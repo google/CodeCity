@@ -26,21 +26,21 @@ func TestBoolean(t *testing.T) {
 }
 
 func TestNumber(t *testing.T) {
-	b := Number(0)
-	if b.Parent() != Value(NumberProto) {
-		t.Errorf("%v.Parent() != NumberProto", b)
+	n := Number(0)
+	if n.Parent() != Value(NumberProto) {
+		t.Errorf("%v.Parent() != NumberProto", n)
 	}
-	if b.Parent().Parent() != Value(ObjectProto) {
-		t.Errorf("%v.Parent().Parent() != ObjectProto", b)
+	if n.Parent().Parent() != Value(ObjectProto) {
+		t.Errorf("%v.Parent().Parent() != ObjectProto", n)
 	}
 }
 
 func TestString(t *testing.T) {
-	b := String("")
-	if b.Parent() != Value(StringProto) {
-		t.Errorf("%v.Parent() != StringProto", b)
+	var s Value = String("")
+	if s.Parent() != Value(StringProto) {
+		t.Errorf("%v.Parent() != StringProto", s)
 	}
-	if b.Parent().Parent() != Value(ObjectProto) {
-		t.Errorf("%v.Parent().Parent() != ObjectProto", b)
+	if s.Parent().Parent() != Value(ObjectProto) {
+		t.Errorf("%v.Parent().Parent() != ObjectProto", s)
 	}
 }
