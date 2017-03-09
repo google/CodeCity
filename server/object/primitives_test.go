@@ -14,3 +14,33 @@ func TestPrimitivesPrimitiveness(t *testing.T) {
 		}
 	}
 }
+
+func TestBoolean(t *testing.T) {
+	b := Boolean(false)
+	if b.Parent() != Value(BooleanProto) {
+		t.Errorf("%v.Parent() != BooleanProto", b)
+	}
+	if b.Parent().Parent() != Value(ObjectProto) {
+		t.Errorf("%v.Parent().Parent() != ObjectProto", b)
+	}
+}
+
+func TestNumber(t *testing.T) {
+	b := Number(0)
+	if b.Parent() != Value(NumberProto) {
+		t.Errorf("%v.Parent() != NumberProto", b)
+	}
+	if b.Parent().Parent() != Value(ObjectProto) {
+		t.Errorf("%v.Parent().Parent() != ObjectProto", b)
+	}
+}
+
+func TestString(t *testing.T) {
+	b := String("")
+	if b.Parent() != Value(StringProto) {
+		t.Errorf("%v.Parent() != StringProto", b)
+	}
+	if b.Parent().Parent() != Value(ObjectProto) {
+		t.Errorf("%v.Parent().Parent() != ObjectProto", b)
+	}
+}

@@ -14,24 +14,27 @@ type Value interface {
 	Parent() Value
 }
 
-// Object represents typical JavaScript objects with (optiona)
+// Object represents typical JavaScript objects with (optional)
 // prototype, properties, etc.
 type Object struct {
 	owner      *Owner
 	parent     Value
 	properties map[string]property
+	f          bool
 }
 
 // property is a property descriptor, with the following fields:
-// r:     Is the property world-readable?
-// i:     Is the property ownership inherited on children?
 // owner: Who owns the property (has permission to write it)?
 // v:     The actual value of the property.
+// r:     Is the property world-readable?
+// e:     Is the property enumerable
+// i:     Is the property ownership inherited on children?
 type property struct {
-	r     bool
-	i     bool
 	owner *Owner
 	v     Value
+	r     bool
+	e     bool
+	i     bool
 }
 
 // *Object must satisfy Value.
@@ -49,11 +52,10 @@ func (this Object) Parent() Value {
 	return this.parent
 }
 
-// An Owner is an object that can own other objects and properties.
-type Owner struct {
-	Object
-	// FIXME: other fields go here.
+// ObjectProto is the default prototype for (plain) JavaScript objects
+// (i.e., ones created from object literals and not via
+// Object.create(nil)).
+var ObjectProto = &Object{
+	// parent: null (not sure how to do this yet)
+	properties: make(map[string]property),
 }
-
-// *Owner must satisfy Value.
-var _ Value = (*Owner)(nil)
