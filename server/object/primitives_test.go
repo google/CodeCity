@@ -48,7 +48,25 @@ func TestString(t *testing.T) {
 }
 
 func TestStringLength(t *testing.T) {
-	// FIXME: implement
+	v, ok := String("").GetProperty("length")
+	if v != Number(0) || !ok {
+		t.Errorf("String(\"\").GetProperty(\"length\") == %v, %v"+
+			"(expected 0, true", v, ok)
+	}
+
+	v, ok = String("Hello, World!").GetProperty("length")
+	if v != Number(13) || !ok {
+		t.Errorf("String(\"కోడ్ సిటీ\").GetProperty(\"length\") == %v, %v"+
+			"(expected 13, true)", v, ok)
+	}
+
+	// "Code City" in Telugu (according to translate.google.com):
+	v, ok = String("కోడ్ సిటీ").GetProperty("length")
+	if v != Number(9) || !ok {
+		t.Errorf("String(\"కోడ్ సిటీ\").GetProperty(\"length\") == %v, %v"+
+			"(expected 9, true)", v, ok)
+	}
+
 }
 
 func TestNullParentPanic(t *testing.T) {

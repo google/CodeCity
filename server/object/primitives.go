@@ -1,5 +1,7 @@
 package object
 
+import "unicode/utf16"
+
 // Booleans, numbers and strings are represented as immediate data -
 // i.e., the Value interface data contains the value itself rather
 // than a pointer to it, as it would in the case of a plain object.
@@ -31,8 +33,9 @@ func (Boolean) GetProperty(name string) (Value, bool) {
 	return nil, false
 }
 
+// SetProperty on Boolean always succeeds but has no effect.
 func (Boolean) SetProperty(name string, value Value) (ok bool) {
-	return false
+	return true
 }
 
 /********************************************************************/
@@ -58,8 +61,9 @@ func (Number) GetProperty(name string) (Value, bool) {
 	return nil, false
 }
 
+// SetProperty on Number always succeeds but has no effect.
 func (Number) SetProperty(name string, value Value) (ok bool) {
-	return false
+	return true
 }
 
 /********************************************************************/
@@ -81,14 +85,17 @@ func (String) Parent() Value {
 	return StringProto
 }
 
-func (String) GetProperty(name string) (Value, bool) {
-	// FIXME: insert magic length property here.
-	return nil, false
+func (this String) GetProperty(name string) (Value, bool) {
+	if name != "length" {
+		return nil, false
+	}
+	return Number(len(utf16.Encode([]rune(string(this))))), true
 }
 
+// SetProperty on String always succeeds but has no effect (even on
+// length).
 func (String) SetProperty(name string, value Value) (ok bool) {
-	// FIXME: insert magic length property here.
-	return false
+	return true
 }
 
 /********************************************************************/
@@ -114,6 +121,7 @@ func (Null) GetProperty(name string) (Value, bool) {
 	return nil, false
 }
 
+// SetProperty on Null always fails.
 func (Null) SetProperty(name string, value Value) (ok bool) {
 	return false
 }
@@ -141,6 +149,7 @@ func (Undefined) GetProperty(name string) (Value, bool) {
 	return nil, false
 }
 
+// SetProperty on Undefined always fails.
 func (Undefined) SetProperty(name string, value Value) (ok bool) {
 	return false
 }
