@@ -48,25 +48,28 @@ func TestString(t *testing.T) {
 }
 
 func TestStringLength(t *testing.T) {
-	v, ok := String("").GetProperty("length")
-	if v != Number(0) || !ok {
+	v, err := String("").GetProperty("length")
+	if v != Number(0) || err != nil {
 		t.Errorf("String(\"\").GetProperty(\"length\") == %v, %v"+
-			"(expected 0, true", v, ok)
+			"(expected 0, nil)", v, err)
 	}
 
-	v, ok = String("Hello, World!").GetProperty("length")
-	if v != Number(13) || !ok {
+	v, err = String("Hello, World!").GetProperty("length")
+	if v != Number(13) || err != nil {
 		t.Errorf("String(\"కోడ్ సిటీ\").GetProperty(\"length\") == %v, %v"+
-			"(expected 13, true)", v, ok)
+			"(expected 13, nil)", v, err)
 	}
 
 	// "Code City" in Telugu (according to translate.google.com):
-	v, ok = String("కోడ్ సిటీ").GetProperty("length")
-	if v != Number(9) || !ok {
+	v, err = String("కోడ్ సిటీ").GetProperty("length")
+	if v != Number(9) || err != nil {
 		t.Errorf("String(\"కోడ్ సిటీ\").GetProperty(\"length\") == %v, %v"+
-			"(expected 9, true)", v, ok)
+			"(expected 9, nil)", v, err)
 	}
 
+}
+
+func TestNull(t *testing.T) {
 }
 
 func TestNullParentPanic(t *testing.T) {

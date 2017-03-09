@@ -13,13 +13,13 @@ type Value interface {
 	// Parent() returns the parent (prototype) object for this object.
 	Parent() Value
 
-	// GetProperty returns the current value of the given property
-	// (and flag indicating success).
-	GetProperty(name string) (v Value, ok bool)
+	// GetProperty returns the current value of the given property or
+	// an ErrorMsg if that was not possible.
+	GetProperty(name string) (Value, *ErrorMsg)
 
-	// SetProperty sets the given property to the specified value;
-	// returns flag indicating success.
-	SetProperty(name string, value Value) (ok bool)
+	// SetProperty sets the given property to the specified value or
+	// returns an ErrorMsg if that was not possible.
+	SetProperty(name string, value Value) *ErrorMsg
 }
 
 // Object represents typical JavaScript objects with (optional)
@@ -60,22 +60,22 @@ func (this Object) Parent() Value {
 	return this.parent
 }
 
-func (this Object) GetProperty(name string) (Value, bool) {
+func (this Object) GetProperty(name string) (Value, *ErrorMsg) {
 	pd, ok := this.properties[name]
 	// FIXME: permissions check for property readability goes here
 	if !ok {
-		return nil /* FIXME: undefined */, false
+		return Undefined{}, nil
 	}
-	return pd.v, true
+	return pd.v, nil
 }
 
-func (this *Object) SetProperty(name string, value Value) bool {
+func (this *Object) SetProperty(name string, value Value) *ErrorMsg {
 	pd, ok := this.properties[name]
 	if ok { // Updating existing property
 		// FIXME: permissions check for property writeability goes here
 		pd.v = value
 		this.properties[name] = pd
-		return true
+		return nil
 	} else { // Creating new property
 		// FIXME: permissions check for object writability goes here
 		this.properties[name] = property{
@@ -85,7 +85,7 @@ func (this *Object) SetProperty(name string, value Value) bool {
 			e:     true,
 			i:     false,
 		}
-		return true
+		return nil
 	}
 }
 

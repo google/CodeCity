@@ -1,6 +1,9 @@
 package object
 
-import "unicode/utf16"
+import (
+	"fmt"
+	"unicode/utf16"
+)
 
 // Booleans, numbers and strings are represented as immediate data -
 // i.e., the Value interface data contains the value itself rather
@@ -29,13 +32,13 @@ func (Boolean) Parent() Value {
 	return BooleanProto
 }
 
-func (Boolean) GetProperty(name string) (Value, bool) {
-	return nil, false
+func (Boolean) GetProperty(name string) (Value, *ErrorMsg) {
+	return Undefined{}, nil
 }
 
 // SetProperty on Boolean always succeeds but has no effect.
-func (Boolean) SetProperty(name string, value Value) (ok bool) {
-	return true
+func (Boolean) SetProperty(name string, value Value) *ErrorMsg {
+	return nil
 }
 
 /********************************************************************/
@@ -57,13 +60,13 @@ func (Number) Parent() Value {
 	return NumberProto
 }
 
-func (Number) GetProperty(name string) (Value, bool) {
-	return nil, false
+func (Number) GetProperty(name string) (Value, *ErrorMsg) {
+	return Undefined{}, nil
 }
 
 // SetProperty on Number always succeeds but has no effect.
-func (Number) SetProperty(name string, value Value) (ok bool) {
-	return true
+func (Number) SetProperty(name string, value Value) *ErrorMsg {
+	return nil
 }
 
 /********************************************************************/
@@ -85,17 +88,17 @@ func (String) Parent() Value {
 	return StringProto
 }
 
-func (this String) GetProperty(name string) (Value, bool) {
+func (this String) GetProperty(name string) (Value, *ErrorMsg) {
 	if name != "length" {
-		return nil, false
+		return Undefined{}, nil
 	}
-	return Number(len(utf16.Encode([]rune(string(this))))), true
+	return Number(len(utf16.Encode([]rune(string(this))))), nil
 }
 
 // SetProperty on String always succeeds but has no effect (even on
 // length).
-func (String) SetProperty(name string, value Value) (ok bool) {
-	return true
+func (String) SetProperty(name string, value Value) *ErrorMsg {
+	return nil
 }
 
 /********************************************************************/
@@ -117,13 +120,19 @@ func (Null) Parent() Value {
 	panic("Cannot get parent (prototype) of null")
 }
 
-func (Null) GetProperty(name string) (Value, bool) {
-	return nil, false
+func (Null) GetProperty(name string) (Value, *ErrorMsg) {
+	return nil, &ErrorMsg{
+		Name:    "TypeError",
+		Message: fmt.Sprintf("Cannot read property '%s' of null", name),
+	}
 }
 
 // SetProperty on Null always fails.
-func (Null) SetProperty(name string, value Value) (ok bool) {
-	return false
+func (Null) SetProperty(name string, value Value) *ErrorMsg {
+	return &ErrorMsg{
+		Name:    "TypeError",
+		Message: fmt.Sprintf("Cannot set property '%s' of null", name),
+	}
 }
 
 /********************************************************************/
@@ -145,13 +154,19 @@ func (Undefined) Parent() Value {
 	panic("Cannot get parent (prototype) of undefined")
 }
 
-func (Undefined) GetProperty(name string) (Value, bool) {
-	return nil, false
+func (Undefined) GetProperty(name string) (Value, *ErrorMsg) {
+	return nil, &ErrorMsg{
+		Name:    "TypeError",
+		Message: fmt.Sprintf("Cannot read property '%s' of undefined", name),
+	}
 }
 
 // SetProperty on Undefined always fails.
-func (Undefined) SetProperty(name string, value Value) (ok bool) {
-	return false
+func (Undefined) SetProperty(name string, value Value) *ErrorMsg {
+	return &ErrorMsg{
+		Name:    "TypeError",
+		Message: fmt.Sprintf("Cannot set property '%s' of undefined", name),
+	}
 }
 
 /********************************************************************/
