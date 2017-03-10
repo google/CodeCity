@@ -56,20 +56,28 @@ func TestStringLength(t *testing.T) {
 
 	v, err = String("Hello, World!").GetProperty("length")
 	if v != Number(13) || err != nil {
-		t.Errorf("String(\"కోడ్ సిటీ\").GetProperty(\"length\") == %v, %v"+
+		t.Errorf("String(\"కోడ్ సిటీ\").GetProperty(\"length\") == %v, %v "+
 			"(expected 13, nil)", v, err)
 	}
 
 	// "Code City" in Telugu (according to translate.google.com):
 	v, err = String("కోడ్ సిటీ").GetProperty("length")
 	if v != Number(9) || err != nil {
-		t.Errorf("String(\"కోడ్ సిటీ\").GetProperty(\"length\") == %v, %v"+
+		t.Errorf("String(\"కోడ్ సిటీ\").GetProperty(\"length\") == %v, %v "+
 			"(expected 9, nil)", v, err)
 	}
 
 }
 
 func TestNull(t *testing.T) {
+	n := Null{}
+	if v := n.Type(); v != "object" {
+		t.Errorf("Null{}.Type() == %v (expected \"object\")", v)
+	}
+	if v, e := n.GetProperty("foo"); e == nil {
+		t.Errorf("Null{}.GetProperty(\"foo\") == %v, %v "+
+			"(expected nil, !nil)", v, e)
+	}
 }
 
 func TestNullParentPanic(t *testing.T) {
@@ -79,6 +87,9 @@ func TestNullParentPanic(t *testing.T) {
 		}
 	}()
 	_ = Null{}.Parent()
+}
+
+func TestUndefined(t *testing.T) {
 }
 
 func TestUndefinedParentPanic(t *testing.T) {
