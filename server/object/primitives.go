@@ -1,3 +1,19 @@
+/* Copyright 2017 Google Inc.
+ * https://github.com/NeilFraser/CodeCity
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package object
 
 import (
@@ -14,6 +30,7 @@ import (
 // tl;dr: do NOT take the address of a primitive.
 
 /********************************************************************/
+
 // Boolean represents a JS boolean value.
 type Boolean bool
 
@@ -42,6 +59,7 @@ func (Boolean) SetProperty(name string, value Value) *ErrorMsg {
 }
 
 /********************************************************************/
+
 // Number represents a JS numeric value.
 type Number float64
 
@@ -70,6 +88,7 @@ func (Number) SetProperty(name string, value Value) *ErrorMsg {
 }
 
 /********************************************************************/
+
 // String represents a JS string value.
 type String string
 
@@ -102,6 +121,7 @@ func (String) SetProperty(name string, value Value) *ErrorMsg {
 }
 
 /********************************************************************/
+
 // Null represents a JS null value.
 type Null struct{}
 
@@ -136,6 +156,7 @@ func (Null) SetProperty(name string, value Value) *ErrorMsg {
 }
 
 /********************************************************************/
+
 // Undefined represents a JS undefined value.
 type Undefined struct{}
 
@@ -170,6 +191,7 @@ func (Undefined) SetProperty(name string, value Value) *ErrorMsg {
 }
 
 /********************************************************************/
+
 // BooleanProto, NumberProto, and StringProto are the (plain)
 // JavaScript objects that are the prototypes for all primitive
 // objects of their respective type (they would usually be accessed in
