@@ -32,11 +32,21 @@ var acorn = require('./acorn.js');
 // Create a new TCP server for parsing code into an AST using Acorn.
 var parsePort = 7780;
 var server = net.createServer(function (socket) {
+  if (socket.remoteAddress != '127.0.0.1') {
+    console.log('Rejecting connection from ' + socket.remoteAddress);
+    socket.end('Connection rejected.');
+    return;
+  }
   console.log('Parse connection from ' + socket.remoteAddress);
   socket.incomingData_ = '';
+  socket.closed_ = false;
 
   // Handle incoming messages from clients.
   socket.on('data', function (data) {
+    if (socket.closed_) {
+      // Ignore any further communication on this connection.
+      return;
+    }
     socket.incomingData_ += String(data).replace('\r', '');
     // Incoming data is terminated by a '.' on its own line.
     var end = socket.incomingData_.lastIndexOf('\n.\n');
@@ -45,7 +55,8 @@ var server = net.createServer(function (socket) {
       try {
         var ast = acorn.parse(code);
         socket.write(JSON.stringify(ast));
-        console.log('Parse: ' + code.length + ' bytes.');
+        console.log('Parsed: ' + code.length + ' bytes.');
+        socket.closed_ = true;
       } catch (e) {
         // Syntax error in provided code.
         var error = {'type': e.name, 'message': e.message, 'error': e};
