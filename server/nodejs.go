@@ -18,12 +18,13 @@
 // Used to convert code to an AST.
 package nodejs
 
-import "net"
 import "bufio"
+import "fmt"
+import "net"
 
 func codeToAST(code string) string {
 	conn, _ := net.Dial("tcp", "127.0.0.1:7780")
-	fmt.Fprintf(conn, code + "\n.\n")
+	fmt.Fprint(conn, code + "\n.\n")
 	// Listen for single-line reply.
 	json, _ := bufio.NewReader(conn).ReadString('\n')
 	return json
