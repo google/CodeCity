@@ -24,7 +24,7 @@ type Value interface {
 	// operator).
 	Type() string
 
-	// IsPrimitive() returns true for primitive data (nubmer, string,
+	// IsPrimitive() returns true for primitive data (number, string,
 	// boolean, etc.).
 	IsPrimitive() bool
 
