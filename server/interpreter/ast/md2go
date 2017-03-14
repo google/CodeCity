@@ -48,8 +48,8 @@ my %patches = (
 
 # Extra fields returned by Acorn not mentioned in spec:
 my %extras = (
-    "Node" => [['Start', 'int', 'json:"start,omitempty"'],
-	       ['End', 'int', 'json:"end,omitempty"']],
+    "Node" => [['Start', 'int', 'json:"start"'],
+	       ['End', 'int', 'json:"end"']],
     "Literal" => [["Raw", "string", 'json:"raw,omitempty"']],
     );
 	       

@@ -1,8 +1,11 @@
 package ast
 
-// import "encoding/json"
+//go:generate sh -c "./md2go es5.md > astnodes.go && go fmt"
 
-//go:generate sh -c "./md2go es5.md > astnodes.go"
+import (
+// "encoding/json"
+// "fmt"
+)
 
 type Statement statement
 type Statements []statement

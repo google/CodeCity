@@ -20,10 +20,10 @@ package ast
 // parsed source region) and an end position (the position of the
 // first character after the parsed source region):
 type nodeStuff struct {
-	Type	string	`json:"type,omitempty"`
-	Loc	*SourceLocation	`json:"loc,omitempty"`
-	Start	int	`json:"start,omitempty"`
-	End	int	`json:"end,omitempty"`
+	Type  string          `json:"type,omitempty"`
+	Loc   *SourceLocation `json:"loc,omitempty"`
+	Start int             `json:"start"`
+	End   int             `json:"end"`
 }
 
 /********************************************************************/
@@ -31,16 +31,16 @@ type nodeStuff struct {
 // Each Position object consists of a line number (1-indexed) and a
 // column number (0-indexed):
 type SourceLocation struct {
-	Source	string	`json:"source,omitempty"`
-	Start	*Position	`json:"start,omitempty"`
-	End	*Position	`json:"end,omitempty"`
+	Source string    `json:"source,omitempty"`
+	Start  *Position `json:"start,omitempty"`
+	End    *Position `json:"end,omitempty"`
 }
 
 /********************************************************************/
 
 type Position struct {
-	Line	int	`json:"line,omitempty"`
-	Column	int	`json:"column,omitempty"`
+	Line   int `json:"line,omitempty"`
+	Column int `json:"column,omitempty"`
 }
 
 /********************************************************************/
@@ -49,7 +49,7 @@ type Position struct {
 // expression or a destructuring pattern.
 type Identifier struct {
 	expressionStuff
-	Name	string	`json:"name,omitempty"`
+	Name string `json:"name,omitempty"`
 }
 
 /********************************************************************/
@@ -58,7 +58,7 @@ type Identifier struct {
 // expression.
 type Literal struct {
 	expressionStuff
-	Raw	string	`json:"raw,omitempty"`
+	Raw string `json:"raw,omitempty"`
 }
 
 /********************************************************************/
@@ -66,7 +66,7 @@ type Literal struct {
 // Program is a complete program source tree.
 type Program struct {
 	nodeStuff
-	Body	*Statements	`json:"body,omitempty"`
+	Body *Statements `json:"body,omitempty"`
 }
 
 /********************************************************************/
@@ -75,9 +75,9 @@ type Program struct {
 // [expression](#functionexpression).
 type Function struct {
 	nodeStuff
-	Id	*Identifier	`json:"id,omitempty"`
-	Params	[]*Identifier	`json:"params,omitempty"`
-	Body	*BlockStatement	`json:"body,omitempty"`
+	Id     *Identifier     `json:"id,omitempty"`
+	Params []*Identifier   `json:"params,omitempty"`
+	Body   *BlockStatement `json:"body,omitempty"`
 }
 
 /********************************************************************/
@@ -93,7 +93,7 @@ type statementStuff struct {
 // consisting of a single expression.
 type ExpressionStatement struct {
 	statementStuff
-	Expression	*Expression	`json:"expression,omitempty"`
+	Expression *Expression `json:"expression,omitempty"`
 }
 
 /********************************************************************/
@@ -102,7 +102,7 @@ type ExpressionStatement struct {
 // statements surrounded by braces.
 type BlockStatement struct {
 	statementStuff
-	Body	*Statements	`json:"body,omitempty"`
+	Body *Statements `json:"body,omitempty"`
 }
 
 /********************************************************************/
@@ -124,8 +124,8 @@ type DebuggerStatement struct {
 // WithStatement is a with statement.
 type WithStatement struct {
 	statementStuff
-	Object	*Expression	`json:"object,omitempty"`
-	Body	*Statement	`json:"body,omitempty"`
+	Object *Expression `json:"object,omitempty"`
+	Body   *Statement  `json:"body,omitempty"`
 }
 
 /********************************************************************/
@@ -133,7 +133,7 @@ type WithStatement struct {
 // ReturnStatement is a return statement.
 type ReturnStatement struct {
 	statementStuff
-	Argument	*Expression	`json:"argument,omitempty"`
+	Argument *Expression `json:"argument,omitempty"`
 }
 
 /********************************************************************/
@@ -142,8 +142,8 @@ type ReturnStatement struct {
 // prefixed by a break/continue label.
 type LabeledStatement struct {
 	statementStuff
-	Label	*Identifier	`json:"label,omitempty"`
-	Body	*Statement	`json:"body,omitempty"`
+	Label *Identifier `json:"label,omitempty"`
+	Body  *Statement  `json:"body,omitempty"`
 }
 
 /********************************************************************/
@@ -151,7 +151,7 @@ type LabeledStatement struct {
 // BreakStatement is a break statement.
 type BreakStatement struct {
 	statementStuff
-	Label	*Identifier	`json:"label,omitempty"`
+	Label *Identifier `json:"label,omitempty"`
 }
 
 /********************************************************************/
@@ -159,7 +159,7 @@ type BreakStatement struct {
 // ContinueStatement is a continue statement.
 type ContinueStatement struct {
 	statementStuff
-	Label	*Identifier	`json:"label,omitempty"`
+	Label *Identifier `json:"label,omitempty"`
 }
 
 /********************************************************************/
@@ -167,9 +167,9 @@ type ContinueStatement struct {
 // IfStatement is an if statement.
 type IfStatement struct {
 	statementStuff
-	Test	*Expression	`json:"test,omitempty"`
-	Consequent	*Statement	`json:"consequent,omitempty"`
-	Alternate	*Statement	`json:"alternate,omitempty"`
+	Test       *Expression `json:"test,omitempty"`
+	Consequent *Statement  `json:"consequent,omitempty"`
+	Alternate  *Statement  `json:"alternate,omitempty"`
 }
 
 /********************************************************************/
@@ -177,8 +177,8 @@ type IfStatement struct {
 // SwitchStatement is a switch statement.
 type SwitchStatement struct {
 	statementStuff
-	Discriminant	*Expression	`json:"discriminant,omitempty"`
-	Cases	[]*SwitchCase	`json:"cases,omitempty"`
+	Discriminant *Expression   `json:"discriminant,omitempty"`
+	Cases        []*SwitchCase `json:"cases,omitempty"`
 }
 
 /********************************************************************/
@@ -187,8 +187,8 @@ type SwitchStatement struct {
 // test === null) clause in the body of a switch statement.
 type SwitchCase struct {
 	nodeStuff
-	Test	*Expression	`json:"test,omitempty"`
-	Consequent	*Statements	`json:"consequent,omitempty"`
+	Test       *Expression `json:"test,omitempty"`
+	Consequent *Statements `json:"consequent,omitempty"`
 }
 
 /********************************************************************/
@@ -196,7 +196,7 @@ type SwitchCase struct {
 // ThrowStatement is a throw statement.
 type ThrowStatement struct {
 	statementStuff
-	Argument	*Expression	`json:"argument,omitempty"`
+	Argument *Expression `json:"argument,omitempty"`
 }
 
 /********************************************************************/
@@ -205,9 +205,9 @@ type ThrowStatement struct {
 // must be a BlockStatement.
 type TryStatement struct {
 	statementStuff
-	Block	*BlockStatement	`json:"block,omitempty"`
-	Handler	*CatchClause	`json:"handler,omitempty"`
-	Finalizer	*BlockStatement	`json:"finalizer,omitempty"`
+	Block     *BlockStatement `json:"block,omitempty"`
+	Handler   *CatchClause    `json:"handler,omitempty"`
+	Finalizer *BlockStatement `json:"finalizer,omitempty"`
 }
 
 /********************************************************************/
@@ -215,8 +215,8 @@ type TryStatement struct {
 // CatchClause is a catch clause following a try block.
 type CatchClause struct {
 	nodeStuff
-	Param	*Identifier	`json:"param,omitempty"`
-	Body	*BlockStatement	`json:"body,omitempty"`
+	Param *Identifier     `json:"param,omitempty"`
+	Body  *BlockStatement `json:"body,omitempty"`
 }
 
 /********************************************************************/
@@ -224,8 +224,8 @@ type CatchClause struct {
 // WhileStatement is a while statement.
 type WhileStatement struct {
 	statementStuff
-	Test	*Expression	`json:"test,omitempty"`
-	Body	*Statement	`json:"body,omitempty"`
+	Test *Expression `json:"test,omitempty"`
+	Body *Statement  `json:"body,omitempty"`
 }
 
 /********************************************************************/
@@ -233,8 +233,8 @@ type WhileStatement struct {
 // DoWhileStatement is a do/while statement.
 type DoWhileStatement struct {
 	statementStuff
-	Body	*Statement	`json:"body,omitempty"`
-	Test	*Expression	`json:"test,omitempty"`
+	Body *Statement  `json:"body,omitempty"`
+	Test *Expression `json:"test,omitempty"`
 }
 
 /********************************************************************/
@@ -242,10 +242,10 @@ type DoWhileStatement struct {
 // ForStatement is a for statement.
 type ForStatement struct {
 	statementStuff
-	Init	*DeclOrId	`json:"init,omitempty"`
-	Test	*Expression	`json:"test,omitempty"`
-	Update	*Expression	`json:"update,omitempty"`
-	Body	*Statement	`json:"body,omitempty"`
+	Init   *DeclOrId   `json:"init,omitempty"`
+	Test   *Expression `json:"test,omitempty"`
+	Update *Expression `json:"update,omitempty"`
+	Body   *Statement  `json:"body,omitempty"`
 }
 
 /********************************************************************/
@@ -253,9 +253,9 @@ type ForStatement struct {
 // ForInStatement is a for/in statement.
 type ForInStatement struct {
 	statementStuff
-	Left	*DeclOrId	`json:"left,omitempty"`
-	Right	*Expression	`json:"right,omitempty"`
-	Body	*Statement	`json:"body,omitempty"`
+	Left  *DeclOrId   `json:"left,omitempty"`
+	Right *Expression `json:"right,omitempty"`
+	Body  *Statement  `json:"body,omitempty"`
 }
 
 /********************************************************************/
@@ -274,7 +274,7 @@ type Declaration struct {
 type FunctionDeclaration struct {
 	Function
 	Declaration
-	Id	*Identifier	`json:"id,omitempty"`
+	Id *Identifier `json:"id,omitempty"`
 }
 
 /********************************************************************/
@@ -282,7 +282,7 @@ type FunctionDeclaration struct {
 // VariableDeclaration is a variable declaration.
 type VariableDeclaration struct {
 	Declaration
-	Declarations	[]*VariableDeclarator	`json:"declarations,omitempty"`
+	Declarations []*VariableDeclarator `json:"declarations,omitempty"`
 }
 
 /********************************************************************/
@@ -290,8 +290,8 @@ type VariableDeclaration struct {
 // VariableDeclarator is a variable declarator.
 type VariableDeclarator struct {
 	nodeStuff
-	Id	*Identifier	`json:"id,omitempty"`
-	Init	*Expression	`json:"init,omitempty"`
+	Id   *Identifier `json:"id,omitempty"`
+	Init *Expression `json:"init,omitempty"`
 }
 
 /********************************************************************/
@@ -314,7 +314,7 @@ type ThisExpression struct {
 // ArrayExpression is an array expression.
 type ArrayExpression struct {
 	expressionStuff
-	Elements	*Expressions	`json:"elements,omitempty"`
+	Elements *Expressions `json:"elements,omitempty"`
 }
 
 /********************************************************************/
@@ -322,7 +322,7 @@ type ArrayExpression struct {
 // ObjectExpression is an object expression.
 type ObjectExpression struct {
 	expressionStuff
-	Properties	[]*Property	`json:"properties,omitempty"`
+	Properties []*Property `json:"properties,omitempty"`
 }
 
 /********************************************************************/
@@ -333,8 +333,8 @@ type ObjectExpression struct {
 // the kind values "get" and "set", respectively.
 type Property struct {
 	nodeStuff
-	Key	*LitOrId	`json:"key,omitempty"`
-	Value	*Expression	`json:"value,omitempty"`
+	Key   *LitOrId    `json:"key,omitempty"`
+	Value *Expression `json:"value,omitempty"`
 }
 
 /********************************************************************/
@@ -350,9 +350,9 @@ type FunctionExpression struct {
 // UnaryExpression is a unary operator expression.
 type UnaryExpression struct {
 	expressionStuff
-	Operator	*string	`json:"operator,omitempty"`
-	Prefix	bool	`json:"prefix,omitempty"`
-	Argument	*Expression	`json:"argument,omitempty"`
+	Operator *string     `json:"operator,omitempty"`
+	Prefix   bool        `json:"prefix,omitempty"`
+	Argument *Expression `json:"argument,omitempty"`
 }
 
 /********************************************************************/
@@ -363,9 +363,9 @@ type UnaryExpression struct {
 // expression.
 type UpdateExpression struct {
 	expressionStuff
-	Operator	*string	`json:"operator,omitempty"`
-	Argument	*Expression	`json:"argument,omitempty"`
-	Prefix	bool	`json:"prefix,omitempty"`
+	Operator *string     `json:"operator,omitempty"`
+	Argument *Expression `json:"argument,omitempty"`
+	Prefix   bool        `json:"prefix,omitempty"`
 }
 
 /********************************************************************/
@@ -375,9 +375,9 @@ type UpdateExpression struct {
 // BinaryExpression is a binary operator expression.
 type BinaryExpression struct {
 	expressionStuff
-	Operator	*string	`json:"operator,omitempty"`
-	Left	*Expression	`json:"left,omitempty"`
-	Right	*Expression	`json:"right,omitempty"`
+	Operator *string     `json:"operator,omitempty"`
+	Left     *Expression `json:"left,omitempty"`
+	Right    *Expression `json:"right,omitempty"`
 }
 
 /********************************************************************/
@@ -387,9 +387,9 @@ type BinaryExpression struct {
 // AssignmentExpression is an assignment operator expression.
 type AssignmentExpression struct {
 	expressionStuff
-	Operator	*string	`json:"operator,omitempty"`
-	Left	*Expression	`json:"left,omitempty"`
-	Right	*Expression	`json:"right,omitempty"`
+	Operator *string     `json:"operator,omitempty"`
+	Left     *Expression `json:"left,omitempty"`
+	Right    *Expression `json:"right,omitempty"`
 }
 
 /********************************************************************/
@@ -399,9 +399,9 @@ type AssignmentExpression struct {
 // LogicalExpression is a logical operator expression.
 type LogicalExpression struct {
 	expressionStuff
-	Operator	*string	`json:"operator,omitempty"`
-	Left	*Expression	`json:"left,omitempty"`
-	Right	*Expression	`json:"right,omitempty"`
+	Operator *string     `json:"operator,omitempty"`
+	Left     *Expression `json:"left,omitempty"`
+	Right    *Expression `json:"right,omitempty"`
 }
 
 /********************************************************************/
@@ -415,9 +415,9 @@ type LogicalExpression struct {
 // Identifier.
 type MemberExpression struct {
 	expressionStuff
-	Object	*Expression	`json:"object,omitempty"`
-	Property	*Expression	`json:"property,omitempty"`
-	Computed	bool	`json:"computed,omitempty"`
+	Object   *Expression `json:"object,omitempty"`
+	Property *Expression `json:"property,omitempty"`
+	Computed bool        `json:"computed,omitempty"`
 }
 
 /********************************************************************/
@@ -426,9 +426,9 @@ type MemberExpression struct {
 // ?/: expression.
 type ConditionalExpression struct {
 	expressionStuff
-	Test	*Expression	`json:"test,omitempty"`
-	Alternate	*Expression	`json:"alternate,omitempty"`
-	Consequent	*Expression	`json:"consequent,omitempty"`
+	Test       *Expression `json:"test,omitempty"`
+	Alternate  *Expression `json:"alternate,omitempty"`
+	Consequent *Expression `json:"consequent,omitempty"`
 }
 
 /********************************************************************/
@@ -436,8 +436,8 @@ type ConditionalExpression struct {
 // CallExpression is a function or method call expression.
 type CallExpression struct {
 	expressionStuff
-	Callee	*Expression	`json:"callee,omitempty"`
-	Arguments	*Expressions	`json:"arguments,omitempty"`
+	Callee    *Expression  `json:"callee,omitempty"`
+	Arguments *Expressions `json:"arguments,omitempty"`
 }
 
 /********************************************************************/
@@ -445,8 +445,8 @@ type CallExpression struct {
 // NewExpression is a new expression.
 type NewExpression struct {
 	expressionStuff
-	Callee	*Expression	`json:"callee,omitempty"`
-	Arguments	*Expressions	`json:"arguments,omitempty"`
+	Callee    *Expression  `json:"callee,omitempty"`
+	Arguments *Expressions `json:"arguments,omitempty"`
 }
 
 /********************************************************************/
@@ -455,7 +455,7 @@ type NewExpression struct {
 // comma-separated sequence of expressions.
 type SequenceExpression struct {
 	expressionStuff
-	Expressions	*Expressions	`json:"expressions,omitempty"`
+	Expressions *Expressions `json:"expressions,omitempty"`
 }
 
 // $VAR1 = {
