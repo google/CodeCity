@@ -24,7 +24,9 @@ import "net"
 
 func codeToAST(code string) string {
 	conn, _ := net.Dial("tcp", "127.0.0.1:7780")
-	fmt.Fprint(conn, code + "\n.\n")
+	fmt.Fprint(conn, code + "\n")
+	// Half-close the connection, and wait for a reply.
+	conn.(*net.TCPConn).CloseWrite()
 	// Listen for single-line reply.
 	json, _ := bufio.NewReader(conn).ReadString('\n')
 	return json
