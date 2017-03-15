@@ -1,3 +1,20 @@
+// The ast package defines types to store an abstract syntax tree, in
+// ESTree EcmaScript 5 format, as defined at
+// https://github.com/estree/estree/blob/master/es5.md, as tree of Go
+// structs, interfaces, and slices.
+//
+// Most of the ES5 nodes are represented by a Go struct of the same
+// name, with fields with capitalised versions of the same names (so
+// they are visible outside the ast package).
+//
+// There are some execptions - notably for statements and expressions -
+// where multiple different ES5 node types can appear in the same
+// position in the parse tree.
+//
+// Most of the type declarations are in astnodes.go which is
+// auto-generated from the ES5 ESTree spec document by the md2go
+// script; run `go generate` to update it.  The rest of the code, and
+// in particular interface types and associated methods, is in ast.go.
 package ast
 
 //go:generate sh -c "./md2go es5.md > astnodes.go && go fmt"
