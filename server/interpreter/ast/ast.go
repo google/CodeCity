@@ -8,6 +8,12 @@ import (
 	"reflect"
 )
 
+// typeOnly is used to determine node types in first pass of two-pass
+// JSON unmarhsalling routines.
+type typeOnly struct {
+	Type string `json:"type"`
+}
+
 type node interface {
 	_is_node()
 }
@@ -23,30 +29,31 @@ func (statementStuff) _is_statement() {}
 type Statement struct{ statement }
 type Statements []statement
 
-// func (this *Statement) UnmarshalJSON(b []byte) error {
-// 	var tmp thingWithType
-// 	if err := json.Unmarshal(b, &tmp); err != nil {
-// 		return err
-// 	}
-// 	var s statement = reflect.New(reflect.TypeOf(statementTypes[tmp.Type]).
-// 		Elem()).Interface().(statement)
-// 	if err := json.Unmarshal(b, &s); err != nil {
-// 		return err
-// 	}
-// 	this.statement = s
-// 	return nil
-// }
+func (this *Statement) UnmarshalJSON(b []byte) error {
+	var tmp typeOnly
+	if err := json.Unmarshal(b, &tmp); err != nil {
+		return err
+	}
+	stype, ok := statementTypes[tmp.Type]
+	if !ok {
+		return fmt.Errorf("ast: json.Unmarshal: unknown type %s", tmp.Type)
+	}
+	var s statement = reflect.New(reflect.TypeOf(stype).Elem()).
+		Interface().(statement)
+	if err := json.Unmarshal(b, &s); err != nil {
+		return err
+	}
+	this.statement = s
+	return nil
+}
 
 func (this *Statements) UnmarshalJSON(b []byte) error {
-	var tmp []struct {
-		Type string `json:"type"`
-	}
+	var tmp []typeOnly
 	if err := json.Unmarshal(b, &tmp); err != nil {
 		return err
 	}
 	s := make([]statement, len(tmp))
 	for i, t := range tmp {
-		fmt.Printf("Type = %s\n", t.Type)
 		stype, ok := statementTypes[t.Type]
 		if !ok {
 			return fmt.Errorf("ast: json.Unmarshal: unknown type %s", t.Type)
@@ -69,10 +76,41 @@ type expression interface {
 func (expressionStuff) _is_expression() {}
 
 func (this *Expression) UnmarshalJSON(b []byte) error {
+	var tmp typeOnly
+	if err := json.Unmarshal(b, &tmp); err != nil {
+		return err
+	}
+	etype, ok := expressionTypes[tmp.Type]
+	if !ok {
+		return fmt.Errorf("ast: json.Unmarshal: unknown type %s", tmp.Type)
+	}
+	var e expression = reflect.New(reflect.TypeOf(etype).Elem()).
+		Interface().(expression)
+	if err := json.Unmarshal(b, &e); err != nil {
+		return err
+	}
+	this.expression = e
 	return nil
 }
 
 func (this *Expressions) UnmarshalJSON(b []byte) error {
+	var tmp []typeOnly
+	if err := json.Unmarshal(b, &tmp); err != nil {
+		return err
+	}
+	e := make([]expression, len(tmp))
+	for i, t := range tmp {
+		etype, ok := expressionTypes[t.Type]
+		if !ok {
+			return fmt.Errorf("ast: json.Unmarshal: unknown type %s", t.Type)
+		}
+		e[i] = reflect.New(reflect.TypeOf(etype).Elem()).
+			Interface().(expression)
+	}
+	if err := json.Unmarshal(b, &e); err != nil {
+		return err
+	}
+	*this = e
 	return nil
 }
 
