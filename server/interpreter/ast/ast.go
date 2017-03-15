@@ -7,6 +7,12 @@ import (
 // "fmt"
 )
 
+type node interface {
+	_is_node()
+}
+
+func (nodeStuff) _is_node() {}
+
 type Statement statement
 type Statements []statement
 type statement interface {

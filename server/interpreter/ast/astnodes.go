@@ -458,6 +458,57 @@ type SequenceExpression struct {
 	Expressions *Expressions `json:"expressions,omitempty"`
 }
 
+/********************************************************************/
+
+var nodeTypes = map[string]node{
+	"Program":            (*Program)(nil),
+	"Function":           (*Function)(nil),
+	"SwitchCase":         (*SwitchCase)(nil),
+	"CatchClause":        (*CatchClause)(nil),
+	"VariableDeclarator": (*VariableDeclarator)(nil),
+	"Property":           (*Property)(nil),
+}
+
+var statementTypes = map[string]statement{
+	"ExpressionStatement": (*ExpressionStatement)(nil),
+	"BlockStatement":      (*BlockStatement)(nil),
+	"EmptyStatement":      (*EmptyStatement)(nil),
+	"DebuggerStatement":   (*DebuggerStatement)(nil),
+	"WithStatement":       (*WithStatement)(nil),
+	"ReturnStatement":     (*ReturnStatement)(nil),
+	"LabeledStatement":    (*LabeledStatement)(nil),
+	"BreakStatement":      (*BreakStatement)(nil),
+	"ContinueStatement":   (*ContinueStatement)(nil),
+	"IfStatement":         (*IfStatement)(nil),
+	"SwitchStatement":     (*SwitchStatement)(nil),
+	"ThrowStatement":      (*ThrowStatement)(nil),
+	"TryStatement":        (*TryStatement)(nil),
+	"WhileStatement":      (*WhileStatement)(nil),
+	"DoWhileStatement":    (*DoWhileStatement)(nil),
+	"ForStatement":        (*ForStatement)(nil),
+	"ForInStatement":      (*ForInStatement)(nil),
+	"Declaration":         (*Declaration)(nil),
+}
+
+var expressionTypes = map[string]expression{
+	"Identifier":            (*Identifier)(nil),
+	"Literal":               (*Literal)(nil),
+	"ThisExpression":        (*ThisExpression)(nil),
+	"ArrayExpression":       (*ArrayExpression)(nil),
+	"ObjectExpression":      (*ObjectExpression)(nil),
+	"FunctionExpression":    (*FunctionExpression)(nil),
+	"UnaryExpression":       (*UnaryExpression)(nil),
+	"UpdateExpression":      (*UpdateExpression)(nil),
+	"BinaryExpression":      (*BinaryExpression)(nil),
+	"AssignmentExpression":  (*AssignmentExpression)(nil),
+	"LogicalExpression":     (*LogicalExpression)(nil),
+	"MemberExpression":      (*MemberExpression)(nil),
+	"ConditionalExpression": (*ConditionalExpression)(nil),
+	"CallExpression":        (*CallExpression)(nil),
+	"NewExpression":         (*NewExpression)(nil),
+	"SequenceExpression":    (*SequenceExpression)(nil),
+}
+
 // $VAR1 = {
 //           'Declaration' => [
 //                              'FunctionDeclaration',
