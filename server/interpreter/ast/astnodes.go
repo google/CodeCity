@@ -260,20 +260,10 @@ type ForInStatement struct {
 
 /********************************************************************/
 
-// Any declaration node. Note that declarations are considered
-// statements; this is because declarations can appear in any
-// statement context.
-type Declaration struct {
-	statementStuff
-}
-
-/********************************************************************/
-
 // FunctionDeclaration is a function declaration. Note that unlike in
 // the parent interface Function, the id cannot be null.
 type FunctionDeclaration struct {
-	Function
-	Declaration
+	statementStuff
 	Id *Identifier `json:"id,omitempty"`
 }
 
@@ -281,7 +271,7 @@ type FunctionDeclaration struct {
 
 // VariableDeclaration is a variable declaration.
 type VariableDeclaration struct {
-	Declaration
+	statementStuff
 	Declarations []*VariableDeclarator `json:"declarations,omitempty"`
 }
 
@@ -487,7 +477,8 @@ var statementTypes = map[string]statement{
 	"DoWhileStatement":    (*DoWhileStatement)(nil),
 	"ForStatement":        (*ForStatement)(nil),
 	"ForInStatement":      (*ForInStatement)(nil),
-	"Declaration":         (*Declaration)(nil),
+	"FunctionDeclaration": (*FunctionDeclaration)(nil),
+	"VariableDeclaration": (*VariableDeclaration)(nil),
 }
 
 var expressionTypes = map[string]expression{
@@ -510,12 +501,7 @@ var expressionTypes = map[string]expression{
 }
 
 // $VAR1 = {
-//           'Declaration' => [
-//                              'FunctionDeclaration',
-//                              'VariableDeclaration'
-//                            ],
 //           'Function' => [
-//                           'FunctionDeclaration',
 //                           'FunctionExpression'
 //                         ],
 //           'Literal' => [
@@ -568,6 +554,8 @@ var expressionTypes = map[string]expression{
 //                                 'DoWhileStatement',
 //                                 'ForStatement',
 //                                 'ForInStatement',
-//                                 'Declaration'
+//                                 'Declaration',
+//                                 'FunctionDeclaration',
+//                                 'VariableDeclaration'
 //                               ]
 //         };

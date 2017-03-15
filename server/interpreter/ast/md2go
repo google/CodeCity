@@ -26,7 +26,7 @@ $Text::Wrap::columns = 70;
 my @interfaces = qw(Node Statement Expression);
 
 # Ignore these types; they are never produced by Acorn:
-my @ignore = qw(Pattern RegExpLiteral);
+my @ignore = qw(Pattern Declaration RegExpLiteral);
 
 # Patch these structure type declarations, as either Acorn produces
 # something different from the spec or we need to handle it specially:
@@ -44,6 +44,15 @@ my %field_patches = (
     "AssignmentExpression.Left"     => "Expression",
     "Property.Key"                  => "LitOrId",
     "Literal.Value"                 => undef,
+    );
+
+# Patch these structure type declarations and associated entries in
+# %children as we don't care about certain intermediate abstract
+# interfaces (e.g., all Declarations are just Statements as far as we
+# are concerned):
+my %parent_patches = (
+    "FunctionDeclaration" => ["Statement"],
+    "VariableDeclaration" => ["Statement"],
     );
 
 # Extra fields returned by Acorn not mentioned in spec:
@@ -79,18 +88,22 @@ while(<>) {
 	    if($type ~~ @interfaces) {
 		$type = lcfirst($type) . "Stuff"
 	    }
+
 	    # Does it have superclass(es)?
-	    if($2) {
-		@parents = grep { !($_ ~~ @ignore)} split(/\s*,\s*/, $2);
-		for my $p (@parents) {
-		    # Is parent type actually an interface?  Use
-		    # common-stuff struct instead:
-		    if($p ~~ @interfaces) {
-			$p = lcfirst($p) . "Stuff"
-		    }
-		    $children{$p} ||= [];
-		    push(@{$children{$p}}, $name);
+	    if($parent_patches{$name}) {
+		@parents = @{$parent_patches{$name}}
+	    }
+	    elsif($2) {
+		@parents = grep { !($_ ~~ @ignore) } split(/\s*,\s*/, $2);
+	    }
+	    for my $p (@parents) {
+		# Is parent type actually an interface?  Use
+		# common-stuff struct instead:
+		if($p ~~ @interfaces) {
+		    $p = lcfirst($p) . "Stuff"
 		}
+		$children{$p} ||= [];
+		push(@{$children{$p}}, $name);
 	    }
 	}
 	# Does this declare properties?
