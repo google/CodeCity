@@ -26,7 +26,7 @@ type statement interface {
 
 func (statementStuff) _is_statement() {}
 
-type Statement struct{ statement }
+type Statement struct{ S statement }
 type Statements []statement
 
 func (this *Statement) UnmarshalJSON(b []byte) error {
@@ -43,7 +43,7 @@ func (this *Statement) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &s); err != nil {
 		return err
 	}
-	this.statement = s
+	this.S = s
 	return nil
 }
 
@@ -67,7 +67,7 @@ func (this *Statements) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-type Expression struct{ expression }
+type Expression struct{ E expression }
 type Expressions []expression
 type expression interface {
 	_is_expression()
@@ -89,7 +89,7 @@ func (this *Expression) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &e); err != nil {
 		return err
 	}
-	this.expression = e
+	this.E = e
 	return nil
 }
 
@@ -114,7 +114,7 @@ func (this *Expressions) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-type DeclOrID struct{ declOrID }
+type DeclOrID struct{ N declOrID }
 type declOrID interface {
 	_is_declOrID()
 }
@@ -139,11 +139,11 @@ func (this *DeclOrID) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &n); err != nil {
 		return err
 	}
-	this.declOrID = n
+	this.N = n
 	return nil
 }
 
-type LitOrID struct{ litOrID }
+type LitOrID struct{ N litOrID }
 type litOrID interface {
 	_is_litOrID()
 }
@@ -168,6 +168,6 @@ func (this *LitOrID) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &n); err != nil {
 		return err
 	}
-	this.litOrID = n
+	this.N = n
 	return nil
 }
