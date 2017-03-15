@@ -25,6 +25,11 @@ $Text::Wrap::columns = 70;
 #
 my @interfaces = qw(Node Statement Expression);
 
+# Some node types are just replaced by "stuff" structs; this includes
+# all @interfaces (whose stuff structs might have no data but do
+# impement _is_type() methods to satisfy the corresponding interface):
+my @stuff = (@interfaces, qw(Function));
+
 # Ignore these types; they are never produced by Acorn:
 my @ignore = qw(Pattern Declaration RegExpLiteral);
 
@@ -36,22 +41,23 @@ my %field_patches = (
     "UnaryExpression.Operator"      => "string",
     "AssignmentExpression.Operator" => "string",
     "LogicalExpression.Operator"    => "string",
-    "ForStatement.Init"             => "DeclOrId",
-    "ForInStatement.Left"           => "DeclOrId",
-    "Function.Params"               => "Identifier",
+    "ForStatement.Init"             => "DeclOrID",
+    "ForInStatement.Left"           => "DeclOrID",
+    "functionStuff.Params"          => "Identifier",
     "VariableDeclarator.Id"         => "Identifier",
     "CatchClause.Param"             => "Identifier",
     "AssignmentExpression.Left"     => "Expression",
-    "Property.Key"                  => "LitOrId",
+    "Property.Key"                  => "LitOrID",
     "Literal.Value"                 => undef,
     );
 
 # Patch these structure type declarations and associated entries in
-# %children as we don't care about certain intermediate abstract
-# interfaces (e.g., all Declarations are just Statements as far as we
-# are concerned):
+# %implementations as we don't care about certain intermediate
+# abstract interfaces (e.g., all Declarations are just Statements as
+# far as we are concerned):
 my %parent_patches = (
-    "FunctionDeclaration" => ["Statement"],
+    "Function" => [],
+    "FunctionDeclaration" => ["Statement", "Function"],
     "VariableDeclaration" => ["Statement"],
     );
 
@@ -60,6 +66,7 @@ my %extras = (
     "Node" => [['Start', 'int', 'json:"start"'],
 	       ['End', 'int', 'json:"end"']],
     "Literal" => [["Raw", "string", 'json:"raw,omitempty"']],
+    "VariableDeclaration" => [["Kind", "string", 'json:"kind,omitempty"']],
     );
 	       
 
@@ -71,7 +78,7 @@ print "package ast\n\n";
 my($type, $name, @fields, @parents, $comments);
 
 # Data accumulated through whole input file:
-my(%children);
+my(%implementations, %children);
     
 while(<>) {
     # Skip table of contents:
@@ -85,7 +92,7 @@ while(<>) {
 	    $name = $1;
 	    # Is type actually going to be an interface?  Create
 	    # common-stuff struct instead:
-	    if($type ~~ @interfaces) {
+	    if($type ~~ @stuff) {
 		$type = lcfirst($type) . "Stuff"
 	    }
 
@@ -97,13 +104,23 @@ while(<>) {
 		@parents = grep { !($_ ~~ @ignore) } split(/\s*,\s*/, $2);
 	    }
 	    for my $p (@parents) {
-		# Is parent type actually an interface?  Use
-		# common-stuff struct instead:
-		if($p ~~ @interfaces) {
-		    $p = lcfirst($p) . "Stuff"
-		}
+		# Record original heirarchy:
 		$children{$p} ||= [];
 		push(@{$children{$p}}, $name);
+
+		unless($name ~~ @stuff || $name ~~ @ignore) {
+		    # Record implementations:
+		    if($p ~~ @interfaces) {
+			$implementations{$p} ||= [];
+			push(@{$implementations{$p}}, $name);
+		    }
+		}
+		
+		# Is parent type actually an interface other type that
+		# has been replaced by embedded "Stuff" struct?
+		if($p ~~ @stuff) {
+		    $p = lcfirst($p) . "Stuff"
+		}
 	    }
 	}
 	# Does this declare properties?
@@ -115,7 +132,7 @@ while(<>) {
 	    given($ftype) {
 		# Use Go types for corresponding JS types:
 		when(/^boolean$/) { $ftype = "bool"; }
-		when(/^string$/) { $ftype = "string"; }
+		when(/^string$/) { $ftype = "string"; $json .= ",omitempty" }
 		when(/^number$/) { $ftype = "int"; } # line/col/position only
 
 		default {
@@ -137,10 +154,11 @@ while(<>) {
 			}
 		    }
 		    # It's a pointer:
-		    $ftype = "*$_" 
+		    $ftype = "*$_";
+		    $json .= ",omitempty";
 		}
 	    }
-	    push @fields, [$field, $pfx . $ftype, "json:\"$json\,omitempty\""]
+	    push @fields, [$field, $pfx . $ftype, "json:\"$json\""]
 		if $field;
 	}
 	else {
@@ -191,9 +209,8 @@ print "/" . ("*" x 68) . "/\n\n";
 foreach my $i (@interfaces) {
     my $int = lcfirst($i);
     print "var ${int}Types = map[string]${int}{\n";
-    foreach my $t (@{$children{"${int}Stuff"}}) {
+    foreach my $t (@{$implementations{$i}}) {
 	print "\t\"$t\": (*$t)(nil),\n"
-	    unless $t ~~ @ignore or $t ~~ @interfaces;
     }
     print "}\n\n";
 }

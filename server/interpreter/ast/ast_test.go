@@ -9,17 +9,15 @@ import (
 func TestUnmarshal(t *testing.T) {
 	var p *Program
 	e := json.Unmarshal([]byte(astJSON), &p)
-
 	if e != nil {
 		t.Error(e)
 	}
 
 	s, e := json.MarshalIndent(p, "", "  ")
-	fmt.Printf("%s\n", s)
-
 	if e != nil {
 		t.Error(e)
 	}
+	fmt.Printf("%s\n", s)
 }
 
 const astJSON = `

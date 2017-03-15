@@ -39,8 +39,8 @@ type SourceLocation struct {
 /********************************************************************/
 
 type Position struct {
-	Line   int `json:"line,omitempty"`
-	Column int `json:"column,omitempty"`
+	Line   int `json:"line"`
+	Column int `json:"column"`
 }
 
 /********************************************************************/
@@ -71,10 +71,9 @@ type Program struct {
 
 /********************************************************************/
 
-// Function is a function [declaration](#functiondeclaration) or
+// functionStuff is a function [declaration](#functiondeclaration) or
 // [expression](#functionexpression).
-type Function struct {
-	nodeStuff
+type functionStuff struct {
 	Id     *Identifier     `json:"id,omitempty"`
 	Params []*Identifier   `json:"params,omitempty"`
 	Body   *BlockStatement `json:"body,omitempty"`
@@ -242,7 +241,7 @@ type DoWhileStatement struct {
 // ForStatement is a for statement.
 type ForStatement struct {
 	statementStuff
-	Init   *DeclOrId   `json:"init,omitempty"`
+	Init   *DeclOrID   `json:"init,omitempty"`
 	Test   *Expression `json:"test,omitempty"`
 	Update *Expression `json:"update,omitempty"`
 	Body   *Statement  `json:"body,omitempty"`
@@ -253,7 +252,7 @@ type ForStatement struct {
 // ForInStatement is a for/in statement.
 type ForInStatement struct {
 	statementStuff
-	Left  *DeclOrId   `json:"left,omitempty"`
+	Left  *DeclOrID   `json:"left,omitempty"`
 	Right *Expression `json:"right,omitempty"`
 	Body  *Statement  `json:"body,omitempty"`
 }
@@ -264,6 +263,7 @@ type ForInStatement struct {
 // the parent interface Function, the id cannot be null.
 type FunctionDeclaration struct {
 	statementStuff
+	functionStuff
 	Id *Identifier `json:"id,omitempty"`
 }
 
@@ -273,6 +273,7 @@ type FunctionDeclaration struct {
 type VariableDeclaration struct {
 	statementStuff
 	Declarations []*VariableDeclarator `json:"declarations,omitempty"`
+	Kind         string                `json:"kind,omitempty"`
 }
 
 /********************************************************************/
@@ -323,7 +324,7 @@ type ObjectExpression struct {
 // the kind values "get" and "set", respectively.
 type Property struct {
 	nodeStuff
-	Key   *LitOrId    `json:"key,omitempty"`
+	Key   *LitOrID    `json:"key,omitempty"`
 	Value *Expression `json:"value,omitempty"`
 }
 
@@ -331,7 +332,7 @@ type Property struct {
 
 // FunctionExpression is a function expression.
 type FunctionExpression struct {
-	Function
+	functionStuff
 	expressionStuff
 }
 
@@ -341,7 +342,7 @@ type FunctionExpression struct {
 type UnaryExpression struct {
 	expressionStuff
 	Operator *string     `json:"operator,omitempty"`
-	Prefix   bool        `json:"prefix,omitempty"`
+	Prefix   bool        `json:"prefix"`
 	Argument *Expression `json:"argument,omitempty"`
 }
 
@@ -355,7 +356,7 @@ type UpdateExpression struct {
 	expressionStuff
 	Operator *string     `json:"operator,omitempty"`
 	Argument *Expression `json:"argument,omitempty"`
-	Prefix   bool        `json:"prefix,omitempty"`
+	Prefix   bool        `json:"prefix"`
 }
 
 /********************************************************************/
@@ -407,7 +408,7 @@ type MemberExpression struct {
 	expressionStuff
 	Object   *Expression `json:"object,omitempty"`
 	Property *Expression `json:"property,omitempty"`
-	Computed bool        `json:"computed,omitempty"`
+	Computed bool        `json:"computed"`
 }
 
 /********************************************************************/
@@ -452,7 +453,6 @@ type SequenceExpression struct {
 
 var nodeTypes = map[string]node{
 	"Program":            (*Program)(nil),
-	"Function":           (*Function)(nil),
 	"SwitchCase":         (*SwitchCase)(nil),
 	"CatchClause":        (*CatchClause)(nil),
 	"VariableDeclarator": (*VariableDeclarator)(nil),
@@ -501,61 +501,61 @@ var expressionTypes = map[string]expression{
 }
 
 // $VAR1 = {
+//           'Expression' => [
+//                             'Identifier',
+//                             'Literal',
+//                             'ThisExpression',
+//                             'ArrayExpression',
+//                             'ObjectExpression',
+//                             'FunctionExpression',
+//                             'UnaryExpression',
+//                             'UpdateExpression',
+//                             'BinaryExpression',
+//                             'AssignmentExpression',
+//                             'LogicalExpression',
+//                             'MemberExpression',
+//                             'ConditionalExpression',
+//                             'CallExpression',
+//                             'NewExpression',
+//                             'SequenceExpression'
+//                           ],
 //           'Function' => [
+//                           'FunctionDeclaration',
 //                           'FunctionExpression'
 //                         ],
 //           'Literal' => [
 //                          'RegExpLiteral'
 //                        ],
-//           'expressionStuff' => [
-//                                  'Identifier',
-//                                  'Literal',
-//                                  'ThisExpression',
-//                                  'ArrayExpression',
-//                                  'ObjectExpression',
-//                                  'FunctionExpression',
-//                                  'UnaryExpression',
-//                                  'UpdateExpression',
-//                                  'BinaryExpression',
-//                                  'AssignmentExpression',
-//                                  'LogicalExpression',
-//                                  'MemberExpression',
-//                                  'ConditionalExpression',
-//                                  'CallExpression',
-//                                  'NewExpression',
-//                                  'SequenceExpression'
-//                                ],
-//           'nodeStuff' => [
-//                            'Program',
-//                            'Function',
-//                            'Statement',
-//                            'SwitchCase',
-//                            'CatchClause',
-//                            'VariableDeclarator',
-//                            'Expression',
-//                            'Property',
-//                            'Pattern'
-//                          ],
-//           'statementStuff' => [
-//                                 'ExpressionStatement',
-//                                 'BlockStatement',
-//                                 'EmptyStatement',
-//                                 'DebuggerStatement',
-//                                 'WithStatement',
-//                                 'ReturnStatement',
-//                                 'LabeledStatement',
-//                                 'BreakStatement',
-//                                 'ContinueStatement',
-//                                 'IfStatement',
-//                                 'SwitchStatement',
-//                                 'ThrowStatement',
-//                                 'TryStatement',
-//                                 'WhileStatement',
-//                                 'DoWhileStatement',
-//                                 'ForStatement',
-//                                 'ForInStatement',
-//                                 'Declaration',
-//                                 'FunctionDeclaration',
-//                                 'VariableDeclaration'
-//                               ]
+//           'Node' => [
+//                       'Program',
+//                       'Statement',
+//                       'SwitchCase',
+//                       'CatchClause',
+//                       'VariableDeclarator',
+//                       'Expression',
+//                       'Property',
+//                       'Pattern'
+//                     ],
+//           'Statement' => [
+//                            'ExpressionStatement',
+//                            'BlockStatement',
+//                            'EmptyStatement',
+//                            'DebuggerStatement',
+//                            'WithStatement',
+//                            'ReturnStatement',
+//                            'LabeledStatement',
+//                            'BreakStatement',
+//                            'ContinueStatement',
+//                            'IfStatement',
+//                            'SwitchStatement',
+//                            'ThrowStatement',
+//                            'TryStatement',
+//                            'WhileStatement',
+//                            'DoWhileStatement',
+//                            'ForStatement',
+//                            'ForInStatement',
+//                            'Declaration',
+//                            'FunctionDeclaration',
+//                            'VariableDeclaration'
+//                          ]
 //         };

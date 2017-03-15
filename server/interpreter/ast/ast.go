@@ -114,18 +114,60 @@ func (this *Expressions) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-type DeclOrId declOrId
-type declOrId interface {
-	_is_declOrId()
+type DeclOrID struct{ declOrID }
+type declOrID interface {
+	_is_declOrID()
 }
 
 func (VariableDeclaration) _is_declOrID() {}
 func (Identifier) _is_declOrID()          {}
 
-type LitOrId litOrId
-type litOrId interface {
-	_is_litOrId()
+func (this *DeclOrID) UnmarshalJSON(b []byte) error {
+	var tmp typeOnly
+	if err := json.Unmarshal(b, &tmp); err != nil {
+		return err
+	}
+	var n declOrID
+	switch tmp.Type {
+	case "VariableDeclaration":
+		n = new(VariableDeclaration)
+	case "Identifier":
+		n = new(Identifier)
+	default:
+		return fmt.Errorf("Unrecognized type %s", tmp.Type)
+	}
+	if err := json.Unmarshal(b, &n); err != nil {
+		return err
+	}
+	this.declOrID = n
+	return nil
 }
 
-func (Literal) _is_litOrId()    {}
-func (Identifier) _is_litOrId() {}
+type LitOrID struct{ litOrID }
+type litOrID interface {
+	_is_litOrID()
+}
+
+func (Literal) _is_litOrID()    {}
+func (Identifier) _is_litOrID() {}
+
+func (this *LitOrID) UnmarshalJSON(b []byte) error {
+	var tmp typeOnly
+	if err := json.Unmarshal(b, &tmp); err != nil {
+		return err
+	}
+	var n litOrID
+	switch tmp.Type {
+	case "Literal":
+		n = new(Literal)
+	case "Identifier":
+		n = new(Identifier)
+	default:
+		return fmt.Errorf("Unrecognized type %s", tmp.Type)
+	}
+	if err := json.Unmarshal(b, &n); err != nil {
+		return err
+	}
+	this.litOrID = n
+	return nil
+}
