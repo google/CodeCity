@@ -4,7 +4,7 @@
 // structs, interfaces, and slices.
 //
 // Most of the ES5 nodes are represented by a Go struct of the same
-// name, with fields with capitalised versions of the same names (so
+// name, with the same field names (but with capitalised initials so
 // they are visible outside the ast package).
 //
 // There are some execptions - notably for statements and expressions -
@@ -133,6 +133,8 @@ func (this *Expression) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+// Expressions is a wrapper of slice of expression interfaces to allow
+// a UnmarshallJSON method to be defined.
 type Expressions []expression
 
 func (this *Expressions) UnmarshalJSON(b []byte) error {

@@ -4,10 +4,6 @@ package ast
 
 /********************************************************************/
 
-// ESTree AST nodes are represented as Node objects, which may have
-// any prototype inheritance but which implement the following
-// interface:
-//
 // The type field is a string representing the AST variant type. Each
 // subtype of Node is documented below with the specific string of
 // its type field. You can use this field to determine which
@@ -19,6 +15,7 @@ package ast
 // of a start position (the position of the first character of the
 // parsed source region) and an end position (the position of the
 // first character after the parsed source region):
+// (Auto-generated from ESTree spec.)
 type nodeStuff struct {
 	Type  string          `json:"type,omitempty"`
 	Loc   *SourceLocation `json:"loc,omitempty"`
@@ -30,6 +27,7 @@ type nodeStuff struct {
 
 // Each Position object consists of a line number (1-indexed) and a
 // column number (0-indexed):
+// (Auto-generated from ESTree spec.)
 type SourceLocation struct {
 	Source string    `json:"source,omitempty"`
 	Start  *Position `json:"start,omitempty"`
@@ -47,6 +45,7 @@ type Position struct {
 
 // Identifier is an identifier. Note that an identifier may be an
 // expression or a destructuring pattern.
+// (Auto-generated from ESTree spec.)
 type Identifier struct {
 	expressionStuff
 	Name string `json:"name,omitempty"`
@@ -56,6 +55,7 @@ type Identifier struct {
 
 // Literal is a literal token. Note that a literal can be an
 // expression.
+// (Auto-generated from ESTree spec.)
 type Literal struct {
 	expressionStuff
 	Raw string `json:"raw,omitempty"`
@@ -64,6 +64,7 @@ type Literal struct {
 /********************************************************************/
 
 // Program is a complete program source tree.
+// (Auto-generated from ESTree spec.)
 type Program struct {
 	nodeStuff
 	Body *Statements `json:"body,omitempty"`
@@ -73,6 +74,7 @@ type Program struct {
 
 // functionStuff is a function [declaration](#functiondeclaration) or
 // [expression](#functionexpression).
+// (Auto-generated from ESTree spec.)
 type functionStuff struct {
 	Id     *Identifier     `json:"id,omitempty"`
 	Params []*Identifier   `json:"params,omitempty"`
@@ -82,6 +84,7 @@ type functionStuff struct {
 /********************************************************************/
 
 // Any statement.
+// (Auto-generated from ESTree spec.)
 type statementStuff struct {
 	nodeStuff
 }
@@ -90,6 +93,7 @@ type statementStuff struct {
 
 // ExpressionStatement is an expression statement, i.e., a statement
 // consisting of a single expression.
+// (Auto-generated from ESTree spec.)
 type ExpressionStatement struct {
 	statementStuff
 	Expression *Expression `json:"expression,omitempty"`
@@ -99,6 +103,7 @@ type ExpressionStatement struct {
 
 // BlockStatement is a block statement, i.e., a sequence of
 // statements surrounded by braces.
+// (Auto-generated from ESTree spec.)
 type BlockStatement struct {
 	statementStuff
 	Body *Statements `json:"body,omitempty"`
@@ -107,6 +112,7 @@ type BlockStatement struct {
 /********************************************************************/
 
 // EmptyStatement is an empty statement, i.e., a solitary semicolon.
+// (Auto-generated from ESTree spec.)
 type EmptyStatement struct {
 	statementStuff
 }
@@ -114,6 +120,7 @@ type EmptyStatement struct {
 /********************************************************************/
 
 // DebuggerStatement is a debugger statement.
+// (Auto-generated from ESTree spec.)
 type DebuggerStatement struct {
 	statementStuff
 }
@@ -121,6 +128,7 @@ type DebuggerStatement struct {
 /********************************************************************/
 
 // WithStatement is a with statement.
+// (Auto-generated from ESTree spec.)
 type WithStatement struct {
 	statementStuff
 	Object *Expression `json:"object,omitempty"`
@@ -130,6 +138,7 @@ type WithStatement struct {
 /********************************************************************/
 
 // ReturnStatement is a return statement.
+// (Auto-generated from ESTree spec.)
 type ReturnStatement struct {
 	statementStuff
 	Argument *Expression `json:"argument,omitempty"`
@@ -139,6 +148,7 @@ type ReturnStatement struct {
 
 // LabeledStatement is a labeled statement, i.e., a statement
 // prefixed by a break/continue label.
+// (Auto-generated from ESTree spec.)
 type LabeledStatement struct {
 	statementStuff
 	Label *Identifier `json:"label,omitempty"`
@@ -148,6 +158,7 @@ type LabeledStatement struct {
 /********************************************************************/
 
 // BreakStatement is a break statement.
+// (Auto-generated from ESTree spec.)
 type BreakStatement struct {
 	statementStuff
 	Label *Identifier `json:"label,omitempty"`
@@ -156,6 +167,7 @@ type BreakStatement struct {
 /********************************************************************/
 
 // ContinueStatement is a continue statement.
+// (Auto-generated from ESTree spec.)
 type ContinueStatement struct {
 	statementStuff
 	Label *Identifier `json:"label,omitempty"`
@@ -164,6 +176,7 @@ type ContinueStatement struct {
 /********************************************************************/
 
 // IfStatement is an if statement.
+// (Auto-generated from ESTree spec.)
 type IfStatement struct {
 	statementStuff
 	Test       *Expression `json:"test,omitempty"`
@@ -174,6 +187,7 @@ type IfStatement struct {
 /********************************************************************/
 
 // SwitchStatement is a switch statement.
+// (Auto-generated from ESTree spec.)
 type SwitchStatement struct {
 	statementStuff
 	Discriminant *Expression   `json:"discriminant,omitempty"`
@@ -184,6 +198,7 @@ type SwitchStatement struct {
 
 // SwitchCase is a case (if test is an Expression) or default (if
 // test === null) clause in the body of a switch statement.
+// (Auto-generated from ESTree spec.)
 type SwitchCase struct {
 	nodeStuff
 	Test       *Expression `json:"test,omitempty"`
@@ -193,6 +208,7 @@ type SwitchCase struct {
 /********************************************************************/
 
 // ThrowStatement is a throw statement.
+// (Auto-generated from ESTree spec.)
 type ThrowStatement struct {
 	statementStuff
 	Argument *Expression `json:"argument,omitempty"`
@@ -202,6 +218,7 @@ type ThrowStatement struct {
 
 // TryStatement is a try statement. If handler is null then finalizer
 // must be a BlockStatement.
+// (Auto-generated from ESTree spec.)
 type TryStatement struct {
 	statementStuff
 	Block     *BlockStatement `json:"block,omitempty"`
@@ -212,6 +229,7 @@ type TryStatement struct {
 /********************************************************************/
 
 // CatchClause is a catch clause following a try block.
+// (Auto-generated from ESTree spec.)
 type CatchClause struct {
 	nodeStuff
 	Param *Identifier     `json:"param,omitempty"`
@@ -221,6 +239,7 @@ type CatchClause struct {
 /********************************************************************/
 
 // WhileStatement is a while statement.
+// (Auto-generated from ESTree spec.)
 type WhileStatement struct {
 	statementStuff
 	Test *Expression `json:"test,omitempty"`
@@ -230,6 +249,7 @@ type WhileStatement struct {
 /********************************************************************/
 
 // DoWhileStatement is a do/while statement.
+// (Auto-generated from ESTree spec.)
 type DoWhileStatement struct {
 	statementStuff
 	Body *Statement  `json:"body,omitempty"`
@@ -239,6 +259,7 @@ type DoWhileStatement struct {
 /********************************************************************/
 
 // ForStatement is a for statement.
+// (Auto-generated from ESTree spec.)
 type ForStatement struct {
 	statementStuff
 	Init   *ForStatementInit `json:"init,omitempty"`
@@ -250,6 +271,7 @@ type ForStatement struct {
 /********************************************************************/
 
 // ForInStatement is a for/in statement.
+// (Auto-generated from ESTree spec.)
 type ForInStatement struct {
 	statementStuff
 	Left  *ForInStatementLeft `json:"left,omitempty"`
@@ -261,6 +283,7 @@ type ForInStatement struct {
 
 // FunctionDeclaration is a function declaration. Note that unlike in
 // the parent interface Function, the id cannot be null.
+// (Auto-generated from ESTree spec.)
 type FunctionDeclaration struct {
 	statementStuff
 	functionStuff
@@ -270,6 +293,7 @@ type FunctionDeclaration struct {
 /********************************************************************/
 
 // VariableDeclaration is a variable declaration.
+// (Auto-generated from ESTree spec.)
 type VariableDeclaration struct {
 	statementStuff
 	Declarations []*VariableDeclarator `json:"declarations,omitempty"`
@@ -279,6 +303,7 @@ type VariableDeclaration struct {
 /********************************************************************/
 
 // VariableDeclarator is a variable declarator.
+// (Auto-generated from ESTree spec.)
 type VariableDeclarator struct {
 	nodeStuff
 	Id   *Identifier `json:"id,omitempty"`
@@ -289,6 +314,7 @@ type VariableDeclarator struct {
 
 // Any expression node. Since the left-hand side of an assignment may
 // be any expression in general, an expression can also be a pattern.
+// (Auto-generated from ESTree spec.)
 type expressionStuff struct {
 	nodeStuff
 }
@@ -296,6 +322,7 @@ type expressionStuff struct {
 /********************************************************************/
 
 // ThisExpression is a this expression.
+// (Auto-generated from ESTree spec.)
 type ThisExpression struct {
 	expressionStuff
 }
@@ -303,6 +330,7 @@ type ThisExpression struct {
 /********************************************************************/
 
 // ArrayExpression is an array expression.
+// (Auto-generated from ESTree spec.)
 type ArrayExpression struct {
 	expressionStuff
 	Elements *Expressions `json:"elements,omitempty"`
@@ -311,6 +339,7 @@ type ArrayExpression struct {
 /********************************************************************/
 
 // ObjectExpression is an object expression.
+// (Auto-generated from ESTree spec.)
 type ObjectExpression struct {
 	expressionStuff
 	Properties []*Property `json:"properties,omitempty"`
@@ -322,6 +351,7 @@ type ObjectExpression struct {
 // either a string or number as its value. Ordinary property
 // initializers have a kind value "init"; getters and setters have
 // the kind values "get" and "set", respectively.
+// (Auto-generated from ESTree spec.)
 type Property struct {
 	nodeStuff
 	Key   *PropertyKey `json:"key,omitempty"`
@@ -331,6 +361,7 @@ type Property struct {
 /********************************************************************/
 
 // FunctionExpression is a function expression.
+// (Auto-generated from ESTree spec.)
 type FunctionExpression struct {
 	functionStuff
 	expressionStuff
@@ -339,6 +370,7 @@ type FunctionExpression struct {
 /********************************************************************/
 
 // UnaryExpression is a unary operator expression.
+// (Auto-generated from ESTree spec.)
 type UnaryExpression struct {
 	expressionStuff
 	Operator *string     `json:"operator,omitempty"`
@@ -348,10 +380,9 @@ type UnaryExpression struct {
 
 /********************************************************************/
 
-//  is a unary operator token.
-//
 // UpdateExpression is an update (increment or decrement) operator
 // expression.
+// (Auto-generated from ESTree spec.)
 type UpdateExpression struct {
 	expressionStuff
 	Operator *string     `json:"operator,omitempty"`
@@ -361,9 +392,8 @@ type UpdateExpression struct {
 
 /********************************************************************/
 
-//  is an update (increment or decrement) operator token.
-//
 // BinaryExpression is a binary operator expression.
+// (Auto-generated from ESTree spec.)
 type BinaryExpression struct {
 	expressionStuff
 	Operator *string     `json:"operator,omitempty"`
@@ -373,9 +403,8 @@ type BinaryExpression struct {
 
 /********************************************************************/
 
-//  is a binary operator token.
-//
 // AssignmentExpression is an assignment operator expression.
+// (Auto-generated from ESTree spec.)
 type AssignmentExpression struct {
 	expressionStuff
 	Operator *string     `json:"operator,omitempty"`
@@ -385,9 +414,8 @@ type AssignmentExpression struct {
 
 /********************************************************************/
 
-//  is an assignment operator token.
-//
 // LogicalExpression is a logical operator expression.
+// (Auto-generated from ESTree spec.)
 type LogicalExpression struct {
 	expressionStuff
 	Operator *string     `json:"operator,omitempty"`
@@ -397,13 +425,12 @@ type LogicalExpression struct {
 
 /********************************************************************/
 
-//  is a logical operator token.
-//
 // MemberExpression is a member expression. If computed is true, the
 // node corresponds to a computed (a[b]) member expression and
 // property is an Expression. If computed is false, the node
 // corresponds to a static (a.b) member expression and property is an
 // Identifier.
+// (Auto-generated from ESTree spec.)
 type MemberExpression struct {
 	expressionStuff
 	Object   *Expression `json:"object,omitempty"`
@@ -415,6 +442,7 @@ type MemberExpression struct {
 
 // ConditionalExpression is a conditional expression, i.e., a ternary
 // ?/: expression.
+// (Auto-generated from ESTree spec.)
 type ConditionalExpression struct {
 	expressionStuff
 	Test       *Expression `json:"test,omitempty"`
@@ -425,6 +453,7 @@ type ConditionalExpression struct {
 /********************************************************************/
 
 // CallExpression is a function or method call expression.
+// (Auto-generated from ESTree spec.)
 type CallExpression struct {
 	expressionStuff
 	Callee    *Expression  `json:"callee,omitempty"`
@@ -434,6 +463,7 @@ type CallExpression struct {
 /********************************************************************/
 
 // NewExpression is a new expression.
+// (Auto-generated from ESTree spec.)
 type NewExpression struct {
 	expressionStuff
 	Callee    *Expression  `json:"callee,omitempty"`
@@ -444,6 +474,7 @@ type NewExpression struct {
 
 // SequenceExpression is a sequence expression, i.e., a
 // comma-separated sequence of expressions.
+// (Auto-generated from ESTree spec.)
 type SequenceExpression struct {
 	expressionStuff
 	Expressions *Expressions `json:"expressions,omitempty"`
