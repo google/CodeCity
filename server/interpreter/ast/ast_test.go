@@ -6,13 +6,13 @@ import (
 	"testing"
 )
 
-func TestUnmarshal(t *testing.T) {
-	var p *Program
-	e := json.Unmarshal([]byte(astJSON), &p)
+func TestNewFromJSON(t *testing.T) {
+	p, e := NewFromJSON([]byte(astJSON))
 	if e != nil {
 		t.Error(e)
 	}
-
+	// FIXME: test to see if returned tree was actually correct - not
+	// just that it can be reencoded without error.
 	s, e := json.MarshalIndent(p, "", "  ")
 	if e != nil {
 		t.Error(e)

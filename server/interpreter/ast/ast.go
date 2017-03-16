@@ -15,6 +15,9 @@
 // auto-generated from the ES5 ESTree spec document by the md2go
 // script; run `go generate` to update it.  The rest of the code, and
 // in particular interface types and associated methods, is in ast.go.
+//
+// It is intended that AST nodes will normally be created by the
+// NewFromJSON() factory function.
 package ast
 
 //go:generate sh -c "./md2go es5.md > astnodes.go && go fmt"
@@ -25,21 +28,34 @@ import (
 	"reflect"
 )
 
-// typeOnly is used in the two-pass UnmarshalJSON routines: they
-// initially unmarshal the unknown JSON object into this type, so as
-// to be able to determine the node types to allocate for the second
-// pass.  JSON unmarhsalling routines.
-type typeOnly struct {
-	Type string `json:"type"`
+// NewFromJSON is a factory function that creates an abstract syntax
+// tree by unmarshalling a JSON-encoded ESTree.
+//
+// The present implementation assumes that the top-most node of the
+// tree is a Program node.
+func NewFromJSON(astJSON []byte) (ast Node, err error) {
+	var p *Program
+	e := json.Unmarshal([]byte(astJSON), &p)
+	if e != nil {
+		return nil, e
+	}
+	return p, nil
 }
+
+/********************************************************************/
 
 // node is an interface fulfilled by all ESTree nodes.
 type node interface {
 	_is_node()
 }
 
+// Node is any arbitrary ESTree node.
+type Node node
+
 // nodeStuff._is_node() is a dummy method for interface satisfaction.
 func (nodeStuff) _is_node() {}
+
+/********************************************************************/
 
 // statement is an interface fulfilled by all ESTree <Foo>Statement
 // nodes.
@@ -261,4 +277,14 @@ func (this *PropertyKey) UnmarshalJSON(b []byte) error {
 	}
 	this.N = n
 	return nil
+}
+
+/********************************************************************/
+
+// typeOnly is used in the two-pass UnmarshalJSON routines: they
+// initially unmarshal the unknown JSON object into this type, so as
+// to be able to determine the node types to allocate for the second
+// pass.  JSON unmarhsalling routines.
+type typeOnly struct {
+	Type string `json:"type"`
 }
