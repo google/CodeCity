@@ -158,24 +158,24 @@ func (this *Expressions) UnmarshalJSON(b []byte) error {
 
 /********************************************************************/
 
-// DeclOrID is an interface representing the things that can appear in
-// the first position of a for-in statement - specifically, either a
-// VariableDeclaration (for(var v in ...)) or an Identifier (for(v in
-// ...).
-type DeclOrID struct{ N declOrID }
-type declOrID interface {
-	_is_declOrID()
+// ForStatementInit is (wrapper for an) interface representing the
+// things that can appear in the first position of a for statement -
+// specifically, either a VariableDeclaration (for(var v = 0; ...)) or
+// an Expression (for(v = 0; ...)).
+type ForStatementInit struct{ N forStatementInit }
+type forStatementInit interface {
+	_is_forStatementInit()
 }
 
-func (VariableDeclaration) _is_declOrID() {}
-func (Identifier) _is_declOrID()          {}
+func (VariableDeclaration) _is_forStatementInit() {}
+func (Identifier) _is_forStatementInit()          {}
 
-func (this *DeclOrID) UnmarshalJSON(b []byte) error {
+func (this *ForStatementInit) UnmarshalJSON(b []byte) error {
 	var tmp typeOnly
 	if err := json.Unmarshal(b, &tmp); err != nil {
 		return err
 	}
-	var n declOrID
+	var n forStatementInit
 	switch tmp.Type {
 	case "VariableDeclaration":
 		n = new(VariableDeclaration)
@@ -193,24 +193,59 @@ func (this *DeclOrID) UnmarshalJSON(b []byte) error {
 
 /********************************************************************/
 
-// LitOrID is an interface representing the things that can appear to
-// the left othe colon in a property in an object literal -
-// specifically, either a Literal ({"foo": ... }) or an Identifier
-// ({foo: ...}).
-type LitOrID struct{ N litOrID }
-type litOrID interface {
-	_is_litOrID()
+// ForInStatementLeft is a (wrapper for an) interface representing the
+// things that can appear in the first position of a for-in statement
+// - specifically, either a VariableDeclaration (for(var v in ...)) or
+// an Identifier (for(v in ...).
+type ForInStatementLeft struct{ N forInStatementLeft }
+type forInStatementLeft interface {
+	_is_forInStatementLeft()
 }
 
-func (Literal) _is_litOrID()    {}
-func (Identifier) _is_litOrID() {}
+func (VariableDeclaration) _is_forInStatementLeft() {}
+func (Identifier) _is_forInStatementLeft()          {}
 
-func (this *LitOrID) UnmarshalJSON(b []byte) error {
+func (this *ForInStatementLeft) UnmarshalJSON(b []byte) error {
 	var tmp typeOnly
 	if err := json.Unmarshal(b, &tmp); err != nil {
 		return err
 	}
-	var n litOrID
+	var n forInStatementLeft
+	switch tmp.Type {
+	case "VariableDeclaration":
+		n = new(VariableDeclaration)
+	case "Identifier":
+		n = new(Identifier)
+	default:
+		return fmt.Errorf("Unrecognized type %s", tmp.Type)
+	}
+	if err := json.Unmarshal(b, &n); err != nil {
+		return err
+	}
+	this.N = n
+	return nil
+}
+
+/********************************************************************/
+
+// PropertyKey is an interface representing the things that can appear to
+// the left othe colon in a property in an object literal -
+// specifically, either a Literal ({"foo": ... }) or an Identifier
+// ({foo: ...}).
+type PropertyKey struct{ N propertyKey }
+type propertyKey interface {
+	_is_propertyKey()
+}
+
+func (Literal) _is_propertyKey()    {}
+func (Identifier) _is_propertyKey() {}
+
+func (this *PropertyKey) UnmarshalJSON(b []byte) error {
+	var tmp typeOnly
+	if err := json.Unmarshal(b, &tmp); err != nil {
+		return err
+	}
+	var n propertyKey
 	switch tmp.Type {
 	case "Literal":
 		n = new(Literal)

@@ -241,10 +241,10 @@ type DoWhileStatement struct {
 // ForStatement is a for statement.
 type ForStatement struct {
 	statementStuff
-	Init   *DeclOrID   `json:"init,omitempty"`
-	Test   *Expression `json:"test,omitempty"`
-	Update *Expression `json:"update,omitempty"`
-	Body   *Statement  `json:"body,omitempty"`
+	Init   *ForStatementInit `json:"init,omitempty"`
+	Test   *Expression       `json:"test,omitempty"`
+	Update *Expression       `json:"update,omitempty"`
+	Body   *Statement        `json:"body,omitempty"`
 }
 
 /********************************************************************/
@@ -252,9 +252,9 @@ type ForStatement struct {
 // ForInStatement is a for/in statement.
 type ForInStatement struct {
 	statementStuff
-	Left  *DeclOrID   `json:"left,omitempty"`
-	Right *Expression `json:"right,omitempty"`
-	Body  *Statement  `json:"body,omitempty"`
+	Left  *ForInStatementLeft `json:"left,omitempty"`
+	Right *Expression         `json:"right,omitempty"`
+	Body  *Statement          `json:"body,omitempty"`
 }
 
 /********************************************************************/
@@ -324,8 +324,8 @@ type ObjectExpression struct {
 // the kind values "get" and "set", respectively.
 type Property struct {
 	nodeStuff
-	Key   *LitOrID    `json:"key,omitempty"`
-	Value *Expression `json:"value,omitempty"`
+	Key   *PropertyKey `json:"key,omitempty"`
+	Value *Expression  `json:"value,omitempty"`
 }
 
 /********************************************************************/
