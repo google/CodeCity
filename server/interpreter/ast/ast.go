@@ -25,26 +25,35 @@ import (
 	"reflect"
 )
 
-// typeOnly is used to determine node types in first pass of two-pass
-// JSON unmarhsalling routines.
+// typeOnly is used in the two-pass UnmarshalJSON routines: they
+// initially unmarshal the unknown JSON object into this type, so as
+// to be able to determine the node types to allocate for the second
+// pass.  JSON unmarhsalling routines.
 type typeOnly struct {
 	Type string `json:"type"`
 }
 
+// node is an interface fulfilled by all ESTree nodes.
 type node interface {
 	_is_node()
 }
 
+// nodeStuff._is_node() is a dummy method for interface satisfaction.
 func (nodeStuff) _is_node() {}
 
+// statement is an interface fulfilled by all ESTree <Foo>Statement
+// nodes.
 type statement interface {
 	_is_statement()
 }
 
+// statementStuff._is_statement() is a dummy method for interface
+// satisfaction.
 func (statementStuff) _is_statement() {}
 
+// Statement is a wrapper of (a single instance of) the statement
+// interface to allow a UnmarshallJSON method to be defined.
 type Statement struct{ S statement }
-type Statements []statement
 
 func (this *Statement) UnmarshalJSON(b []byte) error {
 	var tmp typeOnly
@@ -63,6 +72,10 @@ func (this *Statement) UnmarshalJSON(b []byte) error {
 	this.S = s
 	return nil
 }
+
+// Statements is a wrapper of slice of statement interfaces to allow a
+// UnmarshallJSON method to be defined.
+type Statements []statement
 
 func (this *Statements) UnmarshalJSON(b []byte) error {
 	var tmp []typeOnly
@@ -84,14 +97,24 @@ func (this *Statements) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-type Expression struct{ E expression }
-type Expressions []expression
+/********************************************************************/
+
+// expression is an interface satisfied by all ESTree <Foo>Expression
+// nodes.
 type expression interface {
 	_is_expression()
 }
 
+// expressionStuff._is_expression() is a dummy method for interface
+// satisfaction.
 func (expressionStuff) _is_expression() {}
 
+// Expression is a wrapper of (a single instance of) the expression
+// interface to allow a UnmarshallJSON method to be defined.
+type Expression struct{ E expression }
+
+// Expressions is a wrapper of slice of expression interfaces to allow
+// a UnmarshallJSON method to be defined.
 func (this *Expression) UnmarshalJSON(b []byte) error {
 	var tmp typeOnly
 	if err := json.Unmarshal(b, &tmp); err != nil {
@@ -109,6 +132,8 @@ func (this *Expression) UnmarshalJSON(b []byte) error {
 	this.E = e
 	return nil
 }
+
+type Expressions []expression
 
 func (this *Expressions) UnmarshalJSON(b []byte) error {
 	var tmp []typeOnly
@@ -131,6 +156,12 @@ func (this *Expressions) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+/********************************************************************/
+
+// DeclOrID is an interface representing the things that can appear in
+// the first position of a for-in statement - specifically, either a
+// VariableDeclaration (for(var v in ...)) or an Identifier (for(v in
+// ...).
 type DeclOrID struct{ N declOrID }
 type declOrID interface {
 	_is_declOrID()
@@ -160,6 +191,12 @@ func (this *DeclOrID) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+/********************************************************************/
+
+// LitOrID is an interface representing the things that can appear to
+// the left othe colon in a property in an object literal -
+// specifically, either a Literal ({"foo": ... }) or an Identifier
+// ({foo: ...}).
 type LitOrID struct{ N litOrID }
 type litOrID interface {
 	_is_litOrID()
