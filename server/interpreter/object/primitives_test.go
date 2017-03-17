@@ -40,7 +40,6 @@ func TestPrimitiveFromRaw(t *testing.T) {
 				c.raw, v, v, c.expected, c.expected)
 		}
 	}
-
 }
 
 func TestPrimitivesPrimitiveness(t *testing.T) {

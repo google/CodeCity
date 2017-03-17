@@ -165,39 +165,33 @@ func (this *stateBlockStatement) acceptValue(v object.Value) {
 
 type stateExpressionStatement struct {
 	stateCommon
-	node  ast.ExpressionStatement
-	value object.Value
-	done  bool
+	expr ast.Expression
 }
 
 func (this *stateExpressionStatement) init(node ast.ExpressionStatement) {
-	this.node = node
+	this.expr = node.Expression
 }
 
 func (this *stateExpressionStatement) step() state {
-	if !this.done {
-		return newState(this, ast.Node(this.node.Expression.E))
-	}
-	this.parent.acceptValue(this.value)
-	return this.parent
-
+	return newState(this.parent, ast.Node(this.expr.E))
 }
 
 func (this *stateExpressionStatement) acceptValue(v object.Value) {
-	this.value = v
-	this.done = true
+	panic("should not be reached")
 }
 
 /********************************************************************/
 
 type stateBinaryExpression struct {
 	stateCommon
+	op                  string
 	lNode, rNode        ast.Expression
 	haveLeft, haveRight bool
 	left, right         object.Value
 }
 
 func (this *stateBinaryExpression) init(node ast.BinaryExpression) {
+	this.op = node.Operator
 	this.lNode = node.Left
 	this.rNode = node.Right
 	this.haveLeft = false
@@ -209,10 +203,29 @@ func (this *stateBinaryExpression) step() state {
 		return newState(this, ast.Node(this.lNode.E))
 	} else if !this.haveRight {
 		return newState(this, ast.Node(this.rNode.E))
-	} else {
-		this.parent.acceptValue(object.Number(this.left.(object.Number) + this.right.(object.Number)))
-		return this.parent
 	}
+
+	// FIXME: implement other operators, types
+
+	var v object.Value
+	switch this.op {
+	case "+":
+		v = object.Number(this.left.(object.Number) +
+			this.right.(object.Number))
+	case "-":
+		v = object.Number(this.left.(object.Number) -
+			this.right.(object.Number))
+	case "*":
+		v = object.Number(this.left.(object.Number) *
+			this.right.(object.Number))
+	case "/":
+		v = object.Number(this.left.(object.Number) /
+			this.right.(object.Number))
+	}
+
+	this.parent.acceptValue(v)
+	return this.parent
+
 }
 
 func (this *stateBinaryExpression) acceptValue(v object.Value) {
@@ -244,5 +257,5 @@ func (this *stateLiteral) step() state {
 }
 
 func (this *stateLiteral) acceptValue(v object.Value) {
-	panic(fmt.Errorf("literal can't have subexpression"))
+	panic(fmt.Errorf("Literal can't have subexpression"))
 }
