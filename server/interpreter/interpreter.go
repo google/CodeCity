@@ -7,11 +7,15 @@ import (
 	"CodeCity/server/interpreter/object"
 )
 
+// Interpreter implements a JavaScript interpreter.
 type Interpreter struct {
 	state state
 	value object.Value
 }
 
+// NewInterpreter takes a JavaScript program, in the form of an
+// JSON-encoded ESTree, and creates a new Interpreter that will
+// execute that program.
 func NewInterpreter(astJSON string) *Interpreter {
 	var this = new(Interpreter)
 
@@ -19,12 +23,13 @@ func NewInterpreter(astJSON string) *Interpreter {
 	if err != nil {
 		panic(err)
 	}
-	this.state = NewState(nil, *tree)
+	this.state = newState(nil, *tree)
 	this.state.(*stateBlockStatement).interpreter = this
 	return this
 }
 
-// Returns true if a step was executed; false if no more instructions.
+// Step performs the next step in the evaluation of program.  Returns
+// true if a step was executed; false if the program has terminated.
 func (this *Interpreter) Step() bool {
 	if this.state == nil {
 		return false
@@ -34,27 +39,52 @@ func (this *Interpreter) Step() bool {
 	return true
 }
 
+// Run runs the program to completion.
 func (this *Interpreter) Run() {
 	for this.Step() {
 	}
 }
 
+// Value returns the final value computed by the last statement
+// expression of the program.
 func (this *Interpreter) Value() object.Value {
 	return this.value
 }
 
+// acceptValue receives the final value computed by the program.  It
+// is normally called from the step method of final state to be
+// evaluated before the program terminates.
 func (this *Interpreter) acceptValue(v object.Value) {
 	this.value = v
 }
 
 /********************************************************************/
 
+// state is the interface implemented by each of the types
+// representing different possible next states for the interpreter
+// (roughly: one state per ast.Node implementation); each value of
+// this type represents a possible state of the computation.
 type state interface {
+	// step performs the next step in the evaluation of the program, and
+	// returns the new state execution state.
 	step() state
+
+	// acceptValue receives the value resulting from the evaluation of
+	//a child expression.
+	/// It is normally called by the
+	// subexpression's step method, typically as follows:
+	//
+	//        // ... compute value to be returned ...
+	//        this.parent.acceptValue(value)
+	//        return this.parent
+	//    }
 	acceptValue(object.Value)
 }
 
-func NewState(parent state, node ast.Node) state {
+// newState creates a state object corresponding to the given AST
+// node.  The parent parameter represents the state the interpreter
+// should return to after evaluating the tree rooted at node.
+func newState(parent state, node ast.Node) state {
 	switch n := node.(type) {
 	case ast.Program:
 		s := stateBlockStatement{}
@@ -88,7 +118,12 @@ func NewState(parent state, node ast.Node) state {
 
 /********************************************************************/
 
+// stateCommon is a struct, intended to be embedded in most or all
+// state<NodeType> types, which provides fields common to most/all
+// states.
 type stateCommon struct {
+	// state is the state to return to once evaluation of this state is
+	// finished.
 	parent state
 }
 
@@ -112,7 +147,7 @@ func (this *stateBlockStatement) init(node ast.BlockStatement) {
 
 func (this *stateBlockStatement) step() state {
 	if this.n < len(this.body) {
-		s := NewState(this, (this.body)[this.n])
+		s := newState(this, (this.body)[this.n])
 		this.n++
 		return s
 	}
@@ -141,7 +176,7 @@ func (this *stateExpressionStatement) init(node ast.ExpressionStatement) {
 
 func (this *stateExpressionStatement) step() state {
 	if !this.done {
-		return NewState(this, ast.Node(this.node.Expression.E))
+		return newState(this, ast.Node(this.node.Expression.E))
 	}
 	this.parent.acceptValue(this.value)
 	return this.parent
@@ -171,9 +206,9 @@ func (this *stateBinaryExpression) init(node ast.BinaryExpression) {
 
 func (this *stateBinaryExpression) step() state {
 	if !this.haveLeft {
-		return NewState(this, ast.Node(this.lNode.E))
+		return newState(this, ast.Node(this.lNode.E))
 	} else if !this.haveRight {
-		return NewState(this, ast.Node(this.rNode.E))
+		return newState(this, ast.Node(this.rNode.E))
 	} else {
 		this.parent.acceptValue(object.Number(this.left.(object.Number) + this.right.(object.Number)))
 		return this.parent
