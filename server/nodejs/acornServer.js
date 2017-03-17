@@ -1,6 +1,6 @@
 /**
  * @license
- * Code City Node.js Server
+ * Code City Node.js AST Server
  *
  * Copyright 2017 Google Inc.
  * https://github.com/NeilFraser/CodeCity
@@ -19,24 +19,26 @@
  */
 
 /**
- * @fileoverview Node.js server that provides JavaScript services to Code City.
+ * @fileoverview Node.js server that provides AST parsing services to Code City.
  * @author fraser@google.com (Neil Fraser)
  */
 
-// Start with: node nodeServer.js
+// Start with: node acornServer.js
 'use strict';
 
 var net = require('net');
 var acorn = require('./acorn.js');
 
 // Create a new TCP server for parsing code into an AST using Acorn.
-var parsePort = 7780;
+const parsePort = 7780;
 var options = {
   allowHalfOpen: true
 };
 
 var server = net.createServer(options, function (socket) {
   if (socket.remoteAddress != '127.0.0.1') {
+    // This check is redundant, the socket is only accessible to
+    // localhost connections.
     console.log('Rejecting connection from ' + socket.remoteAddress);
     socket.end('Connection rejected.');
     return;
@@ -71,5 +73,6 @@ var server = net.createServer(options, function (socket) {
     socket.end('\n');
   });
 });
+// Listen on a port, but restrict connections to be local.
 server.listen(parsePort, 'localhost');
 console.log('Parse server listening on port ' + parsePort);
