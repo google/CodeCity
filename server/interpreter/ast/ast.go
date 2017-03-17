@@ -73,6 +73,11 @@ func (statementStuff) _is_statement() {}
 type Statement struct{ S statement }
 
 func (this *Statement) UnmarshalJSON(b []byte) error {
+	// Special case: "null" -> nil
+	if string(b) == "null" {
+		this.S = nil
+		return nil
+	}
 	var tmp typeOnly
 	if err := json.Unmarshal(b, &tmp); err != nil {
 		return err
@@ -131,9 +136,12 @@ func (expressionStuff) _is_expression() {}
 // interface to allow a UnmarshallJSON method to be defined.
 type Expression struct{ E expression }
 
-// Expressions is a wrapper of slice of expression interfaces to allow
-// a UnmarshallJSON method to be defined.
 func (this *Expression) UnmarshalJSON(b []byte) error {
+	// Special case: "null" -> nil
+	if string(b) == "null" {
+		this.E = nil
+		return nil
+	}
 	var tmp typeOnly
 	if err := json.Unmarshal(b, &tmp); err != nil {
 		return err

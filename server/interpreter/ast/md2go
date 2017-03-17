@@ -22,7 +22,6 @@ $Text::Wrap::columns = 70;
 # - foo: interface type satisfied by several other node types;
 # - Foo: struct wrapper for unmarshaling just one foo
 # - Foos: struct wrapper for unmarshaling slice of foo
-#
 my @interfaces = qw(Node Statement Expression);
 
 # Some node types are just replaced by "stuff" structs; this includes
@@ -145,6 +144,10 @@ while(<>) {
 			    $ftype .= "s"
 			}
 		    }
+		    # Normal child nodes are pointed at:
+		    else {
+			$ftype = "*$_" 
+		    }
 		    # Patch certain entries as required:
 		    if(exists $field_patches{"$type.$field"}) {
 			if(defined($field_patches{"$type.$field"})) {
@@ -155,8 +158,6 @@ while(<>) {
 			    $field = undef;			    # Skip
 			}
 		    }
-		    # It's a pointer:
-		    $ftype = "*$_";
 		    $json .= ",omitempty";
 		}
 	    }

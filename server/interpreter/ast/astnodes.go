@@ -67,7 +67,7 @@ type Literal struct {
 // (Auto-generated from ESTree spec.)
 type Program struct {
 	nodeStuff
-	Body *Statements `json:"body,omitempty"`
+	Body Statements `json:"body,omitempty"`
 }
 
 /********************************************************************/
@@ -77,7 +77,7 @@ type Program struct {
 // (Auto-generated from ESTree spec.)
 type functionStuff struct {
 	Id     *Identifier     `json:"id,omitempty"`
-	Params []*Identifier   `json:"params,omitempty"`
+	Params []Identifier    `json:"params,omitempty"`
 	Body   *BlockStatement `json:"body,omitempty"`
 }
 
@@ -96,7 +96,7 @@ type statementStuff struct {
 // (Auto-generated from ESTree spec.)
 type ExpressionStatement struct {
 	statementStuff
-	Expression *Expression `json:"expression,omitempty"`
+	Expression Expression `json:"expression,omitempty"`
 }
 
 /********************************************************************/
@@ -106,7 +106,7 @@ type ExpressionStatement struct {
 // (Auto-generated from ESTree spec.)
 type BlockStatement struct {
 	statementStuff
-	Body *Statements `json:"body,omitempty"`
+	Body Statements `json:"body,omitempty"`
 }
 
 /********************************************************************/
@@ -131,8 +131,8 @@ type DebuggerStatement struct {
 // (Auto-generated from ESTree spec.)
 type WithStatement struct {
 	statementStuff
-	Object *Expression `json:"object,omitempty"`
-	Body   *Statement  `json:"body,omitempty"`
+	Object Expression `json:"object,omitempty"`
+	Body   Statement  `json:"body,omitempty"`
 }
 
 /********************************************************************/
@@ -141,7 +141,7 @@ type WithStatement struct {
 // (Auto-generated from ESTree spec.)
 type ReturnStatement struct {
 	statementStuff
-	Argument *Expression `json:"argument,omitempty"`
+	Argument Expression `json:"argument,omitempty"`
 }
 
 /********************************************************************/
@@ -152,7 +152,7 @@ type ReturnStatement struct {
 type LabeledStatement struct {
 	statementStuff
 	Label *Identifier `json:"label,omitempty"`
-	Body  *Statement  `json:"body,omitempty"`
+	Body  Statement   `json:"body,omitempty"`
 }
 
 /********************************************************************/
@@ -179,9 +179,9 @@ type ContinueStatement struct {
 // (Auto-generated from ESTree spec.)
 type IfStatement struct {
 	statementStuff
-	Test       *Expression `json:"test,omitempty"`
-	Consequent *Statement  `json:"consequent,omitempty"`
-	Alternate  *Statement  `json:"alternate,omitempty"`
+	Test       Expression `json:"test,omitempty"`
+	Consequent Statement  `json:"consequent,omitempty"`
+	Alternate  Statement  `json:"alternate,omitempty"`
 }
 
 /********************************************************************/
@@ -190,7 +190,7 @@ type IfStatement struct {
 // (Auto-generated from ESTree spec.)
 type SwitchStatement struct {
 	statementStuff
-	Discriminant *Expression   `json:"discriminant,omitempty"`
+	Discriminant Expression    `json:"discriminant,omitempty"`
 	Cases        []*SwitchCase `json:"cases,omitempty"`
 }
 
@@ -201,8 +201,8 @@ type SwitchStatement struct {
 // (Auto-generated from ESTree spec.)
 type SwitchCase struct {
 	nodeStuff
-	Test       *Expression `json:"test,omitempty"`
-	Consequent *Statements `json:"consequent,omitempty"`
+	Test       Expression `json:"test,omitempty"`
+	Consequent Statements `json:"consequent,omitempty"`
 }
 
 /********************************************************************/
@@ -211,7 +211,7 @@ type SwitchCase struct {
 // (Auto-generated from ESTree spec.)
 type ThrowStatement struct {
 	statementStuff
-	Argument *Expression `json:"argument,omitempty"`
+	Argument Expression `json:"argument,omitempty"`
 }
 
 /********************************************************************/
@@ -232,7 +232,7 @@ type TryStatement struct {
 // (Auto-generated from ESTree spec.)
 type CatchClause struct {
 	nodeStuff
-	Param *Identifier     `json:"param,omitempty"`
+	Param Identifier      `json:"param,omitempty"`
 	Body  *BlockStatement `json:"body,omitempty"`
 }
 
@@ -242,8 +242,8 @@ type CatchClause struct {
 // (Auto-generated from ESTree spec.)
 type WhileStatement struct {
 	statementStuff
-	Test *Expression `json:"test,omitempty"`
-	Body *Statement  `json:"body,omitempty"`
+	Test Expression `json:"test,omitempty"`
+	Body Statement  `json:"body,omitempty"`
 }
 
 /********************************************************************/
@@ -252,8 +252,8 @@ type WhileStatement struct {
 // (Auto-generated from ESTree spec.)
 type DoWhileStatement struct {
 	statementStuff
-	Body *Statement  `json:"body,omitempty"`
-	Test *Expression `json:"test,omitempty"`
+	Body Statement  `json:"body,omitempty"`
+	Test Expression `json:"test,omitempty"`
 }
 
 /********************************************************************/
@@ -262,10 +262,10 @@ type DoWhileStatement struct {
 // (Auto-generated from ESTree spec.)
 type ForStatement struct {
 	statementStuff
-	Init   *ForStatementInit `json:"init,omitempty"`
-	Test   *Expression       `json:"test,omitempty"`
-	Update *Expression       `json:"update,omitempty"`
-	Body   *Statement        `json:"body,omitempty"`
+	Init   ForStatementInit `json:"init,omitempty"`
+	Test   Expression       `json:"test,omitempty"`
+	Update Expression       `json:"update,omitempty"`
+	Body   Statement        `json:"body,omitempty"`
 }
 
 /********************************************************************/
@@ -274,9 +274,9 @@ type ForStatement struct {
 // (Auto-generated from ESTree spec.)
 type ForInStatement struct {
 	statementStuff
-	Left  *ForInStatementLeft `json:"left,omitempty"`
-	Right *Expression         `json:"right,omitempty"`
-	Body  *Statement          `json:"body,omitempty"`
+	Left  ForInStatementLeft `json:"left,omitempty"`
+	Right Expression         `json:"right,omitempty"`
+	Body  Statement          `json:"body,omitempty"`
 }
 
 /********************************************************************/
@@ -306,8 +306,8 @@ type VariableDeclaration struct {
 // (Auto-generated from ESTree spec.)
 type VariableDeclarator struct {
 	nodeStuff
-	Id   *Identifier `json:"id,omitempty"`
-	Init *Expression `json:"init,omitempty"`
+	Id   Identifier `json:"id,omitempty"`
+	Init Expression `json:"init,omitempty"`
 }
 
 /********************************************************************/
@@ -333,7 +333,7 @@ type ThisExpression struct {
 // (Auto-generated from ESTree spec.)
 type ArrayExpression struct {
 	expressionStuff
-	Elements *Expressions `json:"elements,omitempty"`
+	Elements Expressions `json:"elements,omitempty"`
 }
 
 /********************************************************************/
@@ -354,8 +354,8 @@ type ObjectExpression struct {
 // (Auto-generated from ESTree spec.)
 type Property struct {
 	nodeStuff
-	Key   *PropertyKey `json:"key,omitempty"`
-	Value *Expression  `json:"value,omitempty"`
+	Key   PropertyKey `json:"key,omitempty"`
+	Value Expression  `json:"value,omitempty"`
 }
 
 /********************************************************************/
@@ -373,9 +373,9 @@ type FunctionExpression struct {
 // (Auto-generated from ESTree spec.)
 type UnaryExpression struct {
 	expressionStuff
-	Operator *string     `json:"operator,omitempty"`
-	Prefix   bool        `json:"prefix"`
-	Argument *Expression `json:"argument,omitempty"`
+	Operator string     `json:"operator,omitempty"`
+	Prefix   bool       `json:"prefix"`
+	Argument Expression `json:"argument,omitempty"`
 }
 
 /********************************************************************/
@@ -385,9 +385,9 @@ type UnaryExpression struct {
 // (Auto-generated from ESTree spec.)
 type UpdateExpression struct {
 	expressionStuff
-	Operator *string     `json:"operator,omitempty"`
-	Argument *Expression `json:"argument,omitempty"`
-	Prefix   bool        `json:"prefix"`
+	Operator string     `json:"operator,omitempty"`
+	Argument Expression `json:"argument,omitempty"`
+	Prefix   bool       `json:"prefix"`
 }
 
 /********************************************************************/
@@ -396,9 +396,9 @@ type UpdateExpression struct {
 // (Auto-generated from ESTree spec.)
 type BinaryExpression struct {
 	expressionStuff
-	Operator *string     `json:"operator,omitempty"`
-	Left     *Expression `json:"left,omitempty"`
-	Right    *Expression `json:"right,omitempty"`
+	Operator string     `json:"operator,omitempty"`
+	Left     Expression `json:"left,omitempty"`
+	Right    Expression `json:"right,omitempty"`
 }
 
 /********************************************************************/
@@ -407,9 +407,9 @@ type BinaryExpression struct {
 // (Auto-generated from ESTree spec.)
 type AssignmentExpression struct {
 	expressionStuff
-	Operator *string     `json:"operator,omitempty"`
-	Left     *Expression `json:"left,omitempty"`
-	Right    *Expression `json:"right,omitempty"`
+	Operator string     `json:"operator,omitempty"`
+	Left     Expression `json:"left,omitempty"`
+	Right    Expression `json:"right,omitempty"`
 }
 
 /********************************************************************/
@@ -418,9 +418,9 @@ type AssignmentExpression struct {
 // (Auto-generated from ESTree spec.)
 type LogicalExpression struct {
 	expressionStuff
-	Operator *string     `json:"operator,omitempty"`
-	Left     *Expression `json:"left,omitempty"`
-	Right    *Expression `json:"right,omitempty"`
+	Operator string     `json:"operator,omitempty"`
+	Left     Expression `json:"left,omitempty"`
+	Right    Expression `json:"right,omitempty"`
 }
 
 /********************************************************************/
@@ -433,9 +433,9 @@ type LogicalExpression struct {
 // (Auto-generated from ESTree spec.)
 type MemberExpression struct {
 	expressionStuff
-	Object   *Expression `json:"object,omitempty"`
-	Property *Expression `json:"property,omitempty"`
-	Computed bool        `json:"computed"`
+	Object   Expression `json:"object,omitempty"`
+	Property Expression `json:"property,omitempty"`
+	Computed bool       `json:"computed"`
 }
 
 /********************************************************************/
@@ -445,9 +445,9 @@ type MemberExpression struct {
 // (Auto-generated from ESTree spec.)
 type ConditionalExpression struct {
 	expressionStuff
-	Test       *Expression `json:"test,omitempty"`
-	Alternate  *Expression `json:"alternate,omitempty"`
-	Consequent *Expression `json:"consequent,omitempty"`
+	Test       Expression `json:"test,omitempty"`
+	Alternate  Expression `json:"alternate,omitempty"`
+	Consequent Expression `json:"consequent,omitempty"`
 }
 
 /********************************************************************/
@@ -456,8 +456,8 @@ type ConditionalExpression struct {
 // (Auto-generated from ESTree spec.)
 type CallExpression struct {
 	expressionStuff
-	Callee    *Expression  `json:"callee,omitempty"`
-	Arguments *Expressions `json:"arguments,omitempty"`
+	Callee    Expression  `json:"callee,omitempty"`
+	Arguments Expressions `json:"arguments,omitempty"`
 }
 
 /********************************************************************/
@@ -466,8 +466,8 @@ type CallExpression struct {
 // (Auto-generated from ESTree spec.)
 type NewExpression struct {
 	expressionStuff
-	Callee    *Expression  `json:"callee,omitempty"`
-	Arguments *Expressions `json:"arguments,omitempty"`
+	Callee    Expression  `json:"callee,omitempty"`
+	Arguments Expressions `json:"arguments,omitempty"`
 }
 
 /********************************************************************/
@@ -477,7 +477,7 @@ type NewExpression struct {
 // (Auto-generated from ESTree spec.)
 type SequenceExpression struct {
 	expressionStuff
-	Expressions *Expressions `json:"expressions,omitempty"`
+	Expressions Expressions `json:"expressions,omitempty"`
 }
 
 /********************************************************************/

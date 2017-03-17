@@ -96,7 +96,7 @@ type stateCommon struct {
 
 type stateBlockStatement struct {
 	stateCommon
-	body        *ast.Statements
+	body        ast.Statements
 	value       object.Value
 	n           int
 	interpreter *Interpreter // Used by Program nodes only
@@ -111,8 +111,8 @@ func (this *stateBlockStatement) init(node ast.BlockStatement) {
 }
 
 func (this *stateBlockStatement) step() state {
-	if this.n < len(*this.body) {
-		s := NewState(this, (*this.body)[this.n])
+	if this.n < len(this.body) {
+		s := NewState(this, (this.body)[this.n])
 		this.n++
 		return s
 	}
@@ -157,7 +157,7 @@ func (this *stateExpressionStatement) acceptValue(v object.Value) {
 
 type stateBinaryExpression struct {
 	stateCommon
-	lNode, rNode        *ast.Expression
+	lNode, rNode        ast.Expression
 	haveLeft, haveRight bool
 	left, right         object.Value
 }
