@@ -24,7 +24,7 @@ func NewInterpreter(astJSON string) *Interpreter {
 	if err != nil {
 		panic(err)
 	}
-	this.state = newState(nil, *tree)
+	this.state = newState(nil, tree)
 	this.state.(*stateBlockStatement).interpreter = this
 	return this
 }
@@ -89,30 +89,37 @@ type state interface {
 // should return to after evaluating the tree rooted at node.
 func newState(parent state, node ast.Node) state {
 	switch n := node.(type) {
-	case ast.Program:
-		s := stateBlockStatement{}
-		s.parent = parent
-		s.initFromProgram(n)
+	case *ast.BinaryExpression:
+		s := stateBinaryExpression{stateCommon: stateCommon{parent}}
+		s.init(n)
 		return &s
-	case ast.BlockStatement:
-		s := stateBlockStatement{}
-		s.parent = parent
+	case *ast.BlockStatement:
+		s := stateBlockStatement{stateCommon: stateCommon{parent}}
+		s.init(n)
+		return &s
+	case *ast.ConditionalExpression:
+		s := stateConditionalExpression{stateCommon: stateCommon{parent}}
+		s.init(n)
+		return &s
+	case *ast.EmptyStatement:
+		s := stateEmptyStatement{stateCommon: stateCommon{parent}}
 		s.init(n)
 		return &s
 	case *ast.ExpressionStatement:
-		s := stateExpressionStatement{}
-		s.parent = parent
-		s.init(*n)
+		s := stateExpressionStatement{stateCommon: stateCommon{parent}}
+		s.init(n)
 		return &s
-	case *ast.BinaryExpression:
-		s := stateBinaryExpression{}
-		s.parent = parent
-		s.init(*n)
+	case *ast.FunctionDeclaration:
+		s := stateFunctionDeclaration{stateCommon: stateCommon{parent}}
+		s.init(n)
 		return &s
 	case *ast.Literal:
-		s := stateLiteral{}
-		s.parent = parent
-		s.init(*n)
+		s := stateLiteral{stateCommon: stateCommon{parent}}
+		s.init(n)
+		return &s
+	case *ast.Program:
+		s := stateBlockStatement{stateCommon: stateCommon{parent}}
+		s.initFromProgram(n)
 		return &s
 	default:
 		panic(fmt.Errorf("State for AST node type %T not implemented\n", n))
@@ -140,7 +147,7 @@ type stateBinaryExpression struct {
 	left, right         object.Value
 }
 
-func (this *stateBinaryExpression) init(node ast.BinaryExpression) {
+func (this *stateBinaryExpression) init(node *ast.BinaryExpression) {
 	this.op = node.Operator
 	this.lNode = node.Left
 	this.rNode = node.Right
@@ -171,6 +178,8 @@ func (this *stateBinaryExpression) step() state {
 	case "/":
 		v = object.Number(this.left.(object.Number) /
 			this.right.(object.Number))
+	default:
+		panic("not implemented")
 	}
 
 	this.parent.acceptValue(v)
@@ -200,11 +209,11 @@ type stateBlockStatement struct {
 	interpreter *Interpreter // Used by Program nodes only
 }
 
-func (this *stateBlockStatement) initFromProgram(node ast.Program) {
+func (this *stateBlockStatement) initFromProgram(node *ast.Program) {
 	this.body = node.Body
 }
 
-func (this *stateBlockStatement) init(node ast.BlockStatement) {
+func (this *stateBlockStatement) init(node *ast.BlockStatement) {
 	this.body = node.Body
 }
 
@@ -226,11 +235,34 @@ func (this *stateBlockStatement) acceptValue(v object.Value) {
 
 /********************************************************************/
 
+type stateConditionalExpression struct {
+	stateCommon
+	test       ast.Expression
+	consequent ast.Expression
+	alternate  ast.Expression
+}
+
+func (this *stateConditionalExpression) init(node *ast.ConditionalExpression) {
+	this.test = node.Test
+	this.consequent = node.Consequent
+	this.alternate = node.Alternate
+}
+
+func (this *stateConditionalExpression) step() state {
+	panic("not implemented")
+	// return this.parent
+}
+
+func (this *stateConditionalExpression) acceptValue(v object.Value) {
+}
+
+/********************************************************************/
+
 type stateEmptyStatement struct {
 	stateCommon
 }
 
-func (this *stateEmptyStatement) init(node ast.Literal) {
+func (this *stateEmptyStatement) init(node *ast.EmptyStatement) {
 }
 
 func (this *stateEmptyStatement) step() state {
@@ -248,7 +280,7 @@ type stateExpressionStatement struct {
 	expr ast.Expression
 }
 
-func (this *stateExpressionStatement) init(node ast.ExpressionStatement) {
+func (this *stateExpressionStatement) init(node *ast.ExpressionStatement) {
 	this.expr = node.Expression
 }
 
@@ -266,7 +298,7 @@ type stateFunctionDeclaration struct {
 	stateCommon
 }
 
-func (this *stateFunctionDeclaration) init(node ast.Literal) {
+func (this *stateFunctionDeclaration) init(node *ast.FunctionDeclaration) {
 }
 
 func (this *stateFunctionDeclaration) step() state {
@@ -284,7 +316,7 @@ type stateLiteral struct {
 	value object.Value
 }
 
-func (this *stateLiteral) init(node ast.Literal) {
+func (this *stateLiteral) init(node *ast.Literal) {
 	this.value = object.PrimitiveFromRaw(node.Raw)
 }
 
