@@ -9,6 +9,7 @@ import (
 
 type Interpreter struct {
 	state state
+	value object.Value
 }
 
 func NewInterpreter(astJSON string) *Interpreter {
@@ -18,7 +19,8 @@ func NewInterpreter(astJSON string) *Interpreter {
 	if err != nil {
 		panic(err)
 	}
-	_ = tree
+	this.state = NewState(nil, *tree)
+	this.state.(*stateBlockStatement).interpreter = this
 	return this
 }
 
@@ -27,6 +29,7 @@ func (this *Interpreter) Step() bool {
 	if this.state == nil {
 		return false
 	}
+	fmt.Printf("Next step is a %T\n", this.state)
 	this.state = this.state.step()
 	return true
 }
@@ -37,7 +40,11 @@ func (this *Interpreter) Run() {
 }
 
 func (this *Interpreter) Value() object.Value {
-	return object.Value(object.Number(42))
+	return this.value
+}
+
+func (this *Interpreter) acceptValue(v object.Value) {
+	this.value = v
 }
 
 /********************************************************************/
@@ -51,23 +58,28 @@ func NewState(parent state, node ast.Node) state {
 	switch n := node.(type) {
 	case ast.Program:
 		s := stateBlockStatement{}
+		s.parent = parent
 		s.initFromProgram(n)
 		return &s
 	case ast.BlockStatement:
 		s := stateBlockStatement{}
+		s.parent = parent
 		s.init(n)
 		return &s
-	case ast.ExpressionStatement:
+	case *ast.ExpressionStatement:
 		s := stateExpressionStatement{}
-		s.init(n)
+		s.parent = parent
+		s.init(*n)
 		return &s
-	case ast.BinaryExpression:
+	case *ast.BinaryExpression:
 		s := stateBinaryExpression{}
-		s.init(n)
+		s.parent = parent
+		s.init(*n)
 		return &s
-	case ast.Literal:
+	case *ast.Literal:
 		s := stateLiteral{}
-		s.init(n)
+		s.parent = parent
+		s.init(*n)
 		return &s
 	default:
 		panic(fmt.Errorf("State for AST node type %T not implemented\n", n))
@@ -78,55 +90,106 @@ func NewState(parent state, node ast.Node) state {
 
 type stateCommon struct {
 	parent state
-	value  object.Value
-}
-
-func (this *stateCommon) acceptValue(v object.Value) {
-	this.value = v
 }
 
 /********************************************************************/
 
 type stateBlockStatement struct {
 	stateCommon
+	body        *ast.Statements
+	value       object.Value
+	n           int
+	interpreter *Interpreter // Used by Program nodes only
 }
 
 func (this *stateBlockStatement) initFromProgram(node ast.Program) {
+	this.body = node.Body
 }
 
 func (this *stateBlockStatement) init(node ast.BlockStatement) {
+	this.body = node.Body
 }
 
 func (this *stateBlockStatement) step() state {
-	return nil
+	if this.n < len(*this.body) {
+		s := NewState(this, (*this.body)[this.n])
+		this.n++
+		return s
+	}
+	if this.interpreter != nil {
+		this.interpreter.acceptValue(this.value)
+	}
+	return this.parent
+}
+
+func (this *stateBlockStatement) acceptValue(v object.Value) {
+	this.value = v
 }
 
 /********************************************************************/
 
 type stateExpressionStatement struct {
 	stateCommon
+	node  ast.ExpressionStatement
+	value object.Value
+	done  bool
 }
 
 func (this *stateExpressionStatement) init(node ast.ExpressionStatement) {
+	this.node = node
 }
 
 func (this *stateExpressionStatement) step() state {
-	return nil
+	if !this.done {
+		return NewState(this, ast.Node(this.node.Expression.E))
+	}
+	this.parent.acceptValue(this.value)
+	return this.parent
+
+}
+
+func (this *stateExpressionStatement) acceptValue(v object.Value) {
+	this.value = v
+	this.done = true
 }
 
 /********************************************************************/
 
 type stateBinaryExpression struct {
 	stateCommon
-	//	haveLeft, haveRight bool
-	//	left, right object.Value
+	lNode, rNode        *ast.Expression
+	haveLeft, haveRight bool
+	left, right         object.Value
 }
 
 func (this *stateBinaryExpression) init(node ast.BinaryExpression) {
+	this.lNode = node.Left
+	this.rNode = node.Right
+	this.haveLeft = false
+	this.haveRight = false
 }
 
 func (this *stateBinaryExpression) step() state {
-	return nil
+	if !this.haveLeft {
+		return NewState(this, ast.Node(this.lNode.E))
+	} else if !this.haveRight {
+		return NewState(this, ast.Node(this.rNode.E))
+	} else {
+		this.parent.acceptValue(object.Number(this.left.(object.Number) + this.right.(object.Number)))
+		return this.parent
+	}
+}
+
+func (this *stateBinaryExpression) acceptValue(v object.Value) {
+	if !this.haveLeft {
+		this.left = v
+		this.haveLeft = true
+	} else if !this.haveRight {
+		this.right = v
+		this.haveRight = true
+	} else {
+		panic(fmt.Errorf("too may values"))
+	}
 }
 
 /********************************************************************/
@@ -141,4 +204,8 @@ func (this *stateLiteral) init(node ast.Literal) {
 func (this *stateLiteral) step() state {
 	this.parent.acceptValue(object.Number(1))
 	return this.parent
+}
+
+func (this *stateLiteral) acceptValue(v object.Value) {
+	panic(fmt.Errorf("literal can't have subexpression"))
 }

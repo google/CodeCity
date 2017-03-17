@@ -33,7 +33,7 @@ import (
 //
 // The present implementation assumes that the top-most node of the
 // tree is a Program node.
-func NewFromJSON(astJSON []byte) (ast Node, err error) {
+func NewFromJSON(astJSON string) (ast *Program, err error) {
 	var p *Program
 	e := json.Unmarshal([]byte(astJSON), &p)
 	if e != nil {
@@ -60,6 +60,7 @@ func (nodeStuff) _is_node() {}
 // statement is an interface fulfilled by all ESTree <Foo>Statement
 // nodes.
 type statement interface {
+	_is_node()
 	_is_statement()
 }
 
@@ -118,6 +119,7 @@ func (this *Statements) UnmarshalJSON(b []byte) error {
 // expression is an interface satisfied by all ESTree <Foo>Expression
 // nodes.
 type expression interface {
+	_is_node()
 	_is_expression()
 }
 

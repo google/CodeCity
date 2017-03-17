@@ -2,22 +2,22 @@ package ast
 
 import (
 	"encoding/json"
-	"fmt"
+	// "fmt"
 	"testing"
 )
 
 func TestNewFromJSON(t *testing.T) {
-	p, e := NewFromJSON([]byte(astJSON))
+	p, e := NewFromJSON(astJSON)
 	if e != nil {
 		t.Error(e)
 	}
 	// FIXME: test to see if returned tree was actually correct - not
 	// just that it can be reencoded without error.
-	s, e := json.MarshalIndent(p, "", "  ")
+	_, e = json.MarshalIndent(p, "", "  ")
 	if e != nil {
 		t.Error(e)
 	}
-	fmt.Printf("%s\n", s)
+	// fmt.Printf("%s\n", s)
 }
 
 const astJSON = `
