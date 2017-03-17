@@ -9,8 +9,9 @@ import (
 
 // Interpreter implements a JavaScript interpreter.
 type Interpreter struct {
-	state state
-	value object.Value
+	state   state
+	value   object.Value
+	verbose bool
 }
 
 // NewInterpreter takes a JavaScript program, in the form of an
@@ -34,7 +35,9 @@ func (this *Interpreter) Step() bool {
 	if this.state == nil {
 		return false
 	}
-	fmt.Printf("Next step is a %T\n", this.state)
+	if this.verbose {
+		fmt.Printf("Next step is a %T\n", this.state)
+	}
 	this.state = this.state.step()
 	return true
 }
