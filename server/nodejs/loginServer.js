@@ -26,25 +26,42 @@
 // Start with: node loginServer.js
 'use strict';
 
+var crypto = require('crypto');
 var fs = require('fs');
-var http = require('http');
 var google = require('googleapis');
-var oauth2Api = google.oauth2('v2');
-var OAuth2 = google.auth.OAuth2;
+var http = require('http');
 
-// Define a port we want to listen to.
-const loginPort = 7781;
+// Global variables.
+var CFG = null;
+var oauth2Client;
+var loginUrl;
 
-var oauth2Client = new OAuth2(
-  '63024745471-9aothjt7m84o1cpsmg6ta93td2qnbsaf.apps.googleusercontent.com',
-  'Nbxup8Ge92D8krs9nGsszjj6',
-  'http://localhost:7781/login'
-);
+/**
+ * Generate a unique ID.  This should be globally unique.
+ * 87 characters ^ 20 length > 128 bits (better than a UUID).
+ * @return {string} A globally unique ID string.
+ */
+function genUid(n) {
+  var soupLength = genUid.soup_.length;
+  var id = [];
+  for (var i = 0; i < n; i++) {
+    id[i] = genUid.soup_.charAt(Math.random() * soupLength);
+  }
+  return id.join('');
+};
 
-var url = oauth2Client.generateAuthUrl({
-  scope: 'email'
-});
+/**
+ * Legal characters for the unique ID.
+ * @private
+ */
+genUid.soup_ = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 
+/**
+ * Load a file from disk, add substitutions, and serve to the web.
+ * @param {!Object} response HTTP server response object.
+ * @param {string} filename Name of template file on disk.
+ * @param {!Object} subs Hash of replacement strings.
+ */
 function serveFile(response, filename, subs) {
   fs.readFile(filename, 'utf8', function(err, data) {
     if (err) {
@@ -63,7 +80,11 @@ function serveFile(response, filename, subs) {
   });
 }
 
-//We need a function which handles requests and send response
+/**
+ * Handles HTTP requests from web server.
+ * @param {!Object} request HTTP server request object
+ * @param {!Object} response HTTP server response object.
+ */
 function handleRequest(request, response) {
   if (request.connection.remoteAddress != '127.0.0.1') {
     // This check is redundant, the server is only accessible to
@@ -74,8 +95,9 @@ function handleRequest(request, response) {
   }
 
   if (request.url == '/login') {
-    var subs = {'<<<LOGIN_URL>>>': url};
+    var subs = {'<<<LOGIN_URL>>>': loginUrl};
     serveFile(response, 'login.html', subs);
+
   } else if (request.url.indexOf('/login?code=') == 0) {
     var code = request.url.substring(request.url.indexOf('=') + 1);
     oauth2Client.getToken(code, function(err, tokens) {
@@ -88,6 +110,7 @@ function handleRequest(request, response) {
       }
       oauth2Client.setCredentials(tokens);
 
+      var oauth2Api = google.oauth2('v2');
       oauth2Api.userinfo.v2.me.get({auth: oauth2Client},
         function(err, data) {
           if (err) {
@@ -96,8 +119,10 @@ function handleRequest(request, response) {
             response.end('Google Userinfo fail: ' + err);
             return;
           }
-          response.end('Hello: ' + data.email + ' ' + data.id);
-          console.log(data);
+          var id = CFG.idSalt + data.id;
+          id = crypto.createHash('md5').update(id).digest('hex');
+          // For future reference, the user's email address is: data.email
+          response.end('Hello: ' + id);
         });
     });
   } else {
@@ -106,10 +131,59 @@ function handleRequest(request, response) {
   }
 }
 
-//Create a server
-var server = http.createServer(handleRequest);
+/**
+ * Read the JSON configuration file.  If none is present, write a stub.
+ * When done, call startup.
+ */
+function configureAndStartup() {
+  const filename = 'loginServer.cfg';
+  fs.readFile(filename, 'utf8', function(err, data) {
+    if (err) {
+      console.log('Configuration file loginServer.cfg not found.  ' +
+                  'Creating new file.  Please edit this file.');
+      data = {
+        httpPort: 7781,
+        clientId: '00000000000-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com',
+        clientSecret: 'yyyyyyyyyyyyyyyyyyyyyyyy',
+        redirectUri: 'https://example.codecity.world/login',
+        idSalt: genUid(8)
+      };
+      data = JSON.stringify(data, null, 2);
+      fs.writeFile(filename, data, 'utf8');
+      return;
+    }
+    data = JSON.parse(data);
+    if (data.clientSecret == 'yyyyyyyyyyyyyyyyyyyyyyyy') {
+      console.log('Configuration file loginServer.cfg not configured.  ' +
+                  'Please edit this file.');
+      return;
+    }
+    CFG = data;
+    startup();
+  });
+}
 
-// Start server
-server.listen(loginPort, 'localhost', function(){
-  console.log('Login server listening on port ' + loginPort);
-});
+/**
+ * Initialize Google's authentication and start up the HTTP server.
+ */
+function startup() {
+  // Create an authentication client for our interactions with Google.
+  oauth2Client = new google.auth.OAuth2(
+    CFG.clientId,
+    CFG.clientSecret,
+    CFG.redirectUri
+  );
+
+  // Precompute Google's login URL.
+  loginUrl = oauth2Client.generateAuthUrl({
+    scope: 'email'
+  });
+
+  // Start an HTTP server.
+  var server = http.createServer(handleRequest);
+  server.listen(CFG.httpPort, 'localhost', function(){
+    console.log('Login server listening on port ' + CFG.httpPort);
+  });
+}
+
+configureAndStartup();
