@@ -242,6 +242,40 @@ func (this *stateBinaryExpression) acceptValue(v object.Value) {
 
 /********************************************************************/
 
+type stateEmptyStatement struct {
+	stateCommon
+}
+
+func (this *stateEmptyStatement) init(node ast.Literal) {
+}
+
+func (this *stateEmptyStatement) step() state {
+	return this.parent
+}
+
+func (this *stateEmptyStatement) acceptValue(v object.Value) {
+	panic(fmt.Errorf("EmptyStatement can't have subexpression"))
+}
+
+/********************************************************************/
+
+type stateFunctionDeclaration struct {
+	stateCommon
+}
+
+func (this *stateFunctionDeclaration) init(node ast.Literal) {
+}
+
+func (this *stateFunctionDeclaration) step() state {
+	return this.parent
+}
+
+func (this *stateFunctionDeclaration) acceptValue(v object.Value) {
+	panic(fmt.Errorf("FunctionDeclaration can't have subexpression"))
+}
+
+/********************************************************************/
+
 type stateLiteral struct {
 	stateCommon
 	value object.Value
