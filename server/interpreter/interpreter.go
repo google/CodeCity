@@ -129,59 +129,6 @@ type stateCommon struct {
 
 /********************************************************************/
 
-type stateBlockStatement struct {
-	stateCommon
-	body        ast.Statements
-	value       object.Value
-	n           int
-	interpreter *Interpreter // Used by Program nodes only
-}
-
-func (this *stateBlockStatement) initFromProgram(node ast.Program) {
-	this.body = node.Body
-}
-
-func (this *stateBlockStatement) init(node ast.BlockStatement) {
-	this.body = node.Body
-}
-
-func (this *stateBlockStatement) step() state {
-	if this.n < len(this.body) {
-		s := newState(this, (this.body)[this.n])
-		this.n++
-		return s
-	}
-	if this.interpreter != nil {
-		this.interpreter.acceptValue(this.value)
-	}
-	return this.parent
-}
-
-func (this *stateBlockStatement) acceptValue(v object.Value) {
-	this.value = v
-}
-
-/********************************************************************/
-
-type stateExpressionStatement struct {
-	stateCommon
-	expr ast.Expression
-}
-
-func (this *stateExpressionStatement) init(node ast.ExpressionStatement) {
-	this.expr = node.Expression
-}
-
-func (this *stateExpressionStatement) step() state {
-	return newState(this.parent, ast.Node(this.expr.E))
-}
-
-func (this *stateExpressionStatement) acceptValue(v object.Value) {
-	panic("should not be reached")
-}
-
-/********************************************************************/
-
 type stateBinaryExpression struct {
 	stateCommon
 	op                  string
@@ -242,6 +189,40 @@ func (this *stateBinaryExpression) acceptValue(v object.Value) {
 
 /********************************************************************/
 
+type stateBlockStatement struct {
+	stateCommon
+	body        ast.Statements
+	value       object.Value
+	n           int
+	interpreter *Interpreter // Used by Program nodes only
+}
+
+func (this *stateBlockStatement) initFromProgram(node ast.Program) {
+	this.body = node.Body
+}
+
+func (this *stateBlockStatement) init(node ast.BlockStatement) {
+	this.body = node.Body
+}
+
+func (this *stateBlockStatement) step() state {
+	if this.n < len(this.body) {
+		s := newState(this, (this.body)[this.n])
+		this.n++
+		return s
+	}
+	if this.interpreter != nil {
+		this.interpreter.acceptValue(this.value)
+	}
+	return this.parent
+}
+
+func (this *stateBlockStatement) acceptValue(v object.Value) {
+	this.value = v
+}
+
+/********************************************************************/
+
 type stateEmptyStatement struct {
 	stateCommon
 }
@@ -255,6 +236,25 @@ func (this *stateEmptyStatement) step() state {
 
 func (this *stateEmptyStatement) acceptValue(v object.Value) {
 	panic(fmt.Errorf("EmptyStatement can't have subexpression"))
+}
+
+/********************************************************************/
+
+type stateExpressionStatement struct {
+	stateCommon
+	expr ast.Expression
+}
+
+func (this *stateExpressionStatement) init(node ast.ExpressionStatement) {
+	this.expr = node.Expression
+}
+
+func (this *stateExpressionStatement) step() state {
+	return newState(this.parent, ast.Node(this.expr.E))
+}
+
+func (this *stateExpressionStatement) acceptValue(v object.Value) {
+	panic("should not be reached")
 }
 
 /********************************************************************/
