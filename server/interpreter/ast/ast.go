@@ -16,6 +16,22 @@
 // script; run `go generate` to update it.  The rest of the code, and
 // in particular interface types and associated methods, is in ast.go.
 //
+// Rules concerning use of pointers in AST node fields:
+//
+// - If the field is a (Go) int, string, or bool it is stored directly
+// in node.
+//
+// - If the field is of a concrete type (like Identifier) it is stored
+// as a pointer to the node.
+//
+// - If the filed is of an interface (wrapper) type (like Expression
+// or Statements) the wrapper is stored directly in the node, but the
+// wrapper will contain interface values which in turn store pointers
+// to the child nodes.
+//
+// (These rules are applied automatically by md2go to code it
+// generates.)
+//
 // It is intended that AST nodes will normally be created by the
 // NewFromJSON() factory function.
 package ast
