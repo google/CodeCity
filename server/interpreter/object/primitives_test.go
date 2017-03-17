@@ -18,6 +18,31 @@ package object
 
 import "testing"
 
+func TestPrimitiveFromRaw(t *testing.T) {
+	var tests = []struct {
+		raw      string
+		expected Value
+	}{
+		{`true`, Boolean(true)},
+		{`false`, Boolean(false)},
+		{`undefined`, Undefined{}},
+		{`null`, Null{}},
+		{`42`, Number(42)},
+		{`"Hello, World!"`, String("Hello, World!")},
+		// {`'Hello, World!'`, String("Hello, World!")}, // FIXME
+		{`"foo'bar\"baz"`, String(`foo'bar"baz`)},
+		// {`'foo\'bar"baz'`, String(`foo'bar"baz`)}, // FIXME
+	}
+
+	for _, c := range tests {
+		if v := PrimitiveFromRaw(c.raw); v != c.expected {
+			t.Errorf("newFromRaw(%v) == %v (%T)\n(expected %v (%T))",
+				c.raw, v, v, c.expected, c.expected)
+		}
+	}
+
+}
+
 func TestPrimitivesPrimitiveness(t *testing.T) {
 	var prims [5]Value
 	prims[0] = Boolean(false)

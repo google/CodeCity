@@ -18,6 +18,8 @@ package object
 
 import (
 	"fmt"
+	"strconv"
+	"unicode"
 	"unicode/utf16"
 )
 
@@ -28,6 +30,42 @@ import (
 //
 //
 // tl;dr: do NOT take the address of a primitive.
+
+// PrimitiveFromRaw takes a raw JavaScript literal (as a string as it appears in
+// the source code, and as found in an ast.Literal.raw property) and
+// returns a primitive Value object representing the value of that
+// literal.
+func PrimitiveFromRaw(raw string) Value {
+	if raw == "true" {
+		return Boolean(true)
+	} else if raw == "false" {
+		return Boolean(false)
+	} else if raw == "undefined" {
+		return Undefined{}
+	} else if raw == "null" {
+		return Null{}
+	} else if raw[0] == '"' {
+		s, err := strconv.Unquote(raw)
+		if err != nil {
+			panic(err)
+		}
+		return String(s)
+	} else if raw[0] == '\'' {
+		// BUG(cpcallen): single-quoted string literals not implemented.
+		panic(fmt.Errorf("Single-quoted string literals not implemented"))
+	} else if unicode.IsDigit(rune(raw[0])) {
+		f, err := strconv.ParseFloat(raw, 64)
+		if err != nil {
+			panic(err)
+		}
+		return Number(f)
+	} else if raw[0] == '/' {
+		// BUG(cpcallen): regular expresion literals not implemented.
+		panic(fmt.Errorf("Regular Expression literals not implemented"))
+	} else {
+		panic(fmt.Errorf("Unrecognized raw literal %v", raw))
+	}
+}
 
 /********************************************************************/
 
