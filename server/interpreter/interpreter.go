@@ -231,13 +231,15 @@ func (this *stateBinaryExpression) acceptValue(v object.Value) {
 
 type stateLiteral struct {
 	stateCommon
+	value object.Value
 }
 
 func (this *stateLiteral) init(node ast.Literal) {
+	this.value = object.PrimitiveFromRaw(node.Raw)
 }
 
 func (this *stateLiteral) step() state {
-	this.parent.acceptValue(object.Number(1))
+	this.parent.acceptValue(this.value)
 	return this.parent
 }
 

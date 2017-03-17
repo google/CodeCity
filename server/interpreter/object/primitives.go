@@ -32,7 +32,7 @@ import (
 // tl;dr: do NOT take the address of a primitive.
 
 // PrimitiveFromRaw takes a raw JavaScript literal (as a string as it appears in
-// the source code, and as found in an ast.Literal.raw property) and
+// the source code, and as found in an ast.Literal.Raw property) and
 // returns a primitive Value object representing the value of that
 // literal.
 func PrimitiveFromRaw(raw string) Value {
