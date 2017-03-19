@@ -240,6 +240,8 @@ type stateConditionalExpression struct {
 	test       ast.Expression
 	consequent ast.Expression
 	alternate  ast.Expression
+	result     bool
+	haveResult bool
 }
 
 func (this *stateConditionalExpression) init(node *ast.ConditionalExpression) {
@@ -249,11 +251,19 @@ func (this *stateConditionalExpression) init(node *ast.ConditionalExpression) {
 }
 
 func (this *stateConditionalExpression) step() state {
-	panic("not implemented")
-	// return this.parent
+	if !this.haveResult {
+		return newState(this, ast.Node(this.test.E))
+	}
+	if this.result {
+		return newState(this.parent, this.consequent.E)
+	} else {
+		return newState(this.parent, this.alternate.E)
+	}
 }
 
 func (this *stateConditionalExpression) acceptValue(v object.Value) {
+	this.result = object.IsTruthy(v)
+	this.haveResult = true
 }
 
 /********************************************************************/

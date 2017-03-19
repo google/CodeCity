@@ -18,6 +18,7 @@ package object
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 	"unicode"
 	"unicode/utf16"
@@ -65,6 +66,27 @@ func PrimitiveFromRaw(raw string) Value {
 	} else {
 		panic(fmt.Errorf("Unrecognized raw literal %v", raw))
 	}
+}
+
+// IsTruthy returns true iff Boolean(v) (in JS) would return true
+func IsTruthy(v Value) bool {
+	switch v := v.(type) {
+	case Boolean:
+		return bool(v)
+	case Null:
+		return false
+	case Undefined:
+		return false
+	case String:
+		return len(string(v)) != 0
+	case Number:
+		return !(float64(v) == 0 || math.IsNaN(float64(v)))
+	case *Object:
+		return true
+	default:
+		panic(fmt.Errorf("Not sure if %v (%T) is true or false", v, v))
+	}
+
 }
 
 /********************************************************************/

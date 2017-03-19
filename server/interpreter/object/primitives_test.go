@@ -16,7 +16,10 @@
 
 package object
 
-import "testing"
+import (
+	"math"
+	"testing"
+)
 
 func TestPrimitiveFromRaw(t *testing.T) {
 	var tests = []struct {
@@ -38,6 +41,38 @@ func TestPrimitiveFromRaw(t *testing.T) {
 		if v := PrimitiveFromRaw(c.raw); v != c.expected {
 			t.Errorf("newFromRaw(%v) == %v (%T)\n(expected %v (%T))",
 				c.raw, v, v, c.expected, c.expected)
+		}
+	}
+}
+
+func TestIsTruthy(t *testing.T) {
+	var z float64
+	var tests = []struct {
+		input    Value
+		expected bool
+	}{
+		{Boolean(true), true},
+		{Boolean(false), false},
+		{Null{}, false},
+		{Undefined{}, false},
+		{String(""), false},
+		{String("foo"), true},
+		{String("0"), true},
+		{String("false"), true},
+		{String("null"), true},
+		{String("undefined"), true},
+		{Number(0), false},
+		{Number(-0), false},
+		{Number(0.0), false},
+		{Number(-0.0), false},
+		{Number(1), true},
+		{Number(z / z), false}, // NaN
+		{Number(math.MaxFloat64), true},
+		{Number(math.SmallestNonzeroFloat64), true},
+	}
+	for _, c := range tests {
+		if v := IsTruthy(c.input); v != c.expected {
+			t.Errorf("IsTruthy(%v) (%T) == %v", c.input, c.input, v)
 		}
 	}
 }
