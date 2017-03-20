@@ -82,7 +82,7 @@ func (this *Interpreter) acceptValue(v object.Value) {
 //
 // FIXME: readonly flag?  Or readonly if parent == nil?
 type scope struct {
-	names       map[string]object.Value
+	vars        map[string]object.Value
 	parent      *scope
 	interpreter *Interpreter
 }
@@ -92,7 +92,38 @@ type scope struct {
 // being created is the global scope.  The interpreter param is a
 // pointer to the interpreter this scope belongs to.
 func newScope(parent *scope, interpreter *Interpreter) *scope {
-	return &scope{make(map[string]object.Value), parent, interpreter}
+	var s = &scope{make(map[string]object.Value), parent, interpreter}
+	s.vars["x"] = object.Undefined{}
+	return s
+}
+
+// setValue sets the named variable to the specified value, after
+// first checking that it exists.
+//
+// FIXME: this should probably recurse if name is not found in current
+// scope - but not when called from stateVariableDeclarator, which
+// should never be setting variables other than in the
+// immediately-enclosing scope.
+func (this *scope) setValue(name string, value object.Value) {
+	_, ok := this.vars[name]
+	if !ok {
+		panic(fmt.Errorf("can't set undeclared variable %v", name))
+	}
+	this.vars[name] = value
+}
+
+// getValue gets the current value of the specified variable, after
+// first checking that it exists.
+//
+// FIXME: this should probably recurse if name is not found in current
+// scope.
+func (this *scope) getValue(name string) object.Value {
+	v, ok := this.vars[name]
+	if !ok {
+		// FIXME: should probably throw
+		panic(fmt.Errorf("can't get undeclared variable %v", name))
+	}
+	return v
 }
 
 /********************************************************************/
@@ -152,6 +183,10 @@ func newState(parent state, scope *scope, node ast.Node) state {
 		s := stateFunctionDeclaration{stateCommon: sc}
 		s.init(n)
 		return &s
+	case *ast.Identifier:
+		s := stateIdentifier{stateCommon: sc}
+		s.init(n)
+		return &s
 	case *ast.Literal:
 		s := stateLiteral{stateCommon: sc}
 		s.init(n)
@@ -159,6 +194,14 @@ func newState(parent state, scope *scope, node ast.Node) state {
 	case *ast.Program:
 		s := stateBlockStatement{stateCommon: sc}
 		s.initFromProgram(n)
+		return &s
+	case *ast.VariableDeclaration:
+		s := stateVariableDeclaration{stateCommon: sc}
+		s.init(n)
+		return &s
+	case *ast.VariableDeclarator:
+		s := stateVariableDeclarator{stateCommon: sc}
+		s.init(n)
 		return &s
 	default:
 		panic(fmt.Errorf("State for AST node type %T not implemented\n", n))
@@ -365,6 +408,22 @@ func (this *stateFunctionDeclaration) step() state {
 
 /********************************************************************/
 
+type stateIdentifier struct {
+	stateCommon
+	name string
+}
+
+func (this *stateIdentifier) init(node *ast.Identifier) {
+	this.name = node.Name
+}
+
+func (this *stateIdentifier) step() state {
+	this.parent.(valueAcceptor).acceptValue(this.scope.getValue(this.name))
+	return this.parent
+}
+
+/********************************************************************/
+
 type stateLiteral struct {
 	stateCommon
 	value object.Value
@@ -377,4 +436,63 @@ func (this *stateLiteral) init(node *ast.Literal) {
 func (this *stateLiteral) step() state {
 	this.parent.(valueAcceptor).acceptValue(this.value)
 	return this.parent
+}
+
+/********************************************************************/
+
+type stateVariableDeclaration struct {
+	stateCommon
+	decls []*ast.VariableDeclarator
+}
+
+func (this *stateVariableDeclaration) init(node *ast.VariableDeclaration) {
+	this.decls = node.Declarations
+	if node.Kind != "var" {
+		panic(fmt.Errorf("Unknown VariableDeclaration kind '%v'", node.Kind))
+	}
+}
+
+func (this *stateVariableDeclaration) step() state {
+	// Create a stateVariableDeclarator for every VariableDeclarator
+	// that has an Init value, chaining them together so they will
+	// execute in left-to-right order.
+	var p = this.parent
+	for i := len(this.decls) - 1; i >= 0; i-- {
+		if this.decls[i].Init.E != nil {
+			p = newState(p, this.scope, this.decls[i])
+		}
+	}
+	return p
+}
+
+/********************************************************************/
+
+type stateVariableDeclarator struct {
+	stateCommon
+	name  string
+	expr  ast.Expression
+	value object.Value
+}
+
+func (this *stateVariableDeclarator) init(node *ast.VariableDeclarator) {
+	this.name = node.Id.Name
+	this.expr = node.Init
+	this.value = nil
+}
+
+func (this *stateVariableDeclarator) step() state {
+	if this.expr.E == nil {
+		panic("Why are we bothering to execute an variable declaration" +
+			"(that has already been hoisted) that has no initialiser?")
+	}
+	if this.value == nil {
+		return newState(this, this.scope, ast.Node(this.expr.E))
+	} else {
+		this.scope.setValue(this.name, this.value)
+		return this.parent
+	}
+}
+
+func (this *stateVariableDeclarator) acceptValue(v object.Value) {
+	this.value = v
 }
