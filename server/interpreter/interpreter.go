@@ -26,6 +26,7 @@ func NewInterpreter(astJSON string) *Interpreter {
 	}
 	s := newScope(nil, this)
 	// FIXME: insert global names into s
+	s.populate(tree)
 	this.state = newState(nil, s, tree)
 	return this
 }
@@ -92,9 +93,7 @@ type scope struct {
 // being created is the global scope.  The interpreter param is a
 // pointer to the interpreter this scope belongs to.
 func newScope(parent *scope, interpreter *Interpreter) *scope {
-	var s = &scope{make(map[string]object.Value), parent, interpreter}
-	s.vars["x"] = object.Undefined{}
-	return s
+	return &scope{make(map[string]object.Value), parent, interpreter}
 }
 
 // setValue sets the named variable to the specified value, after
@@ -124,6 +123,95 @@ func (this *scope) getValue(name string) object.Value {
 		panic(fmt.Errorf("can't get undeclared variable %v", name))
 	}
 	return v
+}
+
+func (this *scope) populate(node ast.Node) {
+	fmt.Printf("Populating scope from a %T.\n", node)
+	switch n := node.(type) {
+
+	// The interesting cases:
+	case *ast.VariableDeclarator:
+		this.vars[n.Id.Name] = object.Undefined{}
+	case *ast.FunctionDeclaration:
+		// Add name of function to scope; ignore contents.
+		this.vars[n.Id.Name] = object.Undefined{}
+
+	// The recursive cases:
+	case *ast.BlockStatement:
+		for _, s := range n.Body {
+			this.populate(s)
+		}
+	case *ast.CatchClause:
+		this.populate(n.Body)
+	case *ast.DoWhileStatement:
+		this.populate(n.Body.S)
+	case *ast.ForInStatement:
+		this.populate(n.Left.N)
+		this.populate(n.Body.S)
+	case *ast.ForStatement:
+		this.populate(n.Init.N)
+		this.populate(n.Body.S)
+	case *ast.IfStatement:
+		this.populate(n.Consequent.S)
+		this.populate(n.Alternate.S)
+	case *ast.LabeledStatement:
+		this.populate(n.Body.S)
+	case *ast.Program:
+		for _, s := range n.Body {
+			this.populate(s)
+		}
+	case *ast.SwitchCase:
+		for _, s := range n.Consequent {
+			this.populate(s)
+		}
+	case *ast.SwitchStatement:
+		for _, c := range n.Cases {
+			this.populate(c)
+		}
+	case *ast.TryStatement:
+		this.populate(n.Block)
+		this.populate(n.Handler)
+		this.populate(n.Finalizer)
+	case *ast.VariableDeclaration:
+		for _, d := range n.Declarations {
+			this.populate(d)
+		}
+	case *ast.WhileStatement:
+		this.populate(n.Body.S)
+	case *ast.WithStatement:
+		panic("not implemented")
+
+	// The cases we can ignore because they cannot contain
+	// declarations:
+	case *ast.ArrayExpression:
+	case *ast.AssignmentExpression:
+	case *ast.BinaryExpression:
+	case *ast.BreakStatement:
+	case *ast.CallExpression:
+	case *ast.ConditionalExpression:
+	case *ast.ContinueStatement:
+	case *ast.DebuggerStatement:
+	case *ast.EmptyStatement:
+	case *ast.ExpressionStatement:
+	case *ast.FunctionExpression:
+	case *ast.Identifier:
+	case *ast.Literal:
+	case *ast.LogicalExpression:
+	case *ast.MemberExpression:
+	case *ast.NewExpression:
+	case *ast.ObjectExpression:
+	case *ast.Property:
+	case *ast.ReturnStatement:
+	case *ast.SequenceExpression:
+	case *ast.ThisExpression:
+	case *ast.ThrowStatement:
+	case *ast.UnaryExpression:
+	case *ast.UpdateExpression:
+
+	// Just in case:
+	default:
+		panic(fmt.Errorf("Unrecognized ast.Node type %T", node))
+	}
 }
 
 /********************************************************************/

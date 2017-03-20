@@ -208,6 +208,7 @@ func (this *Expressions) UnmarshalJSON(b []byte) error {
 // an Expression (for(v = 0; ...)).
 type ForStatementInit struct{ N forStatementInit }
 type forStatementInit interface {
+	_is_node()
 	_is_forStatementInit()
 }
 
@@ -243,6 +244,7 @@ func (this *ForStatementInit) UnmarshalJSON(b []byte) error {
 // an Identifier (for(v in ...).
 type ForInStatementLeft struct{ N forInStatementLeft }
 type forInStatementLeft interface {
+	_is_node()
 	_is_forInStatementLeft()
 }
 
@@ -278,6 +280,7 @@ func (this *ForInStatementLeft) UnmarshalJSON(b []byte) error {
 // ({foo: ...}).
 type PropertyKey struct{ N propertyKey }
 type propertyKey interface {
+	_is_node()
 	_is_propertyKey()
 }
 
