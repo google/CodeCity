@@ -126,7 +126,6 @@ func (this *scope) getValue(name string) object.Value {
 }
 
 func (this *scope) populate(node ast.Node) {
-	fmt.Printf("Populating scope from a %T.\n", node)
 	switch n := node.(type) {
 
 	// The interesting cases:
