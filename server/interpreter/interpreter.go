@@ -274,6 +274,10 @@ func newState(parent state, scope *scope, node ast.Node) state {
 		s := stateIdentifier{stateCommon: sc}
 		s.init(n)
 		return &s
+	case *ast.IfStatement:
+		s := stateIfStatement{stateCommon: sc}
+		s.init(n)
+		return &s
 	case *ast.Literal:
 		s := stateLiteral{stateCommon: sc}
 		s.init(n)
@@ -507,6 +511,42 @@ func (this *stateIdentifier) init(node *ast.Identifier) {
 func (this *stateIdentifier) step() state {
 	this.parent.(valueAcceptor).acceptValue(this.scope.getValue(this.name))
 	return this.parent
+}
+
+/********************************************************************/
+
+type stateIfStatement struct {
+	stateCommon
+	test       ast.Expression
+	consequent ast.Statement
+	alternate  ast.Statement
+	result     bool
+	haveResult bool
+}
+
+func (this *stateIfStatement) init(node *ast.IfStatement) {
+	this.test = node.Test
+	this.consequent = node.Consequent
+	this.alternate = node.Alternate
+}
+
+func (this *stateIfStatement) step() state {
+	if !this.haveResult {
+		return newState(this, this.scope, ast.Node(this.test.E))
+	}
+	if this.result {
+		return newState(this.parent, this.scope, this.consequent.S)
+	} else {
+		return newState(this.parent, this.scope, this.alternate.S)
+	}
+}
+
+func (this *stateIfStatement) acceptValue(v object.Value) {
+	if this.scope.interpreter.Verbose {
+		fmt.Printf("stateIfStatement just got %v.\n", v)
+	}
+	this.result = object.IsTruthy(v)
+	this.haveResult = true
 }
 
 /********************************************************************/
