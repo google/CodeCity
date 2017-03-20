@@ -11,7 +11,7 @@ import (
 type Interpreter struct {
 	state   state
 	value   object.Value
-	verbose bool
+	Verbose bool
 }
 
 // NewInterpreter takes a JavaScript program, in the form of an
@@ -24,8 +24,9 @@ func NewInterpreter(astJSON string) *Interpreter {
 	if err != nil {
 		panic(err)
 	}
-	this.state = newState(nil, tree)
-	this.state.(*stateBlockStatement).interpreter = this
+	s := newScope(nil, this)
+	// FIXME: insert global names into s
+	this.state = newState(nil, s, tree)
 	return this
 }
 
@@ -35,7 +36,7 @@ func (this *Interpreter) Step() bool {
 	if this.state == nil {
 		return false
 	}
-	if this.verbose {
+	if this.Verbose {
 		fmt.Printf("Next step is a %T\n", this.state)
 	}
 	this.state = this.state.step()
@@ -54,11 +55,44 @@ func (this *Interpreter) Value() object.Value {
 	return this.value
 }
 
-// acceptValue receives the final value computed by the program.  It
-// is normally called from the step method of final state to be
-// evaluated before the program terminates.
+// acceptValue receives values computed by StatementExpressions; the
+// last such value accepted is the completion value of the program.
 func (this *Interpreter) acceptValue(v object.Value) {
+	if this.Verbose {
+		fmt.Printf("Interpreter just got %v.\n", v)
+	}
 	this.value = v
+}
+
+/********************************************************************/
+
+// scope implements JavaScript (block) scope; it's basically just a
+// mapping of declared variable names to values, with two additions:
+//
+// - parent is a pointer to the parent scope (if nil then this is the
+// global scope)
+//
+// - interpreter is a pointer to the interpreter that this scope
+// belongs to.  It is provided so that stateExpressionStatement can
+// send a completion value to the interpreter, which is useful for
+// testing purposes now and possibly for eval() later.  This may go
+// away if we find a better way to test and decide not to implement
+// eval().  It's on scope instead of stateCommon just to reduce the
+// number of redundant copies.
+//
+// FIXME: readonly flag?  Or readonly if parent == nil?
+type scope struct {
+	names       map[string]object.Value
+	parent      *scope
+	interpreter *Interpreter
+}
+
+// newScope is a factory for scope objects.  The parent param is a
+// pointer to the parent (enclosing scope); it is nil if the scope
+// being created is the global scope.  The interpreter param is a
+// pointer to the interpreter this scope belongs to.
+func newScope(parent *scope, interpreter *Interpreter) *scope {
+	return &scope{make(map[string]object.Value), parent, interpreter}
 }
 
 /********************************************************************/
@@ -71,7 +105,11 @@ type state interface {
 	// step performs the next step in the evaluation of the program, and
 	// returns the new state execution state.
 	step() state
+}
 
+// valueAcceptor is the interface implemented by any object (mostly
+// states with subexpressions) that can accept a value.
+type valueAcceptor interface {
 	// acceptValue receives the value resulting from the evaluation of
 	//a child expression.
 	/// It is normally called by the
@@ -87,38 +125,39 @@ type state interface {
 // newState creates a state object corresponding to the given AST
 // node.  The parent parameter represents the state the interpreter
 // should return to after evaluating the tree rooted at node.
-func newState(parent state, node ast.Node) state {
+func newState(parent state, scope *scope, node ast.Node) state {
+	var sc = stateCommon{parent, scope}
 	switch n := node.(type) {
 	case *ast.BinaryExpression:
-		s := stateBinaryExpression{stateCommon: stateCommon{parent}}
+		s := stateBinaryExpression{stateCommon: sc}
 		s.init(n)
 		return &s
 	case *ast.BlockStatement:
-		s := stateBlockStatement{stateCommon: stateCommon{parent}}
+		s := stateBlockStatement{stateCommon: sc}
 		s.init(n)
 		return &s
 	case *ast.ConditionalExpression:
-		s := stateConditionalExpression{stateCommon: stateCommon{parent}}
+		s := stateConditionalExpression{stateCommon: sc}
 		s.init(n)
 		return &s
 	case *ast.EmptyStatement:
-		s := stateEmptyStatement{stateCommon: stateCommon{parent}}
+		s := stateEmptyStatement{stateCommon: sc}
 		s.init(n)
 		return &s
 	case *ast.ExpressionStatement:
-		s := stateExpressionStatement{stateCommon: stateCommon{parent}}
+		s := stateExpressionStatement{stateCommon: sc}
 		s.init(n)
 		return &s
 	case *ast.FunctionDeclaration:
-		s := stateFunctionDeclaration{stateCommon: stateCommon{parent}}
+		s := stateFunctionDeclaration{stateCommon: sc}
 		s.init(n)
 		return &s
 	case *ast.Literal:
-		s := stateLiteral{stateCommon: stateCommon{parent}}
+		s := stateLiteral{stateCommon: sc}
 		s.init(n)
 		return &s
 	case *ast.Program:
-		s := stateBlockStatement{stateCommon: stateCommon{parent}}
+		s := stateBlockStatement{stateCommon: sc}
 		s.initFromProgram(n)
 		return &s
 	default:
@@ -132,9 +171,14 @@ func newState(parent state, node ast.Node) state {
 // state<NodeType> types, which provides fields common to most/all
 // states.
 type stateCommon struct {
-	// state is the state to return to once evaluation of this state is
-	// finished.
+	// state is the state to return to once evaluation of this state
+	// is finished.  (This is "state" rather than "*state" because the
+	// interface value already containins a pointer to the actual
+	// state<Whatever> object.)
 	parent state
+
+	//
+	scope *scope
 }
 
 /********************************************************************/
@@ -157,9 +201,9 @@ func (this *stateBinaryExpression) init(node *ast.BinaryExpression) {
 
 func (this *stateBinaryExpression) step() state {
 	if !this.haveLeft {
-		return newState(this, ast.Node(this.lNode.E))
+		return newState(this, this.scope, ast.Node(this.lNode.E))
 	} else if !this.haveRight {
-		return newState(this, ast.Node(this.rNode.E))
+		return newState(this, this.scope, ast.Node(this.rNode.E))
 	}
 
 	// FIXME: implement other operators, types
@@ -182,12 +226,15 @@ func (this *stateBinaryExpression) step() state {
 		panic("not implemented")
 	}
 
-	this.parent.acceptValue(v)
+	this.parent.(valueAcceptor).acceptValue(v)
 	return this.parent
 
 }
 
 func (this *stateBinaryExpression) acceptValue(v object.Value) {
+	if this.scope.interpreter.Verbose {
+		fmt.Printf("stateBinaryExpression just got %v.\n", v)
+	}
 	if !this.haveLeft {
 		this.left = v
 		this.haveLeft = true
@@ -203,10 +250,9 @@ func (this *stateBinaryExpression) acceptValue(v object.Value) {
 
 type stateBlockStatement struct {
 	stateCommon
-	body        ast.Statements
-	value       object.Value
-	n           int
-	interpreter *Interpreter // Used by Program nodes only
+	body  ast.Statements
+	value object.Value
+	n     int
 }
 
 func (this *stateBlockStatement) initFromProgram(node *ast.Program) {
@@ -219,18 +265,11 @@ func (this *stateBlockStatement) init(node *ast.BlockStatement) {
 
 func (this *stateBlockStatement) step() state {
 	if this.n < len(this.body) {
-		s := newState(this, (this.body)[this.n])
+		s := newState(this, this.scope, (this.body)[this.n])
 		this.n++
 		return s
 	}
-	if this.interpreter != nil {
-		this.interpreter.acceptValue(this.value)
-	}
 	return this.parent
-}
-
-func (this *stateBlockStatement) acceptValue(v object.Value) {
-	this.value = v
 }
 
 /********************************************************************/
@@ -252,16 +291,19 @@ func (this *stateConditionalExpression) init(node *ast.ConditionalExpression) {
 
 func (this *stateConditionalExpression) step() state {
 	if !this.haveResult {
-		return newState(this, ast.Node(this.test.E))
+		return newState(this, this.scope, ast.Node(this.test.E))
 	}
 	if this.result {
-		return newState(this.parent, this.consequent.E)
+		return newState(this.parent, this.scope, this.consequent.E)
 	} else {
-		return newState(this.parent, this.alternate.E)
+		return newState(this.parent, this.scope, this.alternate.E)
 	}
 }
 
 func (this *stateConditionalExpression) acceptValue(v object.Value) {
+	if this.scope.interpreter.Verbose {
+		fmt.Printf("stateConditionalExpression just got %v.\n", v)
+	}
 	this.result = object.IsTruthy(v)
 	this.haveResult = true
 }
@@ -279,27 +321,33 @@ func (this *stateEmptyStatement) step() state {
 	return this.parent
 }
 
-func (this *stateEmptyStatement) acceptValue(v object.Value) {
-	panic(fmt.Errorf("EmptyStatement can't have subexpression"))
-}
-
 /********************************************************************/
 
 type stateExpressionStatement struct {
 	stateCommon
 	expr ast.Expression
+	done bool
 }
 
 func (this *stateExpressionStatement) init(node *ast.ExpressionStatement) {
 	this.expr = node.Expression
+	this.done = false
 }
 
 func (this *stateExpressionStatement) step() state {
-	return newState(this.parent, ast.Node(this.expr.E))
+	if !this.done {
+		return newState(this, this.scope, ast.Node(this.expr.E))
+	} else {
+		return this.parent
+	}
 }
 
 func (this *stateExpressionStatement) acceptValue(v object.Value) {
-	panic("should not be reached")
+	if this.scope.interpreter.Verbose {
+		fmt.Printf("stateExpressionStatement just got %v.\n", v)
+	}
+	this.scope.interpreter.acceptValue(v)
+	this.done = true
 }
 
 /********************************************************************/
@@ -315,10 +363,6 @@ func (this *stateFunctionDeclaration) step() state {
 	return this.parent
 }
 
-func (this *stateFunctionDeclaration) acceptValue(v object.Value) {
-	panic(fmt.Errorf("FunctionDeclaration can't have subexpression"))
-}
-
 /********************************************************************/
 
 type stateLiteral struct {
@@ -331,10 +375,6 @@ func (this *stateLiteral) init(node *ast.Literal) {
 }
 
 func (this *stateLiteral) step() state {
-	this.parent.acceptValue(this.value)
+	this.parent.(valueAcceptor).acceptValue(this.value)
 	return this.parent
-}
-
-func (this *stateLiteral) acceptValue(v object.Value) {
-	panic(fmt.Errorf("Literal can't have subexpression"))
 }
