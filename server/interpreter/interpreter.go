@@ -96,14 +96,14 @@ func newScope(parent *scope, interpreter *Interpreter) *scope {
 	return &scope{make(map[string]object.Value), parent, interpreter}
 }
 
-// setValue sets the named variable to the specified value, after
+// setVar sets the named variable to the specified value, after
 // first checking that it exists.
 //
 // FIXME: this should probably recurse if name is not found in current
 // scope - but not when called from stateVariableDeclarator, which
 // should never be setting variables other than in the
 // immediately-enclosing scope.
-func (this *scope) setValue(name string, value object.Value) {
+func (this *scope) setVar(name string, value object.Value) {
 	_, ok := this.vars[name]
 	if !ok {
 		panic(fmt.Errorf("can't set undeclared variable %v", name))
@@ -111,12 +111,12 @@ func (this *scope) setValue(name string, value object.Value) {
 	this.vars[name] = value
 }
 
-// getValue gets the current value of the specified variable, after
+// getVar gets the current value of the specified variable, after
 // first checking that it exists.
 //
 // FIXME: this should probably recurse if name is not found in current
 // scope.
-func (this *scope) getValue(name string) object.Value {
+func (this *scope) getVar(name string) object.Value {
 	v, ok := this.vars[name]
 	if !ok {
 		// FIXME: should probably throw
@@ -509,7 +509,7 @@ func (this *stateIdentifier) init(node *ast.Identifier) {
 }
 
 func (this *stateIdentifier) step() state {
-	this.parent.(valueAcceptor).acceptValue(this.scope.getValue(this.name))
+	this.parent.(valueAcceptor).acceptValue(this.scope.getVar(this.name))
 	return this.parent
 }
 
@@ -615,7 +615,7 @@ func (this *stateVariableDeclarator) step() state {
 	if this.value == nil {
 		return newState(this, this.scope, ast.Node(this.expr.E))
 	} else {
-		this.scope.setValue(this.name, this.value)
+		this.scope.setVar(this.name, this.value)
 		return this.parent
 	}
 }
