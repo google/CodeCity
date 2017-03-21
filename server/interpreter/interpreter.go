@@ -530,6 +530,10 @@ func (this *stateIdentifier) init(node *ast.Identifier) {
 }
 
 func (this *stateIdentifier) step() state {
+	// Note: if we getters/setters and a global scope object (like
+	// window), we would have to do a check to see if we need to run a
+	// getter.  But we have neither, so this is a straight variable
+	// lookup.
 	this.parent.(valueAcceptor).acceptValue(this.scope.getVar(this.name))
 	return this.parent
 }
