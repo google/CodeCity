@@ -14,10 +14,10 @@ type Interpreter struct {
 	Verbose bool
 }
 
-// NewInterpreter takes a JavaScript program, in the form of an
-// JSON-encoded ESTree, and creates a new Interpreter that will
-// execute that program.
-func NewInterpreter(astJSON string) *Interpreter {
+// New takes a JavaScript program, in the form of an JSON-encoded
+// ESTree, and creates a new Interpreter that will execute that
+// program.
+func New(astJSON string) *Interpreter {
 	var this = new(Interpreter)
 
 	tree, err := ast.NewFromJSON(astJSON)
@@ -282,6 +282,10 @@ func newState(parent state, scope *scope, node ast.Node) state {
 		s := stateLiteral{stateCommon: sc}
 		s.init(n)
 		return &s
+	case *ast.ObjectExpression:
+		s := stateObjectExpression{stateCommon: sc}
+		s.init(n)
+		return &s
 	case *ast.Program:
 		s := stateBlockStatement{stateCommon: sc}
 		s.initFromProgram(n)
@@ -311,7 +315,7 @@ type stateCommon struct {
 	// state<Whatever> object.)
 	parent state
 
-	//
+	// scope is the symobl table for the innermost scope.
 	scope *scope
 }
 
@@ -563,6 +567,57 @@ func (this *stateLiteral) init(node *ast.Literal) {
 func (this *stateLiteral) step() state {
 	this.parent.(valueAcceptor).acceptValue(this.value)
 	return this.parent
+}
+
+/********************************************************************/
+
+type stateObjectExpression struct {
+	stateCommon
+	props            []*ast.Property
+	obj              *object.Object
+	n                int
+	key              string
+	value            object.Value
+	gotKey, gotValue bool
+}
+
+func (this *stateObjectExpression) init(node *ast.ObjectExpression) {
+	this.props = node.Properties
+	this.obj = nil
+	this.n = 0
+}
+
+// FIXME: (maybe) getters and setters not supported.
+func (this *stateObjectExpression) step() state {
+	if this.obj == nil {
+		if this.n != 0 {
+			//			panic("lost object under construction!")
+		}
+		// FIXME: set owner of new object
+		this.obj = object.New(nil, object.ObjectProto)
+	}
+	if this.n < len(this.props) {
+		return newState(this, this.scope, this.props[this.n].Value.E)
+	} else {
+		this.parent.(valueAcceptor).acceptValue(this.obj)
+		return this.parent
+	}
+}
+
+func (this *stateObjectExpression) acceptValue(v object.Value) {
+	if this.scope.interpreter.Verbose {
+		fmt.Printf("stateObjectExpression just got %v.\n", v)
+	}
+	var key string
+	switch k := this.props[this.n].Key.N.(type) {
+	case *ast.Literal:
+		v := object.PrimitiveFromRaw(k.Raw)
+		key = v.String()
+	case *ast.Identifier:
+		key = k.Name
+	}
+	this.obj.SetProperty(key, v)
+	this.n++
 }
 
 /********************************************************************/

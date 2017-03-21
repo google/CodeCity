@@ -118,6 +118,14 @@ func (Boolean) SetProperty(name string, value Value) *ErrorMsg {
 	return nil
 }
 
+func (b Boolean) String() string {
+	if b {
+		return "true"
+	} else {
+		return "false"
+	}
+}
+
 /********************************************************************/
 
 // Number represents a JS numeric value.
@@ -145,6 +153,10 @@ func (Number) GetProperty(name string) (Value, *ErrorMsg) {
 // SetProperty on Number always succeeds but has no effect.
 func (Number) SetProperty(name string, value Value) *ErrorMsg {
 	return nil
+}
+
+func (n Number) String() string {
+	return fmt.Sprintf("%f", n)
 }
 
 /********************************************************************/
@@ -178,6 +190,10 @@ func (this String) GetProperty(name string) (Value, *ErrorMsg) {
 // length).
 func (String) SetProperty(name string, value Value) *ErrorMsg {
 	return nil
+}
+
+func (s String) String() string {
+	return string(s)
 }
 
 /********************************************************************/
@@ -215,6 +231,10 @@ func (Null) SetProperty(name string, value Value) *ErrorMsg {
 	}
 }
 
+func (Null) String() string {
+	return "null"
+}
+
 /********************************************************************/
 
 // Undefined represents a JS undefined value.
@@ -248,6 +268,10 @@ func (Undefined) SetProperty(name string, value Value) *ErrorMsg {
 		Name:    "TypeError",
 		Message: fmt.Sprintf("Cannot set property '%s' of undefined", name),
 	}
+}
+
+func (Undefined) String() string {
+	return "undefined"
 }
 
 /********************************************************************/

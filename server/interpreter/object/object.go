@@ -18,6 +18,11 @@
 // JavaScript values (objects and primitive values).
 package object
 
+import (
+	"bytes"
+	"fmt"
+)
+
 // Value represents any JavaScript value (primitive, object, etc.).
 type Value interface {
 	// Type() returns name of type (as given by the JavaScript typeof
@@ -38,6 +43,9 @@ type Value interface {
 	// SetProperty sets the given property to the specified value or
 	// returns an ErrorMsg if that was not possible.
 	SetProperty(name string, value Value) *ErrorMsg
+
+	// Must have a fmt-compatible String method.
+	fmt.Stringer
 }
 
 // Object represents typical JavaScript objects with (optional)
@@ -104,6 +112,31 @@ func (this *Object) SetProperty(name string, value Value) *ErrorMsg {
 			i:     false,
 		}
 		return nil
+	}
+}
+
+// FIXME: this should really print readably
+func (this *Object) String() string {
+	var b = new(bytes.Buffer)
+	var comma bool
+	b.WriteString("{ ")
+	for k, p := range this.properties {
+		if comma {
+			b.WriteString(", ")
+		}
+		fmt.Fprintf(b, "%s: %v", k, p.v)
+		comma = true
+	}
+	b.WriteString(" }")
+	return b.String()
+}
+
+func New(owner *Owner, parent Value) *Object {
+	return &Object{
+		owner:      owner,
+		parent:     parent,
+		properties: make(map[string]property),
+		f:          true,
 	}
 }
 

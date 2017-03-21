@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestInterpreter(t *testing.T) {
+func TestInterpreterSimple(t *testing.T) {
 	var tests = []struct {
 		desc     string
 		src      string
@@ -23,12 +23,34 @@ func TestInterpreter(t *testing.T) {
 	}
 
 	for _, c := range tests {
-		i := NewInterpreter(c.src)
+		i := New(c.src)
 		i.Run()
 		if v := i.Value(); v != c.expected {
 			t.Errorf("%s == %v (%T)\n(expected %v (%T))",
 				c.desc, v, v, c.expected, c.expected)
 		}
+	}
+}
+
+func TestInterpreterObjectExpression(t *testing.T) {
+	i := New(objectExpression)
+	i.Run()
+	v, ok := i.Value().(*object.Object)
+	if !ok {
+		t.Errorf("{foo: \"bar\", answer: 42} returned type %T "+
+			"(expected object.Object)", i.Value())
+	}
+	if c := object.PropCount(v); c != 2 {
+		t.Errorf("{foo: \"bar\", answer: 42} had %d properties "+
+			"(expected 2)", c)
+	}
+	if foo, _ := v.GetProperty("foo"); foo != object.String("bar") {
+		t.Errorf("{foo: \"bar\", answer: 42}'s foo == %v (%T) "+
+			"(expected \"bar\")", foo, foo)
+	}
+	if answer, _ := v.GetProperty("answer"); answer != object.Number(42) {
+		t.Errorf("{foo: \"bar\", answer: 42}'s answer == %v (%T) "+
+			"(expected 42)", answer, answer)
 	}
 }
 
@@ -71,3 +93,7 @@ const ifTrue = `{"type":"Program","start":0,"end":45,"body":[{"type":"IfStatemen
 // }
 // => "else"
 const ifFalse = `{"type":"Program","start":0,"end":46,"body":[{"type":"IfStatement","start":0,"end":46,"test":{"type":"Literal","start":3,"end":8,"value":false,"raw":"false"},"consequent":{"type":"BlockStatement","start":10,"end":25,"body":[{"type":"ExpressionStatement","start":16,"end":23,"expression":{"type":"Literal","start":16,"end":22,"value":"then","raw":"\"then\""}}]},"alternate":{"type":"BlockStatement","start":31,"end":46,"body":[{"type":"ExpressionStatement","start":37,"end":44,"expression":{"type":"Literal","start":37,"end":43,"value":"else","raw":"\"else\""}}]}}]}`
+
+// ({foo: "bar", answer: 42})
+// => {foo: "bar", answer: 42}
+const objectExpression = `{"type":"Program","start":0,"end":26,"body":[{"type":"ExpressionStatement","start":0,"end":26,"expression":{"type":"ObjectExpression","start":0,"end":26,"properties":[{"key":{"type":"Identifier","start":2,"end":5,"name":"foo"},"value":{"type":"Literal","start":7,"end":12,"value":"bar","raw":"\"bar\""},"kind":"init"},{"key":{"type":"Identifier","start":14,"end":20,"name":"answer"},"value":{"type":"Literal","start":22,"end":24,"value":42,"raw":"42"},"kind":"init"}]}}]}`
