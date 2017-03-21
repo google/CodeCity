@@ -44,8 +44,42 @@ type Value interface {
 	// returns an ErrorMsg if that was not possible.
 	SetProperty(name string, value Value) *ErrorMsg
 
-	// Must have a fmt-compatible String method.
-	fmt.Stringer
+	// ToString returns a string representation of the object.  This
+	// needn't be very informative (most objects will return "[object
+	// Object]").  N.B.:
+	//
+	// - The value returned by this method is used as a property
+	// key, in the case of a passing a non-string to a
+	// MemberExpression (i.e., in foo[bar], where bar is not a
+	// string).  It is therefore important that it do the same thing
+	// as other JS interpreters.
+	//
+	// - The JS .toString() method just wraps this one; note however
+	// that for primitives, overriding .toString on a primitive's
+	// prototype won't change how numbers are implicitly stringified;
+	// they'll still use the value returned by this method.  E.g.:
+	//
+	//     Number.proto.toString = function() { "42" };
+	//     (10).toString();    // => "42"
+	//     '' + 10;            // => "10"
+	//
+	// FIXME: move most of this comment somewhere better
+	ToString() string
+
+	// ToJSON returns a JSON representation of the object.
+	//
+	// The JS .toJSON() method just wraps this one.
+
+	//	ToJSON() string
+
+	// We also implement fmt.Stringer; this is intended to provide
+	// more useful Go test error messages and/or REPL output.
+	//
+	// FIXME: at the moment the String method defined here is just a
+	// synonym for ToJSON.  Provide additional info (type, proto,
+	// etc.)
+
+	//	fmt.Stringer
 }
 
 // Object represents typical JavaScript objects with (optional)
@@ -115,8 +149,11 @@ func (this *Object) SetProperty(name string, value Value) *ErrorMsg {
 	}
 }
 
-// FIXME: this should really print readably
-func (this *Object) String() string {
+func (Object) ToString() string {
+	return "[object Object]"
+}
+
+func (this *Object) ToJSON() string {
 	var b = new(bytes.Buffer)
 	var comma bool
 	b.WriteString("{ ")
@@ -129,6 +166,10 @@ func (this *Object) String() string {
 	}
 	b.WriteString(" }")
 	return b.String()
+}
+
+func (this *Object) String() string {
+	return this.ToJSON()
 }
 
 func New(owner *Owner, parent Value) *Object {

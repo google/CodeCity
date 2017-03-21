@@ -46,7 +46,6 @@ func TestPrimitiveFromRaw(t *testing.T) {
 }
 
 func TestIsTruthy(t *testing.T) {
-	var z float64
 	var tests = []struct {
 		input    Value
 		expected bool
@@ -66,7 +65,9 @@ func TestIsTruthy(t *testing.T) {
 		{Number(0.0), false},
 		{Number(-0.0), false},
 		{Number(1), true},
-		{Number(z / z), false}, // NaN
+		{Number(math.Inf(+1)), true},
+		{Number(math.Inf(-1)), true},
+		{Number(math.NaN()), false},
 		{Number(math.MaxFloat64), true},
 		{Number(math.SmallestNonzeroFloat64), true},
 	}
@@ -174,4 +175,32 @@ func TestUndefinedParentPanic(t *testing.T) {
 		}
 	}()
 	_ = Undefined{}.Parent()
+}
+
+func TestToString(t *testing.T) {
+	var tests = []struct {
+		input    Value
+		expected string
+	}{
+		{Boolean(true), "true"},
+		{Boolean(false), "false"},
+		{Null{}, "null"},
+		{Undefined{}, "undefined"},
+		{String(""), ""},
+		{String("foo"), "foo"},
+		{String("\"foo\""), "\"foo\""},
+		{Number(0), "0"},
+		{Number(math.Copysign(0, -1)), "-0"},
+		{Number(math.Inf(+1)), "Infinity"},
+		{Number(math.Inf(-1)), "-Infinity"},
+		{Number(math.NaN()), "NaN"},
+		// FIXME: add test cases for decimal -> scientific notation
+		// transition threshold.
+	}
+	for _, c := range tests {
+		if v := c.input.ToString(); v != c.expected {
+			t.Errorf("%v.ToString() (input type %T) == %v "+
+				"(expected %v)", c.input, c.input, v, c.expected)
+		}
+	}
 }

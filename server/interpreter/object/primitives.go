@@ -118,7 +118,7 @@ func (Boolean) SetProperty(name string, value Value) *ErrorMsg {
 	return nil
 }
 
-func (b Boolean) String() string {
+func (b Boolean) ToString() string {
 	if b {
 		return "true"
 	} else {
@@ -155,8 +155,15 @@ func (Number) SetProperty(name string, value Value) *ErrorMsg {
 	return nil
 }
 
-func (n Number) String() string {
-	return fmt.Sprintf("%f", n)
+func (n Number) ToString() string {
+	switch float64(n) {
+	case math.Inf(+1):
+		return "Infinity"
+	case math.Inf(-1):
+		return "-Infinity"
+	default:
+		return fmt.Sprintf("%g", n)
+	}
 }
 
 /********************************************************************/
@@ -192,7 +199,7 @@ func (String) SetProperty(name string, value Value) *ErrorMsg {
 	return nil
 }
 
-func (s String) String() string {
+func (s String) ToString() string {
 	return string(s)
 }
 
@@ -231,7 +238,7 @@ func (Null) SetProperty(name string, value Value) *ErrorMsg {
 	}
 }
 
-func (Null) String() string {
+func (Null) ToString() string {
 	return "null"
 }
 
@@ -270,7 +277,7 @@ func (Undefined) SetProperty(name string, value Value) *ErrorMsg {
 	}
 }
 
-func (Undefined) String() string {
+func (Undefined) ToString() string {
 	return "undefined"
 }
 
