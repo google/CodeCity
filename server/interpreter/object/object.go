@@ -19,8 +19,7 @@
 package object
 
 import (
-	"bytes"
-	"fmt"
+//	"fmt"
 )
 
 // Value represents any JavaScript value (primitive, object, etc.).
@@ -65,21 +64,6 @@ type Value interface {
 	//
 	// FIXME: move most of this comment somewhere better
 	ToString() string
-
-	// ToJSON returns a JSON representation of the object.
-	//
-	// The JS .toJSON() method just wraps this one.
-
-	//	ToJSON() string
-
-	// We also implement fmt.Stringer; this is intended to provide
-	// more useful Go test error messages and/or REPL output.
-	//
-	// FIXME: at the moment the String method defined here is just a
-	// synonym for ToJSON.  Provide additional info (type, proto,
-	// etc.)
-
-	//	fmt.Stringer
 }
 
 // Object represents typical JavaScript objects with (optional)
@@ -151,25 +135,6 @@ func (this *Object) SetProperty(name string, value Value) *ErrorMsg {
 
 func (Object) ToString() string {
 	return "[object Object]"
-}
-
-func (this *Object) ToJSON() string {
-	var b = new(bytes.Buffer)
-	var comma bool
-	b.WriteString("{ ")
-	for k, p := range this.properties {
-		if comma {
-			b.WriteString(", ")
-		}
-		fmt.Fprintf(b, "%s: %v", k, p.v)
-		comma = true
-	}
-	b.WriteString(" }")
-	return b.String()
-}
-
-func (this *Object) String() string {
-	return this.ToJSON()
 }
 
 func New(owner *Owner, parent Value) *Object {
