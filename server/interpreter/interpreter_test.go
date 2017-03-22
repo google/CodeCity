@@ -36,6 +36,7 @@ func TestInterpreterSimple(t *testing.T) {
 		{"?: false", condFalse, object.String("else")},
 		{"if true", ifTrue, object.String("then")},
 		{"if false", ifFalse, object.String("else")},
+		{"var x = 0; x = 44; x", simpleAssignment, object.Number(44)},
 	}
 
 	for _, c := range tests {
@@ -109,6 +110,12 @@ const ifTrue = `{"type":"Program","start":0,"end":45,"body":[{"type":"IfStatemen
 // }
 // => "else"
 const ifFalse = `{"type":"Program","start":0,"end":46,"body":[{"type":"IfStatement","start":0,"end":46,"test":{"type":"Literal","start":3,"end":8,"value":false,"raw":"false"},"consequent":{"type":"BlockStatement","start":10,"end":25,"body":[{"type":"ExpressionStatement","start":16,"end":23,"expression":{"type":"Literal","start":16,"end":22,"value":"then","raw":"\"then\""}}]},"alternate":{"type":"BlockStatement","start":31,"end":46,"body":[{"type":"ExpressionStatement","start":37,"end":44,"expression":{"type":"Literal","start":37,"end":43,"value":"else","raw":"\"else\""}}]}}]}`
+
+// var x = 0;
+// x = 44;
+// x
+// => 44
+const simpleAssignment = `{"type":"Program","start":0,"end":20,"body":[{"type":"VariableDeclaration","start":0,"end":10,"declarations":[{"type":"VariableDeclarator","start":4,"end":9,"id":{"type":"Identifier","start":4,"end":5,"name":"x"},"init":{"type":"Literal","start":8,"end":9,"value":0,"raw":"0"}}],"kind":"var"},{"type":"ExpressionStatement","start":11,"end":18,"expression":{"type":"AssignmentExpression","start":11,"end":17,"operator":"=","left":{"type":"Identifier","start":11,"end":12,"name":"x"},"right":{"type":"Literal","start":15,"end":17,"value":44,"raw":"44"}}},{"type":"ExpressionStatement","start":19,"end":20,"expression":{"type":"Identifier","start":19,"end":20,"name":"x"}}]}`
 
 // ({foo: "bar", answer: 42})
 // => {foo: "bar", answer: 42}

@@ -491,18 +491,22 @@ func (this *stateExpressionStatement) init(node *ast.ExpressionStatement) {
 
 func (this *stateExpressionStatement) step() state {
 	if !this.done {
+		this.done = true
 		return newState(this, this.scope, ast.Node(this.expr.E))
 	} else {
 		return this.parent
 	}
 }
 
+// FIXME: this is only needed so a completion value is available in
+// the interpreter for test purposes (and possibly for eval); if it
+// was not required we could greatly simplify this state and only
+// visit it once.
 func (this *stateExpressionStatement) acceptValue(v object.Value) {
 	if this.scope.interpreter.Verbose {
 		fmt.Printf("stateExpressionStatement just got %v.\n", v)
 	}
 	this.scope.interpreter.acceptValue(v)
-	this.done = true
 }
 
 /********************************************************************/
