@@ -633,7 +633,7 @@ func (this *stateObjectExpression) acceptValue(v object.Value) {
 	switch k := this.props[this.n].Key.N.(type) {
 	case *ast.Literal:
 		v := object.PrimitiveFromRaw(k.Raw)
-		key = v.String()
+		key = v.ToString()
 	case *ast.Identifier:
 		key = k.Name
 	}
