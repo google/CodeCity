@@ -303,6 +303,10 @@ func newState(parent state, scope *scope, node ast.Node) state {
 		s := stateLiteral{stateCommon: sc}
 		s.init(n)
 		return &s
+	case *ast.MemberExpression:
+		s := stateMemberExpression{stateCommon: sc}
+		s.init(n)
+		return &s
 	case *ast.ObjectExpression:
 		s := stateObjectExpression{stateCommon: sc}
 		s.init(n)
@@ -353,12 +357,12 @@ type stateAssignmentExpression struct {
 func (this *stateAssignmentExpression) init(node *ast.AssignmentExpression) {
 	this.op = node.Operator
 	this.rNode = node.Right
-	this.left.init(this.scope, node.Left)
+	this.left.init(this, this.scope, node.Left)
 }
 
 func (this *stateAssignmentExpression) step() state {
 	if !this.left.ready {
-		return this.left.next(this)
+		return &this.left
 	} else if this.right == nil {
 		return newState(this, this.scope, ast.Node(this.rNode.E))
 	}
@@ -641,6 +645,67 @@ func (this *stateLiteral) step() state {
 
 /********************************************************************/
 
+type stateMemberExpression struct {
+	stateCommon
+	baseExpr           ast.Expression // To be resolve to obtain base
+	membExpr           ast.Expression // To be resolve to obtain name
+	computed           bool           // Is this x[y] (rather than x.y)?
+	base               object.Value
+	name               string
+	haveBase, haveName bool
+}
+
+func (this *stateMemberExpression) init(node *ast.MemberExpression) {
+	this.baseExpr = node.Object
+	this.membExpr = node.Property
+	this.computed = node.Computed
+	this.haveBase = false
+	this.haveName = false
+}
+
+func (this *stateMemberExpression) step() state {
+	if !this.haveBase {
+		return newState(this, this.scope, ast.Node(this.baseExpr.E))
+	} else if !this.haveName {
+		if this.computed {
+			return newState(this, this.scope, ast.Node(this.membExpr.E))
+		}
+
+		// It's expr.identifier; get name of identifier:
+		i, ok := this.membExpr.E.(*ast.Identifier)
+		if !ok {
+			panic(fmt.Errorf("invalid computed member expression type %T",
+				this.membExpr.E))
+		}
+		this.name = i.Name
+		this.haveName = true
+	}
+	v, err := this.base.GetProperty(this.name)
+	if err != nil {
+		// FIXME: throw JS error
+		panic(err)
+	}
+	this.parent.(valueAcceptor).acceptValue(v)
+	return this.parent
+}
+
+func (this *stateMemberExpression) acceptValue(v object.Value) {
+	if this.scope.interpreter.Verbose {
+		fmt.Printf("stepMemberExpression just got %v.\n", v)
+	}
+	if !this.haveBase {
+		this.base = v
+		this.haveBase = true
+	} else if !this.haveName {
+		this.name = v.ToString()
+		this.haveName = true
+	} else {
+		panic(fmt.Errorf("too may values"))
+	}
+}
+
+/********************************************************************/
+
 type stateObjectExpression struct {
 	stateCommon
 	props            []*ast.Property
@@ -752,8 +817,13 @@ func (this *stateVariableDeclarator) acceptValue(v object.Value) {
 /********************************************************************/
 
 // lvalue is an object which encapsulates reading and modification of
-// lvalues in assignment and update expressions.  It also acts as an
-// interpreter state for the evaluation of lvalue subexpressions.
+// lvalues in assignment and update expressions.  It is (very
+// approximately) an implementation of the "reference type" in the
+// ECMAScript 5.1 spec, without the strict flag (as we are always
+// strict).
+//
+// It also serves as an interpreter state for the evaluation of its own
+// subexpressions.
 //
 // Usage:
 //
@@ -764,13 +834,13 @@ func (this *stateVariableDeclarator) acceptValue(v object.Value) {
 //  }
 //
 //  func (this *stateFoo) init(node *ast.Foo) {
-//      this.lv.init(this.scope, node.left)
+//      this.lv.init(this, this.scope, node.left)
 //      ...
 //  }
 //
 //  func (this *stateFoo) step() state {
 //      if(!this.lv.ready) {
-//          return this.lv.next(this)
+//          return &this.lv
 //      }
 //      ...
 //      lv.set(lv.get() + 1) // or whatever
@@ -779,30 +849,30 @@ func (this *stateVariableDeclarator) acceptValue(v object.Value) {
 //
 type lvalue struct {
 	stateCommon
-	name  string
-	ready bool
+	baseExpr        ast.Expression // To be resolve to obtain base
+	membExpr        ast.Expression // To be resolve to obtain name
+	computed        bool           // Is this x[y] (rather than x.y)?
+	base            object.Value   // ECMA "base"
+	name            string         // ECMA "referenced name"
+	haveBase, ready bool
 }
 
-func (this *lvalue) init(scope *scope, expr ast.Expression) {
+func (this *lvalue) init(parent state, scope *scope, expr ast.Expression) {
+	this.parent = parent
 	this.scope = scope
-
 	switch e := expr.E.(type) {
 	case *ast.Identifier:
+		this.base = nil
 		this.name = e.Name
 		this.ready = true
 	case *ast.MemberExpression:
-		panic("not implemented")
+		this.baseExpr = e.Object
+		this.membExpr = e.Property
+		this.computed = e.Computed
+		this.ready = false
 	default:
 		panic(fmt.Errorf("%T is not an lvalue", expr.E))
 	}
-}
-
-func (this *lvalue) next(parent state) state {
-	if this.ready {
-		// Nothing to do.  Why was this called?
-		panic("lvalue already ready")
-	}
-	panic("not implemented")
 }
 
 // get returns the current value of the variable or property denoted
@@ -811,7 +881,16 @@ func (this *lvalue) get() object.Value {
 	if !this.ready {
 		panic("lvalue not ready")
 	}
-	return this.scope.getVar(this.name)
+	if this.base == nil {
+		return this.scope.getVar(this.name)
+	} else {
+		v, err := this.base.GetProperty(this.name)
+		if err != nil {
+			// FIXME: throw JS error
+			panic(err)
+		}
+		return v
+	}
 }
 
 // set updates the variable or property denoted
@@ -820,13 +899,46 @@ func (this *lvalue) set(value object.Value) {
 	if !this.ready {
 		panic("lvalue not ready")
 	}
-	this.scope.setVar(this.name, value)
+	if this.base == nil {
+		this.scope.setVar(this.name, value)
+	} else {
+		this.base.SetProperty(this.name, value)
+	}
 }
 
 func (this *lvalue) step() state {
-	panic("not implemented")
+	if !this.haveBase {
+		return newState(this, this.scope, ast.Node(this.baseExpr.E))
+	} else if !this.ready {
+		if this.computed {
+			return newState(this, this.scope, ast.Node(this.membExpr.E))
+		}
+
+		// It's expr.identifier; get name of identifier:
+		i, ok := this.membExpr.E.(*ast.Identifier)
+		if !ok {
+			panic(fmt.Errorf("invalid computed member expression type %T",
+				this.membExpr.E))
+		}
+		this.name = i.Name
+		this.ready = true
+		return this.parent
+	} else {
+		return this.parent
+	}
 }
 
 func (this *lvalue) acceptValue(v object.Value) {
-	panic("not implemented")
+	if this.scope.interpreter.Verbose {
+		fmt.Printf("lvalue just got %v.\n", v)
+	}
+	if !this.haveBase {
+		this.base = v
+		this.haveBase = true
+	} else if !this.ready {
+		this.name = v.ToString()
+		this.ready = true
+	} else {
+		panic(fmt.Errorf("too may values"))
+	}
 }

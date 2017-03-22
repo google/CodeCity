@@ -36,7 +36,8 @@ func TestInterpreterSimple(t *testing.T) {
 		{"?: false", condFalse, object.String("else")},
 		{"if true", ifTrue, object.String("then")},
 		{"if false", ifFalse, object.String("else")},
-		{"var x = 0; x = 44; x", simpleAssignment, object.Number(44)},
+		{"var x=0; x=44; x", simpleAssignment, object.Number(44)},
+		{"var o={}; o.foo=45; o.foo", propertyAssignment, object.Number(45)},
 	}
 
 	for _, c := range tests {
@@ -116,6 +117,12 @@ const ifFalse = `{"type":"Program","start":0,"end":46,"body":[{"type":"IfStateme
 // x
 // => 44
 const simpleAssignment = `{"type":"Program","start":0,"end":20,"body":[{"type":"VariableDeclaration","start":0,"end":10,"declarations":[{"type":"VariableDeclarator","start":4,"end":9,"id":{"type":"Identifier","start":4,"end":5,"name":"x"},"init":{"type":"Literal","start":8,"end":9,"value":0,"raw":"0"}}],"kind":"var"},{"type":"ExpressionStatement","start":11,"end":18,"expression":{"type":"AssignmentExpression","start":11,"end":17,"operator":"=","left":{"type":"Identifier","start":11,"end":12,"name":"x"},"right":{"type":"Literal","start":15,"end":17,"value":44,"raw":"44"}}},{"type":"ExpressionStatement","start":19,"end":20,"expression":{"type":"Identifier","start":19,"end":20,"name":"x"}}]}`
+
+// var o = {};
+// o.foo = 45;
+// o.foo
+// => 45
+const propertyAssignment = `{"type":"Program","start":0,"end":29,"body":[{"type":"VariableDeclaration","start":0,"end":11,"declarations":[{"type":"VariableDeclarator","start":4,"end":10,"id":{"type":"Identifier","start":4,"end":5,"name":"o"},"init":{"type":"ObjectExpression","start":8,"end":10,"properties":[]}}],"kind":"var"},{"type":"ExpressionStatement","start":12,"end":23,"expression":{"type":"AssignmentExpression","start":12,"end":22,"operator":"=","left":{"type":"MemberExpression","start":12,"end":17,"object":{"type":"Identifier","start":12,"end":13,"name":"o"},"property":{"type":"Identifier","start":14,"end":17,"name":"foo"},"computed":false},"right":{"type":"Literal","start":20,"end":22,"value":45,"raw":"45"}}},{"type":"ExpressionStatement","start":24,"end":29,"expression":{"type":"MemberExpression","start":24,"end":29,"object":{"type":"Identifier","start":24,"end":25,"name":"o"},"property":{"type":"Identifier","start":26,"end":29,"name":"foo"},"computed":false}}]}`
 
 // ({foo: "bar", answer: 42})
 // => {foo: "bar", answer: 42}
