@@ -511,6 +511,8 @@ func (this *stateExpressionStatement) acceptValue(v object.Value) {
 
 /********************************************************************/
 
+// Evaluating a function declaration has no effect; the declaration
+// has already been hoisted into the enclosing scope.
 type stateFunctionDeclaration struct {
 	stateCommon
 }
@@ -544,6 +546,9 @@ func (this *stateIdentifier) step() state {
 
 /********************************************************************/
 
+// This is exactly the same as stateConditionalExpression except for
+// the types of consequent and alternate (and the name and node type,
+// of course).
 type stateIfStatement struct {
 	stateCommon
 	test       ast.Expression
