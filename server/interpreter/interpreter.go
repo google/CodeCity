@@ -263,6 +263,10 @@ type valueAcceptor interface {
 func newState(parent state, scope *scope, node ast.Node) state {
 	var sc = stateCommon{parent, scope}
 	switch n := node.(type) {
+	case *ast.AssignmentExpression:
+		s := stateAssignmentExpression{stateCommon: sc}
+		s.init(n)
+		return &s
 	case *ast.BinaryExpression:
 		s := stateBinaryExpression{stateCommon: sc}
 		s.init(n)
@@ -334,6 +338,42 @@ type stateCommon struct {
 
 	// scope is the symobl table for the innermost scope.
 	scope *scope
+}
+
+/********************************************************************/
+
+type stateAssignmentExpression struct {
+	stateCommon
+	op    string
+	left  lvalue
+	rNode ast.Expression
+	right object.Value
+}
+
+func (this *stateAssignmentExpression) init(node *ast.AssignmentExpression) {
+	this.op = node.Operator
+	this.rNode = node.Right
+	this.left.init(this.scope, node.Left)
+}
+
+func (this *stateAssignmentExpression) step() state {
+	if !this.left.ready {
+		return this.left.next(this)
+	} else if this.right == nil {
+		return newState(this, this.scope, ast.Node(this.rNode.E))
+	}
+
+	// Do assignment:
+	if !this.left.ready {
+		panic("lvalue not ready???")
+	}
+	this.left.set(this.right)
+
+	return this.parent
+}
+
+func (this *stateAssignmentExpression) acceptValue(v object.Value) {
+	this.right = v
 }
 
 /********************************************************************/
@@ -707,4 +747,86 @@ func (this *stateVariableDeclarator) step() state {
 
 func (this *stateVariableDeclarator) acceptValue(v object.Value) {
 	this.value = v
+}
+
+/********************************************************************/
+
+// lvalue is an object which encapsulates reading and modification of
+// lvalues in assignment and update expressions.  It also acts as an
+// interpreter state for the evaluation of lvalue subexpressions.
+//
+// Usage:
+//
+//  struct stateFoo {
+//      stateCommon
+//      lv lvalue
+//      ...
+//  }
+//
+//  func (this *stateFoo) init(node *ast.Foo) {
+//      this.lv.init(this.scope, node.left)
+//      ...
+//  }
+//
+//  func (this *stateFoo) step() state {
+//      if(!this.lv.ready) {
+//          return this.lv.next(this)
+//      }
+//      ...
+//      lv.set(lv.get() + 1) // or whatever
+//      ...
+//  }
+//
+type lvalue struct {
+	stateCommon
+	name  string
+	ready bool
+}
+
+func (this *lvalue) init(scope *scope, expr ast.Expression) {
+	this.scope = scope
+
+	switch e := expr.E.(type) {
+	case *ast.Identifier:
+		this.name = e.Name
+		this.ready = true
+	case *ast.MemberExpression:
+		panic("not implemented")
+	default:
+		panic(fmt.Errorf("%T is not an lvalue", expr.E))
+	}
+}
+
+func (this *lvalue) next(parent state) state {
+	if this.ready {
+		// Nothing to do.  Why was this called?
+		panic("lvalue already ready")
+	}
+	panic("not implemented")
+}
+
+// get returns the current value of the variable or property denoted
+// by the lvalue expression.
+func (this *lvalue) get() object.Value {
+	if !this.ready {
+		panic("lvalue not ready")
+	}
+	return this.scope.getVar(this.name)
+}
+
+// set updates the variable or property denoted
+// by the lvalue expression to the given value.
+func (this *lvalue) set(value object.Value) {
+	if !this.ready {
+		panic("lvalue not ready")
+	}
+	this.scope.setVar(this.name, value)
+}
+
+func (this *lvalue) step() state {
+	panic("not implemented")
+}
+
+func (this *lvalue) acceptValue(v object.Value) {
+	panic("not implemented")
 }
