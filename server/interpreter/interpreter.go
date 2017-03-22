@@ -323,6 +323,10 @@ func newState(parent state, scope *scope, node ast.Node) state {
 		s := stateVariableDeclarator{stateCommon: sc}
 		s.init(n)
 		return &s
+	case *ast.UpdateExpression:
+		s := stateUpdateExpression{stateCommon: sc}
+		s.init(n)
+		return &s
 	default:
 		panic(fmt.Errorf("State for AST node type %T not implemented\n", n))
 	}
@@ -812,6 +816,52 @@ func (this *stateVariableDeclarator) step() state {
 
 func (this *stateVariableDeclarator) acceptValue(v object.Value) {
 	this.value = v
+}
+
+/********************************************************************/
+
+type stateUpdateExpression struct {
+	stateCommon
+	op     string
+	prefix bool
+	arg    lvalue
+}
+
+func (this *stateUpdateExpression) init(node *ast.UpdateExpression) {
+	this.op = node.Operator
+	this.prefix = node.Prefix
+	this.arg.init(this, this.scope, node.Argument)
+}
+
+func (this *stateUpdateExpression) step() state {
+	if !this.arg.ready {
+		return &this.arg
+	}
+
+	// Do update:
+	v := this.arg.get()
+	n, ok := v.(object.Number)
+	if !ok {
+		// FIXME: coerce v to number
+		panic("not a number")
+	}
+	if !this.prefix {
+		this.parent.(valueAcceptor).acceptValue(n)
+	}
+	switch this.op {
+	case "++":
+		n++
+	case "--":
+		n--
+	}
+	if this.prefix {
+		this.parent.(valueAcceptor).acceptValue(n)
+	}
+	this.arg.set(n)
+	return this.parent
+}
+
+func (this *stateUpdateExpression) acceptValue(v object.Value) {
 }
 
 /********************************************************************/

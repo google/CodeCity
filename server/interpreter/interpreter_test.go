@@ -38,6 +38,8 @@ func TestInterpreterSimple(t *testing.T) {
 		{"if false", ifFalse, object.String("else")},
 		{"var x=0; x=44; x", simpleAssignment, object.Number(44)},
 		{"var o={}; o.foo=45; o.foo", propertyAssignment, object.Number(45)},
+		{"var x=45; x++; x++", postincrement, object.Number(46)},
+		{"var x=45; ++x; ++x", preincrement, object.Number(47)},
 	}
 
 	for _, c := range tests {
@@ -123,6 +125,18 @@ const simpleAssignment = `{"type":"Program","start":0,"end":20,"body":[{"type":"
 // o.foo
 // => 45
 const propertyAssignment = `{"type":"Program","start":0,"end":29,"body":[{"type":"VariableDeclaration","start":0,"end":11,"declarations":[{"type":"VariableDeclarator","start":4,"end":10,"id":{"type":"Identifier","start":4,"end":5,"name":"o"},"init":{"type":"ObjectExpression","start":8,"end":10,"properties":[]}}],"kind":"var"},{"type":"ExpressionStatement","start":12,"end":23,"expression":{"type":"AssignmentExpression","start":12,"end":22,"operator":"=","left":{"type":"MemberExpression","start":12,"end":17,"object":{"type":"Identifier","start":12,"end":13,"name":"o"},"property":{"type":"Identifier","start":14,"end":17,"name":"foo"},"computed":false},"right":{"type":"Literal","start":20,"end":22,"value":45,"raw":"45"}}},{"type":"ExpressionStatement","start":24,"end":29,"expression":{"type":"MemberExpression","start":24,"end":29,"object":{"type":"Identifier","start":24,"end":25,"name":"o"},"property":{"type":"Identifier","start":26,"end":29,"name":"foo"},"computed":false}}]}`
+
+// var x = 45;
+// x++;
+// x++;
+// => 46
+const postincrement = `{"type":"Program","start":0,"end":21,"body":[{"type":"VariableDeclaration","start":0,"end":11,"declarations":[{"type":"VariableDeclarator","start":4,"end":10,"id":{"type":"Identifier","start":4,"end":5,"name":"x"},"init":{"type":"Literal","start":8,"end":10,"value":45,"raw":"45"}}],"kind":"var"},{"type":"ExpressionStatement","start":12,"end":16,"expression":{"type":"UpdateExpression","start":12,"end":15,"operator":"++","prefix":false,"argument":{"type":"Identifier","start":12,"end":13,"name":"x"}}},{"type":"ExpressionStatement","start":17,"end":21,"expression":{"type":"UpdateExpression","start":17,"end":20,"operator":"++","prefix":false,"argument":{"type":"Identifier","start":17,"end":18,"name":"x"}}}]}`
+
+// var x = 45;
+// ++x;
+// ++x;
+// => 47
+const preincrement = `{"type":"Program","start":0,"end":21,"body":[{"type":"VariableDeclaration","start":0,"end":11,"declarations":[{"type":"VariableDeclarator","start":4,"end":10,"id":{"type":"Identifier","start":4,"end":5,"name":"x"},"init":{"type":"Literal","start":8,"end":10,"value":45,"raw":"45"}}],"kind":"var"},{"type":"ExpressionStatement","start":12,"end":16,"expression":{"type":"UpdateExpression","start":12,"end":15,"operator":"++","prefix":true,"argument":{"type":"Identifier","start":14,"end":15,"name":"x"}}},{"type":"ExpressionStatement","start":17,"end":21,"expression":{"type":"UpdateExpression","start":17,"end":20,"operator":"++","prefix":true,"argument":{"type":"Identifier","start":19,"end":20,"name":"x"}}}]}`
 
 // ({foo: "bar", answer: 42})
 // => {foo: "bar", answer: 42}
