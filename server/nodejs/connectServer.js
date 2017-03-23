@@ -1,6 +1,6 @@
 /**
  * @license
- * Code City Node.js Login Server
+ * Code City Node.js Connection Server
  *
  * Copyright 2017 Google Inc.
  * https://github.com/NeilFraser/CodeCity
@@ -19,22 +19,18 @@
  */
 
 /**
- * @fileoverview Node.js server that provides Google auth services to Code City.
+ * @fileoverview Node.js server that provides connection services to Code City.
  * @author fraser@google.com (Neil Fraser)
  */
 
 // Start with: node loginServer.js
 'use strict';
 
-var crypto = require('crypto');
 var fs = require('fs');
-var google = require('googleapis');
 var http = require('http');
 
 // Global variables.
 var CFG = null;
-var oauth2Client;
-var loginUrl;
 
 /**
  * Generate a unique ID.  This should be globally unique.
@@ -94,47 +90,36 @@ function handleRequest(request, response) {
     return;
   }
 
-  if (request.url == CFG.loginPath) {
-    var subs = {'<<<LOGIN_URL>>>': loginUrl};
-    serveFile(response, 'login.html', subs);
-
-  } else if (request.url.indexOf(CFG.loginPath + '?code=') == 0) {
-    var code = request.url.substring(request.url.indexOf('=') + 1);
-    oauth2Client.getToken(code, function(err, tokens) {
-      // Now tokens contains an access_token and an optional refresh_token. Save them.
-      if (err) {
-        console.log(err);
-        response.statusCode = 500;
-        response.end('Google Authentication fail: ' + err);
-        return;
-      }
-      oauth2Client.setCredentials(tokens);
-
-      var oauth2Api = google.oauth2('v2');
-      oauth2Api.userinfo.v2.me.get({auth: oauth2Client},
-        function(err, data) {
-          if (err) {
-            console.log(err);
-            response.statusCode = 500;
-            response.end('Google Userinfo fail: ' + err);
-            return;
-          }
-          var id = CFG.idSalt + data.id;
-          id = crypto.createHash('md5').update(id).digest('hex');
-          // For future reference, the user's email address is: data.email
-          response.writeHead(302, {  // Temporary redirect
-             'Set-Cookie': 'id=' + id + '; Domain=' + CFG.cookieDomain +
-                           '; Path=' + CFG.connectPath + '; HttpOnly',
-             'Location': CFG.connectPath
-           });
-          response.end('Login OK.  Redirecting.');
-          console.log('Accepted ' + 'x'.repeat(id.length - 4) +
-                      id.substring(id.length - 4));
-        });
+  if (request.url == CFG.connectPath) {
+    var cookieList = {};
+    var rhc = request.headers.cookie;
+    rhc && rhc.split(';').forEach(function(cookie) {
+        var parts = cookie.split('=');
+        cookieList[parts.shift().trim()] = decodeURI(parts.join('='));
     });
+    if (!cookieList.id || !cookieList.id.match(/^\w+$/)) {
+      if (cookieList.id) {
+        console.log('Missing login ID.  Redirecting.');
+      } else {
+        console.log('Invalid login ID: ' + cookieList.id);
+      }
+      response.writeHead(302, {  // Temporary redirect
+         'Location': CFG.loginPath
+       });
+      response.end('Login required.  Redirecting.');
+      return;
+    }
+    var sessionId = genUid(22);
+    var subs = {
+      '<<<LOGIN_ID>>>': cookieList.id,
+      '<<<SESSION_ID>>>': sessionId
+    };
+    serveFile(response, 'connect.html', subs);
+
+  } else if (request.url.indexOf(CFG.connectPath + '?ping=') == 0) {
   } else {
     response.statusCode = 404;
-    response.end('Unknown Login URL: ' + request.url);
+    response.end('Unknown Connect URL: ' + request.url);
   }
 }
 
@@ -143,39 +128,23 @@ function handleRequest(request, response) {
  * When done, call startup.
  */
 function configureAndStartup() {
-  const filename = 'loginServer.cfg';
+  const filename = 'connectServer.cfg';
   fs.readFile(filename, 'utf8', function(err, data) {
     if (err) {
-      console.log('Configuration file loginServer.cfg not found.  ' +
-                  'Creating new file.  Please edit this file.');
+      console.log('Configuration file connectServer.cfg not found.  ' +
+                  'Creating new file.');
       data = {
         // Internal port for this HTTP server.  Nginx hides this from users.
-        httpPort: 7781,
+        httpPort: 7782,
         // Path to the login page.
         loginPath: '/login',
         // Path to the connect page.
-        connectPath: '/connect',
-        // Google's API client ID.
-        clientId: '00000000000-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com',
-        // Google's API client secret.
-        clientSecret: 'yyyyyyyyyyyyyyyyyyyyyyyy',
-        // Full public-facing URL for login page.
-        redirectUri: 'https://example.codecity.world/login',
-        // Domain of connect page.
-        cookieDomain: 'example.codecity.world',
-        // Random salt for login IDs.
-        idSalt: genUid(8)
+        connectPath: '/connect'
       };
       data = JSON.stringify(data, null, 2);
       fs.writeFile(filename, data, 'utf8');
-      return;
     }
     data = JSON.parse(data);
-    if (data.clientSecret == 'yyyyyyyyyyyyyyyyyyyyyyyy') {
-      console.log('Configuration file loginServer.cfg not configured.  ' +
-                  'Please edit this file.');
-      return;
-    }
     CFG = data;
     startup();
   });
@@ -185,22 +154,10 @@ function configureAndStartup() {
  * Initialize Google's authentication and start up the HTTP server.
  */
 function startup() {
-  // Create an authentication client for our interactions with Google.
-  oauth2Client = new google.auth.OAuth2(
-    CFG.clientId,
-    CFG.clientSecret,
-    CFG.redirectUri
-  );
-
-  // Precompute Google's login URL.
-  loginUrl = oauth2Client.generateAuthUrl({
-    scope: 'email'
-  });
-
   // Start an HTTP server.
   var server = http.createServer(handleRequest);
   server.listen(CFG.httpPort, 'localhost', function(){
-    console.log('Login server listening on port ' + CFG.httpPort);
+    console.log('Connection server listening on port ' + CFG.httpPort);
   });
 }
 

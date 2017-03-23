@@ -1,7 +1,7 @@
 .DS_Store
-*.pyc
 *.komodoproject
 *~
 
 server/nodejs/node_modules
 server/nodejs/loginServer.cfg
+server/nodejs/connectServer.cfg
