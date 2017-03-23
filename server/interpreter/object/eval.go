@@ -19,9 +19,35 @@
 
 package object
 
+import (
+	"fmt"
+)
+
 func BinaryOp(left Value, op string, right Value) Value {
 	// FIXME: implement other operators
 	switch op {
+	case "==":
+		panic("not implemented")
+	case "!=":
+		panic("not implemented")
+	case "===":
+		panic("not implemented")
+	case "!==":
+		panic("not implemented")
+	case "<":
+		panic("not implemented")
+	case "<=":
+		panic("not implemented")
+	case ">":
+		panic("not implemented")
+	case ">=":
+		panic("not implemented")
+	case "<<":
+		panic("not implemented")
+	case ">>":
+		panic("not implemented")
+	case ">>>":
+		panic("not implemented")
 	case "+":
 		if left.Type() == "string" || right.Type() == "string" {
 			// Concatenate
@@ -37,7 +63,19 @@ func BinaryOp(left Value, op string, right Value) Value {
 	case "/":
 		// FIXME: check edge cases - NaN, Infinity, etc.
 		return Number(left.ToNumber() / right.ToNumber())
-	default:
+	case "%":
 		panic("not implemented")
+	case "|":
+		panic("not implemented")
+	case "^":
+		panic("not implemented")
+	case "&":
+		panic("not implemented")
+	case "in":
+		panic("not implemented")
+	case "instanceof":
+		panic("not implemented")
+	default:
+		panic(fmt.Errorf("illegal binary operator %s", op))
 	}
 }

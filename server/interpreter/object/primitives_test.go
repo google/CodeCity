@@ -202,6 +202,7 @@ func TestToNumber(t *testing.T) {
 		{String(" \t\v\r\n12\n\r\v\t "), 12},
 		{String("010"), 10},
 		{String("0x10"), 16},
+		{String("0x3.14"), NaN},
 		{String("-10"), -10},
 		{String("6.02214086e23"), 6.02214086e23},       // Avogadro
 		{String("9007199254740991"), 9007199254740991}, // MAX_SAFE_INTEGER
