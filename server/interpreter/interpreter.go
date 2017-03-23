@@ -507,7 +507,7 @@ func (this *stateConditionalExpression) acceptValue(v object.Value) {
 	if this.scope.interpreter.Verbose {
 		fmt.Printf("stateConditionalExpression just got %v.\n", v)
 	}
-	this.result = object.IsTruthy(v)
+	this.result = bool(v.ToBoolean())
 	this.haveResult = true
 }
 
@@ -627,7 +627,7 @@ func (this *stateIfStatement) acceptValue(v object.Value) {
 	if this.scope.interpreter.Verbose {
 		fmt.Printf("stateIfStatement just got %v.\n", v)
 	}
-	this.result = object.IsTruthy(v)
+	this.result = bool(v.ToBoolean())
 	this.haveResult = true
 }
 
@@ -639,7 +639,7 @@ type stateLiteral struct {
 }
 
 func (this *stateLiteral) init(node *ast.Literal) {
-	this.value = object.PrimitiveFromRaw(node.Raw)
+	this.value = object.NewFromRaw(node.Raw)
 }
 
 func (this *stateLiteral) step() state {
@@ -701,7 +701,7 @@ func (this *stateMemberExpression) acceptValue(v object.Value) {
 		this.base = v
 		this.haveBase = true
 	} else if !this.haveName {
-		this.name = v.ToString()
+		this.name = string(v.ToString())
 		this.haveName = true
 	} else {
 		panic(fmt.Errorf("too may values"))
@@ -750,8 +750,8 @@ func (this *stateObjectExpression) acceptValue(v object.Value) {
 	var key string
 	switch k := this.props[this.n].Key.N.(type) {
 	case *ast.Literal:
-		v := object.PrimitiveFromRaw(k.Raw)
-		key = v.ToString()
+		v := object.NewFromRaw(k.Raw)
+		key = string(v.ToString())
 	case *ast.Identifier:
 		key = k.Name
 	}
@@ -986,7 +986,7 @@ func (this *lvalue) acceptValue(v object.Value) {
 		this.base = v
 		this.haveBase = true
 	} else if !this.ready {
-		this.name = v.ToString()
+		this.name = string(v.ToString())
 		this.ready = true
 	} else {
 		panic(fmt.Errorf("too may values"))

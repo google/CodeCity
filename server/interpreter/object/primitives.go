@@ -36,7 +36,7 @@ import (
 // the source code, and as found in an ast.Literal.Raw property) and
 // returns a primitive Value object representing the value of that
 // literal.
-func PrimitiveFromRaw(raw string) Value {
+func NewFromRaw(raw string) Value {
 	if raw == "true" {
 		return Boolean(true)
 	} else if raw == "false" {
@@ -68,27 +68,6 @@ func PrimitiveFromRaw(raw string) Value {
 	}
 }
 
-// IsTruthy returns true iff Boolean(v) (in JS) would return true
-func IsTruthy(v Value) bool {
-	switch v := v.(type) {
-	case Boolean:
-		return bool(v)
-	case Null:
-		return false
-	case Undefined:
-		return false
-	case String:
-		return len(string(v)) != 0
-	case Number:
-		return !(float64(v) == 0 || math.IsNaN(float64(v)))
-	case *Object:
-		return true
-	default:
-		panic(fmt.Errorf("Not sure if %v (%T) is true or false", v, v))
-	}
-
-}
-
 /********************************************************************/
 
 // Boolean represents a JS boolean value.
@@ -118,7 +97,11 @@ func (Boolean) SetProperty(name string, value Value) *ErrorMsg {
 	return nil
 }
 
-func (b Boolean) ToString() string {
+func (b Boolean) ToBoolean() Boolean {
+	return b
+}
+
+func (b Boolean) ToString() String {
 	if b {
 		return "true"
 	} else {
@@ -155,14 +138,18 @@ func (Number) SetProperty(name string, value Value) *ErrorMsg {
 	return nil
 }
 
-func (n Number) ToString() string {
+func (n Number) ToBoolean() Boolean {
+	return Boolean(!(float64(n) == 0 || math.IsNaN(float64(n))))
+}
+
+func (n Number) ToString() String {
 	switch float64(n) {
 	case math.Inf(+1):
 		return "Infinity"
 	case math.Inf(-1):
 		return "-Infinity"
 	default:
-		return fmt.Sprintf("%g", n)
+		return String(fmt.Sprintf("%g", n))
 	}
 }
 
@@ -199,8 +186,12 @@ func (String) SetProperty(name string, value Value) *ErrorMsg {
 	return nil
 }
 
-func (s String) ToString() string {
-	return string(s)
+func (s String) ToBoolean() Boolean {
+	return len(string(s)) != 0
+}
+
+func (s String) ToString() String {
+	return s
 }
 
 /********************************************************************/
@@ -238,7 +229,11 @@ func (Null) SetProperty(name string, value Value) *ErrorMsg {
 	}
 }
 
-func (Null) ToString() string {
+func (Null) ToBoolean() Boolean {
+	return false
+}
+
+func (Null) ToString() String {
 	return "null"
 }
 
@@ -277,7 +272,11 @@ func (Undefined) SetProperty(name string, value Value) *ErrorMsg {
 	}
 }
 
-func (Undefined) ToString() string {
+func (Undefined) ToBoolean() Boolean {
+	return false
+}
+
+func (Undefined) ToString() String {
 	return "undefined"
 }
 

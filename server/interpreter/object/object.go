@@ -43,6 +43,9 @@ type Value interface {
 	// returns an ErrorMsg if that was not possible.
 	SetProperty(name string, value Value) *ErrorMsg
 
+	// ToBoolean returns true iff the object is truthy
+	ToBoolean() Boolean
+
 	// ToString returns a string representation of the object.  This
 	// needn't be very informative (most objects will return "[object
 	// Object]").  N.B.:
@@ -63,7 +66,7 @@ type Value interface {
 	//     '' + 10;            // => "10"
 	//
 	// FIXME: move most of this comment somewhere better
-	ToString() string
+	ToString() String
 }
 
 // Object represents typical JavaScript objects with (optional)
@@ -133,7 +136,11 @@ func (this *Object) SetProperty(name string, value Value) *ErrorMsg {
 	}
 }
 
-func (Object) ToString() string {
+func (Object) ToBoolean() Boolean {
+	return true
+}
+
+func (Object) ToString() String {
 	return "[object Object]"
 }
 

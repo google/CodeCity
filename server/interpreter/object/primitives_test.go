@@ -38,7 +38,7 @@ func TestPrimitiveFromRaw(t *testing.T) {
 	}
 
 	for _, c := range tests {
-		if v := PrimitiveFromRaw(c.raw); v != c.expected {
+		if v := NewFromRaw(c.raw); v != c.expected {
 			t.Errorf("newFromRaw(%v) == %v (%T)\n(expected %v (%T))",
 				c.raw, v, v, c.expected, c.expected)
 		}
@@ -72,7 +72,7 @@ func TestIsTruthy(t *testing.T) {
 		{Number(math.SmallestNonzeroFloat64), true},
 	}
 	for _, c := range tests {
-		if v := IsTruthy(c.input); v != c.expected {
+		if v := c.input.ToBoolean(); v != Boolean(c.expected) {
 			t.Errorf("IsTruthy(%v) (%T) == %v", c.input, c.input, v)
 		}
 	}
@@ -198,7 +198,7 @@ func TestToString(t *testing.T) {
 		// transition threshold.
 	}
 	for _, c := range tests {
-		if v := c.input.ToString(); v != c.expected {
+		if v := c.input.ToString(); v != String(c.expected) {
 			t.Errorf("%v.ToString() (input type %T) == %v "+
 				"(expected %v)", c.input, c.input, v, c.expected)
 		}
