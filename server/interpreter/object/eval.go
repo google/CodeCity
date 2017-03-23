@@ -19,26 +19,25 @@
 
 package object
 
-func Add(left, right Value) Value {
-	if left.Type() == "string" || right.Type() == "string" {
-		// Concatenate
-		return String(left.ToString() + right.ToString())
-	} else {
-		// Sum
-		return Number(left.ToNumber() + right.ToNumber())
+func BinaryOp(left Value, op string, right Value) Value {
+	// FIXME: implement other operators
+	switch op {
+	case "+":
+		if left.Type() == "string" || right.Type() == "string" {
+			// Concatenate
+			return String(left.ToString() + right.ToString())
+		} else {
+			// Sum
+			return Number(left.ToNumber() + right.ToNumber())
+		}
+	case "-":
+		return Number(left.ToNumber() - right.ToNumber())
+	case "*":
+		return Number(left.ToNumber() * right.ToNumber())
+	case "/":
+		// FIXME: check edge cases - NaN, Infinity, etc.
+		return Number(left.ToNumber() / right.ToNumber())
+	default:
+		panic("not implemented")
 	}
-}
-
-func Subtract(left, right Value) Value {
-	return Number(left.ToNumber() - right.ToNumber())
-
-}
-
-func Multiply(left, right Value) Value {
-	return Number(left.ToNumber() * right.ToNumber())
-}
-
-func Divide(left, right Value) Value {
-	// FIXME: check edge cases - NaN, Infinity, etc.
-	return Number(left.ToNumber() / right.ToNumber())
 }

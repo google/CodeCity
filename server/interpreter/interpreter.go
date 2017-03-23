@@ -376,7 +376,7 @@ func (this *stateAssignmentExpression) step() state {
 	if this.op == "=" {
 		r = this.right
 	} else {
-		r = binOp(this.left.get(), this.op[0:1], this.right)
+		r = object.BinaryOp(this.left.get(), this.op[0:1], this.right)
 	}
 	this.left.set(r)
 	this.parent.(valueAcceptor).acceptValue(r)
@@ -413,7 +413,7 @@ func (this *stateBinaryExpression) step() state {
 		return newState(this, this.scope, ast.Node(this.rNode.E))
 	}
 
-	var r object.Value = binOp(this.left, this.op, this.right)
+	var r object.Value = object.BinaryOp(this.left, this.op, this.right)
 	this.parent.(valueAcceptor).acceptValue(r)
 	return this.parent
 
@@ -976,26 +976,4 @@ func (this *lvalue) acceptValue(v object.Value) {
 	} else {
 		panic(fmt.Errorf("too may values"))
 	}
-}
-
-/********************************************************************/
-
-func binOp(left object.Value, op string, right object.Value) object.Value {
-	var v object.Value
-
-	// FIXME: implement other operators, types
-	switch op {
-	case "+":
-		v = object.Add(left, right)
-	case "-":
-		v = object.Subtract(left, right)
-	case "*":
-		v = object.Multiply(left, right)
-	case "/":
-		v = object.Divide(left, right)
-	default:
-		panic("not implemented")
-	}
-
-	return v
 }
