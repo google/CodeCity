@@ -40,6 +40,9 @@ func TestInterpreterSimple(t *testing.T) {
 		{"var o={}; o.foo=45; o.foo", propertyAssignment, object.Number(45)},
 		{"var x=45; x++; x++", postincrement, object.Number(46)},
 		{"var x=45; ++x; ++x", preincrement, object.Number(47)},
+		{"var x=40,y=8; x+=y; x", plusequalsLeft, object.Number(48)},
+		{"var x=40,y=8; x+=y; y", plusequalsRight, object.Number(8)},
+		{"\"foo\"+\"bar\"", concat, object.String("foobar")},
 	}
 
 	for _, c := range tests {
@@ -137,6 +140,22 @@ const postincrement = `{"type":"Program","start":0,"end":21,"body":[{"type":"Var
 // ++x;
 // => 47
 const preincrement = `{"type":"Program","start":0,"end":21,"body":[{"type":"VariableDeclaration","start":0,"end":11,"declarations":[{"type":"VariableDeclarator","start":4,"end":10,"id":{"type":"Identifier","start":4,"end":5,"name":"x"},"init":{"type":"Literal","start":8,"end":10,"value":45,"raw":"45"}}],"kind":"var"},{"type":"ExpressionStatement","start":12,"end":16,"expression":{"type":"UpdateExpression","start":12,"end":15,"operator":"++","prefix":true,"argument":{"type":"Identifier","start":14,"end":15,"name":"x"}}},{"type":"ExpressionStatement","start":17,"end":21,"expression":{"type":"UpdateExpression","start":17,"end":20,"operator":"++","prefix":true,"argument":{"type":"Identifier","start":19,"end":20,"name":"x"}}}]}`
+
+// "foo"+"bar"
+// => "foobar"
+const concat = `{"type":"Program","start":0,"end":11,"body":[{"type":"ExpressionStatement","start":0,"end":11,"expression":{"type":"BinaryExpression","start":0,"end":11,"left":{"type":"Literal","start":0,"end":5,"value":"foo","raw":"\"foo\""},"operator":"+","right":{"type":"Literal","start":6,"end":11,"value":"bar","raw":"\"bar\""}}}]}`
+
+// var x=40, y=8
+// x+=y
+// x
+// => 48
+const plusequalsLeft = `{"type":"Program","start":0,"end":20,"body":[{"type":"VariableDeclaration","start":0,"end":13,"declarations":[{"type":"VariableDeclarator","start":4,"end":8,"id":{"type":"Identifier","start":4,"end":5,"name":"x"},"init":{"type":"Literal","start":6,"end":8,"value":40,"raw":"40"}},{"type":"VariableDeclarator","start":10,"end":13,"id":{"type":"Identifier","start":10,"end":11,"name":"y"},"init":{"type":"Literal","start":12,"end":13,"value":8,"raw":"8"}}],"kind":"var"},{"type":"ExpressionStatement","start":14,"end":18,"expression":{"type":"AssignmentExpression","start":14,"end":18,"operator":"+=","left":{"type":"Identifier","start":14,"end":15,"name":"x"},"right":{"type":"Identifier","start":17,"end":18,"name":"y"}}},{"type":"ExpressionStatement","start":19,"end":20,"expression":{"type":"Identifier","start":19,"end":20,"name":"x"}}]}`
+
+// var x=40, y=8
+// x+=y
+// y
+// => 8
+const plusequalsRight = `{"type":"Program","start":0,"end":20,"body":[{"type":"VariableDeclaration","start":0,"end":13,"declarations":[{"type":"VariableDeclarator","start":4,"end":8,"id":{"type":"Identifier","start":4,"end":5,"name":"x"},"init":{"type":"Literal","start":6,"end":8,"value":40,"raw":"40"}},{"type":"VariableDeclarator","start":10,"end":13,"id":{"type":"Identifier","start":10,"end":11,"name":"y"},"init":{"type":"Literal","start":12,"end":13,"value":8,"raw":"8"}}],"kind":"var"},{"type":"ExpressionStatement","start":14,"end":18,"expression":{"type":"AssignmentExpression","start":14,"end":18,"operator":"+=","left":{"type":"Identifier","start":14,"end":15,"name":"x"},"right":{"type":"Identifier","start":17,"end":18,"name":"y"}}},{"type":"ExpressionStatement","start":19,"end":20,"expression":{"type":"Identifier","start":19,"end":20,"name":"y"}}]}`
 
 // ({foo: "bar", answer: 42})
 // => {foo: "bar", answer: 42}

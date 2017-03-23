@@ -371,11 +371,15 @@ func (this *stateAssignmentExpression) step() state {
 		return newState(this, this.scope, ast.Node(this.rNode.E))
 	}
 
-	// Do assignment:
-	if !this.left.ready {
-		panic("lvalue not ready???")
+	// Do (operator)assignment:
+	var r object.Value
+	if this.op == "=" {
+		r = this.right
+	} else {
+		r = binOp(this.left.get(), this.op[0:1], this.right)
 	}
-	this.left.set(this.right)
+	this.left.set(r)
+	this.parent.(valueAcceptor).acceptValue(r)
 
 	return this.parent
 }
@@ -409,27 +413,8 @@ func (this *stateBinaryExpression) step() state {
 		return newState(this, this.scope, ast.Node(this.rNode.E))
 	}
 
-	// FIXME: implement other operators, types
-
-	var v object.Value
-	switch this.op {
-	case "+":
-		v = object.Number(this.left.(object.Number) +
-			this.right.(object.Number))
-	case "-":
-		v = object.Number(this.left.(object.Number) -
-			this.right.(object.Number))
-	case "*":
-		v = object.Number(this.left.(object.Number) *
-			this.right.(object.Number))
-	case "/":
-		v = object.Number(this.left.(object.Number) /
-			this.right.(object.Number))
-	default:
-		panic("not implemented")
-	}
-
-	this.parent.(valueAcceptor).acceptValue(v)
+	var r object.Value = binOp(this.left, this.op, this.right)
+	this.parent.(valueAcceptor).acceptValue(r)
 	return this.parent
 
 }
@@ -991,4 +976,26 @@ func (this *lvalue) acceptValue(v object.Value) {
 	} else {
 		panic(fmt.Errorf("too may values"))
 	}
+}
+
+/********************************************************************/
+
+func binOp(left object.Value, op string, right object.Value) object.Value {
+	var v object.Value
+
+	// FIXME: implement other operators, types
+	switch op {
+	case "+":
+		v = object.Add(left, right)
+	case "-":
+		v = object.Subtract(left, right)
+	case "*":
+		v = object.Multiply(left, right)
+	case "/":
+		v = object.Divide(left, right)
+	default:
+		panic("not implemented")
+	}
+
+	return v
 }
