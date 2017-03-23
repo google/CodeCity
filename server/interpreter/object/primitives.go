@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"math"
 	"strconv"
+	"strings"
 	"unicode"
 	"unicode/utf16"
 )
@@ -55,11 +56,11 @@ func NewFromRaw(raw string) Value {
 		// BUG(cpcallen): single-quoted string literals not implemented.
 		panic(fmt.Errorf("Single-quoted string literals not implemented"))
 	} else if unicode.IsDigit(rune(raw[0])) {
-		f, err := strconv.ParseFloat(raw, 64)
-		if err != nil {
-			panic(err)
-		}
-		return Number(f)
+		// BUG(cpcallen): numeric literals probably not handled
+		// completely in accordance with ES5.1 spec; it is implemented
+		// using String.ToNumber which may be unduly tolerant and
+		// handle certain edge cases differently.
+		return String(raw).ToNumber()
 	} else if raw[0] == '/' {
 		// BUG(cpcallen): regular expresion literals not implemented.
 		panic(fmt.Errorf("Regular Expression literals not implemented"))
@@ -101,6 +102,14 @@ func (b Boolean) ToBoolean() Boolean {
 	return b
 }
 
+func (b Boolean) ToNumber() Number {
+	if b {
+		return 1
+	} else {
+		return 0
+	}
+}
+
 func (b Boolean) ToString() String {
 	if b {
 		return "true"
@@ -140,6 +149,10 @@ func (Number) SetProperty(name string, value Value) *ErrorMsg {
 
 func (n Number) ToBoolean() Boolean {
 	return Boolean(!(float64(n) == 0 || math.IsNaN(float64(n))))
+}
+
+func (n Number) ToNumber() Number {
+	return n
 }
 
 func (n Number) ToString() String {
@@ -190,6 +203,45 @@ func (s String) ToBoolean() Boolean {
 	return len(string(s)) != 0
 }
 
+// BUG(cpcallen): String.ToNumber() is probably not strictly compliant
+// with the ES5.1 spec.
+func (s String) ToNumber() Number {
+	str := strings.TrimSpace(string(s))
+	if len(str) == 0 { // Empty string == 0
+		return 0
+	}
+	if len(str) > 2 { // Hex?  (Octal not supported in use strict!)
+		pfx := str[0:2]
+		if pfx == "0x" || pfx == "0X" {
+			n, err := strconv.ParseInt(str[2:], 16, 64)
+			if err != nil {
+				if err.(*strconv.NumError).Err == strconv.ErrSyntax {
+					return Number(math.NaN())
+				} else if err.(*strconv.NumError).Err == strconv.ErrRange {
+					if n > 0 {
+						return Number(math.Inf(+1))
+					} else {
+						return Number(math.Inf(-1))
+					}
+				} else {
+					panic(err)
+				}
+			}
+			return Number(float64(n))
+		}
+	}
+	n, err := strconv.ParseFloat(str, 64)
+	if err != nil {
+		// Malformed number?
+		if err.(*strconv.NumError).Err == strconv.ErrSyntax {
+			return Number(math.NaN())
+		} else if err.(*strconv.NumError).Err != strconv.ErrRange {
+			panic(err)
+		}
+	}
+	return Number(n)
+}
+
 func (s String) ToString() String {
 	return s
 }
@@ -233,6 +285,10 @@ func (Null) ToBoolean() Boolean {
 	return false
 }
 
+func (Null) ToNumber() Number {
+	return 0
+}
+
 func (Null) ToString() String {
 	return "null"
 }
@@ -274,6 +330,10 @@ func (Undefined) SetProperty(name string, value Value) *ErrorMsg {
 
 func (Undefined) ToBoolean() Boolean {
 	return false
+}
+
+func (Undefined) ToNumber() Number {
+	return Number(math.NaN())
 }
 
 func (Undefined) ToString() String {

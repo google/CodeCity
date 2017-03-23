@@ -39,41 +39,8 @@ func TestPrimitiveFromRaw(t *testing.T) {
 
 	for _, c := range tests {
 		if v := NewFromRaw(c.raw); v != c.expected {
-			t.Errorf("newFromRaw(%v) == %v (%T)\n(expected %v (%T))",
+			t.Errorf("newFromRaw(%#v) == %#v (%T)\n(expected %#v (%T))",
 				c.raw, v, v, c.expected, c.expected)
-		}
-	}
-}
-
-func TestIsTruthy(t *testing.T) {
-	var tests = []struct {
-		input    Value
-		expected bool
-	}{
-		{Boolean(true), true},
-		{Boolean(false), false},
-		{Null{}, false},
-		{Undefined{}, false},
-		{String(""), false},
-		{String("foo"), true},
-		{String("0"), true},
-		{String("false"), true},
-		{String("null"), true},
-		{String("undefined"), true},
-		{Number(0), false},
-		{Number(-0), false},
-		{Number(0.0), false},
-		{Number(-0.0), false},
-		{Number(1), true},
-		{Number(math.Inf(+1)), true},
-		{Number(math.Inf(-1)), true},
-		{Number(math.NaN()), false},
-		{Number(math.MaxFloat64), true},
-		{Number(math.SmallestNonzeroFloat64), true},
-	}
-	for _, c := range tests {
-		if v := c.input.ToBoolean(); v != Boolean(c.expected) {
-			t.Errorf("IsTruthy(%v) (%T) == %v", c.input, c.input, v)
 		}
 	}
 }
@@ -177,6 +144,94 @@ func TestUndefinedParentPanic(t *testing.T) {
 	_ = Undefined{}.Parent()
 }
 
+func TestToBoolean(t *testing.T) {
+	var tests = []struct {
+		input    Value
+		expected bool
+	}{
+		{Boolean(true), true},
+		{Boolean(false), false},
+		{Null{}, false},
+		{Undefined{}, false},
+		{String(""), false},
+		{String("foo"), true},
+		{String("0"), true},
+		{String("false"), true},
+		{String("null"), true},
+		{String("undefined"), true},
+		{Number(0), false},
+		{Number(-0), false},
+		{Number(0.0), false},
+		{Number(-0.0), false},
+		{Number(1), true},
+		{Number(math.Inf(+1)), true},
+		{Number(math.Inf(-1)), true},
+		{Number(math.NaN()), false},
+		{Number(math.MaxFloat64), true},
+		{Number(math.SmallestNonzeroFloat64), true},
+		{New(nil, nil), true},
+	}
+	for _, c := range tests {
+		if v := c.input.ToBoolean(); v != Boolean(c.expected) {
+			t.Errorf("%#v.ToBoolean() (%T) == %#v", c.input, c.input, v)
+		}
+	}
+}
+
+// FIXME: list of whitespace characters to test (also check ES5.1 spec)
+// \u0009 \u000A \u000B \u000C \u000D \u0020 \u0085 \u00A \u1680
+// \u2000 \u2001 \u2002 \u2003 \u2004 \u2005 \u2006 \u2007 \u2008 \u2009 \u200A
+// \u2028 \u2029 \u202F \u205F \u3000
+
+func TestToNumber(t *testing.T) {
+	var NaN = math.NaN()
+	var tests = []struct {
+		input    Value
+		expected float64
+	}{
+		{Boolean(true), 1},
+		{Boolean(false), 0},
+		{Null{}, 0},
+		{Undefined{}, NaN},
+		{String(""), 0},
+		{String("0"), 0},
+		{String("0.0"), 0},
+		{String("7"), 7},
+		{String("3.14"), 3.14},
+		{String("12"), 12},
+		{String(" \t\v\r\n12\n\r\v\t "), 12},
+		{String("010"), 10},
+		{String("0x10"), 16},
+		{String("-10"), -10},
+		{String("6.02214086e23"), 6.02214086e23},       // Avogadro
+		{String("9007199254740991"), 9007199254740991}, // MAX_SAFE_INTEGER
+		{String("foo"), NaN},
+		{String("false"), NaN},
+		{String("null"), NaN},
+		{String("undefined"), NaN},
+		{Number(0), 0},
+		{Number(-0), math.Copysign(0, -1)},
+		{Number(0.0), 0},
+		{Number(-0.0), math.Copysign(0, -1)},
+		{Number(1), 1},
+		{Number(math.Inf(+1)), math.Inf(+1)},
+		{Number(math.Inf(-1)), math.Inf(-1)},
+		{Number(math.NaN()), NaN},
+		{Number(math.MaxFloat64), math.MaxFloat64},
+		{Number(math.SmallestNonzeroFloat64), math.SmallestNonzeroFloat64},
+		{New(nil, nil), NaN},
+	}
+	for _, c := range tests {
+		if v := c.input.ToNumber(); v != Number(c.expected) {
+			// Wait, did we just fail because NaN != NaN?
+			if !math.IsNaN(float64(v)) || !math.IsNaN(c.expected) {
+				t.Errorf("%#v.ToNumber() (%T) == %#v (expected %#v)",
+					c.input, c.input, v, c.expected)
+			}
+		}
+	}
+}
+
 func TestToString(t *testing.T) {
 	var tests = []struct {
 		input    Value
@@ -199,8 +254,8 @@ func TestToString(t *testing.T) {
 	}
 	for _, c := range tests {
 		if v := c.input.ToString(); v != String(c.expected) {
-			t.Errorf("%v.ToString() (input type %T) == %v "+
-				"(expected %v)", c.input, c.input, v, c.expected)
+			t.Errorf("%#v.ToString() (input type %T) == %#v "+
+				"(expected %#v)", c.input, c.input, v, c.expected)
 		}
 	}
 }

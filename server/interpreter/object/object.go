@@ -46,6 +46,9 @@ type Value interface {
 	// ToBoolean returns true iff the object is truthy
 	ToBoolean() Boolean
 
+	// ToNumber returns the numeric equivalent of the object
+	ToNumber() Number
+
 	// ToString returns a string representation of the object.  This
 	// needn't be very informative (most objects will return "[object
 	// Object]").  N.B.:
@@ -138,6 +141,12 @@ func (this *Object) SetProperty(name string, value Value) *ErrorMsg {
 
 func (Object) ToBoolean() Boolean {
 	return true
+}
+
+func (o Object) ToNumber() Number {
+	// BUG(cpcallen): Object.ToNumber is not strictly compliant with
+	// ES5.1 spec; it just returns .ToString().ToNumber()
+	return o.ToString().ToNumber()
 }
 
 func (Object) ToString() String {
