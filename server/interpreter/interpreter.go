@@ -376,7 +376,34 @@ func (this *stateAssignmentExpression) step() state {
 	if this.op == "=" {
 		r = this.right
 	} else {
-		r = object.BinaryOp(this.left.get(), this.op[0:1], this.right)
+		var op string
+		switch this.op {
+		case "+=":
+			op = "+"
+		case "-=":
+			op = "-"
+		case "*=":
+			op = "*"
+		case "/=":
+			op = "/"
+		case "%=":
+			op = "/"
+		case "<<=":
+			op = "<<"
+		case ">>=":
+			op = ">>"
+		case ">>>=":
+			op = ">>>"
+		case "|=":
+			op = "|"
+		case "^=":
+			op = "^"
+		case "&=":
+			op = "&"
+		default:
+			panic(fmt.Errorf("illegal assignemnt operator %s", this.op))
+		}
+		r = object.BinaryOp(this.left.get(), op, this.right)
 	}
 	this.left.set(r)
 	this.parent.(valueAcceptor).acceptValue(r)
