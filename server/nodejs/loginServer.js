@@ -122,12 +122,19 @@ function handleRequest(request, response) {
           var id = CFG.idSalt + data.id;
           id = crypto.createHash('md5').update(id).digest('hex');
           // For future reference, the user's email address is: data.email
-          response.end('Hello: ' + id);
+          response.writeHead(302, {  // Temporary redirect
+             'Set-Cookie': 'id=' + id + '; Domain=' + CFG.cookieDomain +
+                           '; Path=' + CFG.connectPath + '; HttpOnly',
+             'Location': CFG.connectPath
+           });
+          response.end('Login OK.  Redirecting.');
+          console.log('Accepted ' + 'x'.repeat(id.length - 4) +
+                      id.substring(id.length - 4));
         });
     });
   } else {
     response.statusCode = 404;
-    response.end('Unknown URL: ' + request.url);
+    response.end('Unknown Login URL: ' + request.url);
   }
 }
 
@@ -146,6 +153,8 @@ function configureAndStartup() {
         clientId: '00000000000-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com',
         clientSecret: 'yyyyyyyyyyyyyyyyyyyyyyyy',
         redirectUri: 'https://example.codecity.world/login',
+        cookieDomain: 'example.codecity.world',
+        connectPath: '/connect',
         idSalt: genUid(8)
       };
       data = JSON.stringify(data, null, 2);
