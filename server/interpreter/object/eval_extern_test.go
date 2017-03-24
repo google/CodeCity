@@ -145,6 +145,12 @@ func TestBinaryOp(t *testing.T) {
 		{Number(-11), ">>>", Number(0), Number(0xfffffff5)},
 		{Number(-11), ">>>", Number(1), Number(0x7ffffffa)},
 		{Number(-11), ">>>", Number(2), Number(0x3ffffffd)},
+		{Number(4294967338), ">>>", Number(0), Number(42)},
+
+		// Bitwise:
+		{Number(0x3), "|", Number(0x5), Number(0x7)},
+		{Number(0x3), "^", Number(0x5), Number(0x6)},
+		{Number(0x3), "&", Number(0x5), Number(0x1)},
 
 		// Comparisons:
 		//

@@ -85,11 +85,14 @@ func BinaryOp(left Value, op string, right Value) Value {
 		return Number(
 			math.Mod(float64(left.ToNumber()), float64(right.ToNumber())))
 	case "|":
-		panic("not implemented")
+		return Number(float64(
+			int32(float64(left.ToNumber())) | int32(float64(right.ToNumber()))))
 	case "^":
-		panic("not implemented")
+		return Number(float64(
+			int32(float64(left.ToNumber())) ^ int32(float64(right.ToNumber()))))
 	case "&":
-		panic("not implemented")
+		return Number(float64(
+			int32(float64(left.ToNumber())) & int32(float64(right.ToNumber()))))
 	case "in":
 		panic("not implemented")
 	case "instanceof":
