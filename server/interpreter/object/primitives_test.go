@@ -99,8 +99,8 @@ func TestStringLength(t *testing.T) {
 
 	v, err = String("Hello, World!").GetProperty("length")
 	if v != Number(13) || err != nil {
-		t.Errorf("String(\"కోడ్ సిటీ\").GetProperty(\"length\") == %v, %v "+
-			"(expected 13, nil)", v, err)
+		t.Errorf("String(\"Hello, World!\").GetProperty(\"length\") == %v, %v"+
+			" (expected 13, nil)", v, err)
 	}
 
 	// "Code City" in Telugu (according to translate.google.com):
@@ -110,6 +110,12 @@ func TestStringLength(t *testing.T) {
 			"(expected 9, nil)", v, err)
 	}
 
+	// Random example from https://mathiasbynens.be/notes/javascript-encoding:
+	v, err = String("𝌆").GetProperty("length")
+	if v != Number(2) || err != nil {
+		t.Errorf("String(\"𝌆\").GetProperty(\"length\") == %v, %v "+
+			"(expected 2, nil)", v, err)
+	}
 }
 
 func TestNull(t *testing.T) {
