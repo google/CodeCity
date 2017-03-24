@@ -14,14 +14,18 @@
  * limitations under the License.
  */
 
-package object
+package object_test
 
 import (
 	"math"
 	"testing"
+
+	. "CodeCity/server/interpreter/object"
+	tu "CodeCity/server/interpreter/object/testutil"
 )
 
 func TestBinaryOp(t *testing.T) {
+	var NaN = math.NaN()
 	var tests = []struct {
 		left     Value
 		op       string
@@ -31,18 +35,23 @@ func TestBinaryOp(t *testing.T) {
 		{Number(1), "+", Number(1), Number(2)},
 		{String("1"), "+", Number(1), String("11")},
 		{Number(1), "+", String("1"), String("11")},
+		{String("1"), "-", Number(1), Number(0)},
 		{String("5"), "*", String("5"), Number(25)},
+		{Number(1), "*", Number(NaN), Number(NaN)},
+		{Number(-5), "*", Number(0), Number(math.Copysign(0, -1))},
+		{Number(-5), "*", Number(math.Copysign(0, -1)), Number(0)},
+		{Number(math.Inf(+1)), "*", Number(NaN), Number(NaN)},
+		{Number(math.Inf(+1)), "*", Number(math.Inf(+1)), Number(math.Inf(+1))},
+		{Number(math.Inf(+1)), "*", Number(math.Inf(-1)), Number(math.Inf(-1))},
+		{Number(math.Inf(-1)), "*", Number(math.Inf(-1)), Number(math.Inf(+1))},
+		{Number(math.Inf(-1)), "*", Number(math.Inf(+1)), Number(math.Inf(-1))},
+		{Number(35), "/", String("7"), Number(5)},
 	}
 	for _, c := range tests {
-		if v := BinaryOp(c.left, c.op, c.right); v != c.expected {
-			// Wait, did we just fail because NaN != NaN?
-			vn, vok := v.(Number)
-			exn, exok := c.expected.(Number)
-			if !vok || !math.IsNaN(float64(vn)) ||
-				!exok || !math.IsNaN(float64(exn)) {
-				t.Errorf("%#v %s %#v == %#v (expected %#v)",
-					c.left, c.op, c.right, v, c.expected)
-			}
+		v := BinaryOp(c.left, c.op, c.right)
+		if !tu.Identical(v, c.expected) {
+			t.Errorf("%#v %s %#v == %#v (expected %#v)",
+				c.left, c.op, c.right, v, c.expected)
 		}
 	}
 }
