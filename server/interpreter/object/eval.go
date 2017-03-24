@@ -44,12 +44,20 @@ func BinaryOp(left Value, op string, right Value) Value {
 	case ">=":
 		panic("not implemented")
 	case "<<":
-		panic("not implemented")
+		return Number(float64(
+			int32(float64(left.ToNumber())) <<
+				(uint32(float64(right.ToNumber())) & 0x1f)))
 	case ">>":
-		panic("not implemented")
+		return Number(float64(
+			int32(float64(left.ToNumber())) >>
+				(uint32(float64(right.ToNumber())) & 0x1f)))
 	case ">>>":
-		panic("not implemented")
+		return Number(float64(
+			uint32(float64(left.ToNumber())) >>
+				(uint32(float64(right.ToNumber())) & 0x1f)))
 	case "+":
+		// FIXME: should do a ToPrimitive() on arguments (calling user
+		// code) before ToString or ToNumber.
 		if left.Type() == "string" || right.Type() == "string" {
 			// Concatenate
 			return String(left.ToString() + right.ToString())

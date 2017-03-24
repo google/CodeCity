@@ -124,6 +124,27 @@ func TestBinaryOp(t *testing.T) {
 		{Number(0), "%", Number(1), Number(0)},
 		{Number(neg0), "%", Number(1), Number(neg0)},
 		// FIXME: add overflow/underflow cases
+
+		// Left shift:
+		{Number(10), "<<", Number(2), Number(40)},
+		{Number(10), "<<", Number(28), Number(-1610612736)},
+		{Number(10), "<<", Number(33), Number(20)},
+		{Number(10), "<<", Number(34), Number(40)},
+
+		// Signed right shift:
+		{Number(10), ">>", Number(4), Number(0)},
+		{Number(10), ">>", Number(33), Number(5)},
+		{Number(10), ">>", Number(34), Number(2)},
+		{Number(-11), ">>", Number(1), Number(-6)},
+		{Number(-11), ">>", Number(2), Number(-3)},
+
+		// Signed right shift:
+		{Number(10), ">>>", Number(4), Number(0)},
+		{Number(10), ">>>", Number(33), Number(5)},
+		{Number(10), ">>>", Number(34), Number(2)},
+		{Number(-11), ">>>", Number(0), Number(0xfffffff5)},
+		{Number(-11), ">>>", Number(1), Number(0x7ffffffa)},
+		{Number(-11), ">>>", Number(2), Number(0x3ffffffd)},
 	}
 	for _, c := range tests {
 		v := BinaryOp(c.left, c.op, c.right)
