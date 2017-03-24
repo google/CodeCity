@@ -1,0 +1,41 @@
+html {
+  height: 100%;
+}
+
+body {
+  color: #444;
+  background-color: #fff;
+  font-family: sans-serif;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+#comicFrame, #logFrame {
+  position: absolute;
+  width: 100%;
+  z-index: -1;
+}
+
+#mainTable {
+  height: 100%;
+  width: 100%;
+  background: #fff;
+}
+
+thead, tfoot {
+  height: 1%;
+}
+
+#displayCell {
+  text-align: center;
+}
+
+#commandInput {
+  color: #000;
+  box-sizing: border-box;
+  background-color: #f8f8f8;
+  font-family: monospace;
+  resize: none;
+  width: 100%;
+}
