@@ -22,8 +22,14 @@ package object
 import (
 	"fmt"
 	"math"
+	"unicode/utf16"
 )
 
+// BinaryOp implements evaluation of (non-assignment) binary
+// expressions of the form (foo @ bar), for @ being any ESTree
+// BinaryOperator ("==", "!=", "===", "!==", "<", "<=", ">", ">=",
+// "<<", ">>", ">>>", "+", "-", "*", "/", "%", "|", "^", "&", "in" or
+// "instanceof"
 func BinaryOp(left Value, op string, right Value) Value {
 	// FIXME: implement other operators
 	switch op {
@@ -36,13 +42,17 @@ func BinaryOp(left Value, op string, right Value) Value {
 	case "!==":
 		panic("not implemented")
 	case "<":
-		panic("not implemented")
+		lt, undef := arca(left, right)
+		return Boolean(lt && !undef)
 	case "<=":
-		panic("not implemented")
+		lt, undef := arca(right, left)
+		return Boolean(!lt && !undef)
 	case ">":
-		panic("not implemented")
+		lt, undef := arca(right, left)
+		return Boolean(lt && !undef)
 	case ">=":
-		panic("not implemented")
+		lt, undef := arca(left, right)
+		return Boolean(!lt && !undef)
 	case "<<":
 		return Number(float64(
 			int32(float64(left.ToNumber())) <<
@@ -87,4 +97,53 @@ func BinaryOp(left Value, op string, right Value) Value {
 	default:
 		panic(fmt.Errorf("illegal binary operator %s", op))
 	}
+}
+
+// arca implements the Abstract Relational Comparison Algorithm (see
+// ES5.1 spec, §11.8.5.
+//
+// x and y are the arguments to be compared.  The spec's
+// LeftFirst parameter is not present becaues this implementation does
+// not run ToPrimitive (and thus does not run user code in a way that
+// could reveal order of evaluation).
+//
+// If lt returns true then x is less than y according to the ARCA; if
+// undef is true then the two are not comparable.
+//
+// BUG(cpcallen): arca does not do ToPrimitive() as required by spec.
+func arca(x, y Value) (lt, undef bool) {
+	if x.Type() != "string" || y.Type() != "string" {
+		// Not both strings?  Numerical comparison:
+		nx := float64(x.ToNumber())
+		ny := float64(y.ToNumber())
+		if math.IsNaN(nx) || math.IsNaN(ny) {
+			return false, true
+		}
+		return nx < ny, false
+	} else {
+		// Both strings?  Lexicographic comparision of UTF-16 code
+		// units (not code points)
+		sx := utf16.Encode([]rune(string(x.ToString())))
+		sy := utf16.Encode([]rune(string(y.ToString())))
+		for i := 0; ; i++ {
+			if i == len(sx) {
+				if i < len(sy) {
+					// x is prefix of y
+					return true, false
+				}
+				// x === y
+				return false, false
+			} else if i == len(sy) {
+				// y is prefix of x
+				return false, false
+			}
+			if sx[i] < sy[i] {
+				return true, false
+			}
+			if sx[i] > sy[i] {
+				return false, false
+			}
+		}
+	}
+	//return false, true
 }

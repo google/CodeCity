@@ -14,143 +14,69 @@
  * limitations under the License.
  */
 
-package object_test
+package object
 
 import (
 	"math"
 	"testing"
-
-	. "CodeCity/server/interpreter/object"
-	tu "CodeCity/server/interpreter/object/testutil"
 )
 
-func TestBinaryOp(t *testing.T) {
+func TestARCA(t *testing.T) {
 	var NaN = math.NaN()
 	var neg0 = math.Copysign(0, -1)
 	var inf = math.Inf(+1)
 	var negInf = math.Inf(-1)
 	var tests = []struct {
 		left     Value
-		op       string
 		right    Value
-		expected Value
+		expLT    bool
+		expUndef bool
 	}{
-		// Addition / concatenation:
-		{Number(1), "+", Number(1), Number(2)},
-		{String("1"), "+", Number(1), String("11")},
-		{Number(1), "+", String("1"), String("11")},
+		// Numeric comparisons:
+		{Number(0), Number(NaN), false, true},
+		{Number(NaN), Number(NaN), false, true},
+		{Number(NaN), Number(0), false, true},
 
-		// Subtraction:
-		{String("1"), "-", Number(1), Number(0)},
+		{Number(1), Number(1), false, false},
+		{Number(0), Number(neg0), false, false},
+		{Number(neg0), Number(0), false, false},
 
-		// Multiplication:
-		{String("5"), "*", String("5"), Number(25)},
+		{Number(inf), Number(math.MaxFloat64), false, false},
+		{Number(math.MaxFloat64), Number(inf), true, false},
+		{Number(negInf), Number(-math.MaxFloat64), true, false},
+		{Number(-math.MaxFloat64), Number(negInf), false, false},
 
-		{Number(-5), "*", Number(0), Number(neg0)},
-		{Number(-5), "*", Number(neg0), Number(0)},
+		{Number(1), Number(2), true, false},
+		{Number(2), Number(1), false, false},
 
-		{Number(1), "*", Number(NaN), Number(NaN)},
-		{Number(inf), "*", Number(NaN), Number(NaN)},
-		{Number(negInf), "*", Number(NaN), Number(NaN)},
+		// String comparisons:
+		{String(""), String(""), false, false},
+		{String(""), String(" "), true, false},
+		{String(" "), String(""), false, false},
+		{String(" "), String(" "), false, false},
+		{String("foo"), String("foobar"), true, false},
+		{String("foo"), String("bar"), false, false},
+		{String("foobar"), String("foo"), false, false},
+		{String("10"), String("9"), true, false},
+		{String("10"), Number(9), false, false},
 
-		{Number(inf), "*", Number(inf), Number(inf)},
-		{Number(inf), "*", Number(negInf), Number(negInf)},
-		{Number(negInf), "*", Number(negInf), Number(inf)},
-		{Number(negInf), "*", Number(inf), Number(negInf)},
-		// FIXME: add overflow/underflow cases
+		// \ufb00 vs. \U0001f019: this test fails if we do simple
+		// lexicographic comparison of UTF-8 or UTF-32.  The latter
+		// character is a larger code point and sorts later in UTF8,
+		// but in UTF16 it gets replaced by two surrogates, both of
+		// which are smaller than \uf000.
+		{String("ﬀ"), String("🀙"), false, false},
 
-		// Division:
-		{Number(35), "/", String("7"), Number(5)},
-
-		{Number(1), "/", Number(1), Number(1)},
-		{Number(1), "/", Number(-1), Number(-1)},
-		{Number(-1), "/", Number(-1), Number(1)},
-		{Number(-1), "/", Number(1), Number(-1)},
-
-		{Number(1), "/", Number(NaN), Number(NaN)},
-		{Number(NaN), "/", Number(NaN), Number(NaN)},
-		{Number(NaN), "/", Number(1), Number(NaN)},
-
-		{Number(inf), "/", Number(inf), Number(NaN)},
-		{Number(inf), "/", Number(negInf), Number(NaN)},
-		{Number(negInf), "/", Number(negInf), Number(NaN)},
-		{Number(negInf), "/", Number(inf), Number(NaN)},
-
-		{Number(inf), "/", Number(0), Number(inf)},
-		{Number(inf), "/", Number(neg0), Number(negInf)},
-		{Number(negInf), "/", Number(neg0), Number(inf)},
-		{Number(negInf), "/", Number(0), Number(negInf)},
-
-		{Number(inf), "/", Number(1), Number(inf)},
-		{Number(inf), "/", Number(-1), Number(negInf)},
-		{Number(negInf), "/", Number(-1), Number(inf)},
-		{Number(negInf), "/", Number(1), Number(negInf)},
-
-		{Number(1), "/", Number(inf), Number(0)},
-		{Number(1), "/", Number(negInf), Number(neg0)},
-		{Number(-1), "/", Number(negInf), Number(0)},
-		{Number(-1), "/", Number(inf), Number(neg0)},
-
-		{Number(0), "/", Number(0), Number(NaN)},
-		{Number(0), "/", Number(neg0), Number(NaN)},
-		{Number(neg0), "/", Number(neg0), Number(NaN)},
-		{Number(neg0), "/", Number(0), Number(NaN)},
-
-		{Number(1), "/", Number(0), Number(inf)},
-		{Number(1), "/", Number(neg0), Number(negInf)},
-		{Number(-1), "/", Number(neg0), Number(inf)},
-		{Number(-1), "/", Number(0), Number(negInf)},
-		// FIXME: add overflow/underflow cases
-
-		// Remainder:
-		{Number(20), "%", Number(5.5), Number(3.5)},
-		{Number(20), "%", Number(-5.5), Number(3.5)},
-		{Number(-20), "%", Number(-5.5), Number(-3.5)},
-		{Number(-20), "%", Number(5.5), Number(-3.5)},
-
-		{Number(1), "%", Number(NaN), Number(NaN)},
-		{Number(NaN), "%", Number(NaN), Number(NaN)},
-		{Number(NaN), "%", Number(1), Number(NaN)},
-
-		{Number(inf), "%", Number(1), Number(NaN)},
-		{Number(negInf), "%", Number(1), Number(NaN)},
-		{Number(1), "%", Number(0), Number(NaN)},
-		{Number(1), "%", Number(neg0), Number(NaN)},
-		{Number(inf), "%", Number(0), Number(NaN)},
-		{Number(inf), "%", Number(neg0), Number(NaN)},
-		{Number(negInf), "%", Number(neg0), Number(NaN)},
-		{Number(negInf), "%", Number(0), Number(NaN)},
-
-		{Number(0), "%", Number(1), Number(0)},
-		{Number(neg0), "%", Number(1), Number(neg0)},
-		// FIXME: add overflow/underflow cases
-
-		// Left shift:
-		{Number(10), "<<", Number(2), Number(40)},
-		{Number(10), "<<", Number(28), Number(-1610612736)},
-		{Number(10), "<<", Number(33), Number(20)},
-		{Number(10), "<<", Number(34), Number(40)},
-
-		// Signed right shift:
-		{Number(10), ">>", Number(4), Number(0)},
-		{Number(10), ">>", Number(33), Number(5)},
-		{Number(10), ">>", Number(34), Number(2)},
-		{Number(-11), ">>", Number(1), Number(-6)},
-		{Number(-11), ">>", Number(2), Number(-3)},
-
-		// Signed right shift:
-		{Number(10), ">>>", Number(4), Number(0)},
-		{Number(10), ">>>", Number(33), Number(5)},
-		{Number(10), ">>>", Number(34), Number(2)},
-		{Number(-11), ">>>", Number(0), Number(0xfffffff5)},
-		{Number(-11), ">>>", Number(1), Number(0x7ffffffa)},
-		{Number(-11), ">>>", Number(2), Number(0x3ffffffd)},
+		// Mixed:
+		{Number(11), String("2"), false, false},  // Numeric
+		{Number(2), String("11"), true, false},   // Numeric
+		{String("11"), String("2"), true, false}, // String
 	}
 	for _, c := range tests {
-		v := BinaryOp(c.left, c.op, c.right)
-		if !tu.Identical(v, c.expected) {
-			t.Errorf("%#v %s %#v == %#v (expected %#v)",
-				c.left, c.op, c.right, v, c.expected)
+		lt, undef := arca(c.left, c.right)
+		if lt != c.expLT || undef != c.expUndef {
+			t.Errorf("arca(%#v, %#v) == %t %t (expected %t %t)",
+				c.left, c.right, lt, undef, c.expLT, c.expUndef)
 		}
 	}
 }
