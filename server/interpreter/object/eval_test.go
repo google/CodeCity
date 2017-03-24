@@ -26,26 +26,81 @@ import (
 
 func TestBinaryOp(t *testing.T) {
 	var NaN = math.NaN()
+	var neg0 = math.Copysign(0, -1)
+	var inf = math.Inf(+1)
+	var negInf = math.Inf(-1)
 	var tests = []struct {
 		left     Value
 		op       string
 		right    Value
 		expected Value
 	}{
+		// Addition / concatenation:
 		{Number(1), "+", Number(1), Number(2)},
 		{String("1"), "+", Number(1), String("11")},
 		{Number(1), "+", String("1"), String("11")},
+
+		// Subtraction:
 		{String("1"), "-", Number(1), Number(0)},
+
+		// Multiplication:
 		{String("5"), "*", String("5"), Number(25)},
+
+		{Number(-5), "*", Number(0), Number(neg0)},
+		{Number(-5), "*", Number(neg0), Number(0)},
+
 		{Number(1), "*", Number(NaN), Number(NaN)},
-		{Number(-5), "*", Number(0), Number(math.Copysign(0, -1))},
-		{Number(-5), "*", Number(math.Copysign(0, -1)), Number(0)},
-		{Number(math.Inf(+1)), "*", Number(NaN), Number(NaN)},
-		{Number(math.Inf(+1)), "*", Number(math.Inf(+1)), Number(math.Inf(+1))},
-		{Number(math.Inf(+1)), "*", Number(math.Inf(-1)), Number(math.Inf(-1))},
-		{Number(math.Inf(-1)), "*", Number(math.Inf(-1)), Number(math.Inf(+1))},
-		{Number(math.Inf(-1)), "*", Number(math.Inf(+1)), Number(math.Inf(-1))},
+		{Number(inf), "*", Number(NaN), Number(NaN)},
+		{Number(negInf), "*", Number(NaN), Number(NaN)},
+
+		{Number(inf), "*", Number(inf), Number(inf)},
+		{Number(inf), "*", Number(negInf), Number(negInf)},
+		{Number(negInf), "*", Number(negInf), Number(inf)},
+		{Number(negInf), "*", Number(inf), Number(negInf)},
+		// FIXME: add overflow/underflow cases
+
+		// Division:
 		{Number(35), "/", String("7"), Number(5)},
+
+		{Number(1), "/", Number(1), Number(1)},
+		{Number(1), "/", Number(-1), Number(-1)},
+		{Number(-1), "/", Number(-1), Number(1)},
+		{Number(-1), "/", Number(1), Number(-1)},
+
+		{Number(1), "/", Number(NaN), Number(NaN)},
+		{Number(NaN), "/", Number(NaN), Number(NaN)},
+		{Number(NaN), "/", Number(1), Number(NaN)},
+
+		{Number(inf), "/", Number(inf), Number(NaN)},
+		{Number(inf), "/", Number(negInf), Number(NaN)},
+		{Number(negInf), "/", Number(negInf), Number(NaN)},
+		{Number(negInf), "/", Number(inf), Number(NaN)},
+
+		{Number(inf), "/", Number(0), Number(inf)},
+		{Number(inf), "/", Number(neg0), Number(negInf)},
+		{Number(negInf), "/", Number(neg0), Number(inf)},
+		{Number(negInf), "/", Number(0), Number(negInf)},
+
+		{Number(inf), "/", Number(1), Number(inf)},
+		{Number(inf), "/", Number(-1), Number(negInf)},
+		{Number(negInf), "/", Number(-1), Number(inf)},
+		{Number(negInf), "/", Number(1), Number(negInf)},
+
+		{Number(1), "/", Number(inf), Number(0)},
+		{Number(1), "/", Number(negInf), Number(neg0)},
+		{Number(-1), "/", Number(negInf), Number(0)},
+		{Number(-1), "/", Number(inf), Number(neg0)},
+
+		{Number(0), "/", Number(0), Number(NaN)},
+		{Number(0), "/", Number(neg0), Number(NaN)},
+		{Number(neg0), "/", Number(neg0), Number(NaN)},
+		{Number(neg0), "/", Number(0), Number(NaN)},
+
+		{Number(1), "/", Number(0), Number(inf)},
+		{Number(1), "/", Number(neg0), Number(negInf)},
+		{Number(-1), "/", Number(neg0), Number(inf)},
+		{Number(-1), "/", Number(0), Number(negInf)},
+		// FIXME: add overflow/underflow cases
 	}
 	for _, c := range tests {
 		v := BinaryOp(c.left, c.op, c.right)
