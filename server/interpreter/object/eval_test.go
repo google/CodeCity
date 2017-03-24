@@ -101,6 +101,29 @@ func TestBinaryOp(t *testing.T) {
 		{Number(-1), "/", Number(neg0), Number(inf)},
 		{Number(-1), "/", Number(0), Number(negInf)},
 		// FIXME: add overflow/underflow cases
+
+		// Remainder:
+		{Number(20), "%", Number(5.5), Number(3.5)},
+		{Number(20), "%", Number(-5.5), Number(3.5)},
+		{Number(-20), "%", Number(-5.5), Number(-3.5)},
+		{Number(-20), "%", Number(5.5), Number(-3.5)},
+
+		{Number(1), "%", Number(NaN), Number(NaN)},
+		{Number(NaN), "%", Number(NaN), Number(NaN)},
+		{Number(NaN), "%", Number(1), Number(NaN)},
+
+		{Number(inf), "%", Number(1), Number(NaN)},
+		{Number(negInf), "%", Number(1), Number(NaN)},
+		{Number(1), "%", Number(0), Number(NaN)},
+		{Number(1), "%", Number(neg0), Number(NaN)},
+		{Number(inf), "%", Number(0), Number(NaN)},
+		{Number(inf), "%", Number(neg0), Number(NaN)},
+		{Number(negInf), "%", Number(neg0), Number(NaN)},
+		{Number(negInf), "%", Number(0), Number(NaN)},
+
+		{Number(0), "%", Number(1), Number(0)},
+		{Number(neg0), "%", Number(1), Number(neg0)},
+		// FIXME: add overflow/underflow cases
 	}
 	for _, c := range tests {
 		v := BinaryOp(c.left, c.op, c.right)

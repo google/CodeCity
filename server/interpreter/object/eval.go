@@ -21,6 +21,7 @@ package object
 
 import (
 	"fmt"
+	"math"
 )
 
 func BinaryOp(left Value, op string, right Value) Value {
@@ -61,10 +62,10 @@ func BinaryOp(left Value, op string, right Value) Value {
 	case "*":
 		return Number(left.ToNumber() * right.ToNumber())
 	case "/":
-		// FIXME: check edge cases - NaN, Infinity, etc.
 		return Number(left.ToNumber() / right.ToNumber())
 	case "%":
-		panic("not implemented")
+		return Number(
+			math.Mod(float64(left.ToNumber()), float64(right.ToNumber())))
 	case "|":
 		panic("not implemented")
 	case "^":
