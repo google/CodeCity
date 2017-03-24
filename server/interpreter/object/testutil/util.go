@@ -61,6 +61,14 @@ func Identical(x, y object.Value) bool {
 		// Are the two strings equal?
 		yy, ok := y.(object.String)
 		return ok && xx == yy
+	case object.Undefined:
+		// Is the other also undefined?
+		_, ok := y.(object.Undefined)
+		return ok
+	case object.Null:
+		// Is the other also undefined?
+		_, ok := y.(object.Null)
+		return ok
 	case *object.Object:
 		// Is it a pointer to the same object?
 		yy, ok := y.(*object.Object)
