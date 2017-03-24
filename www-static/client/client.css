@@ -36,6 +36,7 @@ thead, tfoot {
   box-sizing: border-box;
   background-color: #f8f8f8;
   font-family: monospace;
+  margin-top: 2px;
   resize: none;
   width: 100%;
 }

@@ -25,6 +25,21 @@
 'use strict';
 
 var CCC = {};
+/**
+ * Number of calls to countdown required before launching.
+ * @private
+ */
+CCC.countdown_ = 2;
+
+/**
+ * After every iframe has reported ready, call the initialization.
+ */
+CCC.countdown = function() {
+  CCC.countdown_--;
+  if (CCC.countdown_ == 0) {
+    CCC.init();
+  }
+};
 
 /**
  * Initialization code called on startup.
@@ -85,4 +100,23 @@ CCC.resize = function() {
   CCC.logFrame.style.height = CCC.displayCell.offsetHeight + 'px';
 };
 
-window.addEventListener('load', CCC.init, false);
+/**
+ * Receive messages from our child frames.
+ * @param {!Event} e Incoming message event.
+ */
+CCC.receiveMessage = function(e) {
+  var origin = e.origin || e.originalEvent.origin;
+  if (origin != location.origin) {
+    console.error('Message received by client frame from unknown origin: ' +
+                  origin);
+    return;
+  }
+  if (e.data == 'initLog') {
+    CCC.countdown();
+  } else {
+    console.log('Unknown message received by client frame: ' + e.data);
+  }
+}
+
+window.addEventListener('message', CCC.receiveMessage, false);
+window.addEventListener('load', CCC.countdown, false);

@@ -1,11 +1,46 @@
-<!doctype html>
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Code City</title>
+    <link href="/client/client.css" rel="stylesheet">
+    <link href="/favicon.ico" rel="shortcut icon">
+    <script>  // Data injected by connect server.
+      var LOGIN_ID = '<<<LOGIN_ID>>>';
+      var SESSION_ID = '<<<SESSION_ID>>>';
+     </script>
+    <script src="/client/client.js"></script>
+  </head>
 
-<html lang="en">
-<head>
-    <title>Code City Connect</title>
-</head>
-<body>
-    Your login ID is <<<LOGIN_ID>>><br>
-    Your session ID is <<<SESSION_ID>>>
-</body>
+  <body>
+    <iframe src="http://xkcd.com" id="comicFrame"></iframe>
+    <iframe src="/client/log.html" id="logFrame"></iframe>
+    <table id="mainTable">
+      <thead>
+        <tr>
+          <td>
+            [
+            View:
+            <button id="comicButton">Comic</button>
+            <button id="logButton">Log</button>
+            ]
+          </td>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td id="displayCell">
+            Loading...
+          </td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td>
+            <textarea rows=2 id="commandInput"></textarea>
+          </td>
+        </tr>
+      </tfoot>
+    </table>
+  </body>
 </html>
