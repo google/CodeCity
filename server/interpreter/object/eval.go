@@ -156,8 +156,7 @@ func arca(x, y Value) (lt, undef bool) {
 //
 // x and y are the arguments to be compared.
 //
-// If lt returns true then x is less than y according to the ARCA; if
-// undef is true then the two are not comparable.
+// If it returns true then x == y according to the AECA.
 //
 // BUG(cpcallen): aeca'a ToPrimitive() calls do not result in user
 // code being called.
@@ -283,4 +282,14 @@ func aeca(x, y Value) bool {
 	default:
 		panic(fmt.Errorf("unknown type %T", x))
 	}
+}
+
+// aseca implements the Abstract Strict Equality Comparison Algorithm (see
+// ES5.1 spec, §11.9.6.
+//
+// x and y are the arguments to be compared.
+//
+// If it returns true then x == y according to the AECA.
+func aseca(x, y Value) bool {
+	return x == y
 }
