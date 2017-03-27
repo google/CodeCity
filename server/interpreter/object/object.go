@@ -32,7 +32,7 @@ type Value interface {
 	// boolean, etc.).
 	IsPrimitive() bool
 
-	// Parent() returns the parent (prototype) object for this object.
+	// Parent returns the parent (prototype) object for this object.
 	Parent() Value
 
 	// GetProperty returns the current value of the given property or
@@ -43,10 +43,10 @@ type Value interface {
 	// returns an ErrorMsg if that was not possible.
 	SetProperty(name string, value Value) *ErrorMsg
 
-	// ToBoolean returns true iff the object is truthy
+	// ToBoolean returns true iff the object is truthy.
 	ToBoolean() Boolean
 
-	// ToNumber returns the numeric equivalent of the object
+	// ToNumber returns the numeric equivalent of the object.
 	ToNumber() Number
 
 	// ToString returns a string representation of the object.  This
@@ -103,18 +103,23 @@ type property struct {
 // *Object must satisfy Value.
 var _ Value = (*Object)(nil)
 
+// Type always returns "object" for regular Objects.
 func (Object) Type() string {
 	return "object"
 }
 
+// IsPrimitive always returns false for regular Objects.
 func (Object) IsPrimitive() bool {
 	return false
 }
 
+// Parent returns the parent (prototype) object for this object.
 func (obj Object) Parent() Value {
 	return obj.parent
 }
 
+// GetProperty returns the current value of the given property or an
+// ErrorMsg if that was not possible.
 func (obj Object) GetProperty(name string) (Value, *ErrorMsg) {
 	pd, ok := obj.properties[name]
 	// FIXME: permissions check for property readability goes here
@@ -124,14 +129,11 @@ func (obj Object) GetProperty(name string) (Value, *ErrorMsg) {
 	return pd.v, nil
 }
 
+// SetProperty sets the given property to the specified value or
+// returns an ErrorMsg if that was not possible.
 func (obj *Object) SetProperty(name string, value Value) *ErrorMsg {
 	pd, ok := obj.properties[name]
-	if ok { // Updating existing property
-		// FIXME: permissions check for property writeability goes here
-		pd.v = value
-		obj.properties[name] = pd
-		return nil
-	} else { // Creating new property
+	if !ok { // Creating new property
 		// FIXME: permissions check for object writability goes here
 		obj.properties[name] = property{
 			owner: obj.owner, // FIXME: should be caller
@@ -142,28 +144,46 @@ func (obj *Object) SetProperty(name string, value Value) *ErrorMsg {
 		}
 		return nil
 	}
+	// Updating existing property
+	// FIXME: permissions check for property writeability goes here
+	pd.v = value
+	obj.properties[name] = pd
+	return nil
 }
 
+// ToBoolean always returns true for regular Objects.
 func (Object) ToBoolean() Boolean {
 	return true
 }
 
+// ToNumber returns the numeric equivalent of the object.
+//
+// BUG(cpcallen): Object.ToNumber is not strictly compliant with
+// ES5.1 spec; it just returns .ToString().ToNumber().
 func (obj Object) ToNumber() Number {
-	// BUG(cpcallen): Object.ToNumber is not strictly compliant with
-	// ES5.1 spec; it just returns .ToString().ToNumber()
 	return obj.ToString().ToNumber()
 }
 
+// ToString returns a string representation of the object.  By default
+// this is "[object Object]" for plain objects.
+//
+// BUG(cpcallen): Object.ToString should call a user-code toString()
+// method if present.
 func (Object) ToString() String {
 	return "[object Object]"
 }
 
-// BUG(cpcallen) Object.ToPrimitive should prefer to return the result
+// ToPrimitive defaults to ToNumber on objects.
+//
+// BUG(cpcallen): Object.ToPrimitive should prefer to return the result
 // of ToString() on date objects.
 func (obj *Object) ToPrimitive() Value {
 	return obj.ToNumber()
 }
 
+// New creates a new object with the specified owner and parent,
+// initialises it as appropriate, and returns a pointer to the
+// newly-created object.
 func New(owner *Owner, parent Value) *Object {
 	var obj = new(Object)
 	obj.init(owner, parent)
@@ -171,8 +191,9 @@ func New(owner *Owner, parent Value) *Object {
 	return obj
 }
 
-// Internal initialisation routine, also called when constructing
-// Functions, Owners, etc.
+// init is an internal initialisation routine, called from New and
+// also called when constructing other types of objects such as
+// Arrays, Owners, etc.
 func (obj *Object) init(owner *Owner, parent Value) {
 	obj.owner = owner
 	obj.parent = parent

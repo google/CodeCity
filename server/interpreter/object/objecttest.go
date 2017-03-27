@@ -16,7 +16,8 @@
 
 package object
 
-// Helper method for interpreter_test.go
+// PropCount is a helper method for interpreter_test.go, and should
+// not be used outside of test files.
 //
 // FIXME: this function and indeed file should go away as soon as
 // there's a better way to detrmine the number of properties on an

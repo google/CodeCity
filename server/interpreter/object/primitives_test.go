@@ -121,7 +121,10 @@ func TestStringLength(t *testing.T) {
 func TestNull(t *testing.T) {
 	n := Null{}
 	if v := n.Type(); v != "object" {
-		t.Errorf("Null{}.Type() == %v (expected \"object\")", v)
+		t.Errorf("Null{}.Type() == %#v (expected \"object\")", v)
+	}
+	if v := n.Parent(); v != (Undefined{}) {
+		t.Errorf("Null{}.Parent == %#v (expected Undefined{})", v)
 	}
 	if v, e := n.GetProperty("foo"); e == nil {
 		t.Errorf("Null{}.GetProperty(\"foo\") == %v, %v "+
@@ -129,25 +132,14 @@ func TestNull(t *testing.T) {
 	}
 }
 
-func TestNullParentPanic(t *testing.T) {
-	defer func() {
-		if r := recover(); r == nil {
-			t.Errorf("Null{}.Parent() did not panic")
-		}
-	}()
-	_ = Null{}.Parent()
-}
-
 func TestUndefined(t *testing.T) {
-}
-
-func TestUndefinedParentPanic(t *testing.T) {
-	defer func() {
-		if r := recover(); r == nil {
-			t.Errorf("Undefined{}.Parent() did not panic")
-		}
-	}()
-	_ = Undefined{}.Parent()
+	u := Undefined{}
+	if v := u.Type(); v != "undefined" {
+		t.Errorf("Undefined{}.Type() == %#v (expected \"undefined\")", v)
+	}
+	if v := u.Parent(); v != (Undefined{}) {
+		t.Errorf("Undefined{}.Parent == %#v (expected Undefined{})", v)
+	}
 }
 
 func TestToBoolean(t *testing.T) {

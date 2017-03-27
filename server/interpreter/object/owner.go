@@ -25,6 +25,10 @@ type Owner struct {
 // *Owner must satisfy Value.
 var _ Value = (*Owner)(nil)
 
+// ToString always returns "[object Owner]" for Owners.
+//
+// BUG(cpcallen): this should probably call a user-supplied
+// .toString() method if present.
 func (Owner) ToString() String {
 	return "[object Owner]"
 }

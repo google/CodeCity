@@ -33,10 +33,10 @@ import (
 //
 // tl;dr: do NOT take the address of a primitive.
 
-// PrimitiveFromRaw takes a raw JavaScript literal (as a string as it appears in
-// the source code, and as found in an ast.Literal.Raw property) and
-// returns a primitive Value object representing the value of that
-// literal.
+// NewFromRaw takes a raw JavaScript literal (as a string as it
+// appears in the source code, and as found in an ast.Literal.Raw
+// property) and returns a primitive Value object representing the
+// value of that literal.
 func NewFromRaw(raw string) Value {
 	if raw == "true" {
 		return Boolean(true)
@@ -77,20 +77,24 @@ type Boolean bool
 // Boolean must satisfy Value.
 var _ Value = Boolean(false)
 
+// Type always returns "boolean" for Booleans.
 func (Boolean) Type() string {
 	return "boolean"
 }
 
+// IsPrimitive alwasy returns true for Booleans.
 func (Boolean) IsPrimitive() bool {
 	return true
 }
 
+// Parent returns BooleanProto for all Booleans.
 func (Boolean) Parent() Value {
 	return BooleanProto
 }
 
-func (Boolean) GetProperty(name string) (Value, *ErrorMsg) {
-	return Undefined{}, nil
+// GetProperty on Boolean just passes to its parent:
+func (b Boolean) GetProperty(name string) (Value, *ErrorMsg) {
+	return b.Parent().GetProperty(name)
 }
 
 // SetProperty on Boolean always succeeds but has no effect.
@@ -98,10 +102,12 @@ func (Boolean) SetProperty(name string, value Value) *ErrorMsg {
 	return nil
 }
 
+// ToBoolean on a Boolean just returns itself.
 func (b Boolean) ToBoolean() Boolean {
 	return b
 }
 
+// ToNumber converts a boolean to 1 (if true) or 0 (if false).
 func (b Boolean) ToNumber() Number {
 	if b {
 		return 1
@@ -110,6 +116,7 @@ func (b Boolean) ToNumber() Number {
 	}
 }
 
+// ToString converts a boolean to "true" or "false" as appropriate.
 func (b Boolean) ToString() String {
 	if b {
 		return "true"
@@ -118,6 +125,7 @@ func (b Boolean) ToString() String {
 	}
 }
 
+// ToPrimitive on a primitive just returns itself.
 func (b Boolean) ToPrimitive() Value {
 	return b
 }
@@ -130,20 +138,24 @@ type Number float64
 // Number must satisfy Value.
 var _ Value = Number(0)
 
+// Type always returns "number" for numbers.
 func (Number) Type() string {
 	return "number"
 }
 
+// IsPrimitive alwasy returns true for Numbers.
 func (Number) IsPrimitive() bool {
 	return true
 }
 
+// Parent returns NumberProto for all Numbers.
 func (Number) Parent() Value {
 	return NumberProto
 }
 
-func (Number) GetProperty(name string) (Value, *ErrorMsg) {
-	return Undefined{}, nil
+// GetProperty on Number just passes to its parent:
+func (n Number) GetProperty(name string) (Value, *ErrorMsg) {
+	return n.Parent().GetProperty(name)
 }
 
 // SetProperty on Number always succeeds but has no effect.
@@ -151,14 +163,26 @@ func (Number) SetProperty(name string, value Value) *ErrorMsg {
 	return nil
 }
 
+// ToBoolean on a number returns true if the number is not 0 or NaN.
 func (n Number) ToBoolean() Boolean {
 	return Boolean(!(float64(n) == 0 || math.IsNaN(float64(n))))
 }
 
+// ToNumber on a Number just returns itself.
 func (n Number) ToNumber() Number {
 	return n
 }
 
+// ToString on a number returns "Infinity" for +Inf, "-Infinity" for
+// -Inf, "NaN" for NaN, and a decimal or exponential representation
+// for regular numeric values.
+//
+// BUG(cpcallen): This implementation is probably not strictly
+// compatible with the ES5.1 spec.  In particular, transtion from
+// decimal to exponential representation is not guaranteed to be
+// compliant.
+//
+// FIXME: Should we return "-0" for negative zero?  Do we?
 func (n Number) ToString() String {
 	switch float64(n) {
 	case math.Inf(+1):
@@ -170,6 +194,7 @@ func (n Number) ToString() String {
 	}
 }
 
+// ToPrimitive on a primitive just returns itself.
 func (n Number) ToPrimitive() Value {
 	return n
 }
@@ -182,21 +207,25 @@ type String string
 // String must satisfy Value.
 var _ Value = String("")
 
+// Type always returns "string" for strings.
 func (String) Type() string {
 	return "string"
 }
 
+// IsPrimitive alwasy returns true for Strings.
 func (String) IsPrimitive() bool {
 	return true
 }
 
+// Parent returns StringProto for all Strings.
 func (String) Parent() Value {
 	return StringProto
 }
 
+// GetProperty on String implements a magic .length property itself, and passes any other property lookups to its parent:
 func (s String) GetProperty(name string) (Value, *ErrorMsg) {
 	if name != "length" {
-		return Undefined{}, nil
+		return s.Parent().GetProperty(name)
 	}
 	return Number(len(utf16.Encode([]rune(string(s))))), nil
 }
@@ -207,10 +236,14 @@ func (String) SetProperty(name string, value Value) *ErrorMsg {
 	return nil
 }
 
+// ToBoolean on String returns true iff the string is non-empty.
 func (s String) ToBoolean() Boolean {
 	return len(string(s)) != 0
 }
 
+// ToNumber returns the numeric value of the string, or NaN if it does
+// not look like a number.
+//
 // BUG(cpcallen): String.ToNumber() is probably not strictly compliant
 // with the ES5.1 spec.
 func (s String) ToNumber() Number {
@@ -250,10 +283,12 @@ func (s String) ToNumber() Number {
 	return Number(n)
 }
 
+// ToString on a string just returns itself.
 func (s String) ToString() String {
 	return s
 }
 
+// ToPrimitive on a primitive just returns itself.
 func (s String) ToPrimitive() Value {
 	return s
 }
@@ -266,18 +301,22 @@ type Null struct{}
 // Null must satisfy Value.
 var _ Value = Null{}
 
+// Type (surprisingly) returns "object" for null values.
 func (Null) Type() string {
 	return "object"
 }
 
+// IsPrimitive alwasy returns true for Null.
 func (Null) IsPrimitive() bool {
 	return true
 }
 
+// Parent returns Undefined for Null values.
 func (Null) Parent() Value {
-	panic("Cannot get parent (prototype) of null")
+	return Undefined{}
 }
 
+// GetProperty on Null always returns an error.
 func (Null) GetProperty(name string) (Value, *ErrorMsg) {
 	return nil, &ErrorMsg{
 		Name:    "TypeError",
@@ -293,18 +332,22 @@ func (Null) SetProperty(name string, value Value) *ErrorMsg {
 	}
 }
 
+// ToBoolean on Null always return false.
 func (Null) ToBoolean() Boolean {
 	return false
 }
 
+// ToNumber on Null always returns 0.
 func (Null) ToNumber() Number {
 	return 0
 }
 
+// ToString on Null always returns "null".
 func (Null) ToString() String {
 	return "null"
 }
 
+// ToPrimitive on a primitive just returns itself.
 func (Null) ToPrimitive() Value {
 	return Null{}
 }
@@ -317,18 +360,22 @@ type Undefined struct{}
 // Undefined must satisfy Value.
 var _ Value = Undefined{}
 
+// Type always returns "undefined" for undefined.
 func (Undefined) Type() string {
 	return "undefined"
 }
 
+// IsPrimitive alwasy returns true for Undefined.
 func (Undefined) IsPrimitive() bool {
 	return true
 }
 
+// Parent returns Undefined for Undefined values.
 func (Undefined) Parent() Value {
-	panic("Cannot get parent (prototype) of undefined")
+	return Undefined{}
 }
 
+// GetProperty on Undefined always returns an error.
 func (Undefined) GetProperty(name string) (Value, *ErrorMsg) {
 	return nil, &ErrorMsg{
 		Name:    "TypeError",
@@ -344,18 +391,22 @@ func (Undefined) SetProperty(name string, value Value) *ErrorMsg {
 	}
 }
 
+// ToBoolean on Undefined always returns false.
 func (Undefined) ToBoolean() Boolean {
 	return false
 }
 
+// ToNumber on Undefined always returns NaN.
 func (Undefined) ToNumber() Number {
 	return Number(math.NaN())
 }
 
+// ToString on Undefined always returns "undefined".
 func (Undefined) ToString() String {
 	return "undefined"
 }
 
+// ToPrimitive on a primitive just returns itself.
 func (Undefined) ToPrimitive() Value {
 	return Undefined{}
 }
