@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-// Package interpreter implements a JavaScript interpreter.
 package interpreter
 
 import (
@@ -23,66 +22,6 @@ import (
 	"CodeCity/server/interpreter/ast"
 	"CodeCity/server/interpreter/object"
 )
-
-// Interpreter implements a JavaScript interpreter.
-type Interpreter struct {
-	state   state
-	value   object.Value
-	Verbose bool
-}
-
-// New takes a JavaScript program, in the form of an JSON-encoded
-// ESTree, and creates a new Interpreter that will execute that
-// program.
-func New(astJSON string) *Interpreter {
-	var this = new(Interpreter)
-
-	tree, err := ast.NewFromJSON(astJSON)
-	if err != nil {
-		panic(err)
-	}
-	s := newScope(nil, this)
-	// FIXME: insert global names into s
-	s.populate(tree)
-	this.state = newState(nil, s, tree)
-	return this
-}
-
-// Step performs the next step in the evaluation of program.  Returns
-// true if a step was executed; false if the program has terminated.
-func (this *Interpreter) Step() bool {
-	if this.state == nil {
-		return false
-	}
-	if this.Verbose {
-		fmt.Printf("Next step is a %T\n", this.state)
-	}
-	this.state = this.state.step()
-	return true
-}
-
-// Run runs the program to completion.
-func (this *Interpreter) Run() {
-	for this.Step() {
-	}
-}
-
-// Value returns the final value computed by the last statement
-// expression of the program.
-func (this *Interpreter) Value() object.Value {
-	return this.value
-}
-
-// acceptValue receives values computed by StatementExpressions; the
-// last such value accepted is the completion value of the program.
-func (this *Interpreter) acceptValue(v object.Value) {
-	if this.Verbose {
-		fmt.Printf("Interpreter just got %v.\n", v)
-	}
-	this.value = v
-}
-
-/********************************************************************/
 
 // state is the interface implemented by each of the types
 // representing different possible next states for the interpreter
