@@ -97,11 +97,12 @@ function handleRequest(request, response) {
         var parts = cookie.split('=');
         cookieList[parts.shift().trim()] = decodeURI(parts.join('='));
     });
-    if (!cookieList.id || !cookieList.id.match(/^\w+$/)) {
-      if (cookieList.id) {
+    var loginId = cookieList.id;
+    if (!loginId || !loginId.match(/^\w+$/)) {
+      if (loginId) {
         console.log('Missing login ID.  Redirecting.');
       } else {
-        console.log('Invalid login ID: ' + cookieList.id);
+        console.log('Invalid login ID: ' + loginId);
       }
       response.writeHead(302, {  // Temporary redirect
          'Location': CFG.loginPath
@@ -111,10 +112,13 @@ function handleRequest(request, response) {
     }
     var sessionId = genUid(22);
     var subs = {
-      '<<<LOGIN_ID>>>': cookieList.id,
+      '<<<LOGIN_ID>>>': loginId,
       '<<<SESSION_ID>>>': sessionId
     };
     serveFile(response, 'connect.html', subs);
+    console.log('Hello ' + 'x'.repeat(loginId.length - 4) +
+                loginId.substring(loginId.length - 4) + ', starting session ' +
+                sessionId);
 
   } else if (request.url.indexOf(CFG.connectPath + '?ping=') == 0) {
   } else {
