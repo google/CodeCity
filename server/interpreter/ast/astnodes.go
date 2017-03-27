@@ -77,7 +77,7 @@ type Program struct {
 // (Auto-generated from ESTree spec.)
 type functionStuff struct {
 	Id     *Identifier     `json:"id,omitempty"`
-	Params []Identifier    `json:"params,omitempty"`
+	Params []*Identifier   `json:"params,omitempty"`
 	Body   *BlockStatement `json:"body,omitempty"`
 }
 
@@ -232,7 +232,7 @@ type TryStatement struct {
 // (Auto-generated from ESTree spec.)
 type CatchClause struct {
 	nodeStuff
-	Param Identifier      `json:"param,omitempty"`
+	Param *Identifier     `json:"param,omitempty"`
 	Body  *BlockStatement `json:"body,omitempty"`
 }
 
@@ -306,8 +306,8 @@ type VariableDeclaration struct {
 // (Auto-generated from ESTree spec.)
 type VariableDeclarator struct {
 	nodeStuff
-	Id   Identifier `json:"id,omitempty"`
-	Init Expression `json:"init,omitempty"`
+	Id   *Identifier `json:"id,omitempty"`
+	Init Expression  `json:"init,omitempty"`
 }
 
 /********************************************************************/

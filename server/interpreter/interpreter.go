@@ -146,15 +146,19 @@ func (this *scope) getVar(name string) object.Value {
 	panic(fmt.Errorf("can't get undeclared variable %v", name))
 }
 
+func (this *scope) newVar(name string, value object.Value) {
+	this.vars[name] = value
+}
+
 func (this *scope) populate(node ast.Node) {
 	switch n := node.(type) {
 
 	// The interesting cases:
 	case *ast.VariableDeclarator:
-		this.vars[n.Id.Name] = object.Undefined{}
+		this.newVar(n.Id.Name, object.Undefined{})
 	case *ast.FunctionDeclaration:
 		// Add name of function to scope; ignore contents.
-		this.vars[n.Id.Name] = object.Undefined{}
+		this.newVar(n.Id.Name, object.Undefined{})
 
 	// The recursive cases:
 	case *ast.BlockStatement:
@@ -506,6 +510,8 @@ type stateCallExpression struct {
 	callee ast.Expression
 	args   ast.Expressions
 	cl     *closure
+	ns     *scope // New scope being constructed
+	n      int    // Which arg are we evaluating?
 }
 
 func (this *stateCallExpression) init(node *ast.CallExpression) {
@@ -515,22 +521,39 @@ func (this *stateCallExpression) init(node *ast.CallExpression) {
 
 func (this *stateCallExpression) step() state {
 	if this.cl == nil {
+		// First visit: evaluate function to get closure
+		if this.ns != nil {
+			panic("ns but not cl???")
+		}
 		return newState(this, this.scope, this.callee.E)
-	} else { // FIXME: args
-		ns := newScope(this.scope, this.scope.interpreter)
-		ns.populate(this.cl.body)
-		return newState(this.parent, ns, this.cl.body)
 	}
+	if this.n == 0 {
+		// Set up scope:
+		this.ns = newScope(this.scope, this.scope.interpreter)
+		this.ns.populate(this.cl.body)
+	}
+	// Subsequent visits: evaluate arguments
+	if this.n < len(this.args) {
+		// FIXME: do error checking for param/arg count mismatch
+		return newState(this, this.scope, this.args[this.n])
+	}
+	// Last visit: evaluate function call
+	return newState(this.parent, this.ns, this.cl.body)
 }
 
 func (this *stateCallExpression) acceptValue(v object.Value) {
 	if this.cl == nil {
+		// First value: should be closure
 		cl, ok := v.(*closure)
 		if !ok {
 			panic("can't call non-closure")
 		}
 		this.cl = cl
-	} else { // FIXME: args
+	} else if this.n < len(this.args) {
+		this.ns.newVar(this.cl.params[this.n], v)
+		this.n++
+	} else {
+
 		panic("should not re-visit already-evaluated stateCallExpression")
 	}
 }
@@ -636,18 +659,18 @@ func (this *stateFunctionDeclaration) step() state {
 
 type stateFunctionExpression struct {
 	stateCommon
-	// FIXME: save param list?
-	body *ast.BlockStatement
+	params []*ast.Identifier
+	body   *ast.BlockStatement
 }
 
 func (this *stateFunctionExpression) init(node *ast.FunctionExpression) {
-	// this.params = node.Params
+	this.params = node.Params
 	this.body = node.Body
 }
 
 func (this *stateFunctionExpression) step() state {
 	this.parent.(valueAcceptor).acceptValue(
-		newClosure(nil, this.scope, this.body))
+		newClosure(nil, this.scope, this.params, this.body))
 	return this.parent
 }
 

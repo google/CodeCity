@@ -45,6 +45,8 @@ func TestInterpreterSimple(t *testing.T) {
 		{"\"foo\"+\"bar\"", concat, object.String("foobar")},
 		{"var v; var f = function() {v = 49}; f(); v",
 			simpleFunctionExpression, object.Number(49)},
+		{"var v; var f = function(x) {v = x}; f(50); v",
+			fExpWithParameter, object.Number(50)},
 	}
 
 	for _, c := range tests {
@@ -165,6 +167,13 @@ const plusequalsRight = `{"type":"Program","start":0,"end":20,"body":[{"type":"V
 // v;
 // => 49
 const simpleFunctionExpression = `{"type":"Program","start":0,"end":42,"body":[{"type":"VariableDeclaration","start":0,"end":6,"declarations":[{"type":"VariableDeclarator","start":4,"end":5,"id":{"type":"Identifier","start":4,"end":5,"name":"v"},"init":null}],"kind":"var"},{"type":"VariableDeclaration","start":7,"end":34,"declarations":[{"type":"VariableDeclarator","start":11,"end":34,"id":{"type":"Identifier","start":11,"end":12,"name":"f"},"init":{"type":"FunctionExpression","start":15,"end":34,"id":null,"params":[],"body":{"type":"BlockStatement","start":26,"end":34,"body":[{"type":"ExpressionStatement","start":27,"end":33,"expression":{"type":"AssignmentExpression","start":27,"end":33,"operator":"=","left":{"type":"Identifier","start":27,"end":28,"name":"v"},"right":{"type":"Literal","start":31,"end":33,"value":49,"raw":"49"}}}]}}}],"kind":"var"},{"type":"ExpressionStatement","start":35,"end":39,"expression":{"type":"CallExpression","start":35,"end":38,"callee":{"type":"Identifier","start":35,"end":36,"name":"f"},"arguments":[]}},{"type":"ExpressionStatement","start":40,"end":42,"expression":{"type":"Identifier","start":40,"end":41,"name":"v"}}]}`
+
+// var v;
+// var f = function(x) {v = x}
+// f(50);
+// v;
+// => 50
+const fExpWithParameter = `{"type":"Program","start":0,"end":44,"body":[{"type":"VariableDeclaration","start":0,"end":6,"declarations":[{"type":"VariableDeclarator","start":4,"end":5,"id":{"type":"Identifier","start":4,"end":5,"name":"v"},"init":null}],"kind":"var"},{"type":"VariableDeclaration","start":7,"end":34,"declarations":[{"type":"VariableDeclarator","start":11,"end":34,"id":{"type":"Identifier","start":11,"end":12,"name":"f"},"init":{"type":"FunctionExpression","start":15,"end":34,"id":null,"params":[{"type":"Identifier","start":24,"end":25,"name":"x"}],"body":{"type":"BlockStatement","start":27,"end":34,"body":[{"type":"ExpressionStatement","start":28,"end":33,"expression":{"type":"AssignmentExpression","start":28,"end":33,"operator":"=","left":{"type":"Identifier","start":28,"end":29,"name":"v"},"right":{"type":"Identifier","start":32,"end":33,"name":"x"}}}]}}}],"kind":"var"},{"type":"ExpressionStatement","start":35,"end":41,"expression":{"type":"CallExpression","start":35,"end":40,"callee":{"type":"Identifier","start":35,"end":36,"name":"f"},"arguments":[{"type":"Literal","start":37,"end":39,"value":50,"raw":"50"}]}},{"type":"ExpressionStatement","start":42,"end":44,"expression":{"type":"Identifier","start":42,"end":43,"name":"v"}}]}`
 
 // ({foo: "bar", answer: 42})
 // => {foo: "bar", answer: 42}
