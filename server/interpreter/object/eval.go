@@ -38,9 +38,9 @@ func BinaryOp(left Value, op string, right Value) Value {
 	case "!=":
 		return Boolean(!aeca(left, right))
 	case "===":
-		panic("not implemented")
+		return Boolean(aseca(left, right))
 	case "!==":
-		panic("not implemented")
+		return Boolean(!aseca(left, right))
 	case "<":
 		lt, undef := arca(left, right)
 		return Boolean(lt && !undef)
