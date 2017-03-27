@@ -96,7 +96,6 @@ func TestEquality(t *testing.T) {
 	var o1 = New(nil, nil)
 	var o2 = New(nil, nil)
 	var ow = NewOwner()
-	var fn = NewFunction(nil, nil)
 
 	var tests = []struct {
 		left     Value
@@ -149,8 +148,6 @@ func TestEquality(t *testing.T) {
 		{o2, o2, true, true},
 		{o1, ow, false, false},
 		{ow, ow, true, true},
-		{o1, fn, false, false},
-		{fn, fn, true, true},
 
 		// Mixed:
 		{String("10"), Number(10), true, false},   // Numeric

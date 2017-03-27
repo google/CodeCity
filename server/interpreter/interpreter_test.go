@@ -43,6 +43,8 @@ func TestInterpreterSimple(t *testing.T) {
 		{"var x=40,y=8; x+=y; x", plusequalsLeft, object.Number(48)},
 		{"var x=40,y=8; x+=y; y", plusequalsRight, object.Number(8)},
 		{"\"foo\"+\"bar\"", concat, object.String("foobar")},
+		{"var v; var f = function() {v = 49}; f(); v",
+			simpleFunctionExpression, object.Number(49)},
 	}
 
 	for _, c := range tests {
@@ -156,6 +158,13 @@ const plusequalsLeft = `{"type":"Program","start":0,"end":20,"body":[{"type":"Va
 // y
 // => 8
 const plusequalsRight = `{"type":"Program","start":0,"end":20,"body":[{"type":"VariableDeclaration","start":0,"end":13,"declarations":[{"type":"VariableDeclarator","start":4,"end":8,"id":{"type":"Identifier","start":4,"end":5,"name":"x"},"init":{"type":"Literal","start":6,"end":8,"value":40,"raw":"40"}},{"type":"VariableDeclarator","start":10,"end":13,"id":{"type":"Identifier","start":10,"end":11,"name":"y"},"init":{"type":"Literal","start":12,"end":13,"value":8,"raw":"8"}}],"kind":"var"},{"type":"ExpressionStatement","start":14,"end":18,"expression":{"type":"AssignmentExpression","start":14,"end":18,"operator":"+=","left":{"type":"Identifier","start":14,"end":15,"name":"x"},"right":{"type":"Identifier","start":17,"end":18,"name":"y"}}},{"type":"ExpressionStatement","start":19,"end":20,"expression":{"type":"Identifier","start":19,"end":20,"name":"y"}}]}`
+
+// var v;
+// var f = function() {v = 49}
+// f();
+// v;
+// => 49
+const simpleFunctionExpression = `{"type":"Program","start":0,"end":42,"body":[{"type":"VariableDeclaration","start":0,"end":6,"declarations":[{"type":"VariableDeclarator","start":4,"end":5,"id":{"type":"Identifier","start":4,"end":5,"name":"v"},"init":null}],"kind":"var"},{"type":"VariableDeclaration","start":7,"end":34,"declarations":[{"type":"VariableDeclarator","start":11,"end":34,"id":{"type":"Identifier","start":11,"end":12,"name":"f"},"init":{"type":"FunctionExpression","start":15,"end":34,"id":null,"params":[],"body":{"type":"BlockStatement","start":26,"end":34,"body":[{"type":"ExpressionStatement","start":27,"end":33,"expression":{"type":"AssignmentExpression","start":27,"end":33,"operator":"=","left":{"type":"Identifier","start":27,"end":28,"name":"v"},"right":{"type":"Literal","start":31,"end":33,"value":49,"raw":"49"}}}]}}}],"kind":"var"},{"type":"ExpressionStatement","start":35,"end":39,"expression":{"type":"CallExpression","start":35,"end":38,"callee":{"type":"Identifier","start":35,"end":36,"name":"f"},"arguments":[]}},{"type":"ExpressionStatement","start":40,"end":42,"expression":{"type":"Identifier","start":40,"end":41,"name":"v"}}]}`
 
 // ({foo: "bar", answer: 42})
 // => {foo: "bar", answer: 42}

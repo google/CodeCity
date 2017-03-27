@@ -19,14 +19,14 @@ package object
 import "testing"
 
 func TestObjectNonPrimitiveness(t *testing.T) {
-	var objs [2]Value
-	objs[0] = New(nil, nil)
-	objs[1] = NewFunction(nil, nil)
-	objs[1] = NewOwner()
+	var objs = []Value{
+		New(nil, nil),
+		NewOwner(),
+	}
 
-	for i := 0; i < len(objs); i++ {
-		if objs[i].IsPrimitive() {
-			t.Errorf("%v.isPrimitive() = true", objs[i])
+	for _, o := range objs {
+		if o.IsPrimitive() {
+			t.Errorf("%v.isPrimitive() = true", o)
 		}
 	}
 }

@@ -116,30 +116,34 @@ func newScope(parent *scope, interpreter *Interpreter) *scope {
 // setVar sets the named variable to the specified value, after
 // first checking that it exists.
 //
-// FIXME: this should probably recurse if name is not found in current
-// scope - but not when called from stateVariableDeclarator, which
-// should never be setting variables other than in the
-// immediately-enclosing scope.
+// FIXME: this should probably not recurse when called from
+// stateVariableDeclarator, which should never be setting variables
+// other than in the immediately-enclosing scope.
 func (this *scope) setVar(name string, value object.Value) {
 	_, ok := this.vars[name]
-	if !ok {
-		panic(fmt.Errorf("can't set undeclared variable %v", name))
+	if ok {
+		this.vars[name] = value
+		return
 	}
-	this.vars[name] = value
+	if this.parent != nil {
+		this.parent.setVar(name, value)
+		return
+	}
+	panic(fmt.Errorf("can't set undeclared variable %v", name))
 }
 
 // getVar gets the current value of the specified variable, after
 // first checking that it exists.
-//
-// FIXME: this should probably recurse if name is not found in current
-// scope.
 func (this *scope) getVar(name string) object.Value {
 	v, ok := this.vars[name]
-	if !ok {
-		// FIXME: should probably throw
-		panic(fmt.Errorf("can't get undeclared variable %v", name))
+	if ok {
+		return v
 	}
-	return v
+	if this.parent != nil {
+		return this.parent.getVar(name)
+	}
+	// FIXME: should probably throw
+	panic(fmt.Errorf("can't get undeclared variable %v", name))
 }
 
 func (this *scope) populate(node ast.Node) {
@@ -275,6 +279,10 @@ func newState(parent state, scope *scope, node ast.Node) state {
 		s := stateBlockStatement{stateCommon: sc}
 		s.init(n)
 		return &s
+	case *ast.CallExpression:
+		s := stateCallExpression{stateCommon: sc}
+		s.init(n)
+		return &s
 	case *ast.ConditionalExpression:
 		s := stateConditionalExpression{stateCommon: sc}
 		s.init(n)
@@ -289,6 +297,10 @@ func newState(parent state, scope *scope, node ast.Node) state {
 		return &s
 	case *ast.FunctionDeclaration:
 		s := stateFunctionDeclaration{stateCommon: sc}
+		s.init(n)
+		return &s
+	case *ast.FunctionExpression:
+		s := stateFunctionExpression{stateCommon: sc}
 		s.init(n)
 		return &s
 	case *ast.Identifier:
@@ -489,6 +501,42 @@ func (this *stateBlockStatement) step() state {
 
 /********************************************************************/
 
+type stateCallExpression struct {
+	stateCommon
+	callee ast.Expression
+	args   ast.Expressions
+	cl     *closure
+}
+
+func (this *stateCallExpression) init(node *ast.CallExpression) {
+	this.callee = node.Callee
+	this.args = node.Arguments
+}
+
+func (this *stateCallExpression) step() state {
+	if this.cl == nil {
+		return newState(this, this.scope, this.callee.E)
+	} else { // FIXME: args
+		ns := newScope(this.scope, this.scope.interpreter)
+		ns.populate(this.cl.body)
+		return newState(this.parent, ns, this.cl.body)
+	}
+}
+
+func (this *stateCallExpression) acceptValue(v object.Value) {
+	if this.cl == nil {
+		cl, ok := v.(*closure)
+		if !ok {
+			panic("can't call non-closure")
+		}
+		this.cl = cl
+	} else { // FIXME: args
+		panic("should not re-visit already-evaluated stateCallExpression")
+	}
+}
+
+/********************************************************************/
+
 type stateConditionalExpression struct {
 	stateCommon
 	test       ast.Expression
@@ -581,6 +629,25 @@ func (this *stateFunctionDeclaration) init(node *ast.FunctionDeclaration) {
 }
 
 func (this *stateFunctionDeclaration) step() state {
+	return this.parent
+}
+
+/********************************************************************/
+
+type stateFunctionExpression struct {
+	stateCommon
+	// FIXME: save param list?
+	body *ast.BlockStatement
+}
+
+func (this *stateFunctionExpression) init(node *ast.FunctionExpression) {
+	// this.params = node.Params
+	this.body = node.Body
+}
+
+func (this *stateFunctionExpression) step() state {
+	this.parent.(valueAcceptor).acceptValue(
+		newClosure(nil, this.scope, this.body))
 	return this.parent
 }
 
