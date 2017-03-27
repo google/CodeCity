@@ -70,6 +70,11 @@ type Value interface {
 	//
 	// FIXME: move most of this comment somewhere better
 	ToString() String
+
+	// ToPrimitive returns a primitive representing the object (for
+	// primitives, this is the object itself; for regular objects this
+	// is will be either the result of ToString or of ToNumber.
+	ToPrimitive() Value
 }
 
 // Object represents typical JavaScript objects with (optional)
@@ -151,6 +156,12 @@ func (o Object) ToNumber() Number {
 
 func (Object) ToString() String {
 	return "[object Object]"
+}
+
+// BUG(cpcallen) Object.ToPrimitive should prefer to return the result
+// of ToString() on date objects.
+func (o *Object) ToPrimitive() Value {
+	return o.ToNumber()
 }
 
 func New(owner *Owner, parent Value) *Object {

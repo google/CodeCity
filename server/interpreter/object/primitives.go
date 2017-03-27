@@ -118,6 +118,10 @@ func (b Boolean) ToString() String {
 	}
 }
 
+func (b Boolean) ToPrimitive() Value {
+	return b
+}
+
 /********************************************************************/
 
 // Number represents a JS numeric value.
@@ -164,6 +168,10 @@ func (n Number) ToString() String {
 	default:
 		return String(fmt.Sprintf("%g", n))
 	}
+}
+
+func (n Number) ToPrimitive() Value {
+	return n
 }
 
 /********************************************************************/
@@ -246,6 +254,10 @@ func (s String) ToString() String {
 	return s
 }
 
+func (s String) ToPrimitive() Value {
+	return s
+}
+
 /********************************************************************/
 
 // Null represents a JS null value.
@@ -293,6 +305,10 @@ func (Null) ToString() String {
 	return "null"
 }
 
+func (Null) ToPrimitive() Value {
+	return Null{}
+}
+
 /********************************************************************/
 
 // Undefined represents a JS undefined value.
@@ -338,6 +354,10 @@ func (Undefined) ToNumber() Number {
 
 func (Undefined) ToString() String {
 	return "undefined"
+}
+
+func (Undefined) ToPrimitive() Value {
+	return Undefined{}
 }
 
 /********************************************************************/

@@ -34,9 +34,9 @@ func BinaryOp(left Value, op string, right Value) Value {
 	// FIXME: implement other operators
 	switch op {
 	case "==":
-		panic("not implemented")
+		return Boolean(aeca(left, right))
 	case "!=":
-		panic("not implemented")
+		return Boolean(!aeca(left, right))
 	case "===":
 		panic("not implemented")
 	case "!==":
