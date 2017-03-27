@@ -150,3 +150,137 @@ func arca(x, y Value) (lt, undef bool) {
 	}
 	//return false, true
 }
+
+// aeca implements the Abstract Equality Comparison Algorithm (see
+// ES5.1 spec, §11.9.3.
+//
+// x and y are the arguments to be compared.
+//
+// If lt returns true then x is less than y according to the ARCA; if
+// undef is true then the two are not comparable.
+//
+// BUG(cpcallen): aeca'a ToPrimitive() calls do not result in user
+// code being called.
+func aeca(x, y Value) bool {
+	// Shortcut common case:
+	if x == y {
+		return true
+	}
+	switch x := x.(type) {
+	case Boolean:
+		switch y := y.(type) {
+		case Boolean:
+			return x == y
+		case Number:
+			return x.ToNumber() == y
+		case String:
+			return x.ToNumber() == y.ToNumber()
+		case Null:
+			return false
+		case Undefined:
+			return false
+		case *Object:
+			return x.ToNumber() == y.ToPrimitive()
+		case *Owner:
+			return x.ToNumber() == y.ToPrimitive()
+		default:
+			panic(fmt.Errorf("unknown type %T", y))
+		}
+	case Number:
+		switch y := y.(type) {
+		case Boolean:
+			return x == y.ToNumber()
+		case Number:
+			return x == y
+		case String:
+			return x == y.ToNumber()
+		case Null:
+			return false
+		case Undefined:
+			return false
+		case *Object:
+			return Value(x) == y.ToPrimitive()
+		case *Owner:
+			return Value(x) == y.ToPrimitive()
+		default:
+			panic(fmt.Errorf("unknown type %T", y))
+		}
+	case String:
+		switch y := y.(type) {
+		case Boolean:
+			return x.ToNumber() == y.ToNumber()
+		case Number:
+			return x.ToNumber() == y
+		case String:
+			return x == y
+		case Null:
+			return false
+		case Undefined:
+			return false
+		case *Object:
+			return Value(x) == y.ToPrimitive()
+		case *Owner:
+			return Value(x) == y.ToPrimitive()
+		default:
+			panic(fmt.Errorf("unknown type %T", y))
+		}
+	case Null:
+		switch y.(type) {
+		case Null:
+			return true
+		case Undefined:
+			return true
+		default:
+			return false
+		}
+	case Undefined:
+		switch y.(type) {
+		case Null:
+			return true
+		case Undefined:
+			return true
+		default:
+			return false
+		}
+	case *Object:
+		switch y := y.(type) {
+		case Boolean:
+			return x.ToPrimitive() == y.ToNumber()
+		case Number:
+			return x.ToPrimitive() == y
+		case String:
+			return x.ToPrimitive() == y
+		case Null:
+			return false
+		case Undefined:
+			return false
+		case *Object:
+			return x == y
+		case *Owner:
+			return false
+		default:
+			panic(fmt.Errorf("unknown type %T", y))
+		}
+	case *Owner:
+		switch y := y.(type) {
+		case Boolean:
+			return x.ToPrimitive() == y.ToNumber()
+		case Number:
+			return x.ToPrimitive() == y
+		case String:
+			return x.ToPrimitive() == y
+		case Null:
+			return false
+		case Undefined:
+			return false
+		case *Object:
+			return false
+		case *Owner:
+			return x == y
+		default:
+			panic(fmt.Errorf("unknown type %T", y))
+		}
+	default:
+		panic(fmt.Errorf("unknown type %T", x))
+	}
+}

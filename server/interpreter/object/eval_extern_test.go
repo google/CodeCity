@@ -172,6 +172,17 @@ func TestBinaryOp(t *testing.T) {
 		{Number(1), ">=", Number(2), Boolean(false)},
 		{Number(2), ">=", Number(2), Boolean(true)},
 		{Number(3), ">=", Number(2), Boolean(true)},
+
+		// (Ditto, aeca().)
+		{Number(1), "==", Number(1), Boolean(true)},
+		{Number(2), "==", Number(1), Boolean(false)},
+		{Number(2), "==", Number(2), Boolean(true)},
+		{Number(1), "==", Number(2), Boolean(false)},
+
+		{Number(1), "!=", Number(1), Boolean(false)},
+		{Number(2), "!=", Number(1), Boolean(true)},
+		{Number(2), "!=", Number(2), Boolean(false)},
+		{Number(1), "!=", Number(2), Boolean(true)},
 	}
 	for _, c := range tests {
 		v := BinaryOp(c.left, c.op, c.right)
