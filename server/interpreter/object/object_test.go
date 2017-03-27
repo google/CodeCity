@@ -20,8 +20,9 @@ import "testing"
 
 func TestObjectNonPrimitiveness(t *testing.T) {
 	var objs [2]Value
-	objs[0] = new(Object)
-	objs[1] = new(Owner)
+	objs[0] = New(nil, nil)
+	objs[1] = NewFunction(nil, nil)
+	objs[1] = NewOwner()
 
 	for i := 0; i < len(objs); i++ {
 		if objs[i].IsPrimitive() {

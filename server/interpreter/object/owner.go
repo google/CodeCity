@@ -25,9 +25,19 @@ type Owner struct {
 // *Owner must satisfy Value.
 var _ Value = (*Owner)(nil)
 
-// OwnerProto is the default prototype for owners:
-
-var OwnerProto = &Object{
-	parent:     ObjectProto,
-	properties: make(map[string]property),
+func (Owner) ToString() String {
+	return "[object Owner]"
 }
+
+// NewOwner returns a new Owner object, owned by itself and having
+// parent ObjectProto.
+func NewOwner() *Owner {
+	var o = new(Owner)
+	o.init(o, OwnerProto)
+	return o
+}
+
+// OwnerProto is the the (plain) JavaScript object that is the
+// prototype for all Owner objects.  (It has no direct equivalent in
+// JavaScript, but if it did it would be Owner.prototype.)
+var OwnerProto = New(nil, ObjectProto)

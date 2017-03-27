@@ -362,22 +362,17 @@ func (Undefined) ToPrimitive() Value {
 
 /********************************************************************/
 
-// BooleanProto, NumberProto, and StringProto are the (plain)
-// JavaScript objects that are the prototypes for all primitive
-// objects of their respective type (they would usually be accessed in
-// JavaScript as Boolean.prototype, Number.prototype, and
-// String.prototype respectively.
-var BooleanProto = &Object{
-	parent:     ObjectProto,
-	properties: make(map[string]property),
-}
+// BooleanProto is the the (plain) JavaScript object that is the
+// prototype for all Boolean primitives.  (It would usually be
+// accessed in JavaScript as Boolean.prototype.)
+var BooleanProto = New(nil, ObjectProto)
 
-var NumberProto = &Object{
-	parent:     ObjectProto,
-	properties: make(map[string]property),
-}
+// NumberProto is the the (plain) JavaScript object that is the
+// prototype for all Number primitives.  (It would usually be
+// accessed in JavaScript as Number.prototype.)
+var NumberProto = New(nil, ObjectProto)
 
-var StringProto = &Object{
-	parent:     ObjectProto,
-	properties: make(map[string]property),
-}
+// StringProto is the the (plain) JavaScript object that is the
+// prototype for all String primitives.  (It would usually be
+// accessed in JavaScript as String.prototype.)
+var StringProto = New(nil, ObjectProto)

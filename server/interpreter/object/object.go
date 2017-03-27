@@ -165,18 +165,21 @@ func (o *Object) ToPrimitive() Value {
 }
 
 func New(owner *Owner, parent Value) *Object {
-	return &Object{
-		owner:      owner,
-		parent:     parent,
-		properties: make(map[string]property),
-		f:          true,
-	}
+	var o = new(Object)
+	o.init(owner, parent)
+	o.f = true
+	return o
+}
+
+// Internal initialisation routine, also called when constructing
+// Functions, Owners, etc.
+func (o *Object) init(owner *Owner, parent Value) {
+	o.owner = owner
+	o.parent = parent
+	o.properties = make(map[string]property)
 }
 
 // ObjectProto is the default prototype for (plain) JavaScript objects
 // (i.e., ones created from object literals and not via
 // Object.create(nil)).
-var ObjectProto = &Object{
-	parent:     Null{},
-	properties: make(map[string]property),
-}
+var ObjectProto = New(nil, Null{})

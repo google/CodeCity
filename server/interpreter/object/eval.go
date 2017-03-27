@@ -178,12 +178,8 @@ func aeca(x, y Value) bool {
 			return false
 		case Undefined:
 			return false
-		case *Object:
+		default: // Object, Array, Function, Owner etc.:
 			return x.ToNumber() == y.ToPrimitive()
-		case *Owner:
-			return x.ToNumber() == y.ToPrimitive()
-		default:
-			panic(fmt.Errorf("unknown type %T", y))
 		}
 	case Number:
 		switch y := y.(type) {
@@ -197,12 +193,8 @@ func aeca(x, y Value) bool {
 			return false
 		case Undefined:
 			return false
-		case *Object:
+		default: // Object, Array, Function, Owner etc.:
 			return Value(x) == y.ToPrimitive()
-		case *Owner:
-			return Value(x) == y.ToPrimitive()
-		default:
-			panic(fmt.Errorf("unknown type %T", y))
 		}
 	case String:
 		switch y := y.(type) {
@@ -216,12 +208,8 @@ func aeca(x, y Value) bool {
 			return false
 		case Undefined:
 			return false
-		case *Object:
+		default: // Object, Array, Function, Owner etc.:
 			return Value(x) == y.ToPrimitive()
-		case *Owner:
-			return Value(x) == y.ToPrimitive()
-		default:
-			panic(fmt.Errorf("unknown type %T", y))
 		}
 	case Null:
 		switch y.(type) {
@@ -241,7 +229,7 @@ func aeca(x, y Value) bool {
 		default:
 			return false
 		}
-	case *Object:
+	default: // Object, Array, Function, Owner etc.:
 		switch y := y.(type) {
 		case Boolean:
 			return x.ToPrimitive() == y.ToNumber()
@@ -253,34 +241,9 @@ func aeca(x, y Value) bool {
 			return false
 		case Undefined:
 			return false
-		case *Object:
+		default: // Object, Array, Function, Owner etc.:
 			return x == y
-		case *Owner:
-			return false
-		default:
-			panic(fmt.Errorf("unknown type %T", y))
 		}
-	case *Owner:
-		switch y := y.(type) {
-		case Boolean:
-			return x.ToPrimitive() == y.ToNumber()
-		case Number:
-			return x.ToPrimitive() == y
-		case String:
-			return x.ToPrimitive() == y
-		case Null:
-			return false
-		case Undefined:
-			return false
-		case *Object:
-			return false
-		case *Owner:
-			return x == y
-		default:
-			panic(fmt.Errorf("unknown type %T", y))
-		}
-	default:
-		panic(fmt.Errorf("unknown type %T", x))
 	}
 }
 
