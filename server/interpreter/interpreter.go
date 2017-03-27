@@ -50,34 +50,34 @@ func New(astJSON string) *Interpreter {
 
 // Step performs the next step in the evaluation of program.  Returns
 // true if a step was executed; false if the program has terminated.
-func (this *Interpreter) Step() bool {
-	if this.state == nil {
+func (intrp *Interpreter) Step() bool {
+	if intrp.state == nil {
 		return false
 	}
-	if this.Verbose {
-		fmt.Printf("Next step is a %T\n", this.state)
+	if intrp.Verbose {
+		fmt.Printf("Next step is a %T\n", intrp.state)
 	}
-	this.state = this.state.step()
+	intrp.state = intrp.state.step()
 	return true
 }
 
 // Run runs the program to completion.
-func (this *Interpreter) Run() {
-	for this.Step() {
+func (intrp *Interpreter) Run() {
+	for intrp.Step() {
 	}
 }
 
 // Value returns the final value computed by the last statement
 // expression of the program.
-func (this *Interpreter) Value() object.Value {
-	return this.value
+func (intrp *Interpreter) Value() object.Value {
+	return intrp.value
 }
 
 // acceptValue receives values computed by StatementExpressions; the
 // last such value accepted is the completion value of the program.
-func (this *Interpreter) acceptValue(v object.Value) {
-	if this.Verbose {
+func (intrp *Interpreter) acceptValue(v object.Value) {
+	if intrp.Verbose {
 		fmt.Printf("Interpreter just got %v.\n", v)
 	}
-	this.value = v
+	intrp.value = v
 }

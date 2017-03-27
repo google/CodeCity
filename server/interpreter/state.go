@@ -55,79 +55,79 @@ func newState(parent state, scope *scope, node ast.Node) state {
 	var sc = stateCommon{parent, scope}
 	switch n := node.(type) {
 	case *ast.AssignmentExpression:
-		s := stateAssignmentExpression{stateCommon: sc}
-		s.init(n)
-		return &s
+		st := stateAssignmentExpression{stateCommon: sc}
+		st.init(n)
+		return &st
 	case *ast.BinaryExpression:
-		s := stateBinaryExpression{stateCommon: sc}
-		s.init(n)
-		return &s
+		st := stateBinaryExpression{stateCommon: sc}
+		st.init(n)
+		return &st
 	case *ast.BlockStatement:
-		s := stateBlockStatement{stateCommon: sc}
-		s.init(n)
-		return &s
+		st := stateBlockStatement{stateCommon: sc}
+		st.init(n)
+		return &st
 	case *ast.CallExpression:
-		s := stateCallExpression{stateCommon: sc}
-		s.init(n)
-		return &s
+		st := stateCallExpression{stateCommon: sc}
+		st.init(n)
+		return &st
 	case *ast.ConditionalExpression:
-		s := stateConditionalExpression{stateCommon: sc}
-		s.init(n)
-		return &s
+		st := stateConditionalExpression{stateCommon: sc}
+		st.init(n)
+		return &st
 	case *ast.EmptyStatement:
-		s := stateEmptyStatement{stateCommon: sc}
-		s.init(n)
-		return &s
+		st := stateEmptyStatement{stateCommon: sc}
+		st.init(n)
+		return &st
 	case *ast.ExpressionStatement:
-		s := stateExpressionStatement{stateCommon: sc}
-		s.init(n)
-		return &s
+		st := stateExpressionStatement{stateCommon: sc}
+		st.init(n)
+		return &st
 	case *ast.FunctionDeclaration:
-		s := stateFunctionDeclaration{stateCommon: sc}
-		s.init(n)
-		return &s
+		st := stateFunctionDeclaration{stateCommon: sc}
+		st.init(n)
+		return &st
 	case *ast.FunctionExpression:
-		s := stateFunctionExpression{stateCommon: sc}
-		s.init(n)
-		return &s
+		st := stateFunctionExpression{stateCommon: sc}
+		st.init(n)
+		return &st
 	case *ast.Identifier:
-		s := stateIdentifier{stateCommon: sc}
-		s.init(n)
-		return &s
+		st := stateIdentifier{stateCommon: sc}
+		st.init(n)
+		return &st
 	case *ast.IfStatement:
-		s := stateIfStatement{stateCommon: sc}
-		s.init(n)
-		return &s
+		st := stateIfStatement{stateCommon: sc}
+		st.init(n)
+		return &st
 	case *ast.Literal:
-		s := stateLiteral{stateCommon: sc}
-		s.init(n)
-		return &s
+		st := stateLiteral{stateCommon: sc}
+		st.init(n)
+		return &st
 	case *ast.MemberExpression:
-		s := stateMemberExpression{stateCommon: sc}
-		s.init(n)
-		return &s
+		st := stateMemberExpression{stateCommon: sc}
+		st.init(n)
+		return &st
 	case *ast.ObjectExpression:
-		s := stateObjectExpression{stateCommon: sc}
-		s.init(n)
-		return &s
+		st := stateObjectExpression{stateCommon: sc}
+		st.init(n)
+		return &st
 	case *ast.Program:
-		s := stateBlockStatement{stateCommon: sc}
-		s.initFromProgram(n)
-		return &s
+		st := stateBlockStatement{stateCommon: sc}
+		st.initFromProgram(n)
+		return &st
 	case *ast.VariableDeclaration:
-		s := stateVariableDeclaration{stateCommon: sc}
-		s.init(n)
-		return &s
+		st := stateVariableDeclaration{stateCommon: sc}
+		st.init(n)
+		return &st
 	case *ast.VariableDeclarator:
-		s := stateVariableDeclarator{stateCommon: sc}
-		s.init(n)
-		return &s
+		st := stateVariableDeclarator{stateCommon: sc}
+		st.init(n)
+		return &st
 	case *ast.UpdateExpression:
-		s := stateUpdateExpression{stateCommon: sc}
-		s.init(n)
-		return &s
+		st := stateUpdateExpression{stateCommon: sc}
+		st.init(n)
+		return &st
 	default:
-		panic(fmt.Errorf("State for AST node type %T not implemented\n", n))
+		panic(fmt.Errorf("state for AST node type %T not implemented", n))
 	}
 }
 
@@ -157,26 +157,26 @@ type stateAssignmentExpression struct {
 	right object.Value
 }
 
-func (this *stateAssignmentExpression) init(node *ast.AssignmentExpression) {
-	this.op = node.Operator
-	this.rNode = node.Right
-	this.left.init(this, this.scope, node.Left)
+func (st *stateAssignmentExpression) init(node *ast.AssignmentExpression) {
+	st.op = node.Operator
+	st.rNode = node.Right
+	st.left.init(st, st.scope, node.Left)
 }
 
-func (this *stateAssignmentExpression) step() state {
-	if !this.left.ready {
-		return &this.left
-	} else if this.right == nil {
-		return newState(this, this.scope, ast.Node(this.rNode.E))
+func (st *stateAssignmentExpression) step() state {
+	if !st.left.ready {
+		return &st.left
+	} else if st.right == nil {
+		return newState(st, st.scope, ast.Node(st.rNode.E))
 	}
 
 	// Do (operator)assignment:
 	var r object.Value
-	if this.op == "=" {
-		r = this.right
+	if st.op == "=" {
+		r = st.right
 	} else {
 		var op string
-		switch this.op {
+		switch st.op {
 		case "+=":
 			op = "+"
 		case "-=":
@@ -200,18 +200,18 @@ func (this *stateAssignmentExpression) step() state {
 		case "&=":
 			op = "&"
 		default:
-			panic(fmt.Errorf("illegal assignemnt operator %s", this.op))
+			panic(fmt.Errorf("illegal assignemnt operator %s", st.op))
 		}
-		r = object.BinaryOp(this.left.get(), op, this.right)
+		r = object.BinaryOp(st.left.get(), op, st.right)
 	}
-	this.left.set(r)
-	this.parent.(valueAcceptor).acceptValue(r)
+	st.left.set(r)
+	st.parent.(valueAcceptor).acceptValue(r)
 
-	return this.parent
+	return st.parent
 }
 
-func (this *stateAssignmentExpression) acceptValue(v object.Value) {
-	this.right = v
+func (st *stateAssignmentExpression) acceptValue(v object.Value) {
+	st.right = v
 }
 
 /********************************************************************/
@@ -224,37 +224,37 @@ type stateBinaryExpression struct {
 	left, right         object.Value
 }
 
-func (this *stateBinaryExpression) init(node *ast.BinaryExpression) {
-	this.op = node.Operator
-	this.lNode = node.Left
-	this.rNode = node.Right
-	this.haveLeft = false
-	this.haveRight = false
+func (st *stateBinaryExpression) init(node *ast.BinaryExpression) {
+	st.op = node.Operator
+	st.lNode = node.Left
+	st.rNode = node.Right
+	st.haveLeft = false
+	st.haveRight = false
 }
 
-func (this *stateBinaryExpression) step() state {
-	if !this.haveLeft {
-		return newState(this, this.scope, ast.Node(this.lNode.E))
-	} else if !this.haveRight {
-		return newState(this, this.scope, ast.Node(this.rNode.E))
+func (st *stateBinaryExpression) step() state {
+	if !st.haveLeft {
+		return newState(st, st.scope, ast.Node(st.lNode.E))
+	} else if !st.haveRight {
+		return newState(st, st.scope, ast.Node(st.rNode.E))
 	}
 
-	var r object.Value = object.BinaryOp(this.left, this.op, this.right)
-	this.parent.(valueAcceptor).acceptValue(r)
-	return this.parent
+	var r object.Value = object.BinaryOp(st.left, st.op, st.right)
+	st.parent.(valueAcceptor).acceptValue(r)
+	return st.parent
 
 }
 
-func (this *stateBinaryExpression) acceptValue(v object.Value) {
-	if this.scope.interpreter.Verbose {
+func (st *stateBinaryExpression) acceptValue(v object.Value) {
+	if st.scope.interpreter.Verbose {
 		fmt.Printf("stateBinaryExpression just got %v.\n", v)
 	}
-	if !this.haveLeft {
-		this.left = v
-		this.haveLeft = true
-	} else if !this.haveRight {
-		this.right = v
-		this.haveRight = true
+	if !st.haveLeft {
+		st.left = v
+		st.haveLeft = true
+	} else if !st.haveRight {
+		st.right = v
+		st.haveRight = true
 	} else {
 		panic(fmt.Errorf("too may values"))
 	}
@@ -269,21 +269,21 @@ type stateBlockStatement struct {
 	n     int
 }
 
-func (this *stateBlockStatement) initFromProgram(node *ast.Program) {
-	this.body = node.Body
+func (st *stateBlockStatement) initFromProgram(node *ast.Program) {
+	st.body = node.Body
 }
 
-func (this *stateBlockStatement) init(node *ast.BlockStatement) {
-	this.body = node.Body
+func (st *stateBlockStatement) init(node *ast.BlockStatement) {
+	st.body = node.Body
 }
 
-func (this *stateBlockStatement) step() state {
-	if this.n < len(this.body) {
-		s := newState(this, this.scope, (this.body)[this.n])
-		this.n++
+func (st *stateBlockStatement) step() state {
+	if st.n < len(st.body) {
+		s := newState(st, st.scope, (st.body)[st.n])
+		st.n++
 		return s
 	}
-	return this.parent
+	return st.parent
 }
 
 /********************************************************************/
@@ -297,44 +297,44 @@ type stateCallExpression struct {
 	n      int    // Which arg are we evaluating?
 }
 
-func (this *stateCallExpression) init(node *ast.CallExpression) {
-	this.callee = node.Callee
-	this.args = node.Arguments
+func (st *stateCallExpression) init(node *ast.CallExpression) {
+	st.callee = node.Callee
+	st.args = node.Arguments
 }
 
-func (this *stateCallExpression) step() state {
-	if this.cl == nil {
+func (st *stateCallExpression) step() state {
+	if st.cl == nil {
 		// First visit: evaluate function to get closure
-		if this.ns != nil {
+		if st.ns != nil {
 			panic("ns but not cl???")
 		}
-		return newState(this, this.scope, this.callee.E)
+		return newState(st, st.scope, st.callee.E)
 	}
-	if this.n == 0 {
+	if st.n == 0 {
 		// Set up scope:
-		this.ns = newScope(this.scope, this.scope.interpreter)
-		this.ns.populate(this.cl.body)
+		st.ns = newScope(st.scope, st.scope.interpreter)
+		st.ns.populate(st.cl.body)
 	}
 	// Subsequent visits: evaluate arguments
-	if this.n < len(this.args) {
+	if st.n < len(st.args) {
 		// FIXME: do error checking for param/arg count mismatch
-		return newState(this, this.scope, this.args[this.n])
+		return newState(st, st.scope, st.args[st.n])
 	}
 	// Last visit: evaluate function call
-	return newState(this.parent, this.ns, this.cl.body)
+	return newState(st.parent, st.ns, st.cl.body)
 }
 
-func (this *stateCallExpression) acceptValue(v object.Value) {
-	if this.cl == nil {
+func (st *stateCallExpression) acceptValue(v object.Value) {
+	if st.cl == nil {
 		// First value: should be closure
 		cl, ok := v.(*closure)
 		if !ok {
 			panic("can't call non-closure")
 		}
-		this.cl = cl
-	} else if this.n < len(this.args) {
-		this.ns.newVar(this.cl.params[this.n], v)
-		this.n++
+		st.cl = cl
+	} else if st.n < len(st.args) {
+		st.ns.newVar(st.cl.params[st.n], v)
+		st.n++
 	} else {
 
 		panic("should not re-visit already-evaluated stateCallExpression")
@@ -352,29 +352,29 @@ type stateConditionalExpression struct {
 	haveResult bool
 }
 
-func (this *stateConditionalExpression) init(node *ast.ConditionalExpression) {
-	this.test = node.Test
-	this.consequent = node.Consequent
-	this.alternate = node.Alternate
+func (st *stateConditionalExpression) init(node *ast.ConditionalExpression) {
+	st.test = node.Test
+	st.consequent = node.Consequent
+	st.alternate = node.Alternate
 }
 
-func (this *stateConditionalExpression) step() state {
-	if !this.haveResult {
-		return newState(this, this.scope, ast.Node(this.test.E))
+func (st *stateConditionalExpression) step() state {
+	if !st.haveResult {
+		return newState(st, st.scope, ast.Node(st.test.E))
 	}
-	if this.result {
-		return newState(this.parent, this.scope, this.consequent.E)
+	if st.result {
+		return newState(st.parent, st.scope, st.consequent.E)
 	} else {
-		return newState(this.parent, this.scope, this.alternate.E)
+		return newState(st.parent, st.scope, st.alternate.E)
 	}
 }
 
-func (this *stateConditionalExpression) acceptValue(v object.Value) {
-	if this.scope.interpreter.Verbose {
+func (st *stateConditionalExpression) acceptValue(v object.Value) {
+	if st.scope.interpreter.Verbose {
 		fmt.Printf("stateConditionalExpression just got %v.\n", v)
 	}
-	this.result = bool(v.ToBoolean())
-	this.haveResult = true
+	st.result = bool(v.ToBoolean())
+	st.haveResult = true
 }
 
 /********************************************************************/
@@ -383,11 +383,11 @@ type stateEmptyStatement struct {
 	stateCommon
 }
 
-func (this *stateEmptyStatement) init(node *ast.EmptyStatement) {
+func (st *stateEmptyStatement) init(node *ast.EmptyStatement) {
 }
 
-func (this *stateEmptyStatement) step() state {
-	return this.parent
+func (st *stateEmptyStatement) step() state {
+	return st.parent
 }
 
 /********************************************************************/
@@ -398,29 +398,28 @@ type stateExpressionStatement struct {
 	done bool
 }
 
-func (this *stateExpressionStatement) init(node *ast.ExpressionStatement) {
-	this.expr = node.Expression
-	this.done = false
+func (st *stateExpressionStatement) init(node *ast.ExpressionStatement) {
+	st.expr = node.Expression
+	st.done = false
 }
 
-func (this *stateExpressionStatement) step() state {
-	if !this.done {
-		this.done = true
-		return newState(this, this.scope, ast.Node(this.expr.E))
-	} else {
-		return this.parent
+func (st *stateExpressionStatement) step() state {
+	if !st.done {
+		st.done = true
+		return newState(st, st.scope, ast.Node(st.expr.E))
 	}
+	return st.parent
 }
 
 // FIXME: this is only needed so a completion value is available in
 // the interpreter for test purposes (and possibly for eval); if it
 // was not required we could greatly simplify this state and only
 // visit it once.
-func (this *stateExpressionStatement) acceptValue(v object.Value) {
-	if this.scope.interpreter.Verbose {
+func (st *stateExpressionStatement) acceptValue(v object.Value) {
+	if st.scope.interpreter.Verbose {
 		fmt.Printf("stateExpressionStatement just got %v.\n", v)
 	}
-	this.scope.interpreter.acceptValue(v)
+	st.scope.interpreter.acceptValue(v)
 }
 
 /********************************************************************/
@@ -431,11 +430,11 @@ type stateFunctionDeclaration struct {
 	stateCommon
 }
 
-func (this *stateFunctionDeclaration) init(node *ast.FunctionDeclaration) {
+func (st *stateFunctionDeclaration) init(node *ast.FunctionDeclaration) {
 }
 
-func (this *stateFunctionDeclaration) step() state {
-	return this.parent
+func (st *stateFunctionDeclaration) step() state {
+	return st.parent
 }
 
 /********************************************************************/
@@ -446,15 +445,15 @@ type stateFunctionExpression struct {
 	body   *ast.BlockStatement
 }
 
-func (this *stateFunctionExpression) init(node *ast.FunctionExpression) {
-	this.params = node.Params
-	this.body = node.Body
+func (st *stateFunctionExpression) init(node *ast.FunctionExpression) {
+	st.params = node.Params
+	st.body = node.Body
 }
 
-func (this *stateFunctionExpression) step() state {
-	this.parent.(valueAcceptor).acceptValue(
-		newClosure(nil, this.scope, this.params, this.body))
-	return this.parent
+func (st *stateFunctionExpression) step() state {
+	st.parent.(valueAcceptor).acceptValue(
+		newClosure(nil, st.scope, st.params, st.body))
+	return st.parent
 }
 
 /********************************************************************/
@@ -464,17 +463,17 @@ type stateIdentifier struct {
 	name string
 }
 
-func (this *stateIdentifier) init(node *ast.Identifier) {
-	this.name = node.Name
+func (st *stateIdentifier) init(node *ast.Identifier) {
+	st.name = node.Name
 }
 
-func (this *stateIdentifier) step() state {
+func (st *stateIdentifier) step() state {
 	// Note: if we getters/setters and a global scope object (like
 	// window), we would have to do a check to see if we need to run a
 	// getter.  But we have neither, so this is a straight variable
 	// lookup.
-	this.parent.(valueAcceptor).acceptValue(this.scope.getVar(this.name))
-	return this.parent
+	st.parent.(valueAcceptor).acceptValue(st.scope.getVar(st.name))
+	return st.parent
 }
 
 /********************************************************************/
@@ -491,29 +490,29 @@ type stateIfStatement struct {
 	haveResult bool
 }
 
-func (this *stateIfStatement) init(node *ast.IfStatement) {
-	this.test = node.Test
-	this.consequent = node.Consequent
-	this.alternate = node.Alternate
+func (st *stateIfStatement) init(node *ast.IfStatement) {
+	st.test = node.Test
+	st.consequent = node.Consequent
+	st.alternate = node.Alternate
 }
 
-func (this *stateIfStatement) step() state {
-	if !this.haveResult {
-		return newState(this, this.scope, ast.Node(this.test.E))
+func (st *stateIfStatement) step() state {
+	if !st.haveResult {
+		return newState(st, st.scope, ast.Node(st.test.E))
 	}
-	if this.result {
-		return newState(this.parent, this.scope, this.consequent.S)
+	if st.result {
+		return newState(st.parent, st.scope, st.consequent.S)
 	} else {
-		return newState(this.parent, this.scope, this.alternate.S)
+		return newState(st.parent, st.scope, st.alternate.S)
 	}
 }
 
-func (this *stateIfStatement) acceptValue(v object.Value) {
-	if this.scope.interpreter.Verbose {
+func (st *stateIfStatement) acceptValue(v object.Value) {
+	if st.scope.interpreter.Verbose {
 		fmt.Printf("stateIfStatement just got %v.\n", v)
 	}
-	this.result = bool(v.ToBoolean())
-	this.haveResult = true
+	st.result = bool(v.ToBoolean())
+	st.haveResult = true
 }
 
 /********************************************************************/
@@ -523,13 +522,13 @@ type stateLiteral struct {
 	value object.Value
 }
 
-func (this *stateLiteral) init(node *ast.Literal) {
-	this.value = object.NewFromRaw(node.Raw)
+func (st *stateLiteral) init(node *ast.Literal) {
+	st.value = object.NewFromRaw(node.Raw)
 }
 
-func (this *stateLiteral) step() state {
-	this.parent.(valueAcceptor).acceptValue(this.value)
-	return this.parent
+func (st *stateLiteral) step() state {
+	st.parent.(valueAcceptor).acceptValue(st.value)
+	return st.parent
 }
 
 /********************************************************************/
@@ -544,50 +543,50 @@ type stateMemberExpression struct {
 	haveBase, haveName bool
 }
 
-func (this *stateMemberExpression) init(node *ast.MemberExpression) {
-	this.baseExpr = node.Object
-	this.membExpr = node.Property
-	this.computed = node.Computed
-	this.haveBase = false
-	this.haveName = false
+func (st *stateMemberExpression) init(node *ast.MemberExpression) {
+	st.baseExpr = node.Object
+	st.membExpr = node.Property
+	st.computed = node.Computed
+	st.haveBase = false
+	st.haveName = false
 }
 
-func (this *stateMemberExpression) step() state {
-	if !this.haveBase {
-		return newState(this, this.scope, ast.Node(this.baseExpr.E))
-	} else if !this.haveName {
-		if this.computed {
-			return newState(this, this.scope, ast.Node(this.membExpr.E))
+func (st *stateMemberExpression) step() state {
+	if !st.haveBase {
+		return newState(st, st.scope, ast.Node(st.baseExpr.E))
+	} else if !st.haveName {
+		if st.computed {
+			return newState(st, st.scope, ast.Node(st.membExpr.E))
 		}
 
 		// It's expr.identifier; get name of identifier:
-		i, ok := this.membExpr.E.(*ast.Identifier)
+		i, ok := st.membExpr.E.(*ast.Identifier)
 		if !ok {
 			panic(fmt.Errorf("invalid computed member expression type %T",
-				this.membExpr.E))
+				st.membExpr.E))
 		}
-		this.name = i.Name
-		this.haveName = true
+		st.name = i.Name
+		st.haveName = true
 	}
-	v, err := this.base.GetProperty(this.name)
+	v, err := st.base.GetProperty(st.name)
 	if err != nil {
 		// FIXME: throw JS error
 		panic(err)
 	}
-	this.parent.(valueAcceptor).acceptValue(v)
-	return this.parent
+	st.parent.(valueAcceptor).acceptValue(v)
+	return st.parent
 }
 
-func (this *stateMemberExpression) acceptValue(v object.Value) {
-	if this.scope.interpreter.Verbose {
+func (st *stateMemberExpression) acceptValue(v object.Value) {
+	if st.scope.interpreter.Verbose {
 		fmt.Printf("stepMemberExpression just got %v.\n", v)
 	}
-	if !this.haveBase {
-		this.base = v
-		this.haveBase = true
-	} else if !this.haveName {
-		this.name = string(v.ToString())
-		this.haveName = true
+	if !st.haveBase {
+		st.base = v
+		st.haveBase = true
+	} else if !st.haveName {
+		st.name = string(v.ToString())
+		st.haveName = true
 	} else {
 		panic(fmt.Errorf("too may values"))
 	}
@@ -605,43 +604,42 @@ type stateObjectExpression struct {
 	gotKey, gotValue bool
 }
 
-func (this *stateObjectExpression) init(node *ast.ObjectExpression) {
-	this.props = node.Properties
-	this.obj = nil
-	this.n = 0
+func (st *stateObjectExpression) init(node *ast.ObjectExpression) {
+	st.props = node.Properties
+	st.obj = nil
+	st.n = 0
 }
 
 // FIXME: (maybe) getters and setters not supported.
-func (this *stateObjectExpression) step() state {
-	if this.obj == nil {
-		if this.n != 0 {
+func (st *stateObjectExpression) step() state {
+	if st.obj == nil {
+		if st.n != 0 {
 			//			panic("lost object under construction!")
 		}
 		// FIXME: set owner of new object
-		this.obj = object.New(nil, object.ObjectProto)
+		st.obj = object.New(nil, object.ObjectProto)
 	}
-	if this.n < len(this.props) {
-		return newState(this, this.scope, this.props[this.n].Value.E)
-	} else {
-		this.parent.(valueAcceptor).acceptValue(this.obj)
-		return this.parent
+	if st.n < len(st.props) {
+		return newState(st, st.scope, st.props[st.n].Value.E)
 	}
+	st.parent.(valueAcceptor).acceptValue(st.obj)
+	return st.parent
 }
 
-func (this *stateObjectExpression) acceptValue(v object.Value) {
-	if this.scope.interpreter.Verbose {
+func (st *stateObjectExpression) acceptValue(v object.Value) {
+	if st.scope.interpreter.Verbose {
 		fmt.Printf("stateObjectExpression just got %v.\n", v)
 	}
 	var key string
-	switch k := this.props[this.n].Key.N.(type) {
+	switch k := st.props[st.n].Key.N.(type) {
 	case *ast.Literal:
 		v := object.NewFromRaw(k.Raw)
 		key = string(v.ToString())
 	case *ast.Identifier:
 		key = k.Name
 	}
-	this.obj.SetProperty(key, v)
-	this.n++
+	st.obj.SetProperty(key, v)
+	st.n++
 }
 
 /********************************************************************/
@@ -651,21 +649,21 @@ type stateVariableDeclaration struct {
 	decls []*ast.VariableDeclarator
 }
 
-func (this *stateVariableDeclaration) init(node *ast.VariableDeclaration) {
-	this.decls = node.Declarations
+func (st *stateVariableDeclaration) init(node *ast.VariableDeclaration) {
+	st.decls = node.Declarations
 	if node.Kind != "var" {
 		panic(fmt.Errorf("Unknown VariableDeclaration kind '%v'", node.Kind))
 	}
 }
 
-func (this *stateVariableDeclaration) step() state {
+func (st *stateVariableDeclaration) step() state {
 	// Create a stateVariableDeclarator for every VariableDeclarator
 	// that has an Init value, chaining them together so they will
 	// execute in left-to-right order.
-	var p = this.parent
-	for i := len(this.decls) - 1; i >= 0; i-- {
-		if this.decls[i].Init.E != nil {
-			p = newState(p, this.scope, this.decls[i])
+	var p = st.parent
+	for i := len(st.decls) - 1; i >= 0; i-- {
+		if st.decls[i].Init.E != nil {
+			p = newState(p, st.scope, st.decls[i])
 		}
 	}
 	return p
@@ -680,27 +678,26 @@ type stateVariableDeclarator struct {
 	value object.Value
 }
 
-func (this *stateVariableDeclarator) init(node *ast.VariableDeclarator) {
-	this.name = node.Id.Name
-	this.expr = node.Init
-	this.value = nil
+func (st *stateVariableDeclarator) init(node *ast.VariableDeclarator) {
+	st.name = node.Id.Name
+	st.expr = node.Init
+	st.value = nil
 }
 
-func (this *stateVariableDeclarator) step() state {
-	if this.expr.E == nil {
+func (st *stateVariableDeclarator) step() state {
+	if st.expr.E == nil {
 		panic("Why are we bothering to execute an variable declaration" +
 			"(that has already been hoisted) that has no initialiser?")
 	}
-	if this.value == nil {
-		return newState(this, this.scope, ast.Node(this.expr.E))
-	} else {
-		this.scope.setVar(this.name, this.value)
-		return this.parent
+	if st.value == nil {
+		return newState(st, st.scope, ast.Node(st.expr.E))
 	}
+	st.scope.setVar(st.name, st.value)
+	return st.parent
 }
 
-func (this *stateVariableDeclarator) acceptValue(v object.Value) {
-	this.value = v
+func (st *stateVariableDeclarator) acceptValue(v object.Value) {
+	st.value = v
 }
 
 /********************************************************************/
@@ -712,41 +709,41 @@ type stateUpdateExpression struct {
 	arg    lvalue
 }
 
-func (this *stateUpdateExpression) init(node *ast.UpdateExpression) {
-	this.op = node.Operator
-	this.prefix = node.Prefix
-	this.arg.init(this, this.scope, node.Argument)
+func (st *stateUpdateExpression) init(node *ast.UpdateExpression) {
+	st.op = node.Operator
+	st.prefix = node.Prefix
+	st.arg.init(st, st.scope, node.Argument)
 }
 
-func (this *stateUpdateExpression) step() state {
-	if !this.arg.ready {
-		return &this.arg
+func (st *stateUpdateExpression) step() state {
+	if !st.arg.ready {
+		return &st.arg
 	}
 
 	// Do update:
-	v := this.arg.get()
+	v := st.arg.get()
 	n, ok := v.(object.Number)
 	if !ok {
 		// FIXME: coerce v to number
 		panic("not a number")
 	}
-	if !this.prefix {
-		this.parent.(valueAcceptor).acceptValue(n)
+	if !st.prefix {
+		st.parent.(valueAcceptor).acceptValue(n)
 	}
-	switch this.op {
+	switch st.op {
 	case "++":
 		n++
 	case "--":
 		n--
 	}
-	if this.prefix {
-		this.parent.(valueAcceptor).acceptValue(n)
+	if st.prefix {
+		st.parent.(valueAcceptor).acceptValue(n)
 	}
-	this.arg.set(n)
-	return this.parent
+	st.arg.set(n)
+	return st.parent
 }
 
-func (this *stateUpdateExpression) acceptValue(v object.Value) {
+func (st *stateUpdateExpression) acceptValue(v object.Value) {
 }
 
 /********************************************************************/
@@ -768,14 +765,14 @@ func (this *stateUpdateExpression) acceptValue(v object.Value) {
 //      ...
 //  }
 //
-//  func (this *stateFoo) init(node *ast.Foo) {
-//      this.lv.init(this, this.scope, node.left)
+//  func (st *stateFoo) init(node *ast.Foo) {
+//      st.lv.init(st, st.scope, node.left)
 //      ...
 //  }
 //
-//  func (this *stateFoo) step() state {
-//      if(!this.lv.ready) {
-//          return &this.lv
+//  func (st *stateFoo) step() state {
+//      if(!st.lv.ready) {
+//          return &st.lv
 //      }
 //      ...
 //      lv.set(lv.get() + 1) // or whatever
@@ -792,19 +789,19 @@ type lvalue struct {
 	haveBase, ready bool
 }
 
-func (this *lvalue) init(parent state, scope *scope, expr ast.Expression) {
-	this.parent = parent
-	this.scope = scope
+func (lv *lvalue) init(parent state, scope *scope, expr ast.Expression) {
+	lv.parent = parent
+	lv.scope = scope
 	switch e := expr.E.(type) {
 	case *ast.Identifier:
-		this.base = nil
-		this.name = e.Name
-		this.ready = true
+		lv.base = nil
+		lv.name = e.Name
+		lv.ready = true
 	case *ast.MemberExpression:
-		this.baseExpr = e.Object
-		this.membExpr = e.Property
-		this.computed = e.Computed
-		this.ready = false
+		lv.baseExpr = e.Object
+		lv.membExpr = e.Property
+		lv.computed = e.Computed
+		lv.ready = false
 	default:
 		panic(fmt.Errorf("%T is not an lvalue", expr.E))
 	}
@@ -812,67 +809,66 @@ func (this *lvalue) init(parent state, scope *scope, expr ast.Expression) {
 
 // get returns the current value of the variable or property denoted
 // by the lvalue expression.
-func (this *lvalue) get() object.Value {
-	if !this.ready {
+func (lv *lvalue) get() object.Value {
+	if !lv.ready {
 		panic("lvalue not ready")
 	}
-	if this.base == nil {
-		return this.scope.getVar(this.name)
-	} else {
-		v, err := this.base.GetProperty(this.name)
-		if err != nil {
-			// FIXME: throw JS error
-			panic(err)
-		}
-		return v
+	if lv.base == nil {
+		return lv.scope.getVar(lv.name)
 	}
+	v, err := lv.base.GetProperty(lv.name)
+	if err != nil {
+		// FIXME: throw JS error
+		panic(err)
+	}
+	return v
 }
 
 // set updates the variable or property denoted
 // by the lvalue expression to the given value.
-func (this *lvalue) set(value object.Value) {
-	if !this.ready {
+func (lv *lvalue) set(value object.Value) {
+	if !lv.ready {
 		panic("lvalue not ready")
 	}
-	if this.base == nil {
-		this.scope.setVar(this.name, value)
+	if lv.base == nil {
+		lv.scope.setVar(lv.name, value)
 	} else {
-		this.base.SetProperty(this.name, value)
+		lv.base.SetProperty(lv.name, value)
 	}
 }
 
-func (this *lvalue) step() state {
-	if !this.haveBase {
-		return newState(this, this.scope, ast.Node(this.baseExpr.E))
-	} else if !this.ready {
-		if this.computed {
-			return newState(this, this.scope, ast.Node(this.membExpr.E))
+func (lv *lvalue) step() state {
+	if !lv.haveBase {
+		return newState(lv, lv.scope, ast.Node(lv.baseExpr.E))
+	} else if !lv.ready {
+		if lv.computed {
+			return newState(lv, lv.scope, ast.Node(lv.membExpr.E))
 		}
 
 		// It's expr.identifier; get name of identifier:
-		i, ok := this.membExpr.E.(*ast.Identifier)
+		i, ok := lv.membExpr.E.(*ast.Identifier)
 		if !ok {
 			panic(fmt.Errorf("invalid computed member expression type %T",
-				this.membExpr.E))
+				lv.membExpr.E))
 		}
-		this.name = i.Name
-		this.ready = true
-		return this.parent
+		lv.name = i.Name
+		lv.ready = true
+		return lv.parent
 	} else {
-		return this.parent
+		return lv.parent
 	}
 }
 
-func (this *lvalue) acceptValue(v object.Value) {
-	if this.scope.interpreter.Verbose {
+func (lv *lvalue) acceptValue(v object.Value) {
+	if lv.scope.interpreter.Verbose {
 		fmt.Printf("lvalue just got %v.\n", v)
 	}
-	if !this.haveBase {
-		this.base = v
-		this.haveBase = true
-	} else if !this.ready {
-		this.name = string(v.ToString())
-		this.ready = true
+	if !lv.haveBase {
+		lv.base = v
+		lv.haveBase = true
+	} else if !lv.ready {
+		lv.name = string(v.ToString())
+		lv.ready = true
 	} else {
 		panic(fmt.Errorf("too may values"))
 	}

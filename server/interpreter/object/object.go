@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-// The object package defines various types used to represent
-// JavaScript values (objects and primitive values).
+// Package object defines various types used to represent JavaScript
+// values (objects and primitive values).
 package object
 
 import (
@@ -111,12 +111,12 @@ func (Object) IsPrimitive() bool {
 	return false
 }
 
-func (this Object) Parent() Value {
-	return this.parent
+func (obj Object) Parent() Value {
+	return obj.parent
 }
 
-func (this Object) GetProperty(name string) (Value, *ErrorMsg) {
-	pd, ok := this.properties[name]
+func (obj Object) GetProperty(name string) (Value, *ErrorMsg) {
+	pd, ok := obj.properties[name]
 	// FIXME: permissions check for property readability goes here
 	if !ok {
 		return Undefined{}, nil
@@ -124,17 +124,17 @@ func (this Object) GetProperty(name string) (Value, *ErrorMsg) {
 	return pd.v, nil
 }
 
-func (this *Object) SetProperty(name string, value Value) *ErrorMsg {
-	pd, ok := this.properties[name]
+func (obj *Object) SetProperty(name string, value Value) *ErrorMsg {
+	pd, ok := obj.properties[name]
 	if ok { // Updating existing property
 		// FIXME: permissions check for property writeability goes here
 		pd.v = value
-		this.properties[name] = pd
+		obj.properties[name] = pd
 		return nil
 	} else { // Creating new property
 		// FIXME: permissions check for object writability goes here
-		this.properties[name] = property{
-			owner: this.owner, // FIXME: should be caller
+		obj.properties[name] = property{
+			owner: obj.owner, // FIXME: should be caller
 			v:     value,
 			r:     true,
 			e:     true,
@@ -148,10 +148,10 @@ func (Object) ToBoolean() Boolean {
 	return true
 }
 
-func (o Object) ToNumber() Number {
+func (obj Object) ToNumber() Number {
 	// BUG(cpcallen): Object.ToNumber is not strictly compliant with
 	// ES5.1 spec; it just returns .ToString().ToNumber()
-	return o.ToString().ToNumber()
+	return obj.ToString().ToNumber()
 }
 
 func (Object) ToString() String {
@@ -160,23 +160,23 @@ func (Object) ToString() String {
 
 // BUG(cpcallen) Object.ToPrimitive should prefer to return the result
 // of ToString() on date objects.
-func (o *Object) ToPrimitive() Value {
-	return o.ToNumber()
+func (obj *Object) ToPrimitive() Value {
+	return obj.ToNumber()
 }
 
 func New(owner *Owner, parent Value) *Object {
-	var o = new(Object)
-	o.init(owner, parent)
-	o.f = true
-	return o
+	var obj = new(Object)
+	obj.init(owner, parent)
+	obj.f = true
+	return obj
 }
 
 // Internal initialisation routine, also called when constructing
 // Functions, Owners, etc.
-func (o *Object) init(owner *Owner, parent Value) {
-	o.owner = owner
-	o.parent = parent
-	o.properties = make(map[string]property)
+func (obj *Object) init(owner *Owner, parent Value) {
+	obj.owner = owner
+	obj.parent = parent
+	obj.properties = make(map[string]property)
 }
 
 // ObjectProto is the default prototype for (plain) JavaScript objects

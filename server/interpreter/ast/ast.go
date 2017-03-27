@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// The ast package defines types to store an abstract syntax tree, in
+// Package ast defines types to store an abstract syntax tree, in
 // ESTree EcmaScript 5 format, as defined at
 // https://github.com/estree/estree/blob/master/es5.md, as tree of Go
 // structs, interfaces, and slices.
@@ -78,36 +78,37 @@ func NewFromJSON(astJSON string) (ast *Program, err error) {
 
 // node is an interface fulfilled by all ESTree nodes.
 type node interface {
-	_is_node()
+	_isNode()
 }
 
 // Node is any arbitrary ESTree node.
 type Node node
 
-// nodeStuff._is_node() is a dummy method for interface satisfaction.
-func (nodeStuff) _is_node() {}
+// nodeStuff._isNode() is a dummy method for interface satisfaction.
+func (nodeStuff) _isNode() {}
 
 /********************************************************************/
 
 // statement is an interface fulfilled by all ESTree <Foo>Statement
 // nodes.
 type statement interface {
-	_is_node()
-	_is_statement()
+	_isNode()
+	_isStatement()
 }
 
-// statementStuff._is_statement() is a dummy method for interface
+// statementStuff._isStatement() is a dummy method for interface
 // satisfaction.
-func (statementStuff) _is_statement() {}
+func (statementStuff) _isStatement() {}
 
 // Statement is a wrapper of (a single instance of) the statement
 // interface to allow a UnmarshallJSON method to be defined.
 type Statement struct{ S statement }
 
-func (this *Statement) UnmarshalJSON(b []byte) error {
+// UnmarshalJSON should only be called from the encoding/json package.
+func (stmnt *Statement) UnmarshalJSON(b []byte) error {
 	// Special case: "null" -> nil
 	if string(b) == "null" {
-		this.S = nil
+		stmnt.S = nil
 		return nil
 	}
 	var tmp typeOnly
@@ -118,12 +119,12 @@ func (this *Statement) UnmarshalJSON(b []byte) error {
 	if !ok {
 		return fmt.Errorf("ast: json.Unmarshal: unknown type %s", tmp.Type)
 	}
-	var s statement = reflect.New(reflect.TypeOf(stype).Elem()).
+	var s = reflect.New(reflect.TypeOf(stype).Elem()).
 		Interface().(statement)
 	if err := json.Unmarshal(b, &s); err != nil {
 		return err
 	}
-	this.S = s
+	stmnt.S = s
 	return nil
 }
 
@@ -131,7 +132,8 @@ func (this *Statement) UnmarshalJSON(b []byte) error {
 // UnmarshallJSON method to be defined.
 type Statements []statement
 
-func (this *Statements) UnmarshalJSON(b []byte) error {
+// UnmarshalJSON should only be called from the encoding/json package.
+func (stmnts *Statements) UnmarshalJSON(b []byte) error {
 	var tmp []typeOnly
 	if err := json.Unmarshal(b, &tmp); err != nil {
 		return err
@@ -147,7 +149,7 @@ func (this *Statements) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &s); err != nil {
 		return err
 	}
-	*this = s
+	*stmnts = s
 	return nil
 }
 
@@ -156,22 +158,23 @@ func (this *Statements) UnmarshalJSON(b []byte) error {
 // expression is an interface satisfied by all ESTree <Foo>Expression
 // nodes.
 type expression interface {
-	_is_node()
-	_is_expression()
+	_isNode()
+	_isExpression()
 }
 
-// expressionStuff._is_expression() is a dummy method for interface
+// expressionStuff._isExpression() is a dummy method for interface
 // satisfaction.
-func (expressionStuff) _is_expression() {}
+func (expressionStuff) _isExpression() {}
 
 // Expression is a wrapper of (a single instance of) the expression
 // interface to allow a UnmarshallJSON method to be defined.
 type Expression struct{ E expression }
 
-func (this *Expression) UnmarshalJSON(b []byte) error {
+// UnmarshalJSON should only be called from the encoding/json package.
+func (exp *Expression) UnmarshalJSON(b []byte) error {
 	// Special case: "null" -> nil
 	if string(b) == "null" {
-		this.E = nil
+		exp.E = nil
 		return nil
 	}
 	var tmp typeOnly
@@ -182,12 +185,12 @@ func (this *Expression) UnmarshalJSON(b []byte) error {
 	if !ok {
 		return fmt.Errorf("ast: json.Unmarshal: unknown type %s", tmp.Type)
 	}
-	var e expression = reflect.New(reflect.TypeOf(etype).Elem()).
+	var e = reflect.New(reflect.TypeOf(etype).Elem()).
 		Interface().(expression)
 	if err := json.Unmarshal(b, &e); err != nil {
 		return err
 	}
-	this.E = e
+	exp.E = e
 	return nil
 }
 
@@ -195,7 +198,8 @@ func (this *Expression) UnmarshalJSON(b []byte) error {
 // a UnmarshallJSON method to be defined.
 type Expressions []expression
 
-func (this *Expressions) UnmarshalJSON(b []byte) error {
+// UnmarshalJSON should only be called from the encoding/json package.
+func (exps *Expressions) UnmarshalJSON(b []byte) error {
 	var tmp []typeOnly
 	if err := json.Unmarshal(b, &tmp); err != nil {
 		return err
@@ -212,7 +216,7 @@ func (this *Expressions) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &e); err != nil {
 		return err
 	}
-	*this = e
+	*exps = e
 	return nil
 }
 
@@ -224,14 +228,15 @@ func (this *Expressions) UnmarshalJSON(b []byte) error {
 // an Expression (for(v = 0; ...)).
 type ForStatementInit struct{ N forStatementInit }
 type forStatementInit interface {
-	_is_node()
-	_is_forStatementInit()
+	_isNode()
+	_isForStatementInit()
 }
 
-func (VariableDeclaration) _is_forStatementInit() {}
-func (Identifier) _is_forStatementInit()          {}
+func (VariableDeclaration) _isForStatementInit() {}
+func (Identifier) _isForStatementInit()          {}
 
-func (this *ForStatementInit) UnmarshalJSON(b []byte) error {
+// UnmarshalJSON should only be called from the encoding/json package.
+func (fsi *ForStatementInit) UnmarshalJSON(b []byte) error {
 	var tmp typeOnly
 	if err := json.Unmarshal(b, &tmp); err != nil {
 		return err
@@ -248,7 +253,7 @@ func (this *ForStatementInit) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &n); err != nil {
 		return err
 	}
-	this.N = n
+	fsi.N = n
 	return nil
 }
 
@@ -260,14 +265,15 @@ func (this *ForStatementInit) UnmarshalJSON(b []byte) error {
 // an Identifier (for(v in ...).
 type ForInStatementLeft struct{ N forInStatementLeft }
 type forInStatementLeft interface {
-	_is_node()
-	_is_forInStatementLeft()
+	_isNode()
+	_isForInStatementLeft()
 }
 
-func (VariableDeclaration) _is_forInStatementLeft() {}
-func (Identifier) _is_forInStatementLeft()          {}
+func (VariableDeclaration) _isForInStatementLeft() {}
+func (Identifier) _isForInStatementLeft()          {}
 
-func (this *ForInStatementLeft) UnmarshalJSON(b []byte) error {
+// UnmarshalJSON should only be called from the encoding/json package.
+func (fisl *ForInStatementLeft) UnmarshalJSON(b []byte) error {
 	var tmp typeOnly
 	if err := json.Unmarshal(b, &tmp); err != nil {
 		return err
@@ -284,7 +290,7 @@ func (this *ForInStatementLeft) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &n); err != nil {
 		return err
 	}
-	this.N = n
+	fisl.N = n
 	return nil
 }
 
@@ -296,14 +302,15 @@ func (this *ForInStatementLeft) UnmarshalJSON(b []byte) error {
 // ({foo: ...}).
 type PropertyKey struct{ N propertyKey }
 type propertyKey interface {
-	_is_node()
-	_is_propertyKey()
+	_isNode()
+	_isPropertyKey()
 }
 
-func (Literal) _is_propertyKey()    {}
-func (Identifier) _is_propertyKey() {}
+func (Literal) _isPropertyKey()    {}
+func (Identifier) _isPropertyKey() {}
 
-func (this *PropertyKey) UnmarshalJSON(b []byte) error {
+// UnmarshalJSON should only be called from the encoding/json package.
+func (pk *PropertyKey) UnmarshalJSON(b []byte) error {
 	var tmp typeOnly
 	if err := json.Unmarshal(b, &tmp); err != nil {
 		return err
@@ -320,7 +327,7 @@ func (this *PropertyKey) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &n); err != nil {
 		return err
 	}
-	this.N = n
+	pk.N = n
 	return nil
 }
 

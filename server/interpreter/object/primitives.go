@@ -194,11 +194,11 @@ func (String) Parent() Value {
 	return StringProto
 }
 
-func (this String) GetProperty(name string) (Value, *ErrorMsg) {
+func (s String) GetProperty(name string) (Value, *ErrorMsg) {
 	if name != "length" {
 		return Undefined{}, nil
 	}
-	return Number(len(utf16.Encode([]rune(string(this))))), nil
+	return Number(len(utf16.Encode([]rune(string(s))))), nil
 }
 
 // SetProperty on String always succeeds but has no effect (even on

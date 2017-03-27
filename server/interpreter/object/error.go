@@ -27,6 +27,6 @@ type ErrorMsg struct {
 // *ErrorMsg must satisfy error.
 var _ error = (*ErrorMsg)(nil)
 
-func (this ErrorMsg) Error() string {
-	return this.Name + ": " + this.Message
+func (err ErrorMsg) Error() string {
+	return err.Name + ": " + err.Message
 }

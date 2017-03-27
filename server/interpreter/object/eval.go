@@ -71,10 +71,9 @@ func BinaryOp(left Value, op string, right Value) Value {
 		if left.Type() == "string" || right.Type() == "string" {
 			// Concatenate
 			return String(left.ToString() + right.ToString())
-		} else {
-			// Sum
-			return Number(left.ToNumber() + right.ToNumber())
 		}
+		// Otherwise sum
+		return Number(left.ToNumber() + right.ToNumber())
 	case "-":
 		return Number(left.ToNumber() - right.ToNumber())
 	case "*":
@@ -123,29 +122,29 @@ func arca(x, y Value) (lt, undef bool) {
 			return false, true
 		}
 		return nx < ny, false
-	} else {
-		// Both strings?  Lexicographic comparision of UTF-16 code
-		// units (not code points)
-		sx := utf16.Encode([]rune(string(x.ToString())))
-		sy := utf16.Encode([]rune(string(y.ToString())))
-		for i := 0; ; i++ {
-			if i == len(sx) {
-				if i < len(sy) {
-					// x is prefix of y
-					return true, false
-				}
-				// x === y
-				return false, false
-			} else if i == len(sy) {
-				// y is prefix of x
-				return false, false
-			}
-			if sx[i] < sy[i] {
+	}
+
+	// Both strings?  Lexicographic comparision of UTF-16 code
+	// units (not code points)
+	sx := utf16.Encode([]rune(string(x.ToString())))
+	sy := utf16.Encode([]rune(string(y.ToString())))
+	for i := 0; ; i++ {
+		if i == len(sx) {
+			if i < len(sy) {
+				// x is prefix of y
 				return true, false
 			}
-			if sx[i] > sy[i] {
-				return false, false
-			}
+			// x === y
+			return false, false
+		} else if i == len(sy) {
+			// y is prefix of x
+			return false, false
+		}
+		if sx[i] < sy[i] {
+			return true, false
+		}
+		if sx[i] > sy[i] {
+			return false, false
 		}
 	}
 	//return false, true
