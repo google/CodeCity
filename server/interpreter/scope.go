@@ -126,11 +126,17 @@ func (sc *scope) populate(node ast.Node) {
 		sc.populate(n.Left.N)
 		sc.populate(n.Body.S)
 	case *ast.ForStatement:
-		sc.populate(n.Init.N)
-		sc.populate(n.Body.S)
+		if n.Init.N != nil {
+			sc.populate(n.Init.N)
+		}
+		if n.Body.S != nil {
+			sc.populate(n.Body.S)
+		}
 	case *ast.IfStatement:
 		sc.populate(n.Consequent.S)
-		sc.populate(n.Alternate.S)
+		if n.Alternate.S != nil {
+			sc.populate(n.Alternate.S)
+		}
 	case *ast.LabeledStatement:
 		sc.populate(n.Body.S)
 	case *ast.Program:
@@ -147,8 +153,12 @@ func (sc *scope) populate(node ast.Node) {
 		}
 	case *ast.TryStatement:
 		sc.populate(n.Block)
-		sc.populate(n.Handler)
-		sc.populate(n.Finalizer)
+		if n.Handler != nil {
+			sc.populate(n.Handler)
+		}
+		if n.Finalizer != nil {
+			sc.populate(n.Finalizer)
+		}
 	case *ast.VariableDeclaration:
 		for _, d := range n.Declarations {
 			sc.populate(d)
