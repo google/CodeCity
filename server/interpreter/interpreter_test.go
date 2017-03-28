@@ -47,6 +47,7 @@ func TestInterpreterSimple(t *testing.T) {
 			simpleFunctionExpression, object.Number(49)},
 		{"var v; var f = function(x) {v = x}; f(50); v",
 			fExpWithParameter, object.Number(50)},
+		{"(function(x){return x;})(51)", functionWithReturn, object.Number(51)},
 	}
 
 	for _, c := range tests {
@@ -174,6 +175,14 @@ const simpleFunctionExpression = `{"type":"Program","start":0,"end":42,"body":[{
 // v;
 // => 50
 const fExpWithParameter = `{"type":"Program","start":0,"end":44,"body":[{"type":"VariableDeclaration","start":0,"end":6,"declarations":[{"type":"VariableDeclarator","start":4,"end":5,"id":{"type":"Identifier","start":4,"end":5,"name":"v"},"init":null}],"kind":"var"},{"type":"VariableDeclaration","start":7,"end":34,"declarations":[{"type":"VariableDeclarator","start":11,"end":34,"id":{"type":"Identifier","start":11,"end":12,"name":"f"},"init":{"type":"FunctionExpression","start":15,"end":34,"id":null,"params":[{"type":"Identifier","start":24,"end":25,"name":"x"}],"body":{"type":"BlockStatement","start":27,"end":34,"body":[{"type":"ExpressionStatement","start":28,"end":33,"expression":{"type":"AssignmentExpression","start":28,"end":33,"operator":"=","left":{"type":"Identifier","start":28,"end":29,"name":"v"},"right":{"type":"Identifier","start":32,"end":33,"name":"x"}}}]}}}],"kind":"var"},{"type":"ExpressionStatement","start":35,"end":41,"expression":{"type":"CallExpression","start":35,"end":40,"callee":{"type":"Identifier","start":35,"end":36,"name":"f"},"arguments":[{"type":"Literal","start":37,"end":39,"value":50,"raw":"50"}]}},{"type":"ExpressionStatement","start":42,"end":44,"expression":{"type":"Identifier","start":42,"end":43,"name":"v"}}]}`
+
+// (function(x) {return x})(51)
+// => 51
+const functionWithReturn = `{"type":"Program","start":0,"end":31,"body":[{"type":"ExpressionStatement","start":0,"end":31,"expression":{"type":"CallExpression","start":0,"end":31,"callee":{"type":"FunctionExpression","start":0,"end":27,"id":null,"params":[{"type":"Identifier","start":10,"end":11,"name":"x"}],"body":{"type":"BlockStatement","start":13,"end":26,"body":[{"type":"ReturnStatement","start":15,"end":24,"argument":{"type":"Identifier","start":22,"end":23,"name":"x"}}]}},"arguments":[{"type":"Literal","start":28,"end":30,"value":51,"raw":"51"}]}}]}`
+
+// (function() {})()
+// => undefined
+const functionWithoutReturn = `{"type":"Program","start":0,"end":17,"body":[{"type":"ExpressionStatement","start":0,"end":17,"expression":{"type":"CallExpression","start":0,"end":17,"callee":{"type":"FunctionExpression","start":0,"end":15,"id":null,"params":[],"body":{"type":"BlockStatement","start":12,"end":14,"body":[]}},"arguments":[]}}]}`
 
 // ({foo: "bar", answer: 42})
 // => {foo: "bar", answer: 42}

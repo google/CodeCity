@@ -114,6 +114,10 @@ func newState(parent state, scope *scope, node ast.Node) state {
 		st := stateBlockStatement{stateCommon: sc}
 		st.initFromProgram(n)
 		return &st
+	case *ast.ReturnStatement:
+		st := stateReturnStatement{stateCommon: sc}
+		st.init(n)
+		return &st
 	case *ast.VariableDeclaration:
 		st := stateVariableDeclaration{stateCommon: sc}
 		st.init(n)
@@ -293,17 +297,31 @@ type stateCallExpression struct {
 	callee ast.Expression
 	args   ast.Expressions
 	cl     *closure
-	ns     *scope // New scope being constructed
-	n      int    // Which arg are we evaluating?
+	ns     *scope       // New scope being constructed
+	n      int          // Which arg are we evaluating?
+	called bool         // Has call itself begun?
+	retVal object.Value // Value to yield to enclosing expression
 }
 
 func (st *stateCallExpression) init(node *ast.CallExpression) {
 	st.callee = node.Callee
 	st.args = node.Arguments
+	st.retVal = object.Undefined{}
 }
 
+// step gets called once to set up evaluation of the function to be
+// executed, once to set up each parameter, once to execute the
+// function body, and one final time to yield the return value.
+//
+// BUG(cpcallen): does not set up arguments variable.
+//
+// BUG(cpcallen): probably does not handle argument/parameter count
+// mismatch properly.
 func (st *stateCallExpression) step() state {
 	if st.cl == nil {
+		if st.scope.interpreter.Verbose {
+			fmt.Printf("sCE: first visit: eval function\n")
+		}
 		// First visit: evaluate function to get closure
 		if st.ns != nil {
 			panic("ns but not cl???")
@@ -311,33 +329,78 @@ func (st *stateCallExpression) step() state {
 		return newState(st, st.scope, st.callee.E)
 	}
 	if st.n == 0 {
+		if st.scope.interpreter.Verbose {
+			fmt.Printf("sCE: build scope\n")
+		}
 		// Set up scope:
-		st.ns = newScope(st.scope, st.scope.interpreter)
+		st.ns = newScope(st.scope, st, st.scope.interpreter)
 		st.ns.populate(st.cl.body)
 	}
 	// Subsequent visits: evaluate arguments
 	if st.n < len(st.args) {
+		if st.scope.interpreter.Verbose {
+			fmt.Printf("sCE: eval arg %d\n", st.n)
+		}
 		// FIXME: do error checking for param/arg count mismatch
 		return newState(st, st.scope, st.args[st.n])
 	}
-	// Last visit: evaluate function call
-	return newState(st.parent, st.ns, st.cl.body)
+	if !st.called {
+		if st.scope.interpreter.Verbose {
+			fmt.Printf("sCE: eval body\n")
+		}
+		// Second last visit: evaluate function call
+		st.called = true
+		return newState(st, st.ns, st.cl.body)
+	}
+	// We're done; yield (most recent) return value:
+	if st.scope.interpreter.Verbose {
+		fmt.Printf("sCE: return %#v\n", st.retVal)
+	}
+	st.parent.(valueAcceptor).acceptValue(st.retVal)
+	return st.parent
 }
 
+// acceptValue gets called once for the left hand side of the
+// expression (which should supply a closure), once for each argument,
+// and one or more times for the return value.  "Wait, one *or more*
+// times?", I hear you ask.  Yes: it turns out that a you can "return"
+// more than once from a function (even without continuations!), as
+// in:
+//
+//     function f() {
+//         try {
+//             return true;
+//         }
+//         finally {
+//             return false;
+//         }
+//     }
+//
+// so we don't propagate the return value to the caller as soon as we
+// accept it; instead we just store it.
 func (st *stateCallExpression) acceptValue(v object.Value) {
+	if st.scope.interpreter.Verbose {
+		fmt.Printf("stateCallExpression just got %v.\n", v)
+	}
 	if st.cl == nil {
+		// accept function value
 		// First value: should be closure
 		cl, ok := v.(*closure)
 		if !ok {
+			// FIXME: throw instead of panic
 			panic("can't call non-closure")
 		}
 		st.cl = cl
 	} else if st.n < len(st.args) {
+		// accept an argument value
+		if st.called {
+			panic("call begun before all parameters evaluated??")
+		}
 		st.ns.newVar(st.cl.params[st.n], v)
 		st.n++
 	} else {
-
-		panic("should not re-visit already-evaluated stateCallExpression")
+		// accept return value
+		st.retVal = v
 	}
 }
 
@@ -640,6 +703,44 @@ func (st *stateObjectExpression) acceptValue(v object.Value) {
 	}
 	st.obj.SetProperty(key, v)
 	st.n++
+}
+
+/********************************************************************/
+
+type stateReturnStatement struct {
+	stateCommon
+	arg     ast.Expression
+	doneArg bool
+}
+
+func (st *stateReturnStatement) init(node *ast.ReturnStatement) {
+	st.arg = node.Argument
+}
+
+// step should get called twice: once to set up evaluation of the
+// argument, and a second time to do the actual return.
+//
+// BUG(cpcallen): finally blocks are ignored when returning.
+//
+// BUG(cpcallen): should throw if called outside a function
+// invocation.
+func (st *stateReturnStatement) step() state {
+	if !st.doneArg {
+		st.doneArg = true
+		return newState(st, st.scope, st.arg.E)
+	}
+	// Short-cut directly to corresponding stateCallExpression.
+	//
+	// FIXME: should execute any finally blocks (TryStatement.Finalisers)
+	if st.scope.caller == nil {
+		// FIXME: should throw
+		panic("return called outside function")
+	}
+	return st.scope.caller
+}
+
+func (st *stateReturnStatement) acceptValue(v object.Value) {
+	st.scope.caller.acceptValue(v)
 }
 
 /********************************************************************/
