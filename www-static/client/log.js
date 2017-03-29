@@ -31,8 +31,146 @@ CCC.Log = {};
  * Initialization code called on startup.
  */
 CCC.Log.init = function() {
+  CCC.Log.parser = new DOMParser();
+  CCC.Log.serializer = new XMLSerializer();
+
   // Report back to the parent frame that we're fully loaded and ready to go.
   parent.postMessage('initLog', location.origin);
+  // Lazy-load prettify library.
+  setTimeout(CCC.Log.importPrettify, 1);
 };
 
+/**
+ * Load the Prettify CSS and JavaScript.
+ */
+CCC.Log.importPrettify = function() {
+  //<link rel="stylesheet" type="text/css" href="common/prettify.css">
+  //<script type="text/javascript" src="common/prettify.js"></script>
+  var link = document.createElement('link');
+  link.setAttribute('rel', 'stylesheet');
+  link.setAttribute('type', 'text/css');
+  link.setAttribute('href', 'prettify.css');
+  document.head.appendChild(link);
+  var script = document.createElement('script');
+  script.setAttribute('type', 'text/javascript');
+  script.setAttribute('src', 'prettify.js');
+  document.head.appendChild(script);
+};
+
+/**
+ * Receive messages from our parent frame.
+ * @param {!Event} e Incoming message event.
+ */
+CCC.Log.receiveMessage = function(e) {
+  var origin = e.origin || e.originalEvent.origin;
+  if (origin != location.origin) {
+    console.error('Message received by log frame from unknown origin: ' +
+                  origin);
+    return;
+  }
+
+  var dom = CCC.Log.parser.parseFromString(e.data, 'text/xml');
+  if (dom.getElementsByTagName('parsererror').length) {
+    // Not valid XML, treat as string literal.
+    var div = CCC.Log.textToHtml(e.data);
+    CCC.Log.appendRow(div);
+  } else {
+    CCC.Log.addXml(dom);
+  }
+};
+
+/**
+ * Convert plain text to HTML.  Perserve spaces and line breaks.
+ * @param {string} text Line of text.
+ * @return {!Element} HTML div element.
+ */
+CCC.Log.textToHtml = function(text) {
+  text = text.replace(/  /g, '\u00A0 ');
+  text = text.replace(/  /g, '\u00A0 ');
+  text = text.replace(/^ /gm, '\u00A0');
+  var lines = text.split('\n');
+  var div = document.createElement('div');
+  div.className = 'textDiv';
+  for (var i = 0; i < lines.length; i++) {
+    if (i != 0) {
+      div.appendChild(document.createElement('br'));
+    }
+    div.appendChild(document.createTextNode(lines[i]));
+  }
+  return div;
+};
+
+/**
+ * Add one row of XML to the log.
+ * @param {!Object} dom XML tree.
+ */
+CCC.Log.addXml = function(dom) {
+  var text = CCC.Log.renderXml(dom);
+  var code = CCC.Log.serializer.serializeToString(dom);
+  var pre = document.createElement('pre');
+  pre.textContent = code;
+  if (typeof prettyPrint == 'function') {
+    pre.className = 'prettyprint lang-xml';
+    var div = document.createElement('div');
+    div.appendChild(pre);
+    prettyPrint(null, div);
+  }
+
+  if (text) {
+    var div = CCC.Log.textToHtml(text);
+    div.className = 'zippyDiv';
+    var span = document.createElement('span');
+    span.className = 'zippySpan';
+    span.addEventListener('click', CCC.Log.toggleZippy);
+    div.insertBefore(span, div.firstChild);
+    pre.style.display = 'none';
+    div.appendChild(pre);
+    CCC.Log.appendRow(div);
+  } else {
+    CCC.Log.appendRow(pre);
+  }
+};
+
+CCC.Log.toggleZippy = function(e) {
+  var zippy = e.target;
+  var pre = e.target.parentNode.lastChild;
+  if (zippy.className.indexOf(' open') == -1) {
+    zippy.className += ' open';
+    pre.style.display = 'block';
+  } else {
+    zippy.className = zippy.className.replace(' open', '');
+    pre.style.display = 'none';
+  }
+};
+
+/**
+ * Attempt to render the XML as a plain text version.
+ * @param {!Object} dom XML tree.
+ * @return {string} Text representation.
+ */
+CCC.Log.renderXml = function(dom) {
+  var node = dom.firstChild;
+  if (!node) {
+    return '';  // Invalid.
+  }
+  if (node.tagName == 'say') {
+    // <say user="Max" room="The Hangout">Hello world.</say>
+    var user = node.getAttribute('user');
+    var text = user + ' says, "' + node.textContent + '"';
+    return text;
+  }
+  // Unknown XML.
+  return '';
+};
+
+/**
+ * Add one row to the log.  Scroll page to the bottom.
+ * @param {!Element} element HTML element to add.
+ */
+CCC.Log.appendRow = function(element) {
+  document.body.appendChild(element);
+  window.scrollTo(0, Number.MAX_SAFE_INTEGER);
+}
+
+window.addEventListener('message', CCC.Log.receiveMessage, false);
 window.addEventListener('load', CCC.Log.init, false);

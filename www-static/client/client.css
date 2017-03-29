@@ -5,13 +5,13 @@ html {
 body {
   color: #444;
   background-color: #fff;
-  font-family: sans-serif;
+  font-family: 'Roboto Mono', monospace;
   height: 100%;
   margin: 0;
   overflow: hidden;
 }
 
-#comicFrame, #logFrame {
+#worldFrame, #logFrame {
   position: absolute;
   width: 100%;
   z-index: -1;
@@ -35,7 +35,8 @@ thead, tfoot {
   color: #000;
   box-sizing: border-box;
   background-color: #f8f8f8;
-  font-family: monospace;
+  font-family: 'Roboto Mono', monospace;
+  font-size: 12pt;
   margin-top: 2px;
   resize: none;
   width: 100%;

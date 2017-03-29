@@ -89,7 +89,7 @@ CCC.countdown = function() {
  * Initialization code called on startup.
  */
 CCC.init = function() {
-  CCC.comicFrame = document.getElementById('comicFrame');
+  CCC.worldFrame = document.getElementById('worldFrame');
   CCC.logFrame = document.getElementById('logFrame');
   CCC.displayCell = document.getElementById('displayCell');
   CCC.commandInput = document.getElementById('commandInput');
@@ -101,24 +101,24 @@ CCC.init = function() {
   CCC.commandInput.value = '';
   CCC.commandInput.focus();
 
-  var comicButton = document.getElementById('comicButton');
-  comicButton.addEventListener('click', CCC.tab.bind(null, 'comic'), false);
+  var worldButton = document.getElementById('worldButton');
+  worldButton.addEventListener('click', CCC.tab.bind(null, 'world'), false);
   var logButton = document.getElementById('logButton');
   logButton.addEventListener('click', CCC.tab.bind(null, 'log'), false);
-  CCC.tab('comic');
+  CCC.tab('log');
 };
 
 /**
- * Switch between comic and log views.
- * @param {string} mode Either 'comic' or 'log'.
+ * Switch between world and log views.
+ * @param {string} mode Either 'world' or 'log'.
  */
 CCC.tab = function(mode) {
-  if (mode == 'comic') {
-    CCC.comicFrame.style.zIndex = 1;
+  if (mode == 'world') {
+    CCC.worldFrame.style.zIndex = 1;
     CCC.logFrame.style.zIndex = -1;
   } else {
     CCC.logFrame.style.zIndex = 1;
-    CCC.comicFrame.style.zIndex = -1;
+    CCC.worldFrame.style.zIndex = -1;
   }
 };
 
@@ -137,10 +137,10 @@ CCC.resize = function() {
     element = element.offsetParent;
   } while (element);
   // Position both iframes over displayCell.
-  CCC.comicFrame.style.left = x + 'px';
-  CCC.comicFrame.style.top = y + 'px';
-  CCC.comicFrame.style.width = CCC.displayCell.offsetWidth + 'px';
-  CCC.comicFrame.style.height = CCC.displayCell.offsetHeight + 'px';
+  CCC.worldFrame.style.left = x + 'px';
+  CCC.worldFrame.style.top = y + 'px';
+  CCC.worldFrame.style.width = CCC.displayCell.offsetWidth + 'px';
+  CCC.worldFrame.style.height = CCC.displayCell.offsetHeight + 'px';
   CCC.logFrame.style.left = x + 'px';
   CCC.logFrame.style.top = y + 'px';
   CCC.logFrame.style.width = CCC.displayCell.offsetWidth + 'px';
@@ -166,6 +166,14 @@ CCC.receiveMessage = function(e) {
 };
 
 /**
+ * Distribute a line of text to all frames.
+ * @param {string} line Text from Code City.
+ */
+CCC.renderLine = function(line) {
+  CCC.logFrame.contentWindow.postMessage(line, location.origin);
+};
+
+/**
  * Add one command to the outbound queue.
  * @param {string} commands Text of user's command.  May be more than one line.
  * @param {boolean} echo True if command to be saved in history.
@@ -185,7 +193,7 @@ CCC.sendCommand = function(commands, echo) {
         CCC.commandHistory.push(commands[i]);
       }
     }
-    while (commandHistory.length > CCC.maxHistorySize) {
+    while (CCC.commandHistory.length > CCC.maxHistorySize) {
       CCC.commandHistory.shift();
     }
   }

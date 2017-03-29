@@ -1,5 +1,25 @@
 body {
   color: #444;
   background-color: #fff;
-  font-family: sans-serif;
+  font-family: 'Roboto Mono', monospace;
+  padding-left: 15px;
+}
+
+.zippySpan {
+  cursor: pointer;
+  margin-left: -15px;
+  position: absolute;
+}
+
+.zippySpan::before {
+  content: '▸ ';
+ }
+
+.zippySpan.open::before {
+  content: '▾ ';
+}
+
+pre {
+  margin-bottom: 0;
+  margin-top: 0;
 }
