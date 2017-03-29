@@ -31,9 +31,6 @@ import (
 // - parent is a pointer to the parent scope (if nil then this is the
 // global scope)
 //
-// - caller is a pointer to the stepCallExpression that created the
-// scope (if any; i.e., is nil in global scope).
-//
 // - interpreter is a pointer to the interpreter that this scope
 // belongs to.  It is provided so that stateExpressionStatement can
 // send a completion value to the interpreter, which is useful for
@@ -46,7 +43,6 @@ import (
 type scope struct {
 	vars        map[string]object.Value
 	parent      *scope
-	caller      *stateCallExpression
 	interpreter *Interpreter
 }
 
@@ -54,9 +50,8 @@ type scope struct {
 // pointer to the parent (enclosing scope); it is nil if the scope
 // being created is the global scope.  The interpreter param is a
 // pointer to the interpreter this scope belongs to.
-func newScope(parent *scope, caller *stateCallExpression,
-	interpreter *Interpreter) *scope {
-	return &scope{make(map[string]object.Value), parent, caller, interpreter}
+func newScope(parent *scope, interpreter *Interpreter) *scope {
+	return &scope{make(map[string]object.Value), parent, interpreter}
 }
 
 // newVar creates a new variabe in the scope, setting it to the given

@@ -31,6 +31,20 @@ type state interface {
 	// step performs the next step in the evaluation of the program, and
 	// returns the new state execution state.
 	step() state
+
+	// getParent returns the state's parent; this is just a
+	// convenience method obtaining the parent of a state of unknown
+	// (concrete) type, which is not otherwise possible without
+	// casting.  This method name violates the usual recommendation
+	// (getter names should not contain "get") because almost all the
+	// code refers directly to the .parent property rather than
+	// calling this method.
+	getParent() state
+
+	// setParent sets the state's parent; this is just a convenience
+	// method for reparenting a state of unknown (concrete) type,
+	// which is not otherwise possible without casting.
+	setParent(state)
 }
 
 // valueAcceptor is the interface implemented by any object (mostly
@@ -118,6 +132,10 @@ func newState(parent state, scope *scope, node ast.Node) state {
 		st := stateReturnStatement{stateCommon: sc}
 		st.init(n)
 		return &st
+	case *ast.TryStatement:
+		st := stateTryStatement{stateCommon: sc}
+		st.init(n)
+		return &st
 	case *ast.VariableDeclaration:
 		st := stateVariableDeclaration{stateCommon: sc}
 		st.init(n)
@@ -149,6 +167,26 @@ type stateCommon struct {
 
 	// scope is the symobl table for the innermost scope.
 	scope *scope
+}
+
+// getParent returns the state's parent; this is just a convenience
+// method obtaining the parent of a state of unknown (concrete) type,
+// which is not otherwise possible without casting.  This method name
+// violates the usual recommendation (getter names should not contain
+// "get") because almost all the code refers directly to the .parent
+// property rather than calling this method.
+func (st stateCommon) getParent() state {
+	return st.parent
+}
+
+// setParent sets the state's parent; this is just a convenience
+// method for reparenting a state of unknown (concrete) type, which is
+// not otherwise possible without casting.
+//
+// FIXME: states should be readonly to allow implementation of
+// call/cc.
+func (st *stateCommon) setParent(parent state) {
+	st.parent = parent
 }
 
 /********************************************************************/
@@ -333,7 +371,7 @@ func (st *stateCallExpression) step() state {
 			fmt.Printf("sCE: build scope\n")
 		}
 		// Set up scope:
-		st.ns = newScope(st.scope, st, st.scope.interpreter)
+		st.ns = newScope(st.scope, st.scope.interpreter)
 		st.ns.populate(st.cl.body)
 	}
 	// Subsequent visits: evaluate arguments
@@ -710,6 +748,7 @@ func (st *stateObjectExpression) acceptValue(v object.Value) {
 type stateReturnStatement struct {
 	stateCommon
 	arg     ast.Expression
+	retVal  object.Value
 	doneArg bool
 }
 
@@ -725,22 +764,73 @@ func (st *stateReturnStatement) init(node *ast.ReturnStatement) {
 // BUG(cpcallen): should throw if called outside a function
 // invocation.
 func (st *stateReturnStatement) step() state {
-	if !st.doneArg {
+	if st.arg.E != nil && !st.doneArg {
+		// Evaluate argument:
 		st.doneArg = true
 		return newState(st, st.scope, st.arg.E)
 	}
-	// Short-cut directly to corresponding stateCallExpression.
-	//
-	// FIXME: should execute any finally blocks (TryStatement.Finalisers)
-	if st.scope.caller == nil {
-		// FIXME: should throw
-		panic("return called outside function")
+
+	// Unwind stack back to last stateCallExpression (FIXME: or
+	// stateNewExpression?), but keeping any statTryStatements found
+	// along the way (so their finalizers can be run, and their
+	// handlers can be run if an inner finalizer throws.)
+	var s state = st
+unwind:
+	for {
+		if s == nil {
+			panic("something went wrong when unwinding stack")
+		}
+		switch p := s.getParent().(type) {
+		case *stateCallExpression: // FIXME: or stateNewExpression?
+			// Have unwound back to a call expression.  Pass it the
+			// return value and terminate unwinding:
+			if st.retVal != nil {
+				p.acceptValue(st.retVal)
+			}
+			break unwind
+		case *stateTryStatement:
+			// We'll leave the stepTryExpression on the stack, but
+			// continue unwinding with its parent:
+			s = p
+		default:
+			// Remove p from stack:
+			s.setParent(p.getParent())
+		}
 	}
-	return st.scope.caller
+	return st.parent
 }
 
 func (st *stateReturnStatement) acceptValue(v object.Value) {
-	st.scope.caller.acceptValue(v)
+	st.retVal = v
+}
+
+/********************************************************************/
+
+type stateTryStatement struct {
+	stateCommon
+	block                                 *ast.BlockStatement
+	handler                               *ast.CatchClause
+	finalizer                             *ast.BlockStatement
+	doneBlock, doneHandler, doneFinalizer bool
+}
+
+func (st *stateTryStatement) init(node *ast.TryStatement) {
+	st.block = node.Block
+	st.handler = node.Handler
+	st.finalizer = node.Finalizer
+}
+
+func (st *stateTryStatement) step() state {
+	if !st.doneBlock {
+		st.doneBlock = true
+		return newState(st, st.scope, st.block)
+	}
+	// FIXME: handle exceptions
+	if !st.doneFinalizer {
+		st.doneFinalizer = true
+		return newState(st, st.scope, st.finalizer)
+	}
+	return st.parent
 }
 
 /********************************************************************/

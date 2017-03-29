@@ -48,10 +48,15 @@ func TestInterpreterSimple(t *testing.T) {
 		{"var v; var f = function(x) {v = x}; f(50); v",
 			fExpWithParameter, object.Number(50)},
 		{"(function(x){return x;})(51)", functionWithReturn, object.Number(51)},
+		{"(function(){try {return true;} finally {return false;}})()",
+			multipleReturn, object.Boolean(false)},
 	}
 
 	for _, c := range tests {
 		i := New(c.src)
+		//if c.src == functionWithoutReturn {
+		//	i.Verbose = true
+		//}
 		i.Run()
 		if v := i.Value(); v != c.expected {
 			t.Errorf("%s == %v (%T)\n(expected %v (%T))",
@@ -183,6 +188,18 @@ const functionWithReturn = `{"type":"Program","start":0,"end":31,"body":[{"type"
 // (function() {})()
 // => undefined
 const functionWithoutReturn = `{"type":"Program","start":0,"end":17,"body":[{"type":"ExpressionStatement","start":0,"end":17,"expression":{"type":"CallExpression","start":0,"end":17,"callee":{"type":"FunctionExpression","start":0,"end":15,"id":null,"params":[],"body":{"type":"BlockStatement","start":12,"end":14,"body":[]}},"arguments":[]}}]}`
+
+// function f() {
+//     try {
+//         return true;
+//     }
+//     finally {
+//         return false;
+//     }
+// }
+// f()
+// => false
+const multipleReturn = `{"type":"Program","start":0,"end":58,"body":[{"type":"ExpressionStatement","start":0,"end":58,"expression":{"type":"CallExpression","start":0,"end":58,"callee":{"type":"FunctionExpression","start":0,"end":56,"id":null,"params":[],"body":{"type":"BlockStatement","start":11,"end":55,"body":[{"type":"TryStatement","start":12,"end":54,"block":{"type":"BlockStatement","start":16,"end":30,"body":[{"type":"ReturnStatement","start":17,"end":29,"argument":{"type":"Literal","start":24,"end":28,"value":true,"raw":"true"}}]},"handler":null,"guardedHandlers":[],"finalizer":{"type":"BlockStatement","start":39,"end":54,"body":[{"type":"ReturnStatement","start":40,"end":53,"argument":{"type":"Literal","start":47,"end":52,"value":false,"raw":"false"}}]}}]}},"arguments":[]}}]}`
 
 // ({foo: "bar", answer: 42})
 // => {foo: "bar", answer: 42}
