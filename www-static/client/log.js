@@ -68,19 +68,26 @@ CCC.Log.receiveMessage = function(e) {
                   origin);
     return;
   }
-
-  var dom = CCC.Log.parser.parseFromString(e.data, 'text/xml');
-  if (dom.getElementsByTagName('parsererror').length) {
-    // Not valid XML, treat as string literal.
-    var div = CCC.Log.textToHtml(e.data);
+  var mode = e.data.mode;
+  var text = e.data.text;
+  if (mode == 'command') {
+    var div = CCC.Log.textToHtml(text);
+    div.className = 'commandDiv';
     CCC.Log.appendRow(div);
   } else {
-    CCC.Log.addXml(dom);
+    var dom = CCC.Log.parser.parseFromString(text, 'text/xml');
+    if (dom.getElementsByTagName('parsererror').length) {
+      // Not valid XML, treat as string literal.
+      var div = CCC.Log.textToHtml(text);
+      CCC.Log.appendRow(div);
+    } else {
+      CCC.Log.addXml(dom);
+    }
   }
 };
 
 /**
- * Convert plain text to HTML.  Perserve spaces and line breaks.
+ * Convert plain text to HTML.  Preserve spaces and line breaks.
  * @param {string} text Line of text.
  * @return {!Element} HTML div element.
  */

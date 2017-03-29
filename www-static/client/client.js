@@ -170,7 +170,17 @@ CCC.receiveMessage = function(e) {
  * @param {string} line Text from Code City.
  */
 CCC.renderLine = function(line) {
-  CCC.logFrame.contentWindow.postMessage(line, location.origin);
+  CCC.logFrame.contentWindow.postMessage({mode: 'message', text: line},
+                                         location.origin);
+};
+
+/**
+ * Distribute a command to all frames.
+ * @param {string} line Text from user.
+ */
+CCC.localEcho = function(line) {
+  CCC.logFrame.contentWindow.postMessage({mode: 'command', text: line},
+                                         location.origin);
 };
 
 /**
@@ -196,10 +206,12 @@ CCC.sendCommand = function(commands, echo) {
     while (CCC.commandHistory.length > CCC.maxHistorySize) {
       CCC.commandHistory.shift();
     }
+    if (echo) {
+      CCC.localEcho(commands[i]);
+    }
   }
   CCC.commandTemp = '';
   CCC.commandHistoryPointer = -1;
-  console.log(commands.join('\n'));
 };
 
 /**
