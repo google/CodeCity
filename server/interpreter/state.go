@@ -84,6 +84,10 @@ func newState(parent state, scope *scope, node ast.Node) state {
 		st := stateCallExpression{stateCommon: sc}
 		st.init(n)
 		return &st
+	case *ast.CatchClause:
+		st := stateCatchClause{stateCommon: sc}
+		st.init(n)
+		return &st
 	case *ast.ConditionalExpression:
 		st := stateConditionalExpression{stateCommon: sc}
 		st.init(n)
@@ -130,6 +134,10 @@ func newState(parent state, scope *scope, node ast.Node) state {
 		return &st
 	case *ast.ReturnStatement:
 		st := stateReturnStatement{stateCommon: sc}
+		st.init(n)
+		return &st
+	case *ast.ThrowStatement:
+		st := stateThrowStatement{stateCommon: sc}
 		st.init(n)
 		return &st
 	case *ast.TryStatement:
@@ -440,6 +448,26 @@ func (st *stateCallExpression) acceptValue(v object.Value) {
 		// accept return value
 		st.retVal = v
 	}
+}
+
+/********************************************************************/
+
+type stateCatchClause struct {
+	stateCommon
+	param  string
+	body   *ast.BlockStatement
+	excptn object.Value
+}
+
+func (st *stateCatchClause) init(node *ast.CatchClause) {
+	st.param = node.Param.Name
+	st.body = node.Body
+}
+
+func (st *stateCatchClause) step() state {
+	sc := newScope(st.scope, st.scope.interpreter)
+	sc.newVar(st.param, st.excptn)
+	return newState(st.parent, sc, st.body)
 }
 
 /********************************************************************/
@@ -759,8 +787,6 @@ func (st *stateReturnStatement) init(node *ast.ReturnStatement) {
 // step should get called twice: once to set up evaluation of the
 // argument, and a second time to do the actual return.
 //
-// BUG(cpcallen): finally blocks are ignored when returning.
-//
 // BUG(cpcallen): should throw if called outside a function
 // invocation.
 func (st *stateReturnStatement) step() state {
@@ -806,12 +832,57 @@ func (st *stateReturnStatement) acceptValue(v object.Value) {
 
 /********************************************************************/
 
+type stateThrowStatement struct {
+	stateCommon
+	arg     ast.Expression
+	excptn  object.Value
+	doneArg bool
+}
+
+func (st *stateThrowStatement) init(node *ast.ThrowStatement) {
+	st.arg = node.Argument
+}
+
+// step should get called twice: once to set up evaluation of the
+// argument, and a second time to do the actual throw.
+func (st *stateThrowStatement) step() state {
+	if st.arg.E != nil && !st.doneArg {
+		// Evaluate argument:
+		st.doneArg = true
+		return newState(st, st.scope, st.arg.E)
+	}
+
+	if st.excptn == nil {
+		panic("no exception??")
+	}
+	return findTryAndThrow(st, st.excptn)
+}
+
+func (st *stateThrowStatement) acceptValue(v object.Value) {
+	st.excptn = v
+}
+
+func findTryAndThrow(st state, excptn object.Value) state {
+	// Search up the stack to find last stateTryStatement
+	for s := st.getParent(); s != nil; s = s.getParent() {
+		sts, ok := s.(*stateTryStatement)
+		if ok {
+			sts.excptn = excptn
+			return sts
+		}
+	}
+	panic(fmt.Errorf("uncaught exception %#v", excptn))
+}
+
+/********************************************************************/
+
 type stateTryStatement struct {
 	stateCommon
 	block                                 *ast.BlockStatement
 	handler                               *ast.CatchClause
 	finalizer                             *ast.BlockStatement
 	doneBlock, doneHandler, doneFinalizer bool
+	excptn                                object.Value
 }
 
 func (st *stateTryStatement) init(node *ast.TryStatement) {
@@ -825,10 +896,20 @@ func (st *stateTryStatement) step() state {
 		st.doneBlock = true
 		return newState(st, st.scope, st.block)
 	}
-	// FIXME: handle exceptions
-	if !st.doneFinalizer {
+	if st.excptn != nil && st.handler != nil && !st.doneHandler {
+		cc := newState(st, st.scope, st.handler).(*stateCatchClause)
+		cc.excptn = st.excptn
+		st.excptn = nil
+		return cc
+	}
+	if st.finalizer != nil && !st.doneFinalizer {
 		st.doneFinalizer = true
 		return newState(st, st.scope, st.finalizer)
+	}
+	if st.excptn != nil {
+		// There was no catch handler, or the catch/finally threw an
+		// error.  Throw the error up to a higher try.
+		return findTryAndThrow(st, st.excptn)
 	}
 	return st.parent
 }
@@ -926,6 +1007,8 @@ func (st *stateUpdateExpression) step() state {
 		n++
 	case "--":
 		n--
+	default:
+		panic(fmt.Errorf("unrecognized update operator '%s'", st.op))
 	}
 	if st.prefix {
 		st.parent.(valueAcceptor).acceptValue(n)
