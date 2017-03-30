@@ -221,7 +221,7 @@ CCC.sendCommand = function(commands, echo) {
 CCC.keydown = function(e) {
   CCC.lastactivetime = Date.now();
   CCC.setUnreadLines(0);
-  if (e.key == 'Enter') {
+  if (!e.shiftKey && e.key == 'Enter') {
     // Enter
     CCC.sendCommand(CCC.commandInput.value, CCC.localecho);
     // Clear the textarea.

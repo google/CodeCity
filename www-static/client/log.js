@@ -28,6 +28,11 @@ var CCC = {};
 CCC.Log = {};
 
 /**
+ * Maximum number of lines saved in history.
+ */
+CCC.Log.maxHistorySize = 10000;
+
+/**
  * Initialization code called on startup.
  */
 CCC.Log.init = function() {
@@ -176,6 +181,9 @@ CCC.Log.renderXml = function(dom) {
  */
 CCC.Log.appendRow = function(element) {
   document.body.appendChild(element);
+  if (document.body.childNodes.length > CCC.Log.maxHistorySize) {
+    document.body.removeChild(document.body.firstChild);
+  }
   window.scrollTo(0, Number.MAX_SAFE_INTEGER);
 }
 
