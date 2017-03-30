@@ -52,6 +52,7 @@ func TestInterpreterSimple(t *testing.T) {
 			multipleReturn, object.Boolean(false)},
 		{"var f=function(){throw 26;};try{f()}catch(e){e*2;}",
 			throwCatch, object.Number(52)},
+		{"51,52,53", seqExpr, object.Number(53)},
 	}
 
 	for _, c := range tests {
@@ -214,6 +215,10 @@ const multipleReturn = `{"type":"Program","start":0,"end":58,"body":[{"type":"Ex
 // }
 // => 52
 const throwCatch = `{"type":"Program","start":0,"end":78,"body":[{"type":"VariableDeclaration","start":0,"end":37,"declarations":[{"type":"VariableDeclarator","start":4,"end":37,"id":{"type":"Identifier","start":4,"end":5,"name":"f"},"init":{"type":"FunctionExpression","start":8,"end":37,"id":null,"params":[],"body":{"type":"BlockStatement","start":20,"end":37,"body":[{"type":"ThrowStatement","start":26,"end":35,"argument":{"type":"Literal","start":32,"end":34,"value":26,"raw":"26"}}]}}}],"kind":"var"},{"type":"TryStatement","start":38,"end":78,"block":{"type":"BlockStatement","start":42,"end":53,"body":[{"type":"ExpressionStatement","start":48,"end":51,"expression":{"type":"CallExpression","start":48,"end":51,"callee":{"type":"Identifier","start":48,"end":49,"name":"f"},"arguments":[]}}]},"handler":{"type":"CatchClause","start":54,"end":78,"param":{"type":"Identifier","start":61,"end":62,"name":"e"},"guard":null,"body":{"type":"BlockStatement","start":64,"end":78,"body":[{"type":"ExpressionStatement","start":70,"end":76,"expression":{"type":"BinaryExpression","start":70,"end":75,"left":{"type":"Identifier","start":70,"end":71,"name":"e"},"operator":"*","right":{"type":"Literal","start":74,"end":75,"value":2,"raw":"2"}}}]}},"guardedHandlers":[],"finalizer":null}]}`
+
+// 51, 52, 53
+// => 53
+const seqExpr = `{"type":"Program","start":0,"end":10,"body":[{"type":"ExpressionStatement","start":0,"end":10,"expression":{"type":"SequenceExpression","start":0,"end":10,"expressions":[{"type":"Literal","start":0,"end":2,"value":51,"raw":"51"},{"type":"Literal","start":4,"end":6,"value":52,"raw":"52"},{"type":"Literal","start":8,"end":10,"value":53,"raw":"53"}]}}]}`
 
 // ({foo: "bar", answer: 42})
 // => {foo: "bar", answer: 42}

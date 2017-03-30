@@ -136,6 +136,10 @@ func newState(parent state, scope *scope, node ast.Node) state {
 		st := stateReturnStatement{stateCommon: sc}
 		st.init(n)
 		return &st
+	case *ast.SequenceExpression:
+		st := stateSequenceExpression{stateCommon: sc}
+		st.init(n)
+		return &st
 	case *ast.ThrowStatement:
 		st := stateThrowStatement{stateCommon: sc}
 		st.init(n)
@@ -314,9 +318,8 @@ func (st *stateBinaryExpression) acceptValue(v object.Value) {
 
 type stateBlockStatement struct {
 	stateCommon
-	body  ast.Statements
-	value object.Value
-	n     int
+	body ast.Statements
+	n    int
 }
 
 func (st *stateBlockStatement) initFromProgram(node *ast.Program) {
@@ -828,6 +831,33 @@ unwind:
 
 func (st *stateReturnStatement) acceptValue(v object.Value) {
 	st.retVal = v
+}
+
+/********************************************************************/
+
+type stateSequenceExpression struct {
+	stateCommon
+	expressions ast.Expressions
+	value       object.Value
+	n           int
+}
+
+func (st *stateSequenceExpression) init(node *ast.SequenceExpression) {
+	st.expressions = node.Expressions
+}
+
+func (st *stateSequenceExpression) step() state {
+	if st.n < len(st.expressions) {
+		s := newState(st, st.scope, (st.expressions)[st.n])
+		st.n++
+		return s
+	}
+	st.parent.(valueAcceptor).acceptValue(st.value)
+	return st.parent
+}
+
+func (st *stateSequenceExpression) acceptValue(v object.Value) {
+	st.value = v
 }
 
 /********************************************************************/
