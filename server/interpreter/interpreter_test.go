@@ -54,12 +54,12 @@ func TestInterpreterSimple(t *testing.T) {
 			throwCatch, object.Number(52)},
 		{"51,52,53", seqExpr, object.Number(53)},
 		{"foo: 54", labeledStatement, object.Number(54)},
-		// {"var a = 0;while(a<55){a++}a;", whileLoop, object.Number(55)},
+		{"var a = 0;while(a<55){a++}a;", whileLoop, object.Number(55)},
 	}
 
 	for _, c := range tests {
 		i := New(c.src)
-		//if c.src == functionWithoutReturn {
+		//if c.src == labeledStatement {
 		//	i.Verbose = true
 		//}
 		i.Run()
@@ -225,6 +225,14 @@ const seqExpr = `{"type":"Program","start":0,"end":10,"body":[{"type":"Expressio
 // foo: 54
 // => 54
 const labeledStatement = `{"type":"Program","start":0,"end":7,"body":[{"type":"LabeledStatement","start":0,"end":7,"body":{"type":"ExpressionStatement","start":5,"end":7,"expression":{"type":"Literal","start":5,"end":7,"value":54,"raw":"54"}},"label":{"type":"Identifier","start":0,"end":3,"name":"foo"}}]}`
+
+// var a = 0;
+// while(a<55) {
+//     a++
+// }
+// a;
+// => 55
+const whileLoop = `{"type":"Program","start":0,"end":37,"body":[{"type":"VariableDeclaration","start":0,"end":10,"declarations":[{"type":"VariableDeclarator","start":4,"end":9,"id":{"type":"Identifier","start":4,"end":5,"name":"a"},"init":{"type":"Literal","start":8,"end":9,"value":0,"raw":"0"}}],"kind":"var"},{"type":"WhileStatement","start":11,"end":34,"test":{"type":"BinaryExpression","start":17,"end":21,"left":{"type":"Identifier","start":17,"end":18,"name":"a"},"operator":"<","right":{"type":"Literal","start":19,"end":21,"value":55,"raw":"55"}},"body":{"type":"BlockStatement","start":23,"end":34,"body":[{"type":"ExpressionStatement","start":29,"end":32,"expression":{"type":"UpdateExpression","start":29,"end":32,"operator":"++","prefix":false,"argument":{"type":"Identifier","start":29,"end":30,"name":"a"}}}]}},{"type":"ExpressionStatement","start":35,"end":37,"expression":{"type":"Identifier","start":35,"end":36,"name":"a"}}]}`
 
 // ({foo: "bar", answer: 42})
 // => {foo: "bar", answer: 42}

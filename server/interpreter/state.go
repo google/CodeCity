@@ -160,6 +160,10 @@ func newState(parent state, scope *scope, node ast.Node) state {
 		st := stateVariableDeclarator{stateCommon: sc}
 		st.init(n)
 		return &st
+	case *ast.WhileStatement:
+		st := stateWhileStatement{stateCommon: sc}
+		st.init(n)
+		return &st
 	case *ast.UpdateExpression:
 		st := stateUpdateExpression{stateCommon: sc}
 		st.init(n)
@@ -1023,6 +1027,37 @@ func (st *stateVariableDeclarator) step() state {
 
 func (st *stateVariableDeclarator) acceptValue(v object.Value) {
 	st.value = v
+}
+
+/********************************************************************/
+
+type stateWhileStatement struct {
+	stateCommon
+	test       ast.Expression
+	body       ast.Statement
+	testDone   bool
+	testResult bool
+}
+
+func (st *stateWhileStatement) init(node *ast.WhileStatement) {
+	st.test = node.Test
+	st.body = node.Body
+}
+
+func (st *stateWhileStatement) step() state {
+	if !st.testDone {
+		return newState(st, st.scope, st.test.E)
+	}
+	if st.testResult {
+		st.testDone = false
+		return newState(st, st.scope, st.body.S)
+	}
+	return st.parent
+}
+
+func (st *stateWhileStatement) acceptValue(v object.Value) {
+	st.testDone = true
+	st.testResult = bool(v.ToBoolean())
 }
 
 /********************************************************************/
