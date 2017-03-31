@@ -80,6 +80,10 @@ func newState(parent state, scope *scope, node ast.Node) state {
 		st := stateBlockStatement{stateCommon: sc}
 		st.init(n)
 		return &st
+	case *ast.BreakStatement:
+		st := stateBreakStatement{stateCommon: sc}
+		st.init(n)
+		return &st
 	case *ast.CallExpression:
 		st := stateCallExpression{stateCommon: sc}
 		st.init(n)
@@ -347,6 +351,56 @@ func (st *stateBlockStatement) step() state {
 		s := newState(st, st.scope, (st.body)[st.n])
 		st.n++
 		return s
+	}
+	return st.parent
+}
+
+/********************************************************************/
+
+type stateBreakStatement struct {
+	stateCommon
+	label string
+}
+
+func (st *stateBreakStatement) init(node *ast.BreakStatement) {
+	if node.Label != nil {
+		st.label = node.Label.Name
+	}
+}
+
+func (st *stateBreakStatement) step() state {
+	// Unwind stack back to (just above) the corresponding enclosing
+	// loop or switch statement, but keeping any statTryStatements
+	// found along the way (so their finalizers can be run, and their
+	// handlers can be run if an inner finalizer throws.)  If no break
+	// target is found before hitting a function call boundary, throw
+	// an error.
+	//
+	// FIXME: handle loops other than WhileStatement
+	// FIXME: handle labels correctly
+	// FIXME: throw instead of panicing
+	var s state = st
+unwind:
+	for {
+		if s == nil {
+			panic("something went wrong when unwinding stack")
+		}
+		switch p := s.getParent().(type) {
+		case *stateCallExpression: // FIXME: or stateNewExpression?
+			// Have unwound back to a call expression.  This should
+			// not have happened.
+			panic("break without corresponding statement")
+		case *stateWhileStatement:
+			// Reached our target.
+			break unwind
+		case *stateTryStatement:
+			// We'll leave the stepTryExpression on the stack, but
+			// continue unwinding with its parent:
+			s = p
+		default:
+			// Remove p from stack:
+			s.setParent(p.getParent())
+		}
 	}
 	return st.parent
 }

@@ -57,6 +57,8 @@ func TestInterpreterSimple(t *testing.T) {
 		{"var a = 0;while(a<55){a++}a;", whileLoop, object.Number(55)},
 		{"var a=56;while(false){a++};a", whileFalse, object.Number(56)},
 		{"var a=56;do{a++}while(false);a", doWhileFalse, object.Number(57)},
+		{"var a=57;do{a++;break;a++}while(false);a",
+			breakDoWhile, object.Number(58)},
 	}
 
 	for _, c := range tests {
@@ -251,6 +253,16 @@ const whileFalse = `{"type":"Program","start":0,"end":39,"body":[{"type":"Variab
 // a
 // => 57
 const doWhileFalse = `{"type":"Program","start":0,"end":40,"body":[{"type":"VariableDeclaration","start":0,"end":10,"declarations":[{"type":"VariableDeclarator","start":4,"end":10,"id":{"type":"Identifier","start":4,"end":5,"name":"a"},"init":{"type":"Literal","start":8,"end":10,"value":56,"raw":"56"}}],"kind":"var"},{"type":"DoWhileStatement","start":11,"end":38,"body":{"type":"BlockStatement","start":14,"end":25,"body":[{"type":"ExpressionStatement","start":20,"end":23,"expression":{"type":"UpdateExpression","start":20,"end":23,"operator":"++","prefix":false,"argument":{"type":"Identifier","start":20,"end":21,"name":"a"}}}]},"test":{"type":"Literal","start":32,"end":37,"value":false,"raw":"false"}},{"type":"ExpressionStatement","start":39,"end":40,"expression":{"type":"Identifier","start":39,"end":40,"name":"a"}}]}`
+
+// var a = 57
+// do {
+//     a++
+//     break
+//     a++
+// } while(false)
+// a
+// => 58
+const breakDoWhile = `{"type":"Program","start":0,"end":58,"body":[{"type":"VariableDeclaration","start":0,"end":10,"declarations":[{"type":"VariableDeclarator","start":4,"end":10,"id":{"type":"Identifier","start":4,"end":5,"name":"a"},"init":{"type":"Literal","start":8,"end":10,"value":57,"raw":"57"}}],"kind":"var"},{"type":"DoWhileStatement","start":11,"end":56,"body":{"type":"BlockStatement","start":14,"end":43,"body":[{"type":"ExpressionStatement","start":20,"end":23,"expression":{"type":"UpdateExpression","start":20,"end":23,"operator":"++","prefix":false,"argument":{"type":"Identifier","start":20,"end":21,"name":"a"}}},{"type":"BreakStatement","start":28,"end":33,"label":null},{"type":"ExpressionStatement","start":38,"end":41,"expression":{"type":"UpdateExpression","start":38,"end":41,"operator":"++","prefix":false,"argument":{"type":"Identifier","start":38,"end":39,"name":"a"}}}]},"test":{"type":"Literal","start":50,"end":55,"value":false,"raw":"false"}},{"type":"ExpressionStatement","start":57,"end":58,"expression":{"type":"Identifier","start":57,"end":58,"name":"a"}}]}`
 
 // ({foo: "bar", answer: 42})
 // => {foo: "bar", answer: 42}
