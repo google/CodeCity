@@ -53,6 +53,8 @@ func TestInterpreterSimple(t *testing.T) {
 		{"var f=function(){throw 26;};try{f()}catch(e){e*2;}",
 			throwCatch, object.Number(52)},
 		{"51,52,53", seqExpr, object.Number(53)},
+		{"foo: 54", labeledStatement, object.Number(54)},
+		// {"var a = 0;while(a<55){a++}a;", whileLoop, object.Number(55)},
 	}
 
 	for _, c := range tests {
@@ -219,6 +221,10 @@ const throwCatch = `{"type":"Program","start":0,"end":78,"body":[{"type":"Variab
 // 51, 52, 53
 // => 53
 const seqExpr = `{"type":"Program","start":0,"end":10,"body":[{"type":"ExpressionStatement","start":0,"end":10,"expression":{"type":"SequenceExpression","start":0,"end":10,"expressions":[{"type":"Literal","start":0,"end":2,"value":51,"raw":"51"},{"type":"Literal","start":4,"end":6,"value":52,"raw":"52"},{"type":"Literal","start":8,"end":10,"value":53,"raw":"53"}]}}]}`
+
+// foo: 54
+// => 54
+const labeledStatement = `{"type":"Program","start":0,"end":7,"body":[{"type":"LabeledStatement","start":0,"end":7,"body":{"type":"ExpressionStatement","start":5,"end":7,"expression":{"type":"Literal","start":5,"end":7,"value":54,"raw":"54"}},"label":{"type":"Identifier","start":0,"end":3,"name":"foo"}}]}`
 
 // ({foo: "bar", answer: 42})
 // => {foo: "bar", answer: 42}

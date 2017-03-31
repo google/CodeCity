@@ -116,6 +116,10 @@ func newState(parent state, scope *scope, node ast.Node) state {
 		st := stateIfStatement{stateCommon: sc}
 		st.init(n)
 		return &st
+	case *ast.LabeledStatement:
+		st := stateLabeledStatement{stateCommon: sc}
+		st.init(n)
+		return &st
 	case *ast.Literal:
 		st := stateLiteral{stateCommon: sc}
 		st.init(n)
@@ -645,6 +649,25 @@ func (st *stateIfStatement) acceptValue(v object.Value) {
 	}
 	st.result = bool(v.ToBoolean())
 	st.haveResult = true
+}
+
+/********************************************************************/
+
+type stateLabeledStatement struct {
+	stateCommon
+	label string
+	body  ast.Statement
+}
+
+func (st *stateLabeledStatement) init(node *ast.LabeledStatement) {
+	st.label = node.Label.Name
+	st.body = node.Body
+}
+
+func (st *stateLabeledStatement) step() state {
+	inner := newState(st.parent, st.scope, st.body.S)
+	// FIXME: do something with the label!
+	return inner
 }
 
 /********************************************************************/
