@@ -152,6 +152,10 @@ func newState(parent state, scope *scope, node ast.Node) state {
 		st := stateTryStatement{stateCommon: sc}
 		st.init(n)
 		return &st
+	case *ast.UpdateExpression:
+		st := stateUpdateExpression{stateCommon: sc}
+		st.init(n)
+		return &st
 	case *ast.VariableDeclaration:
 		st := stateVariableDeclaration{stateCommon: sc}
 		st.init(n)
@@ -162,10 +166,6 @@ func newState(parent state, scope *scope, node ast.Node) state {
 		return &st
 	case *ast.WhileStatement:
 		st := stateWhileStatement{stateCommon: sc}
-		st.init(n)
-		return &st
-	case *ast.UpdateExpression:
-		st := stateUpdateExpression{stateCommon: sc}
 		st.init(n)
 		return &st
 	default:
@@ -973,6 +973,54 @@ func (st *stateTryStatement) step() state {
 
 /********************************************************************/
 
+type stateUpdateExpression struct {
+	stateCommon
+	op     string
+	prefix bool
+	arg    lvalue
+}
+
+func (st *stateUpdateExpression) init(node *ast.UpdateExpression) {
+	st.op = node.Operator
+	st.prefix = node.Prefix
+	st.arg.init(st, st.scope, node.Argument)
+}
+
+func (st *stateUpdateExpression) step() state {
+	if !st.arg.ready {
+		return &st.arg
+	}
+
+	// Do update:
+	v := st.arg.get()
+	n, ok := v.(object.Number)
+	if !ok {
+		// FIXME: coerce v to number
+		panic("not a number")
+	}
+	if !st.prefix {
+		st.parent.(valueAcceptor).acceptValue(n)
+	}
+	switch st.op {
+	case "++":
+		n++
+	case "--":
+		n--
+	default:
+		panic(fmt.Errorf("unrecognized update operator '%s'", st.op))
+	}
+	if st.prefix {
+		st.parent.(valueAcceptor).acceptValue(n)
+	}
+	st.arg.set(n)
+	return st.parent
+}
+
+func (st *stateUpdateExpression) acceptValue(v object.Value) {
+}
+
+/********************************************************************/
+
 type stateVariableDeclaration struct {
 	stateCommon
 	decls []*ast.VariableDeclarator
@@ -1058,54 +1106,6 @@ func (st *stateWhileStatement) step() state {
 func (st *stateWhileStatement) acceptValue(v object.Value) {
 	st.testDone = true
 	st.testResult = bool(v.ToBoolean())
-}
-
-/********************************************************************/
-
-type stateUpdateExpression struct {
-	stateCommon
-	op     string
-	prefix bool
-	arg    lvalue
-}
-
-func (st *stateUpdateExpression) init(node *ast.UpdateExpression) {
-	st.op = node.Operator
-	st.prefix = node.Prefix
-	st.arg.init(st, st.scope, node.Argument)
-}
-
-func (st *stateUpdateExpression) step() state {
-	if !st.arg.ready {
-		return &st.arg
-	}
-
-	// Do update:
-	v := st.arg.get()
-	n, ok := v.(object.Number)
-	if !ok {
-		// FIXME: coerce v to number
-		panic("not a number")
-	}
-	if !st.prefix {
-		st.parent.(valueAcceptor).acceptValue(n)
-	}
-	switch st.op {
-	case "++":
-		n++
-	case "--":
-		n--
-	default:
-		panic(fmt.Errorf("unrecognized update operator '%s'", st.op))
-	}
-	if st.prefix {
-		st.parent.(valueAcceptor).acceptValue(n)
-	}
-	st.arg.set(n)
-	return st.parent
-}
-
-func (st *stateUpdateExpression) acceptValue(v object.Value) {
 }
 
 /********************************************************************/
