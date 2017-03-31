@@ -92,6 +92,10 @@ func newState(parent state, scope *scope, node ast.Node) state {
 		st := stateConditionalExpression{stateCommon: sc}
 		st.init(n)
 		return &st
+	case *ast.DoWhileStatement:
+		st := stateWhileStatement{stateCommon: sc}
+		st.initFromDoWhile(n)
+		return &st
 	case *ast.EmptyStatement:
 		st := stateEmptyStatement{stateCommon: sc}
 		st.init(n)
@@ -1090,6 +1094,13 @@ type stateWhileStatement struct {
 func (st *stateWhileStatement) init(node *ast.WhileStatement) {
 	st.test = node.Test
 	st.body = node.Body
+}
+
+func (st *stateWhileStatement) initFromDoWhile(node *ast.DoWhileStatement) {
+	st.test = node.Test
+	st.body = node.Body
+	st.testDone = true
+	st.testResult = true
 }
 
 func (st *stateWhileStatement) step() state {
