@@ -59,13 +59,16 @@ func TestInterpreterSimple(t *testing.T) {
 		{"var a=56;do{a++}while(false);a", doWhileFalse, object.Number(57)},
 		{"var a=57;do{a++;break;a++}while(false);a",
 			breakDoWhile, object.Number(58)},
+		{"foo:break foo", selfBreak, nil}, // NO completion value
+		{"var a=6;foo:{try{a*=10;break foo}finally{a--}};a",
+			breakWithFinally, object.Number(59)},
 	}
 
 	for _, c := range tests {
 		i := New(c.src)
-		//if c.src == labeledStatement {
-		//	i.Verbose = true
-		//}
+		// if c.src == breakWithFinally {
+		// 	i.Verbose = true
+		// }
 		i.Run()
 		if v := i.Value(); v != c.expected {
 			t.Errorf("%s == %v (%T)\n(expected %v (%T))",
@@ -263,6 +266,24 @@ const doWhileFalse = `{"type":"Program","start":0,"end":40,"body":[{"type":"Vari
 // a
 // => 58
 const breakDoWhile = `{"type":"Program","start":0,"end":58,"body":[{"type":"VariableDeclaration","start":0,"end":10,"declarations":[{"type":"VariableDeclarator","start":4,"end":10,"id":{"type":"Identifier","start":4,"end":5,"name":"a"},"init":{"type":"Literal","start":8,"end":10,"value":57,"raw":"57"}}],"kind":"var"},{"type":"DoWhileStatement","start":11,"end":56,"body":{"type":"BlockStatement","start":14,"end":43,"body":[{"type":"ExpressionStatement","start":20,"end":23,"expression":{"type":"UpdateExpression","start":20,"end":23,"operator":"++","prefix":false,"argument":{"type":"Identifier","start":20,"end":21,"name":"a"}}},{"type":"BreakStatement","start":28,"end":33,"label":null},{"type":"ExpressionStatement","start":38,"end":41,"expression":{"type":"UpdateExpression","start":38,"end":41,"operator":"++","prefix":false,"argument":{"type":"Identifier","start":38,"end":39,"name":"a"}}}]},"test":{"type":"Literal","start":50,"end":55,"value":false,"raw":"false"}},{"type":"ExpressionStatement","start":57,"end":58,"expression":{"type":"Identifier","start":57,"end":58,"name":"a"}}]}`
+
+// foo: break foo
+// => undefined (but legal!)
+const selfBreak = `{"type":"Program","start":0,"end":14,"body":[{"type":"LabeledStatement","start":0,"end":14,"body":{"type":"BreakStatement","start":5,"end":14,"label":{"type":"Identifier","start":11,"end":14,"name":"foo"}},"label":{"type":"Identifier","start":0,"end":3,"name":"foo"}}]}`
+
+// var a = 6
+// foo: {
+//     try {
+//         a *= 10
+//         break foo
+//     }
+//     finally {
+//         a--
+//     }
+// }
+// a
+// => 59
+const breakWithFinally = `{"type":"Program","start":0,"end":102,"body":[{"type":"VariableDeclaration","start":0,"end":9,"declarations":[{"type":"VariableDeclarator","start":4,"end":9,"id":{"type":"Identifier","start":4,"end":5,"name":"a"},"init":{"type":"Literal","start":8,"end":9,"value":6,"raw":"6"}}],"kind":"var"},{"type":"LabeledStatement","start":10,"end":100,"body":{"type":"BlockStatement","start":15,"end":100,"body":[{"type":"TryStatement","start":21,"end":98,"block":{"type":"BlockStatement","start":25,"end":66,"body":[{"type":"ExpressionStatement","start":35,"end":42,"expression":{"type":"AssignmentExpression","start":35,"end":42,"operator":"*=","left":{"type":"Identifier","start":35,"end":36,"name":"a"},"right":{"type":"Literal","start":40,"end":42,"value":10,"raw":"10"}}},{"type":"BreakStatement","start":51,"end":60,"label":{"type":"Identifier","start":57,"end":60,"name":"foo"}}]},"handler":null,"guardedHandlers":[],"finalizer":{"type":"BlockStatement","start":79,"end":98,"body":[{"type":"ExpressionStatement","start":89,"end":92,"expression":{"type":"UpdateExpression","start":89,"end":92,"operator":"--","prefix":false,"argument":{"type":"Identifier","start":89,"end":90,"name":"a"}}}]}}]},"label":{"type":"Identifier","start":10,"end":13,"name":"foo"}},{"type":"ExpressionStatement","start":101,"end":102,"expression":{"type":"Identifier","start":101,"end":102,"name":"a"}}]}`
 
 // ({foo: "bar", answer: 42})
 // => {foo: "bar", answer: 42}

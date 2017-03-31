@@ -219,6 +219,43 @@ func (st *stateCommon) setParent(parent state) {
 
 /********************************************************************/
 
+// labelled is an interface satisfied by all state<Type>Statement
+// states, which are statements and can therefore be labeled.
+type labelled interface {
+	// addLabel adds the specified string to the label set for the
+	// statement.
+	addLabel(string)
+
+	// hasLabel returns true if the specified string has previously
+	// been added to the label set for the statement.
+	hasLabel(string) bool
+}
+
+// labelsCommon is a struct, intended to be embedded in most or all
+// state<Type>Statement types, which satisfies labelled.
+type labelsCommon struct {
+	labels []string
+}
+
+var _ labelled = (*labelsCommon)(nil)
+
+func (lc *labelsCommon) addLabel(label string) {
+	if !lc.hasLabel(label) {
+		lc.labels = append(lc.labels, label)
+	}
+}
+
+func (lc *labelsCommon) hasLabel(label string) bool {
+	for _, l := range lc.labels {
+		if l == label {
+			return true
+		}
+	}
+	return false
+}
+
+/********************************************************************/
+
 type stateAssignmentExpression struct {
 	stateCommon
 	op    string
@@ -334,6 +371,7 @@ func (st *stateBinaryExpression) acceptValue(v object.Value) {
 
 type stateBlockStatement struct {
 	stateCommon
+	labelsCommon
 	body ast.Statements
 	n    int
 }
@@ -359,6 +397,7 @@ func (st *stateBlockStatement) step() state {
 
 type stateBreakStatement struct {
 	stateCommon
+	labelsCommon
 	label string
 }
 
@@ -369,38 +408,66 @@ func (st *stateBreakStatement) init(node *ast.BreakStatement) {
 }
 
 func (st *stateBreakStatement) step() state {
-	// Unwind stack back to (just above) the corresponding enclosing
-	// loop or switch statement, but keeping any statTryStatements
-	// found along the way (so their finalizers can be run, and their
-	// handlers can be run if an inner finalizer throws.)  If no break
-	// target is found before hitting a function call boundary, throw
-	// an error.
+	// Handle the "foo: break foo" case:
+	if st.label != "" && st.hasLabel(st.label) {
+		return st.parent
+	}
+
+	// Unwind stack back to (just above) either:
+	//
+	// - the statement labelled with the specified label, or
+	//
+	// - the innerermost loop or switch statement, if no label was
+	// specified.
+	//
+	// If no break target is found before hitting a function call
+	// boundary, we throw an error.
+	///
+	// We keep any statTryStatements found along the way, so their
+	// finalizers can be run (and their handlers can be run if an
+	// inner finalizer throws).
 	//
 	// FIXME: handle loops other than WhileStatement
 	// FIXME: handle labels correctly
 	// FIXME: throw instead of panicing
 	var s state = st
+	var done = false
 unwind:
-	for {
-		if s == nil {
-			panic("something went wrong when unwinding stack")
+	for !done {
+		if st.scope.interpreter.Verbose {
+			fmt.Printf("Break: s is a %T, p is a %T\n", s, s.getParent())
+			if lbld, hasLabels := s.getParent().(labelled); hasLabels {
+				fmt.Printf("Break: p = %#v\n", lbld)
+			}
 		}
-		switch p := s.getParent().(type) {
+
+		p := s.getParent()
+		switch p := p.(type) {
+		case nil:
+			// Have unwound back out of program.  This should not have
+			// happened.
+			panic("Illegal break statement")
 		case *stateCallExpression: // FIXME: or stateNewExpression?
 			// Have unwound back to a call expression.  This should
 			// not have happened.
-			panic("break without corresponding statement")
-		case *stateWhileStatement:
-			// Reached our target.
-			break unwind
+			panic("Illegal break statement")
 		case *stateTryStatement:
 			// We'll leave the stepTryExpression on the stack, but
 			// continue unwinding with its parent:
 			s = p
+			continue unwind // skip remove p
+		case *stateWhileStatement:
+			if st.label == "" || p.hasLabel(st.label) {
+				done = true
+			}
 		default:
-			// Remove p from stack:
-			s.setParent(p.getParent())
+			l, isLabelled := p.(labelled)
+			if isLabelled && st.label != "" && l.hasLabel(st.label) {
+				done = true
+			}
 		}
+		// Remove p from stack:
+		s.setParent(p.getParent())
 	}
 	return st.parent
 }
@@ -579,6 +646,7 @@ func (st *stateConditionalExpression) acceptValue(v object.Value) {
 
 type stateEmptyStatement struct {
 	stateCommon
+	labelsCommon
 }
 
 func (st *stateEmptyStatement) init(node *ast.EmptyStatement) {
@@ -592,6 +660,7 @@ func (st *stateEmptyStatement) step() state {
 
 type stateExpressionStatement struct {
 	stateCommon
+	labelsCommon
 	expr ast.Expression
 	done bool
 }
@@ -626,6 +695,7 @@ func (st *stateExpressionStatement) acceptValue(v object.Value) {
 // has already been hoisted into the enclosing scope.
 type stateFunctionDeclaration struct {
 	stateCommon
+	labelsCommon
 }
 
 func (st *stateFunctionDeclaration) init(node *ast.FunctionDeclaration) {
@@ -681,6 +751,7 @@ func (st *stateIdentifier) step() state {
 // of course).
 type stateIfStatement struct {
 	stateCommon
+	labelsCommon
 	test       ast.Expression
 	consequent ast.Statement
 	alternate  ast.Statement
@@ -717,6 +788,7 @@ func (st *stateIfStatement) acceptValue(v object.Value) {
 
 type stateLabeledStatement struct {
 	stateCommon
+	labelsCommon
 	label string
 	body  ast.Statement
 }
@@ -728,7 +800,15 @@ func (st *stateLabeledStatement) init(node *ast.LabeledStatement) {
 
 func (st *stateLabeledStatement) step() state {
 	inner := newState(st.parent, st.scope, st.body.S)
-	// FIXME: do something with the label!
+
+	li := inner.(labelled)
+	// Add any enclosing labels to enclosed statement:
+	for _, l := range st.labels {
+		li.addLabel(l)
+	}
+	// Add this label to enclosed statement:
+	li.addLabel(st.label)
+
 	return inner
 }
 
@@ -863,6 +943,7 @@ func (st *stateObjectExpression) acceptValue(v object.Value) {
 
 type stateReturnStatement struct {
 	stateCommon
+	labelsCommon
 	arg     ast.Expression
 	retVal  object.Value
 	doneArg bool
@@ -949,6 +1030,7 @@ func (st *stateSequenceExpression) acceptValue(v object.Value) {
 
 type stateThrowStatement struct {
 	stateCommon
+	labelsCommon
 	arg     ast.Expression
 	excptn  object.Value
 	doneArg bool
@@ -993,6 +1075,7 @@ func findTryAndThrow(st state, excptn object.Value) state {
 
 type stateTryStatement struct {
 	stateCommon
+	labelsCommon
 	block                                 *ast.BlockStatement
 	handler                               *ast.CatchClause
 	finalizer                             *ast.BlockStatement
@@ -1081,6 +1164,7 @@ func (st *stateUpdateExpression) acceptValue(v object.Value) {
 
 type stateVariableDeclaration struct {
 	stateCommon
+	labelsCommon
 	decls []*ast.VariableDeclarator
 }
 
@@ -1139,6 +1223,7 @@ func (st *stateVariableDeclarator) acceptValue(v object.Value) {
 
 type stateWhileStatement struct {
 	stateCommon
+	labelsCommon
 	test       ast.Expression
 	body       ast.Statement
 	testDone   bool
