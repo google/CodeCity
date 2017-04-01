@@ -52,6 +52,14 @@ func New(astJSON string) *Interpreter {
 // true if a step was executed; false if the program has terminated.
 func (intrp *Interpreter) Step() bool {
 	if intrp.state == nil {
+		switch intrp.value.typ {
+		case BREAK:
+			panic(fmt.Errorf("illegal break to %s", intrp.value.targ))
+		case CONTINUE:
+			panic(fmt.Errorf("illegal continue of %s", intrp.value.targ))
+		case THROW:
+			panic(fmt.Errorf("unhandled exception %s", intrp.value.val))
+		}
 		return false
 	}
 	if intrp.Verbose {
