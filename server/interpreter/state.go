@@ -330,7 +330,7 @@ type stateBlockStatement struct {
 	labelsCommon
 	body ast.Statements
 	n    int
-	cv   *cval
+	val  object.Value
 }
 
 func (st *stateBlockStatement) initFromProgram(node *ast.Program) {
@@ -346,14 +346,16 @@ func (st *stateBlockStatement) step(cv *cval) (state, *cval) {
 		if cv.abrupt() {
 			return st.parent, cv
 		}
-		st.cv = cv
+		if cv.val != nil {
+			st.val = cv.val
+		}
 	}
 	if st.n < len(st.body) {
 		s := newState(st, st.scope, (st.body)[st.n])
 		st.n++
 		return s, nil
 	}
-	return st.parent, st.cv
+	return st.parent, &cval{cv.typ, st.val, cv.targ}
 }
 
 /********************************************************************/
@@ -401,7 +403,7 @@ func (st *stateCallExpression) init(node *ast.CallExpression) {
 // BUG(cpcallen): probably does not handle argument/parameter count
 // mismatch properly.
 func (st *stateCallExpression) step(cv *cval) (state, *cval) {
-	if st.cl == nil {
+	if cv == nil {
 		// First visit: evaluate function to get closure
 		if st.scope.interpreter.Verbose {
 			fmt.Printf("sCE: first visit: eval function\n")
@@ -409,18 +411,18 @@ func (st *stateCallExpression) step(cv *cval) (state, *cval) {
 		if st.ns != nil {
 			panic("have scope already???")
 		}
-		if cv != nil {
-			panic("have continuation value already???")
+		if st.cl != nil {
+			panic("have closure already???")
 		}
 		return newState(st, st.scope, st.callee.E), nil
 	}
 
-	if st.n == 0 {
+	if st.n == 0 && !st.called {
+		if st.scope.interpreter.Verbose {
+			fmt.Printf("sCE: save closure, build scope\n")
+		}
 		// Save closure:
 		st.cl = cv.pval().(*closure)
-		if st.scope.interpreter.Verbose {
-			fmt.Printf("sCE: build scope\n")
-		}
 		// Set up scope:
 		st.ns = newScope(st.scope, st.scope.interpreter)
 		st.ns.populate(st.cl.body)
