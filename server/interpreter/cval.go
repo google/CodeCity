@@ -26,8 +26,7 @@ import (
 type cvalType int
 
 const (
-	PLAIN cvalType = iota
-	NORMAL
+	NORMAL cvalType = iota
 	BREAK
 	CONTINUE
 	RETURN
@@ -37,12 +36,7 @@ const (
 // The cval type implements Completion Values, as defined in §8.9
 // of the ES5.1 spec.
 //
-// .typ is the type: NORMAL, BREAK, CONTINUE, RETURN, or THROW, or one
-// of two wpecial values:
-//
-// - PLAIN, indicating that this value represents a plain JavaScript
-// object as returned by an expression, rather than a completion value
-// as returned by a statement.
+// .typ is the type: NORMAL, BREAK, CONTINUE, RETURN, or THROW
 //
 // .val is the JavaScript value being returned (if any)
 //
@@ -53,43 +47,39 @@ type cval struct {
 	targ string
 }
 
-// The pval method tests to make sure the cval is a plain JavaScript
-// value (has .typ == NONE), and returns that value.
+// The pval method tests to make sure the cval is a plain (normal)
+// JavaScript value (has .typ == NORMAL, .targ == ""), and returns
+// that value.
 func (cv cval) pval() object.Value {
-	if cv.typ != PLAIN {
-		panic("expected plain JS value, not completion value")
+	if cv.typ != NORMAL || cv.targ != "" {
+		panic("expected NORMAL JS value")
 	}
 	return cv.val
 }
 
 // The abrupt method returns true if the cval is an abrupt completion,
-// i.e. has .typ other than NORMAL.  As a check against erroneous
-// usage, .typ == PLAIN (or any other invalid value) will panic.
+// i.e. has .typ other than NORMAL.
 func (cv cval) abrupt() bool {
 	if cv.typ == NORMAL {
 		return false
 	} else if cv.typ == BREAK || cv.typ == CONTINUE ||
 		cv.typ == RETURN || cv.typ == THROW {
 		return true
-	} else if cv.typ == PLAIN {
-		panic("not actually a completion value")
 	} else {
 		panic("invalid cval type")
 	}
 }
 
-// pval takes a plain JavaScript object and returns a pointer to a
-// cval with type PLAIN containing that value.
+// pval takes an ordinary JavaScript value and returns a pointer to a
+// cval with type NORMAL containing that value.
 func pval(v object.Value) *cval {
-	return &cval{PLAIN, v, ""}
+	return &cval{NORMAL, v, ""}
 }
 
 // GoString prints a cval in a readable format
 func (cv cval) GoString() string {
 	var t string
 	switch cv.typ {
-	case PLAIN:
-		t = "PLAIN"
 	case NORMAL:
 		t = "NORMAL"
 	case BREAK:

@@ -257,6 +257,8 @@ func (st *stateAssignmentExpression) step(cv *cval) (state, *cval) {
 	}
 	if cv == nil {
 		return newState(st, st.scope, ast.Node(st.rNode.E)), nil
+	} else if cv.abrupt() {
+		return st.parent, cv
 	}
 
 	// Do (operator)assignment:
@@ -315,6 +317,8 @@ func (st *stateBinaryExpression) init(node *ast.BinaryExpression) {
 func (st *stateBinaryExpression) step(cv *cval) (state, *cval) {
 	if cv == nil {
 		return newState(st, st.scope, ast.Node(st.lNode.E)), nil
+	} else if cv.abrupt() {
+		return st.parent, cv
 	} else if st.left == nil {
 		st.left = cv.pval()
 		return newState(st, st.scope, ast.Node(st.rNode.E)), nil
@@ -345,8 +349,7 @@ func (st *stateBlockStatement) step(cv *cval) (state, *cval) {
 	if cv != nil {
 		if cv.abrupt() {
 			return st.parent, cv
-		}
-		if cv.val != nil {
+		} else if cv.val != nil {
 			st.val = cv.val
 		}
 	}
@@ -415,9 +418,11 @@ func (st *stateCallExpression) step(cv *cval) (state, *cval) {
 			panic("have closure already???")
 		}
 		return newState(st, st.scope, st.callee.E), nil
+	} else if cv.abrupt() {
+		return st.parent, cv
 	}
 
-	if st.n == 0 && !st.called {
+	if st.cl == nil {
 		if st.scope.interpreter.Verbose {
 			fmt.Printf("sCE: save closure, build scope\n")
 		}
@@ -428,7 +433,8 @@ func (st *stateCallExpression) step(cv *cval) (state, *cval) {
 		st.ns.populate(st.cl.body)
 	} else if !st.called {
 		// Save arguments:
-		st.ns.newVar(st.cl.params[st.n-1], cv.pval())
+		st.ns.newVar(st.cl.params[st.n], cv.pval())
+		st.n++
 	}
 
 	// Subsequent visits: evaluate arguments
@@ -503,8 +509,9 @@ func (st *stateConditionalExpression) init(node *ast.ConditionalExpression) {
 func (st *stateConditionalExpression) step(cv *cval) (state, *cval) {
 	if cv == nil {
 		return newState(st, st.scope, ast.Node(st.test.E)), nil
-	}
-	if cv.pval().ToBoolean() {
+	} else if cv.abrupt() {
+		return st.parent, cv
+	} else if cv.pval().ToBoolean() {
 		return newState(st.parent, st.scope, st.consequent.E), nil
 	} else {
 		return newState(st.parent, st.scope, st.alternate.E), nil
@@ -541,7 +548,7 @@ func (st *stateExpressionStatement) step(cv *cval) (state, *cval) {
 	if cv == nil {
 		return newState(st, st.scope, ast.Node(st.expr.E)), nil
 	}
-	return st.parent, &cval{NORMAL, cv.pval(), ""}
+	return st.parent, cv
 }
 
 /********************************************************************/
@@ -563,7 +570,7 @@ func (st *stateFunctionDeclaration) step(cv *cval) (state, *cval) {
 	// supposed to return the created function here, but that doesn't
 	// really make sense (it's not a completion value, and this is
 	// effectively a statement).
-	return st.parent, nil
+	return st.parent, &cval{NORMAL, nil, ""}
 }
 
 /********************************************************************/
@@ -624,8 +631,9 @@ func (st *stateIfStatement) init(node *ast.IfStatement) {
 func (st *stateIfStatement) step(cv *cval) (state, *cval) {
 	if cv == nil {
 		return newState(st, st.scope, ast.Node(st.test.E)), nil
-	}
-	if cv.pval().ToBoolean() {
+	} else if cv.abrupt() {
+		return st.parent, cv
+	} else if cv.pval().ToBoolean() {
 		return newState(st.parent, st.scope, st.consequent.S), nil
 	} else {
 		return newState(st.parent, st.scope, st.alternate.S), nil
@@ -648,7 +656,7 @@ func (st *stateLabeledStatement) init(node *ast.LabeledStatement) {
 
 func (st *stateLabeledStatement) step(cv *cval) (state, *cval) {
 	if cv == nil {
-		inner := newState(st.parent, st.scope, st.body.S)
+		inner := newState(st, st.scope, st.body.S)
 		li := inner.(labelled)
 		// Add any enclosing labels to enclosed statement:
 		for _, l := range st.labels {
@@ -657,8 +665,7 @@ func (st *stateLabeledStatement) step(cv *cval) (state, *cval) {
 		// Add this label to enclosed statement:
 		li.addLabel(st.label)
 		return inner, nil
-	}
-	if cv.typ == BREAK && cv.targ == st.label {
+	} else if cv.typ == BREAK && cv.targ == st.label {
 		cv = &cval{NORMAL, cv.val, ""}
 	}
 	return st.parent, cv
@@ -698,12 +705,15 @@ func (st *stateMemberExpression) init(node *ast.MemberExpression) {
 func (st *stateMemberExpression) step(cv *cval) (state, *cval) {
 	if cv == nil {
 		return newState(st, st.scope, ast.Node(st.baseExpr.E)), nil
+	} else if cv.abrupt() {
+		return st.parent, cv
 	} else if st.base == nil {
 		st.base = cv.pval()
 		if st.computed {
 			return newState(st, st.scope, ast.Node(st.membExpr.E)), nil
 		}
 	}
+
 	var name string
 	if st.computed {
 		name = string(cv.pval().ToString())
@@ -747,6 +757,9 @@ func (st *stateObjectExpression) step(cv *cval) (state, *cval) {
 		st.obj = object.New(nil, object.ObjectProto)
 	}
 	if cv != nil {
+		if cv.abrupt() {
+			return st.parent, cv
+		}
 		var key string
 		switch k := st.props[st.n].Key.N.(type) {
 		case *ast.Literal:
@@ -784,6 +797,8 @@ func (st *stateReturnStatement) step(cv *cval) (state, *cval) {
 	if cv == nil {
 		// Evaluate argument:
 		return newState(st, st.scope, st.arg.E), nil
+	} else if cv.abrupt() {
+		return st.parent, cv
 	}
 	return st.parent, &cval{RETURN, cv.pval(), ""}
 }
@@ -802,6 +817,10 @@ func (st *stateSequenceExpression) init(node *ast.SequenceExpression) {
 }
 
 func (st *stateSequenceExpression) step(cv *cval) (state, *cval) {
+	if cv != nil && cv.abrupt() {
+		return st.parent, cv
+	}
+
 	var next state = st
 	if st.n == len(st.expressions)-1 {
 		next = st.parent // tail call final subexpression
@@ -829,8 +848,9 @@ func (st *stateThrowStatement) init(node *ast.ThrowStatement) {
 func (st *stateThrowStatement) step(cv *cval) (state, *cval) {
 	if cv == nil {
 		return newState(st, st.scope, st.arg.E), nil
-	}
-	if cv.pval() == nil {
+	} else if cv.abrupt() {
+		return st.parent, cv
+	} else if cv.pval() == nil {
 		panic("no exception??")
 	}
 	return st.parent, &cval{THROW, cv.pval(), ""}
@@ -945,6 +965,9 @@ func (st *stateVariableDeclaration) init(node *ast.VariableDeclaration) {
 
 func (st *stateVariableDeclaration) step(cv *cval) (state, *cval) {
 	if cv != nil {
+		if cv.abrupt() {
+			return st.parent, cv
+		}
 		st.scope.setVar(st.decls[st.n].Id.Name, cv.pval())
 		st.n++
 	}
@@ -982,19 +1005,22 @@ func (st *stateWhileStatement) initFromDoWhile(node *ast.DoWhileStatement) {
 
 func (st *stateWhileStatement) step(cv *cval) (state, *cval) {
 	if cv == nil {
+		if st.tested { // First iteration of a do while loop
+			return newState(st, st.scope, st.body.S), nil
+		}
 		return newState(st, st.scope, st.test.E), nil
 	}
 	if !st.tested {
-		if cv != nil && !bool(cv.pval().ToBoolean()) {
+		if cv.abrupt() {
+			return st.parent, cv
+		} else if !bool(cv.pval().ToBoolean()) {
 			return st.parent, &cval{NORMAL, st.val, ""}
 		}
 		st.tested = true
 		return newState(st, st.scope, st.body.S), nil
 	}
 	// At this point cv is cval from body.
-	if cv.val != nil {
-		st.val = cv.val
-	}
+	st.val = cv.val
 	if cv.typ != CONTINUE || !st.hasLabel(cv.targ) {
 		if cv.typ == BREAK && (cv.targ == "" || st.hasLabel(cv.targ)) {
 			return st.parent, &cval{NORMAL, st.val, ""}
@@ -1107,8 +1133,9 @@ func (lv *lvalue) step(cv *cval) (state, *cval) {
 			panic("lvalue already has base??")
 		}
 		return newState(lv, lv.scope, ast.Node(lv.baseExpr.E)), nil
-	}
-	if !lv.haveBase {
+	} else if cv.abrupt() {
+		return lv.parent, cv
+	} else if !lv.haveBase {
 		lv.base = cv.pval()
 		lv.haveBase = true
 		if lv.computed {
