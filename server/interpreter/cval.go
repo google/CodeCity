@@ -17,6 +17,8 @@
 package interpreter
 
 import (
+	"fmt"
+
 	"CodeCity/server/interpreter/object"
 )
 
@@ -80,4 +82,24 @@ func (cv cval) abrupt() bool {
 // cval with type PLAIN containing that value.
 func pval(v object.Value) *cval {
 	return &cval{PLAIN, v, ""}
+}
+
+// GoString prints a cval in a readable format
+func (cv cval) GoString() string {
+	var t string
+	switch cv.typ {
+	case PLAIN:
+		t = "PLAIN"
+	case NORMAL:
+		t = "NORMAL"
+	case BREAK:
+		t = "BREAK"
+	case CONTINUE:
+		t = "CONTINUE"
+	case RETURN:
+		t = "RETURN"
+	case THROW:
+		t = "THROW"
+	}
+	return fmt.Sprintf("{%s, %#v, %#v}", t, cv.val, cv.targ)
 }
