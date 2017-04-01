@@ -28,9 +28,10 @@ import (
 // (roughly: one state per ast.Node implementation); each value of
 // this type represents a possible state of the computation.
 type state interface {
-	// step performs the next step in the evaluation of the program, and
-	// returns the new state execution state.
-	step() state
+	// step performs the next step in the evaluation of the program.
+	// It accepts a *cval representing the result of the previous step,
+	// and returns the new state execution state and *cval.
+	step(*cval) (state, *cval)
 
 	// getParent returns the state's parent; this is just a
 	// convenience method obtaining the parent of a state of unknown
@@ -45,21 +46,6 @@ type state interface {
 	// method for reparenting a state of unknown (concrete) type,
 	// which is not otherwise possible without casting.
 	setParent(state)
-}
-
-// valueAcceptor is the interface implemented by any object (mostly
-// states with subexpressions) that can accept a value.
-type valueAcceptor interface {
-	// acceptValue receives the value resulting from the evaluation of
-	//a child expression.
-	/// It is normally called by the
-	// subexpression's step method, typically as follows:
-	//
-	//        // ... compute value to be returned ...
-	//        this.parent.acceptValue(value)
-	//        return this.parent
-	//    }
-	acceptValue(object.Value)
 }
 
 // newState creates a state object corresponding to the given AST
@@ -168,10 +154,6 @@ func newState(parent state, scope *scope, node ast.Node) state {
 		st := stateVariableDeclaration{stateCommon: sc}
 		st.init(n)
 		return &st
-	case *ast.VariableDeclarator:
-		st := stateVariableDeclarator{stateCommon: sc}
-		st.init(n)
-		return &st
 	case *ast.WhileStatement:
 		st := stateWhileStatement{stateCommon: sc}
 		st.init(n)
@@ -261,7 +243,6 @@ type stateAssignmentExpression struct {
 	op    string
 	left  lvalue
 	rNode ast.Expression
-	right object.Value
 }
 
 func (st *stateAssignmentExpression) init(node *ast.AssignmentExpression) {
@@ -270,17 +251,18 @@ func (st *stateAssignmentExpression) init(node *ast.AssignmentExpression) {
 	st.left.init(st, st.scope, node.Left)
 }
 
-func (st *stateAssignmentExpression) step() state {
+func (st *stateAssignmentExpression) step(cv *cval) (state, *cval) {
 	if !st.left.ready {
-		return &st.left
-	} else if st.right == nil {
-		return newState(st, st.scope, ast.Node(st.rNode.E))
+		return &st.left, nil
+	}
+	if cv == nil {
+		return newState(st, st.scope, ast.Node(st.rNode.E)), nil
 	}
 
 	// Do (operator)assignment:
-	var r object.Value
+	var r object.Value = cv.pval()
 	if st.op == "=" {
-		r = st.right
+		// nothing extra to do
 	} else {
 		var op string
 		switch st.op {
@@ -309,62 +291,36 @@ func (st *stateAssignmentExpression) step() state {
 		default:
 			panic(fmt.Errorf("illegal assignemnt operator %s", st.op))
 		}
-		r = object.BinaryOp(st.left.get(), op, st.right)
+		r = object.BinaryOp(st.left.get(), op, r)
 	}
 	st.left.set(r)
-	st.parent.(valueAcceptor).acceptValue(r)
-
-	return st.parent
-}
-
-func (st *stateAssignmentExpression) acceptValue(v object.Value) {
-	st.right = v
+	return st.parent, pval(r)
 }
 
 /********************************************************************/
 
 type stateBinaryExpression struct {
 	stateCommon
-	op                  string
-	lNode, rNode        ast.Expression
-	haveLeft, haveRight bool
-	left, right         object.Value
+	op           string
+	lNode, rNode ast.Expression
+	left         object.Value
 }
 
 func (st *stateBinaryExpression) init(node *ast.BinaryExpression) {
 	st.op = node.Operator
 	st.lNode = node.Left
 	st.rNode = node.Right
-	st.haveLeft = false
-	st.haveRight = false
 }
 
-func (st *stateBinaryExpression) step() state {
-	if !st.haveLeft {
-		return newState(st, st.scope, ast.Node(st.lNode.E))
-	} else if !st.haveRight {
-		return newState(st, st.scope, ast.Node(st.rNode.E))
+func (st *stateBinaryExpression) step(cv *cval) (state, *cval) {
+	if cv == nil {
+		return newState(st, st.scope, ast.Node(st.lNode.E)), nil
+	} else if st.left == nil {
+		st.left = cv.pval()
+		return newState(st, st.scope, ast.Node(st.rNode.E)), nil
 	}
-
-	var r object.Value = object.BinaryOp(st.left, st.op, st.right)
-	st.parent.(valueAcceptor).acceptValue(r)
-	return st.parent
-
-}
-
-func (st *stateBinaryExpression) acceptValue(v object.Value) {
-	if st.scope.interpreter.Verbose {
-		fmt.Printf("stateBinaryExpression just got %v.\n", v)
-	}
-	if !st.haveLeft {
-		st.left = v
-		st.haveLeft = true
-	} else if !st.haveRight {
-		st.right = v
-		st.haveRight = true
-	} else {
-		panic(fmt.Errorf("too may values"))
-	}
+	r := object.BinaryOp(st.left, st.op, cv.pval())
+	return st.parent, pval(r)
 }
 
 /********************************************************************/
@@ -374,6 +330,7 @@ type stateBlockStatement struct {
 	labelsCommon
 	body ast.Statements
 	n    int
+	cv   *cval
 }
 
 func (st *stateBlockStatement) initFromProgram(node *ast.Program) {
@@ -384,13 +341,19 @@ func (st *stateBlockStatement) init(node *ast.BlockStatement) {
 	st.body = node.Body
 }
 
-func (st *stateBlockStatement) step() state {
+func (st *stateBlockStatement) step(cv *cval) (state, *cval) {
+	if cv != nil {
+		if cv.abrupt() {
+			return st.parent, cv
+		}
+		st.cv = cv
+	}
 	if st.n < len(st.body) {
 		s := newState(st, st.scope, (st.body)[st.n])
 		st.n++
-		return s
+		return s, nil
 	}
-	return st.parent
+	return st.parent, st.cv
 }
 
 /********************************************************************/
@@ -407,69 +370,8 @@ func (st *stateBreakStatement) init(node *ast.BreakStatement) {
 	}
 }
 
-func (st *stateBreakStatement) step() state {
-	// Handle the "foo: break foo" case:
-	if st.label != "" && st.hasLabel(st.label) {
-		return st.parent
-	}
-
-	// Unwind stack back to (just above) either:
-	//
-	// - the statement labelled with the specified label, or
-	//
-	// - the innerermost loop or switch statement, if no label was
-	// specified.
-	//
-	// If no break target is found before hitting a function call
-	// boundary, we throw an error.
-	///
-	// We keep any statTryStatements found along the way, so their
-	// finalizers can be run (and their handlers can be run if an
-	// inner finalizer throws).
-	//
-	// FIXME: handle loops other than WhileStatement
-	// FIXME: handle labels correctly
-	// FIXME: throw instead of panicing
-	var s state = st
-	var done = false
-unwind:
-	for !done {
-		if st.scope.interpreter.Verbose {
-			fmt.Printf("Break: s is a %T, p is a %T\n", s, s.getParent())
-			if lbld, hasLabels := s.getParent().(labelled); hasLabels {
-				fmt.Printf("Break: p = %#v\n", lbld)
-			}
-		}
-
-		p := s.getParent()
-		switch p := p.(type) {
-		case nil:
-			// Have unwound back out of program.  This should not have
-			// happened.
-			panic("Illegal break statement")
-		case *stateCallExpression: // FIXME: or stateNewExpression?
-			// Have unwound back to a call expression.  This should
-			// not have happened.
-			panic("Illegal break statement")
-		case *stateTryStatement:
-			// We'll leave the stepTryExpression on the stack, but
-			// continue unwinding with its parent:
-			s = p
-			continue unwind // skip remove p
-		case *stateWhileStatement:
-			if st.label == "" || p.hasLabel(st.label) {
-				done = true
-			}
-		default:
-			l, isLabelled := p.(labelled)
-			if isLabelled && st.label != "" && l.hasLabel(st.label) {
-				done = true
-			}
-		}
-		// Remove p from stack:
-		s.setParent(p.getParent())
-	}
-	return st.parent
+func (st *stateBreakStatement) step(cv *cval) (state, *cval) {
+	return st.parent, &cval{BREAK, nil, st.label}
 }
 
 /********************************************************************/
@@ -478,121 +380,96 @@ type stateCallExpression struct {
 	stateCommon
 	callee ast.Expression
 	args   ast.Expressions
-	cl     *closure
-	ns     *scope       // New scope being constructed
-	n      int          // Which arg are we evaluating?
-	called bool         // Has call itself begun?
-	retVal object.Value // Value to yield to enclosing expression
+	cl     *closure // Actual function to call
+	ns     *scope   // New scope being constructed
+	n      int      // Which arg are we evaluating?
+	called bool     // Has call itself begun?
 }
 
 func (st *stateCallExpression) init(node *ast.CallExpression) {
 	st.callee = node.Callee
 	st.args = node.Arguments
-	st.retVal = object.Undefined{}
 }
 
 // step gets called once to set up evaluation of the function to be
-// executed, once to set up each parameter, once to execute the
-// function body, and one final time to yield the return value.
+// executed, once to set up each parameter, once to initiate execution
+// of the function body, and one final time to process the return
+// value.
 //
 // BUG(cpcallen): does not set up arguments variable.
 //
 // BUG(cpcallen): probably does not handle argument/parameter count
 // mismatch properly.
-func (st *stateCallExpression) step() state {
+func (st *stateCallExpression) step(cv *cval) (state, *cval) {
 	if st.cl == nil {
+		// First visit: evaluate function to get closure
 		if st.scope.interpreter.Verbose {
 			fmt.Printf("sCE: first visit: eval function\n")
 		}
-		// First visit: evaluate function to get closure
 		if st.ns != nil {
-			panic("ns but not cl???")
+			panic("have scope already???")
 		}
-		return newState(st, st.scope, st.callee.E)
+		if cv != nil {
+			panic("have continuation value already???")
+		}
+		return newState(st, st.scope, st.callee.E), nil
 	}
+
 	if st.n == 0 {
+		// Save closure:
+		st.cl = cv.pval().(*closure)
 		if st.scope.interpreter.Verbose {
 			fmt.Printf("sCE: build scope\n")
 		}
 		// Set up scope:
 		st.ns = newScope(st.scope, st.scope.interpreter)
 		st.ns.populate(st.cl.body)
+	} else if !st.called {
+		// Save arguments:
+		st.ns.newVar(st.cl.params[st.n-1], cv.pval())
 	}
+
 	// Subsequent visits: evaluate arguments
 	if st.n < len(st.args) {
 		if st.scope.interpreter.Verbose {
 			fmt.Printf("sCE: eval arg %d\n", st.n)
 		}
 		// FIXME: do error checking for param/arg count mismatch
-		return newState(st, st.scope, st.args[st.n])
+		return newState(st, st.scope, st.args[st.n]), nil
 	}
+
 	if !st.called {
+		// Second last visit: evaluate function call
 		if st.scope.interpreter.Verbose {
 			fmt.Printf("sCE: eval body\n")
 		}
-		// Second last visit: evaluate function call
 		st.called = true
-		return newState(st, st.ns, st.cl.body)
+		return newState(st, st.ns, st.cl.body), nil
 	}
-	// We're done; yield (most recent) return value:
-	if st.scope.interpreter.Verbose {
-		fmt.Printf("sCE: return %#v\n", st.retVal)
-	}
-	st.parent.(valueAcceptor).acceptValue(st.retVal)
-	return st.parent
-}
 
-// acceptValue gets called once for the left hand side of the
-// expression (which should supply a closure), once for each argument,
-// and one or more times for the return value.  "Wait, one *or more*
-// times?", I hear you ask.  Yes: it turns out that a you can "return"
-// more than once from a function (even without continuations!), as
-// in:
-//
-//     function f() {
-//         try {
-//             return true;
-//         }
-//         finally {
-//             return false;
-//         }
-//     }
-//
-// so we don't propagate the return value to the caller as soon as we
-// accept it; instead we just store it.
-func (st *stateCallExpression) acceptValue(v object.Value) {
+	// We're done: process return value:
 	if st.scope.interpreter.Verbose {
-		fmt.Printf("stateCallExpression just got %v.\n", v)
+		fmt.Printf("sCE: return %#v\n", cv)
 	}
-	if st.cl == nil {
-		// accept function value
-		// First value: should be closure
-		cl, ok := v.(*closure)
-		if !ok {
-			// FIXME: throw instead of panic
-			panic("can't call non-closure")
-		}
-		st.cl = cl
-	} else if st.n < len(st.args) {
-		// accept an argument value
-		if st.called {
-			panic("call begun before all parameters evaluated??")
-		}
-		st.ns.newVar(st.cl.params[st.n], v)
-		st.n++
-	} else {
-		// accept return value
-		st.retVal = v
+	switch cv.typ {
+	case RETURN:
+		cv.typ = NORMAL
+	case THROW:
+		// fine; leave as-is
+	case NORMAL:
+		cv = &cval{NORMAL, object.Undefined{}, ""}
+	default:
+		panic(fmt.Errorf("unexpected cval %#v", cv))
 	}
+	return st.parent, cv
 }
 
 /********************************************************************/
 
 type stateCatchClause struct {
 	stateCommon
-	param  string
-	body   *ast.BlockStatement
-	excptn object.Value
+	param string
+	body  *ast.BlockStatement
 }
 
 func (st *stateCatchClause) init(node *ast.CatchClause) {
@@ -600,10 +477,10 @@ func (st *stateCatchClause) init(node *ast.CatchClause) {
 	st.body = node.Body
 }
 
-func (st *stateCatchClause) step() state {
+func (st *stateCatchClause) step(cv *cval) (state, *cval) {
 	sc := newScope(st.scope, st.scope.interpreter)
-	sc.newVar(st.param, st.excptn)
-	return newState(st.parent, sc, st.body)
+	sc.newVar(st.param, cv.pval())
+	return newState(st.parent, sc, st.body), nil
 }
 
 /********************************************************************/
@@ -613,8 +490,6 @@ type stateConditionalExpression struct {
 	test       ast.Expression
 	consequent ast.Expression
 	alternate  ast.Expression
-	result     bool
-	haveResult bool
 }
 
 func (st *stateConditionalExpression) init(node *ast.ConditionalExpression) {
@@ -623,23 +498,15 @@ func (st *stateConditionalExpression) init(node *ast.ConditionalExpression) {
 	st.alternate = node.Alternate
 }
 
-func (st *stateConditionalExpression) step() state {
-	if !st.haveResult {
-		return newState(st, st.scope, ast.Node(st.test.E))
+func (st *stateConditionalExpression) step(cv *cval) (state, *cval) {
+	if cv == nil {
+		return newState(st, st.scope, ast.Node(st.test.E)), nil
 	}
-	if st.result {
-		return newState(st.parent, st.scope, st.consequent.E)
+	if cv.pval().ToBoolean() {
+		return newState(st.parent, st.scope, st.consequent.E), nil
 	} else {
-		return newState(st.parent, st.scope, st.alternate.E)
+		return newState(st.parent, st.scope, st.alternate.E), nil
 	}
-}
-
-func (st *stateConditionalExpression) acceptValue(v object.Value) {
-	if st.scope.interpreter.Verbose {
-		fmt.Printf("stateConditionalExpression just got %v.\n", v)
-	}
-	st.result = bool(v.ToBoolean())
-	st.haveResult = true
 }
 
 /********************************************************************/
@@ -652,8 +519,8 @@ type stateEmptyStatement struct {
 func (st *stateEmptyStatement) init(node *ast.EmptyStatement) {
 }
 
-func (st *stateEmptyStatement) step() state {
-	return st.parent
+func (st *stateEmptyStatement) step(cv *cval) (state, *cval) {
+	return st.parent, &cval{NORMAL, nil, ""}
 }
 
 /********************************************************************/
@@ -662,37 +529,25 @@ type stateExpressionStatement struct {
 	stateCommon
 	labelsCommon
 	expr ast.Expression
-	done bool
 }
 
 func (st *stateExpressionStatement) init(node *ast.ExpressionStatement) {
 	st.expr = node.Expression
-	st.done = false
 }
 
-func (st *stateExpressionStatement) step() state {
-	if !st.done {
-		st.done = true
-		return newState(st, st.scope, ast.Node(st.expr.E))
+func (st *stateExpressionStatement) step(cv *cval) (state, *cval) {
+	if cv == nil {
+		return newState(st, st.scope, ast.Node(st.expr.E)), nil
 	}
-	return st.parent
-}
-
-// FIXME: this is only needed so a completion value is available in
-// the interpreter for test purposes (and possibly for eval); if it
-// was not required we could greatly simplify this state and only
-// visit it once.
-func (st *stateExpressionStatement) acceptValue(v object.Value) {
-	if st.scope.interpreter.Verbose {
-		fmt.Printf("stateExpressionStatement just got %v.\n", v)
-	}
-	st.scope.interpreter.acceptValue(v)
+	return st.parent, &cval{NORMAL, cv.pval(), ""}
 }
 
 /********************************************************************/
 
 // Evaluating a function declaration has no effect; the declaration
 // has already been hoisted into the enclosing scope.
+//
+// FIXME: except it actually hasn't yet
 type stateFunctionDeclaration struct {
 	stateCommon
 	labelsCommon
@@ -701,8 +556,12 @@ type stateFunctionDeclaration struct {
 func (st *stateFunctionDeclaration) init(node *ast.FunctionDeclaration) {
 }
 
-func (st *stateFunctionDeclaration) step() state {
-	return st.parent
+func (st *stateFunctionDeclaration) step(cv *cval) (state, *cval) {
+	// §13 and §13.2 of ES5.1 together seem to imply that we are
+	// supposed to return the created function here, but that doesn't
+	// really make sense (it's not a completion value, and this is
+	// effectively a statement).
+	return st.parent, nil
 }
 
 /********************************************************************/
@@ -718,10 +577,8 @@ func (st *stateFunctionExpression) init(node *ast.FunctionExpression) {
 	st.body = node.Body
 }
 
-func (st *stateFunctionExpression) step() state {
-	st.parent.(valueAcceptor).acceptValue(
-		newClosure(nil, st.scope, st.params, st.body))
-	return st.parent
+func (st *stateFunctionExpression) step(cv *cval) (state, *cval) {
+	return st.parent, pval(newClosure(nil, st.scope, st.params, st.body))
 }
 
 /********************************************************************/
@@ -735,13 +592,12 @@ func (st *stateIdentifier) init(node *ast.Identifier) {
 	st.name = node.Name
 }
 
-func (st *stateIdentifier) step() state {
+func (st *stateIdentifier) step(cv *cval) (state, *cval) {
 	// Note: if we getters/setters and a global scope object (like
 	// window), we would have to do a check to see if we need to run a
 	// getter.  But we have neither, so this is a straight variable
 	// lookup.
-	st.parent.(valueAcceptor).acceptValue(st.scope.getVar(st.name))
-	return st.parent
+	return st.parent, pval(st.scope.getVar(st.name))
 }
 
 /********************************************************************/
@@ -755,8 +611,6 @@ type stateIfStatement struct {
 	test       ast.Expression
 	consequent ast.Statement
 	alternate  ast.Statement
-	result     bool
-	haveResult bool
 }
 
 func (st *stateIfStatement) init(node *ast.IfStatement) {
@@ -765,23 +619,15 @@ func (st *stateIfStatement) init(node *ast.IfStatement) {
 	st.alternate = node.Alternate
 }
 
-func (st *stateIfStatement) step() state {
-	if !st.haveResult {
-		return newState(st, st.scope, ast.Node(st.test.E))
+func (st *stateIfStatement) step(cv *cval) (state, *cval) {
+	if cv == nil {
+		return newState(st, st.scope, ast.Node(st.test.E)), nil
 	}
-	if st.result {
-		return newState(st.parent, st.scope, st.consequent.S)
+	if cv.pval().ToBoolean() {
+		return newState(st.parent, st.scope, st.consequent.S), nil
 	} else {
-		return newState(st.parent, st.scope, st.alternate.S)
+		return newState(st.parent, st.scope, st.alternate.S), nil
 	}
-}
-
-func (st *stateIfStatement) acceptValue(v object.Value) {
-	if st.scope.interpreter.Verbose {
-		fmt.Printf("stateIfStatement just got %v.\n", v)
-	}
-	st.result = bool(v.ToBoolean())
-	st.haveResult = true
 }
 
 /********************************************************************/
@@ -798,18 +644,22 @@ func (st *stateLabeledStatement) init(node *ast.LabeledStatement) {
 	st.body = node.Body
 }
 
-func (st *stateLabeledStatement) step() state {
-	inner := newState(st.parent, st.scope, st.body.S)
-
-	li := inner.(labelled)
-	// Add any enclosing labels to enclosed statement:
-	for _, l := range st.labels {
-		li.addLabel(l)
+func (st *stateLabeledStatement) step(cv *cval) (state, *cval) {
+	if cv == nil {
+		inner := newState(st.parent, st.scope, st.body.S)
+		li := inner.(labelled)
+		// Add any enclosing labels to enclosed statement:
+		for _, l := range st.labels {
+			li.addLabel(l)
+		}
+		// Add this label to enclosed statement:
+		li.addLabel(st.label)
+		return inner, nil
 	}
-	// Add this label to enclosed statement:
-	li.addLabel(st.label)
-
-	return inner
+	if cv.typ == BREAK && cv.targ == st.label {
+		cv = &cval{NORMAL, cv.val, ""}
+	}
+	return st.parent, cv
 }
 
 /********************************************************************/
@@ -823,120 +673,92 @@ func (st *stateLiteral) init(node *ast.Literal) {
 	st.value = object.NewFromRaw(node.Raw)
 }
 
-func (st *stateLiteral) step() state {
-	st.parent.(valueAcceptor).acceptValue(st.value)
-	return st.parent
+func (st *stateLiteral) step(cv *cval) (state, *cval) {
+	return st.parent, pval(st.value)
 }
 
 /********************************************************************/
 
 type stateMemberExpression struct {
 	stateCommon
-	baseExpr           ast.Expression // To be resolve to obtain base
-	membExpr           ast.Expression // To be resolve to obtain name
-	computed           bool           // Is this x[y] (rather than x.y)?
-	base               object.Value
-	name               string
-	haveBase, haveName bool
+	baseExpr ast.Expression // To be resolve to obtain base
+	membExpr ast.Expression // To be resolve to obtain name
+	computed bool           // Is this x[y] (rather than x.y)?
+	base     object.Value
 }
 
 func (st *stateMemberExpression) init(node *ast.MemberExpression) {
 	st.baseExpr = node.Object
 	st.membExpr = node.Property
 	st.computed = node.Computed
-	st.haveBase = false
-	st.haveName = false
 }
 
-func (st *stateMemberExpression) step() state {
-	if !st.haveBase {
-		return newState(st, st.scope, ast.Node(st.baseExpr.E))
-	} else if !st.haveName {
+func (st *stateMemberExpression) step(cv *cval) (state, *cval) {
+	if cv == nil {
+		return newState(st, st.scope, ast.Node(st.baseExpr.E)), nil
+	} else if st.base == nil {
+		st.base = cv.pval()
 		if st.computed {
-			return newState(st, st.scope, ast.Node(st.membExpr.E))
+			return newState(st, st.scope, ast.Node(st.membExpr.E)), nil
 		}
-
+	}
+	var name string
+	if st.computed {
+		name = string(cv.pval().ToString())
+	} else {
 		// It's expr.identifier; get name of identifier:
-		i, ok := st.membExpr.E.(*ast.Identifier)
-		if !ok {
+		i, isID := st.membExpr.E.(*ast.Identifier)
+		if !isID {
 			panic(fmt.Errorf("invalid computed member expression type %T",
 				st.membExpr.E))
 		}
-		st.name = i.Name
-		st.haveName = true
+		name = i.Name
 	}
-	v, err := st.base.GetProperty(st.name)
+	v, err := st.base.GetProperty(name)
 	if err != nil {
 		// FIXME: throw JS error
 		panic(err)
 	}
-	st.parent.(valueAcceptor).acceptValue(v)
-	return st.parent
-}
-
-func (st *stateMemberExpression) acceptValue(v object.Value) {
-	if st.scope.interpreter.Verbose {
-		fmt.Printf("stepMemberExpression just got %v.\n", v)
-	}
-	if !st.haveBase {
-		st.base = v
-		st.haveBase = true
-	} else if !st.haveName {
-		st.name = string(v.ToString())
-		st.haveName = true
-	} else {
-		panic(fmt.Errorf("too may values"))
-	}
+	return st.parent, pval(v)
 }
 
 /********************************************************************/
 
 type stateObjectExpression struct {
 	stateCommon
-	props            []*ast.Property
-	obj              *object.Object
-	n                int
-	key              string
-	value            object.Value
-	gotKey, gotValue bool
+	props []*ast.Property
+	obj   *object.Object
+	n     int
 }
 
 func (st *stateObjectExpression) init(node *ast.ObjectExpression) {
 	st.props = node.Properties
-	st.obj = nil
-	st.n = 0
 }
 
 // FIXME: (maybe) getters and setters not supported.
-func (st *stateObjectExpression) step() state {
+func (st *stateObjectExpression) step(cv *cval) (state, *cval) {
 	if st.obj == nil {
-		if st.n != 0 {
-			//			panic("lost object under construction!")
+		if st.n != 0 || cv != nil {
+			panic("internal error when constructing object")
 		}
 		// FIXME: set owner of new object
 		st.obj = object.New(nil, object.ObjectProto)
 	}
+	if cv != nil {
+		var key string
+		switch k := st.props[st.n].Key.N.(type) {
+		case *ast.Literal:
+			key = string(object.NewFromRaw(k.Raw).ToString())
+		case *ast.Identifier:
+			key = k.Name
+		}
+		st.obj.SetProperty(key, cv.pval())
+		st.n++
+	}
 	if st.n < len(st.props) {
-		return newState(st, st.scope, st.props[st.n].Value.E)
+		return newState(st, st.scope, st.props[st.n].Value.E), nil
 	}
-	st.parent.(valueAcceptor).acceptValue(st.obj)
-	return st.parent
-}
-
-func (st *stateObjectExpression) acceptValue(v object.Value) {
-	if st.scope.interpreter.Verbose {
-		fmt.Printf("stateObjectExpression just got %v.\n", v)
-	}
-	var key string
-	switch k := st.props[st.n].Key.N.(type) {
-	case *ast.Literal:
-		v := object.NewFromRaw(k.Raw)
-		key = string(v.ToString())
-	case *ast.Identifier:
-		key = k.Name
-	}
-	st.obj.SetProperty(key, v)
-	st.n++
+	return st.parent, pval(st.obj)
 }
 
 /********************************************************************/
@@ -944,9 +766,7 @@ func (st *stateObjectExpression) acceptValue(v object.Value) {
 type stateReturnStatement struct {
 	stateCommon
 	labelsCommon
-	arg     ast.Expression
-	retVal  object.Value
-	doneArg bool
+	arg ast.Expression
 }
 
 func (st *stateReturnStatement) init(node *ast.ReturnStatement) {
@@ -958,45 +778,12 @@ func (st *stateReturnStatement) init(node *ast.ReturnStatement) {
 //
 // BUG(cpcallen): should throw if called outside a function
 // invocation.
-func (st *stateReturnStatement) step() state {
-	if st.arg.E != nil && !st.doneArg {
+func (st *stateReturnStatement) step(cv *cval) (state, *cval) {
+	if cv == nil {
 		// Evaluate argument:
-		st.doneArg = true
-		return newState(st, st.scope, st.arg.E)
+		return newState(st, st.scope, st.arg.E), nil
 	}
-
-	// Unwind stack back to last stateCallExpression (FIXME: or
-	// stateNewExpression?), but keeping any statTryStatements found
-	// along the way (so their finalizers can be run, and their
-	// handlers can be run if an inner finalizer throws.)
-	var s state = st
-unwind:
-	for {
-		if s == nil {
-			panic("something went wrong when unwinding stack")
-		}
-		switch p := s.getParent().(type) {
-		case *stateCallExpression: // FIXME: or stateNewExpression?
-			// Have unwound back to a call expression.  Pass it the
-			// return value and terminate unwinding:
-			if st.retVal != nil {
-				p.acceptValue(st.retVal)
-			}
-			break unwind
-		case *stateTryStatement:
-			// We'll leave the stepTryExpression on the stack, but
-			// continue unwinding with its parent:
-			s = p
-		default:
-			// Remove p from stack:
-			s.setParent(p.getParent())
-		}
-	}
-	return st.parent
-}
-
-func (st *stateReturnStatement) acceptValue(v object.Value) {
-	st.retVal = v
+	return st.parent, &cval{RETURN, cv.pval(), ""}
 }
 
 /********************************************************************/
@@ -1012,18 +799,14 @@ func (st *stateSequenceExpression) init(node *ast.SequenceExpression) {
 	st.expressions = node.Expressions
 }
 
-func (st *stateSequenceExpression) step() state {
-	if st.n < len(st.expressions) {
-		s := newState(st, st.scope, (st.expressions)[st.n])
-		st.n++
-		return s
+func (st *stateSequenceExpression) step(cv *cval) (state, *cval) {
+	var next state = st
+	if st.n == len(st.expressions)-1 {
+		next = st.parent // tail call final subexpression
 	}
-	st.parent.(valueAcceptor).acceptValue(st.value)
-	return st.parent
-}
-
-func (st *stateSequenceExpression) acceptValue(v object.Value) {
-	st.value = v
+	s := newState(next, st.scope, (st.expressions)[st.n])
+	st.n++
+	return s, nil
 }
 
 /********************************************************************/
@@ -1031,9 +814,8 @@ func (st *stateSequenceExpression) acceptValue(v object.Value) {
 type stateThrowStatement struct {
 	stateCommon
 	labelsCommon
-	arg     ast.Expression
-	excptn  object.Value
-	doneArg bool
+	arg    ast.Expression
+	excptn object.Value
 }
 
 func (st *stateThrowStatement) init(node *ast.ThrowStatement) {
@@ -1042,33 +824,14 @@ func (st *stateThrowStatement) init(node *ast.ThrowStatement) {
 
 // step should get called twice: once to set up evaluation of the
 // argument, and a second time to do the actual throw.
-func (st *stateThrowStatement) step() state {
-	if st.arg.E != nil && !st.doneArg {
-		// Evaluate argument:
-		st.doneArg = true
-		return newState(st, st.scope, st.arg.E)
+func (st *stateThrowStatement) step(cv *cval) (state, *cval) {
+	if cv == nil {
+		return newState(st, st.scope, st.arg.E), nil
 	}
-
-	if st.excptn == nil {
+	if cv.pval() == nil {
 		panic("no exception??")
 	}
-	return findTryAndThrow(st, st.excptn)
-}
-
-func (st *stateThrowStatement) acceptValue(v object.Value) {
-	st.excptn = v
-}
-
-func findTryAndThrow(st state, excptn object.Value) state {
-	// Search up the stack to find last stateTryStatement
-	for s := st.getParent(); s != nil; s = s.getParent() {
-		sts, ok := s.(*stateTryStatement)
-		if ok {
-			sts.excptn = excptn
-			return sts
-		}
-	}
-	panic(fmt.Errorf("uncaught exception %#v", excptn))
+	return st.parent, &cval{THROW, cv.pval(), ""}
 }
 
 /********************************************************************/
@@ -1076,11 +839,11 @@ func findTryAndThrow(st state, excptn object.Value) state {
 type stateTryStatement struct {
 	stateCommon
 	labelsCommon
-	block                                 *ast.BlockStatement
-	handler                               *ast.CatchClause
-	finalizer                             *ast.BlockStatement
-	doneBlock, doneHandler, doneFinalizer bool
-	excptn                                object.Value
+	block              *ast.BlockStatement
+	handler            *ast.CatchClause
+	finalizer          *ast.BlockStatement
+	cv                 *cval
+	handled, finalized bool
 }
 
 func (st *stateTryStatement) init(node *ast.TryStatement) {
@@ -1089,27 +852,39 @@ func (st *stateTryStatement) init(node *ast.TryStatement) {
 	st.finalizer = node.Finalizer
 }
 
-func (st *stateTryStatement) step() state {
-	if !st.doneBlock {
-		st.doneBlock = true
-		return newState(st, st.scope, st.block)
+func (st *stateTryStatement) step(cv *cval) (state, *cval) {
+	if cv == nil {
+		if st.handled || st.finalized {
+			panic("done block or catch before begun?")
+		}
+		return newState(st, st.scope, st.block), nil
 	}
-	if st.excptn != nil && st.handler != nil && !st.doneHandler {
-		cc := newState(st, st.scope, st.handler).(*stateCatchClause)
-		cc.excptn = st.excptn
-		st.excptn = nil
-		return cc
+	if !st.handled {
+		// At this point cv is result from block.
+		st.handled = true
+		if cv.typ == THROW && st.handler != nil {
+			return newState(st, st.scope, st.handler).(*stateCatchClause),
+				pval(cv.val)
+		}
 	}
-	if st.finalizer != nil && !st.doneFinalizer {
-		st.doneFinalizer = true
-		return newState(st, st.scope, st.finalizer)
+	if !st.finalized {
+		// At this point, cv is non-throw result of block, or
+		// possibly-still-throw result of handling throw result from
+		// block.
+		if st.finalizer != nil {
+			st.finalized = true
+			st.cv = cv // save to re-throw
+			return newState(st, st.scope, st.finalizer), nil
+		}
+		// There's no finalizer; just return
+		return st.parent, cv
 	}
-	if st.excptn != nil {
-		// There was no catch handler, or the catch/finally threw an
-		// error.  Throw the error up to a higher try.
-		return findTryAndThrow(st, st.excptn)
+	// At this point cv is result from finalizser, and st.cv is saved
+	// result from block or handler.
+	if cv.abrupt() {
+		return st.parent, cv
 	}
-	return st.parent
+	return st.parent, st.cv
 }
 
 /********************************************************************/
@@ -1127,37 +902,26 @@ func (st *stateUpdateExpression) init(node *ast.UpdateExpression) {
 	st.arg.init(st, st.scope, node.Argument)
 }
 
-func (st *stateUpdateExpression) step() state {
+func (st *stateUpdateExpression) step(cv *cval) (state, *cval) {
 	if !st.arg.ready {
-		return &st.arg
+		return &st.arg, nil
 	}
 
 	// Do update:
-	v := st.arg.get()
-	n, ok := v.(object.Number)
-	if !ok {
-		// FIXME: coerce v to number
-		panic("not a number")
-	}
-	if !st.prefix {
-		st.parent.(valueAcceptor).acceptValue(n)
-	}
+	n := st.arg.get().ToNumber()
+	r := n
 	switch st.op {
 	case "++":
 		n++
 	case "--":
 		n--
 	default:
-		panic(fmt.Errorf("unrecognized update operator '%s'", st.op))
+		panic(fmt.Errorf("illegal update operator '%s'", st.op))
 	}
 	if st.prefix {
-		st.parent.(valueAcceptor).acceptValue(n)
+		r = n
 	}
-	st.arg.set(n)
-	return st.parent
-}
-
-func (st *stateUpdateExpression) acceptValue(v object.Value) {
+	return st.parent, pval(r)
 }
 
 /********************************************************************/
@@ -1166,6 +930,7 @@ type stateVariableDeclaration struct {
 	stateCommon
 	labelsCommon
 	decls []*ast.VariableDeclarator
+	n     int
 }
 
 func (st *stateVariableDeclaration) init(node *ast.VariableDeclaration) {
@@ -1175,48 +940,19 @@ func (st *stateVariableDeclaration) init(node *ast.VariableDeclaration) {
 	}
 }
 
-func (st *stateVariableDeclaration) step() state {
-	// Create a stateVariableDeclarator for every VariableDeclarator
-	// that has an Init value, chaining them together so they will
-	// execute in left-to-right order.
-	var p = st.parent
-	for i := len(st.decls) - 1; i >= 0; i-- {
-		if st.decls[i].Init.E != nil {
-			p = newState(p, st.scope, st.decls[i])
-		}
+func (st *stateVariableDeclaration) step(cv *cval) (state, *cval) {
+	if cv != nil {
+		st.scope.setVar(st.decls[st.n].Id.Name, cv.pval())
+		st.n++
 	}
-	return p
-}
-
-/********************************************************************/
-
-type stateVariableDeclarator struct {
-	stateCommon
-	name  string
-	expr  ast.Expression
-	value object.Value
-}
-
-func (st *stateVariableDeclarator) init(node *ast.VariableDeclarator) {
-	st.name = node.Id.Name
-	st.expr = node.Init
-	st.value = nil
-}
-
-func (st *stateVariableDeclarator) step() state {
-	if st.expr.E == nil {
-		panic("Why are we bothering to execute an variable declaration" +
-			"(that has already been hoisted) that has no initialiser?")
+	// Skip any decls without initializers:
+	for st.n < len(st.decls) && st.decls[st.n].Init.E == nil {
+		st.n++
 	}
-	if st.value == nil {
-		return newState(st, st.scope, ast.Node(st.expr.E))
+	if st.n < len(st.decls) {
+		return newState(st, st.scope, st.decls[st.n].Init.E), nil
 	}
-	st.scope.setVar(st.name, st.value)
-	return st.parent
-}
-
-func (st *stateVariableDeclarator) acceptValue(v object.Value) {
-	st.value = v
+	return st.parent, &cval{NORMAL, nil, ""}
 }
 
 /********************************************************************/
@@ -1224,10 +960,10 @@ func (st *stateVariableDeclarator) acceptValue(v object.Value) {
 type stateWhileStatement struct {
 	stateCommon
 	labelsCommon
-	test       ast.Expression
-	body       ast.Statement
-	testDone   bool
-	testResult bool
+	test   ast.Expression
+	body   ast.Statement
+	tested bool
+	val    object.Value // For completion value
 }
 
 func (st *stateWhileStatement) init(node *ast.WhileStatement) {
@@ -1238,24 +974,33 @@ func (st *stateWhileStatement) init(node *ast.WhileStatement) {
 func (st *stateWhileStatement) initFromDoWhile(node *ast.DoWhileStatement) {
 	st.test = node.Test
 	st.body = node.Body
-	st.testDone = true
-	st.testResult = true
+	st.tested = true
 }
 
-func (st *stateWhileStatement) step() state {
-	if !st.testDone {
-		return newState(st, st.scope, st.test.E)
+func (st *stateWhileStatement) step(cv *cval) (state, *cval) {
+	if cv == nil {
+		return newState(st, st.scope, st.test.E), nil
 	}
-	if st.testResult {
-		st.testDone = false
-		return newState(st, st.scope, st.body.S)
+	if !st.tested {
+		if cv != nil && !bool(cv.pval().ToBoolean()) {
+			return st.parent, &cval{NORMAL, st.val, ""}
+		}
+		st.tested = true
+		return newState(st, st.scope, st.body.S), nil
 	}
-	return st.parent
-}
-
-func (st *stateWhileStatement) acceptValue(v object.Value) {
-	st.testDone = true
-	st.testResult = bool(v.ToBoolean())
+	// At this point cv is cval from body.
+	if cv.val != nil {
+		st.val = cv.val
+	}
+	if cv.typ != CONTINUE || !st.hasLabel(cv.targ) {
+		if cv.typ == BREAK && (cv.targ == "" || st.hasLabel(cv.targ)) {
+			return st.parent, &cval{NORMAL, st.val, ""}
+		} else if cv.abrupt() {
+			return st.parent, cv
+		}
+	}
+	st.tested = false
+	return newState(st, st.scope, st.test.E), nil
 }
 
 /********************************************************************/
@@ -1282,7 +1027,7 @@ func (st *stateWhileStatement) acceptValue(v object.Value) {
 //      ...
 //  }
 //
-//  func (st *stateFoo) step() state {
+//  func (st *stateFoo) step(cv *cval) (state, *cval) {
 //      if(!st.lv.ready) {
 //          return &st.lv
 //      }
@@ -1291,6 +1036,7 @@ func (st *stateWhileStatement) acceptValue(v object.Value) {
 //      ...
 //  }
 //
+//  FIXME: update this example to deal with *cvals.
 type lvalue struct {
 	stateCommon
 	baseExpr        ast.Expression // To be resolve to obtain base
@@ -1349,38 +1095,35 @@ func (lv *lvalue) set(value object.Value) {
 	}
 }
 
-func (lv *lvalue) step() state {
-	if !lv.haveBase {
-		return newState(lv, lv.scope, ast.Node(lv.baseExpr.E))
-	} else if !lv.ready {
-		if lv.computed {
-			return newState(lv, lv.scope, ast.Node(lv.membExpr.E))
+func (lv *lvalue) step(cv *cval) (state, *cval) {
+	if lv.ready {
+		panic("lvalue already ready??")
+	}
+	if cv == nil {
+		if lv.haveBase {
+			panic("lvalue already has base??")
 		}
-
+		return newState(lv, lv.scope, ast.Node(lv.baseExpr.E)), nil
+	}
+	if !lv.haveBase {
+		lv.base = cv.pval()
+		lv.haveBase = true
+		if lv.computed {
+			return newState(lv, lv.scope, ast.Node(lv.membExpr.E)), nil
+		}
 		// It's expr.identifier; get name of identifier:
-		i, ok := lv.membExpr.E.(*ast.Identifier)
-		if !ok {
+		i, isID := lv.membExpr.E.(*ast.Identifier)
+		if !isID {
 			panic(fmt.Errorf("invalid computed member expression type %T",
 				lv.membExpr.E))
 		}
 		lv.name = i.Name
 		lv.ready = true
-		return lv.parent
-	} else {
-		return lv.parent
-	}
-}
-
-func (lv *lvalue) acceptValue(v object.Value) {
-	if lv.scope.interpreter.Verbose {
-		fmt.Printf("lvalue just got %v.\n", v)
-	}
-	if !lv.haveBase {
-		lv.base = v
-		lv.haveBase = true
+		return lv.parent, nil
 	} else if !lv.ready {
-		lv.name = string(v.ToString())
+		lv.name = string(cv.pval().ToString())
 		lv.ready = true
+		return lv.parent, nil
 	} else {
 		panic(fmt.Errorf("too may values"))
 	}

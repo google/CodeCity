@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-// Package interpreter implements a JavaScript interpreter.
 package interpreter
 
 import (

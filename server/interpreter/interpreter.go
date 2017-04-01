@@ -27,7 +27,7 @@ import (
 // Interpreter implements a JavaScript interpreter.
 type Interpreter struct {
 	state   state
-	value   object.Value
+	value   *cval
 	Verbose bool
 }
 
@@ -55,9 +55,9 @@ func (intrp *Interpreter) Step() bool {
 		return false
 	}
 	if intrp.Verbose {
-		fmt.Printf("Next step is a %T\n", intrp.state)
+		fmt.Printf("Next step is %T.step(%#v)\n", intrp.state, intrp.value)
 	}
-	intrp.state = intrp.state.step()
+	intrp.state, intrp.value = intrp.state.step(intrp.value)
 	return true
 }
 
@@ -70,14 +70,8 @@ func (intrp *Interpreter) Run() {
 // Value returns the final value computed by the last statement
 // expression of the program.
 func (intrp *Interpreter) Value() object.Value {
-	return intrp.value
-}
-
-// acceptValue receives values computed by StatementExpressions; the
-// last such value accepted is the completion value of the program.
-func (intrp *Interpreter) acceptValue(v object.Value) {
-	if intrp.Verbose {
-		fmt.Printf("Interpreter just got %v.\n", v)
+	if intrp.value == nil {
+		return nil
 	}
-	intrp.value = v
+	return intrp.value.val
 }
