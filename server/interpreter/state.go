@@ -921,6 +921,7 @@ func (st *stateUpdateExpression) step(cv *cval) (state, *cval) {
 	if st.prefix {
 		r = n
 	}
+	st.arg.set(n)
 	return st.parent, pval(r)
 }
 
