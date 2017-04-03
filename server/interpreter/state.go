@@ -1015,13 +1015,11 @@ type stateWhileStatement struct {
 }
 
 func (st *stateWhileStatement) init(node *ast.WhileStatement) {
-	st.addLabel("")
 	st.test = node.Test
 	st.body = node.Body
 }
 
 func (st *stateWhileStatement) initFromDoWhile(node *ast.DoWhileStatement) {
-	st.addLabel("")
 	st.test = node.Test
 	st.body = node.Body
 	st.tested = true
@@ -1045,7 +1043,7 @@ func (st *stateWhileStatement) step(cv *cval) (state, *cval) {
 	}
 	// At this point cv is cval from body.
 	st.val = cv.val
-	if cv.typ != CONTINUE || !st.hasLabel(cv.targ) {
+	if cv.typ != CONTINUE || !(cv.targ == "" || st.hasLabel(cv.targ)) {
 		if cv.typ == BREAK && (cv.targ == "" || st.hasLabel(cv.targ)) {
 			return st.parent, &cval{NORMAL, st.val, ""}
 		} else if cv.abrupt() {
