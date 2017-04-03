@@ -73,6 +73,8 @@ func TestInterpreterSimple(t *testing.T) {
 		{"false||64", orFalse, object.Number(64)},
 		{"({})&&65", andTrue, object.Number(65)},
 		{"0&&65", andFalse, object.Number(0)},
+		{"var t=0;for(var i=0;i<12;i++){t+=i};t",
+			forTriangular, object.Number(66)},
 	}
 
 	for _, c := range tests {
@@ -349,6 +351,14 @@ const andTrue = `{"type":"Program","start":0,"end":10,"body":[{"type":"Expressio
 // 0 && 65
 // => 0
 const andFalse = `{"type":"Program","start":0,"end":7,"body":[{"type":"ExpressionStatement","start":0,"end":7,"expression":{"type":"LogicalExpression","start":0,"end":7,"left":{"type":"Literal","start":0,"end":1,"value":0,"raw":"0"},"operator":"&&","right":{"type":"Literal","start":5,"end":7,"value":65,"raw":"65"}}}]}`
+
+// var t = 0;
+// for(var i=0; i < 12; i++) {
+//   t += i
+// }
+// t
+// => 66
+const forTriangular = `{"type":"Program","start":0,"end":51,"body":[{"type":"VariableDeclaration","start":0,"end":10,"declarations":[{"type":"VariableDeclarator","start":4,"end":9,"id":{"type":"Identifier","start":4,"end":5,"name":"t"},"init":{"type":"Literal","start":8,"end":9,"value":0,"raw":"0"}}],"kind":"var"},{"type":"ForStatement","start":11,"end":49,"init":{"type":"VariableDeclaration","start":15,"end":22,"declarations":[{"type":"VariableDeclarator","start":19,"end":22,"id":{"type":"Identifier","start":19,"end":20,"name":"i"},"init":{"type":"Literal","start":21,"end":22,"value":0,"raw":"0"}}],"kind":"var"},"test":{"type":"BinaryExpression","start":24,"end":30,"left":{"type":"Identifier","start":24,"end":25,"name":"i"},"operator":"<","right":{"type":"Literal","start":28,"end":30,"value":12,"raw":"12"}},"update":{"type":"UpdateExpression","start":32,"end":35,"operator":"++","prefix":false,"argument":{"type":"Identifier","start":32,"end":33,"name":"i"}},"body":{"type":"BlockStatement","start":37,"end":49,"body":[{"type":"ExpressionStatement","start":41,"end":47,"expression":{"type":"AssignmentExpression","start":41,"end":47,"operator":"+=","left":{"type":"Identifier","start":41,"end":42,"name":"t"},"right":{"type":"Identifier","start":46,"end":47,"name":"i"}}}]}},{"type":"ExpressionStatement","start":50,"end":51,"expression":{"type":"Identifier","start":50,"end":51,"name":"t"}}]}`
 
 // ({Foo: "bar", answer: 42})
 // => {foo: "bar", answer: 42}

@@ -98,6 +98,10 @@ func newState(parent state, scope *scope, node ast.Node) state {
 		st := stateExpressionStatement{stateCommon: sc}
 		st.init(n)
 		return &st
+	case *ast.ForStatement:
+		st := stateForStatement{stateCommon: sc}
+		st.init(n)
+		return &st
 	case *ast.FunctionDeclaration:
 		st := stateFunctionDeclaration{stateCommon: sc}
 		st.init(n)
@@ -576,6 +580,96 @@ func (st *stateExpressionStatement) step(cv *cval) (state, *cval) {
 		return newState(st, st.scope, ast.Node(st.expr.E)), nil
 	}
 	return st.parent, cv
+}
+
+/********************************************************************/
+
+type stateForState int
+
+const (
+	forUnstarted stateForState = iota
+	forInit
+	forTest
+	forUpdate
+	forBody
+)
+
+type stateForStatement struct {
+	stateCommon
+	labelsCommon
+	ini      ast.ForStatementInit
+	tst, upd ast.Expression
+	body     ast.Statement
+	state    stateForState
+	val      object.Value // For completion value
+}
+
+func (st *stateForStatement) init(node *ast.ForStatement) {
+	st.ini = node.Init
+	st.tst = node.Test
+	st.upd = node.Update
+	st.body = node.Body
+	st.state = forUnstarted
+}
+
+func (st *stateForStatement) step(cv *cval) (state, *cval) {
+	// Handle return value from previous evaluation:
+	switch st.state {
+	case forUnstarted:
+		if cv != nil {
+			panic("internal error: for loop not started")
+		}
+	case forInit, forUpdate:
+		if cv.abrupt() {
+			return st.parent, cv
+		}
+	case forTest:
+		if cv.abrupt() {
+			return st.parent, cv
+		} else if cv.pval().ToBoolean() == false {
+			return st.parent, &cval{NORMAL, st.val, ""}
+		}
+	case forBody:
+		st.val = cv.val
+		if cv.typ == BREAK && (cv.targ == "" || st.hasLabel(cv.targ)) {
+			return st.parent, &cval{NORMAL, st.val, ""}
+		} else if (cv.typ != CONTINUE || !(cv.targ == "" ||
+			st.hasLabel(cv.targ))) && cv.abrupt() {
+			return st.parent, cv
+		}
+	default:
+		panic("invalid for statement state")
+	}
+
+	// Figure out what to evaluate next:
+	for {
+		switch st.state {
+		case forUnstarted:
+			if vd, isVarDecl := st.ini.N.(*ast.VariableDeclaration); isVarDecl {
+				st.state = forInit
+				return newState(st, st.scope, vd), nil
+			}
+			fallthrough
+		case forInit, forUpdate:
+			if st.tst.E != nil {
+				st.state = forTest
+				return newState(st, st.scope, st.tst.E), nil
+			}
+			fallthrough
+		case forTest:
+			// Must have a body.  (FIXME: error check invalid ast?)
+			st.state = forBody
+			return newState(st, st.scope, st.body.S), nil
+		case forBody:
+			if st.upd.E != nil {
+				st.state = forUpdate
+				return newState(st, st.scope, st.upd.E), nil
+			}
+			st.state = forInit // enclosing for loop takes us there
+		default:
+			panic("invalid for statement state")
+		}
+	}
 }
 
 /********************************************************************/
