@@ -69,6 +69,10 @@ func TestInterpreterSimple(t *testing.T) {
 		{"(function(){var i=0;while(i++<61){try{return 42}" +
 			"finally{continue}}return i})()",
 			returnWithFinallyContinue, object.Number(62)},
+		{"63||\"foo\"", orTrue, object.Number(63)},
+		{"false||64", orFalse, object.Number(64)},
+		{"({})&&65", andTrue, object.Number(65)},
+		{"0&&65", andFalse, object.Number(0)},
 	}
 
 	for _, c := range tests {
@@ -329,6 +333,22 @@ const breakWithFinallyContinue = `{"type":"Program","start":0,"end":82,"body":[{
 // })();
 // => 62
 const returnWithFinallyContinue = `{"type":"Program","start":0,"end":131,"body":[{"type":"ExpressionStatement","start":0,"end":131,"expression":{"type":"CallExpression","start":0,"end":130,"callee":{"type":"FunctionExpression","start":0,"end":128,"id":null,"params":[],"body":{"type":"BlockStatement","start":11,"end":127,"body":[{"type":"VariableDeclaration","start":15,"end":24,"declarations":[{"type":"VariableDeclarator","start":19,"end":24,"id":{"type":"Identifier","start":19,"end":20,"name":"i"},"init":{"type":"Literal","start":23,"end":24,"value":0,"raw":"0"}}],"kind":"var"},{"type":"WhileStatement","start":27,"end":113,"test":{"type":"BinaryExpression","start":33,"end":41,"left":{"type":"UpdateExpression","start":33,"end":36,"operator":"++","prefix":false,"argument":{"type":"Identifier","start":33,"end":34,"name":"i"}},"operator":"<","right":{"type":"Literal","start":39,"end":41,"value":61,"raw":"61"}},"body":{"type":"BlockStatement","start":43,"end":113,"body":[{"type":"TryStatement","start":49,"end":109,"block":{"type":"BlockStatement","start":53,"end":77,"body":[{"type":"ReturnStatement","start":61,"end":71,"argument":{"type":"Literal","start":68,"end":70,"value":42,"raw":"42"}}]},"handler":null,"guardedHandlers":[],"finalizer":{"type":"BlockStatement","start":86,"end":109,"body":[{"type":"ContinueStatement","start":94,"end":103,"label":null}]}}]}},{"type":"ReturnStatement","start":116,"end":125,"argument":{"type":"Identifier","start":123,"end":124,"name":"i"}}]}},"arguments":[]}}]}`
+
+// 63 || "foo"
+// => 63
+const orTrue = `{"type":"Program","start":0,"end":11,"body":[{"type":"ExpressionStatement","start":0,"end":11,"expression":{"type":"LogicalExpression","start":0,"end":11,"left":{"type":"Literal","start":0,"end":2,"value":63,"raw":"63"},"operator":"||","right":{"type":"Literal","start":6,"end":11,"value":"foo","raw":"\"foo\""}}}]}`
+
+// false || 64
+// => 64
+const orFalse = `{"type":"Program","start":0,"end":11,"body":[{"type":"ExpressionStatement","start":0,"end":11,"expression":{"type":"LogicalExpression","start":0,"end":11,"left":{"type":"Literal","start":0,"end":5,"value":false,"raw":"false"},"operator":"||","right":{"type":"Literal","start":9,"end":11,"value":64,"raw":"64"}}}]}`
+
+// ({}) && 65
+// => 65
+const andTrue = `{"type":"Program","start":0,"end":10,"body":[{"type":"ExpressionStatement","start":0,"end":10,"expression":{"type":"LogicalExpression","start":0,"end":10,"left":{"type":"ObjectExpression","start":0,"end":4,"properties":[]},"operator":"&&","right":{"type":"Literal","start":8,"end":10,"value":65,"raw":"65"}}}]}`
+
+// 0 && 65
+// => 0
+const andFalse = `{"type":"Program","start":0,"end":7,"body":[{"type":"ExpressionStatement","start":0,"end":7,"expression":{"type":"LogicalExpression","start":0,"end":7,"left":{"type":"Literal","start":0,"end":1,"value":0,"raw":"0"},"operator":"&&","right":{"type":"Literal","start":5,"end":7,"value":65,"raw":"65"}}}]}`
 
 // ({Foo: "bar", answer: 42})
 // => {foo: "bar", answer: 42}

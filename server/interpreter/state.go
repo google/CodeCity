@@ -122,6 +122,10 @@ func newState(parent state, scope *scope, node ast.Node) state {
 		st := stateLiteral{stateCommon: sc}
 		st.init(n)
 		return &st
+	case *ast.LogicalExpression:
+		st := stateLogicalExpression{stateCommon: sc}
+		st.init(n)
+		return &st
 	case *ast.MemberExpression:
 		st := stateMemberExpression{stateCommon: sc}
 		st.init(n)
@@ -705,6 +709,44 @@ func (st *stateLiteral) init(node *ast.Literal) {
 
 func (st *stateLiteral) step(cv *cval) (state, *cval) {
 	return st.parent, pval(st.value)
+}
+
+/********************************************************************/
+
+type stateLogicalExpression struct {
+	stateCommon
+	op          string
+	left, right ast.Expression
+}
+
+func (st *stateLogicalExpression) init(node *ast.LogicalExpression) {
+	st.op = node.Operator
+	st.left = node.Left
+	st.right = node.Right
+}
+
+func (st *stateLogicalExpression) step(cv *cval) (state, *cval) {
+	if cv == nil {
+		return newState(st, st.scope, st.left.E), nil
+	} else if cv.abrupt() {
+		return st.parent, cv
+	}
+	switch st.op {
+	case "&&":
+		if cv.pval().ToBoolean() {
+			return newState(st.parent, st.scope, st.right.E), nil // tail call
+		} else {
+			return st.parent, cv
+		}
+	case "||":
+		if cv.pval().ToBoolean() {
+			return st.parent, cv
+		} else {
+			return newState(st.parent, st.scope, st.right.E), nil // tail call
+		}
+	default:
+		panic(fmt.Errorf("illegal logical operator '%s'", st.op))
+	}
 }
 
 /********************************************************************/
