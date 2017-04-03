@@ -62,7 +62,7 @@ func TestInterpreterSimple(t *testing.T) {
 		{"foo:break foo", selfBreak, nil}, // NO completion value
 		{"var a=6;foo:{try{a*=10;break foo}finally{a--}};a",
 			breakWithFinally, object.Number(59)},
-		{"var a=0;for(var i=0;i<60;i++){try{continue;}finally{a++;}};a",
+		{"var a=59;do {try{continue}finally{a++}}while(false);a",
 			continueWithFinally, object.Number(60)},
 	}
 
