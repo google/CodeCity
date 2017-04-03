@@ -265,11 +265,10 @@ func (st *stateAssignmentExpression) step(cv *cval) (state, *cval) {
 		return st.parent, cv
 	}
 
-	// Do (operator)assignment:
 	var r object.Value = cv.pval()
-	if st.op == "=" {
-		// nothing extra to do
-	} else {
+
+	// Do (operator)assignment:
+	if st.op != "=" {
 		var op string
 		switch st.op {
 		case "+=":
