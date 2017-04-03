@@ -259,6 +259,8 @@ func (st *stateAssignmentExpression) init(node *ast.AssignmentExpression) {
 	st.left.init(st, st.scope, node.Left)
 }
 
+// FIXME: ToString() and ToNumber() calls in object.BinaryOp should be
+// able to result in calls to user toString() and valueOf() methods
 func (st *stateAssignmentExpression) step(cv *cval) (state, *cval) {
 	if !st.left.ready {
 		return &st.left, nil
@@ -987,6 +989,8 @@ func (st *stateUpdateExpression) init(node *ast.UpdateExpression) {
 	st.arg.init(st, st.scope, node.Argument)
 }
 
+// FIXME: ToNumber should be able to result in call to user valueOf
+// method.
 func (st *stateUpdateExpression) step(cv *cval) (state, *cval) {
 	if !st.arg.ready {
 		return &st.arg, nil
