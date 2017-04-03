@@ -415,10 +415,10 @@ func (st *stateCallExpression) step(cv *cval) (state, *cval) {
 			fmt.Printf("sCE: first visit: eval function\n")
 		}
 		if st.ns != nil {
-			panic("have scope already???")
+			panic("have scope already??")
 		}
 		if st.cl != nil {
-			panic("have closure already???")
+			panic("have closure already??")
 		}
 		return newState(st, st.scope, st.callee.E), nil
 	} else if cv.abrupt() {
@@ -898,7 +898,7 @@ func (st *stateTryStatement) init(node *ast.TryStatement) {
 func (st *stateTryStatement) step(cv *cval) (state, *cval) {
 	if cv == nil {
 		if st.handled || st.finalized {
-			panic("done block or catch before begun?")
+			panic("done block or catch before begun??")
 		}
 		return newState(st, st.scope, st.block), nil
 	}
