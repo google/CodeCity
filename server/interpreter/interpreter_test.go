@@ -62,11 +62,13 @@ func TestInterpreterSimple(t *testing.T) {
 		{"foo:break foo", selfBreak, nil}, // NO completion value
 		{"var a=6;foo:{try{a*=10;break foo}finally{a--}};a",
 			breakWithFinally, object.Number(59)},
+		{"var a=0;for(var i=0;i<60;i++){try{continue;}finally{a++;}};a",
+			continueWithFinally, object.Number(60)},
 	}
 
 	for _, c := range tests {
 		i := New(c.src)
-		// if c.src == breakWithFinally {
+		// if c.src == continueWithFinally {
 		// 	i.Verbose = true
 		// }
 		i.Run()
@@ -284,6 +286,18 @@ const selfBreak = `{"type":"Program","start":0,"end":14,"body":[{"type":"Labeled
 // a
 // => 59
 const breakWithFinally = `{"type":"Program","start":0,"end":102,"body":[{"type":"VariableDeclaration","start":0,"end":9,"declarations":[{"type":"VariableDeclarator","start":4,"end":9,"id":{"type":"Identifier","start":4,"end":5,"name":"a"},"init":{"type":"Literal","start":8,"end":9,"value":6,"raw":"6"}}],"kind":"var"},{"type":"LabeledStatement","start":10,"end":100,"body":{"type":"BlockStatement","start":15,"end":100,"body":[{"type":"TryStatement","start":21,"end":98,"block":{"type":"BlockStatement","start":25,"end":66,"body":[{"type":"ExpressionStatement","start":35,"end":42,"expression":{"type":"AssignmentExpression","start":35,"end":42,"operator":"*=","left":{"type":"Identifier","start":35,"end":36,"name":"a"},"right":{"type":"Literal","start":40,"end":42,"value":10,"raw":"10"}}},{"type":"BreakStatement","start":51,"end":60,"label":{"type":"Identifier","start":57,"end":60,"name":"foo"}}]},"handler":null,"guardedHandlers":[],"finalizer":{"type":"BlockStatement","start":79,"end":98,"body":[{"type":"ExpressionStatement","start":89,"end":92,"expression":{"type":"UpdateExpression","start":89,"end":92,"operator":"--","prefix":false,"argument":{"type":"Identifier","start":89,"end":90,"name":"a"}}}]}}]},"label":{"type":"Identifier","start":10,"end":13,"name":"foo"}},{"type":"ExpressionStatement","start":101,"end":102,"expression":{"type":"Identifier","start":101,"end":102,"name":"a"}}]}`
+
+// var a = 59;
+// do {
+//   try {
+//     continue;
+//   } finally {
+//     a++;
+//   }
+// } while(false)
+// a
+// => 60
+const continueWithFinally = `{"type":"Program","start":0,"end":82,"body":[{"type":"VariableDeclaration","start":0,"end":11,"declarations":[{"type":"VariableDeclarator","start":4,"end":10,"id":{"type":"Identifier","start":4,"end":5,"name":"a"},"init":{"type":"Literal","start":8,"end":10,"value":59,"raw":"59"}}],"kind":"var"},{"type":"DoWhileStatement","start":12,"end":80,"body":{"type":"BlockStatement","start":15,"end":67,"body":[{"type":"TryStatement","start":19,"end":65,"block":{"type":"BlockStatement","start":23,"end":42,"body":[{"type":"ContinueStatement","start":29,"end":38,"label":null}]},"handler":null,"guardedHandlers":[],"finalizer":{"type":"BlockStatement","start":51,"end":65,"body":[{"type":"ExpressionStatement","start":57,"end":61,"expression":{"type":"UpdateExpression","start":57,"end":60,"operator":"++","prefix":false,"argument":{"type":"Identifier","start":57,"end":58,"name":"a"}}}]}}]},"test":{"type":"Literal","start":74,"end":79,"value":false,"raw":"false"}},{"type":"ExpressionStatement","start":81,"end":82,"expression":{"type":"Identifier","start":81,"end":82,"name":"a"}}]}`
 
 // ({foo: "bar", answer: 42})
 // => {foo: "bar", answer: 42}

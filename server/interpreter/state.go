@@ -82,6 +82,10 @@ func newState(parent state, scope *scope, node ast.Node) state {
 		st := stateConditionalExpression{stateCommon: sc}
 		st.init(n)
 		return &st
+	case *ast.ContinueStatement:
+		st := stateContinueStatement{stateCommon: sc}
+		st.init(n)
+		return &st
 	case *ast.DoWhileStatement:
 		st := stateWhileStatement{stateCommon: sc}
 		st.initFromDoWhile(n)
@@ -516,6 +520,24 @@ func (st *stateConditionalExpression) step(cv *cval) (state, *cval) {
 	} else {
 		return newState(st.parent, st.scope, st.alternate.E), nil
 	}
+}
+
+/********************************************************************/
+
+type stateContinueStatement struct {
+	stateCommon
+	labelsCommon
+	label string
+}
+
+func (st *stateContinueStatement) init(node *ast.ContinueStatement) {
+	if node.Label != nil {
+		st.label = node.Label.Name
+	}
+}
+
+func (st *stateContinueStatement) step(cv *cval) (state, *cval) {
+	return st.parent, &cval{CONTINUE, nil, st.label}
 }
 
 /********************************************************************/
@@ -993,11 +1015,13 @@ type stateWhileStatement struct {
 }
 
 func (st *stateWhileStatement) init(node *ast.WhileStatement) {
+	st.addLabel("")
 	st.test = node.Test
 	st.body = node.Body
 }
 
 func (st *stateWhileStatement) initFromDoWhile(node *ast.DoWhileStatement) {
+	st.addLabel("")
 	st.test = node.Test
 	st.body = node.Body
 	st.tested = true
