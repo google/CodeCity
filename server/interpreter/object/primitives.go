@@ -102,6 +102,8 @@ func (Boolean) SetProperty(name string, value Value) *ErrorMsg {
 	return nil
 }
 
+func (Boolean) propNames() []string { return nil }
+
 // ToBoolean on a Boolean just returns itself.
 func (b Boolean) ToBoolean() Boolean {
 	return b
@@ -162,6 +164,8 @@ func (n Number) GetProperty(name string) (Value, *ErrorMsg) {
 func (Number) SetProperty(name string, value Value) *ErrorMsg {
 	return nil
 }
+
+func (Number) propNames() []string { return nil }
 
 // ToBoolean on a number returns true if the number is not 0 or NaN.
 func (n Number) ToBoolean() Boolean {
@@ -235,6 +239,8 @@ func (s String) GetProperty(name string) (Value, *ErrorMsg) {
 func (String) SetProperty(name string, value Value) *ErrorMsg {
 	return nil
 }
+
+func (String) propNames() []string { return []string{"length"} }
 
 // ToBoolean on String returns true iff the string is non-empty.
 func (s String) ToBoolean() Boolean {
@@ -332,6 +338,8 @@ func (Null) SetProperty(name string, value Value) *ErrorMsg {
 	}
 }
 
+func (Null) propNames() []string { return nil }
+
 // ToBoolean on Null always return false.
 func (Null) ToBoolean() Boolean {
 	return false
@@ -390,6 +398,8 @@ func (Undefined) SetProperty(name string, value Value) *ErrorMsg {
 		Message: fmt.Sprintf("Cannot set property '%s' of undefined", name),
 	}
 }
+
+func (Undefined) propNames() []string { return nil }
 
 // ToBoolean on Undefined always returns false.
 func (Undefined) ToBoolean() Boolean {

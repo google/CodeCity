@@ -43,6 +43,14 @@ type Value interface {
 	// returns an ErrorMsg if that was not possible.
 	SetProperty(name string, value Value) *ErrorMsg
 
+	// propNames returns the list of (own) property names as a slice
+	// of strings.
+	propNames() []string
+
+	// PropertyIter returns an iterator which will iterate over the
+	// properties of the object.
+	//	PropertyIter() *PropertyIter
+
 	// ToBoolean returns true iff the object is truthy.
 	ToBoolean() Boolean
 
@@ -149,6 +157,16 @@ func (obj *Object) SetProperty(name string, value Value) *ErrorMsg {
 	pd.v = value
 	obj.properties[name] = pd
 	return nil
+}
+
+func (obj *Object) propNames() []string {
+	names := make([]string, len(obj.properties))
+	i := 0
+	for k := range obj.properties {
+		names[i] = k
+		i++
+	}
+	return names
 }
 
 // ToBoolean always returns true for regular Objects.
