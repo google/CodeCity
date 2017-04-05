@@ -27,6 +27,32 @@
 var CCC = {};
 
 /**
+ * Smallest interval in milliseconds between pings.
+ * @constant
+ */
+CCC.MIN_PING_INTERVAL = 1000;
+
+/**
+ * Largest interval in milliseconds between pings.
+ * @constant
+ */
+CCC.MAX_PING_INTERVAL = 16000;
+
+/**
+ * Maximum number of commands saved in history.
+ * @constant
+ */
+CCC.MAX_HISTORY_SIZE = 1000;
+
+/**
+ * Location to send pings to.
+ * @constant
+ */
+CCC.PING_URL = '/connect?ping';
+
+// Properties below this point are not configurable.
+
+/**
  * All the commands the user has sent.
  */
 CCC.commandHistory = [];
@@ -45,42 +71,73 @@ CCC.commandHistoryPointer = -1;
  * When was the last time we saw the user?
  * @type {number}
  */
-CCC.lastactivetime = Date.now();
+CCC.lastActiveTime = Date.now();
 
 /**
- * The last command's index number.
+ * Number of lines we think the user has not seen.
  */
-CCC.commandindex = 0;
+CCC.unreadLines = 0;
 
 /**
- * Number of lines unread.
- * @type {number}
- * @private
+ * The index number of the first command on the commandOutput queue.
  */
-CCC.unreadlines_ = 0;
+CCC.commandIndex = 0;
+
+/**
+ * Queue of commands being sent, awaiting acks from server.
+ */
+CCC.commandOutput = [];
 
 /**
  * Bit to switch off local echo when typing passwords.
  */
-CCC.localecho = true;
+CCC.localEcho = true;
 
 /**
- * Maximum number of commands saved in history.
+ * The index number of the most recent message received from the server.
  */
-CCC.maxHistorySize = 1000;
+CCC.messageIndex = -1;
 
 /**
  * Number of calls to countdown required before launching.
+ */
+CCC.countdownValue = 2;
+
+/**
+ * XMLHttpRequest currently in flight, or null.
+ * @type {XMLHttpRequest}
+ */
+CCC.xhrObject = null;
+
+/**
+ * Current length of time between pings.
+ */
+CCC.pingInterval = CCC.MIN_PING_INTERVAL;
+
+/**
+ * Process ID of next ping to the server.
+ */
+CCC.nextPingPid = -1;
+
+/**
+ * Flag for only acknowledging new messages after a new message has arrived.
+ * Saves bandwidth.
+ */
+CCC.ackMsgNextPing = true;
+
+/**
+ * Unique queue ID.  Identifies this client to the connectServer across
+ * polling connections.  Set randomly at startup.
  * @private
  */
-CCC.countdown_ = 2;
+CCC.queueId_ = '';
 
 /**
  * After every iframe has reported ready, call the initialization.
  */
 CCC.countdown = function() {
-  CCC.countdown_--;
-  if (CCC.countdown_ == 0) {
+  CCC.countdownValue--;
+  if (!CCC.countdownValue) {
     CCC.init();
   }
 };
@@ -89,17 +146,19 @@ CCC.countdown = function() {
  * Initialization code called on startup.
  */
 CCC.init = function() {
+  CCC.queueId_ = CCC.genUid(8);
+
   CCC.worldFrame = document.getElementById('worldFrame');
   CCC.logFrame = document.getElementById('logFrame');
   CCC.displayCell = document.getElementById('displayCell');
-  CCC.commandInput = document.getElementById('commandInput');
+  CCC.commandTextarea = document.getElementById('commandTextarea');
 
   window.addEventListener('resize', CCC.resize, false);
   CCC.resize();
 
-  CCC.commandInput.addEventListener('keydown', CCC.keydown, false);
-  CCC.commandInput.value = '';
-  CCC.commandInput.focus();
+  CCC.commandTextarea.addEventListener('keydown', CCC.keydown, false);
+  CCC.commandTextarea.value = '';
+  CCC.commandTextarea.focus();
 
   var worldButton = document.getElementById('worldButton');
   worldButton.addEventListener('click', CCC.tab.bind(null, 'world'), false);
@@ -169,7 +228,7 @@ CCC.receiveMessage = function(e) {
  * Distribute a line of text to all frames.
  * @param {string} line Text from Code City.
  */
-CCC.renderLine = function(line) {
+CCC.distrubuteMessage = function(line) {
   CCC.logFrame.contentWindow.postMessage({mode: 'message', text: line},
                                          location.origin);
 };
@@ -178,7 +237,7 @@ CCC.renderLine = function(line) {
  * Distribute a command to all frames.
  * @param {string} line Text from user.
  */
-CCC.localEcho = function(line) {
+CCC.distrubuteCommand = function(line) {
   CCC.logFrame.contentWindow.postMessage({mode: 'command', text: line},
                                          location.origin);
 };
@@ -189,7 +248,7 @@ CCC.localEcho = function(line) {
  * @param {boolean} echo True if command to be saved in history.
  */
 CCC.sendCommand = function(commands, echo) {
-  CCC.lastactivetime = Date.now();
+  CCC.lastActiveTime = Date.now();
   CCC.setUnreadLines(0);
   commands = commands.split('\n');
   // A blank line at the end of a multi-line command is usually accidental.
@@ -197,21 +256,151 @@ CCC.sendCommand = function(commands, echo) {
     commands.pop();
   }
   for (var i = 0; i < commands.length; i++) {
+    // Add command to list of commands to send to server.
+    CCC.commandOutput.push(commands[i] + '\n');
+    // Add command to history.
     if (echo) {
       if (!CCC.commandHistory.length ||
           CCC.commandHistory[CCC.commandHistory.length - 1] != commands[i]) {
         CCC.commandHistory.push(commands[i]);
       }
     }
-    while (CCC.commandHistory.length > CCC.maxHistorySize) {
+    while (CCC.commandHistory.length > CCC.MAX_HISTORY_SIZE) {
       CCC.commandHistory.shift();
     }
+    // Echo command onscreen.
     if (echo) {
-      CCC.localEcho(commands[i]);
+      CCC.distrubuteCommand(commands[i]);
     }
   }
   CCC.commandTemp = '';
   CCC.commandHistoryPointer = -1;
+  // User is sending command, reset the ping to be frequent.
+  CCC.pingInterval = CCC.MIN_PING_INTERVAL;
+  // Interrupt any in-flight ping.
+  if (CCC.xhrObject) {
+    CCC.xhrObject.abort();
+    CCC.xhrObject = null;
+  }
+  CCC.doPing();
+};
+
+/**
+ * Initiate an XHR network connection.
+ */
+CCC.doPing = function() {
+  if (CCC.xhrObject) {
+    // Another ping is currently in progress.
+    return;
+  }
+  // Next ping will be scheduled when this ping completes,
+  // but schedule a contingency ping in case of some thrown error.
+  CCC.schedulePing(CCC.MAX_PING_INTERVAL + 1);
+
+  var sendingJson = {
+    'q': CCC.queueId_
+  };
+  if (CCC.ackMsgNextPing) {
+    sendingJson['ackMsg'] = CCC.messageIndex;
+  }
+  if (CCC.commandOutput.length) {
+    sendingJson['cmdNum'] = CCC.commandIndex;
+    sendingJson['cmds'] = CCC.commandOutput;
+  }
+
+  // XMLHttpRequest with timeout works in IE8 or better.
+  var req = new XMLHttpRequest();
+  req.onreadystatechange = CCC.xhrStateChange;
+  req.ontimeout = CCC.xhrTimeout;
+  req.open('POST', CCC.PING_URL, true);
+  req.timeout = CCC.MAX_PING_INTERVAL; // time in milliseconds
+  req.setRequestHeader('Content-Type','application/x-www-form-urlencoded');
+  req.send(JSON.stringify(sendingJson));
+  CCC.xhrObject = req;
+  // Let the ping interval creep up.
+  CCC.pingInterval = Math.min(CCC.MAX_PING_INTERVAL, CCC.pingInterval * 1.1);
+};
+
+/**
+ * Timeout function for XHR request.
+ * @this {!XMLHttpRequest}
+ */
+CCC.xhrTimeout = function() {
+  console.warn('Connection timeout.');
+  CCC.xhrObject = null;
+  CCC.schedulePing(CCC.pingInterval);
+};
+
+/**
+ * Callback function for XHR request.
+ * Check network response was ok, then call CCC.parse.
+ * @this {!XMLHttpRequest}
+ */
+CCC.xhrStateChange = function() {
+  // Only if request shows "loaded".
+  if (this.readyState == 4) {
+    CCC.xhrObject = null;
+    // Only if "OK".
+    if (this.status == 200) {
+      try {
+        var json = JSON.parse(this.responseText);
+      } catch (e) {
+        console.log('Invalid JSON: ' + this.responseText);
+        return;
+      }
+      CCC.parse(json);
+    } else {
+      console.warn('Connection error code: ' + this.status);
+    }
+    CCC.schedulePing(CCC.pingInterval);
+  }
+};
+
+/**
+ * Parse the response from the server.
+ * @param {!Object} receivedJson Server data.
+ */
+CCC.parse = function(receivedJson) {
+  var ackCmd = receivedJson['ackCmd'];
+  var msgNum = receivedJson['msgNum'];
+  var msgs = receivedJson['msgs'];
+
+  if (typeof ackCmd == 'number') {
+    // Server acknowledges receipt of commands.
+    // Remove them from the output list.
+    // TODO: Reimplement this with splice and math.
+    while (CCC.commandOutput.length && CCC.commandIndex <= ackCmd) {
+      CCC.commandOutput.shift();
+      CCC.commandIndex++;
+    }
+  }
+
+  if (typeof msgNum == 'number') {
+    // Server sent messages.  Increase client's index for acknowledgment.
+    var currentIndex = msgNum;
+    for (var i = 0; i < msgs.length; i++) {
+      if (currentIndex > CCC.messageIndex) {
+        CCC.messageIndex = currentIndex;
+        CCC.distrubuteMessage(msgs[i]);
+        // Reduce ping interval.
+        CCC.pingInterval =
+            Math.max(CCC.MIN_PING_INTERVAL, CCC.pingInterval * 0.8);
+      }
+      currentIndex++;
+    }
+    CCC.ackMsgNextPing = true;
+  } else {
+    CCC.ackMsgNextPing = false;
+  }
+};
+
+/**
+ * Schedule the next ping.
+ * @param {number} ms Milliseconds.
+ */
+CCC.schedulePing = function(ms) {
+  clearTimeout(CCC.nextPingPid);
+  CCC.nextPingPid = setTimeout(CCC.doPing, ms);
 };
 
 /**
@@ -219,13 +408,13 @@ CCC.sendCommand = function(commands, echo) {
  * @param {!Event} e Keydown event.
  */
 CCC.keydown = function(e) {
-  CCC.lastactivetime = Date.now();
+  CCC.lastActiveTime = Date.now();
   CCC.setUnreadLines(0);
   if (!e.shiftKey && e.key == 'Enter') {
     // Enter
-    CCC.sendCommand(CCC.commandInput.value, CCC.localecho);
+    CCC.sendCommand(CCC.commandTextarea.value, CCC.localEcho);
     // Clear the textarea.
-    CCC.commandInput.value = '';
+    CCC.commandTextarea.value = '';
     CCC.commandHistoryPointer = -1;
     CCC.commandTemp = '';
     e.preventDefault();  // Don't add an enter after the clear.
@@ -236,12 +425,12 @@ CCC.keydown = function(e) {
       return;
     }
     if (CCC.commandHistoryPointer == -1) {
-      CCC.commandTemp = CCC.commandInput.value;
+      CCC.commandTemp = CCC.commandTextarea.value;
       CCC.commandHistoryPointer = CCC.commandHistory.length - 1;
-      CCC.commandInput.value = CCC.commandHistory[CCC.commandHistoryPointer];
+      CCC.commandTextarea.value = CCC.commandHistory[CCC.commandHistoryPointer];
     } else if (CCC.commandHistoryPointer > 0) {
       CCC.commandHistoryPointer--;
-      CCC.commandInput.value = CCC.commandHistory[CCC.commandHistoryPointer];
+      CCC.commandTextarea.value = CCC.commandHistory[CCC.commandHistoryPointer];
     }
     e.preventDefault();  // Don't move the cursor to start after change.
   } else if ((!e.shiftKey && e.key == 'ArrowDown') ||
@@ -252,11 +441,11 @@ CCC.keydown = function(e) {
     }
     if (CCC.commandHistoryPointer == CCC.commandHistory.length - 1) {
       CCC.commandHistoryPointer = -1;
-      CCC.commandInput.value = CCC.commandTemp;
+      CCC.commandTextarea.value = CCC.commandTemp;
       CCC.commandTemp = '';
     } else if (CCC.commandHistoryPointer >= 0) {
       CCC.commandHistoryPointer++;
-      CCC.commandInput.value = CCC.commandHistory[CCC.commandHistoryPointer];
+      CCC.commandTextarea.value = CCC.commandHistory[CCC.commandHistoryPointer];
     }
   } else if (e.key == 'Tab') {
     // Tab
@@ -265,8 +454,8 @@ CCC.keydown = function(e) {
       return;
     }
     var chp = CCC.commandHistoryPointer;
-    if (chp == -1) {  // Save the current value
-      CCC.commandTemp = CCC.commandInput.value;
+    if (chp == -1) {  // Save the current value.
+      CCC.commandTemp = CCC.commandTextarea.value;
     }
     var reverse = e.shiftKey;
     for (var i = 0; i <= CCC.commandHistory.length; i++) {
@@ -280,13 +469,13 @@ CCC.keydown = function(e) {
       if (chp == -1) {
         // The current value is always a match.
         CCC.commandHistoryPointer = -1;
-        CCC.commandInput.value = CCC.commandTemp;
+        CCC.commandTextarea.value = CCC.commandTemp;
         CCC.commandTemp = '';
         break;
       } else if (CCC.commandHistory[chp].toLowerCase()
                  .indexOf(CCC.commandTemp.toLowerCase()) == 0) {
         CCC.commandHistoryPointer = chp;
-        CCC.commandInput.value = CCC.commandHistory[chp];
+        CCC.commandTextarea.value = CCC.commandHistory[chp];
         break;
       }
     }
@@ -301,16 +490,37 @@ CCC.keydown = function(e) {
  * @param {number} n Number of unread lines.
  */
 CCC.setUnreadLines = function(n) {
-  CCC.unreadlines_ = n;
+  CCC.unreadLines = n;
   var title = document.title;
   // Strip off old number.
   title = title.replace(/ \(\d+\)$/, '');
-  // Add new number.
-  if (n) {
+  // Add new number if user hasn't been seen in 10 seconds.
+  if (n && CCC.lastActiveTime > Date.now() + 10000) {
     title += ' (' + n + ')';
   }
   document.title = title;
 };
+
+/**
+ * Generate a unique ID.  This should be globally unique.
+ * 62 characters ^ 22 length > 128 bits (better than a UUID).
+ * @param {number} n Length of the string.
+ * @return {string} A globally unique ID string.
+ */
+CCC.genUid = function(n) {
+  var soupLength = CCC.genUid.soup_.length;
+  var id = [];
+  for (var i = 0; i < n; i++) {
+    id[i] = CCC.genUid.soup_.charAt(Math.random() * soupLength);
+  }
+  return id.join('');
+};
+
+/**
+ * Legal characters for the unique ID.
+ * @private
+ */
+CCC.genUid.soup_ = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 
 window.addEventListener('message', CCC.receiveMessage, false);
 window.addEventListener('load', CCC.countdown, false);
