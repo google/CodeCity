@@ -23,18 +23,67 @@
  * @author fraser@google.com (Neil Fraser)
  */
 
-// Start with: node loginServer.js
+// Start with: node connectServer.js
 'use strict';
 
 var fs = require('fs');
 var http = require('http');
+var net = require('net');
+
 
 // Global variables.
 var CFG = null;
+var queueList = Object.create(null);
+
+/**
+ * Class for one user's connection to Code City.
+ * Establishes a connection and buffers the text coming from Code City.
+ * @param {string} id ID of this queue.
+ * @constructor
+ */
+var Queue = function (id) {
+  // Save 'this' for closures below.
+  var thisQueue = this;
+  /**
+   * Time that this queue was pinged by a user.  Abandoned queues are deleted.
+   */
+  this.lastPingTime = Date.now();
+  /**
+   * The index number of the most recent message added to the messages queue.
+   */
+  this.messageIndex = 0;
+  /**
+   * Queue of messages from Code City to the user.
+   */
+  this.messageOutput = [];
+  /**
+   * The index number of the most recent command received from the user.
+   */
+  this.commandIndex = -1;
+  /**
+   * Persistent TCP connection to Code City.
+   */
+  this.client = new net.Socket();
+  this.client.on('close', function() {
+    if (queueList[id]) {
+      delete queueList[id];
+      console.log('Code City closed session ' + id);
+    }
+  });
+  this.client.on('data', function(data) {
+    thisQueue.messageOutput.push(data.toString());
+    thisQueue.messageIndex++;
+    if (thisQueue.messageOutput.length > CFG.maxHistorySize) {
+      thisQueue.messageOutput.shift();
+    }
+  });
+  this.client.connect(CFG.remotePort, CFG.remoteHost);
+};
 
 /**
  * Generate a unique ID.  This should be globally unique.
  * 62 characters ^ 22 length > 128 bits (better than a UUID).
+ * @param {number} n Length of the string.
  * @return {string} A globally unique ID string.
  */
 function genUid(n) {
@@ -90,7 +139,7 @@ function handleRequest(request, response) {
     return;
   }
 
-  if (request.url == CFG.connectPath) {
+  if (request.method == 'GET' && request.url == CFG.connectPath) {
     var cookieList = {};
     var rhc = request.headers.cookie;
     rhc && rhc.split(';').forEach(function(cookie) {
@@ -111,8 +160,19 @@ function handleRequest(request, response) {
       return;
     }
     var sessionId = genUid(22);
+    if (Object.keys(queueList).length > 1000) {
+      response.statusCode = 429;
+      response.end('Too many queues open at once.');
+      console.log('Too many queues open at once.');
+      return;
+    }
+    var queue = new Queue(sessionId);
+    queueList[sessionId] = queue;
+
+    // Start a connection.
+    queue.client.write('identify as ' + loginId + '\n');
+
     var subs = {
-      '<<<LOGIN_ID>>>': loginId,
       '<<<SESSION_ID>>>': sessionId
     };
     serveFile(response, 'connect.html', subs);
@@ -120,11 +180,97 @@ function handleRequest(request, response) {
                 loginId.substring(loginId.length - 4) + ', starting session ' +
                 sessionId);
 
-  } else if (request.url.indexOf(CFG.connectPath + '?ping=') == 0) {
+  } else if (request.method == 'POST' &&
+             request.url.indexOf(CFG.connectPath + '?ping') == 0) {
+    var requestBody = '';
+    request.on('data', function(data) {
+      requestBody += data;
+      if (requestBody.length > 1000000) {  // Megabyte of commands?
+        response.statusCode = 413;
+        response.end('Request Entity Too Large');
+      }
+    });
+    request.on('end', function() {
+      try {
+        var receivedJson = JSON.parse(requestBody);
+        if (!receivedJson['q']) {
+          throw 'no queue';
+        }
+      } catch (e) {
+        response.statusCode = 412;
+        response.end('Illegal JSON');
+        return;
+      }
+      ping(receivedJson, response);
+    });
   } else {
     response.statusCode = 404;
     response.end('Unknown Connect URL: ' + request.url);
   }
+}
+
+function ping(receivedJson, response) {
+  var q = receivedJson['q'];
+  var ackMsg = receivedJson['ackMsg'];
+  var cmdNum = receivedJson['cmdNum'];
+  var cmds = receivedJson['cmds'];
+
+  var queue = queueList[q];
+  if (!queue) {
+    console.log('Unknown session ' + q);
+    response.statusCode = 404;
+    response.end('Your session has timed out');
+    return;
+  }
+  queue.lastPingTime = Date.now();
+
+  if (typeof ackMsg == 'number') {
+    // Client acknowledges receipt of messages.
+    // Remove them from the output list.
+    // TODO: Reimplement this with splice and math.
+    while (queue.messageOutput.length && queue.messageIndex <= ackMsg) {
+      queue.messageOutput.shift();
+      queue.messageIndex++;
+    }
+  }
+
+  var delay = 0;
+  if (typeof cmdNum == 'number') {
+    // Client sent commands.  Increase server's index for acknowledgment.
+    var currentIndex = cmdNum;
+    for (var i = 0; i < cmds.length; i++) {
+      if (currentIndex > queue.commandIndex) {
+        queue.commandIndex = currentIndex;
+        // Send commands to Code City.
+        queue.client.write(cmds[i]);
+        delay += 200;
+      }
+      currentIndex++;
+    }
+    var ackCmdNextPing = true;
+  } else {
+    var ackCmdNextPing = false;
+  }
+
+  // Wait a fifth of a second for each command,
+  // but don't wait for more than a second.
+  var delay = Math.min(delay, 1000);
+  var replyFunc = pong.bind(null, queue, response, ackCmdNextPing);
+  setTimeout(replyFunc, delay);
+}
+
+function pong(queue, response, ackCmdNextPing) {
+  var sendingJson = {};
+  if (ackCmdNextPing) {
+    sendingJson['ackCmd'] = queue.commandIndex;
+  }
+  if (queue.messageOutput.length) {
+    sendingJson['msgNum'] = queue.messageIndex;
+    sendingJson['msgs'] = queue.messageOutput;
+  }
+  response.statusCode = 200;
+  response.setHeader('Content-Type', 'application/json');
+  response.end(JSON.stringify(sendingJson));
 }
 
 /**
@@ -143,7 +289,15 @@ function configureAndStartup() {
         // Path to the login page.
         loginPath: '/login',
         // Path to the connect page.
-        connectPath: '/connect'
+        connectPath: '/connect',
+        // Host of Code City.
+        remoteHost: 'localhost',
+        // Port of Code City.
+        remotePort: 7777,
+        // Maximum size of message buffer to keep for each connection.
+        maxHistorySize: 1000,
+        // Age in seconds of abandoned queues to be closed.
+        connectionTimeout: 300
       };
       data = JSON.stringify(data, null, 2);
       fs.writeFile(filename, data, 'utf8');
@@ -155,14 +309,29 @@ function configureAndStartup() {
 }
 
 /**
- * Initialize Google's authentication and start up the HTTP server.
+ * Close and destroy any abandoned queues.  Called every minute.
+ */
+function cleanup() {
+  var bestBefore = Date.now() - CFG.connectionTimeout * 1000;
+  for (var id in queueList) {
+    var queue = queueList[id];
+    if (queue.lastPingTime < bestBefore) {
+      queue.client.end();
+      delete queueList[id];
+      console.log('Timeout of session ' + id);
+    }
+  }
+}
+
+/**
+ * Start up the HTTP server.
  */
 function startup() {
-  // Start an HTTP server.
   var server = http.createServer(handleRequest);
   server.listen(CFG.httpPort, 'localhost', function(){
     console.log('Connection server listening on port ' + CFG.httpPort);
   });
+  setInterval(cleanup, 60 * 1000);
 }
 
 configureAndStartup();

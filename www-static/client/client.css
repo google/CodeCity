@@ -31,7 +31,7 @@ thead, tfoot {
   text-align: center;
 }
 
-#commandInput {
+#commandTextarea {
   color: #000;
   box-sizing: border-box;
   background-color: #f8f8f8;

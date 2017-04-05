@@ -39,6 +39,7 @@ var loginUrl;
 /**
  * Generate a unique ID.  This should be globally unique.
  * 62 characters ^ 22 length > 128 bits (better than a UUID).
+ * @param {number} n Length of the string.
  * @return {string} A globally unique ID string.
  */
 function genUid(n) {
