@@ -308,7 +308,7 @@ func (st *stateAssignmentExpression) step(cv *cval) (state, *cval) {
 		}
 		r = object.BinaryOp(st.left.get(), op, r)
 	}
-	st.left.set(r)
+	st.left.put(r)
 	return st.parent, pval(r)
 }
 
@@ -1104,7 +1104,7 @@ func (st *stateUpdateExpression) step(cv *cval) (state, *cval) {
 	if st.prefix {
 		r = n
 	}
-	st.arg.set(n)
+	st.arg.put(n)
 	return st.parent, pval(r)
 }
 
@@ -1229,6 +1229,8 @@ func (st *stateWhileStatement) step(cv *cval) (state, *cval) {
 // FIXME: update this example to deal with *cvals.
 // FIXME: throw if !=1 VariableDeclarator in a VariableDeclaration
 // FIXME: throw if VariableDeclarator has initializer
+// FIXME: throw if VariableDeclarator used in AssignmentExpression or
+//        UpdateExpression (it is only valid in ForInStatement.Left)
 type lvalue struct {
 	stateCommon
 	baseExpr        ast.Expression // To be resolve to obtain base
@@ -1239,8 +1241,14 @@ type lvalue struct {
 	haveBase, ready bool
 }
 
+func (lv *lvalue) init(parent state, scope *scope, expr ast.LValue) {
 	lv.parent = parent
 	lv.scope = scope
+	switch e := expr.N.(type) {
+	case *ast.VariableDeclaration:
+		lv.base = nil
+		lv.name = e.Declarations[0].Id.Name
+		lv.ready = true
 	case *ast.Identifier:
 		lv.base = nil
 		lv.name = e.Name
@@ -1251,6 +1259,14 @@ type lvalue struct {
 		lv.computed = e.Computed
 		lv.ready = false
 	default:
+		panic(fmt.Errorf("%T is not an lvalue", expr.N))
+	}
+}
+
+func (lv *lvalue) reset() {
+	if lv.baseExpr.E != nil || lv.membExpr.E != nil {
+		lv.haveBase = false
+		lv.ready = false
 	}
 }
 
@@ -1273,7 +1289,7 @@ func (lv *lvalue) get() object.Value {
 
 // set updates the variable or property denoted
 // by the lvalue expression to the given value.
-func (lv *lvalue) set(value object.Value) {
+func (lv *lvalue) put(value object.Value) {
 	if !lv.ready {
 		panic("lvalue not ready")
 	}
@@ -1304,7 +1320,7 @@ func (lv *lvalue) step(cv *cval) (state, *cval) {
 		// It's expr.identifier; get name of identifier:
 		i, isID := lv.membExpr.E.(*ast.Identifier)
 		if !isID {
-			panic(fmt.Errorf("invalid computed member expression type %T",
+			panic(fmt.Errorf("invalid non-computed member expression type %T",
 				lv.membExpr.E))
 		}
 		lv.name = i.Name
