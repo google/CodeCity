@@ -33,7 +33,10 @@ func NewPropIter(v Value) *PropIter {
 	return &PropIter{v, v.propNames(), make(map[string]bool)}
 }
 
-func (iter *PropIter) next() (string, bool) {
+// The Next method returns the next non-deleted, non-shadowed property
+// name and ok == true, or ok == false if there are no more propert
+// names to iterate over.
+func (iter *PropIter) Next() (string, bool) {
 	var name string
 	for {
 		for len(iter.names) > 0 {

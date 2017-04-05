@@ -30,7 +30,7 @@ func TestPropIterSimpleObj(t *testing.T) {
 
 	got := make(map[string]bool)
 	iter := NewPropIter(obj)
-	for n, ok := iter.next(); ok; n, ok = iter.next() {
+	for n, ok := iter.Next(); ok; n, ok = iter.Next() {
 		got[n] = true
 	}
 	for _, n := range names {
@@ -66,7 +66,7 @@ func TestPropIterInheritance(t *testing.T) {
 
 	got := make(map[string]bool)
 	iter := NewPropIter(obj2)
-	for n, ok := iter.next(); ok; n, ok = iter.next() {
+	for n, ok := iter.Next(); ok; n, ok = iter.Next() {
 		got[n] = true
 	}
 	for _, n := range expected {
@@ -92,9 +92,9 @@ func TestPropIterDelete(t *testing.T) {
 
 	cnt := 0
 	iter := NewPropIter(obj)
-	n, ok := iter.next()
+	n, ok := iter.Next()
 	if !ok {
-		t.Errorf("iter.next() == %#v, false", n)
+		t.Errorf("iter.Next() == %#v, false", n)
 	}
 	cnt++
 	if n == "bar" {
@@ -102,7 +102,7 @@ func TestPropIterDelete(t *testing.T) {
 	} else {
 		obj.DeleteProperty("bar")
 	}
-	for _, ok = iter.next(); ok; _, ok = iter.next() {
+	for _, ok = iter.Next(); ok; _, ok = iter.Next() {
 		cnt++
 	}
 	if cnt != len(names)-1 {
