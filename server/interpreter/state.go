@@ -102,6 +102,10 @@ func newState(parent state, scope *scope, node ast.Node) state {
 		st := stateForStatement{stateCommon: sc}
 		st.init(n)
 		return &st
+	case *ast.ForInStatement:
+		st := stateForInStatement{stateCommon: sc}
+		st.init(n)
+		return &st
 	case *ast.FunctionDeclaration:
 		st := stateFunctionDeclaration{stateCommon: sc}
 		st.init(n)
@@ -668,6 +672,100 @@ func (st *stateForStatement) step(cv *cval) (state, *cval) {
 			st.state = forInit // enclosing for loop takes us there
 		default:
 			panic("invalid for statement state")
+		}
+	}
+}
+
+/********************************************************************/
+
+type stateForInState int
+
+const (
+	forInUnstarted stateForInState = iota
+	forInRight
+	forInPrepLeft
+	forInLeft
+	forInBody
+)
+
+type stateForInStatement struct {
+	stateCommon
+	labelsCommon
+	left  lvalue
+	right ast.Expression
+	body  ast.Statement
+	state stateForInState
+	val   object.Value
+	iter  *object.PropIter
+	pname string
+}
+
+func (st *stateForInStatement) init(node *ast.ForInStatement) {
+	st.left.init(st, st.scope, node.Left)
+	st.right = node.Right
+	st.body = node.Body
+	st.state = forInUnstarted
+}
+
+func (st *stateForInStatement) step(cv *cval) (state, *cval) {
+	for {
+		// Handle return value from previous evaluation:
+		switch st.state {
+		case forInUnstarted:
+			if cv != nil {
+				panic("internal error: for-in loop not started")
+			}
+			st.state = forInRight
+			return newState(st, st.scope, st.right.E), nil
+
+		case forInRight:
+			if cv.abrupt() {
+				return st.parent, cv
+			}
+			obj := cv.pval()
+			// FIXME: should call ToObject() which in turn could call user
+			// code to get valueOf().
+			if (obj == object.Null{} || obj == object.Undefined{}) {
+				return st.parent, &cval{NORMAL, nil, ""}
+			}
+			st.iter = object.NewPropIter(obj)
+			fallthrough
+		case forInPrepLeft:
+			n, ok := st.iter.Next()
+			if !ok {
+				return st.parent, &cval{NORMAL, st.val, ""}
+			}
+			st.pname = n
+			st.left.reset()
+			if !st.left.ready {
+				st.state = forInLeft
+				return &st.left, nil
+			}
+			cv = nil
+			fallthrough
+		case forInLeft:
+			if cv != nil && cv.abrupt() {
+				return st.parent, cv
+			}
+			st.left.put(object.String(st.pname))
+			st.state = forInBody
+			return newState(st, st.scope, st.body.S), nil
+
+		case forInBody:
+			if cv.val != nil {
+				st.val = cv.val
+			}
+			if cv.typ == BREAK && (cv.targ == "" || st.hasLabel(cv.targ)) {
+				return st.parent, &cval{NORMAL, st.val, ""}
+			} else if (cv.typ != CONTINUE || !(cv.targ == "" ||
+				st.hasLabel(cv.targ))) && cv.abrupt() {
+				return st.parent, cv
+			}
+			cv = nil
+			st.state = forInPrepLeft // outer for loop takes us there
+
+		default:
+			panic("invalid for-in statement state")
 		}
 	}
 }
