@@ -353,9 +353,14 @@ func (Null) IsPrimitive() bool {
 	return true
 }
 
-// Parent returns Undefined for Null values.
+// Parent on Undefined and Null values should not be callable from
+// user code, but is used in various places internally (e.g.,
+// PropIter.Next()); we return nil to signal that there is no parent.
+// (Previously we returned Undefined{} or Null{}, but this just forces
+// us to write additional code elsewhere to avoid infinite loops, and
+// violates the rule that there should be no prototype chain loops.)
 func (Null) Parent() Value {
-	return Undefined{}
+	return nil
 }
 
 // GetProperty on Null always returns an error.
@@ -382,7 +387,7 @@ func (Null) HasOwnProperty(string) bool { return false }
 
 // DeleteProperty should never be called on Null
 func (Null) DeleteProperty(name string) *ErrorMsg {
-	panic("How did Null.DeleteProperty() get called??")
+	panic("Null.DeleteProperty() not callable")
 }
 
 // ToBoolean on Null always return false.
@@ -423,9 +428,9 @@ func (Undefined) IsPrimitive() bool {
 	return true
 }
 
-// Parent returns Undefined for Undefined values.
+// Parent on Undefined returns nil; see not on Null.Parent() for wy.
 func (Undefined) Parent() Value {
-	return Undefined{}
+	return nil
 }
 
 // GetProperty on Undefined always returns an error.
@@ -452,7 +457,7 @@ func (Undefined) HasOwnProperty(string) bool { return false }
 
 // DeleteProperty should never be called on Undeined.
 func (Undefined) DeleteProperty(name string) *ErrorMsg {
-	panic("How did Null.DeleteProperty() get called??")
+	panic("Null.DeleteProperty() not callable")
 }
 
 // ToBoolean on Undefined always returns false.

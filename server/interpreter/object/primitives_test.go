@@ -138,8 +138,8 @@ func TestNull(t *testing.T) {
 	if v := n.Type(); v != "object" {
 		t.Errorf("Null{}.Type() == %#v (expected \"object\")", v)
 	}
-	if v := n.Parent(); v != (Undefined{}) {
-		t.Errorf("Null{}.Parent == %#v (expected Undefined{})", v)
+	if v := n.Parent(); v != nil {
+		t.Errorf("Null{}.Parent() == %#v (expected nil)", v)
 	}
 	if v, e := n.GetProperty("foo"); e == nil {
 		t.Errorf("Null{}.GetProperty(\"foo\") == %v, %v "+
@@ -152,8 +152,8 @@ func TestUndefined(t *testing.T) {
 	if v := u.Type(); v != "undefined" {
 		t.Errorf("Undefined{}.Type() == %#v (expected \"undefined\")", v)
 	}
-	if v := u.Parent(); v != (Undefined{}) {
-		t.Errorf("Undefined{}.Parent == %#v (expected Undefined{})", v)
+	if v := u.Parent(); v != nil {
+		t.Errorf("Undefined{}.Parent() == %#v (expected nil)", v)
 	}
 }
 
