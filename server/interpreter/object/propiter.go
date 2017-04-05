@@ -22,9 +22,11 @@ type PropIter struct {
 	seen  map[string]bool
 }
 
-// The PropertyIter method on Object returns an iterator which will
-// iterate over the properties of the object and its prototypes.
+// NewPropIter takes any JavaScript value and returns an iterator
+// which will iterate over the properties of that object and its
+// prototypes.
 //
+// FIXME: skip non-enumerable properties
 // FIXME: perhaps we should guarantee iteration order, as most
 // browsers (and ES6) do?
 func NewPropIter(v Value) *PropIter {

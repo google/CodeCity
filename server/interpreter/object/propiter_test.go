@@ -105,8 +105,8 @@ func TestPropIterDelete(t *testing.T) {
 	for _, ok = iter.next(); ok; _, ok = iter.next() {
 		cnt++
 	}
-	if cnt != 2 {
+	if cnt != len(names)-1 {
 		t.Errorf("Property deletion during iteration: "+
-			"expected 2 properties; found %d", cnt)
+			"expected %d properties; found %d", len(names)-1, cnt)
 	}
 }
