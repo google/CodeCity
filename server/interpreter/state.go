@@ -1226,7 +1226,9 @@ func (st *stateWhileStatement) step(cv *cval) (state, *cval) {
 //      ...
 //  }
 //
-//  FIXME: update this example to deal with *cvals.
+// FIXME: update this example to deal with *cvals.
+// FIXME: throw if !=1 VariableDeclarator in a VariableDeclaration
+// FIXME: throw if VariableDeclarator has initializer
 type lvalue struct {
 	stateCommon
 	baseExpr        ast.Expression // To be resolve to obtain base
@@ -1237,10 +1239,8 @@ type lvalue struct {
 	haveBase, ready bool
 }
 
-func (lv *lvalue) init(parent state, scope *scope, expr ast.Expression) {
 	lv.parent = parent
 	lv.scope = scope
-	switch e := expr.E.(type) {
 	case *ast.Identifier:
 		lv.base = nil
 		lv.name = e.Name
@@ -1251,7 +1251,6 @@ func (lv *lvalue) init(parent state, scope *scope, expr ast.Expression) {
 		lv.computed = e.Computed
 		lv.ready = false
 	default:
-		panic(fmt.Errorf("%T is not an lvalue", expr.E))
 	}
 }
 
