@@ -30,3 +30,21 @@ func TestObjectNonPrimitiveness(t *testing.T) {
 		}
 	}
 }
+
+func TestObjectHasOwnProperty(t *testing.T) {
+	var parent = New(nil, nil)
+	var obj = New(nil, parent)
+
+	if obj.HasOwnProperty("foo") {
+		t.Errorf("%#v.HasOwnProperty(\"foo\") == true", obj)
+	}
+	parent.SetProperty("foo", Undefined{})
+	if obj.HasOwnProperty("foo") {
+		t.Errorf("%#v.HasOwnProperty(\"foo\") == true "+
+			"(after setting parent.foo)", obj)
+	}
+	obj.SetProperty("foo", Undefined{})
+	if !obj.HasOwnProperty("foo") {
+		t.Errorf("%#v.HasOwnProperty(\"foo\") == false", obj)
+	}
+}

@@ -57,6 +57,8 @@ func (intrp *Interpreter) Step() bool {
 			panic(fmt.Errorf("illegal break to %s", intrp.value.targ))
 		case CONTINUE:
 			panic(fmt.Errorf("illegal continue of %s", intrp.value.targ))
+		case RETURN:
+			panic(fmt.Errorf("illegal return of %s", intrp.value.val))
 		case THROW:
 			panic(fmt.Errorf("unhandled exception %s", intrp.value.val))
 		}

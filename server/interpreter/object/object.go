@@ -43,6 +43,24 @@ type Value interface {
 	// returns an ErrorMsg if that was not possible.
 	SetProperty(name string, value Value) *ErrorMsg
 
+	// DeleteProperty attempts to remove the named property.  If the
+	// property exists but can't be removed for some reason an
+	// ErrorMsg is returned.  (Removing a non-existing property
+	// "succeeds" silently.)
+	DeleteProperty(name string) *ErrorMsg
+
+	// propNames returns the list of (own) property names as a slice
+	// of strings.
+	propNames() []string
+
+	// HasOwnProperty returns true if the specified property name
+	// exists on the object itself.
+	HasOwnProperty(string) bool
+
+	// PropertyIter returns an iterator which will iterate over the
+	// properties of the object.
+	//	PropertyIter() *PropertyIter
+
 	// ToBoolean returns true iff the object is truthy.
 	ToBoolean() Boolean
 
@@ -149,6 +167,31 @@ func (obj *Object) SetProperty(name string, value Value) *ErrorMsg {
 	pd.v = value
 	obj.properties[name] = pd
 	return nil
+}
+
+func (obj *Object) propNames() []string {
+	names := make([]string, len(obj.properties))
+	i := 0
+	for k := range obj.properties {
+		names[i] = k
+		i++
+	}
+	return names
+}
+
+// DeleteProperty removes the named property if possible.
+//
+// FIXME: perm / immutability checks!
+func (obj *Object) DeleteProperty(name string) *ErrorMsg {
+	delete(obj.properties, name)
+	return nil
+}
+
+// HasOwnProperty returns true if the specified property name exists
+// on the object itself.
+func (obj *Object) HasOwnProperty(s string) bool {
+	_, exists := obj.properties[s]
+	return exists
 }
 
 // ToBoolean always returns true for regular Objects.

@@ -102,6 +102,16 @@ func (Boolean) SetProperty(name string, value Value) *ErrorMsg {
 	return nil
 }
 
+func (Boolean) propNames() []string { return nil }
+
+// HasOwnProperty always returns false for Boolean values.
+func (Boolean) HasOwnProperty(string) bool { return false }
+
+// DeleteProperty always succeeds on Boolean.
+func (Boolean) DeleteProperty(name string) *ErrorMsg {
+	return nil
+}
+
 // ToBoolean on a Boolean just returns itself.
 func (b Boolean) ToBoolean() Boolean {
 	return b
@@ -160,6 +170,16 @@ func (n Number) GetProperty(name string) (Value, *ErrorMsg) {
 
 // SetProperty on Number always succeeds but has no effect.
 func (Number) SetProperty(name string, value Value) *ErrorMsg {
+	return nil
+}
+
+func (Number) propNames() []string { return nil }
+
+// HasOwnProperty always returns false for Number values.
+func (Number) HasOwnProperty(string) bool { return false }
+
+// DeleteProperty always succeeds on Number.
+func (Number) DeleteProperty(name string) *ErrorMsg {
 	return nil
 }
 
@@ -234,6 +254,28 @@ func (s String) GetProperty(name string) (Value, *ErrorMsg) {
 // length).
 func (String) SetProperty(name string, value Value) *ErrorMsg {
 	return nil
+}
+
+func (String) propNames() []string { return []string{"length"} }
+
+// HasOwnProperty always returns true for "length" and false for all
+// other inputs for Strings.
+//
+// FIXME: should return true for numeric inputs 0 <= n < length!
+func (String) HasOwnProperty(s string) bool {
+	if s == "length" {
+		return true
+	}
+	return false
+}
+
+// DeleteProperty always succeeds on String unless name is "length".
+func (s String) DeleteProperty(name string) *ErrorMsg {
+	if name != "length" {
+		return nil
+	}
+	return &ErrorMsg{"TypeError",
+		fmt.Sprintf("Cannot delete property 'length' of %s", s.ToString())}
 }
 
 // ToBoolean on String returns true iff the string is non-empty.
@@ -311,9 +353,14 @@ func (Null) IsPrimitive() bool {
 	return true
 }
 
-// Parent returns Undefined for Null values.
+// Parent on Undefined and Null values should not be callable from
+// user code, but is used in various places internally (e.g.,
+// PropIter.Next()); we return nil to signal that there is no parent.
+// (Previously we returned Undefined{} or Null{}, but this just forces
+// us to write additional code elsewhere to avoid infinite loops, and
+// violates the rule that there should be no prototype chain loops.)
 func (Null) Parent() Value {
-	return Undefined{}
+	return nil
 }
 
 // GetProperty on Null always returns an error.
@@ -330,6 +377,17 @@ func (Null) SetProperty(name string, value Value) *ErrorMsg {
 		Name:    "TypeError",
 		Message: fmt.Sprintf("Cannot set property '%s' of null", name),
 	}
+}
+
+func (Null) propNames() []string { return nil }
+
+// HasOwnProperty always returns false for Null values
+// FIXME: this should throw.
+func (Null) HasOwnProperty(string) bool { return false }
+
+// DeleteProperty should never be called on Null
+func (Null) DeleteProperty(name string) *ErrorMsg {
+	panic("Null.DeleteProperty() not callable")
 }
 
 // ToBoolean on Null always return false.
@@ -365,14 +423,14 @@ func (Undefined) Type() string {
 	return "undefined"
 }
 
-// IsPrimitive alwasy returns true for Undefined.
+// IsPrimitive always returns true for Undefined.
 func (Undefined) IsPrimitive() bool {
 	return true
 }
 
-// Parent returns Undefined for Undefined values.
+// Parent on Undefined returns nil; see not on Null.Parent() for wy.
 func (Undefined) Parent() Value {
-	return Undefined{}
+	return nil
 }
 
 // GetProperty on Undefined always returns an error.
@@ -389,6 +447,17 @@ func (Undefined) SetProperty(name string, value Value) *ErrorMsg {
 		Name:    "TypeError",
 		Message: fmt.Sprintf("Cannot set property '%s' of undefined", name),
 	}
+}
+
+func (Undefined) propNames() []string { return nil }
+
+// HasOwnProperty always returns false for Undefined values
+// FIXME: this should throw.
+func (Undefined) HasOwnProperty(string) bool { return false }
+
+// DeleteProperty should never be called on Undeined.
+func (Undefined) DeleteProperty(name string) *ErrorMsg {
+	panic("Null.DeleteProperty() not callable")
 }
 
 // ToBoolean on Undefined always returns false.

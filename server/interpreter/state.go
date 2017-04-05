@@ -102,6 +102,10 @@ func newState(parent state, scope *scope, node ast.Node) state {
 		st := stateForStatement{stateCommon: sc}
 		st.init(n)
 		return &st
+	case *ast.ForInStatement:
+		st := stateForInStatement{stateCommon: sc}
+		st.init(n)
+		return &st
 	case *ast.FunctionDeclaration:
 		st := stateFunctionDeclaration{stateCommon: sc}
 		st.init(n)
@@ -308,7 +312,7 @@ func (st *stateAssignmentExpression) step(cv *cval) (state, *cval) {
 		}
 		r = object.BinaryOp(st.left.get(), op, r)
 	}
-	st.left.set(r)
+	st.left.put(r)
 	return st.parent, pval(r)
 }
 
@@ -431,7 +435,7 @@ func (st *stateCallExpression) step(cv *cval) (state, *cval) {
 			panic("have closure already??")
 		}
 		return newState(st, st.scope, st.callee.E), nil
-	} else if cv.abrupt() {
+	} else if cv.abrupt() && cv.typ != RETURN { // RETURN handled below
 		return st.parent, cv
 	}
 
@@ -668,6 +672,100 @@ func (st *stateForStatement) step(cv *cval) (state, *cval) {
 			st.state = forInit // enclosing for loop takes us there
 		default:
 			panic("invalid for statement state")
+		}
+	}
+}
+
+/********************************************************************/
+
+type stateForInState int
+
+const (
+	forInUnstarted stateForInState = iota
+	forInRight
+	forInPrepLeft
+	forInLeft
+	forInBody
+)
+
+type stateForInStatement struct {
+	stateCommon
+	labelsCommon
+	left  lvalue
+	right ast.Expression
+	body  ast.Statement
+	state stateForInState
+	val   object.Value
+	iter  *object.PropIter
+	pname string
+}
+
+func (st *stateForInStatement) init(node *ast.ForInStatement) {
+	st.left.init(st, st.scope, node.Left)
+	st.right = node.Right
+	st.body = node.Body
+	st.state = forInUnstarted
+}
+
+func (st *stateForInStatement) step(cv *cval) (state, *cval) {
+	for {
+		// Handle return value from previous evaluation:
+		switch st.state {
+		case forInUnstarted:
+			if cv != nil {
+				panic("internal error: for-in loop not started")
+			}
+			st.state = forInRight
+			return newState(st, st.scope, st.right.E), nil
+
+		case forInRight:
+			if cv.abrupt() {
+				return st.parent, cv
+			}
+			obj := cv.pval()
+			// FIXME: should call ToObject() which in turn could call user
+			// code to get valueOf().
+			if (obj == object.Null{} || obj == object.Undefined{}) {
+				return st.parent, &cval{NORMAL, nil, ""}
+			}
+			st.iter = object.NewPropIter(obj)
+			fallthrough
+		case forInPrepLeft:
+			n, ok := st.iter.Next()
+			if !ok {
+				return st.parent, &cval{NORMAL, st.val, ""}
+			}
+			st.pname = n
+			st.left.reset()
+			if !st.left.ready {
+				st.state = forInLeft
+				return &st.left, nil
+			}
+			cv = nil
+			fallthrough
+		case forInLeft:
+			if cv != nil && cv.abrupt() {
+				return st.parent, cv
+			}
+			st.left.put(object.String(st.pname))
+			st.state = forInBody
+			return newState(st, st.scope, st.body.S), nil
+
+		case forInBody:
+			if cv.val != nil {
+				st.val = cv.val
+			}
+			if cv.typ == BREAK && (cv.targ == "" || st.hasLabel(cv.targ)) {
+				return st.parent, &cval{NORMAL, st.val, ""}
+			} else if (cv.typ != CONTINUE || !(cv.targ == "" ||
+				st.hasLabel(cv.targ))) && cv.abrupt() {
+				return st.parent, cv
+			}
+			cv = nil
+			st.state = forInPrepLeft // outer for loop takes us there
+
+		default:
+			panic("invalid for-in statement state")
 		}
 	}
 }
@@ -1104,7 +1202,7 @@ func (st *stateUpdateExpression) step(cv *cval) (state, *cval) {
 	if st.prefix {
 		r = n
 	}
-	st.arg.set(n)
+	st.arg.put(n)
 	return st.parent, pval(r)
 }
 
@@ -1229,6 +1327,8 @@ func (st *stateWhileStatement) step(cv *cval) (state, *cval) {
 // FIXME: update this example to deal with *cvals.
 // FIXME: throw if !=1 VariableDeclarator in a VariableDeclaration
 // FIXME: throw if VariableDeclarator has initializer
+// FIXME: throw if VariableDeclarator used in AssignmentExpression or
+//        UpdateExpression (it is only valid in ForInStatement.Left)
 type lvalue struct {
 	stateCommon
 	baseExpr        ast.Expression // To be resolve to obtain base
@@ -1239,8 +1339,14 @@ type lvalue struct {
 	haveBase, ready bool
 }
 
+func (lv *lvalue) init(parent state, scope *scope, expr ast.LValue) {
 	lv.parent = parent
 	lv.scope = scope
+	switch e := expr.N.(type) {
+	case *ast.VariableDeclaration:
+		lv.base = nil
+		lv.name = e.Declarations[0].Id.Name
+		lv.ready = true
 	case *ast.Identifier:
 		lv.base = nil
 		lv.name = e.Name
@@ -1251,6 +1357,14 @@ type lvalue struct {
 		lv.computed = e.Computed
 		lv.ready = false
 	default:
+		panic(fmt.Errorf("%T is not an lvalue", expr.N))
+	}
+}
+
+func (lv *lvalue) reset() {
+	if lv.baseExpr.E != nil || lv.membExpr.E != nil {
+		lv.haveBase = false
+		lv.ready = false
 	}
 }
 
@@ -1273,7 +1387,7 @@ func (lv *lvalue) get() object.Value {
 
 // set updates the variable or property denoted
 // by the lvalue expression to the given value.
-func (lv *lvalue) set(value object.Value) {
+func (lv *lvalue) put(value object.Value) {
 	if !lv.ready {
 		panic("lvalue not ready")
 	}
@@ -1304,7 +1418,7 @@ func (lv *lvalue) step(cv *cval) (state, *cval) {
 		// It's expr.identifier; get name of identifier:
 		i, isID := lv.membExpr.E.(*ast.Identifier)
 		if !isID {
-			panic(fmt.Errorf("invalid computed member expression type %T",
+			panic(fmt.Errorf("invalid non-computed member expression type %T",
 				lv.membExpr.E))
 		}
 		lv.name = i.Name
