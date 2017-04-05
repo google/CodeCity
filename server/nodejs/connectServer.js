@@ -38,19 +38,16 @@ var queueList = Object.create(null);
 /**
  * Class for one user's connection to Code City.
  * Establishes a connection and buffers the text coming from Code City.
+ * @param {string} id ID of this queue.
  * @constructor
  */
-var Queue = function () {
+var Queue = function (id) {
   // Save 'this' for closures below.
   var thisQueue = this;
   /**
    * Time that this queue was pinged by a user.  Abandoned queues are deleted.
    */
   this.lastPingTime = Date.now();
-  /**
-   * Is the connection to Code City alive?
-   */
-  this.connected = false;
   /**
    * The index number of the most recent message added to the messages queue.
    */
@@ -67,8 +64,12 @@ var Queue = function () {
    * Persistent TCP connection to Code City.
    */
   this.client = new net.Socket();
-  this.client.on('connect', function() {thisQueue.connected = true;});
-  this.client.on('close', function() {thisQueue.connected = false;});
+  this.client.on('close', function() {
+    if (queueList[id]) {
+      delete queueList[id];
+      console.log('Code City closed session ' + id);
+    }
+  });
   this.client.on('data', function(data) {
     thisQueue.messageOutput.push(data.toString());
     thisQueue.messageIndex++;
@@ -78,7 +79,6 @@ var Queue = function () {
   });
   this.client.connect(CFG.remotePort, CFG.remoteHost);
 };
-
 
 /**
  * Generate a unique ID.  This should be globally unique.
@@ -160,8 +160,19 @@ function handleRequest(request, response) {
       return;
     }
     var sessionId = genUid(22);
+    if (Object.keys(queueList).length > 1000) {
+      response.statusCode = 429;
+      response.end('Too many queues open at once.');
+      console.log('Too many queues open at once.');
+      return;
+    }
+    var queue = new Queue(sessionId);
+    queueList[sessionId] = queue;
+
+    // Start a connection.
+    queue.client.write('identify as ' + loginId + '\n');
+
     var subs = {
-      '<<<LOGIN_ID>>>': loginId,
       '<<<SESSION_ID>>>': sessionId
     };
     serveFile(response, 'connect.html', subs);
@@ -206,15 +217,10 @@ function ping(receivedJson, response) {
 
   var queue = queueList[q];
   if (!queue) {
-    if (Object.keys(queueList).length > 1000) {
-      response.statusCode = 503;
-      response.end('Too many queues open at once.');
-      console.log('Too many queues open at once.');
-      return;
-    }
-    console.log('New queue: ' + q);
-    queue = new Queue();
-    queueList[q] = queue;
+    console.log('Unknown session ' + q);
+    response.statusCode = 404;
+    response.end('Your session has timed out');
+    return;
   }
   queue.lastPingTime = Date.now();
 
@@ -289,7 +295,9 @@ function configureAndStartup() {
         // Port of Code City.
         remotePort: 7777,
         // Maximum size of message buffer to keep for each connection.
-        maxHistorySize: 1000
+        maxHistorySize: 1000,
+        // Age in seconds of abandoned queues to be closed.
+        connectionTimeout: 300
       };
       data = JSON.stringify(data, null, 2);
       fs.writeFile(filename, data, 'utf8');
@@ -301,6 +309,21 @@ function configureAndStartup() {
 }
 
 /**
+ * Close and destroy any abandoned queues.  Called every minute.
+ */
+function cleanup() {
+  var bestBefore = Date.now() - CFG.connectionTimeout * 1000;
+  for (var id in queueList) {
+    var queue = queueList[id];
+    if (queue.lastPingTime < bestBefore) {
+      queue.client.end();
+      delete queueList[id];
+      console.log('Timeout of session ' + id);
+    }
+  }
+}
+
+/**
  * Start up the HTTP server.
  */
 function startup() {
@@ -308,6 +331,7 @@ function startup() {
   server.listen(CFG.httpPort, 'localhost', function(){
     console.log('Connection server listening on port ' + CFG.httpPort);
   });
+  setInterval(cleanup, 60 * 1000);
 }
 
 configureAndStartup();

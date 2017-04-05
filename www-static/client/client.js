@@ -127,10 +127,10 @@ CCC.ackMsgNextPing = true;
 
 /**
  * Unique queue ID.  Identifies this client to the connectServer across
- * polling connections.  Set randomly at startup.
+ * polling connections.  Set by the server at startup.
  * @private
  */
-CCC.queueId_ = '';
+CCC.queueId_ = SESSION_ID;
 
 /**
  * After every iframe has reported ready, call the initialization.
@@ -146,8 +146,6 @@ CCC.countdown = function() {
  * Initialization code called on startup.
  */
 CCC.init = function() {
-  CCC.queueId_ = CCC.genUid(8);
-
   CCC.worldFrame = document.getElementById('worldFrame');
   CCC.logFrame = document.getElementById('logFrame');
   CCC.displayCell = document.getElementById('displayCell');
@@ -165,6 +163,7 @@ CCC.init = function() {
   var logButton = document.getElementById('logButton');
   logButton.addEventListener('click', CCC.tab.bind(null, 'log'), false);
   CCC.tab('log');
+  CCC.schedulePing(0);
 };
 
 /**
@@ -351,9 +350,21 @@ CCC.xhrStateChange = function() {
       CCC.parse(json);
     } else {
       console.warn('Connection error code: ' + this.status);
+      CCC.terminate();
+      return;
     }
     CCC.schedulePing(CCC.pingInterval);
   }
+};
+
+/**
+ * Received an error from the server, indicating that our connection is closed.
+ */
+CCC.terminate = function() {
+  clearTimeout(CCC.nextPingPid);
+  // TODO: visualize this better.
+  CCC.commandTextarea.disabled = true;
+  alert('Game over!');
 };
 
 /**
@@ -500,27 +511,6 @@ CCC.setUnreadLines = function(n) {
   }
   document.title = title;
 };
-
-/**
- * Generate a unique ID.  This should be globally unique.
- * 62 characters ^ 22 length > 128 bits (better than a UUID).
- * @param {number} n Length of the string.
- * @return {string} A globally unique ID string.
- */
-CCC.genUid = function(n) {
-  var soupLength = CCC.genUid.soup_.length;
-  var id = [];
-  for (var i = 0; i < n; i++) {
-    id[i] = CCC.genUid.soup_.charAt(Math.random() * soupLength);
-  }
-  return id.join('');
-};
-
-/**
- * Legal characters for the unique ID.
- * @private
- */
-CCC.genUid.soup_ = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 
 window.addEventListener('message', CCC.receiveMessage, false);
 window.addEventListener('load', CCC.countdown, false);
