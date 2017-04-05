@@ -431,7 +431,7 @@ func (st *stateCallExpression) step(cv *cval) (state, *cval) {
 			panic("have closure already??")
 		}
 		return newState(st, st.scope, st.callee.E), nil
-	} else if cv.abrupt() {
+	} else if cv.abrupt() && cv.typ != RETURN { // RETURN handled below
 		return st.parent, cv
 	}
 
