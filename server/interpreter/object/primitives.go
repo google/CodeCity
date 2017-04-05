@@ -104,8 +104,13 @@ func (Boolean) SetProperty(name string, value Value) *ErrorMsg {
 
 func (Boolean) propNames() []string { return nil }
 
-// HasOwnProperty always returns false for Boolean values
+// HasOwnProperty always returns false for Boolean values.
 func (Boolean) HasOwnProperty(string) bool { return false }
+
+// DeleteProperty always succeeds on Boolean.
+func (Boolean) DeleteProperty(name string) *ErrorMsg {
+	return nil
+}
 
 // ToBoolean on a Boolean just returns itself.
 func (b Boolean) ToBoolean() Boolean {
@@ -168,10 +173,15 @@ func (Number) SetProperty(name string, value Value) *ErrorMsg {
 	return nil
 }
 
-// HasOwnProperty always returns false for Number values
+func (Number) propNames() []string { return nil }
+
+// HasOwnProperty always returns false for Number values.
 func (Number) HasOwnProperty(string) bool { return false }
 
-func (Number) propNames() []string { return nil }
+// DeleteProperty always succeeds on Number.
+func (Number) DeleteProperty(name string) *ErrorMsg {
+	return nil
+}
 
 // ToBoolean on a number returns true if the number is not 0 or NaN.
 func (n Number) ToBoolean() Boolean {
@@ -257,6 +267,15 @@ func (String) HasOwnProperty(s string) bool {
 		return true
 	}
 	return false
+}
+
+// DeleteProperty always succeeds on String unless name is "length".
+func (s String) DeleteProperty(name string) *ErrorMsg {
+	if name != "length" {
+		return nil
+	}
+	return &ErrorMsg{"TypeError",
+		fmt.Sprintf("Cannot delete property 'length' of %s", s.ToString())}
 }
 
 // ToBoolean on String returns true iff the string is non-empty.
@@ -358,7 +377,13 @@ func (Null) SetProperty(name string, value Value) *ErrorMsg {
 func (Null) propNames() []string { return nil }
 
 // HasOwnProperty always returns false for Null values
+// FIXME: this should throw.
 func (Null) HasOwnProperty(string) bool { return false }
+
+// DeleteProperty should never be called on Null
+func (Null) DeleteProperty(name string) *ErrorMsg {
+	panic("How did Null.DeleteProperty() get called??")
+}
 
 // ToBoolean on Null always return false.
 func (Null) ToBoolean() Boolean {
@@ -422,7 +447,13 @@ func (Undefined) SetProperty(name string, value Value) *ErrorMsg {
 func (Undefined) propNames() []string { return nil }
 
 // HasOwnProperty always returns false for Undefined values
+// FIXME: this should throw.
 func (Undefined) HasOwnProperty(string) bool { return false }
+
+// DeleteProperty should never be called on Undeined.
+func (Undefined) DeleteProperty(name string) *ErrorMsg {
+	panic("How did Null.DeleteProperty() get called??")
+}
 
 // ToBoolean on Undefined always returns false.
 func (Undefined) ToBoolean() Boolean {

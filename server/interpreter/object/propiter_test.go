@@ -79,3 +79,34 @@ func TestPropIterInheritance(t *testing.T) {
 		t.Errorf("Extra properties: %#v", got)
 	}
 }
+
+func TestPropIterDelete(t *testing.T) {
+	names := []string{"foo", "bar", "baz"}
+	obj := New(nil, nil)
+	for _, n := range names {
+		err := obj.SetProperty(n, String(n))
+		if err != nil {
+			t.Error(err)
+		}
+	}
+
+	cnt := 0
+	iter := NewPropIter(obj)
+	n, ok := iter.first()
+	if !ok {
+		t.Errorf("iter.first() == %#v, false", n)
+	}
+	cnt++
+	if n == "bar" {
+		obj.DeleteProperty("baz")
+	} else {
+		obj.DeleteProperty("bar")
+	}
+	for _, ok = iter.next(); ok; _, ok = iter.next() {
+		cnt++
+	}
+	if cnt != 2 {
+		t.Errorf("Property deletion during iteration: "+
+			"expected 2 properties; found %d", cnt)
+	}
+}

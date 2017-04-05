@@ -43,6 +43,12 @@ type Value interface {
 	// returns an ErrorMsg if that was not possible.
 	SetProperty(name string, value Value) *ErrorMsg
 
+	// DeleteProperty attempts to remove the named property.  If the
+	// property exists but can't be removed for some reason an
+	// ErrorMsg is returned.  (Removing a non-existing property
+	// "succeeds" silently.)
+	DeleteProperty(name string) *ErrorMsg
+
 	// propNames returns the list of (own) property names as a slice
 	// of strings.
 	propNames() []string
@@ -171,6 +177,14 @@ func (obj *Object) propNames() []string {
 		i++
 	}
 	return names
+}
+
+// DeleteProperty removes the named property if possible.
+//
+// FIXME: perm / immutability checks!
+func (obj *Object) DeleteProperty(name string) *ErrorMsg {
+	delete(obj.properties, name)
+	return nil
 }
 
 // HasOwnProperty returns true if the specified property name exists

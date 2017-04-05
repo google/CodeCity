@@ -23,24 +23,24 @@ type PropIter struct {
 }
 
 // The PropertyIter method on Object returns an iterator which will
-// iterate over the properties of the object.
+// iterate over the properties of the object and its prototypes.
 //
-// FIXME: should exclude deleted properties
-// FIXME: should also iterate over parent properties, etc.
+// FIXME: perhaps we should guarantee iteration order, as most
+// browsers (and ES6) do?
 func NewPropIter(v Value) *PropIter {
 	return &PropIter{v, v.propNames(), make(map[string]bool)}
 }
 
 func (iter *PropIter) next() (string, bool) {
-	var n string
+	var name string
 	for {
 		for len(iter.names) > 0 {
-			n = iter.names[0]
+			name = iter.names[0]
 			iter.names = iter.names[1:]
-			// if _, exists := iter.value.properties[n]; exists && !iter.seen[n] {
-			iter.seen[n] = true
-			return n, true
-			// }
+			if iter.value.HasOwnProperty(name) && !iter.seen[name] {
+				iter.seen[name] = true
+				return name, true
+			}
 		}
 		iter.value = iter.value.Parent()
 		if iter.value == nil {
