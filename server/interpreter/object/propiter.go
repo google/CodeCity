@@ -51,7 +51,3 @@ func (iter *PropIter) next() (string, bool) {
 		iter.names = iter.value.propNames()
 	}
 }
-
-func (iter *PropIter) first() (string, bool) {
-	return iter.next()
-}
