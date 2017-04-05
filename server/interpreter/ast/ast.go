@@ -248,7 +248,7 @@ func (fsi *ForStatementInit) UnmarshalJSON(b []byte) error {
 	case "Identifier":
 		n = new(Identifier)
 	default:
-		return fmt.Errorf("Unrecognized type %s", tmp.Type)
+		return fmt.Errorf("Unrecognized type %s in ForStatement.Init", tmp.Type)
 	}
 	if err := json.Unmarshal(b, &n); err != nil {
 		return err
@@ -259,38 +259,55 @@ func (fsi *ForStatementInit) UnmarshalJSON(b []byte) error {
 
 /********************************************************************/
 
-// ForInStatementLeft is a (wrapper for an) interface representing the
-// things that can appear in the first position of a for-in statement
-// - specifically, either a VariableDeclaration (for(var v in ...)) or
-// an Identifier (for(v in ...).
-type ForInStatementLeft struct{ N forInStatementLeft }
-type forInStatementLeft interface {
+// LValue is a (wrapper for an) interface representing the things that
+// can appear to the left of an assignment statement or in the first
+// position of a for-in statement - specifically, any one of:
+//
+// - VariableDeclaration with at most one VariableDeclarator, e.g.:
+//     for(var v in ...
+// (not allowed for AssignmentStatement.Left)
+//
+// - An Identifier, e.g.:
+//     for(v in ...
+// or
+//     v = ...
+//
+// - A MemberExpression, e.g.:
+//     foo()[bar] = ...
+// or
+//     for(foo().bar in ...
+type LValue struct{ N lValue }
+type lValue interface {
 	_isNode()
-	_isForInStatementLeft()
+	_isLValue()
 }
 
-func (VariableDeclaration) _isForInStatementLeft() {}
-func (Identifier) _isForInStatementLeft()          {}
+func (VariableDeclaration) _isLValue() {}
+func (Identifier) _isLValue()          {}
+func (MemberExpression) _isLValue()    {}
 
 // UnmarshalJSON should only be called from the encoding/json package.
-func (fisl *ForInStatementLeft) UnmarshalJSON(b []byte) error {
+func (lv *LValue) UnmarshalJSON(b []byte) error {
 	var tmp typeOnly
 	if err := json.Unmarshal(b, &tmp); err != nil {
 		return err
 	}
-	var n forInStatementLeft
+	var n lValue
 	switch tmp.Type {
 	case "VariableDeclaration":
 		n = new(VariableDeclaration)
 	case "Identifier":
 		n = new(Identifier)
+	case "MemberExpression":
+		n = new(MemberExpression)
 	default:
-		return fmt.Errorf("Unrecognized type %s", tmp.Type)
+		return fmt.Errorf("Unrecognized type %s in LValue",
+			tmp.Type)
 	}
 	if err := json.Unmarshal(b, &n); err != nil {
 		return err
 	}
-	fisl.N = n
+	lv.N = n
 	return nil
 }
 

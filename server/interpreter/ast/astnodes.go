@@ -274,9 +274,9 @@ type ForStatement struct {
 // (Auto-generated from ESTree spec.)
 type ForInStatement struct {
 	statementStuff
-	Left  ForInStatementLeft `json:"left,omitempty"`
-	Right Expression         `json:"right,omitempty"`
-	Body  Statement          `json:"body,omitempty"`
+	Left  LValue     `json:"left,omitempty"`
+	Right Expression `json:"right,omitempty"`
+	Body  Statement  `json:"body,omitempty"`
 }
 
 /********************************************************************/
@@ -385,9 +385,9 @@ type UnaryExpression struct {
 // (Auto-generated from ESTree spec.)
 type UpdateExpression struct {
 	expressionStuff
-	Operator string     `json:"operator,omitempty"`
-	Argument Expression `json:"argument,omitempty"`
-	Prefix   bool       `json:"prefix"`
+	Operator string `json:"operator,omitempty"`
+	Argument LValue `json:"argument,omitempty"`
+	Prefix   bool   `json:"prefix"`
 }
 
 /********************************************************************/
@@ -408,7 +408,7 @@ type BinaryExpression struct {
 type AssignmentExpression struct {
 	expressionStuff
 	Operator string     `json:"operator,omitempty"`
-	Left     Expression `json:"left,omitempty"`
+	Left     LValue     `json:"left,omitempty"`
 	Right    Expression `json:"right,omitempty"`
 }
 
