@@ -36,26 +36,6 @@ var CFG = null;
 var oauth2Client;
 var loginUrl;
 
-/**
- * Generate a unique ID.  This should be globally unique.
- * 62 characters ^ 22 length > 128 bits (better than a UUID).
- * @param {number} n Length of the string.
- * @return {string} A globally unique ID string.
- */
-function genUid(n) {
-  var soupLength = genUid.soup_.length;
-  var id = [];
-  for (var i = 0; i < n; i++) {
-    id[i] = genUid.soup_.charAt(Math.random() * soupLength);
-  }
-  return id.join('');
-};
-
-/**
- * Legal characters for the unique ID.
- * @private
- */
-genUid.soup_ = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 
 /**
  * Load a file from disk, add substitutions, and serve to the web.
@@ -120,13 +100,18 @@ function handleRequest(request, response) {
             response.end('Google Userinfo fail: ' + err);
             return;
           }
-          var id = CFG.idSalt + data.id;
-          id = crypto.createHash('md5').update(id).digest('hex');
+          // Convert the Google ID into one unique for Code City.
+          var id = CFG.password + data.id;
+          id = crypto.createHash('sha512').update(id).digest('hex');
+          // Encrypt the ID to prevent tampering.
+          var cipher = crypto.createCipher('aes-256-ctr', CFG.password);
+          var crypted = cipher.update(id,'utf8','hex');
+          crypted += cipher.final('hex');
           // For future reference, the user's email address is: data.email
           response.writeHead(302, {  // Temporary redirect
-             'Set-Cookie': 'id=' + id + '; Domain=' + CFG.cookieDomain +
-                           '; Path=' + CFG.connectPath + '; HttpOnly',
-             'Location': CFG.connectPath
+              'Set-Cookie': 'id=' + crypted + '; HttpOnly' +
+              '; Domain=' + CFG.cookieDomain + '; Path=' + CFG.connectPath,
+              'Location': CFG.connectPath
            });
           response.end('Login OK.  Redirecting.');
           console.log('Accepted ' + 'x'.repeat(id.length - 4) +
@@ -164,15 +149,15 @@ function configureAndStartup() {
         redirectUri: 'https://example.codecity.world/login',
         // Domain of connect page.
         cookieDomain: 'example.codecity.world',
-        // Random salt for login IDs.
-        idSalt: genUid(8)
+        // Random password for cookie encryption and salt for login IDs.
+        password: 'zzzzzzzzzzzzzzzz'
       };
       data = JSON.stringify(data, null, 2);
       fs.writeFile(filename, data, 'utf8');
       return;
     }
     data = JSON.parse(data);
-    if (data.clientSecret == 'yyyyyyyyyyyyyyyyyyyyyyyy') {
+    if (data.password == 'zzzzzzzzzzzzzzzz') {
       console.log('Configuration file loginServer.cfg not configured.  ' +
                   'Please edit this file.');
       return;

@@ -26,6 +26,7 @@
 // Start with: node connectServer.js
 'use strict';
 
+var crypto = require('crypto');
 var fs = require('fs');
 var http = require('http');
 var net = require('net');
@@ -81,27 +82,6 @@ var Queue = function (id) {
 };
 
 /**
- * Generate a unique ID.  This should be globally unique.
- * 62 characters ^ 22 length > 128 bits (better than a UUID).
- * @param {number} n Length of the string.
- * @return {string} A globally unique ID string.
- */
-function genUid(n) {
-  var soupLength = genUid.soup_.length;
-  var id = [];
-  for (var i = 0; i < n; i++) {
-    id[i] = genUid.soup_.charAt(Math.random() * soupLength);
-  }
-  return id.join('');
-};
-
-/**
- * Legal characters for the unique ID.
- * @private
- */
-genUid.soup_ = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-
-/**
  * Load a file from disk, add substitutions, and serve to the web.
  * @param {!Object} response HTTP server response object.
  * @param {string} filename Name of template file on disk.
@@ -146,12 +126,16 @@ function handleRequest(request, response) {
         var parts = cookie.split('=');
         cookieList[parts.shift().trim()] = decodeURI(parts.join('='));
     });
-    var loginId = cookieList.id;
-    if (!loginId || !loginId.match(/^\w+$/)) {
-      if (loginId) {
-        console.log('Missing login ID.  Redirecting.');
+    // Decrypt the ID to ensure there was no tampering.
+    var decipher = crypto.createDecipher('aes-256-ctr', CFG.password);
+    try {
+      var loginId = decipher.update(cookieList.id, 'hex','utf8');
+      loginId += decipher.final('utf8');
+    } catch (e) {
+      if (cookieList.id) {
+        console.log('Invalid login cookie: ' + cookieList.id);
       } else {
-        console.log('Invalid login ID: ' + loginId);
+        console.log('Missing login cookie.  Redirecting.');
       }
       response.writeHead(302, {  // Temporary redirect
          'Location': CFG.loginPath
@@ -159,7 +143,9 @@ function handleRequest(request, response) {
       response.end('Login required.  Redirecting.');
       return;
     }
-    var sessionId = genUid(22);
+    var seed = (Date.now() * Math.random()).toString() + cookieList.id;
+    // This ID gets transmitted a *lot* so keep it short.
+    var sessionId = crypto.createHash('sha').update(seed).digest('base64');
     if (Object.keys(queueList).length > 1000) {
       response.statusCode = 429;
       response.end('Too many queues open at once.');
@@ -297,12 +283,20 @@ function configureAndStartup() {
         // Maximum size of message buffer to keep for each connection.
         maxHistorySize: 1000,
         // Age in seconds of abandoned queues to be closed.
-        connectionTimeout: 300
+        connectionTimeout: 300,
+        // Random password for cookie encryption and salt for login IDs.
+        password: 'zzzzzzzzzzzzzzzz'
       };
       data = JSON.stringify(data, null, 2);
       fs.writeFile(filename, data, 'utf8');
+      return;
     }
     data = JSON.parse(data);
+    if (data.password == 'zzzzzzzzzzzzzzzz') {
+      console.log('Configuration file connectServer.cfg not configured.  ' +
+                  'Please edit this file.');
+      return;
+    }
     CFG = data;
     startup();
   });
