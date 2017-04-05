@@ -118,6 +118,21 @@ func TestStringLength(t *testing.T) {
 	}
 }
 
+func TestStringHasOwnProperty(t *testing.T) {
+	var s = String("foo")
+
+	if s.HasOwnProperty("foo") {
+		t.Errorf("%#v.HasOwnProperty(\"foo\") == true", s)
+	}
+	s.SetProperty("foo", Undefined{})
+	if s.HasOwnProperty("foo") {
+		t.Errorf("%#v.HasOwnProperty(\"foo\") == true (after setting s.foo)", s)
+	}
+	if !s.HasOwnProperty("length") {
+		t.Errorf("%#v.HasOwnProperty(\"length\") == false", s)
+	}
+}
+
 func TestNull(t *testing.T) {
 	n := Null{}
 	if v := n.Type(); v != "object" {

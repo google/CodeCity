@@ -104,6 +104,9 @@ func (Boolean) SetProperty(name string, value Value) *ErrorMsg {
 
 func (Boolean) propNames() []string { return nil }
 
+// HasOwnProperty always returns false for Boolean values
+func (Boolean) HasOwnProperty(string) bool { return false }
+
 // ToBoolean on a Boolean just returns itself.
 func (b Boolean) ToBoolean() Boolean {
 	return b
@@ -164,6 +167,9 @@ func (n Number) GetProperty(name string) (Value, *ErrorMsg) {
 func (Number) SetProperty(name string, value Value) *ErrorMsg {
 	return nil
 }
+
+// HasOwnProperty always returns false for Number values
+func (Number) HasOwnProperty(string) bool { return false }
 
 func (Number) propNames() []string { return nil }
 
@@ -241,6 +247,17 @@ func (String) SetProperty(name string, value Value) *ErrorMsg {
 }
 
 func (String) propNames() []string { return []string{"length"} }
+
+// HasOwnProperty always returns true for "length" and false for all
+// other inputs for Strings.
+//
+// FIXME: should return true for numeric inputs 0 <= n < length!
+func (String) HasOwnProperty(s string) bool {
+	if s == "length" {
+		return true
+	}
+	return false
+}
 
 // ToBoolean on String returns true iff the string is non-empty.
 func (s String) ToBoolean() Boolean {
@@ -340,6 +357,9 @@ func (Null) SetProperty(name string, value Value) *ErrorMsg {
 
 func (Null) propNames() []string { return nil }
 
+// HasOwnProperty always returns false for Null values
+func (Null) HasOwnProperty(string) bool { return false }
+
 // ToBoolean on Null always return false.
 func (Null) ToBoolean() Boolean {
 	return false
@@ -373,7 +393,7 @@ func (Undefined) Type() string {
 	return "undefined"
 }
 
-// IsPrimitive alwasy returns true for Undefined.
+// IsPrimitive always returns true for Undefined.
 func (Undefined) IsPrimitive() bool {
 	return true
 }
@@ -400,6 +420,9 @@ func (Undefined) SetProperty(name string, value Value) *ErrorMsg {
 }
 
 func (Undefined) propNames() []string { return nil }
+
+// HasOwnProperty always returns false for Undefined values
+func (Undefined) HasOwnProperty(string) bool { return false }
 
 // ToBoolean on Undefined always returns false.
 func (Undefined) ToBoolean() Boolean {

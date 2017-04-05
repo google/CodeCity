@@ -47,6 +47,10 @@ type Value interface {
 	// of strings.
 	propNames() []string
 
+	// HasOwnProperty returns true if the specified property name
+	// exists on the object itself.
+	HasOwnProperty(string) bool
+
 	// PropertyIter returns an iterator which will iterate over the
 	// properties of the object.
 	//	PropertyIter() *PropertyIter
@@ -167,6 +171,13 @@ func (obj *Object) propNames() []string {
 		i++
 	}
 	return names
+}
+
+// HasOwnProperty returns true if the specified property name exists
+// on the object itself.
+func (obj *Object) HasOwnProperty(s string) bool {
+	_, exists := obj.properties[s]
+	return exists
 }
 
 // ToBoolean always returns true for regular Objects.
