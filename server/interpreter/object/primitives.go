@@ -242,7 +242,8 @@ func (String) Proto() Value {
 	return StringProto
 }
 
-// GetProperty on String implements a magic .length property itself, and passes any other property lookups to its prototype:
+// GetProperty on String implements a magic .length property itself,
+// and passes any other property lookups to its prototype:
 func (s String) GetProperty(name string) (Value, *ErrorMsg) {
 	if name != "length" {
 		return s.Proto().GetProperty(name)
