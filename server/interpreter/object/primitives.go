@@ -87,14 +87,14 @@ func (Boolean) IsPrimitive() bool {
 	return true
 }
 
-// Parent returns BooleanProto for all Booleans.
-func (Boolean) Parent() Value {
+// Proto returns BooleanProto for all Booleans.
+func (Boolean) Proto() Value {
 	return BooleanProto
 }
 
-// GetProperty on Boolean just passes to its parent:
+// GetProperty on Boolean just passes to its prototype:
 func (b Boolean) GetProperty(name string) (Value, *ErrorMsg) {
-	return b.Parent().GetProperty(name)
+	return b.Proto().GetProperty(name)
 }
 
 // SetProperty on Boolean always succeeds but has no effect.
@@ -158,14 +158,14 @@ func (Number) IsPrimitive() bool {
 	return true
 }
 
-// Parent returns NumberProto for all Numbers.
-func (Number) Parent() Value {
+// Proto returns NumberProto for all Numbers.
+func (Number) Proto() Value {
 	return NumberProto
 }
 
-// GetProperty on Number just passes to its parent:
+// GetProperty on Number just passes to its prototype:
 func (n Number) GetProperty(name string) (Value, *ErrorMsg) {
-	return n.Parent().GetProperty(name)
+	return n.Proto().GetProperty(name)
 }
 
 // SetProperty on Number always succeeds but has no effect.
@@ -237,15 +237,15 @@ func (String) IsPrimitive() bool {
 	return true
 }
 
-// Parent returns StringProto for all Strings.
-func (String) Parent() Value {
+// Proto returns StringProto for all Strings.
+func (String) Proto() Value {
 	return StringProto
 }
 
-// GetProperty on String implements a magic .length property itself, and passes any other property lookups to its parent:
+// GetProperty on String implements a magic .length property itself, and passes any other property lookups to its prototype:
 func (s String) GetProperty(name string) (Value, *ErrorMsg) {
 	if name != "length" {
-		return s.Parent().GetProperty(name)
+		return s.Proto().GetProperty(name)
 	}
 	return Number(len(utf16.Encode([]rune(string(s))))), nil
 }
@@ -353,13 +353,13 @@ func (Null) IsPrimitive() bool {
 	return true
 }
 
-// Parent on Undefined and Null values should not be callable from
+// Proto on Undefined and Null values should not be callable from
 // user code, but is used in various places internally (e.g.,
-// PropIter.Next()); we return nil to signal that there is no parent.
+// PropIter.Next()); we return nil to signal that there is no prototype.
 // (Previously we returned Undefined{} or Null{}, but this just forces
 // us to write additional code elsewhere to avoid infinite loops, and
 // violates the rule that there should be no prototype chain loops.)
-func (Null) Parent() Value {
+func (Null) Proto() Value {
 	return nil
 }
 
@@ -428,8 +428,8 @@ func (Undefined) IsPrimitive() bool {
 	return true
 }
 
-// Parent on Undefined returns nil; see not on Null.Parent() for wy.
-func (Undefined) Parent() Value {
+// Proto on Undefined returns nil; see not on Null.Proto() for why.
+func (Undefined) Proto() Value {
 	return nil
 }
 

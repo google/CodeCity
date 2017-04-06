@@ -62,31 +62,31 @@ func TestPrimitivesPrimitiveness(t *testing.T) {
 
 func TestBoolean(t *testing.T) {
 	b := Boolean(false)
-	if b.Parent() != Value(BooleanProto) {
-		t.Errorf("%v.Parent() != BooleanProto", b)
+	if b.Proto() != Value(BooleanProto) {
+		t.Errorf("%v.Proto() != BooleanProto", b)
 	}
-	if b.Parent().Parent() != Value(ObjectProto) {
-		t.Errorf("%v.Parent().Parent() != ObjectProto", b)
+	if b.Proto().Proto() != Value(ObjectProto) {
+		t.Errorf("%v.Proto().Proto() != ObjectProto", b)
 	}
 }
 
 func TestNumber(t *testing.T) {
 	n := Number(0)
-	if n.Parent() != Value(NumberProto) {
-		t.Errorf("%v.Parent() != NumberProto", n)
+	if n.Proto() != Value(NumberProto) {
+		t.Errorf("%v.Proto() != NumberProto", n)
 	}
-	if n.Parent().Parent() != Value(ObjectProto) {
-		t.Errorf("%v.Parent().Parent() != ObjectProto", n)
+	if n.Proto().Proto() != Value(ObjectProto) {
+		t.Errorf("%v.Proto().Proto() != ObjectProto", n)
 	}
 }
 
 func TestString(t *testing.T) {
 	var s Value = String("")
-	if s.Parent() != Value(StringProto) {
-		t.Errorf("%v.Parent() != StringProto", s)
+	if s.Proto() != Value(StringProto) {
+		t.Errorf("%v.Proto() != StringProto", s)
 	}
-	if s.Parent().Parent() != Value(ObjectProto) {
-		t.Errorf("%v.Parent().Parent() != ObjectProto", s)
+	if s.Proto().Proto() != Value(ObjectProto) {
+		t.Errorf("%v.Proto().Proto() != ObjectProto", s)
 	}
 }
 
@@ -138,8 +138,8 @@ func TestNull(t *testing.T) {
 	if v := n.Type(); v != "object" {
 		t.Errorf("Null{}.Type() == %#v (expected \"object\")", v)
 	}
-	if v := n.Parent(); v != nil {
-		t.Errorf("Null{}.Parent() == %#v (expected nil)", v)
+	if v := n.Proto(); v != nil {
+		t.Errorf("Null{}.Proto() == %#v (expected nil)", v)
 	}
 	if v, e := n.GetProperty("foo"); e == nil {
 		t.Errorf("Null{}.GetProperty(\"foo\") == %v, %v "+
@@ -152,8 +152,8 @@ func TestUndefined(t *testing.T) {
 	if v := u.Type(); v != "undefined" {
 		t.Errorf("Undefined{}.Type() == %#v (expected \"undefined\")", v)
 	}
-	if v := u.Parent(); v != nil {
-		t.Errorf("Undefined{}.Parent() == %#v (expected nil)", v)
+	if v := u.Proto(); v != nil {
+		t.Errorf("Undefined{}.Proto() == %#v (expected nil)", v)
 	}
 }
 

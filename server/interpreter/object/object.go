@@ -32,8 +32,9 @@ type Value interface {
 	// boolean, etc.).
 	IsPrimitive() bool
 
-	// Parent returns the parent (prototype) object for this object.
-	Parent() Value
+	// Proto returns the prototype (parent) object for this object.
+	// N.B. this is object.__proto__, not Constructor.prototype!
+	Proto() Value
 
 	// GetProperty returns the current value of the given property or
 	// an ErrorMsg if that was not possible.
@@ -99,7 +100,7 @@ type Value interface {
 // prototype, properties, etc.
 type Object struct {
 	owner      *Owner
-	parent     Value
+	proto      Value
 	properties map[string]property
 	f          bool
 }
@@ -131,9 +132,9 @@ func (Object) IsPrimitive() bool {
 	return false
 }
 
-// Parent returns the parent (prototype) object for this object.
-func (obj Object) Parent() Value {
-	return obj.parent
+// Proto returns the prototype (parent) object for this object.
+func (obj Object) Proto() Value {
+	return obj.proto
 }
 
 // GetProperty returns the current value of the given property or an
@@ -224,12 +225,12 @@ func (obj *Object) ToPrimitive() Value {
 	return obj.ToNumber()
 }
 
-// New creates a new object with the specified owner and parent,
+// New creates a new object with the specified owner and prototype,
 // initialises it as appropriate, and returns a pointer to the
 // newly-created object.
-func New(owner *Owner, parent Value) *Object {
+func New(owner *Owner, proto Value) *Object {
 	var obj = new(Object)
-	obj.init(owner, parent)
+	obj.init(owner, proto)
 	obj.f = true
 	return obj
 }
@@ -237,9 +238,9 @@ func New(owner *Owner, parent Value) *Object {
 // init is an internal initialisation routine, called from New and
 // also called when constructing other types of objects such as
 // Arrays, Owners, etc.
-func (obj *Object) init(owner *Owner, parent Value) {
+func (obj *Object) init(owner *Owner, proto Value) {
 	obj.owner = owner
-	obj.parent = parent
+	obj.proto = proto
 	obj.properties = make(map[string]property)
 }
 

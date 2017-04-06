@@ -34,7 +34,7 @@ func NewPropIter(v Value) *PropIter {
 }
 
 // The Next method returns the next non-deleted, non-shadowed property
-// name and ok == true, or ok == false if there are no more propert
+// name and ok == true, or ok == false if there are no more property
 // names to iterate over.
 func (iter *PropIter) Next() (string, bool) {
 	var name string
@@ -47,7 +47,7 @@ func (iter *PropIter) Next() (string, bool) {
 				return name, true
 			}
 		}
-		iter.value = iter.value.Parent()
+		iter.value = iter.value.Proto()
 		if iter.value == nil {
 			return "", false
 		}
