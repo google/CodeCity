@@ -60,7 +60,7 @@ var Queue = function (id) {
   /**
    * The index number of the most recent command received from the user.
    */
-  this.commandIndex = -1;
+  this.commandIndex = 0;
   /**
    * Persistent TCP connection to Code City.
    */
@@ -70,6 +70,9 @@ var Queue = function (id) {
       delete queueList[id];
       console.log('Code City closed session ' + id);
     }
+  });
+  this.client.on('error', function(error) {
+    console.log('TCP error for session ' + id, error);
   });
   this.client.on('data', function(data) {
     thisQueue.messageOutput.push(data.toString());
@@ -165,11 +168,12 @@ function handleRequest(request, response) {
                 sessionId);
 
   } else if (request.method == 'POST' &&
-             request.url.indexOf(CFG.connectPath + '?ping') == 0) {
+             request.url.startsWith(CFG.connectPath + '?ping')) {
     var requestBody = '';
     request.on('data', function(data) {
       requestBody += data;
       if (requestBody.length > 1000000) {  // Megabyte of commands?
+        console.error('Oversized JSON: ' + requestBody.length / 1024 + 'kb');
         response.statusCode = 413;
         response.end('Request Entity Too Large');
       }
@@ -181,6 +185,7 @@ function handleRequest(request, response) {
           throw 'no queue';
         }
       } catch (e) {
+        console.error('Illegal JSON');
         response.statusCode = 412;
         response.end('Illegal JSON');
         return;
@@ -209,19 +214,24 @@ function ping(receivedJson, response) {
   queue.lastPingTime = Date.now();
 
   if (typeof ackMsg == 'number') {
+    if (ackMsg > queue.messageIndex) {
+      var msg = 'Client ' + q + ' ackMsg ' + ackMsg +
+                ', but queue.messageIndex is only ' + queue.messageIndex;
+      console.error(msg);
+      response.statusCode = 412;
+      response.end(msg);
+      return;
+    }
     // Client acknowledges receipt of messages.
     // Remove them from the output list.
-    // TODO: Reimplement this with splice and math.
-    while (queue.messageOutput.length && queue.messageIndex <= ackMsg) {
-      queue.messageOutput.shift();
-      queue.messageIndex++;
-    }
+    queue.messageOutput.splice(0,
+        queue.messageOutput.length + ackMsg - queue.messageIndex);
   }
 
   var delay = 0;
   if (typeof cmdNum == 'number') {
     // Client sent commands.  Increase server's index for acknowledgment.
-    var currentIndex = cmdNum;
+    var currentIndex = cmdNum - cmds.length + 1;
     for (var i = 0; i < cmds.length; i++) {
       if (currentIndex > queue.commandIndex) {
         queue.commandIndex = currentIndex;

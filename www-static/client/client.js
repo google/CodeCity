@@ -96,7 +96,7 @@ CCC.localEcho = true;
 /**
  * The index number of the most recent message received from the server.
  */
-CCC.messageIndex = -1;
+CCC.messageIndex = 0;
 
 /**
  * Number of calls to countdown required before launching.
@@ -257,6 +257,7 @@ CCC.sendCommand = function(commands, echo) {
   for (var i = 0; i < commands.length; i++) {
     // Add command to list of commands to send to server.
     CCC.commandOutput.push(commands[i] + '\n');
+    CCC.commandIndex++;
     // Add command to history.
     if (echo) {
       if (!CCC.commandHistory.length ||
@@ -348,7 +349,7 @@ CCC.xhrStateChange = function() {
         return;
       }
       CCC.parse(json);
-    } else {
+    } else if (this.status) {
       console.warn('Connection error code: ' + this.status);
       CCC.terminate();
       return;
@@ -377,18 +378,20 @@ CCC.parse = function(receivedJson) {
   var msgs = receivedJson['msgs'];
 
   if (typeof ackCmd == 'number') {
+    if (ackCmd > CCC.commandIndex) {
+      console.error('Server acks ' + ackCmd +
+                    ', but CCC.commandIndex is only ' + CCC.commandIndex);
+      CCC.terminate();
+    }
     // Server acknowledges receipt of commands.
     // Remove them from the output list.
-    // TODO: Reimplement this with splice and math.
-    while (CCC.commandOutput.length && CCC.commandIndex <= ackCmd) {
-      CCC.commandOutput.shift();
-      CCC.commandIndex++;
-    }
+    CCC.commandOutput.splice(0,
+        CCC.commandOutput.length + ackCmd - CCC.commandIndex);
   }
 
   if (typeof msgNum == 'number') {
     // Server sent messages.  Increase client's index for acknowledgment.
-    var currentIndex = msgNum;
+    var currentIndex = msgNum - msgs.length + 1;
     for (var i = 0; i < msgs.length; i++) {
       if (currentIndex > CCC.messageIndex) {
         CCC.messageIndex = currentIndex;
