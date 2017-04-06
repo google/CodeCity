@@ -425,9 +425,6 @@ func (st *stateCallExpression) init(node *ast.CallExpression) {
 func (st *stateCallExpression) step(cv *cval) (state, *cval) {
 	if cv == nil {
 		// First visit: evaluate function to get closure
-		if st.scope.interpreter.Verbose {
-			fmt.Printf("sCE: first visit: eval function\n")
-		}
 		if st.ns != nil {
 			panic("have scope already??")
 		}
@@ -440,13 +437,10 @@ func (st *stateCallExpression) step(cv *cval) (state, *cval) {
 	}
 
 	if st.cl == nil {
-		if st.scope.interpreter.Verbose {
-			fmt.Printf("sCE: save closure, build scope\n")
-		}
 		// Save closure:
 		st.cl = cv.pval().(*closure)
 		// Set up scope:
-		st.ns = newScope(st.scope, st.scope.interpreter)
+		st.ns = newScope(st.scope)
 		st.ns.populate(st.cl.body)
 	} else if !st.called {
 		// Save arguments:
@@ -456,26 +450,17 @@ func (st *stateCallExpression) step(cv *cval) (state, *cval) {
 
 	// Subsequent visits: evaluate arguments
 	if st.n < len(st.args) {
-		if st.scope.interpreter.Verbose {
-			fmt.Printf("sCE: eval arg %d\n", st.n)
-		}
 		// FIXME: do error checking for param/arg count mismatch
 		return newState(st, st.scope, st.args[st.n]), nil
 	}
 
 	if !st.called {
 		// Second last visit: evaluate function call
-		if st.scope.interpreter.Verbose {
-			fmt.Printf("sCE: eval body\n")
-		}
 		st.called = true
 		return newState(st, st.ns, st.cl.body), nil
 	}
 
 	// We're done: process return value:
-	if st.scope.interpreter.Verbose {
-		fmt.Printf("sCE: return %#v\n", cv)
-	}
 	switch cv.typ {
 	case RETURN:
 		cv.typ = NORMAL
@@ -503,7 +488,7 @@ func (st *stateCatchClause) init(node *ast.CatchClause) {
 }
 
 func (st *stateCatchClause) step(cv *cval) (state, *cval) {
-	sc := newScope(st.scope, st.scope.interpreter)
+	sc := newScope(st.scope)
 	sc.newVar(st.param, cv.pval())
 	return newState(st.parent, sc, st.body), nil
 }

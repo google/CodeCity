@@ -25,32 +25,22 @@ import (
 
 // scope is a symbol table used to implement JavaScript scope; it's
 // basically just a mapping of declared variable names to values, with
-// some addiontal properties:
+// an addiontal property:
 //
 // - parent is a pointer to the parent scope (if nil then this is the
 // global scope)
 //
-// - interpreter is a pointer to the interpreter that this scope
-// belongs to.  It is provided so that stateExpressionStatement can
-// send a completion value to the interpreter, which is useful for
-// testing purposes now and possibly for eval() later.  This may go
-// away if we find a better way to test and decide not to implement
-// eval().  It's on scope instead of stateCommon just to reduce the
-// number of redundant copies.
-//
 // FIXME: readonly flag?  Or readonly if parent == nil?
 type scope struct {
-	vars        map[string]object.Value
-	parent      *scope
-	interpreter *Interpreter
+	vars   map[string]object.Value
+	parent *scope
 }
 
 // newScope is a factory for scope objects.  The parent param is a
 // pointer to the parent (enclosing scope); it is nil if the scope
-// being created is the global scope.  The interpreter param is a
-// pointer to the interpreter this scope belongs to.
-func newScope(parent *scope, interpreter *Interpreter) *scope {
-	return &scope{make(map[string]object.Value), parent, interpreter}
+// being created is the global scope.
+func newScope(parent *scope) *scope {
+	return &scope{make(map[string]object.Value), parent}
 }
 
 // newVar creates a new variabe in the scope, setting it to the given
