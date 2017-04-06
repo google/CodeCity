@@ -104,8 +104,9 @@ function handleRequest(request, response) {
           var id = CFG.password + data.id;
           id = crypto.createHash('sha512').update(id).digest('hex');
           // Encrypt the ID to prevent tampering.
-          var cipher = crypto.createCipher('aes-256-ctr', CFG.password);
-          var crypted = cipher.update(id,'utf8','hex');
+          var cipher = crypto.createCipher('aes-128-cbc-hmac-sha256',
+                                           CFG.password);
+          var crypted = cipher.update(id, 'utf8', 'hex');
           crypted += cipher.final('hex');
           // For future reference, the user's email address is: data.email
           response.writeHead(302, {  // Temporary redirect

@@ -74,9 +74,6 @@ var Queue = function (id) {
   this.client.on('data', function(data) {
     thisQueue.messageOutput.push(data.toString());
     thisQueue.messageIndex++;
-    if (thisQueue.messageOutput.length > CFG.maxHistorySize) {
-      thisQueue.messageOutput.shift();
-    }
   });
   this.client.connect(CFG.remotePort, CFG.remoteHost);
 };
@@ -127,9 +124,10 @@ function handleRequest(request, response) {
         cookieList[parts.shift().trim()] = decodeURI(parts.join('='));
     });
     // Decrypt the ID to ensure there was no tampering.
-    var decipher = crypto.createDecipher('aes-256-ctr', CFG.password);
+    var decipher = crypto.createDecipher('aes-128-cbc-hmac-sha256',
+                                         CFG.password);
     try {
-      var loginId = decipher.update(cookieList.id, 'hex','utf8');
+      var loginId = decipher.update(cookieList.id, 'hex', 'utf8');
       loginId += decipher.final('utf8');
     } catch (e) {
       if (cookieList.id) {
@@ -280,8 +278,6 @@ function configureAndStartup() {
         remoteHost: 'localhost',
         // Port of Code City.
         remotePort: 7777,
-        // Maximum size of message buffer to keep for each connection.
-        maxHistorySize: 1000,
         // Age in seconds of abandoned queues to be closed.
         connectionTimeout: 300,
         // Random password for cookie encryption and salt for login IDs.
