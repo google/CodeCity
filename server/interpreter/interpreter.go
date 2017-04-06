@@ -41,7 +41,7 @@ func New(astJSON string) *Interpreter {
 	if err != nil {
 		panic(err)
 	}
-	s := newScope(nil)
+	s := newScope(nil, nil)
 	// FIXME: insert global names into s
 	s.populate(tree)
 	this.state = newState(nil, s, tree)

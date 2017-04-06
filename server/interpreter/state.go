@@ -154,6 +154,10 @@ func newState(parent state, scope *scope, node ast.Node) state {
 		st := stateSequenceExpression{stateCommon: sc}
 		st.init(n)
 		return &st
+	case *ast.ThisExpression:
+		st := stateThisExpression{stateCommon: sc}
+		st.init(n)
+		return &st
 	case *ast.ThrowStatement:
 		st := stateThrowStatement{stateCommon: sc}
 		st.init(n)
@@ -402,10 +406,11 @@ type stateCallExpression struct {
 	stateCommon
 	callee ast.Expression
 	args   ast.Expressions
-	cl     *closure // Actual function to call
-	ns     *scope   // New scope being constructed
-	n      int      // Which arg are we evaluating?
-	called bool     // Has call itself begun?
+	cl     *closure     // Actual function to call
+	this   object.Value // Value of 'this' in method call
+	ns     *scope       // New scope being constructed
+	n      int          // Which arg are we evaluating?
+	called bool         // Has call itself begun?
 }
 
 func (st *stateCallExpression) init(node *ast.CallExpression) {
@@ -439,8 +444,10 @@ func (st *stateCallExpression) step(cv *cval) (state, *cval) {
 	if st.cl == nil {
 		// Save closure:
 		st.cl = cv.pval().(*closure)
-		// Set up scope:
-		st.ns = newScope(st.scope)
+		// Set up scope.  st.this will have been set as a side effect
+		// of evaluating callee, if callee was a MemberExpression.
+		// FIXME: this is an ugly hack.
+		st.ns = newScope(st.scope, st.this)
 		st.ns.populate(st.cl.body)
 	} else if !st.called {
 		// Save arguments:
@@ -488,7 +495,7 @@ func (st *stateCatchClause) init(node *ast.CatchClause) {
 }
 
 func (st *stateCatchClause) step(cv *cval) (state, *cval) {
-	sc := newScope(st.scope)
+	sc := newScope(st.scope, st.scope.this)
 	sc.newVar(st.param, cv.pval())
 	return newState(st.parent, sc, st.body), nil
 }
@@ -973,6 +980,10 @@ func (st *stateMemberExpression) step(cv *cval) (state, *cval) {
 		// FIXME: throw JS error
 		panic(err)
 	}
+	// FIXME: this is an ugly hack.
+	if ce, isCE := st.parent.(*stateCallExpression); isCE {
+		ce.this = st.base
+	}
 	return st.parent, pval(v)
 }
 
@@ -1070,6 +1081,23 @@ func (st *stateSequenceExpression) step(cv *cval) (state, *cval) {
 	s := newState(next, st.scope, (st.expressions)[st.n])
 	st.n++
 	return s, nil
+}
+
+/********************************************************************/
+
+type stateThisExpression struct {
+	stateCommon
+}
+
+func (st *stateThisExpression) init(node *ast.ThisExpression) {
+}
+
+func (st *stateThisExpression) step(cv *cval) (state, *cval) {
+	this := st.scope.this
+	if this == nil {
+		this = object.Undefined{}
+	}
+	return st.parent, &cval{NORMAL, this, ""}
 }
 
 /********************************************************************/

@@ -30,17 +30,21 @@ import (
 // - parent is a pointer to the parent scope (if nil then this is the
 // global scope)
 //
+// - this is the current binding of the "this" special variable in
+// this scope.
+//
 // FIXME: readonly flag?  Or readonly if parent == nil?
 type scope struct {
 	vars   map[string]object.Value
 	parent *scope
+	this   object.Value
 }
 
 // newScope is a factory for scope objects.  The parent param is a
 // pointer to the parent (enclosing scope); it is nil if the scope
 // being created is the global scope.
-func newScope(parent *scope) *scope {
-	return &scope{make(map[string]object.Value), parent}
+func newScope(parent *scope, this object.Value) *scope {
+	return &scope{make(map[string]object.Value), parent, this}
 }
 
 // newVar creates a new variabe in the scope, setting it to the given

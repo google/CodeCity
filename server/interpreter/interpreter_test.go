@@ -82,6 +82,11 @@ func TestInterpreterSimple(t *testing.T) {
 		{"var x=0,o={},f=function(){x+=20;return o}, a={a:2,b:3,c:4}" +
 			"for(f().foo in a){x+=a[o.foo]};x", forInMembFunc,
 			object.Number(69)},
+		{"var o={f:function(){return this.foo},foo:70};o.f()",
+			methodCall, object.Number(70)},
+		{"var o={f:function(){return this}};var g=o.f;g()",
+			demethodedCall, object.Undefined{}},
+		{"this", bareThis, object.Undefined{}},
 	}
 
 	for _, c := range tests {
@@ -386,6 +391,21 @@ const forInMemberExp = `{"type":"Program","start":0,"end":85,"body":[{"type":"Va
 // x
 // => 69
 const forInMembFunc = `{"type":"Program","start":0,"end":120,"body":[{"type":"VariableDeclaration","start":0,"end":17,"declarations":[{"type":"VariableDeclarator","start":4,"end":9,"id":{"type":"Identifier","start":4,"end":5,"name":"x"},"init":{"type":"Literal","start":8,"end":9,"value":0,"raw":"0"}},{"type":"VariableDeclarator","start":11,"end":17,"id":{"type":"Identifier","start":11,"end":12,"name":"o"},"init":{"type":"ObjectExpression","start":15,"end":17,"properties":[]}}],"kind":"var"},{"type":"VariableDeclaration","start":18,"end":58,"declarations":[{"type":"VariableDeclarator","start":22,"end":58,"id":{"type":"Identifier","start":22,"end":23,"name":"f"},"init":{"type":"FunctionExpression","start":26,"end":58,"id":null,"params":[],"body":{"type":"BlockStatement","start":37,"end":58,"body":[{"type":"ExpressionStatement","start":39,"end":47,"expression":{"type":"AssignmentExpression","start":39,"end":46,"operator":"+=","left":{"type":"Identifier","start":39,"end":40,"name":"x"},"right":{"type":"Literal","start":44,"end":46,"value":20,"raw":"20"}}},{"type":"ReturnStatement","start":48,"end":56,"argument":{"type":"Identifier","start":55,"end":56,"name":"o"}}]}}}],"kind":"var"},{"type":"VariableDeclaration","start":59,"end":82,"declarations":[{"type":"VariableDeclarator","start":63,"end":82,"id":{"type":"Identifier","start":63,"end":64,"name":"a"},"init":{"type":"ObjectExpression","start":67,"end":82,"properties":[{"key":{"type":"Identifier","start":68,"end":69,"name":"a"},"value":{"type":"Literal","start":70,"end":71,"value":2,"raw":"2"},"kind":"init"},{"key":{"type":"Identifier","start":73,"end":74,"name":"b"},"value":{"type":"Literal","start":75,"end":76,"value":3,"raw":"3"},"kind":"init"},{"key":{"type":"Identifier","start":78,"end":79,"name":"c"},"value":{"type":"Literal","start":80,"end":81,"value":4,"raw":"4"},"kind":"init"}]}}],"kind":"var"},{"type":"ForInStatement","start":83,"end":118,"left":{"type":"MemberExpression","start":87,"end":94,"object":{"type":"CallExpression","start":87,"end":90,"callee":{"type":"Identifier","start":87,"end":88,"name":"f"},"arguments":[]},"property":{"type":"Identifier","start":91,"end":94,"name":"foo"},"computed":false},"right":{"type":"Identifier","start":98,"end":99,"name":"a"},"body":{"type":"BlockStatement","start":101,"end":118,"body":[{"type":"ExpressionStatement","start":103,"end":116,"expression":{"type":"AssignmentExpression","start":103,"end":116,"operator":"+=","left":{"type":"Identifier","start":103,"end":104,"name":"x"},"right":{"type":"MemberExpression","start":108,"end":116,"object":{"type":"Identifier","start":108,"end":109,"name":"a"},"property":{"type":"MemberExpression","start":110,"end":115,"object":{"type":"Identifier","start":110,"end":111,"name":"o"},"property":{"type":"Identifier","start":112,"end":115,"name":"foo"},"computed":false},"computed":true}}}]}},{"type":"ExpressionStatement","start":119,"end":120,"expression":{"type":"Identifier","start":119,"end":120,"name":"x"}}]}`
+
+// var o = {f: function() {return this.foo}, foo: 70}
+// o.f()
+// => 70
+const methodCall = `{"type":"Program","start":0,"end":56,"body":[{"type":"VariableDeclaration","start":0,"end":50,"declarations":[{"type":"VariableDeclarator","start":4,"end":50,"id":{"type":"Identifier","start":4,"end":5,"name":"o"},"init":{"type":"ObjectExpression","start":8,"end":50,"properties":[{"key":{"type":"Identifier","start":9,"end":10,"name":"f"},"value":{"type":"FunctionExpression","start":12,"end":40,"id":null,"params":[],"body":{"type":"BlockStatement","start":23,"end":40,"body":[{"type":"ReturnStatement","start":24,"end":39,"argument":{"type":"MemberExpression","start":31,"end":39,"object":{"type":"ThisExpression","start":31,"end":35},"property":{"type":"Identifier","start":36,"end":39,"name":"foo"},"computed":false}}]}},"kind":"init"},{"key":{"type":"Identifier","start":42,"end":45,"name":"foo"},"value":{"type":"Literal","start":47,"end":49,"value":70,"raw":"70"},"kind":"init"}]}}],"kind":"var"},{"type":"ExpressionStatement","start":51,"end":56,"expression":{"type":"CallExpression","start":51,"end":56,"callee":{"type":"MemberExpression","start":51,"end":54,"object":{"type":"Identifier","start":51,"end":52,"name":"o"},"property":{"type":"Identifier","start":53,"end":54,"name":"f"},"computed":false},"arguments":[]}}]}`
+
+// var o = { f: function() { return this }}
+// var g = o.f
+// g()
+// => undefined
+const demethodedCall = `{"type":"Program","start":0,"end":56,"body":[{"type":"VariableDeclaration","start":0,"end":40,"declarations":[{"type":"VariableDeclarator","start":4,"end":40,"id":{"type":"Identifier","start":4,"end":5,"name":"o"},"init":{"type":"ObjectExpression","start":8,"end":40,"properties":[{"key":{"type":"Identifier","start":10,"end":11,"name":"f"},"value":{"type":"FunctionExpression","start":13,"end":39,"id":null,"params":[],"body":{"type":"BlockStatement","start":24,"end":39,"body":[{"type":"ReturnStatement","start":26,"end":37,"argument":{"type":"ThisExpression","start":33,"end":37}}]}},"kind":"init"}]}}],"kind":"var"},{"type":"VariableDeclaration","start":41,"end":52,"declarations":[{"type":"VariableDeclarator","start":45,"end":52,"id":{"type":"Identifier","start":45,"end":46,"name":"g"},"init":{"type":"MemberExpression","start":49,"end":52,"object":{"type":"Identifier","start":49,"end":50,"name":"o"},"property":{"type":"Identifier","start":51,"end":52,"name":"f"},"computed":false}}],"kind":"var"},{"type":"ExpressionStatement","start":53,"end":56,"expression":{"type":"CallExpression","start":53,"end":56,"callee":{"type":"Identifier","start":53,"end":54,"name":"g"},"arguments":[]}}]}`
+
+// this
+// => undefined
+const bareThis = `{"type":"Program","start":0,"end":4,"body":[{"type":"ExpressionStatement","start":0,"end":4,"expression":{"type":"ThisExpression","start":0,"end":4}}]}`
 
 // ({Foo: "bar", answer: 42})
 // => {foo: "bar", answer: 42}
