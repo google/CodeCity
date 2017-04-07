@@ -42,6 +42,7 @@ func New(astJSON string) *Interpreter {
 		panic(err)
 	}
 	s := newScope(nil, nil)
+	initArrayProto(s)
 	// FIXME: insert global names into s
 	s.populate(tree)
 	this.state = newState(nil, s, tree)
