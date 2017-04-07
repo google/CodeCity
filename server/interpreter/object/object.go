@@ -142,10 +142,16 @@ func (obj Object) Proto() Value {
 func (obj Object) GetProperty(name string) (Value, *ErrorMsg) {
 	pd, ok := obj.properties[name]
 	// FIXME: permissions check for property readability goes here
-	if !ok {
-		return Undefined{}, nil
+	if ok {
+		return pd.v, nil
 	}
-	return pd.v, nil
+	// Try the prototype?
+	proto := obj.Proto()
+	if proto != nil {
+		return proto.GetProperty(name)
+	}
+	return Undefined{}, nil
+
 }
 
 // SetProperty sets the given property to the specified value or
@@ -165,6 +171,7 @@ func (obj *Object) SetProperty(name string, value Value) *ErrorMsg {
 	}
 	// Updating existing property
 	// FIXME: permissions check for property writeability goes here
+	// FIXME: recurse if necessary
 	pd.v = value
 	obj.properties[name] = pd
 	return nil
