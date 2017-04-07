@@ -16,6 +16,10 @@
 
 package object
 
+import (
+	"math"
+)
+
 // An Array is an object with a magic .length property and some other
 // minor special features.
 type Array struct {
@@ -27,12 +31,77 @@ type Array struct {
 var _ Value = (*Array)(nil)
 
 // GetProperty on Array implements a magic .length property itself,
-// and passes any other property lookups to its embedded Object:
-func (arr Array) GetProperty(name string) (Value, *ErrorMsg) {
+// and passes any other property lookups to its embedded Object.
+func (arr *Array) GetProperty(name string) (Value, *ErrorMsg) {
 	if name != "length" {
 		return arr.Object.GetProperty(name)
 	}
 	return Number(float64(arr.length)), nil
+}
+
+// SetProperty on Array will, if name == "length":
+//
+// - Update .length be the specified length.
+// - Delete any properties whose names are indexes and >= .length
+//
+// Otherwise, it will:
+//
+// - Delegates setting the specified property to its embedded Object.
+// - If this succeeds, and the property name looks like an array
+// index, then it will udpate .length appropriately.
+func (arr *Array) SetProperty(name string, value Value) *ErrorMsg {
+	if name == "length" {
+		l, ok := asLength(value)
+		if !ok {
+			return &ErrorMsg{"Range Error", "Invalid array length"}
+		}
+		arr.length = l
+		for k, _ := range arr.properties {
+			if i, isIndex := asIndex(k); isIndex && i >= l {
+				delete(arr.properties, k)
+			}
+		}
+		return nil
+	}
+	err := arr.Object.SetProperty(name, value)
+	if err == nil {
+		if i, isIndex := asIndex(name); isIndex && arr.length < i+1 {
+			arr.length = i + 1
+		}
+	}
+	return err
+}
+
+// asIndex takes a property name (as a string) and checks to see if it
+// qualifies as an array index (according to the definition given in
+// §15.4 of the ES5.1 spec).  If it does, it returns the index and
+// true; if not it return 0 and false.
+func asIndex(p string) (uint32, bool) {
+	n := uint32(float64(String(p).ToNumber()))
+	if n < math.MaxUint32 && string(Number(n).ToString()) == p {
+		return n, true
+	}
+	return 0, false
+}
+
+// asLength takes a value and checks to see if it is a valid array
+// length.  If it is, it returns the length and true; if not it return
+// 0 and false.
+func asLength(v Value) (uint32, bool) {
+	n := float64(v.ToNumber())
+	if n < 0 || n > math.MaxUint32 || n != math.Floor(n) {
+		return 0, false
+	}
+	return uint32(n), true
+}
+
+// HasOwnProperty returns true if the property name is "length" or if
+// the embedded Object has it.
+func (arr Array) HasOwnProperty(s string) bool {
+	if s == "length" {
+		return true
+	}
+	return arr.Object.HasOwnProperty(s)
 }
 
 // ToString returns a string containing a comma-separated

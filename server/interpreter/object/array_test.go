@@ -17,11 +17,77 @@
 package object
 
 import (
+	"fmt"
+	"math"
 	"testing"
 )
 
+func TestAsIndex(t *testing.T) {
+	var tests = []struct {
+		in  string
+		out uint32
+		ok  bool
+	}{
+		{"0", 0, true},
+		{"1", 1, true},
+		{fmt.Sprintf("%d", math.MaxUint32-1), math.MaxUint32 - 1, true},
+		{fmt.Sprintf("%d", math.MaxUint32), 0, false},
+		{fmt.Sprintf("%d", math.MaxUint32+1), 0, false},
+		{"4.5", 0, false},
+		{"-1", 0, false},
+	}
+	for _, c := range tests {
+		out, ok := asIndex(c.in)
+		if out != c.out || ok != c.ok {
+			t.Errorf("asIndex(%#v) == (%d, %t) (expected (%d %t))",
+				c.in, out, ok, c.out, c.ok)
+		}
+	}
+}
+
+func TestAsLength(t *testing.T) {
+	var tests = []struct {
+		in  Value
+		out uint32
+		ok  bool
+	}{
+		{Boolean(false), 0, true},
+		{Boolean(true), 1, true},
+
+		{Number(0), 0, true},
+		{Number(1), 1, true},
+		{Number(math.MaxUint32 - 1), math.MaxUint32 - 1, true},
+		{Number(math.MaxUint32), math.MaxUint32, true},
+		{Number(math.MaxUint32 + 1), 0, false},
+		{Number(4.5), 0, false},
+
+		{String("-1"), 0, false},
+		{String("0"), 0, true},
+		{String("1"), 1, true},
+		{String(fmt.Sprintf("%d", math.MaxUint32-1)), math.MaxUint32 - 1, true},
+		{String(fmt.Sprintf("%d", math.MaxUint32)), math.MaxUint32, true},
+		{String(fmt.Sprintf("%d", math.MaxUint32+1)), 0, false},
+		{String("4.5"), 0, false},
+		{String("-1"), 0, false},
+
+		{Null{}, 0, true},
+		{Undefined{}, 0, false},
+		{New(nil, ObjectProto), 0, false},
+	}
+	for _, c := range tests {
+		out, ok := asLength(c.in)
+		if out != c.out || ok != c.ok {
+			t.Errorf("asLength(%#v) == (%d, %t) (expected (%d %t))",
+				c.in, out, ok, c.out, c.ok)
+		}
+	}
+}
+
 func TestArray(t *testing.T) {
 	a := NewArray(nil, ArrayProto)
+	if !a.HasOwnProperty("length") {
+		t.Errorf("%v.HasOwnProperty(\"length\") == false", a)
+	}
 	if a.Proto() != Value(ArrayProto) {
 		t.Errorf("%v.Proto() != ArrayProto", a)
 	}
@@ -32,12 +98,99 @@ func TestArray(t *testing.T) {
 
 func TestArrayLength(t *testing.T) {
 	a := NewArray(nil, ArrayProto)
-	l, err := a.GetProperty("length")
-	if err != nil {
-		t.Errorf("[].length returned error %#v", err)
 
+	set := func(n int64, v Value) {
+		err := a.SetProperty(fmt.Sprintf("%d", n), v)
+		if err != nil {
+			t.Error(err)
+		}
 	}
-	if l != Number(0) {
-		t.Errorf("[].length == %#v (expected 0)", l)
+	checkLen := func(expected int64) {
+		l, err := a.GetProperty("length")
+		if err != nil {
+			t.Error(err)
+		} else if l != Number(float64(expected)) {
+			t.Errorf("%v.length == %#v (expected %d)", a, l, expected)
+		}
+	}
+
+	// Empty array has length == 0
+	checkLen(0)
+
+	// Adding non-numeric properties does not increase length:
+	err := a.SetProperty("zero", Number(0))
+	if err != nil {
+		t.Error(err)
+	}
+	checkLen(0)
+
+	// Adding numeric properties >= length does increase length:
+	var i int64
+	for i = 0; i < 5; i++ {
+		set(i, String("dummy"))
+		checkLen(i + 1)
+	}
+
+	// .length works propery even for large, sparse arrays, and even
+	// if values are undefined:
+	for i = 3; i <= 31; i++ {
+		set((1<<uint(i))-1, Undefined{})
+		checkLen(1 << uint(i))
+	}
+
+	// Adding numeric properties < length does not increase length:
+	set((1<<31)-2, String("not largest"))
+	checkLen(1 << 31)
+
+	// Verify behaviour around largest possible index:
+	set(math.MaxUint32-2, Null{})
+	checkLen(math.MaxUint32 - 1)
+	set(math.MaxUint32-1, Null{})
+	checkLen(math.MaxUint32)
+	set(math.MaxUint32, Null{})
+	checkLen(math.MaxUint32)
+	set(math.MaxUint32+1, Null{})
+	checkLen(math.MaxUint32)
+
+	setLen := func(l int) {
+		err := a.SetProperty("length", Number(float64(l)))
+		if err != nil {
+			t.Error(err)
+		}
+	}
+	check := func(n int64, exists bool) {
+		e := a.HasOwnProperty(fmt.Sprintf("%d", n))
+		if e != exists {
+			t.Errorf("%v.HasOwnProperty(%d) == %t (expected %t)",
+				a, n, e, exists)
+		}
+	}
+
+	// Setting length to existing value should have no effect:
+	setLen(math.MaxUint32)
+	check(math.MaxUint32-2, true)
+	check(math.MaxUint32-1, true)
+	check(math.MaxUint32, true)
+	check(math.MaxUint32+1, true)
+
+	// Setting length one less than maximum should remove largest
+	// index, but leave properties with names too large to be indexes:
+	setLen(math.MaxUint32 - 1)
+	check(math.MaxUint32-2, true)
+	check(math.MaxUint32-1, false)
+	check(math.MaxUint32, true)
+	check(math.MaxUint32+1, true)
+
+	// Setting length to zero should remove all index properties:
+	setLen(0)
+	for _, p := range a.propNames() {
+		if _, isIndex := asIndex(p); isIndex {
+			t.Errorf("Setting .lengh == 0 failed to remove property %#v", p)
+		}
+	}
+	// Make sure we didn't wipe everything!
+	if len(a.propNames()) <= 1 {
+		t.Errorf("Setting .lengh == 0 seems to have removed some" +
+			"non-index properties")
 	}
 }
