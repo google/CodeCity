@@ -101,7 +101,7 @@ CCC.messageIndex = 0;
 /**
  * Number of calls to countdown required before launching.
  */
-CCC.countdownValue = 2;
+CCC.countdownValue = 3;
 
 /**
  * XMLHttpRequest currently in flight, or null.
@@ -162,7 +162,7 @@ CCC.init = function() {
   worldButton.addEventListener('click', CCC.tab.bind(null, 'world'), false);
   var logButton = document.getElementById('logButton');
   logButton.addEventListener('click', CCC.tab.bind(null, 'log'), false);
-  CCC.tab('log');
+  CCC.tab('world');
   CCC.schedulePing(0);
 };
 
@@ -174,9 +174,11 @@ CCC.tab = function(mode) {
   if (mode == 'world') {
     CCC.worldFrame.style.zIndex = 1;
     CCC.logFrame.style.zIndex = -1;
+    CCC.commandTextarea.style.fontFamily = '"Patrick Hand", "Comic Sans MS"';
   } else {
     CCC.logFrame.style.zIndex = 1;
     CCC.worldFrame.style.zIndex = -1;
+    CCC.commandTextarea.style.fontFamily = '"Roboto Mono", monospace';
   }
 };
 
@@ -216,7 +218,7 @@ CCC.receiveMessage = function(e) {
                   origin);
     return;
   }
-  if (e.data == 'initLog') {
+  if (e.data == 'initLog' || e.data == 'initWorld') {
     CCC.countdown();
   } else {
     console.log('Unknown message received by client frame: ' + e.data);
@@ -228,8 +230,9 @@ CCC.receiveMessage = function(e) {
  * @param {string} line Text from Code City.
  */
 CCC.distrubuteMessage = function(line) {
-  CCC.logFrame.contentWindow.postMessage({mode: 'message', text: line},
-                                         location.origin);
+  var json = {mode: 'message', text: line};
+  CCC.worldFrame.contentWindow.postMessage(json, location.origin);
+  CCC.logFrame.contentWindow.postMessage(json, location.origin);
 };
 
 /**
@@ -237,8 +240,9 @@ CCC.distrubuteMessage = function(line) {
  * @param {string} line Text from user.
  */
 CCC.distrubuteCommand = function(line) {
-  CCC.logFrame.contentWindow.postMessage({mode: 'command', text: line},
-                                         location.origin);
+  var json = {mode: 'command', text: line};
+  CCC.worldFrame.contentWindow.postMessage(json, location.origin);
+  CCC.logFrame.contentWindow.postMessage(json, location.origin);
 };
 
 /**
