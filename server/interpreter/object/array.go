@@ -72,27 +72,28 @@ func (arr *Array) SetProperty(name string, value Value) *ErrorMsg {
 	return err
 }
 
-// asIndex takes a property name (as a string) and checks to see if it
-// qualifies as an array index (according to the definition given in
-// §15.4 of the ES5.1 spec).  If it does, it returns the index and
-// true; if not it return 0 and false.
-func asIndex(p string) (uint32, bool) {
-	n := uint32(float64(String(p).ToNumber()))
-	if n < math.MaxUint32 && string(Number(n).ToString()) == p {
-		return n, true
+// propNames returns the list of property names (starting with
+// "length"); for efficiency this is done directly rather than by
+// calling the propNames method on the embedded Object.
+func (arr *Array) propNames() []string {
+	names := make([]string, len(arr.Object.properties)+1)
+	names[0] = "length"
+	i := 1
+	for k := range arr.Object.properties {
+		names[i] = k
+		i++
 	}
-	return 0, false
+	return names
 }
 
-// asLength takes a value and checks to see if it is a valid array
-// length.  If it is, it returns the length and true; if not it return
-// 0 and false.
-func asLength(v Value) (uint32, bool) {
-	n := float64(v.ToNumber())
-	if n < 0 || n > math.MaxUint32 || n != math.Floor(n) {
-		return 0, false
+// DeleteProperty will reject attempts to remove "length" and
+// otherwise defers to the embedded Object.
+func (arr *Array) DeleteProperty(name string) *ErrorMsg {
+	if name == "length" {
+		return &ErrorMsg{"TypeError",
+			"Cannot delete property 'length' of array."}
 	}
-	return uint32(n), true
+	return arr.Object.DeleteProperty(name)
 }
 
 // HasOwnProperty returns true if the property name is "length" or if
@@ -131,3 +132,28 @@ func NewArray(owner *Owner, proto Value) *Array {
 // prototype subsequently changed).  It is itself an array with
 // prototype ObjectProto.
 var ArrayProto = NewArray(nil, ObjectProto)
+
+/********************************************************************/
+
+// asIndex takes a property name (as a string) and checks to see if it
+// qualifies as an array index (according to the definition given in
+// §15.4 of the ES5.1 spec).  If it does, it returns the index and
+// true; if not it return 0 and false.
+func asIndex(p string) (uint32, bool) {
+	n := uint32(float64(String(p).ToNumber()))
+	if n < math.MaxUint32 && string(Number(n).ToString()) == p {
+		return n, true
+	}
+	return 0, false
+}
+
+// asLength takes a value and checks to see if it is a valid array
+// length.  If it is, it returns the length and true; if not it return
+// 0 and false.
+func asLength(v Value) (uint32, bool) {
+	n := float64(v.ToNumber())
+	if n < 0 || n > math.MaxUint32 || n != math.Floor(n) {
+		return 0, false
+	}
+	return uint32(n), true
+}
