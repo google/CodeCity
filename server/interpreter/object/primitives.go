@@ -197,10 +197,9 @@ func (n Number) ToNumber() Number {
 // -Inf, "NaN" for NaN, and a decimal or exponential representation
 // for regular numeric values.
 //
-// BUG(cpcallen): This implementation is probably not strictly
-// compatible with the ES5.1 spec.  In particular, transtion from
-// decimal to exponential representation is not guaranteed to be
-// compliant.
+// BUG(cpcallen): This implementation may not be strictly compatible
+// with the ES5.1 spec, although transtion from decimal to exponential
+// representation should be correct.
 //
 // FIXME: Should we return "-0" for negative zero?  Do we?
 func (n Number) ToString() String {
@@ -209,8 +208,17 @@ func (n Number) ToString() String {
 		return "Infinity"
 	case math.Inf(-1):
 		return "-Infinity"
+	case 0:
+		if math.Signbit(float64(n)) {
+			return "-0"
+		}
+		return "0"
 	default:
-		return String(fmt.Sprintf("%g", n))
+		exp := math.Log10(math.Abs(float64(n)))
+		if exp >= 21 || exp < -6 {
+			return String(strconv.FormatFloat(float64(n), 'e', -1, 64))
+		}
+		return String(strconv.FormatFloat(float64(n), 'f', -1, 64))
 	}
 }
 
