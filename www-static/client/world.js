@@ -49,6 +49,11 @@ CCC.World.panelHeight = 256;
 CCC.World.resizePid = 0;
 
 /**
+ * Calculated width of history panels.  Used to set width of current panel.
+ */
+CCC.World.width = NaN;
+
+/**
  * Initialization code called on startup.
  */
 CCC.World.init = function() {
@@ -56,7 +61,7 @@ CCC.World.init = function() {
   CCC.World.currentDiv = document.getElementById('currentDiv');
   CCC.World.parser = new DOMParser();
 
-  window.addEventListener('resize', CCC.World.resize, false);
+  window.addEventListener('resize', CCC.World.resizeSoon, false);
 
   // Report back to the parent frame that we're fully loaded and ready to go.
   parent.postMessage('initWorld', location.origin);
@@ -87,12 +92,37 @@ CCC.World.receiveMessage = function(e) {
 };
 
 /**
- * Rerender entire history.
+ * Buffer temporally close resize events.
  * Called when the window changes size.
  */
-CCC.World.resize = function() {
-  clearTimeout(CCC.World.resizePid);
-  CCC.World.resizePid = setTimeout(CCC.World.renderHistory, 1000);
+CCC.World.resizeSoon = function() {
+  // First resize should call function immediately,
+  // subsequent ones should throttle resizing reflows.
+  if (CCC.World.resizePid) {
+    clearTimeout(CCC.World.resizePid);
+    CCC.World.resizePid = setTimeout(CCC.World.resizeNow, 1000);
+  } else {
+    CCC.World.resizeNow();
+    CCC.World.resizePid = -1;
+  }
+};
+
+/**
+ * Rerender the history and the current panels.
+ * Called when the window changes size.
+ */
+CCC.World.resizeNow = function() {
+  CCC.World.renderHistory();
+  CCC.World.renderCurrent();
+};
+
+/**
+ * Rerender current panel.
+ * Called when the window changes size.
+ */
+CCC.World.renderCurrent = function() {
+  var panelBloat = 2 * (5 + 2);  // Margin and border widths must match the CSS.
+  CCC.World.currentDiv.style.width = (CCC.World.width - panelBloat) + 'px';
 };
 
 /**
@@ -128,6 +158,7 @@ CCC.World.rowWidths = function() {
   var panelCount = Math.round(windowWidth / idealWidth);
   var averageWidth = Math.floor(windowWidth / panelCount);
   averageWidth = Math.max(averageWidth, CCC.World.panelHeight);
+  CCC.World.width = averageWidth * panelCount;
   var smallWidth = Math.round(averageWidth * 0.9);
   var largeWidth = averageWidth * 2 - smallWidth;
   // Build an array of lengths.  Add in matching pairs.

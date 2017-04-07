@@ -27,10 +27,10 @@ body {
 }
 
 #currentDiv {
-  background: #eee;
+  border: 2px solid #444;
   bottom: 0;
-  height: 300px;
+  height: 295px;
   overflow: hidden;
   position: absolute;
-  width: 100%;
+  margin: 0 5px;
 }
