@@ -106,18 +106,17 @@ type Statement struct{ S statement }
 
 // UnmarshalJSON should only be called from the encoding/json package.
 func (stmnt *Statement) UnmarshalJSON(b []byte) error {
-	// Special case: "null" -> nil
-	if string(b) == "null" {
-		stmnt.S = nil
-		return nil
-	}
-	var tmp typeOnly
+	var tmp *typeOnly
 	if err := json.Unmarshal(b, &tmp); err != nil {
 		return err
 	}
+	// Special case: "null" -> nil
+	if tmp == nil {
+		return nil
+	}
 	stype, ok := statementTypes[tmp.Type]
 	if !ok {
-		return fmt.Errorf("ast: json.Unmarshal: unknown type %s", tmp.Type)
+		return fmt.Errorf("ast: json.Unmarshal: unknown type '%s'", tmp.Type)
 	}
 	var s = reflect.New(reflect.TypeOf(stype).Elem()).
 		Interface().(statement)
@@ -134,15 +133,19 @@ type Statements []statement
 
 // UnmarshalJSON should only be called from the encoding/json package.
 func (stmnts *Statements) UnmarshalJSON(b []byte) error {
-	var tmp []typeOnly
+	var tmp []*typeOnly
 	if err := json.Unmarshal(b, &tmp); err != nil {
 		return err
 	}
 	s := make([]statement, len(tmp))
 	for i, t := range tmp {
+		// Special case: "null" -> nil
+		if t == nil {
+			continue
+		}
 		stype, ok := statementTypes[t.Type]
 		if !ok {
-			return fmt.Errorf("ast: json.Unmarshal: unknown type %s", t.Type)
+			return fmt.Errorf("ast: json.Unmarshal: unknown type '%s'", t.Type)
 		}
 		s[i] = reflect.New(reflect.TypeOf(stype).Elem()).Interface().(statement)
 	}
@@ -172,18 +175,17 @@ type Expression struct{ E expression }
 
 // UnmarshalJSON should only be called from the encoding/json package.
 func (exp *Expression) UnmarshalJSON(b []byte) error {
-	// Special case: "null" -> nil
-	if string(b) == "null" {
-		exp.E = nil
-		return nil
-	}
-	var tmp typeOnly
+	var tmp *typeOnly
 	if err := json.Unmarshal(b, &tmp); err != nil {
 		return err
 	}
+	// Special case: "null" -> nil
+	if tmp == nil {
+		return nil
+	}
 	etype, ok := expressionTypes[tmp.Type]
 	if !ok {
-		return fmt.Errorf("ast: json.Unmarshal: unknown type %s", tmp.Type)
+		return fmt.Errorf("ast: json.Unmarshal: unknown type '%s'", tmp.Type)
 	}
 	var e = reflect.New(reflect.TypeOf(etype).Elem()).
 		Interface().(expression)
@@ -200,15 +202,18 @@ type Expressions []expression
 
 // UnmarshalJSON should only be called from the encoding/json package.
 func (exps *Expressions) UnmarshalJSON(b []byte) error {
-	var tmp []typeOnly
+	var tmp []*typeOnly
 	if err := json.Unmarshal(b, &tmp); err != nil {
 		return err
 	}
 	e := make([]expression, len(tmp))
 	for i, t := range tmp {
+		if t == nil {
+			continue
+		}
 		etype, ok := expressionTypes[t.Type]
 		if !ok {
-			return fmt.Errorf("ast: json.Unmarshal: unknown type %s", t.Type)
+			return fmt.Errorf("ast: json.Unmarshal: unknown type '%s'", t.Type)
 		}
 		e[i] = reflect.New(reflect.TypeOf(etype).Elem()).
 			Interface().(expression)

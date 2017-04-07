@@ -18,12 +18,26 @@ package ast
 
 import (
 	"encoding/json"
-	// "fmt"
+	//"fmt"
 	"testing"
 )
 
 func TestNewFromJSON(t *testing.T) {
 	p, e := NewFromJSON(astJSON)
+	if e != nil {
+		t.Error(e)
+	}
+	// FIXME: test to see if returned tree was actually correct - not
+	// just that it can be reencoded without error.
+	_, e = json.MarshalIndent(p, "", "  ")
+	if e != nil {
+		t.Error(e)
+	}
+	// fmt.Printf("%s\n", s)
+}
+
+func TestElidedElts(t *testing.T) {
+	p, e := NewFromJSON(astJSONElidedElts)
 	if e != nil {
 		t.Error(e)
 	}
@@ -405,3 +419,5 @@ const astJSON = `
   ]
 }
 `
+
+const astJSONElidedElts = `{"type":"Program","start":0,"end":4,"body":[{"type":"ExpressionStatement","start":0,"end":4,"expression":{"type":"ArrayExpression","start":0,"end":4,"elements":[null,null]}}]}`
