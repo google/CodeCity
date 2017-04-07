@@ -54,6 +54,10 @@ type state interface {
 func newState(parent state, scope *scope, node ast.Node) state {
 	var sc = stateCommon{parent, scope}
 	switch n := node.(type) {
+	case *ast.ArrayExpression:
+		st := stateArrayExpression{stateCommon: sc}
+		st.init(n)
+		return &st
 	case *ast.AssignmentExpression:
 		st := stateAssignmentExpression{stateCommon: sc}
 		st.init(n)
@@ -254,6 +258,55 @@ func (lc *labelsCommon) hasLabel(label string) bool {
 		}
 	}
 	return false
+}
+
+/********************************************************************/
+
+type stateArrayExpression struct {
+	stateCommon
+	elems ast.Expressions
+	arr   *object.Array
+	n     int
+}
+
+func (st *stateArrayExpression) init(node *ast.ArrayExpression) {
+	st.elems = node.Elements
+}
+
+func (st *stateArrayExpression) step(cv *cval) (state, *cval) {
+	if cv == nil {
+		if st.arr != nil {
+			panic("array already created??")
+		}
+		// FIXME: set owner
+		st.arr = object.NewArray(nil, object.ArrayProto)
+	} else if cv.abrupt() {
+		return st.parent, cv
+	} else {
+		// FIXME: this is somewhat inefficient.
+		if cv.pval() != nil {
+			err := st.arr.SetProperty(string(object.Number(st.n).ToString()),
+				cv.pval())
+			if err != nil {
+				panic(err)
+			}
+		}
+		st.n++
+	}
+	// Find next non-elided element and evaluate it:
+	for st.n < len(st.elems) {
+		if st.elems[st.n] != nil {
+			return newState(st, st.scope, st.elems[st.n]), nil
+		}
+		st.n++
+	}
+	// Update .length, in case there were trailing elided elements:
+	err := st.arr.SetProperty("length", object.Number(st.n).ToString())
+	if err != nil {
+		panic(err)
+	}
+
+	return st.parent, pval(st.arr)
 }
 
 /********************************************************************/

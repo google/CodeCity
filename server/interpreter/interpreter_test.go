@@ -87,6 +87,8 @@ func TestInterpreterSimple(t *testing.T) {
 		{"var o={f:function(){return this}};var g=o.f;g()",
 			demethodedCall, object.Undefined{}},
 		{"this", bareThis, object.Undefined{}},
+		{"[].length", emptyArrayLength, object.Number(0)},
+		{"[1,,3,,].length", arrayElidedLength, object.Number(4)},
 	}
 
 	for _, c := range tests {
@@ -121,6 +123,13 @@ func TestInterpreterObjectExpression(t *testing.T) {
 	if answer, _ := v.GetProperty("answer"); answer != object.Number(42) {
 		t.Errorf("{foo: \"bar\", answer: 42}'s answer == %v (%T) "+
 			"(expected 42)", answer, answer)
+	}
+}
+
+func BenchmarkFibonacci(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		i := New(fibonacci10k)
+		i.Run()
 	}
 }
 
@@ -406,6 +415,14 @@ const demethodedCall = `{"type":"Program","start":0,"end":56,"body":[{"type":"Va
 // this
 // => undefined
 const bareThis = `{"type":"Program","start":0,"end":4,"body":[{"type":"ExpressionStatement","start":0,"end":4,"expression":{"type":"ThisExpression","start":0,"end":4}}]}`
+
+// [].length
+// => 0
+const emptyArrayLength = `{"type":"Program","start":0,"end":9,"body":[{"type":"ExpressionStatement","start":0,"end":9,"expression":{"type":"MemberExpression","start":0,"end":9,"object":{"type":"ArrayExpression","start":0,"end":2,"elements":[]},"property":{"type":"Identifier","start":3,"end":9,"name":"length"},"computed":false}}]}`
+
+// [1,,3,,].length
+// => 4
+const arrayElidedLength = `{"type":"Program","start":0,"end":15,"body":[{"type":"ExpressionStatement","start":0,"end":15,"expression":{"type":"MemberExpression","start":0,"end":15,"object":{"type":"ArrayExpression","start":0,"end":8,"elements":[{"type":"Literal","start":1,"end":2,"value":1,"raw":"1"},null,{"type":"Literal","start":4,"end":5,"value":3,"raw":"3"},null]},"property":{"type":"Identifier","start":9,"end":15,"name":"length"},"computed":false}}]}`
 
 // ({Foo: "bar", answer: 42})
 // => {foo: "bar", answer: 42}
