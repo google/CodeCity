@@ -2,4 +2,35 @@ body {
   color: #444;
   background-color: #fff;
   font-family: 'Patrick Hand', 'Comic Sans MS';
+  margin: 0;
+}
+
+#historyScroll {
+  bottom: 300px;
+  overflow-x: hidden;
+  overflow-y: scroll;
+  position: absolute;
+  top: 0;
+  width: 100%;
+}
+
+#historyDiv {
+}
+
+.historyRow {
+}
+
+.historyPanel {
+  border: 2px solid #444;
+  display: inline-block;
+  margin: 2px 5px;
+}
+
+#currentDiv {
+  background: #eee;
+  bottom: 0;
+  height: 300px;
+  overflow: hidden;
+  position: absolute;
+  width: 100%;
 }
