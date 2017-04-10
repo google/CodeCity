@@ -155,6 +155,7 @@ CCC.init = function() {
   CCC.resize();
 
   CCC.commandTextarea.addEventListener('keydown', CCC.keydown, false);
+  CCC.commandTextarea.addEventListener('click', CCC.click, false);
   CCC.commandTextarea.value = '';
   CCC.commandTextarea.focus();
 
@@ -164,6 +165,8 @@ CCC.init = function() {
   logButton.addEventListener('click', CCC.tab.bind(null, 'log'), false);
   CCC.tab('world');
   CCC.schedulePing(0);
+  // Firefox sometimes caches the disabled value on reload.
+  CCC.commandTextarea.disabled = false;
 };
 
 /**
@@ -406,6 +409,7 @@ CCC.parse = function(receivedJson) {
       }
       currentIndex++;
     }
+    CCC.setUnreadLines(CCC.unreadLines + msgs.length);
     CCC.ackMsgNextPing = true;
   } else {
     CCC.ackMsgNextPing = false;
@@ -504,6 +508,15 @@ CCC.keydown = function(e) {
 };
 
 /**
+ * Monitor the user's clicks in the command text area.
+ * @param {!Event} e Mouse event.
+ */
+CCC.click = function(e) {
+  CCC.lastActiveTime = Date.now();
+  CCC.setUnreadLines(0);
+};
+
+/**
  * Change the number of unread lines, as notified in the title.
  * @param {number} n Number of unread lines.
  */
@@ -513,7 +526,7 @@ CCC.setUnreadLines = function(n) {
   // Strip off old number.
   title = title.replace(/ \(\d+\)$/, '');
   // Add new number if user hasn't been seen in 10 seconds.
-  if (n && CCC.lastActiveTime > Date.now() + 10000) {
+  if (n && CCC.lastActiveTime + 10000 < Date.now()) {
     title += ' (' + n + ')';
   }
   document.title = title;

@@ -33,9 +33,14 @@ CCC.World = {};
 CCC.World.maxHistorySize = 10000;
 
 /**
- * Message history.
+ * Messages in the history panels.
  */
-CCC.World.history = [];
+CCC.World.historyMessages = [];
+
+/**
+ * Messages in the current panel.
+ */
+CCC.World.currentMessages = [];
 
 /**
  * Height of history panels.
@@ -84,11 +89,75 @@ CCC.World.receiveMessage = function(e) {
     var dom = CCC.World.parser.parseFromString(text, 'text/xml');
     if (dom.getElementsByTagName('parsererror').length) {
       // Not valid XML, treat as string literal.
-      console.log(text);
+      CCC.World.renderMessage(text);
     } else {
-      console.log(dom);
+      CCC.World.renderMessage(dom);
     }
   }
+};
+
+/**
+ * Render a message to the current frame, optionally triggering a history push.
+ * @param {string|!Element} msg Message to render.
+ */
+CCC.World.renderMessage = function(msg) {
+  if (CCC.World.prerenderHistory(msg) && CCC.World.prerenderCurrent(msg)) {
+    CCC.World.publishCurrent();
+  } else {
+    CCC.World.rollbackHistory();
+    CCC.World.publishHistory();
+    CCC.World.newHistory();
+    CCC.World.newCurrent();
+    CCC.World.renderMessage(msg);
+  }
+};
+
+/**
+ * Experimentally render a new message onto the most recent history frame.
+ * @param {string|!Element} msg Message to render.
+ * @return {boolean} True if the message fit.  False if overflow.
+ */
+CCC.World.prerenderHistory = function(msg) {
+  return true;
+};
+
+/**
+ * Experimentally render a new message onto the current frame.
+ * @param {string|!Element} msg Message to render.
+ * @return {boolean} True if the message fit.  False if overflow.
+ */
+CCC.World.prerenderCurrent = function(msg) {
+  return true;
+};
+
+/**
+ * Publish the previously experimentally rendered history frame to the user.
+ */
+CCC.World.publishHistory = function() {
+};
+
+/**
+ * Publish the previously experimentally rendered current frame to the user.
+ */
+CCC.World.publishCurrent = function() {
+};
+
+/**
+ * Throw out the experimentally rendered history frame and restore from backup.
+ */
+CCC.World.rollbackHistory = function() {
+};
+
+/**
+ * Create a blank history frame.
+ */
+CCC.World.newHistory = function() {
+};
+
+/**
+ * Create a blank current frame.
+ */
+CCC.World.newCurrent = function() {
 };
 
 /**

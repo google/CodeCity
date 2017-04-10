@@ -184,7 +184,7 @@ CCC.Log.appendRow = function(element) {
   if (document.body.childNodes.length > CCC.Log.maxHistorySize) {
     document.body.removeChild(document.body.firstChild);
   }
-  window.scrollTo(0, Number.MAX_SAFE_INTEGER);
+  window.scroll(0, document.body.scrollHeight);
 }
 
 window.addEventListener('message', CCC.Log.receiveMessage, false);
