@@ -38,9 +38,9 @@ CCC.World.maxHistorySize = 10000;
 CCC.World.historyMessages = [];
 
 /**
- * Messages in the current panel.
+ * Messages in the panorama panel.
  */
-CCC.World.currentMessages = [];
+CCC.World.panoramaMessages = [];
 
 /**
  * Height of history panels.
@@ -54,16 +54,11 @@ CCC.World.panelHeight = 256;
 CCC.World.resizePid = 0;
 
 /**
- * Calculated width of history panels.  Used to set width of current panel.
- */
-CCC.World.width = NaN;
-
-/**
  * Initialization code called on startup.
  */
 CCC.World.init = function() {
-  CCC.World.historyDiv = document.getElementById('historyDiv');
-  CCC.World.currentDiv = document.getElementById('currentDiv');
+  CCC.World.scrollDiv = document.getElementById('scrollDiv');
+  CCC.World.panoramaDiv = document.getElementById('panoramaDiv');
   CCC.World.parser = new DOMParser();
 
   window.addEventListener('resize', CCC.World.resizeSoon, false);
@@ -99,17 +94,17 @@ CCC.World.receiveMessage = function(e) {
 };
 
 /**
- * Render a message to the current frame, optionally triggering a history push.
+ * Render a message to the panorama panel, optionally triggering a history push.
  * @param {string|!Element} msg Message to render.
  */
 CCC.World.renderMessage = function(msg) {
-  if (CCC.World.prerenderHistory(msg) && CCC.World.prerenderCurrent(msg)) {
-    CCC.World.publishCurrent();
+  if (CCC.World.prerenderHistory(msg) && CCC.World.prerenderPanorama(msg)) {
+    CCC.World.publishPanorama();
   } else {
     CCC.World.rollbackHistory();
     CCC.World.publishHistory();
     CCC.World.newHistory();
-    CCC.World.newCurrent();
+    CCC.World.newPanorama();
     CCC.World.renderMessage(msg);
   }
 };
@@ -124,11 +119,11 @@ CCC.World.prerenderHistory = function(msg) {
 };
 
 /**
- * Experimentally render a new message onto the current frame.
+ * Experimentally render a new message onto the panorama frame.
  * @param {string|!Element} msg Message to render.
  * @return {boolean} True if the message fit.  False if overflow.
  */
-CCC.World.prerenderCurrent = function(msg) {
+CCC.World.prerenderPanorama = function(msg) {
   return true;
 };
 
@@ -139,9 +134,9 @@ CCC.World.publishHistory = function() {
 };
 
 /**
- * Publish the previously experimentally rendered current frame to the user.
+ * Publish the previously experimentally rendered panorama frame to the user.
  */
-CCC.World.publishCurrent = function() {
+CCC.World.publishPanorama = function() {
 };
 
 /**
@@ -157,9 +152,9 @@ CCC.World.newHistory = function() {
 };
 
 /**
- * Create a blank current frame.
+ * Create a blank panorama frame.
  */
-CCC.World.newCurrent = function() {
+CCC.World.newPanorama = function() {
 };
 
 /**
@@ -179,21 +174,20 @@ CCC.World.resizeSoon = function() {
 };
 
 /**
- * Rerender the history and the current panels.
+ * Rerender the history and the panorama panels.
  * Called when the window changes size.
  */
 CCC.World.resizeNow = function() {
   CCC.World.renderHistory();
-  CCC.World.renderCurrent();
+  CCC.World.renderPanorama();
+  CCC.World.scrollDiv.scrollTop = CCC.World.scrollDiv.scrollHeight;
 };
 
 /**
- * Rerender current panel.
+ * Rerender panorama panel.
  * Called when the window changes size.
  */
-CCC.World.renderCurrent = function() {
-  var panelBloat = 2 * (5 + 2);  // Margin and border widths must match the CSS.
-  CCC.World.currentDiv.style.width = (CCC.World.width - panelBloat) + 'px';
+CCC.World.renderPanorama = function() {
 };
 
 /**
@@ -202,7 +196,10 @@ CCC.World.renderCurrent = function() {
  */
 CCC.World.renderHistory = function() {
   var panelBloat = 2 * (5 + 2);  // Margin and border widths must match the CSS.
-  CCC.World.historyDiv.innerHTML = '';
+  var historyRows = document.getElementsByClassName('historyRow');
+  while (historyRows[0]) {
+    historyRows[0].parentNode.removeChild(historyRows[0]);
+  }
   for (var y = 0; y < 3; y++) {
     var rowWidths = CCC.World.rowWidths();
     var rowDiv = document.createElement('div');
@@ -214,7 +211,7 @@ CCC.World.renderHistory = function() {
       panelDiv.style.width = (rowWidths[x] - panelBloat) + 'px';
       rowDiv.appendChild(panelDiv);
     }
-    CCC.World.historyDiv.appendChild(rowDiv);
+    CCC.World.scrollDiv.insertBefore(rowDiv, CCC.World.panoramaDiv);
   }
 };
 
@@ -224,12 +221,12 @@ CCC.World.renderHistory = function() {
  * @return {!Array.<number>} Array of lengths.
  */
 CCC.World.rowWidths = function() {
-  var windowWidth = CCC.World.historyDiv.offsetWidth;
+  var panelBloat = 2 * (5 + 2);  // Margin and border widths must match the CSS.
+  var windowWidth = CCC.World.scrollDiv.offsetWidth - panelBloat;
   var idealWidth = CCC.World.panelHeight * 5 / 4;  // Standard TV ratio.
   var panelCount = Math.round(windowWidth / idealWidth);
   var averageWidth = Math.floor(windowWidth / panelCount);
   averageWidth = Math.max(averageWidth, CCC.World.panelHeight);
-  CCC.World.width = averageWidth * panelCount;
   var smallWidth = Math.round(averageWidth * 0.9);
   var largeWidth = averageWidth * 2 - smallWidth;
   // Build an array of lengths.  Add in matching pairs.

@@ -5,16 +5,13 @@ body {
   margin: 0;
 }
 
-#historyScroll {
-  bottom: 300px;
-  overflow-x: hidden;
-  overflow-y: scroll;
+#scrollDiv {
+  bottom: 0;
+  left: 0;
+  max-height: 100%;
+  overflow-y: auto;
   position: absolute;
-  top: 0;
-  width: 100%;
-}
-
-#historyDiv {
+  right: 0;
 }
 
 .historyRow {
@@ -26,11 +23,8 @@ body {
   margin: 2px 5px;
 }
 
-#currentDiv {
+#panoramaDiv {
   border: 2px solid #444;
-  bottom: 0;
   height: 295px;
-  overflow: hidden;
-  position: absolute;
-  margin: 0 5px;
+  margin: 2px 6px 0 5px;
 }
