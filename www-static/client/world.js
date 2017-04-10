@@ -83,9 +83,11 @@ CCC.World.receiveMessage = function(e) {
                   origin);
     return;
   }
-  var mode = e.data.mode;
-  var text = e.data.text;
-  if (mode == 'message') {
+  var mode = e.data['mode'];
+  var text = e.data['text'];
+  if (mode == 'clear') {
+    // TODO: Clear history.
+  } else if (mode == 'message') {
     var dom = CCC.World.parser.parseFromString(text, 'text/xml');
     if (dom.getElementsByTagName('parsererror').length) {
       // Not valid XML, treat as string literal.

@@ -158,8 +158,9 @@ CCC.init = function() {
   CCC.commandTextarea.addEventListener('keydown', CCC.keydown, false);
   CCC.commandTextarea.addEventListener('click', CCC.click, false);
   CCC.commandTextarea.value = '';
-  CCC.commandTextarea.focus();
 
+  var clearButton = document.getElementById('clearButton');
+  clearButton.addEventListener('click', CCC.clear, false);
   var worldButton = document.getElementById('worldButton');
   worldButton.addEventListener('click', CCC.tab.bind(null, 'world'), false);
   var logButton = document.getElementById('logButton');
@@ -184,7 +185,21 @@ CCC.tab = function(mode) {
     CCC.worldFrame.style.zIndex = -1;
     CCC.commandTextarea.style.fontFamily = '"Roboto Mono", monospace';
   }
+  CCC.commandTextarea.focus();
 };
+
+/**
+ * Clear all history.
+ */
+CCC.clear = function() {
+  CCC.commandHistory.length = 0;
+  CCC.commandTemp = '';
+  CCC.commandHistoryPointer = -1;
+  var json = {'mode': 'clear'};
+  CCC.worldFrame.contentWindow.postMessage(json, location.origin);
+  CCC.logFrame.contentWindow.postMessage(json, location.origin);
+  CCC.commandTextarea.focus();
+}
 
 /**
  * Reposition the iframes over the placeholder displayCell.
@@ -234,7 +249,7 @@ CCC.receiveMessage = function(e) {
  * @param {string} line Text from Code City.
  */
 CCC.distrubuteMessage = function(line) {
-  var json = {mode: 'message', text: line};
+  var json = {'mode': 'message', 'text': line};
   CCC.worldFrame.contentWindow.postMessage(json, location.origin);
   CCC.logFrame.contentWindow.postMessage(json, location.origin);
 };
@@ -244,7 +259,7 @@ CCC.distrubuteMessage = function(line) {
  * @param {string} line Text from user.
  */
 CCC.distrubuteCommand = function(line) {
-  var json = {mode: 'command', text: line};
+  var json = {'mode': 'command', 'text': line};
   CCC.worldFrame.contentWindow.postMessage(json, location.origin);
   CCC.logFrame.contentWindow.postMessage(json, location.origin);
 };

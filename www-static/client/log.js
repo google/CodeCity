@@ -76,9 +76,11 @@ CCC.Log.receiveMessage = function(e) {
                   origin);
     return;
   }
-  var mode = e.data.mode;
-  var text = e.data.text;
-  if (mode == 'command') {
+  var mode = e.data['mode'];
+  var text = e.data['text'];
+  if (mode == 'clear') {
+    CCC.Log.scrollDiv.innerHTML = '';
+  } else if (mode == 'command') {
     var div = CCC.Log.textToHtml(text);
     div.className = 'commandDiv';
     CCC.Log.appendRow(div);

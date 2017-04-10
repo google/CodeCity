@@ -2,7 +2,6 @@ body {
   color: #444;
   background-color: #fff;
   font-family: 'Roboto Mono', monospace;
-  padding-left: 15px;
 }
 
 #scrollDiv {
@@ -10,6 +9,7 @@ body {
   left: 0;
   max-height: 100%;
   overflow-y: auto;
+  padding-left: 15px;
   position: absolute;
   right: 0;
 }
