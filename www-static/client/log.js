@@ -36,8 +36,11 @@ CCC.Log.maxHistorySize = 10000;
  * Initialization code called on startup.
  */
 CCC.Log.init = function() {
+  CCC.Log.scrollDiv = document.getElementById('scrollDiv');
   CCC.Log.parser = new DOMParser();
   CCC.Log.serializer = new XMLSerializer();
+
+  window.addEventListener('resize', CCC.Log.resize, false);
 
   // Report back to the parent frame that we're fully loaded and ready to go.
   parent.postMessage('initLog', location.origin);
@@ -180,12 +183,20 @@ CCC.Log.renderXml = function(dom) {
  * @param {!Element} element HTML element to add.
  */
 CCC.Log.appendRow = function(element) {
-  document.body.appendChild(element);
-  if (document.body.childNodes.length > CCC.Log.maxHistorySize) {
-    document.body.removeChild(document.body.firstChild);
+  var div = CCC.Log.scrollDiv;
+  div.appendChild(element);
+  if (div.childNodes.length > CCC.Log.maxHistorySize) {
+    div.removeChild(document.body.firstChild);
   }
-  window.scroll(0, document.body.scrollHeight);
-}
+  div.scrollTop = div.scrollHeight;
+};
+
+/**
+ * When resizing, keep the log scrolled to the bottom.
+ */
+CCC.Log.resize = function() {
+  CCC.Log.scrollDiv.scrollTop = CCC.Log.scrollDiv.scrollHeight;
+};
 
 window.addEventListener('message', CCC.Log.receiveMessage, false);
 window.addEventListener('load', CCC.Log.init, false);

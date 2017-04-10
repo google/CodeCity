@@ -5,6 +5,15 @@ body {
   padding-left: 15px;
 }
 
+#scrollDiv {
+  bottom: 0;
+  left: 0;
+  max-height: 100%;
+  overflow-y: auto;
+  position: absolute;
+  right: 0;
+}
+
 .zippySpan {
   cursor: pointer;
   margin-left: -15px;

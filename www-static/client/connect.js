@@ -152,7 +152,8 @@ CCC.init = function() {
   CCC.commandTextarea = document.getElementById('commandTextarea');
 
   window.addEventListener('resize', CCC.resize, false);
-  CCC.resize();
+  // Firefox needs a 0ms delay before first resize, Chrome does not care.
+  setTimeout(CCC.resize, 0);
 
   CCC.commandTextarea.addEventListener('keydown', CCC.keydown, false);
   CCC.commandTextarea.addEventListener('click', CCC.click, false);

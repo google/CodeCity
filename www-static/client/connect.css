@@ -15,6 +15,7 @@ body {
   position: absolute;
   width: 100%;
   z-index: -1;
+  border: none;
 }
 
 #mainTable {
@@ -36,6 +37,7 @@ thead, tfoot {
   box-sizing: border-box;
   background-color: #f8f8f8;
   font-size: 12pt;
+  height: 42pt;
   margin-top: 2px;
   resize: none;
   width: 100%;
