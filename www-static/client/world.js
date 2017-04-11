@@ -54,6 +54,12 @@ CCC.World.panelHeight = 256;
 CCC.World.resizePid = 0;
 
 /**
+ * The last recorded screen width.  Used to determine if a resize event resulted
+ * in a change of width.
+ */
+CCC.World.lastWidth = NaN;
+
+/**
  * Initialization code called on startup.
  */
 CCC.World.init = function() {
@@ -178,6 +184,11 @@ CCC.World.resizeSoon = function() {
  * Called when the window changes size.
  */
 CCC.World.resizeNow = function() {
+  var width = CCC.World.scrollDiv.offsetWidth;
+  if (width == CCC.World.lastWidth) {
+    return;
+  }
+  CCC.World.lastWidth = width;
   CCC.World.renderHistory();
   CCC.World.renderPanorama();
   CCC.World.scrollDiv.scrollTop = CCC.World.scrollDiv.scrollHeight;
@@ -196,10 +207,12 @@ CCC.World.renderPanorama = function() {
  */
 CCC.World.renderHistory = function() {
   var panelBloat = 2 * (5 + 2);  // Margin and border widths must match the CSS.
+  // Destroy all existing history.
   var historyRows = document.getElementsByClassName('historyRow');
   while (historyRows[0]) {
     historyRows[0].parentNode.removeChild(historyRows[0]);
   }
+  // Create new history.
   for (var y = 0; y < 3; y++) {
     var rowWidths = CCC.World.rowWidths();
     var rowDiv = document.createElement('div');
@@ -222,7 +235,7 @@ CCC.World.renderHistory = function() {
  */
 CCC.World.rowWidths = function() {
   var panelBloat = 2 * (5 + 2);  // Margin and border widths must match the CSS.
-  var windowWidth = CCC.World.scrollDiv.offsetWidth - panelBloat;
+  var windowWidth = CCC.World.lastWidth - panelBloat - 1;
   var idealWidth = CCC.World.panelHeight * 5 / 4;  // Standard TV ratio.
   var panelCount = Math.round(windowWidth / idealWidth);
   var averageWidth = Math.floor(windowWidth / panelCount);

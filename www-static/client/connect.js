@@ -126,6 +126,20 @@ CCC.nextPingPid = -1;
 CCC.ackMsgNextPing = true;
 
 /**
+ * Buffer to accumulate incoming messages when paused.
+ */
+CCC.pauseBuffer = null;
+
+/**
+ * Enum for message types.
+ * @enum {string}
+ */
+CCC.MessageTypes = {
+  COMMAND: 'command',
+  MESSAGE: 'message'
+};
+
+/**
  * Unique queue ID.  Identifies this client to the connectServer across
  * polling connections.  Set by the server at startup.
  * @private
@@ -161,6 +175,8 @@ CCC.init = function() {
 
   var clearButton = document.getElementById('clearButton');
   clearButton.addEventListener('click', CCC.clear, false);
+  var pauseCheckbox = document.getElementById('pauseCheckbox');
+  pauseCheckbox.addEventListener('click', CCC.pause, false);
   var worldButton = document.getElementById('worldButton');
   worldButton.addEventListener('click', CCC.tab.bind(null, 'world'), false);
   var logButton = document.getElementById('logButton');
@@ -195,11 +211,32 @@ CCC.clear = function() {
   CCC.commandHistory.length = 0;
   CCC.commandTemp = '';
   CCC.commandHistoryPointer = -1;
+  if (CCC.pauseBuffer) {
+    CCC.pauseBuffer.length = 0;
+  }
   var json = {'mode': 'clear'};
   CCC.worldFrame.contentWindow.postMessage(json, location.origin);
   CCC.logFrame.contentWindow.postMessage(json, location.origin);
   CCC.commandTextarea.focus();
-}
+};
+
+/**
+ * Toggle pausing of incoming messages.
+ */
+CCC.pause = function() {
+  var checkbox = document.getElementById('pauseCheckbox');
+  if (CCC.pauseBuffer && !checkbox.checked) {
+    // Fire off all accumulated messages.
+    var buffer = CCC.pauseBuffer;
+    CCC.pauseBuffer = null;
+    for (var i = 0, args; args = buffer[i]; i++) {
+      CCC.distributeMessage.apply(null, args);
+    }
+  } else if (!CCC.pauseBuffer && checkbox.checked) {
+    CCC.pauseBuffer = [];
+  }
+  CCC.commandTextarea.focus();
+};
 
 /**
  * Reposition the iframes over the placeholder displayCell.
@@ -246,20 +283,15 @@ CCC.receiveMessage = function(e) {
 
 /**
  * Distribute a line of text to all frames.
- * @param {string} line Text from Code City.
+ * @param {string} line Text to or from Code City.
+ * @param {!CCC.MessageTypes} type Command or message.
  */
-CCC.distrubuteMessage = function(line) {
-  var json = {'mode': 'message', 'text': line};
-  CCC.worldFrame.contentWindow.postMessage(json, location.origin);
-  CCC.logFrame.contentWindow.postMessage(json, location.origin);
-};
-
-/**
- * Distribute a command to all frames.
- * @param {string} line Text from user.
- */
-CCC.distrubuteCommand = function(line) {
-  var json = {'mode': 'command', 'text': line};
+CCC.distributeMessage = function(line, type) {
+  if (CCC.pauseBuffer) {
+    CCC.pauseBuffer.push(arguments);
+    return;
+  }
+  var json = {'mode': type, 'text': line};
   CCC.worldFrame.contentWindow.postMessage(json, location.origin);
   CCC.logFrame.contentWindow.postMessage(json, location.origin);
 };
@@ -293,7 +325,7 @@ CCC.sendCommand = function(commands, echo) {
     }
     // Echo command onscreen.
     if (echo) {
-      CCC.distrubuteCommand(commands[i]);
+      CCC.distributeMessage(commands[i], CCC.MessageTypes.COMMAND);
     }
   }
   CCC.commandTemp = '';
@@ -418,7 +450,7 @@ CCC.parse = function(receivedJson) {
     for (var i = 0; i < msgs.length; i++) {
       if (currentIndex > CCC.messageIndex) {
         CCC.messageIndex = currentIndex;
-        CCC.distrubuteMessage(msgs[i]);
+        CCC.distributeMessage(msgs[i], CCC.MessageTypes.MESSAGE);
         // Reduce ping interval.
         CCC.pingInterval =
             Math.max(CCC.MIN_PING_INTERVAL, CCC.pingInterval * 0.8);
