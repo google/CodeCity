@@ -22,7 +22,7 @@ import (
 )
 
 func TestInitArrayProto(t *testing.T) {
-	i := New(emptyProg)
+	i := NewFromJSON(emptyProg)
 	ap, _ := i.state.(*stateBlockStatement).scope.getVar("Array").
 		GetProperty("prototype")
 	push, _ := ap.GetProperty("push")

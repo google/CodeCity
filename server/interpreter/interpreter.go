@@ -31,22 +31,28 @@ type Interpreter struct {
 	Verbose bool
 }
 
-// New takes a JavaScript program, in the form of an JSON-encoded
+// NewFromJSON takes a JavaScript program, in the form of an JSON-encoded
 // ESTree, and creates a new Interpreter that will execute that
 // program.
-func New(astJSON string) *Interpreter {
-	var this = new(Interpreter)
-
+func NewFromJSON(astJSON string) *Interpreter {
 	tree, err := ast.NewFromJSON(astJSON)
 	if err != nil {
 		panic(err)
 	}
+	return NewFromAST(tree)
+}
+
+// NewFromAST takes a JavaScript program, in the form of an
+// ESTree-structured *ast.Program and creates a new Interpreter that
+// will execute that program.
+func NewFromAST(tree *ast.Program) *Interpreter {
+	var intrp = new(Interpreter)
 	s := newScope(nil, nil)
 	initArrayProto(s)
 	// FIXME: insert global names into s
 	s.populate(tree)
-	this.state = newState(nil, s, tree)
-	return this
+	intrp.state = newState(nil, s, tree)
+	return intrp
 }
 
 // Step performs the next step in the evaluation of program.  Returns
