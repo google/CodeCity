@@ -127,21 +127,24 @@ function handleRequest(request, response) {
         cookieList[parts.shift().trim()] = decodeURI(parts.join('='));
     });
     // Decrypt the ID to ensure there was no tampering.
-    var decipher = crypto.createDecipher('aes-128-cbc-hmac-sha256',
-                                         CFG.password);
-    try {
-      var loginId = decipher.update(cookieList.id, 'hex', 'utf8');
-      loginId += decipher.final('utf8');
-    } catch (e) {
-      if (cookieList.id) {
-        console.log('Invalid login cookie: ' + cookieList.id);
-      } else {
-        console.log('Missing login cookie.  Redirecting.');
-      }
+    var m = cookieList.id && cookieList.id.match(/^([0-9a-f]+)_([0-9a-f]+)$/);
+    if (!m) {
+      console.log('Missing login cookie.  Redirecting.');
       response.writeHead(302, {  // Temporary redirect
          'Location': CFG.loginPath
        });
       response.end('Login required.  Redirecting.');
+      return;
+    }
+    var loginId = m[1];
+    var checksum = CFG.password + loginId;
+    checksum = crypto.createHash('sha').update(checksum).digest('hex');
+    if (checksum != m[2]) {
+      console.log('Invalid login cookie: ' + cookieList.id);
+      response.writeHead(302, {  // Temporary redirect
+         'Location': CFG.loginPath
+       });
+      response.end('Login invalid.  Redirecting.');
       return;
     }
     var seed = (Date.now() * Math.random()).toString() + cookieList.id;
@@ -163,12 +166,11 @@ function handleRequest(request, response) {
       '<<<SESSION_ID>>>': sessionId
     };
     serveFile(response, 'connect.html', subs);
-    console.log('Hello ' + 'x'.repeat(loginId.length - 4) +
-                loginId.substring(loginId.length - 4) + ', starting session ' +
-                sessionId);
+    console.log('Hello xxxx' + loginId.substring(loginId.length - 4) +
+                ', starting session ' + sessionId);
 
   } else if (request.method == 'POST' &&
-             request.url.startsWith(CFG.connectPath + '?ping')) {
+             request.url.indexOf(CFG.connectPath + '?ping') === 0) {
     var requestBody = '';
     request.on('data', function(data) {
       requestBody += data;
@@ -272,7 +274,7 @@ function pong(queue, response, ackCmdNextPing) {
  * When done, call startup.
  */
 function configureAndStartup() {
-  const filename = 'connectServer.cfg';
+  var filename = 'connectServer.cfg';
   fs.readFile(filename, 'utf8', function(err, data) {
     if (err) {
       console.log('Configuration file connectServer.cfg not found.  ' +

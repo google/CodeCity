@@ -30,7 +30,7 @@ var net = require('net');
 var acorn = require('./acorn.js');
 
 // Create a new TCP server for parsing code into an AST using Acorn.
-const parsePort = 7780;
+var parsePort = 7780;
 var options = {
   allowHalfOpen: true
 };

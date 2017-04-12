@@ -79,7 +79,7 @@ function handleRequest(request, response) {
     var subs = {'<<<LOGIN_URL>>>': loginUrl};
     serveFile(response, 'login.html', subs);
 
-  } else if (request.url.startsWith(CFG.loginPath + '?code=')) {
+  } else if (request.url.indexOf(CFG.loginPath + '?code=') === 0) {
     var code = request.url.substring(request.url.indexOf('=') + 1);
     oauth2Client.getToken(code, function(err, tokens) {
       // Now tokens contains an access_token and an optional refresh_token. Save them.
@@ -103,20 +103,17 @@ function handleRequest(request, response) {
           // Convert the Google ID into one unique for Code City.
           var id = CFG.password + data.id;
           id = crypto.createHash('sha512').update(id).digest('hex');
-          // Encrypt the ID to prevent tampering.
-          var cipher = crypto.createCipher('aes-128-cbc-hmac-sha256',
-                                           CFG.password);
-          var crypted = cipher.update(id, 'utf8', 'hex');
-          crypted += cipher.final('hex');
+          // Create anti-tampering hash as checksum.
+          var checksum = CFG.password + id;
+          checksum = crypto.createHash('sha').update(checksum).digest('hex');
           // For future reference, the user's email address is: data.email
           response.writeHead(302, {  // Temporary redirect
-              'Set-Cookie': 'id=' + crypted + '; HttpOnly' +
+              'Set-Cookie': 'id=' + id + '_' + checksum + '; HttpOnly' +
               '; Domain=' + CFG.cookieDomain + '; Path=' + CFG.connectPath,
               'Location': CFG.connectPath
            });
           response.end('Login OK.  Redirecting.');
-          console.log('Accepted ' + 'x'.repeat(id.length - 4) +
-                      id.substring(id.length - 4));
+          console.log('Accepted xxxx' + id.substring(id.length - 4));
         });
     });
   } else {
@@ -130,7 +127,7 @@ function handleRequest(request, response) {
  * When done, call startup.
  */
 function configureAndStartup() {
-  const filename = 'loginServer.cfg';
+  var filename = 'loginServer.cfg';
   fs.readFile(filename, 'utf8', function(err, data) {
     if (err) {
       console.log('Configuration file loginServer.cfg not found.  ' +
