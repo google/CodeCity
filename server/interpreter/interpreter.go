@@ -31,6 +31,14 @@ type Interpreter struct {
 	Verbose bool
 }
 
+// New takes a JavaScript program as text source code and creates a
+// new Interpreter that will execute that program.
+//
+// FIXME: error handling
+func New(js string) *Interpreter {
+	return NewFromAST(parse(js))
+}
+
 // NewFromJSON takes a JavaScript program, in the form of an JSON-encoded
 // ESTree, and creates a new Interpreter that will execute that
 // program.

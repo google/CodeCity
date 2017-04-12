@@ -14,21 +14,24 @@
  * limitations under the License.
  */
 
-package nodejs
+package interpreter
 
 import "strings"
 import "testing"
 
 func TestCodeToAST(t *testing.T) {
+	// Uncomment this if you don't have node.js running acornserver.js
+	// while testing:
+	// t.SkipNow()
 	code := "1 + 2"
-	json := strings.Trim(codeToAST(code), " \r\n")
+	json := strings.Trim(codeToJSON(code), " \r\n")
 	expected := `{"type":"Program","start":0,"end":5,"body":[{"type":"ExpressionStatement","start":0,"end":5,"expression":{"type":"BinaryExpression","start":0,"end":5,"left":{"type":"Literal","start":0,"end":1,"value":1,"raw":"1"},"operator":"+","right":{"type":"Literal","start":4,"end":5,"value":2,"raw":"2"}}}]}`
 	if json != expected {
 		t.Errorf("%s != %s", json, expected)
 	}
 
 	code = "Holy !@#$%"
-	json = strings.Trim(codeToAST(code), " \r\n")
+	json = strings.Trim(codeToJSON(code), " \r\n")
 	expected = `{"type":"SyntaxError","message":"Unexpected token (1:5)","error":{"pos":5,"loc":{"line":1,"column":5},"raisedAt":6}}`
 	if json != expected {
 		t.Errorf("%s != %s", json, expected)

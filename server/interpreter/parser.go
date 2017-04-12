@@ -14,20 +14,40 @@
  * limitations under the License.
  */
 
-// The nodejs package handles all network communication to the Node.js server.
-// Used to convert code to an AST.
-package nodejs
+package interpreter
 
-import "bufio"
-import "fmt"
-import "net"
+import (
+	"bufio"
+	"fmt"
+	"net"
 
-func codeToAST(code string) string {
-	conn, _ := net.Dial("tcp", "127.0.0.1:7780")
-	fmt.Fprint(conn, code + "\n")
+	"CodeCity/server/interpreter/ast"
+)
+
+// parse takes a javascript program, and returns an *ast.Program
+//
+// FIXME: error handling
+func parse(code string) *ast.Program {
+	json := codeToJSON(code)
+	p, err := ast.NewFromJSON(json)
+	if err != nil {
+		panic(err)
+	}
+	return p
+}
+
+func codeToJSON(code string) string {
+	conn, err := net.Dial("tcp", "localhost:7780")
+	if err != nil {
+		panic(err)
+	}
+	fmt.Fprint(conn, code+"\n")
 	// Half-close the connection, and wait for a reply.
 	conn.(*net.TCPConn).CloseWrite()
 	// Listen for single-line reply.
-	json, _ := bufio.NewReader(conn).ReadString('\n')
+	json, err := bufio.NewReader(conn).ReadString('\n')
+	if err != nil {
+		panic(err)
+	}
 	return json
 }
