@@ -234,8 +234,7 @@ CCC.World.publishHistory = function() {
   panelDiv.className = 'historyPanel';
   if (Math.random() < 1 / 16) {
     // The occasional panel should lack a border for artistic reasons.
-    // TODO: change this to #fff when confident in history behaviour.
-    panelDiv.style.borderColor = '#ccc';
+    panelDiv.style.borderColor = '#fff';
   }
   panelDiv.style.height = CCC.World.panelHeight + 'px';
   panelDiv.style.width = width + 'px';
@@ -300,6 +299,8 @@ CCC.World.resizeSoon = function() {
 CCC.World.resizeNow = function() {
   var width = CCC.World.scrollDiv.offsetWidth;
   if (width == CCC.World.lastWidth) {
+    // Width hasn't changed.  Maybe just the height changed.  Snap to bottom.
+    CCC.World.scrollDiv.scrollTop = CCC.World.scrollDiv.scrollHeight;
     return;
   }
   CCC.World.lastWidth = width;

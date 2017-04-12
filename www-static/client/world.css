@@ -3,6 +3,7 @@ body {
   background-color: #fff;
   font-family: 'Patrick Hand', 'Comic Sans MS';
   margin: 0;
+  overflow: hidden;
 }
 
 #scrollDiv {
