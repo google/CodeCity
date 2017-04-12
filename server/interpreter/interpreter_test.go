@@ -92,7 +92,7 @@ func TestInterpreterSimple(t *testing.T) {
 	}
 
 	for _, c := range tests {
-		i := New(c.src)
+		i := NewFromJSON(c.src)
 		// if c.src == returnWithFinallyContinue {
 		// 	i.Verbose = true
 		// }
@@ -105,7 +105,7 @@ func TestInterpreterSimple(t *testing.T) {
 }
 
 func TestInterpreterObjectExpression(t *testing.T) {
-	i := New(objectExpression)
+	i := NewFromJSON(objectExpression)
 	i.Run()
 	v, ok := i.Value().(*object.Object)
 	if !ok {
