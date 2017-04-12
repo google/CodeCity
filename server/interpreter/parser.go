@@ -18,6 +18,7 @@ package interpreter
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"net"
 
@@ -27,19 +28,33 @@ import (
 // parse takes a javascript program, and returns an *ast.Program
 //
 // FIXME: error handling
-func parse(code string) *ast.Program {
-	json := codeToJSON(code)
-	p, err := ast.NewFromJSON(json)
+func parse(code string) (*ast.Program, error) {
+	astJSON, err := codeToJSON(code)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	return p
+	// Check for parse errors:
+	var tmp struct {
+		Type string `json:"type"`
+	}
+	e := json.Unmarshal([]byte(astJSON), &tmp)
+	if e != nil {
+		return nil, e
+	} else if tmp.Type != "Program" {
+		return nil, fmt.Errorf("%s", astJSON) // FIXME: return proper error
+	}
+
+	p, err := ast.NewFromJSON(astJSON)
+	if err != nil {
+		return nil, err
+	}
+	return p, nil
 }
 
-func codeToJSON(code string) string {
+func codeToJSON(code string) (string, error) {
 	conn, err := net.Dial("tcp", "localhost:7780")
 	if err != nil {
-		panic(err)
+		return "", err
 	}
 	fmt.Fprint(conn, code+"\n")
 	// Half-close the connection, and wait for a reply.
@@ -47,7 +62,7 @@ func codeToJSON(code string) string {
 	// Listen for single-line reply.
 	json, err := bufio.NewReader(conn).ReadString('\n')
 	if err != nil {
-		panic(err)
+		return "", err
 	}
-	return json
+	return json, nil
 }

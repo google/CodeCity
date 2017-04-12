@@ -33,8 +33,9 @@ func main() {
 	}
 	for {
 		conn, err := ln.Accept()
+
 		if err != nil {
-			fmt.Errorf("Accept failed: %s\n", err)
+			fmt.Printf("Accept failed: %s\n", err)
 			break
 		}
 		go handleConnection(conn)
@@ -47,9 +48,15 @@ func handleConnection(conn net.Conn) {
 	for in.Scan() {
 		input := in.Text()
 		fmt.Println(input)
-		i := interpreter.New(input)
+		i, err := interpreter.New(input)
+		if err != nil {
+			fmt.Println(err)
+			fmt.Fprintln(conn, err)
+			continue
+		}
 		i.Run()
 		fmt.Fprintln(conn, i.Value().ToString())
+
 	}
 	if err := in.Err(); err != nil {
 		fmt.Fprintln(conn, "reading standard input:", err)

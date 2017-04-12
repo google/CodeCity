@@ -92,7 +92,7 @@ func TestInterpreterSimple(t *testing.T) {
 	}
 
 	for _, c := range tests {
-		i := NewFromJSON(c.src)
+		i, _ := NewFromJSON(c.src)
 		// if c.src == returnWithFinallyContinue {
 		// 	i.Verbose = true
 		// }
@@ -105,7 +105,7 @@ func TestInterpreterSimple(t *testing.T) {
 }
 
 func TestInterpreterObjectExpression(t *testing.T) {
-	i := NewFromJSON(objectExpression)
+	i, _ := NewFromJSON(objectExpression)
 	i.Run()
 	v, ok := i.Value().(*object.Object)
 	if !ok {
@@ -128,7 +128,7 @@ func TestInterpreterObjectExpression(t *testing.T) {
 
 func BenchmarkFibonacci(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		i := New(fibonacci10k)
+		i, _ := New(fibonacci10k)
 		i.Run()
 	}
 }

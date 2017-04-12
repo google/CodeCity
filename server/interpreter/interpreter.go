@@ -35,19 +35,23 @@ type Interpreter struct {
 // new Interpreter that will execute that program.
 //
 // FIXME: error handling
-func New(js string) *Interpreter {
-	return NewFromAST(parse(js))
+func New(js string) (*Interpreter, error) {
+	ast, err := parse(js)
+	if err != nil {
+		return nil, err
+	}
+	return NewFromAST(ast), nil
 }
 
 // NewFromJSON takes a JavaScript program, in the form of an JSON-encoded
 // ESTree, and creates a new Interpreter that will execute that
 // program.
-func NewFromJSON(astJSON string) *Interpreter {
+func NewFromJSON(astJSON string) (*Interpreter, error) {
 	tree, err := ast.NewFromJSON(astJSON)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	return NewFromAST(tree)
+	return NewFromAST(tree), nil
 }
 
 // NewFromAST takes a JavaScript program, in the form of an
