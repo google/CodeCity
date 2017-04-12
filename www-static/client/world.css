@@ -28,3 +28,14 @@ body {
   height: 295px;
   margin: 2px 6px 0 5px;
 }
+
+iframe {
+  border: none;
+  height: 100%;
+  width: 100%;
+}
+
+svg {
+  height: 100%;
+  width: 100%;
+}
