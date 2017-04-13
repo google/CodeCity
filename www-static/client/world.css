@@ -43,3 +43,16 @@ svg {
   height: 100%;
   width: 100%;
 }
+
+.iframeClose:hover {
+  opacity: 1;
+}
+
+.iframeClose {
+  cursor: pointer;
+  position: absolute;
+  margin-left: -16px;
+  margin-top: -5px;
+  opacity: .7;
+  z-index: 1;
+}
