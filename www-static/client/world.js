@@ -195,6 +195,8 @@ CCC.World.prerenderHistory = function(msg) {
     rect.setAttribute('width', '200');
     rect.setAttribute('x', '-100');
     rect.setAttribute('y', '-1.4em');
+    rect.setAttribute('rx', 15);
+    rect.setAttribute('ry', 15);
     var text = document.createElementNS(CCC.World.NS, 'text');
     text.appendChild(document.createTextNode(
         CCC.World.getMsg('relaunchIframeMsg')));
@@ -203,9 +205,9 @@ CCC.World.prerenderHistory = function(msg) {
     g.addEventListener('click', function() {
       msg.iframe = CCC.World.createIframe(msg);
       var div = svg.parentNode;
-      console.log(div);
       CCC.World.positionIframe(msg.iframe, div);
-      div.lastChild.style.display = 'inline';
+      div.firstChild.style.visibility = 'hidden';  // SVG.
+      div.lastChild.style.display = 'inline';  // Close button.
     }, false);
     svg.appendChild(g);
     CCC.World.scratchHistory = svg;
@@ -262,10 +264,12 @@ CCC.World.publishHistory = function() {
   panelDiv.style.width = width + 'px';
   CCC.World.historyRow.appendChild(panelDiv);
   panelDiv.appendChild(CCC.World.scratchHistory);
+  var isIframeVisible = false;
   var msgs = CCC.World.scratchHistory.msgs;
   if (msgs.length == 1 && msgs[0].iframe !== undefined) {
     var msg = msgs[0];
     if (msg.iframe) {
+      isIframeVisible = true;
       CCC.World.positionIframe(msg.iframe, panelDiv);
       var closeImg = new Image(21, 21);
       closeImg.className = 'iframeClose';
@@ -273,6 +277,7 @@ CCC.World.publishHistory = function() {
       closeImg.title = CCC.World.getMsg('closeIframeMsg');
       closeImg.addEventListener('click', function() {
         closeImg.style.display = 'none';
+        panelDiv.firstChild.style.visibility = 'visible';  // SVG.
         msg.iframe.parentNode.removeChild(msg.iframe);
         msg.iframe = null;
       }, false);
@@ -282,7 +287,11 @@ CCC.World.publishHistory = function() {
     // The occasional (non-iframe) panel should lack a border.
     panelDiv.style.borderColor = '#fff';
   }
-  CCC.World.scratchHistory.style.visibility = 'visible';
+  // While being built, the SVG was hidden.
+  // Make it visible, unless there is an iframe displayed on top of it.
+  if (!isIframeVisible) {
+    CCC.World.scratchHistory.style.visibility = 'visible';
+  }
   CCC.World.scratchHistory = null;
   CCC.World.scrollDiv.scrollTop = CCC.World.scrollDiv.scrollHeight;
 

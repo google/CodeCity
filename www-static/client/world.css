@@ -66,16 +66,18 @@ svg {
 }
 
 .iframeRelaunch>rect {
-  fill: #000;
-  rx: 15;
-  ry: 15;
+  fill: #222;
 }
 
 .iframeRelaunch>text {
-  fill: #fff;
+  fill: #ccc;
   text-anchor: middle;
 }
 
 .iframeRelaunch:hover>text {
-  fill: #f00;
+  fill: #fff;
+}
+
+.iframeRelaunch:hover>rect {
+  fill: #000;
 }
