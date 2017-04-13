@@ -20,20 +20,23 @@ body {
 
 .historyPanel {
   border: 2px solid #444;
+  border-radius: 2px;
   display: inline-block;
-  margin: 2px 5px;
+  margin: 5px;
 }
 
 #panoramaDiv {
   border: 2px solid #444;
+  border-radius: 2px;
   height: 295px;
-  margin: 2px 6px 0 5px;
+  margin: 5px 6px 0 5px;
 }
 
-iframe {
+#iframeStorage>iframe {
   border: none;
-  height: 100%;
-  width: 100%;
+  left: 0;
+  position: absolute;
+  top: 0;
 }
 
 svg {

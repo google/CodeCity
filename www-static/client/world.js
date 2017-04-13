@@ -122,6 +122,7 @@ CCC.World.receiveMessage = function(e) {
   var mode = e.data['mode'];
   var text = e.data['text'];
   if (mode == 'clear') {
+    document.getElementById('iframeStorage').innerHTML = '';
     CCC.World.historyMessages.length = 0;
     CCC.World.panoramaMessages.length = 0;
     CCC.World.renderHistory();
@@ -156,9 +157,11 @@ CCC.World.renderMessage = function(msg) {
     msg.iframe.sandbox = 'allow-forms allow-scripts';
     msg.iframe.src = msg.firstChild.getAttribute('src');
     msg.removeChild(msg.firstChild);  // Throw away redundant information.
+    document.getElementById('iframeStorage').appendChild(msg.iframe);
   }
   var backupScratchHistory = CCC.World.scratchHistory;
   if (CCC.World.prerenderHistory(msg) && CCC.World.prerenderPanorama(msg)) {
+    // Rendering successful in both panorama and pending history panel.
     CCC.World.publishPanorama();
     CCC.World.panoramaMessages.push(msg);
   } else {
@@ -181,11 +184,12 @@ CCC.World.prerenderHistory = function(msg) {
   if (CCC.World.panoramaMessages.length) {
     return false;
   }
+  var svg = CCC.World.createSvg();
   if (msg.iframe) {
-    CCC.World.scratchHistory = msg.iframe;
+    svg.iframe = msg.iframe;
+    CCC.World.scratchHistory = svg;
     return true;
   }
-  var svg = CCC.World.createSvg();
   var text = document.createElementNS(CCC.World.NS, 'text');
   text.appendChild(document.createTextNode(msg));
   text.setAttribute('x', 10);
@@ -205,11 +209,12 @@ CCC.World.prerenderPanorama = function(msg) {
   if (CCC.World.panoramaMessages.length) {
     return false;
   }
+  var svg = CCC.World.createSvg();
   if (msg.iframe) {
-    CCC.World.scratchPanorama = msg.iframe;
+    svg.iframe = msg.iframe;
+    CCC.World.scratchPanorama = svg;
     return true;
   }
-  var svg = CCC.World.createSvg();
   var text = document.createElementNS(CCC.World.NS, 'text');
   text.appendChild(document.createTextNode(msg));
   text.setAttribute('x', 20);
@@ -238,10 +243,13 @@ CCC.World.publishHistory = function() {
   }
   panelDiv.style.height = CCC.World.panelHeight + 'px';
   panelDiv.style.width = width + 'px';
+  CCC.World.historyRow.appendChild(panelDiv);
   panelDiv.appendChild(CCC.World.scratchHistory);
+  if (CCC.World.scratchHistory.iframe) {
+    CCC.World.positionIframe(CCC.World.scratchHistory.iframe, panelDiv);
+  }
   CCC.World.scratchHistory.style.visibility = 'visible';
   CCC.World.scratchHistory = null;
-  CCC.World.historyRow.appendChild(panelDiv);
   CCC.World.scrollDiv.scrollTop = CCC.World.scrollDiv.scrollHeight;
 
   if (!CCC.World.panelWidths.length) {
@@ -257,12 +265,37 @@ CCC.World.publishHistory = function() {
  * Publish the previously experimentally rendered panorama frame to the user.
  */
 CCC.World.publishPanorama = function() {
+  // Destroy any existing content.
   while (CCC.World.panoramaDiv.firstChild) {
     CCC.World.panoramaDiv.removeChild(CCC.World.panoramaDiv.firstChild);
   }
+  // Insert new content.
   CCC.World.panoramaDiv.appendChild(CCC.World.scratchPanorama);
+  if (CCC.World.scratchPanorama.iframe) {
+    CCC.World.positionIframe(CCC.World.scratchPanorama.iframe,
+                             CCC.World.panoramaDiv);
+  }
   CCC.World.scratchPanorama.style.visibility = 'visible';
   CCC.World.scratchPanorama = null;
+};
+
+/**
+ * Absolutely position an iframe so that it fits exactly inside a comic panel.
+ * @param {!Element} iframe DOM node for iframe.
+ * @param {!Element} container DOM node for panel.
+ */
+CCC.World.positionIframe = function (iframe, container) {
+  var borderWidth = 2;
+  iframe.style.width = (container.offsetWidth - borderWidth * 2) + 'px';
+  iframe.style.height = (container.offsetHeight - borderWidth * 2) + 'px';
+  var x = 0;
+  var y = 0;
+  do {
+    x += container.offsetLeft;
+    y += container.offsetTop;
+  } while (container = container.offsetParent);
+  iframe.style.top = (y + borderWidth) + 'px';
+  iframe.style.left = (x + borderWidth) + 'px';
 };
 
 /**
