@@ -56,3 +56,26 @@ svg {
   opacity: .7;
   z-index: 1;
 }
+
+.iframeRelaunch {
+  cursor: pointer;
+}
+
+.iframeRelaunch:hover>text {
+  fill: #f00;
+}
+
+.iframeRelaunch>rect {
+  fill: #000;
+  rx: 15;
+  ry: 15;
+}
+
+.iframeRelaunch>text {
+  fill: #fff;
+  text-anchor: middle;
+}
+
+.iframeRelaunch:hover>text {
+  fill: #f00;
+}

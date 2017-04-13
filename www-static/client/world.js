@@ -182,7 +182,32 @@ CCC.World.prerenderHistory = function(msg) {
   var svg = CCC.World.createSvg();
   svg.msgs = [msg];
   if (msg.iframe !== undefined) {
+    // Create relaunch button if iframe is closed.
+    var midWidth = CCC.World.panelWidths[0] / 2;
+    var midHeight = CCC.World.panelHeight / 2;
     svg.style.backgroundColor = '#696969';
+    var g = document.createElementNS(CCC.World.NS, 'g');
+    g.setAttribute('class', 'iframeRelaunch');
+    g.setAttribute('transform',
+                   'translate(' + midWidth + ', ' + midHeight + ')');
+    var rect = document.createElementNS(CCC.World.NS, 'rect');
+    rect.setAttribute('height', '2em');
+    rect.setAttribute('width', '200');
+    rect.setAttribute('x', '-100');
+    rect.setAttribute('y', '-1.4em');
+    var text = document.createElementNS(CCC.World.NS, 'text');
+    text.appendChild(document.createTextNode(
+        CCC.World.getMsg('relaunchIframeMsg')));
+    g.appendChild(rect);
+    g.appendChild(text);
+    g.addEventListener('click', function() {
+      msg.iframe = CCC.World.createIframe(msg);
+      var div = svg.parentNode;
+      console.log(div);
+      CCC.World.positionIframe(msg.iframe, div);
+      div.lastChild.style.display = 'inline';
+    }, false);
+    svg.appendChild(g);
     CCC.World.scratchHistory = svg;
     return true;
   }
@@ -239,17 +264,17 @@ CCC.World.publishHistory = function() {
   panelDiv.appendChild(CCC.World.scratchHistory);
   var msgs = CCC.World.scratchHistory.msgs;
   if (msgs.length == 1 && msgs[0].iframe !== undefined) {
-    var iframe = msgs[0].iframe;
-    if (iframe) {
-      CCC.World.positionIframe(iframe, panelDiv);
+    var msg = msgs[0];
+    if (msg.iframe) {
+      CCC.World.positionIframe(msg.iframe, panelDiv);
       var closeImg = new Image(21, 21);
       closeImg.className = 'iframeClose';
       closeImg.src = 'close.png';
-      closeImg.title = CCC.getMsg('closeIframeMsg');
+      closeImg.title = CCC.World.getMsg('closeIframeMsg');
       closeImg.addEventListener('click', function() {
         closeImg.style.display = 'none';
-        iframe.parentNode.removeChild(iframe);
-        msgs[0].iframe = null;
+        msg.iframe.parentNode.removeChild(msg.iframe);
+        msg.iframe = null;
       }, false);
       panelDiv.appendChild(closeImg);
     }
@@ -316,6 +341,7 @@ CCC.World.positionIframe = function (iframe, container) {
  */
 CCC.World.createSvg = function() {
   var svg = document.createElementNS(CCC.World.NS, 'svg');
+  svg.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
   svg.style.visibility = 'hidden';
   document.body.appendChild(svg);
   return svg;
@@ -438,7 +464,7 @@ CCC.World.rowWidths = function() {
  * @param {string} key The key of the document element.
  * @return {string} The textContent of the specified element.
  */
-CCC.getMsg = function(key) {
+CCC.World.getMsg = function(key) {
   var element = document.getElementById(key);
   if (!element) {
     throw 'Unknow message ' + key;
