@@ -125,6 +125,8 @@ CCC.World.receiveMessage = function(e) {
     document.getElementById('iframeStorage').innerHTML = '';
     CCC.World.historyMessages.length = 0;
     CCC.World.panoramaMessages.length = 0;
+    CCC.World.removeNode(CCC.World.scratchHistory);
+    CCC.World.removeNode(CCC.World.scratchPanorama);
     CCC.World.renderHistory();
   } else if (mode == 'message') {
     if (text.indexOf('I don\'t understand that.') != -1) {
@@ -159,8 +161,11 @@ CCC.World.renderMessage = function(msg) {
     // Rendering successful in both panorama and pending history panel.
     CCC.World.publishPanorama();
     CCC.World.panoramaMessages.push(msg);
+    CCC.World.removeNode(backupScratchHistory);
   } else {
     // Failure to render.  Revert to previous state.
+    CCC.World.removeNode(CCC.World.scratchHistory);
+    CCC.World.removeNode(CCC.World.scratchPanorama);
     CCC.World.scratchHistory = backupScratchHistory;
     // Publish one panel to the history.
     CCC.World.publishHistory();
@@ -278,7 +283,7 @@ CCC.World.publishHistory = function() {
       closeImg.addEventListener('click', function() {
         closeImg.style.display = 'none';
         panelDiv.firstChild.style.visibility = 'visible';  // SVG.
-        msg.iframe.parentNode.removeChild(msg.iframe);
+        CCC.World.removeNode(msg.iframe);
         msg.iframe = null;
       }, false);
       panelDiv.appendChild(closeImg);
@@ -409,7 +414,7 @@ CCC.World.renderHistory = function() {
   // Destroy all existing history.
   var historyRows = document.getElementsByClassName('historyRow');
   while (historyRows[0]) {
-    historyRows[0].parentNode.removeChild(historyRows[0]);
+    CCC.World.removeNode(historyRows[0]);
   }
   while (CCC.World.panoramaDiv.firstChild) {
     CCC.World.panoramaDiv.removeChild(CCC.World.panoramaDiv.firstChild);
@@ -482,6 +487,16 @@ CCC.World.getMsg = function(key) {
   // Convert newline sequences.
   text = text.replace(/\\n/g, '\n');
   return text;
+};
+
+/**
+ * Remove a node from the DOM.
+ * @param {Node} node Node to remove, ok if null.
+ */
+CCC.World.removeNode = function(node) {
+  if (node) {
+    node.parentNode.removeChild(node);
+  }
 };
 
 window.addEventListener('message', CCC.World.receiveMessage, false);
