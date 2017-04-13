@@ -74,6 +74,10 @@ func newState(parent state, scope *scope, node ast.Node) state {
 		st := stateBreakStatement{stateCommon: sc}
 		st.init(n)
 		return &st
+	case *ast.SwitchCase:
+		st := stateBlockStatement{stateCommon: sc}
+		st.initFromSwitchCase(n)
+		return &st
 	case *ast.CallExpression:
 		st := stateCallExpression{stateCommon: sc}
 		st.init(n)
@@ -156,6 +160,10 @@ func newState(parent state, scope *scope, node ast.Node) state {
 		return &st
 	case *ast.SequenceExpression:
 		st := stateSequenceExpression{stateCommon: sc}
+		st.init(n)
+		return &st
+	case *ast.SwitchStatement:
+		st := stateSwitchStatement{stateCommon: sc}
 		st.init(n)
 		return &st
 	case *ast.ThisExpression:
@@ -411,12 +419,16 @@ type stateBlockStatement struct {
 	val  object.Value
 }
 
+func (st *stateBlockStatement) init(node *ast.BlockStatement) {
+	st.body = node.Body
+}
+
 func (st *stateBlockStatement) initFromProgram(node *ast.Program) {
 	st.body = node.Body
 }
 
-func (st *stateBlockStatement) init(node *ast.BlockStatement) {
-	st.body = node.Body
+func (st *stateBlockStatement) initFromSwitchCase(node *ast.SwitchCase) {
+	st.body = node.Consequent
 }
 
 func (st *stateBlockStatement) step(cv *cval) (state, *cval) {
@@ -939,15 +951,15 @@ func (st *stateLabeledStatement) step(cv *cval) (state, *cval) {
 
 type stateLiteral struct {
 	stateCommon
-	value object.Value
+	val object.Value
 }
 
 func (st *stateLiteral) init(node *ast.Literal) {
-	st.value = object.NewFromRaw(node.Raw)
+	st.val = object.NewFromRaw(node.Raw)
 }
 
 func (st *stateLiteral) step(cv *cval) (state, *cval) {
-	return st.parent, pval(st.value)
+	return st.parent, pval(st.val)
 }
 
 /********************************************************************/
@@ -1114,7 +1126,6 @@ func (st *stateReturnStatement) step(cv *cval) (state, *cval) {
 type stateSequenceExpression struct {
 	stateCommon
 	expressions ast.Expressions
-	value       object.Value
 	n           int
 }
 
@@ -1134,6 +1145,80 @@ func (st *stateSequenceExpression) step(cv *cval) (state, *cval) {
 	s := newState(next, st.scope, (st.expressions)[st.n])
 	st.n++
 	return s, nil
+}
+
+/********************************************************************/
+
+type stateSwitchStatement struct {
+	stateCommon
+	labelsCommon
+	discExp   ast.Expression
+	cases     []*ast.SwitchCase
+	disc, val object.Value
+	found     bool
+	n         int
+	def       int
+}
+
+func (st *stateSwitchStatement) init(node *ast.SwitchStatement) {
+	st.discExp = node.Discriminant
+	st.cases = node.Cases
+}
+
+func (st *stateSwitchStatement) step(cv *cval) (state, *cval) {
+	if cv == nil {
+		// Evaluate discriminant
+		return newState(st, st.scope, st.discExp.E), nil
+	} else if cv.abrupt() {
+		if !st.found {
+			// FIXME: assert check that cv.typ == THROW
+			return st.parent, cv
+		}
+		if cv.typ == BREAK && cv.targ == "" || st.hasLabel(cv.targ) {
+			return st.parent, &cval{NORMAL, st.val, ""}
+		}
+		return st.parent, &cval{cv.typ, st.val, cv.targ}
+	}
+	if st.disc == nil {
+		// Save discriminant value:
+		st.disc = cv.pval()
+		if st.disc == nil {
+			panic("no discriminant value??")
+		}
+	} else if !st.found {
+		// Check to see if result === discriminant:
+		if st.disc == cv.pval() {
+			st.found = true
+		} else {
+			st.n++
+			if st.n < len(st.cases) && st.cases[st.n].Test.E == nil {
+				st.n++ // Skip 'defaut:' case
+			}
+		}
+	} else {
+		if cv.pval() != nil {
+			st.val = cv.pval()
+		}
+		st.n++
+	}
+
+	if !st.found {
+		if st.n < len(st.cases) {
+			return newState(st, st.scope, st.cases[st.n].Test.E), nil
+		}
+		// Find default clause, if any
+		for n := 0; n < len(st.cases); n++ {
+			if st.cases[n].Test.E == nil {
+				st.found = true
+				st.n = n
+				break
+			}
+		}
+	}
+	if st.n < len(st.cases) {
+		return newState(st, st.scope, st.cases[st.n]), nil
+	}
+	return st.parent, &cval{NORMAL, st.val, ""}
 }
 
 /********************************************************************/
