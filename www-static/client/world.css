@@ -23,6 +23,7 @@ body {
   border-radius: 2px;
   display: inline-block;
   margin: 5px;
+  overflow: hidden;
 }
 
 #panoramaDiv {
@@ -30,6 +31,7 @@ body {
   border-radius: 2px;
   height: 295px;
   margin: 5px 6px 0 5px;
+  overflow: hidden;
 }
 
 #iframeStorage>iframe {

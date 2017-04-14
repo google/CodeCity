@@ -344,7 +344,8 @@ CCC.World.positionIframe = function (iframe, container) {
   do {
     x += container.offsetLeft;
     y += container.offsetTop;
-  } while (container = container.offsetParent);
+  } while ((container = container.offsetParent) &&
+           (container != CCC.World.scrollDiv));
   iframe.style.top = (y + borderWidth) + 'px';
   iframe.style.left = (x + borderWidth) + 'px';
 };
