@@ -50,9 +50,9 @@ type Value interface {
 	// "succeeds" silently.)
 	DeleteProperty(name string) *ErrorMsg
 
-	// propNames returns the list of (own) property names as a slice
-	// of strings.
-	propNames() []string
+	// OwnPropertyKeys returns the list of (own) property names as a
+	// slice of strings.
+	OwnPropertyKeys() []string
 
 	// HasOwnProperty returns true if the specified property name
 	// exists on the object itself.
@@ -177,7 +177,9 @@ func (obj *Object) SetProperty(name string, value Value) *ErrorMsg {
 	return nil
 }
 
-func (obj *Object) propNames() []string {
+// OwnPropertyKeys returns the list of (own) property names as a slice
+// of strings.
+func (obj *Object) OwnPropertyKeys() []string {
 	names := make([]string, len(obj.properties))
 	i := 0
 	for k := range obj.properties {

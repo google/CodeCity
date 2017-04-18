@@ -120,7 +120,7 @@ func TestInterpreterObjectExpression(t *testing.T) {
 		t.Errorf("{foo: \"bar\", answer: 42} returned type %T "+
 			"(expected object.Object)", i.Value())
 	}
-	if c := object.PropCount(v); c != 2 {
+	if c := len(v.OwnPropertyKeys()); c != 2 {
 		t.Errorf("{foo: \"bar\", answer: 42} had %d properties "+
 			"(expected 2)", c)
 	}

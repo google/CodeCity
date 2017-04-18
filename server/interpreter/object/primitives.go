@@ -102,7 +102,8 @@ func (Boolean) SetProperty(name string, value Value) *ErrorMsg {
 	return nil
 }
 
-func (Boolean) propNames() []string { return nil }
+// OwnPropertyKeys always returns an empty slice on Boolean.
+func (Boolean) OwnPropertyKeys() []string { return nil }
 
 // HasOwnProperty always returns false for Boolean values.
 func (Boolean) HasOwnProperty(string) bool { return false }
@@ -173,7 +174,8 @@ func (Number) SetProperty(name string, value Value) *ErrorMsg {
 	return nil
 }
 
-func (Number) propNames() []string { return nil }
+// OwnPropertyKeys always returns an empty slice on Number.
+func (Number) OwnPropertyKeys() []string { return nil }
 
 // HasOwnProperty always returns false for Number values.
 func (Number) HasOwnProperty(string) bool { return false }
@@ -265,7 +267,8 @@ func (String) SetProperty(name string, value Value) *ErrorMsg {
 	return nil
 }
 
-func (String) propNames() []string { return []string{"length"} }
+// OwnPropertyKeys always returns just the length property on Strings.
+func (String) OwnPropertyKeys() []string { return []string{"length"} }
 
 // HasOwnProperty always returns true for "length" and false for all
 // other inputs for Strings.
@@ -388,7 +391,8 @@ func (Null) SetProperty(name string, value Value) *ErrorMsg {
 	}
 }
 
-func (Null) propNames() []string { return nil }
+// OwnPropertyKeys always returns an empty slice on Null.
+func (Null) OwnPropertyKeys() []string { return nil }
 
 // HasOwnProperty always returns false for Null values
 // FIXME: this should throw.
@@ -458,7 +462,8 @@ func (Undefined) SetProperty(name string, value Value) *ErrorMsg {
 	}
 }
 
-func (Undefined) propNames() []string { return nil }
+// OwnPropertyKeys always returns an empty slice on Undefined.
+func (Undefined) OwnPropertyKeys() []string { return nil }
 
 // HasOwnProperty always returns false for Undefined values
 // FIXME: this should throw.

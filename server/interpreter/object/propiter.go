@@ -30,7 +30,7 @@ type PropIter struct {
 // FIXME: perhaps we should guarantee iteration order, as most
 // browsers (and ES6) do?
 func NewPropIter(v Value) *PropIter {
-	return &PropIter{v, v.propNames(), make(map[string]bool)}
+	return &PropIter{v, v.OwnPropertyKeys(), make(map[string]bool)}
 }
 
 // The Next method returns the next non-deleted, non-shadowed property
@@ -51,6 +51,6 @@ func (iter *PropIter) Next() (string, bool) {
 		if iter.value == nil {
 			return "", false
 		}
-		iter.names = iter.value.propNames()
+		iter.names = iter.value.OwnPropertyKeys()
 	}
 }
