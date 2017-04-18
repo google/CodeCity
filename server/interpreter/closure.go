@@ -32,6 +32,10 @@ type closure struct {
 // *Function must satisfy Value.
 var _ object.Value = (*closure)(nil)
 
+func (closure) Type() string {
+	return "function"
+}
+
 func (closure) ToString() object.String {
 	return "[object Function]"
 }

@@ -1354,6 +1354,8 @@ func (st *stateUnaryExpression) step(cv *cval) (state, *cval) {
 	}
 	var r object.Value
 	switch st.op {
+	case "typeof":
+		r = object.String(cv.pval().Type())
 	case "void":
 		r = object.Undefined{}
 	case "+":
