@@ -425,6 +425,7 @@ func (st *stateBlockStatement) init(node *ast.BlockStatement) {
 
 func (st *stateBlockStatement) initFromProgram(node *ast.Program) {
 	st.body = node.Body
+	st.val = object.Undefined{}
 }
 
 func (st *stateBlockStatement) initFromSwitchCase(node *ast.SwitchCase) {
@@ -433,18 +434,19 @@ func (st *stateBlockStatement) initFromSwitchCase(node *ast.SwitchCase) {
 
 func (st *stateBlockStatement) step(cv *cval) (state, *cval) {
 	if cv != nil {
-		if cv.abrupt() {
-			return st.parent, cv
-		} else if cv.val != nil {
+		if cv.val != nil {
 			st.val = cv.val
 		}
+		if cv.abrupt() || st.n >= len(st.body) {
+			return st.parent, &cval{cv.typ, st.val, cv.targ}
+		}
 	}
-	if st.n < len(st.body) {
-		s := newState(st, st.scope, (st.body)[st.n])
-		st.n++
-		return s, nil
+	if len(st.body) == 0 {
+		return st.parent, pval(nil)
 	}
-	return st.parent, &cval{cv.typ, st.val, cv.targ}
+	s := newState(st, st.scope, (st.body)[st.n])
+	st.n++
+	return s, nil
 }
 
 /********************************************************************/
@@ -1173,6 +1175,9 @@ func (st *stateSwitchStatement) step(cv *cval) (state, *cval) {
 		if !st.found {
 			// FIXME: assert check that cv.typ == THROW
 			return st.parent, cv
+		}
+		if cv.val != nil {
+			st.val = cv.val
 		}
 		if cv.typ == BREAK && cv.targ == "" || st.hasLabel(cv.targ) {
 			return st.parent, &cval{NORMAL, st.val, ""}

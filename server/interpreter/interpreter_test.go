@@ -59,7 +59,7 @@ func TestInterpreterSimple(t *testing.T) {
 		{"var a=56;do{a++}while(false);a", doWhileFalse, object.Number(57)},
 		{"var a=57;do{a++;break;a++}while(false);a",
 			breakDoWhile, object.Number(58)},
-		{"foo:break foo", selfBreak, nil}, // NO completion value
+		{"foo:break foo", selfBreak, object.Undefined{}},
 		{"var a=6;foo:{try{a*=10;break foo}finally{a--}};a",
 			breakWithFinally, object.Number(59)},
 		{"var a=59;do {try{continue}finally{a++}}while(false);a",
@@ -89,6 +89,7 @@ func TestInterpreterSimple(t *testing.T) {
 		{"this", bareThis, object.Undefined{}},
 		{"[].length", emptyArrayLength, object.Number(0)},
 		{"[1,,3,,].length", arrayElidedLength, object.Number(4)},
+		{"{}", compValEmptyBlock, object.Undefined{}},
 	}
 
 	for _, c := range tests {
@@ -130,10 +131,6 @@ func TestInterpreterSwitchStatement(t *testing.T) {
 	var code = []string{switchStatement, switchStatementWithBreaks}
 	var expected = [][]int{{28, 31, 30, 12, 8}, {30, 20, 20, 30, 40}}
 	for i, _ := range code {
-		if i == 1 {
-			// FIXME
-			t.Skip("Skipping failing continuation value tests")
-		}
 		for j := 0; j < 5; j++ {
 			code := fmt.Sprintf(code[i], j, j)
 			intrp, _ := NewFromJSON(code)
@@ -448,6 +445,10 @@ const arrayElidedLength = `{"type":"Program","start":0,"end":15,"body":[{"type":
 // ({Foo: "bar", answer: 42})
 // => {foo: "bar", answer: 42}
 const objectExpression = `{"type":"Program","start":0,"end":26,"body":[{"type":"ExpressionStatement","start":0,"end":26,"expression":{"type":"ObjectExpression","start":0,"end":26,"properties":[{"key":{"type":"Identifier","start":2,"end":5,"name":"foo"},"value":{"type":"Literal","start":7,"end":12,"value":"bar","raw":"\"bar\""},"kind":"init"},{"key":{"type":"Identifier","start":14,"end":20,"name":"answer"},"value":{"type":"Literal","start":22,"end":24,"value":42,"raw":"42"},"kind":"init"}]}}]}`
+
+// {}
+// => undefined
+const compValEmptyBlock = `{"type":"Program","start":0,"end":2,"body":[{"type":"BlockStatement","start":0,"end":2,"body":[]}]}`
 
 // var x = 0
 // switch(<VALUE>) {
