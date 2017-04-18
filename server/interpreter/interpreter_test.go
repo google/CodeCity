@@ -90,6 +90,7 @@ func TestInterpreterSimple(t *testing.T) {
 		{"[].length", emptyArrayLength, object.Number(0)},
 		{"[1,,3,,].length", arrayElidedLength, object.Number(4)},
 		{"{}", compValEmptyBlock, object.Undefined{}},
+		{"undefined", undefined, object.Undefined{}},
 	}
 
 	for _, c := range tests {
@@ -442,13 +443,19 @@ const emptyArrayLength = `{"type":"Program","start":0,"end":9,"body":[{"type":"E
 // => 4
 const arrayElidedLength = `{"type":"Program","start":0,"end":15,"body":[{"type":"ExpressionStatement","start":0,"end":15,"expression":{"type":"MemberExpression","start":0,"end":15,"object":{"type":"ArrayExpression","start":0,"end":8,"elements":[{"type":"Literal","start":1,"end":2,"value":1,"raw":"1"},null,{"type":"Literal","start":4,"end":5,"value":3,"raw":"3"},null]},"property":{"type":"Identifier","start":9,"end":15,"name":"length"},"computed":false}}]}`
 
-// ({Foo: "bar", answer: 42})
-// => {foo: "bar", answer: 42}
-const objectExpression = `{"type":"Program","start":0,"end":26,"body":[{"type":"ExpressionStatement","start":0,"end":26,"expression":{"type":"ObjectExpression","start":0,"end":26,"properties":[{"key":{"type":"Identifier","start":2,"end":5,"name":"foo"},"value":{"type":"Literal","start":7,"end":12,"value":"bar","raw":"\"bar\""},"kind":"init"},{"key":{"type":"Identifier","start":14,"end":20,"name":"answer"},"value":{"type":"Literal","start":22,"end":24,"value":42,"raw":"42"},"kind":"init"}]}}]}`
-
 // {}
 // => undefined
 const compValEmptyBlock = `{"type":"Program","start":0,"end":2,"body":[{"type":"BlockStatement","start":0,"end":2,"body":[]}]}`
+
+// undefined
+// => undefined
+const undefined = `{"type":"Program","start":0,"end":9,"body":[{"type":"ExpressionStatement","start":0,"end":9,"expression":{"type":"Identifier","start":0,"end":9,"name":"undefined"}}]}`
+
+/********************************************************************/
+
+// ({Foo: "bar", answer: 42})
+// => {foo: "bar", answer: 42}
+const objectExpression = `{"type":"Program","start":0,"end":26,"body":[{"type":"ExpressionStatement","start":0,"end":26,"expression":{"type":"ObjectExpression","start":0,"end":26,"properties":[{"key":{"type":"Identifier","start":2,"end":5,"name":"foo"},"value":{"type":"Literal","start":7,"end":12,"value":"bar","raw":"\"bar\""},"kind":"init"},{"key":{"type":"Identifier","start":14,"end":20,"name":"answer"},"value":{"type":"Literal","start":22,"end":24,"value":42,"raw":"42"},"kind":"init"}]}}]}`
 
 // var x = 0
 // switch(<VALUE>) {

@@ -61,7 +61,8 @@ func NewFromAST(tree *ast.Program) *Interpreter {
 	var intrp = new(Interpreter)
 	s := newScope(nil, nil)
 	initArrayProto(s)
-	// FIXME: insert global names into s
+	s.newVar("undefined", object.Undefined{})
+	// FIXME: insert (more) global names into s
 	s.populate(tree)
 	intrp.state = newState(nil, s, tree)
 	return intrp
