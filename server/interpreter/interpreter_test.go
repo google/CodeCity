@@ -91,6 +91,7 @@ func TestInterpreterSimple(t *testing.T) {
 		{"[1,,3,,].length", arrayElidedLength, object.Number(4)},
 		{"{}", compValEmptyBlock, object.Undefined{}},
 		{"undefined", undefined, object.Undefined{}},
+		{"var x=70; undefined === void x++ && x", unaryVoid, object.Number(71)},
 	}
 
 	for _, c := range tests {
@@ -450,6 +451,11 @@ const compValEmptyBlock = `{"type":"Program","start":0,"end":2,"body":[{"type":"
 // undefined
 // => undefined
 const undefined = `{"type":"Program","start":0,"end":9,"body":[{"type":"ExpressionStatement","start":0,"end":9,"expression":{"type":"Identifier","start":0,"end":9,"name":"undefined"}}]}`
+
+// var x = 70
+// undefined === void x++ && x
+// => 71
+const unaryVoid = `{"type":"Program","start":0,"end":38,"body":[{"type":"VariableDeclaration","start":0,"end":10,"declarations":[{"type":"VariableDeclarator","start":4,"end":10,"id":{"type":"Identifier","start":4,"end":5,"name":"x"},"init":{"type":"Literal","start":8,"end":10,"value":70,"raw":"70"}}],"kind":"var"},{"type":"ExpressionStatement","start":11,"end":38,"expression":{"type":"LogicalExpression","start":11,"end":38,"left":{"type":"BinaryExpression","start":11,"end":33,"left":{"type":"Identifier","start":11,"end":20,"name":"undefined"},"operator":"===","right":{"type":"UnaryExpression","start":25,"end":33,"operator":"void","prefix":true,"argument":{"type":"UpdateExpression","start":30,"end":33,"operator":"++","prefix":false,"argument":{"type":"Identifier","start":30,"end":31,"name":"x"}}}},"operator":"&&","right":{"type":"Identifier","start":37,"end":38,"name":"x"}}}]}`
 
 /********************************************************************/
 

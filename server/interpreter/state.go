@@ -178,6 +178,10 @@ func newState(parent state, scope *scope, node ast.Node) state {
 		st := stateTryStatement{stateCommon: sc}
 		st.init(n)
 		return &st
+	case *ast.UnaryExpression:
+		st := stateUnaryExpression{stateCommon: sc}
+		st.init(n)
+		return &st
 	case *ast.UpdateExpression:
 		st := stateUpdateExpression{stateCommon: sc}
 		st.init(n)
@@ -1320,6 +1324,38 @@ func (st *stateTryStatement) step(cv *cval) (state, *cval) {
 		return st.parent, cv
 	}
 	return st.parent, st.cv
+}
+
+/********************************************************************/
+
+type stateUnaryExpression struct {
+	stateCommon
+	op  string
+	arg ast.Expression
+}
+
+func (st *stateUnaryExpression) init(node *ast.UnaryExpression) {
+	st.op = node.Operator
+	st.arg = node.Argument
+	if !node.Prefix {
+		panic("postfix unary expression??")
+	}
+}
+
+func (st *stateUnaryExpression) step(cv *cval) (state, *cval) {
+	if cv == nil {
+		return newState(st, st.scope, st.arg.E), nil
+	} else if cv.abrupt() {
+		return st.parent, cv
+	}
+	var r object.Value
+	switch st.op {
+	case "void":
+		r = object.Undefined{}
+	default:
+		panic(fmt.Errorf("Unary operator \"%s\" not implemented", st.op))
+	}
+	return st.parent, &cval{NORMAL, r, ""}
 }
 
 /********************************************************************/
