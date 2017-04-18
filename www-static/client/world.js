@@ -95,12 +95,18 @@ CCC.World.scratchHistory = null;
 CCC.World.scratchPanorama = null;
 
 /**
+ * Width of a scrollbar.  Computed once at startup.
+ */
+CCC.World.scrollBarWidth = NaN;
+
+/**
  * Initialization code called on startup.
  */
 CCC.World.init = function() {
   CCC.World.scrollDiv = document.getElementById('scrollDiv');
   CCC.World.panoramaDiv = document.getElementById('panoramaDiv');
   CCC.World.parser = new DOMParser();
+  CCC.World.scrollBarWidth = CCC.World.getScrollBarWidth();
 
   window.addEventListener('resize', CCC.World.resizeSoon, false);
 
@@ -441,11 +447,10 @@ CCC.World.renderHistory = function() {
  */
 CCC.World.rowWidths = function() {
   var panelBloat = 2 * (5 + 2);  // Margin and border widths must match the CSS.
-  var windowWidth = CCC.World.lastWidth - panelBloat - 1;
+  var windowWidth = CCC.World.lastWidth - CCC.World.scrollBarWidth - 1;
   var idealWidth = CCC.World.panelHeight * 5 / 4;  // Standard TV ratio.
   var panelCount = Math.round(windowWidth / idealWidth);
   var averageWidth = Math.floor(windowWidth / panelCount);
-  averageWidth = Math.max(averageWidth, CCC.World.panelHeight);
   var smallWidth = Math.round(averageWidth * 0.9);
   var largeWidth = averageWidth * 2 - smallWidth;
   averageWidth -= panelBloat;
@@ -498,6 +503,38 @@ CCC.World.removeNode = function(node) {
   if (node) {
     node.parentNode.removeChild(node);
   }
+};
+
+/**
+ * Determine the width of scrollbars on this platform.
+ * Code copied from https://stackoverflow.com/questions/8079187/
+ * @return {number} Width in pixels.
+ */
+CCC.World.getScrollBarWidth = function() {
+  var inner = document.createElement('p');
+  inner.style.width = '100%';
+  inner.style.height = '200px';
+
+  var outer = document.createElement('div');
+  outer.style.position = 'absolute';
+  outer.style.top = 0;
+  outer.style.left = 0;
+  outer.style.visibility = 'hidden';
+  outer.style.width = '200px';
+  outer.style.height = '150px';
+  outer.style.overflow = 'hidden';
+  outer.appendChild(inner);
+
+  document.body.appendChild(outer);
+  var w1 = inner.offsetWidth;
+  outer.style.overflow = 'scroll';
+  var w2 = inner.offsetWidth;
+  if (w1 == w2) {
+    w2 = outer.clientWidth;
+  }
+  document.body.removeChild(outer);
+
+  return w1 - w2;
 };
 
 window.addEventListener('message', CCC.World.receiveMessage, false);
