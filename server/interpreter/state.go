@@ -893,9 +893,9 @@ func (st *stateIdentifier) step(cv *cval) (state, *cval) {
 
 /********************************************************************/
 
-// This is exactly the same as stateConditionalExpression except for
+// This is very similar to stateConditionalExpression except for
 // the types of consequent and alternate (and the name and node type,
-// of course).
+// of course) and the fact that here alternate is optional.
 type stateIfStatement struct {
 	stateCommon
 	labelsCommon
@@ -918,6 +918,9 @@ func (st *stateIfStatement) step(cv *cval) (state, *cval) {
 	} else if cv.pval().ToBoolean() {
 		return newState(st.parent, st.scope, st.consequent.S), nil
 	} else {
+		if st.alternate.S == nil {
+			return st.parent, &cval{NORMAL, nil, ""}
+		}
 		return newState(st.parent, st.scope, st.alternate.S), nil
 	}
 }
