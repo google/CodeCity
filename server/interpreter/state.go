@@ -1359,6 +1359,8 @@ func (st *stateUnaryExpression) step(cv *cval) (state, *cval) {
 		r = -(cv.pval().ToNumber())
 	case "~":
 		r = object.Number(float64(^uint32(float64(cv.pval().ToNumber()))))
+	case "!":
+		r = object.Boolean(!(cv.pval().ToBoolean()))
 	default:
 		panic(fmt.Errorf("Unary operator \"%s\" not implemented", st.op))
 	}

@@ -95,6 +95,7 @@ func TestInterpreterSimple(t *testing.T) {
 		{"+\"72\"", unaryPlus, object.Number(72)},
 		{"-73", unaryMinus, object.Number(-73)},
 		{"~0xffffffb5", unaryComplement, object.Number(74)},
+		{"!false&&(!true===false)", unaryNot, object.Boolean(true)},
 	}
 
 	for _, c := range tests {
@@ -471,6 +472,10 @@ const unaryMinus = `{"type":"Program","start":0,"end":3,"body":[{"type":"Express
 // ~0xffffffb5
 // => 74
 const unaryComplement = `{"type":"Program","start":0,"end":11,"body":[{"type":"ExpressionStatement","start":0,"end":11,"expression":{"type":"UnaryExpression","start":0,"end":11,"operator":"~","prefix":true,"argument":{"type":"Literal","start":1,"end":11,"value":4294967221,"raw":"0xffffffb5"}}}]}`
+
+// !false && (!true === false)
+// => true
+const unaryNot = `{"type":"Program","start":0,"end":27,"body":[{"type":"ExpressionStatement","start":0,"end":27,"expression":{"type":"LogicalExpression","start":0,"end":27,"left":{"type":"UnaryExpression","start":0,"end":6,"operator":"!","prefix":true,"argument":{"type":"Literal","start":1,"end":6,"value":false,"raw":"false"}},"operator":"&&","right":{"type":"BinaryExpression","start":10,"end":27,"left":{"type":"UnaryExpression","start":11,"end":16,"operator":"!","prefix":true,"argument":{"type":"Literal","start":12,"end":16,"value":true,"raw":"true"}},"operator":"===","right":{"type":"Literal","start":21,"end":26,"value":false,"raw":"false"}}}}]}`
 
 /********************************************************************/
 
