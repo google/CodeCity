@@ -1342,6 +1342,7 @@ func (st *stateUnaryExpression) init(node *ast.UnaryExpression) {
 	}
 }
 
+// FIXME: ToNumber() should call user code if applicable
 func (st *stateUnaryExpression) step(cv *cval) (state, *cval) {
 	if cv == nil {
 		return newState(st, st.scope, st.arg.E), nil
@@ -1352,6 +1353,10 @@ func (st *stateUnaryExpression) step(cv *cval) (state, *cval) {
 	switch st.op {
 	case "void":
 		r = object.Undefined{}
+	case "+":
+		r = cv.pval().ToNumber()
+	case "-":
+		r = -(cv.pval().ToNumber())
 	default:
 		panic(fmt.Errorf("Unary operator \"%s\" not implemented", st.op))
 	}
