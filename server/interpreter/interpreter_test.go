@@ -94,6 +94,7 @@ func TestInterpreterSimple(t *testing.T) {
 		{"var x=70; undefined === void x++ && x", unaryVoid, object.Number(71)},
 		{"+\"72\"", unaryPlus, object.Number(72)},
 		{"-73", unaryMinus, object.Number(-73)},
+		{"~0xffffffb5", unaryComplement, object.Number(74)},
 	}
 
 	for _, c := range tests {
@@ -466,6 +467,10 @@ const unaryPlus = `{"type":"Program","start":0,"end":5,"body":[{"type":"Expressi
 // -73
 // => -73
 const unaryMinus = `{"type":"Program","start":0,"end":3,"body":[{"type":"ExpressionStatement","start":0,"end":3,"expression":{"type":"UnaryExpression","start":0,"end":3,"operator":"-","prefix":true,"argument":{"type":"Literal","start":1,"end":3,"value":73,"raw":"73"}}}]}`
+
+// ~0xffffffb5
+// => 74
+const unaryComplement = `{"type":"Program","start":0,"end":11,"body":[{"type":"ExpressionStatement","start":0,"end":11,"expression":{"type":"UnaryExpression","start":0,"end":11,"operator":"~","prefix":true,"argument":{"type":"Literal","start":1,"end":11,"value":4294967221,"raw":"0xffffffb5"}}}]}`
 
 /********************************************************************/
 
