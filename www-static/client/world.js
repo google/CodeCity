@@ -492,6 +492,92 @@ CCC.World.getMsg = function(key) {
 };
 
 /**
+ * Convert an XML tree into an SVG tree.
+ * Whitelist used for all elements and properties.
+ * @param {!Element} dom XML tree.
+ * @return {Element} SVG tree.
+ */
+CCC.World.xmlToSvg = function(dom) {
+  switch (dom.nodeType) {
+    case 1:  // Element node.
+      if (CCC.World.xmlToSvg.ELEMENT_NAMES.indexOf(dom.tagName) == -1) {
+        console.log('SVG element not in whitelist: <' + dom.tagName + '>');
+        return null;
+      }
+      var svg = document.createElementNS(CCC.World.NS, dom.tagName);
+      for (var i = 0, attr; attr = dom.attributes[i]; i++) {
+        if (CCC.World.xmlToSvg.ATTRIBUTE_NAMES.indexOf(attr.name) == -1) {
+          console.log('SVG attribute not in whitelist: ' +
+              '<' + dom.tagName + ' ' + attr.name + '="' + attr.value + '">');
+        } else {
+          svg.setAttribute(attr.name, attr.value);
+        }
+      }
+      for (var i = 0, childDom; childDom = dom.childNodes[i]; i++) {
+        var childSvg = CCC.World.xmlToSvg(childDom);
+        if (childSvg) {
+          svg.appendChild(childSvg);
+        }
+      }
+      return svg;
+    case 3:  // Text node.
+      return document.createTextNode(dom.data);
+    case 8:  // Comment node.
+      return null;
+  }
+  console.log('Unknown XML node type: ' + dom);
+  return null;
+};
+
+/**
+ * Whitelist of all allowed SVG element names.
+ */
+CCC.World.xmlToSvg.ELEMENT_NAMES = [
+  'circle',
+  'desc',
+  'ellipse',
+  'g',
+  'line',
+  'path',
+  'polygon',
+  'polyline',
+  'rect',
+  'svg',
+  'text',
+  'title',
+  'tspan',
+];
+
+/**
+ * Whitelist of all allowed SVG property names.
+ * This architecture assumes that there are no banned properties
+ * on one element type which are allowed on another.
+ */
+CCC.World.xmlToSvg.ATTRIBUTE_NAMES = [
+  'cx',
+  'cy',
+  'd',
+  'dx',
+  'dy',
+  'height',
+  'lengthAdjust',
+  'points',
+  'r',
+  'rx',
+  'ry',
+  'text-anchor',
+  'textLength',
+  'transform',
+  'x',
+  'x1',
+  'x2',
+  'y',
+  'y1',
+  'y2',
+  'width',
+];
+
+/**
  * Remove a node from the DOM.
  * @param {Node} node Node to remove, ok if null.
  */
