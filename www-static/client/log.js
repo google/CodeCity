@@ -33,6 +33,13 @@ CCC.Log = {};
 CCC.Log.maxHistorySize = 10000;
 
 /**
+ * Allowed protocols for iframe links.
+ * Probably best not to allow 'javascript:' URIs due to security reasons.
+ */
+CCC.Log.protocolRegex =
+    /^(https?|ftp|gopher|data|irc|telnet|news|wais|file|nntp|mailto):/;
+
+/**
  * Initialization code called on startup.
  */
 CCC.Log.init = function() {
@@ -122,7 +129,7 @@ CCC.Log.textToHtml = function(text) {
  * @param {!Object} dom XML tree.
  */
 CCC.Log.addXml = function(dom) {
-  var text = CCC.Log.renderXml(dom);
+  var rendered = CCC.Log.renderXml(dom);
   var code = CCC.Log.serializer.serializeToString(dom);
   var pre = document.createElement('pre');
   pre.textContent = code;
@@ -133,8 +140,12 @@ CCC.Log.addXml = function(dom) {
     prettyPrint(null, div);
   }
 
-  if (text) {
-    var div = CCC.Log.textToHtml(text);
+  if (rendered) {
+    if (typeof rendered == 'string') {
+      var div = CCC.Log.textToHtml(rendered);
+    } else {
+      var div = rendered;
+    }
     div.className = 'zippyDiv';
     var span = document.createElement('span');
     span.className = 'zippySpan';
@@ -163,18 +174,34 @@ CCC.Log.toggleZippy = function(e) {
 /**
  * Attempt to render the XML as a plain text version.
  * @param {!Object} dom XML tree.
- * @return {string} Text representation.
+ * @return {string|!Element} Text representation or div.
  */
 CCC.Log.renderXml = function(dom) {
   var node = dom.firstChild;
   if (!node) {
     return '';  // Invalid.
   }
-  if (node.tagName == 'say') {
-    // <say user="Max" room="The Hangout">Hello world.</say>
-    var user = node.getAttribute('user');
-    var text = user + ' says, "' + node.textContent + '"';
-    return text;
+  switch (node.tagName) {
+    case 'iframe':
+      // <iframe src="https://neil.fraser.name/">Neil Fraser</iframe>
+      var src = node.getAttribute('src');
+      var m = src.match(CCC.Log.protocolRegex);
+      if (!m) {
+        return '';  // Invalid src attribute.
+      }
+      var text = node.textContent || src;
+      var link = document.createElement('a');
+      link.href = src;
+      link.target = '_blank';
+      link.appendChild(document.createTextNode(text));
+      var div = document.createElement('div');
+      div.appendChild(link);
+      return div;
+    case 'say':
+      // <say user="Max" room="The Hangout">Hello world.</say>
+      var user = node.getAttribute('user');
+      var text = user + ' says, "' + node.textContent + '"';
+      return text;
   }
   // Unknown XML.
   return '';

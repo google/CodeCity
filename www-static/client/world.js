@@ -135,10 +135,6 @@ CCC.World.receiveMessage = function(e) {
     CCC.World.removeNode(CCC.World.scratchPanorama);
     CCC.World.renderHistory();
   } else if (mode == 'message') {
-    if (text.indexOf('I don\'t understand that.') != -1) {
-      // <say user="Max" room="The Hangout">Hello world.</say>
-      text = '<iframe src="http://purple.com"></iframe>';
-    }
     var dom = CCC.World.parser.parseFromString(text, 'text/xml');
     if (dom.getElementsByTagName('parsererror').length) {
       // Not valid XML, treat as string literal.
@@ -487,7 +483,7 @@ CCC.World.rowWidths = function() {
 CCC.World.getMsg = function(key) {
   var element = document.getElementById(key);
   if (!element) {
-    throw 'Unknow message ' + key;
+    throw 'Unknown message ' + key;
   }
   var text = element.textContent;
   // Convert newline sequences.
