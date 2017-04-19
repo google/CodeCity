@@ -205,8 +205,7 @@ CCC.World.prerenderHistory = function(msg) {
     rect.setAttribute('rx', 15);
     rect.setAttribute('ry', 15);
     var text = document.createElementNS(CCC.World.NS, 'text');
-    text.appendChild(document.createTextNode(
-        CCC.World.getMsg('relaunchIframeMsg')));
+    text.appendChild(document.createTextNode(CCC.getMsg('relaunchIframeMsg')));
     g.appendChild(rect);
     g.appendChild(text);
     g.addEventListener('click', function() {
@@ -281,7 +280,7 @@ CCC.World.publishHistory = function() {
       var closeImg = new Image(21, 21);
       closeImg.className = 'iframeClose';
       closeImg.src = 'close.png';
-      closeImg.title = CCC.World.getMsg('closeIframeMsg');
+      closeImg.title = CCC.getMsg('closeIframeMsg');
       closeImg.addEventListener('click', function() {
         closeImg.style.display = 'none';
         panelDiv.firstChild.style.visibility = 'visible';  // SVG.
@@ -476,22 +475,6 @@ CCC.World.rowWidths = function() {
 };
 
 /**
- * Gets the message with the given key from the document.
- * @param {string} key The key of the document element.
- * @return {string} The textContent of the specified element.
- */
-CCC.World.getMsg = function(key) {
-  var element = document.getElementById(key);
-  if (!element) {
-    throw 'Unknown message ' + key;
-  }
-  var text = element.textContent;
-  // Convert newline sequences.
-  text = text.replace(/\\n/g, '\n');
-  return text;
-};
-
-/**
  * Convert an XML tree into an SVG tree.
  * Whitelist used for all elements and properties.
  * @param {!Element} dom XML tree.
@@ -617,6 +600,27 @@ CCC.World.getScrollBarWidth = function() {
   document.body.removeChild(outer);
 
   return w1 - w2;
+};
+
+/**
+ * Gets the message with the given key from the document.
+ * @param {string} key The key of the document element.
+ * @param {...string} var_args Optional substitutions for %1, %2, ...
+ * @return {string} The textContent of the specified element.
+ */
+CCC.getMsg = function(key, var_args) {
+  var element = document.getElementById(key);
+  if (!element) {
+    throw 'Unknown message ' + key;
+  }
+  var text = element.textContent;
+  // Convert newline sequences.
+  text = text.replace(/\\n/g, '\n');
+  // Inject any substitutions.
+  for (var i = 1; i < arguments.length; i++) {
+    text = text.replace('%' + i, arguments[i]);
+  }
+  return text;
 };
 
 window.addEventListener('message', CCC.World.receiveMessage, false);

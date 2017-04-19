@@ -40,6 +40,13 @@ CCC.Log.protocolRegex =
     /^(https?|ftp|gopher|data|irc|telnet|news|wais|file|nntp|mailto):/;
 
 /**
+ * Record of the user's name.  Used for displaying 2nd person vs 3rd person
+ * messages.  E.g.:  You say, "Hello."  -vs-  Max says, "Hello."
+ * @type {string=}
+ */
+CCC.Log.userName = undefined;
+
+/**
  * Initialization code called on startup.
  */
 CCC.Log.init = function() {
@@ -47,7 +54,7 @@ CCC.Log.init = function() {
   CCC.Log.parser = new DOMParser();
   CCC.Log.serializer = new XMLSerializer();
 
-  window.addEventListener('resize', CCC.Log.resize, false);
+  window.addEventListener('resize', CCC.Log.scrollToBottom, false);
 
   // Report back to the parent frame that we're fully loaded and ready to go.
   parent.postMessage('initLog', location.origin);
@@ -161,10 +168,14 @@ CCC.Log.addXml = function(dom) {
 
 CCC.Log.toggleZippy = function(e) {
   var zippy = e.target;
-  var pre = e.target.parentNode.lastChild;
+  var pre = zippy.parentNode.lastChild;
   if (zippy.className.indexOf(' open') == -1) {
     zippy.className += ' open';
     pre.style.display = 'block';
+    if (!zippy.parentNode.nextSibling) {
+      // Opening a zippy at the bottom of the page.  Scroll down.
+      CCC.Log.scrollToBottom();
+    }
   } else {
     zippy.className = zippy.className.replace(' open', '');
     pre.style.display = 'none';
@@ -197,14 +208,89 @@ CCC.Log.renderXml = function(dom) {
       var div = document.createElement('div');
       div.appendChild(link);
       return div;
+    case 'scene':
+      // <scene user="Max" location="The Hangout">
+      //   <description>The lights are dim and blah blah blah...</description>
+      //   <svg>...</svg>
+      //   <exit name="out">
+      //     <svg>...</svg>
+      //   </exit>
+      //   <object name="a clock">
+      //     <svg>...</svg>
+      //   </object>
+      //   <user name="Max">
+      //     <svg>...</svg>
+      //   </user>
+      // </scene>
+      var user = node.getAttribute('user');
+      if (user) {
+        // Record the user name if present.
+        CCC.Log.userName = user;
+      }
+      var description = '';
+      var objects = [];
+      var users = [];
+      for (var i = 0, child; child = node.childNodes[i]; i++) {
+        switch (child.tagName) {
+          case 'description':
+            description = child.textContent;
+            break;
+          case 'object':
+            objects.push(child.getAttribute('name'));
+            break;
+          case 'user':
+            users.push(child.getAttribute('name'));
+            break;
+        }
+      }
+      var text = '';
+      var roomName = node.getAttribute('name');
+      if (roomName) {
+        text += roomName + '\n';
+      }
+      if (description) {
+        text += description + '\n';
+      }
+      if (objects.length == 1) {
+        text += CCC.getMsg('roomObjectMsg', objects[0]);
+      } else if (objects.length > 1) {
+        text += CCC.getMsg('roomObjectsMsg', CCC.Log.naturalList(objects));
+      }
+      if (users.length == 1) {
+        text += CCC.getMsg('roomUserMsg', users[0]);
+      } else if (users.length > 1) {
+        text += CCC.getMsg('roomUsersMsg', CCC.Log.naturalList(users));
+      }
+      return text;
     case 'say':
       // <say user="Max" room="The Hangout">Hello world.</say>
       var user = node.getAttribute('user');
-      var text = user + ' says, "' + node.textContent + '"';
+      if (CCC.Log.userName === user) {
+        var text = CCC.getMsg('saySelfMsg', node.textContent);
+      } else {
+        var text = CCC.getMsg('sayMsg', user, node.textContent);
+      }
       return text;
   }
   // Unknown XML.
   return '';
+};
+
+/**
+ * Make a natural language list.  Don't use Oxford comma due to lack of plurals.
+ * ['apple', 'banana', 'cherry'] -> 'apple, banana and cherry'
+ * @param {!Array.<string>} list List of strings.
+ * @return {string} Natural language list.
+ */
+CCC.Log.naturalList = function(list) {
+  var text = list.slice(0, -1).join(', ');
+  var last = list[list.length - 1];
+  if (text) {
+    text += ' ' + CCC.getMsg('andMsg') + ' ' + last;
+  } else {
+    text = last;
+  }
+  return text;
 };
 
 /**
@@ -217,14 +303,35 @@ CCC.Log.appendRow = function(element) {
   if (div.childNodes.length > CCC.Log.maxHistorySize) {
     div.removeChild(document.body.firstChild);
   }
-  div.scrollTop = div.scrollHeight;
+  CCC.Log.scrollToBottom();
 };
 
 /**
- * When resizing, keep the log scrolled to the bottom.
+ * Scroll the log to the bottom.
  */
-CCC.Log.resize = function() {
+CCC.Log.scrollToBottom = function() {
   CCC.Log.scrollDiv.scrollTop = CCC.Log.scrollDiv.scrollHeight;
+};
+
+/**
+ * Gets the message with the given key from the document.
+ * @param {string} key The key of the document element.
+ * @param {...string} var_args Optional substitutions for %1, %2, ...
+ * @return {string} The textContent of the specified element.
+ */
+CCC.getMsg = function(key, var_args) {
+  var element = document.getElementById(key);
+  if (!element) {
+    throw 'Unknown message ' + key;
+  }
+  var text = element.textContent;
+  // Convert newline sequences.
+  text = text.replace(/\\n/g, '\n');
+  // Inject any substitutions.
+  for (var i = 1; i < arguments.length; i++) {
+    text = text.replace('%' + i, arguments[i]);
+  }
+  return text;
 };
 
 window.addEventListener('message', CCC.Log.receiveMessage, false);
