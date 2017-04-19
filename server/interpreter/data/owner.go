@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package object
+package data
 
 // An Owner is an object that can own other objects and properties.
 type Owner struct {
@@ -44,4 +44,4 @@ func NewOwner() *Owner {
 // OwnerProto is the the (plain) JavaScript object that is the
 // prototype for all Owner objects.  (It has no direct equivalent in
 // JavaScript, but if it did it would be Owner.prototype.)
-var OwnerProto = New(nil, ObjectProto)
+var OwnerProto = NewObject(nil, ObjectProto)

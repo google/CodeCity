@@ -20,7 +20,7 @@ import (
 	"fmt"
 
 	"CodeCity/server/interpreter/ast"
-	"CodeCity/server/interpreter/object"
+	"CodeCity/server/interpreter/data"
 )
 
 // scope is a symbol table used to implement JavaScript scope; it's
@@ -35,22 +35,22 @@ import (
 //
 // FIXME: readonly flag?  Or readonly if parent == nil?
 type scope struct {
-	vars   map[string]object.Value
+	vars   map[string]data.Value
 	parent *scope
-	this   object.Value
+	this   data.Value
 }
 
 // newScope is a factory for scope objects.  The parent param is a
 // pointer to the parent (enclosing scope); it is nil if the scope
 // being created is the global scope.
-func newScope(parent *scope, this object.Value) *scope {
-	return &scope{make(map[string]object.Value), parent, this}
+func newScope(parent *scope, this data.Value) *scope {
+	return &scope{make(map[string]data.Value), parent, this}
 }
 
 // newVar creates a new variabe in the scope, setting it to the given
 // value (or, if the named variable already exists, updates its
 // value).
-func (sc *scope) newVar(name string, value object.Value) {
+func (sc *scope) newVar(name string, value data.Value) {
 	sc.vars[name] = value
 }
 
@@ -60,7 +60,7 @@ func (sc *scope) newVar(name string, value object.Value) {
 // FIXME: this should probably not recurse when called from
 // stateVariableDeclarator, which should never be setting variables
 // other than in the immediately-enclosing scope.
-func (sc *scope) setVar(name string, value object.Value) {
+func (sc *scope) setVar(name string, value data.Value) {
 	_, ok := sc.vars[name]
 	if ok {
 		sc.vars[name] = value
@@ -75,7 +75,7 @@ func (sc *scope) setVar(name string, value object.Value) {
 
 // getVar gets the current value of the specified variable, after
 // first checking that it exists.
-func (sc *scope) getVar(name string) object.Value {
+func (sc *scope) getVar(name string) data.Value {
 	v, ok := sc.vars[name]
 	if ok {
 		return v
@@ -96,10 +96,10 @@ func (sc *scope) populate(node ast.Node) {
 
 	// The interesting cases:
 	case *ast.VariableDeclarator:
-		sc.newVar(n.Id.Name, object.Undefined{})
+		sc.newVar(n.Id.Name, data.Undefined{})
 	case *ast.FunctionDeclaration:
 		// Add name of function to scope; ignore contents.
-		sc.newVar(n.Id.Name, object.Undefined{})
+		sc.newVar(n.Id.Name, data.Undefined{})
 
 	// The recursive cases:
 	case *ast.BlockStatement:

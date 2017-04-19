@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package object
+package data
 
 import (
 	"fmt"
@@ -499,14 +499,14 @@ func (Undefined) ToPrimitive() Value {
 // BooleanProto is the the (plain) JavaScript object that is the
 // prototype for all Boolean primitives.  (It would usually be
 // accessed in JavaScript as Boolean.prototype.)
-var BooleanProto = New(nil, ObjectProto)
+var BooleanProto = NewObject(nil, ObjectProto)
 
 // NumberProto is the the (plain) JavaScript object that is the
 // prototype for all Number primitives.  (It would usually be
 // accessed in JavaScript as Number.prototype.)
-var NumberProto = New(nil, ObjectProto)
+var NumberProto = NewObject(nil, ObjectProto)
 
 // StringProto is the the (plain) JavaScript object that is the
 // prototype for all String primitives.  (It would usually be
 // accessed in JavaScript as String.prototype.)
-var StringProto = New(nil, ObjectProto)
+var StringProto = NewObject(nil, ObjectProto)

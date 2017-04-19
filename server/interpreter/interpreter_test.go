@@ -17,7 +17,7 @@
 package interpreter
 
 import (
-	"CodeCity/server/interpreter/object"
+	"CodeCity/server/interpreter/data"
 	"fmt"
 	"testing"
 )
@@ -26,77 +26,77 @@ func TestInterpreterSimple(t *testing.T) {
 	var tests = []struct {
 		desc     string
 		src      string
-		expected object.Value
+		expected data.Value
 	}{
-		{"1+1", onePlusOne, object.Number(2)},
-		{"2+2", twoPlusTwo, object.Number(4)},
-		{"four functions", simpleFourFunction, object.Number(42)},
-		{"variable declaration", variableDecl, object.Number(43)},
-		{"?: true", condTrue, object.String("then")},
-		{"?: false", condFalse, object.String("else")},
-		{"if true", ifTrue, object.String("then")},
-		{"if false", ifFalse, object.String("else")},
-		{"var x=0; x=44; x", simpleAssignment, object.Number(44)},
-		{"var o={}; o.foo=45; o.foo", propertyAssignment, object.Number(45)},
-		{"var x=45; x++; x++", postincrement, object.Number(46)},
-		{"var x=45; ++x; ++x", preincrement, object.Number(47)},
-		{"var x=40,y=8; x+=y; x", plusequalsLeft, object.Number(48)},
-		{"var x=40,y=8; x+=y; y", plusequalsRight, object.Number(8)},
-		{"\"foo\"+\"bar\"", concat, object.String("foobar")},
+		{"1+1", onePlusOne, data.Number(2)},
+		{"2+2", twoPlusTwo, data.Number(4)},
+		{"four functions", simpleFourFunction, data.Number(42)},
+		{"variable declaration", variableDecl, data.Number(43)},
+		{"?: true", condTrue, data.String("then")},
+		{"?: false", condFalse, data.String("else")},
+		{"if true", ifTrue, data.String("then")},
+		{"if false", ifFalse, data.String("else")},
+		{"var x=0; x=44; x", simpleAssignment, data.Number(44)},
+		{"var o={}; o.foo=45; o.foo", propertyAssignment, data.Number(45)},
+		{"var x=45; x++; x++", postincrement, data.Number(46)},
+		{"var x=45; ++x; ++x", preincrement, data.Number(47)},
+		{"var x=40,y=8; x+=y; x", plusequalsLeft, data.Number(48)},
+		{"var x=40,y=8; x+=y; y", plusequalsRight, data.Number(8)},
+		{"\"foo\"+\"bar\"", concat, data.String("foobar")},
 		{"var v; var f = function() {v = 49}; f(); v",
-			simpleFunctionExpression, object.Number(49)},
+			simpleFunctionExpression, data.Number(49)},
 		{"var v; var f = function(x) {v = x}; f(50); v",
-			fExpWithParameter, object.Number(50)},
-		{"(function(x){return x;})(51)", functionWithReturn, object.Number(51)},
+			fExpWithParameter, data.Number(50)},
+		{"(function(x){return x;})(51)", functionWithReturn, data.Number(51)},
 		{"(function(){try {return true;} finally {return false;}})()",
-			multipleReturn, object.Boolean(false)},
+			multipleReturn, data.Boolean(false)},
 		{"var f=function(){throw 26;};try{f()}catch(e){e*2;}",
-			throwCatch, object.Number(52)},
-		{"51,52,53", seqExpr, object.Number(53)},
-		{"foo: 54", labeledStatement, object.Number(54)},
-		{"var a = 0;while(a<55){a++}a;", whileLoop, object.Number(55)},
-		{"var a=56;while(false){a++};a", whileFalse, object.Number(56)},
-		{"var a=56;do{a++}while(false);a", doWhileFalse, object.Number(57)},
+			throwCatch, data.Number(52)},
+		{"51,52,53", seqExpr, data.Number(53)},
+		{"foo: 54", labeledStatement, data.Number(54)},
+		{"var a = 0;while(a<55){a++}a;", whileLoop, data.Number(55)},
+		{"var a=56;while(false){a++};a", whileFalse, data.Number(56)},
+		{"var a=56;do{a++}while(false);a", doWhileFalse, data.Number(57)},
 		{"var a=57;do{a++;break;a++}while(false);a",
-			breakDoWhile, object.Number(58)},
-		{"foo:break foo", selfBreak, object.Undefined{}},
+			breakDoWhile, data.Number(58)},
+		{"foo:break foo", selfBreak, data.Undefined{}},
 		{"var a=6;foo:{try{a*=10;break foo}finally{a--}};a",
-			breakWithFinally, object.Number(59)},
+			breakWithFinally, data.Number(59)},
 		{"var a=59;do {try{continue}finally{a++}}while(false);a",
-			continueWithFinally, object.Number(60)},
+			continueWithFinally, data.Number(60)},
 		{"var a=0;while(a++<60){try{break}finally{continue}};a",
-			breakWithFinallyContinue, object.Number(61)},
+			breakWithFinallyContinue, data.Number(61)},
 		{"(function(){var i=0;while(i++<61){try{return 42}" +
 			"finally{continue}}return i})()",
-			returnWithFinallyContinue, object.Number(62)},
-		{"63||\"foo\"", orTrue, object.Number(63)},
-		{"false||64", orFalse, object.Number(64)},
-		{"({})&&65", andTrue, object.Number(65)},
-		{"0&&65", andFalse, object.Number(0)},
+			returnWithFinallyContinue, data.Number(62)},
+		{"63||\"foo\"", orTrue, data.Number(63)},
+		{"false||64", orFalse, data.Number(64)},
+		{"({})&&65", andTrue, data.Number(65)},
+		{"0&&65", andFalse, data.Number(0)},
 		{"var t=0;for(var i=0;i<12;i++){t+=i};t",
-			forTriangular, object.Number(66)},
+			forTriangular, data.Number(66)},
 		{"var x=0, a={a:60,b:3,c:4}for(var i in a){" +
-			"x+=a[i]};x", forIn, object.Number(67)},
+			"x+=a[i]};x", forIn, data.Number(67)},
 		{"var x=1,o={foo:\"bar\"},a={a:2,b:2,c:17};for(o.foo in a)" +
-			"{x*=a[o.foo]};x", forInMemberExp, object.Number(68)},
+			"{x*=a[o.foo]};x", forInMemberExp, data.Number(68)},
 		{"var x=0,o={},f=function(){x+=20;return o}, a={a:2,b:3,c:4}" +
 			"for(f().foo in a){x+=a[o.foo]};x", forInMembFunc,
-			object.Number(69)},
+			data.Number(69)},
 		{"var o={f:function(){return this.foo},foo:70};o.f()",
-			methodCall, object.Number(70)},
+			methodCall, data.Number(70)},
 		{"var o={f:function(){return this}};var g=o.f;g()",
-			demethodedCall, object.Undefined{}},
-		{"this", bareThis, object.Undefined{}},
-		{"[].length", emptyArrayLength, object.Number(0)},
-		{"[1,,3,,].length", arrayElidedLength, object.Number(4)},
-		{"{}", compValEmptyBlock, object.Undefined{}},
-		{"undefined", undefined, object.Undefined{}},
-		{"var x=70; undefined === void x++ && x", unaryVoid, object.Number(71)},
-		{"+\"72\"", unaryPlus, object.Number(72)},
-		{"-73", unaryMinus, object.Number(-73)},
-		{"~0xffffffb5", unaryComplement, object.Number(74)},
-		{"!false&&(!true===false)", unaryNot, object.Boolean(true)},
-		{"(many typeof tests)", unaryTypeof, object.String("pass")},
+			demethodedCall, data.Undefined{}},
+		{"this", bareThis, data.Undefined{}},
+		{"[].length", emptyArrayLength, data.Number(0)},
+		{"[1,,3,,].length", arrayElidedLength, data.Number(4)},
+		{"{}", compValEmptyBlock, data.Undefined{}},
+		{"undefined", undefined, data.Undefined{}},
+		{"var x=70; undefined === void x++ && x", unaryVoid, data.Number(71)},
+		{"+\"72\"", unaryPlus, data.Number(72)},
+		{"-73", unaryMinus, data.Number(-73)},
+		{"~0xffffffb5", unaryComplement, data.Number(74)},
+		{"!false&&(!true===false)", unaryNot, data.Boolean(true)},
+		{"(many typeof tests)", unaryTypeof, data.String("pass")},
 	}
 
 	for _, c := range tests {
@@ -115,20 +115,20 @@ func TestInterpreterSimple(t *testing.T) {
 func TestInterpreterObjectExpression(t *testing.T) {
 	i, _ := NewFromJSON(objectExpression)
 	i.Run()
-	v, ok := i.Value().(*object.Object)
+	v, ok := i.Value().(*data.Object)
 	if !ok {
 		t.Errorf("{foo: \"bar\", answer: 42} returned type %T "+
-			"(expected object.Object)", i.Value())
+			"(expected data.Object)", i.Value())
 	}
 	if c := len(v.OwnPropertyKeys()); c != 2 {
 		t.Errorf("{foo: \"bar\", answer: 42} had %d properties "+
 			"(expected 2)", c)
 	}
-	if foo, _ := v.Get("foo"); foo != object.String("bar") {
+	if foo, _ := v.Get("foo"); foo != data.String("bar") {
 		t.Errorf("{foo: \"bar\", answer: 42}'s foo == %v (%T) "+
 			"(expected \"bar\")", foo, foo)
 	}
-	if answer, _ := v.Get("answer"); answer != object.Number(42) {
+	if answer, _ := v.Get("answer"); answer != data.Number(42) {
 		t.Errorf("{foo: \"bar\", answer: 42}'s answer == %v (%T) "+
 			"(expected 42)", answer, answer)
 	}
@@ -142,7 +142,7 @@ func TestInterpreterSwitchStatement(t *testing.T) {
 			code := fmt.Sprintf(code[i], j, j)
 			intrp, _ := NewFromJSON(code)
 			intrp.Run()
-			exp := object.Number(expected[i][j])
+			exp := data.Number(expected[i][j])
 			if v := intrp.Value(); v != exp {
 				t.Errorf("case test %d,%d == %v (%T) (expected %v)",
 					i, j, v, v, exp)

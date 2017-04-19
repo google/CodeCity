@@ -19,7 +19,7 @@ package interpreter
 import (
 	"fmt"
 
-	"CodeCity/server/interpreter/object"
+	"CodeCity/server/interpreter/data"
 )
 
 // cvalType is an enum of completion value types.
@@ -43,14 +43,14 @@ const (
 // .targ is the target label for a BREAK or CONTINUE
 type cval struct {
 	typ  cvalType
-	val  object.Value
+	val  data.Value
 	targ string
 }
 
 // The pval method tests to make sure the cval is a plain (normal)
 // JavaScript value (has .typ == NORMAL, .targ == ""), and returns
 // that value.
-func (cv cval) pval() object.Value {
+func (cv cval) pval() data.Value {
 	if cv.typ != NORMAL || cv.targ != "" {
 		panic("expected NORMAL JS value")
 	}
@@ -72,7 +72,7 @@ func (cv cval) abrupt() bool {
 
 // pval takes an ordinary JavaScript value and returns a pointer to a
 // cval with type NORMAL containing that value.
-func pval(v object.Value) *cval {
+func pval(v data.Value) *cval {
 	return &cval{NORMAL, v, ""}
 }
 

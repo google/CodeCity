@@ -20,7 +20,7 @@ import (
 	"fmt"
 
 	"CodeCity/server/interpreter/ast"
-	"CodeCity/server/interpreter/object"
+	"CodeCity/server/interpreter/data"
 )
 
 // state is the interface implemented by each of the types
@@ -208,7 +208,7 @@ type stateCommon struct {
 	// state is the state to return to once evaluation of this state
 	// is finished.  (This is "state" rather than "*state" because the
 	// interface value already containins a pointer to the actual
-	// state<Whatever> object.)
+	// state<Whatever> data.)
 	parent state
 
 	// scope is the symobl table for the innermost scope.
@@ -277,7 +277,7 @@ func (lc *labelsCommon) hasLabel(label string) bool {
 type stateArrayExpression struct {
 	stateCommon
 	elems ast.Expressions
-	arr   *object.Array
+	arr   *data.Array
 	n     int
 }
 
@@ -291,13 +291,13 @@ func (st *stateArrayExpression) step(cv *cval) (state, *cval) {
 			panic("array already created??")
 		}
 		// FIXME: set owner
-		st.arr = object.NewArray(nil, object.ArrayProto)
+		st.arr = data.NewArray(nil, data.ArrayProto)
 	} else if cv.abrupt() {
 		return st.parent, cv
 	} else {
 		// FIXME: this is somewhat inefficient.
 		if cv.pval() != nil {
-			err := st.arr.Set(string(object.Number(st.n).ToString()),
+			err := st.arr.Set(string(data.Number(st.n).ToString()),
 				cv.pval())
 			if err != nil {
 				panic(err)
@@ -313,7 +313,7 @@ func (st *stateArrayExpression) step(cv *cval) (state, *cval) {
 		st.n++
 	}
 	// Update .length, in case there were trailing elided elements:
-	err := st.arr.Set("length", object.Number(st.n).ToString())
+	err := st.arr.Set("length", data.Number(st.n).ToString())
 	if err != nil {
 		panic(err)
 	}
@@ -336,7 +336,7 @@ func (st *stateAssignmentExpression) init(node *ast.AssignmentExpression) {
 	st.left.init(st, st.scope, node.Left)
 }
 
-// FIXME: ToString() and ToNumber() calls in object.BinaryOp should be
+// FIXME: ToString() and ToNumber() calls in data.BinaryOp should be
 // able to result in calls to user toString() and valueOf() methods
 func (st *stateAssignmentExpression) step(cv *cval) (state, *cval) {
 	if !st.left.ready {
@@ -348,7 +348,7 @@ func (st *stateAssignmentExpression) step(cv *cval) (state, *cval) {
 		return st.parent, cv
 	}
 
-	var r object.Value = cv.pval()
+	var r data.Value = cv.pval()
 
 	// Do (operator)assignment:
 	if st.op != "=" {
@@ -379,7 +379,7 @@ func (st *stateAssignmentExpression) step(cv *cval) (state, *cval) {
 		default:
 			panic(fmt.Errorf("illegal assignemnt operator %s", st.op))
 		}
-		r = object.BinaryOp(st.left.get(), op, r)
+		r = data.BinaryOp(st.left.get(), op, r)
 	}
 	st.left.put(r)
 	return st.parent, pval(r)
@@ -391,7 +391,7 @@ type stateBinaryExpression struct {
 	stateCommon
 	op           string
 	lNode, rNode ast.Expression
-	left         object.Value
+	left         data.Value
 }
 
 func (st *stateBinaryExpression) init(node *ast.BinaryExpression) {
@@ -409,7 +409,7 @@ func (st *stateBinaryExpression) step(cv *cval) (state, *cval) {
 		st.left = cv.pval()
 		return newState(st, st.scope, ast.Node(st.rNode.E)), nil
 	}
-	r := object.BinaryOp(st.left, st.op, cv.pval())
+	r := data.BinaryOp(st.left, st.op, cv.pval())
 	return st.parent, pval(r)
 }
 
@@ -420,7 +420,7 @@ type stateBlockStatement struct {
 	labelsCommon
 	body ast.Statements
 	n    int
-	val  object.Value
+	val  data.Value
 }
 
 func (st *stateBlockStatement) init(node *ast.BlockStatement) {
@@ -429,7 +429,7 @@ func (st *stateBlockStatement) init(node *ast.BlockStatement) {
 
 func (st *stateBlockStatement) initFromProgram(node *ast.Program) {
 	st.body = node.Body
-	st.val = object.Undefined{}
+	st.val = data.Undefined{}
 }
 
 func (st *stateBlockStatement) initFromSwitchCase(node *ast.SwitchCase) {
@@ -477,11 +477,11 @@ type stateCallExpression struct {
 	stateCommon
 	callee ast.Expression
 	args   ast.Expressions
-	cl     *closure     // Actual function to call
-	this   object.Value // Value of 'this' in method call
-	ns     *scope       // New scope being constructed
-	n      int          // Which arg are we evaluating?
-	called bool         // Has call itself begun?
+	cl     *closure   // Actual function to call
+	this   data.Value // Value of 'this' in method call
+	ns     *scope     // New scope being constructed
+	n      int        // Which arg are we evaluating?
+	called bool       // Has call itself begun?
 }
 
 func (st *stateCallExpression) init(node *ast.CallExpression) {
@@ -545,7 +545,7 @@ func (st *stateCallExpression) step(cv *cval) (state, *cval) {
 	case THROW:
 		// fine; leave as-is
 	case NORMAL:
-		cv = &cval{NORMAL, object.Undefined{}, ""}
+		cv = &cval{NORMAL, data.Undefined{}, ""}
 	default:
 		panic(fmt.Errorf("unexpected cval %#v", cv))
 	}
@@ -668,7 +668,7 @@ type stateForStatement struct {
 	tst, upd ast.Expression
 	body     ast.Statement
 	state    stateForState
-	val      object.Value // For completion value
+	val      data.Value // For completion value
 }
 
 func (st *stateForStatement) init(node *ast.ForStatement) {
@@ -758,8 +758,8 @@ type stateForInStatement struct {
 	right ast.Expression
 	body  ast.Statement
 	state stateForInState
-	val   object.Value
-	iter  *object.PropIter
+	val   data.Value
+	iter  *data.PropIter
 	pname string
 }
 
@@ -788,10 +788,10 @@ func (st *stateForInStatement) step(cv *cval) (state, *cval) {
 			obj := cv.pval()
 			// FIXME: should call ToObject() which in turn could call user
 			// code to get valueOf().
-			if (obj == object.Null{} || obj == object.Undefined{}) {
+			if (obj == data.Null{} || obj == data.Undefined{}) {
 				return st.parent, &cval{NORMAL, nil, ""}
 			}
-			st.iter = object.NewPropIter(obj)
+			st.iter = data.NewPropIter(obj)
 			fallthrough
 		case forInPrepLeft:
 			n, ok := st.iter.Next()
@@ -810,7 +810,7 @@ func (st *stateForInStatement) step(cv *cval) (state, *cval) {
 			if cv != nil && cv.abrupt() {
 				return st.parent, cv
 			}
-			st.left.put(object.String(st.pname))
+			st.left.put(data.String(st.pname))
 			st.state = forInBody
 			return newState(st, st.scope, st.body.S), nil
 
@@ -960,11 +960,11 @@ func (st *stateLabeledStatement) step(cv *cval) (state, *cval) {
 
 type stateLiteral struct {
 	stateCommon
-	val object.Value
+	val data.Value
 }
 
 func (st *stateLiteral) init(node *ast.Literal) {
-	st.val = object.NewFromRaw(node.Raw)
+	st.val = data.NewFromRaw(node.Raw)
 }
 
 func (st *stateLiteral) step(cv *cval) (state, *cval) {
@@ -1016,7 +1016,7 @@ type stateMemberExpression struct {
 	baseExpr ast.Expression // To be resolve to obtain base
 	membExpr ast.Expression // To be resolve to obtain name
 	computed bool           // Is this x[y] (rather than x.y)?
-	base     object.Value
+	base     data.Value
 }
 
 func (st *stateMemberExpression) init(node *ast.MemberExpression) {
@@ -1066,7 +1066,7 @@ func (st *stateMemberExpression) step(cv *cval) (state, *cval) {
 type stateObjectExpression struct {
 	stateCommon
 	props []*ast.Property
-	obj   *object.Object
+	obj   *data.Object
 	n     int
 }
 
@@ -1081,7 +1081,7 @@ func (st *stateObjectExpression) step(cv *cval) (state, *cval) {
 			panic("internal error when constructing object")
 		}
 		// FIXME: set owner of new object
-		st.obj = object.New(nil, object.ObjectProto)
+		st.obj = data.NewObject(nil, data.ObjectProto)
 	}
 	if cv != nil {
 		if cv.abrupt() {
@@ -1090,7 +1090,7 @@ func (st *stateObjectExpression) step(cv *cval) (state, *cval) {
 		var key string
 		switch k := st.props[st.n].Key.N.(type) {
 		case *ast.Literal:
-			key = string(object.NewFromRaw(k.Raw).ToString())
+			key = string(data.NewFromRaw(k.Raw).ToString())
 		case *ast.Identifier:
 			key = k.Name
 		}
@@ -1163,7 +1163,7 @@ type stateSwitchStatement struct {
 	labelsCommon
 	discExp   ast.Expression
 	cases     []*ast.SwitchCase
-	disc, val object.Value
+	disc, val data.Value
 	found     bool
 	n         int
 	def       int
@@ -1245,7 +1245,7 @@ func (st *stateThisExpression) init(node *ast.ThisExpression) {
 func (st *stateThisExpression) step(cv *cval) (state, *cval) {
 	this := st.scope.this
 	if this == nil {
-		this = object.Undefined{}
+		this = data.Undefined{}
 	}
 	return st.parent, &cval{NORMAL, this, ""}
 }
@@ -1256,7 +1256,7 @@ type stateThrowStatement struct {
 	stateCommon
 	labelsCommon
 	arg    ast.Expression
-	excptn object.Value
+	excptn data.Value
 }
 
 func (st *stateThrowStatement) init(node *ast.ThrowStatement) {
@@ -1352,20 +1352,20 @@ func (st *stateUnaryExpression) step(cv *cval) (state, *cval) {
 	} else if cv.abrupt() {
 		return st.parent, cv
 	}
-	var r object.Value
+	var r data.Value
 	switch st.op {
 	case "typeof":
-		r = object.String(cv.pval().Type())
+		r = data.String(cv.pval().Type())
 	case "void":
-		r = object.Undefined{}
+		r = data.Undefined{}
 	case "+":
 		r = cv.pval().ToNumber()
 	case "-":
 		r = -(cv.pval().ToNumber())
 	case "~":
-		r = object.Number(float64(^uint32(float64(cv.pval().ToNumber()))))
+		r = data.Number(float64(^uint32(float64(cv.pval().ToNumber()))))
 	case "!":
-		r = object.Boolean(!(cv.pval().ToBoolean()))
+		r = data.Boolean(!(cv.pval().ToBoolean()))
 	default:
 		panic(fmt.Errorf("Unary operator \"%s\" not implemented", st.op))
 	}
@@ -1454,7 +1454,7 @@ type stateWhileStatement struct {
 	test   ast.Expression
 	body   ast.Statement
 	tested bool
-	val    object.Value // For completion value
+	val    data.Value // For completion value
 }
 
 func (st *stateWhileStatement) init(node *ast.WhileStatement) {
@@ -1540,7 +1540,7 @@ type lvalue struct {
 	baseExpr        ast.Expression // To be resolve to obtain base
 	membExpr        ast.Expression // To be resolve to obtain name
 	computed        bool           // Is this x[y] (rather than x.y)?
-	base            object.Value   // ECMA "base"
+	base            data.Value     // ECMA "base"
 	name            string         // ECMA "referenced name"
 	haveBase, ready bool
 }
@@ -1576,7 +1576,7 @@ func (lv *lvalue) reset() {
 
 // get returns the current value of the variable or property denoted
 // by the lvalue expression.
-func (lv *lvalue) get() object.Value {
+func (lv *lvalue) get() data.Value {
 	if !lv.ready {
 		panic("lvalue not ready")
 	}
@@ -1593,7 +1593,7 @@ func (lv *lvalue) get() object.Value {
 
 // set updates the variable or property denoted
 // by the lvalue expression to the given value.
-func (lv *lvalue) put(value object.Value) {
+func (lv *lvalue) put(value data.Value) {
 	if !lv.ready {
 		panic("lvalue not ready")
 	}

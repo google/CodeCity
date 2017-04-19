@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package object
+package data
 
 // ErrorMsg is a (name, description)-tuple used to report error
 // conditions inside the JavaScript interpreter.  It's not actually a

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package object
+package data
 
 import (
 	"fmt"
@@ -72,7 +72,7 @@ func TestAsLength(t *testing.T) {
 
 		{Null{}, 0, true},
 		{Undefined{}, 0, false},
-		{New(nil, ObjectProto), 0, false},
+		{NewObject(nil, ObjectProto), 0, false},
 	}
 	for _, c := range tests {
 		out, ok := asLength(c.in)

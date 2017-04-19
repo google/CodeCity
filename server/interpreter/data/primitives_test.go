@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package object
+package data
 
 import (
 	"math"
@@ -182,7 +182,7 @@ func TestToBoolean(t *testing.T) {
 		{Number(math.NaN()), false},
 		{Number(math.MaxFloat64), true},
 		{Number(math.SmallestNonzeroFloat64), true},
-		{New(nil, nil), true},
+		{NewObject(nil, nil), true},
 	}
 	for _, c := range tests {
 		if v := c.input.ToBoolean(); v != Boolean(c.expected) {
@@ -233,7 +233,7 @@ func TestToNumber(t *testing.T) {
 		{Number(math.NaN()), NaN},
 		{Number(math.MaxFloat64), math.MaxFloat64},
 		{Number(math.SmallestNonzeroFloat64), math.SmallestNonzeroFloat64},
-		{New(nil, nil), NaN},
+		{NewObject(nil, nil), NaN},
 	}
 	for _, c := range tests {
 		if v := c.input.ToNumber(); v != Number(c.expected) {

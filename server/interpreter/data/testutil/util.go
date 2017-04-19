@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"math"
 
-	"CodeCity/server/interpreter/object"
+	"CodeCity/server/interpreter/data"
 )
 
 // Identical returns true iff the two JS values are identical:
@@ -30,15 +30,15 @@ import (
 // - Numbers are numerically identical (as if NaN == NaN, but +0 != -0.)
 //
 // - Strings and booleans equal using ==.
-func Identical(x, y object.Value) bool {
+func Identical(x, y data.Value) bool {
 	switch xx := x.(type) {
-	case object.Boolean:
+	case data.Boolean:
 		// Are the two booleans equal?
-		yy, ok := y.(object.Boolean)
+		yy, ok := y.(data.Boolean)
 		return ok && xx == yy
-	case object.Number:
+	case data.Number:
 		// Are the two numbers identical (not just numerically equal)?
-		yy, ok := y.(object.Number)
+		yy, ok := y.(data.Number)
 		if !ok {
 			return false
 		}
@@ -57,21 +57,21 @@ func Identical(x, y object.Value) bool {
 			return true
 		}
 		panic(fmt.Errorf("Can't decide if %#v == %#v", xf, yf))
-	case object.String:
+	case data.String:
 		// Are the two strings equal?
-		yy, ok := y.(object.String)
+		yy, ok := y.(data.String)
 		return ok && xx == yy
-	case object.Undefined:
+	case data.Undefined:
 		// Is the other also undefined?
-		_, ok := y.(object.Undefined)
+		_, ok := y.(data.Undefined)
 		return ok
-	case object.Null:
+	case data.Null:
 		// Is the other also undefined?
-		_, ok := y.(object.Null)
+		_, ok := y.(data.Null)
 		return ok
-	case *object.Object:
+	case *data.Object:
 		// Is it a pointer to the same object?
-		yy, ok := y.(*object.Object)
+		yy, ok := y.(*data.Object)
 		return ok && xx == yy
 	case nil:
 		return y == nil

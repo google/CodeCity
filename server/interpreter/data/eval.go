@@ -17,7 +17,7 @@
 // eval.go contains helper functions to evaluate operations on
 // primitives (and in some cases non-primitives).
 
-package object
+package data
 
 import (
 	"fmt"

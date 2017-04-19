@@ -20,12 +20,12 @@ import (
 	"math"
 	"testing"
 
-	. "CodeCity/server/interpreter/object"
+	. "CodeCity/server/interpreter/data"
 )
 
 func TestIdentical(t *testing.T) {
-	var o1 = New(nil, nil)
-	var o2 = New(nil, nil)
+	var o1 = NewObject(nil, nil)
+	var o2 = NewObject(nil, nil)
 	var tests = []struct {
 		x        Value
 		y        Value

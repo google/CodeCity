@@ -18,16 +18,16 @@ package interpreter
 
 import (
 	"CodeCity/server/interpreter/ast"
-	"CodeCity/server/interpreter/object"
+	"CodeCity/server/interpreter/data"
 	"encoding/json"
 )
 
 func initArrayProto(sc *scope) {
 	// FIXME: should be Function:
-	var Array = object.New(nil, object.ObjectProto)
+	var Array = data.NewObject(nil, data.ObjectProto)
 	sc.newVar("Array", Array)
 
-	Array.Set("prototype", object.ArrayProto)
+	Array.Set("prototype", data.ArrayProto)
 
 	var params []*ast.Identifier
 	var body *ast.BlockStatement
@@ -41,7 +41,7 @@ func initArrayProto(sc *scope) {
 		panic(e)
 	}
 	var push = newClosure(nil, sc, params, body)
-	object.ArrayProto.Set("push", push)
+	data.ArrayProto.Set("push", push)
 }
 
 const pushPolyfillParams = `[{"type":"Identifier","start":32,"end":33,"name":"e"}]`

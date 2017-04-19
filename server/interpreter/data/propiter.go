@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package object
+package data
 
 type PropIter struct {
 	value Value

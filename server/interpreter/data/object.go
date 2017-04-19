@@ -16,85 +16,7 @@
 
 // Package object defines various types used to represent JavaScript
 // values (objects and primitive values).
-package object
-
-import (
-//	"fmt"
-)
-
-// Value represents any JavaScript value (primitive, object, etc.).
-type Value interface {
-	// Type() returns name of type (as given by the JavaScript typeof
-	// operator).
-	Type() string
-
-	// IsPrimitive() returns true for primitive data (number, string,
-	// boolean, etc.).
-	IsPrimitive() bool
-
-	// Proto returns the prototype (parent) object for this object.
-	// N.B. this is object.__proto__, not Constructor.prototype!
-	Proto() Value
-
-	// Get returns the current value of the given property or an
-	// ErrorMsg if that was not possible.
-	Get(name string) (Value, *ErrorMsg)
-
-	// Set sets the given property to the specified value or returns
-	// an ErrorMsg if that was not possible.
-	Set(name string, value Value) *ErrorMsg
-
-	// Delete attempts to remove the named property.  If the property
-	// exists but can't be removed for some reason an ErrorMsg is
-	// returned.  (Removing a non-existing property "succeeds"
-	// silently.)
-	Delete(name string) *ErrorMsg
-
-	// OwnPropertyKeys returns the list of (own) property names as a
-	// slice of strings.
-	OwnPropertyKeys() []string
-
-	// HasOwnProperty returns true if the specified property name
-	// exists on the object itself.
-	HasOwnProperty(string) bool
-
-	// PropertyIter returns an iterator which will iterate over the
-	// properties of the object.
-	//	PropertyIter() *PropertyIter
-
-	// ToBoolean returns true iff the object is truthy.
-	ToBoolean() Boolean
-
-	// ToNumber returns the numeric equivalent of the object.
-	ToNumber() Number
-
-	// ToString returns a string representation of the object.  This
-	// needn't be very informative (most objects will return "[object
-	// Object]").  N.B.:
-	//
-	// - The value returned by this method is used as a property
-	// key, in the case of a passing a non-string to a
-	// MemberExpression (i.e., in foo[bar], where bar is not a
-	// string).  It is therefore important that it do the same thing
-	// as other JS interpreters.
-	//
-	// - The JS .toString() method just wraps this one; note however
-	// that for primitives, overriding .toString on a primitive's
-	// prototype won't change how numbers are implicitly stringified;
-	// they'll still use the value returned by this method.  E.g.:
-	//
-	//     Number.proto.toString = function() { "42" };
-	//     (10).toString();    // => "42"
-	//     '' + 10;            // => "10"
-	//
-	// FIXME: move most of this comment somewhere better
-	ToString() String
-
-	// ToPrimitive returns a primitive representing the object (for
-	// primitives, this is the object itself; for regular objects this
-	// is will be either the result of ToString or of ToNumber.
-	ToPrimitive() Value
-}
+package data
 
 // Object represents typical JavaScript objects with (optional)
 // prototype, properties, etc.
@@ -234,10 +156,10 @@ func (obj *Object) ToPrimitive() Value {
 	return obj.ToNumber()
 }
 
-// New creates a new object with the specified owner and prototype,
+// NewObject creates a new object with the specified owner and prototype,
 // initialises it as appropriate, and returns a pointer to the
 // newly-created object.
-func New(owner *Owner, proto Value) *Object {
+func NewObject(owner *Owner, proto Value) *Object {
 	var obj = new(Object)
 	obj.init(owner, proto)
 	obj.f = true
@@ -256,4 +178,4 @@ func (obj *Object) init(owner *Owner, proto Value) {
 // ObjectProto is the default prototype for (plain) JavaScript objects
 // (i.e., ones created from object literals and not via
 // Object.create(nil)).
-var ObjectProto = New(nil, Null{})
+var ObjectProto = NewObject(nil, Null{})

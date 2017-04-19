@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-package object_test
+package data_test
 
 import (
 	"math"
 	"testing"
 
-	. "CodeCity/server/interpreter/object"
-	tu "CodeCity/server/interpreter/object/testutil"
+	. "CodeCity/server/interpreter/data"
+	tu "CodeCity/server/interpreter/data/testutil"
 )
 
 func TestBinaryOp(t *testing.T) {

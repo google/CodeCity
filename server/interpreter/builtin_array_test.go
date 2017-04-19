@@ -17,7 +17,7 @@
 package interpreter
 
 import (
-	//"CodeCity/server/interpreter/object"
+	//"CodeCity/server/interpreter/data"
 	"testing"
 )
 

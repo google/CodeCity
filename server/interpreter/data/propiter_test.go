@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-package object
+package data
 
 import "testing"
 
 func TestPropIterSimpleObj(t *testing.T) {
 	names := []string{"foo", "bar", "baz"}
-	obj := New(nil, nil)
+	obj := NewObject(nil, nil)
 	for _, n := range names {
 		err := obj.Set(n, String(n))
 		if err != nil {
@@ -49,8 +49,8 @@ func TestPropIterInheritance(t *testing.T) {
 	names2 := []string{"foo", "quux", "quuux"}
 	expected := []string{"foo", "bar", "baz", "quux", "quuux"}
 
-	obj1 := New(nil, nil)
-	obj2 := New(nil, obj1)
+	obj1 := NewObject(nil, nil)
+	obj2 := NewObject(nil, obj1)
 	for _, n := range names1 {
 		err := obj1.Set(n, String(n))
 		if err != nil {
@@ -82,7 +82,7 @@ func TestPropIterInheritance(t *testing.T) {
 
 func TestPropIterDelete(t *testing.T) {
 	names := []string{"foo", "bar", "baz"}
-	obj := New(nil, nil)
+	obj := NewObject(nil, nil)
 	for _, n := range names {
 		err := obj.Set(n, String(n))
 		if err != nil {

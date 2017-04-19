@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-package object
+package data
 
 import "testing"
 
 func TestObjectNonPrimitiveness(t *testing.T) {
 	var objs = []Value{
-		New(nil, nil),
+		NewObject(nil, nil),
 		NewOwner(),
 	}
 
@@ -32,8 +32,8 @@ func TestObjectNonPrimitiveness(t *testing.T) {
 }
 
 func TestObjectHasOwnProperty(t *testing.T) {
-	var parent = New(nil, nil)
-	var obj = New(nil, parent)
+	var parent = NewObject(nil, nil)
+	var obj = NewObject(nil, parent)
 
 	if obj.HasOwnProperty("foo") {
 		t.Errorf("%#v.HasOwnProperty(\"foo\") == true", obj)

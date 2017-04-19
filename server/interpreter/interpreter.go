@@ -21,7 +21,7 @@ import (
 	"fmt"
 
 	"CodeCity/server/interpreter/ast"
-	"CodeCity/server/interpreter/object"
+	"CodeCity/server/interpreter/data"
 )
 
 // Interpreter implements a JavaScript interpreter.
@@ -61,7 +61,7 @@ func NewFromAST(tree *ast.Program) *Interpreter {
 	var intrp = new(Interpreter)
 	s := newScope(nil, nil)
 	initArrayProto(s)
-	s.newVar("undefined", object.Undefined{})
+	s.newVar("undefined", data.Undefined{})
 	// FIXME: insert (more) global names into s
 	s.populate(tree)
 	intrp.state = newState(nil, s, tree)
@@ -99,7 +99,7 @@ func (intrp *Interpreter) Run() {
 
 // Value returns the final value computed by the last statement
 // expression of the program.
-func (intrp *Interpreter) Value() object.Value {
+func (intrp *Interpreter) Value() data.Value {
 	if intrp.value == nil {
 		return nil
 	}

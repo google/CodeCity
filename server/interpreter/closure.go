@@ -18,36 +18,36 @@ package interpreter
 
 import (
 	"CodeCity/server/interpreter/ast"
-	"CodeCity/server/interpreter/object"
+	"CodeCity/server/interpreter/data"
 )
 
 // A closure is an object that can be called / applied.
 type closure struct {
-	object.Object
+	data.Object
 	scope  *scope
 	params []string
 	body   *ast.BlockStatement
 }
 
 // *Function must satisfy Value.
-var _ object.Value = (*closure)(nil)
+var _ data.Value = (*closure)(nil)
 
 func (closure) Type() string {
 	return "function"
 }
 
-func (closure) ToString() object.String {
+func (closure) ToString() data.String {
 	return "[object Function]"
 }
 
 // newClosure returns a new closure object with the specified owner,
 // scope and body, having parent functionProto.
-func newClosure(owner *object.Owner, scope *scope,
+func newClosure(owner *data.Owner, scope *scope,
 	params []*ast.Identifier, body *ast.BlockStatement) *closure {
 	var cl = new(closure)
-	cl.Object = *object.New(owner, functionProto)
+	cl.Object = *data.NewObject(owner, functionProto)
 	cl.scope = scope
-	cl.Set("length", object.Number(len(params)))
+	cl.Set("length", data.Number(len(params)))
 	cl.params = make([]string, len(params))
 	for i, p := range params {
 		cl.params[i] = p.Name
@@ -59,4 +59,4 @@ func newClosure(owner *object.Owner, scope *scope,
 // functionProto is the the (plain) JavaScript object that is the
 // prototype for all closures.  (It would usually be accessed in
 // JavaScript as Function.prototype.)
-var functionProto = object.New(nil, object.ObjectProto)
+var functionProto = data.NewObject(nil, data.ObjectProto)
