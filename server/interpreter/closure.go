@@ -32,7 +32,7 @@ type closure struct {
 // *Function must satisfy Value.
 var _ data.Value = (*closure)(nil)
 
-func (closure) Type() string {
+func (closure) Typeof() string {
 	return "function"
 }
 

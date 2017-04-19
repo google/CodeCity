@@ -77,8 +77,13 @@ type Boolean bool
 // Boolean must satisfy Value.
 var _ Value = Boolean(false)
 
-// Type always returns "boolean" for Booleans.
-func (Boolean) Type() string {
+// Type always returns BOOLEAN for Booleans.
+func (Boolean) Type() Type {
+	return BOOLEAN
+}
+
+// Typeof always returns "boolean" for Booleans.
+func (Boolean) Typeof() string {
 	return "boolean"
 }
 
@@ -154,8 +159,13 @@ type Number float64
 // Number must satisfy Value.
 var _ Value = Number(0)
 
+// Type always returns NUMBER for numbers.
+func (Number) Type() Type {
+	return NUMBER
+}
+
 // Type always returns "number" for numbers.
-func (Number) Type() string {
+func (Number) Typeof() string {
 	return "number"
 }
 
@@ -248,7 +258,12 @@ type String string
 var _ Value = String("")
 
 // Type always returns "string" for strings.
-func (String) Type() string {
+func (String) Type() Type {
+	return STRING
+}
+
+// Typeof always returns "string" for strings.
+func (String) Typeof() string {
 	return "string"
 }
 
@@ -371,8 +386,13 @@ type Null struct{}
 // Null must satisfy Value.
 var _ Value = Null{}
 
-// Type (surprisingly) returns "object" for null values.
-func (Null) Type() string {
+// Type returns NULL for null values.
+func (Null) Type() Type {
+	return NULL
+}
+
+// Typeof (surprisingly) returns "object" for null values.
+func (Null) Typeof() string {
 	return "object"
 }
 
@@ -451,8 +471,13 @@ type Undefined struct{}
 // Undefined must satisfy Value.
 var _ Value = Undefined{}
 
-// Type always returns "undefined" for undefined.
-func (Undefined) Type() string {
+// Type always returns UNDEFINED for undefined.
+func (Undefined) Type() Type {
+	return UNDEFINED
+}
+
+// Typeof always returns "undefined" for undefined.
+func (Undefined) Typeof() string {
 	return "undefined"
 }
 

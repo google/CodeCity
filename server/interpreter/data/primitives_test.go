@@ -62,6 +62,9 @@ func TestPrimitivesPrimitiveness(t *testing.T) {
 
 func TestBoolean(t *testing.T) {
 	b := Boolean(false)
+	if b.Typeof() != "boolean" {
+		t.Errorf("%v.Typeof() == %#v (expected \"boolean\")", b, b.Typeof())
+	}
 	if b.Proto() != Value(BooleanProto) {
 		t.Errorf("%v.Proto() != BooleanProto", b)
 	}
@@ -155,7 +158,10 @@ func TestStringHasProperty(t *testing.T) {
 
 func TestNull(t *testing.T) {
 	n := Null{}
-	if v := n.Type(); v != "object" {
+	if v := n.Type(); v != NULL {
+		t.Errorf("Null{}.Type() == %#v (expected %#v)", v, NULL)
+	}
+	if v := n.Typeof(); v != "object" {
 		t.Errorf("Null{}.Type() == %#v (expected \"object\")", v)
 	}
 	if v := n.Proto(); v != nil {
@@ -169,8 +175,11 @@ func TestNull(t *testing.T) {
 
 func TestUndefined(t *testing.T) {
 	u := Undefined{}
-	if v := u.Type(); v != "undefined" {
-		t.Errorf("Undefined{}.Type() == %#v (expected \"undefined\")", v)
+	if v := u.Type(); v != UNDEFINED {
+		t.Errorf("Undefined{}.Type() == %#v (expected %#v)", v, UNDEFINED)
+	}
+	if v := u.Typeof(); v != "undefined" {
+		t.Errorf("Undefined{}.Typeof() == %#v (expected \"undefined\")", v)
 	}
 	if v := u.Proto(); v != nil {
 		t.Errorf("Undefined{}.Proto() == %#v (expected nil)", v)

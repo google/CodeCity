@@ -20,11 +20,28 @@
 // property descriptors) all conform to the Value interface.
 package data
 
+type Type int
+
+// Type is an enum identifying the formal type of a value, per §8 of
+// the ES5.1 spec.  Note that OBJECT identifies *any* object type
+// (including Arrays, Functions, closures, Owners, Regexps, etc.)
+const (
+	UNDEFINED Type = iota
+	NULL
+	BOOLEAN
+	STRING
+	NUMBER
+	OBJECT
+)
+
 // Value represents any JavaScript value (primitive, object, etc.).
 type Value interface {
-	// Type() returns name of type (as given by the JavaScript typeof
-	// operator).
-	Type() string
+	// Type() returns the internal type of the object.
+	Type() Type
+
+	// Typeof() returns name of the type of the value (as given by the
+	// JavaScript typeof operator).
+	Typeof() string
 
 	// IsPrimitive() returns true for primitive data (number, string,
 	// boolean, etc.).

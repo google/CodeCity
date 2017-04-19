@@ -68,7 +68,7 @@ func BinaryOp(left Value, op string, right Value) Value {
 	case "+":
 		// FIXME: should do a ToPrimitive() on arguments (calling user
 		// code) before ToString or ToNumber.
-		if left.Type() == "string" || right.Type() == "string" {
+		if left.Type() == STRING || right.Type() == STRING {
 			// Concatenate
 			return String(left.ToString() + right.ToString())
 		}
@@ -114,7 +114,7 @@ func BinaryOp(left Value, op string, right Value) Value {
 //
 // BUG(cpcallen): arca does not do ToPrimitive() as required by spec.
 func arca(x, y Value) (lt, undef bool) {
-	if x.Type() != "string" || y.Type() != "string" {
+	if x.Type() != STRING || y.Type() != STRING {
 		// Not both strings?  Numerical comparison:
 		nx := float64(x.ToNumber())
 		ny := float64(y.ToNumber())

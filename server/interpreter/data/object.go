@@ -42,8 +42,13 @@ type property struct {
 // *Object must satisfy Value.
 var _ Value = (*Object)(nil)
 
-// Type always returns "object" for regular Objects.
-func (Object) Type() string {
+// Type always returns OBJECT for regular Objects.
+func (Object) Type() Type {
+	return OBJECT
+}
+
+// Typeof always returns "object" for regular Objects.
+func (Object) Typeof() string {
 	return "object"
 }
 
