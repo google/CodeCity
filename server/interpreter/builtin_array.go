@@ -27,7 +27,7 @@ func initArrayProto(sc *scope) {
 	var Array = object.New(nil, object.ObjectProto)
 	sc.newVar("Array", Array)
 
-	Array.SetProperty("prototype", object.ArrayProto)
+	Array.Set("prototype", object.ArrayProto)
 
 	var params []*ast.Identifier
 	var body *ast.BlockStatement
@@ -41,7 +41,7 @@ func initArrayProto(sc *scope) {
 		panic(e)
 	}
 	var push = newClosure(nil, sc, params, body)
-	object.ArrayProto.SetProperty("push", push)
+	object.ArrayProto.Set("push", push)
 }
 
 const pushPolyfillParams = `[{"type":"Identifier","start":32,"end":33,"name":"e"}]`

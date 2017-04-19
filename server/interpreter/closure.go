@@ -47,7 +47,7 @@ func newClosure(owner *object.Owner, scope *scope,
 	var cl = new(closure)
 	cl.Object = *object.New(owner, functionProto)
 	cl.scope = scope
-	cl.SetProperty("length", object.Number(len(params)))
+	cl.Set("length", object.Number(len(params)))
 	cl.params = make([]string, len(params))
 	for i, p := range params {
 		cl.params[i] = p.Name

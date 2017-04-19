@@ -124,11 +124,11 @@ func TestInterpreterObjectExpression(t *testing.T) {
 		t.Errorf("{foo: \"bar\", answer: 42} had %d properties "+
 			"(expected 2)", c)
 	}
-	if foo, _ := v.GetProperty("foo"); foo != object.String("bar") {
+	if foo, _ := v.Get("foo"); foo != object.String("bar") {
 		t.Errorf("{foo: \"bar\", answer: 42}'s foo == %v (%T) "+
 			"(expected \"bar\")", foo, foo)
 	}
-	if answer, _ := v.GetProperty("answer"); answer != object.Number(42) {
+	if answer, _ := v.Get("answer"); answer != object.Number(42) {
 		t.Errorf("{foo: \"bar\", answer: 42}'s answer == %v (%T) "+
 			"(expected 42)", answer, answer)
 	}

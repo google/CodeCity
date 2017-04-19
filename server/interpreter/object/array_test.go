@@ -91,7 +91,7 @@ func TestArray(t *testing.T) {
 	if props := a.propNames(); len(props) != 1 || props[0] != "length" {
 		t.Errorf("%v.propNames == %#v (expected [\"length\"])", a, props)
 	}
-	if a.DeleteProperty("length") == nil {
+	if a.Delete("length") == nil {
 		t.Error("delete([].length) failed to report error")
 	}
 	if a.Proto() != Value(ArrayProto) {
@@ -106,13 +106,13 @@ func TestArrayLength(t *testing.T) {
 	a := NewArray(nil, ArrayProto)
 
 	set := func(n int64, v Value) {
-		err := a.SetProperty(fmt.Sprintf("%d", n), v)
+		err := a.Set(fmt.Sprintf("%d", n), v)
 		if err != nil {
 			t.Error(err)
 		}
 	}
 	checkLen := func(expected int64) {
-		l, err := a.GetProperty("length")
+		l, err := a.Get("length")
 		if err != nil {
 			t.Error(err)
 		} else if l != Number(float64(expected)) {
@@ -124,7 +124,7 @@ func TestArrayLength(t *testing.T) {
 	checkLen(0)
 
 	// Adding non-numeric properties does not increase length:
-	err := a.SetProperty("zero", Number(0))
+	err := a.Set("zero", Number(0))
 	if err != nil {
 		t.Error(err)
 	}
@@ -159,7 +159,7 @@ func TestArrayLength(t *testing.T) {
 	checkLen(math.MaxUint32)
 
 	setLen := func(l int) {
-		err := a.SetProperty("length", Number(float64(l)))
+		err := a.Set("length", Number(float64(l)))
 		if err != nil {
 			t.Error(err)
 		}

@@ -91,29 +91,29 @@ func TestString(t *testing.T) {
 }
 
 func TestStringLength(t *testing.T) {
-	v, err := String("").GetProperty("length")
+	v, err := String("").Get("length")
 	if v != Number(0) || err != nil {
-		t.Errorf("String(\"\").GetProperty(\"length\") == %v, %v"+
+		t.Errorf("String(\"\").Get(\"length\") == %v, %v"+
 			"(expected 0, nil)", v, err)
 	}
 
-	v, err = String("Hello, World!").GetProperty("length")
+	v, err = String("Hello, World!").Get("length")
 	if v != Number(13) || err != nil {
-		t.Errorf("String(\"Hello, World!\").GetProperty(\"length\") == %v, %v"+
+		t.Errorf("String(\"Hello, World!\").Get(\"length\") == %v, %v"+
 			" (expected 13, nil)", v, err)
 	}
 
 	// "Code City" in Telugu (according to translate.google.com):
-	v, err = String("కోడ్ సిటీ").GetProperty("length")
+	v, err = String("కోడ్ సిటీ").Get("length")
 	if v != Number(9) || err != nil {
-		t.Errorf("String(\"కోడ్ సిటీ\").GetProperty(\"length\") == %v, %v "+
+		t.Errorf("String(\"కోడ్ సిటీ\").Get(\"length\") == %v, %v "+
 			"(expected 9, nil)", v, err)
 	}
 
 	// Random example from https://mathiasbynens.be/notes/javascript-encoding:
-	v, err = String("𝌆").GetProperty("length")
+	v, err = String("𝌆").Get("length")
 	if v != Number(2) || err != nil {
-		t.Errorf("String(\"𝌆\").GetProperty(\"length\") == %v, %v "+
+		t.Errorf("String(\"𝌆\").Get(\"length\") == %v, %v "+
 			"(expected 2, nil)", v, err)
 	}
 }
@@ -124,7 +124,7 @@ func TestStringHasOwnProperty(t *testing.T) {
 	if s.HasOwnProperty("foo") {
 		t.Errorf("%#v.HasOwnProperty(\"foo\") == true", s)
 	}
-	s.SetProperty("foo", Undefined{})
+	s.Set("foo", Undefined{})
 	if s.HasOwnProperty("foo") {
 		t.Errorf("%#v.HasOwnProperty(\"foo\") == true (after setting s.foo)", s)
 	}
@@ -141,8 +141,8 @@ func TestNull(t *testing.T) {
 	if v := n.Proto(); v != nil {
 		t.Errorf("Null{}.Proto() == %#v (expected nil)", v)
 	}
-	if v, e := n.GetProperty("foo"); e == nil {
-		t.Errorf("Null{}.GetProperty(\"foo\") == %v, %v "+
+	if v, e := n.Get("foo"); e == nil {
+		t.Errorf("Null{}.Get(\"foo\") == %v, %v "+
 			"(expected nil, !nil)", v, e)
 	}
 }

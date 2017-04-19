@@ -36,19 +36,19 @@ type Value interface {
 	// N.B. this is object.__proto__, not Constructor.prototype!
 	Proto() Value
 
-	// GetProperty returns the current value of the given property or
+	// Get returns the current value of the given property or an
+	// ErrorMsg if that was not possible.
+	Get(name string) (Value, *ErrorMsg)
+
+	// Set sets the given property to the specified value or returns
 	// an ErrorMsg if that was not possible.
-	GetProperty(name string) (Value, *ErrorMsg)
+	Set(name string, value Value) *ErrorMsg
 
-	// SetProperty sets the given property to the specified value or
-	// returns an ErrorMsg if that was not possible.
-	SetProperty(name string, value Value) *ErrorMsg
-
-	// DeleteProperty attempts to remove the named property.  If the
-	// property exists but can't be removed for some reason an
-	// ErrorMsg is returned.  (Removing a non-existing property
-	// "succeeds" silently.)
-	DeleteProperty(name string) *ErrorMsg
+	// Delete attempts to remove the named property.  If the property
+	// exists but can't be removed for some reason an ErrorMsg is
+	// returned.  (Removing a non-existing property "succeeds"
+	// silently.)
+	Delete(name string) *ErrorMsg
 
 	// OwnPropertyKeys returns the list of (own) property names as a
 	// slice of strings.
@@ -137,9 +137,9 @@ func (obj Object) Proto() Value {
 	return obj.proto
 }
 
-// GetProperty returns the current value of the given property or an
-// ErrorMsg if that was not possible.
-func (obj Object) GetProperty(name string) (Value, *ErrorMsg) {
+// Get returns the current value of the given property or an ErrorMsg
+// if that was not possible.
+func (obj Object) Get(name string) (Value, *ErrorMsg) {
 	pd, ok := obj.properties[name]
 	// FIXME: permissions check for property readability goes here
 	if ok {
@@ -148,15 +148,15 @@ func (obj Object) GetProperty(name string) (Value, *ErrorMsg) {
 	// Try the prototype?
 	proto := obj.Proto()
 	if proto != nil {
-		return proto.GetProperty(name)
+		return proto.Get(name)
 	}
 	return Undefined{}, nil
 
 }
 
-// SetProperty sets the given property to the specified value or
-// returns an ErrorMsg if that was not possible.
-func (obj *Object) SetProperty(name string, value Value) *ErrorMsg {
+// Set sets the given property to the specified value or returns an
+// ErrorMsg if that was not possible.
+func (obj *Object) Set(name string, value Value) *ErrorMsg {
 	pd, ok := obj.properties[name]
 	if !ok { // Creating new property
 		// FIXME: permissions check for object writability goes here
@@ -189,10 +189,10 @@ func (obj *Object) OwnPropertyKeys() []string {
 	return names
 }
 
-// DeleteProperty removes the named property if possible.
+// Delete removes the named property if possible.
 //
 // FIXME: perm / immutability checks!
-func (obj *Object) DeleteProperty(name string) *ErrorMsg {
+func (obj *Object) Delete(name string) *ErrorMsg {
 	delete(obj.properties, name)
 	return nil
 }

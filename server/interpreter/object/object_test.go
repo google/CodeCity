@@ -38,12 +38,12 @@ func TestObjectHasOwnProperty(t *testing.T) {
 	if obj.HasOwnProperty("foo") {
 		t.Errorf("%#v.HasOwnProperty(\"foo\") == true", obj)
 	}
-	parent.SetProperty("foo", Undefined{})
+	parent.Set("foo", Undefined{})
 	if obj.HasOwnProperty("foo") {
 		t.Errorf("%#v.HasOwnProperty(\"foo\") == true "+
 			"(after setting parent.foo)", obj)
 	}
-	obj.SetProperty("foo", Undefined{})
+	obj.Set("foo", Undefined{})
 	if !obj.HasOwnProperty("foo") {
 		t.Errorf("%#v.HasOwnProperty(\"foo\") == false", obj)
 	}

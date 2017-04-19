@@ -92,13 +92,13 @@ func (Boolean) Proto() Value {
 	return BooleanProto
 }
 
-// GetProperty on Boolean just passes to its prototype:
-func (b Boolean) GetProperty(name string) (Value, *ErrorMsg) {
-	return b.Proto().GetProperty(name)
+// Get on Boolean just passes to its prototype:
+func (b Boolean) Get(name string) (Value, *ErrorMsg) {
+	return b.Proto().Get(name)
 }
 
-// SetProperty on Boolean always succeeds but has no effect.
-func (Boolean) SetProperty(name string, value Value) *ErrorMsg {
+// Set on Boolean always succeeds but has no effect.
+func (Boolean) Set(name string, value Value) *ErrorMsg {
 	return nil
 }
 
@@ -108,8 +108,8 @@ func (Boolean) OwnPropertyKeys() []string { return nil }
 // HasOwnProperty always returns false for Boolean values.
 func (Boolean) HasOwnProperty(string) bool { return false }
 
-// DeleteProperty always succeeds on Boolean.
-func (Boolean) DeleteProperty(name string) *ErrorMsg {
+// Delete always succeeds on Boolean.
+func (Boolean) Delete(name string) *ErrorMsg {
 	return nil
 }
 
@@ -164,13 +164,13 @@ func (Number) Proto() Value {
 	return NumberProto
 }
 
-// GetProperty on Number just passes to its prototype:
-func (n Number) GetProperty(name string) (Value, *ErrorMsg) {
-	return n.Proto().GetProperty(name)
+// Get on Number just passes to its prototype:
+func (n Number) Get(name string) (Value, *ErrorMsg) {
+	return n.Proto().Get(name)
 }
 
-// SetProperty on Number always succeeds but has no effect.
-func (Number) SetProperty(name string, value Value) *ErrorMsg {
+// Set on Number always succeeds but has no effect.
+func (Number) Set(name string, value Value) *ErrorMsg {
 	return nil
 }
 
@@ -180,8 +180,8 @@ func (Number) OwnPropertyKeys() []string { return nil }
 // HasOwnProperty always returns false for Number values.
 func (Number) HasOwnProperty(string) bool { return false }
 
-// DeleteProperty always succeeds on Number.
-func (Number) DeleteProperty(name string) *ErrorMsg {
+// Delete always succeeds on Number.
+func (Number) Delete(name string) *ErrorMsg {
 	return nil
 }
 
@@ -252,18 +252,18 @@ func (String) Proto() Value {
 	return StringProto
 }
 
-// GetProperty on String implements a magic .length property itself,
+// Get on String implements a magic .length property itself,
 // and passes any other property lookups to its prototype:
-func (s String) GetProperty(name string) (Value, *ErrorMsg) {
+func (s String) Get(name string) (Value, *ErrorMsg) {
 	if name != "length" {
-		return s.Proto().GetProperty(name)
+		return s.Proto().Get(name)
 	}
 	return Number(len(utf16.Encode([]rune(string(s))))), nil
 }
 
-// SetProperty on String always succeeds but has no effect (even on
+// Set on String always succeeds but has no effect (even on
 // length).
-func (String) SetProperty(name string, value Value) *ErrorMsg {
+func (String) Set(name string, value Value) *ErrorMsg {
 	return nil
 }
 
@@ -281,8 +281,8 @@ func (String) HasOwnProperty(s string) bool {
 	return false
 }
 
-// DeleteProperty always succeeds on String unless name is "length".
-func (s String) DeleteProperty(name string) *ErrorMsg {
+// Delete always succeeds on String unless name is "length".
+func (s String) Delete(name string) *ErrorMsg {
 	if name != "length" {
 		return nil
 	}
@@ -375,16 +375,16 @@ func (Null) Proto() Value {
 	return nil
 }
 
-// GetProperty on Null always returns an error.
-func (Null) GetProperty(name string) (Value, *ErrorMsg) {
+// Get on Null always returns an error.
+func (Null) Get(name string) (Value, *ErrorMsg) {
 	return nil, &ErrorMsg{
 		Name:    "TypeError",
 		Message: fmt.Sprintf("Cannot read property '%s' of null", name),
 	}
 }
 
-// SetProperty on Null always fails.
-func (Null) SetProperty(name string, value Value) *ErrorMsg {
+// Set on Null always fails.
+func (Null) Set(name string, value Value) *ErrorMsg {
 	return &ErrorMsg{
 		Name:    "TypeError",
 		Message: fmt.Sprintf("Cannot set property '%s' of null", name),
@@ -398,9 +398,9 @@ func (Null) OwnPropertyKeys() []string { return nil }
 // FIXME: this should throw.
 func (Null) HasOwnProperty(string) bool { return false }
 
-// DeleteProperty should never be called on Null
-func (Null) DeleteProperty(name string) *ErrorMsg {
-	panic("Null.DeleteProperty() not callable")
+// Delete should never be called on Null
+func (Null) Delete(name string) *ErrorMsg {
+	panic("Null.Delete() not callable")
 }
 
 // ToBoolean on Null always return false.
@@ -446,16 +446,16 @@ func (Undefined) Proto() Value {
 	return nil
 }
 
-// GetProperty on Undefined always returns an error.
-func (Undefined) GetProperty(name string) (Value, *ErrorMsg) {
+// Get on Undefined always returns an error.
+func (Undefined) Get(name string) (Value, *ErrorMsg) {
 	return nil, &ErrorMsg{
 		Name:    "TypeError",
 		Message: fmt.Sprintf("Cannot read property '%s' of undefined", name),
 	}
 }
 
-// SetProperty on Undefined always fails.
-func (Undefined) SetProperty(name string, value Value) *ErrorMsg {
+// Set on Undefined always fails.
+func (Undefined) Set(name string, value Value) *ErrorMsg {
 	return &ErrorMsg{
 		Name:    "TypeError",
 		Message: fmt.Sprintf("Cannot set property '%s' of undefined", name),
@@ -469,9 +469,9 @@ func (Undefined) OwnPropertyKeys() []string { return nil }
 // FIXME: this should throw.
 func (Undefined) HasOwnProperty(string) bool { return false }
 
-// DeleteProperty should never be called on Undeined.
-func (Undefined) DeleteProperty(name string) *ErrorMsg {
-	panic("Null.DeleteProperty() not callable")
+// Delete should never be called on Undeined.
+func (Undefined) Delete(name string) *ErrorMsg {
+	panic("Null.Delete() not callable")
 }
 
 // ToBoolean on Undefined always returns false.

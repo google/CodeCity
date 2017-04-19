@@ -22,7 +22,7 @@ func TestPropIterSimpleObj(t *testing.T) {
 	names := []string{"foo", "bar", "baz"}
 	obj := New(nil, nil)
 	for _, n := range names {
-		err := obj.SetProperty(n, String(n))
+		err := obj.Set(n, String(n))
 		if err != nil {
 			t.Error(err)
 		}
@@ -52,13 +52,13 @@ func TestPropIterInheritance(t *testing.T) {
 	obj1 := New(nil, nil)
 	obj2 := New(nil, obj1)
 	for _, n := range names1 {
-		err := obj1.SetProperty(n, String(n))
+		err := obj1.Set(n, String(n))
 		if err != nil {
 			t.Error(err)
 		}
 	}
 	for _, n := range names2 {
-		err := obj2.SetProperty(n, String(n))
+		err := obj2.Set(n, String(n))
 		if err != nil {
 			t.Error(err)
 		}
@@ -84,7 +84,7 @@ func TestPropIterDelete(t *testing.T) {
 	names := []string{"foo", "bar", "baz"}
 	obj := New(nil, nil)
 	for _, n := range names {
-		err := obj.SetProperty(n, String(n))
+		err := obj.Set(n, String(n))
 		if err != nil {
 			t.Error(err)
 		}
@@ -98,9 +98,9 @@ func TestPropIterDelete(t *testing.T) {
 	}
 	cnt++
 	if n == "bar" {
-		obj.DeleteProperty("baz")
+		obj.Delete("baz")
 	} else {
-		obj.DeleteProperty("bar")
+		obj.Delete("bar")
 	}
 	for _, ok = iter.Next(); ok; _, ok = iter.Next() {
 		cnt++

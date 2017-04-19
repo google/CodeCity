@@ -297,7 +297,7 @@ func (st *stateArrayExpression) step(cv *cval) (state, *cval) {
 	} else {
 		// FIXME: this is somewhat inefficient.
 		if cv.pval() != nil {
-			err := st.arr.SetProperty(string(object.Number(st.n).ToString()),
+			err := st.arr.Set(string(object.Number(st.n).ToString()),
 				cv.pval())
 			if err != nil {
 				panic(err)
@@ -313,7 +313,7 @@ func (st *stateArrayExpression) step(cv *cval) (state, *cval) {
 		st.n++
 	}
 	// Update .length, in case there were trailing elided elements:
-	err := st.arr.SetProperty("length", object.Number(st.n).ToString())
+	err := st.arr.Set("length", object.Number(st.n).ToString())
 	if err != nil {
 		panic(err)
 	}
@@ -1049,7 +1049,7 @@ func (st *stateMemberExpression) step(cv *cval) (state, *cval) {
 		}
 		name = i.Name
 	}
-	v, err := st.base.GetProperty(name)
+	v, err := st.base.Get(name)
 	if err != nil {
 		// FIXME: throw JS error
 		panic(err)
@@ -1094,7 +1094,7 @@ func (st *stateObjectExpression) step(cv *cval) (state, *cval) {
 		case *ast.Identifier:
 			key = k.Name
 		}
-		st.obj.SetProperty(key, cv.pval())
+		st.obj.Set(key, cv.pval())
 		st.n++
 	}
 	if st.n < len(st.props) {
@@ -1583,7 +1583,7 @@ func (lv *lvalue) get() object.Value {
 	if lv.base == nil {
 		return lv.scope.getVar(lv.name)
 	}
-	v, err := lv.base.GetProperty(lv.name)
+	v, err := lv.base.Get(lv.name)
 	if err != nil {
 		// FIXME: throw JS error
 		panic(err)
@@ -1600,7 +1600,7 @@ func (lv *lvalue) put(value object.Value) {
 	if lv.base == nil {
 		lv.scope.setVar(lv.name, value)
 	} else {
-		lv.base.SetProperty(lv.name, value)
+		lv.base.Set(lv.name, value)
 	}
 }
 

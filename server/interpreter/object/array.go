@@ -30,16 +30,16 @@ type Array struct {
 // *Array must satisfy Value.
 var _ Value = (*Array)(nil)
 
-// GetProperty on Array implements a magic .length property itself,
-// and passes any other property lookups to its embedded Object.
-func (arr *Array) GetProperty(name string) (Value, *ErrorMsg) {
+// Get on Array implements a magic .length property itself, and passes
+// any other property lookups to its embedded Object.
+func (arr *Array) Get(name string) (Value, *ErrorMsg) {
 	if name != "length" {
-		return arr.Object.GetProperty(name)
+		return arr.Object.Get(name)
 	}
 	return Number(float64(arr.length)), nil
 }
 
-// SetProperty on Array will, if name == "length":
+// Set on Array will, if name == "length":
 //
 // - Update .length be the specified length.
 // - Delete any properties whose names are indexes and >= .length
@@ -49,7 +49,7 @@ func (arr *Array) GetProperty(name string) (Value, *ErrorMsg) {
 // - Delegates setting the specified property to its embedded Object.
 // - If this succeeds, and the property name looks like an array
 // index, then it will udpate .length appropriately.
-func (arr *Array) SetProperty(name string, value Value) *ErrorMsg {
+func (arr *Array) Set(name string, value Value) *ErrorMsg {
 	if name == "length" {
 		l, ok := asLength(value)
 		if !ok {
@@ -63,7 +63,7 @@ func (arr *Array) SetProperty(name string, value Value) *ErrorMsg {
 		}
 		return nil
 	}
-	err := arr.Object.SetProperty(name, value)
+	err := arr.Object.Set(name, value)
 	if err == nil {
 		if i, isIndex := asIndex(name); isIndex && arr.length < i+1 {
 			arr.length = i + 1
@@ -86,14 +86,14 @@ func (arr *Array) propNames() []string {
 	return names
 }
 
-// DeleteProperty will reject attempts to remove "length" and
-// otherwise defers to the embedded Object.
-func (arr *Array) DeleteProperty(name string) *ErrorMsg {
+// Delete will reject attempts to remove "length" and otherwise defers
+// to the embedded Object.
+func (arr *Array) Delete(name string) *ErrorMsg {
 	if name == "length" {
 		return &ErrorMsg{"TypeError",
 			"Cannot delete property 'length' of array."}
 	}
-	return arr.Object.DeleteProperty(name)
+	return arr.Object.Delete(name)
 }
 
 // HasOwnProperty returns true if the property name is "length" or if
