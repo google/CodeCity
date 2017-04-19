@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-// Package object defines various types used to represent JavaScript
-// values (objects and primitive values).
 package data
 
 // Object represents typical JavaScript objects with (optional)
@@ -61,8 +59,8 @@ func (obj Object) Proto() Value {
 
 // Get returns the current value of the given property or an ErrorMsg
 // if that was not possible.
-func (obj Object) Get(name string) (Value, *ErrorMsg) {
-	pd, ok := obj.properties[name]
+func (obj Object) Get(key string) (Value, *ErrorMsg) {
+	pd, ok := obj.properties[key]
 	// FIXME: permissions check for property readability goes here
 	if ok {
 		return pd.v, nil
@@ -70,7 +68,7 @@ func (obj Object) Get(name string) (Value, *ErrorMsg) {
 	// Try the prototype?
 	proto := obj.Proto()
 	if proto != nil {
-		return proto.Get(name)
+		return proto.Get(key)
 	}
 	return Undefined{}, nil
 
@@ -78,11 +76,11 @@ func (obj Object) Get(name string) (Value, *ErrorMsg) {
 
 // Set sets the given property to the specified value or returns an
 // ErrorMsg if that was not possible.
-func (obj *Object) Set(name string, value Value) *ErrorMsg {
-	pd, ok := obj.properties[name]
+func (obj *Object) Set(key string, value Value) *ErrorMsg {
+	pd, ok := obj.properties[key]
 	if !ok { // Creating new property
 		// FIXME: permissions check for object writability goes here
-		obj.properties[name] = property{
+		obj.properties[key] = property{
 			owner: obj.owner, // FIXME: should be caller
 			v:     value,
 			r:     true,
@@ -95,34 +93,34 @@ func (obj *Object) Set(name string, value Value) *ErrorMsg {
 	// FIXME: permissions check for property writeability goes here
 	// FIXME: recurse if necessary
 	pd.v = value
-	obj.properties[name] = pd
+	obj.properties[key] = pd
 	return nil
 }
 
-// OwnPropertyKeys returns the list of (own) property names as a slice
+// OwnPropertyKeys returns the list of (own) property keys as a slice
 // of strings.
 func (obj *Object) OwnPropertyKeys() []string {
-	names := make([]string, len(obj.properties))
+	keys := make([]string, len(obj.properties))
 	i := 0
 	for k := range obj.properties {
-		names[i] = k
+		keys[i] = k
 		i++
 	}
-	return names
+	return keys
 }
 
 // Delete removes the named property if possible.
 //
 // FIXME: perm / immutability checks!
-func (obj *Object) Delete(name string) *ErrorMsg {
-	delete(obj.properties, name)
+func (obj *Object) Delete(key string) *ErrorMsg {
+	delete(obj.properties, key)
 	return nil
 }
 
-// HasOwnProperty returns true if the specified property name exists
+// HasOwnProperty returns true if the specified property key exists
 // on the object itself.
-func (obj *Object) HasOwnProperty(s string) bool {
-	_, exists := obj.properties[s]
+func (obj *Object) HasOwnProperty(key string) bool {
+	_, exists := obj.properties[key]
 	return exists
 }
 

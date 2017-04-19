@@ -137,7 +137,7 @@ func TestInterpreterObjectExpression(t *testing.T) {
 func TestInterpreterSwitchStatement(t *testing.T) {
 	var code = []string{switchStatement, switchStatementWithBreaks}
 	var expected = [][]int{{28, 31, 30, 12, 8}, {30, 20, 20, 30, 40}}
-	for i, _ := range code {
+	for i := range code {
 		for j := 0; j < 5; j++ {
 			code := fmt.Sprintf(code[i], j, j)
 			intrp, _ := NewFromJSON(code)

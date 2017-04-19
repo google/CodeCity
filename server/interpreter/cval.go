@@ -25,6 +25,7 @@ import (
 // cvalType is an enum of completion value types.
 type cvalType int
 
+// Completion value types, as defined in §8.9 of the ES5.1 spec.
 const (
 	NORMAL cvalType = iota
 	BREAK

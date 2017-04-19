@@ -16,41 +16,41 @@
 
 package data
 
-type PropIter struct {
-	value Value
-	names []string
-	seen  map[string]bool
-}
-
-// NewPropIter takes any JavaScript value and returns an iterator
-// which will iterate over the properties of that object and its
-// prototypes.
+// PropIter is an iterator which will iterate over the (non-deleted)
+// properties of an object and its prototypes.
 //
 // FIXME: skip non-enumerable properties
 // FIXME: perhaps we should guarantee iteration order, as most
 // browsers (and ES6) do?
+type PropIter struct {
+	value Value
+	keys  []string
+	seen  map[string]bool
+}
+
+// NewPropIter takes any Value and returns an PropIter for it.
 func NewPropIter(v Value) *PropIter {
 	return &PropIter{v, v.OwnPropertyKeys(), make(map[string]bool)}
 }
 
-// The Next method returns the next non-deleted, non-shadowed property
-// name and ok == true, or ok == false if there are no more property
-// names to iterate over.
+// Next returns the next non-deleted, non-shadowed property key, with
+// ok == true, or returns ok == false if there are no more property
+// keys to iterate over.
 func (iter *PropIter) Next() (string, bool) {
-	var name string
+	var key string
 	for {
-		for len(iter.names) > 0 {
-			name = iter.names[0]
-			iter.names = iter.names[1:]
-			if iter.value.HasOwnProperty(name) && !iter.seen[name] {
-				iter.seen[name] = true
-				return name, true
+		for len(iter.keys) > 0 {
+			key = iter.keys[0]
+			iter.keys = iter.keys[1:]
+			if iter.value.HasOwnProperty(key) && !iter.seen[key] {
+				iter.seen[key] = true
+				return key, true
 			}
 		}
 		iter.value = iter.value.Proto()
 		if iter.value == nil {
 			return "", false
 		}
-		iter.names = iter.value.OwnPropertyKeys()
+		iter.keys = iter.value.OwnPropertyKeys()
 	}
 }

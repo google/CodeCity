@@ -274,8 +274,8 @@ func (String) OwnPropertyKeys() []string { return []string{"length"} }
 // other inputs for Strings.
 //
 // FIXME: should return true for numeric inputs 0 <= n < length!
-func (String) HasOwnProperty(s string) bool {
-	if s == "length" {
+func (String) HasOwnProperty(key string) bool {
+	if key == "length" {
 		return true
 	}
 	return false

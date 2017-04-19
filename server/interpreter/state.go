@@ -917,10 +917,9 @@ func (st *stateIfStatement) step(cv *cval) (state, *cval) {
 		return st.parent, cv
 	} else if cv.pval().ToBoolean() {
 		return newState(st.parent, st.scope, st.consequent.S), nil
+	} else if st.alternate.S == nil {
+		return st.parent, &cval{NORMAL, nil, ""}
 	} else {
-		if st.alternate.S == nil {
-			return st.parent, &cval{NORMAL, nil, ""}
-		}
 		return newState(st.parent, st.scope, st.alternate.S), nil
 	}
 }
@@ -995,15 +994,13 @@ func (st *stateLogicalExpression) step(cv *cval) (state, *cval) {
 	case "&&":
 		if cv.pval().ToBoolean() {
 			return newState(st.parent, st.scope, st.right.E), nil // tail call
-		} else {
-			return st.parent, cv
 		}
+		return st.parent, cv
 	case "||":
 		if cv.pval().ToBoolean() {
 			return st.parent, cv
-		} else {
-			return newState(st.parent, st.scope, st.right.E), nil // tail call
 		}
+		return newState(st.parent, st.scope, st.right.E), nil // tail call
 	default:
 		panic(fmt.Errorf("illegal logical operator '%s'", st.op))
 	}

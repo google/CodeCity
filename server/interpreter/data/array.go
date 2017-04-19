@@ -56,7 +56,7 @@ func (arr *Array) Set(name string, value Value) *ErrorMsg {
 			return &ErrorMsg{"Range Error", "Invalid array length"}
 		}
 		arr.length = l
-		for k, _ := range arr.properties {
+		for k := range arr.properties {
 			if i, isIndex := asIndex(k); isIndex && i >= l {
 				delete(arr.properties, k)
 			}

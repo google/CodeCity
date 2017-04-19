@@ -19,10 +19,10 @@ package data
 import "testing"
 
 func TestPropIterSimpleObj(t *testing.T) {
-	names := []string{"foo", "bar", "baz"}
+	keys := []string{"foo", "bar", "baz"}
 	obj := NewObject(nil, nil)
-	for _, n := range names {
-		err := obj.Set(n, String(n))
+	for _, k := range keys {
+		err := obj.Set(k, String(k))
 		if err != nil {
 			t.Error(err)
 		}
@@ -30,14 +30,14 @@ func TestPropIterSimpleObj(t *testing.T) {
 
 	got := make(map[string]bool)
 	iter := NewPropIter(obj)
-	for n, ok := iter.Next(); ok; n, ok = iter.Next() {
-		got[n] = true
+	for k, ok := iter.Next(); ok; k, ok = iter.Next() {
+		got[k] = true
 	}
-	for _, n := range names {
-		if !got[n] {
-			t.Errorf("!got[%#v]", n)
+	for _, k := range keys {
+		if !got[k] {
+			t.Errorf("!got[%#v]", k)
 		}
-		delete(got, n)
+		delete(got, k)
 	}
 	if len(got) != 0 {
 		t.Errorf("Extra properties: %#v", got)
@@ -45,20 +45,20 @@ func TestPropIterSimpleObj(t *testing.T) {
 }
 
 func TestPropIterInheritance(t *testing.T) {
-	names1 := []string{"foo", "bar", "baz"}
-	names2 := []string{"foo", "quux", "quuux"}
+	keys1 := []string{"foo", "bar", "baz"}
+	keys2 := []string{"foo", "quux", "quuux"}
 	expected := []string{"foo", "bar", "baz", "quux", "quuux"}
 
 	obj1 := NewObject(nil, nil)
 	obj2 := NewObject(nil, obj1)
-	for _, n := range names1 {
-		err := obj1.Set(n, String(n))
+	for _, k := range keys1 {
+		err := obj1.Set(k, String(k))
 		if err != nil {
 			t.Error(err)
 		}
 	}
-	for _, n := range names2 {
-		err := obj2.Set(n, String(n))
+	for _, k := range keys2 {
+		err := obj2.Set(k, String(k))
 		if err != nil {
 			t.Error(err)
 		}
@@ -66,14 +66,14 @@ func TestPropIterInheritance(t *testing.T) {
 
 	got := make(map[string]bool)
 	iter := NewPropIter(obj2)
-	for n, ok := iter.Next(); ok; n, ok = iter.Next() {
-		got[n] = true
+	for k, ok := iter.Next(); ok; k, ok = iter.Next() {
+		got[k] = true
 	}
-	for _, n := range expected {
-		if !got[n] {
-			t.Errorf("!got[%#v]", n)
+	for _, k := range expected {
+		if !got[k] {
+			t.Errorf("!got[%#v]", k)
 		}
-		delete(got, n)
+		delete(got, k)
 	}
 	if len(got) != 0 {
 		t.Errorf("Extra properties: %#v", got)
@@ -81,10 +81,10 @@ func TestPropIterInheritance(t *testing.T) {
 }
 
 func TestPropIterDelete(t *testing.T) {
-	names := []string{"foo", "bar", "baz"}
+	keys := []string{"foo", "bar", "baz"}
 	obj := NewObject(nil, nil)
-	for _, n := range names {
-		err := obj.Set(n, String(n))
+	for _, k := range keys {
+		err := obj.Set(k, String(k))
 		if err != nil {
 			t.Error(err)
 		}
@@ -92,12 +92,12 @@ func TestPropIterDelete(t *testing.T) {
 
 	cnt := 0
 	iter := NewPropIter(obj)
-	n, ok := iter.Next()
+	k, ok := iter.Next()
 	if !ok {
-		t.Errorf("iter.Next() == %#v, false", n)
+		t.Errorf("iter.Next() == %#v, false", k)
 	}
 	cnt++
-	if n == "bar" {
+	if k == "bar" {
 		obj.Delete("baz")
 	} else {
 		obj.Delete("bar")
@@ -105,8 +105,8 @@ func TestPropIterDelete(t *testing.T) {
 	for _, ok = iter.Next(); ok; _, ok = iter.Next() {
 		cnt++
 	}
-	if cnt != len(names)-1 {
+	if cnt != len(keys)-1 {
 		t.Errorf("Property deletion during iteration: "+
-			"expected %d properties; found %d", len(names)-1, cnt)
+			"expected %d properties; found %d", len(keys)-1, cnt)
 	}
 }
