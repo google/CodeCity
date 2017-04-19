@@ -108,6 +108,11 @@ func (Boolean) OwnPropertyKeys() []string { return nil }
 // HasOwnProperty always returns false for Boolean values.
 func (Boolean) HasOwnProperty(string) bool { return false }
 
+// HasProperty just calls HasProperty on prototype for Boolean values.
+func (b Boolean) HasProperty(key string) bool {
+	return b.Proto().HasProperty(key)
+}
+
 // Delete always succeeds on Boolean.
 func (Boolean) Delete(name string) *ErrorMsg {
 	return nil
@@ -179,6 +184,11 @@ func (Number) OwnPropertyKeys() []string { return nil }
 
 // HasOwnProperty always returns false for Number values.
 func (Number) HasOwnProperty(string) bool { return false }
+
+// HasProperty just calls HasProperty on prototype for Boolean values.
+func (n Number) HasProperty(key string) bool {
+	return n.Proto().HasProperty(key)
+}
 
 // Delete always succeeds on Number.
 func (Number) Delete(name string) *ErrorMsg {
@@ -279,6 +289,12 @@ func (String) HasOwnProperty(key string) bool {
 		return true
 	}
 	return false
+}
+
+// HasProperty returns true if the specified property name exists on
+// the object or its prototype chain.
+func (s String) HasProperty(key string) bool {
+	return s.HasOwnProperty(key) || s.Proto().HasProperty(key)
 }
 
 // Delete always succeeds on String unless name is "length".
@@ -398,6 +414,10 @@ func (Null) OwnPropertyKeys() []string { return nil }
 // FIXME: this should throw.
 func (Null) HasOwnProperty(string) bool { return false }
 
+// HasProperty always returns false for Null values
+// FIXME: this should throw.
+func (Null) HasProperty(string) bool { return false }
+
 // Delete should never be called on Null
 func (Null) Delete(name string) *ErrorMsg {
 	panic("Null.Delete() not callable")
@@ -468,6 +488,10 @@ func (Undefined) OwnPropertyKeys() []string { return nil }
 // HasOwnProperty always returns false for Undefined values
 // FIXME: this should throw.
 func (Undefined) HasOwnProperty(string) bool { return false }
+
+// HasProperty always returns false for Undefined values
+// FIXME: this should throw.
+func (Undefined) HasProperty(string) bool { return false }
 
 // Delete should never be called on Undeined.
 func (Undefined) Delete(name string) *ErrorMsg {

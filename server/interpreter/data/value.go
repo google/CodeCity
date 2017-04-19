@@ -58,7 +58,7 @@ type Value interface {
 
 	// HasProperty returns true if the specified property name
 	// exists on the object or its prototype chain.
-	//HasProperty(string) bool
+	HasProperty(string) bool
 
 	// ToBoolean returns true iff the object is truthy.
 	ToBoolean() Boolean

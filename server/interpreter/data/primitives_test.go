@@ -133,6 +133,26 @@ func TestStringHasOwnProperty(t *testing.T) {
 	}
 }
 
+func TestStringHasProperty(t *testing.T) {
+	var s = String("foo")
+
+	if s.HasProperty("foo") {
+		t.Errorf("%#v.HasProperty(\"foo\") == true", s)
+	}
+	s.Set("foo", Undefined{})
+	if s.HasProperty("foo") {
+		t.Errorf("%#v.HasProperty(\"foo\") == true (after setting s.foo)", s)
+	}
+	s.Proto().Set("foo", Undefined{})
+	if !s.HasProperty("foo") {
+		t.Errorf("%#v.HasProperty(\"foo\") == false (after setting parent)", s)
+	}
+	s.Proto().Delete("foo")
+	if !s.HasProperty("length") {
+		t.Errorf("%#v.HasProperty(\"length\") == false", s)
+	}
+}
+
 func TestNull(t *testing.T) {
 	n := Null{}
 	if v := n.Type(); v != "object" {

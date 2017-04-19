@@ -124,6 +124,13 @@ func (obj *Object) HasOwnProperty(key string) bool {
 	return exists
 }
 
+// HasProperty returns true if the specified property key exists on
+// the object or its prototype chain.
+func (obj *Object) HasProperty(key string) bool {
+	return obj.HasOwnProperty(key) ||
+		obj.proto != nil && obj.proto.HasProperty(key)
+}
+
 // ToBoolean always returns true for regular Objects.
 func (Object) ToBoolean() Boolean {
 	return true
