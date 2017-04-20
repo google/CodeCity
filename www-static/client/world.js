@@ -100,6 +100,17 @@ CCC.World.scratchPanorama = null;
 CCC.World.scrollBarWidth = NaN;
 
 /**
+ * Record of the current scene.
+ */
+CCC.World.Scene = {
+  user: undefined,
+  room: undefined,
+  svg: null,
+  users: [],
+  objects: []
+};
+
+/**
  * Initialization code called on startup.
  */
 CCC.World.init = function() {
@@ -140,12 +151,59 @@ CCC.World.receiveMessage = function(e) {
       // Not valid XML, treat as string literal.
       CCC.World.renderMessage(text);
     } else {
-      if (dom.firstChild && dom.firstChild.tagName == 'iframe') {
-        // It's an iframe, create the DOM element.
-        dom.iframe = CCC.World.createIframe(dom);
+      for (var i = 0, child; child = dom.childNodes[i]; i++) {
+        CCC.World.preprocessXml(child);
+        CCC.World.renderMessage(child);
       }
-      CCC.World.renderMessage(dom);
     }
+  }
+};
+
+/**
+ * Parse the XML and add relevant properties on the node or in CCC.World.Scene.
+ * @param {!Element} node XML tree.
+ */
+CCC.World.preprocessXml = function(node) {
+  switch (node.tagName) {
+    case 'iframe':
+      // <iframe src="https://neil.fraser.name/">Neil Fraser</iframe>
+      // It's an iframe, create the DOM element.
+      node.iframe = CCC.World.createIframe(node);
+      break;
+    case 'scene':
+      // <scene user="Max" location="The Hangout">
+      //   <description>The lights are dim and blah blah blah...</description>
+      //   <svg>...</svg>
+      //   <object name="a clock">
+      //     <svg>...</svg>
+      //   </object>
+      //   <user name="Max">
+      //     <svg>...</svg>
+      //   </user>
+      // </scene>
+      CCC.World.Scene.user = node.getAttribute('user');
+      CCC.World.Scene.location = node.getAttribute('location');
+      CCC.World.Scene.svg = null;
+      CCC.World.Scene.objects.length = 0;
+      CCC.World.Scene.users.length = 0;
+      for (var i = 0, child; child = node.childNodes[i]; i++) {
+        var obj = {
+          name: child.getAttribute('name'),
+          svg: CCC.World.xmlToSvg(child.getAttribute('svg'))
+        };
+        switch (child.tagName) {
+          case 'object':
+            CCC.World.Scene.objects.push(obj);
+            break;
+          case 'user':
+            CCC.World.Scene.users.push(obj);
+            break;
+          case 'svg':
+            CCC.World.Scene.svg = child;
+            break;
+        }
+      }
+      break;
   }
 };
 
@@ -239,6 +297,12 @@ CCC.World.prerenderPanorama = function(msg) {
     return false;
   }
   var svg = CCC.World.createSvg();
+  svg.setAttribute('viewBox', '0 0 100 100');
+  // Add scene background.
+  if (CCC.World.Scene.svg) {
+    var g = CCC.World.appendSvgGroup(svg, CCC.World.Scene.svg);
+    g.setAttribute('transform', 'translate(50, 0)');
+  }
   svg.msgs = [msg];
   if (msg.iframe !== undefined) {
     CCC.World.scratchPanorama = svg;
@@ -251,6 +315,32 @@ CCC.World.prerenderPanorama = function(msg) {
   svg.appendChild(text);
   CCC.World.scratchPanorama = svg;
   return true;
+};
+
+/**
+ * Append a new child onto an SVG.  Convert the new child from XML to SVG if
+ * needed.  Coerce the child into being a group element rather than SVG.
+ * @param {!SVGElement} svg SVG parent.
+ * @param {!Element} newChild New content for SVG.
+ * @return {SVGElement} The SVG group object that was appended.
+ */
+CCC.World.appendSvgGroup = function(svg, newChild) {
+  if (!(newChild instanceof SVGElement)) {
+    // Convert XML to SVG.
+    newChild = CCC.World.xmlToSvg(newChild);
+  }
+  if (newChild) {
+    if (newChild.tagName.toLowerCase() == 'svg') {
+      // Convert SVG to group.
+      var g = document.createElementNS(CCC.World.NS, 'g');
+      while (newChild.firstChild) {
+        g.appendChild(newChild.firstChild);
+      }
+      newChild = g;
+    }
+    svg.appendChild(newChild);
+  }
+  return newChild;
 };
 
 /**
@@ -353,7 +443,7 @@ CCC.World.positionIframe = function (iframe, container) {
 
 /**
  * Create a blank, hidden SVG.
- * @return {!Element} SVG element.
+ * @return {!SVGElement} SVG element.
  */
 CCC.World.createSvg = function() {
   var svg = document.createElementNS(CCC.World.NS, 'svg');
@@ -371,7 +461,7 @@ CCC.World.createSvg = function() {
 CCC.World.createIframe = function(msg) {
   var iframe = document.createElement('iframe');
   iframe.sandbox = 'allow-forms allow-scripts';
-  iframe.src = msg.firstChild.getAttribute('src');
+  iframe.src = msg.getAttribute('src');
   document.getElementById('iframeStorage').appendChild(iframe);
   return iframe;
 };
@@ -478,9 +568,12 @@ CCC.World.rowWidths = function() {
  * Convert an XML tree into an SVG tree.
  * Whitelist used for all elements and properties.
  * @param {!Element} dom XML tree.
- * @return {Element} SVG tree.
+ * @return {SVGElement} SVG tree.
  */
 CCC.World.xmlToSvg = function(dom) {
+  if (!dom) {
+    return null;
+  }
   switch (dom.nodeType) {
     case 1:  // Element node.
       if (CCC.World.xmlToSvg.ELEMENT_NAMES.indexOf(dom.tagName) == -1) {

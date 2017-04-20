@@ -105,7 +105,9 @@ CCC.Log.receiveMessage = function(e) {
       var div = CCC.Log.textToHtml(text);
       CCC.Log.appendRow(div);
     } else {
-      CCC.Log.addXml(dom);
+      for (var i = 0, child; child = dom.childNodes[i]; i++) {
+        CCC.Log.addXml(child);
+      }
     }
   }
 };
@@ -184,14 +186,10 @@ CCC.Log.toggleZippy = function(e) {
 
 /**
  * Attempt to render the XML as a plain text version.
- * @param {!Object} dom XML tree.
+ * @param {!Element} node XML tree.
  * @return {string|!Element} Text representation or div.
  */
-CCC.Log.renderXml = function(dom) {
-  var node = dom.firstChild;
-  if (!node) {
-    return '';  // Invalid.
-  }
+CCC.Log.renderXml = function(node) {
   switch (node.tagName) {
     case 'iframe':
       // <iframe src="https://neil.fraser.name/">Neil Fraser</iframe>
@@ -212,9 +210,6 @@ CCC.Log.renderXml = function(dom) {
       // <scene user="Max" location="The Hangout">
       //   <description>The lights are dim and blah blah blah...</description>
       //   <svg>...</svg>
-      //   <exit name="out">
-      //     <svg>...</svg>
-      //   </exit>
       //   <object name="a clock">
       //     <svg>...</svg>
       //   </object>
