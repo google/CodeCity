@@ -379,7 +379,12 @@ func (st *stateAssignmentExpression) step(cv *cval) (state, *cval) {
 		default:
 			panic(fmt.Errorf("illegal assignemnt operator %s", st.op))
 		}
-		r = data.BinaryOp(st.left.get(), op, r)
+		var e *data.ErrorMsg
+		r, e = data.BinaryOp(st.left.get(), op, r)
+		// FIXME: actually throw error here
+		if e != nil {
+			panic(fmt.Errorf("need to throw %#v", e))
+		}
 	}
 	st.left.put(r)
 	return st.parent, pval(r)
@@ -409,7 +414,11 @@ func (st *stateBinaryExpression) step(cv *cval) (state, *cval) {
 		st.left = cv.pval()
 		return newState(st, st.scope, ast.Node(st.rNode.E)), nil
 	}
-	r := data.BinaryOp(st.left, st.op, cv.pval())
+	r, e := data.BinaryOp(st.left, st.op, cv.pval())
+	// FIXME: actually throw error here
+	if e != nil {
+		panic(fmt.Errorf("need to throw %#v", e))
+	}
 	return st.parent, pval(r)
 }
 

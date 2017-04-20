@@ -30,70 +30,74 @@ import (
 // BinaryOperator ("==", "!=", "===", "!==", "<", "<=", ">", ">=",
 // "<<", ">>", ">>>", "+", "-", "*", "/", "%", "|", "^", "&", "in" or
 // "instanceof"
-func BinaryOp(left Value, op string, right Value) Value {
-	// FIXME: implement other operators
+func BinaryOp(left Value, op string, right Value) (Value, *ErrorMsg) {
 	switch op {
 	case "==":
-		return Boolean(aeca(left, right))
+		return Boolean(aeca(left, right)), nil
 	case "!=":
-		return Boolean(!aeca(left, right))
+		return Boolean(!aeca(left, right)), nil
 	case "===":
-		return Boolean(aseca(left, right))
+		return Boolean(aseca(left, right)), nil
 	case "!==":
-		return Boolean(!aseca(left, right))
+		return Boolean(!aseca(left, right)), nil
 	case "<":
 		lt, undef := arca(left, right)
-		return Boolean(lt && !undef)
+		return Boolean(lt && !undef), nil
 	case "<=":
 		lt, undef := arca(right, left)
-		return Boolean(!lt && !undef)
+		return Boolean(!lt && !undef), nil
 	case ">":
 		lt, undef := arca(right, left)
-		return Boolean(lt && !undef)
+		return Boolean(lt && !undef), nil
 	case ">=":
 		lt, undef := arca(left, right)
-		return Boolean(!lt && !undef)
+		return Boolean(!lt && !undef), nil
 	case "<<":
 		return Number(float64(
 			int32(float64(left.ToNumber())) <<
-				(uint32(float64(right.ToNumber())) & 0x1f)))
+				(uint32(float64(right.ToNumber())) & 0x1f))), nil
 	case ">>":
 		return Number(float64(
 			int32(float64(left.ToNumber())) >>
-				(uint32(float64(right.ToNumber())) & 0x1f)))
+				(uint32(float64(right.ToNumber())) & 0x1f))), nil
 	case ">>>":
 		return Number(float64(
 			uint32(float64(left.ToNumber())) >>
-				(uint32(float64(right.ToNumber())) & 0x1f)))
+				(uint32(float64(right.ToNumber())) & 0x1f))), nil
 	case "+":
 		// FIXME: should do a ToPrimitive() on arguments (calling user
 		// code) before ToString or ToNumber.
 		if left.Type() == STRING || right.Type() == STRING {
 			// Concatenate
-			return String(left.ToString() + right.ToString())
+			return String(left.ToString() + right.ToString()), nil
 		}
 		// Otherwise sum
-		return Number(left.ToNumber() + right.ToNumber())
+		return Number(left.ToNumber() + right.ToNumber()), nil
 	case "-":
-		return Number(left.ToNumber() - right.ToNumber())
+		return Number(left.ToNumber() - right.ToNumber()), nil
 	case "*":
-		return Number(left.ToNumber() * right.ToNumber())
+		return Number(left.ToNumber() * right.ToNumber()), nil
 	case "/":
-		return Number(left.ToNumber() / right.ToNumber())
+		return Number(left.ToNumber() / right.ToNumber()), nil
 	case "%":
 		return Number(
-			math.Mod(float64(left.ToNumber()), float64(right.ToNumber())))
+			math.Mod(float64(left.ToNumber()), float64(right.ToNumber()))), nil
 	case "|":
-		return Number(float64(
-			int32(float64(left.ToNumber())) | int32(float64(right.ToNumber()))))
+		return Number(float64(int32(float64(left.ToNumber())) |
+			int32(float64(right.ToNumber())))), nil
 	case "^":
-		return Number(float64(
-			int32(float64(left.ToNumber())) ^ int32(float64(right.ToNumber()))))
+		return Number(float64(int32(float64(left.ToNumber())) ^
+			int32(float64(right.ToNumber())))), nil
 	case "&":
-		return Number(float64(
-			int32(float64(left.ToNumber())) & int32(float64(right.ToNumber()))))
+		return Number(float64(int32(float64(left.ToNumber())) &
+			int32(float64(right.ToNumber())))), nil
 	case "in":
-		panic("not implemented")
+		if right.Type() != OBJECT {
+			return nil, &ErrorMsg{"TypeError", fmt.Sprintf(
+				"Cannot use 'in' operator to search for '%s' in %#v",
+				left.ToString(), right)}
+		}
+		return Boolean(right.HasProperty(string(left.ToString()))), nil
 	case "instanceof":
 		panic("not implemented")
 	default:
