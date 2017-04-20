@@ -105,6 +105,15 @@ func (arr Array) HasOwnProperty(s string) bool {
 	return arr.Object.HasOwnProperty(s)
 }
 
+// HasProperty returns true if the property name is "length" or if the
+// embedded Object (or its prototype(s)) has it.
+func (arr Array) HasProperty(s string) bool {
+	if s == "length" {
+		return true
+	}
+	return arr.Object.HasProperty(s)
+}
+
 // ToString returns a string containing a comma-separated
 // concatenation of the result of calling ToString() on the elements
 // of the array in numerical order.

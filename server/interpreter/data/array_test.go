@@ -88,6 +88,9 @@ func TestArray(t *testing.T) {
 	if !a.HasOwnProperty("length") {
 		t.Errorf("%v.HasOwnProperty(\"length\") == false", a)
 	}
+	if !a.HasProperty("length") {
+		t.Errorf("%v.HasProperty(\"length\") == false", a)
+	}
 	if props := a.propNames(); len(props) != 1 || props[0] != "length" {
 		t.Errorf("%v.propNames == %#v (expected [\"length\"])", a, props)
 	}
