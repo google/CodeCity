@@ -257,6 +257,23 @@ CCC.Log.renderXml = function(node) {
         text += CCC.getMsg('roomUsersMsg', CCC.Log.naturalList(users));
       }
       return text;
+    case 'object':
+      // <object name="Bob">
+      //   <svg>...</svg>
+      //   <description>A programmer who likes to code.
+      //He is in the Library.</description>
+      // </object>
+      var text = '';
+      var objectName = node.getAttribute('name');
+      if (objectName) {
+        text += objectName + '\n';
+      }
+      for (var i = 0, child; child = node.childNodes[i]; i++) {
+        if (child.tagName == 'description') {
+          text += child.textContent + '\n';
+        }
+      }
+      return text;
     case 'say':
       // <say user="Max" room="The Hangout">Hello world.</say>
       var user = node.getAttribute('user');

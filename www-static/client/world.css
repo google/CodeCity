@@ -83,3 +83,17 @@ svg {
 .iframeRelaunch:hover>rect {
   fill: #000;
 }
+
+/* Enforce a consistent drawing style on all content. */
+svg {
+  fill: #fff;
+  stroke: #000;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: .7px;
+}
+
+text {
+  fill: #000;
+  stroke-width: 0;
+}
