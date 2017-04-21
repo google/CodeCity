@@ -189,3 +189,13 @@ func (sc *scope) populate(node ast.Node) {
 		panic(fmt.Errorf("Unrecognized ast.Node type %T", node))
 	}
 }
+
+// newGlobalScope is a factory for top-level global scopes.
+func newGlobalScope() *scope {
+	sc := newScope(nil, nil)
+	initBuiltinObject(sc)
+	initBuiltinArray(sc)
+	sc.newVar("undefined", data.Undefined{})
+	// FIXME: insert (more) global names into sc
+	return sc
+}

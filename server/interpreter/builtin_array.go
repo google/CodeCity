@@ -22,7 +22,7 @@ import (
 	"encoding/json"
 )
 
-func initArrayProto(sc *scope) {
+func initBuiltinArray(sc *scope) {
 	// FIXME: should be Function:
 	var Array = data.NewObject(nil, data.ObjectProto)
 	sc.newVar("Array", Array)

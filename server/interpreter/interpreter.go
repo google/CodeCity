@@ -26,6 +26,7 @@ import (
 
 // Interpreter implements a JavaScript interpreter.
 type Interpreter struct {
+	global  *scope
 	state   state
 	value   *cval
 	Verbose bool
@@ -59,12 +60,9 @@ func NewFromJSON(astJSON string) (*Interpreter, error) {
 // will execute that program.
 func NewFromAST(tree *ast.Program) *Interpreter {
 	var intrp = new(Interpreter)
-	s := newScope(nil, nil)
-	initArrayProto(s)
-	s.newVar("undefined", data.Undefined{})
-	// FIXME: insert (more) global names into s
-	s.populate(tree)
-	intrp.state = newState(nil, s, tree)
+	intrp.global = newGlobalScope()
+	intrp.global.populate(tree)
+	intrp.state = newState(nil, intrp.global, tree)
 	return intrp
 }
 
