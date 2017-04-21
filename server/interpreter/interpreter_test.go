@@ -153,6 +153,10 @@ func TestInterpreterSwitchStatement(t *testing.T) {
 	}
 }
 
+// TestPrototypeIndependence verifies that modifying the prototype of
+// a builtin object in one interpreter does not result in modifying
+// the value of the prototype object in a different interpreter
+// instance.
 func TestPrototypeIndependence(t *testing.T) {
 	i1, _ := NewFromJSON(emptyProg)
 	op1, _ := i1.state.(*stateBlockStatement).scope.
@@ -164,26 +168,22 @@ func TestPrototypeIndependence(t *testing.T) {
 	op2, _ := i2.state.(*stateBlockStatement).scope.
 		getVar("Object").Get("prototype")
 
-	v, e := op1.Get("foo")
-	if e == nil {
-		t.Errorf("Object.prototype.foo already defined as %#v", v)
+	if op1.HasOwnProperty("foo") {
+		t.Errorf("Object.prototype.foo already defined")
 	}
-	v, e = op2.Get("foo")
-	if e == nil {
-		t.Errorf("(other) Object.prototype.foo already defined as %#v", v)
+	if op2.HasProperty("foo") {
+		t.Errorf("(other) Object.prototype.foo already defined")
 	}
-	e = op1.Set("foo", data.String("bar"))
-	v, e = op1.Get("foo")
-	if e != nil {
-		t.Errorf("setting Object.prototype.foo failed: %s", e)
+	op1.Set("foo", data.String("bar"))
+	if !op1.HasOwnProperty("foo") {
+		t.Errorf("setting Object.prototype.foo failed")
 	}
-	v, e = ap1.Get("foo")
+	v, e := ap1.Get("foo")
 	if e != nil || v != data.String("bar") {
 		t.Errorf("Array.prototype.foo == %#v (%s) "+
 			"(expected String(\"bar\"), nil)", v, e)
 	}
-	v, e = op2.Get("foo")
-	if e == nil {
+	if op2.HasProperty("foo") {
 		t.Errorf("(other) Object.prototype.foo now defined as %#v", v)
 	}
 }

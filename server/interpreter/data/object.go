@@ -76,7 +76,6 @@ func (obj Object) Get(key string) (Value, *ErrorMsg) {
 		return proto.Get(key)
 	}
 	return Undefined{}, nil
-
 }
 
 // Set sets the given property to the specified value or returns an
