@@ -31,5 +31,3 @@ func TestInitArrayProto(t *testing.T) {
 		t.Errorf("Array.prototype.push is a %T (expected *closure)", cl)
 	}
 }
-
-const emptyProg = `{"type":"Program","start":0,"end":0,"body":[]}`
