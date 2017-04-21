@@ -41,8 +41,9 @@ type scope struct {
 }
 
 // newScope is a factory for scope objects.  The parent param is a
-// pointer to the parent (enclosing scope); it is nil if the scope
-// being created is the global scope.
+// pointer to the parent (enclosing scope).  The this param is the
+// value of ThisExpression in the given scope.  Both should be nil if
+// the scope being created is the global scope.
 func newScope(parent *scope, this data.Value) *scope {
 	return &scope{make(map[string]data.Value), parent, this}
 }
