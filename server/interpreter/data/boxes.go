@@ -217,3 +217,21 @@ func NewBoxedString(owner *Owner, proto Object, value String) *BoxedString {
 	bstr.value = value
 	return bstr
 }
+
+/********************************************************************/
+
+// Coerce coerces its first argument into an object.
+func Coerce(value Value, owner *Owner, protos *Protos) Object {
+	switch v := value.(type) {
+	case Object:
+		return v
+	case Boolean:
+		return NewBoxedBoolean(owner, protos.BooleanProto, v)
+	case Number:
+		return NewBoxedNumber(owner, protos.NumberProto, v)
+	case String:
+		return NewBoxedString(owner, protos.StringProto, v)
+	default:
+		panic(fmt.Errorf("Can't coerce a %T to Object", v))
+	}
+}

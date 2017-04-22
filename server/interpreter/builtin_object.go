@@ -20,10 +20,9 @@ import (
 	"CodeCity/server/interpreter/data"
 )
 
-func initBuiltinObject(sc *scope) {
-	// FIXME: should be Function:
-	var Object = data.NewObject(nil, data.ObjectProto)
+func initBuiltinObject(protos *data.Protos, sc *scope) {
+	var Object = data.NewObject(nil, protos.ObjectProto)
 	sc.newVar("Object", Object)
 
-	Object.Set("prototype", data.ObjectProto)
+	Object.Set("prototype", protos.ObjectProto)
 }

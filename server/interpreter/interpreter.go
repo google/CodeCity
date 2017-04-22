@@ -26,6 +26,7 @@ import (
 
 // Interpreter implements a JavaScript interpreter.
 type Interpreter struct {
+	protos  *data.Protos
 	global  *scope
 	state   state
 	value   *cval
@@ -60,7 +61,8 @@ func NewFromJSON(astJSON string) (*Interpreter, error) {
 // will execute that program.
 func NewFromAST(tree *ast.Program) *Interpreter {
 	var intrp = new(Interpreter)
-	intrp.global = newGlobalScope()
+	intrp.protos = data.NewProtos()
+	intrp.global = newGlobalScope(intrp.protos)
 	intrp.global.populate(tree)
 	intrp.state = newState(nil, intrp.global, tree)
 	return intrp
@@ -85,7 +87,7 @@ func (intrp *Interpreter) Step() bool {
 	if intrp.Verbose {
 		fmt.Printf("Next step is %T.step(%#v)\n", intrp.state, intrp.value)
 	}
-	intrp.state, intrp.value = intrp.state.step(intrp.value)
+	intrp.state, intrp.value = intrp.state.step(intrp, intrp.value)
 	return true
 }
 

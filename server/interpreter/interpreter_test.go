@@ -117,7 +117,7 @@ func TestInterpreterSimple(t *testing.T) {
 func TestInterpreterObjectExpression(t *testing.T) {
 	i, _ := NewFromJSON(objectExpression)
 	i.Run()
-	v, ok := i.Value().(*data.Object)
+	v, ok := i.Value().(data.Object)
 	if !ok {
 		t.Errorf("{foo: \"bar\", answer: 42} returned type %T "+
 			"(expected data.Object)", i.Value())
@@ -159,14 +159,17 @@ func TestInterpreterSwitchStatement(t *testing.T) {
 // instance.
 func TestPrototypeIndependence(t *testing.T) {
 	i1, _ := NewFromJSON(emptyProg)
-	op1, _ := i1.state.(*stateBlockStatement).scope.
-		getVar("Object").Get("prototype")
-	ap1, _ := i1.state.(*stateBlockStatement).scope.
-		getVar("Array").Get("prototype")
+	op1v, _ := i1.state.(*stateBlockStatement).scope.
+		getVar("Object").(data.Object).Get("prototype")
+	op1 := op1v.(data.Object)
+	ap1v, _ := i1.state.(*stateBlockStatement).scope.
+		getVar("Array").(data.Object).Get("prototype")
+	ap1 := ap1v.(data.Object)
 
 	i2, _ := NewFromJSON(emptyProg)
-	op2, _ := i2.state.(*stateBlockStatement).scope.
-		getVar("Object").Get("prototype")
+	op2v, _ := i2.state.(*stateBlockStatement).scope.
+		getVar("Object").(data.Object).Get("prototype")
+	op2 := op2v.(data.Object)
 
 	if op1.HasOwnProperty("foo") {
 		t.Errorf("Object.prototype.foo already defined")
