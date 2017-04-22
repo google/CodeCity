@@ -17,15 +17,16 @@
 package interpreter
 
 import (
-	//"CodeCity/server/interpreter/data"
 	"testing"
+
+	"CodeCity/server/interpreter/data"
 )
 
 func TestInitArrayProto(t *testing.T) {
 	i, _ := NewFromJSON(emptyProg)
-	ap, _ := i.state.(*stateBlockStatement).scope.getVar("Array").
+	ap, _ := i.state.(*stateBlockStatement).scope.getVar("Array").(data.Object).
 		Get("prototype")
-	push, _ := ap.Get("push")
+	push, _ := ap.(data.Object).Get("push")
 	cl, isClosure := push.(*closure)
 	if !isClosure {
 		t.Errorf("Array.prototype.push is a %T (expected *closure)", cl)
