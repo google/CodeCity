@@ -29,9 +29,11 @@ import (
 // this type represents a possible state of the computation.
 type state interface {
 	// step performs the next step in the evaluation of the program.
-	// It accepts a *cval representing the result of the previous step,
-	// and returns the new state execution state and *cval.
-	step(*cval) (state, *cval)
+	// It accepts a pointer to the enclosing Interpreter (for access
+	// to protos, etc.) and a *cval representing the result of the
+	// previous step, and returns the new state execution state and
+	// *cval.
+	step(*Interpreter, *cval) (state, *cval)
 
 	// getParent returns the state's parent; this is just a
 	// convenience method obtaining the parent of a state of unknown
@@ -285,13 +287,13 @@ func (st *stateArrayExpression) init(node *ast.ArrayExpression) {
 	st.elems = node.Elements
 }
 
-func (st *stateArrayExpression) step(cv *cval) (state, *cval) {
+func (st *stateArrayExpression) step(intrp *Interpreter, cv *cval) (state, *cval) {
 	if cv == nil {
 		if st.arr != nil {
 			panic("array already created??")
 		}
 		// FIXME: set owner
-		st.arr = data.NewArray(nil, data.ArrayProto)
+		st.arr = data.NewArray(nil, intrp.protos.ArrayProto)
 	} else if cv.abrupt() {
 		return st.parent, cv
 	} else {
@@ -338,7 +340,7 @@ func (st *stateAssignmentExpression) init(node *ast.AssignmentExpression) {
 
 // FIXME: ToString() and ToNumber() calls in data.BinaryOp should be
 // able to result in calls to user toString() and valueOf() methods
-func (st *stateAssignmentExpression) step(cv *cval) (state, *cval) {
+func (st *stateAssignmentExpression) step(intrp *Interpreter, cv *cval) (state, *cval) {
 	if !st.left.ready {
 		return &st.left, nil
 	}
@@ -405,7 +407,7 @@ func (st *stateBinaryExpression) init(node *ast.BinaryExpression) {
 	st.rNode = node.Right
 }
 
-func (st *stateBinaryExpression) step(cv *cval) (state, *cval) {
+func (st *stateBinaryExpression) step(intrp *Interpreter, cv *cval) (state, *cval) {
 	if cv == nil {
 		return newState(st, st.scope, ast.Node(st.lNode.E)), nil
 	} else if cv.abrupt() {
@@ -445,7 +447,7 @@ func (st *stateBlockStatement) initFromSwitchCase(node *ast.SwitchCase) {
 	st.body = node.Consequent
 }
 
-func (st *stateBlockStatement) step(cv *cval) (state, *cval) {
+func (st *stateBlockStatement) step(intrp *Interpreter, cv *cval) (state, *cval) {
 	if cv != nil {
 		if cv.val != nil {
 			st.val = cv.val
@@ -476,7 +478,7 @@ func (st *stateBreakStatement) init(node *ast.BreakStatement) {
 	}
 }
 
-func (st *stateBreakStatement) step(cv *cval) (state, *cval) {
+func (st *stateBreakStatement) step(intrp *Interpreter, cv *cval) (state, *cval) {
 	return st.parent, &cval{BREAK, nil, st.label}
 }
 
@@ -507,7 +509,7 @@ func (st *stateCallExpression) init(node *ast.CallExpression) {
 //
 // BUG(cpcallen): probably does not handle argument/parameter count
 // mismatch properly.
-func (st *stateCallExpression) step(cv *cval) (state, *cval) {
+func (st *stateCallExpression) step(intrp *Interpreter, cv *cval) (state, *cval) {
 	if cv == nil {
 		// First visit: evaluate function to get closure
 		if st.ns != nil {
@@ -574,7 +576,7 @@ func (st *stateCatchClause) init(node *ast.CatchClause) {
 	st.body = node.Body
 }
 
-func (st *stateCatchClause) step(cv *cval) (state, *cval) {
+func (st *stateCatchClause) step(intrp *Interpreter, cv *cval) (state, *cval) {
 	sc := newScope(st.scope, st.scope.this)
 	sc.newVar(st.param, cv.pval())
 	return newState(st.parent, sc, st.body), nil
@@ -595,7 +597,7 @@ func (st *stateConditionalExpression) init(node *ast.ConditionalExpression) {
 	st.alternate = node.Alternate
 }
 
-func (st *stateConditionalExpression) step(cv *cval) (state, *cval) {
+func (st *stateConditionalExpression) step(intrp *Interpreter, cv *cval) (state, *cval) {
 	if cv == nil {
 		return newState(st, st.scope, ast.Node(st.test.E)), nil
 	} else if cv.abrupt() {
@@ -621,7 +623,7 @@ func (st *stateContinueStatement) init(node *ast.ContinueStatement) {
 	}
 }
 
-func (st *stateContinueStatement) step(cv *cval) (state, *cval) {
+func (st *stateContinueStatement) step(intrp *Interpreter, cv *cval) (state, *cval) {
 	return st.parent, &cval{CONTINUE, nil, st.label}
 }
 
@@ -635,7 +637,7 @@ type stateEmptyStatement struct {
 func (st *stateEmptyStatement) init(node *ast.EmptyStatement) {
 }
 
-func (st *stateEmptyStatement) step(cv *cval) (state, *cval) {
+func (st *stateEmptyStatement) step(intrp *Interpreter, cv *cval) (state, *cval) {
 	return st.parent, &cval{NORMAL, nil, ""}
 }
 
@@ -651,7 +653,7 @@ func (st *stateExpressionStatement) init(node *ast.ExpressionStatement) {
 	st.expr = node.Expression
 }
 
-func (st *stateExpressionStatement) step(cv *cval) (state, *cval) {
+func (st *stateExpressionStatement) step(intrp *Interpreter, cv *cval) (state, *cval) {
 	if cv == nil {
 		return newState(st, st.scope, ast.Node(st.expr.E)), nil
 	}
@@ -688,7 +690,7 @@ func (st *stateForStatement) init(node *ast.ForStatement) {
 	st.state = forUnstarted
 }
 
-func (st *stateForStatement) step(cv *cval) (state, *cval) {
+func (st *stateForStatement) step(intrp *Interpreter, cv *cval) (state, *cval) {
 	// Handle return value from previous evaluation:
 	switch st.state {
 	case forUnstarted:
@@ -779,7 +781,7 @@ func (st *stateForInStatement) init(node *ast.ForInStatement) {
 	st.state = forInUnstarted
 }
 
-func (st *stateForInStatement) step(cv *cval) (state, *cval) {
+func (st *stateForInStatement) step(intrp *Interpreter, cv *cval) (state, *cval) {
 	for {
 		// Handle return value from previous evaluation:
 		switch st.state {
@@ -800,7 +802,8 @@ func (st *stateForInStatement) step(cv *cval) (state, *cval) {
 			if (obj == data.Null{} || obj == data.Undefined{}) {
 				return st.parent, &cval{NORMAL, nil, ""}
 			}
-			st.iter = data.NewPropIter(obj)
+			// FIXME: set owner:
+			st.iter = data.NewPropIter(data.Coerce(obj, nil, intrp.protos))
 			fallthrough
 		case forInPrepLeft:
 			n, ok := st.iter.Next()
@@ -856,7 +859,7 @@ type stateFunctionDeclaration struct {
 func (st *stateFunctionDeclaration) init(node *ast.FunctionDeclaration) {
 }
 
-func (st *stateFunctionDeclaration) step(cv *cval) (state, *cval) {
+func (st *stateFunctionDeclaration) step(intrp *Interpreter, cv *cval) (state, *cval) {
 	// §13 and §13.2 of ES5.1 together seem to imply that we are
 	// supposed to return the created function here, but that doesn't
 	// really make sense (it's not a completion value, and this is
@@ -877,8 +880,10 @@ func (st *stateFunctionExpression) init(node *ast.FunctionExpression) {
 	st.body = node.Body
 }
 
-func (st *stateFunctionExpression) step(cv *cval) (state, *cval) {
-	return st.parent, pval(newClosure(nil, st.scope, st.params, st.body))
+func (st *stateFunctionExpression) step(intrp *Interpreter, cv *cval) (state, *cval) {
+	// FIXME: set owner:
+	return st.parent, pval(newClosure(nil, intrp.protos.FunctionProto,
+		st.scope, st.params, st.body))
 }
 
 /********************************************************************/
@@ -892,7 +897,7 @@ func (st *stateIdentifier) init(node *ast.Identifier) {
 	st.name = node.Name
 }
 
-func (st *stateIdentifier) step(cv *cval) (state, *cval) {
+func (st *stateIdentifier) step(intrp *Interpreter, cv *cval) (state, *cval) {
 	// Note: if we getters/setters and a global scope object (like
 	// window), we would have to do a check to see if we need to run a
 	// getter.  But we have neither, so this is a straight variable
@@ -919,7 +924,7 @@ func (st *stateIfStatement) init(node *ast.IfStatement) {
 	st.alternate = node.Alternate
 }
 
-func (st *stateIfStatement) step(cv *cval) (state, *cval) {
+func (st *stateIfStatement) step(intrp *Interpreter, cv *cval) (state, *cval) {
 	if cv == nil {
 		return newState(st, st.scope, ast.Node(st.test.E)), nil
 	} else if cv.abrupt() {
@@ -947,7 +952,7 @@ func (st *stateLabeledStatement) init(node *ast.LabeledStatement) {
 	st.body = node.Body
 }
 
-func (st *stateLabeledStatement) step(cv *cval) (state, *cval) {
+func (st *stateLabeledStatement) step(intrp *Interpreter, cv *cval) (state, *cval) {
 	if cv == nil {
 		inner := newState(st, st.scope, st.body.S)
 		li := inner.(labelled)
@@ -975,7 +980,7 @@ func (st *stateLiteral) init(node *ast.Literal) {
 	st.val = data.NewFromRaw(node.Raw)
 }
 
-func (st *stateLiteral) step(cv *cval) (state, *cval) {
+func (st *stateLiteral) step(intrp *Interpreter, cv *cval) (state, *cval) {
 	return st.parent, pval(st.val)
 }
 
@@ -993,7 +998,7 @@ func (st *stateLogicalExpression) init(node *ast.LogicalExpression) {
 	st.right = node.Right
 }
 
-func (st *stateLogicalExpression) step(cv *cval) (state, *cval) {
+func (st *stateLogicalExpression) step(intrp *Interpreter, cv *cval) (state, *cval) {
 	if cv == nil {
 		return newState(st, st.scope, st.left.E), nil
 	} else if cv.abrupt() {
@@ -1031,13 +1036,14 @@ func (st *stateMemberExpression) init(node *ast.MemberExpression) {
 	st.computed = node.Computed
 }
 
-func (st *stateMemberExpression) step(cv *cval) (state, *cval) {
+func (st *stateMemberExpression) step(intrp *Interpreter, cv *cval) (state, *cval) {
 	if cv == nil {
 		return newState(st, st.scope, ast.Node(st.baseExpr.E)), nil
 	} else if cv.abrupt() {
 		return st.parent, cv
 	} else if st.base == nil {
-		st.base = cv.pval()
+		// FIXME: set owner:
+		st.base = data.Coerce(cv.pval(), nil, intrp.protos)
 		if st.computed {
 			return newState(st, st.scope, ast.Node(st.membExpr.E)), nil
 		}
@@ -1081,13 +1087,13 @@ func (st *stateObjectExpression) init(node *ast.ObjectExpression) {
 }
 
 // FIXME: (maybe) getters and setters not supported.
-func (st *stateObjectExpression) step(cv *cval) (state, *cval) {
+func (st *stateObjectExpression) step(intrp *Interpreter, cv *cval) (state, *cval) {
 	if st.obj == nil {
 		if st.n != 0 || cv != nil {
 			panic("internal error when constructing object")
 		}
 		// FIXME: set owner of new object
-		st.obj = data.NewObject(nil, data.ObjectProto)
+		st.obj = data.NewObject(nil, intrp.protos.ObjectProto)
 	}
 	if cv != nil {
 		if cv.abrupt() {
@@ -1126,7 +1132,7 @@ func (st *stateReturnStatement) init(node *ast.ReturnStatement) {
 //
 // BUG(cpcallen): should throw if called outside a function
 // invocation.
-func (st *stateReturnStatement) step(cv *cval) (state, *cval) {
+func (st *stateReturnStatement) step(intrp *Interpreter, cv *cval) (state, *cval) {
 	if cv == nil {
 		// Evaluate argument:
 		return newState(st, st.scope, st.arg.E), nil
@@ -1148,7 +1154,7 @@ func (st *stateSequenceExpression) init(node *ast.SequenceExpression) {
 	st.expressions = node.Expressions
 }
 
-func (st *stateSequenceExpression) step(cv *cval) (state, *cval) {
+func (st *stateSequenceExpression) step(intrp *Interpreter, cv *cval) (state, *cval) {
 	if cv != nil && cv.abrupt() {
 		return st.parent, cv
 	}
@@ -1180,7 +1186,7 @@ func (st *stateSwitchStatement) init(node *ast.SwitchStatement) {
 	st.cases = node.Cases
 }
 
-func (st *stateSwitchStatement) step(cv *cval) (state, *cval) {
+func (st *stateSwitchStatement) step(intrp *Interpreter, cv *cval) (state, *cval) {
 	if cv == nil {
 		// Evaluate discriminant
 		return newState(st, st.scope, st.discExp.E), nil
@@ -1248,7 +1254,7 @@ type stateThisExpression struct {
 func (st *stateThisExpression) init(node *ast.ThisExpression) {
 }
 
-func (st *stateThisExpression) step(cv *cval) (state, *cval) {
+func (st *stateThisExpression) step(intrp *Interpreter, cv *cval) (state, *cval) {
 	this := st.scope.this
 	if this == nil {
 		this = data.Undefined{}
@@ -1271,7 +1277,7 @@ func (st *stateThrowStatement) init(node *ast.ThrowStatement) {
 
 // step should get called twice: once to set up evaluation of the
 // argument, and a second time to do the actual throw.
-func (st *stateThrowStatement) step(cv *cval) (state, *cval) {
+func (st *stateThrowStatement) step(intrp *Interpreter, cv *cval) (state, *cval) {
 	if cv == nil {
 		return newState(st, st.scope, st.arg.E), nil
 	} else if cv.abrupt() {
@@ -1300,7 +1306,7 @@ func (st *stateTryStatement) init(node *ast.TryStatement) {
 	st.finalizer = node.Finalizer
 }
 
-func (st *stateTryStatement) step(cv *cval) (state, *cval) {
+func (st *stateTryStatement) step(intrp *Interpreter, cv *cval) (state, *cval) {
 	if cv == nil {
 		if st.handled || st.finalized {
 			panic("done block or catch before begun??")
@@ -1352,7 +1358,7 @@ func (st *stateUnaryExpression) init(node *ast.UnaryExpression) {
 }
 
 // FIXME: ToNumber() should call user code if applicable
-func (st *stateUnaryExpression) step(cv *cval) (state, *cval) {
+func (st *stateUnaryExpression) step(intrp *Interpreter, cv *cval) (state, *cval) {
 	if cv == nil {
 		return newState(st, st.scope, st.arg.E), nil
 	} else if cv.abrupt() {
@@ -1395,7 +1401,7 @@ func (st *stateUpdateExpression) init(node *ast.UpdateExpression) {
 
 // FIXME: ToNumber should be able to result in call to user valueOf
 // method.
-func (st *stateUpdateExpression) step(cv *cval) (state, *cval) {
+func (st *stateUpdateExpression) step(intrp *Interpreter, cv *cval) (state, *cval) {
 	if !st.arg.ready {
 		return &st.arg, nil
 	}
@@ -1434,7 +1440,7 @@ func (st *stateVariableDeclaration) init(node *ast.VariableDeclaration) {
 	}
 }
 
-func (st *stateVariableDeclaration) step(cv *cval) (state, *cval) {
+func (st *stateVariableDeclaration) step(intrp *Interpreter, cv *cval) (state, *cval) {
 	if cv != nil {
 		if cv.abrupt() {
 			return st.parent, cv
@@ -1474,7 +1480,7 @@ func (st *stateWhileStatement) initFromDoWhile(node *ast.DoWhileStatement) {
 	st.tested = true
 }
 
-func (st *stateWhileStatement) step(cv *cval) (state, *cval) {
+func (st *stateWhileStatement) step(intrp *Interpreter, cv *cval) (state, *cval) {
 	if cv == nil {
 		if st.tested { // First iteration of a do while loop
 			return newState(st, st.scope, st.body.S), nil
@@ -1527,7 +1533,7 @@ func (st *stateWhileStatement) step(cv *cval) (state, *cval) {
 //      ...
 //  }
 //
-//  func (st *stateFoo) step(cv *cval) (state, *cval) {
+//  func (st *stateFoo) step(intrp *Interpreter, cv *cval) (state, *cval) {
 //      if(!st.lv.ready) {
 //          return &st.lv
 //      }
@@ -1610,7 +1616,7 @@ func (lv *lvalue) put(value data.Value) {
 	}
 }
 
-func (lv *lvalue) step(cv *cval) (state, *cval) {
+func (lv *lvalue) step(intrp *Interpreter, cv *cval) (state, *cval) {
 	if lv.ready {
 		panic("lvalue already ready??")
 	}
@@ -1622,7 +1628,8 @@ func (lv *lvalue) step(cv *cval) (state, *cval) {
 	} else if cv.abrupt() {
 		return lv.parent, cv
 	} else if !lv.haveBase {
-		lv.base = cv.pval()
+		// FIXME: set owner:
+		lv.base = data.Coerce(cv.pval(), nil, intrp.protos)
 		lv.haveBase = true
 		if lv.computed {
 			return newState(lv, lv.scope, ast.Node(lv.membExpr.E)), nil

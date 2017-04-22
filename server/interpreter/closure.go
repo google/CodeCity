@@ -42,10 +42,10 @@ func (closure) ToString() data.String {
 
 // newClosure returns a new closure object with the specified owner,
 // scope and body, having parent functionProto.
-func newClosure(owner *data.Owner, scope *scope,
+func newClosure(owner *data.Owner, proto data.Object, scope *scope,
 	params []*ast.Identifier, body *ast.BlockStatement) *closure {
 	var cl = new(closure)
-	cl.Object = data.NewObject(owner, functionProto)
+	cl.Object = data.NewObject(owner, proto)
 	cl.scope = scope
 	cl.Set("length", data.Number(len(params)))
 	cl.params = make([]string, len(params))
@@ -55,8 +55,3 @@ func newClosure(owner *data.Owner, scope *scope,
 	cl.body = body
 	return cl
 }
-
-// functionProto is the the (plain) JavaScript object that is the
-// prototype for all closures.  (It would usually be accessed in
-// JavaScript as Function.prototype.)
-var functionProto = data.NewObject(nil, data.ObjectProto)

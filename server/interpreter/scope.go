@@ -191,10 +191,10 @@ func (sc *scope) populate(node ast.Node) {
 }
 
 // newGlobalScope is a factory for top-level global scopes.
-func newGlobalScope() *scope {
+func newGlobalScope(protos *data.Protos) *scope {
 	sc := newScope(nil, nil)
-	initBuiltinObject(sc)
-	initBuiltinArray(sc)
+	initBuiltinObject(protos, sc)
+	initBuiltinArray(protos, sc)
 	sc.newVar("undefined", data.Undefined{})
 	// FIXME: insert (more) global names into sc
 	return sc
