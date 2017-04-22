@@ -72,7 +72,7 @@ func TestAsLength(t *testing.T) {
 
 		{Null{}, 0, true},
 		{Undefined{}, 0, false},
-		{NewObject(nil, ObjectProto), 0, false},
+		{NewObject(nil, protos.ObjectProto), 0, false},
 	}
 	for _, c := range tests {
 		out, ok := asLength(c.in)
@@ -84,7 +84,7 @@ func TestAsLength(t *testing.T) {
 }
 
 func TestArray(t *testing.T) {
-	a := NewArray(nil, ArrayProto)
+	a := NewArray(nil, protos.ArrayProto)
 	if !a.HasOwnProperty("length") {
 		t.Errorf("%v.HasOwnProperty(\"length\") == false", a)
 	}
@@ -97,16 +97,16 @@ func TestArray(t *testing.T) {
 	if a.Delete("length") == nil {
 		t.Error("delete([].length) failed to report error")
 	}
-	if a.Proto() != Value(ArrayProto) {
+	if a.Proto() != Value(protos.ArrayProto) {
 		t.Errorf("%v.Proto() != ArrayProto", a)
 	}
-	if a.Proto().Proto() != Value(ObjectProto) {
+	if a.Proto().Proto() != Value(protos.ObjectProto) {
 		t.Errorf("%v.Proto().Proto() != ObjectProto", a)
 	}
 }
 
 func TestArrayLength(t *testing.T) {
-	a := NewArray(nil, ArrayProto)
+	a := NewArray(nil, protos.ArrayProto)
 
 	set := func(n int64, v Value) {
 		err := a.Set(fmt.Sprintf("%d", n), v)

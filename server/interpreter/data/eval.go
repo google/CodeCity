@@ -92,12 +92,13 @@ func BinaryOp(left Value, op string, right Value) (Value, *ErrorMsg) {
 		return Number(float64(int32(float64(left.ToNumber())) &
 			int32(float64(right.ToNumber())))), nil
 	case "in":
-		if right.Type() != OBJECT {
+		obj, isObject := right.(Object)
+		if !isObject {
 			return nil, &ErrorMsg{"TypeError", fmt.Sprintf(
 				"Cannot use 'in' operator to search for '%s' in %#v",
 				left.ToString(), right)}
 		}
-		return Boolean(right.HasProperty(string(left.ToString()))), nil
+		return Boolean(obj.HasProperty(string(left.ToString()))), nil
 	case "instanceof":
 		panic("not implemented")
 	default:

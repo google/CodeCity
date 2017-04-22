@@ -18,12 +18,12 @@ package data
 
 // An Owner is an object that can own other objects and properties.
 type Owner struct {
-	Object
+	object
 	// FIXME: other fields go here.
 }
 
-// *Owner must satisfy Value.
-var _ Value = (*Owner)(nil)
+// *Owner must satisfy Object.
+var _ Object = (*Owner)(nil)
 
 // ToString always returns "[object Owner]" for Owners.
 //
@@ -35,13 +35,9 @@ func (Owner) ToString() String {
 
 // NewOwner returns a new Owner object, owned by itself and having
 // parent ObjectProto.
-func NewOwner() *Owner {
+func NewOwner(proto Object) *Owner {
 	var o = new(Owner)
-	o.init(o, OwnerProto)
+	o.init(o, proto)
+	o.f = false
 	return o
 }
-
-// OwnerProto is the the (plain) JavaScript object that is the
-// prototype for all Owner objects.  (It has no direct equivalent in
-// JavaScript, but if it did it would be Owner.prototype.)
-var OwnerProto = NewObject(nil, ObjectProto)

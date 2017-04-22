@@ -18,10 +18,16 @@ package data
 
 import "testing"
 
+var protos *Protos
+
+func init() {
+	protos = NewProtos()
+}
+
 func TestObjectNonPrimitiveness(t *testing.T) {
 	var objs = []Value{
-		NewObject(nil, nil),
-		NewOwner(),
+		NewObject(nil, protos.ObjectProto),
+		NewOwner(protos.OwnerProto),
 	}
 
 	for _, o := range objs {

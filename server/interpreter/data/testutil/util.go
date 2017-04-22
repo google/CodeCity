@@ -69,9 +69,9 @@ func Identical(x, y data.Value) bool {
 		// Is the other also undefined?
 		_, ok := y.(data.Null)
 		return ok
-	case *data.Object:
-		// Is it a pointer to the same object?
-		yy, ok := y.(*data.Object)
+	case data.Object:
+		// Is it the same object?
+		yy, ok := y.(data.Object)
 		return ok && xx == yy
 	case nil:
 		return y == nil
