@@ -24,6 +24,12 @@ import (
 	tu "CodeCity/server/interpreter/data/testutil"
 )
 
+var protos *Protos
+
+func init() {
+	protos = NewProtos()
+}
+
 func TestBinaryOp(t *testing.T) {
 	var NaN = math.NaN()
 	var neg0 = math.Copysign(0, -1)
@@ -230,7 +236,7 @@ func TestBinaryOpIn(t *testing.T) {
 		t.Errorf("\"foo\" in, %#v == (%#v, %#v) (expected (true, nil))",
 			obj, v, e)
 	}
-	v, e = BinaryOp(String("length"), "in", NewArray(nil, ArrayProto))
+	v, e = BinaryOp(String("length"), "in", NewArray(nil, protos.ArrayProto))
 	if v != Boolean(true) || e != nil {
 		t.Errorf("\"foo\" in [] == (%#v, %#v) (expected true, nil)", v, e)
 	}

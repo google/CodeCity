@@ -23,18 +23,18 @@ import (
 // An Array is an object with a magic .length property and some other
 // minor special features.
 type Array struct {
-	Object
+	object
 	length uint32
 }
 
-// *Array must satisfy Value.
-var _ Value = (*Array)(nil)
+// *Array must satisfy Object.
+var _ Object = (*Array)(nil)
 
 // Get on Array implements a magic .length property itself, and passes
-// any other property lookups to its embedded Object.
-func (arr *Array) Get(key string) (Value, *ErrorMsg) {
-	if key != "length" {
-		return arr.Object.Get(key)
+// any other property lookups to its embedded object.
+func (arr *Array) Get(name string) (Value, *ErrorMsg) {
+	if name != "length" {
+		return arr.object.Get(name)
 	}
 	return Number(float64(arr.length)), nil
 }
@@ -46,7 +46,7 @@ func (arr *Array) Get(key string) (Value, *ErrorMsg) {
 //
 // Otherwise, it will:
 //
-// - Delegates setting the specified property to its embedded Object.
+// - Delegates setting the specified property to its embedded object.
 // - If this succeeds, and the property key looks like an array
 // index, then it will udpate .length appropriately.
 func (arr *Array) Set(key string, value Value) *ErrorMsg {
@@ -63,7 +63,7 @@ func (arr *Array) Set(key string, value Value) *ErrorMsg {
 		}
 		return nil
 	}
-	err := arr.Object.Set(key, value)
+	err := arr.object.Set(key, value)
 	if err == nil {
 		if i, isIndex := asIndex(key); isIndex && arr.length < i+1 {
 			arr.length = i + 1
@@ -74,12 +74,12 @@ func (arr *Array) Set(key string, value Value) *ErrorMsg {
 
 // OwnPropertyKeys returns the list of property keys (starting with
 // "length"); for efficiency this is done directly rather than by
-// calling the OwnPropertyKeys method on the embedded Object.
+// calling the OwnPropertyKeys method on the embedded object.
 func (arr *Array) OwnPropertyKeys() []string {
-	keys := make([]string, len(arr.Object.properties)+1)
+	keys := make([]string, len(arr.object.properties)+1)
 	keys[0] = "length"
 	i := 1
-	for k := range arr.Object.properties {
+	for k := range arr.object.properties {
 		keys[i] = k
 		i++
 	}
@@ -87,31 +87,31 @@ func (arr *Array) OwnPropertyKeys() []string {
 }
 
 // Delete will reject attempts to remove "length" and otherwise defers
-// to the embedded Object.
+// to the embedded object.
 func (arr *Array) Delete(key string) *ErrorMsg {
 	if key == "length" {
 		return &ErrorMsg{"TypeError",
 			"Cannot delete property 'length' of array."}
 	}
-	return arr.Object.Delete(key)
+	return arr.object.Delete(key)
 }
 
 // HasOwnProperty returns true if the property key is "length" or if
-// the embedded Object has it.
+// the embedded object has it.
 func (arr Array) HasOwnProperty(s string) bool {
 	if s == "length" {
 		return true
 	}
-	return arr.Object.HasOwnProperty(s)
+	return arr.object.HasOwnProperty(s)
 }
 
 // HasProperty returns true if the property key is "length" or if the
-// embedded Object (or its prototype(s)) has it.
+// embedded object (or its prototype(s)) has it.
 func (arr Array) HasProperty(s string) bool {
 	if s == "length" {
 		return true
 	}
-	return arr.Object.HasProperty(s)
+	return arr.object.HasProperty(s)
 }
 
 // ToString returns a string containing a comma-separated
@@ -128,19 +128,13 @@ func (arr Array) ToString() String {
 // NewArray creates a new Array with the specified owner and
 // prototype, initialises it as appropriate, and returns a pointer to
 // the newly-created object.
-func NewArray(owner *Owner, proto Value) *Array {
+func NewArray(owner *Owner, proto Object) *Array {
 	var arr = new(Array)
 	arr.init(owner, proto)
 	arr.f = true
 	arr.length = 0
 	return arr
 }
-
-// ArrayProto is the default prototype for JavaScript arrays (i.e.,
-// ones created from array literals or via Array() and not had their
-// prototype subsequently changed).  It is itself an array with
-// prototype ObjectProto.
-var ArrayProto = NewArray(nil, ObjectProto)
 
 /********************************************************************/
 

@@ -23,14 +23,14 @@ package data
 // FIXME: perhaps we should guarantee iteration order, as most
 // browsers (and ES6) do?
 type PropIter struct {
-	value Value
-	keys  []string
-	seen  map[string]bool
+	obj  Object
+	keys []string
+	seen map[string]bool
 }
 
 // NewPropIter takes any Value and returns an PropIter for it.
-func NewPropIter(v Value) *PropIter {
-	return &PropIter{v, v.OwnPropertyKeys(), make(map[string]bool)}
+func NewPropIter(obj Object) *PropIter {
+	return &PropIter{obj, obj.OwnPropertyKeys(), make(map[string]bool)}
 }
 
 // Next returns the next non-deleted, non-shadowed property key, with
@@ -42,15 +42,15 @@ func (iter *PropIter) Next() (string, bool) {
 		for len(iter.keys) > 0 {
 			key = iter.keys[0]
 			iter.keys = iter.keys[1:]
-			if iter.value.HasOwnProperty(key) && !iter.seen[key] {
+			if iter.obj.HasOwnProperty(key) && !iter.seen[key] {
 				iter.seen[key] = true
 				return key, true
 			}
 		}
-		iter.value = iter.value.Proto()
-		if iter.value == nil {
+		iter.obj = iter.obj.Proto()
+		if iter.obj == nil {
 			return "", false
 		}
-		iter.keys = iter.value.OwnPropertyKeys()
+		iter.keys = iter.obj.OwnPropertyKeys()
 	}
 }

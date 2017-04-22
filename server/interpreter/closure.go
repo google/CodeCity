@@ -45,7 +45,7 @@ func (closure) ToString() data.String {
 func newClosure(owner *data.Owner, scope *scope,
 	params []*ast.Identifier, body *ast.BlockStatement) *closure {
 	var cl = new(closure)
-	cl.Object = *data.NewObject(owner, functionProto)
+	cl.Object = data.NewObject(owner, functionProto)
 	cl.scope = scope
 	cl.Set("length", data.Number(len(params)))
 	cl.params = make([]string, len(params))

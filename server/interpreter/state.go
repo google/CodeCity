@@ -1022,7 +1022,7 @@ type stateMemberExpression struct {
 	baseExpr ast.Expression // To be resolve to obtain base
 	membExpr ast.Expression // To be resolve to obtain name
 	computed bool           // Is this x[y] (rather than x.y)?
-	base     data.Value
+	base     data.Object
 }
 
 func (st *stateMemberExpression) init(node *ast.MemberExpression) {
@@ -1072,7 +1072,7 @@ func (st *stateMemberExpression) step(cv *cval) (state, *cval) {
 type stateObjectExpression struct {
 	stateCommon
 	props []*ast.Property
-	obj   *data.Object
+	obj   data.Object
 	n     int
 }
 
@@ -1546,7 +1546,7 @@ type lvalue struct {
 	baseExpr        ast.Expression // To be resolve to obtain base
 	membExpr        ast.Expression // To be resolve to obtain name
 	computed        bool           // Is this x[y] (rather than x.y)?
-	base            data.Value     // ECMA "base"
+	base            data.Object    // ECMA "base"
 	name            string         // ECMA "referenced name"
 	haveBase, ready bool
 }
