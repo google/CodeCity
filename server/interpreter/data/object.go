@@ -27,27 +27,27 @@ type Object interface {
 
 	// Get returns the current value of the given property or an
 	// ErrorMsg if that was not possible.
-	Get(name string) (Value, *ErrorMsg)
+	Get(string) (Value, *ErrorMsg)
 
 	// Set sets the given property to the specified value or returns
 	// an ErrorMsg if that was not possible.
-	Set(name string, value Value) *ErrorMsg
+	Set(string, Value) *ErrorMsg
 
 	// Delete attempts to remove the named property.  If the property
 	// exists but can't be removed for some reason an ErrorMsg is
 	// returned.  (Removing a non-existing property "succeeds"
 	// silently.)
-	Delete(name string) *ErrorMsg
+	Delete(string) *ErrorMsg
 
-	// OwnPropertyKeys returns the list of (own) property names as a
+	// OwnPropertyKeys returns the list of (own) property keys as a
 	// slice of strings.
 	OwnPropertyKeys() []string
 
-	// HasOwnProperty returns true if the specified property name
+	// HasOwnProperty returns true if the specified property key
 	// exists on the object itself.
 	HasOwnProperty(string) bool
 
-	// HasProperty returns true if the specified property name
+	// HasProperty returns true if the specified property key
 	// exists on the object or its prototype chain.
 	HasProperty(string) bool
 }

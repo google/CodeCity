@@ -91,8 +91,8 @@ func TestArray(t *testing.T) {
 	if !a.HasProperty("length") {
 		t.Errorf("%v.HasProperty(\"length\") == false", a)
 	}
-	if props := a.propNames(); len(props) != 1 || props[0] != "length" {
-		t.Errorf("%v.propNames == %#v (expected [\"length\"])", a, props)
+	if props := a.OwnPropertyKeys(); len(props) != 1 || props[0] != "length" {
+		t.Errorf("%v.OwnPropertyKeys == %#v (expected [\"length\"])", a, props)
 	}
 	if a.Delete("length") == nil {
 		t.Error("delete([].length) failed to report error")
@@ -183,7 +183,7 @@ func TestArrayLength(t *testing.T) {
 	check(math.MaxUint32+1, true)
 
 	// Setting length one less than maximum should remove largest
-	// index, but leave properties with names too large to be indexes:
+	// index, but leave properties with keys too large to be indexes:
 	setLen(math.MaxUint32 - 1)
 	check(math.MaxUint32-2, true)
 	check(math.MaxUint32-1, false)
@@ -192,13 +192,13 @@ func TestArrayLength(t *testing.T) {
 
 	// Setting length to zero should remove all index properties:
 	setLen(0)
-	for _, p := range a.propNames() {
+	for _, p := range a.OwnPropertyKeys() {
 		if _, isIndex := asIndex(p); isIndex {
 			t.Errorf("Setting .lengh == 0 failed to remove property %#v", p)
 		}
 	}
 	// Make sure we didn't wipe everything!
-	if len(a.propNames()) <= 1 {
+	if len(a.OwnPropertyKeys()) <= 1 {
 		t.Errorf("Setting .lengh == 0 seems to have removed some" +
 			"non-index properties")
 	}
