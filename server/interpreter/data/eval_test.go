@@ -93,9 +93,9 @@ func TestEquality(t *testing.T) {
 	var neg0 = math.Copysign(0, -1)
 	var inf = math.Inf(+1)
 	var negInf = math.Inf(-1)
-	var o1 = NewObject(nil, nil)
-	var o2 = NewObject(nil, nil)
-	var ow = NewOwner()
+	var o1 = NewObject(nil, protos.ObjectProto)
+	var o2 = NewObject(nil, protos.ObjectProto)
+	var ow = NewOwner(protos.OwnerProto)
 
 	var tests = []struct {
 		left     Value

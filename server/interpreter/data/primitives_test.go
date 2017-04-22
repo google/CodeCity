@@ -61,98 +61,50 @@ func TestPrimitivesPrimitiveness(t *testing.T) {
 }
 
 func TestBoolean(t *testing.T) {
-	b := Boolean(false)
+	var b Boolean = Boolean(false)
+	if b.Type() != BOOLEAN {
+		t.Errorf("%v.Type() == %#v (expected %#v)", b, b.Type(), BOOLEAN)
+	}
 	if b.Typeof() != "boolean" {
 		t.Errorf("%v.Typeof() == %#v (expected \"boolean\")", b, b.Typeof())
-	}
-	if b.Proto() != Value(BooleanProto) {
-		t.Errorf("%v.Proto() != BooleanProto", b)
-	}
-	if b.Proto().Proto() != Value(ObjectProto) {
-		t.Errorf("%v.Proto().Proto() != ObjectProto", b)
 	}
 }
 
 func TestNumber(t *testing.T) {
-	n := Number(0)
-	if n.Proto() != Value(NumberProto) {
-		t.Errorf("%v.Proto() != NumberProto", n)
+	var n Number = Number(0)
+	if n.Type() != NUMBER {
+		t.Errorf("%v.Type() == %#v (expected %#v)", n, n.Type(), NUMBER)
 	}
-	if n.Proto().Proto() != Value(ObjectProto) {
-		t.Errorf("%v.Proto().Proto() != ObjectProto", n)
+	if n.Typeof() != "number" {
+		t.Errorf("%v.Typeof() == %#v (expected \"number\")", n, n.Typeof())
 	}
 }
 
 func TestString(t *testing.T) {
 	var s Value = String("")
-	if s.Proto() != Value(StringProto) {
-		t.Errorf("%v.Proto() != StringProto", s)
+	if s.Type() != STRING {
+		t.Errorf("%v.Type() == %#v (expected %#v)", s, s.Type(), STRING)
 	}
-	if s.Proto().Proto() != Value(ObjectProto) {
-		t.Errorf("%v.Proto().Proto() != ObjectProto", s)
-	}
-}
-
-func TestStringLength(t *testing.T) {
-	v, err := String("").Get("length")
-	if v != Number(0) || err != nil {
-		t.Errorf("String(\"\").Get(\"length\") == %v, %v"+
-			"(expected 0, nil)", v, err)
-	}
-
-	v, err = String("Hello, World!").Get("length")
-	if v != Number(13) || err != nil {
-		t.Errorf("String(\"Hello, World!\").Get(\"length\") == %v, %v"+
-			" (expected 13, nil)", v, err)
-	}
-
-	// "Code City" in Telugu (according to translate.google.com):
-	v, err = String("కోడ్ సిటీ").Get("length")
-	if v != Number(9) || err != nil {
-		t.Errorf("String(\"కోడ్ సిటీ\").Get(\"length\") == %v, %v "+
-			"(expected 9, nil)", v, err)
-	}
-
-	// Random example from https://mathiasbynens.be/notes/javascript-encoding:
-	v, err = String("𝌆").Get("length")
-	if v != Number(2) || err != nil {
-		t.Errorf("String(\"𝌆\").Get(\"length\") == %v, %v "+
-			"(expected 2, nil)", v, err)
+	if s.Typeof() != "string" {
+		t.Errorf("%v.Typeof() == %#v (expected \"string\")", s, s.Typeof())
 	}
 }
 
-func TestStringHasOwnProperty(t *testing.T) {
-	var s = String("foo")
-
-	if s.HasOwnProperty("foo") {
-		t.Errorf("%#v.HasOwnProperty(\"foo\") == true", s)
+func TestString_utf16len(t *testing.T) {
+	var tests = []struct {
+		in       string
+		expected int
+	}{
+		{"", 0},
+		{"Hello, World!", 13},
+		{"కోడ్ సిటీ", 9},
+		{"𝌆", 2},
 	}
-	s.Set("foo", Undefined{})
-	if s.HasOwnProperty("foo") {
-		t.Errorf("%#v.HasOwnProperty(\"foo\") == true (after setting s.foo)", s)
-	}
-	if !s.HasOwnProperty("length") {
-		t.Errorf("%#v.HasOwnProperty(\"length\") == false", s)
-	}
-}
-
-func TestStringHasProperty(t *testing.T) {
-	var s = String("foo")
-
-	if s.HasProperty("foo") {
-		t.Errorf("%#v.HasProperty(\"foo\") == true", s)
-	}
-	s.Set("foo", Undefined{})
-	if s.HasProperty("foo") {
-		t.Errorf("%#v.HasProperty(\"foo\") == true (after setting s.foo)", s)
-	}
-	s.Proto().Set("foo", Undefined{})
-	if !s.HasProperty("foo") {
-		t.Errorf("%#v.HasProperty(\"foo\") == false (after setting parent)", s)
-	}
-	s.Proto().Delete("foo")
-	if !s.HasProperty("length") {
-		t.Errorf("%#v.HasProperty(\"length\") == false", s)
+	for _, c := range tests {
+		if l := String(c.in).utf16len(); l != c.expected {
+			t.Errorf("String(%#v).utf16len() == %d (expected %d)",
+				c.in, l, c.expected)
+		}
 	}
 }
 
@@ -164,13 +116,6 @@ func TestNull(t *testing.T) {
 	if v := n.Typeof(); v != "object" {
 		t.Errorf("Null{}.Type() == %#v (expected \"object\")", v)
 	}
-	if v := n.Proto(); v != nil {
-		t.Errorf("Null{}.Proto() == %#v (expected nil)", v)
-	}
-	if v, e := n.Get("foo"); e == nil {
-		t.Errorf("Null{}.Get(\"foo\") == %v, %v "+
-			"(expected nil, !nil)", v, e)
-	}
 }
 
 func TestUndefined(t *testing.T) {
@@ -180,9 +125,6 @@ func TestUndefined(t *testing.T) {
 	}
 	if v := u.Typeof(); v != "undefined" {
 		t.Errorf("Undefined{}.Typeof() == %#v (expected \"undefined\")", v)
-	}
-	if v := u.Proto(); v != nil {
-		t.Errorf("Undefined{}.Proto() == %#v (expected nil)", v)
 	}
 }
 
