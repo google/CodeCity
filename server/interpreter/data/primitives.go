@@ -92,37 +92,6 @@ func (Boolean) IsPrimitive() bool {
 	return true
 }
 
-// Proto returns BooleanProto for all Booleans.
-func (Boolean) Proto() Value {
-	return BooleanProto
-}
-
-// Get on Boolean just passes to its prototype:
-func (b Boolean) Get(name string) (Value, *ErrorMsg) {
-	return b.Proto().Get(name)
-}
-
-// Set on Boolean always succeeds but has no effect.
-func (Boolean) Set(name string, value Value) *ErrorMsg {
-	return nil
-}
-
-// OwnPropertyKeys always returns an empty slice on Boolean.
-func (Boolean) OwnPropertyKeys() []string { return nil }
-
-// HasOwnProperty always returns false for Boolean values.
-func (Boolean) HasOwnProperty(string) bool { return false }
-
-// HasProperty just calls HasProperty on prototype for Boolean values.
-func (b Boolean) HasProperty(key string) bool {
-	return b.Proto().HasProperty(key)
-}
-
-// Delete always succeeds on Boolean.
-func (Boolean) Delete(name string) *ErrorMsg {
-	return nil
-}
-
 // ToBoolean on a Boolean just returns itself.
 func (b Boolean) ToBoolean() Boolean {
 	return b
@@ -164,7 +133,7 @@ func (Number) Type() Type {
 	return NUMBER
 }
 
-// Type always returns "number" for numbers.
+// Typeof always returns "number" for numbers.
 func (Number) Typeof() string {
 	return "number"
 }
@@ -172,37 +141,6 @@ func (Number) Typeof() string {
 // IsPrimitive alwasy returns true for Numbers.
 func (Number) IsPrimitive() bool {
 	return true
-}
-
-// Proto returns NumberProto for all Numbers.
-func (Number) Proto() Value {
-	return NumberProto
-}
-
-// Get on Number just passes to its prototype:
-func (n Number) Get(name string) (Value, *ErrorMsg) {
-	return n.Proto().Get(name)
-}
-
-// Set on Number always succeeds but has no effect.
-func (Number) Set(name string, value Value) *ErrorMsg {
-	return nil
-}
-
-// OwnPropertyKeys always returns an empty slice on Number.
-func (Number) OwnPropertyKeys() []string { return nil }
-
-// HasOwnProperty always returns false for Number values.
-func (Number) HasOwnProperty(string) bool { return false }
-
-// HasProperty just calls HasProperty on prototype for Boolean values.
-func (n Number) HasProperty(key string) bool {
-	return n.Proto().HasProperty(key)
-}
-
-// Delete always succeeds on Number.
-func (Number) Delete(name string) *ErrorMsg {
-	return nil
 }
 
 // ToBoolean on a number returns true if the number is not 0 or NaN.
@@ -272,55 +210,6 @@ func (String) IsPrimitive() bool {
 	return true
 }
 
-// Proto returns StringProto for all Strings.
-func (String) Proto() Value {
-	return StringProto
-}
-
-// Get on String implements a magic .length property itself,
-// and passes any other property lookups to its prototype:
-func (s String) Get(name string) (Value, *ErrorMsg) {
-	if name != "length" {
-		return s.Proto().Get(name)
-	}
-	return Number(len(utf16.Encode([]rune(string(s))))), nil
-}
-
-// Set on String always succeeds but has no effect (even on
-// length).
-func (String) Set(name string, value Value) *ErrorMsg {
-	return nil
-}
-
-// OwnPropertyKeys always returns just the length property on Strings.
-func (String) OwnPropertyKeys() []string { return []string{"length"} }
-
-// HasOwnProperty always returns true for "length" and false for all
-// other inputs for Strings.
-//
-// FIXME: should return true for numeric inputs 0 <= n < length!
-func (String) HasOwnProperty(key string) bool {
-	if key == "length" {
-		return true
-	}
-	return false
-}
-
-// HasProperty returns true if the specified property name exists on
-// the object or its prototype chain.
-func (s String) HasProperty(key string) bool {
-	return s.HasOwnProperty(key) || s.Proto().HasProperty(key)
-}
-
-// Delete always succeeds on String unless name is "length".
-func (s String) Delete(name string) *ErrorMsg {
-	if name != "length" {
-		return nil
-	}
-	return &ErrorMsg{"TypeError",
-		fmt.Sprintf("Cannot delete property 'length' of %s", s.ToString())}
-}
-
 // ToBoolean on String returns true iff the string is non-empty.
 func (s String) ToBoolean() Boolean {
 	return len(string(s)) != 0
@@ -378,6 +267,12 @@ func (s String) ToPrimitive() Value {
 	return s
 }
 
+// utf16len returns the length of the string in utf16 code units - the
+// standard way of measuring string length in JavaScript.
+func (s String) utf16len() int {
+	return len(utf16.Encode([]rune(string(s))))
+}
+
 /********************************************************************/
 
 // Null represents a JS null value.
@@ -399,48 +294,6 @@ func (Null) Typeof() string {
 // IsPrimitive alwasy returns true for Null.
 func (Null) IsPrimitive() bool {
 	return true
-}
-
-// Proto on Undefined and Null values should not be callable from
-// user code, but is used in various places internally (e.g.,
-// PropIter.Next()); we return nil to signal that there is no prototype.
-// (Previously we returned Undefined{} or Null{}, but this just forces
-// us to write additional code elsewhere to avoid infinite loops, and
-// violates the rule that there should be no prototype chain loops.)
-func (Null) Proto() Value {
-	return nil
-}
-
-// Get on Null always returns an error.
-func (Null) Get(name string) (Value, *ErrorMsg) {
-	return nil, &ErrorMsg{
-		Name:    "TypeError",
-		Message: fmt.Sprintf("Cannot read property '%s' of null", name),
-	}
-}
-
-// Set on Null always fails.
-func (Null) Set(name string, value Value) *ErrorMsg {
-	return &ErrorMsg{
-		Name:    "TypeError",
-		Message: fmt.Sprintf("Cannot set property '%s' of null", name),
-	}
-}
-
-// OwnPropertyKeys always returns an empty slice on Null.
-func (Null) OwnPropertyKeys() []string { return nil }
-
-// HasOwnProperty always returns false for Null values
-// FIXME: this should throw.
-func (Null) HasOwnProperty(string) bool { return false }
-
-// HasProperty always returns false for Null values
-// FIXME: this should throw.
-func (Null) HasProperty(string) bool { return false }
-
-// Delete should never be called on Null
-func (Null) Delete(name string) *ErrorMsg {
-	panic("Null.Delete() not callable")
 }
 
 // ToBoolean on Null always return false.
@@ -486,43 +339,6 @@ func (Undefined) IsPrimitive() bool {
 	return true
 }
 
-// Proto on Undefined returns nil; see not on Null.Proto() for why.
-func (Undefined) Proto() Value {
-	return nil
-}
-
-// Get on Undefined always returns an error.
-func (Undefined) Get(name string) (Value, *ErrorMsg) {
-	return nil, &ErrorMsg{
-		Name:    "TypeError",
-		Message: fmt.Sprintf("Cannot read property '%s' of undefined", name),
-	}
-}
-
-// Set on Undefined always fails.
-func (Undefined) Set(name string, value Value) *ErrorMsg {
-	return &ErrorMsg{
-		Name:    "TypeError",
-		Message: fmt.Sprintf("Cannot set property '%s' of undefined", name),
-	}
-}
-
-// OwnPropertyKeys always returns an empty slice on Undefined.
-func (Undefined) OwnPropertyKeys() []string { return nil }
-
-// HasOwnProperty always returns false for Undefined values
-// FIXME: this should throw.
-func (Undefined) HasOwnProperty(string) bool { return false }
-
-// HasProperty always returns false for Undefined values
-// FIXME: this should throw.
-func (Undefined) HasProperty(string) bool { return false }
-
-// Delete should never be called on Undeined.
-func (Undefined) Delete(name string) *ErrorMsg {
-	panic("Null.Delete() not callable")
-}
-
 // ToBoolean on Undefined always returns false.
 func (Undefined) ToBoolean() Boolean {
 	return false
@@ -542,20 +358,3 @@ func (Undefined) ToString() String {
 func (Undefined) ToPrimitive() Value {
 	return Undefined{}
 }
-
-/********************************************************************/
-
-// BooleanProto is the the (plain) JavaScript object that is the
-// prototype for all Boolean primitives.  (It would usually be
-// accessed in JavaScript as Boolean.prototype.)
-var BooleanProto = NewObject(nil, ObjectProto)
-
-// NumberProto is the the (plain) JavaScript object that is the
-// prototype for all Number primitives.  (It would usually be
-// accessed in JavaScript as Number.prototype.)
-var NumberProto = NewObject(nil, ObjectProto)
-
-// StringProto is the the (plain) JavaScript object that is the
-// prototype for all String primitives.  (It would usually be
-// accessed in JavaScript as String.prototype.)
-var StringProto = NewObject(nil, ObjectProto)

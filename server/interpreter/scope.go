@@ -41,8 +41,9 @@ type scope struct {
 }
 
 // newScope is a factory for scope objects.  The parent param is a
-// pointer to the parent (enclosing scope); it is nil if the scope
-// being created is the global scope.
+// pointer to the parent (enclosing scope).  The this param is the
+// value of ThisExpression in the given scope.  Both should be nil if
+// the scope being created is the global scope.
 func newScope(parent *scope, this data.Value) *scope {
 	return &scope{make(map[string]data.Value), parent, this}
 }
@@ -187,4 +188,14 @@ func (sc *scope) populate(node ast.Node) {
 	default:
 		panic(fmt.Errorf("Unrecognized ast.Node type %T", node))
 	}
+}
+
+// newGlobalScope is a factory for top-level global scopes.
+func newGlobalScope(protos *data.Protos) *scope {
+	sc := newScope(nil, nil)
+	initBuiltinObject(protos, sc)
+	initBuiltinArray(protos, sc)
+	sc.newVar("undefined", data.Undefined{})
+	// FIXME: insert (more) global names into sc
+	return sc
 }

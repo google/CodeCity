@@ -117,7 +117,7 @@ func TestInterpreterSimple(t *testing.T) {
 func TestInterpreterObjectExpression(t *testing.T) {
 	i, _ := NewFromJSON(objectExpression)
 	i.Run()
-	v, ok := i.Value().(*data.Object)
+	v, ok := i.Value().(data.Object)
 	if !ok {
 		t.Errorf("{foo: \"bar\", answer: 42} returned type %T "+
 			"(expected data.Object)", i.Value())
@@ -150,6 +150,44 @@ func TestInterpreterSwitchStatement(t *testing.T) {
 					i, j, v, v, exp)
 			}
 		}
+	}
+}
+
+// TestPrototypeIndependence verifies that modifying the prototype of
+// a builtin object in one interpreter does not result in modifying
+// the value of the prototype object in a different interpreter
+// instance.
+func TestPrototypeIndependence(t *testing.T) {
+	i1, _ := NewFromJSON(emptyProg)
+	op1v, _ := i1.state.(*stateBlockStatement).scope.
+		getVar("Object").(data.Object).Get("prototype")
+	op1 := op1v.(data.Object)
+	ap1v, _ := i1.state.(*stateBlockStatement).scope.
+		getVar("Array").(data.Object).Get("prototype")
+	ap1 := ap1v.(data.Object)
+
+	i2, _ := NewFromJSON(emptyProg)
+	op2v, _ := i2.state.(*stateBlockStatement).scope.
+		getVar("Object").(data.Object).Get("prototype")
+	op2 := op2v.(data.Object)
+
+	if op1.HasOwnProperty("foo") {
+		t.Errorf("Object.prototype.foo already defined")
+	}
+	if op2.HasProperty("foo") {
+		t.Errorf("(other) Object.prototype.foo already defined")
+	}
+	op1.Set("foo", data.String("bar"))
+	if !op1.HasOwnProperty("foo") {
+		t.Errorf("setting Object.prototype.foo failed")
+	}
+	v, e := ap1.Get("foo")
+	if e != nil || v != data.String("bar") {
+		t.Errorf("Array.prototype.foo == %#v (%s) "+
+			"(expected String(\"bar\"), nil)", v, e)
+	}
+	if op2.HasProperty("foo") {
+		t.Errorf("(other) Object.prototype.foo now defined as %#v", v)
 	}
 }
 
@@ -550,3 +588,7 @@ const switchStatementWithBreaks = `{"type":"Program","start":0,"end":115,"body":
 // result
 // => ???
 const fibonacci10k = `{"type":"Program","start":0,"end":247,"body":[{"type":"VariableDeclaration","start":0,"end":161,"declarations":[{"type":"VariableDeclarator","start":4,"end":161,"id":{"type":"Identifier","start":4,"end":13,"name":"fibonacci"},"init":{"type":"FunctionExpression","start":16,"end":161,"id":null,"params":[{"type":"Identifier","start":25,"end":26,"name":"n"},{"type":"Identifier","start":28,"end":34,"name":"output"}],"body":{"type":"BlockStatement","start":36,"end":161,"body":[{"type":"VariableDeclaration","start":40,"end":62,"declarations":[{"type":"VariableDeclarator","start":44,"end":49,"id":{"type":"Identifier","start":44,"end":45,"name":"a"},"init":{"type":"Literal","start":48,"end":49,"value":1,"raw":"1"}},{"type":"VariableDeclarator","start":51,"end":56,"id":{"type":"Identifier","start":51,"end":52,"name":"b"},"init":{"type":"Literal","start":55,"end":56,"value":1,"raw":"1"}},{"type":"VariableDeclarator","start":58,"end":61,"id":{"type":"Identifier","start":58,"end":61,"name":"sum"},"init":null}],"kind":"var"},{"type":"ForStatement","start":65,"end":159,"init":{"type":"VariableDeclaration","start":70,"end":79,"declarations":[{"type":"VariableDeclarator","start":74,"end":79,"id":{"type":"Identifier","start":74,"end":75,"name":"i"},"init":{"type":"Literal","start":78,"end":79,"value":0,"raw":"0"}}],"kind":"var"},"test":{"type":"BinaryExpression","start":81,"end":86,"left":{"type":"Identifier","start":81,"end":82,"name":"i"},"operator":"<","right":{"type":"Identifier","start":85,"end":86,"name":"n"}},"update":{"type":"UpdateExpression","start":88,"end":91,"operator":"++","prefix":false,"argument":{"type":"Identifier","start":88,"end":89,"name":"i"}},"body":{"type":"BlockStatement","start":93,"end":159,"body":[{"type":"ExpressionStatement","start":99,"end":114,"expression":{"type":"CallExpression","start":99,"end":113,"callee":{"type":"MemberExpression","start":99,"end":110,"object":{"type":"Identifier","start":99,"end":105,"name":"output"},"property":{"type":"Identifier","start":106,"end":110,"name":"push"},"computed":false},"arguments":[{"type":"Identifier","start":111,"end":112,"name":"a"}]}},{"type":"ExpressionStatement","start":119,"end":131,"expression":{"type":"AssignmentExpression","start":119,"end":130,"operator":"=","left":{"type":"Identifier","start":119,"end":122,"name":"sum"},"right":{"type":"BinaryExpression","start":125,"end":130,"left":{"type":"Identifier","start":125,"end":126,"name":"a"},"operator":"+","right":{"type":"Identifier","start":129,"end":130,"name":"b"}}}},{"type":"ExpressionStatement","start":136,"end":142,"expression":{"type":"AssignmentExpression","start":136,"end":141,"operator":"=","left":{"type":"Identifier","start":136,"end":137,"name":"a"},"right":{"type":"Identifier","start":140,"end":141,"name":"b"}}},{"type":"ExpressionStatement","start":147,"end":155,"expression":{"type":"AssignmentExpression","start":147,"end":154,"operator":"=","left":{"type":"Identifier","start":147,"end":148,"name":"b"},"right":{"type":"Identifier","start":151,"end":154,"name":"sum"}}}]}}]}}}],"kind":"var"},{"type":"ForStatement","start":162,"end":240,"init":{"type":"VariableDeclaration","start":166,"end":175,"declarations":[{"type":"VariableDeclarator","start":170,"end":175,"id":{"type":"Identifier","start":170,"end":171,"name":"i"},"init":{"type":"Literal","start":174,"end":175,"value":0,"raw":"0"}}],"kind":"var"},"test":{"type":"BinaryExpression","start":177,"end":186,"left":{"type":"Identifier","start":177,"end":178,"name":"i"},"operator":"<","right":{"type":"Literal","start":181,"end":186,"value":10000,"raw":"10000"}},"update":{"type":"UpdateExpression","start":188,"end":191,"operator":"++","prefix":false,"argument":{"type":"Identifier","start":188,"end":189,"name":"i"}},"body":{"type":"BlockStatement","start":193,"end":240,"body":[{"type":"VariableDeclaration","start":197,"end":213,"declarations":[{"type":"VariableDeclarator","start":201,"end":212,"id":{"type":"Identifier","start":201,"end":207,"name":"result"},"init":{"type":"ArrayExpression","start":210,"end":212,"elements":[]}}],"kind":"var"},{"type":"ExpressionStatement","start":216,"end":238,"expression":{"type":"CallExpression","start":216,"end":237,"callee":{"type":"Identifier","start":216,"end":225,"name":"fibonacci"},"arguments":[{"type":"Literal","start":226,"end":228,"value":78,"raw":"78"},{"type":"Identifier","start":230,"end":236,"name":"result"}]}}]}},{"type":"ExpressionStatement","start":241,"end":247,"expression":{"type":"Identifier","start":241,"end":247,"name":"result"}}]}`
+
+// An empty program.  Used to initialise interpreter for tests that
+// don't involve running code.
+const emptyProg = `{"type":"Program","start":0,"end":0,"body":[]}`

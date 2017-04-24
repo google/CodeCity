@@ -16,11 +16,48 @@
 
 package data
 
-// Object represents typical JavaScript objects with (optional)
-// prototype, properties, etc.
-type Object struct {
+// Object represents any JavaScript value (primitive, object, etc.).
+type Object interface {
+	/// Any Object is a valid Value.
+	Value
+
+	// Proto returns the prototype (parent) object for this object.
+	// N.B. this is object.__proto__, not Constructor.prototype!
+	Proto() Object
+
+	// Get returns the current value of the given property or an
+	// ErrorMsg if that was not possible.
+	Get(string) (Value, *ErrorMsg)
+
+	// Set sets the given property to the specified value or returns
+	// an ErrorMsg if that was not possible.
+	Set(string, Value) *ErrorMsg
+
+	// Delete attempts to remove the named property.  If the property
+	// exists but can't be removed for some reason an ErrorMsg is
+	// returned.  (Removing a non-existing property "succeeds"
+	// silently.)
+	Delete(string) *ErrorMsg
+
+	// OwnPropertyKeys returns the list of (own) property keys as a
+	// slice of strings.
+	OwnPropertyKeys() []string
+
+	// HasOwnProperty returns true if the specified property key
+	// exists on the object itself.
+	HasOwnProperty(string) bool
+
+	// HasProperty returns true if the specified property key
+	// exists on the object or its prototype chain.
+	HasProperty(string) bool
+}
+
+// object represents typical plain old JavaScript objects with
+// prototype, properties, etc.; this struct is also embedded in other,
+// less-plain object types like Array.
+type object struct {
 	owner      *Owner
-	proto      Value
+	proto      Object
 	properties map[string]property
 	f          bool
 }
@@ -39,32 +76,32 @@ type property struct {
 	i     bool
 }
 
-// *Object must satisfy Value.
-var _ Value = (*Object)(nil)
+// *object must satisfy Object.
+var _ Object = (*object)(nil)
 
-// Type always returns OBJECT for regular Objects.
-func (Object) Type() Type {
+// Type always returns OBJECT for regular objects.
+func (object) Type() Type {
 	return OBJECT
 }
 
-// Typeof always returns "object" for regular Objects.
-func (Object) Typeof() string {
+// Typeof always returns "object" for regular objects.
+func (object) Typeof() string {
 	return "object"
 }
 
-// IsPrimitive always returns false for regular Objects.
-func (Object) IsPrimitive() bool {
+// IsPrimitive always returns false for regular objects.
+func (object) IsPrimitive() bool {
 	return false
 }
 
 // Proto returns the prototype (parent) object for this object.
-func (obj Object) Proto() Value {
+func (obj object) Proto() Object {
 	return obj.proto
 }
 
 // Get returns the current value of the given property or an ErrorMsg
 // if that was not possible.
-func (obj Object) Get(key string) (Value, *ErrorMsg) {
+func (obj object) Get(key string) (Value, *ErrorMsg) {
 	pd, ok := obj.properties[key]
 	// FIXME: permissions check for property readability goes here
 	if ok {
@@ -76,12 +113,11 @@ func (obj Object) Get(key string) (Value, *ErrorMsg) {
 		return proto.Get(key)
 	}
 	return Undefined{}, nil
-
 }
 
 // Set sets the given property to the specified value or returns an
 // ErrorMsg if that was not possible.
-func (obj *Object) Set(key string, value Value) *ErrorMsg {
+func (obj *object) Set(key string, value Value) *ErrorMsg {
 	pd, ok := obj.properties[key]
 	if !ok { // Creating new property
 		// FIXME: permissions check for object writability goes here
@@ -102,9 +138,17 @@ func (obj *Object) Set(key string, value Value) *ErrorMsg {
 	return nil
 }
 
+// Delete removes the named property if possible.
+//
+// FIXME: perm / immutability checks!
+func (obj *object) Delete(key string) *ErrorMsg {
+	delete(obj.properties, key)
+	return nil
+}
+
 // OwnPropertyKeys returns the list of (own) property keys as a slice
 // of strings.
-func (obj *Object) OwnPropertyKeys() []string {
+func (obj *object) OwnPropertyKeys() []string {
 	keys := make([]string, len(obj.properties))
 	i := 0
 	for k := range obj.properties {
@@ -114,63 +158,55 @@ func (obj *Object) OwnPropertyKeys() []string {
 	return keys
 }
 
-// Delete removes the named property if possible.
-//
-// FIXME: perm / immutability checks!
-func (obj *Object) Delete(key string) *ErrorMsg {
-	delete(obj.properties, key)
-	return nil
-}
-
 // HasOwnProperty returns true if the specified property key exists
 // on the object itself.
-func (obj *Object) HasOwnProperty(key string) bool {
+func (obj *object) HasOwnProperty(key string) bool {
 	_, exists := obj.properties[key]
 	return exists
 }
 
 // HasProperty returns true if the specified property key exists on
 // the object or its prototype chain.
-func (obj *Object) HasProperty(key string) bool {
+func (obj *object) HasProperty(key string) bool {
 	return obj.HasOwnProperty(key) ||
 		obj.proto != nil && obj.proto.HasProperty(key)
 }
 
-// ToBoolean always returns true for regular Objects.
-func (Object) ToBoolean() Boolean {
+// ToBoolean always returns true for regular objects.
+func (object) ToBoolean() Boolean {
 	return true
 }
 
 // ToNumber returns the numeric equivalent of the object.
 //
-// BUG(cpcallen): Object.ToNumber is not strictly compliant with
+// BUG(cpcallen): object.ToNumber is not strictly compliant with
 // ES5.1 spec; it just returns .ToString().ToNumber().
-func (obj Object) ToNumber() Number {
+func (obj object) ToNumber() Number {
 	return obj.ToString().ToNumber()
 }
 
 // ToString returns a string representation of the object.  By default
 // this is "[object Object]" for plain objects.
 //
-// BUG(cpcallen): Object.ToString should call a user-code toString()
+// BUG(cpcallen): object.ToString should call a user-code toString()
 // method if present.
-func (Object) ToString() String {
+func (object) ToString() String {
 	return "[object Object]"
 }
 
 // ToPrimitive defaults to ToNumber on objects.
 //
-// BUG(cpcallen): Object.ToPrimitive should prefer to return the result
+// BUG(cpcallen): object.ToPrimitive should prefer to return the result
 // of ToString() on date objects.
-func (obj *Object) ToPrimitive() Value {
+func (obj *object) ToPrimitive() Value {
 	return obj.ToNumber()
 }
 
 // NewObject creates a new object with the specified owner and prototype,
 // initialises it as appropriate, and returns a pointer to the
 // newly-created object.
-func NewObject(owner *Owner, proto Value) *Object {
-	var obj = new(Object)
+func NewObject(owner *Owner, proto Object) *object {
+	var obj = new(object)
 	obj.init(owner, proto)
 	obj.f = true
 	return obj
@@ -179,13 +215,8 @@ func NewObject(owner *Owner, proto Value) *Object {
 // init is an internal initialisation routine, called from New and
 // also called when constructing other types of objects such as
 // Arrays, Owners, etc.
-func (obj *Object) init(owner *Owner, proto Value) {
+func (obj *object) init(owner *Owner, proto Object) {
 	obj.owner = owner
 	obj.proto = proto
 	obj.properties = make(map[string]property)
 }
-
-// ObjectProto is the default prototype for (plain) JavaScript objects
-// (i.e., ones created from object literals and not via
-// Object.create(nil)).
-var ObjectProto = NewObject(nil, Null{})

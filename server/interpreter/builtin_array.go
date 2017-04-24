@@ -22,12 +22,12 @@ import (
 	"encoding/json"
 )
 
-func initArrayProto(sc *scope) {
-	// FIXME: should be Function:
-	var Array = data.NewObject(nil, data.ObjectProto)
+func initBuiltinArray(protos *data.Protos, sc *scope) {
+	// FIXME: should be Function?:
+	var Array = data.NewObject(nil, protos.FunctionProto)
 	sc.newVar("Array", Array)
 
-	Array.Set("prototype", data.ArrayProto)
+	Array.Set("prototype", protos.ArrayProto)
 
 	var params []*ast.Identifier
 	var body *ast.BlockStatement
@@ -40,8 +40,9 @@ func initArrayProto(sc *scope) {
 	if e != nil {
 		panic(e)
 	}
-	var push = newClosure(nil, sc, params, body)
-	data.ArrayProto.Set("push", push)
+	// FIXME: set owner:
+	var push = newClosure(nil, protos.FunctionProto, sc, params, body)
+	protos.ArrayProto.Set("push", push)
 }
 
 const pushPolyfillParams = `[{"type":"Identifier","start":32,"end":33,"name":"e"}]`

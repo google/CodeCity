@@ -17,18 +17,12 @@
 package interpreter
 
 import (
-	"testing"
-
 	"CodeCity/server/interpreter/data"
 )
 
-func TestInitArrayProto(t *testing.T) {
-	i, _ := NewFromJSON(emptyProg)
-	ap, _ := i.state.(*stateBlockStatement).scope.getVar("Array").(data.Object).
-		Get("prototype")
-	push, _ := ap.(data.Object).Get("push")
-	cl, isClosure := push.(*closure)
-	if !isClosure {
-		t.Errorf("Array.prototype.push is a %T (expected *closure)", cl)
-	}
+func initBuiltinObject(protos *data.Protos, sc *scope) {
+	var Object = data.NewObject(nil, protos.ObjectProto)
+	sc.newVar("Object", Object)
+
+	Object.Set("prototype", protos.ObjectProto)
 }
