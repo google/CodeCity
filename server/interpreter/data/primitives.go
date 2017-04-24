@@ -133,7 +133,7 @@ func (Number) Type() Type {
 	return NUMBER
 }
 
-// Type always returns "number" for numbers.
+// Typeof always returns "number" for numbers.
 func (Number) Typeof() string {
 	return "number"
 }

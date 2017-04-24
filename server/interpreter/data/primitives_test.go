@@ -61,7 +61,7 @@ func TestPrimitivesPrimitiveness(t *testing.T) {
 }
 
 func TestBoolean(t *testing.T) {
-	var b Boolean = Boolean(false)
+	var b = Boolean(false)
 	if b.Type() != BOOLEAN {
 		t.Errorf("%v.Type() == %#v (expected %#v)", b, b.Type(), BOOLEAN)
 	}
@@ -71,7 +71,7 @@ func TestBoolean(t *testing.T) {
 }
 
 func TestNumber(t *testing.T) {
-	var n Number = Number(0)
+	var n = Number(0)
 	if n.Type() != NUMBER {
 		t.Errorf("%v.Type() == %#v (expected %#v)", n, n.Type(), NUMBER)
 	}
