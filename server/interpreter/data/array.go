@@ -32,9 +32,9 @@ var _ Object = (*Array)(nil)
 
 // Get on Array implements a magic .length property itself, and passes
 // any other property lookups to its embedded object.
-func (arr *Array) Get(name string) (Value, *NativeError) {
-	if name != "length" {
-		return arr.object.Get(name)
+func (arr *Array) Get(key string) (Value, *NativeError) {
+	if key != "length" {
+		return arr.object.Get(key)
 	}
 	return Number(float64(arr.length)), nil
 }

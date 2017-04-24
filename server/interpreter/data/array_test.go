@@ -92,7 +92,7 @@ func TestArray(t *testing.T) {
 		t.Errorf(`%v.HasProperty("length") == false`, a)
 	}
 	if props := a.OwnPropertyKeys(); len(props) != 1 || props[0] != "length" {
-		t.Errorf(`%v.OwnPropertyKeys == %#v (expected ["length"])`, a, props)
+		t.Errorf(`%v.OwnPropertyKeys() == %#v (expected ["length"])`, a, props)
 	}
 	if a.Delete("length") == nil {
 		t.Error("delete([].length) failed to report error")
