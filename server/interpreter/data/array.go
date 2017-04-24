@@ -32,25 +32,25 @@ var _ Value = (*Array)(nil)
 
 // Get on Array implements a magic .length property itself, and passes
 // any other property lookups to its embedded Object.
-func (arr *Array) Get(name string) (Value, *ErrorMsg) {
-	if name != "length" {
-		return arr.Object.Get(name)
+func (arr *Array) Get(key string) (Value, *ErrorMsg) {
+	if key != "length" {
+		return arr.Object.Get(key)
 	}
 	return Number(float64(arr.length)), nil
 }
 
-// Set on Array will, if name == "length":
+// Set on Array will, if key == "length":
 //
 // - Update .length be the specified length.
-// - Delete any properties whose names are indexes and >= .length
+// - Delete any properties whose keys are indexes and >= .length
 //
 // Otherwise, it will:
 //
 // - Delegates setting the specified property to its embedded Object.
-// - If this succeeds, and the property name looks like an array
+// - If this succeeds, and the property key looks like an array
 // index, then it will udpate .length appropriately.
-func (arr *Array) Set(name string, value Value) *ErrorMsg {
-	if name == "length" {
+func (arr *Array) Set(key string, value Value) *ErrorMsg {
+	if key == "length" {
 		l, ok := asLength(value)
 		if !ok {
 			return &ErrorMsg{"Range Error", "Invalid array length"}
@@ -63,40 +63,40 @@ func (arr *Array) Set(name string, value Value) *ErrorMsg {
 		}
 		return nil
 	}
-	err := arr.Object.Set(name, value)
+	err := arr.Object.Set(key, value)
 	if err == nil {
-		if i, isIndex := asIndex(name); isIndex && arr.length < i+1 {
+		if i, isIndex := asIndex(key); isIndex && arr.length < i+1 {
 			arr.length = i + 1
 		}
 	}
 	return err
 }
 
-// propNames returns the list of property names (starting with
+// OwnPropertyKeys returns the list of property keys (starting with
 // "length"); for efficiency this is done directly rather than by
-// calling the propNames method on the embedded Object.
-func (arr *Array) propNames() []string {
-	names := make([]string, len(arr.Object.properties)+1)
-	names[0] = "length"
+// calling the OwnPropertyKeys method on the embedded Object.
+func (arr *Array) OwnPropertyKeys() []string {
+	keys := make([]string, len(arr.Object.properties)+1)
+	keys[0] = "length"
 	i := 1
 	for k := range arr.Object.properties {
-		names[i] = k
+		keys[i] = k
 		i++
 	}
-	return names
+	return keys
 }
 
 // Delete will reject attempts to remove "length" and otherwise defers
 // to the embedded Object.
-func (arr *Array) Delete(name string) *ErrorMsg {
-	if name == "length" {
+func (arr *Array) Delete(key string) *ErrorMsg {
+	if key == "length" {
 		return &ErrorMsg{"TypeError",
 			"Cannot delete property 'length' of array."}
 	}
-	return arr.Object.Delete(name)
+	return arr.Object.Delete(key)
 }
 
-// HasOwnProperty returns true if the property name is "length" or if
+// HasOwnProperty returns true if the property key is "length" or if
 // the embedded Object has it.
 func (arr Array) HasOwnProperty(s string) bool {
 	if s == "length" {
@@ -105,7 +105,7 @@ func (arr Array) HasOwnProperty(s string) bool {
 	return arr.Object.HasOwnProperty(s)
 }
 
-// HasProperty returns true if the property name is "length" or if the
+// HasProperty returns true if the property key is "length" or if the
 // embedded Object (or its prototype(s)) has it.
 func (arr Array) HasProperty(s string) bool {
 	if s == "length" {
@@ -144,7 +144,7 @@ var ArrayProto = NewArray(nil, ObjectProto)
 
 /********************************************************************/
 
-// asIndex takes a property name (as a string) and checks to see if it
+// asIndex takes a property key (as a string) and checks to see if it
 // qualifies as an array index (according to the definition given in
 // §15.4 of the ES5.1 spec).  If it does, it returns the index and
 // true; if not it return 0 and false.
