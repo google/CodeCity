@@ -20,11 +20,12 @@
 // property descriptors) all conform to the Value interface.
 package data
 
-type Type int
-
 // Type is an enum identifying the formal type of a value, per §8 of
 // the ES5.1 spec.  Note that OBJECT identifies *any* object type
 // (including Arrays, Functions, closures, Owners, Regexps, etc.)
+type Type int
+
+// These constants define the valid values of a Type variable.
 const (
 	UNDEFINED Type = iota
 	NULL

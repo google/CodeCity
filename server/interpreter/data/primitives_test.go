@@ -62,6 +62,9 @@ func TestPrimitivesPrimitiveness(t *testing.T) {
 
 func TestBoolean(t *testing.T) {
 	b := Boolean(false)
+	if b.Type() != BOOLEAN {
+		t.Errorf("%v.Type() == %#v (expected %#v)", b, b.Type(), BOOLEAN)
+	}
 	if b.Typeof() != "boolean" {
 		t.Errorf("%v.Typeof() == %#v (expected \"boolean\")", b, b.Typeof())
 	}
@@ -75,6 +78,12 @@ func TestBoolean(t *testing.T) {
 
 func TestNumber(t *testing.T) {
 	n := Number(0)
+	if n.Type() != NUMBER {
+		t.Errorf("%v.Type() == %#v (expected %#v)", n, n.Type(), NUMBER)
+	}
+	if n.Typeof() != "number" {
+		t.Errorf("%v.Typeof() == %#v (expected \"number\"", n, n.Type())
+	}
 	if n.Proto() != Value(NumberProto) {
 		t.Errorf("%v.Proto() != NumberProto", n)
 	}
@@ -84,7 +93,13 @@ func TestNumber(t *testing.T) {
 }
 
 func TestString(t *testing.T) {
-	var s Value = String("")
+	s := String("")
+	if s.Type() != STRING {
+		t.Errorf("%v.Type() == %#v (expected %#v)", s, s.Type(), STRING)
+	}
+	if s.Typeof() != "string" {
+		t.Errorf("%v.Typeof() == %#v (expected \"string\"", s, s.Type())
+	}
 	if s.Proto() != Value(StringProto) {
 		t.Errorf("%v.Proto() != StringProto", s)
 	}
