@@ -209,12 +209,12 @@ CCC.Log.renderXml = function(node) {
     case 'scene':
       // <scene user="Max" location="The Hangout">
       //   <description>The lights are dim and blah blah blah...</description>
-      //   <svg>...</svg>
+      //   <svgtext>...</svgtext>
       //   <object name="a clock">
-      //     <svg>...</svg>
+      //     <svgtext>...</svgtext>
       //   </object>
       //   <user name="Max">
-      //     <svg>...</svg>
+      //     <svgtext>...</svgtext>
       //   </user>
       // </scene>
       var user = node.getAttribute('user');
@@ -239,7 +239,7 @@ CCC.Log.renderXml = function(node) {
         }
       }
       var text = '';
-      var roomName = node.getAttribute('name');
+      var roomName = node.getAttribute('location');
       if (roomName) {
         text += roomName + '\n';
       }
@@ -255,23 +255,6 @@ CCC.Log.renderXml = function(node) {
         text += CCC.getMsg('roomUserMsg', users[0]);
       } else if (users.length > 1) {
         text += CCC.getMsg('roomUsersMsg', CCC.Log.naturalList(users));
-      }
-      return text;
-    case 'object':
-      // <object name="Bob">
-      //   <svg>...</svg>
-      //   <description>A programmer who likes to code.
-      //He is in the Library.</description>
-      // </object>
-      var text = '';
-      var objectName = node.getAttribute('name');
-      if (objectName) {
-        text += objectName + '\n';
-      }
-      for (var i = 0, child; child = node.childNodes[i]; i++) {
-        if (child.tagName == 'description') {
-          text += child.textContent + '\n';
-        }
       }
       return text;
     case 'say':

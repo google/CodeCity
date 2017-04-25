@@ -74,6 +74,7 @@ svg {
 .iframeRelaunch>text {
   fill: #ccc;
   text-anchor: middle;
+  alignment-baseline: middle;
 }
 
 .iframeRelaunch:hover>text {
@@ -95,5 +96,6 @@ svg {
 
 text {
   fill: #000;
+  font-size: 4pt;
   stroke-width: 0;
 }

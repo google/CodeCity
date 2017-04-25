@@ -54,6 +54,12 @@ CCC.World.panelHeight = 256;
 CCC.World.panelWidths = [];
 
 /**
+ * Width of panel borders (must match CSS).
+ * @constant
+ */
+CCC.World.panelBorder = 2;
+
+/**
  * Div containing a partial row of history panels (null if new row needed).
  * @type Element
  */
@@ -101,14 +107,9 @@ CCC.World.scrollBarWidth = NaN;
 
 /**
  * Record of the current scene.
+ * @type {Element}
  */
-CCC.World.Scene = {
-  user: undefined,
-  room: undefined,
-  svg: null,
-  users: [],
-  objects: []
-};
+CCC.World.scene = null;
 
 /**
  * Initialization code called on startup.
@@ -118,6 +119,7 @@ CCC.World.init = function() {
   CCC.World.panoramaDiv = document.getElementById('panoramaDiv');
   CCC.World.parser = new DOMParser();
   CCC.World.scrollBarWidth = CCC.World.getScrollBarWidth();
+  delete CCC.World.getScrollBarWidth;  // Free memory.
 
   window.addEventListener('resize', CCC.World.resizeSoon, false);
 
@@ -151,24 +153,37 @@ CCC.World.receiveMessage = function(e) {
       // Not valid XML, treat as string literal.
       CCC.World.renderMessage(text);
     } else {
-      for (var i = 0, child; child = dom.childNodes[i]; i++) {
-        CCC.World.preprocessXml(child);
-        CCC.World.renderMessage(child);
+      for (var i = 0, msg; msg = dom.childNodes[i]; i++) {
+        CCC.World.preprocessXml(msg);
+        CCC.World.renderMessage(msg);
       }
     }
   }
 };
 
 /**
- * Parse the XML and add relevant properties on the node or in CCC.World.Scene.
- * @param {!Element} node XML tree.
+ * Parse the XML and deal with any chunks that need one-time processing.
+ * Record the latest scene data to CCC.World.scene.
+ * @param {!Element} msg XML tree.
  */
-CCC.World.preprocessXml = function(node) {
-  switch (node.tagName) {
+CCC.World.preprocessXml = function(msg) {
+  // Find all stringified SVG nodes and replace them with actual SVG nodes.
+  var svgTextNodes = msg.getElementsByTagName('svgtext');
+  for (var i = svgTextNodes.length - 1; i >= 0; i--) {
+    var svgTextNode = svgTextNodes[i];
+    var svgNode = CCC.World.stringToSvg(svgTextNode.textContent);
+    if (svgNode) {
+      svgTextNode.parentNode.replaceChild(svgNode, svgTextNode);
+    } else {  // Syntax error in SVG.
+      svgTextNode.parentNode.removeChild(svgTextNode);
+    }
+  }
+
+  switch (msg.tagName) {
     case 'iframe':
       // <iframe src="https://neil.fraser.name/">Neil Fraser</iframe>
       // It's an iframe, create the DOM element.
-      node.iframe = CCC.World.createIframe(node);
+      msg.iframe = CCC.World.createIframe(msg);
       break;
     case 'scene':
       // <scene user="Max" location="The Hangout">
@@ -181,27 +196,9 @@ CCC.World.preprocessXml = function(node) {
       //     <svg>...</svg>
       //   </user>
       // </scene>
-      CCC.World.Scene.user = node.getAttribute('user');
-      CCC.World.Scene.location = node.getAttribute('location');
-      CCC.World.Scene.svg = null;
-      CCC.World.Scene.objects.length = 0;
-      CCC.World.Scene.users.length = 0;
-      for (var i = 0, child; child = node.childNodes[i]; i++) {
-        var obj = {
-          name: child.getAttribute('name'),
-          svg: CCC.World.xmlToSvg(child.getAttribute('svg'))
-        };
-        switch (child.tagName) {
-          case 'object':
-            CCC.World.Scene.objects.push(obj);
-            break;
-          case 'user':
-            CCC.World.Scene.users.push(obj);
-            break;
-          case 'svg':
-            CCC.World.Scene.svg = child;
-            break;
-        }
+      if (msg.getAttribute('user')) {
+        // This is the user's current location.  Save this environment data.
+        CCC.World.scene = msg;
       }
       break;
   }
@@ -219,8 +216,8 @@ CCC.World.renderMessage = function(msg) {
   var backupScratchHistory = CCC.World.scratchHistory;
   if (CCC.World.prerenderHistory(msg) && CCC.World.prerenderPanorama(msg)) {
     // Rendering successful in both panorama and pending history panel.
-    CCC.World.publishPanorama();
     CCC.World.panoramaMessages.push(msg);
+    CCC.World.publishPanorama();
     CCC.World.removeNode(backupScratchHistory);
   } else {
     // Failure to render.  Revert to previous state.
@@ -244,24 +241,16 @@ CCC.World.prerenderHistory = function(msg) {
   if (CCC.World.panoramaMessages.length) {
     return false;
   }
-  var svg = CCC.World.createSvg();
-  svg.msgs = [msg];
+  var svg =
+      CCC.World.createSvg(CCC.World.panelWidths[0], CCC.World.panelHeight);
   if (msg.iframe !== undefined) {
     // Create relaunch button if iframe is closed.
-    var midWidth = CCC.World.panelWidths[0] / 2;
-    var midHeight = CCC.World.panelHeight / 2;
     svg.style.backgroundColor = '#696969';
     var g = document.createElementNS(CCC.World.NS, 'g');
     g.setAttribute('class', 'iframeRelaunch');
-    g.setAttribute('transform',
-                   'translate(' + midWidth + ', ' + midHeight + ')');
+    g.setAttribute('transform', 'translate(0, 50)');
+    // Add relaunch button.
     var rect = document.createElementNS(CCC.World.NS, 'rect');
-    rect.setAttribute('height', '2em');
-    rect.setAttribute('width', '200');
-    rect.setAttribute('x', '-100');
-    rect.setAttribute('y', '-1.4em');
-    rect.setAttribute('rx', 15);
-    rect.setAttribute('ry', 15);
     var text = document.createElementNS(CCC.World.NS, 'text');
     text.appendChild(document.createTextNode(CCC.getMsg('relaunchIframeMsg')));
     g.appendChild(rect);
@@ -274,8 +263,23 @@ CCC.World.prerenderHistory = function(msg) {
       div.lastChild.style.display = 'inline';  // Close button.
     }, false);
     svg.appendChild(g);
+    // Size the rectangle to match the text size.
+    var bBox = text.getBBox();
+    var r = Math.min(bBox.height, bBox.width) / 2;
+    rect.setAttribute('height', bBox.height);
+    rect.setAttribute('width', bBox.width + 2 * r);
+    rect.setAttribute('x', bBox.x - r);
+    rect.setAttribute('y', bBox.y);
+    rect.setAttribute('rx', r);
+    rect.setAttribute('ry', r);
     CCC.World.scratchHistory = svg;
     return true;
+  }
+
+  // Add scene background.
+  if (CCC.World.scene) {
+    var background = CCC.World.scene.querySelector('scene>svg');
+    CCC.World.appendSvgGroup(svg, background);
   }
   var text = document.createElementNS(CCC.World.NS, 'text');
   text.appendChild(document.createTextNode(msg));
@@ -296,51 +300,24 @@ CCC.World.prerenderPanorama = function(msg) {
   if (CCC.World.panoramaMessages.length) {
     return false;
   }
-  var svg = CCC.World.createSvg();
-  svg.setAttribute('viewBox', '0 0 100 100');
-  // Add scene background.
-  if (CCC.World.Scene.svg) {
-    var g = CCC.World.appendSvgGroup(svg, CCC.World.Scene.svg);
-    g.setAttribute('transform', 'translate(50, 0)');
-  }
-  svg.msgs = [msg];
-  if (msg.iframe !== undefined) {
+  var svg = CCC.World.createSvg(CCC.World.panoramaDiv.offsetWidth,
+                                CCC.World.panoramaDiv.offsetHeight);
+  if (msg.iframe !== undefined) {  // Iframe
     CCC.World.scratchPanorama = svg;
     return true;
   }
-  var text = document.createElementNS(CCC.World.NS, 'text');
-  text.appendChild(document.createTextNode(msg));
-  text.setAttribute('x', 20);
-  text.setAttribute('y', 70);
-  svg.appendChild(text);
+  // Add scene background.
+  if (CCC.World.scene) {
+    var background = CCC.World.scene.querySelector('scene>svg');
+    CCC.World.appendSvgGroup(svg, background);
+  }
+  if (typeof msg == 'string') {  // Flat text.
+    var textgroup = CCC.World.createTextArea(svg, 150, 100, msg);
+    textgroup.setAttribute('transform', 'translate(-75, 0)');
+    svg.appendChild(textgroup);
+  }
   CCC.World.scratchPanorama = svg;
   return true;
-};
-
-/**
- * Append a new child onto an SVG.  Convert the new child from XML to SVG if
- * needed.  Coerce the child into being a group element rather than SVG.
- * @param {!SVGElement} svg SVG parent.
- * @param {!Element} newChild New content for SVG.
- * @return {SVGElement} The SVG group object that was appended.
- */
-CCC.World.appendSvgGroup = function(svg, newChild) {
-  if (!(newChild instanceof SVGElement)) {
-    // Convert XML to SVG.
-    newChild = CCC.World.xmlToSvg(newChild);
-  }
-  if (newChild) {
-    if (newChild.tagName.toLowerCase() == 'svg') {
-      // Convert SVG to group.
-      var g = document.createElementNS(CCC.World.NS, 'g');
-      while (newChild.firstChild) {
-        g.appendChild(newChild.firstChild);
-      }
-      newChild = g;
-    }
-    svg.appendChild(newChild);
-  }
-  return newChild;
 };
 
 /**
@@ -361,7 +338,7 @@ CCC.World.publishHistory = function() {
   CCC.World.historyRow.appendChild(panelDiv);
   panelDiv.appendChild(CCC.World.scratchHistory);
   var isIframeVisible = false;
-  var msgs = CCC.World.scratchHistory.msgs;
+  var msgs = CCC.World.panoramaMessages;
   if (msgs.length == 1 && msgs[0].iframe !== undefined) {
     var msg = msgs[0];
     if (msg.iframe) {
@@ -410,7 +387,7 @@ CCC.World.publishPanorama = function() {
   }
   // Insert new content.
   CCC.World.panoramaDiv.appendChild(CCC.World.scratchPanorama);
-  var msgs = CCC.World.scratchPanorama.msgs;
+  var msgs = CCC.World.panoramaMessages;
   if (msgs.length == 1 && msgs[0].iframe !== undefined) {
     var iframe = msgs[0].iframe;
     if (iframe) {
@@ -443,13 +420,22 @@ CCC.World.positionIframe = function (iframe, container) {
 
 /**
  * Create a blank, hidden SVG.
+ * @param {number} width Width of panel in pixels.
+ * @param {number} height Height of panel in pixels.
  * @return {!SVGElement} SVG element.
  */
-CCC.World.createSvg = function() {
+CCC.World.createSvg = function(width, height) {
   var svg = document.createElementNS(CCC.World.NS, 'svg');
   svg.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
   svg.style.visibility = 'hidden';
   document.body.appendChild(svg);
+  // Compute the scaled height and width and save on private properties.
+  width -= CCC.World.panelBorder * 2;
+  height -= CCC.World.panelBorder * 2;
+  svg.scaledHeight_ = 100;
+  svg.scaledWidth_ = width / height * svg.scaledHeight_;
+  svg.setAttribute('viewBox',
+      [-svg.scaledWidth_ / 2, 0, svg.scaledWidth_, svg.scaledHeight_].join(' '));
   return svg;
 };
 
@@ -531,7 +517,8 @@ CCC.World.renderHistory = function() {
  * @return {!Array.<number>} Array of lengths.
  */
 CCC.World.rowWidths = function() {
-  var panelBloat = 2 * (5 + 2);  // Margin and border widths must match the CSS.
+  // Margin and border widths must match the CSS.
+  var panelBloat = 2 * (5 + CCC.World.panelBorder);
   var windowWidth = CCC.World.lastWidth - CCC.World.scrollBarWidth - 1;
   var idealWidth = CCC.World.panelHeight * 5 / 4;  // Standard TV ratio.
   var panelCount = Math.round(windowWidth / idealWidth);
@@ -562,6 +549,22 @@ CCC.World.rowWidths = function() {
     panels[j] = temp;
   }
   return panels;
+};
+
+/**
+ * Unserialize a stringified SVG.
+ * @param {string} svgText '<g><circle r="5" /></g>'
+ * @return {!SVGSVGElement} <svg><g><circle r="5" /></g></svg>
+ */
+CCC.World.stringToSvg = function(svgText) {
+  svgText = '<svg>' + svgText + '</svg>';
+  var dom = CCC.World.parser.parseFromString(svgText, 'image/svg+xml');
+  if (dom.getElementsByTagName('parsererror').length) {
+    // Not valid XML.
+    console.log('Syntax error in SVG.');
+    return null;
+  }
+  return CCC.World.xmlToSvg(dom.firstChild);
 };
 
 /**
@@ -652,6 +655,29 @@ CCC.World.xmlToSvg.ATTRIBUTE_NAMES = [
   'y2',
   'width',
 ];
+
+/**
+ * Clone a DOM tree, and append it as a new child onto an SVG.
+ * Coerce the child into being a group element rather than SVG.
+ * @param {!SVGElement} svg SVG parent.
+ * @param {Element} newChild New content for SVG.
+ * @return {SVGElement} The SVG group object that was appended.
+ */
+CCC.World.appendSvgGroup = function(svg, newChild) {
+  if (newChild) {
+    var newChild = newChild.cloneNode(true);
+    if (newChild.tagName.toLowerCase() == 'svg') {
+      // Convert SVG to group.
+      var g = document.createElementNS(CCC.World.NS, 'g');
+      while (newChild.firstChild) {
+        g.appendChild(newChild.firstChild);
+      }
+      newChild = g;
+    }
+    svg.appendChild(newChild);
+  }
+  return newChild;
+};
 
 /**
  * Remove a node from the DOM.
