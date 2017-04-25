@@ -81,6 +81,8 @@ func TestInterpreterSimple(t *testing.T) {
 		{"!false&&(!true===false)", unaryNot, data.Boolean(true)},
 		{"(many typeof tests)", unaryTypeof, data.String("pass")},
 		{`var o={foo:"bar"};"foo" in o && !("bar" in o)`, binaryIn, data.Boolean(true)},
+		{"typeof this in function on Object.proto when called on primitive",
+			strictBoxedThis, data.String("string")},
 	}
 
 	for _, c := range tests {
@@ -525,6 +527,12 @@ const unaryTypeof = `{"type":"Program","start":0,"end":337,"body":[{"type":"Vari
 // "foo" in o && !("bar" in o)
 // => true
 const binaryIn = `{"type":"Program","start":0,"end":49,"body":[{"type":"VariableDeclaration","start":0,"end":21,"declarations":[{"type":"VariableDeclarator","start":4,"end":20,"id":{"type":"Identifier","start":4,"end":5,"name":"o"},"init":{"type":"ObjectExpression","start":8,"end":20,"properties":[{"key":{"type":"Identifier","start":9,"end":12,"name":"foo"},"value":{"type":"Literal","start":14,"end":19,"value":"bar","raw":"\"bar\""},"kind":"init"}]}}],"kind":"var"},{"type":"ExpressionStatement","start":22,"end":49,"expression":{"type":"LogicalExpression","start":22,"end":49,"left":{"type":"BinaryExpression","start":22,"end":32,"left":{"type":"Literal","start":22,"end":27,"value":"foo","raw":"\"foo\""},"operator":"in","right":{"type":"Identifier","start":31,"end":32,"name":"o"}},"operator":"&&","right":{"type":"UnaryExpression","start":36,"end":49,"operator":"!","prefix":true,"argument":{"type":"BinaryExpression","start":37,"end":49,"left":{"type":"Literal","start":38,"end":43,"value":"bar","raw":"\"bar\""},"operator":"in","right":{"type":"Identifier","start":47,"end":48,"name":"o"}}}}}]}`
+
+// "use strict";
+// Object.prototype.foo = function() { return typeof this };
+// "foo".foo();
+// => "string"
+const strictBoxedThis = `{"type":"Program","start":0,"end":84,"body":[{"type":"ExpressionStatement","start":0,"end":13,"expression":{"type":"Literal","start":0,"end":12,"value":"use strict","raw":"\"use strict\""}},{"type":"ExpressionStatement","start":14,"end":71,"expression":{"type":"AssignmentExpression","start":14,"end":70,"operator":"=","left":{"type":"MemberExpression","start":14,"end":34,"object":{"type":"MemberExpression","start":14,"end":30,"object":{"type":"Identifier","start":14,"end":20,"name":"Object"},"property":{"type":"Identifier","start":21,"end":30,"name":"prototype"},"computed":false},"property":{"type":"Identifier","start":31,"end":34,"name":"foo"},"computed":false},"right":{"type":"FunctionExpression","start":37,"end":70,"id":null,"params":[],"body":{"type":"BlockStatement","start":48,"end":70,"body":[{"type":"ReturnStatement","start":50,"end":68,"argument":{"type":"UnaryExpression","start":57,"end":68,"operator":"typeof","prefix":true,"argument":{"type":"ThisExpression","start":64,"end":68}}}]}}}},{"type":"ExpressionStatement","start":72,"end":84,"expression":{"type":"CallExpression","start":72,"end":83,"callee":{"type":"MemberExpression","start":72,"end":81,"object":{"type":"Literal","start":72,"end":77,"value":"foo","raw":"\"foo\""},"property":{"type":"Identifier","start":78,"end":81,"name":"foo"},"computed":false},"arguments":[]}}]}`
 
 /********************************************************************/
 

@@ -1024,7 +1024,7 @@ type stateMemberExpression struct {
 	baseExpr ast.Expression // To be resolve to obtain base
 	membExpr ast.Expression // To be resolve to obtain name
 	computed bool           // Is this x[y] (rather than x.y)?
-	base     data.Object
+	base     data.Value
 }
 
 func (st *stateMemberExpression) init(node *ast.MemberExpression) {
@@ -1039,8 +1039,11 @@ func (st *stateMemberExpression) step(intrp *Interpreter, cv *cval) (state, *cva
 	} else if cv.abrupt() {
 		return st.parent, cv
 	} else if st.base == nil {
-		// FIXME: set owner:
-		st.base = intrp.toObject(cv.pval(), nil)
+		st.base = cv.pval()
+		// FIXME: this is an ugly hack.
+		if ce, isCE := st.parent.(*stateCallExpression); isCE {
+			ce.this = st.base
+		}
 		if st.computed {
 			return newState(st, st.scope, ast.Node(st.membExpr.E)), nil
 		}
@@ -1058,13 +1061,10 @@ func (st *stateMemberExpression) step(intrp *Interpreter, cv *cval) (state, *cva
 		}
 		name = i.Name
 	}
-	v, ne := st.base.Get(name)
+	// FIXME: set owner:
+	v, ne := intrp.toObject(st.base, nil).Get(name)
 	if ne != nil {
 		return st.parent, intrp.throw(ne)
-	}
-	// FIXME: this is an ugly hack.
-	if ce, isCE := st.parent.(*stateCallExpression); isCE {
-		ce.this = st.base
 	}
 	return st.parent, pval(v)
 }
@@ -1548,7 +1548,8 @@ type lvalue struct {
 	baseExpr        ast.Expression // To be resolve to obtain base
 	membExpr        ast.Expression // To be resolve to obtain name
 	computed        bool           // Is this x[y] (rather than x.y)?
-	base            data.Object    // ECMA "base"
+	intrp           *Interpreter   // For obtaining box protos
+	base            data.Value     // ECMA "base"
 	name            string         // ECMA "referenced name"
 	haveBase, ready bool
 }
@@ -1591,9 +1592,11 @@ func (lv *lvalue) get() data.Value {
 	if lv.base == nil {
 		return lv.scope.getVar(lv.name)
 	}
-	v, ne := lv.base.Get(lv.name)
+	// FIXME: set owner
+	v, ne := lv.intrp.toObject(lv.base, nil).Get(lv.name)
 	if ne != nil {
-		// FIXME: should throw error.
+		// FIXME: throw JS error
+		panic(ne)
 	}
 	return v
 }
@@ -1607,9 +1610,11 @@ func (lv *lvalue) put(value data.Value) {
 	if lv.base == nil {
 		lv.scope.setVar(lv.name, value)
 	} else {
-		ne := lv.base.Set(lv.name, value)
+		// FIXME: set owner
+		ne := lv.intrp.toObject(lv.base, nil).Set(lv.name, value)
 		if ne != nil {
-			// FIXME: should throw error.
+			// FIXME: throw JS error
+			panic(ne)
 		}
 	}
 }
@@ -1626,8 +1631,8 @@ func (lv *lvalue) step(intrp *Interpreter, cv *cval) (state, *cval) {
 	} else if cv.abrupt() {
 		return lv.parent, cv
 	} else if !lv.haveBase {
-		// FIXME: set owner:
-		lv.base = intrp.toObject(cv.pval(), nil)
+		lv.intrp = intrp
+		lv.base = cv.pval()
 		lv.haveBase = true
 		if lv.computed {
 			return newState(lv, lv.scope, ast.Node(lv.membExpr.E)), nil
