@@ -35,6 +35,12 @@ const (
 	OBJECT
 )
 
+// MaxTypeConst is the largest Type value defined in this package.  It
+// is part of the public interface so that other packages can define
+// additional types that satisfy Value and have a Type() method
+// returning distinct Type values LastType + 1, + 2, etc.
+const MaxTypeConst Type = OBJECT
+
 // Value represents any JavaScript value (primitive, object, etc.).
 type Value interface {
 	// Type() returns the internal type of the object.

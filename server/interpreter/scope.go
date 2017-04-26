@@ -190,6 +190,12 @@ func (sc *scope) populate(node ast.Node) {
 	}
 }
 
+// Type is defined to allow *scope to satisfy the refbase interface
+// and thus be stored in the base slot of a reference.
+func (scope) Type() data.Type {
+	return SCOPE
+}
+
 // newGlobalScope is a factory for top-level global scopes.
 func newGlobalScope(protos *data.Protos) *scope {
 	sc := newScope(nil, nil)
