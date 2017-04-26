@@ -170,7 +170,7 @@ CCC.init = function() {
   setTimeout(CCC.resize, 0);
 
   CCC.commandTextarea.addEventListener('keydown', CCC.keydown, false);
-  CCC.commandTextarea.addEventListener('click', CCC.click, false);
+  CCC.commandTextarea.addEventListener('click', CCC.userActive, false);
   CCC.commandTextarea.value = '';
 
   var clearButton = document.getElementById('clearButton');
@@ -192,6 +192,7 @@ CCC.init = function() {
  * @param {string} mode Either 'world' or 'log'.
  */
 CCC.tab = function(mode) {
+  CCC.userActive();
   if (mode == 'world') {
     CCC.worldFrame.style.zIndex = 1;
     CCC.logFrame.style.zIndex = -1;
@@ -208,6 +209,7 @@ CCC.tab = function(mode) {
  * Clear all history.
  */
 CCC.clear = function() {
+  CCC.userActive();
   CCC.commandHistory.length = 0;
   CCC.commandTemp = '';
   CCC.commandHistoryPointer = -1;
@@ -224,6 +226,7 @@ CCC.clear = function() {
  * Toggle pausing of incoming messages.
  */
 CCC.pause = function() {
+  CCC.userActive();
   var checkbox = document.getElementById('pauseCheckbox');
   if (CCC.pauseBuffer && !checkbox.checked) {
     // Fire off all accumulated messages.
@@ -302,8 +305,7 @@ CCC.distributeMessage = function(line, type) {
  * @param {boolean} echo True if command to be saved in history.
  */
 CCC.sendCommand = function(commands, echo) {
-  CCC.lastActiveTime = Date.now();
-  CCC.setUnreadLines(0);
+  CCC.userActive();
   commands = commands.split('\n');
   // A blank line at the end of a multi-line command is usually accidental.
   if (commands.length > 1 && !commands[commands.length-1]) {
@@ -478,8 +480,7 @@ CCC.schedulePing = function(ms) {
  * @param {!Event} e Keydown event.
  */
 CCC.keydown = function(e) {
-  CCC.lastActiveTime = Date.now();
-  CCC.setUnreadLines(0);
+  CCC.userActive();
   if (!e.shiftKey && e.key == 'Enter') {
     // Enter
     CCC.sendCommand(CCC.commandTextarea.value, CCC.localEcho);
@@ -556,10 +557,10 @@ CCC.keydown = function(e) {
 };
 
 /**
- * Monitor the user's clicks in the command text area.
- * @param {!Event} e Mouse event.
+ * The user is active.
+ * Reset the last active time, and clear the notification of unread lines.
  */
-CCC.click = function(e) {
+CCC.userActive = function() {
   CCC.lastActiveTime = Date.now();
   CCC.setUnreadLines(0);
 };
