@@ -25,7 +25,7 @@ import (
 // cvalType is an enum of completion value types.
 type cvalType int
 
-// Completion value types, as defined in §8.9 of the ES5.1 spec.
+// Completion value types, as defined in §8.9 of the ES5.1 spec.
 const (
 	NORMAL cvalType = iota
 	BREAK
@@ -39,23 +39,45 @@ const (
 //
 // .typ is the type: NORMAL, BREAK, CONTINUE, RETURN, or THROW
 //
-// .val is the JavaScript value being returned (if any)
+// .val is the JavaScript value being returned or a reference (or nil,
+//  which the spec calls 'empty').
 //
 // .targ is the target label for a BREAK or CONTINUE
 type cval struct {
 	typ  cvalType
-	val  data.Value
+	val  value
 	targ string
 }
 
-// The pval method tests to make sure the cval is a plain (normal)
-// JavaScript value (has .typ == NORMAL, .targ == ""), and returns
-// that value.
+// *scope must satisfy value, so we can put one in a reference.
+var _ value = (*scope)(nil)
+
+// The pval method tests to make sure the cval is a (normal) plain
+// JavaScript value (has .typ == NORMAL, .val fulfils data.Value,
+// .targ == ""), and returns that value.
 func (cv cval) pval() data.Value {
 	if cv.typ != NORMAL || cv.targ != "" {
-		panic("expected NORMAL JS value")
+		panic("expected NORMAL completion value")
 	}
-	return cv.val
+	return cv.value()
+}
+
+// The value method tests to make sure the cval is a JavaScript value.
+func (cv cval) value() data.Value {
+	if cv.val == nil {
+		return nil
+	}
+	return cv.val.(data.Value)
+}
+
+// The rval method tests to make sure the cval is a (normal) reference
+// (has .typ == NORMAL, .val is a reference, .targ == ""), and returns
+// that reference.
+func (cv cval) rval() reference {
+	if cv.typ != NORMAL || cv.targ != "" {
+		panic("expected NORMAL completion value")
+	}
+	return cv.val.(reference)
 }
 
 // The abrupt method returns true if the cval is an abrupt completion,
@@ -77,7 +99,13 @@ func pval(v data.Value) *cval {
 	return &cval{NORMAL, v, ""}
 }
 
-// GoString prints a cval in a readable format
+// rval takes a reference returns a pointer to a cval with type NORMAL
+// containing reference.
+func rval(r reference) *cval {
+	return &cval{NORMAL, r, ""}
+}
+
+// GoString prints a cval in a readable format for debugging purposes.
 func (cv cval) GoString() string {
 	var t string
 	switch cv.typ {

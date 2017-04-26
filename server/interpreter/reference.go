@@ -20,33 +20,17 @@ import (
 	"CodeCity/server/interpreter/data"
 )
 
-// refbase is an interface satisfied by the two types (data.Value and
-// scope) that can be stored in the base slot of a reference.
-//
-// The signatures of these methods should match the corresponding
-// signatures of data.Value.
-type refbase interface {
-	// Type() returns the internal type of the object.
-	Type() data.Type
-}
-
-// data.Value must satisfy refbase.
-var _ refbase = (data.Value)(nil)
-
-// *scope must satisfy refbase.
-var _ refbase = (*scope)(nil)
-
 // reference is an implementation of the "Reference Specification
 // Type" defined in ES5.1 §8.7; in summary, it is a reference to
 // something which can be assigned to - either a variable in a scope,
 // or a property slot on an object.
 type reference struct {
-	base refbase // ECMA "base"
-	name string  // ECMA "referenced name"
+	base value  // ECMA "base"; is a data.Value or *scope
+	name string // ECMA "referenced name"
 	// no strict reference flag; we're always strict
 }
 
-func (ref reference) getBase() refbase {
+func (ref reference) getBase() value {
 	return ref.base
 }
 
@@ -100,45 +84,28 @@ func (ref reference) putValue(intrp *Interpreter, v data.Value) *data.NativeErro
 	}
 }
 
-// references must also satisfy the data.Value interface so that we
-// can stuff them into the val slot of a cval.  Here we implement the
-// necessary additional methods, most of which should never be called:
-
 func (reference) Type() data.Type {
 	return REFERENCE
 }
 
-func (reference) Typeof() string {
-	panic("should never be called")
-}
-
-func (ref reference) IsPrimitive() bool {
-	panic("should never be called")
-}
-
-func (ref reference) ToBoolean() data.Boolean {
-	panic("should never be called")
-}
-
-func (ref reference) ToNumber() data.Number {
-	panic("should never be called")
-}
-
-func (ref reference) ToString() data.String {
-	panic("should never be called")
-}
-
-func (ref reference) ToPrimitive() data.Value {
-	panic("should never be called")
-}
-
-// reference and *reference should satisfy data.Value.
-var _ data.Value = reference{nil, ""}
-var _ data.Value = (*reference)(nil)
+// reference must satisfy value
+var _ value = reference{nil, ""}
 
 /********************************************************************/
 
-// newReference is a factory for reference objects
-func newReference(base refbase, name string) *reference {
-	return &reference{base, name}
+// newReference is a factory for reference objects.
+//
+// This boring function exists mostly in case we decide to replace the
+// reference strcut with a reference interface that has
+// base-type-specific getValue and putValue methods - but we also do a
+// check to make sure that the caller is not trying to stuff something
+// other than a scope or data.Value into the reference.
+func newReference(base value, name string) reference {
+	switch base.(type) {
+	case data.Value: // OK
+	case *scope: // OK
+	default:
+		panic("invalid reference base type")
+	}
+	return reference{base, name}
 }

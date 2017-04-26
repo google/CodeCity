@@ -28,3 +28,14 @@ const (
 	SCOPE     = data.MaxTypeConst + 1 + iota // for scope objects
 	REFERENCE                                // for reference objects
 )
+
+// value is an interface satisfied by various types used internally in
+// the interpreter - notably data.Value (arbitary JS values), *scope
+// and reference.
+type value interface {
+	// Type() returns the internal type of the object.
+	Type() data.Type
+}
+
+// data.Value must satisfy value.
+var _ value = (data.Value)(nil)

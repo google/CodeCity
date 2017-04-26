@@ -447,7 +447,7 @@ func (st *stateBlockStatement) initFromSwitchCase(node *ast.SwitchCase) {
 func (st *stateBlockStatement) step(intrp *Interpreter, cv *cval) (state, *cval) {
 	if cv != nil {
 		if cv.val != nil {
-			st.val = cv.val
+			st.val = cv.value()
 		}
 		if cv.abrupt() || st.n >= len(st.body) {
 			return st.parent, &cval{cv.typ, st.val, cv.targ}
@@ -705,7 +705,7 @@ func (st *stateForStatement) step(intrp *Interpreter, cv *cval) (state, *cval) {
 			return st.parent, &cval{NORMAL, st.val, ""}
 		}
 	case forBody:
-		st.val = cv.val
+		st.val = cv.value()
 		if cv.typ == BREAK && (cv.targ == "" || st.hasLabel(cv.targ)) {
 			return st.parent, &cval{NORMAL, st.val, ""}
 		} else if (cv.typ != CONTINUE || !(cv.targ == "" ||
@@ -826,7 +826,7 @@ func (st *stateForInStatement) step(intrp *Interpreter, cv *cval) (state, *cval)
 
 		case forInBody:
 			if cv.val != nil {
-				st.val = cv.val
+				st.val = cv.value()
 			}
 			if cv.typ == BREAK && (cv.targ == "" || st.hasLabel(cv.targ)) {
 				return st.parent, &cval{NORMAL, st.val, ""}
@@ -1192,7 +1192,7 @@ func (st *stateSwitchStatement) step(intrp *Interpreter, cv *cval) (state, *cval
 			return st.parent, cv
 		}
 		if cv.val != nil {
-			st.val = cv.val
+			st.val = cv.value()
 		}
 		if cv.typ == BREAK && cv.targ == "" || st.hasLabel(cv.targ) {
 			return st.parent, &cval{NORMAL, st.val, ""}
@@ -1314,7 +1314,7 @@ func (st *stateTryStatement) step(intrp *Interpreter, cv *cval) (state, *cval) {
 		st.handled = true
 		if cv.typ == THROW && st.handler != nil {
 			return newState(st, st.scope, st.handler).(*stateCatchClause),
-				pval(cv.val)
+				pval(cv.value())
 		}
 	}
 	if !st.finalized {
@@ -1493,7 +1493,7 @@ func (st *stateWhileStatement) step(intrp *Interpreter, cv *cval) (state, *cval)
 		return newState(st, st.scope, st.body.S), nil
 	}
 	// At this point cv is cval from body.
-	st.val = cv.val
+	st.val = cv.value()
 	if cv.typ != CONTINUE || !(cv.targ == "" || st.hasLabel(cv.targ)) {
 		if cv.typ == BREAK && (cv.targ == "" || st.hasLabel(cv.targ)) {
 			return st.parent, &cval{NORMAL, st.val, ""}

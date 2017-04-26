@@ -70,6 +70,8 @@ func NewFromAST(tree *ast.Program) *Interpreter {
 
 // Step performs the next step in the evaluation of program.  Returns
 // true if a step was executed; false if the program has terminated.
+//
+// FIXME: should not panic!
 func (intrp *Interpreter) Step() bool {
 	if intrp.state == nil {
 		switch intrp.value.typ {
@@ -103,7 +105,7 @@ func (intrp *Interpreter) Value() data.Value {
 	if intrp.value == nil {
 		return nil
 	}
-	return intrp.value.val
+	return intrp.value.value()
 }
 
 // toObject coerces its first argument into an object.  This
