@@ -644,6 +644,19 @@ CCC.World.xmlToHtml = function(dom) {
               '<' + dom.tagName + ' ' + attr.name + '="' + attr.value + '">');
         } else {
           element.setAttribute(attr.name, attr.value);
+          // Remove all styles not in the whitelist.
+          if (attr.name == 'style') {
+            for (var name in element.style) {
+              if (element.style.hasOwnProperty(name) &&
+                  isNaN(parseFloat(name)) && // Don't delete indexed props.
+                  element.style[name] && element.style[name] != 'initial' &&
+                  CCC.World.xmlToHtml.STYLE_NAMES.indexOf(name) == -1) {
+                console.log('Style attribute not in whitelist: ' +
+                    name + ': ' + element.style[name]);
+                element.style[name] = '';
+              }
+            }
+          }
         }
       }
       for (var i = 0, childDom; childDom = dom.childNodes[i]; i++) {
@@ -739,7 +752,6 @@ CCC.World.xmlToHtml.ELEMENT_NAMES = [
  * Whitelist of all allowed HTML property names.
  * This architecture assumes that there are no banned properties
  * on one element type which are allowed on another.
- * 'style' property is handled separately.
  */
 CCC.World.xmlToHtml.ATTRIBUTE_NAMES = [
   'cite',
@@ -753,9 +765,58 @@ CCC.World.xmlToHtml.ATTRIBUTE_NAMES = [
   'scope',
   'span',
   'start',
+  'style',
   'title',
   'type',
   'value',
+];
+
+/**
+ * Whitelist of all allowed style property names.
+ */
+CCC.World.xmlToHtml.STYLE_NAMES = [
+  'border',
+  'borderBottom',
+  'borderBottomColor',
+  'borderBottomLeftRadius',
+  'borderBottomRightRadius',
+  'borderBottomStyle',
+  'borderBottomWidth',
+  'borderCollapse',
+  'borderColor',
+  'borderLeft',
+  'borderLeftColor',
+  'borderLeftStyle',
+  'borderLeftWidth',
+  'borderRadius',
+  'borderRight',
+  'borderRightColor',
+  'borderRightStyle',
+  'borderRightWidth',
+  'borderSpacing',
+  'borderStyle',
+  'borderTop',
+  'borderTopColor',
+  'borderTopLeftRadius',
+  'borderTopRightRadius',
+  'borderTopStyle',
+  'borderTopWidth',
+  'borderWidth',
+  'clear',
+  'direction',
+  'display',
+  'float',
+  'fontWeight',
+  'height',
+  'hyphens',
+  'padding',
+  'paddingBottom',
+  'paddingLeft',
+  'paddingRight',
+  'paddingTop',
+  'textAalign',
+  'verticalAlign',
+  'width',
 ];
 
 /**
