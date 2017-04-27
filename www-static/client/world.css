@@ -41,11 +41,6 @@ body {
   top: 0;
 }
 
-svg {
-  height: 100%;
-  width: 100%;
-}
-
 .iframeClose:hover {
   opacity: 1;
 }

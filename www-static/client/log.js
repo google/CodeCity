@@ -206,6 +206,13 @@ CCC.Log.renderXml = function(node) {
       var div = document.createElement('div');
       div.appendChild(link);
       return div;
+    case 'htmltext':
+      // <htmltext>&lt;p&gt;Hello world.&lt;/p&gt;</htmltext>
+      var dom = CCC.Log.parser.parseFromString(node.textContent, 'text/html');
+      if (dom.body) {
+        return dom.body.textContent;
+      }
+      return '';  // Illegal HTML.
     case 'scene':
       // <scene user="Max" location="The Hangout">
       //   <description>The lights are dim and blah blah blah...</description>

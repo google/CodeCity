@@ -146,15 +146,17 @@ CCC.World.receiveMessage = function(e) {
     CCC.World.panoramaMessages.length = 0;
     CCC.World.removeNode(CCC.World.scratchHistory);
     CCC.World.removeNode(CCC.World.scratchPanorama);
+    var scene = CCC.World.scene;  // Save the scene.
     CCC.World.renderHistory();
+    CCC.World.scene = scene;  // Restore the scene.
   } else if (mode == 'message') {
     var dom = CCC.World.parser.parseFromString(text, 'text/xml');
     if (dom.getElementsByTagName('parsererror').length) {
       // Not valid XML, treat as string literal.
       CCC.World.renderMessage(text);
     } else {
+      CCC.World.preprocessXml(dom);
       for (var i = 0, msg; msg = dom.childNodes[i]; i++) {
-        CCC.World.preprocessXml(msg);
         CCC.World.renderMessage(msg);
       }
     }
@@ -164,43 +166,44 @@ CCC.World.receiveMessage = function(e) {
 /**
  * Parse the XML and deal with any chunks that need one-time processing.
  * Record the latest scene data to CCC.World.scene.
- * @param {!Element} msg XML tree.
+ * @param {!Element} dom XML tree.
  */
-CCC.World.preprocessXml = function(msg) {
+CCC.World.preprocessXml = function(dom) {
   // Find all stringified SVG nodes and replace them with actual SVG nodes.
-  var svgTextNodes = msg.getElementsByTagName('svgtext');
+  var svgTextNodes = dom.getElementsByTagName('svgtext');
   for (var i = svgTextNodes.length - 1; i >= 0; i--) {
     var svgTextNode = svgTextNodes[i];
     var svgNode = CCC.World.stringToSvg(svgTextNode.textContent);
     if (svgNode) {
-      svgTextNode.parentNode.replaceChild(svgNode, svgTextNode);
+      var container = document.createElement('svgdom');
+      container.appendChild(svgNode);
+      svgTextNode.parentNode.replaceChild(container, svgTextNode);
     } else {  // Syntax error in SVG.
       svgTextNode.parentNode.removeChild(svgTextNode);
     }
   }
 
-  switch (msg.tagName) {
-    case 'iframe':
+  // Find all stringified HTML nodes and replace them with actual HTML nodes.
+  var htmlTextNodes = dom.getElementsByTagName('htmltext');
+  for (var i = htmlTextNodes.length - 1; i >= 0; i--) {
+    var htmlTextNode = htmlTextNodes[i];
+    var htmlNode = CCC.World.stringToHtml(htmlTextNode.textContent);
+    if (htmlNode) {
+      var container = document.createElement('htmldom');
+      container.appendChild(htmlNode);
+      htmlTextNode.parentNode.replaceChild(container, htmlTextNode);
+    } else {  // Syntax error in HTML.
+      htmlTextNode.parentNode.removeChild(htmlTextNode);
+    }
+  }
+
+  // Find top-level nodes that need processing.
+  for (var i = 0, msg; msg = dom.childNodes[i]; i++) {
+    if (msg.tagName == 'iframe') {
       // <iframe src="https://neil.fraser.name/">Neil Fraser</iframe>
       // It's an iframe, create the DOM element.
       msg.iframe = CCC.World.createIframe(msg);
-      break;
-    case 'scene':
-      // <scene user="Max" location="The Hangout">
-      //   <description>The lights are dim and blah blah blah...</description>
-      //   <svg>...</svg>
-      //   <object name="a clock">
-      //     <svg>...</svg>
-      //   </object>
-      //   <user name="Max">
-      //     <svg>...</svg>
-      //   </user>
-      // </scene>
-      if (msg.getAttribute('user')) {
-        // This is the user's current location.  Save this environment data.
-        CCC.World.scene = msg;
-      }
-      break;
+    }
   }
 };
 
@@ -242,8 +245,8 @@ CCC.World.prerenderHistory = function(msg) {
     return false;
   }
   var svg =
-      CCC.World.createSvg(CCC.World.panelWidths[0], CCC.World.panelHeight);
-  if (msg.iframe !== undefined) {
+      CCC.World.createHiddenSvg(CCC.World.panelWidths[0], CCC.World.panelHeight);
+  if (msg.tagName == 'iframe') {
     // Create relaunch button if iframe is closed.
     svg.style.backgroundColor = '#696969';
     var g = document.createElementNS(CCC.World.NS, 'g');
@@ -276,10 +279,36 @@ CCC.World.prerenderHistory = function(msg) {
     return true;
   }
 
+  if (msg.tagName == 'htmldom') {
+    var div = CCC.World.createHiddenDiv();
+    CCC.World.cloneAndAppend(div, msg.firstChild);
+    CCC.World.scratchHistory = div;
+    return true;
+  }
+
+  if (msg.tagName == 'scene') {
+    // <scene user="Max" location="The Hangout">
+    //   <description>The lights are dim and blah blah blah...</description>
+    //   <svgdom>...</svgdom>
+    //   <object name="a clock">
+    //     <svgdom>...</svgdom>
+    //   </object>
+    //   <user name="Max">
+    //     <svgdom>...</svgdom>
+    //   </user>
+    // </scene>
+    if (msg.getAttribute('user')) {
+      // This is the user's current location.  Save this environment data.
+      CCC.World.scene = msg;
+    }
+  }
+
   // Add scene background.
   if (CCC.World.scene) {
-    var background = CCC.World.scene.querySelector('scene>svg');
-    CCC.World.appendSvgGroup(svg, background);
+    var svgdom = CCC.World.scene.querySelector('scene>svgdom');
+    if (svgdom) {
+      CCC.World.cloneAndAppend(svg, svgdom.firstChild);
+    }
   }
   var text = document.createElementNS(CCC.World.NS, 'text');
   text.appendChild(document.createTextNode(msg));
@@ -300,16 +329,25 @@ CCC.World.prerenderPanorama = function(msg) {
   if (CCC.World.panoramaMessages.length) {
     return false;
   }
-  var svg = CCC.World.createSvg(CCC.World.panoramaDiv.offsetWidth,
-                                CCC.World.panoramaDiv.offsetHeight);
-  if (msg.iframe !== undefined) {  // Iframe
+  var svg = CCC.World.createHiddenSvg(CCC.World.panoramaDiv.offsetWidth,
+                                      CCC.World.panoramaDiv.offsetHeight);
+  if (msg.tagName == 'iframe') {
     CCC.World.scratchPanorama = svg;
     return true;
   }
+  if (msg.tagName == 'htmldom') {
+    var div = CCC.World.createHiddenDiv();
+    CCC.World.cloneAndAppend(div, msg.firstChild);
+    CCC.World.scratchPanorama = div;
+    return true;
+  }
+
   // Add scene background.
   if (CCC.World.scene) {
-    var background = CCC.World.scene.querySelector('scene>svg');
-    CCC.World.appendSvgGroup(svg, background);
+    var svgdom = CCC.World.scene.querySelector('scene>svgdom');
+    if (svgdom) {
+      CCC.World.cloneAndAppend(svg, svgdom.firstChild);
+    }
   }
   if (typeof msg == 'string') {  // Flat text.
     var textgroup = CCC.World.createTextArea(svg, 150, 100, msg);
@@ -339,7 +377,7 @@ CCC.World.publishHistory = function() {
   panelDiv.appendChild(CCC.World.scratchHistory);
   var isIframeVisible = false;
   var msgs = CCC.World.panoramaMessages;
-  if (msgs.length == 1 && msgs[0].iframe !== undefined) {
+  if (msgs.length == 1) {
     var msg = msgs[0];
     if (msg.iframe) {
       isIframeVisible = true;
@@ -388,7 +426,7 @@ CCC.World.publishPanorama = function() {
   // Insert new content.
   CCC.World.panoramaDiv.appendChild(CCC.World.scratchPanorama);
   var msgs = CCC.World.panoramaMessages;
-  if (msgs.length == 1 && msgs[0].iframe !== undefined) {
+  if (msgs.length == 1) {
     var iframe = msgs[0].iframe;
     if (iframe) {
       CCC.World.positionIframe(iframe, CCC.World.panoramaDiv);
@@ -424,7 +462,7 @@ CCC.World.positionIframe = function (iframe, container) {
  * @param {number} height Height of panel in pixels.
  * @return {!SVGElement} SVG element.
  */
-CCC.World.createSvg = function(width, height) {
+CCC.World.createHiddenSvg = function(width, height) {
   var svg = document.createElementNS(CCC.World.NS, 'svg');
   svg.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
   svg.style.visibility = 'hidden';
@@ -437,6 +475,18 @@ CCC.World.createSvg = function(width, height) {
   svg.setAttribute('viewBox',
       [-svg.scaledWidth_ / 2, 0, svg.scaledWidth_, svg.scaledHeight_].join(' '));
   return svg;
+};
+
+/**
+ * Create a blank, hidden div.
+ * @return {!Element} Div element.
+ */
+CCC.World.createHiddenDiv = function() {
+  var div = document.createElement('div');
+  div.className = 'htmlpanel';
+  div.style.visibility = 'hidden';
+  document.body.appendChild(div);
+  return div;
 };
 
 /**
@@ -501,6 +551,7 @@ CCC.World.renderHistory = function() {
   CCC.World.historyRow = null;
   CCC.World.scratchHistory = null;
   CCC.World.scratchPanorama = null;
+  CCC.World.scene = null;
   // Create new history.
   var messages = CCC.World.historyMessages.concat(CCC.World.panoramaMessages);
   CCC.World.historyMessages.length = 0;
@@ -552,16 +603,172 @@ CCC.World.rowWidths = function() {
 };
 
 /**
- * Unserialize a stringified SVG.
- * @param {string} svgText '<g><circle r="5" /></g>'
- * @return {!SVGSVGElement} <svg><g><circle r="5" /></g></svg>
+ * Unserialize stringified HTML.  Wrap the HTML elements in a body.
+ * @param {string} svgText '<p>Hello</p>'
+ * @return {Element} <body><p>Hello</p></body>
+ */
+CCC.World.stringToHtml = function(htmlText) {
+  var dom = CCC.World.parser.parseFromString(htmlText, 'text/html');
+  if (!dom.body) {
+    // Not valid XML.
+    console.log('Syntax error in HTML: ' + htmlText);
+    return null;
+  }
+  return CCC.World.xmlToHtml(dom.body);
+};
+
+/**
+ * Convert an XML tree into an HTML tree.
+ * Whitelist used for all elements and properties.
+ * @param {!Element} dom XML tree.
+ * @return {Element} HTML tree.
+ */
+CCC.World.xmlToHtml = function(dom) {
+  if (!dom) {
+    return null;
+  }
+  switch (dom.nodeType) {
+    case 1:  // Element node.
+      if (dom.tagName == 'svg') {
+        // Switch to SVG rendering mode.
+        return CCC.World.xmlToSvg(dom);
+      }
+      if (CCC.World.xmlToHtml.ELEMENT_NAMES.indexOf(dom.tagName) == -1) {
+        console.log('HTML element not in whitelist: <' + dom.tagName + '>');
+        return null;
+      }
+      var element = document.createElement(dom.tagName);
+      for (var i = 0, attr; attr = dom.attributes[i]; i++) {
+        if (CCC.World.xmlToHtml.ATTRIBUTE_NAMES.indexOf(attr.name) == -1) {
+          console.log('HTML attribute not in whitelist: ' +
+              '<' + dom.tagName + ' ' + attr.name + '="' + attr.value + '">');
+        } else {
+          element.setAttribute(attr.name, attr.value);
+        }
+      }
+      for (var i = 0, childDom; childDom = dom.childNodes[i]; i++) {
+        var childNode = CCC.World.xmlToHtml(childDom);
+        if (childNode) {
+          element.appendChild(childNode);
+        }
+      }
+      return element;
+    case 3:  // Text node.
+      return document.createTextNode(dom.data);
+    case 8:  // Comment node.
+      return null;
+  }
+  console.log('Unknown HTML node type: ' + dom);
+  return null;
+};
+
+/**
+ * Whitelist of all allowed HTML element names.
+ * 'svg' element is handled separately.
+ */
+CCC.World.xmlToHtml.ELEMENT_NAMES = [
+  'ABBR',
+  'ADDRESS',
+  'ARTICLE',
+  'ASIDE',
+  'B',
+  'BDI',
+  'BDO',
+  'BODY',
+  'BR',
+  'CAPTION',
+  'CITE',
+  'CODE',
+  'COL',
+  'COLGROUP',
+  'DATA',
+  'DD',
+  'DEL',
+  'DFN',
+  'DIV',
+  'DL',
+  'DT',
+  'EM',
+  'FIELDSET',
+  'FIGCAPTION',
+  'FIGURE',
+  'FOOTER',
+  'H1', 'H2', 'H3', 'H4', 'H5', 'H6',
+  'HEADER',
+  'HGROUP',
+  'HR',
+  'I',
+  'INS',
+  'KBD',
+  'LEGEND',
+  'LI',
+  'MAIN',
+  'MARK',
+  'NAV',
+  'OL',
+  'P',
+  'PRE',
+  'Q',
+  'RP',
+  'RT',
+  'RTC',
+  'RUBY',
+  'S',
+  'SAMP',
+  'SECTION',
+  'SMALL',
+  'SPAN',
+  'STRONG',
+  'SUB',
+  'SUP',
+  'TABLE',
+  'TBODY',
+  'TD',
+  'TFOOT',
+  'TH',
+  'THEAD',
+  'TIME',
+  'TR',
+  'U',
+  'UL',
+  'VAR',
+  'WBR',
+];
+
+/**
+ * Whitelist of all allowed HTML property names.
+ * This architecture assumes that there are no banned properties
+ * on one element type which are allowed on another.
+ * 'style' property is handled separately.
+ */
+CCC.World.xmlToHtml.ATTRIBUTE_NAMES = [
+  'cite',
+  'colspan',
+  'datetime',
+  'dir',
+  'headers',
+  'nowrap',
+  'reversed',
+  'rowspan',
+  'scope',
+  'span',
+  'start',
+  'title',
+  'type',
+  'value',
+];
+
+/**
+ * Unserialize stringified SVG.  Wrap the SVG elements in an SVG.
+ * @param {string} svgText '<rect /><circle r="5" />'
+ * @return {SVGSVGElement} <svg><rect /><circle r="5" /></svg>
  */
 CCC.World.stringToSvg = function(svgText) {
-  svgText = '<svg>' + svgText + '</svg>';
-  var dom = CCC.World.parser.parseFromString(svgText, 'image/svg+xml');
+  var dom = CCC.World.parser.parseFromString(
+      '<svg>' + svgText + '</svg>', 'image/svg+xml');
   if (dom.getElementsByTagName('parsererror').length) {
     // Not valid XML.
-    console.log('Syntax error in SVG.');
+    console.log('Syntax error in SVG: ' + svgText);
     return null;
   }
   return CCC.World.xmlToSvg(dom.firstChild);
@@ -657,26 +864,17 @@ CCC.World.xmlToSvg.ATTRIBUTE_NAMES = [
 ];
 
 /**
- * Clone a DOM tree, and append it as a new child onto an SVG.
- * Coerce the child into being a group element rather than SVG.
- * @param {!SVGElement} svg SVG parent.
- * @param {Element} newChild New content for SVG.
- * @return {SVGElement} The SVG group object that was appended.
+ * Clone a tree of elements, and append it as a new child onto a DOM.
+ * @param {!Element} parent Parent DOM element.
+ * @param {Element} container A disposable <body> or <svg> wrapper.
  */
-CCC.World.appendSvgGroup = function(svg, newChild) {
-  if (newChild) {
-    var newChild = newChild.cloneNode(true);
-    if (newChild.tagName.toLowerCase() == 'svg') {
-      // Convert SVG to group.
-      var g = document.createElementNS(CCC.World.NS, 'g');
-      while (newChild.firstChild) {
-        g.appendChild(newChild.firstChild);
-      }
-      newChild = g;
+CCC.World.cloneAndAppend = function(parent, container) {
+  if (container) {
+    var clonedContianer = container.cloneNode(true);
+    while (clonedContianer.firstChild) {
+      parent.appendChild(clonedContianer.firstChild);
     }
-    svg.appendChild(newChild);
   }
-  return newChild;
 };
 
 /**
