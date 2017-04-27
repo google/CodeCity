@@ -210,7 +210,9 @@ CCC.Log.renderXml = function(node) {
       // <htmltext>&lt;p&gt;Hello world.&lt;/p&gt;</htmltext>
       var dom = CCC.Log.parser.parseFromString(node.textContent, 'text/html');
       if (dom.body) {
-        return dom.body.textContent;
+        var div = document.createElement('div');
+        CCC.Log.renderHtmltext(div, dom.body);
+        return div;
       }
       return '';  // Illegal HTML.
     case 'scene':
@@ -276,6 +278,37 @@ CCC.Log.renderXml = function(node) {
   }
   // Unknown XML.
   return '';
+};
+
+/**
+ * Create a mostly text-based representation of the provided DOM.
+ * @param {!Element} div Div element to append content to.
+ * @param {!Node} node DOM to walk.
+ */
+CCC.Log.renderHtmltext = function(div, node) {
+  if (node.nodeType == 1) {
+    // Element.
+    if (node.tagName == 'svg') {  // SVG tagName must be lowercase.
+      return;  // No text content of this tag should be rendered.
+    }
+    if (node.tagName == 'MENUITEM') {  // MENUITEM tagName must be uppercase.
+      var cmdText = node.innerText;
+      var a = document.createElement('a');
+      a.className = 'command';
+      a.appendChild(document.createTextNode(cmdText));
+      a.addEventListener('click', function() {
+        parent.postMessage({'commands': [cmdText]}, location.origin);
+      });
+      div.appendChild(a);
+      return;
+    }
+    for (var i = 0, child; child = node.childNodes[i]; i++) {
+      CCC.Log.renderHtmltext(div, node.childNodes[i]);
+    }
+  } else if (node.nodeType == 3) {
+    // Text node.
+    div.appendChild(document.createTextNode(node.data));
+  }
 };
 
 /**

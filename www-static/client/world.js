@@ -339,6 +339,13 @@ CCC.World.prerenderPanorama = function(msg) {
     var div = CCC.World.createHiddenDiv();
     CCC.World.cloneAndAppend(div, msg.firstChild);
     CCC.World.scratchPanorama = div;
+    // Add event handlers on all <a class="command> links.
+    var as = div.querySelectorAll('a.command');
+    for (var i = 0, a; a = as[i]; i++) {
+      a.addEventListener('click', function() {
+        parent.postMessage({'commands': [this.innerText]}, location.origin);
+      });
+    }
     return true;
   }
 
@@ -629,9 +636,16 @@ CCC.World.xmlToHtml = function(dom) {
   }
   switch (dom.nodeType) {
     case 1:  // Element node.
-      if (dom.tagName == 'svg') {
+      if (dom.tagName == 'svg') {  // SVG tagName must be lowercase.
         // Switch to SVG rendering mode.
         return CCC.World.xmlToSvg(dom);
+      }
+      if (dom.tagName == 'MENUITEM') {  // MENUITEM tagName must be uppercase.
+        var cmdText = dom.innerText;
+        var a = document.createElement('a');
+        a.className = 'command';
+        a.appendChild(document.createTextNode(cmdText));
+        return a;
       }
       if (CCC.World.xmlToHtml.ELEMENT_NAMES.indexOf(dom.tagName) == -1) {
         console.log('HTML element not in whitelist: <' + dom.tagName + '>');
@@ -814,7 +828,7 @@ CCC.World.xmlToHtml.STYLE_NAMES = [
   'paddingLeft',
   'paddingRight',
   'paddingTop',
-  'textAalign',
+  'textAlign',
   'verticalAlign',
   'width',
 ];

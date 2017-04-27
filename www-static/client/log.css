@@ -37,3 +37,9 @@ pre {
 .commandDiv {
   background: #ffc;
 }
+
+a.command {
+  color: #00f;
+  cursor: pointer;
+  text-decoration: underline dotted;
+}

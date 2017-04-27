@@ -277,8 +277,16 @@ CCC.receiveMessage = function(e) {
                   origin);
     return;
   }
-  if (e.data == 'initLog' || e.data == 'initWorld') {
+  if (!e.data) {
+    // Shouldn't happen, but harmless.
+  } else if (e.data == 'initLog' || e.data == 'initWorld') {
+    // A frame is notifying us that it has fully loaded.
     CCC.countdown();
+  } else if (e.data['commands'] && e.data['commands'].length) {
+    // User has clicked a command link or command menu.
+    for (var i = 0; i < e.data['commands'].length; i++) {
+      CCC.sendCommand(e.data['commands'][i], true);
+    }
   } else {
     console.log('Unknown message received by client frame: ' + e.data);
   }

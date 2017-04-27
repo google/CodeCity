@@ -94,3 +94,9 @@ text {
   font-size: 4pt;
   stroke-width: 0;
 }
+
+#panoramaDiv a.command {
+  color: #00f;
+  cursor: pointer;
+  text-decoration: underline dotted;
+}
