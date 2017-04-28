@@ -24,14 +24,14 @@ func TestBoxedStringHasOwnProperty(t *testing.T) {
 	var s = NewBoxedString(nil, protos.StringProto, String("foo"))
 
 	if s.HasOwnProperty("foo") {
-		t.Errorf("%#v.HasOwnProperty(\"foo\") == true", s)
+		t.Errorf(`%#v.HasOwnProperty("foo") == true`, s)
 	}
 	s.Set("foo", Undefined{})
 	if !s.HasOwnProperty("foo") {
-		t.Errorf("%#v.HasOwnProperty(\"foo\") == false (after set)", s)
+		t.Errorf(`%#v.HasOwnProperty("foo") == false (after set)`, s)
 	}
 	if !s.HasOwnProperty("length") {
-		t.Errorf("%#v.HasOwnProperty(\"length\") == false", s)
+		t.Errorf(`%#v.HasOwnProperty("length") == false`, s)
 	}
 }
 
@@ -39,15 +39,15 @@ func TestBoxedStringHasProperty(t *testing.T) {
 	var s = NewBoxedString(nil, protos.StringProto, String("foo"))
 
 	if s.HasProperty("foo") {
-		t.Errorf("%#v.HasProperty(\"foo\") == true", s)
+		t.Errorf(`%#v.HasProperty("foo") == true`, s)
 	}
 	s.Proto().Set("foo", Undefined{})
 	if !s.HasProperty("foo") {
-		t.Errorf("%#v.HasProperty(\"foo\") == false (after setting parent)", s)
+		t.Errorf(`%#v.HasProperty("foo") == false (after setting parent)`, s)
 	}
 	s.Proto().Delete("foo")
 	if !s.HasProperty("length") {
-		t.Errorf("%#v.HasProperty(\"length\") == false", s)
+		t.Errorf(`%#v.HasProperty("length") == false`, s)
 	}
 }
 
@@ -64,8 +64,7 @@ func TestBoxedStringLength(t *testing.T) {
 	for _, c := range tests {
 		bstr := NewBoxedString(nil, protos.StringProto, String(c.in))
 		if l, _ := bstr.Get("length"); l != Number(c.expected) {
-			t.Errorf("new String(%#v).length == %d (expected %d)",
-				c.in, l, c.expected)
+			t.Errorf("new String(%#v).length == %d (expected %d)", c.in, l, c.expected)
 		}
 	}
 }

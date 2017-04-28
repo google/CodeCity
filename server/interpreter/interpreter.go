@@ -105,3 +105,22 @@ func (intrp *Interpreter) Value() data.Value {
 	}
 	return intrp.value.val
 }
+
+// toObject coerces its first argument into an object.  This
+// implements the ToObject algorithm in ES5.1 §9.9.
+//
+// FIXME: should throw error for null, undefined.
+func (intrp *Interpreter) toObject(value data.Value, owner *data.Owner) data.Object {
+	switch v := value.(type) {
+	case data.Boolean:
+		return data.NewBoxedBoolean(owner, intrp.protos.BooleanProto, v)
+	case data.Number:
+		return data.NewBoxedNumber(owner, intrp.protos.NumberProto, v)
+	case data.String:
+		return data.NewBoxedString(owner, intrp.protos.StringProto, v)
+	case data.Object:
+		return v
+	default:
+		panic(fmt.Errorf("Can't coerce a %T to Object", v))
+	}
+}

@@ -42,16 +42,16 @@ func TestObjectHasOwnProperty(t *testing.T) {
 	var obj = NewObject(nil, parent)
 
 	if obj.HasOwnProperty("foo") {
-		t.Errorf("%#v.HasOwnProperty(\"foo\") == true", obj)
+		t.Errorf(`%#v.HasOwnProperty("foo") == true`, obj)
 	}
 	parent.Set("foo", Undefined{})
 	if obj.HasOwnProperty("foo") {
-		t.Errorf("%#v.HasOwnProperty(\"foo\") == true "+
+		t.Errorf(`%#v.HasOwnProperty("foo") == true `+
 			"(after setting parent.foo)", obj)
 	}
 	obj.Set("foo", Undefined{})
 	if !obj.HasOwnProperty("foo") {
-		t.Errorf("%#v.HasOwnProperty(\"foo\") == false", obj)
+		t.Errorf(`%#v.HasOwnProperty("foo") == false`, obj)
 	}
 }
 
@@ -60,15 +60,15 @@ func TestObjectHasProperty(t *testing.T) {
 	var obj = NewObject(nil, parent)
 
 	if obj.HasProperty("foo") {
-		t.Errorf("%#v.HasProperty(\"foo\") == true", obj)
+		t.Errorf(`%#v.HasProperty("foo") == true`, obj)
 	}
 	parent.Set("foo", Undefined{})
 	if !obj.HasProperty("foo") {
-		t.Errorf("%#v.HasProperty(\"foo\") == false "+
+		t.Errorf(`%#v.HasProperty("foo") == false `+
 			"(after setting parent.foo)", obj)
 	}
 	obj.Set("bar", Undefined{})
 	if !obj.HasProperty("bar") {
-		t.Errorf("%#v.HasProperty(\"bar\") == false", obj)
+		t.Errorf(`%#v.HasProperty("bar") == false`, obj)
 	}
 }

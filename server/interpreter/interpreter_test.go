@@ -42,7 +42,7 @@ func TestInterpreterSimple(t *testing.T) {
 		{"var x=45; ++x; ++x", preincrement, data.Number(47)},
 		{"var x=40,y=8; x+=y; x", plusequalsLeft, data.Number(48)},
 		{"var x=40,y=8; x+=y; y", plusequalsRight, data.Number(8)},
-		{"\"foo\"+\"bar\"", concat, data.String("foobar")},
+		{`"foo"+"bar"`, concat, data.String("foobar")},
 		{"var v; var f = function() {v = 49}; f(); v",
 			simpleFunctionExpression, data.Number(49)},
 		{"var v; var f = function(x) {v = x}; f(50); v",
@@ -69,7 +69,7 @@ func TestInterpreterSimple(t *testing.T) {
 		{"(function(){var i=0;while(i++<61){try{return 42}" +
 			"finally{continue}}return i})()",
 			returnWithFinallyContinue, data.Number(62)},
-		{"63||\"foo\"", orTrue, data.Number(63)},
+		{`63||"foo"`, orTrue, data.Number(63)},
 		{"false||64", orFalse, data.Number(64)},
 		{"({})&&65", andTrue, data.Number(65)},
 		{"0&&65", andFalse, data.Number(0)},
@@ -77,11 +77,10 @@ func TestInterpreterSimple(t *testing.T) {
 			forTriangular, data.Number(66)},
 		{"var x=0, a={a:60,b:3,c:4}for(var i in a){" +
 			"x+=a[i]};x", forIn, data.Number(67)},
-		{"var x=1,o={foo:\"bar\"},a={a:2,b:2,c:17};for(o.foo in a)" +
+		{`var x=1,o={foo:"bar"},a={a:2,b:2,c:17};for(o.foo in a)` +
 			"{x*=a[o.foo]};x", forInMemberExp, data.Number(68)},
 		{"var x=0,o={},f=function(){x+=20;return o}, a={a:2,b:3,c:4}" +
-			"for(f().foo in a){x+=a[o.foo]};x", forInMembFunc,
-			data.Number(69)},
+			"for(f().foo in a){x+=a[o.foo]};x", forInMembFunc, data.Number(69)},
 		{"var o={f:function(){return this.foo},foo:70};o.f()",
 			methodCall, data.Number(70)},
 		{"var o={f:function(){return this}};var g=o.f;g()",
@@ -92,13 +91,12 @@ func TestInterpreterSimple(t *testing.T) {
 		{"{}", compValEmptyBlock, data.Undefined{}},
 		{"undefined", undefined, data.Undefined{}},
 		{"var x=70; undefined === void x++ && x", unaryVoid, data.Number(71)},
-		{"+\"72\"", unaryPlus, data.Number(72)},
+		{`+"72"`, unaryPlus, data.Number(72)},
 		{"-73", unaryMinus, data.Number(-73)},
 		{"~0xffffffb5", unaryComplement, data.Number(74)},
 		{"!false&&(!true===false)", unaryNot, data.Boolean(true)},
 		{"(many typeof tests)", unaryTypeof, data.String("pass")},
-		{"var o={foo:\"bar\"};\"foo\" in o && !(\"bar\" in o)",
-			binaryIn, data.Boolean(true)},
+		{`var o={foo:"bar"};"foo" in o && !("bar" in o)`, binaryIn, data.Boolean(true)},
 	}
 
 	for _, c := range tests {
