@@ -181,6 +181,12 @@ func newState(parent state, scope *scope, node ast.Node) state {
 		st.init(n)
 		return &st
 	case *ast.UnaryExpression:
+		// delete is handled specially:
+		if n.Operator == "delete" {
+			st := stateUnaryDeleteExpression{stateCommon: sc}
+			st.init(n)
+			return &st
+		}
 		st := stateUnaryExpression{stateCommon: sc}
 		st.init(n)
 		return &st
@@ -1365,6 +1371,41 @@ func (st *stateTryStatement) step(intrp *Interpreter, cv *cval) (state, *cval) {
 		return st.parent, cv
 	}
 	return st.parent, st.cv
+}
+
+/********************************************************************/
+
+type stateUnaryDeleteExpression struct {
+	stateCommon
+	arg ast.Expression
+}
+
+func (st *stateUnaryDeleteExpression) init(node *ast.UnaryExpression) {
+	st.arg = node.Argument
+}
+
+func (st *stateUnaryDeleteExpression) step(intrp *Interpreter, cv *cval) (state, *cval) {
+	if cv == nil {
+		return newStateForRef(st, st.scope, st.arg.E), nil
+	} else if cv.abrupt() {
+		return st.parent, cv
+	} else if cv.val.Type() != REFERENCE {
+		return st.parent, pval(data.Boolean(true))
+	}
+	ref := cv.rval()
+	if ref.isUnresolvable() {
+		// FIXME: can this ever happen?  ES7.0 §12.5.3.2, step 4a
+		// suggests that this should never occur in strict mode.
+		//
+		// FIXME: throw SyntaxError.
+		panic("unresolvable reference")
+	}
+	e := ref.delete(intrp.protos)
+	if e != nil {
+		// FIXME: throw error.
+		panic(e)
+	}
+	return st.parent, pval(data.Boolean(true))
 }
 
 /********************************************************************/

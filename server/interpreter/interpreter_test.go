@@ -83,11 +83,13 @@ func TestInterpreterSimple(t *testing.T) {
 		{`var o={foo:"bar"};"foo" in o && !("bar" in o)`, binaryIn, data.Boolean(true)},
 		{"typeof this in function on Object.proto when called on primitive",
 			strictBoxedThis, data.String("string")},
+		{`var o={foo:"bar"};(delete o.quux)+("foo" in o)+(delete o.foo)+` +
+			`!("foo" in o)+(delete o.foo)`, deleteProp, data.Number(5)},
 	}
 
 	for _, c := range tests {
 		i, _ := NewFromJSON(c.src)
-		// if c.src == unaryTypeof {
+		// if c.src == deleteProp {
 		// 	i.Verbose = true
 		// }
 		i.Run()
@@ -533,6 +535,11 @@ const binaryIn = `{"type":"Program","start":0,"end":49,"body":[{"type":"Variable
 // "foo".foo();
 // => "string"
 const strictBoxedThis = `{"type":"Program","start":0,"end":84,"body":[{"type":"ExpressionStatement","start":0,"end":13,"expression":{"type":"Literal","start":0,"end":12,"value":"use strict","raw":"\"use strict\""}},{"type":"ExpressionStatement","start":14,"end":71,"expression":{"type":"AssignmentExpression","start":14,"end":70,"operator":"=","left":{"type":"MemberExpression","start":14,"end":34,"object":{"type":"MemberExpression","start":14,"end":30,"object":{"type":"Identifier","start":14,"end":20,"name":"Object"},"property":{"type":"Identifier","start":21,"end":30,"name":"prototype"},"computed":false},"property":{"type":"Identifier","start":31,"end":34,"name":"foo"},"computed":false},"right":{"type":"FunctionExpression","start":37,"end":70,"id":null,"params":[],"body":{"type":"BlockStatement","start":48,"end":70,"body":[{"type":"ReturnStatement","start":50,"end":68,"argument":{"type":"UnaryExpression","start":57,"end":68,"operator":"typeof","prefix":true,"argument":{"type":"ThisExpression","start":64,"end":68}}}]}}}},{"type":"ExpressionStatement","start":72,"end":84,"expression":{"type":"CallExpression","start":72,"end":83,"callee":{"type":"MemberExpression","start":72,"end":81,"object":{"type":"Literal","start":72,"end":77,"value":"foo","raw":"\"foo\""},"property":{"type":"Identifier","start":78,"end":81,"name":"foo"},"computed":false},"arguments":[]}}]}`
+
+// var o = {foo: "bar"};
+// (delete o.quux) + ("foo" in o) + (delete o.foo) + !("foo" in o) + (delete o.foo)
+// => 5
+const deleteProp = `{"type":"Program","start":0,"end":102,"body":[{"type":"VariableDeclaration","start":0,"end":21,"declarations":[{"type":"VariableDeclarator","start":4,"end":20,"id":{"type":"Identifier","start":4,"end":5,"name":"o"},"init":{"type":"ObjectExpression","start":8,"end":20,"properties":[{"key":{"type":"Identifier","start":9,"end":12,"name":"foo"},"value":{"type":"Literal","start":14,"end":19,"value":"bar","raw":"\"bar\""},"kind":"init"}]}}],"kind":"var"},{"type":"ExpressionStatement","start":22,"end":102,"expression":{"type":"BinaryExpression","start":22,"end":102,"left":{"type":"BinaryExpression","start":22,"end":85,"left":{"type":"BinaryExpression","start":22,"end":69,"left":{"type":"BinaryExpression","start":22,"end":52,"left":{"type":"UnaryExpression","start":22,"end":37,"operator":"delete","prefix":true,"argument":{"type":"MemberExpression","start":30,"end":36,"object":{"type":"Identifier","start":30,"end":31,"name":"o"},"property":{"type":"Identifier","start":32,"end":36,"name":"quux"},"computed":false}},"operator":"+","right":{"type":"BinaryExpression","start":40,"end":52,"left":{"type":"Literal","start":41,"end":46,"value":"foo","raw":"\"foo\""},"operator":"in","right":{"type":"Identifier","start":50,"end":51,"name":"o"}}},"operator":"+","right":{"type":"UnaryExpression","start":55,"end":69,"operator":"delete","prefix":true,"argument":{"type":"MemberExpression","start":63,"end":68,"object":{"type":"Identifier","start":63,"end":64,"name":"o"},"property":{"type":"Identifier","start":65,"end":68,"name":"foo"},"computed":false}}},"operator":"+","right":{"type":"UnaryExpression","start":72,"end":85,"operator":"!","prefix":true,"argument":{"type":"BinaryExpression","start":73,"end":85,"left":{"type":"Literal","start":74,"end":79,"value":"foo","raw":"\"foo\""},"operator":"in","right":{"type":"Identifier","start":83,"end":84,"name":"o"}}}},"operator":"+","right":{"type":"UnaryExpression","start":88,"end":102,"operator":"delete","prefix":true,"argument":{"type":"MemberExpression","start":96,"end":101,"object":{"type":"Identifier","start":96,"end":97,"name":"o"},"property":{"type":"Identifier","start":98,"end":101,"name":"foo"},"computed":false}}}}]}`
 
 /********************************************************************/
 
