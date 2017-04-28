@@ -90,6 +90,22 @@ func (ref reference) putValue(v data.Value, intrp *Interpreter) *data.NativeErro
 	}
 }
 
+func (ref reference) delete(protos *data.Protos) *data.ErrorMsg {
+	if ref.isUnresolvable() {
+		return &data.ErrorMsg{"ReferenceError", "unresolvable reference"}
+	}
+	switch b := ref.base.(type) {
+	case data.Object:
+		return b.Delete(ref.name)
+	case data.Value:
+		return data.Coerce(b, nil, protos).Delete(ref.name)
+	case *scope:
+		return &data.ErrorMsg{"SyntaxError", "Delete of an unqualified identifier in strict mode."}
+	default:
+		panic("unexpected base type when getting reference??")
+	}
+}
+
 func (reference) Type() data.Type {
 	return REFERENCE
 }

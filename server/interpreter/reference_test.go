@@ -48,6 +48,9 @@ func TestEnvRef(t *testing.T) {
 	if v, e := ref.getValue(nil); v != data.String("bar") || e != nil {
 		t.Errorf("ref.getValue() == %#v, %#v (expected %#v, nil)", v, e, data.String("bar"))
 	}
+	if e := ref.delete(nil); e == nil || e.Name != "SyntaxError" {
+		t.Errorf("ref.delete() == %#v (exected SyntaxError)", e)
+	}
 }
 
 func TestPropRef(t *testing.T) {
@@ -74,6 +77,9 @@ func TestPropRef(t *testing.T) {
 	if v, e := ref.getValue(nil); v != data.String("bar") || e != nil {
 		t.Errorf("ref.getValue() == %#v, %#v (expected %#v, nil)", v, e, data.String("bar"))
 	}
+	if e := ref.delete(nil); e != nil {
+		t.Errorf("ref.delete() == %#v (exected nil)", e)
+	}
 }
 
 func TestPrimRef(t *testing.T) {
@@ -99,6 +105,9 @@ func TestPrimRef(t *testing.T) {
 	}
 	if v, e := ref.getValue(intrp); v != data.Number(3) || e != nil {
 		t.Errorf("ref.getValue() == %#v, %#v (expected %#v, nil)", v, e, data.Number(3))
+	}
+	if e := ref.delete(protos); e == nil || e.Name != "TypeError" {
+		t.Errorf("ref.delete() == %#v (exected TypeError)", e)
 	}
 }
 
