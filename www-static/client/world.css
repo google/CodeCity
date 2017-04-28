@@ -1,21 +1,7 @@
 body {
-  color: #444;
-  background-color: #fff;
   font-family: 'Patrick Hand', 'Comic Sans MS';
   margin: 0;
   overflow: hidden;
-}
-
-#scrollDiv {
-  bottom: 0;
-  left: 0;
-  max-height: 100%;
-  overflow-y: auto;
-  position: absolute;
-  right: 0;
-}
-
-.historyRow {
 }
 
 .historyPanel {
@@ -93,32 +79,4 @@ text {
   fill: #000;
   font-size: 4pt;
   stroke-width: 0;
-}
-
-#panoramaDiv a.command {
-  cursor: pointer;
-  text-decoration: underline dotted;
-}
-
-#panoramaDiv a.command:hover {
-  color: #d00;
-}
-
-svg.menuIcon {
-  display: none;
-}
-
-#panoramaDiv svg.menuIcon {
-  cursor: pointer;
-  display: inline;
-  fill: #000;
-  height: 10px;
-  opacity: .7;
-  stroke: none;
-  vertical-align: top;
-  width: 10px;
-}
-
-#panoramaDiv svg.menuIcon:hover {
-  fill: #d00;
 }

@@ -24,8 +24,8 @@
  */
 'use strict';
 
-var CCC = {};
 CCC.Log = {};
+
 
 /**
  * Maximum number of lines saved in history.

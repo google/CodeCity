@@ -24,8 +24,8 @@
  */
 'use strict';
 
-var CCC = {};
 CCC.World = {};
+
 
 /**
  * Maximum number of messages saved in history.
@@ -272,6 +272,15 @@ CCC.World.prerenderHistory = function(msg) {
   if (msg.tagName == 'htmldom') {
     var div = CCC.World.createHiddenDiv();
     CCC.World.cloneAndAppend(div, msg.firstChild);
+    // Strip all command links and menus.
+    var menus = div.querySelectorAll('svg.menuIcon');
+    for (var i = 0, menu; menu = menus[i]; i++) {
+      menu.parentNode.removeChild(menu);
+    }
+    var commands = div.querySelectorAll('a.command');
+    for (var i = 0, command; command = commands[i]; i++) {
+      command.className = '';
+    }
     CCC.World.scratchHistory = div;
     return true;
   }
@@ -329,10 +338,10 @@ CCC.World.prerenderPanorama = function(msg) {
     var div = CCC.World.createHiddenDiv();
     CCC.World.cloneAndAppend(div, msg.firstChild);
     CCC.World.scratchPanorama = div;
-    // Add event handlers on all <a class="command> links.
-    var as = div.querySelectorAll('a.command');
-    for (var i = 0, a; a = as[i]; i++) {
-      a.addEventListener('click', function() {
+    // Add event handlers on all <a class="command"> links.
+    var commands = div.querySelectorAll('a.command');
+    for (var i = 0, command; command = commands[i]; i++) {
+      command.addEventListener('click', function() {
         parent.postMessage({'commands': [this.innerText]}, location.origin);
       });
     }

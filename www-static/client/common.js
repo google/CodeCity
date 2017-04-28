@@ -24,6 +24,7 @@
  */
 'use strict';
 
+var CCC = {};
 CCC.Common = {};
 
 

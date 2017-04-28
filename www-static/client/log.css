@@ -1,17 +1,9 @@
 body {
-  color: #444;
-  background-color: #fff;
   font-family: 'Roboto Mono', monospace;
 }
 
 #scrollDiv {
-  bottom: 0;
-  left: 0;
-  max-height: 100%;
-  overflow-y: auto;
   padding-left: 15px;
-  position: absolute;
-  right: 0;
 }
 
 .zippySpan {
@@ -40,25 +32,4 @@ pre {
 
 .commandDiv {
   background: #ffc;
-}
-
-a.command {
-  cursor: pointer;
-  text-decoration: underline dotted;
-}
-
-a.command:hover {
-  color: #d00;
-}
-
-svg.menuIcon {
-  cursor: pointer;
-  height: 10px;
-  opacity: .7;
-  vertical-align: top;
-  width: 10px;
-}
-
-svg.menuIcon:hover {
-  fill: #d00;
 }
