@@ -796,14 +796,15 @@ func (st *stateForInStatement) step(intrp *Interpreter, cv *cval) (state, *cval)
 			if cv.abrupt() {
 				return st.parent, cv
 			}
-			obj := cv.pval()
+			right := cv.pval()
 			// FIXME: should call ToObject() which in turn could call user
 			// code to get valueOf().
-			if (obj == data.Null{} || obj == data.Undefined{}) {
+			if (right == data.Null{} || right == data.Undefined{}) {
 				return st.parent, &cval{NORMAL, nil, ""}
 			}
 			// FIXME: set owner:
-			st.iter = data.NewPropIter(data.Coerce(obj, nil, intrp.protos))
+			obj := intrp.toObject(right, nil)
+			st.iter = data.NewPropIter(obj)
 			fallthrough
 		case forInPrepLeft:
 			n, ok := st.iter.Next()
@@ -882,8 +883,7 @@ func (st *stateFunctionExpression) init(node *ast.FunctionExpression) {
 
 func (st *stateFunctionExpression) step(intrp *Interpreter, cv *cval) (state, *cval) {
 	// FIXME: set owner:
-	return st.parent, pval(newClosure(nil, intrp.protos.FunctionProto,
-		st.scope, st.params, st.body))
+	return st.parent, pval(newClosure(nil, intrp.protos.FunctionProto, st.scope, st.params, st.body))
 }
 
 /********************************************************************/
@@ -1043,7 +1043,7 @@ func (st *stateMemberExpression) step(intrp *Interpreter, cv *cval) (state, *cva
 		return st.parent, cv
 	} else if st.base == nil {
 		// FIXME: set owner:
-		st.base = data.Coerce(cv.pval(), nil, intrp.protos)
+		st.base = intrp.toObject(cv.pval(), nil)
 		if st.computed {
 			return newState(st, st.scope, ast.Node(st.membExpr.E)), nil
 		}
@@ -1379,7 +1379,7 @@ func (st *stateUnaryExpression) step(intrp *Interpreter, cv *cval) (state, *cval
 	case "!":
 		r = data.Boolean(!(cv.pval().ToBoolean()))
 	default:
-		panic(fmt.Errorf("Unary operator \"%s\" not implemented", st.op))
+		panic(fmt.Errorf(`Unary operator "%s" not implemented`, st.op))
 	}
 	return st.parent, &cval{NORMAL, r, ""}
 }
@@ -1629,7 +1629,7 @@ func (lv *lvalue) step(intrp *Interpreter, cv *cval) (state, *cval) {
 		return lv.parent, cv
 	} else if !lv.haveBase {
 		// FIXME: set owner:
-		lv.base = data.Coerce(cv.pval(), nil, intrp.protos)
+		lv.base = intrp.toObject(cv.pval(), nil)
 		lv.haveBase = true
 		if lv.computed {
 			return newState(lv, lv.scope, ast.Node(lv.membExpr.E)), nil

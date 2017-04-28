@@ -17,9 +17,19 @@
 package data
 
 // An Owner is an object that can own other objects and properties.
+//
+// One of CodeCity's extensions to JavaScript is that the interpreter
+// keeps track of who owns each (non-primitive) object and each
+// individual property thereon.  When an object or property is created
+// it is usually owned by the programmer whose code created it, as
+// represented by their Owner object.  (Other Owner objects could also
+// represent role accounts, multi-user groups etc.)
+//
+// To avoid shenanigans, the interpreter enforces the invariant that
+// an object's (or property's) owner must be an instance of Owner.
 type Owner struct {
 	object
-	// FIXME: other fields go here.
+	// FIXME: other fields (quota limits etc.) go here.
 }
 
 // *Owner must satisfy Object.

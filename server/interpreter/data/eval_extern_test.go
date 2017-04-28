@@ -227,22 +227,21 @@ func TestBinaryOpIn(t *testing.T) {
 
 	v, e := BinaryOp(String("foo"), "in", obj)
 	if v != Boolean(false) || e != nil {
-		t.Errorf("\"foo\" in, %#v == (%#v, %#v) (expected (false, nil))",
+		t.Errorf(`"foo" in, %#v == (%#v, %#v) (expected (false, nil))`,
 			obj, v, e)
 	}
 	parent.Set("foo", Undefined{})
 	v, e = BinaryOp(String("foo"), "in", obj)
 	if v != Boolean(true) || e != nil {
-		t.Errorf("\"foo\" in, %#v == (%#v, %#v) (expected (true, nil))",
+		t.Errorf(`"foo" in, %#v == (%#v, %#v) (expected (true, nil))`,
 			obj, v, e)
 	}
 	v, e = BinaryOp(String("length"), "in", NewArray(nil, protos.ArrayProto))
 	if v != Boolean(true) || e != nil {
-		t.Errorf("\"foo\" in [] == (%#v, %#v) (expected true, nil)", v, e)
+		t.Errorf(`"foo" in [] == (%#v, %#v) (expected true, nil)`, v, e)
 	}
 	v, e = BinaryOp(String("length"), "in", String("foo"))
 	if e == nil || e.Name != "TypeError" {
-		t.Errorf("\"length\" in \"foo\" == (%#v, %#v) "+
-			"(expected nil, TypeError)", v, e)
+		t.Errorf(`"length" in "foo" == (%#v, %#v) (expected nil, TypeError)`, v, e)
 	}
 }

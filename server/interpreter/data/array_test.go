@@ -86,13 +86,13 @@ func TestAsLength(t *testing.T) {
 func TestArray(t *testing.T) {
 	a := NewArray(nil, protos.ArrayProto)
 	if !a.HasOwnProperty("length") {
-		t.Errorf("%v.HasOwnProperty(\"length\") == false", a)
+		t.Errorf(`%v.HasOwnProperty("length") == false`, a)
 	}
 	if !a.HasProperty("length") {
-		t.Errorf("%v.HasProperty(\"length\") == false", a)
+		t.Errorf(`%v.HasProperty("length") == false`, a)
 	}
 	if props := a.OwnPropertyKeys(); len(props) != 1 || props[0] != "length" {
-		t.Errorf("%v.OwnPropertyKeys == %#v (expected [\"length\"])", a, props)
+		t.Errorf(`%v.OwnPropertyKeys == %#v (expected ["length"])`, a, props)
 	}
 	if a.Delete("length") == nil {
 		t.Error("delete([].length) failed to report error")

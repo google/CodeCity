@@ -22,7 +22,9 @@ type Object interface {
 	Value
 
 	// Proto returns the prototype (parent) object for this object.
-	// N.B. this is object.__proto__, not Constructor.prototype!
+	// N.B. this is the value returned by Object.getPrototypeOf(foo)
+	// (and by foo.__proto__, if not overridden); it is unrelated to
+	// the .prototype property on Functions.
 	Proto() Object
 
 	// Get returns the current value of the given property or an

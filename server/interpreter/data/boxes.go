@@ -135,8 +135,7 @@ func (bstr *BoxedString) Get(key string) (Value, *ErrorMsg) {
 func (bstr *BoxedString) Set(key string, value Value) *ErrorMsg {
 	if key == "length" {
 		return &ErrorMsg{"TypeError",
-			fmt.Sprintf("Cannot assign to read only property '%s' of %s",
-				key, bstr.ToString())}
+			fmt.Sprintf("Cannot assign to read only property '%s' of %s", key, bstr.ToString())}
 	}
 	return bstr.object.Set(key, value)
 }
@@ -148,8 +147,7 @@ func (bstr *BoxedString) Set(key string, value Value) *ErrorMsg {
 func (bstr *BoxedString) Delete(key string) *ErrorMsg {
 	if key == "length" {
 		return &ErrorMsg{"TypeError",
-			fmt.Sprintf("Cannot delete property '%s' of %s",
-				key, bstr.ToString())}
+			fmt.Sprintf("Cannot delete property '%s' of %s", key, bstr.ToString())}
 	}
 	return bstr.object.Delete(key)
 }
@@ -216,22 +214,4 @@ func NewBoxedString(owner *Owner, proto Object, value String) *BoxedString {
 	bstr.f = true
 	bstr.value = value
 	return bstr
-}
-
-/********************************************************************/
-
-// Coerce coerces its first argument into an object.
-func Coerce(value Value, owner *Owner, protos *Protos) Object {
-	switch v := value.(type) {
-	case Object:
-		return v
-	case Boolean:
-		return NewBoxedBoolean(owner, protos.BooleanProto, v)
-	case Number:
-		return NewBoxedNumber(owner, protos.NumberProto, v)
-	case String:
-		return NewBoxedString(owner, protos.StringProto, v)
-	default:
-		panic(fmt.Errorf("Can't coerce a %T to Object", v))
-	}
 }

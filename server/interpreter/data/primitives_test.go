@@ -66,7 +66,7 @@ func TestBoolean(t *testing.T) {
 		t.Errorf("%v.Type() == %#v (expected %#v)", b, b.Type(), BOOLEAN)
 	}
 	if b.Typeof() != "boolean" {
-		t.Errorf("%v.Typeof() == %#v (expected \"boolean\")", b, b.Typeof())
+		t.Errorf(`%v.Typeof() == %#v (expected "boolean")`, b, b.Typeof())
 	}
 }
 
@@ -76,7 +76,7 @@ func TestNumber(t *testing.T) {
 		t.Errorf("%v.Type() == %#v (expected %#v)", n, n.Type(), NUMBER)
 	}
 	if n.Typeof() != "number" {
-		t.Errorf("%v.Typeof() == %#v (expected \"number\")", n, n.Typeof())
+		t.Errorf(`%v.Typeof() == %#v (expected "number")`, n, n.Typeof())
 	}
 }
 
@@ -86,7 +86,7 @@ func TestString(t *testing.T) {
 		t.Errorf("%v.Type() == %#v (expected %#v)", s, s.Type(), STRING)
 	}
 	if s.Typeof() != "string" {
-		t.Errorf("%v.Typeof() == %#v (expected \"string\")", s, s.Typeof())
+		t.Errorf(`%v.Typeof() == %#v (expected "string")`, s, s.Typeof())
 	}
 }
 
@@ -114,7 +114,7 @@ func TestNull(t *testing.T) {
 		t.Errorf("Null{}.Type() == %#v (expected %#v)", v, NULL)
 	}
 	if v := n.Typeof(); v != "object" {
-		t.Errorf("Null{}.Type() == %#v (expected \"object\")", v)
+		t.Errorf(`Null{}.Type() == %#v (expected "object")`, v)
 	}
 }
 
@@ -124,7 +124,7 @@ func TestUndefined(t *testing.T) {
 		t.Errorf("Undefined{}.Type() == %#v (expected %#v)", v, UNDEFINED)
 	}
 	if v := u.Typeof(); v != "undefined" {
-		t.Errorf("Undefined{}.Typeof() == %#v (expected \"undefined\")", v)
+		t.Errorf(`Undefined{}.Typeof() == %#v (expected "undefined")`, v)
 	}
 }
 
