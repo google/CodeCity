@@ -28,6 +28,10 @@ body {
   content: '▾ ';
 }
 
+.zippySpan:hover {
+  color: #d00;
+}
+
 pre {
   font-family: 'Roboto Mono', monospace;
   margin-bottom: 0;
@@ -39,7 +43,22 @@ pre {
 }
 
 a.command {
-  color: #00f;
   cursor: pointer;
   text-decoration: underline dotted;
+}
+
+a.command:hover {
+  color: #d00;
+}
+
+svg.menuIcon {
+  cursor: pointer;
+  height: 10px;
+  opacity: .7;
+  vertical-align: top;
+  width: 10px;
+}
+
+svg.menuIcon:hover {
+  fill: #d00;
 }

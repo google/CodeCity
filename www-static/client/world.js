@@ -83,12 +83,6 @@ CCC.World.resizePid = 0;
 CCC.World.lastWidth = NaN;
 
 /**
- * Namespace for SVG elements.
- * @constant
- */
-CCC.World.NS = 'http://www.w3.org/2000/svg';
-
-/**
  * SVG scratchpad for rendering potential history panels.
  * @type {Element}
  */
@@ -244,12 +238,12 @@ CCC.World.prerenderHistory = function(msg) {
   if (msg.tagName == 'iframe') {
     // Create relaunch button if iframe is closed.
     svg.style.backgroundColor = '#696969';
-    var g = document.createElementNS(CCC.World.NS, 'g');
+    var g = document.createElementNS(CCC.Common.NS, 'g');
     g.setAttribute('class', 'iframeRelaunch');
     g.setAttribute('transform', 'translate(0, 50)');
     // Add relaunch button.
-    var rect = document.createElementNS(CCC.World.NS, 'rect');
-    var text = document.createElementNS(CCC.World.NS, 'text');
+    var rect = document.createElementNS(CCC.Common.NS, 'rect');
+    var text = document.createElementNS(CCC.Common.NS, 'text');
     text.appendChild(document.createTextNode(
         CCC.Common.getMsg('relaunchIframeMsg')));
     g.appendChild(rect);
@@ -306,7 +300,7 @@ CCC.World.prerenderHistory = function(msg) {
       CCC.World.cloneAndAppend(svg, svgdom.firstChild);
     }
   }
-  var text = document.createElementNS(CCC.World.NS, 'text');
+  var text = document.createElementNS(CCC.Common.NS, 'text');
   text.appendChild(document.createTextNode(msg));
   text.setAttribute('x', 10);
   text.setAttribute('y', 50);
@@ -466,7 +460,7 @@ CCC.World.positionIframe = function (iframe, container) {
  * @return {!SVGElement} SVG element.
  */
 CCC.World.createHiddenSvg = function(width, height) {
-  var svg = document.createElementNS(CCC.World.NS, 'svg');
+  var svg = document.createElementNS(CCC.Common.NS, 'svg');
   svg.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
   svg.style.visibility = 'hidden';
   document.body.appendChild(svg);
@@ -632,11 +626,14 @@ CCC.World.xmlToHtml = function(dom) {
   }
   switch (dom.nodeType) {
     case 1:  // Element node.
-      if (dom.tagName == 'svg') {  // SVG tagName must be lowercase.
+      if (dom.tagName == 'svg') {  // XML tagNames are lowercase.
         // Switch to SVG rendering mode.
         return CCC.World.xmlToSvg(dom);
       }
-      if (dom.tagName == 'MENUITEM') {  // MENUITEM tagName must be uppercase.
+      if (dom.tagName == 'CMDS') {  // HTML tagNames are uppercase.
+        return CCC.Common.newMenuIcon();
+      }
+      if (dom.tagName == 'CMD') {  // HTML tagNames are uppercase.
         var cmdText = dom.innerText;
         var a = document.createElement('a');
         a.className = 'command';
@@ -697,6 +694,7 @@ CCC.World.xmlToHtml.ELEMENT_NAMES = [
   'B',
   'BDI',
   'BDO',
+  'BLOCKQUOTE',
   'BODY',
   'BR',
   'CAPTION',
@@ -861,7 +859,7 @@ CCC.World.xmlToSvg = function(dom) {
         console.log('SVG element not in whitelist: <' + dom.tagName + '>');
         return null;
       }
-      var svg = document.createElementNS(CCC.World.NS, dom.tagName);
+      var svg = document.createElementNS(CCC.Common.NS, dom.tagName);
       for (var i = 0, attr; attr = dom.attributes[i]; i++) {
         if (CCC.World.xmlToSvg.ATTRIBUTE_NAMES.indexOf(attr.name) == -1) {
           console.log('SVG attribute not in whitelist: ' +

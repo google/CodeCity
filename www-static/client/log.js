@@ -281,10 +281,15 @@ CCC.Log.renderXml = function(node) {
 CCC.Log.renderHtmltext = function(div, node) {
   if (node.nodeType == 1) {
     // Element.
-    if (node.tagName == 'svg') {  // SVG tagName must be lowercase.
+    if (node.tagName == 'svg') {  // XML tagNames are lowercase.
       return;  // No text content of this tag should be rendered.
     }
-    if (node.tagName == 'MENUITEM') {  // MENUITEM tagName must be uppercase.
+    if (node.tagName == 'CMDS') {  // HTML tagNames are uppercase.
+      var icon = CCC.Common.newMenuIcon();
+      div.appendChild(icon);
+      return;
+    }
+    if (node.tagName == 'CMD') {  // HTML tagNames are uppercase.
       var cmdText = node.innerText;
       var a = document.createElement('a');
       a.className = 'command';
@@ -298,11 +303,36 @@ CCC.Log.renderHtmltext = function(div, node) {
     for (var i = 0, child; child = node.childNodes[i]; i++) {
       CCC.Log.renderHtmltext(div, node.childNodes[i]);
     }
+    if (CCC.Log.renderHtmltext.BLOCK_NAMES.indexOf(node.tagName) != -1) {
+      div.appendChild(document.createElement('br'));
+    }
   } else if (node.nodeType == 3) {
     // Text node.
     div.appendChild(document.createTextNode(node.data));
   }
 };
+
+/**
+ * List of elements that are blocks, rather than inline.
+ */
+CCC.Log.renderHtmltext.BLOCK_NAMES = [
+  'ADDRESS',
+  'BLOCKQUOTE',
+  'BR',
+  'DIV',
+  'DL',
+  'DT',
+  'FIELDSET',
+  'H1', 'H2', 'H3', 'H4', 'H5', 'H6',
+  'HR',
+  'LI',
+  'OL',
+  'P',
+  'PRE',
+  'TABLE',
+  'TR',
+  'UL',
+];
 
 /**
  * Make a natural language list.  Don't use Oxford comma due to lack of plurals.

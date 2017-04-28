@@ -28,6 +28,12 @@ CCC.Common = {};
 
 
 /**
+ * Namespace for SVG elements.
+ * @constant
+ */
+CCC.Common.NS = 'http://www.w3.org/2000/svg';
+
+/**
  * Initialization code called on startup.
  */
 CCC.Common.init = function() {
@@ -71,4 +77,17 @@ CCC.Common.getMsg = function(key, var_args) {
     text = text.replace('%' + i, arguments[i]);
   }
   return text;
+};
+
+/**
+ * Create a command menu icon.
+ * @return {!SVGSVGElement} Root element of icon.
+ */
+CCC.Common.newMenuIcon = function() {
+  var svg = document.createElementNS(CCC.Common.NS, 'svg');
+  svg.setAttribute('class', 'menuIcon');
+  var path = document.createElementNS(CCC.Common.NS, 'path');
+  path.setAttribute('d', 'm 1,2 4,4 4,-4 z');
+  svg.appendChild(path);
+  return svg;
 };
