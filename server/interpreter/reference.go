@@ -46,9 +46,12 @@ func (ref reference) isPropRef() bool {
 
 // isUnresolvable is IsUnresolvableReference in ES5.1 spec.
 func (ref reference) isUnresolvable() bool {
-	return ref.base != nil
+	return ref.base == nil
 }
 
+// getValue is GetValue in the ES5.1 spec; the *Interpreter parameter
+// allows access to Interpreter.toObject() and may be nil if base is
+// known not to be a primitive.
 func (ref reference) getValue(intrp *Interpreter) (data.Value, *data.NativeError) {
 	if ref.isUnresolvable() {
 		return nil, &data.NativeError{data.ReferenceError, "unresolvable reference"}
@@ -66,7 +69,10 @@ func (ref reference) getValue(intrp *Interpreter) (data.Value, *data.NativeError
 	}
 }
 
-func (ref reference) putValue(intrp *Interpreter, v data.Value) *data.NativeError {
+// putValue is PutValue in the ES5.1 spec; the extra *Interpreter
+// parameter allows access to Interpreter.toObject() and may be nil if
+// base is known not to be a primitive.
+func (ref reference) putValue(v data.Value, intrp *Interpreter) *data.NativeError {
 	if ref.isUnresolvable() {
 		return &data.NativeError{data.ReferenceError, "unresolvable reference"}
 	}
