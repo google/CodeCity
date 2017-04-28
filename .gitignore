@@ -8,3 +8,5 @@ server/nodejs/connectServer.cfg
 
 server/interpreter/template
 server/interpreter/ast/sample-ast.json
+
+server/nodejs/nohup.out
