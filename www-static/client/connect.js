@@ -279,7 +279,7 @@ CCC.receiveMessage = function(e) {
   }
   if (!e.data) {
     // Shouldn't happen, but harmless.
-  } else if (e.data == 'initLog' || e.data == 'initWorld') {
+  } else if (e.data == 'init') {
     // A frame is notifying us that it has fully loaded.
     CCC.countdown();
   } else if (e.data['commands'] && e.data['commands'].length) {

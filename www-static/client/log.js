@@ -50,14 +50,9 @@ CCC.Log.userName = undefined;
  * Initialization code called on startup.
  */
 CCC.Log.init = function() {
+  CCC.Common.init();
   CCC.Log.scrollDiv = document.getElementById('scrollDiv');
-  CCC.Log.parser = new DOMParser();
-  CCC.Log.serializer = new XMLSerializer();
-
   window.addEventListener('resize', CCC.Log.scrollToBottom, false);
-
-  // Report back to the parent frame that we're fully loaded and ready to go.
-  parent.postMessage('initLog', location.origin);
   // Lazy-load prettify library.
   setTimeout(CCC.Log.importPrettify, 1);
 };
@@ -84,14 +79,12 @@ CCC.Log.importPrettify = function() {
  * @param {!Event} e Incoming message event.
  */
 CCC.Log.receiveMessage = function(e) {
-  var origin = e.origin || e.originalEvent.origin;
-  if (origin != location.origin) {
-    console.error('Message received by log frame from unknown origin: ' +
-                  origin);
+  var data = CCC.Common.verifyMessage(e);
+  if (!data) {
     return;
   }
-  var mode = e.data['mode'];
-  var text = e.data['text'];
+  var mode = data['mode'];
+  var text = data['text'];
   if (mode == 'clear') {
     CCC.Log.scrollDiv.innerHTML = '';
   } else if (mode == 'command') {
@@ -99,7 +92,7 @@ CCC.Log.receiveMessage = function(e) {
     div.className = 'commandDiv';
     CCC.Log.appendRow(div);
   } else {
-    var dom = CCC.Log.parser.parseFromString(text, 'text/xml');
+    var dom = CCC.Common.parser.parseFromString(text, 'text/xml');
     if (dom.getElementsByTagName('parsererror').length) {
       // Not valid XML, treat as string literal.
       var div = CCC.Log.textToHtml(text);
@@ -139,7 +132,7 @@ CCC.Log.textToHtml = function(text) {
  */
 CCC.Log.addXml = function(dom) {
   var rendered = CCC.Log.renderXml(dom);
-  var code = CCC.Log.serializer.serializeToString(dom);
+  var code = CCC.Common.serializer.serializeToString(dom);
   var pre = document.createElement('pre');
   pre.textContent = code;
   if (typeof prettyPrint == 'function') {
@@ -208,7 +201,7 @@ CCC.Log.renderXml = function(node) {
       return div;
     case 'htmltext':
       // <htmltext>&lt;p&gt;Hello world.&lt;/p&gt;</htmltext>
-      var dom = CCC.Log.parser.parseFromString(node.textContent, 'text/html');
+      var dom = CCC.Common.parser.parseFromString(node.textContent, 'text/html');
       if (dom.body) {
         var div = document.createElement('div');
         CCC.Log.renderHtmltext(div, dom.body);
@@ -256,23 +249,23 @@ CCC.Log.renderXml = function(node) {
         text += description + '\n';
       }
       if (objects.length == 1) {
-        text += CCC.getMsg('roomObjectMsg', objects[0]);
+        text += CCC.Common.getMsg('roomObjectMsg', objects[0]);
       } else if (objects.length > 1) {
-        text += CCC.getMsg('roomObjectsMsg', CCC.Log.naturalList(objects));
+        text += CCC.Common.getMsg('roomObjectsMsg', CCC.Log.naturalList(objects));
       }
       if (users.length == 1) {
-        text += CCC.getMsg('roomUserMsg', users[0]);
+        text += CCC.Common.getMsg('roomUserMsg', users[0]);
       } else if (users.length > 1) {
-        text += CCC.getMsg('roomUsersMsg', CCC.Log.naturalList(users));
+        text += CCC.Common.getMsg('roomUsersMsg', CCC.Log.naturalList(users));
       }
       return text;
     case 'say':
       // <say user="Max" room="The Hangout">Hello world.</say>
       var user = node.getAttribute('user');
       if (CCC.Log.userName === user) {
-        var text = CCC.getMsg('saySelfMsg', node.textContent);
+        var text = CCC.Common.getMsg('saySelfMsg', node.textContent);
       } else {
-        var text = CCC.getMsg('sayMsg', user, node.textContent);
+        var text = CCC.Common.getMsg('sayMsg', user, node.textContent);
       }
       return text;
   }
@@ -321,7 +314,7 @@ CCC.Log.naturalList = function(list) {
   var text = list.slice(0, -1).join(', ');
   var last = list[list.length - 1];
   if (text) {
-    text += ' ' + CCC.getMsg('andMsg') + ' ' + last;
+    text += ' ' + CCC.Common.getMsg('andMsg') + ' ' + last;
   } else {
     text = last;
   }
@@ -346,27 +339,7 @@ CCC.Log.appendRow = function(element) {
  */
 CCC.Log.scrollToBottom = function() {
   CCC.Log.scrollDiv.scrollTop = CCC.Log.scrollDiv.scrollHeight;
-};
-
-/**
- * Gets the message with the given key from the document.
- * @param {string} key The key of the document element.
- * @param {...string} var_args Optional substitutions for %1, %2, ...
- * @return {string} The textContent of the specified element.
- */
-CCC.getMsg = function(key, var_args) {
-  var element = document.getElementById(key);
-  if (!element) {
-    throw 'Unknown message ' + key;
-  }
-  var text = element.textContent;
-  // Convert newline sequences.
-  text = text.replace(/\\n/g, '\n');
-  // Inject any substitutions.
-  for (var i = 1; i < arguments.length; i++) {
-    text = text.replace('%' + i, arguments[i]);
-  }
-  return text;
+  CCC.Log.scrollDiv.scrollLeft = 0;
 };
 
 window.addEventListener('message', CCC.Log.receiveMessage, false);

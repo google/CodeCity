@@ -115,16 +115,13 @@ CCC.World.scene = null;
  * Initialization code called on startup.
  */
 CCC.World.init = function() {
+  CCC.Common.init();
   CCC.World.scrollDiv = document.getElementById('scrollDiv');
   CCC.World.panoramaDiv = document.getElementById('panoramaDiv');
-  CCC.World.parser = new DOMParser();
   CCC.World.scrollBarWidth = CCC.World.getScrollBarWidth();
   delete CCC.World.getScrollBarWidth;  // Free memory.
 
   window.addEventListener('resize', CCC.World.resizeSoon, false);
-
-  // Report back to the parent frame that we're fully loaded and ready to go.
-  parent.postMessage('initWorld', location.origin);
 };
 
 /**
@@ -132,14 +129,12 @@ CCC.World.init = function() {
  * @param {!Event} e Incoming message event.
  */
 CCC.World.receiveMessage = function(e) {
-  var origin = e.origin || e.originalEvent.origin;
-  if (origin != location.origin) {
-    console.error('Message received by world frame from unknown origin: ' +
-                  origin);
+  var data = CCC.Common.verifyMessage(e);
+  if (!data) {
     return;
   }
-  var mode = e.data['mode'];
-  var text = e.data['text'];
+  var mode = data['mode'];
+  var text = data['text'];
   if (mode == 'clear') {
     document.getElementById('iframeStorage').innerHTML = '';
     CCC.World.historyMessages.length = 0;
@@ -150,7 +145,7 @@ CCC.World.receiveMessage = function(e) {
     CCC.World.renderHistory();
     CCC.World.scene = scene;  // Restore the scene.
   } else if (mode == 'message') {
-    var dom = CCC.World.parser.parseFromString(text, 'text/xml');
+    var dom = CCC.Common.parser.parseFromString(text, 'text/xml');
     if (dom.getElementsByTagName('parsererror').length) {
       // Not valid XML, treat as string literal.
       CCC.World.renderMessage(text);
@@ -244,8 +239,8 @@ CCC.World.prerenderHistory = function(msg) {
   if (CCC.World.panoramaMessages.length) {
     return false;
   }
-  var svg =
-      CCC.World.createHiddenSvg(CCC.World.panelWidths[0], CCC.World.panelHeight);
+  var svg = CCC.World.createHiddenSvg(CCC.World.panelWidths[0],
+                                      CCC.World.panelHeight);
   if (msg.tagName == 'iframe') {
     // Create relaunch button if iframe is closed.
     svg.style.backgroundColor = '#696969';
@@ -255,7 +250,8 @@ CCC.World.prerenderHistory = function(msg) {
     // Add relaunch button.
     var rect = document.createElementNS(CCC.World.NS, 'rect');
     var text = document.createElementNS(CCC.World.NS, 'text');
-    text.appendChild(document.createTextNode(CCC.getMsg('relaunchIframeMsg')));
+    text.appendChild(document.createTextNode(
+        CCC.Common.getMsg('relaunchIframeMsg')));
     g.appendChild(rect);
     g.appendChild(text);
     g.addEventListener('click', function() {
@@ -392,7 +388,7 @@ CCC.World.publishHistory = function() {
       var closeImg = new Image(21, 21);
       closeImg.className = 'iframeClose';
       closeImg.src = 'close.png';
-      closeImg.title = CCC.getMsg('closeIframeMsg');
+      closeImg.title = CCC.Common.getMsg('closeIframeMsg');
       closeImg.addEventListener('click', function() {
         closeImg.style.display = 'none';
         panelDiv.firstChild.style.visibility = 'visible';  // SVG.
@@ -479,8 +475,8 @@ CCC.World.createHiddenSvg = function(width, height) {
   height -= CCC.World.panelBorder * 2;
   svg.scaledHeight_ = 100;
   svg.scaledWidth_ = width / height * svg.scaledHeight_;
-  svg.setAttribute('viewBox',
-      [-svg.scaledWidth_ / 2, 0, svg.scaledWidth_, svg.scaledHeight_].join(' '));
+  svg.setAttribute('viewBox', [-svg.scaledWidth_ / 2, 0,
+                               svg.scaledWidth_, svg.scaledHeight_].join(' '));
   return svg;
 };
 
@@ -615,7 +611,7 @@ CCC.World.rowWidths = function() {
  * @return {Element} <body><p>Hello</p></body>
  */
 CCC.World.stringToHtml = function(htmlText) {
-  var dom = CCC.World.parser.parseFromString(htmlText, 'text/html');
+  var dom = CCC.Common.parser.parseFromString(htmlText, 'text/html');
   if (!dom.body) {
     // Not valid XML.
     console.log('Syntax error in HTML: ' + htmlText);
@@ -839,7 +835,7 @@ CCC.World.xmlToHtml.STYLE_NAMES = [
  * @return {SVGSVGElement} <svg><rect /><circle r="5" /></svg>
  */
 CCC.World.stringToSvg = function(svgText) {
-  var dom = CCC.World.parser.parseFromString(
+  var dom = CCC.Common.parser.parseFromString(
       '<svg>' + svgText + '</svg>', 'image/svg+xml');
   if (dom.getElementsByTagName('parsererror').length) {
     // Not valid XML.
@@ -992,27 +988,6 @@ CCC.World.getScrollBarWidth = function() {
   document.body.removeChild(outer);
 
   return w1 - w2;
-};
-
-/**
- * Gets the message with the given key from the document.
- * @param {string} key The key of the document element.
- * @param {...string} var_args Optional substitutions for %1, %2, ...
- * @return {string} The textContent of the specified element.
- */
-CCC.getMsg = function(key, var_args) {
-  var element = document.getElementById(key);
-  if (!element) {
-    throw 'Unknown message ' + key;
-  }
-  var text = element.textContent;
-  // Convert newline sequences.
-  text = text.replace(/\\n/g, '\n');
-  // Inject any substitutions.
-  for (var i = 1; i < arguments.length; i++) {
-    text = text.replace('%' + i, arguments[i]);
-  }
-  return text;
 };
 
 window.addEventListener('message', CCC.World.receiveMessage, false);
