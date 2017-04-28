@@ -201,6 +201,16 @@ func newState(parent state, scope *scope, node ast.Node) state {
 	}
 }
 
+// newStateForRef operates like newState, but where node is an lvalue
+// the resulting state is configured to return a reference.
+func newStateForRef(parent state, scope *scope, node ast.Node) state {
+	st := newState(parent, scope, node)
+	if lvst, ok := st.(lvalue); ok {
+		lvst.requestReference()
+	}
+	return st
+}
+
 /********************************************************************/
 
 // stateCommon is a struct, intended to be embedded in most or all
@@ -276,6 +286,43 @@ func (lc *labelsCommon) hasLabel(label string) bool {
 
 /********************************************************************/
 
+// lvalue is an interface stisfied by states corresponding to nodes
+// which are sepcified in ES5.1 to return a reference (as defined in
+// the §8.7 of the spec) - specifically, those which can appear on the
+// left hand side of an AssignmentExpression, as the argument to an
+// UpdateExpression, in the left position of a ForInLoop, or as the
+// argument of a delete or typeof UnaryExpression:
+//
+// - Identifier
+// - MemberExpression
+// - VariableDeclaration
+//
+// (We ignore the possibliity of CallExpression returning a reference:
+// the spec allows this but notes that only host objects can return
+// references, and we define no such host objects.)
+//
+// It provides a method, requestReference(), which, if called, will
+// cause the state's step() method to return a reference rather than
+// an evaluated JS value.
+type lvalue interface {
+	requestReference()
+}
+
+// lvalueCommon is a struct, intended to be embedded in the
+// state<Type>Expression types of nodes which can return a reference,
+// which satisfies lvalue.
+type lvalueCommon struct {
+	reqRef bool
+}
+
+var _ lvalue = (*lvalueCommon)(nil)
+
+func (lv *lvalueCommon) requestReference() {
+	lv.reqRef = true
+}
+
+/********************************************************************/
+
 type stateArrayExpression struct {
 	stateCommon
 	elems ast.Expressions
@@ -326,67 +373,48 @@ func (st *stateArrayExpression) step(intrp *Interpreter, cv *cval) (state, *cval
 
 type stateAssignmentExpression struct {
 	stateCommon
-	op    string
-	left  lvalue
-	rNode ast.Expression
+	op      string
+	left    reference
+	gotLeft bool
+	lNode   ast.LValue
+	rNode   ast.Expression
 }
 
 func (st *stateAssignmentExpression) init(node *ast.AssignmentExpression) {
 	st.op = node.Operator
+	st.lNode = node.Left
 	st.rNode = node.Right
-	st.left.init(st, st.scope, node.Left)
 }
 
 // FIXME: ToString() and ToNumber() calls in data.BinaryOp should be
 // able to result in calls to user toString() and valueOf() methods
 func (st *stateAssignmentExpression) step(intrp *Interpreter, cv *cval) (state, *cval) {
-	if !st.left.ready {
-		return &st.left, nil
-	}
 	if cv == nil {
-		return newState(st, st.scope, ast.Node(st.rNode.E)), nil
+		return newStateForRef(st, st.scope, ast.Node(st.lNode.N)), nil
 	} else if cv.abrupt() {
 		return st.parent, cv
+	} else if !st.gotLeft {
+		st.left = cv.rval()
+		st.gotLeft = true
+		return newState(st, st.scope, ast.Node(st.rNode.E)), nil
 	}
-
 	var r data.Value = cv.pval()
 
 	// Do (operator)assignment:
 	if st.op != "=" {
-		var op string
-		switch st.op {
-		case "+=":
-			op = "+"
-		case "-=":
-			op = "-"
-		case "*=":
-			op = "*"
-		case "/=":
-			op = "/"
-		case "%=":
-			op = "/"
-		case "<<=":
-			op = "<<"
-		case ">>=":
-			op = ">>"
-		case ">>>=":
-			op = ">>>"
-		case "|=":
-			op = "|"
-		case "^=":
-			op = "^"
-		case "&=":
-			op = "&"
-		default:
-			panic(fmt.Errorf("illegal assignemnt operator %s", st.op))
-		}
+		var op = st.op[:len(st.op)-1]
 		var ne *data.NativeError
-		r, ne = data.BinaryOp(st.left.get(), op, r)
+		l, ne := st.left.getValue(intrp)
+		if ne != nil {
+			return st.parent, intrp.throw(ne)
+		}
+		r, ne = data.BinaryOp(l, op, r)
 		if ne != nil {
 			return st.parent, intrp.throw(ne)
 		}
 	}
-	st.left.put(r)
+	// FIXME: throw error:
+	_ = st.left.putValue(r, intrp)
 	return st.parent, pval(r)
 }
 
@@ -762,7 +790,7 @@ const (
 type stateForInStatement struct {
 	stateCommon
 	labelsCommon
-	left  lvalue
+	left  ast.LValue
 	right ast.Expression
 	body  ast.Statement
 	state stateForInState
@@ -772,7 +800,7 @@ type stateForInStatement struct {
 }
 
 func (st *stateForInStatement) init(node *ast.ForInStatement) {
-	st.left.init(st, st.scope, node.Left)
+	st.left = node.Left
 	st.right = node.Right
 	st.body = node.Body
 	st.state = forInUnstarted
@@ -809,18 +837,15 @@ func (st *stateForInStatement) step(intrp *Interpreter, cv *cval) (state, *cval)
 				return st.parent, &cval{NORMAL, st.val, ""}
 			}
 			st.pname = n
-			st.left.reset()
-			if !st.left.ready {
-				st.state = forInLeft
-				return &st.left, nil
-			}
-			cv = nil
-			fallthrough
+			st.state = forInLeft
+			return newStateForRef(st, st.scope, st.left.N), nil
+
 		case forInLeft:
 			if cv != nil && cv.abrupt() {
 				return st.parent, cv
 			}
-			st.left.put(data.String(st.pname))
+			// FIXME: throw if error
+			_ = cv.rval().putValue(data.String(st.pname), intrp)
 			st.state = forInBody
 			return newState(st, st.scope, st.body.S), nil
 
@@ -887,6 +912,7 @@ func (st *stateFunctionExpression) step(intrp *Interpreter, cv *cval) (state, *c
 
 type stateIdentifier struct {
 	stateCommon
+	lvalueCommon
 	name string
 }
 
@@ -895,10 +921,10 @@ func (st *stateIdentifier) init(node *ast.Identifier) {
 }
 
 func (st *stateIdentifier) step(intrp *Interpreter, cv *cval) (state, *cval) {
-	// Note: if we getters/setters and a global scope object (like
-	// window), we would have to do a check to see if we need to run a
-	// getter.  But we have neither, so this is a straight variable
-	// lookup.
+	if st.reqRef {
+		ref := newReference(st.scope, st.name)
+		return st.parent, rval(ref)
+	}
 	return st.parent, pval(st.scope.getVar(st.name))
 }
 
@@ -1021,6 +1047,7 @@ func (st *stateLogicalExpression) step(intrp *Interpreter, cv *cval) (state, *cv
 
 type stateMemberExpression struct {
 	stateCommon
+	lvalueCommon
 	baseExpr ast.Expression // To be resolve to obtain base
 	membExpr ast.Expression // To be resolve to obtain name
 	computed bool           // Is this x[y] (rather than x.y)?
@@ -1061,8 +1088,11 @@ func (st *stateMemberExpression) step(intrp *Interpreter, cv *cval) (state, *cva
 		}
 		name = i.Name
 	}
-	// FIXME: set owner:
-	v, ne := intrp.toObject(st.base, nil).Get(name)
+	ref := newReference(st.base, name)
+	if st.reqRef {
+		return st.parent, rval(ref)
+	}
+	v, ne := ref.getValue(intrp)
 	if ne != nil {
 		return st.parent, intrp.throw(ne)
 	}
@@ -1386,24 +1416,30 @@ type stateUpdateExpression struct {
 	stateCommon
 	op     string
 	prefix bool
-	arg    lvalue
+	arg    ast.LValue
 }
 
 func (st *stateUpdateExpression) init(node *ast.UpdateExpression) {
 	st.op = node.Operator
 	st.prefix = node.Prefix
-	st.arg.init(st, st.scope, node.Argument)
+	st.arg = node.Argument
 }
 
 // FIXME: ToNumber should be able to result in call to user valueOf
 // method.
 func (st *stateUpdateExpression) step(intrp *Interpreter, cv *cval) (state, *cval) {
-	if !st.arg.ready {
-		return &st.arg, nil
+	if cv == nil {
+		return newStateForRef(st, st.scope, st.arg.N), nil
+	} else if cv.abrupt() {
+		return st.parent, cv
 	}
 
+	lhs := cv.rval()
+
 	// Do update:
-	n := st.arg.get().ToNumber()
+	v, _ := lhs.getValue(intrp)
+	// FIXME: throw if error
+	n := v.ToNumber()
 	r := n
 	switch st.op {
 	case "++":
@@ -1416,7 +1452,8 @@ func (st *stateUpdateExpression) step(intrp *Interpreter, cv *cval) (state, *cva
 	if st.prefix {
 		r = n
 	}
-	st.arg.put(n)
+	_ = lhs.putValue(n, intrp)
+	// FIXME: throw if error
 	return st.parent, pval(r)
 }
 
@@ -1425,6 +1462,7 @@ func (st *stateUpdateExpression) step(intrp *Interpreter, cv *cval) (state, *cva
 type stateVariableDeclaration struct {
 	stateCommon
 	labelsCommon
+	lvalueCommon
 	decls []*ast.VariableDeclarator
 	n     int
 }
@@ -1437,6 +1475,16 @@ func (st *stateVariableDeclaration) init(node *ast.VariableDeclaration) {
 }
 
 func (st *stateVariableDeclaration) step(intrp *Interpreter, cv *cval) (state, *cval) {
+	if st.reqRef {
+		// No evaluation to be done.  Should be single declared
+		// variable with no initialiser.
+		if len(st.decls) != 1 || st.decls[0].Init.E != nil {
+			// FIXME: throw error
+			panic("for-in loop variable declaration may not have an initializer")
+		}
+		return st.parent, rval(newReference(st.scope, st.decls[0].Id.Name))
+	}
+
 	if cv != nil {
 		if cv.abrupt() {
 			return st.parent, cv
@@ -1503,154 +1551,4 @@ func (st *stateWhileStatement) step(intrp *Interpreter, cv *cval) (state, *cval)
 	}
 	st.tested = false
 	return newState(st, st.scope, st.test.E), nil
-}
-
-/********************************************************************/
-
-// lvalue is an object which encapsulates reading and modification of
-// lvalues in assignment and update expressions.  It is (very
-// approximately) an implementation of the "reference type" in the
-// ECMAScript 5.1 spec, without the strict flag (as we are always
-// strict).
-//
-// It also serves as an interpreter state for the evaluation of its own
-// subexpressions.
-//
-// Usage:
-//
-//  struct stateFoo {
-//      stateCommon
-//      lv lvalue
-//      ...
-//  }
-//
-//  func (st *stateFoo) init(node *ast.Foo) {
-//      st.lv.init(st, st.scope, node.left)
-//      ...
-//  }
-//
-//  func (st *stateFoo) step(intrp *Interpreter, cv *cval) (state, *cval) {
-//      if(!st.lv.ready) {
-//          return &st.lv
-//      }
-//      ...
-//      lv.set(lv.get() + 1) // or whatever
-//      ...
-//  }
-//
-// FIXME: update this example to deal with *cvals.
-// FIXME: throw if !=1 VariableDeclarator in a VariableDeclaration
-// FIXME: throw if VariableDeclarator has initializer
-// FIXME: throw if VariableDeclarator used in AssignmentExpression or
-//        UpdateExpression (it is only valid in ForInStatement.Left)
-type lvalue struct {
-	stateCommon
-	baseExpr        ast.Expression // To be resolve to obtain base
-	membExpr        ast.Expression // To be resolve to obtain name
-	computed        bool           // Is this x[y] (rather than x.y)?
-	intrp           *Interpreter   // For obtaining box protos
-	base            data.Value     // ECMA "base"
-	name            string         // ECMA "referenced name"
-	haveBase, ready bool
-}
-
-func (lv *lvalue) init(parent state, scope *scope, expr ast.LValue) {
-	lv.parent = parent
-	lv.scope = scope
-	switch e := expr.N.(type) {
-	case *ast.VariableDeclaration:
-		lv.base = nil
-		lv.name = e.Declarations[0].Id.Name
-		lv.ready = true
-	case *ast.Identifier:
-		lv.base = nil
-		lv.name = e.Name
-		lv.ready = true
-	case *ast.MemberExpression:
-		lv.baseExpr = e.Object
-		lv.membExpr = e.Property
-		lv.computed = e.Computed
-		lv.ready = false
-	default:
-		panic(fmt.Errorf("%T is not an lvalue", expr.N))
-	}
-}
-
-func (lv *lvalue) reset() {
-	if lv.baseExpr.E != nil || lv.membExpr.E != nil {
-		lv.haveBase = false
-		lv.ready = false
-	}
-}
-
-// get returns the current value of the variable or property denoted
-// by the lvalue expression.
-func (lv *lvalue) get() data.Value {
-	if !lv.ready {
-		panic("lvalue not ready")
-	}
-	if lv.base == nil {
-		return lv.scope.getVar(lv.name)
-	}
-	// FIXME: set owner
-	v, ne := lv.intrp.toObject(lv.base, nil).Get(lv.name)
-	if ne != nil {
-		// FIXME: throw JS error
-		panic(ne)
-	}
-	return v
-}
-
-// set updates the variable or property denoted
-// by the lvalue expression to the given value.
-func (lv *lvalue) put(value data.Value) {
-	if !lv.ready {
-		panic("lvalue not ready")
-	}
-	if lv.base == nil {
-		lv.scope.setVar(lv.name, value)
-	} else {
-		// FIXME: set owner
-		ne := lv.intrp.toObject(lv.base, nil).Set(lv.name, value)
-		if ne != nil {
-			// FIXME: throw JS error
-			panic(ne)
-		}
-	}
-}
-
-func (lv *lvalue) step(intrp *Interpreter, cv *cval) (state, *cval) {
-	if lv.ready {
-		panic("lvalue already ready??")
-	}
-	if cv == nil {
-		if lv.haveBase {
-			panic("lvalue already has base??")
-		}
-		return newState(lv, lv.scope, ast.Node(lv.baseExpr.E)), nil
-	} else if cv.abrupt() {
-		return lv.parent, cv
-	} else if !lv.haveBase {
-		lv.intrp = intrp
-		lv.base = cv.pval()
-		lv.haveBase = true
-		if lv.computed {
-			return newState(lv, lv.scope, ast.Node(lv.membExpr.E)), nil
-		}
-		// It's expr.identifier; get name of identifier:
-		i, isID := lv.membExpr.E.(*ast.Identifier)
-		if !isID {
-			panic(fmt.Errorf("invalid non-computed member expression type %T",
-				lv.membExpr.E))
-		}
-		lv.name = i.Name
-		lv.ready = true
-		return lv.parent, nil
-	} else if !lv.ready {
-		lv.name = string(cv.pval().ToString())
-		lv.ready = true
-		return lv.parent, nil
-	} else {
-		panic(fmt.Errorf("too may values"))
-	}
 }
