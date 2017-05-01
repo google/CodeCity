@@ -87,6 +87,8 @@ CCC.Log.receiveMessage = function(e) {
   var text = data['text'];
   if (mode == 'clear') {
     CCC.Log.scrollDiv.innerHTML = '';
+  } else if (mode == 'blur') {
+      CCC.Common.closeMenu();
   } else if (mode == 'command') {
     var div = CCC.Log.textToHtml(text);
     div.className = 'commandDiv';
@@ -285,8 +287,11 @@ CCC.Log.renderHtmltext = function(div, node) {
       return;  // No text content of this tag should be rendered.
     }
     if (node.tagName == 'CMDS') {  // HTML tagNames are uppercase.
-      var icon = CCC.Common.newMenuIcon();
-      div.appendChild(icon);
+      var icon = CCC.Common.newMenuIcon(node);
+      if (icon) {
+        icon.addEventListener('click', CCC.Common.openMenu);
+        div.appendChild(icon);
+      }
       return;
     }
     if (node.tagName == 'CMD') {  // HTML tagNames are uppercase.
@@ -294,9 +299,7 @@ CCC.Log.renderHtmltext = function(div, node) {
       var a = document.createElement('a');
       a.className = 'command';
       a.appendChild(document.createTextNode(cmdText));
-      a.addEventListener('click', function() {
-        parent.postMessage({'commands': [cmdText]}, location.origin);
-      });
+      a.addEventListener('click', CCC.Common.commandFunction, false);
       div.appendChild(a);
       return;
     }

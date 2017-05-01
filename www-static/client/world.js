@@ -138,6 +138,8 @@ CCC.World.receiveMessage = function(e) {
     var scene = CCC.World.scene;  // Save the scene.
     CCC.World.renderHistory();
     CCC.World.scene = scene;  // Restore the scene.
+  } else if (mode == 'blur') {
+      CCC.Common.closeMenu();
   } else if (mode == 'message') {
     var dom = CCC.Common.parser.parseFromString(text, 'text/xml');
     if (dom.getElementsByTagName('parsererror').length) {
@@ -341,9 +343,12 @@ CCC.World.prerenderPanorama = function(msg) {
     // Add event handlers on all <a class="command"> links.
     var commands = div.querySelectorAll('a.command');
     for (var i = 0, command; command = commands[i]; i++) {
-      command.addEventListener('click', function() {
-        parent.postMessage({'commands': [this.innerText]}, location.origin);
-      });
+      command.addEventListener('click', CCC.Common.commandFunction, false);
+    }
+    // Add event handlers on all <svg class="menuIcon"> menus.
+    var menus = div.querySelectorAll('svg.menuIcon');
+    for (var i = 0, menu; menu = menus[i]; i++) {
+      menu.addEventListener('click', CCC.Common.openMenu, false);
     }
     return true;
   }
@@ -640,7 +645,7 @@ CCC.World.xmlToHtml = function(dom) {
         return CCC.World.xmlToSvg(dom);
       }
       if (dom.tagName == 'CMDS') {  // HTML tagNames are uppercase.
-        return CCC.Common.newMenuIcon();
+        return CCC.Common.newMenuIcon(dom);
       }
       if (dom.tagName == 'CMD') {  // HTML tagNames are uppercase.
         var cmdText = dom.innerText;

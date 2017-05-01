@@ -165,6 +165,11 @@ CCC.init = function() {
   CCC.displayCell = document.getElementById('displayCell');
   CCC.commandTextarea = document.getElementById('commandTextarea');
 
+  // When focus returns to this frame from an iframe, go to the command area.
+  // This happens whenever a command link is clicked in an iframe.
+  window.addEventListener('focus', function() {
+    CCC.commandTextarea.focus();
+  }, false);
   window.addEventListener('resize', CCC.resize, false);
   // Firefox needs a 0ms delay before first resize, Chrome does not care.
   setTimeout(CCC.resize, 0);
@@ -181,6 +186,9 @@ CCC.init = function() {
   worldButton.addEventListener('click', CCC.tab.bind(null, 'world'), false);
   var logButton = document.getElementById('logButton');
   logButton.addEventListener('click', CCC.tab.bind(null, 'log'), false);
+  document.body.addEventListener('click', function() {
+    CCC.postToAllFrames({'mode': 'blur'});
+  }, true);
   CCC.tab('world');
   CCC.schedulePing(0);
   // Firefox sometimes caches the disabled value on reload.
@@ -216,9 +224,7 @@ CCC.clear = function() {
   if (CCC.pauseBuffer) {
     CCC.pauseBuffer.length = 0;
   }
-  var json = {'mode': 'clear'};
-  CCC.worldFrame.contentWindow.postMessage(json, location.origin);
-  CCC.logFrame.contentWindow.postMessage(json, location.origin);
+  CCC.postToAllFrames({'mode': 'clear'});
   CCC.commandTextarea.focus();
 };
 
@@ -302,7 +308,14 @@ CCC.distributeMessage = function(line, type) {
     CCC.pauseBuffer.push(arguments);
     return;
   }
-  var json = {'mode': type, 'text': line};
+  CCC.postToAllFrames({'mode': type, 'text': line});
+};
+
+/**
+ * Distribute an encoded message to all sub-frames.
+ * @param {!Object} json Encoded message.
+ */
+CCC.postToAllFrames = function(json) {
   CCC.worldFrame.contentWindow.postMessage(json, location.origin);
   CCC.logFrame.contentWindow.postMessage(json, location.origin);
 };

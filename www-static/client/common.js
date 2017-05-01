@@ -40,6 +40,7 @@ CCC.Common.NS = 'http://www.w3.org/2000/svg';
 CCC.Common.init = function() {
   CCC.Common.parser = new DOMParser();
   CCC.Common.serializer = new XMLSerializer();
+  document.body.addEventListener('click', CCC.Common.closeMenu, true);
 
   // Report back to the parent frame that we're fully loaded and ready to go.
   parent.postMessage('init', location.origin);
@@ -82,13 +83,62 @@ CCC.Common.getMsg = function(key, var_args) {
 
 /**
  * Create a command menu icon.
- * @return {!SVGSVGElement} Root element of icon.
+ * @param {!Element} node Root DOM element describing the menu commands.
+ * @return {SVGSVGElement} Root element of icon.
  */
-CCC.Common.newMenuIcon = function() {
+CCC.Common.newMenuIcon = function(node) {
+  var cmdNodes = node.querySelectorAll('CMD');
+  if (!cmdNodes.length) {
+    return null;
+  }
+  var cmds = [];
+  for (var i = 0, cmdNode; cmdNode = cmdNodes[i]; i++) {
+    cmds.push(cmdNode.innerText);
+  }
   var svg = document.createElementNS(CCC.Common.NS, 'svg');
   svg.setAttribute('class', 'menuIcon');
+  svg.setAttribute('data-cmds', JSON.stringify(cmds));
   var path = document.createElementNS(CCC.Common.NS, 'path');
   path.setAttribute('d', 'm 1,2 4,4 4,-4 z');
   svg.appendChild(path);
   return svg;
+};
+
+/**
+ * Open the command menu for the clicked menu icon.
+ * @param {!Event} e Click event.
+ * @this {!SVGSVGElement} Root element of icon.
+ */
+CCC.Common.openMenu = function(e) {
+  CCC.Common.closeMenu();  // Should be already closed, but let's make sure.
+  var cmds = JSON.parse(this.getAttribute('data-cmds'));
+  var menu = document.createElement('div');
+  menu.id = 'menu';
+  for (var i = 0; i < cmds.length; i++) {
+    var menuItem = document.createElement('div');
+    menuItem.className = 'menuitem';
+    menuItem.appendChild(document.createTextNode(cmds[i]));
+    menuItem.addEventListener('click', CCC.Common.commandFunction, false);
+    menu.appendChild(menuItem);
+  }
+  document.body.appendChild(menu);
+};
+
+/**
+ * If there is a menu open, close it.
+ */
+CCC.Common.closeMenu = function() {
+  var menu = document.getElementById('menu');
+  if (menu) {
+    menu.parentNode.removeChild(menu);
+  }
+};
+
+/**
+ * When clicked, execute the printed command.
+ * @this {!Element} Clicked element.
+ */
+CCC.Common.commandFunction = function() {
+  parent.postMessage({'commands': [this.innerText]}, location.origin);
+  parent.focus();
 };
