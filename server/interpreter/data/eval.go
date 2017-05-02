@@ -98,7 +98,7 @@ func BinaryOp(left Value, op string, right Value) (Value, *NativeError) {
 		}
 		return Boolean(obj.HasProperty(string(left.ToString()))), nil
 	case "instanceof":
-		panic("not implemented")
+		return nil, &NativeError{SyntaxError, "instanceof not implemented"}
 	default:
 		panic(fmt.Errorf("illegal binary operator %s", op))
 	}
