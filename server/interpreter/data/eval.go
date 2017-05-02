@@ -30,7 +30,7 @@ import (
 // BinaryOperator ("==", "!=", "===", "!==", "<", "<=", ">", ">=",
 // "<<", ">>", ">>>", "+", "-", "*", "/", "%", "|", "^", "&", "in" or
 // "instanceof"
-func BinaryOp(left Value, op string, right Value) (Value, *ErrorMsg) {
+func BinaryOp(left Value, op string, right Value) (Value, *NativeError) {
 	switch op {
 	case "==":
 		return Boolean(aeca(left, right)), nil
@@ -94,9 +94,7 @@ func BinaryOp(left Value, op string, right Value) (Value, *ErrorMsg) {
 	case "in":
 		obj, isObject := right.(Object)
 		if !isObject {
-			return nil, &ErrorMsg{"TypeError", fmt.Sprintf(
-				"Cannot use 'in' operator to search for '%s' in %#v",
-				left.ToString(), right)}
+			return nil, &NativeError{TypeError, fmt.Sprintf("Cannot use 'in' operator to search for '%s' in %#v", left.ToString(), right)}
 		}
 		return Boolean(obj.HasProperty(string(left.ToString()))), nil
 	case "instanceof":

@@ -109,15 +109,15 @@ func TestArrayLength(t *testing.T) {
 	a := NewArray(nil, protos.ArrayProto)
 
 	set := func(n int64, v Value) {
-		err := a.Set(fmt.Sprintf("%d", n), v)
-		if err != nil {
-			t.Error(err)
+		ne := a.Set(fmt.Sprintf("%d", n), v)
+		if ne != nil {
+			t.Error(ne)
 		}
 	}
 	checkLen := func(expected int64) {
-		l, err := a.Get("length")
-		if err != nil {
-			t.Error(err)
+		l, ne := a.Get("length")
+		if ne != nil {
+			t.Error(ne)
 		} else if l != Number(float64(expected)) {
 			t.Errorf("%v.length == %#v (expected %d)", a, l, expected)
 		}
@@ -127,9 +127,9 @@ func TestArrayLength(t *testing.T) {
 	checkLen(0)
 
 	// Adding non-numeric properties does not increase length:
-	err := a.Set("zero", Number(0))
-	if err != nil {
-		t.Error(err)
+	ne := a.Set("zero", Number(0))
+	if ne != nil {
+		t.Error(ne)
 	}
 	checkLen(0)
 
@@ -162,9 +162,9 @@ func TestArrayLength(t *testing.T) {
 	checkLen(math.MaxUint32)
 
 	setLen := func(l int) {
-		err := a.Set("length", Number(float64(l)))
-		if err != nil {
-			t.Error(err)
+		ne := a.Set("length", Number(float64(l)))
+		if ne != nil {
+			t.Error(ne)
 		}
 	}
 	check := func(n int64, exists bool) {

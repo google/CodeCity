@@ -28,18 +28,18 @@ type Object interface {
 	Proto() Object
 
 	// Get returns the current value of the given property or an
-	// ErrorMsg if that was not possible.
-	Get(name string) (Value, *ErrorMsg)
+	// NativeError if that was not possible.
+	Get(name string) (Value, *NativeError)
 
 	// Set sets the given property to the specified value or returns
-	// an ErrorMsg if that was not possible.
-	Set(name string, value Value) *ErrorMsg
+	// an NativeError if that was not possible.
+	Set(name string, value Value) *NativeError
 
 	// Delete attempts to remove the named property.  If the property
-	// exists but can't be removed for some reason an ErrorMsg is
+	// exists but can't be removed for some reason an NativeError is
 	// returned.  (Removing a non-existing property "succeeds"
 	// silently.)
-	Delete(name string) *ErrorMsg
+	Delete(name string) *NativeError
 
 	// OwnPropertyKeys returns the list of (own) property names as a
 	// slice of strings.
@@ -101,9 +101,9 @@ func (obj object) Proto() Object {
 	return obj.proto
 }
 
-// Get returns the current value of the given property or an ErrorMsg
-// if that was not possible.
-func (obj object) Get(key string) (Value, *ErrorMsg) {
+// Get returns the current value of the given property or an
+// NativeError if that was not possible.
+func (obj object) Get(key string) (Value, *NativeError) {
 	pd, ok := obj.properties[key]
 	// FIXME: permissions check for property readability goes here
 	if ok {
@@ -118,8 +118,8 @@ func (obj object) Get(key string) (Value, *ErrorMsg) {
 }
 
 // Set sets the given property to the specified value or returns an
-// ErrorMsg if that was not possible.
-func (obj *object) Set(key string, value Value) *ErrorMsg {
+// NativeError if that was not possible.
+func (obj *object) Set(key string, value Value) *NativeError {
 	pd, ok := obj.properties[key]
 	if !ok { // Creating new property
 		// FIXME: permissions check for object writability goes here
@@ -143,7 +143,7 @@ func (obj *object) Set(key string, value Value) *ErrorMsg {
 // Delete removes the named property if possible.
 //
 // FIXME: perm / immutability checks!
-func (obj *object) Delete(key string) *ErrorMsg {
+func (obj *object) Delete(key string) *NativeError {
 	delete(obj.properties, key)
 	return nil
 }

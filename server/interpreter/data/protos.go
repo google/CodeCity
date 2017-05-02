@@ -57,11 +57,17 @@ func NewProtos() *Protos {
 	prts.ErrorProto = NewObject(nil, prts.ObjectProto)
 
 	prts.EvalErrorProto = NewObject(nil, prts.ErrorProto)
+	prts.EvalErrorProto.Set("name", String("EvalError"))
 	prts.RangeErrorProto = NewObject(nil, prts.ErrorProto)
+	prts.RangeErrorProto.Set("name", String("RangeError"))
 	prts.ReferenceErrorProto = NewObject(nil, prts.ErrorProto)
+	prts.ReferenceErrorProto.Set("name", String("ReferenceError"))
 	prts.SyntaxErrorProto = NewObject(nil, prts.ErrorProto)
+	prts.SyntaxErrorProto.Set("name", String("SyntaxError"))
 	prts.TypeErrorProto = NewObject(nil, prts.ErrorProto)
+	prts.TypeErrorProto.Set("name", String("TypeError"))
 	prts.URIErrorProto = NewObject(nil, prts.ErrorProto)
+	prts.URIErrorProto.Set("name", String("URIError"))
 
 	prts.OwnerProto = NewOwner(prts.ObjectProto)
 

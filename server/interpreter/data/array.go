@@ -32,7 +32,7 @@ var _ Object = (*Array)(nil)
 
 // Get on Array implements a magic .length property itself, and passes
 // any other property lookups to its embedded object.
-func (arr *Array) Get(name string) (Value, *ErrorMsg) {
+func (arr *Array) Get(name string) (Value, *NativeError) {
 	if name != "length" {
 		return arr.object.Get(name)
 	}
@@ -49,11 +49,11 @@ func (arr *Array) Get(name string) (Value, *ErrorMsg) {
 // - Delegates setting the specified property to its embedded object.
 // - If this succeeds, and the property key looks like an array
 // index, then it will udpate .length appropriately.
-func (arr *Array) Set(key string, value Value) *ErrorMsg {
+func (arr *Array) Set(key string, value Value) *NativeError {
 	if key == "length" {
 		l, ok := asLength(value)
 		if !ok {
-			return &ErrorMsg{"Range Error", "Invalid array length"}
+			return &NativeError{RangeError, "Invalid array length"}
 		}
 		arr.length = l
 		for k := range arr.properties {
@@ -63,13 +63,13 @@ func (arr *Array) Set(key string, value Value) *ErrorMsg {
 		}
 		return nil
 	}
-	err := arr.object.Set(key, value)
-	if err == nil {
+	ne := arr.object.Set(key, value)
+	if ne == nil {
 		if i, isIndex := asIndex(key); isIndex && arr.length < i+1 {
 			arr.length = i + 1
 		}
 	}
-	return err
+	return ne
 }
 
 // OwnPropertyKeys returns the list of property keys (starting with
@@ -88,10 +88,9 @@ func (arr *Array) OwnPropertyKeys() []string {
 
 // Delete will reject attempts to remove "length" and otherwise defers
 // to the embedded object.
-func (arr *Array) Delete(key string) *ErrorMsg {
+func (arr *Array) Delete(key string) *NativeError {
 	if key == "length" {
-		return &ErrorMsg{"TypeError",
-			"Cannot delete property 'length' of array."}
+		return &NativeError{TypeError, "Cannot delete property 'length' of array."}
 	}
 	return arr.object.Delete(key)
 }

@@ -121,7 +121,7 @@ var _ Object = (*BoxedString)(nil)
 // lookups to its embedded object.
 //
 // BUG(cpcallen): character indicides not implemented.
-func (bstr *BoxedString) Get(key string) (Value, *ErrorMsg) {
+func (bstr *BoxedString) Get(key string) (Value, *NativeError) {
 	if key == "length" {
 		return Number(bstr.value.utf16len()), nil
 	}
@@ -132,10 +132,9 @@ func (bstr *BoxedString) Get(key string) (Value, *ErrorMsg) {
 // character indicies, and otherwise delegates to the embedded object.
 //
 // BUG(cpcallen): character indicides not implemented.
-func (bstr *BoxedString) Set(key string, value Value) *ErrorMsg {
+func (bstr *BoxedString) Set(key string, value Value) *NativeError {
 	if key == "length" {
-		return &ErrorMsg{"TypeError",
-			fmt.Sprintf("Cannot assign to read only property '%s' of %s", key, bstr.ToString())}
+		return &NativeError{TypeError, fmt.Sprintf("Cannot assign to read only property '%s' of %s", key, bstr.ToString())}
 	}
 	return bstr.object.Set(key, value)
 }
@@ -144,10 +143,9 @@ func (bstr *BoxedString) Set(key string, value Value) *ErrorMsg {
 // character indicies, and otherwise defers to the embedded object.
 //
 // BUG(cpcallen): character indicides not implemented.
-func (bstr *BoxedString) Delete(key string) *ErrorMsg {
+func (bstr *BoxedString) Delete(key string) *NativeError {
 	if key == "length" {
-		return &ErrorMsg{"TypeError",
-			fmt.Sprintf("Cannot delete property '%s' of %s", key, bstr.ToString())}
+		return &NativeError{TypeError, fmt.Sprintf("Cannot delete property '%s' of %s", key, bstr.ToString())}
 	}
 	return bstr.object.Delete(key)
 }
