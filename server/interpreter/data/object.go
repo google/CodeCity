@@ -160,8 +160,8 @@ func (obj *object) OwnPropertyKeys() []string {
 	return keys
 }
 
-// HasOwnProperty returns true if the specified property key exists
-// on the object itself.
+// HasOwnProperty returns true if the specified property key exists on
+// the object itself.
 func (obj *object) HasOwnProperty(key string) bool {
 	_, exists := obj.properties[key]
 	return exists
@@ -181,8 +181,8 @@ func (object) ToBoolean() Boolean {
 
 // ToNumber returns the numeric equivalent of the object.
 //
-// BUG(cpcallen): object.ToNumber is not strictly compliant with
-// ES5.1 spec; it just returns .ToString().ToNumber().
+// BUG(cpcallen): object.ToNumber is not strictly compliant with ES5.1
+// spec; it just returns .ToString().ToNumber().
 func (obj object) ToNumber() Number {
 	return obj.ToString().ToNumber()
 }
@@ -198,15 +198,15 @@ func (object) ToString() String {
 
 // ToPrimitive defaults to ToNumber on objects.
 //
-// BUG(cpcallen): object.ToPrimitive should prefer to return the result
-// of ToString() on date objects.
+// BUG(cpcallen): object.ToPrimitive should prefer to return the
+// result of ToString() on date objects.
 func (obj *object) ToPrimitive() Value {
 	return obj.ToNumber()
 }
 
-// NewObject creates a new object with the specified owner and prototype,
-// initialises it as appropriate, and returns a pointer to the
-// newly-created object.
+// NewObject creates a new object with the specified owner and
+// prototype, initialises it as appropriate, and returns a pointer to
+// the newly-created object.
 func NewObject(owner *Owner, proto Object) *object {
 	var obj = new(object)
 	obj.init(owner, proto)
