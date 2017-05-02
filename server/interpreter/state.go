@@ -519,16 +519,17 @@ type stateCallExpression struct {
 	stateCommon
 	callee ast.Expression
 	args   ast.Expressions
-	cl     *closure   // Actual function to call
-	this   data.Value // Value of 'this' in method call
-	ns     *scope     // New scope being constructed
-	n      int        // Which arg are we evaluating?
-	called bool       // Has call itself begun?
+	fn     data.Value   // Actual function to call
+	this   data.Value   // Value of 'this' in method call
+	argv   []data.Value // Actual arguments
+	n      int          // Which arg are we evaluating?
+	called bool         // Has call itself begun?
 }
 
 func (st *stateCallExpression) init(node *ast.CallExpression) {
 	st.callee = node.Callee
 	st.args = node.Arguments
+	st.this = data.Undefined{}
 }
 
 // step gets called once to set up evaluation of the function to be
@@ -542,29 +543,33 @@ func (st *stateCallExpression) init(node *ast.CallExpression) {
 // mismatch properly.
 func (st *stateCallExpression) step(intrp *Interpreter, cv *cval) (state, *cval) {
 	if cv == nil {
-		// First visit: evaluate function to get closure
-		if st.ns != nil {
-			panic("have scope already??")
+		// First visit: evaluate callee arg to get function to call:
+		if st.fn != nil {
+			panic("have func already??")
 		}
-		if st.cl != nil {
-			panic("have closure already??")
-		}
-		return newState(st, st.scope, st.callee.E), nil
+		return newStateForRef(st, st.scope, st.callee.E), nil
 	} else if cv.abrupt() && cv.typ != RETURN { // RETURN handled below
 		return st.parent, cv
 	}
 
-	if st.cl == nil {
-		// Save closure:
-		st.cl = cv.pval().(*closure)
-		// Set up scope.  st.this will have been set as a side effect
-		// of evaluating callee, if callee was a MemberExpression.
-		// FIXME: this is an ugly hack.
-		st.ns = newScope(st.scope, st.this)
-		st.ns.populate(st.cl.body)
+	if st.fn == nil {
+		// Save function and 'this' value:
+		if ref, isRef := cv.val.(reference); isRef {
+			// callee was a MemberExpression or the like:
+			var ne *data.NativeError
+			st.fn, ne = ref.getValue(intrp)
+			if ne != nil {
+				return st.parent, intrp.throw(ne)
+			}
+			if ref.isPropRef() {
+				st.this = ref.getBase().(data.Value)
+			}
+		} else {
+			st.fn = cv.pval()
+		}
 	} else if !st.called {
 		// Save arguments:
-		st.ns.newVar(st.cl.params[st.n], cv.pval())
+		st.argv = append(st.argv, cv.pval())
 		st.n++
 	}
 
@@ -575,9 +580,23 @@ func (st *stateCallExpression) step(intrp *Interpreter, cv *cval) (state, *cval)
 	}
 
 	if !st.called {
-		// Second last visit: evaluate function call
+		// Second last visit: prepare for and execute call.
+		// Check if st.func is callable:
+		closure, isClosure := st.fn.(*closure)
+		if !isClosure {
+			e := fmt.Sprintf("%#v is not a function", st.fn)
+			return st.parent, intrp.throw(&data.NativeError{data.TypeError, e})
+		}
+		scope := newScope(st.scope, st.this)
+		// Set up scope:
+		scope.populate(closure.body)
+		for i, arg := range st.argv {
+			scope.newVar(closure.params[i], arg)
+		}
+		// FIXME: create arguments object.
+		// Evaluate function call
 		st.called = true
-		return newState(st, st.ns, st.cl.body), nil
+		return newState(st, scope, closure.body), nil
 	}
 
 	// We're done: process return value:
@@ -1073,10 +1092,6 @@ func (st *stateMemberExpression) step(intrp *Interpreter, cv *cval) (state, *cva
 		return st.parent, cv
 	} else if st.base == nil {
 		st.base = cv.pval()
-		// FIXME: this is an ugly hack.
-		if ce, isCE := st.parent.(*stateCallExpression); isCE {
-			ce.this = st.base
-		}
 		if st.computed {
 			return newState(st, st.scope, ast.Node(st.membExpr.E)), nil
 		}
