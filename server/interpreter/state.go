@@ -1400,7 +1400,7 @@ func (st *stateUnaryDeleteExpression) step(intrp *Interpreter, cv *cval) (state,
 		// FIXME: throw SyntaxError.
 		panic("unresolvable reference")
 	}
-	e := ref.delete(intrp.protos)
+	e := ref.delete(intrp)
 	if e != nil {
 		// FIXME: throw error.
 		panic(e)
