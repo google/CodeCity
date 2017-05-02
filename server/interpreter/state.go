@@ -181,15 +181,21 @@ func newState(parent state, scope *scope, node ast.Node) state {
 		st.init(n)
 		return &st
 	case *ast.UnaryExpression:
-		// delete is handled specially:
-		if n.Operator == "delete" {
+		// delete and typeof are handled specially:
+		switch n.Operator {
+		case "delete":
 			st := stateUnaryDeleteExpression{stateCommon: sc}
 			st.init(n)
 			return &st
+		case "typeof":
+			st := stateUnaryTypeofExpression{stateCommon: sc}
+			st.init(n)
+			return &st
+		default:
+			st := stateUnaryExpression{stateCommon: sc}
+			st.init(n)
+			return &st
 		}
-		st := stateUnaryExpression{stateCommon: sc}
-		st.init(n)
-		return &st
 	case *ast.UpdateExpression:
 		st := stateUpdateExpression{stateCommon: sc}
 		st.init(n)
@@ -554,7 +560,8 @@ func (st *stateCallExpression) step(intrp *Interpreter, cv *cval) (state, *cval)
 
 	if st.fn == nil {
 		// Save function and 'this' value:
-		if ref, isRef := cv.val.(reference); isRef {
+		if cv.val.Type() == REFERENCE {
+			ref := cv.rval()
 			// callee was a MemberExpression or the like:
 			var ne *data.NativeError
 			st.fn, ne = ref.getValue(intrp)
@@ -947,8 +954,7 @@ func (st *stateIdentifier) init(node *ast.Identifier) {
 
 func (st *stateIdentifier) step(intrp *Interpreter, cv *cval) (state, *cval) {
 	if st.reqRef {
-		ref := newReference(st.scope, st.name)
-		return st.parent, rval(ref)
+		return st.parent, rval(st.scope.getRef(st.name))
 	}
 	return st.parent, pval(st.scope.getVar(st.name))
 }
@@ -1425,6 +1431,37 @@ func (st *stateUnaryDeleteExpression) step(intrp *Interpreter, cv *cval) (state,
 
 /********************************************************************/
 
+type stateUnaryTypeofExpression struct {
+	stateCommon
+	arg ast.Expression
+}
+
+func (st *stateUnaryTypeofExpression) init(node *ast.UnaryExpression) {
+	st.arg = node.Argument
+}
+
+func (st *stateUnaryTypeofExpression) step(intrp *Interpreter, cv *cval) (state, *cval) {
+	if cv == nil {
+		return newStateForRef(st, st.scope, st.arg.E), nil
+	} else if cv.abrupt() {
+		return st.parent, cv
+	} else if cv.val.Type() == REFERENCE {
+		ref := cv.rval()
+		if ref.isUnresolvable() {
+			return st.parent, pval(data.String("undefined"))
+		}
+		v, ne := ref.getValue(intrp)
+		if ne != nil {
+			return st.parent, intrp.throw(ne)
+		}
+		return st.parent, pval(data.String(v.Typeof()))
+	} else {
+		return st.parent, pval(data.String(cv.pval().Typeof()))
+	}
+}
+
+/********************************************************************/
+
 type stateUnaryExpression struct {
 	stateCommon
 	op  string
@@ -1448,8 +1485,6 @@ func (st *stateUnaryExpression) step(intrp *Interpreter, cv *cval) (state, *cval
 	}
 	var r data.Value
 	switch st.op {
-	case "typeof":
-		r = data.String(cv.pval().Typeof())
 	case "void":
 		r = data.Undefined{}
 	case "+":

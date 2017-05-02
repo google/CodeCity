@@ -88,6 +88,18 @@ func (sc *scope) getVar(name string) data.Value {
 	panic(fmt.Errorf("can't get undeclared variable %v", name))
 }
 
+// getRef returns a reference to the specified variable; this will be
+// an uresolvable reference if the variable does not exist.
+func (sc *scope) getRef(name string) reference {
+	_, ok := sc.vars[name]
+	if ok {
+		return newReference(sc, name)
+	} else if sc.parent == nil {
+		return newReference(nil, name)
+	}
+	return sc.parent.getRef(name)
+}
+
 // populate takes a syntax (sub)tree; the tree is searched for
 // declarations in it's outermost scope (i.e., ignoring function
 // declarations) and updates the scope object with any variables

@@ -127,6 +127,7 @@ func newReference(base value, name string) reference {
 	switch base.(type) {
 	case data.Value: // OK
 	case *scope: // OK
+	case nil: // Undefined reference, but OK
 	default:
 		panic("invalid reference base type")
 	}
