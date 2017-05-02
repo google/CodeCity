@@ -121,7 +121,28 @@ CCC.Common.openMenu = function(e) {
     menuItem.addEventListener('click', CCC.Common.commandFunction, false);
     menu.appendChild(menuItem);
   }
-  document.body.appendChild(menu);
+  var scrollDiv = document.getElementById('scrollDiv');
+  var pageHeight = scrollDiv.scrollHeight;
+  var pageWidth = scrollDiv.scrollWidth;
+  scrollDiv.appendChild(menu);
+  var iconRect = this.getBoundingClientRect();
+  // Calculate preferred location of below and right of icon.
+  var top = iconRect.top + scrollDiv.scrollTop + iconRect.height;
+  var left = iconRect.left + scrollDiv.scrollLeft;
+  // Flip up if below page.
+  if (top + menu.offsetHeight > pageHeight) {
+    top -= menu.offsetHeight + iconRect.height;
+    // Don't go off the top of the page.
+    top = Math.max(top, 0);
+  }
+  // Don't go off the right of the page.
+  if (left + menu.offsetWidth > pageWidth) {
+    left = pageWidth - menu.offsetWidth;
+    // Don't go off the right of the page.
+    left = Math.max(left, 0);
+  }
+  menu.style.top = top + 'px';
+  menu.style.left = left + 'px';
 };
 
 /**
@@ -132,6 +153,7 @@ CCC.Common.closeMenu = function() {
   if (menu) {
     menu.parentNode.removeChild(menu);
   }
+  parent.focus();
 };
 
 /**
