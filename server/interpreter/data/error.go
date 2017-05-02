@@ -16,17 +16,27 @@
 
 package data
 
-// ErrorMsg is a (name, description)-tuple used to report error
-// conditions inside the JavaScript interpreter.  It's not actually a
-// JS Error object, but might get turned into one if appropriate.
-type ErrorMsg struct {
-	Name    string
+// NativeError is a (type, description) tuple used to indicate that an
+// error condition which is specified to throw a JS native error has
+// occurred.  It's not actually a JS Error object itself (because
+// creating one would require access to the appropriate prototype
+// object), but the interpreter should turn it into one and then
+// trhrow the result.
+type NativeError struct {
+	Type    NativeErrorType
 	Message string
 }
 
-// *ErrorMsg must satisfy error.
-var _ error = (*ErrorMsg)(nil)
+// NativeErrorType is an enum of the native error types listed in
+// ES5.1 §15.11.6: EvalError, RangeError, etc.
+type NativeErrorType int
 
-func (err ErrorMsg) Error() string {
-	return err.Name + ": " + err.Message
-}
+// Type constants for NativeErrorType.
+const (
+	EvalError NativeErrorType = iota
+	RangeError
+	ReferenceError
+	SyntaxError
+	TypeError
+	URIError
+)

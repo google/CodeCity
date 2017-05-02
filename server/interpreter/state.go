@@ -299,10 +299,9 @@ func (st *stateArrayExpression) step(intrp *Interpreter, cv *cval) (state, *cval
 	} else {
 		// FIXME: this is somewhat inefficient.
 		if cv.pval() != nil {
-			err := st.arr.Set(string(data.Number(st.n).ToString()),
-				cv.pval())
-			if err != nil {
-				panic(err)
+			ne := st.arr.Set(string(data.Number(st.n).ToString()), cv.pval())
+			if ne != nil {
+				return st.parent, intrp.throw(ne)
 			}
 		}
 		st.n++
@@ -315,9 +314,9 @@ func (st *stateArrayExpression) step(intrp *Interpreter, cv *cval) (state, *cval
 		st.n++
 	}
 	// Update .length, in case there were trailing elided elements:
-	err := st.arr.Set("length", data.Number(st.n).ToString())
-	if err != nil {
-		panic(err)
+	ne := st.arr.Set("length", data.Number(st.n).ToString())
+	if ne != nil {
+		return st.parent, intrp.throw(ne)
 	}
 
 	return st.parent, pval(st.arr)
@@ -381,11 +380,10 @@ func (st *stateAssignmentExpression) step(intrp *Interpreter, cv *cval) (state, 
 		default:
 			panic(fmt.Errorf("illegal assignemnt operator %s", st.op))
 		}
-		var e *data.ErrorMsg
-		r, e = data.BinaryOp(st.left.get(), op, r)
-		// FIXME: actually throw error here
-		if e != nil {
-			panic(fmt.Errorf("need to throw %#v", e))
+		var ne *data.NativeError
+		r, ne = data.BinaryOp(st.left.get(), op, r)
+		if ne != nil {
+			return st.parent, intrp.throw(ne)
 		}
 	}
 	st.left.put(r)
@@ -416,10 +414,9 @@ func (st *stateBinaryExpression) step(intrp *Interpreter, cv *cval) (state, *cva
 		st.left = cv.pval()
 		return newState(st, st.scope, ast.Node(st.rNode.E)), nil
 	}
-	r, e := data.BinaryOp(st.left, st.op, cv.pval())
-	// FIXME: actually throw error here
-	if e != nil {
-		panic(fmt.Errorf("need to throw %#v", e))
+	r, ne := data.BinaryOp(st.left, st.op, cv.pval())
+	if ne != nil {
+		return st.parent, intrp.throw(ne)
 	}
 	return st.parent, pval(r)
 }
@@ -1061,10 +1058,9 @@ func (st *stateMemberExpression) step(intrp *Interpreter, cv *cval) (state, *cva
 		}
 		name = i.Name
 	}
-	v, err := st.base.Get(name)
-	if err != nil {
-		// FIXME: throw JS error
-		panic(err)
+	v, ne := st.base.Get(name)
+	if ne != nil {
+		return st.parent, intrp.throw(ne)
 	}
 	// FIXME: this is an ugly hack.
 	if ce, isCE := st.parent.(*stateCallExpression); isCE {
@@ -1090,7 +1086,7 @@ func (st *stateObjectExpression) init(node *ast.ObjectExpression) {
 func (st *stateObjectExpression) step(intrp *Interpreter, cv *cval) (state, *cval) {
 	if st.obj == nil {
 		if st.n != 0 || cv != nil {
-			panic("internal error when constructing object")
+			panic(fmt.Errorf("no value for property #%d??", st.n-1))
 		}
 		// FIXME: set owner of new object
 		st.obj = data.NewObject(nil, intrp.protos.ObjectProto)
@@ -1595,10 +1591,9 @@ func (lv *lvalue) get() data.Value {
 	if lv.base == nil {
 		return lv.scope.getVar(lv.name)
 	}
-	v, err := lv.base.Get(lv.name)
-	if err != nil {
-		// FIXME: throw JS error
-		panic(err)
+	v, ne := lv.base.Get(lv.name)
+	if ne != nil {
+		// FIXME: should throw error.
 	}
 	return v
 }
@@ -1612,7 +1607,10 @@ func (lv *lvalue) put(value data.Value) {
 	if lv.base == nil {
 		lv.scope.setVar(lv.name, value)
 	} else {
-		lv.base.Set(lv.name, value)
+		ne := lv.base.Set(lv.name, value)
+		if ne != nil {
+			// FIXME: should throw error.
+		}
 	}
 }
 

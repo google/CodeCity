@@ -124,3 +124,32 @@ func (intrp *Interpreter) toObject(value data.Value, owner *data.Owner) data.Obj
 		panic(fmt.Errorf("Can't coerce a %T to Object", v))
 	}
 }
+
+// nativeError takes a data.NativeError error specification and an
+// owner and creates a corresponding native error object.
+func (intrp *Interpreter) nativeError(ne *data.NativeError, o *data.Owner) data.Object {
+	var e data.Object
+	switch ne.Type {
+	case data.EvalError:
+		e = data.NewObject(o, intrp.protos.EvalErrorProto)
+	case data.RangeError:
+		e = data.NewObject(o, intrp.protos.RangeErrorProto)
+	case data.ReferenceError:
+		e = data.NewObject(o, intrp.protos.ReferenceErrorProto)
+	case data.SyntaxError:
+		e = data.NewObject(o, intrp.protos.SyntaxErrorProto)
+	case data.TypeError:
+		e = data.NewObject(o, intrp.protos.TypeErrorProto)
+	case data.URIError:
+		e = data.NewObject(o, intrp.protos.URIErrorProto)
+	default:
+		panic(fmt.Errorf("Unknown NativeErrorType %d", ne.Type))
+	}
+	e.Set("message", data.String(ne.Message))
+	return e
+}
+
+func (intrp *Interpreter) throw(ne *data.NativeError) *cval {
+	// FIXME: set owner.
+	return &cval{THROW, intrp.nativeError(ne, nil), ""}
+}
