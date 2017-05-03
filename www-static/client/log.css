@@ -33,3 +33,7 @@ pre {
 .commandDiv {
   background: #ffc;
 }
+
+.sceneTitle {
+  font-weight: bold;
+}

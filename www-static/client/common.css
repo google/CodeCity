@@ -24,9 +24,8 @@ a.command:hover {
 svg.menuIcon {
   cursor: pointer;
   display: inline;
-  fill: #000;
+  fill: #444;
   height: 10px;
-  opacity: .7;
   stroke: none;
   vertical-align: top;
   width: 10px;

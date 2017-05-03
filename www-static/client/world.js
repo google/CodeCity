@@ -247,7 +247,7 @@ CCC.World.prerenderHistory = function(msg) {
     var rect = document.createElementNS(CCC.Common.NS, 'rect');
     var text = document.createElementNS(CCC.Common.NS, 'text');
     text.appendChild(document.createTextNode(
-        CCC.Common.getMsg('relaunchIframeMsg')));
+        CCC.World.getMsg('relaunchIframeMsg')));
     g.appendChild(rect);
     g.appendChild(text);
     g.addEventListener('click', function() {
@@ -293,9 +293,11 @@ CCC.World.prerenderHistory = function(msg) {
     //   <svgdom>...</svgdom>
     //   <object name="a clock">
     //     <svgdom>...</svgdom>
+    //     <cmds><cmd>look clock</cmd></cmds>
     //   </object>
     //   <user name="Max">
     //     <svgdom>...</svgdom>
+    //     <cmds><cmd>look Max</cmd></cmds>
     //   </user>
     // </scene>
     if (msg.getAttribute('user')) {
@@ -396,7 +398,7 @@ CCC.World.publishHistory = function() {
       var closeImg = new Image(21, 21);
       closeImg.className = 'iframeClose';
       closeImg.src = 'close.png';
-      closeImg.title = CCC.Common.getMsg('closeIframeMsg');
+      closeImg.title = CCC.World.getMsg('closeIframeMsg');
       closeImg.addEventListener('click', function() {
         closeImg.style.display = 'none';
         panelDiv.firstChild.style.visibility = 'visible';  // SVG.
@@ -968,6 +970,19 @@ CCC.World.removeNode = function(node) {
   if (node) {
     node.parentNode.removeChild(node);
   }
+};
+
+/**
+ * Gets the message with the given key from the document.
+ * @param {string} key The key of the document element.
+ * @return {string} The textContent of the specified element.
+ */
+CCC.World.getMsg = function(key) {
+  var element = document.getElementById(key);
+  if (!element) {
+    throw 'Unknown message ' + key;
+  }
+  return element.textContent;
 };
 
 /**

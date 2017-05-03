@@ -216,9 +216,11 @@ CCC.Log.renderXml = function(node) {
       //   <svgtext>...</svgtext>
       //   <object name="a clock">
       //     <svgtext>...</svgtext>
+      //     <cmds><cmd>look clock</cmd></cmds>
       //   </object>
       //   <user name="Max">
       //     <svgtext>...</svgtext>
+      //     <cmds><cmd>look Max</cmd></cmds>
       //   </user>
       // </scene>
       var user = node.getAttribute('user');
@@ -235,39 +237,55 @@ CCC.Log.renderXml = function(node) {
             description = child.textContent;
             break;
           case 'object':
-            objects.push(child.getAttribute('name'));
-            break;
           case 'user':
-            users.push(child.getAttribute('name'));
+            var df = document.createDocumentFragment();
+            df.appendChild(document.createTextNode(
+                child.getAttribute('name')));
+            var cmds = child.querySelector('user>cmds,object>cmds');
+            if (cmds) {
+              var icon = CCC.Common.newMenuIcon(cmds);
+              if (icon) {
+                icon.addEventListener('click', CCC.Common.openMenu);
+                df.appendChild(icon);
+              }
+            }
+            (child.tagName == 'user' ? users : objects).push(df);
             break;
         }
       }
-      var text = '';
+      var div = document.createElement('div');
       var roomName = node.getAttribute('location');
       if (roomName) {
-        text += roomName + '\n';
+        var titleDiv = document.createElement('div');
+        titleDiv.className = 'sceneTitle';
+        titleDiv.appendChild(document.createTextNode(roomName));
+        div.appendChild(titleDiv);
       }
       if (description) {
-        text += description + '\n';
+        var descriptionDiv = document.createElement('div');
+        descriptionDiv.appendChild(document.createTextNode(description));
+        div.appendChild(descriptionDiv);
       }
       if (objects.length == 1) {
-        text += CCC.Common.getMsg('roomObjectMsg', objects[0]);
+        div.appendChild(CCC.Log.getMsg('roomObjectMsg', objects[0]));
       } else if (objects.length > 1) {
-        text += CCC.Common.getMsg('roomObjectsMsg', CCC.Log.naturalList(objects));
+        div.appendChild(
+            CCC.Log.getMsg('roomObjectsMsg', CCC.Log.naturalList(objects)));
       }
       if (users.length == 1) {
-        text += CCC.Common.getMsg('roomUserMsg', users[0]);
+        div.appendChild(CCC.Log.getMsg('roomUserMsg', users[0]));
       } else if (users.length > 1) {
-        text += CCC.Common.getMsg('roomUsersMsg', CCC.Log.naturalList(users));
+        div.appendChild(
+            CCC.Log.getMsg('roomUsersMsg', CCC.Log.naturalList(users)));
       }
-      return text;
+      return div;
     case 'say':
       // <say user="Max" room="The Hangout">Hello world.</say>
       var user = node.getAttribute('user');
       if (CCC.Log.userName === user) {
-        var text = CCC.Common.getMsg('saySelfMsg', node.textContent);
+        var text = CCC.Log.getMsg('saySelfMsg', node.textContent);
       } else {
-        var text = CCC.Common.getMsg('sayMsg', user, node.textContent);
+        var text = CCC.Log.getMsg('sayMsg', user, node.textContent);
       }
       return text;
   }
@@ -338,20 +356,54 @@ CCC.Log.renderHtmltext.BLOCK_NAMES = [
 ];
 
 /**
+ * Gets the message with the given key from the document.
+ * @param {string} key The key of the document element.
+ * @param {...string|DocumentFragment} var_args Optional substitutions for %1...
+ * @return {!DocumentFragment} A document fragment containing the text.
+ */
+CCC.Log.getMsg = function(key, var_args) {
+  var element = document.getElementById(key);
+  if (!element) {
+    throw 'Unknown message ' + key;
+  }
+  var text = element.textContent;
+  var parts = text.split(/(%\d)/);
+  var df = document.createDocumentFragment();
+  // Inject any substitutions.
+  for (var i = 0; i < parts.length; i++) {
+    var part = parts[i];
+    var m = part.match(/^%(\d)$/);
+    if (m) {
+      df.appendChild(arguments[m[1]]);
+    } else if (part) {
+      df.appendChild(document.createTextNode(part));
+    }
+  }
+  return df;
+};
+
+/**
  * Make a natural language list.  Don't use Oxford comma due to lack of plurals.
  * ['apple', 'banana', 'cherry'] -> 'apple, banana and cherry'
- * @param {!Array.<string>} list List of strings.
- * @return {string} Natural language list.
+ * @param {!Array.<!DocumentFragment>} list List of items to concatenate.
+ * @return {!DocumentFragment} A document fragment containing the text.
  */
 CCC.Log.naturalList = function(list) {
-  var text = list.slice(0, -1).join(', ');
-  var last = list[list.length - 1];
-  if (text) {
-    text += ' ' + CCC.Common.getMsg('andMsg') + ' ' + last;
-  } else {
-    text = last;
+  if (list.length == 1) {
+    return list[0];
   }
-  return text;
+  var df = document.createDocumentFragment();
+  for (var i = 0; i < list.length - 1; i++) {
+    if (i) {
+      df.appendChild(document.createTextNode(', '));
+    }
+    df.appendChild(list[i]);
+  }
+  df.appendChild(document.createTextNode(' '));
+  df.appendChild(CCC.Log.getMsg('andMsg'));
+  df.appendChild(document.createTextNode(' '));
+  df.appendChild(list[list.length - 1]);
+  return df;
 };
 
 /**

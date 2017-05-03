@@ -61,39 +61,18 @@ CCC.Common.verifyMessage = function(e) {
 };
 
 /**
- * Gets the message with the given key from the document.
- * @param {string} key The key of the document element.
- * @param {...string} var_args Optional substitutions for %1, %2, ...
- * @return {string} The textContent of the specified element.
- */
-CCC.Common.getMsg = function(key, var_args) {
-  var element = document.getElementById(key);
-  if (!element) {
-    throw 'Unknown message ' + key;
-  }
-  var text = element.textContent;
-  // Convert newline sequences.
-  text = text.replace(/\\n/g, '\n');
-  // Inject any substitutions.
-  for (var i = 1; i < arguments.length; i++) {
-    text = text.replace('%' + i, arguments[i]);
-  }
-  return text;
-};
-
-/**
  * Create a command menu icon.
  * @param {!Element} node Root DOM element describing the menu commands.
  * @return {SVGSVGElement} Root element of icon.
  */
 CCC.Common.newMenuIcon = function(node) {
-  var cmdNodes = node.querySelectorAll('CMD');
+  var cmdNodes = node.querySelectorAll('cmd');
   if (!cmdNodes.length) {
     return null;
   }
   var cmds = [];
   for (var i = 0, cmdNode; cmdNode = cmdNodes[i]; i++) {
-    cmds.push(cmdNode.innerText);
+    cmds.push(CCC.Common.innerText(cmdNode));
   }
   var svg = document.createElementNS(CCC.Common.NS, 'svg');
   svg.setAttribute('class', 'menuIcon');
@@ -102,6 +81,24 @@ CCC.Common.newMenuIcon = function(node) {
   path.setAttribute('d', 'm 1,2 4,4 4,-4 z');
   svg.appendChild(path);
   return svg;
+};
+
+/**
+ * Concatenate all the text element in a DOM tree.
+ * <foo>123<bar>456</bar>789</foo> -> '123456789'
+ * @param {!Element} node Root DOM element.
+ * @return {string} Plain text.
+ */
+CCC.Common.innerText = function(node) {
+  var text = '';
+  if (node.nodeType == 3) {
+    text = node.data;
+  } else if (node.nodeType == 1) {
+    for (var i = 0; i < node.childNodes.length; i++) {
+      text += CCC.Common.innerText(node.childNodes[i]);
+    }
+  }
+  return text;
 };
 
 /**
