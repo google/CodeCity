@@ -55,7 +55,7 @@ func NewFromRaw(raw string) Value {
 	} else if raw[0] == '\'' {
 		// BUG(cpcallen): single-quoted string literals not implemented.
 		panic(fmt.Errorf("Single-quoted string literals not implemented"))
-	} else if unicode.IsDigit(rune(raw[0])) {
+	} else if unicode.IsDigit(rune(raw[0])) || raw[0] == '-' {
 		// BUG(cpcallen): numeric literals probably not handled
 		// completely in accordance with ES5.1 spec; it is implemented
 		// using String.ToNumber which may be unduly tolerant and
