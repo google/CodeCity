@@ -80,9 +80,12 @@ func (intrp *Interpreter) Step() bool {
 		case CONTINUE:
 			panic(fmt.Errorf("illegal continue of %s", intrp.value.targ))
 		case RETURN:
-			panic(fmt.Errorf("illegal return of %s", intrp.value.val))
+			panic(fmt.Errorf("illegal return of %s", intrp.value.value().ToString()))
 		case THROW:
-			panic(fmt.Errorf("unhandled exception %s", intrp.value.val))
+			error := intrp.toObject(intrp.value.value(), nil)
+			name, _ := error.Get("name")
+			message, _ := error.Get("message")
+			panic(fmt.Errorf("unhandled exception: %s: %s", name, message))
 		}
 		return false
 	}
