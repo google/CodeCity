@@ -42,9 +42,9 @@ for (var i = 0; i < t.length; i++) {
   // Compact source code by removing line breaks and unneeded spaces &
   // semicolons:
   var src = t[i].src.replace(/\n/g, ' ').trim().replace(/ +/g, ' ');
-  src = src.replace(/ *([{}()\[\],;=+*/<>~|&!?:-]+) */g, "$1");
-  src = src.replace(/;}/g, "}");
-  src = src.replace(/;$/, "");
+  src = src.replace(/ *([{}()\[\],;=+*/<>~|&!?:-]+) */g, '$1');
+  src = src.replace(/;}/g, '}');
+  src = src.replace(/;$/, '');
   // Convert the expected value so it can be parsed by data.NewFromRaw():
   var expt = JSON.stringify(t[i].expected);
   console.log('\t{%s, `%s`, `%s`},', t[i].name, src, expt);
