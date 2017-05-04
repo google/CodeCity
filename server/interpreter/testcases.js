@@ -25,215 +25,211 @@
 
 // This file is input for (and required by) gentests.js.
 exports.tests = [
-  { name: "onePlusOne", src: `
+  { name: 'onePlusOne', src: `
     1 + 1;
     `,
     expected: 2 },
 
-  { name: "twoPlusTwo", src: `
+  { name: 'twoPlusTwo', src: `
     2 + 2;
     `,
     expected: 4 },
 
-  { name: "sixTimesSeven", src: `
+  { name: 'sixTimesSeven', src: `
     6 * 7;
     `,
     expected: 42 },
 
-  { name: "simpleFourFunction", src: `
+  { name: 'simpleFourFunction', src: `
     (3 + 12 / 4) * (10 - 3);
     `,
     expected: 42 },
 
-  { name: "variableDecl", src: `
+  { name: 'variableDecl', src: `
     var x = 43;
     x;
     `,
     expected: 43 },
 
-  { name: "condTrue", src: `
-    true?"then":"else";
+  { name: 'condTrue', src: `
+    true ? "then" : "else";
     `,
     expected: "then" },
 
-  { name: "condFalse", src: `
-    false?"then":"else";
+  { name: 'condFalse', src: `
+    false ? "then" : "else";
     `,
     expected: "else" },
 
-  { name: "ifTrue", src: `
-    if(true) {
-        "then";
-    }
-    else {
-        "else";
+  { name: 'ifTrue', src: `
+    if (true) {
+      "then";
+    } else {
+      "else";
     }
     `,
     expected: "then" },
 
-  { name: "ifFalse", src: `
-    if(false) {
-        "then";
-    }
-    else {
-        "else";
+  { name: 'ifFalse', src: `
+    if (false) {
+      "then";
+    } else {
+      "else";
     }
     `,
     expected: "else" },
 
-  { name: "simpleAssignment", src: `
+  { name: 'simpleAssignment', src: `
     var x = 0;
     x = 44;
     x;
     `,
     expected: 44 },
 
-  { name: "propertyAssignment", src: `
+  { name: 'propertyAssignment', src: `
     var o = {};
     o.foo = 45;
     o.foo;
     `,
     expected: 45 },
 
-  { name: "postincrement", src: `
+  { name: 'postincrement', src: `
     var x = 45;
     x++;
     x++;
     `,
     expected: 46 },
 
-  { name: "preincrement", src: `
+  { name: 'preincrement', src: `
     var x = 45;
     ++x;
     ++x;
     `,
     expected: 47 },
 
-  { name: "concat", src: `
-    "foo"+"bar";
+  { name: 'concat', src: `
+    "foo" + "bar";
     `,
     expected: "foobar" },
 
-  { name: "plusequalsLeft", src: `
+  { name: 'plusequalsLeft', src: `
     var x=40, y=8;
-    x+=y;
+    x += y;
     x;
     `,
   expected: 48 },
 
-  { name: "plusequalsRight", src: `
+  { name: 'plusequalsRight', src: `
     var x=40, y=8;
-    x+=y;
+    x += y;
     y;
     `,
     expected: 8 },
 
-  { name: "simpleFunctionExpression", src: `
+  { name: 'simpleFunctionExpression', src: `
     var v;
-    var f = function() {v = 49};
+    var f = function() { v = 49; };
     f();
     v;
     `,
     expected: 49 },
 
-  { name: "fExpWithParameter", src: `
+  { name: 'fExpWithParameter', src: `
     var v;
-    var f = function(x) {v = x};
+    var f = function(x) { v = x; };
     f(50);
     v;
     `,
     expected: 50 },
 
-  { name: "functionWithReturn", src: `
-    (function(x) {return x})(51);
+  { name: 'functionWithReturn', src: `
+    (function(x) { return x; })(51);
     `,
     expected: 51 },
 
-  { name: "functionWithoutReturn", src: `
+  { name: 'functionWithoutReturn', src: `
     (function() {})();
     `,
     expected: undefined },
 
-  { name: "multipleReturn", src: `
+  { name: 'multipleReturn', src: `
     var f = function() {
-        try {
-            return true;
-        }
-        finally {
-            return false;
-        }
+      try {
+        return true;
+      } finally {
+        return false;
+      }
     }
     f();
     `,
     expected: false },
 
-  { name: "throwCatch", src: `
-    var f = function () {
-        throw 26;
+  { name: 'throwCatch', src: `
+    var f = function() {
+      throw 26;
     }
     try {
-        f();
-    }
-    catch (e) {
-        e * 2;
+      f();
+    } catch (e) {
+      e * 2;
     }
     `,
     expected: 52 },
 
-  { name: "seqExpr", src: `
+  { name: 'seqExpr', src: `
     51, 52, 53;
     `,
     expected: 53 },
 
-  { name: "labeledStatement", src: `
+  { name: 'labeledStatement', src: `
     foo: 54;
     `,
     expected: 54 },
 
-  { name: "whileLoop", src: `
+  { name: 'whileLoop', src: `
     var a = 0;
-    while(a<55) {
-        a++;
+    while (a < 55) {
+      a++;
     }
     a;
     `,
     expected: 55 },
 
-  { name: "whileFalse", src: `
+  { name: 'whileFalse', src: `
     var a = 56;
-    while(false) {
-        a++;
+    while (false) {
+      a++;
     }
     a;
     `,
     expected: 56 },
 
-  { name: "doWhileFalse", src: `
+  { name: 'doWhileFalse', src: `
     var a = 56;
     do {
-        a++;
-    } while(false);
+      a++;
+    } while (false);
     a;
     `,
     expected: 57 },
 
-  { name: "breakDoWhile", src: `
+  { name: 'breakDoWhile', src: `
     var a = 57;
     do {
         a++;
         break;
         a++;
-    } while(false);
+    } while (false);
     a;
     `,
     expected: 58 },
 
-  { name: "selfBreak", src: `
+  { name: 'selfBreak', src: `
     foo: break foo;
     `,
     expected: undefined /* (but legal!) */ },
 
-  { name: "breakWithFinally", src: `
+  { name: 'breakWithFinally', src: `
     var a = 6;
     foo: {
         try {
@@ -248,7 +244,7 @@ exports.tests = [
     `,
     expected: 59 },
 
-  { name: "continueWithFinally", src: `
+  { name: 'continueWithFinally', src: `
     var a = 59;
     do {
       try {
@@ -256,14 +252,14 @@ exports.tests = [
       } finally {
         a++;
       }
-    } while(false);
+    } while (false);
     a;
     `,
     expected: 60 },
 
-  { name: "breakWithFinallyContinue", src: `
+  { name: 'breakWithFinallyContinue', src: `
     var a = 0;
-    while(a++ < 60) {
+    while (a++ < 60) {
       try {
         break;
       } finally {
@@ -274,10 +270,10 @@ exports.tests = [
     `,
     expected: 61 },
 
-  { name: "returnWithFinallyContinue", src: `
-    (function(){
+  { name: 'returnWithFinallyContinue', src: `
+    (function() {
       var i = 0;
-      while(i++ < 61) {
+      while (i++ < 61) {
         try {
           return 42;
         } finally {
@@ -289,126 +285,126 @@ exports.tests = [
     `,
     expected: 62 },
 
-  { name: "orTrue", src: `
+  { name: 'orTrue', src: `
     63 || "foo";
     `,
     expected: 63 },
 
-  { name: "orFalse", src: `
+  { name: 'orFalse', src: `
     false || 64;
     `,
     expected: 64 },
 
-  { name: "andTrue", src: `
+  { name: 'andTrue', src: `
     ({}) && 65;
     `,
     expected: 65 },
 
-  { name: "andFalse", src: `
+  { name: 'andFalse', src: `
     0 && 65;
     `,
     expected: 0 },
 
-  { name: "forTriangular", src: `
+  { name: 'forTriangular', src: `
     var t = 0;
-    for(var i=0; i < 12; i++) {
+    for (var i = 0; i < 12; i++) {
       t += i;
     }
     t;
     `,
     expected: 66 },
 
-  { name: "forIn", src: `
+  { name: 'forIn', src: `
     var x = 0, a = {a: 60, b:3, c:4};
-    for(var i in a) { x += a[i]; }
+    for (var i in a) { x += a[i]; }
     x;
     `,
     expected: 67 },
 
-  { name: "forInMemberExp", src: `
+  { name: 'forInMemberExp', src: `
     var x = 1, o = {foo: "bar"}, a = {a:2, b:2, c:17};
-    for(o.foo in a) { x *= a[o.foo]; }
+    for (o.foo in a) { x *= a[o.foo]; }
     x;
     `,
     expected: 68 },
 
-  { name: "forInMembFunc", src: `
+  { name: 'forInMembFunc', src: `
     var x = 0, o = {};
-    var f = function() { x += 20; return o };
+    var f = function() { x += 20; return o; };
     var a = {a:2, b:3, c:4};
-    for(f().foo in a) { x += a[o.foo] }
+    for (f().foo in a) { x += a[o.foo]; }
     x;
     `,
     expected: 69 },
 
-  { name: "methodCall", src: `
+  { name: 'methodCall', src: `
     var o = {
-      f: function() {return this.foo},
+      f: function() { return this.foo; },
       foo: 70
     };
     o.f();
     `,
     expected: 70 },
 
-  { name: "demethodedCall", src: `
+  { name: 'demethodedCall', src: `
     var o = { f: function() { return this; }};
     var g = o.f;
     g();
     `,
     expected: undefined },
 
-  { name: "bareThis", src: `
+  { name: 'bareThis', src: `
     this;
     `,
     expected: undefined },
 
-  { name: "emptyArrayLength", src: `
+  { name: 'emptyArrayLength', src: `
     [].length;
     `,
     expected: 0 },
 
-  { name: "arrayElidedLength", src: `
+  { name: 'arrayElidedLength', src: `
     [1,,3,,].length;
     `,
     expected: 4 },
 
-  { name: "compValEmptyBlock", src: `
+  { name: 'compValEmptyBlock', src: `
     {};
     `,
     expected: undefined },
 
-  { name: "undefined", src: `
+  { name: 'undefined', src: `
     undefined;
     `,
     expected: undefined },
 
-  { name: "unaryVoid", src: `
+  { name: 'unaryVoid', src: `
     var x = 70;
-    undefined === void x++ && x;
+    (undefined === void x++) && x;
     `,
     expected: 71 },
 
-  { name: "unaryPlus", src: `
+  { name: 'unaryPlus', src: `
     +"72";
     `,
     expected: 72 },
 
-  { name: "unaryMinus", src: `
+  { name: 'unaryMinus', src: `
     -73;
     `,
     expected: -73 },
 
-  { name: "unaryComplement", src: `
+  { name: 'unaryComplement', src: `
     ~0xffffffb5;
     `,
     expected: 74 },
 
-  { name: "unaryNot", src: `
+  { name: 'unaryNot', src: `
     !false && (!true === false);
     `,
     expected: true },
 
-  { name: "unaryTypeof", src: `
+  { name: 'unaryTypeof', src: `
     var tests = [
       [undefined, "undefined"],
       [null, "object"],
@@ -417,11 +413,11 @@ exports.tests = [
       ["", "string"],
       [{}, "object"],
       [[], "object"],
-      [function () {}, "function"],
+      [function() {}, "function"],
     ];
     var ok = 0;
-    for(var i = 0; i < tests.length; i++) {
-      if(typeof(tests[i][1]) != tests[i][2]) {
+    for (var i = 0; i < tests.length; i++) {
+      if (typeof(tests[i][1]) != tests[i][2]) {
         ok++;
       }
     }
@@ -429,7 +425,7 @@ exports.tests = [
     `,
     expected: "pass" },
 
-  { name: "unaryTypeofUndeclared", src: `
+  { name: 'unaryTypeofUndeclared', src: `
     try {
       typeof undeclaredVar;
     } catch(e) {
@@ -438,23 +434,24 @@ exports.tests = [
     `,
     expected: "undefined" },
 
-  { name: "binaryIn", src: `
+  { name: 'binaryIn', src: `
     var o = {foo: "bar"};
     "foo" in o && !("bar" in o);
     `,
     expected: true },
 
-  { name: "strictBoxedThis", src: `
+  { name: 'strictBoxedThis', src: `
     "use strict";
     Object.prototype.foo = function() { return typeof this };
     "foo".foo();
     `,
     expected: "string" },
 
-  { name: "deleteProp", src: `
+  { name: 'deleteProp', src: `
     var o = {foo: "bar"};
     (delete o.quux) + ("foo" in o) + (delete o.foo) + 
       !("foo" in o) + (delete o.foo);
     `,
     expected: 5 },
+
 ];
