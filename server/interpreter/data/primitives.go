@@ -37,6 +37,11 @@ import (
 // appears in the source code, and as found in an ast.Literal.Raw
 // property) and returns a primitive Value object representing the
 // value of that literal.
+//
+// As an aid to testing, this function also handles negative numbers
+// and undefined, which normally never occur as raw literals in an
+// ESTree AST (they are parsed as UnaryExpression and Identifier,
+// respectively).
 func NewFromRaw(raw string) Value {
 	if raw == "true" {
 		return Boolean(true)
