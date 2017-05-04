@@ -596,7 +596,7 @@ func (st *stateCallExpression) step(intrp *Interpreter, cv *cval) (state, *cval)
 		}
 		scope := newScope(st.scope, st.this)
 		// Set up scope:
-		scope.populate(closure.body)
+		scope.populate(closure.body, intrp)
 		for i, arg := range st.argv {
 			scope.newVar(closure.params[i], arg)
 		}

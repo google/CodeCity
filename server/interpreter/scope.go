@@ -104,68 +104,73 @@ func (sc *scope) getRef(name string) reference {
 // declarations in it's outermost scope (i.e., ignoring function
 // declarations) and updates the scope object with any variables
 // found.  This is how function and variable hoisting is performed.
-func (sc *scope) populate(node ast.Node) {
+func (sc *scope) populate(node ast.Node, intrp *Interpreter) {
 	switch n := node.(type) {
 
 	// The interesting cases:
 	case *ast.VariableDeclarator:
 		sc.newVar(n.Id.Name, data.Undefined{})
 	case *ast.FunctionDeclaration:
-		// Add name of function to scope; ignore contents.
-		sc.newVar(n.Id.Name, data.Undefined{})
+		// Add name of function to scope and initialise it with a
+		// closure.  Ignore contained subtree (it will be examined
+		// when the function is called).
+		//
+		// FIXME: set owner:
+		cl := newClosure(nil, intrp.protos.FunctionProto, sc, n.Params, n.Body)
+		sc.newVar(n.Id.Name, cl)
 
 	// The recursive cases:
 	case *ast.BlockStatement:
 		for _, s := range n.Body {
-			sc.populate(s)
+			sc.populate(s, intrp)
 		}
 	case *ast.CatchClause:
-		sc.populate(n.Body)
+		sc.populate(n.Body, intrp)
 	case *ast.DoWhileStatement:
-		sc.populate(n.Body.S)
+		sc.populate(n.Body.S, intrp)
 	case *ast.ForInStatement:
-		sc.populate(n.Left.N)
-		sc.populate(n.Body.S)
+		sc.populate(n.Left.N, intrp)
+		sc.populate(n.Body.S, intrp)
 	case *ast.ForStatement:
 		if n.Init.N != nil {
-			sc.populate(n.Init.N)
+			sc.populate(n.Init.N, intrp)
 		}
 		if n.Body.S != nil {
-			sc.populate(n.Body.S)
+			sc.populate(n.Body.S, intrp)
 		}
 	case *ast.IfStatement:
-		sc.populate(n.Consequent.S)
+		sc.populate(n.Consequent.S, intrp)
 		if n.Alternate.S != nil {
-			sc.populate(n.Alternate.S)
+			sc.populate(n.Alternate.S, intrp)
 		}
 	case *ast.LabeledStatement:
-		sc.populate(n.Body.S)
+		sc.populate(n.Body.S, intrp)
 	case *ast.Program:
 		for _, s := range n.Body {
-			sc.populate(s)
+			sc.populate(s, intrp)
 		}
 	case *ast.SwitchCase:
 		for _, s := range n.Consequent {
-			sc.populate(s)
+			sc.populate(s, intrp)
 		}
 	case *ast.SwitchStatement:
 		for _, c := range n.Cases {
-			sc.populate(c)
+			sc.populate(c, intrp)
 		}
 	case *ast.TryStatement:
-		sc.populate(n.Block)
+		sc.populate(n.Block, intrp)
 		if n.Handler != nil {
-			sc.populate(n.Handler)
+			sc.populate(n.Handler, intrp)
 		}
 		if n.Finalizer != nil {
-			sc.populate(n.Finalizer)
+			sc.populate(n.Finalizer, intrp)
 		}
 	case *ast.VariableDeclaration:
 		for _, d := range n.Declarations {
-			sc.populate(d)
+			sc.populate(d, intrp)
 		}
 	case *ast.WhileStatement:
-		sc.populate(n.Body.S)
+		sc.populate(n.Body.S, intrp)
 	case *ast.WithStatement:
 		panic("not implemented")
 

@@ -63,7 +63,7 @@ func NewFromAST(tree *ast.Program) *Interpreter {
 	var intrp = new(Interpreter)
 	intrp.protos = data.NewProtos()
 	intrp.global = newGlobalScope(intrp.protos)
-	intrp.global.populate(tree)
+	intrp.global.populate(tree, intrp)
 	intrp.state = newState(nil, intrp.global, tree)
 	return intrp
 }
