@@ -66,6 +66,10 @@ body {
   fill: #000;
 }
 
+.htmlPanel {
+  height: 100%;
+}
+
 /* Enforce a consistent drawing style on all content. */
 svg {
   fill: #fff;
@@ -73,6 +77,10 @@ svg {
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: .7px;
+}
+
+.sceneBackground {
+  stroke: #888;
 }
 
 text {

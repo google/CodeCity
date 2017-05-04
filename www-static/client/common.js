@@ -74,12 +74,9 @@ CCC.Common.newMenuIcon = function(node) {
   for (var i = 0, cmdNode; cmdNode = cmdNodes[i]; i++) {
     cmds.push(CCC.Common.innerText(cmdNode));
   }
-  var svg = document.createElementNS(CCC.Common.NS, 'svg');
-  svg.setAttribute('class', 'menuIcon');
-  svg.setAttribute('data-cmds', JSON.stringify(cmds));
-  var path = document.createElementNS(CCC.Common.NS, 'path');
-  path.setAttribute('d', 'm 1,2 4,4 4,-4 z');
-  svg.appendChild(path);
+  var svg = CCC.Common.createSvgElement('svg',
+      {'class': 'menuIcon', 'data-cmds': JSON.stringify(cmds)});
+  CCC.Common.createSvgElement('path', {'d': 'm 1,2 4,4 4,-4 z'}, svg);
   return svg;
 };
 
@@ -160,4 +157,22 @@ CCC.Common.closeMenu = function() {
 CCC.Common.commandFunction = function() {
   parent.postMessage({'commands': [this.innerText]}, location.origin);
   parent.focus();
+};
+
+/**
+ * Helper method for creating SVG elements.
+ * @param {string} name Element's tag name.
+ * @param {!Object} attrs Dictionary of attribute names and values.
+ * @param {Element} opt_parent Optional parent on which to append the element.
+ * @return {!SVGElement} Newly created SVG element.
+ */
+CCC.Common.createSvgElement = function(name, attrs, opt_parent) {
+  var el = document.createElementNS(CCC.Common.NS, name);
+  for (var key in attrs) {
+    el.setAttribute(key, attrs[key]);
+  }
+  if (opt_parent) {
+    opt_parent.appendChild(el);
+  }
+  return el;
 };

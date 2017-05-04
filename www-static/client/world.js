@@ -240,9 +240,8 @@ CCC.World.prerenderHistory = function(msg) {
   if (msg.tagName == 'iframe') {
     // Create relaunch button if iframe is closed.
     svg.style.backgroundColor = '#696969';
-    var g = document.createElementNS(CCC.Common.NS, 'g');
-    g.setAttribute('class', 'iframeRelaunch');
-    g.setAttribute('transform', 'translate(0, 50)');
+    var g = CCC.Common.createSvgElement('g',
+        {'class': 'iframeRelaunch', 'transform': 'translate(0, 50)'}, svg);
     // Add relaunch button.
     var rect = document.createElementNS(CCC.Common.NS, 'rect');
     var text = document.createElementNS(CCC.Common.NS, 'text');
@@ -257,7 +256,6 @@ CCC.World.prerenderHistory = function(msg) {
       div.firstChild.style.visibility = 'hidden';  // SVG.
       div.lastChild.style.display = 'inline';  // Close button.
     }, false);
-    svg.appendChild(g);
     // Size the rectangle to match the text size.
     var bBox = text.getBBox();
     var r = Math.min(bBox.height, bBox.width) / 2;
@@ -355,11 +353,39 @@ CCC.World.prerenderPanorama = function(msg) {
     return true;
   }
 
-  // Add scene background.
   if (CCC.World.scene) {
+    // Add scene background.
     var svgdom = CCC.World.scene.querySelector('scene>svgdom');
     if (svgdom) {
-      CCC.World.cloneAndAppend(svg, svgdom.firstChild);
+      var g = CCC.Common.createSvgElement('g',
+          {'class': 'sceneBackground'}, svg);
+      CCC.World.cloneAndAppend(g, svgdom.firstChild);
+    }
+    // Obtain an ordered list of users.
+    var userArray = [];
+    var userNodeList = CCC.World.scene.querySelectorAll('scene>user');
+    for (var i = 0, user; user = userNodeList[i]; i++) {
+      var name = user.getAttribute('name');
+      if (name == CCC.World.scene.getAttribute('user')) {
+        // That's me!  Place me at the front.
+        userArray.unshift(user);
+      } else {
+        userArray.push(user);
+      }
+    }
+    // Draw each user.
+    for (var i = 0, user; user = userArray[i]; i++) {
+      var cursorX = (i + 1) / (userArray.length + 1) * svg.scaledWidth_ -
+          svg.scaledWidth_ / 2;
+      var userDom = user.querySelector('user>svgdom');
+      if (userDom) {
+        var g = CCC.Common.createSvgElement('g', {}, svg);
+        CCC.World.cloneAndAppend(g, userDom);
+        // Move the user's sprite into position.
+        var bBox = g.getBBox();
+        var dx = cursorX - bBox.x - (bBox.width / 2);
+        g.setAttribute('transform', 'translate(' + dx + ', 0)');
+      }
     }
   }
   if (typeof msg == 'string') {  // Flat text.
@@ -496,7 +522,7 @@ CCC.World.createHiddenSvg = function(width, height) {
  */
 CCC.World.createHiddenDiv = function() {
   var div = document.createElement('div');
-  div.className = 'htmlpanel';
+  div.className = 'htmlPanel';
   div.style.visibility = 'hidden';
   document.body.appendChild(div);
   return div;
