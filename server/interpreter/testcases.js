@@ -113,14 +113,14 @@ exports.tests = [
     expected: "foobar" },
 
   { name: 'plusequalsLeft', src: `
-    var x=40, y=8;
+    var x = 40, y = 8;
     x += y;
     x;
     `,
   expected: 48 },
 
   { name: 'plusequalsRight', src: `
-    var x=40, y=8;
+    var x = 40, y = 8;
     x += y;
     y;
     `,
@@ -216,9 +216,9 @@ exports.tests = [
   { name: 'breakDoWhile', src: `
     var a = 57;
     do {
-        a++;
-        break;
-        a++;
+      a++;
+      break;
+      a++;
     } while (false);
     a;
     `,
@@ -232,13 +232,12 @@ exports.tests = [
   { name: 'breakWithFinally', src: `
     var a = 6;
     foo: {
-        try {
-            a *= 10;
-            break foo;
-        }
-        finally {
-            a--;
-        }
+      try {
+        a *= 10;
+        break foo;
+      } finally {
+        a--;
+      }
     }
     a;
     `,
@@ -417,11 +416,11 @@ exports.tests = [
     ];
     var ok = 0;
     for (var i = 0; i < tests.length; i++) {
-      if (typeof(tests[i][1]) != tests[i][2]) {
+      if (typeof tests[i][1] != tests[i][2]) {
         ok++;
       }
     }
-    ok == tests.length ? "pass" : "fail";
+    ok === tests.length ? "pass" : "fail";
     `,
     expected: "pass" },
 
@@ -442,7 +441,7 @@ exports.tests = [
 
   { name: 'strictBoxedThis', src: `
     "use strict";
-    Object.prototype.foo = function() { return typeof this };
+    Object.prototype.foo = function() { return typeof this; };
     "foo".foo();
     `,
     expected: "string" },
@@ -450,7 +449,7 @@ exports.tests = [
   { name: 'deleteProp', src: `
     var o = {foo: "bar"};
     (delete o.quux) + ("foo" in o) + (delete o.foo) + 
-      !("foo" in o) + (delete o.foo);
+        !("foo" in o) + (delete o.foo);
     `,
     expected: 5 },
 
