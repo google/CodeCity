@@ -266,17 +266,25 @@ CCC.Log.renderXml = function(node) {
         descriptionDiv.appendChild(document.createTextNode(description));
         div.appendChild(descriptionDiv);
       }
-      if (objects.length == 1) {
-        div.appendChild(CCC.Log.getMsg('roomObjectMsg', objects[0]));
-      } else if (objects.length > 1) {
-        div.appendChild(
-            CCC.Log.getMsg('roomObjectsMsg', CCC.Log.naturalList(objects)));
+      if (objects.length) {
+        var objectsDiv = document.createElement('div');
+        if (objects.length == 1) {
+          objectsDiv.appendChild(CCC.Log.getMsg('roomObjectMsg', objects[0]));
+        } else if (objects.length > 1) {
+          objectsDiv.appendChild(
+              CCC.Log.getMsg('roomObjectsMsg', CCC.Log.naturalList(objects)));
+        }
+        div.appendChild(objectsDiv);
       }
-      if (users.length == 1) {
-        div.appendChild(CCC.Log.getMsg('roomUserMsg', users[0]));
-      } else if (users.length > 1) {
-        div.appendChild(
-            CCC.Log.getMsg('roomUsersMsg', CCC.Log.naturalList(users)));
+      if (users.length) {
+        var usersDiv = document.createElement('div');
+        if (users.length == 1) {
+          usersDiv.appendChild(CCC.Log.getMsg('roomUserMsg', users[0]));
+        } else if (users.length > 1) {
+          usersDiv.appendChild(
+              CCC.Log.getMsg('roomUsersMsg', CCC.Log.naturalList(users)));
+        }
+        div.appendChild(usersDiv);
       }
       return div;
     case 'say':

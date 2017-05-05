@@ -370,9 +370,17 @@ CCC.World.prerenderPanorama = function(msg) {
           svg.scaledWidth_ / 2;
       var bBox = null;
       var userDom = user.querySelector('user>svgdom');
-      if (userDom) {
+      if (userDom && userDom.firstChild) {
         var g = CCC.Common.createSvgElement('g', {}, svg);
-        CCC.World.cloneAndAppend(g, userDom);
+        CCC.World.cloneAndAppend(g, userDom.firstChild);
+        // Users on the right side should be mirrored to face centre.
+        // Wrap mirrored users in an extra group.
+        if (i > 0 && i >= Math.floor(userArray.length / 2)) {
+          var g2 = CCC.Common.createSvgElement('g', {}, svg);
+          g.setAttribute('transform', 'scale(-1,1)');
+          g2.appendChild(g);
+          g = g2;
+        }
         // Move the user's sprite into position.
         bBox = g.getBBox();
         var dx = cursorX - bBox.x - (bBox.width / 2);
