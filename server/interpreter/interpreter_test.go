@@ -26,19 +26,21 @@ import (
 
 func TestInterpreterSimple(t *testing.T) {
 	for _, c := range tests {
-		i, err := NewFromJSON(c.ast)
-		if err != nil {
-			t.Error(err)
-		}
-		// if c.src == deleteProp {
-		// 	i.Verbose = true
-		// }
-		i.Run()
-		expected := data.NewFromRaw(c.expected)
-		if v := i.Value(); v != expected {
-			t.Errorf("%s == %v (%T)\n(expected %v (%T))",
-				c.src, v, v, expected, expected)
-		}
+		t.Run(c.name, func(t *testing.T) {
+			i, err := NewFromJSON(c.ast)
+			if err != nil {
+				t.Error(err)
+			}
+			// if c.src == deleteProp {
+			// 	i.Verbose = true
+			// }
+			i.Run()
+			expected := data.NewFromRaw(c.expected)
+			if v := i.Value(); v != expected {
+				t.Errorf("%s == %v (%T)\n(expected %v (%T))",
+					c.src, v, v, expected, expected)
+			}
+		})
 	}
 }
 
