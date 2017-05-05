@@ -366,6 +366,7 @@ CCC.World.prerenderPanorama = function(msg) {
       var svgDom = thing.querySelector('*>svgdom');
       if (svgDom && svgDom.firstChild) {
         var g = CCC.Common.createSvgElement('g', {'class': thing.tagName}, svg);
+        g.setAttribute('filter', 'url(#' + svg.whiteShadowId_ + ')');
         CCC.World.cloneAndAppend(g, svgDom.firstChild);
         // Users should face the majority of other users.
         // If user is alone, should face majority of objects.
@@ -382,6 +383,7 @@ CCC.World.prerenderPanorama = function(msg) {
         bBox = g.getBBox();
         var dx = cursorX - bBox.x - (bBox.width / 2);
         g.setAttribute('transform', 'translate(' + dx + ', 0)');
+        g.setAttribute('filter', 'url(#' + svg.whiteShadowId_ + ')');
       }
       var cmds = thing.querySelector('*>cmds');
       if (cmds) {
@@ -549,6 +551,36 @@ CCC.World.createHiddenSvg = function(width, height) {
   svg.scaledWidth_ = width / height * svg.scaledHeight_;
   svg.setAttribute('viewBox', [-svg.scaledWidth_ / 2, 0,
                                svg.scaledWidth_, svg.scaledHeight_].join(' '));
+  /*
+  <filter id="whiteShadow25501663536281627">
+    <feFlood result="flood" flood-color="#fff" flood-opacity="1" />
+    <feComposite in="flood" result="mask" in2="SourceGraphic" operator="in" />
+    <feMorphology in="mask" result="dilated" operator="dilate" radius="4" />
+    <feGaussianBlur in="dilated" result="blurred" stdDeviation="2" />
+    <feMerge>
+      <feMergeNode in="blurred" />
+      <feMergeNode in="SourceGraphic" />
+    </feMerge>
+  </filter>
+  */
+  // Filters cannot be shared between SVGs, doing so can even crash browsers.
+  // https://bugs.webkit.org/show_bug.cgi?id=149613
+  var id = 'whiteShadow' + String(Math.random()).substring(2);
+  svg.whiteShadowId_ = id;
+  var filter = CCC.Common.createSvgElement('filter', {'id': id}, svg);
+  CCC.Common.createSvgElement('feFlood',
+      {'result': 'flood', 'flood-color': '#fff', 'flood-opacity': 1}, filter);
+  CCC.Common.createSvgElement('feComposite',
+      {'in': 'flood', 'result': 'mask', 'in2': 'SourceGraphic',
+      'operator': 'in'}, filter);
+  CCC.Common.createSvgElement('feMorphology',
+      {'in': 'mask', 'result': 'dilated', 'operator': 'dilate', 'radius': 1},
+      filter);
+  CCC.Common.createSvgElement('feGaussianBlur',
+      {'in': 'dilated', 'result': 'blurred', 'stdDeviation': 1}, filter);
+  var feMerge = CCC.Common.createSvgElement('feMerge', {'id': id}, filter);
+  CCC.Common.createSvgElement('feMergeNode', {'in': 'blurred'}, feMerge);
+  CCC.Common.createSvgElement('feMergeNode', {'in': 'SourceGraphic'}, feMerge);
   return svg;
 };
 
