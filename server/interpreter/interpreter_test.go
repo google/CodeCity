@@ -27,6 +27,11 @@ import (
 func TestInterpreterSimple(t *testing.T) {
 	for _, c := range tests {
 		t.Run(c.name, func(t *testing.T) {
+			defer func() {
+				if p := recover(); p != nil {
+					t.Errorf("%s panicked: %s", c.src, p)
+				}
+			}()
 			i, err := NewFromJSON(c.ast)
 			if err != nil {
 				t.Error(err)
