@@ -351,31 +351,28 @@ CCC.World.prerenderPanorama = function(msg) {
           {'class': 'sceneBackground'}, svg);
       CCC.World.cloneAndAppend(g, svgdom.firstChild);
     }
-    // Obtain an ordered list of users.
-    var userArray = [];
-    var userNodeList = CCC.World.scene.querySelectorAll('scene>user');
-    for (var i = 0, user; user = userNodeList[i]; i++) {
-      var name = user.getAttribute('name');
-      if (name == CCC.World.scene.getAttribute('user')) {
-        // That's me!  Place me at the front.
-        userArray.unshift(user);
-      } else {
-        userArray.push(user);
-      }
-    }
-    // Draw each user.
+    // Obtain an ordered list of contents.
+    var contentsArray =
+        CCC.World.scene.querySelectorAll('scene>user,scene>object');
+    var userTotal = CCC.World.scene.querySelectorAll('scene>user').length;
+    // Draw each item.
     var icons = [];
-    for (var i = 0, user; user = userArray[i]; i++) {
-      var cursorX = (i + 1) / (userArray.length + 1) * svg.scaledWidth_ -
+    var userCount = 0;
+    for (var i = 0, thing; thing = contentsArray[i]; i++) {
+      var cursorX = (i + 1) / (contentsArray.length + 1) * svg.scaledWidth_ -
           svg.scaledWidth_ / 2;
       var bBox = null;
-      var userDom = user.querySelector('user>svgdom');
-      if (userDom && userDom.firstChild) {
-        var g = CCC.Common.createSvgElement('g', {}, svg);
-        CCC.World.cloneAndAppend(g, userDom.firstChild);
-        // Users on the right side should be mirrored to face centre.
-        // Wrap mirrored users in an extra group.
-        if (i > 0 && i >= Math.floor(userArray.length / 2)) {
+      var isUser = thing.tagName == 'user';
+      var svgDom = thing.querySelector('*>svgdom');
+      if (svgDom && svgDom.firstChild) {
+        var g = CCC.Common.createSvgElement('g', {'class': thing.tagName}, svg);
+        CCC.World.cloneAndAppend(g, svgDom.firstChild);
+        // Users should face the majority of other users.
+        // If user is alone, should face majority of objects.
+        if (isUser && (userTotal == 1 ?
+            (i > 0 && i >= Math.floor(contentsArray.length / 2)) :
+            (userCount > 0 && userCount >= Math.floor(userTotal / 2)))) {
+          // Wrap mirrored users in an extra group.
           var g2 = CCC.Common.createSvgElement('g', {}, svg);
           g.setAttribute('transform', 'scale(-1,1)');
           g2.appendChild(g);
@@ -386,11 +383,11 @@ CCC.World.prerenderPanorama = function(msg) {
         var dx = cursorX - bBox.x - (bBox.width / 2);
         g.setAttribute('transform', 'translate(' + dx + ', 0)');
       }
-      var cmds = user.querySelector('user>cmds');
+      var cmds = thing.querySelector('*>cmds');
       if (cmds) {
         var iconSize = 6;
         var x = cursorX - iconSize / 2;
-        var y = 40;
+        var y = isUser ? 40 : 60;
         if (bBox) {
           // Align menu icon with top-right corner of user's sprite.
           x = Math.min(cursorX + bBox.width / 2,
@@ -404,6 +401,9 @@ CCC.World.prerenderPanorama = function(msg) {
         icon.setAttribute('x', x);
         icon.setAttribute('y', y);
         icons.push(icon);
+      }
+      if (isUser) {
+        userCount++;
       }
     }
     // Menu icons should be added after all the sprites so that they aren't
