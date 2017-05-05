@@ -340,16 +340,6 @@ CCC.World.prerenderPanorama = function(msg) {
     var div = CCC.World.createHiddenDiv();
     CCC.World.cloneAndAppend(div, msg.firstChild);
     CCC.World.scratchPanorama = div;
-    // Add event handlers on all <a class="command"> links.
-    var commands = div.querySelectorAll('a.command');
-    for (var i = 0, command; command = commands[i]; i++) {
-      command.addEventListener('click', CCC.Common.commandFunction, false);
-    }
-    // Add event handlers on all <svg class="menuIcon"> menus.
-    var menus = div.querySelectorAll('svg.menuIcon');
-    for (var i = 0, menu; menu = menus[i]; i++) {
-      menu.addEventListener('click', CCC.Common.openMenu, false);
-    }
     return true;
   }
 
@@ -374,18 +364,44 @@ CCC.World.prerenderPanorama = function(msg) {
       }
     }
     // Draw each user.
+    var icons = [];
     for (var i = 0, user; user = userArray[i]; i++) {
       var cursorX = (i + 1) / (userArray.length + 1) * svg.scaledWidth_ -
           svg.scaledWidth_ / 2;
+      var bBox = null;
       var userDom = user.querySelector('user>svgdom');
       if (userDom) {
         var g = CCC.Common.createSvgElement('g', {}, svg);
         CCC.World.cloneAndAppend(g, userDom);
         // Move the user's sprite into position.
-        var bBox = g.getBBox();
+        bBox = g.getBBox();
         var dx = cursorX - bBox.x - (bBox.width / 2);
         g.setAttribute('transform', 'translate(' + dx + ', 0)');
       }
+      var cmds = user.querySelector('user>cmds');
+      if (cmds) {
+        var iconSize = 6;
+        var x = cursorX - iconSize / 2;
+        var y = 40;
+        if (bBox) {
+          // Align menu icon with top-right corner of user's sprite.
+          x = Math.min(cursorX + bBox.width / 2,
+                       svg.scaledWidth_ / 2 - iconSize);
+          y = Math.max(0, bBox.y);
+        }
+        var icon = CCC.Common.newMenuIcon(cmds);
+        icon.setAttribute('width', iconSize);
+        icon.setAttribute('height', iconSize);
+        icon.setAttribute('viewBox', '0 0 10 10');
+        icon.setAttribute('x', x);
+        icon.setAttribute('y', y);
+        icons.push(icon);
+      }
+    }
+    // Menu icons should be added after all the sprites so that they aren't
+    // occluded by user content.
+    for (var i = 0, icon; icon = icons[i]; i++) {
+      svg.appendChild(icon);
     }
   }
   if (typeof msg == 'string') {  // Flat text.
@@ -463,16 +479,28 @@ CCC.World.publishPanorama = function() {
     CCC.World.panoramaDiv.removeChild(CCC.World.panoramaDiv.firstChild);
   }
   // Insert new content.
-  CCC.World.panoramaDiv.appendChild(CCC.World.scratchPanorama);
+  var content = CCC.World.scratchPanorama;
+  CCC.World.panoramaDiv.appendChild(content);
   var msgs = CCC.World.panoramaMessages;
   if (msgs.length == 1) {
     var iframe = msgs[0].iframe;
     if (iframe) {
       CCC.World.positionIframe(iframe, CCC.World.panoramaDiv);
+      content = iframe;
     }
   }
   CCC.World.scratchPanorama.style.visibility = 'visible';
   CCC.World.scratchPanorama = null;
+  // Add event handlers on all <a class="command"> links.
+  var commands = content.querySelectorAll('a.command');
+  for (var i = 0, command; command = commands[i]; i++) {
+    command.addEventListener('click', CCC.Common.commandFunction, false);
+  }
+  // Add event handlers on all <svg class="menuIcon"> menus.
+  var menus = content.querySelectorAll('svg.menuIcon');
+  for (var i = 0, menu; menu = menus[i]; i++) {
+    menu.addEventListener('click', CCC.Common.openMenu, false);
+  }
 };
 
 /**
