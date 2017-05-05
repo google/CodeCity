@@ -36,7 +36,7 @@ func TestInterpreterSimple(t *testing.T) {
 			if err != nil {
 				t.Error(err)
 			}
-			// if c.src == deleteProp {
+			// if c.name == "namedFunctionExpression" {
 			// 	i.Verbose = true
 			// }
 			i.Run()

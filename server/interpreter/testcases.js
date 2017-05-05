@@ -463,40 +463,39 @@ exports.tests = [
     `,
     expected: 75 },
 
-  // FIXME: enable these tests and make sure they pass!
+  { name: 'namedFunctionExpression', src: `
+    var f = function foo(x) {
+      if (x < 100) {
+        return x;
+      }
+      return foo(x / 2);
+    };
+    f(152)
+    `,
+    expected: 76 },
 
-  // { name: 'namedFunctionExpression', src: `
-  //   var f = function foo(x) {
-  //     if (x < 100) {
-  // 	return x;
-  //     }
-  //     return foo(x / 2);
-  //   };
-  //   f(152)
-  //   `,
-  //   expected: 76 },
+  { name: 'namedFunExpNoLeak', src: `
+    var f = function foo() {};
+    typeof foo;
+    `,
+    expected: "undefined" },
 
-  // { name: 'namedFunExpNoLeak', src: `
-  //   var f = function foo() {};
-  //   typeof foo;
-  //   `,
-  //   expected: "undefined" },
+  { name: 'namedFunExpSameSame', src: `
+    var f = function foo() {
+      return f === foo;
+    };
+    f();
+    `,
+    expected: true },
 
-  // { name: 'namedFunExpSameSame', src: `
-  //   var f = function foo() {
-  //     return f === foo;
-  //   };
-  //   `,
-  //   expected: true },
-
-  // { name: 'closureIndependence', src: `
-  //   function makeAdder(x) {
-  //     return function(y) { return x + y; };
-  //   }
-  //   var plus3 = makeAdder(3);
-  //   var plus4 = makeAdder(4);
-  //   plus3(plus4(70));
-  //   `,
-  //   expected: true },
+  { name: 'closureIndependence', src: `
+    function makeAdder(x) {
+      return function(y) { return x + y; };
+    }
+    var plus3 = makeAdder(3);
+    var plus4 = makeAdder(4);
+    plus3(plus4(70));
+    `,
+    expected: 77 },
 
 ];

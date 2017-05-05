@@ -594,7 +594,7 @@ func (st *stateCallExpression) step(intrp *Interpreter, cv *cval) (state, *cval)
 			e := fmt.Sprintf("%#v is not a function", st.fn)
 			return st.parent, intrp.throw(&data.NativeError{data.TypeError, e})
 		}
-		scope := newScope(st.scope, st.this)
+		scope := newScope(closure.scope, st.this)
 		// Set up scope:
 		scope.populate(closure.body, intrp)
 		for i, arg := range st.argv {
@@ -926,18 +926,28 @@ func (st *stateFunctionDeclaration) step(intrp *Interpreter, cv *cval) (state, *
 
 type stateFunctionExpression struct {
 	stateCommon
+	id     *ast.Identifier
 	params []*ast.Identifier
 	body   *ast.BlockStatement
 }
 
 func (st *stateFunctionExpression) init(node *ast.FunctionExpression) {
+	st.id = node.Id
 	st.params = node.Params
 	st.body = node.Body
 }
 
 func (st *stateFunctionExpression) step(intrp *Interpreter, cv *cval) (state, *cval) {
+	var scope = st.scope
+	if st.id != nil {
+		scope = newScope(scope, scope.this)
+	}
 	// FIXME: set owner:
-	return st.parent, pval(newClosure(nil, intrp.protos.FunctionProto, st.scope, st.params, st.body))
+	cl := newClosure(nil, intrp.protos.FunctionProto, scope, st.params, st.body)
+	if st.id != nil {
+		scope.newVar(string(st.id.Name), cl)
+	}
+	return st.parent, pval(cl)
 }
 
 /********************************************************************/
