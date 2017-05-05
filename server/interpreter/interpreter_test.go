@@ -40,7 +40,7 @@ func TestInterpreterSimple(t *testing.T) {
 			// 	i.Verbose = true
 			// }
 			i.Run()
-			expected := data.NewFromRaw(c.expected)
+			expected, _ := data.NewFromRaw(c.expected)
 			if v := i.Value(); v != expected {
 				t.Errorf("%s == %v (%T)\n(expected %v (%T))",
 					c.src, v, v, expected, expected)

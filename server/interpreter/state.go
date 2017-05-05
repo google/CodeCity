@@ -1038,13 +1038,17 @@ func (st *stateLabeledStatement) step(intrp *Interpreter, cv *cval) (state, *cva
 type stateLiteral struct {
 	stateCommon
 	val data.Value
+	ne  *data.NativeError
 }
 
 func (st *stateLiteral) init(node *ast.Literal) {
-	st.val = data.NewFromRaw(node.Raw)
+	st.val, st.ne = data.NewFromRaw(node.Raw)
 }
 
 func (st *stateLiteral) step(intrp *Interpreter, cv *cval) (state, *cval) {
+	if st.ne != nil {
+		return st.parent, intrp.throw(st.ne)
+	}
 	return st.parent, pval(st.val)
 }
 
@@ -1165,7 +1169,9 @@ func (st *stateObjectExpression) step(intrp *Interpreter, cv *cval) (state, *cva
 		var key string
 		switch k := st.props[st.n].Key.N.(type) {
 		case *ast.Literal:
-			key = string(data.NewFromRaw(k.Raw).ToString())
+			// FIXME: error handling?
+			keyval, _ := data.NewFromRaw(k.Raw)
+			key = string(keyval.ToString())
 		case *ast.Identifier:
 			key = k.Name
 		}

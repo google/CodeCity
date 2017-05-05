@@ -42,33 +42,33 @@ import (
 // and undefined, which normally never occur as raw literals in an
 // ESTree AST (they are parsed as UnaryExpression and Identifier,
 // respectively).
-func NewFromRaw(raw string) Value {
+func NewFromRaw(raw string) (Value, *NativeError) {
 	if raw == "true" {
-		return Boolean(true)
+		return Boolean(true), nil
 	} else if raw == "false" {
-		return Boolean(false)
+		return Boolean(false), nil
 	} else if raw == "undefined" {
-		return Undefined{}
+		return Undefined{}, nil
 	} else if raw == "null" {
-		return Null{}
+		return Null{}, nil
 	} else if raw[0] == '"' {
 		s, err := strconv.Unquote(raw)
 		if err != nil {
-			panic(err)
+			return nil, &NativeError{SyntaxError, err.Error()}
 		}
-		return String(s)
+		return String(s), nil
 	} else if raw[0] == '\'' {
 		// BUG(cpcallen): single-quoted string literals not implemented.
-		panic(fmt.Errorf("Single-quoted string literals not implemented"))
+		return nil, &NativeError{SyntaxError, "Single-quoted string literals not implemented"}
 	} else if unicode.IsDigit(rune(raw[0])) || raw[0] == '-' {
 		// BUG(cpcallen): numeric literals probably not handled
 		// completely in accordance with ES5.1 spec; it is implemented
 		// using String.ToNumber which may be unduly tolerant and
 		// handle certain edge cases differently.
-		return String(raw).ToNumber()
+		return String(raw).ToNumber(), nil
 	} else if raw[0] == '/' {
 		// BUG(cpcallen): regular expresion literals not implemented.
-		panic(fmt.Errorf("Regular Expression literals not implemented"))
+		return nil, &NativeError{SyntaxError, "Regular expression literals not implemented"}
 	} else {
 		panic(fmt.Errorf("Unrecognized raw literal %v", raw))
 	}

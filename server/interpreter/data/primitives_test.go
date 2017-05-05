@@ -38,7 +38,10 @@ func TestPrimitiveFromRaw(t *testing.T) {
 	}
 
 	for _, c := range tests {
-		if v := NewFromRaw(c.raw); v != c.expected {
+		v, ne := NewFromRaw(c.raw)
+		if ne != nil {
+			t.Errorf("newFromRaw(%#v) returned error: %#v", c.raw, ne)
+		} else if v != c.expected {
 			t.Errorf("newFromRaw(%#v) == %#v (%T)\n(expected %#v (%T))",
 				c.raw, v, v, c.expected, c.expected)
 		}
