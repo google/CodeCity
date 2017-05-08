@@ -182,7 +182,7 @@ CCC.Log.toggleZippy = function(e) {
 /**
  * Attempt to render the XML as a plain text version.
  * @param {!Element} node XML tree.
- * @return {string|!Element} Text representation or div.
+ * @return {Element} Div, or null if cannot be rendered.
  */
 CCC.Log.renderXml = function(node) {
   switch (node.tagName) {
@@ -290,15 +290,21 @@ CCC.Log.renderXml = function(node) {
     case 'say':
       // <say user="Max" room="The Hangout">Hello world.</say>
       var user = node.getAttribute('user');
+      var msg = node.textContent;
+      var lastLetter = msg[msg.length - 1];
+      var type = (lastLetter == '?') ? 'ask' :
+          ((lastLetter == '!') ? 'exclaim' : 'say');
       if (CCC.Log.userName === user) {
-        var text = CCC.Log.getMsg('saySelfMsg', node.textContent);
+        var fragment = CCC.Log.getMsg(type + 'SelfMsg', msg);
       } else {
-        var text = CCC.Log.getMsg('sayMsg', user, node.textContent);
+        var fragment = CCC.Log.getMsg(type + 'Msg', user, msg);
       }
-      return text;
+      var div = document.createElement('div');
+      div.appendChild(fragment);
+      return div;
   }
   // Unknown XML.
-  return '';
+  return null;
 };
 
 /**
@@ -382,7 +388,11 @@ CCC.Log.getMsg = function(key, var_args) {
     var part = parts[i];
     var m = part.match(/^%(\d)$/);
     if (m) {
-      df.appendChild(arguments[m[1]]);
+      var inject = arguments[m[1]];
+      if (typeof inject == 'string') {
+        inject = document.createTextNode(inject);
+      }
+      df.appendChild(inject);
     } else if (part) {
       df.appendChild(document.createTextNode(part));
     }
