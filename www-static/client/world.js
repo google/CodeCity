@@ -1111,5 +1111,236 @@ CCC.World.getScrollBarWidth = function() {
   return w1 - w2;
 };
 
+/**
+ * Create a block of text on SVG constrained to a given size.
+ * @param {!SVGSVGElement} svg SVG element to use.
+ * @param {number} width Maximum width.
+ * @param {number} height Maximum height.
+ * @param {string} msg Text to create.
+ * @return {!SVGElement} SVG group containing text.
+ */
+CCC.World.createTextArea = function(svg, width, height, msg) {
+  msg = msg.replace(/  /g, '\u00A0 ');
+  msg = msg.replace(/  /g, '\u00A0 ');
+  msg = msg.replace(/^ /gm, '\u00A0');
+  msg = CCC.World.wrap(svg, msg, width);
+  var lines = msg.split('\n');
+  var text = document.createElementNS(CCC.Common.NS, 'text');
+  text.setAttribute('alignment-baseline', 'hanging');
+  if (lines.length) {
+    var dy = CCC.World.measureText(svg, 'Wg').height;
+    for (var i = 0; i < lines.length; i++) {
+      var line = (lines[i] == '\r' || lines[i] == '\n') ? '\u200B' : lines[i];
+      var tspan = document.createElementNS(CCC.Common.NS, 'tspan');
+      tspan.appendChild(document.createTextNode(line));
+      tspan.setAttribute('x', 0);
+      tspan.setAttribute('dy', dy);
+      text.appendChild(tspan);
+    }
+  }
+  var g = document.createElementNS(CCC.Common.NS, 'g');
+  g.appendChild(text);
+  return g;
+};
+
+/**
+ * Wrap text to the specified width.
+ * @param {!SVGSVGElement} svg SVG element to use.
+ * @param {string} text Text to wrap.
+ * @param {number} limit Width to wrap each line.
+ * @return {string} Wrapped text.
+ */
+CCC.World.wrap = function(svg, text, limit) {
+  var lines = text.split('\n');
+  for (var i = 0; i < lines.length; i++) {
+    lines[i] = CCC.World.wrapLine_(svg, lines[i], limit);
+  }
+  return lines.join('\n');
+};
+
+/**
+ * Wrap single line of text to the specified width.
+ * @param {!SVGSVGElement} svg SVG element to use.
+ * @param {string} text Text to wrap.
+ * @param {number} limit Width to wrap each line.
+ * @return {string} Wrapped text.
+ * @private
+ */
+CCC.World.wrapLine_ = function(svg, text, limit) {
+  if (CCC.World.measureText(svg, text).width <= limit) {
+    // Short text, no need to wrap.
+    return text;
+  }
+  // Split the text into words.
+  var words = text.split(/\b(?=\w)/);
+  // Set limit to be the length of the largest word.
+  for (var i = 0; i < words.length; i++) {
+    limit = Math.max(CCC.World.measureText(svg, words[i]).width, limit);
+  }
+  limit = Math.min(svg.scaledWidth_ - 5, limit);  // But not wider than panel.
+
+  var lastScore;
+  var score = -Infinity;
+  var lastText;
+  var lineCount = 1;
+  do {
+    lastScore = score;
+    lastText = text;
+    // Create a list of booleans representing if a space (false) or
+    // a break (true) appears after each word.
+    var wordBreaks = [];
+    // Seed the list with evenly spaced linebreaks.
+    var steps = words.length / lineCount;
+    var insertedBreaks = 1;
+    for (var i = 0; i < words.length - 1; i++) {
+      if (insertedBreaks < (i + 1.5) / steps) {
+        insertedBreaks++;
+        wordBreaks[i] = true;
+      } else {
+        wordBreaks[i] = false;
+      }
+    }
+    wordBreaks = CCC.World.wrapMutate_(svg, words, wordBreaks, limit);
+    score = CCC.World.wrapScore_(svg, words, wordBreaks, limit);
+    text = CCC.World.wrapToText_(words, wordBreaks);
+    lineCount++;
+  } while (score > lastScore);
+  return lastText;
+};
+
+/**
+ * Compute a score for how good the wrapping is.
+ * @param {!SVGSVGElement} svg SVG element to use.
+ * @param {!Array.<string>} words Array of each word.
+ * @param {!Array.<boolean>} wordBreaks Array of line breaks.
+ * @param {number} limit Width to wrap each line.
+ * @return {number} Larger the better.
+ * @private
+ */
+CCC.World.wrapScore_ = function(svg, words, wordBreaks, limit) {
+  // If this function becomes a performance liability, add caching.
+  // Compute the length of each line.
+  console.log(limit);
+  var lineLengths = [0];
+  var linePunctuation = [];
+  for (var i = 0; i < words.length; i++) {
+    var word = words[i];
+    lineLengths[lineLengths.length - 1] +=
+        CCC.World.measureText(svg, word).width;
+    if (wordBreaks[i] === true) {
+      lineLengths.push(0);
+      word = word.trim();
+      linePunctuation.push(word.charAt(word.length - 1));
+    }
+  }
+  var maxLength = Math.max.apply(Math, lineLengths);
+
+  var score = 0;
+  for (var i = 0; i < lineLengths.length; i++) {
+    // Optimize for width.
+    // -2 points per char over limit (scaled to the power of 1.5).
+    score -= Math.pow(Math.abs(limit - lineLengths[i]), 1.5) * 2;
+    // Optimize for even lines.
+    // -1 point per char smaller than max (scaled to the power of 1.5).
+    score -= Math.pow(maxLength - lineLengths[i], 1.5);
+    // Optimize for structure.
+    // Add score to line endings after punctuation.
+    if ('.?!'.indexOf(linePunctuation[i]) != -1) {
+      score += limit / 3;
+    } else if (',;)]}'.indexOf(linePunctuation[i]) != -1) {
+      score += limit / 4;
+    }
+  }
+  // All else being equal, the last line should not be longer than the
+  // previous line.  For example, this looks wrong:
+  // aaa bbb
+  // ccc ddd eee
+  if (lineLengths.length > 1 && lineLengths[lineLengths.length - 1] <=
+      lineLengths[lineLengths.length - 2]) {
+    score += 0.5;
+  }
+  return score;
+};
+
+/**
+ * Mutate the array of line break locations until an optimal solution is found.
+ * No line breaks are added or deleted, they are simply moved around.
+ * @param {!SVGSVGElement} svg SVG element to use.
+ * @param {!Array.<string>} words Array of each word.
+ * @param {!Array.<boolean>} wordBreaks Array of line breaks.
+ * @param {number} limit Width to wrap each line.
+ * @return {!Array.<boolean>} New array of optimal line breaks.
+ * @private
+ */
+CCC.World.wrapMutate_ = function(svg, words, wordBreaks, limit) {
+  var bestScore = CCC.World.wrapScore_(svg, words, wordBreaks, limit);
+  var bestBreaks;
+  // Try shifting every line break forward or backward.
+  for (var i = 0; i < wordBreaks.length - 1; i++) {
+    if (wordBreaks[i] == wordBreaks[i + 1]) {
+      continue;
+    }
+    var mutatedWordBreaks = [].concat(wordBreaks);
+    mutatedWordBreaks[i] = !mutatedWordBreaks[i];
+    mutatedWordBreaks[i + 1] = !mutatedWordBreaks[i + 1];
+    var mutatedScore =
+        CCC.World.wrapScore_(svg, words, mutatedWordBreaks, limit);
+    if (mutatedScore > bestScore) {
+      bestScore = mutatedScore;
+      bestBreaks = mutatedWordBreaks;
+    }
+  }
+  if (bestBreaks) {
+    // Found an improvement.  See if it may be improved further.
+    return CCC.World.wrapMutate_(svg, words, bestBreaks, limit);
+  }
+  // No improvements found.  Done.
+  return wordBreaks;
+};
+
+/**
+ * Reassemble the array of words into text, with the specified line breaks.
+ * @param {!Array.<string>} words Array of each word.
+ * @param {!Array.<boolean>} wordBreaks Array of line breaks.
+ * @return {string} Plain text.
+ * @private
+ */
+CCC.World.wrapToText_ = function(words, wordBreaks) {
+  var text = [];
+  for (var i = 0; i < words.length; i++) {
+    text.push(words[i]);
+    if (wordBreaks[i]) {
+      text.push('\n');
+    }
+  }
+  return text.join('');
+};
+
+/**
+ * Measure some text to obtain its height and width.
+ * @param {!SVGSVGElement} svg SVG element to use.
+ * @param {string} text Text to measure.
+ * @return {!SVGRect} Height and width of text.
+ */
+CCC.World.measureText = function(svg, text) {
+  if (!svg.measureTextCache_) {
+    svg.measureTextCache_ = Object.create(null);
+  } else if (svg.measureTextCache_[text]) {
+    return svg.measureTextCache_[text];
+  }
+  var textarea = document.createElementNS(CCC.Common.NS, 'text');
+  textarea.appendChild(document.createTextNode(text));
+  svg.appendChild(textarea);
+  var bBox = textarea.getBBox();
+  svg.removeChild(textarea);
+  svg.measureTextCache_[text] = bBox;
+  return bBox;
+};
+
+/**
+ * Cache of text widths for performance boost.
+ */
+CCC.World.measureText.cache_ = Object.create(null);
+
 window.addEventListener('message', CCC.World.receiveMessage, false);
 window.addEventListener('load', CCC.World.init, false);
