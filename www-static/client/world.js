@@ -322,23 +322,23 @@ CCC.World.prerenderHistory = function(msg) {
 
 /**
  * Experimentally render a new message onto the panorama frame.
- * @param {string|!Element} msg Message to render.
+ * @param {!Element} node Message to render.
  * @return {boolean} True if the message fit.  False if overflow.
  */
-CCC.World.prerenderPanorama = function(msg) {
+CCC.World.prerenderPanorama = function(node) {
   // For now every message needs its own frame.
   if (CCC.World.panoramaMessages.length) {
     return false;
   }
   var svg = CCC.World.createHiddenSvg(CCC.World.panoramaDiv.offsetWidth,
                                       CCC.World.panoramaDiv.offsetHeight);
-  if (msg.tagName == 'iframe') {
+  if (node.tagName == 'iframe') {
     CCC.World.scratchPanorama = svg;
     return true;
   }
-  if (msg.tagName == 'htmldom') {
+  if (node.tagName == 'htmldom') {
     var div = CCC.World.createHiddenDiv();
-    CCC.World.cloneAndAppend(div, msg.firstChild);
+    CCC.World.cloneAndAppend(div, node.firstChild);
     CCC.World.scratchPanorama = div;
     return true;
   }
@@ -355,6 +355,7 @@ CCC.World.prerenderPanorama = function(msg) {
     var contentsArray =
         CCC.World.scene.querySelectorAll('scene>user,scene>object');
     var userTotal = CCC.World.scene.querySelectorAll('scene>user').length;
+    CCC.World.sceneUserLocations = Object.create(null);
     // Draw each item.
     var icons = [];
     var userCount = 0;
@@ -379,11 +380,16 @@ CCC.World.prerenderPanorama = function(msg) {
           g2.appendChild(g);
           g = g2;
         }
-        // Move the user's sprite into position.
+        // Move the sprite into position.
         bBox = g.getBBox();
         var dx = cursorX - bBox.x - (bBox.width / 2);
         g.setAttribute('transform', 'translate(' + dx + ', 0)');
         g.setAttribute('filter', 'url(#' + svg.whiteShadowId_ + ')');
+        // Record location of each user for positioning of speech bubbles.
+        if (isUser) {
+          var name = thing.getAttribute('name');
+          CCC.World.sceneUserLocations[name] = cursorX;
+        }
       }
       var cmds = thing.querySelector('*>cmds');
       if (cmds) {
@@ -413,11 +419,36 @@ CCC.World.prerenderPanorama = function(msg) {
     for (var i = 0, icon; icon = icons[i]; i++) {
       svg.appendChild(icon);
     }
+
+    if (node.tagName == 'say') {
+      // <say user="Max" room="The Hangout">Hello world.</say>
+      var user = node.getAttribute('user');
+      var text = node.textContent;
+      var textGroup = CCC.World.createTextArea(svg, 150, 100, text);
+      textGroup.setAttribute('class', 'bubbleSay');
+      var bubble = CCC.Common.createSvgElement('rect',
+          {'class': 'bubbleSay', 'rx': 5, 'ry': 5}, svg);
+      svg.appendChild(textGroup);
+      var textBBox = textGroup.getBBox();
+      var cursorX;
+      if (CCC.World.sceneUserLocations && user in CCC.World.sceneUserLocations) {
+        cursorX = CCC.World.sceneUserLocations[user];
+      } else {
+        cursorX = 0;
+      }
+      cursorX -= textBBox.width / 2;
+      textGroup.setAttribute('transform',
+                             'translate(' + (cursorX - textBBox.x) + ', 2)');
+      bubble.setAttribute('height', textBBox.height + 4);
+      bubble.setAttribute('width', textBBox.width + 4);
+      bubble.setAttribute('x', cursorX - 2);
+      bubble.setAttribute('y', 2);
+    }
   }
-  if (typeof msg == 'string') {  // Flat text.
-    var textgroup = CCC.World.createTextArea(svg, 150, 100, msg);
-    textgroup.setAttribute('transform', 'translate(-75, 0)');
-    svg.appendChild(textgroup);
+  if (typeof node == 'string') {  // Flat text.
+    var textGroup = CCC.World.createTextArea(svg, 150, 100, node);
+    textGroup.setAttribute('transform', 'translate(-75, 0)');
+    svg.appendChild(textGroup);
   }
   CCC.World.scratchPanorama = svg;
   return true;
@@ -1220,7 +1251,6 @@ CCC.World.wrapLine_ = function(svg, text, limit) {
 CCC.World.wrapScore_ = function(svg, words, wordBreaks, limit) {
   // If this function becomes a performance liability, add caching.
   // Compute the length of each line.
-  console.log(limit);
   var lineLengths = [0];
   var linePunctuation = [];
   for (var i = 0; i < words.length; i++) {
@@ -1238,10 +1268,12 @@ CCC.World.wrapScore_ = function(svg, words, wordBreaks, limit) {
   var score = 0;
   for (var i = 0; i < lineLengths.length; i++) {
     // Optimize for width.
-    // -2 points per char over limit (scaled to the power of 1.5).
-    score -= Math.pow(Math.abs(limit - lineLengths[i]), 1.5) * 2;
+    // -100 points per unit over limit.
+    if (lineLengths[i] > limit) {
+      score -= (lineLengths[i] - limit) * 100;
+    }
     // Optimize for even lines.
-    // -1 point per char smaller than max (scaled to the power of 1.5).
+    // -1 point per unit smaller than max (scaled to the power of 1.5).
     score -= Math.pow(maxLength - lineLengths[i], 1.5);
     // Optimize for structure.
     // Add score to line endings after punctuation.
@@ -1257,7 +1289,12 @@ CCC.World.wrapScore_ = function(svg, words, wordBreaks, limit) {
   // ccc ddd eee
   if (lineLengths.length > 1 && lineLengths[lineLengths.length - 1] <=
       lineLengths[lineLengths.length - 2]) {
-    score += 0.5;
+    score += 5;
+  }
+  // Likewise, the first line should not be longer than the next line.
+  // An ideal bubble with centered text has the first and last lines shorter.
+  if (lineLengths.length > 2 && lineLengths[0] <= lineLengths[1]) {
+    score += 5;
   }
   return score;
 };

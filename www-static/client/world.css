@@ -88,3 +88,7 @@ text {
   font-size: 4pt;
   stroke-width: 0;
 }
+
+g.bubbleSay {
+  text-anchor: middle;
+}
