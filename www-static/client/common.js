@@ -121,7 +121,8 @@ CCC.Common.openMenu = function(e) {
   scrollDiv.appendChild(menu);
   var iconRect = this.getBoundingClientRect();
   // Calculate preferred location of below and right of icon.
-  var top = iconRect.top + scrollDiv.scrollTop + iconRect.height;
+  var top = iconRect.top + scrollDiv.scrollTop + iconRect.height -
+      scrollDiv.offsetTop;
   var left = iconRect.left + scrollDiv.scrollLeft;
   // Flip up if below page.
   if (top + menu.offsetHeight > pageHeight) {
