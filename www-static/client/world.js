@@ -388,7 +388,12 @@ CCC.World.prerenderPanorama = function(node) {
         // Record location of each user for positioning of speech bubbles.
         if (isUser) {
           var name = thing.getAttribute('name');
-          CCC.World.sceneUserLocations[name] = cursorX;
+          var radius = Math.min(bBox.height, bBox.width) / 2;
+          CCC.World.sceneUserLocations[name] = {
+            headX: cursorX,
+            headY: bBox.y + radius,
+            headR: radius
+          };
         }
       }
       var cmds = thing.querySelector('*>cmds');
@@ -425,24 +430,47 @@ CCC.World.prerenderPanorama = function(node) {
       var user = node.getAttribute('user');
       var text = node.textContent;
       var textGroup = CCC.World.createTextArea(svg, 150, 100, text);
-      textGroup.setAttribute('class', 'bubbleSay');
-      var bubble = CCC.Common.createSvgElement('rect',
-          {'class': 'bubbleSay', 'rx': 5, 'ry': 5}, svg);
+      textGroup.setAttribute('class', 'say');
+      var bubbleGroup = CCC.Common.createSvgElement('g',
+          {'class': 'bubble'}, svg);
       svg.appendChild(textGroup);
       var textBBox = textGroup.getBBox();
       var cursorX;
       if (CCC.World.sceneUserLocations && user in CCC.World.sceneUserLocations) {
-        cursorX = CCC.World.sceneUserLocations[user];
+        cursorX = CCC.World.sceneUserLocations[user].headX;
       } else {
         cursorX = 0;
       }
+      CCC.Common.createSvgElement('circle',
+          {'cx': CCC.World.sceneUserLocations[user].headX,
+           'cy': CCC.World.sceneUserLocations[user].headY,
+           'r': CCC.World.sceneUserLocations[user].headR + 1,
+           'style': 'stroke: red; fill: none'}, svg);
       cursorX -= textBBox.width / 2;
       textGroup.setAttribute('transform',
                              'translate(' + (cursorX - textBBox.x) + ', 2)');
-      bubble.setAttribute('height', textBBox.height + 4);
-      bubble.setAttribute('width', textBBox.width + 4);
-      bubble.setAttribute('x', cursorX - 2);
-      bubble.setAttribute('y', 2);
+      var strokeWidth = 0.7;  // Matches with CSS.
+      var margin = 4;
+      var radius = 15;
+      CCC.Common.createSvgElement('rect',
+          {'class': 'bubbleBG',
+           'x': -strokeWidth, 'y': -strokeWidth,
+           'rx': radius, 'ry': radius,
+           'height': textBBox.height + margin + 2 * strokeWidth,
+           'width': textBBox.width + margin + 2 * strokeWidth},
+           bubbleGroup);
+      CCC.Common.createSvgElement('path',
+          {'class': 'bubbleArrow',
+           'd': 'm 5,5 l 5,40 5,-40 z'},
+           bubbleGroup);
+      CCC.Common.createSvgElement('rect',
+          {'class': 'bubbleFG',
+           'rx': radius, 'ry': radius,
+           'height': textBBox.height + margin,
+           'width': textBBox.width + margin},
+           bubbleGroup);
+      bubbleGroup.setAttribute('transform',
+                             'translate(' + (cursorX - 2) + ', 2)');
     }
   }
   if (typeof node == 'string') {  // Flat text.

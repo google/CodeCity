@@ -89,6 +89,15 @@ text {
   stroke-width: 0;
 }
 
-g.bubbleSay {
+.bubbleBG {
+  stroke: none;
+  fill: #000;
+}
+
+.bubbleFG {
+  stroke: none;
+}
+
+g.say {
   text-anchor: middle;
 }
