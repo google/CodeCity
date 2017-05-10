@@ -435,42 +435,16 @@ CCC.World.prerenderPanorama = function(node) {
           {'class': 'bubble'}, svg);
       svg.appendChild(textGroup);
       var textBBox = textGroup.getBBox();
-      var cursorX;
-      if (CCC.World.sceneUserLocations && user in CCC.World.sceneUserLocations) {
-        cursorX = CCC.World.sceneUserLocations[user].headX;
+      var anchor = CCC.World.sceneUserLocations &&
+                   CCC.World.sceneUserLocations[user];
+      if (anchor) {
+        cursorX = anchor.headX;
       } else {
         cursorX = 0;
       }
-      CCC.Common.createSvgElement('circle',
-          {'cx': CCC.World.sceneUserLocations[user].headX,
-           'cy': CCC.World.sceneUserLocations[user].headY,
-           'r': CCC.World.sceneUserLocations[user].headR + 1,
-           'style': 'stroke: red; fill: none'}, svg);
-      cursorX -= textBBox.width / 2;
       textGroup.setAttribute('transform',
-                             'translate(' + (cursorX - textBBox.x) + ', 2)');
-      var strokeWidth = 0.7;  // Matches with CSS.
-      var margin = 4;
-      var radius = 15;
-      CCC.Common.createSvgElement('rect',
-          {'class': 'bubbleBG',
-           'x': -strokeWidth, 'y': -strokeWidth,
-           'rx': radius, 'ry': radius,
-           'height': textBBox.height + margin + 2 * strokeWidth,
-           'width': textBBox.width + margin + 2 * strokeWidth},
-           bubbleGroup);
-      CCC.Common.createSvgElement('path',
-          {'class': 'bubbleArrow',
-           'd': 'm 5,5 l 5,40 5,-40 z'},
-           bubbleGroup);
-      CCC.Common.createSvgElement('rect',
-          {'class': 'bubbleFG',
-           'rx': radius, 'ry': radius,
-           'height': textBBox.height + margin,
-           'width': textBBox.width + margin},
-           bubbleGroup);
-      bubbleGroup.setAttribute('transform',
-                             'translate(' + (cursorX - 2) + ', 2)');
+          'translate(' + (cursorX - textBBox.x - textBBox.width / 2) + ', 2)');
+      CCC.World.drawBubble(bubbleGroup, textGroup, anchor);
     }
   }
   if (typeof node == 'string') {  // Flat text.
@@ -481,6 +455,140 @@ CCC.World.prerenderPanorama = function(node) {
   CCC.World.scratchPanorama = svg;
   return true;
 };
+
+/**
+ * Draw a bubble around some content.
+ * @param {!SVGElement} bubbleGroup Empty group to render the bubble in.
+ * @param {!SVGElement} contentGroup Group to surround.
+ * @param {Object} opt_anchor Optional anchor location for arrow tip.
+ */
+CCC.World.drawBubble = function(bubbleGroup, contentGroup, opt_anchor) {
+  // Find coordinates of the contents.
+  var contentBBox = contentGroup.getBBox();
+  // getBBox doesn't look at contentGroup's transform="translate(...)".
+  var transform = contentGroup.getAttribute('transform');
+  var r = transform && transform.match(
+      /translate\(\s*([-+\d.e]+)([ ,]\s*([-+\d.e]+)\s*\))?/);
+  if (r) {
+    contentBBox.x += parseFloat(r[1]);
+    if (r[3]) {
+      contentBBox.y += parseFloat(r[3]);
+    }
+  }
+  // Draw a solid black bubble then the arrow (with border) then a slightly
+  // smaller solid white bubble, resulting in a clean border.
+  var strokeWidth = 0.7;  // Matches with CSS.
+  var marginV = 2;
+  var marginH = 6;
+  var radius = 15;
+  CCC.Common.createSvgElement('rect',
+      {'class': 'bubbleBG',
+       'x': -marginH - strokeWidth, 'y': -marginV - strokeWidth,
+       'rx': radius + strokeWidth, 'ry': radius + strokeWidth,
+       'height': contentBBox.height + 2 * (marginV + strokeWidth),
+       'width': contentBBox.width + 2 * (marginH + strokeWidth)},
+       bubbleGroup);
+  if (opt_anchor) {
+    CCC.Common.createSvgElement('path',
+        {'class': 'bubbleArrow',
+         'd': CCC.World.drawArrow_(contentBBox, opt_anchor)},
+         bubbleGroup);
+  }
+  CCC.Common.createSvgElement('rect',
+      {'class': 'bubbleFG',
+       'x': -marginH, 'y': -marginV,
+       'rx': radius, 'ry': radius,
+       'height': contentBBox.height + 2 * marginV,
+       'width': contentBBox.width + 2 * marginH},
+       bubbleGroup);
+  bubbleGroup.setAttribute('transform', 'translate(' + contentBBox.x +
+      ', ' + contentBBox.y + ')');
+};
+
+/**
+ * Draw the arrow between the bubble and the origin.
+ * @param {!Object} contentBBox Dimensions of the bubble's contents.
+ * @param {!Object} anchor Anchor location for arrow tip.
+ * @return {string} Path for arrow.
+ * @private
+ */
+CCC.World.drawArrow_ = function(contentBBox, anchor) {
+  var steps = [];
+  // Find the relative coordinates of the center of the bubble.
+  var relBubbleX = contentBBox.width / 2;
+  var relBubbleY = contentBBox.height / 2;
+  // Find the relative coordinates of the center of the anchor.
+  var relAnchorX = anchor.headX - contentBBox.x;
+  var relAnchorY = anchor.headY - contentBBox.y;
+  if (relBubbleX == relAnchorX && relBubbleY == relAnchorY) {
+    // Null case.  Bubble is directly on top of the anchor.
+    // Short circuit this rather than wade through divide by zeros.
+    steps.push('M ' + relBubbleX + ',' + relBubbleY);
+  } else {
+    // Compute the angle of the arrow's line.
+    var rise = relAnchorY - relBubbleY;
+    var run = relAnchorX - relBubbleX;
+    var hypotenuse = Math.sqrt(rise * rise + run * run);
+    var angle = Math.acos(run / hypotenuse);
+    if (rise < 0) {
+      angle = 2 * Math.PI - angle;
+    }
+    // Compute a line perpendicular to the arrow.
+    var rightAngle = angle + Math.PI / 2;
+    if (rightAngle > Math.PI * 2) {
+      rightAngle -= Math.PI * 2;
+    }
+    var rightRise = Math.sin(rightAngle);
+    var rightRun = Math.cos(rightAngle);
+
+    // Calculate the thickness of the base of the arrow.
+    var thickness = (contentBBox.width + contentBBox.height) /
+                    CCC.World.ARROW_THICKNESS;
+    thickness = Math.min(thickness, contentBBox.width, contentBBox.height) / 4;
+
+    // Back the tip of the arrow off of the anchor.
+    var backoffRatio = 1 - (anchor.headR + 5) / hypotenuse;
+    relAnchorX = relBubbleX + backoffRatio * run;
+    relAnchorY = relBubbleY + backoffRatio * rise;
+
+    // Coordinates for the base of the arrow.
+    var baseX1 = relBubbleX + thickness * rightRun;
+    var baseY1 = relBubbleY + thickness * rightRise;
+    var baseX2 = relBubbleX - thickness * rightRun;
+    var baseY2 = relBubbleY - thickness * rightRise;
+
+    // Distortion to curve the arrow.
+    var swirlAngle = angle + Math.random() - 0.5;
+    if (swirlAngle > Math.PI * 2) {
+      swirlAngle -= Math.PI * 2;
+    }
+    var swirlRise = Math.sin(swirlAngle) *
+        hypotenuse / CCC.World.ARROW_BEND;
+    var swirlRun = Math.cos(swirlAngle) *
+        hypotenuse / CCC.World.ARROW_BEND;
+
+    steps.push('M' + baseX1 + ',' + baseY1);
+    steps.push('C' + (baseX1 + swirlRun) + ',' + (baseY1 + swirlRise) +
+               ' ' + relAnchorX + ',' + relAnchorY +
+               ' ' + relAnchorX + ',' + relAnchorY);
+    steps.push('C' + relAnchorX + ',' + relAnchorY +
+               ' ' + (baseX2 + swirlRun) + ',' + (baseY2 + swirlRise) +
+               ' ' + baseX2 + ',' + baseY2);
+  }
+  steps.push('z');
+  return steps.join(' ');
+};
+
+/**
+ * Determines the thickness of the base of the arrow in relation to the size
+ * of the bubble.  Higher numbers result in thinner arrows.
+ */
+CCC.World.ARROW_THICKNESS = 5;
+
+/**
+ * The sharpness of the arrow's bend.  Higher numbers result in smoother arrows.
+ */
+CCC.World.ARROW_BEND = 4;
 
 /**
  * Publish the previously experimentally rendered history frame to the user.
