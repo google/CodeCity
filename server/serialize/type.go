@@ -33,6 +33,14 @@ type tagged struct {
 	V interface{}
 }
 
+// tIDOf returnes the tID (type ID) of its argument
+func tIDOf(typ reflect.Type) tID {
+	// FIXME: this isn't guaranteed to be unique.  At very least we
+	// should check for dupes and panic if two different types give
+	// same tID.
+	return tID(typ.String())
+}
+
 // flatType takes a reflect.Type and returns a substitute reflect.Type
 // that can store the same data but is more suited for serialisation
 // using encoding/json (and similar):
@@ -46,6 +54,9 @@ type tagged struct {
 //
 // - Maps with non-string key types replaced by slice of 2-member struct
 func flatType(typ reflect.Type) reflect.Type {
+	if typ == nil {
+		panic("nil is not a type")
+	}
 	switch typ.Kind() {
 	case reflect.Invalid:
 		panic("Invalid Kind")
