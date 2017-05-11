@@ -1325,26 +1325,41 @@ CCC.World.createTextArea = function(svg, text, width, height) {
  * @return {string} Wrapped text.
  */
 CCC.World.wrap = function(svg, text, width, height) {
-  var paragraphs = text.split('\n');
-  var measuredWidth = 0;
-  var measuredHeight = 0;
-  var dy = CCC.World.measureText(svg, 'Wg').height;
-  for (var i = 0; i < paragraphs.length; i++) {
-    paragraphs[i] = CCC.World.wrapLine_(svg, paragraphs[i], width);
-    var lines = paragraphs[i].split('\n');
-    for (var j = 0; j < lines.length; j++) {
-      var size = CCC.World.measureText(svg, lines[j]);
-      measuredWidth = Math.max(measuredWidth, size.width);
-      measuredHeight += dy;
+  var minWidth = width;
+  var maxWidth = svg.scaledWidth_ - 10;
+  var measuredWidth, measuredHeight;
+  function wrapForWidth(width) {
+    measuredWidth = 0;
+    measuredHeight = 0;
+    var paragraphs = text.split('\n');
+    var dy = CCC.World.measureText(svg, 'Wg').height;
+    for (var i = 0; i < paragraphs.length; i++) {
+      paragraphs[i] = CCC.World.wrapLine_(svg, paragraphs[i], width);
+      var lines = paragraphs[i].split('\n');
+      for (var j = 0; j < lines.length; j++) {
+        var size = CCC.World.measureText(svg, lines[j]);
+        measuredWidth = Math.max(measuredWidth, size.width);
+        measuredHeight += dy;
+      }
     }
+    return  paragraphs.join('\n');
   }
-  // If overflowing on height, increase the width incrementally until reaching
-  // the full width of the SVG.
-  if (measuredHeight > height && width < svg.scaledWidth_ - 20) {
-    return CCC.World.wrap(svg, text, width + 10, height);
+  var wrappedText = wrapForWidth(width);
+  if (measuredHeight > height) {
+    // If overflowing on height, increase the width using a binary search.
+    // Do not exceed the full width of the SVG.
+    do {
+      if (measuredHeight > height) {
+        minWidth = width;
+        width = Math.round((maxWidth - width) / 2 + width);
+      } else {
+        maxWidth = width;
+        width = Math.round((width - minWidth) / 2 + minWidth);
+      }
+      wrappedText = wrapForWidth(width);
+    } while (maxWidth - minWidth > 10);
   }
-  text = paragraphs.join('\n');
-  return text;
+  return wrappedText;
 };
 
 /**
@@ -1426,19 +1441,22 @@ CCC.World.wrapScore_ = function(svg, words, wordBreaks, limit) {
   var score = 0;
   for (var i = 0; i < lineLengths.length; i++) {
     // Optimize for width.
-    // -100 points per unit over limit.
     if (lineLengths[i] > limit) {
-      score -= (lineLengths[i] - limit) * 100;
+      // -1000 points per unit over limit.
+      score -= (lineLengths[i] - limit) * 1000;
+    } else {
+      // -1 point per unit under limit.
+      score -= (limit - lineLengths[i]) * 1;
     }
     // Optimize for even lines.
-    // -1 point per unit smaller than max (scaled to the power of 1.5).
-    score -= Math.pow(maxLength - lineLengths[i], 1.5);
+    // -1 point per unit smaller than max.
+    //score -= maxLength - lineLengths[i];
     // Optimize for structure.
     // Add score to line endings after punctuation.
     if ('.?!'.indexOf(linePunctuation[i]) != -1) {
-      score += limit / 3;
+      score += 6;
     } else if (',;)]}'.indexOf(linePunctuation[i]) != -1) {
-      score += limit / 4;
+      score += 3;
     }
   }
   // All else being equal, the last line should not be longer than the
