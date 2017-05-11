@@ -111,12 +111,16 @@ func (f *Flatpack) flatten(v reflect.Value) reflect.Value {
 		panic("Not implemented")
 	case reflect.Ptr:
 		// FIXME: what is v is a nil pointer?
-		// FIXME: don't store same pointer-target more than once.
 
+		// Check to see if we have already flattened thing pointed to.
+		if ref, ok := f.index[v.Interface()]; ok {
+			return reflect.ValueOf(ref)
+		}
 		// Allocate a space in the flatpack for the (flattened
-		// version) of the thing v points at:
+		// version) of the thing v points at, and record in f.index:
 		idx := len(f.Values)
 		f.Values = append(f.Values, tagged{})
+		f.index[v.Interface()] = ref(idx)
 
 		// Stick thing v points at in an interface (so we can record
 		// its type info) and flatten that:
