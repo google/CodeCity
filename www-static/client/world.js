@@ -113,6 +113,7 @@ CCC.World.init = function() {
   CCC.World.scrollDiv = document.getElementById('scrollDiv');
   CCC.World.panoramaDiv = document.getElementById('panoramaDiv');
   CCC.World.scrollBarWidth = CCC.World.getScrollBarWidth();
+  CCC.World.scene = document.createElement('scene');  // Blank scene.
   delete CCC.World.getScrollBarWidth;  // Free memory.
 
   window.addEventListener('resize', CCC.World.resizeSoon, false);
@@ -156,7 +157,6 @@ CCC.World.receiveMessage = function(e) {
 
 /**
  * Parse the XML and deal with any chunks that need one-time processing.
- * Record the latest scene data to CCC.World.scene.
  * @param {!Element} dom XML tree.
  */
 CCC.World.preprocessXml = function(dom) {
@@ -305,11 +305,9 @@ CCC.World.prerenderHistory = function(msg) {
   }
 
   // Add scene background.
-  if (CCC.World.scene) {
-    var svgdom = CCC.World.scene.querySelector('scene>svgdom');
-    if (svgdom) {
-      CCC.World.cloneAndAppend(svg, svgdom.firstChild);
-    }
+  var svgdom = CCC.World.scene.querySelector('scene>svgdom');
+  if (svgdom) {
+    CCC.World.cloneAndAppend(svg, svgdom.firstChild);
   }
   var text = document.createElementNS(CCC.Common.NS, 'text');
   text.appendChild(document.createTextNode(msg));
@@ -343,116 +341,119 @@ CCC.World.prerenderPanorama = function(node) {
     return true;
   }
 
-  if (CCC.World.scene) {
-    // Add scene background.
-    var svgdom = CCC.World.scene.querySelector('scene>svgdom');
-    if (svgdom) {
-      var g = CCC.Common.createSvgElement('g',
-          {'class': 'sceneBackground'}, svg);
-      CCC.World.cloneAndAppend(g, svgdom.firstChild);
-    }
-    // Obtain an ordered list of contents.
-    var contentsArray =
-        CCC.World.scene.querySelectorAll('scene>user,scene>object');
-    var userTotal = CCC.World.scene.querySelectorAll('scene>user').length;
-    CCC.World.sceneUserLocations = Object.create(null);
-    // Draw each item.
-    var icons = [];
-    var userCount = 0;
-    for (var i = 0, thing; thing = contentsArray[i]; i++) {
-      var cursorX = (i + 1) / (contentsArray.length + 1) * svg.scaledWidth_ -
-          svg.scaledWidth_ / 2;
-      var bBox = null;
-      var isUser = thing.tagName == 'user';
-      var svgDom = thing.querySelector('*>svgdom');
-      if (svgDom && svgDom.firstChild) {
-        var g = CCC.Common.createSvgElement('g', {'class': thing.tagName}, svg);
-        g.setAttribute('filter', 'url(#' + svg.whiteShadowId_ + ')');
-        CCC.World.cloneAndAppend(g, svgDom.firstChild);
-        // Users should face the majority of other users.
-        // If user is alone, should face majority of objects.
-        if (isUser && (userTotal == 1 ?
-            (i > 0 && i >= Math.floor(contentsArray.length / 2)) :
-            (userCount > 0 && userCount >= Math.floor(userTotal / 2)))) {
-          // Wrap mirrored users in an extra group.
-          var g2 = CCC.Common.createSvgElement('g', {}, svg);
-          g.setAttribute('transform', 'scale(-1,1)');
-          g2.appendChild(g);
-          g = g2;
-        }
-        // Move the sprite into position.
-        bBox = g.getBBox();
-        var dx = cursorX - bBox.x - (bBox.width / 2);
-        g.setAttribute('transform', 'translate(' + dx + ', 0)');
-        g.setAttribute('filter', 'url(#' + svg.whiteShadowId_ + ')');
-        // Record location of each user for positioning of speech bubbles.
-        if (isUser) {
-          var name = thing.getAttribute('name');
-          var radius = Math.min(bBox.height, bBox.width) / 2;
-          CCC.World.sceneUserLocations[name] = {
-            headX: cursorX,
-            headY: bBox.y + radius,
-            headR: radius
-          };
-        }
+  // Add scene background.
+  var svgdom = CCC.World.scene.querySelector('scene>svgdom');
+  if (svgdom) {
+    var g = CCC.Common.createSvgElement('g',
+        {'class': 'sceneBackground'}, svg);
+    CCC.World.cloneAndAppend(g, svgdom.firstChild);
+  }
+  // Obtain an ordered list of contents.
+  var contentsArray =
+      CCC.World.scene.querySelectorAll('scene>user,scene>object');
+  var userTotal = CCC.World.scene.querySelectorAll('scene>user').length;
+  CCC.World.sceneUserLocations = Object.create(null);
+  // Draw each item.
+  var icons = [];
+  var userCount = 0;
+  for (var i = 0, thing; thing = contentsArray[i]; i++) {
+    var cursorX = (i + 1) / (contentsArray.length + 1) * svg.scaledWidth_ -
+        svg.scaledWidth_ / 2;
+    var bBox = null;
+    var isUser = thing.tagName == 'user';
+    var svgDom = thing.querySelector('*>svgdom');
+    if (svgDom && svgDom.firstChild) {
+      var name = thing.getAttribute('name');
+      var g = CCC.Common.createSvgElement('g', {'class': thing.tagName}, svg);
+      var title = CCC.Common.createSvgElement('title', {}, g);
+      title.appendChild(document.createTextNode(name));
+      g.setAttribute('filter', 'url(#' + svg.whiteShadowId_ + ')');
+      CCC.World.cloneAndAppend(g, svgDom.firstChild);
+      // Users should face the majority of other users.
+      // If user is alone, should face majority of objects.
+      if (isUser && (userTotal == 1 ?
+          (i > 0 && i >= Math.floor(contentsArray.length / 2)) :
+          (userCount > 0 && userCount >= Math.floor(userTotal / 2)))) {
+        // Wrap mirrored users in an extra group.
+        var g2 = CCC.Common.createSvgElement('g', {}, svg);
+        g.setAttribute('transform', 'scale(-1,1)');
+        g2.appendChild(g);
+        g = g2;
       }
-      var cmds = thing.querySelector('*>cmds');
-      if (cmds) {
-        var iconSize = 6;
-        var x = cursorX - iconSize / 2;
-        var y = isUser ? 40 : 60;
-        if (bBox) {
-          // Align menu icon with top-right corner of user's sprite.
-          x = Math.min(cursorX + bBox.width / 2,
-                       svg.scaledWidth_ / 2 - iconSize);
-          y = Math.max(0, bBox.y);
-        }
-        var icon = CCC.Common.newMenuIcon(cmds);
-        icon.setAttribute('width', iconSize);
-        icon.setAttribute('height', iconSize);
-        icon.setAttribute('viewBox', '0 0 10 10');
-        icon.setAttribute('x', x);
-        icon.setAttribute('y', y);
-        icons.push(icon);
-      }
+      // Move the sprite into position.
+      bBox = g.getBBox();
+      var dx = cursorX - bBox.x - (bBox.width / 2);
+      g.setAttribute('transform', 'translate(' + dx + ', 0)');
+      g.setAttribute('filter', 'url(#' + svg.whiteShadowId_ + ')');
+      // Record location of each user for positioning of speech bubbles.
       if (isUser) {
-        userCount++;
+        var radius = Math.min(bBox.height, bBox.width) / 2;
+        CCC.World.sceneUserLocations[name] = {
+          headX: cursorX,
+          headY: bBox.y + radius,
+          headR: radius
+        };
       }
     }
-    // Menu icons should be added after all the sprites so that they aren't
-    // occluded by user content.
-    for (var i = 0, icon; icon = icons[i]; i++) {
-      svg.appendChild(icon);
-    }
-
-    if (node.tagName == 'say') {
-      // <say user="Max" room="The Hangout">Hello world.</say>
-      var user = node.getAttribute('user');
-      var text = node.textContent;
-      var textGroup = CCC.World.createTextArea(svg, text, 100, 30);
-      textGroup.setAttribute('class', 'say');
-      var bubbleGroup = CCC.Common.createSvgElement('g',
-          {'class': 'bubble'}, svg);
-      svg.appendChild(textGroup);
-      var textBBox = textGroup.getBBox();
-      var anchor = CCC.World.sceneUserLocations &&
-                   CCC.World.sceneUserLocations[user];
-      // Align the text above the user.
-      if (anchor) {
-        cursorX = anchor.headX;
-      } else {
-        cursorX = 0;
+    var cmds = thing.querySelector('*>cmds');
+    if (cmds) {
+      var iconSize = 6;
+      var x = cursorX - iconSize / 2;
+      var y = isUser ? 40 : 60;
+      if (bBox) {
+        // Align menu icon with top-right corner of user's sprite.
+        x = Math.min(cursorX + bBox.width / 2,
+                     svg.scaledWidth_ / 2 - iconSize);
+        y = Math.max(0, bBox.y);
       }
-      // Don't overflow the right edge.
-      cursorX = Math.min(cursorX, svg.scaledWidth_ / 2 - textBBox.width / 2 - 1);
-      // Don't overflow the left edge.
-      cursorX = Math.max(cursorX, textBBox.width / 2 - svg.scaledWidth_ / 2 + 1);
-      cursorX -= textBBox.x + textBBox.width / 2;
-      textGroup.setAttribute('transform',
-          'translate(' + cursorX + ', 2)');
-      CCC.World.drawBubble(bubbleGroup, textGroup, anchor);
+      var icon = CCC.Common.newMenuIcon(cmds);
+      icon.setAttribute('width', iconSize);
+      icon.setAttribute('height', iconSize);
+      icon.setAttribute('viewBox', '0 0 10 10');
+      icon.setAttribute('x', x);
+      icon.setAttribute('y', y);
+      icons.push(icon);
+    }
+    if (isUser) {
+      userCount++;
     }
   }
+  // Menu icons should be added after all the sprites so that they aren't
+  // occluded by user content.
+  for (var i = 0, icon; icon = icons[i]; i++) {
+    svg.appendChild(icon);
+  }
+
+  if (node.tagName == 'say') {
+    // <say user="Max" room="The Hangout">Hello world.</say>
+    var user = node.getAttribute('user');
+    var text = node.textContent;
+    var textGroup = CCC.World.createTextArea(svg, text, 100, 30);
+    textGroup.setAttribute('class', 'say');
+    var bubbleGroup = CCC.Common.createSvgElement('g',
+        {'class': 'bubble'}, svg);
+    var title = CCC.Common.createSvgElement('title', {}, bubbleGroup);
+    title.appendChild(document.createTextNode(user));
+    svg.appendChild(textGroup);
+    var textBBox = textGroup.getBBox();
+    var anchor = CCC.World.sceneUserLocations &&
+                 CCC.World.sceneUserLocations[user];
+    // Align the text above the user.
+    if (anchor) {
+      cursorX = anchor.headX;
+    } else {
+      cursorX = 0;
+    }
+    // Don't overflow the right edge.
+    cursorX = Math.min(cursorX, svg.scaledWidth_ / 2 - textBBox.width / 2 - 1);
+    // Don't overflow the left edge.
+    cursorX = Math.max(cursorX, textBBox.width / 2 - svg.scaledWidth_ / 2 + 1);
+    cursorX -= textBBox.x + textBBox.width / 2;
+    textGroup.setAttribute('transform',
+        'translate(' + cursorX + ', 2)');
+    CCC.World.drawBubble(bubbleGroup, textGroup, anchor);
+  }
+
   if (typeof node == 'string') {  // Flat text.
     var textGroup = CCC.World.createTextArea(svg, node, 150, 100);
     textGroup.setAttribute('transform', 'translate(-75, 0)');
@@ -831,7 +832,7 @@ CCC.World.renderHistory = function() {
   CCC.World.historyRow = null;
   CCC.World.scratchHistory = null;
   CCC.World.scratchPanorama = null;
-  CCC.World.scene = null;
+  CCC.World.scene = document.createElement('scene');
   // Create new history.
   var messages = CCC.World.historyMessages.concat(CCC.World.panoramaMessages);
   CCC.World.historyMessages.length = 0;
