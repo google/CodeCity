@@ -429,7 +429,7 @@ CCC.World.prerenderPanorama = function(node) {
       // <say user="Max" room="The Hangout">Hello world.</say>
       var user = node.getAttribute('user');
       var text = node.textContent;
-      var textGroup = CCC.World.createTextArea(svg, 150, 100, text);
+      var textGroup = CCC.World.createTextArea(svg, text, 100, 30);
       textGroup.setAttribute('class', 'say');
       var bubbleGroup = CCC.Common.createSvgElement('g',
           {'class': 'bubble'}, svg);
@@ -437,18 +437,24 @@ CCC.World.prerenderPanorama = function(node) {
       var textBBox = textGroup.getBBox();
       var anchor = CCC.World.sceneUserLocations &&
                    CCC.World.sceneUserLocations[user];
+      // Align the text above the user.
       if (anchor) {
         cursorX = anchor.headX;
       } else {
         cursorX = 0;
       }
+      // Don't overflow the right edge.
+      cursorX = Math.min(cursorX, svg.scaledWidth_ / 2 - textBBox.width / 2 - 1);
+      // Don't overflow the left edge.
+      cursorX = Math.max(cursorX, textBBox.width / 2 - svg.scaledWidth_ / 2 + 1);
+      cursorX -= textBBox.x + textBBox.width / 2;
       textGroup.setAttribute('transform',
-          'translate(' + (cursorX - textBBox.x - textBBox.width / 2) + ', 2)');
+          'translate(' + cursorX + ', 2)');
       CCC.World.drawBubble(bubbleGroup, textGroup, anchor);
     }
   }
   if (typeof node == 'string') {  // Flat text.
-    var textGroup = CCC.World.createTextArea(svg, 150, 100, node);
+    var textGroup = CCC.World.createTextArea(svg, node, 150, 100);
     textGroup.setAttribute('transform', 'translate(-75, 0)');
     svg.appendChild(textGroup);
   }
@@ -1281,19 +1287,19 @@ CCC.World.getScrollBarWidth = function() {
 /**
  * Create a block of text on SVG constrained to a given size.
  * @param {!SVGSVGElement} svg SVG element to use.
+ * @param {string} text Text to create.
  * @param {number} width Maximum width.
  * @param {number} height Maximum height.
- * @param {string} msg Text to create.
  * @return {!SVGElement} SVG group containing text.
  */
-CCC.World.createTextArea = function(svg, width, height, msg) {
-  msg = msg.replace(/  /g, '\u00A0 ');
-  msg = msg.replace(/  /g, '\u00A0 ');
-  msg = msg.replace(/^ /gm, '\u00A0');
-  msg = CCC.World.wrap(svg, msg, width);
-  var lines = msg.split('\n');
-  var text = document.createElementNS(CCC.Common.NS, 'text');
-  text.setAttribute('alignment-baseline', 'hanging');
+CCC.World.createTextArea = function(svg, text, width, height) {
+  text = text.replace(/  /g, '\u00A0 ');
+  text = text.replace(/  /g, '\u00A0 ');
+  text = text.replace(/^ /gm, '\u00A0');
+  text = CCC.World.wrap(svg, text, width, height);
+  var lines = text.split('\n');
+  var textNode = document.createElementNS(CCC.Common.NS, 'text');
+  textNode.setAttribute('alignment-baseline', 'hanging');
   if (lines.length) {
     var dy = CCC.World.measureText(svg, 'Wg').height;
     for (var i = 0; i < lines.length; i++) {
@@ -1302,11 +1308,11 @@ CCC.World.createTextArea = function(svg, width, height, msg) {
       tspan.appendChild(document.createTextNode(line));
       tspan.setAttribute('x', 0);
       tspan.setAttribute('dy', dy);
-      text.appendChild(tspan);
+      textNode.appendChild(tspan);
     }
   }
   var g = document.createElementNS(CCC.Common.NS, 'g');
-  g.appendChild(text);
+  g.appendChild(textNode);
   return g;
 };
 
@@ -1314,15 +1320,31 @@ CCC.World.createTextArea = function(svg, width, height, msg) {
  * Wrap text to the specified width.
  * @param {!SVGSVGElement} svg SVG element to use.
  * @param {string} text Text to wrap.
- * @param {number} limit Width to wrap each line.
+ * @param {number} width Maximum width.
+ * @param {number} height Maximum height.
  * @return {string} Wrapped text.
  */
-CCC.World.wrap = function(svg, text, limit) {
-  var lines = text.split('\n');
-  for (var i = 0; i < lines.length; i++) {
-    lines[i] = CCC.World.wrapLine_(svg, lines[i], limit);
+CCC.World.wrap = function(svg, text, width, height) {
+  var paragraphs = text.split('\n');
+  var measuredWidth = 0;
+  var measuredHeight = 0;
+  var dy = CCC.World.measureText(svg, 'Wg').height;
+  for (var i = 0; i < paragraphs.length; i++) {
+    paragraphs[i] = CCC.World.wrapLine_(svg, paragraphs[i], width);
+    var lines = paragraphs[i].split('\n');
+    for (var j = 0; j < lines.length; j++) {
+      var size = CCC.World.measureText(svg, lines[j]);
+      measuredWidth = Math.max(measuredWidth, size.width);
+      measuredHeight += dy;
+    }
   }
-  return lines.join('\n');
+  // If overflowing on height, increase the width incrementally until reaching
+  // the full width of the SVG.
+  if (measuredHeight > height && width < svg.scaledWidth_ - 20) {
+    return CCC.World.wrap(svg, text, width + 10, height);
+  }
+  text = paragraphs.join('\n');
+  return text;
 };
 
 /**
@@ -1490,7 +1512,7 @@ CCC.World.wrapToText_ = function(words, wordBreaks) {
 };
 
 /**
- * Measure some text to obtain its height and width.
+ * Measure one line of text to obtain its height and width.
  * @param {!SVGSVGElement} svg SVG element to use.
  * @param {string} text Text to measure.
  * @return {!SVGRect} Height and width of text.
