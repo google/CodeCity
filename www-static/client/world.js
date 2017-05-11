@@ -1358,6 +1358,9 @@ CCC.World.wrap = function(svg, text, width, height) {
       }
       wrappedText = wrapForWidth(width);
     } while (maxWidth - minWidth > 10);
+    if (measuredHeight > height) {
+      wrappedText = wrapForWidth(maxWidth);
+    }
   }
   return wrappedText;
 };
@@ -1424,19 +1427,18 @@ CCC.World.wrapLine_ = function(svg, text, limit) {
 CCC.World.wrapScore_ = function(svg, words, wordBreaks, limit) {
   // If this function becomes a performance liability, add caching.
   // Compute the length of each line.
-  var lineLengths = [0];
-  var linePunctuation = [];
+  var lines = [[]];
   for (var i = 0; i < words.length; i++) {
-    var word = words[i];
-    lineLengths[lineLengths.length - 1] +=
-        CCC.World.measureText(svg, word).width;
+    lines[lines.length - 1].push(words[i]);
     if (wordBreaks[i] === true) {
-      lineLengths.push(0);
-      word = word.trim();
-      linePunctuation.push(word.charAt(word.length - 1));
+      lines.push([]);
     }
   }
-  var maxLength = Math.max.apply(Math, lineLengths);
+  var lineLengths = [];
+  for (var i = 0; i < lines.length; i++) {
+    lines[i] = lines[i].join('');
+    lineLengths.push(CCC.World.measureText(svg, lines[i]).width);
+  }
 
   var score = 0;
   for (var i = 0; i < lineLengths.length; i++) {
@@ -1445,17 +1447,15 @@ CCC.World.wrapScore_ = function(svg, words, wordBreaks, limit) {
       // -1000 points per unit over limit.
       score -= (lineLengths[i] - limit) * 1000;
     } else {
-      // -1 point per unit under limit.
-      score -= (limit - lineLengths[i]) * 1;
+      // -1 point per unit under limit (scaled to the power of 1.5).
+      score -= Math.pow(Math.abs(limit - lineLengths[i]) * 1, 1.5);
     }
-    // Optimize for even lines.
-    // -1 point per unit smaller than max.
-    //score -= maxLength - lineLengths[i];
     // Optimize for structure.
     // Add score to line endings after punctuation.
-    if ('.?!'.indexOf(linePunctuation[i]) != -1) {
+    var lastLetter = lines[i].trim().slice(-1);
+    if ('.?!'.indexOf(lastLetter) != -1) {
       score += 6;
-    } else if (',;)]}'.indexOf(linePunctuation[i]) != -1) {
+    } else if (',;)]}'.indexOf(lastLetter) != -1) {
       score += 3;
     }
   }
