@@ -113,8 +113,8 @@ func (f *Flatpack) flatten(v reflect.Value) reflect.Value {
 		// FIXME: what is v is a nil pointer?
 
 		// Check to see if we have already flattened thing pointed to.
-		if ref, ok := f.index[v.Interface()]; ok {
-			return reflect.ValueOf(ref)
+		if r, ok := f.index[v.Interface()]; ok {
+			return reflect.ValueOf(r)
 		}
 		// Allocate a space in the flatpack for the (flattened
 		// version) of the thing v points at, and record in f.index:
@@ -143,7 +143,7 @@ func (f *Flatpack) flatten(v reflect.Value) reflect.Value {
 	case reflect.Struct:
 		// To (usefully) read unexported fields (using unsafe) we need
 		// to be able to get pointers to them, so make an addressable
-		// copy of arg, if it is not already addressable:
+		// copy of v, if it is not already addressable:
 		if !v.CanAddr() {
 			vv := reflect.New(typ).Elem()
 			vv.Set(v)

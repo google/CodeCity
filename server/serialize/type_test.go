@@ -24,6 +24,7 @@ import (
 func TestFlatTypeSimple(t *testing.T) {
 	// All these should not be changed by flatType():
 	var cases = []interface{}{
+		false,
 		int(0),
 		int8(0),
 		int16(0),
