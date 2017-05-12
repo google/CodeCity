@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package serialize
+package flatpack
 
 import (
 	"reflect"
@@ -49,7 +49,7 @@ func TestFlattenSimple(t *testing.T) {
 			"fraser":   7499832,
 		},
 	}
-	var f = NewFlatpack()
+	var f = New()
 	for _, c := range cases {
 		var r = f.flatten(reflect.ValueOf(c))
 		if reflect.TypeOf(c).Comparable() {
@@ -72,7 +72,7 @@ func TestFlattenStringMap(t *testing.T) {
 		"naughty": &a[1],
 		"random":  &a[2],
 	}
-	var f = NewFlatpack()
+	var f = New()
 	r := f.flatten(reflect.ValueOf(m))
 
 	if r.Type() != flatType(reflect.TypeOf(m)) {
@@ -98,7 +98,7 @@ func TestFlattenNonStringMap(t *testing.T) {
 		{1939, 1945}: "WW II",
 		{2026, 2053}: "WW III", // Citation: http://memory-alpha.wikia.com/wiki/World_War_III
 	}
-	var f = NewFlatpack()
+	var f = New()
 	r := f.flatten(reflect.ValueOf(m))
 
 	if r.Type() != flatType(reflect.TypeOf(m)) {
@@ -126,7 +126,7 @@ func TestFlattenArrayPtr(t *testing.T) {
 	var s = "spam"
 	var a = [...]*string{&s, &s, &s, &s}
 
-	var f = NewFlatpack()
+	var f = New()
 	r := f.flatten(reflect.ValueOf(a))
 	if r.Len() != len(a) {
 		t.Errorf("r.Len() == %d (expected %d)", r.Len(), len(a))
@@ -162,7 +162,7 @@ func TestFlattenStructSliceInterface(t *testing.T) {
 		sl []interface{}
 	}{42, []interface{}{69, "Hello", true}}
 
-	var f = NewFlatpack()
+	var f = New()
 	r := f.flatten(reflect.ValueOf(s))
 
 	if r.Type() != flatType(reflect.TypeOf(s)) {

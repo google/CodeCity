@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package serialize
+package flatpack
 
 import (
 	"fmt"

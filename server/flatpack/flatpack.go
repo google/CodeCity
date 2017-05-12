@@ -14,16 +14,17 @@
  * limitations under the License.
  */
 
-// serialise implements a mechanism to convert arbitrary Go data,
-// possibly including shared substructures, into a slice of objects
-// that can be serialised using encoding.json or the like.
+// flatpack implements a mechanism to convert arbitrary Go data,
+// possibly including shared and/or cyclic substructure, into a purely
+// tree-structured datastructure that can be serialised using
+// encoding.json or the like.
 //
-// BUG(cpcallen): does not handle internal pointers (pointers to array
+// BUG(cpcallen): does not handle interior pointers (pointers to array
 // or struct element) correctly.
 //
 // BUG(cpcallen): does not handle shared backing arrays for slices (or
 // strings) correctly.
-package serialize
+package flatpack
 
 import (
 	"reflect"
@@ -48,7 +49,7 @@ type Flatpack struct {
 	index map[interface{}]ref
 }
 
-func NewFlatpack() *Flatpack {
+func New() *Flatpack {
 	var f Flatpack
 	f.index = make(map[interface{}]ref)
 	return &f
