@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-// flatpack implements a mechanism to convert arbitrary Go data,
-// possibly including shared and/or cyclic substructure, into a purely
-// tree-structured datastructure that can be serialised using
+// Package flatpack implements a mechanism to convert arbitrary Go
+// data, possibly including shared and/or cyclic substructure, into a
+// purely tree-structured datastructure that can be serialised using
 // encoding.json or the like.
 //
 // BUG(cpcallen): does not handle interior pointers (pointers to array
@@ -49,6 +49,7 @@ type Flatpack struct {
 	index map[interface{}]ref
 }
 
+// New creates and initializes a new flatpack.
 func New() *Flatpack {
 	var f Flatpack
 	f.index = make(map[interface{}]ref)

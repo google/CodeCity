@@ -50,11 +50,14 @@ func tIDOf(typ reflect.Type) tID {
 // circular data and shared substructure can be represented.
 //
 // - Interfaces are replaced with a struct containing an explicit type
-// ID in addition to the interface value.
+// ID in addition to the interface value.  This allows selection of
+// the right datastructure when unmarshalling JSON.
 //
 // - Structs have all fields exported.
 //
-// - Maps with non-string key types replaced by slice of 2-member struct.
+// - Maps with non-string key types replaced by slice of 2-member
+// {key, value} struct.  This ensures maps will be correctly handled
+// as JSON.
 func flatType(typ reflect.Type) reflect.Type {
 	if typ == nil {
 		panic("nil is not a type")
@@ -71,20 +74,19 @@ func flatType(typ reflect.Type) reflect.Type {
 	case reflect.Interface:
 		return reflect.TypeOf(tagged{"", nil})
 	case reflect.Map:
-		// If the map key type is a string then we mostly leave it
-		// alone; other maps become a slice of {key, value} pairs.
+		// If key type is a string, just flatten value type:
 		if typ.Key().Kind() == reflect.String {
 			return reflect.MapOf(typ.Key(), flatType(typ.Elem()))
-		} else {
-			var fields = make([]reflect.StructField, 2)
-			fields[0].Name = "K"
-			fields[0].Type = flatType(typ.Key())
-			fields[0].Tag = `json:"k"`
-			fields[1].Name = "V"
-			fields[1].Type = flatType(typ.Elem())
-			fields[1].Tag = `json:"v"`
-			return reflect.SliceOf(reflect.StructOf(fields))
 		}
+		// Otherwise, it becomes a slice of {key, value} pairs:
+		var fields = make([]reflect.StructField, 2)
+		fields[0].Name = "K"
+		fields[0].Type = flatType(typ.Key())
+		fields[0].Tag = `json:"k"`
+		fields[1].Name = "V"
+		fields[1].Type = flatType(typ.Elem())
+		fields[1].Tag = `json:"v"`
+		return reflect.SliceOf(reflect.StructOf(fields))
 	case reflect.Ptr:
 		return reflect.TypeOf((*ref)(nil)).Elem() // *whatever => ref
 	case reflect.Slice:
