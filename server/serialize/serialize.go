@@ -54,27 +54,9 @@ func NewFlatpack() *Flatpack {
 	return &f
 }
 
-// Flatten takes an arbitrary Go value and returns a Flatpack of it.
-func Flatten(v interface{}) *Flatpack {
-	var f = NewFlatpack()
-	f.Flatten(v)
-	return f
-}
-
-// RefOf returns the reference (index) of the flattened version of its
-// argument, which should be a pointer, or !ok if the argument was not
-// a pointer or has not yet been flattened.
-func (f *Flatpack) RefOf(v interface{}) (idx ref, ok bool) {
-	if reflect.TypeOf(v).Kind() != reflect.Ptr {
-		return -1, false
-	}
-	idx, ok = f.index[v]
-	return
-}
-
-// flatten takes an ordinary value and returns it in flattened form.
-// In partciular, the type of the result will be the flatType of the
-// type of the argument:
+// flatten takes an ordinary reflect.Value and returns it in flattened
+// form.  In partciular, the type of the result will be the flatType
+// of the type of the argument:
 //
 //     f.flatten(v).Type() == flatType(v.Type())
 //
@@ -102,13 +84,27 @@ func (f *Flatpack) flatten(v reflect.Value) reflect.Value {
 		return r
 	case reflect.Interface:
 		// FIXME: what if v is a nil interface value?
-		var r = reflect.ValueOf(new(tagged)).Elem()
+		r := reflect.ValueOf(new(tagged)).Elem()
 		r.Field(0).Set(reflect.ValueOf(tIDOf(v.Elem().Type())))
 		r.Field(1).Set(f.flatten(v.Elem()))
 		return r
 	case reflect.Map:
-		// FIXME: implement (two versions)!
-		panic("Not implemented")
+		var r reflect.Value
+		if ftyp.Kind() == reflect.Map {
+			r = reflect.MakeMap(ftyp)
+			for _, k := range v.MapKeys() {
+				r.SetMapIndex(k, f.flatten(v.MapIndex(k)))
+			}
+		} else {
+			r = reflect.MakeSlice(ftyp, v.Len(), v.Len())
+			for i, k := range v.MapKeys() {
+				pair := reflect.New(ftyp.Elem()).Elem()
+				pair.Field(0).Set(f.flatten(k))
+				pair.Field(1).Set(f.flatten(v.MapIndex(k)))
+				r.Index(i).Set(pair)
+			}
+		}
+		return r
 	case reflect.Ptr:
 		// FIXME: what is v is a nil pointer?
 

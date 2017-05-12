@@ -44,6 +44,10 @@ func TestFlattenSimple(t *testing.T) {
 		string("Eighteen"),
 		[3]int{19, 20, 21},
 		[]int{22, 23, 24},
+		map[string]int{
+			"cpcallen": 2365779,
+			"fraser":   7499832,
+		},
 	}
 	var f = NewFlatpack()
 	for _, c := range cases {
@@ -58,6 +62,61 @@ func TestFlattenSimple(t *testing.T) {
 	}
 	if len(f.Values) != 0 {
 		t.Errorf("len(f.Values) == %d (expected 0)", len(f.Values))
+	}
+}
+
+func TestFlattenStringMap(t *testing.T) {
+	var a = [...]int{42, 69, 105}
+	var m = map[string]*int{
+		"answer":  &a[0],
+		"naughty": &a[1],
+		"random":  &a[2],
+	}
+	var f = NewFlatpack()
+	r := f.flatten(reflect.ValueOf(m))
+
+	if r.Type() != flatType(reflect.TypeOf(m)) {
+		t.Errorf("r.Type() == %s (expected %s)", r.Type(), flatType(reflect.TypeOf(m)))
+	}
+	if r.Len() != len(m) {
+		t.Errorf("r.Len() == %d (expected %d)", r.Len(), len(m))
+	}
+	for k, v := range r.Interface().(map[string]ref) {
+		if *(m[k]) != f.Values[v].V {
+			t.Errorf("*(m[%#v]) == %#v in input but %#v in output", k, *(m[k]), f.Values[v].V)
+		}
+		delete(m, k)
+	}
+	if len(m) > 0 {
+		t.Errorf("%#v present in input but not in output", m)
+	}
+}
+
+func TestFlattenNonStringMap(t *testing.T) {
+	var m = map[[2]int]string{
+		{1914, 1918}: "WW I",
+		{1939, 1945}: "WW II",
+		{2026, 2053}: "WW III", // Citation: http://memory-alpha.wikia.com/wiki/World_War_III
+	}
+	var f = NewFlatpack()
+	r := f.flatten(reflect.ValueOf(m))
+
+	if r.Type() != flatType(reflect.TypeOf(m)) {
+		t.Errorf("r.Type() == %s (expected %s)", r.Type(), flatType(reflect.TypeOf(m)))
+	}
+	if r.Len() != len(m) {
+		t.Errorf("r.Len() == %d (expected %d)", r.Len(), len(m))
+	}
+	for i := 0; i < r.Len(); i++ {
+		k := r.Index(i).Field(0).Interface().([2]int)
+		v := r.Index(i).Field(1).Interface().(string)
+		if m[k] != v {
+			t.Errorf("m[%#v] == %#v in input but %#v in output", k, m[k], v)
+		}
+		delete(m, k)
+	}
+	if len(m) > 0 {
+		t.Errorf("%#v present in input but not in output", m)
 	}
 }
 
@@ -107,12 +166,12 @@ func TestFlattenStructSliceInterface(t *testing.T) {
 	r := f.flatten(reflect.ValueOf(s))
 
 	if r.Type() != flatType(reflect.TypeOf(s)) {
-		t.Errorf("r.Type() == %#v (expected %#v)", r.Type(), flatType(reflect.TypeOf(s)))
+		t.Errorf("r.Type() == %s (expected %s)", r.Type(), flatType(reflect.TypeOf(s)))
 	}
 	if ri := r.Field(0).Interface(); ri.(int) != s.i {
 		t.Errorf("r.Field(0).Interface() == %#v (expected %#v)", ri, s.i)
 	}
-	var rSlice []tagged = r.Field(1).Interface().([]tagged)
+	rSlice := r.Field(1).Interface().([]tagged)
 	for i := 0; i < len(s.sl); i++ {
 		expType := tIDOf(reflect.TypeOf(s.sl[i]))
 		if rSlice[i].T != expType {

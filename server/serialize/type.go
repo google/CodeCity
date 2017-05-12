@@ -45,14 +45,16 @@ func tIDOf(typ reflect.Type) tID {
 // that can store the same data but is more suited for serialisation
 // using encoding/json (and similar):
 //
-// - Pointer types replaced with ref (numeric object ID), so circular
-// data and shared substructure can be flattened.
+// - Pointer types are replaced with ref (numeric object ID indexing
+// into a list of flattened objects, e.g. as in a Flatpack), so
+// circular data and shared substructure can be represented.
 //
-// - Interfaces are replaced with struct containign explicit type ID
+// - Interfaces are replaced with a struct containing an explicit type
+// ID in addition to the interface value.
 //
-// - Structs have all fields exported
+// - Structs have all fields exported.
 //
-// - Maps with non-string key types replaced by slice of 2-member struct
+// - Maps with non-string key types replaced by slice of 2-member struct.
 func flatType(typ reflect.Type) reflect.Type {
 	if typ == nil {
 		panic("nil is not a type")
