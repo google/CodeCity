@@ -47,7 +47,7 @@ func TestFlatTypeSimple(t *testing.T) {
 	for _, c := range cases {
 		var typ = reflect.TypeOf(c)
 		if r := flatType(typ); r != typ {
-			t.Errorf("flatType(%s) == %s (expected %[1]s)", typ.String(), r.String())
+			t.Errorf("flatType(%s) == %s (expected %[1]s)", typ, r)
 		}
 	}
 }

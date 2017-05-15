@@ -24,15 +24,6 @@ import (
 // tID is a string uniquely identifying a type.
 type tID string
 
-// ref replaces pointers in flattened types.
-type ref int
-
-// tagged replaces interface types in flattened types.
-type tagged struct {
-	T tID
-	V interface{}
-}
-
 // tIDOf returnes the tID (type ID) of its argument.
 func tIDOf(typ reflect.Type) tID {
 	// FIXME: this isn't guaranteed to be unique.  At very least we
@@ -63,8 +54,6 @@ func flatType(typ reflect.Type) reflect.Type {
 		panic("nil is not a type")
 	}
 	switch typ.Kind() {
-	case reflect.Invalid:
-		panic("Invalid Kind")
 	case reflect.Bool, reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
 		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr,
 		reflect.Float32, reflect.Float64, reflect.Complex64, reflect.Complex128, reflect.String:
@@ -72,7 +61,7 @@ func flatType(typ reflect.Type) reflect.Type {
 	case reflect.Array:
 		return reflect.ArrayOf(typ.Len(), flatType(typ.Elem()))
 	case reflect.Interface:
-		return reflect.TypeOf(tagged{"", nil})
+		return reflect.TypeOf(tagged{})
 	case reflect.Map:
 		// If key type is a string, just flatten value type:
 		if typ.Key().Kind() == reflect.String {
@@ -92,17 +81,17 @@ func flatType(typ reflect.Type) reflect.Type {
 		var fields []reflect.StructField
 		for i := 0; i < typ.NumField(); i++ {
 			f := typ.Field(i)
-			ff := reflect.StructField{
-				Name: "F_" + f.Name,
-				Type: flatType(f.Type),
-				Tag:  reflect.StructTag(fmt.Sprintf(`json:"%s"`, f.Name)),
-			}
-			fields = append(fields, ff)
+			fields = append(fields,
+				reflect.StructField{
+					Name: "F_" + f.Name,
+					Type: flatType(f.Type),
+					Tag:  reflect.StructTag(fmt.Sprintf(`json:"%s"`, f.Name)),
+				})
 		}
 		return reflect.StructOf(fields)
 	case reflect.Chan, reflect.Func, reflect.UnsafePointer:
 		panic(fmt.Errorf("%v not implemented", typ.Kind()))
 	default:
-		panic(fmt.Errorf("Invalid Kind %v", typ.Kind()))
+		panic(fmt.Errorf("Invalid Kind %s", typ.Kind()))
 	}
 }

@@ -28,15 +28,17 @@
 package flatpack
 
 import (
+	"fmt"
 	"reflect"
 )
 
-// A Flatpack is an easily-serializable representation of collection
-// of arbitrary Go values.  It is guaranteed not to have any cycles or
-// shared substructure, private struct fields[1], nil pointers[2] or
-// maps with non-string keys.  It also ensures all interface types
-// have an accompanying tag to allow the correct concrete type to be
-// found when unmarshalling.
+// A Flatpack is an easily-serializable representation of a collection
+// of arbitrary Go values.  It will preserve relationships, including
+// cycles and shared substructure, between stored values while being
+// guaranteed not to actually contain either.  Nor will it contain any
+// private struct fields[1], nil pointers[2] or maps with non-string
+// keys.  It also ensures all interface types have an accompanying tag
+// to allow the correct concrete type to be found when unmarshalling.
 //
 // [1] Except for private fields used internally for packing and
 // unpacking the flatpack, which do not need to be (de)serialised.
@@ -63,6 +65,15 @@ func New() *Flatpack {
 	}
 }
 
+// ref replaces all pointer types in flattened values.
+type ref int
+
+// tagged replaces all interface types in flattened values.
+type tagged struct {
+	T tID
+	V interface{}
+}
+
 // flatten takes an ordinary reflect.Value and returns it in flattened
 // form.  In particular, the type of the result will be the flatType
 // of the type of the argument:
@@ -80,8 +91,6 @@ func (f *Flatpack) flatten(v reflect.Value) reflect.Value {
 	ftyp := flatType(typ)
 
 	switch typ.Kind() {
-	case reflect.Invalid:
-		panic("Invalid Kind") // Should never happen
 	case reflect.Bool, reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
 		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr,
 		reflect.Float32, reflect.Float64, reflect.Complex64, reflect.Complex128, reflect.String:
@@ -94,10 +103,10 @@ func (f *Flatpack) flatten(v reflect.Value) reflect.Value {
 		return r
 	case reflect.Interface:
 		// FIXME: what if v is a nil interface value?
-		r := reflect.ValueOf(new(tagged)).Elem()
-		r.Field(0).Set(reflect.ValueOf(tIDOf(v.Elem().Type())))
-		r.Field(1).Set(f.flatten(v.Elem()))
-		return r
+		return reflect.ValueOf(tagged{
+			T: tIDOf(v.Elem().Type()),
+			V: f.flatten(v.Elem()).Interface(),
+		})
 	case reflect.Map:
 		var r reflect.Value
 		if ftyp.Kind() == reflect.Map {
@@ -163,6 +172,6 @@ func (f *Flatpack) flatten(v reflect.Value) reflect.Value {
 	case reflect.Chan, reflect.Func, reflect.UnsafePointer:
 		panic("Not implemented")
 	default:
-		panic("Invalid Kind")
+		panic(fmt.Errorf("Invalid Kind %s", typ.Kind()))
 	}
 }
