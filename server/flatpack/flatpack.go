@@ -15,9 +15,10 @@
  */
 
 // Package flatpack implements a mechanism to convert arbitrary Go
-// data, possibly including shared and/or cyclic substructure, into a
-// purely tree-structured datastructure that can be serialised using
-// encoding.json or the like.
+// data, possibly including unexported fields and shared and/or cyclic
+// substructure, into a purely tree-structured datastructure without
+// unexported fields that can be serialised using encoding.json or the
+// like.
 //
 // BUG(cpcallen): does not handle interior pointers (pointers to array
 // or struct element) correctly.
@@ -30,19 +31,25 @@ import (
 	"reflect"
 )
 
-// Flatpack is an easily-serializable representation of an arbitrary
-// Go value.  It is guaranteed not to have any cycles or shared
-// substructure, private struct fields[*], nil pointers (in fact, it
-// has no pointers whatsoever), or maps with non-string keys[*].  It
-// also ensures all interface types have an accompanying tag to make
-// it easy to find the correct concrete type when unmarshalling.
+// A Flatpack is an easily-serializable representation of collection
+// of arbitrary Go values.  It is guaranteed not to have any cycles or
+// shared substructure, private struct fields[1], nil pointers[2] or
+// maps with non-string keys.  It also ensures all interface types
+// have an accompanying tag to allow the correct concrete type to be
+// found when unmarshalling.
 //
-// [*] Except for private fields used internally to this package, and
-// which do not need to be (de)serialised.
+// [1] Except for private fields used internally for packing and
+// unpacking the flatpack, which do not need to be (de)serialised.
+//
+// [2] In fact, it has no pointers except the not-user-accessible ones
+// the compiler uses to implement interface values too large to fit in
+// a machine word.
 type Flatpack struct {
 	// FIXME: types?
 
-	// Values is a slice of tagged, flattened values.
+	// Values is a slice of tagged, flattened values.  It is exported
+	// only to allow serialisation.  The contents should not be
+	// accessed directly; instead, use the Pack and Unpack methods.
 	Values []tagged
 
 	// index is a map of (pointer) values to ref (index of flattened value)
@@ -51,21 +58,22 @@ type Flatpack struct {
 
 // New creates and initializes a new flatpack.
 func New() *Flatpack {
-	var f Flatpack
-	f.index = make(map[interface{}]ref)
-	return &f
+	return &Flatpack{
+		index: make(map[interface{}]ref),
+	}
 }
 
 // flatten takes an ordinary reflect.Value and returns it in flattened
-// form.  In partciular, the type of the result will be the flatType
+// form.  In particular, the type of the result will be the flatType
 // of the type of the argument:
 //
 //     f.flatten(v).Type() == flatType(v.Type())
 //
 // Iff given a pointer to a value then then the flattened value will
-// be added to the flatpack (if it was not already there), and the
-// return value will be a ref containing the index of the packed,
-// flattened object.
+// be appended to f.Values (if the pointed-to value has not not
+// already been added), and the return value will be a ref containing
+// the index of the packed, flattened object.  The caller is otherwise
+// responsible for storing the flattened value in the flatpack.
 func (f *Flatpack) flatten(v reflect.Value) reflect.Value {
 	typ := v.Type()
 	// FIXME: use type registry?

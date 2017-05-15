@@ -61,7 +61,7 @@ func TestFlattenSimple(t *testing.T) {
 		}
 	}
 	if len(f.Values) != 0 {
-		t.Errorf("len(f.Values) == %d (expected 0)", len(f.Values))
+		t.Errorf("f.Values) == %#v (expected empty slice)", f.Values)
 	}
 }
 
@@ -154,7 +154,7 @@ func TestFlattenArrayPtr(t *testing.T) {
 }
 
 func TestFlattenStructSliceInterface(t *testing.T) {
-	// A struct containing an int and a slice of inteface type should
+	// A struct containing an int and a slice of interface type should
 	// come back as a struct containign an int and a slice of structs
 	// containing a tID in addition to the original interface value.
 	var s = struct {

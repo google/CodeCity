@@ -22,12 +22,17 @@ import (
 )
 
 // defeat takes a reflect.Value that is addressable but not settable
-// or can't be used to set another (because it is for/from an
-// unexported field) and returns a new reflect.Value that can be set
-// or used to set.
+// (or which can't be used to set another) because it is for/from an
+// unexported field, and returns a new reflect.Value that can be set
+// (or used to set).
 func defeat(v reflect.Value) reflect.Value {
 	if !v.CanAddr() {
 		panic("Can't defeat protection of unadressable value")
 	}
+	// Be very careful, if modifying the following statement, not to
+	// violate the rules for use of unsafe.Pointer.  In particular,
+	// the call of v.UnsafeAddr() and cast to unsafe.Pointer() must be
+	// part of a single statement.  It is not safe to temporarily store
+	// the intervening uintptr value in a variable.
 	return reflect.NewAt(v.Type(), unsafe.Pointer(v.UnsafeAddr())).Elem()
 }

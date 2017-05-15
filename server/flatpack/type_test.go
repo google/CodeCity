@@ -64,10 +64,10 @@ func TestFlatTypePtr(t *testing.T) {
 		{new([]int), ref(0)},
 	}
 	for _, c := range cases {
-		tin := reflect.TypeOf(c.in)
-		texp := reflect.TypeOf(c.exp)
-		if r := flatType(tin); r != texp {
-			t.Errorf("flatType(%s) == %s (expected %s)", tin, r, texp)
+		typ := reflect.TypeOf(c.in)
+		exp := reflect.TypeOf(c.exp)
+		if r := flatType(typ); r != exp {
+			t.Errorf("flatType(%s) == %s (expected %s)", typ, r, exp)
 		}
 	}
 }
@@ -75,18 +75,19 @@ func TestFlatTypePtr(t *testing.T) {
 func TestFlatTypeMap(t *testing.T) {
 	var msi map[string]*int
 	typ := reflect.TypeOf(msi)
-	if r := flatType(typ); r != reflect.TypeOf(make(map[string]ref)) {
-		t.Errorf("flatType(map[string]*int) == %s (expected map[string]serialize.ref)", r.String())
+	exp := reflect.TypeOf(map[string]ref(nil))
+	if r := flatType(typ); r != exp {
+		t.Errorf("flatType(%s) == %s (expected %s)", typ, r, exp)
 	}
 
 	var mis map[int]string
 	typ = reflect.TypeOf(mis)
-	flat := flatType(typ)
-	if flat.Kind() != reflect.Slice ||
-		flat.Elem().Kind() != reflect.Struct ||
-		flat.Elem().Field(0).Type != reflect.TypeOf(0) ||
-		flat.Elem().Field(1).Type != reflect.TypeOf("") {
-		t.Errorf("flatType(map[int]string) == %s (expected some []struct{int, string})", flat.String())
+	r := flatType(typ)
+	if r.Kind() != reflect.Slice ||
+		r.Elem().Kind() != reflect.Struct ||
+		r.Elem().Field(0).Type.String() != "int" ||
+		r.Elem().Field(1).Type.String() != "string" {
+		t.Errorf("flatType(%s) == %s (expected some []struct{int, string})", typ, r)
 	}
 }
 
@@ -96,15 +97,15 @@ func TestFlatTypeStruct(t *testing.T) {
 		i *int
 	}
 	typ := reflect.TypeOf(s)
-	flat := flatType(typ)
-	if flat.Kind() != reflect.Struct ||
-		flat.Field(0).Type != reflect.TypeOf("") ||
-		flat.Field(1).Type != reflect.TypeOf(ref(0)) {
-		t.Errorf("flatType(struct{string, int}) == %s (expected some struct{string, ref})", flat.String())
+	r := flatType(typ)
+	if r.Kind() != reflect.Struct ||
+		r.Field(0).Type.String() != "string" ||
+		r.Field(1).Type.String() != "flatpack.ref" {
+		t.Errorf("flatType(%s) == %s (expected some struct{string, ref})", typ, r)
 	}
-	if !('A' < flat.Field(0).Name[0] && flat.Field(0).Name[0] < 'Z') ||
-		!('A' < flat.Field(1).Name[0] && flat.Field(1).Name[0] < 'Z') {
-		t.Errorf("flatType(struct{string, int}) == %s (expected exported fields)", flat.String())
+	if !('A' < r.Field(0).Name[0] && r.Field(0).Name[0] < 'Z') ||
+		!('A' < r.Field(1).Name[0] && r.Field(1).Name[0] < 'Z') {
+		t.Errorf("flatType(%s) == %s (expected exported fields)", typ, r)
 	}
 }
 
@@ -113,21 +114,13 @@ func TestFlatTypeInterface(t *testing.T) {
 	// the thing *in* the interface, not the interface itself, so we
 	// use a little cheat to get an actual interface type to pass to
 	// flatType():
-	var si struct {
+	typ := reflect.TypeOf(struct {
 		im interface {
 			method()
 		}
-		i interface{}
-	}
-	typ := reflect.TypeOf(si).Field(0).Type
-	flat := flatType(typ)
-	if flat.Kind() != reflect.Struct ||
-		flat.Field(0).Type != reflect.TypeOf(tID("")) ||
-		flat.Field(1).Type != reflect.TypeOf(si).Field(1).Type {
-		t.Errorf("flatType(interface{...} == %s (expected some struct{tID, interface{})", flat.String())
-	}
-	if !('A' < flat.Field(0).Name[0] && flat.Field(0).Name[0] < 'Z') ||
-		!('A' < flat.Field(1).Name[0] && flat.Field(1).Name[0] < 'Z') {
-		t.Errorf("flatType(interface{...} == %s (expected exported fields)", flat.String())
+	}{}).Field(0).Type
+	exp := reflect.TypeOf(tagged{})
+	if r := flatType(typ); r != exp {
+		t.Errorf("flatType(%s) = %s (expected %s)", typ, r, exp)
 	}
 }
