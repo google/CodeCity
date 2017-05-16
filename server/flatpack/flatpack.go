@@ -65,7 +65,10 @@ func New() *Flatpack {
 	}
 }
 
-// ref replaces all pointer types in flattened values.
+// ref replaces all pointer types in flattened values.  It is just the
+// numerical index of the packed, flattened representation of the
+// target object within the flatpack's .Values slice, or -1 if the
+// pointer is a nil pointer.
 type ref int
 
 // tagged replaces all interface types in flattened values.
@@ -102,7 +105,9 @@ func (f *Flatpack) flatten(v reflect.Value) reflect.Value {
 		}
 		return r
 	case reflect.Interface:
-		// FIXME: what if v is a nil interface value?
+		if v.IsNil() {
+			return reflect.ValueOf(tagged{T: tIDOf(nil), V: nil})
+		}
 		return reflect.ValueOf(tagged{
 			T: tIDOf(v.Elem().Type()),
 			V: f.flatten(v.Elem()).Interface(),
@@ -125,8 +130,10 @@ func (f *Flatpack) flatten(v reflect.Value) reflect.Value {
 		}
 		return r
 	case reflect.Ptr:
-		// FIXME: what is v is a nil pointer?
-
+		// Check for nil pointer.
+		if v.IsNil() {
+			return reflect.ValueOf(ref(-1))
+		}
 		// Check to see if we have already flattened thing pointed to.
 		if r, ok := f.index[v.Interface()]; ok {
 			return reflect.ValueOf(r)

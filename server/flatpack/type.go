@@ -21,11 +21,16 @@ import (
 	"reflect"
 )
 
-// tID is a string uniquely identifying a type.
+// tID is a string uniquely identifying a type.  An untyped nil value
+// (i.e., the zero value of a variable of interface type) is
+// represented by the empty string.
 type tID string
 
 // tIDOf returnes the tID (type ID) of its argument.
 func tIDOf(typ reflect.Type) tID {
+	if typ == nil {
+		return ""
+	}
 	// FIXME: this isn't guaranteed to be unique.  At very least we
 	// should check for dupes and panic if two different types give
 	// same tID.

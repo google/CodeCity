@@ -124,7 +124,7 @@ func TestFlattenArrayPtr(t *testing.T) {
 	// An array of four pointers to the same string should store one
 	// copy in the flatpack an return an array of four refs:
 	var s = "spam"
-	var a = [...]*string{&s, &s, &s, &s}
+	var a = [...]*string{nil, &s, &s, &s}
 
 	var f = New()
 	r := f.flatten(reflect.ValueOf(a))
@@ -138,8 +138,8 @@ func TestFlattenArrayPtr(t *testing.T) {
 		t.Errorf("r.Index(0).Type() == %s (expected %s)", r0Type, refType)
 	}
 
-	for i := 1; i < len(a); i++ {
-		if r.Index(i).Interface() != r.Index(0).Interface() {
+	for i := 2; i < len(a); i++ {
+		if r.Index(i).Interface() != r.Index(1).Interface() {
 			t.Errorf("Flattening same pointer value should yield same ref")
 		}
 	}
@@ -160,7 +160,7 @@ func TestFlattenStructSliceInterface(t *testing.T) {
 	var s = struct {
 		i  int
 		sl []interface{}
-	}{42, []interface{}{69, "Hello", true}}
+	}{42, []interface{}{nil, 69, "Hello", true}}
 
 	var f = New()
 	r := f.flatten(reflect.ValueOf(s))
