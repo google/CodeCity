@@ -37,6 +37,33 @@ func tIDOf(typ reflect.Type) tID {
 	return tID(typ.String())
 }
 
+type typeInfo struct {
+	tID  tID
+	typ  reflect.Type
+	ftyp reflect.Type
+}
+
+var types = make([]typeInfo, 0)
+var byTID = make(map[tID]int)
+var byType = make(map[reflect.Type]int)
+var byFlatType = make(map[reflect.Type]int)
+
+func RegisterTypeOf(val interface{}) {
+	RegisterType(reflect.TypeOf(val))
+}
+
+func RegisterType(typ reflect.Type) {
+	if _, exists := byType[typ]; exists {
+		return
+	}
+	ti := typeInfo{tIDOf(typ), typ, flatType(typ)}
+	idx := len(types)
+	types = append(types, ti)
+	byTID[ti.tID] = idx
+	byType[ti.typ] = idx
+	byFlatType[ti.ftyp] = idx
+}
+
 // flatType takes a reflect.Type and returns a substitute reflect.Type
 // that can store the same data but is more suited for serialisation
 // using encoding/json (and similar):
@@ -98,5 +125,46 @@ func flatType(typ reflect.Type) reflect.Type {
 		panic(fmt.Errorf("flat type for %v not implemented", typ.Kind()))
 	default:
 		panic(fmt.Errorf("Invalid Kind %s", typ.Kind()))
+	}
+}
+
+// init registers all the built-in Go types that
+func init() {
+	var ifaces = reflect.TypeOf(
+		struct {
+			// i1 typename
+		}{})
+	for i := 0; i < ifaces.NumField(); i++ {
+		RegisterType(ifaces.Field(i).Type)
+	}
+
+	var examples = []interface{}{
+		uint8(0),
+		uint16(0),
+		uint32(0),
+		uint64(0),
+
+		int8(0),
+		int16(0),
+		int32(0),
+		int64(0),
+
+		float32(0),
+		float64(0),
+
+		complex64(0),
+		complex128(0),
+
+		byte(0),
+		rune(0),
+
+		uint(0),
+		int(0),
+		uintptr(0),
+
+		"",
+	}
+	for _, val := range examples {
+		RegisterTypeOf(val)
 	}
 }
