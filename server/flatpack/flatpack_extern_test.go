@@ -36,7 +36,6 @@ func Example() {
 		panic(e)
 	}
 	fmt.Printf("%s\n", string(b))
-	// Output:
 }
 
 // var fibonacci = function(n, output) {

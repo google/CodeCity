@@ -168,16 +168,10 @@ func (f *Flatpack) flatten(v reflect.Value) reflect.Value {
 		// Allocate a space in the flatpack for the (flattened
 		// version) of the thing v points at, and record in f.index:
 		idx := len(f.Values)
-		f.Values = append(f.Values, tagged{})
+		f.Values = append(f.Values, tagged{T: tIDOf(v.Elem().Type())})
 		f.index[v.Interface()] = ref(idx)
-
-		// Stick thing v points at in an interface (so we can record
-		// its type info) and flatten that:
-		var tmp interface{} = v.Elem().Interface()
-		vi := reflect.ValueOf(&tmp).Elem()
-		fv := f.flatten(vi)
-		// Save result in earlier-allocated spot in f.Values:
-		f.Values[idx] = fv.Interface().(tagged)
+		// Flatten and save result in earlier-allocated spot in f.Values:
+		f.Values[idx].V = f.flatten(v.Elem()).Interface()
 		//	Return newly-allocated index idx as ref:
 		return reflect.ValueOf(ref(idx))
 	case reflect.Slice:
