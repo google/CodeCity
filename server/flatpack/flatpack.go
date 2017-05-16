@@ -170,7 +170,7 @@ func (f *Flatpack) flatten(v reflect.Value) reflect.Value {
 		}
 		return r
 	case reflect.Chan, reflect.Func, reflect.UnsafePointer:
-		panic("Not implemented")
+		panic(fmt.Errorf("Flattening of %s not implemented", typ.Kind()))
 	default:
 		panic(fmt.Errorf("Invalid Kind %s", typ.Kind()))
 	}

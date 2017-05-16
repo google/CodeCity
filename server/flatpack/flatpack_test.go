@@ -61,7 +61,7 @@ func TestFlattenSimple(t *testing.T) {
 		}
 	}
 	if len(f.Values) != 0 {
-		t.Errorf("f.Values) == %#v (expected empty slice)", f.Values)
+		t.Errorf("f.Values == %#v (expected empty slice)", f.Values)
 	}
 }
 

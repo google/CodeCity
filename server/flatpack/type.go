@@ -90,7 +90,7 @@ func flatType(typ reflect.Type) reflect.Type {
 		}
 		return reflect.StructOf(fields)
 	case reflect.Chan, reflect.Func, reflect.UnsafePointer:
-		panic(fmt.Errorf("%v not implemented", typ.Kind()))
+		panic(fmt.Errorf("flat type for %v not implemented", typ.Kind()))
 	default:
 		panic(fmt.Errorf("Invalid Kind %s", typ.Kind()))
 	}

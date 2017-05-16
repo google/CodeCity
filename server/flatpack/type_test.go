@@ -75,7 +75,7 @@ func TestFlatTypePtr(t *testing.T) {
 func TestFlatTypeMap(t *testing.T) {
 	var msi map[string]*int
 	typ := reflect.TypeOf(msi)
-	exp := reflect.TypeOf(map[string]ref(nil))
+	exp := reflect.TypeOf(map[string]ref{})
 	if r := flatType(typ); r != exp {
 		t.Errorf("flatType(%s) == %s (expected %s)", typ, r, exp)
 	}
