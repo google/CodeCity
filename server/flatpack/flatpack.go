@@ -49,6 +49,11 @@ import (
 type Flatpack struct {
 	// FIXME: types?
 
+	// Labels is the table of contents, maping the label of a value to
+	// the index within Values it is stored at.  It should not be
+	// accessed directly; instead, use the Pack and Unpack methods.
+	Labels map[string]ref
+
 	// Values is a slice of tagged, flattened values.  It is exported
 	// only to allow serialisation.  The contents should not be
 	// accessed directly; instead, use the Pack and Unpack methods.
@@ -61,8 +66,30 @@ type Flatpack struct {
 // New creates and initializes a new flatpack.
 func New() *Flatpack {
 	return &Flatpack{
-		index: make(map[interface{}]ref),
+		Labels: make(map[string]ref),
+		index:  make(map[interface{}]ref),
 	}
+}
+
+// Pack adds an arbitrary Go value to the flatpack, giving it the
+// specified label.  It is an error to reuse a label within the same
+// Flatpack.
+func (f *Flatpack) Pack(label string, value interface{}) {
+	if _, exists := f.Labels[label]; exists {
+		panic(fmt.Errorf("Duplicate label %s", label))
+	}
+	idx := len(f.Values)
+	f.Values = append(f.Values, tagged{})
+	v := reflect.ValueOf(value)
+	fv := f.flatten(v)
+	f.Values[idx] = tagged{tIDOf(v.Type()), fv.Interface()}
+	f.Labels[label] = ref(idx)
+}
+
+// Unpack retrieves the value associated with the given label from the
+// Flatpack and returns it.
+func (f *Flatpack) Unpack(label string) interface{} {
+	panic("Not implemented")
 }
 
 // ref replaces all pointer types in flattened values.  It is just the
