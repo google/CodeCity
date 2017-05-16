@@ -76,7 +76,7 @@ CCC.Common.newMenuIcon = function(node) {
   }
   var svg = CCC.Common.createSvgElement('svg',
       {'class': 'menuIcon', 'data-cmds': JSON.stringify(cmds)});
-  CCC.Common.createSvgElement('path', {'d': 'm 1,2 4,4 4,-4 z'}, svg);
+  CCC.Common.createSvgElement('path', {'d': 'm 0.5,2.5 5,5 5,-5 z'}, svg);
   return svg;
 };
 

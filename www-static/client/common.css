@@ -26,9 +26,9 @@ svg.menuIcon {
   display: inline;
   fill: #444;
   height: 10px;
-  stroke: none;
+  stroke: #fff;
   vertical-align: top;
-  width: 10px;
+  width: 11px;
 }
 
 svg.menuIcon:hover {

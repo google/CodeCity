@@ -751,8 +751,8 @@ CCC.World.createHiddenSvg = function(width, height) {
       {'in': 'mask', 'result': 'dilated', 'operator': 'dilate', 'radius': 1},
       filter);
   CCC.Common.createSvgElement('feGaussianBlur',
-      {'in': 'dilated', 'result': 'blurred', 'stdDeviation': 1}, filter);
-  var feMerge = CCC.Common.createSvgElement('feMerge', {'id': id}, filter);
+      {'in': 'dilated', 'result': 'blurred', 'stdDeviation': 5}, filter);
+  var feMerge = CCC.Common.createSvgElement('feMerge', {}, filter);
   CCC.Common.createSvgElement('feMergeNode', {'in': 'blurred'}, feMerge);
   CCC.Common.createSvgElement('feMergeNode', {'in': 'SourceGraphic'}, feMerge);
   return svg;
