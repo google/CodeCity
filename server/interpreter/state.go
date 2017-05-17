@@ -1471,9 +1471,8 @@ func (st *stateUnaryTypeofExpression) step(intrp *Interpreter, cv *cval) (state,
 			return st.parent, intrp.throw(ne)
 		}
 		return st.parent, pval(data.String(v.Typeof()))
-	} else {
-		return st.parent, pval(data.String(cv.pval().Typeof()))
 	}
+	return st.parent, pval(data.String(cv.pval().Typeof()))
 }
 
 /********************************************************************/
