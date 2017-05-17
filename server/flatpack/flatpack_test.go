@@ -212,7 +212,7 @@ func TestUnflattenSimple(t *testing.T) {
 		// FIXME: implement:
 		//
 		// [3]int{19, 20, 21},
-		// []int{22, 23, 24},
+		[]int{22, 23, 24},
 		// map[string]int{
 		// 	"cpcallen": 2365779,
 		// 	"fraser":   7499832,

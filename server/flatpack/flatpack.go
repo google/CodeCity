@@ -35,6 +35,9 @@
 //
 // BUG(cpcallen): does not handle shared backing arrays for slices (or
 // strings) correctly.
+//
+// BUG(cpcallen): does not preserve spare capacity (or the values of
+// elements in the underlying array between len and cap).
 package flatpack
 
 import (
@@ -69,15 +72,16 @@ type Flatpack struct {
 	// accessed directly; instead, use the Pack and Unpack methods.
 	Values []tagged
 
-	// index is a map of (pointer) values to ref (index of flattened value)
-	index map[interface{}]ref
+	// ptr2ref is a map of (pointer) values to ref (index of flattened
+	// value); used during packing.
+	ptr2ref map[interface{}]ref
 }
 
 // New creates and initializes a new flatpack.
 func New() *Flatpack {
 	return &Flatpack{
-		Labels: make(map[string]ref),
-		index:  make(map[interface{}]ref),
+		Labels:  make(map[string]ref),
+		ptr2ref: make(map[interface{}]ref),
 	}
 }
 
@@ -87,7 +91,7 @@ func New() *Flatpack {
 //
 // FIXME: warn (or even panic) if unregistered types are encountered?
 func (f *Flatpack) Pack(label string, value interface{}) {
-	if f.index == nil {
+	if f.ptr2ref == nil {
 		panic("Flatpack is already sealed")
 	}
 	if _, exists := f.Labels[label]; exists {
@@ -114,7 +118,7 @@ func (f *Flatpack) Unpack(label string) interface{} {
 //
 // After a Flatpack is sealed it cannot have additional values added to it.
 func (f *Flatpack) Seal() {
-	f.index = nil
+	f.ptr2ref = nil
 }
 
 // ref replaces all pointer types in flattened values.  It is just the
@@ -187,14 +191,14 @@ func (f *Flatpack) flatten(v reflect.Value) reflect.Value {
 			return reflect.ValueOf(ref(-1))
 		}
 		// Check to see if we have already flattened thing pointed to.
-		if r, ok := f.index[v.Interface()]; ok {
+		if r, ok := f.ptr2ref[v.Interface()]; ok {
 			return reflect.ValueOf(r)
 		}
 		// Allocate a space in the flatpack for the (flattened
 		// version) of the thing v points at, and record in f.index:
 		idx := len(f.Values)
 		f.Values = append(f.Values, tagged{T: tIDOf(v.Elem().Type())})
-		f.index[v.Interface()] = ref(idx)
+		f.ptr2ref[v.Interface()] = ref(idx)
 		// Flatten and save result in earlier-allocated spot in f.Values:
 		f.Values[idx].V = f.flatten(v.Elem()).Interface()
 		//	Return newly-allocated index idx as ref:
@@ -237,15 +241,13 @@ func (f *Flatpack) flatten(v reflect.Value) reflect.Value {
 //
 //     tIDOf(f.unflatten(t, v).Type()) == t && flatType(t) == v.Type()
 //
+// FIXME: should this take a reflect.Type (or two?) instead of a tID?
 func (f *Flatpack) unflatten(tid tID, v reflect.Value) reflect.Value {
 	typ := typeForTID(tid, false)
 	ftyp := typeForTID(tid, true)
 	if v.Type() != ftyp {
 		panic(fmt.Errorf("Type mismatch unflattening a %s: expected %s but got %s", tid, ftyp, v.Type()))
 	}
-
-	_ = typ
-
 	switch ftyp.Kind() {
 	case reflect.Bool, reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
 		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr,
@@ -264,8 +266,13 @@ func (f *Flatpack) unflatten(tid tID, v reflect.Value) reflect.Value {
 		panic(fmt.Errorf("Unflattening of %s not implemented", ftyp.Kind()))
 
 	case reflect.Slice:
-		panic(fmt.Errorf("Unflattening of %s not implemented", ftyp.Kind()))
-
+		// No info re: spare capacity survives (de)serialisation, so
+		// assume cap == len.
+		r := reflect.MakeSlice(typ, v.Len(), v.Len())
+		for i := 0; i < v.Len(); i++ {
+			r.Index(i).Set(f.unflatten(tIDOf(v.Type().Elem()), v.Index(i)))
+		}
+		return r
 	case reflect.Struct:
 		panic(fmt.Errorf("Unflattening of %s not implemented", ftyp.Kind()))
 
