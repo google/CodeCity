@@ -51,7 +51,7 @@ func TestFlattenSimple(t *testing.T) {
 	}
 	var f = New()
 	for _, c := range cases {
-		var r = f.flatten(reflect.ValueOf(c))
+		r := f.flatten(reflect.ValueOf(c))
 		if reflect.TypeOf(c).Comparable() {
 			if r.Interface() != c {
 				t.Errorf("f.flatten(reflect.ValueOf(%#v)).Interface() == %#v (expected %#v)", c, r, c)
@@ -180,5 +180,121 @@ func TestFlattenStructSliceInterface(t *testing.T) {
 		if rSlice[i].V != s.sl[i] {
 			t.Errorf("rSlice[%d].V == %#v (expected %#v)", i, rSlice[i].T, s.sl[i])
 		}
+	}
+}
+
+func TestUnflattenSimple(t *testing.T) {
+	// All these should not be changed by unflatten():
+	var cases = []interface{}{
+		false,
+		int(1),
+		int8(2),
+		int16(3),
+		int32(4),
+		int64(5),
+		uint(6),
+		uint8(7),
+		uint16(8),
+		uint32(9),
+		uint64(10),
+		uintptr(11),
+		float32(12.0),
+		float64(13.0),
+		complex64(14 + 15i),
+		complex128(16 + 17i),
+		string("Eighteen"),
+
+		myBool(false),
+		myInt(19),
+		myUint64(20),
+		myFloat64(21.0),
+		myComplex64(22 + 23i),
+		// FIXME: implement:
+		//
+		// [3]int{19, 20, 21},
+		// []int{22, 23, 24},
+		// map[string]int{
+		// 	"cpcallen": 2365779,
+		// 	"fraser":   7499832,
+		// },
+	}
+	var f = New()
+	for _, c := range cases {
+		tid := tIDOf(reflect.TypeOf(c))
+		r := f.unflatten(tIDOf(reflect.TypeOf(c)), reflect.ValueOf(c))
+		if reflect.TypeOf(c).Comparable() {
+			if r.Interface() != c {
+				t.Errorf("f.unflatten(%#v, reflect.ValueOf(%#v)).Interface() == %#v (expected %#v)", tid, c, r, c)
+			}
+		} else if !reflect.DeepEqual(r.Interface(), c) {
+			t.Errorf("f.unflatten(%#v, reflect.ValueOf(%#v)).Interface() == %#v (expected %#v)", tid, c, r, c)
+		}
+	}
+}
+
+// Some user-declared types for testing:
+type myBool bool
+type myInt int
+type myUint64 uint64
+type myFloat64 float64
+type myComplex64 complex64
+
+/*
+func TestUnflattenNamedSimple(t *testing.T) {
+	// All these should not be changed by unflatten():
+	var cases = []struct {
+		t tID
+		v interface{}
+	}{
+		{"flatpack.myBool", false},
+		{"myInt", int(18)},
+		{"myUint64", uint64(19)},
+		{"myFloat64", float64(20.0)},
+		{"myComplex64", complex64(21 + 22i)},
+		// FIXME: implement:
+		//
+		// {"string", string("Eighteen")},
+		// {"[3]int", [3]int{19, 20, 21}},
+		// {"[]int", []int{22, 23, 24}},
+		// {"map[string]int",
+		// 	map[string]int{
+		// 		"cpcallen": 2365779,
+		// 		"fraser":   7499832,
+		// 	},
+		// },
+	}
+	var f = New()
+	for _, c := range cases {
+		var r = f.unflatten(c.t, reflect.ValueOf(c.v))
+		if reflect.TypeOf(c.v).Comparable() {
+			if r.Interface() != c.v {
+				t.Errorf("f.unflatten(%#v reflect.ValueOf(%#v)).Interface() == %#v (expected %#v)", c.t, c.v, r, c.v)
+			}
+		} else if !reflect.DeepEqual(r.Interface(), c) {
+			t.Errorf("f.unflatten(%#v, reflect.ValueOf(%#v)).Interface() == %#v (expected %#v)", c.t, c.v, r, c.v)
+		}
+	}
+}
+*/
+
+// init registers types for testing.
+func init() {
+	var ifaces = reflect.TypeOf(
+		struct {
+			// i1 typename
+		}{})
+	for i := 0; i < ifaces.NumField(); i++ {
+		RegisterType(ifaces.Field(i).Type)
+	}
+
+	var examples = []interface{}{
+		myBool(false),
+		myInt(0),
+		myUint64(0),
+		myFloat64(0),
+		myComplex64(0 + 0i),
+	}
+	for _, val := range examples {
+		RegisterTypeOf(val)
 	}
 }

@@ -39,7 +39,7 @@ func (t *tagged) UnmarshalJSON(b []byte) error {
 		return nil
 	}
 	// FIXME: better error handling
-	ftyp := flatTypeForTID(tmp.T)
+	ftyp := typeForTID(tmp.T, true)
 	item := reflect.New(ftyp)
 	if e := json.Unmarshal(tmp.V, item.Interface()); e != nil {
 		return e

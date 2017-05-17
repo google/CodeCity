@@ -228,3 +228,50 @@ func (f *Flatpack) flatten(v reflect.Value) reflect.Value {
 		panic(fmt.Errorf("Invalid Kind %s", typ.Kind()))
 	}
 }
+
+// unflatten takes a (non-flat) tID and a value of that type's
+// corresponding flattened type and converts it back to its original
+// pre-flattened form.  In particular, if it succeeds then the the tID
+// of the type of result will be the same as the tID value given as
+// the first argument, the flatType of the argument will be the type
+//
+//     tIDOf(f.unflatten(t, v).Type()) == t && flatType(t) == v.Type()
+//
+func (f *Flatpack) unflatten(tid tID, v reflect.Value) reflect.Value {
+	typ := typeForTID(tid, false)
+	ftyp := typeForTID(tid, true)
+	if v.Type() != ftyp {
+		panic(fmt.Errorf("Type mismatch unflattening a %s: expected %s but got %s", tid, ftyp, v.Type()))
+	}
+
+	_ = typ
+
+	switch ftyp.Kind() {
+	case reflect.Bool, reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr,
+		reflect.Float32, reflect.Float64, reflect.Complex64, reflect.Complex128, reflect.String:
+		return v
+	case reflect.Array:
+		panic(fmt.Errorf("Unflattening of %s not implemented", ftyp.Kind()))
+
+	case reflect.Interface:
+		panic(fmt.Errorf("Unflattening of %s not implemented", ftyp.Kind()))
+
+	case reflect.Map:
+		panic(fmt.Errorf("Unflattening of %s not implemented", ftyp.Kind()))
+
+	case reflect.Ptr:
+		panic(fmt.Errorf("Unflattening of %s not implemented", ftyp.Kind()))
+
+	case reflect.Slice:
+		panic(fmt.Errorf("Unflattening of %s not implemented", ftyp.Kind()))
+
+	case reflect.Struct:
+		panic(fmt.Errorf("Unflattening of %s not implemented", ftyp.Kind()))
+
+	case reflect.Chan, reflect.Func, reflect.UnsafePointer:
+		panic(fmt.Errorf("Unflattening of %s not implemented", ftyp.Kind()))
+	default:
+		panic(fmt.Errorf("Invalid Kind %s", ftyp.Kind()))
+	}
+}

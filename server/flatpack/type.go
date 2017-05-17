@@ -17,6 +17,7 @@
 package flatpack
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 )
@@ -38,7 +39,7 @@ func tIDOf(typ reflect.Type) tID {
 }
 
 type typeInfo struct {
-	tID  tID
+	tid  tID
 	typ  reflect.Type
 	ftyp reflect.Type
 }
@@ -48,7 +49,7 @@ var byTID = make(map[tID]int)
 var byType = make(map[reflect.Type]int)
 var byFlatType = make(map[reflect.Type]int)
 
-// RegisterTypeOf addss the (dynamic) type of its argument to the type
+// RegisterTypeOf adds the (dynamic) type of its argument to the type
 // registry.
 func RegisterTypeOf(val interface{}) {
 	RegisterType(reflect.TypeOf(val))
@@ -62,22 +63,26 @@ func RegisterType(typ reflect.Type) {
 	ti := typeInfo{tIDOf(typ), typ, flatType(typ)}
 	idx := len(types)
 	types = append(types, ti)
-	byTID[ti.tID] = idx
+	byTID[ti.tid] = idx
 	byType[ti.typ] = idx
 	byFlatType[ti.ftyp] = idx
 }
 
-// flatTypeForTID returns the type of the flattened version of the
-// type described by tid, which must be non-empty.
+// typeForTID returns the type described by tid, which must be non-empty.
+// If flat is true it returns the flattened type; otherwise the
+// original.
 //
 // FIXME: better error handling
-func flatTypeForTID(tid tID) reflect.Type {
+func typeForTID(tid tID, flat bool) reflect.Type {
 	if tid == "" {
 		// Calling this function with nil should never happen.
 		panic("nil has no type")
 	}
 	if idx, ok := byTID[tid]; ok {
-		return types[idx].ftyp
+		if flat {
+			return types[idx].ftyp
+		}
+		return types[idx].typ
 	} else if tid[0] == '*' {
 		return reflect.TypeOf(ref(0))
 	}
@@ -148,7 +153,8 @@ func flatType(typ reflect.Type) reflect.Type {
 	}
 }
 
-// init registers all the built-in Go types that
+// init registers built-in Go types that are likely to be needed when
+// deserializing.
 func init() {
 	var ifaces = reflect.TypeOf(
 		struct {
@@ -182,7 +188,11 @@ func init() {
 		int(0),
 		uintptr(0),
 
+		false,
 		"",
+		errors.New(""),
+
+		// FIXME: add more type exemplars here.
 	}
 	for _, val := range examples {
 		RegisterTypeOf(val)
