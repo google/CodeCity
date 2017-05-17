@@ -48,10 +48,13 @@ var byTID = make(map[tID]int)
 var byType = make(map[reflect.Type]int)
 var byFlatType = make(map[reflect.Type]int)
 
+// RegisterTypeOf addss the (dynamic) type of its argument to the type
+// registry.
 func RegisterTypeOf(val interface{}) {
 	RegisterType(reflect.TypeOf(val))
 }
 
+// RegisterType adds the given type to the type registry.
 func RegisterType(typ reflect.Type) {
 	if _, exists := byType[typ]; exists {
 		return
@@ -62,6 +65,23 @@ func RegisterType(typ reflect.Type) {
 	byTID[ti.tID] = idx
 	byType[ti.typ] = idx
 	byFlatType[ti.ftyp] = idx
+}
+
+// flatTypeForTID returns the type of the flattened version of the
+// type described by tid, which must be non-empty.
+//
+// FIXME: better error handling
+func flatTypeForTID(tid tID) reflect.Type {
+	if tid == "" {
+		// Calling this function with nil should never happen.
+		panic("nil has no type")
+	}
+	if idx, ok := byTID[tid]; ok {
+		return types[idx].ftyp
+	} else if tid[0] == '*' {
+		return reflect.TypeOf(ref(0))
+	}
+	panic(fmt.Errorf("Whoops: no type %s found", tid))
 }
 
 // flatType takes a reflect.Type and returns a substitute reflect.Type

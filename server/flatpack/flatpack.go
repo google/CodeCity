@@ -16,10 +16,20 @@
 
 // Package flatpack implements a mechanism to convert arbitrary Go
 // data, possibly including unexported fields and shared and/or cyclic
-// substructure, into a purely tree-structured datastructure without
-// unexported fields that can be serialised using encoding.json or the
-// like.
+// substructure, into and back from a purely tree-structured
+// datastructure without unexported fields that can be serialised
+// using encoding.json or the like.
 //
+// There are two parts to this mechanism: the Flatpack type, the
+// serialization-friendly container which stores the converted data
+// (and whose Pack and Unpack methods do the necessary conversion),
+// and an package-internal type registry used to locate the correct
+// type when deserializing and unpacking Flatpacks.  This type
+// registry must be pre-populated with all the (named) types that
+// might be encountered; it will be convenient to do so by calling
+// RegisterType and/or RegisterTypeOf from an init() func in each
+// package whose types will be serialized.
+
 // BUG(cpcallen): does not handle interior pointers (pointers to array
 // or struct element) correctly.
 //
@@ -73,8 +83,13 @@ func New() *Flatpack {
 
 // Pack adds an arbitrary Go value to the flatpack, giving it the
 // specified label.  It is an error to reuse a label within the same
-// Flatpack.
+// Flatpack, or to call Pack after Seal.
+//
+// FIXME: warn (or even panic) if unregistered types are encountered?
 func (f *Flatpack) Pack(label string, value interface{}) {
+	if f.index == nil {
+		panic("Flatpack is already sealed")
+	}
 	if _, exists := f.Labels[label]; exists {
 		panic(fmt.Errorf("Duplicate label %s", label))
 	}
@@ -90,6 +105,16 @@ func (f *Flatpack) Pack(label string, value interface{}) {
 // Flatpack and returns it.
 func (f *Flatpack) Unpack(label string) interface{} {
 	panic("Not implemented")
+}
+
+// Seal removes the index used when flattening pointer values.  This
+// ensures the Flatpack will not cause inadvertent retention of the
+// original (non-flat) objects if they would otherwise be eligible for
+// garbage collection.
+//
+// After a Flatpack is sealed it cannot have additional values added to it.
+func (f *Flatpack) Seal() {
+	f.index = nil
 }
 
 // ref replaces all pointer types in flattened values.  It is just the
