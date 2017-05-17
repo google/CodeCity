@@ -2,49 +2,49 @@
 var Math2 = {};
 
 Object.defineProperty(Math2, 'E', {
-  configurable: true,
+  configurable: false,
   enumerable: false,
   writable: false,
   value: 2.718281828459045
 });
 Object.defineProperty(Math2, 'LN2', {
-  configurable: true,
+  configurable: false,
   enumerable: false,
   writable: false,
   value: 0.6931471805599453
 });
 Object.defineProperty(Math2, 'LN10', {
-  configurable: true,
+  configurable: false,
   enumerable: false,
   writable: false,
   value: 2.302585092994046
 });
 Object.defineProperty(Math2, 'LOG2E', {
-  configurable: true,
+  configurable: false,
   enumerable: false,
   writable: false,
   value: 1.4426950408889634
 });
 Object.defineProperty(Math2, 'LOG10E', {
-  configurable: true,
+  configurable: false,
   enumerable: false,
   writable: false,
   value: 0.4342944819032518
 });
 Object.defineProperty(Math2, 'PI', {
-  configurable: true,
+  configurable: false,
   enumerable: false,
   writable: false,
   value: 3.141592653589793
 });
 Object.defineProperty(Math2, 'SQRT1_2', {
-  configurable: true,
+  configurable: false,
   enumerable: false,
   writable: false,
   value: 0.7071067811865476
 });
 Object.defineProperty(Math2, 'SQRT2', {
-  configurable: true,
+  configurable: false,
   enumerable: false,
   writable: false,
   value: 1.4142135623730951
@@ -53,8 +53,8 @@ Object.defineProperty(Math2, 'SQRT2', {
 Object.defineProperty(Math2, 'abs', {
   configurable: true,
   enumerable: false,
-  writable: false,
-  value: function (x) {
+  writable: true,
+  value: function(x) {
     x = Number(x);
     return x < 0 ? -x : x;
   }
@@ -63,8 +63,8 @@ Object.defineProperty(Math2, 'abs', {
 Object.defineProperty(Math2, 'ceil', {
   configurable: true,
   enumerable: false,
-  writable: false,
-  value: function (x) {
+  writable: true,
+  value: function(x) {
     x = Number(x);
     var trunc = parseInt(x);
     if (!trunc && (x < 0 || (!x && (1 / x == -Infinity)))) {
@@ -77,8 +77,8 @@ Object.defineProperty(Math2, 'ceil', {
 Object.defineProperty(Math2, 'exp', {
   configurable: true,
   enumerable: false,
-  writable: false,
-  value: function (x) {
+  writable: true,
+  value: function(x) {
     return Math.pow(Math.E, x);
   }
 });
@@ -86,8 +86,8 @@ Object.defineProperty(Math2, 'exp', {
 Object.defineProperty(Math2, 'floor', {
   configurable: true,
   enumerable: false,
-  writable: false,
-  value: function (x) {
+  writable: true,
+  value: function(x) {
     x = Number(x);
     var trunc = parseInt(x);
     if (trunc == x) {
@@ -100,8 +100,8 @@ Object.defineProperty(Math2, 'floor', {
 Object.defineProperty(Math2, 'max', {
   configurable: true,
   enumerable: false,
-  writable: false,
-  value: function (var_args) {
+  writable: true,
+  value: function(var_args) {
     var max = -Infinity;
     for (var i = 0; i < arguments.length; i++) {
       var n = Number(arguments[i]);
@@ -119,8 +119,8 @@ Object.defineProperty(Math2, 'max', {
 Object.defineProperty(Math2, 'min', {
   configurable: true,
   enumerable: false,
-  writable: false,
-  value: function (var_args) {
+  writable: true,
+  value: function(var_args) {
     var min = Infinity;
     for (var i = 0; i < arguments.length; i++) {
       var n = Number(arguments[i]);
@@ -138,8 +138,8 @@ Object.defineProperty(Math2, 'min', {
 Object.defineProperty(Math2, 'round', {
   configurable: true,
   enumerable: false,
-  writable: false,
-  value: function (x) {
+  writable: true,
+  value: function(x) {
     x = Number(x);
     if (isNaN(x)) {
       return NaN;
