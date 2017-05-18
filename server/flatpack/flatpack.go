@@ -260,8 +260,15 @@ func (f *Flatpack) unflatten(typ reflect.Type, v reflect.Value) reflect.Value {
 		panic(fmt.Errorf("Unflattening of %s not implemented", typ.Kind()))
 
 	case reflect.Interface:
-		panic(fmt.Errorf("Unflattening of %s not implemented", typ.Kind()))
-
+		tid := v.Field(0).Interface().(tID)
+		if tid == "" { // Special case: {"", nil} -> nil
+			if !v.Field(1).IsNil() {
+				panic("Non-nil vlaue with no type??")
+			}
+			return reflect.Zero(typ)
+		}
+		ttyp, _ := typesForTID(tid)
+		return f.unflatten(ttyp, v.Field(1).Elem()).Convert(typ)
 	case reflect.Map:
 		panic(fmt.Errorf("Unflattening of %s not implemented", typ.Kind()))
 

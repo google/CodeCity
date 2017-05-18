@@ -325,6 +325,23 @@ func TestUnflattenStruct(t *testing.T) {
 	}
 }
 
+func TestUnflattenSliceInterface(t *testing.T) {
+	// A struct containing an int and a slice of interface type should
+	// come back as a struct containign an int and a slice of structs
+	// containing a tID in addition to the original interface value.
+	var f Flatpack
+	sl := []tagged{{"", nil}, {"int", 69}, {"string", "Hello"}, {"bool", true}}
+	exp := []interface{}{nil, 69, "Hello", true}
+	typ := reflect.TypeOf(exp)
+	r := f.unflatten(typ, reflect.ValueOf(sl))
+	if r.Type() != typ {
+		t.Errorf("r.Type() == %s (expected %s)", r.Type(), typ)
+	}
+	if v := r.Interface().([]interface{}); !reflect.DeepEqual(v, exp) {
+		t.Errorf("r == %#v (expected %#v)", v, exp)
+	}
+}
+
 // init registers types for testing.
 func init() {
 	var examples = []interface{}{
