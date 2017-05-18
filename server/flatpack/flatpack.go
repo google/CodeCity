@@ -289,9 +289,10 @@ func (f *Flatpack) unflatten(typ reflect.Type, v reflect.Value) (ret reflect.Val
 			// FIXME: Use MakeMapWithSize(typ, v.Len()) once Go1.9 is available
 			r = reflect.MakeMap(typ)
 			for i := 0; i < v.Len(); i++ {
-				pair := v.Index(i)
-				// FIXME: WRONG!  Need to unflatten key and value.
-				r.SetMapIndex(pair.Field(0), pair.Field(1))
+				kv := v.Index(i)
+				uk := f.unflatten(typ.Key(), kv.Field(0))
+				uv := f.unflatten(typ.Elem(), kv.Field(1))
+				r.SetMapIndex(uk, uv)
 			}
 		}
 		return r

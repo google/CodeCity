@@ -108,10 +108,12 @@ func TestFlattenStringMap(t *testing.T) {
 }
 
 func TestFlattenNonStringMap(t *testing.T) {
-	var m = map[[2]int]string{
-		{1914, 1918}: "WW I",
-		{1939, 1945}: "WW II",
-		{2026, 2053}: "WW III", // Citation: http://memory-alpha.wikia.com/wiki/World_War_III
+	// Gratuitous use of interface{} to ensure key and value types are
+	// also (recursively) flattened.
+	var m = map[interface{}]interface{}{
+		[2]int{1914, 1918}: "WW I",
+		[2]int{1939, 1945}: "WW II",
+		[2]int{2026, 2053}: "WW III", // Citation: http://memory-alpha.wikia.com/wiki/World_War_III
 	}
 	var f = New()
 	r := f.flatten(reflect.ValueOf(m))
@@ -123,8 +125,8 @@ func TestFlattenNonStringMap(t *testing.T) {
 		t.Errorf("r.Len() == %d (expected %d)", r.Len(), len(m))
 	}
 	for i := 0; i < r.Len(); i++ {
-		k := r.Index(i).Field(0).Interface().([2]int)
-		v := r.Index(i).Field(1).Interface().(string)
+		k := r.Index(i).Field(0).Interface().(tagged).V.([2]int)
+		v := r.Index(i).Field(1).Interface().(tagged).V
 		if m[k] != v {
 			t.Errorf("m[%#v] == %#v in input but %#v in output", k, m[k], v)
 		}
@@ -270,23 +272,31 @@ func TestUnflattenStringMap(t *testing.T) {
 }
 
 func TestUnflattenNonStringMap(t *testing.T) {
+	var f = Flatpack{
+		Values: []tagged{
+			{T: "string", V: "WW I"},
+			{T: "string", V: "WW II"},
+			{T: "string", V: "WW III"},
+		},
+	}
 	var sl = []struct {
 		K [2]int `json:"k"`
-		V string `json:"v"`
+		V ref    `json:"v"`
 	}{
-		{[2]int{1914, 1918}, "WW I"},
-		{[2]int{1939, 1945}, "WW II"},
-		{[2]int{2026, 2053}, "WW III"}, // Citation: http://memory-alpha.wikia.com/wiki/World_War_III
+		{[2]int{1914, 1918}, ref(0)},
+		{[2]int{1939, 1945}, ref(1)},
+		{[2]int{2026, 2053}, ref(2)},
 	}
-	var f Flatpack
-	r := f.unflatten(reflect.TypeOf(map[[2]int]string{}), reflect.ValueOf(sl))
+	r := f.unflatten(reflect.TypeOf(map[[2]int]*string{}), reflect.ValueOf(sl))
 	if r.Len() != len(sl) {
 		t.Errorf("r.Len() == %d (expected %d)", r.Len(), len(sl))
 	}
 	for i := 0; i < len(sl); i++ {
 		k := reflect.ValueOf(sl[i].K)
-		if v := r.MapIndex(k).Interface().(string); v != sl[i].V {
-			t.Errorf("key %#v maps to %#v in input but %#v in output", sl[i].K, sl[i].V, v)
+		v := *(r.MapIndex(k).Interface().(*string))
+		exp := f.Values[sl[i].V].V
+		if v != exp {
+			t.Errorf("key %#v maps to %#v in input but %#v in output", k, exp, v)
 		}
 		r.SetMapIndex(k, reflect.Value{}) // Delete index k
 	}
