@@ -292,6 +292,11 @@ func TestUnlattenPtr(t *testing.T) {
 	if r2 != r {
 		t.Errorf("Multiple unflattens of same reference yielded different pointer values")
 	}
+	r0 := f.unflatten("*int", reflect.ValueOf(ref(-1)))
+	if !r0.IsNil() {
+		t.Error("r0.IsNil() == false")
+	}
+
 }
 
 func TestUnflattenStruct(t *testing.T) {
