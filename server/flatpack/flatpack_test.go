@@ -145,7 +145,7 @@ func TestFlattenArrayPtr(t *testing.T) {
 	// An array of four pointers to the same string should store one
 	// copy in the flatpack an return an array of four refs:
 	var s = "spam"
-	var a = [...]*string{nil, &s, &s, &s}
+	var a = [5]*string{nil, &s, &s, &s, &s}
 
 	var f = New()
 	r := f.flatten(reflect.ValueOf(a))
@@ -153,21 +153,18 @@ func TestFlattenArrayPtr(t *testing.T) {
 		t.Errorf("r.Len() == %d (expected %d)", r.Len(), len(a))
 	}
 
-	r0Type := r.Index(0).Type()
-	refType := reflect.TypeOf(ref(0))
-	if r0Type != refType {
-		t.Errorf("r.Index(0).Type() == %s (expected %s)", r0Type, refType)
+	if r0 := r.Index(0).Interface().(ref); r0 != -1 {
+		t.Errorf("r[0] == %d (expected -1)", r0)
 	}
-
 	for i := 2; i < len(a); i++ {
 		if r.Index(i).Interface() != r.Index(1).Interface() {
 			t.Errorf("Flattening same pointer value should yield same ref")
 		}
 	}
+
 	if len(f.Values) != 1 {
 		t.Errorf("Flattening same pointer value multiple times should only store one copy of referant")
 	}
-
 	exp := tagged{tIDOf(reflect.TypeOf("")), s}
 	if f.Values[0] != exp {
 		t.Errorf("f.Values[0] == %#v (expected %#v)", f.Values[0], exp)
@@ -233,7 +230,7 @@ func TestUnflattenSimple(t *testing.T) {
 
 		// FIXME: implement:
 		//
-		// [3]int{24, 25, 26},
+		[3]int{24, 25, 26},
 		[]int{27, 28, 29},
 		// map[string]int{
 		// 	"cpcallen": 2365779,
@@ -254,27 +251,28 @@ func TestUnflattenSimple(t *testing.T) {
 	}
 }
 
-func TestUnlattenPtr(t *testing.T) {
+func TestUnflattenArrayPtr(t *testing.T) {
 	var f = Flatpack{
-		Values: []tagged{{"int", 42}},
+		Values: []tagged{{"string", "spam"}},
 	}
-	intptr := reflect.TypeOf((*int)(nil))
-	r := f.unflatten(intptr, reflect.ValueOf(ref(0)))
-	if rtyp := r.Type(); rtyp != intptr {
-		t.Errorf("Type of r is %s (expected *int)", rtyp)
+	arr5PtrStrType := reflect.TypeOf([5]*string{})
+	a := [5]ref{-1, 0, 0, 0, 0}
+	r := f.unflatten(arr5PtrStrType, reflect.ValueOf(a))
+	if rtyp := r.Type(); rtyp != arr5PtrStrType {
+		t.Errorf("Type of r is %s (expected []*int)", rtyp)
 	}
-	if v := *(r.Interface().(*int)); v != 42 {
-		t.Errorf("*(r.Interface().(*int)) == %d (expected 42)", v)
-	}
-	r2 := f.unflatten(intptr, reflect.ValueOf(ref(0)))
-	if r2 != r {
-		t.Errorf("Multiple unflattens of same reference yielded different pointer values")
-	}
-	r0 := f.unflatten(intptr, reflect.ValueOf(ref(-1)))
-	if !r0.IsNil() {
-		t.Error("r0.IsNil() == false")
+	if r.Len() != len(a) {
+		t.Errorf("r.Len() == %d (expected %d)", r.Len(), len(a))
 	}
 
+	if r0 := r.Index(0).Interface().(*string); r0 != nil {
+		t.Errorf("r[0] == %#v (expected nil)", r0)
+	}
+	for i := 2; i < len(a); i++ {
+		if r.Index(i).Interface() != r.Index(1).Interface() {
+			t.Errorf("Unflatting same ref should yield same pointer value")
+		}
+	}
 }
 
 func TestUnflattenStruct(t *testing.T) {

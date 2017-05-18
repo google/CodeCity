@@ -263,8 +263,11 @@ func (f *Flatpack) unflatten(typ reflect.Type, v reflect.Value) (ret reflect.Val
 		reflect.Float32, reflect.Float64, reflect.Complex64, reflect.Complex128, reflect.String:
 		return v
 	case reflect.Array:
-		panic(fmt.Errorf("Unflattening of %s not implemented", typ.Kind()))
-
+		r := reflect.New(typ).Elem()
+		for i := 0; i < v.Len(); i++ {
+			r.Index(i).Set(f.unflatten(typ.Elem(), v.Index(i)))
+		}
+		return r
 	case reflect.Interface:
 		tid := v.Field(0).Interface().(tID)
 		if tid == "" { // Special case: {"", nil} -> nil
@@ -291,7 +294,7 @@ func (f *Flatpack) unflatten(typ reflect.Type, v reflect.Value) (ret reflect.Val
 		case f.ref2ptr[idx] == reflect.Value{}:
 			if tIDOf(typ.Elem()) != f.Values[idx].T {
 				// FIXME: better error handling
-				panic("type mismatch")
+				panic(fmt.Errorf("type mismatch: Values[%d] contains a %s (expected %s)", idx, f.Values[idx].T, tIDOf(typ.Elem())))
 			}
 			f.ref2ptr[idx] = reflect.New(typ.Elem())
 			ttyp, _ := typesForTID(f.Values[idx].T)
