@@ -27,6 +27,7 @@ type myInt int
 type myUint64 uint64
 type myFloat64 float64
 type myComplex64 complex64
+type myString string
 
 func TestFlattenSimple(t *testing.T) {
 	// All these should not be changed by flatten(), and nothing
@@ -55,10 +56,10 @@ func TestFlattenSimple(t *testing.T) {
 		myUint64(20),
 		myFloat64(21.0),
 		myComplex64(22 + 23i),
+		myString("twenty-four"),
 
 		[3]int{24, 25, 26},
 		[]int{27, 28, 29},
-		map[string]int{
 			"cpcallen": 2365779,
 			"fraser":   7499832,
 		},
@@ -220,9 +221,8 @@ func TestUnflattenSimple(t *testing.T) {
 		myUint64(20),
 		myFloat64(21.0),
 		myComplex64(22 + 23i),
+		myString("twenty-four"),
 
-		// FIXME: implement:
-		//
 		[3]int{24, 25, 26},
 		[]int{27, 28, 29},
 		map[string]int{
