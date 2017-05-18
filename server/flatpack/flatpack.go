@@ -246,11 +246,17 @@ func (f *Flatpack) flatten(v reflect.Value) reflect.Value {
 //
 //     tIDOf(f.unflatten(t, v).Type()) == t && flatType(t) == v.Type()
 //
-func (f *Flatpack) unflatten(typ reflect.Type, v reflect.Value) reflect.Value {
-	ftyp := flatType(typ)
-	if v.Type() != ftyp {
+func (f *Flatpack) unflatten(typ reflect.Type, v reflect.Value) (ret reflect.Value) {
+	// FIXME: perhaps replace these runtime assertions with good tests?
+	if ftyp := flatType(typ); v.Type() != ftyp {
 		panic(fmt.Errorf("Type mismatch unflattening a %s: expected %s but got %s", typ, ftyp, v.Type()))
 	}
+	defer func() {
+		if ret.Type() != typ {
+			panic(fmt.Errorf("Incorrect return type %s (expected %s)", ret.Type(), typ))
+		}
+	}()
+
 	switch typ.Kind() {
 	case reflect.Bool, reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
 		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr,
