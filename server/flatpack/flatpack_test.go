@@ -294,6 +294,54 @@ func TestUnlattenPtr(t *testing.T) {
 	}
 }
 
+func TestUnflattenStruct(t *testing.T) {
+	type testStruct struct {
+		n int
+		p *testStruct
+	}
+	typ := reflect.TypeOf(testStruct{})
+	RegisterType(typ)
+	tid := tIDOf(typ)
+	// A flatpack of two crosslinked testStructs.  Unfortunately the
+	// flattened struct type can't be given a name, because unflatten
+	// expects it to be anonymous.
+	var f = Flatpack{
+		Values: []tagged{
+			{
+				T: tid,
+				V: struct {
+					F_n int `json:"n"`
+					F_p ref `json:"p"`
+				}{42, 1},
+			},
+			{
+				T: tid,
+				V: struct {
+					F_n int `json:"n"`
+					F_p ref `json:"p"`
+				}{69, 0},
+			},
+		},
+	}
+	r := f.unflatten(tIDOf(reflect.PtrTo(typ)), reflect.ValueOf(ref(0)))
+	v := r.Interface().(*testStruct)
+	if v == nil {
+		t.Error("v.n == nil (expected non-nil)")
+	}
+	if v.n != 42 {
+		t.Errorf("v.n == %d (expected 42)", v.n)
+	}
+	if v.p == nil {
+		t.Error("v.p == nil (expected non-nil)")
+	}
+	if v.p.n != 69 {
+		t.Errorf("v.p.n == %d (expected 69)", v.p.n)
+	}
+	if v.p.p != v {
+		t.Errorf("v.p.p == %p (expected %p == v)", v.p.p, v)
+	}
+}
+
 // init registers types for testing.
 func init() {
 	var ifaces = reflect.TypeOf(

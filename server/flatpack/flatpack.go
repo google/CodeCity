@@ -282,12 +282,9 @@ func (f *Flatpack) unflatten(tid tID, v reflect.Value) reflect.Value {
 				// FIXME: better error handling
 				panic("type mismatch")
 			}
-			// FIXME: this is broken for circular data, but we need a test to prove it:
-			f.ref2ptr[idx] = makeAddressable(f.unflatten(f.Values[idx].T, reflect.ValueOf(f.Values[idx].V))).Addr()
-			// This version is correct:
-			// f.ref2ptr[idx] = reflect.New(typ.Elem())
-			// uv := f.unflatten(f.Values[idx].T, reflect.ValueOf(f.Values[idx].V))
-			// f.ref2ptr[idx].Elem().Set(uv)
+			f.ref2ptr[idx] = reflect.New(typ.Elem())
+			uv := f.unflatten(f.Values[idx].T, reflect.ValueOf(f.Values[idx].V))
+			f.ref2ptr[idx].Elem().Set(uv)
 			fallthrough
 		default:
 			return f.ref2ptr[idx]
@@ -301,8 +298,13 @@ func (f *Flatpack) unflatten(tid tID, v reflect.Value) reflect.Value {
 		}
 		return r
 	case reflect.Struct:
-		panic(fmt.Errorf("Unflattening of %s not implemented", typ.Kind()))
-
+		r := reflect.New(typ).Elem()
+		for i := 0; i < typ.NumField(); i++ {
+			src := v.Field(i)
+			dst := defeat(r.Field(i))
+			dst.Set(f.unflatten(tIDOf(dst.Type()), src))
+		}
+		return r
 	case reflect.Chan, reflect.Func, reflect.UnsafePointer:
 		panic(fmt.Errorf("Unflattening of %s not implemented", typ.Kind()))
 	default:
