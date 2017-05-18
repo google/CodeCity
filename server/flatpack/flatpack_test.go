@@ -62,13 +62,6 @@ func TestFlattenSimple(t *testing.T) {
 			"cpcallen": 2365779,
 			"fraser":   7499832,
 		},
-
-		[3]int{19, 20, 21},
-		[]int{22, 23, 24},
-		map[string]int{
-			"cpcallen": 2365779,
-			"fraser":   7499832,
-		},
 	}
 	var f = New()
 	for _, c := range cases {
