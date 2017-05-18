@@ -270,16 +270,31 @@ func (f *Flatpack) unflatten(typ reflect.Type, v reflect.Value) (ret reflect.Val
 		return r
 	case reflect.Interface:
 		tid := v.Field(0).Interface().(tID)
-		if tid == "" { // Special case: {"", nil} -> nil
+		if tid == tIDOf(nil) { // Special case: {"", nil} -> nil
 			if !v.Field(1).IsNil() {
 				panic("Non-nil vlaue with no type??")
 			}
 			return reflect.Zero(typ)
 		}
-		ttyp, _ := typesForTID(tid)
-		return f.unflatten(ttyp, v.Field(1).Elem()).Convert(typ)
+		vtyp, _ := typesForTID(tid)
+		return f.unflatten(vtyp, v.Field(1).Elem()).Convert(typ)
 	case reflect.Map:
-		panic(fmt.Errorf("Unflattening of %s not implemented", typ.Kind()))
+		var r reflect.Value
+		if flatType(typ).Kind() == reflect.Map {
+			r = reflect.MakeMap(typ)
+			for _, k := range v.MapKeys() {
+				r.SetMapIndex(k, f.unflatten(typ.Elem(), v.MapIndex(k)))
+			}
+		} else {
+			// FIXME: Use MakeMapWithSize(typ, v.Len()) once Go1.9 is available
+			r = reflect.MakeMap(typ)
+			for i := 0; i < v.Len(); i++ {
+				pair := v.Index(i)
+				// FIXME: WRONG!  Need to unflatten key and value.
+				r.SetMapIndex(pair.Field(0), pair.Field(1))
+			}
+		}
+		return r
 
 	case reflect.Ptr:
 		idx := int(v.Interface().(ref))

@@ -232,10 +232,10 @@ func TestUnflattenSimple(t *testing.T) {
 		//
 		[3]int{24, 25, 26},
 		[]int{27, 28, 29},
-		// map[string]int{
-		// 	"cpcallen": 2365779,
-		// 	"fraser":   7499832,
-		// },
+		map[string]int{
+			"cpcallen": 2365779,
+			"fraser":   7499832,
+		},
 	}
 	var f = New()
 	for _, c := range cases {
@@ -248,6 +248,57 @@ func TestUnflattenSimple(t *testing.T) {
 		} else if !reflect.DeepEqual(r.Interface(), c) {
 			t.Errorf("f.unflatten(%#v, reflect.ValueOf(%#v)).Interface() == %#v (expected %#v)", tid, c, r, c)
 		}
+	}
+}
+
+func TestUnflattenStringMap(t *testing.T) {
+	var f = Flatpack{
+		Values: []tagged{{"int", 42}, {"int", 69}, {"int", 105}},
+	}
+	mapStrPtrIntType := reflect.TypeOf(map[string]*int{})
+	var m = map[string]ref{
+		"answer":  0,
+		"naughty": 1,
+		"random":  2,
+	}
+	r := f.unflatten(mapStrPtrIntType, reflect.ValueOf(m))
+	if r.Len() != len(m) {
+		t.Errorf("r.Len() == %d (expected %d)", r.Len(), len(m))
+	}
+	for k, v := range r.Interface().(map[string]*int) {
+		if exp := f.Values[int(m[k])].V.(int); *v != exp {
+			t.Errorf("*(m[%#v]) == %#v in input but %#v in output", k, *v, exp)
+		}
+		delete(m, k)
+	}
+	if len(m) > 0 {
+		t.Errorf("%#v present in input but not in output", m)
+	}
+}
+
+func TestUnflattenNonStringMap(t *testing.T) {
+	var sl = []struct {
+		K [2]int `json:"k"`
+		V string `json:"v"`
+	}{
+		{[2]int{1914, 1918}, "WW I"},
+		{[2]int{1939, 1945}, "WW II"},
+		{[2]int{2026, 2053}, "WW III"}, // Citation: http://memory-alpha.wikia.com/wiki/World_War_III
+	}
+	var f Flatpack
+	r := f.unflatten(reflect.TypeOf(map[[2]int]string{}), reflect.ValueOf(sl))
+	if r.Len() != len(sl) {
+		t.Errorf("r.Len() == %d (expected %d)", r.Len(), len(sl))
+	}
+	for i := 0; i < len(sl); i++ {
+		k := reflect.ValueOf(sl[i].K)
+		if v := r.MapIndex(k).Interface().(string); v != sl[i].V {
+			t.Errorf("key %#v maps to %#v in input but %#v in output", sl[i].K, sl[i].V, v)
+		}
+		r.SetMapIndex(k, reflect.Value{}) // Delete index k
+	}
+	if r.Len() > 0 {
+		//		t.Errorf("%#v present in output but not in input", r.Interface())
 	}
 }
 
@@ -328,7 +379,7 @@ func TestUnflattenSliceInterface(t *testing.T) {
 	// come back as a struct containign an int and a slice of structs
 	// containing a tID in addition to the original interface value.
 	var f Flatpack
-	sl := []tagged{{"", nil}, {"int", 69}, {"string", "Hello"}, {"bool", true}}
+	sl := []tagged{{nilTID, nil}, {"int", 69}, {"string", "Hello"}, {"bool", true}}
 	exp := []interface{}{nil, 69, "Hello", true}
 	typ := reflect.TypeOf(exp)
 	r := f.unflatten(typ, reflect.ValueOf(sl))
