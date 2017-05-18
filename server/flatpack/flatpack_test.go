@@ -21,6 +21,13 @@ import (
 	"testing"
 )
 
+// Some user-declared types for testing:
+type myBool bool
+type myInt int
+type myUint64 uint64
+type myFloat64 float64
+type myComplex64 complex64
+
 func TestFlattenSimple(t *testing.T) {
 	// All these should not be changed by flatten(), and nothing
 	// should be added to the flatpack:
@@ -42,6 +49,20 @@ func TestFlattenSimple(t *testing.T) {
 		complex64(14 + 15i),
 		complex128(16 + 17i),
 		string("Eighteen"),
+
+		myBool(false),
+		myInt(19),
+		myUint64(20),
+		myFloat64(21.0),
+		myComplex64(22 + 23i),
+
+		[3]int{24, 25, 26},
+		[]int{27, 28, 29},
+		map[string]int{
+			"cpcallen": 2365779,
+			"fraser":   7499832,
+		},
+
 		[3]int{19, 20, 21},
 		[]int{22, 23, 24},
 		map[string]int{
@@ -209,10 +230,11 @@ func TestUnflattenSimple(t *testing.T) {
 		myUint64(20),
 		myFloat64(21.0),
 		myComplex64(22 + 23i),
+
 		// FIXME: implement:
 		//
-		// [3]int{19, 20, 21},
-		[]int{22, 23, 24},
+		// [3]int{24, 25, 26},
+		[]int{27, 28, 29},
 		// map[string]int{
 		// 	"cpcallen": 2365779,
 		// 	"fraser":   7499832,
@@ -231,51 +253,6 @@ func TestUnflattenSimple(t *testing.T) {
 		}
 	}
 }
-
-// Some user-declared types for testing:
-type myBool bool
-type myInt int
-type myUint64 uint64
-type myFloat64 float64
-type myComplex64 complex64
-
-/*
-func TestUnflattenNamedSimple(t *testing.T) {
-	// All these should not be changed by unflatten():
-	var cases = []struct {
-		t tID
-		v interface{}
-	}{
-		{"flatpack.myBool", false},
-		{"myInt", int(18)},
-		{"myUint64", uint64(19)},
-		{"myFloat64", float64(20.0)},
-		{"myComplex64", complex64(21 + 22i)},
-		// FIXME: implement:
-		//
-		// {"string", string("Eighteen")},
-		// {"[3]int", [3]int{19, 20, 21}},
-		// {"[]int", []int{22, 23, 24}},
-		// {"map[string]int",
-		// 	map[string]int{
-		// 		"cpcallen": 2365779,
-		// 		"fraser":   7499832,
-		// 	},
-		// },
-	}
-	var f = New()
-	for _, c := range cases {
-		var r = f.unflatten(c.t, reflect.ValueOf(c.v))
-		if reflect.TypeOf(c.v).Comparable() {
-			if r.Interface() != c.v {
-				t.Errorf("f.unflatten(%#v reflect.ValueOf(%#v)).Interface() == %#v (expected %#v)", c.t, c.v, r, c.v)
-			}
-		} else if !reflect.DeepEqual(r.Interface(), c) {
-			t.Errorf("f.unflatten(%#v, reflect.ValueOf(%#v)).Interface() == %#v (expected %#v)", c.t, c.v, r, c.v)
-		}
-	}
-}
-*/
 
 func TestUnlattenPtr(t *testing.T) {
 	var f = Flatpack{
