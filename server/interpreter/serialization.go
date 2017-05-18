@@ -17,23 +17,10 @@
 package interpreter
 
 import (
-	"reflect"
-
 	"CodeCity/server/flatpack"
 )
 
 func init() {
-	var ifaces = reflect.TypeOf(
-		struct {
-			i1 state
-			i2 labelled
-			i3 lvalue
-			i4 value
-		}{})
-	for i := 0; i < ifaces.NumField(); i++ {
-		flatpack.RegisterType(ifaces.Field(i).Type)
-	}
-
 	var examples = []interface{}{
 		// From closure.go:
 		closure{},

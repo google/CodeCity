@@ -17,21 +17,10 @@
 package data
 
 import (
-	"reflect"
-
 	"CodeCity/server/flatpack"
 )
 
 func init() {
-	var ifaces = reflect.TypeOf(
-		struct {
-			i1 Value
-			i2 Object
-		}{})
-	for i := 0; i < ifaces.NumField(); i++ {
-		flatpack.RegisterType(ifaces.Field(i).Type)
-	}
-
 	var examples = []interface{}{
 		// From array.go:
 		Array{},

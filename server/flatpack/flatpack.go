@@ -246,11 +246,10 @@ func (f *Flatpack) flatten(v reflect.Value) reflect.Value {
 //
 //     tIDOf(f.unflatten(t, v).Type()) == t && flatType(t) == v.Type()
 //
-// FIXME: should this take a reflect.Type (or two?) instead of a tID?
-func (f *Flatpack) unflatten(tid tID, v reflect.Value) reflect.Value {
-	typ, ftyp := typesForTID(tid)
+func (f *Flatpack) unflatten(typ reflect.Type, v reflect.Value) reflect.Value {
+	ftyp := flatType(typ)
 	if v.Type() != ftyp {
-		panic(fmt.Errorf("Type mismatch unflattening a %s: expected %s but got %s", tid, ftyp, v.Type()))
+		panic(fmt.Errorf("Type mismatch unflattening a %s: expected %s but got %s", typ, ftyp, v.Type()))
 	}
 	switch typ.Kind() {
 	case reflect.Bool, reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
@@ -282,8 +281,9 @@ func (f *Flatpack) unflatten(tid tID, v reflect.Value) reflect.Value {
 				panic("type mismatch")
 			}
 			f.ref2ptr[idx] = reflect.New(typ.Elem())
-			uv := f.unflatten(f.Values[idx].T, reflect.ValueOf(f.Values[idx].V))
-			f.ref2ptr[idx].Elem().Set(uv)
+			ttyp, _ := typesForTID(f.Values[idx].T)
+			tval := reflect.ValueOf(f.Values[idx].V)
+			f.ref2ptr[idx].Elem().Set(f.unflatten(ttyp, tval))
 			fallthrough
 		default:
 			return f.ref2ptr[idx]
@@ -293,7 +293,7 @@ func (f *Flatpack) unflatten(tid tID, v reflect.Value) reflect.Value {
 		// assume cap == len.
 		r := reflect.MakeSlice(typ, v.Len(), v.Len())
 		for i := 0; i < v.Len(); i++ {
-			r.Index(i).Set(f.unflatten(tIDOf(typ.Elem()), v.Index(i)))
+			r.Index(i).Set(f.unflatten(typ.Elem(), v.Index(i)))
 		}
 		return r
 	case reflect.Struct:
@@ -301,13 +301,13 @@ func (f *Flatpack) unflatten(tid tID, v reflect.Value) reflect.Value {
 		for i := 0; i < typ.NumField(); i++ {
 			src := v.Field(i)
 			dst := defeat(r.Field(i))
-			dst.Set(f.unflatten(tIDOf(dst.Type()), src))
+			dst.Set(f.unflatten(dst.Type(), src))
 		}
 		return r
 	case reflect.Chan, reflect.Func, reflect.UnsafePointer:
 		panic(fmt.Errorf("Unflattening of %s not implemented", typ.Kind()))
 	default:
-		panic(fmt.Errorf("Invalid Kind %s", ftyp.Kind()))
+		panic(fmt.Errorf("Invalid Kind %s", typ.Kind()))
 	}
 }
 

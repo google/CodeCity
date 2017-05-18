@@ -17,26 +17,10 @@
 package ast
 
 import (
-	"reflect"
-
 	"CodeCity/server/flatpack"
 )
 
 func init() {
-	var ifaces = reflect.TypeOf(
-		struct {
-			i1 node
-			i2 Node
-			i3 statement
-			i4 expression
-			i5 forStatementInit
-			i6 propertyKey
-			i7 lValue
-		}{})
-	for i := 0; i < ifaces.NumField(); i++ {
-		flatpack.RegisterType(ifaces.Field(i).Type)
-	}
-
 	var examples = []interface{}{
 		// From ast.go:
 		Statement{},

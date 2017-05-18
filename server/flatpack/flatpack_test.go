@@ -243,7 +243,7 @@ func TestUnflattenSimple(t *testing.T) {
 	var f = New()
 	for _, c := range cases {
 		tid := tIDOf(reflect.TypeOf(c))
-		r := f.unflatten(tIDOf(reflect.TypeOf(c)), reflect.ValueOf(c))
+		r := f.unflatten(reflect.TypeOf(c), reflect.ValueOf(c))
 		if reflect.TypeOf(c).Comparable() {
 			if r.Interface() != c {
 				t.Errorf("f.unflatten(%#v, reflect.ValueOf(%#v)).Interface() == %#v (expected %#v)", tid, c, r, c)
@@ -258,18 +258,19 @@ func TestUnlattenPtr(t *testing.T) {
 	var f = Flatpack{
 		Values: []tagged{{"int", 42}},
 	}
-	r := f.unflatten("*int", reflect.ValueOf(ref(0)))
-	if rtyp := r.Type(); rtyp != reflect.TypeOf((*int)(nil)) {
+	intptr := reflect.TypeOf((*int)(nil))
+	r := f.unflatten(intptr, reflect.ValueOf(ref(0)))
+	if rtyp := r.Type(); rtyp != intptr {
 		t.Errorf("Type of r is %s (expected *int)", rtyp)
 	}
 	if v := *(r.Interface().(*int)); v != 42 {
 		t.Errorf("*(r.Interface().(*int)) == %d (expected 42)", v)
 	}
-	r2 := f.unflatten("*int", reflect.ValueOf(ref(0)))
+	r2 := f.unflatten(intptr, reflect.ValueOf(ref(0)))
 	if r2 != r {
 		t.Errorf("Multiple unflattens of same reference yielded different pointer values")
 	}
-	r0 := f.unflatten("*int", reflect.ValueOf(ref(-1)))
+	r0 := f.unflatten(intptr, reflect.ValueOf(ref(-1)))
 	if !r0.IsNil() {
 		t.Error("r0.IsNil() == false")
 	}
@@ -305,7 +306,7 @@ func TestUnflattenStruct(t *testing.T) {
 			},
 		},
 	}
-	r := f.unflatten(tIDOf(reflect.PtrTo(typ)), reflect.ValueOf(ref(0)))
+	r := f.unflatten(reflect.PtrTo(typ), reflect.ValueOf(ref(0)))
 	v := r.Interface().(*testStruct)
 	if v == nil {
 		t.Error("v.n == nil (expected non-nil)")
@@ -326,14 +327,6 @@ func TestUnflattenStruct(t *testing.T) {
 
 // init registers types for testing.
 func init() {
-	var ifaces = reflect.TypeOf(
-		struct {
-			// i1 typename
-		}{})
-	for i := 0; i < ifaces.NumField(); i++ {
-		RegisterType(ifaces.Field(i).Type)
-	}
-
 	var examples = []interface{}{
 		myBool(false),
 		myInt(0),
