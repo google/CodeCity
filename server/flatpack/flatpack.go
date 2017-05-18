@@ -113,7 +113,12 @@ func (f *Flatpack) Pack(label string, value interface{}) {
 // Unpack retrieves the value associated with the given label from the
 // Flatpack and returns it.
 func (f *Flatpack) Unpack(label string) interface{} {
-	panic("Not implemented")
+	idx, ok := f.Labels[label]
+	if !ok {
+		panic(fmt.Errorf("Label %s not found", label))
+	}
+	ityp := reflect.TypeOf((*interface{})(nil)).Elem()
+	return f.unflatten(ityp, reflect.ValueOf(f.Values[idx])).Interface()
 }
 
 // Seal removes the index used when flattening pointer values.  This
