@@ -32,11 +32,11 @@ func (t *tagged) UnmarshalJSON(b []byte) error {
 		return e
 	}
 	t.T = tmp.T
-	if tmp.T == "" { // Special case: `{"T": "", "V": null}` -> tagged{"", nil}
+	if tmp.T == "" { // Special case: `{"T": "", "V": null}` -> tagged{nilTID, nil}
 		if string(tmp.V) != "null" {
 			panic("Non-null value with no type??")
 		}
-		*t = tagged{"", nil} // Redundant - unless caller is re-using *t
+		*t = tagged{nilTID, nil} // Redundant - unless caller is re-using *t
 		return nil
 	}
 	// FIXME: better error handling

@@ -167,7 +167,7 @@ func (f *Flatpack) flatten(v reflect.Value) reflect.Value {
 		return r
 	case reflect.Interface:
 		if v.IsNil() {
-			return reflect.ValueOf(tagged{T: tIDOf(nil), V: nil})
+			return reflect.ValueOf(tagged{T: nilTID, V: nil})
 		}
 		return reflect.ValueOf(tagged{
 			T: tIDOf(v.Elem().Type()),
