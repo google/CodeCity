@@ -277,6 +277,23 @@ func TestUnflattenNamedSimple(t *testing.T) {
 }
 */
 
+func TestUnlattenPtr(t *testing.T) {
+	var f = Flatpack{
+		Values: []tagged{{"int", 42}},
+	}
+	r := f.unflatten("*int", reflect.ValueOf(ref(0)))
+	if rtyp := r.Type(); rtyp != reflect.TypeOf((*int)(nil)) {
+		t.Errorf("Type of r is %s (expected *int)", rtyp)
+	}
+	if v := *(r.Interface().(*int)); v != 42 {
+		t.Errorf("*(r.Interface().(*int)) == %d (expected 42)", v)
+	}
+	r2 := f.unflatten("*int", reflect.ValueOf(ref(0)))
+	if r2 != r {
+		t.Errorf("Multiple unflattens of same reference yielded different pointer values")
+	}
+}
+
 // init registers types for testing.
 func init() {
 	var ifaces = reflect.TypeOf(

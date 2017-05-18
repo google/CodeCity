@@ -84,7 +84,10 @@ func typeForTID(tid tID, flat bool) reflect.Type {
 		}
 		return types[idx].typ
 	} else if tid[0] == '*' {
-		return reflect.TypeOf(ref(0))
+		if flat {
+			return reflect.TypeOf(ref(0))
+		}
+		return reflect.PtrTo(typeForTID(tid[1:], flat))
 	} else if tid[0:2] == "[]" {
 		return reflect.SliceOf(typeForTID(tid[2:], flat))
 	}

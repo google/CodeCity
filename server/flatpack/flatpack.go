@@ -72,9 +72,14 @@ type Flatpack struct {
 	// accessed directly; instead, use the Pack and Unpack methods.
 	Values []tagged
 
-	// ptr2ref is a map of (pointer) values to ref (index of flattened
-	// value); used during packing.
+	// ptr2ref is a map of (pointer) values to their corresponding ref
+	// (index of flattened value).  Used during packing.
 	ptr2ref map[interface{}]ref
+
+	// ref2ptr is a slice mapping refs to (the reflect.Value
+	// representation of) their corresponding pointer values.  Used
+	// during unpacking.
+	ref2ptr []reflect.Value
 }
 
 // New creates and initializes a new flatpack.
@@ -248,37 +253,69 @@ func (f *Flatpack) unflatten(tid tID, v reflect.Value) reflect.Value {
 	if v.Type() != ftyp {
 		panic(fmt.Errorf("Type mismatch unflattening a %s: expected %s but got %s", tid, ftyp, v.Type()))
 	}
-	switch ftyp.Kind() {
+	switch typ.Kind() {
 	case reflect.Bool, reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
 		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr,
 		reflect.Float32, reflect.Float64, reflect.Complex64, reflect.Complex128, reflect.String:
 		return v
 	case reflect.Array:
-		panic(fmt.Errorf("Unflattening of %s not implemented", ftyp.Kind()))
+		panic(fmt.Errorf("Unflattening of %s not implemented", typ.Kind()))
 
 	case reflect.Interface:
-		panic(fmt.Errorf("Unflattening of %s not implemented", ftyp.Kind()))
+		panic(fmt.Errorf("Unflattening of %s not implemented", typ.Kind()))
 
 	case reflect.Map:
-		panic(fmt.Errorf("Unflattening of %s not implemented", ftyp.Kind()))
+		panic(fmt.Errorf("Unflattening of %s not implemented", typ.Kind()))
 
 	case reflect.Ptr:
-		panic(fmt.Errorf("Unflattening of %s not implemented", ftyp.Kind()))
-
+		idx := int(v.Interface().(ref))
+		switch {
+		case idx == -1:
+			return reflect.Zero(typ)
+		case idx < -1, idx > len(f.Values):
+			panic("ref out of range")
+		case f.ref2ptr == nil: // First time unflattening any pointer?
+			f.ref2ptr = make([]reflect.Value, len(f.Values))
+			fallthrough
+		case f.ref2ptr[idx] == reflect.Value{}:
+			if tIDOf(typ.Elem()) != f.Values[idx].T {
+				// FIXME: better error handling
+				panic("type mismatch")
+			}
+			// FIXME: this is broken for circular data, but we need a test to prove it:
+			f.ref2ptr[idx] = makeAddressable(f.unflatten(f.Values[idx].T, reflect.ValueOf(f.Values[idx].V))).Addr()
+			// This version is correct:
+			// f.ref2ptr[idx] = reflect.New(typ.Elem())
+			// uv := f.unflatten(f.Values[idx].T, reflect.ValueOf(f.Values[idx].V))
+			// f.ref2ptr[idx].Elem().Set(uv)
+			fallthrough
+		default:
+			return f.ref2ptr[idx]
+		}
 	case reflect.Slice:
 		// No info re: spare capacity survives (de)serialisation, so
 		// assume cap == len.
 		r := reflect.MakeSlice(typ, v.Len(), v.Len())
 		for i := 0; i < v.Len(); i++ {
-			r.Index(i).Set(f.unflatten(tIDOf(v.Type().Elem()), v.Index(i)))
+			r.Index(i).Set(f.unflatten(tIDOf(typ.Elem()), v.Index(i)))
 		}
 		return r
 	case reflect.Struct:
-		panic(fmt.Errorf("Unflattening of %s not implemented", ftyp.Kind()))
+		panic(fmt.Errorf("Unflattening of %s not implemented", typ.Kind()))
 
 	case reflect.Chan, reflect.Func, reflect.UnsafePointer:
-		panic(fmt.Errorf("Unflattening of %s not implemented", ftyp.Kind()))
+		panic(fmt.Errorf("Unflattening of %s not implemented", typ.Kind()))
 	default:
 		panic(fmt.Errorf("Invalid Kind %s", ftyp.Kind()))
 	}
+}
+
+// FIXME: remove this once unlattening pointers fixed
+func makeAddressable(v reflect.Value) reflect.Value {
+	if v.CanAddr() {
+		return v
+	}
+	vv := reflect.New(v.Type()).Elem()
+	vv.Set(v)
+	return vv
 }
