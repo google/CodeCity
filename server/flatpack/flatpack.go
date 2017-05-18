@@ -248,8 +248,7 @@ func (f *Flatpack) flatten(v reflect.Value) reflect.Value {
 //
 // FIXME: should this take a reflect.Type (or two?) instead of a tID?
 func (f *Flatpack) unflatten(tid tID, v reflect.Value) reflect.Value {
-	typ := typeForTID(tid, false)
-	ftyp := typeForTID(tid, true)
+	typ, ftyp := typesForTID(tid)
 	if v.Type() != ftyp {
 		panic(fmt.Errorf("Type mismatch unflattening a %s: expected %s but got %s", tid, ftyp, v.Type()))
 	}

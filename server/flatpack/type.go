@@ -68,28 +68,23 @@ func RegisterType(typ reflect.Type) {
 	byFlatType[ti.ftyp] = idx
 }
 
-// typeForTID returns the type described by tid, which must be non-empty.
-// If flat is true it returns the flattened type; otherwise the
-// original.
+// typeForTID returns the original (unflattened) and flattend types
+// described by tid, which must be non-empty.
 //
 // FIXME: better error handling
-func typeForTID(tid tID, flat bool) reflect.Type {
+func typesForTID(tid tID) (typ, ftyp reflect.Type) {
 	if tid == "" {
 		// Calling this function with nil should never happen.
 		panic("nil has no type")
 	}
 	if idx, ok := byTID[tid]; ok {
-		if flat {
-			return types[idx].ftyp
-		}
-		return types[idx].typ
+		return types[idx].typ, types[idx].ftyp
 	} else if tid[0] == '*' {
-		if flat {
-			return reflect.TypeOf(ref(0))
-		}
-		return reflect.PtrTo(typeForTID(tid[1:], flat))
+		t, _ := typesForTID(tid[1:])
+		return reflect.PtrTo(t), reflect.TypeOf(ref(0))
 	} else if tid[0:2] == "[]" {
-		return reflect.SliceOf(typeForTID(tid[2:], flat))
+		t, ft := typesForTID(tid[2:])
+		return reflect.SliceOf(t), reflect.SliceOf(ft)
 	}
 	panic(fmt.Errorf("Whoops: no type %s found", tid))
 }
