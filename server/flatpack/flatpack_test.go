@@ -60,6 +60,7 @@ func TestFlattenSimple(t *testing.T) {
 
 		[3]int{24, 25, 26},
 		[]int{27, 28, 29},
+		map[myString]myInt{
 			"cpcallen": 2365779,
 			"fraser":   7499832,
 		},
@@ -227,7 +228,7 @@ func TestUnflattenSimple(t *testing.T) {
 
 		[3]int{24, 25, 26},
 		[]int{27, 28, 29},
-		map[string]int{
+		map[myString]myInt{
 			"cpcallen": 2365779,
 			"fraser":   7499832,
 		},
@@ -337,9 +338,13 @@ func TestUnflattenStruct(t *testing.T) {
 	typ := reflect.TypeOf(testStruct{})
 	RegisterType(typ)
 	tid := tIDOf(typ)
-	// A flatpack of two crosslinked testStructs.  Unfortunately the
+	// A flatpack of two crosslinked testStructs.
+	//
+	// Unfortunately the
 	// flattened struct type can't be given a name, because unflatten
 	// expects it to be anonymous.
+	//
+	// FIXME: use type aliases once they are available in go1.9
 	var f = Flatpack{
 		Values: []tagged{
 			{
@@ -402,6 +407,7 @@ func init() {
 		myUint64(0),
 		myFloat64(0),
 		myComplex64(0 + 0i),
+		myString(""),
 	}
 	for _, val := range examples {
 		RegisterTypeOf(val)
