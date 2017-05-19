@@ -27,6 +27,7 @@ import (
 // represented by the empty string.
 type tID string
 
+// nilTID is the canonical tID for nil interface values.
 const nilTID = tID("")
 
 // tIDOf returnes the tID (type ID) of its argument.

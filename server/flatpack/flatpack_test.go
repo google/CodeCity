@@ -109,7 +109,7 @@ func TestFlattenStringMap(t *testing.T) {
 }
 
 func TestFlattenNonStringMap(t *testing.T) {
-	// Gratuitous use of interface{} to ensure key and value types are
+	// Gratuitous use of interface{} to verify key and value types are
 	// also (recursively) flattened.
 	var m = map[interface{}]interface{}{
 		[2]int{1914, 1918}: "WW I",
@@ -294,9 +294,8 @@ func TestUnflattenNonStringMap(t *testing.T) {
 	}
 	for i := 0; i < len(sl); i++ {
 		k := reflect.ValueOf(sl[i].K)
-		v := *(r.MapIndex(k).Interface().(*string))
 		exp := f.Values[sl[i].V].V
-		if v != exp {
+		if v := *(r.MapIndex(k).Interface().(*string)); v != exp {
 			t.Errorf("key %#v maps to %#v in input but %#v in output", k, exp, v)
 		}
 		r.SetMapIndex(k, reflect.Value{}) // Delete index k
@@ -319,7 +318,6 @@ func TestUnflattenArrayPtr(t *testing.T) {
 	if r.Len() != len(a) {
 		t.Errorf("r.Len() == %d (expected %d)", r.Len(), len(a))
 	}
-
 	if r0 := r.Index(0).Interface().(*string); r0 != nil {
 		t.Errorf("r[0] == %#v (expected nil)", r0)
 	}
@@ -338,19 +336,19 @@ func TestUnflattenStruct(t *testing.T) {
 	typ := reflect.TypeOf(testStruct{})
 	RegisterType(typ)
 	tid := tIDOf(typ)
+
 	// A flatpack of two crosslinked testStructs.
 	//
-	// Unfortunately the
-	// flattened struct type can't be given a name, because unflatten
-	// expects it to be anonymous.
+	// Unfortunately the flattened struct type can't be given a name,
+	// because unflatten expects it to be anonymous.
 	//
-	// FIXME: use type aliases once they are available in go1.9
+	// FIXME: use type aliases once once Go1.9 is available.
 	var f = Flatpack{
 		Values: []tagged{
 			{
 				T: tid,
 				V: struct {
-					F_n int `json:"n"`
+					F_n int `json:"n"` // Piss off, golint.
 					F_p ref `json:"p"`
 				}{42, 1},
 			},
@@ -364,28 +362,19 @@ func TestUnflattenStruct(t *testing.T) {
 		},
 	}
 	r := f.unflatten(reflect.PtrTo(typ), reflect.ValueOf(ref(0)))
-	v := r.Interface().(*testStruct)
-	if v == nil {
-		t.Error("v.n == nil (expected non-nil)")
-	}
-	if v.n != 42 {
-		t.Errorf("v.n == %d (expected 42)", v.n)
-	}
-	if v.p == nil {
-		t.Error("v.p == nil (expected non-nil)")
-	}
-	if v.p.n != 69 {
-		t.Errorf("v.p.n == %d (expected 69)", v.p.n)
-	}
-	if v.p.p != v {
-		t.Errorf("v.p.p == %p (expected %p == v)", v.p.p, v)
+
+	// Cycle of two testStructs:
+	exp := &testStruct{42, &testStruct{69, nil}}
+	exp.p.p = exp
+
+	if v := r.Interface().(*testStruct); !reflect.DeepEqual(v, exp) {
+		t.Errorf("%#v != %#v", v, exp)
+	} else if v.p.p != v { // Double check cycle length
+		t.Errorf("v.p.p == %#v (expected %#v == v)", v.p.p, v)
 	}
 }
 
 func TestUnflattenSliceInterface(t *testing.T) {
-	// A struct containing an int and a slice of interface type should
-	// come back as a struct containign an int and a slice of structs
-	// containing a tID in addition to the original interface value.
 	var f Flatpack
 	sl := []tagged{{nilTID, nil}, {"int", 69}, {"string", "Hello"}, {"bool", true}}
 	exp := []interface{}{nil, 69, "Hello", true}
@@ -393,8 +382,7 @@ func TestUnflattenSliceInterface(t *testing.T) {
 	r := f.unflatten(typ, reflect.ValueOf(sl))
 	if r.Type() != typ {
 		t.Errorf("r.Type() == %s (expected %s)", r.Type(), typ)
-	}
-	if v := r.Interface().([]interface{}); !reflect.DeepEqual(v, exp) {
+	} else if v := r.Interface().([]interface{}); !reflect.DeepEqual(v, exp) {
 		t.Errorf("r == %#v (expected %#v)", v, exp)
 	}
 }

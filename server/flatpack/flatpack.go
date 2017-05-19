@@ -29,7 +29,7 @@
 // might be encountered; it will be convenient to do so by calling
 // RegisterType and/or RegisterTypeOf from an init() func in each
 // package whose types will be serialized.
-
+//
 // BUG(cpcallen): does not handle interior pointers (pointers to array
 // or struct element) correctly.
 //
@@ -112,6 +112,9 @@ func (f *Flatpack) Pack(label string, value interface{}) {
 
 // Unpack retrieves the value associated with the given label from the
 // Flatpack and returns it.
+//
+// FIXME: this should return an error value if any problems are
+// encountered (at present it just panics).
 func (f *Flatpack) Unpack(label string) interface{} {
 	idx, ok := f.Labels[label]
 	if !ok {
@@ -121,12 +124,17 @@ func (f *Flatpack) Unpack(label string) interface{} {
 	return f.unflatten(ityp, reflect.ValueOf(f.Values[idx])).Interface()
 }
 
-// Seal removes the index used when flattening pointer values.  This
-// ensures the Flatpack will not cause inadvertent retention of the
-// original (non-flat) objects if they would otherwise be eligible for
-// garbage collection.
+// Seal removes the indicies used when flattening and unflattening
+// pointer values.  This ensures the Flatpack will not cause
+// inadvertent retention of the original (non-flat) objects if they
+// would otherwise be eligible for garbage collection.
 //
 // After a Flatpack is sealed it cannot have additional values added to it.
+//
+// Normally unpacking the same pointer value twice will return the
+// same pointer (i.e., one pointing at the same object), but if Seal()
+// is called between calls to Unpack the second call to Unpack will
+// return a completely seperate copy.
 func (f *Flatpack) Seal() {
 	f.ptr2ref = nil
 }
@@ -243,19 +251,26 @@ func (f *Flatpack) flatten(v reflect.Value) reflect.Value {
 	}
 }
 
-// unflatten takes a (non-flat) tID and a value of that type's
-// corresponding flattened type and converts it back to its original
-// pre-flattened form.  In particular, if it succeeds then the the tID
-// of the type of result will be the same as the tID value given as
-// the first argument, the flatType of the argument will be the type
+// unflatten takes a (non-flat) reflect.Type and a value of that
+// type's corresponding flattened type and converts it back to its
+// original pre-flattened form.  In particular, the type of the v
+// argument should be the flattened form of the type specified by typ:
 //
-//     tIDOf(f.unflatten(t, v).Type()) == t && flatType(t) == v.Type()
+//     flatType(typ) == v.Type()
 //
+// and if unflattening is successfu then then the the type of the
+// result will be the same as the typ argument:
+//
+//     f.unflatten(typ, v).Type() == typ
+//
+// FIXME: Better error handling.  Return error instead of panicing.
 func (f *Flatpack) unflatten(typ reflect.Type, v reflect.Value) (ret reflect.Value) {
-	// FIXME: perhaps replace these runtime assertions with good tests?
+	// FIXME: should return error instead of throwing.
 	if ftyp := flatType(typ); v.Type() != ftyp {
 		panic(fmt.Errorf("Type mismatch unflattening a %s: expected %s but got %s", typ, ftyp, v.Type()))
 	}
+	// FIXME: move postcondition check to tests once we have some
+	// confidence with it working reliably in normal use.
 	defer func() {
 		if ret.Type() != typ {
 			panic(fmt.Errorf("Incorrect return type %s (expected %s)", ret.Type(), typ))
@@ -291,7 +306,7 @@ func (f *Flatpack) unflatten(typ reflect.Type, v reflect.Value) (ret reflect.Val
 				r.SetMapIndex(k, f.unflatten(typ.Elem(), v.MapIndex(k)))
 			}
 		} else {
-			// FIXME: Use MakeMapWithSize(typ, v.Len()) once Go1.9 is available
+			// FIXME: Use MakeMapWithSize(typ, v.Len()) once Go1.9 is available.
 			r = reflect.MakeMap(typ)
 			for i := 0; i < v.Len(); i++ {
 				kv := v.Index(i)
@@ -312,9 +327,8 @@ func (f *Flatpack) unflatten(typ reflect.Type, v reflect.Value) (ret reflect.Val
 		case f.ref2ptr == nil: // First time unflattening any pointer?
 			f.ref2ptr = make([]reflect.Value, len(f.Values))
 			fallthrough
-		case f.ref2ptr[idx] == reflect.Value{}:
+		case f.ref2ptr[idx] == reflect.Value{}: // First time for this pointer?
 			if tIDOf(typ.Elem()) != f.Values[idx].T {
-				// FIXME: better error handling
 				panic(fmt.Errorf("type mismatch: Values[%d] contains a %s (expected %s)", idx, f.Values[idx].T, tIDOf(typ.Elem())))
 			}
 			f.ref2ptr[idx] = reflect.New(typ.Elem())
@@ -346,14 +360,4 @@ func (f *Flatpack) unflatten(typ reflect.Type, v reflect.Value) (ret reflect.Val
 	default:
 		panic(fmt.Errorf("Invalid Kind %s", typ.Kind()))
 	}
-}
-
-// FIXME: remove this once unlattening pointers fixed
-func makeAddressable(v reflect.Value) reflect.Value {
-	if v.CanAddr() {
-		return v
-	}
-	vv := reflect.New(v.Type()).Elem()
-	vv.Set(v)
-	return vv
 }
