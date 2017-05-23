@@ -54,6 +54,90 @@ Object.defineProperty(String.prototype, 'charAt', {
   }
 });
 
+Object.defineProperty(String.prototype, 'substring', {
+  configurable: true,
+  enumerable: false,
+  writable: true,
+  value: function(indexStart, indexEnd) {
+    if (this === null || this === undefined) {
+      throw TypeError('"this" is null or undefined');
+    }
+    var str = String(this);
+    indexStart |= 0;
+    if (indexEnd === undefined) {
+      indexEnd = str.length;
+    } else {
+      indexEnd |= 0;
+      if (indexStart > indexEnd) {
+        var temp = indexEnd;
+        indexEnd = indexStart;
+        indexStart = temp;
+      }
+      indexEnd = Math.min(str.length, indexEnd);
+    }
+    indexStart = Math.max(0, indexStart);
+    // Shortcut if substring is whole string.
+    if (!indexStart && indexEnd == str.length) {
+      return str;
+    }
+    var outStr = '';
+    for (var i = indexStart; i < indexEnd; i++) {
+      outStr += str[i];
+    }
+    return outStr;
+  }
+});
+
+Object.defineProperty(String.prototype, 'toUpperCase', {
+  configurable: true,
+  enumerable: false,
+  writable: true,
+  value: function() {
+    // TODO: Support Unicode characters.
+    if (this === null || this === undefined) {
+      throw TypeError('"this" is null or undefined');
+    }
+    var str = String(this);
+    var lower = 'abcdefghijklmnopqrstuvwxyz';
+    var upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    var outStr = '';
+    for (var i = 0; i < str.length; i++) {
+      var x = lower.indexOf(str[i]);
+      if (x == -1) {
+        outStr += str[i];
+      } else {
+        outStr += upper[x];
+      }
+    }
+    return outStr;
+  }
+});
+
+Object.defineProperty(String.prototype, 'toLowerCase', {
+  configurable: true,
+  enumerable: false,
+  writable: true,
+  value: function() {
+    // TODO: Support Unicode characters.
+    if (this === null || this === undefined) {
+      throw TypeError('"this" is null or undefined');
+    }
+    var str = String(this);
+    var lower = 'abcdefghijklmnopqrstuvwxyz';
+    var upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    var outStr = '';
+    for (var i = 0; i < str.length; i++) {
+      var x = upper.indexOf(str[i]);
+      if (x == -1) {
+        outStr += str[i];
+      } else {
+        outStr += lower[x];
+      }
+    }
+    return outStr;
+  }
+});
+
 Object.defineProperty(String.prototype, 'trim', {
   configurable: true,
   enumerable: false,
