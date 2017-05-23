@@ -26,8 +26,60 @@ import (
 // This file provides some utility functions used in testing the rest
 // of the package.
 
-func recEqual(i1, i2 interface{}, disjoint bool) bool {
-	return recValueEqual(reflect.ValueOf(i1), reflect.ValueOf(i2), disjoint)
+// RecEqual reports whether x and y are "recursively equal", as
+// defined below.  This is similar to reflect.DeepEqual, but also
+// considers whether they have the same structure (shared substructure
+// and cycles).  Additionally, recEqual is slightly more picky about
+// some types, and and more lenient about others, than DeepEqual is.
+//
+// Values of distinct types are never recursively equal.  Values of
+// identical type are recursively equal if one of the following is
+// true:
+//
+// Boolean, integer and string values are recursively equal if they
+// are equal according to the == operator.
+//
+// Arrays are recursively equal if all their corresponding elements
+// are recursively equal.
+//
+// Complex numbers are recursively equal if their corresponding real
+// and imaginary parts are recursively equal.
+//
+// Floats are recursively equal if they are both NaN, both 0 or both
+// -0; or if they are non-zero and equal according to the == operator.
+//
+// Interface values are recursively equal if their contents are
+// recurisvely equal.
+//
+// Map values are recursively equal if their values as references are
+// recursively equal according to the rules for pointers (below), and
+// they additionally have the same length, and their corresponding
+// keys (according to ==) map to recursively equal values.  (Note that
+// recursive equality for maps with NaN keys is not well-defined.)
+//
+// Pointer values are recursively equal if they point at recursively
+// equal values AND ADDITIONALLY if every occurence of pointer p1 in v1
+// corresponds to the same pointer p2 in v2 (and vice versa).
+//
+// Slice values are recursively equal if they are both nil or both
+// non-nil, and have the same length, and their corresponding elements
+// are deeply equal.
+//
+// Struct values are recursively equal if their corresponding fields
+// (exported and unexported) are recursively equal.
+//
+// Func values are recursively equal if they are both nil or if they
+// point to the same location.
+//
+// Comparison of Channel and unsafe.Pointer values is not implemented;
+// attempting to compare such values will cause a panic.
+//
+// In addition to the above rules, if disjoint == true then RecEqual
+// will return false any map, pointer, or slice backing pointer value
+// found in v1 also appears in v2.
+//
+// BUG(cpcallen): Checking of slices for shared substructure is very
+// primitive and likely to miss many cases.
 func RecEqual(x, y interface{}, disjoint bool) bool {
 	return recValueEqual(reflect.ValueOf(x), reflect.ValueOf(y), disjoint)
 }
@@ -42,13 +94,12 @@ func recValueEqual(v1, v2 reflect.Value, disjoint bool) bool {
 // If disjoint is true, then v1 and v2 must not share any substructure.
 //
 // v1s and v2s keep track of previously-visited values; in v1s the
-// keys are values of v1 already seen while the values are the
-// corresponding v2 values; in v2s it is vice versa.  We keep maps
-// for both directions because otherwise certain cases of structural
-// dissimilarity (or shared substructure between v1 and v2) might not
-// otherwise be detected.
+// keys are pointers found in v2 and their corresponding pointers from
+// v2; in v2s it is vice versa.  We keep maps for both directions
+// because otherwise certain cases of structural dissimilarity (or
+// shared substructure between v1 and v2) might otherwise not be caught.
 //
-// FXIME: Slices shoudl have better check for shared backing
+// FXIME: Slices should have better check for shared backing
 func recEq(v1, v2 reflect.Value, disjoint bool, v1s, v2s map[unsafe.Pointer]unsafe.Pointer) bool {
 	if !v1.IsValid() {
 		return !v2.IsValid()
@@ -145,11 +196,6 @@ func recEq(v1, v2 reflect.Value, disjoint bool, v1s, v2s map[unsafe.Pointer]unsa
 			}
 		}
 	case reflect.Func:
-		// Because you can't meanigfully produce a disjoint f2 that
-		// does the same as f1 at runtime (and would have no way to in
-		// general to verify the functions were equivalent even if you
-		// could create one), we just test for pointer equality (and
-		// *not* disjointness):
 		return unsafe.Pointer(v1.Pointer()) == unsafe.Pointer(v2.Pointer())
 	case reflect.Chan, reflect.UnsafePointer:
 		panic(fmt.Errorf("Comparison of %s not implemented", v1.Kind()))
