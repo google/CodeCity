@@ -56,7 +56,7 @@ Object.defineProperty(Math2, 'abs', {
   writable: true,
   value: function(x) {
     x = Number(x);
-    return x < 0 ? -x : x;
+    return x > 0 ? x : (x < 0 ? -x : (x === 0 ? 0 : NaN));
   }
 });
 
@@ -110,6 +110,8 @@ Object.defineProperty(Math2, 'max', {
       }
       if (n > max) {
         max = n;
+      } else if (!n && !max && (1 / n == Infinity)) {
+        max = 0;  // 0 is bigger than -0.
       }
     }
     return max;
@@ -129,6 +131,8 @@ Object.defineProperty(Math2, 'min', {
       }
       if (n < min) {
         min = n;
+      } else if (!n && !min && (1 / n == -Infinity)) {
+        min = -0;  // -0 is smaller than 0.
       }
     }
     return min;

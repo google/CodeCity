@@ -451,6 +451,7 @@ Object.defineProperty(Array.prototype, 'sort', {
   enumerable: false,
   writable: true,
   value: function(opt_comp) {
+    // TODO: Switch to any algorithm other than bubble sort.
     for (var i = 0; i < this.length; i++) {
       var changes = 0;
       for (var j = 0; j < this.length - i - 1; j++) {
