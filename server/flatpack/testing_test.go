@@ -75,11 +75,6 @@ func recEq(v1, v2 reflect.Value, disjoint bool, v1s, v2s map[unsafe.Pointer]unsa
 					return false
 				}
 			}
-		} else {
-			// Short circuit?
-			if v1p == v2p {
-				return true
-			}
 		}
 
 		// Check if we have previously visited this v1 (and if so whether
@@ -121,7 +116,7 @@ func recEq(v1, v2 reflect.Value, disjoint bool, v1s, v2s map[unsafe.Pointer]unsa
 		for _, k := range v1.MapKeys() {
 			v1v := v1.MapIndex(k)
 			v2v := v2.MapIndex(k)
-			if !v1v.IsValid() || !v2v.IsValid() || !recEq(v1.MapIndex(k), v2.MapIndex(k), disjoint, v1s, v2s) {
+			if !v1v.IsValid() || !v2v.IsValid() || !recEq(v1v, v2v, disjoint, v1s, v2s) {
 				return false
 			}
 		}

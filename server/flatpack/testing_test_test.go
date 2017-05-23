@@ -33,8 +33,7 @@ type NotBasic Basic
 type Loop *Loop
 type Loopy interface{}
 
-var loop1, loop2, loop3, loop4, loop5 Loop
-var loopy1, loopy2, loopy3, loopy4, loopy5 Loopy
+type cons struct{ car, cdr interface{} }
 
 // self is a special type that signals that the other agument should
 // be compared against itself.
@@ -47,6 +46,10 @@ var (
 	fn3 = func() { fn1() } // Not nil.
 )
 
+var loop1, loop2, loop3, loop4, loop5, loop6 Loop
+var loopy1, loopy2, loopy3, loopy4, loopy5, loopy6 Loopy
+var cons1, cons2, cons3 cons
+
 func init() {
 	loop1 = &loop2
 	loop2 = &loop1
@@ -55,6 +58,7 @@ func init() {
 	loop4 = &loop3
 
 	loop5 = &loop5
+	loop6 = &loop5
 
 	loopy1 = &loopy2
 	loopy2 = &loopy1
@@ -63,6 +67,11 @@ func init() {
 	loopy4 = &loopy3
 
 	loopy5 = &loopy5
+	loopy6 = &loopy5
+
+	cons1 = cons{"foo", "bar"}
+	cons2 = cons{"foo", "bar"}
+	cons3 = cons{"foo", "bar"}
 }
 
 type recEqualTest struct {
@@ -85,12 +94,16 @@ var recEqualTests = []recEqualTest{
 	{error(nil), error(nil), true, true},
 	{map[int]string{1: "one", 2: "two"}, map[int]string{2: "two", 1: "one"}, true, true},
 	{fn1, fn2, true, true},
+	{[][]int{{1}}, [][]int{{1}}, true, true},
+	{&[1]float64{math.NaN()}, &[1]float64{math.NaN()}, true, true},
+	{[]float64{math.NaN()}, []float64{math.NaN()}, true, true},
+	{math.NaN(), math.NaN(), true, true},
 
 	// Equal, but not disjoint:
 	{make([]int, 10), self{}, true, false},
 	{&[1]float64{math.NaN()}, self{}, true, false},
 	{[]float64{math.NaN()}, self{}, true, false},
-	{map[float64]float64{math.NaN(): 1}, self{}, true, false},
+	{map[float64]float64{1: math.NaN()}, self{}, true, false},
 
 	// Inequalities:
 	{1, 2, false, false},
@@ -110,16 +123,10 @@ var recEqualTests = []recEqualTest{
 	{1, nil, false, false},
 	{fn1, fn3, false, false},
 	{fn3, fn3, true, true},
-	{[][]int{{1}}, [][]int{{1}}, true, true},
 	{[][]int{{1}}, [][]int{{2}}, false, false},
-	{math.NaN(), math.NaN(), true, true},
-
-	{&[1]float64{math.NaN()}, &[1]float64{math.NaN()}, true, true},
-	{[]float64{math.NaN()}, []float64{math.NaN()}, true, true},
 	{map[float64]float64{math.NaN(): 1}, map[float64]float64{1: 2}, false, false},
-	{map[float64]float64{1: 2}, map[float64]float64{math.NaN(): 1}, false, false},
 
-	// Nil vs empty: not the same.
+	// Nil vs empty: not the same:
 	{[]int{}, []int(nil), false, false},
 	{[]int{}, []int{}, true, true},
 	{[]int(nil), []int(nil), true, true},
@@ -127,7 +134,7 @@ var recEqualTests = []recEqualTest{
 	{map[int]int{}, map[int]int{}, true, true},
 	{map[int]int(nil), map[int]int(nil), true, true},
 
-	// Mismatched types
+	// Mismatched types:
 	{1, 1.0, false, false},
 	{int32(1), int64(1), false, false},
 	{0.5, "hello", false, false},
@@ -136,7 +143,7 @@ var recEqualTests = []recEqualTest{
 	{Basic{1, 0.5}, NotBasic{1, 0.5}, false, false},
 	{map[uint]string{1: "one", 2: "two"}, map[int]string{2: "two", 1: "one"}, false, false},
 
-	// Possible loops.
+	// Loops:
 	{&loop1, self{}, true, false},
 	{&loop1, &loop2, true, false},
 	{&loop1, &loop3, true, true},
@@ -146,6 +153,14 @@ var recEqualTests = []recEqualTest{
 	{&loopy1, &loopy2, true, false},
 	{&loopy1, &loopy3, true, true},
 	{&loopy1, &loopy5, false, false},
+
+	// M(ism)atched structure:
+	{cons{&cons1, &cons2}, self{}, true, false},
+	{cons{&cons1, &cons2}, cons{&cons3, &cons3}, false, false},
+	{&loop1, &loop6, false, false},
+	{&loop5, &loop6, false, false},
+	{&loopy1, &loopy6, false, false},
+	{&loopy5, &loopy6, false, false},
 }
 
 func TestRecEqual(t *testing.T) {
