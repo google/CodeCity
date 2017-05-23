@@ -198,10 +198,10 @@ func TestRecEqual(t *testing.T) {
 		if test.b == (self{}) {
 			test.b = test.a
 		}
-		if r := recEqual(test.a, test.b, false); r != test.eq {
+		if r := RecEqual(test.a, test.b, false); r != test.eq {
 			t.Errorf("recEqual(%#v, %#v, false) = %v, want %v", test.a, test.b, r, test.eq)
 		}
-		if r := recEqual(test.a, test.b, true); r != test.disjEq {
+		if r := RecEqual(test.a, test.b, true); r != test.disjEq {
 			t.Errorf("recEqual(%#v, %#v, true) = %v, want %v", test.a, test.b, r, test.disjEq)
 		}
 	}

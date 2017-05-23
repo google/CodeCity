@@ -28,6 +28,8 @@ import (
 
 func recEqual(i1, i2 interface{}, disjoint bool) bool {
 	return recValueEqual(reflect.ValueOf(i1), reflect.ValueOf(i2), disjoint)
+func RecEqual(x, y interface{}, disjoint bool) bool {
+	return recValueEqual(reflect.ValueOf(x), reflect.ValueOf(y), disjoint)
 }
 
 func recValueEqual(v1, v2 reflect.Value, disjoint bool) bool {
