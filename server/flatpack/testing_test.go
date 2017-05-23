@@ -66,11 +66,8 @@ func recEq(v1, v2 reflect.Value, disjoint bool, v1s, v2s map[unsafe.Pointer]unsa
 
 		// Check for disjointness if requested:
 		if disjoint {
-			if v1.Kind() == reflect.Slice {
-				if overlap(v1, v2) {
-					return false
-				}
-			} else {
+			// (But ignore zero-capacity slices.)
+			if v1.Kind() != reflect.Slice || v1.Cap() > 0 && v2.Cap() > 0 {
 				_, v2in1 := v1s[v2p]
 				_, v1in2 := v2s[v1p]
 				if (!v1.IsNil() && v1p == v2p) || v2in1 || v1in2 {
@@ -179,12 +176,4 @@ func same(f1, f2 float64) bool {
 		return true
 	}
 	return false
-}
-
-// overlap makes a best-effort attempt to determine if the backing
-// array for its arguments (which must be the reflect.Value
-// representations of slices) overlap, and returns true if they do.
-func overlap(s1, s2 reflect.Value) bool {
-	// Possible false positives...  :-)
-	return s1.Pointer() == s2.Pointer() && s1.Cap() > 0 && s2.Cap() > 0
 }
