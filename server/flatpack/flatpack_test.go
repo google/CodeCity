@@ -125,7 +125,7 @@ func TestFlattenNonStringMap(t *testing.T) {
 	if r.Len() != len(m) {
 		t.Errorf("r.Len() == %d (expected %d)", r.Len(), len(m))
 	}
-	for i := 0; i < r.Len(); i++ {
+	for i, l := 0, r.Len(); i < l; i++ {
 		k := r.Index(i).Field(0).Interface().(tagged).V.([2]int)
 		v := r.Index(i).Field(1).Interface().(tagged).V
 		if m[k] != v {

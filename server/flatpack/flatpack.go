@@ -174,7 +174,7 @@ func (f *Flatpack) flatten(v reflect.Value) reflect.Value {
 		return v
 	case reflect.Array:
 		r := reflect.New(ftyp).Elem()
-		for i := 0; i < v.Len(); i++ {
+		for i, l := 0, v.Len(); i < l; i++ {
 			r.Index(i).Set(f.flatten(v.Index(i)))
 		}
 		return r
@@ -226,7 +226,7 @@ func (f *Flatpack) flatten(v reflect.Value) reflect.Value {
 		// capacity will not be preserved when deserializing, so trim
 		// our flattened version now (i.e., cap == len).
 		r := reflect.MakeSlice(ftyp, v.Len(), v.Len())
-		for i := 0; i < v.Len(); i++ {
+		for i, l := 0, v.Len(); i < l; i++ {
 			r.Index(i).Set(f.flatten(v.Index(i)))
 		}
 		return r
@@ -240,7 +240,7 @@ func (f *Flatpack) flatten(v reflect.Value) reflect.Value {
 			v = vv
 		}
 		r := reflect.New(ftyp).Elem()
-		for i := 0; i < ftyp.NumField(); i++ {
+		for i, n := 0, ftyp.NumField(); i < n; i++ {
 			r.Field(i).Set(f.flatten(defeat(v.Field(i))))
 		}
 		return r
@@ -284,7 +284,7 @@ func (f *Flatpack) unflatten(typ reflect.Type, v reflect.Value) (ret reflect.Val
 		return v
 	case reflect.Array:
 		r := reflect.New(typ).Elem()
-		for i := 0; i < v.Len(); i++ {
+		for i, l := 0, v.Len(); i < l; i++ {
 			r.Index(i).Set(f.unflatten(typ.Elem(), v.Index(i)))
 		}
 		return r
@@ -308,7 +308,7 @@ func (f *Flatpack) unflatten(typ reflect.Type, v reflect.Value) (ret reflect.Val
 		} else {
 			// FIXME: Use MakeMapWithSize(typ, v.Len()) once Go1.9 is available.
 			r = reflect.MakeMap(typ)
-			for i := 0; i < v.Len(); i++ {
+			for i, l := 0, v.Len(); i < l; i++ {
 				kv := v.Index(i)
 				uk := f.unflatten(typ.Key(), kv.Field(0))
 				uv := f.unflatten(typ.Elem(), kv.Field(1))
@@ -343,13 +343,13 @@ func (f *Flatpack) unflatten(typ reflect.Type, v reflect.Value) (ret reflect.Val
 		// No info re: spare capacity survives (de)serialisation, so
 		// assume cap == len.
 		r := reflect.MakeSlice(typ, v.Len(), v.Len())
-		for i := 0; i < v.Len(); i++ {
+		for i, l := 0, v.Len(); i < l; i++ {
 			r.Index(i).Set(f.unflatten(typ.Elem(), v.Index(i)))
 		}
 		return r
 	case reflect.Struct:
 		r := reflect.New(typ).Elem()
-		for i := 0; i < typ.NumField(); i++ {
+		for i, n := 0, typ.NumField(); i < n; i++ {
 			src := v.Field(i)
 			dst := defeat(r.Field(i))
 			dst.Set(f.unflatten(dst.Type(), src))

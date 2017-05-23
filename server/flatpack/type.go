@@ -145,7 +145,7 @@ func flatType(typ reflect.Type) reflect.Type {
 		return reflect.SliceOf(flatType(typ.Elem()))
 	case reflect.Struct:
 		var fields []reflect.StructField
-		for i := 0; i < typ.NumField(); i++ {
+		for i, n := 0, typ.NumField(); i < n; i++ {
 			f := typ.Field(i)
 			fields = append(fields,
 				reflect.StructField{
@@ -165,14 +165,6 @@ func flatType(typ reflect.Type) reflect.Type {
 // init registers built-in Go types that are likely to be needed when
 // deserializing.
 func init() {
-	var ifaces = reflect.TypeOf(
-		struct {
-			// i1 typename
-		}{})
-	for i := 0; i < ifaces.NumField(); i++ {
-		RegisterType(ifaces.Field(i).Type)
-	}
-
 	var examples = []interface{}{
 		uint8(0),
 		uint16(0),
