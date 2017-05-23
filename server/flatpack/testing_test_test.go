@@ -32,6 +32,7 @@ type NotBasic Basic
 
 type Loop *Loop
 type Loopy interface{}
+type Loopier map[int]interface{}
 
 type cons struct{ car, cdr interface{} }
 
@@ -48,7 +49,16 @@ var (
 
 var loop1, loop2, loop3, loop4, loop5, loop6 Loop
 var loopy1, loopy2, loopy3, loopy4, loopy5, loopy6 Loopy
+var loopier1 = Loopier{}
+var loopier2 = Loopier{}
+var loopier3 = Loopier{}
+var loopier4 = Loopier{}
+var loopier5 = Loopier{}
+var loopier6 = Loopier{}
 var cons1, cons2, cons3 cons
+var map1 = map[int]int{1: 2}
+var map2 = map[int]int{1: 2}
+var map3 = map[int]int{1: 2}
 
 func init() {
 	loop1 = &loop2
@@ -68,6 +78,15 @@ func init() {
 
 	loopy5 = &loopy5
 	loopy6 = &loopy5
+
+	loopier1[1] = loopier2
+	loopier2[1] = loopier1
+
+	loopier3[1] = loopier4
+	loopier4[1] = loopier3
+
+	loopier5[1] = loopier5
+	loopier6[1] = loopier5
 
 	cons1 = cons{"foo", "bar"}
 	cons2 = cons{"foo", "bar"}
@@ -99,12 +118,14 @@ var recEqualTests = []recEqualTest{
 	{&[1]float64{math.NaN()}, &[1]float64{math.NaN()}, true, true},
 	{[]float64{math.NaN()}, []float64{math.NaN()}, true, true},
 	{math.NaN(), math.NaN(), true, true},
+	{cons{map1, map1}, cons{map2, map2}, true, true},
 
 	// Equal, but not disjoint:
 	{make([]int, 10), self{}, true, false},
 	{&[1]float64{math.NaN()}, self{}, true, false},
 	{[]float64{math.NaN()}, self{}, true, false},
 	{map[float64]float64{1: math.NaN()}, self{}, true, false},
+	{cons{map1, map2}, cons{map2, map3}, true, false},
 
 	// Inequalities:
 	{1, 2, false, false},
@@ -157,6 +178,11 @@ var recEqualTests = []recEqualTest{
 	{&loopy1, &loopy3, true, true},
 	{&loopy1, &loopy5, false, false},
 
+	{&loopier1, self{}, true, false},
+	{&loopier1, &loopier2, true, false},
+	{&loopier1, &loopier3, true, true},
+	{&loopier1, &loopier5, false, false},
+
 	// M(ism)atched structure:
 	{cons{&cons1, &cons2}, self{}, true, false},
 	{cons{&cons1, &cons2}, cons{&cons3, &cons3}, false, false},
@@ -164,6 +190,7 @@ var recEqualTests = []recEqualTest{
 	{&loop5, &loop6, false, false},
 	{&loopy1, &loopy6, false, false},
 	{&loopy5, &loopy6, false, false},
+	{cons{map1, map1}, cons{map2, map3}, false, false},
 }
 
 func TestRecEqual(t *testing.T) {
