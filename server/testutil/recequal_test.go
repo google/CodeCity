@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package flatpack
+package testutil
 
 import (
 	"math"
@@ -118,6 +118,10 @@ var recEqualTests = []recEqualTest{
 	{&[1]float64{math.NaN()}, &[1]float64{math.NaN()}, true, true},
 	{[]float64{math.NaN()}, []float64{math.NaN()}, true, true},
 	{math.NaN(), math.NaN(), true, true},
+	{math.Inf(1), math.Inf(1), true, true},
+	{math.Inf(-1), math.Inf(-1), true, true},
+	{math.Copysign(0, -1), math.Copysign(0, -1), true, true},
+	{[...]float64{math.NaN(), math.Copysign(0, -1), math.Inf(1), math.Inf(-1)}, self{}, true, true},
 	{cons{map1, map1}, cons{map2, map2}, true, true},
 
 	// Equal, but not disjoint:

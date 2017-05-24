@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package flatpack
+package testutil
 
 import (
 	"fmt"
@@ -191,7 +191,14 @@ func recEq(v1, v2 reflect.Value, disjoint bool, v1s, v2s map[unsafe.Pointer]unsa
 			v2 = vv
 		}
 		for i, n := 0, v1.NumField(); i < n; i++ {
-			if !recEq(defeat(v1.Field(i)), defeat(v2.Field(i)), disjoint, v1s, v2s) {
+			v1v := v1.Field(i)
+			v2v := v2.Field(i)
+			// Defeat restrictions on access to unexported fields:
+			if !v1v.CanSet() {
+				v1v = reflect.NewAt(v1v.Type(), unsafe.Pointer(v1v.UnsafeAddr())).Elem()
+				v2v = reflect.NewAt(v2v.Type(), unsafe.Pointer(v2v.UnsafeAddr())).Elem()
+			}
+			if !recEq(v1v, v2v, disjoint, v1s, v2s) {
 				return false
 			}
 		}
