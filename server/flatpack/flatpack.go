@@ -272,7 +272,9 @@ func (f *Flatpack) unflatten(typ reflect.Type, v reflect.Value) (ret reflect.Val
 	// FIXME: move postcondition check to tests once we have some
 	// confidence with it working reliably in normal use.
 	defer func() {
-		if ret.Type() != typ {
+		if p := recover(); p != nil {
+			panic(p)
+		} else if ret.Type() != typ {
 			panic(fmt.Errorf("Incorrect return type %s (expected %s)", ret.Type(), typ))
 		}
 	}()
