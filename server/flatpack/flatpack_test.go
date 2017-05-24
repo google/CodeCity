@@ -19,6 +19,8 @@ package flatpack
 import (
 	"reflect"
 	"testing"
+
+	"CodeCity/server/testutil"
 )
 
 // Some user-declared types for testing:
@@ -29,51 +31,52 @@ type myFloat64 float64
 type myComplex64 complex64
 type myString string
 
-func TestFlattenSimple(t *testing.T) {
-	// All these should not be changed by flatten(), and nothing
-	// should be added to the flatpack:
-	var cases = []interface{}{
-		false,
-		int(1),
-		int8(2),
-		int16(3),
-		int32(4),
-		int64(5),
-		uint(6),
-		uint8(7),
-		uint16(8),
-		uint32(9),
-		uint64(10),
-		uintptr(11),
-		float32(12.0),
-		float64(13.0),
-		complex64(14 + 15i),
-		complex128(16 + 17i),
-		string("Eighteen"),
+// All these should not be changed by flatten() or unflatten(), and in
+// the former case nothing should be added to the flatpack.
+var simpleCases = []interface{}{
+	false,
+	int(1),
+	int8(2),
+	int16(3),
+	int32(4),
+	int64(5),
+	uint(6),
+	uint8(7),
+	uint16(8),
+	uint32(9),
+	uint64(10),
+	uintptr(11),
+	float32(12.0),
+	float64(13.0),
+	complex64(14 + 15i),
+	complex128(16 + 17i),
+	string("Eighteen"),
 
-		myBool(false),
-		myInt(19),
-		myUint64(20),
-		myFloat64(21.0),
-		myComplex64(22 + 23i),
-		myString("twenty-four"),
+	myBool(false),
+	myInt(19),
+	myUint64(20),
+	myFloat64(21.0),
+	myComplex64(22 + 23i),
+	myString("twenty-four"),
 
-		[3]int{24, 25, 26},
-		[]int{27, 28, 29},
-		map[myString]myInt{
-			"cpcallen": 2365779,
-			"fraser":   7499832,
-		},
-	}
+	[3]int{24, 25, 26},
+	[]int{27, 28, 29},
+	map[myString]myInt{
+		"cpcallen": 2365779,
+		"fraser":   7499832,
+	},
+}
+
+func TestSimple(t *testing.T) {
 	var f = New()
-	for _, c := range cases {
-		r := f.flatten(reflect.ValueOf(c))
-		if reflect.TypeOf(c).Comparable() {
-			if r.Interface() != c {
-				t.Errorf("f.flatten(reflect.ValueOf(%#v)).Interface() == %#v (expected %#v)", c, r, c)
-			}
-		} else if !reflect.DeepEqual(r.Interface(), c) {
+	for _, c := range simpleCases {
+		typ := reflect.TypeOf(c)
+		v := reflect.ValueOf(c)
+		if r := f.flatten(v); !testutil.RecEqual(r.Interface(), c, true) {
 			t.Errorf("f.flatten(reflect.ValueOf(%#v)).Interface() == %#v (expected %#v)", c, r, c)
+		}
+		if r := f.unflatten(typ, v); !testutil.RecEqual(r.Interface(), c, true) {
+			t.Errorf("f.unflatten(%s, reflect.ValueOf(%#v)).Interface() == %#v (expected %#v)", typ, c, r, c)
 		}
 	}
 	if len(f.Values) != 0 {
@@ -83,7 +86,7 @@ func TestFlattenSimple(t *testing.T) {
 
 func TestFlattenStringMap(t *testing.T) {
 	var a = [...]int{42, 69, 105}
-	var m = map[string]*int{
+	var m = map[myString]*int{
 		"answer":  &a[0],
 		"naughty": &a[1],
 		"random":  &a[2],
@@ -97,7 +100,7 @@ func TestFlattenStringMap(t *testing.T) {
 	if r.Len() != len(m) {
 		t.Errorf("r.Len() == %d (expected %d)", r.Len(), len(m))
 	}
-	for k, v := range r.Interface().(map[string]ref) {
+	for k, v := range r.Interface().(map[myString]ref) {
 		if *(m[k]) != f.Values[v].V {
 			t.Errorf("*(m[%#v]) == %#v in input but %#v in output", k, *(m[k]), f.Values[v].V)
 		}
@@ -198,54 +201,7 @@ func TestFlattenStructSliceInterface(t *testing.T) {
 	}
 }
 
-func TestUnflattenSimple(t *testing.T) {
-	// All these should not be changed by unflatten():
-	var cases = []interface{}{
-		false,
-		int(1),
-		int8(2),
-		int16(3),
-		int32(4),
-		int64(5),
-		uint(6),
-		uint8(7),
-		uint16(8),
-		uint32(9),
-		uint64(10),
-		uintptr(11),
-		float32(12.0),
-		float64(13.0),
-		complex64(14 + 15i),
-		complex128(16 + 17i),
-		string("Eighteen"),
-
-		myBool(false),
-		myInt(19),
-		myUint64(20),
-		myFloat64(21.0),
-		myComplex64(22 + 23i),
-		myString("twenty-four"),
-
-		[3]int{24, 25, 26},
-		[]int{27, 28, 29},
-		map[myString]myInt{
-			"cpcallen": 2365779,
-			"fraser":   7499832,
-		},
-	}
-	var f = New()
-	for _, c := range cases {
-		tid := tIDOf(reflect.TypeOf(c))
-		r := f.unflatten(reflect.TypeOf(c), reflect.ValueOf(c))
-		if reflect.TypeOf(c).Comparable() {
-			if r.Interface() != c {
-				t.Errorf("f.unflatten(%#v, reflect.ValueOf(%#v)).Interface() == %#v (expected %#v)", tid, c, r, c)
-			}
-		} else if !reflect.DeepEqual(r.Interface(), c) {
-			t.Errorf("f.unflatten(%#v, reflect.ValueOf(%#v)).Interface() == %#v (expected %#v)", tid, c, r, c)
-		}
-	}
-}
+/********************************************************************/
 
 func TestUnflattenStringMap(t *testing.T) {
 	var f = Flatpack{
