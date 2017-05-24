@@ -174,7 +174,7 @@ func (f *Flatpack) flatten(v reflect.Value) reflect.Value {
 		return v
 	case reflect.Array:
 		r := reflect.New(ftyp).Elem()
-		for i, l := 0, v.Len(); i < l; i++ {
+		for i, n := 0, v.Len(); i < n; i++ {
 			r.Index(i).Set(f.flatten(v.Index(i)))
 		}
 		return r
@@ -226,7 +226,7 @@ func (f *Flatpack) flatten(v reflect.Value) reflect.Value {
 		// capacity will not be preserved when deserializing, so trim
 		// our flattened version now (i.e., cap == len).
 		r := reflect.MakeSlice(ftyp, v.Len(), v.Len())
-		for i, l := 0, v.Len(); i < l; i++ {
+		for i, n := 0, v.Len(); i < n; i++ {
 			r.Index(i).Set(f.flatten(v.Index(i)))
 		}
 		return r
@@ -284,7 +284,7 @@ func (f *Flatpack) unflatten(typ reflect.Type, v reflect.Value) (ret reflect.Val
 		return v
 	case reflect.Array:
 		r := reflect.New(typ).Elem()
-		for i, l := 0, v.Len(); i < l; i++ {
+		for i, n := 0, v.Len(); i < n; i++ {
 			r.Index(i).Set(f.unflatten(typ.Elem(), v.Index(i)))
 		}
 		return r
@@ -308,7 +308,7 @@ func (f *Flatpack) unflatten(typ reflect.Type, v reflect.Value) (ret reflect.Val
 		} else {
 			// FIXME: Use MakeMapWithSize(typ, v.Len()) once Go1.9 is available.
 			r = reflect.MakeMap(typ)
-			for i, l := 0, v.Len(); i < l; i++ {
+			for i, n := 0, v.Len(); i < n; i++ {
 				kv := v.Index(i)
 				uk := f.unflatten(typ.Key(), kv.Field(0))
 				uv := f.unflatten(typ.Elem(), kv.Field(1))
@@ -343,7 +343,7 @@ func (f *Flatpack) unflatten(typ reflect.Type, v reflect.Value) (ret reflect.Val
 		// No info re: spare capacity survives (de)serialisation, so
 		// assume cap == len.
 		r := reflect.MakeSlice(typ, v.Len(), v.Len())
-		for i, l := 0, v.Len(); i < l; i++ {
+		for i, n := 0, v.Len(); i < n; i++ {
 			r.Index(i).Set(f.unflatten(typ.Elem(), v.Index(i)))
 		}
 		return r
