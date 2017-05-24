@@ -51,11 +51,14 @@ import (
 // Interface values are recursively equal if their contents are
 // recurisvely equal.
 //
-// Map values are recursively equal if their values as references are
-// recursively equal according to the rules for pointers (below), and
-// they additionally have the same length, and their corresponding
-// keys (according to ==) map to recursively equal values.  (Note that
-// recursive equality for maps with NaN keys is not well-defined.)
+// Map values are recursively equal if they have the same length, and
+// their corresponding keys (according to ==) map to recursively equal
+// values AND ADDITIONALY that every occurrence of a map value m1
+// (i.e., map values derived from the same map literal or make() call)
+// in v1 corresponds to the same map value m2 in v2 (and vice versa).
+//
+// Note that recursive equality for maps with NaN keys is
+// not well-defined.
 //
 // Pointer values are recursively equal if they point at recursively
 // equal values AND ADDITIONALLY if every occurence of pointer p1 in v1
@@ -162,6 +165,9 @@ func recEq(v1, v2 reflect.Value, disjoint bool, v1s, v2s map[unsafe.Pointer]unsa
 	case reflect.Map:
 		if v1.IsNil() != v2.IsNil() || v1.Len() != v2.Len() {
 			return false
+		}
+		if disjoint && v1.Type().Key().Kind() == reflect.Ptr {
+			panic("Disjoint maps with pointer keys can never be recursively equal")
 		}
 		for _, k := range v1.MapKeys() {
 			v1v := v1.MapIndex(k)
