@@ -84,262 +84,117 @@ func TestSimple(t *testing.T) {
 	}
 }
 
-func TestFlattenStringMap(t *testing.T) {
-	var a = [...]int{42, 69, 105}
-	var m = map[myString]*int{
-		"answer":  &a[0],
-		"naughty": &a[1],
-		"random":  &a[2],
-	}
-	var f = New()
-	r := f.flatten(reflect.ValueOf(m))
-
-	if r.Type() != flatType(reflect.TypeOf(m)) {
-		t.Errorf("r.Type() == %s (expected %s)", r.Type(), flatType(reflect.TypeOf(m)))
-	}
-	if r.Len() != len(m) {
-		t.Errorf("r.Len() == %d (expected %d)", r.Len(), len(m))
-	}
-	for k, v := range r.Interface().(map[myString]ref) {
-		if *(m[k]) != f.Values[v].V {
-			t.Errorf("*(m[%#v]) == %#v in input but %#v in output", k, *(m[k]), f.Values[v].V)
-		}
-		delete(m, k)
-	}
-	if len(m) > 0 {
-		t.Errorf("%#v present in input but not in output", m)
-	}
+type complexCase struct {
+	name       string      // Testcase name
+	pre        interface{} // Value to flatten before test (as setup)
+	orig, flat interface{} // Original and flattend value
+	newVals    int         // How many items will be added to .Values()?
 }
 
-func TestFlattenNonStringMap(t *testing.T) {
-	// Gratuitous use of interface{} to verify key and value types are
-	// also (recursively) flattened.
-	var m = map[interface{}]interface{}{
-		[2]int{1914, 1918}: "WW I",
-		[2]int{1939, 1945}: "WW II",
-		[2]int{2026, 2053}: "WW III", // Citation: http://memory-alpha.wikia.com/wiki/World_War_III
-	}
-	var f = New()
-	r := f.flatten(reflect.ValueOf(m))
+// Data used (by pointer) in some complex cases:
 
-	if r.Type() != flatType(reflect.TypeOf(m)) {
-		t.Errorf("r.Type() == %s (expected %s)", r.Type(), flatType(reflect.TypeOf(m)))
-	}
-	if r.Len() != len(m) {
-		t.Errorf("r.Len() == %d (expected %d)", r.Len(), len(m))
-	}
-	for i, l := 0, r.Len(); i < l; i++ {
-		k := r.Index(i).Field(0).Interface().(tagged).V.([2]int)
-		v := r.Index(i).Field(1).Interface().(tagged).V
-		if m[k] != v {
-			t.Errorf("m[%#v] == %#v in input but %#v in output", k, m[k], v)
-		}
-		delete(m, k)
-	}
-	if len(m) > 0 {
-		t.Errorf("%#v present in input but not in output", m)
-	}
-}
+var ints = [...]int{42, 69, 105}
+var spam = "spam"
 
-func TestFlattenArrayPtr(t *testing.T) {
-	// An array of four pointers to the same string should store one
-	// copy in the flatpack an return an array of four refs:
-	var s = "spam"
-	var a = [5]*string{nil, &s, &s, &s, &s}
-
-	var f = New()
-	r := f.flatten(reflect.ValueOf(a))
-	if r.Len() != len(a) {
-		t.Errorf("r.Len() == %d (expected %d)", r.Len(), len(a))
-	}
-
-	if r0 := r.Index(0).Interface().(ref); r0 != -1 {
-		t.Errorf("r[0] == %d (expected -1)", r0)
-	}
-	for i := 2; i < len(a); i++ {
-		if r.Index(i).Interface() != r.Index(1).Interface() {
-			t.Errorf("Flattening same pointer value should yield same ref")
-		}
-	}
-
-	if len(f.Values) != 1 {
-		t.Errorf("Flattening same pointer value multiple times should only store one copy of referant")
-	}
-	exp := tagged{tIDOf(reflect.TypeOf("")), s}
-	if f.Values[0] != exp {
-		t.Errorf("f.Values[0] == %#v (expected %#v)", f.Values[0], exp)
-	}
-}
-
-func TestFlattenStructSliceInterface(t *testing.T) {
-	// A struct containing an int and a slice of interface type should
-	// come back as a struct containign an int and a slice of structs
-	// containing a tID in addition to the original interface value.
-	var s = struct {
-		i  int
-		sl []interface{}
-	}{42, []interface{}{nil, 69, "Hello", true}}
-
-	var f = New()
-	r := f.flatten(reflect.ValueOf(s))
-
-	if r.Type() != flatType(reflect.TypeOf(s)) {
-		t.Errorf("r.Type() == %s (expected %s)", r.Type(), flatType(reflect.TypeOf(s)))
-	}
-	if ri := r.Field(0).Interface(); ri.(int) != s.i {
-		t.Errorf("r.Field(0).Interface() == %#v (expected %#v)", ri, s.i)
-	}
-	rSlice := r.Field(1).Interface().([]tagged)
-	for i := 0; i < len(s.sl); i++ {
-		expType := tIDOf(reflect.TypeOf(s.sl[i]))
-		if rSlice[i].T != expType {
-			t.Errorf("rSlice[%d].T == %#v (expected %#v)", i, rSlice[i].T, expType)
-		}
-		if rSlice[i].V != s.sl[i] {
-			t.Errorf("rSlice[%d].V == %#v (expected %#v)", i, rSlice[i].T, s.sl[i])
-		}
-	}
-}
-
-/********************************************************************/
-
-func TestUnflattenStringMap(t *testing.T) {
-	var f = Flatpack{
-		Values: []tagged{{"int", 42}, {"int", 69}, {"int", 105}},
-	}
-	mapStrPtrIntType := reflect.TypeOf(map[string]*int{})
-	var m = map[string]ref{
-		"answer":  0,
-		"naughty": 1,
-		"random":  2,
-	}
-	r := f.unflatten(mapStrPtrIntType, reflect.ValueOf(m))
-	if r.Len() != len(m) {
-		t.Errorf("r.Len() == %d (expected %d)", r.Len(), len(m))
-	}
-	for k, v := range r.Interface().(map[string]*int) {
-		if exp := f.Values[int(m[k])].V.(int); *v != exp {
-			t.Errorf("*(m[%#v]) == %#v in input but %#v in output", k, *v, exp)
-		}
-		delete(m, k)
-	}
-	if len(m) > 0 {
-		t.Errorf("%#v present in input but not in output", m)
-	}
-}
-
-func TestUnflattenNonStringMap(t *testing.T) {
-	var f = Flatpack{
-		Values: []tagged{
-			{T: "string", V: "WW I"},
-			{T: "string", V: "WW II"},
-			{T: "string", V: "WW III"},
+// complexCases are the cases checked by TestComplex.
+//
+// N.B. TestComplex runs extra checks for certain named testcases.  Be
+// careful if renaming testcases to make sure new name matches!
+var complexCases = []complexCase{
+	{
+		name:    "TestFlattenArrayPtr",
+		orig:    [...]*string{nil, &spam, &spam, &spam, &spam},
+		flat:    [...]ref{-1, 0, 0, 0, 0},
+		newVals: 1,
+	}, {
+		name: "StringMap",
+		pre:  [...]*int{&ints[0], &ints[1]}, // Force ref order
+		orig: map[myString]*int{
+			"answer":  &ints[0],
+			"naughty": &ints[1],
+			"random":  &ints[2],
 		},
-	}
-	var sl = []struct {
-		K [2]int `json:"k"`
-		V ref    `json:"v"`
-	}{
-		{[2]int{1914, 1918}, ref(0)},
-		{[2]int{1939, 1945}, ref(1)},
-		{[2]int{2026, 2053}, ref(2)},
-	}
-	r := f.unflatten(reflect.TypeOf(map[[2]int]*string{}), reflect.ValueOf(sl))
-	if r.Len() != len(sl) {
-		t.Errorf("r.Len() == %d (expected %d)", r.Len(), len(sl))
-	}
-	for i := 0; i < len(sl); i++ {
-		k := reflect.ValueOf(sl[i].K)
-		exp := f.Values[sl[i].V].V
-		if v := *(r.MapIndex(k).Interface().(*string)); v != exp {
-			t.Errorf("key %#v maps to %#v in input but %#v in output", k, exp, v)
-		}
-		r.SetMapIndex(k, reflect.Value{}) // Delete index k
-	}
-	if r.Len() > 0 {
-		//		t.Errorf("%#v present in output but not in input", r.Interface())
-	}
-}
-
-func TestUnflattenArrayPtr(t *testing.T) {
-	var f = Flatpack{
-		Values: []tagged{{"string", "spam"}},
-	}
-	arr5PtrStrType := reflect.TypeOf([5]*string{})
-	a := [5]ref{-1, 0, 0, 0, 0}
-	r := f.unflatten(arr5PtrStrType, reflect.ValueOf(a))
-	if rtyp := r.Type(); rtyp != arr5PtrStrType {
-		t.Errorf("Type of r is %s (expected []*int)", rtyp)
-	}
-	if r.Len() != len(a) {
-		t.Errorf("r.Len() == %d (expected %d)", r.Len(), len(a))
-	}
-	if r0 := r.Index(0).Interface().(*string); r0 != nil {
-		t.Errorf("r[0] == %#v (expected nil)", r0)
-	}
-	for i := 2; i < len(a); i++ {
-		if r.Index(i).Interface() != r.Index(1).Interface() {
-			t.Errorf("Unflatting same ref should yield same pointer value")
-		}
-	}
-}
-
-func TestUnflattenStruct(t *testing.T) {
-	type testStruct struct {
-		n int
-		p *testStruct
-	}
-	typ := reflect.TypeOf(testStruct{})
-	RegisterType(typ)
-	tid := tIDOf(typ)
-
-	// A flatpack of two crosslinked testStructs.
-	//
-	// Unfortunately the flattened struct type can't be given a name,
-	// because unflatten expects it to be anonymous.
-	//
-	// FIXME: use type aliases once once Go1.9 is available.
-	var f = Flatpack{
-		Values: []tagged{
-			{
-				T: tid,
-				V: struct {
-					F_n int `json:"n"` // Piss off, golint.
-					F_p ref `json:"p"`
-				}{42, 1},
-			},
-			{
-				T: tid,
-				V: struct {
-					F_n int `json:"n"`
-					F_p ref `json:"p"`
-				}{69, 0},
-			},
+		flat: map[myString]ref{
+			"answer":  ref(0),
+			"naughty": ref(1),
+			"random":  ref(2),
 		},
-	}
-	r := f.unflatten(reflect.PtrTo(typ), reflect.ValueOf(ref(0)))
-
-	// Cycle of two testStructs:
-	exp := &testStruct{42, &testStruct{69, nil}}
-	exp.p.p = exp
-
-	if v := r.Interface().(*testStruct); !reflect.DeepEqual(v, exp) {
-		t.Errorf("%#v != %#v", v, exp)
-	} else if v.p.p != v { // Double check cycle length
-		t.Errorf("v.p.p == %#v (expected %#v == v)", v.p.p, v)
-	}
+		newVals: 3,
+	}, {
+		name: "NonStringMap",
+		orig: map[[2]int]string{
+			[2]int{1914, 1918}: "WW I",
+			[2]int{1939, 1945}: "WW II",
+			[2]int{2026, 2053}: "WW III", // Citation: http://memory-alpha.wikia.com/wiki/World_War_III
+		},
+	}, {
+		name: "NonStringMapRecursive",
+		pre:  [...]*int{&ints[0], &ints[1]}, // Force ref order
+		orig: map[interface{}]*int{
+			nil:    &ints[0],
+			"one":  &ints[1],
+			2:      &ints[2],
+			3 + 0i: &ints[2], // Check shared substructure
+		},
+		newVals: 3,
+	}, {
+		name: "TestFlattenStruct",
+		orig: (struct {
+			i  int
+			sl []interface{}
+		}{42, []interface{}{nil, 69, "Hello", true}}),
+	},
 }
 
-func TestUnflattenSliceInterface(t *testing.T) {
-	var f Flatpack
-	sl := []tagged{{nilTID, nil}, {"int", 69}, {"string", "Hello"}, {"bool", true}}
-	exp := []interface{}{nil, 69, "Hello", true}
-	typ := reflect.TypeOf(exp)
-	r := f.unflatten(typ, reflect.ValueOf(sl))
-	if r.Type() != typ {
-		t.Errorf("r.Type() == %s (expected %s)", r.Type(), typ)
-	} else if v := r.Interface().([]interface{}); !reflect.DeepEqual(v, exp) {
-		t.Errorf("r == %#v (expected %#v)", v, exp)
+// TestComplex does round-trip testing of more complex cases.
+//
+// N.B.: there are some extra checks for certain named testcases in
+// the bottom section of the function.
+func TestComplex(t *testing.T) {
+	for _, c := range complexCases {
+		t.Run(c.name, func(t *testing.T) {
+			defer func() {
+				if p := recover(); p != nil {
+					t.Errorf("%s panicked: %s", c.name, p)
+				}
+			}()
+
+			var f = New()
+			if c.pre != nil {
+				_ = f.flatten(reflect.ValueOf(c.pre))
+			}
+			typ := reflect.TypeOf(c.orig)
+			v := reflect.ValueOf(c.orig)
+			flat := f.flatten(v)
+			unflat := f.unflatten(typ, flat)
+
+			if ftyp := flat.Type(); ftyp != flatType(typ) {
+				t.Errorf("f.Flatten(reflect.ValueOf(%#v)).Type() == %s (expected %s)", c.orig, ftyp, flatType(typ))
+			}
+			if c.flat != nil && !testutil.RecEqual(flat.Interface(), c.flat, true) {
+				t.Errorf("f.flatten(reflect.ValueOf(%#v)).Interface() == %#v (expected %#v)", c.orig, flat, c.flat)
+			}
+			if !testutil.RecEqual(unflat.Interface(), c.orig, true) {
+				t.Errorf("f.unflatten(%s, f.flatten(reflect.ValueOf(%#v))).Interface() == %#v (expected %#[2]v)", typ, c.orig, unflat)
+			}
+			if len(f.Values) != c.newVals {
+				t.Errorf("len(f.Values) == %d (expected %d)", len(f.Values), c.newVals)
+				t.Logf("f.Values == %#v", f.Values)
+			}
+
+			// Extra checks:
+			switch c.name {
+			case "StringMap":
+				if ft := flat.Type().Kind(); ft != reflect.Map {
+					t.Errorf("f.flatten(reflect.ValueOf(%#v)).Type() == %s (expected a map type)", c.orig, ft)
+				}
+			case "NonStringMap", "NonStringMapRecursive":
+				if ft := flat.Type().Kind(); ft == reflect.Map {
+					t.Errorf("f.flatten(reflect.ValueOf(%#v)).Type() == %s (expected a non-map type)", c.orig, ft)
+
+				}
+			}
+		})
 	}
 }
 
