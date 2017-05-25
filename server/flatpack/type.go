@@ -71,10 +71,10 @@ func RegisterType(typ reflect.Type) {
 	byFlatType[ti.ftyp] = idx
 }
 
-// typeForTID finds the entry for tid in the type registry and returns
-// the original (unflattened) and flattend types described it.  It is
-// an error for tid to be "" (representing the empty type) or not the
-// tID of a previously-registered type.
+// typesForTID finds the entry for tid in the type registry and
+// returns the original (unflattened) and flattend types described by
+// it.  It is an error for tid to be "" (representing the empty type)
+// or not the tID of a previously-registered type.
 //
 // As a convenience to reduce the number of types that need to be
 // registered, this function will synthesize pointer and slice types
