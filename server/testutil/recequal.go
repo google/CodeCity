@@ -115,30 +115,34 @@ func recEq(v1, v2 reflect.Value, disjoint bool, v1s, v2s map[unsafe.Pointer]unsa
 		v1p := unsafe.Pointer(v1.Pointer())
 		v2p := unsafe.Pointer(v2.Pointer())
 
-		// Check for disjointness if requested:
-		if disjoint {
-			// (But ignore zero-capacity slices.)
-			if v1.Kind() != reflect.Slice || v1.Cap() > 0 && v2.Cap() > 0 {
-				_, v2in1 := v1s[v2p]
-				_, v1in2 := v2s[v1p]
-				if (!v1.IsNil() && v1p == v2p) || v2in1 || v1in2 {
-					return false
-				}
-			}
-		}
-
-		// Check if we have previously visited this v1 (and if so whether
-		// we have the correct corresponding v2):
-		v1o, seen1 := v1s[v1p]
-		v2o, seen2 := v2s[v2p]
-		if seen1 {
-			return seen2 && v1o == v2p && v2o == v1p
-		} else if seen2 {
+		if (v1p == nil) != (v2p == nil) {
 			return false
 		}
-		v1s[v1p] = v2p
-		v2s[v2p] = v1p
+		if v1p != nil {
+			// Check for disjointness if requested:
+			if disjoint {
+				// (But ignore zero-capacity slices.)
+				if v1.Kind() != reflect.Slice || v1.Cap() > 0 && v2.Cap() > 0 {
+					_, v2in1 := v1s[v2p]
+					_, v1in2 := v2s[v1p]
+					if v1p == v2p || v2in1 || v1in2 {
+						return false
+					}
+				}
+			}
 
+			// Check if we have previously visited this v1 (and if so whether
+			// we have the correct corresponding v2):
+			v1o, seen1 := v1s[v1p]
+			v2o, seen2 := v2s[v2p]
+			if seen1 {
+				return seen2 && v1o == v2p && v2o == v1p
+			} else if seen2 {
+				return false
+			}
+			v1s[v1p] = v2p
+			v2s[v2p] = v1p
+		}
 	}
 
 	switch v1.Kind() {
@@ -160,7 +164,7 @@ func recEq(v1, v2 reflect.Value, disjoint bool, v1s, v2s map[unsafe.Pointer]unsa
 	case reflect.Interface, reflect.Ptr:
 		return recEq(v1.Elem(), v2.Elem(), disjoint, v1s, v2s)
 	case reflect.Map:
-		if v1.IsNil() != v2.IsNil() || v1.Len() != v2.Len() {
+		if v1.Len() != v2.Len() {
 			return false
 		}
 		if disjoint && v1.Type().Key().Kind() == reflect.Ptr {
@@ -174,7 +178,7 @@ func recEq(v1, v2 reflect.Value, disjoint bool, v1s, v2s map[unsafe.Pointer]unsa
 			}
 		}
 	case reflect.Slice:
-		if v1.IsNil() != v2.IsNil() || v1.Len() != v2.Len() {
+		if v1.Len() != v2.Len() {
 			return false
 		}
 		for i, n := 0, v1.Len(); i < n; i++ {

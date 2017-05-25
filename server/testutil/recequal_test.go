@@ -162,6 +162,11 @@ var recEqualTests = []recEqualTest{
 	{map[int]int{}, map[int]int{}, true, true},
 	{map[int]int(nil), map[int]int(nil), true, true},
 
+	// Multiple instances of nil are not shared; they are always disjoint:
+	{[...][]int{nil, nil}, self{}, true, true},
+	{[...]map[int]int{nil, nil}, self{}, true, true},
+	{[...]*int{nil, nil}, self{}, true, true},
+
 	// Mismatched types:
 	{1, 1.0, false, false},
 	{int32(1), int64(1), false, false},
