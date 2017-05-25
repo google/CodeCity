@@ -19,12 +19,12 @@ package flatpack_test
 import (
 	"encoding/json"
 	"fmt"
-	"reflect"
 	"testing"
 
 	"CodeCity/server/flatpack"
 	"CodeCity/server/interpreter"
 	"CodeCity/server/interpreter/data"
+	"CodeCity/server/testutil"
 )
 
 // FIXME: add a more general (and more comprehensive) example.
@@ -63,8 +63,8 @@ func TestRoundTripInterpreter(t *testing.T) {
 		t.Error(e)
 	}
 
-	if !reflect.DeepEqual(f, f2) {
-		t.Errorf("%#v != %#v", f2, f)
+	if !testutil.RecEqual(f, f2, true) {
+		t.Errorf("testutil.RecEqual(%#v, %#v, true) == false", f2, f)
 	}
 	// These versions might be more helpful in diagnosis:
 	// if !reflect.DeepEqual(f.Labels, f2.Labels) {
