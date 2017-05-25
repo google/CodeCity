@@ -63,27 +63,23 @@ func TestRoundTripInterpreter(t *testing.T) {
 		t.Error(e)
 	}
 
+	// Check flatpack has survived serialisation unscathed:
 	if !testutil.RecEqual(f, f2, true) {
-		t.Errorf("testutil.RecEqual(%#v, %#v, true) == false", f2, f)
+		t.Errorf("testutil.RecEqual(f2, f, true) == false")
+		t.Log("\n" + testutil.Diff(f, f2))
 	}
-	// These versions might be more helpful in diagnosis:
-	// if !reflect.DeepEqual(f.Labels, f2.Labels) {
-	// 	t.Errorf("%#v != %#v", f2.Labels, f.Labels)
-	// }
-	// for i := 0; i < len(f.Values); i++ {
-	// 	if f.Values[i].T != f2.Values[i].T {
-	// 		t.Errorf("Values[%d].T == %#v (expected %#v)", i, f2.Values[i].T, f.Values[i].T)
-	// 	}
-	// 	if !reflect.DeepEqual(f.Values[i].V, f2.Values[i].V) {
-	// 		t.Errorf("Values[%d].V == %#v (%[2]T) (expected %#v (%[3]T))", i, f2.Values[i].V, f.Values[i].V)
-	// 	}
-	// }
 
 	v, err := f.Unpack("Interpreter")
 	if err != nil {
 		t.Error(err)
 	}
 	intrp2 := v.(*interpreter.Interpreter)
+
+	// Check interpreter has survived flatpacking unscathed:
+	if !testutil.RecEqual(intrp, intrp2, true) {
+		t.Errorf("RecEqual(intrp, intrp2, true) == false")
+		t.Log("\n" + testutil.Diff(intrp, intrp2))
+	}
 	intrp2.Run()
 	if v := intrp2.Value(); v != data.Number(987) {
 		t.Errorf("intrp2.Value() == %#v (expected %#v)", v, data.Number(987))
