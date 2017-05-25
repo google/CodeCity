@@ -23,9 +23,6 @@ import (
 	"unsafe"
 )
 
-// This file provides some utility functions used in testing the rest
-// of the package.
-
 // RecEqual reports whether x and y are "recursively equal", as
 // defined below.  This is similar to reflect.DeepEqual, but also
 // considers whether they have the same structure (shared substructure
