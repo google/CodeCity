@@ -1,3 +1,4 @@
+// TODO: Add tests from https://github.com/tc39/test262/tree/master/test/built-ins/Math
 
 var Math2 = {};
 
@@ -55,7 +56,7 @@ Object.defineProperty(Math2, 'abs', {
   enumerable: false,
   writable: true,
   value: function(x) {
-    x = Number(x);
+    x -= 0;
     return x > 0 ? x : (x < 0 ? -x : (x === 0 ? 0 : NaN));
   }
 });
@@ -65,8 +66,11 @@ Object.defineProperty(Math2, 'ceil', {
   enumerable: false,
   writable: true,
   value: function(x) {
-    x = Number(x);
-    var trunc = parseInt(x);
+    x -= 0;
+    if (!isFinite(x)) {
+      return x;  // +/- Infinity and NaN.
+    }
+    var trunc = x | 0;
     if (!trunc && (x < 0 || (!x && (1 / x == -Infinity)))) {
       trunc = -0;  // -0 is different than 0.
     }
@@ -88,8 +92,11 @@ Object.defineProperty(Math2, 'floor', {
   enumerable: false,
   writable: true,
   value: function(x) {
-    x = Number(x);
-    var trunc = parseInt(x);
+    x -= 0;
+    if (!isFinite(x)) {
+      return x;  // +/- Infinity and NaN.
+    }
+    var trunc = x | 0;
     if (trunc == x) {
       return x;  // -0 is different than 0.
     }
@@ -104,7 +111,7 @@ Object.defineProperty(Math2, 'max', {
   value: function(var_args) {
     var max = -Infinity;
     for (var i = 0; i < arguments.length; i++) {
-      var n = Number(arguments[i]);
+      var n = arguments[i] - 0;
       if (isNaN(n)) {
         return NaN;
       }
@@ -125,7 +132,7 @@ Object.defineProperty(Math2, 'min', {
   value: function(var_args) {
     var min = Infinity;
     for (var i = 0; i < arguments.length; i++) {
-      var n = Number(arguments[i]);
+      var n = arguments[i] - 0;
       if (isNaN(n)) {
         return NaN;
       }
@@ -144,12 +151,12 @@ Object.defineProperty(Math2, 'round', {
   enumerable: false,
   writable: true,
   value: function(x) {
-    x = Number(x);
-    if (isNaN(x)) {
-      return NaN;
+    x -= 0;
+    if (!isFinite(x)) {
+      return x;  // +/- Infinity and NaN.
     }
     if (x > 0) {  // Positive numbers round .5 numbers up.
-      return parseInt(x + 0.5);
+      return (x + 0.5) | 0;
     }
     if (!x) {  // Preserve -0 vs 0.
       return x;
@@ -157,7 +164,7 @@ Object.defineProperty(Math2, 'round', {
     if (x >= -0.5) {  // Rounding up to 0 results in -0.
       return -0;
     }
-    var trunc = parseInt(x - 0.5);
+    var trunc = (x - 0.5) | 0;
     if (trunc + 0.5 == x) {
       // Negative numbers round .5 numbers towards 0.
       trunc++;

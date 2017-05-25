@@ -1,3 +1,16 @@
+// TODO: Add tests from https://github.com/tc39/test262/tree/master/test/built-ins/Array
+
+Object.defineProperty(Array, 'isArray', {
+  configurable: true,
+  enumerable: false,
+  writable: true,
+  value: function(obj) {
+    // On the web instanceof might not work because of multiple globals caused
+    // by iframes.  Not an issue in Code City.
+    // http://web.mit.edu/jwalden/www/isArray.html
+    return obj instanceof Array;
+  }
+});
 
 Object.defineProperty(Array.prototype, 'pop', {
   configurable: true,
@@ -176,11 +189,13 @@ Object.defineProperty(Array.prototype, 'slice', {
     var o = Object(this);
     var length = o.length >>> 0;
     // Handle negative value for "start"
-    start = start | 0;
+    start |= 0;
     start = (start >= 0) ? start : Math.max(0, length + start);
     // Handle negative value for "end"
     if (typeof end != 'undefined') {
-      end = end | 0;
+      if (end != Infinity) {
+        end |= 0;
+      }
       if (end < 0) {
         end = length + end;
       } else {
@@ -208,7 +223,7 @@ Object.defineProperty(Array.prototype, 'splice', {
     }
     var o = Object(this);
     var length = o.length >>> 0;
-    start = start | 0;
+    start |= 0;
     if (start < 0) {
       start = Math.max(length + start, 0);
     } else {
@@ -217,7 +232,7 @@ Object.defineProperty(Array.prototype, 'splice', {
     if (arguments.length < 1) {
       deleteCount = length - start;
     } else {
-      deleteCount = deleteCount | 0;
+      deleteCount |= 0;
       deleteCount = Math.max(0, Math.min(deleteCount, length - start));
     }
     var removed = [];
