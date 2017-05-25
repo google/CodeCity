@@ -80,6 +80,7 @@ func TestRoundTripInterpreter(t *testing.T) {
 		t.Errorf("RecEqual(intrp, intrp2, true) == false")
 		t.Log("\n" + testutil.Diff(intrp, intrp2))
 	}
+
 	intrp2.Run()
 	if v := intrp2.Value(); v != data.Number(987) {
 		t.Errorf("intrp2.Value() == %#v (expected %#v)", v, data.Number(987))
