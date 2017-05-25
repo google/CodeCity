@@ -139,9 +139,9 @@ var complexCases = []complexCase{
 	}, {
 		name: "NonStringMap",
 		orig: map[[2]int]string{
-			[2]int{1914, 1918}: "WW I",
-			[2]int{1939, 1945}: "WW II",
-			[2]int{2026, 2053}: "WW III", // Citation: http://memory-alpha.wikia.com/wiki/World_War_III
+			{1914, 1918}: "WW I",
+			{1939, 1945}: "WW II",
+			{2026, 2053}: "WW III", // Citation: http://memory-alpha.wikia.com/wiki/World_War_III
 		},
 	}, {
 		name: "NilMap",
