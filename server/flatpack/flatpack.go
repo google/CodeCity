@@ -41,10 +41,9 @@
 // named type and its underlying type.)
 //
 // BUG(cpcallen): Flatpack does not handle interior pointers (pointers
-// to array or struct element) correctly.
-//
-// BUG(cpcallen): Flatpack does not handle shared backing arrays for
-// slices (or strings) correctly.
+// to array or struct element) correctly; this includes in particular
+// the case of slice backing arrays (even if the slice points points
+// at the 0th element of the underlying array).
 //
 // BUG(cpcallen): Flatpack does not preserve spare capacity (or the
 // values of elements in the underlying array between len and cap).
