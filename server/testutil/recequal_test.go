@@ -45,20 +45,27 @@ var (
 	fn1 func()             // nil.
 	fn2 func()             // nil.
 	fn3 = func() { fn1() } // Not nil.
-)
 
-var loop1, loop2, loop3, loop4, loop5, loop6 Loop
-var loopy1, loopy2, loopy3, loopy4, loopy5, loopy6 Loopy
-var loopier1 = Loopier{}
-var loopier2 = Loopier{}
-var loopier3 = Loopier{}
-var loopier4 = Loopier{}
-var loopier5 = Loopier{}
-var loopier6 = Loopier{}
-var cons1, cons2, cons3 cons
-var map1 = map[int]int{1: 2}
-var map2 = map[int]int{1: 2}
-var map3 = map[int]int{1: 2}
+	basics = [...]Basic{{42, 3.14}, {42, 3.14}, {42, 3.14}}
+
+	loop1, loop2, loop3, loop4, loop5, loop6       Loop
+	loopy1, loopy2, loopy3, loopy4, loopy5, loopy6 Loopy
+
+	loopier1 = Loopier{}
+	loopier2 = Loopier{}
+	loopier3 = Loopier{}
+	loopier4 = Loopier{}
+	loopier5 = Loopier{}
+	loopier6 = Loopier{}
+
+	cons1, cons2, cons3 cons
+
+	map1 = map[int]int{1: 2}
+	map2 = map[int]int{1: 2}
+	map3 = map[int]int{1: 2}
+
+	arr = [...]int{1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5}
+)
 
 func init() {
 	loop1 = &loop2
@@ -125,9 +132,7 @@ var recEqualTests = []recEqualTest{
 	{cons{map1, map1}, cons{map2, map2}, true, true},
 
 	// Equal, but not disjoint:
-	{make([]int, 10), self{}, true, false},
 	{&[1]float64{math.NaN()}, self{}, true, false},
-	{[]float64{math.NaN()}, self{}, true, false},
 	{map[float64]float64{1: math.NaN()}, self{}, true, false},
 	{cons{map1, map2}, cons{map2, map3}, true, false},
 
@@ -200,6 +205,31 @@ var recEqualTests = []recEqualTest{
 	{&loopy1, &loopy6, false, false},
 	{&loopy5, &loopy6, false, false},
 	{cons{map1, map1}, cons{map2, map3}, false, false},
+
+	// Many of the following tests will require correct handling of
+	// interior pointers to pass.  Maybe someday...
+
+	// Shared backing - disjointness:
+	// {make([]int, 10), self{}, true, false},
+	// {[]float64{math.NaN()}, self{}, true, false},
+	// {arr[:], arr[:], true, false},
+	// {[][]int{arr[0:5], arr[0:5]}, self{}, true, false},
+
+	// Shared backing - structure:
+	{[][]int{arr[0:5], arr[0:5]}, [][]int{arr[5:10], arr[5:10]}, true, true},
+	// {[][]int{arr[0:5], arr[0:5]}, [][]int{arr[5:10], arr[10:15]}, false, false},
+
+	// Array / slice interior pointer:
+	{cons{arr, &arr[0]}, cons{arr, &arr[0]}, true, false},
+	// {cons{arr, &arr[0]}, cons{arr, &arr[5]}, false, false},
+	{cons{arr[0:5], &arr[0]}, cons{arr[5:10], &arr[5]}, true, true},
+	// {cons{arr[0:10], &arr[0]}, cons{arr[5:15], &arr[5]}, true, false},
+	// {cons{arr[0:10], &arr[0]}, cons{arr[5:15], &arr[10]}, false, false},
+
+	// Struct interior pointer:
+	{cons{&(basics[0].y), &basics[0]}, cons{&(basics[0].y), &basics[0]}, true, false},
+	{cons{&(basics[0].y), &basics[0]}, cons{&(basics[1].y), &basics[1]}, true, true},
+	// {cons{&(basics[0].y), &basics[0]}, cons{&(basics[2].y), &basics[1]}, false, false},
 }
 
 func TestRecEqual(t *testing.T) {

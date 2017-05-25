@@ -78,8 +78,16 @@ import (
 // will return false any map, pointer, or slice backing pointer value
 // found in v1 also appears in v2.
 //
-// BUG(cpcallen): Checking of slices for shared substructure is very
-// primitive and likely to miss many cases.
+// BUG(cpcallen): RecEqual does not make any attempt to check the
+// structure of interior pointers (i.e., a pointer pointing at an
+// array element or struct field), or verify their disjointness.  This
+// includes in particular the backing array of slices: given
+//     a := []int{0, 0, 0, 0}
+// then
+//     RecEqual([2][]int{a[0:2], a[0:2]}, [2][]int{a[0:2], a[2:4]}, true)
+// returns true, as does
+//     RecEqual([2][]int{a[0:2], a[0:2]}, [2][]int{a[0:2], a[2:4]}, false)
+//
 func RecEqual(x, y interface{}, disjoint bool) bool {
 	return recValueEqual(reflect.ValueOf(x), reflect.ValueOf(y), disjoint)
 }
@@ -99,7 +107,7 @@ func recValueEqual(v1, v2 reflect.Value, disjoint bool) bool {
 // because otherwise certain cases of structural dissimilarity (or
 // shared substructure between v1 and v2) might otherwise not be caught.
 //
-// FXIME: Slices should have better check for shared backing
+// FIXME: handle interior pointers (especially for slices)?
 func recEq(v1, v2 reflect.Value, disjoint bool, v1s, v2s map[unsafe.Pointer]unsafe.Pointer) bool {
 	if !v1.IsValid() {
 		return !v2.IsValid()
@@ -111,7 +119,7 @@ func recEq(v1, v2 reflect.Value, disjoint bool, v1s, v2s map[unsafe.Pointer]unsa
 	}
 
 	switch v1.Kind() {
-	case reflect.Map, reflect.Ptr, reflect.Slice:
+	case reflect.Map, reflect.Ptr:
 		v1p := unsafe.Pointer(v1.Pointer())
 		v2p := unsafe.Pointer(v2.Pointer())
 
@@ -178,7 +186,7 @@ func recEq(v1, v2 reflect.Value, disjoint bool, v1s, v2s map[unsafe.Pointer]unsa
 			}
 		}
 	case reflect.Slice:
-		if v1.Len() != v2.Len() {
+		if v1.IsNil() != v2.IsNil() || v1.Len() != v2.Len() {
 			return false
 		}
 		for i, n := 0, v1.Len(); i < n; i++ {
