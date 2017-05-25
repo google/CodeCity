@@ -204,7 +204,9 @@ func (f *Flatpack) flatten(v reflect.Value) reflect.Value {
 		})
 	case reflect.Map:
 		var r reflect.Value
-		if ftyp.Kind() == reflect.Map {
+		if v.IsNil() {
+			r = reflect.New(ftyp).Elem()
+		} else if ftyp.Kind() == reflect.Map {
 			r = reflect.MakeMap(ftyp)
 			for _, k := range v.MapKeys() {
 				r.SetMapIndex(k, f.flatten(v.MapIndex(k)))
@@ -238,6 +240,9 @@ func (f *Flatpack) flatten(v reflect.Value) reflect.Value {
 		//	Return newly-allocated index idx as ref:
 		return reflect.ValueOf(ref(idx))
 	case reflect.Slice:
+		if v.IsNil() {
+			return reflect.New(ftyp).Elem()
+		}
 		// Won't need to append to r before seralizing, and any spare
 		// capacity will not be preserved when deserializing, so trim
 		// our flattened version now (i.e., cap == len).
@@ -325,7 +330,9 @@ func (f *Flatpack) unflatten(typ reflect.Type, v reflect.Value) (ret reflect.Val
 		return f.unflatten(vtyp, v.Field(1).Elem()).Convert(typ)
 	case reflect.Map:
 		var r reflect.Value
-		if flatType(typ).Kind() == reflect.Map {
+		if v.IsNil() {
+			r = reflect.New(typ).Elem()
+		} else if flatType(typ).Kind() == reflect.Map {
 			r = reflect.MakeMap(typ)
 			for _, k := range v.MapKeys() {
 				r.SetMapIndex(k, f.unflatten(typ.Elem(), v.MapIndex(k)))
@@ -341,7 +348,6 @@ func (f *Flatpack) unflatten(typ reflect.Type, v reflect.Value) (ret reflect.Val
 			}
 		}
 		return r
-
 	case reflect.Ptr:
 		idx := int(v.Interface().(ref))
 		if idx == -1 {
@@ -363,6 +369,9 @@ func (f *Flatpack) unflatten(typ reflect.Type, v reflect.Value) (ret reflect.Val
 		}
 		return f.ref2ptr[idx].Convert(typ)
 	case reflect.Slice:
+		if v.IsNil() {
+			return reflect.New(typ).Elem()
+		}
 		// No info re: spare capacity survives (de)serialisation, so
 		// assume cap == len.
 		r := reflect.MakeSlice(typ, v.Len(), v.Len())

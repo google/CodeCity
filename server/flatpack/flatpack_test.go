@@ -144,6 +144,12 @@ var complexCases = []complexCase{
 			[2]int{2026, 2053}: "WW III", // Citation: http://memory-alpha.wikia.com/wiki/World_War_III
 		},
 	}, {
+		name: "NilMap",
+		orig: map[int]string(nil),
+	}, {
+		name: "EmptyMap",
+		orig: map[int]string{},
+	}, {
 		name: "NonStringMapShareSubstructure",
 		pre:  [...]*int{&ints[0], &ints[1]}, // Force ref order
 		orig: map[interface{}]*int{
@@ -154,7 +160,13 @@ var complexCases = []complexCase{
 		},
 		newVals: 3,
 	}, {
-		name: "FlattenStruct",
+		name: "NilSlice",
+		orig: []int(nil),
+	}, {
+		name: "EmptySlice",
+		orig: []int{},
+	}, {
+		name: "Struct",
 		orig: (struct {
 			i  int
 			sl []interface{}
