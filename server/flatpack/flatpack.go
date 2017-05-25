@@ -30,14 +30,24 @@
 // RegisterType and/or RegisterTypeOf from an init() func in each
 // package whose types will be serialized.
 //
-// BUG(cpcallen): does not handle interior pointers (pointers to array
-// or struct element) correctly.
+// BUG(cpcallen): Flatpack.Pack() does not handle multiple references
+// to the same map correctly.  Multiple copies of map contents will
+// be saved in the flatpack, and Unpack() will unpack them to
+// independent map structures.
 //
-// BUG(cpcallen): does not handle shared backing arrays for slices (or
-// strings) correctly.
+// BUG(cpcallen): Flatpack.Pack() will incorrectly preserve shared (or
+// cyclic) substructure if it encounters two pointers of different
+// types that point to the same object.  (This could happen with a
+// named type and its underlying type.)
 //
-// BUG(cpcallen): does not preserve spare capacity (or the values of
-// elements in the underlying array between len and cap).
+// BUG(cpcallen): Flatpack does not handle interior pointers (pointers
+// to array or struct element) correctly.
+//
+// BUG(cpcallen): Flatpack does not handle shared backing arrays for
+// slices (or strings) correctly.
+//
+// BUG(cpcallen): Flatpack does not preserve spare capacity (or the
+// values of elements in the underlying array between len and cap).
 package flatpack
 
 import (
@@ -339,7 +349,7 @@ func (f *Flatpack) unflatten(typ reflect.Type, v reflect.Value) (ret reflect.Val
 			f.ref2ptr[idx].Elem().Set(f.unflatten(ttyp, tval))
 			fallthrough
 		default:
-			return f.ref2ptr[idx]
+			return f.ref2ptr[idx].Convert(typ)
 		}
 	case reflect.Slice:
 		// No info re: spare capacity survives (de)serialisation, so

@@ -30,6 +30,7 @@ type myUint64 uint64
 type myFloat64 float64
 type myComplex64 complex64
 type myString string
+type loop *loop
 
 // All these should not be changed by flatten() or unflatten(), and in
 // the former case nothing should be added to the flatpack.
@@ -89,12 +90,15 @@ type complexCase struct {
 	pre        interface{} // Value to flatten before test (as setup)
 	orig, flat interface{} // Original and flattend value
 	newVals    int         // How many items will be added to .Values()?
+	skip       bool        // Should this test be skipped?
 }
 
 // Data used (by pointer) in some complex cases:
 
 var ints = [...]int{42, 69, 105}
 var spam = "spam"
+var loop1, loop2 loop
+var hhg = map[string]int{"answer": 42}
 
 // complexCases are the cases checked by TestComplex.
 //
@@ -102,10 +106,22 @@ var spam = "spam"
 // careful if renaming testcases to make sure new name matches!
 var complexCases = []complexCase{
 	{
-		name:    "TestFlattenArrayPtr",
+		name:    "ArrayPtr",
 		orig:    [...]*string{nil, &spam, &spam, &spam, &spam},
 		flat:    [...]ref{-1, 0, 0, 0, 0},
 		newVals: 1,
+	}, {
+		name:    "PtrLoop",
+		orig:    (loop)(&loop1),
+		flat:    ref(0),
+		newVals: 2,
+	}, {
+		// FIXME: broken because flatten gets confused about loop vs *loop
+		name:    "PtrLoopBroken",
+		orig:    &loop1,
+		flat:    ref(0),
+		newVals: 2,
+		skip:    true,
 	}, {
 		name: "StringMap",
 		pre:  [...]*int{&ints[0], &ints[1]}, // Force ref order
@@ -128,7 +144,7 @@ var complexCases = []complexCase{
 			[2]int{2026, 2053}: "WW III", // Citation: http://memory-alpha.wikia.com/wiki/World_War_III
 		},
 	}, {
-		name: "NonStringMapRecursive",
+		name: "NonStringMapShareSubstructure",
 		pre:  [...]*int{&ints[0], &ints[1]}, // Force ref order
 		orig: map[interface{}]*int{
 			nil:    &ints[0],
@@ -138,11 +154,29 @@ var complexCases = []complexCase{
 		},
 		newVals: 3,
 	}, {
-		name: "TestFlattenStruct",
+		name: "FlattenStruct",
 		orig: (struct {
 			i  int
 			sl []interface{}
 		}{42, []interface{}{nil, 69, "Hello", true}}),
+	}, {
+		// FIXME: broken because flatten fails to check for
+		// map-pointer equality.
+		name: "SharedMapSubstructure",
+		orig: struct{ m1, m2 map[string]int }{hhg, hhg},
+		skip: true,
+	}, {
+		// FIXME: code (probably) works but test broken because of
+		// limitations of RecEqual: it only compares map keys with ==
+		name: "MapKeysShareSubstructure",
+		orig: struct {
+			s *string
+			m map[*string]int
+		}{
+			s: &spam,
+			m: map[*string]int{&spam: 42},
+		},
+		skip: true,
 	},
 }
 
@@ -159,6 +193,9 @@ func TestComplex(t *testing.T) {
 				}
 			}()
 
+			if c.skip {
+				t.Skipf("Skipping %s", c.name)
+			}
 			var f = New()
 			if c.pre != nil {
 				_ = f.flatten(reflect.ValueOf(c.pre))
@@ -188,7 +225,7 @@ func TestComplex(t *testing.T) {
 				if ft := flat.Type().Kind(); ft != reflect.Map {
 					t.Errorf("f.flatten(reflect.ValueOf(%#v)).Type() == %s (expected a map type)", c.orig, ft)
 				}
-			case "NonStringMap", "NonStringMapRecursive":
+			case "NonStringMap", "NonStringMapShareSubstructure":
 				if ft := flat.Type().Kind(); ft == reflect.Map {
 					t.Errorf("f.flatten(reflect.ValueOf(%#v)).Type() == %s (expected a non-map type)", c.orig, ft)
 
@@ -198,7 +235,7 @@ func TestComplex(t *testing.T) {
 	}
 }
 
-// init registers types for testing.
+// init registers types for testing, plus sets up loops:
 func init() {
 	var examples = []interface{}{
 		myBool(false),
@@ -207,8 +244,12 @@ func init() {
 		myFloat64(0),
 		myComplex64(0 + 0i),
 		myString(""),
+		loop(nil),
 	}
 	for _, val := range examples {
 		RegisterTypeOf(val)
 	}
+
+	loop1 = &loop2
+	loop2 = &loop1
 }
