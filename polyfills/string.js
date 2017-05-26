@@ -8,9 +8,9 @@ Object.defineProperty(String.prototype, 'concat', {
     if (this === null || this === undefined) {
       throw TypeError('"this" is null or undefined');
     }
-    var str = String(this);
+    var str = '' + this;
     for (var i = 0; i < arguments.length; i++) {
-      str += String(arguments[i]);
+      str += '' + arguments[i];
     }
     return str;
   }
@@ -25,15 +25,16 @@ Object.defineProperty(String.prototype, 'indexOf', {
     if (this === null || this === undefined) {
       throw TypeError('"this" is null or undefined');
     }
-    var str = String(this);
-    searchValue = String(searchValue);
+    var str = '' + this;
+    searchValue = '' + searchValue;
     if (fromIndex != Infinity) {
       fromIndex = Math.max(0, fromIndex | 0);
     }
     if (!searchValue) {
       return (fromIndex < str.length) ? fromIndex : str.length;
     }
-    letter: for (var i = fromIndex; i < str.length; i++) {
+    var end = str.length - searchValue.length + 1;
+    letter: for (var i = fromIndex; i < end; i++) {
       for (var j = 0; j < searchValue.length; j++) {
         if (str[i + j] != searchValue[j]) {
           continue letter;
@@ -54,17 +55,18 @@ Object.defineProperty(String.prototype, 'lastIndexOf', {
     if (this === null || this === undefined) {
       throw TypeError('"this" is null or undefined');
     }
-    var str = String(this);
-    searchValue = String(searchValue);
-    if (fromIndex === undefined) {
+    var str = '' + this;
+    searchValue = '' + searchValue;
+    if (fromIndex == Infinity || fromIndex === undefined || isNaN(fromIndex)) {
       fromIndex = str.length;
     } else {
-      fromIndex = Math.min(str.length, fromIndex | 0);
+      fromIndex |= 0;
     }
+    fromIndex = Math.min(str.length - searchValue.length, fromIndex);
     if (!searchValue) {
-      return (fromIndex < str.length) ? fromIndex : str.length;
+      return (fromIndex < 0) ? 0 : fromIndex;
     }
-    letter: for (var i = fromIndex; i < str.length; i++) {
+    letter: for (var i = fromIndex; i >= 0; i--) {
       for (var j = 0; j < searchValue.length; j++) {
         if (str[i + j] != searchValue[j]) {
           continue letter;
@@ -84,7 +86,7 @@ Object.defineProperty(String.prototype, 'charAt', {
     if (this === null || this === undefined) {
       throw TypeError('"this" is null or undefined');
     }
-    return (isFinite(index) && String(this)[index | 0]) || '';
+    return (isFinite(index) && ('' + this)[index | 0]) || '';
   }
 });
 
@@ -97,8 +99,8 @@ Object.defineProperty(String.prototype, 'replace', {
     if (this === null || this === undefined) {
       throw TypeError('"this" is null or undefined');
     }
-    var str = String(this);
-    match = String(match);
+    var str = '' + this;
+    match = '' + match;
     var index = str.indexOf(match);
     if (index == -1) {
       return str;  // No match.
@@ -108,7 +110,7 @@ Object.defineProperty(String.prototype, 'replace', {
     if (typeof replace == 'function') {
       replace = replace(match, prefix.length, str);
     } else {
-      replace = String(replace);
+      replace = '' + replace;
     }
     return prefix + replace + suffix;
   }
@@ -123,8 +125,8 @@ Object.defineProperty(String.prototype, 'split', {
     if (this === null || this === undefined) {
       throw TypeError('"this" is null or undefined');
     }
-    var str = String(this);
-    separator = String(separator);
+    var str = '' + this;
+    separator = '' + separator;
     // Bug in JavaScript spec: If limit is Infinity, it becomes 0.
     limit = (limit === undefined) ? Infinity : (limit | 0);
     var list = [];
@@ -161,7 +163,7 @@ Object.defineProperty(String.prototype, 'substring', {
     if (this === null || this === undefined) {
       throw TypeError('"this" is null or undefined');
     }
-    var str = String(this);
+    var str = '' + this;
     if (indexStart != Infinity) {
       indexStart |= 0;
     }
@@ -199,7 +201,7 @@ Object.defineProperty(String.prototype, 'slice', {
     if (this === null || this === undefined) {
       throw TypeError('"this" is null or undefined');
     }
-    var str = String(this);
+    var str = '' + this;
     if (indexStart != Infinity) {
       indexStart |= 0;
     }
@@ -231,7 +233,7 @@ Object.defineProperty(String.prototype, 'substr', {
     if (this === null || this === undefined) {
       throw TypeError('"this" is null or undefined');
     }
-    var str = String(this);
+    var str = '' + this;
     if (indexStart != Infinity) {
       indexStart |= 0;
     }
@@ -260,7 +262,7 @@ Object.defineProperty(String.prototype, 'toUpperCase', {
     if (this === null || this === undefined) {
       throw TypeError('"this" is null or undefined');
     }
-    var str = String(this);
+    var str = '' + this;
     var lower = 'abcdefghijklmnopqrstuvwxyz';
     var upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
     var outStr = '';
@@ -285,7 +287,7 @@ Object.defineProperty(String.prototype, 'toLowerCase', {
     if (this === null || this === undefined) {
       throw TypeError('"this" is null or undefined');
     }
-    var str = String(this);
+    var str = '' + this;
     var lower = 'abcdefghijklmnopqrstuvwxyz';
     var upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
     var outStr = '';
@@ -314,7 +316,7 @@ Object.defineProperty(String.prototype, 'trim', {
     var white = ' \f\n\r\t\v\u00a0\u1680\u180e\u2000\u2001\u2002\u2003\u2004' +
         '\u2005\u2006\u2007\u2008\u2009\u200a\u2028\u2029\u202f\u205f\u3000' +
         '\ufeff\uFEFF\xA0';
-    var str = String(this);
+    var str = '' + this;
     for (var start = 0; start < str.length; start++) {
       if (white.indexOf(str[start]) == -1) {
         break;

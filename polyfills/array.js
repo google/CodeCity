@@ -294,7 +294,7 @@ Object.defineProperty(Array.prototype, 'join', {
       throw TypeError('"this" is null or undefined');
     }
     var separator = typeof opt_separator == 'undefined' ?
-        ',' : String(opt_separator);
+        ',' : ('' + opt_separator);
     var str = '';
     for (var i = 0; i < this.length; i++) {
       if (i && separator) {
