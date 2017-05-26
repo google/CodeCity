@@ -190,3 +190,67 @@ Object.defineProperty(Number.prototype, 'toPrecision', {
     throw 'toPrecision is not implemented yet. Complain to someone about this.';
   }
 });
+
+Object.defineProperty(Number.prototype, 'toString', {
+  configurable: true,
+  enumerable: false,
+  writable: true,
+  value: function(radix) {
+    var num = this;
+    if (typeof num != 'number') {
+      if (num == Number.prototype) {
+        num = 0;
+      } else if (num instanceof Number) {
+        num -= 0;
+      } else {
+        throw TypeError('this is not a number');
+      }
+    }
+    if (radix === undefined) {
+      radix = 10;
+    } else {
+      radix |= 0;
+    }
+    if (isNaN(radix) || radix < 2 || radix > 36) {
+      throw RangeError('radix argument must be between 2 and 36');
+    }
+    if (!isFinite(num) || radix == 10) {
+      return '' + num;  // Built-in functionality can handle base 10 conversion.
+    }
+    var negative = num < 0;
+    if (negative) {
+      num *= -1;
+    }
+    var digits = '0123456789abcdefghijklmnopqrstuvwxyz';
+    var str = negative ? '-' : '';
+    // Compute the number of digits (left of the decimal) that the number will
+    // have in its new radix.  E.g. 12345 (10) -> 5
+    var place = (Math.log(num) / Math.log(radix)) | 0;
+    while (place >= 0) {
+      var power = Math.pow(radix, place);
+      var remainder = num % power;
+      var digit = ((num - remainder) / power) | 0;
+      str += digits[digit];
+      num = remainder;
+      place--;
+    }
+    if (num > 0) {
+      // If the number has a decimal remainder, compute the first 20 digits.
+      // Use a buffer to prevent display of trailing zeros.
+      var strBuffer = '.';
+      while (num > 0 && place >= -20) {
+        var power = Math.pow(radix, place);
+        var remainder = num % power;
+        var digit = ((num - remainder) / power) | 0;
+        strBuffer += digits[digit];
+        if (digit) {
+          str += strBuffer;
+          strBuffer = '';
+        }
+        num = remainder;
+        place--;
+      }
+    }
+    return str;
+  }
+});
