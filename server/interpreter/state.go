@@ -496,7 +496,7 @@ func (st *stateBlockStatement) step(intrp *Interpreter, cv *cval) (state, *cval)
 	if len(st.body) == 0 {
 		return st.parent, pval(nil)
 	}
-	s := newState(st, st.scope, (st.body)[st.n])
+	s := newState(st, st.scope, st.body[st.n])
 	st.n++
 	return s, nil
 }

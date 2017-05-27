@@ -48,7 +48,8 @@ func handleConnection(conn net.Conn) {
 	for in.Scan() {
 		input := in.Text()
 		fmt.Println(input)
-		i, err := interpreter.New(input)
+		i := interpreter.New()
+		err := i.Eval(input)
 		if err != nil {
 			fmt.Println(err)
 			fmt.Fprintln(conn, err)

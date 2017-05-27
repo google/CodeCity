@@ -23,9 +23,8 @@ import (
 )
 
 func TestInitArrayProto(t *testing.T) {
-	i, _ := NewFromJSON(emptyProg)
-	ap, _ := i.state.(*stateBlockStatement).scope.getVar("Array").(data.Object).
-		Get("prototype")
+	i := New()
+	ap, _ := i.global.getVar("Array").(data.Object).Get("prototype")
 	push, _ := ap.(data.Object).Get("push")
 	cl, isClosure := push.(*closure)
 	if !isClosure {

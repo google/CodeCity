@@ -84,7 +84,7 @@ func TestPropRef(t *testing.T) {
 
 func TestPrimRef(t *testing.T) {
 	prim := data.String("foo")
-	intrp, _ := NewFromJSON(emptyProg)
+	intrp := New()
 	ref := newReference(prim, "length")
 
 	if b := ref.getBase(); b != prim {

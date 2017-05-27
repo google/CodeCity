@@ -26,7 +26,8 @@ import (
 func TestInterpreterSimple(t *testing.T) {
 	for _, c := range tests {
 		t.Run(c.name, func(t *testing.T) {
-			i, err := NewFromJSON(c.ast)
+			i := New()
+			err := i.EvalASTJSON(c.ast)
 			if err != nil {
 				t.Error(err)
 			}
@@ -44,7 +45,8 @@ func TestInterpreterSimple(t *testing.T) {
 }
 
 func TestInterpreterObjectExpression(t *testing.T) {
-	i, _ := NewFromJSON(objectExpression)
+	i := New()
+	i.EvalASTJSON(objectExpression)
 	i.Run()
 	v, ok := i.Value().(data.Object)
 	if !ok {
@@ -70,7 +72,8 @@ func TestInterpreterSwitchStatement(t *testing.T) {
 	var expected = [][]int{{28, 31, 30, 12, 8}, {30, 20, 20, 30, 40}}
 	for i := range code {
 		for j := 0; j < 5; j++ {
-			intrp, err := NewFromJSON(code[i])
+			intrp := New()
+			err := intrp.EvalASTJSON(code[i])
 			if err != nil {
 				t.Error(err)
 			}
@@ -90,17 +93,14 @@ func TestInterpreterSwitchStatement(t *testing.T) {
 // the value of the prototype object in a different interpreter
 // instance.
 func TestPrototypeIndependence(t *testing.T) {
-	i1, _ := NewFromJSON(emptyProg)
-	op1v, _ := i1.state.(*stateBlockStatement).scope.
-		getVar("Object").(data.Object).Get("prototype")
+	i1 := New()
+	op1v, _ := i1.global.getVar("Object").(data.Object).Get("prototype")
 	op1 := op1v.(data.Object)
-	ap1v, _ := i1.state.(*stateBlockStatement).scope.
-		getVar("Array").(data.Object).Get("prototype")
+	ap1v, _ := i1.global.getVar("Array").(data.Object).Get("prototype")
 	ap1 := ap1v.(data.Object)
 
-	i2, _ := NewFromJSON(emptyProg)
-	op2v, _ := i2.state.(*stateBlockStatement).scope.
-		getVar("Object").(data.Object).Get("prototype")
+	i2 := New()
+	op2v, _ := i2.global.getVar("Object").(data.Object).Get("prototype")
 	op2 := op2v.(data.Object)
 
 	if op1.HasOwnProperty("foo") {
@@ -115,8 +115,7 @@ func TestPrototypeIndependence(t *testing.T) {
 	}
 	v, e := ap1.Get("foo")
 	if e != nil || v != data.String("bar") {
-		t.Errorf("Array.prototype.foo == %#v (%s) "+
-			"(expected String(\"bar\"), nil)", v, e)
+		t.Errorf("Array.prototype.foo == %#v (%s) (expected String(\"bar\"), nil)", v, e)
 	}
 	if op2.HasProperty("foo") {
 		t.Errorf("(other) Object.prototype.foo now defined as %#v", v)
@@ -125,7 +124,8 @@ func TestPrototypeIndependence(t *testing.T) {
 
 func BenchmarkFibonacci(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		i, _ := New(fibonacci10k)
+		i := New()
+		i.EvalASTJSON(fibonacci10k)
 		i.Run()
 	}
 }

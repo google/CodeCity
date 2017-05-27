@@ -30,7 +30,8 @@ import (
 // FIXME: add a more general (and more comprehensive) example.
 
 func Example() {
-	intrp, _ := interpreter.NewFromJSON(fibonacci)
+	intrp := interpreter.New()
+	intrp.EvalASTJSON(fibonacci)
 	for i := 0; i < 500 && intrp.Step(); i++ {
 	}
 	var f = flatpack.New()
@@ -46,7 +47,8 @@ func Example() {
 
 func TestRoundTripInterpreter(t *testing.T) {
 	// t.SkipNow()
-	intrp, _ := interpreter.NewFromJSON(fibonacci)
+	intrp := interpreter.New()
+	intrp.EvalASTJSON(fibonacci)
 	for i := 0; i < 500 && intrp.Step(); i++ {
 	}
 	var f = flatpack.New()

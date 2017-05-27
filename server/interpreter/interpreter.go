@@ -28,75 +28,98 @@ import (
 type Interpreter struct {
 	protos  *data.Protos
 	global  *scope
-	state   state
-	value   *cval
+	threads []thread
 	Verbose bool
 }
 
-// New takes a JavaScript program as text source code and creates a
-// new Interpreter that will execute that program.
-//
-// FIXME: error handling
-func New(js string) (*Interpreter, error) {
-	ast, err := parse(js)
-	if err != nil {
-		return nil, err
-	}
-	return NewFromAST(ast), nil
+// Thread is a single thread of execution.
+type thread struct {
+	state state
+	value *cval
 }
 
-// NewFromJSON takes a JavaScript program, in the form of an JSON-encoded
-// ESTree, and creates a new Interpreter that will execute that
-// program.
-func NewFromJSON(astJSON string) (*Interpreter, error) {
-	tree, err := ast.NewFromJSON(astJSON)
-	if err != nil {
-		return nil, err
-	}
-	return NewFromAST(tree), nil
-}
-
-// NewFromAST takes a JavaScript program, in the form of an
-// ESTree-structured *ast.Program and creates a new Interpreter that
-// will execute that program.
-func NewFromAST(tree *ast.Program) *Interpreter {
+// New creates a new, empty interpreter.
+func New() *Interpreter {
 	var intrp = new(Interpreter)
 	intrp.protos = data.NewProtos()
 	intrp.global = newGlobalScope(intrp.protos)
-	intrp.global.populate(tree, intrp)
-	intrp.state = newState(nil, intrp.global, tree)
 	return intrp
 }
 
-// Step performs the next step in the evaluation of program.  Returns
-// true if a step was executed; false if the program has terminated.
+// Eval takes a JavaScript program as text source code and adds a
+// thread to the interpreter that will execute that program.
+//
+// FIXME: error handling
+func (intrp *Interpreter) Eval(js string) error {
+	tree, err := parse(js)
+	if err != nil {
+		return err
+	}
+	intrp.EvalAST(tree)
+	return nil
+}
+
+// EvalASTJSON takes a JavaScript program, in the form of an
+// JSON-encoded ESTree, and adds a thread to the interpreter that will
+// execute that program.
+func (intrp *Interpreter) EvalASTJSON(astJSON string) error {
+	tree, err := ast.NewFromJSON(astJSON)
+	if err != nil {
+		return err
+	}
+	intrp.EvalAST(tree)
+	return nil
+}
+
+// EvalAST takes a JavaScript program, in the form of an
+// ESTree-structured *ast.Program and adds a thread to the interpreter
+// that will execute that program.
+func (intrp *Interpreter) EvalAST(tree *ast.Program) {
+	intrp.global.populate(tree, intrp)
+	state := newState(nil, intrp.global, tree)
+	intrp.threads = append(intrp.threads, thread{state: state})
+}
+
+// Step performs the next step in the evaluation of the current
+// thread.  Returns true if a step was executed; false if the program
+// has terminated.
 //
 // FIXME: should not panic!
 func (intrp *Interpreter) Step() bool {
-	if intrp.state == nil {
-		switch intrp.value.typ {
-		case BREAK:
-			panic(fmt.Errorf("illegal break to %s", intrp.value.targ))
-		case CONTINUE:
-			panic(fmt.Errorf("illegal continue of %s", intrp.value.targ))
-		case RETURN:
-			panic(fmt.Errorf("illegal return of %s", intrp.value.value().ToString()))
-		case THROW:
-			error := intrp.toObject(intrp.value.value(), nil)
-			name, _ := error.Get("name")
-			message, _ := error.Get("message")
-			panic(fmt.Errorf("unhandled exception: %s: %s", name, message))
-		}
+	if len(intrp.threads) == 0 {
+		return false
+	}
+	for intrp.threads[0].state == nil && len(intrp.threads) > 1 {
+		intrp.threads = intrp.threads[1:]
+	}
+	thread := &intrp.threads[0]
+	if thread.state == nil {
 		return false
 	}
 	if intrp.Verbose {
-		fmt.Printf("Next step is %T.step(%#v)\n", intrp.state, intrp.value)
+		fmt.Printf("Next step is %T.step(%#v)\n", thread.state, thread.value)
 	}
-	intrp.state, intrp.value = intrp.state.step(intrp, intrp.value)
-	return true
+	thread.state, thread.value = thread.state.step(intrp, thread.value)
+	if thread.state != nil {
+		return true
+	}
+	switch thread.value.typ {
+	case BREAK:
+		panic(fmt.Errorf("illegal break to %s", thread.value.targ))
+	case CONTINUE:
+		panic(fmt.Errorf("illegal continue of %s", thread.value.targ))
+	case RETURN:
+		panic(fmt.Errorf("illegal return of %s", thread.value.value().ToString()))
+	case THROW:
+		error := intrp.toObject(thread.value.value(), nil)
+		name, _ := error.Get("name")
+		message, _ := error.Get("message")
+		panic(fmt.Errorf("unhandled exception: %s: %s", name, message))
+	}
+	return false
 }
 
-// Run runs the program to completion.
+// Run calls Step() repeatedly until it returns false.
 func (intrp *Interpreter) Run() {
 	for intrp.Step() {
 	}
@@ -105,10 +128,10 @@ func (intrp *Interpreter) Run() {
 // Value returns the final value computed by the last statement
 // expression of the program.
 func (intrp *Interpreter) Value() data.Value {
-	if intrp.value == nil {
+	if len(intrp.threads) == 0 || intrp.threads[0].value == nil {
 		return nil
 	}
-	return intrp.value.value()
+	return intrp.threads[0].value.value()
 }
 
 // toObject coerces its first argument into an object.  This
