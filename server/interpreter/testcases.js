@@ -25,6 +25,7 @@
 
 // This file is input for (and required by) gentests.js.
 exports.tests = [
+  // Testcases for TestInterpreterSimple (have expected value):
   { name: 'onePlusOne', src: `
     1 + 1;
     `,
@@ -498,4 +499,33 @@ exports.tests = [
     `,
     expected: 77 },
 
+  // Other tests (without expected value):
+
+  // FIXME: remove this
+  { name: 'emptyProg', src: '',
+  },
+  
+  { name: 'objectExpression', src: `
+    ({foo: "bar", answer: 42})
+    `,
+    // expected: {foo: "bar", answer: 42}
+  },
+
+  { name: 'fibonacci10k', src: `
+    var fibonacci = function(n, output) {
+      var a = 1, b = 1, sum;
+      for (var i = 0; i < n; i++) {
+	output.push(a);
+	sum = a + b;
+	a = b;
+	b = sum;
+      }
+    }
+    for(var i = 0; i < 10000; i++) {
+      var result = [];
+      fibonacci(78, result);
+    }
+    result;
+    `,
+  },
 ];

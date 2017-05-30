@@ -40,6 +40,10 @@ console.log('}{');
 
 var t = tests.tests;
 for (var i = 0; i < t.length; i++) {
+  // Skip testcases without expected result (only parse them)
+  if (!("expected" in t[i])) {
+    continue;
+  }
   var name = t[i].name;
   // Compact source code by removing line breaks and unneeded spaces &
   // semicolons:
