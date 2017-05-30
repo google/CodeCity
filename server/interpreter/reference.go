@@ -54,7 +54,7 @@ func (ref reference) isUnresolvable() bool {
 // known not to be a primitive.
 func (ref reference) getValue(intrp *Interpreter) (data.Value, *data.NativeError) {
 	if ref.isUnresolvable() {
-		return nil, &data.NativeError{data.ReferenceError, "unresolvable reference"}
+		return nil, &data.NativeError{Type: data.ReferenceError, Message: "unresolvable reference"}
 	}
 	switch b := ref.base.(type) {
 	case data.Object:
@@ -74,7 +74,7 @@ func (ref reference) getValue(intrp *Interpreter) (data.Value, *data.NativeError
 // base is known not to be a primitive.
 func (ref reference) putValue(v data.Value, intrp *Interpreter) *data.NativeError {
 	if ref.isUnresolvable() {
-		return &data.NativeError{data.ReferenceError, "unresolvable reference"}
+		return &data.NativeError{Type: data.ReferenceError, Message: "unresolvable reference"}
 	}
 	switch b := ref.base.(type) {
 	case data.Object:
@@ -92,7 +92,7 @@ func (ref reference) putValue(v data.Value, intrp *Interpreter) *data.NativeErro
 
 func (ref reference) delete(intrp *Interpreter) *data.NativeError {
 	if ref.isUnresolvable() {
-		return &data.NativeError{data.ReferenceError, "unresolvable reference"}
+		return &data.NativeError{Type: data.ReferenceError, Message: "unresolvable reference"}
 	}
 	switch b := ref.base.(type) {
 	case data.Object:
@@ -101,7 +101,7 @@ func (ref reference) delete(intrp *Interpreter) *data.NativeError {
 		// FIXME: set owner.
 		return intrp.toObject(b, nil).Delete(ref.name)
 	case *scope:
-		return &data.NativeError{data.SyntaxError, "Delete of an unqualified identifier in strict mode."}
+		return &data.NativeError{Type: data.SyntaxError, Message: "Delete of an unqualified identifier in strict mode."}
 	default:
 		panic("unexpected base type when getting reference??")
 	}

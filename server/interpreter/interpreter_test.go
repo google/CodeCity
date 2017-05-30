@@ -115,7 +115,7 @@ func TestPrototypeIndependence(t *testing.T) {
 	}
 	v, e := ap1.Get("foo")
 	if e != nil || v != data.String("bar") {
-		t.Errorf("Array.prototype.foo == %#v (%s) (expected String(\"bar\"), nil)", v, e)
+		t.Errorf("Array.prototype.foo == %#v, %#v (expected String(\"bar\"), nil)", v, e)
 	}
 	if op2.HasProperty("foo") {
 		t.Errorf("(other) Object.prototype.foo now defined as %#v", v)

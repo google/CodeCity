@@ -410,7 +410,7 @@ func (st *stateAssignmentExpression) step(intrp *Interpreter, cv *cval) (state, 
 		st.gotLeft = true
 		return newState(st, st.scope, ast.Node(st.rNode.E)), nil
 	}
-	var r data.Value = cv.pval()
+	var r = cv.pval()
 
 	// Do (operator)assignment:
 	if st.op != "=" {
@@ -592,7 +592,7 @@ func (st *stateCallExpression) step(intrp *Interpreter, cv *cval) (state, *cval)
 		closure, isClosure := st.fn.(*closure)
 		if !isClosure {
 			e := fmt.Sprintf("%#v is not a function", st.fn)
-			return st.parent, intrp.throw(&data.NativeError{data.TypeError, e})
+			return st.parent, intrp.throw(&data.NativeError{Type: data.TypeError, Message: e})
 		}
 		scope := newScope(closure.scope, st.this)
 		// Set up scope:

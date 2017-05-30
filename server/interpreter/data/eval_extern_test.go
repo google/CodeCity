@@ -216,7 +216,7 @@ func TestBinaryOp(t *testing.T) {
 				c.left, c.op, c.right, v, c.expected)
 		}
 		if e != nil {
-			t.Errorf("%#v %s %#v returned error: %s", c.left, c.op, c.right, e)
+			t.Errorf("%#v %s %#v returned error: %#v", c.left, c.op, c.right, e)
 		}
 	}
 }
