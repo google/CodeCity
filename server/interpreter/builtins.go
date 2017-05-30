@@ -22,21 +22,24 @@ import (
 )
 
 func (intrp *Interpreter) mkBuiltin(path string, value data.Value) {
+	if intrp.builtins != nil {
+		intrp.builtins[path] = value
+		return
+	}
 	cmp := strings.Split(path, ".")
 	if len(cmp) == 1 {
 		intrp.global.newVar(cmp[0], value)
 		return
-	} else {
-		o := intrp.global.getVar(cmp[0]).(data.Object)
-		for cmp = cmp[1:]; len(cmp) > 1; cmp = cmp[1:] {
-			v, err := o.Get(cmp[0])
-			if err != nil {
-				panic(err)
-			}
-			o = v.(data.Object)
-		}
-		o.Set(cmp[0], value)
 	}
+	o := intrp.global.getVar(cmp[0]).(data.Object)
+	for cmp = cmp[1:]; len(cmp) > 1; cmp = cmp[1:] {
+		v, err := o.Get(cmp[0])
+		if err != nil {
+			panic(err)
+		}
+		o = v.(data.Object)
+	}
+	o.Set(cmp[0], value)
 }
 
 // initGlobalScope initializes the global scope

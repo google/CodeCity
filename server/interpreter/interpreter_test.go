@@ -122,6 +122,15 @@ func TestPrototypeIndependence(t *testing.T) {
 	}
 }
 
+// TestNewBare verifies that NewBare() returns an interpreter with
+// nothing in the global scope.
+func TestNewBare(t *testing.T) {
+	i := NewBare()
+	if len(i.global.vars) > 0 {
+		t.Errorf("NewBare().global.vars == %#v (expected nil)", i.global.vars)
+	}
+}
+
 func BenchmarkFibonacci(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		i := New()

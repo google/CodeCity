@@ -26,10 +26,11 @@ import (
 
 // Interpreter implements a JavaScript interpreter.
 type Interpreter struct {
-	protos  *data.Protos
-	global  *scope
-	threads []thread
-	Verbose bool
+	protos   *data.Protos
+	builtins map[string]data.Value
+	global   *scope
+	threads  []thread
+	Verbose  bool
 }
 
 // Thread is a single thread of execution.
@@ -38,13 +39,27 @@ type thread struct {
 	value *cval
 }
 
-// New creates a new, empty interpreter.
-func New() *Interpreter {
+func newInterpreter(bare bool) *Interpreter {
 	var intrp = new(Interpreter)
 	intrp.protos = data.NewProtos()
 	intrp.global = newScope(nil, nil)
+	if bare {
+		intrp.builtins = make(map[string]data.Value)
+	}
 	intrp.initBuiltins()
 	return intrp
+}
+
+// New creates a new, empty interpreter with only the usual built-in
+// global names defined.
+func New() *Interpreter {
+	return newInterpreter(false)
+}
+
+// NewBare creates a new, entirely empty interpreter, with nothing at
+// all in the global namespace.
+func NewBare() *Interpreter {
+	return newInterpreter(true)
 }
 
 // Eval takes a JavaScript program as text source code and adds a
