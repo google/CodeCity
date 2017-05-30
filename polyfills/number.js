@@ -102,11 +102,10 @@ Object.defineProperty(Number.prototype, 'toExponential', {
         // Decimal too long.  Round off.
         var zeros = Math.pow(10, decimal.length - fractionDigits);
         decimal = Math.round(decimal / zeros) + '';
-      } else {
-        // Decimals not long enough.  Add zeros.
-        while (decimal.length < fractionDigits) {
-          decimal += '0';
-        }
+      }
+      // Decimals not long enough.  Add zeros.
+      while (decimal.length < fractionDigits) {
+        decimal += '0';
       }
     }
     return integer + (decimal ? '.' + decimal : '') + 'e' + exponent;
@@ -151,6 +150,11 @@ Object.defineProperty(Number.prototype, 'toFixed', {
     }
     var zeros = Math.pow(10, digits);
     decimal = Math.round(decimal * zeros) / zeros;
+    if (decimal >= 1) {
+      // Carry over to the integer.
+      decimal--;
+      integer < 0 ? integer-- : integer++;
+    }
     var str = integer + '.';
     // Shift each decimal digit off one by one.
     for (var i = 0; i < digits; i++) {
@@ -178,16 +182,24 @@ Object.defineProperty(Number.prototype, 'toPrecision', {
         throw TypeError('this is not a number');
       }
     }
-    if (!isFinite(num)) {
+    if (!isFinite(num) || precision === undefined) {
       return '' + num;  // NaN and Infinities.
     }
-    if (isFinite(digits)) {
-      precision |= 0;
-    }
+    precision |= 0;
     if (precision < 1 || precision > 100) {
       throw RangeError('toPrecision() argument must be between 1 and 21');
     }
-    throw 'toPrecision is not implemented yet. Complain to someone about this.';
+    var log = Math.log10(num);
+    if (log >= precision) {
+      // Forced to switch to exponential notation.
+      return num.toExponential(precision - 1);
+    }
+    var digits = precision - log;
+    // Bug: toFixed can change the length of the number due to rounding,
+    // resulting in an incorrect precision.
+    // E.g. (9.9999).toPrecision(4) should be '10.00' but is '10.000'.
+    // The solution is to stop using toFixed.
+    return num.toFixed(digits);
   }
 });
 
