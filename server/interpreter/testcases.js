@@ -511,14 +511,61 @@ exports.tests = [
     // expected: {foo: "bar", answer: 42}
   },
 
+  { name: 'switchStatement', src: `
+    var n;
+    var x = 0;
+    switch(n) {
+    case 1:
+      x += 1
+      // fall through
+    case 2:
+      x += 2
+      // fall through
+    default:
+      x += 16
+      // fall through
+    case 3:
+      x += 4
+      // fall through
+    case 4:
+      x += 8
+      // fall through
+    }
+    x;
+    `,
+  },
+
+  { name: 'switchStatementWithBreaks', src: `
+    var n;
+    foo: {
+      switch(n) {
+      case 1:
+	10;
+        // fall through
+      case 2:
+        20;
+        break;
+      default:
+        50;
+        // fall through
+      case 3:
+        30;
+        break foo;
+      case 4:
+        40;
+      }
+    }
+    `,
+  },
+
   { name: 'fibonacci10k', src: `
     var fibonacci = function(n, output) {
       var a = 1, b = 1, sum;
       for (var i = 0; i < n; i++) {
-	output.push(a);
-	sum = a + b;
-	a = b;
-	b = sum;
+        output.push(a);
+        sum = a + b;
+        a = b;
+        b = sum;
       }
     }
     for(var i = 0; i < 10000; i++) {

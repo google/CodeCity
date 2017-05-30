@@ -20,7 +20,6 @@ package interpreter
 
 import (
 	"CodeCity/server/interpreter/data"
-	"fmt"
 	"testing"
 )
 
@@ -76,13 +75,16 @@ func TestInterpreterSwitchStatement(t *testing.T) {
 	var expected = [][]int{{28, 31, 30, 12, 8}, {30, 20, 20, 30, 40}}
 	for i := range code {
 		for j := 0; j < 5; j++ {
-			code := fmt.Sprintf(code[i], j, j)
-			intrp, _ := NewFromJSON(code)
+			intrp, err := NewFromJSON(code[i])
+			if err != nil {
+				t.Error(err)
+			}
+			intrp.global.setVar("n", data.Number(float64(j)))
 			intrp.Run()
 			exp := data.Number(expected[i][j])
 			if v := intrp.Value(); v != exp {
-				t.Errorf("case test %d,%d == %v (%T) (expected %v)",
-					i, j, v, v, exp)
+				t.Errorf("case test %d,%d == %v (%[3]T) (expected %v)",
+					i, j, v, exp)
 			}
 		}
 	}
@@ -132,32 +134,3 @@ func BenchmarkFibonacci(b *testing.B) {
 		i.Run()
 	}
 }
-
-/********************************************************************/
-
-// Special test parse trees that can't be generated: they contain
-// printf escape sequences in the JSON to parameterize the code.  This
-// is marked as <VALUE> in the source comment, but of course acorn
-// does not actually handle such things:
-
-// var x = 0
-// switch(<VALUE>) {
-//   case 1: x+=1
-//   case 2: x+=2
-//   default: x+=16
-//   case 3: x+=4
-//   case 4: x+=8
-// }
-// x
-const switchStatement = `{"type":"Program","start":0,"end":102,"body":[{"type":"VariableDeclaration","start":0,"end":9,"declarations":[{"type":"VariableDeclarator","start":4,"end":9,"id":{"type":"Identifier","start":4,"end":5,"name":"x"},"init":{"type":"Literal","start":8,"end":9,"value":0,"raw":"0"}}],"kind":"var"},{"type":"SwitchStatement","start":10,"end":100,"discriminant":{"type":"Literal","start":17,"end":18,"value":%d,"raw":"%d"},"cases":[{"type":"SwitchCase","start":24,"end":36,"consequent":[{"type":"ExpressionStatement","start":32,"end":36,"expression":{"type":"AssignmentExpression","start":32,"end":36,"operator":"+=","left":{"type":"Identifier","start":32,"end":33,"name":"x"},"right":{"type":"Literal","start":35,"end":36,"value":1,"raw":"1"}}}],"test":{"type":"Literal","start":29,"end":30,"value":1,"raw":"1"}},{"type":"SwitchCase","start":39,"end":51,"consequent":[{"type":"ExpressionStatement","start":47,"end":51,"expression":{"type":"AssignmentExpression","start":47,"end":51,"operator":"+=","left":{"type":"Identifier","start":47,"end":48,"name":"x"},"right":{"type":"Literal","start":50,"end":51,"value":2,"raw":"2"}}}],"test":{"type":"Literal","start":44,"end":45,"value":2,"raw":"2"}},{"type":"SwitchCase","start":54,"end":68,"consequent":[{"type":"ExpressionStatement","start":63,"end":68,"expression":{"type":"AssignmentExpression","start":63,"end":68,"operator":"+=","left":{"type":"Identifier","start":63,"end":64,"name":"x"},"right":{"type":"Literal","start":66,"end":68,"value":16,"raw":"16"}}}],"test":null},{"type":"SwitchCase","start":71,"end":83,"consequent":[{"type":"ExpressionStatement","start":79,"end":83,"expression":{"type":"AssignmentExpression","start":79,"end":83,"operator":"+=","left":{"type":"Identifier","start":79,"end":80,"name":"x"},"right":{"type":"Literal","start":82,"end":83,"value":4,"raw":"4"}}}],"test":{"type":"Literal","start":76,"end":77,"value":3,"raw":"3"}},{"type":"SwitchCase","start":86,"end":98,"consequent":[{"type":"ExpressionStatement","start":94,"end":98,"expression":{"type":"AssignmentExpression","start":94,"end":98,"operator":"+=","left":{"type":"Identifier","start":94,"end":95,"name":"x"},"right":{"type":"Literal","start":97,"end":98,"value":8,"raw":"8"}}}],"test":{"type":"Literal","start":91,"end":92,"value":4,"raw":"4"}}]},{"type":"ExpressionStatement","start":101,"end":102,"expression":{"type":"Identifier","start":101,"end":102,"name":"x"}}]}`
-
-// foo: {
-//   switch(<VALUE>) {
-//   case 1: 10;
-//   case 2: 20; break;
-//   default: 50;
-//   case 3: 30; break foo;
-//   case 4: 40;
-//   }
-// }
-const switchStatementWithBreaks = `{"type":"Program","start":0,"end":115,"body":[{"type":"LabeledStatement","start":0,"end":115,"body":{"type":"BlockStatement","start":5,"end":115,"body":[{"type":"SwitchStatement","start":9,"end":113,"discriminant":{"type":"Literal","start":16,"end":17,"value":%d,"raw":"%d"},"cases":[{"type":"SwitchCase","start":23,"end":34,"consequent":[{"type":"ExpressionStatement","start":31,"end":34,"expression":{"type":"Literal","start":31,"end":33,"value":10,"raw":"10"}}],"test":{"type":"Literal","start":28,"end":29,"value":1,"raw":"1"}},{"type":"SwitchCase","start":37,"end":55,"consequent":[{"type":"ExpressionStatement","start":45,"end":48,"expression":{"type":"Literal","start":45,"end":47,"value":20,"raw":"20"}},{"type":"BreakStatement","start":49,"end":55,"label":null}],"test":{"type":"Literal","start":42,"end":43,"value":2,"raw":"2"}},{"type":"SwitchCase","start":58,"end":70,"consequent":[{"type":"ExpressionStatement","start":67,"end":70,"expression":{"type":"Literal","start":67,"end":69,"value":50,"raw":"50"}}],"test":null},{"type":"SwitchCase","start":73,"end":95,"consequent":[{"type":"ExpressionStatement","start":81,"end":84,"expression":{"type":"Literal","start":81,"end":83,"value":30,"raw":"30"}},{"type":"BreakStatement","start":85,"end":95,"label":{"type":"Identifier","start":91,"end":94,"name":"foo"}}],"test":{"type":"Literal","start":78,"end":79,"value":3,"raw":"3"}},{"type":"SwitchCase","start":98,"end":109,"consequent":[{"type":"ExpressionStatement","start":106,"end":109,"expression":{"type":"Literal","start":106,"end":108,"value":40,"raw":"40"}}],"test":{"type":"Literal","start":103,"end":104,"value":4,"raw":"4"}}]}]},"label":{"type":"Identifier","start":0,"end":3,"name":"foo"}}]}`
