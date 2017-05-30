@@ -127,7 +127,8 @@ var parseInt = function(str, radix) {
   if (negative || str[cursor] == '+') {
     cursor++;
   }
-  var hex = str[cursor] == '0' && (str[cursor + 1] == 'x' || str[cursor + 1] == 'X');
+  var hex = str[cursor] == '0' &&
+      (str[cursor + 1] == 'x' || str[cursor + 1] == 'X');
   if (!radix) {
     radix = hex ? 16 : 10;
   }
