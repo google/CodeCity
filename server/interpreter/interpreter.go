@@ -42,7 +42,8 @@ type thread struct {
 func New() *Interpreter {
 	var intrp = new(Interpreter)
 	intrp.protos = data.NewProtos()
-	intrp.global = newGlobalScope(intrp.protos)
+	intrp.global = newScope(nil, nil)
+	intrp.initBuiltins()
 	return intrp
 }
 

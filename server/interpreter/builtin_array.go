@@ -22,12 +22,10 @@ import (
 	"encoding/json"
 )
 
-func initBuiltinArray(protos *data.Protos, sc *scope) {
-	// FIXME: should be Function?:
-	var Array = data.NewObject(nil, protos.FunctionProto)
-	sc.newVar("Array", Array)
-
-	Array.Set("prototype", protos.ArrayProto)
+func (intrp *Interpreter) initBuiltinArray() {
+	// FIXME: should be a Function (not just child of Function.prototype)
+	intrp.mkBuiltin("Array", data.NewObject(nil, intrp.protos.FunctionProto))
+	intrp.mkBuiltin("Array.prototype", intrp.protos.ArrayProto)
 
 	var params []*ast.Identifier
 	var body *ast.BlockStatement
@@ -41,8 +39,9 @@ func initBuiltinArray(protos *data.Protos, sc *scope) {
 		panic(e)
 	}
 	// FIXME: set owner:
-	var push = newClosure(nil, protos.FunctionProto, sc, params, body)
-	protos.ArrayProto.Set("push", push)
+	var push = newClosure(nil, intrp.protos.FunctionProto, intrp.global, params, body)
+
+	intrp.mkBuiltin("Array.prototype.push", push)
 }
 
 const pushPolyfillParams = `[{"type":"Identifier","start":32,"end":33,"name":"e"}]`

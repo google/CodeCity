@@ -18,9 +18,31 @@ package interpreter
 
 import (
 	"CodeCity/server/interpreter/data"
+	"strings"
 )
 
-func (intrp *Interpreter) initBuiltinObject() {
-	intrp.mkBuiltin("Object", data.NewObject(nil, intrp.protos.ObjectProto))
-	intrp.mkBuiltin("Object.prototype", intrp.protos.ObjectProto)
+func (intrp *Interpreter) mkBuiltin(path string, value data.Value) {
+	cmp := strings.Split(path, ".")
+	if len(cmp) == 1 {
+		intrp.global.newVar(cmp[0], value)
+		return
+	} else {
+		o := intrp.global.getVar(cmp[0]).(data.Object)
+		for cmp = cmp[1:]; len(cmp) > 1; cmp = cmp[1:] {
+			v, err := o.Get(cmp[0])
+			if err != nil {
+				panic(err)
+			}
+			o = v.(data.Object)
+		}
+		o.Set(cmp[0], value)
+	}
+}
+
+// initGlobalScope initializes the global scope
+func (intrp *Interpreter) initBuiltins() {
+	intrp.mkBuiltin("undefined", data.Undefined{})
+	intrp.initBuiltinObject()
+	intrp.initBuiltinArray()
+	// FIXME: insert (more) global names into intrp.global
 }
