@@ -558,6 +558,12 @@ exports.tests = [
     `,
   },
 
+  { name: 'newHack', src: `
+    typeof new "Array.prototype.push"
+    `,
+    // expected: "function"
+  },
+
   { name: 'fibonacci10k', src: `
     var fibonacci = function(n, output) {
       var a = 1, b = 1, sum;

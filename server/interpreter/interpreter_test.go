@@ -88,6 +88,15 @@ func TestInterpreterSwitchStatement(t *testing.T) {
 	}
 }
 
+func TestNewHack(t *testing.T) {
+	i := NewBare()
+	i.EvalASTJSON(newHack)
+	i.Run()
+	if v := i.Value(); v != data.String("function") {
+		t.Errorf(`typeof new "Array.prototype.push" == %#v (expected %#v)`, v, "function")
+	}
+}
+
 // TestPrototypeIndependence verifies that modifying the prototype of
 // a builtin object in one interpreter does not result in modifying
 // the value of the prototype object in a different interpreter

@@ -148,6 +148,10 @@ func newState(parent state, scope *scope, node ast.Node) state {
 		st := stateMemberExpression{stateCommon: sc}
 		st.init(n)
 		return &st
+	case *ast.NewExpression:
+		st := stateNewExpression{stateCommon: sc}
+		st.init(n)
+		return &st
 	case *ast.ObjectExpression:
 		st := stateObjectExpression{stateCommon: sc}
 		st.init(n)
@@ -1138,6 +1142,31 @@ func (st *stateMemberExpression) step(intrp *Interpreter, cv *cval) (state, *cva
 		return st.parent, intrp.throw(ne)
 	}
 	return st.parent, pval(v)
+}
+
+/********************************************************************/
+
+type stateNewExpression struct {
+	stateCommon
+	callee ast.Expression
+}
+
+func (st *stateNewExpression) init(node *ast.NewExpression) {
+	st.callee = node.Callee
+}
+
+func (st *stateNewExpression) step(intrp *Interpreter, cv *cval) (state, *cval) {
+	// Special `new "Path.to.builtin"` hack:
+	if lit, isLit := st.callee.E.(*ast.Literal); isLit && intrp.builtins != nil {
+		v, ne := data.NewFromRaw(lit.Raw)
+		if ne != nil {
+			return st.parent, intrp.throw(ne)
+		}
+		if s, isStr := v.(data.String); isStr {
+			return st.parent, pval(intrp.builtins[string(s)])
+		}
+	}
+	panic(fmt.Errorf("new operator not implemented"))
 }
 
 /********************************************************************/
