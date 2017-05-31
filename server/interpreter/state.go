@@ -832,7 +832,7 @@ type stateForInStatement struct {
 	state stateForInState
 	val   data.Value
 	iter  *data.PropIter
-	pname string
+	key   string
 }
 
 func (st *stateForInStatement) init(node *ast.ForInStatement) {
@@ -869,10 +869,10 @@ func (st *stateForInStatement) step(intrp *Interpreter, cv *cval) (state, *cval)
 			fallthrough
 		case forInPrepLeft:
 			n, ok := st.iter.Next()
-			if !ok {
+			if !ok { // done iteration
 				return st.parent, &cval{NORMAL, st.val, ""}
 			}
-			st.pname = n
+			st.key = n
 			st.state = forInLeft
 			return newStateForRef(st, st.scope, st.left.N), nil
 
@@ -881,7 +881,7 @@ func (st *stateForInStatement) step(intrp *Interpreter, cv *cval) (state, *cval)
 				return st.parent, cv
 			}
 			// FIXME: throw if error
-			_ = cv.rval().putValue(data.String(st.pname), intrp)
+			_ = cv.rval().putValue(data.String(st.key), intrp)
 			st.state = forInBody
 			return newState(st, st.scope, st.body.S), nil
 

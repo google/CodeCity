@@ -29,27 +29,27 @@ type Object interface {
 
 	// Get returns the current value of the given property or an
 	// NativeError if that was not possible.
-	Get(name string) (Value, *NativeError)
+	Get(key string) (Value, *NativeError)
 
 	// Set sets the given property to the specified value or returns
 	// an NativeError if that was not possible.
-	Set(name string, value Value) *NativeError
+	Set(key string, value Value) *NativeError
 
-	// Delete attempts to remove the named property.  If the property
-	// exists but can't be removed for some reason an NativeError is
-	// returned.  (Removing a non-existing property "succeeds"
-	// silently.)
-	Delete(name string) *NativeError
+	// Delete attempts to remove the specified property.  If the
+	// property exists but can't be removed for some reason an
+	// NativeError is returned.  (Removing a non-existing property
+	// "succeeds" silently.)
+	Delete(key string) *NativeError
 
-	// OwnPropertyKeys returns the list of (own) property names as a
+	// OwnPropertyKeys returns the list of (own) property keys as a
 	// slice of strings.
 	OwnPropertyKeys() []string
 
-	// HasOwnProperty returns true if the specified property name
+	// HasOwnProperty returns true if the specified property key
 	// exists on the object itself.
 	HasOwnProperty(string) bool
 
-	// HasProperty returns true if the specified property name
+	// HasProperty returns true if the specified property key
 	// exists on the object or its prototype chain.
 	HasProperty(string) bool
 }
@@ -140,7 +140,7 @@ func (obj *object) Set(key string, value Value) *NativeError {
 	return nil
 }
 
-// Delete removes the named property if possible.
+// Delete removes the specified property if possible.
 //
 // FIXME: perm / immutability checks!
 func (obj *object) Delete(key string) *NativeError {
