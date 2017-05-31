@@ -564,6 +564,16 @@ exports.tests = [
     // expected: "function"
   },
 
+  { name: 'iterNonEnumerable', src: `
+    var o;
+    var n = 0;
+    for (k in o) {
+      n++;
+    }
+    n;
+    `,
+  },
+
   { name: 'fibonacci10k', src: `
     var fibonacci = function(n, output) {
       var a = 1, b = 1, sum;

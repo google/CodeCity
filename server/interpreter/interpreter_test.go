@@ -97,6 +97,19 @@ func TestNewHack(t *testing.T) {
 	}
 }
 
+func TestIterNonEnumerable(t *testing.T) {
+	i := New()
+	i.EvalASTJSON(iterNonEnumerable)
+	o := data.NewObject(nil, i.protos.ObjectProto)
+	o.DefineOwnProperty("enumerable", data.Property{E: true})
+	o.DefineOwnProperty("nonenumerable", data.Property{E: false})
+	i.global.setVar("o", o)
+	i.Run()
+	if v := i.Value(); v != data.Number(1) {
+		t.Errorf("intrp.Value() == %#v (expected data.Number(1))", v)
+	}
+}
+
 // TestPrototypeIndependence verifies that modifying the prototype of
 // a builtin object in one interpreter does not result in modifying
 // the value of the prototype object in a different interpreter

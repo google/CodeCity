@@ -116,6 +116,9 @@ func (obj object) Proto() Object {
 // one, if possible) with the specified property descriptor.
 func (obj *object) DefineOwnProperty(key string, pd Property) *NativeError {
 	// FIXME: perm / configurability checks!
+	if pd.Value == nil {
+		pd.Value = Undefined{}
+	}
 	obj.properties[key] = pd
 	return nil
 }
