@@ -60,22 +60,23 @@ type Object interface {
 type object struct {
 	owner      *Owner
 	proto      Object
-	properties map[string]property
+	properties map[string]Property
 	f          bool
 }
 
-// property is a property descriptor, with the following fields:
-// owner: Who owns the property (has permission to write it)?
-// v:     The actual value of the property.
-// r:     Is the property world-readable?
-// e:     Is the property enumerable
-// i:     Is the property ownership inherited on children?
-type property struct {
-	owner *Owner
-	v     Value
-	r     bool
-	e     bool
-	i     bool
+// Property is a property descriptor, per §8.10 of ES5.1
+//     Value: The actual value of the property.
+//     Owner: Who owns the property (has permission to write it)?
+//     W:     Is the property writeable?
+//     E:     Is the property enumerable?
+//     C:     Is the property configurable?
+//     R:     Is the property world-readable?
+//     I:     Is the property ownership inherited on children?
+type Property struct {
+	Value   Value
+	Owner   *Owner
+	W, E, C bool
+	R, I    bool
 }
 
 // *object must satisfy Object.
@@ -107,7 +108,7 @@ func (obj object) Get(key string) (Value, *NativeError) {
 	pd, ok := obj.properties[key]
 	// FIXME: permissions check for property readability goes here
 	if ok {
-		return pd.v, nil
+		return pd.Value, nil
 	}
 	// Try the prototype?
 	proto := obj.Proto()
@@ -123,19 +124,21 @@ func (obj *object) Set(key string, value Value) *NativeError {
 	pd, ok := obj.properties[key]
 	if !ok { // Creating new property
 		// FIXME: permissions check for object writability goes here
-		obj.properties[key] = property{
-			owner: obj.owner, // FIXME: should be caller
-			v:     value,
-			r:     true,
-			e:     true,
-			i:     false,
+		obj.properties[key] = Property{
+			Value: value,
+			Owner: obj.owner, // FIXME: should this be caller?
+			W:     true,
+			E:     true,
+			C:     true,
+			R:     true,
+			I:     false,
 		}
 		return nil
 	}
 	// Updating existing property
 	// FIXME: permissions check for property writeability goes here
 	// FIXME: recurse if necessary
-	pd.v = value
+	pd.Value = value
 	obj.properties[key] = pd
 	return nil
 }
@@ -220,5 +223,5 @@ func NewObject(owner *Owner, proto Object) *object {
 func (obj *object) init(owner *Owner, proto Object) {
 	obj.owner = owner
 	obj.proto = proto
-	obj.properties = make(map[string]property)
+	obj.properties = make(map[string]Property)
 }

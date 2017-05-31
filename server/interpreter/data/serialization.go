@@ -36,7 +36,7 @@ func init() {
 
 		// From Object.go:
 		object{},
-		property{},
+		Property{},
 
 		// From owner.go:
 		Owner{},
