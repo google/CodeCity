@@ -29,7 +29,7 @@ type closure struct {
 	body   *ast.BlockStatement
 }
 
-// *Function must satisfy Value.
+// *closure must satisfy Value.
 var _ data.Value = (*closure)(nil)
 
 func (closure) Typeof() string {
@@ -41,12 +41,13 @@ func (closure) ToString() data.String {
 }
 
 // newClosure returns a new closure object with the specified owner,
-// scope and body, having parent functionProto.
+// prototype, scope and body.
 func newClosure(owner *data.Owner, proto data.Object, scope *scope,
 	params []*ast.Identifier, body *ast.BlockStatement) *closure {
 	var cl = new(closure)
 	cl.Object = data.NewObject(owner, proto)
 	cl.scope = scope
+	// FIXME: should length be non-writeable?
 	cl.Set("length", data.Number(len(params)))
 	cl.params = make([]string, len(params))
 	for i, p := range params {
