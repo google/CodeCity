@@ -27,6 +27,16 @@ type Object interface {
 	// the .prototype property on Functions.
 	Proto() Object
 
+	// DefineOwnProperty creates a new property (or updates an
+	// existing one, if possible) with the specified property
+	// descriptor.
+	DefineOwnProperty(key string, pd Property) *NativeError
+
+	// GetOwnProperty returns the property descriptor for the
+	// specified key and ok == true (if a property with the specified
+	// key exists), or ok == false (if it doesn't).
+	GetOwnProperty(key string) (pd Property, ok bool)
+
 	// Get returns the current value of the given property or an
 	// NativeError if that was not possible.
 	Get(key string) (Value, *NativeError)
@@ -102,8 +112,31 @@ func (obj object) Proto() Object {
 	return obj.proto
 }
 
+// DefineOwnProperty creates a new property (or updates an existing
+// one, if possible) with the specified property descriptor.
+func (obj *object) DefineOwnProperty(key string, pd Property) *NativeError {
+	// FIXME: perm / configurability checks!
+	obj.properties[key] = pd
+	return nil
+}
+
+// GetOwnProperty returns the property descriptor for the specified
+// key and ok == true (if a property with the specified key exists),
+// or ok == false (if it doesn't).
+//
+// FIXME: this needs to be redefined more carefully on Array,
+// BoxedString, etc.
+func (obj *object) GetOwnProperty(key string) (pd Property, ok bool) {
+	// FIXME: perm check?
+	pd, ok = obj.properties[key]
+	return pd, ok
+}
+
 // Get returns the current value of the given property or an
 // NativeError if that was not possible.
+//
+// FIXME: this needs to be redefined more carefully on Array,
+// BoxedString, etc.
 func (obj object) Get(key string) (Value, *NativeError) {
 	pd, ok := obj.properties[key]
 	// FIXME: permissions check for property readability goes here
@@ -123,8 +156,7 @@ func (obj object) Get(key string) (Value, *NativeError) {
 func (obj *object) Set(key string, value Value) *NativeError {
 	pd, ok := obj.properties[key]
 	if !ok { // Creating new property
-		// FIXME: permissions check for object writability goes here
-		obj.properties[key] = Property{
+		pd := Property{
 			Value: value,
 			Owner: obj.owner, // FIXME: should this be caller?
 			W:     true,
@@ -133,7 +165,7 @@ func (obj *object) Set(key string, value Value) *NativeError {
 			R:     true,
 			I:     false,
 		}
-		return nil
+		return obj.DefineOwnProperty(key, pd)
 	}
 	// Updating existing property
 	// FIXME: permissions check for property writeability goes here
