@@ -1,32 +1,30 @@
 // TODO: Add tests from https://github.com/tc39/test262/tree/master/test/built-ins/Number
 
-var Number2 = {};
-
-Object.defineProperty(Number2, 'MAX_VALUE', {
+Object.defineProperty(Number, 'MAX_VALUE', {
   configurable: false,
   enumerable: false,
   writable: false,
   value: 1.7976931348623157e+308
 });
-Object.defineProperty(Number2, 'MIN_VALUE', {
+Object.defineProperty(Number, 'MIN_VALUE', {
   configurable: false,
   enumerable: false,
   writable: false,
   value: 5e-324
 });
-Object.defineProperty(Number2, 'NaN', {
+Object.defineProperty(Number, 'NaN', {
   configurable: false,
   enumerable: false,
   writable: false,
   value: NaN
 });
-Object.defineProperty(Number2, 'NEGATIVE_INFINITY', {
+Object.defineProperty(Number, 'NEGATIVE_INFINITY', {
   configurable: false,
   enumerable: false,
   writable: false,
   value: -Infinity
 });
-Object.defineProperty(Number2, 'POSITIVE_INFINITY', {
+Object.defineProperty(Number, 'POSITIVE_INFINITY', {
   configurable: false,
   enumerable: false,
   writable: false,
@@ -157,6 +155,8 @@ Object.defineProperty(Number.prototype, 'toFixed', {
     }
     var str = integer + '.';
     // Shift each decimal digit off one by one.
+    // Bug: Multiplying each digit by 10 can result in binary math errors.
+    // E.g. 0.1235 * 10 -> 1.2349999999999999
     for (var i = 0; i < digits; i++) {
       decimal *= 10;
       integer = decimal | 0;

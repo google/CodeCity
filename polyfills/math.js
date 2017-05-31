@@ -1,57 +1,55 @@
 // TODO: Add tests from https://github.com/tc39/test262/tree/master/test/built-ins/Math
 
-var Math2 = {};
-
-Object.defineProperty(Math2, 'E', {
+Object.defineProperty(Math, 'E', {
   configurable: false,
   enumerable: false,
   writable: false,
   value: 2.718281828459045
 });
-Object.defineProperty(Math2, 'LN2', {
+Object.defineProperty(Math, 'LN2', {
   configurable: false,
   enumerable: false,
   writable: false,
   value: 0.6931471805599453
 });
-Object.defineProperty(Math2, 'LN10', {
+Object.defineProperty(Math, 'LN10', {
   configurable: false,
   enumerable: false,
   writable: false,
   value: 2.302585092994046
 });
-Object.defineProperty(Math2, 'LOG2E', {
+Object.defineProperty(Math, 'LOG2E', {
   configurable: false,
   enumerable: false,
   writable: false,
   value: 1.4426950408889634
 });
-Object.defineProperty(Math2, 'LOG10E', {
+Object.defineProperty(Math, 'LOG10E', {
   configurable: false,
   enumerable: false,
   writable: false,
   value: 0.4342944819032518
 });
-Object.defineProperty(Math2, 'PI', {
+Object.defineProperty(Math, 'PI', {
   configurable: false,
   enumerable: false,
   writable: false,
   value: 3.141592653589793
 });
-Object.defineProperty(Math2, 'SQRT1_2', {
+Object.defineProperty(Math, 'SQRT1_2', {
   configurable: false,
   enumerable: false,
   writable: false,
   value: 0.7071067811865476
 });
-Object.defineProperty(Math2, 'SQRT2', {
+Object.defineProperty(Math, 'SQRT2', {
   configurable: false,
   enumerable: false,
   writable: false,
   value: 1.4142135623730951
 });
 
-Object.defineProperty(Math2, 'abs', {
+Object.defineProperty(Math, 'abs', {
   configurable: true,
   enumerable: false,
   writable: true,
@@ -61,7 +59,7 @@ Object.defineProperty(Math2, 'abs', {
   }
 });
 
-Object.defineProperty(Math2, 'ceil', {
+Object.defineProperty(Math, 'ceil', {
   configurable: true,
   enumerable: false,
   writable: true,
@@ -78,7 +76,7 @@ Object.defineProperty(Math2, 'ceil', {
   }
 });
 
-Object.defineProperty(Math2, 'exp', {
+Object.defineProperty(Math, 'exp', {
   configurable: true,
   enumerable: false,
   writable: true,
@@ -87,7 +85,7 @@ Object.defineProperty(Math2, 'exp', {
   }
 });
 
-Object.defineProperty(Math2, 'floor', {
+Object.defineProperty(Math, 'floor', {
   configurable: true,
   enumerable: false,
   writable: true,
@@ -104,7 +102,7 @@ Object.defineProperty(Math2, 'floor', {
   }
 });
 
-Object.defineProperty(Math2, 'max', {
+Object.defineProperty(Math, 'max', {
   configurable: true,
   enumerable: false,
   writable: true,
@@ -125,7 +123,7 @@ Object.defineProperty(Math2, 'max', {
   }
 });
 
-Object.defineProperty(Math2, 'min', {
+Object.defineProperty(Math, 'min', {
   configurable: true,
   enumerable: false,
   writable: true,
@@ -146,7 +144,7 @@ Object.defineProperty(Math2, 'min', {
   }
 });
 
-Object.defineProperty(Math2, 'round', {
+Object.defineProperty(Math, 'round', {
   configurable: true,
   enumerable: false,
   writable: true,
