@@ -39,7 +39,9 @@ func (intrp *Interpreter) mkBuiltin(path string, value data.Value) {
 		}
 		o = v.(data.Object)
 	}
-	o.Set(cmp[0], value)
+	// FIXME: set attributes to conform with ES5.1 spec (most should
+	// be writable, configurable)
+	o.DefineOwnProperty(cmp[0], data.Property{Value: value})
 }
 
 // initGlobalScope initializes the global scope

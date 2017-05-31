@@ -499,6 +499,12 @@ exports.tests = [
     `,
     expected: 77 },
 
+  { name: 'ObjectToString', src: `
+    ({}).toString();
+    `,
+    expected: "[object Object]" },
+
+  /******************************************************************/
   // Other tests (without expected value):
 
   // FIXME: remove this

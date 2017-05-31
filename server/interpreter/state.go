@@ -591,23 +591,29 @@ func (st *stateCallExpression) step(intrp *Interpreter, cv *cval) (state, *cval)
 	}
 
 	if !st.called {
+		st.called = true
 		// Second last visit: prepare for and execute call.
-		// Check if st.func is callable:
-		closure, isClosure := st.fn.(*closure)
-		if !isClosure {
+		switch f := st.fn.(type) {
+		case *closure:
+			scope := newScope(f.scope, st.this)
+			// Set up scope:
+			scope.populate(f.body, intrp)
+			for i, arg := range st.argv {
+				scope.newVar(f.params[i], arg)
+			}
+			// FIXME: create arguments object.
+			// Evaluate function call
+			return newState(st, scope, f.body), nil
+		case *nativeFunc:
+			r, throw := f.impl(intrp, st.this, st.argv)
+			if throw {
+				return st.parent, &cval{THROW, r, ""}
+			}
+			return st.parent, pval(r)
+		default:
 			e := fmt.Sprintf("%#v is not a function", st.fn)
 			return st.parent, intrp.throw(&data.NativeError{Type: data.TypeError, Message: e})
 		}
-		scope := newScope(closure.scope, st.this)
-		// Set up scope:
-		scope.populate(closure.body, intrp)
-		for i, arg := range st.argv {
-			scope.newVar(closure.params[i], arg)
-		}
-		// FIXME: create arguments object.
-		// Evaluate function call
-		st.called = true
-		return newState(st, scope, closure.body), nil
 	}
 
 	// We're done: process return value:

@@ -23,4 +23,10 @@ import (
 func (intrp *Interpreter) initBuiltinObject() {
 	intrp.mkBuiltin("Object", data.NewObject(nil, intrp.protos.ObjectProto))
 	intrp.mkBuiltin("Object.prototype", intrp.protos.ObjectProto)
+	intrp.mkBuiltin("Object.prototype.toString",
+		// FIXME: set owner
+		newNativeFunc(nil, intrp.protos.FunctionProto, 0,
+			func(intrp *Interpreter, this data.Value, args []data.Value) (ret data.Value, throw bool) {
+				return this.ToString(), false
+			}))
 }
