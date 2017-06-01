@@ -1169,7 +1169,11 @@ func (st *stateNewExpression) step(intrp *Interpreter, cv *cval) (state, *cval) 
 			return st.parent, intrp.throw(ne)
 		}
 		if s, isStr := v.(data.String); isStr {
-			return st.parent, pval(intrp.builtins[string(s)])
+			bi, ok := intrp.builtins[string(s)]
+			if !ok {
+				panic(fmt.Errorf("No builtin named %s", s))
+			}
+			return st.parent, pval(bi)
 		}
 	}
 	panic(fmt.Errorf("new operator not implemented"))
