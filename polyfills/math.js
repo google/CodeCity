@@ -170,3 +170,21 @@ Object.defineProperty(Math, 'round', {
     return trunc;
   }
 });
+
+// Create an anonymous function to hide the secret primes.
+(function () {
+  var MAX = 4294967296;
+  var PRIME1 = 3439588987;
+  var PRIME2 = 1264941673;
+  var previous = 2671581058;  // Randomly chosen seed.
+  Object.defineProperty(Math, 'random', {
+    configurable: true,
+    enumerable: false,
+    writable: true,
+    value: function() {
+      previous = (previous * PRIME1) >>> 0;
+      var rand = (previous * PRIME2) >>> 0;
+      return rand / MAX;
+    }
+  });
+})();

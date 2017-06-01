@@ -315,6 +315,7 @@ CCC.Log.openIcon = function(src) {
   //     <path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1..."/>
   //   </svg>
   // </a>
+  // Icon artwork sourced from https://icons.googleplex.com/
   var link = document.createElement('a');
   link.href = src;
   link.target = '_blank';
