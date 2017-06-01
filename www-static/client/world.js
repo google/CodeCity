@@ -424,63 +424,65 @@ CCC.World.prerenderPanorama = function(node) {
     svg.appendChild(icon);
   }
 
-  if (node.tagName == 'say') {
-    // <say user="Max" room="The Hangout">Hello world.</say>
-    var user = node.getAttribute('user');
-    var text = node.textContent;
-    var textGroup = CCC.World.createTextArea(svg, text, 100, 30);
-    textGroup.setAttribute('class', 'say');
-    var bubbleGroup = CCC.Common.createSvgElement('g',
-        {'class': 'bubble'}, svg);
-    var title = CCC.Common.createSvgElement('title', {}, bubbleGroup);
-    title.appendChild(document.createTextNode(user));
-    svg.appendChild(textGroup);
-    var textBBox = textGroup.getBBox();
-    var anchor;
-    try {
-      anchor =
-        CCC.World.scene.getAttribute('room') == node.getAttribute('room') &&
-        CCC.World.sceneUserLocations[user];
-    } catch (e) {
-      // Not a match.
-    }
-    // Align the text above the user.
-    if (anchor) {
-      cursorX = anchor.headX;
-    } else {
-      cursorX = 0;
-    }
-    // Don't overflow the right edge.
-    cursorX = Math.min(cursorX, svg.scaledWidth_ / 2 - textBBox.width / 2 - 1);
-    // Don't overflow the left edge.
-    cursorX = Math.max(cursorX, textBBox.width / 2 - svg.scaledWidth_ / 2 + 1);
-    cursorX -= textBBox.x + textBBox.width / 2;
-    textGroup.setAttribute('transform',
-        'translate(' + cursorX + ', 2)');
-    CCC.World.drawBubble(bubbleGroup, textGroup, anchor);
-  }
-
-  if (node.tagName == 'text') {
-    // <text user="Max" room="The Hangout">Max sneezes.</text>
-    // <text object="Cat" room="The Hangout">The cat sneezes.</text>
-    // <text>Command not recognized.</text>
-    var user = node.getAttribute('user');
-    var text = node.textContent;
-    var textGroup = CCC.World.createTextArea(svg, text, 150, 100);
-    textGroup.setAttribute('transform', 'translate(-75, 0)');
-    svg.appendChild(textGroup);
+  if (node.tagName == 'say' || node.tagName == 'text') {
+    CCC.World.createBubble(node, svg);
   }
   CCC.World.scratchPanorama = svg;
   return true;
 };
 
 /**
+ * Write text in a bubble.
+ * @param {!Element} node Message to render.
+ * @param {!SVGElement} svg SVG Element to place the text and bubble.
+ */
+CCC.World.createBubble = function(node, svg) {
+  // <say user="Max" room="The Hangout">Hello world.</say>
+  // <text user="Max" room="The Hangout">Max sneezes.</text>
+  // <text object="Cat" room="The Hangout">The cat sneezes.</text>
+  // <text>Command not recognized.</text>
+  var user = node.getAttribute('user');
+  var text = node.textContent;
+  var width = node.tagName == 'text' ? 150 : 100;
+  var textGroup = CCC.World.createTextArea(svg, text, width, 30);
+  textGroup.setAttribute('class', node.tagName);
+  var bubbleGroup = CCC.Common.createSvgElement('g',
+      {'class': 'bubble'}, svg);
+  if (user) {
+    var title = CCC.Common.createSvgElement('title', {}, bubbleGroup);
+    title.appendChild(document.createTextNode(user));
+    var title = CCC.Common.createSvgElement('title', {}, textGroup);
+    title.appendChild(document.createTextNode(user));
+  }
+  svg.appendChild(textGroup);
+  var textBBox = textGroup.getBBox();
+  var anchor;
+  try {
+    anchor =
+        CCC.World.scene.getAttribute('room') == node.getAttribute('room') &&
+        CCC.World.sceneUserLocations[user];
+  } catch (e) {
+    // Not a match.
+  }
+  // Align the text above the user.
+  var cursorX = anchor ? anchor.headX : 0;
+  // Don't overflow the right edge.
+  cursorX = Math.min(cursorX, svg.scaledWidth_ / 2 - textBBox.width / 2 - 1);
+  // Don't overflow the left edge.
+  cursorX = Math.max(cursorX, textBBox.width / 2 - svg.scaledWidth_ / 2 + 1);
+  cursorX -= textBBox.x + textBBox.width / 2;
+  textGroup.setAttribute('transform', 'translate(' + cursorX + ', 2)');
+  CCC.World.drawBubble(node.tagName, bubbleGroup, textGroup, anchor);
+};
+
+/**
  * Draw a bubble around some content.
+ * @param {!string} type Type of bubble: 'say' or 'text'.
  * @param {!SVGElement} bubbleGroup Empty group to render the bubble in.
  * @param {!SVGElement} contentGroup Group to surround.
  * @param {Object} opt_anchor Optional anchor location for arrow tip.
  */
-CCC.World.drawBubble = function(bubbleGroup, contentGroup, opt_anchor) {
+CCC.World.drawBubble = function(type, bubbleGroup, contentGroup, opt_anchor) {
   // Find coordinates of the contents.
   var contentBBox = contentGroup.getBBox();
   // getBBox doesn't look at contentGroup's transform="translate(...)".
@@ -495,10 +497,17 @@ CCC.World.drawBubble = function(bubbleGroup, contentGroup, opt_anchor) {
   }
   // Draw a solid black bubble then the arrow (with border) then a slightly
   // smaller solid white bubble, resulting in a clean border.
-  var strokeWidth = 0.7;  // Matches with CSS.
-  var marginV = 2;
-  var marginH = 6;
-  var radius = 15;
+  if (type == 'text') {
+    var strokeWidth = 0.4;
+    var marginV = 1;
+    var marginH = 2;
+    var radius = 0.5;
+  } else {
+    var strokeWidth = 0.7;  // Matches with CSS.
+    var marginV = 2;
+    var marginH = 6;
+    var radius = 15;
+  }
   CCC.Common.createSvgElement('rect',
       {'class': 'bubbleBG',
        'x': -marginH - strokeWidth, 'y': -marginV - strokeWidth,
@@ -883,14 +892,24 @@ CCC.World.rowWidths = function() {
   if (panels.length < panelCount) {
     panels.push(averageWidth);
   }
-  // Shuffle the array.
-  for (var i = panels.length; i; i--) {
-    var j = Math.floor(Math.random() * i);
-    var temp = panels[i - 1];
-    panels[i - 1] = panels[j];
-    panels[j] = temp;
-  }
+  CCC.World.shuffle(panels);
   return panels;
+};
+
+/**
+ * Shuffles the values in the specified array using the Fisher-Yates in-place
+ * shuffle (also known as the Knuth Shuffle).
+ * Copied from Google Closure's goog.array.shuffle
+ * @param {!Array} arr The array to be shuffled.
+ */
+CCC.World.shuffle = function(arr) {
+ for (var i = arr.length - 1; i > 0; i--) {
+    // Choose a random array index in [0, i] (inclusive with i).
+    var j = Math.floor(Math.random() * (i + 1));
+    var tmp = arr[i];
+    arr[i] = arr[j];
+    arr[j] = tmp;
+  }
 };
 
 /**
