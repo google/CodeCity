@@ -213,7 +213,9 @@ func newState(parent state, scope *scope, node ast.Node) state {
 		st.init(n)
 		return &st
 	default:
-		panic(fmt.Errorf("state for AST node type %T not implemented", n))
+		st := stateUnimplemented{stateCommon: sc}
+		st.init(n)
+		return &st
 	}
 }
 
@@ -419,7 +421,6 @@ func (st *stateAssignmentExpression) step(intrp *Interpreter, cv *cval) (state, 
 	// Do (operator)assignment:
 	if st.op != "=" {
 		var op = st.op[:len(st.op)-1]
-		var ne *data.NativeError
 		l, ne := st.left.getValue(intrp)
 		if ne != nil {
 			return st.parent, intrp.throw(ne)
@@ -567,11 +568,11 @@ func (st *stateCallExpression) step(intrp *Interpreter, cv *cval) (state, *cval)
 		if cv.val.Type() == REFERENCE {
 			ref := cv.rval()
 			// callee was a MemberExpression or the like:
-			var ne *data.NativeError
-			st.fn, ne = ref.getValue(intrp)
+			fn, ne := ref.getValue(intrp)
 			if ne != nil {
 				return st.parent, intrp.throw(ne)
 			}
+			st.fn = fn
 			if ref.isPropRef() {
 				st.this = ref.getBase().(data.Value)
 			}
@@ -612,7 +613,7 @@ func (st *stateCallExpression) step(intrp *Interpreter, cv *cval) (state, *cval)
 			return st.parent, pval(r)
 		default:
 			e := fmt.Sprintf("%#v is not a function", st.fn)
-			return st.parent, intrp.throw(&data.NativeError{Type: data.TypeError, Message: e})
+			return st.parent, &cval{THROW, intrp.typeError(e), ""}
 		}
 	}
 
@@ -624,8 +625,12 @@ func (st *stateCallExpression) step(intrp *Interpreter, cv *cval) (state, *cval)
 		// fine; leave as-is
 	case NORMAL:
 		cv = &cval{NORMAL, data.Undefined{}, ""}
+	case BREAK:
+		cv = &cval{THROW, intrp.syntaxError("illegal break"), ""}
+	case CONTINUE:
+		cv = &cval{THROW, intrp.syntaxError("illegal continue"), ""}
 	default:
-		panic(fmt.Errorf("unexpected cval %#v", cv))
+		panic(fmt.Errorf("unknown cval %#v", cv))
 	}
 	return st.parent, cv
 }
@@ -762,7 +767,7 @@ func (st *stateForStatement) step(intrp *Interpreter, cv *cval) (state, *cval) {
 	switch st.state {
 	case forUnstarted:
 		if cv != nil {
-			panic("internal error: for loop not started")
+			panic("for loop not started??")
 		}
 	case forInit, forUpdate:
 		if cv.abrupt() {
@@ -854,7 +859,7 @@ func (st *stateForInStatement) step(intrp *Interpreter, cv *cval) (state, *cval)
 		switch st.state {
 		case forInUnstarted:
 			if cv != nil {
-				panic("internal error: for-in loop not started")
+				panic("for-in loop not started??")
 			}
 			st.state = forInRight
 			return newState(st, st.scope, st.right.E), nil
@@ -1094,7 +1099,8 @@ func (st *stateLogicalExpression) step(intrp *Interpreter, cv *cval) (state, *cv
 		}
 		return newState(st.parent, st.scope, st.right.E), nil // tail call
 	default:
-		panic(fmt.Errorf("illegal logical operator '%s'", st.op))
+		msg := fmt.Sprintf(`"%s" is not a logical operator.`, st.op)
+		return st.parent, &cval{THROW, intrp.syntaxError(msg), ""}
 	}
 }
 
@@ -1134,8 +1140,7 @@ func (st *stateMemberExpression) step(intrp *Interpreter, cv *cval) (state, *cva
 		// It's expr.identifier; get name of identifier:
 		i, isID := st.membExpr.E.(*ast.Identifier)
 		if !isID {
-			panic(fmt.Errorf("invalid computed member expression type %T",
-				st.membExpr.E))
+			panic(fmt.Errorf("non-computed member expression was %T (expected identifier)", st.membExpr.E))
 		}
 		name = i.Name
 	}
@@ -1171,12 +1176,14 @@ func (st *stateNewExpression) step(intrp *Interpreter, cv *cval) (state, *cval) 
 		if s, isStr := v.(data.String); isStr {
 			bi, ok := intrp.builtins[string(s)]
 			if !ok {
-				panic(fmt.Errorf("No builtin named %s", s))
+				msg := fmt.Sprintf("No builtin named %s", s)
+				return st.parent, &cval{THROW, intrp.referenceError(msg), ""}
 			}
 			return st.parent, pval(bi)
 		}
 	}
-	panic(fmt.Errorf("new operator not implemented"))
+	msg := "Operator new not implemented"
+	return st.parent, &cval{THROW, intrp.syntaxError(msg), ""}
 }
 
 /********************************************************************/
@@ -1196,7 +1203,7 @@ func (st *stateObjectExpression) init(node *ast.ObjectExpression) {
 func (st *stateObjectExpression) step(intrp *Interpreter, cv *cval) (state, *cval) {
 	if st.obj == nil {
 		if st.n != 0 || cv != nil {
-			panic(fmt.Errorf("no value for property #%d??", st.n-1))
+			panic("object lost during contruction??")
 		}
 		// FIXME: set owner of new object
 		st.obj = data.NewObject(nil, intrp.protos.ObjectProto)
@@ -1391,7 +1398,7 @@ func (st *stateThrowStatement) step(intrp *Interpreter, cv *cval) (state, *cval)
 	} else if cv.abrupt() {
 		return st.parent, cv
 	} else if cv.pval() == nil {
-		panic("no exception??")
+		panic("no exception to throw??")
 	}
 	return st.parent, &cval{THROW, cv.pval(), ""}
 }
@@ -1470,16 +1477,17 @@ func (st *stateUnaryDeleteExpression) step(intrp *Interpreter, cv *cval) (state,
 	}
 	ref := cv.rval()
 	if ref.isUnresolvable() {
-		// FIXME: can this ever happen?  ES7.0 §12.5.3.2, step 4a
-		// suggests that this should never occur in strict mode.
-		//
-		// FIXME: throw SyntaxError.
-		panic("unresolvable reference")
+		// ES7.0 §12.5.3.2, step 4a imples that this should never
+		// occur in strict mode - but that's only because §12.5.3.1
+		// says it's an early error to try to delete an
+		// IdentifierReference.  We don't do early errors, but we can
+		// at least throw a SyntaxError at this point.
+		msg := "Delete of an unqualified identifier in strict mode."
+		return st.parent, &cval{THROW, intrp.syntaxError(msg), ""}
 	}
-	e := ref.delete(intrp)
-	if e != nil {
-		// FIXME: throw error.
-		panic(e)
+	ne := ref.delete(intrp)
+	if ne != nil {
+		return st.parent, intrp.throw(ne)
 	}
 	return st.parent, pval(data.Boolean(true))
 }
@@ -1550,7 +1558,8 @@ func (st *stateUnaryExpression) step(intrp *Interpreter, cv *cval) (state, *cval
 	case "!":
 		r = data.Boolean(!(cv.pval().ToBoolean()))
 	default:
-		panic(fmt.Errorf(`Unary operator "%s" not implemented`, st.op))
+		msg := fmt.Sprintf(`"%s" is not a unary operator.`, st.op)
+		return st.parent, &cval{THROW, intrp.syntaxError(msg), ""}
 	}
 	return st.parent, &cval{NORMAL, r, ""}
 }
@@ -1592,7 +1601,8 @@ func (st *stateUpdateExpression) step(intrp *Interpreter, cv *cval) (state, *cva
 	case "--":
 		n--
 	default:
-		panic(fmt.Errorf("illegal update operator '%s'", st.op))
+		msg := fmt.Sprintf(`"%s" is not an update operator.`, st.op)
+		return st.parent, &cval{THROW, intrp.syntaxError(msg), ""}
 	}
 	if st.prefix {
 		r = n
@@ -1615,7 +1625,7 @@ type stateVariableDeclaration struct {
 func (st *stateVariableDeclaration) init(node *ast.VariableDeclaration) {
 	st.decls = node.Declarations
 	if node.Kind != "var" {
-		panic(fmt.Errorf("Unknown VariableDeclaration kind '%v'", node.Kind))
+		panic(fmt.Errorf("unknown VariableDeclaration kind '%v'", node.Kind))
 	}
 }
 
@@ -1624,8 +1634,8 @@ func (st *stateVariableDeclaration) step(intrp *Interpreter, cv *cval) (state, *
 		// No evaluation to be done.  Should be single declared
 		// variable with no initialiser.
 		if len(st.decls) != 1 || st.decls[0].Init.E != nil {
-			// FIXME: throw error
-			panic("for-in loop variable declaration may not have an initializer")
+			msg := "for-in loop variable declaration may not have an initializer"
+			return st.parent, &cval{THROW, intrp.syntaxError(msg), ""}
 		}
 		return st.parent, rval(newReference(st.scope, st.decls[0].Id.Name))
 	}
@@ -1696,4 +1706,23 @@ func (st *stateWhileStatement) step(intrp *Interpreter, cv *cval) (state, *cval)
 	}
 	st.tested = false
 	return newState(st, st.scope, st.test.E), nil
+}
+
+/********************************************************************/
+
+// stateUnimplemented is a stand-in for any AST node types that have
+// not yet been implemented.  When stepped, it just throws a syntax
+// error.
+type stateUnimplemented struct {
+	stateCommon
+	node ast.Node
+}
+
+func (st *stateUnimplemented) init(node ast.Node) {
+	st.node = node
+}
+
+func (st *stateUnimplemented) step(intrp *Interpreter, cv *cval) (state, *cval) {
+	msg := fmt.Sprintf("AST node type %T not implemented", st.node)
+	return st.parent, &cval{THROW, intrp.syntaxError(msg), ""}
 }

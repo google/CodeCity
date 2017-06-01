@@ -454,6 +454,25 @@ exports.tests = [
     `,
     expected: 5 },
 
+  { name: 'deleteUnqualifiedIdentifier', src: `
+    var foo;
+    try { 
+      delete foo;
+    } catch (e) {
+      e.name;
+    }
+    `,
+    expected: "SyntaxError" },
+
+  { name: 'deleteUndeclaredIdentifier', src: `
+    try { 
+      delete foo;
+    } catch (e) {
+      e.name;
+    }
+    `,
+    expected: "SyntaxError" },
+
   { name: 'funcDecl', src: `
     var v;
     function f() {
@@ -503,6 +522,24 @@ exports.tests = [
     ({}).toString();
     `,
     expected: "[object Object]" },
+
+  { name: 'unimplementedASTNode', src: `
+    try {
+      debugger;
+    } catch (e) {
+      e.name;
+    }
+    `,
+    expected: "SyntaxError" },
+    
+  { name: 'newHackNotAvailable', src: `
+    try { 
+      new "foo";
+    } catch (e) {
+      e.name;
+    }
+    `,
+    expected: "SyntaxError" },
 
   /******************************************************************/
   // Other tests (without expected value):
@@ -568,6 +605,17 @@ exports.tests = [
     typeof new "Array.prototype.push"
     `,
     // expected: "function"
+  },
+
+  // FIXME: use instanceof or the like to check that error is returned.
+  { name: 'newHackUnknown', src: `
+    try {
+      new "nonexistent-builtin-name";
+    } catch (e) {
+      e.name;
+    }
+    `,
+    // expected: "ReferenceError"
   },
 
   { name: 'iterNonEnumerable', src: `

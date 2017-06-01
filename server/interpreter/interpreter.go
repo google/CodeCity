@@ -169,9 +169,23 @@ func (intrp *Interpreter) toObject(value data.Value, owner *data.Owner) data.Obj
 	}
 }
 
+// newError takes an error prototype object and a message string, and
+// returns a new child object having the specified prototype and
+// message.
+func (intrp *Interpreter) newError(proto data.Object, msg string) data.Object {
+	// FIXME: set owner
+	e := data.NewObject(nil, proto)
+	// FIXME: should this be locked down?
+	e.Set("message", data.String(msg))
+	return e
+}
+
+// Convenience methods for creating error objects of certain types
+// using newError:
+
 // nativeError takes a data.NativeError error specification and an
 // owner and creates a corresponding native error object.
-func (intrp *Interpreter) nativeError(ne *data.NativeError, o *data.Owner) data.Object {
+func (intrp *Interpreter) nativeError(ne *data.NativeError) data.Object {
 	var p data.Object
 	switch ne.Type {
 	case data.EvalError:
@@ -189,13 +203,22 @@ func (intrp *Interpreter) nativeError(ne *data.NativeError, o *data.Owner) data.
 	default:
 		panic(fmt.Errorf("Unknown NativeErrorType %d", ne.Type))
 	}
-	e := data.NewObject(o, p)
-	// FIXME: should this be locked down?
-	e.Set("message", data.String(ne.Message))
-	return e
+	return intrp.newError(p, ne.Message)
+}
+
+func (intrp *Interpreter) typeError(msg string) data.Object {
+	return intrp.newError(intrp.protos.TypeErrorProto, msg)
+}
+
+func (intrp *Interpreter) syntaxError(msg string) data.Object {
+	return intrp.newError(intrp.protos.SyntaxErrorProto, msg)
+}
+
+func (intrp *Interpreter) referenceError(msg string) data.Object {
+	return intrp.newError(intrp.protos.ReferenceErrorProto, msg)
 }
 
 func (intrp *Interpreter) throw(ne *data.NativeError) *cval {
 	// FIXME: set owner.
-	return &cval{THROW, intrp.nativeError(ne, nil), ""}
+	return &cval{THROW, intrp.nativeError(ne), ""}
 }

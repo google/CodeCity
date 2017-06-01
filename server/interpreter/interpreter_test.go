@@ -93,7 +93,12 @@ func TestNewHack(t *testing.T) {
 	i.EvalASTJSON(newHack)
 	i.Run()
 	if v := i.Value(); v != data.String("function") {
-		t.Errorf(`typeof new "Array.prototype.push" == %#v (expected %#v)`, v, "function")
+		t.Errorf(`typeof new "Array.prototype.push" == %#v (expected "function")`, v)
+	}
+	i.EvalASTJSON(newHackUnknown)
+	i.Run()
+	if v := i.Value(); v != data.String("ReferenceError") {
+		t.Errorf(`new "nonexisten-builtin-name" did not throw a ReferenceError`)
 	}
 }
 
