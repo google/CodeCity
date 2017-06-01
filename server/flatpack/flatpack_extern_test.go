@@ -79,7 +79,11 @@ func TestRoundTripInterpreter(t *testing.T) {
 	// 	}
 	// }
 
-	intrp2 := f.Unpack("Interpreter").(*interpreter.Interpreter)
+	v, err := f.Unpack("Interpreter")
+	if err != nil {
+		t.Error(err)
+	}
+	intrp2 := v.(*interpreter.Interpreter)
 	intrp2.Run()
 	if v := intrp2.Value(); v != data.Number(987) {
 		t.Errorf("intrp2.Value() == %#v (expected %#v)", v, data.Number(987))

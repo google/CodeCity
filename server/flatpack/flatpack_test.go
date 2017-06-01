@@ -88,7 +88,7 @@ func TestSimple(t *testing.T) {
 type complexCase struct {
 	name       string      // Testcase name
 	pre        interface{} // Value to flatten before test (as setup)
-	orig, flat interface{} // Original and flattend value
+	orig, flat interface{} // Original and flattened value
 	newVals    int         // How many items will be added to .Values()?
 	skip       bool        // Should this test be skipped?
 }
@@ -187,12 +187,6 @@ var complexCases = []complexCase{
 func TestComplex(t *testing.T) {
 	for _, c := range complexCases {
 		t.Run(c.name, func(t *testing.T) {
-			defer func() {
-				if p := recover(); p != nil {
-					t.Errorf("%s panicked: %s", c.name, p)
-				}
-			}()
-
 			if c.skip {
 				t.Skipf("Skipping %s", c.name)
 			}

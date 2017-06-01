@@ -225,14 +225,8 @@ func recEq(v1, v2 reflect.Value, disjoint bool, v1s, v2s map[unsafe.Pointer]unsa
 // and otherwise:
 //      same(x, y) == (x == y)
 func same(f1, f2 float64) bool {
-	if f1 == f2 {
-		if f1 == 0 && f2 == 0 {
-			return math.Signbit(f1) == math.Signbit(f2)
-		}
-		return true
+	if f1 == 0 && f2 == 0 {
+		return math.Signbit(f1) == math.Signbit(f2)
 	}
-	if math.IsNaN(f1) && math.IsNaN(f2) {
-		return true
-	}
-	return false
+	return f1 == f2 || math.IsNaN(f1) && math.IsNaN(f2)
 }
