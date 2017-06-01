@@ -37,3 +37,12 @@ pre {
 .sceneTitle {
   font-weight: bold;
 }
+
+.openIcon {
+  fill: #444;
+  width: 1.5ex;
+}
+
+.openIcon:hover {
+  fill: #d00;
+}

@@ -145,12 +145,12 @@ CCC.World.receiveMessage = function(e) {
     var dom = CCC.Common.parser.parseFromString(text, 'text/xml');
     if (dom.getElementsByTagName('parsererror').length) {
       // Not valid XML, treat as string literal.
-      CCC.World.renderMessage(text);
-    } else {
-      CCC.World.preprocessXml(dom);
-      for (var i = 0, msg; msg = dom.childNodes[i]; i++) {
-        CCC.World.renderMessage(msg);
-      }
+      dom = document.implementation.createDocument(null, 'text');
+      dom.firstChild.appendChild(document.createTextNode(text));
+    }
+    CCC.World.preprocessXml(dom);
+    for (var i = 0, msg; msg = dom.childNodes[i]; i++) {
+      CCC.World.renderMessage(msg);
     }
   }
 };
@@ -227,7 +227,7 @@ CCC.World.renderMessage = function(msg) {
 
 /**
  * Experimentally render a new message onto the most recent history frame.
- * @param {string|!Element} msg Message to render.
+ * @param {!Element} msg Message to render.
  * @return {boolean} True if the message fit.  False if overflow.
  */
 CCC.World.prerenderHistory = function(msg) {
@@ -286,7 +286,7 @@ CCC.World.prerenderHistory = function(msg) {
   }
 
   if (msg.tagName == 'scene') {
-    // <scene user="Max" location="The Hangout">
+    // <scene user="Max" room="The Hangout">
     //   <description>The lights are dim and blah blah blah...</description>
     //   <svgdom>...</svgdom>
     //   <object name="a clock">
@@ -436,8 +436,14 @@ CCC.World.prerenderPanorama = function(node) {
     title.appendChild(document.createTextNode(user));
     svg.appendChild(textGroup);
     var textBBox = textGroup.getBBox();
-    var anchor = CCC.World.sceneUserLocations &&
-                 CCC.World.sceneUserLocations[user];
+    var anchor;
+    try {
+      anchor =
+        CCC.World.scene.getAttribute('room') == node.getAttribute('room') &&
+        CCC.World.sceneUserLocations[user];
+    } catch (e) {
+      // Not a match.
+    }
     // Align the text above the user.
     if (anchor) {
       cursorX = anchor.headX;
@@ -454,8 +460,13 @@ CCC.World.prerenderPanorama = function(node) {
     CCC.World.drawBubble(bubbleGroup, textGroup, anchor);
   }
 
-  if (typeof node == 'string') {  // Flat text.
-    var textGroup = CCC.World.createTextArea(svg, node, 150, 100);
+  if (node.tagName == 'text') {
+    // <text user="Max" room="The Hangout">Max sneezes.</text>
+    // <text object="Cat" room="The Hangout">The cat sneezes.</text>
+    // <text>Command not recognized.</text>
+    var user = node.getAttribute('user');
+    var text = node.textContent;
+    var textGroup = CCC.World.createTextArea(svg, text, 150, 100);
     textGroup.setAttribute('transform', 'translate(-75, 0)');
     svg.appendChild(textGroup);
   }
@@ -714,10 +725,9 @@ CCC.World.positionIframe = function (iframe, container) {
  * @return {!SVGElement} SVG element.
  */
 CCC.World.createHiddenSvg = function(width, height) {
-  var svg = document.createElementNS(CCC.Common.NS, 'svg');
-  svg.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
+  var svg = CCC.Common.createSvgElement('svg',
+      {'xmlns:xlink': 'http://www.w3.org/1999/xlink'}, document.body);
   svg.style.visibility = 'hidden';
-  document.body.appendChild(svg);
   // Compute the scaled height and width and save on private properties.
   width -= CCC.World.panelBorder * 2;
   height -= CCC.World.panelBorder * 2;

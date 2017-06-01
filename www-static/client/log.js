@@ -191,15 +191,12 @@ CCC.Log.renderXml = function(node) {
       var src = node.getAttribute('src');
       var m = src.match(CCC.Log.protocolRegex);
       if (!m) {
-        return '';  // Invalid src attribute.
+        return null;  // Invalid src attribute.
       }
-      var text = node.textContent || src;
-      var link = document.createElement('a');
-      link.href = src;
-      link.target = '_blank';
-      link.appendChild(document.createTextNode(text));
       var div = document.createElement('div');
-      div.appendChild(link);
+      var text = node.textContent || src;
+      div.appendChild(document.createTextNode(text));
+      div.appendChild(CCC.Log.openIcon(src));
       return div;
     case 'htmltext':
       // <htmltext>&lt;p&gt;Hello world.&lt;/p&gt;</htmltext>
@@ -211,7 +208,7 @@ CCC.Log.renderXml = function(node) {
       }
       return '';  // Illegal HTML.
     case 'scene':
-      // <scene user="Max" location="The Hangout">
+      // <scene user="Max" room="The Hangout">
       //   <description>The lights are dim and blah blah blah...</description>
       //   <svgtext>...</svgtext>
       //   <object name="a clock">
@@ -306,6 +303,27 @@ CCC.Log.renderXml = function(node) {
   // Unknown XML.
   return null;
 };
+
+/**
+ * Create an icon that links to a page in a new window.
+ * @param {string} src URL of link to open.
+ * @return {!Element} DOM element of newly-created link and icon.
+ */
+CCC.Log.openIcon = function(src) {
+  // <a href="https://example.com" target="_blank">
+  //   <svg class="openIcon" xmlns="http://www.w3.org/2000/svg" viewBox="0 3 24 24">
+  //     <path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1..."/>
+  //   </svg>
+  // </a>
+  var link = document.createElement('a');
+  link.href = src;
+  link.target = '_blank';
+  var svg = CCC.Common.createSvgElement('svg',
+      {'class': 'openIcon', 'viewBox': '0 3 24 24'}, link);
+  CCC.Common.createSvgElement('path',
+      {'d': 'M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z'}, svg);
+  return link;
+}
 
 /**
  * Create a mostly text-based representation of the provided DOM.
