@@ -353,6 +353,7 @@ CCC.World.prerenderPanorama = function(node) {
       CCC.World.scene.querySelectorAll('scene>user,scene>object');
   var userTotal = CCC.World.scene.querySelectorAll('scene>user').length;
   CCC.World.sceneUserLocations = Object.create(null);
+  CCC.World.sceneObjectLocations = Object.create(null);
   // Draw each item.
   var icons = [];
   var userCount = 0;
@@ -386,13 +387,16 @@ CCC.World.prerenderPanorama = function(node) {
       g.setAttribute('transform', 'translate(' + dx + ', 0)');
       g.setAttribute('filter', 'url(#' + svg.whiteShadowId_ + ')');
       // Record location of each user for positioning of speech bubbles.
+      var radius = Math.min(bBox.height, bBox.width) / 2;
+      var location = {
+        headX: cursorX,
+        headY: bBox.y + radius,
+        headR: radius
+      };
       if (isUser) {
-        var radius = Math.min(bBox.height, bBox.width) / 2;
-        CCC.World.sceneUserLocations[name] = {
-          headX: cursorX,
-          headY: bBox.y + radius,
-          headR: radius
-        };
+        CCC.World.sceneUserLocations[name] = location;
+      } else {
+        CCC.World.sceneObjectLocations[name] = location;
       }
     }
     var cmds = thing.querySelector('*>cmds');
@@ -437,11 +441,14 @@ CCC.World.prerenderPanorama = function(node) {
  * @param {!SVGElement} svg SVG Element to place the text and bubble.
  */
 CCC.World.createBubble = function(node, svg) {
+  // <say>Welcome</say>
   // <say user="Max" room="The Hangout">Hello world.</say>
-  // <text user="Max" room="The Hangout">Max sneezes.</text>
-  // <text object="Cat" room="The Hangout">The cat sneezes.</text>
+  // <say object="Cat" room="The Hangout">Meow.</say>
   // <text>Command not recognized.</text>
+  // <text user="Max" room="The Hangout">Max sneezes.</text>
+  // <text object="Cat" room="The Hangout">The cat meows.</text>
   var user = node.getAttribute('user');
+  var object = node.getAttribute('object');
   var text = node.textContent;
   var width = node.tagName == 'text' ? 150 : 100;
   var textGroup = CCC.World.createTextArea(svg, text, width, 30);
@@ -460,7 +467,8 @@ CCC.World.createBubble = function(node, svg) {
   try {
     anchor =
         CCC.World.scene.getAttribute('room') == node.getAttribute('room') &&
-        CCC.World.sceneUserLocations[user];
+        (CCC.World.sceneUserLocations[user] ||
+         CCC.World.sceneObjectLocations[object]);
   } catch (e) {
     // Not a match.
   }

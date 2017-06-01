@@ -285,16 +285,20 @@ CCC.Log.renderXml = function(node) {
       }
       return div;
     case 'say':
+      // <say>Welcome</say>
       // <say user="Max" room="The Hangout">Hello world.</say>
+      // <say object="Cat" room="The Hangout">Meow.</say>
       var user = node.getAttribute('user');
+      var object = node.getAttribute('object');
       var msg = node.textContent;
       var lastLetter = msg[msg.length - 1];
       var type = (lastLetter == '?') ? 'ask' :
           ((lastLetter == '!') ? 'exclaim' : 'say');
-      if (CCC.Log.userName === user) {
+      if (user && CCC.Log.userName === user) {
         var fragment = CCC.Log.getMsg(type + 'SelfMsg', msg);
       } else {
-        var fragment = CCC.Log.getMsg(type + 'Msg', user, msg);
+        var who = user || object || CCC.Log.getMsg('unknownMsg');
+        var fragment = CCC.Log.getMsg(type + 'Msg', who, msg);
       }
       var div = document.createElement('div');
       div.appendChild(fragment);
