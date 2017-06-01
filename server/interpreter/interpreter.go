@@ -172,23 +172,25 @@ func (intrp *Interpreter) toObject(value data.Value, owner *data.Owner) data.Obj
 // nativeError takes a data.NativeError error specification and an
 // owner and creates a corresponding native error object.
 func (intrp *Interpreter) nativeError(ne *data.NativeError, o *data.Owner) data.Object {
-	var e data.Object
+	var p data.Object
 	switch ne.Type {
 	case data.EvalError:
-		e = data.NewObject(o, intrp.protos.EvalErrorProto)
+		p = intrp.protos.EvalErrorProto
 	case data.RangeError:
-		e = data.NewObject(o, intrp.protos.RangeErrorProto)
+		p = intrp.protos.RangeErrorProto
 	case data.ReferenceError:
-		e = data.NewObject(o, intrp.protos.ReferenceErrorProto)
+		p = intrp.protos.ReferenceErrorProto
 	case data.SyntaxError:
-		e = data.NewObject(o, intrp.protos.SyntaxErrorProto)
+		p = intrp.protos.SyntaxErrorProto
 	case data.TypeError:
-		e = data.NewObject(o, intrp.protos.TypeErrorProto)
+		p = intrp.protos.TypeErrorProto
 	case data.URIError:
-		e = data.NewObject(o, intrp.protos.URIErrorProto)
+		p = intrp.protos.URIErrorProto
 	default:
 		panic(fmt.Errorf("Unknown NativeErrorType %d", ne.Type))
 	}
+	e := data.NewObject(o, p)
+	// FIXME: should this be locked down?
 	e.Set("message", data.String(ne.Message))
 	return e
 }
