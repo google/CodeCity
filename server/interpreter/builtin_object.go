@@ -25,6 +25,55 @@ func (intrp *Interpreter) initBuiltinObject() {
 	intrp.mkBuiltin("Object.prototype", intrp.protos.ObjectProto)
 	intrp.mkBuiltinFunc("Object.prototype.toString", 0,
 		func(intrp *Interpreter, this data.Value, args []data.Value) (ret data.Value, throw bool) {
+			if this == nil {
+				panic("Object.property.toString called with this == nil??")
+			}
 			return this.ToString(), false
+		})
+	intrp.mkBuiltinFunc("Object.defineProperty", 3,
+		func(intrp *Interpreter, this data.Value, args []data.Value) (ret data.Value, throw bool) {
+			// Need at least three arguments:
+			for len(args) < 3 {
+				args = append(args, data.Undefined{})
+			}
+			obj, ok := args[0].(data.Object)
+			if !ok {
+				return intrp.typeError("Object.defineProperty called on non-object"), true
+			}
+			key := string(args[1].ToString())
+			desc, ok := args[2].(data.Object)
+			if !ok {
+				return intrp.typeError("Property description must be an object"), true
+			}
+			var pd data.Property
+			var ne *data.NativeError
+			pd.Value, ne = desc.Get("value")
+			if ne != nil {
+				return intrp.nativeError(ne), true
+			}
+			// FIXME: set owner
+			pd.Owner = nil
+			attrs := []struct {
+				flag *bool
+				key  string
+			}{
+				{&pd.W, "writeable"},
+				{&pd.E, "enumerable"},
+				{&pd.C, "configurable"},
+				{&pd.R, "readable"},
+				{&pd.I, "inheritable"},
+			}
+			for _, attr := range attrs {
+				v, ne := desc.Get(attr.key)
+				if ne != nil {
+					return intrp.nativeError(ne), true
+				}
+				*(attr.flag) = bool(v.ToBoolean())
+			}
+			ne = obj.DefineOwnProperty(key, pd)
+			if ne != nil {
+				return intrp.nativeError(ne), true
+			}
+			return obj, false
 		})
 }

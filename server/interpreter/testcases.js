@@ -541,6 +541,52 @@ exports.tests = [
     `,
     expected: "SyntaxError" },
 
+  { name: 'objectDefinePropertyNoArgs', src: `
+    try {
+      Object.defineProperty();
+    } catch (e) {
+      e.name;
+    }
+    `,
+    expected: "TypeError" },
+
+  { name: 'objectDefinePropertyNonObject', src: `
+    try {
+      Object.defineProperty("not an object", "foo", {});
+    } catch (e) {
+      e.name;
+    }
+    `,
+    expected: "TypeError" },
+
+  { name: 'objectDefinePropertyBadDescriptor', src: `
+    var o = {}
+    try {
+      Object.defineProperty(o, "foo", "not an object");
+    } catch (e) {
+      e.name;
+    }
+    `,
+    expected: "TypeError" },
+
+  { name: 'objectDefineProperty', src: `
+    var o = { "foo": 70 }, r = 0;
+    Object.defineProperty(o, "bar", {
+      writeable: true,
+      enumerable: true,
+      configurable: true,
+      value: 8,
+    });
+    Object.defineProperty(o, "baz", {
+      value: 13,
+    });
+    for (var k in o) {
+      r += o[k];
+    }
+    r;
+    `,
+    expected: 78 },
+
   /******************************************************************/
   // Other tests (without expected value):
 
