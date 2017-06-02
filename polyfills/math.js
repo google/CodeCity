@@ -171,6 +171,15 @@ Object.defineProperty(Math, 'round', {
   }
 });
 
+Object.defineProperty(Math, 'cos', {
+  configurable: true,
+  enumerable: false,
+  writable: true,
+  value: function(x) {
+    return Math.sin(x - Math.PI / 2);
+  }
+});
+
 // Create an anonymous function to hide the secret primes.
 (function () {
   var MAX = 4294967296;
@@ -182,8 +191,8 @@ Object.defineProperty(Math, 'round', {
     enumerable: false,
     writable: true,
     value: function() {
-      previous = (previous * PRIME1) >>> 0;
-      var rand = (previous * PRIME2) >>> 0;
+      previous = (previous * PRIME1 / 10000) >>> 0;
+      var rand = (previous * PRIME2 / 10000) >>> 0;
       return rand / MAX;
     }
   });
