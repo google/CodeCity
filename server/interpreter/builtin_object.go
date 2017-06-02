@@ -23,6 +23,7 @@ import (
 func (intrp *Interpreter) initBuiltinObject() {
 	intrp.mkBuiltin("Object", data.NewObject(nil, intrp.protos.ObjectProto))
 	intrp.mkBuiltin("Object.prototype", intrp.protos.ObjectProto)
+
 	intrp.mkBuiltinFunc("Object.prototype.toString", 0,
 		func(intrp *Interpreter, this data.Value, args []data.Value) (ret data.Value, throw bool) {
 			if this == nil {
@@ -30,6 +31,7 @@ func (intrp *Interpreter) initBuiltinObject() {
 			}
 			return this.ToString(), false
 		})
+
 	intrp.mkBuiltinFunc("Object.defineProperty", 3,
 		func(intrp *Interpreter, this data.Value, args []data.Value) (ret data.Value, throw bool) {
 			// Need at least three arguments:
@@ -38,7 +40,7 @@ func (intrp *Interpreter) initBuiltinObject() {
 			}
 			obj, ok := args[0].(data.Object)
 			if !ok {
-				return intrp.typeError("Object.defineProperty called on non-object"), true
+				return intrp.typeError("Object.defineProperty: first argument not an object"), true
 			}
 			key := string(args[1].ToString())
 			desc, ok := args[2].(data.Object)
@@ -75,5 +77,22 @@ func (intrp *Interpreter) initBuiltinObject() {
 				return intrp.nativeError(ne), true
 			}
 			return obj, false
+		})
+
+	intrp.mkBuiltinFunc("Object.getPrototypeOf", 1,
+		func(intrp *Interpreter, this data.Value, args []data.Value) (ret data.Value, throw bool) {
+			// Need at least one argument:
+			for len(args) < 1 {
+				args = append(args, data.Undefined{})
+			}
+			obj, ok := args[0].(data.Object)
+			if !ok {
+				return intrp.typeError("Object.getPrototypeOf: first argument not an object"), true
+			}
+			proto := obj.Proto()
+			if proto == nil {
+				return data.Null{}, false
+			}
+			return proto, false
 		})
 }

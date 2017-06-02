@@ -587,6 +587,13 @@ exports.tests = [
     `,
     expected: 78 },
 
+  { name: 'objectGetPrototypeOf', src: `
+    var o = {};
+    Object.getPrototypeOf(o) == Object.prototype && 
+        Object.getPrototypeOf(Object.prototype) == null;
+    `,
+    expected: true },
+
   /******************************************************************/
   // Other tests (without expected value):
 
