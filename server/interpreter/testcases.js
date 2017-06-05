@@ -594,6 +594,37 @@ exports.tests = [
     `,
     expected: true },
 
+  { name: 'objectCreateNoArgs', src: `
+    try {
+      Object.create();
+    } catch (e) {
+      e.name;
+    }
+    `,
+    expected: "TypeError" },
+
+  { name: 'objectCreateNonObject', src: `
+    try {
+      Object.create(42);
+    } catch (e) {
+      e.name;
+    }
+    `,
+    expected: "TypeError" },
+
+  { name: 'objectCreateNull', src: `
+    var o = Object.create(null);
+    Object.getPrototypeOf(o);
+    `,
+    expected: null },
+
+  { name: 'objectCreate', src: `
+    var o = Object.create({foo: 79});
+    delete o.foo
+    o.foo;
+    `,
+    expected: 79 },
+
   /******************************************************************/
   // Other tests (without expected value):
 

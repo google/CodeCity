@@ -45,7 +45,25 @@ func (intrp *Interpreter) initBuiltinObject() {
 
 	// Object.getOwnPropertyDescriptor
 	// Object.getOwnPropertyNames
-	// Object.create
+
+	// FIXME: support property specs
+	intrp.mkBuiltinFunc("Object.create", 2,
+		func(intrp *Interpreter, this data.Value, args []data.Value) (ret data.Value, throw bool) {
+			// Need at least one argument:
+			for len(args) < 1 {
+				args = append(args, data.Undefined{})
+			}
+			if args[0] == (data.Null{}) {
+				// FIXME: set owner
+				return data.NewObject(nil, nil), false
+			}
+			proto, ok := args[0].(data.Object)
+			if !ok {
+				return intrp.typeError("Object prototype may only be an Object or null"), true
+			}
+			// FIXME: set owner
+			return data.NewObject(nil, proto), false
+		})
 
 	intrp.mkBuiltinFunc("Object.defineProperty", 3,
 		func(intrp *Interpreter, this data.Value, args []data.Value) (ret data.Value, throw bool) {
