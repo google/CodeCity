@@ -227,17 +227,17 @@ CCC.World.renderMessage = function(msg) {
 
 /**
  * Experimentally render a new message onto the most recent history frame.
- * @param {!Element} msg Message to render.
+ * @param {!Element} node Message to render.
  * @return {boolean} True if the message fit.  False if overflow.
  */
-CCC.World.prerenderHistory = function(msg) {
+CCC.World.prerenderHistory = function(node) {
   // For now every message needs its own frame.
   if (CCC.World.panoramaMessages.length) {
     return false;
   }
   var svg = CCC.World.createHiddenSvg(CCC.World.panelWidths[0],
                                       CCC.World.panelHeight);
-  if (msg.tagName == 'iframe') {
+  if (node.tagName == 'iframe') {
     // Create relaunch button if iframe is closed.
     svg.style.backgroundColor = '#696969';
     var g = CCC.Common.createSvgElement('g',
@@ -250,9 +250,9 @@ CCC.World.prerenderHistory = function(msg) {
     g.appendChild(rect);
     g.appendChild(text);
     g.addEventListener('click', function() {
-      msg.iframe = CCC.World.createIframe(msg);
+      node.iframe = CCC.World.createIframe(node);
       var div = svg.parentNode;
-      CCC.World.positionIframe(msg.iframe, div);
+      CCC.World.positionIframe(node.iframe, div);
       div.firstChild.style.visibility = 'hidden';  // SVG.
       div.lastChild.style.display = 'inline';  // Close button.
     }, false);
@@ -269,23 +269,14 @@ CCC.World.prerenderHistory = function(msg) {
     return true;
   }
 
-  if (msg.tagName == 'htmldom') {
+  if (node.tagName == 'htmldom') {
     var div = CCC.World.createHiddenDiv();
-    CCC.World.cloneAndAppend(div, msg.firstChild);
-    // Strip all command links and menus.
-    var menus = div.querySelectorAll('svg.menuIcon');
-    for (var i = 0, menu; menu = menus[i]; i++) {
-      menu.parentNode.removeChild(menu);
-    }
-    var commands = div.querySelectorAll('a.command');
-    for (var i = 0, command; command = commands[i]; i++) {
-      command.className = '';
-    }
+    CCC.World.cloneAndAppend(div, node.firstChild);
     CCC.World.scratchHistory = div;
     return true;
   }
 
-  if (msg.tagName == 'scene') {
+  if (node.tagName == 'scene') {
     // <scene user="Max" room="The Hangout">
     //   <description>The lights are dim and blah blah blah...</description>
     //   <svgdom>...</svgdom>
@@ -298,22 +289,18 @@ CCC.World.prerenderHistory = function(msg) {
     //     <cmds><cmd>look Max</cmd></cmds>
     //   </user>
     // </scene>
-    if (msg.getAttribute('user')) {
+    if (node.getAttribute('user')) {
       // This is the user's current location.  Save this environment data.
-      CCC.World.scene = msg;
+      CCC.World.scene = node;
     }
   }
 
-  // Add scene background.
-  var svgdom = CCC.World.scene.querySelector('scene>svgdom');
-  if (svgdom) {
-    CCC.World.cloneAndAppend(svg, svgdom.firstChild);
+  CCC.World.drawScene(svg);
+  if (node.tagName == 'say' || node.tagName == 'think' ||
+      node.tagName == 'text') {
+    CCC.World.createBubble(node, svg);
   }
-  var text = document.createElementNS(CCC.Common.NS, 'text');
-  text.appendChild(document.createTextNode(msg));
-  text.setAttribute('x', 10);
-  text.setAttribute('y', 50);
-  svg.appendChild(text);
+
   CCC.World.scratchHistory = svg;
   return true;
 };
@@ -341,19 +328,42 @@ CCC.World.prerenderPanorama = function(node) {
     return true;
   }
 
-  // Add scene background.
+  CCC.World.drawScene(svg);
+  if (node.tagName == 'say' || node.tagName == 'think' ||
+      node.tagName == 'text') {
+    CCC.World.createBubble(node, svg);
+  }
+
+  CCC.World.scratchPanorama = svg;
+  return true;
+};
+
+/**
+ * Draw the currently recorded scene background into the provided SVG.
+ * @param {!SVGElement} svg SVG element in which to draw the background.
+ */
+CCC.World.drawSceneBackground = function(svg) {
   var svgdom = CCC.World.scene.querySelector('scene>svgdom');
   if (svgdom) {
     var g = CCC.Common.createSvgElement('g',
         {'class': 'sceneBackground'}, svg);
     CCC.World.cloneAndAppend(g, svgdom.firstChild);
   }
+};
+
+
+/**
+ * Draw the users and objects in the currently recorded scene.
+ * @param {!SVGElement} svg SVG element in which to draw the users and objects.
+ */
+CCC.World.drawScene = function(svg) {
+  CCC.World.drawSceneBackground(svg);
   // Obtain an ordered list of contents.
   var contentsArray =
       CCC.World.scene.querySelectorAll('scene>user,scene>object');
   var userTotal = CCC.World.scene.querySelectorAll('scene>user').length;
-  CCC.World.sceneUserLocations = Object.create(null);
-  CCC.World.sceneObjectLocations = Object.create(null);
+  svg.sceneUserLocations = Object.create(null);
+  svg.sceneObjectLocations = Object.create(null);
   // Draw each item.
   var icons = [];
   var userCount = 0;
@@ -394,9 +404,9 @@ CCC.World.prerenderPanorama = function(node) {
         headR: radius
       };
       if (isUser) {
-        CCC.World.sceneUserLocations[name] = location;
+        svg.sceneUserLocations[name] = location;
       } else {
-        CCC.World.sceneObjectLocations[name] = location;
+        svg.sceneObjectLocations[name] = location;
       }
     }
     var cmds = thing.querySelector('*>cmds');
@@ -427,13 +437,6 @@ CCC.World.prerenderPanorama = function(node) {
   for (var i = 0, icon; icon = icons[i]; i++) {
     svg.appendChild(icon);
   }
-
-  if (node.tagName == 'say' || node.tagName == 'think' ||
-      node.tagName == 'text') {
-    CCC.World.createBubble(node, svg);
-  }
-  CCC.World.scratchPanorama = svg;
-  return true;
 };
 
 /**
@@ -472,8 +475,7 @@ CCC.World.createBubble = function(node, svg) {
   try {
     anchor =
         CCC.World.scene.getAttribute('room') == node.getAttribute('room') &&
-        (CCC.World.sceneUserLocations[user] ||
-         CCC.World.sceneObjectLocations[object]);
+        (svg.sceneUserLocations[user] || svg.sceneObjectLocations[object]);
   } catch (e) {
     // Not a match.  Simpler to try/catch than to check every step.
   }
@@ -802,6 +804,7 @@ CCC.World.publishHistory = function() {
   panelDiv.style.width = width + 'px';
   CCC.World.historyRow.appendChild(panelDiv);
   panelDiv.appendChild(CCC.World.scratchHistory);
+  CCC.World.stripActions(panelDiv);
   var isIframeVisible = false;
   var msgs = CCC.World.panoramaMessages;
   if (msgs.length == 1) {
@@ -893,6 +896,22 @@ CCC.World.positionIframe = function (iframe, container) {
            (container != CCC.World.scrollDiv));
   iframe.style.top = (y + borderWidth) + 'px';
   iframe.style.left = (x + borderWidth) + 'px';
+};
+
+/**
+ * Strip all command links and menus.
+ * History panels should not be interactive.
+ * @param {!Element} div History panel div.
+ */
+CCC.World.stripActions = function(div) {
+  var menus = div.querySelectorAll('svg.menuIcon');
+  for (var i = 0, menu; menu = menus[i]; i++) {
+    menu.parentNode.removeChild(menu);
+  }
+  var commands = div.querySelectorAll('a.command');
+  for (var i = 0, command; command = commands[i]; i++) {
+    command.className = '';
+  }
 };
 
 /**
