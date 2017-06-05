@@ -288,12 +288,21 @@ CCC.Log.renderXml = function(node) {
       // <say>Welcome</say>
       // <say user="Max" room="The Hangout">Hello world.</say>
       // <say object="Cat" room="The Hangout">Meow.</say>
+      // Fall through.
+    case 'think':
+      // <think>Don't be evil.</think>
+      // <think user="Max" room="The Hangout">I'm hungry.</think>
+      // <think object="Cat" room="The Hangout">I'm evil.</think>
       var user = node.getAttribute('user');
       var object = node.getAttribute('object');
       var msg = node.textContent;
-      var lastLetter = msg[msg.length - 1];
-      var type = (lastLetter == '?') ? 'ask' :
-          ((lastLetter == '!') ? 'exclaim' : 'say');
+      if (node.tagName == 'think') {
+        var type = 'think';
+      } else {
+        var lastLetter = msg[msg.length - 1];
+        var type = (lastLetter == '?') ? 'ask' :
+            ((lastLetter == '!') ? 'exclaim' : 'say');
+      }
       if (user && CCC.Log.userName === user) {
         var fragment = CCC.Log.getMsg(type + 'SelfMsg', msg);
       } else {

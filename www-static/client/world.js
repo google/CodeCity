@@ -428,7 +428,8 @@ CCC.World.prerenderPanorama = function(node) {
     svg.appendChild(icon);
   }
 
-  if (node.tagName == 'say' || node.tagName == 'text') {
+  if (node.tagName == 'say' || node.tagName == 'think' ||
+      node.tagName == 'text') {
     CCC.World.createBubble(node, svg);
   }
   CCC.World.scratchPanorama = svg;
@@ -444,22 +445,26 @@ CCC.World.createBubble = function(node, svg) {
   // <say>Welcome</say>
   // <say user="Max" room="The Hangout">Hello world.</say>
   // <say object="Cat" room="The Hangout">Meow.</say>
+  // <think>Don't be evil.</think>
+  // <think user="Max" room="The Hangout">I'm hungry.</think>
+  // <think object="Cat" room="The Hangout">I'm evil.</think>
   // <text>Command not recognized.</text>
   // <text user="Max" room="The Hangout">Max sneezes.</text>
   // <text object="Cat" room="The Hangout">The cat meows.</text>
   var user = node.getAttribute('user');
   var object = node.getAttribute('object');
-  var text = node.textContent;
+  var text = node.textContent || '';
   var width = node.tagName == 'text' ? 150 : 100;
   var textGroup = CCC.World.createTextArea(svg, text, width, 30);
   textGroup.setAttribute('class', node.tagName);
   var bubbleGroup = CCC.Common.createSvgElement('g',
       {'class': 'bubble'}, svg);
-  if (user) {
+  var titleName = user || object;
+  if (titleName) {
     var title = CCC.Common.createSvgElement('title', {}, bubbleGroup);
-    title.appendChild(document.createTextNode(user));
+    title.appendChild(document.createTextNode(titleName));
     var title = CCC.Common.createSvgElement('title', {}, textGroup);
-    title.appendChild(document.createTextNode(user));
+    title.appendChild(document.createTextNode(titleName));
   }
   svg.appendChild(textGroup);
   var textBBox = textGroup.getBBox();
@@ -470,7 +475,7 @@ CCC.World.createBubble = function(node, svg) {
         (CCC.World.sceneUserLocations[user] ||
          CCC.World.sceneObjectLocations[object]);
   } catch (e) {
-    // Not a match.
+    // Not a match.  Simpler to try/catch than to check every step.
   }
   // Align the text above the user.
   var cursorX = anchor ? anchor.headX : 0;
@@ -503,39 +508,145 @@ CCC.World.drawBubble = function(type, bubbleGroup, contentGroup, opt_anchor) {
       contentBBox.y += parseFloat(r[3]);
     }
   }
-  // Draw a solid black bubble then the arrow (with border) then a slightly
+  // Draw a solid black bubble, then the arrow (with border), then a slightly
   // smaller solid white bubble, resulting in a clean border.
-  if (type == 'text') {
-    var strokeWidth = 0.4;
-    var marginV = 1;
-    var marginH = 2;
-    var radius = 0.5;
-  } else {
+  if (type == 'think') {
     var strokeWidth = 0.7;  // Matches with CSS.
-    var marginV = 2;
-    var marginH = 6;
-    var radius = 15;
-  }
-  CCC.Common.createSvgElement('rect',
-      {'class': 'bubbleBG',
-       'x': -marginH - strokeWidth, 'y': -marginV - strokeWidth,
-       'rx': radius + strokeWidth, 'ry': radius + strokeWidth,
-       'height': contentBBox.height + 2 * (marginV + strokeWidth),
-       'width': contentBBox.width + 2 * (marginH + strokeWidth)},
-       bubbleGroup);
-  if (opt_anchor) {
-    CCC.Common.createSvgElement('path',
-        {'class': 'bubbleArrow',
-         'd': CCC.World.drawArrow_(contentBBox, opt_anchor)},
+    var radiusXAverage = 4;  // Target size of cloud puffs.
+    var radiusYAverage = 3;  // Target size of cloud puffs.
+    var radiusVariation = 0.5;  // Cloud puffs can be + or - this amount.
+    var inflateRadius = 1;  // Expand the radii a bit to make less jagged.
+    // Pick a radius that's within the standard variation.
+    var randomRadius = function(r) {
+      return r + (Math.random() - 0.5) * radiusVariation * 2;
+    };
+    // Create a horizontal or vertical line of puff descriptors.
+    var puffLine = function(x, y, dx, dy) {
+      var d = Math.max(dx, dy);
+      var radiusAverage = d == dx ? radiusXAverage : radiusYAverage;
+      var line = new Array(Math.round(d / radiusAverage / 2));
+      radiusAverage = d / line.length / 2;
+      for (var i = 0; i < line.length - 1; i += 2) {
+        line[i] = randomRadius(radiusAverage);
+        line[i + 1] = radiusAverage * 2 - line[i];
+      }
+      if (line[line.length - 1] === undefined) {
+        // There was an odd number of puffs.  Add the remaining orphan.
+        line[line.length - 1] = radiusAverage;
+      }
+      CCC.World.shuffle(line);
+      var cursor = (d == dx) ? x : y;
+      for (var i = 0; i < line.length; i++) {
+        var r = line[i];
+        var puff;
+        if (d == dx) {
+          puff = {
+            rx: r,
+            ry: randomRadius(radiusYAverage),
+            cx: cursor + r,
+            cy: y
+          };
+          cursor += puff.rx * 2;
+        } else {
+          puff = {
+            rx: randomRadius(radiusXAverage),
+            ry: r,
+            cx: x,
+            cy: cursor + r
+          };
+          cursor += puff.ry * 2;
+        }
+        line[i] = puff;
+      }
+      return line;
+    };
+
+    var puffs = [];
+    // Top edge.
+    puffs = puffs.concat(puffLine(inflateRadius, inflateRadius,
+        contentBBox.width - 2 * inflateRadius, 0));
+    // Right edge.
+    puffs = puffs.concat(puffLine(contentBBox.width - inflateRadius,
+        inflateRadius, 0, contentBBox.height - 2 * inflateRadius));
+    // Bottom edge.
+    puffs = puffs.concat(puffLine(inflateRadius, contentBBox.height -
+        inflateRadius, contentBBox.width - 2 * inflateRadius, 0));
+    // Left edge.
+    puffs = puffs.concat(puffLine(inflateRadius, inflateRadius, 0,
+        contentBBox.height - 2 * inflateRadius));
+    if (!puffs.length) {
+      // Empty thought bubble.  Add one puff.
+      puffs[0] = {rx: radiusXAverage, ry: radiusYAverage, cx: 0, cy: 0};
+    }
+    if (contentBBox.height > 2 * inflateRadius &&
+        contentBBox.width > 2 * inflateRadius) {
+      CCC.Common.createSvgElement('rect',
+          {'class': 'bubbleBG',
+           'x': inflateRadius - strokeWidth, 'y': inflateRadius - strokeWidth,
+           'height': contentBBox.height + 2 * strokeWidth - 2 * inflateRadius,
+           'width': contentBBox.width + 2 * strokeWidth - 2 * inflateRadius},
+           bubbleGroup);
+    }
+    for (var i = 0; i < puffs.length; i++) {
+      var puff = puffs[i];
+      CCC.Common.createSvgElement('ellipse',
+          {'class': 'bubbleBG',
+           'cx': puff.cx, 'cy': puff.cy,
+           'rx': puff.rx + inflateRadius + strokeWidth,
+           'ry': puff.ry + inflateRadius + strokeWidth},
+           bubbleGroup);
+    }
+    if (opt_anchor) {
+      bubbleGroup.appendChild(
+          CCC.World.drawThoughtArrow_(contentBBox, opt_anchor));
+    }
+    if (contentBBox.height > 2 * inflateRadius &&
+        contentBBox.width > 2 * inflateRadius) {
+      CCC.Common.createSvgElement('rect',
+          {'class': 'bubbleFG',
+           'x': inflateRadius, 'y': inflateRadius,
+           'height': contentBBox.height - 2 * inflateRadius,
+           'width': contentBBox.width - 2 * inflateRadius},
+           bubbleGroup);
+    }
+    for (var i = 0; i < puffs.length; i++) {
+      var puff = puffs[i];
+      CCC.Common.createSvgElement('ellipse',
+          {'class': 'bubbleFG',
+           'cx': puff.cx, 'cy': puff.cy,
+           'rx': puff.rx + inflateRadius, 'ry': puff.ry + inflateRadius},
+           bubbleGroup);
+    }
+  } else {
+    if (type == 'say') {
+      var strokeWidth = 0.7;  // Matches with CSS.
+      var marginV = 2;
+      var marginH = 6;
+      var radius = 15;
+    } else {
+      var strokeWidth = 0.4;
+      var marginV = 1;
+      var marginH = 2;
+      var radius = 0.5;
+    }
+    CCC.Common.createSvgElement('rect',
+        {'class': 'bubbleBG',
+         'x': -marginH - strokeWidth, 'y': -marginV - strokeWidth,
+         'rx': radius + strokeWidth, 'ry': radius + strokeWidth,
+         'height': contentBBox.height + 2 * (marginV + strokeWidth),
+         'width': contentBBox.width + 2 * (marginH + strokeWidth)},
+         bubbleGroup);
+    if (opt_anchor) {
+      bubbleGroup.appendChild(CCC.World.drawArrow_(contentBBox, opt_anchor));
+    }
+    CCC.Common.createSvgElement('rect',
+        {'class': 'bubbleFG',
+         'x': -marginH, 'y': -marginV,
+         'rx': radius, 'ry': radius,
+         'height': contentBBox.height + 2 * marginV,
+         'width': contentBBox.width + 2 * marginH},
          bubbleGroup);
   }
-  CCC.Common.createSvgElement('rect',
-      {'class': 'bubbleFG',
-       'x': -marginH, 'y': -marginV,
-       'rx': radius, 'ry': radius,
-       'height': contentBBox.height + 2 * marginV,
-       'width': contentBBox.width + 2 * marginH},
-       bubbleGroup);
   bubbleGroup.setAttribute('transform', 'translate(' + contentBBox.x +
       ', ' + contentBBox.y + ')');
 };
@@ -544,7 +655,7 @@ CCC.World.drawBubble = function(type, bubbleGroup, contentGroup, opt_anchor) {
  * Draw the arrow between the bubble and the origin.
  * @param {!Object} contentBBox Dimensions of the bubble's contents.
  * @param {!Object} anchor Anchor location for arrow tip.
- * @return {string} Path for arrow.
+ * @return {!Element} Path for arrow.
  * @private
  */
 CCC.World.drawArrow_ = function(contentBBox, anchor) {
@@ -611,7 +722,20 @@ CCC.World.drawArrow_ = function(contentBBox, anchor) {
                ' ' + baseX2 + ',' + baseY2);
   }
   steps.push('z');
-  return steps.join(' ');
+  return CCC.Common.createSvgElement('path',
+          {'class': 'bubbleArrow', 'd': steps.join(' ')}, null);
+};
+/**
+ * Draw an arrow composed of thought bubbles between the bubble and the origin.
+ * @param {!Object} contentBBox Dimensions of the bubble's contents.
+ * @param {!Object} anchor Anchor location for arrow tip.
+ * @return {!Element} Path for arrow.
+ * @private
+ */
+CCC.World.drawThoughtArrow_ = function(contentBBox, anchor) {
+  var group = CCC.Common.createSvgElement('g', {}, null);
+  // TODO
+  return group;
 };
 
 /**
