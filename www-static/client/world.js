@@ -231,14 +231,13 @@ CCC.World.renderMessage = function(msg) {
  * @return {boolean} True if the message fit.  False if overflow.
  */
 CCC.World.prerenderHistory = function(node) {
-  // For now every message needs its own frame.
-  if (CCC.World.panoramaMessages.length) {
-    return false;
-  }
-  var svg = CCC.World.createHiddenSvg(CCC.World.panelWidths[0],
-                                      CCC.World.panelHeight);
   if (node.tagName == 'iframe') {
+    if (CCC.World.panoramaMessages.length) {
+      return false;  // Every iframe needs to be in its own panel.
+    }
     // Create relaunch button if iframe is closed.
+    var svg = CCC.World.createHiddenSvg(CCC.World.panelWidths[0],
+                                        CCC.World.panelHeight);
     svg.style.backgroundColor = '#696969';
     var g = CCC.Common.createSvgElement('g',
         {'class': 'iframeRelaunch', 'transform': 'translate(0, 50)'}, svg);
@@ -270,6 +269,9 @@ CCC.World.prerenderHistory = function(node) {
   }
 
   if (node.tagName == 'htmldom') {
+    if (CCC.World.panoramaMessages.length) {
+      return false;  // Every htmlframe needs to be in its own panel.
+    }
     var div = CCC.World.createHiddenDiv();
     CCC.World.cloneAndAppend(div, node.firstChild);
     CCC.World.scratchHistory = div;
@@ -293,9 +295,23 @@ CCC.World.prerenderHistory = function(node) {
       // This is the user's current location.  Save this environment data.
       CCC.World.scene = node;
     }
+    // Each scene message needs its own frame.
+    if (CCC.World.panoramaMessages.length) {
+      return false;
+    }
+    node = CCC.World.sceneDescription(node);
   }
 
-  CCC.World.drawScene(svg);
+  // For now every message needs its own frame.
+  if (CCC.World.panoramaMessages.length) {
+    return false;
+  }
+  var svg = CCC.World.scratchHistory;
+  if (!svg) {
+    svg = CCC.World.createHiddenSvg(CCC.World.panelWidths[0],
+                                    CCC.World.panelHeight);
+    CCC.World.drawScene(svg);
+  }
   if (node.tagName == 'say' || node.tagName == 'think' ||
       node.tagName == 'text') {
     CCC.World.createBubble(node, svg);
@@ -311,24 +327,38 @@ CCC.World.prerenderHistory = function(node) {
  * @return {boolean} True if the message fit.  False if overflow.
  */
 CCC.World.prerenderPanorama = function(node) {
-  // For now every message needs its own frame.
-  if (CCC.World.panoramaMessages.length) {
-    return false;
-  }
-  var svg = CCC.World.createHiddenSvg(CCC.World.panoramaDiv.offsetWidth,
-                                      CCC.World.panoramaDiv.offsetHeight);
   if (node.tagName == 'iframe') {
+    if (CCC.World.panoramaMessages.length) {
+      return false;  // Every iframe needs to be in its own panel.
+    }
+    var svg = CCC.World.createHiddenSvg(CCC.World.panoramaDiv.offsetWidth,
+                                        CCC.World.panoramaDiv.offsetHeight);
     CCC.World.scratchPanorama = svg;
     return true;
   }
   if (node.tagName == 'htmldom') {
+    if (CCC.World.panoramaMessages.length) {
+      return false;  // Every htmlframe needs to be in its own panel.
+    }
     var div = CCC.World.createHiddenDiv();
     CCC.World.cloneAndAppend(div, node.firstChild);
     CCC.World.scratchPanorama = div;
     return true;
   }
+  if (node.tagName == 'scene') {
+    node = CCC.World.sceneDescription(node);
+  }
 
-  CCC.World.drawScene(svg);
+  // For now every message needs its own frame.
+  if (CCC.World.panoramaMessages.length) {
+    return false;
+  }
+  var svg = CCC.World.scratchPanorama;
+  if (!svg) {
+    var svg = CCC.World.createHiddenSvg(CCC.World.panoramaDiv.offsetWidth,
+                                        CCC.World.panoramaDiv.offsetHeight);
+    CCC.World.drawScene(svg);
+  }
   if (node.tagName == 'say' || node.tagName == 'think' ||
       node.tagName == 'text') {
     CCC.World.createBubble(node, svg);
@@ -336,6 +366,37 @@ CCC.World.prerenderPanorama = function(node) {
 
   CCC.World.scratchPanorama = svg;
   return true;
+};
+
+/**
+ * Forge a text message with the room name and description.
+ * @param {!Element} node Scene message.
+ * @return {!Element} Text message to render, or original scene if no text.
+ */
+CCC.World.sceneDescription = function(node) {
+  var text = [];
+  var title = node.getAttribute('room') || '';
+  if (title) {
+    text.push(title);
+  }
+  var description = node.querySelector('scene>description');
+  if (description) {
+    description = description.textContent;
+    if (description) {
+      text.push(description);
+    }
+  }
+  text = text.join('\n');
+  if (text) {
+    // Create an XML document with a 'text' node, and extract the node.
+    var dom = document.implementation.createDocument(null, 'text');
+    var textNode = dom.firstChild;
+    dom.removeChild(textNode);
+    textNode.setAttribute('room', title);
+    textNode.textContent = text;
+    return textNode;
+  }
+  return node;
 };
 
 /**
@@ -452,12 +513,15 @@ CCC.World.createBubble = function(node, svg) {
   // <think user="Max" room="The Hangout">I'm hungry.</think>
   // <think object="Cat" room="The Hangout">I'm evil.</think>
   // <text>Command not recognized.</text>
+  // <text room="The Hangout">The Hangout is dark.</text>
   // <text user="Max" room="The Hangout">Max sneezes.</text>
   // <text object="Cat" room="The Hangout">The cat meows.</text>
   var user = node.getAttribute('user');
   var object = node.getAttribute('object');
+  var room = node.getAttribute('room');
   var text = node.textContent || '';
   var width = node.tagName == 'text' ? 150 : 100;
+  width = Math.min(svg.scaledWidth_, width);
   var textGroup = CCC.World.createTextArea(svg, text, width, 30);
   textGroup.setAttribute('class', node.tagName);
   var bubbleGroup = CCC.Common.createSvgElement('g',
@@ -473,9 +537,16 @@ CCC.World.createBubble = function(node, svg) {
   var textBBox = textGroup.getBBox();
   var anchor;
   try {
-    anchor =
-        CCC.World.scene.getAttribute('room') == node.getAttribute('room') &&
-        (svg.sceneUserLocations[user] || svg.sceneObjectLocations[object]);
+    if (room && room == CCC.World.scene.getAttribute('room')) {
+      if (user || object) {
+        anchor = svg.sceneUserLocations[user] ||
+                 svg.sceneObjectLocations[object];
+      } else {
+        // This text box is coming from the room, not a user or object.
+        // Left-align the box.  A bit of a hack: place anchor under box.
+        anchor = {headX: 1 - svg.scaledWidth_ / 2, headY: 2, headR: 0};
+      }
+    }
   } catch (e) {
     // Not a match.  Simpler to try/catch than to check every step.
   }

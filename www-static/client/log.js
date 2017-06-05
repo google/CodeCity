@@ -251,7 +251,7 @@ CCC.Log.renderXml = function(node) {
         }
       }
       var div = document.createElement('div');
-      var roomName = node.getAttribute('location');
+      var roomName = node.getAttribute('room');
       if (roomName) {
         var titleDiv = document.createElement('div');
         titleDiv.className = 'sceneTitle';
