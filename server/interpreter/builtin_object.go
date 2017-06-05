@@ -18,6 +18,7 @@ package interpreter
 
 import (
 	"CodeCity/server/interpreter/data"
+	"fmt"
 )
 
 func (intrp *Interpreter) initBuiltinObject() {
@@ -33,7 +34,7 @@ func (intrp *Interpreter) initBuiltinObject() {
 			}
 			obj, ok := args[0].(data.Object)
 			if !ok {
-				return intrp.typeError("Object prototype may only be an Object or null"), true
+				return intrp.typeError(fmt.Sprintf("Cannot get prototype of %s", args[0].ToString())), true
 			}
 			proto := obj.Proto()
 			if proto == nil {
@@ -54,7 +55,7 @@ func (intrp *Interpreter) initBuiltinObject() {
 			}
 			obj, ok := args[0].(data.Object)
 			if !ok {
-				return intrp.typeError("Object.defineProperty: first argument not an object"), true
+				return intrp.typeError(fmt.Sprintf("Cannot define property on %s", args[0].ToString())), true
 			}
 			key := string(args[1].ToString())
 			desc, ok := args[2].(data.Object)
@@ -106,6 +107,7 @@ func (intrp *Interpreter) initBuiltinObject() {
 
 	intrp.mkBuiltinFunc("Object.prototype.toString", 0,
 		func(intrp *Interpreter, this data.Value, args []data.Value) (ret data.Value, throw bool) {
+			// FIXME: don't panic
 			if this == nil {
 				panic("Object.property.toString called with this == nil??")
 			}
