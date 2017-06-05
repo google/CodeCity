@@ -127,7 +127,10 @@ func (intrp *Interpreter) Step() bool {
 	case RETURN:
 		panic(fmt.Errorf("illegal return of %s", thread.value.value().ToString()))
 	case THROW:
-		error := intrp.toObject(thread.value.value(), nil)
+		error, ne := intrp.toObject(thread.value.value(), nil)
+		if ne != nil {
+			panic(fmt.Errorf("unhandled exception: %v", thread.value.value()))
+		}
 		name, _ := error.Get("name")
 		message, _ := error.Get("message")
 		panic(fmt.Errorf("unhandled exception: %s: %s", name, message))
@@ -154,18 +157,20 @@ func (intrp *Interpreter) Value() data.Value {
 // implements the ToObject algorithm in ES5.1 §9.9.
 //
 // FIXME: should throw error for null, undefined.
-func (intrp *Interpreter) toObject(value data.Value, owner *data.Owner) data.Object {
+func (intrp *Interpreter) toObject(value data.Value, owner *data.Owner) (data.Object, *data.NativeError) {
 	switch v := value.(type) {
 	case data.Boolean:
-		return data.NewBoxedBoolean(owner, intrp.protos.BooleanProto, v)
+		return data.NewBoxedBoolean(owner, intrp.protos.BooleanProto, v), nil
 	case data.Number:
-		return data.NewBoxedNumber(owner, intrp.protos.NumberProto, v)
+		return data.NewBoxedNumber(owner, intrp.protos.NumberProto, v), nil
 	case data.String:
-		return data.NewBoxedString(owner, intrp.protos.StringProto, v)
+		return data.NewBoxedString(owner, intrp.protos.StringProto, v), nil
 	case data.Object:
-		return v
+		return v, nil
 	default:
-		panic(fmt.Errorf("Can't coerce a %T to Object", v))
+		return nil,
+			&data.NativeError{Type: data.SyntaxError,
+				Message: fmt.Sprintf("Can't coerce a %T to Object", v)}
 	}
 }
 

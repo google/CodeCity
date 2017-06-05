@@ -768,7 +768,7 @@ exports.tests = [
   { name: 'iterNonEnumerable', src: `
     var o;
     var n = 0;
-    for (k in o) {
+    for (var k in o) {
       n++;
     }
     n;

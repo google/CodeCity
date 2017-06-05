@@ -875,7 +875,10 @@ func (st *stateForInStatement) step(intrp *Interpreter, cv *cval) (state, *cval)
 				return st.parent, &cval{NORMAL, nil, ""}
 			}
 			// FIXME: set owner:
-			obj := intrp.toObject(right, nil)
+			obj, ne := intrp.toObject(right, nil)
+			if ne != nil {
+				return st.parent, intrp.throw(ne)
+			}
 			st.iter = data.NewPropIter(obj)
 			fallthrough
 		case forInPrepLeft:
@@ -891,8 +894,10 @@ func (st *stateForInStatement) step(intrp *Interpreter, cv *cval) (state, *cval)
 			if cv != nil && cv.abrupt() {
 				return st.parent, cv
 			}
-			// FIXME: throw if error
-			_ = cv.rval().putValue(data.String(st.key), intrp)
+			ne := cv.rval().putValue(data.String(st.key), intrp)
+			if ne != nil {
+				return st.parent, intrp.throw(ne)
+			}
 			st.state = forInBody
 			return newState(st, st.scope, st.body.S), nil
 

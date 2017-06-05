@@ -18,6 +18,7 @@ package interpreter
 
 import (
 	"CodeCity/server/interpreter/data"
+	"fmt"
 )
 
 // reference is an implementation of the "Reference Specification
@@ -54,14 +55,18 @@ func (ref reference) isUnresolvable() bool {
 // known not to be a primitive.
 func (ref reference) getValue(intrp *Interpreter) (data.Value, *data.NativeError) {
 	if ref.isUnresolvable() {
-		return nil, &data.NativeError{Type: data.ReferenceError, Message: "unresolvable reference"}
+		return nil, ref.unresolvable()
 	}
 	switch b := ref.base.(type) {
 	case data.Object:
 		return b.Get(ref.name)
 	case data.Value:
 		// FIXME: set owner.
-		return intrp.toObject(b, nil).Get(ref.name)
+		o, ne := intrp.toObject(b, nil)
+		if ne != nil {
+			return nil, ne
+		}
+		return o.Get(ref.name)
 	case *scope:
 		return b.getVar(ref.name), nil
 	default:
@@ -74,14 +79,18 @@ func (ref reference) getValue(intrp *Interpreter) (data.Value, *data.NativeError
 // base is known not to be a primitive.
 func (ref reference) putValue(v data.Value, intrp *Interpreter) *data.NativeError {
 	if ref.isUnresolvable() {
-		return &data.NativeError{Type: data.ReferenceError, Message: "unresolvable reference"}
+		return ref.unresolvable()
 	}
 	switch b := ref.base.(type) {
 	case data.Object:
 		return b.Set(ref.name, v)
 	case data.Value:
 		// FIXME: set owner.
-		return intrp.toObject(b, nil).Set(ref.name, v)
+		o, ne := intrp.toObject(b, nil)
+		if ne != nil {
+			return ne
+		}
+		return o.Set(ref.name, v)
 	case *scope:
 		b.setVar(ref.name, v)
 		return nil
@@ -92,18 +101,29 @@ func (ref reference) putValue(v data.Value, intrp *Interpreter) *data.NativeErro
 
 func (ref reference) delete(intrp *Interpreter) *data.NativeError {
 	if ref.isUnresolvable() {
-		return &data.NativeError{Type: data.ReferenceError, Message: "unresolvable reference"}
+		return ref.unresolvable()
 	}
 	switch b := ref.base.(type) {
 	case data.Object:
 		return b.Delete(ref.name)
 	case data.Value:
 		// FIXME: set owner.
-		return intrp.toObject(b, nil).Delete(ref.name)
+		o, ne := intrp.toObject(b, nil)
+		if ne != nil {
+			return ne
+		}
+		return o.Delete(ref.name)
 	case *scope:
 		return &data.NativeError{Type: data.SyntaxError, Message: "Delete of an unqualified identifier in strict mode."}
 	default:
 		panic("unexpected base type when getting reference??")
+	}
+}
+
+func (ref reference) unresolvable() *data.NativeError {
+	return &data.NativeError{
+		Type:    data.ReferenceError,
+		Message: fmt.Sprintf("unresolvable reference %s", ref.name),
 	}
 }
 
