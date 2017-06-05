@@ -43,7 +43,49 @@ func (intrp *Interpreter) initBuiltinObject() {
 			return proto, false
 		})
 
-	// Object.getOwnPropertyDescriptor
+	intrp.mkBuiltinFunc("Object.getOwnPropertyDescriptor", 2,
+		func(intrp *Interpreter, this data.Value, args []data.Value) (ret data.Value, throw bool) {
+			// Need at least two arguments:
+			for len(args) < 2 {
+				args = append(args, data.Undefined{})
+			}
+			obj, ok := args[0].(data.Object)
+			if !ok {
+				return intrp.typeError(fmt.Sprintf("Cannot get property descriptor from %s", args[0].ToString())), true
+			}
+			key := string(args[1].ToString())
+			pd, ok := obj.GetOwnProperty(key)
+			if !ok {
+				return data.Undefined{}, false
+			}
+			// FIXME: set owner
+			var desc = data.NewObject(nil, intrp.protos.ObjectProto)
+			var ne *data.NativeError
+			ne = desc.Set("value", pd.Value)
+			if ne != nil {
+				return intrp.nativeError(ne), true
+			}
+			attrs := []struct {
+				flag *bool
+				key  string
+			}{
+				{&pd.W, "writeable"},
+				{&pd.E, "enumerable"},
+				{&pd.C, "configurable"},
+				// FIXME: either enable, or remove, once we decide
+				// what flags properties will actually have:
+				// {&pd.R, "readable"},
+				// {&pd.I, "inheritable"},
+			}
+			for _, attr := range attrs {
+				ne := desc.Set(attr.key, data.Boolean(*attr.flag))
+				if ne != nil {
+					return intrp.nativeError(ne), true
+				}
+			}
+			return desc, false
+		})
+
 	// Object.getOwnPropertyNames
 
 	// FIXME: support property specs
@@ -78,7 +120,7 @@ func (intrp *Interpreter) initBuiltinObject() {
 			key := string(args[1].ToString())
 			desc, ok := args[2].(data.Object)
 			if !ok {
-				return intrp.typeError("Property description must be an object"), true
+				return intrp.typeError("Property descriptor must be an object"), true
 			}
 			var pd data.Property
 			var ne *data.NativeError

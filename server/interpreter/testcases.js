@@ -560,7 +560,7 @@ exports.tests = [
     expected: "TypeError" },
 
   { name: 'objectDefinePropertyBadDescriptor', src: `
-    var o = {}
+    var o = {};
     try {
       Object.defineProperty(o, "foo", "not an object");
     } catch (e) {
@@ -624,6 +624,39 @@ exports.tests = [
     o.foo;
     `,
     expected: 79 },
+
+  { name: 'objectGetOwnPropertyDescriptorNoArgs', src: `
+    try {
+      Object.getOwnPropertyDescriptor();
+    } catch (e) {
+      e.name;
+    }
+    `,
+    expected: "TypeError" },
+
+  { name: 'objectGetOwnPropertyDescriptorNonObject', src: `
+    try {
+      Object.getOwnPropertyDescriptor("not an object", "foo");
+    } catch (e) {
+      e.name;
+    }
+    `,
+    expected: "TypeError" },
+
+  { name: 'objectGetOwnPropertyDescriptorBadKey', src: `
+    var o = {};
+    Object.getOwnPropertyDescriptor(o, "foo");
+    `,
+    expected: undefined },
+
+  { name: 'objectGetOwnPropertyDescriptor', src: `
+    var o = {}, r = 0;
+    Object.defineProperty(o, "foo", { value: "bar" });
+    var desc = Object.getOwnPropertyDescriptor(o, "foo");
+    desc.value == o.foo && 
+        !desc.writeable && !desc.enumerable && !desc.configurable;
+    `,
+    expected: true },
 
   /******************************************************************/
   // Other tests (without expected value):
