@@ -658,6 +658,36 @@ exports.tests = [
     `,
     expected: true },
 
+  { name: 'objectGetOwnPropertyNamesNoArgs', src: `
+    try {
+      Object.getOwnPropertyNames();
+    } catch (e) {
+      e.name;
+    }
+    `,
+    expected: "TypeError" },
+
+  { name: 'objectGetOwnPropertyNamesNonObject', src: `
+    try {
+      Object.getOwnPropertyNames("not an object");
+    } catch (e) {
+      e.name;
+    }
+    `,
+    expected: "TypeError" },
+
+  { name: 'objectGetOwnPropertyNames', src: `
+    var o = { "foo": 42 }, r = 0;
+    Object.defineProperty(o, "bar", { value: 38 });
+    var keys = Object.getOwnPropertyNames(o);
+    var r = 0;
+    for (var i = 0; i < keys.length; i++) {
+      r += o[keys[i]];
+    }
+    r;
+    `,
+    expected: 80 },
+
   /******************************************************************/
   // Other tests (without expected value):
 

@@ -86,7 +86,25 @@ func (intrp *Interpreter) initBuiltinObject() {
 			return desc, false
 		})
 
-	// Object.getOwnPropertyNames
+	intrp.mkBuiltinFunc("Object.getOwnPropertyNames", 1,
+		func(intrp *Interpreter, this data.Value, args []data.Value) (ret data.Value, throw bool) {
+			// Need at least one argument:
+			for len(args) < 1 {
+				args = append(args, data.Undefined{})
+			}
+			obj, ok := args[0].(data.Object)
+			if !ok {
+				return intrp.typeError(fmt.Sprintf("Cannot get propery names of %s", args[0].ToString())), true
+			}
+			keys := data.NewArray(nil, intrp.protos.ArrayProto)
+			for i, k := range obj.OwnPropertyKeys() {
+				ne := keys.Set(string(data.Number(i).ToString()), data.String(k))
+				if ne != nil {
+					return intrp.nativeError(ne), true
+				}
+			}
+			return keys, false
+		})
 
 	// FIXME: support property specs
 	intrp.mkBuiltinFunc("Object.create", 2,
