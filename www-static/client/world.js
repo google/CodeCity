@@ -596,10 +596,6 @@ CCC.World.drawBubble = function(type, bubbleGroup, contentGroup, opt_anchor) {
            'ry': puff.ry + inflateRadius + strokeWidth},
            bubbleGroup);
     }
-    if (opt_anchor) {
-      bubbleGroup.appendChild(
-          CCC.World.drawThoughtArrow_(contentBBox, opt_anchor));
-    }
     if (contentBBox.height > 2 * inflateRadius &&
         contentBBox.width > 2 * inflateRadius) {
       CCC.Common.createSvgElement('rect',
@@ -616,6 +612,10 @@ CCC.World.drawBubble = function(type, bubbleGroup, contentGroup, opt_anchor) {
            'cx': puff.cx, 'cy': puff.cy,
            'rx': puff.rx + inflateRadius, 'ry': puff.ry + inflateRadius},
            bubbleGroup);
+    }
+    if (opt_anchor) {
+      bubbleGroup.appendChild(
+          CCC.World.drawArrow_(contentBBox, opt_anchor, true));
     }
   } else {
     if (type == 'say') {
@@ -637,7 +637,8 @@ CCC.World.drawBubble = function(type, bubbleGroup, contentGroup, opt_anchor) {
          'width': contentBBox.width + 2 * (marginH + strokeWidth)},
          bubbleGroup);
     if (opt_anchor) {
-      bubbleGroup.appendChild(CCC.World.drawArrow_(contentBBox, opt_anchor));
+      bubbleGroup.appendChild(
+          CCC.World.drawArrow_(contentBBox, opt_anchor, false));
     }
     CCC.Common.createSvgElement('rect',
         {'class': 'bubbleFG',
@@ -655,11 +656,11 @@ CCC.World.drawBubble = function(type, bubbleGroup, contentGroup, opt_anchor) {
  * Draw the arrow between the bubble and the origin.
  * @param {!Object} contentBBox Dimensions of the bubble's contents.
  * @param {!Object} anchor Anchor location for arrow tip.
+ * @param {boolean} thought True if a thought bubble, false for solid arrow.
  * @return {!Element} Path for arrow.
  * @private
  */
-CCC.World.drawArrow_ = function(contentBBox, anchor) {
-  var steps = [];
+CCC.World.drawArrow_ = function(contentBBox, anchor, thought) {
   // Find the relative coordinates of the center of the bubble.
   var relBubbleX = contentBBox.width / 2;
   var relBubbleY = contentBBox.height / 2;
@@ -669,73 +670,108 @@ CCC.World.drawArrow_ = function(contentBBox, anchor) {
   if (relBubbleX == relAnchorX && relBubbleY == relAnchorY) {
     // Null case.  Bubble is directly on top of the anchor.
     // Short circuit this rather than wade through divide by zeros.
-    steps.push('M ' + relBubbleX + ',' + relBubbleY);
+    return CCC.Common.createSvgElement('g', {}, null);
+  }
+  // Compute the angle of the arrow's line.
+  var rise = relAnchorY - relBubbleY;
+  var run = relAnchorX - relBubbleX;
+  var hypotenuse = Math.sqrt(rise * rise + run * run);
+  var angle = Math.acos(run / hypotenuse);
+  if (rise < 0) {
+    angle = 2 * Math.PI - angle;
+  }
+  // Compute a line perpendicular to the arrow.
+  var rightAngle = angle + Math.PI / 2;
+  if (rightAngle > Math.PI * 2) {
+    rightAngle -= Math.PI * 2;
+  }
+  var rightRise = Math.sin(rightAngle);
+  var rightRun = Math.cos(rightAngle);
+
+  // Calculate the thickness of the base of the arrow.
+  var thickness = (contentBBox.width + contentBBox.height) /
+                  CCC.World.ARROW_THICKNESS;
+  thickness = Math.min(thickness, contentBBox.width, contentBBox.height) / 4;
+
+  // Back the tip of the arrow off of the anchor.
+  var backoffRatio = 1 - (anchor.headR + 5) / hypotenuse;
+  relAnchorX = relBubbleX + backoffRatio * run;
+  relAnchorY = relBubbleY + backoffRatio * rise;
+
+  // Distortion to curve the arrow.
+  var swirlAngle = angle + Math.random() - 0.5;
+  if (swirlAngle > Math.PI * 2) {
+    swirlAngle -= Math.PI * 2;
+  }
+  var swirlRise = Math.sin(swirlAngle) * hypotenuse / CCC.World.ARROW_BEND;
+  var swirlRun = Math.cos(swirlAngle) * hypotenuse / CCC.World.ARROW_BEND;
+
+  if (thought) {
+    var group = CCC.Common.createSvgElement('g', {}, null);
+    // The commented out code below is a guide path to verify the placement of
+    // the thought bubbles which make up the arrow.
+    //var d = 'M' + relBubbleX + ',' + relBubbleY +
+    //    ' Q' + (relBubbleX + swirlRun) + ',' + (relBubbleY + swirlRise) +
+    //    ' ' + relAnchorX + ',' + relAnchorY;
+    //CCC.Common.createSvgElement('path', {'d': d}, group);
+    /**
+     * Given two x/y points, find the point at the specified distance between.
+     * @param {number} x1 Horizontal position of first point.
+     * @param {number} y1 Vertical position of first point.
+     * @param {number} x2 Horizontal position of second point.
+     * @param {number} y2 Vertical position of second point.
+     * @param {number} t Interpolation distance (0.0 - 1.0).
+     * @return {!Object} Contains x and y properties.
+     */
+    var interpolate = function(x1, y1, x2, y2, t) {
+      var x = t * (x2 - x1) + x1;
+      var y = t * (y2 - y1) + y1;
+      return {x: x, y: y};
+    };
+    // Pythagorean theorem for approximate length of arrow
+    // (doesn't count the added length caused by the bend).
+    var length = Math.sqrt(Math.pow(relBubbleX - relAnchorX, 2) +
+                           Math.pow(relBubbleY - relAnchorY, 2));
+    var t = 0;
+    while (t < 1) {
+      // Add a little bubble on the arrow's path.
+      // Compute point on a quadratic curve.
+      var q1 = interpolate(relBubbleX, relBubbleY,
+                           relBubbleX + swirlRun, relBubbleY + swirlRise, t);
+      var q2 = interpolate(relBubbleX + swirlRun, relBubbleY + swirlRise,
+                           relAnchorX, relAnchorY, t);
+      var p = interpolate(q1.x, q1.y, q2.x, q2.y, t);
+      // The bubble's radius gets smaller as one gets closer to the anchor.
+      var ry = (1 - t) * 2 + 1;
+      if (p.y > contentBBox.height + ry) {
+        CCC.Common.createSvgElement('ellipse',
+            {'rx': ry * 1.5, 'ry': ry, 'cx': p.x, 'cy': p.y}, group);
+        // Place next bubble three radii away from this bubble.
+        t += 3 * ry / length;
+      } else {
+        // Skip this bubble, since it is over the main thought bubble.
+        t += 0.1;
+      }
+    }
+    return group;
   } else {
-    // Compute the angle of the arrow's line.
-    var rise = relAnchorY - relBubbleY;
-    var run = relAnchorX - relBubbleX;
-    var hypotenuse = Math.sqrt(rise * rise + run * run);
-    var angle = Math.acos(run / hypotenuse);
-    if (rise < 0) {
-      angle = 2 * Math.PI - angle;
-    }
-    // Compute a line perpendicular to the arrow.
-    var rightAngle = angle + Math.PI / 2;
-    if (rightAngle > Math.PI * 2) {
-      rightAngle -= Math.PI * 2;
-    }
-    var rightRise = Math.sin(rightAngle);
-    var rightRun = Math.cos(rightAngle);
-
-    // Calculate the thickness of the base of the arrow.
-    var thickness = (contentBBox.width + contentBBox.height) /
-                    CCC.World.ARROW_THICKNESS;
-    thickness = Math.min(thickness, contentBBox.width, contentBBox.height) / 4;
-
-    // Back the tip of the arrow off of the anchor.
-    var backoffRatio = 1 - (anchor.headR + 5) / hypotenuse;
-    relAnchorX = relBubbleX + backoffRatio * run;
-    relAnchorY = relBubbleY + backoffRatio * rise;
-
     // Coordinates for the base of the arrow.
     var baseX1 = relBubbleX + thickness * rightRun;
     var baseY1 = relBubbleY + thickness * rightRise;
     var baseX2 = relBubbleX - thickness * rightRun;
     var baseY2 = relBubbleY - thickness * rightRise;
 
-    // Distortion to curve the arrow.
-    var swirlAngle = angle + Math.random() - 0.5;
-    if (swirlAngle > Math.PI * 2) {
-      swirlAngle -= Math.PI * 2;
-    }
-    var swirlRise = Math.sin(swirlAngle) *
-        hypotenuse / CCC.World.ARROW_BEND;
-    var swirlRun = Math.cos(swirlAngle) *
-        hypotenuse / CCC.World.ARROW_BEND;
-
-    steps.push('M' + baseX1 + ',' + baseY1);
+    var steps = ['M' + baseX1 + ',' + baseY1];
     steps.push('C' + (baseX1 + swirlRun) + ',' + (baseY1 + swirlRise) +
                ' ' + relAnchorX + ',' + relAnchorY +
                ' ' + relAnchorX + ',' + relAnchorY);
     steps.push('C' + relAnchorX + ',' + relAnchorY +
                ' ' + (baseX2 + swirlRun) + ',' + (baseY2 + swirlRise) +
                ' ' + baseX2 + ',' + baseY2);
+    steps.push('z');
+    return CCC.Common.createSvgElement('path',
+            {'class': 'bubbleArrow', 'd': steps.join(' ')}, null);
   }
-  steps.push('z');
-  return CCC.Common.createSvgElement('path',
-          {'class': 'bubbleArrow', 'd': steps.join(' ')}, null);
-};
-/**
- * Draw an arrow composed of thought bubbles between the bubble and the origin.
- * @param {!Object} contentBBox Dimensions of the bubble's contents.
- * @param {!Object} anchor Anchor location for arrow tip.
- * @return {!Element} Path for arrow.
- * @private
- */
-CCC.World.drawThoughtArrow_ = function(contentBBox, anchor) {
-  var group = CCC.Common.createSvgElement('g', {}, null);
-  // TODO
-  return group;
 };
 
 /**
