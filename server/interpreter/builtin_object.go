@@ -22,15 +22,29 @@ import (
 
 func (intrp *Interpreter) initBuiltinObject() {
 	intrp.mkBuiltin("Object", data.NewObject(nil, intrp.protos.ObjectProto))
+
 	intrp.mkBuiltin("Object.prototype", intrp.protos.ObjectProto)
 
-	intrp.mkBuiltinFunc("Object.prototype.toString", 0,
+	intrp.mkBuiltinFunc("Object.getPrototypeOf", 1,
 		func(intrp *Interpreter, this data.Value, args []data.Value) (ret data.Value, throw bool) {
-			if this == nil {
-				panic("Object.property.toString called with this == nil??")
+			// Need at least one argument:
+			for len(args) < 1 {
+				args = append(args, data.Undefined{})
 			}
-			return this.ToString(), false
+			obj, ok := args[0].(data.Object)
+			if !ok {
+				return intrp.typeError("Object prototype may only be an Object or null"), true
+			}
+			proto := obj.Proto()
+			if proto == nil {
+				return data.Null{}, false
+			}
+			return proto, false
 		})
+
+	// Object.getOwnPropertyDescriptor
+	// Object.getOwnPropertyNames
+	// Object.create
 
 	intrp.mkBuiltinFunc("Object.defineProperty", 3,
 		func(intrp *Interpreter, this data.Value, args []data.Value) (ret data.Value, throw bool) {
@@ -79,20 +93,22 @@ func (intrp *Interpreter) initBuiltinObject() {
 			return obj, false
 		})
 
-	intrp.mkBuiltinFunc("Object.getPrototypeOf", 1,
+	// Object.defineProperties
+	// Object.seal
+	// Object.freeze
+	// Object.preventExtensions
+	// Object.isSealed
+	// Object.isFrozen
+	// Object.isExtensible
+	// Object.keys
+
+	/****************************************************************/
+
+	intrp.mkBuiltinFunc("Object.prototype.toString", 0,
 		func(intrp *Interpreter, this data.Value, args []data.Value) (ret data.Value, throw bool) {
-			// Need at least one argument:
-			for len(args) < 1 {
-				args = append(args, data.Undefined{})
+			if this == nil {
+				panic("Object.property.toString called with this == nil??")
 			}
-			obj, ok := args[0].(data.Object)
-			if !ok {
-				return intrp.typeError("Object.getPrototypeOf: first argument not an object"), true
-			}
-			proto := obj.Proto()
-			if proto == nil {
-				return data.Null{}, false
-			}
-			return proto, false
+			return this.ToString(), false
 		})
 }
