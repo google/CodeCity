@@ -86,7 +86,6 @@ func (intrp *Interpreter) initBuiltinObject() {
 			return keys, false
 		})
 
-	// FIXME: support property specs
 	intrp.mkBuiltinFunc("Object.create", 2,
 		func(intrp *Interpreter, this data.Value, args []data.Value) (ret data.Value, throw bool) {
 			// Need at least one argument:
@@ -102,7 +101,12 @@ func (intrp *Interpreter) initBuiltinObject() {
 				return intrp.typeError("Object prototype may only be an Object or null"), true
 			}
 			// FIXME: set owner
-			return data.NewObject(nil, proto), false
+			obj := data.NewObject(nil, proto)
+			if len(args) > 1 {
+				builtinObjectDefineProperties(intrp, this, []data.Value{obj, args[1]})
+			}
+			return obj, false
+
 		})
 
 	intrp.mkBuiltinFunc("Object.defineProperty", 3,
@@ -131,50 +135,7 @@ func (intrp *Interpreter) initBuiltinObject() {
 			return obj, false
 		})
 
-	intrp.mkBuiltinFunc("Object.defineProperties", 2,
-		func(intrp *Interpreter, this data.Value, args []data.Value) (ret data.Value, throw bool) {
-			// Need at least two arguments:
-			for len(args) < 2 {
-				args = append(args, data.Undefined{})
-			}
-			obj, ok := args[0].(data.Object)
-			if !ok {
-				return intrp.typeError(fmt.Sprintf("Cannot define property on %s", args[0].ToString())), true
-			}
-			// FIXME: set owner:
-			props, ne := intrp.toObject(args[1], nil)
-			if ne != nil {
-				return intrp.nativeError(ne), true
-			}
-			type kpd struct {
-				key string
-				pd  data.Property
-			}
-			var kpds []kpd
-			for _, key := range props.OwnPropertyKeys() {
-				pdpd, ok := props.GetOwnProperty(key)
-				if !ok || !pdpd.E {
-					continue
-				}
-				descObj, ok := pdpd.Value.(data.Object)
-				if !ok {
-					return intrp.typeError("Property descriptor must be an object"), true
-				}
-				pd, ne := data.ToPropertyDescriptor(descObj)
-				if ne != nil {
-					return intrp.nativeError(ne), true
-				}
-				kpds = append(kpds, kpd{key, pd})
-			}
-			// Create props in second pass (in case of errors in first).
-			for _, d := range kpds {
-				ne = obj.DefineOwnProperty(d.key, d.pd)
-				if ne != nil {
-					return intrp.nativeError(ne), true
-				}
-			}
-			return obj, false
-		})
+	intrp.mkBuiltinFunc("Object.defineProperties", 2, builtinObjectDefineProperties)
 
 	// Object.seal
 	// Object.freeze
@@ -194,4 +155,48 @@ func (intrp *Interpreter) initBuiltinObject() {
 			}
 			return this.ToString(), false
 		})
+}
+
+func builtinObjectDefineProperties(intrp *Interpreter, this data.Value, args []data.Value) (ret data.Value, throw bool) {
+	// Need at least two arguments:
+	for len(args) < 2 {
+		args = append(args, data.Undefined{})
+	}
+	obj, ok := args[0].(data.Object)
+	if !ok {
+		return intrp.typeError(fmt.Sprintf("Cannot define property on %s", args[0].ToString())), true
+	}
+	// FIXME: set owner:
+	props, ne := intrp.toObject(args[1], nil)
+	if ne != nil {
+		return intrp.nativeError(ne), true
+	}
+	type kpd struct {
+		key string
+		pd  data.Property
+	}
+	var kpds []kpd
+	for _, key := range props.OwnPropertyKeys() {
+		pdpd, ok := props.GetOwnProperty(key)
+		if !ok || !pdpd.E {
+			continue
+		}
+		descObj, ok := pdpd.Value.(data.Object)
+		if !ok {
+			return intrp.typeError("Property descriptor must be an object"), true
+		}
+		pd, ne := data.ToPropertyDescriptor(descObj)
+		if ne != nil {
+			return intrp.nativeError(ne), true
+		}
+		kpds = append(kpds, kpd{key, pd})
+	}
+	// Create props in second pass (in case of errors in first).
+	for _, d := range kpds {
+		ne = obj.DefineOwnProperty(d.key, d.pd)
+		if ne != nil {
+			return intrp.nativeError(ne), true
+		}
+	}
+	return obj, false
 }

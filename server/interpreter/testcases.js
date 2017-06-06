@@ -739,6 +739,21 @@ exports.tests = [
     `,
     expected: 81 },
 
+  { name: 'objectCreateWithProperties', src: `
+    var o = Object.create({ foo: 70 }, {
+        bar: {
+            writeable: true,
+            enumerable: true,
+            configurable: true,
+            value: 10 },
+        baz: { value: 999 }});
+    var r = 0;
+    for (var k in o) {
+      r += o[k];
+    }
+    r + Object.getOwnPropertyNames(o).length;
+    `,
+    expected: 82 },
   /******************************************************************/
   // Other tests (without expected value):
 
