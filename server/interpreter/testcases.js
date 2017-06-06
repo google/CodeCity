@@ -570,7 +570,7 @@ exports.tests = [
     expected: "TypeError" },
 
   { name: 'objectDefineProperty', src: `
-    var o = { "foo": 70 }, r = 0;
+    var o = { foo: 70 }, r = 0;
     Object.defineProperty(o, "bar", {
       writeable: true,
       enumerable: true,
@@ -677,7 +677,7 @@ exports.tests = [
     expected: "TypeError" },
 
   { name: 'objectGetOwnPropertyNames', src: `
-    var o = { "foo": 42 }, r = 0;
+    var o = { foo: 42 }, r = 0;
     Object.defineProperty(o, "bar", { value: 38 });
     var keys = Object.getOwnPropertyNames(o);
     var r = 0;
