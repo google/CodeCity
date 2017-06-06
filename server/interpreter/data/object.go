@@ -64,6 +64,8 @@ type Object interface {
 	HasProperty(string) bool
 }
 
+/********************************************************************/
+
 // object represents typical plain old JavaScript objects with
 // prototype, properties, etc.; this struct is also embedded in other,
 // less-plain object types like Array.
@@ -72,21 +74,6 @@ type object struct {
 	proto      Object
 	properties map[string]Property
 	f          bool
-}
-
-// Property is a property descriptor, per §8.10 of ES5.1
-//     Value: The actual value of the property.
-//     Owner: Who owns the property (has permission to write it)?
-//     W:     Is the property writeable?
-//     E:     Is the property enumerable?
-//     C:     Is the property configurable?
-//     R:     Is the property world-readable?
-//     I:     Is the property ownership inherited on children?
-type Property struct {
-	Value   Value
-	Owner   *Owner
-	W, E, C bool
-	R, I    bool
 }
 
 // *object must satisfy Object.
@@ -259,4 +246,85 @@ func (obj *object) init(owner *Owner, proto Object) {
 	obj.owner = owner
 	obj.proto = proto
 	obj.properties = make(map[string]Property)
+}
+
+/********************************************************************/
+
+// Property is a property descriptor, per §8.10 of ES5.1
+//     Value: The actual value of the property.
+//     Owner: Who owns the property (has permission to write it)?
+//     W:     Is the property writeable?
+//     E:     Is the property enumerable?
+//     C:     Is the property configurable?
+//     R:     Is the property world-readable?
+//     I:     Is the property ownership inherited on children?
+type Property struct {
+	Value   Value
+	Owner   *Owner
+	W, E, C bool
+	R, I    bool
+}
+
+// FromProeprtyDescriptor implements the altorithm of the same name
+// from §8.10.4 of the ES5.1 spec, but simplified because we do not
+// (yet) support getters / setters, and with extra parameters for
+// objet owner and prototype.
+func FromPropertyDescriptor(pd Property, owner *Owner, proto Object) (desc Object, ne *NativeError) {
+	desc = NewObject(owner, proto)
+	ne = desc.Set("value", pd.Value)
+	if ne != nil {
+		return
+	}
+	attrs := []struct {
+		flag *bool
+		key  string
+	}{
+		{&pd.W, "writeable"},
+		{&pd.E, "enumerable"},
+		{&pd.C, "configurable"},
+		// FIXME: either enable, or remove, once we decide
+		// what flags properties will actually have:
+		// {&pd.R, "readable"},
+		// {&pd.I, "inheritable"},
+	}
+	for _, attr := range attrs {
+		ne = desc.Set(attr.key, Boolean(*attr.flag))
+		if ne != nil {
+			return
+		}
+	}
+	return
+}
+
+// ToProeprtyDescriptor implements the altorithm of the same name from
+// §8.10.5 of the ES5.1 spec, but simplified because we do not (yet)
+// support getters / setters.
+func ToPropertyDescriptor(obj Object) (pd Property, ne *NativeError) {
+	pd.Value, ne = obj.Get("value")
+	if ne != nil {
+		return
+	}
+	// FIXME: set owner
+	pd.Owner = nil
+	attrs := []struct {
+		flag *bool
+		key  string
+	}{
+		{&pd.W, "writeable"},
+		{&pd.E, "enumerable"},
+		{&pd.C, "configurable"},
+		// FIXME: either enable, or remove, once we decide what flags
+		// properties will actually have:
+		// {&pd.R, "readable"},
+		// {&pd.I, "inheritable"},
+	}
+	for _, attr := range attrs {
+		var v Value
+		v, ne = obj.Get(attr.key)
+		if ne != nil {
+			return
+		}
+		*(attr.flag) = bool(v.ToBoolean())
+	}
+	return
 }

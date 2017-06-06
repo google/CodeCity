@@ -59,29 +59,9 @@ func (intrp *Interpreter) initBuiltinObject() {
 				return data.Undefined{}, false
 			}
 			// FIXME: set owner
-			var desc = data.NewObject(nil, intrp.protos.ObjectProto)
-			var ne *data.NativeError
-			ne = desc.Set("value", pd.Value)
+			desc, ne := data.FromPropertyDescriptor(pd, nil, intrp.protos.ObjectProto)
 			if ne != nil {
 				return intrp.nativeError(ne), true
-			}
-			attrs := []struct {
-				flag *bool
-				key  string
-			}{
-				{&pd.W, "writeable"},
-				{&pd.E, "enumerable"},
-				{&pd.C, "configurable"},
-				// FIXME: either enable, or remove, once we decide
-				// what flags properties will actually have:
-				// {&pd.R, "readable"},
-				// {&pd.I, "inheritable"},
-			}
-			for _, attr := range attrs {
-				ne := desc.Set(attr.key, data.Boolean(*attr.flag))
-				if ne != nil {
-					return intrp.nativeError(ne), true
-				}
 			}
 			return desc, false
 		})
@@ -140,30 +120,9 @@ func (intrp *Interpreter) initBuiltinObject() {
 			if !ok {
 				return intrp.typeError("Property descriptor must be an object"), true
 			}
-			var pd data.Property
-			var ne *data.NativeError
-			pd.Value, ne = desc.Get("value")
+			pd, ne := data.ToPropertyDescriptor(desc)
 			if ne != nil {
 				return intrp.nativeError(ne), true
-			}
-			// FIXME: set owner
-			pd.Owner = nil
-			attrs := []struct {
-				flag *bool
-				key  string
-			}{
-				{&pd.W, "writeable"},
-				{&pd.E, "enumerable"},
-				{&pd.C, "configurable"},
-				{&pd.R, "readable"},
-				{&pd.I, "inheritable"},
-			}
-			for _, attr := range attrs {
-				v, ne := desc.Get(attr.key)
-				if ne != nil {
-					return intrp.nativeError(ne), true
-				}
-				*(attr.flag) = bool(v.ToBoolean())
 			}
 			ne = obj.DefineOwnProperty(key, pd)
 			if ne != nil {
