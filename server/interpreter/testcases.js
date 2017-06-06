@@ -688,6 +688,57 @@ exports.tests = [
     `,
     expected: 80 },
 
+  { name: 'objectDefinePropertiesNoArgs', src: `
+    try {
+      Object.defineProperties();
+    } catch (e) {
+      e.name;
+    }
+    `,
+    expected: "TypeError" },
+
+  { name: 'objectDefinePropertiesNonObject', src: `
+    try {
+      Object.defineProperties("not an object", {});
+    } catch (e) {
+      e.name;
+    }
+    `,
+    expected: "TypeError" },
+
+  { name: 'objectDefinePropertiesNonObjectProps', src: `
+    Object.getOwnPropertyNames(
+        Object.defineProperties({}, "not an object")
+    ).length;
+    `,
+    expected: 0 },
+
+  { name: 'objectDefinePropertiesBadDescriptor', src: `
+    var o = {};
+    try {
+      Object.defineProperties(o, { foo: "not an object" });
+    } catch (e) {
+      e.name;
+    }
+    `,
+    expected: "TypeError" },
+
+  { name: 'objectDefineProperties', src: `
+    var o = { foo: 70 }, r = 0;
+    Object.defineProperties(o, {
+        bar: {
+            writeable: true,
+            enumerable: true,
+            configurable: true,
+            value: 8 },
+        baz: { value: 999 }});
+    for (var k in o) {
+      r += o[k];
+    }
+    r + Object.getOwnPropertyNames(o).length;
+    `,
+    expected: 81 },
+
   /******************************************************************/
   // Other tests (without expected value):
 
