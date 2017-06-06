@@ -265,7 +265,7 @@ type Property struct {
 	R, I    bool
 }
 
-// FromProeprtyDescriptor implements the altorithm of the same name
+// FromPropertyDescriptor implements the altorithm of the same name
 // from §8.10.4 of the ES5.1 spec, but simplified because we do not
 // (yet) support getters / setters, and with extra parameters for
 // objet owner and prototype.
@@ -296,7 +296,7 @@ func FromPropertyDescriptor(pd Property, owner *Owner, proto Object) (desc Objec
 	return
 }
 
-// ToProeprtyDescriptor implements the altorithm of the same name from
+// ToPropertyDescriptor implements the altorithm of the same name from
 // §8.10.5 of the ES5.1 spec, but simplified because we do not (yet)
 // support getters / setters.
 func ToPropertyDescriptor(obj Object) (pd Property, ne *NativeError) {
