@@ -193,7 +193,7 @@ CCC.World.preprocessXml = function(dom) {
     if (msg.tagName == 'iframe') {
       // <iframe src="https://neil.fraser.name/">Neil Fraser</iframe>
       // It's an iframe, create the DOM element.
-      msg.iframe = CCC.World.createIframe(msg);
+      msg.iframeId = CCC.World.createIframe(msg.getAttribute('src'));
     }
   }
 };
@@ -207,19 +207,25 @@ CCC.World.renderMessage = function(msg) {
     CCC.World.panelWidths = CCC.World.rowWidths();
   }
 
-  var backupScratchHistory = CCC.World.scratchHistory;
+  var backupScratchHistory =
+      CCC.World.scratchHistory && CCC.World.scratchHistory.cloneNode(true);
   if (CCC.World.prerenderHistory(msg) && CCC.World.prerenderPanorama(msg)) {
     // Rendering successful in both panorama and pending history panel.
     CCC.World.panoramaMessages.push(msg);
     CCC.World.publishPanorama();
     CCC.World.removeNode(backupScratchHistory);
   } else {
-    // Failure to render.  Revert to previous state.
+    // Failure to render.  Publish the previous history, and start fresh.
     CCC.World.removeNode(CCC.World.scratchHistory);
     CCC.World.removeNode(CCC.World.scratchPanorama);
-    CCC.World.scratchHistory = backupScratchHistory;
+    CCC.World.scratchHistory = null;
+    CCC.World.scratchPanorama = null;
     // Publish one panel to the history.
-    CCC.World.publishHistory();
+    CCC.World.publishHistory(backupScratchHistory);
+    // Move all panorama messages into history.
+    Array.prototype.push.apply(CCC.World.historyMessages,
+                               CCC.World.panoramaMessages);
+    CCC.World.panoramaMessages.length = 0;
     // Try again.
     CCC.World.renderMessage(msg);
   }
@@ -232,15 +238,18 @@ CCC.World.renderMessage = function(msg) {
  */
 CCC.World.prerenderHistory = function(node) {
   if (node.tagName == 'iframe') {
-    if (CCC.World.panoramaMessages.length) {
+    if (CCC.World.scratchHistory) {
       return false;  // Every iframe needs to be in its own panel.
     }
     // Create relaunch button if iframe is closed.
     var svg = CCC.World.createHiddenSvg(CCC.World.panelWidths[0],
                                         CCC.World.panelHeight);
     svg.style.backgroundColor = '#696969';
+    svg.setAttribute('data-iframe-id', node.iframeId);
     var g = CCC.Common.createSvgElement('g',
-        {'class': 'iframeRelaunch', 'transform': 'translate(0, 50)'}, svg);
+        {'class': 'iframeRelaunch',
+         'transform': 'translate(0, 50)',
+         'data-iframe-src': node.getAttribute('src')}, svg);
     // Add relaunch button.
     var rect = document.createElementNS(CCC.Common.NS, 'rect');
     var text = document.createElementNS(CCC.Common.NS, 'text');
@@ -248,13 +257,6 @@ CCC.World.prerenderHistory = function(node) {
         CCC.World.getMsg('relaunchIframeMsg')));
     g.appendChild(rect);
     g.appendChild(text);
-    g.addEventListener('click', function() {
-      node.iframe = CCC.World.createIframe(node);
-      var div = svg.parentNode;
-      CCC.World.positionIframe(node.iframe, div);
-      div.firstChild.style.visibility = 'hidden';  // SVG.
-      div.lastChild.style.display = 'inline';  // Close button.
-    }, false);
     // Size the rectangle to match the text size.
     var bBox = text.getBBox();
     var r = Math.min(bBox.height, bBox.width) / 2;
@@ -269,7 +271,7 @@ CCC.World.prerenderHistory = function(node) {
   }
 
   if (node.tagName == 'htmldom') {
-    if (CCC.World.panoramaMessages.length) {
+    if (CCC.World.scratchHistory) {
       return false;  // Every htmlframe needs to be in its own panel.
     }
     var div = CCC.World.createHiddenDiv();
@@ -296,14 +298,14 @@ CCC.World.prerenderHistory = function(node) {
       CCC.World.scene = node;
     }
     // Each scene message needs its own frame.
-    if (CCC.World.panoramaMessages.length) {
+    if (CCC.World.scratchHistory) {
       return false;
     }
     node = CCC.World.sceneDescription(node);
   }
 
   // For now every message needs its own frame.
-  if (CCC.World.panoramaMessages.length) {
+  if (CCC.World.scratchHistory) {
     return false;
   }
   var svg = CCC.World.scratchHistory;
@@ -328,16 +330,17 @@ CCC.World.prerenderHistory = function(node) {
  */
 CCC.World.prerenderPanorama = function(node) {
   if (node.tagName == 'iframe') {
-    if (CCC.World.panoramaMessages.length) {
+    if (CCC.World.scratchPanorama) {
       return false;  // Every iframe needs to be in its own panel.
     }
     var svg = CCC.World.createHiddenSvg(CCC.World.panoramaDiv.offsetWidth,
                                         CCC.World.panoramaDiv.offsetHeight);
+    svg.setAttribute('data-iframe-id', node.iframeId);
     CCC.World.scratchPanorama = svg;
     return true;
   }
   if (node.tagName == 'htmldom') {
-    if (CCC.World.panoramaMessages.length) {
+    if (CCC.World.scratchPanorama) {
       return false;  // Every htmlframe needs to be in its own panel.
     }
     var div = CCC.World.createHiddenDiv();
@@ -350,7 +353,7 @@ CCC.World.prerenderPanorama = function(node) {
   }
 
   // For now every message needs its own frame.
-  if (CCC.World.panoramaMessages.length) {
+  if (CCC.World.scratchPanorama) {
     return false;
   }
   var svg = CCC.World.scratchPanorama;
@@ -860,8 +863,9 @@ CCC.World.ARROW_BEND = 4;
 
 /**
  * Publish the previously experimentally rendered history frame to the user.
+ * @param {!Element} historyElement Rendered history panel.
  */
-CCC.World.publishHistory = function() {
+CCC.World.publishHistory = function(historyElement) {
   if (!CCC.World.historyRow) {
     var rowDiv = document.createElement('div');
     rowDiv.className = 'historyRow';
@@ -874,46 +878,48 @@ CCC.World.publishHistory = function() {
   panelDiv.style.height = CCC.World.panelHeight + 'px';
   panelDiv.style.width = width + 'px';
   CCC.World.historyRow.appendChild(panelDiv);
-  panelDiv.appendChild(CCC.World.scratchHistory);
+  panelDiv.appendChild(historyElement);
   CCC.World.stripActions(panelDiv);
-  var isIframeVisible = false;
-  var msgs = CCC.World.panoramaMessages;
-  if (msgs.length == 1) {
-    var msg = msgs[0];
-    if (msg.iframe) {
-      isIframeVisible = true;
-      CCC.World.positionIframe(msg.iframe, panelDiv);
-      var closeImg = new Image(21, 21);
-      closeImg.className = 'iframeClose';
-      closeImg.src = 'close.png';
-      closeImg.title = CCC.World.getMsg('closeIframeMsg');
-      closeImg.addEventListener('click', function() {
-        closeImg.style.display = 'none';
-        panelDiv.firstChild.style.visibility = 'visible';  // SVG.
-        CCC.World.removeNode(msg.iframe);
-        msg.iframe = null;
-      }, false);
-      panelDiv.appendChild(closeImg);
-    }
-  } else if (Math.random() < 1 / 16) {
+  var iframeId = historyElement.getAttribute('data-iframe-id');
+  if (iframeId) {
+    var iframe = document.getElementById(iframeId);
+    CCC.World.positionIframe(iframe, panelDiv);
+    // Add <img height=21 width=21 src="close.png" title="Close iframe">
+    var closeImg = new Image(21, 21);
+    closeImg.className = 'iframeClose';
+    closeImg.src = 'close.png';
+    closeImg.title = CCC.World.getMsg('closeIframeMsg');
+    closeImg.addEventListener('click', function() {
+      closeImg.style.display = 'none';
+      panelDiv.firstChild.style.visibility = 'visible';  // SVG.
+      CCC.World.removeNode(iframe);
+    }, false);
+    // Add event handler on <g class="iframeRelaunch"> element.
+    var group = panelDiv.querySelector('g.iframeRelaunch');
+    group.addEventListener('click', function() {
+      var iframeSrc = group.getAttribute('data-iframe-src');
+      iframeId = CCC.World.createIframe(iframeSrc);
+      iframe = document.getElementById(iframeId);
+      var div = historyElement.parentNode;
+      CCC.World.positionIframe(iframe, div);
+      div.firstChild.style.visibility = 'hidden';  // SVG.
+      div.lastChild.style.display = 'inline';  // Close button.
+    }, false);
+    panelDiv.appendChild(closeImg);
+  } else {
     // The occasional (non-iframe) panel should lack a border.
-    panelDiv.style.borderColor = '#fff';
+    if (Math.random() < 1 / 16) {
+      panelDiv.style.borderColor = '#fff';
+    }
+    // While being built, the SVG was hidden.
+    // Make it visible, unless there is an iframe displayed on top of it.
+    historyElement.style.visibility = 'visible';
   }
-  // While being built, the SVG was hidden.
-  // Make it visible, unless there is an iframe displayed on top of it.
-  if (!isIframeVisible) {
-    CCC.World.scratchHistory.style.visibility = 'visible';
-  }
-  CCC.World.scratchHistory = null;
   CCC.World.scrollDiv.scrollTop = CCC.World.scrollDiv.scrollHeight;
 
   if (!CCC.World.panelWidths.length) {
     CCC.World.historyRow = null;  // Next row.
   }
-  // Move all panorama messages into history.
-  Array.prototype.push.apply(CCC.World.historyMessages,
-                             CCC.World.panoramaMessages);
-  CCC.World.panoramaMessages.length = 0;
 };
 
 /**
@@ -925,27 +931,24 @@ CCC.World.publishPanorama = function() {
     CCC.World.panoramaDiv.removeChild(CCC.World.panoramaDiv.firstChild);
   }
   // Insert new content.
-  var content = CCC.World.scratchPanorama;
+  var content = CCC.World.scratchPanorama.cloneNode(true);
   CCC.World.panoramaDiv.appendChild(content);
-  var msgs = CCC.World.panoramaMessages;
-  if (msgs.length == 1) {
-    var iframe = msgs[0].iframe;
-    if (iframe) {
-      CCC.World.positionIframe(iframe, CCC.World.panoramaDiv);
-      content = iframe;
+  var iframeId = content.getAttribute('data-iframe-id');
+  if (iframeId) {
+    var iframe = document.getElementById(iframeId);
+    CCC.World.positionIframe(iframe, CCC.World.panoramaDiv);
+  } else {
+    content.style.visibility = 'visible';
+    // Add event handlers on all <a class="command"> links.
+    var commands = content.querySelectorAll('a.command');
+    for (var i = 0, command; command = commands[i]; i++) {
+      command.addEventListener('click', CCC.Common.commandFunction, false);
     }
-  }
-  CCC.World.scratchPanorama.style.visibility = 'visible';
-  CCC.World.scratchPanorama = null;
-  // Add event handlers on all <a class="command"> links.
-  var commands = content.querySelectorAll('a.command');
-  for (var i = 0, command; command = commands[i]; i++) {
-    command.addEventListener('click', CCC.Common.commandFunction, false);
-  }
-  // Add event handlers on all <svg class="menuIcon"> menus.
-  var menus = content.querySelectorAll('svg.menuIcon');
-  for (var i = 0, menu; menu = menus[i]; i++) {
-    menu.addEventListener('click', CCC.Common.openMenu, false);
+    // Add event handlers on all <svg class="menuIcon"> menus.
+    var menus = content.querySelectorAll('svg.menuIcon');
+    for (var i = 0, menu; menu = menus[i]; i++) {
+      menu.addEventListener('click', CCC.Common.openMenu, false);
+    }
   }
 };
 
@@ -954,7 +957,7 @@ CCC.World.publishPanorama = function() {
  * @param {!Element} iframe DOM node for iframe.
  * @param {!Element} container DOM node for panel.
  */
-CCC.World.positionIframe = function (iframe, container) {
+CCC.World.positionIframe = function(iframe, container) {
   var borderWidth = 2;
   iframe.style.width = (container.offsetWidth - borderWidth * 2) + 'px';
   iframe.style.height = (container.offsetHeight - borderWidth * 2) + 'px';
@@ -970,8 +973,7 @@ CCC.World.positionIframe = function (iframe, container) {
 };
 
 /**
- * Strip all command links and menus.
- * History panels should not be interactive.
+ * Strip all command links and menus.  History panels should not be interactive.
  * @param {!Element} div History panel div.
  */
 CCC.World.stripActions = function(div) {
@@ -1049,15 +1051,16 @@ CCC.World.createHiddenDiv = function() {
 
 /**
  * Instantiate an iframe based on a message.
- * @param {string|!Element} msg Message describing an iframe.
- * @return {!Object} The iframe's DOM.
+ * @param {string} src URL of target.
+ * @return {string} The iframe's UUID.
  */
-CCC.World.createIframe = function(msg) {
+CCC.World.createIframe = function(src) {
   var iframe = document.createElement('iframe');
+  iframe.id = 'iframe' +  (Math.random() + '').substring(2);
   iframe.sandbox = 'allow-forms allow-scripts';
-  iframe.src = msg.getAttribute('src');
+  iframe.src = src;
   document.getElementById('iframeStorage').appendChild(iframe);
-  return iframe;
+  return iframe.id;
 };
 
 
