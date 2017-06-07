@@ -606,7 +606,7 @@ func (st *stateCallExpression) step(intrp *Interpreter, cv *cval) (state, *cval)
 			// Evaluate function call
 			return newState(st, scope, f.body), nil
 		case *nativeFunc:
-			r, throw := f.impl(intrp, st.this, st.argv)
+			r, throw := nativeImpls[f.idx].impl(intrp, st.this, st.argv)
 			if throw {
 				return st.parent, &cval{THROW, r, ""}
 			}

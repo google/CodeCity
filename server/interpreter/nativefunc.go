@@ -17,6 +17,9 @@
 package interpreter
 
 import (
+	"encoding/json"
+	"fmt"
+
 	"CodeCity/server/interpreter/data"
 )
 
@@ -34,9 +37,14 @@ type NativeImpl func(intrp *Interpreter, this data.Value, args []data.Value) (re
 
 // A nativeFunc is an object that when called / applied invokes a
 // Go-language function.
+//
+// In order to be serializable using flatpack and encoding/json (which
+// cannot serialise function values) it does not contain the
+// NativeImpl directly but rather an index into the package variable
+// nativeImpls.
 type nativeFunc struct {
 	data.Object
-	impl NativeImpl
+	idx nii
 }
 
 // *nativeFunc must satisfy Value.
@@ -51,15 +59,82 @@ func (nativeFunc) ToString() data.String {
 }
 
 // newNativeFunc returns a new native function object with the
-// specified owner, prototype, length and implementation.
-func newNativeFunc(owner *data.Owner, proto data.Object, length int, impl NativeImpl) *nativeFunc {
+// specified owner, prototype, tag and length.
+//
+// The owner and proto params are as for data.NewObject().
+//
+// The tag param specifies which nativeImpl (from nativeImpls) should
+// be used; this will also be used when serialising; a deserialised
+// NativeFunc will be reconnected to a nativeImpl with the same name.
+//
+// the length param specifies the value for the function's .length
+// property; this is neither a minimum nor maximum number of
+// parameters, but a somewhat arbitrary 'usual' number of parameters
+// as specified by the ES5.1 spec.
+func newNativeFunc(owner *data.Owner, proto data.Object, tag string, length int) *nativeFunc {
+	idx, ok := nativeImplsIdx[tag]
+	if !ok {
+		panic(fmt.Errorf("No NativeImpl tagged '%s' registered", tag))
+	}
 	o := data.NewObject(owner, proto)
+	// FIXME: make not writeable? (check spec for this an other attributes)
 	err := o.Set("length", data.Number(length)) // FIXME: readonly!
 	if err != nil {
 		panic(err)
 	}
 	return &nativeFunc{
 		Object: o,
-		impl:   impl,
+		idx:    idx,
 	}
+}
+
+// nit is the type of the entries of the nativeImpls table
+type nit struct {
+	tag  string
+	impl NativeImpl
+}
+
+// nativeImpls is a table mapping nativeFunc.idx values to NativeImpl
+// values.
+var nativeImpls []nit
+
+// nativeImplsIdx is a map indexing nativeImpls by tag value.
+var nativeImplsIdx = make(map[string]nii)
+
+// registerNativeImpl adds impl to nativeImpls with the specified tag.
+func registerNativeImpl(tag string, impl NativeImpl) {
+	if _, exists := nativeImplsIdx[tag]; exists {
+		panic(fmt.Errorf("A NativeImpl tagged '%s' already registered", tag))
+	}
+	nativeImplsIdx[tag] = nii(len(nativeImpls))
+	nativeImpls = append(nativeImpls, nit{tag, impl})
+}
+
+// nii is just an integer index into nativeImpls which is
+// serialised in a special way: using the corresponding tag value.
+type nii int
+
+// nii must satisfy json.Marshaler and json.Unmarshaler.
+var _ json.Marshaler = nii(0)
+var _ json.Unmarshaler = &[]nii{0}[0]
+
+func (idx nii) MarshalJSON() ([]byte, error) {
+	if n := len(nativeImpls); int(idx) >= n {
+		return nil, fmt.Errorf("nii %d out of range [0:%d]", idx, n)
+	}
+	return json.Marshal(nativeImpls[idx].tag)
+}
+
+func (idx *nii) UnmarshalJSON(data []byte) error {
+	var tag string
+	err := json.Unmarshal(data, &tag)
+	if err != nil {
+		return err
+	}
+	var ok bool
+	*idx, ok = nativeImplsIdx[tag]
+	if !ok {
+		return fmt.Errorf("No NativeImpl tagged '%s' registered", tag)
+	}
+	return nil
 }

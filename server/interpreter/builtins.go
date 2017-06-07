@@ -44,9 +44,9 @@ func (intrp *Interpreter) mkBuiltin(path string, value data.Value) {
 	o.DefineOwnProperty(cmp[0], data.Property{Value: value})
 }
 
-func (intrp *Interpreter) mkBuiltinFunc(path string, length int, impl NativeImpl) {
+func (intrp *Interpreter) mkBuiltinFunc(path string, length int) {
 	// FIXME: set owner
-	intrp.mkBuiltin(path, newNativeFunc(nil, intrp.protos.FunctionProto, length, impl))
+	intrp.mkBuiltin(path, newNativeFunc(nil, intrp.protos.FunctionProto, path, length))
 }
 
 // initGlobalScope initializes the global scope
