@@ -213,7 +213,6 @@ CCC.World.renderMessage = function(msg) {
     // Rendering successful in both panorama and pending history panel.
     CCC.World.panoramaMessages.push(msg);
     CCC.World.publishPanorama();
-    CCC.World.removeNode(backupScratchHistory);
   } else {
     // Failure to render.  Publish the previous history, and start fresh.
     CCC.World.removeNode(CCC.World.scratchHistory);
@@ -304,6 +303,12 @@ CCC.World.prerenderHistory = function(node) {
     node = CCC.World.sceneDescription(node);
   }
 
+  // If bubbles can be merged, attempt to do so.
+  var merge = CCC.World.mergeBubbles(CCC.World.scratchHistory, node);
+  if (merge !== undefined) {
+    return merge;
+  }
+
   // For now every message needs its own frame.
   if (CCC.World.scratchHistory) {
     return false;
@@ -352,6 +357,12 @@ CCC.World.prerenderPanorama = function(node) {
     node = CCC.World.sceneDescription(node);
   }
 
+  // If bubbles can be merged, attempt to do so.
+  var merge = CCC.World.mergeBubbles(CCC.World.scratchPanorama, node);
+  if (merge !== undefined) {
+    return merge;
+  }
+
   // For now every message needs its own frame.
   if (CCC.World.scratchPanorama) {
     return false;
@@ -369,6 +380,39 @@ CCC.World.prerenderPanorama = function(node) {
 
   CCC.World.scratchPanorama = svg;
   return true;
+};
+
+/**
+ *
+ * @param {!SVGElement} svg SVG element in which to draw the background.
+ * @param {!Element} node Message to render.
+ * @return {?boolean} True if merged, false if overflow, undefined if no match.
+ */
+CCC.World.mergeBubbles = function(svg, node) {
+  var previousNode =
+      CCC.World.panoramaMessages[CCC.World.panoramaMessages.length - 1];
+  if (!svg || !previousNode || previousNode.tagName != node.tagName ||
+      previousNode.getAttribute('user') != node.getAttribute('user') ||
+      previousNode.getAttribute('object') != node.getAttribute('object') ||
+      previousNode.getAttribute('room') != node.getAttribute('room')) {
+    return undefined;  // Current message not a match with previous message.
+  }
+  // Remove previous bubble.
+  svg.removeChild(svg.lastBubbleText_);
+  svg.removeChild(svg.lastBubbleGroup_);
+  // Try to add a merged bubble.
+  var mergedNode = node.cloneNode(true);
+  mergedNode.textContent = svg.lastPlainText_ + '\n' + node.textContent;
+  CCC.World.createBubble(mergedNode, svg);
+
+  // If the merged bubble is too big, reject the merge.
+  var bBox = CCC.World.getBBoxWithTransform(svg.lastBubbleText_);
+  var bottom = bBox.y + bBox.height - 2;  // -2 for the border.
+  console.log(bottom);
+  var anchor = CCC.World.getAnchor(node, svg);
+  console.log(anchor);
+  var limitY = anchor ? 100 - anchor.headY - anchor.headR : 100;
+  return bottom < limitY;
 };
 
 /**
@@ -538,21 +582,14 @@ CCC.World.createBubble = function(node, svg) {
   }
   svg.appendChild(textGroup);
   var textBBox = textGroup.getBBox();
-  var anchor;
-  try {
-    if (room && room == CCC.World.scene.getAttribute('room')) {
-      if (user || object) {
-        anchor = svg.sceneUserLocations[user] ||
-                 svg.sceneObjectLocations[object];
-      } else {
-        // This text box is coming from the room, not a user or object.
-        // Left-align the box.  A bit of a hack: place anchor under box.
-        anchor = {headX: 1 - svg.scaledWidth_ / 2, headY: 2, headR: 0};
-      }
-    }
-  } catch (e) {
-    // Not a match.  Simpler to try/catch than to check every step.
+
+  var anchor = CCC.World.getAnchor(node, svg);
+  if (!anchor && room && room == CCC.World.scene.getAttribute('room')) {
+    // This text box is coming from the room, not a user or object.
+    // A bit of a hack: place anchor under box.
+    anchor = {headX: 1 - svg.scaledWidth_ / 2, headY: 2, headR: 0};
   }
+
   // Align the text above the user.
   var cursorX = anchor ? anchor.headX : 0;
   // Don't overflow the right edge.
@@ -562,6 +599,54 @@ CCC.World.createBubble = function(node, svg) {
   cursorX -= textBBox.x + textBBox.width / 2;
   textGroup.setAttribute('transform', 'translate(' + cursorX + ', 2)');
   CCC.World.drawBubble(node.tagName, bubbleGroup, textGroup, anchor);
+  // Record the appended DOM elements so that they may be removed if more
+  // text needs to be appended.
+  svg.lastBubbleGroup_ = bubbleGroup;
+  svg.lastBubbleText_ = textGroup;
+  svg.lastPlainText_ = text;
+};
+
+/**
+ * Find the location of the actor who is initiating a bubble.
+ * @param {!Element} node Message to render.
+ * @param {!SVGElement} svg SVG Element to place the text and bubble.
+ * @return {Object} Provides headX, headY, and headR properties.
+ */
+CCC.World.getAnchor = function(node, svg) {
+  var user = node.getAttribute('user');
+  var object = node.getAttribute('object');
+  var room = node.getAttribute('room');
+  var anchor = null;
+  try {
+    if (room && room == CCC.World.scene.getAttribute('room') ||
+        (user || object)) {
+      anchor = svg.sceneUserLocations[user] ||
+               svg.sceneObjectLocations[object];
+    }
+  } catch (e) {
+    // No anchor.  Simpler to try/catch than to check every step.
+  }
+  return anchor;
+};
+
+/**
+ * Return the object's bounding box, compensating for any transform-translate.
+ * @param {!Element} element Element to measure.
+ * @return {!Object} Height, width, x and y.
+ */
+CCC.World.getBBoxWithTransform = function(element) {
+  var bBox = element.getBBox();
+  // getBBox doesn't look at element's transform="translate(...)".
+  var transform = element.getAttribute('transform');
+  var r = transform && transform.match(
+      /translate\(\s*([-+\d.e]+)([ ,]\s*([-+\d.e]+)\s*\))?/);
+  if (r) {
+    bBox.x += parseFloat(r[1]);
+    if (r[3]) {
+      bBox.y += parseFloat(r[3]);
+    }
+  }
+  return bBox;
 };
 
 /**
@@ -573,17 +658,7 @@ CCC.World.createBubble = function(node, svg) {
  */
 CCC.World.drawBubble = function(type, bubbleGroup, contentGroup, opt_anchor) {
   // Find coordinates of the contents.
-  var contentBBox = contentGroup.getBBox();
-  // getBBox doesn't look at contentGroup's transform="translate(...)".
-  var transform = contentGroup.getAttribute('transform');
-  var r = transform && transform.match(
-      /translate\(\s*([-+\d.e]+)([ ,]\s*([-+\d.e]+)\s*\))?/);
-  if (r) {
-    contentBBox.x += parseFloat(r[1]);
-    if (r[3]) {
-      contentBBox.y += parseFloat(r[3]);
-    }
-  }
+  var contentBBox = CCC.World.getBBoxWithTransform(contentGroup);
   // Draw a solid black bubble, then the arrow (with border), then a slightly
   // smaller solid white bubble, resulting in a clean border.
   if (type == 'think') {
