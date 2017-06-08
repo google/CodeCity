@@ -276,19 +276,19 @@ func FromPropertyDescriptor(pd Property, owner *Owner, proto Object) (desc Objec
 		return
 	}
 	attrs := []struct {
-		flag *bool
+		flag bool
 		key  string
 	}{
-		{&pd.W, "writeable"},
-		{&pd.E, "enumerable"},
-		{&pd.C, "configurable"},
+		{pd.W, "writeable"},
+		{pd.E, "enumerable"},
+		{pd.C, "configurable"},
 		// FIXME: either enable, or remove, once we decide
 		// what flags properties will actually have:
 		// {&pd.R, "readable"},
 		// {&pd.I, "inheritable"},
 	}
 	for _, attr := range attrs {
-		ne = desc.Set(attr.key, Boolean(*attr.flag))
+		ne = desc.Set(attr.key, Boolean(attr.flag))
 		if ne != nil {
 			return
 		}

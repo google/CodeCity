@@ -34,7 +34,7 @@ func init() {
 
 		// From nativefunc.go:
 		nativeFunc{},
-		nii(0),
+		natImplIdx(0),
 		// NativeImpl and nit not needed as they only appear in
 		// package variables, never in Interpreter instances.
 

@@ -44,7 +44,7 @@ type NativeImpl func(intrp *Interpreter, this data.Value, args []data.Value) (re
 // nativeImpls.
 type nativeFunc struct {
 	data.Object
-	idx nii
+	idx natImplIdx
 }
 
 // *nativeFunc must satisfy Value.
@@ -72,7 +72,7 @@ func (nativeFunc) ToString() data.String {
 // parameters, but a somewhat arbitrary 'usual' number of parameters
 // as specified by the ES5.1 spec.
 func newNativeFunc(owner *data.Owner, proto data.Object, tag string, length int) *nativeFunc {
-	idx, ok := nativeImplsIdx[tag]
+	idx, ok := nativeImplsByTag[tag]
 	if !ok {
 		panic(fmt.Errorf("No NativeImpl tagged '%s' registered", tag))
 	}
@@ -98,41 +98,41 @@ type nit struct {
 // values.
 var nativeImpls []nit
 
-// nativeImplsIdx is a map indexing nativeImpls by tag value.
-var nativeImplsIdx = make(map[string]nii)
+// nativeImplsByTag is a map indexing nativeImpls by tag value.
+var nativeImplsByTag = make(map[string]natImplIdx)
 
 // registerNativeImpl adds impl to nativeImpls with the specified tag.
 func registerNativeImpl(tag string, impl NativeImpl) {
-	if _, exists := nativeImplsIdx[tag]; exists {
+	if _, exists := nativeImplsByTag[tag]; exists {
 		panic(fmt.Errorf("A NativeImpl tagged '%s' already registered", tag))
 	}
-	nativeImplsIdx[tag] = nii(len(nativeImpls))
+	nativeImplsByTag[tag] = natImplIdx(len(nativeImpls))
 	nativeImpls = append(nativeImpls, nit{tag, impl})
 }
 
-// nii is just an integer index into nativeImpls which is
+// natImplIdx is just an integer index into nativeImpls which is
 // serialised in a special way: using the corresponding tag value.
-type nii int
+type natImplIdx int
 
-// nii must satisfy json.Marshaler and json.Unmarshaler.
-var _ json.Marshaler = nii(0)
-var _ json.Unmarshaler = &[]nii{0}[0]
+// natImplIdx must satisfy json.Marshaler and json.Unmarshaler.
+var _ json.Marshaler = natImplIdx(0)
+var _ json.Unmarshaler = &[]natImplIdx{0}[0]
 
-func (idx nii) MarshalJSON() ([]byte, error) {
+func (idx natImplIdx) MarshalJSON() ([]byte, error) {
 	if n := len(nativeImpls); int(idx) >= n {
-		return nil, fmt.Errorf("nii %d out of range [0:%d]", idx, n)
+		return nil, fmt.Errorf("natImplIdx %d out of range [0:%d]", idx, n)
 	}
 	return json.Marshal(nativeImpls[idx].tag)
 }
 
-func (idx *nii) UnmarshalJSON(data []byte) error {
+func (idx *natImplIdx) UnmarshalJSON(data []byte) error {
 	var tag string
 	err := json.Unmarshal(data, &tag)
 	if err != nil {
 		return err
 	}
 	var ok bool
-	*idx, ok = nativeImplsIdx[tag]
+	*idx, ok = nativeImplsByTag[tag]
 	if !ok {
 		return fmt.Errorf("No NativeImpl tagged '%s' registered", tag)
 	}

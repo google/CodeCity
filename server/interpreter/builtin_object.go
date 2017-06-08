@@ -17,8 +17,9 @@
 package interpreter
 
 import (
-	"CodeCity/server/interpreter/data"
 	"fmt"
+
+	"CodeCity/server/interpreter/data"
 )
 
 func (intrp *Interpreter) initBuiltinObject() {
@@ -32,6 +33,7 @@ func (intrp *Interpreter) initBuiltinObject() {
 	intrp.mkBuiltinFunc("Object.create", 2)
 	intrp.mkBuiltinFunc("Object.defineProperty", 3)
 	intrp.mkBuiltinFunc("Object.defineProperties", 2)
+	// TODO(cpcallen): Finish Implementing §15.2.3 of ES5.1:
 	// intrp.mkBuiltinFunc("Object.seal", 1)
 	// intrp.mkBuiltinFunc("Object.freeze", 1)
 	// intrp.mkBuiltinFunc("Object.preventExtensions", 1)
@@ -44,10 +46,10 @@ func (intrp *Interpreter) initBuiltinObject() {
 	// etc.
 }
 
-// Underscores replace '.'s in names of builtin function
-// implementations.  Sorry, golint.
+// Latin Letter Sinological Dot ('ꞏ', U+A78F) replaces '.' in names of
+// builtin function implementations.
 
-func builtinObject_getPrototypeOf(intrp *Interpreter, this data.Value, args []data.Value) (ret data.Value, throw bool) {
+func builtinObjectꞏgetPrototypeOf(intrp *Interpreter, this data.Value, args []data.Value) (ret data.Value, throw bool) {
 	// Need at least one argument:
 	for len(args) < 1 {
 		args = append(args, data.Undefined{})
@@ -63,7 +65,7 @@ func builtinObject_getPrototypeOf(intrp *Interpreter, this data.Value, args []da
 	return proto, false
 }
 
-func builtinObject_getOwnPropertyDescriptor(intrp *Interpreter, this data.Value, args []data.Value) (ret data.Value, throw bool) {
+func builtinObjectꞏgetOwnPropertyDescriptor(intrp *Interpreter, this data.Value, args []data.Value) (ret data.Value, throw bool) {
 	// Need at least two arguments:
 	for len(args) < 2 {
 		args = append(args, data.Undefined{})
@@ -85,7 +87,7 @@ func builtinObject_getOwnPropertyDescriptor(intrp *Interpreter, this data.Value,
 	return desc, false
 }
 
-func builtinObject_getOwnPropertyNames(intrp *Interpreter, this data.Value, args []data.Value) (ret data.Value, throw bool) {
+func builtinObjectꞏgetOwnPropertyNames(intrp *Interpreter, this data.Value, args []data.Value) (ret data.Value, throw bool) {
 	// Need at least one argument:
 	for len(args) < 1 {
 		args = append(args, data.Undefined{})
@@ -104,7 +106,7 @@ func builtinObject_getOwnPropertyNames(intrp *Interpreter, this data.Value, args
 	return keys, false
 }
 
-func builtinObject_create(intrp *Interpreter, this data.Value, args []data.Value) (ret data.Value, throw bool) {
+func builtinObjectꞏcreate(intrp *Interpreter, this data.Value, args []data.Value) (ret data.Value, throw bool) {
 	// Need at least one argument:
 	for len(args) < 1 {
 		args = append(args, data.Undefined{})
@@ -120,13 +122,13 @@ func builtinObject_create(intrp *Interpreter, this data.Value, args []data.Value
 	// FIXME: set owner
 	obj := data.NewObject(nil, proto)
 	if len(args) > 1 {
-		builtinObject_defineProperties(intrp, this, []data.Value{obj, args[1]})
+		builtinObjectꞏdefineProperties(intrp, this, []data.Value{obj, args[1]})
 	}
 	return obj, false
 
 }
 
-func builtinObject_defineProperty(intrp *Interpreter, this data.Value, args []data.Value) (ret data.Value, throw bool) {
+func builtinObjectꞏdefineProperty(intrp *Interpreter, this data.Value, args []data.Value) (ret data.Value, throw bool) {
 	// Need at least three arguments:
 	for len(args) < 3 {
 		args = append(args, data.Undefined{})
@@ -151,7 +153,7 @@ func builtinObject_defineProperty(intrp *Interpreter, this data.Value, args []da
 	return obj, false
 }
 
-func builtinObject_defineProperties(intrp *Interpreter, this data.Value, args []data.Value) (ret data.Value, throw bool) {
+func builtinObjectꞏdefineProperties(intrp *Interpreter, this data.Value, args []data.Value) (ret data.Value, throw bool) {
 	// Need at least two arguments:
 	for len(args) < 2 {
 		args = append(args, data.Undefined{})
@@ -195,17 +197,18 @@ func builtinObject_defineProperties(intrp *Interpreter, this data.Value, args []
 	return obj, false
 }
 
-// func builtinObject_seal(intrp *Interpreter, this data.Value, args []data.Value) (ret data.Value, throw bool)
-// func builtinObject_freeze(intrp *Interpreter, this data.Value, args []data.Value) (ret data.Value, throw bool)
-// func builtinObject_preventExtensions(intrp *Interpreter, this data.Value, args []data.Value) (ret data.Value, throw bool)
-// func builtinObject_isSealed(intrp *Interpreter, this data.Value, args []data.Value) (ret data.Value, throw bool)
-// func builtinObject_isFrozen(intrp *Interpreter, this data.Value, args []data.Value) (ret data.Value, throw bool)
-// func builtinObject_isExtensible(intrp *Interpreter, this data.Value, args []data.Value) (ret data.Value, throw bool)
-// func builtinObject_keys(intrp *Interpreter, this data.Value, args []data.Value) (ret data.Value, throw bool)
+// TODO(cpcallen): Finish Implementing §15.2.3 of ES5.1:
+// func builtinObjectꞏseal(intrp *Interpreter, this data.Value, args []data.Value) (ret data.Value, throw bool)
+// func builtinObjectꞏfreeze(intrp *Interpreter, this data.Value, args []data.Value) (ret data.Value, throw bool)
+// func builtinObjectꞏpreventExtensions(intrp *Interpreter, this data.Value, args []data.Value) (ret data.Value, throw bool)
+// func builtinObjectꞏisSealed(intrp *Interpreter, this data.Value, args []data.Value) (ret data.Value, throw bool)
+// func builtinObjectꞏisFrozen(intrp *Interpreter, this data.Value, args []data.Value) (ret data.Value, throw bool)
+// func builtinObjectꞏisExtensible(intrp *Interpreter, this data.Value, args []data.Value) (ret data.Value, throw bool)
+// func builtinObjectꞏkeys(intrp *Interpreter, this data.Value, args []data.Value) (ret data.Value, throw bool)
 
 /****************************************************************/
 
-func builtinObject_prototype_toString(intrp *Interpreter, this data.Value, args []data.Value) (ret data.Value, throw bool) {
+func builtinObjectꞏprototypeꞏtoString(intrp *Interpreter, this data.Value, args []data.Value) (ret data.Value, throw bool) {
 	// FIXME: don't panic
 	if this == nil {
 		panic("Object.property.toString called with this == nil??")
@@ -214,19 +217,20 @@ func builtinObject_prototype_toString(intrp *Interpreter, this data.Value, args 
 }
 
 func init() {
-	registerNativeImpl("Object.getPrototypeOf", builtinObject_getPrototypeOf)
-	registerNativeImpl("Object.getOwnPropertyDescriptor", builtinObject_getOwnPropertyDescriptor)
-	registerNativeImpl("Object.getOwnPropertyNames", builtinObject_getOwnPropertyNames)
-	registerNativeImpl("Object.create", builtinObject_create)
-	registerNativeImpl("Object.defineProperty", builtinObject_defineProperty)
-	registerNativeImpl("Object.defineProperties", builtinObject_defineProperties)
-	// registerNativeImpl("Object.seal", builtinObject_seal)
-	// registerNativeImpl("Object.freeze", builtinObject_freeze)
-	// registerNativeImpl("Object.preventExtensions", builtinObject_preventExtensions)
-	// registerNativeImpl("Object.isSealed", builtinObject_isSealed)
-	// registerNativeImpl("Object.isFrozen", builtinObject_isFrozen)
-	// registerNativeImpl("Object.isExtensible", builtinObject_isExtensible)
-	// registerNativeImpl("Object.keys", builtinObject_keys)
+	registerNativeImpl("Object.getPrototypeOf", builtinObjectꞏgetPrototypeOf)
+	registerNativeImpl("Object.getOwnPropertyDescriptor", builtinObjectꞏgetOwnPropertyDescriptor)
+	registerNativeImpl("Object.getOwnPropertyNames", builtinObjectꞏgetOwnPropertyNames)
+	registerNativeImpl("Object.create", builtinObjectꞏcreate)
+	registerNativeImpl("Object.defineProperty", builtinObjectꞏdefineProperty)
+	registerNativeImpl("Object.defineProperties", builtinObjectꞏdefineProperties)
+	// TODO(cpcallen): Finish Implementing §15.2.3 of ES5.1:
+	// registerNativeImpl("Object.seal", builtinObjectꞏseal)
+	// registerNativeImpl("Object.freeze", builtinObjectꞏfreeze)
+	// registerNativeImpl("Object.preventExtensions", builtinObjectꞏpreventExtensions)
+	// registerNativeImpl("Object.isSealed", builtinObjectꞏisSealed)
+	// registerNativeImpl("Object.isFrozen", builtinObjectꞏisFrozen)
+	// registerNativeImpl("Object.isExtensible", builtinObjectꞏisExtensible)
+	// registerNativeImpl("Object.keys", builtinObjectꞏkeys)
 
-	registerNativeImpl("Object.prototype.toString", builtinObject_prototype_toString)
+	registerNativeImpl("Object.prototype.toString", builtinObjectꞏprototypeꞏtoString)
 }
