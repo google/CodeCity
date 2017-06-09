@@ -557,11 +557,6 @@ exports.tests = [
   //   `,
   //   expected: "[object Arguments]" },
 
-  { name: 'ObjectToString', src: `
-    ({}).toString();
-    `,
-    expected: "[object Object]" },
-
   { name: 'unimplementedASTNode', src: `
     try {
       debugger;
@@ -580,7 +575,7 @@ exports.tests = [
     `,
     expected: "SyntaxError" },
 
-  { name: 'objectDefinePropertyNoArgs', src: `
+  { name: 'ObjectDefinePropertyNoArgs', src: `
     try {
       Object.defineProperty();
     } catch (e) {
@@ -589,7 +584,7 @@ exports.tests = [
     `,
     expected: "TypeError" },
 
-  { name: 'objectDefinePropertyNonObject', src: `
+  { name: 'ObjectDefinePropertyNonObject', src: `
     try {
       Object.defineProperty("not an object", "foo", {});
     } catch (e) {
@@ -598,7 +593,7 @@ exports.tests = [
     `,
     expected: "TypeError" },
 
-  { name: 'objectDefinePropertyBadDescriptor', src: `
+  { name: 'ObjectDefinePropertyBadDescriptor', src: `
     var o = {};
     try {
       Object.defineProperty(o, "foo", "not an object");
@@ -609,7 +604,7 @@ exports.tests = [
     expected: "TypeError" },
 
   // This also tests iteration over (non-)enumerable properties.
-  { name: 'objectDefineProperty', src: `
+  { name: 'ObjectDefineProperty', src: `
     var o = { foo: 70 }, r = 0;
     Object.defineProperty(o, "bar", {
       writeable: true,
@@ -627,14 +622,14 @@ exports.tests = [
     `,
     expected: 78 },
 
-  { name: 'objectGetPrototypeOf', src: `
+  { name: 'ObjectGetPrototypeOf', src: `
     var o = {};
     Object.getPrototypeOf(o) == Object.prototype && 
         Object.getPrototypeOf(Object.prototype) == null;
     `,
     expected: true },
 
-  { name: 'objectCreateNoArgs', src: `
+  { name: 'ObjectCreateNoArgs', src: `
     try {
       Object.create();
     } catch (e) {
@@ -643,7 +638,7 @@ exports.tests = [
     `,
     expected: "TypeError" },
 
-  { name: 'objectCreateNonObject', src: `
+  { name: 'ObjectCreateNonObject', src: `
     try {
       Object.create(42);
     } catch (e) {
@@ -652,20 +647,20 @@ exports.tests = [
     `,
     expected: "TypeError" },
 
-  { name: 'objectCreateNull', src: `
+  { name: 'ObjectCreateNull', src: `
     var o = Object.create(null);
     Object.getPrototypeOf(o);
     `,
     expected: null },
 
-  { name: 'objectCreate', src: `
+  { name: 'ObjectCreate', src: `
     var o = Object.create({foo: 79});
     delete o.foo
     o.foo;
     `,
     expected: 79 },
 
-  { name: 'objectGetOwnPropertyDescriptorNoArgs', src: `
+  { name: 'ObjectGetOwnPropertyDescriptorNoArgs', src: `
     try {
       Object.getOwnPropertyDescriptor();
     } catch (e) {
@@ -674,7 +669,7 @@ exports.tests = [
     `,
     expected: "TypeError" },
 
-  { name: 'objectGetOwnPropertyDescriptorNonObject', src: `
+  { name: 'ObjectGetOwnPropertyDescriptorNonObject', src: `
     try {
       Object.getOwnPropertyDescriptor("not an object", "foo");
     } catch (e) {
@@ -683,13 +678,13 @@ exports.tests = [
     `,
     expected: "TypeError" },
 
-  { name: 'objectGetOwnPropertyDescriptorBadKey', src: `
+  { name: 'ObjectGetOwnPropertyDescriptorBadKey', src: `
     var o = {};
     Object.getOwnPropertyDescriptor(o, "foo");
     `,
     expected: undefined },
 
-  { name: 'objectGetOwnPropertyDescriptor', src: `
+  { name: 'ObjectGetOwnPropertyDescriptor', src: `
     var o = {}, r = 0;
     Object.defineProperty(o, "foo", { value: "bar" });
     var desc = Object.getOwnPropertyDescriptor(o, "foo");
@@ -698,7 +693,7 @@ exports.tests = [
     `,
     expected: true },
 
-  { name: 'objectGetOwnPropertyNamesNoArgs', src: `
+  { name: 'ObjectGetOwnPropertyNamesNoArgs', src: `
     try {
       Object.getOwnPropertyNames();
     } catch (e) {
@@ -707,7 +702,7 @@ exports.tests = [
     `,
     expected: "TypeError" },
 
-  { name: 'objectGetOwnPropertyNamesNonObject', src: `
+  { name: 'ObjectGetOwnPropertyNamesNonObject', src: `
     try {
       Object.getOwnPropertyNames("not an object");
     } catch (e) {
@@ -716,7 +711,7 @@ exports.tests = [
     `,
     expected: "TypeError" },
 
-  { name: 'objectGetOwnPropertyNames', src: `
+  { name: 'ObjectGetOwnPropertyNames', src: `
     var o = { foo: 42 }, r = 0;
     Object.defineProperty(o, "bar", { value: 38 });
     var keys = Object.getOwnPropertyNames(o);
@@ -728,7 +723,7 @@ exports.tests = [
     `,
     expected: 80 },
 
-  { name: 'objectDefinePropertiesNoArgs', src: `
+  { name: 'ObjectDefinePropertiesNoArgs', src: `
     try {
       Object.defineProperties();
     } catch (e) {
@@ -737,7 +732,7 @@ exports.tests = [
     `,
     expected: "TypeError" },
 
-  { name: 'objectDefinePropertiesNonObject', src: `
+  { name: 'ObjectDefinePropertiesNonObject', src: `
     try {
       Object.defineProperties("not an object", {});
     } catch (e) {
@@ -746,14 +741,14 @@ exports.tests = [
     `,
     expected: "TypeError" },
 
-  { name: 'objectDefinePropertiesNonObjectProps', src: `
+  { name: 'ObjectDefinePropertiesNonObjectProps', src: `
     Object.getOwnPropertyNames(
         Object.defineProperties({}, "not an object")
     ).length;
     `,
     expected: 0 },
 
-  { name: 'objectDefinePropertiesBadDescriptor', src: `
+  { name: 'ObjectDefinePropertiesBadDescriptor', src: `
     var o = {};
     try {
       Object.defineProperties(o, { foo: "not an object" });
@@ -763,7 +758,7 @@ exports.tests = [
     `,
     expected: "TypeError" },
 
-  { name: 'objectDefineProperties', src: `
+  { name: 'ObjectDefineProperties', src: `
     var o = { foo: 70 }, r = 0;
     Object.defineProperties(o, {
         bar: {
@@ -779,7 +774,7 @@ exports.tests = [
     `,
     expected: 81 },
 
-  { name: 'objectCreateWithProperties', src: `
+  { name: 'ObjectCreateWithProperties', src: `
     var o = Object.create({ foo: 70 }, {
         bar: {
             writeable: true,
@@ -794,6 +789,12 @@ exports.tests = [
     r + Object.getOwnPropertyNames(o).length;
     `,
     expected: 82 },
+
+  { name: 'ObjectPrototypeToString', src: `
+    ({}).toString();
+    `,
+    expected: "[object Object]" },
+
   /******************************************************************/
   // Other tests (without expected value):
 
