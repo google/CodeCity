@@ -66,8 +66,20 @@ func (cl closure) ToString() data.String {
 	return data.String("[object " + cl.Class() + "]")
 }
 
+// call sets up a new (inner) scope and adds the parameters to it,
+// initializing them with the corresponding argument values, before
+// creating (and returning) a new state for the root node of the body
+// AST.
 func (cl *closure) call(st *stateCallExpression, intrp *Interpreter, this data.Value, args []data.Value) (state, *cval) {
-	panic("not implemented")
+	scope := newScope(cl.scope, this)
+	// Set up scope:
+	scope.populate(cl.body, intrp)
+	for i, arg := range args {
+		scope.newVar(cl.params[i], arg)
+	}
+	// FIXME: create arguments object.
+	// Evaluate function call
+	return newState(st, scope, cl.body), nil
 }
 
 // newClosure returns a new closure object with the specified owner,

@@ -90,6 +90,9 @@ func (nf nativeFunc) ToString() data.String {
 	return data.String("[object " + nf.Class() + "]")
 }
 
+// call prepares the arguments and then calls the NativeImpl.impl,
+// after which it converts the return values into a cval which it
+// sends to the parent of the call expression that initiated the call.
 func (nf nativeFunc) call(st *stateCallExpression, intrp *Interpreter, this data.Value, args []data.Value) (state, *cval) {
 	ni := nativeImpls[nf.idx]
 	// Extend args list to length:

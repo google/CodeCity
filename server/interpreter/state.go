@@ -596,15 +596,7 @@ func (st *stateCallExpression) step(intrp *Interpreter, cv *cval) (state, *cval)
 		// Second last visit: prepare for and execute call.
 		switch f := st.fn.(type) {
 		case *closure:
-			scope := newScope(f.scope, st.this)
-			// Set up scope:
-			scope.populate(f.body, intrp)
-			for i, arg := range st.argv {
-				scope.newVar(f.params[i], arg)
-			}
-			// FIXME: create arguments object.
-			// Evaluate function call
-			return newState(st, scope, f.body), nil
+			return f.call(st, intrp, st.this, st.argv)
 		case *nativeFunc:
 			return f.call(st, intrp, st.this, st.argv)
 		default:
