@@ -22,7 +22,12 @@ import (
 	"CodeCity/server/interpreter/data"
 )
 
+// This file contains code that creates the Object constructor and
+// spec-specified properties on Object and Object.prototype, as well
+// as providing native implementations for many of them.
+
 func (intrp *Interpreter) initBuiltinObject() {
+	// FIXME: Object should be constructor + conversion function.
 	intrp.mkBuiltin("Object", data.NewObject(nil, intrp.protos.ObjectProto))
 
 	intrp.mkBuiltin("Object.prototype", intrp.protos.ObjectProto)
@@ -194,6 +199,10 @@ func builtinObjectꞏprototypeꞏtoString(intrp *Interpreter, this data.Value, a
 	if this == nil {
 		panic("Object.property.toString called with this == nil??")
 	}
+
+	// FIXME: this is not quite to spec.  E.g.: applied to a new
+	// String, it should return [object String] rather than the string
+	// value.
 	return this.ToString(), false
 }
 
