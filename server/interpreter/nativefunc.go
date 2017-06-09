@@ -70,15 +70,24 @@ type nativeFunc struct {
 	idx natImplIdx
 }
 
-// *nativeFunc must satisfy Value.
-var _ data.Value = (*nativeFunc)(nil)
+// *nativeFunc must satisfy Object.
+var _ data.Object = (*nativeFunc)(nil)
 
 func (nativeFunc) Typeof() string {
 	return "function"
 }
 
-func (nativeFunc) ToString() data.String {
-	return "[object Function]"
+// Class always returns "Function" for function objects.
+func (nativeFunc) Class() string {
+	return "Function"
+}
+
+// ToString is repeated here to catch the changed definition of Class.
+//
+// BUG(cpcallen): as with object.ToString, nativeFunc.ToString should
+// call a user-code toString() method if present.
+func (nf nativeFunc) ToString() data.String {
+	return data.String("[object " + nf.Class() + "]")
 }
 
 func (nf nativeFunc) call(intrp *Interpreter, this data.Value, args []data.Value) (ret data.Value, throw bool) {

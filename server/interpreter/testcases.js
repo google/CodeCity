@@ -518,6 +518,45 @@ exports.tests = [
     `,
     expected: 77 },
 
+  { name: 'internalObjectToString', src: `
+    var o = {};
+    o[{}] = null;
+    for(var key in o) {
+      key;
+    }
+    `,
+    expected: "[object Object]" },
+
+  { name: 'internalFunctionToString', src: `
+    var o = {};
+    o[function(){}] = null;
+    for(var key in o) {
+      key;
+    }
+    `,
+    expected: "[object Function]" },
+
+  { name: 'internalNativeFuncToString', src: `
+    var o = {};
+    o[Object.create] = null;
+    for(var key in o) {
+      key;
+    }
+    `,
+    expected: "[object Function]" },
+
+  // FIXME: enable once arguments implemented:
+  // { name: 'internalArgumentsToString', src: `
+  //   var o = {};
+  //   (function() {
+  //     o[arguments] = null;
+  //   })();
+  //   for(var key in o) {
+  //     key;
+  //   }
+  //   `,
+  //   expected: "[object Arguments]" },
+
   { name: 'ObjectToString', src: `
     ({}).toString();
     `,

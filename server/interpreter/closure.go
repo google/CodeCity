@@ -29,15 +29,24 @@ type closure struct {
 	body   *ast.BlockStatement
 }
 
-// *closure must satisfy Value.
-var _ data.Value = (*closure)(nil)
+// *closure must satisfy Object.
+var _ data.Object = (*closure)(nil)
 
 func (closure) Typeof() string {
 	return "function"
 }
 
-func (closure) ToString() data.String {
-	return "[object Function]"
+// Class always returns "Function" for function objects.
+func (closure) Class() string {
+	return "Function"
+}
+
+// ToString is repeated here to catch the changed definition of Class.
+//
+// BUG(cpcallen): as with object.ToString, nativeFunc.ToString should
+// call a user-code toString() method if present.
+func (cl closure) ToString() data.String {
+	return data.String("[object " + cl.Class() + "]")
 }
 
 // newClosure returns a new closure object with the specified owner,

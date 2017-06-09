@@ -27,6 +27,10 @@ type Object interface {
 	// the .prototype property on Functions.
 	Proto() Object
 
+	// Class returns a string value indicating a specification defined
+	// classification of the object.
+	Class() string
+
 	// DefineOwnProperty creates a new property (or updates an
 	// existing one, if possible) with the specified property
 	// descriptor.
@@ -97,6 +101,11 @@ func (object) IsPrimitive() bool {
 // Proto returns the prototype (parent) object for this object.
 func (obj object) Proto() Object {
 	return obj.proto
+}
+
+// Class always returns "Object" for regular objects.
+func (object) Class() string {
+	return "Object"
 }
 
 // DefineOwnProperty creates a new property (or updates an existing
@@ -213,8 +222,8 @@ func (obj object) ToNumber() Number {
 //
 // BUG(cpcallen): object.ToString should call a user-code toString()
 // method if present.
-func (object) ToString() String {
-	return "[object Object]"
+func (obj object) ToString() String {
+	return String("[object " + obj.Class() + "]")
 }
 
 // ToPrimitive defaults to ToNumber on objects.
