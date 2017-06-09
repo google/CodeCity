@@ -17,6 +17,8 @@
 package interpreter
 
 import (
+	"fmt"
+
 	"CodeCity/server/interpreter/ast"
 	"CodeCity/server/interpreter/data"
 )
@@ -78,8 +80,11 @@ func (cl *closure) call(st *stateCallExpression, intrp *Interpreter, this data.V
 		scope.newVar(cl.params[i], arg)
 	}
 	// FIXME: create arguments object.
+	// Create coda state to handle RETURN->NORMAL cval conversion:
+	stCE := &stateCallEpilogue{parent: st.parent}
+
 	// Evaluate function call
-	return newState(st, scope, cl.body), nil
+	return newState(stCE, scope, cl.body), nil
 }
 
 // newClosure returns a new closure object with the specified owner,
@@ -97,4 +102,29 @@ func newClosure(owner *data.Owner, proto data.Object, scope *scope,
 	}
 	cl.body = body
 	return cl
+}
+
+// stateCallEpilogue is used to implement steps 4-6 of the [[Call]]
+// algorithm given in §13.2.1 of the ES5.1 spec, converting a RETURN
+// into NORMAL result, throwing a SyntaxError if the result of the
+// function call evaluation was a(n illegal) continue or break, or
+// returning undefined otherwise.
+type stateCallEpilogue stateCommon
+
+func (st *stateCallEpilogue) step(intrp *Interpreter, cv *cval) (state, *cval) {
+	switch cv.typ {
+	case RETURN:
+		cv.typ = NORMAL
+	case THROW:
+		// fine; leave as-is
+	case NORMAL:
+		cv = &cval{NORMAL, data.Undefined{}, ""}
+	case BREAK:
+		cv = &cval{THROW, intrp.syntaxError("illegal break"), ""}
+	case CONTINUE:
+		cv = &cval{THROW, intrp.syntaxError("illegal continue"), ""}
+	default:
+		panic(fmt.Errorf("unknown cval %#v", cv))
+	}
+	return st.parent, cv
 }

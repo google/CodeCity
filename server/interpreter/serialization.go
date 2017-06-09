@@ -24,6 +24,7 @@ func init() {
 	var examples = []interface{}{
 		// From closure.go:
 		closure{},
+		stateCallEpilogue{},
 
 		// From cval.go:
 		cvalType(0),

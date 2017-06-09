@@ -500,7 +500,6 @@ type stateCallExpression struct {
 	this   data.Value   // Value of 'this' in method call
 	argv   []data.Value // Actual arguments
 	n      int          // Which arg are we evaluating?
-	called bool         // Has call itself begun?
 }
 
 func (st *stateCallExpression) init(node *ast.CallExpression) {
@@ -545,7 +544,7 @@ func (st *stateCallExpression) step(intrp *Interpreter, cv *cval) (state, *cval)
 		} else {
 			st.fn = cv.pval()
 		}
-	} else if !st.called {
+	} else {
 		// Save arguments:
 		st.argv = append(st.argv, cv.pval())
 		st.n++
@@ -557,36 +556,13 @@ func (st *stateCallExpression) step(intrp *Interpreter, cv *cval) (state, *cval)
 		return newState(st, st.scope, st.args[st.n]), nil
 	}
 
-	if !st.called {
-		st.called = true
-		// Second last visit: prepare for and execute call.
-		switch f := st.fn.(type) {
-		case *closure:
-			return f.call(st, intrp, st.this, st.argv)
-		case *nativeFunc:
-			return f.call(st, intrp, st.this, st.argv)
-		default:
-			e := fmt.Sprintf("%#v is not a function", st.fn)
-			return st.parent, &cval{THROW, intrp.typeError(e), ""}
-		}
+	// Last visit: prepare for and execute call.
+	f, ok := st.fn.(function)
+	if !ok {
+		e := fmt.Sprintf("%#v is not a function", st.fn)
+		return st.parent, &cval{THROW, intrp.typeError(e), ""}
 	}
-
-	// We're done: process return value:
-	switch cv.typ {
-	case RETURN:
-		cv.typ = NORMAL
-	case THROW:
-		// fine; leave as-is
-	case NORMAL:
-		cv = &cval{NORMAL, data.Undefined{}, ""}
-	case BREAK:
-		cv = &cval{THROW, intrp.syntaxError("illegal break"), ""}
-	case CONTINUE:
-		cv = &cval{THROW, intrp.syntaxError("illegal continue"), ""}
-	default:
-		panic(fmt.Errorf("unknown cval %#v", cv))
-	}
-	return st.parent, cv
+	return f.call(st, intrp, st.this, st.argv)
 }
 
 /********************************************************************/

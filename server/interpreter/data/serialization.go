@@ -37,6 +37,7 @@ func init() {
 		// From Object.go:
 		object{},
 		Property{},
+		propFlags(0),
 
 		// From owner.go:
 		Owner{},
