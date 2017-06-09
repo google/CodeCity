@@ -27,22 +27,22 @@ func (intrp *Interpreter) initBuiltinObject() {
 
 	intrp.mkBuiltin("Object.prototype", intrp.protos.ObjectProto)
 
-	intrp.mkBuiltinFunc("Object.getPrototypeOf", 1)
-	intrp.mkBuiltinFunc("Object.getOwnPropertyDescriptor", 2)
-	intrp.mkBuiltinFunc("Object.getOwnPropertyNames", 1)
-	intrp.mkBuiltinFunc("Object.create", 2)
-	intrp.mkBuiltinFunc("Object.defineProperty", 3)
-	intrp.mkBuiltinFunc("Object.defineProperties", 2)
+	intrp.mkBuiltinFunc("Object.getPrototypeOf")
+	intrp.mkBuiltinFunc("Object.getOwnPropertyDescriptor")
+	intrp.mkBuiltinFunc("Object.getOwnPropertyNames")
+	intrp.mkBuiltinFunc("Object.create")
+	intrp.mkBuiltinFunc("Object.defineProperty")
+	intrp.mkBuiltinFunc("Object.defineProperties")
 	// TODO(cpcallen): Finish Implementing §15.2.3 of ES5.1:
-	// intrp.mkBuiltinFunc("Object.seal", 1)
-	// intrp.mkBuiltinFunc("Object.freeze", 1)
-	// intrp.mkBuiltinFunc("Object.preventExtensions", 1)
-	// intrp.mkBuiltinFunc("Object.isSealed", 1)
-	// intrp.mkBuiltinFunc("Object.isFrozen", 1)
-	// intrp.mkBuiltinFunc("Object.isExtensible", 1)
-	// intrp.mkBuiltinFunc("Object.keys", 1)
+	// intrp.mkBuiltinFunc("Object.seal")
+	// intrp.mkBuiltinFunc("Object.freeze")
+	// intrp.mkBuiltinFunc("Object.preventExtensions")
+	// intrp.mkBuiltinFunc("Object.isSealed")
+	// intrp.mkBuiltinFunc("Object.isFrozen")
+	// intrp.mkBuiltinFunc("Object.isExtensible")
+	// intrp.mkBuiltinFunc("Object.keys")
 
-	intrp.mkBuiltinFunc("Object.prototype.toString", 0)
+	intrp.mkBuiltinFunc("Object.prototype.toString")
 	// etc.
 }
 
@@ -50,10 +50,6 @@ func (intrp *Interpreter) initBuiltinObject() {
 // builtin function implementations.
 
 func builtinObjectꞏgetPrototypeOf(intrp *Interpreter, this data.Value, args []data.Value) (ret data.Value, throw bool) {
-	// Need at least one argument:
-	for len(args) < 1 {
-		args = append(args, data.Undefined{})
-	}
 	obj, ok := args[0].(data.Object)
 	if !ok {
 		return intrp.typeError(fmt.Sprintf("Cannot get prototype of %s", args[0].ToString())), true
@@ -66,10 +62,6 @@ func builtinObjectꞏgetPrototypeOf(intrp *Interpreter, this data.Value, args []
 }
 
 func builtinObjectꞏgetOwnPropertyDescriptor(intrp *Interpreter, this data.Value, args []data.Value) (ret data.Value, throw bool) {
-	// Need at least two arguments:
-	for len(args) < 2 {
-		args = append(args, data.Undefined{})
-	}
 	obj, ok := args[0].(data.Object)
 	if !ok {
 		return intrp.typeError(fmt.Sprintf("Cannot get property descriptor from %s", args[0].ToString())), true
@@ -88,10 +80,6 @@ func builtinObjectꞏgetOwnPropertyDescriptor(intrp *Interpreter, this data.Valu
 }
 
 func builtinObjectꞏgetOwnPropertyNames(intrp *Interpreter, this data.Value, args []data.Value) (ret data.Value, throw bool) {
-	// Need at least one argument:
-	for len(args) < 1 {
-		args = append(args, data.Undefined{})
-	}
 	obj, ok := args[0].(data.Object)
 	if !ok {
 		return intrp.typeError(fmt.Sprintf("Cannot get propery names of %s", args[0].ToString())), true
@@ -107,10 +95,6 @@ func builtinObjectꞏgetOwnPropertyNames(intrp *Interpreter, this data.Value, ar
 }
 
 func builtinObjectꞏcreate(intrp *Interpreter, this data.Value, args []data.Value) (ret data.Value, throw bool) {
-	// Need at least one argument:
-	for len(args) < 1 {
-		args = append(args, data.Undefined{})
-	}
 	if args[0] == (data.Null{}) {
 		// FIXME: set owner
 		return data.NewObject(nil, nil), false
@@ -129,10 +113,6 @@ func builtinObjectꞏcreate(intrp *Interpreter, this data.Value, args []data.Val
 }
 
 func builtinObjectꞏdefineProperty(intrp *Interpreter, this data.Value, args []data.Value) (ret data.Value, throw bool) {
-	// Need at least three arguments:
-	for len(args) < 3 {
-		args = append(args, data.Undefined{})
-	}
 	obj, ok := args[0].(data.Object)
 	if !ok {
 		return intrp.typeError(fmt.Sprintf("Cannot define property on %s", args[0].ToString())), true
@@ -154,10 +134,6 @@ func builtinObjectꞏdefineProperty(intrp *Interpreter, this data.Value, args []
 }
 
 func builtinObjectꞏdefineProperties(intrp *Interpreter, this data.Value, args []data.Value) (ret data.Value, throw bool) {
-	// Need at least two arguments:
-	for len(args) < 2 {
-		args = append(args, data.Undefined{})
-	}
 	obj, ok := args[0].(data.Object)
 	if !ok {
 		return intrp.typeError(fmt.Sprintf("Cannot define property on %s", args[0].ToString())), true
@@ -217,20 +193,20 @@ func builtinObjectꞏprototypeꞏtoString(intrp *Interpreter, this data.Value, a
 }
 
 func init() {
-	registerNativeImpl("Object.getPrototypeOf", builtinObjectꞏgetPrototypeOf)
-	registerNativeImpl("Object.getOwnPropertyDescriptor", builtinObjectꞏgetOwnPropertyDescriptor)
-	registerNativeImpl("Object.getOwnPropertyNames", builtinObjectꞏgetOwnPropertyNames)
-	registerNativeImpl("Object.create", builtinObjectꞏcreate)
-	registerNativeImpl("Object.defineProperty", builtinObjectꞏdefineProperty)
-	registerNativeImpl("Object.defineProperties", builtinObjectꞏdefineProperties)
+	registerNativeImpl("Object.getPrototypeOf", builtinObjectꞏgetPrototypeOf, 1)
+	registerNativeImpl("Object.getOwnPropertyDescriptor", builtinObjectꞏgetOwnPropertyDescriptor, 2)
+	registerNativeImpl("Object.getOwnPropertyNames", builtinObjectꞏgetOwnPropertyNames, 1)
+	registerNativeImpl("Object.create", builtinObjectꞏcreate, 2)
+	registerNativeImpl("Object.defineProperty", builtinObjectꞏdefineProperty, 3)
+	registerNativeImpl("Object.defineProperties", builtinObjectꞏdefineProperties, 2)
 	// TODO(cpcallen): Finish Implementing §15.2.3 of ES5.1:
-	// registerNativeImpl("Object.seal", builtinObjectꞏseal)
-	// registerNativeImpl("Object.freeze", builtinObjectꞏfreeze)
-	// registerNativeImpl("Object.preventExtensions", builtinObjectꞏpreventExtensions)
-	// registerNativeImpl("Object.isSealed", builtinObjectꞏisSealed)
-	// registerNativeImpl("Object.isFrozen", builtinObjectꞏisFrozen)
-	// registerNativeImpl("Object.isExtensible", builtinObjectꞏisExtensible)
-	// registerNativeImpl("Object.keys", builtinObjectꞏkeys)
+	// registerNativeImpl("Object.seal", builtinObjectꞏseal, 1)
+	// registerNativeImpl("Object.freeze", builtinObjectꞏfreeze, 1)
+	// registerNativeImpl("Object.preventExtensions", builtinObjectꞏpreventExtensions, 1)
+	// registerNativeImpl("Object.isSealed", builtinObjectꞏisSealed, 1)
+	// registerNativeImpl("Object.isFrozen", builtinObjectꞏisFrozen, 1)
+	// registerNativeImpl("Object.isExtensible", builtinObjectꞏisExtensible, 1)
+	// registerNativeImpl("Object.keys", builtinObjectꞏkeys, 1)
 
-	registerNativeImpl("Object.prototype.toString", builtinObjectꞏprototypeꞏtoString)
+	registerNativeImpl("Object.prototype.toString", builtinObjectꞏprototypeꞏtoString, 0)
 }

@@ -58,6 +58,15 @@ func (nativeFunc) ToString() data.String {
 	return "[object Function]"
 }
 
+func (nf nativeFunc) call(intrp *Interpreter, this data.Value, args []data.Value) (ret data.Value, throw bool) {
+	ni := nativeImpls[nf.idx]
+	// Extend args list to length:
+	for len(args) < ni.length {
+		args = append(args, data.Undefined{})
+	}
+	return ni.impl(intrp, this, args)
+}
+
 // newNativeFunc returns a new native function object with the
 // specified owner, prototype, tag and length.
 //
@@ -66,19 +75,14 @@ func (nativeFunc) ToString() data.String {
 // The tag param specifies which nativeImpl (from nativeImpls) should
 // be used; this will also be used when serialising; a deserialised
 // NativeFunc will be reconnected to a nativeImpl with the same name.
-//
-// the length param specifies the value for the function's .length
-// property; this is neither a minimum nor maximum number of
-// parameters, but a somewhat arbitrary 'usual' number of parameters
-// as specified by the ES5.1 spec.
-func newNativeFunc(owner *data.Owner, proto data.Object, tag string, length int) *nativeFunc {
+func newNativeFunc(owner *data.Owner, proto data.Object, tag string) *nativeFunc {
 	idx, ok := nativeImplsByTag[tag]
 	if !ok {
 		panic(fmt.Errorf("No NativeImpl tagged '%s' registered", tag))
 	}
 	o := data.NewObject(owner, proto)
 	// FIXME: make not writeable? (check spec for this an other attributes)
-	err := o.Set("length", data.Number(length)) // FIXME: readonly!
+	err := o.Set("length", data.Number(nativeImpls[idx].length))
 	if err != nil {
 		panic(err)
 	}
@@ -90,8 +94,9 @@ func newNativeFunc(owner *data.Owner, proto data.Object, tag string, length int)
 
 // nit is the type of the entries of the nativeImpls table
 type nit struct {
-	tag  string
-	impl NativeImpl
+	tag    string
+	impl   NativeImpl
+	length int
 }
 
 // nativeImpls is a table mapping nativeFunc.idx values to NativeImpl
@@ -102,12 +107,17 @@ var nativeImpls []nit
 var nativeImplsByTag = make(map[string]natImplIdx)
 
 // registerNativeImpl adds impl to nativeImpls with the specified tag.
-func registerNativeImpl(tag string, impl NativeImpl) {
+//
+// the length param specifies the value to be used for the associated
+// (JS) function object's .length property; this is neither a minimum
+// nor maximum number of parameters, but a somewhat arbitrary 'usual'
+// number of parameters as specified by the ES5.1 spec.
+func registerNativeImpl(tag string, impl NativeImpl, length int) {
 	if _, exists := nativeImplsByTag[tag]; exists {
 		panic(fmt.Errorf("A NativeImpl tagged '%s' already registered", tag))
 	}
 	nativeImplsByTag[tag] = natImplIdx(len(nativeImpls))
-	nativeImpls = append(nativeImpls, nit{tag, impl})
+	nativeImpls = append(nativeImpls, nit{tag, impl, length})
 }
 
 // natImplIdx is just an integer index into nativeImpls which is
