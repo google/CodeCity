@@ -28,7 +28,7 @@ import (
 
 func (intrp *Interpreter) initBuiltinObject() {
 	// FIXME: Object should be constructor + conversion function.
-	intrp.mkBuiltin("Object", data.NewObject(nil, intrp.protos.ObjectProto))
+	intrp.mkBuiltin("Object", data.NewObject(nil, intrp.protos.FunctionProto))
 
 	intrp.mkBuiltin("Object.prototype", intrp.protos.ObjectProto)
 
