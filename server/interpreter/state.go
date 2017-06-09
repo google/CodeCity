@@ -606,11 +606,7 @@ func (st *stateCallExpression) step(intrp *Interpreter, cv *cval) (state, *cval)
 			// Evaluate function call
 			return newState(st, scope, f.body), nil
 		case *nativeFunc:
-			r, throw := f.call(intrp, st.this, st.argv)
-			if throw {
-				return st.parent, &cval{THROW, r, ""}
-			}
-			return st.parent, pval(r)
+			return f.call(st, intrp, st.this, st.argv)
 		default:
 			e := fmt.Sprintf("%#v is not a function", st.fn)
 			return st.parent, &cval{THROW, intrp.typeError(e), ""}

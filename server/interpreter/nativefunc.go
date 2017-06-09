@@ -70,8 +70,8 @@ type nativeFunc struct {
 	idx natImplIdx
 }
 
-// *nativeFunc must satisfy Object.
-var _ data.Object = (*nativeFunc)(nil)
+// *nativeFunc must satisfy function (and in turn data.Object):
+var _ function = (*nativeFunc)(nil)
 
 func (nativeFunc) Typeof() string {
 	return "function"
@@ -90,13 +90,17 @@ func (nf nativeFunc) ToString() data.String {
 	return data.String("[object " + nf.Class() + "]")
 }
 
-func (nf nativeFunc) call(intrp *Interpreter, this data.Value, args []data.Value) (ret data.Value, throw bool) {
+func (nf nativeFunc) call(st *stateCallExpression, intrp *Interpreter, this data.Value, args []data.Value) (state, *cval) {
 	ni := nativeImpls[nf.idx]
 	// Extend args list to length:
 	for len(args) < ni.Length {
 		args = append(args, data.Undefined{})
 	}
-	return ni.Impl(intrp, this, args)
+	r, throw := ni.Impl(intrp, this, args)
+	if throw {
+		return st.parent, &cval{THROW, r, ""}
+	}
+	return st.parent, pval(r)
 }
 
 // newNativeFunc returns a new native function object with the
