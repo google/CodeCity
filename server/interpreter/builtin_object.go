@@ -27,27 +27,32 @@ func (intrp *Interpreter) initBuiltinObject() {
 
 	intrp.mkBuiltin("Object.prototype", intrp.protos.ObjectProto)
 
-	intrp.mkBuiltinFunc("Object.getPrototypeOf")
-	intrp.mkBuiltinFunc("Object.getOwnPropertyDescriptor")
-	intrp.mkBuiltinFunc("Object.getOwnPropertyNames")
-	intrp.mkBuiltinFunc("Object.create")
-	intrp.mkBuiltinFunc("Object.defineProperty")
-	intrp.mkBuiltinFunc("Object.defineProperties")
-	// TODO(cpcallen): Finish Implementing §15.2.3 of ES5.1:
-	// intrp.mkBuiltinFunc("Object.seal")
-	// intrp.mkBuiltinFunc("Object.freeze")
-	// intrp.mkBuiltinFunc("Object.preventExtensions")
-	// intrp.mkBuiltinFunc("Object.isSealed")
-	// intrp.mkBuiltinFunc("Object.isFrozen")
-	// intrp.mkBuiltinFunc("Object.isExtensible")
-	// intrp.mkBuiltinFunc("Object.keys")
-
-	intrp.mkBuiltinFunc("Object.prototype.toString")
-	// etc.
+	for _, ni := range builtinObjectNativeImpls {
+		intrp.mkBuiltinFunc(ni.Tag)
+	}
 }
 
 // Latin Letter Sinological Dot ('ꞏ', U+A78F) replaces '.' in names of
 // builtin function implementations.
+
+var builtinObjectNativeImpls = []NativeImpl{
+	{"Object.getPrototypeOf", builtinObjectꞏgetPrototypeOf, 1},
+	{"Object.getOwnPropertyDescriptor", builtinObjectꞏgetOwnPropertyDescriptor, 2},
+	{"Object.getOwnPropertyNames", builtinObjectꞏgetOwnPropertyNames, 1},
+	{"Object.create", builtinObjectꞏcreate, 2},
+	{"Object.defineProperty", builtinObjectꞏdefineProperty, 3},
+	{"Object.defineProperties", builtinObjectꞏdefineProperties, 2},
+	// TODO(cpcallen): Finish Implementing §15.2.3 of ES5.1:
+	// {"Object.seal", builtinObjectꞏseal, 1},
+	// {"Object.freeze", builtinObjectꞏfreeze, 1},
+	// {"Object.preventExtensions", builtinObjectꞏpreventExtensions, 1},
+	// {"Object.isSealed", builtinObjectꞏisSealed, 1},
+	// {"Object.isFrozen", builtinObjectꞏisFrozen, 1},
+	// {"Object.isExtensible", builtinObjectꞏisExtensible, 1},
+	// {"Object.keys", builtinObjectꞏkeys, 1},
+
+	{"Object.prototype.toString", builtinObjectꞏprototypeꞏtoString, 0},
+}
 
 func builtinObjectꞏgetPrototypeOf(intrp *Interpreter, this data.Value, args []data.Value) (ret data.Value, throw bool) {
 	obj, ok := args[0].(data.Object)
@@ -193,20 +198,7 @@ func builtinObjectꞏprototypeꞏtoString(intrp *Interpreter, this data.Value, a
 }
 
 func init() {
-	registerNativeImpl("Object.getPrototypeOf", builtinObjectꞏgetPrototypeOf, 1)
-	registerNativeImpl("Object.getOwnPropertyDescriptor", builtinObjectꞏgetOwnPropertyDescriptor, 2)
-	registerNativeImpl("Object.getOwnPropertyNames", builtinObjectꞏgetOwnPropertyNames, 1)
-	registerNativeImpl("Object.create", builtinObjectꞏcreate, 2)
-	registerNativeImpl("Object.defineProperty", builtinObjectꞏdefineProperty, 3)
-	registerNativeImpl("Object.defineProperties", builtinObjectꞏdefineProperties, 2)
-	// TODO(cpcallen): Finish Implementing §15.2.3 of ES5.1:
-	// registerNativeImpl("Object.seal", builtinObjectꞏseal, 1)
-	// registerNativeImpl("Object.freeze", builtinObjectꞏfreeze, 1)
-	// registerNativeImpl("Object.preventExtensions", builtinObjectꞏpreventExtensions, 1)
-	// registerNativeImpl("Object.isSealed", builtinObjectꞏisSealed, 1)
-	// registerNativeImpl("Object.isFrozen", builtinObjectꞏisFrozen, 1)
-	// registerNativeImpl("Object.isExtensible", builtinObjectꞏisExtensible, 1)
-	// registerNativeImpl("Object.keys", builtinObjectꞏkeys, 1)
-
-	registerNativeImpl("Object.prototype.toString", builtinObjectꞏprototypeꞏtoString, 0)
+	for _, ni := range builtinObjectNativeImpls {
+		registerNativeImpl(ni)
+	}
 }
