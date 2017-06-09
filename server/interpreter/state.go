@@ -34,20 +34,6 @@ type state interface {
 	// previous step, and returns the new state execution state and
 	// *cval.
 	step(*Interpreter, *cval) (state, *cval)
-
-	// getParent returns the state's parent; this is just a
-	// convenience method obtaining the parent of a state of unknown
-	// (concrete) type, which is not otherwise possible without
-	// casting.  This method name violates the usual recommendation
-	// (getter names should not contain "get") because almost all the
-	// code refers directly to the .parent property rather than
-	// calling this method.
-	getParent() state
-
-	// setParent sets the state's parent; this is just a convenience
-	// method for reparenting a state of unknown (concrete) type,
-	// which is not otherwise possible without casting.
-	setParent(state)
 }
 
 // newState creates a state object corresponding to the given AST
@@ -243,26 +229,6 @@ type stateCommon struct {
 
 	// scope is the symobl table for the innermost scope.
 	scope *scope
-}
-
-// getParent returns the state's parent; this is just a convenience
-// method obtaining the parent of a state of unknown (concrete) type,
-// which is not otherwise possible without casting.  This method name
-// violates the usual recommendation (getter names should not contain
-// "get") because almost all the code refers directly to the .parent
-// property rather than calling this method.
-func (st stateCommon) getParent() state {
-	return st.parent
-}
-
-// setParent sets the state's parent; this is just a convenience
-// method for reparenting a state of unknown (concrete) type, which is
-// not otherwise possible without casting.
-//
-// FIXME: states should be readonly to allow implementation of
-// call/cc.
-func (st *stateCommon) setParent(parent state) {
-	st.parent = parent
 }
 
 /********************************************************************/
