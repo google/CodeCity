@@ -121,9 +121,9 @@ func newNativeFunc(owner *data.Owner, proto data.Object, tag string) *nativeFunc
 	}
 	o := data.NewObject(owner, proto)
 	// FIXME: make not writeable? (check spec for this an other attributes)
-	err := o.Set("length", data.Number(nativeImpls[idx].Length))
-	if err != nil {
-		panic(err)
+	nErr := o.Set("length", data.Number(nativeImpls[idx].Length))
+	if nErr != nil {
+		panic(nErr)
 	}
 	return &nativeFunc{
 		Object: o,
