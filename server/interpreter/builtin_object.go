@@ -155,7 +155,7 @@ func builtinObjectꞏdefineProperties(intrp *Interpreter, this data.Value, args 
 	var kpds []kpd
 	for _, key := range props.OwnPropertyKeys() {
 		pdpd, ok := props.GetOwnProperty(key)
-		if !ok || !pdpd.E {
+		if !ok || !pdpd.IsEnumerable() {
 			continue
 		}
 		descObj, ok := pdpd.Value.(data.Object)

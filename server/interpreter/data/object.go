@@ -149,11 +149,7 @@ func (obj *object) Set(key string, value Value) *NativeError {
 		pd := Property{
 			Value: value,
 			Owner: obj.owner, // FIXME: should this be caller?
-			W:     true,
-			E:     true,
-			C:     true,
-			R:     true,
-			I:     false,
+			flags: writable | enumerable | configurable | readable,
 		}
 		return obj.DefineOwnProperty(key, pd)
 	}
@@ -251,18 +247,39 @@ func (obj *object) init(owner *Owner, proto Object) {
 /********************************************************************/
 
 // Property is a property descriptor, per §8.10 of ES5.1
-//     Value: The actual value of the property.
-//     Owner: Who owns the property (has permission to write it)?
-//     W:     Is the property writeable?
-//     E:     Is the property enumerable?
-//     C:     Is the property configurable?
-//     R:     Is the property world-readable?
-//     I:     Is the property ownership inherited on children?
+//     Flags: The boolean-valued property attributes.
 type Property struct {
-	Value   Value
-	Owner   *Owner
-	W, E, C bool
-	R, I    bool
+	Value Value  // actual value of the property.
+	Owner *Owner // who owns (can write/config) the property
+	flags propFlags
+}
+
+type propFlags uint8
+
+const (
+	writable propFlags = 1 << iota
+	enumerable
+	configurable
+	readable
+	inerhit
+)
+
+// IsEnumerable returns true if the property is enumerable.
+func (pd Property) IsEnumerable() bool {
+	return pd.flags&enumerable != 0
+}
+
+var attrMap = []struct {
+	flag propFlags
+	key  string
+}{
+	{writable, "writeable"},
+	{enumerable, "enumerable"},
+	{configurable, "configurable"},
+	// FIXME: either enable, or remove, once we decide
+	// what flags properties will actually have:
+	// {readable, "readable"},
+	// {inherit, "inheritable"},
 }
 
 // FromPropertyDescriptor implements the altorithm of the same name
@@ -275,20 +292,8 @@ func FromPropertyDescriptor(pd Property, owner *Owner, proto Object) (desc Objec
 	if ne != nil {
 		return
 	}
-	attrs := []struct {
-		flag bool
-		key  string
-	}{
-		{pd.W, "writeable"},
-		{pd.E, "enumerable"},
-		{pd.C, "configurable"},
-		// FIXME: either enable, or remove, once we decide
-		// what flags properties will actually have:
-		// {&pd.R, "readable"},
-		// {&pd.I, "inheritable"},
-	}
-	for _, attr := range attrs {
-		ne = desc.Set(attr.key, Boolean(attr.flag))
+	for _, attr := range attrMap {
+		ne = desc.Set(attr.key, Boolean((pd.flags&attr.flag) != 0))
 		if ne != nil {
 			return
 		}
@@ -306,25 +311,17 @@ func ToPropertyDescriptor(obj Object) (pd Property, ne *NativeError) {
 	}
 	// FIXME: set owner
 	pd.Owner = nil
-	attrs := []struct {
-		flag *bool
-		key  string
-	}{
-		{&pd.W, "writeable"},
-		{&pd.E, "enumerable"},
-		{&pd.C, "configurable"},
-		// FIXME: either enable, or remove, once we decide what flags
-		// properties will actually have:
-		// {&pd.R, "readable"},
-		// {&pd.I, "inheritable"},
-	}
-	for _, attr := range attrs {
+	var flags propFlags
+	for _, attr := range attrMap {
 		var v Value
 		v, ne = obj.Get(attr.key)
 		if ne != nil {
 			return
 		}
-		*(attr.flag) = bool(v.ToBoolean())
+		if bool(v.ToBoolean()) {
+			flags |= attr.flag
+		}
 	}
+	pd.flags = flags
 	return
 }

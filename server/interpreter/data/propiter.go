@@ -42,7 +42,7 @@ func (iter *PropIter) Next() (string, bool) {
 			key = iter.keys[0]
 			iter.keys = iter.keys[1:]
 			pd, ok := iter.obj.GetOwnProperty(key)
-			if ok && pd.E && !iter.seen[key] {
+			if ok && pd.IsEnumerable() && !iter.seen[key] {
 				iter.seen[key] = true
 				return key, true
 			}
