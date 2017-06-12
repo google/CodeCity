@@ -147,20 +147,20 @@ func NewArray(owner *Owner, proto Object) *Array {
 // §15.4 of the ES5.1 spec).  If it does, it returns the index and
 // true; if not it return 0 and false.
 func asIndex(p string) (uint32, bool) {
-	n := uint32(float64(String(p).ToNumber()))
-	if n < math.MaxUint32 && string(Number(n).ToString()) == p {
-		return n, true
+	n := ToUint32(String(p))
+	if n >= math.MaxUint32 || string(Number(n).ToString()) != p {
+		return 0, false
 	}
-	return 0, false
+	return n, true
 }
 
 // asLength takes a value and checks to see if it is a valid array
 // length.  If it is, it returns the length and true; if not it return
 // 0 and false.
 func asLength(v Value) (uint32, bool) {
-	n := float64(v.ToNumber())
-	if n < 0 || n > math.MaxUint32 || n != math.Floor(n) {
+	n := ToUint32(v)
+	if float64(n) != float64(v.ToNumber()) {
 		return 0, false
 	}
-	return uint32(n), true
+	return n, true
 }

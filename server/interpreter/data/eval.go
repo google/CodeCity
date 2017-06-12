@@ -53,17 +53,11 @@ func BinaryOp(left Value, op string, right Value) (Value, *NativeError) {
 		lt, undef := arca(left, right)
 		return Boolean(!lt && !undef), nil
 	case "<<":
-		return Number(float64(
-			int32(float64(left.ToNumber())) <<
-				(uint32(float64(right.ToNumber())) & 0x1f))), nil
+		return Number(float64(ToInt32(left) << (ToUint32(right) & 0x1f))), nil
 	case ">>":
-		return Number(float64(
-			int32(float64(left.ToNumber())) >>
-				(uint32(float64(right.ToNumber())) & 0x1f))), nil
+		return Number(float64(ToInt32(left) >> (ToUint32(right) & 0x1f))), nil
 	case ">>>":
-		return Number(float64(
-			uint32(float64(left.ToNumber())) >>
-				(uint32(float64(right.ToNumber())) & 0x1f))), nil
+		return Number(float64(ToUint32(left) >> (ToUint32(right) & 0x1f))), nil
 	case "+":
 		// FIXME: should do a ToPrimitive() on arguments (calling user
 		// code) before ToString or ToNumber.
@@ -83,14 +77,11 @@ func BinaryOp(left Value, op string, right Value) (Value, *NativeError) {
 		return Number(
 			math.Mod(float64(left.ToNumber()), float64(right.ToNumber()))), nil
 	case "|":
-		return Number(float64(int32(float64(left.ToNumber())) |
-			int32(float64(right.ToNumber())))), nil
+		return Number(float64(ToInt32(left) | ToInt32(right))), nil
 	case "^":
-		return Number(float64(int32(float64(left.ToNumber())) ^
-			int32(float64(right.ToNumber())))), nil
+		return Number(float64(ToInt32(left) ^ ToInt32(right))), nil
 	case "&":
-		return Number(float64(int32(float64(left.ToNumber())) &
-			int32(float64(right.ToNumber())))), nil
+		return Number(float64(ToInt32(left) & ToInt32(right))), nil
 	case "in":
 		obj, isObject := right.(Object)
 		if !isObject {
@@ -98,6 +89,7 @@ func BinaryOp(left Value, op string, right Value) (Value, *NativeError) {
 		}
 		return Boolean(obj.HasProperty(string(left.ToString()))), nil
 	case "instanceof":
+		// FIXME: implement instanceof
 		return nil, &NativeError{SyntaxError, "instanceof not implemented"}
 	default:
 		panic(fmt.Errorf("illegal binary operator %s", op))
@@ -254,7 +246,29 @@ func aeca(x, y Value) bool {
 //
 // x and y are the arguments to be compared.
 //
-// If it returns true then x == y according to the AECA.
+// If it returns true then x == y according to the ASECA.
 func aseca(x, y Value) bool {
 	return x == y
+}
+
+// ToInt32 implements the algorithm of the same name from §9.5 of the
+// ES5.1 spec.
+func ToInt32(v Value) int32 {
+	f := float64(v.ToNumber())
+	if math.IsNaN(f) || f == math.Inf(1) || f == math.Inf(-1) {
+		return 0
+	}
+	return int32(math.Remainder(math.Trunc(f), 1<<32))
+}
+
+// ToUint32 implements the algorithm of the same name from §9.6 of the
+// ES5.1 spec.
+func ToUint32(v Value) uint32 {
+	return uint32(ToInt32(v))
+}
+
+// ToUint16 implements the algorithm of the same name from §9.7 of the
+// ES5.1 spec.
+func ToUint16(v Value) uint16 {
+	return uint16(ToInt32(v))
 }

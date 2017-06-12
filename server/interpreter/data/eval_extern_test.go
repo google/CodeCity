@@ -158,6 +158,11 @@ func TestBinaryOp(t *testing.T) {
 		{Number(0x3), "^", Number(0x5), Number(0x6)},
 		{Number(0x3), "&", Number(0x5), Number(0x1)},
 
+		{Number(NaN), "|", Number(0), Number(0)},
+		{Number(neg0), "|", Number(0), Number(0)},
+		{Number(inf), "|", Number(0), Number(0)},
+		{Number(negInf), "|", Number(0), Number(0)},
+
 		// Comparisons:
 		//
 		// (This is mainly about making sure that BinaryOp() is hooked
