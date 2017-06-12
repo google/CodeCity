@@ -77,9 +77,9 @@ func builtinObjectꞏgetOwnPropertyDescriptor(intrp *Interpreter, this data.Valu
 		return data.Undefined{}, false
 	}
 	// FIXME: set owner
-	desc, ne := data.FromPropertyDescriptor(pd, nil, intrp.protos.ObjectProto)
-	if ne != nil {
-		return intrp.nativeError(ne), true
+	desc, nErr := data.FromPropertyDescriptor(pd, nil, intrp.protos.ObjectProto)
+	if nErr != nil {
+		return intrp.nativeError(nErr), true
 	}
 	return desc, false
 }
@@ -91,9 +91,9 @@ func builtinObjectꞏgetOwnPropertyNames(intrp *Interpreter, this data.Value, ar
 	}
 	keys := data.NewArray(nil, intrp.protos.ArrayProto)
 	for i, k := range obj.OwnPropertyKeys() {
-		ne := keys.Set(string(data.Number(i).ToString()), data.String(k))
-		if ne != nil {
-			return intrp.nativeError(ne), true
+		nErr := keys.Set(string(data.Number(i).ToString()), data.String(k))
+		if nErr != nil {
+			return intrp.nativeError(nErr), true
 		}
 	}
 	return keys, false
@@ -127,13 +127,13 @@ func builtinObjectꞏdefineProperty(intrp *Interpreter, this data.Value, args []
 	if !ok {
 		return intrp.typeError("Property descriptor must be an object"), true
 	}
-	pd, ne := data.ToPropertyDescriptor(desc)
-	if ne != nil {
-		return intrp.nativeError(ne), true
+	pd, nErr := data.ToPropertyDescriptor(desc)
+	if nErr != nil {
+		return intrp.nativeError(nErr), true
 	}
-	ne = obj.DefineOwnProperty(key, pd)
-	if ne != nil {
-		return intrp.nativeError(ne), true
+	nErr = obj.DefineOwnProperty(key, pd)
+	if nErr != nil {
+		return intrp.nativeError(nErr), true
 	}
 	return obj, false
 }
@@ -144,9 +144,9 @@ func builtinObjectꞏdefineProperties(intrp *Interpreter, this data.Value, args 
 		return intrp.typeError(fmt.Sprintf("Cannot define property on %s", args[0].ToString())), true
 	}
 	// FIXME: set owner:
-	props, ne := intrp.toObject(args[1], nil)
-	if ne != nil {
-		return intrp.nativeError(ne), true
+	props, nErr := intrp.toObject(args[1], nil)
+	if nErr != nil {
+		return intrp.nativeError(nErr), true
 	}
 	type kpd struct {
 		key string
@@ -162,17 +162,17 @@ func builtinObjectꞏdefineProperties(intrp *Interpreter, this data.Value, args 
 		if !ok {
 			return intrp.typeError("Property descriptor must be an object"), true
 		}
-		pd, ne := data.ToPropertyDescriptor(descObj)
-		if ne != nil {
-			return intrp.nativeError(ne), true
+		pd, nErr := data.ToPropertyDescriptor(descObj)
+		if nErr != nil {
+			return intrp.nativeError(nErr), true
 		}
 		kpds = append(kpds, kpd{key, pd})
 	}
 	// Create props in second pass (in case of errors in first).
 	for _, d := range kpds {
-		ne = obj.DefineOwnProperty(d.key, d.pd)
-		if ne != nil {
-			return intrp.nativeError(ne), true
+		nErr = obj.DefineOwnProperty(d.key, d.pd)
+		if nErr != nil {
+			return intrp.nativeError(nErr), true
 		}
 	}
 	return obj, false

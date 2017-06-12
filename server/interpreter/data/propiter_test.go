@@ -22,9 +22,9 @@ func TestPropIterSimpleObj(t *testing.T) {
 	keys := []string{"foo", "bar", "baz"}
 	obj := NewObject(nil, nil)
 	for _, k := range keys {
-		ne := obj.Set(k, String(k))
-		if ne != nil {
-			t.Errorf("obj.Set(%#v, %#v) returned %v", k, String(k), ne)
+		nErr := obj.Set(k, String(k))
+		if nErr != nil {
+			t.Errorf("obj.Set(%#v, %#v) returned %v", k, String(k), nErr)
 		}
 	}
 
@@ -52,15 +52,15 @@ func TestPropIterInheritance(t *testing.T) {
 	obj1 := NewObject(nil, nil)
 	obj2 := NewObject(nil, obj1)
 	for _, k := range keys1 {
-		ne := obj1.Set(k, String(k))
-		if ne != nil {
-			t.Error(ne)
+		nErr := obj1.Set(k, String(k))
+		if nErr != nil {
+			t.Error(nErr)
 		}
 	}
 	for _, k := range keys2 {
-		ne := obj2.Set(k, String(k))
-		if ne != nil {
-			t.Errorf("obj.Set(%#v, %#v) returned %v", k, String(k), ne)
+		nErr := obj2.Set(k, String(k))
+		if nErr != nil {
+			t.Errorf("obj.Set(%#v, %#v) returned %v", k, String(k), nErr)
 		}
 	}
 
@@ -84,9 +84,9 @@ func TestPropIterDelete(t *testing.T) {
 	keys := []string{"foo", "bar", "baz"}
 	obj := NewObject(nil, nil)
 	for _, k := range keys {
-		ne := obj.Set(k, String(k))
-		if ne != nil {
-			t.Errorf("obj.Set(%#v, %#v) returned %v", k, String(k), ne)
+		nErr := obj.Set(k, String(k))
+		if nErr != nil {
+			t.Errorf("obj.Set(%#v, %#v) returned %v", k, String(k), nErr)
 		}
 	}
 

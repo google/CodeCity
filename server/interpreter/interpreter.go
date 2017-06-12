@@ -127,8 +127,8 @@ func (intrp *Interpreter) Step() bool {
 	case RETURN:
 		panic(fmt.Errorf("illegal return of %s", thread.value.value().ToString()))
 	case THROW:
-		error, ne := intrp.toObject(thread.value.value(), nil)
-		if ne != nil {
+		error, nErr := intrp.toObject(thread.value.value(), nil)
+		if nErr != nil {
 			panic(fmt.Errorf("unhandled exception: %v", thread.value.value()))
 		}
 		name, _ := error.Get("name")
@@ -190,9 +190,9 @@ func (intrp *Interpreter) newError(proto data.Object, msg string) data.Object {
 
 // nativeError takes a data.NativeError error specification and an
 // owner and creates a corresponding native error object.
-func (intrp *Interpreter) nativeError(ne *data.NativeError) data.Object {
+func (intrp *Interpreter) nativeError(nErr *data.NativeError) data.Object {
 	var p data.Object
-	switch ne.Type {
+	switch nErr.Type {
 	case data.EvalError:
 		p = intrp.protos.EvalErrorProto
 	case data.RangeError:
@@ -206,9 +206,9 @@ func (intrp *Interpreter) nativeError(ne *data.NativeError) data.Object {
 	case data.URIError:
 		p = intrp.protos.URIErrorProto
 	default:
-		panic(fmt.Errorf("Unknown NativeErrorType %d", ne.Type))
+		panic(fmt.Errorf("Unknown NativeErrorType %d", nErr.Type))
 	}
-	return intrp.newError(p, ne.Message)
+	return intrp.newError(p, nErr.Message)
 }
 
 func (intrp *Interpreter) typeError(msg string) data.Object {
@@ -223,7 +223,7 @@ func (intrp *Interpreter) referenceError(msg string) data.Object {
 	return intrp.newError(intrp.protos.ReferenceErrorProto, msg)
 }
 
-func (intrp *Interpreter) throw(ne *data.NativeError) *cval {
+func (intrp *Interpreter) throw(nErr *data.NativeError) *cval {
 	// FIXME: set owner.
-	return &cval{THROW, intrp.nativeError(ne), ""}
+	return &cval{THROW, intrp.nativeError(nErr), ""}
 }

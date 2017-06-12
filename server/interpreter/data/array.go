@@ -63,13 +63,13 @@ func (arr *Array) Set(key string, value Value) *NativeError {
 		}
 		return nil
 	}
-	ne := arr.object.Set(key, value)
-	if ne == nil {
-		if i, isIndex := asIndex(key); isIndex && arr.length < i+1 {
-			arr.length = i + 1
-		}
+	if nErr := arr.object.Set(key, value); nErr != nil {
+		return nErr
 	}
-	return ne
+	if i, isIndex := asIndex(key); isIndex && arr.length < i+1 {
+		arr.length = i + 1
+	}
+	return nil
 }
 
 // OwnPropertyKeys returns the list of property keys (starting with

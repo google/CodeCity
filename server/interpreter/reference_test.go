@@ -39,17 +39,17 @@ func TestEnvRef(t *testing.T) {
 		t.Errorf("ref.getName() == %#v (expected %#v)", b, "foo")
 	}
 
-	if v, ne := ref.getValue(nil); v != data.Number(42) || ne != nil {
-		t.Errorf("ref.getValue() == %#v, %#v (expected %#v, nil)", v, ne, data.Number(42))
+	if v, nErr := ref.getValue(nil); v != data.Number(42) || nErr != nil {
+		t.Errorf("ref.getValue() == %#v, %#v (expected %#v, nil)", v, nErr, data.Number(42))
 	}
-	if ne := ref.putValue(data.String("bar"), nil); ne != nil {
-		t.Errorf(`ref.putValue("bar") == %#v (exected nil)`, ne)
+	if nErr := ref.putValue(data.String("bar"), nil); nErr != nil {
+		t.Errorf(`ref.putValue("bar") == %#v (exected nil)`, nErr)
 	}
-	if v, ne := ref.getValue(nil); v != data.String("bar") || ne != nil {
-		t.Errorf("ref.getValue() == %#v, %#v (expected %#v, nil)", v, ne, data.String("bar"))
+	if v, nErr := ref.getValue(nil); v != data.String("bar") || nErr != nil {
+		t.Errorf("ref.getValue() == %#v, %#v (expected %#v, nil)", v, nErr, data.String("bar"))
 	}
-	if ne := ref.delete(nil); ne == nil || ne.Type != data.SyntaxError {
-		t.Errorf("ref.delete() == %#v (exected %#v)", ne, data.SyntaxError)
+	if nErr := ref.delete(nil); nErr == nil || nErr.Type != data.SyntaxError {
+		t.Errorf("ref.delete() == %#v (exected %#v)", nErr, data.SyntaxError)
 	}
 }
 
@@ -68,17 +68,17 @@ func TestPropRef(t *testing.T) {
 		t.Errorf("ref.isUnresovable() == %#v", ur)
 	}
 
-	if v, ne := ref.getValue(nil); v != data.Number(42) || ne != nil {
-		t.Errorf("ref.getValue() == %#v, %#v (expected %#v, nil)", v, ne, data.Number(42))
+	if v, nErr := ref.getValue(nil); v != data.Number(42) || nErr != nil {
+		t.Errorf("ref.getValue() == %#v, %#v (expected %#v, nil)", v, nErr, data.Number(42))
 	}
-	if ne := ref.putValue(data.String("bar"), nil); ne != nil {
-		t.Errorf(`ref.putValue("bar") == %#v (exected nil)`, ne)
+	if nErr := ref.putValue(data.String("bar"), nil); nErr != nil {
+		t.Errorf(`ref.putValue("bar") == %#v (exected nil)`, nErr)
 	}
-	if v, ne := ref.getValue(nil); v != data.String("bar") || ne != nil {
-		t.Errorf("ref.getValue() == %#v, %#v (expected %#v, nil)", v, ne, data.String("bar"))
+	if v, nErr := ref.getValue(nil); v != data.String("bar") || nErr != nil {
+		t.Errorf("ref.getValue() == %#v, %#v (expected %#v, nil)", v, nErr, data.String("bar"))
 	}
-	if ne := ref.delete(nil); ne != nil {
-		t.Errorf("ref.delete() == %#v (exected nil)", ne)
+	if nErr := ref.delete(nil); nErr != nil {
+		t.Errorf("ref.delete() == %#v (exected nil)", nErr)
 	}
 }
 
@@ -97,18 +97,16 @@ func TestPrimRef(t *testing.T) {
 		t.Errorf("ref.isUnresovable() == %#v", ur)
 	}
 
-	if v, ne := ref.getValue(intrp); v != data.Number(3) || ne != nil {
-		t.Errorf("ref.getValue() == %#v, %#v (expected %#v, nil)", v, ne, data.Number(3))
+	if v, nErr := ref.getValue(intrp); v != data.Number(3) || nErr != nil {
+		t.Errorf("ref.getValue() == %#v, %#v (expected %#v, nil)", v, nErr, data.Number(3))
 	}
-	if ne := ref.putValue(data.Number(0), intrp); ne == nil {
+	if nErr := ref.putValue(data.Number(0), intrp); nErr == nil {
 		t.Errorf("ref.putValue(42) == nil (exected an error)")
 	}
-	if v, ne := ref.getValue(intrp); v != data.Number(3) || ne != nil {
-		t.Errorf("ref.getValue() == %#v, %#v (expected %#v, nil)", v, ne, data.Number(3))
+	if v, nErr := ref.getValue(intrp); v != data.Number(3) || nErr != nil {
+		t.Errorf("ref.getValue() == %#v, %#v (expected %#v, nil)", v, nErr, data.Number(3))
 	}
-	if ne := ref.delete(intrp); ne == nil || ne.Type != data.TypeError {
-		t.Errorf("ref.delete() == %#v (exected TypeError)", ne)
+	if nErr := ref.delete(intrp); nErr == nil || nErr.Type != data.TypeError {
+		t.Errorf("ref.delete() == %#v (exected TypeError)", nErr)
 	}
 }
-
-// FIXME: add tests for undefined, null and unresolvable (nil) references.

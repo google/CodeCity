@@ -286,15 +286,15 @@ var attrMap = []struct {
 // from §8.10.4 of the ES5.1 spec, but simplified because we do not
 // (yet) support getters / setters, and with extra parameters for
 // objet owner and prototype.
-func FromPropertyDescriptor(pd Property, owner *Owner, proto Object) (desc Object, ne *NativeError) {
+func FromPropertyDescriptor(pd Property, owner *Owner, proto Object) (desc Object, nErr *NativeError) {
 	desc = NewObject(owner, proto)
-	ne = desc.Set("value", pd.Value)
-	if ne != nil {
+	nErr = desc.Set("value", pd.Value)
+	if nErr != nil {
 		return
 	}
 	for _, attr := range attrMap {
-		ne = desc.Set(attr.key, Boolean((pd.flags&attr.flag) != 0))
-		if ne != nil {
+		nErr = desc.Set(attr.key, Boolean((pd.flags&attr.flag) != 0))
+		if nErr != nil {
 			return
 		}
 	}
@@ -304,9 +304,9 @@ func FromPropertyDescriptor(pd Property, owner *Owner, proto Object) (desc Objec
 // ToPropertyDescriptor implements the altorithm of the same name from
 // §8.10.5 of the ES5.1 spec, but simplified because we do not (yet)
 // support getters / setters.
-func ToPropertyDescriptor(obj Object) (pd Property, ne *NativeError) {
-	pd.Value, ne = obj.Get("value")
-	if ne != nil {
+func ToPropertyDescriptor(obj Object) (pd Property, nErr *NativeError) {
+	pd.Value, nErr = obj.Get("value")
+	if nErr != nil {
 		return
 	}
 	// FIXME: set owner
@@ -314,8 +314,8 @@ func ToPropertyDescriptor(obj Object) (pd Property, ne *NativeError) {
 	var flags propFlags
 	for _, attr := range attrMap {
 		var v Value
-		v, ne = obj.Get(attr.key)
-		if ne != nil {
+		v, nErr = obj.Get(attr.key)
+		if nErr != nil {
 			return
 		}
 		if bool(v.ToBoolean()) {

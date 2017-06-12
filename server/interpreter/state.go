@@ -364,9 +364,9 @@ func (st *stateArrayExpression) step(intrp *Interpreter, cv *cval) (state, *cval
 	} else {
 		// FIXME: this is somewhat inefficient.
 		if cv.pval() != nil {
-			ne := st.arr.Set(string(data.Number(st.n).ToString()), cv.pval())
-			if ne != nil {
-				return st.parent, intrp.throw(ne)
+			nErr := st.arr.Set(string(data.Number(st.n).ToString()), cv.pval())
+			if nErr != nil {
+				return st.parent, intrp.throw(nErr)
 			}
 		}
 		st.n++
@@ -379,9 +379,9 @@ func (st *stateArrayExpression) step(intrp *Interpreter, cv *cval) (state, *cval
 		st.n++
 	}
 	// Update .length, in case there were trailing elided elements:
-	ne := st.arr.Set("length", data.Number(st.n).ToString())
-	if ne != nil {
-		return st.parent, intrp.throw(ne)
+	nErr := st.arr.Set("length", data.Number(st.n).ToString())
+	if nErr != nil {
+		return st.parent, intrp.throw(nErr)
 	}
 
 	return st.parent, pval(st.arr)
@@ -421,13 +421,13 @@ func (st *stateAssignmentExpression) step(intrp *Interpreter, cv *cval) (state, 
 	// Do (operator)assignment:
 	if st.op != "=" {
 		var op = st.op[:len(st.op)-1]
-		l, ne := st.left.getValue(intrp)
-		if ne != nil {
-			return st.parent, intrp.throw(ne)
+		l, nErr := st.left.getValue(intrp)
+		if nErr != nil {
+			return st.parent, intrp.throw(nErr)
 		}
-		r, ne = data.BinaryOp(l, op, r)
-		if ne != nil {
-			return st.parent, intrp.throw(ne)
+		r, nErr = data.BinaryOp(l, op, r)
+		if nErr != nil {
+			return st.parent, intrp.throw(nErr)
 		}
 	}
 	// FIXME: throw error:
@@ -459,9 +459,9 @@ func (st *stateBinaryExpression) step(intrp *Interpreter, cv *cval) (state, *cva
 		st.left = cv.pval()
 		return newState(st, st.scope, ast.Node(st.rNode.E)), nil
 	}
-	r, ne := data.BinaryOp(st.left, st.op, cv.pval())
-	if ne != nil {
-		return st.parent, intrp.throw(ne)
+	r, nErr := data.BinaryOp(st.left, st.op, cv.pval())
+	if nErr != nil {
+		return st.parent, intrp.throw(nErr)
 	}
 	return st.parent, pval(r)
 }
@@ -568,9 +568,9 @@ func (st *stateCallExpression) step(intrp *Interpreter, cv *cval) (state, *cval)
 		if cv.val.Type() == REFERENCE {
 			ref := cv.rval()
 			// callee was a MemberExpression or the like:
-			fn, ne := ref.getValue(intrp)
-			if ne != nil {
-				return st.parent, intrp.throw(ne)
+			fn, nErr := ref.getValue(intrp)
+			if nErr != nil {
+				return st.parent, intrp.throw(nErr)
 			}
 			st.fn = fn
 			if ref.isPropRef() {
@@ -875,9 +875,9 @@ func (st *stateForInStatement) step(intrp *Interpreter, cv *cval) (state, *cval)
 				return st.parent, &cval{NORMAL, nil, ""}
 			}
 			// FIXME: set owner:
-			obj, ne := intrp.toObject(right, nil)
-			if ne != nil {
-				return st.parent, intrp.throw(ne)
+			obj, nErr := intrp.toObject(right, nil)
+			if nErr != nil {
+				return st.parent, intrp.throw(nErr)
 			}
 			st.iter = data.NewPropIter(obj)
 			fallthrough
@@ -894,9 +894,9 @@ func (st *stateForInStatement) step(intrp *Interpreter, cv *cval) (state, *cval)
 			if cv != nil && cv.abrupt() {
 				return st.parent, cv
 			}
-			ne := cv.rval().putValue(data.String(st.key), intrp)
-			if ne != nil {
-				return st.parent, intrp.throw(ne)
+			nErr := cv.rval().putValue(data.String(st.key), intrp)
+			if nErr != nil {
+				return st.parent, intrp.throw(nErr)
 			}
 			st.state = forInBody
 			return newState(st, st.scope, st.body.S), nil
@@ -1057,17 +1057,17 @@ func (st *stateLabeledStatement) step(intrp *Interpreter, cv *cval) (state, *cva
 
 type stateLiteral struct {
 	stateCommon
-	val data.Value
-	ne  *data.NativeError
+	val  data.Value
+	nErr *data.NativeError
 }
 
 func (st *stateLiteral) init(node *ast.Literal) {
-	st.val, st.ne = data.NewFromRaw(node.Raw)
+	st.val, st.nErr = data.NewFromRaw(node.Raw)
 }
 
 func (st *stateLiteral) step(intrp *Interpreter, cv *cval) (state, *cval) {
-	if st.ne != nil {
-		return st.parent, intrp.throw(st.ne)
+	if st.nErr != nil {
+		return st.parent, intrp.throw(st.nErr)
 	}
 	return st.parent, pval(st.val)
 }
@@ -1153,9 +1153,9 @@ func (st *stateMemberExpression) step(intrp *Interpreter, cv *cval) (state, *cva
 	if st.reqRef {
 		return st.parent, rval(ref)
 	}
-	v, ne := ref.getValue(intrp)
-	if ne != nil {
-		return st.parent, intrp.throw(ne)
+	v, nErr := ref.getValue(intrp)
+	if nErr != nil {
+		return st.parent, intrp.throw(nErr)
 	}
 	return st.parent, pval(v)
 }
@@ -1174,9 +1174,9 @@ func (st *stateNewExpression) init(node *ast.NewExpression) {
 func (st *stateNewExpression) step(intrp *Interpreter, cv *cval) (state, *cval) {
 	// Special `new "Path.to.builtin"` hack:
 	if lit, isLit := st.callee.E.(*ast.Literal); isLit && intrp.builtins != nil {
-		v, ne := data.NewFromRaw(lit.Raw)
-		if ne != nil {
-			return st.parent, intrp.throw(ne)
+		v, nErr := data.NewFromRaw(lit.Raw)
+		if nErr != nil {
+			return st.parent, intrp.throw(nErr)
 		}
 		if s, isStr := v.(data.String); isStr {
 			bi, ok := intrp.builtins[string(s)]
@@ -1490,9 +1490,9 @@ func (st *stateUnaryDeleteExpression) step(intrp *Interpreter, cv *cval) (state,
 		msg := "Delete of an unqualified identifier in strict mode."
 		return st.parent, &cval{THROW, intrp.syntaxError(msg), ""}
 	}
-	ne := ref.delete(intrp)
-	if ne != nil {
-		return st.parent, intrp.throw(ne)
+	nErr := ref.delete(intrp)
+	if nErr != nil {
+		return st.parent, intrp.throw(nErr)
 	}
 	return st.parent, pval(data.Boolean(true))
 }
@@ -1518,9 +1518,9 @@ func (st *stateUnaryTypeofExpression) step(intrp *Interpreter, cv *cval) (state,
 		if ref.isUnresolvable() {
 			return st.parent, pval(data.String("undefined"))
 		}
-		v, ne := ref.getValue(intrp)
-		if ne != nil {
-			return st.parent, intrp.throw(ne)
+		v, nErr := ref.getValue(intrp)
+		if nErr != nil {
+			return st.parent, intrp.throw(nErr)
 		}
 		return st.parent, pval(data.String(v.Typeof()))
 	}

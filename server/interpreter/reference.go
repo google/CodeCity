@@ -62,9 +62,9 @@ func (ref reference) getValue(intrp *Interpreter) (data.Value, *data.NativeError
 		return b.Get(ref.name)
 	case data.Value:
 		// FIXME: set owner.
-		o, ne := intrp.toObject(b, nil)
-		if ne != nil {
-			return nil, ne
+		o, nErr := intrp.toObject(b, nil)
+		if nErr != nil {
+			return nil, nErr
 		}
 		return o.Get(ref.name)
 	case *scope:
@@ -86,9 +86,9 @@ func (ref reference) putValue(v data.Value, intrp *Interpreter) *data.NativeErro
 		return b.Set(ref.name, v)
 	case data.Value:
 		// FIXME: set owner.
-		o, ne := intrp.toObject(b, nil)
-		if ne != nil {
-			return ne
+		o, nErr := intrp.toObject(b, nil)
+		if nErr != nil {
+			return nErr
 		}
 		return o.Set(ref.name, v)
 	case *scope:
@@ -108,9 +108,9 @@ func (ref reference) delete(intrp *Interpreter) *data.NativeError {
 		return b.Delete(ref.name)
 	case data.Value:
 		// FIXME: set owner.
-		o, ne := intrp.toObject(b, nil)
-		if ne != nil {
-			return ne
+		o, nErr := intrp.toObject(b, nil)
+		if nErr != nil {
+			return nErr
 		}
 		return o.Delete(ref.name)
 	case *scope:
