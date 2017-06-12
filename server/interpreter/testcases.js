@@ -569,6 +569,7 @@ exports.tests = [
     `,
     expected: "TypeError" },
 
+  // This also tests iteration over (non-)enumerable properties.
   { name: 'objectDefineProperty', src: `
     var o = { foo: 70 }, r = 0;
     Object.defineProperty(o, "bar", {
@@ -829,16 +830,6 @@ exports.tests = [
     }
     `,
     // expected: "ReferenceError"
-  },
-
-  { name: 'iterNonEnumerable', src: `
-    var o;
-    var n = 0;
-    for (var k in o) {
-      n++;
-    }
-    n;
-    `,
   },
 
   { name: 'fibonacci10k', src: `
