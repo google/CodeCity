@@ -91,8 +91,8 @@ func (arr *Array) OwnPropertyKeys() []string {
 	return keys
 }
 
-// Delete will reject attempts to remove "length" and otherwise defers
-// to the embedded object.
+// Delete will reject attempts to remove "length" and otherwise
+// delegates to the embedded object.
 func (arr *Array) Delete(key string) *NativeError {
 	if key == "length" {
 		return &NativeError{TypeError, "Cannot delete property 'length' of array."}

@@ -155,7 +155,7 @@ func (bstr *BoxedString) Set(key string, value Value) *NativeError {
 }
 
 // Delete on BoxedString will refuse to delete "length" and numeric
-// character indicies, and otherwise defers to the embedded object.
+// character indicies, and otherwise delegates to the embedded object.
 //
 // BUG(cpcallen): character indicides not implemented.
 func (bstr *BoxedString) Delete(key string) *NativeError {
