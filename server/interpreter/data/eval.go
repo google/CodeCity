@@ -261,6 +261,16 @@ func ToInt32(v Value) int32 {
 	return int32(math.Remainder(math.Trunc(f), 1<<32))
 }
 
+// ToInteger implements the algorithm of the same name from §9.4 of
+// the ES5.1 spec.
+func ToInteger(v Value) int {
+	f := float64(v.ToNumber())
+	if math.IsNaN(f) || f == math.Inf(1) || f == math.Inf(-1) {
+		return 0
+	}
+	return int(math.Trunc(f))
+}
+
 // ToUint32 implements the algorithm of the same name from §9.6 of the
 // ES5.1 spec.
 func ToUint32(v Value) uint32 {

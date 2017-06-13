@@ -25,6 +25,11 @@ import (
 	"unicode/utf16"
 )
 
+const (
+	// Largest integer safely representable by a Number (float64)
+	MaxSafeInteger = 0x1FFFFFFFFFFFFF
+)
+
 // Booleans, numbers and strings are represented as immediate data -
 // i.e., the Value interface data contains the value itself rather
 // than a pointer to it, as it would in the case of a plain object.

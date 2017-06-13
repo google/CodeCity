@@ -191,8 +191,9 @@ func TestToNumber(t *testing.T) {
 		{String("0x10"), 16},
 		{String("0x3.14"), NaN},
 		{String("-10"), -10},
-		{String("6.02214086e23"), 6.02214086e23},       // Avogadro
-		{String("9007199254740991"), 9007199254740991}, // MAX_SAFE_INTEGER
+		{String("6.02214086e23"), 6.02214086e23}, // Avogadro
+		{String("9007199254740991"), MaxSafeInteger},
+		{String("-9007199254740991"), -MaxSafeInteger},
 		{String("foo"), NaN},
 		{String("false"), NaN},
 		{String("null"), NaN},

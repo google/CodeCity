@@ -24,47 +24,53 @@ import (
 func TestToInt(t *testing.T) {
 	var tests = []struct {
 		in  Number
+		out int
 		i32 int32
 		u32 uint32
 		u16 uint16
 	}{
 		// Numeric comparisons:
-		{Number(0), 0, 0, 0},
-		{Number(math.Copysign(0, -1)), 0, 0, 0},
-		{Number(1), 1, 1, 1},
-		{Number(0.25), 0, 0, 0},
-		{Number(0.75), 0, 0, 0},
-		{Number(-0.25), 0, 0, 0},
-		{Number(-0.75), 0, 0, 0},
-		{Number(-1), -1, 0xffffffff, 0xffff},
+		{Number(0), 0, 0, 0, 0},
+		{Number(math.Copysign(0, -1)), 0, 0, 0, 0},
+		{Number(1), 1, 1, 1, 1},
+		{Number(0.25), 0, 0, 0, 0},
+		{Number(0.75), 0, 0, 0, 0},
+		{Number(-0.25), 0, 0, 0, 0},
+		{Number(-0.75), 0, 0, 0, 0},
+		{Number(-1), -1, -1, 0xffffffff, 0xffff},
 
-		{Number(0x7fff), 0x7fff, 0x7fff, 0x7fff},
-		{Number(0x8000), 0x8000, 0x8000, 0x8000},
-		{Number(0xffff), 0xffff, 0xffff, 0xffff},
-		{Number(0x10000), 0x10000, 0x10000, 0},
+		{Number(0x7fff), 0x7fff, 0x7fff, 0x7fff, 0x7fff},
+		{Number(0x8000), 0x8000, 0x8000, 0x8000, 0x8000},
+		{Number(0xffff), 0xffff, 0xffff, 0xffff, 0xffff},
+		{Number(0x10000), 0x10000, 0x10000, 0x10000, 0},
 
-		{Number(-0x8000), -0x8000, 0xffff8000, 0x8000},
-		{Number(-0x8001), -0x8001, 0xffff7fff, 0x7fff},
-		{Number(-0xffff), -0xffff, 0xffff0001, 1},
-		{Number(-0x10000), -0x10000, 0xffff0000, 0},
-		{Number(-0x10001), -0x10001, 0xfffeffff, 0xffff},
+		{Number(-0x8000), -0x8000, -0x8000, 0xffff8000, 0x8000},
+		{Number(-0x8001), -0x8001, -0x8001, 0xffff7fff, 0x7fff},
+		{Number(-0xffff), -0xffff, -0xffff, 0xffff0001, 1},
+		{Number(-0x10000), -0x10000, -0x10000, 0xffff0000, 0},
+		{Number(-0x10001), -0x10001, -0x10001, 0xfffeffff, 0xffff},
 
-		{Number(0x7fffffff), 0x7fffffff, 0x7fffffff, 0xffff},
-		{Number(0x80000000), -0x80000000, 0x80000000, 0x0000},
-		{Number(0xffffffff), -1, 0xffffffff, 0xffff},
-		{Number(0x100000000), 0, 0, 0},
+		{Number(0x7fffffff), 0x7fffffff, 0x7fffffff, 0x7fffffff, 0xffff},
+		{Number(0x80000000), 0x80000000, -0x80000000, 0x80000000, 0x0000},
+		{Number(0xffffffff), 0xffffffff, -1, 0xffffffff, 0xffff},
+		{Number(0x100000000), 0x100000000, 0, 0, 0},
 
-		{Number(-0x80000000), -0x80000000, 0x80000000, 0x0000},
-		{Number(-0x80000001), 0x7fffffff, 0x7fffffff, 0xffff},
-		{Number(-0xffffffff), 1, 1, 1},
-		{Number(-0x100000000), 0, 0, 0},
-		{Number(-0x100000001), -1, 0xffffffff, 0xffff},
+		{Number(-0x80000000), -0x80000000, -0x80000000, 0x80000000, 0x0000},
+		{Number(-0x80000001), -0x80000001, 0x7fffffff, 0x7fffffff, 0xffff},
+		{Number(-0xffffffff), -0xffffffff, 1, 1, 1},
+		{Number(-0x100000000), -0x100000000, 0, 0, 0},
+		{Number(-0x100000001), -0x100000001, -1, 0xffffffff, 0xffff},
 
-		{Number(math.NaN()), 0, 0, 0},
-		{Number(math.Inf(1)), 0, 0, 0},
-		{Number(math.Inf(-1)), 0, 0, 0},
+		{Number(MaxSafeInteger), MaxSafeInteger, -1, 0xffffffff, 0xffff},
+
+		{Number(math.NaN()), 0, 0, 0, 0},
+		{Number(math.Inf(1)), 0, 0, 0, 0},
+		{Number(math.Inf(-1)), 0, 0, 0, 0},
 	}
 	for _, c := range tests {
+		if r := ToInteger(c.in); r != c.out {
+			t.Errorf("ToInteger(%#v) == %d (expected %d)", c.in, r, c.out)
+		}
 		if r := ToInt32(c.in); r != c.i32 {
 			t.Errorf("ToInt32(%#v) == %d (expected %d)", c.in, r, c.i32)
 		}
