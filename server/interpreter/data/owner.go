@@ -35,19 +35,24 @@ type Owner struct {
 // *Owner must satisfy Object.
 var _ Object = (*Owner)(nil)
 
-// ToString always returns "[object Owner]" for Owners.
+// Class always returns "Owner" for Owners.
+func (Owner) Class() string {
+	return "Owner"
+}
+
+// ToString is repeated here to catch the changed definition of Class.
 //
-// BUG(cpcallen): this should probably call a user-supplied
-// .toString() method if present.
-func (Owner) ToString() String {
-	return "[object Owner]"
+// BUG(cpcallen): as with object.ToString, owner.ToString should call
+// a user-code toString() method if present.
+func (owner Owner) ToString() String {
+	return String("[object " + owner.Class() + "]")
 }
 
 // NewOwner returns a new Owner object, owned by itself and having
-// parent ObjectProto.
+// the specified prototype.
 func NewOwner(proto Object) *Owner {
-	var o = new(Owner)
-	o.init(o, proto)
-	o.f = false
-	return o
+	var owner = new(Owner)
+	owner.init(owner, proto)
+	owner.f = false
+	return owner
 }

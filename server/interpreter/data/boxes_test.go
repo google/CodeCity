@@ -20,6 +20,26 @@ import (
 	"testing"
 )
 
+func TestBoxed(t *testing.T) {
+	var cases = []struct {
+		obj   Object
+		class string
+		typ   Type
+	}{
+		{NewBoxedBoolean(nil, protos.BooleanProto, false), "Boolean", BOOLEAN},
+		{NewBoxedNumber(nil, protos.NumberProto, 0), "Number", NUMBER},
+		{NewBoxedString(nil, protos.StringProto, ""), "String", STRING},
+	}
+	for _, c := range cases {
+		if cls := c.obj.Class(); cls != c.class {
+			t.Errorf(`%#v.Class() = %#v (expected %#v)`, c.obj, cls, c.class)
+		}
+		if pt := c.obj.ToPrimitive().Type(); pt != c.typ {
+			t.Errorf(`%#v.ToPrimitive().Type() == %#v (expected %#v)`, c.obj, pt, c.typ)
+		}
+	}
+}
+
 func TestBoxedStringHasOwnProperty(t *testing.T) {
 	var s = NewBoxedString(nil, protos.StringProto, String("foo"))
 

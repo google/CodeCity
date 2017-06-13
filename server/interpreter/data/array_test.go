@@ -85,6 +85,9 @@ func TestAsLength(t *testing.T) {
 
 func TestArray(t *testing.T) {
 	a := NewArray(nil, protos.ArrayProto)
+	if c := a.Class(); c != "Array" {
+		t.Errorf(`%#v.Class() = %#v (expected "Array")`, a, c)
+	}
 	if !a.HasOwnProperty("length") {
 		t.Errorf(`%v.HasOwnProperty("length") == false`, a)
 	}

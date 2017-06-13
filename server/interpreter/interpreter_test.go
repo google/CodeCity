@@ -152,3 +152,11 @@ func BenchmarkFibonacci(b *testing.B) {
 		i.Run()
 	}
 }
+
+// Used in various other *_test.go files in this package:
+
+var protos *data.Protos
+
+func init() {
+	protos = data.NewProtos()
+}

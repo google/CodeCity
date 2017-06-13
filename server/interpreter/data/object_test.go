@@ -24,6 +24,13 @@ func init() {
 	protos = NewProtos()
 }
 
+func TestObject(t *testing.T) {
+	var obj = NewObject(nil, protos.ObjectProto)
+	if c := obj.Class(); c != "Object" {
+		t.Errorf(`%#v.Class() = %#v (expected "Object"`, obj, c)
+	}
+}
+
 func TestObjectNonPrimitiveness(t *testing.T) {
 	var objs = []Value{
 		NewObject(nil, protos.ObjectProto),

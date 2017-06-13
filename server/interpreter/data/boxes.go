@@ -31,6 +31,11 @@ type BoxedBoolean struct {
 // *BoxedBoolean must satisfy Object.
 var _ Object = (*BoxedBoolean)(nil)
 
+// Class always returns "Boolean" for BoxedBoolean objects.
+func (BoxedBoolean) Class() string {
+	return "Boolean"
+}
+
 // ToBoolean has no special behaviour on BoxedBooleans: it returns
 // true, as for any other object.
 
@@ -75,6 +80,11 @@ type BoxedNumber struct {
 // *BoxedNumber must satisfy Object.
 var _ Object = (*BoxedNumber)(nil)
 
+// Class always returns "Number" for BoxedNumber objects.
+func (BoxedNumber) Class() string {
+	return "Number"
+}
+
 // ToBoolean has no special behaviour on BoxedNumbers: it returns
 // true, as for any other object.
 
@@ -115,6 +125,11 @@ type BoxedString struct {
 
 // *BoxedString must satisfy Object.
 var _ Object = (*BoxedString)(nil)
+
+// Class always returns "String" for BoxedString objects.
+func (BoxedString) Class() string {
+	return "String"
+}
 
 // Get on BoxedString implements magic .length and numeric character
 // index properties on itself, and delegates any other property

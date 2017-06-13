@@ -30,6 +30,11 @@ type Array struct {
 // *Array must satisfy Object.
 var _ Object = (*Array)(nil)
 
+// Class always returns "Array" for array objects.
+func (Array) Class() string {
+	return "Array"
+}
+
 // Get on Array implements a magic .length property itself, and passes
 // any other property lookups to its embedded object.
 func (arr *Array) Get(key string) (Value, *NativeError) {
@@ -121,7 +126,7 @@ func (arr Array) HasProperty(s string) bool {
 // .toString() method if present.
 func (arr Array) ToString() String {
 	// FIXME: not implemented yet.
-	return "[object Array]"
+	return String("[object " + arr.Class() + "]")
 }
 
 // NewArray creates a new Array with the specified owner and
