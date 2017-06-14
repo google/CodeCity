@@ -19,8 +19,11 @@ package data
 // PropIter is an iterator which will iterate over the (non-deleted)
 // properties of an object and its prototypes.
 //
-// FIXME: perhaps we should guarantee iteration order, as most
-// browsers (and ES6) do?
+// It is intended that this comply with the requirements for the
+// EnumerateObjectProperties algorithm given in §13.7.5.15 of the
+// ES7.0 spec.
+//
+// FIXME: we should guarantee iteration order, as most browsers and ES6 do.
 type PropIter struct {
 	obj  Object
 	keys []string
@@ -42,9 +45,11 @@ func (iter *PropIter) Next() (string, bool) {
 			key = iter.keys[0]
 			iter.keys = iter.keys[1:]
 			pd, ok := iter.obj.GetOwnProperty(key)
-			if ok && pd.IsEnumerable() && !iter.seen[key] {
+			if ok && !iter.seen[key] {
 				iter.seen[key] = true
-				return key, true
+				if pd.IsEnumerable() {
+					return key, true
+				}
 			}
 		}
 		iter.obj = iter.obj.Proto()

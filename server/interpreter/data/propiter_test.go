@@ -27,6 +27,11 @@ func TestPropIterSimpleObj(t *testing.T) {
 			t.Errorf("obj.Set(%#v, %#v) returned %v", k, String(k), nErr)
 		}
 	}
+	// Check shadowing by non-enumerable properties:
+	nErr := obj.DefineOwnProperty("quux", Property{Value: String("quux")})
+	if nErr != nil {
+		t.Errorf(`obj.DefineOwnProperty("quux", Property{Value: String("quux")}) == %v (expected nil)`, nErr)
+	}
 
 	got := make(map[string]bool)
 	iter := NewPropIter(obj)
@@ -45,27 +50,32 @@ func TestPropIterSimpleObj(t *testing.T) {
 }
 
 func TestPropIterInheritance(t *testing.T) {
-	keys1 := []string{"foo", "bar", "baz"}
-	keys2 := []string{"foo", "quux", "quuux"}
-	expected := []string{"foo", "bar", "baz", "quux", "quuux"}
+	parentKeys := []string{"foo", "bar", "baz"}
+	childKeys := []string{"foo", "quux"}
+	expected := []string{"foo", "baz", "quux"}
 
-	obj1 := NewObject(nil, nil)
-	obj2 := NewObject(nil, obj1)
-	for _, k := range keys1 {
-		nErr := obj1.Set(k, String(k))
+	parent := NewObject(nil, nil)
+	child := NewObject(nil, parent)
+	for _, k := range parentKeys {
+		nErr := parent.Set(k, String(k))
 		if nErr != nil {
-			t.Error(nErr)
+			t.Errorf("parent.Set(%#v, %#v) returned %v", k, String(k), nErr)
 		}
 	}
-	for _, k := range keys2 {
-		nErr := obj2.Set(k, String(k))
+	for _, k := range childKeys {
+		nErr := child.Set(k, String(k))
 		if nErr != nil {
-			t.Errorf("obj.Set(%#v, %#v) returned %v", k, String(k), nErr)
+			t.Errorf("child.Set(%#v, %#v) returned %v", k, String(k), nErr)
 		}
+	}
+	// Check shadowing by non-enumerable properties:
+	nErr := child.DefineOwnProperty("bar", Property{Value: String("bar")})
+	if nErr != nil {
+		t.Errorf(`child.DefineOwnProperty("bar", Property{Value: String("bar")}) == %v (expected nil)`, nErr)
 	}
 
 	got := make(map[string]bool)
-	iter := NewPropIter(obj2)
+	iter := NewPropIter(child)
 	for k, ok := iter.Next(); ok; k, ok = iter.Next() {
 		got[k] = true
 	}
