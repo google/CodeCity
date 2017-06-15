@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-package testutil
+package testutil // import "codecity.world/cc/server/interpreter/data/testutil"
 
 import (
 	"fmt"
 	"math"
 
-	"CodeCity/server/interpreter/data"
+	"codecity.world/cc/server/interpreter/data"
 )
 
 // Identical returns true iff the two JS values are identical:

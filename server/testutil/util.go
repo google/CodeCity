@@ -16,7 +16,7 @@
 
 // Package testutil provides some utility functions to make writing
 // tests easier.
-package testutil
+package testutil // import "codecity.world/cc/server/testutil"
 
 import (
 	"github.com/davecgh/go-spew/spew"

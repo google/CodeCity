@@ -19,7 +19,7 @@ package interpreter
 import (
 	"fmt"
 
-	"CodeCity/server/interpreter/data"
+	"codecity.world/cc/server/interpreter/data"
 )
 
 // This file contains code that creates the Object constructor and

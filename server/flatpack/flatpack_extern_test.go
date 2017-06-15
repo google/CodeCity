@@ -21,10 +21,10 @@ import (
 	"fmt"
 	"testing"
 
-	"CodeCity/server/flatpack"
-	"CodeCity/server/interpreter"
-	"CodeCity/server/interpreter/data"
-	"CodeCity/server/testutil"
+	"codecity.world/cc/server/flatpack"
+	"codecity.world/cc/server/interpreter"
+	"codecity.world/cc/server/interpreter/data"
+	"codecity.world/cc/server/testutil"
 )
 
 // FIXME: add a more general (and more comprehensive) example.

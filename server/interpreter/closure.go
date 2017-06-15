@@ -19,8 +19,8 @@ package interpreter
 import (
 	"fmt"
 
-	"CodeCity/server/interpreter/ast"
-	"CodeCity/server/interpreter/data"
+	"codecity.world/cc/server/interpreter/ast"
+	"codecity.world/cc/server/interpreter/data"
 )
 
 // function is a type representing some kind of JS Function object.

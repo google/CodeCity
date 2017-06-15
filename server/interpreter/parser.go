@@ -22,7 +22,7 @@ import (
 	"fmt"
 	"net"
 
-	"CodeCity/server/interpreter/ast"
+	"codecity.world/cc/server/interpreter/ast"
 )
 
 // parse takes a javascript program, and returns an *ast.Program

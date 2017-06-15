@@ -17,8 +17,9 @@
 package interpreter
 
 import (
-	"CodeCity/server/interpreter/data"
 	"strings"
+
+	"codecity.world/cc/server/interpreter/data"
 )
 
 func (intrp *Interpreter) mkBuiltin(path string, value data.Value) {

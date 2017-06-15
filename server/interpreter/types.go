@@ -17,7 +17,7 @@
 package interpreter
 
 import (
-	"CodeCity/server/interpreter/data"
+	"codecity.world/cc/server/interpreter/data"
 )
 
 // Most of the types we use are defined in the data package, but there

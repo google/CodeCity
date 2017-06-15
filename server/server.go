@@ -16,14 +16,15 @@
 
 // Package main implements the Code City server.  The initial
 // implementation just evaluates any JavaScript it receives.
-package main
+package main // import "codecity.world/cc/server"
 
 import (
-	"CodeCity/server/interpreter"
 	"bufio"
 	"fmt"
 	"net"
 	"os"
+
+	"codecity.world/cc/server/interpreter"
 )
 
 func main() {

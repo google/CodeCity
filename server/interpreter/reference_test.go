@@ -19,7 +19,7 @@ package interpreter
 import (
 	"testing"
 
-	"CodeCity/server/interpreter/data"
+	"codecity.world/cc/server/interpreter/data"
 )
 
 func TestEnvRef(t *testing.T) {

@@ -20,8 +20,8 @@ import (
 	"math"
 	"testing"
 
-	. "CodeCity/server/interpreter/data"
-	tu "CodeCity/server/interpreter/data/testutil"
+	. "codecity.world/cc/server/interpreter/data"
+	tu "codecity.world/cc/server/interpreter/data/testutil"
 )
 
 var protos *Protos

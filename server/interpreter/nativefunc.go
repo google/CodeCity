@@ -20,7 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"CodeCity/server/interpreter/data"
+	"codecity.world/cc/server/interpreter/data"
 )
 
 // A NativeImpl encapsulates information about a Go-language function

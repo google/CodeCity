@@ -20,7 +20,7 @@ import (
 	"math"
 	"testing"
 
-	. "CodeCity/server/interpreter/data"
+	. "codecity.world/cc/server/interpreter/data"
 )
 
 func TestIdentical(t *testing.T) {

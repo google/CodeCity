@@ -15,13 +15,13 @@
  */
 
 // Package interpreter implements a JavaScript interpreter.
-package interpreter
+package interpreter // import "codecity.world/cc/server/interpreter"
 
 import (
 	"fmt"
 
-	"CodeCity/server/interpreter/ast"
-	"CodeCity/server/interpreter/data"
+	"codecity.world/cc/server/interpreter/ast"
+	"codecity.world/cc/server/interpreter/data"
 )
 
 // Interpreter implements a JavaScript interpreter.

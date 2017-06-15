@@ -47,7 +47,7 @@
 //
 // BUG(cpcallen): Flatpack does not preserve spare capacity (or the
 // values of elements in the underlying array between len and cap).
-package flatpack
+package flatpack // import "codecity.world/cc/server/flatpack"
 
 import (
 	"fmt"

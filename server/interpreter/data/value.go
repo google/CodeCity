@@ -18,7 +18,7 @@
 // values (objects and primitive values).  The principle ones (that
 // represent user-visible JS values, as opposed to internal data like
 // property descriptors) all conform to the Value interface.
-package data
+package data // import "codecity.world/cc/server/interpreter/data"
 
 // Type is an enum identifying the formal type of a value, per §8 of
 // the ES5.1 spec.  Note that OBJECT identifies *any* object type

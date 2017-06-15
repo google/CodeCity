@@ -19,8 +19,9 @@ package interpreter
 //go:generate sh -c "./gentests.js > testcases_test.go && go fmt"
 
 import (
-	"CodeCity/server/interpreter/data"
 	"testing"
+
+	"codecity.world/cc/server/interpreter/data"
 )
 
 func TestInterpreterSimple(t *testing.T) {

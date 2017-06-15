@@ -20,7 +20,7 @@ import (
 	"reflect"
 	"testing"
 
-	"CodeCity/server/testutil"
+	"codecity.world/cc/server/testutil"
 )
 
 // Some user-declared types for testing:

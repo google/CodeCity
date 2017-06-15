@@ -19,7 +19,7 @@ package interpreter
 import (
 	"fmt"
 
-	"CodeCity/server/interpreter/data"
+	"codecity.world/cc/server/interpreter/data"
 )
 
 // cvalType is an enum of completion value types.

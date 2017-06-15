@@ -19,8 +19,8 @@ package interpreter
 import (
 	"fmt"
 
-	"CodeCity/server/interpreter/ast"
-	"CodeCity/server/interpreter/data"
+	"codecity.world/cc/server/interpreter/ast"
+	"codecity.world/cc/server/interpreter/data"
 )
 
 // scope is a symbol table used to implement JavaScript scope; it's

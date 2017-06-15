@@ -17,9 +17,10 @@
 package interpreter
 
 import (
-	"CodeCity/server/interpreter/ast"
-	"CodeCity/server/interpreter/data"
 	"encoding/json"
+
+	"codecity.world/cc/server/interpreter/ast"
+	"codecity.world/cc/server/interpreter/data"
 )
 
 func (intrp *Interpreter) initBuiltinArray() {

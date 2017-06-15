@@ -17,8 +17,9 @@
 package interpreter
 
 import (
-	"CodeCity/server/interpreter/data"
 	"fmt"
+
+	"codecity.world/cc/server/interpreter/data"
 )
 
 // reference is an implementation of the "Reference Specification
