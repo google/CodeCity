@@ -17,7 +17,7 @@
 package ast
 
 import (
-	"codecity.world/cc/server/flatpack"
+	"github.com/cpcallen/flatpack"
 )
 
 func init() {

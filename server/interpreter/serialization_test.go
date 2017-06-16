@@ -14,36 +14,17 @@
  * limitations under the License.
  */
 
-package flatpack_test
+package interpreter_test
 
 import (
 	"encoding/json"
-	"fmt"
 	"testing"
 
-	"codecity.world/cc/server/flatpack"
 	"codecity.world/cc/server/interpreter"
 	"codecity.world/cc/server/interpreter/data"
-	"codecity.world/cc/server/testutil"
+	"github.com/cpcallen/flatpack"
+	"github.com/cpcallen/testutil"
 )
-
-// FIXME: add a more general (and more comprehensive) example.
-
-func Example() {
-	intrp := interpreter.New()
-	intrp.EvalASTJSON(fibonacci)
-	for i := 0; i < 500 && intrp.Step(); i++ {
-	}
-	var f = flatpack.New()
-	f.Pack("Interpreter", intrp)
-
-	b, e := json.MarshalIndent(f, "", "  ")
-	if e != nil {
-		panic(e)
-	}
-	fmt.Printf("%s\n", string(b))
-	// // Output:
-}
 
 func TestRoundTripInterpreter(t *testing.T) {
 	// t.SkipNow()
