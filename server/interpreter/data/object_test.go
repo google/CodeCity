@@ -16,7 +16,9 @@
 
 package data
 
-import "testing"
+import (
+	"testing"
+)
 
 var protos *Protos
 
@@ -29,53 +31,144 @@ func TestObject(t *testing.T) {
 	if c := obj.Class(); c != "Object" {
 		t.Errorf(`%#v.Class() = %#v (expected "Object"`, obj, c)
 	}
+	if obj.Proto() != Value(protos.ObjectProto) {
+		t.Errorf("%v.Proto() != ObjectProto", obj)
+	}
+	testObject(t, obj)
 }
 
-func TestObjectNonPrimitiveness(t *testing.T) {
-	var objs = []Value{
-		NewObject(nil, protos.ObjectProto),
-		NewOwner(protos.OwnerProto),
-	}
+/********************************************************************/
+// Utilitiy functions for testing property behaviour on Objects
 
-	for _, o := range objs {
-		if o.IsPrimitive() {
-			t.Errorf("%v.isPrimitive() = true", o)
+// testObject performs a battery of standard tests on an object:
+//
+//     1) Check object is not primitive
+//     2) Add a property and make sure it exists.
+//     3) Delete it and make sure it no longer exists.
+//     4) If has proto, repeat steps 2) and 3) for an inherited
+//        property.
+//
+// FIXME: try setting via DefineOwnProperty
+//
+// FIXME: check !writeable / !configurable properties, !extensible
+// object.
+func testObject(t *testing.T, obj Object) {
+	t.Run("IsPrimitive", func(t *testing.T) {
+		if obj.IsPrimitive() {
+			t.Errorf("%v.isPrimitive() = true", obj)
+		}
+	})
+
+	t.Run("OwnProperty", func(t *testing.T) {
+		checkNoProp(t, obj, "foo")
+		ne := obj.Set("foo", String("bar"))
+		if ne != nil {
+			t.Errorf(`%v.Set("foo", String("bar")) == %v (expected <nil>)`, obj, ne)
+		}
+		checkOwnProp(t, obj, "foo", Property{Value: String("bar"), flags: writable | enumerable | configurable})
+		ne = obj.Delete("foo")
+		if ne != nil {
+			t.Errorf(`%v.Delete("foo") == %v (expected <nil>)`, obj, ne)
+		}
+		checkNoProp(t, obj, "foo")
+	})
+
+	t.Run("InheritedProperty", func(t *testing.T) {
+		proto := obj.Proto()
+		if proto == nil {
+			return
+		}
+		checkNoProp(t, proto, "foo")
+		ne := proto.Set("foo", String("bar"))
+		if ne != nil {
+			t.Errorf(`%v.Set("foo", String("bar")) == %v (expected <nil>)`, proto, ne)
+		}
+		checkInheritedProp(t, obj, "foo", Property{Value: String("bar"), flags: writable | enumerable | configurable})
+		ne = proto.Delete("foo")
+		if ne != nil {
+			t.Errorf(`%v.Delete("foo") == %v (expected <nil>)`, proto, ne)
+		}
+		checkNoProp(t, obj, "foo")
+	})
+}
+
+// checkOwnProp checks that the property exists and has the expected
+// value (via several different methods)
+func checkOwnProp(t *testing.T, obj Object, key string, pd Property) {
+	p, ok := obj.GetOwnProperty(key)
+	if p != pd || !ok {
+		t.Errorf(`%v.GetOwnPropertyDescriptor(%#v) == %v, %t (expected %v, true)`, obj, key, p, ok, pd)
+	}
+	v, ne := obj.Get(key)
+	if v != pd.Value || ne != nil {
+		t.Errorf(`%v.Get(%#v) == %#v, %v (expected %#v, <nil>)`, obj, key, v, ne, pd.Value)
+	}
+	keys := obj.OwnPropertyKeys()
+	var i int
+	for i = 0; i < len(keys); i++ {
+		if keys[i] == key {
+			break
 		}
 	}
-}
-
-func TestObjectHasOwnProperty(t *testing.T) {
-	var parent = NewObject(nil, nil)
-	var obj = NewObject(nil, parent)
-
-	if obj.HasOwnProperty("foo") {
-		t.Errorf(`%#v.HasOwnProperty("foo") == true`, obj)
+	if i == len(keys) {
+		t.Errorf(`%v.OwnPropertyKeys() == %#v (expected to contain %#v)`, obj, keys, key)
 	}
-	parent.Set("foo", Undefined{})
-	if obj.HasOwnProperty("foo") {
-		t.Errorf(`%#v.HasOwnProperty("foo") == true `+
-			"(after setting parent.foo)", obj)
+	if !obj.HasOwnProperty(key) {
+		t.Errorf(`%v.HasOwnProperty(%#v) == false`, obj, key)
 	}
-	obj.Set("foo", Undefined{})
-	if !obj.HasOwnProperty("foo") {
-		t.Errorf(`%#v.HasOwnProperty("foo") == false`, obj)
+	if !obj.HasProperty(key) {
+		t.Errorf(`%v.HasOwnProperty(%#v) == false`, obj, key)
 	}
 }
 
-func TestObjectHasProperty(t *testing.T) {
-	var parent = NewObject(nil, nil)
-	var obj = NewObject(nil, parent)
+// checkInheritedProp checks that the property exists as an inherited
+// property and has the expected value (via several different methods)
+func checkInheritedProp(t *testing.T, obj Object, key string, pd Property) {
+	p, ok := obj.GetOwnProperty(key)
+	if ok {
+		t.Errorf(`%v.GetOwnPropertyDescriptor(%#v) == %v, %t (expected [...], false)`, obj, key, p, ok)
+	}
+	v, ne := obj.Get(key)
+	if v != pd.Value || ne != nil {
+		t.Errorf(`%v.Get(%#v) == %#v, %v (expected %#v, <nil>)`, obj, key, v, ne, pd.Value)
+	}
+	keys := obj.OwnPropertyKeys()
+	for i := 0; i < len(keys); i++ {
+		if keys[i] == key {
+			t.Errorf(`%v.OwnPropertyKeys() == %#v (expected not to contain %#v)`, obj, keys, key)
+			break
+		}
+	}
+	if obj.HasOwnProperty(key) {
+		t.Errorf(`%v.HasOwnProperty(%#v) == true`, obj, key)
+	}
+	if !obj.HasProperty(key) {
+		t.Errorf(`%v.HasOwnProperty(%#v) == false`, obj, key)
+	}
+}
 
-	if obj.HasProperty("foo") {
-		t.Errorf(`%#v.HasProperty("foo") == true`, obj)
+// checkNoProp checks that specified property does not exist (via
+// several different methods)
+func checkNoProp(t *testing.T, obj Object, key string) {
+	p, ok := obj.GetOwnProperty(key)
+	if ok {
+		t.Errorf(`%v.GetOwnPropertyDescriptor(%#v) == %v, %t (expected [...], false)`, obj, key, p, ok)
 	}
-	parent.Set("foo", Undefined{})
-	if !obj.HasProperty("foo") {
-		t.Errorf(`%#v.HasProperty("foo") == false `+
-			"(after setting parent.foo)", obj)
+	v, ne := obj.Get(key)
+	if ne != nil {
+		t.Errorf(`%v.Get(%#v) == %#v, %v (expected nil, non-nil)`, obj, key, v, ne)
 	}
-	obj.Set("bar", Undefined{})
-	if !obj.HasProperty("bar") {
-		t.Errorf(`%#v.HasProperty("bar") == false`, obj)
+	keys := obj.OwnPropertyKeys()
+	for i := 0; i < len(keys); i++ {
+		if keys[i] == key {
+			t.Errorf(`%v.OwnPropertyKeys() == %#v (expected not to contain %#v)`, obj, keys, key)
+			break
+		}
+	}
+	if obj.HasOwnProperty(key) {
+		t.Errorf(`%v.HasOwnProperty(%#v) == true`, obj, key)
+	}
+	if obj.HasProperty(key) {
+		t.Errorf(`%v.HasOwnProperty(%#v) == true`, obj, key)
 	}
 }

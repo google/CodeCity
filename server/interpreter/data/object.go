@@ -158,7 +158,7 @@ func (obj *object) Set(key string, value Value) *NativeError {
 		pd := Property{
 			Value: value,
 			Owner: obj.owner, // FIXME: should this be caller?
-			flags: writable | enumerable | configurable | readable,
+			flags: writable | enumerable | configurable,
 		}
 		return obj.DefineOwnProperty(key, pd)
 	}
@@ -269,8 +269,8 @@ const (
 	writable propFlags = 1 << iota
 	enumerable
 	configurable
-	readable
-	inerhit
+	// readable
+	// inerhit
 )
 
 // IsEnumerable returns true if the property is enumerable.
