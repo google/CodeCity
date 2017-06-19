@@ -1,0 +1,16 @@
+name: "Acorn"
+description:
+    "A tiny, fast JavaScript parser, written completely in JavaScript."
+
+third_party {
+  url {
+    type: HOMEPAGE
+    value: "https://github.com/ternjs/acorn"
+  }
+  url {
+    type: GIT
+    value: "https://github.com/ternjs/acorn"
+  }
+  version: "0.5.0"
+  last_upgrade_date { year: 2017 month: 6 day: 19 }
+}
