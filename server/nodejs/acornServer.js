@@ -27,7 +27,7 @@
 'use strict';
 
 var net = require('net');
-var acorn = require('./acorn.js');
+var acorn = require('../../third_party/acorn/acorn.js');
 
 // Create a new TCP server for parsing code into an AST using Acorn.
 var parsePort = 7780;
