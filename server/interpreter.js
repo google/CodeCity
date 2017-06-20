@@ -3627,19 +3627,7 @@ Interpreter.prototype['stepVariableDeclaration'] = function() {
 };
 
 Interpreter.prototype['stepWithStatement'] = function() {
-  var stack = this.stateStack;
-  var state = stack[stack.length - 1];
-  var node = state.node;
-  if (!state.doneObject_) {
-    state.doneObject_ = true;
-    stack.push({node: node['object']});
-  } else if (!state.doneBody_) {
-    state.doneBody_ = true;
-    var scope = this.createSpecialScope(this.getScope(), state.value);
-    stack.push({node: node['body'], scope: scope});
-  } else {
-    stack.pop();
-  }
+  this.throwException(this.SYNTAX_ERROR, 'Strict mode code may not include a with statement');
 };
 
 Interpreter.prototype['stepWhileStatement'] =
