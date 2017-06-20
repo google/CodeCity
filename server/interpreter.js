@@ -1120,16 +1120,10 @@ Interpreter.prototype.initNumber = function(scope) {
   // Number constructor.
   wrapper = function(value) {
     value = value ? value.toNumber() : 0;
-    if (thisInterpreter.calledWithNew()) {
-      // Called as new Number().
-      this.data = value;
-      return this;
-    } else {
-      // Called as Number().
-      return thisInterpreter.createPrimitive(value);
-    }
+    return thisInterpreter.createPrimitive(value);
   };
   this.NUMBER = this.createNativeFunction(wrapper, true);
+  this.NUMBER.illegalConstructor = true;  // Don't allow 'new Number(x)'.
   this.setProperty(scope, 'Number', this.NUMBER);
 
   var numConsts = ['MAX_VALUE', 'MIN_VALUE', 'NaN', 'NEGATIVE_INFINITY',
@@ -1204,16 +1198,10 @@ Interpreter.prototype.initString = function(scope) {
   // String constructor.
   wrapper = function(value) {
     value = value ? value.toString() : '';
-    if (thisInterpreter.calledWithNew()) {
-      // Called as new String().
-      this.data = value;
-      return this;
-    } else {
-      // Called as String().
-      return thisInterpreter.createPrimitive(value);
-    }
+    return thisInterpreter.createPrimitive(value);
   };
   this.STRING = this.createNativeFunction(wrapper, true);
+  this.STRING.illegalConstructor = true;  // Don't allow 'new String(x)'.
   this.setProperty(scope, 'String', this.STRING);
 
   // Static methods on String.
@@ -1370,16 +1358,10 @@ Interpreter.prototype.initBoolean = function(scope) {
   // Boolean constructor.
   wrapper = function(value) {
     value = value ? value.toBoolean() : false;
-    if (thisInterpreter.calledWithNew()) {
-      // Called as new Boolean().
-      this.data = value;
-      return this;
-    } else {
-      // Called as Boolean().
-      return thisInterpreter.createPrimitive(value);
-    }
+    return thisInterpreter.createPrimitive(value);
   };
   this.BOOLEAN = this.createNativeFunction(wrapper, true);
+  this.BOOLEAN.illegalConstructor = true;  // Don't allow 'new Boolean(x)'.
   this.setProperty(scope, 'Boolean', this.BOOLEAN);
 };
 
