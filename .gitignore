@@ -5,10 +5,6 @@
 server/nodejs/node_modules
 server/nodejs/loginServer.cfg
 server/nodejs/connectServer.cfg
-
-server/interpreter/template
-server/interpreter/ast/sample-ast.json
-
 server/nodejs/nohup.out
 
-server/server
+server/node_modules
