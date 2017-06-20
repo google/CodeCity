@@ -64,6 +64,10 @@ function deserialize(json, interpreter) {
       case 'Array':
         obj = [];
         break;
+      case 'Set':
+        // Currently we assume that Sets do not contain objects.
+        obj = new Set(jsonObj['data']);
+        break;
       case 'Date':
         obj = new Date(jsonObj['data']);
         if (isNaN(obj)) {
@@ -72,6 +76,9 @@ function deserialize(json, interpreter) {
         break;
       case 'RegExp':
         obj = RegExp(jsonObj['source'], jsonObj['flags']);
+        break;
+      case 'Scope':
+        obj = new Interpreter.Scope(null);
         break;
       case 'PseudoObject':
         obj = new Interpreter.Object(null);
@@ -139,6 +146,13 @@ function serialize(interpreter) {
       case Array.prototype:
         jsonObj['type'] = 'Array';
         break;
+      case Set.prototype:
+        // Currently we assume that Sets do not contain objects.
+        jsonObj['type'] = 'Set';
+        if (obj.size) {
+          jsonObj['data'] = Array.from(obj.values());
+        }
+        continue;  // No need to index properties.
       case Date.prototype:
         jsonObj['type'] = 'Date';
         jsonObj['data'] = obj.toJSON();
@@ -148,6 +162,9 @@ function serialize(interpreter) {
         jsonObj['source'] = obj.source;
         jsonObj['flags'] = obj.flags;
         continue;  // No need to index properties.
+      case Interpreter.Scope.prototype:
+        jsonObj['type'] = 'Scope';
+        break;
       case Interpreter.Object.prototype:
         jsonObj['type'] = 'PseudoObject';
         break;
