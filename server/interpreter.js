@@ -207,15 +207,10 @@ Interpreter.prototype.run = function() {
  */
 Interpreter.prototype.initGlobalScope = function(scope) {
   // Initialize uneditable global properties.
-  this.setProperty(scope, 'Infinity', this.createPrimitive(Infinity),
-                   Interpreter.READONLY_DESCRIPTOR);
-  this.setProperty(scope, 'NaN', this.NAN,
-                   Interpreter.READONLY_DESCRIPTOR);
-  this.setProperty(scope, 'undefined', this.UNDEFINED,
-                   Interpreter.READONLY_DESCRIPTOR);
-  this.setProperty(scope, 'window', scope,
-                   Interpreter.READONLY_DESCRIPTOR);
-  this.setProperty(scope, 'self', scope); // Editable.
+  this.addVariableToScope(scope, 'Infinity', this.createPrimitive(Infinity),
+                          true);
+  this.addVariableToScope(scope, 'NaN', this.NAN, true);
+  this.addVariableToScope(scope, 'undefined', this.UNDEFINED, true);
 
   // Initialize global objects.
   this.initFunction(scope);
@@ -224,7 +219,6 @@ Interpreter.prototype.initGlobalScope = function(scope) {
   // Note that in a browser this would be 'Window', whereas in Node.js it would
   // be 'Object'.  This interpreter is closer to Node in that it has no DOM.
   scope.proto = this.OBJECT.properties['prototype'];
-  this.setProperty(scope, 'constructor', this.OBJECT);
   this.initArray(scope);
   this.initNumber(scope);
   this.initString(scope);
@@ -242,27 +236,27 @@ Interpreter.prototype.initGlobalScope = function(scope) {
     num = num || thisInterpreter.UNDEFINED;
     return thisInterpreter.createPrimitive(isNaN(num.toNumber()));
   };
-  this.setProperty(scope, 'isNaN',
-                   this.createNativeFunction(wrapper, false));
+  this.addVariableToScope(scope, 'isNaN',
+      this.createNativeFunction(wrapper, false));
 
   wrapper = function(num) {
     num = num || thisInterpreter.UNDEFINED;
     return thisInterpreter.createPrimitive(isFinite(num.toNumber()));
   };
-  this.setProperty(scope, 'isFinite',
-                   this.createNativeFunction(wrapper, false));
+  this.addVariableToScope(scope, 'isFinite',
+      this.createNativeFunction(wrapper, false));
 
-  this.setProperty(scope, 'parseFloat',
-                   this.getProperty(this.NUMBER, 'parseFloat'));
+  this.addVariableToScope(scope, 'parseFloat',
+      this.getProperty(this.NUMBER, 'parseFloat'));
 
-  this.setProperty(scope, 'parseInt',
-                   this.getProperty(this.NUMBER, 'parseInt'));
+  this.addVariableToScope(scope, 'parseInt',
+      this.getProperty(this.NUMBER, 'parseInt'));
 
   var func = this.createObject(this.FUNCTION);
   func.eval = true;
   this.setProperty(func, 'length', this.NUMBER_ONE,
                    Interpreter.READONLY_DESCRIPTOR);
-  this.setProperty(scope, 'eval', func);
+  this.addVariableToScope(scope, 'eval', func);
 
   var strFunctions = [
     [escape, 'escape'], [unescape, 'unescape'],
@@ -282,8 +276,8 @@ Interpreter.prototype.initGlobalScope = function(scope) {
         return thisInterpreter.createPrimitive(str);
       };
     })(strFunctions[i][0]);
-    this.setProperty(scope, strFunctions[i][1],
-                     this.createNativeFunction(wrapper, false));
+    this.addVariableToScope(scope, strFunctions[i][1],
+        this.createNativeFunction(wrapper, false));
   }
 
   // Run any user-provided initialization.
@@ -346,7 +340,7 @@ Interpreter.prototype.initFunction = function(scope) {
   };
   wrapper.id = this.functionCounter_++;
   this.FUNCTION = this.createObject(null);
-  this.setProperty(scope, 'Function', this.FUNCTION);
+  this.addVariableToScope(scope, 'Function', this.FUNCTION);
   // Manually setup type and prototype because createObj doesn't recognize
   // this object as a function (this.FUNCTION did not exist).
   this.FUNCTION.type = 'function';
@@ -470,7 +464,7 @@ Interpreter.prototype.initObject = function(scope) {
     return value;
   };
   this.OBJECT = this.createNativeFunction(wrapper, true);
-  this.setProperty(scope, 'Object', this.OBJECT);
+  this.addVariableToScope(scope, 'Object', this.OBJECT);
 
   // Static methods on Object.
   wrapper = function(obj) {
@@ -492,7 +486,7 @@ Interpreter.prototype.initObject = function(scope) {
     }
     var list = [];
     for (var key in obj.properties) {
-      if (!obj.notEnumerable[key]) {
+      if (!obj.notEnumerable.has(key)) {
         list.push(key);
       }
     }
@@ -586,9 +580,9 @@ Interpreter.prototype.initObject = function(scope) {
     if (!(prop in obj.properties)) {
       return thisInterpreter.UNDEFINED;
     }
-    var configurable = !obj.notConfigurable[prop];
-    var enumerable = !obj.notEnumerable[prop];
-    var writable = !obj.notWritable[prop];
+    var configurable = !obj.notConfigurable.has(prop);
+    var enumerable = !obj.notEnumerable.has(prop);
+    var writable = !obj.notWritable.has(prop);
 
     var descriptor = thisInterpreter.createObject(thisInterpreter.OBJECT);
     thisInterpreter.setProperty(descriptor, 'configurable',
@@ -663,7 +657,7 @@ Interpreter.prototype.initObject = function(scope) {
 
   wrapper = function(prop) {
     prop = (prop || thisInterpreter.UNDEFINED).toString();
-    var enumerable = prop in this.properties && !this.notEnumerable[prop];
+    var enumerable = prop in this.properties && !this.notEnumerable.has(prop);
     return thisInterpreter.createPrimitive(enumerable);
   };
   this.setNativeFunctionPrototype(this.OBJECT, 'propertyIsEnumerable', wrapper);
@@ -732,7 +726,7 @@ Interpreter.prototype.initArray = function(scope) {
     return newArray;
   };
   this.ARRAY = this.createNativeFunction(wrapper, true);
-  this.setProperty(scope, 'Array', this.ARRAY);
+  this.addVariableToScope(scope, 'Array', this.ARRAY);
 
   // Static methods on Array.
   wrapper = function(obj) {
@@ -1117,7 +1111,7 @@ Interpreter.prototype.initNumber = function(scope) {
   };
   this.NUMBER = this.createNativeFunction(wrapper, true);
   this.NUMBER.illegalConstructor = true;  // Don't allow 'new Number(x)'.
-  this.setProperty(scope, 'Number', this.NUMBER);
+  this.addVariableToScope(scope, 'Number', this.NUMBER);
 
   var numConsts = ['MAX_VALUE', 'MIN_VALUE', 'NaN', 'NEGATIVE_INFINITY',
                    'POSITIVE_INFINITY'];
@@ -1195,7 +1189,7 @@ Interpreter.prototype.initString = function(scope) {
   };
   this.STRING = this.createNativeFunction(wrapper, true);
   this.STRING.illegalConstructor = true;  // Don't allow 'new String(x)'.
-  this.setProperty(scope, 'String', this.STRING);
+  this.addVariableToScope(scope, 'String', this.STRING);
 
   // Static methods on String.
   wrapper = function(var_args) {
@@ -1355,7 +1349,7 @@ Interpreter.prototype.initBoolean = function(scope) {
   };
   this.BOOLEAN = this.createNativeFunction(wrapper, true);
   this.BOOLEAN.illegalConstructor = true;  // Don't allow 'new Boolean(x)'.
-  this.setProperty(scope, 'Boolean', this.BOOLEAN);
+  this.addVariableToScope(scope, 'Boolean', this.BOOLEAN);
 };
 
 /**
@@ -1390,7 +1384,7 @@ Interpreter.prototype.initDate = function(scope) {
     return newDate;
   };
   this.DATE = this.createNativeFunction(wrapper, true);
-  this.setProperty(scope, 'Date', this.DATE);
+  this.addVariableToScope(scope, 'Date', this.DATE);
 
   // Static methods on Date.
   wrapper = function() {
@@ -1452,7 +1446,7 @@ Interpreter.prototype.initDate = function(scope) {
 Interpreter.prototype.initMath = function(scope) {
   var thisInterpreter = this;
   var myMath = this.createObject(this.OBJECT);
-  this.setProperty(scope, 'Math', myMath);
+  this.addVariableToScope(scope, 'Math', myMath);
   var mathConsts = ['E', 'LN2', 'LN10', 'LOG2E', 'LOG10E', 'PI',
                     'SQRT1_2', 'SQRT2'];
   for (var i = 0; i < mathConsts.length; i++) {
@@ -1500,7 +1494,7 @@ Interpreter.prototype.initRegExp = function(scope) {
     return thisInterpreter.populateRegExp_(rgx, new RegExp(pattern, flags));
   };
   this.REGEXP = this.createNativeFunction(wrapper, true);
-  this.setProperty(scope, 'RegExp', this.REGEXP);
+  this.addVariableToScope(scope, 'RegExp', this.REGEXP);
 
   this.setProperty(this.REGEXP.properties['prototype'], 'global',
       this.UNDEFINED, Interpreter.READONLY_NONENUMERABLE_DESCRIPTOR);
@@ -1552,7 +1546,7 @@ Interpreter.prototype.initRegExp = function(scope) {
 Interpreter.prototype.initJSON = function(scope) {
   var thisInterpreter = this;
   var myJSON = thisInterpreter.createObject(this.OBJECT);
-  this.setProperty(scope, 'JSON', myJSON);
+  this.addVariableToScope(scope, 'JSON', myJSON);
 
   var wrapper = function(text) {
     try {
@@ -1601,7 +1595,7 @@ Interpreter.prototype.initError = function(scope) {
     }
     return newError;
   }, true);
-  this.setProperty(scope, 'Error', this.ERROR);
+  this.addVariableToScope(scope, 'Error', this.ERROR);
   this.setProperty(this.ERROR.properties['prototype'], 'message',
       this.STRING_EMPTY, Interpreter.NONENUMERABLE_DESCRIPTOR);
   this.setProperty(this.ERROR.properties['prototype'], 'name',
@@ -1629,7 +1623,7 @@ Interpreter.prototype.initError = function(scope) {
     thisInterpreter.setProperty(constructor.properties['prototype'], 'name',
         thisInterpreter.createPrimitive(name),
         Interpreter.NONENUMERABLE_DESCRIPTOR);
-    thisInterpreter.setProperty(scope, name, constructor);
+    thisInterpreter.addVariableToScope(scope, name, constructor);
 
     return constructor;
   };
@@ -1706,6 +1700,17 @@ Interpreter.prototype.arrayIndex = function(n) {
     return NaN;
   }
   return n;
+};
+
+/**
+ * Class for a scope.
+ * @param {Interpreter.Scope} parentScope Inherited scope.
+ * @constructor
+ */
+Interpreter.Scope = function(parentScope) {
+  this.notWritable = new Set();
+  this.properties = Object.create(null);
+  this.parentScope = parentScope;
 };
 
 /**
@@ -1809,15 +1814,16 @@ Interpreter.prototype.createPrimitive = function(data) {
   return new Interpreter.Primitive(data, this);
 };
 
+
 /**
  * Class for an object.
  * @param {Interpreter.Object} proto Prototype object or null.
  * @constructor
  */
 Interpreter.Object = function(proto) {
-  this.notConfigurable = Object.create(null);
-  this.notEnumerable = Object.create(null);
-  this.notWritable = Object.create(null);
+  this.notConfigurable = new Set();
+  this.notEnumerable = new Set();
+  this.notWritable = new Set();
   this.properties = Object.create(null);
   this.proto = proto;
 };
@@ -2128,7 +2134,7 @@ Interpreter.prototype.pseudoToNative = function(pseudoObj, opt_cycles) {
     cycles.native.push(nativeObj);
     var val;
     for (var key in pseudoObj.properties) {
-      if (pseudoObj.notEnumerable[key]) {
+      if (pseudoObj.notEnumerable.has(key)) {
         continue;
       }
       val = pseudoObj.properties[key];
@@ -2217,7 +2223,7 @@ Interpreter.prototype.hasProperty = function(obj, name) {
  */
 Interpreter.prototype.setProperty = function(obj, name, value, opt_descriptor) {
   name = name.toString();
-  if (opt_descriptor && obj.notConfigurable[name]) {
+  if (opt_descriptor && obj.notConfigurable.has(name)) {
     this.throwException(this.TYPE_ERROR, 'Cannot redefine property: ' + name);
   }
   if (typeof value != 'object') {
@@ -2279,21 +2285,21 @@ Interpreter.prototype.setProperty = function(obj, name, value, opt_descriptor) {
     // Define the property.
     obj.properties[name] = value;
     if (!opt_descriptor.configurable) {
-      obj.notConfigurable[name] = true;
+      obj.notConfigurable.add(name);
     }
     var enumerable = opt_descriptor.enumerable || false;
     if (enumerable) {
-      delete obj.notEnumerable[name];
+      obj.notEnumerable.delete(name);
     } else {
-      obj.notEnumerable[name] = true;
+      obj.notEnumerable.add(name);
     }
     var writable = opt_descriptor.writable || false;
     if (writable) {
-      delete obj.notWritable[name];
+      obj.notWritable.delete(name);
     } else {
-      obj.notWritable[name] = true;
+      obj.notWritable.add(name);
     }
-  } else if (obj.notWritable[name]) {
+  } else if (obj.notWritable.has(name)) {
     this.throwException(this.TYPE_ERROR, 'Cannot assign to read only ' +
         'property \'' + name + '\' of object \'' + obj + '\'');
   } else {
@@ -2323,7 +2329,7 @@ Interpreter.prototype.setNativeFunctionPrototype =
  */
 Interpreter.prototype.deleteProperty = function(obj, name) {
   name = name.toString();
-  if (obj.isPrimitive || obj.notWritable[name]) {
+  if (obj.isPrimitive || obj.notWritable.has(name)) {
     return false;
   }
   if (name == 'length' && this.isa(obj, this.ARRAY)) {
@@ -2334,7 +2340,7 @@ Interpreter.prototype.deleteProperty = function(obj, name) {
 
 /**
  * Returns the current scope from the stateStack.
- * @return {!Interpreter.Object} Current scope dictionary.
+ * @return {!Interpreter.Scope} Current scope dictionary.
  */
 Interpreter.prototype.getScope = function() {
   for (var i = this.stateStack.length - 1; i >= 0; i--) {
@@ -2349,12 +2355,11 @@ Interpreter.prototype.getScope = function() {
  * Create a new scope dictionary.
  * @param {!Object} node AST node defining the scope container
  *     (e.g. a function).
- * @param {Interpreter.Object} parentScope Scope to link to.
- * @return {!Interpreter.Object} New scope.
+ * @param {Interpreter.Scope} parentScope Scope to link to.
+ * @return {!Interpreter.Scope} New scope.
  */
 Interpreter.prototype.createScope = function(node, parentScope) {
-  var scope = this.createObject(null);
-  scope.parentScope = parentScope;
+  var scope = new Interpreter.Scope(parentScope);
   if (!parentScope) {
     this.initGlobalScope(scope);
   }
@@ -2364,19 +2369,18 @@ Interpreter.prototype.createScope = function(node, parentScope) {
 
 /**
  * Create a new special scope dictionary. Similar to createScope(), but
- * doesn't assume that the scope is for a function body. This is used for
- * the catch clause and with statement.
- * @param {!Interpreter.Object} parentScope Scope to link to.
- * @param {Interpreter.Object=} opt_scope Optional object to transform into
+ * doesn't assume that the scope is for a function body.
+ * This is used for catch clauses.
+ * @param {!Interpreter.Scope} parentScope Scope to link to.
+ * @param {Interpreter.Scope=} opt_scope Optional object to transform into
  *     scope.
- * @return {!Interpreter.Object} New scope.
+ * @return {!Interpreter.Scope} New scope.
  */
 Interpreter.prototype.createSpecialScope = function(parentScope, opt_scope) {
   if (!parentScope) {
     throw Error('parentScope required');
   }
-  var scope = opt_scope || this.createObject(null);
-  scope.parentScope = parentScope;
+  var scope = opt_scope || new Interpreter.Scope(parentScope);
   return scope;
 };
 
@@ -2389,15 +2393,11 @@ Interpreter.prototype.createSpecialScope = function(parentScope, opt_scope) {
 Interpreter.prototype.getValueFromScope = function(name) {
   var scope = this.getScope();
   var nameStr = name.toString();
-  while (scope && scope != this.global) {
+  while (scope) {
     if (nameStr in scope.properties) {
       return scope.properties[nameStr];
     }
     scope = scope.parentScope;
-  }
-  // The root scope is also an object which has inherited properties.
-  if (scope == this.global && this.hasProperty(scope, nameStr)) {
-    return this.getProperty(scope, nameStr);
   }
   // Typeof operator is unique: it can safely look at non-defined variables.
   var prevNode = this.stateStack[this.stateStack.length - 1].node;
@@ -2417,18 +2417,35 @@ Interpreter.prototype.getValueFromScope = function(name) {
 Interpreter.prototype.setValueToScope = function(name, value) {
   var scope = this.getScope();
   var nameStr = name.toString();
-  while (scope && scope != this.global) {
+  while (scope) {
     if (nameStr in scope.properties) {
+      if (scope.notWritable.has(nameStr)) {
+        this.throwException(this.TYPE_ERROR,
+                            'Assignment to constant variable: ' + nameStr);
+      }
       scope.properties[nameStr] = value;
       return undefined;
     }
     scope = scope.parentScope;
   }
-  // The root scope is also an object which has readonly properties.
-  if (scope == this.global && this.hasProperty(scope, nameStr)) {
-    this.setProperty(scope, nameStr, value);
-  } else {
-    this.throwException(this.REFERENCE_ERROR, nameStr + ' is not defined');
+  this.throwException(this.REFERENCE_ERROR, nameStr + ' is not defined');
+};
+
+/**
+ * Creates a variable in the given scope.
+ * @param {!Interpreter.Scope} scope Scope to write to.
+ * @param {!Interpreter.Object|!Interpreter.Primitive} name Name of variable.
+ * @param {!Interpreter.Object|!Interpreter.Primitive} value Initial value.
+ * @param {boolean?} opt_notWritable True if constant.  Defaults to false.
+ */
+Interpreter.prototype.addVariableToScope =
+    function(scope, name, value, opt_notWritable) {
+  var nameStr = name.toString();
+  if (!(nameStr in scope.properties)) {
+    scope.properties[nameStr] = value;
+  }
+  if (opt_notWritable) {
+    scope.notWritable.add(nameStr);
   }
 };
 
@@ -2441,12 +2458,12 @@ Interpreter.prototype.setValueToScope = function(name, value) {
 Interpreter.prototype.populateScope_ = function(node, scope) {
   if (node['type'] == 'VariableDeclaration') {
     for (var i = 0; i < node['declarations'].length; i++) {
-      this.setProperty(scope, node['declarations'][i]['id']['name'],
-                       this.UNDEFINED);
+      this.addVariableToScope(scope, node['declarations'][i]['id']['name'],
+                              this.UNDEFINED);
     }
   } else if (node['type'] == 'FunctionDeclaration') {
-    this.setProperty(scope, node['id']['name'],
-                     this.createFunction(node, scope));
+    this.addVariableToScope(scope, node['id']['name'],
+                            this.createFunction(node, scope));
     return;  // Do not recurse into function.
   } else if (node['type'] == 'FunctionExpression') {
     return;  // Do not recurse into function.
@@ -2891,15 +2908,14 @@ Interpreter.prototype['stepCallExpression'] = function() {
     state.doneExec_ = true;
     var funcNode = state.func_.node;
     if (funcNode) {
-      var scope =
-          this.createScope(funcNode['body'], state.func_.parentScope);
+      var scope = this.createScope(funcNode['body'], state.func_.parentScope);
       // Add all arguments.
       for (var i = 0; i < funcNode['params'].length; i++) {
         var paramName =
             this.createPrimitive(funcNode['params'][i]['name']);
         var paramValue = state.arguments_.length > i ? state.arguments_[i] :
             this.UNDEFINED;
-        this.setProperty(scope, paramName, paramValue);
+        this.addVariableToScope(scope, paramName, paramValue);
       }
       // Build arguments variable.
       var argsList = this.createObject(this.ARRAY);
@@ -2907,11 +2923,11 @@ Interpreter.prototype['stepCallExpression'] = function() {
         this.setProperty(argsList, this.createPrimitive(i),
                          state.arguments_[i]);
       }
-      this.setProperty(scope, 'arguments', argsList);
+      this.addVariableToScope(scope, 'arguments', argsList, true);
       // Add the function's name (var x = function foo(){};)
       var name = funcNode['id'] && funcNode['id']['name'];
       if (name) {
-        this.setProperty(scope, name, state.func_);
+        this.addVariableToScope(scope, name, state.func_, true);
       }
       var funcState = {
         node: funcNode['body'],
@@ -2983,7 +2999,7 @@ Interpreter.prototype['stepCatchClause'] = function() {
       scope = this.createSpecialScope(this.getScope());
       // Add the argument.
       var paramName = this.createPrimitive(node['param']['name']);
-      this.setProperty(scope, paramName, state.throwValue);
+      this.addVariableToScope(scope, paramName, state.throwValue);
     }
     stack.push({node: node['body'], scope: scope});
   } else {
@@ -3127,27 +3143,27 @@ Interpreter.prototype['stepForInStatement'] = function() {
     // First iteration.
     state.isLoop = true;
     state.object_ = state.value;
-    state.visited_ = [];
+    state.visited_ = new Set();
   }
   // Third, find the property name for this iteration.
   if (state.name_ === undefined) {
     done: do {
       if (state.object_.isPrimitive) {
         for (var prop in state.object_.data) {
-          if (state.visited_.indexOf(prop) == -1) {
-            state.visited_.push(prop);
+          if (state.visited_.has(prop)) {
+            state.visited_.add(prop);
             state.name_ = prop;
-            state.visited_.push(prop);
+            state.visited_.add(prop);
             break done;
           }
         }
       } else {
         for (var prop in state.object_.properties) {
-          if (state.visited_.indexOf(prop) == -1) {
-            state.visited_.push(prop);
-            if (!state.object_.notEnumerable[prop]) {
+          if (state.visited_.has(prop)) {
+            state.visited_.add(prop);
+            if (!state.object_.notEnumerable.has(prop)) {
               state.name_ = prop;
-              state.visited_.push(prop);
+              state.visited_.add(prop);
               break done;
             }
           }
@@ -3241,7 +3257,8 @@ Interpreter.prototype['stepIdentifier'] = function() {
   var state = stack.pop();
   var nameStr = state.node['name'];
   var name = this.createPrimitive(nameStr);
-  var value = state.components ? name : this.getValueFromScope(name);
+  var value = state.components ? name :
+      this.getValueFromScope(name);
   stack[stack.length - 1].value = value;
 };
 
@@ -3608,8 +3625,10 @@ Interpreter.prototype['stepVariableDeclaration'] = function() {
   var n = state.n_ || 0;
   var declarationNode = node['declarations'][n];
   if (state.value && declarationNode) {
-    this.setValue(this.createPrimitive(declarationNode['id']['name']),
-                  state.value);
+    // Note that this is setting the init value, not defining the variable.
+    // Variable definition (addVariableToScope) is done when scope is populated.
+    this.setValueToScope(
+        this.createPrimitive(declarationNode['id']['name']), state.value);
     state.value = null;
     declarationNode = node['declarations'][++n];
   }
@@ -3627,7 +3646,8 @@ Interpreter.prototype['stepVariableDeclaration'] = function() {
 };
 
 Interpreter.prototype['stepWithStatement'] = function() {
-  this.throwException(this.SYNTAX_ERROR, 'Strict mode code may not include a with statement');
+  this.throwException(this.SYNTAX_ERROR,
+                      'Strict mode code may not include a with statement');
 };
 
 Interpreter.prototype['stepWhileStatement'] =
