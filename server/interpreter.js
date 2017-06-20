@@ -2386,12 +2386,12 @@ Interpreter.prototype.createSpecialScope = function(parentScope, opt_scope) {
 
 /**
  * Retrieves a value from the scope chain.
- * @param {!Interpreter.Scope} scope Scope to start reading from.
  * @param {!Interpreter.Object|!Interpreter.Primitive} name Name of variable.
  * @return {!Interpreter.Object|!Interpreter.Primitive|null} The value
  *     or null if an error was thrown and will be caught.
  */
-Interpreter.prototype.getValueFromScope = function(scope, name) {
+Interpreter.prototype.getValueFromScope = function(name) {
+  var scope = this.getScope();
   var nameStr = name.toString();
   while (scope) {
     if (nameStr in scope.properties) {
@@ -2411,12 +2411,12 @@ Interpreter.prototype.getValueFromScope = function(scope, name) {
 
 /**
  * Sets a value to the current scope.
- * @param {!Interpreter.Scope} scope Scope to write to.
  * @param {!Interpreter.Object|!Interpreter.Primitive} name Name of variable.
  * @param {!Interpreter.Object|!Interpreter.Primitive} value Value.
  * @param {boolean?} opt_notWritable True if constant.  Defaults to false.
  */
-Interpreter.prototype.setValueToScope = function(scope, name, value) {
+Interpreter.prototype.setValueToScope = function(name, value) {
+  var scope = this.getScope();
   var nameStr = name.toString();
   while (scope) {
     if (nameStr in scope.properties) {
@@ -2541,7 +2541,7 @@ Interpreter.prototype.getValue = function(left) {
     var prop = left[1];
     return this.getProperty(obj, prop);
   } else {
-    return this.getValueFromScope(this.getScope(), left);
+    return this.getValueFromScope(left);
   }
 };
 
@@ -2557,7 +2557,7 @@ Interpreter.prototype.setValue = function(left, value) {
     var prop = left[1];
     this.setProperty(obj, prop, value);
   } else {
-    this.setValueToScope(this.getScope(), left, value);
+    this.setValueToScope(left, value);
   }
 };
 
@@ -3259,7 +3259,7 @@ Interpreter.prototype['stepIdentifier'] = function() {
   var nameStr = state.node['name'];
   var name = this.createPrimitive(nameStr);
   var value = state.components ? name :
-      this.getValueFromScope(this.getScope(), name);
+      this.getValueFromScope(name);
   stack[stack.length - 1].value = value;
 };
 
@@ -3628,7 +3628,7 @@ Interpreter.prototype['stepVariableDeclaration'] = function() {
   if (state.value && declarationNode) {
     // Note that this is setting the init value, not defining the variable.
     // Variable definition (addVariableToScope) is done when scope is populated.
-    this.setValueToScope(this.getScope(),
+    this.setValueToScope(
         this.createPrimitive(declarationNode['id']['name']), state.value);
     state.value = null;
     declarationNode = node['declarations'][++n];
