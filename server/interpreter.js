@@ -355,29 +355,13 @@ Interpreter.prototype.initFunction = function(scope) {
       this.FUNCTION, Interpreter.NONENUMERABLE_DESCRIPTOR);
   this.FUNCTION.nativeFunc = wrapper;
 
-  var boxThis = function(value) {
-    // In non-strict mode 'this' must be an object.
-    if (value.isPrimitive && !thisInterpreter.getScope().strict) {
-      if (value == thisInterpreter.UNDEFINED || value == thisInterpreter.NULL) {
-        // 'Undefined' and 'null' are changed to global object.
-        value = thisInterpreter.global;
-      } else {
-        // Primitives must be boxed in non-strict mode.
-        var box = thisInterpreter.createObject(value.properties['constructor']);
-        box.data = value.data;
-        value = box;
-      }
-    }
-    return value;
-  };
-
   wrapper = function(thisArg, args) {
     var state =
         thisInterpreter.stateStack[thisInterpreter.stateStack.length - 1];
     // Rewrite the current 'CallExpression' to apply a different function.
     state.func_ = this;
     // Assign the 'this' object.
-    state.funcThis_ = boxThis(thisArg);
+    state.funcThis_ = thisArg;
     // Bind any provided arguments.
     state.arguments_ = [];
     if (args) {
@@ -401,7 +385,7 @@ Interpreter.prototype.initFunction = function(scope) {
     // Rewrite the current 'CallExpression' to call a different function.
     state.func_ = this;
     // Assign the 'this' object.
-    state.funcThis_ = boxThis(thisArg);
+    state.funcThis_ = thisArg;
     // Bind any provided arguments.
     state.arguments_ = [];
     for (var i = 1; i < arguments.length; i++) {
@@ -2286,22 +2270,17 @@ Interpreter.prototype.setProperty = function(obj, name, value, opt_descriptor) {
     this.throwException(this.TYPE_ERROR, 'Invalid property descriptor. ' +
         'Cannot both specify accessors and a value or writable attribute');
   }
-  var strict = !this.stateStack || this.getScope().strict;
   if (obj.isPrimitive) {
-    if (strict) {
-      this.throwException(this.TYPE_ERROR, 'Can\'t create property \'' + name +
-                          '\' on \'' + obj.data + '\'');
-    }
+    this.throwException(this.TYPE_ERROR, 'Can\'t create property \'' + name +
+                        '\' on \'' + obj.data + '\'');
     return;
   }
   if (this.isa(obj, this.STRING)) {
     var n = this.arrayIndex(name);
     if (name == 'length' || (!isNaN(n) && n < obj.data.length)) {
       // Can't set length or letters on String objects.
-      if (strict) {
-        this.throwException(this.TYPE_ERROR, 'Cannot assign to read only ' +
-            'property \'' + name + '\' of String \'' + obj.data + '\'');
-      }
+      this.throwException(this.TYPE_ERROR, 'Cannot assign to read only ' +
+          'property \'' + name + '\' of String \'' + obj.data + '\'');
       return;
     }
   }
@@ -2330,10 +2309,8 @@ Interpreter.prototype.setProperty = function(obj, name, value, opt_descriptor) {
     }
   }
   if (!obj.properties[name] && obj.preventExtensions) {
-    if (strict) {
-      this.throwException(this.TYPE_ERROR, 'Can\'t add property ' + name +
-                          ', object is not extensible');
-    }
+    this.throwException(this.TYPE_ERROR, 'Can\'t add property ' + name +
+                        ', object is not extensible');
     return;
   }
   if (opt_descriptor) {
@@ -2381,17 +2358,15 @@ Interpreter.prototype.setProperty = function(obj, name, value, opt_descriptor) {
       }
     } while ((parent = parent.proto));
     if (obj.getter && obj.getter[name]) {
-      if (strict) {
-        this.throwException(this.TYPE_ERROR, 'Cannot set property \'' + name +
-            '\' of object \'' + obj + '\' which only has a getter');
-      }
+      this.throwException(this.TYPE_ERROR, 'Cannot set property \'' + name +
+          '\' of object \'' + obj + '\' which only has a getter');
     } else {
       // No setter, simple assignment.
-      if (!obj.notWritable[name]) {
-        obj.properties[name] = value;
-      } else if (strict) {
+      if (obj.notWritable[name]) {
         this.throwException(this.TYPE_ERROR, 'Cannot assign to read only ' +
             'property \'' + name + '\' of object \'' + obj + '\'');
+      } else {
+        obj.properties[name] = value;
       }
     }
   }
@@ -2455,19 +2430,6 @@ Interpreter.prototype.createScope = function(node, parentScope) {
     this.initGlobalScope(scope);
   }
   this.populateScope_(node, scope);
-
-  // Determine if this scope starts with 'use strict'.
-  scope.strict = false;
-  if (parentScope && parentScope.strict) {
-    scope.strict = true;
-  } else {
-    var firstNode = node['body'] && node['body'][0];
-    if (firstNode && firstNode.expression &&
-        firstNode.expression['type'] == 'Literal' &&
-        firstNode.expression.value == 'use strict') {
-      scope.strict = true;
-    }
-  }
   return scope;
 };
 
@@ -2486,7 +2448,6 @@ Interpreter.prototype.createSpecialScope = function(parentScope, opt_scope) {
   }
   var scope = opt_scope || this.createObject(null);
   scope.parentScope = parentScope;
-  scope.strict = parentScope.strict;
   return scope;
 };
 
@@ -2539,8 +2500,7 @@ Interpreter.prototype.setValueToScope = function(name, value) {
   }
   // The root scope is also an object which has readonly properties and
   // could also have setters.
-  if (scope == this.global &&
-      (!scope.strict || this.hasProperty(scope, nameStr))) {
+  if (scope == this.global && this.hasProperty(scope, nameStr)) {
     return this.setProperty(scope, nameStr, value);
   }
   this.throwException(this.REFERENCE_ERROR, nameStr + ' is not defined');
@@ -3062,9 +3022,8 @@ Interpreter.prototype['stepCallExpression'] = function() {
       // Method function, 'this' is object.
       state.funcThis_ = state.value[0];
     } else {
-      // Global function, 'this' is global object (or 'undefined' if strict).
-      state.funcThis_ = this.getScope().strict ?
-          this.UNDEFINED : this.global;
+      // Global function, 'this' is undefined.
+      state.funcThis_ = this.UNDEFINED;
     }
     state.arguments_ = [];
     state.n_ = 0;
@@ -3297,17 +3256,13 @@ Interpreter.prototype['stepForInStatement'] = function() {
   var stack = this.stateStack;
   var state = stack[stack.length - 1];
   var node = state.node;
-  // First, initialize a variable if exists.  Only do so once, ever.
+  // First, variable initialization is illegal in strict mode.
   if (!state.doneInit_) {
     state.doneInit_ = true;
     if (node['left']['declarations'] &&
         node['left']['declarations'][0]['init']) {
-      if (this.getScope().strict) {
-        throw SyntaxError(
-            'for-in loop variable declaration may not have an initializer.');
-      }
-      // Variable initialization: for (var x = 4 in y)
-      stack.push({node: node['left']});
+      throw SyntaxError(
+          'for-in loop variable declaration may not have an initializer.');
       return;
     }
   }
@@ -3789,7 +3744,7 @@ Interpreter.prototype['stepUnaryExpression'] = function() {
       var name = value;
     }
     value = this.deleteProperty(obj, name);
-    if (!value && this.getScope().strict) {
+    if (!value) {
       this.throwException(this.TYPE_ERROR, 'Cannot delete property \'' +
                           name + '\' of \'' + obj + '\'');
       return;
