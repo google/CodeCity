@@ -2413,7 +2413,6 @@ Interpreter.prototype.getValueFromScope = function(name) {
  * Sets a value to the current scope.
  * @param {!Interpreter.Object|!Interpreter.Primitive} name Name of variable.
  * @param {!Interpreter.Object|!Interpreter.Primitive} value Value.
- * @param {boolean?} opt_notWritable True if constant.  Defaults to false.
  */
 Interpreter.prototype.setValueToScope = function(name, value) {
   var scope = this.getScope();
@@ -3647,19 +3646,8 @@ Interpreter.prototype['stepVariableDeclaration'] = function() {
 };
 
 Interpreter.prototype['stepWithStatement'] = function() {
-  var stack = this.stateStack;
-  var state = stack[stack.length - 1];
-  var node = state.node;
-  if (!state.doneObject_) {
-    state.doneObject_ = true;
-    stack.push({node: node['object']});
-  } else if (!state.doneBody_) {
-    state.doneBody_ = true;
-    var scope = this.createSpecialScope(this.getScope(), state.value);
-    stack.push({node: node['body'], scope: scope});
-  } else {
-    stack.pop();
-  }
+  this.throwException(this.SYNTAX_ERROR,
+                      'Strict mode code may not include a with statement');
 };
 
 Interpreter.prototype['stepWhileStatement'] =
