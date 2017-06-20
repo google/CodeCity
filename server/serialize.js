@@ -62,7 +62,7 @@ function deserialize(json, interpreter) {
         }
         break;
       case 'Array':
-        obj = [];
+        obj = Array.from(jsonObj['data']);
         break;
       case 'Set':
         // Currently we assume that Sets do not contain objects.
@@ -95,20 +95,36 @@ function deserialize(json, interpreter) {
     objectList[i] = obj;
   }
   // Second pass: Populate properties for every object.
+  var ref;
   for (var i = 0; i < json.length; i++) {
+    var obj = objectList[i];
+    // Repopulate objects.
     var props = json[i]['props'];
     if (props) {
       var names = Object.getOwnPropertyNames(props);
       for (var j = 0; j < names.length; j++) {
         var name = names[j];
         var value = props[name];
-        if (value && typeof value == 'object' && 'ref' in value) {
-          value = objectList[value['ref']];
+        if (value && typeof value == 'object' && (ref = value['#'])) {
+          var value = objectList[ref];
           if (!value) {
-            throw 'Object reference not found: ' + value['ref'];
+            throw 'Object reference not found: ' + ref;
           }
         }
-        objectList[i][name] = value;
+        obj[name] = value;
+      }
+    }
+    // Repopulate arrays.
+    if (Array.isArray(obj)) {
+      for (var j = 0; j < obj.length; j++) {
+        var value = obj[j];
+        if (value && typeof value == 'object' && (ref = value['#'])) {
+          var value = objectList[ref];
+          if (!value) {
+            throw 'Object reference not found: ' + ref;
+          }
+        }
+        obj[j] = value;
       }
     }
   }
@@ -145,7 +161,20 @@ function serialize(interpreter) {
         continue;  // No need to index properties.
       case Array.prototype:
         jsonObj['type'] = 'Array';
-        break;
+        var data = Array.from(obj);
+        for (var j = 0; j < data.length; j++) {
+          var value = data[j];
+          if (value && (typeof value == 'object' ||
+                        typeof value == 'function')) {
+            var ref = objectList.indexOf(value);
+            if (ref == -1) {
+              throw 'Object not found in table.';
+            }
+            data[j] = {'#': ref};
+          }
+        }
+        jsonObj['data'] = data;
+        continue;  // No need to index properties.
       case Set.prototype:
         // Currently we assume that Sets do not contain objects.
         jsonObj['type'] = 'Set';
@@ -184,9 +213,13 @@ function serialize(interpreter) {
       var name = names[j];
       var value = obj[name];
       if (value && (typeof value == 'object' || typeof value == 'function')) {
-        props[name] = {'ref': objectList.indexOf(obj[name])};
+        var ref = objectList.indexOf(value)
+        if (ref == -1) {
+          throw 'Object not found in table.';
+        }
+        props[name] = {'#': ref};
       } else {
-        props[name] = obj[name];
+        props[name] = value;
       }
     }
     if (names.length) {
