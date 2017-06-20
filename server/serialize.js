@@ -1,6 +1,6 @@
 /**
  * @license
- * JavaScript Interpreter: serialization and deserialization
+ * Code City: serialization and deserialization for JavaScript Intepreter.
  *
  * Copyright 2017 Google Inc.
  *

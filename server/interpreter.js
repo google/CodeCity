@@ -1,6 +1,6 @@
 /**
  * @license
- * JavaScript Interpreter
+ * Code City: JavaScript Interpreter
  *
  * Copyright 2013 Google Inc.
  *
@@ -25,30 +25,24 @@
 
 /**
  * Create a new interpreter.
- * @param {string|!Object} code Raw JavaScript text or AST.
  * @param {Function=} opt_initFunc Optional initialization function.  Used to
  *     define APIs.  When called it is passed the interpreter object and the
  *     global scope object.
  * @constructor
  */
-var Interpreter = function(code, opt_initFunc) {
-  if (typeof code == 'string') {
-    code = acorn.parse(code, Interpreter.PARSE_OPTIONS);
-  }
-  this.ast = code;
+var Interpreter = function(opt_initFunc) {
   this.initFunc_ = opt_initFunc;
   this.paused_ = false;
-  this.polyfills_ = [];
   // Unique identifier for native functions.  Used in serialization.
   this.functionCounter_ = 0;
   // Map node types to our step function names; a property lookup is faster
   // than string concatenation with "step" prefix.
-  this.functionMap_ = Object.create(null);
+  this.functionMap_ = new Map();
   var stepMatch = /^step([A-Z]\w*)$/;
   var m;
   for (var methodName in this) {
     if (m = methodName.match(stepMatch)) {
-      this.functionMap_[m[1]] = this[methodName].bind(this);
+      this.functionMap_.set(m[1], this[methodName].bind(this));
     }
   }
   // Declare some mock constructors to get the environment bootstrapped.
@@ -62,47 +56,21 @@ var Interpreter = function(code, opt_initFunc) {
   this.NAN = new Interpreter.Primitive(NaN, this);
   this.TRUE = new Interpreter.Primitive(true, this);
   this.FALSE = new Interpreter.Primitive(false, this);
-  this.NUMBER_ZERO = new Interpreter.Primitive(0, this);
-  this.NUMBER_ONE = new Interpreter.Primitive(1, this);
-  this.STRING_EMPTY = new Interpreter.Primitive('', this);
   // Create and initialize the global scope.
-  this.global = this.createScope(this.ast, null);
+  this.global = this.createScope({}, null);
   // Fix the proto properties now that the global scope exists.
   //this.UNDEFINED.proto = undefined;
   //this.NULL.proto = undefined;
   this.NAN.proto = this.NUMBER.properties['prototype'];
   this.TRUE.proto = this.BOOLEAN.properties['prototype'];
   this.FALSE.proto = this.BOOLEAN.properties['prototype'];
-  this.NUMBER_ZERO.proto = this.NUMBER.properties['prototype'];
-  this.NUMBER_ONE.proto = this.NUMBER.properties['prototype'];
-  this.STRING_EMPTY.proto = this.STRING.properties['prototype'];
-  // Run the polyfills.
-  this.ast = acorn.parse(this.polyfills_.join('\n'), Interpreter.PARSE_OPTIONS);
-  this.polyfills_ = undefined;  // Allow polyfill strings to garbage collect.
-  this.stripLocations_(this.ast, undefined, undefined);
-  this.stateStack = [{
-    node: this.ast,
-    scope: this.global,
-    thisExpression: this.global,
-    done: false
-  }];
-  this.run();
   this.value = this.UNDEFINED;
-  // Point at the main program.
-  this.ast = code;
   this.stateStack = [{
-    node: this.ast,
+    node: acorn.parse('', Interpreter.PARSE_OPTIONS),
     scope: this.global,
-    thisExpression: this.global,
+    thisExpression: this.UNDEFINED,
     done: false
   }];
-  // Preserve publicly properties from being pruned/renamed by JS compilers.
-  // Add others as needed.
-  this['UNDEFINED'] = this.UNDEFINED;
-  this['NULL'] = this.NULL;
-  this['NAN'] = this.NAN;
-  this['TRUE'] = this.TRUE;
-  this['FALSE'] = this.FALSE;
 };
 
 /**
@@ -161,7 +129,7 @@ Interpreter.prototype.appendCode = function(code) {
   }
   this.populateScope_(code, state.scope);
   // Append the new program to the old one.
-  for (var i = 0, node; node = code['body'][i]; i++) {
+  for (var i = 0, node; (node = code['body'][i]); i++) {
     state.node['body'].push(node);
   }
   state.done = false;
@@ -183,11 +151,7 @@ Interpreter.prototype.step = function() {
   } else if (this.paused_) {
     return true;
   }
-  this.functionMap_[type]();
-  if (!node['end']) {
-    // This is polyfill code.  Keep executing until we arrive at user code.
-    return this.step();
-  }
+  this.functionMap_.get(type)();
   return true;
 };
 
@@ -254,7 +218,7 @@ Interpreter.prototype.initGlobalScope = function(scope) {
 
   var func = this.createObject(this.FUNCTION);
   func.eval = true;
-  this.setProperty(func, 'length', this.NUMBER_ONE,
+  this.setProperty(func, 'length', this.createPrimitive(1),
                    Interpreter.READONLY_DESCRIPTOR);
   this.addVariableToScope(scope, 'eval', func);
 
@@ -390,32 +354,6 @@ Interpreter.prototype.initFunction = function(scope) {
   };
   this.setNativeFunctionPrototype(this.FUNCTION, 'call', wrapper);
 
-  this.polyfills_.push(
-// Polyfill copied from:
-// https://developer.mozilla.org/en/docs/Web/JavaScript/Reference/Global_objects/Function/bind
-"Object.defineProperty(Function.prototype, 'bind', {configurable: true, value:",
-  "function(oThis) {",
-    "if (typeof this !== 'function') {",
-      "throw new TypeError('Function.prototype.bind - what is trying to be bound is not callable');",
-    "}",
-    "var aArgs   = Array.prototype.slice.call(arguments, 1),",
-        "fToBind = this,",
-        "fNOP    = function() {},",
-        "fBound  = function() {",
-          "return fToBind.apply(this instanceof fNOP",
-                 "? this",
-                 ": oThis,",
-                 "aArgs.concat(Array.prototype.slice.call(arguments)));",
-        "};",
-    "if (this.prototype) {",
-      "fNOP.prototype = this.prototype;",
-    "}",
-    "fBound.prototype = new fNOP();",
-    "return fBound;",
-  "}",
-"});",
-"");
-
   // Function has no parent to inherit from, so it needs its own mandatory
   // toString and valueOf functions.
   wrapper = function() {
@@ -511,20 +449,6 @@ Interpreter.prototype.initObject = function(scope) {
       this.createNativeFunction(wrapper, false),
       Interpreter.NONENUMERABLE_DESCRIPTOR);
 
-  // Add a polyfill to handle create's second argument.
-  this.polyfills_.push(
-  "(function() {",
-    "var create_ = Object.create;",
-    "Object.defineProperty(Object, 'create', {configurable: true, value:",
-      "function(proto, props) {",
-        "var obj = create_(proto);",
-        "props && Object.defineProperties(obj, props);",
-        "return obj;",
-      "}",
-    "});",
-  "})();",
-  "");
-
   wrapper = function(obj, prop, descriptor) {
     prop = (prop || thisInterpreter.UNDEFINED).toString();
     if (!(descriptor instanceof Interpreter.Object)) {
@@ -562,18 +486,6 @@ Interpreter.prototype.initObject = function(scope) {
   this.setProperty(this.OBJECT, 'defineProperty',
       this.createNativeFunction(wrapper, false),
       Interpreter.NONENUMERABLE_DESCRIPTOR);
-
-  this.polyfills_.push(
-"Object.defineProperty(Object, 'defineProperties', {configurable: true, value:",
-  "function(obj, props) {",
-    "var keys = Object.keys(props);",
-    "for (var i = 0; i < keys.length; i++) {",
-      "Object.defineProperty(obj, keys[i], props[keys[i]]);",
-    "}",
-    "return obj;",
-  "}",
-"});",
-"");
 
   wrapper = function(obj, prop) {
     prop = (prop || thisInterpreter.UNDEFINED).toString();
@@ -930,171 +842,6 @@ Interpreter.prototype.initArray = function(scope) {
     return thisInterpreter.createPrimitive(-1);
   };
   this.setNativeFunctionPrototype(this.ARRAY, 'lastIndexOf', wrapper);
-
-  this.polyfills_.push(
-// Polyfill copied from:
-// developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/every
-"Object.defineProperty(Array.prototype, 'every', {configurable: true, value:",
-  "function(callbackfn, thisArg) {",
-    "if (this == null || typeof callbackfn !== 'function') throw new TypeError;",
-    "var T, k;",
-    "var O = Object(this);",
-    "var len = O.length >>> 0;",
-    "if (arguments.length > 1) T = thisArg;",
-    "k = 0;",
-    "while (k < len) {",
-      "if (k in O && !callbackfn.call(T, O[k], k, O)) return false;",
-      "k++;",
-    "}",
-    "return true;",
-  "}",
-"});",
-
-// Polyfill copied from:
-// developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/filter
-"Object.defineProperty(Array.prototype, 'filter', {configurable: true, value:",
-  "function(fun/*, thisArg*/) {",
-    "if (this === void 0 || this === null || typeof fun !== 'function') throw new TypeError;",
-    "var t = Object(this);",
-    "var len = t.length >>> 0;",
-    "var res = [];",
-    "var thisArg = arguments.length >= 2 ? arguments[1] : void 0;",
-    "for (var i = 0; i < len; i++) {",
-      "if (i in t) {",
-        "var val = t[i];",
-        "if (fun.call(thisArg, val, i, t)) res.push(val);",
-      "}",
-    "}",
-    "return res;",
-  "}",
-"});",
-
-// Polyfill copied from:
-// developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/forEach
-"Object.defineProperty(Array.prototype, 'forEach', {configurable: true, value:",
-  "function(callback, thisArg) {",
-    "if (this == null || typeof callback !== 'function') throw new TypeError;",
-    "var T, k;",
-    "var O = Object(this);",
-    "var len = O.length >>> 0;",
-    "if (arguments.length > 1) T = thisArg;",
-    "k = 0;",
-    "while (k < len) {",
-      "if (k in O) callback.call(T, O[k], k, O);",
-      "k++;",
-    "}",
-  "}",
-"});",
-
-// Polyfill copied from:
-// developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/map
-"Object.defineProperty(Array.prototype, 'map', {configurable: true, value:",
-  "function(callback, thisArg) {",
-    "if (this == null || typeof callback !== 'function') new TypeError;",
-    "var T, A, k;",
-    "var O = Object(this);",
-    "var len = O.length >>> 0;",
-    "if (arguments.length > 1) T = thisArg;",
-    "A = new Array(len);",
-    "k = 0;",
-    "while (k < len) {",
-      "if (k in O) A[k] = callback.call(T, O[k], k, O);",
-      "k++;",
-    "}",
-    "return A;",
-  "}",
-"});",
-
-// Polyfill copied from:
-// developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/Reduce
-"Object.defineProperty(Array.prototype, 'reduce', {configurable: true, value:",
-  "function(callback /*, initialValue*/) {",
-    "if (this == null || typeof callback !== 'function') throw new TypeError;",
-    "var t = Object(this), len = t.length >>> 0, k = 0, value;",
-    "if (arguments.length == 2) {",
-      "value = arguments[1];",
-    "} else {",
-      "while (k < len && !(k in t)) k++;",
-      "if (k >= len) {",
-        "throw new TypeError('Reduce of empty array with no initial value');",
-      "}",
-      "value = t[k++];",
-    "}",
-    "for (; k < len; k++) {",
-      "if (k in t) value = callback(value, t[k], k, t);",
-    "}",
-    "return value;",
-  "}",
-"});",
-
-// Polyfill copied from:
-// developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/ReduceRight
-"Object.defineProperty(Array.prototype, 'reduceRight', {configurable: true, value:",
-  "function(callback /*, initialValue*/) {",
-    "if (null === this || 'undefined' === typeof this || 'function' !== typeof callback) throw new TypeError;",
-    "var t = Object(this), len = t.length >>> 0, k = len - 1, value;",
-    "if (arguments.length >= 2) {",
-      "value = arguments[1];",
-    "} else {",
-      "while (k >= 0 && !(k in t)) k--;",
-      "if (k < 0) {",
-        "throw new TypeError('Reduce of empty array with no initial value');",
-      "}",
-      "value = t[k--];",
-    "}",
-    "for (; k >= 0; k--) {",
-      "if (k in t) value = callback(value, t[k], k, t);",
-    "}",
-    "return value;",
-  "}",
-"});",
-
-// Polyfill copied from:
-// developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/some
-"Object.defineProperty(Array.prototype, 'some', {configurable: true, value:",
-  "function(fun/*, thisArg*/) {",
-    "if (this == null || typeof fun !== 'function') throw new TypeError;",
-    "var t = Object(this);",
-    "var len = t.length >>> 0;",
-    "var thisArg = arguments.length >= 2 ? arguments[1] : void 0;",
-    "for (var i = 0; i < len; i++) {",
-      "if (i in t && fun.call(thisArg, t[i], i, t)) {",
-        "return true;",
-      "}",
-    "}",
-    "return false;",
-  "}",
-"});",
-
-"Object.defineProperty(Array.prototype, 'sort', {configurable: true, value:",
-  "function(opt_comp) {",
-    "for (var i = 0; i < this.length; i++) {",
-      "var changes = 0;",
-      "for (var j = 0; j < this.length - i - 1; j++) {",
-        "if (opt_comp ?" +
-            "opt_comp(this[j], this[j + 1]) > 0 : this[j] > this[j + 1]) {",
-          "var swap = this[j];",
-          "this[j] = this[j + 1];",
-          "this[j + 1] = swap;",
-          "changes++;",
-        "}",
-      "}",
-      "if (changes <= 1) break;",
-    "}",
-    "return this;",
-  "}",
-"});",
-
-"Object.defineProperty(Array.prototype, 'toLocaleString', {configurable: true, value:",
-  "function() {",
-    "var out = [];",
-    "for (var i = 0; i < this.length; i++) {",
-      "out[i] = (this[i] === null || this[i] === undefined) ? '' : this[i].toLocaleString();",
-    "}",
-    "return out.join(',');",
-  "}",
-"});",
-"");
 };
 
 /**
@@ -1597,7 +1344,7 @@ Interpreter.prototype.initError = function(scope) {
   }, true);
   this.addVariableToScope(scope, 'Error', this.ERROR);
   this.setProperty(this.ERROR.properties['prototype'], 'message',
-      this.STRING_EMPTY, Interpreter.NONENUMERABLE_DESCRIPTOR);
+      this.createPrimitive(''), Interpreter.NONENUMERABLE_DESCRIPTOR);
   this.setProperty(this.ERROR.properties['prototype'], 'name',
       this.createPrimitive('Error'), Interpreter.NONENUMERABLE_DESCRIPTOR);
 
@@ -1802,12 +1549,6 @@ Interpreter.prototype.createPrimitive = function(data) {
     return this.TRUE;
   } else if (data === false) {
     return this.FALSE;
-  } else if (data === 0) {
-    return this.NUMBER_ZERO;
-  } else if (data === 1) {
-    return this.NUMBER_ONE;
-  } else if (data === '') {
-    return this.STRING_EMPTY;
   } else if (data instanceof RegExp) {
     return this.populateRegExp_(this.createObject(this.REGEXP), data);
   }
@@ -3652,21 +3393,3 @@ Interpreter.prototype['stepWithStatement'] = function() {
 
 Interpreter.prototype['stepWhileStatement'] =
     Interpreter.prototype['stepDoWhileStatement'];
-
-// Preserve top-level API functions from being pruned/renamed by JS compilers.
-// Add others as needed.
-// The global object ('window' in a browser, 'global' in node.js) is 'this'.
-this['Interpreter'] = Interpreter;
-Interpreter.prototype['step'] = Interpreter.prototype.step;
-Interpreter.prototype['run'] = Interpreter.prototype.run;
-Interpreter.prototype['appendCode'] = Interpreter.prototype.appendCode;
-Interpreter.prototype['createPrimitive'] =
-    Interpreter.prototype.createPrimitive;
-Interpreter.prototype['createAsyncFunction'] =
-    Interpreter.prototype.createAsyncFunction;
-Interpreter.prototype['createNativeFunction'] =
-    Interpreter.prototype.createNativeFunction;
-Interpreter.prototype['getProperty'] = Interpreter.prototype.getProperty;
-Interpreter.prototype['setProperty'] = Interpreter.prototype.setProperty;
-Interpreter.prototype['nativeToPseudo'] = Interpreter.prototype.nativeToPseudo;
-Interpreter.prototype['pseudoToNative'] = Interpreter.prototype.pseudoToNative;
