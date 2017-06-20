@@ -589,23 +589,16 @@ Interpreter.prototype.initObject = function(scope) {
     var configurable = !obj.notConfigurable[prop];
     var enumerable = !obj.notEnumerable[prop];
     var writable = !obj.notWritable[prop];
-    var getter = obj.getter[prop];
-    var setter = obj.setter[prop];
 
     var descriptor = thisInterpreter.createObject(thisInterpreter.OBJECT);
     thisInterpreter.setProperty(descriptor, 'configurable',
         thisInterpreter.createPrimitive(configurable));
     thisInterpreter.setProperty(descriptor, 'enumerable',
         thisInterpreter.createPrimitive(enumerable));
-    if (getter || setter) {
-      thisInterpreter.setProperty(descriptor, 'getter', getter);
-      thisInterpreter.setProperty(descriptor, 'setter', setter);
-    } else {
-      thisInterpreter.setProperty(descriptor, 'writable',
-          thisInterpreter.createPrimitive(writable));
-      thisInterpreter.setProperty(descriptor, 'value',
-          thisInterpreter.getProperty(obj, prop));
-    }
+    thisInterpreter.setProperty(descriptor, 'writable',
+        thisInterpreter.createPrimitive(writable));
+    thisInterpreter.setProperty(descriptor, 'value',
+        thisInterpreter.getProperty(obj, prop));
     return descriptor;
   };
   this.setProperty(this.OBJECT, 'getOwnPropertyDescriptor',
@@ -1825,8 +1818,6 @@ Interpreter.Object = function(proto) {
   this.notConfigurable = Object.create(null);
   this.notEnumerable = Object.create(null);
   this.notWritable = Object.create(null);
-  this.getter = Object.create(null);
-  this.setter = Object.create(null);
   this.properties = Object.create(null);
   this.proto = proto;
 };
@@ -1896,7 +1887,6 @@ Interpreter.Object.prototype.toString = function() {
       return '[Error]';
     }
     var name, message;
-    // Bug: Does not support getters and setters for name or message.
     var obj = this;
     do {
       if ('name' in obj.properties) {
@@ -2183,13 +2173,6 @@ Interpreter.prototype.getProperty = function(obj, name) {
   }
   do {
     if (obj.properties && name in obj.properties) {
-      var getter = obj.getter[name];
-      if (getter) {
-        // Flag this function as being a getter and thus needing immediate
-        // execution (rather than being the value of the property).
-        getter.isGetter = true;
-        return getter;
-      }
       return obj.properties[name];
     }
   } while ((obj = obj.proto));
@@ -2229,11 +2212,8 @@ Interpreter.prototype.hasProperty = function(obj, name) {
  * Set a property value on a data object.
  * @param {!Interpreter.Object} obj Data object.
  * @param {*} name Name of property.
- * @param {Interpreter.Object|Interpreter.Primitive} value
- *     New property value or null if getter/setter is described.
+ * @param {Interpreter.Object|Interpreter.Primitive} value New property value.
  * @param {Object=} opt_descriptor Optional descriptor object.
- * @return {!Interpreter.Object|undefined} Returns a setter function if one
- *     needs to be called, otherwise undefined.
  */
 Interpreter.prototype.setProperty = function(obj, name, value, opt_descriptor) {
   name = name.toString();
@@ -2301,56 +2281,23 @@ Interpreter.prototype.setProperty = function(obj, name, value, opt_descriptor) {
     if (!opt_descriptor.configurable) {
       obj.notConfigurable[name] = true;
     }
-    var getter = opt_descriptor.get;
-    if (getter) {
-      obj.getter[name] = getter;
-    } else {
-      delete obj.getter[name];
-    }
-    var setter = opt_descriptor.set;
-    if (setter) {
-      obj.setter[name] = setter;
-    } else {
-      delete obj.setter[name];
-    }
     var enumerable = opt_descriptor.enumerable || false;
     if (enumerable) {
       delete obj.notEnumerable[name];
     } else {
       obj.notEnumerable[name] = true;
     }
-    if (getter || setter) {
+    var writable = opt_descriptor.writable || false;
+    if (writable) {
       delete obj.notWritable[name];
-      obj.properties[name] = this.UNDEFINED;
     } else {
-      var writable = opt_descriptor.writable || false;
-      if (writable) {
-        delete obj.notWritable[name];
-      } else {
-        obj.notWritable[name] = true;
-      }
+      obj.notWritable[name] = true;
     }
+  } else if (obj.notWritable[name]) {
+    this.throwException(this.TYPE_ERROR, 'Cannot assign to read only ' +
+        'property \'' + name + '\' of object \'' + obj + '\'');
   } else {
-    // Set the property.
-    // Determine if there is a setter anywhere in the parent chain.
-    var parent = obj;
-    do {
-      if (parent.setter && parent.setter[name]) {
-        return parent.setter[name];
-      }
-    } while ((parent = parent.proto));
-    if (obj.getter && obj.getter[name]) {
-      this.throwException(this.TYPE_ERROR, 'Cannot set property \'' + name +
-          '\' of object \'' + obj + '\' which only has a getter');
-    } else {
-      // No setter, simple assignment.
-      if (obj.notWritable[name]) {
-        this.throwException(this.TYPE_ERROR, 'Cannot assign to read only ' +
-            'property \'' + name + '\' of object \'' + obj + '\'');
-      } else {
-        obj.properties[name] = value;
-      }
-    }
+    obj.properties[name] = value;
   }
 };
 
@@ -2448,8 +2395,7 @@ Interpreter.prototype.getValueFromScope = function(name) {
     }
     scope = scope.parentScope;
   }
-  // The root scope is also an object which has inherited properties and
-  // could also have getters.
+  // The root scope is also an object which has inherited properties.
   if (scope == this.global && this.hasProperty(scope, nameStr)) {
     return this.getProperty(scope, nameStr);
   }
@@ -2467,8 +2413,6 @@ Interpreter.prototype.getValueFromScope = function(name) {
  * Sets a value to the current scope.
  * @param {!Interpreter.Object|!Interpreter.Primitive} name Name of variable.
  * @param {!Interpreter.Object|!Interpreter.Primitive} value Value.
- * @return {!Interpreter.Object|undefined} Returns a setter function if one
- *     needs to be called, otherwise undefined.
  */
 Interpreter.prototype.setValueToScope = function(name, value) {
   var scope = this.getScope();
@@ -2480,12 +2424,12 @@ Interpreter.prototype.setValueToScope = function(name, value) {
     }
     scope = scope.parentScope;
   }
-  // The root scope is also an object which has readonly properties and
-  // could also have setters.
+  // The root scope is also an object which has readonly properties.
   if (scope == this.global && this.hasProperty(scope, nameStr)) {
-    return this.setProperty(scope, nameStr, value);
+    this.setProperty(scope, nameStr, value);
+  } else {
+    this.throwException(this.REFERENCE_ERROR, nameStr + ' is not defined');
   }
-  this.throwException(this.REFERENCE_ERROR, nameStr + ' is not defined');
 };
 
 /**
@@ -2588,16 +2532,14 @@ Interpreter.prototype.getValue = function(left) {
  * @param {!Interpreter.Object|!Interpreter.Primitive|!Array} left
  *     Name of variable or object/propname tuple.
  * @param {!Interpreter.Object|!Interpreter.Primitive} value Value.
- * @return {!Interpreter.Object|undefined} Returns a setter function if one
- *     needs to be called, otherwise undefined.
  */
 Interpreter.prototype.setValue = function(left, value) {
   if (left instanceof Array) {
     var obj = left[0];
     var prop = left[1];
-    return this.setProperty(obj, prop, value);
+    this.setProperty(obj, prop, value);
   } else {
-    return this.setValueToScope(left, value);
+    this.setValueToScope(left, value);
   }
 };
 
@@ -2659,49 +2601,6 @@ Interpreter.prototype.executeException = function(error) {
   throw realError;
 };
 
-/**
- * Push a call to a getter onto the statestack.
- * @param {!Interpreter.Object} func Function to execute.
- * @param {!Interpreter.Object|!Array} left
- *     Name of variable or object/propname tuple.
- * @private
- */
-Interpreter.prototype.pushGetter_ = function(func, left) {
-  // Normally 'this' will be specified as the object component (o.x).
-  // Sometimes 'this' is explicitly provided (o).
-  var funcThis = (left instanceof Array) ? left[0] : left;
-  this.stateStack.push({
-    node: {type: 'CallExpression'},
-    doneCallee_: true,
-    funcThis_: funcThis,
-    func_: func,
-    doneArgs_: true,
-    arguments_: []
-  });
-};
-
-/**
- * Push a call to a setter onto the statestack.
- * @param {!Interpreter.Object} func Function to execute.
- * @param {!Interpreter.Object|!Array} left
- *     Name of variable or object/propname tuple.
- * @param {!Interpreter.Object|Interpreter.Primitive} value Value to set.
- * @private
- */
-Interpreter.prototype.pushSetter_ = function(func, left, value) {
-  // Normally 'this' will be specified as the object component (o.x).
-  // Sometimes 'this' is implicitly the global object (x).
-  var funcThis = (left instanceof Array) ? left[0] : this.global;
-  this.stateStack.push({
-    node: {type: 'CallExpression'},
-    doneCallee_: true,
-    funcThis_: funcThis,
-    func_: func,
-    doneArgs_: true,
-    arguments_: [value]
-  });
-};
-
 ///////////////////////////////////////////////////////////////////////////////
 // Functions to handle each node type.
 ///////////////////////////////////////////////////////////////////////////////
@@ -2745,30 +2644,11 @@ Interpreter.prototype['stepAssignmentExpression'] = function() {
     if (!state.leftSide_) {
       state.leftSide_ = state.value;
     }
-    if (state.doneGetter_) {
-      state.leftValue_ = state.value;
-    }
-    if (!state.doneGetter_ && node['operator'] != '=') {
+    if (node['operator'] != '=') {
       state.leftValue_ = this.getValue(state.leftSide_);
-      if (state.leftValue_.isGetter) {
-        // Clear the getter flag and call the getter function.
-        state.leftValue_.isGetter = false;
-        state.doneGetter_ = true;
-        var func = /** @type {!Interpreter.Object} */ (state.leftValue_);
-        this.pushGetter_(func, state.leftSide_);
-        return;
-      }
     }
     state.doneRight_ = true;
     stack.push({node: node['right']});
-    return;
-  }
-  if (state.doneSetter_) {
-    // Return if setter function.
-    // Setter method on property has completed.
-    // Ignore its return value, and use the original set value instead.
-    stack.pop();
-    stack[stack.length - 1].value = state.doneSetter_;
     return;
   }
   var rightSide = state.value;
@@ -2814,13 +2694,7 @@ Interpreter.prototype['stepAssignmentExpression'] = function() {
     }
     value = this.createPrimitive(value);
   }
-  var setter = this.setValue(state.leftSide_, value);
-  if (setter) {
-    state.doneSetter_ = value;
-    this.pushSetter_(setter, state.leftSide_, value);
-    return;
-  }
-  // Return if no setter function.
+  this.setValue(state.leftSide_, value);
   stack.pop();
   stack[stack.length - 1].value = value;
 };
@@ -2974,14 +2848,6 @@ Interpreter.prototype['stepCallExpression'] = function() {
       state.func_ = state.value;
     } else {
       state.func_ = this.getValue(state.value);
-      if (state.func_.isGetter) {
-        // Clear the getter flag and call the getter function.
-        state.func_.isGetter = false;
-        this.pushGetter_(/** @type {!Interpreter.Object} */ (state.func_),
-                         state.value);
-        state.func_ = null;
-        return;
-      }
       if (!state.func_) {
         return;  // Thrown error, but trapped.
       } else if (state.func_.type != 'function') {
@@ -3313,15 +3179,8 @@ Interpreter.prototype['stepForInStatement'] = function() {
     state.variable_ = state.value;
   }
   // Fifth, set the variable.
-  if (!state.doneSetter_) {
-    state.doneSetter_ = true;
-    var value = this.createPrimitive(state.name_);
-    var setter = this.setValue(state.variable_, value);
-    if (setter) {
-      this.pushSetter_(setter, state.variable_, value);
-      return;
-    }
-  }
+  var value = this.createPrimitive(state.name_);
+  this.setValue(state.variable_, value);
   // Sixth, execute the body.
   if (node['body']) {
     stack.push({node: node['body']});
@@ -3331,7 +3190,6 @@ Interpreter.prototype['stepForInStatement'] = function() {
   if (state.variable_ instanceof Array) {
     state.doneVariable_ = false;
   }
-  state.doneSetter_ = false;
 };
 
 Interpreter.prototype['stepForStatement'] = function() {
@@ -3384,19 +3242,7 @@ Interpreter.prototype['stepIdentifier'] = function() {
   var nameStr = state.node['name'];
   var name = this.createPrimitive(nameStr);
   var value = state.components ? name : this.getValueFromScope(name);
-  // An identifier could be a getter if it's a property on the global object.
-  if (value && value.isGetter) {
-    // Clear the getter flag and call the getter function.
-    value.isGetter = false;
-    var scope = this.getScope();
-    while (!this.hasProperty(scope, nameStr)) {
-      scope = scope.parentScope;
-    }
-    var func = /** @type {!Interpreter.Object} */ (value);
-    this.pushGetter_(func, this.global);
-  } else {
-    stack[stack.length - 1].value = value;
-  }
+  stack[stack.length - 1].value = value;
 };
 
 Interpreter.prototype['stepIfStatement'] =
@@ -3468,14 +3314,7 @@ Interpreter.prototype['stepMemberExpression'] = function() {
             state.object_.toString());
         return;
       }
-      if (value.isGetter) {
-        // Clear the getter flag and call the getter function.
-        value.isGetter = false;
-        var func = /** @type {!Interpreter.Object} */ (value);
-        this.pushGetter_(func, state.object_);
-      } else {
-        stack[stack.length - 1].value = value;
-      }
+      stack[stack.length - 1].value = value;
     }
   }
 };
@@ -3497,7 +3336,7 @@ Interpreter.prototype['stepObjectExpression'] = function() {
       state.key_ = state.value;
     } else {
       if (!state.properties[state.key_]) {
-        // Create temp object to collect value, getter, and/or setter.
+        // Create temp object to collect value.
         state.properties[state.key_] = {};
       }
       state.properties[state.key_][state.kind_] = state.value;
@@ -3515,19 +3354,8 @@ Interpreter.prototype['stepObjectExpression'] = function() {
   } else {
     for (var key in state.properties) {
       var kinds = state.properties[key];
-      if ('get' in kinds || 'set' in kinds) {
-        // Set a property with a getter or setter.
-        var descriptor = {
-          configurable: true,
-          enumerable: true,
-          get: kinds['get'],
-          set: kinds['set']
-        };
-        this.setProperty(state.object, key, null, descriptor);
-      } else {
-        // Set a normal property with a value.
-        this.setProperty(state.object, key, kinds['init']);
-      }
+      // Set a normal property with a value.
+      this.setProperty(state.object, key, kinds['init']);
     }
     stack.pop();
     stack[stack.length - 1].value = state.object;
@@ -3753,30 +3581,9 @@ Interpreter.prototype['stepUpdateExpression'] = function() {
   if (!state.leftSide_) {
     state.leftSide_ = state.value;
   }
-  if (state.doneGetter_) {
-    state.leftValue_ = state.value;
-  }
-  if (!state.doneGetter_) {
-    state.leftValue_ = this.getValue(state.leftSide_);
-    if (!state.leftValue_) {
-      return;  // Thrown error, but trapped.
-    }
-    if (state.leftValue_.isGetter) {
-      // Clear the getter flag and call the getter function.
-      state.leftValue_.isGetter = false;
-      state.doneGetter_ = true;
-      var func = /** @type {!Interpreter.Object} */ (state.leftValue_);
-      this.pushGetter_(func, state.leftSide_);
-      return;
-    }
-  }
-  if (state.doneSetter_) {
-    // Return if setter function.
-    // Setter method on property has completed.
-    // Ignore its return value, and use the original set value instead.
-    stack.pop();
-    stack[stack.length - 1].value = state.doneSetter_;
-    return;
+  state.leftValue_ = this.getValue(state.leftSide_);
+  if (!state.leftValue_) {
+    return;  // Thrown error, but trapped.
   }
   var leftValue = state.leftValue_.toNumber();
   var changeValue;
@@ -3789,13 +3596,7 @@ Interpreter.prototype['stepUpdateExpression'] = function() {
   }
   var returnValue = node['prefix'] ? changeValue :
       this.createPrimitive(leftValue);
-  var setter = this.setValue(state.leftSide_, changeValue);
-  if (setter) {
-    state.doneSetter_ = returnValue;
-    this.pushSetter_(setter, state.leftSide_, changeValue);
-    return;
-  }
-  // Return if no setter function.
+  this.setValue(state.leftSide_, changeValue);
   stack.pop();
   stack[stack.length - 1].value = returnValue;
 };
@@ -3807,7 +3608,6 @@ Interpreter.prototype['stepVariableDeclaration'] = function() {
   var n = state.n_ || 0;
   var declarationNode = node['declarations'][n];
   if (state.value && declarationNode) {
-    // This setValue call never needs to deal with calling a setter function.
     this.setValue(this.createPrimitive(declarationNode['id']['name']),
                   state.value);
     state.value = null;
