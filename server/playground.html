@@ -31,7 +31,14 @@
 
     function serializeButton() {
       var json = serialize(myInterpreter);
-      document.getElementById('serializeTextarea').value = JSON.stringify(json);
+      // JSON.stringify(json) would work, but adding linebreaks so that every
+      // object is on its own line makes the output more readable.
+      var text = [];
+      for (var i = 0; i < json.length; i++) {
+        text.push(JSON.stringify(json[i]));
+      }
+      text = '[' + text.join(',\n') + ']';
+      document.getElementById('serializeTextarea').value = text;
     }
 
     function deserializeButton() {

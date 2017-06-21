@@ -49,7 +49,7 @@ function deserialize(json, interpreter) {
     var jsonObj = json[i];
     var obj;
     switch (jsonObj['type']) {
-      case 'None':
+      case 'Map':
         obj = Object.create(null);
         break;
       case 'Object':
@@ -147,7 +147,7 @@ function serialize(interpreter) {
     var obj = objectList[i];
     switch (Object.getPrototypeOf(obj)) {
       case null:
-        jsonObj['type'] = 'None';
+        jsonObj['type'] = 'Map';
         break;
       case Object.prototype:
         jsonObj['type'] = 'Object';
