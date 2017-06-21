@@ -35,12 +35,13 @@ var Interpreter = function() {
   this.functionCounter_ = 0;
   // Map node types to our step function names; a property lookup is faster
   // than string concatenation with "step" prefix.
-  this.functionMap_ = new Map();
+  // Note that a Map is much slower than a null-parent object (v8 in 2017).
+  this.functionMap_ = Object.create(null);
   var stepMatch = /^step([A-Z]\w*)$/;
   var m;
   for (var methodName in this) {
-    if (m = methodName.match(stepMatch)) {
-      this.functionMap_.set(m[1], this[methodName].bind(this));
+    if ((m = methodName.match(stepMatch))) {
+      this.functionMap_[m[1]] = this[methodName].bind(this);
     }
   }
   // Declare some mock constructors to get the environment bootstrapped.
@@ -149,7 +150,7 @@ Interpreter.prototype.step = function() {
   } else if (this.paused_) {
     return true;
   }
-  this.functionMap_.get(type)();
+  this.functionMap_[type]();
   return true;
 };
 
@@ -2550,11 +2551,11 @@ Interpreter.prototype['stepBinaryExpression'] = function() {
 Interpreter.prototype['stepBlockStatement'] = function() {
   var stack = this.stateStack;
   var state = stack[stack.length - 1];
-  var node = state.node;
+  var body = state.node['body'];
   var n = state.n_ || 0;
-  if (node['body'][n]) {
+  if (body[n]) {
     state.n_ = n + 1;
-    stack.push({node: node['body'][n]});
+    stack.push({node: body[n]});
   } else {
     stack.pop();
   }
@@ -2990,8 +2991,7 @@ Interpreter.prototype['stepIdentifier'] = function() {
   var state = stack.pop();
   var nameStr = state.node['name'];
   var name = this.createPrimitive(nameStr);
-  var value = state.components ? name :
-      this.getValueFromScope(name);
+  var value = state.components ? name : this.getValueFromScope(name);
   stack[stack.length - 1].value = value;
 };
 
