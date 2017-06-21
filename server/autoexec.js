@@ -23,7 +23,7 @@
  */
 'use strict';
 
-var autoexec = `
+module.exports = `
 
 // Polyfill copied from:
 // developer.mozilla.org/en/docs/Web/JavaScript/Reference/Global_objects/Function/bind
@@ -240,4 +240,7 @@ Object.defineProperty(Array.prototype, 'toLocaleString',
   }
 });
 
+// Must eval to undefined so subsequent evals will give undefined if
+// they have no completion value.
+undefined;
 `;

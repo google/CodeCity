@@ -23,8 +23,7 @@
  * @author cpcallen@google.com (Christopher Allen)
  */
 
-// This file is input for (and required by) gentests.js.
-exports.tests = [
+module.exports = [
   // Testcases for TestInterpreterSimple (have expected value):
   { name: 'onePlusOne', src: `
     1 + 1;
@@ -798,10 +797,6 @@ exports.tests = [
   /******************************************************************/
   // Other tests (without expected value):
 
-  // FIXME: remove this
-  { name: 'emptyProg', src: '',
-  },
-  
   { name: 'objectExpression', src: `
     ({foo: "bar", answer: 42})
     `,
