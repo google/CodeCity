@@ -26,11 +26,11 @@
 var autoexec = `
 
 // Polyfill copied from:
-// https://developer.mozilla.org/en/docs/Web/JavaScript/Reference/Global_objects/Function/bind
+// developer.mozilla.org/en/docs/Web/JavaScript/Reference/Global_objects/Function/bind
 Object.defineProperty(Function.prototype, 'bind', {configurable: true, value:
   function(oThis) {
     if (typeof this !== 'function') {
-      throw new TypeError('Function.prototype.bind - what is trying to be bound is not callable');
+      throw new TypeError('What is trying to be bound is not callable');
     }
     var aArgs   = Array.prototype.slice.call(arguments, 1),
         fToBind = this,
@@ -93,7 +93,9 @@ Object.defineProperty(Array.prototype, 'every', {configurable: true, value:
 // developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/filter
 Object.defineProperty(Array.prototype, 'filter', {configurable: true, value:
   function(fun/*, thisArg*/) {
-    if (this === void 0 || this === null || typeof fun !== 'function') throw new TypeError;
+    if (this === void 0 || this === null || typeof fun !== 'function') {
+      throw new TypeError;
+    }
     var t = Object(this);
     var len = t.length >>> 0;
     var res = [];
@@ -168,9 +170,11 @@ Object.defineProperty(Array.prototype, 'reduce', {configurable: true, value:
 
 // Polyfill copied from:
 // developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/ReduceRight
-Object.defineProperty(Array.prototype, 'reduceRight', {configurable: true, value:
+Object.defineProperty(Array.prototype, 'reduceRight',
+    {configurable: true, value:
   function(callback /*, initialValue*/) {
-    if (null === this || 'undefined' === typeof this || 'function' !== typeof callback) throw new TypeError;
+    if (null === this || 'undefined' === typeof this ||
+        'function' !== typeof callback) throw new TypeError;
     var t = Object(this), len = t.length >>> 0, k = len - 1, value;
     if (arguments.length >= 2) {
       value = arguments[1];
@@ -210,7 +214,8 @@ Object.defineProperty(Array.prototype, 'sort', {configurable: true, value:
     for (var i = 0; i < this.length; i++) {
       var changes = 0;
       for (var j = 0; j < this.length - i - 1; j++) {
-        if (opt_comp ? + opt_comp(this[j], this[j + 1]) > 0 : this[j] > this[j + 1]) {
+        if (opt_comp ? + opt_comp(this[j], this[j + 1]) > 0 :
+                       this[j] > this[j + 1]) {
           var swap = this[j];
           this[j] = this[j + 1];
           this[j + 1] = swap;
@@ -223,11 +228,13 @@ Object.defineProperty(Array.prototype, 'sort', {configurable: true, value:
   }
 });
 
-Object.defineProperty(Array.prototype, 'toLocaleString', {configurable: true, value:
+Object.defineProperty(Array.prototype, 'toLocaleString',
+    {configurable: true, value:
   function() {
     var out = [];
     for (var i = 0; i < this.length; i++) {
-      out[i] = (this[i] === null || this[i] === undefined) ? '' : this[i].toLocaleString();
+      out[i] = (this[i] === null || this[i] === undefined) ?
+          '' : this[i].toLocaleString();
     }
     return out.join(',');
   }
