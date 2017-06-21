@@ -24,6 +24,24 @@
 'use strict';
 
 function deserialize(json, interpreter) {
+  function decodeValue(value) {
+    if (value && typeof value == 'object') {
+      var data;
+      if ((data = value['#'])) {
+       // Object reference: {'#': 42}
+       value = objectList[data];
+        if (!value) {
+          throw 'Object reference not found: ' + data;
+        }
+        return value;
+      }
+      if ((data = value['Number'])) {
+        // Special number: {'Number': 'Infinity'}
+        return Number(data);
+      }
+    }
+    return value;
+  }
   var stack = interpreter.stateStack;
   if (!Array.isArray(json)) {
     throw 'Top-level JSON is not a list.';
@@ -62,11 +80,11 @@ function deserialize(json, interpreter) {
         }
         break;
       case 'Array':
-        obj = Array.from(jsonObj['data']);
+        // Currently we assume that Arrays are not sparse.
+        obj = [];
         break;
       case 'Set':
-        // Currently we assume that Sets do not contain objects.
-        obj = new Set(jsonObj['data']);
+        obj = new Set();
         break;
       case 'Date':
         obj = new Date(jsonObj['data']);
@@ -84,7 +102,9 @@ function deserialize(json, interpreter) {
         obj = new Interpreter.Object(null);
         break;
       case 'PseudoPrimitive':
-        obj = interpreter.createPrimitive(jsonObj['data']);
+        // decodeValue is needed here for -0, NaN, Infinity, -Infinity.
+        // It is guaranteed not to have an object reference.
+        obj = interpreter.createPrimitive(decodeValue(jsonObj['data']));
         break;
       case 'Node':
         obj = Object.create(nodeProto);
@@ -95,36 +115,34 @@ function deserialize(json, interpreter) {
     objectList[i] = obj;
   }
   // Second pass: Populate properties for every object.
-  var ref;
   for (var i = 0; i < json.length; i++) {
+    var jsonObj = json[i];
     var obj = objectList[i];
     // Repopulate objects.
-    var props = json[i]['props'];
+    var props = jsonObj['props'];
     if (props) {
       var names = Object.getOwnPropertyNames(props);
       for (var j = 0; j < names.length; j++) {
         var name = names[j];
-        var value = props[name];
-        if (value && typeof value == 'object' && (ref = value['#'])) {
-          var value = objectList[ref];
-          if (!value) {
-            throw 'Object reference not found: ' + ref;
-          }
-        }
-        obj[name] = value;
+        obj[name] = decodeValue(props[name]);
       }
     }
     // Repopulate arrays.
     if (Array.isArray(obj)) {
-      for (var j = 0; j < obj.length; j++) {
-        var value = obj[j];
-        if (value && typeof value == 'object' && (ref = value['#'])) {
-          var value = objectList[ref];
-          if (!value) {
-            throw 'Object reference not found: ' + ref;
-          }
+      var data = jsonObj['data'];
+      if (data) {
+        for (var j = 0; j < data.length; j++) {
+          obj.push(decodeValue(data[j]));
         }
-        obj[j] = value;
+      }
+    }
+    // Repopulate sets.
+    if (obj instanceof Set) {
+      var data = jsonObj['data'];
+      if (data) {
+        for (var j = 0; j < data.length; j++) {
+          obj.add(decodeValue(data[j]));
+        }
       }
     }
   }
@@ -133,6 +151,27 @@ function deserialize(json, interpreter) {
 }
 
 function serialize(interpreter) {
+  function encodeValue(value) {
+    if (value && (typeof value == 'object' || typeof value == 'function')) {
+      var ref = objectList.indexOf(value);
+      if (ref == -1) {
+        throw 'Object not found in table.';
+      }
+      return {'#': ref};
+    }
+    if (typeof value == 'number') {
+      if (value == Infinity) {
+        return {'Number': 'Infinity'};
+      } else if (value == -Infinity) {
+        return {'Number': '-Infinity'};
+      } else if (isNaN(value)) {
+        return {'Number': 'NaN'};
+      } else if (1 / value == -Infinity) {
+        return {'Number': '-0'};
+      }
+    }
+    return value;
+  }
   var stack = interpreter.stateStack;
   // Find all objects.
   var objectList = [];
@@ -160,26 +199,16 @@ function serialize(interpreter) {
         }
         continue;  // No need to index properties.
       case Array.prototype:
+        // Currently we assume that Arrays are not sparse.
         jsonObj['type'] = 'Array';
-        var data = Array.from(obj);
-        for (var j = 0; j < data.length; j++) {
-          var value = data[j];
-          if (value && (typeof value == 'object' ||
-                        typeof value == 'function')) {
-            var ref = objectList.indexOf(value);
-            if (ref == -1) {
-              throw 'Object not found in table.';
-            }
-            data[j] = {'#': ref};
-          }
+        if (obj.length) {
+          jsonObj['data'] = obj.map(encodeValue);
         }
-        jsonObj['data'] = data;
         continue;  // No need to index properties.
       case Set.prototype:
-        // Currently we assume that Sets do not contain objects.
         jsonObj['type'] = 'Set';
         if (obj.size) {
-          jsonObj['data'] = Array.from(obj.values());
+          jsonObj['data'] = Array.from(obj.values()).map(encodeValue);
         }
         continue;  // No need to index properties.
       case Date.prototype:
@@ -199,7 +228,7 @@ function serialize(interpreter) {
         break;
       case Interpreter.Primitive.prototype:
         jsonObj['type'] = 'PseudoPrimitive';
-        jsonObj['data'] = obj.data;
+        jsonObj['data'] = encodeValue(obj.data);
         continue;  // No need to index properties.
       case nodeProto:
         jsonObj['type'] = 'Node';
@@ -211,16 +240,7 @@ function serialize(interpreter) {
     var names = Object.getOwnPropertyNames(obj);
     for (var j = 0; j < names.length; j++) {
       var name = names[j];
-      var value = obj[name];
-      if (value && (typeof value == 'object' || typeof value == 'function')) {
-        var ref = objectList.indexOf(value)
-        if (ref == -1) {
-          throw 'Object not found in table.';
-        }
-        props[name] = {'#': ref};
-      } else {
-        props[name] = value;
-      }
+      props[name] = encodeValue(obj[name]);
     }
     if (names.length) {
       jsonObj['props'] = props;
