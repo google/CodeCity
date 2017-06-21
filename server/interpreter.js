@@ -25,13 +25,9 @@
 
 /**
  * Create a new interpreter.
- * @param {Function=} opt_initFunc Optional initialization function.  Used to
- *     define APIs.  When called it is passed the interpreter object and the
- *     global scope object.
  * @constructor
  */
-var Interpreter = function(opt_initFunc) {
-  this.initFunc_ = opt_initFunc;
+var Interpreter = function() {
   this.paused_ = false;
   // Unique identifier for native functions.  Used in serialization.
   this.functionCounter_ = 0;
@@ -243,11 +239,6 @@ Interpreter.prototype.initGlobalScope = function(scope) {
     this.addVariableToScope(scope, strFunctions[i][1],
         this.createNativeFunction(wrapper, false));
   }
-
-  // Run any user-provided initialization.
-  if (this.initFunc_) {
-    this.initFunc_(this, scope);
-  }
 };
 
 /**
@@ -393,10 +384,9 @@ Interpreter.prototype.initObject = function(scope) {
       }
     }
     if (value.isPrimitive) {
-      // Wrap the value as an object.
-      var obj = thisInterpreter.createObject(value.properties['constructor']);
-      obj.data = value.data;
-      return obj;
+      // No boxed primitives in Code City.
+      thisInterpreter.throwException(thisInterpreter.TYPE_ERROR,
+          'Boxing of primitives not supported.');
     }
     // Return the provided object.
     return value;

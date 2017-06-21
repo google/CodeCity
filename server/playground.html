@@ -9,17 +9,13 @@
   <script src="autoexec.js"></script>
   <script>
     var myInterpreter;
-    function initAlert(interpreter, scope) {
-      var wrapper = function(text) {
-        text = text ? text.toString() : '';
-        return interpreter.createPrimitive(alert(text));
-      };
-      interpreter.setProperty(scope, 'alert',
-          interpreter.createNativeFunction(wrapper));
-    }
-
     function parseButton() {
-      myInterpreter = new Interpreter(initAlert);
+      myInterpreter = new Interpreter();
+      var wrapper = function(text) {
+        return myInterpreter.createPrimitive(alert(text));
+      };
+      myInterpreter.addVariableToScope(myInterpreter.global, 'alert',
+          myInterpreter.createNativeFunction(wrapper));
 
       myInterpreter.appendCode(autoexec);
       myInterpreter.run();
