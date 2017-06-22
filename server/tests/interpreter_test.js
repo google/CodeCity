@@ -6,12 +6,11 @@ var testcases = require('./testcases');
 
 /**
  * Run a test of the interpreter.
- *
  * @param {string} name The name of the test.
  * @param {string} src The code to be evaled.
- * @param {(number|string|boolean|null|undefined)} expected The
+ * @param {number|string|boolean|null|undefined} expected The
  *     expected completion value.
- * @return {bool} True iff the test passed.
+ * @return {boolean} True iff the test passed.
  */
 function runTest(name, src, expected) {
   var interpreter = new Interpreter();
@@ -42,7 +41,6 @@ function runTest(name, src, expected) {
 
 /**
  * Print a 'test skipped' message.
- *
  * @param {string} name The name of the test.
  * @param {string} src The code to be evaled.
  * @param {(number|string|boolean|null|undefined)} expected The
@@ -54,7 +52,6 @@ function skipTest(name) {
 
 /**
  * Run the simple tests in testcases.js
- *
  * @return True if all tests passed.
  */
 exports.testSimple = function() {
@@ -63,14 +60,14 @@ exports.testSimple = function() {
     var tc = testcases[i];
     if ('expected' in tc) {
       if (!runTest(tc.name, tc.src, tc.expected)) {
-	allOk = false;
+        allOk = false;
       }
     } else {
       skipTest(tc.name);
     }
   }
   return allOk;
-}
+};
 
 /**
  * Run some tests of switch statement with fallthrough.
@@ -78,22 +75,22 @@ exports.testSimple = function() {
 exports.testSwitchStatementFallthrough = function() {
   var code = `
       var x = 0;
-      switch(i) {
-      case 1:
-	x += 1;
-	// fall through
-      case 2:
-	x += 2;
-	// fall through
-      default:
-	x += 16;
-	// fall through
-      case 3:
-	x += 4;
-	// fall through
-      case 4:
-	x += 8;
-	// fall through
+      switch (i) {
+        case 1:
+          x += 1;
+          // fall through
+        case 2:
+          x += 2;
+          // fall through
+        default:
+          x += 16;
+          // fall through
+        case 3:
+          x += 4;
+          // fall through
+        case 4:
+          x += 8;
+          // fall through
       }
       x;`;
   var expected = [28, 31, 30, 12, 8];
@@ -109,21 +106,21 @@ exports.testSwitchStatementFallthrough = function() {
 exports.testSwitchStatementBreaks = function() {
   var code = `
       foo: {
-        switch(i) {
-        case 1:
-          10;
-          // fall through
-        case 2:
-          20;
-          break;
-        default:
-          50;
-          // fall through
-        case 3:
-          30;
-          break foo;
-        case 4:
-          40;
+        switch (i) {
+          case 1:
+            10;
+            // fall through
+          case 2:
+            20;
+            break;
+          default:
+            50;
+            // fall through
+          case 3:
+            30;
+            break foo;
+          case 4:
+            40;
         }
       }`;
   var expected = [30, 20, 20, 30, 40];
@@ -131,7 +128,7 @@ exports.testSwitchStatementBreaks = function() {
     var src = 'var i = ' + i + ';\n' + code;
     runTest('switch completion ' + i, src, expected[i]);
   }
-}
+};
 
 /**
  * Run some tests of the Abstract Relational Comparison Algorithm, as
@@ -187,8 +184,7 @@ exports.testArca = function() {
         })(${tc[0]});`;
     runTest('ARCA: ' + tc[0], src, tc[1]);
   }
-  
-}
+};
 
 /**
  * Run some tests of the Abstract Equality Comparison Algorithm and
@@ -276,4 +272,4 @@ exports.testAeca = function() {
     src = `(function(a,b){ return a === b })(${tc[0]});`;
     runTest('ASECA: ' + tc[0], src, tc[2]);
   }
-}
+};
