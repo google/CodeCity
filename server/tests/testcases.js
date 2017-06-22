@@ -797,59 +797,6 @@ module.exports = [
   /******************************************************************/
   // Other tests (without expected value):
 
-  { name: 'objectExpression', src: `
-    ({foo: "bar", answer: 42})
-    `,
-    // expected: {foo: "bar", answer: 42}
-  },
-
-  { name: 'switchStatement', src: `
-    var n;
-    var x = 0;
-    switch(n) {
-    case 1:
-      x += 1
-      // fall through
-    case 2:
-      x += 2
-      // fall through
-    default:
-      x += 16
-      // fall through
-    case 3:
-      x += 4
-      // fall through
-    case 4:
-      x += 8
-      // fall through
-    }
-    x;
-    `,
-  },
-
-  { name: 'switchStatementWithBreaks', src: `
-    var n;
-    foo: {
-      switch(n) {
-      case 1:
-	10;
-        // fall through
-      case 2:
-        20;
-        break;
-      default:
-        50;
-        // fall through
-      case 3:
-        30;
-        break foo;
-      case 4:
-        40;
-      }
-    }
-    `,
-  },
-
   { name: 'newHack', src: `
     typeof new "Array.prototype.push"
     `,
