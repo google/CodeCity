@@ -1,29 +1,29 @@
 'use strict';
 
-let Interpreter = require('../');
-let autoexec = require('../autoexec');
-let testcases = require('./testcases');
+var Interpreter = require('../');
+var autoexec = require('../autoexec');
+var testcases = require('./testcases');
 
-for (let i = 0; i < testcases.length; i++) {
-  let tc = testcases[i];
+for (var i = 0; i < testcases.length; i++) {
+  var tc = testcases[i];
 
   if (!('expected' in tc)) {
     console.log('SKIP\t%s', tc.name);
     continue;
   }
   
-  let interpreter = new Interpreter()
+  var interpreter = new Interpreter()
   interpreter.appendCode(autoexec);
   interpreter.run();
 
-  let err;
+  var err = undefined;
   try {
     interpreter.appendCode(tc.src);
     interpreter.run();
   } catch (e) {
     err = e
   }
-  let r = interpreter.pseudoToNative(interpreter.value);
+  var r = interpreter.pseudoToNative(interpreter.value);
 
   if (err) {
     console.error('FAILED\t%s\n\n%s\n', tc.name, tc.src.trim());
