@@ -29,7 +29,7 @@ var acorn;
  * Create a new interpreter.
  * @constructor
  */
-var Interpreter = function () {
+var Interpreter = function() {
   this.paused_ = false;
   // Unique identifier for native functions.  Used in serialization.
   this.functionCounter_ = 0;
