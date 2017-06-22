@@ -1,6 +1,6 @@
 'use strict';
 
-var Interpreter = require('../interpreter');
+var Interpreter = require('../');
 var autoexec = require('../autoexec');
 var testcases = require('./testcases');
 

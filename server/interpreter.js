@@ -23,13 +23,13 @@
  */
 'use strict';
 
-var acorn = require("../third_party/acorn/acorn");
+var acorn;
 
 /**
  * Create a new interpreter.
  * @constructor
  */
-function Interpreter() {
+var Interpreter = function () {
   this.paused_ = false;
   // Unique identifier for native functions.  Used in serialization.
   this.functionCounter_ = 0;
@@ -3386,4 +3386,7 @@ Interpreter.prototype['stepWithStatement'] = function() {
 Interpreter.prototype['stepWhileStatement'] =
     Interpreter.prototype['stepDoWhileStatement'];
 
-module.exports = Interpreter;
+if (typeof module !== 'undefined') { // Node.js
+  acorn = require('../third_party/acorn/acorn');
+  module.exports = Interpreter;
+}
