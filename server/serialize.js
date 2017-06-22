@@ -23,6 +23,8 @@
  */
 'use strict';
 
+var Interpreter;
+
 function deserialize(json, interpreter) {
   function decodeValue(value) {
     if (value && typeof value == 'object') {
@@ -261,4 +263,10 @@ function objectHunt_(node, objectList) {
       objectHunt_(node[names[i]], objectList);
     }
   }
+}
+
+if (typeof module !== 'undefined') { // Node.js
+  Interpreter = require('./interpreter.js');
+  exports.deserialize = deserialize;
+  exports.serialize = serialize;
 }
