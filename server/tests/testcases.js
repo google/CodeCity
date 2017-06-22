@@ -52,32 +52,32 @@ module.exports = [
     expected: 43 },
 
   { name: 'condTrue', src: `
-    true ? "then" : "else";
+    true ? 'then' : 'else';
     `,
-    expected: "then" },
+    expected: 'then' },
 
   { name: 'condFalse', src: `
-    false ? "then" : "else";
+    false ? 'then' : 'else';
     `,
-    expected: "else" },
+    expected: 'else' },
 
   { name: 'ifTrue', src: `
     if (true) {
-      "then";
+      'then';
     } else {
-      "else";
+      'else';
     }
     `,
-    expected: "then" },
+    expected: 'then' },
 
   { name: 'ifFalse', src: `
     if (false) {
-      "then";
+      'then';
     } else {
-      "else";
+      'else';
     }
     `,
-    expected: "else" },
+    expected: 'else' },
 
   { name: 'simpleAssignment', src: `
     var x = 0;
@@ -108,9 +108,9 @@ module.exports = [
     expected: 47 },
 
   { name: 'concat', src: `
-    "foo" + "bar";
+    'foo' + 'bar';
     `,
-    expected: "foobar" },
+    expected: 'foobar' },
 
   { name: 'plusequalsLeft', src: `
     var x = 40, y = 8;
@@ -285,7 +285,7 @@ module.exports = [
     expected: 62 },
 
   { name: 'orTrue', src: `
-    63 || "foo";
+    63 || 'foo';
     `,
     expected: 63 },
 
@@ -321,7 +321,7 @@ module.exports = [
     expected: 67 },
 
   { name: 'forInMemberExp', src: `
-    var x = 1, o = {foo: "bar"}, a = {a:2, b:2, c:17};
+    var x = 1, o = {foo: 'bar'}, a = {a:2, b:2, c:17};
     for (o.foo in a) { x *= a[o.foo]; }
     x;
     `,
@@ -384,7 +384,7 @@ module.exports = [
     expected: 71 },
 
   { name: 'unaryPlus', src: `
-    +"72";
+    +'72';
     `,
     expected: 72 },
 
@@ -405,14 +405,14 @@ module.exports = [
 
   { name: 'unaryTypeof', src: `
     var tests = [
-      [undefined, "undefined"],
-      [null, "object"],
-      [false, "boolean"],
-      [0, "number"],
-      ["", "string"],
-      [{}, "object"],
-      [[], "object"],
-      [function() {}, "function"],
+      [undefined, 'undefined'],
+      [null, 'object'],
+      [false, 'boolean'],
+      [0, 'number'],
+      ['', 'string'],
+      [{}, 'object'],
+      [[], 'object'],
+      [function() {}, 'function'],
     ];
     var ok = 0;
     for (var i = 0; i < tests.length; i++) {
@@ -420,36 +420,36 @@ module.exports = [
         ok++;
       }
     }
-    ok === tests.length ? "pass" : "fail";
+    ok === tests.length ? 'pass' : 'fail';
     `,
-    expected: "pass" },
+    expected: 'pass' },
 
   { name: 'unaryTypeofUndeclared', src: `
     try {
       typeof undeclaredVar;
     } catch(e) {
-      "whoops!"
+      'whoops!'
     }
     `,
-    expected: "undefined" },
+    expected: 'undefined' },
 
   { name: 'binaryIn', src: `
-    var o = {foo: "bar"};
-    "foo" in o && !("bar" in o);
+    var o = {foo: 'bar'};
+    'foo' in o && !('bar' in o);
     `,
     expected: true },
 
   { name: 'strictBoxedThis', src: `
-    "use strict";
+    'use strict';
     Object.prototype.foo = function() { return typeof this; };
-    "foo".foo();
+    'foo'.foo();
     `,
-    expected: "string" },
+    expected: 'string' },
 
   { name: 'deleteProp', src: `
-    var o = {foo: "bar"};
-    (delete o.quux) + ("foo" in o) + (delete o.foo) + 
-        !("foo" in o) + (delete o.foo);
+    var o = {foo: 'bar'};
+    (delete o.quux) + ('foo' in o) + (delete o.foo) + 
+        !('foo' in o) + (delete o.foo);
     `,
     expected: 5 },
 
@@ -461,7 +461,7 @@ module.exports = [
       e.name;
     }
     `,
-    expected: "SyntaxError" },
+    expected: 'SyntaxError' },
 
   { name: 'deleteUndeclaredIdentifier', src: `
     try { 
@@ -470,7 +470,7 @@ module.exports = [
       e.name;
     }
     `,
-    expected: "SyntaxError" },
+    expected: 'SyntaxError' },
 
   { name: 'funcDecl', src: `
     var v;
@@ -497,7 +497,7 @@ module.exports = [
     var f = function foo() {};
     typeof foo;
     `,
-    expected: "undefined" },
+    expected: 'undefined' },
 
   { name: 'namedFunExpSameSame', src: `
     var f = function foo() {
@@ -524,7 +524,7 @@ module.exports = [
       key;
     }
     `,
-    expected: "[object Object]" },
+    expected: '[object Object]' },
 
   { name: 'internalFunctionToString', src: `
     var o = {};
@@ -533,7 +533,7 @@ module.exports = [
       key;
     }
     `,
-    expected: "[object Function]" },
+    expected: '[object Function]' },
 
   { name: 'internalNativeFuncToString', src: `
     var o = {};
@@ -542,7 +542,7 @@ module.exports = [
       key;
     }
     `,
-    expected: "[object Function]" },
+    expected: '[object Function]' },
 
   // FIXME: enable once arguments implemented:
   // { name: 'internalArgumentsToString', src: `
@@ -554,7 +554,7 @@ module.exports = [
   //     key;
   //   }
   //   `,
-  //   expected: "[object Arguments]" },
+  //   expected: '[object Arguments]' },
 
   { name: 'unimplementedASTNode', src: `
     try {
@@ -563,16 +563,16 @@ module.exports = [
       e.name;
     }
     `,
-    expected: "SyntaxError" },
+    expected: 'SyntaxError' },
     
   { name: 'newHackNotAvailable', src: `
     try { 
-      new "foo";
+      new 'foo';
     } catch (e) {
       e.name;
     }
     `,
-    expected: "SyntaxError" },
+    expected: 'SyntaxError' },
 
   { name: 'ObjectDefinePropertyNoArgs', src: `
     try {
@@ -581,37 +581,37 @@ module.exports = [
       e.name;
     }
     `,
-    expected: "TypeError" },
+    expected: 'TypeError' },
 
   { name: 'ObjectDefinePropertyNonObject', src: `
     try {
-      Object.defineProperty("not an object", "foo", {});
+      Object.defineProperty('not an object', 'foo', {});
     } catch (e) {
       e.name;
     }
     `,
-    expected: "TypeError" },
+    expected: 'TypeError' },
 
   { name: 'ObjectDefinePropertyBadDescriptor', src: `
     var o = {};
     try {
-      Object.defineProperty(o, "foo", "not an object");
+      Object.defineProperty(o, 'foo', 'not an object');
     } catch (e) {
       e.name;
     }
     `,
-    expected: "TypeError" },
+    expected: 'TypeError' },
 
   // This also tests iteration over (non-)enumerable properties.
   { name: 'ObjectDefineProperty', src: `
     var o = { foo: 70 }, r = 0;
-    Object.defineProperty(o, "bar", {
+    Object.defineProperty(o, 'bar', {
       writeable: true,
       enumerable: true,
       configurable: true,
       value: 8,
     });
-    Object.defineProperty(o, "baz", {
+    Object.defineProperty(o, 'baz', {
       value: 13,
     });
     for (var k in o) {
@@ -635,7 +635,7 @@ module.exports = [
       e.name;
     }
     `,
-    expected: "TypeError" },
+    expected: 'TypeError' },
 
   { name: 'ObjectCreateNonObject', src: `
     try {
@@ -644,7 +644,7 @@ module.exports = [
       e.name;
     }
     `,
-    expected: "TypeError" },
+    expected: 'TypeError' },
 
   { name: 'ObjectCreateNull', src: `
     var o = Object.create(null);
@@ -666,27 +666,27 @@ module.exports = [
       e.name;
     }
     `,
-    expected: "TypeError" },
+    expected: 'TypeError' },
 
   { name: 'ObjectGetOwnPropertyDescriptorNonObject', src: `
     try {
-      Object.getOwnPropertyDescriptor("not an object", "foo");
+      Object.getOwnPropertyDescriptor('not an object', 'foo');
     } catch (e) {
       e.name;
     }
     `,
-    expected: "TypeError" },
+    expected: 'TypeError' },
 
   { name: 'ObjectGetOwnPropertyDescriptorBadKey', src: `
     var o = {};
-    Object.getOwnPropertyDescriptor(o, "foo");
+    Object.getOwnPropertyDescriptor(o, 'foo');
     `,
     expected: undefined },
 
   { name: 'ObjectGetOwnPropertyDescriptor', src: `
     var o = {}, r = 0;
-    Object.defineProperty(o, "foo", { value: "bar" });
-    var desc = Object.getOwnPropertyDescriptor(o, "foo");
+    Object.defineProperty(o, 'foo', { value: 'bar' });
+    var desc = Object.getOwnPropertyDescriptor(o, 'foo');
     desc.value == o.foo && 
         !desc.writeable && !desc.enumerable && !desc.configurable;
     `,
@@ -699,20 +699,20 @@ module.exports = [
       e.name;
     }
     `,
-    expected: "TypeError" },
+    expected: 'TypeError' },
 
   { name: 'ObjectGetOwnPropertyNamesNonObject', src: `
     try {
-      Object.getOwnPropertyNames("not an object");
+      Object.getOwnPropertyNames('not an object');
     } catch (e) {
       e.name;
     }
     `,
-    expected: "TypeError" },
+    expected: 'TypeError' },
 
   { name: 'ObjectGetOwnPropertyNames', src: `
     var o = { foo: 42 }, r = 0;
-    Object.defineProperty(o, "bar", { value: 38 });
+    Object.defineProperty(o, 'bar', { value: 38 });
     var keys = Object.getOwnPropertyNames(o);
     var r = 0;
     for (var i = 0; i < keys.length; i++) {
@@ -729,20 +729,20 @@ module.exports = [
       e.name;
     }
     `,
-    expected: "TypeError" },
+    expected: 'TypeError' },
 
   { name: 'ObjectDefinePropertiesNonObject', src: `
     try {
-      Object.defineProperties("not an object", {});
+      Object.defineProperties('not an object', {});
     } catch (e) {
       e.name;
     }
     `,
-    expected: "TypeError" },
+    expected: 'TypeError' },
 
   { name: 'ObjectDefinePropertiesNonObjectProps', src: `
     Object.getOwnPropertyNames(
-        Object.defineProperties({}, "not an object")
+        Object.defineProperties({}, 'not an object')
     ).length;
     `,
     expected: 0 },
@@ -750,12 +750,12 @@ module.exports = [
   { name: 'ObjectDefinePropertiesBadDescriptor', src: `
     var o = {};
     try {
-      Object.defineProperties(o, { foo: "not an object" });
+      Object.defineProperties(o, { foo: 'not an object' });
     } catch (e) {
       e.name;
     }
     `,
-    expected: "TypeError" },
+    expected: 'TypeError' },
 
   { name: 'ObjectDefineProperties', src: `
     var o = { foo: 70 }, r = 0;
@@ -792,26 +792,26 @@ module.exports = [
   { name: 'ObjectPrototypeToString', src: `
     ({}).toString();
     `,
-    expected: "[object Object]" },
+    expected: '[object Object]' },
 
   /******************************************************************/
   // Other tests (without expected value):
 
   { name: 'newHack', src: `
-    typeof new "Array.prototype.push"
+    typeof new 'Array.prototype.push'
     `,
-    // expected: "function"
+    // expected: 'function'
   },
 
   // FIXME: use instanceof or the like to check that error is returned.
   { name: 'newHackUnknown', src: `
     try {
-      new "nonexistent-builtin-name";
+      new 'nonexistent-builtin-name';
     } catch (e) {
       e.name;
     }
     `,
-    // expected: "ReferenceError"
+    // expected: 'ReferenceError'
   },
 
   { name: 'fibonacci10k', src: `
