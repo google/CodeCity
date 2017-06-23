@@ -148,7 +148,7 @@ Interpreter.prototype.step = function() {
   } catch (e) {
     // Eat any step errors.  They have been thrown on the stack.
     if (e !== Interpreter.STEP_ERROR) {
-      // Uh oh.  This is a real error in the JS-Interpreter.
+      // Uh oh.  This is a real error in the JS-Interpreter.  Rethrow.
       throw e;
     }
   }
@@ -208,6 +208,11 @@ Interpreter.prototype.initGlobalScope = function(scope) {
       this.getProperty(this.NUMBER, 'parseFloat'));
   this.addVariableToScope(scope, 'parseInt',
       this.getProperty(this.NUMBER, 'parseInt'));
+
+  var func = this.createObject(this.FUNCTION);
+  func.eval = true;
+  this.setProperty(func, 'length', 1, Interpreter.READONLY_DESCRIPTOR);
+  this.addVariableToScope(scope, 'eval', func);
 
   var strFunctions = [
     [escape, 'escape'], [unescape, 'unescape'],
@@ -380,7 +385,7 @@ Interpreter.prototype.initObject = function(scope) {
 
   /**
    * Checks if the provided value is null or undefined.
-   * If so, then throw and error in the call stack.
+   * If so, then throw an error in the call stack.
    * @param {*} value Value to check.
    */
   var throwIfNullUndefined = function(value) {
@@ -2089,7 +2094,7 @@ Interpreter.prototype.throwException = function(errorClass, opt_message) {
         Interpreter.NONENUMERABLE_DESCRIPTOR);
   }
   this.executeException(error);
-  // Abort anything
+  // Abort anything related to the current step.
   throw Interpreter.STEP_ERROR;
 };
 
@@ -2443,7 +2448,7 @@ Interpreter.prototype['stepCallExpression'] = function() {
     } else if (state.func_.asyncFunc) {
       var thisInterpreter = this;
       var callback = function(value) {
-        state.value = value || undefined;
+        state.value = value;
         thisInterpreter.paused_ = false;
       };
       var argsWithCallback = state.arguments_.concat(callback);
@@ -2453,7 +2458,7 @@ Interpreter.prototype['stepCallExpression'] = function() {
     } else if (state.func_.eval) {
       var code = state.arguments_[0];
       if (!code) {  // eval()
-        state.value = this.UNDEFINED;
+        state.value = undefined;
       } else if (!code.isPrimitive) {
         // JS does not parse String objects:
         // eval(new String('1 + 1')) -> '1 + 1'
