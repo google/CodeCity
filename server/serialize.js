@@ -101,11 +101,6 @@ function deserialize(json, interpreter) {
       case 'PseudoObject':
         obj = new Interpreter.Object(null);
         break;
-      case 'PseudoPrimitive':
-        // decodeValue is needed here for -0, NaN, Infinity, -Infinity.
-        // It is guaranteed not to have an object reference.
-        obj = interpreter.createPrimitive(decodeValue(jsonObj['data']));
-        break;
       case 'Node':
         obj = Object.create(nodeProto);
         break;
@@ -184,6 +179,10 @@ function serialize(interpreter) {
     var jsonObj = Object.create(null);
     json.push(jsonObj);
     var obj = objectList[i];
+    // TODO: Add a flag on the '#' prop.  On for debugging, off for production.
+    if (true) {
+      jsonObj['#'] = i;
+    }
     switch (Object.getPrototypeOf(obj)) {
       case null:
         jsonObj['type'] = 'Map';
@@ -226,10 +225,6 @@ function serialize(interpreter) {
       case Interpreter.Object.prototype:
         jsonObj['type'] = 'PseudoObject';
         break;
-      case Interpreter.Primitive.prototype:
-        jsonObj['type'] = 'PseudoPrimitive';
-        jsonObj['data'] = encodeValue(obj.data);
-        continue;  // No need to index properties.
       case nodeProto:
         jsonObj['type'] = 'Node';
         break;

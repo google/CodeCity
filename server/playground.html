@@ -12,7 +12,7 @@
     function parseButton() {
       myInterpreter = new Interpreter();
       var wrapper = function(text) {
-        return myInterpreter.createPrimitive(alert(text));
+        return alert(text);
       };
       myInterpreter.addVariableToScope(myInterpreter.global, 'alert',
           myInterpreter.createNativeFunction(wrapper));
