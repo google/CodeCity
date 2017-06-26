@@ -8,7 +8,7 @@ var testcases = require('./testcases');
 
 /**
  * Run a test of the interpreter.
- * @param {T} t The test runner object.
+ * @param {!T} t The test runner object.
  * @param {string} name The name of the test.
  * @param {string} src The code to be evaled.
  * @param {number|string|boolean|null|undefined} expected The
@@ -79,11 +79,11 @@ exports.testSwitchStatementFallthrough = function(t) {
       }
       x;`;
   var expected = [28, 31, 30, 12, 8];
-  for (var i in expected) {
+  for (var i = 0; i < expected.length; i++) {
     var src = 'var i = ' + i + ';\n' + code;
     runTest(t, 'switch fallthrough ' + i, src, expected[i]);
   }
-}
+};
 
 /**
  * Run some tests of switch statement completion values.
@@ -110,7 +110,7 @@ exports.testSwitchStatementBreaks = function(t) {
         }
       }`;
   var expected = [30, 20, 20, 30, 40];
-  for (var i in expected) {
+  for (var i = 0; i < expected.length; i++) {
     var src = 'var i = ' + i + ';\n' + code;
     runTest(t, 'switch completion ' + i, src, expected[i]);
   }

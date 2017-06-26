@@ -20,7 +20,7 @@ T.prototype.result = function (status, name, opt_message) {
     console.log(opt_message)
   }
   this.results[status] = this.results[status] + 1 || 1;
-}
+};
 
 /**
  * Report a test pass.
@@ -29,7 +29,7 @@ T.prototype.result = function (status, name, opt_message) {
  */
 T.prototype.pass = function(name, opt_message) {
   this.result('OK', name, opt_message);
-}
+};
 
 /**
  * Report a test failure.
@@ -38,7 +38,7 @@ T.prototype.pass = function(name, opt_message) {
  */
 T.prototype.fail = function(name, opt_message) {
   this.result('FAIL', name, opt_message);
-}
+};
 
 /**
  * Report a test failure due to crash.
@@ -47,7 +47,7 @@ T.prototype.fail = function(name, opt_message) {
  */
 T.prototype.crash = function(name, opt_message) {
   this.result('CRASH', name, opt_message);
-}
+};
 
 /**
  * Report a test skip.
@@ -56,7 +56,7 @@ T.prototype.crash = function(name, opt_message) {
  */
 T.prototype.skip = function(name, opt_message) {
   this.result('SKIP', name, opt_message);
-}
+};
 
 /**
  * Run tests.
@@ -66,7 +66,7 @@ function runTests() {
 
   var t = new T;
   for (var k in tests) {
-    if (k.match(/^test/) && typeof tests[k] === 'function') {
+    if (k.startsWith('test') && typeof tests[k] === 'function') {
       tests[k](t);
     }
   }
