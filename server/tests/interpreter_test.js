@@ -1,18 +1,20 @@
 'use strict';
 
+var util = require('util');
+
 var Interpreter = require('../');
 var autoexec = require('../autoexec');
 var testcases = require('./testcases');
 
 /**
  * Run a test of the interpreter.
+ * @param {T} t The test runner object.
  * @param {string} name The name of the test.
  * @param {string} src The code to be evaled.
  * @param {number|string|boolean|null|undefined} expected The
  *     expected completion value.
- * @return {boolean} True iff the test passed.
  */
-function runTest(name, src, expected) {
+function runTest(t, name, src, expected) {
   var interpreter = new Interpreter();
   interpreter.appendCode(autoexec);
   interpreter.run();
@@ -27,52 +29,35 @@ function runTest(name, src, expected) {
   var r = interpreter.pseudoToNative(interpreter.value);
 
   if (err) {
-    console.error('FAIL\t%s\n%s', name, src);
-    console.error(err);
-    return false;
+    t.crash(name, util.format('%s\n%s', src, err));
   } else if (r !== expected) {
-    console.error('FAIL\t%s\n%s', name, src);
-    console.error('got: %j  want: %j', r, expected);
-    return false;
+    t.fail(name, util.format('%s\ngot: %j  want: %j', src, r, expected));
+  } else {
+    t.pass(name);
   }
-  console.log('OK\t%s', name);
   return true;
 }
 
 /**
- * Print a 'test skipped' message.
- * @param {string} name The name of the test.
- * @param {string} src The code to be evaled.
- * @param {(number|string|boolean|null|undefined)} expected The
- *     expected completion value.
- */
-function skipTest(name) {
-  console.log('SKIP\t%s', name);
-}
-
-/**
  * Run the simple tests in testcases.js
- * @return True if all tests passed.
+ * @param {T} t The test runner object.
  */
-exports.testSimple = function() {
-  var allOk = true;
+exports.testSimple = function(t) {
   for (var i = 0; i < testcases.length; i++) {
     var tc = testcases[i];
     if ('expected' in tc) {
-      if (!runTest(tc.name, tc.src, tc.expected)) {
-        allOk = false;
-      }
+      !runTest(t, tc.name, tc.src, tc.expected);
     } else {
-      skipTest(tc.name);
+      t.skip(tc.name);
     }
   }
-  return allOk;
 };
 
 /**
  * Run some tests of switch statement with fallthrough.
+ * @param {T} t The test runner object.
  */
-exports.testSwitchStatementFallthrough = function() {
+exports.testSwitchStatementFallthrough = function(t) {
   var code = `
       var x = 0;
       switch (i) {
@@ -96,14 +81,15 @@ exports.testSwitchStatementFallthrough = function() {
   var expected = [28, 31, 30, 12, 8];
   for (var i in expected) {
     var src = 'var i = ' + i + ';\n' + code;
-    runTest('switch fallthrough ' + i, src, expected[i]);
+    runTest(t, 'switch fallthrough ' + i, src, expected[i]);
   }
 }
 
 /**
  * Run some tests of switch statement completion values.
+ * @param {T} t The test runner object.
  */
-exports.testSwitchStatementBreaks = function() {
+exports.testSwitchStatementBreaks = function(t) {
   var code = `
       foo: {
         switch (i) {
@@ -126,7 +112,7 @@ exports.testSwitchStatementBreaks = function() {
   var expected = [30, 20, 20, 30, 40];
   for (var i in expected) {
     var src = 'var i = ' + i + ';\n' + code;
-    runTest('switch completion ' + i, src, expected[i]);
+    runTest(t, 'switch completion ' + i, src, expected[i]);
   }
 };
 
@@ -134,8 +120,9 @@ exports.testSwitchStatementBreaks = function() {
  * Run some tests of the Abstract Relational Comparison Algorithm, as
  * defined in §11.8.5 of the ES5.1 spec and as embodied by the '<'
  * operator.
+ * @param {T} t The test runner object.
  */
-exports.testArca = function() {
+exports.testArca = function(t) {
   var cases = [
     ['0, NaN', undefined],
     ['NaN, NaN', undefined],
@@ -182,7 +169,7 @@ exports.testArca = function() {
         (function(a,b){
           return ((a < b) || (a >= b)) ? (a < b) : undefined;
         })(${tc[0]});`;
-    runTest('ARCA: ' + tc[0], src, tc[1]);
+    runTest(t, 'ARCA: ' + tc[0], src, tc[1]);
   }
 };
 
@@ -191,8 +178,9 @@ exports.testArca = function() {
  * the Abstract Strict Equality Comparison Algorithm, as defined in
  * §11.9.3 and §11.9.6 respectiveyl of the ES5.1 spec and as embodied
  * by the '==' and '===' operators.
+ * @param {T} t The test runner object.
  */
-exports.testAeca = function() {
+exports.testAeca = function(t) {
   var cases = [
     ['false, false', true, true],  // Numeric
     ['false, true', false, false], // Numeric
@@ -268,8 +256,8 @@ exports.testAeca = function() {
   for (var i in cases) {
     var tc = cases[i]
     var src = `(function(a,b){ return a == b })(${tc[0]});`;
-    runTest('AECA: ' + tc[0], src, tc[1]);
+    runTest(t, 'AECA: ' + tc[0], src, tc[1]);
     src = `(function(a,b){ return a === b })(${tc[0]});`;
-    runTest('ASECA: ' + tc[0], src, tc[2]);
+    runTest(t, 'ASECA: ' + tc[0], src, tc[2]);
   }
 };
