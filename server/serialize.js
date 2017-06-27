@@ -27,7 +27,7 @@ var Interpreter;
 
 function deserialize(json, interpreter) {
   function decodeValue(value) {
-    if (value && typeof value == 'object') {
+    if (value && typeof value === 'object') {
       var data;
       if ((data = value['#'])) {
        // Object reference: {'#': 42}
@@ -40,6 +40,12 @@ function deserialize(json, interpreter) {
       if ((data = value['Number'])) {
         // Special number: {'Number': 'Infinity'}
         return Number(data);
+      }
+      if ((data = value['Value'])) {
+        // Special value: {'Value': 'undefined'}
+        if (value['Value'] === 'undefined') {
+          return undefined;
+        }
       }
     }
     return value;
@@ -57,7 +63,7 @@ function deserialize(json, interpreter) {
   objectHunt_(stack, objectList);
   var functionHash = Object.create(null);
   for (var i = 0; i < objectList.length; i++) {
-    if (typeof objectList[i] == 'function') {
+    if (typeof objectList[i] === 'function') {
       functionHash[objectList[i].id] = objectList[i];
     }
   }
@@ -149,21 +155,24 @@ function deserialize(json, interpreter) {
 
 function serialize(interpreter) {
   function encodeValue(value) {
-    if (value && (typeof value == 'object' || typeof value == 'function')) {
+    if (value && (typeof value === 'object' || typeof value === 'function')) {
       var ref = objectList.indexOf(value);
-      if (ref == -1) {
+      if (ref === -1) {
         throw 'Object not found in table.';
       }
       return {'#': ref};
     }
-    if (typeof value == 'number') {
-      if (value == Infinity) {
+    if (value === undefined) {
+      return {'Value': 'undefined'};
+    }
+    if (typeof value === 'number') {
+      if (value === Infinity) {
         return {'Number': 'Infinity'};
-      } else if (value == -Infinity) {
+      } else if (value === -Infinity) {
         return {'Number': '-Infinity'};
       } else if (isNaN(value)) {
         return {'Number': 'NaN'};
-      } else if (1 / value == -Infinity) {
+      } else if (1 / value === -Infinity) {
         return {'Number': '-0'};
       }
     }
@@ -248,14 +257,16 @@ function serialize(interpreter) {
 
 // Recursively search the stack to find all non-primitives.
 function objectHunt_(node, objectList) {
-  if (node && (typeof node == 'object' || typeof node == 'function')) {
-    if (objectList.indexOf(node) != -1) {
+  if (node && (typeof node === 'object' || typeof node === 'function')) {
+    if (objectList.indexOf(node) !== -1) {
       return;
     }
-    var names = Object.getOwnPropertyNames(node);
     objectList.push(node);
-    for (var i = 0; i < names.length; i++) {
-      objectHunt_(node[names[i]], objectList);
+    if (typeof node === 'object') {  // Recurse.
+      var names = Object.getOwnPropertyNames(node);
+      for (var i = 0; i < names.length; i++) {
+        objectHunt_(node[names[i]], objectList);
+      }
     }
   }
 }
