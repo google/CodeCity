@@ -2161,7 +2161,9 @@ Interpreter.prototype['stepBinaryExpression'] = function() {
   var value;
   var comp = this.comp(leftSide, rightSide);
   if (node['operator'] === '==' || node['operator'] === '!=') {
-    if (!leftSide.isObject && !rightSide.isObject) {
+    if ((!leftSide || !leftSide.isObject) &&
+        (!rightSide || !rightSide.isObject)) {
+      // At least one side is a primitive.
       value = leftSide == rightSide;
     } else {
       value = comp === 0;
