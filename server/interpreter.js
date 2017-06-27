@@ -1972,7 +1972,7 @@ Interpreter.prototype.getValue = function(left) {
  * @param {*} value Value.
  */
 Interpreter.prototype.setValue = function(left, value) {
-  if (left instanceof Array) {
+  if (left instanceof Array) {  // This is a components tuple (foo.bar).
     var obj = left[0];
     var prop = left[1];
     this.setProperty(obj, prop, value);
@@ -2807,7 +2807,7 @@ Interpreter.prototype['stepReturnStatement'] = function() {
     state.done_ = true;
     stack.push({node: node['argument']});
   } else {
-    var value = state.value || undefined;
+    var value = state.value;
     var i = stack.length - 1;
     state = stack[i];
     while (state.node['type'] !== 'CallExpression' &&
