@@ -63,6 +63,9 @@ Object.defineProperty(Function.prototype, 'bind', {configurable: true, value:
 
 Object.defineProperty(Object, 'defineProperties', {configurable: true, value:
   function(obj, props) {
+    if (!obj || (typeof obj !== 'object' && typeof obj !== 'function')) {
+      throw new TypeError('Object.defineProperties called on non-object');
+    }
     var keys = Object.keys(props);
     for (var i = 0; i < keys.length; i++) {
       Object.defineProperty(obj, keys[i], props[keys[i]]);

@@ -396,7 +396,7 @@ Interpreter.prototype.initObject = function(scope) {
       Interpreter.NONENUMERABLE_DESCRIPTOR);
 
   wrapper = function(obj) {
-    if (!obj.isObject) {
+    if (!obj || !obj.isObject) {
       return thisInterpreter.nativeToPseudo(Object.keys(obj));
     }
     var list = [];
@@ -453,7 +453,10 @@ Interpreter.prototype.initObject = function(scope) {
       Interpreter.NONENUMERABLE_DESCRIPTOR);
 
   wrapper = function(obj, prop) {
-    throwIfNullUndefined(obj);
+    if (!obj || !obj.isObject) {
+      thisInterpreter.throwException(thisInterpreter.TYPE_ERROR,
+          'Object.getOwnPropertyDescriptor called on non-object');
+    }
     prop += '';
     if (!(prop in obj.properties)) {
       return undefined;
@@ -1052,7 +1055,8 @@ Interpreter.prototype.initRegExp = function(scope) {
     }
     pattern = pattern ? pattern.toString() : '';
     flags = flags ? flags.toString() : '';
-    return thisInterpreter.populateRegExp_(rgx, new RegExp(pattern, flags));
+    thisInterpreter.populateRegExp(rgx, new RegExp(pattern, flags));
+    return rgx;
   };
   this.REGEXP = this.createNativeFunction(wrapper, true);
   this.addVariableToScope(scope, 'RegExp', this.REGEXP);
@@ -1336,7 +1340,8 @@ Interpreter.Object.prototype.toString = function() {
       cycles.pop();
     }
     return strs.join(',');
-  } else if (this.class === 'Error') {
+  }
+  if (this.class === 'Error') {
     var cycles = Interpreter.toStringCycles_;
     if (cycles.indexOf(this) !== -1) {
       return '[object Error]';
@@ -1364,12 +1369,13 @@ Interpreter.Object.prototype.toString = function() {
       cycles.pop();
     }
     return message ? name + ': ' + message : name + '';
-  } else if (this.class === 'Function') {
+  }
+  if (this.class === 'Function') {
     // TODO: Return the source code.
     return '[object Function]';
   }
 
-  // Regexp, Date.
+  // RegExp, Date.
   if (this.data !== null) {
     return String(this.data);
   }
@@ -1425,10 +1431,8 @@ Interpreter.prototype.createObjectProto = function(proto) {
  * expression object.
  * @param {!Interpreter.Object} pseudoRegexp The existing object to set.
  * @param {!RegExp} nativeRegexp The native regular expression.
- * @return {!Interpreter.Object} Newly populated regular expression object.
- * @private
  */
-Interpreter.prototype.populateRegExp_ = function(pseudoRegexp, nativeRegexp) {
+Interpreter.prototype.populateRegExp = function(pseudoRegexp, nativeRegexp) {
   pseudoRegexp.data = nativeRegexp;
   // lastIndex is settable, all others are read-only attributes
   this.setProperty(pseudoRegexp, 'lastIndex', nativeRegexp.lastIndex,
@@ -1441,10 +1445,6 @@ Interpreter.prototype.populateRegExp_ = function(pseudoRegexp, nativeRegexp) {
       Interpreter.READONLY_NONENUMERABLE_DESCRIPTOR);
   this.setProperty(pseudoRegexp, 'multiline', nativeRegexp.multiline,
       Interpreter.READONLY_NONENUMERABLE_DESCRIPTOR);
-  // Override a couple of Object's conversion functions.
-  pseudoRegexp.toString = function() {return String(this.data);};
-  pseudoRegexp.valueOf = function() {return this.data;};
-  return pseudoRegexp;
 };
 
 /**
@@ -1517,8 +1517,9 @@ Interpreter.prototype.nativeToPseudo = function(nativeObj) {
   }
 
   if (nativeObj instanceof RegExp) {
-    // TODO
-    throw 'Implement me!';
+    var pseudoRegexp = this.createObject(this.REGEXP);
+    this.populateRegExp(pseudoRegexp, nativeObj);
+    return pseudoRegexp;
   }
 
   if (nativeObj instanceof Function) {
@@ -1566,9 +1567,8 @@ Interpreter.prototype.pseudoToNative = function(pseudoObj, opt_cycles) {
     return pseudoObj;
   }
 
-  if (nativeObj instanceof RegExp) {
-    // TODO
-    throw 'Implement me!';
+  if (this.isa(pseudoObj, this.REGEXP)) {  // Regular expression.
+    return pseudoObj.data;
   }
 
   var cycles = opt_cycles || {
@@ -2696,7 +2696,13 @@ Interpreter.prototype['stepLabeledStatement'] = function() {
 Interpreter.prototype['stepLiteral'] = function() {
   var stack = this.stateStack;
   var state = stack.pop();
-  stack[stack.length - 1].value = state.node['value'];
+  var value = state.node['value'];
+  if (value instanceof RegExp) {
+    var pseudoRegexp = this.createObject(this.REGEXP);
+    this.populateRegExp(pseudoRegexp, value);
+    value = pseudoRegexp;
+  }
+  stack[stack.length - 1].value = value;
 };
 
 Interpreter.prototype['stepLogicalExpression'] = function() {
@@ -2851,11 +2857,12 @@ Interpreter.prototype['stepSwitchStatement'] = function() {
   var stack = this.stateStack;
   var state = stack[stack.length - 1];
   if (!state.test_) {
-    state.test_ = true;
+    state.test_ = 1;
     stack.push({node: state.node['discriminant']});
     return;
   }
-  if (!state.switchValue_) {
+  if (state.test_ == 1) {
+    state.test_ = 2;
     // Preserve switch value between case tests.
     state.switchValue_ = state.value;
   }
