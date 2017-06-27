@@ -44,11 +44,6 @@ var Interpreter = function() {
       this.functionMap_[m[1]] = this[methodName].bind(this);
     }
   }
-  // Declare some mock constructors to get the environment bootstrapped.
-  var mockObject = {properties: {prototype: null}};
-  this.NUMBER = mockObject;
-  this.BOOLEAN = mockObject;
-  this.STRING = mockObject;
   // Create and initialize the global scope.
   this.global = this.createScope({}, null);
   this.value = undefined;
@@ -501,21 +496,12 @@ Interpreter.prototype.initObject = function(scope) {
       Interpreter.NONENUMERABLE_DESCRIPTOR);
 
   // Instance methods on Object.
-  // Wrappers needed because OBJECT.prototype doesn't exist yet.
-  wrapper = function() {
-    return this.toString();
-  };
-  this.setNativeFunctionPrototype(this.OBJECT, 'toString', wrapper);
-
-  wrapper = function() {
-    return this.toLocaleString();
-  };
-  this.setNativeFunctionPrototype(this.OBJECT, 'toLocaleString', wrapper);
-
-  wrapper = function() {
-    return this.valueOf();
-  };
-  this.setNativeFunctionPrototype(this.OBJECT, 'valueOf', wrapper);
+  this.setNativeFunctionPrototype(this.OBJECT, 'toString',
+      Interpreter.Object.prototype.toString);
+  this.setNativeFunctionPrototype(this.OBJECT, 'toLocaleString',
+      Interpreter.Object.prototype.toString);
+  this.setNativeFunctionPrototype(this.OBJECT, 'valueOf',
+      Interpreter.Object.prototype.valueOf);
 
   wrapper = function(prop) {
     throwIfNullUndefined(this);
@@ -1239,13 +1225,13 @@ Interpreter.prototype.comp = function(a, b) {
   if (a === b) {
     return 0;
   }
-  var aValue = a.isObject ? a.toString() : a;
-  var bValue = b.isObject ? b.toString() : b;
+  var aValue = a && a.isObject ? a.toString() : a;
+  var bValue = b && b.isObject ? b.toString() : b;
   if (aValue < bValue) {
     return -1;
   } else if (aValue > bValue) {
     return 1;
-  } else if (a.isObject && b.isObject) {
+  } else if (a && b && a.isObject && b.isObject) {
     // Two objects that have equal values are still not equal.
     // e.g. [1, 2] !== [1, 2]
     return NaN;
@@ -1349,7 +1335,7 @@ Interpreter.Object.prototype.toString = function() {
   } else if (this.class === 'Error') {
     var cycles = Interpreter.toStringCycles_;
     if (cycles.indexOf(this) !== -1) {
-      return '[Error]';
+      return '[object Error]';
     }
     var name, message;
     var obj = this;
@@ -1376,7 +1362,7 @@ Interpreter.Object.prototype.toString = function() {
     return message ? name + ': ' + message : name + '';
   } else if (this.class === 'Function') {
     // TODO: Return the source code.
-    return '[Function]';
+    return '[object Function]';
   }
 
   // Regexp, Date.
@@ -1384,7 +1370,7 @@ Interpreter.Object.prototype.toString = function() {
     return String(this.data);
   }
 
-  return '[Object ' + this.class + ']';
+  return '[object ' + this.class + ']';
 };
 
 /**
