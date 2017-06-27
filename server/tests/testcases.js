@@ -705,13 +705,32 @@ module.exports = [
       } else {
         r += Number(names[i]) + 1;
       }
+    }
+    `,
     expected: 16 },
 
   { name: 'ObjectGetOwnPropertyNamesNumber', src: `
     Object.getOwnPropertyNames(42).length
     `,
     expected: 0 },
+
+  { name: 'ObjectGetOwnPropertyNamesBoolean', src: `
+    Object.getOwnPropertyNames(true).length
+    `,
+    expected: 0 },
+
+  { name: 'ObjectGetOwnPropertyNamesNull', src: `
     try {
+      Object.getOwnPropertyNames(null).length;
+    } catch (e) {
+      e.name;
+    }
+    `,
+    expected: 'TypeError' },
+
+  { name: 'ObjectGetOwnPropertyNamesUndefined', src: `
+    try {
+      Object.getOwnPropertyNames(undefined).length;
     } catch (e) {
       e.name;
     }
