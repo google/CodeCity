@@ -556,14 +556,10 @@ module.exports = [
   //   `,
   //   expected: '[object Arguments]' },
 
-  { name: 'unimplementedASTNode', src: `
-    try {
-      debugger;
-    } catch (e) {
-      e.name;
-    }
+  { name: 'debugger', src: `
+    debugger;
     `,
-    expected: 'SyntaxError' },
+    expected: undefined },
     
   { name: 'newHackNotAvailable', src: `
     try { 
@@ -572,7 +568,7 @@ module.exports = [
       e.name;
     }
     `,
-    expected: 'SyntaxError' },
+    expected: 'TypeError' },
 
   { name: 'ObjectDefinePropertyNoArgs', src: `
     try {
@@ -701,9 +697,21 @@ module.exports = [
     `,
     expected: 'TypeError' },
 
-  { name: 'ObjectGetOwnPropertyNamesNonObject', src: `
+  { name: 'ObjectGetOwnPropertyNamesString', src: `
+    var i, r = 0, names = Object.getOwnPropertyNames('foo');
+    for (i = 0; i < names.length; i++) {
+      if (names[i] === 'length') {
+        r += 10;
+      } else {
+        r += Number(names[i]) + 1;
+      }
+    expected: 16 },
+
+  { name: 'ObjectGetOwnPropertyNamesNumber', src: `
+    Object.getOwnPropertyNames(42).length
+    `,
+    expected: 0 },
     try {
-      Object.getOwnPropertyNames('not an object');
     } catch (e) {
       e.name;
     }
