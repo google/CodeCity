@@ -415,7 +415,7 @@ Interpreter.prototype.initObject = function(scope) {
     if (proto === null) {
       return thisInterpreter.createObject(null);
     }
-    if (!proto.isObject) {
+    if (proto === undefined || !proto.isObject) {
       thisInterpreter.throwException(thisInterpreter.TYPE_ERROR,
           'Object prototype may only be an Object or null');
     }
@@ -426,10 +426,14 @@ Interpreter.prototype.initObject = function(scope) {
       Interpreter.NONENUMERABLE_DESCRIPTOR);
 
   wrapper = function(obj, prop, descriptor) {
-    prop = (prop || undefined).toString();
-    if (!(descriptor instanceof Interpreter.Object)) {
+    prop += '';
+    if (!obj || !obj.isObject) {
       thisInterpreter.throwException(thisInterpreter.TYPE_ERROR,
-          'Property description must be an object.');
+          'Object.defineProperty called on non-object');
+    }
+    if (!descriptor || !descriptor.isObject) {
+      thisInterpreter.throwException(thisInterpreter.TYPE_ERROR,
+          'Property description must be an object');
     }
     if (!obj.properties[prop] && obj.preventExtensions) {
       thisInterpreter.throwException(thisInterpreter.TYPE_ERROR,
@@ -472,7 +476,7 @@ Interpreter.prototype.initObject = function(scope) {
 
   wrapper = function(obj) {
     throwIfNullUndefined(obj);
-    return this.getPrototype(obj.proto);
+    return thisInterpreter.getPrototype(obj.proto);
   };
   this.setProperty(this.OBJECT, 'getPrototypeOf',
       this.createNativeFunction(wrapper, false),
@@ -2189,9 +2193,9 @@ Interpreter.prototype['stepBinaryExpression'] = function() {
     var rightValue = rightSide.isObject ? rightSide + '' : rightSide;
     value = leftValue + rightValue;
   } else if (node['operator'] === 'in') {
-    if (!leftSide || !leftSide.isObject) {
+    if (!rightSide || !rightSide.isObject) {
       this.throwException(this.TYPE_ERROR,
-          "'in' expects an object, not '" + leftSide + "'");
+          "'in' expects an object, not '" + rightSide + "'");
     }
     value = this.hasProperty(rightSide, leftSide);
   } else if (node['operator'] === 'instanceof') {
@@ -2473,8 +2477,9 @@ Interpreter.prototype['stepContinueStatement'] = function() {
   throw SyntaxError('Illegal continue statement');
 };
 
-Interpreter.prototype['stepDebugger'] = function() {
+Interpreter.prototype['stepDebuggerStatement'] = function() {
   // Do nothing.  May be overridden by developers.
+  this.stateStack.pop();
 };
 
 Interpreter.prototype['stepDoWhileStatement'] = function() {
