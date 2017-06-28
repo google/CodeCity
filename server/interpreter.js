@@ -2311,17 +2311,18 @@ Interpreter.prototype['stepCallExpression'] = function() {
   }
   if (!state.doneExec_) {
     state.doneExec_ = true;
-    if (!state.func_ || !this.isa(state.func_, this.FUNCTION)) {
-      this.throwException(this.TYPE_ERROR, state.func_ + ' is not a function');
+    var func = state.func_;
+    if (!func || !func.isObject) {
+      this.throwException(this.TYPE_ERROR, func + ' is not a function');
     }
     // Determine value of 'this' in function.
     if (state.node['type'] === 'NewExpression') {
-      if (state.func_.illegalConstructor) {
+      if (func.illegalConstructor) {
         // Illegal: new escape();
-        this.throwException(this.TYPE_ERROR, 'function is not a constructor');
+        this.throwException(this.TYPE_ERROR, func + ' is not a constructor');
       }
       // Constructor, 'this' is new object.
-      state.funcThis_ = this.createObject(state.func_);
+      state.funcThis_ = this.createObject(func);
       state.isConstructor = true;
     } else if (state.components_) {
       // Method function, 'this' is object.
@@ -2330,9 +2331,9 @@ Interpreter.prototype['stepCallExpression'] = function() {
       // Global function, 'this' is undefined.
       state.funcThis_ = undefined;
     }
-    var funcNode = state.func_.node;
+    var funcNode = func.node;
     if (funcNode) {
-      var scope = this.createScope(funcNode['body'], state.func_.parentScope);
+      var scope = this.createScope(funcNode['body'], func.parentScope);
       // Add all arguments.
       for (var i = 0; i < funcNode['params'].length; i++) {
         var paramName = funcNode['params'][i]['name'];
@@ -2349,7 +2350,7 @@ Interpreter.prototype['stepCallExpression'] = function() {
       // Add the function's name (var x = function foo(){};)
       var name = funcNode['id'] && funcNode['id']['name'];
       if (name) {
-        this.addVariableToScope(scope, name, state.func_, true);
+        this.addVariableToScope(scope, name, func, true);
       }
       this.addVariableToScope(scope, 'this', state.funcThis_, true);
       var funcState = {
@@ -2358,10 +2359,9 @@ Interpreter.prototype['stepCallExpression'] = function() {
       };
       stack.push(funcState);
       state.value = undefined;  // Default value if no explicit return.
-    } else if (state.func_.nativeFunc) {
-      state.value =
-          state.func_.nativeFunc.apply(state.funcThis_, state.arguments_);
-    } else if (state.func_.asyncFunc) {
+    } else if (func.nativeFunc) {
+      state.value = func.nativeFunc.apply(state.funcThis_, state.arguments_);
+    } else if (func.asyncFunc) {
       var thisInterpreter = this;
       var callback = function(value) {
         state.value = value;
@@ -2369,9 +2369,9 @@ Interpreter.prototype['stepCallExpression'] = function() {
       };
       var argsWithCallback = state.arguments_.concat(callback);
       this.paused_ = true;
-      state.func_.asyncFunc.apply(state.funcThis_, argsWithCallback);
+      func.asyncFunc.apply(state.funcThis_, argsWithCallback);
       return;
-    } else if (state.func_.eval) {
+    } else if (func.eval) {
       var code = state.arguments_[0];
       if (!code) {  // eval()
         state.value = undefined;
@@ -2397,7 +2397,7 @@ Interpreter.prototype['stepCallExpression'] = function() {
       var f = new F();
       f();
       */
-      this.throwException(this.TYPE_ERROR, 'function is not a function');
+      this.throwException(this.TYPE_ERROR, func.class + ' is not a function');
     }
   } else {
     // Execution complete.  Put the return value on the stack.
@@ -2742,19 +2742,30 @@ Interpreter.prototype['stepMemberExpression'] = function() {
   if (!state.doneObject_) {
     state.doneObject_ = true;
     stack.push({node: node['object']});
-  } else if (!state.doneProperty_) {
-    state.doneProperty_ = true;
-    state.object_ = state.value;
-    stack.push({node: node['property'], components: !node['computed']});
-  } else {
-    stack.pop();
-    var propName = state.value;
-    if (Array.isArray(propName)) {
-      propName = propName[1];
-    }
-    stack[stack.length - 1].value = state.components ?
-        [state.object_, propName] : this.getProperty(state.object_, propName);
+    return;
   }
+  if (!node['computed']) {
+    // obj.foo -- Just access 'foo' directly.
+    var propName = node['property']['name'];
+    stack.pop();
+    stack[stack.length - 1].value = state.components ?
+        [state.value, propName] : this.getProperty(state.value, propName);
+    return;
+  }
+  if (!state.doneProperty_) {
+    state.object_ = state.value;
+    // obj[foo] -- Compute value of 'foo'.
+    state.doneProperty_ = true;
+    stack.push({node: node['property']});
+    return;
+  }
+  stack.pop();
+  var propName = state.value;
+  if (Array.isArray(propName)) {
+    propName = propName[1];
+  }
+  stack[stack.length - 1].value = state.components ?
+      [state.object_, propName] : this.getProperty(state.object_, propName);
 };
 
 Interpreter.prototype['stepNewExpression'] =
