@@ -35,8 +35,8 @@ var testcases = require('./testcases');
  * @param {!T} t The test runner object.
  * @param {string} name The name of the test.
  * @param {string} src The code to be evaled.
- * @param {number|string|boolean|null|undefined} expected The
- *     expected completion value.
+ * @param {number|string|boolean|null|undefined} expected The expected
+ *     completion value.
  */
 function runTest(t, name, src, expected) {
   var interpreter = new Interpreter();
@@ -48,12 +48,12 @@ function runTest(t, name, src, expected) {
     interpreter.appendCode(src);
     interpreter.run();
   } catch (e) {
-    err = e
+    err = e;
   }
   var r = interpreter.pseudoToNative(interpreter.value);
 
   if (err) {
-    t.crash(name, util.format('%s\n%s', src, err));
+    t.crash(name, util.format('%s\n%s', src, err.stack));
   } else if (r !== expected) {
     t.fail(name, util.format('%s\ngot: %j  want: %j', src, r, expected));
   } else {
@@ -70,7 +70,7 @@ exports.testSimple = function(t) {
   for (var i = 0; i < testcases.length; i++) {
     var tc = testcases[i];
     if ('expected' in tc) {
-      !runTest(t, tc.name, tc.src, tc.expected);
+      runTest(t, tc.name, tc.src, tc.expected);
     } else {
       t.skip(tc.name);
     }
@@ -278,7 +278,7 @@ exports.testAeca = function(t) {
     ['{}, undefined', false, false],
   ];
   for (var i in cases) {
-    var tc = cases[i]
+    var tc = cases[i];
     var src = `(function(a,b){ return a == b })(${tc[0]});`;
     runTest(t, 'AECA: ' + tc[0], src, tc[1]);
     src = `(function(a,b){ return a === b })(${tc[0]});`;

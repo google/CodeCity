@@ -397,7 +397,8 @@ Interpreter.prototype.initObject = function(scope) {
       Interpreter.NONENUMERABLE_DESCRIPTOR);
 
   wrapper = function(obj) {
-    if (!obj || !obj.isObject) {
+    throwIfNullUndefined(obj);
+    if (!obj.isObject) {
       return thisInterpreter.nativeToPseudo(Object.keys(obj));
     }
     var list = [];
