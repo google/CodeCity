@@ -1,3 +1,35 @@
+/**
+ * @license
+ * Code City: Database Core
+ *
+ * Copyright 2017 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/**
+ * @fileoverview The initial database core.
+ * 
+ * It's designed to be read into the server (see CodeCity/server) at
+ * initial startup time.  It should not be needed after that (the
+ * server should save all internal state to a checkpoint file, and
+ * subsequent server starts will restore that state), but it is
+ * intended to written in such a way that it should be possible to
+ * re-run it to update an existing core with newer versions of the
+ * core objects / functions.  Doing so is at your own risk however!
+ * 
+ * @author cpcallen@google.com (Christopher Allen)
+ */
 'use strict'; // For testing with node.js
 
 // Global scope declarations:
@@ -32,11 +64,11 @@ var $ = Object.create(Object.prototype);
    */
   make($, 'physical', Object.create($.object, {
     name: {value: 'Physical object prototype',
-	   writable: true, enumerable: true, configurable: true},
+           writable: true, enumerable: true, configurable: true},
     location: {value: null,
-	       writable: true, enumerable: true, configurable: true},
-    contents_: {value: undefined, // wil be vetted into existance
-		writable: true, enumerable: true, configurable: true},
+               writable: true, enumerable: true, configurable: true},
+    contents_: {value: undefined, // will be vetted into existance
+                writable: true, enumerable: true, configurable: true},
   }));
 
   make($.physical, 'contents', function() {
@@ -60,8 +92,8 @@ var $ = Object.create(Object.prototype);
     // FIXME: permission checks go here.
     // Do moveable and accept checks:
     if (!this.moveable(dest)) {
-      var destname = (dest === null ? 'null' : dest.name);
-      throw Error(this.name + ' declined to move to ' + destname);
+      var destName = (dest === null ? 'null' : dest.name);
+      throw Error(this.name + ' declined to move to ' + destName);
     }
     if (dest !== null && !dest.accept(this)) {
       throw Error(dest.name + ' refused ' + this.name);
@@ -73,7 +105,7 @@ var $ = Object.create(Object.prototype);
     // hierarchy.
     for(var loc = dest; loc !== null; loc = loc.location) {
       if (loc === this) {
-	throw Error("Can't put " + this.name + " inside itself.");
+        throw Error("Can't put " + this.name + " inside itself.");
       }
     }
 
@@ -81,7 +113,7 @@ var $ = Object.create(Object.prototype);
     var i;
     if ($.physical.isPrototypeOf(src)) {
       while ((i = src.contents_.indexOf(this)) >= 0) {
-	src.contents_.splice(i, 1);
+        src.contents_.splice(i, 1);
       }
     }
     this.location = dest;
@@ -119,7 +151,7 @@ var $ = Object.create(Object.prototype);
     $.physical_vet(obj);
     for (var loc = obj.location; loc !== null; loc = loc.location) {
       if (loc === this) {
-	return true;
+        return true;
       }
       $.physical_vet(loc);
     }
@@ -135,12 +167,12 @@ var $ = Object.create(Object.prototype);
     // They can only be located in another $.physical object - and
     // that object must obj in its contents:
     if (!$.physical.isPrototypeOf(obj.location) ||
-	obj.contents_.indexOf(obj) == -1) {
+        obj.contents_.indexOf(obj) === -1) {
       obj.location === null;
     }
     // obj.contents_ must be an array unique to obj (not inherited):
     if (!obj.hasOwnProperty('contents_') || !Array.isArray(obj.contents_) ||
-	!obj.contents_.for === obj) {
+        !obj.contents_.for === obj) {
       // FIXME: attributes?
       obj.contents_ = [];
       Object.defineProperty(obj.contents_, 'for', { value: obj });
@@ -149,9 +181,9 @@ var $ = Object.create(Object.prototype);
     // objects, objects not located in obj:
     for (var i = 0; i < obj.contents_.length; i++) {
       if (obj.contents_.lastIndexOf(obj.contents_[i]) !== i ||
-	  !$.physical.isPrototypeOf(obj.contents_[i]) ||
-	  obj.contents_[i].location !== obj) {
-	obj.contents_.splice(i, 1);
+          !$.physical.isPrototypeOf(obj.contents_[i]) ||
+          obj.contents_[i].location !== obj) {
+        obj.contents_.splice(i, 1);
       }
     }
     // FIXME: check for circular containment?

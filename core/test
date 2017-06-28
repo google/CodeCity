@@ -1,5 +1,27 @@
 #!/usr/bin/env node
+/**
+ * @license
+ * Code City: Database Core Tests
+ *
+ * Copyright 2017 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
+/**
+ * @fileoverview Tests for the initial database core.
+ * @author cpcallen@google.com (Christopher Allen)
+ */
 'use strict';
 
 var $ = require('./core.js');
@@ -26,17 +48,17 @@ var movableAccepting2 = Object.create(movableAccepting);
 movableAccepting2.name = 'movableAccepting2';
 
 var combos = ['immovable.moveto(nonaccepting);',
-	      'movable.moveto(nonaccepting);',
-	      'immovable.moveto(accepting);',
-	      'movable.moveto(accepting);',
-	      'immovable.moveto(null);',
-	      'movable.moveto(null);',
-	      'movable.moveto(movable);',
-	      'movableAccepting.moveto(accepting);',
-	      'movableAccepting.moveto(movableAccepting);',
-	      'movableAccepting2.moveto(movableAccepting);',
-	      'movableAccepting.moveto(movableAccepting2);',
-	     ];
+              'movable.moveto(nonaccepting);',
+              'immovable.moveto(accepting);',
+              'movable.moveto(accepting);',
+              'immovable.moveto(null);',
+              'movable.moveto(null);',
+              'movable.moveto(movable);',
+              'movableAccepting.moveto(accepting);',
+              'movableAccepting.moveto(movableAccepting);',
+              'movableAccepting2.moveto(movableAccepting);',
+              'movableAccepting.moveto(movableAccepting2);',
+             ];
 
 for (var i = 0; i < combos.length; i++) {
   console.log();
@@ -49,14 +71,14 @@ for (var i = 0; i < combos.length; i++) {
   }
 
   var items = [$.physical, immovable, movable, accepting, nonaccepting,
-	       movableAccepting, movableAccepting2];
+               movableAccepting, movableAccepting2];
   for (var j = 0; j < items.length; j++) {
-    var locname;
+    var locName;
     if ($.physical.isPrototypeOf(items[j].location)) {
-      locname = items[j].location.name;
+      locName = items[j].location.name;
     } else {
-      locname = items[j].location;
+      locName = items[j].location;
     }
-    console.log("%s.location === %s", items[j].name, locname);
+    console.log("%s.location === %s", items[j].name, locName);
   }
 }
