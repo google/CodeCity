@@ -1539,7 +1539,7 @@ Interpreter.prototype.nativeToPseudo = function(nativeObj) {
   }
 
   var pseudoObj;
-  if (nativeObj instanceof Array) {  // Array.
+  if (Array.isArray(nativeObj)) {  // Array.
     pseudoObj = this.createObject(this.ARRAY);
     for (var i = 0; i < nativeObj.length; i++) {
       this.setProperty(pseudoObj, i, this.nativeToPseudo(nativeObj[i]));
@@ -1904,7 +1904,7 @@ Interpreter.prototype.populateScope_ = function(node, scope) {
   for (var name in node) {
     var prop = node[name];
     if (prop && typeof prop === 'object') {
-      if (prop instanceof Array) {
+      if (Array.isArray(prop)) {
         for (var i = 0; i < prop.length; i++) {
           if (prop[i] && prop[i].constructor === nodeClass) {
             this.populateScope_(prop[i], scope);
@@ -1959,30 +1959,31 @@ Interpreter.prototype.calledWithNew = function() {
 
 /**
  * Gets a value from the scope chain or from an object property.
- * @param {*} left Name of variable or object/propname tuple.
+ * @param {!Array} left Name of variable or object/propname tuple.
  * @return {*} Value (may be undefined).
  */
 Interpreter.prototype.getValue = function(left) {
-  if (left instanceof Array) {
-    var obj = left[0];
-    var prop = left[1];
-    return this.getProperty(obj, prop);
+  if (left[0]) {
+    // An obj/prop components tuple (foo.bar).
+    return this.getProperty(left[0], left[1]);
+  } else {
+    // A null/varname variable lookup.
+    return this.getValueFromScope(left[1]);
   }
-  return this.getValueFromScope(left);
 };
 
 /**
  * Sets a value to the scope chain or to an object property.
- * @param {*} left Name of variable or object/propname tuple.
+ * @param {!Array} left Name of variable or object/propname tuple.
  * @param {*} value Value.
  */
 Interpreter.prototype.setValue = function(left, value) {
-  if (left instanceof Array) {  // This is a components tuple (foo.bar).
-    var obj = left[0];
-    var prop = left[1];
-    this.setProperty(obj, prop, value);
+  if (left[0]) {
+    // An obj/prop components tuple (foo.bar).
+    this.setProperty(left[0], left[1], value);
   } else {
-    this.setValueToScope(left, value);
+    // A null/varname variable lookup.
+    this.setValueToScope(left[1], value);
   }
 };
 
@@ -2164,14 +2165,13 @@ Interpreter.prototype['stepBinaryExpression'] = function() {
   var leftSide = state.leftValue_;
   var rightSide = state.value;
   var value;
-  var comp = this.comp(leftSide, rightSide);
   if (node['operator'] === '==' || node['operator'] === '!=') {
     if ((!leftSide || !leftSide.isObject) &&
         (!rightSide || !rightSide.isObject)) {
       // At least one side is a primitive.
       value = leftSide == rightSide;
     } else {
-      value = comp === 0;
+      value = this.comp(leftSide, rightSide) === 0;
     }
     if (node['operator'] === '!=') {
       value = !value;
@@ -2182,12 +2182,15 @@ Interpreter.prototype['stepBinaryExpression'] = function() {
       value = !value;
     }
   } else if (node['operator'] === '>') {
-    value = comp === 1;
+    value = this.comp(leftSide, rightSide) === 1;
   } else if (node['operator'] === '>=') {
+    var comp = this.comp(leftSide, rightSide);
     value = comp === 1 || comp === 0;
   } else if (node['operator'] === '<') {
-    value = comp === -1;
+    var comp = this.comp(leftSide, rightSide);
+    value = this.comp(leftSide, rightSide) === -1;
   } else if (node['operator'] === '<=') {
+    var comp = this.comp(leftSide, rightSide);
     value = comp === -1 || comp === 0;
   } else if (node['operator'] === '+') {
     var leftValue = leftSide.isObject ? leftSide + '' : leftSide;
@@ -2277,19 +2280,20 @@ Interpreter.prototype['stepCallExpression'] = function() {
   var node = state.node;
   if (!state.doneCallee_) {
     state.doneCallee_ = 1;
+    // Components needed to determine value of 'this'.
     stack.push({node: node['callee'], components: true});
     return;
   }
   if (state.doneCallee_ == 1) {
     // Determine value of the function.
     state.doneCallee_ = 2;
-    if (state.value && state.value.class === 'Function') {
-      state.func_ = state.value;
+    var func = state.value;
+    if (Array.isArray(func)) {
+      state.func_ = this.getValue(func);
+      state.components_ = func;
     } else {
-      state.func_ = this.getValue(state.value);
-      if (Array.isArray(state.value)) {
-        state.components_ = state.value;
-      }
+      // Already evaluated function: (function(){...})();
+      state.func_ = func;
     }
     state.arguments_ = [];
     state.n_ = 0;
@@ -2307,9 +2311,8 @@ Interpreter.prototype['stepCallExpression'] = function() {
   }
   if (!state.doneExec_) {
     state.doneExec_ = true;
-    if (state.func_ === null || state.func_ === undefined) {
-      this.throwException(this.TYPE_ERROR,
-          (typeof state.func_) + ' is not a function');
+    if (!state.func_ || !this.isa(state.func_, this.FUNCTION)) {
+      this.throwException(this.TYPE_ERROR, state.func_ + ' is not a function');
     }
     // Determine value of 'this' in function.
     if (state.node['type'] === 'NewExpression') {
@@ -2624,7 +2627,7 @@ Interpreter.prototype['stepForInStatement'] = function() {
   }
   // Reset back to step three.
   state.name_ = undefined;
-  if (state.variable_ instanceof Array) {
+  if (Array.isArray(state.variable_)) {
     state.doneVariable_ = false;
   }
 };
@@ -2677,7 +2680,7 @@ Interpreter.prototype['stepIdentifier'] = function() {
   var stack = this.stateStack;
   var state = stack.pop();
   var name = state.node['name'];
-  var value = state.components ? name : this.getValueFromScope(name);
+  var value = state.components ? [null, name] : this.getValueFromScope(name);
   stack[stack.length - 1].value = value;
 };
 
@@ -2688,7 +2691,7 @@ Interpreter.prototype['stepLabeledStatement'] = function() {
   var stack = this.stateStack;
   // No need to hit this node again on the way back up the stack.
   var state = stack.pop();
-  // Note that a statement might have multiple labels,
+  // Note that a statement might have multiple labels.
   var labels = state.labels || [];
   labels.push(state.node['label']['name']);
   stack.push({node: state.node['body'], labels: labels});
@@ -2745,12 +2748,12 @@ Interpreter.prototype['stepMemberExpression'] = function() {
     stack.push({node: node['property'], components: !node['computed']});
   } else {
     stack.pop();
-    if (state.components) {
-      stack[stack.length - 1].value = [state.object_, state.value];
-    } else {
-      var value = this.getProperty(state.object_, state.value);
-      stack[stack.length - 1].value = value;
+    var propName = state.value;
+    if (Array.isArray(propName)) {
+      propName = propName[1];
     }
+    stack[stack.length - 1].value = state.components ?
+        [state.object_, propName] : this.getProperty(state.object_, propName);
   }
 };
 
