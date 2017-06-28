@@ -1764,7 +1764,7 @@ Interpreter.prototype.setProperty = function(obj, name, value, opt_descriptor) {
  */
 Interpreter.prototype.deleteProperty = function(obj, name) {
   name += '';
-  if (!obj.isObject || obj.notWritable.has(name)) {
+  if (!obj || !obj.isObject || obj.notWritable.has(name)) {
     return false;
   }
   if (name === 'length' && obj.class === 'Array') {
@@ -2744,26 +2744,21 @@ Interpreter.prototype['stepMemberExpression'] = function() {
     stack.push({node: node['object']});
     return;
   }
+  var propName;
   if (!node['computed']) {
+    state.object_ = state.value;
     // obj.foo -- Just access 'foo' directly.
-    var propName = node['property']['name'];
-    stack.pop();
-    stack[stack.length - 1].value = state.components ?
-        [state.value, propName] : this.getProperty(state.value, propName);
-    return;
-  }
-  if (!state.doneProperty_) {
+    propName = node['property']['name'];
+  } else if (!state.doneProperty_) {
     state.object_ = state.value;
     // obj[foo] -- Compute value of 'foo'.
     state.doneProperty_ = true;
     stack.push({node: node['property']});
     return;
+  } else {
+    propName = state.value;
   }
   stack.pop();
-  var propName = state.value;
-  if (Array.isArray(propName)) {
-    propName = propName[1];
-  }
   stack[stack.length - 1].value = state.components ?
       [state.object_, propName] : this.getProperty(state.object_, propName);
 };
