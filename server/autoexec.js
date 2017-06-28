@@ -27,7 +27,8 @@ var autoexec = `
 
 // Polyfill copied from:
 // developer.mozilla.org/en/docs/Web/JavaScript/Reference/Global_objects/Function/bind
-Object.defineProperty(Function.prototype, 'bind', {configurable: true, value:
+Object.defineProperty(Function.prototype, 'bind',
+    {configurable: true, writable: true, value:
   function(oThis) {
     if (typeof this !== 'function') {
       throw new TypeError('What is trying to be bound is not callable');
@@ -52,7 +53,8 @@ Object.defineProperty(Function.prototype, 'bind', {configurable: true, value:
 // Add a polyfill to handle create's second argument.
 (function() {
   var create_ = Object.create;
-  Object.defineProperty(Object, 'create', {configurable: true, value:
+  Object.defineProperty(Object, 'create',
+      {configurable: true, writable: true, value:
     function(proto, props) {
       var obj = create_(proto);
       props && Object.defineProperties(obj, props);
@@ -61,7 +63,8 @@ Object.defineProperty(Function.prototype, 'bind', {configurable: true, value:
   });
 })();
 
-Object.defineProperty(Object, 'defineProperties', {configurable: true, value:
+Object.defineProperty(Object, 'defineProperties',
+    {configurable: true, writable: true, value:
   function(obj, props) {
     if (!obj || (typeof obj !== 'object' && typeof obj !== 'function')) {
       throw new TypeError('Object.defineProperties called on non-object');
@@ -76,7 +79,8 @@ Object.defineProperty(Object, 'defineProperties', {configurable: true, value:
 
 // Polyfill copied from:
 // developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/every
-Object.defineProperty(Array.prototype, 'every', {configurable: true, value:
+Object.defineProperty(Array.prototype, 'every',
+    {configurable: true, writable: true, value:
   function(callbackfn, thisArg) {
     if (this == null || typeof callbackfn !== 'function') throw new TypeError;
     var T, k;
@@ -94,7 +98,8 @@ Object.defineProperty(Array.prototype, 'every', {configurable: true, value:
 
 // Polyfill copied from:
 // developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/filter
-Object.defineProperty(Array.prototype, 'filter', {configurable: true, value:
+Object.defineProperty(Array.prototype, 'filter',
+    {configurable: true, writable: true, value:
   function(fun/*, thisArg*/) {
     if (this === void 0 || this === null || typeof fun !== 'function') {
       throw new TypeError;
@@ -115,7 +120,8 @@ Object.defineProperty(Array.prototype, 'filter', {configurable: true, value:
 
 // Polyfill copied from:
 // developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/forEach
-Object.defineProperty(Array.prototype, 'forEach', {configurable: true, value:
+Object.defineProperty(Array.prototype, 'forEach',
+    {configurable: true, writable: true, value:
   function(callback, thisArg) {
     if (this == null || typeof callback !== 'function') throw new TypeError;
     var T, k;
@@ -132,7 +138,8 @@ Object.defineProperty(Array.prototype, 'forEach', {configurable: true, value:
 
 // Polyfill copied from:
 // developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/map
-Object.defineProperty(Array.prototype, 'map', {configurable: true, value:
+Object.defineProperty(Array.prototype, 'map',
+    {configurable: true, writable: true, value:
   function(callback, thisArg) {
     if (this == null || typeof callback !== 'function') new TypeError;
     var T, A, k;
@@ -151,7 +158,8 @@ Object.defineProperty(Array.prototype, 'map', {configurable: true, value:
 
 // Polyfill copied from:
 // developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/Reduce
-Object.defineProperty(Array.prototype, 'reduce', {configurable: true, value:
+Object.defineProperty(Array.prototype, 'reduce',
+    {configurable: true, writable: true, value:
   function(callback /*, initialValue*/) {
     if (this == null || typeof callback !== 'function') throw new TypeError;
     var t = Object(this), len = t.length >>> 0, k = 0, value;
@@ -174,7 +182,7 @@ Object.defineProperty(Array.prototype, 'reduce', {configurable: true, value:
 // Polyfill copied from:
 // developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/ReduceRight
 Object.defineProperty(Array.prototype, 'reduceRight',
-    {configurable: true, value:
+    {configurable: true, writable: true, value:
   function(callback /*, initialValue*/) {
     if (null === this || 'undefined' === typeof this ||
         'function' !== typeof callback) throw new TypeError;
@@ -197,7 +205,8 @@ Object.defineProperty(Array.prototype, 'reduceRight',
 
 // Polyfill copied from:
 // developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/some
-Object.defineProperty(Array.prototype, 'some', {configurable: true, value:
+Object.defineProperty(Array.prototype, 'some',
+    {configurable: true, writable: true, value:
   function(fun/*, thisArg*/) {
     if (this == null || typeof fun !== 'function') throw new TypeError;
     var t = Object(this);
@@ -212,7 +221,8 @@ Object.defineProperty(Array.prototype, 'some', {configurable: true, value:
   }
 });
 
-Object.defineProperty(Array.prototype, 'sort', {configurable: true, value:
+Object.defineProperty(Array.prototype, 'sort',
+    {configurable: true, writable: true, value:
   function(opt_comp) {
     for (var i = 0; i < this.length; i++) {
       var changes = 0;
@@ -232,7 +242,7 @@ Object.defineProperty(Array.prototype, 'sort', {configurable: true, value:
 });
 
 Object.defineProperty(Array.prototype, 'toLocaleString',
-    {configurable: true, value:
+    {configurable: true, writable: true, value:
   function() {
     var out = [];
     for (var i = 0; i < this.length; i++) {
