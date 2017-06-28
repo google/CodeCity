@@ -201,6 +201,7 @@ Interpreter.prototype.initGlobalScope = function(scope) {
 
   var func = this.createObject(this.FUNCTION);
   func.eval = true;
+  func.illegalConstructor = true;
   this.setProperty(func, 'length', 1, Interpreter.READONLY_DESCRIPTOR);
   this.addVariableToScope(scope, 'eval', func);
 
@@ -1354,14 +1355,14 @@ Interpreter.Object.prototype.toString = function() {
         name = obj.properties['name'];
         break;
       }
-    } while ((obj = this.getPrototype(obj)));
+    } while ((obj = obj.proto));
     var obj = this;
     do {
       if ('message' in obj.properties) {
         message = obj.properties['message'];
         break;
       }
-    } while ((obj = this.getPrototype(obj)));
+    } while ((obj = obj.proto));
     cycles.push(this);
     try {
       name = name && name.toString();
@@ -2607,7 +2608,7 @@ Interpreter.prototype['stepForInStatement'] = function() {
     var left = node['left'];
     if (left['type'] === 'VariableDeclaration') {
       // Inline variable declaration: for (var x in y)
-      state.variable_ = left['declarations'][0]['id']['name'];
+      state.variable_ = [null, left['declarations'][0]['id']['name']];
     } else {
       // Arbitrary left side: for (foo().bar in y)
       state.variable_ = null;
@@ -2774,38 +2775,29 @@ Interpreter.prototype['stepNewExpression'] =
 Interpreter.prototype['stepObjectExpression'] = function() {
   var stack = this.stateStack;
   var state = stack[stack.length - 1];
-  var valueToggle = state.valueToggle_;
   var n = state.n_ || 0;
-  if (!state.object_) {
-    state.object_ = this.createObject(this.OBJECT);
-    state.properties = Object.create(null);
-  } else {
-    if (valueToggle) {
-      state.key_ = state.value;
-    } else {
-      if (!state.properties[state.key_]) {
-        // Create temp object to collect value.
-        state.properties[state.key_] = {};
-      }
-      state.properties[state.key_][state.kind_] = state.value;
-    }
-  }
   var property = state.node['properties'][n];
-  if (property) {
-    if (valueToggle) {
-      state.n_ = n + 1;
-      stack.push({node: property['value']});
-    } else {
-      state.kind_ = property['kind'];
-      stack.push({node: property['key'], components: true});
-    }
-    state.valueToggle_ = !valueToggle;
+  if (!state.object_) {
+    // First execution.
+    state.object_ = this.createObject(this.OBJECT);
   } else {
-    for (var key in state.properties) {
-      var kinds = state.properties[key];
-      // Set a normal property with a value.
-      this.setProperty(state.object_, key, kinds['init']);
+    // Determine property name.
+    var key = property['key'];
+    if (key['type'] === 'Identifier') {
+      var propName = key['name'];
+    } else if (key['type'] === 'Literal') {
+      var propName = key['value'];
+    } else {
+      throw SyntaxError('Unknown object structure: ' + key['type']);
     }
+    // Set the property computed in the previous execution.
+    this.setProperty(state.object_, propName, state.value);
+    state.n_ = ++n;
+    property = state.node['properties'][n];
+  }
+  if (property) {
+    stack.push({node: property['value']});
+  } else {
     stack.pop();
     stack[stack.length - 1].value = state.object_;
   }
