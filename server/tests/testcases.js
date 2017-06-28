@@ -769,11 +769,13 @@ module.exports = [
     expected: 'TypeError' },
 
   { name: 'ObjectDefinePropertiesNonObjectProps', src: `
-    Object.getOwnPropertyNames(
-        Object.defineProperties({}, 'not an object')
-    ).length;
+    try {
+      Object.defineProperties({}, undefined);
+    } catch (e) {
+      e.name;
+    }
     `,
-    expected: 0 },
+    expected: 'TypeError' },
 
   { name: 'ObjectDefinePropertiesBadDescriptor', src: `
     var o = {};

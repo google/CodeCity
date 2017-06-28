@@ -36,7 +36,7 @@ function T() {
  * Report a test result.
  * @param{string} status the test result status (e.g., 'OK', 'FAIL', 'SKIP')
  * @param{string} name
- * @param{number=} opt_message
+ * @param{*} opt_message
  */
 T.prototype.result = function (status, name, opt_message) {
   console.log('%s\t%s', status, name);
@@ -49,7 +49,7 @@ T.prototype.result = function (status, name, opt_message) {
 /**
  * Report a test pass.
  * @param{string} name
- * @param{number=} opt_message
+ * @param{*} opt_message
  */
 T.prototype.pass = function(name, opt_message) {
   this.result('OK', name, opt_message);
@@ -58,7 +58,7 @@ T.prototype.pass = function(name, opt_message) {
 /**
  * Report a test failure.
  * @param{string} name
- * @param{number=} opt_message
+ * @param{*} opt_message
  */
 T.prototype.fail = function(name, opt_message) {
   this.result('FAIL', name, opt_message);
@@ -67,7 +67,7 @@ T.prototype.fail = function(name, opt_message) {
 /**
  * Report a test failure due to crash.
  * @param{string} name
- * @param{number=} opt_message
+ * @param{*} opt_message
  */
 T.prototype.crash = function(name, opt_message) {
   this.result('CRASH', name, opt_message);
@@ -76,7 +76,7 @@ T.prototype.crash = function(name, opt_message) {
 /**
  * Report a test skip.
  * @param{string} name
- * @param{number=} opt_message
+ * @param{*} opt_message
  */
 T.prototype.skip = function(name, opt_message) {
   this.result('SKIP', name, opt_message);
