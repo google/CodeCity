@@ -1,6 +1,6 @@
 /**
  * @license
- * Code City interpreter JS testscases
+ * Code City: Server JavaScript Interpreter Testscases
  *
  * Copyright 2017 Google Inc.
  * https://github.com/NeilFraser/CodeCity
@@ -22,6 +22,7 @@
  * @fileoverview Test cases for JavaScript interpreter.
  * @author cpcallen@google.com (Christopher Allen)
  */
+'use strict';
 
 module.exports = [
   // Testcases for TestInterpreterSimple (have expected value):
