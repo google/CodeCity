@@ -37,41 +37,97 @@ var $ = Object.create(Object.prototype);
 
 (function() {
   // Core build options:
-
-  // Overwrite existing?:
-  var force = false;
+  var forceAll = false; // Overwrite existing?
 
   /**
-   * Add a property to a core object - but only overwrite existing
-   * properties if force is true.
+   * Log a message to the console.
+   * @param {string} msg Message to show.
+   */
+  function log(msg) {
+    // FIXME: this implementation for testing in Node only.
+    console.log(msg);
+  }
+    
+  /**
+   * Verify that obj has a property obj[key], with specified
+   * enumerability, whose value is an object with prototype proto.
+   * Existing values / prototype will not be overwritten unless force
+   * or forceAll is true, but an error will be reported instead.
    * @param {Object} obj The object to which to add a property.
    * @param {string} key The property key to add.
-   * @param {*} value The property key to add.
+   * @param {Object} proto The desired prototype for obj[key].
+   * @param {bool=} enumerable The property should be enumerable.
+   * @param {bool=} force Overwrite existing?
    */
-  function make(obj, key, value) {
-    if (force || typeof obj[key] === 'undefined') {
-      obj[key] = value;
+  function make(obj, key, proto, enumerable, force) {
+    var desc = Object.getOwnPropertyDescriptor(obj, key);
+    if (desc === undefined) {
+      desc = { value: Object.create(proto), enumerable,
+               writable: true, configurable: true };
+    } else if (force === undefined ? forceAll : force) {
+      if (typeof obj !== 'object' && typeof obj !== 'function' ||
+          obj === null) {
+        desc.value = Object.create(proto);
+      }
+      Object.setPrototypeOf(desc.value, proto);
+      desc.enumerable = enumerable;
+    } else {
+      if (typeof obj !== 'object' && typeof obj !== 'function' ||
+          obj === null) {
+        log(obj + '.' + key + ' is not an object.');
+        return; // Abort: can't (usefully) set prototype of primitive
+      }
+      if (Object.getPrototypeOf(desc.value) !== proto) {
+        log(obj + '.' + key + ' has prototype ' +
+            Object.getPrototypeOf(desc.value));
+      }
+      if (desc.enumerable !== enumerable) {
+        log(obj + '.' + key + ' enumerability is ' + desc.enumerable);
+      }
     }
+    Object.defineProperty(obj, key, desc);
+  }
+
+  /**
+   * Set a obj[key] to value (and make it enumerable iff enumerble is
+   * true) but don't modify an existing property unless force or
+   * global forceAll is true (force will override forceAll if given).
+   * @param {Object} obj The object to which to add a property.
+   * @param {string} key The property key to add.
+   * @param {*} value The value to add as obj[key].
+   * @param {bool=} enumerable The property should be enumerable.
+   * @param {bool=} force Overwrite existing.
+   */
+  function set(obj, key, value, enumerable, force) {
+    var desc = Object.getOwnPropertyDescriptor(obj, key);
+    if (desc === undefined || (force === undefined ? forceAll : force)) {
+      desc = { value, enumerable, writable: true, configurable: true };
+    } else {
+      if (desc.value !== value) {
+        log(obj + '.' + key + ' === ' + value + ' (expected: ' + value + ').');
+      }
+      if (desc.enumerable !== enumerable) {
+        log(obj + '.' + key + ' enumerability is ' + desc.enumerable);
+      }
+    }
+    Object.defineProperty(obj, key, desc);
   }
 
   /*******************************************************************
    * $.object
    */
-  make($, 'object', Object.prototype);
-
+  set($, 'object', Object.prototype, true);
+  
   /*******************************************************************
    * $.physical
    */
-  make($, 'physical', Object.create($.object, {
-    name: {value: 'Physical object prototype',
-           writable: true, enumerable: true, configurable: true},
-    location: {value: null,
-               writable: true, enumerable: true, configurable: true},
-    contents_: {value: undefined, // will be vetted into existance
-                writable: true, enumerable: true, configurable: true},
-  }));
+  make($, 'physical', $.object, true);
 
-  make($.physical, 'contents', function() {
+  set($.physical, 'name', 'Physical object prototype', true);
+  set($.physical, 'location', null, true);
+  set($.physical, 'contents_', undefined, true); // later vetted into existance
+
+  set($.physical, 'contents', function() {
     // Return the contents of this object.  This is for VR purposes,
     // and descendents of $.physical can override it to 'hide' certain
     // objects from their contents.
@@ -79,7 +135,7 @@ var $ = Object.create(Object.prototype);
     return this.contents_;
   });
        
-  make($.physical, 'moveto', function(dest) {
+  set($.physical, 'moveto', function(dest) {
     // Move this physical object to dest
     //
     // This is based loosely on moo.ca's #3:moveto and #102:bf_move
@@ -123,12 +179,12 @@ var $ = Object.create(Object.prototype);
     // FIXME: call enterfunc
   });
   
-  make($.physical, 'moveable', function(obj) {
+  set($.physical, 'moveable', function(obj) {
     // Returns true iff this is willing to accept obj into its contents.
     return false;
   });
 
-  make($.physical, 'accept', function(obj) {
+  set($.physical, 'accept', function(obj) {
     // Returns true iff this is willing to accept obj into its
     // contents.  This function should only be called by
     // $.physical.moveto(), and might cause some action to occur as a
@@ -137,7 +193,7 @@ var $ = Object.create(Object.prototype);
     return this.acceptable(obj);
   });
 
-  make($.physical, 'acceptable', function(obj) {
+  set($.physical, 'acceptable', function(obj) {
     // Returns true iff this is willing to accept obj into its
     // contents.  By default .accept() delegates this decision to this
     // function.  This function (and any overrides) MUST NOT cause any
@@ -145,7 +201,7 @@ var $ = Object.create(Object.prototype);
     return false;
   });
 
-  make($.physical, 'contains', function(obj) {
+  set($.physical, 'contains', function(obj) {
     // Returns true iff obj is located in this.
     $.physical_vet(this);
     $.physical_vet(obj);
@@ -159,7 +215,7 @@ var $ = Object.create(Object.prototype);
   });
   
   // FIXME: should be a non-overridable method on $.physical:
-  make($, 'physical_vet', function(obj) {
+  set($, 'physical_vet', function(obj) {
     // Verify the integrity of a $.physical object.
     if (!$.physical.isPrototypeOf(obj)) {
       throw TypeError('Not a $.physical object');
