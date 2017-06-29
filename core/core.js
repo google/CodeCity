@@ -119,6 +119,38 @@ var $ = Object.create(Object.prototype);
   set($, 'object', Object.prototype, true);
   
   /*******************************************************************
+   * $.vet - Library of vetting functions + general vetting function.
+   */
+  make($, 'vet', $.object, function(obj) {
+    /* $.vet(obj) - validate obj.
+     * 
+     * Verifies the internal state of obj.
+     * 
+     * $.vet is also a library of type-specific vetting functions -
+     * e.g., $.vet.physical(p), which verifies that p is a $.physical
+     * object and has valid internal state.
+     */
+    // FIXME: select and apply relevant $.vet.whatever functions
+  });
+
+  set($.vet, 'arrayFor', function(obj, key) {
+    /* $.vet.arrayFor(obj, key)
+     *
+     * Verify that obj[key] is an array unique to obj (not inherited
+     * from a prototype).
+     */
+    if (!obj.hasOwnProperty(key) || !Array.isArray(obj[key]) ||
+        obj[key].forObj !== obj || obj[key].forKey !== key) {
+      // FIXME: attributes?
+      obj[key] = [];
+      Object.defineProperties(obj[key], {forObj: {value: obj},
+                                         forKey: {value: key}});
+    }
+  });
+
+  // Type-specific vetting functions defined with types below.
+  
+  /*******************************************************************
    * $.physical
    */
   make($, 'physical', $.object, true);
@@ -131,7 +163,7 @@ var $ = Object.create(Object.prototype);
     // Return the contents of this object.  This is for VR purposes,
     // and descendents of $.physical can override it to 'hide' certain
     // objects from their contents.
-    $.physical_vet(this);
+    $.vet.physical(this);
     return this.contents_;
   });
        
@@ -140,10 +172,10 @@ var $ = Object.create(Object.prototype);
     //
     // This is based loosely on moo.ca's #3:moveto and #102:bf_move
     // Vet obj, src and dest (also does type check):
-    $.physical_vet(this);
+    $.vet.physical(this);
     var src = this.location;
-    src === null || $.physical_vet(src);
-    dest === null || $.physical_vet(dest);
+    src === null || $.vet.physical(src);
+    dest === null || $.vet.physical(dest);
 
     // FIXME: permission checks go here.
     // Do moveable and accept checks:
@@ -203,36 +235,36 @@ var $ = Object.create(Object.prototype);
 
   set($.physical, 'contains', function(obj) {
     // Returns true iff obj is located in this.
-    $.physical_vet(this);
-    $.physical_vet(obj);
+    $.vet.physical(this);
+    $.vet.physical(obj);
     for (var loc = obj.location; loc !== null; loc = loc.location) {
       if (loc === this) {
         return true;
       }
-      $.physical_vet(loc);
+      $.vet.physical(loc);
     }
     return false;
   });
   
-  // FIXME: should be a non-overridable method on $.physical:
-  set($, 'physical_vet', function(obj) {
-    // Verify the integrity of a $.physical object.
+  set($.vet, 'physical', function(obj) {
+    /* $.vet.physical(obj) - validate $.physical object.
+     * 
+     * Verifies that obj is a $.physical object and has valid internal
+     * state.
+     */
     if (typeof obj !== 'object' || !$.physical.isPrototypeOf(obj)) {
       throw TypeError('Not a $.physical object');
     }
-    // They can only be located in another $.physical object - and
-    // that object must obj in its contents:
-    if (!$.physical.isPrototypeOf(obj.location) ||
-        obj.contents_.indexOf(obj) === -1) {
-      obj.location === null;
+    // They can only be located in another $.physical object (or null)
+    // and that object must obj in its contents:
+    var loc = obj.location;
+    if (!$.physical.isPrototypeOf(loc) ||
+        ($.vet.arrayFor(loc, 'contents_'), // comma operator
+         obj.location.contents_.indexOf(obj) === -1)) {
+      obj.location = null;
     }
     // obj.contents_ must be an array unique to obj (not inherited):
-    if (!obj.hasOwnProperty('contents_') || !Array.isArray(obj.contents_) ||
-        !obj.contents_.for === obj) {
-      // FIXME: attributes?
-      obj.contents_ = [];
-      Object.defineProperty(obj.contents_, 'for', { value: obj });
-    }
+    $.vet.arrayFor(obj, 'contents_');
     // obj.contents_ must not contain any duplicates, non-$.physical
     // objects, objects not located in obj:
     for (var i = 0; i < obj.contents_.length; i++) {
