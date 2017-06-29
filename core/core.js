@@ -156,6 +156,37 @@ var $ = Object.create(Object.prototype);
   // Type-specific vetting functions defined with types below.
   
   /*******************************************************************
+   * $.owner - object which can own other objects
+   */
+  // FIXME: this will probably need to be some kind of system object.
+  make($, 'owner', Object.prototype, true);
+  
+  /*******************************************************************
+   * $.user - owner representing an individual user
+   */
+  make($, 'user', $.owner, true);
+
+  set($.user, 'userid', undefined, true);
+
+  // FIXME: having VR stuff, like avatars, should be optional.
+  set($.user, 'avatar', undefined, true);
+
+  set($.vet, 'user', function(obj) {
+    /* $.vet.user(obj) - validate an $.user object.
+     * 
+     * Verifies that obj is a $.user object and has valid internal
+     * state.
+     */
+    if (typeof obj !== 'object' || !$.user.isPrototypeOf(obj)) {
+      throw TypeError('Not an $.user object');
+    }
+    // .avatar must be an $.avatar or undefined.
+    if (typeof obj.avatar !== 'object' || !$.avatar.isPrototypeOf(obj.avatar)) {
+      obj.avatar = undefined;
+    }
+  });
+
+  /*******************************************************************
    * $.physical - all kinds of physical stuff: people, places, things.
    */
   make($, 'physical', $.object, true);
@@ -262,7 +293,7 @@ var $ = Object.create(Object.prototype);
   });
   
   set($.vet, 'physical', function(obj) {
-    /* $.vet.physical(obj) - validate $.physical object.
+    /* $.vet.physical(obj) - validate a $.physical object.
      * 
      * Verifies that obj is a $.physical object and has valid internal
      * state.
@@ -310,7 +341,7 @@ var $ = Object.create(Object.prototype);
   });
 
   set($.vet, 'scene', function(obj) {
-    /* $.vet.scene(obj) - validate $.scene object.
+    /* $.vet.scene(obj) - validate a $.scene object.
      * 
      * Verifies that obj is a $.scene object and has valid internal
      * state.
@@ -336,7 +367,7 @@ var $ = Object.create(Object.prototype);
    * $.avatar - physical manifestation of user
    */
   make($, 'thing', $.thing, true);
-  
+
 })();
 
 if (typeof module !== 'undefined') { // Node.js
