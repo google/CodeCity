@@ -173,15 +173,20 @@ var $ = Object.create(Object.prototype);
   });
        
   set($.physical, 'moveto', function(dest) {
-    // Move this physical object to dest
-    //
-    // This is based loosely on moo.ca's #3:moveto and #102:bf_move
+    /* .moveto(dest) - move this physical object to dest.
+     *
+     * If this.moveable(dest) and dest.accept(this) both return true
+     * then move this to dest and then call .exitfunc(this) on
+     * original this.location and .enterfunc(this) on new
+     * this.location.
+     * 
+     * This is based loosely on moo.ca's #3:moveto and #102:bf_move.
+     */
     // Vet obj, src and dest (also does type check):
     $.vet.physical(this);
     var src = this.location;
     src === null || $.vet.physical(src);
     dest === null || $.vet.physical(dest);
-
     // FIXME: permission checks go here.
     // Do moveable and accept checks:
     if (!this.moveable(dest)) {
@@ -191,17 +196,15 @@ var $ = Object.create(Object.prototype);
     if (dest !== null && !dest.accept(this)) {
       throw Error(dest.name + ' refused ' + this.name);
     }
-
     // Check proposed containment hierarchy for cycles.  We do this
-    // after the movable and accept checks because we don't want those
-    // checks in case they muck arounnd with the containment
-    // hierarchy.
+    // *after* the movable and accept checks to prevent them from
+    // mucking around with the containment hierarchy between this
+    // check and the actual move.
     for(var loc = dest; loc !== null; loc = loc.location) {
       if (loc === this) {
         throw Error("Can't put " + this.name + " inside itself.");
       }
     }
-
     // Do move:
     var i;
     if ($.physical.isPrototypeOf(src)) {
@@ -211,30 +214,37 @@ var $ = Object.create(Object.prototype);
     }
     this.location = dest;
     dest === null || dest.contents_.push(this);
-
     // FIXME: call exitfunc
     // FIXME: call enterfunc
   });
   
-  set($.physical, 'moveable', function(obj) {
-    // Returns true iff this is willing to accept obj into its contents.
+  set($.physical, 'moveable', function(whither) {
+    // Returns true iff this is willing to move to whither.
     return false;
   });
 
   set($.physical, 'accept', function(obj) {
-    // Returns true iff this is willing to accept obj into its
-    // contents.  This function should only be called by
-    // $.physical.moveto(), and might cause some action to occur as a
-    // result.  Other callers interested in testing to see if a move will
-    // be accepted should call .acceptable() instead.
+    /* .accept(obj) => boolean
+     * 
+     * Returns true iff this is willing to accept obj into its
+     * contents.  This function should only be called by
+     * $.physical.moveto() immediately before performing a move, and
+     * this might cause some kind of observable side-effect (prompting
+     * a user for a password, making some noise, etc.)  Other code
+     * wanted to test if a move might succeed should call
+     * .acceptable(), which must not have any side-effects.
+     */
+    // By default just delegate decision to .acceptable():
     return this.acceptable(obj);
   });
 
   set($.physical, 'acceptable', function(obj) {
-    // Returns true iff this is willing to accept obj into its
-    // contents.  By default .accept() delegates this decision to this
-    // function.  This function (and any overrides) MUST NOT cause any
-    // observable action to occur.
+    /* .acceptable(obj) => boolean
+     * 
+     * Returns true iff this is willing to accept obj into its
+     * contents.  This function (and any overrides) MUST NOT have any
+     * observable side-effects.
+     */
     return false;
   });
 
@@ -287,7 +297,17 @@ var $ = Object.create(Object.prototype);
    */
   make($, 'scene', $.physical, true);
 
-  set($.physical, 'exits_', undefined, true);
+  set($.scene, 'exits_', undefined, true);
+
+  set($.scene, 'acceptable', function(obj) {
+    /* .acceptable(obj) => boolean
+     * 
+     * Returns true iff this is willing to accept obj into its
+     * contents.  This function (and any overrides) MUST NOT have any
+     * observable side-effects.
+     */
+    return true;
+  });
 
   set($.vet, 'scene', function(obj) {
     /* $.vet.scene(obj) - validate $.scene object.
@@ -307,14 +327,16 @@ var $ = Object.create(Object.prototype);
    */
   make($, 'thing', $.physical, true);
 
+  set($.thing, 'moveable', function(whither) {
+    // Returns true iff this is willing to move to whither.
+    return true;
+  });
+
   /*******************************************************************
    * $.avatar - physical manifestation of user
    */
   make($, 'thing', $.thing, true);
   
-
-  
-
 })();
 
 if (typeof module !== 'undefined') { // Node.js
