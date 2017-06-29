@@ -619,9 +619,45 @@ module.exports = [
     expected: 78 },
 
   { name: 'ObjectGetPrototypeOf', src: `
-    var o = {};
-    Object.getPrototypeOf(o) == Object.prototype && 
-        Object.getPrototypeOf(Object.prototype) == null;
+    Object.getPrototypeOf({}) === Object.prototype;
+    `,
+    expected: true },
+
+  { name: 'ObjectGetPrototypeOfObjectPrototype', src: `
+    Object.getPrototypeOf(Object.prototype) == null;
+    `,
+    expected: true },
+
+  { name: 'ObjectGetPrototypeOfNullUndefined', src: `
+    var r = '', prims = [null, undefined];
+    for (var i = 0; i < prims.length; i++) {
+      try {
+        Object.getPrototypeOf(prims[i]);
+      } catch (e) {
+        r += e.name;
+      }
+    }
+    r;
+    `,
+    expected: 'TypeErrorTypeError' },
+
+  { name: 'ObjectGetPrototypeOfPrimitivesES5', src: `
+    var r = '', prims = [true, 42, 'hello'];
+    for (var i = 0; i < prims.length; i++) {
+      try {
+        Object.getPrototypeOf(prims[i]);
+      } catch (e) {
+        r += e.name;
+      }
+    }
+    r;
+    `,
+    expected: 'TypeErrorTypeErrorTypeError' },
+
+  { name: 'ObjectGetPrototypeOfPrimitivesES6', src: `
+    Object.getPrototypeOf(true) === Boolean.prototype &&
+    Object.getPrototypeOf(1337) === Number.prototype &&
+    Object.getPrototypeOf('hi') === String.prototype;
     `,
     expected: true },
 
