@@ -217,7 +217,7 @@ var $ = Object.create(Object.prototype);
   // FIXME: should be a non-overridable method on $.physical:
   set($, 'physical_vet', function(obj) {
     // Verify the integrity of a $.physical object.
-    if (!$.physical.isPrototypeOf(obj)) {
+    if (typeof obj !== 'object' || !$.physical.isPrototypeOf(obj)) {
       throw TypeError('Not a $.physical object');
     }
     // They can only be located in another $.physical object - and
