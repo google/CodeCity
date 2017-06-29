@@ -114,12 +114,17 @@ var $ = Object.create(Object.prototype);
   }
 
   /*******************************************************************
-   * $.object
+   * $.object - Object.prototype
    */
   set($, 'object', Object.prototype, true);
   
   /*******************************************************************
-   * $.vet - Library of vetting functions + general vetting function.
+   * $.array - Array.prototype
+   */
+  set($, 'array', Array.prototype, true);
+
+  /*******************************************************************
+   * $.vet - library of vetting functions + general vetting function.
    */
   make($, 'vet', $.object, function(obj) {
     /* $.vet(obj) - validate obj.
@@ -151,7 +156,7 @@ var $ = Object.create(Object.prototype);
   // Type-specific vetting functions defined with types below.
   
   /*******************************************************************
-   * $.physical
+   * $.physical - all kinds of physical stuff: people, places, things.
    */
   make($, 'physical', $.object, true);
 
@@ -276,6 +281,39 @@ var $ = Object.create(Object.prototype);
     }
     // FIXME: check for circular containment?
   });
+
+  /*******************************************************************
+   * $.scene - places you can be.
+   */
+  make($, 'scene', $.physical, true);
+
+  set($.physical, 'exits_', undefined, true);
+
+  set($.vet, 'scene', function(obj) {
+    /* $.vet.scene(obj) - validate $.scene object.
+     * 
+     * Verifies that obj is a $.scene object and has valid internal
+     * state.
+     */
+    if (typeof obj !== 'object' || !$.scene.isPrototypeOf(obj)) {
+      throw TypeError('Not a $.scene object');
+    }
+    // obj.exits_ must be an array unique to obj (not inherited):
+    $.vet.arrayFor(obj, 'exits_');
+  });
+
+  /*******************************************************************
+   * $.thing - stuff you might find in a $.scene (including people)
+   */
+  make($, 'thing', $.physical, true);
+
+  /*******************************************************************
+   * $.avatar - physical manifestation of user
+   */
+  make($, 'thing', $.thing, true);
+  
+
+  
 
 })();
 
