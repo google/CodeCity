@@ -96,7 +96,7 @@ Interpreter.READONLY_NONENUMERABLE_DESCRIPTOR = {
 Interpreter.STEP_ERROR = {};
 
 // For cycle detection in array to string and error conversion;
-// see spec bug https://github.com/tc39/ecma262/issues/289
+// see spec bug github.com/tc39/ecma262/issues/289
 // Since this is for atomic actions only, it can be a class property.
 Interpreter.toStringCycles_ = [];
 
@@ -481,7 +481,7 @@ Interpreter.prototype.initObject = function(scope) {
 
   wrapper = function(obj) {
     throwIfNullUndefined(obj);
-    return thisInterpreter.getPrototype(obj.proto);
+    return thisInterpreter.getPrototype(obj);
   };
   this.setProperty(this.OBJECT, 'getPrototypeOf',
       this.createNativeFunction(wrapper, false),
@@ -2791,6 +2791,10 @@ Interpreter.prototype['stepObjectExpression'] = function() {
     property = state.node['properties'][n];
   }
   if (property) {
+    if (property['kind'] !== 'init') {
+      this.throwException(this.SYNTAX_ERROR, "Object kind: '" +
+          property['kind'] + "'.  Getters and setters are not supported.");
+    }
     stack.push({node: property['value']});
   } else {
     stack.pop();
