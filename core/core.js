@@ -62,8 +62,8 @@ var $ = Object.create(Object.prototype);
   function make(obj, key, proto, enumerable, force) {
     var desc = Object.getOwnPropertyDescriptor(obj, key);
     if (desc === undefined) {
-      desc = { value: Object.create(proto), enumerable,
-               writable: true, configurable: true };
+      desc = {value: Object.create(proto), enumerable,
+              writable: true, configurable: true};
     } else if (force === undefined ? forceAll : force) {
       if (typeof obj !== 'object' && typeof obj !== 'function' ||
           obj === null) {
@@ -101,7 +101,7 @@ var $ = Object.create(Object.prototype);
   function set(obj, key, value, enumerable, force) {
     var desc = Object.getOwnPropertyDescriptor(obj, key);
     if (desc === undefined || (force === undefined ? forceAll : force)) {
-      desc = { value, enumerable, writable: true, configurable: true };
+      desc = {value, enumerable, writable: true, configurable: true};
     } else {
       if (desc.value !== value) {
         log(obj + '.' + key + ' === ' + value + ' (expected: ' + value + ').');
