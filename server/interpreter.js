@@ -1455,7 +1455,7 @@ Interpreter.prototype.populateRegExp = function(pseudoRegexp, nativeRegexp) {
  * @param {!Object} scope Parent scope.
  * @return {!Interpreter.Object} New function.
  */
-Interpreter.prototype.createFunction = function(node, scope) {
+Interpreter.prototype.createFunctionFromAST = function(node, scope) {
   var func = this.createObject(this.FUNCTION);
   func.parentScope = scope;
   func.node = node;
@@ -1902,7 +1902,7 @@ Interpreter.prototype.populateScope_ = function(node, scope) {
     }
   } else if (node['type'] === 'FunctionDeclaration') {
     this.addVariableToScope(scope, node['id']['name'],
-                            this.createFunction(node, scope));
+                            this.createFunctionFromAST(node, scope));
     return;  // Do not recurse into function.
   } else if (node['type'] === 'FunctionExpression') {
     return;  // Do not recurse into function.
@@ -2683,7 +2683,7 @@ Interpreter.prototype['stepFunctionExpression'] = function() {
   var stack = this.stateStack;
   var state = stack.pop();
   stack[stack.length - 1].value =
-      this.createFunction(state.node, this.getScope());
+      this.createFunctionFromAST(state.node, this.getScope());
 };
 
 Interpreter.prototype['stepIdentifier'] = function() {
