@@ -327,13 +327,13 @@ var $ = function() {
   });
 
   /*******************************************************************
-   * $.scene - places you can be.
+   * $.place - places you can go
    */
-  make($, 'scene', $.physical, true);
+  make($, 'place', $.physical, true);
 
-  set($.scene, 'exits_', undefined, true);
+  set($.place, 'exits_', undefined, true);
 
-  set($.scene, 'acceptable', function(obj) {
+  set($.place, 'acceptable', function(obj) {
     /* .acceptable(obj) => boolean
      * 
      * Returns true iff this is willing to accept obj into its
@@ -343,21 +343,21 @@ var $ = function() {
     return true;
   });
 
-  set($.vet, 'scene', function(obj) {
-    /* $.vet.scene(obj) - validate a $.scene object.
+  set($.vet, 'place', function(obj) {
+    /* $.vet.place(obj) - validate a $.place object.
      * 
-     * Verifies that obj is a $.scene object and has valid internal
+     * Verifies that obj is a $.place object and has valid internal
      * state.
      */
-    if (typeof obj !== 'object' || !$.scene.isPrototypeOf(obj)) {
-      throw TypeError('Not a $.scene object');
+    if (typeof obj !== 'object' || !$.place.isPrototypeOf(obj)) {
+      throw TypeError('Not a $.place object');
     }
     // obj.exits_ must be an array unique to obj (not inherited):
     $.vet.arrayFor(obj, 'exits_');
   });
 
   /*******************************************************************
-   * $.thing - stuff you might find in a $.scene (including people)
+   * $.thing - stuff you might find in a $.place (including people)
    */
   make($, 'thing', $.physical, true);
 
