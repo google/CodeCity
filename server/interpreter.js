@@ -2248,9 +2248,11 @@ Interpreter.prototype['stepBinaryExpression'] = function() {
     }
     value = this.hasProperty(rightSide, leftSide);
   } else if (node['operator'] === 'instanceof') {
-    if (!this.isa(rightSide, this.FUNCTION)) {
+    // TODO(cpcallen): rewrite this as rightSide instanceof
+    // Interpreter.Function once such a class exists.
+    if (!rightSide || !rightSide.class === 'function') {
       this.throwException(this.TYPE_ERROR,
-          'Expecting a function in instanceof check');
+          'Right-hand side of instanceof is not an object');
     }
     value = leftSide.isObject ? this.isa(leftSide, rightSide) : false;
   } else {
