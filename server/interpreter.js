@@ -299,7 +299,8 @@ Interpreter.prototype.initFunction = function(scope) {
     // Bind any provided arguments.
     state.arguments_ = [];
     if (args) {
-      if (thisInterpreter.isa(args, thisInterpreter.ARRAY)) {
+      // TODO(cpcallen): this should probably accept array-like object too.
+      if (args.class === 'array') {
         for (var i = 0; i < args.length; i++) {
           state.arguments_[i] = thisInterpreter.getProperty(args, i);
         }
@@ -585,14 +586,15 @@ Interpreter.prototype.initArray = function(scope) {
     }
     return newArray;
   };
-  this.ARRAY = this.createNativeFunction(wrapper, true);
-  this.addVariableToScope(scope, 'Array', this.ARRAY);
+  var ArrayConst = this.createNativeFunction(wrapper, true);
+  this.ARRAYPROTO = thisInterpreter.getProperty(ArrayConst, 'prototype');
+  this.addVariableToScope(scope, 'Array', ArrayConst);
 
   // Static methods on Array.
   wrapper = function(obj) {
     return obj && obj.class === 'Array';
   };
-  this.setProperty(this.ARRAY, 'isArray',
+  this.setProperty(ArrayConst, 'isArray',
                    this.createNativeFunction(wrapper, false),
                    Interpreter.NONENUMERABLE_DESCRIPTOR);
 
@@ -607,7 +609,7 @@ Interpreter.prototype.initArray = function(scope) {
     }
     return value;
   };
-  this.setNativeFunctionPrototype(this.ARRAY, 'pop', wrapper);
+  this.setNativeFunctionPrototype(ArrayConst, 'pop', wrapper);
 
   wrapper = function(var_args) {
     for (var i = 0; i < arguments.length; i++) {
@@ -616,7 +618,7 @@ Interpreter.prototype.initArray = function(scope) {
     }
     return this.length;
   };
-  this.setNativeFunctionPrototype(this.ARRAY, 'push', wrapper);
+  this.setNativeFunctionPrototype(ArrayConst, 'push', wrapper);
 
   wrapper = function() {
     if (!this.length) {
@@ -630,7 +632,7 @@ Interpreter.prototype.initArray = function(scope) {
     delete this.properties[this.length];
     return value;
   };
-  this.setNativeFunctionPrototype(this.ARRAY, 'shift', wrapper);
+  this.setNativeFunctionPrototype(ArrayConst, 'shift', wrapper);
 
   wrapper = function(var_args) {
     for (var i = this.length - 1; i >= 0; i--) {
@@ -642,7 +644,7 @@ Interpreter.prototype.initArray = function(scope) {
     }
     return this.length;
   };
-  this.setNativeFunctionPrototype(this.ARRAY, 'unshift', wrapper);
+  this.setNativeFunctionPrototype(ArrayConst, 'unshift', wrapper);
 
   wrapper = function() {
     for (var i = 0; i < this.length / 2; i++) {
@@ -652,7 +654,7 @@ Interpreter.prototype.initArray = function(scope) {
     }
     return this;
   };
-  this.setNativeFunctionPrototype(this.ARRAY, 'reverse', wrapper);
+  this.setNativeFunctionPrototype(ArrayConst, 'reverse', wrapper);
 
   wrapper = function(index, howmany /*, var_args*/) {
     index = getInt(index, 0);
@@ -688,7 +690,7 @@ Interpreter.prototype.initArray = function(scope) {
     }
     return removed;
   };
-  this.setNativeFunctionPrototype(this.ARRAY, 'splice', wrapper);
+  this.setNativeFunctionPrototype(ArrayConst, 'splice', wrapper);
 
   wrapper = function(opt_begin, opt_end) {
     var list = thisInterpreter.createArray();
@@ -709,7 +711,7 @@ Interpreter.prototype.initArray = function(scope) {
     }
     return list;
   };
-  this.setNativeFunctionPrototype(this.ARRAY, 'slice', wrapper);
+  this.setNativeFunctionPrototype(ArrayConst, 'slice', wrapper);
 
   wrapper = function(opt_separator) {
     var cycles = Interpreter.toStringCycles_;
@@ -724,7 +726,7 @@ Interpreter.prototype.initArray = function(scope) {
     }
     return text.join(opt_separator);
   };
-  this.setNativeFunctionPrototype(this.ARRAY, 'join', wrapper);
+  this.setNativeFunctionPrototype(ArrayConst, 'join', wrapper);
 
   wrapper = function(var_args) {
     var list = thisInterpreter.createArray();
@@ -737,7 +739,7 @@ Interpreter.prototype.initArray = function(scope) {
     // Loop through all arguments and copy them in.
     for (var i = 0; i < arguments.length; i++) {
       var value = arguments[i];
-      if (thisInterpreter.isa(value, thisInterpreter.ARRAY)) {
+      if (value && value.class === 'Array') {
         for (var j = 0; j < value.length; j++) {
           var element = thisInterpreter.getProperty(value, j);
           thisInterpreter.setProperty(list, length++, element);
@@ -748,7 +750,7 @@ Interpreter.prototype.initArray = function(scope) {
     }
     return list;
   };
-  this.setNativeFunctionPrototype(this.ARRAY, 'concat', wrapper);
+  this.setNativeFunctionPrototype(ArrayConst, 'concat', wrapper);
 
   wrapper = function(searchElement, opt_fromIndex) {
     searchElement = searchElement || undefined;
@@ -765,7 +767,7 @@ Interpreter.prototype.initArray = function(scope) {
     }
     return -1;
   };
-  this.setNativeFunctionPrototype(this.ARRAY, 'indexOf', wrapper);
+  this.setNativeFunctionPrototype(ArrayConst, 'indexOf', wrapper);
 
   wrapper = function(searchElement, opt_fromIndex) {
     searchElement = searchElement || undefined;
@@ -782,7 +784,7 @@ Interpreter.prototype.initArray = function(scope) {
     }
     return -1;
   };
-  this.setNativeFunctionPrototype(this.ARRAY, 'lastIndexOf', wrapper);
+  this.setNativeFunctionPrototype(ArrayConst, 'lastIndexOf', wrapper);
 };
 
 /**
@@ -1435,7 +1437,7 @@ Interpreter.prototype.createFunction = function() {
  * @return {!Interpreter.Object} New array object.
  */
 Interpreter.prototype.createArray = function() {
-  var obj = this.createObject(this.ARRAY);
+  var obj = this.createObjectProto(this.ARRAYPROTO);
   obj.class = 'Array';
   obj.length = 0;
   return obj;
@@ -1606,7 +1608,7 @@ Interpreter.prototype.pseudoToNative = function(pseudoObj, opt_cycles) {
   }
   cycles.pseudo.push(pseudoObj);
   var nativeObj;
-  if (this.isa(pseudoObj, this.ARRAY)) {  // Array.
+  if (pseudoObj.class === 'Array') {  // Array.
     nativeObj = [];
     cycles.native.push(nativeObj);
     for (var i = 0; i < pseudoObj.length; i++) {
