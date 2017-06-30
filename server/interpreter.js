@@ -559,10 +559,6 @@ Interpreter.prototype.initArray = function(scope) {
     }
     return n;
   };
-  var strictComp = function(a, b) {
-    // Strict === comparison.
-    return a === b;
-  };
   var wrapper;
   // Array constructor.
   wrapper = function(var_args) {
@@ -762,7 +758,7 @@ Interpreter.prototype.initArray = function(scope) {
     fromIndex = Math.max(0, fromIndex);
     for (var i = fromIndex; i < this.length; i++) {
       var element = thisInterpreter.getProperty(this, i);
-      if (strictComp(element, searchElement)) {
+      if (element === searchElement) {
         return i;
       }
     }
@@ -779,7 +775,7 @@ Interpreter.prototype.initArray = function(scope) {
     fromIndex = Math.min(fromIndex, this.length - 1);
     for (var i = fromIndex; i >= 0; i--) {
       var element = thisInterpreter.getProperty(this, i);
-      if (strictComp(element, searchElement)) {
+      if (element === searchElement) {
         return i;
       }
     }
@@ -977,6 +973,7 @@ Interpreter.prototype.initDate = function(scope) {
   this.setProperty(this.DATE, 'parse',
       this.createNativeFunction(Date.parse, false),
       Interpreter.NONENUMERABLE_DESCRIPTOR);
+
   this.setProperty(this.DATE, 'UTC', this.createNativeFunction(Date.UTC, false),
       Interpreter.NONENUMERABLE_DESCRIPTOR);
 
@@ -1338,7 +1335,7 @@ Interpreter.Object.prototype.toString = function() {
       for (var i = 0; i < this.length; i++) {
         var value = this.properties[i];
         strs[i] = (value && value.isObject && cycles.indexOf(value) !== -1) ?
-            '...' : value.toString();
+            '...' : value;
       }
     } finally {
       cycles.pop();
@@ -2193,7 +2190,6 @@ Interpreter.prototype['stepBinaryExpression'] = function() {
     var comp = this.comp(leftSide, rightSide);
     value = comp === 1 || comp === 0;
   } else if (node['operator'] === '<') {
-    var comp = this.comp(leftSide, rightSide);
     value = this.comp(leftSide, rightSide) === -1;
   } else if (node['operator'] === '<=') {
     var comp = this.comp(leftSide, rightSide);
@@ -2290,7 +2286,7 @@ Interpreter.prototype['stepCallExpression'] = function() {
     stack.push({node: node['callee'], components: true});
     return;
   }
-  if (state.doneCallee_ == 1) {
+  if (state.doneCallee_ === 1) {
     // Determine value of the function.
     state.doneCallee_ = 2;
     var func = state.value;
@@ -2555,7 +2551,7 @@ Interpreter.prototype['stepForInStatement'] = function() {
     state.doneInit_ = true;
     if (node['left']['declarations'] &&
         node['left']['declarations'][0]['init']) {
-      throw SyntaxError(
+      this.throwException(this.SYNTAX_ERROR,
           'for-in loop variable declaration may not have an initializer.');
       return;
     }
@@ -2872,7 +2868,7 @@ Interpreter.prototype['stepSwitchStatement'] = function() {
     stack.push({node: state.node['discriminant']});
     return;
   }
-  if (state.test_ == 1) {
+  if (state.test_ === 1) {
     state.test_ = 2;
     // Preserve switch value between case tests.
     state.switchValue_ = state.value;
