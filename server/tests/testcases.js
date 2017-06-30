@@ -944,6 +944,11 @@ module.exports = [
     `,
     expected: true },
 
+  { name: 'ArrayIsArrayArrayLiteral', src: `
+    Array.isArray([]);
+    `,
+    expected: true },
+
   /******************************************************************/
   // Other tests (all are skipped):
 
