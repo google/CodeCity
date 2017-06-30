@@ -907,6 +907,44 @@ module.exports = [
     expected: true },
 
   /******************************************************************/
+  // Array and Array.prototype
+
+  { name: 'ArrayIsFunction', src: `
+    typeof Array;
+    `,
+    expected: 'function' },
+
+  { name: 'ArrayProtoIsFunctionPrototype', src: `
+    Object.getPrototypeOf(Array) === Function.prototype;
+    `,
+    expected: true },
+
+  { name: 'ArrayPrototypeIsObject', src: `
+    typeof Array.prototype;
+    `,
+    expected: 'object' },
+
+  { name: 'ArrayIsArrayArrayPrototype', src: `
+    Array.isArray(Array.prototype);
+    `,
+    expected: true },
+
+  { name: 'ArrayPrototypeProto', src: `
+    Object.getPrototypeOf(Array.prototype) === Object.prototype;
+    `,
+    expected: true },
+
+  { name: 'ArrayPrototypeHasNoPrototype', src: `
+    Array.prototype.hasOwnProperty('prototype');
+    `,
+    expected: false },
+
+  { name: 'ArraysAreArrays', src: `
+    Object.getPrototypeOf([]) === Array.prototype;
+    `,
+    expected: true },
+
+  /******************************************************************/
   // Other tests (all are skipped):
 
   { name: 'newHack', src: `
