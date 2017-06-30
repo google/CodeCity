@@ -306,7 +306,6 @@ Interpreter.prototype.initFunction = function(scope) {
             'CreateListFromArrayLike called on non-object');
       }
     }
-    state.doneArgs_ = true;
     state.doneExec_ = false;
   };
   this.setNativeFunctionPrototype(this.FUNCTION, 'apply', wrapper);
@@ -323,7 +322,6 @@ Interpreter.prototype.initFunction = function(scope) {
     for (var i = 1; i < arguments.length; i++) {
       state.arguments_.push(arguments[i]);
     }
-    state.doneArgs_ = true;
     state.doneExec_ = false;
   };
   this.setNativeFunctionPrototype(this.FUNCTION, 'call', wrapper);
@@ -904,7 +902,7 @@ Interpreter.prototype.initString = function(scope) {
       separator = separator.data;
     }
     var jsList = this.split(separator, limit);
-    return thisInterpreter.pseudoToNative(jsList);
+    return thisInterpreter.nativeToPseudo(jsList);
   };
   this.setNativeFunctionPrototype(this.STRING, 'split', wrapper);
 
@@ -2309,14 +2307,6 @@ Interpreter.prototype['stepCallExpression'] = function() {
       state.n_++;
       return;
     }
-    state.doneArgs_ = true;
-  }
-  if (!state.doneExec_) {
-    state.doneExec_ = true;
-    var func = state.func_;
-    if (!func || !func.isObject) {
-      this.throwException(this.TYPE_ERROR, func + ' is not a function');
-    }
     // Determine value of 'this' in function.
     if (state.node['type'] === 'NewExpression') {
       if (func.illegalConstructor) {
@@ -2332,6 +2322,14 @@ Interpreter.prototype['stepCallExpression'] = function() {
     } else {
       // Global function, 'this' is undefined.
       state.funcThis_ = undefined;
+    }
+    state.doneArgs_ = true;
+  }
+  if (!state.doneExec_) {
+    state.doneExec_ = true;
+    var func = state.func_;
+    if (!func || !func.isObject) {
+      this.throwException(this.TYPE_ERROR, func + ' is not a function');
     }
     var funcNode = func.node;
     if (funcNode) {
@@ -2377,12 +2375,8 @@ Interpreter.prototype['stepCallExpression'] = function() {
       var code = state.arguments_[0];
       if (!code) {  // eval()
         state.value = undefined;
-      } else if (!code.isPrimitive) {
-        // JS does not parse String objects:
-        // eval(new String('1 + 1')) -> '1 + 1'
-        state.value = code;
       } else {
-        var ast = acorn.parse(code.toString(), Interpreter.PARSE_OPTIONS);
+        var ast = acorn.parse(String(code), Interpreter.PARSE_OPTIONS);
         state = {
           node: {type: 'EvalProgram_', body: ast['body']}
         };
