@@ -168,7 +168,7 @@ var $ = Object.create(Object.prototype);
 
   set($.user, 'userid', undefined, true);
 
-  // FIXME: having VR stuff, like avatars, should be optional.
+  // FIXME: having VR stuff, like an avatar, should be optional.
   set($.user, 'avatar', undefined, true);
 
   set($.vet, 'user', function(obj) {
@@ -180,8 +180,9 @@ var $ = Object.create(Object.prototype);
     if (typeof obj !== 'object' || !$.user.isPrototypeOf(obj)) {
       throw TypeError('Not an $.user object');
     }
-    // .avatar must be an $.avatar or undefined.
-    if (typeof obj.avatar !== 'object' || !$.avatar.isPrototypeOf(obj.avatar)) {
+    // .avatar must be an $.character or undefined.
+    if (typeof obj.avatar !== 'object' ||
+        !$.character.isPrototypeOf(obj.avatar)) {
       obj.avatar = undefined;
     }
   });
@@ -364,9 +365,9 @@ var $ = Object.create(Object.prototype);
   });
 
   /*******************************************************************
-   * $.avatar - physical manifestation of user
+   * $.character - a character (user avatar or NPC)
    */
-  make($, 'thing', $.thing, true);
+  make($, 'character', $.thing, true);
 
 })();
 
