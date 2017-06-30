@@ -894,7 +894,7 @@ module.exports = [
   { name: 'FunctionPrototypeProto', src: `
     Object.getPrototypeOf(Function.prototype) === Object.prototype;
     `,
-    expected: false },
+    expected: true },
 
   { name: 'FunctionPrototypeHasNoPrototype', src: `
     Function.prototype.hasOwnProperty('prototype');
