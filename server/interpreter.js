@@ -276,11 +276,13 @@ Interpreter.prototype.initFunction = function(scope) {
     return newFunc;
   };
   wrapper.id = this.functionCounter_++;
-  this.FUNCTION = this.createObject(null);
+  // TODO(cpcallen): make Function's prototype be Function.prototype
+  this.FUNCTION = this.createObjectProto(null);
   this.addVariableToScope(scope, 'Function', this.FUNCTION);
   // Manually setup type and prototype because createObj doesn't recognize
   // this object as a function (this.FUNCTION did not exist).
-  this.setProperty(this.FUNCTION, 'prototype', this.createObject(null));
+  // TODO(cpcallen): make Function.prototype's prototype be Object.prototype
+  this.setProperty(this.FUNCTION, 'prototype', this.createObjectProto(null));
   this.setProperty(this.FUNCTION.properties['prototype'], 'constructor',
       this.FUNCTION, Interpreter.NONENUMERABLE_DESCRIPTOR);
   this.FUNCTION.nativeFunc = wrapper;
@@ -415,7 +417,7 @@ Interpreter.prototype.initObject = function(scope) {
 
   wrapper = function(proto) {
     if (proto === null) {
-      return thisInterpreter.createObject(null);
+      return thisInterpreter.createObjectProto(null);
     }
     if (proto === undefined || !proto.isObject) {
       thisInterpreter.throwException(thisInterpreter.TYPE_ERROR,
@@ -1413,15 +1415,18 @@ Interpreter.prototype.createObject = function(constructor) {
 Interpreter.prototype.createObjectProto = function(proto) {
   var obj = new Interpreter.Object(proto);
   // Functions have prototype objects.
+  // TODO(cpcallen): Move this bit to a separate createFunction function.
   if (this.isa(obj, this.FUNCTION)) {
     this.setProperty(obj, 'prototype', this.createObject(this.OBJECT || null));
     obj.class = 'Function';
   }
   // Arrays have length.
+  // TODO(cpcallen): Move this bit to a separate createArray function.
   if (this.isa(obj, this.ARRAY)) {
     obj.length = 0;
     obj.class = 'Array';
   }
+  // TODO(cpcallen): Move this bit to a separate createError function.
   if (this.isa(obj, this.ERROR)) {
     obj.class = 'Error';
   }
