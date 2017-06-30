@@ -565,7 +565,7 @@ Interpreter.prototype.initArray = function(scope) {
       var newArray = this;
     } else {
       // Called as Array().
-      var newArray = thisInterpreter.createObject(thisInterpreter.ARRAY);
+      var newArray = thisInterpreter.createArray();
     }
     var first = arguments[0];
     if (arguments.length === 1 && typeof first === 'number') {
@@ -660,7 +660,7 @@ Interpreter.prototype.initArray = function(scope) {
     }
     howmany = getInt(howmany, Infinity);
     howmany = Math.min(howmany, this.length - index);
-    var removed = thisInterpreter.createObject(thisInterpreter.ARRAY);
+    var removed = thisInterpreter.createArray();
     // Remove specified elements.
     for (var i = index; i < index + howmany; i++) {
       removed.properties[removed.length++] = this.properties[i];
@@ -688,7 +688,7 @@ Interpreter.prototype.initArray = function(scope) {
   this.setNativeFunctionPrototype(this.ARRAY, 'splice', wrapper);
 
   wrapper = function(opt_begin, opt_end) {
-    var list = thisInterpreter.createObject(thisInterpreter.ARRAY);
+    var list = thisInterpreter.createArray();
     var begin = getInt(opt_begin, 0);
     if (begin < 0) {
       begin = this.length + begin;
@@ -724,7 +724,7 @@ Interpreter.prototype.initArray = function(scope) {
   this.setNativeFunctionPrototype(this.ARRAY, 'join', wrapper);
 
   wrapper = function(var_args) {
-    var list = thisInterpreter.createObject(thisInterpreter.ARRAY);
+    var list = thisInterpreter.createArray();
     var length = 0;
     // Start by copying the current array.
     for (var i = 0; i < this.length; i++) {
@@ -1083,7 +1083,7 @@ Interpreter.prototype.initRegExp = function(scope) {
     thisInterpreter.setProperty(this, 'lastIndex', this.data.lastIndex);
 
     if (match) {
-      var result = thisInterpreter.createObject(thisInterpreter.ARRAY);
+      var result = thisInterpreter.createArray();
       for (var i = 0; i < match.length; i++) {
         thisInterpreter.setProperty(result, i, match[i]);
       }
@@ -1410,11 +1410,6 @@ Interpreter.prototype.createObject = function(constructor) {
 Interpreter.prototype.createObjectProto = function(proto) {
   var obj = new Interpreter.Object(proto);
   // Arrays have length.
-  // TODO(cpcallen): Move this bit to a separate createArray function.
-  if (this.isa(obj, this.ARRAY)) {
-    obj.length = 0;
-    obj.class = 'Array';
-  }
   // TODO(cpcallen): Move this bit to a separate createError function.
   if (this.isa(obj, this.ERROR)) {
     obj.class = 'Error';
@@ -1423,8 +1418,8 @@ Interpreter.prototype.createObjectProto = function(proto) {
 };
 
 /**
- * Create a new function object and its associated prototype.  This
- * implements parts of §13.2 of the ES5.1 spec.
+ * Create a new function object and its associated prototype object.
+ * This implements parts of §13.2 of the ES5.1 spec.
  * @return {!Interpreter.Object} New data object.
  */
 Interpreter.prototype.createFunction = function() {
@@ -1434,6 +1429,17 @@ Interpreter.prototype.createFunction = function() {
   var protoObj = this.createObject(this.OBJECT || null);
   this.setProperty(obj, 'prototype', protoObj);
   this.setProperty(protoObj, 'constructor', obj);
+  return obj;
+};
+
+/**
+ * Create a new array object.  See §15.4 fo the ES5.1 spec.
+ * @return {!Interpreter.Object} New array object.
+ */
+Interpreter.prototype.createArray = function() {
+  var obj = this.createObject(this.ARRAY);
+  obj.class = 'Array';
+  obj.length = 0;
   return obj;
 };
 
@@ -1550,7 +1556,7 @@ Interpreter.prototype.nativeToPseudo = function(nativeObj) {
 
   var pseudoObj;
   if (Array.isArray(nativeObj)) {  // Array.
-    pseudoObj = this.createObject(this.ARRAY);
+    pseudoObj = this.createArray();
     for (var i = 0; i < nativeObj.length; i++) {
       this.setProperty(pseudoObj, i, this.nativeToPseudo(nativeObj[i]));
     }
@@ -2088,7 +2094,7 @@ Interpreter.prototype['stepArrayExpression'] = function() {
   var elements = state.node['elements'];
   var n = state.n_ || 0;
   if (!state.array_) {
-    state.array_ = this.createObject(this.ARRAY);
+    state.array_ = this.createArray();
   } else if (state.value) {
     this.setProperty(state.array_, n - 1, state.value);
   }
@@ -2378,7 +2384,7 @@ Interpreter.prototype['stepCallExpression'] = function() {
         this.addVariableToScope(scope, paramName, paramValue);
       }
       // Build arguments variable.
-      var argsList = this.createObject(this.ARRAY);
+      var argsList = this.createArray();
       for (var i = 0; i < state.arguments_.length; i++) {
         this.setProperty(argsList, i, state.arguments_[i]);
       }
