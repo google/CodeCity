@@ -1142,7 +1142,7 @@ Interpreter.prototype.initError = function(scope) {
       var newError = this;
     } else {
       // Called as Error().
-      var newError = thisInterpreter.createObject(thisInterpreter.ERROR);
+      var newError = thisInterpreter.createError();
     }
     if (opt_message) {
       thisInterpreter.setProperty(newError, 'message', opt_message + '',
@@ -1173,7 +1173,7 @@ Interpreter.prototype.initError = function(scope) {
           return newError;
         }, true);
     thisInterpreter.setProperty(constructor, 'prototype',
-        thisInterpreter.createObject(thisInterpreter.ERROR));
+        thisInterpreter.createError());
     thisInterpreter.setProperty(constructor.properties['prototype'], 'name',
         name, Interpreter.NONENUMERABLE_DESCRIPTOR);
     thisInterpreter.addVariableToScope(scope, name, constructor);
@@ -1409,11 +1409,6 @@ Interpreter.prototype.createObject = function(constructor) {
  */
 Interpreter.prototype.createObjectProto = function(proto) {
   var obj = new Interpreter.Object(proto);
-  // Arrays have length.
-  // TODO(cpcallen): Move this bit to a separate createError function.
-  if (this.isa(obj, this.ERROR)) {
-    obj.class = 'Error';
-  }
   return obj;
 };
 
@@ -1433,13 +1428,23 @@ Interpreter.prototype.createFunction = function() {
 };
 
 /**
- * Create a new array object.  See §15.4 fo the ES5.1 spec.
+ * Create a new array object.  See §15.4 of the ES5.1 spec.
  * @return {!Interpreter.Object} New array object.
  */
 Interpreter.prototype.createArray = function() {
   var obj = this.createObject(this.ARRAY);
   obj.class = 'Array';
   obj.length = 0;
+  return obj;
+};
+
+/**
+ * Create a new error object.  See §15.11 of the ES5.1 spec.
+ * @return {!Interpreter.Object} New array object.
+ */
+Interpreter.prototype.createError = function() {
+  var obj = this.createObject(this.ERROR);
+  obj.class = 'Error';
   return obj;
 };
 
