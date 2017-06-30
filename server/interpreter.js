@@ -376,6 +376,8 @@ Interpreter.prototype.initObject = function(scope) {
   };
   var ObjectConst = this.createNativeFunction(wrapper, true);
   this.setProperty(ObjectConst, 'prototype', this.OBJECTPROTO, {});
+  this.setProperty(this.OBJECTPROTO, 'constructor', ObjectConst,
+      Interpreter.NONENUMERABLE_DESCRIPTOR);
   this.addVariableToScope(scope, 'Object', ObjectConst);
 
   /**
