@@ -33,7 +33,9 @@
 'use strict'; // For testing with node.js
 
 // Global scope declarations:
-var $ = Object.create(Object.prototype);
+var $ = function() {
+  // FIXME: JQuery-style matching?
+};
 
 (function() {
   // Core build options:
