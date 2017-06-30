@@ -199,7 +199,7 @@ Interpreter.prototype.initGlobalScope = function(scope) {
   this.addVariableToScope(scope, 'parseInt',
       this.getProperty(this.NUMBER, 'parseInt'));
 
-  var func = this.createObject(this.FUNCTION);
+  var func = this.createFunction();
   func.eval = true;
   func.illegalConstructor = true;
   this.setProperty(func, 'length', 1, Interpreter.READONLY_DESCRIPTOR);
@@ -241,7 +241,7 @@ Interpreter.prototype.initFunction = function(scope) {
       var newFunc = this;
     } else {
       // Called as Function().
-      var newFunc = thisInterpreter.createObject(thisInterpreter.FUNCTION);
+      var newFunc = thisInterpreter.createFunction();
     }
     if (arguments.length) {
       var code = arguments[arguments.length - 1].toString();
@@ -1409,12 +1409,6 @@ Interpreter.prototype.createObject = function(constructor) {
  */
 Interpreter.prototype.createObjectProto = function(proto) {
   var obj = new Interpreter.Object(proto);
-  // Functions have prototype objects.
-  // TODO(cpcallen): Move this bit to a separate createFunction function.
-  if (this.isa(obj, this.FUNCTION)) {
-    this.setProperty(obj, 'prototype', this.createObject(this.OBJECT || null));
-    obj.class = 'Function';
-  }
   // Arrays have length.
   // TODO(cpcallen): Move this bit to a separate createArray function.
   if (this.isa(obj, this.ARRAY)) {
@@ -1425,6 +1419,21 @@ Interpreter.prototype.createObjectProto = function(proto) {
   if (this.isa(obj, this.ERROR)) {
     obj.class = 'Error';
   }
+  return obj;
+};
+
+/**
+ * Create a new function object and its associated prototype.  This
+ * implements parts of §13.2 of the ES5.1 spec.
+ * @return {!Interpreter.Object} New data object.
+ */
+Interpreter.prototype.createFunction = function() {
+  var obj = this.createObject(this.FUNCTION);
+  obj.class = 'Function';
+  // Functions have prototype objects.
+  var protoObj = this.createObject(this.OBJECT || null);
+  this.setProperty(obj, 'prototype', protoObj);
+  this.setProperty(protoObj, 'constructor', obj);
   return obj;
 };
 
@@ -1456,7 +1465,7 @@ Interpreter.prototype.populateRegExp = function(pseudoRegexp, nativeRegexp) {
  * @return {!Interpreter.Object} New function.
  */
 Interpreter.prototype.createFunctionFromAST = function(node, scope) {
-  var func = this.createObject(this.FUNCTION);
+  var func = this.createFunction();
   func.parentScope = scope;
   func.node = node;
   this.setProperty(func, 'length', func.node['params'].length,
@@ -1475,7 +1484,7 @@ Interpreter.prototype.createFunctionFromAST = function(node, scope) {
  */
 Interpreter.prototype.createNativeFunction =
     function(nativeFunc, opt_constructor) {
-  var func = this.createObject(this.FUNCTION);
+  var func = this.createFunction();
   func.nativeFunc = nativeFunc;
   nativeFunc.id = this.functionCounter_++;
   this.setProperty(func, 'length', nativeFunc.length,
@@ -1496,7 +1505,7 @@ Interpreter.prototype.createNativeFunction =
  * @return {!Interpreter.Object} New function.
  */
 Interpreter.prototype.createAsyncFunction = function(asyncFunc) {
-  var func = this.createObject(this.FUNCTION);
+  var func = this.createFunction();
   func.asyncFunc = asyncFunc;
   asyncFunc.id = this.functionCounter_++;
   this.setProperty(func, 'length', asyncFunc.length,
