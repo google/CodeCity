@@ -587,6 +587,11 @@ module.exports = [
   // Object and Object.prototype
   
   { name: 'ObjectIsFunction', src: `
+    typeof Object;
+    `,
+    expected: 'function' },
+
+  { name: 'ObjectProtoIsFunctionPrototype', src: `
     Object.getPrototypeOf(Object) === Function.prototype;
     `,
     expected: true },
