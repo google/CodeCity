@@ -1614,6 +1614,14 @@ Interpreter.prototype.pseudoToNative = function(pseudoObj, opt_cycles) {
 Interpreter.prototype.getPrototype = function(value) {
   switch (typeof value) {
     case 'number':
+      // TODO(cpcallen): Do not depend on the *current* value of
+      // Number.prototype (etc.).  Existing code below is correctly
+      // unaffected by userland assignments to Number, but should also
+      // be immune to userland assignments to Number.prototype.
+      //
+      // (In fact, there is no reason for the interpreter to have its
+      // own private handles for Boolean, Number and String since they
+      // are never needed except during global scope creation.)
       return this.NUMBER.properties['prototype'];
     case 'boolean':
       return this.BOOLEAN.properties['prototype'];
