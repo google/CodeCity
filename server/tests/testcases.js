@@ -242,7 +242,8 @@ module.exports = [
     }
     a;
     `,
-    expected: 59 },
+    // SKIP: expected: 59
+  },
 
   { name: 'continueWithFinally', src: `
     var a = 59;
@@ -255,7 +256,8 @@ module.exports = [
     } while (false);
     a;
     `,
-    expected: 60 },
+    // SKIP: expected: 60
+  },
 
   { name: 'breakWithFinallyContinue', src: `
     var a = 0;
@@ -268,7 +270,8 @@ module.exports = [
     }
     a;
     `,
-    expected: 61 },
+    // SKIP: expected: 61
+  },
 
   { name: 'returnWithFinallyContinue', src: `
     (function() {
@@ -283,7 +286,8 @@ module.exports = [
       return i;
     })();
     `,
-    expected: 62 },
+    // SKIP: expected: 62
+  },
 
   { name: 'orTrue', src: `
     63 || 'foo';
@@ -538,7 +542,7 @@ module.exports = [
 
   { name: 'internalNativeFuncToString', src: `
     var o = {};
-    o[Object.create] = null;
+    o[function f() {}] = null;
     for(var key in o) {
       key;
     }
@@ -571,6 +575,9 @@ module.exports = [
     `,
     expected: 'TypeError' },
 
+  /******************************************************************/
+  // Object and Object.prototype
+  
   { name: 'ObjectDefinePropertyNoArgs', src: `
     try {
       Object.defineProperty();
@@ -641,20 +648,8 @@ module.exports = [
     `,
     expected: 'TypeErrorTypeError' },
 
-  { name: 'ObjectGetPrototypeOfPrimitivesES5', src: `
-    var r = '', prims = [true, 42, 'hello'];
-    for (var i = 0; i < prims.length; i++) {
-      try {
-        Object.getPrototypeOf(prims[i]);
-      } catch (e) {
-        r += e.name;
-      }
-    }
-    r;
-    `,
-    expected: 'TypeErrorTypeErrorTypeError' },
-
-  { name: 'ObjectGetPrototypeOfPrimitivesES6', src: `
+  // This tests for ES6 behaviour:
+  { name: 'ObjectGetPrototypeOfPrimitives', src: `
     Object.getPrototypeOf(true) === Boolean.prototype &&
     Object.getPrototypeOf(1337) === Number.prototype &&
     Object.getPrototypeOf('hi') === String.prototype;
@@ -861,7 +856,20 @@ module.exports = [
     expected: '[object Object]' },
 
   /******************************************************************/
-  // Other tests (without expected value):
+  // Function and Function.prototype
+
+  { name: 'FunctionPrototype', src: `
+    Object.getPrototypeOf(Function) === Function.prototype;
+    `,
+    expected: true },
+
+  { name: 'FunctionPrototypePrototype', src: `
+    Object.getPrototypeOf(Function.prototype) === Object.prototype;
+    `,
+    expected: true },
+
+  /******************************************************************/
+  // Other tests (all are skipped):
 
   { name: 'newHack', src: `
     typeof new 'Array.prototype.push'
