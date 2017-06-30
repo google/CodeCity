@@ -24,9 +24,9 @@
  * initial startup time.  It should not be needed after that (the
  * server should save all internal state to a checkpoint file, and
  * subsequent server starts will restore that state), but it is
- * intended to written in such a way that it should be possible to
- * re-run it to update an existing core with newer versions of the
- * core objects / functions.  Doing so is at your own risk however!
+ * intended that it should be possible to re-run it to update an
+ * existing core with newer versions of the core objects / functions.
+ * Doing so is at your own risk, however!
  * 
  * @author cpcallen@google.com (Christopher Allen)
  */
