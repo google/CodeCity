@@ -172,9 +172,11 @@ Interpreter.prototype.initGlobalScope = function(scope) {
   this.addVariableToScope(scope, 'NaN', NaN, true);
   this.addVariableToScope(scope, 'undefined', undefined, true);
 
-  // Create the object which will become Object.prototype, which is
-  // needed to bootstrap everything else:
+  // Create the objects which will become Object.prototype and
+  // Function.prototype, which are needed to bootstrap everything
+  // else:
   this.OBJECTPROTO = this.createObjectProto(null);
+  this.FUNCTIONPROTO = this.createObjectProto(this.OBJECTPROTO);
   
   // Initialize global objects.
   this.initFunction(scope);
@@ -280,16 +282,12 @@ Interpreter.prototype.initFunction = function(scope) {
     return newFunc;
   };
   wrapper.id = this.functionCounter_++;
-  // TODO(cpcallen): make Function's prototype be Function.prototype
-  this.FUNCTION = this.createObjectProto(null);
-  this.addVariableToScope(scope, 'Function', this.FUNCTION);
-  // Manually setup type and prototype because createObj doesn't recognize
-  // this object as a function (this.FUNCTION did not exist).
-  // TODO(cpcallen): make Function.prototype's prototype be Object.prototype
-  this.setProperty(this.FUNCTION, 'prototype', this.createObjectProto(null));
-  this.setProperty(this.FUNCTION.properties['prototype'], 'constructor',
-      this.FUNCTION, Interpreter.NONENUMERABLE_DESCRIPTOR);
-  this.FUNCTION.nativeFunc = wrapper;
+  var FunctionConst = this.createFunction();
+  FunctionConst.nativeFunc = wrapper;
+  this.setProperty(FunctionConst, 'prototype', this.FUNCTIONPROTO, {});
+  this.setProperty(this.FUNCTIONPROTO, 'constructor', FunctionConst,
+      Interpreter.NONENUMERABLE_DESCRIPTOR);
+  this.addVariableToScope(scope, 'Function', FunctionConst);
 
   wrapper = function(thisArg, args) {
     var state =
@@ -312,7 +310,7 @@ Interpreter.prototype.initFunction = function(scope) {
     }
     state.doneExec_ = false;
   };
-  this.setNativeFunctionPrototype(this.FUNCTION, 'apply', wrapper);
+  this.setNativeFunctionPrototype(FunctionConst, 'apply', wrapper);
 
   wrapper = function(thisArg, var_args) {
     var state =
@@ -328,22 +326,22 @@ Interpreter.prototype.initFunction = function(scope) {
     }
     state.doneExec_ = false;
   };
-  this.setNativeFunctionPrototype(this.FUNCTION, 'call', wrapper);
+  this.setNativeFunctionPrototype(FunctionConst, 'call', wrapper);
 
   // Function has no parent to inherit from, so it needs its own mandatory
   // toString and valueOf functions.
   wrapper = function() {
     return this.toString();
   };
-  this.setNativeFunctionPrototype(this.FUNCTION, 'toString', wrapper);
-  this.setProperty(this.FUNCTION, 'toString',
+  this.setNativeFunctionPrototype(FunctionConst, 'toString', wrapper);
+  this.setProperty(FunctionConst, 'toString',
       this.createNativeFunction(wrapper, false),
       Interpreter.NONENUMERABLE_DESCRIPTOR);
   wrapper = function() {
     return this.valueOf();
   };
-  this.setNativeFunctionPrototype(this.FUNCTION, 'valueOf', wrapper);
-  this.setProperty(this.FUNCTION, 'valueOf',
+  this.setNativeFunctionPrototype(FunctionConst, 'valueOf', wrapper);
+  this.setProperty(FunctionConst, 'valueOf',
       this.createNativeFunction(wrapper, false),
       Interpreter.NONENUMERABLE_DESCRIPTOR);
 };
@@ -376,7 +374,7 @@ Interpreter.prototype.initObject = function(scope) {
     return value;
   };
   var ObjectConst = this.createNativeFunction(wrapper, true);
-  this.setProperty(ObjectConst, 'prototype', this.OBJECTPROTO);
+  this.setProperty(ObjectConst, 'prototype', this.OBJECTPROTO, {});
   this.addVariableToScope(scope, 'Object', ObjectConst);
 
   /**
@@ -1423,7 +1421,7 @@ Interpreter.prototype.createObjectProto = function(proto) {
  * @return {!Interpreter.Object} New data object.
  */
 Interpreter.prototype.createFunction = function() {
-  var obj = this.createObject(this.FUNCTION);
+  var obj = this.createObjectProto(this.FUNCTIONPROTO);
   obj.class = 'Function';
   // Functions have prototype objects.
   var protoObj = this.createObjectProto(this.OBJECTPROTO);
