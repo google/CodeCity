@@ -596,6 +596,27 @@ module.exports = [
     `,
     expected: true },
 
+  { name: 'ObjectPrototypeIsObject', src: `
+    typeof Object.prototype;
+    `,
+    expected: 'object' },
+
+  { name: 'ObjectPrototypeConstructorIsObject', src: `
+    Object.prototype.constructor === Object;
+    `,
+    expected: true },
+
+  { name: 'ObjectPrototypeProtoIsNull', src: `
+    Object.getPrototypeOf(Object.prototype)
+    `,
+    expected: null },
+
+  { name: 'ObjectsAreObjects', src: `
+    Object.getPrototypeOf({}) === Object.prototype;
+    `,
+    expected: true },
+
+
   { name: 'ObjectDefinePropertyNoArgs', src: `
     try {
       Object.defineProperty();
@@ -642,16 +663,6 @@ module.exports = [
     r;
     `,
     expected: 78 },
-
-  { name: 'ObjectGetPrototypeOfObj', src: `
-    Object.getPrototypeOf({}) === Object.prototype;
-    `,
-    expected: true },
-
-  { name: 'ObjectGetPrototypeOfObjectPrototype', src: `
-    Object.getPrototypeOf(Object.prototype) == null;
-    `,
-    expected: true },
 
   { name: 'ObjectGetPrototypeOfNullUndefined', src: `
     var r = '', prims = [null, undefined];
@@ -733,7 +744,7 @@ module.exports = [
     var o = {}, r = 0;
     Object.defineProperty(o, 'foo', { value: 'bar' });
     var desc = Object.getOwnPropertyDescriptor(o, 'foo');
-    desc.value == o.foo && 
+    desc.value === o.foo && 
         !desc.writeable && !desc.enumerable && !desc.configurable;
     `,
     expected: true },
@@ -891,6 +902,11 @@ module.exports = [
     `,
     expected: 'function' },
 
+  { name: 'FunctionPrototypeConstructorIsFunction', src: `
+    Function.prototype.constructor === Function;
+    `,
+    expected: true },
+
   { name: 'FunctionPrototypeProto', src: `
     Object.getPrototypeOf(Function.prototype) === Object.prototype;
     `,
@@ -923,6 +939,11 @@ module.exports = [
     typeof Array.prototype;
     `,
     expected: 'object' },
+
+  { name: 'ArrayPrototypeConstructorIsArray', src: `
+    Array.prototype.constructor === Array;
+    `,
+    expected: true },
 
   { name: 'ArrayIsArrayArrayPrototype', src: `
     Array.isArray(Array.prototype);
