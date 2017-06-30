@@ -91,7 +91,7 @@ Interpreter.READONLY_NONENUMERABLE_DESCRIPTOR = {
 /**
  * Unique symbol for indicating that a step has encountered an error, has
  * added it to the stack, and will be thrown within the user's program.
- * When STEP_ERROR is thrown in the JS-Interpreter, the error can be ignored.
+ * When STEP_ERROR is thrown by the interpreter the error can be ignored.
  */
 Interpreter.STEP_ERROR = {};
 
@@ -144,7 +144,7 @@ Interpreter.prototype.step = function() {
   } catch (e) {
     // Eat any step errors.  They have been thrown on the stack.
     if (e !== Interpreter.STEP_ERROR) {
-      // Uh oh.  This is a real error in the JS-Interpreter.  Rethrow.
+      // Uh oh.  This is a real error in the interpreter.  Rethrow.
       throw e;
     }
   }

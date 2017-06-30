@@ -18,7 +18,7 @@
  */
 
 /**
- * @fileoverview Saving and restoring the state of a JS-Intepreter.
+ * @fileoverview Saving and restoring the state of the interpreter.
  * @author fraser@google.com (Neil Fraser)
  */
 'use strict';
