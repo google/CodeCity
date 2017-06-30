@@ -586,6 +586,11 @@ module.exports = [
   /******************************************************************/
   // Object and Object.prototype
   
+  { name: 'ObjectIsFunction', src: `
+    Object.getPrototypeOf(Object) === Function.prototype;
+    `,
+    expected: true },
+
   { name: 'ObjectDefinePropertyNoArgs', src: `
     try {
       Object.defineProperty();
@@ -633,7 +638,7 @@ module.exports = [
     `,
     expected: 78 },
 
-  { name: 'ObjectGetPrototypeOf', src: `
+  { name: 'ObjectGetPrototypeOfObj', src: `
     Object.getPrototypeOf({}) === Object.prototype;
     `,
     expected: true },
@@ -866,13 +871,33 @@ module.exports = [
   /******************************************************************/
   // Function and Function.prototype
 
-  { name: 'FunctionPrototype', src: `
+  { name: 'FunctionIsFunction', src: `
+    typeof Function;
+    `,
+    expected: 'function' },
+
+  { name: 'FunctionProtoIsFunctionPrototype', src: `
     Object.getPrototypeOf(Function) === Function.prototype;
     `,
     expected: true },
 
-  { name: 'FunctionPrototypePrototype', src: `
+  { name: 'FunctionPrototypeIsFunction', src: `
+    typeof Function.prototype;
+    `,
+    expected: 'function' },
+
+  { name: 'FunctionPrototypeProto', src: `
     Object.getPrototypeOf(Function.prototype) === Object.prototype;
+    `,
+    expected: false },
+
+  { name: 'FunctionPrototypeHasNoPrototype', src: `
+    Function.prototype.hasOwnProperty('prototype');
+    `,
+    expected: false },
+
+  { name: 'FunctionsAreFunctions', src: `
+    Object.getPrototypeOf(function(){}) === Function.prototype;
     `,
     expected: true },
 
