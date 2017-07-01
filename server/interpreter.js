@@ -511,10 +511,23 @@ Interpreter.prototype.initObject = function(scope) {
       Interpreter.NONENUMERABLE_DESCRIPTOR);
 
   // Instance methods on Object.
-  this.setNativeFunctionPrototype(ObjectConst, 'toString',
-      Interpreter.Object.prototype.toString);
-  this.setNativeFunctionPrototype(ObjectConst, 'toLocaleString',
-      Interpreter.Object.prototype.toString);
+  wrapper = function () {
+    var c;
+    if (this instanceof Interpreter.Object) {
+      c = this.class;
+    } else {
+      c = ({
+        undefined: 'Undefined',
+        null: 'Null',
+        boolean: 'Boolean',
+        number: 'Number',
+        string: 'String',
+      })[typeof this];
+    }
+    return '[object ' + c + ']';
+  };
+  this.setNativeFunctionPrototype(ObjectConst, 'toString', wrapper);
+  this.setNativeFunctionPrototype(ObjectConst, 'toLocaleString', wrapper);
   this.setNativeFunctionPrototype(ObjectConst, 'valueOf',
       Interpreter.Object.prototype.valueOf);
 
@@ -1331,6 +1344,10 @@ Interpreter.Object.prototype.data = null;
  * @override
  */
 Interpreter.Object.prototype.toString = function() {
+  // TODO(cpcallen): this funciton should not exist in its present
+  // form.  Each of the different classes (Object, Function, Array)
+  // should have their own toString implementation as described in the
+  // spec.
   if (this.class === 'Array') {
     // Array
     var cycles = Interpreter.toStringCycles_;
