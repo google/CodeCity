@@ -586,37 +586,6 @@ module.exports = [
   /******************************************************************/
   // Object and Object.prototype
   
-  { name: 'ObjectIsFunction', src: `
-    typeof Object;
-    `,
-    expected: 'function' },
-
-  { name: 'ObjectProtoIsFunctionPrototype', src: `
-    Object.getPrototypeOf(Object) === Function.prototype;
-    `,
-    expected: true },
-
-  { name: 'ObjectPrototypeIsObject', src: `
-    typeof Object.prototype;
-    `,
-    expected: 'object' },
-
-  { name: 'ObjectPrototypeConstructorIsObject', src: `
-    Object.prototype.constructor === Object;
-    `,
-    expected: true },
-
-  { name: 'ObjectPrototypeProtoIsNull', src: `
-    Object.getPrototypeOf(Object.prototype)
-    `,
-    expected: null },
-
-  { name: 'ObjectsAreObjects', src: `
-    Object.getPrototypeOf({}) === Object.prototype;
-    `,
-    expected: true },
-
-
   { name: 'ObjectDefinePropertyNoArgs', src: `
     try {
       Object.defineProperty();
@@ -887,81 +856,16 @@ module.exports = [
   /******************************************************************/
   // Function and Function.prototype
 
-  { name: 'FunctionIsFunction', src: `
-    typeof Function;
-    `,
-    expected: 'function' },
-
-  { name: 'FunctionProtoIsFunctionPrototype', src: `
-    Object.getPrototypeOf(Function) === Function.prototype;
-    `,
-    expected: true },
-
-  { name: 'FunctionPrototypeIsFunction', src: `
-    typeof Function.prototype;
-    `,
-    expected: 'function' },
-
-  { name: 'FunctionPrototypeConstructorIsFunction', src: `
-    Function.prototype.constructor === Function;
-    `,
-    expected: true },
-
-  { name: 'FunctionPrototypeProto', src: `
-    Object.getPrototypeOf(Function.prototype) === Object.prototype;
-    `,
-    expected: true },
-
   { name: 'FunctionPrototypeHasNoPrototype', src: `
     Function.prototype.hasOwnProperty('prototype');
     `,
     expected: false },
 
-  { name: 'FunctionsAreFunctions', src: `
-    Object.getPrototypeOf(function(){}) === Function.prototype;
-    `,
-    expected: true },
-
   /******************************************************************/
   // Array and Array.prototype
 
-  { name: 'ArrayIsFunction', src: `
-    typeof Array;
-    `,
-    expected: 'function' },
-
-  { name: 'ArrayProtoIsFunctionPrototype', src: `
-    Object.getPrototypeOf(Array) === Function.prototype;
-    `,
-    expected: true },
-
-  { name: 'ArrayPrototypeIsObject', src: `
-    typeof Array.prototype;
-    `,
-    expected: 'object' },
-
-  { name: 'ArrayPrototypeConstructorIsArray', src: `
-    Array.prototype.constructor === Array;
-    `,
-    expected: true },
-
   { name: 'ArrayIsArrayArrayPrototype', src: `
     Array.isArray(Array.prototype);
-    `,
-    expected: true },
-
-  { name: 'ArrayPrototypeProto', src: `
-    Object.getPrototypeOf(Array.prototype) === Object.prototype;
-    `,
-    expected: true },
-
-  { name: 'ArrayPrototypeHasNoPrototype', src: `
-    Array.prototype.hasOwnProperty('prototype');
-    `,
-    expected: false },
-
-  { name: 'ArraysAreArrays', src: `
-    Object.getPrototypeOf([]) === Array.prototype;
     `,
     expected: true },
 

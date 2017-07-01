@@ -78,6 +78,72 @@ exports.testSimple = function(t) {
 };
 
 /**
+ * Run some tests of the various constructors and their associated
+ * literals and prototype objects.
+ * @param {T} t The test runner object.
+ */
+exports.testClasses = function(t) {
+  var classes = {
+    Object: {
+      prototypeType: 'object',
+      prototypeProto: 'null',
+      instance: '{}'},
+    Function: {
+      prototypeType: 'function',
+      prototypeProto: 'Object.prototype',
+      instance: 'function(){}'},
+    Array: {
+      prototypeType: 'object',
+      prototypeProto: 'Object.prototype',
+      instance: '[]'},
+    RegExp: {
+      prototypeType: 'object',
+      prototypeProto: 'Object.prototype',
+      instance: '/foo/'},
+    Date: {
+      prototypeType: 'object',
+      prototypeProto: 'Object.prototype',
+      instance: 'new Date()'}, // Not actually a instance, but whatever.
+  };   
+  for (var c in classes) {
+    var name, src, tc = classes[c];
+    // Check constructor is a function:
+    name = c + 'IsFunction';
+    src = 'typeof ' + c + ';';
+    runTest(t, name, src, 'function');
+    // Check constructor's proto is Function.prototype
+    name = c + 'ProtoIsFunctionPrototype';
+    src = 'Object.getPrototypeOf(' + c + ') === Function.prototype;';
+    runTest(t, name, src, true);
+    // Check prototype is of correct type:
+    name = c + 'PrototypeIs' + tc.prototypeType;
+    src = 'typeof ' + c + '.prototype;';
+    runTest(t, name, src, tc.prototypeType);
+    // Check prototype has correct class:
+    name = c + 'PrototypeClassIs' + c
+    src = 'Object.prototype.toString.apply(' + c + '.prototype);';
+    runTest(t, name, src, '[object ' + c + ']');
+    // Check prototype has correct proto:
+    name = c + 'PrototypeProtoIs' + tc.prototypeProto;
+    src = 'Object.getPrototypeOf(' + c + '.prototype) === ' +
+        tc.prototypeProto + ';';
+    runTest(t, name, src, true);
+    // Check prototype's .constructor is constructor:
+    name = c + 'PrototypeConstructorIs' + c;
+    src = c + '.prototype.constructor === ' + c + ';';
+    runTest(t, name, src, true);
+    // Check instance's type:
+    name = c + 'InstanceIs' + tc.prototypeType;
+    src = 'typeof (' + tc.instance + ');';
+    runTest(t, name, src, tc.prototypeType);
+    // Check instance's proto:
+    name = c + 'InstancePrototypeIs' + c + 'Prototype';
+    src = 'Object.getPrototypeOf(' + tc.instance + ') === ' + c + '.prototype;';
+    runTest(t, name, src, true);
+  }
+};
+
+/**
  * Run some tests of switch statement with fallthrough.
  * @param {T} t The test runner object.
  */
@@ -188,7 +254,7 @@ exports.testArca = function(t) {
     ['"11", "2"', true], // String
   ];
   for (var i in cases) {
-    var tc = cases[i]
+    var tc = cases[i];
     var src = `
         (function(a,b){
           return ((a < b) || (a >= b)) ? (a < b) : undefined;
