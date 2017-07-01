@@ -575,6 +575,14 @@ module.exports = [
     `,
     expected: 'TypeError' },
 
+  { name: 'newExpression', src: `
+    function T(x, y) { this.sum += x + y; };
+    T.prototype = { sum: 70 }
+    var t = new T(7, 0.7);
+    t.sum;
+    `,
+    expected: 77.7 },
+
   /******************************************************************/
   // Object and Object.prototype
   
