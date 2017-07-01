@@ -99,10 +99,12 @@ exports.testClasses = function(t) {
     RegExp: {
       prototypeType: 'object',
       prototypeProto: 'Object.prototype',
+      prototypeClass: 'Object',
       instance: '/foo/'},
     Date: {
       prototypeType: 'object',
       prototypeProto: 'Object.prototype',
+      prototypeClass: 'Object',
       instance: 'new Date()'}, // Not actually a instance, but whatever.
   };   
   for (var c in classes) {
@@ -120,9 +122,9 @@ exports.testClasses = function(t) {
     src = 'typeof ' + c + '.prototype;';
     runTest(t, name, src, tc.prototypeType);
     // Check prototype has correct class:
-    name = c + 'PrototypeClassIs' + c
+    name = c + 'PrototypeClassIs' + (tc.prototypeClass || c)
     src = 'Object.prototype.toString.apply(' + c + '.prototype);';
-    runTest(t, name, src, '[object ' + c + ']');
+    runTest(t, name, src, '[object ' + (tc.prototypeClass || c) + ']');
     // Check prototype has correct proto:
     name = c + 'PrototypeProtoIs' + tc.prototypeProto;
     src = 'Object.getPrototypeOf(' + c + '.prototype) === ' +
@@ -140,6 +142,10 @@ exports.testClasses = function(t) {
     name = c + 'InstancePrototypeIs' + c + 'Prototype';
     src = 'Object.getPrototypeOf(' + tc.instance + ') === ' + c + '.prototype;';
     runTest(t, name, src, true);
+    // Check instance's class:
+    name = c + 'InstanceClassIs' + c,
+    src = 'Object.prototype.toString.apply(' + tc.instance + ');';
+    runTest(t, name, src, '[object ' + c + ']');
   }
 };
 
