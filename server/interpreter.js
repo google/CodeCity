@@ -2292,7 +2292,8 @@ Interpreter.prototype['stepCallExpression'] = function() {
       state.func_ = this.getValue(func);
       state.components_ = func;
     } else {
-      // Already evaluated function: (function(){...})();
+      // Callee was not an Identifier or MemberExpression, and is
+      // already fully evaluated.
       state.func_ = func;
     }
     state.arguments_ = [];
@@ -2309,7 +2310,10 @@ Interpreter.prototype['stepCallExpression'] = function() {
     }
     // Determine value of 'this' in function.
     if (state.node['type'] === 'NewExpression') {
-      if (func.illegalConstructor) {
+      var func = state.func_;
+      if (!func || !func.isObject) {
+        this.throwException(this.TYPE_ERROR, func + ' is not a function');
+      } else if (func.illegalConstructor) {
         // Illegal: new escape();
         this.throwException(this.TYPE_ERROR, func + ' is not a constructor');
       }
@@ -2328,6 +2332,8 @@ Interpreter.prototype['stepCallExpression'] = function() {
   if (!state.doneExec_) {
     state.doneExec_ = true;
     var func = state.func_;
+    // TODO(fraser): determine if this check is redundant; remove it or add
+    // tests that depend on it.
     if (!func || !func.isObject) {
       this.throwException(this.TYPE_ERROR, func + ' is not a function');
     }
