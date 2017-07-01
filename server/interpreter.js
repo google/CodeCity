@@ -80,6 +80,15 @@ Interpreter.NONENUMERABLE_DESCRIPTOR = {
 };
 
 /**
+ * Property descriptor of non-enumerable, non-configurable properties.
+ */
+Interpreter.NONENUMERABLE_NONCONFIGURABLE_DESCRIPTOR = {
+  configurable: true,
+  enumerable: false,
+  writable: true
+};
+
+/**
  * Property descriptor of readonly, non-enumerable properties.
  */
 Interpreter.READONLY_NONENUMERABLE_DESCRIPTOR = {
@@ -176,7 +185,7 @@ Interpreter.prototype.initGlobalScope = function(scope) {
   // Function.prototype, which are needed to bootstrap everything
   // else:
   this.OBJECTPROTO = this.createObjectProto(null);
-  this.FUNCTIONPROTO = this.createObjectProto(this.OBJECTPROTO);
+  this.FUNCTIONPROTO = this.createFunction(this.OBJECTPROTO);
   
   // Initialize global objects.
   this.initFunction(scope);
@@ -248,6 +257,7 @@ Interpreter.prototype.initFunction = function(scope) {
     } else {
       // Called as Function().
       var newFunc = thisInterpreter.createFunction();
+      this.addFunctionPrototype(newFunc);
     }
     if (arguments.length) {
       var code = arguments[arguments.length - 1].toString();
@@ -284,10 +294,11 @@ Interpreter.prototype.initFunction = function(scope) {
   wrapper.id = this.functionCounter_++;
   var FunctionConst = this.createFunction();
   FunctionConst.nativeFunc = wrapper;
+  this.addVariableToScope(scope, 'Function', FunctionConst);
+
   this.setProperty(FunctionConst, 'prototype', this.FUNCTIONPROTO, {});
   this.setProperty(this.FUNCTIONPROTO, 'constructor', FunctionConst,
       Interpreter.NONENUMERABLE_DESCRIPTOR);
-  this.addVariableToScope(scope, 'Function', FunctionConst);
 
   wrapper = function(thisArg, args) {
     var state =
@@ -1437,18 +1448,38 @@ Interpreter.prototype.createObjectProto = function(proto) {
 };
 
 /**
- * Create a new function object and its associated prototype object.
- * This implements parts of §13.2 of the ES5.1 spec.
+ * Create a new function object.
+ * @param {Interpreter.Object=} proto Prototype object (or null);
+ *     defaults to this.FUNCTIONPROTO.
  * @return {!Interpreter.Object} New data object.
  */
-Interpreter.prototype.createFunction = function() {
-  var obj = this.createObjectProto(this.FUNCTIONPROTO);
+Interpreter.prototype.createFunction = function(proto) {
+  var p = (proto === undefined ? this.FUNCTIONPROTO : proto);
+  var obj = this.createObjectProto(p);
   obj.class = 'Function';
-  // Functions have prototype objects.
-  var protoObj = this.createObjectProto(this.OBJECTPROTO);
-  this.setProperty(obj, 'prototype', protoObj);
-  this.setProperty(protoObj, 'constructor', obj);
   return obj;
+};
+
+/**
+ * Add a prototype property to a function object, setting
+ * func.prototype to prototype and prototype.constructor to func.  (If
+ * prototype is not specified, a newly-created object will be used
+ * instead.)
+ * @param {!Interpreter.Object} func Function to be modified.
+ * @param {Interpreter.Object=} prototype Prototype to add to it.
+ */
+Interpreter.prototype.addFunctionPrototype = function(func, prototype) {
+  if (func.class !== 'Function') {
+    // TODO(cpcallen): instanceof check once we have a function class:
+    throw TypeError("Expected func.class === 'Function'");
+  } else if (func.illegalConstructor) {
+    throw TypeError('func claims not to be a constructor!');
+  }
+  var protoObj = prototype || this.createObjectProto(this.OBJECTPROTO);
+  this.setProperty(func, 'prototype', protoObj,
+      Interpreter.NONENUMERABLE_NONCONFIGURABLE_DESCRIPTOR);
+  this.setProperty(protoObj, 'constructor', func,
+      Interpreter.NONENUMERABLE_DESCRIPTOR);
 };
 
 /**
@@ -1501,6 +1532,7 @@ Interpreter.prototype.populateRegExp = function(pseudoRegexp, nativeRegexp) {
  */
 Interpreter.prototype.createFunctionFromAST = function(node, scope) {
   var func = this.createFunction();
+  this.addFunctionPrototype(func);
   func.parentScope = scope;
   func.node = node;
   this.setProperty(func, 'length', func.node['params'].length,
@@ -1511,10 +1543,10 @@ Interpreter.prototype.createFunctionFromAST = function(node, scope) {
 /**
  * Create a new native function.
  * @param {!Function} nativeFunc JavaScript function.
- * @param {boolean=} opt_constructor If true, the function's
- * prototype will have its constructor property set to the function.
- * If false, the function cannot be called as a constructor (e.g. escape).
- * Defaults to undefined.
+ * @param {boolean=} opt_constructor If true, the function will have a
+ * prototype property added using Interpreter.addFunctionPrototype.
+ * If false (or unspecified), the function cannot be called as a
+ * constructor (e.g. escape).
  * @return {!Interpreter.Object} New function.
  */
 Interpreter.prototype.createNativeFunction =
@@ -1525,11 +1557,9 @@ Interpreter.prototype.createNativeFunction =
   this.setProperty(func, 'length', nativeFunc.length,
       Interpreter.READONLY_DESCRIPTOR);
   if (opt_constructor) {
-    this.setProperty(func.properties['prototype'], 'constructor',
-        func, Interpreter.NONENUMERABLE_DESCRIPTOR);
+    this.addFunctionPrototype(func);
   } else if (opt_constructor === false) {
     func.illegalConstructor = true;
-    this.setProperty(func, 'prototype', undefined);
   }
   return func;
 };
@@ -1541,6 +1571,7 @@ Interpreter.prototype.createNativeFunction =
  */
 Interpreter.prototype.createAsyncFunction = function(asyncFunc) {
   var func = this.createFunction();
+  this.addFunctionPrototype(func); // TODO(cpcallen): is this necessary?
   func.asyncFunc = asyncFunc;
   asyncFunc.id = this.functionCounter_++;
   this.setProperty(func, 'length', asyncFunc.length,
