@@ -929,7 +929,7 @@ Interpreter.prototype.initString = function(scope) {
   this.setNativeFunctionPrototype(this.STRING, 'localeCompare', wrapper);
 
   wrapper = function(separator, limit) {
-    if (thisInterpreter.isa(separator, thisInterpreter.REGEXP)) {
+    if (separator && separator.class === 'RegExp') {
       separator = separator.data;
     }
     var jsList = this.split(separator, limit);
@@ -1081,29 +1081,30 @@ Interpreter.prototype.initRegExp = function(scope) {
       var rgx = this;
     } else {
       // Called as RegExp().
-      var rgx = thisInterpreter.createObject(thisInterpreter.REGEXP);
+      var rgx = thisInterpreter.createRegExp()
     }
     pattern = pattern ? pattern.toString() : '';
     flags = flags ? flags.toString() : '';
     thisInterpreter.populateRegExp(rgx, new RegExp(pattern, flags));
     return rgx;
   };
-  this.REGEXP = this.createNativeFunction(wrapper, true);
-  this.addVariableToScope(scope, 'RegExp', this.REGEXP);
+  var RegExpConst = this.createNativeFunction(wrapper, true);
+  this.REGEXPPROTO = thisInterpreter.getProperty(RegExpConst, 'prototype');
+  this.addVariableToScope(scope, 'RegExp', RegExpConst);
 
-  this.setProperty(this.REGEXP.properties['prototype'], 'global', undefined,
+  this.setProperty(RegExpConst.properties['prototype'], 'global', undefined,
       Interpreter.READONLY_NONENUMERABLE_DESCRIPTOR);
-  this.setProperty(this.REGEXP.properties['prototype'], 'ignoreCase', undefined,
+  this.setProperty(RegExpConst.properties['prototype'], 'ignoreCase', undefined,
       Interpreter.READONLY_NONENUMERABLE_DESCRIPTOR);
-  this.setProperty(this.REGEXP.properties['prototype'], 'multiline', undefined,
+  this.setProperty(RegExpConst.properties['prototype'], 'multiline', undefined,
       Interpreter.READONLY_NONENUMERABLE_DESCRIPTOR);
-  this.setProperty(this.REGEXP.properties['prototype'], 'source', '(?:)',
+  this.setProperty(RegExpConst.properties['prototype'], 'source', '(?:)',
       Interpreter.READONLY_NONENUMERABLE_DESCRIPTOR);
 
   wrapper = function(str) {
     return this.data.test(str);
   };
-  this.setNativeFunctionPrototype(this.REGEXP, 'test', wrapper);
+  this.setNativeFunctionPrototype(RegExpConst, 'test', wrapper);
 
   wrapper = function(str) {
     str = str.toString();
@@ -1125,7 +1126,7 @@ Interpreter.prototype.initRegExp = function(scope) {
     }
     return null;
   };
-  this.setNativeFunctionPrototype(this.REGEXP, 'exec', wrapper);
+  this.setNativeFunctionPrototype(RegExpConst, 'exec', wrapper);
 };
 
 /**
@@ -1494,6 +1495,19 @@ Interpreter.prototype.createArray = function() {
 };
 
 /**
+ * Create a new regexp object.
+ * @param {Interpreter.Object=} proto Prototype object (or null);
+ *     defaults to this.REGEXPPROTO
+ * @return {!Interpreter.Object} New data object.
+ */
+Interpreter.prototype.createRegExp = function(proto) {
+  var p = (proto === undefined ? this.REGEXPPROTO : proto);
+  var obj = this.createObjectProto(p);
+  obj.class = 'RegExp';
+  return obj;
+};
+
+/**
  * Create a new error object.  See §15.11 of the ES5.1 spec.
  * @return {!Interpreter.Object} New array object.
  */
@@ -1594,7 +1608,7 @@ Interpreter.prototype.nativeToPseudo = function(nativeObj) {
   }
 
   if (nativeObj instanceof RegExp) {
-    var pseudoRegexp = this.createObject(this.REGEXP);
+    var pseudoRegexp = this.createRegExp();
     this.populateRegExp(pseudoRegexp, nativeObj);
     return pseudoRegexp;
   }
@@ -1644,7 +1658,7 @@ Interpreter.prototype.pseudoToNative = function(pseudoObj, opt_cycles) {
     return pseudoObj;
   }
 
-  if (this.isa(pseudoObj, this.REGEXP)) {  // Regular expression.
+  if (pseudoObj.class === 'RegExp') {  // Regular expression.
     return pseudoObj.data;
   }
 
@@ -2789,7 +2803,7 @@ Interpreter.prototype['stepLiteral'] = function() {
   var state = stack.pop();
   var value = state.node['value'];
   if (value instanceof RegExp) {
-    var pseudoRegexp = this.createObject(this.REGEXP);
+    var pseudoRegexp = this.createRegExp();
     this.populateRegExp(pseudoRegexp, value);
     value = pseudoRegexp;
   }
