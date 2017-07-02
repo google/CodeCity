@@ -300,7 +300,7 @@ Interpreter.prototype.initFunction = function(scope) {
     state.arguments_ = [];
     if (args) {
       // TODO(cpcallen): this should probably accept array-like object too.
-      if (args.class === 'array') {
+      if (args instanceof Interpreter.Array) {
         for (var i = 0; i < args.length; i++) {
           state.arguments_[i] = thisInterpreter.getProperty(args, i);
         }
@@ -603,7 +603,7 @@ Interpreter.prototype.initArray = function(scope) {
 
   // Static methods on Array.
   wrapper = function(obj) {
-    return obj && obj.class === 'Array';
+    return obj instanceof Interpreter.Array;
   };
   this.setProperty(ArrayConst, 'isArray',
                    this.createNativeFunction(wrapper, false),
@@ -750,7 +750,7 @@ Interpreter.prototype.initArray = function(scope) {
     // Loop through all arguments and copy them in.
     for (var i = 0; i < arguments.length; i++) {
       var value = arguments[i];
-      if (value && value.class === 'Array') {
+      if (value instanceof Interpreter.Array) {
         for (var j = 0; j < value.length; j++) {
           var element = thisInterpreter.getProperty(value, j);
           thisInterpreter.setProperty(list, length++, element);
@@ -925,7 +925,7 @@ Interpreter.prototype.initString = function(scope) {
   this.setNativeFunctionPrototype(StringConst, 'localeCompare', wrapper);
 
   wrapper = function(separator, limit) {
-    if (separator && separator.class === 'RegExp') {
+    if (separator && separator instanceof Interpreter.RegExp) {
       separator = separator.data;
     }
     var jsList = this.split(separator, limit);
@@ -1222,7 +1222,8 @@ Interpreter.prototype.initError = function(scope) {
 };
 
 /**
- * Is an object of a certain class?
+ * Does the object have a certain constructor's .prototype in its
+ * proto chain?
  * @param {*} child Object to check.
  * @param {Interpreter.Object} constructor Constructor of object.
  * @return {boolean} True if object is the class or inherits from it.
@@ -1360,7 +1361,7 @@ Interpreter.Object.prototype.toString = function() {
   // form.  Each of the different classes (Object, Function, Array)
   // should have their own toString implementation as described in the
   // spec.
-  if (this.class === 'Array') {
+  if (this instanceof Interpreter.Array) {
     // Array
     var cycles = Interpreter.toStringCycles_;
     cycles.push(this);
@@ -1376,7 +1377,7 @@ Interpreter.Object.prototype.toString = function() {
     }
     return strs.join(',');
   }
-  if (this.class === 'Error') {
+  if (this instanceof Interpreter.Error) {
     var cycles = Interpreter.toStringCycles_;
     if (cycles.indexOf(this) !== -1) {
       return '[object Error]';
@@ -1405,7 +1406,7 @@ Interpreter.Object.prototype.toString = function() {
     }
     return message ? name + ': ' + message : name + '';
   }
-  if (this.class === 'Function') {
+  if (this instanceof Interpreter.Function) {
     // TODO: Return the source code.
     return '[object Function]';
   }
@@ -1701,7 +1702,7 @@ Interpreter.prototype.pseudoToNative = function(pseudoObj, opt_cycles) {
     return pseudoObj;
   }
 
-  if (pseudoObj.class === 'RegExp') {  // Regular expression.
+  if (pseudoObj instanceof Interpreter.RegExp) {  // Regular expression.
     return pseudoObj.data;
   }
 
@@ -1715,7 +1716,7 @@ Interpreter.prototype.pseudoToNative = function(pseudoObj, opt_cycles) {
   }
   cycles.pseudo.push(pseudoObj);
   var nativeObj;
-  if (pseudoObj.class === 'Array') {  // Array.
+  if (pseudoObj instanceof Interpreter.Array) {  // Array.
     nativeObj = [];
     cycles.native.push(nativeObj);
     for (var i = 0; i < pseudoObj.length; i++) {
@@ -1774,7 +1775,7 @@ Interpreter.prototype.getProperty = function(obj, name) {
     // Special cases for magic length property.
     if (typeof obj === 'string') {
       return obj.length;
-    } else if (obj.class === 'Array') {
+    } else if (obj instanceof Interpreter.Array) {
       return obj.length;
     }
   } else if (name.charCodeAt(0) < 0x40) {
@@ -1808,7 +1809,7 @@ Interpreter.prototype.hasProperty = function(obj, name) {
     return undefined;
   }
   name += '';
-  if (name === 'length' && obj.class === 'Array') {
+  if (name === 'length' && obj instanceof Interprerter.Array) {
     return true;
   }
   do {
@@ -1835,7 +1836,7 @@ Interpreter.prototype.setProperty = function(obj, name, value, opt_descriptor) {
     this.throwException(this.TYPE_ERROR, "Can't create property '" + name +
                         "' on '" + obj + "'");
   }
-  if (obj.class === 'Array') {
+  if (obj instanceof Interpreter.Array) {
     // Arrays have a magic length variable that is bound to the elements.
     var i;
     if (name === 'length') {
@@ -1900,7 +1901,7 @@ Interpreter.prototype.deleteProperty = function(obj, name) {
   if (!obj || !obj.isObject || obj.notWritable.has(name)) {
     return false;
   }
-  if (name === 'length' && obj.class === 'Array') {
+ if (name === 'length' && obj instanceof Interpreter.Array) {
     return false;
   }
   return delete obj.properties[name];
@@ -2162,7 +2163,7 @@ Interpreter.prototype.executeException = function(error) {
 
   // Throw a real error.
   var realError;
-  if (error.class === 'Error') {
+  if (error instanceof Interpreter.Error) {
     var errorTable = {
       'EvalError': EvalError,
       'RangeError': RangeError,
@@ -2349,9 +2350,7 @@ Interpreter.prototype['stepBinaryExpression'] = function() {
     }
     value = this.hasProperty(rightSide, leftSide);
   } else if (node['operator'] === 'instanceof') {
-    // TODO(cpcallen): rewrite this as rightSide instanceof
-    // Interpreter.Function once such a class exists.
-    if (!rightSide || !rightSide.class === 'function') {
+    if (!(rightSide instanceof Interpreter.Function)) {
       this.throwException(this.TYPE_ERROR,
           'Right-hand side of instanceof is not an object');
     }
@@ -3140,7 +3139,7 @@ Interpreter.prototype['stepUnaryExpression'] = function() {
                           name + "' of '" + obj + "'");
     }
   } else if (node['operator'] === 'typeof') {
-    value = (value && value.class === 'Function') ? 'function' : typeof value;
+    value = (value instanceof Interpreter.Function) ? 'function' : typeof value;
   } else if (node['operator'] === 'void') {
     value = undefined;
   } else {
