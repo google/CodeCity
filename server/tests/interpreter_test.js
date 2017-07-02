@@ -167,9 +167,9 @@ exports.testClasses = function(t) {
     src = 'Object.getPrototypeOf(new ' + c + ') === ' + c + '.prototype;';
     runTest(t, name, src, true);
     // Check instance's class:
-    name = c + 'InstanceClassIs' + c,
+    name = c + 'InstanceClassIs' + prototypeClass,
     src = 'Object.prototype.toString.apply(new ' + c + ');';
-    runTest(t, name, src, '[object ' + c + ']');
+    runTest(t, name, src, '[object ' + prototypeClass + ']');
     if (tc.literal) {
       // Check literal's type:
       name = c + 'LiteralIs' + prototypeType;
@@ -181,9 +181,9 @@ exports.testClasses = function(t) {
           '.prototype;';
       runTest(t, name, src, true);
       // Check literal's class:
-      name = c + 'LiteralClassIs' + c,
+      name = c + 'LiteralClassIs' + prototypeClass,
       src = 'Object.prototype.toString.apply(' + tc.literal + ');';
-      runTest(t, name, src, '[object ' + c + ']');
+      runTest(t, name, src, '[object ' + prototypeClass + ']');
     }
   }
 };

@@ -836,7 +836,7 @@ Interpreter.prototype.initNumber = function(scope) {
       return this.toExponential(fractionDigits);
     } catch (e) {
       // Throws if fractionDigits isn't within 0-20.
-      thisInterpreter.throwException(thisInterpreter.ERROR, e.message);
+      thisInterpreter.throwException(thisInterpreter.RANGE_ERROR, e.message);
     }
   };
   this.setNativeFunctionPrototype(this.NUMBER, 'toExponential', wrapper);
@@ -846,7 +846,7 @@ Interpreter.prototype.initNumber = function(scope) {
       return this.toFixed(digits);
     } catch (e) {
       // Throws if digits isn't within 0-20.
-      thisInterpreter.throwException(thisInterpreter.ERROR, e.message);
+      thisInterpreter.throwException(thisInterpreter.RANGE_ERROR, e.message);
     }
   };
   this.setNativeFunctionPrototype(this.NUMBER, 'toFixed', wrapper);
@@ -856,7 +856,7 @@ Interpreter.prototype.initNumber = function(scope) {
       return this.toPrecision(precision);
     } catch (e) {
       // Throws if precision isn't within range (depends on implementation).
-      thisInterpreter.throwException(thisInterpreter.ERROR, e.message);
+      thisInterpreter.throwException(thisInterpreter.RANGE_ERROR, e.message);
     }
   };
   this.setNativeFunctionPrototype(this.NUMBER, 'toPrecision', wrapper);
@@ -866,7 +866,7 @@ Interpreter.prototype.initNumber = function(scope) {
       return this.toString(radix);
     } catch (e) {
       // Throws if radix isn't within 2-36.
-      thisInterpreter.throwException(thisInterpreter.ERROR, e.message);
+      thisInterpreter.throwException(thisInterpreter.RANGE_ERROR, e.message);
     }
   };
   this.setNativeFunctionPrototype(this.NUMBER, 'toString', wrapper);
@@ -1158,8 +1158,10 @@ Interpreter.prototype.initJSON = function(scope) {
  */
 Interpreter.prototype.initError = function(scope) {
   var thisInterpreter = this;
+  // Error prototype:
+  this.ERRORPROTO = this.createError(this.OBJECTPROTO);
   // Error constructor.
-  this.ERROR = this.createNativeFunction(function(opt_message) {
+  var ErrorConst = this.createNativeFunction(function(opt_message) {
     if (thisInterpreter.calledWithNew()) {
       // Called as new Error().
       var newError = this;
@@ -1172,14 +1174,18 @@ Interpreter.prototype.initError = function(scope) {
           Interpreter.NONENUMERABLE_DESCRIPTOR);
     }
     return newError;
-  }, true);
-  this.addVariableToScope(scope, 'Error', this.ERROR);
-  this.setProperty(this.ERROR.properties['prototype'], 'message', '',
+  }, this.ERRORPROTO);
+  this.addVariableToScope(scope, 'Error', ErrorConst);
+  
+  this.setProperty(this.ERRORPROTO, 'message', '',
       Interpreter.NONENUMERABLE_DESCRIPTOR);
-  this.setProperty(this.ERROR.properties['prototype'], 'name', 'Error',
+  this.setProperty(this.ERRORPROTO, 'name', 'Error',
       Interpreter.NONENUMERABLE_DESCRIPTOR);
 
   var createErrorSubclass = function(name) {
+    var prototype = thisInterpreter.createError();
+    thisInterpreter.setProperty(prototype, 'name', name,
+        Interpreter.NONENUMERABLE_DESCRIPTOR);
     var constructor = thisInterpreter.createNativeFunction(
         function(opt_message) {
           if (thisInterpreter.calledWithNew()) {
@@ -1187,21 +1193,17 @@ Interpreter.prototype.initError = function(scope) {
             var newError = this;
           } else {
             // Called as XyzError().
-            var newError = thisInterpreter.createObject(constructor);
+            var newError = thisInterpreter.createError(prototype);
           }
           if (opt_message) {
             thisInterpreter.setProperty(newError, 'message', opt_message + '',
                 Interpreter.NONENUMERABLE_DESCRIPTOR);
           }
           return newError;
-        }, true);
-    thisInterpreter.setProperty(constructor, 'prototype',
-        thisInterpreter.createError());
-    thisInterpreter.setProperty(constructor.properties['prototype'], 'name',
-        name, Interpreter.NONENUMERABLE_DESCRIPTOR);
+        }, prototype);
     thisInterpreter.addVariableToScope(scope, name, constructor);
 
-    return constructor;
+    return prototype;
   };
 
   this.EVAL_ERROR = createErrorSubclass('EvalError');
@@ -1503,10 +1505,13 @@ Interpreter.prototype.createRegExp = function(proto) {
 
 /**
  * Create a new error object.  See §15.11 of the ES5.1 spec.
+ * @param {Interpreter.Object=} proto Prototype object (or null);
+ *     defaults to this.ERRORPROTO
  * @return {!Interpreter.Object} New array object.
  */
-Interpreter.prototype.createError = function() {
-  var obj = this.createObject(this.ERROR);
+Interpreter.prototype.createError = function(proto) {
+  var p = (proto === undefined ? this.ERRORPROTO : proto);
+  var obj = this.createObjectProto(p);
   obj.class = 'Error';
   return obj;
 };
@@ -2087,15 +2092,17 @@ Interpreter.prototype.setValue = function(left, value) {
  * interpreter try/catch statement.  If unhandled, a real exception will
  * be thrown.  Can be called with either an error class and a message, or
  * with an actual object to be thrown.
- * @param {!Interpreter.Object} errorClass Type of error (if message is
- *   provided) or the value to throw (if no message).
+ * @param {*} value Value to be thrown.  If message is provided a new
+ *     error object is created using value as the prototype; if not it
+ *     is used directly.
  * @param {string=} opt_message Message being thrown.
  */
-Interpreter.prototype.throwException = function(errorClass, opt_message) {
+Interpreter.prototype.throwException = function(value, opt_message) {
+  var error
   if (opt_message === undefined) {
-    var error = errorClass;  // This is a value to throw, not an error class.
+    error = value;  // This is a value to throw, not an error proto.
   } else {
-    var error = this.createObject(errorClass);
+    error = this.createError(value);
     this.setProperty(error, 'message', opt_message,
         Interpreter.NONENUMERABLE_DESCRIPTOR);
   }
@@ -2123,7 +2130,7 @@ Interpreter.prototype.executeException = function(error) {
 
   // Throw a real error.
   var realError;
-  if (this.isa(error, this.ERROR)) {
+  if (error.class === 'Error') {
     var errorTable = {
       'EvalError': EvalError,
       'RangeError': RangeError,
