@@ -869,6 +869,11 @@ module.exports = [
     `,
     expected: true },
 
+  { name: 'ArrayIsArrayArrayInstance', src: `
+    Array.isArray(new Array);
+    `,
+    expected: true },
+
   { name: 'ArrayIsArrayArrayLiteral', src: `
     Array.isArray([]);
     `,
