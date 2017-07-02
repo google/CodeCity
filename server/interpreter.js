@@ -252,7 +252,7 @@ Interpreter.prototype.initFunction = function(scope) {
     } else {
       // Called as Function().
       var newFunc = thisInterpreter.createFunction();
-      this.addFunctionPrototype(newFunc);
+      newFunc.addPrototype(thisInterpreter);
     }
     if (arguments.length) {
       var code = arguments[arguments.length - 1].toString();
@@ -1452,6 +1452,27 @@ Interpreter.Function.prototype.constructor = Interpreter.Function;
 Interpreter.Function.prototype.class = 'Function';
 
 /**
+ * Add a prototype property to this function object, setting
+ * this.properties[prototype] to prototype and
+ * prototype.properites[constructor] to func.  If prototype is not
+ * specified, a newly-created object will be used instead.
+ * @param {!Interpreter} interpreter Interpreter to which this is attached.
+ * @param {Interpreter.Object=} prototype Prototype to add to this.
+ */
+Interpreter.Function.prototype.addPrototype = function(thisInterpreter, prototype) {
+  if (this.illegalConstructor) {
+    throw TypeError("You said this wasn't constructor!");
+  }
+  var protoObj = prototype ||
+      thisInterpreter.createObject(thisInterpreter.OBJECT);
+  thisInterpreter.setProperty(this, 'prototype', protoObj,
+      Interpreter.NONENUMERABLE_NONCONFIGURABLE_DESCRIPTOR);
+  thisInterpreter.setProperty(protoObj, 'constructor', this,
+      Interpreter.NONENUMERABLE_DESCRIPTOR);
+};
+
+
+/**
  * Create a new function object.
  * @param {Interpreter.Object=} proto Prototype object (or null);
  *     defaults to this.FUNCTION.
@@ -1460,28 +1481,6 @@ Interpreter.Function.prototype.class = 'Function';
 Interpreter.prototype.createFunction = function(proto) {
   var p = (proto === undefined ? this.FUNCTION : proto);
   return new Interpreter.Function(p);
-};
-
-/**
- * Add a prototype property to a function object, setting
- * func.prototype to prototype and prototype.constructor to func.  (If
- * prototype is not specified, a newly-created object will be used
- * instead.)
- * @param {!Interpreter.Object} func Function to be modified.
- * @param {Interpreter.Object=} prototype Prototype to add to it.
- */
-Interpreter.prototype.addFunctionPrototype = function(func, prototype) {
-  if (func.class !== 'Function') {
-    // TODO(cpcallen): instanceof check once we have a function class:
-    throw TypeError("Expected func.class === 'Function'");
-  } else if (func.illegalConstructor) {
-    throw TypeError('func claims not to be a constructor!');
-  }
-  var protoObj = prototype || this.createObject(this.OBJECT);
-  this.setProperty(func, 'prototype', protoObj,
-      Interpreter.NONENUMERABLE_NONCONFIGURABLE_DESCRIPTOR);
-  this.setProperty(protoObj, 'constructor', func,
-      Interpreter.NONENUMERABLE_DESCRIPTOR);
 };
 
 /**
@@ -1586,7 +1585,7 @@ Interpreter.prototype.populateRegExp = function(pseudoRegexp, nativeRegexp) {
  */
 Interpreter.prototype.createFunctionFromAST = function(node, scope) {
   var func = this.createFunction();
-  this.addFunctionPrototype(func);
+  func.addPrototype(this);
   func.parentScope = scope;
   func.node = node;
   this.setProperty(func, 'length', func.node['params'].length,
@@ -1613,9 +1612,9 @@ Interpreter.prototype.createNativeFunction = function(nativeFunc, prototype) {
   this.setProperty(func, 'length', nativeFunc.length,
       Interpreter.READONLY_DESCRIPTOR);
   if (prototype === true) {
-    this.addFunctionPrototype(func);
+    func.addPrototype(this);
   } else if (prototype) {
-    this.addFunctionPrototype(func, prototype);
+    func.addPrototype(this, prototype);
   } else {
     func.illegalConstructor = true;
   }
@@ -1629,7 +1628,7 @@ Interpreter.prototype.createNativeFunction = function(nativeFunc, prototype) {
  */
 Interpreter.prototype.createAsyncFunction = function(asyncFunc) {
   var func = this.createFunction();
-  this.addFunctionPrototype(func); // TODO(cpcallen): is this necessary?
+  func.addPrototype(this); // TODO(cpcallen): is this necessary?
   func.asyncFunc = asyncFunc;
   asyncFunc.id = this.functionCounter_++;
   this.setProperty(func, 'length', asyncFunc.length,
