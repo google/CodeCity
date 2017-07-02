@@ -86,18 +86,18 @@ exports.testClasses = function(t) {
   var classes = {
     Object: {
       prototypeProto: 'null',
-      instance: '{}'
+      literal: '{}'
     },
     Function: {
       prototypeType: 'function',
-      instance: 'function(){}'
+      listeral: 'function(){}'
     },
     Array: {
-      instance: '[]'
+      literal: '[]'
     },
     RegExp: {
       prototypeClass: 'Object',
-      instance: '/foo/'
+      literal: '/foo/'
     },
     Date: {
       prototypeClass: 'Object'
@@ -159,18 +159,32 @@ exports.testClasses = function(t) {
     src = c + '.prototype.constructor === ' + c + ';';
     runTest(t, name, src, true);
     // Check instance's type:
-    var instance = (tc.instance || 'new ' + c);
     name = c + 'InstanceIs' + prototypeType;
-    src = 'typeof (' + instance + ');';
+    src = 'typeof (new ' + c + ');';
     runTest(t, name, src, prototypeType);
     // Check instance's proto:
     name = c + 'InstancePrototypeIs' + c + 'Prototype';
-    src = 'Object.getPrototypeOf(' + instance + ') === ' + c + '.prototype;';
+    src = 'Object.getPrototypeOf(new ' + c + ') === ' + c + '.prototype;';
     runTest(t, name, src, true);
     // Check instance's class:
     name = c + 'InstanceClassIs' + c,
-    src = 'Object.prototype.toString.apply(' + instance + ');';
+    src = 'Object.prototype.toString.apply(new ' + c + ');';
     runTest(t, name, src, '[object ' + c + ']');
+    if (tc.literal) {
+      // Check literal's type:
+      name = c + 'LiteralIs' + prototypeType;
+      src = 'typeof (' + tc.literal + ');';
+      runTest(t, name, src, prototypeType);
+      // Check literal's proto:
+      name = c + 'LiteralPrototypeIs' + c + 'Prototype';
+      src = 'Object.getPrototypeOf(' + tc.literal + ') === ' + c +
+          '.prototype;';
+      runTest(t, name, src, true);
+      // Check literal's class:
+      name = c + 'LiteralClassIs' + c,
+      src = 'Object.prototype.toString.apply(' + tc.literal + ');';
+      runTest(t, name, src, '[object ' + c + ']');
+    }
   }
 };
 
