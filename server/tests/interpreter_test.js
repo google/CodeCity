@@ -96,11 +96,11 @@ exports.testClasses = function(t) {
       literal: '[]'
     },
     RegExp: {
-      prototypeClass: 'Object',
+      prototypeClass: 'Object', // Was 'RegExp' in ES5.1.
       literal: '/foo/'
     },
     Date: {
-      prototypeClass: 'Object'
+      prototypeClass: 'Object' // Was 'RegExp' in ES5.1.
     },
     Error: {},
     EvalError: {
@@ -126,6 +126,21 @@ exports.testClasses = function(t) {
     URIError: {
       prototypeProto: 'Error.prototype',
       prototypeClass: 'Error'
+    },
+    Boolean: {
+      literal: 'false',
+      literalType: 'boolean',
+      noInstance: true,
+    },
+    Number: {
+      literal: '42',
+      literalType: 'number',
+      noInstance: true,
+    },
+    String: {
+      literal: '"hello"',
+      literalType: 'string',
+      noInstance: true,
     },
   };   
   for (var c in classes) {
@@ -158,23 +173,26 @@ exports.testClasses = function(t) {
     name = c + 'PrototypeConstructorIs' + c;
     src = c + '.prototype.constructor === ' + c + ';';
     runTest(t, name, src, true);
-    // Check instance's type:
-    name = c + 'InstanceIs' + prototypeType;
-    src = 'typeof (new ' + c + ');';
-    runTest(t, name, src, prototypeType);
-    // Check instance's proto:
-    name = c + 'InstancePrototypeIs' + c + 'Prototype';
-    src = 'Object.getPrototypeOf(new ' + c + ') === ' + c + '.prototype;';
-    runTest(t, name, src, true);
-    // Check instance's class:
-    name = c + 'InstanceClassIs' + prototypeClass,
-    src = 'Object.prototype.toString.apply(new ' + c + ');';
-    runTest(t, name, src, '[object ' + prototypeClass + ']');
+    if (!tc.noInstance) {
+      // Check instance's type:
+      name = c + 'InstanceIs' + prototypeType;
+      src = 'typeof (new ' + c + ');';
+      runTest(t, name, src, prototypeType);
+      // Check instance's proto:
+      name = c + 'InstancePrototypeIs' + c + 'Prototype';
+      src = 'Object.getPrototypeOf(new ' + c + ') === ' + c + '.prototype;';
+      runTest(t, name, src, true);
+      // Check instance's class:
+      name = c + 'InstanceClassIs' + prototypeClass,
+      src = 'Object.prototype.toString.apply(new ' + c + ');';
+      runTest(t, name, src, '[object ' + c + ']');
+    }
     if (tc.literal) {
       // Check literal's type:
-      name = c + 'LiteralIs' + prototypeType;
+      var literalType = (tc.literalType || prototypeType);
+      name = c + 'LiteralIs' + literalType;
       src = 'typeof (' + tc.literal + ');';
-      runTest(t, name, src, prototypeType);
+      runTest(t, name, src, literalType);
       // Check literal's proto:
       name = c + 'LiteralPrototypeIs' + c + 'Prototype';
       src = 'Object.getPrototypeOf(' + tc.literal + ') === ' + c +
@@ -183,7 +201,7 @@ exports.testClasses = function(t) {
       // Check literal's class:
       name = c + 'LiteralClassIs' + prototypeClass,
       src = 'Object.prototype.toString.apply(' + tc.literal + ');';
-      runTest(t, name, src, '[object ' + prototypeClass + ']');
+      runTest(t, name, src, '[object ' + c + ']');
     }
   }
 };

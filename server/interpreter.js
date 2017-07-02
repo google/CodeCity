@@ -209,12 +209,6 @@ Interpreter.prototype.initGlobalScope = function(scope) {
   this.addVariableToScope(scope, 'isFinite',
       this.createNativeFunction(isFinite, false));
 
-  // parseFloat and parseInt === Number.parseFloat and Number.parseInt
-  this.addVariableToScope(scope, 'parseFloat',
-      this.getProperty(this.NUMBER, 'parseFloat'));
-  this.addVariableToScope(scope, 'parseInt',
-      this.getProperty(this.NUMBER, 'parseInt'));
-
   var func = this.createFunction();
   func.eval = true;
   func.illegalConstructor = true;
@@ -811,24 +805,32 @@ Interpreter.prototype.initArray = function(scope) {
 Interpreter.prototype.initNumber = function(scope) {
   var thisInterpreter = this;
   var wrapper;
+  // Number prototype.
+  this.NUMBERPROTO = this.createObjectProto(this.OBJECTPROTO);
+  this.NUMBERPROTO.class = 'Number';
   // Number constructor.
-  this.NUMBER = this.createNativeFunction(Number, true);
-  this.NUMBER.illegalConstructor = true;  // Don't allow 'new Number(x)'.
-  this.addVariableToScope(scope, 'Number', this.NUMBER);
+  var NumberConst = this.createNativeFunction(Number, this.NUMBERPROTO);
+  NumberConst.illegalConstructor = true;  // Don't allow 'new Number(x)'.
+  this.addVariableToScope(scope, 'Number', NumberConst);
 
   var numConsts = ['MAX_VALUE', 'MIN_VALUE', 'NaN', 'NEGATIVE_INFINITY',
                    'POSITIVE_INFINITY'];
   for (var i = 0; i < numConsts.length; i++) {
-    this.setProperty(this.NUMBER, numConsts[i], Number[numConsts[i]],
+    this.setProperty(NumberConst, numConsts[i], Number[numConsts[i]],
         Interpreter.READONLY_NONENUMERABLE_DESCRIPTOR);
   }
 
   // Static methods on Number.
-  this.setProperty(this.NUMBER, 'parseFloat',
-      this.createNativeFunction(Number.parseFloat, false));
 
-  this.setProperty(this.NUMBER, 'parseInt',
-      this.createNativeFunction(Number.parseInt, false));
+  var nativeParseFloat = this.createNativeFunction(Number.parseFloat, false);
+  this.setProperty(NumberConst, 'parseFloat', nativeParseFloat);
+
+  var nativeParseInt = this.createNativeFunction(Number.parseInt, false);
+  this.setProperty(NumberConst, 'parseInt', nativeParseInt);
+
+  // parseFloat and parseInt === Number.parseFloat and Number.parseInt
+  this.addVariableToScope(scope, 'parseFloat', nativeParseFloat);
+  this.addVariableToScope(scope, 'parseInt', nativeParseInt);
 
   // Instance methods on Number.
   wrapper = function(fractionDigits) {
@@ -839,7 +841,7 @@ Interpreter.prototype.initNumber = function(scope) {
       thisInterpreter.throwException(thisInterpreter.RANGE_ERROR, e.message);
     }
   };
-  this.setNativeFunctionPrototype(this.NUMBER, 'toExponential', wrapper);
+  this.setNativeFunctionPrototype(NumberConst, 'toExponential', wrapper);
 
   wrapper = function(digits) {
     try {
@@ -849,7 +851,7 @@ Interpreter.prototype.initNumber = function(scope) {
       thisInterpreter.throwException(thisInterpreter.RANGE_ERROR, e.message);
     }
   };
-  this.setNativeFunctionPrototype(this.NUMBER, 'toFixed', wrapper);
+  this.setNativeFunctionPrototype(NumberConst, 'toFixed', wrapper);
 
   wrapper = function(precision) {
     try {
@@ -859,7 +861,7 @@ Interpreter.prototype.initNumber = function(scope) {
       thisInterpreter.throwException(thisInterpreter.RANGE_ERROR, e.message);
     }
   };
-  this.setNativeFunctionPrototype(this.NUMBER, 'toPrecision', wrapper);
+  this.setNativeFunctionPrototype(NumberConst, 'toPrecision', wrapper);
 
   wrapper = function(radix) {
     try {
@@ -869,7 +871,7 @@ Interpreter.prototype.initNumber = function(scope) {
       thisInterpreter.throwException(thisInterpreter.RANGE_ERROR, e.message);
     }
   };
-  this.setNativeFunctionPrototype(this.NUMBER, 'toString', wrapper);
+  this.setNativeFunctionPrototype(NumberConst, 'toString', wrapper);
 
   wrapper = function(/*locales, options*/) {
     // Messing around with arguments so that function's length is 0.
@@ -879,7 +881,7 @@ Interpreter.prototype.initNumber = function(scope) {
         thisInterpreter.pseudoToNative(arguments[1]) : undefined;
     return this.toLocaleString(locales, options);
   };
-  this.setNativeFunctionPrototype(this.NUMBER, 'toLocaleString', wrapper);
+  this.setNativeFunctionPrototype(NumberConst, 'toLocaleString', wrapper);
 };
 
 /**
@@ -889,13 +891,16 @@ Interpreter.prototype.initNumber = function(scope) {
 Interpreter.prototype.initString = function(scope) {
   var thisInterpreter = this;
   var wrapper;
+  // String prototype.
+  this.STRINGPROTO = this.createObjectProto(this.OBJECTPROTO);
+  this.STRINGPROTO.class = 'String';
   // String constructor.
-  this.STRING = this.createNativeFunction(String, true);
-  this.STRING.illegalConstructor = true;  // Don't allow 'new String(x)'.
-  this.addVariableToScope(scope, 'String', this.STRING);
+  var StringConst = this.createNativeFunction(String, this.STRINGPROTO);
+  StringConst.illegalConstructor = true;  // Don't allow 'new String(x)'.
+  this.addVariableToScope(scope, 'String', StringConst);
 
   // Static methods on String.
-  this.setProperty(this.STRING, 'fromCharCode',
+  this.setProperty(StringConst, 'fromCharCode',
       this.createNativeFunction(String.fromCharCode, false),
       Interpreter.NONENUMERABLE_DESCRIPTOR);
 
@@ -905,7 +910,7 @@ Interpreter.prototype.initString = function(scope) {
       'toLocaleLowerCase', 'toLocaleUpperCase', 'charAt', 'charCodeAt',
       'substring', 'slice', 'substr', 'indexOf', 'lastIndexOf', 'concat'];
   for (var i = 0; i < functions.length; i++) {
-    this.setNativeFunctionPrototype(this.STRING, functions[i],
+    this.setNativeFunctionPrototype(StringConst, functions[i],
                                     String.prototype[functions[i]]);
   }
 
@@ -917,7 +922,7 @@ Interpreter.prototype.initString = function(scope) {
         thisInterpreter.pseudoToNative(arguments[2]) : undefined;
     return this.localeCompare(compareString, locales, options);
   };
-  this.setNativeFunctionPrototype(this.STRING, 'localeCompare', wrapper);
+  this.setNativeFunctionPrototype(StringConst, 'localeCompare', wrapper);
 
   wrapper = function(separator, limit) {
     if (separator && separator.class === 'RegExp') {
@@ -926,7 +931,7 @@ Interpreter.prototype.initString = function(scope) {
     var jsList = this.split(separator, limit);
     return thisInterpreter.nativeToPseudo(jsList);
   };
-  this.setNativeFunctionPrototype(this.STRING, 'split', wrapper);
+  this.setNativeFunctionPrototype(StringConst, 'split', wrapper);
 
   wrapper = function(regexp) {
     regexp = regexp ? regexp.data : undefined;
@@ -936,19 +941,19 @@ Interpreter.prototype.initString = function(scope) {
     }
     return thisInterpreter.pseudoToNative(match);
   };
-  this.setNativeFunctionPrototype(this.STRING, 'match', wrapper);
+  this.setNativeFunctionPrototype(StringConst, 'match', wrapper);
 
   wrapper = function(regexp) {
     regexp = regexp ? regexp.data : undefined;
     return this.search(regexp);
   };
-  this.setNativeFunctionPrototype(this.STRING, 'search', wrapper);
+  this.setNativeFunctionPrototype(StringConst, 'search', wrapper);
 
   wrapper = function(substr, newSubStr) {
     // TODO: Rewrite as a polyfill to support function replacements.
     return this.replace(substr, newSubStr);
   };
-  this.setNativeFunctionPrototype(this.STRING, 'replace', wrapper);
+  this.setNativeFunctionPrototype(StringConst, 'replace', wrapper);
 };
 
 /**
@@ -957,11 +962,13 @@ Interpreter.prototype.initString = function(scope) {
  */
 Interpreter.prototype.initBoolean = function(scope) {
   var thisInterpreter = this;
-  var wrapper;
+  // Boolean prototype.
+  this.BOOLEANPROTO = this.createObjectProto(this.OBJECTPROTO);
+  this.BOOLEANPROTO.class = 'Boolean';
   // Boolean constructor.
-  this.BOOLEAN = this.createNativeFunction(Boolean, true);
-  this.BOOLEAN.illegalConstructor = true;  // Don't allow 'new Boolean(x)'.
-  this.addVariableToScope(scope, 'Boolean', this.BOOLEAN);
+  var BooleanConst = this.createNativeFunction(Boolean, this.BOOLEANPROTO);
+  BooleanConst.illegalConstructor = true;  // Don't allow 'new Boolean(x)'.
+  this.addVariableToScope(scope, 'Boolean', BooleanConst);
 };
 
 /**
@@ -1706,19 +1713,11 @@ Interpreter.prototype.pseudoToNative = function(pseudoObj, opt_cycles) {
 Interpreter.prototype.getPrototype = function(value) {
   switch (typeof value) {
     case 'number':
-      // TODO(cpcallen): Do not depend on the *current* value of
-      // Number.prototype (etc.).  Existing code below is correctly
-      // unaffected by userland assignments to Number, but should also
-      // be immune to userland assignments to Number.prototype.
-      //
-      // (In fact, there is no reason for the interpreter to have its
-      // own private handles for Boolean, Number and String since they
-      // are never needed except during global scope creation.)
-      return this.NUMBER.properties['prototype'];
+      return this.NUMBERPROTO;
     case 'boolean':
-      return this.BOOLEAN.properties['prototype'];
+      return this.BOOLEANPROTO;
     case 'string':
-      return this.STRING.properties['prototype'];
+      return this.STRINGPROTO;
   }
   if (value) {
     return value.proto;
