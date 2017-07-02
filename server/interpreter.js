@@ -990,18 +990,18 @@ Interpreter.prototype.initDate = function(scope) {
     this.data = new (Function.prototype.bind.apply(Date, args));
     return this;
   };
-  this.DATE = this.createNativeFunction(wrapper, true);
-  this.addVariableToScope(scope, 'Date', this.DATE);
+  var DateProto = this.createNativeFunction(wrapper, true);
+  this.addVariableToScope(scope, 'Date', DateProto);
 
   // Static methods on Date.
-  this.setProperty(this.DATE, 'now', this.createNativeFunction(Date.now, false),
+  this.setProperty(DateProto, 'now', this.createNativeFunction(Date.now, false),
       Interpreter.NONENUMERABLE_DESCRIPTOR);
 
-  this.setProperty(this.DATE, 'parse',
+  this.setProperty(DateProto, 'parse',
       this.createNativeFunction(Date.parse, false),
       Interpreter.NONENUMERABLE_DESCRIPTOR);
 
-  this.setProperty(this.DATE, 'UTC', this.createNativeFunction(Date.UTC, false),
+  this.setProperty(DateProto, 'UTC', this.createNativeFunction(Date.UTC, false),
       Interpreter.NONENUMERABLE_DESCRIPTOR);
 
   // Instance methods on Date.
@@ -1022,7 +1022,7 @@ Interpreter.prototype.initDate = function(scope) {
         return this.data[nativeFunc].apply(this.data, arguments);
       };
     })(functions[i]);
-    this.setNativeFunctionPrototype(this.DATE, functions[i], wrapper);
+    this.setNativeFunctionPrototype(DateProto, functions[i], wrapper);
   }
   var functions = ['toLocaleDateString', 'toLocaleString',
                    'toLocaleTimeString'];
@@ -1037,7 +1037,7 @@ Interpreter.prototype.initDate = function(scope) {
         return this.data[nativeFunc].call(this.data, locales, options);
       };
     })(functions[i]);
-    this.setNativeFunctionPrototype(this.DATE, functions[i], wrapper);
+    this.setNativeFunctionPrototype(DateProto, functions[i], wrapper);
   }
 };
 
