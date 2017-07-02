@@ -181,15 +181,16 @@ Interpreter.prototype.initGlobalScope = function(scope) {
   this.addVariableToScope(scope, 'NaN', NaN, true);
   this.addVariableToScope(scope, 'undefined', undefined, true);
 
-  // Create the objects which will become Object.prototype and
-  // Function.prototype, which are needed to bootstrap everything
-  // else:
+  // Create the objects which will become Object.prototype,
+  // Function.prototype and Array.prototype, which are needed to
+  // bootstrap everything else:
   this.OBJECTPROTO = this.createObjectProto(null);
   this.FUNCTIONPROTO = this.createFunction(this.OBJECTPROTO);
+  this.ARRAYPROTO = this.createArray(this.OBJECTPROTO);
   
   // Initialize global objects.
-  this.initFunction(scope);
   this.initObject(scope);
+  this.initFunction(scope);
   this.initArray(scope);
   this.initNumber(scope);
   this.initString(scope);
@@ -291,14 +292,8 @@ Interpreter.prototype.initFunction = function(scope) {
         Interpreter.READONLY_DESCRIPTOR);
     return newFunc;
   };
-  wrapper.id = this.functionCounter_++;
-  var FunctionConst = this.createFunction();
-  FunctionConst.nativeFunc = wrapper;
+  var FunctionConst = this.createNativeFunction(wrapper, this.FUNCTIONPROTO);
   this.addVariableToScope(scope, 'Function', FunctionConst);
-
-  this.setProperty(FunctionConst, 'prototype', this.FUNCTIONPROTO, {});
-  this.setProperty(this.FUNCTIONPROTO, 'constructor', FunctionConst,
-      Interpreter.NONENUMERABLE_DESCRIPTOR);
 
   wrapper = function(thisArg, args) {
     var state =
@@ -385,10 +380,7 @@ Interpreter.prototype.initObject = function(scope) {
     // Return the provided object.
     return value;
   };
-  var ObjectConst = this.createNativeFunction(wrapper, true);
-  this.setProperty(ObjectConst, 'prototype', this.OBJECTPROTO, {});
-  this.setProperty(this.OBJECTPROTO, 'constructor', ObjectConst,
-      Interpreter.NONENUMERABLE_DESCRIPTOR);
+  var ObjectConst = this.createNativeFunction(wrapper, this.OBJECTPROTO);
   this.addVariableToScope(scope, 'Object', ObjectConst);
 
   /**
@@ -612,8 +604,7 @@ Interpreter.prototype.initArray = function(scope) {
     }
     return newArray;
   };
-  var ArrayConst = this.createNativeFunction(wrapper, true);
-  this.ARRAYPROTO = thisInterpreter.getProperty(ArrayConst, 'prototype');
+  var ArrayConst = this.createNativeFunction(wrapper, this.ARRAYPROTO);
   this.addVariableToScope(scope, 'Array', ArrayConst);
 
   // Static methods on Array.
@@ -1485,10 +1476,13 @@ Interpreter.prototype.addFunctionPrototype = function(func, prototype) {
 
 /**
  * Create a new array object.  See §15.4 of the ES5.1 spec.
+ * @param {Interpreter.Object=} proto Prototype object (or null);
+ *     defaults to this.ARRAYPROTO
  * @return {!Interpreter.Object} New array object.
  */
-Interpreter.prototype.createArray = function() {
-  var obj = this.createObjectProto(this.ARRAYPROTO);
+Interpreter.prototype.createArray = function(proto) {
+  var p = (proto === undefined ? this.ARRAYPROTO : proto);
+  var obj = this.createObjectProto(p);
   obj.class = 'Array';
   obj.length = 0;
   return obj;
@@ -1557,22 +1551,26 @@ Interpreter.prototype.createFunctionFromAST = function(node, scope) {
 /**
  * Create a new native function.
  * @param {!Function} nativeFunc JavaScript function.
- * @param {boolean=} opt_constructor If true, the function will have a
- * prototype property added using Interpreter.addFunctionPrototype.
- * If false (or unspecified), the function cannot be called as a
- * constructor (e.g. escape).
+ * @param {!Interpreter.Object|boolean=} prototype If an object is
+ *     supplied, that object will be added as the function's
+ *     .prototype property (with the object receivieng a corresponding
+ *     .constructor properyt).  If true, a new ordinary
+ *     Interpreter.Object will be created for the purpose.  If false
+ *     (or unspecified) the function cannot be used as a constructor
+ *     (e.g. escape).
  * @return {!Interpreter.Object} New function.
  */
-Interpreter.prototype.createNativeFunction =
-    function(nativeFunc, opt_constructor) {
+Interpreter.prototype.createNativeFunction = function(nativeFunc, prototype) {
   var func = this.createFunction();
   func.nativeFunc = nativeFunc;
   nativeFunc.id = this.functionCounter_++;
   this.setProperty(func, 'length', nativeFunc.length,
       Interpreter.READONLY_DESCRIPTOR);
-  if (opt_constructor) {
+  if (prototype === true) {
     this.addFunctionPrototype(func);
-  } else if (opt_constructor === false) {
+  } else if (prototype) {
+    this.addFunctionPrototype(func, prototype);
+  } else {
     func.illegalConstructor = true;
   }
   return func;
