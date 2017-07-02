@@ -85,27 +85,48 @@ exports.testSimple = function(t) {
 exports.testClasses = function(t) {
   var classes = {
     Object: {
-      prototypeType: 'object',
       prototypeProto: 'null',
-      instance: '{}'},
+      instance: '{}'
+    },
     Function: {
       prototypeType: 'function',
-      prototypeProto: 'Object.prototype',
-      instance: 'function(){}'},
+      instance: 'function(){}'
+    },
     Array: {
-      prototypeType: 'object',
-      prototypeProto: 'Object.prototype',
-      instance: '[]'},
+      instance: '[]'
+    },
     RegExp: {
-      prototypeType: 'object',
-      prototypeProto: 'Object.prototype',
       prototypeClass: 'Object',
-      instance: '/foo/'},
+      instance: '/foo/'
+    },
     Date: {
-      prototypeType: 'object',
-      prototypeProto: 'Object.prototype',
-      prototypeClass: 'Object',
-      instance: 'new Date()'}, // Not actually a instance, but whatever.
+      prototypeClass: 'Object'
+    },
+    Error: {},
+    EvalError: {
+      prototypeProto: 'Error.prototype',
+      prototypeClass: 'Error'
+    },
+    RangeError: {
+      prototypeProto: 'Error.prototype',
+      prototypeClass: 'Error'
+    },
+    ReferenceError: {
+      prototypeProto: 'Error.prototype',
+      prototypeClass: 'Error'
+    },
+    SyntaxError: {
+      prototypeProto: 'Error.prototype',
+      prototypeClass: 'Error'
+    },
+    TypeError: {
+      prototypeProto: 'Error.prototype',
+      prototypeClass: 'Error'
+    },
+    URIError: {
+      prototypeProto: 'Error.prototype',
+      prototypeClass: 'Error'
+    },
   };   
   for (var c in classes) {
     var name, src, tc = classes[c];
@@ -118,33 +139,37 @@ exports.testClasses = function(t) {
     src = 'Object.getPrototypeOf(' + c + ') === Function.prototype;';
     runTest(t, name, src, true);
     // Check prototype is of correct type:
-    name = c + 'PrototypeIs' + tc.prototypeType;
+    var prototypeType = (tc.prototypeType || 'object');
+    name = c + 'PrototypeIs' + prototypeType
     src = 'typeof ' + c + '.prototype;';
-    runTest(t, name, src, tc.prototypeType);
+    runTest(t, name, src, prototypeType);
     // Check prototype has correct class:
-    name = c + 'PrototypeClassIs' + (tc.prototypeClass || c)
+    var prototypeClass = (tc.prototypeClass || c);
+    name = c + 'PrototypeClassIs' + prototypeClass;
     src = 'Object.prototype.toString.apply(' + c + '.prototype);';
-    runTest(t, name, src, '[object ' + (tc.prototypeClass || c) + ']');
+    runTest(t, name, src, '[object ' + prototypeClass + ']');
     // Check prototype has correct proto:
-    name = c + 'PrototypeProtoIs' + tc.prototypeProto;
+    var prototypeProto = (tc.prototypeProto || 'Object.prototype');
+    name = c + 'PrototypeProtoIs' + prototypeProto;
     src = 'Object.getPrototypeOf(' + c + '.prototype) === ' +
-        tc.prototypeProto + ';';
+        prototypeProto + ';';
     runTest(t, name, src, true);
     // Check prototype's .constructor is constructor:
     name = c + 'PrototypeConstructorIs' + c;
     src = c + '.prototype.constructor === ' + c + ';';
     runTest(t, name, src, true);
     // Check instance's type:
-    name = c + 'InstanceIs' + tc.prototypeType;
-    src = 'typeof (' + tc.instance + ');';
-    runTest(t, name, src, tc.prototypeType);
+    var instance = (tc.instance || 'new ' + c);
+    name = c + 'InstanceIs' + prototypeType;
+    src = 'typeof (' + instance + ');';
+    runTest(t, name, src, prototypeType);
     // Check instance's proto:
     name = c + 'InstancePrototypeIs' + c + 'Prototype';
-    src = 'Object.getPrototypeOf(' + tc.instance + ') === ' + c + '.prototype;';
+    src = 'Object.getPrototypeOf(' + instance + ') === ' + c + '.prototype;';
     runTest(t, name, src, true);
     // Check instance's class:
     name = c + 'InstanceClassIs' + c,
-    src = 'Object.prototype.toString.apply(' + tc.instance + ');';
+    src = 'Object.prototype.toString.apply(' + instance + ');';
     runTest(t, name, src, '[object ' + c + ']');
   }
 };
