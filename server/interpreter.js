@@ -1429,13 +1429,27 @@ Interpreter.Object.prototype.valueOf = function() {
 
 /**
  * Create a new data object.
- * @param {Interpreter.Object} proto Prototype object.
+ * @param {Interpreter.Object=} proto Prototype object (or null);
+ *     defaults to this.OBJECT.
  * @return {!Interpreter.Object} New data object.
  */
 Interpreter.prototype.createObject = function(proto) {
-  var obj = new Interpreter.Object(proto);
-  return obj;
+  var p = (proto === undefined ? this.OBJECT : proto);
+  return new Interpreter.Object(p);
 };
+
+/**
+ * Class for a function
+ * @param {Interpreter.Object} proto Prototype object.
+ * @constructor
+ */
+Interpreter.Function = function(proto) {
+  Interpreter.Object.call(this, proto);
+};
+
+Interpreter.Function.prototype = Object.create(Interpreter.Object.prototype);
+Interpreter.Function.prototype.constructor = Interpreter.Function;
+Interpreter.Function.prototype.class = 'Function';
 
 /**
  * Create a new function object.
@@ -1445,9 +1459,7 @@ Interpreter.prototype.createObject = function(proto) {
  */
 Interpreter.prototype.createFunction = function(proto) {
   var p = (proto === undefined ? this.FUNCTION : proto);
-  var obj = this.createObject(p);
-  obj.class = 'Function';
-  return obj;
+  return new Interpreter.Function(p);
 };
 
 /**
@@ -1473,6 +1485,20 @@ Interpreter.prototype.addFunctionPrototype = function(func, prototype) {
 };
 
 /**
+ * Class for an array
+ * @param {Interpreter.Object} proto Prototype object.
+ * @constructor
+ */
+Interpreter.Array = function(proto) {
+  Interpreter.Object.call(this, proto);
+  this.length = 0;
+};
+
+Interpreter.Array.prototype = Object.create(Interpreter.Object.prototype);
+Interpreter.Array.prototype.constructor = Interpreter.Array;
+Interpreter.Array.prototype.class = 'Array';
+
+/**
  * Create a new array object.  See §15.4 of the ES5.1 spec.
  * @param {Interpreter.Object=} proto Prototype object (or null);
  *     defaults to this.ARRAY
@@ -1480,11 +1506,21 @@ Interpreter.prototype.addFunctionPrototype = function(func, prototype) {
  */
 Interpreter.prototype.createArray = function(proto) {
   var p = (proto === undefined ? this.ARRAY : proto);
-  var obj = this.createObject(p);
-  obj.class = 'Array';
-  obj.length = 0;
-  return obj;
+  return new Interpreter.Array(p);
 };
+
+/**
+ * Class for a regexp
+ * @param {Interpreter.Object} proto Prototype object.
+ * @constructor
+ */
+Interpreter.RegExp = function(proto) {
+  Interpreter.Object.call(this, proto);
+};
+
+Interpreter.RegExp.prototype = Object.create(Interpreter.Object.prototype);
+Interpreter.RegExp.prototype.constructor = Interpreter.RegExp;
+Interpreter.RegExp.prototype.class = 'RegExp';
 
 /**
  * Create a new regexp object.
@@ -1494,10 +1530,21 @@ Interpreter.prototype.createArray = function(proto) {
  */
 Interpreter.prototype.createRegExp = function(proto) {
   var p = (proto === undefined ? this.REGEXP : proto);
-  var obj = this.createObject(p);
-  obj.class = 'RegExp';
-  return obj;
+  return new Interpreter.RegExp(p);
 };
+
+/**
+ * Class for an error object
+ * @param {Interpreter.Object} proto Prototype object.
+ * @constructor
+ */
+Interpreter.Error = function(proto) {
+  Interpreter.Object.call(this, proto);
+};
+
+Interpreter.Error.prototype = Object.create(Interpreter.Object.prototype);
+Interpreter.Error.prototype.constructor = Interpreter.Error;
+Interpreter.Error.prototype.class = 'Error';
 
 /**
  * Create a new error object.  See §15.11 of the ES5.1 spec.
@@ -1507,9 +1554,7 @@ Interpreter.prototype.createRegExp = function(proto) {
  */
 Interpreter.prototype.createError = function(proto) {
   var p = (proto === undefined ? this.ERROR : proto);
-  var obj = this.createObject(p);
-  obj.class = 'Error';
-  return obj;
+  return new Interpreter.Error(p);
 };
 
 /**
