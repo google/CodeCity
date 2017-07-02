@@ -184,9 +184,9 @@ Interpreter.prototype.initGlobalScope = function(scope) {
   // Create the objects which will become Object.prototype,
   // Function.prototype and Array.prototype, which are needed to
   // bootstrap everything else:
-  this.OBJECTPROTO = this.createObjectProto(null);
-  this.FUNCTIONPROTO = this.createFunction(this.OBJECTPROTO);
-  this.ARRAYPROTO = this.createArray(this.OBJECTPROTO);
+  this.OBJECT = this.createObjectProto(null);
+  this.FUNCTION = this.createFunction(this.OBJECT);
+  this.ARRAY = this.createArray(this.OBJECT);
   
   // Initialize global objects.
   this.initObject(scope);
@@ -286,7 +286,7 @@ Interpreter.prototype.initFunction = function(scope) {
         Interpreter.READONLY_DESCRIPTOR);
     return newFunc;
   };
-  var FunctionConst = this.createNativeFunction(wrapper, this.FUNCTIONPROTO);
+  var FunctionConst = this.createNativeFunction(wrapper, this.FUNCTION);
   this.addVariableToScope(scope, 'Function', FunctionConst);
 
   wrapper = function(thisArg, args) {
@@ -363,7 +363,7 @@ Interpreter.prototype.initObject = function(scope) {
         return this;
       } else {
         // Called as Object().
-        return thisInterpreter.createObjectProto(thisInterpreter.OBJECTPROTO);
+        return thisInterpreter.createObjectProto(thisInterpreter.OBJECT);
       }
     }
     if (!value.isObject) {
@@ -374,7 +374,7 @@ Interpreter.prototype.initObject = function(scope) {
     // Return the provided object.
     return value;
   };
-  var ObjectConst = this.createNativeFunction(wrapper, this.OBJECTPROTO);
+  var ObjectConst = this.createNativeFunction(wrapper, this.OBJECT);
   this.addVariableToScope(scope, 'Object', ObjectConst);
 
   /**
@@ -598,7 +598,7 @@ Interpreter.prototype.initArray = function(scope) {
     }
     return newArray;
   };
-  var ArrayConst = this.createNativeFunction(wrapper, this.ARRAYPROTO);
+  var ArrayConst = this.createNativeFunction(wrapper, this.ARRAY);
   this.addVariableToScope(scope, 'Array', ArrayConst);
 
   // Static methods on Array.
@@ -806,10 +806,10 @@ Interpreter.prototype.initNumber = function(scope) {
   var thisInterpreter = this;
   var wrapper;
   // Number prototype.
-  this.NUMBERPROTO = this.createObjectProto(this.OBJECTPROTO);
-  this.NUMBERPROTO.class = 'Number';
+  this.NUMBER = this.createObjectProto(this.OBJECT);
+  this.NUMBER.class = 'Number';
   // Number constructor.
-  var NumberConst = this.createNativeFunction(Number, this.NUMBERPROTO);
+  var NumberConst = this.createNativeFunction(Number, this.NUMBER);
   NumberConst.illegalConstructor = true;  // Don't allow 'new Number(x)'.
   this.addVariableToScope(scope, 'Number', NumberConst);
 
@@ -892,10 +892,10 @@ Interpreter.prototype.initString = function(scope) {
   var thisInterpreter = this;
   var wrapper;
   // String prototype.
-  this.STRINGPROTO = this.createObjectProto(this.OBJECTPROTO);
-  this.STRINGPROTO.class = 'String';
+  this.STRING = this.createObjectProto(this.OBJECT);
+  this.STRING.class = 'String';
   // String constructor.
-  var StringConst = this.createNativeFunction(String, this.STRINGPROTO);
+  var StringConst = this.createNativeFunction(String, this.STRING);
   StringConst.illegalConstructor = true;  // Don't allow 'new String(x)'.
   this.addVariableToScope(scope, 'String', StringConst);
 
@@ -963,10 +963,10 @@ Interpreter.prototype.initString = function(scope) {
 Interpreter.prototype.initBoolean = function(scope) {
   var thisInterpreter = this;
   // Boolean prototype.
-  this.BOOLEANPROTO = this.createObjectProto(this.OBJECTPROTO);
-  this.BOOLEANPROTO.class = 'Boolean';
+  this.BOOLEAN = this.createObjectProto(this.OBJECT);
+  this.BOOLEAN.class = 'Boolean';
   // Boolean constructor.
-  var BooleanConst = this.createNativeFunction(Boolean, this.BOOLEANPROTO);
+  var BooleanConst = this.createNativeFunction(Boolean, this.BOOLEAN);
   BooleanConst.illegalConstructor = true;  // Don't allow 'new Boolean(x)'.
   this.addVariableToScope(scope, 'Boolean', BooleanConst);
 };
@@ -1047,7 +1047,7 @@ Interpreter.prototype.initDate = function(scope) {
  */
 Interpreter.prototype.initMath = function(scope) {
   var thisInterpreter = this;
-  var myMath = this.createObjectProto(this.OBJECTPROTO);
+  var myMath = this.createObjectProto(this.OBJECT);
   this.addVariableToScope(scope, 'Math', myMath);
   var mathConsts = ['E', 'LN2', 'LN10', 'LOG2E', 'LOG10E', 'PI',
                     'SQRT1_2', 'SQRT2'];
@@ -1087,7 +1087,7 @@ Interpreter.prototype.initRegExp = function(scope) {
     return rgx;
   };
   var RegExpConst = this.createNativeFunction(wrapper, true);
-  this.REGEXPPROTO = thisInterpreter.getProperty(RegExpConst, 'prototype');
+  this.REGEXP = thisInterpreter.getProperty(RegExpConst, 'prototype');
   this.addVariableToScope(scope, 'RegExp', RegExpConst);
 
   this.setProperty(RegExpConst.properties['prototype'], 'global', undefined,
@@ -1133,7 +1133,7 @@ Interpreter.prototype.initRegExp = function(scope) {
  */
 Interpreter.prototype.initJSON = function(scope) {
   var thisInterpreter = this;
-  var myJSON = thisInterpreter.createObjectProto(this.OBJECTPROTO);
+  var myJSON = thisInterpreter.createObjectProto(this.OBJECT);
   this.addVariableToScope(scope, 'JSON', myJSON);
 
   var wrapper = function(text) {
@@ -1166,7 +1166,7 @@ Interpreter.prototype.initJSON = function(scope) {
 Interpreter.prototype.initError = function(scope) {
   var thisInterpreter = this;
   // Error prototype:
-  this.ERRORPROTO = this.createError(this.OBJECTPROTO);
+  this.ERROR = this.createError(this.OBJECT);
   // Error constructor.
   var ErrorConst = this.createNativeFunction(function(opt_message) {
     if (thisInterpreter.calledWithNew()) {
@@ -1181,12 +1181,12 @@ Interpreter.prototype.initError = function(scope) {
           Interpreter.NONENUMERABLE_DESCRIPTOR);
     }
     return newError;
-  }, this.ERRORPROTO);
+  }, this.ERROR);
   this.addVariableToScope(scope, 'Error', ErrorConst);
   
-  this.setProperty(this.ERRORPROTO, 'message', '',
+  this.setProperty(this.ERROR, 'message', '',
       Interpreter.NONENUMERABLE_DESCRIPTOR);
-  this.setProperty(this.ERRORPROTO, 'name', 'Error',
+  this.setProperty(this.ERROR, 'name', 'Error',
       Interpreter.NONENUMERABLE_DESCRIPTOR);
 
   var createErrorSubclass = function(name) {
@@ -1451,11 +1451,11 @@ Interpreter.prototype.createObjectProto = function(proto) {
 /**
  * Create a new function object.
  * @param {Interpreter.Object=} proto Prototype object (or null);
- *     defaults to this.FUNCTIONPROTO.
+ *     defaults to this.FUNCTION.
  * @return {!Interpreter.Object} New data object.
  */
 Interpreter.prototype.createFunction = function(proto) {
-  var p = (proto === undefined ? this.FUNCTIONPROTO : proto);
+  var p = (proto === undefined ? this.FUNCTION : proto);
   var obj = this.createObjectProto(p);
   obj.class = 'Function';
   return obj;
@@ -1476,7 +1476,7 @@ Interpreter.prototype.addFunctionPrototype = function(func, prototype) {
   } else if (func.illegalConstructor) {
     throw TypeError('func claims not to be a constructor!');
   }
-  var protoObj = prototype || this.createObjectProto(this.OBJECTPROTO);
+  var protoObj = prototype || this.createObjectProto(this.OBJECT);
   this.setProperty(func, 'prototype', protoObj,
       Interpreter.NONENUMERABLE_NONCONFIGURABLE_DESCRIPTOR);
   this.setProperty(protoObj, 'constructor', func,
@@ -1486,11 +1486,11 @@ Interpreter.prototype.addFunctionPrototype = function(func, prototype) {
 /**
  * Create a new array object.  See §15.4 of the ES5.1 spec.
  * @param {Interpreter.Object=} proto Prototype object (or null);
- *     defaults to this.ARRAYPROTO
+ *     defaults to this.ARRAY
  * @return {!Interpreter.Object} New array object.
  */
 Interpreter.prototype.createArray = function(proto) {
-  var p = (proto === undefined ? this.ARRAYPROTO : proto);
+  var p = (proto === undefined ? this.ARRAY : proto);
   var obj = this.createObjectProto(p);
   obj.class = 'Array';
   obj.length = 0;
@@ -1500,11 +1500,11 @@ Interpreter.prototype.createArray = function(proto) {
 /**
  * Create a new regexp object.
  * @param {Interpreter.Object=} proto Prototype object (or null);
- *     defaults to this.REGEXPPROTO
+ *     defaults to this.REGEXP
  * @return {!Interpreter.Object} New data object.
  */
 Interpreter.prototype.createRegExp = function(proto) {
-  var p = (proto === undefined ? this.REGEXPPROTO : proto);
+  var p = (proto === undefined ? this.REGEXP : proto);
   var obj = this.createObjectProto(p);
   obj.class = 'RegExp';
   return obj;
@@ -1513,11 +1513,11 @@ Interpreter.prototype.createRegExp = function(proto) {
 /**
  * Create a new error object.  See §15.11 of the ES5.1 spec.
  * @param {Interpreter.Object=} proto Prototype object (or null);
- *     defaults to this.ERRORPROTO
+ *     defaults to this.ERROR
  * @return {!Interpreter.Object} New array object.
  */
 Interpreter.prototype.createError = function(proto) {
-  var p = (proto === undefined ? this.ERRORPROTO : proto);
+  var p = (proto === undefined ? this.ERROR : proto);
   var obj = this.createObjectProto(p);
   obj.class = 'Error';
   return obj;
@@ -1645,7 +1645,7 @@ Interpreter.prototype.nativeToPseudo = function(nativeObj) {
       this.setProperty(pseudoObj, i, this.nativeToPseudo(nativeObj[i]));
     }
   } else {  // Object.
-    pseudoObj = this.createObjectProto(this.OBJECTPROTO);
+    pseudoObj = this.createObjectProto(this.OBJECT);
     for (var key in nativeObj) {
       this.setProperty(pseudoObj, key, this.nativeToPseudo(nativeObj[key]));
     }
@@ -1713,11 +1713,11 @@ Interpreter.prototype.pseudoToNative = function(pseudoObj, opt_cycles) {
 Interpreter.prototype.getPrototype = function(value) {
   switch (typeof value) {
     case 'number':
-      return this.NUMBERPROTO;
+      return this.NUMBER;
     case 'boolean':
-      return this.BOOLEANPROTO;
+      return this.BOOLEAN;
     case 'string':
-      return this.STRINGPROTO;
+      return this.STRING;
   }
   if (value) {
     return value.proto;
@@ -2878,7 +2878,7 @@ Interpreter.prototype['stepObjectExpression'] = function() {
   var property = state.node['properties'][n];
   if (!state.object_) {
     // First execution.
-    state.object_ = this.createObjectProto(this.OBJECTPROTO);
+    state.object_ = this.createObjectProto(this.OBJECT);
   } else {
     // Determine property name.
     var key = property['key'];
