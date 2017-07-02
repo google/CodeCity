@@ -1429,17 +1429,6 @@ Interpreter.Object.prototype.valueOf = function() {
 
 /**
  * Create a new data object.
- * @param {Interpreter.Object} constructor Parent constructor function,
- *     or null if scope object.
- * @return {!Interpreter.Object} New data object.
- */
-Interpreter.prototype.createObject = function(constructor) {
-  return this.createObjectProto(constructor &&
-                                constructor.properties['prototype']);
-};
-
-/**
- * Create a new data object.
  * @param {Interpreter.Object} proto Prototype object.
  * @return {!Interpreter.Object} New data object.
  */
@@ -2434,7 +2423,8 @@ Interpreter.prototype['stepCallExpression'] = function() {
         this.throwException(this.TYPE_ERROR, func + ' is not a constructor');
       }
       // Constructor, 'this' is new object.
-      state.funcThis_ = this.createObject(func);
+      state.funcThis_ = this.createObjectProto(
+          this.getProperty(func, 'prototype'));
       state.isConstructor = true;
     } else if (state.components_) {
       // Method function, 'this' is object.
