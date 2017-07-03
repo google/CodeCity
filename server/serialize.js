@@ -109,6 +109,21 @@ function deserialize(json, interpreter) {
       case 'PseudoObject':
         obj = new Interpreter.Object(null);
         break;
+      case 'PseudoFunction':
+        obj = new Interpreter.Function(null);
+        break;
+      case 'PseudoArray':
+        obj = new Interpreter.Array(null);
+        break;
+      case 'PseudoDate':
+        obj = new Interpreter.Date(null);
+        break;
+      case 'PseudoRegExp':
+        obj = new Interpreter.RegExp(null);
+        break;
+      case 'PseudoError':
+        obj = new Interpreter.Error(null);
+        break;
       case 'Node':
         obj = Object.create(nodeProto);
         break;
@@ -235,6 +250,21 @@ function serialize(interpreter) {
         break;
       case Interpreter.Object.prototype:
         jsonObj['type'] = 'PseudoObject';
+        break;
+      case Interpreter.Function.prototype:
+        jsonObj['type'] = 'PseudoFunction';
+        break;
+      case Interpreter.Array.prototype:
+        jsonObj['type'] = 'PseudoArray';
+        break;
+      case Interpreter.Date.prototype:
+        jsonObj['type'] = 'PseudoDate';
+        break;
+      case Interpreter.RegExp.prototype:
+        jsonObj['type'] = 'PseudoRegExp';
+        break;
+      case Interpreter.Error.prototype:
+        jsonObj['type'] = 'PseudoError';
         break;
       case nodeProto:
         jsonObj['type'] = 'Node';
