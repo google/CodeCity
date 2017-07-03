@@ -105,27 +105,27 @@ exports.testClasses = function(t) {
     Error: {},
     EvalError: {
       prototypeProto: 'Error.prototype',
-      prototypeClass: 'Error'
+      class: 'Error'
     },
     RangeError: {
       prototypeProto: 'Error.prototype',
-      prototypeClass: 'Error'
+      class: 'Error'
     },
     ReferenceError: {
       prototypeProto: 'Error.prototype',
-      prototypeClass: 'Error'
+      class: 'Error'
     },
     SyntaxError: {
       prototypeProto: 'Error.prototype',
-      prototypeClass: 'Error'
+      class: 'Error'
     },
     TypeError: {
       prototypeProto: 'Error.prototype',
-      prototypeClass: 'Error'
+      class: 'Error'
     },
     URIError: {
       prototypeProto: 'Error.prototype',
-      prototypeClass: 'Error'
+      class: 'Error'
     },
     Boolean: {
       literal: 'false',
@@ -159,7 +159,7 @@ exports.testClasses = function(t) {
     src = 'typeof ' + c + '.prototype;';
     runTest(t, name, src, prototypeType);
     // Check prototype has correct class:
-    var prototypeClass = (tc.prototypeClass || c);
+    var prototypeClass = (tc.prototypeClass || tc.class || c);
     name = c + 'PrototypeClassIs' + prototypeClass;
     src = 'Object.prototype.toString.apply(' + c + '.prototype);';
     runTest(t, name, src, '[object ' + prototypeClass + ']');
@@ -173,6 +173,8 @@ exports.testClasses = function(t) {
     name = c + 'PrototypeConstructorIs' + c;
     src = c + '.prototype.constructor === ' + c + ';';
     runTest(t, name, src, true);
+
+    var cls = tc.class || c;
     if (!tc.noInstance) {
       // Check instance's type:
       name = c + 'InstanceIs' + prototypeType;
@@ -183,9 +185,9 @@ exports.testClasses = function(t) {
       src = 'Object.getPrototypeOf(new ' + c + ') === ' + c + '.prototype;';
       runTest(t, name, src, true);
       // Check instance's class:
-      name = c + 'InstanceClassIs' + prototypeClass,
+      name = c + 'InstanceClassIs' + cls,
       src = 'Object.prototype.toString.apply(new ' + c + ');';
-      runTest(t, name, src, '[object ' + c + ']');
+      runTest(t, name, src, '[object ' + cls + ']');
     }
     if (tc.literal) {
       // Check literal's type:
@@ -199,9 +201,9 @@ exports.testClasses = function(t) {
           '.prototype;';
       runTest(t, name, src, true);
       // Check literal's class:
-      name = c + 'LiteralClassIs' + prototypeClass,
+      name = c + 'LiteralClassIs' + cls,
       src = 'Object.prototype.toString.apply(' + tc.literal + ');';
-      runTest(t, name, src, '[object ' + c + ']');
+      runTest(t, name, src, '[object ' + cls + ']');
     }
   }
 };
