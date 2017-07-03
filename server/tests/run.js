@@ -25,12 +25,97 @@
 'use strict';
 
 /**
+ * Class that records benchmark results; much like Go's testing.B type.
+ * @constructor
+ */
+function B() {
+  this.results = {};
+}
+
+/**
+ * Report a benchmark or test result.
+ * @param{string} status the test result status (e.g., 'OK', 'FAIL', 'SKIP')
+ * @param{string} name
+ * @param{*} opt_message
+ */
+B.prototype.result = function (status, name, opt_message) {
+  console.log('%s\t%s', status, name);
+  if (opt_message) {
+    console.log(opt_message);
+  }
+  this.results[status] = this.results[status] + 1 || 1;
+};
+
+/**
+ * Report a benchmark start.
+ * @param{string} name Name of test
+ * @param{number} run Which run is this?  (Run 0 is warm-up run.)
+ */
+B.prototype.start = function (name, run) {
+  var r = run === 0 ? 'WARMUP' : 'RUN ' + run;
+  console.log('%s\t%s...', r, name);
+  this.startTime = Date.now();
+};
+
+/**
+ * Report a benchmark end.
+ * @param{string} name Name of test
+ * @param{number} run Which run is this?  (Run 0 is warm-up run.)
+ */
+B.prototype.end = function (name, run) {
+  this.endTime = Date.now();
+  var r = run === 0 ? 'WARMUP' : 'RUN ' + run;
+  console.log('%s\t%s: %d ms', r, name, this.endTime - this.startTime);
+};
+
+/**
+ * Report a benchmark or test failure due to crash.
+ * @param{string} name
+ * @param{*} opt_message
+ */
+B.prototype.crash = function(name, opt_message) {
+  this.result('CRASH', name, opt_message);
+};
+
+/**
+ * Report a bench or test skip.
+ * @param{string} name
+ * @param{*} opt_message
+ */
+B.prototype.skip = function(name, opt_message) {
+  this.result('SKIP', name, opt_message);
+};
+
+/********************************************************************/
+
+/**
+ * Run tests.
+ */
+function runBenchmarks() {
+  var tests = require('./interpreter_bench.js');
+
+  var b = new B;
+  for (var k in tests) {
+    if (k.startsWith('bench') && typeof tests[k] === 'function') {
+      tests[k](b);
+    }
+  }
+}
+
+/********************************************************************/
+
+/**
  * Class that records test results; much like Go's testing.T type.
  * @constructor
  */
 function T() {
-  this.results = {'OK': 0, 'FAIL': 0};
+  B.call(this);
+  this.results['OK'] = 0;
+  this.results['FAIL'] = 0;
 }
+
+T.prototype = Object.create(B.prototype);
+T.prototype.constructor = T;
 
 /**
  * Report a test result.
@@ -41,7 +126,7 @@ function T() {
 T.prototype.result = function (status, name, opt_message) {
   console.log('%s\t%s', status, name);
   if (opt_message) {
-    console.log(opt_message)
+    console.log(opt_message);
   }
   this.results[status] = this.results[status] + 1 || 1;
 };
@@ -64,23 +149,7 @@ T.prototype.fail = function(name, opt_message) {
   this.result('FAIL', name, opt_message);
 };
 
-/**
- * Report a test failure due to crash.
- * @param{string} name
- * @param{*} opt_message
- */
-T.prototype.crash = function(name, opt_message) {
-  this.result('CRASH', name, opt_message);
-};
-
-/**
- * Report a test skip.
- * @param{string} name
- * @param{*} opt_message
- */
-T.prototype.skip = function(name, opt_message) {
-  this.result('SKIP', name, opt_message);
-};
+/********************************************************************/
 
 /**
  * Run tests.
@@ -99,6 +168,10 @@ function runTests() {
   for (var status in t.results) {
     console.log('%s\t%d tests', status, t.results[status]);
   }
+  console.log();
 }
 
+/********************************************************************/
+
 runTests();
+runBenchmarks();
