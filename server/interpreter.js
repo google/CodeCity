@@ -172,7 +172,7 @@ Interpreter.prototype.run = function() {
 
 /**
  * Initialize the global scope with buitin properties and functions.
- * @param {!Interpreter.Object} scope Global scope.
+ * @param {!Interpreter.Scope} scope Global scope.
  */
 Interpreter.prototype.initGlobalScope = function(scope) {
   // Initialize uneditable global properties.
@@ -238,7 +238,7 @@ Interpreter.prototype.initGlobalScope = function(scope) {
 
 /**
  * Initialize the Function class.
- * @param {!Interpreter.Object} scope Global scope.
+ * @param {!Interpreter.Scope} scope Global scope.
  */
 Interpreter.prototype.initFunction = function(scope) {
   var thisInterpreter = this;
@@ -349,7 +349,7 @@ Interpreter.prototype.initFunction = function(scope) {
 
 /**
  * Initialize the Object class.
- * @param {!Interpreter.Object} scope Global scope.
+ * @param {!Interpreter.Scope} scope Global scope.
  */
 Interpreter.prototype.initObject = function(scope) {
   var thisInterpreter = this;
@@ -561,7 +561,7 @@ Interpreter.prototype.initObject = function(scope) {
 
 /**
  * Initialize the Array class.
- * @param {!Interpreter.Object} scope Global scope.
+ * @param {!Interpreter.Scope} scope Global scope.
  */
 Interpreter.prototype.initArray = function(scope) {
   var thisInterpreter = this;
@@ -800,7 +800,7 @@ Interpreter.prototype.initArray = function(scope) {
 
 /**
  * Initialize the Number class.
- * @param {!Interpreter.Object} scope Global scope.
+ * @param {!Interpreter.Scope} scope Global scope.
  */
 Interpreter.prototype.initNumber = function(scope) {
   var thisInterpreter = this;
@@ -886,7 +886,7 @@ Interpreter.prototype.initNumber = function(scope) {
 
 /**
  * Initialize the String class.
- * @param {!Interpreter.Object} scope Global scope.
+ * @param {!Interpreter.Scope} scope Global scope.
  */
 Interpreter.prototype.initString = function(scope) {
   var thisInterpreter = this;
@@ -958,7 +958,7 @@ Interpreter.prototype.initString = function(scope) {
 
 /**
  * Initialize the Boolean class.
- * @param {!Interpreter.Object} scope Global scope.
+ * @param {!Interpreter.Scope} scope Global scope.
  */
 Interpreter.prototype.initBoolean = function(scope) {
   var thisInterpreter = this;
@@ -973,7 +973,7 @@ Interpreter.prototype.initBoolean = function(scope) {
 
 /**
  * Initialize the Date class.
- * @param {!Interpreter.Object} scope Global scope.
+ * @param {!Interpreter.Scope} scope Global scope.
  */
 Interpreter.prototype.initDate = function(scope) {
   var thisInterpreter = this;
@@ -1046,7 +1046,7 @@ Interpreter.prototype.initDate = function(scope) {
 
 /**
  * Initialize Math object.
- * @param {!Interpreter.Object} scope Global scope.
+ * @param {!Interpreter.Scope} scope Global scope.
  */
 Interpreter.prototype.initMath = function(scope) {
   var thisInterpreter = this;
@@ -1070,7 +1070,7 @@ Interpreter.prototype.initMath = function(scope) {
 
 /**
  * Initialize Regular Expression object.
- * @param {!Interpreter.Object} scope Global scope.
+ * @param {!Interpreter.Scope} scope Global scope.
  */
 Interpreter.prototype.initRegExp = function(scope) {
   var thisInterpreter = this;
@@ -1134,7 +1134,7 @@ Interpreter.prototype.initRegExp = function(scope) {
 
 /**
  * Initialize JSON object.
- * @param {!Interpreter.Object} scope Global scope.
+ * @param {!Interpreter.Scope} scope Global scope.
  */
 Interpreter.prototype.initJSON = function(scope) {
   var thisInterpreter = this;
@@ -1166,7 +1166,7 @@ Interpreter.prototype.initJSON = function(scope) {
 
 /**
  * Initialize the Error class.
- * @param {!Interpreter.Object} scope Global scope.
+ * @param {!Interpreter.Scope} scope Global scope.
  */
 Interpreter.prototype.initError = function(scope) {
   var thisInterpreter = this;
@@ -1416,6 +1416,7 @@ Interpreter.prototype.createObject = function(proto) {
  * Class for a function.
  * @param {Interpreter.Object} proto Prototype object.
  * @constructor
+ * @extends {Interpreter.Object}
  */
 Interpreter.Function = function(proto) {
   Interpreter.Object.call(this, proto);
@@ -1464,6 +1465,7 @@ Interpreter.prototype.createFunction = function(proto) {
  * Class for an array.
  * @param {Interpreter.Object} proto Prototype object.
  * @constructor
+ * @extends {Interpreter.Object}
  */
 Interpreter.Array = function(proto) {
   Interpreter.Object.call(this, proto);
@@ -1489,6 +1491,7 @@ Interpreter.prototype.createArray = function(proto) {
  * Class for a date.
  * @param {Interpreter.Object} proto Prototype object.
  * @constructor
+ * @extends {Interpreter.Object}
  */
 Interpreter.Date = function(proto) {
   Interpreter.Object.call(this, proto);
@@ -1513,6 +1516,7 @@ Interpreter.prototype.createDate = function(proto) {
  * Class for a regexp.
  * @param {Interpreter.Object} proto Prototype object.
  * @constructor
+ * @extends {Interpreter.Object}
  */
 Interpreter.RegExp = function(proto) {
   Interpreter.Object.call(this, proto);
@@ -1537,6 +1541,7 @@ Interpreter.prototype.createRegExp = function(proto) {
  * Class for an error object.
  * @param {Interpreter.Object} proto Prototype object.
  * @constructor
+ * @extends {Interpreter.Object}
  */
 Interpreter.Error = function(proto) {
   Interpreter.Object.call(this, proto);
@@ -1581,8 +1586,8 @@ Interpreter.prototype.populateRegExp = function(pseudoRegexp, nativeRegexp) {
 /**
  * Create a new function.
  * @param {!Object} node AST node defining the function.
- * @param {!Object} scope Parent scope.
- * @return {!Interpreter.Object} New function.
+ * @param {!Interpreter.Scope} scope Parent scope.
+ * @return {!Interpreter.Function} New function.
  */
 Interpreter.prototype.createFunctionFromAST = function(node, scope) {
   var func = this.createFunction();
@@ -1602,7 +1607,7 @@ Interpreter.prototype.createFunctionFromAST = function(node, scope) {
  *     .prototype property (with the object receiving a corresponding
  *     .constructor property).  If undefined or omitted the function
  *     cannot be used as a constructor (e.g. escape).
- * @return {!Interpreter.Object} New function.
+ * @return {!Interpreter.Function} New function.
  */
 Interpreter.prototype.createNativeFunction = function(nativeFunc, prototype) {
   var func = this.createFunction();
@@ -2011,7 +2016,7 @@ Interpreter.prototype.addVariableToScope =
 /**
  * Create a new scope for the given node.
  * @param {!Object} node AST node (program or function).
- * @param {!Interpreter.Object} scope Scope dictionary to populate.
+ * @param {!Interpreter.Scope} scope Scope dictionary to populate.
  * @private
  */
 Interpreter.prototype.populateScope_ = function(node, scope) {
