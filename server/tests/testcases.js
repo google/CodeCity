@@ -896,21 +896,4 @@ module.exports = [
     // expected: 'ReferenceError'
   },
 
-  { name: 'fibonacci10k', src: `
-    var fibonacci = function(n, output) {
-      var a = 1, b = 1, sum;
-      for (var i = 0; i < n; i++) {
-        output.push(a);
-        sum = a + b;
-        a = b;
-        b = sum;
-      }
-    }
-    for(var i = 0; i < 10000; i++) {
-      var result = [];
-      fibonacci(78, result);
-    }
-    result;
-    `,
-  },
 ];
