@@ -180,8 +180,8 @@ CCC.init = function() {
 
   var clearButton = document.getElementById('clearButton');
   clearButton.addEventListener('click', CCC.clear, false);
-  var pauseCheckbox = document.getElementById('pauseCheckbox');
-  pauseCheckbox.addEventListener('click', CCC.pause, false);
+  var pauseButton = document.getElementById('pauseButton');
+  pauseButton.addEventListener('click', CCC.pause, false);
   var worldButton = document.getElementById('worldButton');
   worldButton.addEventListener('click', CCC.tab.bind(null, 'world'), false);
   var logButton = document.getElementById('logButton');
@@ -201,14 +201,20 @@ CCC.init = function() {
  */
 CCC.tab = function(mode) {
   CCC.userActive();
+  var worldButton = document.getElementById('worldButton');
+  var logButton = document.getElementById('logButton');
   if (mode == 'world') {
     CCC.worldFrame.style.zIndex = 1;
     CCC.logFrame.style.zIndex = -1;
     CCC.commandTextarea.style.fontFamily = '"Patrick Hand", "Comic Sans MS"';
+    worldButton.classList.add('jfk-checked');
+    logButton.classList.remove('jfk-checked');
   } else {
     CCC.logFrame.style.zIndex = 1;
     CCC.worldFrame.style.zIndex = -1;
     CCC.commandTextarea.style.fontFamily = '"Roboto Mono", monospace';
+    worldButton.classList.remove('jfk-checked');
+    logButton.classList.add('jfk-checked');
   }
   CCC.commandTextarea.focus();
 };
@@ -233,8 +239,15 @@ CCC.clear = function() {
  */
 CCC.pause = function() {
   CCC.userActive();
-  var paused = document.getElementById('pauseCheckbox').checked;
-  document.body.className = paused ? 'paused' : '';
+  var paused = CCC.pauseBuffer === null;
+  var pauseButton = document.getElementById('pauseButton');
+  if (paused) {
+    document.body.classList.add('paused');
+    pauseButton.classList.add('paused');
+  } else {
+    document.body.classList.remove('paused');
+    pauseButton.classList.remove('paused');
+  }
   if (CCC.pauseBuffer && !paused) {
     // Fire off all accumulated messages.
     var buffer = CCC.pauseBuffer;
