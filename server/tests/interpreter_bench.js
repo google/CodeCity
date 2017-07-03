@@ -73,6 +73,7 @@ exports.benchFibbonacci10k = function(b) {
       var result = [];
       fibonacci(78, result);
     }
+    result;
   `;
   runBench(b, name, src);
 };
