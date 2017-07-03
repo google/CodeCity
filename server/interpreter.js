@@ -363,7 +363,7 @@ Interpreter.prototype.initObject = function(scope) {
         return this;
       } else {
         // Called as Object().
-        return thisInterpreter.createObject(thisInterpreter.OBJECT);
+        return thisInterpreter.createObject();
       }
     }
     if (!value.isObject) {
@@ -806,7 +806,7 @@ Interpreter.prototype.initNumber = function(scope) {
   var thisInterpreter = this;
   var wrapper;
   // Number prototype.
-  this.NUMBER = this.createObject(this.OBJECT);
+  this.NUMBER = this.createObject();
   this.NUMBER.class = 'Number';
   // Number constructor.
   var NumberConst = this.createNativeFunction(Number, this.NUMBER);
@@ -892,7 +892,7 @@ Interpreter.prototype.initString = function(scope) {
   var thisInterpreter = this;
   var wrapper;
   // String prototype.
-  this.STRING = this.createObject(this.OBJECT);
+  this.STRING = this.createObject();
   this.STRING.class = 'String';
   // String constructor.
   var StringConst = this.createNativeFunction(String, this.STRING);
@@ -963,7 +963,7 @@ Interpreter.prototype.initString = function(scope) {
 Interpreter.prototype.initBoolean = function(scope) {
   var thisInterpreter = this;
   // Boolean prototype.
-  this.BOOLEAN = this.createObject(this.OBJECT);
+  this.BOOLEAN = this.createObject();
   this.BOOLEAN.class = 'Boolean';
   // Boolean constructor.
   var BooleanConst = this.createNativeFunction(Boolean, this.BOOLEAN);
@@ -1047,7 +1047,7 @@ Interpreter.prototype.initDate = function(scope) {
  */
 Interpreter.prototype.initMath = function(scope) {
   var thisInterpreter = this;
-  var myMath = this.createObject(this.OBJECT);
+  var myMath = this.createObject();
   this.addVariableToScope(scope, 'Math', myMath);
   var mathConsts = ['E', 'LN2', 'LN10', 'LOG2E', 'LOG10E', 'PI',
                     'SQRT1_2', 'SQRT2'];
@@ -1133,7 +1133,7 @@ Interpreter.prototype.initRegExp = function(scope) {
  */
 Interpreter.prototype.initJSON = function(scope) {
   var thisInterpreter = this;
-  var myJSON = thisInterpreter.createObject(this.OBJECT);
+  var myJSON = thisInterpreter.createObject();
   this.addVariableToScope(scope, 'JSON', myJSON);
 
   var wrapper = function(text) {
@@ -1465,7 +1465,7 @@ Interpreter.Function.prototype.addPrototype = function(thisInterpreter, prototyp
     throw TypeError("You said this wasn't constructor!");
   }
   var protoObj = prototype ||
-      thisInterpreter.createObject(thisInterpreter.OBJECT);
+      thisInterpreter.createObject();
   thisInterpreter.setProperty(this, 'prototype', protoObj,
       Interpreter.NONENUMERABLE_NONCONFIGURABLE_DESCRIPTOR);
   thisInterpreter.setProperty(protoObj, 'constructor', this,
@@ -1679,7 +1679,7 @@ Interpreter.prototype.nativeToPseudo = function(nativeObj) {
       this.setProperty(pseudoObj, i, this.nativeToPseudo(nativeObj[i]));
     }
   } else {  // Object.
-    pseudoObj = this.createObject(this.OBJECT);
+    pseudoObj = this.createObject();
     for (var key in nativeObj) {
       this.setProperty(pseudoObj, key, this.nativeToPseudo(nativeObj[key]));
     }
@@ -2910,7 +2910,7 @@ Interpreter.prototype['stepObjectExpression'] = function() {
   var property = state.node['properties'][n];
   if (!state.object_) {
     // First execution.
-    state.object_ = this.createObject(this.OBJECT);
+    state.object_ = this.createObject();
   } else {
     // Determine property name.
     var key = property['key'];
