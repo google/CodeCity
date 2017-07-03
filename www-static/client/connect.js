@@ -233,15 +233,16 @@ CCC.clear = function() {
  */
 CCC.pause = function() {
   CCC.userActive();
-  var checkbox = document.getElementById('pauseCheckbox');
-  if (CCC.pauseBuffer && !checkbox.checked) {
+  var paused = document.getElementById('pauseCheckbox').checked;
+  document.body.className = paused ? 'paused' : '';
+  if (CCC.pauseBuffer && !paused) {
     // Fire off all accumulated messages.
     var buffer = CCC.pauseBuffer;
     CCC.pauseBuffer = null;
     for (var i = 0, args; args = buffer[i]; i++) {
       CCC.distributeMessage.apply(null, args);
     }
-  } else if (!CCC.pauseBuffer && checkbox.checked) {
+  } else if (!CCC.pauseBuffer && paused) {
     CCC.pauseBuffer = [];
   }
   CCC.commandTextarea.focus();
