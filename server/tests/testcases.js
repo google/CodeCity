@@ -548,12 +548,48 @@ module.exports = [
 
   { name: 'internalNativeFuncToString', src: `
     var o = {};
-    o[function f() {}] = null;
+    o[Object.create] = null;
     for(var key in o) {
       key;
     }
     `,
     expected: '[object Function]' },
+
+  { name: 'internalArrayToString', src: `
+    var o = {};
+    o[[1, 2, 3]] = null;
+    for(var key in o) {
+      key;
+    }
+    `,
+    expected: '1,2,3' },
+
+  { name: 'internalDateToString', src: `
+    var o = {};
+    o[new Date(0)] = null;
+    for(var key in o) {
+      key;
+    }
+    `,
+    expected: (new Date(0)).toString() },
+
+  { name: 'internalRegExpToString', src: `
+    var o = {};
+    o[/foo/g] = null;
+    for(var key in o) {
+      key;
+    }
+    `,
+    expected: '/foo/g' },
+
+  { name: 'internalErrorToString', src: `
+    var o = {};
+    o[Error('oops')] = null;
+    for(var key in o) {
+      key;
+    }
+    `,
+    expected: 'Error: oops' },
 
   // FIXME: enable once arguments implemented:
   // { name: 'internalArgumentsToString', src: `
