@@ -204,10 +204,10 @@ Interpreter.prototype.initGlobalScope = function(scope) {
   // Initialize global functions.
   var thisInterpreter = this;
   this.addVariableToScope(scope, 'isNaN',
-      this.createNativeFunction(isNaN, false));
+      this.createNativeFunction(isNaN));
 
   this.addVariableToScope(scope, 'isFinite',
-      this.createNativeFunction(isFinite, false));
+      this.createNativeFunction(isFinite));
 
   var func = this.createFunction();
   func.eval = true;
@@ -232,7 +232,7 @@ Interpreter.prototype.initGlobalScope = function(scope) {
       };
     })(strFunctions[i][0]);
     this.addVariableToScope(scope, strFunctions[i][1],
-        this.createNativeFunction(wrapper, false));
+        this.createNativeFunction(wrapper));
   }
 };
 
@@ -336,14 +336,14 @@ Interpreter.prototype.initFunction = function(scope) {
   };
   this.setNativeFunctionPrototype(FunctionConst, 'toString', wrapper);
   this.setProperty(FunctionConst, 'toString',
-      this.createNativeFunction(wrapper, false),
+      this.createNativeFunction(wrapper),
       Interpreter.NONENUMERABLE_DESCRIPTOR);
   wrapper = function() {
     return this.valueOf();
   };
   this.setNativeFunctionPrototype(FunctionConst, 'valueOf', wrapper);
   this.setProperty(FunctionConst, 'valueOf',
-      this.createNativeFunction(wrapper, false),
+      this.createNativeFunction(wrapper),
       Interpreter.NONENUMERABLE_DESCRIPTOR);
 };
 
@@ -396,7 +396,7 @@ Interpreter.prototype.initObject = function(scope) {
     return thisInterpreter.nativeToPseudo(Object.getOwnPropertyNames(props));
   };
   this.setProperty(ObjectConst, 'getOwnPropertyNames',
-      this.createNativeFunction(wrapper, false),
+      this.createNativeFunction(wrapper),
       Interpreter.NONENUMERABLE_DESCRIPTOR);
 
   wrapper = function(obj) {
@@ -413,7 +413,7 @@ Interpreter.prototype.initObject = function(scope) {
     return thisInterpreter.nativeToPseudo(list);
   };
   this.setProperty(ObjectConst, 'keys',
-      this.createNativeFunction(wrapper, false),
+      this.createNativeFunction(wrapper),
       Interpreter.NONENUMERABLE_DESCRIPTOR);
 
   wrapper = function(proto) {
@@ -427,7 +427,7 @@ Interpreter.prototype.initObject = function(scope) {
     return thisInterpreter.createObject(proto);
   };
   this.setProperty(ObjectConst, 'create',
-      this.createNativeFunction(wrapper, false),
+      this.createNativeFunction(wrapper),
       Interpreter.NONENUMERABLE_DESCRIPTOR);
 
   wrapper = function(obj, prop, descriptor) {
@@ -454,7 +454,7 @@ Interpreter.prototype.initObject = function(scope) {
     return obj;
   };
   this.setProperty(ObjectConst, 'defineProperty',
-      this.createNativeFunction(wrapper, false),
+      this.createNativeFunction(wrapper),
       Interpreter.NONENUMERABLE_DESCRIPTOR);
 
   wrapper = function(obj, prop) {
@@ -479,7 +479,7 @@ Interpreter.prototype.initObject = function(scope) {
     return descriptor;
   };
   this.setProperty(ObjectConst, 'getOwnPropertyDescriptor',
-      this.createNativeFunction(wrapper, false),
+      this.createNativeFunction(wrapper),
       Interpreter.NONENUMERABLE_DESCRIPTOR);
 
   wrapper = function(obj) {
@@ -487,14 +487,14 @@ Interpreter.prototype.initObject = function(scope) {
     return thisInterpreter.getPrototype(obj);
   };
   this.setProperty(ObjectConst, 'getPrototypeOf',
-      this.createNativeFunction(wrapper, false),
+      this.createNativeFunction(wrapper),
       Interpreter.NONENUMERABLE_DESCRIPTOR);
 
   wrapper = function(obj) {
     return Boolean(obj) && !obj.preventExtensions;
   };
   this.setProperty(ObjectConst, 'isExtensible',
-      this.createNativeFunction(wrapper, false),
+      this.createNativeFunction(wrapper),
       Interpreter.NONENUMERABLE_DESCRIPTOR);
 
   wrapper = function(obj) {
@@ -504,7 +504,7 @@ Interpreter.prototype.initObject = function(scope) {
     return obj;
   };
   this.setProperty(ObjectConst, 'preventExtensions',
-      this.createNativeFunction(wrapper, false),
+      this.createNativeFunction(wrapper),
       Interpreter.NONENUMERABLE_DESCRIPTOR);
 
   // Instance methods on Object.
@@ -606,7 +606,7 @@ Interpreter.prototype.initArray = function(scope) {
     return obj instanceof Interpreter.Array;
   };
   this.setProperty(ArrayConst, 'isArray',
-                   this.createNativeFunction(wrapper, false),
+                   this.createNativeFunction(wrapper),
                    Interpreter.NONENUMERABLE_DESCRIPTOR);
 
   // Instance methods on Array.
@@ -822,10 +822,10 @@ Interpreter.prototype.initNumber = function(scope) {
 
   // Static methods on Number.
 
-  var nativeParseFloat = this.createNativeFunction(Number.parseFloat, false);
+  var nativeParseFloat = this.createNativeFunction(Number.parseFloat);
   this.setProperty(NumberConst, 'parseFloat', nativeParseFloat);
 
-  var nativeParseInt = this.createNativeFunction(Number.parseInt, false);
+  var nativeParseInt = this.createNativeFunction(Number.parseInt);
   this.setProperty(NumberConst, 'parseInt', nativeParseInt);
 
   // parseFloat and parseInt === Number.parseFloat and Number.parseInt
@@ -901,7 +901,7 @@ Interpreter.prototype.initString = function(scope) {
 
   // Static methods on String.
   this.setProperty(StringConst, 'fromCharCode',
-      this.createNativeFunction(String.fromCharCode, false),
+      this.createNativeFunction(String.fromCharCode),
       Interpreter.NONENUMERABLE_DESCRIPTOR);
 
   // Instance methods on String.
@@ -978,6 +978,9 @@ Interpreter.prototype.initBoolean = function(scope) {
 Interpreter.prototype.initDate = function(scope) {
   var thisInterpreter = this;
   var wrapper;
+  // Date prototype.  As of ES6 this is just an ordinary object.  (In
+  // ES5 it had [[Class]] Date.)
+  this.DATE = this.createObject();
   // Date constructor.
   wrapper = function(value, var_args) {
     if (!thisInterpreter.calledWithNew()) {
@@ -990,18 +993,18 @@ Interpreter.prototype.initDate = function(scope) {
     this.data = new (Function.prototype.bind.apply(Date, args));
     return this;
   };
-  var DateProto = this.createNativeFunction(wrapper, true);
-  this.addVariableToScope(scope, 'Date', DateProto);
+  var DateConst = this.createNativeFunction(wrapper, this.DATE);
+  this.addVariableToScope(scope, 'Date', DateConst);
 
   // Static methods on Date.
-  this.setProperty(DateProto, 'now', this.createNativeFunction(Date.now, false),
+  this.setProperty(DateConst, 'now', this.createNativeFunction(Date.now),
       Interpreter.NONENUMERABLE_DESCRIPTOR);
 
-  this.setProperty(DateProto, 'parse',
-      this.createNativeFunction(Date.parse, false),
+  this.setProperty(DateConst, 'parse',
+      this.createNativeFunction(Date.parse),
       Interpreter.NONENUMERABLE_DESCRIPTOR);
 
-  this.setProperty(DateProto, 'UTC', this.createNativeFunction(Date.UTC, false),
+  this.setProperty(DateConst, 'UTC', this.createNativeFunction(Date.UTC),
       Interpreter.NONENUMERABLE_DESCRIPTOR);
 
   // Instance methods on Date.
@@ -1022,7 +1025,7 @@ Interpreter.prototype.initDate = function(scope) {
         return this.data[nativeFunc].apply(this.data, arguments);
       };
     })(functions[i]);
-    this.setNativeFunctionPrototype(DateProto, functions[i], wrapper);
+    this.setNativeFunctionPrototype(DateConst, functions[i], wrapper);
   }
   var functions = ['toLocaleDateString', 'toLocaleString',
                    'toLocaleTimeString'];
@@ -1037,7 +1040,7 @@ Interpreter.prototype.initDate = function(scope) {
         return this.data[nativeFunc].call(this.data, locales, options);
       };
     })(functions[i]);
-    this.setNativeFunctionPrototype(DateProto, functions[i], wrapper);
+    this.setNativeFunctionPrototype(DateConst, functions[i], wrapper);
   }
 };
 
@@ -1060,7 +1063,7 @@ Interpreter.prototype.initMath = function(scope) {
                       'round', 'sin', 'sqrt', 'tan'];
   for (var i = 0; i < numFunctions.length; i++) {
     this.setProperty(myMath, numFunctions[i],
-        this.createNativeFunction(Math[numFunctions[i]], false),
+        this.createNativeFunction(Math[numFunctions[i]]),
         Interpreter.NONENUMERABLE_DESCRIPTOR);
   }
 };
@@ -1072,6 +1075,9 @@ Interpreter.prototype.initMath = function(scope) {
 Interpreter.prototype.initRegExp = function(scope) {
   var thisInterpreter = this;
   var wrapper;
+  // RegExp prototype.  As of ES6 this is just an ordinary object.
+  // (In ES5 it had [[Class]] RegExp.)
+  this.REGEXP = this.createObject();
   // RegExp constructor.
   wrapper = function(pattern, flags) {
     if (thisInterpreter.calledWithNew()) {
@@ -1086,8 +1092,7 @@ Interpreter.prototype.initRegExp = function(scope) {
     thisInterpreter.populateRegExp(rgx, new RegExp(pattern, flags));
     return rgx;
   };
-  var RegExpConst = this.createNativeFunction(wrapper, true);
-  this.REGEXP = thisInterpreter.getProperty(RegExpConst, 'prototype');
+  var RegExpConst = this.createNativeFunction(wrapper, this.REGEXP);
   this.addVariableToScope(scope, 'RegExp', RegExpConst);
 
   this.setProperty(RegExpConst.properties['prototype'], 'global', undefined,
@@ -1144,7 +1149,7 @@ Interpreter.prototype.initJSON = function(scope) {
     }
     return thisInterpreter.nativeToPseudo(nativeObj);
   };
-  this.setProperty(myJSON, 'parse', this.createNativeFunction(wrapper, false));
+  this.setProperty(myJSON, 'parse', this.createNativeFunction(wrapper));
 
   wrapper = function(value) {
     var nativeObj = thisInterpreter.pseudoToNative(value);
@@ -1156,7 +1161,7 @@ Interpreter.prototype.initJSON = function(scope) {
     return str;
   };
   this.setProperty(myJSON, 'stringify',
-      this.createNativeFunction(wrapper, false));
+      this.createNativeFunction(wrapper));
 };
 
 /**
@@ -1165,7 +1170,7 @@ Interpreter.prototype.initJSON = function(scope) {
  */
 Interpreter.prototype.initError = function(scope) {
   var thisInterpreter = this;
-  // Error prototype:
+  // Error prototype.
   this.ERROR = this.createError(this.OBJECT);
   // Error constructor.
   var ErrorConst = this.createNativeFunction(function(opt_message) {
@@ -1440,7 +1445,7 @@ Interpreter.prototype.createObject = function(proto) {
 };
 
 /**
- * Class for a function
+ * Class for a function.
  * @param {Interpreter.Object} proto Prototype object.
  * @constructor
  */
@@ -1462,10 +1467,13 @@ Interpreter.Function.prototype.class = 'Function';
  */
 Interpreter.Function.prototype.addPrototype = function(thisInterpreter, prototype) {
   if (this.illegalConstructor) {
-    throw TypeError("You said this wasn't constructor!");
+    // It's almost certainly an erro add a .prototype property to a
+    // function we have declared isn't a constructor.  (This doesn't
+    // prevent user code from doing so - just makes sure we don't do
+    // it accidentally when bootstrapping or whatever.)
+    throw TypeError("Illogical addition of .prototype to non-constructor");
   }
-  var protoObj = prototype ||
-      thisInterpreter.createObject();
+  var protoObj = prototype || thisInterpreter.createObject();
   thisInterpreter.setProperty(this, 'prototype', protoObj,
       Interpreter.NONENUMERABLE_NONCONFIGURABLE_DESCRIPTOR);
   thisInterpreter.setProperty(protoObj, 'constructor', this,
@@ -1485,7 +1493,7 @@ Interpreter.prototype.createFunction = function(proto) {
 };
 
 /**
- * Class for an array
+ * Class for an array.
  * @param {Interpreter.Object} proto Prototype object.
  * @constructor
  */
@@ -1510,7 +1518,31 @@ Interpreter.prototype.createArray = function(proto) {
 };
 
 /**
- * Class for a regexp
+ * Class for a date.
+ * @param {Interpreter.Object} proto Prototype object.
+ * @constructor
+ */
+Interpreter.Date = function(proto) {
+  Interpreter.Object.call(this, proto);
+};
+
+Interpreter.Date.prototype = Object.create(Interpreter.Object.prototype);
+Interpreter.Date.prototype.constructor = Interpreter.Date;
+Interpreter.Date.prototype.class = 'Date';
+
+/**
+ * Create a new date object.
+ * @param {Interpreter.Object=} proto Prototype object (or null);
+ *     defaults to this.DATE
+ * @return {!Interpreter.Object} New data object.
+ */
+Interpreter.prototype.createDate = function(proto) {
+  var p = (proto === undefined ? this.DATE : proto);
+  return new Interpreter.Date(p);
+};
+
+/**
+ * Class for a regexp.
  * @param {Interpreter.Object} proto Prototype object.
  * @constructor
  */
@@ -1534,7 +1566,7 @@ Interpreter.prototype.createRegExp = function(proto) {
 };
 
 /**
- * Class for an error object
+ * Class for an error object.
  * @param {Interpreter.Object} proto Prototype object.
  * @constructor
  */
@@ -1597,13 +1629,11 @@ Interpreter.prototype.createFunctionFromAST = function(node, scope) {
 /**
  * Create a new native function.
  * @param {!Function} nativeFunc JavaScript function.
- * @param {!Interpreter.Object|boolean=} prototype If an object is
- *     supplied, that object will be added as the function's
- *     .prototype property (with the object receivieng a corresponding
- *     .constructor properyt).  If true, a new ordinary
- *     Interpreter.Object will be created for the purpose.  If false
- *     (or unspecified) the function cannot be used as a constructor
- *     (e.g. escape).
+ * @param {!Interpreter.Object|boolean=} prototype If an object (or
+ *     null) is supplied, that object will be added as the function's
+ *     .prototype property (with the object receiving a corresponding
+ *     .constructor property).  If undefined or omitted the function
+ *     cannot be used as a constructor (e.g. escape).
  * @return {!Interpreter.Object} New function.
  */
 Interpreter.prototype.createNativeFunction = function(nativeFunc, prototype) {
@@ -1612,12 +1642,10 @@ Interpreter.prototype.createNativeFunction = function(nativeFunc, prototype) {
   nativeFunc.id = this.functionCounter_++;
   this.setProperty(func, 'length', nativeFunc.length,
       Interpreter.READONLY_DESCRIPTOR);
-  if (prototype === true) {
-    func.addPrototype(this);
-  } else if (prototype) {
-    func.addPrototype(this, prototype);
-  } else {
+  if (prototype === undefined) {
     func.illegalConstructor = true;
+  } else {
+    func.addPrototype(this, prototype);
   }
   return func;
 };
@@ -1917,7 +1945,7 @@ Interpreter.prototype.deleteProperty = function(obj, name) {
 Interpreter.prototype.setNativeFunctionPrototype =
     function(obj, name, wrapper) {
   this.setProperty(obj.properties['prototype'], name,
-      this.createNativeFunction(wrapper, false),
+      this.createNativeFunction(wrapper),
       Interpreter.NONENUMERABLE_DESCRIPTOR);
 };
 
