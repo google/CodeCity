@@ -26,13 +26,22 @@ body.paused {
   border: none;
 }
 
+#optionsDiv {
+  background: rgba(255,255,255, 0.8);
+  margin-right: 2em; /* Leave room for the scrollbar. */
+  position: fixed;
+  right: 0;
+  top: 0;
+  z-index: 9;  /* On top of the iframe. */
+}
+
 #mainTable {
   height: 100%;
   width: 100%;
   background: #fff;
 }
 
-thead, tfoot {
+tfoot {
   height: 1%;
 }
 
