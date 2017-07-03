@@ -380,7 +380,7 @@ Interpreter.prototype.initObject = function(scope) {
   /**
    * Checks if the provided value is null or undefined.
    * If so, then throw an error in the call stack.
-   * @param {*} value Value to check.
+   * @param {Interpreter.Value} value Value to check.
    */
   var throwIfNullUndefined = function(value) {
     if (value === undefined || value === null) {
@@ -470,7 +470,7 @@ Interpreter.prototype.initObject = function(scope) {
     var enumerable = !obj.notEnumerable.has(prop);
     var writable = !obj.notWritable.has(prop);
 
-    var descriptor = thisInterpreter.nativeToPseudo({});
+    var descriptor = thisInterpreter.createObject();
     thisInterpreter.setProperty(descriptor, 'configurable', configurable);
     thisInterpreter.setProperty(descriptor, 'enumerable', enumerable);
     thisInterpreter.setProperty(descriptor, 'writable', writable);
@@ -1229,7 +1229,7 @@ Interpreter.prototype.initError = function(scope) {
 /**
  * Does the object have a certain constructor's .prototype in its
  * proto chain?
- * @param {*} child Object to check.
+ * @param {Interpreter.Value} child Object to check.
  * @param {Interpreter.Object} constructor Constructor of object.
  * @return {boolean} True if object is the class or inherits from it.
  *     False otherwise.
@@ -1256,7 +1256,7 @@ Interpreter.prototype.isa = function(child, constructor) {
 
 /**
  * Is a value a legal integer for an array length?
- * @param {*} n Value to check.
+ * @param {Interpreter.Value} n Value to check.
  * @return {number} Zero, or a positive integer if the value can be
  *     converted to such.  NaN otherwise.
  */
@@ -1268,7 +1268,7 @@ Interpreter.prototype.legalArrayLength = function(n) {
 
 /**
  * Is a value a legal integer for an array index?
- * @param {*} n Value to check.
+ * @param {Interpreter.Value} n Value to check.
  * @return {number} Zero, or a positive integer if the value can be
  *     converted to such.  NaN otherwise.
  */
@@ -1291,6 +1291,12 @@ Interpreter.Scope = function(parentScope) {
 };
 
 /**
+ * Typedef for JS values.
+ * @typedef {!Interpreter.Object|boolean|number|string|undefined|null}
+ */
+Interpreter.Value;
+
+/**
  * Class for an object.
  * @param {Interpreter.Object} proto Prototype object or null.
  * @constructor
@@ -1303,19 +1309,11 @@ Interpreter.Object = function(proto) {
   this.proto = proto;
 };
 
-/**
- * @type {Interpreter.Object}
- */
+/** @type {Interpreter.Object} */
 Interpreter.Object.prototype.proto = null;
-
-/**
- * @type {boolean}
- */
+/** @type {boolean} */
 Interpreter.Object.prototype.isObject = true;
-
-/**
- * @type {string}
- */
+/** @type {string} */
 Interpreter.Object.prototype.class = 'Object';
 
 /**
@@ -1394,7 +1392,7 @@ Interpreter.Object.prototype.toString = function() {
 
 /**
  * Return the object value.
- * @return {*} Value.
+ * @return {Interpreter.Value} Value.
  * @override
  */
 Interpreter.Object.prototype.valueOf = function() {
@@ -1431,10 +1429,11 @@ Interpreter.Function.prototype.class = 'Function';
  * this.properties[prototype] to prototype and
  * prototype.properites[constructor] to func.  If prototype is not
  * specified, a newly-created object will be used instead.
- * @param {!Interpreter} interpreter Interpreter to which this is attached.
+ * @param {!Interpreter} thisInterpreter Interpreter to which this is attached.
  * @param {Interpreter.Object=} prototype Prototype to add to this.
  */
-Interpreter.Function.prototype.addPrototype = function(thisInterpreter, prototype) {
+Interpreter.Function.prototype.addPrototype = function(thisInterpreter,
+    prototype) {
   if (this.illegalConstructor) {
     // It's almost certainly an erro add a .prototype property to a
     // function we have declared isn't a constructor.  (This doesn't
@@ -1454,7 +1453,7 @@ Interpreter.Function.prototype.addPrototype = function(thisInterpreter, prototyp
  * Create a new function object.
  * @param {Interpreter.Object=} proto Prototype object (or null);
  *     defaults to this.FUNCTION.
- * @return {!Interpreter.Object} New data object.
+ * @return {!Interpreter.Function} New data object.
  */
 Interpreter.prototype.createFunction = function(proto) {
   var p = (proto === undefined ? this.FUNCTION : proto);
@@ -1480,7 +1479,7 @@ Interpreter.Array.prototype.class = 'Array';
  * Create a new array object.  See §15.4 of the ES5.1 spec.
  * @param {Interpreter.Object=} proto Prototype object (or null);
  *     defaults to this.ARRAY
- * @return {!Interpreter.Object} New array object.
+ * @return {!Interpreter.Array} New array object.
  */
 Interpreter.prototype.createArray = function(proto) {
   var p = (proto === undefined ? this.ARRAY : proto);
@@ -1505,7 +1504,7 @@ Interpreter.Date.prototype.class = 'Date';
  * Create a new date object.
  * @param {Interpreter.Object=} proto Prototype object (or null);
  *     defaults to this.DATE
- * @return {!Interpreter.Object} New data object.
+ * @return {!Interpreter.Date} New data object.
  */
 Interpreter.prototype.createDate = function(proto) {
   var p = (proto === undefined ? this.DATE : proto);
@@ -1530,7 +1529,7 @@ Interpreter.RegExp.prototype.class = 'RegExp';
  * Create a new regexp object.
  * @param {Interpreter.Object=} proto Prototype object (or null);
  *     defaults to this.REGEXP
- * @return {!Interpreter.Object} New data object.
+ * @return {!Interpreter.RegExp} New data object.
  */
 Interpreter.prototype.createRegExp = function(proto) {
   var p = (proto === undefined ? this.REGEXP : proto);
@@ -1555,7 +1554,7 @@ Interpreter.Error.prototype.class = 'Error';
  * Create a new error object.  See §15.11 of the ES5.1 spec.
  * @param {Interpreter.Object=} proto Prototype object (or null);
  *     defaults to this.ERROR
- * @return {!Interpreter.Object} New array object.
+ * @return {!Interpreter.Error} New array object.
  */
 Interpreter.prototype.createError = function(proto) {
   var p = (proto === undefined ? this.ERROR : proto);
@@ -1602,7 +1601,7 @@ Interpreter.prototype.createFunctionFromAST = function(node, scope) {
 /**
  * Create a new native function.
  * @param {!Function} nativeFunc JavaScript function.
- * @param {!Interpreter.Object|boolean=} prototype If an object (or
+ * @param {Interpreter.Object=} prototype If an object (or
  *     null) is supplied, that object will be added as the function's
  *     .prototype property (with the object receiving a corresponding
  *     .constructor property).  If undefined or omitted the function
@@ -1641,8 +1640,9 @@ Interpreter.prototype.createAsyncFunction = function(asyncFunc) {
 /**
  * Converts from a native JS object or value to a JS interpreter object.
  * Can handle JSON-style values.
- * @param {*} nativeObj The native JS object to be converted.
- * @return {*} The equivalent JS interpreter object.
+ * @param {*} nativeObj The native JS object to be
+ *     converted.
+ * @return {Interpreter.Value} The equivalent JS interpreter object.
  */
 Interpreter.prototype.nativeToPseudo = function(nativeObj) {
   if (typeof nativeObj === 'boolean' ||
@@ -1691,7 +1691,8 @@ Interpreter.prototype.nativeToPseudo = function(nativeObj) {
 /**
  * Converts from a JS interpreter object to native JS object.
  * Can handle JSON-style values, plus cycles.
- * @param {*} pseudoObj The JS interpreter object to be converted.
+ * @param {Interpreter.Value} pseudoObj The JS interpreter object to
+ *     be converted.
  * @param {Object=} opt_cycles Cycle detection (used in recursive calls).
  * @return {*} The equivalent native JS object or value.
  */
@@ -1742,7 +1743,7 @@ Interpreter.prototype.pseudoToNative = function(pseudoObj, opt_cycles) {
 
 /**
  * Look up the prototype for this value.
- * @param {*} value Data object.
+ * @param {Interpreter.Value} value Data object.
  * @return {Interpreter.Object} Prototype object, null if none.
  */
 Interpreter.prototype.getPrototype = function(value) {
@@ -1762,9 +1763,9 @@ Interpreter.prototype.getPrototype = function(value) {
 
 /**
  * Fetch a property value from a data object.
- * @param {*} obj Data object.
- * @param {*} name Name of property.
- * @return {*} Property value (may be undefined).
+ * @param {Interpreter.Value} obj Data object.
+ * @param {Interpreter.Value} name Name of property.
+ * @return {Interpreter.Value} Property value (may be undefined).
  */
 Interpreter.prototype.getProperty = function(obj, name) {
   name += '';
@@ -1801,9 +1802,9 @@ Interpreter.prototype.getProperty = function(obj, name) {
  * Does the named property exist on a data object.  Implements 'in'.
  * Note that although primitives have (inherited) properties, 'in' does not
  * recognize them.  Thus "'length' in 'str'" is an error.
- * @param {*} obj Data object.
- * @param {*} name Name of property.
- * @return {boolean=} True if property exists, undefined if primitive.
+ * @param {Interpreter.Value} obj Data object.
+ * @param {Interpreter.Value} name Name of property.
+ * @return {boolean|undefined} True if property exists, undefined if primitive.
  */
 Interpreter.prototype.hasProperty = function(obj, name) {
   if (!obj.isObject) {
@@ -1824,8 +1825,8 @@ Interpreter.prototype.hasProperty = function(obj, name) {
 /**
  * Set a property value on a data object.
  * @param {!Interpreter.Object} obj Data object.
- * @param {*} name Name of property.
- * @param {*} value New property value.
+ * @param {Interpreter.Value} name Name of property.
+ * @param {Interpreter.Value} value New property value.
  * @param {Object=} opt_descriptor Optional descriptor object.
  */
 Interpreter.prototype.setProperty = function(obj, name, value, opt_descriptor) {
@@ -1894,7 +1895,7 @@ Interpreter.prototype.setProperty = function(obj, name, value, opt_descriptor) {
 /**
  * Delete a property value on a data object.
  * @param {!Interpreter.Object} obj Data object.
- * @param {*} name Name of property.
+ * @param {Interpreter.Value} name Name of property.
  * @return {boolean} True if deleted, false if undeletable.
  */
 Interpreter.prototype.deleteProperty = function(obj, name) {
@@ -1912,7 +1913,7 @@ Interpreter.prototype.deleteProperty = function(obj, name) {
  * Convenience method for adding a native function as a non-enumerable property
  * onto an object's prototype.
  * @param {!Interpreter.Object} obj Data object.
- * @param {*} name Name of property.
+ * @param {Interpreter.Value} name Name of property.
  * @param {!Function} wrapper Function object.
  */
 Interpreter.prototype.setNativeFunctionPrototype =
@@ -1952,8 +1953,8 @@ Interpreter.prototype.createScope = function(node, parentScope) {
 
 /**
  * Retrieves a value from the scope chain.
- * @param {*} name Name of variable.
- * @return {*} Value (may be undefined).
+ * @param {Interpreter.Value} name Name of variable.
+ * @return {Interpreter.Value} Value (may be undefined).
  */
 Interpreter.prototype.getValueFromScope = function(name) {
   var scope = this.getScope();
@@ -1975,8 +1976,8 @@ Interpreter.prototype.getValueFromScope = function(name) {
 
 /**
  * Sets a value to the current scope.
- * @param {*} name Name of variable.
- * @param {*} value Value.
+ * @param {Interpreter.Value} name Name of variable.
+ * @param {Interpreter.Value} value Value.
  */
 Interpreter.prototype.setValueToScope = function(name, value) {
   var scope = this.getScope();
@@ -1998,8 +1999,8 @@ Interpreter.prototype.setValueToScope = function(name, value) {
 /**
  * Creates a variable in the given scope.
  * @param {!Interpreter.Scope} scope Scope to write to.
- * @param {*} name Name of variable.
- * @param {*} value Initial value.
+ * @param {Interpreter.Value} name Name of variable.
+ * @param {Interpreter.Value} value Initial value.
  * @param {boolean=} opt_notWritable True if constant.  Defaults to false.
  */
 Interpreter.prototype.addVariableToScope =
@@ -2094,7 +2095,7 @@ Interpreter.prototype.calledWithNew = function() {
 /**
  * Gets a value from the scope chain or from an object property.
  * @param {!Array} left Name of variable or object/propname tuple.
- * @return {*} Value (may be undefined).
+ * @return {Interpreter.Value} Value (may be undefined).
  */
 Interpreter.prototype.getValue = function(left) {
   if (left[0]) {
@@ -2109,7 +2110,7 @@ Interpreter.prototype.getValue = function(left) {
 /**
  * Sets a value to the scope chain or to an object property.
  * @param {!Array} left Name of variable or object/propname tuple.
- * @param {*} value Value.
+ * @param {Interpreter.Value} value Value.
  */
 Interpreter.prototype.setValue = function(left, value) {
   if (left[0]) {
@@ -2126,9 +2127,9 @@ Interpreter.prototype.setValue = function(left, value) {
  * interpreter try/catch statement.  If unhandled, a real exception will
  * be thrown.  Can be called with either an error class and a message, or
  * with an actual object to be thrown.
- * @param {*} value Value to be thrown.  If message is provided a new
- *     error object is created using value as the prototype; if not it
- *     is used directly.
+ * @param {Interpreter.Value} value Value to be thrown.  If message is
+ *     provided a new error object is created using value as the
+ *     prototype; if not it is used directly.
  * @param {string=} opt_message Message being thrown.
  */
 Interpreter.prototype.throwException = function(value, opt_message) {
