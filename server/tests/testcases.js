@@ -559,22 +559,24 @@ module.exports = [
     expected: '[object Object]' },
 
   { name: 'internalFunctionToString', src: `
-    var o = {};
-    o[function(){}] = null;
+    var o = {}, s, f = function(){};
+    o[f] = null;
     for(var key in o) {
-      key;
+      s = key;
     }
+    /^function.*\(.*\).*{.*}$/.test(s);
     `,
-    expected: '[object Function]' },
+    expected: true },
 
   { name: 'internalNativeFuncToString', src: `
-    var o = {};
-    o[Object.create] = null;
+    var o = {}, s, f = Object.create;
+    o[f] = null;
     for(var key in o) {
-      key;
+      s = key;
     }
+    /^function.*\(.*\).*{.*}$/.test(s);
     `,
-    expected: '[object Function]' },
+    expected: true },
 
   { name: 'internalArrayToString', src: `
     var o = {};
