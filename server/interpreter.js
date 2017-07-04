@@ -1811,7 +1811,7 @@ Interpreter.prototype.hasProperty = function(obj, name) {
     return undefined;
   }
   name += '';
-  if (name === 'length' && obj instanceof Interprerter.Array) {
+  if (name === 'length' && obj instanceof Interpreter.Array) {
     return true;
   }
   do {

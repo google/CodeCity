@@ -450,6 +450,27 @@ module.exports = [
     `,
     expected: true },
 
+  { name: 'binaryInParent', src: `
+    var p = {foo: 'bar'};
+    var o = Object.create(p);
+    'foo' in o && !('bar' in o);
+    `,
+    expected: true },
+
+  { name: 'binaryInArrayLength', src: `
+    'length' in [];
+    `,
+    expected: true },
+
+  { name: 'binaryInStringLength', src: `
+    try {
+      'length' in '';
+    } catch (e) {
+      e.name;
+    }
+    `,
+    expected: 'TypeError' },
+
   { name: 'strictBoxedThis', src: `
     'use strict';
     Object.prototype.foo = function() { return typeof this; };
