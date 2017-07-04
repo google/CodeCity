@@ -255,13 +255,13 @@ Interpreter.prototype.initFunction = function(scope) {
       newFunc.addPrototype(thisInterpreter);
     }
     if (arguments.length) {
-      var code = arguments[arguments.length - 1].toString();
+      var code = String(arguments[arguments.length - 1]);
     } else {
       var code = '';
     }
     var args = [];
     for (var i = 0; i < arguments.length - 1; i++) {
-      var name = arguments[i].toString();
+      var name = String(arguments[i]);
       if (!name.match(identifierRegexp)) {
         thisInterpreter.throwException(thisInterpreter.SYNTAX_ERROR,
             'Invalid function argument: ' + name);
@@ -733,7 +733,7 @@ Interpreter.prototype.initArray = function(scope) {
     try {
       var text = [];
       for (var i = 0; i < this.length; i++) {
-        text[i] = this.properties[i].toString();
+        text[i] = String(this.properties[i]);
       }
     } finally {
       cycles.pop();
@@ -868,7 +868,7 @@ Interpreter.prototype.initNumber = function(scope) {
 
   wrapper = function(radix) {
     try {
-      return this.toString(radix);
+      return String(radix);
     } catch (e) {
       // Throws if radix isn't within 2-36.
       thisInterpreter.throwException(thisInterpreter.RANGE_ERROR, e.message);
