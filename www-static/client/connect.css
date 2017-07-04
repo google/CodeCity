@@ -5,10 +5,19 @@ html {
 body {
   color: #444;
   background-color: #fff;
+  border-left: 2px dashed #fff;
+  border-right: 2px dashed #fff;
   font-family: 'Roboto Mono', monospace;
   height: 100%;
   margin: 0;
   overflow: hidden;
+  padding: 0;
+  transition: border 0.5s;
+}
+
+body.paused {
+  border-left: 2px dashed #d00;
+  border-right: 2px dashed #d00;
 }
 
 #worldFrame, #logFrame {
@@ -24,7 +33,7 @@ body {
   background: #fff;
 }
 
-thead, tfoot {
+tfoot {
   height: 1%;
 }
 
@@ -41,4 +50,133 @@ thead, tfoot {
   margin-top: 2px;
   resize: none;
   width: 100%;
+}
+
+#optionsDiv {
+  background: rgba(255,255,255, 0.8);
+  margin-right: 25px; /* Leave room for the scrollbar. */
+  position: fixed;
+  right: 0;
+  top: 0;
+  z-index: 9;  /* On top of the iframes. */
+  padding: 0 2px 2px 2px;
+}
+
+.icon {
+  height: 8px;
+  width: 8px;
+  fill: #444;
+}
+
+#playIcon {
+  fill: #fff;
+}
+
+.jfk-button {
+  user-select: none;
+  box-shadow: none;
+  background-color: #f5f5f5;
+  background-image: -webkit-linear-gradient(top,#f5f5f5,#f1f1f1);
+  background-image: -moz-linear-gradient(top,#f5f5f5,#f1f1f1);
+  background-image: -ms-linear-gradient(top,#f5f5f5,#f1f1f1);
+  background-image: -o-linear-gradient(top,#f5f5f5,#f1f1f1);
+  background-image: linear-gradient(top,#f5f5f5,#f1f1f1);
+  colour: #444;
+  border: 1px solid rgba(0,0,0,0.1);
+  border-top: none;
+  border-bottom-right-radius: 2px;
+  border-bottom-left-radius: 2px;
+  cursor: default;
+  font-size: 11px;
+  font-weight: bold;
+  text-align: center;
+  white-space: nowrap;
+  margin-right: 8px;
+  height: 27px;
+  line-height: 27px;
+  min-width: 54px;
+  outline: 0;
+  padding: 0 8px;
+  position: relative;
+  display: inline-block;
+  font-family: "Arial", "Helvetica", sans-serif;
+}
+
+.jfk-checked {
+  box-shadow: inset 0 1px 2px rgba(0,0,0,.1);
+  background-color: #eee;
+  background-image: -webkit-linear-gradient(top,#eee,#e0e0e0);
+  background-image: -moz-linear-gradient(top,#eee,#e0e0e0);
+  background-image: -ms-linear-gradient(top,#eee,#e0e0e0);
+  background-image: -o-linear-gradient(top,#eee,#e0e0e0);
+  background-image: linear-gradient(top,#eee,#e0e0e0);
+  color: #333
+}
+
+.jfk-button:hover:not(.jfk-checked) {
+  box-shadow: none;
+  background-color: #f8f8f8;
+  background-image: -webkit-linear-gradient(top,#f8f8f8,#f1f1f1);
+  background-image: -moz-linear-gradient(top,#f8f8f8,#f1f1f1);
+  background-image: -ms-linear-gradient(top,#f8f8f8,#f1f1f1);
+  background-image: -o-linear-gradient(top,#f8f8f8,#f1f1f1);
+  background-image: linear-gradient(top,#f8f8f8,#f1f1f1);
+  border: 1px solid #c6c6c6;
+  border-top: none;
+  color: #333
+}
+
+.jfk-button:active:not(.jfk-checked) {
+  box-shadow: inset 0 1px 2px rgba(0,0,0,.1);
+  background: #f8f8f8;
+  color: #333
+}
+
+#worldButton {
+  border-bottom-right-radius: 0;
+  margin-right: 0;
+}
+
+#logButton {
+  border-bottom-left-radius: 0;
+  margin-left: -1px;
+}
+
+#pauseButton.paused {
+  color: #fff;
+  background-color: #d14836;
+  background-image: -webkit-linear-gradient(top,#dd4b39,#d14836);
+  background-image: -moz-linear-gradient(top,#dd4b39,#d14836);
+  background-image: -ms-linear-gradient(top,#dd4b39,#d14836);
+  background-image: -o-linear-gradient(top,#dd4b39,#d14836);
+  background-image: linear-gradient(top,#dd4b39,#d14836);
+}
+
+#pauseButton.paused:hover {
+  box-shadow: 0px 1px 1px rgba(0,0,0,0.2);
+  background-color: #c53727;
+  background-image: -webkit-linear-gradient(top,#dd4b39,#c53727);
+  background-image: -moz-linear-gradient(top,#dd4b39,#c53727);
+  background-image: -ms-linear-gradient(top,#dd4b39,#c53727);
+  background-image: -o-linear-gradient(top,#dd4b39,#c53727);
+  background-image: linear-gradient(top,#dd4b39,#c53727);
+  border: 1px solid #b0281a;
+  border-top: none;
+  border-bottom-color: #af301f
+}
+
+#pauseButton.paused:active {
+  box-shadow: inset 0px 1px 2px rgba(0,0,0,0.3);
+  background-color: #b0281a;
+  background-image: -webkit-linear-gradient(top,#dd4b39,#b0281a);
+  background-image: -moz-linear-gradient(top,#dd4b39,#b0281a);
+  background-image: -ms-linear-gradient(top,#dd4b39,#b0281a);
+  background-image: -o-linear-gradient(top,#dd4b39,#b0281a);
+  background-image: linear-gradient(top,#dd4b39,#b0281a);
+  border: 1px solid #992a1b;
+  border-top: none;
+}
+
+#clearButton {
+  margin-right: 0;  /* This is the right-most button. */
 }

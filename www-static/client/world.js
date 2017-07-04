@@ -408,9 +408,7 @@ CCC.World.mergeBubbles = function(svg, node) {
   // If the merged bubble is too big, reject the merge.
   var bBox = CCC.World.getBBoxWithTransform(svg.lastBubbleText_);
   var bottom = bBox.y + bBox.height - 2;  // -2 for the border.
-  console.log(bottom);
   var anchor = CCC.World.getAnchor(node, svg);
-  console.log(anchor);
   var limitY = anchor ? 100 - anchor.headY - anchor.headR : 100;
   return bottom < limitY;
 };
