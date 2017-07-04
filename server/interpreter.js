@@ -431,7 +431,7 @@ Interpreter.prototype.initObject = function(scope) {
       Interpreter.NONENUMERABLE_DESCRIPTOR);
 
   wrapper = function(obj, prop, descriptor) {
-    prop += '';
+    prop = String(prop);
     if (!obj || !obj.isObject) {
       thisInterpreter.throwException(thisInterpreter.TYPE_ERROR,
           'Object.defineProperty called on non-object');
@@ -462,7 +462,7 @@ Interpreter.prototype.initObject = function(scope) {
       thisInterpreter.throwException(thisInterpreter.TYPE_ERROR,
           'Object.getOwnPropertyDescriptor called on non-object');
     }
-    prop += '';
+    prop = String(prop);
     if (!(prop in obj.properties)) {
       return undefined;
     }
@@ -533,13 +533,13 @@ Interpreter.prototype.initObject = function(scope) {
     if (!this.isObject) {
       return this.hasOwnProperty(prop);
     }
-    return (prop + '') in this.properties;
+    return String(prop) in this.properties;
   };
   this.setNativeFunctionPrototype(ObjectConst, 'hasOwnProperty', wrapper);
 
   wrapper = function(prop) {
     throwIfNullUndefined(this);
-    return (prop + '') in this.properties && !this.notEnumerable.has(prop);
+    return String(prop) in this.properties && !this.notEnumerable.has(prop);
   };
   this.setNativeFunctionPrototype(ObjectConst, 'propertyIsEnumerable', wrapper);
 
@@ -1182,7 +1182,7 @@ Interpreter.prototype.initError = function(scope) {
       var newError = thisInterpreter.createError();
     }
     if (opt_message) {
-      thisInterpreter.setProperty(newError, 'message', opt_message + '',
+      thisInterpreter.setProperty(newError, 'message', String(opt_message),
           Interpreter.NONENUMERABLE_DESCRIPTOR);
     }
     return newError;
@@ -1208,8 +1208,8 @@ Interpreter.prototype.initError = function(scope) {
             var newError = thisInterpreter.createError(prototype);
           }
           if (opt_message) {
-            thisInterpreter.setProperty(newError, 'message', opt_message + '',
-                Interpreter.NONENUMERABLE_DESCRIPTOR);
+            thisInterpreter.setProperty(newError, 'message',
+                String(opt_message), Interpreter.NONENUMERABLE_DESCRIPTOR);
           }
           return newError;
         }, prototype);
@@ -1370,12 +1370,15 @@ Interpreter.Object.prototype.toString = function() {
     } while ((obj = obj.proto));
     cycles.push(this);
     try {
-      name = name && name.toString();
-      message = message && message.toString();
+      name = (name === undefined) ? 'Error' : String(name);
+      message = (message === undefined) ? '' : String(message);
     } finally {
       cycles.pop();
     }
-    return message ? name + ': ' + message : name + '';
+    if (name) {
+      return message ? (name + ': ' + message) : name;
+    }
+    return message;
   }
   if (this instanceof Interpreter.Function) {
     // TODO: Return the source code.
@@ -1768,7 +1771,7 @@ Interpreter.prototype.getPrototype = function(value) {
  * @return {Interpreter.Value} Property value (may be undefined).
  */
 Interpreter.prototype.getProperty = function(obj, name) {
-  name += '';
+  name = String(name);
   if (obj === undefined || obj === null) {
     this.throwException(this.TYPE_ERROR,
                         "Cannot read property '" + name + "' of " + obj);
@@ -1810,7 +1813,7 @@ Interpreter.prototype.hasProperty = function(obj, name) {
   if (!obj.isObject) {
     return undefined;
   }
-  name += '';
+  name = String(name);
   if (name === 'length' && obj instanceof Interpreter.Array) {
     return true;
   }
@@ -1830,7 +1833,7 @@ Interpreter.prototype.hasProperty = function(obj, name) {
  * @param {Object=} opt_descriptor Optional descriptor object.
  */
 Interpreter.prototype.setProperty = function(obj, name, value, opt_descriptor) {
-  name += '';
+  name = String(name);
   if (opt_descriptor && obj.notConfigurable.has(name)) {
     this.throwException(this.TYPE_ERROR, 'Cannot redefine property: ' + name);
   }
@@ -1899,7 +1902,7 @@ Interpreter.prototype.setProperty = function(obj, name, value, opt_descriptor) {
  * @return {boolean} True if deleted, false if undeletable.
  */
 Interpreter.prototype.deleteProperty = function(obj, name) {
-  name += '';
+  name = String(name);
   if (!obj || !obj.isObject || obj.notWritable.has(name)) {
     return false;
   }
@@ -1953,12 +1956,11 @@ Interpreter.prototype.createScope = function(node, parentScope) {
 
 /**
  * Retrieves a value from the scope chain.
- * @param {Interpreter.Value} name Name of variable.
+ * @param {string} name Name of variable.
  * @return {Interpreter.Value} Value (may be undefined).
  */
 Interpreter.prototype.getValueFromScope = function(name) {
   var scope = this.getScope();
-  name += '';
   while (scope) {
     if (name in scope.properties) {
       return scope.properties[name];
@@ -1976,12 +1978,11 @@ Interpreter.prototype.getValueFromScope = function(name) {
 
 /**
  * Sets a value to the current scope.
- * @param {Interpreter.Value} name Name of variable.
+ * @param {string} name Name of variable.
  * @param {Interpreter.Value} value Value.
  */
 Interpreter.prototype.setValueToScope = function(name, value) {
   var scope = this.getScope();
-  name += '';
   while (scope) {
     if (name in scope.properties) {
       if (scope.notWritable.has(name)) {
@@ -2005,7 +2006,7 @@ Interpreter.prototype.setValueToScope = function(name, value) {
  */
 Interpreter.prototype.addVariableToScope =
     function(scope, name, value, opt_notWritable) {
-  name += '';
+  name = String(name);
   if (!(name in scope.properties)) {
     scope.properties[name] = value;
   }
@@ -2113,7 +2114,7 @@ Interpreter.prototype.getValue = function(left) {
  * @param {Interpreter.Value} value Value.
  */
 Interpreter.prototype.setValue = function(left, value) {
-  if (left[0]) {
+  if (Array.isArray(left) && left[0] !== null) {
     // An obj/prop components tuple (foo.bar).
     this.setProperty(left[0], left[1], value);
   } else {
