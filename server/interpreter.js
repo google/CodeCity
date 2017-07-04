@@ -246,14 +246,8 @@ Interpreter.prototype.initFunction = function(scope) {
   var identifierRegexp = /^[A-Za-z_$][\w$]*$/;
   // Function constructor.
   wrapper = function(var_args) {
-    if (thisInterpreter.calledWithNew()) {
-      // Called as new Function().
-      var newFunc = this;
-    } else {
-      // Called as Function().
-      var newFunc = thisInterpreter.createFunction();
-      newFunc.addPrototype(thisInterpreter);
-    }
+    var newFunc = thisInterpreter.createFunction();
+    newFunc.addPrototype(thisInterpreter);
     if (arguments.length) {
       var code = String(arguments[arguments.length - 1]);
     } else {
@@ -579,13 +573,7 @@ Interpreter.prototype.initArray = function(scope) {
   var wrapper;
   // Array constructor.
   wrapper = function(var_args) {
-    if (thisInterpreter.calledWithNew()) {
-      // Called as new Array().
-      var newArray = this;
-    } else {
-      // Called as Array().
-      var newArray = thisInterpreter.createArray();
-    }
+    var newArray = thisInterpreter.createArray();
     var first = arguments[0];
     if (arguments.length === 1 && typeof first === 'number') {
       if (isNaN(thisInterpreter.legalArrayLength(first))) {
@@ -993,8 +981,9 @@ Interpreter.prototype.initDate = function(scope) {
     }
     // Called as new Date().
     var args = [null].concat(Array.from(arguments));
-    this.data = new (Function.prototype.bind.apply(Date, args));
-    return this;
+    var date = thisInterpreter.createDate();
+    date.date = new (Function.prototype.bind.apply(Date, args));
+    return date;
   };
   var DateConst = this.createNativeFunction(wrapper, this.DATE);
   this.addVariableToScope(scope, 'Date', DateConst);
@@ -1083,17 +1072,11 @@ Interpreter.prototype.initRegExp = function(scope) {
   this.REGEXP = this.createObject();
   // RegExp constructor.
   wrapper = function(pattern, flags) {
-    if (thisInterpreter.calledWithNew()) {
-      // Called as new RegExp().
-      var rgx = this;
-    } else {
-      // Called as RegExp().
-      var rgx = thisInterpreter.createRegExp()
-    }
+    var regexp = thisInterpreter.createRegExp();
     pattern = pattern ? pattern.toString() : '';
     flags = flags ? flags.toString() : '';
-    thisInterpreter.populateRegExp(rgx, new RegExp(pattern, flags));
-    return rgx;
+    thisInterpreter.populateRegExp(regexp, new RegExp(pattern, flags));
+    return regexp;
   };
   var RegExpConst = this.createNativeFunction(wrapper, this.REGEXP);
   this.addVariableToScope(scope, 'RegExp', RegExpConst);
@@ -1177,13 +1160,7 @@ Interpreter.prototype.initError = function(scope) {
   this.ERROR = this.createError(this.OBJECT);
   // Error constructor.
   var ErrorConst = this.createNativeFunction(function(opt_message) {
-    if (thisInterpreter.calledWithNew()) {
-      // Called as new Error().
-      var newError = this;
-    } else {
-      // Called as Error().
-      var newError = thisInterpreter.createError();
-    }
+    var newError = thisInterpreter.createError();
     if (opt_message) {
       thisInterpreter.setProperty(newError, 'message', String(opt_message),
           Interpreter.NONENUMERABLE_DESCRIPTOR);
@@ -1203,13 +1180,7 @@ Interpreter.prototype.initError = function(scope) {
         Interpreter.NONENUMERABLE_DESCRIPTOR);
     var constructor = thisInterpreter.createNativeFunction(
         function(opt_message) {
-          if (thisInterpreter.calledWithNew()) {
-            // Called as new XyzError().
-            var newError = this;
-          } else {
-            // Called as XyzError().
-            var newError = thisInterpreter.createError(prototype);
-          }
+          var newError = thisInterpreter.createError(prototype);
           if (opt_message) {
             thisInterpreter.setProperty(newError, 'message',
                 String(opt_message), Interpreter.NONENUMERABLE_DESCRIPTOR);
