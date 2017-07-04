@@ -2246,42 +2246,18 @@ Interpreter.prototype['stepAssignmentExpression'] = function() {
   var rightSide = state.value;
   var value = leftSide;
   switch (node['operator']) {
-    case '=':
-      value = rightSide;
-      break;
-    case '+=':
-      value += rightSide;
-      break;
-    case '-=':
-      value -= rightSide;
-      break;
-    case '*=':
-      value *= rightSide;
-      break;
-    case '/=':
-      value /= rightSide;
-      break;
-    case '%=':
-      value %= rightSide;
-      break;
-    case '<<=':
-      value <<= rightSide;
-      break;
-    case '>>=':
-      value >>= rightSide;
-      break;
-    case '>>>=':
-      value >>>= rightSide;
-      break;
-    case '&=':
-      value &= rightSide;
-      break;
-    case '^=':
-      value ^= rightSide;
-      break;
-    case '|=':
-      value |= rightSide;
-      break;
+    case '=':    value =    rightSide; break;
+    case '+=':   value +=   rightSide; break;
+    case '-=':   value -=   rightSide; break;
+    case '*=':   value *=   rightSide; break;
+    case '/=':   value /=   rightSide; break;
+    case '%=':   value %=   rightSide; break;
+    case '<<=':  value <<=  rightSide; break;
+    case '>>=':  value >>=  rightSide; break;
+    case '>>>=': value >>>= rightSide; break;
+    case '&=':   value &=   rightSide; break;
+    case '^=':   value ^=   rightSide; break;
+    case '|=':   value |=   rightSide; break;
     default:
       throw SyntaxError('Unknown assignment expression: ' + node['operator']);
   }
@@ -2310,63 +2286,25 @@ Interpreter.prototype['stepBinaryExpression'] = function() {
   var rightSide = state.value;
   var value;
   switch (node['operator']) {
-    case '==':
-      value = leftSide == rightSide;
-      break;
-    case '!=':
-      value = leftSide != rightSide;
-      break;
-    case '===':
-      value = leftSide === rightSide;
-      break;
-    case '!==':
-      value = leftSide !== rightSide;
-      break;
-    case '>':
-      value = leftSide > rightSide;
-      break;
-    case '>=':
-      value = leftSide >= rightSide;
-      break;
-    case '<':
-      value = leftSide < rightSide;
-      break;
-    case '<=':
-      value = leftSide <= rightSide;
-      break;
-    case '+':
-      value = leftSide + rightSide;
-      break;
-    case '-':
-      value = leftSide - rightSide;
-      break;
-    case '*':
-      value = leftSide * rightSide;
-      break;
-    case '/':
-      value = leftSide / rightSide;
-      break;
-    case '%':
-      value = leftSide % rightSide;
-      break;
-    case '&':
-      value = leftSide & rightSide;
-      break;
-    case '|':
-      value = leftSide | rightSide;
-      break;
-    case '^':
-      value = leftSide ^ rightSide;
-      break;
-    case '<<':
-      value = leftSide << rightSide;
-      break;
-    case '>>':
-      value = leftSide >> rightSide;
-      break;
-    case '>>>':
-      value = leftSide >>> rightSide;
-      break;
+    case '==':  value = leftSide ==  rightSide; break;
+    case '!=':  value = leftSide !=  rightSide; break;
+    case '===': value = leftSide === rightSide; break;
+    case '!==': value = leftSide !== rightSide; break;
+    case '>':   value = leftSide >   rightSide; break;
+    case '>=':  value = leftSide >=  rightSide; break;
+    case '<':   value = leftSide <   rightSide; break;
+    case '<=':  value = leftSide <=  rightSide; break;
+    case '+':   value = leftSide +   rightSide; break;
+    case '-':   value = leftSide -   rightSide; break;
+    case '*':   value = leftSide *   rightSide; break;
+    case '/':   value = leftSide /   rightSide; break;
+    case '%':   value = leftSide %   rightSide; break;
+    case '&':   value = leftSide &   rightSide; break;
+    case '|':   value = leftSide |   rightSide; break;
+    case '^':   value = leftSide ^   rightSide; break;
+    case '<<':  value = leftSide <<  rightSide; break;
+    case '>>':  value = leftSide >>  rightSide; break;
+    case '>>>': value = leftSide >>> rightSide; break;
     case 'in':
       if (!rightSide || !rightSide.isObject) {
         this.throwException(this.TYPE_ERROR,
