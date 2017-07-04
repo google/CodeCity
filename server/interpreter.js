@@ -187,7 +187,7 @@ Interpreter.prototype.initGlobalScope = function(scope) {
   this.OBJECT = this.createObject(null);
   this.FUNCTION = this.createFunction(this.OBJECT);
   this.ARRAY = this.createArray(this.OBJECT);
-  
+
   // Initialize global objects.
   this.initObject(scope);
   this.initFunction(scope);
@@ -1188,7 +1188,7 @@ Interpreter.prototype.initError = function(scope) {
     return newError;
   }, this.ERROR);
   this.addVariableToScope(scope, 'Error', ErrorConst);
-  
+
   this.setProperty(this.ERROR, 'message', '',
       Interpreter.NONENUMERABLE_DESCRIPTOR);
   this.setProperty(this.ERROR, 'name', 'Error',
@@ -1252,38 +1252,6 @@ Interpreter.prototype.isa = function(child, constructor) {
     child = child.proto;
   }
   return false;
-};
-
-/**
- * Compares two objects against each other.
- * @param {*} a First object.
- * @param {*} b Second object.
- * @return {number} -1 if a is smaller, 0 if a === b, 1 if a is bigger,
- *     NaN if they are not comparable.
- */
-Interpreter.prototype.comp = function(a, b) {
-  if (typeof a === 'number' && isNaN(a) ||
-      typeof b === 'number' && isNaN(b)) {
-    // NaN is not comparable to anything, including itself.
-    return NaN;
-  }
-  if (a === b) {
-    return 0;
-  }
-  var aValue = a && a.isObject ? a.toString() : a;
-  var bValue = b && b.isObject ? b.toString() : b;
-  if (aValue < bValue) {
-    return -1;
-  } else if (aValue > bValue) {
-    return 1;
-  } else if (a && b && a.isObject && b.isObject) {
-    // Two objects that have equal values are still not equal.
-    // e.g. [1, 2] !== [1, 2]
-    return NaN;
-  } else if (aValue == bValue) {
-    return 0;
-  }
-  return NaN;
 };
 
 /**
@@ -2274,48 +2242,48 @@ Interpreter.prototype['stepAssignmentExpression'] = function() {
     this.pushNode_(node['right']);
     return;
   }
+  var leftSide = state.leftValue_;
   var rightSide = state.value;
-  var value;
-  if (node['operator'] === '=') {
-    value = rightSide;
-  } else {
-    var rightValue = rightSide;
-    var leftNumber = state.leftValue_ - 0;
-    var rightNumber = rightValue - 0;
-    if (node['operator'] === '+=') {
-      var left, right;
-      if (typeof state.leftValue_ === 'string' ||
-          typeof rightValue === 'string') {
-        left = state.leftValue_ + '';
-        right = rightValue + '';
-      } else {
-        left = leftNumber;
-        right = rightNumber;
-      }
-      value = left + right;
-    } else if (node['operator'] === '-=') {
-      value = leftNumber - rightNumber;
-    } else if (node['operator'] === '*=') {
-      value = leftNumber * rightNumber;
-    } else if (node['operator'] === '/=') {
-      value = leftNumber / rightNumber;
-    } else if (node['operator'] === '%=') {
-      value = leftNumber % rightNumber;
-    } else if (node['operator'] === '<<=') {
-      value = leftNumber << rightNumber;
-    } else if (node['operator'] === '>>=') {
-      value = leftNumber >> rightNumber;
-    } else if (node['operator'] === '>>>=') {
-      value = leftNumber >>> rightNumber;
-    } else if (node['operator'] === '&=') {
-      value = leftNumber & rightNumber;
-    } else if (node['operator'] === '^=') {
-      value = leftNumber ^ rightNumber;
-    } else if (node['operator'] === '|=') {
-      value = leftNumber | rightNumber;
-    } else {
+  var value = leftSide;
+  switch (node['operator']) {
+    case '=':
+      value = rightSide;
+      break;
+    case '+=':
+      value += rightSide;
+      break;
+    case '-=':
+      value -= rightSide;
+      break;
+    case '*=':
+      value *= rightSide;
+      break;
+    case '/=':
+      value /= rightSide;
+      break;
+    case '%=':
+      value %= rightSide;
+      break;
+    case '<<=':
+      value <<= rightSide;
+      break;
+    case '>>=':
+      value >>= rightSide;
+      break;
+    case '>>>=':
+      value >>>= rightSide;
+      break;
+    case '&=':
+      value &= rightSide;
+      break;
+    case '^=':
+      value ^= rightSide;
+      break;
+    case '|=':
+      value |= rightSide;
+      break;
+    default:
       throw SyntaxError('Unknown assignment expression: ' + node['operator']);
-    }
   }
   this.setValue(state.leftSide_, value);
   stack.pop();
@@ -2341,74 +2309,80 @@ Interpreter.prototype['stepBinaryExpression'] = function() {
   var leftSide = state.leftValue_;
   var rightSide = state.value;
   var value;
-  if (node['operator'] === '==' || node['operator'] === '!=') {
-    if ((!leftSide || !leftSide.isObject) &&
-        (!rightSide || !rightSide.isObject)) {
-      // At least one side is a primitive.
+  switch (node['operator']) {
+    case '==':
       value = leftSide == rightSide;
-    } else {
-      value = this.comp(leftSide, rightSide) === 0;
-    }
-    if (node['operator'] === '!=') {
-      value = !value;
-    }
-  } else if (node['operator'] === '===' || node['operator'] === '!==') {
-    value = leftSide === rightSide;
-    if (node['operator'] === '!==') {
-      value = !value;
-    }
-  } else if (node['operator'] === '>') {
-    value = this.comp(leftSide, rightSide) === 1;
-  } else if (node['operator'] === '>=') {
-    var comp = this.comp(leftSide, rightSide);
-    value = comp === 1 || comp === 0;
-  } else if (node['operator'] === '<') {
-    value = this.comp(leftSide, rightSide) === -1;
-  } else if (node['operator'] === '<=') {
-    var comp = this.comp(leftSide, rightSide);
-    value = comp === -1 || comp === 0;
-  } else if (node['operator'] === '+') {
-    var leftValue = leftSide.isObject ? leftSide + '' : leftSide;
-    var rightValue = rightSide.isObject ? rightSide + '' : rightSide;
-    value = leftValue + rightValue;
-  } else if (node['operator'] === 'in') {
-    if (!rightSide || !rightSide.isObject) {
-      this.throwException(this.TYPE_ERROR,
-          "'in' expects an object, not '" + rightSide + "'");
-    }
-    value = this.hasProperty(rightSide, leftSide);
-  } else if (node['operator'] === 'instanceof') {
-    if (!(rightSide instanceof Interpreter.Function)) {
-      this.throwException(this.TYPE_ERROR,
-          'Right-hand side of instanceof is not an object');
-    }
-    value = leftSide.isObject ? this.isa(leftSide, rightSide) : false;
-  } else {
-    var leftValue = Number(leftSide);
-    var rightValue = Number(rightSide);
-    if (node['operator'] === '-') {
-      value = leftValue - rightValue;
-    } else if (node['operator'] === '*') {
-      value = leftValue * rightValue;
-    } else if (node['operator'] === '/') {
-      value = leftValue / rightValue;
-    } else if (node['operator'] === '%') {
-      value = leftValue % rightValue;
-    } else if (node['operator'] === '&') {
-      value = leftValue & rightValue;
-    } else if (node['operator'] === '|') {
-      value = leftValue | rightValue;
-    } else if (node['operator'] === '^') {
-      value = leftValue ^ rightValue;
-    } else if (node['operator'] === '<<') {
-      value = leftValue << rightValue;
-    } else if (node['operator'] === '>>') {
-      value = leftValue >> rightValue;
-    } else if (node['operator'] === '>>>') {
-      value = leftValue >>> rightValue;
-    } else {
+      break;
+    case '!=':
+      value = leftSide != rightSide;
+      break;
+    case '===':
+      value = leftSide === rightSide;
+      break;
+    case '!==':
+      value = leftSide !== rightSide;
+      break;
+    case '>':
+      value = leftSide > rightSide;
+      break;
+    case '>=':
+      value = leftSide >= rightSide;
+      break;
+    case '<':
+      value = leftSide < rightSide;
+      break;
+    case '<=':
+      value = leftSide <= rightSide;
+      break;
+    case '+':
+      value = leftSide + rightSide;
+      break;
+    case '-':
+      value = leftSide - rightSide;
+      break;
+    case '*':
+      value = leftSide * rightSide;
+      break;
+    case '/':
+      value = leftSide / rightSide;
+      break;
+    case '%':
+      value = leftSide % rightSide;
+      break;
+    case '&':
+      value = leftSide & rightSide;
+      break;
+    case '|':
+      value = leftSide | rightSide;
+      break;
+    case '^':
+      value = leftSide ^ rightSide;
+      break;
+    case '<<':
+      value = leftSide << rightSide;
+      break;
+    case '>>':
+      value = leftSide >> rightSide;
+      break;
+    case '>>>':
+      value = leftSide >>> rightSide;
+      break;
+    case 'in':
+      if (!rightSide || !rightSide.isObject) {
+        this.throwException(this.TYPE_ERROR,
+            "'in' expects an object, not '" + rightSide + "'");
+      }
+      value = this.hasProperty(rightSide, leftSide);
+      break;
+    case 'instanceof':
+      if (!(rightSide instanceof Interpreter.Function)) {
+        this.throwException(this.TYPE_ERROR,
+            'Right-hand side of instanceof is not an object');
+      }
+      value = leftSide.isObject ? this.isa(leftSide, rightSide) : false;
+      break;
+    default:
       throw SyntaxError('Unknown binary operator: ' + node['operator']);
-    }
   }
   stack[stack.length - 1].value = value;
 };
@@ -3071,7 +3045,7 @@ Interpreter.prototype['stepSwitchStatement'] = function() {
         this.pushNode_(switchCase['test']);
         return;
       }
-      if (state.matched_ || this.comp(state.value, state.switchValue_) === 0) {
+      if (state.matched_ || state.value === state.switchValue_) {
         state.matched_ = true;
         var n = state.n_ || 0;
         if (switchCase['consequent'][n]) {
