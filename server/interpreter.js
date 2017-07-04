@@ -1077,7 +1077,7 @@ Interpreter.prototype.initRegExp = function(scope) {
     if (!(this instanceof Interpreter.RegExp) ||
         !(this.regexp instanceof RegExp)) {
       thisInterpreter.throwException(
-          thisInterpreter.TypeError,
+          thisInterpreter.TYPE_ERROR,
           'Method RegExp.prototype.exec called on incompatible receiver' +
               this.toString());
     }
@@ -1344,9 +1344,9 @@ Interpreter.Function.prototype.class = 'Function';
  * @override
  */
 Interpreter.Function.prototype.toString = function() {
-  if (!this instanceof Function) {
+  if (!(this instanceof Interpreter.Function)) {
     // TODO(cpcallen): throw TypeError: this is not a Function.
-    return undefined;
+    return 'Whoops: supposed to throw a TypeError';
   }
   // N.B. that ES5.1 spec stipulates that output must be in syntax of
   // a function declaration; ES6 corrects this by also allowing
@@ -1468,11 +1468,11 @@ Interpreter.Date.prototype.class = 'Date';
  * @override
  */
 Interpreter.Date.prototype.toString = function() {
-  if (this.date instanceof Date) {
-    return this.date.toString();
+  if (!(this.date instanceof Date)) {
+    // TODO(cpcallen): this should throw a TypeError: this is not a Date object.
+    return 'Whoops: supposed to throw a TypeError';
   }
-  // TODO(cpcallen): this should throw a TypeError: this is not a Date object.
-  return undefined;
+  return this.date.toString();
 };
 
 /**
@@ -1481,11 +1481,11 @@ Interpreter.Date.prototype.toString = function() {
  * @override
  */
 Interpreter.Date.prototype.valueOf = function() {
-  if (this.date instanceof Date) {
-    return this.date.valueOf();
+  if (!(this.date instanceof Date)) {
+    // TODO(cpcallen): this should throw a TypeError: this is not a Date object.
+    return NaN;
   }
-  // TODO(cpcallen): this should throw a TypeError: this is not a Date object.
-  return undefined;
+  return this.date.valueOf();
 };
 
 /**
@@ -1525,7 +1525,7 @@ Interpreter.RegExp.prototype.toString = function() {
   // TODO(cpcallen): this should do some weird stuff per §21.2.5.14 of
   // the ES6 spec.  For most non-RegExp objects it will return
   // "/undefined/undefined"...  :-/
-  return undefined;
+  return '//';
 };
 
 /**
@@ -2176,6 +2176,9 @@ Interpreter.prototype.throwException = function(value, opt_message) {
   if (opt_message === undefined) {
     error = value;  // This is a value to throw, not an error proto.
   } else {
+    if (!(value === null || value instanceof Interpreter.Error)) {
+      throw TypeError("Can't attach message to non-Error value");
+    }
     error = this.createError(value);
     this.setProperty(error, 'message', opt_message,
         Interpreter.NONENUMERABLE_DESCRIPTOR);
@@ -2189,7 +2192,7 @@ Interpreter.prototype.throwException = function(value, opt_message) {
  * Throw an exception in the interpreter that can be handled by a
  * interpreter try/catch statement.  If unhandled, a real exception will
  * be thrown.
- * @param {!Interpreter.Object} error Error object to execute.
+ * @param {Interpreter.Value} error Value being thrown.
  */
 Interpreter.prototype.executeException = function(error) {
   // Search for a try statement.
@@ -2450,6 +2453,7 @@ Interpreter.prototype['stepCallExpression'] = function() {
         this.throwException(this.TYPE_ERROR, func + ' is not a constructor');
       }
       // Constructor, 'this' is new object.
+      // TODO(cpcallen): need type check to make sure proto is an object.
       state.funcThis_ = this.createObject(this.getProperty(func, 'prototype'));
       state.isConstructor = true;
     } else if (state.components_) {
