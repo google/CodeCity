@@ -58,11 +58,8 @@ tfoot {
   position: fixed;
   right: 0;
   top: 0;
-  z-index: 9;  /* On top of the iframe. */
-}
-
-#optionsDiv:last-child {
-  margin-right: 0;
+  z-index: 9;  /* On top of the iframes. */
+  padding: 0 2px 2px 2px;
 }
 
 .icon {
@@ -71,7 +68,7 @@ tfoot {
   fill: #444;
 }
 
-#pauseButton.paused>.icon {
+#playIcon {
   fill: #fff;
 }
 
@@ -177,4 +174,8 @@ tfoot {
   background-image: linear-gradient(top,#dd4b39,#b0281a);
   border: 1px solid #992a1b;
   border-top: none;
+}
+
+#clearButton {
+  margin-right: 0;  /* This is the right-most button. */
 }
