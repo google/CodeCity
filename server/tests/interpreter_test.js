@@ -25,6 +25,7 @@
 'use strict';
 
 var util = require('util');
+//var toSource = require('tosource');
 
 var Interpreter = require('../');
 var autoexec = require('../autoexec');
@@ -54,8 +55,9 @@ function runTest(t, name, src, expected) {
 
   if (err) {
     t.crash(name, util.format('%s\n%s', src, err.stack));
-  } else if (r !== expected) {
-    t.fail(name, util.format('%s\ngot: %j  want: %j', src, r, expected));
+  } else if (!Object.is(r, expected)) {
+    t.fail(name, util.format('%s\ngot: %s  want: %s', src,
+        String(r), String(expected)));
   } else {
     t.pass(name);
   }
@@ -272,6 +274,194 @@ exports.testSwitchStatementBreaks = function(t) {
 };
 
 /**
+ * Run some tests of evaluation of binary expressions, as defined in
+ * §11.5--11.11 of the ES5.1 spec.
+ * @param {T} t The test runner object.
+ */
+exports.testBinaryOp = function(t) {
+  var cases = [
+    // Addition / concatenation:
+    ["1 + 1", 2],
+    ["'1' + 1", '11'],
+    ["1 + '1'", '11'],
+
+    // Subtraction:
+    ["'1' - 1", 0],
+
+    // Multiplication:
+    ["'5' * '5'", 25],
+
+    ["-5 * 0", -0],
+    ["-5 * -0", 0],
+
+    ["1 * NaN", NaN],
+    ["Infinity * NaN", NaN],
+    ["-Infinity * NaN", NaN],
+
+    ["Infinity * Infinity", Infinity],
+    ["Infinity * -Infinity", -Infinity],
+    ["-Infinity * -Infinity", Infinity],
+    ["-Infinity * Infinity", -Infinity],
+    // FIXME: add overflow/underflow cases
+
+    // Division:
+    ["35 / '7'", 5],
+
+    ["1 / 1", 1],
+    ["1 / -1", -1],
+    ["-1 / -1", 1],
+    ["-1 / 1", -1],
+
+    ["1 / NaN", NaN],
+    ["NaN / NaN", NaN],
+    ["NaN / 1", NaN],
+
+    ["Infinity / Infinity", NaN],
+    ["Infinity / -Infinity", NaN],
+    ["-Infinity / -Infinity", NaN],
+    ["-Infinity / Infinity", NaN],
+
+    ["Infinity / 0", Infinity],
+    ["Infinity / -0", -Infinity],
+    ["-Infinity / -0", Infinity],
+    ["-Infinity / 0", -Infinity],
+
+    ["Infinity / 1", Infinity],
+    ["Infinity / -1", -Infinity],
+    ["-Infinity / -1", Infinity],
+    ["-Infinity / 1", -Infinity],
+
+    ["1 / Infinity", 0],
+    ["1 / -Infinity", -0],
+    ["-1 / -Infinity", 0],
+    ["-1 / Infinity", -0],
+
+    ["0 / 0", NaN],
+    ["0 / -0", NaN],
+    ["-0 / -0", NaN],
+    ["-0 / 0", NaN],
+
+    ["1 / 0", Infinity],
+    ["1 / -0", -Infinity],
+    ["-1 / -0", Infinity],
+    ["-1 / 0", -Infinity],
+    // FIXME: add overflow/underflow cases
+
+    // Remainder:
+    ["20 % 5.5", 3.5],
+    ["20 % -5.5", 3.5],
+    ["-20 % -5.5", -3.5],
+    ["-20 % 5.5", -3.5],
+
+    ["1 % NaN", NaN],
+    ["NaN % NaN", NaN],
+    ["NaN % 1", NaN],
+
+    ["Infinity % 1", NaN],
+    ["-Infinity % 1", NaN],
+    ["1 % 0", NaN],
+    ["1 % -0", NaN],
+    ["Infinity % 0", NaN],
+    ["Infinity % -0", NaN],
+    ["-Infinity % -0", NaN],
+    ["-Infinity % 0", NaN],
+
+    ["0 % 1", 0],
+    ["-0 % 1", -0],
+    // FIXME: add overflow/underflow cases
+
+    // Left shift:
+    ["10 << 2", 40],
+    ["10 << 28", -1610612736],
+    ["10 << 33", 20],
+    ["10 << 34", 40],
+
+    // Signed right shift:
+    ["10 >> 4", 0],
+    ["10 >> 33", 5],
+    ["10 >> 34", 2],
+    ["-11 >> 1", -6],
+    ["-11 >> 2", -3],
+
+    // Signed right shift:
+    ["10 >>> 4", 0],
+    ["10 >>> 33", 5],
+    ["10 >>> 34", 2],
+    ["-11 >>> 0", 0xfffffff5],
+    ["-11 >>> 1", 0x7ffffffa],
+    ["-11 >>> 2", 0x3ffffffd],
+    ["4294967338 >>> 0", 42],
+
+    // Bitwise:
+    ["0x3 | 0x5", 0x7],
+    ["0x3 ^ 0x5", 0x6],
+    ["0x3 & 0x5", 0x1],
+
+    ["NaN | 0", 0],
+    ["-0 | 0", 0],
+    ["Infinity | 0", 0],
+    ["-Infinity | 0", 0],
+
+    // Comparisons:
+    //
+    // (This is mainly about making sure that the binary operators are
+    // hooked up to the abstract relational comparison algorithm
+    // correctly; that algorithm is tested separately to make sure
+    // details of comparisons are correct.)
+    ["1 < 2", true],
+    ["2 < 2", false],
+    ["3 < 2", false],
+
+    ["1 <= 2", true],
+    ["2 <= 2", true],
+    ["3 <= 2", false],
+
+    ["1 > 2", false],
+    ["2 > 2", false],
+    ["3 > 2", true],
+
+    ["1 >= 2", false],
+    ["2 >= 2", true],
+    ["3 >= 2", true],
+
+    // (Ditto for abastract equality comparison algorithm.)
+    ["1 == 1", true],
+    ["2 == 1", false],
+    ["2 == 2", true],
+    ["1 == 2", false],
+
+    ["1 == '1'", true],
+
+    ["1 != 1", false],
+    ["2 != 1", true],
+    ["2 != 2", false],
+    ["1 != 2", true],
+
+    ["1 != '1'", false],
+
+    // (Ditto for abastract strict equality comparison algorithm.)
+    ["1 === 1", true],
+    ["2 === 1", false],
+    ["2 === 2", true],
+    ["1 === 2", false],
+
+    ["1 === '1'", false],
+
+    ["1 !== 1", false],
+    ["2 !== 1", true],
+    ["2 !== 2", false],
+    ["1 !== 2", true],
+
+    ["1 !== '1'", true],
+  ];
+  for (var i = 0; i < cases.length; i++) {
+    var tc = cases[i];
+    var src = tc[0] + ';';
+    runTest(t, 'BinaryExpression: ' + tc[0], src, tc[1]);
+  }
+};  
+
+/**
  * Run some tests of the Abstract Relational Comparison Algorithm, as
  * defined in §11.8.5 of the ES5.1 spec and as embodied by the '<'
  * operator.
@@ -318,7 +508,7 @@ exports.testArca = function(t) {
     ['2, "11"', true],   // Numeric
     ['"11", "2"', true], // String
   ];
-  for (var i in cases) {
+  for (var i = 0; i < cases.length; i++) {
     var tc = cases[i];
     var src = `
         (function(a,b){
@@ -408,7 +598,7 @@ exports.testAeca = function(t) {
     ['{}, null', false, false],
     ['{}, undefined', false, false],
   ];
-  for (var i in cases) {
+  for (var i = 0; i < cases.length; i++) {
     var tc = cases[i];
     var src = `(function(a,b){ return a == b })(${tc[0]});`;
     runTest(t, 'AECA: ' + tc[0], src, tc[1]);

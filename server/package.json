@@ -4,7 +4,9 @@
   "description": "Server for the CodeCity project",
   "main": "interpreter.js",
   "dependencies": {},
-  "devDependencies": {},
+  "devDependencies": {
+    "tosource": "^1.0.0"
+  },
   "scripts": {
     "test": "node tests/run.js"
   },
