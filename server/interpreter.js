@@ -2235,23 +2235,22 @@ Interpreter.prototype['stepArrayExpression'] = function() {
   var n = state.n_ || 0;
   if (!state.array_) {
     state.array_ = this.createArray();
-  } else if (state.value) {
-    this.setProperty(state.array_, n - 1, state.value);
+    state.array_.length = elements.length;
+  } else {
+    this.setProperty(state.array_, n, state.value);
+    n++;
   }
-  if (n < elements.length) {
-    state.n_ = n + 1;
+  while (n < elements.length) {
+    // Skip missing elements - they're not defined, not undefined.
     if (elements[n]) {
       this.pushNode_(elements[n]);
-    } else {
-      // [0, 1, , 3][2] -> undefined
-      // Missing elements are not defined, they aren't undefined.
-      state.value = undefined;
+      state.n_ = n;
+      return;
     }
-  } else {
-    state.array_.length = state.n_ || 0;
-    stack.pop();
-    stack[stack.length - 1].value = state.array_;
+    n++;
   }
+  stack.pop();
+  stack[stack.length - 1].value = state.array_;
 };
 
 Interpreter.prototype['stepAssignmentExpression'] = function() {
