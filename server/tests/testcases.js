@@ -926,6 +926,16 @@ module.exports = [
     `,
     expected: false },
 
+  { name: 'FunctionPrototypeToStringApplyNonFunctionThrows', src: `
+    try {
+      Function.prototype.toString.apply({});
+    } catch (e) {
+      e.name;
+    }
+    `,
+    // SKIP: expected: 'TypeError'
+  },
+
   /******************************************************************/
   // Array and Array.prototype
 
@@ -1024,6 +1034,18 @@ module.exports = [
     (ok === tests.length) ? 'pass' : 'fail';
     `,
     expected: 'pass' },
+
+  /******************************************************************/
+  // RegExp
+
+  { name: 'RegExpPrototypeTestApplyNonRegExpThrows', src: `
+    try {
+      /foo/.test.apply({}, ['foo']);
+    } catch (e) {
+      e.name;
+    }
+    `,
+    expected: 'TypeError' },
 
   /******************************************************************/
   // Other tests (all are skipped):
