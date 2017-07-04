@@ -372,6 +372,12 @@ module.exports = [
     `,
     expected: 4 },
 
+  { name: 'arrayElidedNotDefinedNotUndefined', src: `
+    var a = [,undefined,null,0,false];
+    !(0 in a) && (1 in a) && (2 in a) && (3 in a) && (4 in a);
+    `,
+    expected: true },
+
   { name: 'compValEmptyBlock', src: `
     {};
     `,
@@ -421,11 +427,11 @@ module.exports = [
     ];
     var ok = 0;
     for (var i = 0; i < tests.length; i++) {
-      if (typeof tests[i][1] != tests[i][2]) {
+      if (typeof tests[i][0] === tests[i][1]) {
         ok++;
       }
     }
-    ok === tests.length ? 'pass' : 'fail';
+    (ok === tests.length) ? 'pass' : 'fail';
     `,
     expected: 'pass' },
 
