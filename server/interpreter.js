@@ -390,6 +390,9 @@ Interpreter.prototype.initObject = function(scope) {
   };
 
   // Static methods on Object.
+  this.setProperty(ObjectConst, 'is', this.createNativeFunction(Object.is),
+      Interpreter.NONENUMERABLE_DESCRIPTOR);
+
   wrapper = function(obj) {
     throwIfNullUndefined(obj);
     var props = obj.isObject ? obj.properties : obj;

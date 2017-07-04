@@ -943,6 +943,87 @@ module.exports = [
     expected: true },
 
   /******************************************************************/
+  // Boolean
+  { name: 'Boolean', src: `
+    var tests = [
+      [undefined, false],
+      [null, false],
+      [false, false],
+      [true, true],
+      [NaN, false],
+      [0, false],
+      [1, true],
+      ['', false],
+      ['foo', true],
+      [{}, true],
+      [[], true],
+      [function() {}, true],
+    ];
+    var ok = 0;
+    for (var i = 0; i < tests.length; i++) {
+      if (Boolean(tests[i][0]) === tests[i][1]) {
+        ok++;
+      }
+    }
+    (ok === tests.length) ? 'pass' : 'fail';
+    `,
+    expected: 'pass' },
+
+  /******************************************************************/
+  // Number
+
+  { name: 'Number', src: `
+    var tests = [
+      [undefined, NaN],
+      [null, 0],
+      [true, 1],
+      [false, 0],
+      ['42', 42],
+      ['', 0],
+      [{}, NaN],
+      [[], 0],
+      [[42], 42],
+      [[1,2,3], NaN],
+      [function () {}, NaN],
+    ];
+    var ok = 0;
+    for (var i = 0; i < tests.length; i++) {
+      if (Object.is(Number(tests[i][0]), tests[i][1])) {
+        ok++;
+      }
+    }
+    (ok === tests.length) ? 'pass' : 'fail';
+    `,
+    expected: 'pass' },
+
+  /******************************************************************/
+  // String
+
+  { name: 'String', src: `
+    var tests = [
+      [undefined, 'undefined'],
+      [null, 'null'],
+      [true, 'true'],
+      [false, 'false'],
+      [0, '0'],
+      [-0, '0'],
+      [Infinity, 'Infinity'],
+      [-Infinity, '-Infinity'],
+      [NaN, 'NaN'],
+      [{}, '[object Object]'],
+      [[1, 2, 3,,5], '1,2,3,,5'],
+    ];
+    var ok = 0;
+    for (var i = 0; i < tests.length; i++) {
+      if (String(tests[i][0]) === tests[i][1]) {
+        ok++;
+      }
+    }
+    (ok === tests.length) ? 'pass' : 'fail';
+    `,
+    expected: 'pass' },
+
+  /******************************************************************/
   // Other tests (all are skipped):
 
   { name: 'newHack', src: `
