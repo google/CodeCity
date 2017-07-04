@@ -109,6 +109,7 @@ tfoot {
   background-image: -moz-linear-gradient(top,#eee,#e0e0e0);
   background-image: -ms-linear-gradient(top,#eee,#e0e0e0);
   background-image: -o-linear-gradient(top,#eee,#e0e0e0);
+  background-image: linear-gradient(top,#eee,#e0e0e0);
   color: #333
 }
 

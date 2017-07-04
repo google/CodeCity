@@ -248,21 +248,19 @@ CCC.pause = function() {
     pauseButton.classList.add('paused');
     pauseIcon.style.display = 'none';
     playIcon.style.display = '';
+    // Initialize the pause buffer.
+    CCC.pauseBuffer = [];
   } else {
     document.body.classList.remove('paused');
     pauseButton.classList.remove('paused');
     pauseIcon.style.display = '';
     playIcon.style.display = 'none';
-  }
-  if (CCC.pauseBuffer && !paused) {
     // Fire off all accumulated messages.
     var buffer = CCC.pauseBuffer;
     CCC.pauseBuffer = null;
     for (var i = 0, args; args = buffer[i]; i++) {
       CCC.distributeMessage.apply(null, args);
     }
-  } else if (!CCC.pauseBuffer && paused) {
-    CCC.pauseBuffer = [];
   }
   CCC.commandTextarea.focus();
 };
