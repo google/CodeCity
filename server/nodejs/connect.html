@@ -17,8 +17,23 @@
     <div id="optionsDiv">
       <div class="jfk-button" role="button" id="worldButton">World</div><div
       class="jfk-button" role="button" id="logButton">Log</div><div
-      class="jfk-button" role="button" id="pauseButton">|| Pause scroll</div><div
-      class="jfk-button" role="button" id="clearButton">X Clear buffer</div>
+      class="jfk-button" role="button" id="pauseButton">
+        <svg xmlns="http://www.w3.org/2000/svg" version="1.1" class="icon">
+          <g id="pauseIcon">
+            <rect x="1" y="0" height="8" width="2" />
+            <rect x="5" y="0" height="8" width="2" />
+          </g>
+          <g id="playIcon" style="display: none">
+            <path d="M1,0 L7.5,4 1,8 Z" />
+          </g>
+        </svg>
+        Pause scroll</div><div
+      class="jfk-button" role="button" id="clearButton">
+        <svg xmlns="http://www.w3.org/2000/svg" version="1.1" class="icon">
+          <path d="M1,0 L8,7 7,8 0,1 Z" />
+          <path d="M7,0 L0,7 1,8 8,1 Z" />
+        </svg>
+        Clear buffer</div>
     </div>
     <iframe src="/client/world.html" id="worldFrame"></iframe>
     <iframe src="/client/log.html" id="logFrame"></iframe>

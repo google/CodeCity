@@ -241,12 +241,18 @@ CCC.pause = function() {
   CCC.userActive();
   var paused = CCC.pauseBuffer === null;
   var pauseButton = document.getElementById('pauseButton');
+  var pauseIcon = document.getElementById('pauseIcon');
+  var playIcon = document.getElementById('playIcon');
   if (paused) {
     document.body.classList.add('paused');
     pauseButton.classList.add('paused');
+    pauseIcon.style.display = 'none';
+    playIcon.style.display = '';
   } else {
     document.body.classList.remove('paused');
     pauseButton.classList.remove('paused');
+    pauseIcon.style.display = '';
+    playIcon.style.display = 'none';
   }
   if (CCC.pauseBuffer && !paused) {
     // Fire off all accumulated messages.

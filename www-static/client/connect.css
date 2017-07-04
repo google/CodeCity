@@ -5,13 +5,14 @@ html {
 body {
   color: #444;
   background-color: #fff;
-  border-left: 2px solid #fff;
-  border-right: 2px solid #fff;
+  border-left: 2px dashed #fff;
+  border-right: 2px dashed #fff;
   font-family: 'Roboto Mono', monospace;
   height: 100%;
   margin: 0;
   overflow: hidden;
   padding: 0;
+  transition: border 0.5s;
 }
 
 body.paused {
@@ -62,6 +63,16 @@ tfoot {
 
 #optionsDiv:last-child {
   margin-right: 0;
+}
+
+.icon {
+  height: 8px;
+  width: 8px;
+  fill: #444;
+}
+
+#pauseButton.paused>.icon {
+  fill: #fff;
 }
 
 .jfk-button {
