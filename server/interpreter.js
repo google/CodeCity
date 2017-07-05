@@ -839,7 +839,7 @@ Interpreter.prototype.initNumber = function(scope) {
 
   wrapper = function(radix) {
     try {
-      return String(radix);
+      return this.toString(radix);
     } catch (e) {
       // Throws if radix isn't within 2-36.
       thisInterpreter.throwException(thisInterpreter.RANGE_ERROR, e.message);
