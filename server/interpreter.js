@@ -913,7 +913,7 @@ Interpreter.prototype.initString = function(scope) {
     if (!match) {
       return null;
     }
-    return thisInterpreter.pseudoToNative(match);
+    return thisInterpreter.nativeToPseudo(match);
   };
   this.setNativeFunctionPrototype(StringConst, 'match', wrapper);
 
@@ -1687,8 +1687,7 @@ Interpreter.prototype.createAsyncFunction = function(asyncFunc) {
 /**
  * Converts from a native JS object or value to a JS interpreter object.
  * Can handle JSON-style values.
- * @param {*} nativeObj The native JS object to be
- *     converted.
+ * @param {*} nativeObj The native JS object to be converted.
  * @return {Interpreter.Value} The equivalent JS interpreter object.
  */
 Interpreter.prototype.nativeToPseudo = function(nativeObj) {
