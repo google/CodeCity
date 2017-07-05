@@ -144,7 +144,7 @@ exports.testClasses = function(t) {
       literalType: 'string',
       noInstance: true,
     },
-  };   
+  };
   for (var c in classes) {
     var name, src, tc = classes[c];
     // Check constructor is a function:
@@ -459,7 +459,7 @@ exports.testBinaryOp = function(t) {
     var src = tc[0] + ';';
     runTest(t, 'BinaryExpression: ' + tc[0], src, tc[1]);
   }
-};  
+};
 
 /**
  * Run some tests of the Abstract Relational Comparison Algorithm, as
@@ -472,19 +472,19 @@ exports.testArca = function(t) {
     ['0, NaN', undefined],
     ['NaN, NaN', undefined],
     ['NaN, 0', undefined],
-    
+
     ['1, 1', false],
     ['0, -0', false],
     ['-0, 0', false],
-    
+
     ['Infinity, Number.MAX_VALUE', false],
     ['Number.MAX_VALUE, Infinity', true],
     ['-Infinity, -Number.MAX_VALUE', true],
     ['-Number.MAX_VALUE, -Infinity', false],
-    
+
     ['1, 2', true],
     ['2, 1', false],
-    
+
     // String comparisons:
     ['"", ""', false],
     ['"", " "', true],
@@ -495,14 +495,14 @@ exports.testArca = function(t) {
     ['"foobar", "foo"', false],
     ['"10", "9"', true],
     ['"10", 9', false],
-    
+
     // \ufb00 vs. \U0001f019: this test fails if we do simple
     // lexicographic comparison of UTF-8 or UTF-32.  The latter
     // character is a larger code point and sorts later in UTF8,
     // but in UTF16 it gets replaced by two surrogates, both of
     // which are smaller than \uf000.
     ['"ﬀ", "🀙"', false],
-    
+
     // Mixed:
     ['11, "2"', false],  // Numeric
     ['2, "11"', true],   // Numeric
@@ -604,5 +604,24 @@ exports.testAeca = function(t) {
     runTest(t, 'AECA: ' + tc[0], src, tc[1]);
     src = `(function(a,b){ return a === b })(${tc[0]});`;
     runTest(t, 'ASECA: ' + tc[0], src, tc[2]);
+  }
+};
+
+exports.testNumber = function(t) {
+  var cases = [
+    ['(42).toString()', '42'],
+    ['(42).toString(16)', '2a'],
+    //['(-42.4).toString(5)', '-132.2'], Node incorrectly reports '-132.144444'.
+    ['(42).toString("2")', '101010'],
+    ['(-3.14).toString()', '-3.14'],
+    ['(999999999999999999999999999).toString()', '1e+27'],
+    ['(NaN).toString()', 'NaN'],
+    ['(Infinity).toString()', 'Infinity'],
+    ['(-Infinity).toString()', '-Infinity'],
+  ];
+  for (var i = 0; i < cases.length; i++) {
+    var tc = cases[i];
+    var src = tc[0] + ';';
+    runTest(t, 'Number.toString: ' + tc[0], src, tc[1]);
   }
 };
