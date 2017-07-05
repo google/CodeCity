@@ -104,6 +104,12 @@ Interpreter.READONLY_NONENUMERABLE_DESCRIPTOR = {
  */
 Interpreter.STEP_ERROR = {};
 
+/**
+ * Unique symbol for indicating that a reference is a variable on the scope,
+ * not an object property.
+ */
+Interpreter.SCOPE_REFERENCE = {};
+
 // For cycle detection in array to string and error conversion;
 // see spec bug github.com/tc39/ecma262/issues/289
 // Since this is for atomic actions only, it can be a class property.
@@ -1352,7 +1358,7 @@ Interpreter.Function.prototype.toString = function() {
   // a function declaration; ES6 corrects this by also allowing
   // function expressions (plus generators, classes, arrow functions,
   // methods etc...) - but in any case it should look like source code.
-  // 
+  //
   // TODO: return source code
   return 'function /*name*/ (/* args */) {/* body */}';
 };
@@ -2137,12 +2143,12 @@ Interpreter.prototype.calledWithNew = function() {
  * @return {Interpreter.Value} Value (may be undefined).
  */
 Interpreter.prototype.getValue = function(left) {
-  if (left[0]) {
-    // An obj/prop components tuple (foo.bar).
-    return this.getProperty(left[0], left[1]);
-  } else {
+  if (left[0] === Interpreter.SCOPE_REFERENCE) {
     // A null/varname variable lookup.
     return this.getValueFromScope(left[1]);
+  } else {
+    // An obj/prop components tuple (foo.bar).
+    return this.getProperty(left[0], left[1]);
   }
 };
 
@@ -2152,12 +2158,12 @@ Interpreter.prototype.getValue = function(left) {
  * @param {Interpreter.Value} value Value.
  */
 Interpreter.prototype.setValue = function(left, value) {
-  if (Array.isArray(left) && left[0] !== null) {
-    // An obj/prop components tuple (foo.bar).
-    this.setProperty(left[0], left[1], value);
-  } else {
+  if (left[0] === Interpreter.SCOPE_REFERENCE) {
     // A null/varname variable lookup.
     this.setValueToScope(left[1], value);
+  } else {
+    // An obj/prop components tuple (foo.bar).
+    this.setProperty(left[0], left[1], value);
   }
 };
 
@@ -2279,36 +2285,35 @@ Interpreter.prototype['stepAssignmentExpression'] = function() {
     return;
   }
   if (!state.doneRight_) {
-    if (!state.leftSide_) {
-      state.leftSide_ = state.value;
+    if (!state.leftReference_) {
+      state.leftReference_ = state.value;
     }
     if (node['operator'] !== '=') {
-      state.leftValue_ = this.getValue(state.leftSide_);
+      state.leftValue_ = this.getValue(state.leftReference_);
     }
     state.doneRight_ = true;
     this.pushNode_(node['right']);
     return;
   }
-  var leftSide = state.leftValue_;
-  var rightSide = state.value;
-  var value = leftSide;
+  var rightValue = state.value;
+  var value = state.leftValue_;
   switch (node['operator']) {
-    case '=':    value =    rightSide; break;
-    case '+=':   value +=   rightSide; break;
-    case '-=':   value -=   rightSide; break;
-    case '*=':   value *=   rightSide; break;
-    case '/=':   value /=   rightSide; break;
-    case '%=':   value %=   rightSide; break;
-    case '<<=':  value <<=  rightSide; break;
-    case '>>=':  value >>=  rightSide; break;
-    case '>>>=': value >>>= rightSide; break;
-    case '&=':   value &=   rightSide; break;
-    case '^=':   value ^=   rightSide; break;
-    case '|=':   value |=   rightSide; break;
+    case '=':    value =    rightValue; break;
+    case '+=':   value +=   rightValue; break;
+    case '-=':   value -=   rightValue; break;
+    case '*=':   value *=   rightValue; break;
+    case '/=':   value /=   rightValue; break;
+    case '%=':   value %=   rightValue; break;
+    case '<<=':  value <<=  rightValue; break;
+    case '>>=':  value >>=  rightValue; break;
+    case '>>>=': value >>>= rightValue; break;
+    case '&=':   value &=   rightValue; break;
+    case '^=':   value ^=   rightValue; break;
+    case '|=':   value |=   rightValue; break;
     default:
       throw SyntaxError('Unknown assignment expression: ' + node['operator']);
   }
-  this.setValue(state.leftSide_, value);
+  this.setValue(state.leftReference_, value);
   stack.pop();
   stack[stack.length - 1].value = value;
 };
@@ -2329,42 +2334,42 @@ Interpreter.prototype['stepBinaryExpression'] = function() {
     return;
   }
   stack.pop();
-  var leftSide = state.leftValue_;
-  var rightSide = state.value;
+  var leftValue = state.leftValue_;
+  var rightValue = state.value;
   var value;
   switch (node['operator']) {
-    case '==':  value = leftSide ==  rightSide; break;
-    case '!=':  value = leftSide !=  rightSide; break;
-    case '===': value = leftSide === rightSide; break;
-    case '!==': value = leftSide !== rightSide; break;
-    case '>':   value = leftSide >   rightSide; break;
-    case '>=':  value = leftSide >=  rightSide; break;
-    case '<':   value = leftSide <   rightSide; break;
-    case '<=':  value = leftSide <=  rightSide; break;
-    case '+':   value = leftSide +   rightSide; break;
-    case '-':   value = leftSide -   rightSide; break;
-    case '*':   value = leftSide *   rightSide; break;
-    case '/':   value = leftSide /   rightSide; break;
-    case '%':   value = leftSide %   rightSide; break;
-    case '&':   value = leftSide &   rightSide; break;
-    case '|':   value = leftSide |   rightSide; break;
-    case '^':   value = leftSide ^   rightSide; break;
-    case '<<':  value = leftSide <<  rightSide; break;
-    case '>>':  value = leftSide >>  rightSide; break;
-    case '>>>': value = leftSide >>> rightSide; break;
+    case '==':  value = leftValue ==  rightValue; break;
+    case '!=':  value = leftValue !=  rightValue; break;
+    case '===': value = leftValue === rightValue; break;
+    case '!==': value = leftValue !== rightValue; break;
+    case '>':   value = leftValue >   rightValue; break;
+    case '>=':  value = leftValue >=  rightValue; break;
+    case '<':   value = leftValue <   rightValue; break;
+    case '<=':  value = leftValue <=  rightValue; break;
+    case '+':   value = leftValue +   rightValue; break;
+    case '-':   value = leftValue -   rightValue; break;
+    case '*':   value = leftValue *   rightValue; break;
+    case '/':   value = leftValue /   rightValue; break;
+    case '%':   value = leftValue %   rightValue; break;
+    case '&':   value = leftValue &   rightValue; break;
+    case '|':   value = leftValue |   rightValue; break;
+    case '^':   value = leftValue ^   rightValue; break;
+    case '<<':  value = leftValue <<  rightValue; break;
+    case '>>':  value = leftValue >>  rightValue; break;
+    case '>>>': value = leftValue >>> rightValue; break;
     case 'in':
-      if (!rightSide || !rightSide.isObject) {
+      if (!rightValue || !rightValue.isObject) {
         this.throwException(this.TYPE_ERROR,
-            "'in' expects an object, not '" + rightSide + "'");
+            "'in' expects an object, not '" + rightValue + "'");
       }
-      value = this.hasProperty(rightSide, leftSide);
+      value = this.hasProperty(rightValue, leftValue);
       break;
     case 'instanceof':
-      if (!(rightSide instanceof Interpreter.Function)) {
+      if (!(rightValue instanceof Interpreter.Function)) {
         this.throwException(this.TYPE_ERROR,
             'Right-hand side of instanceof is not an object');
       }
-      value = leftSide.isObject ? this.isa(leftSide, rightSide) : false;
+      value = leftValue.isObject ? this.isa(leftValue, rightValue) : false;
       break;
     default:
       throw SyntaxError('Unknown binary operator: ' + node['operator']);
@@ -2742,7 +2747,8 @@ Interpreter.prototype['stepForInStatement'] = function() {
     var left = node['left'];
     if (left['type'] === 'VariableDeclaration') {
       // Inline variable declaration: for (var x in y)
-      state.variable_ = [null, left['declarations'][0]['id']['name']];
+      state.variable_ =
+          [Interpreter.SCOPE_REFERENCE, left['declarations'][0]['id']['name']];
     } else {
       // Arbitrary left side: for (foo().bar in y)
       state.variable_ = null;
@@ -2816,7 +2822,8 @@ Interpreter.prototype['stepIdentifier'] = function() {
   var stack = this.stateStack;
   var state = stack.pop();
   var name = state.node['name'];
-  var value = state.components ? [null, name] : this.getValueFromScope(name);
+  var value = state.components ?
+      [Interpreter.SCOPE_REFERENCE, name] : this.getValueFromScope(name);
   stack[stack.length - 1].value = value;
 };
 
