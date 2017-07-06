@@ -2762,7 +2762,8 @@ Interpreter.prototype['stepForInStatement'] = function() {
   }
   // Reset back to step three.
   state.name_ = undefined;
-  if (Array.isArray(state.variable_)) {
+  // Only reevaluate LHS if it wasn't a variable.
+  if (state.variable_[0] !== Interpreter.SCOPE_REFERENCE) {
     state.doneVariable_ = false;
   }
 };
@@ -2787,7 +2788,7 @@ Interpreter.prototype['stepForStatement'] = function() {
     if (node['test'] && !state.value) {
       // Done, exit loop.
       stack.pop();
-    } else if (node['body']) { // Execute the body.
+    } else {  // Execute the body.
       state.isLoop = true;
       this.pushNode_(node['body']);
     }
@@ -3114,7 +3115,7 @@ Interpreter.prototype['stepUnaryExpression'] = function() {
   } else if (node['operator'] === '~') {
     value = ~value;
   } else if (node['operator'] === 'delete') {
-    if (value.length) {
+    if (Array.isArray(value)) {
       var obj = value[0];
       var name = value[1];
     } else {
