@@ -194,7 +194,7 @@ Interpreter.prototype.initGlobalScope = function(scope) {
 
   // Create the objects which will become Object.prototype and
   // Function.prototype, which are needed to bootstrap everything else.
-  this.OBJECT = this.createObject(null);
+  this.OBJECT = new this.Object(null);
   this.FUNCTION = this.createNativeFunction(function() {});
   this.FUNCTION.proto = this.OBJECT;
 
@@ -547,7 +547,7 @@ Interpreter.prototype.initObject = function(scope) {
 Interpreter.prototype.initArray = function(scope) {
   var thisInterpreter = this;
   // Array prototype.
-  this.ARRAY = this.createArray(this.OBJECT);
+  this.ARRAY = new this.Array(this.OBJECT);
   // Array constructor.
   var getInt = function(obj, def) {
     // Return an integer, or the default.
