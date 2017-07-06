@@ -187,12 +187,10 @@ Interpreter.prototype.initGlobalScope = function(scope) {
   this.addVariableToScope(scope, 'NaN', NaN, true);
   this.addVariableToScope(scope, 'undefined', undefined, true);
 
-  // Create the objects which will become Object.prototype,
-  // Function.prototype and Array.prototype, which are needed to
-  // bootstrap everything else:
+  // Create the objects which will become Object.prototype and
+  // Function.prototype, which are needed to bootstrap everything else.
   this.OBJECT = this.createObject(null);
   this.FUNCTION = this.createFunction(this.OBJECT);
-  this.ARRAY = this.createArray(this.OBJECT);
 
   // Initialize global objects.
   this.initObject(scope);
@@ -288,6 +286,12 @@ Interpreter.prototype.initFunction = function(scope) {
   };
   var FunctionConst = this.createNativeFunction(wrapper, this.FUNCTION);
   this.addVariableToScope(scope, 'Function', FunctionConst);
+
+  // Configure Function.prototype.
+  this.FUNCTION.nativeFunc = function() {};
+  this.FUNCTION.id = this.functionCounter_++;
+  this.setProperty(this.FUNCTION, 'length', 0,
+      Interpreter.READONLY_DESCRIPTOR);
 
   this.setNativeFunctionPrototype(FunctionConst, 'toString',
       Interpreter.Function.prototype.toString);
@@ -542,6 +546,7 @@ Interpreter.prototype.initObject = function(scope) {
  */
 Interpreter.prototype.initArray = function(scope) {
   var thisInterpreter = this;
+  this.ARRAY = this.createArray(this.OBJECT);
   var getInt = function(obj, def) {
     // Return an integer, or the default.
     var n = obj ? Math.floor(obj) : def;
