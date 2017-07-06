@@ -357,7 +357,7 @@ Interpreter.prototype.initObject = function(scope) {
         return new thisInterpreter.Object;
       }
     }
-    if (!value.isObject) {
+    if (!(value instanceof thisInterpreter.Object)) {
       // No boxed primitives in Code City.
       thisInterpreter.throwException(thisInterpreter.TYPE_ERROR,
           'Boxing of primitives not supported.');
@@ -386,7 +386,7 @@ Interpreter.prototype.initObject = function(scope) {
 
   wrapper = function(obj) {
     throwIfNullUndefined(obj);
-    var props = obj.isObject ? obj.properties : obj;
+    var props = (obj instanceof thisInterpreter.Object) ? obj.properties : obj;
     return thisInterpreter.nativeToPseudo(Object.getOwnPropertyNames(props));
   };
   this.setProperty(ObjectConst, 'getOwnPropertyNames',
@@ -395,7 +395,7 @@ Interpreter.prototype.initObject = function(scope) {
 
   wrapper = function(obj) {
     throwIfNullUndefined(obj);
-    if (!obj.isObject) {
+    if (!obj instanceof thisInterpreter.Object) {
       return thisInterpreter.nativeToPseudo(Object.keys(obj));
     }
     var list = [];
@@ -414,7 +414,7 @@ Interpreter.prototype.initObject = function(scope) {
     if (proto === null) {
       return new thisInterpreter.Object(null);
     }
-    if (proto === undefined || !proto.isObject) {
+    if (!(proto === null || proto instanceof thisInterpreter.Object)) {
       thisInterpreter.throwException(thisInterpreter.TYPE_ERROR,
           'Object prototype may only be an Object or null');
     }
@@ -426,11 +426,11 @@ Interpreter.prototype.initObject = function(scope) {
 
   wrapper = function(obj, prop, descriptor) {
     prop = String(prop);
-    if (!obj || !obj.isObject) {
+    if (!(obj instanceof thisInterpreter.Object)) {
       thisInterpreter.throwException(thisInterpreter.TYPE_ERROR,
           'Object.defineProperty called on non-object');
     }
-    if (!descriptor || !descriptor.isObject) {
+    if (!(descriptor instanceof thisInterpreter.Object)) {
       thisInterpreter.throwException(thisInterpreter.TYPE_ERROR,
           'Property description must be an object');
     }
@@ -452,7 +452,7 @@ Interpreter.prototype.initObject = function(scope) {
       Interpreter.NONENUMERABLE_DESCRIPTOR);
 
   wrapper = function(obj, prop) {
-    if (!obj || !obj.isObject) {
+    if (!(obj instanceof thisInterpreter.Object)) {
       thisInterpreter.throwException(thisInterpreter.TYPE_ERROR,
           'Object.getOwnPropertyDescriptor called on non-object');
     }
@@ -492,7 +492,7 @@ Interpreter.prototype.initObject = function(scope) {
       Interpreter.NONENUMERABLE_DESCRIPTOR);
 
   wrapper = function(obj) {
-    if (obj && obj.isObject) {
+    if (obj instanceof thisInterpreter.Object) {
       obj.preventExtensions = true;
     }
     return obj;
@@ -511,7 +511,7 @@ Interpreter.prototype.initObject = function(scope) {
 
   wrapper = function(prop) {
     throwIfNullUndefined(this);
-    if (!this.isObject) {
+    if (!(this instanceof thisInterpreter.Object)) {
       return this.hasOwnProperty(prop);
     }
     return String(prop) in this.properties;
@@ -905,7 +905,7 @@ Interpreter.prototype.initString = function(scope) {
   this.setNativeFunctionPrototype(StringConst, 'localeCompare', wrapper);
 
   wrapper = function(separator, limit) {
-    if (separator && separator instanceof thisInterpreter.RegExp) {
+    if (separator instanceof thisInterpreter.RegExp) {
       separator = separator.data;
     }
     var jsList = this.split(separator, limit);
@@ -1515,7 +1515,7 @@ Interpreter.prototype.getProperty = function(obj, name) {
  * @return {boolean|undefined} True if property exists, undefined if primitive.
  */
 Interpreter.prototype.hasProperty = function(obj, name) {
-  if (!obj.isObject) {
+  if (!(obj instanceof this.Object)) {
     return undefined;
   }
   name = String(name);
@@ -1542,7 +1542,7 @@ Interpreter.prototype.setProperty = function(obj, name, value, opt_descriptor) {
   if (opt_descriptor && obj.notConfigurable.has(name)) {
     this.throwException(this.TYPE_ERROR, 'Cannot redefine property: ' + name);
   }
-  if (!obj || !obj.isObject) {
+  if (!(obj instanceof this.Object)) {
     this.throwException(this.TYPE_ERROR, "Can't create property '" + name +
                         "' on '" + obj + "'");
   }
@@ -1608,7 +1608,7 @@ Interpreter.prototype.setProperty = function(obj, name, value, opt_descriptor) {
  */
 Interpreter.prototype.deleteProperty = function(obj, name) {
   name = String(name);
-  if (!obj || !obj.isObject || obj.notWritable.has(name)) {
+  if (!(obj instanceof this.Object) || obj.notWritable.has(name)) {
     return false;
   }
  if (name === 'length' && obj instanceof this.Array) {
@@ -2055,8 +2055,6 @@ Interpreter.prototype.installTypes = function() {
 
   /** @type {Interpreter.prototype.Object} */
   intrp.Object.prototype.proto = null;
-  /** @type {boolean} */
-  intrp.Object.prototype.isObject = true;
   /** @type {string} */
   intrp.Object.prototype.class = 'Object';
 
@@ -2414,7 +2412,7 @@ Interpreter.prototype['stepBinaryExpression'] = function() {
     case '>>':  value = leftValue >>  rightValue; break;
     case '>>>': value = leftValue >>> rightValue; break;
     case 'in':
-      if (!rightValue || !rightValue.isObject) {
+      if (!(rightValue instanceof this.Object)) {
         this.throwException(this.TYPE_ERROR,
             "'in' expects an object, not '" + rightValue + "'");
       }
@@ -2507,7 +2505,7 @@ Interpreter.prototype['stepCallExpression'] = function() {
     // Determine value of 'this' in function.
     if (state.node['type'] === 'NewExpression') {
       var func = state.func_;
-      if (!func || !func.isObject) {
+      if (!(func instanceof this.Function)) {
         this.throwException(this.TYPE_ERROR, func + ' is not a function');
       } else if (func.illegalConstructor) {
         // Illegal: new escape();
@@ -2531,7 +2529,7 @@ Interpreter.prototype['stepCallExpression'] = function() {
     var func = state.func_;
     // TODO(fraser): determine if this check is redundant; remove it or add
     // tests that depend on it.
-    if (!func || !func.isObject) {
+    if (!(func instanceof this.Function)) {
       this.throwException(this.TYPE_ERROR, func + ' is not a function');
     }
     var funcNode = func.node;
@@ -2762,7 +2760,7 @@ Interpreter.prototype['stepForInStatement'] = function() {
   // Third, find the property name for this iteration.
   if (state.name_ === undefined) {
     done: do {
-      if (state.object_ && state.object_.isObject) {
+      if (state.object_ instanceof this.Object) {
         for (var prop in state.object_.properties) {
           if (!state.visited_.has(prop)) {
             state.visited_.add(prop);
