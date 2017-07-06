@@ -2193,11 +2193,10 @@ Interpreter.prototype.installTypes = function() {
    */
   intrp.Function.prototype.addPrototype = function(prototype) {
     if (this.illegalConstructor) {
-      // It's almost certainly an erro add a .prototype property
-      // to a function we have declared isn't a 
-      // constructor.  (This doesn't prevent user code from doing
-      // so - just makes sure we don't do it accidentally when
-      // bootstrapping or whatever.)
+      // It's almost certainly an error to add a .prototype property
+      // to a function we have declared isn't a constructor.  (This
+      // doesn't prevent user code from doing so - just makes sure we
+      // don't do it accidentally when bootstrapping or whatever.)
       throw TypeError("Illogical addition of .prototype to non-constructor");
     }
     var protoObj = prototype || intrp.createObject(intrp.OBJECT);
