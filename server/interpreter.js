@@ -1838,7 +1838,7 @@ Interpreter.prototype.pushNode_ = function(node) {
 ///////////////////////////////////////////////////////////////////////////////
 
 // This is a bunch of boilerplate that serves two purposes:
-// 
+//
 // * First, by declaring these types as if they were on
 //   Interpreter.prototype we can get the Closure Compiler to type
 //   check use of them for us.
@@ -2061,7 +2061,7 @@ Interpreter.prototype.installTypes = function() {
     // a function declaration; ES6 corrects this by also allowing
     // function expressions (plus generators, classes, arrow functions,
     // methods etc...) - but in any case it should look like source code.
-    // 
+    //
     // TODO: return source code
     return 'function /*name*/ (/* args */) {/* body */}';
   };
@@ -2537,8 +2537,8 @@ Interpreter.prototype['stepCallExpression'] = function() {
       return;
     } else if (func.eval) {
       var code = state.arguments_[0];
-      if (!code) {  // eval()
-        state.value = undefined;
+      if (typeof code !== 'string') {  // eval()
+        state.value = code;
       } else {
         var ast = acorn.parse(String(code), Interpreter.PARSE_OPTIONS);
         var evalNode = {type: 'EvalProgram_', body: ast['body']};
