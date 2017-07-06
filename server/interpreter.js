@@ -2683,22 +2683,16 @@ Interpreter.prototype['stepForInStatement'] = function() {
   var stack = this.stateStack;
   var state = stack[stack.length - 1];
   var node = state.node;
-  // First, variable initialization is illegal in strict mode.
-  if (!state.doneInit_) {
-    state.doneInit_ = true;
+  if (!state.doneObject_) {
+    // First, variable initialization is illegal in strict mode.
+    state.doneObject_ = true;
     if (node['left']['declarations'] &&
         node['left']['declarations'][0]['init']) {
       this.throwException(this.SYNTAX_ERROR,
           'for-in loop variable declaration may not have an initializer.');
       return;
     }
-  }
-  // Second, look up the object.  Only do so once, ever.
-  if (!state.doneObject_) {
-    state.doneObject_ = true;
-    if (!state.variable_) {
-      state.variable_ = state.value;
-    }
+    // Second, look up the object.  Only do so once, ever.
     this.pushNode_(node['right']);
     return;
   }
