@@ -562,7 +562,7 @@ Interpreter.prototype.initArray = function(scope) {
     var newArray = new thisInterpreter.Array;
     var first = arguments[0];
     if (arguments.length === 1 && typeof first === 'number') {
-      if (isNaN(thisInterpreter.legalArrayLength(first))) {
+      if (isNaN(Interpreter.legalArrayLength(first))) {
         thisInterpreter.throwException(thisInterpreter.RANGE_ERROR,
                                        'Invalid array length');
       }
@@ -1239,7 +1239,7 @@ Interpreter.prototype.isa = function(child, constructor) {
  * @return {number} Zero, or a positive integer if the value can be
  *     converted to such.  NaN otherwise.
  */
-Interpreter.prototype.legalArrayLength = function(n) {
+Interpreter.legalArrayLength = function(n) {
   n = Number(n);
   // Array length must be between 0 and 2^32-1 (inclusive).
   return (n === n >>> 0) ? n : NaN;
@@ -1251,7 +1251,7 @@ Interpreter.prototype.legalArrayLength = function(n) {
  * @return {number} Zero, or a positive integer if the value can be
  *     converted to such.  NaN otherwise.
  */
-Interpreter.prototype.legalArrayIndex = function(n) {
+Interpreter.legalArrayIndex = function(n) {
   n = Number(n);
   // Array index cannot be 2^32-1, otherwise length would be 2^32.
   // 0xffffffff is 2^32-1.
@@ -1492,7 +1492,7 @@ Interpreter.prototype.getProperty = function(obj, name) {
     // Might have numbers in there?
     // Special cases for string array indexing
     if (typeof obj === 'string') {
-      var n = this.legalArrayIndex(name);
+      var n = Interpreter.legalArrayIndex(name);
       if (!isNaN(n) && n < obj.length) {
         return obj[n];
       }
@@ -1551,13 +1551,13 @@ Interpreter.prototype.setProperty = function(obj, name, value, opt_descriptor) {
     var i;
     if (name === 'length') {
       // Delete elements if length is smaller.
-      var newLength = this.legalArrayLength(value);
+      var newLength = Interpreter.legalArrayLength(value);
       if (isNaN(newLength)) {
         this.throwException(this.RANGE_ERROR, 'Invalid array length');
       }
       if (newLength < obj.length) {
         for (i in obj.properties) {
-          i = this.legalArrayIndex(i);
+          i = Interpreter.legalArrayIndex(i);
           if (!isNaN(i) && newLength <= i) {
             delete obj.properties[i];
           }
@@ -1565,7 +1565,7 @@ Interpreter.prototype.setProperty = function(obj, name, value, opt_descriptor) {
       }
       obj.length = newLength;
       return;  // Don't set a real length property.
-    } else if (!isNaN(i = this.legalArrayIndex(name))) {
+    } else if (!isNaN(i = Interpreter.legalArrayIndex(name))) {
       // Increase length if this index is larger.
       obj.length = Math.max(obj.length, i + 1);
     }
