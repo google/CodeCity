@@ -30,6 +30,7 @@ var acorn;
  * @constructor
  */
 var Interpreter = function() {
+  this.installTypes();
   this.paused_ = false;
   // Unique identifier for native functions.  Used in serialization.
   this.functionCounter_ = 0;
@@ -44,6 +45,15 @@ var Interpreter = function() {
       this.functionMap_[m[1]] = this[methodName].bind(this);
     }
   }
+  // For cycle detection in array to string and error conversion; see
+  // spec bug github.com/tc39/ecma262/issues/289. At the moment this
+  // is used only for actions which are atomic (i.e., take place
+  // entirely within the duration of a single call to .step), so it
+  // could be a global or class property, but better to have it be
+  // per-instance so that we can eventually call user toString
+  // methods.
+  // TODO(cpcallen): Make this per-thread when threads are introduced.
+  this.toStringCycles_ = [];
   // Create and initialize the global scope.
   this.global = this.createScope({}, null);
   this.value = undefined;
@@ -109,11 +119,6 @@ Interpreter.STEP_ERROR = {};
  * not an object property.
  */
 Interpreter.SCOPE_REFERENCE = {};
-
-// For cycle detection in array to string and error conversion;
-// see spec bug github.com/tc39/ecma262/issues/289
-// Since this is for atomic actions only, it can be a class property.
-Interpreter.toStringCycles_ = [];
 
 /**
  * Add more code to the interpreter.
@@ -253,7 +258,7 @@ Interpreter.prototype.initFunction = function(scope) {
   // Function constructor.
   wrapper = function(var_args) {
     var newFunc = thisInterpreter.createFunction();
-    newFunc.addPrototype(thisInterpreter);
+    newFunc.addPrototype();
     if (arguments.length) {
       var code = String(arguments[arguments.length - 1]);
     } else {
@@ -290,7 +295,7 @@ Interpreter.prototype.initFunction = function(scope) {
   this.addVariableToScope(scope, 'Function', FunctionConst);
 
   this.setNativeFunctionPrototype(FunctionConst, 'toString',
-      Interpreter.Function.prototype.toString);
+      this.Function.prototype.toString);
 
   wrapper = function(thisArg, args) {
     var state =
@@ -303,7 +308,7 @@ Interpreter.prototype.initFunction = function(scope) {
     state.arguments_ = [];
     if (args) {
       // TODO(cpcallen): this should probably accept array-like object too.
-      if (args instanceof Interpreter.Array) {
+      if (args instanceof thisInterpreter.Array) {
         for (var i = 0; i < args.length; i++) {
           state.arguments_[i] = thisInterpreter.getProperty(args, i);
         }
@@ -499,11 +504,11 @@ Interpreter.prototype.initObject = function(scope) {
 
   // Instance methods on Object.
   this.setNativeFunctionPrototype(ObjectConst, 'toString',
-      Interpreter.Object.prototype.toString);
+      this.Object.prototype.toString);
   this.setNativeFunctionPrototype(ObjectConst, 'toLocaleString',
-      Interpreter.Object.prototype.toString);
+      this.Object.prototype.toString);
   this.setNativeFunctionPrototype(ObjectConst, 'valueOf',
-      Interpreter.Object.prototype.valueOf);
+      this.Object.prototype.valueOf);
 
   wrapper = function(prop) {
     throwIfNullUndefined(this);
@@ -574,7 +579,7 @@ Interpreter.prototype.initArray = function(scope) {
 
   // Static methods on Array.
   wrapper = function(obj) {
-    return obj instanceof Interpreter.Array;
+    return obj instanceof thisInterpreter.Array;
   };
   this.setProperty(ArrayConst, 'isArray',
                    this.createNativeFunction(wrapper),
@@ -582,7 +587,7 @@ Interpreter.prototype.initArray = function(scope) {
 
   // Instance methods on Array.
   this.setNativeFunctionPrototype(ArrayConst, 'toString',
-      Interpreter.Array.prototype.toString);
+      this.Array.prototype.toString);
 
   wrapper = function() {
     if (this.length) {
@@ -699,7 +704,7 @@ Interpreter.prototype.initArray = function(scope) {
   this.setNativeFunctionPrototype(ArrayConst, 'slice', wrapper);
 
   wrapper = function(opt_separator) {
-    var cycles = Interpreter.toStringCycles_;
+    var cycles = intrp.toStringCycles_;
     cycles.push(this);
     try {
       var text = [];
@@ -724,7 +729,7 @@ Interpreter.prototype.initArray = function(scope) {
     // Loop through all arguments and copy them in.
     for (var i = 0; i < arguments.length; i++) {
       var value = arguments[i];
-      if (value instanceof Interpreter.Array) {
+      if (value instanceof thisInterpreter.Array) {
         for (var j = 0; j < value.length; j++) {
           var element = thisInterpreter.getProperty(value, j);
           thisInterpreter.setProperty(list, length++, element);
@@ -899,7 +904,7 @@ Interpreter.prototype.initString = function(scope) {
   this.setNativeFunctionPrototype(StringConst, 'localeCompare', wrapper);
 
   wrapper = function(separator, limit) {
-    if (separator && separator instanceof Interpreter.RegExp) {
+    if (separator && separator instanceof thisInterpreter.RegExp) {
       separator = separator.data;
     }
     var jsList = this.split(separator, limit);
@@ -984,7 +989,7 @@ Interpreter.prototype.initDate = function(scope) {
 
   // Instance methods on Date.
   this.setNativeFunctionPrototype(DateConst, 'toString',
-      Interpreter.Date.prototype.toString);
+      this.Date.prototype.toString);
 
   var functions = ['getDate', 'getDay', 'getFullYear', 'getHours',
       'getMilliseconds', 'getMinutes', 'getMonth', 'getSeconds', 'getTime',
@@ -1077,10 +1082,10 @@ Interpreter.prototype.initRegExp = function(scope) {
       Interpreter.READONLY_NONENUMERABLE_DESCRIPTOR);
 
   this.setNativeFunctionPrototype(RegExpConst, 'toString',
-      Interpreter.RegExp.prototype.toString);
+      this.RegExp.prototype.toString);
 
   wrapper = function(str) {
-    if (!(this instanceof Interpreter.RegExp) ||
+    if (!(this instanceof thisInterpreter.RegExp) ||
         !(this.regexp instanceof RegExp)) {
       thisInterpreter.throwException(
           thisInterpreter.TYPE_ERROR,
@@ -1171,7 +1176,7 @@ Interpreter.prototype.initError = function(scope) {
       Interpreter.NONENUMERABLE_DESCRIPTOR);
 
   this.setNativeFunctionPrototype(ErrorConst, 'toString',
-      Interpreter.Error.prototype.toString);
+      this.Error.prototype.toString);
 
   var createErrorSubclass = function(name) {
     var prototype = thisInterpreter.createError();
@@ -1203,7 +1208,7 @@ Interpreter.prototype.initError = function(scope) {
  * Does the object have a certain constructor's .prototype in its
  * proto chain?
  * @param {Interpreter.Value} child Object to check.
- * @param {Interpreter.Object} constructor Constructor of object.
+ * @param {Interpreter.prototype.Object} constructor Constructor of object.
  * @return {boolean} True if object is the class or inherits from it.
  *     False otherwise.
  */
@@ -1265,353 +1270,81 @@ Interpreter.Scope = function(parentScope) {
 
 /**
  * Typedef for JS values.
- * @typedef {!Interpreter.Object|boolean|number|string|undefined|null}
+ * @typedef {!Interpreter.prototype.Object|boolean|number|string|undefined|null}
  */
 Interpreter.Value;
 
 /**
- * Class for an object.
- * @param {Interpreter.Object} proto Prototype object or null.
- * @constructor
- */
-Interpreter.Object = function(proto) {
-  this.notConfigurable = new Set();
-  this.notEnumerable = new Set();
-  this.notWritable = new Set();
-  this.properties = Object.create(null);
-  this.proto = proto;
-};
-
-/** @type {Interpreter.Object} */
-Interpreter.Object.prototype.proto = null;
-/** @type {boolean} */
-Interpreter.Object.prototype.isObject = true;
-/** @type {string} */
-Interpreter.Object.prototype.class = 'Object';
-
-/**
- * Convert this object into a string.
- * @return {string} String value.
- * @override
- */
-Interpreter.Object.prototype.toString = function() {
-  var c;
-  if (this instanceof Interpreter.Object) {
-    c = this.class;
-  } else {
-    c = ({
-      undefined: 'Undefined',
-      null: 'Null',
-      boolean: 'Boolean',
-      number: 'Number',
-      string: 'String',
-    })[typeof this];
-  }
-  return '[object ' + c + ']';
-};
-
-/**
- * Return the object value.
- * @return {Interpreter.Value} Value.
- * @override
- */
-Interpreter.Object.prototype.valueOf = function() {
-  return this;
-};
-
-/**
  * Create a new data object.
- * @param {Interpreter.Object=} proto Prototype object (or null);
- *     defaults to this.OBJECT.
- * @return {!Interpreter.Object} New data object.
+ * @param {Interpreter.prototype.Object=} proto Prototype object (or
+ *     null); defaults to this.OBJECT.
+ * @return {!Interpreter.prototype.Object} New data object.
  */
 Interpreter.prototype.createObject = function(proto) {
   var p = (proto === undefined ? this.OBJECT : proto);
-  return new Interpreter.Object(p);
+  return new this.Object(p);
 };
-
-/**
- * Class for a function.
- * @param {Interpreter.Object} proto Prototype object.
- * @constructor
- * @extends {Interpreter.Object}
- */
-Interpreter.Function = function(proto) {
-  Interpreter.Object.call(this, proto);
-};
-
-Interpreter.Function.prototype = Object.create(Interpreter.Object.prototype);
-Interpreter.Function.prototype.constructor = Interpreter.Function;
-Interpreter.Function.prototype.class = 'Function';
-
-/**
- * Convert this function into a string.
- * @return {string} String value.
- * @override
- */
-Interpreter.Function.prototype.toString = function() {
-  if (!(this instanceof Interpreter.Function)) {
-    // TODO(cpcallen): throw TypeError: this is not a Function.
-    return 'Whoops: supposed to throw a TypeError';
-  }
-  // N.B. that ES5.1 spec stipulates that output must be in syntax of
-  // a function declaration; ES6 corrects this by also allowing
-  // function expressions (plus generators, classes, arrow functions,
-  // methods etc...) - but in any case it should look like source code.
-  //
-  // TODO: return source code
-  return 'function /*name*/ (/* args */) {/* body */}';
-};
-
-/**
- * Add a prototype property to this function object, setting
- * this.properties[prototype] to prototype and
- * prototype.properites[constructor] to func.  If prototype is not
- * specified, a newly-created object will be used instead.
- * @param {!Interpreter} thisInterpreter Interpreter to which this is attached.
- * @param {Interpreter.Object=} prototype Prototype to add to this.
- */
-Interpreter.Function.prototype.addPrototype = function(thisInterpreter,
-    prototype) {
-  if (this.illegalConstructor) {
-    // It's almost certainly an erro add a .prototype property to a
-    // function we have declared isn't a constructor.  (This doesn't
-    // prevent user code from doing so - just makes sure we don't do
-    // it accidentally when bootstrapping or whatever.)
-    throw TypeError("Illogical addition of .prototype to non-constructor");
-  }
-  var protoObj = prototype || thisInterpreter.createObject();
-  thisInterpreter.setProperty(this, 'prototype', protoObj,
-      Interpreter.NONENUMERABLE_NONCONFIGURABLE_DESCRIPTOR);
-  thisInterpreter.setProperty(protoObj, 'constructor', this,
-      Interpreter.NONENUMERABLE_DESCRIPTOR);
-};
-
 
 /**
  * Create a new function object.
- * @param {Interpreter.Object=} proto Prototype object (or null);
+ * @param {Interpreter.prototype.Object=} proto Prototype object (or null);
  *     defaults to this.FUNCTION.
- * @return {!Interpreter.Function} New data object.
+ * @return {!Interpreter.prototype.Function} New data object.
  */
 Interpreter.prototype.createFunction = function(proto) {
   var p = (proto === undefined ? this.FUNCTION : proto);
-  return new Interpreter.Function(p);
-};
-
-/**
- * Class for an array.
- * @param {Interpreter.Object} proto Prototype object.
- * @constructor
- * @extends {Interpreter.Object}
- */
-Interpreter.Array = function(proto) {
-  Interpreter.Object.call(this, proto);
-  this.length = 0;
-};
-
-Interpreter.Array.prototype = Object.create(Interpreter.Object.prototype);
-Interpreter.Array.prototype.constructor = Interpreter.Array;
-Interpreter.Array.prototype.class = 'Array';
-
-/**
- * Convert array-like objects into a string.
- * @return {string} String value.
- * @override
- */
-Interpreter.Array.prototype.toString = function() {
-  if (!(this instanceof Interpreter.Object)) {
-    // TODO(cpcallen): this is supposed to do a ToObject.  Fake it for
-    // now using native Array.prototype.toString.  Need to verify
-    // whether this is good enough.
-    return Array.prototype.toString.apply(this);
-  }
-  var cycles = Interpreter.toStringCycles_;
-  cycles.push(this);
-  try {
-    var strs = [];
-    for (var i = 0; i < this.length; i++) {
-      var value = this.properties[i];
-      strs[i] = (value && value.isObject && cycles.indexOf(value) !== -1) ?
-          '...' : value;
-    }
-  } finally {
-    cycles.pop();
-  }
-  return strs.join(',');
+  return new this.Function(p);
 };
 
 /**
  * Create a new array object.  See §15.4 of the ES5.1 spec.
- * @param {Interpreter.Object=} proto Prototype object (or null);
+ * @param {Interpreter.prototype.Object=} proto Prototype object (or null);
  *     defaults to this.ARRAY
- * @return {!Interpreter.Array} New array object.
+ * @return {!Interpreter.prototype.Array} New array object.
  */
 Interpreter.prototype.createArray = function(proto) {
   var p = (proto === undefined ? this.ARRAY : proto);
-  return new Interpreter.Array(p);
-};
-
-/**
- * Class for a date.
- * @param {Interpreter.Object} proto Prototype object.
- * @constructor
- * @extends {Interpreter.Object}
- */
-Interpreter.Date = function(proto) {
-  Interpreter.Object.call(this, proto);
-  /** @type {Date} */
-  this.date = null;
-};
-
-Interpreter.Date.prototype = Object.create(Interpreter.Object.prototype);
-Interpreter.Date.prototype.constructor = Interpreter.Date;
-Interpreter.Date.prototype.class = 'Date';
-
-/**
- * Return the date as a string.
- * @return {string} Value.
- * @override
- */
-Interpreter.Date.prototype.toString = function() {
-  if (!(this.date instanceof Date)) {
-    // TODO(cpcallen): this should throw a TypeError: this is not a Date object.
-    return 'Whoops: supposed to throw a TypeError';
-  }
-  return this.date.toString();
-};
-
-/**
- * Return the date as a numeric value.
- * @return {number} Value.
- * @override
- */
-Interpreter.Date.prototype.valueOf = function() {
-  if (!(this.date instanceof Date)) {
-    // TODO(cpcallen): this should throw a TypeError: this is not a Date object.
-    return NaN;
-  }
-  return this.date.valueOf();
+  return new this.Array(p);
 };
 
 /**
  * Create a new date object.
- * @param {Interpreter.Object=} proto Prototype object (or null);
+ * @param {Interpreter.prototype.Object=} proto Prototype object (or null);
  *     defaults to this.DATE
- * @return {!Interpreter.Date} New data object.
+ * @return {!Interpreter.prototype.Date} New data object.
  */
 Interpreter.prototype.createDate = function(proto) {
   var p = (proto === undefined ? this.DATE : proto);
-  return new Interpreter.Date(p);
-};
-
-/**
- * Class for a regexp.
- * @param {Interpreter.Object} proto Prototype object.
- * @constructor
- * @extends {Interpreter.Object}
- */
-Interpreter.RegExp = function(proto) {
-  Interpreter.Object.call(this, proto);
-};
-
-Interpreter.RegExp.prototype = Object.create(Interpreter.Object.prototype);
-Interpreter.RegExp.prototype.constructor = Interpreter.RegExp;
-Interpreter.RegExp.prototype.class = 'RegExp';
-
-/**
- * Return the regexp as a string.
- * @return {string} Value.
- * @override
- */
-Interpreter.RegExp.prototype.toString = function() {
-  if (this.regexp instanceof RegExp) {
-    return this.regexp.toString();
-  }
-  // TODO(cpcallen): this should do some weird stuff per §21.2.5.14 of
-  // the ES6 spec.  For most non-RegExp objects it will return
-  // "/undefined/undefined"...  :-/
-  return '//';
+  return new this.Date(p);
 };
 
 /**
  * Create a new regexp object.
- * @param {Interpreter.Object=} proto Prototype object (or null);
+ * @param {Interpreter.prototype.Object=} proto Prototype object (or null);
  *     defaults to this.REGEXP
- * @return {!Interpreter.RegExp} New data object.
+ * @return {!Interpreter.prototype.RegExp} New data object.
  */
 Interpreter.prototype.createRegExp = function(proto) {
   var p = (proto === undefined ? this.REGEXP : proto);
-  return new Interpreter.RegExp(p);
-};
-
-/**
- * Class for an error object.
- * @param {Interpreter.Object} proto Prototype object.
- * @constructor
- * @extends {Interpreter.Object}
- */
-Interpreter.Error = function(proto) {
-  Interpreter.Object.call(this, proto);
-};
-
-Interpreter.Error.prototype = Object.create(Interpreter.Object.prototype);
-Interpreter.Error.prototype.constructor = Interpreter.Error;
-Interpreter.Error.prototype.class = 'Error';
-
-/**
- * Return the error as a string.
- * @return {string} Value.
- * @override
- */
-Interpreter.Error.prototype.toString = function() {
-  var cycles = Interpreter.toStringCycles_;
-  if (cycles.indexOf(this) !== -1) {
-    return '[object Error]';
-  }
-  var name, message;
-  var obj = this;
-  do {
-    if ('name' in obj.properties) {
-      name = obj.properties['name'];
-      break;
-    }
-  } while ((obj = obj.proto));
-  var obj = this;
-  do {
-    if ('message' in obj.properties) {
-      message = obj.properties['message'];
-      break;
-    }
-  } while ((obj = obj.proto));
-  cycles.push(this);
-  try {
-    name = (name === undefined) ? 'Error' : String(name);
-    message = (message === undefined) ? '' : String(message);
-  } finally {
-    cycles.pop();
-  }
-  if (name) {
-    return message ? (name + ': ' + message) : name;
-  }
-  return message;
+  return new this.RegExp(p);
 };
 
 /**
  * Create a new error object.  See §15.11 of the ES5.1 spec.
- * @param {Interpreter.Object=} proto Prototype object (or null);
+ * @param {Interpreter.prototype.Object=} proto Prototype object (or null);
  *     defaults to this.ERROR
- * @return {!Interpreter.Error} New array object.
+ * @return {!Interpreter.prototype.Error} New array object.
  */
 Interpreter.prototype.createError = function(proto) {
   var p = (proto === undefined ? this.ERROR : proto);
-  return new Interpreter.Error(p);
+  return new this.Error(p);
 };
 
 /**
  * Initialize a pseudo regular expression object based on a native regular
  * expression object.
- * @param {!Interpreter.Object} pseudoRegexp The existing object to set.
+ * @param {!Interpreter.prototype.Object} pseudoRegexp The existing
+ *     object to set.
  * @param {!RegExp} nativeRegexp The native regular expression.
  */
 Interpreter.prototype.populateRegExp = function(pseudoRegexp, nativeRegexp) {
@@ -1633,11 +1366,11 @@ Interpreter.prototype.populateRegExp = function(pseudoRegexp, nativeRegexp) {
  * Create a new function.
  * @param {!Object} node AST node defining the function.
  * @param {!Interpreter.Scope} scope Parent scope.
- * @return {!Interpreter.Function} New function.
+ * @return {!Interpreter.prototype.Function} New function.
  */
 Interpreter.prototype.createFunctionFromAST = function(node, scope) {
   var func = this.createFunction();
-  func.addPrototype(this);
+  func.addPrototype();
   func.parentScope = scope;
   func.node = node;
   this.setProperty(func, 'length', func.node['params'].length,
@@ -1648,12 +1381,12 @@ Interpreter.prototype.createFunctionFromAST = function(node, scope) {
 /**
  * Create a new native function.
  * @param {!Function} nativeFunc JavaScript function.
- * @param {Interpreter.Object=} prototype If an object (or
+ * @param {Interpreter.prototype.Object=} prototype If an object (or
  *     null) is supplied, that object will be added as the function's
  *     .prototype property (with the object receiving a corresponding
  *     .constructor property).  If undefined or omitted the function
  *     cannot be used as a constructor (e.g. escape).
- * @return {!Interpreter.Function} New function.
+ * @return {!Interpreter.prototype.Function} New function.
  */
 Interpreter.prototype.createNativeFunction = function(nativeFunc, prototype) {
   var func = this.createFunction();
@@ -1664,7 +1397,7 @@ Interpreter.prototype.createNativeFunction = function(nativeFunc, prototype) {
   if (prototype === undefined) {
     func.illegalConstructor = true;
   } else {
-    func.addPrototype(this, prototype);
+    func.addPrototype(prototype);
   }
   return func;
 };
@@ -1672,11 +1405,11 @@ Interpreter.prototype.createNativeFunction = function(nativeFunc, prototype) {
 /**
  * Create a new native asynchronous function.
  * @param {!Function} asyncFunc JavaScript function.
- * @return {!Interpreter.Object} New function.
+ * @return {!Interpreter.prototype.Object} New function.
  */
 Interpreter.prototype.createAsyncFunction = function(asyncFunc) {
   var func = this.createFunction();
-  func.addPrototype(this); // TODO(cpcallen): is this necessary?
+  func.addPrototype(); // TODO(cpcallen): is this necessary?
   func.asyncFunc = asyncFunc;
   asyncFunc.id = this.functionCounter_++;
   this.setProperty(func, 'length', asyncFunc.length,
@@ -1750,7 +1483,7 @@ Interpreter.prototype.pseudoToNative = function(pseudoObj, opt_cycles) {
     return pseudoObj;
   }
 
-  if (pseudoObj instanceof Interpreter.RegExp) {  // Regular expression.
+  if (pseudoObj instanceof this.RegExp) {  // Regular expression.
     return pseudoObj.data;
   }
 
@@ -1764,7 +1497,7 @@ Interpreter.prototype.pseudoToNative = function(pseudoObj, opt_cycles) {
   }
   cycles.pseudo.push(pseudoObj);
   var nativeObj;
-  if (pseudoObj instanceof Interpreter.Array) {  // Array.
+  if (pseudoObj instanceof this.Array) {  // Array.
     nativeObj = [];
     cycles.native.push(nativeObj);
     for (var i = 0; i < pseudoObj.length; i++) {
@@ -1790,7 +1523,7 @@ Interpreter.prototype.pseudoToNative = function(pseudoObj, opt_cycles) {
 /**
  * Look up the prototype for this value.
  * @param {Interpreter.Value} value Data object.
- * @return {Interpreter.Object} Prototype object, null if none.
+ * @return {Interpreter.prototype.Object} Prototype object, null if none.
  */
 Interpreter.prototype.getPrototype = function(value) {
   switch (typeof value) {
@@ -1823,7 +1556,7 @@ Interpreter.prototype.getProperty = function(obj, name) {
     // Special cases for magic length property.
     if (typeof obj === 'string') {
       return obj.length;
-    } else if (obj instanceof Interpreter.Array) {
+    } else if (obj instanceof this.Array) {
       return obj.length;
     }
   } else if (name.charCodeAt(0) < 0x40) {
@@ -1857,7 +1590,7 @@ Interpreter.prototype.hasProperty = function(obj, name) {
     return undefined;
   }
   name = String(name);
-  if (name === 'length' && obj instanceof Interpreter.Array) {
+  if (name === 'length' && obj instanceof this.Array) {
     return true;
   }
   do {
@@ -1870,7 +1603,7 @@ Interpreter.prototype.hasProperty = function(obj, name) {
 
 /**
  * Set a property value on a data object.
- * @param {!Interpreter.Object} obj Data object.
+ * @param {!Interpreter.prototype.Object} obj Data object.
  * @param {Interpreter.Value} name Name of property.
  * @param {Interpreter.Value} value New property value.
  * @param {Object=} opt_descriptor Optional descriptor object.
@@ -1884,7 +1617,7 @@ Interpreter.prototype.setProperty = function(obj, name, value, opt_descriptor) {
     this.throwException(this.TYPE_ERROR, "Can't create property '" + name +
                         "' on '" + obj + "'");
   }
-  if (obj instanceof Interpreter.Array) {
+  if (obj instanceof this.Array) {
     // Arrays have a magic length variable that is bound to the elements.
     var i;
     if (name === 'length') {
@@ -1940,7 +1673,7 @@ Interpreter.prototype.setProperty = function(obj, name, value, opt_descriptor) {
 
 /**
  * Delete a property value on a data object.
- * @param {!Interpreter.Object} obj Data object.
+ * @param {!Interpreter.prototype.Object} obj Data object.
  * @param {Interpreter.Value} name Name of property.
  * @return {boolean} True if deleted, false if undeletable.
  */
@@ -1949,7 +1682,7 @@ Interpreter.prototype.deleteProperty = function(obj, name) {
   if (!obj || !obj.isObject || obj.notWritable.has(name)) {
     return false;
   }
- if (name === 'length' && obj instanceof Interpreter.Array) {
+ if (name === 'length' && obj instanceof this.Array) {
     return false;
   }
   return delete obj.properties[name];
@@ -1958,7 +1691,7 @@ Interpreter.prototype.deleteProperty = function(obj, name) {
 /**
  * Convenience method for adding a native function as a non-enumerable property
  * onto an object's prototype.
- * @param {!Interpreter.Object} obj Data object.
+ * @param {!Interpreter.prototype.Object} obj Data object.
  * @param {Interpreter.Value} name Name of property.
  * @param {!Function} wrapper Function object.
  */
@@ -2181,7 +1914,7 @@ Interpreter.prototype.throwException = function(value, opt_message) {
   if (opt_message === undefined) {
     error = value;  // This is a value to throw, not an error proto.
   } else {
-    if (!(value === null || value instanceof Interpreter.Error)) {
+    if (!(value === null || value instanceof this.Error)) {
       throw TypeError("Can't attach message to non-Error value");
     }
     error = this.createError(value);
@@ -2212,7 +1945,7 @@ Interpreter.prototype.executeException = function(error) {
 
   // Throw a real error.
   var realError;
-  if (error instanceof Interpreter.Error) {
+  if (error instanceof this.Error) {
     var errorTable = {
       'EvalError': EvalError,
       'RangeError': RangeError,
@@ -2243,6 +1976,393 @@ Interpreter.prototype.pushNode_ = function(node) {
   };
   this.stateStack.push(state);
   return state;
+};
+
+///////////////////////////////////////////////////////////////////////////////
+// Types representing JS objects
+///////////////////////////////////////////////////////////////////////////////
+
+// This is a bunch of boilerplate that serves two purposes:
+// 
+// * First, by declaring these types as if they were on
+//   Interpreter.prototype we can get the closure compiler to type
+//   check use of them for us.
+//
+// * Second, for whatever reason these declarations seem to create a
+//   small performance improvement.
+
+/**
+ * @param {Interpreter.prototype.Object} proto
+ * @constructor
+ */
+Interpreter.prototype.Object = function(proto) {
+  this.notConfigurable = new Set();
+  this.notEnumerable = new Set();
+  this.notWritable = new Set();
+  this.properties = Object.create(null);
+  this.proto = proto;
+  throw Error('Inner class constructor not callable on prototype');
+};
+/** @type {Interpreter.prototype.Object} */
+Interpreter.prototype.Object.prototype.proto = null;
+/** @type {boolean} */
+Interpreter.prototype.Object.prototype.isObject = false;
+/** @type {string} */
+Interpreter.prototype.Object.prototype.class = '';
+/** @return {string} */
+Interpreter.prototype.Object.prototype.toString = function() {
+  throw Error('Inner class method not callable on prototype');
+};
+/** @return {Interpreter.Value} */
+Interpreter.prototype.Object.prototype.valueOf = function() {
+  throw Error('Inner class method not callable on prototype');
+};
+
+/**
+ * @param {Interpreter.prototype.Object} proto
+ * @constructor
+ * @extends {Interpreter.prototype.Object}
+ */
+Interpreter.prototype.Function = function(proto) {
+  throw Error('Inner class constructor not callable on prototype');
+};
+/** @return {string} @override */
+Interpreter.prototype.Function.prototype.toString = function() {
+  throw Error('Inner class method not callable on prototype');
+};
+/** @param {Interpreter.prototype.Object=} prototype */
+Interpreter.prototype.Function.prototype.addPrototype = function(prototype) {
+  throw Error('Inner class method not callable on prototype');
+};
+
+/**
+ * @param {Interpreter.prototype.Object} proto
+ * @constructor
+ * @extends {Interpreter.prototype.Object}
+ */
+Interpreter.prototype.Array = function(proto) {
+  this.length = 0;
+  throw Error('Inner class constructor not callable on prototype');
+};
+/** @return {string} @override */
+Interpreter.prototype.Array.prototype.toString = function() {
+  throw Error('Inner class method not callable on prototype');
+};
+
+/**
+ * @param {Interpreter.prototype.Object} proto
+ * @constructor
+ * @extends {Interpreter.prototype.Object}
+ */
+Interpreter.prototype.Date = function(proto) {
+  this.date = null;
+  throw Error('Inner class constructor not callable on prototype');
+};
+/** @return {string} @override */
+Interpreter.prototype.Date.prototype.toString = function() {
+  throw Error('Inner class method not callable on prototype');
+};
+/** @return {Interpreter.Value} */
+Interpreter.prototype.Date.prototype.valueOf = function() {
+  throw Error('Inner class method not callable on prototype');
+};
+
+/**
+ * @param {Interpreter.prototype.Object} proto
+ * @constructor
+ * @extends {Interpreter.prototype.Object}
+ */
+Interpreter.prototype.RegExp = function(proto) {
+  this.regexp = null;
+  throw Error('Inner class constructor not callable on prototype');
+};
+/** @return {string} @override */
+Interpreter.prototype.RegExp.prototype.toString = function() {
+  throw Error('Inner class method not callable on prototype');
+};
+
+/**
+ * @param {Interpreter.prototype.Object} proto
+ * @constructor
+ * @extends {Interpreter.prototype.Object}
+ */
+Interpreter.prototype.Error = function(proto) {
+  throw Error('Inner class constructor not callable on prototype');
+};
+/** @return {string} @override */
+Interpreter.prototype.Error.prototype.toString = function() {
+  throw Error('Inner class method not callable on prototype');
+};
+
+///////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Install the actual Object, Function, Array, RegExp, Error,
+ * etc. data-object constructors on an Interpreter instance.  Should
+ * be called just once at interpreter-creation time.
+ */
+Interpreter.prototype.installTypes = function() {
+  var intrp = this;
+
+  /**
+   * Class for an object.
+   * @param {Interpreter.prototype.Object} proto Prototype object or null.
+   */
+  intrp.Object = function(proto) {
+    this.notConfigurable = new Set();
+    this.notEnumerable = new Set();
+    this.notWritable = new Set();
+    this.properties = Object.create(null);
+    this.proto = proto;
+  };
+
+  /** @type {Interpreter.prototype.Object} */
+  intrp.Object.prototype.proto = null;
+  /** @type {boolean} */
+  intrp.Object.prototype.isObject = true;
+  /** @type {string} */
+  intrp.Object.prototype.class = 'Object';
+
+  /**
+   * Convert this object into a string.
+   * @return {string} String value.
+   * @override
+   */
+  intrp.Object.prototype.toString = function() {
+    var c;
+    if (this instanceof intrp.Object) {
+      c = this.class;
+    } else {
+      c = ({
+        undefined: 'Undefined',
+        null: 'Null',
+        boolean: 'Boolean',
+        number: 'Number',
+        string: 'String',
+      })[typeof this];
+    }
+    return '[object ' + c + ']';
+  };
+
+  /**
+   * Return the object value.
+   * @return {Interpreter.Value} Value.
+   * @override
+   */
+  intrp.Object.prototype.valueOf = function() {
+    return this;
+  };
+
+  /**
+   * Class for a function
+   * @param {Interpreter.prototype.Object} proto Prototype object.
+   */
+  intrp.Function = function(proto) {
+    intrp.Object.call(this, proto);
+  };
+
+  intrp.Function.prototype = Object.create(intrp.Object.prototype);
+  intrp.Function.prototype.constructor = intrp.Function;
+  intrp.Function.prototype.class = 'Function';
+
+  /**
+   * Convert this function into a string.
+   * @return {string} String value.
+   * @override
+   */
+  intrp.Function.prototype.toString = function() {
+    if (!(this instanceof intrp.Function)) {
+      intrp.throwException(intrp.TYPE_ERROR,
+          'Function.prototype.toString is not generic');
+    }
+    // N.B. that ES5.1 spec stipulates that output must be in syntax of
+    // a function declaration; ES6 corrects this by also allowing
+    // function expressions (plus generators, classes, arrow functions,
+    // methods etc...) - but in any case it should look like source code.
+    // 
+    // TODO: return source code
+    return 'function /*name*/ (/* args */) {/* body */}';
+  };
+
+  /**
+   * Add a prototype property to this function object, setting
+   * this.properties[prototype] to prototype and
+   * prototype.properites[constructor] to func.  If prototype is not
+   * specified, a newly-created object will be used instead.
+   * @param {Interpreter.prototype.Object=} prototype Prototype to add to this.
+   */
+  intrp.Function.prototype.addPrototype = function(prototype) {
+    if (this.illegalConstructor) {
+      // It's almost certainly an error to add a .prototype property
+      // to a function we have declared isn't a constructor.  (This
+      // doesn't prevent user code from doing so - just makes sure we
+      // don't do it accidentally when bootstrapping or whatever.)
+      throw TypeError("Illogical addition of .prototype to non-constructor");
+    }
+    var protoObj = prototype || intrp.createObject(intrp.OBJECT);
+    intrp.setProperty(this, 'prototype', protoObj,
+        Interpreter.NONENUMERABLE_NONCONFIGURABLE_DESCRIPTOR);
+    intrp.setProperty(protoObj, 'constructor', this,
+        Interpreter.NONENUMERABLE_DESCRIPTOR);
+  };
+
+  /**
+   * Class for an array
+   * @param {Interpreter.prototype.Object} proto Prototype object.
+   */
+  intrp.Array = function(proto) {
+    intrp.Object.call(this, proto);
+    this.length = 0;
+  };
+
+  intrp.Array.prototype = Object.create(intrp.Object.prototype);
+  intrp.Array.prototype.constructor = intrp.Array;
+  intrp.Array.prototype.class = 'Array';
+
+  /**
+   * Convert array-like objects into a string.
+   * @return {string} String value.
+   * @override
+   */
+  intrp.Array.prototype.toString = function() {
+    if (!(this instanceof intrp.Object)) {
+      // TODO(cpcallen): this is supposed to do a ToObject.  Fake it
+      // for now using native Array.prototype.toString.  Need to
+      // verify whether this is good enough.
+      return Array.prototype.toString.apply(this);
+    }
+    var cycles = intrp.toStringCycles_;
+    cycles.push(this);
+    try {
+      var strs = [];
+      for (var i = 0; i < this.length; i++) {
+        var value = this.properties[i];
+        strs[i] = (value && value.isObject && cycles.indexOf(value) !== -1) ?
+            '...' : value;
+      }
+    } finally {
+      cycles.pop();
+    }
+    return strs.join(',');
+  };
+
+  /**
+   * Class for a date.
+   * @param {Interpreter.prototype.Object} proto Prototype object.
+   */
+  intrp.Date = function(proto) {
+    intrp.Object.call(this, proto);
+    /** @type {Date} */
+    this.date = null;
+  };
+
+  intrp.Date.prototype = Object.create(intrp.Object.prototype);
+  intrp.Date.prototype.constructor = intrp.Date;
+  intrp.Date.prototype.class = 'Date';
+
+  /**
+   * Return the date as a string.
+   * @return {string} Value.
+   * @override
+   */
+  intrp.Date.prototype.toString = function() {
+    if (!(this.date instanceof Date)) {
+      intrp.throwException(intrp.TYPE_ERROR,
+          'Date.prototype.toString is not generic');
+    }
+    return this.date.toString();
+  };
+
+  /**
+   * Return the date as a numeric value.
+   * @return {number} Value.
+   * @override
+   */
+  intrp.Date.prototype.valueOf = function() {
+    if (!(this.date instanceof Date)) {
+      intrp.throwException(intrp.TYPE_ERROR,
+          'Date.prototype.valueOf is not generic');
+    }
+    return this.date.valueOf();
+  };
+
+  /**
+   * Class for a regexp
+   * @param {Interpreter.prototype.Object} proto Prototype object.
+   */
+  intrp.RegExp = function(proto) {
+    intrp.Object.call(this, proto);
+    this.regexp = null;
+  };
+
+  intrp.RegExp.prototype = Object.create(intrp.Object.prototype);
+  intrp.RegExp.prototype.constructor = intrp.RegExp;
+  intrp.RegExp.prototype.class = 'RegExp';
+
+  /**
+   * Return the regexp as a string.
+   * @return {string} Value.
+   * @override
+   */
+  intrp.RegExp.prototype.toString = function() {
+    if (this.regexp instanceof RegExp) {
+      return this.regexp.toString();
+    }
+    // TODO(cpcallen): this should do some weird stuff per §21.2.5.14 of
+    // the ES6 spec.  For most non-RegExp objects it will return
+    // "/undefined/undefined"...  :-/
+    return '//';
+  };
+
+  /**
+   * Class for an error object
+   * @param {Interpreter.prototype.Object} proto Prototype object.
+   */
+  intrp.Error = function(proto) {
+    intrp.Object.call(this, proto);
+  };
+
+  intrp.Error.prototype = Object.create(intrp.Object.prototype);
+  intrp.Error.prototype.constructor = intrp.Error;
+  intrp.Error.prototype.class = 'Error';
+
+  /**
+   * Return the error as a string.
+   * @return {string} Value.
+   * @override
+   */
+  intrp.Error.prototype.toString = function() {
+    var cycles = intrp.toStringCycles_;
+    if (cycles.indexOf(this) !== -1) {
+      return '[object Error]';
+    }
+    var name, message;
+    var obj = this;
+    do {
+      if ('name' in obj.properties) {
+        name = obj.properties['name'];
+        break;
+      }
+    } while ((obj = obj.proto));
+    var obj = this;
+    do {
+      if ('message' in obj.properties) {
+        message = obj.properties['message'];
+        break;
+      }
+    } while ((obj = obj.proto));
+    cycles.push(this);
+    try {
+      name = (name === undefined) ? 'Error' : String(name);
+      message = (message === undefined) ? '' : String(message);
+    } finally {
+      cycles.pop();
+    }
+    if (name) {
+      return message ? (name + ': ' + message) : name;
+    }
+    return message;
+  };
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -2364,7 +2484,7 @@ Interpreter.prototype['stepBinaryExpression'] = function() {
       value = this.hasProperty(rightValue, leftValue);
       break;
     case 'instanceof':
-      if (!(rightValue instanceof Interpreter.Function)) {
+      if (!(rightValue instanceof this.Function)) {
         this.throwException(this.TYPE_ERROR,
             'Right-hand side of instanceof is not an object');
       }
@@ -3133,7 +3253,7 @@ Interpreter.prototype['stepUnaryExpression'] = function() {
                           name + "' of '" + obj + "'");
     }
   } else if (node['operator'] === 'typeof') {
-    value = (value instanceof Interpreter.Function) ? 'function' : typeof value;
+    value = (value instanceof this.Function) ? 'function' : typeof value;
   } else if (node['operator'] === 'void') {
     value = undefined;
   } else {
