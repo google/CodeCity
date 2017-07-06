@@ -195,7 +195,8 @@ Interpreter.prototype.initGlobalScope = function(scope) {
   // Create the objects which will become Object.prototype and
   // Function.prototype, which are needed to bootstrap everything else.
   this.OBJECT = this.createObject(null);
-  this.FUNCTION = this.createNativeFunction(function() {}, this.OBJECT);
+  this.FUNCTION = this.createNativeFunction(function() {});
+  this.FUNCTION.proto = this.OBJECT;
 
   // Initialize global objects.
   this.initObject(scope);
