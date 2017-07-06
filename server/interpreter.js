@@ -218,7 +218,7 @@ Interpreter.prototype.initGlobalScope = function(scope) {
   this.addVariableToScope(scope, 'isFinite',
       this.createNativeFunction(isFinite));
 
-  var func = this.createFunction();
+  var func = new this.Function;
   func.eval = true;
   func.illegalConstructor = true;
   this.setProperty(func, 'length', 1, Interpreter.READONLY_DESCRIPTOR);
@@ -255,7 +255,7 @@ Interpreter.prototype.initFunction = function(scope) {
   var identifierRegexp = /^[A-Za-z_$][\w$]*$/;
   // Function constructor.
   wrapper = function(var_args) {
-    var newFunc = thisInterpreter.createFunction();
+    var newFunc = new thisInterpreter.Function;
     newFunc.addPrototype();
     if (arguments.length) {
       var code = String(arguments[arguments.length - 1]);
@@ -353,7 +353,7 @@ Interpreter.prototype.initObject = function(scope) {
         return this;
       } else {
         // Called as Object().
-        return thisInterpreter.createObject();
+        return new thisInterpreter.Object;
       }
     }
     if (!value.isObject) {
@@ -411,13 +411,13 @@ Interpreter.prototype.initObject = function(scope) {
 
   wrapper = function(proto) {
     if (proto === null) {
-      return thisInterpreter.createObject(null);
+      return new thisInterpreter.Object(null);
     }
     if (proto === undefined || !proto.isObject) {
       thisInterpreter.throwException(thisInterpreter.TYPE_ERROR,
           'Object prototype may only be an Object or null');
     }
-    return thisInterpreter.createObject(proto);
+    return new thisInterpreter.Object(proto);
   };
   this.setProperty(ObjectConst, 'create',
       this.createNativeFunction(wrapper),
@@ -463,7 +463,7 @@ Interpreter.prototype.initObject = function(scope) {
     var enumerable = !obj.notEnumerable.has(prop);
     var writable = !obj.notWritable.has(prop);
 
-    var descriptor = thisInterpreter.createObject();
+    var descriptor = new thisInterpreter.Object;
     thisInterpreter.setProperty(descriptor, 'configurable', configurable);
     thisInterpreter.setProperty(descriptor, 'enumerable', enumerable);
     thisInterpreter.setProperty(descriptor, 'writable', writable);
@@ -547,6 +547,7 @@ Interpreter.prototype.initArray = function(scope) {
   var thisInterpreter = this;
   // Array prototype.
   this.ARRAY = this.createArray(this.OBJECT);
+  // Array constructor.
   var getInt = function(obj, def) {
     // Return an integer, or the default.
     var n = obj ? Math.floor(obj) : def;
@@ -556,9 +557,8 @@ Interpreter.prototype.initArray = function(scope) {
     return n;
   };
   var wrapper;
-  // Array constructor.
   wrapper = function(var_args) {
-    var newArray = thisInterpreter.createArray();
+    var newArray = new thisInterpreter.Array;
     var first = arguments[0];
     if (arguments.length === 1 && typeof first === 'number') {
       if (isNaN(thisInterpreter.legalArrayLength(first))) {
@@ -655,7 +655,7 @@ Interpreter.prototype.initArray = function(scope) {
     }
     howmany = getInt(howmany, Infinity);
     howmany = Math.min(howmany, this.length - index);
-    var removed = thisInterpreter.createArray();
+    var removed = new thisInterpreter.Array;
     // Remove specified elements.
     for (var i = index; i < index + howmany; i++) {
       removed.properties[removed.length++] = this.properties[i];
@@ -683,7 +683,7 @@ Interpreter.prototype.initArray = function(scope) {
   this.setNativeFunctionPrototype(ArrayConst, 'splice', wrapper);
 
   wrapper = function(opt_begin, opt_end) {
-    var list = thisInterpreter.createArray();
+    var list = new thisInterpreter.Array;
     var begin = getInt(opt_begin, 0);
     if (begin < 0) {
       begin = this.length + begin;
@@ -719,7 +719,7 @@ Interpreter.prototype.initArray = function(scope) {
   this.setNativeFunctionPrototype(ArrayConst, 'join', wrapper);
 
   wrapper = function(var_args) {
-    var list = thisInterpreter.createArray();
+    var list = new thisInterpreter.Array;
     var length = 0;
     // Start by copying the current array.
     for (var i = 0; i < this.length; i++) {
@@ -785,7 +785,7 @@ Interpreter.prototype.initNumber = function(scope) {
   var thisInterpreter = this;
   var wrapper;
   // Number prototype.
-  this.NUMBER = this.createObject();
+  this.NUMBER = new this.Object;
   this.NUMBER.class = 'Number';
   // Number constructor.
   var NumberConst = this.createNativeFunction(Number, this.NUMBER);
@@ -871,7 +871,7 @@ Interpreter.prototype.initString = function(scope) {
   var thisInterpreter = this;
   var wrapper;
   // String prototype.
-  this.STRING = this.createObject();
+  this.STRING = new this.Object;
   this.STRING.class = 'String';
   // String constructor.
   var StringConst = this.createNativeFunction(String, this.STRING);
@@ -942,7 +942,7 @@ Interpreter.prototype.initString = function(scope) {
 Interpreter.prototype.initBoolean = function(scope) {
   var thisInterpreter = this;
   // Boolean prototype.
-  this.BOOLEAN = this.createObject();
+  this.BOOLEAN = new this.Object;
   this.BOOLEAN.class = 'Boolean';
   // Boolean constructor.
   var BooleanConst = this.createNativeFunction(Boolean, this.BOOLEAN);
@@ -959,7 +959,7 @@ Interpreter.prototype.initDate = function(scope) {
   var wrapper;
   // Date prototype.  As of ES6 this is just an ordinary object.  (In
   // ES5 it had [[Class]] Date.)
-  this.DATE = this.createObject();
+  this.DATE = new this.Object;
   // Date constructor.
   wrapper = function(value, var_args) {
     if (!thisInterpreter.calledWithNew()) {
@@ -969,7 +969,7 @@ Interpreter.prototype.initDate = function(scope) {
     }
     // Called as new Date().
     var args = [null].concat(Array.from(arguments));
-    var date = thisInterpreter.createDate();
+    var date = new thisInterpreter.Date;
     date.date = new (Function.prototype.bind.apply(Date, args));
     return date;
   };
@@ -1033,7 +1033,7 @@ Interpreter.prototype.initDate = function(scope) {
  */
 Interpreter.prototype.initMath = function(scope) {
   var thisInterpreter = this;
-  var myMath = this.createObject();
+  var myMath = new this.Object;
   this.addVariableToScope(scope, 'Math', myMath);
   var mathConsts = ['E', 'LN2', 'LN10', 'LOG2E', 'LOG10E', 'PI',
                     'SQRT1_2', 'SQRT2'];
@@ -1060,10 +1060,10 @@ Interpreter.prototype.initRegExp = function(scope) {
   var wrapper;
   // RegExp prototype.  As of ES6 this is just an ordinary object.
   // (In ES5 it had [[Class]] RegExp.)
-  this.REGEXP = this.createObject();
+  this.REGEXP = new this.Object;
   // RegExp constructor.
   wrapper = function(pattern, flags) {
-    var regexp = thisInterpreter.createRegExp();
+    var regexp = new thisInterpreter.RegExp;
     pattern = pattern ? pattern.toString() : '';
     flags = flags ? flags.toString() : '';
     thisInterpreter.populateRegExp(regexp, new RegExp(pattern, flags));
@@ -1105,7 +1105,7 @@ Interpreter.prototype.initRegExp = function(scope) {
     thisInterpreter.setProperty(this, 'lastIndex', this.regexp.lastIndex);
 
     if (match) {
-      var result = thisInterpreter.createArray();
+      var result = new thisInterpreter.Array;
       for (var i = 0; i < match.length; i++) {
         thisInterpreter.setProperty(result, i, match[i]);
       }
@@ -1125,7 +1125,7 @@ Interpreter.prototype.initRegExp = function(scope) {
  */
 Interpreter.prototype.initJSON = function(scope) {
   var thisInterpreter = this;
-  var myJSON = thisInterpreter.createObject();
+  var myJSON = new thisInterpreter.Object;
   this.addVariableToScope(scope, 'JSON', myJSON);
 
   var wrapper = function(text) {
@@ -1158,10 +1158,10 @@ Interpreter.prototype.initJSON = function(scope) {
 Interpreter.prototype.initError = function(scope) {
   var thisInterpreter = this;
   // Error prototype.
-  this.ERROR = this.createError(this.OBJECT);
+  this.ERROR = new this.Error(this.OBJECT);
   // Error constructor.
   var ErrorConst = this.createNativeFunction(function(opt_message) {
-    var newError = thisInterpreter.createError();
+    var newError = new thisInterpreter.Error;
     if (opt_message) {
       thisInterpreter.setProperty(newError, 'message', String(opt_message),
           Interpreter.NONENUMERABLE_DESCRIPTOR);
@@ -1179,12 +1179,12 @@ Interpreter.prototype.initError = function(scope) {
       this.Error.prototype.toString);
 
   var createErrorSubclass = function(name) {
-    var prototype = thisInterpreter.createError();
+    var prototype = new thisInterpreter.Error;
     thisInterpreter.setProperty(prototype, 'name', name,
         Interpreter.NONENUMERABLE_DESCRIPTOR);
     var constructor = thisInterpreter.createNativeFunction(
         function(opt_message) {
-          var newError = thisInterpreter.createError(prototype);
+          var newError = new thisInterpreter.Error(prototype);
           if (opt_message) {
             thisInterpreter.setProperty(newError, 'message',
                 String(opt_message), Interpreter.NONENUMERABLE_DESCRIPTOR);
@@ -1269,72 +1269,6 @@ Interpreter.Scope = function(parentScope) {
 };
 
 /**
- * Create a new data object.
- * @param {Interpreter.prototype.Object=} proto Prototype object (or
- *     null); defaults to this.OBJECT.
- * @return {!Interpreter.prototype.Object} New data object.
- */
-Interpreter.prototype.createObject = function(proto) {
-  var p = (proto === undefined ? this.OBJECT : proto);
-  return new this.Object(p);
-};
-
-/**
- * Create a new function object.
- * @param {Interpreter.prototype.Object=} proto Prototype object (or null);
- *     defaults to this.FUNCTION.
- * @return {!Interpreter.prototype.Function} New data object.
- */
-Interpreter.prototype.createFunction = function(proto) {
-  var p = (proto === undefined ? this.FUNCTION : proto);
-  return new this.Function(p);
-};
-
-/**
- * Create a new array object.  See §15.4 of the ES5.1 spec.
- * @param {Interpreter.prototype.Object=} proto Prototype object (or null);
- *     defaults to this.ARRAY
- * @return {!Interpreter.prototype.Array} New array object.
- */
-Interpreter.prototype.createArray = function(proto) {
-  var p = (proto === undefined ? this.ARRAY : proto);
-  return new this.Array(p);
-};
-
-/**
- * Create a new date object.
- * @param {Interpreter.prototype.Object=} proto Prototype object (or null);
- *     defaults to this.DATE
- * @return {!Interpreter.prototype.Date} New data object.
- */
-Interpreter.prototype.createDate = function(proto) {
-  var p = (proto === undefined ? this.DATE : proto);
-  return new this.Date(p);
-};
-
-/**
- * Create a new regexp object.
- * @param {Interpreter.prototype.Object=} proto Prototype object (or null);
- *     defaults to this.REGEXP
- * @return {!Interpreter.prototype.RegExp} New data object.
- */
-Interpreter.prototype.createRegExp = function(proto) {
-  var p = (proto === undefined ? this.REGEXP : proto);
-  return new this.RegExp(p);
-};
-
-/**
- * Create a new error object.  See §15.11 of the ES5.1 spec.
- * @param {Interpreter.prototype.Object=} proto Prototype object (or null);
- *     defaults to this.ERROR
- * @return {!Interpreter.prototype.Error} New array object.
- */
-Interpreter.prototype.createError = function(proto) {
-  var p = (proto === undefined ? this.ERROR : proto);
-  return new this.Error(p);
-};
-
-/**
  * Initialize a pseudo regular expression object based on a native regular
  * expression object.
  * @param {!Interpreter.prototype.Object} pseudoRegexp The existing
@@ -1363,7 +1297,7 @@ Interpreter.prototype.populateRegExp = function(pseudoRegexp, nativeRegexp) {
  * @return {!Interpreter.prototype.Function} New function.
  */
 Interpreter.prototype.createFunctionFromAST = function(node, scope) {
-  var func = this.createFunction();
+  var func = new this.Function;
   func.addPrototype();
   func.parentScope = scope;
   func.node = node;
@@ -1383,7 +1317,7 @@ Interpreter.prototype.createFunctionFromAST = function(node, scope) {
  * @return {!Interpreter.prototype.Function} New function.
  */
 Interpreter.prototype.createNativeFunction = function(nativeFunc, prototype) {
-  var func = this.createFunction();
+  var func = new this.Function;
   func.nativeFunc = nativeFunc;
   nativeFunc.id = this.functionCounter_++;
   this.setProperty(func, 'length', nativeFunc.length,
@@ -1402,7 +1336,7 @@ Interpreter.prototype.createNativeFunction = function(nativeFunc, prototype) {
  * @return {!Interpreter.prototype.Object} New function.
  */
 Interpreter.prototype.createAsyncFunction = function(asyncFunc) {
-  var func = this.createFunction();
+  var func = new this.Function;
   func.addPrototype(); // TODO(cpcallen): is this necessary?
   func.asyncFunc = asyncFunc;
   asyncFunc.id = this.functionCounter_++;
@@ -1426,7 +1360,7 @@ Interpreter.prototype.nativeToPseudo = function(nativeObj) {
   }
 
   if (nativeObj instanceof RegExp) {
-    var pseudoRegexp = this.createRegExp();
+    var pseudoRegexp = new this.RegExp;
     this.populateRegExp(pseudoRegexp, nativeObj);
     return pseudoRegexp;
   }
@@ -1448,12 +1382,12 @@ Interpreter.prototype.nativeToPseudo = function(nativeObj) {
 
   var pseudoObj;
   if (Array.isArray(nativeObj)) {  // Array.
-    pseudoObj = this.createArray();
+    pseudoObj = new this.Array;
     for (var i = 0; i < nativeObj.length; i++) {
       this.setProperty(pseudoObj, i, this.nativeToPseudo(nativeObj[i]));
     }
   } else {  // Object.
-    pseudoObj = this.createObject();
+    pseudoObj = new this.Object;
     for (var key in nativeObj) {
       this.setProperty(pseudoObj, key, this.nativeToPseudo(nativeObj[key]));
     }
@@ -1911,7 +1845,7 @@ Interpreter.prototype.throwException = function(value, opt_message) {
     if (!(value === null || value instanceof this.Error)) {
       throw TypeError("Can't attach message to non-Error value");
     }
-    error = this.createError(value);
+    error = new this.Error(value);
     this.setProperty(error, 'message', opt_message,
         Interpreter.NONENUMERABLE_DESCRIPTOR);
   }
@@ -1921,7 +1855,7 @@ Interpreter.prototype.throwException = function(value, opt_message) {
 };
 
 /**
- * Throw an exception in the interpreter that can be handled by a
+ * Throw an exception in the interpreter that can be handled by an
  * interpreter try/catch statement.  If unhandled, a real exception will
  * be thrown.
  * @param {Interpreter.Value} error Value being thrown.
@@ -1992,7 +1926,7 @@ Interpreter.prototype.pushNode_ = function(node) {
 Interpreter.Value;
 
 /**
- * @param {Interpreter.prototype.Object} proto
+ * @param {Interpreter.prototype.Object=} proto
  * @constructor
  */
 Interpreter.prototype.Object = function(proto) {
@@ -2000,7 +1934,7 @@ Interpreter.prototype.Object = function(proto) {
   this.notEnumerable = new Set();
   this.notWritable = new Set();
   this.properties = Object.create(null);
-  this.proto = proto;
+  this.proto = (proto === undefined ? intrp.OBJECT : proto);
   throw Error('Inner class constructor not callable on prototype');
 };
 /** @type {Interpreter.prototype.Object} */
@@ -2019,7 +1953,7 @@ Interpreter.prototype.Object.prototype.valueOf = function() {
 };
 
 /**
- * @param {Interpreter.prototype.Object} proto
+ * @param {Interpreter.prototype.Object=} proto
  * @constructor
  * @extends {Interpreter.prototype.Object}
  */
@@ -2036,7 +1970,7 @@ Interpreter.prototype.Function.prototype.addPrototype = function(prototype) {
 };
 
 /**
- * @param {Interpreter.prototype.Object} proto
+ * @param {Interpreter.prototype.Object=} proto
  * @constructor
  * @extends {Interpreter.prototype.Object}
  */
@@ -2050,7 +1984,7 @@ Interpreter.prototype.Array.prototype.toString = function() {
 };
 
 /**
- * @param {Interpreter.prototype.Object} proto
+ * @param {Interpreter.prototype.Object=} proto
  * @constructor
  * @extends {Interpreter.prototype.Object}
  */
@@ -2068,7 +2002,7 @@ Interpreter.prototype.Date.prototype.valueOf = function() {
 };
 
 /**
- * @param {Interpreter.prototype.Object} proto
+ * @param {Interpreter.prototype.Object=} proto
  * @constructor
  * @extends {Interpreter.prototype.Object}
  */
@@ -2082,7 +2016,7 @@ Interpreter.prototype.RegExp.prototype.toString = function() {
 };
 
 /**
- * @param {Interpreter.prototype.Object} proto
+ * @param {Interpreter.prototype.Object=} proto
  * @constructor
  * @extends {Interpreter.prototype.Object}
  */
@@ -2106,14 +2040,16 @@ Interpreter.prototype.installTypes = function() {
 
   /**
    * Class for an object.
-   * @param {Interpreter.prototype.Object} proto Prototype object or null.
+   * @constructor
+   * @extends {Interpreter.prototype.Object}
+   * @param {Interpreter.prototype.Object=} proto Prototype object or null.
    */
   intrp.Object = function(proto) {
     this.notConfigurable = new Set();
     this.notEnumerable = new Set();
     this.notWritable = new Set();
     this.properties = Object.create(null);
-    this.proto = proto;
+    this.proto = (proto === undefined ? intrp.OBJECT : proto);
   };
 
   /** @type {Interpreter.prototype.Object} */
@@ -2155,10 +2091,10 @@ Interpreter.prototype.installTypes = function() {
 
   /**
    * Class for a function
-   * @param {Interpreter.prototype.Object} proto Prototype object.
+   * @param {Interpreter.prototype.Object=} proto Prototype object.
    */
   intrp.Function = function(proto) {
-    intrp.Object.call(this, proto);
+    intrp.Object.call(this, (proto === undefined ? intrp.FUNCTION : proto));
   };
 
   intrp.Function.prototype = Object.create(intrp.Object.prototype);
@@ -2199,7 +2135,7 @@ Interpreter.prototype.installTypes = function() {
       // don't do it accidentally when bootstrapping or whatever.)
       throw TypeError("Illogical addition of .prototype to non-constructor");
     }
-    var protoObj = prototype || intrp.createObject(intrp.OBJECT);
+    var protoObj = prototype || new intrp.Object();
     intrp.setProperty(this, 'prototype', protoObj,
         Interpreter.NONENUMERABLE_NONCONFIGURABLE_DESCRIPTOR);
     intrp.setProperty(protoObj, 'constructor', this,
@@ -2208,10 +2144,10 @@ Interpreter.prototype.installTypes = function() {
 
   /**
    * Class for an array
-   * @param {Interpreter.prototype.Object} proto Prototype object.
+   * @param {Interpreter.prototype.Object=} proto Prototype object.
    */
   intrp.Array = function(proto) {
-    intrp.Object.call(this, proto);
+    intrp.Object.call(this, (proto === undefined ? intrp.ARRAY : proto));
     this.length = 0;
   };
 
@@ -2248,10 +2184,10 @@ Interpreter.prototype.installTypes = function() {
 
   /**
    * Class for a date.
-   * @param {Interpreter.prototype.Object} proto Prototype object.
+   * @param {Interpreter.prototype.Object=} proto Prototype object.
    */
   intrp.Date = function(proto) {
-    intrp.Object.call(this, proto);
+    intrp.Object.call(this, (proto === undefined ? intrp.DATE : proto));
     /** @type {Date} */
     this.date = null;
   };
@@ -2288,10 +2224,10 @@ Interpreter.prototype.installTypes = function() {
 
   /**
    * Class for a regexp
-   * @param {Interpreter.prototype.Object} proto Prototype object.
+   * @param {Interpreter.prototype.Object=} proto Prototype object.
    */
   intrp.RegExp = function(proto) {
-    intrp.Object.call(this, proto);
+    intrp.Object.call(this, (proto === undefined ? intrp.REGEXP : proto));
     this.regexp = null;
   };
 
@@ -2316,10 +2252,10 @@ Interpreter.prototype.installTypes = function() {
 
   /**
    * Class for an error object
-   * @param {Interpreter.prototype.Object} proto Prototype object.
+   * @param {Interpreter.prototype.Object=} proto Prototype object.
    */
   intrp.Error = function(proto) {
-    intrp.Object.call(this, proto);
+    intrp.Object.call(this, (proto === undefined ? intrp.ERROR : proto));
   };
 
   intrp.Error.prototype = Object.create(intrp.Object.prototype);
@@ -2375,7 +2311,7 @@ Interpreter.prototype['stepArrayExpression'] = function() {
   var elements = state.node['elements'];
   var n = state.n_ || 0;
   if (!state.array_) {
-    state.array_ = this.createArray();
+    state.array_ = new this.Array;
     state.array_.length = elements.length;
   } else {
     this.setProperty(state.array_, n, state.value);
@@ -2578,7 +2514,7 @@ Interpreter.prototype['stepCallExpression'] = function() {
       }
       // Constructor, 'this' is new object.
       // TODO(cpcallen): need type check to make sure proto is an object.
-      state.funcThis_ = this.createObject(this.getProperty(func, 'prototype'));
+      state.funcThis_ = new this.Object(this.getProperty(func, 'prototype'));
       state.isConstructor = true;
     } else if (state.components_) {
       // Method function, 'this' is object.
@@ -2608,7 +2544,7 @@ Interpreter.prototype['stepCallExpression'] = function() {
         this.addVariableToScope(scope, paramName, paramValue);
       }
       // Build arguments variable.
-      var argsList = this.createArray();
+      var argsList = new this.Array;
       for (var i = 0; i < state.arguments_.length; i++) {
         this.setProperty(argsList, i, state.arguments_[i]);
       }
@@ -2960,7 +2896,7 @@ Interpreter.prototype['stepLiteral'] = function() {
   var state = stack.pop();
   var value = state.node['value'];
   if (value instanceof RegExp) {
-    var pseudoRegexp = this.createRegExp();
+    var pseudoRegexp = new this.RegExp;
     this.populateRegExp(pseudoRegexp, value);
     value = pseudoRegexp;
   }
@@ -3031,7 +2967,7 @@ Interpreter.prototype['stepObjectExpression'] = function() {
   var property = state.node['properties'][n];
   if (!state.object_) {
     // First execution.
-    state.object_ = this.createObject();
+    state.object_ = new this.Object;
   } else {
     // Determine property name.
     var key = property['key'];
