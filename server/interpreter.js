@@ -1269,12 +1269,6 @@ Interpreter.Scope = function(parentScope) {
 };
 
 /**
- * Typedef for JS values.
- * @typedef {!Interpreter.prototype.Object|boolean|number|string|undefined|null}
- */
-Interpreter.Value;
-
-/**
  * Create a new data object.
  * @param {Interpreter.prototype.Object=} proto Prototype object (or
  *     null); defaults to this.OBJECT.
@@ -1990,6 +1984,12 @@ Interpreter.prototype.pushNode_ = function(node) {
 //
 // * Second, for whatever reason these declarations seem to create a
 //   small performance improvement.
+
+/**
+ * Typedef for JS values.
+ * @typedef {!Interpreter.prototype.Object|boolean|number|string|undefined|null}
+ */
+Interpreter.Value;
 
 /**
  * @param {Interpreter.prototype.Object} proto
