@@ -258,7 +258,7 @@ CCC.pause = function() {
     // Fire off all accumulated messages.
     var buffer = CCC.pauseBuffer;
     CCC.pauseBuffer = null;
-    for (var i = 0, args; args = buffer[i]; i++) {
+    for (var i = 0, args; (args = buffer[i]); i++) {
       CCC.distributeMessage.apply(null, args);
     }
   }
