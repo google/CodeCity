@@ -1979,11 +1979,11 @@ Interpreter.prototype.pushNode_ = function(node) {
 // This is a bunch of boilerplate that serves two purposes:
 // 
 // * First, by declaring these types as if they were on
-//   Interpreter.prototype we can get the closure compiler to type
+//   Interpreter.prototype we can get the Closure Compiler to type
 //   check use of them for us.
 //
 // * Second, for whatever reason these declarations seem to create a
-//   small performance improvement.
+//   small performance improvement in V8.
 
 /**
  * Typedef for JS values.
