@@ -469,6 +469,24 @@ module.exports = [
     `,
     expected: 'OK' },
     
+  { name: 'arrayLengthWithNonWritableProps', src: `
+    var a = [];
+    Object.defineProperty(a, 0,
+        {value: 'hi', writable: false, configurable: true});
+    a.length = 0;
+    a[0] === undefined && a.length === 0;
+    `,
+    expected: true },
+
+  { name: 'arrayLengthWithNonConfigurableProps', src: `
+    var a = [];
+    Object.defineProperty(a, 0,
+        {value: 'hi', writable: false, configurable: false});
+    a.length = 0;
+    a[0] === 'hi' && a.length === 1;
+    `,
+    expected: true },
+
   { name: 'compValEmptyBlock', src: `
     {};
     `,
