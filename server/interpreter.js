@@ -2439,6 +2439,8 @@ Interpreter.prototype['stepCallExpression'] = function() {
   var node = state.node;
   if (!state.doneCallee_) {
     state.doneCallee_ = 1;
+    // Fallback for global function, 'this' is undefined.
+    state.funcThis_ = undefined;
     // Components needed to determine value of 'this'.
     var nextState = this.pushNode_(node['callee']);
     nextState.components = true;
@@ -2450,7 +2452,10 @@ Interpreter.prototype['stepCallExpression'] = function() {
     var func = state.value;
     if (Array.isArray(func)) {
       state.func_ = this.getValue(func);
-      state.components_ = func;
+      if (func[0] !== Interpreter.SCOPE_REFERENCE) {
+        // Method function, 'this' is object (ignored if invoked as 'new').
+        state.funcThis_ = func[0];
+      }
     } else {
       // Callee was not an Identifier or MemberExpression, and is
       // already fully evaluated.
@@ -2481,12 +2486,6 @@ Interpreter.prototype['stepCallExpression'] = function() {
       // TODO(cpcallen): need type check to make sure proto is an object.
       state.funcThis_ = new this.Object(this.getProperty(func, 'prototype'));
       state.isConstructor = true;
-    } else if (state.components_) {
-      // Method function, 'this' is object.
-      state.funcThis_ = state.components_[0];
-    } else {
-      // Global function, 'this' is undefined.
-      state.funcThis_ = undefined;
     }
     state.doneArgs_ = true;
   }
