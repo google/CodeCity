@@ -705,17 +705,17 @@ module.exports = [
     `,
     expected: 'Error: oops' },
 
-  // FIXME: enable once arguments implemented:
-  // { name: 'internalArgumentsToString', src: `
-  //   var o = {};
-  //   (function() {
-  //     o[arguments] = null;
-  //   })();
-  //   for(var key in o) {
-  //     key;
-  //   }
-  //   `,
-  //   expected: '[object Arguments]' },
+  { name: 'internalArgumentsToString', src: `
+    var o = {};
+    (function() {
+      o[arguments] = null;
+    })();
+    for(var key in o) {
+      key;
+    }
+    `,
+    expected: '[object Arguments]'
+  },
 
   { name: 'debugger', src: `
     debugger;
