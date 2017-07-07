@@ -68,7 +68,8 @@ var Interpreter = function() {
  * @const {!Object} Configuration used for all Acorn parsing.
  */
 Interpreter.PARSE_OPTIONS = {
-  ecmaVersion: 5
+  ecmaVersion: 5,
+  forbidReserved: true
 };
 
 /**
