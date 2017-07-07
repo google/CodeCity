@@ -1235,27 +1235,27 @@ Interpreter.prototype.isa = function(child, constructor) {
 
 /**
  * Is a value a legal integer for an array length?
- * @param {Interpreter.Value} n Value to check.
+ * @param {Interpreter.Value} x Value to check.
  * @return {number} Zero, or a positive integer if the value can be
  *     converted to such.  NaN otherwise.
  */
-Interpreter.legalArrayLength = function(n) {
-  n = Number(n);
+Interpreter.legalArrayLength = function(x) {
+  var n = x >>> 0;
   // Array length must be between 0 and 2^32-1 (inclusive).
-  return (n === n >>> 0) ? n : NaN;
+  return (String(n) === String(x)) ? n : NaN;
 };
 
 /**
  * Is a value a legal integer for an array index?
- * @param {Interpreter.Value} n Value to check.
+ * @param {Interpreter.Value} x Value to check.
  * @return {number} Zero, or a positive integer if the value can be
  *     converted to such.  NaN otherwise.
  */
-Interpreter.legalArrayIndex = function(n) {
-  n = Number(n);
+Interpreter.legalArrayIndex = function(x) {
+  var n = x >>> 0;
   // Array index cannot be 2^32-1, otherwise length would be 2^32.
   // 0xffffffff is 2^32-1.
-  return (n === n >>> 0 && n !== 0xffffffff) ? n : NaN;
+  return (String(n) === String(x) && n !== 0xffffffff) ? n : NaN;
 };
 
 /**
