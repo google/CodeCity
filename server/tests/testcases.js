@@ -739,6 +739,11 @@ module.exports = [
     `,
     expected: 77.7 },
 
+  { name: 'regexpSimple', src: `
+    /foo/.test('foobar');
+    `,
+    expected: true },
+
   /******************************************************************/
   // Object and Object.prototype
   
