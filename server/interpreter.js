@@ -1205,7 +1205,7 @@ Interpreter.prototype.isa = function(child, constructor) {
 Interpreter.legalArrayLength = function(x) {
   var n = x >>> 0;
   // Array length must be between 0 and 2^32-1 (inclusive).
-  return (String(n) === String(x)) ? n : NaN;
+  return (n === Number(x)) ? n : NaN;
 };
 
 /**
