@@ -1522,28 +1522,45 @@ Interpreter.prototype.setProperty = function(obj, name, value, opt_descriptor) {
                         "', object is not extensible");
   }
   if (opt_descriptor) {
+    var previouslyDefined = name in obj.properties;
     // Define the property.
     obj.properties[name] = value;
-    if (!opt_descriptor.configurable) {
+    if (previouslyDefined ? opt_descriptor.configurable === false :
+        opt_descriptor.configurable !== true) {
       obj.notConfigurable.add(name);
     }
-    var enumerable = opt_descriptor.enumerable || false;
-    if (enumerable) {
-      obj.notEnumerable.delete(name);
-    } else {
-      obj.notEnumerable.add(name);
+    if (!previouslyDefined || opt_descriptor.enumerable !== undefined) {
+      if (opt_descriptor.enumerable) {
+        obj.notEnumerable.delete(name);
+      } else {
+        obj.notEnumerable.add(name);
+      }
     }
-    var writable = opt_descriptor.writable || false;
-    if (writable) {
-      obj.notWritable.delete(name);
-    } else {
-      obj.notWritable.add(name);
+    if (!previouslyDefined || opt_descriptor.writable !== undefined) {
+      if (opt_descriptor.writable) {
+        obj.notWritable.delete(name);
+      } else {
+        obj.notWritable.add(name);
+      }
     }
-  } else if (obj.notWritable.has(name)) {
-    this.throwException(this.TYPE_ERROR, "Cannot assign to read only " +
-        "property '" + name + "' of object '" + obj + "'");
   } else {
-    obj.properties[name] = value;
+    // Set the property.
+    // Determine the parent (possibly self) where the property is defined.
+    var defObj = obj;
+    while (!(name in defObj.properties)) {
+       defObj = this.getPrototype(defObj);
+       if (!defObj) {
+         // This is a new property.
+         defObj = obj;
+         break;
+       }
+    }
+    if (defObj.notWritable.has(name)) {
+      this.throwException(this.TYPE_ERROR, "Cannot assign to read only " +
+          "property '" + name + "' of object '" + obj + "'");
+    } else {
+      obj.properties[name] = value;
+    }
   }
 };
 
@@ -2552,8 +2569,7 @@ Interpreter.prototype['stepCallExpression'] = function() {
           var ast = acorn.parse(String(code), Interpreter.PARSE_OPTIONS);
         } catch (e) {
           // Acorn threw a SyntaxError.  Rethrow as a trappable error.
-          thisInterpreter.throwException(thisInterpreter.SYNTAX_ERROR,
-              'Invalid code: ' + e.message);
+          this.throwException(this.SYNTAX_ERROR, 'Invalid code: ' + e.message);
         }
         var evalNode = {type: 'EvalProgram_', body: ast['body']};
         Interpreter.stripLocations_(evalNode, node['start'], node['end']);
