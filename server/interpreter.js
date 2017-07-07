@@ -380,17 +380,14 @@ Interpreter.prototype.initObject = function(scope) {
   };
 
   // Static methods on Object.
-  this.setProperty(ObjectConst, 'is', this.createNativeFunction(Object.is),
-      Interpreter.NONENUMERABLE_DESCRIPTOR);
+  ObjectConst.addNativeMethod('is', Object.is);
 
   wrapper = function(obj) {
     throwIfNullUndefined(obj);
     var props = (obj instanceof thisInterpreter.Object) ? obj.properties : obj;
     return thisInterpreter.nativeToPseudo(Object.getOwnPropertyNames(props));
   };
-  this.setProperty(ObjectConst, 'getOwnPropertyNames',
-      this.createNativeFunction(wrapper),
-      Interpreter.NONENUMERABLE_DESCRIPTOR);
+  ObjectConst.addNativeMethod('getOwnPropertyNames', wrapper);
 
   wrapper = function(obj) {
     throwIfNullUndefined(obj);
@@ -405,9 +402,7 @@ Interpreter.prototype.initObject = function(scope) {
     }
     return thisInterpreter.nativeToPseudo(list);
   };
-  this.setProperty(ObjectConst, 'keys',
-      this.createNativeFunction(wrapper),
-      Interpreter.NONENUMERABLE_DESCRIPTOR);
+  ObjectConst.addNativeMethod('keys', wrapper);
 
   wrapper = function(proto) {
     if (proto === null) {
@@ -419,9 +414,7 @@ Interpreter.prototype.initObject = function(scope) {
     }
     return new thisInterpreter.Object(proto);
   };
-  this.setProperty(ObjectConst, 'create',
-      this.createNativeFunction(wrapper),
-      Interpreter.NONENUMERABLE_DESCRIPTOR);
+  ObjectConst.addNativeMethod('create', wrapper);
 
   wrapper = function(obj, prop, descriptor) {
     prop = String(prop);
@@ -446,9 +439,7 @@ Interpreter.prototype.initObject = function(scope) {
     thisInterpreter.setProperty(obj, prop, value, nativeDescriptor);
     return obj;
   };
-  this.setProperty(ObjectConst, 'defineProperty',
-      this.createNativeFunction(wrapper),
-      Interpreter.NONENUMERABLE_DESCRIPTOR);
+  ObjectConst.addNativeMethod('defineProperty', wrapper);
 
   wrapper = function(obj, prop) {
     if (!(obj instanceof thisInterpreter.Object)) {
@@ -471,24 +462,18 @@ Interpreter.prototype.initObject = function(scope) {
         thisInterpreter.getProperty(obj, prop));
     return descriptor;
   };
-  this.setProperty(ObjectConst, 'getOwnPropertyDescriptor',
-      this.createNativeFunction(wrapper),
-      Interpreter.NONENUMERABLE_DESCRIPTOR);
+  ObjectConst.addNativeMethod('getOwnPropertyDescriptor', wrapper);
 
   wrapper = function(obj) {
     throwIfNullUndefined(obj);
     return thisInterpreter.getPrototype(obj);
   };
-  this.setProperty(ObjectConst, 'getPrototypeOf',
-      this.createNativeFunction(wrapper),
-      Interpreter.NONENUMERABLE_DESCRIPTOR);
+  ObjectConst.addNativeMethod('getPrototypeOf', wrapper);
 
   wrapper = function(obj) {
     return Boolean(obj) && !obj.preventExtensions;
   };
-  this.setProperty(ObjectConst, 'isExtensible',
-      this.createNativeFunction(wrapper),
-      Interpreter.NONENUMERABLE_DESCRIPTOR);
+  ObjectConst.addNativeMethod('isExtensible', wrapper);
 
   wrapper = function(obj) {
     if (obj instanceof thisInterpreter.Object) {
@@ -496,9 +481,7 @@ Interpreter.prototype.initObject = function(scope) {
     }
     return obj;
   };
-  this.setProperty(ObjectConst, 'preventExtensions',
-      this.createNativeFunction(wrapper),
-      Interpreter.NONENUMERABLE_DESCRIPTOR);
+  ObjectConst.addNativeMethod('preventExtensions', wrapper);
 
   // Instance methods on Object.
   this.OBJECT.addNativeMethod('toString', this.Object.prototype.toString);
@@ -578,9 +561,7 @@ Interpreter.prototype.initArray = function(scope) {
   wrapper = function(obj) {
     return obj instanceof thisInterpreter.Array;
   };
-  this.setProperty(ArrayConst, 'isArray',
-                   this.createNativeFunction(wrapper),
-                   Interpreter.NONENUMERABLE_DESCRIPTOR);
+  ArrayConst.addNativeMethod('isArray', wrapper);
 
   // Instance methods on Array.
   this.ARRAY.addNativeMethod('toString', this.Array.prototype.toString);
@@ -798,10 +779,12 @@ Interpreter.prototype.initNumber = function(scope) {
   // Static methods on Number.
 
   var nativeParseFloat = this.createNativeFunction(Number.parseFloat);
-  this.setProperty(NumberConst, 'parseFloat', nativeParseFloat);
+  this.setProperty(NumberConst, 'parseFloat', nativeParseFloat,
+      Interpreter.NONENUMERABLE_DESCRIPTOR);
 
   var nativeParseInt = this.createNativeFunction(Number.parseInt);
-  this.setProperty(NumberConst, 'parseInt', nativeParseInt);
+  this.setProperty(NumberConst, 'parseInt', nativeParseInt,
+      Interpreter.NONENUMERABLE_DESCRIPTOR);
 
   // parseFloat and parseInt === Number.parseFloat and Number.parseInt
   this.addVariableToScope(scope, 'parseFloat', nativeParseFloat);
@@ -875,9 +858,7 @@ Interpreter.prototype.initString = function(scope) {
   this.addVariableToScope(scope, 'String', StringConst);
 
   // Static methods on String.
-  this.setProperty(StringConst, 'fromCharCode',
-      this.createNativeFunction(String.fromCharCode),
-      Interpreter.NONENUMERABLE_DESCRIPTOR);
+  StringConst.addNativeMethod('fromCharCode', String.fromCharCode);
 
   // Instance methods on String.
   // Methods with exclusively primitive arguments.
@@ -972,15 +953,9 @@ Interpreter.prototype.initDate = function(scope) {
   this.addVariableToScope(scope, 'Date', DateConst);
 
   // Static methods on Date.
-  this.setProperty(DateConst, 'now', this.createNativeFunction(Date.now),
-      Interpreter.NONENUMERABLE_DESCRIPTOR);
-
-  this.setProperty(DateConst, 'parse',
-      this.createNativeFunction(Date.parse),
-      Interpreter.NONENUMERABLE_DESCRIPTOR);
-
-  this.setProperty(DateConst, 'UTC', this.createNativeFunction(Date.UTC),
-      Interpreter.NONENUMERABLE_DESCRIPTOR);
+  DateConst.addNativeMethod('now', Date.now);
+  DateConst.addNativeMethod('parse', Date.parse);
+  DateConst.addNativeMethod('UTC', Date.UTC);
 
   // Instance methods on Date.
   this.DATE.addNativeMethod('toString', this.Date.prototype.toString);
@@ -1039,9 +1014,7 @@ Interpreter.prototype.initMath = function(scope) {
                       'exp', 'floor', 'log', 'max', 'min', 'pow', 'random',
                       'round', 'sin', 'sqrt', 'tan'];
   for (var i = 0; i < numFunctions.length; i++) {
-    this.setProperty(myMath, numFunctions[i],
-        this.createNativeFunction(Math[numFunctions[i]]),
-        Interpreter.NONENUMERABLE_DESCRIPTOR);
+    myMath.addNativeMethod(numFunctions[i], Math[numFunctions[i]]);
   }
 };
 
@@ -1129,8 +1102,7 @@ Interpreter.prototype.initJSON = function(scope) {
     }
     return thisInterpreter.nativeToPseudo(nativeObj);
   };
-  this.setProperty(myJSON, 'parse', this.createNativeFunction(wrapper));
-
+  myJSON.addNativeMethod('parse', wrapper);
   wrapper = function(value) {
     var nativeObj = thisInterpreter.pseudoToNative(value);
     try {
@@ -1140,8 +1112,7 @@ Interpreter.prototype.initJSON = function(scope) {
     }
     return str;
   };
-  this.setProperty(myJSON, 'stringify',
-      this.createNativeFunction(wrapper));
+  myJSON.addNativeMethod('stringify', wrapper);
 };
 
 /**
@@ -1164,7 +1135,7 @@ Interpreter.prototype.initError = function(scope) {
   this.addVariableToScope(scope, 'Error', ErrorConst);
 
   this.setProperty(this.ERROR, 'message', '',
-      Interpreter.NONENUMERABLE_DESCRIPTOR);
+       Interpreter.NONENUMERABLE_DESCRIPTOR);
   this.setProperty(this.ERROR, 'name', 'Error',
       Interpreter.NONENUMERABLE_DESCRIPTOR);
 
