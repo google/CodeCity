@@ -1033,7 +1033,7 @@ Interpreter.prototype.initRegExp = function(scope) {
     var regexp = new thisInterpreter.RegExp;
     pattern = pattern ? pattern.toString() : '';
     flags = flags ? flags.toString() : '';
-    thisInterpreter.populateRegExp(regexp, new RegExp(pattern, flags));
+    regexp.populate(new RegExp(pattern, flags));
     return regexp;
   };
   var RegExpConst = this.createNativeFunction(wrapper, this.REGEXP);
@@ -1232,28 +1232,6 @@ Interpreter.Scope = function(parentScope) {
 };
 
 /**
- * Initialize a pseudo regular expression object based on a native regular
- * expression object.
- * @param {!Interpreter.prototype.Object} pseudoRegexp The existing
- *     object to set.
- * @param {!RegExp} nativeRegexp The native regular expression.
- */
-Interpreter.prototype.populateRegExp = function(pseudoRegexp, nativeRegexp) {
-  pseudoRegexp.regexp = nativeRegexp;
-  // lastIndex is settable, all others are read-only attributes
-  this.setProperty(pseudoRegexp, 'lastIndex', nativeRegexp.lastIndex,
-      Interpreter.NONENUMERABLE_DESCRIPTOR);
-  this.setProperty(pseudoRegexp, 'source', nativeRegexp.source,
-      Interpreter.READONLY_NONENUMERABLE_DESCRIPTOR);
-  this.setProperty(pseudoRegexp, 'global', nativeRegexp.global,
-      Interpreter.READONLY_NONENUMERABLE_DESCRIPTOR);
-  this.setProperty(pseudoRegexp, 'ignoreCase', nativeRegexp.ignoreCase,
-      Interpreter.READONLY_NONENUMERABLE_DESCRIPTOR);
-  this.setProperty(pseudoRegexp, 'multiline', nativeRegexp.multiline,
-      Interpreter.READONLY_NONENUMERABLE_DESCRIPTOR);
-};
-
-/**
  * Create a new function.
  * @param {!Object} node AST node defining the function.
  * @param {!Interpreter.Scope} scope Parent scope.
@@ -1324,7 +1302,7 @@ Interpreter.prototype.nativeToPseudo = function(nativeObj) {
 
   if (nativeObj instanceof RegExp) {
     var pseudoRegexp = new this.RegExp;
-    this.populateRegExp(pseudoRegexp, nativeObj);
+    pseudoRegexp.populate(nativeObj);
     return pseudoRegexp;
   }
 
@@ -1970,6 +1948,10 @@ Interpreter.prototype.RegExp = function(proto) {
 Interpreter.prototype.RegExp.prototype.toString = function() {
   throw Error('Inner class method not callable on prototype');
 };
+/** @param {!RegExp} nativeRegexp The native regular expression. */
+Interpreter.prototype.RegExp.prototype.populate = function(nativeRegexp) {
+  throw Error('Inner class method not callable on prototype');
+};
 
 /**
  * @param {Interpreter.prototype.Object=} proto
@@ -2213,6 +2195,25 @@ Interpreter.prototype.installTypes = function() {
     // "/undefined/undefined"...  :-/
     return '//';
   };
+
+  /**
+   * Initialize a (pseudo) RegExp from a native regular expression object.
+   * @param {!RegExp} nativeRegexp The native regular expression.
+   */
+  intrp.RegExp.prototype.populate = function(nativeRegexp) {
+    this.regexp = nativeRegexp;
+    // lastIndex is settable, all others are read-only attributes
+    intrp.setProperty(this, 'lastIndex', nativeRegexp.lastIndex,
+      Interpreter.NONENUMERABLE_DESCRIPTOR);
+    intrp.setProperty(this, 'source', nativeRegexp.source,
+        Interpreter.READONLY_NONENUMERABLE_DESCRIPTOR);
+    intrp.setProperty(this, 'global', nativeRegexp.global,
+        Interpreter.READONLY_NONENUMERABLE_DESCRIPTOR);
+    intrp.setProperty(this, 'ignoreCase', nativeRegexp.ignoreCase,
+        Interpreter.READONLY_NONENUMERABLE_DESCRIPTOR);
+    intrp.setProperty(this, 'multiline', nativeRegexp.multiline,
+        Interpreter.READONLY_NONENUMERABLE_DESCRIPTOR);
+};
 
   /**
    * Class for an error object
@@ -2861,7 +2862,7 @@ Interpreter.prototype['stepLiteral'] = function() {
   var value = state.node['value'];
   if (value instanceof RegExp) {
     var pseudoRegexp = new this.RegExp;
-    this.populateRegExp(pseudoRegexp, value);
+    pseudoRegexp.populate(value);
     value = pseudoRegexp;
   }
   stack[stack.length - 1].value = value;
