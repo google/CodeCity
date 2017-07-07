@@ -279,8 +279,14 @@ Interpreter.prototype.initFunction = function(scope) {
     newFunc.parentScope = thisInterpreter.stateStack[0].scope;
     // Acorn needs to parse code in the context of a function or else 'return'
     // statements will be syntax errors.
-    var ast = acorn.parse('$ = function(' + args + ') {' + code + '};',
-        Interpreter.PARSE_OPTIONS);
+    try {
+      var ast = acorn.parse('$ = function(' + args + ') {' + code + '};',
+          Interpreter.PARSE_OPTIONS);
+    } catch (e) {
+      // Acorn threw a SyntaxError.  Rethrow as a trappable error.
+      thisInterpreter.throwException(thisInterpreter.SYNTAX_ERROR,
+          'Invalid code: ' + e.message);
+    }
     if (ast['body'].length !== 1) {
       // Function('a', 'return a + 6;}; {alert(1);');
       thisInterpreter.throwException(thisInterpreter.SYNTAX_ERROR,
@@ -2540,7 +2546,13 @@ Interpreter.prototype['stepCallExpression'] = function() {
       if (typeof code !== 'string') {  // eval()
         state.value = code;
       } else {
-        var ast = acorn.parse(String(code), Interpreter.PARSE_OPTIONS);
+        try {
+          var ast = acorn.parse(String(code), Interpreter.PARSE_OPTIONS);
+        } catch (e) {
+          // Acorn threw a SyntaxError.  Rethrow as a trappable error.
+          thisInterpreter.throwException(thisInterpreter.SYNTAX_ERROR,
+              'Invalid code: ' + e.message);
+        }
         var evalNode = {type: 'EvalProgram_', body: ast['body']};
         Interpreter.stripLocations_(evalNode, node['start'], node['end']);
         // Update current scope with definitions in eval().
