@@ -1845,8 +1845,6 @@ Interpreter.prototype.Object = function(proto) {
 };
 /** @type {Interpreter.prototype.Object} */
 Interpreter.prototype.Object.prototype.proto = null;
-/** @type {boolean} */
-Interpreter.prototype.Object.prototype.isObject = false;
 /** @type {string} */
 Interpreter.prototype.Object.prototype.class = '';
 /** @return {string} */
@@ -2121,8 +2119,8 @@ Interpreter.prototype.installTypes = function() {
       var strs = [];
       for (var i = 0; i < this.length; i++) {
         var value = this.properties[i];
-        strs[i] = (value && value.isObject && cycles.indexOf(value) !== -1) ?
-            '...' : value;
+        strs[i] = (value instanceof intrp.Object &&
+            cycles.indexOf(value) !== -1) ? '...' : value;
       }
     } finally {
       cycles.pop();

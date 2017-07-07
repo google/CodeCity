@@ -1084,6 +1084,14 @@ module.exports = [
     `,
     expected: true },
 
+  { name: 'ArrayPrototypeToStringCycleDetection', src: `
+    var a = [1, , 3];
+    a[1] = a;
+    a.toString();
+    "Didn't crash!";
+    `,
+    expected: "Didn't crash!" },
+
   /******************************************************************/
   // Boolean
   { name: 'Boolean', src: `
