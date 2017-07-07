@@ -1717,7 +1717,7 @@ Interpreter.prototype.populateScope_ = function(node, scope) {
  * @param {number=} end Ending character of all nodes, or undefined.
  * @private
  */
-Interpreter.prototype.stripLocations_ = function(node, start, end) {
+Interpreter.stripLocations_ = function(node, start, end) {
   if (start) {
     node['start'] = start;
   } else {
@@ -2541,7 +2541,7 @@ Interpreter.prototype['stepCallExpression'] = function() {
       } else {
         var ast = acorn.parse(String(code), Interpreter.PARSE_OPTIONS);
         var evalNode = {type: 'EvalProgram_', body: ast['body']};
-        this.stripLocations_(evalNode, node['start'], node['end']);
+        Interpreter.stripLocations_(evalNode, node['start'], node['end']);
         // Update current scope with definitions in eval().
         var scope = this.getScope();
         this.populateScope_(ast, scope);
