@@ -124,7 +124,7 @@ T.prototype.constructor = T;
  * @param {*} opt_message Additional info to log.
  */
 T.prototype.result = function (status, name, opt_message) {
-  console.log('%s\t%s', status, name);
+  status === 'OK' || console.log('%s\t%s', status, name);
   if (opt_message) {
     console.log(opt_message);
   }
