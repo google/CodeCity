@@ -1142,7 +1142,7 @@ Interpreter.prototype.initError = function(scope) {
   this.addVariableToScope(scope, 'Error', ErrorConst);
 
   this.setProperty(this.ERROR, 'message', '',
-       Interpreter.NONENUMERABLE_DESCRIPTOR);
+      Interpreter.NONENUMERABLE_DESCRIPTOR);
   this.setProperty(this.ERROR, 'name', 'Error',
       Interpreter.NONENUMERABLE_DESCRIPTOR);
 
