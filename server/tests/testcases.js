@@ -562,6 +562,40 @@ module.exports = [
     `,
     expected: 'TypeError' },
 
+  { name: 'instanceofBasics', src: `
+    function F(){}
+    var f = new F;
+    f instanceof F && f instanceof Object && !(f.prototype instanceof F);
+    `,
+    expected: true },
+
+  { name: 'instanceofNonObjectLHS', src: `
+    function F() {}
+    F.prototype = null;
+    42 instanceof F;
+    `,
+    expected: false },
+  
+  { name: 'instanceofNonFunctionRHS', src: `
+    try {
+      ({}) instanceof 0;
+    } catch (e) {
+      e.name;
+    }
+    `,
+    expected: 'TypeError' },
+
+  { name: 'instanceofNonObjectPrototype', src: `
+    function F() {};
+    F.prototype = 'hello';
+    try {
+      ({}) instanceof F;
+    } catch (e) {
+      e.name;
+    }
+    `,
+    expected: 'TypeError' },
+
   { name: 'strictBoxedThis', src: `
     'use strict';
     Object.prototype.foo = function() { return typeof this; };

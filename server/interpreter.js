@@ -1175,34 +1175,6 @@ Interpreter.prototype.initError = function(scope) {
 };
 
 /**
- * Does the object have a certain constructor's .prototype in its
- * proto chain?
- * @param {Interpreter.Value} child Object to check.
- * @param {Interpreter.prototype.Object} constructor Constructor of object.
- * @return {boolean} True if object is the class or inherits from it.
- *     False otherwise.
- */
-Interpreter.prototype.isa = function(child, constructor) {
-  if (child === null || child === undefined || !constructor) {
-    return false;
-  }
-  var proto = constructor.properties['prototype'];
-  if (child === proto) {
-    return true;
-  }
-  // The first step up the prototype chain is harder since the child might be
-  // a primitive value.  Subsequent steps can just follow the .proto property.
-  child = this.getPrototype(child);
-  while (child) {
-    if (child === proto) {
-      return true;
-    }
-    child = child.proto;
-  }
-  return false;
-};
-
-/**
  * Is a value a legal integer for an array length?
  * @param {Interpreter.Value} x Value to check.
  * @return {number} Zero, or a positive integer if the value can be
@@ -2074,6 +2046,29 @@ Interpreter.prototype.installTypes = function() {
   };
 
   /**
+   * The [[HasInstance]] internal method from §15.3.5.3 of the ES5.1 spec.
+   * @param {Interpreter.Value} value The value to be checked for
+   *     being an instance of this function.
+   */
+  intrp.Function.prototype.hasInstance = function(value) {
+    if (!(value instanceof intrp.Object)) {
+      return false;
+    }
+    var prot = intrp.getProperty(this, 'prototype');
+    if (!(prot instanceof intrp.Object)) {
+      intrp.throwException(intrp.TYPE_ERROR,
+          "Function has non-object prototype '" + prot +
+          "' in instanceof check");
+    }
+    for (var v = value.proto; v !== null; v = v.proto) {
+      if (v === prot) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
    * Add a .prototype property to this function object, setting
    * this.properties[prototype] to prototype and
    * prototype.properites[constructor] to func.  If prototype is not
@@ -2396,7 +2391,7 @@ Interpreter.prototype['stepBinaryExpression'] = function() {
         this.throwException(this.TYPE_ERROR,
             'Right-hand side of instanceof is not an object');
       }
-      value = leftValue.isObject ? this.isa(leftValue, rightValue) : false;
+      value = rightValue.hasInstance(leftValue);
       break;
     default:
       throw SyntaxError('Unknown binary operator: ' + node['operator']);
