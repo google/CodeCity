@@ -378,6 +378,97 @@ module.exports = [
     `,
     expected: true },
 
+  { name: 'arrayLength', src: `
+    try {
+      var a;
+      function checkLen(exp, desc) {
+        if (a.length !== exp) {
+          var msg = 'a.length === ' + a.length + ' (expected: ' + exp + ')'
+          throw Error(desc ? msg + ' ' + desc : msg);
+        }
+      }
+
+      // Empty array has length == 0
+      a = [];
+      checkLen(0, 'on empty array');
+
+      // Adding non-numeric properties does not increase length:
+      a['zero'] = 0;
+      checkLen(0, 'after setting non-index property on []');
+
+      // Adding numeric properties >= length does increase length:
+      for (var i = 0; i < 5; i++) {
+        a[i] = i;
+        checkLen(i + 1, 'after setting a[' + i + ']');
+      }
+
+      // .length works propery even for large, sparse arrays, and even
+      // if values are undefined:
+      for (i = 3; i <= 31; i++) {
+        var idx = (1 << i) >>> 0;  // >>> 0 converts int32 to uint32
+        a[idx] = undefined;
+        checkLen(idx + 1, 'after setting a[' + idx + ']');
+      }
+
+      // Adding numeric properties < length does not increase length:
+      a[idx - 1] = 'not the largest';
+      checkLen(idx + 1, 'after setting non-largest element');
+
+      // Verify behaviour around largest possible index:
+      a[0xfffffffd] = null;
+      checkLen(0xfffffffe);
+      a[0xfffffffe] = null;
+      checkLen(0xffffffff);
+      a[0xffffffff] = null;  // Not an index.
+      checkLen(0xffffffff);  // Unchanged.
+      a[0x100000000] = null; // Not an index.
+      checkLen(0xffffffff);  // Unchanged.
+
+      function checkIdx(idx, exp, desc) {
+        var r = a.hasOwnProperty(idx);
+        if (r !== exp) {
+          var msg = 'a.hasOwnProperty(' + idx + ') === ' + r;
+          throw Error(desc ? msg + ' ' + desc : msg);
+        }
+      }
+
+      // Setting length to existing value should have no effect:
+      a.length = 0xffffffff;
+      checkIdx(0xfffffffd, true);
+      checkIdx(0xfffffffe, true);
+      checkIdx(0xffffffff, true);
+      checkIdx(0x100000000, true);
+
+      // Setting length one less than maximum should remove largest
+      // index, but leave properties with keys too large to be indexes:
+      a.length = 0xfffffffe;
+      checkIdx(0xfffffffd, true);
+      checkIdx(0xfffffffe, false);
+      checkIdx(0xffffffff, true);
+      checkIdx(0x100000000, true);
+
+      // Setting length to zero should remove all index properties:
+      a.length = 0;
+      for (var key in a) {
+        if (!a.hasOwnProperty(key)) {
+          continue;
+        }
+        if (String(key >>> 0) === key && (key >>> 0) !== 0xffffffff) {
+          throw Error('Setting a.lengh = 0 failed to remove property ' + key);
+        }
+      }
+
+      // Make sure we didn't wipe everything!
+      if (Object.getOwnPropertyNames(a).length !== 3) {
+        throw Error('Setting .lengh == 0 removed some non-index properties');
+      }
+      'OK';
+    } catch (e) {
+      String(e);
+    }
+    `,
+    expected: 'OK' },
+    
   { name: 'compValEmptyBlock', src: `
     {};
     `,
