@@ -190,6 +190,10 @@ exports.testClasses = function(t) {
       name = c + 'InstanceClassIs' + cls,
       src = 'Object.prototype.toString.apply(new ' + c + ');';
       runTest(t, name, src, '[object ' + cls + ']');
+      // Check instance is instanceof its contructor:
+      name = c + 'InstanceIsInstanceof' + c,
+      src = '(new ' + c + ') instanceof ' + c + ';';
+      runTest(t, name, src, true);
     }
     if (tc.literal) {
       // Check literal's type:
@@ -206,6 +210,13 @@ exports.testClasses = function(t) {
       name = c + 'LiteralClassIs' + cls,
       src = 'Object.prototype.toString.apply(' + tc.literal + ');';
       runTest(t, name, src, '[object ' + cls + ']');
+      // Primitives can never be instances.
+      if (literalType == 'object' || literalType == 'function') { 
+        // Check literal is instanceof its contructor.
+        name = c + 'LiteralIsInstanceof' + c,
+        src = '(' + tc.literal + ') instanceof ' + c + ';';
+        runTest(t, name, src, true);
+      }
     }
   }
 };
