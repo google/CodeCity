@@ -2544,6 +2544,8 @@ Interpreter.prototype['stepCallExpression'] = function() {
     } else if (func.eval) {
       var code = state.arguments_[0];
       if (typeof code !== 'string') {  // eval()
+        // Eval returns the argument if the argument is not a string.
+        // eval(Array) -> Array
         state.value = code;
       } else {
         try {
