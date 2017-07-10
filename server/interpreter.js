@@ -2651,7 +2651,7 @@ Interpreter.prototype['stepContinueStatement'] = function(stack, state, node) {
 
 Interpreter.prototype['stepDebuggerStatement'] = function(stack, state, node) {
   // Do nothing.  May be overridden by developers.
-  this.stateStack.pop();
+  stack.pop();
 };
 
 Interpreter.prototype['stepDoWhileStatement'] = function(stack, state, node) {
@@ -2675,7 +2675,7 @@ Interpreter.prototype['stepDoWhileStatement'] = function(stack, state, node) {
 };
 
 Interpreter.prototype['stepEmptyStatement'] = function(stack, state, node) {
-  this.stateStack.pop();
+  stack.pop();
 };
 
 Interpreter.prototype['stepEvalProgram_'] = function(stack, state, node) {
@@ -2820,7 +2820,7 @@ Interpreter.prototype['stepForStatement'] = function(stack, state, node) {
 Interpreter.prototype['stepFunctionDeclaration'] =
     function(stack, state, node) {
   // This was found and handled when the scope was populated.
-  this.stateStack.pop();
+  stack.pop();
 };
 
 Interpreter.prototype['stepFunctionExpression'] = function(stack, state, node) {
