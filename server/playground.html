@@ -26,7 +26,7 @@
     }
 
     function serializeButton() {
-      var json = serialize(myInterpreter);
+      var json = Serializer.serialize(myInterpreter);
       // JSON.stringify(json) would work, but adding linebreaks so that every
       // object is on its own line makes the output more readable.
       var text = [];
@@ -47,7 +47,7 @@
       }
       // Create a clean interpreter with the same initalization functions.
       parseButton();
-      deserialize(json, myInterpreter);
+      Serializer.deserialize(json, myInterpreter);
     }
 
     function stepButton() {
