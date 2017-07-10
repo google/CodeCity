@@ -14,8 +14,8 @@
     "type": "git",
     "url": "git+https://github.com/NeilFraser/CodeCity.git"
   },
-  "author": "",
-  "license": "\tApache-2.0",
+  "author": "Google",
+  "license": "Apache-2.0",
   "bugs": {
     "url": "https://github.com/NeilFraser/CodeCity/issues"
   },

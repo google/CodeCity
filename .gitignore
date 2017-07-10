@@ -1,10 +1,9 @@
 .DS_Store
+nohup.out
 *.komodoproject
 *~
 
-server/nodejs/node_modules
-server/nodejs/loginServer.cfg
-server/nodejs/connectServer.cfg
-server/nodejs/nohup.out
-
+login/loginServer.cfg
+login/node_modules
+connect/connectServer.cfg
 server/node_modules
