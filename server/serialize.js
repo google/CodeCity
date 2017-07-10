@@ -25,7 +25,9 @@
 
 var Interpreter;
 
-function deserialize(json, interpreter) {
+var Serializer = {};
+
+Serializer.deserialize = function(json, interpreter) {
   function decodeValue(value) {
     if (value && typeof value === 'object') {
       var data;
@@ -50,6 +52,7 @@ function deserialize(json, interpreter) {
     }
     return value;
   }
+
   var stack = interpreter.stateStack;
   if (!Array.isArray(json)) {
     throw 'Top-level JSON is not a list.';
@@ -60,7 +63,7 @@ function deserialize(json, interpreter) {
   }
   // Find all native functions in existing interpreter.
   var objectList = [];
-  objectHunt_(stack, objectList);
+  Serializer.objectHunt_(stack, objectList);
   var functionHash = Object.create(null);
   for (var i = 0; i < objectList.length; i++) {
     if (typeof objectList[i] === 'function') {
@@ -166,9 +169,9 @@ function deserialize(json, interpreter) {
   }
   // First object is the stack.
   interpreter.stateStack = objectList[0];
-}
+};
 
-function serialize(interpreter) {
+Serializer.serialize = function(interpreter) {
   function encodeValue(value) {
     if (value && (typeof value === 'object' || typeof value === 'function')) {
       var ref = objectList.indexOf(value);
@@ -193,10 +196,11 @@ function serialize(interpreter) {
     }
     return value;
   }
+
   var stack = interpreter.stateStack;
   // Find all objects.
   var objectList = [];
-  objectHunt_(stack, objectList);
+  Serializer.objectHunt_(stack, objectList);
   // Get a handle on Acorn's node_t object.
   var nodeProto = stack[0].node.constructor.prototype;
   // Serialize every object.
@@ -283,10 +287,10 @@ function serialize(interpreter) {
     }
   }
   return json;
-}
+};
 
 // Recursively search the stack to find all non-primitives.
-function objectHunt_(node, objectList) {
+Serializer.objectHunt_ = function(node, objectList) {
   if (node && (typeof node === 'object' || typeof node === 'function')) {
     if (objectList.indexOf(node) !== -1) {
       return;
@@ -295,14 +299,14 @@ function objectHunt_(node, objectList) {
     if (typeof node === 'object') {  // Recurse.
       var names = Object.getOwnPropertyNames(node);
       for (var i = 0; i < names.length; i++) {
-        objectHunt_(node[names[i]], objectList);
+        Serializer.objectHunt_(node[names[i]], objectList);
       }
     }
   }
-}
+};
 
-if (typeof module !== 'undefined') { // Node.js
-  Interpreter = require('./interpreter.js');
-  exports.deserialize = deserialize;
-  exports.serialize = serialize;
+if (typeof module !== 'undefined') {  // Node.js
+  Interpreter = require('./');
+  exports.deserialize = Serializer.deserialize;
+  exports.serialize = Serializer.serialize;
 }
