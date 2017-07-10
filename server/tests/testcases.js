@@ -1081,7 +1081,7 @@ module.exports = [
       e.name;
     }
     `,
-    // SKIP: expected: 'TypeError'
+    expected: 'TypeError'
   },
 
   /******************************************************************/
