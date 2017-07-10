@@ -399,7 +399,7 @@ Interpreter.prototype.initObject = function(scope) {
 
   wrapper = function(obj) {
     throwIfNullUndefined(obj);
-    if (!obj instanceof thisInterpreter.Object) {
+    if (!(obj instanceof thisInterpreter.Object)) {
       return thisInterpreter.nativeToPseudo(Object.keys(obj));
     }
     var list = [];
@@ -1691,7 +1691,7 @@ Interpreter.stripLocations_ = function(node, start, end) {
     if (node.hasOwnProperty(name)) {
       var prop = node[name];
       if (prop && typeof prop === 'object') {
-        this.stripLocations_(prop, start, end);
+        Interpreter.stripLocations_(prop, start, end);
       }
     }
   }
