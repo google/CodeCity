@@ -1707,31 +1707,31 @@ Interpreter.prototype.calledWithNew = function() {
 
 /**
  * Gets a value from the scope chain or from an object property.
- * @param {!Array} left Name of variable or object/propname tuple.
+ * @param {!Array} ref Name of variable or object/propname tuple.
  * @return {Interpreter.Value} Value (may be undefined).
  */
-Interpreter.prototype.getValue = function(left) {
-  if (left[0] === Interpreter.SCOPE_REFERENCE) {
+Interpreter.prototype.getValue = function(ref) {
+  if (ref[0] === Interpreter.SCOPE_REFERENCE) {
     // A null/varname variable lookup.
-    return this.getValueFromScope(left[1]);
+    return this.getValueFromScope(ref[1]);
   } else {
     // An obj/prop components tuple (foo.bar).
-    return this.getProperty(left[0], left[1]);
+    return this.getProperty(ref[0], ref[1]);
   }
 };
 
 /**
  * Sets a value to the scope chain or to an object property.
- * @param {!Array} left Name of variable or object/propname tuple.
+ * @param {!Array} ref Name of variable or object/propname tuple.
  * @param {Interpreter.Value} value Value.
  */
-Interpreter.prototype.setValue = function(left, value) {
-  if (left[0] === Interpreter.SCOPE_REFERENCE) {
+Interpreter.prototype.setValue = function(ref, value) {
+  if (ref[0] === Interpreter.SCOPE_REFERENCE) {
     // A null/varname variable lookup.
-    this.setValueToScope(left[1], value);
+    this.setValueToScope(ref[1], value);
   } else {
     // An obj/prop components tuple (foo.bar).
-    this.setProperty(left[0], left[1], value);
+    this.setProperty(ref[0], ref[1], value);
   }
 };
 
