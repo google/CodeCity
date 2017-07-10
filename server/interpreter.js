@@ -1525,8 +1525,8 @@ Interpreter.prototype.setProperty = function(obj, name, value, opt_descriptor) {
     var previouslyDefined = name in obj.properties;
     // Define the property.
     obj.properties[name] = value;
-    if (previouslyDefined ? opt_descriptor.configurable === false :
-        opt_descriptor.configurable !== true) {
+    if ((!previouslyDefined || opt_descriptor.configurable !== undefined) &&
+        !opt_descriptor.configurable) {
       obj.notConfigurable.add(name);
     }
     if (!previouslyDefined || opt_descriptor.enumerable !== undefined) {
