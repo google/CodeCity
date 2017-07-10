@@ -107,22 +107,22 @@ function deserialize(json, interpreter) {
         obj = new Interpreter.Scope(null);
         break;
       case 'PseudoObject':
-        obj = new Interpreter.Object(null);
+        obj = new interpreter.Object(null);
         break;
       case 'PseudoFunction':
-        obj = new Interpreter.Function(null);
+        obj = new interpreter.Function(null);
         break;
       case 'PseudoArray':
-        obj = new Interpreter.Array(null);
+        obj = new interpreter.Array(null);
         break;
       case 'PseudoDate':
-        obj = new Interpreter.Date(null);
+        obj = new interpreter.Date(null);
         break;
       case 'PseudoRegExp':
-        obj = new Interpreter.RegExp(null);
+        obj = new interpreter.RegExp(null);
         break;
       case 'PseudoError':
-        obj = new Interpreter.Error(null);
+        obj = new interpreter.Error(null);
         break;
       case 'Node':
         obj = Object.create(nodeProto);
@@ -248,22 +248,22 @@ function serialize(interpreter) {
       case Interpreter.Scope.prototype:
         jsonObj['type'] = 'Scope';
         break;
-      case Interpreter.Object.prototype:
+      case interpreter.Object.prototype:
         jsonObj['type'] = 'PseudoObject';
         break;
-      case Interpreter.Function.prototype:
+      case interpreter.Function.prototype:
         jsonObj['type'] = 'PseudoFunction';
         break;
-      case Interpreter.Array.prototype:
+      case interpreter.Array.prototype:
         jsonObj['type'] = 'PseudoArray';
         break;
-      case Interpreter.Date.prototype:
+      case interpreter.Date.prototype:
         jsonObj['type'] = 'PseudoDate';
         break;
-      case Interpreter.RegExp.prototype:
+      case interpreter.RegExp.prototype:
         jsonObj['type'] = 'PseudoRegExp';
         break;
-      case Interpreter.Error.prototype:
+      case interpreter.Error.prototype:
         jsonObj['type'] = 'PseudoError';
         break;
       case nodeProto:
