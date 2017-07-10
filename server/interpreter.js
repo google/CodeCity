@@ -180,13 +180,13 @@ Interpreter.prototype.step = function() {
  */
 Interpreter.prototype.run = function() {
   var stack = this.stateStack;
-  while (!this.paused_ && this.step()) {
+  while (true) {
     var state = stack[stack.length - 1];
     if (!state) {
       break;
     }
     var node = state.node, type = node['type'];
-    if (type === 'Program' && state.don || this.paused_) {
+    if (type === 'Program' && state.done || this.paused_) {
       break;
     }
     try {
@@ -2841,6 +2841,7 @@ Interpreter.prototype['stepIfStatement'] =
     Interpreter.prototype['stepConditionalExpression'];
 
 Interpreter.prototype['stepLabeledStatement'] = function(stack, state, node) {
+  // No need to hit this node again on the way back up the stack.
   stack.pop();
   // Note that a statement might have multiple labels.
   var labels = state.labels || [];
@@ -3050,7 +3051,6 @@ Interpreter.prototype['stepSwitchStatement'] = function(stack, state, node) {
 };
 
 Interpreter.prototype['stepThisExpression'] = function(stack, state, node) {
-  var stack = this.stateStack;
   stack.pop();
   stack[stack.length - 1].value = this.getValueFromScope('this');
 };
