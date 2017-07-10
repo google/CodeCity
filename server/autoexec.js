@@ -224,20 +224,43 @@ Object.defineProperty(Array.prototype, 'some',
 Object.defineProperty(Array.prototype, 'sort',
     {configurable: true, writable: true, value:
   function(opt_comp) {
-    for (var i = 0; i < this.length; i++) {
-      var changes = 0;
-      for (var j = 0; j < this.length - i - 1; j++) {
-        if (opt_comp ? + opt_comp(this[j], this[j + 1]) > 0 :
-                       this[j] > this[j + 1]) {
-          var swap = this[j];
-          this[j] = this[j + 1];
-          this[j + 1] = swap;
-          changes++;
+    if (this.length < 2) {
+      return this;
+    } else if (this.length < 20) {
+      // Bubble Sort is faster than Quick Sort on small lists.
+      for (var i = 0; i < this.length; i++) {
+        var changes = 0;
+        for (var j = 0; j < this.length - i - 1; j++) {
+          if (opt_comp ? + opt_comp(this[j], this[j + 1]) > 0 :
+                         this[j] > this[j + 1]) {
+            var swap = this[j];
+            this[j] = this[j + 1];
+            this[j + 1] = swap;
+            changes++;
+          }
+        }
+        if (changes <= 1) break;
+      }
+      return this;
+    } else {
+      // Quick Sort.
+      var l = [];
+      var r = [];
+      var e = [];
+      var pivot = (this.length / 2) | 0;
+      for (var i = 0; i < this.length; i++) {
+        var comp = opt_comp ? opt_comp(this[i], this[pivot]) :
+          (this[i] > this[pivot] ? 1 : (this[i] < this[pivot] ? -1 : 0));
+        if (comp > 0) {
+          r.push(this[i]);
+        } else if (comp < 0) {
+          l.push(this[i]);
+        } else {
+          e.push(this[i]);
         }
       }
-      if (changes <= 1) break;
+      return l.sort(opt_comp).concat(e, r.sort(opt_comp));
     }
-    return this;
   }
 });
 
