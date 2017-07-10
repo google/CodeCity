@@ -55,7 +55,8 @@ var Interpreter = function() {
   // TODO(cpcallen): Make this per-thread when threads are introduced.
   this.toStringCycles_ = [];
   // Create and initialize the global scope.
-  this.global = this.createScope({}, null);
+  this.global = new Interpreter.Scope;
+  this.initGlobalScope(this.global);
   this.value = undefined;
   this.stateStack = [{
     node: acorn.parse('', Interpreter.PARSE_OPTIONS),
@@ -1201,13 +1202,13 @@ Interpreter.legalArrayIndex = function(x) {
 
 /**
  * Class for a scope.
- * @param {Interpreter.Scope} parentScope Inherited scope.
+ * @param {Interpreter.Scope=} parentScope Inherited scope.  Defaults to null.
  * @constructor
  */
 Interpreter.Scope = function(parentScope) {
   this.notWritable = new Set();
   this.properties = Object.create(null);
-  this.parentScope = parentScope;
+  this.parentScope = parentScope || null;
 };
 
 /**
@@ -1562,22 +1563,6 @@ Interpreter.prototype.getScope = function() {
   if (!scope) {
     throw Error('No scope found.');
   }
-  return scope;
-};
-
-/**
- * Create a new scope dictionary.
- * @param {!Object} node AST node defining the scope container
- *     (e.g. a function).
- * @param {Interpreter.Scope} parentScope Scope to link to.
- * @return {!Interpreter.Scope} New scope.
- */
-Interpreter.prototype.createScope = function(node, parentScope) {
-  var scope = new Interpreter.Scope(parentScope);
-  if (!parentScope) {
-    this.initGlobalScope(scope);
-  }
-  this.populateScope_(node, scope);
   return scope;
 };
 
@@ -2516,7 +2501,8 @@ Interpreter.prototype['stepCallExpression'] = function() {
     }
     var funcNode = func.node;
     if (funcNode) {
-      var scope = this.createScope(funcNode['body'], func.parentScope);
+      var scope = new Interpreter.Scope(func.parentScope);
+      this.populateScope_(funcNode['body'], scope);
       // Add all arguments.
       for (var i = 0; i < funcNode['params'].length; i++) {
         var paramName = funcNode['params'][i]['name'];
