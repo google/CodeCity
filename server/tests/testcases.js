@@ -1110,6 +1110,19 @@ module.exports = [
     `,
     expected: "Didn't crash!" },
 
+  { name: 'ArrayPrototypeJoin', src: `
+    [1, 2, 3].join('-');
+    `,
+    expected: '1-2-3' },
+
+  { name: 'ArrayPrototypeJoinCycleDetection', src: `
+    var a = [1, , 3];
+    a[1] = a;
+    a.join('-');
+    "Didn't crash!";
+    `,
+    expected: "Didn't crash!" },
+
   /******************************************************************/
   // Boolean
   { name: 'Boolean', src: `

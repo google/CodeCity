@@ -689,7 +689,7 @@ Interpreter.prototype.initArray = function(scope) {
   this.ARRAY.addNativeMethod('slice', wrapper);
 
   wrapper = function(opt_separator) {
-    var cycles = intrp.toStringCycles_;
+    var cycles = thisInterpreter.toStringCycles_;
     cycles.push(this);
     try {
       var text = [];
