@@ -156,7 +156,7 @@ T.prototype.fail = function(name, opt_message) {
  */
 function runTests() {
   var t = new T;
-  var groups = ['./interpreter_test.js', './interpreter_serialize.js'];
+  var groups = ['./interpreter_test.js', './serialize_test.js'];
   for (var i = 0; i < groups.length; i++) {
     var tests = require(groups[i]);
     for (var k in tests) {
