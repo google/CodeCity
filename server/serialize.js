@@ -307,6 +307,5 @@ Serializer.objectHunt_ = function(node, objectList) {
 
 if (typeof module !== 'undefined') {  // Node.js
   Interpreter = require('./');
-  exports.deserialize = Serializer.deserialize;
-  exports.serialize = Serializer.serialize;
+  exports = Serializer;
 }

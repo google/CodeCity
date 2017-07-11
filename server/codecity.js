@@ -49,7 +49,7 @@ function startup() {
   // Find the most recent database file.
   files.sort();
   for (var i = files.length - 1; i >= 0; i--) {
-    if (files[i].match(/^\d\d\d\d-\d\d-\d\dT\d\d-\d\d-\d\d(\.\d)?\d?\d?Z?\.city$/)) {
+    if (files[i].match(/^\d{4}-\d\d-\d\dT\d\d\.\d\d\.\d\d(\.\d{1-3})?Z?\.city$/)) {
       break;
     }
   }
@@ -80,11 +80,12 @@ function startup() {
   interpreter = new Interpreter();
   Serializer.deserialize(contents, interpreter);
   console.log('Database loaded: ' + filename);
-  // TODO: Run the interpreter.
 
   // Checkpoint at regular intervals.
   // TODO: Let the interval be configurable from the database.
   setInterval(checkpoint, 60 * 1000);
+
+  // TODO: Run the interpreter.
 }
 
 function checkpoint(callback) {
@@ -98,7 +99,7 @@ function checkpoint(callback) {
   }
   text = '[' + text.join(',\n') + ']';
 
-  var filename = (new Date()).toISOString().replace(/:/g, '-') + '.city';
+  var filename = (new Date()).toISOString().replace(/:/g, '.') + '.city';
   filename = path.join(databaseDirectory, filename);
   fs.writeFile(filename, text, function (e) {
     // TODO: Expose success/failure to the database.

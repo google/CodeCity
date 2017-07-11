@@ -2,7 +2,7 @@
   "name": "codecity-server",
   "version": "0.0.0",
   "description": "Server for the CodeCity project",
-  "main": "interpreter.js",
+  "main": "codecity.js",
   "dependencies": {},
   "devDependencies": {
     "tosource": "^1.0.0"
