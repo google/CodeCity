@@ -27,8 +27,8 @@
 
 const fs = require('fs');
 const path = require('path');
-const Interpreter = require('./');
-const Serializer = require('./serialize.js');
+const Interpreter = require('./interpreter');
+const Serializer = require('./serialize');
 
 var databaseDirectory;
 var interpreter;

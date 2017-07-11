@@ -155,12 +155,14 @@ T.prototype.fail = function(name, opt_message) {
  * Run tests.
  */
 function runTests() {
-  var tests = require('./interpreter_test.js');
-
   var t = new T;
-  for (var k in tests) {
-    if (k.startsWith('test') && typeof tests[k] === 'function') {
-      tests[k](t);
+  var groups = ['./interpreter_test.js', './interpreter_serialize.js'];
+  for (var i = 0; i < groups.length; i++) {
+    var tests = require(groups[i]);
+    for (var k in tests) {
+      if (k.startsWith('test') && typeof tests[k] === 'function') {
+        tests[k](t);
+      }
     }
   }
 
