@@ -2314,7 +2314,8 @@ Interpreter.prototype['stepArrayExpression'] = function(stack, state, node) {
   stack[stack.length - 1].value = state.array_;
 };
 
-Interpreter.prototype['stepAssignmentExpression'] = function(stack, state, node) {
+Interpreter.prototype['stepAssignmentExpression'] =
+    function(stack, state, node) {
   if (!state.doneLeft_) {
     state.doneLeft_ = true;
     this.pushNode_(node['left']).components = true;
@@ -2428,8 +2429,8 @@ Interpreter.prototype['stepBreakStatement'] = function(stack, state, node) {
     label = node['label']['name'];
   }
   while (state &&
-         node['type'] !== 'CallExpression' &&
-         node['type'] !== 'NewExpression') {
+         state.node['type'] !== 'CallExpression' &&
+         state.node['type'] !== 'NewExpression') {
     if (label) {
       if (state.labels && state.labels.indexOf(label) !== -1) {
         return;
@@ -2601,7 +2602,8 @@ Interpreter.prototype['stepCatchClause'] = function(stack, state, node) {
   }
 };
 
-Interpreter.prototype['stepConditionalExpression'] = function(stack, state, node) {
+Interpreter.prototype['stepConditionalExpression'] =
+    function(stack, state, node) {
   var mode = state.mode_ || 0;
   if (mode === 0) {
     state.mode_ = 1;
@@ -2635,8 +2637,8 @@ Interpreter.prototype['stepContinueStatement'] = function(stack, state, node) {
   }
   state = stack[stack.length - 1];
   while (state &&
-         node['type'] !== 'CallExpression' &&
-         node['type'] !== 'NewExpression') {
+         state.node['type'] !== 'CallExpression' &&
+         state.node['type'] !== 'NewExpression') {
     if (state.isLoop) {
       if (!label || (state.labels && state.labels.indexOf(label) !== -1)) {
         return;
@@ -2690,7 +2692,8 @@ Interpreter.prototype['stepEvalProgram_'] = function(stack, state, node) {
   }
 };
 
-Interpreter.prototype['stepExpressionStatement'] = function(stack, state, node) {
+Interpreter.prototype['stepExpressionStatement'] =
+    function(stack, state, node) {
   if (!state.done_) {
     state.done_ = true;
     this.pushNode_(node['expression']);
