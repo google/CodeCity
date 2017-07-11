@@ -27,7 +27,7 @@
 var util = require('util');
 //var toSource = require('tosource');
 
-var Interpreter = require('../');
+var Interpreter = require('../interpreter');
 var autoexec = require('../autoexec');
 var testcases = require('./testcases');
 
@@ -61,7 +61,6 @@ function runTest(t, name, src, expected) {
   } else {
     t.pass(name);
   }
-  return true;
 }
 
 /**
@@ -211,7 +210,7 @@ exports.testClasses = function(t) {
       src = 'Object.prototype.toString.apply(' + tc.literal + ');';
       runTest(t, name, src, '[object ' + cls + ']');
       // Primitives can never be instances.
-      if (literalType === 'object' || literalType === 'function') { 
+      if (literalType === 'object' || literalType === 'function') {
         // Check literal is instanceof its contructor.
         name = c + 'LiteralIsInstanceof' + c;
         src = '(' + tc.literal + ') instanceof ' + c + ';';

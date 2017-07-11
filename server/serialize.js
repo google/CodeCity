@@ -84,6 +84,9 @@ Serializer.deserialize = function(json, interpreter) {
       case 'Object':
         obj = {};
         break;
+      case 'ScopeReference':
+        obj = Interpreter.SCOPE_REFERENCE;
+        break;
       case 'Function':
         obj = functionHash[jsonObj['id']];
         if (!obj) {
@@ -218,7 +221,11 @@ Serializer.serialize = function(interpreter) {
         jsonObj['type'] = 'Map';
         break;
       case Object.prototype:
-        jsonObj['type'] = 'Object';
+        if (obj === Interpreter.SCOPE_REFERENCE) {
+          jsonObj['type'] = 'ScopeReference';
+        } else {
+          jsonObj['type'] = 'Object';
+        }
         break;
       case Function.prototype:
         jsonObj['type'] = 'Function';
@@ -306,6 +313,6 @@ Serializer.objectHunt_ = function(node, objectList) {
 };
 
 if (typeof module !== 'undefined') {  // Node.js
-  Interpreter = require('./');
-  exports = Serializer;
+  Interpreter = require('./interpreter');
+  module.exports = Serializer;
 }

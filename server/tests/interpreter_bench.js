@@ -26,7 +26,7 @@
 
 var util = require('util');
 
-var Interpreter = require('../');
+var Interpreter = require('../interpreter');
 var autoexec = require('../autoexec');
 
 /**
