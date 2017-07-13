@@ -44,22 +44,18 @@ function runTest(t, name, src, expected) {
   interpreter.appendCode(autoexec);
   interpreter.run();
 
-  var err = undefined;
   try {
     interpreter.appendCode(src);
     interpreter.run();
   } catch (e) {
-    err = e;
+    t.crash(name, util.format('%s\n%s', src, e.stack));
   }
   var r = interpreter.pseudoToNative(interpreter.value);
-
-  if (err) {
-    t.crash(name, util.format('%s\n%s', src, err.stack));
-  } else if (!Object.is(r, expected)) {
+  if (Object.is(r, expected)) {
+    t.pass(name);
+  } else {
     t.fail(name, util.format('%s\ngot: %s  want: %s', src,
         String(r), String(expected)));
-  } else {
-    t.pass(name);
   }
 }
 
