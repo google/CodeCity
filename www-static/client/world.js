@@ -66,12 +66,6 @@ CCC.World.panelBorder = 2;
 CCC.World.historyRow = null;
 
 /**
- * Data from the last room seen (background, users, contents).
- * @type Object
- */
-CCC.World.latestRoom = null;
-
-/**
  * PID of rate-limiter for resize events.
  */
 CCC.World.resizePid = 0;
@@ -130,7 +124,7 @@ CCC.World.receiveMessage = function(e) {
   }
   var mode = data['mode'];
   var text = data['text'];
-  if (mode == 'clear') {
+  if (mode === 'clear') {
     document.getElementById('iframeStorage').innerHTML = '';
     CCC.World.historyMessages.length = 0;
     CCC.World.panoramaMessages.length = 0;
@@ -139,9 +133,9 @@ CCC.World.receiveMessage = function(e) {
     var scene = CCC.World.scene;  // Save the scene.
     CCC.World.renderHistory();
     CCC.World.scene = scene;  // Restore the scene.
-  } else if (mode == 'blur') {
+  } else if (mode === 'blur') {
       CCC.Common.closeMenu();
-  } else if (mode == 'message') {
+  } else if (mode === 'message') {
     var dom = CCC.Common.parser.parseFromString(text, 'text/xml');
     if (dom.getElementsByTagName('parsererror').length) {
       // Not valid XML, treat as string literal.
@@ -190,7 +184,7 @@ CCC.World.preprocessXml = function(dom) {
 
   // Find top-level nodes that need processing.
   for (var i = 0, msg; msg = dom.childNodes[i]; i++) {
-    if (msg.tagName == 'iframe') {
+    if (msg.tagName === 'iframe') {
       // <iframe src="https://neil.fraser.name/">Neil Fraser</iframe>
       // It's an iframe, create the DOM element.
       msg.iframeId = CCC.World.createIframe(msg.getAttribute('src'));
@@ -236,7 +230,7 @@ CCC.World.renderMessage = function(msg) {
  * @return {boolean} True if the message fit.  False if overflow.
  */
 CCC.World.prerenderHistory = function(node) {
-  if (node.tagName == 'iframe') {
+  if (node.tagName === 'iframe') {
     if (CCC.World.scratchHistory) {
       return false;  // Every iframe needs to be in its own panel.
     }
@@ -269,7 +263,7 @@ CCC.World.prerenderHistory = function(node) {
     return true;
   }
 
-  if (node.tagName == 'htmldom') {
+  if (node.tagName === 'htmldom') {
     if (CCC.World.scratchHistory) {
       return false;  // Every htmlframe needs to be in its own panel.
     }
@@ -279,7 +273,8 @@ CCC.World.prerenderHistory = function(node) {
     return true;
   }
 
-  if (node.tagName == 'scene') {
+
+  if (node.tagName === 'scene') {
     // <scene user="Max" room="The Hangout">
     //   <description>The lights are dim and blah blah blah...</description>
     //   <svgdom>...</svgdom>
@@ -319,8 +314,8 @@ CCC.World.prerenderHistory = function(node) {
                                     CCC.World.panelHeight);
     CCC.World.drawScene(svg);
   }
-  if (node.tagName == 'say' || node.tagName == 'think' ||
-      node.tagName == 'text') {
+  if (node.tagName === 'say' || node.tagName === 'think' ||
+      node.tagName === 'text') {
     CCC.World.createBubble(node, svg);
   }
 
@@ -334,7 +329,7 @@ CCC.World.prerenderHistory = function(node) {
  * @return {boolean} True if the message fit.  False if overflow.
  */
 CCC.World.prerenderPanorama = function(node) {
-  if (node.tagName == 'iframe') {
+  if (node.tagName === 'iframe') {
     if (CCC.World.scratchPanorama) {
       return false;  // Every iframe needs to be in its own panel.
     }
@@ -344,7 +339,8 @@ CCC.World.prerenderPanorama = function(node) {
     CCC.World.scratchPanorama = svg;
     return true;
   }
-  if (node.tagName == 'htmldom') {
+
+  if (node.tagName === 'htmldom') {
     if (CCC.World.scratchPanorama) {
       return false;  // Every htmlframe needs to be in its own panel.
     }
@@ -353,7 +349,8 @@ CCC.World.prerenderPanorama = function(node) {
     CCC.World.scratchPanorama = div;
     return true;
   }
-  if (node.tagName == 'scene') {
+
+  if (node.tagName === 'scene') {
     node = CCC.World.sceneDescription(node);
   }
 
@@ -373,8 +370,8 @@ CCC.World.prerenderPanorama = function(node) {
                                         CCC.World.panoramaDiv.offsetHeight);
     CCC.World.drawScene(svg);
   }
-  if (node.tagName == 'say' || node.tagName == 'think' ||
-      node.tagName == 'text') {
+  if (node.tagName === 'say' || node.tagName === 'think' ||
+      node.tagName === 'text') {
     CCC.World.createBubble(node, svg);
   }
 
@@ -391,10 +388,10 @@ CCC.World.prerenderPanorama = function(node) {
 CCC.World.mergeBubbles = function(svg, node) {
   var previousNode =
       CCC.World.panoramaMessages[CCC.World.panoramaMessages.length - 1];
-  if (!svg || !previousNode || previousNode.tagName != node.tagName ||
-      previousNode.getAttribute('user') != node.getAttribute('user') ||
-      previousNode.getAttribute('object') != node.getAttribute('object') ||
-      previousNode.getAttribute('room') != node.getAttribute('room')) {
+  if (!svg || !previousNode || previousNode.tagName !== node.tagName ||
+      previousNode.getAttribute('user') !== node.getAttribute('user') ||
+      previousNode.getAttribute('object') !== node.getAttribute('object') ||
+      previousNode.getAttribute('room') !== node.getAttribute('room')) {
     return undefined;  // Current message not a match with previous message.
   }
   // Remove previous bubble.
@@ -477,7 +474,7 @@ CCC.World.drawScene = function(svg) {
     var cursorX = (i + 1) / (contentsArray.length + 1) * svg.scaledWidth_ -
         svg.scaledWidth_ / 2;
     var bBox = null;
-    var isUser = thing.tagName == 'user';
+    var isUser = thing.tagName === 'user';
     var svgDom = thing.querySelector('*>svgdom');
     if (svgDom && svgDom.firstChild) {
       var name = thing.getAttribute('name');
@@ -488,7 +485,7 @@ CCC.World.drawScene = function(svg) {
       CCC.World.cloneAndAppend(g, svgDom.firstChild);
       // Users should face the majority of other users.
       // If user is alone, should face majority of objects.
-      if (isUser && (userTotal == 1 ?
+      if (isUser && (userTotal === 1 ?
           (i > 0 && i >= Math.floor(contentsArray.length / 2)) :
           (userCount > 0 && userCount >= Math.floor(userTotal / 2)))) {
         // Wrap mirrored users in an extra group.
@@ -565,7 +562,7 @@ CCC.World.createBubble = function(node, svg) {
   var object = node.getAttribute('object');
   var room = node.getAttribute('room');
   var text = node.textContent || '';
-  var width = node.tagName == 'text' ? 150 : 100;
+  var width = node.tagName === 'text' ? 150 : 100;
   width = Math.min(svg.scaledWidth_, width);
   var textGroup = CCC.World.createTextArea(svg, text, width, 30);
   textGroup.setAttribute('class', node.tagName);
@@ -582,7 +579,7 @@ CCC.World.createBubble = function(node, svg) {
   var textBBox = textGroup.getBBox();
 
   var anchor = CCC.World.getAnchor(node, svg);
-  if (!anchor && room && room == CCC.World.scene.getAttribute('room')) {
+  if (!anchor && room && room === CCC.World.scene.getAttribute('room')) {
     // This text box is coming from the room, not a user or object.
     // A bit of a hack: place anchor under box.
     anchor = {headX: 1 - svg.scaledWidth_ / 2, headY: 2, headR: 0};
@@ -616,7 +613,7 @@ CCC.World.getAnchor = function(node, svg) {
   var room = node.getAttribute('room');
   var anchor = null;
   try {
-    if (room && room == CCC.World.scene.getAttribute('room') ||
+    if (room && room === CCC.World.scene.getAttribute('room') ||
         (user || object)) {
       anchor = svg.sceneUserLocations[user] ||
                svg.sceneObjectLocations[object];
@@ -659,7 +656,7 @@ CCC.World.drawBubble = function(type, bubbleGroup, contentGroup, opt_anchor) {
   var contentBBox = CCC.World.getBBoxWithTransform(contentGroup);
   // Draw a solid black bubble, then the arrow (with border), then a slightly
   // smaller solid white bubble, resulting in a clean border.
-  if (type == 'think') {
+  if (type === 'think') {
     var strokeWidth = 0.7;  // Matches with CSS.
     var radiusXAverage = 4;  // Target size of cloud puffs.
     var radiusYAverage = 3;  // Target size of cloud puffs.
@@ -672,7 +669,7 @@ CCC.World.drawBubble = function(type, bubbleGroup, contentGroup, opt_anchor) {
     // Create a horizontal or vertical line of puff descriptors.
     var puffLine = function(x, y, dx, dy) {
       var d = Math.max(dx, dy);
-      var radiusAverage = d == dx ? radiusXAverage : radiusYAverage;
+      var radiusAverage = d === dx ? radiusXAverage : radiusYAverage;
       var line = new Array(Math.round(d / radiusAverage / 2));
       radiusAverage = d / line.length / 2;
       for (var i = 0; i < line.length - 1; i += 2) {
@@ -684,11 +681,11 @@ CCC.World.drawBubble = function(type, bubbleGroup, contentGroup, opt_anchor) {
         line[line.length - 1] = radiusAverage;
       }
       CCC.World.shuffle(line);
-      var cursor = (d == dx) ? x : y;
+      var cursor = (d === dx) ? x : y;
       for (var i = 0; i < line.length; i++) {
         var r = line[i];
         var puff;
-        if (d == dx) {
+        if (d === dx) {
           puff = {
             rx: r,
             ry: randomRadius(radiusYAverage),
@@ -767,7 +764,7 @@ CCC.World.drawBubble = function(type, bubbleGroup, contentGroup, opt_anchor) {
           CCC.World.drawArrow_(contentBBox, opt_anchor, true));
     }
   } else {
-    if (type == 'say') {
+    if (type === 'say') {
       var strokeWidth = 0.7;  // Matches with CSS.
       var marginV = 2;
       var marginH = 6;
@@ -816,7 +813,7 @@ CCC.World.drawArrow_ = function(contentBBox, anchor, thought) {
   // Find the relative coordinates of the center of the anchor.
   var relAnchorX = anchor.headX - contentBBox.x;
   var relAnchorY = anchor.headY - contentBBox.y;
-  if (relBubbleX == relAnchorX && relBubbleY == relAnchorY) {
+  if (relBubbleX === relAnchorX && relBubbleY === relAnchorY) {
     // Null case.  Bubble is directly on top of the anchor.
     // Short circuit this rather than wade through divide by zeros.
     return CCC.Common.createSvgElement('g', {}, null);
@@ -1040,7 +1037,7 @@ CCC.World.positionIframe = function(iframe, container) {
     x += container.offsetLeft;
     y += container.offsetTop;
   } while ((container = container.offsetParent) &&
-           (container != CCC.World.scrollDiv));
+           (container !== CCC.World.scrollDiv));
   iframe.style.top = (y + borderWidth) + 'px';
   iframe.style.left = (x + borderWidth) + 'px';
 };
@@ -1159,7 +1156,7 @@ CCC.World.resizeSoon = function() {
  */
 CCC.World.resizeNow = function() {
   var width = CCC.World.scrollDiv.offsetWidth;
-  if (width == CCC.World.lastWidth) {
+  if (width === CCC.World.lastWidth) {
     // Width hasn't changed.  Maybe just the height changed.  Snap to bottom.
     CCC.World.scrollDiv.scrollTop = CCC.World.scrollDiv.scrollHeight;
     return;
@@ -1273,38 +1270,38 @@ CCC.World.xmlToHtml = function(dom) {
   }
   switch (dom.nodeType) {
     case 1:  // Element node.
-      if (dom.tagName == 'svg') {  // XML tagNames are lowercase.
+      if (dom.tagName === 'svg') {  // XML tagNames are lowercase.
         // Switch to SVG rendering mode.
         return CCC.World.xmlToSvg(dom);
       }
-      if (dom.tagName == 'CMDS') {  // HTML tagNames are uppercase.
+      if (dom.tagName === 'CMDS') {  // HTML tagNames are uppercase.
         return CCC.Common.newMenuIcon(dom);
       }
-      if (dom.tagName == 'CMD') {  // HTML tagNames are uppercase.
+      if (dom.tagName === 'CMD') {  // HTML tagNames are uppercase.
         var cmdText = dom.innerText;
         var a = document.createElement('a');
         a.className = 'command';
         a.appendChild(document.createTextNode(cmdText));
         return a;
       }
-      if (CCC.World.xmlToHtml.ELEMENT_NAMES.indexOf(dom.tagName) == -1) {
+      if (CCC.World.xmlToHtml.ELEMENT_NAMES.indexOf(dom.tagName) === -1) {
         console.log('HTML element not in whitelist: <' + dom.tagName + '>');
         return null;
       }
       var element = document.createElement(dom.tagName);
       for (var i = 0, attr; attr = dom.attributes[i]; i++) {
-        if (CCC.World.xmlToHtml.ATTRIBUTE_NAMES.indexOf(attr.name) == -1) {
+        if (CCC.World.xmlToHtml.ATTRIBUTE_NAMES.indexOf(attr.name) === -1) {
           console.log('HTML attribute not in whitelist: ' +
               '<' + dom.tagName + ' ' + attr.name + '="' + attr.value + '">');
         } else {
           element.setAttribute(attr.name, attr.value);
           // Remove all styles not in the whitelist.
-          if (attr.name == 'style') {
+          if (attr.name === 'style') {
             for (var name in element.style) {
               if (element.style.hasOwnProperty(name) &&
                   isNaN(parseFloat(name)) && // Don't delete indexed props.
-                  element.style[name] && element.style[name] != 'initial' &&
-                  CCC.World.xmlToHtml.STYLE_NAMES.indexOf(name) == -1) {
+                  element.style[name] && element.style[name] !== 'initial' &&
+                  CCC.World.xmlToHtml.STYLE_NAMES.indexOf(name) === -1) {
                 console.log('Style attribute not in whitelist: ' +
                     name + ': ' + element.style[name]);
                 element.style[name] = '';
@@ -1502,13 +1499,13 @@ CCC.World.xmlToSvg = function(dom) {
   }
   switch (dom.nodeType) {
     case 1:  // Element node.
-      if (CCC.World.xmlToSvg.ELEMENT_NAMES.indexOf(dom.tagName) == -1) {
+      if (CCC.World.xmlToSvg.ELEMENT_NAMES.indexOf(dom.tagName) === -1) {
         console.log('SVG element not in whitelist: <' + dom.tagName + '>');
         return null;
       }
       var svg = document.createElementNS(CCC.Common.NS, dom.tagName);
       for (var i = 0, attr; attr = dom.attributes[i]; i++) {
-        if (CCC.World.xmlToSvg.ATTRIBUTE_NAMES.indexOf(attr.name) == -1) {
+        if (CCC.World.xmlToSvg.ATTRIBUTE_NAMES.indexOf(attr.name) === -1) {
           console.log('SVG attribute not in whitelist: ' +
               '<' + dom.tagName + ' ' + attr.name + '="' + attr.value + '">');
         } else {
@@ -1640,7 +1637,7 @@ CCC.World.getScrollBarWidth = function() {
   var w1 = inner.offsetWidth;
   outer.style.overflow = 'scroll';
   var w2 = inner.offsetWidth;
-  if (w1 == w2) {
+  if (w1 === w2) {
     w2 = outer.clientWidth;
   }
   document.body.removeChild(outer);
@@ -1667,7 +1664,7 @@ CCC.World.createTextArea = function(svg, text, width, height) {
   if (lines.length) {
     var dy = CCC.World.measureText(svg, 'Wg').height;
     for (var i = 0; i < lines.length; i++) {
-      var line = (lines[i] == '\r' || lines[i] == '\n') ? '\u200B' : lines[i];
+      var line = (lines[i] === '\r' || lines[i] === '\n') ? '\u200B' : lines[i];
       var tspan = document.createElementNS(CCC.Common.NS, 'tspan');
       tspan.appendChild(document.createTextNode(line));
       tspan.setAttribute('x', 0);
@@ -1817,9 +1814,9 @@ CCC.World.wrapScore_ = function(svg, words, wordBreaks, limit) {
     // Optimize for structure.
     // Add score to line endings after punctuation.
     var lastLetter = lines[i].trim().slice(-1);
-    if ('.?!'.indexOf(lastLetter) != -1) {
+    if ('.?!'.indexOf(lastLetter) !== -1) {
       score += 6;
-    } else if (',;)]}'.indexOf(lastLetter) != -1) {
+    } else if (',;)]}'.indexOf(lastLetter) !== -1) {
       score += 3;
     }
   }
@@ -1854,7 +1851,7 @@ CCC.World.wrapMutate_ = function(svg, words, wordBreaks, limit) {
   var bestBreaks;
   // Try shifting every line break forward or backward.
   for (var i = 0; i < wordBreaks.length - 1; i++) {
-    if (wordBreaks[i] == wordBreaks[i + 1]) {
+    if (wordBreaks[i] === wordBreaks[i + 1]) {
       continue;
     }
     var mutatedWordBreaks = [].concat(wordBreaks);

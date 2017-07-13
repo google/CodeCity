@@ -85,11 +85,11 @@ CCC.Log.receiveMessage = function(e) {
   }
   var mode = data['mode'];
   var text = data['text'];
-  if (mode == 'clear') {
+  if (mode === 'clear') {
     CCC.Log.scrollDiv.innerHTML = '';
-  } else if (mode == 'blur') {
+  } else if (mode === 'blur') {
       CCC.Common.closeMenu();
-  } else if (mode == 'command') {
+  } else if (mode === 'command') {
     var div = CCC.Log.textToHtml(text);
     div.className = 'commandDiv';
     CCC.Log.appendRow(div);
@@ -120,7 +120,7 @@ CCC.Log.textToHtml = function(text) {
   var div = document.createElement('div');
   div.className = 'textDiv';
   for (var i = 0; i < lines.length; i++) {
-    if (i != 0) {
+    if (i !== 0) {
       div.appendChild(document.createElement('br'));
     }
     div.appendChild(document.createTextNode(lines[i]));
@@ -137,7 +137,7 @@ CCC.Log.addXml = function(dom) {
   var code = CCC.Common.serializer.serializeToString(dom);
   var pre = document.createElement('pre');
   pre.textContent = code;
-  if (typeof prettyPrint == 'function') {
+  if (typeof prettyPrint === 'function') {
     pre.className = 'prettyprint lang-xml';
     var div = document.createElement('div');
     div.appendChild(pre);
@@ -145,7 +145,7 @@ CCC.Log.addXml = function(dom) {
   }
 
   if (rendered) {
-    if (typeof rendered == 'string') {
+    if (typeof rendered === 'string') {
       var div = CCC.Log.textToHtml(rendered);
     } else {
       var div = rendered;
@@ -166,7 +166,7 @@ CCC.Log.addXml = function(dom) {
 CCC.Log.toggleZippy = function(e) {
   var zippy = e.target;
   var pre = zippy.parentNode.lastChild;
-  if (zippy.className.indexOf(' open') == -1) {
+  if (zippy.className.indexOf(' open') === -1) {
     zippy.className += ' open';
     pre.style.display = 'block';
     if (!zippy.parentNode.nextSibling) {
@@ -246,7 +246,7 @@ CCC.Log.renderXml = function(node) {
                 df.appendChild(icon);
               }
             }
-            (child.tagName == 'user' ? users : objects).push(df);
+            (child.tagName === 'user' ? users : objects).push(df);
             break;
         }
       }
@@ -265,7 +265,7 @@ CCC.Log.renderXml = function(node) {
       }
       if (objects.length) {
         var objectsDiv = document.createElement('div');
-        if (objects.length == 1) {
+        if (objects.length === 1) {
           objectsDiv.appendChild(CCC.Log.getMsg('roomObjectMsg', objects[0]));
         } else if (objects.length > 1) {
           objectsDiv.appendChild(
@@ -275,7 +275,7 @@ CCC.Log.renderXml = function(node) {
       }
       if (users.length) {
         var usersDiv = document.createElement('div');
-        if (users.length == 1) {
+        if (users.length === 1) {
           usersDiv.appendChild(CCC.Log.getMsg('roomUserMsg', users[0]));
         } else if (users.length > 1) {
           usersDiv.appendChild(
@@ -296,12 +296,12 @@ CCC.Log.renderXml = function(node) {
       var user = node.getAttribute('user');
       var object = node.getAttribute('object');
       var msg = node.textContent;
-      if (node.tagName == 'think') {
+      if (node.tagName === 'think') {
         var type = 'think';
       } else {
         var lastLetter = msg[msg.length - 1];
-        var type = (lastLetter == '?') ? 'ask' :
-            ((lastLetter == '!') ? 'exclaim' : 'say');
+        var type = (lastLetter === '?') ? 'ask' :
+            ((lastLetter === '!') ? 'exclaim' : 'say');
       }
       if (user && CCC.Log.userName === user) {
         var fragment = CCC.Log.getMsg(type + 'SelfMsg', msg);
@@ -345,12 +345,12 @@ CCC.Log.openIcon = function(src) {
  * @param {!Node} node DOM to walk.
  */
 CCC.Log.renderHtmltext = function(div, node) {
-  if (node.nodeType == 1) {
+  if (node.nodeType === 1) {
     // Element.
-    if (node.tagName == 'svg') {  // XML tagNames are lowercase.
+    if (node.tagName === 'svg') {  // XML tagNames are lowercase.
       return;  // No text content of this tag should be rendered.
     }
-    if (node.tagName == 'CMDS') {  // HTML tagNames are uppercase.
+    if (node.tagName === 'CMDS') {  // HTML tagNames are uppercase.
       var icon = CCC.Common.newMenuIcon(node);
       if (icon) {
         icon.addEventListener('click', CCC.Common.openMenu);
@@ -358,7 +358,7 @@ CCC.Log.renderHtmltext = function(div, node) {
       }
       return;
     }
-    if (node.tagName == 'CMD') {  // HTML tagNames are uppercase.
+    if (node.tagName === 'CMD') {  // HTML tagNames are uppercase.
       var cmdText = node.innerText;
       var a = document.createElement('a');
       a.className = 'command';
@@ -370,10 +370,10 @@ CCC.Log.renderHtmltext = function(div, node) {
     for (var i = 0, child; child = node.childNodes[i]; i++) {
       CCC.Log.renderHtmltext(div, node.childNodes[i]);
     }
-    if (CCC.Log.renderHtmltext.BLOCK_NAMES.indexOf(node.tagName) != -1) {
+    if (CCC.Log.renderHtmltext.BLOCK_NAMES.indexOf(node.tagName) !== -1) {
       div.appendChild(document.createElement('br'));
     }
-  } else if (node.nodeType == 3) {
+  } else if (node.nodeType === 3) {
     // Text node.
     div.appendChild(document.createTextNode(node.data));
   }
@@ -421,7 +421,7 @@ CCC.Log.getMsg = function(key, var_args) {
     var m = part.match(/^%(\d)$/);
     if (m) {
       var inject = arguments[m[1]];
-      if (typeof inject == 'string') {
+      if (typeof inject === 'string') {
         inject = document.createTextNode(inject);
       }
       df.appendChild(inject);
@@ -439,7 +439,7 @@ CCC.Log.getMsg = function(key, var_args) {
  * @return {!DocumentFragment} A document fragment containing the text.
  */
 CCC.Log.naturalList = function(list) {
-  if (list.length == 1) {
+  if (list.length === 1) {
     return list[0];
   }
   var df = document.createDocumentFragment();

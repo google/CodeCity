@@ -52,7 +52,7 @@ CCC.Common.init = function() {
  */
 CCC.Common.verifyMessage = function(e) {
   var origin = e.origin || e.originalEvent.origin;
-  if (origin != location.origin) {
+  if (origin !== location.origin) {
     console.error('Message received by frame from unknown origin: ' +
                   origin);
     return null;
@@ -88,9 +88,9 @@ CCC.Common.newMenuIcon = function(node) {
  */
 CCC.Common.innerText = function(node) {
   var text = '';
-  if (node.nodeType == 3) {
+  if (node.nodeType === 3) {
     text = node.data;
-  } else if (node.nodeType == 1) {
+  } else if (node.nodeType === 1) {
     for (var i = 0; i < node.childNodes.length; i++) {
       text += CCC.Common.innerText(node.childNodes[i]);
     }

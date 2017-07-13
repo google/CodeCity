@@ -203,7 +203,7 @@ CCC.tab = function(mode) {
   CCC.userActive();
   var worldButton = document.getElementById('worldButton');
   var logButton = document.getElementById('logButton');
-  if (mode == 'world') {
+  if (mode === 'world') {
     CCC.worldFrame.style.zIndex = 1;
     CCC.logFrame.style.zIndex = -1;
     CCC.commandTextarea.style.fontFamily = '"Patrick Hand", "Comic Sans MS"';
@@ -296,14 +296,14 @@ CCC.resize = function() {
  */
 CCC.receiveMessage = function(e) {
   var origin = e.origin || e.originalEvent.origin;
-  if (origin != location.origin) {
+  if (origin !== location.origin) {
     console.error('Message received by client frame from unknown origin: ' +
                   origin);
     return;
   }
   if (!e.data) {
     // Shouldn't happen, but harmless.
-  } else if (e.data == 'init') {
+  } else if (e.data === 'init') {
     // A frame is notifying us that it has fully loaded.
     CCC.countdown();
   } else if (e.data['commands'] && e.data['commands'].length) {
@@ -357,7 +357,7 @@ CCC.sendCommand = function(commands, echo) {
     // Add command to history.
     if (echo) {
       if (!CCC.commandHistory.length ||
-          CCC.commandHistory[CCC.commandHistory.length - 1] != commands[i]) {
+          CCC.commandHistory[CCC.commandHistory.length - 1] !== commands[i]) {
         CCC.commandHistory.push(commands[i]);
       }
     }
@@ -434,10 +434,10 @@ CCC.xhrTimeout = function() {
  */
 CCC.xhrStateChange = function() {
   // Only if request shows "loaded".
-  if (this.readyState == 4) {
+  if (this.readyState === 4) {
     CCC.xhrObject = null;
     // Only if "OK".
-    if (this.status == 200) {
+    if (this.status === 200) {
       try {
         var json = JSON.parse(this.responseText);
       } catch (e) {
@@ -473,7 +473,7 @@ CCC.parse = function(receivedJson) {
   var msgNum = receivedJson['msgNum'];
   var msgs = receivedJson['msgs'];
 
-  if (typeof ackCmd == 'number') {
+  if (typeof ackCmd === 'number') {
     if (ackCmd > CCC.commandIndex) {
       console.error('Server acks ' + ackCmd +
                     ', but CCC.commandIndex is only ' + CCC.commandIndex);
@@ -485,7 +485,7 @@ CCC.parse = function(receivedJson) {
         CCC.commandOutput.length + ackCmd - CCC.commandIndex);
   }
 
-  if (typeof msgNum == 'number') {
+  if (typeof msgNum === 'number') {
     // Server sent messages.  Increase client's index for acknowledgment.
     var currentIndex = msgNum - msgs.length + 1;
     for (var i = 0; i < msgs.length; i++) {
@@ -520,7 +520,7 @@ CCC.schedulePing = function(ms) {
  */
 CCC.keydown = function(e) {
   CCC.userActive();
-  if (!e.shiftKey && e.key == 'Enter') {
+  if (!e.shiftKey && e.key === 'Enter') {
     // Enter
     CCC.sendCommand(CCC.commandTextarea.value, CCC.localEcho);
     // Clear the textarea.
@@ -528,13 +528,13 @@ CCC.keydown = function(e) {
     CCC.commandHistoryPointer = -1;
     CCC.commandTemp = '';
     e.preventDefault();  // Don't add an enter after the clear.
-  } else if ((!e.shiftKey && e.key == 'ArrowUp') ||
-             (e.ctrlKey && e.key == 'p')) {
+  } else if ((!e.shiftKey && e.key === 'ArrowUp') ||
+             (e.ctrlKey && e.key === 'p')) {
     // Up or Ctrl-P
     if (!CCC.commandHistory.length) {
       return;
     }
-    if (CCC.commandHistoryPointer == -1) {
+    if (CCC.commandHistoryPointer === -1) {
       CCC.commandTemp = CCC.commandTextarea.value;
       CCC.commandHistoryPointer = CCC.commandHistory.length - 1;
       CCC.commandTextarea.value = CCC.commandHistory[CCC.commandHistoryPointer];
@@ -543,13 +543,13 @@ CCC.keydown = function(e) {
       CCC.commandTextarea.value = CCC.commandHistory[CCC.commandHistoryPointer];
     }
     e.preventDefault();  // Don't move the cursor to start after change.
-  } else if ((!e.shiftKey && e.key == 'ArrowDown') ||
-             (e.ctrlKey && e.key == 'n')) {
+  } else if ((!e.shiftKey && e.key === 'ArrowDown') ||
+             (e.ctrlKey && e.key === 'n')) {
     // Down or Ctrl-N
     if (!CCC.commandHistory.length) {
       return;
     }
-    if (CCC.commandHistoryPointer == CCC.commandHistory.length - 1) {
+    if (CCC.commandHistoryPointer === CCC.commandHistory.length - 1) {
       CCC.commandHistoryPointer = -1;
       CCC.commandTextarea.value = CCC.commandTemp;
       CCC.commandTemp = '';
@@ -557,14 +557,14 @@ CCC.keydown = function(e) {
       CCC.commandHistoryPointer++;
       CCC.commandTextarea.value = CCC.commandHistory[CCC.commandHistoryPointer];
     }
-  } else if (e.key == 'Tab') {
+  } else if (e.key === 'Tab') {
     // Tab
     e.preventDefault();  // Don't change the focus.
     if (!CCC.commandHistory.length) {
       return;
     }
     var chp = CCC.commandHistoryPointer;
-    if (chp == -1) {  // Save the current value.
+    if (chp === -1) {  // Save the current value.
       CCC.commandTemp = CCC.commandTextarea.value;
     }
     var reverse = e.shiftKey;
@@ -576,20 +576,20 @@ CCC.keydown = function(e) {
       } else if (chp >= CCC.commandHistory.length) {  // Wrap down.
         chp = -1;
       }
-      if (chp == -1) {
+      if (chp === -1) {
         // The current value is always a match.
         CCC.commandHistoryPointer = -1;
         CCC.commandTextarea.value = CCC.commandTemp;
         CCC.commandTemp = '';
         break;
       } else if (CCC.commandHistory[chp].toLowerCase()
-                 .indexOf(CCC.commandTemp.toLowerCase()) == 0) {
+                 .indexOf(CCC.commandTemp.toLowerCase()) === 0) {
         CCC.commandHistoryPointer = chp;
         CCC.commandTextarea.value = CCC.commandHistory[chp];
         break;
       }
     }
-  } else if (e.key.length == 1) {
+  } else if (e.key.length === 1) {
     CCC.commandHistoryPointer = -1;
     CCC.commandTemp = '';
   }
