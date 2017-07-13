@@ -116,3 +116,31 @@ exports.testRoundtripSimple = function(t) {
       x;
   `, '', 256, 100);
 };
+
+/**
+ * Run more detailed tests of the state of the post-rountrip interpreter.
+ * @param {T} t The test runner object.
+ */
+exports.testRoundtripDetails = function(t) {
+  runTest(t, 'testRoundtripDetails', `
+      var objProto = Object.getPrototypeOf({}),
+          arrProto = Object.getPrototypeOf([]),
+          reProto = Object.getPrototypeOf(/foo/),
+          boolProto = Object.getPrototypeOf(false),
+          numProto = Object.getPrototypeOf(0),
+          strProto =  Object.getPrototypeOf('');
+  `,`
+      Object.getPrototypeOf({}) === objProto &&
+      Object.getPrototypeOf({}) === Object.prototype &&
+      Object.getPrototypeOf([]) === arrProto &&
+      Object.getPrototypeOf([]) === Array.prototype &&
+      Object.getPrototypeOf(/foo/) === reProto &&
+      Object.getPrototypeOf(/foo/) === RegExp.prototype &&
+      Object.getPrototypeOf(false) === boolProto &&
+      Object.getPrototypeOf(false) === Boolean.prototype &&
+      Object.getPrototypeOf(0) === numProto &&
+      Object.getPrototypeOf(0) === Number.prototype &&
+      Object.getPrototypeOf('') === strProto &&
+      Object.getPrototypeOf('') === String.prototype;
+  `, true);
+};
