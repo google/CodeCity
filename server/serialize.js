@@ -35,7 +35,7 @@ Serializer.deserialize = function(json, interpreter) {
        // Object reference: {'#': 42}
        value = objectList[data];
         if (!value) {
-          throw 'Object reference not found: ' + data;
+          throw ReferenceError('Object reference not found: ' + data);
         }
         return value;
       }
@@ -55,11 +55,11 @@ Serializer.deserialize = function(json, interpreter) {
 
   var stack = interpreter.stateStack;
   if (!Array.isArray(json)) {
-    throw 'Top-level JSON is not a list.';
+    throw TypeError('Top-level JSON is not a list.');
   }
   if (!stack.length) {
     // Require native functions to be present.
-    throw 'Interpreter must be initialized prior to deserialization.';
+    throw Error('Interpreter must be initialized prior to deserialization.');
   }
   // Find all native functions in existing interpreter.
   var objectList = [];
@@ -90,7 +90,7 @@ Serializer.deserialize = function(json, interpreter) {
       case 'Function':
         obj = functionHash[jsonObj['id']];
         if (!obj) {
-          throw 'Function ID not found: ' + jsonObj['id'];
+          throw RangeError('Function ID not found: ' + jsonObj['id']);
         }
         break;
       case 'Array':
@@ -103,7 +103,7 @@ Serializer.deserialize = function(json, interpreter) {
       case 'Date':
         obj = new Date(jsonObj['data']);
         if (isNaN(obj)) {
-          throw 'Invalid date: ' + jsonObj['data'];
+          throw TypeError('Invalid date: ' + jsonObj['data']);
         }
         break;
       case 'RegExp':
@@ -134,7 +134,7 @@ Serializer.deserialize = function(json, interpreter) {
         obj = Object.create(nodeProto);
         break;
       default:
-        throw 'Unknown type: ' + jsonObj['type'];
+        throw TypeError('Unknown type: ' + jsonObj['type']);
     }
     objectList[i] = obj;
   }
@@ -179,7 +179,7 @@ Serializer.serialize = function(interpreter) {
     if (value && (typeof value === 'object' || typeof value === 'function')) {
       var ref = objectList.indexOf(value);
       if (ref === -1) {
-        throw 'Object not found in table.';
+        throw RangeError('Object not found in table.');
       }
       return {'#': ref};
     }
@@ -231,7 +231,7 @@ Serializer.serialize = function(interpreter) {
         jsonObj['type'] = 'Function';
         jsonObj['id'] = obj.id;
         if (obj.id === undefined) {
-          throw 'Native function has no ID: ' + obj;
+          throw Error('Native function has no ID: ' + obj);
         }
         continue;  // No need to index properties.
       case Array.prototype:
@@ -281,7 +281,7 @@ Serializer.serialize = function(interpreter) {
         jsonObj['type'] = 'Node';
         break;
       default:
-        throw 'Unknown type: ' + obj;
+        throw TypeError('Unknown type: ' + obj);
     }
     var props = Object.create(null);
     var names = Object.getOwnPropertyNames(obj);
