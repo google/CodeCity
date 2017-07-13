@@ -30,56 +30,89 @@ const Serializer = require('../serialize');
 const util = require('util');
 
 /**
+ * Run a roundtrip test:
+ * - Create an interpreter instance.
+ * - Append src1 and run specified number of steps.
+ * - Serialize interpreter to JSON.
+ * - Create new interpreter instance and deserialize JSON into it.
+ * - Run new instance to completion.
+ * - Append src2 (if specified) and run that to completion.
+ * - Verify result is as expected.
+ * @param {!T} t The test runner object.
+ * @param {string} name The name of the test.
+ * @param {string} src1 The code to be evaled before serialization.
+ * @param {string} src2 The code to be evaled after serialization.
+ * @param {number|string|boolean|null|undefined} expected The expected
+ *     completion value.
+ * @param {number=} stesp How many steps to run before serializing
+ *     (run to completion if unspecified).
+ */
+function runTest(t, name, src1, src2, expected, steps) {
+  try {
+    var intrp1 = new Interpreter;
+    intrp1.appendCode(autoexec);
+    intrp1.run();
+    if (src1) {
+      intrp1.appendCode(src1);
+      if (steps !== undefined) {
+        for (var i = 0; i < steps; i++) {
+          intrp1.step();
+        }
+      } else {
+        intrp1.run();
+      }
+    }
+  } catch (e) {
+    t.crash(name + 'Pre', e);
+    return;
+  }
+
+  try {
+    var json = JSON.stringify(Serializer.serialize(intrp1));
+  } catch (e) {
+    t.crash(name + 'Serialize', e);
+    return;
+  }
+
+  try {
+    var intrp2 = new Interpreter;
+    Serializer.deserialize(JSON.parse(json), intrp2);
+  } catch (e) {
+    t.crash(name + 'Deserialize', e);
+    return;
+  }
+
+  try {
+    intrp2.run();
+    if (src2) {
+      intrp2.appendCode(src2);
+      intrp2.run();
+    }
+  } catch (e) {
+    t.crash(name + 'Post', e);
+    return;
+  }
+  
+  var r = intrp2.pseudoToNative(intrp2.value);
+  if (Object.is(r, expected)) {
+    t.pass(name);
+  } else {
+    t.fail(name, util.format(
+        '%s\n/* roundtrip */\n%s\ngot: %s  want: %s',
+        src1, src2, String(r), String(expected)));
+  }
+};
+
+/**
  * Run a round trip serialization-deserialization.
  * @param {T} t The test runner object.
  */
-exports.testRoundtrip = function(t) {
-  var interpreter = new Interpreter();
-  interpreter.appendCode(autoexec);
-  interpreter.run();
-
-  var err = undefined;
-  var src = `
-  var x = 1;
-  for (var i = 0; i < 8; i++) {
-    x *= 2;
-  }
-  x;
-  `;
-  try {
-    interpreter.appendCode(src);
-    for (var i = 0; i < 100; i++) {
-      interpreter.step();
-    }
-    var json = Serializer.serialize(interpreter);
-  } catch (e) {
-    err = e;
-  }
-
-  if (err) {
-    t.crash('Serialize', util.format('%s', err.stack));
-  } else if (!json) {
-    t.fail('Serialize', util.format('got: %s', src, String(json)));
-  } else {
-    t.pass('Serialize');
-  }
-
-  var interpreter = new Interpreter();
-
-  err = undefined;
-  try {
-    Serializer.deserialize(json, interpreter);
-    interpreter.run();
-  } catch (e) {
-    err = e;
-  }
-
-  if (err) {
-    t.crash('Deserialize', util.format('%s', err.stack));
-  } else if (interpreter.value != 256) {
-    t.fail('Deserialize', util.format('got: %s  want: %s',
-        String(interpreter.value), '256'));
-  } else {
-    t.pass('Deserialize');
-  }
+exports.testRoundtripSimple = function(t) {
+  runTest(t, 'testRoundtripSimple', `
+      var x = 1;
+      for (var i = 0; i < 8; i++) {
+        x *= 2;
+      }
+      x;
+  `, '', 256, 100);
 };
