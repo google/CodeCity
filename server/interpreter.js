@@ -30,8 +30,8 @@ var acorn;
  * @constructor
  */
 var Interpreter = function() {
+  this.installThread();
   this.installTypes();
-  this.paused_ = false;
   // Unique identifier for native functions.  Used in serialization.
   this.functionCounter_ = 0;
   // Map node types to our step function names; a property lookup is faster
@@ -57,12 +57,7 @@ var Interpreter = function() {
   // Create and initialize the global scope.
   this.global = new Interpreter.Scope;
   this.initGlobalScope(this.global);
-  this.value = undefined;
-  this.stateStack = [{
-    node: acorn.parse('', Interpreter.PARSE_OPTIONS),
-    scope: this.global,
-    done: false
-  }];
+  this.thread = new this.Thread;
 };
 
 /**
@@ -127,7 +122,7 @@ Interpreter.SCOPE_REFERENCE = {};
  * @param {string|!Object} code Raw JavaScript text or AST.
  */
 Interpreter.prototype.appendCode = function(code) {
-  var state = this.stateStack[0];
+  var state = this.thread.stateStack[0];
   if (!state || state.node['type'] !== 'Program') {
     throw Error('Expecting original AST to start with a Program node.');
   }
@@ -150,7 +145,7 @@ Interpreter.prototype.appendCode = function(code) {
  * @return {boolean} True if a step was executed, false if no more instructions.
  */
 Interpreter.prototype.step = function() {
-  var stack = this.stateStack;
+  var stack = this.thread.stateStack;
   var state = stack[stack.length - 1];
   if (!state) {
     return false;
@@ -179,7 +174,7 @@ Interpreter.prototype.step = function() {
  *     false if no more instructions.
  */
 Interpreter.prototype.run = function() {
-  var stack = this.stateStack;
+  var stack = this.thread.stateStack;
   while (true) {
     var state = stack[stack.length - 1];
     if (!state) {
@@ -296,7 +291,7 @@ Interpreter.prototype.initFunction = function(scope) {
     args = args.join(', ');
     // Interestingly, the scope for constructed functions is the global scope,
     // even if they were constructed in some other scope.
-    newFunc.parentScope = thisInterpreter.stateStack[0].scope;
+    newFunc.parentScope = thisInterpreter.global;
     // Acorn needs to parse code in the context of a function or else 'return'
     // statements will be syntax errors.
     try {
@@ -323,8 +318,8 @@ Interpreter.prototype.initFunction = function(scope) {
   this.FUNCTION.addNativeMethod('toString', this.Function.prototype.toString);
 
   wrapper = function(thisArg, args) {
-    var state =
-        thisInterpreter.stateStack[thisInterpreter.stateStack.length - 1];
+    var state = thisInterpreter.thread.stateStack[
+        thisInterpreter.thread.stateStack.length - 1];
     // Rewrite the current 'CallExpression' to apply a different function.
     state.func_ = this;
     // Assign the 'this' object.
@@ -348,7 +343,8 @@ Interpreter.prototype.initFunction = function(scope) {
 
   wrapper = function(thisArg, var_args) {
     var state =
-        thisInterpreter.stateStack[thisInterpreter.stateStack.length - 1];
+        thisInterpreter.thread.stateStack[
+            thisInterpreter.thread.stateStack.length - 1];
     // Rewrite the current 'CallExpression' to call a different function.
     state.func_ = this;
     // Assign the 'this' object.
@@ -1587,7 +1583,7 @@ Interpreter.prototype.getValueFromScope = function(scope, name) {
     scope = scope.parentScope;
   }
   // Typeof operator is unique: it can safely look at non-defined variables.
-  var prevNode = this.stateStack[this.stateStack.length - 1].node;
+  var prevNode = this.thread.stateStack[this.thread.stateStack.length - 1].node;
   if (prevNode['type'] === 'UnaryExpression' &&
       prevNode['operator'] === 'typeof') {
     return undefined;
@@ -1709,7 +1705,8 @@ Interpreter.stripLocations_ = function(node, start, end) {
  * @return {boolean} True if 'new foo()', false if 'foo()'.
  */
 Interpreter.prototype.calledWithNew = function() {
-  return this.stateStack[this.stateStack.length - 1].isConstructor;
+  return this.thread.stateStack[this.thread.stateStack.length - 1].
+      isConstructor;
 };
 
 /**
@@ -1780,8 +1777,8 @@ Interpreter.prototype.throwException = function(value, opt_message) {
 Interpreter.prototype.executeException = function(error) {
   // Search for a try statement.
   do {
-    this.stateStack.pop();
-    var state = this.stateStack[this.stateStack.length - 1];
+    this.thread.stateStack.pop();
+    var state = this.thread.stateStack[this.thread.stateStack.length - 1];
     if (state.node['type'] === 'TryStatement') {
       state.throwValue = error;
       return;
@@ -1817,14 +1814,14 @@ Interpreter.prototype.executeException = function(error) {
 Interpreter.prototype.pushNode_ = function(node) {
   var state = {
     node: node,
-    scope: this.stateStack[this.stateStack.length - 1].scope
+    scope: this.thread.stateStack[this.thread.stateStack.length - 1].scope
   };
-  this.stateStack.push(state);
+  this.thread.stateStack.push(state);
   return state;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
-// Types representing JS objects
+// Thread
 ///////////////////////////////////////////////////////////////////////////////
 
 // This is a bunch of boilerplate that serves two purposes:
@@ -1835,6 +1832,48 @@ Interpreter.prototype.pushNode_ = function(node) {
 //
 // * Second, for whatever reason these declarations seem to create a
 //   small performance improvement in V8.
+
+/**
+ * @param {Interpreter.prototype.Object=} proto
+ * @constructor
+ */
+Interpreter.prototype.Thread = function() {
+  this.paused = false;
+  this.value = undefined;
+  this.stateStack = [];
+  throw Error('Inner class constructor not callable on prototype');
+};
+
+///////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Install the Thread constructor on an Interpreter instance.  Should
+ * be called just once at interpreter-creation time.
+ */
+Interpreter.prototype.installThread = function() {
+  var intrp = this;
+
+  /**
+   * A thread of execution
+   * @constructor
+   * @extends {Interpreter.prototype.Thread}
+   */
+  intrp.Thread = function() {
+    this.paused_ = false;
+    this.value = undefined;
+    this.stateStack = [{
+      node: acorn.parse('', Interpreter.PARSE_OPTIONS),
+      scope: intrp.global,
+      done: false
+    }];
+  }
+
+}
+
+
+///////////////////////////////////////////////////////////////////////////////
+// Types representing JS objects - Object, Function, Array, etc.
+///////////////////////////////////////////////////////////////////////////////
 
 /**
  * Typedef for JS values.

@@ -186,7 +186,7 @@ Serializer.serialize = function(intrp) {
 
   // Properties on Interpreter instances to ignore.
   var skipList = ['Object', 'Function', 'Array', 'Date', 'RegExp', 'Error',
-                  'functionMap_', 'functionCounter_'];
+                  'Thread', 'functionMap_', 'functionCounter_'];
   // Find all objects.
   var objectList = [];
   Serializer.objectHunt_(intrp, objectList, skipList);
@@ -296,13 +296,14 @@ Serializer.getTypesDeserialize_ = function (intrp) {
   return {
     'Interpreter': Interpreter,
     'Scope': Interpreter.Scope,
+    'Thread': intrp.Thread,
     'PseudoObject': intrp.Object,
     'PseudoFunction': intrp.Function,
     'PseudoArray': intrp.Array,
     'PseudoDate': intrp.Date,
     'PseudoRegExp': intrp.RegExp,
     'PseudoError': intrp.Error,
-    'Node': intrp.stateStack[0].node.constructor,
+    'Node': intrp.thread.stateStack[0].node.constructor,
   };
 };
 
