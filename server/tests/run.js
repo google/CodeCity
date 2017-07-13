@@ -24,6 +24,8 @@
  */
 'use strict';
 
+const fs = require('fs');
+
 /**
  * Class that records benchmark results; much like Go's testing.B type.
  * @constructor
@@ -89,15 +91,17 @@ B.prototype.skip = function(name, opt_message) {
 /********************************************************************/
 
 /**
- * Run tests.
+ * Run benchmarks.
+ * @param {!Array} files Filenames containing benchmarks to run.
  */
-function runBenchmarks() {
-  var tests = require('./interpreter_bench.js');
-
-  var b = new B;
-  for (var k in tests) {
-    if (k.startsWith('bench') && typeof tests[k] === 'function') {
-      tests[k](b);
+function runBenchmarks(files) {
+  for (var i = 0; i < files.length; i++) {
+    var tests = require(files[i]);
+    var b = new B;
+    for (var k in tests) {
+      if (k.startsWith('bench') && typeof tests[k] === 'function') {
+        tests[k](b);
+      }
     }
   }
 }
@@ -153,12 +157,13 @@ T.prototype.fail = function(name, opt_message) {
 
 /**
  * Run tests.
+ * @param {!Array} files Filenames containing tests to run.
  */
-function runTests() {
+function runTests(files) {
   var t = new T;
-  var groups = ['./interpreter_test.js', './serialize_test.js'];
-  for (var i = 0; i < groups.length; i++) {
-    var tests = require(groups[i]);
+  
+  for (var i = 0; i < files.length; i++) {
+    var tests = require(files[i]);
     for (var k in tests) {
       if (k.startsWith('test') && typeof tests[k] === 'function') {
         tests[k](t);
@@ -175,5 +180,16 @@ function runTests() {
 
 /********************************************************************/
 
-runTests();
-runBenchmarks();
+/**
+ * Get list of test filenames matching a particular regexp.
+ * @param {!RegExp} pattern RegExp to match.
+ * @return {Array} List of filenames.
+ */
+function getFiles(pattern) {
+  var f = fs.readdirSync(__dirname);  // __dirname is location of this module.
+  return f.filter(function (fn) { return pattern.test(fn); }).
+      map(function (fn) { return './' + fn; });
+}
+
+runTests(getFiles(/_test.js$/));
+runBenchmarks(getFiles(/_bench.js$/));
