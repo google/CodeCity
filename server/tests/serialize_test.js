@@ -24,10 +24,11 @@
  */
 'use strict';
 
+const util = require('util');
+
 const Interpreter = require('../interpreter');
 const autoexec = require('../autoexec');
 const Serializer = require('../serialize');
-const util = require('util');
 
 /**
  * Run a roundtrip test:
