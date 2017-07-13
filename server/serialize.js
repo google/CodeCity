@@ -70,14 +70,15 @@ Serializer.deserialize = function(json, interpreter) {
       functionHash[objectList[i].id] = objectList[i];
     }
   }
-  // Get a handle on Acorn's node_t object.
-  var nodeProto = stack[0].node.constructor.prototype;
+  // Get types.
+  var types = this.getTypesDeserialize_(interpreter);
   // First pass: Create object stubs for every object.
   objectList = [];
   for (var i = 0; i < json.length; i++) {
     var jsonObj = json[i];
     var obj;
-    switch (jsonObj['type']) {
+    var type = jsonObj['type'];
+    switch (type) {
       case 'Map':
         obj = Object.create(null);
         break;
@@ -109,32 +110,13 @@ Serializer.deserialize = function(json, interpreter) {
       case 'RegExp':
         obj = RegExp(jsonObj['source'], jsonObj['flags']);
         break;
-      case 'Scope':
-        obj = new Interpreter.Scope(null);
-        break;
-      case 'PseudoObject':
-        obj = new interpreter.Object(null);
-        break;
-      case 'PseudoFunction':
-        obj = new interpreter.Function(null);
-        break;
-      case 'PseudoArray':
-        obj = new interpreter.Array(null);
-        break;
-      case 'PseudoDate':
-        obj = new interpreter.Date(null);
-        break;
-      case 'PseudoRegExp':
-        obj = new interpreter.RegExp(null);
-        break;
-      case 'PseudoError':
-        obj = new interpreter.Error(null);
-        break;
-      case 'Node':
-        obj = Object.create(nodeProto);
-        break;
       default:
-        throw TypeError('Unknown type: ' + jsonObj['type']);
+        var constructor = types[type];
+        if (!constructor) {
+          throw TypeError('Unknown type: ' + jsonObj['type']);
+        }
+        obj = new constructor;
+        break;
     }
     objectList[i] = obj;
   }
@@ -204,8 +186,8 @@ Serializer.serialize = function(interpreter) {
   // Find all objects.
   var objectList = [];
   Serializer.objectHunt_(stack, objectList);
-  // Get a handle on Acorn's node_t object.
-  var nodeProto = stack[0].node.constructor.prototype;
+  // Get types.
+  var types = this.getTypesSerialize_(interpreter);
   // Serialize every object.
   var json = [];
   for (var i = 0; i < objectList.length; i++) {
@@ -216,7 +198,8 @@ Serializer.serialize = function(interpreter) {
     if (true) {
       jsonObj['#'] = i;
     }
-    switch (Object.getPrototypeOf(obj)) {
+    var proto = Object.getPrototypeOf(obj);
+    switch (proto) {
       case null:
         jsonObj['type'] = 'Map';
         break;
@@ -256,32 +239,13 @@ Serializer.serialize = function(interpreter) {
         jsonObj['source'] = obj.source;
         jsonObj['flags'] = obj.flags;
         continue;  // No need to index properties.
-      case Interpreter.Scope.prototype:
-        jsonObj['type'] = 'Scope';
-        break;
-      case interpreter.Object.prototype:
-        jsonObj['type'] = 'PseudoObject';
-        break;
-      case interpreter.Function.prototype:
-        jsonObj['type'] = 'PseudoFunction';
-        break;
-      case interpreter.Array.prototype:
-        jsonObj['type'] = 'PseudoArray';
-        break;
-      case interpreter.Date.prototype:
-        jsonObj['type'] = 'PseudoDate';
-        break;
-      case interpreter.RegExp.prototype:
-        jsonObj['type'] = 'PseudoRegExp';
-        break;
-      case interpreter.Error.prototype:
-        jsonObj['type'] = 'PseudoError';
-        break;
-      case nodeProto:
-        jsonObj['type'] = 'Node';
-        break;
       default:
-        throw TypeError('Unknown type: ' + obj);
+        var type = types.get(proto);
+        if (!type) {
+          throw TypeError('Unknown type: ' + obj);
+        }
+        jsonObj['type'] = type;
+        break;
     }
     var props = Object.create(null);
     var names = Object.getOwnPropertyNames(obj);
@@ -311,6 +275,47 @@ Serializer.objectHunt_ = function(node, objectList) {
     }
   }
 };
+
+/** 
+ * Make a map of typename to contructor for each type that might be
+ * found while serializing an Interpreter instance.
+ * @param {!Interpreter} intrp The interpreter instance being serialized
+ *     (needed for inner classes).
+ * @return {!Object} A key/value map of typesnames to constructors.
+ */
+Serializer.getTypesDeserialize_ = function (intrp) {
+  var types = {
+    Scope: Interpreter.Scope,
+    PseudoObject: intrp.Object,
+    PseudoFunction: intrp.Function,
+    PseudoArray: intrp.Array,
+    PseudoDate: intrp.Date,
+    PseudoRegExp: intrp.RegExp,
+    PseudoError: intrp.Error,
+  };
+  // Fake up a constructor for Acorn AST nodes:
+  types.Node = function Node() {};
+  types.Node.prototype = intrp.stateStack[0].node.constructor.prototype;
+  return types;
+}
+
+/** 
+ * Make a map of prototype to typename for each of the types that
+ * might be found while deserializing an Interpreter instance.
+ * @param {!Interpreter} intrp An interpreter instance being
+ *     deserialized into (needed for inner classes).
+ * @return {!Map} A key/value map of protoytype objects to typesnames.
+ */
+Serializer.getTypesSerialize_ = function (intrp) {
+  var types = this.getTypesDeserialize_(intrp);
+  var map = new Map;
+  for (var t in types) {
+    if (types.hasOwnProperty(t)) {
+      map.set(types[t].prototype, t);
+    }
+  }
+  return map;
+}
 
 if (typeof module !== 'undefined') {  // Node.js
   Interpreter = require('./interpreter');
