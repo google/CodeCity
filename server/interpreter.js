@@ -1765,7 +1765,7 @@ Interpreter.prototype.setValue = function(ref, value) {
  * @param {string=} opt_message Message being thrown.
  */
 Interpreter.prototype.throwException = function(value, opt_message) {
-  var error
+  var error;
   if (opt_message === undefined) {
     error = value;  // This is a value to throw, not an error proto.
   } else {

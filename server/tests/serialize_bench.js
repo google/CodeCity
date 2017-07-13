@@ -39,18 +39,18 @@ const Serializer = require('../serialize');
  */
 function runInterpreterBench(b, name, src) {
   for (var i = 0; i < 4; i++) {
-    var interpreter1 = new Interpreter;
-    interpreter1.appendCode(autoexec);
-    interpreter1.run();
+    var intrp1 = new Interpreter;
+    intrp1.appendCode(autoexec);
+    intrp1.run();
 
     var err = undefined;
     try {
-      interpreter1.appendCode(src);
-      var json = Serializer.serialize(interpreter1);
-      var interpreter2 = new Interpreter;
-      Serializer.deserialize(json, interpreter2);
+      intrp1.appendCode(src);
+      var json = Serializer.serialize(intrp1);
+      var intrp2 = new Interpreter;
+      Serializer.deserialize(json, intrp2);
       b.start(name, i);
-      interpreter2.run();
+      intrp2.run();
       b.end(name, i);
     } catch (err) {
       b.crash(name, util.format('%s\n%s', src, err.stack));

@@ -69,7 +69,7 @@ function runTest(t, name, src1, src2, expected, steps) {
   }
 
   try {
-    var json = JSON.stringify(Serializer.serialize(intrp1));
+    var json = JSON.stringify(Serializer.serialize(intrp1), null, '  ');
   } catch (e) {
     t.crash(name + 'Serialize', e);
     return;

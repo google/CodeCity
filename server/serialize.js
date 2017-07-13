@@ -27,7 +27,7 @@ var Interpreter;
 
 var Serializer = {};
 
-Serializer.deserialize = function(json, interpreter) {
+Serializer.deserialize = function(json, intrp) {
   function decodeValue(value) {
     if (value && typeof value === 'object') {
       var data;
@@ -53,17 +53,20 @@ Serializer.deserialize = function(json, interpreter) {
     return value;
   }
 
-  var stack = interpreter.stateStack;
   if (!Array.isArray(json)) {
     throw TypeError('Top-level JSON is not a list.');
   }
-  if (!stack.length) {
-    // Require native functions to be present.
+
+  // Require native functions to be present.  Can't just create fresh
+  // new interpreter instance because client code may want to add
+  // custom builtins.
+  if (!intrp.global) {
     throw Error('Interpreter must be initialized prior to deserialization.');
   }
   // Find all native functions in existing interpreter.
+  // Find all native functions to get id => func mappings.
   var objectList = [];
-  Serializer.objectHunt_(stack, objectList);
+  Serializer.objectHunt_(intrp, objectList);
   var functionHash = Object.create(null);
   for (var i = 0; i < objectList.length; i++) {
     if (typeof objectList[i] === 'function') {
@@ -71,10 +74,12 @@ Serializer.deserialize = function(json, interpreter) {
     }
   }
   // Get types.
-  var types = this.getTypesDeserialize_(interpreter);
-  // First pass: Create object stubs for every object.
-  objectList = [];
-  for (var i = 0; i < json.length; i++) {
+  var types = this.getTypesDeserialize_(intrp);
+
+  // First pass: Create object stubs for every object.  We don't need
+  // to (re)create object #0, because that's the interpreter proper.
+  objectList = [intrp];
+  for (var i = 1; i < json.length; i++) {
     var jsonObj = json[i];
     var obj;
     var type = jsonObj['type'];
@@ -152,11 +157,9 @@ Serializer.deserialize = function(json, interpreter) {
       }
     }
   }
-  // First object is the stack.
-  interpreter.stateStack = objectList[0];
 };
 
-Serializer.serialize = function(interpreter) {
+Serializer.serialize = function(intrp) {
   function encodeValue(value) {
     if (value && (typeof value === 'object' || typeof value === 'function')) {
       var ref = objectList.indexOf(value);
@@ -182,12 +185,14 @@ Serializer.serialize = function(interpreter) {
     return value;
   }
 
-  var stack = interpreter.stateStack;
+  // Properties on Interpreter instances to ignore.
+  var skipList = ['Object', 'Function', 'Array', 'Date', 'RegExp', 'Error',
+                  'functionMap_', 'functionCounter_'];
   // Find all objects.
   var objectList = [];
-  Serializer.objectHunt_(stack, objectList);
+  Serializer.objectHunt_(intrp, objectList, skipList);
   // Get types.
-  var types = this.getTypesSerialize_(interpreter);
+  var types = this.getTypesSerialize_(intrp);
   // Serialize every object.
   var json = [];
   for (var i = 0; i < objectList.length; i++) {
@@ -251,7 +256,9 @@ Serializer.serialize = function(interpreter) {
     var names = Object.getOwnPropertyNames(obj);
     for (var j = 0; j < names.length; j++) {
       var name = names[j];
-      props[name] = encodeValue(obj[name]);
+      if (obj !== intrp || skipList.indexOf(name) === -1) {
+        props[name] = encodeValue(obj[name]);
+      }
     }
     if (names.length) {
       jsonObj['props'] = props;
@@ -261,7 +268,7 @@ Serializer.serialize = function(interpreter) {
 };
 
 // Recursively search the stack to find all non-primitives.
-Serializer.objectHunt_ = function(node, objectList) {
+Serializer.objectHunt_ = function(node, objectList, skipList) {
   if (node && (typeof node === 'object' || typeof node === 'function')) {
     if (objectList.indexOf(node) !== -1) {
       return;
@@ -270,7 +277,11 @@ Serializer.objectHunt_ = function(node, objectList) {
     if (typeof node === 'object') {  // Recurse.
       var names = Object.getOwnPropertyNames(node);
       for (var i = 0; i < names.length; i++) {
-        Serializer.objectHunt_(node[names[i]], objectList);
+        var name = names[i];
+        if (!skipList || skipList.indexOf(name) === -1) {
+          // Don't pass skiplist; it's only for top-level property keys.
+          Serializer.objectHunt_(node[names[i]], objectList);
+        }
       }
     }
   }
@@ -285,6 +296,7 @@ Serializer.objectHunt_ = function(node, objectList) {
  */
 Serializer.getTypesDeserialize_ = function (intrp) {
   var types = {
+    Interpreter: Interpreter,
     Scope: Interpreter.Scope,
     PseudoObject: intrp.Object,
     PseudoFunction: intrp.Function,
