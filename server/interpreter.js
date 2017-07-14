@@ -57,7 +57,8 @@ var Interpreter = function() {
   // Create and initialize the global scope.
   this.global = new Interpreter.Scope;
   this.initGlobalScope(this.global);
-  this.thread = new this.Thread;
+  this.threads = [];
+  this.thread = null;
 };
 
 /**
@@ -118,26 +119,34 @@ Interpreter.STEP_ERROR = {};
 Interpreter.SCOPE_REFERENCE = {};
 
 /**
- * Add more code to the interpreter.
+ * Create a new thread and add it to .threads.
  * @param {string|!Object} code Raw JavaScript text or AST.
+ * @return {number} thread ID.
  */
-Interpreter.prototype.appendCode = function(code) {
-  var state = this.thread.stateStack[0];
-  if (!state || state.node['type'] !== 'Program') {
-    throw Error('Expecting original AST to start with a Program node.');
+Interpreter.prototype.createThread = function(code) {
+  var id = this.threads.length;
+  var thread = new this.Thread(id, code);
+  this.threads.push(thread);
+  this.schedule();
+  return id;
+};
+
+/**
+ * Schedule a runnable thread.
+ */
+Interpreter.prototype.schedule = function() {
+  var threads = this.threads;
+  // .threads will be very sparse, so use for-in loop.
+  for (var i in threads) {
+    if (!threads.hasOwnProperty(i)) {
+      continue;
+    }
+    if (threads[i] && threads[i].state === this.Thread.State.READY) {
+      this.thread = threads[i];
+      return;
+    }
   }
-  if (typeof code === 'string') {
-    code = acorn.parse(code, Interpreter.PARSE_OPTIONS);
-  }
-  if (!code || code['type'] !== 'Program') {
-    throw Error('Expecting new AST to start with a Program node.');
-  }
-  this.populateScope_(code, state.scope);
-  // Append the new program to the old one.
-  for (var i = 0, node; (node = code['body'][i]); i++) {
-    state.node['body'].push(node);
-  }
-  state.done = false;
+  throw Error('No runnable threads?');
 };
 
 /**
@@ -1821,6 +1830,7 @@ Interpreter.prototype.pushNode_ = function(node) {
   return state;
 };
 
+
 ///////////////////////////////////////////////////////////////////////////////
 // Thread
 ///////////////////////////////////////////////////////////////////////////////
@@ -1835,10 +1845,12 @@ Interpreter.prototype.pushNode_ = function(node) {
 //   small performance improvement in V8.
 
 /**
- * @param {Interpreter.prototype.Object=} proto
  * @constructor
+ * @param {number} id
+ * @param {string|!Object} code
  */
-Interpreter.prototype.Thread = function() {
+Interpreter.prototype.Thread = function(id, code) {
+  this.id = -1;
   this.state = Interpreter.prototype.Thread.State.ZOMBIE;
   this.value = undefined;
   this.stateStack = [];
@@ -1871,20 +1883,38 @@ Interpreter.prototype.installThread = function() {
    * A thread of execution
    * @constructor
    * @extends {Interpreter.prototype.Thread}
+   * @param {number=} id Thread ID.  Should correspond to index of this
+   *     thread in .threads array.
+   * @param {string|!Object=} code Raw JavaScript text or AST.
    */
-  intrp.Thread = function() {
-    this.state = 0;
+  intrp.Thread = function(id, code) {
+    if (id === undefined) { // Deserialising. Props will be filled in later.
+      this.id = -1;
+      this.state = Interpreter.prototype.Thread.State.ZOMBIE;
+      this.value = undefined;
+      this.stateStack = [];
+      return;
+    } 
+    this.id = id;
+    this.state = intrp.Thread.State.READY;
+    if (typeof code === 'string') {
+      code = acorn.parse(code, Interpreter.PARSE_OPTIONS);
+    }
+    if (!code || code['type'] !== 'Program') {
+      throw Error('Expecting new AST to start with a Program node.');
+    }
+    intrp.populateScope_(code, intrp.global);
     this.value = undefined;
     this.stateStack = [{
-      node: acorn.parse('', Interpreter.PARSE_OPTIONS),
+      node: code,
       scope: intrp.global,
       done: false
     }];
   };
 
   intrp.Thread.State = Interpreter.prototype.Thread.State;
-}
 
+};
 
 ///////////////////////////////////////////////////////////////////////////////
 // Types representing JS objects - Object, Function, Array, etc.
@@ -3001,9 +3031,8 @@ Interpreter.prototype['stepProgram'] = function(stack, state, node) {
     state.n_ = n + 1;
     this.pushNode_(expression);
   } else {
-    state.done = true;
-    // Don't pop the stateStack.
-    // Leave the root scope on the tree in case the program is appended to.
+    stack.pop();
+    this.thread.state = this.Thread.State.ZOMBIE;
   }
 };
 
@@ -3238,3 +3267,15 @@ if (typeof module !== 'undefined') { // Node.js
   acorn = require('../third_party/acorn/acorn');
   module.exports = Interpreter;
 }
+
+///////////////////////////////////////////////////////////////////////////////
+// AST Node
+///////////////////////////////////////////////////////////////////////////////
+// This is just to assist the serializer getting access to the acorn
+// AST node constructor.  And perhaps for Closure Compiler type checking.
+
+/**
+ * @constructor
+ */
+Interpreter.Node = acorn.parse('', Interpreter.PARSE_OPTIONS).constructor;
+

@@ -303,7 +303,7 @@ Serializer.getTypesDeserialize_ = function (intrp) {
     'PseudoDate': intrp.Date,
     'PseudoRegExp': intrp.RegExp,
     'PseudoError': intrp.Error,
-    'Node': intrp.thread.stateStack[0].node.constructor,
+    'Node': Interpreter.Node,
   };
 };
 

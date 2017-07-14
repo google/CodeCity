@@ -51,10 +51,10 @@ const Serializer = require('../serialize');
 function runTest(t, name, src1, src2, expected, steps) {
   try {
     var intrp1 = new Interpreter;
-    intrp1.appendCode(autoexec);
+    intrp1.createThread(autoexec);
     intrp1.run();
     if (src1) {
-      intrp1.appendCode(src1);
+      intrp1.createThread(src1);
       if (steps !== undefined) {
         for (var i = 0; i < steps; i++) {
           intrp1.step();
@@ -86,7 +86,7 @@ function runTest(t, name, src1, src2, expected, steps) {
   try {
     intrp2.run();
     if (src2) {
-      intrp2.appendCode(src2);
+      intrp2.createThread(src2);
       intrp2.run();
     }
   } catch (e) {
