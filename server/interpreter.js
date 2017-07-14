@@ -153,7 +153,7 @@ Interpreter.prototype.step = function() {
   var node = state.node, type = node['type'];
   if (type === 'Program' && state.done) {
     return false;
-  } else if (this.paused_) {
+  } else if (this.thread.state === this.Thread.State.BLOCKED) {
     return true;
   }
   try {
@@ -181,7 +181,8 @@ Interpreter.prototype.run = function() {
       break;
     }
     var node = state.node, type = node['type'];
-    if (type === 'Program' && state.done || this.paused_) {
+    if (type === 'Program' && state.done ||
+        this.thread.state === this.Thread.State.BLOCKED) {
       break;
     }
     try {
@@ -194,7 +195,7 @@ Interpreter.prototype.run = function() {
       }
     }
   }
-  return this.paused_;
+  return this.thread.state === this.Thread.State.BLOCKED;
 };
 
 /**
@@ -1838,7 +1839,7 @@ Interpreter.prototype.pushNode_ = function(node) {
  * @constructor
  */
 Interpreter.prototype.Thread = function() {
-  this.paused = false;
+  this.state = Interpreter.prototype.Thread.State.ZOMBIE;
   this.value = undefined;
   this.stateStack = [];
   throw Error('Inner class constructor not callable on prototype');
@@ -1872,15 +1873,16 @@ Interpreter.prototype.installThread = function() {
    * @extends {Interpreter.prototype.Thread}
    */
   intrp.Thread = function() {
-    this.paused_ = false;
+    this.state = 0;
     this.value = undefined;
     this.stateStack = [{
       node: acorn.parse('', Interpreter.PARSE_OPTIONS),
       scope: intrp.global,
       done: false
     }];
-  }
+  };
 
+  intrp.Thread.State = Interpreter.prototype.Thread.State;
 }
 
 
@@ -2579,10 +2581,10 @@ Interpreter.prototype['stepCallExpression'] = function(stack, state, node) {
       var thisInterpreter = this;
       var callback = function(value) {
         state.value = value;
-        thisInterpreter.paused_ = false;
+        thisInterpreter.thread.state = thisInterpreter.Thread.State.READY;
       };
       var argsWithCallback = state.arguments_.concat(callback);
-      this.paused_ = true;
+      this.thread.state = thisInterpreter.Thread.State.BLOCKED;
       func.asyncFunc.apply(state.funcThis_, argsWithCallback);
       return;
     } else if (func.eval) {
