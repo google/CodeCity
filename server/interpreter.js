@@ -154,19 +154,15 @@ Interpreter.prototype.schedule = function() {
  * @return {boolean} True if a step was executed, false if no more instructions.
  */
 Interpreter.prototype.step = function() {
-  var stack = this.thread.stateStack;
+  var thread = this.thread;
+  if (thread.state !== this.Thread.State.READY) {
+    return false;
+  }
+  var stack = thread.stateStack;
   var state = stack[stack.length - 1];
-  if (!state) {
-    return false;
-  }
-  var node = state.node, type = node['type'];
-  if (type === 'Program' && state.done) {
-    return false;
-  } else if (this.thread.state === this.Thread.State.BLOCKED) {
-    return true;
-  }
+  var node = state.node;
   try {
-    this.functionMap_[type](stack, state, node);
+    this.functionMap_[node['type']](stack, state, node);
   } catch (e) {
     // Eat any step errors.  They have been thrown on the stack.
     if (e !== Interpreter.STEP_ERROR) {
@@ -183,19 +179,13 @@ Interpreter.prototype.step = function() {
  *     false if no more instructions.
  */
 Interpreter.prototype.run = function() {
-  var stack = this.thread.stateStack;
-  while (true) {
+  var thread = this.thread;
+  var stack = thread.stateStack;
+  while (thread.state === this.Thread.State.READY) {
     var state = stack[stack.length - 1];
-    if (!state) {
-      break;
-    }
-    var node = state.node, type = node['type'];
-    if (type === 'Program' && state.done ||
-        this.thread.state === this.Thread.State.BLOCKED) {
-      break;
-    }
+    var node = state.node;
     try {
-      this.functionMap_[type](stack, state, node);
+      this.functionMap_[node['type']](stack, state, node);
     } catch (e) {
       // Eat any step errors.  They have been thrown on the stack.
       if (e !== Interpreter.STEP_ERROR) {
