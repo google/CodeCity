@@ -50,14 +50,14 @@ var testcases = require('./testcases');
  */
 function runTest(t, name, src, expected, initFunc, asyncFunc) {
   var interpreter = new Interpreter();
-  interpreter.appendCode(autoexec);
+  interpreter.createThread(autoexec);
   interpreter.run();
   if (initFunc) {
     initFunc(interpreter);
   }
 
   try {
-    interpreter.appendCode(src);
+    interpreter.createThread(src);
     while (interpreter.run()) {
       if (asyncFunc) {
         asyncFunc();

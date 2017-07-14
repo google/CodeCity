@@ -38,12 +38,12 @@ var autoexec = require('../autoexec');
 function runBench(b, name, src) {
   for (var i = 0; i < 4; i++) {
     var interpreter = new Interpreter();
-    interpreter.appendCode(autoexec);
+    interpreter.createThread(autoexec);
     interpreter.run();
 
     var err = undefined;
     try {
-      interpreter.appendCode(src);
+      interpreter.createThread(src);
       b.start(name, i);
       interpreter.run();
       b.end(name, i);
