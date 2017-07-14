@@ -38,15 +38,31 @@ var testcases = require('./testcases');
  * @param {string} src The code to be evaled.
  * @param {number|string|boolean|null|undefined} expected The expected
  *     completion value.
+ * @param {Function(Interpreter)=} initFunc Optional function to be
+ *     called after creating new interpreter instance and running
+ *     autoexec but before running src.  Can be used to insert extra
+ *     native functions into the interpreter.  initFunc is called
+ *     with the interpreter instance to be configured as its
+ *     parameter.
+ * @param {Function(Interpreter)=} asyncFunc Optional function to be
+ *     called if .run() returns true.  Can be used to fake completion
+ *     of asynchronous events for testing purposes.
  */
-function runTest(t, name, src, expected) {
+function runTest(t, name, src, expected, initFunc, asyncFunc) {
   var interpreter = new Interpreter();
   interpreter.appendCode(autoexec);
   interpreter.run();
+  if (initFunc) {
+    initFunc(interpreter);
+  }
 
   try {
     interpreter.appendCode(src);
-    interpreter.run();
+    while (interpreter.run()) {
+      if (asyncFunc) {
+        asyncFunc();
+      }
+    }
   } catch (e) {
     t.crash(name, util.format('%s\n%s', src, e.stack));
   }
@@ -692,3 +708,29 @@ exports.testLegalArrayIndexLength = function(t) {
     }
   }
 };
+
+/**
+ * Run a test of asynchronous functions:
+ * @param {!T} t The test runner object.
+ */
+exports.testAsync = function(t) {
+  var name ='testAsync';
+  var callback;
+  var initFunc = function(intrp) {
+    var wrapper = function(cb) {
+      callback = cb;
+    };
+    intrp.addVariableToScope(intrp.global, 'pause',
+        intrp.createAsyncFunction(wrapper));
+  };
+  var asyncFunc = function(intrp) {
+    callback();
+  };
+  var src = `
+      'before';
+      pause();
+      'after';
+  `;
+  runTest(t, name, src, 'after', initFunc, asyncFunc);
+};
+
