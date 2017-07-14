@@ -70,6 +70,32 @@ body {
   height: 100%;
 }
 
+.systemDiv {
+  background-color: #d00;
+  color: #fff;
+  text-align: center;
+}
+
+.reloadIcon, .connectIcon {
+  display: block;
+  height: 48px;
+  margin-left: auto;
+  margin-top: 80px;
+  margin-right: auto;
+  opacity: .7;
+  width: 48px;
+}
+
+#panoramaDiv .reloadIcon:hover {
+  cursor: pointer;
+  opacity: 1;
+}
+
+.systemTime {
+  margin-top: 60px;
+  text-align: center;
+}
+
 /* Enforce a consistent drawing style on all content. */
 svg {
   fill: #fff;

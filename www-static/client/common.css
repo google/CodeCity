@@ -8,8 +8,18 @@ a.command {
   text-decoration: underline dotted;
 }
 
+body.disconnected a.command {
+  cursor: not-allowed;
+  text-decoration-color: #ccc;
+}
+
 a.command:hover {
   color: #d00;
+}
+
+body.disconnected a.command:hover {
+  color: #444;
+  text-decoration-color: #aaa;
 }
 
 #scrollDiv {
@@ -31,8 +41,17 @@ svg.menuIcon {
   width: 11px;
 }
 
+body.disconnected svg.menuIcon {
+  cursor: not-allowed;
+  fill: #ccc;
+}
+
 svg.menuIcon:hover {
   fill: #d00;
+}
+
+body.disconnected svg.menuIcon:hover {
+  fill: #aaa;
 }
 
 #menu {
@@ -52,10 +71,15 @@ svg.menuIcon:hover {
 }
 
 .menuitem {
-  color: #000;
+  color: #444;
   margin: 0;
   padding: 4px 1em;
   white-space: nowrap;
+}
+
+body.disconnected .menuitem {
+  color: #ccc;
+  cursor: not-allowed;
 }
 
 .menuitem:hover {

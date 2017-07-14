@@ -6,6 +6,12 @@ body {
   padding-left: 15px;
 }
 
+#scrollDiv>div:first-child {
+  /* Add whitespace above the first line so that the client buttons don't
+  obscure any content. */
+  margin-top: 2em;
+}
+
 .zippySpan {
   cursor: pointer;
   margin-left: -15px;
@@ -45,4 +51,26 @@ pre {
 
 .openIcon:hover {
   fill: #d00;
+}
+
+.systemDiv {
+  background-color: #d00;
+  color: #fff;
+  padding: 0 15px;
+  margin-left: -15px;
+}
+
+.systemDiv>.date {
+  float: right;
+}
+
+a.reconnect {
+  cursor: pointer;
+  margin-left: 1em;
+  text-decoration: underline dotted;
+  user-select: none;
+}
+
+a.reconnect:hover {
+  opacity: .9;
 }

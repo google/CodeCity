@@ -35,6 +35,11 @@ CCC.Common = {};
 CCC.Common.NS = 'http://www.w3.org/2000/svg';
 
 /**
+ * Is the client currently connected to the server?
+ */
+CCC.Common.isConnected = false;
+
+/**
  * Initialization code called on startup.
  */
 CCC.Common.init = function() {
@@ -156,9 +161,27 @@ CCC.Common.closeMenu = function() {
  * @this {!Element} Clicked element.
  */
 CCC.Common.commandFunction = function() {
-  parent.postMessage({'commands': [this.innerText]}, location.origin);
+  if (CCC.Common.isConnected) {
+    parent.postMessage({'commands': [this.innerText]}, location.origin);
+  }
   parent.focus();
 };
+
+/**
+ * Return a local date/time in 'yyyy-mm-dd hh:mm:ss' format.
+ * @return {string} Current date/time.
+ */
+CCC.Common.currentDateString = function() {
+  var now = new Date();
+  var dy = now.getFullYear();
+  var dm = ('0' + (now.getMonth() + 1)).slice(-2);
+  var dd = ('0' + now.getDate()).slice(-2);
+  var th = ('0' + now.getHours()).slice(-2);
+  var tm = ('0' + now.getMinutes()).slice(-2);
+  var ts = ('0' + now.getSeconds()).slice(-2);
+  return dy + '-' + dm + '-' + dd + ' ' + th + ':' + tm + ':' + ts;
+};
+
 
 /**
  * Helper method for creating SVG elements.

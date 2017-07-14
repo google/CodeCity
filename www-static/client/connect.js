@@ -131,6 +131,11 @@ CCC.ackMsgNextPing = true;
 CCC.pauseBuffer = null;
 
 /**
+ * Is the client currently connected to the server?
+ */
+CCC.isConnected = false;
+
+/**
  * Enum for message types.
  * @enum {string}
  */
@@ -458,10 +463,9 @@ CCC.xhrStateChange = function() {
  * Received an error from the server, indicating that our connection is closed.
  */
 CCC.terminate = function() {
+  CCC.isConnected = false;
   clearTimeout(CCC.nextPingPid);
-  // TODO: visualize this better.
-  CCC.commandTextarea.disabled = true;
-  alert('Game over!');
+  CCC.postToAllFrames({'mode': 'terminate'});
 };
 
 /**
@@ -469,6 +473,7 @@ CCC.terminate = function() {
  * @param {!Object} receivedJson Server data.
  */
 CCC.parse = function(receivedJson) {
+  CCC.isConnected = true;
   var ackCmd = receivedJson['ackCmd'];
   var msgNum = receivedJson['msgNum'];
   var msgs = receivedJson['msgs'];
@@ -522,11 +527,22 @@ CCC.keydown = function(e) {
   CCC.userActive();
   if (!e.shiftKey && e.key === 'Enter') {
     // Enter
-    CCC.sendCommand(CCC.commandTextarea.value, CCC.localEcho);
-    // Clear the textarea.
-    CCC.commandTextarea.value = '';
-    CCC.commandHistoryPointer = -1;
-    CCC.commandTemp = '';
+    if (CCC.isConnected) {
+      CCC.sendCommand(CCC.commandTextarea.value, CCC.localEcho);
+      // Clear the textarea.
+      CCC.commandTextarea.value = '';
+      CCC.commandHistoryPointer = -1;
+      CCC.commandTemp = '';
+    } else {
+      // Pulse the command text area to indicate disconnection.
+      CCC.commandTextarea.style.transition = '';
+      CCC.commandTextarea.style.backgroundColor = '#f88';
+      // Wait 0.1 seconds for the browser to process the above style changes.
+      setTimeout(function() {
+        CCC.commandTextarea.style.transition = 'background-color 1s';
+        CCC.commandTextarea.style.backgroundColor = '';
+      }, 100);
+    }
     e.preventDefault();  // Don't add an enter after the clear.
   } else if ((!e.shiftKey && e.key === 'ArrowUp') ||
              (e.ctrlKey && e.key === 'p')) {
