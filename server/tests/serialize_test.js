@@ -45,7 +45,7 @@ const Serializer = require('../serialize');
  * @param {string} src2 The code to be evaled after serialization.
  * @param {number|string|boolean|null|undefined} expected The expected
  *     completion value.
- * @param {number=} stesp How many steps to run before serializing
+ * @param {number=} steps How many steps to run before serializing
  *     (run to completion if unspecified).
  */
 function runTest(t, name, src1, src2, expected, steps) {
@@ -106,7 +106,7 @@ function runTest(t, name, src1, src2, expected, steps) {
 
 /**
  * Run a round trip serialization-deserialization.
- * @param {T} t The test runner object.
+ * @param {!T} t The test runner object.
  */
 exports.testRoundtripSimple = function(t) {
   runTest(t, 'testRoundtripSimple', `
@@ -120,7 +120,7 @@ exports.testRoundtripSimple = function(t) {
 
 /**
  * Run more detailed tests of the state of the post-rountrip interpreter.
- * @param {T} t The test runner object.
+ * @param {!T} t The test runner object.
  */
 exports.testRoundtripDetails = function(t) {
   runTest(t, 'testRoundtripDetails', `
