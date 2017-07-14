@@ -53,14 +53,21 @@ pre {
   fill: #d00;
 }
 
-.systemDiv {
+.connectDiv {
+  background-color: #0a0;
+}
+
+.disconnectDiv {
   background-color: #d00;
+}
+
+.connectDiv, .disconnectDiv {
   color: #fff;
   padding: 0 15px;
   margin-left: -15px;
 }
 
-.systemDiv>.date {
+.connectDiv>.date, .disconnectDiv>.date {
   float: right;
 }
 

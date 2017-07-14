@@ -136,7 +136,8 @@ CCC.Log.setConnected = function(newConnected) {
  */
 CCC.Log.connectDiv = function() {
   var div = document.createElement('div');
-  div.className = 'systemDiv';
+  div.className =
+      (CCC.Common.isConnected ? 'connectDiv' : 'disconnectDiv');
   var span = document.createElement('span');
   span.className = 'date';
   span.appendChild(document.createTextNode(CCC.Common.currentDateString()));

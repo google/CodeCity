@@ -182,7 +182,6 @@ CCC.Common.currentDateString = function() {
   return dy + '-' + dm + '-' + dd + ' ' + th + ':' + tm + ':' + ts;
 };
 
-
 /**
  * Helper method for creating SVG elements.
  * @param {string} name Element's tag name.

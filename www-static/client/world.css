@@ -70,8 +70,15 @@ body {
   height: 100%;
 }
 
-.systemDiv {
+.connectDiv {
+  background-color: #0a0;
+}
+
+.disconnectDiv {
   background-color: #d00;
+}
+
+.connectDiv, .disconnectDiv {
   color: #fff;
   text-align: center;
 }
