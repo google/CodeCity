@@ -1844,6 +1844,19 @@ Interpreter.prototype.Thread = function() {
   throw Error('Inner class constructor not callable on prototype');
 };
 
+/** 
+ * Legal thread states.
+ * @enum {number}
+ */
+Interpreter.prototype.Thread.State = {
+  /** Execution of the thread has terminated. */
+  ZOMBIE: 0,
+  /** The thread is ready to run (or is running). */
+  READY: 1,
+  /** The thread is blocked, awaiting an external event (e.g. callback). */
+  BLOCKED: 2,
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 
 /**
