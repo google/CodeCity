@@ -293,20 +293,17 @@ Serializer.objectHunt_ = function(node, objectList, skipList) {
  * @return {!Object} A key/value map of typesnames to constructors.
  */
 Serializer.getTypesDeserialize_ = function (intrp) {
-  var types = {
-    Interpreter: Interpreter,
-    Scope: Interpreter.Scope,
-    PseudoObject: intrp.Object,
-    PseudoFunction: intrp.Function,
-    PseudoArray: intrp.Array,
-    PseudoDate: intrp.Date,
-    PseudoRegExp: intrp.RegExp,
-    PseudoError: intrp.Error,
+  return {
+    'Interpreter': Interpreter,
+    'Scope': Interpreter.Scope,
+    'PseudoObject': intrp.Object,
+    'PseudoFunction': intrp.Function,
+    'PseudoArray': intrp.Array,
+    'PseudoDate': intrp.Date,
+    'PseudoRegExp': intrp.RegExp,
+    'PseudoError': intrp.Error,
+    'Node': intrp.stateStack[0].node.constructor,
   };
-  // Fake up a constructor for Acorn AST nodes:
-  types.Node = function Node() {};
-  types.Node.prototype = intrp.stateStack[0].node.constructor.prototype;
-  return types;
 };
 
 /** 
