@@ -135,7 +135,10 @@ CCC.World.receiveMessage = function(e) {
     CCC.World.scene = scene;  // Restore the scene.
   } else if (mode === 'blur') {
       CCC.Common.closeMenu();
+  } else if (mode === 'terminate') {
+    CCC.World.setConnected(false);
   } else if (mode === 'message') {
+    CCC.World.setConnected(true);
     var dom = CCC.Common.parser.parseFromString(text, 'text/xml');
     if (dom.getElementsByTagName('parsererror').length) {
       // Not valid XML, treat as string literal.
@@ -273,6 +276,15 @@ CCC.World.prerenderHistory = function(node) {
     return true;
   }
 
+  if (node.tagName === 'connected') {
+    if (CCC.World.scratchHistory) {
+      return false;  // Every connect/disconnect needs to be in its own panel.
+    }
+    var div = CCC.World.createHiddenDiv();
+    div.appendChild(CCC.World.connectPanel(node));
+    CCC.World.scratchHistory = div;
+    return true;
+  }
 
   if (node.tagName === 'scene') {
     // <scene user="Max" room="The Hangout">
@@ -350,6 +362,16 @@ CCC.World.prerenderPanorama = function(node) {
     return true;
   }
 
+  if (node.tagName === 'connected') {
+    if (CCC.World.scratchPanorama) {
+      return false;  // Every connect/disconnect needs to be in its own panel.
+    }
+    var div = CCC.World.createHiddenDiv();
+    div.appendChild(CCC.World.connectPanel(node));
+    CCC.World.scratchPanorama = div;
+    return true;
+  }
+
   if (node.tagName === 'scene') {
     node = CCC.World.sceneDescription(node);
   }
@@ -377,6 +399,34 @@ CCC.World.prerenderPanorama = function(node) {
 
   CCC.World.scratchPanorama = svg;
   return true;
+};
+
+/**
+ * Create a panel for a connection/disconnection event.
+ * @param node {object} Object containing connection/disconnection mode and
+ *   date/time of event.
+ * @return {!DocumentFragment} Document fragment containing rendered panel.
+ */
+CCC.World.connectPanel = function(node) {
+  var df = document.createDocumentFragment();
+  var div = document.createElement('div');
+  div.className = 'systemDiv';
+  var msg = CCC.World.getMsg(node.isConnected ?
+                             'connectedMsg' : 'disconnectedMsg');
+  div.appendChild(document.createTextNode(msg));
+  df.appendChild(div);
+
+  var img = document.createElement('img');
+  img.className = node.isConnected ? 'connectIcon' : 'reloadIcon';
+  img.src = node.isConnected ? 'connectIcon.svg' : 'reloadIcon.svg';
+  df.appendChild(img);
+
+  div = document.createElement('div');
+  div.className = 'systemTime';
+  div.appendChild(document.createTextNode(node.time));
+  df.appendChild(div);
+
+  return df;
 };
 
 /**
@@ -669,7 +719,7 @@ CCC.World.drawBubble = function(type, bubbleGroup, contentGroup, opt_anchor) {
     // Create a horizontal or vertical line of puff descriptors.
     var puffLine = function(x, y, dx, dy) {
       var d = Math.max(dx, dy);
-      var radiusAverage = d === dx ? radiusXAverage : radiusYAverage;
+      var radiusAverage = (d === dx) ? radiusXAverage : radiusYAverage;
       var line = new Array(Math.round(d / radiusAverage / 2));
       radiusAverage = d / line.length / 2;
       for (var i = 0; i < line.length - 1; i += 2) {
@@ -1019,6 +1069,13 @@ CCC.World.publishPanorama = function() {
     for (var i = 0, menu; menu = menus[i]; i++) {
       menu.addEventListener('click', CCC.Common.openMenu, false);
     }
+    // Add an event handler to a reload icon.
+    var icon = content.querySelector('.reloadIcon');
+    if (icon) {
+      icon.addEventListener('click',
+          parent.location.reload.bind(parent.location));
+    }
+
   }
 };
 
@@ -1040,6 +1097,21 @@ CCC.World.positionIframe = function(iframe, container) {
            (container !== CCC.World.scrollDiv));
   iframe.style.top = (y + borderWidth) + 'px';
   iframe.style.left = (x + borderWidth) + 'px';
+};
+
+/**
+ * Change the connection status between being connected or disconnected.
+ * @param {boolean} newConnected New status.
+ */
+CCC.World.setConnected = function(newConnected) {
+  if (newConnected === CCC.Common.isConnected) {
+    return;  // No change.
+  }
+  CCC.Common.isConnected = newConnected;
+  // Notify the user of the status change.
+  CCC.World.renderMessage({tagName: 'connected',
+                           isConnected: CCC.Common.isConnected,
+                           time: CCC.Common.currentDateString()});
 };
 
 /**

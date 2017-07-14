@@ -93,7 +93,10 @@ CCC.Log.receiveMessage = function(e) {
     var div = CCC.Log.textToHtml(text);
     div.className = 'commandDiv';
     CCC.Log.appendRow(div);
+  } else if (mode === 'terminate') {
+    CCC.Log.setConnected(false);
   } else {
+    CCC.Log.setConnected(true);
     var dom = CCC.Common.parser.parseFromString(text, 'text/xml');
     if (dom.getElementsByTagName('parsererror').length) {
       // Not valid XML, treat as string literal.
@@ -105,6 +108,50 @@ CCC.Log.receiveMessage = function(e) {
       }
     }
   }
+};
+
+/**
+ * Change the connection status between being connected or disconnected.
+ * @param {boolean} newConnected New status.
+ */
+CCC.Log.setConnected = function(newConnected) {
+  if (newConnected === CCC.Common.isConnected) {
+    return;  // No change.
+  }
+  CCC.Common.isConnected = newConnected;
+  // Add/remove a classname on body, so that links and menus can change style.
+  if (CCC.Common.isConnected) {
+    document.body.classList.remove("disconnected");
+  } else {
+    document.body.classList.add("disconnected");
+  }
+  // Notify the user of the status change.
+  var div = CCC.Log.connectDiv();
+  CCC.Log.appendRow(div);
+};
+
+/**
+ * Create a div notifying the user of connection or disconnection.
+ * @return {!Element} HTML div element.
+ */
+CCC.Log.connectDiv = function() {
+  var div = document.createElement('div');
+  div.className = 'systemDiv';
+  var span = document.createElement('span');
+  span.className = 'date';
+  span.appendChild(document.createTextNode(CCC.Common.currentDateString()));
+  div.appendChild(span);
+
+  div.appendChild(CCC.Log.getMsg(CCC.Common.isConnected ?
+                           'connectedMsg' : 'disconnectedMsg'));
+  if (!CCC.Common.isConnected) {
+    var link = document.createElement('a');
+    link.className = 'reconnect';
+    link.appendChild(CCC.Log.getMsg('reconnectMsg'));
+    div.appendChild(link)
+    link.addEventListener('click', parent.location.reload.bind(parent.location));
+  }
+  return div;
 };
 
 /**
