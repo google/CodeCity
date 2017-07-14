@@ -183,7 +183,7 @@ function runTests(files) {
 /**
  * Get list of test filenames matching a particular regexp.
  * @param {!RegExp} pattern RegExp to match.
- * @return {Array} List of filenames.
+ * @return {!Array} List of filenames.
  */
 function getFiles(pattern) {
   var f = fs.readdirSync(__dirname);  // __dirname is location of this module.

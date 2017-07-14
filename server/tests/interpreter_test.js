@@ -61,7 +61,7 @@ function runTest(t, name, src, expected) {
 
 /**
  * Run the simple tests in testcases.js
- * @param {T} t The test runner object.
+ * @param {!T} t The test runner object.
  */
 exports.testSimple = function(t) {
   for (var i = 0; i < testcases.length; i++) {
@@ -77,7 +77,7 @@ exports.testSimple = function(t) {
 /**
  * Run some tests of the various constructors and their associated
  * literals and prototype objects.
- * @param {T} t The test runner object.
+ * @param {!T} t The test runner object.
  */
 exports.testClasses = function(t) {
   var classes = {
@@ -218,7 +218,7 @@ exports.testClasses = function(t) {
 
 /**
  * Run some tests of switch statement with fallthrough.
- * @param {T} t The test runner object.
+ * @param {!T} t The test runner object.
  */
 exports.testSwitchStatementFallthrough = function(t) {
   var code = `
@@ -250,7 +250,7 @@ exports.testSwitchStatementFallthrough = function(t) {
 
 /**
  * Run some tests of switch statement completion values.
- * @param {T} t The test runner object.
+ * @param {!T} t The test runner object.
  */
 exports.testSwitchStatementBreaks = function(t) {
   var code = `
@@ -282,7 +282,7 @@ exports.testSwitchStatementBreaks = function(t) {
 /**
  * Run some tests of evaluation of binary expressions, as defined in
  * §11.5--11.11 of the ES5.1 spec.
- * @param {T} t The test runner object.
+ * @param {!T} t The test runner object.
  */
 exports.testBinaryOp = function(t) {
   var cases = [
@@ -471,7 +471,7 @@ exports.testBinaryOp = function(t) {
  * Run some tests of the Abstract Relational Comparison Algorithm, as
  * defined in §11.8.5 of the ES5.1 spec and as embodied by the '<'
  * operator.
- * @param {T} t The test runner object.
+ * @param {!T} t The test runner object.
  */
 exports.testArca = function(t) {
   var cases = [
@@ -529,7 +529,7 @@ exports.testArca = function(t) {
  * the Abstract Strict Equality Comparison Algorithm, as defined in
  * §11.9.3 and §11.9.6 respectiveyl of the ES5.1 spec and as embodied
  * by the '==' and '===' operators.
- * @param {T} t The test runner object.
+ * @param {!T} t The test runner object.
  */
 exports.testAeca = function(t) {
   var cases = [
@@ -616,7 +616,7 @@ exports.testAeca = function(t) {
 /**
  * Run some tests of Number.toString(radix) with various different
  * radix arguments.
- * @param {T} t The test runner object.
+ * @param {!T} t The test runner object.
  */
 exports.testNumberToString = function(t) {
   var cases = [
@@ -640,7 +640,7 @@ exports.testNumberToString = function(t) {
 /**
  * Unit tests for Interpreter.legalArrayIndex and
  * Interpreter.legalArrayLength.
- * @param {T} t The test runner object.
+ * @param {!T} t The test runner object.
  */
 exports.testLegalArrayIndexLength = function(t) {
   var intrp = new Interpreter;

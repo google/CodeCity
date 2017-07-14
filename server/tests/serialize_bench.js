@@ -60,7 +60,7 @@ function runInterpreterBench(b, name, src) {
 
 /**
  * Run the fibbonacci10k benchmark.
- * @param {B} b The test runner object.
+ * @param {!B} b The test runner object.
  */
 exports.benchResurrectedFibbonacci10k = function(b) {
   var name = 'ressurrectedFibonacci10k';

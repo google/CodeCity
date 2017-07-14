@@ -121,7 +121,6 @@ Serializer.deserialize = function(json, intrp) {
           throw TypeError('Unknown type: ' + jsonObj['type']);
         }
         obj = new constructor;
-        break;
     }
     objectList[i] = obj;
   }
@@ -250,7 +249,6 @@ Serializer.serialize = function(intrp) {
           throw TypeError('Unknown type: ' + obj);
         }
         jsonObj['type'] = type;
-        break;
     }
     var props = Object.create(null);
     var names = Object.getOwnPropertyNames(obj);
@@ -309,7 +307,7 @@ Serializer.getTypesDeserialize_ = function (intrp) {
   types.Node = function Node() {};
   types.Node.prototype = intrp.stateStack[0].node.constructor.prototype;
   return types;
-}
+};
 
 /** 
  * Make a map of prototype to typename for each of the types that
@@ -327,7 +325,7 @@ Serializer.getTypesSerialize_ = function (intrp) {
     }
   }
   return map;
-}
+};
 
 if (typeof module !== 'undefined') {  // Node.js
   Interpreter = require('./interpreter');
