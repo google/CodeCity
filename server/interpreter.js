@@ -148,6 +148,7 @@ Interpreter.prototype.schedule = function() {
   var threads = this.threads;
   // .threads will be very sparse, so use for-in loop.
   for (var i in threads) {
+    i = Number(i);  // Make Closure Compiler happy.
     if (!threads.hasOwnProperty(i)) {
       continue;
     }
@@ -914,7 +915,7 @@ Interpreter.prototype.initString = function(scope) {
 
   wrapper = function(separator, limit) {
     if (separator instanceof thisInterpreter.RegExp) {
-      separator = separator.data;
+      separator = separator.regexp;
     }
     var jsList = this.split(separator, limit);
     return thisInterpreter.nativeToPseudo(jsList);
@@ -1012,8 +1013,8 @@ Interpreter.prototype.initDate = function(scope) {
     })(functions[i]);
     this.DATE.addNativeMethod(functions[i], wrapper);
   }
-  var functions = ['toLocaleDateString', 'toLocaleString',
-                   'toLocaleTimeString'];
+  functions = ['toLocaleDateString', 'toLocaleString',
+               'toLocaleTimeString'];
   for (var i = 0; i < functions.length; i++) {
     wrapper = (function(nativeFunc) {
       return function(/*locales, options*/) {
@@ -1358,7 +1359,7 @@ Interpreter.prototype.pseudoToNative = function(pseudoObj, opt_cycles) {
   }
 
   if (pseudoObj instanceof this.RegExp) {  // Regular expression.
-    return pseudoObj.data;
+    return pseudoObj.regexp;
   }
 
   var cycles = opt_cycles || {
@@ -1374,7 +1375,7 @@ Interpreter.prototype.pseudoToNative = function(pseudoObj, opt_cycles) {
   if (pseudoObj instanceof this.Array) {  // Array.
     nativeObj = [];
     cycles.native.push(nativeObj);
-    for (var i = 0; i < pseudoObj.length; i++) {
+    for (i = 0; i < pseudoObj.length; i++) {
       nativeObj[i] = this.pseudoToNative(pseudoObj.properties[i], cycles);
     }
   } else {  // Object.
@@ -1586,11 +1587,10 @@ Interpreter.prototype.deleteProperty = function(obj, name) {
  * @return {Interpreter.Value} Value (may be undefined).
  */
 Interpreter.prototype.getValueFromScope = function(scope, name) {
-  while (scope) {
-    if (name in scope.properties) {
-      return scope.properties[name];
+  for (var s = scope; s; s = s.parentScope) {
+    if (name in s.properties) {
+      return s.properties[name];
     }
-    scope = scope.parentScope;
   }
   // Typeof operator is unique: it can safely look at non-defined variables.
   var prevNode = this.thread.stateStack[this.thread.stateStack.length - 1].node;
@@ -1608,16 +1608,15 @@ Interpreter.prototype.getValueFromScope = function(scope, name) {
  * @param {Interpreter.Value} value Value.
  */
 Interpreter.prototype.setValueToScope = function(scope, name, value) {
-  while (scope) {
-    if (name in scope.properties) {
-      if (scope.notWritable.has(name)) {
+  for (var s = scope; s; s = s.parentScope) {
+    if (name in s.properties) {
+      if (s.notWritable.has(name)) {
         this.throwException(this.TYPE_ERROR,
                             'Assignment to constant variable: ' + name);
       }
-      scope.properties[name] = value;
+      s.properties[name] = value;
       return;
     }
-    scope = scope.parentScope;
   }
   this.throwException(this.REFERENCE_ERROR, name + ' is not defined');
 };
@@ -1721,7 +1720,7 @@ Interpreter.prototype.calledWithNew = function() {
 
 /**
  * Gets a value from the scope chain or from an object property.
- * @return {!Interpreter.Scope} Current scope dictionary.
+ * @param {!Interpreter.Scope} scope Current scope dictionary.
  * @param {!Array} ref Name of variable or object/propname tuple.
  * @return {Interpreter.Value} Value (may be undefined).
  */
@@ -1737,7 +1736,7 @@ Interpreter.prototype.getValue = function(scope, ref) {
 
 /**
  * Sets a value to the scope chain or to an object property.
- * @return {!Interpreter.Scope} Current scope dictionary.
+ * @param {!Interpreter.Scope} scope Current scope dictionary.
  * @param {!Array} ref Name of variable or object/propname tuple.
  * @param {Interpreter.Value} value Value.
  */
@@ -1888,7 +1887,8 @@ Interpreter.prototype.installThread = function() {
    * @param {!Object=} ast Acorn AST Program node
    */
   intrp.Thread = function(id, ast) {
-    if (id === undefined) { // Deserialising. Props will be filled in later.
+    if (id === undefined || ast === undefined) {
+      // Deserialising. Props will be filled in later.
       this.id = -1;
       this.state = Interpreter.prototype.Thread.State.ZOMBIE;
       this.value = undefined;
@@ -1929,7 +1929,7 @@ Interpreter.prototype.Object = function(proto) {
   this.notEnumerable = new Set();
   this.notWritable = new Set();
   this.properties = Object.create(null);
-  this.proto = (proto === undefined ? intrp.OBJECT : proto);
+  this.proto = null;
   throw Error('Inner class constructor not callable on prototype');
 };
 /** @type {Interpreter.prototype.Object} */
@@ -2098,15 +2098,18 @@ Interpreter.prototype.installTypes = function() {
    */
   intrp.Object.prototype.addNativeMethod = function(key, func) {
     intrp.setProperty(this, key, intrp.createNativeFunction(func),
-      Interpreter.NONENUMERABLE_DESCRIPTOR);
+        Interpreter.NONENUMERABLE_DESCRIPTOR);
   };
 
   /**
    * Class for a function
+   * @constructor
+   * @extends{Interpreter.prototype.Function}
    * @param {Interpreter.prototype.Object=} proto Prototype object.
    */
   intrp.Function = function(proto) {
-    intrp.Object.call(this, (proto === undefined ? intrp.FUNCTION : proto));
+    intrp.Object.call(/** @type {?} */(this),
+        (proto === undefined ? intrp.FUNCTION : proto));
   };
 
   intrp.Function.prototype = Object.create(intrp.Object.prototype);
@@ -2179,10 +2182,13 @@ Interpreter.prototype.installTypes = function() {
 
   /**
    * Class for an array
+   * @constructor
+   * @extends{Interpreter.prototype.Array}
    * @param {Interpreter.prototype.Object=} proto Prototype object.
    */
   intrp.Array = function(proto) {
-    intrp.Object.call(this, (proto === undefined ? intrp.ARRAY : proto));
+    intrp.Object.call(/** @type {?} */(this),
+        (proto === undefined ? intrp.ARRAY : proto));
     this.length = 0;
   };
 
@@ -2200,7 +2206,7 @@ Interpreter.prototype.installTypes = function() {
       // TODO(cpcallen): this is supposed to do a ToObject.  Fake it
       // for now using native Array.prototype.toString.  Need to
       // verify whether this is good enough.
-      return Array.prototype.toString.apply(this);
+      return Array.prototype.toString.apply(/** @type {?} */(this));
     }
     var cycles = intrp.toStringCycles_;
     cycles.push(this);
@@ -2219,10 +2225,13 @@ Interpreter.prototype.installTypes = function() {
 
   /**
    * Class for a date.
+   * @constructor
+   * @extends{Interpreter.prototype.Date}
    * @param {Interpreter.prototype.Object=} proto Prototype object.
    */
   intrp.Date = function(proto) {
-    intrp.Object.call(this, (proto === undefined ? intrp.DATE : proto));
+    intrp.Object.call(/** @type {?} */(this),
+        (proto === undefined ? intrp.DATE : proto));
     /** @type {Date} */
     this.date = null;
   };
@@ -2259,10 +2268,14 @@ Interpreter.prototype.installTypes = function() {
 
   /**
    * Class for a regexp
+   * @constructor
+   * @extends{Interpreter.prototype.RegExp}
    * @param {Interpreter.prototype.Object=} proto Prototype object.
    */
   intrp.RegExp = function(proto) {
-    intrp.Object.call(this, (proto === undefined ? intrp.REGEXP : proto));
+    intrp.Object.call(/** @type {?} */(this),
+        (proto === undefined ? intrp.REGEXP : proto));
+    /** @type {RegExp} */
     this.regexp = null;
   };
 
@@ -2306,10 +2319,13 @@ Interpreter.prototype.installTypes = function() {
 
   /**
    * Class for an error object
+   * @constructor
+   * @extends{Interpreter.prototype.Error}
    * @param {Interpreter.prototype.Object=} proto Prototype object.
    */
   intrp.Error = function(proto) {
-    intrp.Object.call(this, (proto === undefined ? intrp.ERROR : proto));
+    intrp.Object.call(/** @type {?} */(this),
+        (proto === undefined ? intrp.ERROR : proto));
   };
 
   intrp.Error.prototype = Object.create(intrp.Object.prototype);
@@ -2334,7 +2350,7 @@ Interpreter.prototype.installTypes = function() {
         break;
       }
     } while ((obj = obj.proto));
-    var obj = this;
+    obj = this;
     do {
       if ('message' in obj.properties) {
         message = obj.properties['message'];
