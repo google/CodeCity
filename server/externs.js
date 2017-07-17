@@ -19,7 +19,7 @@
 
 /**
  * @fileoverview Closure Compiler externs for node.js
- * @author cpcallend@google.com (Christopher Allen)
+ * @author cpcallen@google.com (Christopher Allen)
  * @externs
  */
 
@@ -27,7 +27,7 @@
  * @param name
  * @return {*}
  */
-var require = function(name) {}
+var require = function(name) {};
 
 /**
  * @type {Object}
