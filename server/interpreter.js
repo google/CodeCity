@@ -1013,7 +1013,7 @@ Interpreter.prototype.initDate = function(scope) {
     })(functions[i]);
     this.DATE.addNativeMethod(functions[i], wrapper);
   }
-  functions = ['toLocaleDateString', 'toLocaleString',
+  var functions = ['toLocaleDateString', 'toLocaleString',
                'toLocaleTimeString'];
   for (var i = 0; i < functions.length; i++) {
     wrapper = (function(nativeFunc) {
@@ -1375,7 +1375,7 @@ Interpreter.prototype.pseudoToNative = function(pseudoObj, opt_cycles) {
   if (pseudoObj instanceof this.Array) {  // Array.
     nativeObj = [];
     cycles.native.push(nativeObj);
-    for (i = 0; i < pseudoObj.length; i++) {
+    for (var i = 0; i < pseudoObj.length; i++) {
       nativeObj[i] = this.pseudoToNative(pseudoObj.properties[i], cycles);
     }
   } else {  // Object.
