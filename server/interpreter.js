@@ -125,8 +125,18 @@ Interpreter.SCOPE_REFERENCE = {};
  */
 Interpreter.prototype.createThread = function(code) {
   var id = this.threads.length;
+  if (typeof code === 'string') {
+    code = acorn.parse(code, Interpreter.PARSE_OPTIONS);
+  }
+  if (!code || code['type'] !== 'Program') {
+    throw Error('Expecting new AST to start with a Program node.');
+  }
   var thread = new this.Thread(id, code);
   this.threads.push(thread);
+  // TODO(cpcallen): this call to schedule is a temporary measure
+  // until we decide where it should be called from.  Creating a new
+  // thread should not in general result in the currently-running
+  // thread being preempted.
   this.schedule();
   return id;
 };
@@ -1836,10 +1846,10 @@ Interpreter.prototype.pushNode_ = function(node) {
 
 /**
  * @constructor
- * @param {number} id
- * @param {string|!Object} code
+ * @param {number=} id
+ * @param {!Object=} ast
  */
-Interpreter.prototype.Thread = function(id, code) {
+Interpreter.prototype.Thread = function(id, ast) {
   this.id = -1;
   this.state = Interpreter.prototype.Thread.State.ZOMBIE;
   this.value = undefined;
@@ -1875,9 +1885,9 @@ Interpreter.prototype.installThread = function() {
    * @extends {Interpreter.prototype.Thread}
    * @param {number=} id Thread ID.  Should correspond to index of this
    *     thread in .threads array.
-   * @param {string|!Object=} code Raw JavaScript text or AST.
+   * @param {!Object=} ast Acorn AST Program node
    */
-  intrp.Thread = function(id, code) {
+  intrp.Thread = function(id, ast) {
     if (id === undefined) { // Deserialising. Props will be filled in later.
       this.id = -1;
       this.state = Interpreter.prototype.Thread.State.ZOMBIE;
@@ -1887,16 +1897,10 @@ Interpreter.prototype.installThread = function() {
     } 
     this.id = id;
     this.state = intrp.Thread.State.READY;
-    if (typeof code === 'string') {
-      code = acorn.parse(code, Interpreter.PARSE_OPTIONS);
-    }
-    if (!code || code['type'] !== 'Program') {
-      throw Error('Expecting new AST to start with a Program node.');
-    }
-    intrp.populateScope_(code, intrp.global);
+    intrp.populateScope_(ast, intrp.global);
     this.value = undefined;
     this.stateStack = [{
-      node: code,
+      node: ast,
       scope: intrp.global,
       done: false
     }];
