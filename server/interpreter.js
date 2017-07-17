@@ -1574,24 +1574,12 @@ Interpreter.prototype.deleteProperty = function(obj, name) {
 };
 
 /**
- * Returns the current scope from the stateStack.
- * @return {!Interpreter.Scope} Current scope dictionary.
- */
-Interpreter.prototype.getScope = function() {
-  var scope = this.stateStack[this.stateStack.length - 1].scope;
-  if (!scope) {
-    throw Error('No scope found.');
-  }
-  return scope;
-};
-
-/**
  * Retrieves a value from the scope chain.
+ * @param {!Interpreter.Scope} scope Scope to write to.
  * @param {string} name Name of variable.
  * @return {Interpreter.Value} Value (may be undefined).
  */
-Interpreter.prototype.getValueFromScope = function(name) {
-  var scope = this.getScope();
+Interpreter.prototype.getValueFromScope = function(scope, name) {
   while (scope) {
     if (name in scope.properties) {
       return scope.properties[name];
@@ -1609,11 +1597,11 @@ Interpreter.prototype.getValueFromScope = function(name) {
 
 /**
  * Sets a value to the current scope.
+ * @param {!Interpreter.Scope} scope Scope to write to.
  * @param {string} name Name of variable.
  * @param {Interpreter.Value} value Value.
  */
-Interpreter.prototype.setValueToScope = function(name, value) {
-  var scope = this.getScope();
+Interpreter.prototype.setValueToScope = function(scope, name, value) {
   while (scope) {
     if (name in scope.properties) {
       if (scope.notWritable.has(name)) {
@@ -1726,13 +1714,14 @@ Interpreter.prototype.calledWithNew = function() {
 
 /**
  * Gets a value from the scope chain or from an object property.
+ * @return {!Interpreter.Scope} Current scope dictionary.
  * @param {!Array} ref Name of variable or object/propname tuple.
  * @return {Interpreter.Value} Value (may be undefined).
  */
-Interpreter.prototype.getValue = function(ref) {
+Interpreter.prototype.getValue = function(scope, ref) {
   if (ref[0] === Interpreter.SCOPE_REFERENCE) {
     // A null/varname variable lookup.
-    return this.getValueFromScope(ref[1]);
+    return this.getValueFromScope(scope, ref[1]);
   } else {
     // An obj/prop components tuple (foo.bar).
     return this.getProperty(ref[0], ref[1]);
@@ -1741,13 +1730,14 @@ Interpreter.prototype.getValue = function(ref) {
 
 /**
  * Sets a value to the scope chain or to an object property.
+ * @return {!Interpreter.Scope} Current scope dictionary.
  * @param {!Array} ref Name of variable or object/propname tuple.
  * @param {Interpreter.Value} value Value.
  */
-Interpreter.prototype.setValue = function(ref, value) {
+Interpreter.prototype.setValue = function(scope, ref, value) {
   if (ref[0] === Interpreter.SCOPE_REFERENCE) {
     // A null/varname variable lookup.
-    this.setValueToScope(ref[1], value);
+    this.setValueToScope(scope, ref[1], value);
   } else {
     // An obj/prop components tuple (foo.bar).
     this.setProperty(ref[0], ref[1], value);
@@ -2326,7 +2316,7 @@ Interpreter.prototype['stepAssignmentExpression'] =
       state.leftReference_ = state.value;
     }
     if (node['operator'] !== '=') {
-      state.leftValue_ = this.getValue(state.leftReference_);
+      state.leftValue_ = this.getValue(state.scope, state.leftReference_);
     }
     state.doneRight_ = true;
     this.pushNode_(node['right']);
@@ -2350,7 +2340,7 @@ Interpreter.prototype['stepAssignmentExpression'] =
     default:
       throw SyntaxError('Unknown assignment expression: ' + node['operator']);
   }
-  this.setValue(state.leftReference_, value);
+  this.setValue(state.scope, state.leftReference_, value);
   stack.pop();
   stack[stack.length - 1].value = value;
 };
@@ -2459,7 +2449,7 @@ Interpreter.prototype['stepCallExpression'] = function(stack, state, node) {
     state.doneCallee_ = 2;
     var func = state.value;
     if (Array.isArray(func)) {
-      state.func_ = this.getValue(func);
+      state.func_ = this.getValue(state.scope, func);
       if (func[0] !== Interpreter.SCOPE_REFERENCE) {
         // Method function, 'this' is object (ignored if invoked as 'new').
         state.funcThis_ = func[0];
@@ -2590,7 +2580,7 @@ Interpreter.prototype['stepCatchClause'] = function(stack, state, node) {
     var scope;
     if (node['param']) {
       // Create an empty scope.
-      scope = new Interpreter.Scope(this.getScope());
+      scope = new Interpreter.Scope(state.scope);
       // Add the argument.
       var paramName = node['param']['name'];
       this.addVariableToScope(scope, paramName, state.throwValue);
@@ -2778,7 +2768,7 @@ Interpreter.prototype['stepForInStatement'] = function(stack, state, node) {
   }
   // Fifth, set the variable.
   var value = state.name_;
-  this.setValue(state.variable_, value);
+  this.setValue(state.scope, state.variable_, value);
   // Sixth, execute the body.
   if (node['body']) {
     this.pushNode_(node['body']);
@@ -2829,14 +2819,15 @@ Interpreter.prototype['stepFunctionDeclaration'] =
 Interpreter.prototype['stepFunctionExpression'] = function(stack, state, node) {
   stack.pop();
   stack[stack.length - 1].value =
-      this.createFunctionFromAST(node, this.getScope());
+      this.createFunctionFromAST(node, state.scope);
 };
 
 Interpreter.prototype['stepIdentifier'] = function(stack, state, node) {
   stack.pop();
   var name = node['name'];
   var value = state.components ?
-      [Interpreter.SCOPE_REFERENCE, name] : this.getValueFromScope(name);
+      [Interpreter.SCOPE_REFERENCE, name] :
+      this.getValueFromScope(state.scope, name);
   stack[stack.length - 1].value = value;
 };
 
@@ -3055,7 +3046,7 @@ Interpreter.prototype['stepSwitchStatement'] = function(stack, state, node) {
 
 Interpreter.prototype['stepThisExpression'] = function(stack, state, node) {
   stack.pop();
-  stack[stack.length - 1].value = this.getValueFromScope('this');
+  stack[stack.length - 1].value = this.getValueFromScope(state.scope, 'this');
 };
 
 Interpreter.prototype['stepThrowStatement'] = function(stack, state, node) {
@@ -3110,7 +3101,7 @@ Interpreter.prototype['stepUnaryExpression'] = function(stack, state, node) {
       var obj = value[0];
       var name = value[1];
     } else {
-      var obj = this.getScope();
+      var obj = state.scope;
       var name = value;
     }
     value = this.deleteProperty(obj, name);
@@ -3138,7 +3129,7 @@ Interpreter.prototype['stepUpdateExpression'] = function(stack, state, node) {
   if (!state.leftSide_) {
     state.leftSide_ = state.value;
   }
-  state.leftValue_ = this.getValue(state.leftSide_);
+  state.leftValue_ = this.getValue(state.scope, state.leftSide_);
   var leftValue = Number(state.leftValue_);
   var changeValue;
   if (node['operator'] === '++') {
@@ -3149,7 +3140,7 @@ Interpreter.prototype['stepUpdateExpression'] = function(stack, state, node) {
     throw SyntaxError('Unknown update expression: ' + node['operator']);
   }
   var returnValue = node['prefix'] ? changeValue : leftValue;
-  this.setValue(state.leftSide_, changeValue);
+  this.setValue(state.scope, state.leftSide_, changeValue);
   stack.pop();
   stack[stack.length - 1].value = returnValue;
 };
@@ -3162,7 +3153,8 @@ Interpreter.prototype['stepVariableDeclaration'] =
   if (state.init_ && declarationNode) {
     // Note that this is setting the init value, not defining the variable.
     // Variable definition (addVariableToScope) is done when scope is populated.
-    this.setValueToScope(declarationNode['id']['name'], state.value);
+    this.setValueToScope(state.scope, declarationNode['id']['name'],
+        state.value);
     state.init_ = false;
     declarationNode = declarations[++n];
   }
