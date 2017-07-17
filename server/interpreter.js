@@ -1557,23 +1557,6 @@ Interpreter.prototype.setProperty = function(obj, name, value, opt_descriptor) {
 };
 
 /**
- * Delete a property value on a data object.
- * @param {!Interpreter.prototype.Object} obj Data object.
- * @param {Interpreter.Value} name Name of property.
- * @return {boolean} True if deleted, false if undeletable.
- */
-Interpreter.prototype.deleteProperty = function(obj, name) {
-  name = String(name);
-  if (!(obj instanceof this.Object) || obj.notWritable.has(name)) {
-    return false;
-  }
- if (name === 'length' && obj instanceof this.Array) {
-    return false;
-  }
-  return delete obj.properties[name];
-};
-
-/**
  * Retrieves a value from the scope chain.
  * @param {!Interpreter.Scope} scope Scope to read from.
  * @param {string} name Name of variable.
@@ -3097,18 +3080,21 @@ Interpreter.prototype['stepUnaryExpression'] = function(stack, state, node) {
   } else if (node['operator'] === '~') {
     value = ~value;
   } else if (node['operator'] === 'delete') {
+    // If value is not an array, then it is a primitive.  If so, return true.
     if (Array.isArray(value)) {
       var obj = value[0];
-      var name = value[1];
-    } else {
-      var obj = state.scope;
-      var name = value;
+      // If the obj isn't an object, then it is a scope.  If so, return true.
+      if (obj instanceof this.Object) {
+        var name = String(value[1]);
+        if (obj.notWritable.has(name) ||
+            (name === 'length' && obj instanceof this.Array)) {
+          this.throwException(this.TYPE_ERROR, "Cannot delete property '" +
+                              name + "' of '" + obj + "'");
+        }
+        delete obj.properties[name];
+      }
     }
-    value = this.deleteProperty(obj, name);
-    if (!value) {
-      this.throwException(this.TYPE_ERROR, "Cannot delete property '" +
-                          name + "' of '" + obj + "'");
-    }
+    value = true;
   } else if (node['operator'] === 'typeof') {
     value = (value instanceof this.Function) ? 'function' : typeof value;
   } else if (node['operator'] === 'void') {
