@@ -1231,17 +1231,6 @@ Interpreter.legalArrayIndex = function(x) {
 };
 
 /**
- * Class for a scope.
- * @param {Interpreter.Scope=} parentScope Inherited scope.  Defaults to null.
- * @constructor
- */
-Interpreter.Scope = function(parentScope) {
-  this.notWritable = new Set();
-  this.properties = Object.create(null);
-  this.parentScope = parentScope || null;
-};
-
-/**
  * Create a new function.
  * @param {!Object} node AST node defining the function.
  * @param {!Interpreter.Scope} scope Parent scope.
@@ -1808,14 +1797,37 @@ Interpreter.prototype.executeException = function(error) {
  * @return {!Object} New state.
  */
 Interpreter.prototype.pushNode_ = function(node) {
-  var state = {
-    node: node,
-    scope: this.thread.stateStack[this.thread.stateStack.length - 1].scope
-  };
+  var state = new Interpreter.State(
+      node, this.thread.stateStack[this.thread.stateStack.length - 1].scope);
   this.thread.stateStack.push(state);
   return state;
 };
 
+///////////////////////////////////////////////////////////////////////////////
+// Nested (but not fully inner) classes: Scope and State
+///////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Class for a scope.
+ * @param {Interpreter.Scope=} parentScope Inherited scope.  Defaults to null.
+ * @constructor
+ */
+Interpreter.Scope = function(parentScope) {
+  this.notWritable = new Set();
+  this.properties = Object.create(null);
+  this.parentScope = parentScope || null;
+};
+
+/**
+ * Class for a state.
+ * @param {!Object} node AST node for the state.
+ * @param {!Interpreter.Scope} scope Scope dictionary for the state.
+ * @constructor
+ */
+Interpreter.State = function(node, scope) {
+  this.node = node;
+  this.scope = scope;
+};
 
 ///////////////////////////////////////////////////////////////////////////////
 // Thread
