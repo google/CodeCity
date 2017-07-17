@@ -796,6 +796,24 @@ module.exports = [
     `,
     expected: true },
 
+  { name: 'evalSeeEnclosing', src: `
+    var n = 77.77;
+    eval('n');
+    `,
+    expected: 77.77 },
+
+  { name: 'evalModifyEnclosing', src: `
+    var n = 77.77;
+    eval('n = 77.88');
+    `,
+    expected: 77.88 },
+
+  { name: 'evalNoLeakingDecls', src: `
+    eval('var n = 88.88');
+    typeof n;
+    `,
+    expected: 'undefined' },
+
   /******************************************************************/
   // Object and Object.prototype
   

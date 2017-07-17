@@ -2559,7 +2559,7 @@ Interpreter.prototype['stepCallExpression'] = function(stack, state, node) {
         var evalNode = {type: 'EvalProgram_', body: ast['body']};
         Interpreter.stripLocations_(evalNode, node['start'], node['end']);
         // Update current scope with definitions in eval().
-        var scope = this.getScope();
+        var scope = new Interpreter.Scope(state.scope);
         this.populateScope_(ast, scope);
         var nextState = this.pushNode_(evalNode);
         nextState.scope = scope;
