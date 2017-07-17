@@ -1575,7 +1575,7 @@ Interpreter.prototype.deleteProperty = function(obj, name) {
 
 /**
  * Retrieves a value from the scope chain.
- * @param {!Interpreter.Scope} scope Scope to write to.
+ * @param {!Interpreter.Scope} scope Scope to read from.
  * @param {string} name Name of variable.
  * @return {Interpreter.Value} Value (may be undefined).
  */
