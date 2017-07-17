@@ -3080,10 +3080,13 @@ Interpreter.prototype['stepUnaryExpression'] = function(stack, state, node) {
   } else if (node['operator'] === '~') {
     value = ~value;
   } else if (node['operator'] === 'delete') {
-    // If value is not an array, then it is a primitive.  If so, return true.
+    // If value is not an array, then it is a primitive, or some other value.
+    // If so, skip the delete and return true.
     if (Array.isArray(value)) {
       var obj = value[0];
-      // If the obj isn't an object, then it is a scope.  If so, return true.
+      // Obj should be an object.  But if the AST parser is in non-strict mode
+      // then obj will be a scope if the argument was a variable.
+      // If so, skip the delete and return true.
       if (obj instanceof this.Object) {
         var name = String(value[1]);
         if (obj.notWritable.has(name) ||
