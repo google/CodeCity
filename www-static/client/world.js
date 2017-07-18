@@ -410,8 +410,7 @@ CCC.World.prerenderPanorama = function(node) {
 CCC.World.connectPanel = function(node) {
   var df = document.createDocumentFragment();
   var div = document.createElement('div');
-  div.className =
-      (CCC.Common.isConnected ? 'connectDiv' : 'disconnectDiv');
+  div.className = node.isConnected ? 'connectDiv' : 'disconnectDiv';
   var msg = CCC.World.getMsg(node.isConnected ?
                              'connectedMsg' : 'disconnectedMsg');
   div.appendChild(document.createTextNode(msg));
