@@ -500,6 +500,8 @@ Interpreter.prototype.initObject = function(scope) {
 
   wrapper = function(obj) {
     throwIfNullUndefined(obj);
+    // TODO(cpcallen): behaviour of our getPrototype is wrong for
+    // getPrototypeOf according to ES5.1 (but correct for ES6).
     return thisInterpreter.getPrototype(obj);
   };
   ObjectConst.addNativeMethod('getPrototypeOf', wrapper);
@@ -540,6 +542,8 @@ Interpreter.prototype.initObject = function(scope) {
   wrapper = function(obj) {
     while (true) {
       // Note, circular loops shouldn't be possible.
+      // TODO(cpcallen): behaviour of getPrototype is wrong for
+      // isPrototypeOf, according to either ES5.1 or ES6.
       obj = thisInterpreter.getPrototype(obj);
       if (!obj) {
         // No parent; reached the top.
