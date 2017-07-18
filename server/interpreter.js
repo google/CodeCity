@@ -2657,9 +2657,8 @@ Interpreter.prototype['stepCatchClause'] = function(stack, state, node) {
     // Create an empty scope.
     var scope = new Interpreter.Scope(state.scope);
     // Add the argument.
-    var paramName = node['param']['name'];
-    this.addVariableToScope(scope, paramName, state.throwValue);
-    // Execute catch clause
+    this.addVariableToScope(scope, node['param']['name'], state.throwValue);
+    // Execute catch clause.
     return new Interpreter.State(node['body'], scope);
   } else {
     stack.pop();
@@ -2851,7 +2850,7 @@ Interpreter.prototype['stepForInStatement'] = function(stack, state, node) {
   if (node['body']) {
     return new Interpreter.State(node['body'], state.scope);
   }
-  // TODO(cpcalle): in the absence of a body there is an unnecessary
+  // TODO(cpcallen): in the absence of a body there is an unnecessary
   // step per iteration.  Fix that.
 };
 
@@ -3098,10 +3097,9 @@ Interpreter.prototype['stepSwitchStatement'] = function(stack, state, node) {
         var n = state.n_ || 0;
         if (switchCase['consequent'][n]) {
           state.isSwitch = true;
-          var nextState = new Interpreter.State(
-              switchCase['consequent'][n], state.scope);
           state.n_ = n + 1;
-          return nextState;
+          return new Interpreter.State(
+              switchCase['consequent'][n], state.scope);
         }
       }
       // Move on to next case.
