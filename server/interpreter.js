@@ -2658,14 +2658,12 @@ Interpreter.prototype['stepCallExpression'] = function(stack, state, node) {
 Interpreter.prototype['stepCatchClause'] = function(stack, state, node) {
   if (!state.done_) {
     state.done_ = true;
-    var scope;
-    if (node['param']) {
-      // Create an empty scope.
-      scope = new Interpreter.Scope(state.scope);
-      // Add the argument.
-      var paramName = node['param']['name'];
-      this.addVariableToScope(scope, paramName, state.throwValue);
-    }
+    // Create an empty scope.
+    var scope = new Interpreter.Scope(state.scope);
+    // Add the argument.
+    var paramName = node['param']['name'];
+    this.addVariableToScope(scope, paramName, state.throwValue);
+    // Execute catch clause
     return new Interpreter.State(node['body'], scope);
   } else {
     stack.pop();
