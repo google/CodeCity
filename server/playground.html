@@ -17,11 +17,11 @@
       myInterpreter.addVariableToScope(myInterpreter.global, 'alert',
           myInterpreter.createNativeFunction(wrapper));
 
-      myInterpreter.appendCode(autoexec);
+      myInterpreter.createThread(autoexec);
       myInterpreter.run();
 
       var code = document.getElementById('code').value;
-      myInterpreter.appendCode(code);
+      myInterpreter.createThread(code);
       disable('');
     }
 
@@ -51,9 +51,9 @@
     }
 
     function stepButton() {
-      if (myInterpreter.stateStack.length) {
-        var node =
-            myInterpreter.stateStack[myInterpreter.stateStack.length - 1].node;
+      var stack = myInterpreter.thread.stateStack;
+      if (stack.length) {
+        var node = stack[stack.length - 1].node;
         var start = node.start;
         var end = node.end;
       } else {
