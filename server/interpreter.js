@@ -1804,7 +1804,7 @@ Interpreter.prototype.executeException = function(error) {
 
 /**
  * Create and push a new state onto the statestack.
- * @param {!Object} node AST node for the state.
+ * @param {!Interpreter.Node} node AST node for the state.
  * @return {!Object} New state.
  */
 Interpreter.prototype.pushNode_ = function(node) {
@@ -1833,7 +1833,7 @@ Interpreter.prototype.pushNode_ = function(node) {
 /**
  * @constructor
  * @param {number=} id
- * @param {!Object=} ast
+ * @param {!Interpreter.Node=} ast
  */
 Interpreter.prototype.Thread = function(id, ast) {
   this.id = -1;
@@ -1871,7 +1871,7 @@ Interpreter.prototype.installThread = function() {
    * @extends {Interpreter.prototype.Thread}
    * @param {number=} id Thread ID.  Should correspond to index of this
    *     thread in .threads array.
-   * @param {!Object=} ast Acorn AST Program node
+   * @param {!Interpreter.Node=} ast Acorn AST Program node
    */
   intrp.Thread = function(id, ast) {
     if (id === undefined || ast === undefined) {
@@ -2627,7 +2627,9 @@ Interpreter.prototype['stepCallExpression'] = function(stack, state, node) {
           // Acorn threw a SyntaxError.  Rethrow as a trappable error.
           this.throwException(this.SYNTAX_ERROR, 'Invalid code: ' + e.message);
         }
-        var evalNode = {type: 'EvalProgram_', body: ast['body']};
+        var evalNode = new Interpreter.Node;
+        evalNode.type = 'EvalProgram_';
+        evalNode.body = ast['body'];
         Interpreter.stripLocations_(evalNode, node['start'], node['end']);
         // Update current scope with definitions in eval().
         var scope = new Interpreter.Scope(state.scope);
@@ -3272,8 +3274,10 @@ if (typeof module !== 'undefined') { // Node.js
 ///////////////////////////////////////////////////////////////////////////////
 // AST Node
 ///////////////////////////////////////////////////////////////////////////////
-// This is just to assist the serializer getting access to the acorn
-// AST node constructor.  And perhaps for Closure Compiler type checking.
+// This is mainly to assist the serializer getting access to the acorn
+// AST node constructor, but we also use it to create a fake AST nodes
+// for 'eval', and may in future use it for Closure Compiler type
+// checking.
 
 /**
  * @constructor
