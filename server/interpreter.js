@@ -2801,7 +2801,6 @@ Interpreter.prototype['stepForInStatement'] = function(stack, state, node) {
             state.visited_.add(prop);
             if (!state.object_.notEnumerable.has(prop)) {
               state.name_ = prop;
-              state.visited_.add(prop);
               break done;
             }
           }
@@ -2811,7 +2810,6 @@ Interpreter.prototype['stepForInStatement'] = function(stack, state, node) {
           if (!state.visited_.has(prop)) {
             state.visited_.add(prop);
             state.name_ = prop;
-            state.visited_.add(prop);
             break done;
           }
         }
