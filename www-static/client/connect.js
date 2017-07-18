@@ -194,7 +194,7 @@ CCC.init = function() {
   document.body.addEventListener('click', function() {
     CCC.postToAllFrames({'mode': 'blur'});
   }, true);
-  CCC.tab('world');
+  CCC.tab();
   CCC.schedulePing(0);
   // Firefox sometimes caches the disabled value on reload.
   CCC.commandTextarea.disabled = false;
@@ -202,9 +202,14 @@ CCC.init = function() {
 
 /**
  * Switch between world and log views.
- * @param {string} mode Either 'world' or 'log'.
+ * @param {string=} mode Either 'world' or 'log', or undefined.
  */
 CCC.tab = function(mode) {
+  if (!mode) {
+    // Check for a cookie preference.
+    var m = document.cookie.match(/(?:^|;\s*)tab=(\w+)(?:;|$)/);
+    mode = m ? m[1] : 'world';
+  }
   CCC.userActive();
   var worldButton = document.getElementById('worldButton');
   var logButton = document.getElementById('logButton');
@@ -221,6 +226,8 @@ CCC.tab = function(mode) {
     worldButton.classList.remove('jfk-checked');
     logButton.classList.add('jfk-checked');
   }
+  // Set a session cookie to preserve this setting.
+  document.cookie = 'tab=' + mode;
   CCC.commandTextarea.focus();
 };
 

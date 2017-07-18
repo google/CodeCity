@@ -410,7 +410,7 @@ CCC.World.prerenderPanorama = function(node) {
 CCC.World.connectPanel = function(node) {
   var df = document.createDocumentFragment();
   var div = document.createElement('div');
-  div.className = 'systemDiv';
+  div.className = node.isConnected ? 'connectDiv' : 'disconnectDiv';
   var msg = CCC.World.getMsg(node.isConnected ?
                              'connectedMsg' : 'disconnectedMsg');
   div.appendChild(document.createTextNode(msg));
@@ -1074,8 +1074,8 @@ CCC.World.publishPanorama = function() {
     if (icon) {
       icon.addEventListener('click',
           parent.location.reload.bind(parent.location));
+      icon.title = CCC.World.getMsg('reconnectMsg');
     }
-
   }
 };
 
