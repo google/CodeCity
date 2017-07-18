@@ -299,6 +299,13 @@ module.exports = [
     `,
     expected: 64 },
 
+  { name: 'orShortcircuit', src: `
+    var r = 0;
+    true || (r++);
+    r;
+    `,
+    expected: 0 },
+
   { name: 'andTrue', src: `
     ({}) && 65;
     `,
@@ -306,6 +313,13 @@ module.exports = [
 
   { name: 'andFalse', src: `
     0 && 65;
+    `,
+    expected: 0 },
+
+  { name: 'andShortcircuit', src: `
+    var r = 0;
+    false && (r++);
+    r;
     `,
     expected: 0 },
 
