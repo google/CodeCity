@@ -119,22 +119,24 @@ Interpreter.SCOPE_REFERENCE = {};
 
 /**
  * Create a new thread and add it to .threads.
- * @param {string|!Interpreter.Node} code Raw JavaScript text or AST.
+ * @param {!Interpreter.State|!Interpreter.Node|string} runnable Initial
+ *     state, or AST node to construct state from, or raw JavaScript
+ *     text to parse into AST.
  * @return {number} thread ID.
  */
-Interpreter.prototype.createThread = function(code) {
+Interpreter.prototype.createThread = function(runnable) {
+  if (typeof runnable === 'string') {
+    runnable = acorn.parse(runnable, Interpreter.PARSE_OPTIONS);
+  }
+  if (runnable instanceof Interpreter.Node) {
+    if (runnable['type'] !== 'Program') {
+      throw Error('Expecting AST to start with a Program node.');
+    }
+    this.populateScope_(runnable, this.global);
+    runnable = new Interpreter.State(runnable, this.global);
+  }
   var id = this.threads.length;
-  if (typeof code === 'string') {
-    code = acorn.parse(code, Interpreter.PARSE_OPTIONS);
-  }
-  if (!code || code['type'] !== 'Program') {
-    throw Error('Expecting new AST to start with a Program node.');
-  }
-
-  this.populateScope_(code, this.global);
-  var state = new Interpreter.State(code, this.global);
-
-  var thread = new Interpreter.Thread(id, state);
+  var thread = new Interpreter.Thread(id, runnable);
   this.threads.push(thread);
   // TODO(cpcallen): this call to schedule is a temporary measure
   // until we decide where it should be called from.  Creating a new
