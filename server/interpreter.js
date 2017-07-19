@@ -131,7 +131,11 @@ Interpreter.prototype.createThread = function(code) {
   if (!code || code['type'] !== 'Program') {
     throw Error('Expecting new AST to start with a Program node.');
   }
-  var thread = new this.Thread(id, code);
+
+  this.populateScope_(code, this.global);
+  var state = new Interpreter.State(code, this.global);
+
+  var thread = new this.Thread(id, state);
   this.threads.push(thread);
   // TODO(cpcallen): this call to schedule is a temporary measure
   // until we decide where it should be called from.  Creating a new
@@ -1845,13 +1849,13 @@ Interpreter.State = function(node, scope) {
 /**
  * @constructor
  * @param {number=} id
- * @param {!Interpreter.Node=} ast
+ * @param {!Interpreter.State=} state
  */
-Interpreter.prototype.Thread = function(id, ast) {
+Interpreter.prototype.Thread = function(id, state) {
   this.id = -1;
   this.state = Interpreter.prototype.Thread.State.ZOMBIE;
   this.value = undefined;
-  this.stateStack = [];
+  this.stateStack = [state];
   throw Error('Inner class constructor not callable on prototype');
 };
 
@@ -1878,27 +1882,27 @@ Interpreter.prototype.installThread = function() {
   var intrp = this;
 
   /**
-   * A thread of execution
+   * A thread of execution.
+   *
+   * Parameters should only be undefined when called from the deserializer.
    * @constructor
    * @extends {Interpreter.prototype.Thread}
    * @param {number=} id Thread ID.  Should correspond to index of this
    *     thread in .threads array.
-   * @param {!Interpreter.Node=} ast Acorn AST Program node
+   * @param {!Interpreter.State=} state Starting state for thread.
    */
-  intrp.Thread = function(id, ast) {
-    if (id === undefined || ast === undefined) {
+  intrp.Thread = function(id, state) {
+    this.value = undefined;
+    if (id === undefined || state === undefined) {
       // Deserialising. Props will be filled in later.
       this.id = -1;
       this.state = Interpreter.prototype.Thread.State.ZOMBIE;
-      this.value = undefined;
       this.stateStack = [];
       return;
     }
     this.id = id;
     this.state = intrp.Thread.State.READY;
-    intrp.populateScope_(ast, intrp.global);
-    this.value = undefined;
-    this.stateStack = [new Interpreter.State(ast, intrp.global)];
+    this.stateStack = [state];
   };
 
   intrp.Thread.State = Interpreter.prototype.Thread.State;
@@ -2566,7 +2570,7 @@ Interpreter.prototype['stepCallExpression'] = function(stack, state, node) {
         this.throwException(this.TYPE_ERROR, func + ' is not a constructor');
       }
       // Constructor, 'this' is new object.
-      // TODO(cpcallen): need type check to make sure proto is an object.
+      // TODO(cpcallen): need type check to make sure .prototype is an object.
       state.funcThis_ = new this.Object(this.getProperty(func, 'prototype'));
       state.isConstructor = true;
     }
