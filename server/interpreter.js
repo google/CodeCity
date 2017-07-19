@@ -30,7 +30,6 @@ var acorn;
  * @constructor
  */
 var Interpreter = function() {
-  this.installThread();
   this.installTypes();
   // Unique identifier for native functions.  Used in serialization.
   this.functionCounter_ = 0;
@@ -135,7 +134,7 @@ Interpreter.prototype.createThread = function(code) {
   this.populateScope_(code, this.global);
   var state = new Interpreter.State(code, this.global);
 
-  var thread = new this.Thread(id, state);
+  var thread = new Interpreter.Thread(id, state);
   this.threads.push(thread);
   // TODO(cpcallen): this call to schedule is a temporary measure
   // until we decide where it should be called from.  Creating a new
@@ -156,7 +155,7 @@ Interpreter.prototype.schedule = function() {
     if (!threads.hasOwnProperty(i)) {
       continue;
     }
-    if (threads[i] && threads[i].state === this.Thread.State.READY) {
+    if (threads[i] && threads[i].status === Interpreter.Thread.Status.READY) {
       this.thread = threads[i];
       return;
     }
@@ -170,7 +169,7 @@ Interpreter.prototype.schedule = function() {
  */
 Interpreter.prototype.step = function() {
   var thread = this.thread;
-  if (thread.state !== this.Thread.State.READY) {
+  if (thread.status !== Interpreter.Thread.Status.READY) {
     return false;
   }
   var stack = thread.stateStack;
@@ -199,7 +198,7 @@ Interpreter.prototype.step = function() {
 Interpreter.prototype.run = function() {
   var thread = this.thread;
   var stack = thread.stateStack;
-  while (thread.state === this.Thread.State.READY) {
+  while (thread.status === Interpreter.Thread.Status.READY) {
     var state = stack[stack.length - 1];
     var node = state.node;
     try {
@@ -215,7 +214,7 @@ Interpreter.prototype.run = function() {
       stack.push(nextState);
     }
   }
-  return this.thread.state === this.Thread.State.BLOCKED;
+  return this.thread.status === Interpreter.Thread.Status.BLOCKED;
 };
 
 /**
@@ -1808,7 +1807,7 @@ Interpreter.prototype.executeException = function(error) {
 
 
 ///////////////////////////////////////////////////////////////////////////////
-// Nested (but not fully inner) classes: Scope and State
+// Nested (but not fully inner) classes: Scope, State and Thread.
 ///////////////////////////////////////////////////////////////////////////////
 
 /**
@@ -1833,37 +1832,34 @@ Interpreter.State = function(node, scope) {
   this.scope = scope;
 };
 
-///////////////////////////////////////////////////////////////////////////////
-// Thread
-///////////////////////////////////////////////////////////////////////////////
-
-// This is a bunch of boilerplate that serves two purposes:
-//
-// * First, by declaring these types as if they were on
-//   Interpreter.prototype we can get the Closure Compiler to type
-//   check use of them for us.
-//
-// * Second, for whatever reason these declarations seem to create a
-//   small performance improvement in V8.
-
 /**
+ * Class for a thread of execution.
+ *
+ * Parameters should only be undefined when called from the deserializer.
  * @constructor
- * @param {number=} id
- * @param {!Interpreter.State=} state
+ * @param {number=} id Thread ID.  Should correspond to index of this
+ *     thread in .threads array.
+ * @param {!Interpreter.State=} state Starting state for thread.
  */
-Interpreter.prototype.Thread = function(id, state) {
-  this.id = -1;
-  this.state = Interpreter.prototype.Thread.State.ZOMBIE;
+Interpreter.Thread = function(id, state) {
   this.value = undefined;
+  if (id === undefined || state === undefined) {
+    // Deserialising. Props will be filled in later.
+    this.id = -1;
+    this.status = Interpreter.Thread.Status.ZOMBIE;
+    this.stateStack = [];
+    return;
+  } 
+  this.id = id;
+  this.status = Interpreter.Thread.Status.READY;
   this.stateStack = [state];
-  throw Error('Inner class constructor not callable on prototype');
 };
 
 /**
- * Legal thread states.
+ * Legal thread statuses.
  * @enum {number}
  */
-Interpreter.prototype.Thread.State = {
+Interpreter.Thread.Status = {
   /** Execution of the thread has terminated. */
   ZOMBIE: 0,
   /** The thread is ready to run (or is running). */
@@ -1871,43 +1867,6 @@ Interpreter.prototype.Thread.State = {
   /** The thread is blocked, awaiting an external event (e.g. callback). */
   BLOCKED: 2,
 }
-
-///////////////////////////////////////////////////////////////////////////////
-
-/**
- * Install the Thread constructor on an Interpreter instance.  Should
- * be called just once at interpreter-creation time.
- */
-Interpreter.prototype.installThread = function() {
-  var intrp = this;
-
-  /**
-   * A thread of execution.
-   *
-   * Parameters should only be undefined when called from the deserializer.
-   * @constructor
-   * @extends {Interpreter.prototype.Thread}
-   * @param {number=} id Thread ID.  Should correspond to index of this
-   *     thread in .threads array.
-   * @param {!Interpreter.State=} state Starting state for thread.
-   */
-  intrp.Thread = function(id, state) {
-    this.value = undefined;
-    if (id === undefined || state === undefined) {
-      // Deserialising. Props will be filled in later.
-      this.id = -1;
-      this.state = Interpreter.prototype.Thread.State.ZOMBIE;
-      this.stateStack = [];
-      return;
-    }
-    this.id = id;
-    this.state = intrp.Thread.State.READY;
-    this.stateStack = [state];
-  };
-
-  intrp.Thread.State = Interpreter.prototype.Thread.State;
-
-};
 
 ///////////////////////////////////////////////////////////////////////////////
 // Types representing JS objects - Object, Function, Array, etc.
@@ -2615,10 +2574,10 @@ Interpreter.prototype['stepCallExpression'] = function(stack, state, node) {
       var thisInterpreter = this;
       var callback = function(value) {
         state.value = value;
-        thisInterpreter.thread.state = thisInterpreter.Thread.State.READY;
+        thisInterpreter.thread.status = Interpreter.Thread.Status.READY;
       };
       var argsWithCallback = state.arguments_.concat(callback);
-      this.thread.state = thisInterpreter.Thread.State.BLOCKED;
+      this.thread.status = Interpreter.Thread.Status.BLOCKED;
       func.asyncFunc.apply(state.funcThis_, argsWithCallback);
       return;
     } else if (func.eval) {
@@ -3024,7 +2983,7 @@ Interpreter.prototype['stepProgram'] = function(stack, state, node) {
     return new Interpreter.State(expression, state.scope);
   }
   stack.pop();
-  this.thread.state = this.Thread.State.ZOMBIE;
+  this.thread.status = Interpreter.Thread.Status.ZOMBIE;
 };
 
 Interpreter.prototype['stepReturnStatement'] = function(stack, state, node) {
