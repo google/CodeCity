@@ -1,0 +1,8 @@
+#!/bin/bash
+
+OPTIONS='-O ADVANCED_OPTIMIZATIONS'
+EXTERNS='--externs=externs.js'
+OUTPUT='--js_output_file /dev/null'
+FILES=interpreter.js
+
+closure-compiler $OPTIONS $EXTERNS $OUTPUT $FILES
