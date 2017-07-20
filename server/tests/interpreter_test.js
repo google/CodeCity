@@ -710,6 +710,28 @@ exports.testLegalArrayIndexLength = function(t) {
 };
 
 /**
+ * Run a test of string.prototype.replace.
+ * @param {!T} t The test runner object.
+ */
+exports.testStringReplace = function(t) {
+  var cases = [
+    // replace(string, string)
+    ["'xxxx'.replace('xx', 'y')", "yxx"],
+    // replace(regexp, string)
+    ["'xxxx'.replace(/(X)\\1/ig, 'y')", "yy"],
+    // replace(string, function)
+    ["'xxxx'.replace('xx', function(a,b,c,d,e){return ['[',a,',',b,',',c,',',d,',',e,']'].join('')})", "[xx,0,xxxx,,]xx"],
+    // replace(regexp, function)
+    ["'xxxx'.replace(/(X)\\1/ig, function(a,b,c,d,e){return ['[',a,',',b,',',c,',',d,',',e,']'].join('')})", "[xx,x,0,xxxx,][xx,x,2,xxxx,]"],
+  ];
+  for (var i = 0; i < cases.length; i++) {
+    var tc = cases[i];
+    var src = tc[0] + ';';
+    runTest(t, 'testStringReplace: ' + tc[0], src, tc[1]);
+  }
+};
+
+/**
  * Run a test of asynchronous functions:
  * @param {!T} t The test runner object.
  */
@@ -733,4 +755,3 @@ exports.testAsync = function(t) {
   `;
   runTest(t, name, src, 'after', initFunc, asyncFunc);
 };
-

@@ -445,6 +445,7 @@ Interpreter.prototype.initObject = function(scope) {
   ObjectConst.addNativeMethod('keys', wrapper);
 
   wrapper = function(proto) {
+    // Support for the second argument is the responsibility of a polyfill.
     if (proto === null) {
       return new thisInterpreter.Object(null);
     }
@@ -730,7 +731,10 @@ Interpreter.prototype.initArray = function(scope) {
     try {
       var text = [];
       for (var i = 0; i < this.length; i++) {
-        text[i] = String(this.properties[i]);
+        var value = this.properties[i];
+        if (value !== null && value !== undefined) {
+          text[i] = String(value);
+        }
       }
     } finally {
       cycles.pop();
@@ -933,7 +937,7 @@ Interpreter.prototype.initString = function(scope) {
   this.STRING.addNativeMethod('split', wrapper);
 
   wrapper = function(regexp) {
-    regexp = regexp ? regexp.data : undefined;
+    regexp = regexp ? regexp.regexp : undefined;
     var match = this.match(regexp);
     if (!match) {
       return null;
@@ -943,14 +947,15 @@ Interpreter.prototype.initString = function(scope) {
   this.STRING.addNativeMethod('match', wrapper);
 
   wrapper = function(regexp) {
-    regexp = regexp ? regexp.data : undefined;
+    regexp = regexp ? regexp.regexp : undefined;
     return this.search(regexp);
   };
   this.STRING.addNativeMethod('search', wrapper);
 
-  wrapper = function(substr, newSubStr) {
-    // TODO: Rewrite as a polyfill to support function replacements.
-    return this.replace(substr, newSubStr);
+  wrapper = function(substr, newSubstr) {
+    // Support for function replacements is the responsibility of a polyfill.
+    return String(this).replace((substr instanceof thisInterpreter.RegExp) ?
+                                substr.regexp : substr, newSubstr);
   };
   this.STRING.addNativeMethod('replace', wrapper);
 };
@@ -1850,7 +1855,7 @@ Interpreter.prototype.Thread = function(id, ast) {
   throw Error('Inner class constructor not callable on prototype');
 };
 
-/** 
+/**
  * Legal thread states.
  * @enum {number}
  */
@@ -1888,7 +1893,7 @@ Interpreter.prototype.installThread = function() {
       this.value = undefined;
       this.stateStack = [];
       return;
-    } 
+    }
     this.id = id;
     this.state = intrp.Thread.State.READY;
     intrp.populateScope_(ast, intrp.global);
@@ -2681,7 +2686,7 @@ Interpreter.prototype['stepConditionalExpression'] =
     }
     if (!value && node['alternate']) {
       // Execute 'else' block.
-      return new Interpreter.State(node['alternate'], state.scope);  
+      return new Interpreter.State(node['alternate'], state.scope);
     }
     // eval('1;if(false){2}') -> undefined
     this.value = undefined;
@@ -3264,4 +3269,3 @@ if (typeof module !== 'undefined') { // Node.js
  * @constructor
  */
 Interpreter.Node = acorn.parse('', Interpreter.PARSE_OPTIONS).constructor;
-
