@@ -2207,6 +2207,8 @@ Interpreter.prototype.installTypes = function() {
     cycles.push(this);
     try {
       var strs = [];
+      // TODO(cpcallen): Array.prototype.toString should be generic,
+      // but here we depend on .length.
       for (var i = 0; i < this.length; i++) {
         var value = this.properties[i];
         strs[i] = (value instanceof intrp.Object &&
