@@ -731,7 +731,10 @@ Interpreter.prototype.initArray = function(scope) {
     try {
       var text = [];
       for (var i = 0; i < this.length; i++) {
-        text[i] = String(this.properties[i]);
+        var value = this.properties[i];
+        if (value !== null && value !== undefined) {
+          text[i] = String(value);
+        }
       }
     } finally {
       cycles.pop();
@@ -951,7 +954,8 @@ Interpreter.prototype.initString = function(scope) {
 
   wrapper = function(substr, newSubstr) {
     // Support for function replacements is the responsibility of a polyfill.
-    return String(this).replace(substr.regexp || substr, newSubstr);
+    return String(this).replace((substr instanceof thisInterpreter.RegExp) ?
+                                substr.regexp : substr, newSubstr);
   };
   this.STRING.addNativeMethod('replace', wrapper);
 };
