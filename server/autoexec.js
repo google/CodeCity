@@ -53,14 +53,11 @@ Object.defineProperty(Function.prototype, 'bind',
 // Add a polyfill to handle create's second argument.
 (function() {
   var create_ = Object.create;
-  Object.defineProperty(Object, 'create',
-      {configurable: true, writable: true, value:
-    function(proto, props) {
-      var obj = create_(proto);
-      props && Object.defineProperties(obj, props);
-      return obj;
-    }
-  });
+  Object.create = function(proto, props) {
+    var obj = create_(proto);
+    props && Object.defineProperties(obj, props);
+    return obj;
+  };
 })();
 
 Object.defineProperty(Object, 'defineProperties',
@@ -252,6 +249,40 @@ Object.defineProperty(Array.prototype, 'toLocaleString',
     return out.join(',');
   }
 });
+
+// Add a polyfill to handle replace's second argument being a function.
+(function() {
+  var replace_ = String.prototype.replace;
+  String.prototype.replace = function(substr, newSubstr) {
+    if (typeof newSubstr !== 'function') {
+      // string.replace(string|regexp, string.
+      return replace_.call(this, substr, newSubstr);
+    }
+    var str = this;
+    if (substr instanceof RegExp) {  // string.replace(regexp, function)
+      var subs = [];
+      var m = substr.exec(str);
+      while (m) {
+        m.push(m.index, str);
+        var inject = newSubstr.apply(null, m);
+        subs.push([m.index, m[0].length, inject]);
+        m = substr.global ? substr.exec(str) : null;
+      }
+      for (var i = subs.length - 1; i >= 0; i--) {
+        str = str.substring(0, subs[i][0]) + subs[i][2] +
+            str.substring(subs[i][0] + subs[i][1]);
+      }
+    } else {                         // string.replace(string, function)
+      var i = str.indexOf(substr);
+      if (i !== -1) {
+        var inject = newSubstr(str.substr(i, substr.length), i, str);
+        str = str.substring(0, i) + inject +
+            str.substring(i + substr.length);
+      }
+    }
+    return str;
+  };
+})();
 
 // Must eval to undefined so subsequent evals will give undefined if
 // they have no completion value.
