@@ -1236,6 +1236,29 @@ module.exports = [
     `,
     expected: 'pass' },
 
+  { name: 'String.prototype.replace(string, string)',
+    src: `'xxxx'.replace('xx', 'y');`,
+    expected: 'yxx' },
+
+  { name: 'String.prototype.replace(regexp, string)',
+    src: `'xxxx'.replace(/(X)\\1/ig, 'y');`,
+    expected: 'yy' },
+
+  { name: 'String.prototype.replace(string, function)', src: `
+    'xxxx'.replace('xx', function () {
+         return '[' + Array.prototype.join.apply(arguments) + ']';
+    });
+    `,
+    expected: '[xx,0,xxxx]xx' },
+
+  { name: 'String.prototype.replace(regexp, function)', src: `
+    'xxxx'.replace(/(X)\\1/ig, function () {
+         return '[' + Array.prototype.join.apply(arguments) + ']';
+    });
+    `,
+    expected: '[xx,x,0,xxxx][xx,x,2,xxxx]' },
+    
+
   /******************************************************************/
   // RegExp
 
