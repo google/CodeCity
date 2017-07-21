@@ -1324,6 +1324,14 @@ Interpreter.prototype.initThreads = function(scope) {
         state.doneArgs_ = true;
         return intrp.createThread(state);
       }));
+
+  this.addVariableToScope(scope, 'clearTimeout', this.createNativeFunction(
+      function(id) {
+        id = Number(id);
+        if (intrp.threads[id]) {
+          intrp.threads[id].status = Interpreter.Thread.Status.ZOMBIE;
+        }
+      }));
 };
 
 /**
