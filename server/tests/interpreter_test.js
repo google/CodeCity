@@ -760,13 +760,13 @@ exports.testAsync = function(t) {
  * Run a test of the suspend() function:
  * @param {!T} t The test runner object.
  */
-exports.testSuspend = function(t) {
+exports.testSuspendSetTimeout = function(t) {
   var src = `
       'before';
-      suspend(0);
+      suspend();
       'after';
   `;
-  runTest(t, 'suspend(0)', src, 'after');
+  runTest(t, 'suspend()', src, 'after');
 
   // Function that simulates time passing, 100ms per invocation.
   var wait = function(intrp) {
@@ -779,4 +779,20 @@ exports.testSuspend = function(t) {
       'after';
   `;
   runTest(t, 'suspend(1000)', src, 'after', undefined, wait);
+
+  src = `
+      var s = '';
+      setTimeout(function() {
+          s += '2';
+          suspend();
+          s += '4';
+      });
+      s += 1;
+      suspend();
+      s += 3;
+      suspend();
+      s += 5;
+      s;
+  `;
+  runTest(t, 'setTimeout', src, '12345', undefined, wait);
 };

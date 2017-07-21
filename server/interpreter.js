@@ -220,8 +220,8 @@ Interpreter.prototype.schedule = function() {
   if (runnable.length === 0) {
     return false;
   }
-  // Now pick one from runnable to run.
-  // TODO(cpcallen): implement some kind of round-robin scheduling.
+  // Now pick most-overdue thread from runnable to run.
+  runnable.sort(function(a, b) { return a.runAt - b.runAt; });
   this.thread = runnable[0];
   return true;
 };
@@ -247,6 +247,9 @@ Interpreter.prototype.step = function() {
     }
     if (nextState) {
       stack.push(nextState);
+    }
+    if (stack.length === 0) {
+      thread.status = Interpreter.Thread.Status.ZOMBIE;
     }
   }
   return !this.done;
@@ -275,6 +278,9 @@ Interpreter.prototype.run = function() {
       }
       if (nextState) {
         stack.push(nextState);
+      }
+      if (stack.length === 0) {
+        thread.status = Interpreter.Thread.Status.ZOMBIE;
       }
     }
   }
@@ -1299,6 +1305,24 @@ Interpreter.prototype.initThreads = function(scope) {
           delay = 0;
         }
         intrp.thread.sleepUntil(intrp.now() + delay);
+      }));
+
+  this.addVariableToScope(scope, 'setTimeout', this.createNativeFunction(
+      function(func) {
+        var delay = Number(arguments[1] || 0);
+        var args = Array.prototype.slice.call(arguments, 2);
+
+        if (!(func instanceof intrp.Function)) {
+          this.throwException(this.TYPE_ERROR, func + ' is not a function');
+        }
+        var node = new Interpreter.Node;
+        node['type'] = 'CallExpression';
+        var state = new Interpreter.State(node, intrp.global);
+        state.func_ = func;
+        state.doneCallee_ = 2;
+        state.arguments_ = args;
+        state.doneArgs_ = true;
+        return intrp.createThread(state);
       }));
 };
 
@@ -2712,10 +2736,12 @@ Interpreter.prototype['stepCallExpression'] = function(stack, state, node) {
   } else {
     // Execution complete.  Put the return value on the stack.
     stack.pop();
-    if (state.isConstructor && typeof state.value !== 'object') {
-      stack[stack.length - 1].value = state.funcThis_;
-    } else {
-      stack[stack.length - 1].value = state.value;
+    if (stack.length > 0) {
+      if (state.isConstructor && typeof state.value !== 'object') {
+        stack[stack.length - 1].value = state.funcThis_;
+      } else {
+        stack[stack.length - 1].value = state.value;
+      }
     }
   }
 };
@@ -3081,7 +3107,6 @@ Interpreter.prototype['stepProgram'] = function(stack, state, node) {
     return new Interpreter.State(expression, state.scope);
   }
   stack.pop();
-  this.thread.status = Interpreter.Thread.Status.ZOMBIE;
 };
 
 Interpreter.prototype['stepReturnStatement'] = function(stack, state, node) {
