@@ -100,7 +100,6 @@ Serializer.deserialize = function(json, intrp) {
         }
         break;
       case 'Array':
-        // Currently we assume that Arrays are not sparse.
         obj = [];
         break;
       case 'Set':
@@ -135,15 +134,6 @@ Serializer.deserialize = function(json, intrp) {
       for (var j = 0; j < names.length; j++) {
         var name = names[j];
         obj[name] = decodeValue(props[name]);
-      }
-    }
-    // Repopulate arrays.
-    if (Array.isArray(obj)) {
-      var data = jsonObj['data'];
-      if (data) {
-        for (var j = 0; j < data.length; j++) {
-          obj.push(decodeValue(data[j]));
-        }
       }
     }
     // Repopulate sets.
@@ -222,12 +212,8 @@ Serializer.serialize = function(intrp) {
         }
         continue;  // No need to index properties.
       case Array.prototype:
-        // Currently we assume that Arrays are not sparse.
         jsonObj['type'] = 'Array';
-        if (obj.length) {
-          jsonObj['data'] = obj.map(encodeValue);
-        }
-        continue;  // No need to index properties.
+        break;
       case Set.prototype:
         jsonObj['type'] = 'Set';
         if (obj.size) {

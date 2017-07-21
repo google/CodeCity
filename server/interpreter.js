@@ -195,22 +195,28 @@ Interpreter.prototype.schedule = function() {
     if (!threads.hasOwnProperty(i)) {
       continue;
     }
-    if (threads[i].status !== Interpreter.Thread.Status.ZOMBIE) {
-      this.done = false;
+    if (threads[i] === null) {
+      console.log(threads);
     }
     switch (threads[i].status) {
       case Interpreter.Thread.Status.ZOMBIE:
+        // Remove zombie from threads.
+        delete threads[i];
+        continue;
       case Interpreter.Thread.Status.BLOCKED:
-        // Ignore terminated and blocked threads.
+        // Ignore blocked threads except noting existence.
+        this.done = false;
         continue;
       case Interpreter.Thread.Status.SLEEPING:
         if (threads[i].runAt > now) {
+          this.done = false;
           continue;
         }
         // Done sleeping; wake thread
         threads[i].status = Interpreter.Thread.Status.READY;
         // FALL THROUGH
       case Interpreter.Thread.Status.READY:
+        this.done = false;
         runnable.push(threads[i]);
         break;
       default:
@@ -1962,7 +1968,6 @@ Interpreter.State = function(node, scope) {
  * @param {number=} runAt Time at which to start running thread.
  */
 Interpreter.Thread = function(id, state, runAt) {
-  this.value = undefined;
   if (id === undefined || state === undefined) {
     // Deserialising. Props will be filled in later.
     this.id = -1;
