@@ -29,7 +29,17 @@
  */
 var require = function(name) {};
 
-/**
- * @type {Object}
- */
+/** @type {Object} */
 var module = {};
+
+/** @constructor */
+function Process() {}
+
+/** @const {Process} */
+var process;
+
+/**
+ * @param {!Array<number>=} time
+ * @return {!Array<number>}
+ */
+process.hrtime = function(time) {};
