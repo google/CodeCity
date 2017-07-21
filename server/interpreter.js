@@ -228,37 +228,41 @@ Interpreter.prototype.schedule = function() {
 
 /**
  * Execute one step of the interpreter.
- * @return {boolean} True if a step was executed, false if no more instructions.
+ * @return {boolean} True if a step was executed, false if no more
+ *     READY threads.
  */
 Interpreter.prototype.step = function() {
-  if (this.schedule()) {
-    var thread = this.thread;
-    var stack = thread.stateStack;
-    var state = stack[stack.length - 1];
-    var node = state.node;
-    try {
-      var nextState = this.functionMap_[node['type']](stack, state, node);
-    } catch (e) {
-      // Eat any step errors.  They have been thrown on the stack.
-      if (e !== Interpreter.STEP_ERROR) {
-        // Uh oh.  This is a real error in the interpreter.  Rethrow.
-        throw e;
-      }
-    }
-    if (nextState) {
-      stack.push(nextState);
-    }
-    if (stack.length === 0) {
-      thread.status = Interpreter.Thread.Status.ZOMBIE;
+  if (!this.thread || this.thread.status !== Interpreter.Thread.Status.READY) {
+    if (!this.schedule()) {
+      return false;
     }
   }
-  return !this.done;
+  var thread = this.thread;
+  var stack = thread.stateStack;
+  var state = stack[stack.length - 1];
+  var node = state.node;
+  try {
+    var nextState = this.functionMap_[node['type']](stack, state, node);
+  } catch (e) {
+    // Eat any step errors.  They have been thrown on the stack.
+    if (e !== Interpreter.STEP_ERROR) {
+      // Uh oh.  This is a real error in the interpreter.  Rethrow.
+      throw e;
+    }
+  }
+  if (nextState) {
+    stack.push(nextState);
+  }
+  if (stack.length === 0) {
+    thread.status = Interpreter.Thread.Status.ZOMBIE;
+  }
+  return true;
 };
 
 /**
  * Execute the interpreter to program completion.  Vulnerable to infinite loops.
- * @return {boolean} True if a execution is asynchronously blocked,
- *     false if no more instructions.
+ * @return {boolean} True if there are BLOCKED or SLEEPING threads;
+ *     false if all remaining threads are ZOMBIEs.
  */
 Interpreter.prototype.run = function() {
   while (this.schedule()) {
