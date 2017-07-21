@@ -56,8 +56,12 @@ var Interpreter = function() {
   // Create and initialize the global scope.
   this.global = new Interpreter.Scope;
   this.initGlobalScope(this.global);
+  // Set up threads and scheduler stuff:
   this.threads = [];
   this.thread = null;
+  this.initUptime();
+  this.previousTime_ = 0;
+  this.done = true;  // True if any non-ZOMBIE threads exist.
 };
 
 /**
@@ -118,6 +122,38 @@ Interpreter.STEP_ERROR = {};
 Interpreter.SCOPE_REFERENCE = {};
 
 /**
+ * Initialise internal structures for uptime() and now().
+ */
+Interpreter.prototype.initUptime = function () {
+  this.startTime_ = process.hrtime();
+};
+    
+/**
+ * Return a monotonically increasing count of milliseconds since this
+ * Interpreter instance was most recently started, not including time
+ * when the interpreter runtime was suspended by the host OS (say,
+ * because the machine was asleep).
+ * 
+ * @return{number} Elapsed total time in milliseconds.
+ */
+Interpreter.prototype.uptime = function () {
+  var t = process.hrtime(this.startTime_);
+  return t[0] * 1000 + t[1] / 1000000;
+};
+    
+/**
+ * Return a monotonically increasing count of milliseconds since this
+ * Interpreter instance was created.  In the event of an interpreter
+ * being serialized / deserialized, it is epxected that after
+ * deserialization that this will continue from where it left off
+ * before serialization.
+ * @return{number} Elapsed total time in milliseconds.
+ */
+Interpreter.prototype.now = function () {
+  return this.uptime() + this.previousTime_;
+};
+    
+/**
  * Create a new thread and add it to .threads.
  * @param {!Interpreter.State|!Interpreter.Node|string} runnable Initial
  *     state, or AST node to construct state from, or raw JavaScript
@@ -136,33 +172,58 @@ Interpreter.prototype.createThread = function(runnable) {
     runnable = new Interpreter.State(runnable, this.global);
   }
   var id = this.threads.length;
-  var thread = new Interpreter.Thread(id, runnable);
+  var thread = new Interpreter.Thread(id, runnable, this.now());
   this.threads.push(thread);
-  // TODO(cpcallen): this call to schedule is a temporary measure
-  // until we decide where it should be called from.  Creating a new
-  // thread should not in general result in the currently-running
-  // thread being preempted.
-  this.schedule();
   return id;
 };
 
 /**
- * Schedule a runnable thread.
+ * Schedule the next runnable thread.  Return true if successful;
+ * false otherwise.  If there are no remaining (non-ZOMBIE) threads,
+ * also set .done to true.
+ * @return {boolean} True iff there is a runnable thread.
  */
 Interpreter.prototype.schedule = function() {
+  var now = this.now();
   var threads = this.threads;
+  var runnable = [];
+  // Assume all remaining threads are ZOMBIEs until proven otherwise.
+  this.done = true;
   // .threads will be very sparse, so use for-in loop.
   for (var i in threads) {
     i = Number(i);  // Make Closure Compiler happy.
     if (!threads.hasOwnProperty(i)) {
       continue;
     }
-    if (threads[i] && threads[i].status === Interpreter.Thread.Status.READY) {
-      this.thread = threads[i];
-      return;
+    if (threads[i].status !== Interpreter.Thread.Status.ZOMBIE) {
+      this.done = false;
+    }
+    switch (threads[i].status) {
+      case Interpreter.Thread.Status.ZOMBIE:
+      case Interpreter.Thread.Status.BLOCKED:
+        // Ignore terminated and blocked threads.
+        continue;
+      case Interpreter.Thread.Status.SLEEPING:
+        if (threads[i].runAt > now) {
+          continue;
+        }
+        // Done sleeping; wake thread
+        threads[i].status = Interpreter.Thread.Status.READY;
+        // FALL THROUGH
+      case Interpreter.Thread.Status.READY:
+        runnable.push(threads[i]);
+        break;
+      default:
+        throw Error('Unknown thread state');
     }
   }
-  throw Error('No runnable threads?');
+  if (runnable.length === 0) {
+    return false;
+  }
+  // Now pick one from runnable to run.
+  // TODO(cpcallen): implement some kind of round-robin scheduling.
+  this.thread = runnable[0];
+  return true;
 };
 
 /**
@@ -170,37 +231,9 @@ Interpreter.prototype.schedule = function() {
  * @return {boolean} True if a step was executed, false if no more instructions.
  */
 Interpreter.prototype.step = function() {
-  var thread = this.thread;
-  if (thread.status !== Interpreter.Thread.Status.READY) {
-    return false;
-  }
-  var stack = thread.stateStack;
-  var state = stack[stack.length - 1];
-  var node = state.node;
-  try {
-    var nextState = this.functionMap_[node['type']](stack, state, node);
-  } catch (e) {
-    // Eat any step errors.  They have been thrown on the stack.
-    if (e !== Interpreter.STEP_ERROR) {
-      // Uh oh.  This is a real error in the interpreter.  Rethrow.
-      throw e;
-    }
-  }
-  if (nextState) {
-    stack.push(nextState);
-  }
-  return true;
-};
-
-/**
- * Execute the interpreter to program completion.  Vulnerable to infinite loops.
- * @return {boolean} True if a execution is asynchronously blocked,
- *     false if no more instructions.
- */
-Interpreter.prototype.run = function() {
-  var thread = this.thread;
-  var stack = thread.stateStack;
-  while (thread.status === Interpreter.Thread.Status.READY) {
+  if (this.schedule()) {
+    var thread = this.thread;
+    var stack = thread.stateStack;
     var state = stack[stack.length - 1];
     var node = state.node;
     try {
@@ -216,7 +249,36 @@ Interpreter.prototype.run = function() {
       stack.push(nextState);
     }
   }
-  return this.thread.status === Interpreter.Thread.Status.BLOCKED;
+  return !this.done;
+};
+
+/**
+ * Execute the interpreter to program completion.  Vulnerable to infinite loops.
+ * @return {boolean} True if a execution is asynchronously blocked,
+ *     false if no more instructions.
+ */
+Interpreter.prototype.run = function() {
+  while (this.schedule()) {
+    var thread = this.thread;
+    var stack = thread.stateStack;
+    while (thread.status === Interpreter.Thread.Status.READY) {
+      var state = stack[stack.length - 1];
+      var node = state.node;
+      try {
+        var nextState = this.functionMap_[node['type']](stack, state, node);
+      } catch (e) {
+        // Eat any step errors.  They have been thrown on the stack.
+        if (e !== Interpreter.STEP_ERROR) {
+          // Uh oh.  This is a real error in the interpreter.  Rethrow.
+          throw e;
+        }
+      }
+      if (nextState) {
+        stack.push(nextState);
+      }
+    }
+  }
+  return !this.done;
 };
 
 /**
@@ -249,7 +311,7 @@ Interpreter.prototype.initGlobalScope = function(scope) {
   this.initJSON(scope);
   this.initError(scope);
 
-  // Initialize global functions.
+  // Initialize ES standard global functions.
   var thisInterpreter = this;
   this.addVariableToScope(scope, 'isNaN',
       this.createNativeFunction(isNaN));
@@ -282,6 +344,9 @@ Interpreter.prototype.initGlobalScope = function(scope) {
     this.addVariableToScope(scope, strFunctions[i][1],
         this.createNativeFunction(wrapper));
   }
+
+  // Initialize CC-specific globals.
+  this.initThreads(scope);
 };
 
 /**
@@ -1222,6 +1287,22 @@ Interpreter.prototype.initError = function(scope) {
 };
 
 /**
+ * Initialize the thread system API
+ * @param {!Interpreter.Scope} scope Global scope.
+ */
+Interpreter.prototype.initThreads = function(scope) {
+  var intrp = this;
+  this.addVariableToScope(scope, 'suspend', this.createNativeFunction(
+      function(delay) {
+        delay = Number(delay || 0);
+        if (delay < 0) {
+          delay = 0;
+        }
+        intrp.thread.sleepUntil(intrp.now() + delay);
+      }));
+};
+
+/**
  * Is a value a legal integer for an array length?
  * @param {Interpreter.Value} x Value to check.
  * @return {number} Zero, or a positive integer if the value can be
@@ -1842,22 +1923,35 @@ Interpreter.State = function(node, scope) {
  * @param {number=} id Thread ID.  Should correspond to index of this
  *     thread in .threads array.
  * @param {!Interpreter.State=} state Starting state for thread.
+ * @param {number=} runAt Time at which to start running thread.
  */
-Interpreter.Thread = function(id, state) {
+Interpreter.Thread = function(id, state, runAt) {
   this.value = undefined;
   if (id === undefined || state === undefined) {
     // Deserialising. Props will be filled in later.
     this.id = -1;
     this.status = Interpreter.Thread.Status.ZOMBIE;
     this.stateStack = [];
+    this.runAt = 0;
     return;
   } 
   this.id = id;
-  this.status = Interpreter.Thread.Status.READY;
+  // Say it's sleeping for now.  May be woken immediately.
+  this.status = Interpreter.Thread.Status.SLEEPING;
   this.stateStack = [state];
+  this.runAt = runAt;
 };
 
 /**
+ * Put thread to sleep until a specified time.
+ * @param {number} resumeAt Time at which to wake thread.
+ */
+Interpreter.Thread.prototype.sleepUntil = function(resumeAt) {
+  this.status = Interpreter.Thread.Status.SLEEPING;
+  this.runAt = resumeAt;
+};
+
+/** 
  * Legal thread statuses.
  * @enum {number}
  */
@@ -1868,6 +1962,8 @@ Interpreter.Thread.Status = {
   READY: 1,
   /** The thread is blocked, awaiting an external event (e.g. callback). */
   BLOCKED: 2,
+  /** The thread is sleeping, awaiting arrival of its .runAt time. */
+  SLEEPING: 3,
 }
 
 ///////////////////////////////////////////////////////////////////////////////

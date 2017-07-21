@@ -8,6 +8,13 @@
   <script src="serialize.js"></script>
   <script src="autoexec.js"></script>
   <script>
+    // Monkey patch timing routines.
+    Interpreter.prototype.initUptime = function () {
+      this.startTime_ = performance.now();
+    };
+    Interpreter.prototype.uptime = function () {
+      return performance.now() - this.startTime_;
+    };
     var myInterpreter;
     function parseButton() {
       myInterpreter = new Interpreter();

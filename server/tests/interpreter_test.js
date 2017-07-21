@@ -60,7 +60,7 @@ function runTest(t, name, src, expected, initFunc, asyncFunc) {
     interpreter.createThread(src);
     while (interpreter.run()) {
       if (asyncFunc) {
-        asyncFunc();
+        asyncFunc(interpreter);
       }
     }
   } catch (e) {
@@ -732,4 +732,29 @@ exports.testAsync = function(t) {
       'after';
   `;
   runTest(t, name, src, 'after', initFunc, asyncFunc);
+};
+
+/**
+ * Run a test of the suspend() function:
+ * @param {!T} t The test runner object.
+ */
+exports.testSuspend = function(t) {
+  var src = `
+      'before';
+      suspend(0);
+      'after';
+  `;
+  runTest(t, 'suspend(0)', src, 'after');
+
+  // Function that simulates time passing, 100ms per invocation.
+  var wait = function(intrp) {
+    intrp.previousTime_ += 100;
+  };
+
+  src = `
+      'before';
+      suspend(10000);
+      'after';
+  `;
+  runTest(t, 'suspend(1000)', src, 'after', undefined, wait);
 };
