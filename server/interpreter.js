@@ -124,7 +124,7 @@ Interpreter.SCOPE_REFERENCE = {};
 /**
  * Initialise internal structures for uptime() and now().
  */
-Interpreter.prototype.initUptime = function () {
+Interpreter.prototype.initUptime = function() {
   this.startTime_ = process.hrtime();
 };
     
@@ -133,10 +133,9 @@ Interpreter.prototype.initUptime = function () {
  * Interpreter instance was most recently started, not including time
  * when the interpreter runtime was suspended by the host OS (say,
  * because the machine was asleep).
- * 
- * @return{number} Elapsed total time in milliseconds.
+ * @return {number} Elapsed total time in milliseconds.
  */
-Interpreter.prototype.uptime = function () {
+Interpreter.prototype.uptime = function() {
   var t = process.hrtime(this.startTime_);
   return t[0] * 1000 + t[1] / 1000000;
 };
@@ -147,9 +146,9 @@ Interpreter.prototype.uptime = function () {
  * being serialized / deserialized, it is epxected that after
  * deserialization that this will continue from where it left off
  * before serialization.
- * @return{number} Elapsed total time in milliseconds.
+ * @return {number} Elapsed total time in milliseconds.
  */
-Interpreter.prototype.now = function () {
+Interpreter.prototype.now = function() {
   return this.uptime() + this.previousTime_;
 };
     
@@ -195,9 +194,6 @@ Interpreter.prototype.schedule = function() {
     if (!threads.hasOwnProperty(i)) {
       continue;
     }
-    if (threads[i] === null) {
-      console.log(threads);
-    }
     switch (threads[i].status) {
       case Interpreter.Thread.Status.ZOMBIE:
         // Remove zombie from threads.
@@ -212,9 +208,9 @@ Interpreter.prototype.schedule = function() {
           this.done = false;
           continue;
         }
-        // Done sleeping; wake thread
+        // Done sleeping; wake thread.
         threads[i].status = Interpreter.Thread.Status.READY;
-        // FALL THROUGH
+        // fall through
       case Interpreter.Thread.Status.READY:
         this.done = false;
         runnable.push(threads[i]);
@@ -1310,7 +1306,7 @@ Interpreter.prototype.initThreads = function(scope) {
   var intrp = this;
   this.addVariableToScope(scope, 'suspend', this.createNativeFunction(
       function(delay) {
-        delay = Number(delay || 0);
+        delay = Number(delay) || 0;
         if (delay < 0) {
           delay = 0;
         }
@@ -1319,7 +1315,7 @@ Interpreter.prototype.initThreads = function(scope) {
 
   this.addVariableToScope(scope, 'setTimeout', this.createNativeFunction(
       function(func) {
-        var delay = Number(arguments[1] || 0);
+        var delay = Number(arguments[1]) || 0;
         var args = Array.prototype.slice.call(arguments, 2);
 
         if (!(func instanceof intrp.Function)) {
