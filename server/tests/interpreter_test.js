@@ -757,10 +757,11 @@ exports.testAsync = function(t) {
 };
 
 /**
- * Run a test of the suspend() function:
+ * Run a test of the suspend(), setTimeout() and clearTimeout()
+ * functions.
  * @param {!T} t The test runner object.
  */
-exports.testSuspendSetTimeout = function(t) {
+exports.testThreading = function(t) {
   var src = `
       'before';
       suspend();
@@ -795,4 +796,21 @@ exports.testSuspendSetTimeout = function(t) {
       s;
   `;
   runTest(t, 'setTimeout', src, '12345', undefined, wait);
+
+  src = `
+      var s = '';
+      var tid = setTimeout(function() {
+          s += '2';
+          suspend();
+          s += '4';
+      });
+      s += 1;
+      suspend();
+      s += 3;
+      clearTimeout(tid);
+      suspend();
+      s += 5;
+      s;
+  `;
+  runTest(t, 'clearTimeout', src, '1235', undefined, wait);
 };
