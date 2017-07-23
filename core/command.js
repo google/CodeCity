@@ -19,10 +19,14 @@ var $ = function(str) {
   if (!suffix) {
     return root;
   }
-  // Clear no-longer needed local variables so they don't leak into the eval.
-  str = undefined;
-  m = undefined;
-  return eval('(root)' + suffix);
+  // This regex has two main groups:
+  // 1) match .foo
+  // 2) match [42] or ['bar'] or ["baz"]
+  if (suffix.search(/^((\s*\.\s*[A-Za-z$_][A-Za-z0-9$_]*\s*)|(\s*\[\s*(\d+|\'([^\'\\]*(\\.[^\'\\]*)*)\'|"([^"\\]*(\\.[^"\\]*)*)")\s*\]\s*))+$/) === 0) {
+    // TODO: Handle permissions for -r properties.
+    return eval('(root)' + suffix);
+  }
+  return undefined;
 };
 
 
@@ -64,6 +68,7 @@ $.utils.command.prepositionsRegExp = new RegExp(
 $.utils.command.parse = function(command, user) {
   // Parse a user's command into components:
   // verb, argstr, args, dobjstr, dobj, prepstr, iobjstr, iobj
+  // Returns an object with the above properties, or undefined if no verb.
   var args = command.split(/ +/);
   var verb = args.shift();
   if (!verb) {
@@ -80,7 +85,7 @@ $.utils.command.parse = function(command, user) {
     prepstr = m[1];
     var i = argstr.indexOf(prepstr);
     if (i === -1) {
-      throw RangeError('Impossible preposition: ' + prepstr);
+      throw RangeError("Can't happen.  Impossible preposition: " + prepstr);
     }
     dobjstr = argstr.substring(0, i - 1);
     iobjstr = argstr.substring(i + prepstr.length + 1);
@@ -95,7 +100,9 @@ $.utils.command.parse = function(command, user) {
     } else if (m.length === 1) {
       dobj = dobj[0];
     } else {
-      dobj = ReferenceError(dobj.length + ' matches.');
+      var err = ReferenceError(dobj.length + ' matches.');
+      err.data = dobj;
+      dobj = err;
     }
   }
   if (iobjstr) {
@@ -105,7 +112,9 @@ $.utils.command.parse = function(command, user) {
     } else if (m.length === 1) {
       iobj = iobj[0];
     } else {
-      iobj = ReferenceError(iobj.length + ' matches.');
+      var err = ReferenceError(iobj.length + ' matches.');
+      err.data = iobj;
+      iobj = err;
     }
   }
   return {
@@ -142,13 +151,15 @@ $.utils.command.execute = function(command, user) {
       if (typeof func === 'function' && (prepstr = func.prepstr) &&
           (dobj = func.dobj) && (iobj = func.iobj && (verb = func.verb))) {
         // This is a verb.
-        if (prepstr === 'any' || prepstr == spec.prepstr ||
-            (prepstr == 'none' && !prepstr)) {
-          if (dobj === 'any' || (dobj === 'this' && spec.dobj === host) ||
-              (dobj === 'none' && !dobj)) {
-            if (iobj === 'any' || (iobj === 'this' && spec.iobj === host) ||
-                (iobj === 'none' && !iobj)) {
-              if (spec.verb.search(verb) === 0) {
+        if (spec.verb.search(verb) === 0) {
+          if (prepstr === 'any' ||
+              $.utils.command.prepositions[prepstr] === spec.prepstr ||
+              (prepstr == 'none' && !prepstr)) {
+            if (dobj === 'any' || (dobj === 'this' && spec.dobj === host) ||
+                (dobj === 'none' && !dobj)) {
+              if (iobj === 'any' || (iobj === 'this' && spec.iobj === host) ||
+                  (iobj === 'none' && !iobj)) {
+                // TODO: security check/perms.
                 host[prop](spec);
                 return true;
               }
