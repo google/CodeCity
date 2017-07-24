@@ -178,17 +178,21 @@ Interpreter.prototype.createThread = function(runnable) {
 };
 
 /**
- * Schedule the next runnable thread.  Return true if successful;
- * false otherwise.  If there are no remaining (non-ZOMBIE) threads,
- * also set .done to true.
- * @return {boolean} True iff there is a runnable thread.
+ * Schedule the next runnable thread.  Returns 0 if a READY thread
+ * successfuly scheduled; otherwise returns earliest .runAt time
+ * amongst SLEEPING threads (if any), or Number.MAX_VALUE if there are
+ * none.  If there are additionally no BLOCKED threads left (i.e.,
+ * there are no non-ZOMBIE theads at all) it will also set .done to
+ * true.
+ * @return {number} See above.
  */
 Interpreter.prototype.schedule = function() {
   var now = this.now();
+  var runAt = Number.MAX_VALUE;
   var threads = this.threads;
-  var runnable = [];
   // Assume all remaining threads are ZOMBIEs until proven otherwise.
   this.done = true;
+  this.thread = undefined;
   // .threads will be very sparse, so use for-in loop.
   for (var i in threads) {
     i = Number(i);  // Make Closure Compiler happy.
@@ -206,6 +210,7 @@ Interpreter.prototype.schedule = function() {
         continue;
       case Interpreter.Thread.Status.SLEEPING:
         if (threads[i].runAt > now) {
+          runAt = Math.min(runAt, threads[i].runAt);
           this.done = false;
           continue;
         }
@@ -213,20 +218,18 @@ Interpreter.prototype.schedule = function() {
         threads[i].status = Interpreter.Thread.Status.READY;
         // fall through
       case Interpreter.Thread.Status.READY:
+        // Is this this most-overdue thread found so far?
+        if (threads[i].runAt < runAt) {
+          this.thread = threads[i];
+          runAt = this.thread.runAt;
+        }
         this.done = false;
-        runnable.push(threads[i]);
         break;
       default:
         throw Error('Unknown thread state');
     }
   }
-  if (runnable.length === 0) {
-    return false;
-  }
-  // Now pick most-overdue thread from runnable to run.
-  runnable.sort(function(a, b) { return a.runAt - b.runAt; });
-  this.thread = runnable[0];
-  return true;
+  return runAt < now ? 0 : runAt;
 };
 
 /**
@@ -236,7 +239,7 @@ Interpreter.prototype.schedule = function() {
  */
 Interpreter.prototype.step = function() {
   if (!this.thread || this.thread.status !== Interpreter.Thread.Status.READY) {
-    if (!this.schedule()) {
+    if (this.schedule() > 0) {
       return false;
     }
   }
@@ -268,7 +271,7 @@ Interpreter.prototype.step = function() {
  *     false if all remaining threads are ZOMBIEs.
  */
 Interpreter.prototype.run = function() {
-  while (this.schedule()) {
+  while (this.schedule() === 0) {
     var thread = this.thread;
     var stack = thread.stateStack;
     while (thread.status === Interpreter.Thread.Status.READY) {
@@ -2700,10 +2703,12 @@ Interpreter.prototype['stepCallExpression'] = function(stack, state, node) {
       state.value = func.nativeFunc.apply(state.funcThis_, state.arguments_);
     } else if (func.asyncFunc) {
       var thisInterpreter = this;
-      var callback = function(value) {
-        state.value = value;
-        thisInterpreter.thread.status = Interpreter.Thread.Status.READY;
-      };
+      var callback = (function(i) {
+        return function(value) {
+          state.value = value;
+          thisInterpreter.threads[i].status = Interpreter.Thread.Status.READY;
+        };
+      })(this.thread.id);
       var argsWithCallback = state.arguments_.concat(callback);
       this.thread.status = Interpreter.Thread.Status.BLOCKED;
       func.asyncFunc.apply(state.funcThis_, argsWithCallback);
