@@ -184,7 +184,7 @@ Interpreter.prototype.createThread = function(runnable) {
  * none.  If there are additionally no BLOCKED threads left (i.e.,
  * there are no non-ZOMBIE theads at all) it will also set .done to
  * true.
- * @return {number} See above.
+ * @return {number} See description.
  */
 Interpreter.prototype.schedule = function() {
   var now = this.now();
@@ -266,12 +266,21 @@ Interpreter.prototype.step = function() {
 };
 
 /**
- * Execute the interpreter to program completion.  Vulnerable to infinite loops.
- * @return {boolean} True if there are BLOCKED or SLEEPING threads;
- *     false if all remaining threads are ZOMBIEs.
+ * Execute the interpreter to program completion.  Vulnerable to
+ * infinite loops.  Alternates between wakes any past-due SLEEPING
+ * threads and running the most-overdue READY thread until there are
+ * no more READY threads, then returns an integer as follows:
+ *
+ * - If there are SLEEPING threads, then a positive number that is the
+ *   smallest .runAt value of any sleeping thread.
+ * - If there are no SLEEPING threads, but there are BLOCKED threads
+ *   then a negative number is returned.
+ * - If only ZOMBIE threads remain, then zero is returned.
+ * @return {number} See description.
  */
-Interpreter.prototype.run = function() {
-  while (this.schedule() === 0) {
+Interpreter.prototype.run = function(continuous) {
+  var t;
+  while ((t = this.schedule()) === 0) {
     var thread = this.thread;
     var stack = thread.stateStack;
     while (thread.status === Interpreter.Thread.Status.READY) {
@@ -294,7 +303,10 @@ Interpreter.prototype.run = function() {
       }
     }
   }
-  return !this.done;
+  if (t === Number.MAX_VALUE) {
+    return this.done ? 0 : -1;
+  }
+  return t;
 };
 
 /**
