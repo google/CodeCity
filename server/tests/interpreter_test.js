@@ -761,11 +761,11 @@ exports.testThreading = function(t) {
 
   src = `
       var s = '';
-      setTimeout(function() {
-          s += '2';
+      setTimeout(function(a, b) {
+          s += a;
           suspend();
-          s += '4';
-      });
+          s += b;
+      }, 0, 2, 4);
       s += 1;
       suspend();
       s += 3;
@@ -777,11 +777,11 @@ exports.testThreading = function(t) {
 
   src = `
       var s = '';
-      var tid = setTimeout(function() {
-          s += '2';
+      var tid = setTimeout(function(a, b) {
+          s += a;
           suspend();
-          s += '4';
-      });
+          s += b;
+      }, 0, 2, 4);
       s += 1;
       suspend();
       s += 3;
