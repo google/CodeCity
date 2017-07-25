@@ -792,3 +792,19 @@ exports.testThreading = function(t) {
   `;
   runTest(t, 'clearTimeout', src, '1235', undefined, wait);
 };
+
+
+exports.demo = function() {
+  var intrp = new Interpreter;
+  intrp.addVariableToScope(intrp.global, 'log',
+      intrp.createNativeFunction(console.log));
+  intrp.createThread(`
+      log('DEMO: Begin.');
+      while (true) {
+          suspend(1000);
+          log('DEMO: "Working"...');
+      }`);
+  intrp.start();
+  setTimeout(function() { console.log('DEMO: End.'); intrp.stop(); }, 2900);
+};
+  

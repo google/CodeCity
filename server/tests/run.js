@@ -193,3 +193,5 @@ function getFiles(pattern) {
 
 runTests(getFiles(/_test.js$/));
 runBenchmarks(getFiles(/_bench.js$/));
+
+require('./interpreter_test').demo();

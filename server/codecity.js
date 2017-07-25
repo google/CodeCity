@@ -85,12 +85,17 @@ function startup() {
   // TODO: Let the interval be configurable from the database.
   setInterval(checkpoint, 60 * 1000);
 
-  // TODO: Run the interpreter.
+  interpreter.start();
 }
 
 function checkpoint(callback) {
   console.log('Checkpoint started.');
-  var json = Serializer.serialize(interpreter);
+  try {
+    interpreter.stop();
+    var json = Serializer.serialize(interpreter);
+  } finally {
+    interpreter.start();
+  }
   // JSON.stringify(json) would work, but adding linebreaks so that every
   // object is on its own line makes the output more readable.
   var text = [];

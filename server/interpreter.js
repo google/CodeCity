@@ -267,7 +267,7 @@ Interpreter.prototype.step = function() {
 
 /**
  * Execute the interpreter to program completion.  Vulnerable to
- * infinite loops.  Alternates between wakes any past-due SLEEPING
+ * infinite loops.  Alternates between waking any past-due SLEEPING
  * threads and running the most-overdue READY thread until there are
  * no more READY threads, then returns an integer as follows:
  *
@@ -307,6 +307,32 @@ Interpreter.prototype.run = function(continuous) {
     return this.done ? 0 : -1;
   }
   return t;
+};
+
+/**
+ * Use setTimout to repeatedly call .run() until there are no more
+ * sleeping threads.
+ */
+Interpreter.prototype.start = function() {
+  var intrp = this;
+  var repeat = function() {
+    var r = intrp.run();
+    if (r > 0) {
+      clearTimeout(intrp.runner_);
+      intrp.runner_ = setTimeout(repeat, r - intrp.now());
+    }
+  };
+  // Kill any existing runner and restart.
+  clearTimeout(this.runner_);
+  this.runner_ = setTimeout(repeat, 0);
+};
+
+/**
+ * Stop an interpreter started with .start()
+ */
+Interpreter.prototype.stop = function() {
+  clearTimeout(this.runner_);
+  this.runner_ = undefined;
 };
 
 /**
