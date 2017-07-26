@@ -180,6 +180,28 @@ Interpreter.prototype.createThread = function(runnable, runAt) {
 };
 
 /**
+ * Create a new thread to execute a particular function call.
+ * @param {!Interpreter.prototype.Function} fun Function to call.
+ * @param {!Array<Interpreter.Value>} args Arguments to pass.
+ * @param {number=} runAt Time at which thread should begin execution
+ *     (defaults to now).
+ * @return {number} thread ID.
+ */
+Interpreter.prototype.createThreadForFuncall = function(func, args, runAt) {
+  if (!(func instanceof this.Function)) {
+    this.throwException(this.TYPE_ERROR, func + ' is not a function');
+  }
+  var node = new Interpreter.Node;
+  node['type'] = 'CallExpression';
+  var state = new Interpreter.State(node, this.global);
+  state.func_ = func;
+  state.doneCallee_ = 2;
+  state.arguments_ = args;
+  state.doneArgs_ = true;
+  return this.createThread(state, runAt || this.now());
+};
+
+/**
  * Schedule the next runnable thread.  Returns 0 if a READY thread
  * successfuly scheduled; otherwise returns earliest .runAt time
  * amongst SLEEPING threads (if any), or Number.MAX_VALUE if there are
@@ -1332,18 +1354,7 @@ Interpreter.prototype.initThreads = function(scope) {
       function(func) {
         var delay = Number(arguments[1]) || 0;
         var args = Array.prototype.slice.call(arguments, 2);
-
-        if (!(func instanceof intrp.Function)) {
-          this.throwException(this.TYPE_ERROR, func + ' is not a function');
-        }
-        var node = new Interpreter.Node;
-        node['type'] = 'CallExpression';
-        var state = new Interpreter.State(node, intrp.global);
-        state.func_ = func;
-        state.doneCallee_ = 2;
-        state.arguments_ = args;
-        state.doneArgs_ = true;
-        return intrp.createThread(state, intrp.now() + delay);
+        return intrp.createThreadForFuncall(func, args, intrp.now() + delay);
       }, false);
 
   this.createNativeFunction('clearTimeout',
