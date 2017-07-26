@@ -94,13 +94,13 @@ B.prototype.skip = function(name, opt_message) {
  * Run benchmarks.
  * @param {!Array} files Filenames containing benchmarks to run.
  */
-function runBenchmarks(files) {
+async function runBenchmarks(files) {
   for (var i = 0; i < files.length; i++) {
-    var tests = require(files[i]);
+    var benchmarks = require(files[i]);
     var b = new B;
-    for (var k in tests) {
-      if (k.startsWith('bench') && typeof tests[k] === 'function') {
-        tests[k](b);
+    for (var k in benchmarks) {
+      if (k.startsWith('bench') && typeof benchmarks[k] === 'function') {
+        await benchmarks[k](b);
       }
     }
   }
@@ -159,14 +159,14 @@ T.prototype.fail = function(name, opt_message) {
  * Run tests.
  * @param {!Array} files Filenames containing tests to run.
  */
-function runTests(files) {
+async function runTests(files) {
   var t = new T;
   
   for (var i = 0; i < files.length; i++) {
     var tests = require(files[i]);
     for (var k in tests) {
       if (k.startsWith('test') && typeof tests[k] === 'function') {
-        tests[k](t);
+        await tests[k](t);
       }
     }
   }
@@ -191,7 +191,7 @@ function getFiles(pattern) {
       map(function (fn) { return './' + fn; });
 }
 
-runTests(getFiles(/_test.js$/));
-runBenchmarks(getFiles(/_bench.js$/));
-
-require('./interpreter_test').demo();
+(async function main() {
+  await runTests(getFiles(/_test.js$/));
+  await runBenchmarks(getFiles(/_bench.js$/));
+})();
