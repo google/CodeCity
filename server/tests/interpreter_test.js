@@ -790,18 +790,41 @@ exports.testThreading = function(t) {
   runTest(t, 'clearTimeout', src, '1235', undefined, wait);
 };
 
-
-exports.demo = function() {
+/**
+ * Run a test of the .start() and .stop() methods on Interpreter
+ * instances.  This is an async test because we use real (albeit
+ * small) timeouts to make sure everything works as it ought to.
+ * @param {!T} t The test runner object.
+ */
+exports.testStartStop = async function(t) {
+  function snooze(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
   var intrp = new Interpreter;
-  intrp.addVariableToScope(intrp.global, 'log',
-      intrp.createNativeFunction(console.log));
-  intrp.createThread(`
-      log('DEMO: Begin.');
+  var name = 'testStartStop';
+  var src = `
+      var x = 0;
       while (true) {
-          suspend(1000);
-          log('DEMO: "Working"...');
-      }`);
-  intrp.start();
-  setTimeout(function() { console.log('DEMO: End.'); intrp.stop(); }, 2900);
+          suspend(10);
+          x++;
+      };
+  `;
+  intrp.createThread(autoexec);
+  intrp.run();
+  try {
+    intrp.createThread(src);
+    intrp.start();
+    await snooze(29);
+    intrp.stop();
+  } catch (e) {
+    t.crash(name, util.format('%s\n%s', src, e.stack));
+  }
+  var r = intrp.getValueFromScope(intrp.global, 'x');
+  var expected = 2;
+  if (Object.is(r, expected)) {
+    t.pass(name);
+  } else {
+    t.fail(name, util.format('%s\ngot: %s  want: %s', src,
+        String(r), String(expected)));
+  }
 };
-  
