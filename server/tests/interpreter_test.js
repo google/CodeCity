@@ -761,16 +761,13 @@ exports.testThreading = function(t) {
 
   src = `
       var s = '';
-      setTimeout(function(a, b) {
-          s += a;
-          suspend();
-          s += b;
-      }, 0, 2, 4);
-      s += 1;
-      suspend();
-      s += 3;
-      suspend();
-      s += 5;
+      setTimeout(function(x) { s += '2'; }, 500);
+      setTimeout(function(x) { s += '4'; }, 1500);
+      s += '1';
+      suspend(1000);
+      s += '3';
+      suspend(1000);
+      s += '5';
       s;
   `;
   runTest(t, 'setTimeout', src, '12345', undefined, wait);
@@ -781,13 +778,13 @@ exports.testThreading = function(t) {
           s += a;
           suspend();
           s += b;
-      }, 0, 2, 4);
+      }, 0, '2', '4');
       s += 1;
       suspend();
-      s += 3;
+      s += '3';
       clearTimeout(tid);
       suspend();
-      s += 5;
+      s += '5';
       s;
   `;
   runTest(t, 'clearTimeout', src, '1235', undefined, wait);
