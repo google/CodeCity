@@ -158,9 +158,11 @@ Interpreter.prototype.now = function() {
  * @param {!Interpreter.State|!Interpreter.Node|string} runnable Initial
  *     state, or AST node to construct state from, or raw JavaScript
  *     text to parse into AST.
+ * @param {number=} runAt Time at which thread should begin execution
+ *     (defaults to now).
  * @return {number} thread ID.
  */
-Interpreter.prototype.createThread = function(runnable) {
+Interpreter.prototype.createThread = function(runnable, runAt) {
   if (typeof runnable === 'string') {
     runnable = acorn.parse(runnable, Interpreter.PARSE_OPTIONS);
   }
@@ -172,7 +174,7 @@ Interpreter.prototype.createThread = function(runnable) {
     runnable = new Interpreter.State(runnable, this.global);
   }
   var id = this.threads.length;
-  var thread = new Interpreter.Thread(id, runnable, this.now());
+  var thread = new Interpreter.Thread(id, runnable, runAt || this.now());
   this.threads.push(thread);
   return id;
 };
@@ -1341,7 +1343,7 @@ Interpreter.prototype.initThreads = function(scope) {
         state.doneCallee_ = 2;
         state.arguments_ = args;
         state.doneArgs_ = true;
-        return intrp.createThread(state);
+        return intrp.createThread(state, intrp.now() + delay);
       }, false);
 
   this.createNativeFunction('clearTimeout',
