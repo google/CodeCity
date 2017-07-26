@@ -482,7 +482,7 @@ module.exports = [
     }
     `,
     expected: 'OK' },
-    
+
   { name: 'arrayLengthWithNonWritableProps', src: `
     var a = [];
     Object.defineProperty(a, 0,
@@ -607,7 +607,7 @@ module.exports = [
     42 instanceof F;
     `,
     expected: false },
-  
+
   { name: 'instanceofNonFunctionRHS', src: `
     try {
       ({}) instanceof 0;
@@ -637,14 +637,14 @@ module.exports = [
 
   { name: 'deleteProp', src: `
     var o = {foo: 'bar'};
-    (delete o.quux) + ('foo' in o) + (delete o.foo) + 
+    (delete o.quux) + ('foo' in o) + (delete o.foo) +
         !('foo' in o) + (delete o.foo);
     `,
     expected: 5 },
 
   { name: 'deleteUnqualifiedIdentifier', src: `
     var foo;
-    try { 
+    try {
       delete foo;
     } catch (e) {
       e.name;
@@ -653,7 +653,7 @@ module.exports = [
     expected: 'SyntaxError' },
 
   { name: 'deleteUndeclaredIdentifier', src: `
-    try { 
+    try {
       delete foo;
     } catch (e) {
       e.name;
@@ -787,15 +787,6 @@ module.exports = [
     debugger;
     `,
     expected: undefined },
-    
-  { name: 'newHackNotAvailable', src: `
-    try { 
-      new 'foo';
-    } catch (e) {
-      e.name;
-    }
-    `,
-    expected: 'TypeError' },
 
   { name: 'newExpression', src: `
     function T(x, y) { this.sum += x + y; };
@@ -830,7 +821,7 @@ module.exports = [
 
   /******************************************************************/
   // Object and Object.prototype
-  
+
   { name: 'ObjectDefinePropertyNoArgs', src: `
     try {
       Object.defineProperty();
@@ -958,7 +949,7 @@ module.exports = [
     var o = {}, r = 0;
     Object.defineProperty(o, 'foo', { value: 'bar' });
     var desc = Object.getOwnPropertyDescriptor(o, 'foo');
-    desc.value === o.foo && 
+    desc.value === o.foo &&
         !desc.writeable && !desc.enumerable && !desc.configurable;
     `,
     expected: true },
@@ -1257,7 +1248,7 @@ module.exports = [
     });
     `,
     expected: '[xx,x,0,xxxx][xx,x,2,xxxx]' },
-    
+
 
   /******************************************************************/
   // RegExp
@@ -1275,9 +1266,9 @@ module.exports = [
   // Other tests (all are skipped):
 
   { name: 'newHack', src: `
-    typeof new 'Array.prototype.push'
+    (new 'Array.prototype.push') === Array.prototype.push
     `,
-    // expected: 'function'
+    expected: true
   },
 
   // FIXME: use instanceof or the like to check that error is returned.
@@ -1288,7 +1279,7 @@ module.exports = [
       e.name;
     }
     `,
-    // expected: 'ReferenceError'
+    expected: 'ReferenceError'
   },
 
 ];

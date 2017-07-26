@@ -22,7 +22,7 @@
         return alert(text);
       };
       myInterpreter.addVariableToScope(myInterpreter.global, 'alert',
-          myInterpreter.createNativeFunction(wrapper));
+          myInterpreter.createNativeFunction('alert', wrapper));
 
       myInterpreter.createThread(autoexec);
       myInterpreter.run();

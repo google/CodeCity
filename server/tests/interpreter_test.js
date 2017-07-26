@@ -721,7 +721,7 @@ exports.testAsync = function(t) {
       callback = cb;
     };
     intrp.addVariableToScope(intrp.global, 'pause',
-        intrp.createAsyncFunction(wrapper));
+        intrp.createAsyncFunction('pause', wrapper));
   };
   var asyncFunc = function(intrp) {
     callback();
