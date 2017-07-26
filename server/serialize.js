@@ -176,7 +176,7 @@ Serializer.serialize = function(intrp) {
 
   // Properties on Interpreter instances to ignore.
   var skipList = ['Object', 'Function', 'Array', 'Date', 'RegExp', 'Error',
-                  'Thread', 'functionMap_', 'functionCounter_'];
+                  'Thread', 'stepFunctionMap_'];
   // Find all objects.
   var objectList = [];
   Serializer.objectHunt_(intrp, objectList, skipList);
@@ -207,7 +207,7 @@ Serializer.serialize = function(intrp) {
       case Function.prototype:
         jsonObj['type'] = 'Function';
         jsonObj['id'] = obj.id;
-        if (obj.id === undefined) {
+        if (!obj.id) {
           throw Error('Native function has no ID: ' + obj);
         }
         continue;  // No need to index properties.
@@ -271,7 +271,7 @@ Serializer.objectHunt_ = function(node, objectList, skipList) {
   }
 };
 
-/** 
+/**
  * Make a map of typename to contructor for each type that might be
  * found while serializing an Interpreter instance.
  * @param {!Interpreter} intrp The interpreter instance being serialized
@@ -294,7 +294,7 @@ Serializer.getTypesDeserialize_ = function (intrp) {
   };
 };
 
-/** 
+/**
  * Make a map of prototype to typename for each of the types that
  * might be found while deserializing an Interpreter instance.
  * @param {!Interpreter} intrp An interpreter instance being

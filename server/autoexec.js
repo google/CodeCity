@@ -25,6 +25,252 @@
 
 var autoexec = `
 
+// Global functions.
+var isNaN = new 'isNaN';
+var isFinite = new 'isFinite';
+var parseFloat = new 'parseFloat';
+var parseInt = new 'parseInt';
+var eval = new 'eval';
+var escape = new 'escape';
+var unescape = new 'unescape';
+var decodeURI = new 'decodeURI';
+var decodeURIComponent = new 'decodeURIComponent';
+var encodeURI = new 'encodeURI';
+var encodeURIComponent = new 'encodeURIComponent';
+var suspend = new 'suspend';
+var setTimeout = new 'setTimeout';
+var clearTimeout = new 'clearTimeout';
+
+// Global objects.
+var Object = new 'Object';
+var Function = new 'Function';
+var Array = new 'Array';
+var Number = new 'Number';
+var String = new 'String';
+var Boolean = new 'Boolean';
+var Date = new 'Date';
+var Math = {};
+var RegExp = new 'RegExp';
+var JSON = {};
+var Error = new 'Error';
+var EvalError = new 'EvalError';
+var RangeError = new 'RangeError';
+var ReferenceError = new 'ReferenceError';
+var SyntaxError = new 'SyntaxError';
+var TypeError = new 'TypeError';
+var URIError = new 'URIError';
+
+// Bootstrap the defineProperty function in two steps.
+Object.defineProperty = new 'Object.defineProperty';
+Object.defineProperty(Object, 'defineProperty', {enumerable: false});
+
+(function() {
+  var classes = ['Function', 'Object', 'Array', 'Number', 'String', 'Boolean', 'Date', 'RegExp', 'Error',
+                 'EvalError', 'RangeError', 'ReferenceError', 'SyntaxError', 'TypeError', 'URIError'];
+  // Prototypes of global constructors.
+  for (var i = 0; i < classes.length; i++) {
+    var constructor = new classes[i];
+    Object.defineProperty(constructor, 'prototype', {
+                          configurable: false,
+                          enumerable: false,
+                          writable: false,
+                          value: new (classes[i] + '.prototype')
+                          });
+    Object.defineProperty(constructor.prototype, 'constructor', {
+                          configurable: true,
+                          enumerable: false,
+                          writable: true,
+                          value: constructor
+                          });
+  }
+  // Configure error subclasses.
+  var errors = ['EvalError', 'RangeError', 'ReferenceError', 'SyntaxError', 'TypeError', 'URIError'];
+  for (var i = 0; i < errors.length; i++) {
+    var constructor = new errors[i];
+    Object.defineProperty(constructor.prototype, 'name', {
+                          configurable: true,
+                          enumerable: false,
+                          writable: true,
+                          value: errors[i]
+                          });
+  }
+
+  // Struct is a list of tuples: [Object, 'Object', [static methods], [instance methods]]
+
+  var struct = [
+    [Function, 'Function',
+     [],
+     ['toString', 'apply', 'call']],
+    [Object, 'Object',
+     ['is', 'getOwnPropertyNames', 'keys', 'getOwnPropertyDescriptor', 'getPrototypeOf', 'isExtensible', 'preventExtensions'],
+     ['toString', 'toLocaleString', 'valueOf', 'hasOwnProperty', 'propertyIsEnumerable', 'isPrototypeOf']],
+    [Array, 'Array',
+     ['isArray'],
+     ['toString', 'pop', 'push', 'shift', 'unshift', 'reverse', 'splice', 'slice', 'join', 'concat', 'indexOf', 'lastIndexOf']],
+    [Number, 'Number',
+     [],
+     ['toExponential', 'toFixed', 'toPrecision', 'toString', 'toLocaleString']],
+    [String, 'String',
+     ['fromCharCode'],
+     ['trim', 'toLowerCase', 'toUpperCase', 'toLocaleLowerCase', 'toLocaleUpperCase', 'charAt', 'charCodeAt', 'substring', 'slice', 'substr', 'indexOf', 'lastIndexOf', 'concat', 'toLocaleString', 'split', 'match', 'search', 'replace']],
+    [Date, 'Date',
+     ['now', 'parse', 'UTC'],
+     ['toString', 'getDate', 'getDay', 'getFullYear', 'getHours', 'getMilliseconds', 'getMinutes', 'getMonth', 'getSeconds', 'getTime', 'getTimezoneOffset', 'getUTCDate', 'getUTCDay', 'getUTCFullYear', 'getUTCHours', 'getUTCMilliseconds', 'getUTCMinutes', 'getUTCMonth', 'getUTCSeconds', 'getYear', 'setDate', 'setFullYear', 'setHours', 'setMilliseconds', 'setMinutes', 'setMonth', 'setSeconds', 'setTime', 'setUTCDate', 'setUTCFullYear', 'setUTCHours', 'setUTCMilliseconds', 'setUTCMinutes', 'setUTCMonth', 'setUTCSeconds', 'setYear', 'toDateString', 'toISOString', 'toJSON', 'toGMTString', 'toTimeString', 'toUTCString', 'toLocaleDateString', 'toLocaleString', 'toLocaleTimeString']],
+    [Math, 'Math',
+     ['abs', 'acos', 'asin', 'atan', 'atan2', 'ceil', 'cos', 'exp', 'floor', 'log', 'max', 'min', 'pow', 'random', 'round', 'sin', 'sqrt', 'tan'],
+     []],
+    [RegExp, 'RegExp',
+     [],
+     ['toString', 'test', 'exec']],
+    [JSON, 'JSON',
+     ['parse', 'stringify'],
+     []],
+    [Error, 'Error',
+     [],
+     ['toString']]
+  ];
+  for (var i = 0; i < struct.length; i++) {
+    var obj = struct[i][0];
+    var objName = struct[i][1];
+    var staticMethods = struct[i][2];
+    var instanceMethods = struct[i][3];
+    for (var j = 0; j < staticMethods.length; j++) {
+      var member = staticMethods[j];
+      Object.defineProperty(obj, member,
+          {configurable: true,
+           enumerable: false,
+           writable: true,
+           value: new (objName + '.' + member)});
+    }
+    for (var j = 0; j < instanceMethods.length; j++) {
+      var member = instanceMethods[j];
+      Object.defineProperty(obj.prototype, member,
+          {configurable: true,
+           enumerable: false,
+           writable: true,
+           value: new (objName + '.prototype.' + member)});
+    }
+  }
+})();
+
+Object.defineProperty(Number, 'MAX_VALUE', {
+                      configurable: false,
+                      enumerable: false,
+                      writable: false,
+                      value: 1.7976931348623157e+308
+                      });
+Object.defineProperty(Number, 'MIN_VALUE', {
+                      configurable: false,
+                      enumerable: false,
+                      writable: false,
+                      value: 5e-324
+                      });
+Object.defineProperty(Number, 'NaN', {
+                      configurable: false,
+                      enumerable: false,
+                      writable: false,
+                      value: NaN
+                      });
+Object.defineProperty(Number, 'NEGATIVE_INFINITY', {
+                      configurable: false,
+                      enumerable: false,
+                      writable: false,
+                      value: -Infinity
+                      });
+Object.defineProperty(Number, 'POSITIVE_INFINITY', {
+                      configurable: false,
+                      enumerable: false,
+                      writable: false,
+                      value: Infinity
+                      });
+
+Object.defineProperty(Math, 'E', {
+                      configurable: false,
+                      enumerable: false,
+                      writable: false,
+                      value: 2.718281828459045
+                      });
+Object.defineProperty(Math, 'LN2', {
+                      configurable: false,
+                      enumerable: false,
+                      writable: false,
+                      value: 0.6931471805599453
+                      });
+Object.defineProperty(Math, 'LN10', {
+                      configurable: false,
+                      enumerable: false,
+                      writable: false,
+                      value: 2.302585092994046
+                      });
+Object.defineProperty(Math, 'LOG2E', {
+                      configurable: false,
+                      enumerable: false,
+                      writable: false,
+                      value: 1.4426950408889634
+                      });
+Object.defineProperty(Math, 'LOG10E', {
+                      configurable: false,
+                      enumerable: false,
+                      writable: false,
+                      value: 0.4342944819032518
+                      });
+Object.defineProperty(Math, 'PI', {
+                      configurable: false,
+                      enumerable: false,
+                      writable: false,
+                      value: 3.141592653589793
+                      });
+Object.defineProperty(Math, 'SQRT1_2', {
+                      configurable: false,
+                      enumerable: false,
+                      writable: false,
+                      value: 0.7071067811865476
+                      });
+Object.defineProperty(Math, 'SQRT2', {
+                      configurable: false,
+                      enumerable: false,
+                      writable: false,
+                      value: 1.4142135623730951
+                      });
+
+Object.defineProperty(RegExp.prototype, 'global', {
+                      configurable: false,
+                      enumerable: false,
+                      writable: false,
+                      value: undefined
+                      });
+Object.defineProperty(RegExp.prototype, 'ignoreCase', {
+                      configurable: false,
+                      enumerable: false,
+                      writable: false,
+                      value: undefined
+                      });
+Object.defineProperty(RegExp.prototype, 'multiline', {
+                      configurable: false,
+                      enumerable: false,
+                      writable: false,
+                      value: undefined
+                      });
+Object.defineProperty(RegExp.prototype, 'source', {
+                      configurable: false,
+                      enumerable: false,
+                      writable: false,
+                      value: '(?:)'
+                      });
+
+Object.defineProperty(Error.prototype, 'name', {
+                      configurable: true,
+                      enumerable: false,
+                      writable: true,
+                      value: 'Error'
+                      });
+Object.defineProperty(Error.prototype, 'message', {
+                      configurable: true,
+                      enumerable: false,
+                      writable: true,
+                      value: ''
+                      });
+
 // Polyfill copied from:
 // developer.mozilla.org/en/docs/Web/JavaScript/Reference/Global_objects/Function/bind
 Object.defineProperty(Function.prototype, 'bind',
@@ -51,14 +297,14 @@ Object.defineProperty(Function.prototype, 'bind',
 });
 
 // Add a polyfill to handle create's second argument.
-(function() {
-  var create_ = Object.create;
-  Object.create = function(proto, props) {
-    var obj = create_(proto);
+Object.defineProperty(Object, 'create',
+                      {configurable: true, writable: true, value:
+  function(proto, props) {
+    var obj = (new 'Object.create')(proto);
     props && Object.defineProperties(obj, props);
     return obj;
-  };
-})();
+  }
+});
 
 Object.defineProperty(Object, 'defineProperties',
     {configurable: true, writable: true, value:
@@ -251,12 +497,12 @@ Object.defineProperty(Array.prototype, 'toLocaleString',
 });
 
 // Add a polyfill to handle replace's second argument being a function.
-(function() {
-  var replace_ = String.prototype.replace;
-  String.prototype.replace = function(substr, newSubstr) {
+Object.defineProperty(String.prototype, 'replace',
+                      {configurable: true, writable: true, value:
+  function(substr, newSubstr) {
     if (typeof newSubstr !== 'function') {
-      // string.replace(string|regexp, string.
-      return replace_.call(this, substr, newSubstr);
+      // string.replace(string|regexp, string)
+      return (new 'String.prototype.replace').call(this, substr, newSubstr);
     }
     var str = this;
     if (substr instanceof RegExp) {  // string.replace(regexp, function)
@@ -281,8 +527,8 @@ Object.defineProperty(Array.prototype, 'toLocaleString',
       }
     }
     return str;
-  };
-})();
+  }
+});
 
 // Must eval to undefined so subsequent evals will give undefined if
 // they have no completion value.
