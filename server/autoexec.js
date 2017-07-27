@@ -26,11 +26,11 @@
 var autoexec = `
 
 // Global functions.
+var eval = new 'eval';
+var parseInt = new 'parseInt';
+var parseFloat = new 'parseFloat';
 var isNaN = new 'isNaN';
 var isFinite = new 'isFinite';
-var parseFloat = new 'parseFloat';
-var parseInt = new 'parseInt';
-var eval = new 'eval';
 var escape = new 'escape';
 var unescape = new 'unescape';
 var decodeURI = new 'decodeURI';
@@ -45,13 +45,11 @@ var clearTimeout = new 'clearTimeout';
 var Object = new 'Object';
 var Function = new 'Function';
 var Array = new 'Array';
-var Number = new 'Number';
 var String = new 'String';
 var Boolean = new 'Boolean';
+var Number = new 'Number';
 var Date = new 'Date';
-var Math = {};
 var RegExp = new 'RegExp';
-var JSON = {};
 var Error = new 'Error';
 var EvalError = new 'EvalError';
 var RangeError = new 'RangeError';
@@ -59,13 +57,15 @@ var ReferenceError = new 'ReferenceError';
 var SyntaxError = new 'SyntaxError';
 var TypeError = new 'TypeError';
 var URIError = new 'URIError';
+var Math = {};
+var JSON = {};
 
 // Bootstrap the defineProperty function in two steps.
 Object.defineProperty = new 'Object.defineProperty';
 Object.defineProperty(Object, 'defineProperty', {enumerable: false});
 
 (function() {
-  var classes = ['Function', 'Object', 'Array', 'Number', 'String', 'Boolean', 'Date', 'RegExp', 'Error',
+  var classes = ['Object', 'Function', 'Array', 'String', 'Boolean', 'Number', 'Date', 'RegExp', 'Error',
                  'EvalError', 'RangeError', 'ReferenceError', 'SyntaxError', 'TypeError', 'URIError'];
   // Prototypes of global constructors.
   for (var i = 0; i < classes.length; i++) {
@@ -83,8 +83,8 @@ Object.defineProperty(Object, 'defineProperty', {enumerable: false});
                           value: constructor
                           });
   }
-  // Configure error subclasses.
-  var errors = ['EvalError', 'RangeError', 'ReferenceError', 'SyntaxError', 'TypeError', 'URIError'];
+  // Configure Error and its subclasses.
+  var errors = ['Error', 'EvalError', 'RangeError', 'ReferenceError', 'SyntaxError', 'TypeError', 'URIError'];
   for (var i = 0; i < errors.length; i++) {
     var constructor = new errors[i];
     Object.defineProperty(constructor.prototype, 'name', {
@@ -94,40 +94,46 @@ Object.defineProperty(Object, 'defineProperty', {enumerable: false});
                           value: errors[i]
                           });
   }
+  Object.defineProperty(Error.prototype, 'message', {
+                        configurable: true,
+                        enumerable: false,
+                        writable: true,
+                        value: ''
+                        });
 
   // Struct is a list of tuples: [Object, 'Object', [static methods], [instance methods]]
 
   var struct = [
-    [Function, 'Function',
-     [],
-     ['toString', 'apply', 'call']],
     [Object, 'Object',
      ['is', 'getOwnPropertyNames', 'keys', 'getOwnPropertyDescriptor', 'getPrototypeOf', 'isExtensible', 'preventExtensions'],
      ['toString', 'toLocaleString', 'valueOf', 'hasOwnProperty', 'propertyIsEnumerable', 'isPrototypeOf']],
+    [Function, 'Function',
+     [],
+     ['toString', 'apply', 'call']],
     [Array, 'Array',
      ['isArray'],
      ['toString', 'pop', 'push', 'shift', 'unshift', 'reverse', 'splice', 'slice', 'join', 'concat', 'indexOf', 'lastIndexOf']],
-    [Number, 'Number',
-     [],
-     ['toExponential', 'toFixed', 'toPrecision', 'toString', 'toLocaleString']],
     [String, 'String',
      ['fromCharCode'],
      ['trim', 'toLowerCase', 'toUpperCase', 'toLocaleLowerCase', 'toLocaleUpperCase', 'charAt', 'charCodeAt', 'substring', 'slice', 'substr', 'indexOf', 'lastIndexOf', 'concat', 'toLocaleString', 'split', 'match', 'search', 'replace']],
+    [Number, 'Number',
+     [],
+     ['toExponential', 'toFixed', 'toPrecision', 'toString', 'toLocaleString']],
     [Date, 'Date',
      ['now', 'parse', 'UTC'],
      ['toString', 'getDate', 'getDay', 'getFullYear', 'getHours', 'getMilliseconds', 'getMinutes', 'getMonth', 'getSeconds', 'getTime', 'getTimezoneOffset', 'getUTCDate', 'getUTCDay', 'getUTCFullYear', 'getUTCHours', 'getUTCMilliseconds', 'getUTCMinutes', 'getUTCMonth', 'getUTCSeconds', 'getYear', 'setDate', 'setFullYear', 'setHours', 'setMilliseconds', 'setMinutes', 'setMonth', 'setSeconds', 'setTime', 'setUTCDate', 'setUTCFullYear', 'setUTCHours', 'setUTCMilliseconds', 'setUTCMinutes', 'setUTCMonth', 'setUTCSeconds', 'setYear', 'toDateString', 'toISOString', 'toJSON', 'toGMTString', 'toTimeString', 'toUTCString', 'toLocaleDateString', 'toLocaleString', 'toLocaleTimeString']],
-    [Math, 'Math',
-     ['abs', 'acos', 'asin', 'atan', 'atan2', 'ceil', 'cos', 'exp', 'floor', 'log', 'max', 'min', 'pow', 'random', 'round', 'sin', 'sqrt', 'tan'],
-     []],
     [RegExp, 'RegExp',
      [],
      ['toString', 'test', 'exec']],
-    [JSON, 'JSON',
-     ['parse', 'stringify'],
-     []],
     [Error, 'Error',
      [],
-     ['toString']]
+     ['toString']],
+    [Math, 'Math',
+     ['abs', 'acos', 'asin', 'atan', 'atan2', 'ceil', 'cos', 'exp', 'floor', 'log', 'max', 'min', 'pow', 'random', 'round', 'sin', 'sqrt', 'tan'],
+     []],
+    [JSON, 'JSON',
+     ['parse', 'stringify'],
+     []]
   ];
   for (var i = 0; i < struct.length; i++) {
     var obj = struct[i][0];
@@ -256,19 +262,6 @@ Object.defineProperty(RegExp.prototype, 'source', {
                       enumerable: false,
                       writable: false,
                       value: '(?:)'
-                      });
-
-Object.defineProperty(Error.prototype, 'name', {
-                      configurable: true,
-                      enumerable: false,
-                      writable: true,
-                      value: 'Error'
-                      });
-Object.defineProperty(Error.prototype, 'message', {
-                      configurable: true,
-                      enumerable: false,
-                      writable: true,
-                      value: ''
                       });
 
 // Polyfill copied from:
