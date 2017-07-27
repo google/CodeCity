@@ -1606,7 +1606,7 @@ Interpreter.prototype.setProperty = function(obj, name, value, opt_descriptor) {
       obj.length = Math.max(obj.length, i + 1);
     }
   }
-  if (obj.preventExtensions && !obj.properties[name]) {
+  if (obj.preventExtensions && !(name in obj.properties)) {
     this.throwException(this.TYPE_ERROR, "Can't add property '" + name +
                         "', object is not extensible");
   }
