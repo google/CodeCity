@@ -31,8 +31,49 @@ var Interpreter = require('../interpreter');
 var autoexec = require('../autoexec');
 var testcases = require('./testcases');
 
+// Prepare static interpreter instance for runTest.
+var interpreter = new Interpreter;
+interpreter.createThread(autoexec);
+interpreter.run();
+interpreter.addVariableToScope(interpreter.global, 'src');
+
 /**
- * Run a test of the interpreter.
+ * Run a simple test of the interpreter.  Only a single Interpreter
+ * instance is created for all tests executed by this function, but
+ * eval is used to evaluate src in its own scope.  The supplied src
+ * must not modify objects accessible via the global scope!
+ * @param {!T} t The test runner object.
+ * @param {string} name The name of the test.
+ * @param {string} src The code to be evaled.
+ * @param {number|string|boolean|null|undefined} expected The expected
+ *     completion value.
+ */
+function runTest(t, name, src, expected) {
+  try {
+    interpreter.setValueToScope(interpreter.global, 'src', src);
+    // TODO(cpcallen): it shouldn't be necessary to reset
+    // interpreter.value to undefined between tests; that it is is a
+    // symptom of incorrect completion value handling by the
+    // interpreter.
+    interpreter.value = undefined;
+    interpreter.createThread('eval(src);');
+    interpreter.run();
+  } catch (e) {
+    t.crash(name, util.format('%s\n%s', src, e.stack));
+  }
+  var r = interpreter.pseudoToNative(interpreter.value);
+  if (Object.is(r, expected)) {
+    t.pass(name);
+  } else {
+    t.fail(name, util.format('%s\ngot: %s  want: %s', src,
+        String(r), String(expected)));
+  }
+}
+
+/**
+ * Run a more complicated test of the interpreter.  A new interpreter
+ * instance is created for each test, and the caller can supply
+ * callbacks to be run before beginning and between calls to .run().
  * @param {!T} t The test runner object.
  * @param {string} name The name of the test.
  * @param {string} src The code to be evaled.
@@ -48,25 +89,25 @@ var testcases = require('./testcases');
  *     called if .run() returns true.  Can be used to fake completion
  *     of asynchronous events for testing purposes.
  */
-function runTest(t, name, src, expected, initFunc, asyncFunc) {
-  var interpreter = new Interpreter();
-  interpreter.createThread(autoexec);
-  interpreter.run();
+function runComplexTest(t, name, src, expected, initFunc, asyncFunc) {
+  var intrp = new Interpreter;
+  intrp.createThread(autoexec);
+  intrp.run();
   if (initFunc) {
-    initFunc(interpreter);
+    initFunc(intrp);
   }
 
   try {
-    interpreter.createThread(src);
-    while (interpreter.run()) {
+    intrp.createThread(src);
+    while (intrp.run()) {
       if (asyncFunc) {
-        asyncFunc(interpreter);
+        asyncFunc(intrp);
       }
     }
   } catch (e) {
     t.crash(name, util.format('%s\n%s', src, e.stack));
   }
-  var r = interpreter.pseudoToNative(interpreter.value);
+  var r = intrp.pseudoToNative(intrp.value);
   if (Object.is(r, expected)) {
     t.pass(name);
   } else {
@@ -89,6 +130,21 @@ exports.testSimple = function(t) {
     }
   }
 };
+
+
+/**
+ * Run a (destructive) test to ensure that 'this' is a primitive in
+ * methods invoked on primitives.  (This also tests that interpreter
+ * is running in strict mode; in sloppy mode this will be boxed.)
+ */
+exports.testStrictBoxedThis = function(t) {
+  var name = 'strictBoxedThis', src = `
+      Object.prototype.foo = function() { return typeof this; };
+      'foo'.foo();
+  `;
+  runComplexTest(t, name, src, 'string');
+};
+
 
 /**
  * Run some tests of the various constructors and their associated
@@ -731,7 +787,7 @@ exports.testAsync = function(t) {
       pause();
       'after';
   `;
-  runTest(t, name, src, 'after', initFunc, asyncFunc);
+  runComplexTest(t, name, src, 'after', initFunc, asyncFunc);
 };
 
 /**
@@ -745,7 +801,7 @@ exports.testThreading = function(t) {
       suspend();
       'after';
   `;
-  runTest(t, 'suspend()', src, 'after');
+  runComplexTest(t, 'suspend()', src, 'after');
 
   // Function that simulates time passing, 100ms per invocation.
   var wait = function(intrp) {
@@ -757,7 +813,7 @@ exports.testThreading = function(t) {
       suspend(10000);
       'after';
   `;
-  runTest(t, 'suspend(1000)', src, 'after', undefined, wait);
+  runComplexTest(t, 'suspend(1000)', src, 'after', undefined, wait);
 
   src = `
       var s = '';
@@ -770,7 +826,7 @@ exports.testThreading = function(t) {
       s += '5';
       s;
   `;
-  runTest(t, 'setTimeout', src, '12345', undefined, wait);
+  runComplexTest(t, 'setTimeout', src, '12345', undefined, wait);
 
   src = `
       var s = '';
@@ -787,7 +843,7 @@ exports.testThreading = function(t) {
       s += '5';
       s;
   `;
-  runTest(t, 'clearTimeout', src, '1235', undefined, wait);
+  runComplexTest(t, 'clearTimeout', src, '1235', undefined, wait);
 };
 
 /**
