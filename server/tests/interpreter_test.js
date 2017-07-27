@@ -24,6 +24,7 @@
  */
 'use strict';
 
+var net = require('net');
 var util = require('util');
 //var toSource = require('tosource');
 
@@ -60,6 +61,7 @@ function runTest(t, name, src, expected) {
     interpreter.run();
   } catch (e) {
     t.crash(name, util.format('%s\n%s', src, e.stack));
+    return;
   }
   var r = interpreter.pseudoToNative(interpreter.value);
   if (Object.is(r, expected)) {
@@ -106,6 +108,7 @@ function runComplexTest(t, name, src, expected, initFunc, asyncFunc) {
     }
   } catch (e) {
     t.crash(name, util.format('%s\n%s', src, e.stack));
+    return;
   }
   var r = intrp.pseudoToNative(intrp.value);
   if (Object.is(r, expected)) {
@@ -880,6 +883,7 @@ exports.testStartStop = async function(t) {
     intrp.stop();
   } catch (e) {
     t.crash(name, util.format('%s\n%s', src, e.stack));
+    return;
   }
   var r = intrp.getValueFromScope(intrp.global, 'x');
   var expected = 2;
@@ -899,5 +903,58 @@ exports.testStartStop = async function(t) {
   } else {
     t.fail(name, util.format('%s\ngot: %s  want: %s (after %d ms)', src,
         String(r), String(expected), 39));
+  }
+};
+  
+/**
+ * Run a test of the createServer() function.
+ * @param {!T} t The test runner object.
+ */
+exports.testConnectionListen = async function(t) {
+  var name = 'testConnectionListen';
+  var src = `
+      var data = '', server = {};
+      server.receive = function(d) {
+        data += d;
+      };
+      server.end = function(d) {
+        done();
+      };
+      connectionListen(8888, server);
+   `;
+
+  var intrp = new Interpreter;
+  intrp.createThread(autoexec);
+  intrp.run();
+  // Create promise to signal completion of test from within
+  // interpreter.  Awaiting p will block until done is called.
+  var done;
+  var p = new Promise(function(resolve, reject) { done = resolve; });
+  intrp.addVariableToScope(intrp.global, 'done',
+      intrp.createAsyncFunction('done', done));
+
+  // Fire up in-db server.
+  intrp.createThread(src);
+  intrp.start();
+
+  // Send some data to it.
+  var client = net.createConnection({ port: 8888 },
+      function() { //'connect' listener
+        client.write('foo');
+        client.write('bar');
+        client.end();
+      });
+
+  // Wait for server to report connection closed, then stop intrp.
+  await p;
+  intrp.stop();
+
+  var r = intrp.getValueFromScope(intrp.global, 'data');
+  var expected = 'foobar';
+  if (Object.is(r, expected)) {
+    t.pass(name);
+  } else {
+    t.fail(name, util.format('%s\ngot: %s  want: %s', src,
+        String(r), String(expected)));
   }
 };

@@ -23,7 +23,7 @@
  */
 'use strict';
 
-var acorn;
+var acorn, net;
 
 /**
  * Create a new interpreter.
@@ -452,6 +452,7 @@ Interpreter.prototype.initGlobalScope = function(scope) {
 
   // Initialize CC-specific globals.
   this.initThreads(scope);
+  this.initNetwork(scope);
 };
 
 /**
@@ -1384,6 +1385,57 @@ Interpreter.prototype.initThreads = function(scope) {
           intrp.threads[id].status = Interpreter.Thread.Status.ZOMBIE;
         }
       }, false);
+};
+
+/**
+ * Initialize the networking subsystem API
+ * @param {!Interpreter.Scope} scope Global scope.
+ */
+Interpreter.prototype.initNetwork = function(scope) {
+  var intrp = this;
+  this.addVariableToScope(scope, 'connectionListen', this.createNativeFunction(
+      'connectionListen',
+      function(port, proto) {
+        var options = {
+          // TODO(cpcallen): (what is says:)
+          // allowHalfOpen: true
+        };
+
+        var server = net.createServer(options, function (socket) {
+          // TODO(cpcallen): Add localhost test here, like this - only
+          // also allow IPV6 connections:
+          // if (socket.remoteAddress != '127.0.0.1') {
+          //   // Reject connections other than from localhost.
+          //   console.log('Rejecting connection from ' + socket.remoteAddress);
+          //   socket.end('Connection rejected.');
+          //   return;
+          // }
+          console.log('Connection from ' + socket.remoteAddress);
+
+          // Create new object from proto.
+          var obj = new intrp.Object(proto);
+          obj.socket = socket;
+
+          // Handle incoming code from clients.
+          socket.on('data', function (data) {
+            var func = intrp.getProperty(obj, 'receive');
+            intrp.createThreadForFuncCall(func, obj, [data]);
+          });
+          
+          socket.on('end', function () {
+            console.log('Connection from ' + socket.remoteAddress + ' closed.');
+            var func = intrp.getProperty(obj, 'end');
+            intrp.createThreadForFuncCall(func, obj, []);
+            // TODO(cpcallen): Don't fully close half-closed connection yet.
+            socket.end();
+          });
+          // TODO(cpcallen): save socket (and new object) somewhere we
+          // can find it later.
+        });
+        server.listen(port);
+        console.log('Listening on port ' + port);
+        // TODO(cpcallen): save server somewhere we can find it later.
+      }));
 };
 
 /**
@@ -3421,6 +3473,7 @@ Interpreter.prototype['stepWhileStatement'] =
     Interpreter.prototype['stepDoWhileStatement'];
 
 if (typeof module !== 'undefined') { // Node.js
+  net = require('net');
   acorn = require('../third_party/acorn/acorn');
   module.exports = Interpreter;
 }
