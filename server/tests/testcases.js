@@ -628,13 +628,6 @@ module.exports = [
     `,
     expected: 'TypeError' },
 
-  { name: 'strictBoxedThis', src: `
-    'use strict';
-    Object.prototype.foo = function() { return typeof this; };
-    'foo'.foo();
-    `,
-    expected: 'string' },
-
   { name: 'deleteProp', src: `
     var o = {foo: 'bar'};
     (delete o.quux) + ('foo' in o) + (delete o.foo) +
