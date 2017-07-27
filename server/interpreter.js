@@ -32,17 +32,17 @@ var acorn;
 var Interpreter = function() {
   this.installTypes();
   // Map of natively implemented JS functions.  E.g. Array.pop
-  this.builtinMap_ = Object.create(null);
+  this.builtins_ = Object.create(null);
   // Map node types to our step function names; a property lookup is faster
   // than string concatenation with "step" prefix.
   // Note that a Map is much slower than a null-parent object (v8 in 2017).
-  this.stepFunctionMap_ = Object.create(null);
+  this.stepFunctions_ = Object.create(null);
   var stepMatch = /^step([A-Z]\w*)$/;
   var m;
   for (var methodName in this) {
     if ((typeof this[methodName] === 'function') &&
         (m = methodName.match(stepMatch))) {
-      this.stepFunctionMap_[m[1]] = this[methodName].bind(this);
+      this.stepFunctions_[m[1]] = this[methodName].bind(this);
     }
   }
   // For cycle detection in array to string and error conversion; see
@@ -245,7 +245,7 @@ Interpreter.prototype.step = function() {
   var state = stack[stack.length - 1];
   var node = state.node;
   try {
-    var nextState = this.stepFunctionMap_[node['type']](stack, state, node);
+    var nextState = this.stepFunctions_[node['type']](stack, state, node);
   } catch (e) {
     // Eat any step errors.  They have been thrown on the stack.
     if (e !== Interpreter.STEP_ERROR) {
@@ -275,7 +275,7 @@ Interpreter.prototype.run = function() {
       var state = stack[stack.length - 1];
       var node = state.node;
       try {
-        var nextState = this.stepFunctionMap_[node['type']](stack, state, node);
+        var nextState = this.stepFunctions_[node['type']](stack, state, node);
       } catch (e) {
         // Eat any step errors.  They have been thrown on the stack.
         if (e !== Interpreter.STEP_ERROR) {
@@ -300,15 +300,16 @@ Interpreter.prototype.run = function() {
  */
 Interpreter.prototype.initGlobalScope = function(scope) {
   // Initialize uneditable global properties.
-  this.addVariableToScope(scope, 'this', undefined, true);
-  this.addVariableToScope(scope, 'Infinity', Infinity, true);
   this.addVariableToScope(scope, 'NaN', NaN, true);
+  this.addVariableToScope(scope, 'Infinity', Infinity, true);
   this.addVariableToScope(scope, 'undefined', undefined, true);
+  this.addVariableToScope(scope, 'this', undefined, true);
 
   // Create the objects which will become Object.prototype and
   // Function.prototype, which are needed to bootstrap everything else.
   this.OBJECT = new this.Object(null);
-  this.builtinMap_['Object.prototype'] = this.OBJECT;
+  this.builtins_['Object.prototype'] = this.OBJECT;
+  // createNativeFunction adds the argument to the map of builtins.
   this.FUNCTION =
       this.createNativeFunction('Function.prototype', function() {}, false);
   this.FUNCTION.proto = this.OBJECT;
@@ -317,26 +318,26 @@ Interpreter.prototype.initGlobalScope = function(scope) {
   this.initObject(scope);
   this.initFunction(scope);
   this.initArray(scope);
-  this.initNumber(scope);
   this.initString(scope);
   this.initBoolean(scope);
+  this.initNumber(scope);
   this.initDate(scope);
-  this.initMath(scope);
   this.initRegExp(scope);
-  this.initJSON(scope);
   this.initError(scope);
+  this.initMath(scope);
+  this.initJSON(scope);
 
   // Initialize ES standard global functions.
   var thisInterpreter = this;
 
-  this.createNativeFunction('isNaN', isNaN, false);
-  this.createNativeFunction('isFinite', isFinite, false);
-  this.createNativeFunction('parseFloat', parseFloat, false);
-  this.createNativeFunction('parseInt', parseInt, false);
-
   var func = this.createNativeFunction('eval',
       function(x) {throw EvalError("Can't happen");}, false);
   func.eval = true;
+
+  this.createNativeFunction('parseInt', parseInt, false);
+  this.createNativeFunction('parseFloat', parseFloat, false);
+  this.createNativeFunction('isNaN', isNaN, false);
+  this.createNativeFunction('isFinite', isFinite, false);
 
   var strFunctions = [
     [escape, 'escape'], [unescape, 'unescape'],
@@ -359,103 +360,6 @@ Interpreter.prototype.initGlobalScope = function(scope) {
 
   // Initialize CC-specific globals.
   this.initThreads(scope);
-};
-
-/**
- * Initialize the Function class.
- * @param {!Interpreter.Scope} scope Global scope.
- */
-Interpreter.prototype.initFunction = function(scope) {
-  var thisInterpreter = this;
-  var wrapper;
-  var identifierRegexp = /^[A-Za-z_$][\w$]*$/;
-  // Function constructor.
-  wrapper = function(var_args) {
-    var newFunc = new thisInterpreter.Function;
-    newFunc.addPrototype();
-    if (arguments.length) {
-      var code = String(arguments[arguments.length - 1]);
-    } else {
-      var code = '';
-    }
-    var args = [];
-    for (var i = 0; i < arguments.length - 1; i++) {
-      var name = String(arguments[i]);
-      if (!name.match(identifierRegexp)) {
-        thisInterpreter.throwException(thisInterpreter.SYNTAX_ERROR,
-            'Invalid function argument: ' + name);
-      }
-      args.push(name);
-    }
-    args = args.join(', ');
-    // Interestingly, the scope for constructed functions is the global scope,
-    // even if they were constructed in some other scope.
-    newFunc.parentScope = thisInterpreter.global;
-    // Acorn needs to parse code in the context of a function or else 'return'
-    // statements will be syntax errors.
-    try {
-      var ast = acorn.parse('$ = function(' + args + ') {' + code + '};',
-          Interpreter.PARSE_OPTIONS);
-    } catch (e) {
-      // Acorn threw a SyntaxError.  Rethrow as a trappable error.
-      thisInterpreter.throwException(thisInterpreter.SYNTAX_ERROR,
-          'Invalid code: ' + e.message);
-    }
-    if (ast['body'].length !== 1) {
-      // Function('a', 'return a + 6;}; {alert(1);');
-      thisInterpreter.throwException(thisInterpreter.SYNTAX_ERROR,
-          'Invalid code in function body.');
-    }
-    newFunc.node = ast['body'][0]['expression']['right'];
-    thisInterpreter.setProperty(newFunc, 'length', newFunc.node['length'],
-        Interpreter.READONLY_DESCRIPTOR);
-    return newFunc;
-  };
-  this.createNativeFunction('Function', wrapper, true);
-
-  this.createNativeFunction('Function.prototype.toString',
-                            this.Function.prototype.toString, false);
-
-  wrapper = function(thisArg, args) {
-    var state = thisInterpreter.thread.stateStack[
-        thisInterpreter.thread.stateStack.length - 1];
-    // Rewrite the current 'CallExpression' to apply a different function.
-    state.func_ = this;
-    // Assign the 'this' object.
-    state.funcThis_ = thisArg;
-    // Bind any provided arguments.
-    state.arguments_ = [];
-    if (args) {
-      // TODO(cpcallen): this should probably accept array-like object too.
-      if (args instanceof thisInterpreter.Array) {
-        for (var i = 0; i < args.length; i++) {
-          state.arguments_[i] = thisInterpreter.getProperty(args, i);
-        }
-      } else {
-        thisInterpreter.throwException(thisInterpreter.TYPE_ERROR,
-            'CreateListFromArrayLike called on non-object');
-      }
-    }
-    state.doneExec_ = false;
-  };
-  this.createNativeFunction('Function.prototype.apply', wrapper, false);
-
-  wrapper = function(thisArg, var_args) {
-    var state =
-        thisInterpreter.thread.stateStack[
-            thisInterpreter.thread.stateStack.length - 1];
-    // Rewrite the current 'CallExpression' to call a different function.
-    state.func_ = this;
-    // Assign the 'this' object.
-    state.funcThis_ = thisArg;
-    // Bind any provided arguments.
-    state.arguments_ = [];
-    for (var i = 1; i < arguments.length; i++) {
-      state.arguments_.push(arguments[i]);
-    }
-    state.doneExec_ = false;
-  };
-  this.createNativeFunction('Function.prototype.call', wrapper, false);
 };
 
 /**
@@ -660,6 +564,103 @@ Interpreter.prototype.initObject = function(scope) {
 };
 
 /**
+ * Initialize the Function class.
+ * @param {!Interpreter.Scope} scope Global scope.
+ */
+Interpreter.prototype.initFunction = function(scope) {
+  var thisInterpreter = this;
+  var wrapper;
+  var identifierRegexp = /^[A-Za-z_$][\w$]*$/;
+  // Function constructor.
+  wrapper = function(var_args) {
+    var newFunc = new thisInterpreter.Function;
+    newFunc.addPrototype();
+    if (arguments.length) {
+      var code = String(arguments[arguments.length - 1]);
+    } else {
+      var code = '';
+    }
+    var args = [];
+    for (var i = 0; i < arguments.length - 1; i++) {
+      var name = String(arguments[i]);
+      if (!name.match(identifierRegexp)) {
+        thisInterpreter.throwException(thisInterpreter.SYNTAX_ERROR,
+            'Invalid function argument: ' + name);
+      }
+      args.push(name);
+    }
+    args = args.join(', ');
+    // Interestingly, the scope for constructed functions is the global scope,
+    // even if they were constructed in some other scope.
+    newFunc.parentScope = thisInterpreter.global;
+    // Acorn needs to parse code in the context of a function or else 'return'
+    // statements will be syntax errors.
+    try {
+      var ast = acorn.parse('$ = function(' + args + ') {' + code + '};',
+          Interpreter.PARSE_OPTIONS);
+    } catch (e) {
+      // Acorn threw a SyntaxError.  Rethrow as a trappable error.
+      thisInterpreter.throwException(thisInterpreter.SYNTAX_ERROR,
+          'Invalid code: ' + e.message);
+    }
+    if (ast['body'].length !== 1) {
+      // Function('a', 'return a + 6;}; {alert(1);');
+      thisInterpreter.throwException(thisInterpreter.SYNTAX_ERROR,
+          'Invalid code in function body.');
+    }
+    newFunc.node = ast['body'][0]['expression']['right'];
+    thisInterpreter.setProperty(newFunc, 'length', newFunc.node['length'],
+        Interpreter.READONLY_DESCRIPTOR);
+    return newFunc;
+  };
+  this.createNativeFunction('Function', wrapper, true);
+
+  this.createNativeFunction('Function.prototype.toString',
+                            this.Function.prototype.toString, false);
+
+  wrapper = function(thisArg, args) {
+    var state = thisInterpreter.thread.stateStack[
+        thisInterpreter.thread.stateStack.length - 1];
+    // Rewrite the current 'CallExpression' to apply a different function.
+    state.func_ = this;
+    // Assign the 'this' object.
+    state.funcThis_ = thisArg;
+    // Bind any provided arguments.
+    state.arguments_ = [];
+    if (args) {
+      // TODO(cpcallen): this should probably accept array-like object too.
+      if (args instanceof thisInterpreter.Array) {
+        for (var i = 0; i < args.length; i++) {
+          state.arguments_[i] = thisInterpreter.getProperty(args, i);
+        }
+      } else {
+        thisInterpreter.throwException(thisInterpreter.TYPE_ERROR,
+            'CreateListFromArrayLike called on non-object');
+      }
+    }
+    state.doneExec_ = false;
+  };
+  this.createNativeFunction('Function.prototype.apply', wrapper, false);
+
+  wrapper = function(thisArg, var_args) {
+    var state =
+        thisInterpreter.thread.stateStack[
+            thisInterpreter.thread.stateStack.length - 1];
+    // Rewrite the current 'CallExpression' to call a different function.
+    state.func_ = this;
+    // Assign the 'this' object.
+    state.funcThis_ = thisArg;
+    // Bind any provided arguments.
+    state.arguments_ = [];
+    for (var i = 1; i < arguments.length; i++) {
+      state.arguments_.push(arguments[i]);
+    }
+    state.doneExec_ = false;
+  };
+  this.createNativeFunction('Function.prototype.call', wrapper, false);
+};
+
+/**
  * Initialize the Array class.
  * @param {!Interpreter.Scope} scope Global scope.
  */
@@ -667,7 +668,7 @@ Interpreter.prototype.initArray = function(scope) {
   var thisInterpreter = this;
   // Array prototype.
   this.ARRAY = new this.Array(this.OBJECT);
-  this.builtinMap_['Array.prototype'] = this.ARRAY;
+  this.builtins_['Array.prototype'] = this.ARRAY;
   // Array constructor.
   var getInt = function(obj, def) {
     // Return an integer, or the default.
@@ -899,72 +900,6 @@ Interpreter.prototype.initArray = function(scope) {
 };
 
 /**
- * Initialize the Number class.
- * @param {!Interpreter.Scope} scope Global scope.
- */
-Interpreter.prototype.initNumber = function(scope) {
-  var thisInterpreter = this;
-  var wrapper;
-  // Number prototype.
-  this.NUMBER = new this.Object;
-  this.builtinMap_['Number.prototype'] = this.NUMBER;
-  this.NUMBER.class = 'Number';
-  // Number constructor.
-  this.createNativeFunction('Number', Number, false);  // No: new Number()
-
-  // Instance methods on Number.
-  wrapper = function(fractionDigits) {
-    try {
-      return this.toExponential(fractionDigits);
-    } catch (e) {
-      // Throws if fractionDigits isn't within 0-20.
-      thisInterpreter.throwException(thisInterpreter.RANGE_ERROR, e.message);
-    }
-  };
-  this.createNativeFunction('Number.prototype.toExponential', wrapper, false);
-
-  wrapper = function(digits) {
-    try {
-      return this.toFixed(digits);
-    } catch (e) {
-      // Throws if digits isn't within 0-20.
-      thisInterpreter.throwException(thisInterpreter.RANGE_ERROR, e.message);
-    }
-  };
-  this.createNativeFunction('Number.prototype.toFixed', wrapper, false);
-
-  wrapper = function(precision) {
-    try {
-      return this.toPrecision(precision);
-    } catch (e) {
-      // Throws if precision isn't within range (depends on implementation).
-      thisInterpreter.throwException(thisInterpreter.RANGE_ERROR, e.message);
-    }
-  };
-  this.createNativeFunction('Number.prototype.toPrecision', wrapper, false);
-
-  wrapper = function(radix) {
-    try {
-      return this.toString(radix);
-    } catch (e) {
-      // Throws if radix isn't within 2-36.
-      thisInterpreter.throwException(thisInterpreter.RANGE_ERROR, e.message);
-    }
-  };
-  this.createNativeFunction('Number.prototype.toString', wrapper, false);
-
-  wrapper = function(/*locales, options*/) {
-    // Messing around with arguments so that function's length is 0.
-    var locales = arguments.length > 0 ?
-        thisInterpreter.pseudoToNative(arguments[0]) : undefined;
-    var options = arguments.length > 1 ?
-        thisInterpreter.pseudoToNative(arguments[1]) : undefined;
-    return this.toLocaleString(locales, options);
-  };
-  this.createNativeFunction('Number.prototype.toLocaleString', wrapper, false);
-};
-
-/**
  * Initialize the String class.
  * @param {!Interpreter.Scope} scope Global scope.
  */
@@ -973,7 +908,7 @@ Interpreter.prototype.initString = function(scope) {
   var wrapper;
   // String prototype.
   this.STRING = new this.Object;
-  this.builtinMap_['String.prototype'] = this.STRING;
+  this.builtins_['String.prototype'] = this.STRING;
   this.STRING.class = 'String';
   // String constructor.
   this.createNativeFunction('String', String, false);  // No: new String()
@@ -1042,10 +977,76 @@ Interpreter.prototype.initBoolean = function(scope) {
   var thisInterpreter = this;
   // Boolean prototype.
   this.BOOLEAN = new this.Object;
-  this.builtinMap_['Boolean.prototype'] = this.BOOLEAN;
+  this.builtins_['Boolean.prototype'] = this.BOOLEAN;
   this.BOOLEAN.class = 'Boolean';
   // Boolean constructor.
   this.createNativeFunction('Boolean', Boolean, false);  // No: new Boolean()
+};
+
+/**
+ * Initialize the Number class.
+ * @param {!Interpreter.Scope} scope Global scope.
+ */
+Interpreter.prototype.initNumber = function(scope) {
+  var thisInterpreter = this;
+  var wrapper;
+  // Number prototype.
+  this.NUMBER = new this.Object;
+  this.builtins_['Number.prototype'] = this.NUMBER;
+  this.NUMBER.class = 'Number';
+  // Number constructor.
+  this.createNativeFunction('Number', Number, false);  // No: new Number()
+
+  // Instance methods on Number.
+  wrapper = function(fractionDigits) {
+    try {
+      return this.toExponential(fractionDigits);
+    } catch (e) {
+      // Throws if fractionDigits isn't within 0-20.
+      thisInterpreter.throwException(thisInterpreter.RANGE_ERROR, e.message);
+    }
+  };
+  this.createNativeFunction('Number.prototype.toExponential', wrapper, false);
+
+  wrapper = function(digits) {
+    try {
+      return this.toFixed(digits);
+    } catch (e) {
+      // Throws if digits isn't within 0-20.
+      thisInterpreter.throwException(thisInterpreter.RANGE_ERROR, e.message);
+    }
+  };
+  this.createNativeFunction('Number.prototype.toFixed', wrapper, false);
+
+  wrapper = function(precision) {
+    try {
+      return this.toPrecision(precision);
+    } catch (e) {
+      // Throws if precision isn't within range (depends on implementation).
+      thisInterpreter.throwException(thisInterpreter.RANGE_ERROR, e.message);
+    }
+  };
+  this.createNativeFunction('Number.prototype.toPrecision', wrapper, false);
+
+  wrapper = function(radix) {
+    try {
+      return this.toString(radix);
+    } catch (e) {
+      // Throws if radix isn't within 2-36.
+      thisInterpreter.throwException(thisInterpreter.RANGE_ERROR, e.message);
+    }
+  };
+  this.createNativeFunction('Number.prototype.toString', wrapper, false);
+
+  wrapper = function(/*locales, options*/) {
+    // Messing around with arguments so that function's length is 0.
+    var locales = arguments.length > 0 ?
+        thisInterpreter.pseudoToNative(arguments[0]) : undefined;
+    var options = arguments.length > 1 ?
+        thisInterpreter.pseudoToNative(arguments[1]) : undefined;
+    return this.toLocaleString(locales, options);
+  };
+  this.createNativeFunction('Number.prototype.toLocaleString', wrapper, false);
 };
 
 /**
@@ -1058,7 +1059,7 @@ Interpreter.prototype.initDate = function(scope) {
   // Date prototype.  As of ES6 this is just an ordinary object.  (In
   // ES5 it had [[Class]] Date.)
   this.DATE = new this.Object;
-  this.builtinMap_['Date.prototype'] = this.DATE;
+  this.builtins_['Date.prototype'] = this.DATE;
   // Date constructor.
   wrapper = function(value, var_args) {
     if (!thisInterpreter.calledWithNew()) {
@@ -1120,20 +1121,6 @@ Interpreter.prototype.initDate = function(scope) {
 };
 
 /**
- * Initialize Math object.
- * @param {!Interpreter.Scope} scope Global scope.
- */
-Interpreter.prototype.initMath = function(scope) {
-  var numFunctions = ['abs', 'acos', 'asin', 'atan', 'atan2', 'ceil', 'cos',
-                      'exp', 'floor', 'log', 'max', 'min', 'pow', 'random',
-                      'round', 'sin', 'sqrt', 'tan'];
-  for (var i = 0; i < numFunctions.length; i++) {
-    this.createNativeFunction('Math.' + numFunctions[i], Math[numFunctions[i]],
-                              false);
-  }
-};
-
-/**
  * Initialize Regular Expression object.
  * @param {!Interpreter.Scope} scope Global scope.
  */
@@ -1143,7 +1130,7 @@ Interpreter.prototype.initRegExp = function(scope) {
   // RegExp prototype.  As of ES6 this is just an ordinary object.
   // (In ES5 it had [[Class]] RegExp.)
   this.REGEXP = new this.Object;
-  this.builtinMap_['RegExp.prototype'] = this.REGEXP;
+  this.builtins_['RegExp.prototype'] = this.REGEXP;
   // RegExp constructor.
   wrapper = function(pattern, flags) {
     var regexp = new thisInterpreter.RegExp;
@@ -1193,6 +1180,68 @@ Interpreter.prototype.initRegExp = function(scope) {
 };
 
 /**
+ * Initialize the Error class.
+ * @param {!Interpreter.Scope} scope Global scope.
+ */
+Interpreter.prototype.initError = function(scope) {
+  var thisInterpreter = this;
+  // Error prototype.
+  this.ERROR = new this.Error(this.OBJECT);
+  this.builtins_['Error.prototype'] = this.ERROR;
+  // Error constructor.
+  var wrapper = function(opt_message) {
+    var newError = new thisInterpreter.Error;
+    if (opt_message) {
+      thisInterpreter.setProperty(newError, 'message', String(opt_message),
+          Interpreter.NONENUMERABLE_DESCRIPTOR);
+    }
+    return newError;
+  };
+  this.createNativeFunction('Error', wrapper, true);
+
+  this.createNativeFunction('Error.prototype.toString', this.Error.prototype.toString,
+                            false);
+
+  var createErrorSubclass = function(name) {
+    var prototype = new thisInterpreter.Error;
+    thisInterpreter.builtins_[name + '.prototype'] = prototype;
+
+    wrapper = function(opt_message) {
+      var newError = new thisInterpreter.Error(prototype);
+      if (opt_message) {
+        thisInterpreter.setProperty(newError, 'message',
+            String(opt_message), Interpreter.NONENUMERABLE_DESCRIPTOR);
+      }
+      return newError;
+    };
+    thisInterpreter.createNativeFunction(name, wrapper, true);
+
+    return prototype;
+  };
+
+  this.EVAL_ERROR = createErrorSubclass('EvalError');
+  this.RANGE_ERROR = createErrorSubclass('RangeError');
+  this.REFERENCE_ERROR = createErrorSubclass('ReferenceError');
+  this.SYNTAX_ERROR = createErrorSubclass('SyntaxError');
+  this.TYPE_ERROR = createErrorSubclass('TypeError');
+  this.URI_ERROR = createErrorSubclass('URIError');
+};
+
+/**
+ * Initialize Math object.
+ * @param {!Interpreter.Scope} scope Global scope.
+ */
+Interpreter.prototype.initMath = function(scope) {
+  var numFunctions = ['abs', 'acos', 'asin', 'atan', 'atan2', 'ceil', 'cos',
+                      'exp', 'floor', 'log', 'max', 'min', 'pow', 'random',
+                      'round', 'sin', 'sqrt', 'tan'];
+  for (var i = 0; i < numFunctions.length; i++) {
+    this.createNativeFunction('Math.' + numFunctions[i], Math[numFunctions[i]],
+                              false);
+  }
+};
+
+/**
  * Initialize JSON object.
  * @param {!Interpreter.Scope} scope Global scope.
  */
@@ -1219,54 +1268,6 @@ Interpreter.prototype.initJSON = function(scope) {
     return str;
   };
   this.createNativeFunction('JSON.stringify', wrapper, false);
-};
-
-/**
- * Initialize the Error class.
- * @param {!Interpreter.Scope} scope Global scope.
- */
-Interpreter.prototype.initError = function(scope) {
-  var thisInterpreter = this;
-  // Error prototype.
-  this.ERROR = new this.Error(this.OBJECT);
-  this.builtinMap_['Error.prototype'] = this.ERROR;
-  // Error constructor.
-  var wrapper = function(opt_message) {
-    var newError = new thisInterpreter.Error;
-    if (opt_message) {
-      thisInterpreter.setProperty(newError, 'message', String(opt_message),
-          Interpreter.NONENUMERABLE_DESCRIPTOR);
-    }
-    return newError;
-  };
-  this.createNativeFunction('Error', wrapper, true);
-
-  this.createNativeFunction('Error.prototype.toString', this.Error.prototype.toString,
-                            false);
-
-  var createErrorSubclass = function(name) {
-    var prototype = new thisInterpreter.Error;
-    thisInterpreter.builtinMap_[name + '.prototype'] = prototype;
-
-    wrapper = function(opt_message) {
-      var newError = new thisInterpreter.Error(prototype);
-      if (opt_message) {
-        thisInterpreter.setProperty(newError, 'message',
-            String(opt_message), Interpreter.NONENUMERABLE_DESCRIPTOR);
-      }
-      return newError;
-    };
-    thisInterpreter.createNativeFunction(name, wrapper, true);
-
-    return prototype;
-  };
-
-  this.EVAL_ERROR = createErrorSubclass('EvalError');
-  this.RANGE_ERROR = createErrorSubclass('RangeError');
-  this.REFERENCE_ERROR = createErrorSubclass('ReferenceError');
-  this.SYNTAX_ERROR = createErrorSubclass('SyntaxError');
-  this.TYPE_ERROR = createErrorSubclass('TypeError');
-  this.URI_ERROR = createErrorSubclass('URIError');
 };
 
 /**
@@ -1368,10 +1369,10 @@ Interpreter.prototype.createNativeFunction =
   this.setProperty(func, 'length', nativeFunc.length,
       Interpreter.READONLY_DESCRIPTOR);
   func.illegalConstructor = !legalConstructor;
-  if (this.builtinMap_[name]) {
+  if (this.builtins_[name]) {
     throw ReferenceError('Builtin "' + name + '" already exists.');
   }
-  this.builtinMap_[name] = func;
+  this.builtins_[name] = func;
   return func;
 };
 
@@ -1388,10 +1389,10 @@ Interpreter.prototype.createAsyncFunction = function(name, asyncFunc) {
   this.setProperty(func, 'length', asyncFunc.length,
       Interpreter.READONLY_DESCRIPTOR);
   func.illegalConstructor = true;
-  if (this.builtinMap_[name]) {
+  if (this.builtins_[name]) {
     throw ReferenceError('Builtin "' + name + '" already exists.');
   }
-  this.builtinMap_[name] = func;
+  this.builtins_[name] = func;
   return func;
 };
 
@@ -1615,7 +1616,7 @@ Interpreter.prototype.setProperty = function(obj, name, value, opt_descriptor) {
     // Define the property.
     if ('configurable' in opt_descriptor) {
       if (opt_descriptor.configurable) {
-        obj.notConfigurable.delete(name);  // Can't happen.
+        obj.notConfigurable.delete(name);  // No-op.
       } else {
         obj.notConfigurable.add(name);
       }
@@ -2618,12 +2619,12 @@ Interpreter.prototype['stepCallExpression'] = function(stack, state, node) {
       var func = state.func_;
       if (typeof func === 'string' && state.arguments_.length === 0) {
         // Special hack for Code City's "new 'foo'" syntax.
-        if (!this.builtinMap_[func]) {
+        if (!this.builtins_[func]) {
           this.throwException(this.REFERENCE_ERROR, func + ' is not a builtin');
         }
         stack.pop();
         if (stack.length > 0) {
-          stack[stack.length - 1].value = this.builtinMap_[func];
+          stack[stack.length - 1].value = this.builtins_[func];
         }
         return;
       }
