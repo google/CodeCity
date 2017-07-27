@@ -568,7 +568,7 @@ Interpreter.prototype.initObject = function(scope) {
     if (thisInterpreter.hasProperty(descriptor, 'value')) {
       nativeDescriptor.value = thisInterpreter.getProperty(descriptor, 'value');
     }
-    thisInterpreter.setProperty(obj, prop, nativeDescriptor);
+    thisInterpreter.setProperty(obj, prop, ReferenceError, nativeDescriptor);
     return obj;
   };
   this.createNativeFunction('Object.defineProperty', wrapper, false);
@@ -1568,20 +1568,11 @@ Interpreter.prototype.hasProperty = function(obj, name) {
  * Set a property value on a data object.
  * @param {!Interpreter.prototype.Object} obj Data object.
  * @param {Interpreter.Value} name Name of property.
- * @param {Interpreter.Value|Object} opt_value New property value.
- *   This parameter may be omitted, and a descriptor specified instead.
+ * @param {Interpreter.Value|ReferenceError} value New property value.
+ *   Use ReferenceError if value is handled by descriptor instead.
  * @param {Object=} opt_descriptor Optional descriptor object.
  */
-Interpreter.prototype.setProperty =
-    function(obj, name, opt_value, opt_descriptor) {
-  if (!opt_descriptor) {
-    if (opt_value && Object.getPrototypeOf(opt_value) === Object.prototype) {
-      // 3rd argument is a descriptor.
-      opt_descriptor = opt_value;
-      // Flag value as not used.
-      opt_value = ReferenceError;
-    }
-  }
+Interpreter.prototype.setProperty = function(obj, name, value, opt_descriptor) {
   name = String(name);
   if (opt_descriptor && obj.notConfigurable.has(name)) {
     this.throwException(this.TYPE_ERROR, 'Cannot redefine property: ' + name);
@@ -1596,7 +1587,7 @@ Interpreter.prototype.setProperty =
     // TODO: Make length a real property that has descriptor attributes.
     if (name === 'length') {
       // Delete elements if length is smaller.
-      var newLength = Interpreter.legalArrayLength(opt_value);
+      var newLength = Interpreter.legalArrayLength(value);
       if (isNaN(newLength)) {
         this.throwException(this.RANGE_ERROR, 'Invalid array length');
       }
@@ -1615,7 +1606,7 @@ Interpreter.prototype.setProperty =
       obj.length = Math.max(obj.length, i + 1);
     }
   }
-  if (!obj.properties[name] && obj.preventExtensions) {
+  if (obj.preventExtensions && !obj.properties[name]) {
     this.throwException(this.TYPE_ERROR, "Can't add property '" + name +
                         "', object is not extensible");
   }
@@ -1651,11 +1642,14 @@ Interpreter.prototype.setProperty =
     }
     if ('value' in opt_descriptor) {
       obj.properties[name] = opt_descriptor.value;
-    } else if (opt_value != ReferenceError) {
-      obj.properties[name] = opt_value;
+    } else if (value !== ReferenceError) {
+      obj.properties[name] = value;
     }
   } else {
     // Set the property.
+    if (value === ReferenceError) {
+      throw ReferenceError('Value not specified.');
+    }
     // Determine the parent (possibly self) where the property is defined.
     var defObj = obj;
     while (!(name in defObj.properties)) {
@@ -1670,7 +1664,7 @@ Interpreter.prototype.setProperty =
       this.throwException(this.TYPE_ERROR, "Cannot assign to read only " +
           "property '" + name + "' of object '" + obj + "'");
     } else {
-      obj.properties[name] = opt_value;
+      obj.properties[name] = value;
     }
   }
 };
