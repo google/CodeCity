@@ -62,6 +62,7 @@ var Interpreter = function() {
   this.thread = null;
   this.initUptime();
   this.previousTime_ = 0;
+  this.running = false;
   this.done = true;  // True if any non-ZOMBIE threads exist.
 };
 
@@ -176,6 +177,9 @@ Interpreter.prototype.createThread = function(runnable, runAt) {
   var id = this.threads.length;
   var thread = new Interpreter.Thread(id, runnable, runAt || this.now());
   this.threads.push(thread);
+  if (this.running) {
+    this.start();
+  }
   return id;
 };
 
@@ -352,6 +356,7 @@ Interpreter.prototype.start = function() {
   // Kill any existing runner and restart.
   clearTimeout(this.runner_);
   this.runner_ = setTimeout(repeat, 0);
+  this.running = true;
 };
 
 /**
@@ -360,6 +365,7 @@ Interpreter.prototype.start = function() {
 Interpreter.prototype.stop = function() {
   clearTimeout(this.runner_);
   this.runner_ = undefined;
+  this.running = false;
 };
 
 /**

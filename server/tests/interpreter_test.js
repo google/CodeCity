@@ -812,8 +812,14 @@ exports.testStartStop = async function(t) {
   intrp.createThread(autoexec);
   intrp.run();
   try {
-    intrp.createThread(src);
     intrp.start();
+    // .start() will create a zero-delay timeout to check for sleeping
+    // tasks to awaken.  Snooze briefly to allow it to run, after
+    // which there should be no outstanding timeouts.  This will
+    // ensure that we verify .createThread() frobs .start() to get
+    // things going again.
+    await snooze(0);
+    intrp.createThread(src);
     await snooze(29);
     intrp.stop();
   } catch (e) {
@@ -824,7 +830,18 @@ exports.testStartStop = async function(t) {
   if (Object.is(r, expected)) {
     t.pass(name);
   } else {
-    t.fail(name, util.format('%s\ngot: %s  want: %s', src,
-        String(r), String(expected)));
+    t.fail(name, util.format('%s\ngot: %s  want: %s (after %d ms)', src,
+        String(r), String(expected), 29));
+  }
+
+  // Check that .stop() actually stops thing.
+  await snooze(10);
+  var r = intrp.getValueFromScope(intrp.global, 'x');
+  var expected = 2;
+  if (Object.is(r, expected)) {
+    t.pass(name);
+  } else {
+    t.fail(name, util.format('%s\ngot: %s  want: %s (after %d ms)', src,
+        String(r), String(expected), 39));
   }
 };
