@@ -805,8 +805,8 @@ exports.testStartStop = async function(t) {
   var src = `
       var x = 0;
       while (true) {
-          suspend(10);
-          x++;
+        suspend(10);
+        x++;
       };
   `;
   intrp.createThread(autoexec);

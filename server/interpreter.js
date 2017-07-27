@@ -192,7 +192,7 @@ Interpreter.prototype.createThread = function(runnable, runAt) {
  *     (defaults to now).
  * @return {number} thread ID.
  */
-Interpreter.prototype.createThreadForFuncall =
+Interpreter.prototype.createThreadForFuncCall =
     function(func, funcThis, args, runAt) {
   if (!(func instanceof this.Function)) {
     this.throwException(this.TYPE_ERROR, func + ' is not a function');
@@ -341,7 +341,7 @@ Interpreter.prototype.run = function(continuous) {
 };
 
 /**
- * Use setTimout to repeatedly call .run() until there are no more
+ * Use setTimeout to repeatedly call .run() until there are no more
  * sleeping threads.
  */
 Interpreter.prototype.start = function() {
@@ -1363,8 +1363,8 @@ Interpreter.prototype.initThreads = function(scope) {
       function(func) {
         var delay = Number(arguments[1]) || 0;
         var args = Array.prototype.slice.call(arguments, 2);
-        return intrp.createThreadForFuncall(func, undefined, args,
-                                            intrp.now() + delay);
+        return intrp.createThreadForFuncCall(func, undefined, args,
+                                             intrp.now() + delay);
       }, false);
 
   this.createNativeFunction('clearTimeout',
