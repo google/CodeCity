@@ -704,9 +704,7 @@ Interpreter.prototype.initFunction = function(scope) {
     if (args) {
       // TODO(cpcallen): this should probably accept array-like object too.
       if (args instanceof thisInterpreter.Array) {
-        for (var i = 0; i < args.length; i++) {
-          state.arguments_[i] = thisInterpreter.getProperty(args, i);
-        }
+        state.arguments_ = thisInterpreter.pseudoToNative(args);
       } else {
         thisInterpreter.throwException(thisInterpreter.TYPE_ERROR,
             'CreateListFromArrayLike called on non-object');
@@ -761,12 +759,12 @@ Interpreter.prototype.initArray = function(scope) {
         thisInterpreter.throwException(thisInterpreter.RANGE_ERROR,
                                        'Invalid array length');
       }
-      newArray.length = first;
+      newArray.properties.length = first;
     } else {
       for (var i = 0; i < arguments.length; i++) {
         newArray.properties[i] = arguments[i];
       }
-      newArray.length = i;
+      newArray.properties.length = i;
     }
     return newArray;
   };
@@ -783,10 +781,10 @@ Interpreter.prototype.initArray = function(scope) {
                             this.Array.prototype.toString, false);
 
   wrapper = function() {
-    if (this.length) {
-      var value = this.properties[this.length - 1];
-      delete this.properties[this.length - 1];
-      this.length--;
+    if (this.properties.length) {
+      var value = this.properties[this.properties.length - 1];
+      delete this.properties[this.properties.length - 1];
+      this.properties.length--;
     } else {
       var value = undefined;
     }
@@ -796,43 +794,43 @@ Interpreter.prototype.initArray = function(scope) {
 
   wrapper = function(var_args) {
     for (var i = 0; i < arguments.length; i++) {
-      this.properties[this.length] = arguments[i];
-      this.length++;
+      this.properties[this.properties.length] = arguments[i];
+      this.properties.length++;
     }
-    return this.length;
+    return this.properties.length;
   };
   this.createNativeFunction('Array.prototype.push', wrapper, false);
 
   wrapper = function() {
-    if (!this.length) {
+    if (!this.properties.length) {
       return undefined;
     }
     var value = this.properties[0];
-    for (var i = 1; i < this.length; i++) {
+    for (var i = 1; i < this.properties.length; i++) {
       this.properties[i - 1] = this.properties[i];
     }
-    this.length--;
-    delete this.properties[this.length];
+    this.properties.length--;
+    delete this.properties[thi.properties.length];
     return value;
   };
   this.createNativeFunction('Array.prototype.shift', wrapper, false);
 
   wrapper = function(var_args) {
-    for (var i = this.length - 1; i >= 0; i--) {
+    for (var i = this.properties.length - 1; i >= 0; i--) {
       this.properties[i + arguments.length] = this.properties[i];
     }
-    this.length += arguments.length;
+    this.properties.length += arguments.length;
     for (var i = 0; i < arguments.length; i++) {
       this.properties[i] = arguments[i];
     }
-    return this.length;
+    return this.properties.length;
   };
   this.createNativeFunction('Array.prototype.unshift', wrapper, false);
 
   wrapper = function() {
-    for (var i = 0; i < this.length / 2; i++) {
-      var tmp = this.properties[this.length - i - 1];
-      this.properties[this.length - i - 1] = this.properties[i];
+    for (var i = 0; i < this.properties.length / 2; i++) {
+      var tmp = this.properties[this.properties.length - i - 1];
+      this.properties[this.properties.length - i - 1] = this.properties[i];
       this.properties[i] = tmp;
     }
     return this;
@@ -842,32 +840,32 @@ Interpreter.prototype.initArray = function(scope) {
   wrapper = function(index, howmany /*, var_args*/) {
     index = getInt(index, 0);
     if (index < 0) {
-      index = Math.max(this.length + index, 0);
+      index = Math.max(this.properties.length + index, 0);
     } else {
-      index = Math.min(index, this.length);
+      index = Math.min(index, this.properties.length);
     }
     howmany = getInt(howmany, Infinity);
-    howmany = Math.min(howmany, this.length - index);
+    howmany = Math.min(howmany, this.properties.length - index);
     var removed = new thisInterpreter.Array;
     // Remove specified elements.
     for (var i = index; i < index + howmany; i++) {
-      removed.properties[removed.length++] = this.properties[i];
+      removed.properties[removed.properties.length++] = this.properties[i];
       this.properties[i] = this.properties[i + howmany];
     }
     // Move other element to fill the gap.
-    for (var i = index + howmany; i < this.length - howmany; i++) {
+    for (var i = index + howmany; i < this.properties.length - howmany; i++) {
       this.properties[i] = this.properties[i + howmany];
     }
     // Delete superfluous properties.
-    for (var i = this.length - howmany; i < this.length; i++) {
+    for (var i = this.properties.length - howmany; i < this.properties.length; i++) {
       delete this.properties[i];
     }
-    this.length -= howmany;
+    this.properties.length -= howmany;
     // Insert specified items.
-    for (var i = this.length - 1; i >= index; i--) {
+    for (var i = this.properties.length - 1; i >= index; i--) {
       this.properties[i + arguments.length - 2] = this.properties[i];
     }
-    this.length += arguments.length - 2;
+    this.properties.length += arguments.length - 2;
     for (var i = 2; i < arguments.length; i++) {
       this.properties[index + i - 2] = arguments[i];
     }
@@ -879,14 +877,14 @@ Interpreter.prototype.initArray = function(scope) {
     var list = new thisInterpreter.Array;
     var begin = getInt(opt_begin, 0);
     if (begin < 0) {
-      begin = this.length + begin;
+      begin = this.properties.length + begin;
     }
-    begin = Math.max(0, Math.min(begin, this.length));
-    var end = getInt(opt_end, this.length);
+    begin = Math.max(0, Math.min(begin, this.properties.length));
+    var end = getInt(opt_end, this.properties.length);
     if (end < 0) {
-      end = this.length + end;
+      end = this.properties.length + end;
     }
-    end = Math.max(0, Math.min(end, this.length));
+    end = Math.max(0, Math.min(end, this.properties.length));
     var length = 0;
     for (var i = begin; i < end; i++) {
       var element = thisInterpreter.getProperty(this, i);
@@ -901,7 +899,7 @@ Interpreter.prototype.initArray = function(scope) {
     cycles.push(this);
     try {
       var text = [];
-      for (var i = 0; i < this.length; i++) {
+      for (var i = 0; i < this.properties.length; i++) {
         var value = this.properties[i];
         if (value !== null && value !== undefined) {
           text[i] = String(value);
@@ -918,7 +916,7 @@ Interpreter.prototype.initArray = function(scope) {
     var list = new thisInterpreter.Array;
     var length = 0;
     // Start by copying the current array.
-    for (var i = 0; i < this.length; i++) {
+    for (var i = 0; i < this.properties.length; i++) {
       var element = thisInterpreter.getProperty(this, i);
       thisInterpreter.setProperty(list, length++, element);
     }
@@ -926,7 +924,7 @@ Interpreter.prototype.initArray = function(scope) {
     for (var i = 0; i < arguments.length; i++) {
       var value = arguments[i];
       if (value instanceof thisInterpreter.Array) {
-        for (var j = 0; j < value.length; j++) {
+        for (var j = 0; j < value.properties.length; j++) {
           var element = thisInterpreter.getProperty(value, j);
           thisInterpreter.setProperty(list, length++, element);
         }
@@ -942,10 +940,10 @@ Interpreter.prototype.initArray = function(scope) {
     searchElement = searchElement || undefined;
     var fromIndex = getInt(opt_fromIndex, 0);
     if (fromIndex < 0) {
-      fromIndex = this.length + fromIndex;
+      fromIndex = this.properties.length + fromIndex;
     }
     fromIndex = Math.max(0, fromIndex);
-    for (var i = fromIndex; i < this.length; i++) {
+    for (var i = fromIndex; i < this.properties.length; i++) {
       var element = thisInterpreter.getProperty(this, i);
       if (element === searchElement) {
         return i;
@@ -957,11 +955,11 @@ Interpreter.prototype.initArray = function(scope) {
 
   wrapper = function(searchElement, opt_fromIndex) {
     searchElement = searchElement || undefined;
-    var fromIndex = getInt(opt_fromIndex, this.length);
+    var fromIndex = getInt(opt_fromIndex, this.properties.length);
     if (fromIndex < 0) {
-      fromIndex = this.length + fromIndex;
+      fromIndex = this.properties.length + fromIndex;
     }
-    fromIndex = Math.min(fromIndex, this.length - 1);
+    fromIndex = Math.min(fromIndex, this.properties.length - 1);
     for (var i = fromIndex; i >= 0; i--) {
       var element = thisInterpreter.getProperty(this, i);
       if (element === searchElement) {
@@ -1484,7 +1482,9 @@ Interpreter.prototype.nativeToPseudo = function(nativeObj) {
   if (Array.isArray(nativeObj)) {  // Array.
     pseudoObj = new this.Array;
     for (var i = 0; i < nativeObj.length; i++) {
-      this.setProperty(pseudoObj, i, this.nativeToPseudo(nativeObj[i]));
+      if (i in nativeObj) {
+        this.setProperty(pseudoObj, i, this.nativeToPseudo(nativeObj[i]));
+      }
     }
   } else {  // Object.
     pseudoObj = new this.Object;
@@ -1528,8 +1528,12 @@ Interpreter.prototype.pseudoToNative = function(pseudoObj, opt_cycles) {
   if (pseudoObj instanceof this.Array) {  // Array.
     nativeObj = [];
     cycles.native.push(nativeObj);
-    for (var i = 0; i < pseudoObj.length; i++) {
-      nativeObj[i] = this.pseudoToNative(pseudoObj.properties[i], cycles);
+    var length = this.getProperty(pseudoObj, 'length');
+    for (var i = 0; i < length; i++) {
+      if (this.hasProperty(pseudoObj, i)) {
+        nativeObj[i] =
+            this.pseudoToNative(this.getProperty(pseudoObj, i), cycles);
+      }
     }
   } else {  // Object.
     nativeObj = {};
@@ -1584,8 +1588,6 @@ Interpreter.prototype.getProperty = function(obj, name) {
     // Special cases for magic length property.
     if (typeof obj === 'string') {
       return obj.length;
-    } else if (obj instanceof this.Array) {
-      return obj.length;
     }
   } else if (name.charCodeAt(0) < 0x40) {
     // Might have numbers in there?
@@ -1618,9 +1620,6 @@ Interpreter.prototype.hasProperty = function(obj, name) {
     return undefined;
   }
   name = String(name);
-  if (name === 'length' && obj instanceof this.Array) {
-    return true;
-  }
   do {
     if (obj.properties && name in obj.properties) {
       return true;
@@ -1648,27 +1647,25 @@ Interpreter.prototype.setProperty = function(obj, name, value, opt_descriptor) {
   }
   if (obj instanceof this.Array) {
     // Arrays have a magic length variable that is bound to the elements.
+    var length = obj.properties.length;
     var i;
-    // TODO: Make length a real property that has descriptor attributes.
     if (name === 'length') {
       // Delete elements if length is smaller.
-      var newLength = Interpreter.legalArrayLength(value);
-      if (isNaN(newLength)) {
+      var value = Interpreter.legalArrayLength(value);
+      if (isNaN(value)) {
         this.throwException(this.RANGE_ERROR, 'Invalid array length');
       }
-      if (newLength < obj.length) {
+      if (value < length) {
         for (i in obj.properties) {
           i = Interpreter.legalArrayIndex(i);
-          if (!isNaN(i) && newLength <= i) {
+          if (!isNaN(i) && value <= i) {
             delete obj.properties[i];
           }
         }
       }
-      obj.length = newLength;
-      return;  // Don't set a real length property.
     } else if (!isNaN(i = Interpreter.legalArrayIndex(name))) {
       // Increase length if this index is larger.
-      obj.length = Math.max(obj.length, i + 1);
+      obj.properties.length = Math.max(length, i + 1);
     }
   }
   if (obj.preventExtensions && !(name in obj.properties)) {
@@ -2103,7 +2100,6 @@ Interpreter.prototype.Function.prototype.addPrototype = function() {
  * @extends {Interpreter.prototype.Object}
  */
 Interpreter.prototype.Array = function(proto) {
-  this.length = 0;
   throw Error('Inner class constructor not callable on prototype');
 };
 /** @return {string} @override */
@@ -2306,7 +2302,7 @@ Interpreter.prototype.installTypes = function() {
   intrp.Array = function(proto) {
     intrp.Object.call(/** @type {?} */(this),
         (proto === undefined ? intrp.ARRAY : proto));
-    this.length = 0;
+    this.properties.length = 0;
   };
 
   intrp.Array.prototype = Object.create(intrp.Object.prototype);
@@ -2331,7 +2327,7 @@ Interpreter.prototype.installTypes = function() {
       var strs = [];
       // TODO(cpcallen): Array.prototype.toString should be generic,
       // but here we depend on .length.
-      for (var i = 0; i < this.length; i++) {
+      for (var i = 0; i < this.properties.length; i++) {
         var value = this.properties[i];
         strs[i] = (value instanceof intrp.Object &&
             cycles.indexOf(value) !== -1) ? '...' : value;
@@ -2499,7 +2495,7 @@ Interpreter.prototype['stepArrayExpression'] = function(stack, state, node) {
   var n = state.n_ || 0;
   if (!state.array_) {
     state.array_ = new this.Array;
-    state.array_.length = elements.length;
+    state.array_.properties.length = elements.length;
   } else {
     this.setProperty(state.array_, n, state.value);
     n++;
