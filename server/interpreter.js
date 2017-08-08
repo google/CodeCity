@@ -2455,6 +2455,37 @@ Interpreter.prototype.installTypes = function() {
   intrp.Error = function(proto) {
     intrp.Object.call(/** @type {?} */(this),
         (proto === undefined ? intrp.ERROR : proto));
+    // Construct a text-based stack.
+    // Don't bother when building Error.prototype.
+    if (intrp.thread) {
+      var stack = [];
+      var lastStart;
+      for (var i = intrp.thread.stateStack.length - 1; i >= 0; i--) {
+        var state = intrp.thread.stateStack[i];
+        var node = state.node;
+        if (node['type'] !== 'CallExpression' && stack.length) {
+          continue;
+        }
+        var code = intrp.getSource(i);
+        var lineStart = code.lastIndexOf('\n', node['start']);
+        if (lineStart === -1) {
+          lineStart = 0;
+        } else {
+          lineStart++;
+        }
+        var lineEnd = code.indexOf('\n', lineStart + 1);
+        if (lineEnd === -1) {
+          lineEnd = code.length;
+        }
+        if (lastStart !== lineStart) {
+          var line = code.substring(lineStart, lineEnd);
+          stack.push(line);
+          lastStart = lineStart;
+        }
+      }
+      intrp.setProperty(this, 'stack', stack.join('\n'),
+          Interpreter.NONENUMERABLE_DESCRIPTOR);
+    }
   };
 
   intrp.Error.prototype = Object.create(intrp.Object.prototype);
