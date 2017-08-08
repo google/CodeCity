@@ -177,14 +177,18 @@ Interpreter.prototype.now = function() {
  * @return {number} thread ID.
  */
 Interpreter.prototype.createThread = function(runnable, runAt) {
+  var source = '';
   if (typeof runnable === 'string') {
+    source = runnable;
+    // Acorn may throw an Syntax error.
     runnable = acorn.parse(runnable, Interpreter.PARSE_OPTIONS);
+    runnable['source'] = source;
   }
   if (runnable instanceof Interpreter.Node) {
     if (runnable['type'] !== 'Program') {
       throw Error('Expecting AST to start with a Program node.');
     }
-    this.populateScope_(runnable, this.global);
+    this.populateScope_(runnable, this.global, source);
     runnable = new Interpreter.State(runnable, this.global);
   }
   var id = this.threads.length;
@@ -691,6 +695,7 @@ Interpreter.prototype.initFunction = function(scope) {
           'Invalid code in function body.');
     }
     newFunc.node = ast['body'][0]['expression'];
+    newFunc.node['source'] = code;
     thisInterpreter.setProperty(newFunc, 'length', newFunc.node['length'],
         Interpreter.READONLY_DESCRIPTOR);
     return newFunc;
@@ -1413,15 +1418,22 @@ Interpreter.legalArrayIndex = function(x) {
  * Create a new function.
  * @param {!Interpreter.Node} node AST node defining the function.
  * @param {!Interpreter.Scope} scope Parent scope.
+ * @param {string} source Raw source code.
  * @return {!Interpreter.prototype.Function} New function.
  */
-Interpreter.prototype.createFunctionFromAST = function(node, scope) {
+Interpreter.prototype.createFunctionFromAST = function(node, scope, source) {
   var func = new this.Function;
   func.addPrototype();
   func.parentScope = scope;
   func.node = node;
   this.setProperty(func, 'length', func.node['params'].length,
       Interpreter.READONLY_DESCRIPTOR);
+  // Record the full original source on the function node since a function call
+  // can move execution from one source to another.
+  node['source'] = source;
+  // Also apply the same source to the body, since the function node is bypassed
+  // when stepping.
+  node['body']['source'] = source;
   return func;
 };
 
@@ -1805,9 +1817,10 @@ Interpreter.prototype.addVariableToScope =
  * Create a new scope for the given node.
  * @param {!Interpreter.Node} node AST node (program or function).
  * @param {!Interpreter.Scope} scope Scope dictionary to populate.
+ * @param {string} source Original source code.
  * @private
  */
-Interpreter.prototype.populateScope_ = function(node, scope) {
+Interpreter.prototype.populateScope_ = function(node, scope, source) {
   if (node['type'] === 'VariableDeclaration') {
     for (var i = 0; i < node['declarations'].length; i++) {
       this.addVariableToScope(scope, node['declarations'][i]['id']['name'],
@@ -1815,7 +1828,7 @@ Interpreter.prototype.populateScope_ = function(node, scope) {
     }
   } else if (node['type'] === 'FunctionDeclaration') {
     this.addVariableToScope(scope, node['id']['name'],
-                            this.createFunctionFromAST(node, scope));
+                            this.createFunctionFromAST(node, scope, source));
     return;  // Do not recurse into function.
   } else if (node['type'] === 'FunctionExpression') {
     return;  // Do not recurse into function.
@@ -1829,12 +1842,12 @@ Interpreter.prototype.populateScope_ = function(node, scope) {
       if (Array.isArray(prop)) {
         for (var i = 0; i < prop.length; i++) {
           if (prop[i] && prop[i].constructor === nodeClass) {
-            this.populateScope_(prop[i], scope);
+            this.populateScope_(prop[i], scope, source);
           }
         }
       } else {
         if (prop.constructor === nodeClass) {
-          this.populateScope_(prop, scope);
+          this.populateScope_(prop, scope, source);
         }
       }
     }
@@ -1848,6 +1861,22 @@ Interpreter.prototype.populateScope_ = function(node, scope) {
 Interpreter.prototype.calledWithNew = function() {
   return this.thread.stateStack[this.thread.stateStack.length - 1].
       isConstructor;
+};
+
+/**
+ * Returns the original source code for current state.
+ * @param {number=} opt_index Optional index in stack to look from.
+ * @return {string=} Source code or undefined if none.
+ */
+Interpreter.prototype.getSource = function(opt_index) {
+  // TODO: Should this be on Thread instead of Interpreter?
+  var i = (opt_index === undefined) ?
+      this.thread.stateStack.length - 1 : opt_index;
+  var source;
+  while (source === undefined && i >= 0) {
+    source = this.thread.stateStack[i--].node['source'];
+  }
+  return source;
 };
 
 /**
@@ -2694,7 +2723,7 @@ Interpreter.prototype['stepCallExpression'] = function(stack, state, node) {
     var funcNode = func.node;
     if (funcNode) {
       var scope = new Interpreter.Scope(func.parentScope);
-      this.populateScope_(funcNode['body'], scope);
+      this.populateScope_(funcNode['body'], scope, this.getSource());
       // Add all arguments.
       for (var i = 0; i < funcNode['params'].length; i++) {
         var paramName = funcNode['params'][i]['name'];
@@ -2728,9 +2757,10 @@ Interpreter.prototype['stepCallExpression'] = function(stack, state, node) {
         var evalNode = new Interpreter.Node;
         evalNode['type'] = 'EvalProgram_';
         evalNode['body'] = ast['body'];
+        evalNode['source'] = code;
         // Update current scope with definitions in eval().
         var scope = new Interpreter.Scope(state.scope);
-        this.populateScope_(ast, scope);
+        this.populateScope_(ast, scope, code);
         return new Interpreter.State(evalNode, scope);
       }
     } else if (func.nativeFunc) {
@@ -3009,7 +3039,7 @@ Interpreter.prototype['stepFunctionDeclaration'] =
 Interpreter.prototype['stepFunctionExpression'] = function(stack, state, node) {
   stack.pop();
   stack[stack.length - 1].value =
-      this.createFunctionFromAST(node, state.scope);
+      this.createFunctionFromAST(node, state.scope, this.getSource());
 };
 
 Interpreter.prototype['stepIdentifier'] = function(stack, state, node) {
