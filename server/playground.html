@@ -9,10 +9,10 @@
   <script src="autoexec.js"></script>
   <script>
     // Monkey patch timing routines.
-    Interpreter.prototype.initUptime = function () {
+    Interpreter.prototype.initUptime = function() {
       this.startTime_ = performance.now();
     };
-    Interpreter.prototype.uptime = function () {
+    Interpreter.prototype.uptime = function() {
       return performance.now() - this.startTime_;
     };
     var myInterpreter;
@@ -58,16 +58,18 @@
     }
 
     function stepButton() {
-      var stack = myInterpreter.thread.stateStack;
-      if (stack.length) {
-        var node = stack[stack.length - 1].node;
-        var start = node.start;
-        var end = node.end;
-      } else {
-        var start = 0;
-        var end = 0;
+      if (myInterpreter.thread) {  // Thread does not exist on first step.
+        var stack = myInterpreter.thread.stateStack;
+        if (stack.length) {
+          var node = stack[stack.length - 1].node;
+          var start = node.start;
+          var end = node.end;
+        } else {
+          var start = 0;
+          var end = 0;
+        }
+        createSelection(start, end);
       }
-      createSelection(start, end);
       try {
         var ok = myInterpreter.step();
       } finally {
