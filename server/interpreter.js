@@ -124,6 +124,19 @@ Interpreter.STEP_ERROR = {};
 Interpreter.SCOPE_REFERENCE = {};
 
 /**
+ * Parse a code string into an AST.
+ * @param {string} str
+ */
+Interpreter.prototype.parse = function(str) {
+  try {
+    return acorn.parse(str, Interpreter.PARSE_OPTIONS);
+  } catch (e) {
+    // Acorn threw a SyntaxError.  Rethrow as a trappable error.
+    this.throwException(this.SYNTAX_ERROR, 'Invalid code: ' + e.message);
+  }
+};
+
+/**
  * Initialise internal structures for uptime() and now().
  */
 Interpreter.prototype.initUptime = function() {
@@ -670,20 +683,14 @@ Interpreter.prototype.initFunction = function(scope) {
     newFunc.parentScope = thisInterpreter.global;
     // Acorn needs to parse code in the context of a function or else 'return'
     // statements will be syntax errors.
-    try {
-      var ast = acorn.parse('$ = function(' + args + ') {' + code + '};',
-          Interpreter.PARSE_OPTIONS);
-    } catch (e) {
-      // Acorn threw a SyntaxError.  Rethrow as a trappable error.
-      thisInterpreter.throwException(thisInterpreter.SYNTAX_ERROR,
-          'Invalid code: ' + e.message);
-    }
+    var code = '(function(' + args + ') {' + code + '})';
+    var ast = this.parse(code);
     if (ast['body'].length !== 1) {
       // Function('a', 'return a + 6;}; {alert(1);');
       thisInterpreter.throwException(thisInterpreter.SYNTAX_ERROR,
           'Invalid code in function body.');
     }
-    newFunc.node = ast['body'][0]['expression']['right'];
+    newFunc.node = ast['body'][0]['expression'];
     thisInterpreter.setProperty(newFunc, 'length', newFunc.node['length'],
         Interpreter.READONLY_DESCRIPTOR);
     return newFunc;
@@ -1835,36 +1842,6 @@ Interpreter.prototype.populateScope_ = function(node, scope) {
 };
 
 /**
- * Remove start and end values from AST, or set start and end values to a
- * constant value.  Used to remove highlighting from polyfills and to set
- * highlighting in an eval to cover the entire eval expression.
- * @param {!Interpreter.Node} node AST node.
- * @param {number=} start Starting character of all nodes, or undefined.
- * @param {number=} end Ending character of all nodes, or undefined.
- * @private
- */
-Interpreter.stripLocations_ = function(node, start, end) {
-  if (start) {
-    node['start'] = start;
-  } else {
-    delete node['start'];
-  }
-  if (end) {
-    node['end'] = end;
-  } else {
-    delete node['end'];
-  }
-  for (var name in node) {
-    if (node.hasOwnProperty(name)) {
-      var prop = node[name];
-      if (prop && typeof prop === 'object') {
-        Interpreter.stripLocations_(prop, start, end);
-      }
-    }
-  }
-};
-
-/**
  * Is the current state directly being called with as a construction with 'new'.
  * @return {boolean} True if 'new foo()', false if 'foo()'.
  */
@@ -2746,16 +2723,11 @@ Interpreter.prototype['stepCallExpression'] = function(stack, state, node) {
         // eval(Array) -> Array
         state.value = code;
       } else {
-        try {
-          var ast = acorn.parse(String(code), Interpreter.PARSE_OPTIONS);
-        } catch (e) {
-          // Acorn threw a SyntaxError.  Rethrow as a trappable error.
-          this.throwException(this.SYNTAX_ERROR, 'Invalid code: ' + e.message);
-        }
+        code = String(code);
+        var ast = this.parse(code);
         var evalNode = new Interpreter.Node;
         evalNode['type'] = 'EvalProgram_';
         evalNode['body'] = ast['body'];
-        Interpreter.stripLocations_(evalNode, node['start'], node['end']);
         // Update current scope with definitions in eval().
         var scope = new Interpreter.Scope(state.scope);
         this.populateScope_(ast, scope);
