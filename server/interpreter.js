@@ -1425,6 +1425,7 @@ Interpreter.prototype.createFunctionFromAST = function(node, scope, source) {
   func.node = node;
   this.setProperty(func, 'length', func.node['params'].length,
       Interpreter.READONLY_DESCRIPTOR);
+  func.source = source.substring(node['start'], node['end']);
   // Record the full original source on the function node since a function call
   // can move execution from one source to another.
   node['source'] = source;
@@ -1446,6 +1447,8 @@ Interpreter.prototype.createNativeFunction =
     function(name, nativeFunc, legalConstructor) {
   var func = new this.Function;
   func.nativeFunc = nativeFunc;
+  var surname = name.replace(/^.*\./, '');
+  func.source = 'function ' + surname + '() { [native code] }';
   nativeFunc.id = name;
   this.setProperty(func, 'length', nativeFunc.length,
       Interpreter.READONLY_DESCRIPTOR);
@@ -1466,6 +1469,8 @@ Interpreter.prototype.createNativeFunction =
 Interpreter.prototype.createAsyncFunction = function(name, asyncFunc) {
   var func = new this.Function;
   func.asyncFunc = asyncFunc;
+  var surname = name.replace(/^.*\./, '');
+  func.source = 'function ' + surname + '() { [native async code] }';
   asyncFunc.id = name;
   this.setProperty(func, 'length', asyncFunc.length,
       Interpreter.READONLY_DESCRIPTOR);
@@ -2250,9 +2255,7 @@ Interpreter.prototype.installTypes = function() {
     // a function declaration; ES6 corrects this by also allowing
     // function expressions (plus generators, classes, arrow functions,
     // methods etc...) - but in any case it should look like source code.
-    //
-    // TODO: return source code
-    return 'function /*name*/ (/* args */) {/* body */}';
+    return this.source || 'function() { [unknown] }';
   };
 
   /**
