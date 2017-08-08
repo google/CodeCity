@@ -145,7 +145,7 @@ Interpreter.prototype.uptime = function() {
 /**
  * Return a monotonically increasing count of milliseconds since this
  * Interpreter instance was created.  In the event of an interpreter
- * being serialized / deserialized, it is epxected that after
+ * being serialized / deserialized, it is expected that after
  * deserialization that this will continue from where it left off
  * before serialization.
  * @return {number} Elapsed total time in milliseconds.
@@ -320,6 +320,7 @@ Interpreter.prototype.run = function(continuous) {
       try {
         var nextState = this.stepFunctions_[node['type']](stack, state, node);
       } catch (e) {
+        nextState = undefined;
         // Eat any step errors.  They have been thrown on the stack.
         if (e !== Interpreter.STEP_ERROR) {
           // Uh oh.  This is a real error in the interpreter.  Rethrow.
@@ -2434,7 +2435,7 @@ Interpreter.prototype.installTypes = function() {
         Interpreter.READONLY_NONENUMERABLE_DESCRIPTOR);
     intrp.setProperty(this, 'multiline', nativeRegexp.multiline,
         Interpreter.READONLY_NONENUMERABLE_DESCRIPTOR);
-};
+  };
 
   /**
    * Class for an error object
@@ -3084,7 +3085,7 @@ Interpreter.prototype['stepLogicalExpression'] = function(stack, state, node) {
   if (!state.doneRight_ &&
       ((node['operator'] === '&&' && state.value) ||
       (node['operator'] === '||' && !state.value))) {
-    // No shortcircuit this time.
+    // No short-circuit this time.
     state.doneRight_ = true;
     return new Interpreter.State(node['right'], state.scope);
   }
