@@ -2795,6 +2795,7 @@ Interpreter.prototype['stepCallExpression'] = function(stack, state, node) {
         // Update current scope with definitions in eval().
         var scope = new Interpreter.Scope(state.scope);
         this.populateScope_(ast, scope, code);
+        this.value = undefined;  // Default value if no code.
         return new Interpreter.State(evalNode, scope);
       }
     } else if (func.nativeFunc) {
