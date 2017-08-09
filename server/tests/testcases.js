@@ -473,7 +473,7 @@ module.exports = [
       }
 
       // Make sure we didn't wipe everything!
-      if (Object.getOwnPropertyNames(a).length !== 3) {
+      if (Object.getOwnPropertyNames(a).length !== 4) {
         throw Error('Setting .length == 0 removed some non-index properties');
       }
       'OK';
