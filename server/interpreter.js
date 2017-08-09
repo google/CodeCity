@@ -701,9 +701,8 @@ Interpreter.prototype.initFunction = function(scope) {
     state.funcThis_ = thisArg;
     // Bind any provided arguments.
     state.arguments_ = [];
-    if (args) {
-      // TODO(cpcallen): this should probably accept array-like object too.
-      if (args instanceof thisInterpreter.Array) {
+    if (args !== null && args !== undefined) {
+      if (args instanceof thisInterpreter.Object) {
         state.arguments_ = thisInterpreter.pseudoToNative(args);
       } else {
         thisInterpreter.throwException(thisInterpreter.TYPE_ERROR,
