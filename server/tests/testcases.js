@@ -468,13 +468,13 @@ module.exports = [
           continue;
         }
         if (String(key >>> 0) === key && (key >>> 0) !== 0xffffffff) {
-          throw Error('Setting a.lengh = 0 failed to remove property ' + key);
+          throw Error('Setting a.length = 0 failed to remove property ' + key);
         }
       }
 
       // Make sure we didn't wipe everything!
-      if (Object.getOwnPropertyNames(a).length !== 3) {
-        throw Error('Setting .lengh == 0 removed some non-index properties');
+      if (Object.getOwnPropertyNames(a).length !== 4) {
+        throw Error('Setting .length == 0 removed some non-index properties');
       }
       'OK';
     } catch (e) {

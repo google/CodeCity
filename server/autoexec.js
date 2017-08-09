@@ -471,7 +471,7 @@ Object.defineProperty(Array.prototype, 'sort',
           changes++;
         }
       }
-      if (changes <= 1) break;
+      if (!changes) break;
     }
     return this;
   }

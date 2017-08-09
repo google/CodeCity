@@ -19,7 +19,7 @@
     function parseButton() {
       myInterpreter = new Interpreter();
       var wrapper = function(text) {
-        return alert(text);
+        return alert(arguments.length ? text : '');
       };
       myInterpreter.addVariableToScope(myInterpreter.global, 'alert',
           myInterpreter.createNativeFunction('alert', wrapper));
