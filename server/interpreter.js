@@ -2301,6 +2301,8 @@ Interpreter.prototype.installTypes = function() {
   intrp.Array = function(proto) {
     intrp.Object.call(/** @type {?} */(this),
         (proto === undefined ? intrp.ARRAY : proto));
+    this.notConfigurable.add('length');
+    this.notEnumerable.add('length');
     this.properties.length = 0;
   };
 
