@@ -96,7 +96,7 @@ Interpreter.NONENUMERABLE_DESCRIPTOR = {
  * Property descriptor of non-enumerable, non-configurable properties.
  */
 Interpreter.NONENUMERABLE_NONCONFIGURABLE_DESCRIPTOR = {
-  configurable: true,
+  configurable: false,
   enumerable: false,
   writable: true
 };
@@ -1650,7 +1650,7 @@ Interpreter.prototype.setProperty = function(obj, name, value, opt_descriptor) {
     var i;
     if (name === 'length') {
       // Delete elements if length is smaller.
-      var value = Interpreter.legalArrayLength(value);
+      value = Interpreter.legalArrayLength(value);
       if (isNaN(value)) {
         this.throwException(this.RANGE_ERROR, 'Invalid array length');
       }
@@ -2301,9 +2301,8 @@ Interpreter.prototype.installTypes = function() {
   intrp.Array = function(proto) {
     intrp.Object.call(/** @type {?} */(this),
         (proto === undefined ? intrp.ARRAY : proto));
-    this.notConfigurable.add('length');
-    this.notEnumerable.add('length');
-    this.properties.length = 0;
+    intrp.setProperty(this, 'length', 0,
+                      Interpreter.NONENUMERABLE_NONCONFIGURABLE_DESCRIPTOR);
   };
 
   intrp.Array.prototype = Object.create(intrp.Object.prototype);
