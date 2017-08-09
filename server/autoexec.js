@@ -24,7 +24,6 @@
 'use strict';
 
 var autoexec = `
-try {
 
 // Global functions.
 var eval = new 'eval';
@@ -523,10 +522,6 @@ Object.defineProperty(String.prototype, 'replace',
     return str;
   }
 });
-
-} catch (e) {
-  alert('Uncaught ' + String(e) + '\\n' + e.stack);
-}
 
 // Must eval to undefined so subsequent evals will give undefined if
 // they have no completion value.

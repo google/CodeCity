@@ -180,7 +180,7 @@ Interpreter.prototype.createThread = function(runnable, runAt) {
   var source = '';
   if (typeof runnable === 'string') {
     source = runnable;
-    // Acorn may throw an Syntax error.
+    // Acorn may throw a Syntax error.
     runnable = acorn.parse(runnable, Interpreter.PARSE_OPTIONS);
     runnable['source'] = source;
   }
@@ -1840,18 +1840,17 @@ Interpreter.prototype.populateScope_ = function(node, scope, source) {
   } else if (node['type'] === 'ExpressionStatement') {
     return;  // Expressions can't contain variable/function declarations.
   }
-  var nodeClass = node['constructor'];
   for (var name in node) {
     var prop = node[name];
     if (prop && typeof prop === 'object') {
       if (Array.isArray(prop)) {
         for (var i = 0; i < prop.length; i++) {
-          if (prop[i] && prop[i].constructor === nodeClass) {
+          if (prop[i] && prop[i] instanceof Interpreter.Node) {
             this.populateScope_(prop[i], scope, source);
           }
         }
       } else {
-        if (prop.constructor === nodeClass) {
+        if (prop instanceof Interpreter.Node) {
           this.populateScope_(prop, scope, source);
         }
       }
@@ -1866,22 +1865,6 @@ Interpreter.prototype.populateScope_ = function(node, scope, source) {
 Interpreter.prototype.calledWithNew = function() {
   return this.thread.stateStack[this.thread.stateStack.length - 1].
       isConstructor;
-};
-
-/**
- * Returns the original source code for current state.
- * @param {number=} opt_index Optional index in stack to look from.
- * @return {string=} Source code or undefined if none.
- */
-Interpreter.prototype.getSource = function(opt_index) {
-  // TODO: Should this be on Thread instead of Interpreter?
-  var i = (opt_index === undefined) ?
-      this.thread.stateStack.length - 1 : opt_index;
-  var source;
-  while (source === undefined && i >= 0) {
-    source = this.thread.stateStack[i--].node['source'];
-  }
-  return source;
 };
 
 /**
@@ -1974,7 +1957,8 @@ Interpreter.prototype.executeException = function(error) {
     var name = this.getProperty(error, 'name').toString();
     var message = this.getProperty(error, 'message').valueOf();
     var type = errorTable[name] || Error;
-    realError = type(message);
+    realError = type(message + '\n' +
+                     this.getProperty(error, 'stack'));
   } else {
     realError = error.toString();
   }
@@ -2041,6 +2025,21 @@ Interpreter.Thread = function(id, state, runAt) {
 Interpreter.Thread.prototype.sleepUntil = function(resumeAt) {
   this.status = Interpreter.Thread.Status.SLEEPING;
   this.runAt = resumeAt;
+};
+
+/**
+ * Returns the original source code for current state.
+ * @param {number=} opt_index Optional index in stack to look from.
+ * @return {string=} Source code or undefined if none.
+ */
+Interpreter.Thread.prototype.getSource = function(opt_index) {
+  var i = (opt_index === undefined) ?
+      this.stateStack.length - 1 : opt_index;
+  var source;
+  while (source === undefined && i >= 0) {
+    source = this.stateStack[i--].node['source'];
+  }
+  return source;
 };
 
 /**
@@ -2459,14 +2458,13 @@ Interpreter.prototype.installTypes = function() {
     // Don't bother when building Error.prototype.
     if (intrp.thread) {
       var stack = [];
-      var lastStart;
       for (var i = intrp.thread.stateStack.length - 1; i >= 0; i--) {
         var state = intrp.thread.stateStack[i];
         var node = state.node;
         if (node['type'] !== 'CallExpression' && stack.length) {
           continue;
         }
-        var code = intrp.getSource(i);
+        var code = intrp.thread.getSource(i);
         var lineStart = code.lastIndexOf('\n', node['start']);
         if (lineStart === -1) {
           lineStart = 0;
@@ -2477,11 +2475,8 @@ Interpreter.prototype.installTypes = function() {
         if (lineEnd === -1) {
           lineEnd = code.length;
         }
-        if (lastStart !== lineStart) {
-          var line = code.substring(lineStart, lineEnd);
-          stack.push(line);
-          lastStart = lineStart;
-        }
+        var line = code.substring(lineStart, lineEnd);
+        stack.push(line);
       }
       intrp.setProperty(this, 'stack', stack.join('\n'),
           Interpreter.NONENUMERABLE_DESCRIPTOR);
@@ -2757,7 +2752,7 @@ Interpreter.prototype['stepCallExpression'] = function(stack, state, node) {
     var funcNode = func.node;
     if (funcNode) {
       var scope = new Interpreter.Scope(func.parentScope);
-      this.populateScope_(funcNode['body'], scope, this.getSource());
+      this.populateScope_(funcNode['body'], scope, this.thread.getSource());
       // Add all arguments.
       for (var i = 0; i < funcNode['params'].length; i++) {
         var paramName = funcNode['params'][i]['name'];
@@ -3074,7 +3069,7 @@ Interpreter.prototype['stepFunctionDeclaration'] =
 Interpreter.prototype['stepFunctionExpression'] = function(stack, state, node) {
   stack.pop();
   stack[stack.length - 1].value =
-      this.createFunctionFromAST(node, state.scope, this.getSource());
+      this.createFunctionFromAST(node, state.scope, this.thread.getSource());
 };
 
 Interpreter.prototype['stepIdentifier'] = function(stack, state, node) {
