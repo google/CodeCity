@@ -714,7 +714,7 @@ module.exports = [
     for(var key in o) {
       s = key;
     }
-    /^function.*\(.*\).*{.*}$/.test(s);
+    /^function.*\(.*\).*{[^]*}$/.test(s);
     `,
     expected: true },
 
@@ -724,7 +724,7 @@ module.exports = [
     for(var key in o) {
       s = key;
     }
-    /^function.*\(.*\).*{.*}$/.test(s);
+    /^function.*\(.*\).*{[^]*}$/.test(s);
     `,
     expected: true },
 

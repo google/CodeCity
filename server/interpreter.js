@@ -688,7 +688,7 @@ Interpreter.prototype.initFunction = function(scope) {
     // Acorn needs to parse code in the context of a function or else 'return'
     // statements will be syntax errors.
     var code = '(function(' + args + ') {' + code + '})';
-    var ast = this.parse(code);
+    var ast = thisInterpreter.parse(code);
     if (ast['body'].length !== 1) {
       // Function('a', 'return a + 6;}; {alert(1);');
       thisInterpreter.throwException(thisInterpreter.SYNTAX_ERROR,
