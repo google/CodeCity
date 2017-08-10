@@ -1539,6 +1539,39 @@ Interpreter.prototype.createAsyncFunction = function(name, asyncFunc) {
 };
 
 /**
+ * Call a native asynchronous function.
+ * @param {!Interpreter.State} state State for currently-being-invoked
+ *     CallExpression.  
+ */
+Interpreter.prototype.callAsyncFunction = function(state) {
+  var intrp = this;
+  var callbacks = (function(id) {
+    return [
+      function resolve(value) {
+        state.value = value;
+        intrp.threads[id].status = Interpreter.Thread.Status.READY;
+      },
+      function reject(value) {
+        // Create fake 'throw' state on appropriate thread.
+        // TODO(cpcallen): find a more elegant way to do this.
+        var thread = intrp.threads[id];
+        var node = new Interpreter.Node;
+        node['type'] = 'ThrowStatement';
+        var throwState = new Interpreter.State(node,
+            thread.stateStack[thread.stateStack.length - 1].scope);
+        throwState.done_ = true;
+        throwState.value = value;
+        thread.stateStack.push(throwState);
+        intrp.threads[id].status = Interpreter.Thread.Status.READY;
+      }];
+  })(this.thread.id);
+  // Prepend resolve, reject to arguments.
+  var args = callbacks.concat(state.arguments_);
+  this.thread.status = Interpreter.Thread.Status.BLOCKED;
+  state.func_.asyncFunc.apply(state.funcThis_, args);
+};
+
+/**
  * Converts from a native JS object or value to a JS interpreter object.
  * Can handle JSON-style values.
  * @param {*} nativeObj The native JS object to be converted.
@@ -2848,31 +2881,7 @@ Interpreter.prototype['stepCallExpression'] = function(stack, state, node) {
     } else if (func.nativeFunc) {
       state.value = func.nativeFunc.apply(state.funcThis_, state.arguments_);
     } else if (func.asyncFunc) {
-      var thisInterpreter = this;
-      var callbacks = (function(i) {
-        return [
-          function resolve(value) {
-            state.value = value;
-            thisInterpreter.threads[i].status = Interpreter.Thread.Status.READY;
-          },
-          function reject(value) {
-            // Create fake 'throw' state on appropriate thread.
-            // TODO(cpcallen): find a more elegant way to do this.
-            var thread = thisInterpreter.threads[i];
-            var node = new Interpreter.Node;
-            node['type'] = 'ThrowStatement';
-            var state = new Interpreter.State(node,
-                thread.stateStack[thread.stateStack.length - 1].scope);
-            state.done_ = true;
-            state.value = value;
-            thread.stateStack.push(state);
-            thisInterpreter.threads[i].status = Interpreter.Thread.Status.READY;
-          }];
-      })(this.thread.id);
-      // Prepend resolve, reject to arguments.
-      var args = callbacks.concat(state.arguments_);
-      this.thread.status = Interpreter.Thread.Status.BLOCKED;
-      func.asyncFunc.apply(state.funcThis_, args);
+      this.callAsyncFunction(state);
       return;
     } else {
       /* A child of a function is a function but is not callable.  For example:
