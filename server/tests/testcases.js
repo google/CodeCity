@@ -1104,8 +1104,49 @@ module.exports = [
       e.name;
     }
     `,
-    expected: 'TypeError'
-  },
+    expected: 'TypeError' },
+
+  { name: 'FunctionPrototypeApplyArgsUndefinedOrNull', src: `
+    var n = 0;
+    function f() { n += arguments.length; }
+    f.apply(undefined, undefined);
+    f.apply(undefined, null);
+    n;
+    `,
+    expected: 0 },
+
+  { name: 'FunctionPrototypeApplyArgsNonObject', src: `
+    try {
+      (function() {}).apply(undefined, 'not an object');
+    } catch (e) {
+      e.name;
+    }
+    `,
+    expected: 'TypeError' },
+
+  { name: 'FunctionPrototypeApplyArgsSparse', src: `
+    (function(a, b, c) {
+      if (!(1 in arguments)) {
+        throw Error("Argument 1 missing");
+      }
+      return a + c;
+    }).apply(undefined, [1, , 3]);
+    `,
+    expected: 4 },
+
+  { name: 'FunctionPrototypeApplyArgsArraylike', src: `
+    (function(a, b, c) {
+      return a + b + c;
+    }).apply(undefined, {0: 1, 1: 2, 2: 3, length: 3});
+    `,
+    expected: 6 },
+
+  { name: 'FunctionPrototypeApplyArgsNonArraylike', src: `
+    (function(a, b, c) {
+      return a + b + c;
+    }).apply(undefined, {0: 1, 1: 2, 2: 4});
+    `,
+    expected: NaN },  // Because undefined + undefined === NaN.
 
   /******************************************************************/
   // Array and Array.prototype
