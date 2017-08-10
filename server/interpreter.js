@@ -1516,7 +1516,8 @@ Interpreter.prototype.createNativeFunction =
 };
 
 /**
- * Create a new native asynchronous function.
+ * Create a new native asynchronous function.  Asynchronous native
+ * functions are presumed not to be legal constructors.
  * @param {string} Name of new function.
  * @param {!Function} asyncFunc JavaScript function.
  * @return {!Interpreter.prototype.Function} New function.
@@ -2848,15 +2849,30 @@ Interpreter.prototype['stepCallExpression'] = function(stack, state, node) {
       state.value = func.nativeFunc.apply(state.funcThis_, state.arguments_);
     } else if (func.asyncFunc) {
       var thisInterpreter = this;
-      var callback = (function(i) {
-        return function(value) {
-          state.value = value;
-          thisInterpreter.threads[i].status = Interpreter.Thread.Status.READY;
-        };
+      var callbacks = (function(i) {
+        return [
+          function resolve(value) {
+            state.value = value;
+            thisInterpreter.threads[i].status = Interpreter.Thread.Status.READY;
+          },
+          function reject(value) {
+            // Create fake 'throw' state on appropriate thread.
+            // TODO(cpcallen): find a more elegant way to do this.
+            var thread = thisInterpreter.threads[i];
+            var node = new Interpreter.Node;
+            node['type'] = 'ThrowStatement';
+            var state = new Interpreter.State(node,
+                thread.stateStack[thread.stateStack.length - 1].scope);
+            state.done_ = true;
+            state.value = value;
+            thread.stateStack.push(state);
+            thisInterpreter.threads[i].status = Interpreter.Thread.Status.READY;
+          }];
       })(this.thread.id);
-      var argsWithCallback = state.arguments_.concat(callback);
+      // Prepend resolve, reject to arguments.
+      var args = callbacks.concat(state.arguments_);
       this.thread.status = Interpreter.Thread.Status.BLOCKED;
-      func.asyncFunc.apply(state.funcThis_, argsWithCallback);
+      func.asyncFunc.apply(state.funcThis_, args);
       return;
     } else {
       /* A child of a function is a function but is not callable.  For example:
