@@ -1437,6 +1437,7 @@ Interpreter.prototype.initNetwork = function(scope) {
               intrp.createThreadForFuncCall(func, obj, [data]);
             }
           });
+
           socket.on('end', function() {
             console.log('Connection from ' + socket.remoteAddress + ' closed.');
             var func = intrp.getProperty(obj, 'onEnd');
@@ -1464,12 +1465,12 @@ Interpreter.prototype.initNetwork = function(scope) {
           // reason for failure.
           reject(new intrp.Error(intrp.ERROR, 'connectionListen failed'));
         });
-        
+
         server.on('close', function() {
           console.log('Done listening on port %s', port);
           delete intrp.listeners[port];
         });
-        
+
         server.listen(port);
       }));
 
@@ -2642,7 +2643,10 @@ Interpreter.prototype.installTypes = function() {
       for (var i = intrp.thread.stateStack.length - 1; i >= 0; i--) {
         var state = intrp.thread.stateStack[i];
         var node = state.node;
-        if (node['type'] !== 'CallExpression' && stack.length) {
+        // Always add the first state to the stack.
+        // Also add any call expression that is executing.
+        if (stack.length &&
+            !(node['type'] === 'CallExpression' && state.doneExec)) {
           continue;
         }
         var code = intrp.thread.getSource(i);
@@ -2925,8 +2929,8 @@ Interpreter.prototype['stepCallExpression'] = function(stack, state, node) {
     }
     state.doneArgs_ = true;
   }
-  if (!state.doneExec_) {
-    state.doneExec_ = true;
+  if (!state.doneExec) {
+    state.doneExec = true;
     var func = state.func_;
     // TODO(fraser): determine if this check is redundant; remove it or add
     // tests that depend on it.
