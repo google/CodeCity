@@ -1398,7 +1398,7 @@ Interpreter.prototype.initThreads = function(scope) {
 };
 
 /**
- * Initialize the networking subsystem API
+ * Initialize the networking subsystem API.
  * @param {!Interpreter.Scope} scope Global scope.
  */
 Interpreter.prototype.initNetwork = function(scope) {
@@ -2458,7 +2458,7 @@ Interpreter.prototype.installTypes = function() {
       }
     }
     return false;
-  }
+  };
 
   /**
    * Add a .prototype property to this function object, setting
