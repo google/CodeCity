@@ -23,7 +23,8 @@
  */
 'use strict';
 
-var acorn, net;
+var acorn = require('../third_party/acorn/acorn');
+var net = require('net');
 
 /**
  * Create a new interpreter.
@@ -3603,11 +3604,7 @@ Interpreter.prototype['stepWithStatement'] = function(stack, state, node) {
 Interpreter.prototype['stepWhileStatement'] =
     Interpreter.prototype['stepDoWhileStatement'];
 
-if (typeof module !== 'undefined') { // Node.js
-  net = require('net');
-  acorn = require('../third_party/acorn/acorn');
-  module.exports = Interpreter;
-}
+module.exports = Interpreter;
 
 ///////////////////////////////////////////////////////////////////////////////
 // AST Node
