@@ -1432,8 +1432,11 @@ Interpreter.prototype.initNetwork = function(scope) {
           // TODO(cpcallen): save socket (and new object) somewhere we
           // can find it later.
         });
-        server.listen(port);
-        console.log('Listening on port ' + port);
+        server.listen(port, function() {
+          var addr = server.address();
+          console.log('Listening on %s address %s port %s', addr.family,
+                      addr.address, addr.port);
+        });
         // TODO(cpcallen): save server somewhere we can find it later.
       }));
 };
