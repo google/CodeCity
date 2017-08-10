@@ -964,7 +964,7 @@ exports.testStartStop = async function(t) {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
   var intrp = new Interpreter;
-  var name = 'testStartStop';
+  var name = 'testStart';
   var src = `
       var x = 0;
       while (true) {
@@ -999,6 +999,7 @@ exports.testStartStop = async function(t) {
   }
 
   // Check that .stop() actually stops thing.
+  name = 'testStop';
   await snooze(10);
   var r = intrp.getValueFromScope(intrp.global, 'x');
   var expected = 2;
@@ -1015,7 +1016,7 @@ exports.testStartStop = async function(t) {
  * @param {!T} t The test runner object.
  */
 exports.testNetworking = async function(t) {
-  //  Run a test of the createServer() function.
+  //  Run a test of the connectionListen() function.
   var name = 'testConnectionListen';
   var src = `
       var data = '', conn = {};
