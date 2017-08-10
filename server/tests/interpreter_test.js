@@ -126,8 +126,10 @@ function runComplexTest(t, name, src, expected, initFunc, asyncFunc) {
  * end the test.  If resolve() is called the test will end normally
  * and the argument supplied will be compared with the expected value;
  * if reject() is called the test will instead be treated as a crash.
- * The caller can additionally supply callbacks to be run before
- * starting the user code and while the interpreter is running.
+ * The caller can additionally supply callbacks to be run before and
+ * after starting the user code; the latter may be an async function
+ * and will be awaited before awaiting the userland call to
+ * resolve/reject.
  * @param {!T} t The test runner object.
  * @param {string} name The name of the test.
  * @param {string} src The code to be evaled.
@@ -139,8 +141,9 @@ function runComplexTest(t, name, src, expected, initFunc, asyncFunc) {
  *     native functions into the interpreter.  initFunc is called
  *     with the interpreter instance to be configured as its
  *     parameter.
- * @param {Function(Interpreter)=} sideFunc Optional function to be
- *     called after the interpreter has been .start()ed.
+ * @param {Function(Interpreter)=} sideFunc Optional (optionally
+ *     async) function to be called after the interpreter has been
+ *     .start()ed.
  */
 async function runAsyncTest(t, name, src, expected, initFunc, sideFunc) {
   var intrp = new Interpreter;
@@ -164,7 +167,7 @@ async function runAsyncTest(t, name, src, expected, initFunc, sideFunc) {
     intrp.createThread(src);
     intrp.start();
     if (sideFunc) {
-      sideFunc(intrp);
+      await sideFunc(intrp);
     }
     result = await p;
   } catch (e) {
