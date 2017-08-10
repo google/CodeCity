@@ -1541,7 +1541,7 @@ Interpreter.prototype.createAsyncFunction = function(name, asyncFunc) {
 /**
  * Call a native asynchronous function.
  * @param {!Interpreter.State} state State for currently-being-invoked
- *     CallExpression.  
+ *     CallExpression.
  */
 Interpreter.prototype.callAsyncFunction = function(state) {
   var intrp = this;
