@@ -392,6 +392,13 @@ module.exports = [
     `,
     expected: true },
 
+  { name: 'arrayLengthPropertyDescriptor', src: `
+    var a = [1, 2, 3];
+    var pd = Object.getOwnPropertyDescriptor(a, 'length');
+    (pd.value === 3) && pd.writable && !pd.enumerable && !pd.configurable;
+    `,
+    expected: true },
+    
   { name: 'arrayLength', src: `
     try {
       var a;
