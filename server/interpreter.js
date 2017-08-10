@@ -1545,13 +1545,38 @@ Interpreter.prototype.createAsyncFunction = function(name, asyncFunc) {
  */
 Interpreter.prototype.callAsyncFunction = function(state) {
   var intrp = this;
+  var done = false;
+
+  /**
+   * Invariant check to verify it's safe to resolve or reject this
+   * async function call.  Blow up if the call has already been
+   * resolved/rejected, or if the thread does not appear to be in a
+   * plausible state.
+   * @param {!Number} id Thread ID for this async function call.
+   */
+  var check = function(id) {
+    if (done) {
+      throw Error('Async function resolved or rejected more than once');
+    }
+    done = true;
+    var thread = intrp.threads[id];
+    if (!(thread instanceof Interpreter.Thread) ||
+        thread.status !== Interpreter.Thread.Status.BLOCKED ||
+        thread.stateStack[thread.stateStack.length - 1].node.type !=
+        'CallExpression') {
+      throw Error('Async function thread state looks wrong');
+    }
+  };
+
   var callbacks = (function(id) {
     return [
       function resolve(value) {
+        check(id);
         state.value = value;
         intrp.threads[id].status = Interpreter.Thread.Status.READY;
       },
       function reject(value) {
+        check(id);
         // Create fake 'throw' state on appropriate thread.
         // TODO(cpcallen): find a more elegant way to do this.
         var thread = intrp.threads[id];
