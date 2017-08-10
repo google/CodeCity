@@ -773,24 +773,44 @@ exports.testLegalArrayIndexLength = function(t) {
  * @param {!T} t The test runner object.
  */
 exports.testAsync = function(t) {
-  var name ='testAsync';
-  var callback;
+  var resolve, reject, arg;
   var initFunc = function(intrp) {
-    var wrapper = function(cb) {
-      callback = cb;
+    var wrapper = function(res, rej, a) {
+      resolve = res;
+      reject = rej;
+      arg = a;
     };
-    intrp.addVariableToScope(intrp.global, 'pause',
-        intrp.createAsyncFunction('pause', wrapper));
+    intrp.addVariableToScope(intrp.global, 'async',
+        intrp.createAsyncFunction('async', wrapper));
   };
+
+  var name ='testAsyncResolve';
   var asyncFunc = function(intrp) {
-    callback();
+    resolve(arg);
   };
   var src = `
       'before';
-      pause();
+      if (async(42) !== 42) {
+        throw Error('Async arg / return error');
+      }
       'after';
   `;
   runComplexTest(t, name, src, 'after', initFunc, asyncFunc);
+
+  name ='testAsyncReject';
+  asyncFunc = function(intrp) {
+    reject('except');
+  };
+  src = `
+      try {
+        'before';
+        async();
+        'after';
+      } catch (e) {
+        e;
+      }
+  `;
+  runComplexTest(t, name, src, 'except', initFunc, asyncFunc);
 };
 
 /**
