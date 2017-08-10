@@ -120,6 +120,69 @@ function runComplexTest(t, name, src, expected, initFunc, asyncFunc) {
 }
 
 /**
+ * Run a (truly) asynchronous test of the interpreter.  A new
+ * interpreter instance is created for each test.  Special functions
+ * resolve() and reject() are inserted in the global scope; they will
+ * end the test.  If resolve() is called the test will end normally
+ * and the argument supplied will be compared with the expected value;
+ * if reject() is called the test will instead be treated as a crash.
+ * The caller can additionally supply callbacks to be run before
+ * starting the user code and while the interpreter is running.
+ * @param {!T} t The test runner object.
+ * @param {string} name The name of the test.
+ * @param {string} src The code to be evaled.
+ * @param {number|string|boolean|null|undefined} expected The expected
+ *     completion value.
+ * @param {Function(Interpreter)=} initFunc Optional function to be
+ *     called after creating new interpreter instance and running
+ *     autoexec but before running src.  Can be used to insert extra
+ *     native functions into the interpreter.  initFunc is called
+ *     with the interpreter instance to be configured as its
+ *     parameter.
+ * @param {Function(Interpreter)=} sideFunc Optional function to be
+ *     called after the interpreter has been .start()ed.
+ */
+async function runAsyncTest(t, name, src, expected, initFunc, sideFunc) {
+  var intrp = new Interpreter;
+  intrp.createThread(autoexec);
+  intrp.run();
+  if (initFunc) {
+    initFunc(intrp);
+  }
+
+  // Create promise to signal completion of test from within
+  // interpreter.  Awaiting p will block until resolve or reject is
+  // called.
+  var resolve, reject, result;
+  var p = new Promise(function(res, rej) { resolve = res; reject = rej; });
+  intrp.addVariableToScope(intrp.global, 'resolve',
+      intrp.createNativeFunction('resolve', resolve));
+  intrp.addVariableToScope(intrp.global, 'reject',
+      intrp.createNativeFunction('reject', reject));
+
+  try {
+    intrp.createThread(src);
+    intrp.start();
+    if (sideFunc) {
+      sideFunc(intrp);
+    }
+    result = await p;
+  } catch (e) {
+    t.crash(name, util.format('%s\n%s', src, e.stack));
+    return;
+  } finally {
+    intrp.stop();
+  }
+  var r = intrp.pseudoToNative(result);
+  if (Object.is(r, expected)) {
+    t.pass(name);
+  } else {
+    t.fail(name, util.format('%s\ngot: %s  want: %s', src,
+        String(r), String(expected)));
+  }
+}
+
+/**
  * Run the simple tests in testcases.js
  * @param {!T} t The test runner object.
  */
@@ -773,7 +836,7 @@ exports.testLegalArrayIndexLength = function(t) {
  * @param {!T} t The test runner object.
  */
 exports.testAsync = function(t) {
-  var resolve, reject, arg;
+  var resolve, reject, arg, name, asyncFunc;
   var initFunc = function(intrp) {
     var wrapper = function(res, rej, a) {
       resolve = res;
@@ -785,8 +848,8 @@ exports.testAsync = function(t) {
   };
 
   // Test ordinary return.
-  var name ='testAsyncResolve';
-  var asyncFunc = function(intrp) {
+  name = 'testAsyncResolve';
+  asyncFunc = function(intrp) {
     resolve(arg);
   };
   var src = `
@@ -948,54 +1011,30 @@ exports.testStartStop = async function(t) {
 };
   
 /**
- * Run a test of the createServer() function.
+ * Run tests of the networking subsystem.
  * @param {!T} t The test runner object.
  */
-exports.testConnectionListen = async function(t) {
+exports.testNetworking = async function(t) {
+  //  Run a test of the createServer() function.
   var name = 'testConnectionListen';
   var src = `
-      var data = '', server = {};
-      server.receive = function(d) {
+      var data = '', conn = {};
+      conn.receive = function(d) {
         data += d;
       };
-      server.end = function(d) {
-        done();
+      conn.end = function(d) {
+        resolve(data);
       };
-      connectionListen(8888, server);
+      connectionListen(8888, conn);
    `;
-
-  var intrp = new Interpreter;
-  intrp.createThread(autoexec);
-  intrp.run();
-  // Create promise to signal completion of test from within
-  // interpreter.  Awaiting p will block until done is called.
-  var done;
-  var p = new Promise(function(resolve, reject) { done = resolve; });
-  intrp.addVariableToScope(intrp.global, 'done',
-      intrp.createAsyncFunction('done', done));
-
-  // Fire up in-db server.
-  intrp.createThread(src);
-  intrp.start();
-
-  // Send some data to it.
-  var client = net.createConnection({ port: 8888 },
-      function() { //'connect' listener
-        client.write('foo');
-        client.write('bar');
-        client.end();
-      });
-
-  // Wait for server to report connection closed, then stop intrp.
-  await p;
-  intrp.stop();
-
-  var r = intrp.getValueFromScope(intrp.global, 'data');
-  var expected = 'foobar';
-  if (Object.is(r, expected)) {
-    t.pass(name);
-  } else {
-    t.fail(name, util.format('%s\ngot: %s  want: %s', src,
-        String(r), String(expected)));
-  }
+  var sideFunc = function() {
+    // Send some data to server.
+    var client = net.createConnection({ port: 8888 },
+        function() { //'connect' listener
+          client.write('foo');
+          client.write('bar');
+          client.end();
+        });
+  };
+  await runAsyncTest(t, name, src, 'foobar', undefined, sideFunc);
 };
