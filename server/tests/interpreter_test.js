@@ -784,19 +784,20 @@ exports.testAsync = function(t) {
         intrp.createAsyncFunction('async', wrapper));
   };
 
+  // Test ordinary return.
   var name ='testAsyncResolve';
   var asyncFunc = function(intrp) {
     resolve(arg);
   };
   var src = `
       'before';
-      if (async(42) !== 42) {
-        throw Error('Async arg / return error');
-      }
-      'after';
+      async();
+      'between';
+      async('af') + 'ter';
   `;
   runComplexTest(t, name, src, 'after', initFunc, asyncFunc);
 
+  // Test throwing an exception.
   name ='testAsyncReject';
   asyncFunc = function(intrp) {
     reject('except');
@@ -811,6 +812,26 @@ exports.testAsync = function(t) {
       }
   `;
   runComplexTest(t, name, src, 'except', initFunc, asyncFunc);
+
+  // Extra check to verify async function can't resolve/reject more
+  // than once without an asertion failure.
+  name ='testAsyncSafetyCheck';
+  var ok;
+  asyncFunc = function(intrp) {
+    resolve(ok);
+    // Call reject; this is expected to blow up.
+    try {
+      reject('foo');
+    } catch (e) {
+      ok = 'ok';
+    }
+  };
+  src = `
+     async();
+     async();
+  `;
+  runComplexTest(t, name, src, 'ok', initFunc, asyncFunc);
+  
 };
 
 /**
