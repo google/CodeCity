@@ -124,6 +124,13 @@ Interpreter.STEP_ERROR = {};
 Interpreter.SCOPE_REFERENCE = {};
 
 /**
+ * Unique symbol for indicating, when used as the value of the value
+ * parameter in calls to setProperty and friends, that the value
+ * should be taken from the property descriptor instead.
+ */
+Interpreter.VALUE_IN_DESCRIPTOR = {};
+
+/**
  * Parse a code string into an AST.
  * @param {string} str
  */
@@ -202,7 +209,7 @@ Interpreter.prototype.createThread = function(runnable, runAt) {
 
 /**
  * Create a new thread to execute a particular function call.
- * @param {!Interpreter.prototype.Function} fun Function to call.
+ * @param {!Interpreter.prototype.Function} func Function to call.
  * @param {Interpreter.Value} funcThis value of 'this' in function call.
  * @param {!Array<Interpreter.Value>} args Arguments to pass.
  * @param {number=} runAt Time at which thread should begin execution
@@ -326,7 +333,7 @@ Interpreter.prototype.step = function() {
  * - If only ZOMBIE threads remain, then zero is returned.
  * @return {number} See description.
  */
-Interpreter.prototype.run = function(continuous) {
+Interpreter.prototype.run = function() {
   var t;
   while ((t = this.schedule()) === 0) {
     var thread = this.thread;
@@ -482,7 +489,7 @@ Interpreter.prototype.initObject = function(scope) {
     // Return the provided object.
     return value;
   };
-  this.createNativeFunction('Object', wrapper, this.OBJECT, true);
+  this.createNativeFunction('Object', wrapper, true);
 
   /**
    * Checks if the provided value is null or undefined.
@@ -565,7 +572,8 @@ Interpreter.prototype.initObject = function(scope) {
     if (thisInterpreter.hasProperty(descriptor, 'value')) {
       nativeDescriptor.value = thisInterpreter.getProperty(descriptor, 'value');
     }
-    thisInterpreter.setProperty(obj, prop, ReferenceError, nativeDescriptor);
+    thisInterpreter.setProperty(obj, prop, Interpreter.VALUE_IN_DESCRIPTOR,
+                                nativeDescriptor);
     return obj;
   };
   this.createNativeFunction('Object.defineProperty', wrapper, false);
@@ -823,7 +831,7 @@ Interpreter.prototype.initArray = function(scope) {
       this.properties[i - 1] = this.properties[i];
     }
     this.properties.length--;
-    delete this.properties[thi.properties.length];
+    delete this.properties[this.properties.length];
     return value;
   };
   this.createNativeFunction('Array.prototype.shift', wrapper, false);
@@ -1419,13 +1427,17 @@ Interpreter.prototype.initNetwork = function(scope) {
           // Handle incoming code from clients.
           socket.on('data', function (data) {
             var func = intrp.getProperty(obj, 'receive');
-            intrp.createThreadForFuncCall(func, obj, [data]);
+            if (func instanceof intrp.Function) {
+              intrp.createThreadForFuncCall(func, obj, [data]);
+            }
           });
           
           socket.on('end', function () {
             console.log('Connection from ' + socket.remoteAddress + ' closed.');
             var func = intrp.getProperty(obj, 'end');
-            intrp.createThreadForFuncCall(func, obj, []);
+            if (func instanceof intrp.Function) {
+              intrp.createThreadForFuncCall(func, obj, []);
+            }
             // TODO(cpcallen): Don't fully close half-closed connection yet.
             socket.end();
           });
@@ -1438,7 +1450,7 @@ Interpreter.prototype.initNetwork = function(scope) {
                       addr.address, addr.port);
         });
         // TODO(cpcallen): save server somewhere we can find it later.
-      }));
+      }, false));
 };
 
 /**
@@ -1492,10 +1504,10 @@ Interpreter.prototype.createFunctionFromAST = function(node, scope, source) {
 
 /**
  * Create a new native function.
- * @param {string} Name of new function.
+ * @param {string} name Name of new function.
  * @param {!Function} nativeFunc JavaScript function.
  * @param {boolean} legalConstructor True if the function can be used as a
- *   constructor (e.g. escape), false if not (e.g. Array).
+ *     constructor (e.g. Array), false if not (e.g. escape).
  * @return {!Interpreter.prototype.Function} New function.
 */
 Interpreter.prototype.createNativeFunction =
@@ -1518,7 +1530,7 @@ Interpreter.prototype.createNativeFunction =
 /**
  * Create a new native asynchronous function.  Asynchronous native
  * functions are presumed not to be legal constructors.
- * @param {string} Name of new function.
+ * @param {string} name Name of new function.
  * @param {!Function} asyncFunc JavaScript function.
  * @return {!Interpreter.prototype.Function} New function.
  */
@@ -1552,7 +1564,7 @@ Interpreter.prototype.callAsyncFunction = function(state) {
    * async function call.  Blow up if the call has already been
    * resolved/rejected, or if the thread does not appear to be in a
    * plausible state.
-   * @param {!Number} id Thread ID for this async function call.
+   * @param {!number} id Thread ID for this async function call.
    */
   var check = function(id) {
     if (done) {
@@ -1770,8 +1782,9 @@ Interpreter.prototype.hasProperty = function(obj, name) {
  * Set a property value on a data object.
  * @param {!Interpreter.prototype.Object} obj Data object.
  * @param {Interpreter.Value} name Name of property.
- * @param {Interpreter.Value|ReferenceError} value New property value.
- *   Use ReferenceError if value is handled by descriptor instead.
+ * @param {Interpreter.Value} value New property value.  Use
+ *     Interpreter.VALUE_IN_DESCRIPTOR if value is handled by
+ *     descriptor instead.
  * @param {Object=} opt_descriptor Optional descriptor object.
  */
 Interpreter.prototype.setProperty = function(obj, name, value, opt_descriptor) {
@@ -1842,12 +1855,12 @@ Interpreter.prototype.setProperty = function(obj, name, value, opt_descriptor) {
     }
     if ('value' in opt_descriptor) {
       obj.properties[name] = opt_descriptor.value;
-    } else if (value !== ReferenceError) {
+    } else if (value !== Interpreter.VALUE_IN_DESCRIPTOR) {
       obj.properties[name] = value;
     }
   } else {
     // Set the property.
-    if (value === ReferenceError) {
+    if (value === Interpreter.VALUE_IN_DESCRIPTOR) {
       throw ReferenceError('Value not specified.');
     }
     // Determine the parent (possibly self) where the property is defined.
@@ -2138,7 +2151,7 @@ Interpreter.Thread.prototype.sleepUntil = function(resumeAt) {
 /**
  * Returns the original source code for current state.
  * @param {number=} opt_index Optional index in stack to look from.
- * @return {string=} Source code or undefined if none.
+ * @return {string|undefined} Source code or undefined if none.
  */
 Interpreter.Thread.prototype.getSource = function(opt_index) {
   var i = (opt_index === undefined) ?
