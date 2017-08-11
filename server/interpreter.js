@@ -2077,14 +2077,13 @@ Interpreter.prototype.throwException = function(value, opt_message) {
  */
 Interpreter.prototype.executeException = function(error) {
   // Search for a try statement.
-  do {
-    this.thread.stateStack.pop();
-    var state = this.thread.stateStack[this.thread.stateStack.length - 1];
+  for (var ss = this.thread.stateStack; ss.length > 0; ss.pop()) {
+    var state = ss[ss.length - 1];
     if (state.node['type'] === 'TryStatement') {
       state.throwValue = error;
       return;
     }
-  } while (state && state.node['type'] !== 'Program');
+  }
 
   // Throw a real error.
   var realError;
@@ -2614,6 +2613,9 @@ Interpreter.prototype.installTypes = function() {
           continue;
         }
         var code = intrp.thread.getSource(i);
+        if (code === undefined) {
+          continue;
+        }
         var lineStart = code.lastIndexOf('\n', node['start']);
         if (lineStart === -1) {
           lineStart = 0;
