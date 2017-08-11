@@ -1284,8 +1284,8 @@ Interpreter.prototype.initError = function(scope) {
   };
   this.createNativeFunction('Error', wrapper, true);
 
-  this.createNativeFunction('Error.prototype.toString', this.Error.prototype.toString,
-                            false);
+  this.createNativeFunction('Error.prototype.toString',
+                            this.Error.prototype.toString, false);
 
   var createErrorSubclass = function(name) {
     var prototype = new thisInterpreter.Error;
@@ -2027,9 +2027,7 @@ Interpreter.prototype.throwException = function(value, opt_message) {
     if (!(value === null || value instanceof this.Error)) {
       throw TypeError("Can't attach message to non-Error value");
     }
-    error = new this.Error(value);
-    this.setProperty(error, 'message', opt_message,
-        Interpreter.NONENUMERABLE_DESCRIPTOR);
+    error = new this.Error(value, opt_message);
   }
   this.executeException(error);
   // Abort anything related to the current step.
@@ -2269,10 +2267,11 @@ Interpreter.prototype.RegExp.prototype.populate = function(nativeRegexp) {
 
 /**
  * @param {Interpreter.prototype.Object=} proto
+ * @param {string=} message
  * @constructor
  * @extends {Interpreter.prototype.Object}
  */
-Interpreter.prototype.Error = function(proto) {
+Interpreter.prototype.Error = function(proto, message) {
   throw Error('Inner class constructor not callable on prototype');
 };
 /** @return {string} @override */
@@ -2560,10 +2559,15 @@ Interpreter.prototype.installTypes = function() {
    * @constructor
    * @extends{Interpreter.prototype.Error}
    * @param {Interpreter.prototype.Object=} proto Prototype object.
+   * @param {string=} message Optional message to be attached to error object.
    */
-  intrp.Error = function(proto) {
+  intrp.Error = function(proto, message) {
     intrp.Object.call(/** @type {?} */(this),
         (proto === undefined ? intrp.ERROR : proto));
+    if (message !== undefined) {
+      intrp.setProperty(this, 'message', message,
+                        Interpreter.NONENUMERABLE_DESCRIPTOR);
+    }
     // Construct a text-based stack.
     // Don't bother when building Error.prototype.
     if (intrp.thread) {
