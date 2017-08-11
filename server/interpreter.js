@@ -1401,15 +1401,17 @@ Interpreter.prototype.initThreads = function(scope) {
  */
 Interpreter.prototype.initNetwork = function(scope) {
   var intrp = this;
-  this.addVariableToScope(scope, 'connectionListen', this.createNativeFunction(
+  this.addVariableToScope(scope, 'connectionListen', this.createAsyncFunction(
       'connectionListen',
-      function(port, proto) {
+      function(resolve, reject, port, proto) {
         var options = {
           // TODO(cpcallen): (what is says:)
           // allowHalfOpen: true
         };
 
-        var server = net.createServer(options, function (socket) {
+        var server = net.Server(options);
+
+        server.on('connection', function (socket) {
           // TODO(cpcallen): Add localhost test here, like this - only
           // also allow IPV6 connections:
           // if (socket.remoteAddress != '127.0.0.1') {
@@ -1432,7 +1434,7 @@ Interpreter.prototype.initNetwork = function(scope) {
             }
           });
           
-          socket.on('end', function () {
+          socket.on('end', function() {
             console.log('Connection from ' + socket.remoteAddress + ' closed.');
             var func = intrp.getProperty(obj, 'end');
             if (func instanceof intrp.Function) {
@@ -1444,13 +1446,23 @@ Interpreter.prototype.initNetwork = function(scope) {
           // TODO(cpcallen): save socket (and new object) somewhere we
           // can find it later.
         });
-        server.listen(port, function() {
+
+        server.on('listening', function() {
           var addr = server.address();
           console.log('Listening on %s address %s port %s', addr.family,
                       addr.address, addr.port);
+          resolve();
         });
+
+        server.on('error', function() {
+          // TODO(cpcallen): attach additional information about
+          // reason for failure.
+          reject(new intrp.Error(intrp.ERROR, 'connectionListen failed'));
+        });
+        
+        server.listen(port);
         // TODO(cpcallen): save server somewhere we can find it later.
-      }, false));
+      }));
 };
 
 /**
@@ -1586,6 +1598,9 @@ Interpreter.prototype.callAsyncFunction = function(state) {
         check(id);
         state.value = value;
         intrp.threads[id].status = Interpreter.Thread.Status.READY;
+        if (intrp.running) {
+          intrp.start();
+        }
       },
       function reject(value) {
         check(id);
@@ -1600,6 +1615,9 @@ Interpreter.prototype.callAsyncFunction = function(state) {
         throwState.value = value;
         thread.stateStack.push(throwState);
         intrp.threads[id].status = Interpreter.Thread.Status.READY;
+        if (intrp.running) {
+          intrp.start();
+        }
       }];
   })(this.thread.id);
   // Prepend resolve, reject to arguments.
