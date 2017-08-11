@@ -810,6 +810,7 @@ module.exports = [
   { name: 'evalModifyEnclosing', src: `
     var n = 77.77;
     eval('n = 77.88');
+    n;
     `,
     expected: 77.88 },
 
