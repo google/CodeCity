@@ -1404,13 +1404,17 @@ Interpreter.prototype.initNetwork = function(scope) {
   this.addVariableToScope(scope, 'connectionListen', this.createAsyncFunction(
       'connectionListen',
       function(resolve, reject, port, proto) {
+        if ((typeof port !== 'number') || Math.floor(port) !== port ||
+            port < 0 || port > 0xffff) {
+          reject(new intrp.Error(intrp.TYPE_ERROR, 'invalid port'));
+          return;
+        }
+
         var options = {
           // TODO(cpcallen): (what is says:)
           // allowHalfOpen: true
         };
-
         var server = net.Server(options);
-
         server.on('connection', function (socket) {
           // TODO(cpcallen): Add localhost test here, like this - only
           // also allow IPV6 connections:
@@ -1433,7 +1437,6 @@ Interpreter.prototype.initNetwork = function(scope) {
               intrp.createThreadForFuncCall(func, obj, [data]);
             }
           });
-          
           socket.on('end', function() {
             console.log('Connection from ' + socket.remoteAddress + ' closed.');
             var func = intrp.getProperty(obj, 'end');
@@ -1443,6 +1446,7 @@ Interpreter.prototype.initNetwork = function(scope) {
             // TODO(cpcallen): Don't fully close half-closed connection yet.
             socket.end();
           });
+
           // TODO(cpcallen): save socket (and new object) somewhere we
           // can find it later.
         });

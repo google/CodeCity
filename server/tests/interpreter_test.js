@@ -1046,13 +1046,17 @@ exports.testNetworking = async function(t) {
   //  to rebind to port already in use.
   name = 'testConnectionListenThrows';
   src = `
-      try {
-        connectionListen(9999, {});
-        connectionListen(9999, {});
-      } catch (e) {
-        resolve('ok');
+      var ports = ['foo', {}, -1, 80.8, 9999, 65536];  // 9999 will be in use.
+      var fails = ports.length;
+      connectionListen(9999, {});
+      for (var i = 0; i < ports.length; i++) {
+        try {
+          connectionListen(ports[i], {});
+        } catch (e) {
+          fails--;
+        }
       }
-      resolve('failed to throw');
+      resolve(fails);
    `;
-  await runAsyncTest(t, name, src, 'ok');
+  await runAsyncTest(t, name, src, 0);
 };
