@@ -64,6 +64,8 @@ var Interpreter = function() {
   this.previousTime_ = 0;
   this.running = false;
   this.done = true;  // True if any non-ZOMBIE threads exist.
+  // Set up networking stuff:
+  this.listeners = {};
 };
 
 /**
@@ -1452,6 +1454,7 @@ Interpreter.prototype.initNetwork = function(scope) {
         });
 
         server.on('listening', function() {
+          intrp.listeners[port] = {proto: proto, server: server};
           var addr = server.address();
           console.log('Listening on %s address %s port %s', addr.family,
                       addr.address, addr.port);
@@ -1464,8 +1467,24 @@ Interpreter.prototype.initNetwork = function(scope) {
           reject(new intrp.Error(intrp.ERROR, 'connectionListen failed'));
         });
         
+        server.on('close', function() {
+          delete intrp.listeners[port];
+        });
+        
         server.listen(port);
-        // TODO(cpcallen): save server somewhere we can find it later.
+      }));
+
+  this.addVariableToScope(scope, 'connectionUnlisten', this.createAsyncFunction(
+      'connectionUnlisten',
+      function(resolve, reject, port, proto) {
+        if (!intrp.listeners.hasOwnProperty(port)) {
+          reject(new intrp.Error(intrp.TYPE_ERROR, 'invalid port'));
+          return;
+        }
+        var server = intrp.listeners[port].server;
+        server.close(function() {
+          resolve(undefined);
+        });
       }));
 };
 

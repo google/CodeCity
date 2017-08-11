@@ -1019,14 +1019,15 @@ exports.testStartStop = async function(t) {
  * @param {!T} t The test runner object.
  */
 exports.testNetworking = async function(t) {
-  //  Run a test of the connectionListen() function.
-  var name = 'testConnectionListen';
+  //  Run a test of the connectionListen() and connectionUnlisten functions.
+  var name = 'testConnectionListenUnlisten';
   var src = `
       var data = '', conn = {};
       conn.receive = function(d) {
         data += d;
       };
       conn.end = function(d) {
+        connectionUnlisten(8888);
         resolve(data);
       };
       connectionListen(8888, conn);
@@ -1043,15 +1044,38 @@ exports.testNetworking = async function(t) {
   await runAsyncTest(t, name, src, 'foobar', undefined, sideFunc);
 
   //  Check to make sure that connectionListen() throws if attempting
-  //  to rebind to port already in use.
+  //  to bind to an invalid port or rebind a port already in use.
   name = 'testConnectionListenThrows';
   src = `
       var ports = ['foo', {}, -1, 80.8, 9999, 65536];  // 9999 will be in use.
       var fails = ports.length;
+      try {
+        connectionListen(9999, {});
+        for (var i = 0; i < ports.length; i++) {
+          try {
+            connectionListen(ports[i], {});
+          } catch (e) {
+            fails--;
+          }
+        }
+      } finally {
+        connectionUnlisten(9999);
+      }
+      resolve(fails);
+   `;
+  await runAsyncTest(t, name, src, 0);
+
+  //  Check to make sure that connectionUnlisten() throws if attempting
+  //  to unbind an invalid or not / no longer bound port.
+  name = 'testConnectionUnlistenThrows';
+  src = `
+      var ports = ['foo', {}, -1, 80.8, 9999, 65536];
+      var fails = ports.length;
       connectionListen(9999, {});
+      connectionUnlisten(9999, {});
       for (var i = 0; i < ports.length; i++) {
         try {
-          connectionListen(ports[i], {});
+          connectionUnlisten(ports[i], {});
         } catch (e) {
           fails--;
         }
