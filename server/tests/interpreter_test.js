@@ -1041,4 +1041,18 @@ exports.testNetworking = async function(t) {
         });
   };
   await runAsyncTest(t, name, src, 'foobar', undefined, sideFunc);
+
+  //  Check to make sure that connectionListen() throws if attempting
+  //  to rebind to port already in use.
+  name = 'testConnectionListenThrows';
+  src = `
+      try {
+        connectionListen(9999, {});
+        connectionListen(9999, {});
+      } catch (e) {
+        resolve('ok');
+      }
+      resolve('failed to throw');
+   `;
+  await runAsyncTest(t, name, src, 'ok');
 };
