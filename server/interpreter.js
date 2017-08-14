@@ -1404,19 +1404,14 @@ Interpreter.prototype.initThreads = function(scope) {
 Interpreter.prototype.initNetwork = function(scope) {
   var intrp = this;
   this.addVariableToScope(scope, 'connectionListen', this.createAsyncFunction(
-      'connectionListen',
-      function(resolve, reject, port, proto) {
+      'connectionListen', function(resolve, reject, port, proto) {
         if ((typeof port !== 'number') || Math.floor(port) !== port ||
             port < 0 || port > 0xffff) {
           reject(new intrp.Error(intrp.TYPE_ERROR, 'invalid port'));
           return;
         }
 
-        var options = {
-          // TODO(cpcallen): (what is says:)
-          // allowHalfOpen: true
-        };
-        var server = net.Server(options);
+        var server = net.Server(/* { allowHalfOpen: true } */);
         server.on('connection', function (socket) {
           // TODO(cpcallen): Add localhost test here, like this - only
           // also allow IPV6 connections:
@@ -1428,20 +1423,24 @@ Interpreter.prototype.initNetwork = function(scope) {
           // }
           console.log('Connection from ' + socket.remoteAddress);
 
-          // Create new object from proto.
+          // Create new object from proto and call onConnect.
           var obj = new intrp.Object(proto);
           obj.socket = socket;
+          var func = intrp.getProperty(obj, 'onConnect');
+          if (func instanceof intrp.Function) {
+            intrp.createThreadForFuncCall(func, obj, []);
+          }
 
-          // Handle incoming code from clients.
+          // Handle incoming data from clients.
           socket.on('data', function (data) {
-            var func = intrp.getProperty(obj, 'receive');
+            var func = intrp.getProperty(obj, 'onReceive');
             if (func instanceof intrp.Function) {
               intrp.createThreadForFuncCall(func, obj, [data]);
             }
           });
           socket.on('end', function() {
             console.log('Connection from ' + socket.remoteAddress + ' closed.');
-            var func = intrp.getProperty(obj, 'end');
+            var func = intrp.getProperty(obj, 'onEnd');
             if (func instanceof intrp.Function) {
               intrp.createThreadForFuncCall(func, obj, []);
             }
@@ -1449,8 +1448,8 @@ Interpreter.prototype.initNetwork = function(scope) {
             socket.end();
           });
 
-          // TODO(cpcallen): save socket (and new object) somewhere we
-          // can find it later.
+          // TODO(cpcallen): save new object somewhere we can find it
+          // later (when we want to obtain list of connected objects).
         });
 
         server.on('listening', function() {
@@ -1468,6 +1467,7 @@ Interpreter.prototype.initNetwork = function(scope) {
         });
         
         server.on('close', function() {
+          console.log('Done listening on port %s', port);
           delete intrp.listeners[port];
         });
         
@@ -1475,8 +1475,7 @@ Interpreter.prototype.initNetwork = function(scope) {
       }));
 
   this.addVariableToScope(scope, 'connectionUnlisten', this.createAsyncFunction(
-      'connectionUnlisten',
-      function(resolve, reject, port, proto) {
+      'connectionUnlisten', function(resolve, reject, port, proto) {
         if (!intrp.listeners.hasOwnProperty(port)) {
           reject(new intrp.Error(intrp.TYPE_ERROR, 'invalid port'));
           return;
@@ -1485,6 +1484,22 @@ Interpreter.prototype.initNetwork = function(scope) {
         server.close(function() {
           resolve(undefined);
         });
+      }));
+
+  this.addVariableToScope(scope, 'connectionWrite', this.createNativeFunction(
+      'connectionWrite', function(obj, data) {
+        if (!(obj instanceof intrp.Object) || !obj.socket) {
+          intrp.throwException(intrp.TYPE_ERROR, 'object is not connected');
+        }
+        obj.socket.write(data);
+      }));
+
+  this.addVariableToScope(scope, 'connectionClose', this.createNativeFunction(
+      'connectionClose', function(obj, data) {
+        if (!(obj instanceof intrp.Object) || !obj.socket) {
+          intrp.throwException(intrp.TYPE_ERROR, 'object is not connected');
+        }
+        obj.socket.end(data);
       }));
 };
 
