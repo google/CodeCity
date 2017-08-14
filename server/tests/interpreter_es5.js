@@ -25,4 +25,4 @@
 'use strict';
 
 const fs = require('fs');
-module.exports = fs.readFileSync('startup/00_es5.js', 'utf8')
+module.exports = fs.readFileSync('startup/core_00_es5.js', 'utf8');

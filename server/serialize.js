@@ -23,10 +23,15 @@
  */
 'use strict';
 
-var Interpreter;
+var Interpreter = require('./interpreter');
 
 var Serializer = {};
 
+/**
+ * Deserialize the provided JSON-compatible object into an interpreter.
+ * @param {!Object} JSON-compatible object.
+ * @param {!Interpreter} intrp JS-Interpreter instance.
+ */
 Serializer.deserialize = function(json, intrp) {
   function decodeValue(value) {
     if (value && typeof value === 'object') {
@@ -148,6 +153,11 @@ Serializer.deserialize = function(json, intrp) {
   }
 };
 
+/**
+ * Serialize the provided interpreter.
+ * @param {!Interpreter} intrp JS-Interpreter instance.
+ * @return {!Object} JSON-compatible object.
+ */
 Serializer.serialize = function(intrp) {
   function encodeValue(value) {
     if (value && (typeof value === 'object' || typeof value === 'function')) {
@@ -251,7 +261,12 @@ Serializer.serialize = function(intrp) {
   return json;
 };
 
-// Recursively search the stack to find all non-primitives.
+/**
+ * Recursively search the stack to find all non-primitives.
+ * @param {*} node JavaScript value to search.
+ * @param {!Array<!Object>} objectList Array to add objects to.
+ * @param {!Array<string>} skipList List of properties not to spider.
+ */
 Serializer.objectHunt_ = function(node, objectList, skipList) {
   if (node && (typeof node === 'object' || typeof node === 'function')) {
     if (objectList.indexOf(node) !== -1) {
@@ -312,7 +327,4 @@ Serializer.getTypesSerialize_ = function (intrp) {
   return map;
 };
 
-if (typeof module !== 'undefined') {  // Node.js
-  Interpreter = require('./interpreter');
-  module.exports = Serializer;
-}
+module.exports = Serializer;

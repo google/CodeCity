@@ -34,6 +34,12 @@ var CodeCity = {};
 CodeCity.databaseDirectory = '';
 CodeCity.interpreter = null;
 
+/**
+ * Start a running instance of Code City.  May be called on a command line.
+ * @param {string=} opt_databaseDirectory Directory containing either a .city
+ * database or startup files.  If not present, look for the directory
+ * as a command line parameter.
+ */
 CodeCity.startup = function(opt_databaseDirectory) {
   // process.argv is a list containing: ['node', 'codecity.js', 'databaseDir']
   CodeCity.databaseDirectory = opt_databaseDirectory || process.argv[2];
@@ -66,7 +72,7 @@ CodeCity.startup = function(opt_databaseDirectory) {
                 CodeCity.databaseDirectory);
     var fileCount = 0;
     for (var i = 0; i < files.length; i++) {
-      if (files[i].match(/\.js$/)) {
+      if (files[i].match(/^(core|test).*\.js$/)) {
         var filename = path.join(CodeCity.databaseDirectory, files[i]);
         var contents = CodeCity.loadFile(filename);
         console.log('Loading startup file %s', filename);
@@ -105,6 +111,11 @@ CodeCity.startup = function(opt_databaseDirectory) {
   CodeCity.interpreter.start();
 };
 
+/**
+ * Open a file and read its contents.  Die if there's an error.
+ * @param {string} filename
+ * @return {string} File contents.
+ */
 CodeCity.loadFile = function(filename) {
   // Load the specified file from disk.
   try {
@@ -116,6 +127,11 @@ CodeCity.loadFile = function(filename) {
   }
 };
 
+/**
+ * Save the database to disk.
+ * @param {boolean} sync True if Code City intends to shutdown afterwards.
+ * False if Code City is running this in the background.
+ */
 CodeCity.checkpoint = function(sync) {
   console.log('Checkpoint!');
   try {
@@ -137,15 +153,26 @@ CodeCity.checkpoint = function(sync) {
   fs.writeFileSync(filename, text);
 };
 
+/**
+ * Shutdown Code City.  Checkpoint the database before terminating.
+ */
 CodeCity.shutdown = function() {
   CodeCity.checkpoint(true);
   process.exit(0);
 };
 
-CodeCity.log = function(value) {
-  console.log(value);
+/**
+ * Print one line to the log.  Allows for interpolated strings.
+ * @param {...*} var_args Arbitrary arguments for console.log.
+ */
+CodeCity.log = function(var_args) {
+  console.log.apply(console.log, arguments);
 };
 
+/**
+ * Initialize user-callable system functions.
+ * These are not part of any JavaScript standard.
+ */
 CodeCity.initSystemFunctions = function() {
   var intrp = CodeCity.interpreter;
   intrp.createNativeFunction('$.system.log', CodeCity.log, false);
@@ -153,6 +180,8 @@ CodeCity.initSystemFunctions = function() {
   intrp.createNativeFunction('$.system.shutdown', CodeCity.shutdown, false);
 };
 
+// If this file is executed form a command line, startup Code City.
+// Otherwise, if it is required as a library, do nothing.
 if (require.main === module) {
   CodeCity.startup();
   // Call checkpoint on server shutdown signal.
