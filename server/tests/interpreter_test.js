@@ -1031,17 +1031,20 @@ exports.testNetworking = async function(t) {
         resolve(data);
       };
       connectionListen(8888, conn);
+      send();
    `;
-  var sideFunc = function() {
-    // Send some data to server.
-    var client = net.createConnection({ port: 8888 },
-        function() { //'connect' listener
-          client.write('foo');
-          client.write('bar');
-          client.end();
-        });
+  var initFunc = function(intrp) {
+    intrp.addVariableToScope(intrp.global, 'send', intrp.createNativeFunction(
+        'send', function() {
+          // Send some data to server.
+          var client = net.createConnection({ port: 8888 }, function() {
+            client.write('foo');
+            client.write('bar');
+            client.end();
+          });
+        }));
   };
-  await runAsyncTest(t, name, src, 'foobar', undefined, sideFunc);
+  await runAsyncTest(t, name, src, 'foobar', initFunc);
 
   //  Check to make sure that connectionListen() throws if attempting
   //  to bind to an invalid port or rebind a port already in use.
