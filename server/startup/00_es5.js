@@ -18,12 +18,10 @@
  */
 
 /**
- * @fileoverview Code to start up a JavaScript environment.
+ * @fileoverview Polyfills to bring the server's partial JavaScript
+ * implementation up to JavaScript 5.1 (or close to it).
  * @author fraser@google.com (Neil Fraser)
  */
-'use strict';
-
-var autoexec = `
 
 // Global functions.
 var eval = new 'eval';
@@ -522,12 +520,3 @@ Object.defineProperty(String.prototype, 'replace',
     return str;
   }
 });
-
-// Must eval to undefined so subsequent evals will give undefined if
-// they have no completion value.
-undefined;
-`;
-
-if (typeof module !== 'undefined') { // Node.js
-  module.exports = autoexec;
-}

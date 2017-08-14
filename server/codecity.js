@@ -30,71 +30,99 @@ const path = require('path');
 const Interpreter = require('./interpreter');
 const Serializer = require('./serialize');
 
-var databaseDirectory;
-var interpreter;
+var CodeCity = {};
+CodeCity.databaseDirectory = '';
+CodeCity.interpreter = null;
 
-function startup() {
+CodeCity.startup = function(opt_databaseDirectory) {
   // process.argv is a list containing: ['node', 'codecity.js', 'databaseDir']
-  databaseDirectory = process.argv[2];
+  CodeCity.databaseDirectory = opt_databaseDirectory || process.argv[2];
 
   // Check that the directory was specified and exists.
   try {
-    var files = fs.readdirSync(databaseDirectory);
+    var files = fs.readdirSync(CodeCity.databaseDirectory);
   } catch (e) {
-    console.log('Database not found.\nUsage: node ' + process.argv[1] +
-                ' <DB directory>');
+    console.error('Database directory not found.\nUsage: node %s <DB directory>',
+                  process.argv[1]);
+    if (CodeCity.databaseDirectory) {
+      console.info(e);
+    }
     process.exit(1);
   }
 
   // Find the most recent database file.
   files.sort();
   for (var i = files.length - 1; i >= 0; i--) {
-    if (files[i].match(/^\d{4}-\d\d-\d\dT\d\d\.\d\d\.\d\d(\.\d{1-3})?Z?\.city$/)) {
+    if (files[i].match(/^\d{4}-\d\d-\d\dT\d\d\.\d\d\.\d\d(\.\d{1,3})?Z?\.city$/)) {
       break;
     }
   }
-  if (i === -1) {
-    console.log('Unable to find database file in ' + databaseDirectory);
-    process.exit(1);
-  }
-
-  // Load the database from disk.
-  var filename = path.join(databaseDirectory, files[i]);
-  try {
-    var contents = fs.readFileSync(filename, 'utf8');
-  } catch (e) {
-    console.log('Unable to open database file: ' + filename +
-                '\nCheck permissions.');
-    process.exit(1);
-  }
-
-  // Convert from text to JSON.
-  try {
-    contents = JSON.parse(contents);
-  } catch (e) {
-    console.log('Syntax error in parsing JSON: ' + filename);
-    process.exit(1);
-  }
-
   // Load the interpreter.
-  interpreter = new Interpreter();
-  Serializer.deserialize(contents, interpreter);
-  console.log('Database loaded: ' + filename);
+  CodeCity.interpreter = new Interpreter();
+  CodeCity.initSystemFunctions();
+  if (i === -1) {
+    // Database not found, load one or more startup files instead.
+    console.log('Unable to find database file in %s, looking for startup file(s) instead.',
+                CodeCity.databaseDirectory);
+    var fileCount = 0;
+    for (var i = 0; i < files.length; i++) {
+      if (files[i].match(/\.js$/)) {
+        var filename = path.join(CodeCity.databaseDirectory, files[i]);
+        var contents = CodeCity.loadFile(filename);
+        console.log('Loading startup file %s', filename);
+        CodeCity.interpreter.createThread(contents);
+        fileCount++;
+      }
+    }
+    if (fileCount === 0) {
+      console.error('Unable to find startup file(s) in %s',
+                    CodeCity.databaseDirectory);
+      process.exit(1);
+    }
+    console.log('Loaded %d startup file(s).', fileCount);
+  } else {
+    var filename = path.join(CodeCity.databaseDirectory, files[i]);
+    var contents = CodeCity.loadFile(filename);
+
+    // Convert from text to JSON.
+    try {
+      contents = JSON.parse(contents);
+    } catch (e) {
+      console.error('Syntax error in parsing JSON: %s', filename);
+      console.info(e);
+      process.exit(1);
+    }
+
+    Serializer.deserialize(contents, CodeCity.interpreter);
+    console.log('Database loaded: %s', filename);
+  }
 
   // Checkpoint at regular intervals.
   // TODO: Let the interval be configurable from the database.
-  setInterval(checkpoint, 60 * 1000);
+  setInterval(CodeCity.checkpoint, 60 * 1000);
 
-  interpreter.start();
-}
+  console.log('Load complete.  Starting Code City.');
+  CodeCity.interpreter.start();
+};
 
-function checkpoint(callback) {
-  console.log('Checkpoint started.');
+CodeCity.loadFile = function(filename) {
+  // Load the specified file from disk.
   try {
-    interpreter.stop();
-    var json = Serializer.serialize(interpreter);
+    return fs.readFileSync(filename, 'utf8');
+  } catch (e) {
+    console.error('Unable to open file: %s\nCheck permissions.', filename);
+    console.info(e);
+    process.exit(1);
+  }
+};
+
+CodeCity.checkpoint = function(sync) {
+  console.log('Checkpoint!');
+  try {
+    CodeCity.interpreter.stop();
+    var json = Serializer.serialize(CodeCity.interpreter);
   } finally {
-    interpreter.start();
+    sync || CodeCity.interpreter.start();
   }
   // JSON.stringify(json) would work, but adding linebreaks so that every
   // object is on its own line makes the output more readable.
@@ -105,24 +133,35 @@ function checkpoint(callback) {
   text = '[' + text.join(',\n') + ']';
 
   var filename = (new Date()).toISOString().replace(/:/g, '.') + '.city';
-  filename = path.join(databaseDirectory, filename);
-  fs.writeFile(filename, text, function (e) {
-    // TODO: Expose success/failure to the database.
-    if (e) {
-      console.log('Checkpoint failed: ' + filename);
-      console.log(e);
-    } else {
-      console.log('Checkpoint successful: ' + filename);
-    }
-    callback && callback(e);
+  filename = path.join(CodeCity.databaseDirectory, filename);
+  fs.writeFileSync(filename, text);
+};
+
+CodeCity.shutdown = function() {
+  CodeCity.checkpoint(true);
+  process.exit(0);
+};
+
+CodeCity.log = function(value) {
+  console.log(value);
+};
+
+CodeCity.initSystemFunctions = function() {
+  var intrp = CodeCity.interpreter;
+  intrp.createNativeFunction('$.system.log', CodeCity.log, false);
+  intrp.createNativeFunction('$.system.checkpoint', CodeCity.checkpoint, false);
+  intrp.createNativeFunction('$.system.shutdown', CodeCity.shutdown, false);
+};
+
+if (require.main === module) {
+  CodeCity.startup();
+  // Call checkpoint on server shutdown signal.
+  process.on('SIGTERM', function() {
+    CodeCity.shutdown();
+  });
+  process.on('SIGINT', function() {
+    CodeCity.shutdown();
   });
 }
 
-startup();
-
-// Call checkpoint on server shutdown signal.
-process.on('SIGTERM', function() {
-  checkpoint(function(e) {
-    process.exit(e ? 1 : 0);
-  });
-});
+module.exports = CodeCity;

@@ -161,7 +161,7 @@ T.prototype.fail = function(name, opt_message) {
  */
 async function runTests(files) {
   var t = new T;
-  
+
   for (var i = 0; i < files.length; i++) {
     var tests = require(files[i]);
     for (var k in tests) {

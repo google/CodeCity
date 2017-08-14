@@ -27,7 +27,7 @@
 var util = require('util');
 
 var Interpreter = require('../interpreter');
-var autoexec = require('../autoexec');
+var es5 = require('./interpreter_es5');
 
 /**
  * Run a benchmark of the interpreter.
@@ -38,7 +38,7 @@ var autoexec = require('../autoexec');
 function runBench(b, name, src) {
   for (var i = 0; i < 4; i++) {
     var interpreter = new Interpreter();
-    interpreter.createThread(autoexec);
+    interpreter.createThread(es5);
     interpreter.run();
 
     var err = undefined;

@@ -27,7 +27,7 @@
 const util = require('util');
 
 const Interpreter = require('../interpreter');
-const autoexec = require('../autoexec');
+var es5 = require('./interpreter_es5');
 const Serializer = require('../serialize');
 
 /**
@@ -51,7 +51,7 @@ const Serializer = require('../serialize');
 function runTest(t, name, src1, src2, expected, steps) {
   try {
     var intrp1 = new Interpreter;
-    intrp1.createThread(autoexec);
+    intrp1.createThread(es5);
     intrp1.run();
     if (src1) {
       intrp1.createThread(src1);
@@ -93,7 +93,7 @@ function runTest(t, name, src1, src2, expected, steps) {
     t.crash(name + 'Post', e);
     return;
   }
-  
+
   var r = intrp2.pseudoToNative(intrp2.value);
   if (Object.is(r, expected)) {
     t.pass(name);

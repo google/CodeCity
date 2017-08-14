@@ -6,4 +6,8 @@ nohup.out
 login/loginServer.cfg
 login/node_modules
 connect/connectServer.cfg
+connect/node_modules
 server/node_modules
+
+server/tests/db/[0-9]*.js
+server/tests/db/*.city
