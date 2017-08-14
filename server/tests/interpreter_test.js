@@ -228,7 +228,7 @@ exports.testClasses = function(t) {
     },
     Function: {
       prototypeType: 'function',
-      listeral: 'function(){}'
+      literal: 'function(){}'
     },
     Array: {
       literal: '[]'

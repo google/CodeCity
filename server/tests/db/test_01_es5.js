@@ -1,3 +1,27 @@
+/**
+ * @license
+ * Code City: Testing code.
+ *
+ * Copyright 2017 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/**
+ * @fileoverview Test the ES5 functions of the server.
+ * @author fraser@google.com (Neil Fraser)
+ */
+
 // Object.is is part of ES6, not ES5, so provide as a polyfill.
 // Polyfill copied from:
 // developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Object/is
@@ -14,18 +38,9 @@ if (!Object.is) {
   };
 }
 
-// Run a test to ensure that 'this' is a primitive in methods invoked on
-// primitives.  (This also tests that interpreter is running in strict mode;
-// in sloppy mode this will be boxed.)
-tests.strictBoxedThis = function() {
-  Object.prototype.foo = function() { return typeof this; };
-  console.assert('foo'.foo() === 'string', 'strictBoxedThis');
-  delete Object.prototype.foo;
-};
-
 // Run some tests of the various constructors and their associated
 // literals and prototype objects.
-tests.variousConstructors = function() {
+tests.builtinClasses = function() {
   var classes = [
     {
       constructor: Object,
@@ -450,11 +465,11 @@ tests.arca = function() {
     ['2, "11"', true],   // Numeric
     ['"11", "2"', true], // String
   ];
-  function comp(a, b) {
+  function arca(a, b) {
     return ((a < b) || (a >= b)) ? (a < b) : undefined;
   }
   for (var i = 0, tc; (tc = cases[i]); i++) {
-    console.assert(tc[1] === eval('comp(' + tc[0] + ')'), 'ARCA: ' + tc[0]);
+    console.assert(tc[1] === eval('arca(' + tc[0] + ')'), 'ARCA: ' + tc[0]);
   }
 };
 
@@ -535,15 +550,15 @@ tests.aeca_aseca = function() {
     ['{}, null', false, false],
     ['{}, undefined', false, false],
   ];
-  function comp1(a, b) {
+  function aeca(a, b) {
     return a == b;
   }
-  function comp2(a, b) {
+  function aseca(a, b) {
     return a === b;
   }
   for (var i = 0, tc; (tc = cases[i]); i++) {
-    console.assert(tc[1] === eval('comp1(' + tc[0] + ')'), 'AECA: ' + tc[0]);
-    console.assert(tc[2] === eval('comp2(' + tc[0] + ')'), 'ASECA: ' + tc[0]);
+    console.assert(tc[1] === eval('aeca(' + tc[0] + ')'), 'AECA: ' + tc[0]);
+    console.assert(tc[2] === eval('aseca(' + tc[0] + ')'), 'ASECA: ' + tc[0]);
   }
 };
 
@@ -581,7 +596,7 @@ tests.basicVariables = function() {
   console.assert(x === 44, 'simpleAssignment');
 };
 
-tests.terniary = function() {
+tests.ternary = function() {
   console.assert((true ? 'then' : 'else') === 'then', 'condTrue');
   console.assert((false ? 'then' : 'else') === 'else', 'condFalse');
 };
@@ -691,7 +706,7 @@ tests.whileLoop = function() {
   console.assert(a === 55, 'whileLoop');
 };
 
-tests.xxx = function() {
+tests.whileFalse = function() {
   var a = 56;
   while (false) {
     a++;
@@ -834,6 +849,21 @@ tests.demethodedCall = function() {
 tests.testThis = function() {
   console.assert(this === tests, 'testThis');
   console.assert(eval('this') === tests, 'evalThis');
+  console.assert(tests.testThis.globalThis === undefined, 'globalThis');
+};
+
+tests.testThis.globalThis = this;
+
+tests.strictBoxedThis = function() {
+  // Run a test to ensure that 'this' is a primitive in methods invoked on
+  // primitives.  (This also tests that interpreter is running in strict mode;
+  // in sloppy mode this will be boxed.)
+  try {
+    Object.prototype.foo = function() { return typeof this; };
+    console.assert('foo'.foo() === 'string', 'strictBoxedThis');
+  } finally {
+    console.assert(delete Object.prototype.foo, 'strictBoxedThisDelete');
+  }
 };
 
 tests.emptyArrayLength = function() {
@@ -959,10 +989,6 @@ tests.arrayLengthWithNonConfigurableProps = function() {
 
 tests.compValEmptyBlock = function() {
   console.assert(eval('{}') === undefined, 'compValEmptyBlock');
-};
-
-tests.undefined = function() {
-  console.assert(undefined === undefined, 'undefined');
 };
 
 tests.unaryVoid = function() {
@@ -1584,7 +1610,7 @@ tests.ArrayPrototypeJoinCycleDetection = function() {
 };
 
 tests.ArrayLegalIndexLength = function() {
-  var tuples = [
+  var cases = [
     // [value, asIndex, asLength]
     [false, 0, 0],
     [true, 0, 1],
@@ -1614,20 +1640,20 @@ tests.ArrayLegalIndexLength = function() {
     [[], 0, 0],  // wat!
     [{}, 0, NaN],
   ];
-  for (var i = 0, tuple; (tuple = tuples[i]); i++) {
+  for (var i = 0, tc; (tc = cases[i]); i++) {
     var a = [];
-    a[tuple[0]] = true;
-    console.assert(a.length === tuple[1],
-                   'ArrayLegalIndex ' + JSON.stringify(tuple[0]));
+    a[tc[0]] = true;
+    console.assert(a.length === tc[1],
+                   'ArrayLegalIndex ' + JSON.stringify(tc[0]));
     var a = [];
     try {
-      a.length = tuple[0];
-      if (isNaN(tuple[2])) {
-        console.assert(false, 'ArrayLegalLength ' + JSON.stringify(tuple[0]));
+      a.length = tc[0];
+      if (isNaN(tc[2])) {
+        console.assert(false, 'ArrayLegalLength ' + JSON.stringify(tc[0]));
       }
     } catch (e) {
       console.assert(e.name === 'RangeError',
-                     'ArrayLegalLengthError ' + JSON.stringify(tuple[0]));
+                     'ArrayLegalLengthError ' + JSON.stringify(tc[0]));
     }
   }
 };
@@ -1717,7 +1743,8 @@ tests.RegExpPrototypeTestApplyNonRegExpThrows = function() {
     /foo/.test.apply({}, ['foo']);
     console.assert(false, 'RegExpPrototypeTestApplyNonRegExpThrows');
   } catch (e) {
-    console.assert(e.name === 'TypeError', 'RegExpPrototypeTestApplyNonRegExpThrowsError');
+    console.assert(e.name === 'TypeError',
+                   'RegExpPrototypeTestApplyNonRegExpThrowsError');
   }
 };
 
@@ -1725,7 +1752,8 @@ tests.RegExpPrototypeTestApplyNonRegExpThrows = function() {
 // Other tests
 
 tests.newHack = function() {
-  console.assert((new 'Array.prototype.push') === Array.prototype.push, 'xxx');
+  console.assert((new 'Array.prototype.push') === Array.prototype.push,
+                 'newHack');
 };
 
 tests.newHackUnknown = function() {
