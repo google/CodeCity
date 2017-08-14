@@ -1060,7 +1060,7 @@ exports.testNetworking = async function(t) {
       };
       connectionListen(8888, conn);
       resolve(recieve());
-
+      connectionUnlisten(8888);
    `;
   initFunc = function(intrp) {
     intrp.addVariableToScope(intrp.global, 'recieve', intrp.createAsyncFunction(

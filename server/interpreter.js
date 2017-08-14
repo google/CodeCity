@@ -1405,8 +1405,7 @@ Interpreter.prototype.initNetwork = function(scope) {
   var intrp = this;
   this.addVariableToScope(scope, 'connectionListen', this.createAsyncFunction(
       'connectionListen', function(resolve, reject, port, proto) {
-        if ((typeof port !== 'number') || Math.floor(port) !== port ||
-            port < 0 || port > 0xffff) {
+        if (port !== (port >>> 0) || port > 0xffff) {
           reject(new intrp.Error(intrp.TYPE_ERROR, 'invalid port'));
           return;
         }
@@ -1492,7 +1491,7 @@ Interpreter.prototype.initNetwork = function(scope) {
           intrp.throwException(intrp.TYPE_ERROR, 'object is not connected');
         }
         obj.socket.write(data);
-      }));
+      }, false));
 
   this.addVariableToScope(scope, 'connectionClose', this.createNativeFunction(
       'connectionClose', function(obj, data) {
@@ -1500,7 +1499,7 @@ Interpreter.prototype.initNetwork = function(scope) {
           intrp.throwException(intrp.TYPE_ERROR, 'object is not connected');
         }
         obj.socket.end(data);
-      }));
+      }, false));
 };
 
 /**
@@ -2111,8 +2110,8 @@ Interpreter.prototype.throwException = function(value, opt_message) {
  */
 Interpreter.prototype.executeException = function(error) {
   // Search for a try statement.
-  for (var ss = this.thread.stateStack; ss.length > 0; ss.pop()) {
-    var state = ss[ss.length - 1];
+  for (var stack = this.thread.stateStack; stack.length > 0; stack.pop()) {
+    var state = stack[stack.length - 1];
     if (state.node['type'] === 'TryStatement') {
       state.throwValue = error;
       return;
