@@ -1421,7 +1421,7 @@ Interpreter.prototype.initNetwork = function(scope) {
           //   socket.end('Connection rejected.');
           //   return;
           // }
-          console.log('Connection from ' + socket.remoteAddress);
+          console.log('Connection from %s', socket.remoteAddress);
 
           // Create new object from proto and call onConnect.
           var obj = new intrp.Object(proto);
@@ -1440,7 +1440,7 @@ Interpreter.prototype.initNetwork = function(scope) {
           });
 
           socket.on('end', function() {
-            console.log('Connection from ' + socket.remoteAddress + ' closed.');
+            console.log('Connection from %s closed.', socket.remoteAddress);
             var func = intrp.getProperty(obj, 'onEnd');
             if (func instanceof intrp.Function) {
               intrp.createThreadForFuncCall(func, obj, []);
