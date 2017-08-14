@@ -1019,14 +1019,16 @@ exports.testStartStop = async function(t) {
  * @param {!T} t The test runner object.
  */
 exports.testNetworking = async function(t) {
-  //  Run a test of the connectionListen() and connectionUnlisten functions.
-  var name = 'testConnectionListenUnlisten';
+  //  Run a test of connectionListen() and connectionUnlisten(), and
+  //  of the server receving data using the .recieve and .end methods
+  //  on a connection object.
+  var name = 'testNetworkInbound';
   var src = `
       var data = '', conn = {};
-      conn.receive = function(d) {
+      conn.onReceive = function(d) {
         data += d;
       };
-      conn.end = function(d) {
+      conn.onEnd = function(d) {
         connectionUnlisten(8888);
         resolve(data);
       };
@@ -1041,6 +1043,40 @@ exports.testNetworking = async function(t) {
             client.write('foo');
             client.write('bar');
             client.end();
+          });
+        }));
+  };
+  await runAsyncTest(t, name, src, 'foobar', initFunc);
+
+  //  Run a test of the connectionListen(), connectionUnlisten(),
+  //  connectionWrite() and connectionClose functions.
+  name = 'testNetworkOutbound';
+  src = `
+      var conn = {};
+      conn.onConnect = function() {
+        connectionWrite(this, 'foo');
+        connectionWrite(this, 'bar');
+        connectionClose(this);
+      };
+      connectionListen(8888, conn);
+      resolve(recieve());
+
+   `;
+  initFunc = function(intrp) {
+    intrp.addVariableToScope(intrp.global, 'recieve', intrp.createAsyncFunction(
+        'recieve', function(resolve, reject) {
+          var reply = '';
+          // Recieve some data from the server.
+          var client = net.createConnection({ port: 8888 }, function() {
+            client.on('data', function(data) {
+              reply += data;
+            });
+            client.on('end', function() {
+              resolve(reply);
+            });
+            client.on('error', function() {
+              reject();
+            });
           });
         }));
   };
