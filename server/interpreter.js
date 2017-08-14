@@ -734,7 +734,7 @@ Interpreter.prototype.initFunction = function(scope) {
             'CreateListFromArrayLike called on non-object');
       }
     }
-    state.doneExec_ = false;
+    state.doneExec = false;
   };
   this.createNativeFunction('Function.prototype.apply', wrapper, false);
 
@@ -751,7 +751,7 @@ Interpreter.prototype.initFunction = function(scope) {
     for (var i = 1; i < arguments.length; i++) {
       state.arguments_.push(arguments[i]);
     }
-    state.doneExec_ = false;
+    state.doneExec = false;
   };
   this.createNativeFunction('Function.prototype.call', wrapper, false);
 };
@@ -3069,7 +3069,9 @@ Interpreter.prototype['stepContinueStatement'] = function(stack, state, node) {
     state = stack[stack.length - 1];
   }
   // Syntax error, do not allow this error to be trapped.
-  throw SyntaxError('Illegal continue statement');
+  // TODO: Reenable once continuation passing is correct.
+  // function/try/return/finally/continue
+  //throw SyntaxError('Illegal continue statement');
 };
 
 Interpreter.prototype['stepDebuggerStatement'] = function(stack, state, node) {

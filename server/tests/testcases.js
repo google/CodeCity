@@ -242,7 +242,7 @@ module.exports = [
     }
     a;
     `,
-    // SKIP: expected: 59
+    expected: 59
   },
 
   { name: 'continueWithFinally', src: `
@@ -256,7 +256,7 @@ module.exports = [
     } while (false);
     a;
     `,
-    // SKIP: expected: 60
+    expected: 60
   },
 
   { name: 'breakWithFinallyContinue', src: `
@@ -270,7 +270,7 @@ module.exports = [
     }
     a;
     `,
-    // SKIP: expected: 61
+    expected: 61
   },
 
   { name: 'returnWithFinallyContinue', src: `
@@ -286,7 +286,7 @@ module.exports = [
       return i;
     })();
     `,
-    // SKIP: expected: 62
+    expected: 62
   },
 
   { name: 'orTrue', src: `

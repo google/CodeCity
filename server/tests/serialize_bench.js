@@ -27,7 +27,7 @@
 const util = require('util');
 
 const Interpreter = require('../interpreter');
-const autoexec = require('../autoexec');
+var es5 = require('./interpreter_es5');
 const Serializer = require('../serialize');
 
 /**
@@ -40,7 +40,7 @@ const Serializer = require('../serialize');
 function runInterpreterBench(b, name, src) {
   for (var i = 0; i < 4; i++) {
     var intrp1 = new Interpreter;
-    intrp1.createThread(autoexec);
+    intrp1.createThread(es5);
     intrp1.run();
 
     var err = undefined;

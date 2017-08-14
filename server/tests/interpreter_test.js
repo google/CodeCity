@@ -29,12 +29,12 @@ var util = require('util');
 //var toSource = require('tosource');
 
 var Interpreter = require('../interpreter');
-var autoexec = require('../autoexec');
+var es5 = require('./interpreter_es5');
 var testcases = require('./testcases');
 
 // Prepare static interpreter instance for runTest.
 var interpreter = new Interpreter;
-interpreter.createThread(autoexec);
+interpreter.createThread(es5);
 interpreter.run();
 interpreter.addVariableToScope(interpreter.global, 'src');
 
@@ -83,7 +83,7 @@ function runTest(t, name, src, expected) {
  *     completion value.
  * @param {Function(Interpreter)=} initFunc Optional function to be
  *     called after creating new interpreter instance and running
- *     autoexec but before running src.  Can be used to insert extra
+ *     es5 but before running src.  Can be used to insert extra
  *     native functions into the interpreter.  initFunc is called
  *     with the interpreter instance to be configured as its
  *     parameter.
@@ -93,7 +93,7 @@ function runTest(t, name, src, expected) {
  */
 function runComplexTest(t, name, src, expected, initFunc, asyncFunc) {
   var intrp = new Interpreter;
-  intrp.createThread(autoexec);
+  intrp.createThread(es5);
   intrp.run();
   if (initFunc) {
     initFunc(intrp);
@@ -137,7 +137,7 @@ function runComplexTest(t, name, src, expected, initFunc, asyncFunc) {
  *     completion value.
  * @param {Function(Interpreter)=} initFunc Optional function to be
  *     called after creating new interpreter instance and running
- *     autoexec but before running src.  Can be used to insert extra
+ *     es5 but before running src.  Can be used to insert extra
  *     native functions into the interpreter.  initFunc is called
  *     with the interpreter instance to be configured as its
  *     parameter.
@@ -147,7 +147,7 @@ function runComplexTest(t, name, src, expected, initFunc, asyncFunc) {
  */
 async function runAsyncTest(t, name, src, expected, initFunc, sideFunc) {
   var intrp = new Interpreter;
-  intrp.createThread(autoexec);
+  intrp.createThread(es5);
   intrp.run();
   if (initFunc) {
     initFunc(intrp);
@@ -897,7 +897,7 @@ exports.testAsync = function(t) {
      async();
   `;
   runComplexTest(t, name, src, 'ok', initFunc, asyncFunc);
-  
+
 };
 
 /**
@@ -975,7 +975,7 @@ exports.testStartStop = async function(t) {
         x++;
       };
   `;
-  intrp.createThread(autoexec);
+  intrp.createThread(es5);
   intrp.run();
   try {
     intrp.start();
@@ -1013,7 +1013,7 @@ exports.testStartStop = async function(t) {
         String(r), String(expected), 39));
   }
 };
-  
+
 /**
  * Run tests of the networking subsystem.
  * @param {!T} t The test runner object.
