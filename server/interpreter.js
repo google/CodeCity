@@ -2122,26 +2122,18 @@ Interpreter.prototype.executeException = function(error) {
     }
   }
 
-  // Throw a real error.
-  var realError;
+  // Unhandled exception.  Terminate thread.
+  this.thread.status = Interpreter.Thread.Status.ZOMBIE;
+  
+  // Log exception and stack trace.
   if (error instanceof this.Error) {
-    var errorTable = {
-      'EvalError': EvalError,
-      'RangeError': RangeError,
-      'ReferenceError': ReferenceError,
-      'SyntaxError': SyntaxError,
-      'TypeError': TypeError,
-      'URIError': URIError
-    };
     var name = this.getProperty(error, 'name').toString();
     var message = this.getProperty(error, 'message').valueOf();
-    var type = errorTable[name] || Error;
-    realError = type(message + '\n' +
-                     this.getProperty(error, 'stack'));
+    console.log('Unhandled %s: %s', name, message);
+    console.log(this.getProperty(error, 'stack').toString());
   } else {
-    realError = error.toString();
+    console.log('Unhandled exception with value = ' + error.toString());
   }
-  throw realError;
 };
 
 
