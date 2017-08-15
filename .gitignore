@@ -9,5 +9,4 @@ connect/connectServer.cfg
 connect/node_modules
 server/node_modules
 
-server/tests/db/core*.js
-server/tests/db/*.city
+*.city
