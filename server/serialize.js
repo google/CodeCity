@@ -162,6 +162,12 @@ Serializer.deserialize = function(json, intrp) {
 Serializer.serialize = function(intrp) {
   function encodeValue(value) {
     if (value && (typeof value === 'object' || typeof value === 'function')) {
+      // TODO(cpcallen): this is a bit hacky (leaves dangling null
+      // properties / array elements on serialized objects) but better
+      // fix is hard to do without substantial refactoring.
+      if (Serializer.excludeTypes.has(Object.getPrototypeOf(value))) {
+        return null;
+      }
       var ref = objectList.indexOf(value);
       if (ref === -1) {
         throw RangeError('Object not found in table.');
