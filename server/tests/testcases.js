@@ -177,6 +177,17 @@ module.exports = [
     `,
     expected: 52 },
 
+  // N.B.: This and next tests have no equivalent in the test DB.
+  { name: 'throwUnhandledError', src: `
+    throw Error('not caught');
+    `,
+    expected: undefined },
+
+  { name: 'throwUnhandledException', src: `
+    throw 'not caught';
+    `,
+    expected: undefined },
+
   { name: 'seqExpr', src: `
     51, 52, 53;
     `,
