@@ -185,11 +185,13 @@ Serializer.serialize = function(intrp) {
   }
 
   // Properties on Interpreter instances to ignore.
-  var skipList = ['Object', 'Function', 'Array', 'Date', 'RegExp', 'Error',
-                  'Thread', 'stepFunctions_', 'runner_'];
+  var exclude = ['Object', 'Function', 'Array', 'Date', 'RegExp', 'Error',
+                 'Thread', 'stepFunctions_', 'runner_', 'listeners'];
+  // Properties to ingore on all objects.
+  var excludeAll = ['socket'];
   // Find all objects.
   var objectList = [];
-  Serializer.objectHunt_(intrp, objectList, skipList);
+  Serializer.objectHunt_(intrp, objectList, excludeAll, exclude);
   // Get types.
   var types = this.getTypesSerialize_(intrp);
   // Serialize every object.
@@ -250,7 +252,8 @@ Serializer.serialize = function(intrp) {
     var names = Object.getOwnPropertyNames(obj);
     for (var j = 0; j < names.length; j++) {
       var name = names[j];
-      if (obj !== intrp || skipList.indexOf(name) === -1) {
+      if ((obj !== intrp || exclude.indexOf(name) === -1) &&
+          excludeAll.indexOf(name) === -1) {
         props[name] = encodeValue(obj[name]);
       }
     }
@@ -267,7 +270,7 @@ Serializer.serialize = function(intrp) {
  * @param {!Array<!Object>} objectList Array to add objects to.
  * @param {!Array<string>} skipList List of properties not to spider.
  */
-Serializer.objectHunt_ = function(node, objectList, skipList) {
+Serializer.objectHunt_ = function(node, objectList, excludeAll, exclude) {
   if (node && (typeof node === 'object' || typeof node === 'function')) {
     if (objectList.indexOf(node) !== -1) {
       return;
@@ -277,9 +280,10 @@ Serializer.objectHunt_ = function(node, objectList, skipList) {
       var names = Object.getOwnPropertyNames(node);
       for (var i = 0; i < names.length; i++) {
         var name = names[i];
-        if (!skipList || skipList.indexOf(name) === -1) {
-          // Don't pass skiplist; it's only for top-level property keys.
-          Serializer.objectHunt_(node[names[i]], objectList);
+        if ((!excludeAll || excludeAll.indexOf(name) === -1) &&
+            (!exclude || exclude.indexOf(name) === -1)) {
+          // Don't pass exclude; it's only for top-level property keys.
+          Serializer.objectHunt_(node[names[i]], objectList, excludeAll);
         }
       }
     }

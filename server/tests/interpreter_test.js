@@ -1028,7 +1028,7 @@ exports.testNetworking = async function(t) {
       conn.onReceive = function(d) {
         data += d;
       };
-      conn.onEnd = function(d) {
+      conn.onEnd = function() {
         connectionUnlisten(8888);
         resolve(data);
       };
