@@ -3,8 +3,6 @@ node tests/run.js
 
 # Delete any existing checkpoint files.
 rm tests/db/*.city
-# Copy over a fresh startup configuration.
-cp startup/core*.js tests/db/
 # Start Code City the first time.
 echo "Starting Code City (1 of 2)"
 node codecity.js tests/db
