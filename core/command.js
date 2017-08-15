@@ -22,7 +22,7 @@ var $ = function(str) {
   // This regex has two main groups:
   // 1) match .foo
   // 2) match [42] or ['bar'] or ["baz"]
-  if (suffix.search(/^((\s*\.\s*[A-Za-z$_][A-Za-z0-9$_]*\s*)|(\s*\[\s*(\d+|\'([^\'\\]*(\\.[^\'\\]*)*)\'|"([^"\\]*(\\.[^"\\]*)*)")\s*\]\s*))+$/) === 0) {
+  if (suffix.search(/^((\s*\.\s*[A-Za-z$_][A-Za-z0-9$_]*\s*)|(\s*\[\s*(\d+|'([^'\\]*(\\.[^'\\]*)*)'|"([^"\\]*(\\.[^"\\]*)*)")\s*\]\s*))+$/) === 0) {
     // TODO: Handle permissions for -r properties.
     return eval('(root)' + suffix);
   }
