@@ -24,6 +24,7 @@
 'use strict';
 
 var Interpreter = require('./interpreter');
+var net = require('net');
 
 var Serializer = {};
 
@@ -71,7 +72,7 @@ Serializer.deserialize = function(json, intrp) {
   // Find all native functions in existing interpreter.
   // Find all native functions to get id => func mappings.
   var objectList = [];
-  Serializer.objectHunt_(intrp, objectList);
+  Serializer.objectHunt_(intrp, objectList, Serializer.excludeTypes);
   var functionHash = Object.create(null);
   for (var i = 0; i < objectList.length; i++) {
     if (typeof objectList[i] === 'function') {
@@ -187,11 +188,9 @@ Serializer.serialize = function(intrp) {
   // Properties on Interpreter instances to ignore.
   var exclude = ['Object', 'Function', 'Array', 'Date', 'RegExp', 'Error',
                  'Thread', 'stepFunctions_', 'runner_', 'listeners'];
-  // Properties to ingore on all objects.
-  var excludeAll = ['socket'];
   // Find all objects.
   var objectList = [];
-  Serializer.objectHunt_(intrp, objectList, excludeAll, exclude);
+  Serializer.objectHunt_(intrp, objectList, Serializer.excludeTypes, exclude);
   // Get types.
   var types = this.getTypesSerialize_(intrp);
   // Serialize every object.
@@ -252,8 +251,7 @@ Serializer.serialize = function(intrp) {
     var names = Object.getOwnPropertyNames(obj);
     for (var j = 0; j < names.length; j++) {
       var name = names[j];
-      if ((obj !== intrp || exclude.indexOf(name) === -1) &&
-          excludeAll.indexOf(name) === -1) {
+      if (obj !== intrp || exclude.indexOf(name) === -1) {
         props[name] = encodeValue(obj[name]);
       }
     }
@@ -268,11 +266,14 @@ Serializer.serialize = function(intrp) {
  * Recursively search the stack to find all non-primitives.
  * @param {*} node JavaScript value to search.
  * @param {!Array<!Object>} objectList Array to add objects to.
- * @param {!Array<string>} skipList List of properties not to spider.
+ * @param {!Set<!Object>} excludeTypes Set of prototypes not to spider.
+ * @param {!Array<string>} exclude List of properties not to spider.
  */
-Serializer.objectHunt_ = function(node, objectList, excludeAll, exclude) {
+Serializer.objectHunt_ = function(node, objectList, excludeTypes, exclude) {
   if (node && (typeof node === 'object' || typeof node === 'function')) {
-    if (objectList.indexOf(node) !== -1) {
+    if (((typeof node === 'object' || typeof node === 'function') &&
+        excludeTypes.has(Object.getPrototypeOf(node))) ||
+        objectList.indexOf(node) !== -1) {
       return;
     }
     objectList.push(node);
@@ -280,10 +281,9 @@ Serializer.objectHunt_ = function(node, objectList, excludeAll, exclude) {
       var names = Object.getOwnPropertyNames(node);
       for (var i = 0; i < names.length; i++) {
         var name = names[i];
-        if ((!excludeAll || excludeAll.indexOf(name) === -1) &&
-            (!exclude || exclude.indexOf(name) === -1)) {
+        if (!exclude || exclude.indexOf(name) === -1) {
           // Don't pass exclude; it's only for top-level property keys.
-          Serializer.objectHunt_(node[names[i]], objectList, excludeAll);
+          Serializer.objectHunt_(node[names[i]], objectList, excludeTypes);
         }
       }
     }
@@ -330,5 +330,7 @@ Serializer.getTypesSerialize_ = function (intrp) {
   }
   return map;
 };
+
+Serializer.excludeTypes = new Set([net.Socket.prototype, net.Server.prototype]);
 
 module.exports = Serializer;
