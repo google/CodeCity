@@ -30,12 +30,6 @@
  * 
  * @author cpcallen@google.com (Christopher Allen)
  */
-'use strict'; // For testing with node.js
-
-// Global scope declarations:
-var $ = function() {
-  // FIXME: JQuery-style matching?
-};
 
 (function() {
   // Core build options:

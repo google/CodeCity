@@ -22,4 +22,9 @@
  * @author fraser@google.com (Neil Fraser)
  */
 
-var $ = {};
+var $ = function() {
+  /* This is the magic $() function.  DO NOT EDIT.  Instead, edit
+   * $.utils.command.$
+   */
+  return $.utils.command.$.apply(undefined, arguments);
+};

@@ -1,4 +1,7 @@
-var $ = function(str) {
+$.utils = {};
+$.utils.command = {};
+
+$.utils.command.$ = function(str) {
   // Parse the string to extract a reference.
   // TODO: Support notations starting with @roomname and ~username.
   var m = str.match(/^\s*(\$|me|~|here|@)(.*)\s*$/);
@@ -28,10 +31,6 @@ var $ = function(str) {
   }
   return undefined;
 };
-
-
-$.utils = {};
-$.utils.command = {};
 
 $.utils.command.prepositions = Object.create(null);
 $.utils.command.prepositions['with'] = 'with/using';
