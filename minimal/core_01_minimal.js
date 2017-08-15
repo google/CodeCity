@@ -34,18 +34,23 @@ $.system.connectionWrite = new 'connectionWrite';
 $.system.connectionClose = new 'connectionClose';
 
 
-// Prototype physical object: $.physical
+// Physical object prototype: $.physical
 $.physical = {};
-$.physical.name = 'Prototype physical object';
+$.physical.name = 'Physical object prototype';
 $.physical.description = '';
 $.physical.location = null;
 $.physical.contents_ = null;
-$.physical.getContents = function() {return this.contents_ || [];};
+
+$.physical.getContents = function() {
+  return this.contents_ || [];
+};
+
 $.physical.addContents = function(thing) {
   var contents = this.getContents();
   contents.indexOf(thing) === -1 && contents.push(thing);
   this.contents_ = contents;
 };
+
 $.physical.removeContents = function(thing) {
   var contents = this.getContents();
   var index = contents.indexOf(thing);
@@ -54,12 +59,14 @@ $.physical.removeContents = function(thing) {
   }
   this.contents_ = contents;
 };
+
 $.physical.moveTo = function(dest) {
   var src = this.location;
   src && src.removeContents && src.removeContents(this);
   this.location = dest;
   dest && dest.addContents && dest.addContents(this);
 };
+
 $.physical.look = function() {
   user.tell(this.name);
   user.tell(this.description);
@@ -75,22 +82,33 @@ $.physical.look = function() {
 $.physical.look.dobj = 'this';
 
 
-// Prototype thing: $.thing
+// Thing prototype: $.thing
 $.thing = Object.create($.physical);
-$.thing.name = 'Prototype thing';
+$.thing.name = 'Thing prototype';
+
 $.thing.get = function() {
   this.moveTo(user);
+  user.tell('You pick up ' + this.name + '.');
+  if (user.location) {
+    user.location.announce(user.name + ' picks up ' + this.name + '.');
+  }
 };
 $.thing.get.dobj = 'this';
+
 $.thing.drop = function() {
   this.moveTo(user.location);
+  user.tell('You drop ' + this.name + '.');
+  if (user.location) {
+    user.location.announce(user.name + ' drops ' + this.name + '.');
+  }
 };
 $.thing.drop.dobj = 'this';
 
 
-// Prototype room: $.room
+// Room prototype: $.room
 $.room = Object.create($.physical);
-$.room.name = 'Prototype room';
+$.room.name = 'Room prototype';
+
 $.room.announce = function(text) {
   var contents = this.getContents();
   for (var i = 0; i < contents.length; i++) {
@@ -102,26 +120,30 @@ $.room.announce = function(text) {
 };
 
 
-// Prototype user: $.user
+// User prototype: $.user
 $.user = Object.create($.physical);
-$.user.name = 'Prototype user';
+$.user.name = 'User prototype';
 $.user.connection = null;
+
 $.user.say = function(text) {
   user.tell('You say: ' + text);
-  if (user.location && user.location.announce) {
+  if (user.location) {
     user.location.announce(user.name + ' says: ' + text);
   }
 };
 $.user.say.dobj = 'any';
+
 $.user.eval = function(code) {
   user.tell(eval(code));
 };
 $.user.eval.dobj = 'any';
+
 $.user.tell = function(text) {
   if (this.connection) {
     this.connection.write(text);
   }
 };
+
 $.user.quit = function() {
   if (this.connection) {
     this.connection.close();
@@ -187,23 +209,37 @@ $.execute = function(command) {
 };
 
 
-$.playerDatabase = Object.create(null);
+// Database of users so that connections can bind to a user.
+$.userDatabase = Object.create(null);
 
 
 $.connection = {};
+
 $.connection.onConnect = function() {
   this.user = null;
+  this.buffer = '';
   this.write('Welcome.  Type name of user to connect as (Alpha or Beta).');
 };
+
 $.connection.onReceive = function(text) {
+  this.buffer += text.replace(/\r/g, '');
+  var lf;
+  while ((lf = this.buffer.indexOf('\n')) !== -1) {
+    this.onReceiveLine(this.buffer.substring(0, lf));
+    this.buffer = this.buffer.substring(lf + 1);
+  }
+};
+
+$.connection.onReceiveLine = function(text) {
   if (this.user) {
     user = this.user;
     $.execute(text);
     return;
   }
+  // Remainder of function handles login.
   text = text.trim().toLowerCase();
-  if ($.playerDatabase[text]) {
-    this.user = $.playerDatabase[text];
+  if ($.userDatabase[text]) {
+    this.user = $.userDatabase[text];
     if (this.user.connection) {
       this.user.connection.close();
     }
@@ -212,20 +248,29 @@ $.connection.onReceive = function(text) {
     this.write('Connected as ' + this.user.name);
     user = this.user;
     $.execute('look here');
+    if (user.location) {
+      user.location.announce(user.name + ' connects.');
+    }
   } else {
     this.write('Unknown user.');
   }
 };
+
 $.connection.onEnd = function() {
   if (this.user) {
+    if (user.location) {
+      user.location.announce(user.name + ' disconnects.');
+    }
     $.system.log('Unbinding connection from ' + this.user.name);
     this.user.connection = null;
     this.user = null;
   }
 };
+
 $.connection.write = function(text) {
   $.system.connectionWrite(this, text + '\n');
 };
+
 $.connection.close = function() {
   $.system.connectionClose(this);
 };
@@ -239,19 +284,19 @@ $.connection.close = function() {
 
   var alpha = Object.create($.user);
   alpha.name = 'Alpha';
-  $.playerDatabase[alpha.name.toLowerCase()] = alpha;
+  $.userDatabase[alpha.name.toLowerCase()] = alpha;
   alpha.description = 'Looks a bit Canadian.';
   alpha.moveTo(hangout);
 
   var beta = Object.create($.user);
   beta.name = 'Beta';
-  $.playerDatabase[beta.name.toLowerCase()] = beta;
+  $.userDatabase[beta.name.toLowerCase()] = beta;
   beta.description = 'Mostly harmless.';
   beta.moveTo(hangout);
 
   var rock = Object.create($.thing);
   rock.name = 'Rock';
-  rock.description = 'Cube shaped, made of granite.';
+  rock.description = 'Suspiciously cube shaped, made of granite.';
   rock.moveTo(hangout);
 
   connectionListen(7777, $.connection);
