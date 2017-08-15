@@ -1431,11 +1431,13 @@ Interpreter.prototype.initNetwork = function(scope) {
             intrp.createThreadForFuncCall(func, obj, []);
           }
 
-          // Handle incoming data from clients.
+          // Handle incoming data from clients.  N.B. that data is a
+          // node buffer object, so we must convert it to a string
+          // before passing it to user code.
           socket.on('data', function (data) {
             var func = intrp.getProperty(obj, 'onReceive');
             if (func instanceof intrp.Function) {
-              intrp.createThreadForFuncCall(func, obj, [data]);
+              intrp.createThreadForFuncCall(func, obj, [String(data)]);
             }
           });
 
@@ -1492,15 +1494,15 @@ Interpreter.prototype.initNetwork = function(scope) {
         if (!(obj instanceof intrp.Object) || !obj.socket) {
           intrp.throwException(intrp.TYPE_ERROR, 'object is not connected');
         }
-        obj.socket.write(data);
+        obj.socket.write(String(data));
       }, false));
 
   this.addVariableToScope(scope, 'connectionClose', this.createNativeFunction(
-      'connectionClose', function(obj, data) {
+      'connectionClose', function(obj) {
         if (!(obj instanceof intrp.Object) || !obj.socket) {
           intrp.throwException(intrp.TYPE_ERROR, 'object is not connected');
         }
-        obj.socket.end(data);
+        obj.socket.end();
       }, false));
 };
 
