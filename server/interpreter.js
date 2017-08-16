@@ -2127,12 +2127,16 @@ Interpreter.prototype.executeException = function(error) {
   
   // Log exception and stack trace.
   if (error instanceof this.Error) {
-    var name = this.getProperty(error, 'name').toString();
-    var message = this.getProperty(error, 'message').valueOf();
+    var name = this.getProperty(error, 'name');
+    var message = this.getProperty(error, 'message');
     console.log('Unhandled %s: %s', name, message);
-    console.log(this.getProperty(error, 'stack').toString());
+    var stackTrace = this.getProperty(error, 'stack');
+    if (stackTrace) {
+      console.log(stackTrace);
+    }
   } else {
-    console.log('Unhandled exception with value = ' + error.toString());
+    // TODO(cpcallen): log toSource(error), for clarity?
+    console.log('Unhandled exception with value:', error);
   }
 };
 
