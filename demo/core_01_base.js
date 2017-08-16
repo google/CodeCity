@@ -1,6 +1,6 @@
 /**
  * @license
- * Code City: Minimal database.
+ * Code City: Demonstration database.
  *
  * Copyright 2017 Google Inc.
  *
@@ -18,7 +18,7 @@
  */
 
 /**
- * @fileoverview Minimal database for Code City.
+ * @fileoverview Demonstration database for Code City.
  * @author fraser@google.com (Neil Fraser)
  */
 
@@ -33,11 +33,31 @@ $.system.shutdown = new '$.system.shutdown';
 $.system.connectionWrite = new 'connectionWrite';
 $.system.connectionClose = new 'connectionClose';
 
+// Utility object: $.utils
+$.utils = {};
+
+$.utils.htmlEscape = function(text) {
+  return String(text).replace(/&/g, '&amp;')
+                     .replace(/</g, '&lt;').replace(/>/g, '&gt;');
+};
+
+$.utils.commandMenu = function(commands) {
+  var cmdXml = '';
+  if (commands.length) {
+    cmdXml += '<cmds>';
+    for (var i = 0; i < commands.length; i++) {
+      cmdXml += '<cmd>' + commands[i] + '</cmd>';
+    }
+    cmdXml += '</cmds>';
+  }
+  return cmdXml;
+};
 
 // Physical object prototype: $.physical
 $.physical = {};
 $.physical.name = 'Physical object prototype';
 $.physical.description = '';
+$.physical.svgtext = '';
 $.physical.location = null;
 $.physical.contents_ = null;
 
@@ -81,6 +101,10 @@ $.physical.look = function() {
 };
 $.physical.look.dobj = 'this';
 
+$.physical.getCommands = function() {
+  return ['look ' + this.name];
+};
+
 
 // Thing prototype: $.thing
 $.thing = Object.create($.physical);
@@ -104,16 +128,59 @@ $.thing.drop = function() {
 };
 $.thing.drop.dobj = 'this';
 
+$.thing.getCommands = function() {
+  var commands = $.physical.getCommands.apply(this);
+  if (this.location === user) {
+    commands.push('drop ' + this.name);
+  } else if (this.location === user.location) {
+    commands.push('get ' + this.name);
+  }
+  return commands;
+};
 
 // Room prototype: $.room
 $.room = Object.create($.physical);
 $.room.name = 'Room prototype';
+
+$.room.look = function() {
+  var text = '';
+  text += '<scene user="' + user.name + '" room="' + this.name + '">\n';
+  text += '  <description>' + this.description + '</description>\n';
+  text += '  <svgtext>' + $.utils.htmlEscape(this.svgtext) + '</svgtext>\n';
+  var contents = this.getContents();
+  if (contents.length) {
+    for (var i = 0; i < contents.length; i++) {
+      var thing = contents[i];
+      var tag = $.user.isPrototypeOf(thing) ? 'user' : 'object';
+      text += '  <' + tag + ' name="' + thing.name + '">\n';
+      text += '    <svgtext>' + $.utils.htmlEscape(thing.svgtext) + '</svgtext>\n';
+      var commands = thing.getCommands();
+      if (commands.length) {
+        text += '    ' + $.utils.commandMenu(commands) + '\n';
+      }
+      text += '  </' + tag + '>\n';
+    }
+  }
+  text += '</scene>';
+  user.tell(text);
+};
+$.room.look.dobj = 'this';
 
 $.room.announce = function(text) {
   var contents = this.getContents();
   for (var i = 0; i < contents.length; i++) {
     var thing = contents[i];
     if (thing !== user && thing.tell) {
+      thing.tell(text);
+    }
+  }
+};
+
+$.room.announceAll = function(text) {
+  var contents = this.getContents();
+  for (var i = 0; i < contents.length; i++) {
+    var thing = contents[i];
+    if (thing.tell) {
       thing.tell(text);
     }
   }
@@ -126,15 +193,25 @@ $.user.name = 'User prototype';
 $.user.connection = null;
 
 $.user.say = function(text) {
-  user.tell('You say: ' + text);
   if (user.location) {
-    user.location.announce(user.name + ' says: ' + text);
+    user.location.announceAll(
+        '<say user="' + user.name + '" room="' + user.location + '">' +
+        $.utils.htmlEscape(text) + '</say>');
+  }
+};
+$.user.say.dobj = 'any';
+
+$.user.think = function(text) {
+  if (user.location) {
+    user.location.announceAll(
+        '<think user="' + user.name + '" room="' + user.location + '">' +
+        $.utils.htmlEscape(text) + '</think>');
   }
 };
 $.user.say.dobj = 'any';
 
 $.user.eval = function(code) {
-  user.tell(eval(code));
+  user.tell('<text>' + $.utils.htmlEscape(eval(code)) + '</text>');
 };
 $.user.eval.dobj = 'any';
 
@@ -205,7 +282,7 @@ $.execute = function(command) {
       }
     }
   }
-  user.tell('Command not understood.');
+  user.tell('<text>Command not understood.<text>');
 };
 
 
@@ -218,7 +295,6 @@ $.connection = {};
 $.connection.onConnect = function() {
   this.user = null;
   this.buffer = '';
-  this.write('Welcome.  Type name of user to connect as (Alpha or Beta).');
 };
 
 $.connection.onReceive = function(text) {
@@ -237,29 +313,28 @@ $.connection.onReceiveLine = function(text) {
     return;
   }
   // Remainder of function handles login.
-  text = text.trim().toLowerCase();
-  if ($.userDatabase[text]) {
-    this.user = $.userDatabase[text];
+  var m = text.match(/identify as ([0-9a-f]+)/);
+  if (m && $.userDatabase[m[1]]) {
+    this.user = $.userDatabase[m[1]];
     if (this.user.connection) {
       this.user.connection.close();
     }
     this.user.connection = this;
     $.system.log('Binding connection to ' + this.user.name);
-    this.write('Connected as ' + this.user.name);
     user = this.user;
     $.execute('look here');
     if (user.location) {
-      user.location.announce(user.name + ' connects.');
+      user.location.announce('<text>' + user.name + ' connects.</text>');
     }
   } else {
-    this.write('Unknown user.');
+    this.write('Unknown user: ' + text);
   }
 };
 
 $.connection.onEnd = function() {
   if (this.user) {
     if (user.location) {
-      user.location.announce(user.name + ' disconnects.');
+      user.location.announce('<text>' + user.name + ' disconnects.</text>');
     }
     $.system.log('Unbinding connection from ' + this.user.name);
     this.user.connection = null;
@@ -281,22 +356,26 @@ $.connection.close = function() {
   var hangout = Object.create($.room);
   hangout.name = 'Hangout';
   hangout.description = 'A place to hang out, chat, and program.';
+  hangout.svgtext = '<circle cx="0" cy="100" r="100"/><circle cx="0" cy="0" r="100"/>';
 
-  var alpha = Object.create($.user);
-  alpha.name = 'Alpha';
-  $.userDatabase[alpha.name.toLowerCase()] = alpha;
-  alpha.description = 'Looks a bit Canadian.';
-  alpha.moveTo(hangout);
+  var neil = Object.create($.user);
+  neil.name = 'Neil';
+  $.userDatabase['1387bfc24b159b3bd6ea187c66551d6b08f52dafb7fe5c3a5a93478f54ac6202b8f78efe5817015c250173b23a70f7f6ef3205e9f5d28730e0ff2033cc6fcf84'] = neil;
+  neil.description = 'Looks a bit Canadian.';
+  hangout.svgtext = '<ellipse ry="6" rx="5" cy="51" cx="17"/><line y2="83" x2="18" y1="57" x1="17"/><line y2="60" x2="4" y1="73" x1="18"/><line y2="70" x2="18" y1="62" x1="28"/><line y2="99" x2="11" y1="82" x1="18"/><line y2="99" x2="27" y1="82" x1="18"/><line y2="53" x2="18" y1="55" x1="21"/><circle r="0.4" cy="49" cx="19"/>';
+  neil.moveTo(hangout);
 
-  var beta = Object.create($.user);
-  beta.name = 'Beta';
-  $.userDatabase[beta.name.toLowerCase()] = beta;
-  beta.description = 'Mostly harmless.';
-  beta.moveTo(hangout);
+  var chris = Object.create($.user);
+  chris.name = 'Chris';
+  $.userDatabase[chris.name.toLowerCase()] = chris;
+  chris.description = 'Mostly harmless.';
+  chris.svgtext = '<circle cx="50" cy="50" r="10" /><line x1="50" y1="60" x2="50" y2="80"/><line x1="40" y1="70" x2="60" y2="70"/><line x1="50" y1="80" x2="40" y2="100"/><line x1="50" y1="80" x2="60" y2="100"/>';
+  chris.moveTo(hangout);
 
   var rock = Object.create($.thing);
-  rock.name = 'Rock';
+  rock.name = 'rock';
   rock.description = 'Suspiciously cube shaped, made of granite.';
+  rock.svgtext = '<path d="M10,90 l5,-5 h10 v10 l-5,5"/><line x1="20" y1="90" x2="25" y2="85"/><rect height="10" width="10" y="90" x="10"/>';
   rock.moveTo(hangout);
 
   connectionListen(7777, $.connection);
