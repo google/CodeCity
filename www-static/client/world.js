@@ -520,7 +520,7 @@ CCC.World.drawScene = function(svg) {
   // Draw each item.
   var icons = [];
   var userCount = 0;
-  for (var i = 0, thing; thing = contentsArray[i]; i++) {
+  for (var i = 0, thing; (thing = contentsArray[i]); i++) {
     var cursorX = (i + 1) / (contentsArray.length + 1) * svg.scaledWidth_ -
         svg.scaledWidth_ / 2;
     var bBox = null;

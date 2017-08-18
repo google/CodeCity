@@ -1052,7 +1052,9 @@ Interpreter.prototype.initString = function(scope) {
   this.createNativeFunction('String.prototype.match', wrapper, false);
 
   wrapper = function(regexp) {
-    regexp = regexp ? regexp.regexp : undefined;
+    if (regexp instanceof thisInterpreter.RegExp) {
+      regexp = regexp.regexp;
+    }
     return this.search(regexp);
   };
   this.createNativeFunction('String.prototype.search', wrapper, false);
@@ -2124,7 +2126,7 @@ Interpreter.prototype.executeException = function(error) {
 
   // Unhandled exception.  Terminate thread.
   this.thread.status = Interpreter.Thread.Status.ZOMBIE;
-  
+
   // Log exception and stack trace.
   if (error instanceof this.Error) {
     var name = this.getProperty(error, 'name');

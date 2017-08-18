@@ -1735,6 +1735,13 @@ tests.replaceRegExpFunction = function() {
   console.assert(str === '[xx,x,0,xxxx][xx,x,2,xxxx]', 'replaceRegExpFunction');
 };
 
+tests.search = function() {
+  console.assert('hello'.search('H') === -1, 'searchStringCase');
+  console.assert('hello'.search('ll') === 2, 'searchString');
+  console.assert('hello'.search(/H/) === -1, 'searchRegExpCase');
+  console.assert('hello'.search(/(.)\1/) === 2, 'searchRegExp');
+};
+
 //////////////////////////////////////////////////////////////
 // RegExp
 

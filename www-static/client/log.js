@@ -283,9 +283,13 @@ CCC.Log.renderXml = function(node) {
             break;
           case 'object':
           case 'user':
+            var isUser = child.tagName === 'user';
+            var name = child.getAttribute('name');
+            if (!isUser || CCC.Log.userName !== name) {
+              break;  // Don't show the current user.
+            }
             var df = document.createDocumentFragment();
-            df.appendChild(document.createTextNode(
-                child.getAttribute('name')));
+            df.appendChild(document.createTextNode(name));
             var cmds = child.querySelector('user>cmds,object>cmds');
             if (cmds) {
               var icon = CCC.Common.newMenuIcon(cmds);
@@ -294,7 +298,7 @@ CCC.Log.renderXml = function(node) {
                 df.appendChild(icon);
               }
             }
-            (child.tagName === 'user' ? users : objects).push(df);
+            (isUser ? users : objects).push(df);
             break;
         }
       }

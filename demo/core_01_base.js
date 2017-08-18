@@ -72,7 +72,7 @@ $.physical.getDescription = function() {
 };
 
 $.physical.getContents = function() {
-  return this.contents_ || [];
+  return this.contents_ ? this.contents_.concat() : [];
 };
 
 $.physical.addContents = function(thing) {
@@ -192,6 +192,11 @@ $.room.look = function(spec) {
   text += '  <svgtext>' + $.utils.htmlEscape(this.getSvgText()) + '</svgtext>\n';
   var contents = this.getContents();
   if (contents.length) {
+    var userIndex = contents.indexOf(user);
+    if (userIndex !== -1) {
+      contents.splice(userIndex, 1);
+      contents.unshift(user);
+    }
     for (var i = 0; i < contents.length; i++) {
       var thing = contents[i];
       var tag = $.user.isPrototypeOf(thing) ? 'user' : 'object';
@@ -245,6 +250,7 @@ $.room.announceAll = function(text) {
 $.user = Object.create($.physical);
 $.user.name = 'User prototype';
 $.user.connection = null;
+$.user.svgText = '<circle cx="50" cy="50" r="10" /><line x1="50" y1="60" x2="50" y2="80"/><line x1="40" y1="70" x2="60" y2="70"/><line x1="50" y1="80" x2="40" y2="100"/><line x1="50" y1="80" x2="60" y2="100"/>';
 
 $.user.say = function(spec) {
   if (user.location) {
@@ -358,22 +364,29 @@ $.connection.onReceiveLine = function(text) {
   }
   // Remainder of function handles login.
   var m = text.match(/identify as ([0-9a-f]+)/);
-  if (m && $.userDatabase[m[1]]) {
-    this.user = $.userDatabase[m[1]];
-    if (this.user.connection) {
-      this.user.connection.close();
-    }
-    this.user.connection = this;
-    $.system.log('Binding connection to ' + this.user.name);
-    user = this.user;
-    $.execute('look');
-    if (user.location) {
-      user.location.announce('<text>' + user.name + ' connects.</text>');
-    }
-  } else {
-    this.write('Unknown user: ' + text);
+  if (!m) {
+    this.write('<text>Unknown command: ' + $.utils.htmlEscape(text) + '</text>');
+  }
+  if (!$.userDatabase[m[1]]) {
+    var guest = Object.create($.user);
+    guest.name = 'Guest' + $.connection.onReceiveLine.guestCount++;
+    $.userDatabase[m[1]] = guest;
+    guest.description = 'A new user who has not yet set his/her description.';
+    guest.moveTo($.startRoom);
+  }
+  this.user = $.userDatabase[m[1]];
+  if (this.user.connection) {
+    this.user.connection.close();
+  }
+  this.user.connection = this;
+  $.system.log('Binding connection to ' + this.user.name);
+  user = this.user;
+  $.execute('look');
+  if (user.location) {
+    user.location.announce('<text>' + user.name + ' connects.</text>');
   }
 };
+$.connection.onReceiveLine.guestCount = 0;
 
 $.connection.onEnd = function() {
   if (this.user) {
@@ -400,7 +413,8 @@ $.connection.close = function() {
   var hangout = Object.create($.room);
   hangout.name = 'Hangout';
   hangout.description = 'A place to hang out, chat, and program.';
-  hangout.svgtext = '<circle cx="0" cy="100" r="100"/><circle cx="0" cy="0" r="100"/>';
+  hangout.svgText = '<circle cx="0" cy="100" r="100"/><circle cx="0" cy="0" r="100"/>';
+  $.startRoom = hangout;
 
   var clock = Object.create($.thing);
   clock.name = 'clock';
