@@ -1639,6 +1639,7 @@ CCC.World.xmlToSvg.ATTRIBUTE_NAMES = [
   'text-anchor',
   'textLength',
   'transform',
+  'viewBox',
   'x',
   'x1',
   'x2',

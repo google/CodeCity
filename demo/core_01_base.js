@@ -57,9 +57,17 @@ $.utils.commandMenu = function(commands) {
 $.physical = {};
 $.physical.name = 'Physical object prototype';
 $.physical.description = '';
-$.physical.svgtext = '';
+$.physical.svgText = '';
 $.physical.location = null;
 $.physical.contents_ = null;
+
+$.physical.getSvgText = function() {
+  return this.svgText;
+};
+
+$.physical.getDescription = function() {
+  return this.svgText;
+};
 
 $.physical.getContents = function() {
   return this.contents_ || [];
@@ -88,16 +96,26 @@ $.physical.moveTo = function(dest) {
 };
 
 $.physical.look = function() {
-  user.tell(this.name);
-  user.tell(this.description);
+  var html = '<table><tr><td>';
+  html += '<svg height="200" width="100" viewBox="0 0 100 100">' + this.getSvgText() + '</svg>';
+  html += '</td><td>';
+  html += '<h1>' + this.name + $.utils.commandMenu(this.getCommands()) + '</h1>';
+  html += '<p>' + this.getDescription() + '</p>';
   var contents = this.getContents();
   if (contents.length) {
-    var text = [];
+    var contentsHtml = [];
     for (var i = 0; i < contents.length; i++) {
-      text[i] = String(contents[i].name || contents[i]);
+      contentsHtml[i] = contents[i].name +
+          $.utils.commandMenu(contents[i].getCommands());
     }
-    user.tell('Contents: ' + text.join(', '));
+    html += '<p>Contents: ' + contentsHtml.join(', ') + '</p>';
   }
+  if (this.location) {
+    html += '<p>Location: ' + this.location.name +
+        $.utils.commandMenu(this.location.getCommands()) + '</p>';
+  }
+  html += '</td></tr></table>';
+  user.tell('<htmltext>' + $.utils.htmlEscape(html) + '</htmltext>');
 };
 $.physical.look.dobj = 'this';
 
@@ -109,6 +127,7 @@ $.physical.getCommands = function() {
 // Thing prototype: $.thing
 $.thing = Object.create($.physical);
 $.thing.name = 'Thing prototype';
+$.thing.svgText = '<path d="M10,90 l5,-5 h10 v10 l-5,5"/><line x1="20" y1="90" x2="25" y2="85"/><rect height="10" width="10" y="90" x="10"/>';
 
 $.thing.get = function() {
   this.moveTo(user);
@@ -145,15 +164,15 @@ $.room.name = 'Room prototype';
 $.room.look = function() {
   var text = '';
   text += '<scene user="' + user.name + '" room="' + this.name + '">\n';
-  text += '  <description>' + this.description + '</description>\n';
-  text += '  <svgtext>' + $.utils.htmlEscape(this.svgtext) + '</svgtext>\n';
+  text += '  <description>' + this.getDescription() + '</description>\n';
+  text += '  <svgtext>' + $.utils.htmlEscape(this.getSvgText()) + '</svgtext>\n';
   var contents = this.getContents();
   if (contents.length) {
     for (var i = 0; i < contents.length; i++) {
       var thing = contents[i];
       var tag = $.user.isPrototypeOf(thing) ? 'user' : 'object';
       text += '  <' + tag + ' name="' + thing.name + '">\n';
-      text += '    <svgtext>' + $.utils.htmlEscape(thing.svgtext) + '</svgtext>\n';
+      text += '    <svgtext>' + $.utils.htmlEscape(thing.getSvgText()) + '</svgtext>\n';
       var commands = thing.getCommands();
       if (commands.length) {
         text += '    ' + $.utils.commandMenu(commands) + '\n';
@@ -214,6 +233,11 @@ $.user.eval = function(code) {
   user.tell('<text>' + $.utils.htmlEscape(eval(code)) + '</text>');
 };
 $.user.eval.dobj = 'any';
+
+$.user.edit = function(path) {
+  user.tell('<iframe src="https://example.com/foo?src=' + encodeURIComponent(path) + '">Edit ' + $.utils.htmlEscape(path) + '</iframe>');
+};
+$.user.edit.dobj = 'any';
 
 $.user.tell = function(text) {
   if (this.connection) {
@@ -358,25 +382,78 @@ $.connection.close = function() {
   hangout.description = 'A place to hang out, chat, and program.';
   hangout.svgtext = '<circle cx="0" cy="100" r="100"/><circle cx="0" cy="0" r="100"/>';
 
-  var neil = Object.create($.user);
-  neil.name = 'Neil';
-  $.userDatabase['1387bfc24b159b3bd6ea187c66551d6b08f52dafb7fe5c3a5a93478f54ac6202b8f78efe5817015c250173b23a70f7f6ef3205e9f5d28730e0ff2033cc6fcf84'] = neil;
-  neil.description = 'Looks a bit Canadian.';
-  hangout.svgtext = '<ellipse ry="6" rx="5" cy="51" cx="17"/><line y2="83" x2="18" y1="57" x1="17"/><line y2="60" x2="4" y1="73" x1="18"/><line y2="70" x2="18" y1="62" x1="28"/><line y2="99" x2="11" y1="82" x1="18"/><line y2="99" x2="27" y1="82" x1="18"/><line y2="53" x2="18" y1="55" x1="21"/><circle r="0.4" cy="49" cx="19"/>';
-  neil.moveTo(hangout);
+  var clock = Object.create($.thing);
+  clock.name = 'clock';
+  clock.getDescription = function() {
+    return 'It is currently ' + Date();
+  };
+  clock.getSvgText = function() {
+    var svg = '<circle cx="0" cy="30" r="10"/>';
+    var r = 10;
+    for (var i = 0; i < 12; i++) {
+      var a = Math.PI * 2 / 12 * i;
+      var length = (i % 3 === 0) ? 2 : 1;
+      var x1 = Math.sin(a) * r;
+      var y1 = Math.cos(a) * r + 30;
+      var x2 = Math.sin(a) * (r - length);
+      var y2 = Math.cos(a) * (r - length) + 30;
+      svg += '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" />';
+    }
+    var now = new Date;
+    var minutes = now.getMinutes() + (now.getSeconds() / 60);
+    var hours = now.getHours() + (minutes / 60);
+    var x1 = 0;
+    var y1 = 30;
+    a = minutes / 60 * Math.PI * 2 + Math.PI;
+    var x2 = Math.sin(a) * -8;
+    var y2 = Math.cos(a) * 8 + 30;
+    svg += '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" />';
+    a = hours / 12 * Math.PI * 2 + Math.PI;
+    var x2 = Math.sin(a) * -6;
+    var y2 = Math.cos(a) * 6 + 30;
+    svg += '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" />';
+    return svg;
+  };
+  clock.moveTo(hangout);
 
-  var chris = Object.create($.user);
-  chris.name = 'Chris';
-  $.userDatabase[chris.name.toLowerCase()] = chris;
-  chris.description = 'Mostly harmless.';
-  chris.svgtext = '<circle cx="50" cy="50" r="10" /><line x1="50" y1="60" x2="50" y2="80"/><line x1="40" y1="70" x2="60" y2="70"/><line x1="50" y1="80" x2="40" y2="100"/><line x1="50" y1="80" x2="60" y2="100"/>';
-  chris.moveTo(hangout);
+  var bob = Object.create($.user);
+  bob.name = 'Bob';
+  $.userDatabase['1387bfc24b159b3bd6ea187c66551d6b08f52dafb7fe5c3a5a93478f54ac6202b8f78efe5817015c250173b23a70f7f6ef3205e9f5d28730e0ff2033cc6fcf84'] = bob;
+  bob.description = 'Looks a bit Canadian.';
+  bob.svgText = '<path d="m 1.59,78.8 c 1.48,-6.43 3.16,-12.8 5.20,-18.9 1.71,5.85 3.26,11.5 6.06,18.5" />';
+  bob.svgText += '<path d="m 0.74,99.4 c 3.18,-7.65 4.14,-15.4 6.27,-23.6 1.11,6.88 2.32,14.5 3.72,23.7" />';
+  bob.svgText += '<path d="m 7.01,76.8 c -0.44,-7.45 -0.78,-14.6 -0.11,-18.7" />';
+  bob.svgText += '<path d="m 6.59,58.5 c -3.47,-1.83 -6.15,-6.17 -6.06,-10.1 0.07,-3.06 2.25,-6.52 5.10,-7.65 2.94,-1.17 6.90,0.01 9.24,2.12 2.20,1.98 3.12,5.45 2.87,8.39 -0.22,2.57 -1.53,5.42 -3.72,6.80 -2.10,1.33 -5.24,1.59 -7.44,0.42 z" />';
+  bob.moveTo(hangout);
 
-  var rock = Object.create($.thing);
-  rock.name = 'rock';
-  rock.description = 'Suspiciously cube shaped, made of granite.';
-  rock.svgtext = '<path d="M10,90 l5,-5 h10 v10 l-5,5"/><line x1="20" y1="90" x2="25" y2="85"/><rect height="10" width="10" y="90" x="10"/>';
-  rock.moveTo(hangout);
+  var alice = Object.create($.user);
+  alice.name = 'Alice';
+  $.userDatabase[alice.name.toLowerCase()] = alice;
+  alice.description = 'Mostly harmless.';
+  alice.svgText = '<path d="m 7.01,77.6 c 1.6,-5.5 3.39,-12.3 5.29,-18.6 2.1,6.5 3.5,15.1 4.8,18.6" />';
+  alice.svgText += '<path d="m 5.84,99.5 c 2.86,-6.7 4.56,-16.1 6.66,-24.7 2,6.6 3.9,15.9 5.9,24.7" />';
+  alice.svgText += '<path d="m 12.5,75.6 c -0.6,-7.4 -0.4,-12.1 -0.1,-17" />';
+  alice.svgText += '<path d="m 12.3,58.5 c 2.4,0.8 5.6,0.4 7.6,-1.2 2.5,-2 3.7,-5.8 3.3,-9 -0.3,-2.6 -2.2,-5.3 -4.6,-6.5 -3,-1.5 -7.4,-1.8 -10.1,0.2 -2.58,1.9 -3.75,6 -3.08,9.1 0.71,3.3 3.7,6.3 6.88,7.4 z" />';
+  alice.svgText += '<path d="m 6.48,53.4 c -0.1,-2.2 1.1,-5.7 4.42,-3.6 6,3.8 12.3,-3.5 11.3,-4.3 l 0,0" />';
+  alice.svgText += '<path d="m 6.06,52.6 c -1.34,3.2 -1.54,7.1 -1.18,10.3 -0.15,-2.5 -4.525,-7.7 -4.243,-11.4 0.403,-5.3 2.783,-5.9 4.573,-3.6 0,2.3 0.28,3.8 0.85,4.7 z" />';
+  alice.moveTo(hangout);
+
+  var dog = Object.create($.thing);
+  dog.name = 'dog';
+  dog.description = 'A happy little puppy.';
+  dog.svgText = '<path d="m 33.5,88.7 c 0.2,1.7 0.3,3.3 1.9,5 0,1.4 -0.4,2.7 0.1,4.3 1,1.7 2.2,1.4 3.3,1.4 3.5,-0.1 1.6,-3 -0.2,-3.9 -0.7,-5 0.4,-7.5 0.5,-11.2" />';
+  dog.svgText += '<path d="m 17.8,95.4 c 0.5,1.3 0.9,2.6 1.9,3.9 2.8,-0.5 7.7,0.5 11.7,0.7 0.8,-2.5 0.9,-4.6 -3.2,-2.5 l -3.7,-0.4 c 7.6,-6.3 -0.5,-9.6 -2.9,-7.4" />';
+  dog.svgText += '<path d="m 40.7,98 c 0.2,0.3 1,0.3 2,0.1 0.6,-0.6 -0.3,-2.8 -2.5,-3.1 -0.2,-3.1 -0.3,-6.7 0.3,-9.3" />';
+  dog.svgText += '<path d="m 41.3,81.2 c 1,5.3 -6.7,13.1 -14.9,15.5 -12.9,3.3 -15.9,-5.5 -10.1,-14.8 1.7,-2.7 7.4,-10.4 17.3,-7.3 -3.2,-12.4 14,-21.3 16.2,-5.1 7.8,2.8 13.9,8.9 3.3,13 -6.7,2.5 -14.4,-2.3 -17.7,-5.6" />';
+  dog.svgText += '<circle r="0.5" cy="69.7" cx="46" />';
+  dog.svgText += '<path d="m 33.8,67.5 c 1.4,5.9 5.3,6.6 6.2,-0.6 0.3,-2 2.4,-3.9 1.4,-5.9" />';
+  dog.svgText += '<path d="m 13.4,89.4 c 0,0 -3.4,-2.9 -5.73,-6.2 -2.58,-3.7 -4.84,-5.3 -2.92,1.4 1.44,5 1.2,6 8.65,6.7" />';
+  dog.svgText += '<path d="m 7.75,79.8 c 1.63,0.9 2.65,2.9 3.55,5.3" />';
+  dog.svgText += '<path d="m 9.28,77.6 c 1.72,1.2 2.72,2.5 3.12,3.7" />';
+  dog.svgText += '<path d="m 2.48,87.5 c 0.85,4.6 4.86,7 7.72,6.6" />';
+  dog.svgText += '<path d="m 1.83,93.3 c 1.2,2.3 4.44,4.9 6.65,3.8" />';
+  dog.svgText += '<path d="m 53.3,79 c 0,0 0.6,1.6 4.2,1" />';
+  dog.moveTo(hangout);
 
   connectionListen(7777, $.connection);
 })();
