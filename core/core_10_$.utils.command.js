@@ -1,4 +1,28 @@
-var $ = function(str) {
+/**
+ * @license
+ * Code City: Command parser.
+ *
+ * Copyright 2017 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/**
+ * @fileoverview Command parser for Code City.
+ * @author fraser@google.com (Neil Fraser)
+ */
+
+$.utils.$ = function(str) {
   // Parse the string to extract a reference.
   // TODO: Support notations starting with @roomname and ~username.
   var m = str.match(/^\s*(\$|me|~|here|@)(.*)\s*$/);
@@ -29,8 +53,6 @@ var $ = function(str) {
   return undefined;
 };
 
-
-$.utils = {};
 $.utils.command = {};
 
 $.utils.command.prepositions = Object.create(null);
@@ -98,7 +120,7 @@ $.utils.command.parse = function(command, user) {
     if (!m.length) {
       dobj = undefined;
     } else if (m.length === 1) {
-      dobj = dobj[0];
+      dobj = m[0];
     } else {
       var err = ReferenceError(dobj.length + ' matches.');
       err.data = dobj;
@@ -110,7 +132,7 @@ $.utils.command.parse = function(command, user) {
     if (!m.length) {
       iobj = undefined;
     } else if (m.length === 1) {
-      iobj = iobj[0];
+      iobj = m[0];
     } else {
       var err = ReferenceError(iobj.length + ' matches.');
       err.data = iobj;
@@ -145,20 +167,22 @@ $.utils.command.execute = function(command, user) {
       continue;
     }
     // Check every verb on each object for a match.
-    var func, verb, dobj, prepstr, iobj;
+    var func, verb, dobj, prep, iobj;
     for (var prop in host) {
       func = host[prop];
-      if (typeof func === 'function' && (prepstr = func.prepstr) &&
-          (dobj = func.dobj) && (iobj = func.iobj && (verb = func.verb))) {
+      if (typeof func === 'function' && (prep = func.prep) &&
+          (dobj = func.dobj) && (iobj = func.iobj) && (verb = func.verb)) {
         // This is a verb.
-        if (spec.verb.search(verb) === 0) {
-          if (prepstr === 'any' ||
-              $.utils.command.prepositions[prepstr] === spec.prepstr ||
-              (prepstr == 'none' && !prepstr)) {
+        // TODO: use .search() once it's fixed to return -1 if no match.
+        // if (spec.verb.search(verb) === 0) {
+        if (spec.verb ===  verb) {
+          if (prep === 'any' ||
+              $.utils.command.prepositions[spec.prepstr] === prep ||
+              (prep == 'none' && !spec.prepstr)) {
             if (dobj === 'any' || (dobj === 'this' && spec.dobj === host) ||
-                (dobj === 'none' && !dobj)) {
+                (dobj === 'none' && !spec.dobj)) {
               if (iobj === 'any' || (iobj === 'this' && spec.iobj === host) ||
-                  (iobj === 'none' && !iobj)) {
+                  (iobj === 'none' && !spec.iobj)) {
                 // TODO: security check/perms.
                 host[prop](spec);
                 return true;
@@ -183,7 +207,7 @@ $.utils.match = function(str, context) {
     return [m];
   }
   // Second, check the context for one or more matches.
-  if (!(context instanceof $.physical)) {
+  if (!($.physical.isPrototypeOf(context))) {
     return [];
   }
   var nameMatches = [];  // These should be Sets.
@@ -197,16 +221,16 @@ $.utils.match = function(str, context) {
   // Check the contextual object.
   matchObj(context);
   // Check the contextual object's contents.
-  var contents = context.contents();
+  var contents = context.getContents();
   for (var i = 0; i < contents.length; i++) {
     matchObj(contents[i]);
   }
   var location = context.location;
-  if (context instanceof $.user && location instanceof $.physical) {
+  if ($.user.isPrototypeOf(context) && $.physical.isPrototypeOf(location)) {
     // Try the user's place next.
     matchObj(location);
     // Check the user's place's contents.
-    var contents = context.contents();
+    var contents = location.getContents();
     for (var i = 0; i < contents.length; i++) {
       if (contents[i] !== context) {
         matchObj(contents[i]);

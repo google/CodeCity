@@ -23,7 +23,9 @@
  */
 
 var user = null;
-var $ = {};
+var $ = function() {
+  return $.utils.$.apply($.utils, arguments);
+};
 
 // System object: $.system
 $.system = {};
@@ -95,7 +97,7 @@ $.physical.moveTo = function(dest) {
   dest && dest.addContents && dest.addContents(this);
 };
 
-$.physical.look = function() {
+$.physical.look = function(spec) {
   var html = '<table><tr><td>';
   html += '<svg height="200" width="100" viewBox="0 0 100 100">' + this.getSvgText() + '</svg>';
   html += '</td><td>';
@@ -117,7 +119,10 @@ $.physical.look = function() {
   html += '</td></tr></table>';
   user.tell('<htmltext>' + $.utils.htmlEscape(html) + '</htmltext>');
 };
+$.physical.look.verb = 'look';
 $.physical.look.dobj = 'this';
+$.physical.look.prep = 'none';
+$.physical.look.iobj = 'none';
 
 $.physical.getCommands = function() {
   return ['look ' + this.name];
@@ -129,25 +134,44 @@ $.thing = Object.create($.physical);
 $.thing.name = 'Thing prototype';
 $.thing.svgText = '<path d="M10,90 l5,-5 h10 v10 l-5,5"/><line x1="20" y1="90" x2="25" y2="85"/><rect height="10" width="10" y="90" x="10"/>';
 
-$.thing.get = function() {
+$.thing.get = function(spec) {
   this.moveTo(user);
   user.tell('You pick up ' + this.name + '.');
   if (user.location) {
     user.location.announce(user.name + ' picks up ' + this.name + '.');
   }
 };
+$.thing.get.verb = 'get';
 $.thing.get.dobj = 'this';
+$.thing.get.prep = 'none';
+$.thing.get.iobj = 'none';
 
-$.thing.drop = function() {
+$.thing.drop = function(spec) {
   this.moveTo(user.location);
   user.tell('You drop ' + this.name + '.');
   if (user.location) {
     user.location.announce(user.name + ' drops ' + this.name + '.');
   }
 };
+$.thing.drop.verb = 'drop';
 $.thing.drop.dobj = 'this';
+$.thing.drop.prep = 'none';
+$.thing.drop.iobj = 'none';
 
-$.thing.getCommands = function() {
+$.thing.give = function(spec) {
+  this.moveTo(spec.iobj);
+  user.tell('You give ' + this.name + ' to ' + spec.dobj.name + '.');
+  if (user.location) {
+    user.location.announce(user.name + ' gives ' + this.name + ' to ' +
+        spec.dobj.name + '.');
+  }
+};
+$.thing.give.verb = 'give';
+$.thing.give.dobj = 'this';
+$.thing.give.prep = 'at/to';
+$.thing.give.iobj = 'any';
+
+$.thing.getCommands = function(spec) {
   var commands = $.physical.getCommands.apply(this);
   if (this.location === user) {
     commands.push('drop ' + this.name);
@@ -161,7 +185,7 @@ $.thing.getCommands = function() {
 $.room = Object.create($.physical);
 $.room.name = 'Room prototype';
 
-$.room.look = function() {
+$.room.look = function(spec) {
   var text = '';
   text += '<scene user="' + user.name + '" room="' + this.name + '">\n';
   text += '  <description>' + this.getDescription() + '</description>\n';
@@ -183,7 +207,18 @@ $.room.look = function() {
   text += '</scene>';
   user.tell(text);
 };
+$.room.look.verb = 'look';
 $.room.look.dobj = 'this';
+$.room.look.prep = 'none';
+$.room.look.iobj = 'none';
+
+$.room.lookhere = function(spec) {
+  return this.look(spec);
+}
+$.room.lookhere.verb = 'look';
+$.room.lookhere.dobj = 'none';
+$.room.lookhere.prep = 'none';
+$.room.lookhere.iobj = 'none';
 
 $.room.announce = function(text) {
   var contents = this.getContents();
@@ -211,33 +246,45 @@ $.user = Object.create($.physical);
 $.user.name = 'User prototype';
 $.user.connection = null;
 
-$.user.say = function(text) {
+$.user.say = function(spec) {
   if (user.location) {
     user.location.announceAll(
         '<say user="' + user.name + '" room="' + user.location + '">' +
-        $.utils.htmlEscape(text) + '</say>');
+        $.utils.htmlEscape(spec.argstr) + '</say>');
   }
 };
+$.user.say.verb = 'say';
 $.user.say.dobj = 'any';
+$.user.say.prep = 'any';
+$.user.say.iobj = 'any';
 
-$.user.think = function(text) {
+$.user.think = function(spec) {
   if (user.location) {
     user.location.announceAll(
         '<think user="' + user.name + '" room="' + user.location + '">' +
-        $.utils.htmlEscape(text) + '</think>');
+        $.utils.htmlEscape(spec.argstr) + '</think>');
   }
 };
+$.user.think.verb = 'think';
 $.user.think.dobj = 'any';
+$.user.think.prep = 'any';
+$.user.think.iobj = 'any';
 
-$.user.eval = function(code) {
-  user.tell('<text>' + $.utils.htmlEscape(eval(code)) + '</text>');
+$.user.eval = function(spec) {
+  user.tell('<text>' + $.utils.htmlEscape(eval(spec.argstr)) + '</text>');
 };
+$.user.eval.verb = 'eval';
 $.user.eval.dobj = 'any';
+$.user.eval.prep = 'any';
+$.user.eval.iobj = 'any';
 
 $.user.edit = function(path) {
   user.tell('<iframe src="https://example.com/foo?src=' + encodeURIComponent(path) + '">Edit ' + $.utils.htmlEscape(path) + '</iframe>');
 };
+$.user.edit.verb = 'edit';
 $.user.edit.dobj = 'any';
+$.user.edit.prep = 'any';
+$.user.edit.iobj = 'any';
 
 $.user.tell = function(text) {
   if (this.connection) {
@@ -245,68 +292,22 @@ $.user.tell = function(text) {
   }
 };
 
-$.user.quit = function() {
+$.user.quit = function(spec) {
   if (this.connection) {
     this.connection.close();
   }
 };
+$.user.quit.verb = 'quit';
 $.user.quit.dobj = 'none';
+$.user.quit.prep = 'none';
+$.user.quit.iobj = 'none';
 
 
 // Command parser.
 $.execute = function(command) {
-  var argstr = command.trim();
-  var verbstr = argstr;
-  var dobjstr = '';
-  var dobj = null;
-  var space = command.indexOf(' ');
-  if (space !== -1) {
-    verbstr = argstr.substring(0, space).trim();
-    dobjstr = argstr.substring(space).trim();
+  if (!$.utils.command.execute(command, user)) {
+    user.tell('<text>Command not understood.</text>');
   }
-  if (!verbstr) {
-    return;
-  }
-  if (dobjstr) {
-    if (dobjstr === 'me') {
-      dobj = user;
-    } else if (dobjstr === 'here') {
-      dobj = user.location;
-    } else {
-      var objects = [user].concat(user.getContents());
-      if (user.location && user.location.getContents) {
-        objects.push(user.location);
-        objects = objects.concat(user.location.getContents());
-      }
-      for (var i = 0; i < objects.length; i++) {
-        var obj = objects[i];
-        if (obj.name &&
-            obj.name.toLowerCase().indexOf(dobjstr.toLowerCase()) === 0) {
-          dobj = obj;
-          break;
-        }
-      }
-    }
-  }
-  // Collect all objects which could host the verb.
-  var hosts = [user, user.location, dobj];
-  for (var i = 0; i < hosts.length; i++) {
-    var host = hosts[i];
-    if (!host) {
-      continue;
-    }
-    // Check every verb on each object for a match.
-    for (var prop in host) {
-      var func = host[prop];
-      if (prop === verbstr && typeof func === 'function' && func.dobj) {
-        if (func.dobj === 'any' || (func.dobj === 'this' && dobj === host) ||
-            (func.dobj === 'none' && !dobj)) {
-          return host[prop](dobjstr);
-        }
-      }
-    }
-  }
-  user.tell('<text>Command not understood.</text>');
 };
 
 
@@ -346,7 +347,7 @@ $.connection.onReceiveLine = function(text) {
     this.user.connection = this;
     $.system.log('Binding connection to ' + this.user.name);
     user = this.user;
-    $.execute('look here');
+    $.execute('look');
     if (user.location) {
       user.location.announce('<text>' + user.name + ' connects.</text>');
     }
