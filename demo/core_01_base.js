@@ -460,6 +460,7 @@ $.connection.close = function() {
 
   var fido = Object.create($.thing);
   fido.name = 'Fido';
+  fido.aliases = ['dog'];
   fido.description = 'A happy little puppy.';
   fido.svgText = '<path d="m 20.8,91.5 c -0.1,1.3 -0.2,2.5 -1.4,3.8 0,1.1 0.3,2 -0.1,3.3 -0.7,1.2 -1.6,1 -2.4,1 -2.7,-0.1 -1.3,-2.3 0.1,-2.9 0.5,-3.8 -0.3,-5.7 -0.4,-8.5" />';
   fido.svgText += '<path d="m 15.4,98.6 c -0.1,0.2 -0.7,0.2 -1.5,0 -0.4,-0.4 0.2,-2.1 1.9,-2.3 0.1,-2.3 0.2,-5.1 -0.2,-7" />';
