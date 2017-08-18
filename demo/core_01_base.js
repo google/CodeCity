@@ -119,7 +119,7 @@ $.physical.look = function(spec) {
   html += '</td></tr></table>';
   user.tell('<htmltext>' + $.utils.htmlEscape(html) + '</htmltext>');
 };
-$.physical.look.verb = 'look';
+$.physical.look.verb = 'l(ook)?';
 $.physical.look.dobj = 'this';
 $.physical.look.prep = 'none';
 $.physical.look.iobj = 'none';
@@ -141,7 +141,7 @@ $.thing.get = function(spec) {
     user.location.announce(user.name + ' picks up ' + this.name + '.');
   }
 };
-$.thing.get.verb = 'get';
+$.thing.get.verb = 'get|take';
 $.thing.get.dobj = 'this';
 $.thing.get.prep = 'none';
 $.thing.get.iobj = 'none';
@@ -153,7 +153,7 @@ $.thing.drop = function(spec) {
     user.location.announce(user.name + ' drops ' + this.name + '.');
   }
 };
-$.thing.drop.verb = 'drop';
+$.thing.drop.verb = 'drop|throw';
 $.thing.drop.dobj = 'this';
 $.thing.drop.prep = 'none';
 $.thing.drop.iobj = 'none';
@@ -212,7 +212,7 @@ $.room.look = function(spec) {
   text += '</scene>';
   user.tell(text);
 };
-$.room.look.verb = 'look';
+$.room.look.verb = 'l(ook)?';
 $.room.look.dobj = 'this';
 $.room.look.prep = 'none';
 $.room.look.iobj = 'none';
@@ -220,7 +220,7 @@ $.room.look.iobj = 'none';
 $.room.lookhere = function(spec) {
   return this.look(spec);
 }
-$.room.lookhere.verb = 'look';
+$.room.lookhere.verb = 'l(ook)?';
 $.room.lookhere.dobj = 'none';
 $.room.lookhere.prep = 'none';
 $.room.lookhere.iobj = 'none';
@@ -259,7 +259,7 @@ $.user.say = function(spec) {
         $.utils.htmlEscape(spec.argstr) + '</say>');
   }
 };
-$.user.say.verb = 'say';
+$.user.say.verb = 'say|".*';
 $.user.say.dobj = 'any';
 $.user.say.prep = 'any';
 $.user.say.iobj = 'any';
@@ -271,7 +271,7 @@ $.user.think = function(spec) {
         $.utils.htmlEscape(spec.argstr) + '</think>');
   }
 };
-$.user.think.verb = 'think';
+$.user.think.verb = 'think|\.oO';
 $.user.think.dobj = 'any';
 $.user.think.prep = 'any';
 $.user.think.iobj = 'any';
@@ -294,7 +294,7 @@ $.user.eval = function(spec) {
   }
   user.tell('<text>' + $.utils.htmlEscape(r) + '</text>');
 };
-$.user.eval.verb = 'eval';
+$.user.eval.verb = 'eval|;.*';
 $.user.eval.dobj = 'any';
 $.user.eval.prep = 'any';
 $.user.eval.iobj = 'any';
