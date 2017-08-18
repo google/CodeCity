@@ -271,7 +271,22 @@ $.user.think.prep = 'any';
 $.user.think.iobj = 'any';
 
 $.user.eval = function(spec) {
-  user.tell('<text>' + $.utils.htmlEscape(eval(spec.argstr)) + '</text>');
+  try {
+    var r = eval(spec.argstr);
+  } catch (e) {
+    if (e instanceof Error) {
+      r = String(e.name);
+      if (e.message) {
+        r += ': ' + String(e.message);
+      }
+      if (e.stack) {
+        r += '\n' + e.stack;
+      }
+    } else {
+      r = 'Unhandled exception: ' + String(e);
+    }
+  }
+  user.tell('<text>' + $.utils.htmlEscape(r) + '</text>');
 };
 $.user.eval.verb = 'eval';
 $.user.eval.dobj = 'any';
@@ -327,8 +342,11 @@ $.connection.onReceive = function(text) {
   this.buffer += text.replace(/\r/g, '');
   var lf;
   while ((lf = this.buffer.indexOf('\n')) !== -1) {
-    this.onReceiveLine(this.buffer.substring(0, lf));
-    this.buffer = this.buffer.substring(lf + 1);
+    try {
+      this.onReceiveLine(this.buffer.substring(0, lf));
+    } finally {
+      this.buffer = this.buffer.substring(lf + 1);
+    }
   }
 };
 
