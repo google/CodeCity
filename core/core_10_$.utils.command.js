@@ -173,9 +173,7 @@ $.utils.command.execute = function(command, user) {
       if (typeof func === 'function' && (prep = func.prep) &&
           (dobj = func.dobj) && (iobj = func.iobj) && (verb = func.verb)) {
         // This is a verb.
-        // TODO: use .search() once it's fixed to return -1 if no match.
-        // if (spec.verb.search(verb) === 0) {
-        if (spec.verb ===  verb) {
+        if (spec.verb.search(verb) === 0) {
           if (prep === 'any' ||
               $.utils.command.prepositions[spec.prepstr] === prep ||
               (prep == 'none' && !spec.prepstr)) {
