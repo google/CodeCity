@@ -87,16 +87,16 @@ $.utils.command.prepositionsRegExp = new RegExp(
     'onto|on +top +of|on|off +of|off|is|into|inside|in +front +of|' +
     'in|from +inside|from|for|beside|beneath|behind|at|as|about)(?:\\s|$)');
 
-$.utils.command.parse = function(command, user) {
+$.utils.command.parse = function(cmdstr, user) {
   // Parse a user's command into components:
   // verbstr, argstr, args, dobjstr, dobj, prepstr, iobjstr, iobj
   // Returns an object with the above properties, or undefined if no verb.
-  var args = command.split(/ +/);
+  var args = cmdstr.split(/ +/);
   var verbstr = args.shift();
   if (!verbstr) {
     return undefined;
   }
-  var argstr = command.substring(command.indexOf(verbstr) + verbstr.length + 1);
+  var argstr = cmdstr.substring(cmdstr.indexOf(verbstr) + verbstr.length + 1);
   var dobjstr = '';
   var dobj = null;
   var iobjstr = '';
@@ -140,6 +140,8 @@ $.utils.command.parse = function(command, user) {
     }
   }
   return {
+    user: user,
+    cmdstr: cmdstr,
     verbstr: verbstr,
     argstr: argstr,
     args: args,
@@ -151,10 +153,10 @@ $.utils.command.parse = function(command, user) {
   };
 };
 
-$.utils.command.execute = function(command, user) {
+$.utils.command.execute = function(cmdstr, user) {
   // Parse and execute a user's command.
   // Return true if successful, false if not.
-  var cmd = $.utils.command.parse(command, user);
+  var cmd = $.utils.command.parse(cmdstr, user);
   if (!cmd) {
     // TODO: Support trapping of empty commands.
     return true;
