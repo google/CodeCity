@@ -160,10 +160,10 @@ $.thing.drop.iobj = 'none';
 
 $.thing.give = function(spec) {
   this.moveTo(spec.iobj);
-  user.tell('You give ' + this.name + ' to ' + spec.dobj.name + '.');
+  user.tell('You give ' + this.name + ' to ' + spec.iobj.name + '.');
   if (user.location) {
     user.location.announce(user.name + ' gives ' + this.name + ' to ' +
-        spec.dobj.name + '.');
+        spec.iobj.name + '.');
   }
 };
 $.thing.give.verb = 'give';
