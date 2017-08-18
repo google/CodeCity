@@ -227,7 +227,7 @@ $.user.think = function(text) {
         $.utils.htmlEscape(text) + '</think>');
   }
 };
-$.user.say.dobj = 'any';
+$.user.think.dobj = 'any';
 
 $.user.eval = function(code) {
   user.tell('<text>' + $.utils.htmlEscape(eval(code)) + '</text>');
@@ -306,7 +306,7 @@ $.execute = function(command) {
       }
     }
   }
-  user.tell('<text>Command not understood.<text>');
+  user.tell('<text>Command not understood.</text>');
 };
 
 
