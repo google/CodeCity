@@ -89,14 +89,14 @@ $.utils.command.prepositionsRegExp = new RegExp(
 
 $.utils.command.parse = function(command, user) {
   // Parse a user's command into components:
-  // verb, argstr, args, dobjstr, dobj, prepstr, iobjstr, iobj
+  // verbstr, argstr, args, dobjstr, dobj, prepstr, iobjstr, iobj
   // Returns an object with the above properties, or undefined if no verb.
   var args = command.split(/ +/);
-  var verb = args.shift();
-  if (!verb) {
+  var verbstr = args.shift();
+  if (!verbstr) {
     return undefined;
   }
-  var argstr = command.substring(command.indexOf(verb) + verb.length + 1);
+  var argstr = command.substring(command.indexOf(verbstr) + verbstr.length + 1);
   var dobjstr = '';
   var dobj = null;
   var iobjstr = '';
@@ -140,7 +140,7 @@ $.utils.command.parse = function(command, user) {
     }
   }
   return {
-    verb: verb,
+    verbstr: verbstr,
     argstr: argstr,
     args: args,
     dobjstr: dobjstr,
@@ -154,13 +154,13 @@ $.utils.command.parse = function(command, user) {
 $.utils.command.execute = function(command, user) {
   // Parse and execute a user's command.
   // Return true if successful, false if not.
-  var spec = $.utils.command.parse(command, user);
-  if (!spec) {
+  var cmd = $.utils.command.parse(command, user);
+  if (!cmd) {
     // TODO: Support trapping of empty commands.
     return true;
   }
   // Collect all objects which could host the verb.
-  var hosts = [user, user.location, spec.dobj, spec.iobj];
+  var hosts = [user, user.location, cmd.dobj, cmd.iobj];
   for (var i = 0; i < hosts.length; i++) {
     var host = hosts[i];
     if (!host) {
@@ -173,16 +173,16 @@ $.utils.command.execute = function(command, user) {
       if (typeof func === 'function' && (prep = func.prep) &&
           (dobj = func.dobj) && (iobj = func.iobj) && (verb = func.verb)) {
         // This is a verb.
-        if (spec.verb.search(verb) === 0) {
+        if (cmd.verbstr.search(verb) === 0) {
           if (prep === 'any' ||
-              $.utils.command.prepositions[spec.prepstr] === prep ||
-              (prep == 'none' && !spec.prepstr)) {
-            if (dobj === 'any' || (dobj === 'this' && spec.dobj === host) ||
-                (dobj === 'none' && !spec.dobj)) {
-              if (iobj === 'any' || (iobj === 'this' && spec.iobj === host) ||
-                  (iobj === 'none' && !spec.iobj)) {
+              $.utils.command.prepositions[cmd.prepstr] === prep ||
+              (prep == 'none' && !cmd.prepstr)) {
+            if (dobj === 'any' || (dobj === 'this' && cmd.dobj === host) ||
+                (dobj === 'none' && !cmd.dobj)) {
+              if (iobj === 'any' || (iobj === 'this' && cmd.iobj === host) ||
+                  (iobj === 'none' && !cmd.iobj)) {
                 // TODO: security check/perms.
-                host[prop](spec);
+                host[prop](cmd);
                 return true;
               }
             }

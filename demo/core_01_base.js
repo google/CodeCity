@@ -97,7 +97,7 @@ $.physical.moveTo = function(dest) {
   dest && dest.addContents && dest.addContents(this);
 };
 
-$.physical.look = function(spec) {
+$.physical.look = function(cmd) {
   var html = '<table><tr><td>';
   html += '<svg height="200" width="100" viewBox="0 0 100 100">' + this.getSvgText() + '</svg>';
   html += '</td><td>';
@@ -134,7 +134,7 @@ $.thing = Object.create($.physical);
 $.thing.name = 'Thing prototype';
 $.thing.svgText = '<path d="M10,90 l5,-5 h10 v10 l-5,5"/><line x1="20" y1="90" x2="25" y2="85"/><rect height="10" width="10" y="90" x="10"/>';
 
-$.thing.get = function(spec) {
+$.thing.get = function(cmd) {
   this.moveTo(user);
   user.tell('You pick up ' + this.name + '.');
   if (user.location) {
@@ -146,7 +146,7 @@ $.thing.get.dobj = 'this';
 $.thing.get.prep = 'none';
 $.thing.get.iobj = 'none';
 
-$.thing.drop = function(spec) {
+$.thing.drop = function(cmd) {
   this.moveTo(user.location);
   user.tell('You drop ' + this.name + '.');
   if (user.location) {
@@ -158,12 +158,12 @@ $.thing.drop.dobj = 'this';
 $.thing.drop.prep = 'none';
 $.thing.drop.iobj = 'none';
 
-$.thing.give = function(spec) {
-  this.moveTo(spec.iobj);
-  user.tell('You give ' + this.name + ' to ' + spec.iobj.name + '.');
+$.thing.give = function(cmd) {
+  this.moveTo(cmd.iobj);
+  user.tell('You give ' + this.name + ' to ' + cmd.iobj.name + '.');
   if (user.location) {
     user.location.announce(user.name + ' gives ' + this.name + ' to ' +
-        spec.iobj.name + '.');
+        cmd.iobj.name + '.');
   }
 };
 $.thing.give.verb = 'give';
@@ -171,7 +171,7 @@ $.thing.give.dobj = 'this';
 $.thing.give.prep = 'at/to';
 $.thing.give.iobj = 'any';
 
-$.thing.getCommands = function(spec) {
+$.thing.getCommands = function(cmd) {
   var commands = $.physical.getCommands.apply(this);
   if (this.location === user) {
     commands.push('drop ' + this.name);
@@ -185,7 +185,7 @@ $.thing.getCommands = function(spec) {
 $.room = Object.create($.physical);
 $.room.name = 'Room prototype';
 
-$.room.look = function(spec) {
+$.room.look = function(cmd) {
   var text = '';
   text += '<scene user="' + user.name + '" room="' + this.name + '">\n';
   text += '  <description>' + this.getDescription() + '</description>\n';
@@ -217,8 +217,8 @@ $.room.look.dobj = 'this';
 $.room.look.prep = 'none';
 $.room.look.iobj = 'none';
 
-$.room.lookhere = function(spec) {
-  return this.look(spec);
+$.room.lookhere = function(cmd) {
+  return this.look(cmd);
 }
 $.room.lookhere.verb = 'l(ook)?';
 $.room.lookhere.dobj = 'none';
@@ -252,11 +252,11 @@ $.user.name = 'User prototype';
 $.user.connection = null;
 $.user.svgText = '<circle cx="50" cy="50" r="10" /><line x1="50" y1="60" x2="50" y2="80"/><line x1="40" y1="70" x2="60" y2="70"/><line x1="50" y1="80" x2="40" y2="100"/><line x1="50" y1="80" x2="60" y2="100"/>';
 
-$.user.say = function(spec) {
+$.user.say = function(cmd) {
   if (user.location) {
     user.location.announceAll(
         '<say user="' + user.name + '" room="' + user.location + '">' +
-        $.utils.htmlEscape(spec.argstr) + '</say>');
+        $.utils.htmlEscape(cmd.argstr) + '</say>');
   }
 };
 $.user.say.verb = 'say|".*';
@@ -264,11 +264,11 @@ $.user.say.dobj = 'any';
 $.user.say.prep = 'any';
 $.user.say.iobj = 'any';
 
-$.user.think = function(spec) {
+$.user.think = function(cmd) {
   if (user.location) {
     user.location.announceAll(
         '<think user="' + user.name + '" room="' + user.location + '">' +
-        $.utils.htmlEscape(spec.argstr) + '</think>');
+        $.utils.htmlEscape(cmd.argstr) + '</think>');
   }
 };
 $.user.think.verb = 'think|\.oO';
@@ -276,9 +276,9 @@ $.user.think.dobj = 'any';
 $.user.think.prep = 'any';
 $.user.think.iobj = 'any';
 
-$.user.eval = function(spec) {
+$.user.eval = function(cmd) {
   try {
-    var r = eval(spec.argstr);
+    var r = eval(cmd.argstr);
   } catch (e) {
     if (e instanceof Error) {
       r = String(e.name);
@@ -299,9 +299,9 @@ $.user.eval.dobj = 'any';
 $.user.eval.prep = 'any';
 $.user.eval.iobj = 'any';
 
-$.user.edit = function(spec) {
-  user.tell('<iframe src="/web/edit/' + encodeURIComponent(spec.argstr) + '">' +
-      'Edit ' + $.utils.htmlEscape(spec.argstr) + '</iframe>');
+$.user.edit = function(cmd) {
+  user.tell('<iframe src="/web/edit/' + encodeURIComponent(cmd.argstr) + '">' +
+      'Edit ' + $.utils.htmlEscape(cmd.argstr) + '</iframe>');
 };
 $.user.edit.verb = 'edit';
 $.user.edit.dobj = 'any';
@@ -314,7 +314,7 @@ $.user.tell = function(text) {
   }
 };
 
-$.user.quit = function(spec) {
+$.user.quit = function(cmd) {
   if (this.connection) {
     this.connection.close();
   }
