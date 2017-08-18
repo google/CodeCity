@@ -428,7 +428,7 @@ $.connection.close = function() {
 
   var alice = Object.create($.user);
   alice.name = 'Alice';
-  $.userDatabase[alice.name.toLowerCase()] = alice;
+  $.userDatabase['4b567644d33ad68a38a45d3fb61e5a53a64cf261ea2516d9a3de5235e75d7490b9bd7b2dc12f64182f9b9b50ddb113f257803c1d069cbb32da1719d06a567cee'] = alice;
   alice.description = 'Mostly harmless.';
   alice.svgText = '<path d="m 7.01,77.6 c 1.6,-5.5 3.39,-12.3 5.29,-18.6 2.1,6.5 3.5,15.1 4.8,18.6" />';
   alice.svgText += '<path d="m 5.84,99.5 c 2.86,-6.7 4.56,-16.1 6.66,-24.7 2,6.6 3.9,15.9 5.9,24.7" />';
