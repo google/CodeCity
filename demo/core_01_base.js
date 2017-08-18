@@ -278,8 +278,9 @@ $.user.eval.dobj = 'any';
 $.user.eval.prep = 'any';
 $.user.eval.iobj = 'any';
 
-$.user.edit = function(path) {
-  user.tell('<iframe src="https://example.com/foo?src=' + encodeURIComponent(path) + '">Edit ' + $.utils.htmlEscape(path) + '</iframe>');
+$.user.edit = function(spec) {
+  user.tell('<iframe src="/web/edit/' + encodeURIComponent(spec.argstr) + '">' +
+      'Edit ' + $.utils.htmlEscape(spec.argstr) + '</iframe>');
 };
 $.user.edit.verb = 'edit';
 $.user.edit.dobj = 'any';
