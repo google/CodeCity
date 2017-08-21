@@ -2125,8 +2125,8 @@ Interpreter.prototype.throwException = function(value, opt_message) {
  * the stack being completely unwound the thread will be terminated
  * and an appropriate error being logged.
  * @param {Interpreter.Completion} type Completion type.
- * @param {Interpreter.Value=} error Value computed, returned or thrown.
- * @param {Interpreter.String=} label Target label for break or return.
+ * @param {Interpreter.Value=} value Value computed, returned or thrown.
+ * @param {string=} label Target label for break or return.
  */
 Interpreter.prototype.unwind = function(type, value, label) {
   if (type === Interpreter.Completion.NORMAL) {
