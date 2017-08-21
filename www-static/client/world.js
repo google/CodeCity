@@ -1027,6 +1027,7 @@ CCC.World.publishHistory = function(historyElement) {
     }, false);
     panelDiv.appendChild(closeImg);
   } else {
+    CCC.World.svgZoom(historyElement);
     // The occasional (non-iframe) panel should lack a border.
     if (Math.random() < 1 / 16) {
       panelDiv.style.borderColor = '#fff';
@@ -1059,6 +1060,7 @@ CCC.World.publishPanorama = function() {
     CCC.World.positionIframe(iframe, CCC.World.panoramaDiv);
   } else {
     content.style.visibility = 'visible';
+    CCC.World.svgZoom(content);
     // Add event handlers on all <a class="command"> links.
     var commands = content.querySelectorAll('a.command');
     for (var i = 0, command; command = commands[i]; i++) {
@@ -1075,6 +1077,27 @@ CCC.World.publishPanorama = function() {
       icon.addEventListener('click',
           parent.location.reload.bind(parent.location));
       icon.title = CCC.World.getMsg('reconnectMsg');
+    }
+  }
+};
+
+/**
+ * Find all SVG images with viewbox="0 0 0 0" attribute and resize them to fit.
+ * @param {!Element} container DOM node for panel.
+ */
+CCC.World.svgZoom = function(container) {
+  var svgNodes = container.getElementsByTagName('svg');
+  for (var i = 0, svg; (svg = svgNodes[i]); i++) {
+    var viewBox = svg.getAttribute('viewBox');
+    if (viewBox && viewBox.match(/^\s*0\s+0\s+0\s+0\s*$/)) {
+      //var outerSize = svg.getBoundingClientRect();
+      var bBox = svg.getBBox();
+      var height = bBox.height + 1; // Add half the stroke width to each side.
+      var width = bBox.width + 1;
+      var x = bBox.x - 0.5;
+      var y = bBox.y - 0.5;
+      console.log(bBox);
+      svg.setAttribute('viewBox', x + ' ' + y + ' ' + width + ' ' + height);
     }
   }
 };

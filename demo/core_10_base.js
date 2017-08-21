@@ -98,8 +98,8 @@ $.physical.moveTo = function(dest) {
 };
 
 $.physical.look = function(cmd) {
-  var html = '<table><tr><td>';
-  html += '<svg height="200" width="100" viewBox="0 0 100 100">' + this.getSvgText() + '</svg>';
+  var html = '<table style="height: 100%; width: 100%;"><tr><td style="padding: 1ex; width: 30%;">';
+  html += '<svg width="100%" height="100%" viewBox="0 0 0 0">' + this.getSvgText() + '</svg>';
   html += '</td><td>';
   html += '<h1>' + this.name + $.utils.commandMenu(this.getCommands()) + '</h1>';
   html += '<p>' + this.getDescription() + '</p>';
