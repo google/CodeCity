@@ -2085,9 +2085,8 @@ Interpreter.prototype.setValue = function(scope, ref, value) {
 
 /**
  * Throw an exception in the interpreter that can be handled by a
- * interpreter try/catch statement.  If unhandled, a real exception will
- * be thrown.  Can be called with either an error class and a message, or
- * with an actual object to be thrown.
+ * interpreter try/catch statement.  Can be called with either an
+ * error class and a message, or with an actual object to be thrown.
  * @param {Interpreter.Value} value Value to be thrown.  If message is
  *     provided a new error object is created using value as the
  *     prototype; if not it is used directly.
@@ -2109,9 +2108,9 @@ Interpreter.prototype.throwException = function(value, opt_message) {
 };
 
 /**
- * Throw an exception in the interpreter that can be handled by an
- * interpreter try/catch statement.  If unhandled, a real exception will
- * be thrown.
+ * Execute an exception by unwinding the stack to the innermost
+ * enclosing TryStatement.  If none is found, the current thread will
+ * be terminated and an unhandled exception logged.
  * @param {Interpreter.Value} error Value being thrown.
  */
 Interpreter.prototype.executeException = function(error) {
