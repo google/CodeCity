@@ -2142,11 +2142,28 @@ Interpreter.prototype.unwind = function(type, value, label) {
       case 'CallExpression':
       case 'NewExpression':
         switch (type) {
+          case Interpreter.Completion.BREAK:
+          case Interpreter.Completion.CONTINUE:
+            throw Error('Unsynatctic break/continue not rejected by acorn');
           case Interpreter.Completion.RETURN:
             state.value = value;
             return;
         }
         break;
+    }
+    if (type === Interpreter.Completion.BREAK) {
+      if (label === undefined ?
+          (state.isLoop || state.isSwitch) :
+          (state.labels && state.labels.indexOf(label) !== -1)) {
+        stack.pop();
+        return;
+      }
+    } else if (type === Interpreter.Completion.CONTINUE) {
+      if (label == undefined ?
+          state.isLoop : 
+          (state.labels && state.labels.indexOf(label) !== -1)) {
+        return;
+      }
     }
   }
 
@@ -2875,25 +2892,11 @@ Interpreter.prototype['stepBlockStatement'] = function(stack, state, node) {
 };
 
 Interpreter.prototype['stepBreakStatement'] = function(stack, state, node) {
-  stack.pop();
-  var label = null;
+  var label = undefined;
   if (node['label']) {
     label = node['label']['name'];
   }
-  while (state &&
-         state.node['type'] !== 'CallExpression' &&
-         state.node['type'] !== 'NewExpression') {
-    if (label) {
-      if (state.labels && state.labels.indexOf(label) !== -1) {
-        return;
-      }
-    } else if (state.isLoop || state.isSwitch) {
-      return;
-    }
-    state = stack.pop();
-  }
-  // Syntax error, do not allow this error to be trapped.
-  throw SyntaxError('Illegal break statement');
+  this.unwind(Interpreter.Completion.BREAK, undefined, label);
 };
 
 Interpreter.prototype['stepCallExpression'] = function(stack, state, node) {
@@ -3079,27 +3082,11 @@ Interpreter.prototype['stepConditionalExpression'] =
 };
 
 Interpreter.prototype['stepContinueStatement'] = function(stack, state, node) {
-  stack.pop();
-  var label = null;
+  var label = undefined;
   if (node['label']) {
     label = node['label']['name'];
   }
-  state = stack[stack.length - 1];
-  while (state &&
-         state.node['type'] !== 'CallExpression' &&
-         state.node['type'] !== 'NewExpression') {
-    if (state.isLoop) {
-      if (!label || (state.labels && state.labels.indexOf(label) !== -1)) {
-        return;
-      }
-    }
-    stack.pop();
-    state = stack[stack.length - 1];
-  }
-  // Syntax error, do not allow this error to be trapped.
-  // TODO: Reenable once continuation passing is correct.
-  // function/try/return/finally/continue
-  //throw SyntaxError('Illegal continue statement');
+  this.unwind(Interpreter.Completion.CONTINUE, undefined, label);
 };
 
 Interpreter.prototype['stepDebuggerStatement'] = function(stack, state, node) {
