@@ -132,7 +132,7 @@ $.physical.getCommands = function() {
 // Thing prototype: $.thing
 $.thing = Object.create($.physical);
 $.thing.name = 'Thing prototype';
-$.thing.svgText = '<path d="M10,90 l5,-5 h10 v10 l-5,5"/><line x1="20" y1="90" x2="25" y2="85"/><rect height="10" width="10" y="90" x="10"/>';
+$.thing.svgText = '<path d="M10,90 l5,-5 h10 v10 l-5,5" class="fillWhite"/><line x1="20" y1="90" x2="25" y2="85"/><rect height="10" width="10" y="90" x="10" class="fillWhite"/>';
 
 $.thing.get = function(cmd) {
   this.moveTo(user);
