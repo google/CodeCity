@@ -1581,6 +1581,17 @@ CCC.World.xmlToSvg = function(dom) {
           console.log('SVG attribute not in whitelist: ' +
               '<' + dom.tagName + ' ' + attr.name + '="' + attr.value + '">');
         } else {
+          // Remove all styles not in the whitelist.
+          if (attr.name === 'class') {
+            var classes = attr.value.split(/\s+/g);
+            for (var j = classes.length - 1; j >= 0; j--) {
+              if (CCC.World.xmlToSvg.CLASS_NAMES.indexOf(classes[j]) === -1) {
+                console.log('Class name not in whitelist: ' + classes[j]);
+                classes.splice(j, 1);
+              }
+            }
+            attr.value = classes.join(' ');
+          }
           svg.setAttribute(attr.name, attr.value);
         }
       }
@@ -1625,6 +1636,7 @@ CCC.World.xmlToSvg.ELEMENT_NAMES = [
  * on one element type which are allowed on another.
  */
 CCC.World.xmlToSvg.ATTRIBUTE_NAMES = [
+  'class',
   'cx',
   'cy',
   'd',
@@ -1647,6 +1659,20 @@ CCC.World.xmlToSvg.ATTRIBUTE_NAMES = [
   'y1',
   'y2',
   'width',
+];
+
+/**
+ * Whitelist of all allowed class names.
+ */
+CCC.World.xmlToSvg.CLASS_NAMES = [
+  'fillNone',
+  'fillWhite',
+  'fillBlack',
+  'fillGrey', 'fillGray',
+  'strokeNone',
+  'strokeWhite',
+  'strokeBlack',
+  'strokeGrey', 'strokeGray',
 ];
 
 /**

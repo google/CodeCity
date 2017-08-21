@@ -105,7 +105,7 @@ body {
 
 /* Enforce a consistent drawing style on all content. */
 svg {
-  fill: #fff;
+  fill: none;
   stroke: #000;
   stroke-linecap: round;
   stroke-linejoin: round;
@@ -123,14 +123,47 @@ text {
 }
 
 .bubbleBG {
-  stroke: none;
   fill: #000;
+  stroke: none;
 }
 
 .bubbleFG {
+  fill: #fff;
   stroke: none;
 }
 
 g.say {
   text-anchor: middle;
+}
+
+.strokeNone {
+  stroke: none;
+}
+
+.strokeWhite {
+  stroke: #fff;
+}
+
+.strokeBlack {
+  stroke: #000;
+}
+
+.strokeGrey, .strokeGray {
+  stroke: #888;
+}
+
+.fillNone {
+  fill: none;
+}
+
+.fillWhite {
+  fill: #fff;
+}
+
+.fillBlack {
+  fill: #000;
+}
+
+.fillGrey, .fillGray {
+  fill: #888;
 }
