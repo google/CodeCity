@@ -280,8 +280,10 @@ $.user.think.prep = 'any';
 $.user.think.iobj = 'any';
 
 $.user.eval = function(cmd) {
+  // Format:  ;1+1    -or-    eval 1+1
+  var code = (cmd.cmdstr[0] === ';') ? cmd.cmdstr.substring(1) : cmd.argstr;
   try {
-    var r = eval(cmd.argstr);
+    var r = eval(code);
   } catch (e) {
     if (e instanceof Error) {
       r = String(e.name);
