@@ -2139,6 +2139,14 @@ Interpreter.prototype.unwind = function(type, value, label) {
       case 'TryStatement':
         state.cv = {type: type, value: value, label: label};
         return;
+      case 'CallExpression':
+      case 'NewExpression':
+        switch (type) {
+          case Interpreter.Completion.RETURN:
+            state.value = value;
+            return;
+        }
+        break;
     }
   }
 
@@ -3400,22 +3408,7 @@ Interpreter.prototype['stepReturnStatement'] = function(stack, state, node) {
     state.done_ = true;
     return new Interpreter.State(node['argument'], state.scope);
   }
-  var value = state.value;
-  var i = stack.length - 1;
-  state = stack[i];
-  while (state.node['type'] !== 'CallExpression' &&
-      state.node['type'] !== 'NewExpression') {
-    if (state.node['type'] !== 'TryStatement') {
-      stack.splice(i, 1);
-    }
-    i--;
-    if (i < 0) {
-      // Syntax error, do not allow this error to be trapped.
-      throw SyntaxError('Illegal return statement');
-    }
-    state = stack[i];
-  }
-  state.value = value;
+  this.unwind(Interpreter.Completion.RETURN, state.value, undefined);
 };
 
 Interpreter.prototype['stepSequenceExpression'] = function(stack, state, node) {
