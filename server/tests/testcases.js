@@ -177,6 +177,15 @@ module.exports = [
     `,
     expected: 52 },
 
+  { name: 'throwCatchFalsey', src: `
+    try {
+      throw null;
+    } catch (e) {
+      'caught ' + String(e);
+    }
+    `,
+    expected: 'caught null' },
+
   // N.B.: This and next tests have no equivalent in the test DB.
   { name: 'throwUnhandledError', src: `
     throw Error('not caught');
