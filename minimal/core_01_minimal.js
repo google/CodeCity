@@ -242,9 +242,11 @@ $.connection.onReceiveLine = function(text) {
     this.user = $.userDatabase[text];
     if (this.user.connection) {
       this.user.connection.close();
+      $.system.log('Rebinding connection to ' + this.user.name);
+    } else {
+      $.system.log('Binding connection to ' + this.user.name);
     }
     this.user.connection = this;
-    $.system.log('Binding connection to ' + this.user.name);
     this.write('Connected as ' + this.user.name);
     user = this.user;
     $.execute('look here');
@@ -261,8 +263,10 @@ $.connection.onEnd = function() {
     if (user.location) {
       user.location.announce(user.name + ' disconnects.');
     }
-    $.system.log('Unbinding connection from ' + this.user.name);
-    this.user.connection = null;
+    if (this.user.connection === this) {
+      $.system.log('Unbinding connection from ' + this.user.name);
+      this.user.connection = null;
+    }
     this.user = null;
   }
 };
