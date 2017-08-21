@@ -68,7 +68,7 @@ $.physical.getSvgText = function() {
 };
 
 $.physical.getDescription = function() {
-  return this.svgText;
+  return this.description;
 };
 
 $.physical.getContents = function() {

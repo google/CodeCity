@@ -423,7 +423,9 @@ CCC.Log.renderHtmltext = function(div, node) {
       CCC.Log.renderHtmltext(div, node.childNodes[i]);
     }
     if (CCC.Log.renderHtmltext.BLOCK_NAMES.indexOf(node.tagName) !== -1) {
-      div.appendChild(document.createElement('br'));
+      if (div.lastChild && div.lastChild.tagName !== 'BR') {
+        div.appendChild(document.createElement('br'));
+      }
     }
   } else if (node.nodeType === 3) {
     // Text node.
