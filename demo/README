@@ -1,0 +1,10 @@
+On startup, if no .city database file exists, the server will read and
+execute all .js files in this directory in asciibetical order.  The
+following naming convention has been established to keep things
+organised:
+
+core_0?_*.js - ES5.1 (and later) polyfills / JS base language stuff.
+core_1?_*.js - Code City base structure ($, $.utils, etc.).
+core_2?_*.js - Third-party utility libraries (e.g. acorn).
+core_3?_*.js - Code City application stuff ($.physical etc.)
+core_4?_*.js - Demo world creation code.
