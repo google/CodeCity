@@ -2184,6 +2184,8 @@ Interpreter.prototype.unwind = function(type, value, label) {
       // TODO(cpcallen): log toSource(error), for clarity?
       console.log('Unhandled exception with value:', value);
     }
+  } else {
+    throw Error('Unsynatctic break/continue/return not rejected by acorn');
   }
 };
 
