@@ -257,14 +257,14 @@ CCC.pause = function() {
   var playIcon = document.getElementById('playIcon');
   if (paused) {
     document.body.classList.add('paused');
-    pauseButton.classList.add('paused');
+    pauseButton.classList.add('jfk-button-action');
     pauseIcon.style.display = 'none';
     playIcon.style.display = '';
     // Initialize the pause buffer.
     CCC.pauseBuffer = [];
   } else {
     document.body.classList.remove('paused');
-    pauseButton.classList.remove('paused');
+    pauseButton.classList.remove('jfk-button-action');
     pauseIcon.style.display = '';
     playIcon.style.display = 'none';
     // Fire off all accumulated messages.

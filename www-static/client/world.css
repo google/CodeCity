@@ -132,6 +132,10 @@ text {
   stroke: none;
 }
 
+.bubbleArrow {
+  fill: #fff;
+}
+
 g.say {
   text-anchor: middle;
 }

@@ -903,7 +903,7 @@ CCC.World.drawArrow_ = function(contentBBox, anchor, thought) {
   var swirlRun = Math.cos(swirlAngle) * hypotenuse / CCC.World.ARROW_BEND;
 
   if (thought) {
-    var group = CCC.Common.createSvgElement('g', {}, null);
+    var group = CCC.Common.createSvgElement('g', {class: 'fillWhite'}, null);
     // The commented out code below is a guide path to verify the placement of
     // the thought bubbles which make up the arrow.
     //var d = 'M' + relBubbleX + ',' + relBubbleY +
