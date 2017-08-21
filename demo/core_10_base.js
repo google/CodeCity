@@ -39,7 +39,7 @@ $.system.connectionClose = new 'connectionClose';
 $.utils = {};
 
 $.utils.htmlEscape = function(text) {
-  return String(text).replace(/&/g, '&amp;')
+  return String(text).replace(/&/g, '&amp;').replace(/"/g, '&quot;')
                      .replace(/</g, '&lt;').replace(/>/g, '&gt;');
 };
 
@@ -136,9 +136,9 @@ $.thing.svgText = '<path d="M10,90 l5,-5 h10 v10 l-5,5"/><line x1="20" y1="90" x
 
 $.thing.get = function(cmd) {
   this.moveTo(user);
-  user.tell('You pick up ' + this.name + '.');
+  user.narrate('You pick up ' + this.name + '.');
   if (user.location) {
-    user.location.announce(user.name + ' picks up ' + this.name + '.');
+    user.location.narrate(user.name + ' picks up ' + this.name + '.');
   }
 };
 $.thing.get.verb = 'get|take';
@@ -148,9 +148,9 @@ $.thing.get.iobj = 'none';
 
 $.thing.drop = function(cmd) {
   this.moveTo(user.location);
-  user.tell('You drop ' + this.name + '.');
+  user.narrate('You drop ' + this.name + '.');
   if (user.location) {
-    user.location.announce(user.name + ' drops ' + this.name + '.');
+    user.location.narrate(user.name + ' drops ' + this.name + '.');
   }
 };
 $.thing.drop.verb = 'drop|throw';
@@ -160,9 +160,9 @@ $.thing.drop.iobj = 'none';
 
 $.thing.give = function(cmd) {
   this.moveTo(cmd.iobj);
-  user.tell('You give ' + this.name + ' to ' + cmd.iobj.name + '.');
+  user.narrate('You give ' + this.name + ' to ' + cmd.iobj.name + '.');
   if (user.location) {
-    user.location.announce(user.name + ' gives ' + this.name + ' to ' +
+    user.location.narrate(user.name + ' gives ' + this.name + ' to ' +
         cmd.iobj.name + '.');
   }
 };
@@ -188,8 +188,10 @@ $.room.svgText = '<line x1="-1000" y1="90" x2="1000" y2="90" />';
 
 $.room.look = function(cmd) {
   var text = '';
-  text += '<scene user="' + user.name + '" room="' + this.name + '">\n';
-  text += '  <description>' + this.getDescription() + '</description>\n';
+  text += '<scene user="' + $.utils.htmlEscape(user.name) + '" room="' +
+      $.utils.htmlEscape(this.name) + '">\n';
+  text += '  <description>' + $.utils.htmlEscape(this.getDescription()) +
+      '</description>\n';
   text += '  <svgtext>' + $.utils.htmlEscape(this.getSvgText()) + '</svgtext>\n';
   var contents = this.getContents();
   if (contents.length) {
@@ -201,7 +203,7 @@ $.room.look = function(cmd) {
     for (var i = 0; i < contents.length; i++) {
       var thing = contents[i];
       var tag = $.user.isPrototypeOf(thing) ? 'user' : 'object';
-      text += '  <' + tag + ' name="' + thing.name + '">\n';
+      text += '  <' + tag + ' name="' + $.utils.htmlEscape(thing.name) + '">\n';
       text += '    <svgtext>' + $.utils.htmlEscape(thing.getSvgText()) + '</svgtext>\n';
       var commands = thing.getCommands();
       if (commands.length) {
@@ -226,7 +228,27 @@ $.room.lookhere.dobj = 'none';
 $.room.lookhere.prep = 'none';
 $.room.lookhere.iobj = 'none';
 
-$.room.announce = function(text) {
+$.room.narrate = function(text) {
+  var contents = this.getContents();
+  for (var i = 0; i < contents.length; i++) {
+    var thing = contents[i];
+    if (thing !== user && thing.narrate) {
+      thing.narrate(text);
+    }
+  }
+};
+
+$.room.narrateAll = function(text) {
+  var contents = this.getContents();
+  for (var i = 0; i < contents.length; i++) {
+    var thing = contents[i];
+    if (thing.narrate) {
+      thing.narrate(text);
+    }
+  }
+};
+
+$.room.tell = function(text) {
   var contents = this.getContents();
   for (var i = 0; i < contents.length; i++) {
     var thing = contents[i];
@@ -236,7 +258,7 @@ $.room.announce = function(text) {
   }
 };
 
-$.room.announceAll = function(text) {
+$.room.tellAll = function(text) {
   var contents = this.getContents();
   for (var i = 0; i < contents.length; i++) {
     var thing = contents[i];
@@ -257,8 +279,9 @@ $.user.say = function(cmd) {
   if (user.location) {
     // Format:  "Hello.    -or-    say Hello.
     var text = (cmd.cmdstr[0] === '"') ? cmd.cmdstr.substring(1) : cmd.argstr;
-    user.location.announceAll(
-        '<say user="' + user.name + '" room="' + user.location + '">' +
+    user.location.tellAll(
+        '<say user="' + $.utils.htmlEscape(user.name) + '" room="' +
+        $.utils.htmlEscape(user.location) + '">' +
         $.utils.htmlEscape(text) + '</say>');
   }
 };
@@ -269,8 +292,9 @@ $.user.say.iobj = 'any';
 
 $.user.think = function(cmd) {
   if (user.location) {
-    user.location.announceAll(
-        '<think user="' + user.name + '" room="' + user.location + '">' +
+    user.location.tellAll(
+        '<think user="' + $.utils.htmlEscape(user.name) + '" room="' +
+        $.utils.htmlEscape(user.location) + '">' +
         $.utils.htmlEscape(cmd.argstr) + '</think>');
   }
 };
@@ -297,7 +321,7 @@ $.user.eval = function(cmd) {
       r = 'Unhandled exception: ' + String(e);
     }
   }
-  user.tell('<text>' + $.utils.htmlEscape(r) + '</text>');
+  user.narrate(r);
 };
 $.user.eval.verb = 'eval|;.*';
 $.user.eval.dobj = 'any';
@@ -312,6 +336,10 @@ $.user.edit.verb = 'edit';
 $.user.edit.dobj = 'any';
 $.user.edit.prep = 'any';
 $.user.edit.iobj = 'any';
+
+$.user.narrate = function(text) {
+  this.tell('<text>' + $.utils.htmlEscape(text) + '</text>');
+};
 
 $.user.tell = function(text) {
   if (this.connection) {
@@ -333,7 +361,7 @@ $.user.quit.iobj = 'none';
 // Command parser.
 $.execute = function(command) {
   if (!$.utils.command.execute(command, user)) {
-    user.tell('<text>Command not understood.</text>');
+    user.narrate('Command not understood.');
   }
 };
 
@@ -390,7 +418,7 @@ $.connection.onReceiveLine = function(text) {
   user = this.user;
   $.execute('look');
   if (user.location) {
-    user.location.announce('<text>' + user.name + ' connects.</text>');
+    user.location.narrate(user.name + ' connects.');
   }
 };
 $.connection.onReceiveLine.guestCount = 0;
@@ -398,7 +426,7 @@ $.connection.onReceiveLine.guestCount = 0;
 $.connection.onEnd = function() {
   if (this.user) {
     if (user.location) {
-      user.location.announce('<text>' + user.name + ' disconnects.</text>');
+      user.location.narrate(user.name + ' disconnects.');
     }
     if (this.user.connection === this) {
       $.system.log('Unbinding connection from ' + this.user.name);

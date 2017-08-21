@@ -364,6 +364,11 @@ CCC.Log.renderXml = function(node) {
       var div = document.createElement('div');
       div.appendChild(fragment);
       return div;
+    case 'text':
+      // <text>The dog bites Max</text>
+      var div = document.createElement('div');
+      div.appendChild(document.createTextNode(node.textContent));
+      return div;
   }
   // Unknown XML.
   return null;
@@ -389,7 +394,7 @@ CCC.Log.openIcon = function(src) {
   CCC.Common.createSvgElement('path',
       {'d': 'M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z'}, svg);
   return link;
-}
+};
 
 /**
  * Create a mostly text-based representation of the provided DOM.
@@ -419,7 +424,7 @@ CCC.Log.renderHtmltext = function(div, node) {
       div.appendChild(a);
       return;
     }
-    for (var i = 0, child; child = node.childNodes[i]; i++) {
+    for (var i = 0, child; (child = node.childNodes[i]); i++) {
       CCC.Log.renderHtmltext(div, node.childNodes[i]);
     }
     if (CCC.Log.renderHtmltext.BLOCK_NAMES.indexOf(node.tagName) !== -1) {
