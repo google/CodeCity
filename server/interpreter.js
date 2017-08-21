@@ -2119,6 +2119,7 @@ Interpreter.prototype.executeException = function(error) {
   for (var stack = this.thread.stateStack; stack.length > 0; stack.pop()) {
     var state = stack[stack.length - 1];
     if (state.node['type'] === 'TryStatement') {
+      state.throw = true;
       state.throwValue = error;
       return;
     }
@@ -3480,18 +3481,18 @@ Interpreter.prototype['stepTryStatement'] = function(stack, state, node) {
     state.doneBlock_ = true;
     return new Interpreter.State(node['block'], state.scope);
   }
-  if (state.throwValue && !state.doneHandler_ && node['handler']) {
+  if (state.throw && !state.doneHandler_ && node['handler']) {
     state.doneHandler_ = true;
     var nextState = new Interpreter.State(node['handler'], state.scope);
     nextState.throwValue = state.throwValue;
-    state.throwValue = null;  // This error has been handled, don't rethrow.
+    state.throw = false;  // This error has been handled, don't rethrow.
     return nextState;
   }
   if (!state.doneFinalizer_ && node['finalizer']) {
     state.doneFinalizer_ = true;
     return new Interpreter.State(node['finalizer'], state.scope);
   }
-  if (state.throwValue) {
+  if (state.throw) {
     // There was no catch handler, or the catch/finally threw an error.
     // Throw the error up to a higher try.
     this.executeException(state.throwValue);

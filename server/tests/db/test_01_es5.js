@@ -689,6 +689,16 @@ tests.throwCatch = function() {
   console.assert(result === 52, 'throwCatch');
 };
 
+tests.throwCatchFalsey = function() {
+  var result;
+  try {
+    throw null;
+  } catch (e) {
+    result = 'caught ' + String(e);
+  }
+  console.assert(result === 'caught null', 'throwCatchFalsey');
+};
+
 tests.seqExpr = function() {
   console.assert((51, 52, 53) === 53, 'seqExpr');
 };
