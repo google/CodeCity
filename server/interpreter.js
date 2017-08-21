@@ -2084,6 +2084,18 @@ Interpreter.prototype.setValue = function(scope, ref, value) {
 };
 
 /**
+ * Completion Value Types.
+ * @enum {number}
+ */
+Interpreter.Completion = {
+  NORMAL: 0,
+  BREAK: 1,
+  CONTINUE: 2,
+  RETURN: 3,
+  THROW: 4,
+}
+
+/**
  * Throw an exception in the interpreter that can be handled by a
  * interpreter try/catch statement.  Can be called with either an
  * error class and a message, or with an actual object to be thrown.
@@ -2102,43 +2114,51 @@ Interpreter.prototype.throwException = function(value, opt_message) {
     }
     error = new this.Error(value, opt_message);
   }
-  this.executeException(error);
+  this.unwind(Interpreter.Completion.THROW, error, undefined);
   // Abort anything related to the current step.
   throw Interpreter.STEP_ERROR;
 };
 
 /**
- * Execute an exception by unwinding the stack to the innermost
- * enclosing TryStatement.  If none is found, the current thread will
- * be terminated and an unhandled exception logged.
- * @param {Interpreter.Value} error Value being thrown.
+ * Unwind the stack to the innermost relevant enclosing TryStatement,
+ * For/ForIn/WhileStatement or Call/NewExpression.  If this results in
+ * the stack being completely unwound the thread will be terminated
+ * and an appropriate error being logged.
+ * @param {Interpreter.Completion} type Completion type.
+ * @param {Interpreter.Value=} error Value computed, returned or thrown.
+ * @param {Interpreter.String=} label Target label for break or return.
  */
-Interpreter.prototype.executeException = function(error) {
-  // Search for a try statement.
+Interpreter.prototype.unwind = function(type, value, label) {
+  if (type === Interpreter.Completion.NORMAL) {
+    throw TypeError('Should not unwind for NORMAL completions.');
+  }
+
   for (var stack = this.thread.stateStack; stack.length > 0; stack.pop()) {
     var state = stack[stack.length - 1];
-    if (state.node['type'] === 'TryStatement') {
-      state.throw = true;
-      state.throwValue = error;
-      return;
+    switch (state.node['type']) {
+      case 'TryStatement':
+        state.cv = {type: type, value: value, label: label};
+        return;
     }
   }
 
-  // Unhandled exception.  Terminate thread.
+  // Unhandled completion.  Terminate thread.
   this.thread.status = Interpreter.Thread.Status.ZOMBIE;
 
-  // Log exception and stack trace.
-  if (error instanceof this.Error) {
-    var name = this.getProperty(error, 'name');
-    var message = this.getProperty(error, 'message');
-    console.log('Unhandled %s: %s', name, message);
-    var stackTrace = this.getProperty(error, 'stack');
-    if (stackTrace) {
-      console.log(stackTrace);
+  if (type === Interpreter.Completion.THROW) {
+    // Log exception and stack trace.
+    if (value instanceof this.Error) {
+      var name = this.getProperty(value, 'name');
+      var message = this.getProperty(value, 'message');
+      console.log('Unhandled %s: %s', name, message);
+      var stackTrace = this.getProperty(value, 'stack');
+      if (stackTrace) {
+        console.log(stackTrace);
+      }
+    } else {
+      // TODO(cpcallen): log toSource(error), for clarity?
+      console.log('Unhandled exception with value:', value);
     }
-  } else {
-    // TODO(cpcallen): log toSource(error), for clarity?
-    console.log('Unhandled exception with value:', error);
   }
 };
 
@@ -3480,23 +3500,23 @@ Interpreter.prototype['stepTryStatement'] = function(stack, state, node) {
     state.doneBlock_ = true;
     return new Interpreter.State(node['block'], state.scope);
   }
-  if (state.throw && !state.doneHandler_ && node['handler']) {
+  if (state.cv && state.cv.type === Interpreter.Completion.THROW &&
+      !state.doneHandler_ && node['handler']) {
     state.doneHandler_ = true;
     var nextState = new Interpreter.State(node['handler'], state.scope);
-    nextState.throwValue = state.throwValue;
-    state.throw = false;  // This error has been handled, don't rethrow.
+    nextState.throwValue = state.cv.value;
+    state.cv = undefined;  // This error has been handled, don't rethrow.
     return nextState;
   }
   if (!state.doneFinalizer_ && node['finalizer']) {
     state.doneFinalizer_ = true;
     return new Interpreter.State(node['finalizer'], state.scope);
   }
-  if (state.throw) {
+  stack.pop();
+  if (state.cv) {
     // There was no catch handler, or the catch/finally threw an error.
     // Throw the error up to a higher try.
-    this.executeException(state.throwValue);
-  } else {
-    stack.pop();
+    this.unwind(state.cv.type, state.cv.value, state.cv.label);
   }
 };
 
