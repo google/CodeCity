@@ -255,9 +255,11 @@ $.user.svgText = '<circle cx="50" cy="50" r="10" /><line x1="50" y1="60" x2="50"
 
 $.user.say = function(cmd) {
   if (user.location) {
+    // Format:  "Hello.    -or-    say Hello.
+    var text = (cmd.cmdstr[0] === '"') ? cmd.cmdstr.substring(1) : cmd.argstr;
     user.location.announceAll(
         '<say user="' + user.name + '" room="' + user.location + '">' +
-        $.utils.htmlEscape(cmd.argstr) + '</say>');
+        $.utils.htmlEscape(text) + '</say>');
   }
 };
 $.user.say.verb = 'say|".*';
