@@ -197,6 +197,22 @@ module.exports = [
     `,
     expected: undefined },
 
+  { name: 'throwUnhandledErrorWithFinally', src: `
+    try {
+      throw Error('not caught');
+    } finally {
+    }
+    `,
+    expected: undefined },
+
+  { name: 'throwUnhandledExceptionWithFinally', src: `
+    try {
+      throw 'not caught';
+    } finally {
+    }
+    `,
+    expected: undefined },
+
   { name: 'seqExpr', src: `
     51, 52, 53;
     `,
