@@ -1453,6 +1453,15 @@ Interpreter.prototype.initNetwork = function(scope) {
             socket.end();
           });
 
+          socket.on('error', function(error) {
+            console.log('Socket error:', error);
+            var func = intrp.getProperty(obj, 'onError');
+            var userError = new intrp.Error(this.ERROR, String(error.message));
+            if (func instanceof intrp.Function) {
+              intrp.createThreadForFuncCall(func, obj, [userError]);
+            }
+          });
+
           // TODO(cpcallen): save new object somewhere we can find it
           // later (when we want to obtain list of connected objects).
         });
