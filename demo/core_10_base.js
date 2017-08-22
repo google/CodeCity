@@ -108,7 +108,7 @@ $.physical.moveTo.updateScene_ = function(room) {
     for (var i = 0; i < contents.length; i++) {
       var who = contents[i];
       if ($.user.isPrototypeOf(who)) {
-        room.tellScene(who, false);
+        room.sendScene(who, false);
       }
     }
   }
@@ -204,7 +204,7 @@ $.room.name = 'Room prototype';
 $.room.svgText = '<line x1="-1000" y1="90" x2="1000" y2="90" />';
 $.room.xmlTag = 'room';
 
-$.room.tellScene = function(who, requested) {
+$.room.sendScene = function(who, requested) {
   var text = '<scene user="' + $.utils.htmlEscape(who.name) + '" room="' +
         $.utils.htmlEscape(this.name) + '" requested="' + requested + '">\n';
   text += '  <description>' + $.utils.htmlEscape(this.getDescription()) +
@@ -228,7 +228,7 @@ $.room.tellScene = function(who, requested) {
 };
 
 $.room.look = function(cmd) {
-  this.tellScene(user, true);
+  this.sendScene(user, true);
 };
 $.room.look.verb = 'l(ook)?';
 $.room.look.dobj = 'this';
