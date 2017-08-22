@@ -197,11 +197,6 @@ $.room.look = function(cmd) {
   text += '  <svgtext>' + $.utils.htmlEscape(this.getSvgText()) + '</svgtext>\n';
   var contents = this.getContents();
   if (contents.length) {
-    var userIndex = contents.indexOf(user);
-    if (userIndex !== -1) {
-      contents.splice(userIndex, 1);
-      contents.unshift(user);
-    }
     for (var i = 0; i < contents.length; i++) {
       var thing = contents[i];
       text += '  <' + thing.xmlTag + ' name="' + $.utils.htmlEscape(thing.name) + '">\n';

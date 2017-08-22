@@ -193,6 +193,20 @@ CCC.World.preprocessXml = function(dom) {
       msg.iframeId = CCC.World.createIframe(msg.getAttribute('src'));
     }
   }
+
+  // Move the current user to the start of the room contents list.
+  var scenes = dom.getElementsByTagName('scene');
+  for (var i = 0, scene; (scene = scenes[i]); i++) {
+    var sceneUser = scene.getAttribute('user');
+    if (sceneUser) {
+      var users = scene.getElementsByTagName('user');
+      for (var j = 0, user; (user = users[j]); j++) {
+        if (user.getAttribute('name') === sceneUser) {
+          scene.insertBefore(user, scene.firstChild);
+        }
+      }
+    }
+  }
 };
 
 /**
