@@ -347,6 +347,45 @@ $.user.tell = function(text) {
   }
 };
 
+$.user.create = function(cmd) {
+  if ($.physical !== cmd.dobj && !$.physical.isPrototypeOf(cmd.dobj)) {
+    this.narrate('Unknown prototype object.\n' + $.user.create.usage);
+    return;
+  } else if (!cmd.iobjstr) {
+    this.narrate('Name must be specified.\n' + $.user.create.usage);
+    return;
+  }
+  var obj = Object.create(cmd.dobj);
+  obj.name = cmd.iobjstr;
+  obj.moveTo(this);
+  this.narrate(obj.name + ' created.');
+};
+$.user.create.usage = 'Usage: create <prototype> as <name>';
+$.user.create.verb = 'create';
+$.user.create.dobj = 'any';
+$.user.create.prep = 'as';
+$.user.create.iobj = 'any';
+
+$.user.destroy = function(cmd) {
+  if (!$.physical.isPrototypeOf(cmd.dobj)) {
+    this.narrate('Unknown object.\n' + $.user.destroy.usage);
+    return;
+  }
+  var obj = cmd.dobj;
+  obj.moveTo(null);
+  this.narrate(obj.name + ' destroyed.');
+  // Delete as much data as possible.
+  var props = Object.getOwnPropertyNames(obj);
+  for (var i = 0; i < props.length; i++) {
+    delete obj[props[i]];
+  }
+};
+$.user.destroy.usage = 'Usage: destroy <object>';
+$.user.destroy.verb = 'destroy';
+$.user.destroy.dobj = 'any';
+$.user.destroy.prep = 'none';
+$.user.destroy.iobj = 'none';
+
 $.user.quit = function(cmd) {
   if (this.connection) {
     this.connection.close();
