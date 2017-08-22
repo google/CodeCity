@@ -119,4 +119,5 @@
   fido.moveTo(hangout);
 
   connectionListen(7777, $.connection);
+  connectionListen(7780, $.www);
 })();
