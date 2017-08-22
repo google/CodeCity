@@ -285,7 +285,7 @@ CCC.Log.renderXml = function(node) {
           case 'user':
             var isUser = child.tagName === 'user';
             var name = child.getAttribute('name');
-            if (!isUser || CCC.Log.userName !== name) {
+            if (isUser && CCC.Log.userName === name) {
               break;  // Don't show the current user.
             }
             var df = document.createDocumentFragment();
