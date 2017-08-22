@@ -2124,6 +2124,11 @@ Interpreter.prototype.throwException = function(value, opt_message) {
  * For/ForIn/WhileStatement or Call/NewExpression.  If this results in
  * the stack being completely unwound the thread will be terminated
  * and an appropriate error being logged.
+ * 
+ * N.B. Normally unwind should be called from the current stack frame
+ * (i.e., do NOT do stack.pop() before calling unwind) because the
+ * target label of a break statement can be the statement itself
+ * (e.g., `foo: break foo;`).
  * @param {Interpreter.Completion} type Completion type.
  * @param {Interpreter.Value=} value Value computed, returned or thrown.
  * @param {string=} label Target label for break or return.
@@ -2154,6 +2159,8 @@ Interpreter.prototype.unwind = function(type, value, label) {
     if (type === Interpreter.Completion.BREAK) {
       if (label ? (state.labels && state.labels.indexOf(label) !== -1) :
           (state.isLoop || state.isSwitch)) {
+        // Top of stack is now target of break.  But we are breaking
+        // out of this statement, so pop to discard it.
         stack.pop();
         return;
       }
@@ -3486,10 +3493,14 @@ Interpreter.prototype['stepTryStatement'] = function(stack, state, node) {
     state.doneFinalizer_ = true;
     return new Interpreter.State(node['finalizer'], state.scope);
   }
+  // Regardless of whether we are exiting normally or about to resume
+  // unwinding the stack, we are done with this TryStatement and do
+  // not want to examine it again.
   stack.pop();
   if (state.cv) {
-    // There was no catch handler, or the catch/finally threw an error.
-    // Throw the error up to a higher try.
+    // There was no catch handler, or the catch/finally threw an
+    // error.  Resume unwinding the stack in search of TryStatement /
+    // CallExpression / target of break or continue.
     this.unwind(state.cv.type, state.cv.value, state.cv.label);
   }
 };
