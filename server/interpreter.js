@@ -2092,8 +2092,8 @@ Interpreter.Completion = {
   BREAK: 1,
   CONTINUE: 2,
   RETURN: 3,
-  THROW: 4,
-}
+  THROW: 4
+};
 
 /**
  * Throw an exception in the interpreter that can be handled by a
@@ -2130,7 +2130,7 @@ Interpreter.prototype.throwException = function(value, opt_message) {
  */
 Interpreter.prototype.unwind = function(type, value, label) {
   if (type === Interpreter.Completion.NORMAL) {
-    throw TypeError('Should not unwind for NORMAL completions.');
+    throw TypeError('Should not unwind for NORMAL completions');
   }
 
   for (var stack = this.thread.stateStack; stack.length > 0; stack.pop()) {
@@ -2144,7 +2144,7 @@ Interpreter.prototype.unwind = function(type, value, label) {
         switch (type) {
           case Interpreter.Completion.BREAK:
           case Interpreter.Completion.CONTINUE:
-            throw Error('Unsynatctic break/continue not rejected by acorn');
+            throw Error('Unsynatctic break/continue not rejected by Acorn');
           case Interpreter.Completion.RETURN:
             state.value = value;
             return;
@@ -2152,16 +2152,14 @@ Interpreter.prototype.unwind = function(type, value, label) {
         break;
     }
     if (type === Interpreter.Completion.BREAK) {
-      if (label === undefined ?
-          (state.isLoop || state.isSwitch) :
-          (state.labels && state.labels.indexOf(label) !== -1)) {
+      if (label ? (state.labels && state.labels.indexOf(label) !== -1) :
+          (state.isLoop || state.isSwitch)) {
         stack.pop();
         return;
       }
     } else if (type === Interpreter.Completion.CONTINUE) {
-      if (label == undefined ?
-          state.isLoop : 
-          (state.labels && state.labels.indexOf(label) !== -1)) {
+      if (label ? (state.labels && state.labels.indexOf(label) !== -1) : 
+          state.isLoop) {
         return;
       }
     }
@@ -2185,7 +2183,7 @@ Interpreter.prototype.unwind = function(type, value, label) {
       console.log('Unhandled exception with value:', value);
     }
   } else {
-    throw Error('Unsynatctic break/continue/return not rejected by acorn');
+    throw Error('Unsynatctic break/continue/return not rejected by Acorn');
   }
 };
 
@@ -2894,11 +2892,8 @@ Interpreter.prototype['stepBlockStatement'] = function(stack, state, node) {
 };
 
 Interpreter.prototype['stepBreakStatement'] = function(stack, state, node) {
-  var label = undefined;
-  if (node['label']) {
-    label = node['label']['name'];
-  }
-  this.unwind(Interpreter.Completion.BREAK, undefined, label);
+  this.unwind(Interpreter.Completion.BREAK, undefined,
+              node['label'] ? node['label']['name'] : undefined);
 };
 
 Interpreter.prototype['stepCallExpression'] = function(stack, state, node) {
@@ -3084,11 +3079,8 @@ Interpreter.prototype['stepConditionalExpression'] =
 };
 
 Interpreter.prototype['stepContinueStatement'] = function(stack, state, node) {
-  var label = undefined;
-  if (node['label']) {
-    label = node['label']['name'];
-  }
-  this.unwind(Interpreter.Completion.CONTINUE, undefined, label);
+  this.unwind(Interpreter.Completion.CONTINUE, undefined,
+              node['label'] ? node['label']['name'] : undefined);
 };
 
 Interpreter.prototype['stepDebuggerStatement'] = function(stack, state, node) {
@@ -3613,7 +3605,7 @@ module.exports = Interpreter;
 ///////////////////////////////////////////////////////////////////////////////
 // AST Node
 ///////////////////////////////////////////////////////////////////////////////
-// This is mainly to assist the serializer getting access to the acorn
+// This is mainly to assist the serializer getting access to the Acorn
 // AST node constructor, but we also use it to create a fake AST nodes
 // for 'eval', and may in future use it for Closure Compiler type
 // checking.
