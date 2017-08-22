@@ -104,15 +104,11 @@ $.physical.moveTo = function(dest) {
 
 $.physical.moveTo.updateScene_ = function(room) {
   if ($.room.isPrototypeOf(room)) {
-    var scene = room.getScene();
     var contents = room.getContents();
     for (var i = 0; i < contents.length; i++) {
-      var user = contents[i];
-      if ($.user.isPrototypeOf(user)) {
-        var text = '<scene user="' + $.utils.htmlEscape(user.name) +
-            '" room="' + $.utils.htmlEscape(room.name) +
-            '" requested="false">\n' + scene + '</scene>';
-        user.tell(text);
+      var who = contents[i];
+      if ($.user.isPrototypeOf(who)) {
+        room.tellScene(who, false);
       }
     }
   }
@@ -122,20 +118,20 @@ $.physical.look = function(cmd) {
   var html = '<table style="height: 100%; width: 100%;"><tr><td style="padding: 1ex; width: 30%;">';
   html += '<svg width="100%" height="100%" viewBox="0 0 0 0">' + this.getSvgText() + '</svg>';
   html += '</td><td>';
-  html += '<h1>' + this.name + $.utils.commandMenu(this.getCommands()) + '</h1>';
+  html += '<h1>' + this.name + $.utils.commandMenu(this.getCommands(user)) + '</h1>';
   html += '<p>' + this.getDescription() + '</p>';
   var contents = this.getContents();
   if (contents.length) {
     var contentsHtml = [];
     for (var i = 0; i < contents.length; i++) {
       contentsHtml[i] = contents[i].name +
-          $.utils.commandMenu(contents[i].getCommands());
+          $.utils.commandMenu(contents[i].getCommands(user));
     }
     html += '<p>Contents: ' + contentsHtml.join(', ') + '</p>';
   }
   if (this.location) {
     html += '<p>Location: ' + this.location.name +
-        $.utils.commandMenu(this.location.getCommands()) + '</p>';
+        $.utils.commandMenu(this.location.getCommands(user)) + '</p>';
   }
   html += '</td></tr></table>';
   user.tell('<htmltext>' + $.utils.htmlEscape(html) + '</htmltext>');
@@ -145,7 +141,7 @@ $.physical.look.dobj = 'this';
 $.physical.look.prep = 'none';
 $.physical.look.iobj = 'none';
 
-$.physical.getCommands = function() {
+$.physical.getCommands = function(who) {
   return ['look ' + this.name];
 };
 
@@ -192,11 +188,11 @@ $.thing.give.dobj = 'this';
 $.thing.give.prep = 'at/to';
 $.thing.give.iobj = 'any';
 
-$.thing.getCommands = function(cmd) {
+$.thing.getCommands = function(who) {
   var commands = $.physical.getCommands.apply(this);
-  if (this.location === user) {
+  if (this.location === who) {
     commands.push('drop ' + this.name);
-  } else if (this.location === user.location) {
+  } else if (this.location === who.location) {
     commands.push('get ' + this.name);
   }
   return commands;
@@ -208,8 +204,9 @@ $.room.name = 'Room prototype';
 $.room.svgText = '<line x1="-1000" y1="90" x2="1000" y2="90" />';
 $.room.xmlTag = 'room';
 
-$.room.getScene = function() {
-  var text = '';
+$.room.tellScene = function(who, requested) {
+  var text = '<scene user="' + $.utils.htmlEscape(who.name) + '" room="' +
+        $.utils.htmlEscape(this.name) + '" requested="' + requested + '">\n';
   text += '  <description>' + $.utils.htmlEscape(this.getDescription()) +
       '</description>\n';
   text += '  <svgtext>' + $.utils.htmlEscape(this.getSvgText()) + '</svgtext>\n';
@@ -219,24 +216,19 @@ $.room.getScene = function() {
       var thing = contents[i];
       text += '  <' + thing.xmlTag + ' name="' + $.utils.htmlEscape(thing.name) + '">\n';
       text += '    <svgtext>' + $.utils.htmlEscape(thing.getSvgText()) + '</svgtext>\n';
-      if (user) {
-        var commands = thing.getCommands();
-        if (commands.length) {
-          text += '    ' + $.utils.commandMenu(commands) + '\n';
-        }
+      var commands = thing.getCommands(who);
+      if (commands.length) {
+        text += '    ' + $.utils.commandMenu(commands) + '\n';
       }
       text += '  </' + thing.xmlTag + '>\n';
     }
   }
-  return text;
+  text += '</scene>';
+  who.tell(text);
 };
 
 $.room.look = function(cmd) {
-  var text = '<scene user="' + $.utils.htmlEscape(user.name) + '" room="' +
-      $.utils.htmlEscape(this.name) + '" requested="true">\n';
-  text += this.getScene();
-  text += '</scene>';
-  user.tell(text);
+  this.tellScene(user, true);
 };
 $.room.look.verb = 'l(ook)?';
 $.room.look.dobj = 'this';
