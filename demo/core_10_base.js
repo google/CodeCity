@@ -96,6 +96,26 @@ $.physical.moveTo = function(dest) {
   src && src.removeContents && src.removeContents(this);
   this.location = dest;
   dest && dest.addContents && dest.addContents(this);
+  $.physical.moveTo.updateScene_(src);
+  if (dest !== src) {
+    $.physical.moveTo.updateScene_(dest);
+  }
+};
+
+$.physical.moveTo.updateScene_ = function(room) {
+  if ($.room.isPrototypeOf(room)) {
+    var scene = room.getScene();
+    var contents = room.getContents();
+    for (var i = 0; i < contents.length; i++) {
+      var user = contents[i];
+      if ($.user.isPrototypeOf(user)) {
+        var text = '<scene user="' + $.utils.htmlEscape(user.name) +
+            '" room="' + $.utils.htmlEscape(room.name) +
+            '" requested="false">\n' + scene + '</scene>';
+        user.tell(text);
+      }
+    }
+  }
 };
 
 $.physical.look = function(cmd) {
@@ -188,10 +208,8 @@ $.room.name = 'Room prototype';
 $.room.svgText = '<line x1="-1000" y1="90" x2="1000" y2="90" />';
 $.room.xmlTag = 'room';
 
-$.room.look = function(cmd) {
+$.room.getScene = function() {
   var text = '';
-  text += '<scene user="' + $.utils.htmlEscape(user.name) + '" room="' +
-      $.utils.htmlEscape(this.name) + '">\n';
   text += '  <description>' + $.utils.htmlEscape(this.getDescription()) +
       '</description>\n';
   text += '  <svgtext>' + $.utils.htmlEscape(this.getSvgText()) + '</svgtext>\n';
@@ -201,13 +219,22 @@ $.room.look = function(cmd) {
       var thing = contents[i];
       text += '  <' + thing.xmlTag + ' name="' + $.utils.htmlEscape(thing.name) + '">\n';
       text += '    <svgtext>' + $.utils.htmlEscape(thing.getSvgText()) + '</svgtext>\n';
-      var commands = thing.getCommands();
-      if (commands.length) {
-        text += '    ' + $.utils.commandMenu(commands) + '\n';
+      if (user) {
+        var commands = thing.getCommands();
+        if (commands.length) {
+          text += '    ' + $.utils.commandMenu(commands) + '\n';
+        }
       }
       text += '  </' + thing.xmlTag + '>\n';
     }
   }
+  return text;
+};
+
+$.room.look = function(cmd) {
+  var text = '<scene user="' + $.utils.htmlEscape(user.name) + '" room="' +
+      $.utils.htmlEscape(this.name) + '" requested="true">\n';
+  text += this.getScene();
   text += '</scene>';
   user.tell(text);
 };

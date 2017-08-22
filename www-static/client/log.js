@@ -182,6 +182,9 @@ CCC.Log.textToHtml = function(text) {
  */
 CCC.Log.addXml = function(dom) {
   var rendered = CCC.Log.renderXml(dom);
+  if (rendered === null) {
+    return;  // Unrequested scene.
+  }
   var code = CCC.Common.serializer.serializeToString(dom);
   var pre = document.createElement('pre');
   pre.textContent = code;
@@ -230,7 +233,8 @@ CCC.Log.toggleZippy = function(e) {
 /**
  * Attempt to render the XML as a plain text version.
  * @param {!Element} node XML tree.
- * @return {Element} Div, or null if cannot be rendered.
+ * @return {Element} Div of text, or null if not to be visualized,
+ *   or undefined if unknown/corrupt format.
  */
 CCC.Log.renderXml = function(node) {
   switch (node.tagName) {
@@ -256,7 +260,7 @@ CCC.Log.renderXml = function(node) {
       }
       return '';  // Illegal HTML.
     case 'scene':
-      // <scene user="Max" room="The Hangout">
+      // <scene user="Max" room="The Hangout" requested="true">
       //   <description>The lights are dim and blah blah blah...</description>
       //   <svgtext>...</svgtext>
       //   <object name="a clock">
@@ -268,6 +272,10 @@ CCC.Log.renderXml = function(node) {
       //     <cmds><cmd>look Max</cmd></cmds>
       //   </user>
       // </scene>
+      var requested = node.getAttribute('requested');
+      if (requested === 'false') {
+        return null;  // Do not display this scene update in the log.
+      }
       var user = node.getAttribute('user');
       if (user) {
         // Record the user name if present.
@@ -369,9 +377,11 @@ CCC.Log.renderXml = function(node) {
       var div = document.createElement('div');
       div.appendChild(document.createTextNode(node.textContent));
       return div;
+    case 'move':
+
   }
   // Unknown XML.
-  return null;
+  return undefined;
 };
 
 /**
