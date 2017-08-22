@@ -186,7 +186,7 @@ CCC.World.preprocessXml = function(dom) {
   }
 
   // Find top-level nodes that need processing.
-  for (var i = 0, msg; msg = dom.childNodes[i]; i++) {
+  for (var i = 0, msg; (msg = dom.childNodes[i]); i++) {
     if (msg.tagName === 'iframe') {
       // <iframe src="https://neil.fraser.name/">Neil Fraser</iframe>
       // It's an iframe, create the DOM element.
