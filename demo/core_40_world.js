@@ -62,6 +62,21 @@
     return svg;
   };
   clock.moveTo(hangout);
+  clock.chime = function(silent) {
+    var now = new Date;
+    var nextHour = now.getTime() - (now.getTime() % 3600000) + 3600000;
+    setTimeout(clock.chime.bind(clock), nextHour);
+    if (silent) {
+      return;
+    }
+    var hours = (now.getHours() % 12) || 12;
+    var text = [];
+    while (hours--) {
+      text.push('Bong.');
+    }
+    this.location.narrateAll(text.join(' '), this);
+  };
+  clock.chime(true);
 
   var bob = Object.create($.user);
   bob.name = 'Bob';

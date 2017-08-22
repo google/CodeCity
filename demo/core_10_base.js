@@ -62,6 +62,7 @@ $.physical.description = '';
 $.physical.svgText = '';
 $.physical.location = null;
 $.physical.contents_ = null;
+$.physical.xmlTag = 'object';
 
 $.physical.getSvgText = function() {
   return this.svgText;
@@ -185,6 +186,7 @@ $.thing.getCommands = function(cmd) {
 $.room = Object.create($.physical);
 $.room.name = 'Room prototype';
 $.room.svgText = '<line x1="-1000" y1="90" x2="1000" y2="90" />';
+$.room.xmlTag = 'room';
 
 $.room.look = function(cmd) {
   var text = '';
@@ -202,14 +204,13 @@ $.room.look = function(cmd) {
     }
     for (var i = 0; i < contents.length; i++) {
       var thing = contents[i];
-      var tag = $.user.isPrototypeOf(thing) ? 'user' : 'object';
-      text += '  <' + tag + ' name="' + $.utils.htmlEscape(thing.name) + '">\n';
+      text += '  <' + thing.xmlTag + ' name="' + $.utils.htmlEscape(thing.name) + '">\n';
       text += '    <svgtext>' + $.utils.htmlEscape(thing.getSvgText()) + '</svgtext>\n';
       var commands = thing.getCommands();
       if (commands.length) {
         text += '    ' + $.utils.commandMenu(commands) + '\n';
       }
-      text += '  </' + tag + '>\n';
+      text += '  </' + thing.xmlTag + '>\n';
     }
   }
   text += '</scene>';
@@ -228,22 +229,22 @@ $.room.lookhere.dobj = 'none';
 $.room.lookhere.prep = 'none';
 $.room.lookhere.iobj = 'none';
 
-$.room.narrate = function(text) {
+$.room.narrate = function(text, obj) {
   var contents = this.getContents();
   for (var i = 0; i < contents.length; i++) {
     var thing = contents[i];
     if (thing !== user && thing.narrate) {
-      thing.narrate(text);
+      thing.narrate(text, obj);
     }
   }
 };
 
-$.room.narrateAll = function(text) {
+$.room.narrateAll = function(text, obj) {
   var contents = this.getContents();
   for (var i = 0; i < contents.length; i++) {
     var thing = contents[i];
     if (thing.narrate) {
-      thing.narrate(text);
+      thing.narrate(text, obj);
     }
   }
 };
@@ -274,6 +275,7 @@ $.user = Object.create($.physical);
 $.user.name = 'User prototype';
 $.user.connection = null;
 $.user.svgText = '<circle cx="50" cy="50" r="10" /><line x1="50" y1="60" x2="50" y2="80"/><line x1="40" y1="70" x2="60" y2="70"/><line x1="50" y1="80" x2="40" y2="100"/><line x1="50" y1="80" x2="60" y2="100"/>';
+$.user.xmlTag = 'user';
 
 $.user.say = function(cmd) {
   if (user.location) {
@@ -337,8 +339,13 @@ $.user.edit.dobj = 'any';
 $.user.edit.prep = 'any';
 $.user.edit.iobj = 'any';
 
-$.user.narrate = function(text) {
-  this.tell('<text>' + $.utils.htmlEscape(text) + '</text>');
+$.user.narrate = function(text, obj) {
+  var objAttr = '';
+  if (obj && obj.location) {
+    objAttr = ' ' + obj.xmlTag + '="' + $.utils.htmlEscape(obj.name) + '" ' +
+    obj.location.xmlTag + '="' + $.utils.htmlEscape(obj.location.name) + '"';
+  }
+  this.tell('<text' + objAttr + '>' + $.utils.htmlEscape(text) + '</text>');
 };
 
 $.user.tell = function(text) {
