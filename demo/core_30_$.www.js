@@ -79,13 +79,13 @@ $.www.parseQueryString = function(query) {
    *     {foo: 3, bar: 2, baz: true}
    */
   var r = {};
-  query.split("&").map(function(item) {
-    if(!item) {
+  query.split('&').map(function(item) {
+    if (!item) {
       return;
     }
     item = item.replace(/\+/g, ' ');
     var key, value, m;
-    if((m = item.match(/^([^=]*)=(.*)$/))) {
+    if ((m = item.match(/^([^=]*)=(.*)$/))) {
       key = decodeURIComponent(m[1]);
       value = decodeURIComponent(m[2]);
     } else {
