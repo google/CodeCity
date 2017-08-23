@@ -66,8 +66,11 @@ $.www.web.edit = function(path, params) {
   var name = params.name, key = params.key, src = params.src, editor = '';
   if (src) {
     try {
-      // TODO: don't eval.
-      obj[key] = eval('(' + src + ')');
+      // Evaluate src in global scope (eval by any other name, literally).
+      // TODO: don't use eval - prefer Function constructor for
+      // functions; generate other values from an Acorn parse tree.
+      var evalGlobal = eval;
+      obj[key] = evalGlobal('(' + src + ')');
       editor += 'Saved!<br>';
     } catch (e) {
       editor += 'ERROR: ' + String(e);
