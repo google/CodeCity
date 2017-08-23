@@ -690,8 +690,6 @@ Interpreter.prototype.initFunction = function(scope) {
   var identifierRegexp = /^[A-Za-z_$][\w$]*$/;
   // Function constructor.
   wrapper = function(var_args) {
-    var newFunc = new thisInterpreter.Function;
-    newFunc.addPrototype();
     if (arguments.length) {
       var code = String(arguments[arguments.length - 1]);
     } else {
@@ -707,9 +705,6 @@ Interpreter.prototype.initFunction = function(scope) {
       args.push(name);
     }
     args = args.join(', ');
-    // Interestingly, the scope for constructed functions is the global scope,
-    // even if they were constructed in some other scope.
-    newFunc.parentScope = thisInterpreter.global;
     // Acorn needs to parse code in the context of a function or else 'return'
     // statements will be syntax errors.
     var code = '(function(' + args + ') {' + code + '})';
@@ -719,11 +714,10 @@ Interpreter.prototype.initFunction = function(scope) {
       thisInterpreter.throwException(thisInterpreter.SYNTAX_ERROR,
           'Invalid code in function body.');
     }
-    newFunc.node = ast['body'][0]['expression'];
-    newFunc.node['source'] = code;
-    thisInterpreter.setProperty(newFunc, 'length', newFunc.node['length'],
-        Interpreter.READONLY_DESCRIPTOR);
-    return newFunc;
+    // Interestingly, the scope for constructed functions is the global scope,
+    // even if they were constructed in some other scope.
+    return thisInterpreter.createFunctionFromAST(
+        ast['body'][0]['expression'], thisInterpreter.global, code);
   };
   this.createNativeFunction('Function', wrapper, true);
 
