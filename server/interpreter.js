@@ -1014,9 +1014,10 @@ Interpreter.prototype.initString = function(scope) {
 
   // Instance methods on String.
   // Methods with exclusively primitive arguments.
-  var functions = ['trim', 'toLowerCase', 'toUpperCase',
-      'toLocaleLowerCase', 'toLocaleUpperCase', 'charAt', 'charCodeAt',
-      'substring', 'slice', 'substr', 'indexOf', 'lastIndexOf', 'concat'];
+  var functions = ['charAt', 'charCodeAt', 'concat', 'endsWith', 'includes',
+      'indexOf', 'lastIndexOf', 'slice', 'startsWith', 'substr', 'substring',
+      'toLocaleLowerCase', 'toLocaleUpperCase', 'toLowerCase', 'toUpperCase',
+      'trim'];
   for (var i = 0; i < functions.length; i++) {
     this.createNativeFunction('String.prototype.' + functions[i],
                               String.prototype[functions[i]], false);
@@ -1065,6 +1066,16 @@ Interpreter.prototype.initString = function(scope) {
                                 substr.regexp : substr, newSubstr);
   };
   this.createNativeFunction('String.prototype.replace', wrapper, false);
+
+  wrapper = function(count) {
+    try {
+      return this.repeat(count);
+    } catch (e) {
+      // 'abc'.repeat(-1) will throw an error.  Catch and rethrow.
+      thisInterpreter.throwException(thisInterpreter.RANGE_ERROR, e.message);
+    }
+  };
+  this.createNativeFunction('String.prototype.repeat', wrapper, false);
 };
 
 /**
@@ -2133,7 +2144,7 @@ Interpreter.prototype.throwException = function(value, opt_message) {
  * For/ForIn/WhileStatement or Call/NewExpression.  If this results in
  * the stack being completely unwound the thread will be terminated
  * and an appropriate error being logged.
- * 
+ *
  * N.B. Normally unwind should be called from the current stack frame
  * (i.e., do NOT do stack.pop() before calling unwind) because the
  * target label of a break statement can be the statement itself
@@ -2174,7 +2185,7 @@ Interpreter.prototype.unwind = function(type, value, label) {
         return;
       }
     } else if (type === Interpreter.Completion.CONTINUE) {
-      if (label ? (state.labels && state.labels.indexOf(label) !== -1) : 
+      if (label ? (state.labels && state.labels.indexOf(label) !== -1) :
           state.isLoop) {
         return;
       }

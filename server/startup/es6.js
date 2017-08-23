@@ -28,3 +28,28 @@ Object.defineProperty(Object, 'is',
      enumerable: false,
      writable: true,
      value: new 'Object.is'});
+
+Object.defineProperty(String.prototype, 'endsWith',
+    {configurable: true,
+     enumerable: false,
+     writable: true,
+     value: new 'String.prototype.endsWith'});
+
+Object.defineProperty(String.prototype, 'includes',
+    {configurable: true,
+     enumerable: false,
+     writable: true,
+     value: new 'String.prototype.includes'});
+
+Object.defineProperty(String.prototype, 'repeat',
+    {configurable: true,
+     enumerable: false,
+     writable: true,
+     value: new 'String.prototype.repeat'});
+
+Object.defineProperty(String.prototype, 'startsWith',
+    {configurable: true,
+     enumerable: false,
+     writable: true,
+     value: new 'String.prototype.startsWith'});
+
