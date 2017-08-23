@@ -843,10 +843,20 @@ module.exports = [
     `,
     expected: 77.77 },
 
-  { name: 'indirectEvalNoSeeEnclosing', src: `
+  { name: 'evalIndirectNoSeeEnclosing', src: `
     var n = 77.77, gEval = eval;
     try {
       gEval('n');
+    } catch (e) {
+      e.name;
+    }
+    `,
+    expected: 'ReferenceError' },
+
+  { name: 'evalIndirectNoSeeEnclosing2', src: `
+    var n = 77.77;
+    try {
+      (function() { return eval; })()('n');
     } catch (e) {
       e.name;
     }
