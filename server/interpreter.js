@@ -1586,12 +1586,18 @@ Interpreter.prototype.createFunctionFromAST = function(node, scope, source) {
   func.node = node;
   this.setProperty(func, 'length', func.node['params'].length,
       Interpreter.READONLY_DESCRIPTOR);
+  // Record the source on the function object.  This is needed by
+  // (pseudo)Function.toString().
   func.source = source.substring(node['start'], node['end']);
-  // Record the full original source on the function node since a function call
-  // can move execution from one source to another.
-  node['source'] = source;
-  // Also apply the same source to the body, since the function node is bypassed
-  // when stepping.
+  // Record the source on the function node's body node.  This is
+  // needed by the (pseudo)Error constructor when generating stack
+  // traces (via Thread.prototype.getSource); we store it on the body
+  // node (rather than on the function node) because the function node
+  // never appears on the stateStack when the function is being
+  // executed.  We save the full original source (not just the bit
+  // containing the function) because the start and end offsets on the
+  // AST nodes (that will be used to generate the stack trace) are
+  // relative to the start of the whole source string.
   node['body']['source'] = source;
   return func;
 };
