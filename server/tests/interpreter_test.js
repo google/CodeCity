@@ -30,11 +30,14 @@ var util = require('util');
 
 var Interpreter = require('../interpreter');
 var es5 = require('./interpreter_es5');
+var es6 = require('./interpreter_es6');
 var testcases = require('./testcases');
 
 // Prepare static interpreter instance for runTest.
 var interpreter = new Interpreter;
 interpreter.createThread(es5);
+interpreter.run();
+interpreter.createThread(es6);
 interpreter.run();
 interpreter.addVariableToScope(interpreter.global, 'src');
 
@@ -95,6 +98,8 @@ function runComplexTest(t, name, src, expected, initFunc, asyncFunc) {
   var intrp = new Interpreter;
   intrp.createThread(es5);
   intrp.run();
+  intrp.createThread(es6);
+  intrp.run();
   if (initFunc) {
     initFunc(intrp);
   }
@@ -148,6 +153,8 @@ function runComplexTest(t, name, src, expected, initFunc, asyncFunc) {
 async function runAsyncTest(t, name, src, expected, initFunc, sideFunc) {
   var intrp = new Interpreter;
   intrp.createThread(es5);
+  intrp.run();
+  intrp.createThread(es6);
   intrp.run();
   if (initFunc) {
     initFunc(intrp);
@@ -976,6 +983,8 @@ exports.testStartStop = async function(t) {
       };
   `;
   intrp.createThread(es5);
+  intrp.run();
+  intrp.createThread(es6);
   intrp.run();
   try {
     intrp.start();

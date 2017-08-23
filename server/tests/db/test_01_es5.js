@@ -22,21 +22,6 @@
  * @author fraser@google.com (Neil Fraser)
  */
 
-// Object.is is part of ES6, not ES5, so provide as a polyfill.
-// Polyfill copied from:
-// developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Object/is
-if (!Object.is) {
-  Object.is = function(x, y) {
-    // SameValue algorithm
-    if (x === y) { // Steps 1-5, 7-10
-      // Steps 6.b-6.e: +0 != -0
-      return x !== 0 || 1 / x === 1 / y;
-    } else {
-     // Step 6.a: NaN == NaN
-     return x !== x && y !== y;
-    }
-  };
-}
 
 // Run some tests of the various constructors and their associated
 // literals and prototype objects.
@@ -414,10 +399,25 @@ tests.binary = function() {
 
     ["1 !== '1'", true],
   ];
+
+  // Object.is is part of ES6, not ES5, so provide a helper function.
+  // Copied from:
+  // developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Object/is
+  function is(x, y) {
+    // SameValue algorithm
+    if (x === y) { // Steps 1-5, 7-10
+      // Steps 6.b-6.e: +0 != -0
+      return x !== 0 || 1 / x === 1 / y;
+    } else {
+     // Step 6.a: NaN == NaN
+     return x !== x && y !== y;
+    }
+  }
+
   for (var i = 0, tc; (tc = cases[i]); i++) {
     var actual = eval(tc[0]);
     var expected = tc[1];
-    console.assert(Object.is(actual, expected), tc[0] +
+    console.assert(is(actual, expected), tc[0] +
                    ' Actual: ' + actual  + ' Expected: ' + expected);
   }
 };

@@ -103,7 +103,7 @@ Object.defineProperty(Object, 'defineProperty', {enumerable: false});
 
   var struct = [
     [Object, 'Object',
-     ['is', 'getOwnPropertyNames', 'keys', 'getOwnPropertyDescriptor', 'getPrototypeOf', 'isExtensible', 'preventExtensions'],
+     ['getOwnPropertyNames', 'keys', 'getOwnPropertyDescriptor', 'getPrototypeOf', 'isExtensible', 'preventExtensions'],
      ['toString', 'toLocaleString', 'valueOf', 'hasOwnProperty', 'propertyIsEnumerable', 'isPrototypeOf']],
     [Function, 'Function',
      [],
