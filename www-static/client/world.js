@@ -1237,6 +1237,10 @@ CCC.World.createIframe = function(src) {
   var iframe = document.createElement('iframe');
   iframe.id = 'iframe' +  (Math.random() + '').substring(2);
   iframe.sandbox = 'allow-forms allow-scripts';
+  if (src.match(/^https:\/\/www\.youtube\.com\//)) {
+    // YouTube needs same-origin to play a video.
+    iframe.sandbox += ' allow-same-origin';
+  }
   iframe.src = src;
   document.getElementById('iframeStorage').appendChild(iframe);
   return iframe.id;
