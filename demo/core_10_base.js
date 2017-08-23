@@ -319,25 +319,33 @@ $.user.think.dobj = 'any';
 $.user.think.prep = 'any';
 $.user.think.iobj = 'any';
 
-$.user.eval = function(cmd) {
+$.user.eval = function($$$cmd) {
   // Format:  ;1+1    -or-    eval 1+1
-  var code = (cmd.cmdstr[0] === ';') ? cmd.cmdstr.substring(1) : cmd.argstr;
+  // To reduce the liklihood of clashes with identifiers in the evaled
+  // code, this function has only a single, awkwardly-named parameter
+  // and has no local variables of its own.  Conversely, however, we
+  // create a few local variables with short, convenient names as
+  // aliases for commonly-used values.
+  $$$cmd =
+      ($$$cmd.cmdstr[0] === ';') ? $$$cmd.cmdstr.substring(1) : $$$cmd.argstr;
   try {
-    var r = eval(code);
+    var me = this;
+    var here = this.location;
+    $$$cmd = eval($$$cmd);
   } catch (e) {
     if (e instanceof Error) {
-      r = String(e.name);
+      $$$cmd = String(e.name);
       if (e.message) {
-        r += ': ' + String(e.message);
+        $$$cmd += ': ' + String(e.message);
       }
       if (e.stack) {
-        r += '\n' + e.stack;
+        $$$cmd += '\n' + e.stack;
       }
     } else {
-      r = 'Unhandled exception: ' + String(e);
+      $$$cmd = 'Unhandled exception: ' + String(e);
     }
   }
-  user.narrate(r);
+  user.narrate($$$cmd);
 };
 $.user.eval.verb = 'eval|;.*';
 $.user.eval.dobj = 'any';
