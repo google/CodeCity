@@ -27,6 +27,13 @@
   var hangout = Object.create($.room);
   hangout.name = 'Hangout';
   hangout.description = 'A place to hang out, chat, and program.';
+  hangout.roll = function(cmd) {
+    this.tellAll('<iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1"></iframe>')
+  };
+  hangout.roll.verb = 'roll';
+  hangout.roll.dobj = 'none';
+  hangout.roll.prep = 'none';
+  hangout.roll.iobj = 'none';
   $.startRoom = hangout;
 
   var clock = Object.create($.thing);
