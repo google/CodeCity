@@ -33,8 +33,12 @@ $.editor.edit = function(obj, name, key) {
   }
   var objId = this.objIdFor(obj);
   var url = '/web/edit?objId=' + objId;
-  if (name) { url += '&name=' + encodeURIComponent(String(name)); }
-  if (key) { url += '&key=' + encodeURIComponent(String(key)); }
+  if (name) {
+    url += '&name=' + encodeURIComponent(name);
+  }
+  if (key) {
+    url += '&key=' + encodeURIComponent(key);
+  }
   return url;
 };
 
