@@ -66,6 +66,9 @@ $.www.web.edit = function(path, params) {
   var name = params.name, key = params.key, src = params.src, editor = '';
   if (src) {
     try {
+      // Use Acorn to trim source to first expression.
+      var ast = $.utils.acorn.parseExpressionAt(src, 0, { ecmaVersion: 5 });
+      src = src.substring(ast.start, ast.end);
       // Evaluate src in global scope (eval by any other name, literally).
       // TODO: don't use eval - prefer Function constructor for
       // functions; generate other values from an Acorn parse tree.
