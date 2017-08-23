@@ -562,6 +562,32 @@ tests.aeca_aseca = function() {
   }
 };
 
+tests.isFinite = function() {
+  console.assert(!isFinite(Infinity), 'isFinite Infinity');
+  console.assert(!isFinite(NaN), 'isFinite NaN');
+  console.assert(!isFinite(-Infinity), 'isFinite -Infinity');
+  console.assert(isFinite(0), 'isFinite 0');
+  console.assert(isFinite(2e64), 'isFinite 2e64');
+  console.assert(isFinite('0'), 'isFinite "0"');
+  console.assert(isFinite(null), 'isFinite null');
+};
+
+tests.isNaN = function() {
+  console.assert(isNaN(NaN), 'isNaN NaN');
+  console.assert(isNaN(0 / 0), 'isNaN 0 / 0');
+  console.assert(isNaN('NaN'), 'isNaN "NaN"');
+  console.assert(isNaN(undefined), 'isNaN undefined');
+  console.assert(isNaN({}), 'isNaN {}');
+  console.assert(isNaN('blabla'), 'isNaN "blabla"');
+  console.assert(!isNaN(true), 'isNaN true');
+  console.assert(!isNaN(null), 'isNaN null');
+  console.assert(!isNaN(37), 'isNaN 37');
+  console.assert(!isNaN('37'), 'isNaN "37"');
+  console.assert(!isNaN('37.37'), 'isNaN "37.37"');
+  console.assert(!isNaN(''), 'isNaN ""');
+  console.assert(!isNaN(' '), 'isNaN " "');
+};
+
 // Run some tests of Number.toString(radix) with various different
 // radix arguments.
 tests.toString = function() {
@@ -1704,6 +1730,11 @@ tests.Number = function() {
   console.assert(Number([42]) === 42, 'NumberArray42');
   console.assert(isNaN(Number([1,2,3])), 'NumberArray123');
   console.assert(isNaN(Number(function() {})), 'NumberFunction');
+  console.assert(isNaN(Number.NaN), 'NumberNaN');
+  console.assert(!isFinite(Number.POSITIVE_INFINITY), 'Number +Infinity');
+  console.assert(!isFinite(Number.NEGATIVE_INFINITY), 'Number -Infinity');
+  console.assert(Number.POSITIVE_INFINITY === -Number.NEGATIVE_INFINITY,
+      'Number Infinities');
 };
 
 //////////////////////////////////////////////////////////////

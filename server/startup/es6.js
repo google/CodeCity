@@ -53,3 +53,27 @@ Object.defineProperty(String.prototype, 'startsWith',
      writable: true,
      value: new 'String.prototype.startsWith'});
 
+Object.defineProperty(Number, 'EPSILON',
+    {configurable: false,
+     enumerable: false,
+     writable: false,
+     value: Math.pow(2, -52)});
+
+Object.defineProperty(Number, 'isFinite',
+    {configurable: false,
+     enumerable: false,
+     writable: false,
+     value: new 'Number.isFinite'});
+
+Object.defineProperty(Number, 'isNaN',
+    {configurable: false,
+     enumerable: false,
+     writable: false,
+     value: new 'Number.isNaN'});
+
+Object.defineProperty(Number, 'isSafeInteger',
+    {configurable: false,
+     enumerable: false,
+     writable: false,
+     value: new 'Number.isSafeInteger'});
+
