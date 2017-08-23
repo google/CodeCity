@@ -73,6 +73,7 @@ var Interpreter = function() {
   this.initUptime();
   this.previousTime_ = 0;
   this.running = false;
+  this.runner_ = null;
   this.done = true;  // True if any non-ZOMBIE threads exist.
   // Set up networking stuff:
   this.listeners = {};
@@ -384,10 +385,14 @@ Interpreter.prototype.run = function() {
 Interpreter.prototype.start = function() {
   var intrp = this;
   var repeat = function() {
+    clearTimeout(intrp.runner_);
+    // TODO(cpcallen): figure out reentrancy here: .run() can end up
+    // calling start() via (userland) setTimeout or suspend.
     var r = intrp.run();
     if (r > 0) {
-      clearTimeout(intrp.runner_);
       intrp.runner_ = setTimeout(repeat, r - intrp.now());
+    } else {
+      intrp.runner_ = null;
     }
   };
   // Kill any existing runner and restart.
