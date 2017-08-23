@@ -23,7 +23,9 @@
  */
 
 $.utils.$ = function(str) {
-  // Parse the string to extract a reference.
+  /* Parse the string to extract a reference.
+   * This is the actual implementation of the $() function.
+   */
   // TODO: Support notations starting with @roomname and ~username.
   var m = str.match(/^\s*(\$|me|~|here|@)(.*)\s*$/);
   if (!m) {

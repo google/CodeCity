@@ -29,7 +29,7 @@ $.www.onConnect = function() {
   Object.getPrototypeOf($.www).onConnect.apply(this);
   $.connection.onConnect.apply(this);
   this.done = false;
-}
+};
 
 $.www.onReceiveLine = function(line) {
   if (this.done) {
@@ -103,42 +103,3 @@ $.www.default = function() {
 };
 
 $.www.web = {};
-
-$.www.web.edit = function(path, params) {
-  $.system.log('edit:', path);
-  var m = path.match(/^edit\/(\$(?:\.[a-zA-Z0-9_$]+)*)$/);
-  if (!m) {
-    // Bad edit URL.
-    this.default();
-    return;
-  }
-  var objRef = m[1], src = params.src, editor = '';
-  $.system.log('objRef =', objRef, '; src =', src);
-  if (src) {
-    try {
-      // TODO: don't eval.
-      eval(src);
-      editor += 'Saved!<br>';
-    } catch (e) {
-      editor += 'ERROR: ' + String(e);
-      $.system.log(src);
-      $.system.log(e);
-    }
-  } else {
-    var v = eval(objRef);
-    src = objRef + ' = ' +
-        (typeof v === 'string' ?
-        "'" + v.replace(/[\\']/g, '\$&') + "'" :
-        String(v));
-  }
-  editor += '<form action="' + objRef + '" method="get">';
-  // TODO: don't eval.
-  editor += '<textarea name="src">' + $.utils.htmlEscape(src) + '</textarea>';
-  editor += '<br/>';
-  editor += '<button type="reset">Revert</button>';
-  editor += '<button type="submit">Save</button>';
-  editor += '</form>';
-  this.write('<html><head><title>Code Editor for ' +
-      $.utils.htmlEscape(objRef) + '</title></head>');
-  this.write('<body>' + editor + '</body></html>');
-};

@@ -345,12 +345,14 @@ $.user.eval.prep = 'any';
 $.user.eval.iobj = 'any';
 
 $.user.edit = function(cmd) {
-  user.tell('<iframe src="/web/edit/' + encodeURIComponent(cmd.argstr) + '">' +
-      'Edit ' + $.utils.htmlEscape(cmd.argstr) + '</iframe>');
+  var url =
+      $.utils.htmlEscape($.editor.edit(cmd.iobj, cmd.iobjstr, cmd.dobjstr));
+  user.tell('<iframe src="' + url + '">' +
+      '<a href="' + url + '">Open Editor</a></iframe>');
 };
 $.user.edit.verb = 'edit';
 $.user.edit.dobj = 'any';
-$.user.edit.prep = 'any';
+$.user.edit.prep = 'on top of/on/onto/upon';
 $.user.edit.iobj = 'any';
 
 $.user.narrate = function(text, obj) {
