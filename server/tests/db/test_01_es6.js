@@ -121,3 +121,25 @@ tests.NumberIsSafeInteger = function() {
   console.assert(!Number.isSafeInteger(3.1), 'Number.isSafeInteger 3.1');
   console.assert(Number.isSafeInteger(3.0), 'Number.isSafeInteger 3.0');
 };
+
+tests.MathSign = function() {
+  console.assert(Math.sign(3) === 1, 'Math.sign 3');
+  console.assert(Math.sign(-3) === -1, 'Math.sign -3');
+  console.assert(Math.sign('-3') === -1, 'Math.sign "-3"');
+  console.assert(Object.is(Math.sign(0), 0), 'Math.sign 0');
+  console.assert(Object.is(Math.sign(-0), -0), 'Math.sign -0');
+  console.assert(Number.isNaN(Math.sign(NaN)), 'Math.sign NaN');
+  console.assert(Number.isNaN(Math.sign('foo')), 'Math.sign "foo"');
+  console.assert(Number.isNaN(Math.sign()), 'Math.sign undefined');
+};
+
+tests.MathTrunc = function() {
+  console.assert(Math.trunc(13.37) === 13, 'Math.trunc 13.37');
+  console.assert(Math.trunc(42.84) === 42, 'Math.trunc 42.84');
+  console.assert(Object.is(Math.trunc(0.123), 0), 'Math.trunc 0.123');
+  console.assert(Object.is(Math.trunc(-0.123), -0), 'Math.trunc -0.123');
+  console.assert(Math.trunc('-1.123') === -1, 'Math.trunc "-1.123"');
+  console.assert(Number.isNaN(Math.trunc(NaN)), 'Math.trunc NaN');
+  console.assert(Number.isNaN(Math.trunc('foo')), 'Math.trunc "foo"');
+  console.assert(Number.isNaN(Math.trunc()), 'Math.trunc undefined');
+};

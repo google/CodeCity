@@ -1349,7 +1349,7 @@ Interpreter.prototype.initError = function(scope) {
 Interpreter.prototype.initMath = function(scope) {
   var numFunctions = ['abs', 'acos', 'asin', 'atan', 'atan2', 'ceil', 'cos',
                       'exp', 'floor', 'log', 'max', 'min', 'pow', 'random',
-                      'round', 'sin', 'sqrt', 'tan'];
+                      'round', 'sign', 'sin', 'sqrt', 'tan', 'trunc'];
   for (var i = 0; i < numFunctions.length; i++) {
     this.createNativeFunction('Math.' + numFunctions[i], Math[numFunctions[i]],
                               false);
