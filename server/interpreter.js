@@ -23,7 +23,7 @@
  */
 'use strict';
 
-var acorn = require('../third_party/acorn/acorn');
+var acorn = require('acorn');
 var net = require('net');
 
 /**
@@ -74,7 +74,6 @@ var Interpreter = function() {
  */
 Interpreter.PARSE_OPTIONS = {
   ecmaVersion: 5,
-  forbidReserved: true
 };
 
 /**
@@ -3651,7 +3650,8 @@ module.exports = Interpreter;
 // for 'eval', and may in future use it for Closure Compiler type
 // checking.
 
-/**
- * @constructor
- */
-Interpreter.Node = acorn.parse('', Interpreter.PARSE_OPTIONS).constructor;
+var acornNode = acorn.parse('', Interpreter.PARSE_OPTIONS).constructor;
+/** @constructor */ Interpreter.Node =
+    acornNode.bind(acorn, { options: Interpreter.PARSE_OPTIONS });
+Interpreter.Node.prototype = acornNode.prototype;
+
