@@ -24,7 +24,6 @@
  */
 
 // Global functions.
-var eval = new 'eval';
 var parseInt = new 'parseInt';
 var parseFloat = new 'parseFloat';
 var isNaN = new 'isNaN';
@@ -38,6 +37,10 @@ var encodeURIComponent = new 'encodeURIComponent';
 var suspend = new 'suspend';
 var setTimeout = new 'setTimeout';
 var clearTimeout = new 'clearTimeout';
+// As a special case, eval is not included in this list: it must be
+// set in the global scope by the interpreter because binding eval in
+// strict mode is illegal.
+
 
 // Global objects.
 var Object = new 'Object';

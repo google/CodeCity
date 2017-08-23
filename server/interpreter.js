@@ -26,6 +26,15 @@
 var acorn = require('acorn');
 var net = require('net');
 
+// Create an Acorn plugin called 'alwaysStrict'.
+acorn.plugins.alwaysStrict = function(parser, configValue) {
+  parser.extend('strictDirective', function(nextMethod) {
+    return function strictDirective(start) {
+      return configValue;
+    };
+  });
+};
+
 /**
  * Create a new interpreter.
  * @constructor
@@ -74,6 +83,7 @@ var Interpreter = function() {
  */
 Interpreter.PARSE_OPTIONS = {
   ecmaVersion: 5,
+  plugins: { alwaysStrict: true }
 };
 
 /**
@@ -431,10 +441,14 @@ Interpreter.prototype.initGlobalScope = function(scope) {
   // Initialize ES standard global functions.
   var thisInterpreter = this;
 
+  // eval is a special case; it must be added to the global scope at
+  // startup time (rather than by a "var eval = new 'eval';" statement
+  // in es5.js) because binding eval is illegal in strict mode.
   var func = this.createNativeFunction('eval',
       function(x) {throw EvalError("Can't happen");}, false);
-  func.eval = true;
-
+  func.eval = true;  // Recognized specially by stepCallExpresion.
+  this.addVariableToScope(scope, 'eval', func);
+                          
   this.createNativeFunction('isFinite', isFinite, false);
   this.createNativeFunction('isNaN', isNaN, false);
   this.createNativeFunction('parseFloat', parseFloat, false);

@@ -1124,25 +1124,6 @@ tests.deleteProp = function() {
   console.assert(delete o.foo, 'deleteProp5');
 };
 
-tests.deleteUnqualifiedIdentifier = function() {
-  var foo;
-  try {
-    delete foo;
-    console.assert(false, 'deleteUnqualifiedIdentifier');
-  } catch (e) {
-    console.assert(e.name === 'SyntaxError', 'deleteUnqualifiedIdentifierError');
-  }
-};
-
-tests.deleteUndeclaredIdentifier = function() {
-  try {
-    delete foo;
-    console.assert(false, 'deleteUndeclaredIdentifier');
-  } catch (e) {
-    console.assert(e.name === 'SyntaxError', 'deleteUndeclaredIdentifierError');
-  }
-};
-
 tests.funcDecl = function() {
   var v;
   function f() {
@@ -1834,3 +1815,33 @@ tests.newHackUnknown = function() {
     console.assert(e.name === 'ReferenceError', 'newHackUnknownError');
   }
 };
+
+tests.strictModeSyntaxErrors = function() {
+  var tests = [
+    // With statement.
+    'var o = { foo: 42 }; var f = function() { with (o) { foo; }};',
+
+    // Binding eval in global scope, or arguments in a function.
+    'var eval = "rebinding eval?!?";',
+    '(function() { arguments = undefined; });',
+
+    // Duplicate argument names.
+    '(function(a, a) {});',
+
+    // Octal numeric literals.
+    '0777;',
+
+    // Delete of unqualified or undeclared identifier.
+    'var foo; delete foo;',
+    'delete foo;',
+  ];
+  for (var i = 0; i < tests.length; i++) {
+    var src = tests[i];
+    try {
+      eval(tests[i]);
+      console.assert(false, 'newHackUnknown ' + src);
+    } catch (e) {
+      console.assert(e.name === 'SyntaxError', 'newHackUnknownError ' + src);
+    }
+  }
+};      
