@@ -1279,6 +1279,12 @@ tests.evalIndirectNoSeeEnclosing = function() {
   } catch (e) {
     console.assert(e.name === 'ReferenceError', 'evalIndirectNoSeeEnclosing');
   }
+  try {
+    (function() { return eval; })()('n');
+    console.assert(false, 'evalIndirectNoSeeEnclosing2');
+  } catch (e) {
+    console.assert(e.name === 'ReferenceError', 'evalIndirectNoSeeEnclosing2');
+  }
 };
 
 tests.evalIndirectSeeGlobal = function() {
