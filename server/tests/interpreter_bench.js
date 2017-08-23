@@ -28,6 +28,7 @@ var util = require('util');
 
 var Interpreter = require('../interpreter');
 var es5 = require('./interpreter_es5');
+var es6 = require('./interpreter_es6');
 
 /**
  * Run a benchmark of the interpreter.
@@ -39,6 +40,8 @@ function runBench(b, name, src) {
   for (var i = 0; i < 4; i++) {
     var interpreter = new Interpreter();
     interpreter.createThread(es5);
+    interpreter.run();
+    interpreter.createThread(es6);
     interpreter.run();
 
     var err = undefined;
