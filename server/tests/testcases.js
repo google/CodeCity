@@ -678,25 +678,6 @@ module.exports = [
     `,
     expected: 5 },
 
-  { name: 'deleteUnqualifiedIdentifier', src: `
-    var foo;
-    try {
-      delete foo;
-    } catch (e) {
-      e.name;
-    }
-    `,
-    expected: 'SyntaxError' },
-
-  { name: 'deleteUndeclaredIdentifier', src: `
-    try {
-      delete foo;
-    } catch (e) {
-      e.name;
-    }
-    `,
-    expected: 'SyntaxError' },
-
   { name: 'funcDecl', src: `
     var v;
     function f() {
@@ -1367,7 +1348,7 @@ module.exports = [
     expected: 'TypeError' },
 
   /******************************************************************/
-  // Other tests (all are skipped):
+  // Other tests:
 
   { name: 'newHack', src: `
     (new 'Array.prototype.push') === Array.prototype.push
@@ -1385,5 +1366,38 @@ module.exports = [
     `,
     expected: 'ReferenceError'
   },
+
+  { name: 'strictModeSyntaxErrors', src: `
+    var tests = [
+      // With statement.
+      'var o = { foo: 42 }; var f = function() { with (o) { foo; }};',
+
+      // Binding eval in global scope, or arguments in a function.
+      'var eval = "rebinding eval?!?";',
+      '(function() { arguments = undefined; });',
+
+      // Duplicate argument names.
+      '(function(a, a) {});',
+
+      // Octal numeric literals.
+      '0777;',
+
+      // Delete of unqualified or undeclared identifier.
+      'var foo; delete foo;',
+      'delete foo;',
+    ];
+    var ok = 0;
+    for (var i = 0; i < tests.length; i++) {
+      try {
+        eval(tests[i]);
+      } catch (e) {
+        if (e.name === 'SyntaxError') {
+          ok++;
+        }
+      }
+    }
+    (ok === tests.length) ? 'pass' : 'fail';
+    `,
+    expected: 'pass' },
 
 ];
