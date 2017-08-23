@@ -77,3 +77,15 @@ Object.defineProperty(Number, 'isSafeInteger',
      writable: false,
      value: new 'Number.isSafeInteger'});
 
+Object.defineProperty(Math, 'sign',
+    {configurable: false,
+     enumerable: false,
+     writable: false,
+     value: new 'Math.sign'});
+
+Object.defineProperty(Math, 'trunc',
+    {configurable: false,
+     enumerable: false,
+     writable: false,
+     value: new 'Math.trunc'});
+
