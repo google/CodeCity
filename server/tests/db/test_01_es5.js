@@ -1839,9 +1839,9 @@ tests.strictModeSyntaxErrors = function() {
     var src = tests[i];
     try {
       eval(tests[i]);
-      console.assert(false, 'newHackUnknown ' + src);
+      console.assert(false, 'strictModeSyntaxErrors ' + src);
     } catch (e) {
-      console.assert(e.name === 'SyntaxError', 'newHackUnknownError ' + src);
+      console.assert(e.name === 'SyntaxError', 'strictModeSyntaxErrors ' + src);
     }
   }
 };      
