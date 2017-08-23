@@ -843,6 +843,22 @@ module.exports = [
     `,
     expected: 77.77 },
 
+  { name: 'indirectEvalNoSeeEnclosing', src: `
+    var n = 77.77, gEval = eval;
+    try {
+      gEval('n');
+    } catch (e) {
+      e.name;
+    }
+    `,
+    expected: 'ReferenceError' },
+
+  { name: 'evalIndirectSeeGlobal', src: `
+    var gEval = eval;
+    gEval('typeof Array');
+    `,
+    expected: 'function' },
+
   { name: 'evalModifyEnclosing', src: `
     var n = 77.77;
     eval('n = 77.88');
