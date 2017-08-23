@@ -1,1 +1,1 @@
-../third_party/acorn/acorn.js
+../server/node_modules/acorn/dist/acorn.js
