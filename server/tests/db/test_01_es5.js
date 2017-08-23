@@ -1271,6 +1271,21 @@ tests.evalSeeEnclosing = function() {
   console.assert(eval('n') === 77.77, 'evalSeeEnclosing');
 };
 
+tests.evalIndirectNoSeeEnclosing = function() {
+  var n = 77.77, gEval = eval;
+  try {
+    gEval('n');
+    console.assert(false, 'evalIndirectNoSeeEnclosing');
+  } catch (e) {
+    console.assert(e.name === 'ReferenceError', 'evalIndirectNoSeeEnclosing');
+  }
+};
+
+tests.evalIndirectSeeGlobal = function() {
+  var gEval = eval;
+  console.assert(gEval('typeof Array') === 'function', 'evalIndirectSeeGlobal');
+};
+
 tests.evalModifyEnclosing = function() {
   var n = 77.77;
   eval('n = 77.88');

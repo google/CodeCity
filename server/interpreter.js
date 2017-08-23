@@ -2945,7 +2945,10 @@ Interpreter.prototype['stepCallExpression'] = function(stack, state, node) {
     var func = state.value;
     if (Array.isArray(func)) {
       state.func_ = this.getValue(state.scope, func);
-      if (func[0] !== Interpreter.SCOPE_REFERENCE) {
+      if (func[0] === Interpreter.SCOPE_REFERENCE) {
+        // (Globally or locally) named function.  Is it named 'eval'?
+        state.directEval_ = (func[1] === 'eval');
+      } else {
         // Method function, 'this' is object (ignored if invoked as 'new').
         state.funcThis_ = func[0];
       }
@@ -3037,8 +3040,9 @@ Interpreter.prototype['stepCallExpression'] = function(stack, state, node) {
         evalNode['type'] = 'EvalProgram_';
         evalNode['body'] = ast['body'];
         evalNode['source'] = code;
-        // Update current scope with definitions in eval().
-        var scope = new Interpreter.Scope(state.scope);
+        // Create new scope and update it with definitions in eval().
+        var outerScope = state.directEval_ ? state.scope : this.global;
+        var scope = new Interpreter.Scope(outerScope);
         this.populateScope_(ast, scope, code);
         this.value = undefined;  // Default value if no code.
         return new Interpreter.State(evalNode, scope);
