@@ -436,10 +436,10 @@ Interpreter.prototype.initGlobalScope = function(scope) {
       function(x) {throw EvalError("Can't happen");}, false);
   func.eval = true;
 
-  this.createNativeFunction('parseInt', parseInt, false);
-  this.createNativeFunction('parseFloat', parseFloat, false);
-  this.createNativeFunction('isNaN', isNaN, false);
   this.createNativeFunction('isFinite', isFinite, false);
+  this.createNativeFunction('isNaN', isNaN, false);
+  this.createNativeFunction('parseFloat', parseFloat, false);
+  this.createNativeFunction('parseInt', parseInt, false);
 
   var strFunctions = [
     [escape, 'escape'], [unescape, 'unescape'],
@@ -1105,6 +1105,12 @@ Interpreter.prototype.initNumber = function(scope) {
   this.NUMBER.class = 'Number';
   // Number constructor.
   this.createNativeFunction('Number', Number, false);  // No: new Number()
+
+  // Static methods on Number.
+  this.createNativeFunction('Number.isFinite', Number.isFinite, false);
+  this.createNativeFunction('Number.isNaN', Number.isNaN, false);
+  this.createNativeFunction('Number.isSafeInteger', Number.isSafeInteger,
+                            false);
 
   // Instance methods on Number.
   wrapper = function(fractionDigits) {

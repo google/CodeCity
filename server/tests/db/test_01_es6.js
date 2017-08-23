@@ -79,3 +79,45 @@ tests.StringRepeat = function() {
   }
 };
 
+tests.NumberEpsilon = function() {
+  console.assert(Number.EPSILON > 0, 'Epsilon > zero');
+  console.assert(Number.EPSILON < 0.001, 'Epsilon < 0.001');
+};
+
+tests.NumberIsFinite = function() {
+  console.assert(!Number.isFinite(Infinity), 'Number.isFinite Infinity');
+  console.assert(!Number.isFinite(NaN), 'Number.isFinite NaN');
+  console.assert(!Number.isFinite(-Infinity), 'Number.isFinite -Infinity');
+  console.assert(Number.isFinite(0), 'Number.isFinite 0');
+  console.assert(Number.isFinite(2e64), 'Number.isFinite 2e64');
+  console.assert(!Number.isFinite('0'), 'Number.isFinite "0"');
+  console.assert(!Number.isFinite(null), 'Number.isFinite null');
+};
+
+tests.NumberIsNaN = function() {
+  console.assert(Number.isNaN(NaN), 'Number.isNaN NaN');
+  console.assert(Number.isNaN(Number.NaN), 'Number.isNaN Number.NaN');
+  console.assert(Number.isNaN(0 / 0), 'Number.isNaN 0 / 0');
+  console.assert(!Number.isNaN('NaN'), 'Number.isNaN "NaN"');
+  console.assert(!Number.isNaN(undefined), 'Number.isNaN undefined');
+  console.assert(!Number.isNaN({}), 'Number.isNaN {}');
+  console.assert(!Number.isNaN('blabla'), 'Number.isNaN "blabla"');
+  console.assert(!Number.isNaN(true), 'Number.isNaN true');
+  console.assert(!Number.isNaN(null), 'Number.isNaN null');
+  console.assert(!Number.isNaN(37), 'Number.isNaN 37');
+  console.assert(!Number.isNaN('37'), 'Number.isNaN "37"');
+  console.assert(!Number.isNaN('37.37'), 'Number.isNaN "37.37"');
+  console.assert(!Number.isNaN(''), 'Number.isNaN ""');
+  console.assert(!Number.isNaN(' '), 'Number.isNaN " "');
+};
+
+tests.NumberIsSafeInteger = function() {
+  console.assert(Number.isSafeInteger(3), 'Number.isSafeInteger 3');
+  console.assert(!Number.isSafeInteger(Math.pow(2, 53)), 'Number.isSafeInteger 2^53');
+  console.assert(Number.isSafeInteger(Math.pow(2, 53) - 1), 'Number.isSafeInteger 2^53-1');
+  console.assert(!Number.isSafeInteger(NaN), 'Number.isSafeInteger NaN');
+  console.assert(!Number.isSafeInteger(Infinity), 'Number.isSafeInteger Infinity');
+  console.assert(!Number.isSafeInteger('3'), 'Number.isSafeInteger "3"');
+  console.assert(!Number.isSafeInteger(3.1), 'Number.isSafeInteger 3.1');
+  console.assert(Number.isSafeInteger(3.0), 'Number.isSafeInteger 3.0');
+};
