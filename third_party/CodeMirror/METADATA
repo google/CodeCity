@@ -1,0 +1,17 @@
+name: "CodeMirror"
+description:
+    "CodeMirror is a code editor embedable in a webpage."
+
+third_party {
+  url {
+    type: HOMEPAGE
+    value: "https://codemirror.net/"
+  }
+  url {
+    type: GIT
+    value: "https://github.com/codemirror/codemirror"
+  }
+  version: "e49a19f5cacb447558f162014eb26b8c45b30941"
+  last_upgrade_date { year: 2017 month: 8 day: 24 }
+  license_type: NOTICE
+}
