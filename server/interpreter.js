@@ -1057,12 +1057,10 @@ Interpreter.prototype.initString = function(scope) {
   this.createNativeFunction('String.prototype.split', wrapper, false);
 
   wrapper = function(regexp) {
-    regexp = regexp ? regexp.regexp : undefined;
-    var match = this.match(regexp);
-    if (!match) {
-      return null;
+    if (regexp instanceof thisInterpreter.RegExp) {
+      regexp = regexp.regexp;
     }
-    return thisInterpreter.nativeToPseudo(match);
+    return thisInterpreter.nativeToPseudo(this.match(regexp));
   };
   this.createNativeFunction('String.prototype.match', wrapper, false);
 
@@ -1076,8 +1074,10 @@ Interpreter.prototype.initString = function(scope) {
 
   wrapper = function(substr, newSubstr) {
     // Support for function replacements is the responsibility of a polyfill.
-    return String(this).replace((substr instanceof thisInterpreter.RegExp) ?
-                                substr.regexp : substr, newSubstr);
+    if (substr instanceof thisInterpreter.RegExp) {
+      substr = substr.regexp;
+    }
+    return String(this).replace(substr, newSubstr);
   };
   this.createNativeFunction('String.prototype.replace', wrapper, false);
 
