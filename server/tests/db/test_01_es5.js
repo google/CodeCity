@@ -1554,6 +1554,14 @@ tests.ObjectPrototypeToString = function() {
 //////////////////////////////////////////////////////////////
 // Function and Function.prototype
 
+tests.FunctionConstructor = function() {
+  var f = new Function('return 42;')
+  console.assert(f() === 42, 'FunctionConstructorNoArgs');
+
+  var f = new Function('a, b', 'c', 'return a + b * c;')
+  console.assert(f(2, 3, 10) === 32, 'FunctionConstructorArgs');
+};
+
 tests.FunctionPrototypeHasNoPrototype = function() {
   console.assert(Function.prototype.hasOwnProperty('prototype') === false,
                  'FunctionPrototypeHasNoPrototype');

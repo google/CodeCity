@@ -700,16 +700,18 @@ Interpreter.prototype.initFunction = function(scope) {
     } else {
       var code = '';
     }
-    var args = [];
-    for (var i = 0; i < arguments.length - 1; i++) {
-      var name = String(arguments[i]);
-      if (!name.match(identifierRegexp)) {
-        thisInterpreter.throwException(thisInterpreter.SYNTAX_ERROR,
-            'Invalid function argument: ' + name);
+    var argsStr = Array.prototype.slice.call(arguments, 0, -1).join(',').trim();
+    if (argsStr) {
+      var args = argsStr.split(/\s*,\s*/);
+      for (var i = 0; i < args.length; i++) {
+        var name = args[i];
+        if (!identifierRegexp.test(name)) {
+          thisInterpreter.throwException(thisInterpreter.SYNTAX_ERROR,
+              'Invalid function argument: ' + name);
+        }
       }
-      args.push(name);
+      argsStr = args.join(', ');
     }
-    args = args.join(', ');
     // Acorn needs to parse code in the context of a function or else 'return'
     // statements will be syntax errors.
     var code = '(function(' + args + ') {' + code + '})';
@@ -3673,4 +3675,3 @@ var acornNode = acorn.parse('', Interpreter.PARSE_OPTIONS).constructor;
 /** @constructor */ Interpreter.Node =
     acornNode.bind(acorn, { options: Interpreter.PARSE_OPTIONS });
 Interpreter.Node.prototype = acornNode.prototype;
-
