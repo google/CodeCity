@@ -37,7 +37,7 @@ CCC.Log.maxHistorySize = 10000;
  * Probably best not to allow 'javascript:' URIs due to security reasons.
  */
 CCC.Log.protocolRegex =
-    /^(https?|ftp|gopher|data|irc|telnet|news|wais|file|nntp|mailto):/;
+    /^((https?|ftp|gopher|data|irc|telnet|news|wais|file|nntp|mailto):|\/)/;
 
 /**
  * Record of the user's name.  Used for displaying 2nd person vs 3rd person
@@ -243,7 +243,7 @@ CCC.Log.renderXml = function(node) {
       var src = node.getAttribute('src');
       var m = src.match(CCC.Log.protocolRegex);
       if (!m) {
-        return null;  // Invalid src attribute.
+        return undefined;  // Invalid src attribute.
       }
       var div = document.createElement('div');
       var text = node.textContent || src;
@@ -258,7 +258,7 @@ CCC.Log.renderXml = function(node) {
         CCC.Log.renderHtmltext(div, dom.body);
         return div;
       }
-      return '';  // Illegal HTML.
+      return undefined;  // Illegal HTML.
     case 'scene':
       // <scene user="Max" room="The Hangout" requested="true">
       //   <description>The lights are dim and blah blah blah...</description>

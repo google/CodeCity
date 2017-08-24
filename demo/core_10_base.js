@@ -347,8 +347,8 @@ $.user.eval.iobj = 'any';
 $.user.edit = function(cmd) {
   var url =
       $.utils.htmlEscape($.editor.edit(cmd.iobj, cmd.iobjstr, cmd.dobjstr));
-  user.tell('<iframe src="' + url + '">' +
-      '<a href="' + url + '">Open Editor</a></iframe>');
+  user.tell('<iframe src="' + url + '">Edit ' +
+            cmd.dobjstr + ' on ' + cmd.iobjstr + '</iframe>');
 };
 $.user.edit.verb = 'edit';
 $.user.edit.dobj = 'any';
