@@ -1954,9 +1954,9 @@ CCC.World.wrapScore_ = function(svg, words, wordBreaks, limit) {
     // Optimize for structure.
     // Add score to line endings after punctuation.
     var lastLetter = lines[i].trim().slice(-1);
-    if ('.?!'.indexOf(lastLetter) !== -1) {
+    if ('.?!'.includes(lastLetter)) {
       score += 6;
-    } else if (',;)]}'.indexOf(lastLetter) !== -1) {
+    } else if (',;)]}'.includes(lastLetter)) {
       score += 3;
     }
   }

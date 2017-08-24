@@ -79,7 +79,7 @@ function handleRequest(request, response) {
     var subs = {'<<<LOGIN_URL>>>': loginUrl};
     serveFile(response, 'login.html', subs);
 
-  } else if (request.url.indexOf(CFG.loginPath + '?code=') === 0) {
+  } else if (request.url.startsWith(CFG.loginPath + '?code=')) {
     var code = request.url.substring(request.url.indexOf('=') + 1);
     oauth2Client.getToken(code, function(err, tokens) {
       // Now tokens contains an access_token and an optional refresh_token. Save them.

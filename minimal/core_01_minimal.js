@@ -180,7 +180,7 @@ $.execute = function(command) {
       for (var i = 0; i < objects.length; i++) {
         var obj = objects[i];
         if (obj.name &&
-            obj.name.toLowerCase().indexOf(dobjstr.toLowerCase()) === 0) {
+            obj.name.toLowerCase().startsWith(dobjstr.toLowerCase())) {
           dobj = obj;
           break;
         }

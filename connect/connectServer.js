@@ -170,7 +170,7 @@ function handleRequest(request, response) {
                 ', starting session ' + sessionId);
 
   } else if (request.method == 'POST' &&
-             request.url.indexOf(CFG.connectPath + '?ping') === 0) {
+             request.url.startsWith(CFG.connectPath + '?ping')) {
     var requestBody = '';
     request.on('data', function(data) {
       requestBody += data;

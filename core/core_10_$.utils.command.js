@@ -266,14 +266,14 @@ $.utils.match.strength = function(str, obj) {
   if (name === str) {
     return 3;
   }
-  var partial = name.indexOf(str) === 0;
+  var partial = name.startsWith(str);
   if (Array.isArray(obj.aliases)) {
     for (var i = 0; i < obj.aliases.length; i++) {
       var alias = obj.aliases[i].toLowerCase();
       if (name === alias) {
         return 2;
       }
-      partial = partial || alias.indexOf(str) === 0;
+      partial = partial || alias.startsWith(str);
     }
   }
   return partial ? 1 : 0;

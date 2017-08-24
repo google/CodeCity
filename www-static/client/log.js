@@ -217,7 +217,7 @@ CCC.Log.addXml = function(dom) {
 CCC.Log.toggleZippy = function(e) {
   var zippy = e.target;
   var pre = zippy.parentNode.lastChild;
-  if (zippy.className.indexOf(' open') === -1) {
+  if (!zippy.className.includes(' open')) {
     zippy.className += ' open';
     pre.style.display = 'block';
     if (!zippy.parentNode.nextSibling) {
