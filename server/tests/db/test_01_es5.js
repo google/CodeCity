@@ -1844,4 +1844,4 @@ tests.strictModeSyntaxErrors = function() {
       console.assert(e.name === 'SyntaxError', 'strictModeSyntaxErrors ' + src);
     }
   }
-};      
+};

@@ -453,7 +453,7 @@ Interpreter.prototype.initGlobalScope = function(scope) {
       function(x) {throw EvalError("Can't happen");}, false);
   func.eval = true;  // Recognized specially by stepCallExpresion.
   this.addVariableToScope(scope, 'eval', func);
-                          
+
   this.createNativeFunction('isFinite', isFinite, false);
   this.createNativeFunction('isNaN', isNaN, false);
   this.createNativeFunction('parseFloat', parseFloat, false);

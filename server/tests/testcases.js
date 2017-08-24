@@ -434,7 +434,7 @@ module.exports = [
     (pd.value === 3) && pd.writable && !pd.enumerable && !pd.configurable;
     `,
     expected: true },
-    
+
   { name: 'arrayLength', src: `
     try {
       var a;

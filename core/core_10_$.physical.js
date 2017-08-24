@@ -19,7 +19,7 @@
 
 /**
  * @fileoverview The initial database core.
- * 
+ *
  * It's designed to be read into the server (see CodeCity/server) at
  * initial startup time.  It should not be needed after that (the
  * server should save all internal state to a checkpoint file, and
@@ -27,7 +27,7 @@
  * intended that it should be possible to re-run it to update an
  * existing core with newer versions of the core objects / functions.
  * Doing so is at your own risk, however!
- * 
+ *
  * @author cpcallen@google.com (Christopher Allen)
  */
 'use strict'; // For testing with node.js
@@ -49,7 +49,7 @@ var $ = function() {
     // FIXME: this implementation for testing in Node only.
     console.log(msg);
   }
-    
+
   /**
    * Verify that obj has a property obj[key], with specified
    * enumerability, whose value is an object with prototype proto.
@@ -120,7 +120,7 @@ var $ = function() {
    * $.object - Object.prototype
    */
   set($, 'object', Object.prototype, true);
-  
+
   /*******************************************************************
    * $.array - Array.prototype
    */
@@ -131,9 +131,9 @@ var $ = function() {
    */
   make($, 'vet', $.object, function(obj) {
     /* $.vet(obj) - validate obj.
-     * 
+     *
      * Verifies the internal state of obj.
-     * 
+     *
      * $.vet is also a library of type-specific vetting functions -
      * e.g., $.vet.physical(p), which verifies that p is a $.physical
      * object and has valid internal state.
@@ -157,13 +157,13 @@ var $ = function() {
   });
 
   // Type-specific vetting functions defined with types below.
-  
+
   /*******************************************************************
    * $.owner - object which can own other objects
    */
   // FIXME: this will probably need to be some kind of system object.
   make($, 'owner', Object.prototype, true);
-  
+
   /*******************************************************************
    * $.user - owner representing an individual user
    */
@@ -176,7 +176,7 @@ var $ = function() {
 
   set($.vet, 'user', function(obj) {
     /* $.vet.user(obj) - validate an $.user object.
-     * 
+     *
      * Verifies that obj is a $.user object and has valid internal
      * state.
      */
@@ -206,7 +206,7 @@ var $ = function() {
     $.vet.physical(this);
     return this.contents_;
   });
-       
+
   set($.physical, 'moveto', function(dest) {
     /* .moveto(dest) - move this physical object to dest.
      *
@@ -214,7 +214,7 @@ var $ = function() {
      * then move this to dest and then call .exitfunc(this) on
      * original this.location and .enterfunc(this) on new
      * this.location.
-     * 
+     *
      * This is based loosely on moo.ca's #3:moveto and #102:bf_move.
      */
     // Vet obj, src and dest (also does type check):
@@ -252,7 +252,7 @@ var $ = function() {
     // FIXME: call exitfunc
     // FIXME: call enterfunc
   });
-  
+
   set($.physical, 'moveable', function(whither) {
     // Returns true iff this is willing to move to whither.
     return false;
@@ -260,7 +260,7 @@ var $ = function() {
 
   set($.physical, 'accept', function(obj) {
     /* .accept(obj) => boolean
-     * 
+     *
      * Returns true iff this is willing to accept obj into its
      * contents.  This function should only be called by
      * $.physical.moveto() immediately before performing a move, and
@@ -275,7 +275,7 @@ var $ = function() {
 
   set($.physical, 'acceptable', function(obj) {
     /* .acceptable(obj) => boolean
-     * 
+     *
      * Returns true iff this is willing to accept obj into its
      * contents.  This function (and any overrides) MUST NOT have any
      * observable side-effects.
@@ -295,10 +295,10 @@ var $ = function() {
     }
     return false;
   });
-  
+
   set($.vet, 'physical', function(obj) {
     /* $.vet.physical(obj) - validate a $.physical object.
-     * 
+     *
      * Verifies that obj is a $.physical object and has valid internal
      * state.
      */
@@ -336,7 +336,7 @@ var $ = function() {
 
   set($.place, 'acceptable', function(obj) {
     /* .acceptable(obj) => boolean
-     * 
+     *
      * Returns true iff this is willing to accept obj into its
      * contents.  This function (and any overrides) MUST NOT have any
      * observable side-effects.
@@ -346,7 +346,7 @@ var $ = function() {
 
   set($.vet, 'place', function(obj) {
     /* $.vet.place(obj) - validate a $.place object.
-     * 
+     *
      * Verifies that obj is a $.place object and has valid internal
      * state.
      */
