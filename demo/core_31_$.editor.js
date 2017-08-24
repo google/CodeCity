@@ -63,7 +63,8 @@ $.www.web.edit = function(path, params) {
     this.default();
     return;
   }
-  var name = params.name, key = params.key, src = params.src, editor = '';
+  var name = params.name, key = params.key, src = params.src;
+  var status = '';
   if (src) {
     try {
       // Use Acorn to trim source to first expression.
@@ -74,9 +75,9 @@ $.www.web.edit = function(path, params) {
       // functions; generate other values from an Acorn parse tree.
       var evalGlobal = eval;
       obj[key] = evalGlobal('(' + src + ')');
-      editor += 'Saved!<br>';
+      status = '(saved)';
     } catch (e) {
-      editor += 'ERROR: ' + String(e);
+      status = '(ERROR: ' + String(e) + ')';
     }
   } else {
     var v = obj[key];
@@ -84,22 +85,44 @@ $.www.web.edit = function(path, params) {
         "'" + v.replace(/[\\']/g, '\$&') + "'" :
         String(v));
   }
-  editor += '<h1>Editing ' + $.utils.htmlEscape(name) + '.' +
-      $.utils.htmlEscape(key) + '</h1>';
-  editor += '<form action="/web/edit" method="get">';
-  editor += '<input name=objId type="hidden" value="' +
+  var body = '<form action="/web/edit" method="get">';
+  body += '<button type="submit" class="jfk-button-submit" id="submit"' +
+      ' onclick="document.getElementById(\'src\').value = editor.getValue()">Save</button>';
+  body += '<h1>Editing ' + $.utils.htmlEscape(name) + '.' +
+      $.utils.htmlEscape(key) + ' <span id="status">' + status + '</span></h1>';
+  body += '<input name="objId" type="hidden" value="' +
       $.utils.htmlEscape(objId) + '">';
-  editor += '<input name=name type="hidden" value="' +
+  body += '<input name="name" type="hidden" value="' +
       $.utils.htmlEscape(name) + '">';
-  editor += '<input name=key type="hidden" value="' +
+  body += '<input name="key" type="hidden" value="' +
       $.utils.htmlEscape(key) + '">';
-  editor += '<textarea name="src">' + $.utils.htmlEscape(src) + '</textarea>';
-  editor += '<br/>';
-  editor += '<button type="reset">Revert</button>';
-  editor += '<button type="submit">Save</button>';
-  editor += '</form>';
-  this.write('<html><head><title>Code Editor for ' +
-      $.utils.htmlEscape(name) + '.' + $.utils.htmlEscape(key) +
-      '</title></head>');
-  this.write('<body>' + editor + '</body></html>');
+  body += '<textarea name="src" id="src">' + $.utils.htmlEscape(src) + '\n</textarea>';
+  body += '</form>';
+  body += '<script>';
+  body += '  var editor = CodeMirror.fromTextArea(document.getElementById("src"), {';
+  body += '    lineNumbers: true,';
+  body += '    matchBrackets: true,';
+  body += '    viewportMargin: Infinity,';
+  body += '  });';
+  body += '  editor.on("change", function() {document.getElementById("status").innerText = "(modified)"});';
+  body += '</script>';
+
+  this.write('<!DOCTYPE html>');
+  this.write('<html><head>');
+  this.write('<title>Code Editor for ' +
+      $.utils.htmlEscape(name) + '.' + $.utils.htmlEscape(key) + '</title>');
+  this.write('<link href="/client/jfk.css" rel="stylesheet">');
+  this.write('<link rel="stylesheet" href="/CodeMirror/codemirror.css">');
+  this.write('<style>');
+  this.write('  body {margin: 0; font-family: sans-serif}');
+  this.write('  h1 {margin-bottom: 5; font-size: small}');
+  this.write('  #submit {position: fixed; bottom: 1ex; right: 2ex; z-index: 9}');
+  this.write('  .CodeMirror {height: auto; border: 1px solid #eee}');
+  this.write('</style>');
+  this.write('<script src="/CodeMirror/codemirror.js"></script>');
+  this.write('<script src="/CodeMirror/javascript.js"></script>');
+
+  this.write('</head><body>');
+  this.write(body);
+  this.write('</body></html>');
 };
