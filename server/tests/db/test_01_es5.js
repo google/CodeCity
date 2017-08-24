@@ -1555,11 +1555,19 @@ tests.ObjectPrototypeToString = function() {
 // Function and Function.prototype
 
 tests.FunctionConstructor = function() {
-  var f = new Function('return 42;')
+  var f = new Function('return 42;');
   console.assert(f() === 42, 'FunctionConstructorNoArgs');
+  var expected = 'function() {return 42;}';
+  var actual = String(f);
+  console.assert(actual === expected, 'FunctionConstructorNoArgs Actual: "'
+      + actual + '" Expected: "' + expected + '"');
 
-  var f = new Function('a, b', 'c', 'return a + b * c;')
+  var f = new Function('a, b', 'c', 'return a + b * c;');
   console.assert(f(2, 3, 10) === 32, 'FunctionConstructorArgs');
+  var expected = 'function(a, b, c) {return a + b * c;}';
+  var actual = String(f);
+  console.assert(actual === expected, 'FunctionConstructorArgs Actual: "'
+      + actual + '" Expected: "' + expected + '"');
 };
 
 tests.FunctionPrototypeHasNoPrototype = function() {
