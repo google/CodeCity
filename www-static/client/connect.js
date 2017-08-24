@@ -606,7 +606,7 @@ CCC.keydown = function(e) {
         CCC.commandTemp = '';
         break;
       } else if (CCC.commandHistory[chp].toLowerCase()
-                 .indexOf(CCC.commandTemp.toLowerCase()) === 0) {
+                 .startsWith(CCC.commandTemp.toLowerCase())) {
         CCC.commandHistoryPointer = chp;
         CCC.commandTextarea.value = CCC.commandHistory[chp];
         break;

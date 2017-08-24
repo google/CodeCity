@@ -257,7 +257,7 @@ Serializer.serialize = function(intrp) {
     var names = Object.getOwnPropertyNames(obj);
     for (var j = 0; j < names.length; j++) {
       var name = names[j];
-      if (obj !== intrp || exclude.indexOf(name) === -1) {
+      if (obj !== intrp || !exclude.includes(name)) {
         props[name] = encodeValue(obj[name]);
       }
     }
@@ -279,7 +279,7 @@ Serializer.objectHunt_ = function(node, objectList, excludeTypes, exclude) {
   if (node && (typeof node === 'object' || typeof node === 'function')) {
     if (((typeof node === 'object' || typeof node === 'function') &&
         excludeTypes.has(Object.getPrototypeOf(node))) ||
-        objectList.indexOf(node) !== -1) {
+        objectList.includes(node)) {
       return;
     }
     objectList.push(node);
@@ -287,7 +287,7 @@ Serializer.objectHunt_ = function(node, objectList, excludeTypes, exclude) {
       var names = Object.getOwnPropertyNames(node);
       for (var i = 0; i < names.length; i++) {
         var name = names[i];
-        if (!exclude || exclude.indexOf(name) === -1) {
+        if (!exclude || !exclude.includes(name)) {
           // Don't pass exclude; it's only for top-level property keys.
           Serializer.objectHunt_(node[names[i]], objectList, excludeTypes);
         }
