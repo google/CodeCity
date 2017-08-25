@@ -391,6 +391,15 @@ module.exports = [
     `,
     expected: 69 },
 
+  { name: 'forInNullUndefined', src: `
+    var x = 0, o = {};
+    var f = function() { x++; return o; };
+    for (f().foo in null) { x++; }
+    for (f().foo in undefined) { x++; }
+    x;
+    `,
+    expected: 0 },
+
   { name: 'methodCall', src: `
     var o = {
       f: function() { return this.foo; },
