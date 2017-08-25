@@ -2396,7 +2396,7 @@ Interpreter.prototype.unwind = function(type, value, label) {
 
 
 ///////////////////////////////////////////////////////////////////////////////
-// Nested (but not fully inner) classes: Scope, State and Thread.
+// Nested (but not fully inner) classes: Scope, State, Thread, etc.
 ///////////////////////////////////////////////////////////////////////////////
 
 /**
@@ -3117,6 +3117,65 @@ Interpreter.prototype.installTypes = function() {
     // Existing .on('close', ...) event handler will take care of
     // setting this.server_ = null.
   };
+
+  /**
+   * @constructor
+   * @param {Interpreter.Value} value Value whose properties are to be
+   *     iterated over.
+   */
+  intrp.PropertyIterator = function(value) {
+    this.value = value;
+    this.getKeys_();
+    this.visited = new Set();
+  };
+
+  intrp.PropertyIterator.prototype.getKeys_ = function() {
+    if (this.value === null || this.value === undefined) {
+      this.keys = [];
+    } else if (this.value instanceof intrp.Object) {
+      this.keys = Object.getOwnPropertyNames(this.value.properties);
+    } else {
+      this.keys = Object.getOwnPropertyNames(this.value);
+    }
+    this.i = 0;
+  };
+
+  intrp.PropertyIterator.prototype.isEnumerable_ = function(key) {
+    if (this.value instanceof intrp.Object) {
+      return !this.value.notEnumerable.has(key);
+    } else {
+      return Object.getOwnPropertyDescriptor(this.value, key).enumerable;
+    }
+  };
+
+  /**
+   * @return {string|undefined}
+   */
+  intrp.PropertyIterator.prototype.next = function() {
+    while (true) {
+      if (this.i >= this.keys.length) {
+        this.value = intrp.getPrototype(this.value);
+        if (this.value === null || this.value === undefined) {
+          // Done iteration.
+          return undefined;
+        }
+        this.getKeys_();
+      }
+      var key = this.keys[this.i++];
+      var v = (this.value instanceof intrp.Object) ? this.value.properties :
+          this.value;
+      var pd = Object.getOwnPropertyDescriptor(v, key);
+      // Skip deleted or already-visited properties.
+      if (!pd || this.visited.has(key)) {
+        continue;
+      }
+      this.visited.add(key);
+      if (this.isEnumerable_(key)) {
+        return key;
+      }
+    }
+  };
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -3516,38 +3575,17 @@ Interpreter.prototype['stepForInStatement'] = function(stack, state, node) {
   if (!state.isLoop) {
     // First iteration.
     state.isLoop = true;
-    state.object_ = state.value;
-    state.visited_ = new Set();
+    state.iter_ = new this.PropertyIterator(state.value);
   }
   // Third, find the property name for this iteration.
   if (state.name_ === undefined) {
-    done: do {
-      if (state.object_ instanceof this.Object) {
-        for (var prop in state.object_.properties) {
-          if (!state.visited_.has(prop)) {
-            state.visited_.add(prop);
-            if (!state.object_.notEnumerable.has(prop)) {
-              state.name_ = prop;
-              break done;
-            }
-          }
-        }
-      } else {
-        for (var prop in state.object_) {
-          if (!state.visited_.has(prop)) {
-            state.visited_.add(prop);
-            state.name_ = prop;
-            break done;
-          }
-        }
-      }
-      state.object_ = this.getPrototype(state.object_);
-    } while (state.object_ !== null);
-    if (state.object_ === null) {
+    var next = state.iter_.next();
+    if (next === undefined) {
       // Done, exit loop.
       stack.pop();
       return;
     }
+    state.name_ = next;
   }
   // Fourth, find the variable
   if (!state.doneVariable_) {
