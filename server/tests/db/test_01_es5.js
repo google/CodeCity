@@ -868,6 +868,14 @@ tests.forInMembFunc = function() {
   console.assert(x === 69, 'forInMembFunc');
 };
 
+tests.forInNullUndefined = function() {
+  var x = 0, o = {};
+  var f = function() { x++; return o; };
+  for (f().foo in null) { x++; }
+  for (f().foo in undefined) { x++; }
+  console.assert(x === 0, 'forInNullUndefined');
+};
+  
 tests.methodCall = function() {
   var o = {
     f: function() { return this.foo; },
