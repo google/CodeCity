@@ -630,6 +630,20 @@ Interpreter.prototype.initObject = function(scope) {
   };
   this.createNativeFunction('Object.getPrototypeOf', wrapper, false);
 
+  wrapper = function(obj, proto) {
+    throwIfNullUndefined(obj);
+    if (proto !== null && !(proto instanceof thisInterpreter.Object)) {
+      thisInterpreter.throwException(thisInterpreter.TYPE_ERROR,
+          'Object prototype may only be an Object or null');
+    }
+    if (!(obj instanceof thisInterpreter.Object)) {
+      return obj;
+    }
+    // TODO(cpcallen)
+    return obj;
+  };
+  this.createNativeFunction('Object.setPrototypeOf', wrapper, false);
+
   wrapper = function(obj) {
     return Boolean(obj) && !obj.preventExtensions;
   };

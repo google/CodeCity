@@ -28,25 +28,27 @@ Object.defineProperty(Object, 'is',
      enumerable: false,
      writable: true,
      value: new 'Object.is'});
+Object.defineProperty(Object, 'setPrototypeOf',
+    {configurable: true,
+     enumerable: false,
+     writable: true,
+     value: new 'Object.setPrototypeOf'});
 
 Object.defineProperty(String.prototype, 'endsWith',
     {configurable: true,
      enumerable: false,
      writable: true,
      value: new 'String.prototype.endsWith'});
-
 Object.defineProperty(String.prototype, 'includes',
     {configurable: true,
      enumerable: false,
      writable: true,
      value: new 'String.prototype.includes'});
-
 Object.defineProperty(String.prototype, 'repeat',
     {configurable: true,
      enumerable: false,
      writable: true,
      value: new 'String.prototype.repeat'});
-
 Object.defineProperty(String.prototype, 'startsWith',
     {configurable: true,
      enumerable: false,
@@ -58,19 +60,16 @@ Object.defineProperty(Number, 'EPSILON',
      enumerable: false,
      writable: false,
      value: Math.pow(2, -52)});
-
 Object.defineProperty(Number, 'isFinite',
     {configurable: false,
      enumerable: false,
      writable: false,
      value: new 'Number.isFinite'});
-
 Object.defineProperty(Number, 'isNaN',
     {configurable: false,
      enumerable: false,
      writable: false,
      value: new 'Number.isNaN'});
-
 Object.defineProperty(Number, 'isSafeInteger',
     {configurable: false,
      enumerable: false,
@@ -82,10 +81,8 @@ Object.defineProperty(Math, 'sign',
      enumerable: false,
      writable: false,
      value: new 'Math.sign'});
-
 Object.defineProperty(Math, 'trunc',
     {configurable: false,
      enumerable: false,
      writable: false,
      value: new 'Math.trunc'});
-
