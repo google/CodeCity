@@ -38,6 +38,12 @@ $.system.connectionClose = new 'connectionClose';
 // Utility object: $.utils
 $.utils = {};
 
+$.utils.isObject = function(v) {
+  /* Returns true iff v is an object (of any class, including Array
+   * and Function. */
+  return (typeof v === 'object' && v !== null) || typeof v === 'function';
+};
+
 $.utils.htmlEscape = function(text) {
   return String(text).replace(/&/g, '&amp;').replace(/"/g, '&quot;')
                      .replace(/</g, '&lt;').replace(/>/g, '&gt;');

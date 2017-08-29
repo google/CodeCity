@@ -55,10 +55,65 @@ $.editor.objIdFor = function(obj) {
   return id;
 };
 
+$.editor.load = function(obj, key) {
+  /* Return string containing initial editor contents for editing
+   * obj[key].
+   */
+  // TODO(cpcallen): This should call toSource, once we have such a
+  // function.
+  var pd = Object.getOwnPropertyDescriptor(obj, key);
+  var v = pd ? pd.value : undefined;
+  return (typeof v === 'string' ?
+      "'" + v.replace(/[\\']/g, '\$&') + "'" :
+      String(v));
+};
+
+$.editor.save = function(obj, key, src) {
+  /* Eval the string src and (if successful) save the resulting value
+   * as obj[key].  If the value produced from src and the existing
+   * value of obj[key] are both objects, then an attempt will be made
+   * to copy any properties from the old value to the new one.
+   */
+  // Use Acorn to trim source to first expression.
+  var ast = $.utils.acorn.parseExpressionAt(src, 0, { ecmaVersion: 5 });
+  src = src.substring(ast.start, ast.end);
+  // Evaluate src in global scope (eval by any other name, literally).
+  // TODO: don't use eval - prefer Function constructor for
+  // functions; generate other values from an Acorn parse tree.
+  var evalGlobal = eval;
+  var old = obj[key];
+  var val = evalGlobal('(' + src + ')');
+  if ($.utils.isObject(val) && $.utils.isObject(old)) {
+    var keys = Object.getOwnPropertyNames(old);
+    for (var i = 0, k; k = keys[i], i < keys.length; i++) {
+      if (k === 'length' && typeof val === 'function') {
+        continue;
+      }
+      var pd = Object.getOwnPropertyDescriptor(old, k);
+      try {
+        Object.defineProperty(val, k, pd);
+      } catch (e) {
+        try {
+          // If defineProperty fails, try simple assignment.
+          // TODO(cpcallen): remove this when server allows
+          // (non-effective) redefinition of nonconfigurable
+          // properties?
+          val[k] = pd.value;
+        } catch (e) {
+          // Ignore failed attempt to copy properties.
+        }
+      }
+    }
+  }
+  obj[key] = val;
+  return src;
+};
+
+
 $.www.web.edit = function(path, params) {
   var objId = params.objId;
   var obj = $.editor.objs[params.objId];
-  if (typeof obj !== 'object' && typeof obj !== 'function') {
+  if (!$.utils.isObject(obj)) {
     // Bad edit URL.
     this.default();
     return;
@@ -70,20 +125,13 @@ $.www.web.edit = function(path, params) {
       // Use Acorn to trim source to first expression.
       var ast = $.utils.acorn.parseExpressionAt(src, 0, { ecmaVersion: 5 });
       src = src.substring(ast.start, ast.end);
-      // Evaluate src in global scope (eval by any other name, literally).
-      // TODO: don't use eval - prefer Function constructor for
-      // functions; generate other values from an Acorn parse tree.
-      var evalGlobal = eval;
-      obj[key] = evalGlobal('(' + src + ')');
+      src = $.editor.save(obj, key, src);
       status = '(saved)';
     } catch (e) {
       status = '(ERROR: ' + String(e) + ')';
     }
   } else {
-    var v = obj[key];
-    src = (typeof v === 'string' ?
-        "'" + v.replace(/[\\']/g, '\$&') + "'" :
-        String(v));
+    src = $.editor.load(obj, key);
   }
   var body = '<form action="/web/edit" method="get">';
   body += '<button type="submit" class="jfk-button-submit" id="submit"' +
