@@ -30,7 +30,7 @@
   hangout.roll = function(cmd) {
     var json = {
       type: 'iframe',
-      url: "https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1"
+      url: 'https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1'
     };
     this.tellAll(json);
   };
@@ -74,18 +74,26 @@
   };
   clock.moveTo(hangout);
   clock.chime = function(silent) {
+    var minuteMs = 60 * 1000;
+    var hourMs = 60 * minuteMs;
     var now = new Date;
-    var nextHour = now.getTime() - (now.getTime() % 3600000) + 3600000;
-    setTimeout(clock.chime.bind(clock), nextHour);
-    if (silent) {
-      return;
-    }
     var hours = (now.getHours() % 12) || 12;
-    var text = [];
-    while (hours--) {
-      text.push('Bong.');
+    var nextHour = hourMs - (now.getTime() % hourMs);
+    if (nextHour < minuteMs && !silent) {
+      // Next hour is less than a minute away, we got called a wee bit too soon.
+      // Schedule for the next hour.
+      nextHour += hourMs;
+      // Round current hour up to the next hour.
+      hours++;
     }
-    this.location.narrateAll(text.join(' '), this);
+    setTimeout(clock.chime.bind(clock), nextHour);
+    if (!silent) {
+      var text = [];
+      while (hours--) {
+        text.push('Bong.');
+      }
+      this.location.narrateAll(text.join(' '), this);
+    }
   };
   clock.chime(true);
 
