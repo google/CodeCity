@@ -325,7 +325,7 @@ $.room.tellAll = function(json) {
 $.user = Object.create($.physical);
 $.user.name = 'User prototype';
 $.user.connection = null;
-$.user.svgText = '<circle cx="50" cy="50" r="10" /><line x1="50" y1="60" x2="50" y2="80"/><line x1="40" y1="70" x2="60" y2="70"/><line x1="50" y1="80" x2="40" y2="100"/><line x1="50" y1="80" x2="60" y2="100"/>';
+$.user.svgText = '<circle cx="50" cy="50" r="10" /><line x1="50" y1="60" x2="50" y2="80" /><line x1="40" y1="70" x2="60" y2="70" /><line x1="50" y1="80" x2="40" y2="100" /><line x1="50" y1="80" x2="60" y2="100" />';
 
 $.user.say = function(cmd) {
   if (user.location) {
@@ -387,7 +387,19 @@ $.user.eval = function($$$cmd) {
       $$$cmd = 'Unhandled exception: ' + String(e);
     }
   }
-  user.narrate($$$cmd);
+  // Save the value without creating a new variable.
+  $.user.eval.value_ = $$$cmd;
+  try {
+    $$$cmd = JSON.stringify($$$cmd);
+  } catch (e) {
+    $$$cmd = undefined;
+  }
+  if ($$$cmd === undefined) {
+    // JSON.stringify either failed with an error or just returned undefined.
+    $$$cmd = String($.user.eval.value_);
+  }
+  delete $.user.eval.value_;
+  user.narrate('⇒ ' + $$$cmd);
 };
 $.user.eval.verb = 'eval|;.*';
 $.user.eval.dobj = 'any';
