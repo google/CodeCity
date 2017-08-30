@@ -58,21 +58,21 @@ CCC.Common.init = function() {
 CCC.Common.verifyMessage = function(e) {
   var origin = e.origin || e.originalEvent.origin;
   if (origin !== location.origin) {
-    console.error('Message received by frame from unknown origin: ' +
-                  origin);
+    console.error('Message received by frame from unknown origin: ' + origin);
     return null;
   }
   return e.data;
 };
 
 /**
- * Create a command menu icon.
+ * Create a command menu icon.  Attach the menu commands to the icon.
  * @param {!Array<string>|!Element} cmds Array of menu commands,
  *     or root DOM element describing the menu commands.
  * @return {SVGSVGElement} Root element of icon.
  */
 CCC.Common.newMenuIcon = function(cmds) {
   if (cmds.querySelectorAll) {
+    // HTML frames provide commands as XML.
     // Convert the command DOM into an array.
     // <cmds><cmd>look Bob</cmd></cmds> -> ['look Bob']
     var nodes = cmds.querySelectorAll('cmd');

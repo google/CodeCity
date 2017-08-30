@@ -55,31 +55,27 @@ $.utils.commandMenu = function(commands) {
   return cmdXml;
 };
 
-$.utils.jsonStringifyPhysicals = function(value) {
+$.utils.replacePhysicalsWithName = function(value) {
+  // Deeply clone JSON object.
+  // Replace all instances of $.physical with the object's name.
   if (Array.isArray(value)) {
-    var text = '';
+    var newArray = [];
     for (var i = 0; i < value.length; i++) {
-      if (text.length) {
-        text += ', ';
-      }
-      text += $.utils.jsonStringifyPhysicals(value[i]);
+      newArray[i] = $.utils.replacePhysicalsWithName(value[i]);
     }
-    return '[' + text + ']';
+    return newArray;
   }
   if ($.physical.isPrototypeOf(value)) {
-    return JSON.stringify(value.name);
+    return value.name;
   }
   if (typeof value === 'object' && value !== null) {
-    var text = '';
+    var newObject = {};
     for (var prop in value) {
-      if (text.length) {
-        text += ', ';
-      }
-      text += '"' + prop + '": ' + $.utils.jsonStringifyPhysicals(value[prop]);
+      newObject[prop] = $.utils.replacePhysicalsWithName(value[prop]);
     }
-    return '{' + text + '}';
+    return newObject;
   }
-  return JSON.stringify(value);
+  return value;
 };
 
 // Physical object prototype: $.physical
@@ -171,6 +167,13 @@ $.physical.getCommands = function(who) {
   return ['look ' + this.name];
 };
 
+$.physical.tell = function(json) {
+  // Allow the object to add hooks (e.g. voice controlled objects).
+  if (this.onTell) {
+    setTimeout(this.onTell.bind(this, json), 0);
+  }
+};
+
 
 // Thing prototype: $.thing
 $.thing = Object.create($.physical);
@@ -230,7 +233,7 @@ $.room.name = 'Room prototype';
 $.room.svgText = '<line x1="-1000" y1="90" x2="1000" y2="90" />';
 
 $.room.sendScene = function(who, requested) {
-  var json = {
+  var scene = {
     type: "scene",
     requested: requested,
     user: who,
@@ -242,14 +245,15 @@ $.room.sendScene = function(who, requested) {
   var contents = this.getContents();
   for (var i = 0; i < contents.length; i++) {
     var object = contents[i];
-    json.contents.push({
+    scene.contents.push({
       type: $.user.isPrototypeOf(object) ? 'user' : 'thing',
       what: object,
       svgText: object.getSvgText(),
       cmds: object.getCommands(who)
     });
   }
-  who.writeJson(json);
+  // Should unrequested scenes be sent to writeJson instead of tell?
+  who.tell(scene);
 };
 
 $.room.look = function(cmd) {
@@ -288,28 +292,24 @@ $.room.narrateAll = function(text, obj) {
   }
 };
 
-$.room.writeJson = function(json) {
-  if (this.onTell) {
-    setTimeout(this.onTell.bind(this, json), 0);
-  }
+$.room.tell = function(json) {
+  $.physical.tell.call(this, json);
   var contents = this.getContents();
   for (var i = 0; i < contents.length; i++) {
     var thing = contents[i];
-    if (thing !== user && thing.writeJson) {
-      thing.writeJson(json);
+    if (thing !== user && thing.tell) {
+      thing.tell(json);
     }
   }
 };
 
-$.room.writeJsonAll = function(json) {
-  if (this.onTell) {
-    setTimeout(this.onTell.bind(this, json), 0);
-  }
+$.room.tellAll = function(json) {
+  $.physical.tell.call(this, json);
   var contents = this.getContents();
   for (var i = 0; i < contents.length; i++) {
     var thing = contents[i];
-    if (thing.writeJson) {
-      thing.writeJson(json);
+    if (thing.tell) {
+      thing.tell(json);
     }
   }
 };
@@ -325,13 +325,13 @@ $.user.say = function(cmd) {
   if (user.location) {
     // Format:  "Hello.    -or-    say Hello.
     var text = (cmd.cmdstr[0] === '"') ? cmd.cmdstr.substring(1) : cmd.argstr;
-    var json = {
+    var say = {
       type: "say",
       source: user,
       where: user.location,
       text: text
     };
-    user.location.writeJsonAll(json);
+    user.location.tellAll(say);
   }
 };
 $.user.say.verb = 'say|".*';
@@ -341,13 +341,13 @@ $.user.say.iobj = 'any';
 
 $.user.think = function(cmd) {
   if (user.location) {
-    var json = {
+    var think = {
       type: "think",
       source: user,
       where: user.location,
       text: cmd.argstr
     };
-    user.location.writeJsonAll(json);
+    user.location.tellAll(think);
   }
 };
 $.user.think.verb = 'think|\.oO';
@@ -389,12 +389,12 @@ $.user.eval.prep = 'any';
 $.user.eval.iobj = 'any';
 
 $.user.edit = function(cmd) {
-  var json = {
-    type: "iframe",
+  var iframe = {
+    type: 'iframe',
     url: $.editor.edit(cmd.iobj, cmd.iobjstr, cmd.dobjstr),
     alt: 'Edit ' + cmd.dobjstr + ' on ' + cmd.iobjstr
   };
-  user.writeJson(json);
+  user.tell(iframe);
 };
 $.user.edit.verb = 'edit';
 $.user.edit.dobj = 'any';
@@ -402,22 +402,25 @@ $.user.edit.prep = 'on top of/on/onto/upon';
 $.user.edit.iobj = 'any';
 
 $.user.narrate = function(text, obj) {
-  var json = {type: 'narrate', text: text};
+  var narrate = {type: 'narrate', text: text};
   if (obj && obj.location) {
-    json.source = obj;
-    json.where = obj.location;
+    narrate.source = obj;
+    narrate.where = obj.location;
   }
+  this.tell(narrate);
+};
+
+$.user.tell = function(json) {
+  $.physical.tell.call(this, json);
   this.writeJson(json);
 };
 
 $.user.writeJson = function(json) {
-  if (this.onTell) {
-    setTimeout(this.onTell.bind(this, json), 0);
-  }
   if (!this.connection) {
     return;
   }
-  this.connection.write($.utils.jsonStringifyPhysicals(json));
+  json = $.utils.replacePhysicalsWithName(json);
+  this.connection.write(JSON.stringify(json));
 };
 
 $.user.create = function(cmd) {
