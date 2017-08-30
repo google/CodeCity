@@ -490,7 +490,7 @@ CCC.World.sceneDescription = function(msg) {
     text.push(description);
   }
   text = text.join('\n');
-  return {narrate: text, where: title};
+  return {type: 'narrate', text: text, where: title};
 };
 
 /**
