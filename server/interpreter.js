@@ -639,7 +639,7 @@ Interpreter.prototype.initObject = function(scope) {
     if (!(obj instanceof thisInterpreter.Object)) {
       return obj;
     }
-    // TODO(cpcallen)
+    // TODO(cpcallen): actually implement prototype change.
     return obj;
   };
   this.createNativeFunction('Object.setPrototypeOf', wrapper, false);
