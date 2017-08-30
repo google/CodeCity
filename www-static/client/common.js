@@ -67,17 +67,22 @@ CCC.Common.verifyMessage = function(e) {
 
 /**
  * Create a command menu icon.
- * @param {!Element} node Root DOM element describing the menu commands.
+ * @param {!Array<string>|!Element} cmds Array of menu commands,
+ *     or root DOM element describing the menu commands.
  * @return {SVGSVGElement} Root element of icon.
  */
-CCC.Common.newMenuIcon = function(node) {
-  var cmdNodes = node.querySelectorAll('cmd');
-  if (!cmdNodes.length) {
-    return null;
+CCC.Common.newMenuIcon = function(cmds) {
+  if (cmds.querySelectorAll) {
+    // Convert the command DOM into an array.
+    // <cmds><cmd>look Bob</cmd></cmds> -> ['look Bob']
+    var nodes = cmds.querySelectorAll('cmd');
+    cmds = [];
+    for (var i = 0; i < nodes.length; i++) {
+      cmds[i] = CCC.Common.innerText(nodes[i]);
+    }
   }
-  var cmds = [];
-  for (var i = 0, cmdNode; cmdNode = cmdNodes[i]; i++) {
-    cmds.push(CCC.Common.innerText(cmdNode));
+  if (!cmds.length) {
+    return null;
   }
   var svg = CCC.Common.createSvgElement('svg',
       {'class': 'menuIcon', 'data-cmds': JSON.stringify(cmds)});

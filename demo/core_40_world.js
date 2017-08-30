@@ -28,7 +28,11 @@
   hangout.name = 'Hangout';
   hangout.description = 'A place to hang out, chat, and program.';
   hangout.roll = function(cmd) {
-    this.tellAll('<iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1"></iframe>')
+    var json = {
+      type: 'iframe',
+      url: "https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1"
+    };
+    this.tellAll(json);
   };
   hangout.roll.verb = 'roll';
   hangout.roll.dobj = 'none';
