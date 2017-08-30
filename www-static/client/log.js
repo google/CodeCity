@@ -97,16 +97,15 @@ CCC.Log.receiveMessage = function(e) {
     CCC.Log.setConnected(false);
   } else {
     CCC.Log.setConnected(true);
-    var dom = CCC.Common.parser.parseFromString(text, 'text/xml');
-    if (dom.getElementsByTagName('parsererror').length) {
-      // Not valid XML, treat as string literal.
+    try {
+      var json = JSON.parse(text);
+    } catch (e) {
+      // Not valid JSON, treat as string literal.
       var div = CCC.Log.textToHtml(text);
       CCC.Log.appendRow(div);
-    } else {
-      for (var i = 0, child; child = dom.childNodes[i]; i++) {
-        CCC.Log.addXml(child);
-      }
+      return;
     }
+    CCC.Log.addJson(json);
   }
 };
 
@@ -177,19 +176,18 @@ CCC.Log.textToHtml = function(text) {
 };
 
 /**
- * Add one row of XML to the log.
- * @param {!Object} dom XML tree.
+ * Add one row of JSON to the log.
+ * @param {!Object} json JSON structure.
  */
-CCC.Log.addXml = function(dom) {
-  var rendered = CCC.Log.renderXml(dom);
+CCC.Log.addJson = function(json) {
+  var rendered = CCC.Log.renderJson(json);
   if (rendered === null) {
     return;  // Unrequested scene.
   }
-  var code = CCC.Common.serializer.serializeToString(dom);
   var pre = document.createElement('pre');
-  pre.textContent = code;
+  pre.textContent = JSON.stringify(json, null, 2);
   if (typeof prettyPrint === 'function') {
-    pre.className = 'prettyprint lang-xml';
+    pre.className = 'prettyprint lang-js';
     var div = document.createElement('div');
     div.appendChild(pre);
     prettyPrint(null, div);
@@ -231,28 +229,28 @@ CCC.Log.toggleZippy = function(e) {
 };
 
 /**
- * Attempt to render the XML as a plain text version.
- * @param {!Element} node XML tree.
+ * Attempt to render the JSON as a plain text version.
+ * @param {!Object} json JSON object.
  * @return {Element} Div of text, or null if not to be visualized,
  *   or undefined if unknown/corrupt format.
  */
-CCC.Log.renderXml = function(node) {
-  switch (node.tagName) {
+CCC.Log.renderJson = function(json) {
+  switch (json.type) {
     case 'iframe':
-      // <iframe src="https://neil.fraser.name/">Neil Fraser</iframe>
-      var src = node.getAttribute('src');
+      // {type: "iframe", url: "https://example.com/foo", alt: "Alt text"}
+      var src = json.url;
       var m = src.match(CCC.Log.protocolRegex);
       if (!m) {
         return undefined;  // Invalid src attribute.
       }
       var div = document.createElement('div');
-      var text = node.textContent || src;
+      var text = json.alt || src;
       div.appendChild(document.createTextNode(text));
       div.appendChild(CCC.Log.openIcon(src));
       return div;
-    case 'htmltext':
-      // <htmltext>&lt;p&gt;Hello world.&lt;/p&gt;</htmltext>
-      var dom = CCC.Common.parser.parseFromString(node.textContent, 'text/html');
+    case 'html':
+      // {type: "html", htmlText: "<div>Arbitrary HTML</div>"}
+      var dom = CCC.Common.parser.parseFromString(json.htmlText, 'text/html');
       if (dom.body) {
         var div = document.createElement('div');
         CCC.Log.renderHtmltext(div, dom.body);
@@ -260,67 +258,65 @@ CCC.Log.renderXml = function(node) {
       }
       return undefined;  // Illegal HTML.
     case 'scene':
-      // <scene user="Max" room="The Hangout" requested="true">
-      //   <description>The lights are dim and blah blah blah...</description>
-      //   <svgtext>...</svgtext>
-      //   <object name="a clock">
-      //     <svgtext>...</svgtext>
-      //     <cmds><cmd>look clock</cmd></cmds>
-      //   </object>
-      //   <user name="Max">
-      //     <svgtext>...</svgtext>
-      //     <cmds><cmd>look Max</cmd></cmds>
-      //   </user>
-      // </scene>
-      var requested = node.getAttribute('requested');
-      if (requested === 'false') {
+      //{
+      //  type: "scene",
+      //  requested: true,
+      //  user: "Max",
+      //  where: "Hangout",
+      //  description: "The lights are dim and blah blah blah...",
+      //  svgText: "...",
+      //  contents: [
+      //    {
+      //      type: "user",
+      //      what: "Max",
+      //      svgText: "...",
+      //      cmds: ["look Max", "kick Max"]
+      //    },
+      //    {
+      //      type: "thing",
+      //      what: "clock",
+      //      svgText: "...",
+      //      cmds: ["look clock"]
+      //    }
+      //  ]
+      //}
+      if (!json.requested) {
         return null;  // Do not display this scene update in the log.
       }
-      var user = node.getAttribute('user');
-      if (user) {
+      if (json.user) {
         // Record the user name if present.
-        CCC.Log.userName = user;
+        CCC.Log.userName = json.user;
       }
-      var description = '';
       var objects = [];
       var users = [];
-      for (var i = 0, child; child = node.childNodes[i]; i++) {
-        switch (child.tagName) {
-          case 'description':
-            description = child.textContent;
-            break;
-          case 'object':
-          case 'user':
-            var isUser = child.tagName === 'user';
-            var name = child.getAttribute('name');
-            if (isUser && CCC.Log.userName === name) {
-              break;  // Don't show the current user.
+      if (json.contents) {
+        for (var i = 0; i < json.contents.length; i++) {
+          var content = json.contents[i];
+          if (content.type === 'user' && CCC.Log.userName === content.what) {
+            continue;  // Don't show the current user.
+          }
+          var df = document.createDocumentFragment();
+          df.appendChild(document.createTextNode(content.what));
+          if (content.cmds) {
+            var icon = CCC.Common.newMenuIcon(content.cmds);
+            if (icon) {
+              icon.addEventListener('click', CCC.Common.openMenu);
+              df.appendChild(icon);
             }
-            var df = document.createDocumentFragment();
-            df.appendChild(document.createTextNode(name));
-            var cmds = child.querySelector('user>cmds,object>cmds');
-            if (cmds) {
-              var icon = CCC.Common.newMenuIcon(cmds);
-              if (icon) {
-                icon.addEventListener('click', CCC.Common.openMenu);
-                df.appendChild(icon);
-              }
-            }
-            (isUser ? users : objects).push(df);
-            break;
+          }
+          (content.type === 'user' ? users : objects).push(df);
         }
       }
       var div = document.createElement('div');
-      var roomName = node.getAttribute('room');
-      if (roomName) {
+      if (json.where) {
         var titleDiv = document.createElement('div');
         titleDiv.className = 'sceneTitle';
-        titleDiv.appendChild(document.createTextNode(roomName));
+        titleDiv.appendChild(document.createTextNode(json.where));
         div.appendChild(titleDiv);
       }
-      if (description) {
+      if (json.description) {
         var descriptionDiv = document.createElement('div');
-        descriptionDiv.appendChild(document.createTextNode(description));
+        descriptionDiv.appendChild(document.createTextNode(json.description));
         div.appendChild(descriptionDiv);
       }
       if (objects.length) {
@@ -345,40 +341,39 @@ CCC.Log.renderXml = function(node) {
       }
       return div;
     case 'say':
-      // <say>Welcome</say>
-      // <say user="Max" room="The Hangout">Hello world.</say>
-      // <say object="Cat" room="The Hangout">Meow.</say>
+      // {type: "say", text: "Welcome"}
+      // {type: "say", source: "Max", where: "Hangout", text: "Hello world."}
+      // {type: "say", source: "Cat", where: "Hangout", text: "Meow."}
       // Fall through.
     case 'think':
-      // <think>Don't be evil.</think>
-      // <think user="Max" room="The Hangout">I'm hungry.</think>
-      // <think object="Cat" room="The Hangout">I'm evil.</think>
-      var user = node.getAttribute('user');
-      var object = node.getAttribute('object');
-      var msg = node.textContent;
-      if (node.tagName === 'think') {
+      // {type: "think", text: "Don't be evil."}
+      // {type: "think", source: "Max", where: "Hangout", text: "I'm hungry."}
+      // {type: "think", source: "Cat", where: "Hangout", text: "I'm evil."}
+      var text = json.text;
+      if (json.type === 'think') {
         var type = 'think';
       } else {
-        var lastLetter = msg[msg.length - 1];
+        var lastLetter = text[text.length - 1];
         var type = (lastLetter === '?') ? 'ask' :
             ((lastLetter === '!') ? 'exclaim' : 'say');
       }
-      if (user && CCC.Log.userName === user) {
-        var fragment = CCC.Log.getMsg(type + 'SelfMsg', msg);
+      if (json.source && CCC.Log.userName === json.source) {
+        var fragment = CCC.Log.getMsg(type + 'SelfMsg', text);
       } else {
-        var who = user || object || CCC.Log.getMsg('unknownMsg');
-        var fragment = CCC.Log.getMsg(type + 'Msg', who, msg);
+        var who = json.source || CCC.Log.getMsg('unknownMsg');
+        var fragment = CCC.Log.getMsg(type + 'Msg', who, text);
       }
       var div = document.createElement('div');
       div.appendChild(fragment);
       return div;
-    case 'text':
-      // <text>The dog bites Max</text>
+    case 'narrate':
+      // {type: "narrate", text: "Command not recognized."}
+      // {type: "narrate", where: "Hangout", text: "Hangout is dark."}
+      // {type: "narrate", source: "Max", where: "Hangout", text: "Max smiles."}
+      // {type: "narrate", source: "Cat", where: "Hangout", text: "Cat meows."}
       var div = document.createElement('div');
-      div.appendChild(document.createTextNode(node.textContent));
+      div.appendChild(document.createTextNode(json.text));
       return div;
-    case 'move':
-
   }
   // Unknown XML.
   return undefined;

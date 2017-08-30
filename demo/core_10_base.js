@@ -61,6 +61,33 @@ $.utils.commandMenu = function(commands) {
   return cmdXml;
 };
 
+$.utils.jsonStringifyPhysicals = function(value) {
+  if (Array.isArray(value)) {
+    var text = '';
+    for (var i = 0; i < value.length; i++) {
+      if (text.length) {
+        text += ', ';
+      }
+      text += $.utils.jsonStringifyPhysicals(value[i]);
+    }
+    return '[' + text + ']';
+  }
+  if ($.physical.isPrototypeOf(value)) {
+    return JSON.stringify(value.name);
+  }
+  if (typeof value === 'object' && value !== null) {
+    var text = '';
+    for (var prop in value) {
+      if (text.length) {
+        text += ', ';
+      }
+      text += '"' + prop + '": ' + $.utils.jsonStringifyPhysicals(value[prop]);
+    }
+    return '{' + text + '}';
+  }
+  return JSON.stringify(value);
+};
+
 // Physical object prototype: $.physical
 $.physical = {};
 $.physical.name = 'Physical object prototype';
@@ -68,7 +95,6 @@ $.physical.description = '';
 $.physical.svgText = '';
 $.physical.location = null;
 $.physical.contents_ = null;
-$.physical.xmlTag = 'object';
 
 $.physical.getSvgText = function() {
   return this.svgText;
@@ -140,7 +166,7 @@ $.physical.look = function(cmd) {
         $.utils.commandMenu(this.location.getCommands(user)) + '</p>';
   }
   html += '</td></tr></table>';
-  user.tell('<htmltext>' + $.utils.htmlEscape(html) + '</htmltext>');
+  user.writeJson({type: "html", htmlText: html});
 };
 $.physical.look.verb = 'l(ook)?';
 $.physical.look.dobj = 'this';
@@ -208,29 +234,28 @@ $.thing.getCommands = function(who) {
 $.room = Object.create($.physical);
 $.room.name = 'Room prototype';
 $.room.svgText = '<line x1="-1000" y1="90" x2="1000" y2="90" />';
-$.room.xmlTag = 'room';
 
 $.room.sendScene = function(who, requested) {
-  var text = '<scene user="' + $.utils.htmlEscape(who.name) + '" room="' +
-        $.utils.htmlEscape(this.name) + '" requested="' + requested + '">\n';
-  text += '  <description>' + $.utils.htmlEscape(this.getDescription()) +
-      '</description>\n';
-  text += '  <svgtext>' + $.utils.htmlEscape(this.getSvgText()) + '</svgtext>\n';
+  var json = {
+    type: "scene",
+    requested: requested,
+    user: who,
+    where: this,
+    description: this.getDescription(),
+    svgText: this.getSvgText(),
+    contents: []
+  };
   var contents = this.getContents();
-  if (contents.length) {
-    for (var i = 0; i < contents.length; i++) {
-      var thing = contents[i];
-      text += '  <' + thing.xmlTag + ' name="' + $.utils.htmlEscape(thing.name) + '">\n';
-      text += '    <svgtext>' + $.utils.htmlEscape(thing.getSvgText()) + '</svgtext>\n';
-      var commands = thing.getCommands(who);
-      if (commands.length) {
-        text += '    ' + $.utils.commandMenu(commands) + '\n';
-      }
-      text += '  </' + thing.xmlTag + '>\n';
-    }
+  for (var i = 0; i < contents.length; i++) {
+    var object = contents[i];
+    json.contents.push({
+      type: $.user.isPrototypeOf(object) ? 'user' : 'thing',
+      what: object,
+      svgText: object.getSvgText(),
+      cmds: object.getCommands(who)
+    });
   }
-  text += '</scene>';
-  who.tell(text);
+  who.writeJson(json);
 };
 
 $.room.look = function(cmd) {
@@ -269,22 +294,28 @@ $.room.narrateAll = function(text, obj) {
   }
 };
 
-$.room.tell = function(text) {
+$.room.writeJson = function(json) {
+  if (this.onTell) {
+    setTimeout(this.onTell.bind(this, json), 0);
+  }
   var contents = this.getContents();
   for (var i = 0; i < contents.length; i++) {
     var thing = contents[i];
-    if (thing !== user && thing.tell) {
-      thing.tell(text);
+    if (thing !== user && thing.writeJson) {
+      thing.writeJson(json);
     }
   }
 };
 
-$.room.tellAll = function(text) {
+$.room.writeJsonAll = function(json) {
+  if (this.onTell) {
+    setTimeout(this.onTell.bind(this, json), 0);
+  }
   var contents = this.getContents();
   for (var i = 0; i < contents.length; i++) {
     var thing = contents[i];
-    if (thing.tell) {
-      thing.tell(text);
+    if (thing.writeJson) {
+      thing.writeJson(json);
     }
   }
 };
@@ -295,16 +326,18 @@ $.user = Object.create($.physical);
 $.user.name = 'User prototype';
 $.user.connection = null;
 $.user.svgText = '<circle cx="50" cy="50" r="10" /><line x1="50" y1="60" x2="50" y2="80"/><line x1="40" y1="70" x2="60" y2="70"/><line x1="50" y1="80" x2="40" y2="100"/><line x1="50" y1="80" x2="60" y2="100"/>';
-$.user.xmlTag = 'user';
 
 $.user.say = function(cmd) {
   if (user.location) {
     // Format:  "Hello.    -or-    say Hello.
     var text = (cmd.cmdstr[0] === '"') ? cmd.cmdstr.substring(1) : cmd.argstr;
-    user.location.tellAll(
-        '<say user="' + $.utils.htmlEscape(user.name) + '" room="' +
-        $.utils.htmlEscape(user.location) + '">' +
-        $.utils.htmlEscape(text) + '</say>');
+    var json = {
+      type: "say",
+      source: user,
+      where: user.location,
+      text: text
+    };
+    user.location.writeJsonAll(json);
   }
 };
 $.user.say.verb = 'say|".*';
@@ -314,10 +347,13 @@ $.user.say.iobj = 'any';
 
 $.user.think = function(cmd) {
   if (user.location) {
-    user.location.tellAll(
-        '<think user="' + $.utils.htmlEscape(user.name) + '" room="' +
-        $.utils.htmlEscape(user.location) + '">' +
-        $.utils.htmlEscape(cmd.argstr) + '</think>');
+    var json = {
+      type: "think",
+      source: user,
+      where: user.location,
+      text: cmd.argstr
+    };
+    user.location.writeJsonAll(json);
   }
 };
 $.user.think.verb = 'think|\.oO';
@@ -327,7 +363,7 @@ $.user.think.iobj = 'any';
 
 $.user.eval = function($$$cmd) {
   // Format:  ;1+1    -or-    eval 1+1
-  // To reduce the liklihood of clashes with identifiers in the evaled
+  // To reduce the likelihood of clashes with identifiers in the evaled
   // code, this function has only a single, awkwardly-named parameter
   // and has no local variables of its own.  Conversely, however, we
   // create a few local variables with short, convenient names as
@@ -359,10 +395,12 @@ $.user.eval.prep = 'any';
 $.user.eval.iobj = 'any';
 
 $.user.edit = function(cmd) {
-  var url =
-      $.utils.htmlEscape($.editor.edit(cmd.iobj, cmd.iobjstr, cmd.dobjstr));
-  user.tell('<iframe src="' + url + '">Edit ' +
-            cmd.dobjstr + ' on ' + cmd.iobjstr + '</iframe>');
+  var json = {
+    type: "iframe",
+    url: $.editor.edit(cmd.iobj, cmd.iobjstr, cmd.dobjstr),
+    alt: 'Edit ' + cmd.dobjstr + ' on ' + cmd.iobjstr
+  };
+  user.writeJson(json);
 };
 $.user.edit.verb = 'edit';
 $.user.edit.dobj = 'any';
@@ -370,18 +408,22 @@ $.user.edit.prep = 'on top of/on/onto/upon';
 $.user.edit.iobj = 'any';
 
 $.user.narrate = function(text, obj) {
-  var objAttr = '';
+  var json = {type: 'narrate', text: text};
   if (obj && obj.location) {
-    objAttr = ' ' + obj.xmlTag + '="' + $.utils.htmlEscape(obj.name) + '" ' +
-    obj.location.xmlTag + '="' + $.utils.htmlEscape(obj.location.name) + '"';
+    json.source = obj;
+    json.where = obj.location;
   }
-  this.tell('<text' + objAttr + '>' + $.utils.htmlEscape(text) + '</text>');
+  this.writeJson(json);
 };
 
-$.user.tell = function(text) {
-  if (this.connection) {
-    this.connection.write(text);
+$.user.writeJson = function(json) {
+  if (this.onTell) {
+    setTimeout(this.onTell.bind(this, json), 0);
   }
+  if (!this.connection) {
+    return;
+  }
+  this.connection.write($.utils.jsonStringifyPhysicals(json));
 };
 
 $.user.create = function(cmd) {
@@ -474,7 +516,8 @@ $.connection.onReceiveLine = function(text) {
   // Remainder of function handles login.
   var m = text.match(/identify as ([0-9a-f]+)/);
   if (!m) {
-    this.write('<text>Unknown command: ' + $.utils.htmlEscape(text) + '</text>');
+    this.write('{type: "narrate", text: "Unknown command: ' +
+               $.utils.htmlEscape(text) + '"}');
   }
   if (!$.userDatabase[m[1]]) {
     var guest = Object.create($.user);
