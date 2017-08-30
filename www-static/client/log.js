@@ -372,7 +372,11 @@ CCC.Log.renderJson = function(json) {
       // {type: "narrate", source: "Max", where: "Hangout", text: "Max smiles."}
       // {type: "narrate", source: "Cat", where: "Hangout", text: "Cat meows."}
       var div = document.createElement('div');
-      div.appendChild(document.createTextNode(json.text));
+      var text = json.text;
+      if (json.source) {
+        text = json.source + ': ' + text;
+      }
+      div.appendChild(document.createTextNode(text));
       return div;
   }
   // Unknown XML.
