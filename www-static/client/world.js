@@ -185,7 +185,7 @@ CCC.World.preprocessMessage = function(msg) {
     // Find all iframes and create DOM elements for them.
     if (msg.type === 'iframe') {
       // {type: "iframe", url: "https://example.com/foo", alt: "Alt text"}
-      msg.iframeId = CCC.World.createIframe(msg.src);
+      msg.iframeId = CCC.World.createIframe(msg.url);
     }
 
     // Move the current user to the start of the room contents list.

@@ -84,26 +84,7 @@ $.editor.save = function(obj, key, src) {
   var old = obj[key];
   var val = evalGlobal('(' + src + ')');
   if ($.utils.isObject(val) && $.utils.isObject(old)) {
-    var keys = Object.getOwnPropertyNames(old);
-    for (var i = 0, k; k = keys[i], i < keys.length; i++) {
-      if (k === 'length' && typeof val === 'function') {
-        continue;
-      }
-      var pd = Object.getOwnPropertyDescriptor(old, k);
-      try {
-        Object.defineProperty(val, k, pd);
-      } catch (e) {
-        try {
-          // If defineProperty fails, try simple assignment.
-          // TODO(cpcallen): remove this when server allows
-          // (non-effective) redefinition of nonconfigurable
-          // properties?
-          val[k] = pd.value;
-        } catch (e) {
-          // Ignore failed attempt to copy properties.
-        }
-      }
-    }
+    $.utils.transplantProperties(old, val);
   }
   obj[key] = val;
   return src;
