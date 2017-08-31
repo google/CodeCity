@@ -1,0 +1,11 @@
+[Unit]
+Description=Code City Connect Server
+Documentation=https://github.com/NeilFraser/CodeCity
+After=network.target
+
+[Service]
+SyslogIdentifier=cc-connect
+WorkingDirectory=/home/cc/CodeCity/connect
+User=cc
+Group=cc
+ExecStart=@/usr/bin/nodejs cc-connect /home/cc/CodeCity/connect/connectServer.js

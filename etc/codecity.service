@@ -1,0 +1,15 @@
+[Unit]
+Description=Code City
+Documentation=https://github.com/NeilFraser/CodeCity
+After=network.target
+Wants=codecity-login.service codecity-connect.service
+
+[Service]
+SyslogIdentifier=codecity
+WorkingDirectory=/home/cc/CodeCity/demo
+User=cc
+Group=cc
+ExecStart=@/usr/bin/nodejs codecity /home/cc/CodeCity/server/codecity.js .
+
+[Install]
+WantedBy=multi-user.target
