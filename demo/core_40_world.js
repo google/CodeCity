@@ -74,15 +74,15 @@
   };
   clock.moveTo(hangout);
   clock.chime = function(silent) {
-    var minuteMs = 60 * 1000;
-    var hourMs = 60 * minuteMs;
+    var msPerMinute = 60 * 1000;
+    var msPerHour = 60 * msPerMinute;
     var now = new Date;
     var hours = (now.getHours() % 12) || 12;
-    var nextHour = hourMs - (now.getTime() % hourMs);
-    if (nextHour < minuteMs && !silent) {
+    var nextHour = msPerHour - (now.getTime() % msPerHour);
+    if (nextHour < msPerMinute && !silent) {
       // Next hour is less than a minute away, we got called a wee bit too soon.
       // Schedule for the next hour.
-      nextHour += hourMs;
+      nextHour += msPerHour;
       // Round current hour up to the next hour.
       hours++;
     }
