@@ -424,8 +424,8 @@ CCC.World.connectPanel = function(msg) {
   var df = document.createDocumentFragment();
   var div = document.createElement('div');
   div.className = isConnected ? 'connectDiv' : 'disconnectDiv';
-  var msg = CCC.World.getMsg(isConnected ? 'connectedMsg' : 'disconnectedMsg');
-  div.appendChild(document.createTextNode(msg));
+  var text = CCC.World.getMsg(isConnected ? 'connectedMsg' : 'disconnectedMsg');
+  div.appendChild(document.createTextNode(text));
   df.appendChild(div);
 
   var img = document.createElement('img');
