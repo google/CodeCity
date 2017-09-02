@@ -437,7 +437,18 @@ CCC.Log.renderHtmltext = function(div, node) {
       CCC.Log.renderHtmltext(div, node.childNodes[i]);
     }
     if (CCC.Log.renderHtmltext.BLOCK_NAMES.indexOf(node.tagName) !== -1) {
-      if (div.lastChild && div.lastChild.tagName !== 'BR') {
+      // Add a <br> tag, but not if there's already one.
+      var lastTag = div.lastChild;
+      while (lastTag && lastTag.nodeType !== 1) {
+        if (lastTag.nodeType === 3 && lastTag.nodeValue.trim()) {
+          // Found text that's not whitespace.  Bail.
+          lastTag = null;
+        } else {
+          // Nothing printable found so far, keep walking up looking for a <br>.
+          lastTag = lastTag.previousSibling;
+        }
+      }
+      if (div.hasChildNodes() && (!lastTag || lastTag.tagName !== 'BR')) {
         div.appendChild(document.createElement('br'));
       }
     }

@@ -61,6 +61,32 @@ $.utils.commandMenu = function(commands) {
   return cmdXml;
 };
 
+$.utils.transplantProperties = function(oldObject, newObject) {
+  if (!$.utils.isObject(newObject) || !$.utils.isObject(oldObject)) {
+    throw TypeError("Can't transplant properties on non-objects.");
+  }
+  var keys = Object.getOwnPropertyNames(oldObject);
+  for (var i = 0, k; k = keys[i], i < keys.length; i++) {
+    if (k === 'length' && typeof newObject === 'function') {
+      continue;
+    }
+    var pd = Object.getOwnPropertyDescriptor(oldObject, k);
+    try {
+      Object.defineProperty(newObject, k, pd);
+    } catch (e) {
+      try {
+        // If defineProperty fails, try simple assignment.
+        // TODO(cpcallen): remove this when server allows
+        // (non-effective) redefinition of nonconfigurable
+        // properties?
+        newObject[k] = pd.value;
+      } catch (e) {
+        // Ignore failed attempt to copy properties.
+      }
+    }
+  }
+};
+
 $.utils.replacePhysicalsWithName = function(value) {
   // Deeply clone JSON object.
   // Replace all instances of $.physical with the object's name.
@@ -143,31 +169,48 @@ $.physical.moveTo.updateScene_ = function(room) {
 };
 
 $.physical.look = function(cmd) {
-  var html = '<table style="height: 100%; width: 100%;"><tr><td style="padding: 1ex; width: 30%;">';
-  html += '<svg width="100%" height="100%" viewBox="0 0 0 0">' + this.getSvgText() + '</svg>';
-  html += '</td><td>';
-  html += '<h1>' + this.name + $.utils.commandMenu(this.getCommands(user)) + '</h1>';
-  html += '<p>' + this.getDescription() + '</p>';
-  var contents = this.getContents();
-  if (contents.length) {
-    var contentsHtml = [];
-    for (var i = 0; i < contents.length; i++) {
-      contentsHtml[i] = contents[i].name +
-          $.utils.commandMenu(contents[i].getCommands(user));
-    }
-    html += '<p>Contents: ' + contentsHtml.join(', ') + '</p>';
-  }
-  if (this.location) {
-    html += '<p>Location: ' + this.location.name +
-        $.utils.commandMenu(this.location.getCommands(user)) + '</p>';
-  }
-  html += '</td></tr></table>';
+  var html = $.jssp.generateOutput(this.lookJssp, this);
   user.writeJson({type: "html", htmlText: html});
 };
 $.physical.look.verb = 'l(ook)?';
 $.physical.look.dobj = 'this';
 $.physical.look.prep = 'none';
 $.physical.look.iobj = 'none';
+
+$.physical.lookJssp = function(request, response, out) {
+  // Overwrite on first execution.
+  $.physical.lookJssp = $.jssp.compile($.physical.lookJssp);
+  out.print($.jssp.generateOutput($.physical.lookJssp, this));
+};
+$.physical.lookJssp.jssp = [
+  '<table style="height: 100%; width: 100%;">',
+  '  <tr>',
+  '    <td style="padding: 1ex; width: 30%;">',
+  '      <svg width="100%" height="100%" viewBox="0 0 0 0">',
+  '        <%= this.getSvgText() %>',
+  '      </svg>',
+  '    </td>',
+  '    <td>',
+  '    <h1><%= $.utils.htmlEscape(this.name) + $.utils.commandMenu(this.getCommands(user)) %></h1>',
+  '    <p><%= this.getDescription() %></p>',
+  '<%',
+  'var contents = this.getContents();',
+  'if (contents.length) {',
+  '  var contentsHtml = [];',
+  '  for (var i = 0; i < contents.length; i++) {',
+  '    contentsHtml[i] = contents[i].name +',
+  '        $.utils.commandMenu(contents[i].getCommands(user));',
+  '  }',
+  '  out.println(\'<p>Contents: \' + contentsHtml.join(\', \') + \'</p>\');',
+  '}',
+  'if (this.location) {',
+  '  out.println(\'<p>Location: \' + this.location.name +',
+  '      $.utils.commandMenu(this.location.getCommands(user)) + \'</p>\');',
+  '}',
+  '%>',
+  '    </td>',
+  '  </tr>',
+  '</table>'].join('\n');
 
 $.physical.getCommands = function(who) {
   return ['look ' + this.name];
