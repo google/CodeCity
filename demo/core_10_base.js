@@ -169,7 +169,7 @@ $.physical.moveTo.updateScene_ = function(room) {
 };
 
 $.physical.look = function(cmd) {
-  var html = $.jssp.generateOutput(this.generateLook, this);
+  var html = $.jssp.generateOutput(this.lookJssp, this);
   user.writeJson({type: "html", htmlText: html});
 };
 $.physical.look.verb = 'l(ook)?';
@@ -177,12 +177,12 @@ $.physical.look.dobj = 'this';
 $.physical.look.prep = 'none';
 $.physical.look.iobj = 'none';
 
-$.physical.generateLook = function(request, response, out) {
+$.physical.lookJssp = function(request, response, out) {
   // Overwrite on first execution.
-  $.physical.generateLook = $.jssp.compile($.physical.generateLook);
-  out.print($.jssp.generateOutput($.physical.generateLook, this));
+  $.physical.lookJssp = $.jssp.compile($.physical.lookJssp);
+  out.print($.jssp.generateOutput($.physical.lookJssp, this));
 };
-$.physical.generateLook.jssp = [
+$.physical.lookJssp.jssp = [
   '<table style="height: 100%; width: 100%;">',
   '  <tr>',
   '    <td style="padding: 1ex; width: 30%;">',
