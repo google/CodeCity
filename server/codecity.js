@@ -135,7 +135,7 @@ CodeCity.loadFile = function(filename) {
 CodeCity.checkpoint = function(sync) {
   console.log('Checkpoint!');
   try {
-    CodeCity.interpreter.stop();
+    CodeCity.interpreter.pause();
     var json = Serializer.serialize(CodeCity.interpreter);
   } finally {
     sync || CodeCity.interpreter.start();
