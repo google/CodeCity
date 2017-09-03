@@ -969,7 +969,7 @@ exports.testThreading = function(t) {
 };
 
 /**
- * Run a test of the .start() and .stop() methods on Interpreter
+ * Run a test of the .start() and .pause() methods on Interpreter
  * instances.  This is an async test because we use real (albeit
  * small) timeouts to make sure everything works as it ought to.
  * @param {!T} t The test runner object.
@@ -1003,10 +1003,12 @@ exports.testStartStop = async function(t) {
     await snooze(0);
     intrp.createThread(src);
     await snooze(29);
-    intrp.stop();
+    intrp.pause();
   } catch (e) {
     t.crash(name, util.format('%s\n%s', src, e.stack));
     return;
+  } finally {
+    intrp.stop();
   }
   var r = intrp.getValueFromScope(intrp.global, 'x');
   var expected = 2;
@@ -1017,8 +1019,8 @@ exports.testStartStop = async function(t) {
         String(r), String(expected), 29));
   }
 
-  // Check that .stop() actually stops thing.
-  name = 'testStop';
+  // Check that .pause() actually paused execution.
+  name = 'testPause';
   await snooze(10);
   var r = intrp.getValueFromScope(intrp.global, 'x');
   var expected = 2;
