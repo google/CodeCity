@@ -1,6 +1,6 @@
 /**
  * @license
- * Code City: Server
+ * Code City: Startup code.
  *
  * Copyright 2017 Google Inc.
  *
@@ -18,11 +18,11 @@
  */
 
 /**
- * @fileoverview Load ES6 for tests.
- * @author fraser@google.com (Neil Fraser)
+ * @fileoverview Initialisation code to set up CC-specific networking
+ * extensions.
+ * @author cpcallen@google.com (Christopher Allen)
  */
-
-'use strict';
-
-const fs = require('fs');
-module.exports = fs.readFileSync('startup/es6.js', 'utf8');
+var connectionListen = new 'connectionListen';
+var connectionUnlisten = new 'connectionUnlisten';
+var connectionWrite = new 'connectionWrite';
+var connectionClose = new 'connectionClose';

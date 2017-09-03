@@ -29,15 +29,16 @@ var util = require('util');
 //var toSource = require('tosource');
 
 var Interpreter = require('../interpreter');
-var es5 = require('./interpreter_es5');
-var es6 = require('./interpreter_es6');
+var common = require('./interpreter_common');
 var testcases = require('./testcases');
 
 // Prepare static interpreter instance for runTest.
 var interpreter = new Interpreter;
-interpreter.createThread(es5);
+interpreter.createThread(common.es5);
 interpreter.run();
-interpreter.createThread(es6);
+interpreter.createThread(common.es6);
+interpreter.run();
+interpreter.createThread(common.net);
 interpreter.run();
 interpreter.addVariableToScope(interpreter.global, 'src');
 
@@ -96,9 +97,11 @@ function runTest(t, name, src, expected) {
  */
 function runComplexTest(t, name, src, expected, initFunc, asyncFunc) {
   var intrp = new Interpreter;
-  intrp.createThread(es5);
+  intrp.createThread(common.es5);
   intrp.run();
-  intrp.createThread(es6);
+  intrp.createThread(common.es6);
+  intrp.run();
+  intrp.createThread(common.net);
   intrp.run();
   if (initFunc) {
     initFunc(intrp);
@@ -152,9 +155,11 @@ function runComplexTest(t, name, src, expected, initFunc, asyncFunc) {
  */
 async function runAsyncTest(t, name, src, expected, initFunc, sideFunc) {
   var intrp = new Interpreter;
-  intrp.createThread(es5);
+  intrp.createThread(common.es5);
   intrp.run();
-  intrp.createThread(es6);
+  intrp.createThread(common.es6);
+  intrp.run();
+  intrp.createThread(common.net);
   intrp.run();
   if (initFunc) {
     initFunc(intrp);
@@ -982,9 +987,11 @@ exports.testStartStop = async function(t) {
         x++;
       };
   `;
-  intrp.createThread(es5);
+  intrp.createThread(common.es5);
   intrp.run();
-  intrp.createThread(es6);
+  intrp.createThread(common.es6);
+  intrp.run();
+  intrp.createThread(common.net);
   intrp.run();
   try {
     intrp.start();
