@@ -32,6 +32,8 @@ $.system = {};
 $.system.log = new '$.system.log';
 $.system.checkpoint = new '$.system.checkpoint';
 $.system.shutdown = new '$.system.shutdown';
+$.system.connectionListen = new 'connectionListen';
+$.system.connectionUnlisten = new 'connectionUnlisten';
 $.system.connectionWrite = new 'connectionWrite';
 $.system.connectionClose = new 'connectionClose';
 

@@ -1584,31 +1584,29 @@ Interpreter.prototype.connectionUnlisten = function(port, resolve, reject) {
 Interpreter.prototype.initNetwork = function(scope) {
   var intrp = this;
 
-  this.addVariableToScope(scope, 'connectionListen', this.createAsyncFunction(
-      'connectionListen', function(resolve, reject, port, proto) {
-        intrp.connectionListen(port, proto, resolve, reject);
-      }));
+  this.createAsyncFunction('connectionListen',
+      function(resolve, reject, port, proto) {
+    intrp.connectionListen(port, proto, resolve, reject);
+  });
 
-  this.addVariableToScope(scope, 'connectionUnlisten', this.createAsyncFunction(
-      'connectionUnlisten', function(resolve, reject, port, proto) {
-        intrp.connectionUnlisten(port, resolve, reject);
-      }));
+  this.createAsyncFunction('connectionUnlisten',
+      function(resolve, reject, port, proto) {
+    intrp.connectionUnlisten(port, resolve, reject);
+  });
 
-  this.addVariableToScope(scope, 'connectionWrite', this.createNativeFunction(
-      'connectionWrite', function(obj, data) {
-        if (!(obj instanceof intrp.Object) || !obj.socket) {
-          intrp.throwException(intrp.TYPE_ERROR, 'object is not connected');
-        }
-        obj.socket.write(String(data));
-      }, false));
+  this.createNativeFunction('connectionWrite', function(obj, data) {
+    if (!(obj instanceof intrp.Object) || !obj.socket) {
+      intrp.throwException(intrp.TYPE_ERROR, 'object is not connected');
+    }
+    obj.socket.write(String(data));
+  }, false);
 
-  this.addVariableToScope(scope, 'connectionClose', this.createNativeFunction(
-      'connectionClose', function(obj) {
-        if (!(obj instanceof intrp.Object) || !obj.socket) {
-          intrp.throwException(intrp.TYPE_ERROR, 'object is not connected');
-        }
-        obj.socket.end();
-      }, false));
+  this.createNativeFunction('connectionClose', function(obj) {
+    if (!(obj instanceof intrp.Object) || !obj.socket) {
+      intrp.throwException(intrp.TYPE_ERROR, 'object is not connected');
+    }
+    obj.socket.end();
+  }, false);
 };
 
 /**

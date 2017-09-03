@@ -18,11 +18,13 @@
  */
 
 /**
- * @fileoverview Load ES5 for tests.
+ * @fileoverview Load polyfills for tests.
  * @author fraser@google.com (Neil Fraser)
  */
 
 'use strict';
 
 const fs = require('fs');
-module.exports = fs.readFileSync('startup/es5.js', 'utf8');
+exports.es5 = fs.readFileSync('startup/es5.js', 'utf8');
+exports.es6 = fs.readFileSync('startup/es6.js', 'utf8');
+exports.net = fs.readFileSync('startup/net.js', 'utf8');

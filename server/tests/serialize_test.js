@@ -27,8 +27,7 @@
 const util = require('util');
 
 const Interpreter = require('../interpreter');
-var es5 = require('./interpreter_es5');
-var es6 = require('./interpreter_es6');
+var common = require('./interpreter_common');
 const Serializer = require('../serialize');
 
 /**
@@ -52,9 +51,11 @@ const Serializer = require('../serialize');
 function runTest(t, name, src1, src2, expected, steps) {
   try {
     var intrp1 = new Interpreter;
-    intrp1.createThread(es5);
+    intrp1.createThread(common.es5);
     intrp1.run();
-    intrp1.createThread(es6);
+    intrp1.createThread(common.es6);
+    intrp1.run();
+    intrp1.createThread(common.net);
     intrp1.run();
     if (src1) {
       intrp1.createThread(src1);

@@ -30,6 +30,8 @@ $.system = {};
 $.system.log = new '$.system.log';
 $.system.checkpoint = new '$.system.checkpoint';
 $.system.shutdown = new '$.system.shutdown';
+$.system.connectionListen = new 'connectionListen';
+$.system.connectionUnlisten = new 'connectionUnlisten';
 $.system.connectionWrite = new 'connectionWrite';
 $.system.connectionClose = new 'connectionClose';
 
@@ -303,5 +305,5 @@ $.connection.close = function() {
   rock.description = 'Suspiciously cube shaped, made of granite.';
   rock.moveTo(hangout);
 
-  connectionListen(7777, $.connection);
+  $.system.connectionListen(7777, $.connection);
 })();
