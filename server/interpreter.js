@@ -72,11 +72,35 @@ var Interpreter = function() {
   this.thread = null;
   this.initUptime();
   this.previousTime_ = 0;
-  this.running = false;
+  this.status = Interpreter.Status.PAUSED;
   this.runner_ = null;
   this.done = true;  // True if any non-ZOMBIE threads exist.
   // Set up networking stuff:
   this.listeners = {};
+};
+
+/**
+ * Interpreter statuses.
+ * @enum {number}
+ */
+Interpreter.Status = {
+  /**
+   * Won't run code or listen on network sockets.
+   */
+  STOPPED: 0,
+
+  /**
+   * Will listen on network sockets, but won't automatically execute
+   * code in response to thread creation, timeouts or network
+   * activity; user must call .step() or .run() for any JS to run.
+   */
+  PAUSED: 1,
+
+  /**
+   * Will listen on network sockets and automatically execute code in
+   * response to thread creation, timeouts and network activity.
+   */
+  RUNNING: 2
 };
 
 /**
@@ -214,9 +238,7 @@ Interpreter.prototype.createThread = function(runnable, runAt) {
   var id = this.threads.length;
   var thread = new Interpreter.Thread(id, runnable, runAt || this.now());
   this.threads.push(thread);
-  if (this.running) {
-    this.start();
-  }
+  this.go_();
   return id;
 };
 
@@ -306,6 +328,9 @@ Interpreter.prototype.schedule = function() {
  *     READY threads.
  */
 Interpreter.prototype.step = function() {
+  if (this.status !== Interpreter.Status.PAUSED) {
+    throw new Error('Can only step paused interpreter');
+  }
   if (!this.thread || this.thread.status !== Interpreter.Thread.Status.READY) {
     if (this.schedule() > 0) {
       return false;
@@ -347,6 +372,9 @@ Interpreter.prototype.step = function() {
  * @return {number} See description.
  */
 Interpreter.prototype.run = function() {
+  if (this.status === Interpreter.Status.STOPPED) {
+    throw new Error("Can't run stopped interpreter");
+  }
   var t;
   while ((t = this.schedule()) === 0) {
     var thread = this.thread;
@@ -379,35 +407,78 @@ Interpreter.prototype.run = function() {
 };
 
 /**
- * Use setTimeout to repeatedly call .run() until there are no more
- * sleeping threads.
+ * If interpreter status is RUNNING, use setTimeout to repeatedly call
+ * .run() until there are no more sleeping threads.
  */
-Interpreter.prototype.start = function() {
+Interpreter.prototype.go_ = function() {
+  if (this.status !== Interpreter.Status.RUNNING) {
+    return;
+  }
   var intrp = this;
   var repeat = function() {
-    clearTimeout(intrp.runner_);
-    // TODO(cpcallen): figure out reentrancy here: .run() can end up
-    // calling start() via (userland) setTimeout or suspend.
+    // N.B.: .run may indirectly call .go_ (e.g. via native
+    // function calling .createThread).
     var r = intrp.run();
     if (r > 0) {
+      // No more code to run right now, but there is an outstanding timeout.
       intrp.runner_ = setTimeout(repeat, r - intrp.now());
-    } else {
+    } else if (this.runner_) {
+      // Clear just-completed or no-longer-needed future timeout.
+      clearTimeout(this.runner_);
       intrp.runner_ = null;
     }
   };
   // Kill any existing runner and restart.
   clearTimeout(this.runner_);
   this.runner_ = setTimeout(repeat, 0);
-  this.running = true;
 };
 
 /**
- * Stop an interpreter started with .start()
+ * Set the interpreter status to RUNNING and kick it into action if
+ * there is anything to do.
+ */
+Interpreter.prototype.start = function() {
+  if (this.status !== Interpreter.Status.RUNNING) {
+    // Take care of STOPPED -> PAUSED transition if required.
+    this.pause();
+  }
+  this.status = Interpreter.Status.RUNNING;
+  this.go_();
+};
+
+/**
+ * Set the interpreter status to PAUSED.  If it was previously
+ * STOPPED, begin listening on any listened ports.  If it was
+ * previously RUNNING, ensure the interpreter takes no further action
+ * of its own.
+ */
+Interpreter.prototype.pause = function() {
+  switch (this.status) {
+    case Interpreter.Status.RUNNING:
+      clearTimeout(this.runner_);
+      this.runner_ = null;
+      break;
+    case Interpreter.Status.PAUSED:
+      // No state change, so nothing to do.
+      break;
+    case Interpreter.Status.STOPPED:
+      // TODO(cpcallen): restore listened ports.
+  }
+  this.status = Interpreter.Status.PAUSED;
+};
+
+/**
+ * Set the interpreter status to STOPPED, stop listening on any port
+ * (but do not close any open sockets), and ensure the interpreter
+ * takes no further action of its own.
  */
 Interpreter.prototype.stop = function() {
-  clearTimeout(this.runner_);
-  this.runner_ = undefined;
-  this.running = false;
+  if (this.status !== Interpreter.Status.STOPPED) {
+    // Take care of RUNNING -> PAUSED transition if required.
+    this.pause();
+  }
+  this.status = Interpreter.Status.STOPPED;
+  // TODO(cpcallen): Unlisten listened ports.
 };
 
 /**
@@ -1748,9 +1819,7 @@ Interpreter.prototype.callAsyncFunction = function(state) {
         check(id);
         state.value = value;
         intrp.threads[id].status = Interpreter.Thread.Status.READY;
-        if (intrp.running) {
-          intrp.start();
-        }
+        intrp.go_();
       },
       function reject(value) {
         check(id);
@@ -1765,9 +1834,7 @@ Interpreter.prototype.callAsyncFunction = function(state) {
         throwState.value = value;
         thread.stateStack.push(throwState);
         intrp.threads[id].status = Interpreter.Thread.Status.READY;
-        if (intrp.running) {
-          intrp.start();
-        }
+        intrp.go_();
       }];
   })(this.thread.id);
   // Prepend resolve, reject to arguments.
