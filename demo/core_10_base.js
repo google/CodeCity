@@ -171,7 +171,7 @@ $.physical.moveTo.updateScene_ = function(room) {
 };
 
 $.physical.look = function(cmd) {
-  var html = $.jssp.generateOutput(this.lookJssp, this);
+  var html = $.jssp.generateString(this.lookJssp, this);
   user.writeJson({type: "html", htmlText: html});
 };
 $.physical.look.verb = 'l(ook)?';
@@ -179,10 +179,10 @@ $.physical.look.dobj = 'this';
 $.physical.look.prep = 'none';
 $.physical.look.iobj = 'none';
 
-$.physical.lookJssp = function(request, response, out) {
+$.physical.lookJssp = function(request, response) {
   // Overwrite on first execution.
   $.physical.lookJssp = $.jssp.compile($.physical.lookJssp);
-  out.print($.jssp.generateOutput($.physical.lookJssp, this));
+  $.physical.lookJssp.call(this, request, response);
 };
 $.physical.lookJssp.jssp = [
   '<table style="height: 100%; width: 100%;">',
@@ -203,10 +203,10 @@ $.physical.lookJssp.jssp = [
   '    contentsHtml[i] = contents[i].name +',
   '        $.utils.commandMenu(contents[i].getCommands(user));',
   '  }',
-  '  out.println(\'<p>Contents: \' + contentsHtml.join(\', \') + \'</p>\');',
+  '  response.write(\'<p>Contents: \' + contentsHtml.join(\', \') + \'</p>\');',
   '}',
   'if (this.location) {',
-  '  out.println(\'<p>Location: \' + this.location.name +',
+  '  response.write(\'<p>Location: \' + this.location.name +',
   '      $.utils.commandMenu(this.location.getCommands(user)) + \'</p>\');',
   '}',
   '%>',
@@ -568,6 +568,25 @@ $.connection.onReceive = function(text) {
 };
 
 $.connection.onReceiveLine = function(text) {
+  // Override this on child classes.
+};
+
+$.connection.onEnd = function() {
+  // Override this on child classes.
+};
+
+$.connection.write = function(text) {
+  $.system.connectionWrite(this, text);
+};
+
+$.connection.close = function() {
+  $.system.connectionClose(this);
+};
+
+
+$.telnet = Object.create($.connection);
+
+$.telnet.onReceiveLine = function(text) {
   if (this.user) {
     user = this.user;
     $.execute(text);
@@ -581,7 +600,7 @@ $.connection.onReceiveLine = function(text) {
   }
   if (!$.userDatabase[m[1]]) {
     var guest = Object.create($.user);
-    guest.name = 'Guest' + $.connection.onReceiveLine.guestCount++;
+    guest.name = 'Guest' + $.telnet.onReceiveLine.guestCount++;
     $.userDatabase[m[1]] = guest;
     guest.description = 'A new user who has not yet set his/her description.';
     guest.moveTo($.startRoom);
@@ -604,9 +623,9 @@ $.connection.onReceiveLine = function(text) {
     user.location.narrate(user.name + ' connects.');
   }
 };
-$.connection.onReceiveLine.guestCount = 0;
+$.telnet.onReceiveLine.guestCount = 0;
 
-$.connection.onEnd = function() {
+$.telnet.onEnd = function() {
   if (this.user) {
     if (user.location) {
       user.location.narrate(user.name + ' disconnects.');
@@ -617,12 +636,4 @@ $.connection.onEnd = function() {
     }
     this.user = null;
   }
-};
-
-$.connection.write = function(text) {
-  $.system.connectionWrite(this, text + '\n');
-};
-
-$.connection.close = function() {
-  $.system.connectionClose(this);
 };

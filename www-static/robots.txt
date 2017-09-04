@@ -1,3 +1,0 @@
-# Don't index this Code City site at this time.
-User-agent: *
-Disallow: /

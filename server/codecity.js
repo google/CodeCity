@@ -133,6 +133,7 @@ CodeCity.loadFile = function(filename) {
  * False if Code City is running this in the background.
  */
 CodeCity.checkpoint = function(sync) {
+  return;
   console.log('Checkpoint!');
   try {
     CodeCity.interpreter.pause();

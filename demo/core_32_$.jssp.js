@@ -53,7 +53,7 @@ $.jssp.compile = function(func) {
         } else if (token === '<%--') {
           state = STATES.COMMENT;
         } else {
-          code.push('out.print(' + JSON.stringify(token) + ');');
+          code.push('response.write(' + JSON.stringify(token) + ');');
         }
         break;
       case STATES.STATEMENT:
@@ -69,7 +69,7 @@ $.jssp.compile = function(func) {
         } else {
           token = token.trim();
           if (token) {
-            code.push('out.print(' + token + ');');
+            code.push('response.write(' + token + ');');
           }
         }
         break;
@@ -89,24 +89,19 @@ $.jssp.compile = function(func) {
   return newFunc;
 };
 
-$.jssp.generateOutput = function(func, thisValue) {
+$.jssp.generateString = function(func, thisValue) {
   var request = {};
-  var response = {};
-  var out = new $.jssp.OutputBuffer();
-  func.call(thisValue, request, response, out);
-  return out.toString();
+  var response = new $.jssp.OutputBuffer();
+  func.call(thisValue, request, response);
+  return response.toString();
 };
 
 $.jssp.OutputBuffer = function() {
   this.buffer_ = '';
 };
 
-$.jssp.OutputBuffer.prototype.print = function(text) {
+$.jssp.OutputBuffer.prototype.write = function(text) {
   this.buffer_ += text;
-};
-
-$.jssp.OutputBuffer.prototype.println = function(text) {
-  this.buffer_ += text + '\n';
 };
 
 $.jssp.OutputBuffer.prototype.toString = function() {
