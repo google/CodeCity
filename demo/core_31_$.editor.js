@@ -32,7 +32,7 @@ $.editor.edit = function(obj, name, key) {
     throw TypeError('Can only edit objects');
   }
   var objId = this.objIdFor(obj);
-  var url = '/web/edit?objId=' + objId;
+  var url = '/edit?objId=' + objId;
   if (name) {
     url += '&name=' + encodeURIComponent(name);
   }
@@ -91,7 +91,8 @@ $.editor.save = function(obj, key, src) {
 };
 
 
-$.www.web.edit = function(path, params) {
+$.editor.page = function(request, response) {
+  var params = request.parameters;
   var objId = params.objId;
   var obj = $.editor.objs[params.objId];
   if (!$.utils.isObject(obj)) {
@@ -114,7 +115,7 @@ $.www.web.edit = function(path, params) {
   } else {
     src = $.editor.load(obj, key);
   }
-  var body = '<form action="/web/edit" method="get">';
+  var body = '<form action="/edit" method="get">';
   body += '<button type="submit" class="jfk-button-submit" id="submit"' +
       ' onclick="document.getElementById(\'src\').value = editor.getValue()">Save</button>';
   body += '<h1>Editing ' + $.utils.htmlEscape(name) + '.' +
@@ -136,22 +137,24 @@ $.www.web.edit = function(path, params) {
   body += '  editor.on("change", function() {document.getElementById("status").innerText = "(modified)"});';
   body += '</script>';
 
-  this.write('<!DOCTYPE html>');
-  this.write('<html><head>');
-  this.write('<title>Code Editor for ' +
+  response.write('<!DOCTYPE html>');
+  response.write('<html><head>');
+  response.write('<title>Code Editor for ' +
       $.utils.htmlEscape(name) + '.' + $.utils.htmlEscape(key) + '</title>');
-  this.write('<link href="/client/jfk.css" rel="stylesheet">');
-  this.write('<link rel="stylesheet" href="/CodeMirror/codemirror.css">');
-  this.write('<style>');
-  this.write('  body {margin: 0; font-family: sans-serif}');
-  this.write('  h1 {margin-bottom: 5; font-size: small}');
-  this.write('  #submit {position: fixed; bottom: 1ex; right: 2ex; z-index: 9}');
-  this.write('  .CodeMirror {height: auto; border: 1px solid #eee}');
-  this.write('</style>');
-  this.write('<script src="/CodeMirror/codemirror.js"></script>');
-  this.write('<script src="/CodeMirror/javascript.js"></script>');
+  response.write('<link href="/static/client/jfk.css" rel="stylesheet">');
+  response.write('<link rel="stylesheet" href="/static/CodeMirror/codemirror.css">');
+  response.write('<style>');
+  response.write('  body {margin: 0; font-family: sans-serif}');
+  response.write('  h1 {margin-bottom: 5; font-size: small}');
+  response.write('  #submit {position: fixed; bottom: 1ex; right: 2ex; z-index: 9}');
+  response.write('  .CodeMirror {height: auto; border: 1px solid #eee}');
+  response.write('</style>');
+  response.write('<script src="/static/CodeMirror/codemirror.js"></script>');
+  response.write('<script src="/static/CodeMirror/javascript.js"></script>');
 
-  this.write('</head><body>');
-  this.write(body);
-  this.write('</body></html>');
+  response.write('</head><body>');
+  response.write(body);
+  response.write('</body></html>');
 };
+
+$.www.router.edit = {regexp: /^\/edit(\?|$)/, handler: $.editor.page};
