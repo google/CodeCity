@@ -194,7 +194,7 @@ Serializer.serialize = function(intrp) {
   // Properties on Interpreter instances to ignore.
   var exclude = ['stepFunctions_', 'runner_', 'listeners',
                  'Object', 'Function', 'Array', 'Date', 'RegExp', 'Error',
-                 'Thread', 'connectionListen', 'connectionUnlisten'];
+                 'Thread', 'Server'];
   // Find all objects.
   var objectList = [];
   Serializer.objectHunt_(intrp, objectList, Serializer.excludeTypes, exclude);
