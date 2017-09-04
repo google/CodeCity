@@ -588,7 +588,11 @@ $.connection.onReceiveLine = function(text) {
   }
   this.user = $.userDatabase[m[1]];
   if (this.user.connection) {
-    this.user.connection.close();
+    try {
+      this.user.connection.close();
+    } catch (e) {
+      // Ignore; maybe connection already closed (e.g., due to crash/rebot).
+    }
     $.system.log('Rebinding connection to ' + this.user.name);
   } else {
     $.system.log('Binding connection to ' + this.user.name);
