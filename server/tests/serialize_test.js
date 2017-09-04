@@ -24,6 +24,7 @@
  */
 'use strict';
 
+var net = require('net');
 const util = require('util');
 
 const Interpreter = require('../interpreter');
@@ -82,6 +83,9 @@ function runTest(t, name, src1, src2, expected, steps) {
   try {
     var intrp2 = new Interpreter;
     Serializer.deserialize(JSON.parse(json), intrp2);
+    // Deserialized interpreter was stopped, but we want to be able to
+    // step/run it, so wake it up to PAUSED.
+    intrp2.pause();
   } catch (e) {
     t.crash(name + 'Deserialize', e);
     return;
@@ -99,6 +103,128 @@ function runTest(t, name, src1, src2, expected, steps) {
   }
 
   var r = intrp2.pseudoToNative(intrp2.value);
+  if (Object.is(r, expected)) {
+    t.pass(name);
+  } else {
+    t.fail(name, util.format(
+        '%s\n/* roundtrip */\n%s\ngot: %s  want: %s',
+        src1, src2, String(r), String(expected)));
+  }
+};
+
+/**
+ * Run a (truly) asynchronous roundtrip test of the interpreter.
+ * interpreter instance is created for each test.  Special functions
+ * resolve() and reject() are inserted in the global scope; they will
+ * end each section of the test.  The caller can additionally supply a
+ * callback to be run before starting the interpreter.
+ * 
+ * Full procedure:
+ * - Create and initialize an interpreter instance.
+ * - Call initFunc, if supplied, on first interpreter instance.
+ * - Start the interpreter and run src1 (if supplied).
+ * - Call and await sideFunc, if supplied.
+ * - Await a call to resolve() or reject(); abort the test if the latter occurs.
+ * - Stop the interpreter.
+ * - Serialize interpreter to JSON.
+ * - Create second interpreter instance.  Don't initialize it.
+ * - Call initFunc, if supplied, on second interpreter instance.
+ * - Deserialize JSON into second interpreter instance.
+ * - Start the second interpreter and allow it to run to completion.
+ * - Run src2 (if supplied).
+ * - Await a call to resolve() or reject().
+ * - If resolve was called, verify the result is as expected.
+ * @param {!T} t The test runner object.
+ * @param {string} name The name of the test.
+ * @param {string} src1 The code to be evaled before serialization.
+ * @param {string} src2 The code to be evaled after serialization.
+ * @param {number|string|boolean|null|undefined} expected The expected
+ *     completion value.
+ * @param {number=} steps How many steps to run before serializing
+ *     (run to completion if unspecified).
+ * @param {Function(Interpreter)=} initFunc Optional function to be
+ *     called after creating and initialzing new interpreter but
+ *     before running src.  Can be used to insert extra native
+ *     functions into the interpreter.  initFunc is called with the
+ *     interpreter instance to be configured as its parameter.
+ */
+async function runAsyncTest(t, name, src1, src2, expected, initFunc) {
+  var intrp1 = new Interpreter;
+  intrp1.createThread(common.es5);
+  intrp1.run();
+  intrp1.createThread(common.es6);
+  intrp1.run();
+  intrp1.createThread(common.net);
+  intrp1.run();
+  if (initFunc) {
+    initFunc(intrp1);
+  }
+
+  // Create promise to signal completion of test from within
+  // interpreter.  Awaiting p will block until resolve or reject is
+  // called.
+  var resolve, reject, result;
+  var p = new Promise(function(res, rej) { resolve = res; reject = rej; });
+  intrp1.addVariableToScope(intrp1.global, 'resolve',
+      intrp1.createNativeFunction('resolve', resolve));
+  intrp1.addVariableToScope(intrp1.global, 'reject',
+      intrp1.createNativeFunction('reject', reject));
+
+  try {
+    intrp1.start();
+    if (src1) {
+      intrp1.createThread(src1);
+    }
+    await p;
+    intrp1.pause();
+  } catch (e) {
+    t.crash(name + 'Pre', e);
+    return;
+  }
+
+  // Serialize.
+  try {
+    var json = JSON.stringify(Serializer.serialize(intrp1), null, '  ');
+  } catch (e) {
+    t.crash(name + 'Serialize', e);
+    return;
+  }
+
+  intrp1.stop();
+  
+  // Restore into new interpreter.
+  var intrp2 = new Interpreter;
+  if (initFunc) {
+    initFunc(intrp2);
+  }
+
+  // New promise.
+  p = new Promise(function(res, rej) { resolve = res; reject = rej; });
+  intrp2.addVariableToScope(intrp2.global, 'resolve',
+      intrp2.createNativeFunction('resolve', resolve));
+  intrp2.addVariableToScope(intrp2.global, 'reject',
+      intrp2.createNativeFunction('reject', reject));
+
+  try {
+    Serializer.deserialize(JSON.parse(json), intrp2);
+  } catch (e) {
+    t.crash(name + 'Deserialize', e);
+    return;
+  }
+
+  try {
+    intrp2.start();
+    if (src2) {
+      intrp2.createThread(src2);
+    }
+    var r = await p;
+  } catch (e) {
+    t.crash(name + 'Post', e);
+    return;
+  } finally {
+    intrp2.stop();
+  }
+
   if (Object.is(r, expected)) {
     t.pass(name);
   } else {
@@ -148,4 +274,42 @@ exports.testRoundtripDetails = function(t) {
       Object.getPrototypeOf('') === strProto &&
       Object.getPrototypeOf('') === String.prototype;
   `, true);
+};
+
+/**
+ * Run tests of post-roundtrip interpreter networking state.
+ * @param {!T} t The test runner object.
+ */
+exports.testNetworking = async function(t) {
+  //  Run a test of the server re-listening to sockets after being
+  //  deserialized.
+  var name = 'testPostRestoreNetworkInbound';
+  var src1 = `
+      var data = '', conn = {};
+      conn.onReceive = function(d) {
+        data += d;
+      };
+      conn.onEnd = function() {
+        connectionUnlisten(8888);
+        resolve(data);
+      };
+      connectionListen(8888, conn);
+      resolve();
+   `;
+  var src2 = `
+      send();
+   `;
+  var initFunc = function(intrp) {
+    intrp.addVariableToScope(intrp.global, 'send', intrp.createNativeFunction(
+        'send', function() {
+          // Send some data to server.
+          var client = net.createConnection({ port: 8888 }, function() {
+            client.write('foo');
+            client.write('bar');
+            client.end();
+          });
+        }));
+  };
+  await runAsyncTest(t, name, src1, src2, 'foobar', initFunc);
+
 };
