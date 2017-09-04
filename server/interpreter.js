@@ -76,7 +76,7 @@ var Interpreter = function() {
   this.runner_ = null;
   this.done = true;  // True if any non-ZOMBIE threads exist.
   // Set up networking stuff:
-  this.listeners = {};
+  this.listeners = Object.create(null);
 };
 
 /**
@@ -1638,7 +1638,7 @@ Interpreter.prototype.connectionListen =
  *     occurs while creating server.
  */
 Interpreter.prototype.connectionUnlisten = function(port, resolve, reject) {
-  if (!this.listeners.hasOwnProperty(port)) {
+  if (!(port in this.listeners)) {
     reject && reject(new this.Error(this.TYPE_ERROR, 'invalid port'));
     return;
   }
