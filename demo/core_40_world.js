@@ -138,5 +138,5 @@
   fido.moveTo(hangout);
 
   $.system.connectionListen(7777, $.telnet);
-  $.system.connectionListen(7780, $.www);
+  $.system.connectionListen(7780, $.http.connection);
 })();

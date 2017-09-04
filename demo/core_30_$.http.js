@@ -19,7 +19,7 @@
 
 /**
  * @fileoverview Webserver for Code City.
- * @author cpcallen@google.com (Christopher Allen)
+ * @author fraser@google.com (Neil Fraser)
  */
 
 // HTTP object:
@@ -147,8 +147,13 @@ $.http.IncomingMessage.prototype.parseParameters_ = function(data) {
   var vars = data.split('&');
   for (var i = 0; i < vars.length; i++) {
     var eqIndex = vars[i].indexOf('=');
-    var name = vars[i].substring(0, eqIndex);
-    var value = vars[i].substring(eqIndex + 1);
+    if (eqIndex === -1) {
+      var name = vars[i];
+      var value = true;
+    } else {
+      var name = vars[i].substring(0, eqIndex);
+      var value = vars[i].substring(eqIndex + 1);
+    }
     value = decodeURIComponent(value.replace(/\+/g, ' '));
     if (name in this.parameters) {
       // ?foo=1&foo=2&foo=3
@@ -277,37 +282,37 @@ $.http.STATUS_CODES[511] = 'Network Authentication Required';
 
 
 // Web server:
-$.www = Object.create($.connection);
+$.http.connection = Object.create($.connection);
 
-$.www.onConnect = function() {
+$.http.connection.onConnect = function() {
   $.connection.onConnect.apply(this);
   this.timeout = setTimeout(this.close.bind(this), 60 * 1000);
   this.request = new $.http.IncomingMessage();
   this.response = new $.http.ServerResponse(this);
 };
 
-$.www.onReceiveLine = function(line) {
+$.http.connection.onReceiveLine = function(line) {
   if (!this.request.parse(line)) {
     return;  // Wait for more lines to arrive.
   }
 
   try {
-    for (var name in $.www.router) {
-      var rule = $.www.router[name];
+    for (var name in $.http.router) {
+      var rule = $.http.router[name];
       if (rule.regexp.test(this.request.url)) {
         rule.handler(this.request, this.response);
         return;
       }
     }
-    $.pages.page404(this.request, this.response);
+    $.pages['404'](this.request, this.response);
   } finally {
     this.close();
   }
 };
 
-$.telnet.onEnd = function() {
+$.http.connection.onEnd = function() {
   clearTimeout(this.timeout);
 };
 
 
-$.www.router = Object.create(null);
+$.http.router = Object.create(null);

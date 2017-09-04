@@ -115,7 +115,7 @@ $.editor.page = function(request, response) {
   } else {
     src = $.editor.load(obj, key);
   }
-  var body = '<form action="/edit" method="get">';
+  var body = '<form action="/edit" method="post">';
   body += '<button type="submit" class="jfk-button-submit" id="submit"' +
       ' onclick="document.getElementById(\'src\').value = editor.getValue()">Save</button>';
   body += '<h1>Editing ' + $.utils.htmlEscape(name) + '.' +
@@ -157,4 +157,4 @@ $.editor.page = function(request, response) {
   response.write('</body></html>');
 };
 
-$.www.router.edit = {regexp: /^\/edit(\?|$)/, handler: $.editor.page};
+$.http.router.edit = {regexp: /^\/edit(\?|$)/, handler: $.editor.page};

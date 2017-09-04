@@ -1,6 +1,6 @@
 /**
  * @license
- * Code City: Webserver.
+ * Code City: Web pages.
  *
  * Copyright 2017 Google Inc.
  *
@@ -19,18 +19,18 @@
 
 /**
  * @fileoverview Webserver for Code City.
- * @author cpcallen@google.com (Christopher Allen)
+ * @author fraser@google.com (Neil Fraser)
  */
 
 // Web pages object:
 $.pages = {};
 
-$.pages.page404 = function(request, response) {
+$.pages['404'] = function(request, response) {
   // Overwrite on first execution.
-  $.pages.page404 = $.jssp.compile($.pages.page404);
-  $.pages.page404.call(this, request, response);
+  $.pages['404'] = $.jssp.compile($.pages['404']);
+  $.pages['404'].call(this, request, response);
 };
-$.pages.page404.jssp = [
+$.pages['404'].jssp = [
   '<% response.statusCode = 404 %>',
   '<html>',
   '<head>',
@@ -65,12 +65,12 @@ $.pages.page404.jssp = [
 ].join('\n');
 
 
-$.pages.pageHome = function(request, response) {
+$.pages.home = function(request, response) {
   // Overwrite on first execution.
-  $.pages.pageHome = $.jssp.compile($.pages.pageHome);
-  $.pages.pageHome.call(this, request, response);
+  $.pages.home = $.jssp.compile($.pages.home);
+  $.pages.home.call(this, request, response);
 };
-$.pages.pageHome.jssp = [
+$.pages.home.jssp = [
   '<!doctype html>',
   '<html lang="en">',
   '<head>',
@@ -117,20 +117,19 @@ $.pages.pageHome.jssp = [
   '</html>'
 ].join('\n');
 
-$.www.router.homepage = {regexp: /^\/(\?|$)/, handler: $.pages.pageHome};
+$.http.router.homepage = {regexp: /^\/(\?|$)/, handler: $.pages.home};
 
 
-$.pages.pageRobots = function(request, response) {
+$.pages.robots = function(request, response) {
   // Overwrite on first execution.
-  $.pages.pageRobots = $.jssp.compile($.pages.pageRobots);
-  $.pages.pageRobots.call(this, request, response);
+  $.pages.robots = $.jssp.compile($.pages.robots);
+  $.pages.robots.call(this, request, response);
 };
-$.pages.pageRobots.jssp = [
+$.pages.robots.jssp = [
   '<% response.setHeader(\'Content-Type\', \'text/plain; charset=utf-8\') %>',
   '# Don\'t index this Code City instance at this time.',
   'User-agent: *',
   'Disallow: /',
 ].join('\n');
 
-$.www.router.robots = {regexp: /^\/robots\.txt(\?|$)/, handler: $.pages.pageRobots};
-
+$.http.router.robots = {regexp: /^\/robots\.txt(\?|$)/, handler: $.pages.robots};
