@@ -591,7 +591,7 @@ $.connection.onReceiveLine = function(text) {
     try {
       this.user.connection.close();
     } catch (e) {
-      // Ignore; maybe connection already closed (e.g., due to crash/rebot).
+      // Ignore; maybe connection already closed (e.g., due to crash/reboot).
     }
     $.system.log('Rebinding connection to ' + this.user.name);
   } else {

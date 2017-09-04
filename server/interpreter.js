@@ -471,7 +471,7 @@ Interpreter.prototype.pause = function() {
                       error.name, error.message);
           // Report this to userland by calling .onError on proto
           // (with this === proto) - for lack of a better option.
-          var func = intrp.getProperty(server.proto, 'onError')
+          var func = intrp.getProperty(server.proto, 'onError');
           var userError = intrp.nativeToPseudo(error);
           if (func instanceof intrp.Function) {
             intrp.createThreadForFuncCall(func, server.proto, [userError]);

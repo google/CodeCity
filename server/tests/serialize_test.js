@@ -114,7 +114,7 @@ function runTest(t, name, src1, src2, expected, steps) {
 
 /**
  * Run a (truly) asynchronous roundtrip test of the interpreter.
- * interpreter instance is created for each test.  Special functions
+ * A new Interpreter instance is created for each test.  Special functions
  * resolve() and reject() are inserted in the global scope; they will
  * end each section of the test.  The caller can additionally supply a
  * callback to be run before starting the interpreter.
