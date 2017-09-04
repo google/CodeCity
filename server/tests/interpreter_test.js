@@ -29,15 +29,16 @@ var util = require('util');
 //var toSource = require('tosource');
 
 var Interpreter = require('../interpreter');
-var es5 = require('./interpreter_es5');
-var es6 = require('./interpreter_es6');
+var common = require('./interpreter_common');
 var testcases = require('./testcases');
 
 // Prepare static interpreter instance for runTest.
 var interpreter = new Interpreter;
-interpreter.createThread(es5);
+interpreter.createThread(common.es5);
 interpreter.run();
-interpreter.createThread(es6);
+interpreter.createThread(common.es6);
+interpreter.run();
+interpreter.createThread(common.net);
 interpreter.run();
 interpreter.addVariableToScope(interpreter.global, 'src');
 
@@ -96,9 +97,11 @@ function runTest(t, name, src, expected) {
  */
 function runComplexTest(t, name, src, expected, initFunc, asyncFunc) {
   var intrp = new Interpreter;
-  intrp.createThread(es5);
+  intrp.createThread(common.es5);
   intrp.run();
-  intrp.createThread(es6);
+  intrp.createThread(common.es6);
+  intrp.run();
+  intrp.createThread(common.net);
   intrp.run();
   if (initFunc) {
     initFunc(intrp);
@@ -141,20 +144,21 @@ function runComplexTest(t, name, src, expected, initFunc, asyncFunc) {
  * @param {number|string|boolean|null|undefined} expected The expected
  *     completion value.
  * @param {Function(Interpreter)=} initFunc Optional function to be
- *     called after creating new interpreter instance and running
- *     es5 but before running src.  Can be used to insert extra
- *     native functions into the interpreter.  initFunc is called
- *     with the interpreter instance to be configured as its
- *     parameter.
+ *     called after creating and initialzing new interpreter but
+ *     before running src.  Can be used to insert extra native
+ *     functions into the interpreter.  initFunc is called with the
+ *     interpreter instance to be configured as its parameter.
  * @param {Function(Interpreter)=} sideFunc Optional (optionally
  *     async) function to be called after the interpreter has been
  *     .start()ed.
  */
 async function runAsyncTest(t, name, src, expected, initFunc, sideFunc) {
   var intrp = new Interpreter;
-  intrp.createThread(es5);
+  intrp.createThread(common.es5);
   intrp.run();
-  intrp.createThread(es6);
+  intrp.createThread(common.es6);
+  intrp.run();
+  intrp.createThread(common.net);
   intrp.run();
   if (initFunc) {
     initFunc(intrp);
@@ -964,7 +968,7 @@ exports.testThreading = function(t) {
 };
 
 /**
- * Run a test of the .start() and .stop() methods on Interpreter
+ * Run a test of the .start() and .pause() methods on Interpreter
  * instances.  This is an async test because we use real (albeit
  * small) timeouts to make sure everything works as it ought to.
  * @param {!T} t The test runner object.
@@ -982,9 +986,11 @@ exports.testStartStop = async function(t) {
         x++;
       };
   `;
-  intrp.createThread(es5);
+  intrp.createThread(common.es5);
   intrp.run();
-  intrp.createThread(es6);
+  intrp.createThread(common.es6);
+  intrp.run();
+  intrp.createThread(common.net);
   intrp.run();
   try {
     intrp.start();
@@ -996,10 +1002,12 @@ exports.testStartStop = async function(t) {
     await snooze(0);
     intrp.createThread(src);
     await snooze(29);
-    intrp.stop();
+    intrp.pause();
   } catch (e) {
     t.crash(name, util.format('%s\n%s', src, e.stack));
     return;
+  } finally {
+    intrp.stop();
   }
   var r = intrp.getValueFromScope(intrp.global, 'x');
   var expected = 2;
@@ -1010,8 +1018,8 @@ exports.testStartStop = async function(t) {
         String(r), String(expected), 29));
   }
 
-  // Check that .stop() actually stops thing.
-  name = 'testStop';
+  // Check that .pause() actually paused execution.
+  name = 'testPause';
   await snooze(10);
   var r = intrp.getValueFromScope(intrp.global, 'x');
   var expected = 2;

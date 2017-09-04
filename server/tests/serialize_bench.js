@@ -27,8 +27,7 @@
 const util = require('util');
 
 const Interpreter = require('../interpreter');
-var es5 = require('./interpreter_es5');
-var es6 = require('./interpreter_es6');
+var common = require('./interpreter_common');
 const Serializer = require('../serialize');
 
 /**
@@ -41,9 +40,11 @@ const Serializer = require('../serialize');
 function runInterpreterBench(b, name, src) {
   for (var i = 0; i < 4; i++) {
     var intrp1 = new Interpreter;
-    intrp1.createThread(es5);
+    intrp1.createThread(common.es5);
     intrp1.run();
-    intrp1.createThread(es6);
+    intrp1.createThread(common.es6);
+    intrp1.run();
+    intrp1.createThread(common.net);
     intrp1.run();
 
     var err = undefined;
@@ -52,6 +53,9 @@ function runInterpreterBench(b, name, src) {
       var json = Serializer.serialize(intrp1);
       var intrp2 = new Interpreter;
       Serializer.deserialize(json, intrp2);
+      // Deserialized interpreter was stopped, but we want to be able to
+      // step/run it, so wake it up to PAUSED.
+      intrp2.pause();
       b.start(name, i);
       intrp2.run();
       b.end(name, i);

@@ -152,6 +152,12 @@ Serializer.deserialize = function(json, intrp) {
       }
     }
   }
+  // Finally: fixup interpreter state.  Checkpointed interpreter was
+  // probably paused, but because we're restoring from a checkpoint
+  // the resurrected interpreter is actually stopped (i.e., with no
+  // listening sockets, and with quesitonable timer state
+  // information).
+  intrp.status = Interpreter.Status.STOPPED;
 };
 
 /**
@@ -192,8 +198,9 @@ Serializer.serialize = function(intrp) {
   }
 
   // Properties on Interpreter instances to ignore.
-  var exclude = ['Object', 'Function', 'Array', 'Date', 'RegExp', 'Error',
-                 'Thread', 'stepFunctions_', 'runner_', 'listeners'];
+  var exclude = ['stepFunctions_', 'runner_',
+                 'Object', 'Function', 'Array', 'Date', 'RegExp', 'Error',
+                 'Thread', 'Server'];
   // Find all objects.
   var objectList = [];
   Serializer.objectHunt_(intrp, objectList, Serializer.excludeTypes, exclude);
@@ -315,7 +322,8 @@ Serializer.getTypesDeserialize_ = function (intrp) {
     'PseudoDate': intrp.Date,
     'PseudoRegExp': intrp.RegExp,
     'PseudoError': intrp.Error,
-    'Node': Interpreter.Node,
+    'Server': intrp.Server,
+    'Node': Interpreter.Node
   };
 };
 
