@@ -204,6 +204,12 @@ CCC.World.preprocessMessage = function(msg) {
  * @param {!Object} msg JSON structure.
  */
 CCC.World.renderMessage = function(msg) {
+  if (isNaN(CCC.World.lastWidth)) {
+    // Race condition, message has arrived before world is ready to render.
+    // Just add to the panorama queue, it will be rendered later.
+    CCC.World.panoramaMessages.push(msg);
+    return;
+  }
   if (!CCC.World.panelWidths.length) {
     CCC.World.panelWidths = CCC.World.rowWidths();
   }
