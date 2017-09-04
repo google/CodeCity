@@ -155,8 +155,7 @@ Serializer.deserialize = function(json, intrp) {
   // Finally: fixup interpreter state.  Checkpointed interpreter was
   // probably paused, but because we're restoring from a checkpoint
   // the resurrected interpreter is actually stopped (i.e., with no
-  // listening sockets, and with quesitonable timer state
-  // information).
+  // listening sockets, and with questionable timer state information).
   intrp.status = Interpreter.Status.STOPPED;
 };
 

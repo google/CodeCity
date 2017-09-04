@@ -129,7 +129,7 @@ function runComplexTest(t, name, src, expected, initFunc, asyncFunc) {
 
 /**
  * Run a (truly) asynchronous test of the interpreter.  A new
- * interpreter instance is created for each test.  Special functions
+ * Interpreter instance is created for each test.  Special functions
  * resolve() and reject() are inserted in the global scope; they will
  * end the test.  If resolve() is called the test will end normally
  * and the argument supplied will be compared with the expected value;
