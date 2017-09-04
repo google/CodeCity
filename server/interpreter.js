@@ -462,7 +462,22 @@ Interpreter.prototype.pause = function() {
       // No state change, so nothing to do.
       break;
     case Interpreter.Status.STOPPED:
-      // TODO(cpcallen): restore listened ports.
+      for (var port in this.listeners) {
+        var intrp = this;
+        var server = this.listeners[port];
+        server.listen(undefined, function(error) {
+          // Something went wrong while re-listening.  Maybe port in use.
+          console.log('Re-listen on port %s failed: %s: %s', server.port,
+                      error.name, error.message);
+          // Report this to userland by calling .onError on proto
+          // (with this === proto) - for lack of a better option.
+          var func = intrp.getProperty(server.proto, 'onError')
+          var userError = intrp.nativeToPseudo(error);
+          if (func instanceof intrp.Function) {
+            intrp.createThreadForFuncCall(func, server.proto, [userError]);
+          }
+        });
+      }
   }
   this.status = Interpreter.Status.PAUSED;
 };
@@ -477,8 +492,10 @@ Interpreter.prototype.stop = function() {
     // Take care of RUNNING -> PAUSED transition if required.
     this.pause();
   }
+  for (var port in this.listeners) {
+    this.listeners[port].unlisten();
+  }
   this.status = Interpreter.Status.STOPPED;
-  // TODO(cpcallen): Unlisten listened ports.
 };
 
 /**
@@ -2476,8 +2493,8 @@ Interpreter.prototype.Error.prototype.toString = function() {
  * @param {!Interpreter.prototype.Object} proto
  */
 Interpreter.prototype.Server = function(port, proto) {
-  this.port_ = 0;
-  /** @type {Interpreter.prototype.Object} */ this.proto_ = null;
+  this.port = 0;
+  /** @type {Interpreter.prototype.Object} */ this.proto = null;
   /** @type {net.Server} */ this.server_ = null;
   throw Error('Inner class constructor not callable on prototype');
 };
@@ -2870,16 +2887,17 @@ Interpreter.prototype.installTypes = function() {
    * for that if desired.
    * @constructor
    * @extends {Interpreter.prototype.Server}
-   * @param {number} port Port to listen on.
+   * @param {number=} port Port to listen on.  Should be undefined
+   *     only when deserializing.
    * @param {!Interpreter.prototype.Object} proto Prototype object for
    *     new connections.
    */
   intrp.Server = function(port, proto) {
-    if (port !== (port >>> 0) || port > 0xffff) {
-      throw RangeError('invalid port');
+    if ((port !== (port >>> 0) || port > 0xffff) && port !== undefined) {
+      throw RangeError('invalid port ' + port);
     }
-    this.port_ = port;
-    this.proto_ = proto;
+    this.port = port;
+    this.proto = proto;
     this.server_ = null;
   };
 
@@ -2889,8 +2907,11 @@ Interpreter.prototype.installTypes = function() {
    * @param {!Function=} onError Callback to call in case of error.
    */
   intrp.Server.prototype.listen = function(onListening, onError) {
-    // Invariant check.
-    if (intrp.listeners[this.port_] !== this) {
+    // Invariant checks.
+    if (this.port === undefined || !(this.proto instanceof intrp.Object)) {
+      throw Error('Invalid Server state');
+    }
+    if (intrp.listeners[this.port] !== this) {
       throw Error('Listening on server not listed in .listeners??');
     }
     var server = this;  // Because this will be undefined in handlers below.
@@ -2908,7 +2929,7 @@ Interpreter.prototype.installTypes = function() {
       console.log('Connection from %s', socket.remoteAddress);
 
       // Create new object from proto and call onConnect.
-      var obj = new intrp.Object(server.proto_);
+      var obj = new intrp.Object(server.proto);
       obj.socket = socket;
       var func = intrp.getProperty(obj, 'onConnect');
       if (func instanceof intrp.Function) {
@@ -2958,17 +2979,17 @@ Interpreter.prototype.installTypes = function() {
     netServer.on('error', function(error) {
       // TODO(cpcallen): attach additional information about
       // reason for failure.
-      console.log('Listen on port %s failed: %s: %s', server.port_,
+      console.log('Listen on port %s failed: %s: %s', server.port,
                   error.name, error.message);
       onError && onError(error);
     });
 
     netServer.on('close', function() {
-      console.log('Done listening on port %s', server.port_);
+      console.log('Done listening on port %s', server.port);
       server.server_ = null;
     });
 
-    netServer.listen(this.port_);
+    netServer.listen(this.port);
     this.server_ = netServer;
   };
 

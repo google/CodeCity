@@ -53,6 +53,9 @@ function runInterpreterBench(b, name, src) {
       var json = Serializer.serialize(intrp1);
       var intrp2 = new Interpreter;
       Serializer.deserialize(json, intrp2);
+      // Deserialized interpreter was stopped, but we want to be able to
+      // step/run it, so wake it up to PAUSED.
+      intrp2.pause();
       b.start(name, i);
       intrp2.run();
       b.end(name, i);
