@@ -41,6 +41,7 @@ $.http.IncomingMessage.prototype.parse = function(line) {
   // Returns true if parsing is complete, false if more lines are needed.
   if (this.state_ === 0) {
     // Match "GET /images/logo.png HTTP/1.1"
+    line = line.trim();
     var m = line.match(/^(GET|POST) +(\S+)/);
     if (!m) {
       $.system.log('Unrecognized WWW request line:', line);
@@ -54,6 +55,7 @@ $.http.IncomingMessage.prototype.parse = function(line) {
     return false;
   }
   if (this.state_ === 1) {
+    line = line.trim();
     if (!line) {
       if (this.method === 'POST') {
         this.state_ = 2;
@@ -291,8 +293,26 @@ $.http.connection.onConnect = function() {
   this.response = new $.http.ServerResponse(this);
 };
 
-$.http.connection.onReceiveLine = function(line) {
-  if (!this.request.parse(line)) {
+$.http.connection.onReceive = function(data) {
+  this.buffer += data;
+  var lf;
+  // Start in line-delimited mode, parsing HTTP headers.
+  while ((lf = this.buffer.indexOf('\n')) !== -1) {
+    try {
+      this.onReceiveChunk(this.buffer.substring(0, lf + 1));
+    } finally {
+      this.buffer = this.buffer.substring(lf + 1);
+    }
+  }
+  if (this.request.state_ === 2) {
+    // Waiting for POST data, not line-delimited.
+    this.onReceiveChunk(this.buffer);
+    this.buffer = '';
+  }
+};
+
+$.http.connection.onReceiveChunk = function(chunk) {
+  if (!this.request.parse(chunk)) {
     return;  // Wait for more lines to arrive.
   }
 
