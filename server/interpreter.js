@@ -70,13 +70,16 @@ var Interpreter = function() {
   // Set up threads and scheduler stuff:
   this.threads = [];
   this.thread = null;
-  this.initUptime();
-  this.previousTime_ = 0;
-  this.status = Interpreter.Status.PAUSED;
   this.runner_ = null;
   this.done = true;  // True if any non-ZOMBIE threads exist.
   // Set up networking stuff:
   this.listeners = Object.create(null);
+
+  // Bring interpreter up to PAUSED status, setting up timers etc.
+  this.status = Interpreter.Status.STOPPED;
+  this.previousTime_ = 0;
+  this.cumulativeTime_ = 0;
+  this.pause();
 };
 
 /**
@@ -85,20 +88,23 @@ var Interpreter = function() {
  */
 Interpreter.Status = {
   /**
-   * Won't run code or listen on network sockets.
+   * Won't run code.  Any listening sockets are unlistened.  No time
+   * passes (as measured by .uptime() and .now(), which underly
+   * setTimeout etc.)
    */
   STOPPED: 0,
 
   /**
-   * Will listen on network sockets, but won't automatically execute
-   * code in response to thread creation, timeouts or network
-   * activity; user must call .step() or .run() for any JS to run.
+   * Will run code *only* if .step() or .run() is called.  Will listen
+   * on network sockets (including re-listening on any that were
+   * unlistened because the interpreter was stopped).  Time will pass
+   * (as measured by .uptime() and .now()).
    */
   PAUSED: 1,
 
   /**
-   * Will listen on network sockets and automatically execute code in
-   * response to thread creation, timeouts and network activity.
+   * Will run code automatically in response to thread creation,
+   * timeouts and network activity.
    */
   RUNNING: 2
 };
@@ -181,30 +187,22 @@ Interpreter.prototype.parse = function(str) {
 };
 
 /**
- * Initialise internal structures for uptime() and now().
- */
-Interpreter.prototype.initUptime = function() {
-  this.startTime_ = process.hrtime();
-};
-
-/**
  * Return a monotonically increasing count of milliseconds since this
- * Interpreter instance was most recently started, not including time
- * when the interpreter runtime was suspended by the host OS (say,
- * because the machine was asleep).
- * @return {number} Elapsed total time in milliseconds.
+ * Interpreter was last brought to PAUSED or RUNNING status from
+ * STOPPED.  This excludes time when Node was suspended by the host OS
+ * (say, because the machine was asleep).
+ * @return {number} Elapsed time in milliseconds.
  */
 Interpreter.prototype.uptime = function() {
-  var t = process.hrtime(this.startTime_);
+  var t = process.hrtime(this.hrStartTime_);
   return t[0] * 1000 + t[1] / 1000000;
 };
 
 /**
  * Return a monotonically increasing count of milliseconds since this
  * Interpreter instance was created.  In the event of an interpreter
- * being serialized / deserialized, it is expected that after
- * deserialization that this will continue from where it left off
- * before serialization.
+ * being serialized / deserialized, this count will continue from
+ * where it left off before serialization.
  * @return {number} Elapsed total time in milliseconds.
  */
 Interpreter.prototype.now = function() {
@@ -462,17 +460,24 @@ Interpreter.prototype.start = function() {
  * STOPPED, begin listening on any listened ports.  If it was
  * previously RUNNING, ensure the interpreter takes no further action
  * of its own.
+ *
+ * Call this function before serializing a RUNNING or PAUSED
+ * interpreter to ensure correct timer restoration when deserializing.
+ * (No need to call it if instance is already STOPPED.)
  */
 Interpreter.prototype.pause = function() {
   switch (this.status) {
     case Interpreter.Status.RUNNING:
       clearTimeout(this.runner_);
       this.runner_ = null;
+      this.cumulativeTime_ = this.now();  // Save elapsed time.
       break;
     case Interpreter.Status.PAUSED:
-      // No state change, so nothing to do.
+      // No state change; just update elapsed time.
+      this.cumulativeTime_ = this.now();
       break;
     case Interpreter.Status.STOPPED:
+      // Re-listen to any previously listened ports:
       for (var port in this.listeners) {
         var intrp = this;
         var server = this.listeners[port];
@@ -489,6 +494,10 @@ Interpreter.prototype.pause = function() {
           }
         });
       }
+      // Reset .uptime() to start counting from *NOW*, and .now() to
+      // continue from where it was before the interpreter was stopped.
+      this.previousTime_ = this.cumulativeTime_;
+      this.hrStartTime_ = process.hrtime();
   }
   this.status = Interpreter.Status.PAUSED;
 };
@@ -499,10 +508,12 @@ Interpreter.prototype.pause = function() {
  * takes no further action of its own.
  */
 Interpreter.prototype.stop = function() {
-  if (this.status !== Interpreter.Status.STOPPED) {
-    // Take care of RUNNING -> PAUSED transition if required.
-    this.pause();
+  if (this.status === Interpreter.Status.STOPPED) {
+    return;
   }
+  // Do RUNNING -> PAUSED transition if required; update elapsed time.
+  this.pause();
+  // Unlisten to network sockets.
   for (var port in this.listeners) {
     this.listeners[port].unlisten();
   }
