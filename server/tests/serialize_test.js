@@ -68,6 +68,7 @@ function runTest(t, name, src1, src2, expected, steps) {
         intrp1.run();
       }
     }
+    intrp1.pause();  // Save timer info.
   } catch (e) {
     t.crash(name + 'Pre', e);
     return;
@@ -118,7 +119,7 @@ function runTest(t, name, src1, src2, expected, steps) {
  * resolve() and reject() are inserted in the global scope; they will
  * end each section of the test.  The caller can additionally supply a
  * callback to be run before starting the interpreter.
- * 
+ *
  * Full procedure:
  * - Create and initialize an interpreter instance.
  * - Call initFunc, if supplied, on first interpreter instance.
@@ -191,7 +192,7 @@ async function runAsyncTest(t, name, src1, src2, expected, initFunc) {
   }
 
   intrp1.stop();
-  
+
   // Restore into new interpreter.
   var intrp2 = new Interpreter;
   if (initFunc) {
@@ -277,10 +278,25 @@ exports.testRoundtripDetails = function(t) {
 };
 
 /**
- * Run tests of post-roundtrip interpreter networking state.
+ * Run tests of post-roundtrip interpreter timers & networking state.
  * @param {!T} t The test runner object.
  */
-exports.testNetworking = async function(t) {
+exports.testRoundtripAsync = async function(t) {
+  // Run a test of timer preservation during serialization/deserialization.
+  var name = 'testRestoreTimers';
+  var src1 = `
+      var x = '';
+      setTimeout(function() { x += '1'; }, 0);
+      setTimeout(function() { resolve(); }, 10);
+      setTimeout(function() { x += '3'; }, 20);
+      setTimeout(function() { x += '4'; }, 40);
+  `;
+  var src2 = `
+      x += '2';
+      setTimeout(function() { resolve(x); }, 11);
+  `;
+  await runAsyncTest(t, name, src1, src2, '123');
+
   //  Run a test of the server re-listening to sockets after being
   //  deserialized.
   var name = 'testPostRestoreNetworkInbound';

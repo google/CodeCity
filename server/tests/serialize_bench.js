@@ -50,6 +50,7 @@ function runInterpreterBench(b, name, src) {
     var err = undefined;
     try {
       intrp1.createThread(src);
+      intrp1.stop();
       var json = Serializer.serialize(intrp1);
       var intrp2 = new Interpreter;
       Serializer.deserialize(json, intrp2);
@@ -61,6 +62,8 @@ function runInterpreterBench(b, name, src) {
       b.end(name, i);
     } catch (err) {
       b.crash(name, util.format('%s\n%s', src, err.stack));
+    } finally {
+      intrp2.stop();
     }
   }
 };
