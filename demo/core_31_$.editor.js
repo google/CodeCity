@@ -92,69 +92,72 @@ $.editor.save = function(obj, key, src) {
 
 
 $.editor.page = function(request, response) {
-  var params = request.parameters;
-  var objId = params.objId;
-  var obj = $.editor.objs[params.objId];
-  if (!$.utils.isObject(obj)) {
-    // Bad edit URL.
-    this.default();
-    return;
-  }
-  var name = params.name, key = params.key, src = params.src;
-  var status = '';
-  if (src) {
-    try {
-      // Use Acorn to trim source to first expression.
-      var ast = $.utils.acorn.parseExpressionAt(src, 0, { ecmaVersion: 5 });
-      src = src.substring(ast.start, ast.end);
-      src = $.editor.save(obj, key, src);
-      status = '(saved)';
-    } catch (e) {
-      status = '(ERROR: ' + String(e) + ')';
-    }
-  } else {
-    src = $.editor.load(obj, key);
-  }
-  var body = '<form action="/edit" method="post">';
-  body += '<button type="submit" class="jfk-button-submit" id="submit"' +
-      ' onclick="document.getElementById(\'src\').value = editor.getValue()">Save</button>';
-  body += '<h1>Editing ' + $.utils.htmlEscape(name) + '.' +
-      $.utils.htmlEscape(key) + ' <span id="status">' + status + '</span></h1>';
-  body += '<input name="objId" type="hidden" value="' +
-      $.utils.htmlEscape(objId) + '">';
-  body += '<input name="name" type="hidden" value="' +
-      $.utils.htmlEscape(name) + '">';
-  body += '<input name="key" type="hidden" value="' +
-      $.utils.htmlEscape(key) + '">';
-  body += '<textarea name="src" id="src">' + $.utils.htmlEscape(src) + '\n</textarea>';
-  body += '</form>';
-  body += '<script>';
-  body += '  var editor = CodeMirror.fromTextArea(document.getElementById("src"), {';
-  body += '    lineNumbers: true,';
-  body += '    matchBrackets: true,';
-  body += '    viewportMargin: Infinity,';
-  body += '  });';
-  body += '  editor.on("change", function() {document.getElementById("status").innerText = "(modified)"});';
-  body += '</script>';
-
-  response.write('<!DOCTYPE html>');
-  response.write('<html><head>');
-  response.write('<title>Code Editor for ' +
-      $.utils.htmlEscape(name) + '.' + $.utils.htmlEscape(key) + '</title>');
-  response.write('<link href="/static/client/jfk.css" rel="stylesheet">');
-  response.write('<link rel="stylesheet" href="/static/CodeMirror/codemirror.css">');
-  response.write('<style>');
-  response.write('  body {margin: 0; font-family: sans-serif}');
-  response.write('  h1 {margin-bottom: 5; font-size: small}');
-  response.write('  #submit {position: fixed; bottom: 1ex; right: 2ex; z-index: 9}');
-  response.write('  .CodeMirror {height: auto; border: 1px solid #eee}');
-  response.write('</style>');
-  response.write('<script src="/static/CodeMirror/codemirror.js"></script>');
-  response.write('<script src="/static/CodeMirror/javascript.js"></script>');
-
-  response.write('</head><body>');
-  response.write(body);
-  response.write('</body></html>');
+  // Overwrite on first execution.
+  $.editor.page = $.jssp.compile($.editor.page);
+  $.editor.page.call(this, request, response);
 };
+$.editor.page.jssp = [
+  '<%',
+  'var params = request.parameters;',
+  'var objId = params.objId;',
+  'var obj = $.editor.objs[params.objId];',
+  'if (!$.utils.isObject(obj)) {',
+  '  // Bad edit URL.',
+  '  $.pages[\'404\'](request, response);',
+  '  return;',
+  '}',
+  'var key = params.key;',
+  'var src = params.src;',
+  'var status = \'\';',
+  'if (src) {',
+  '  try {',
+  '    // Use Acorn to trim source to first expression.',
+  '    var ast = $.utils.acorn.parseExpressionAt(src, 0, { ecmaVersion: 5 });',
+  '    src = src.substring(ast.start, ast.end);',
+  '    src = $.editor.save(obj, key, src);',
+  '    status = \'(saved)\';',
+  '  } catch (e) {',
+  '    status = \'(ERROR: \' + String(e) + \')\';',
+  '  }',
+  '} else {',
+  '  src = $.editor.load(obj, key);',
+  '}',
+  'var name = $.utils.htmlEscape(params.name);',
+  'key = $.utils.htmlEscape(key);',
+  '%>',
+  '<!DOCTYPE html>',
+  '<html><head>',
+  '  <title>Code Editor for <%= name %>.<%= key %></title>',
+  '  <link href="/static/client/jfk.css" rel="stylesheet">',
+  '  <link rel="stylesheet" href="/static/CodeMirror/codemirror.css">',
+  '  <style>',
+  '    body {margin: 0; font-family: sans-serif}',
+  '    h1 {margin-bottom: 5; font-size: small}',
+  '    #submit {position: fixed; bottom: 1ex; right: 2ex; z-index: 9}',
+  '    .CodeMirror {height: auto; border: 1px solid #eee}',
+  '  </style>',
+  '  <script src="/static/CodeMirror/codemirror.js"></script>',
+  '  <script src="/static/CodeMirror/javascript.js"></script>',
+  '</head><body>',
+  '  <form action="/edit" method="post">',
+  '  <button type="submit" class="jfk-button-submit" id="submit"',
+  '    onclick="document.getElementById(\'src\').value = editor.getValue()">Save</button>',
+  '  <h1>Editing <%= name %>.<%= key %>',
+  '    <span id="status"><%= status %></span></h1>',
+  '  <input name="objId" type="hidden" value="<%= $.utils.htmlEscape(objId) %>">',
+  '  <input name="name" type="hidden" value="<%= name %>">',
+  '  <input name="key" type="hidden" value="<%= key %>">',
+  '  <textarea name="src" id="src"><%= $.utils.htmlEscape(src) %>\n</textarea>',
+  '  </form>',
+  '  <script>',
+  '    var editor = CodeMirror.fromTextArea(document.getElementById(\'src\'), {',
+  '      lineNumbers: true,',
+  '      matchBrackets: true,',
+  '      viewportMargin: Infinity,',
+  '    });',
+  '    editor.on(\'change\', function() {document.getElementById("status").innerText = \'(modified)\'});',
+  '  </script>',
+  '</body></html>',
+].join('\n');
 
 $.http.router.edit = {regexp: /^\/edit(\?|$)/, handler: $.editor.page};
