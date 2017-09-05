@@ -640,6 +640,7 @@ Interpreter.prototype.initObject = function(scope) {
   wrapper = function(obj) {
     throwIfNullUndefined(obj);
     var props = (obj instanceof thisInterpreter.Object) ? obj.properties : obj;
+    // TODO(cpcallen): Audit for possible incorrect usage of nativeToPseudo.
     return thisInterpreter.nativeToPseudo(Object.getOwnPropertyNames(props));
   };
   this.createNativeFunction('Object.getOwnPropertyNames', wrapper, false);
@@ -647,6 +648,7 @@ Interpreter.prototype.initObject = function(scope) {
   wrapper = function(obj) {
     throwIfNullUndefined(obj);
     if (!(obj instanceof thisInterpreter.Object)) {
+      // TODO(cpcallen): Audit for possible incorrect usage of nativeToPseudo.
       return thisInterpreter.nativeToPseudo(Object.keys(obj));
     }
     var list = [];
@@ -655,6 +657,7 @@ Interpreter.prototype.initObject = function(scope) {
         list.push(key);
       }
     }
+    // TODO(cpcallen): Audit for possible incorrect usage of nativeToPseudo.
     return thisInterpreter.nativeToPseudo(list);
   };
   this.createNativeFunction('Object.keys', wrapper, false);
@@ -866,7 +869,13 @@ Interpreter.prototype.initFunction = function(scope) {
     state.arguments_ = [];
     if (args !== null && args !== undefined) {
       if (args instanceof thisInterpreter.Object) {
-        state.arguments_ = thisInterpreter.pseudoToNative(args);
+        var len = thisInterpreter.getProperty(args, 'length');
+        for (var i = 0; i < len; i++) {
+          if (thisInterpreter.hasProperty(args, i)) {
+            state.arguments_[i] = thisInterpreter.getProperty(args, i);
+          }
+          state.arguments_.length = len;
+        }
       } else {
         thisInterpreter.throwException(thisInterpreter.TYPE_ERROR,
             'CreateListFromArrayLike called on non-object');
@@ -1163,6 +1172,7 @@ Interpreter.prototype.initString = function(scope) {
 
   wrapper = function(compareString /*, locales, options*/) {
     // Messing around with arguments so that function's length is 1.
+    // TODO(cpcallen): Audit for possible incorrect usage of pseudoToNative.
     var locales = arguments.length > 1 ?
         thisInterpreter.pseudoToNative(arguments[1]) : undefined;
     var options = arguments.length > 2 ?
@@ -1176,6 +1186,7 @@ Interpreter.prototype.initString = function(scope) {
       separator = separator.regexp;
     }
     var jsList = this.split(separator, limit);
+    // TODO(cpcallen): Audit for possible incorrect usage of nativeToPseudo.
     return thisInterpreter.nativeToPseudo(jsList);
   };
   this.createNativeFunction('String.prototype.split', wrapper, false);
@@ -1184,6 +1195,7 @@ Interpreter.prototype.initString = function(scope) {
     if (regexp instanceof thisInterpreter.RegExp) {
       regexp = regexp.regexp;
     }
+    // TODO(cpcallen): Audit for possible incorrect usage of nativeToPseudo.
     return thisInterpreter.nativeToPseudo(this.match(regexp));
   };
   this.createNativeFunction('String.prototype.match', wrapper, false);
@@ -1293,6 +1305,7 @@ Interpreter.prototype.initNumber = function(scope) {
 
   wrapper = function(/*locales, options*/) {
     // Messing around with arguments so that function's length is 0.
+    // TODO(cpcallen): Audit for possible incorrect usage of pseudoToNative.
     var locales = arguments.length > 0 ?
         thisInterpreter.pseudoToNative(arguments[0]) : undefined;
     var options = arguments.length > 1 ?
@@ -1362,6 +1375,7 @@ Interpreter.prototype.initDate = function(scope) {
     wrapper = (function(nativeFunc) {
       return function(/*locales, options*/) {
         // Messing around with arguments so that function's length is 0.
+        // TODO(cpcallen): Audit for possible incorrect usage of pseudoToNative.
         var locales = arguments.length > 0 ?
             thisInterpreter.pseudoToNative(arguments[0]) : undefined;
         var options = arguments.length > 1 ?
@@ -1507,11 +1521,13 @@ Interpreter.prototype.initJSON = function(scope) {
     } catch (e) {
       thisInterpreter.throwException(thisInterpreter.SYNTAX_ERROR, e.message);
     }
+    // TODO(cpcallen): Audit for possible incorrect usage of nativeToPseudo.
     return thisInterpreter.nativeToPseudo(nativeObj);
   };
   this.createNativeFunction('JSON.parse', wrapper, false);
 
   wrapper = function(value) {
+    // TODO(cpcallen): Audit for possible incorrect usage of pseudoToNative.
     var nativeObj = thisInterpreter.pseudoToNative(value);
     try {
       var str = JSON.stringify(nativeObj);
