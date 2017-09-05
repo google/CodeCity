@@ -89,6 +89,25 @@ $.utils.command.prepositionsRegExp = new RegExp(
     'onto|on +top +of|on|off +of|off|is|into|inside|in +front +of|' +
     'in|from +inside|from|for|beside|beneath|behind|at|as|about)(?:\\s|$)');
 
+$.utils.command.prepositionOptions = [
+  'none',
+  'any',
+  'with/using',
+  'at/to',
+  'in front of',
+  'in/inside/into',
+  'on top of/on/onto/upon',
+  'over',
+  'through',
+  'under/underneath/beneath',
+  'behind',
+  'beside',
+  'for/about',
+  'is',
+  'as',
+  'off/off of'
+];
+
 $.utils.command.parse = function(cmdstr, user) {
   // Parse a user's command into components:
   // verbstr, argstr, args, dobjstr, dobj, prepstr, iobjstr, iobj
