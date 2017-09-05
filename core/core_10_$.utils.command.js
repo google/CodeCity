@@ -85,9 +85,9 @@ $.utils.command.prepositions['off'] = 'off/off of';
 $.utils.command.prepositions['off of'] = 'off/off of';
 
 $.utils.command.prepositionsRegExp = new RegExp(
-    '(?:^|\\s)(with|using|upon|underneath|under|to|through|over|out +of|' +
+    '^(.*\\s)?(with|using|upon|underneath|under|to|through|over|out +of|' +
     'onto|on +top +of|on|off +of|off|is|into|inside|in +front +of|' +
-    'in|from +inside|from|for|beside|beneath|behind|at|as|about)(?:\\s|$)');
+    'in|from +inside|from|for|beside|beneath|behind|at|as|about)(\\s.*)?$');
 
 $.utils.command.prepositionOptions = [
   'none',
@@ -125,14 +125,9 @@ $.utils.command.parse = function(cmdstr, user) {
   var prepstr = '';
   var m = argstr.match($.utils.command.prepositionsRegExp);
   if (m) {
-    prepstr = m[1];
-    var i = argstr.indexOf(prepstr);
-    if (i === -1) {
-      throw RangeError("Can't happen.  Impossible preposition: " + prepstr);
-    }
-    dobjstr = argstr.substring(0, i - 1);
-    iobjstr = argstr.substring(i + prepstr.length + 1);
-    prepstr = prepstr.replace(/ +/g, ' ');
+    dobjstr = m[1].trim();
+    prepstr = m[2].replace(/ +/g, ' ');
+    iobjstr = m[3].trim();
   } else {
     dobjstr = argstr;
   }
