@@ -125,9 +125,9 @@ $.utils.command.parse = function(cmdstr, user) {
   var prepstr = '';
   var m = argstr.match($.utils.command.prepositionsRegExp);
   if (m) {
-    dobjstr = m[1];
+    dobjstr = m[1].trim();
     prepstr = m[2].replace(/ +/g, ' ');
-    iobjstr = m[3];
+    iobjstr = m[3].trim();
   } else {
     dobjstr = argstr;
   }
