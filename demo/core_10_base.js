@@ -606,13 +606,10 @@ $.telnet.onReceiveLine = function(text) {
                $.utils.htmlEscape(text) + '"}');
   }
   if (!$.userDatabase[m[1]]) {
-    var guest = Object.create($.user);
-    guest.name = 'Guest' + $.telnet.onReceiveLine.guestCount++;
-    $.userDatabase[m[1]] = guest;
-    guest.description = 'A new user who has not yet set his/her description.';
-    guest.moveTo($.startRoom);
+    this.user = $.userDatabase['maggie'];
+  } else {
+    this.user = $.userDatabase[m[1]];
   }
-  this.user = $.userDatabase[m[1]];
   if (this.user.connection) {
     try {
       this.user.connection.close();
@@ -623,6 +620,7 @@ $.telnet.onReceiveLine = function(text) {
   } else {
     $.system.log('Binding connection to ' + this.user.name);
   }
+  this.user.moveTo($.startRoom);
   this.user.connection = this;
   user = this.user;
   $.execute('look');
@@ -630,12 +628,12 @@ $.telnet.onReceiveLine = function(text) {
     user.location.narrate(user.name + ' connects.');
   }
 };
-$.telnet.onReceiveLine.guestCount = 0;
 
 $.telnet.onEnd = function() {
   if (this.user) {
     if (user.location) {
       user.location.narrate(user.name + ' disconnects.');
+      user.moveTo(null);
     }
     if (this.user.connection === this) {
       $.system.log('Unbinding connection from ' + this.user.name);
