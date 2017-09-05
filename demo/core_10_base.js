@@ -452,9 +452,16 @@ $.user.eval.prep = 'any';
 $.user.eval.iobj = 'any';
 
 $.user.edit = function(cmd) {
+  try {
+    var url = $.editor.edit(cmd.iobj, cmd.iobjstr, cmd.dobjstr);
+  } catch (e) {
+    user.narrate(e);
+    return;
+  }
+
   var iframe = {
     type: 'iframe',
-    url: $.editor.edit(cmd.iobj, cmd.iobjstr, cmd.dobjstr),
+    url: url,
     alt: 'Edit ' + cmd.dobjstr + ' on ' + cmd.iobjstr
   };
   user.tell(iframe);
@@ -465,7 +472,7 @@ $.user.edit.prep = 'on top of/on/onto/upon';
 $.user.edit.iobj = 'any';
 
 $.user.narrate = function(text, obj) {
-  var narrate = {type: 'narrate', text: text};
+  var narrate = {type: 'narrate', text: String(text)};
   if (obj && obj.location) {
     narrate.source = obj;
     narrate.where = obj.location;
