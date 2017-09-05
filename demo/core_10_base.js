@@ -490,7 +490,7 @@ $.user.writeJson = function(json) {
     return;
   }
   json = $.utils.replacePhysicalsWithName(json);
-  this.connection.write(JSON.stringify(json));
+  this.connection.write(JSON.stringify(json) + '\n');
 };
 
 $.user.create = function(cmd) {
