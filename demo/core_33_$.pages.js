@@ -18,7 +18,7 @@
  */
 
 /**
- * @fileoverview Webserver for Code City.
+ * @fileoverview Web pages for Code City.
  * @author fraser@google.com (Neil Fraser)
  */
 
