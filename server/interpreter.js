@@ -411,26 +411,37 @@ Interpreter.prototype.run = function() {
  * .run() until there are no more sleeping threads.
  */
 Interpreter.prototype.go_ = function() {
+  // Ignore calls to .go_ when PAUSED or STOPPED
   if (this.status !== Interpreter.Status.RUNNING) {
     return;
   }
+  // Kill any existing runner and restart.
+  if (this.runner_) clearTimeout(this.runner_);
   var intrp = this;
-  var repeat = function() {
-    // N.B.: .run may indirectly call .go_ (e.g. via native
-    // function calling .createThread).
+  this.runner_ = setTimeout(function runner() {
+    // Invariant check: pausing or stopping interpreter should cancel
+    // timeout, so we should never get here while it is not RUNNING.
+    if (intrp.status !== Interpreter.Status.RUNNING) {
+      throw Error('Un-cancelled runner on non-RUNNING interpreteter');
+    }
+    // N.B.: .run may indirectly call .go_ or even .pause or .stop
+    // (e.g. via native function calling .createThread, .pause, etc.).
     var r = intrp.run();
-    if (r > 0) {
-      // No more code to run right now, but there is an outstanding timeout.
-      intrp.runner_ = setTimeout(repeat, r - intrp.now());
-    } else if (this.runner_) {
-      // Clear just-completed or no-longer-needed future timeout.
-      clearTimeout(this.runner_);
+    if (intrp.runner_) {
+      // Clear any outstanding timeout.  This might be the
+      // just-completed one that called this invocation of runner, but
+      // it might be a new one created by a reentrant call to .go_
+      // (e.g. via .run -> [native function] -> .createThread).
+      clearTimeout(intrp.runner_);
       intrp.runner_ = null;
     }
-  };
-  // Kill any existing runner and restart.
-  clearTimeout(this.runner_);
-  this.runner_ = setTimeout(repeat, 0);
+    if (r > 0 && intrp.status === Interpreter.Status.RUNNING) {
+      // No more code to run right now, but there is an outstanding
+      // userland timeout, so set up a future reinvocation of runner
+      // when it's time for that to run.
+      intrp.runner_ = setTimeout(runner, r - intrp.now());
+    }
+  });
 };
 
 /**
