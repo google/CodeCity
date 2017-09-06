@@ -1904,8 +1904,8 @@ Interpreter.prototype.arrayPseudoToNative = function(pseudoArray) {
   // pseudoArray might be an object pretending to be an array.  In this case
   // it's possible that length is non-existent, invalid, or smaller than the
   // largest defined numeric property.  Set length explicitly here.
-  nativeArray.length =
-      Interpreter.legalArrayLength(this.getProperty(pseudoArray, 'length'));
+  nativeArray.length = Interpreter.legalArrayLength(
+      this.getProperty(pseudoArray, 'length')) || 0;
   return nativeArray;
 };
 
