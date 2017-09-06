@@ -1874,6 +1874,7 @@ Interpreter.prototype.pseudoToNative = function(pseudoObj, opt_cycles) {
 
 /**
  * Converts from a native JS array to a JS interpreter array.
+ * Does handle non-numeric properties (like str.match's index prop).
  * Does NOT recurse into the array's contents.
  * @param {!Array} nativeArray The JS array to be converted.
  * @return {!Interpreter.Object} The equivalent JS interpreter array.
@@ -1889,9 +1890,10 @@ Interpreter.prototype.arrayNativeToPseudo = function(nativeArray) {
 
 /**
  * Converts from a JS interpreter array to native JS array.
+ * Does handle non-numeric properties (like str.match's index prop).
  * Does NOT recurse into the array's contents.
- * @param {Interpreter.Value} pseudoObj The JS interpreter array to
- *     be converted.
+ * @param {!Interpreter.Object} pseudoObj The JS interpreter array,
+ *     or JS interpreter object pretending to be an array.
  * @return {!Array} The equivalent native JS array.
  */
 Interpreter.prototype.arrayPseudoToNative = function(pseudoArray) {
@@ -1902,7 +1904,8 @@ Interpreter.prototype.arrayPseudoToNative = function(pseudoArray) {
   // pseudoArray might be an object pretending to be an array.  In this case
   // it's possible that length is non-existent, invalid, or smaller than the
   // largest defined numeric property.  Set length explicitly here.
-  nativeArray.length = this.getProperty(pseudoArray, 'length') || 0;
+  nativeArray.length =
+      Interpreter.legalArrayLength(this.getProperty(pseudoArray, 'length'));
   return nativeArray;
 };
 
