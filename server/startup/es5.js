@@ -116,7 +116,7 @@ Object.defineProperty(Object, 'defineProperty', {enumerable: false});
      ['toString', 'pop', 'push', 'shift', 'unshift', 'reverse', 'splice', 'slice', 'join', 'concat', 'indexOf', 'lastIndexOf']],
     [String, 'String',
      ['fromCharCode'],
-     ['trim', 'toLowerCase', 'toUpperCase', 'toLocaleLowerCase', 'toLocaleUpperCase', 'charAt', 'charCodeAt', 'substring', 'slice', 'substr', 'indexOf', 'lastIndexOf', 'concat', 'toLocaleString', 'split', 'match', 'search', 'replace']],
+     ['trim', 'toLowerCase', 'toUpperCase', 'toLocaleLowerCase', 'toLocaleUpperCase', 'charAt', 'charCodeAt', 'substring', 'slice', 'substr', 'indexOf', 'lastIndexOf', 'concat', 'localeCompare', 'split', 'match', 'search', 'replace']],
     [Number, 'Number',
      [],
      ['toExponential', 'toFixed', 'toPrecision', 'toString', 'toLocaleString']],
