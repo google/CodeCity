@@ -975,7 +975,7 @@ exports.testThreading = function(t) {
  */
 exports.testStartStop = async function(t) {
   function snooze(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise(function(resolve, reject) { setTimeout(resolve, ms); });
   }
   var intrp = new Interpreter;
   var name = 'testStart';
