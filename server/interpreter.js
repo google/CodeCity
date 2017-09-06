@@ -876,7 +876,7 @@ Interpreter.prototype.initFunction = function(scope) {
   };
   this.createNativeFunction('Function.prototype.apply', wrapper, false);
 
-  wrapper = function(thisArg, var_args) {
+  wrapper = function(thisArg /*, var_args*/) {
     var state =
         thisInterpreter.thread.stateStack[
             thisInterpreter.thread.stateStack.length - 1];
@@ -1873,11 +1873,10 @@ Interpreter.prototype.pseudoToNative = function(pseudoObj, opt_cycles) {
 };
 
 /**
- * Converts from a JS interpreter array to native JS array.
+ * Converts from a native JS array to a JS interpreter array.
  * Does NOT recurse into the array's contents.
- * @param {Interpreter.Value} pseudoObj The JS interpreter array to
- *     be converted.
- * @return {!Array} The equivalent native JS array.
+ * @param {!Array} nativeArray The JS array to be converted.
+ * @return {!Interpreter.Object} The equivalent JS interpreter array.
  */
 Interpreter.prototype.arrayNativeToPseudo = function(nativeArray) {
   var pseudoArray = new this.Array;
