@@ -1780,38 +1780,62 @@ Interpreter.prototype.callAsyncFunction = function(state) {
 };
 
 /**
- * Converts from a native JS object or value to a JS interpreter object.
- * Can handle JSON-style values.
+ * Converts from a native JS object or value to a JS interpreter
+ * object.  Can handle JSON-style values plus regexps and errors (of
+ * all standard native types), and handles additional properties on
+ * arrays, regexps and errors (just as for plain objects).  Ignores
+ * inherited properties.  Efficiently handles sparse arrays.  Does NOT
+ * handle cyclic data.
  * @param {*} nativeObj The native JS object to be converted.
  * @return {Interpreter.Value} The equivalent JS interpreter object.
  */
 Interpreter.prototype.nativeToPseudo = function(nativeObj) {
-  if (typeof nativeObj === 'boolean' ||
-      typeof nativeObj === 'number' ||
-      typeof nativeObj === 'string' ||
-      nativeObj === null || nativeObj === undefined) {
+  console.log('>>>', nativeObj);
+  if ((typeof nativeObj !== 'object' && typeof nativeObj !== 'function') ||
+      nativeObj === null) {
     return nativeObj;
   }
 
-  if (nativeObj instanceof RegExp) {
-    var pseudoRegexp = new this.RegExp;
-    pseudoRegexp.populate(nativeObj);
-    return pseudoRegexp;
+  var pseudoObj;
+  switch (Object.prototype.toString.apply(nativeObj)) {
+    case '[object Array]':
+      pseudoObj = new this.Array;
+      break;
+    case '[object RegExp]':
+      pseudoObj = new this.RegExp;
+      pseudoObj.populate(nativeObj);
+      break;
+    case '[object Error]':
+      var proto;
+      if (nativeObj instanceof EvalError) {
+        proto = this.EVAL_ERROR;
+      } else if (nativeObj instanceof RangeError) {
+        proto = this.RANGE_ERROR;
+      } else if (nativeObj instanceof ReferenceError) {
+        proto = this.REFERENCE_ERROR;
+      } else if (nativeObj instanceof SyntaxError) {
+        proto = this.SYNTAX_ERROR;
+      } else if (nativeObj instanceof TypeError) {
+        proto = this.TYPE_ERROR;
+      } else if (nativeObj instanceof URIError) {
+        proto = this.URI_ERROR;
+      } else {
+        proto = this.ERROR;
+      }
+      pseudoObj = new this.Error(proto);
+      break;
+    default:
+      pseudoObj = new this.Object;
   }
 
-  var pseudoObj;
-  if (Array.isArray(nativeObj)) {  // Array.
-    pseudoObj = new this.Array;
-    for (var i = 0; i < nativeObj.length; i++) {
-      if (i in nativeObj) {
-        this.setProperty(pseudoObj, i, this.nativeToPseudo(nativeObj[i]));
-      }
-    }
-  } else {  // Object.
-    pseudoObj = new this.Object;
-    for (var key in nativeObj) {
-      this.setProperty(pseudoObj, key, this.nativeToPseudo(nativeObj[key]));
-    }
+  var keys = Object.getOwnPropertyNames(nativeObj);
+  for (var i = 0; i < keys.length; i++) {
+    var key = keys[i];
+    var desc = Object.getOwnPropertyDescriptor(nativeObj, key);
+    desc.value = this.nativeToPseudo(desc.value);
+    // TODO(cpcallen): use this when setProperty fixed:
+    // this.setProperty(pseudoObj, key, Interpreter.VALUE_IN_DESCRIPTOR, desc);
+    this.setProperty(pseudoObj, key, desc.value);
   }
   return pseudoObj;
 };
