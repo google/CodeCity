@@ -640,16 +640,15 @@ Interpreter.prototype.initObject = function(scope) {
   wrapper = function(obj) {
     throwIfNullUndefined(obj);
     var props = (obj instanceof thisInterpreter.Object) ? obj.properties : obj;
-    // TODO(cpcallen): Audit for possible incorrect usage of nativeToPseudo.
-    return thisInterpreter.nativeToPseudo(Object.getOwnPropertyNames(props));
+    return thisInterpreter.arrayNativeToPseudo(
+        Object.getOwnPropertyNames(props));
   };
   this.createNativeFunction('Object.getOwnPropertyNames', wrapper, false);
 
   wrapper = function(obj) {
     throwIfNullUndefined(obj);
     if (!(obj instanceof thisInterpreter.Object)) {
-      // TODO(cpcallen): Audit for possible incorrect usage of nativeToPseudo.
-      return thisInterpreter.nativeToPseudo(Object.keys(obj));
+      return thisInterpreter.arrayNativeToPseudo(Object.keys(obj));
     }
     var list = [];
     for (var key in obj.properties) {
@@ -657,8 +656,7 @@ Interpreter.prototype.initObject = function(scope) {
         list.push(key);
       }
     }
-    // TODO(cpcallen): Audit for possible incorrect usage of nativeToPseudo.
-    return thisInterpreter.nativeToPseudo(list);
+    return thisInterpreter.arrayNativeToPseudo(list);
   };
   this.createNativeFunction('Object.keys', wrapper, false);
 
@@ -868,18 +866,11 @@ Interpreter.prototype.initFunction = function(scope) {
     // Bind any provided arguments.
     state.arguments_ = [];
     if (args !== null && args !== undefined) {
-      if (args instanceof thisInterpreter.Object) {
-        var len = thisInterpreter.getProperty(args, 'length');
-        for (var i = 0; i < len; i++) {
-          if (thisInterpreter.hasProperty(args, i)) {
-            state.arguments_[i] = thisInterpreter.getProperty(args, i);
-          }
-          state.arguments_.length = len;
-        }
-      } else {
+      if (!(args instanceof thisInterpreter.Object)) {
         thisInterpreter.throwException(thisInterpreter.TYPE_ERROR,
             'CreateListFromArrayLike called on non-object');
       }
+      state.arguments_ = thisInterpreter.arrayPseudoToNative(args);
     }
     state.doneExec = false;
   };
@@ -1172,7 +1163,6 @@ Interpreter.prototype.initString = function(scope) {
 
   wrapper = function(compareString /*, locales, options*/) {
     // Messing around with arguments so that function's length is 1.
-    // TODO(cpcallen): Audit for possible incorrect usage of pseudoToNative.
     var locales = arguments.length > 1 ?
         thisInterpreter.pseudoToNative(arguments[1]) : undefined;
     var options = arguments.length > 2 ?
@@ -1186,8 +1176,7 @@ Interpreter.prototype.initString = function(scope) {
       separator = separator.regexp;
     }
     var jsList = this.split(separator, limit);
-    // TODO(cpcallen): Audit for possible incorrect usage of nativeToPseudo.
-    return thisInterpreter.nativeToPseudo(jsList);
+    return thisInterpreter.arrayNativeToPseudo(jsList);
   };
   this.createNativeFunction('String.prototype.split', wrapper, false);
 
@@ -1195,8 +1184,7 @@ Interpreter.prototype.initString = function(scope) {
     if (regexp instanceof thisInterpreter.RegExp) {
       regexp = regexp.regexp;
     }
-    // TODO(cpcallen): Audit for possible incorrect usage of nativeToPseudo.
-    return thisInterpreter.nativeToPseudo(this.match(regexp));
+    return thisInterpreter.arrayNativeToPseudo(this.match(regexp));
   };
   this.createNativeFunction('String.prototype.match', wrapper, false);
 
@@ -1305,7 +1293,6 @@ Interpreter.prototype.initNumber = function(scope) {
 
   wrapper = function(/*locales, options*/) {
     // Messing around with arguments so that function's length is 0.
-    // TODO(cpcallen): Audit for possible incorrect usage of pseudoToNative.
     var locales = arguments.length > 0 ?
         thisInterpreter.pseudoToNative(arguments[0]) : undefined;
     var options = arguments.length > 1 ?
@@ -1375,7 +1362,6 @@ Interpreter.prototype.initDate = function(scope) {
     wrapper = (function(nativeFunc) {
       return function(/*locales, options*/) {
         // Messing around with arguments so that function's length is 0.
-        // TODO(cpcallen): Audit for possible incorrect usage of pseudoToNative.
         var locales = arguments.length > 0 ?
             thisInterpreter.pseudoToNative(arguments[0]) : undefined;
         var options = arguments.length > 1 ?
@@ -1521,13 +1507,11 @@ Interpreter.prototype.initJSON = function(scope) {
     } catch (e) {
       thisInterpreter.throwException(thisInterpreter.SYNTAX_ERROR, e.message);
     }
-    // TODO(cpcallen): Audit for possible incorrect usage of nativeToPseudo.
     return thisInterpreter.nativeToPseudo(nativeObj);
   };
   this.createNativeFunction('JSON.parse', wrapper, false);
 
   wrapper = function(value) {
-    // TODO(cpcallen): Audit for possible incorrect usage of pseudoToNative.
     var nativeObj = thisInterpreter.pseudoToNative(value);
     try {
       var str = JSON.stringify(nativeObj);
@@ -1886,6 +1870,41 @@ Interpreter.prototype.pseudoToNative = function(pseudoObj, opt_cycles) {
   cycles.pseudo.pop();
   cycles.native.pop();
   return nativeObj;
+};
+
+/**
+ * Converts from a JS interpreter array to native JS array.
+ * Does NOT recurse into the array's contents.
+ * @param {Interpreter.Value} pseudoObj The JS interpreter array to
+ *     be converted.
+ * @return {!Array} The equivalent native JS array.
+ */
+Interpreter.prototype.arrayNativeToPseudo = function(nativeArray) {
+  var pseudoArray = new this.Array;
+  var props = Object.getOwnPropertyNames(nativeArray);
+  for (var i = 0; i < props.length; i++) {
+    this.setProperty(pseudoArray, props[i], nativeArray[props[i]]);
+  }
+  return pseudoArray;
+};
+
+/**
+ * Converts from a JS interpreter array to native JS array.
+ * Does NOT recurse into the array's contents.
+ * @param {Interpreter.Value} pseudoObj The JS interpreter array to
+ *     be converted.
+ * @return {!Array} The equivalent native JS array.
+ */
+Interpreter.prototype.arrayPseudoToNative = function(pseudoArray) {
+  var nativeArray = [];
+  for (var key in pseudoArray.properties) {
+    nativeArray[key] = this.getProperty(pseudoArray, key);
+  }
+  // pseudoArray might be an object pretending to be an array.  In this case
+  // it's possible that length is non-existent, invalid, or smaller than the
+  // largest defined numeric property.  Set length explicitly here.
+  nativeArray.length = this.getProperty(pseudoArray, 'length') || 0;
+  return nativeArray;
 };
 
 /**
