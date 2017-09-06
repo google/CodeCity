@@ -1169,7 +1169,7 @@ Interpreter.prototype.initString = function(scope) {
         thisInterpreter.pseudoToNative(arguments[2]) : undefined;
     return this.localeCompare(compareString, locales, options);
   };
-  this.createNativeFunction('String.prototype.toLocaleString', wrapper, false);
+  this.createNativeFunction('String.prototype.localeCompare', wrapper, false);
 
   wrapper = function(separator, limit) {
     if (separator instanceof thisInterpreter.RegExp) {
