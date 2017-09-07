@@ -1036,10 +1036,10 @@ exports.testStartStop = async function(t) {
  * @param {!T} t The test runner object.
  */
 exports.testNetworking = async function(t) {
-  //  Run a test of connectionListen() and connectionUnlisten(), and
-  //  of the server receving data using the .recieve and .end methods
-  //  on a connection object.
-  var name = 'testNetworkInbound';
+  // Run a test of connectionListen() and connectionUnlisten(), and
+  // of the server receving data using the .recieve and .end methods
+  // on a connection object.
+  var name = 'testServerInbound';
   var src = `
       var data = '', conn = {};
       conn.onReceive = function(d) {
@@ -1065,9 +1065,9 @@ exports.testNetworking = async function(t) {
   };
   await runAsyncTest(t, name, src, 'foobar', initFunc);
 
-  //  Run a test of the connectionListen(), connectionUnlisten(),
-  //  connectionWrite() and connectionClose functions.
-  name = 'testNetworkOutbound';
+  // Run a test of the connectionListen(), connectionUnlisten(),
+  // connectionWrite() and connectionClose functions.
+  name = 'testServerOutbound';
   src = `
       var conn = {};
       conn.onConnect = function() {
@@ -1099,8 +1099,8 @@ exports.testNetworking = async function(t) {
   };
   await runAsyncTest(t, name, src, 'foobar', initFunc);
 
-  //  Check to make sure that connectionListen() throws if attempting
-  //  to bind to an invalid port or rebind a port already in use.
+  // Check to make sure that connectionListen() throws if attempting
+  // to bind to an invalid port or rebind a port already in use.
   name = 'testConnectionListenThrows';
   src = `
       var ports = ['foo', {}, -1, 80.8, 9999, 65536];  // 9999 will be in use.
