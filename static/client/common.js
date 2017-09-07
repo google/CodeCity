@@ -46,6 +46,8 @@ CCC.Common.init = function() {
   CCC.Common.parser = new DOMParser();
   CCC.Common.serializer = new XMLSerializer();
   document.body.addEventListener('click', CCC.Common.closeMenu, true);
+  document.body.addEventListener('keydown', CCC.Common.keyDown, true);
+  document.body.addEventListener('keypress', CCC.Common.keyPress, true);
 
   // Report back to the parent frame that we're fully loaded and ready to go.
   parent.postMessage('init', location.origin);
@@ -157,8 +159,8 @@ CCC.Common.closeMenu = function() {
   var menu = document.getElementById('menu');
   if (menu) {
     menu.parentNode.removeChild(menu);
+    CCC.Common.parentFocus();
   }
-  parent.focus();
 };
 
 /**
@@ -169,7 +171,61 @@ CCC.Common.commandFunction = function() {
   if (CCC.Common.isConnected) {
     parent.postMessage({'commands': [this.innerText]}, location.origin);
   }
-  parent.focus();
+  CCC.Common.parentFocus();
+};
+
+/**
+ * The user pressed a key with the focus in the world/log frame.
+ * Move focus back to the parent frame and inject the keystroke into the
+ * command area.
+ * @param {!KeyboardEvent} e Keyboard down event.
+ */
+CCC.Common.keyDown = function(e) {
+  if (e.key === 'Alt' || e.key === 'Control' || e.key === 'Meta') {
+    // Don't steal focus if the user is pressing a modifier key in preparation
+    // for a cut/copy operation.
+    return;
+  }
+  if (e.ctrlKey || e.altKey || e.metaKey) {
+    // Allow Chrome time to complete a copy before moving focus.
+    setTimeout(CCC.Common.parentFocus, 0);
+  } else {
+    CCC.Common.parentFocus(e);
+  }
+};
+
+/**
+ * The user pressed a key with the focus in the world/log frame.
+ * Move focus back to the parent frame and inject the keystroke into the
+ * command area.
+ * @param {!KeyboardEvent} e Keyboard press event.
+ */
+CCC.Common.keyPress = function(e) {
+  // Allow Firefox time to complete a copy before moving focus.
+  setTimeout(CCC.Common.parentFocus, 0);
+};
+
+/**
+ * Move focus back to the parent frame.  If specified, inject the keystroke
+ * into the command area.
+ * @param {KeyboardEvent} e Optional keyboard event.
+ */
+CCC.Common.parentFocus = function(e) {
+  try {
+    var ct = parent.document.getElementById('commandTextarea');
+    ct.focus();
+    // Chrome won't type the character in the textarea after a focus change.
+    // For the easy case where the field is empty, just add the character.
+    // TODO: Handle cases where the field is not empty.
+    if (e && e.key.length === 1 && !ct.value.length) {
+      ct.value = e.key;
+      // Firefox will type the character a second time, prevent this.
+      e.preventDefault();
+    }
+  } catch (e) {
+    // Cross-frame is risky in some browsers.  Fallback method.
+    parent.focus();
+  }
 };
 
 /**
