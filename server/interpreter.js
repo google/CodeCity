@@ -1790,7 +1790,6 @@ Interpreter.prototype.callAsyncFunction = function(state) {
  * @return {Interpreter.Value} The equivalent JS interpreter object.
  */
 Interpreter.prototype.nativeToPseudo = function(nativeObj) {
-  console.log('>>>', nativeObj);
   if ((typeof nativeObj !== 'object' && typeof nativeObj !== 'function') ||
       nativeObj === null) {
     return nativeObj;
