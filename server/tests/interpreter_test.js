@@ -846,6 +846,63 @@ exports.testLegalArrayIndexLength = function(t) {
 };
 
 /**
+ * Unit tests for Interpreter.prototype.nativeToPseudo.
+ * @param {!T} t The test runner object.
+ */
+exports.testNativeToPseudo = function(t) {
+  var check = function(feature, result, expected) {
+    if (Object.is(result, expected)) {
+      t.pass(name + feature);
+    } else {
+      t.fail(name + feature, util.format('got: %s  want: %s',
+                                         String(result), String(expected)));
+    }
+  };
+
+  var intrp = new Interpreter;
+  intrp.createThread(common.es5);  // Ensure Error.prototype.name etc. defined.
+  intrp.run();
+
+  // Test handling of Arrays (including extra non-index properties).
+  var props = {0: 0, 1: 1, 2: 2, length: 3, extra: 4};
+  var arr = [];
+  for (var k in props) {
+    if (!props.hasOwnProperty(k)) continue;
+    arr[k] = props[k];
+  }
+  var pArr = intrp.nativeToPseudo(arr);
+  for (var k in props) {
+    if (!props.hasOwnProperty(k)) continue;
+    var name = 'testNativeToPseudo(array)["' + k + '"]';
+    var r = intrp.getProperty(pArr, k);
+    check('.' + k, r, props[k]);
+  }
+
+  // Test handling of Errors.
+  var cases = [
+    [ Error, intrp.ERROR, 'Error' ],
+    [ EvalError, intrp.EVAL_ERROR ],
+    [ RangeError, intrp.RANGE_ERROR ],
+    [ ReferenceError, intrp.REFERENCE_ERROR ],
+    [ SyntaxError, intrp.SYNTAX_ERROR ],
+    [ TypeError, intrp.TYPE_ERROR ],
+    [ URIError, intrp.URI_ERROR ]];
+  for (var i = 0, tc; tc = cases[i], i < cases.length; i++) {
+    var Err = tc[0], proto = tc[1];
+    var name = 'testNativeToPseudo(' + Err.prototype.name + ')';
+    var errName, errMessage = 'test ' + Err.prototype.name;
+    var error = Err(errMessage);
+    var pError = intrp.nativeToPseudo(error);
+    
+    check(' instanceof intrp.Error', pError instanceof intrp.Error, true);
+    check('.proto', pError.proto, proto);
+    check('.name', intrp.getProperty(pError, 'name'), Err.prototype.name);
+    check('.message', intrp.getProperty(pError, 'message'), errMessage);
+    check('.stack', intrp.getProperty(pError, 'stack'), error.stack);
+  }
+};
+
+/**
  * Run a test of asynchronous functions:
  * @param {!T} t The test runner object.
  */
@@ -1103,40 +1160,48 @@ exports.testNetworking = async function(t) {
   // to bind to an invalid port or rebind a port already in use.
   name = 'testConnectionListenThrows';
   src = `
-      var ports = ['foo', {}, -1, 80.8, 9999, 65536];  // 9999 will be in use.
-      var fails = ports.length;
+      // Some invalid ports:
+      // * 22 will be in use (or root-only); should be rejected by OS.
+      // * 9999 will be in-use by us, should be rejected by connectionListen.
+      // * Others are not integers or are out-of-range.
+      var ports = ['foo', {}, -1, 22, 80.8, 9999, 65536];
       try {
         connectionListen(9999, {});
         for (var i = 0; i < ports.length; i++) {
           try {
             connectionListen(ports[i], {});
+            resolve('Unexpected success listening on port ' + ports[i]);
           } catch (e) {
-            fails--;
+            if (!(e instanceof Error)) {
+              resolve('threw non-Error value ' + String(e));
+            }
           }
         }
       } finally {
         connectionUnlisten(9999);
       }
-      resolve(fails);
+      resolve('OK');
    `;
-  await runAsyncTest(t, name, src, 0);
+  await runAsyncTest(t, name, src, 'OK');
 
   //  Check to make sure that connectionUnlisten() throws if attempting
   //  to unbind an invalid or not / no longer bound port.
   name = 'testConnectionUnlistenThrows';
   src = `
-      var ports = ['foo', {}, -1, 80.8, 9999, 65536];
-      var fails = ports.length;
+      var ports = ['foo', {}, -1, 22, 80.8, 4567, 65536];
       connectionListen(9999, {});
       connectionUnlisten(9999, {});
       for (var i = 0; i < ports.length; i++) {
         try {
           connectionUnlisten(ports[i], {});
+          resolve('Unexpected success unlistening on port ' + ports[i]);
         } catch (e) {
-          fails--;
+          if (!(e instanceof Error)) {
+            resolve('threw non-Error value ' + String(e));
+          }
         }
       }
-      resolve(fails);
+      resolve('OK');
    `;
-  await runAsyncTest(t, name, src, 0);
+  await runAsyncTest(t, name, src, 'OK');
 };
