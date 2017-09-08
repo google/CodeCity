@@ -1575,8 +1575,8 @@ Interpreter.prototype.initNetwork = function(scope) {
     intrp.listeners[port] = server;
     server.listen(function() {
       res();
-    }, function(error) {
-      rej(intrp.nativeToPseudo(error));
+    }, function(e) {
+      rej(intrp.nativeToPseudo(e));
     });
   });
 
@@ -1784,8 +1784,9 @@ Interpreter.prototype.callAsyncFunction = function(state) {
  * object.  Can handle JSON-style values plus regexps and errors (of
  * all standard native types), and handles additional properties on
  * arrays, regexps and errors (just as for plain objects).  Ignores
- * inherited properties.  Efficiently handles sparse arrays.  Does NOT
- * handle cyclic data.
+ * prototype and inherited properties; ignores property attributes
+ * (but this may change in a future version).  Efficiently handles
+ * sparse arrays.  Does NOT handle cyclic data.
  * @param {*} nativeObj The native JS object to be converted.
  * @return {Interpreter.Value} The equivalent JS interpreter object.
  */
@@ -1832,7 +1833,7 @@ Interpreter.prototype.nativeToPseudo = function(nativeObj) {
     var key = keys[i];
     var desc = Object.getOwnPropertyDescriptor(nativeObj, key);
     desc.value = this.nativeToPseudo(desc.value);
-    // TODO(cpcallen): use this when setProperty fixed:
+    // TODO(cpcallen): use this when setProperty fixed (update docs above!):
     // this.setProperty(pseudoObj, key, Interpreter.VALUE_IN_DESCRIPTOR, desc);
     this.setProperty(pseudoObj, key, desc.value);
   }
