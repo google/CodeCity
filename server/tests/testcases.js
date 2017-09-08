@@ -1348,6 +1348,17 @@ module.exports = [
     expected: 'TypeError' },
 
   /******************************************************************/
+  // JSON
+
+  { name: 'JSON.stringify', src: `
+    JSON.stringify({
+        string: 'foo', number: 42, true: true, false: false, null: null,
+        object: { obj: {}, arr: [] }, array: [{}, []] });
+    `,
+    expected: '{"string":"foo","number":42,"true":true,"false":false,' +
+        '"null":null,"object":{"obj":{},"arr":[]},"array":[{},[]]}' },
+
+  /******************************************************************/
   // Other tests:
 
   { name: 'newHack', src: `
