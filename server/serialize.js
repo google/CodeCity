@@ -282,21 +282,19 @@ Serializer.serialize = function(intrp) {
  * @param {!Array<string>} exclude List of properties not to spider.
  */
 Serializer.objectHunt_ = function(node, objectList, excludeTypes, exclude) {
-  if (node && (typeof node === 'object' || typeof node === 'function')) {
-    if (((typeof node === 'object' || typeof node === 'function') &&
-        excludeTypes.has(Object.getPrototypeOf(node))) ||
-        objectList.includes(node)) {
-      return;
-    }
-    objectList.push(node);
-    if (typeof node === 'object') {  // Recurse.
-      var names = Object.getOwnPropertyNames(node);
-      for (var i = 0; i < names.length; i++) {
-        var name = names[i];
-        if (!exclude || !exclude.includes(name)) {
-          // Don't pass exclude; it's only for top-level property keys.
-          Serializer.objectHunt_(node[names[i]], objectList, excludeTypes);
-        }
+  if (!node || (typeof node !== 'object' && typeof node !== 'function') ||
+      excludeTypes.has(Object.getPrototypeOf(node)) ||
+      objectList.includes(node)) {
+    return;
+  }
+  objectList.push(node);
+  if (typeof node === 'object') {  // Recurse.
+    var names = Object.getOwnPropertyNames(node);
+    for (var i = 0; i < names.length; i++) {
+      var name = names[i];
+      if (!exclude || !exclude.includes(name)) {
+        // Don't pass exclude; it's only for top-level property keys.
+        Serializer.objectHunt_(node[names[i]], objectList, excludeTypes);
       }
     }
   }
