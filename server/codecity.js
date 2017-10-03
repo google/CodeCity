@@ -133,7 +133,7 @@ CodeCity.loadFile = function(filename) {
  * False if Code City is running this in the background.
  */
 CodeCity.checkpoint = function(sync) {
-  console.log('Checkpoint!');
+  console.log('Checkpointing...');
   try {
     CodeCity.interpreter.pause();
     var json = Serializer.serialize(CodeCity.interpreter);
@@ -150,7 +150,20 @@ CodeCity.checkpoint = function(sync) {
 
   var filename = (new Date()).toISOString().replace(/:/g, '.') + '.city';
   filename = path.join(CodeCity.databaseDirectory, filename);
-  fs.writeFileSync(filename, text);
+  var tmpFilename = filename + '.partial';
+  try {
+    fs.writeFileSync(tmpFilename, text);
+    fs.renameSync(tmpFilename, filename);
+    console.log('Checkpoint complete.');
+  } catch(e) {
+    console.error('Checkpoint failed!  ' + e);
+  } finally {
+    // Attempt to remove partially-written checkpoint if it still exists.
+    try {
+      fs.unlinkSync(tmpFilename);
+    } catch(e) {
+    }
+  }
 };
 
 /**
