@@ -9,3 +9,4 @@ WorkingDirectory=/home/cc/CodeCity/connect
 User=cc
 Group=cc
 ExecStart=@/usr/bin/nodejs cc-connect /home/cc/CodeCity/connect/connectServer.js
+Restart=on-failure

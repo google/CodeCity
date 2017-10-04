@@ -9,3 +9,4 @@ WorkingDirectory=/home/cc/CodeCity/login
 User=cc
 Group=cc
 ExecStart=@/usr/bin/nodejs cc-login /home/cc/CodeCity/login/loginServer.js
+Restart=on-failure
