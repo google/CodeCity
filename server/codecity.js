@@ -168,10 +168,18 @@ CodeCity.checkpoint = function(sync) {
 
 /**
  * Shutdown Code City.  Checkpoint the database before terminating.
+ * Optional parameter is exit code (if numeric) or signal to (re-)kill
+ * process with (if string).  Re-killing after checkpointing allows
+ * systemd to accurately determine cause of death.  Defaults to 0.
+ * @param {string|number=} code Exit code or signal.
  */
-CodeCity.shutdown = function() {
+CodeCity.shutdown = function(code) {
   CodeCity.checkpoint(true);
-  process.exit(0);
+  if (typeof code === 'string') {
+    process.kill(process.pid, code);
+  } else {
+    process.exit(code || 0);
+  }
 };
 
 /**
@@ -197,13 +205,13 @@ CodeCity.initSystemFunctions = function() {
 // Otherwise, if it is required as a library, do nothing.
 if (require.main === module) {
   CodeCity.startup();
-  // Call checkpoint on server shutdown signal.
-  process.on('SIGTERM', function() {
-    CodeCity.shutdown();
-  });
-  process.on('SIGINT', function() {
-    CodeCity.shutdown();
-  });
+
+  // SIGTERM and SIGINT shut down server.
+  process.once('SIGTERM', CodeCity.shutdown.bind(null, 'SIGTERM'));
+  process.once('SIGINT', CodeCity.shutdown.bind(null, 'SIGINT'));
+
+  // SIGHUP forces checkpoint.
+  process.on('SIGHUP', CodeCity.checkpoint.bind(null, false));
 }
 
 module.exports = CodeCity;
