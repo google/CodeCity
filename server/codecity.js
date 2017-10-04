@@ -198,7 +198,9 @@ CodeCity.initSystemFunctions = function() {
   var intrp = CodeCity.interpreter;
   intrp.createNativeFunction('$.system.log', CodeCity.log, false);
   intrp.createNativeFunction('$.system.checkpoint', CodeCity.checkpoint, false);
-  intrp.createNativeFunction('$.system.shutdown', CodeCity.shutdown, false);
+  intrp.createNativeFunction('$.system.shutdown', function(code) {
+    CodeCity.shutdown(Number(code));
+  }, false);
 };
 
 // If this file is executed form a command line, startup Code City.
