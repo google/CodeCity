@@ -56,7 +56,7 @@ $.pages['404'].jssp = [
   '</head>',
   '<body>',
   '  <h1>',
-  '    <img src="/static/logo-404.png">',
+  '    <img src="/static/logo-error.svg">',
   '    404 Page Not Found',
   '  </h1>',
   '  <pre><%= request.method %> <%= $.utils.htmlEscape(request.url) %></pre>',
