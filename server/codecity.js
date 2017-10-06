@@ -155,13 +155,13 @@ CodeCity.checkpoint = function(sync) {
     fs.writeFileSync(tmpFilename, text);
     fs.renameSync(tmpFilename, filename);
     console.log('Checkpoint complete.');
-  } catch(e) {
+  } catch (e) {
     console.error('Checkpoint failed!  ' + e);
   } finally {
     // Attempt to remove partially-written checkpoint if it still exists.
     try {
       fs.unlinkSync(tmpFilename);
-    } catch(e) {
+    } catch (e) {
     }
   }
 };
