@@ -39,6 +39,86 @@ function toStringTag(o) {
 }
 
 /**
+ * Wraps a function that, when applied to an arbitray JS value, throws
+ * a TypeError if the value is not of a particular type.  The
+ * resulting wrapper returns true if the value was of the particular
+ * type and false otherwise.
+ * @param {Function(): ?} fn Function to wrap.
+ * @param {Array=} args Arguments for apply (optional).
+ * @return {Function(*): boolean}
+ */
+function apply(fn, args) {
+  return function(v) {
+    try {
+      fn.apply(v, args);
+      return true;
+    } catch (e) {
+      if (!(e instanceof TypeError)) throw e;
+      return false;
+    }
+  };
+}
+
+/**
+ * Table of functions returning true iff argument is of the specified type.
+ * @type {Object<string, Function(Object): boolean>}
+ */
+const tests = {
+  Array: Array.isArray,
+  Boolean: apply(Boolean.prototype.valueOf),
+  Date: apply(Date.prototype.getDate),
+  Map: apply(Map.prototype.entries),
+  Number: apply(Number.prototype.valueOf),
+  RegExp: apply(Object.getOwnPropertyDescriptor(
+      RegExp.prototype, 'source').get),
+  Set: apply(Set.prototype.entries),
+  String: apply(String.prototype.valueOf),
+  Symbol: (v) => (typeof v.valueOf()) === 'symbol',
+  WeakMap: apply(WeakMap.prototype.has, [undefined]),
+  WeakSet: apply(WeakSet.prototype.has, [undefined]),
+  
+  
+  // These correctly identify type, but are destructive, so can't be
+  // used for this purpose:
+  // 'Array Iterator': [].entries().next,
+  // 'Map Iterator': (new Map).entries().next,
+  // 'Set Iterator': (new Set).entries().next,
+  // 'String Iterator': ''.entries().next,
+  
+  // No way to test for these at all (at least in presence of
+  // non-configurable @@toStringTag) according to spec:
+  // ArrayIterator
+  // Error
+  // Generator
+  // ListIterator
+  // Map Iterator
+  // NativeError
+  // Set Iterator
+  // StringIterator
+
+  // Undecided:
+  // ArrayBuffer
+  // DataView
+
+  // Int8Array
+  // Uint8Array
+  // Uint8ClampedArray
+  // Int16Array
+  // Uint16Array
+  // Int32Array
+  // Uint32Array
+  // Float32Array
+  // Float64Array
+
+  // Promise
+  // Object
+  // Proxy
+
+  // Function
+  // GeneratorFunction
+};
+
+/**
  * Determine the internal implementation type of an object.  This is
  * approximately the same as what the ES5.1 called an object's
  * "class", but extended to include primitives and all the new types
@@ -131,3 +211,4 @@ exports.typeOf = typeOf;
 exports.Flatpack = Flatpack;
 exports.Boundary = Boundary;
 exports.defaultBoundary = defaultBoundary;
+exports.typeOf = typeOf;
