@@ -27,7 +27,7 @@
 const Flatpack = require('../flatpack');
 
 /**
- * Run tests of the networking subsystem.
+ * Unit tests for typeOf().
  * @param {!T} t The test runner object.
  */
 exports.testTypeOf = function(t) {
@@ -64,4 +64,15 @@ exports.testTypeOf = function(t) {
                                tc[0], r, tc[1]));
     }
   }
+};
+
+/**
+ * Unit tests for Flatpack.add().
+ * @param {!T} t The test runner object.
+ */
+exports.testFlatpackAdd = function(t) {
+  let fp = new Flatpack;
+
+  fp.add({});
+  console.log('>>>', fp);
 };

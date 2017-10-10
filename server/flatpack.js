@@ -65,4 +65,69 @@ function typeOf(v) {
   return toStringTag(v);
 }
 
+const byName_ = Symbol('byName_');
+const byValue_ = Symbol('byValue_');
+
+class Boundary {
+  constructor() {
+    this[byName_] = Object.create(null);
+    this[byValue_] = new Map;
+  }
+
+  add(name, value) {
+    if (name in this[byName_] || this[byValue_].has(value)) {
+      throw Error("Can't redefine " + name + " in Boundary");
+    }
+    this[byName_][name] = value;
+    this[byValue_].set(value, name);
+  }
+
+  hasName(name) {
+    return (name in this[byName_]);
+  }
+
+  hasValue(value) {
+    return this[byValue_].has(value);
+  }
+}
+
+const boundary_ = Symbol('boundary_');
+const obj2ref_ = Symbol('obj2ref_');
+
+class Flatpack {
+  constructor(boundary) {
+    this[boundary_] = boundary || defaultBoundary;
+    this[obj2ref_] = new WeakMap;
+    this.items = [];
+    console.log('***', this);
+  }
+
+  add(obj) {
+    if (this[boundary_].hasValue(obj) || this[obj2ref_].has(obj)) {
+      return;
+    }
+    const proto = Object.getPrototypeOf(obj);
+    if (proto !== null) {
+      this.add(proto);
+    }
+    console.log('add:', obj);
+    this[obj2ref_].set(obj, this.items.length);
+    this.items.push(obj);
+    
+  }
+}
+
+const defaultBoundary = new Boundary;
+const defaultBoundaryItems = [
+  'Object.prototype',
+];
+
+for (let name of defaultBoundaryItems) {
+  defaultBoundary.add(name, eval(name));
+}
+
+module.exports = exports = Flatpack;
 exports.typeOf = typeOf;
+exports.Flatpack = Flatpack;
+exports.Boundary = Boundary;
+exports.defaultBoundary = defaultBoundary;

@@ -166,7 +166,11 @@ async function runTests(files) {
     var tests = require(files[i]);
     for (var k in tests) {
       if (k.startsWith('test') && typeof tests[k] === 'function') {
-        await tests[k](t);
+        try {
+          await tests[k](t);
+        } catch (e) {
+          console.log(e);
+        }
       }
     }
   }
