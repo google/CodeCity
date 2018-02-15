@@ -1563,7 +1563,7 @@ Interpreter.prototype.initThreads = function(scope) {
 Interpreter.prototype.initNetwork = function(scope) {
   var intrp = this;
 
-  this.createAsyncFunction('connectionListen', function(res, rej, port, proto) {
+  this.createAsyncFunction('CC.connectionListen', function(res, rej, port, proto) {
     if (port !== (port >>> 0) || port > 0xffff) {
       rej(new intrp.Error(intrp.RANGE_ERROR, 'invalid port'));
       return;
@@ -1580,7 +1580,7 @@ Interpreter.prototype.initNetwork = function(scope) {
     });
   });
 
-  this.createAsyncFunction('connectionUnlisten', function(res, rej, port) {
+  this.createAsyncFunction('CC.connectionUnlisten', function(res, rej, port) {
     if (!(port in intrp.listeners)) {
       rej(new intrp.Error(intrp.RANGE_ERROR, 'port not listening'));
       return;
@@ -1601,14 +1601,14 @@ Interpreter.prototype.initNetwork = function(scope) {
     delete intrp.listeners[port];
   });
 
-  this.createNativeFunction('connectionWrite', function(obj, data) {
+  this.createNativeFunction('CC.connectionWrite', function(obj, data) {
     if (!(obj instanceof intrp.Object) || !obj.socket) {
       intrp.throwException(intrp.TYPE_ERROR, 'object is not connected');
     }
     obj.socket.write(String(data));
   }, false);
 
-  this.createNativeFunction('connectionClose', function(obj) {
+  this.createNativeFunction('CC.connectionClose', function(obj) {
     if (!(obj instanceof intrp.Object) || !obj.socket) {
       intrp.throwException(intrp.TYPE_ERROR, 'object is not connected');
     }

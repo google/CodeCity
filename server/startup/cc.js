@@ -18,11 +18,15 @@
  */
 
 /**
- * @fileoverview Initialisation code to set up CC-specific networking
- * extensions.
+ * @fileoverview Initialisation code to set up CC-specific extensions.
  * @author cpcallen@google.com (Christopher Allen)
  */
-var connectionListen = new 'connectionListen';
-var connectionUnlisten = new 'connectionUnlisten';
-var connectionWrite = new 'connectionWrite';
-var connectionClose = new 'connectionClose';
+
+// Root CC object.
+var CC = {};
+
+// Networking functions.
+CC.connectionListen = new 'CC.connectionListen';
+CC.connectionUnlisten = new 'CC.connectionUnlisten';
+CC.connectionWrite = new 'CC.connectionWrite';
+CC.connectionClose = new 'CC.connectionClose';

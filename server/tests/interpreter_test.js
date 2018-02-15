@@ -893,7 +893,7 @@ exports.testNativeToPseudo = function(t) {
     var errName, errMessage = 'test ' + Err.prototype.name;
     var error = Err(errMessage);
     var pError = intrp.nativeToPseudo(error);
-    
+
     check(' instanceof intrp.Error', pError instanceof intrp.Error, true);
     check('.proto', pError.proto, proto);
     check('.name', intrp.getProperty(pError, 'name'), Err.prototype.name);
@@ -1094,7 +1094,7 @@ exports.testStartStop = async function(t) {
  */
 exports.testNetworking = async function(t) {
   // Run a test of connectionListen() and connectionUnlisten(), and
-  // of the server receving data using the .recieve and .end methods
+  // of the server receiving data using the .receive and .end methods
   // on a connection object.
   var name = 'testServerInbound';
   var src = `
@@ -1103,10 +1103,10 @@ exports.testNetworking = async function(t) {
         data += d;
       };
       conn.onEnd = function() {
-        connectionUnlisten(8888);
+        CC.connectionUnlisten(8888);
         resolve(data);
       };
-      connectionListen(8888, conn);
+      CC.connectionListen(8888, conn);
       send();
    `;
   var initFunc = function(intrp) {
@@ -1128,13 +1128,13 @@ exports.testNetworking = async function(t) {
   src = `
       var conn = {};
       conn.onConnect = function() {
-        connectionWrite(this, 'foo');
-        connectionWrite(this, 'bar');
-        connectionClose(this);
+        CC.connectionWrite(this, 'foo');
+        CC.connectionWrite(this, 'bar');
+        CC.connectionClose(this);
       };
-      connectionListen(8888, conn);
+      CC.connectionListen(8888, conn);
       resolve(recieve());
-      connectionUnlisten(8888);
+      CC.connectionUnlisten(8888);
    `;
   initFunc = function(intrp) {
     intrp.addVariableToScope(intrp.global, 'recieve', intrp.createAsyncFunction(
@@ -1166,10 +1166,10 @@ exports.testNetworking = async function(t) {
       // * Others are not integers or are out-of-range.
       var ports = ['foo', {}, -1, 22, 80.8, 9999, 65536];
       try {
-        connectionListen(9999, {});
+        CC.connectionListen(9999, {});
         for (var i = 0; i < ports.length; i++) {
           try {
-            connectionListen(ports[i], {});
+            CC.connectionListen(ports[i], {});
             resolve('Unexpected success listening on port ' + ports[i]);
           } catch (e) {
             if (!(e instanceof Error)) {
@@ -1189,11 +1189,11 @@ exports.testNetworking = async function(t) {
   name = 'testConnectionUnlistenThrows';
   src = `
       var ports = ['foo', {}, -1, 22, 80.8, 4567, 65536];
-      connectionListen(9999, {});
-      connectionUnlisten(9999, {});
+      CC.connectionListen(9999, {});
+      CC.connectionUnlisten(9999, {});
       for (var i = 0; i < ports.length; i++) {
         try {
-          connectionUnlisten(ports[i], {});
+          CC.connectionUnlisten(ports[i], {});
           resolve('Unexpected success unlistening on port ' + ports[i]);
         } catch (e) {
           if (!(e instanceof Error)) {

@@ -29,13 +29,13 @@ var $ = function() {
 
 // System object: $.system
 $.system = {};
-$.system.log = new '$.system.log';
-$.system.checkpoint = new '$.system.checkpoint';
-$.system.shutdown = new '$.system.shutdown';
-$.system.connectionListen = new 'connectionListen';
-$.system.connectionUnlisten = new 'connectionUnlisten';
-$.system.connectionWrite = new 'connectionWrite';
-$.system.connectionClose = new 'connectionClose';
+$.system.log = new 'CC.log';
+$.system.checkpoint = new 'CC.checkpoint';
+$.system.shutdown = new 'CC.shutdown';
+$.system.connectionListen = new 'CC.connectionListen';
+$.system.connectionUnlisten = new 'CC.connectionUnlisten';
+$.system.connectionWrite = new 'CC.connectionWrite';
+$.system.connectionClose = new 'CC.connectionClose';
 
 // Utility object: $.utils
 $.utils = {};
