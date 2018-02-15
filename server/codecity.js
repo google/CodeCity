@@ -196,9 +196,9 @@ CodeCity.log = function(var_args) {
  */
 CodeCity.initSystemFunctions = function() {
   var intrp = CodeCity.interpreter;
-  intrp.createNativeFunction('$.system.log', CodeCity.log, false);
-  intrp.createNativeFunction('$.system.checkpoint', CodeCity.checkpoint, false);
-  intrp.createNativeFunction('$.system.shutdown', function(code) {
+  intrp.createNativeFunction('CC.log', CodeCity.log, false);
+  intrp.createNativeFunction('CC.checkpoint', CodeCity.checkpoint, false);
+  intrp.createNativeFunction('CC.shutdown', function(code) {
     CodeCity.shutdown(Number(code));
   }, false);
 };

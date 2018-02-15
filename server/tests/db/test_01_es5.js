@@ -1817,7 +1817,7 @@ tests.RegExpPrototypeTestApplyNonRegExpThrows = function() {
 //////////////////////////////////////////////////////////////
 // JSON
 
-test.JsonStringify = function () {
+tests.JsonStringify = function () {
   var obj = {string: 'foo', number: 42, true: true, false: false, null: null,
        object: { obj: {}, arr: [] }, array: [{}, []] };
   var str = '{"string":"foo","number":42,"true":true,"false":false,' +

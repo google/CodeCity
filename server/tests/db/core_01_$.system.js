@@ -24,6 +24,6 @@
 
 $.system = {};
 
-$.system.log = new '$.system.log';
-$.system.checkpoint = new '$.system.checkpoint';
-$.system.shutdown = new '$.system.shutdown';
+$.system.log = new 'CC.log';
+$.system.checkpoint = new 'CC.checkpoint';
+$.system.shutdown = new 'CC.shutdown';
