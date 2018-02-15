@@ -61,7 +61,7 @@ CCC.World.panelBorder = 2;
 
 /**
  * Div containing a partial row of history panels (null if new row needed).
- * @type Element
+ * @type {Element}
  */
 CCC.World.historyRow = null;
 

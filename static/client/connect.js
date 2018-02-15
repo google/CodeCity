@@ -131,9 +131,20 @@ CCC.ackMsgNextPing = true;
 CCC.pauseBuffer = null;
 
 /**
- * Is the client currently connected to the server?
+ * Sequence of possible connection states.
+ * @enum {number}
  */
-CCC.isConnected = false;
+CCC.ConnectionStates = {
+  NEVER_CONNECTED: 0,
+  CONNECTED: 1,
+  DISCONNECTED: 2
+};
+
+/**
+ * Is the client currently connected to the server?
+ * @type {CCC.ConnectionStates}
+ */
+CCC.connectionState = CCC.ConnectionStates.NEVER_CONNECTED;
 
 /**
  * Enum for message types.
@@ -359,7 +370,7 @@ CCC.sendCommand = function(commands, echo) {
   CCC.userActive();
   commands = commands.split('\n');
   // A blank line at the end of a multi-line command is usually accidental.
-  if (commands.length > 1 && !commands[commands.length-1]) {
+  if (commands.length > 1 && !commands[commands.length - 1]) {
     commands.pop();
   }
   for (var i = 0; i < commands.length; i++) {
@@ -470,7 +481,7 @@ CCC.xhrStateChange = function() {
  * Received an error from the server, indicating that our connection is closed.
  */
 CCC.terminate = function() {
-  CCC.isConnected = false;
+  CCC.connectionState = CCC.ConnectionStates.DISCONNECTED;
   clearTimeout(CCC.nextPingPid);
   CCC.postToAllFrames({'mode': 'terminate'});
 };
@@ -480,7 +491,13 @@ CCC.terminate = function() {
  * @param {!Object} receivedJson Server data.
  */
 CCC.parse = function(receivedJson) {
-  CCC.isConnected = true;
+  if (CCC.connectionState === CCC.ConnectionStates.DISCONNECTED) {
+    console.error('Ignoring JSON received after disconnection.');
+    console.log(receivedJson);
+  }
+  if (CCC.connectionState === CCC.ConnectionStates.NEVER_CONNECTED) {
+    CCC.connectionState = CCC.ConnectionStates.CONNECTED;
+  }
   var ackCmd = receivedJson['ackCmd'];
   var msgNum = receivedJson['msgNum'];
   var msgs = receivedJson['msgs'];
@@ -534,7 +551,7 @@ CCC.keydown = function(e) {
   CCC.userActive();
   if (!e.shiftKey && e.key === 'Enter') {
     // Enter
-    if (CCC.isConnected) {
+    if (CCC.connectionState === CCC.ConnectionStates.CONNECTED) {
       CCC.sendCommand(CCC.commandTextarea.value, CCC.localEcho);
       // Clear the textarea.
       CCC.commandTextarea.value = '';
