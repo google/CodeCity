@@ -40,6 +40,23 @@ CCC.Common.NS = 'http://www.w3.org/2000/svg';
 CCC.Common.isConnected = false;
 
 /**
+ * Enum for message types to the log/world frames.
+ * Should be identical to CCC.MessageTypes
+ * @enum {string}
+ */
+CCC.Common.MessageTypes = {
+  // Messages that may be paused:
+  COMMAND: 'command',  // User-generated command echoed.
+  MESSAGE: 'message',  // Block of text from Code City.
+  CONNECT_MSG: 'connect msg',  // User-visible connection message.
+  DISCONNECT_MSG: 'disconnect msg',  // User-visible disconnection message.
+  // Messages that may be sent while paused:
+  CONNECTION: 'connection',  // Signal change of connection state.
+  CLEAR: 'clear',  // Signal tho clear history.
+  BLUR: 'blur'  // Signal to close pop-up menus.
+};
+
+/**
  * Initialization code called on startup.
  */
 CCC.Common.init = function() {
@@ -226,21 +243,6 @@ CCC.Common.parentFocus = function(e) {
     // Cross-frame is risky in some browsers.  Fallback method.
     parent.focus();
   }
-};
-
-/**
- * Return a local date/time in 'yyyy-mm-dd hh:mm:ss' format.
- * @return {string} Current date/time.
- */
-CCC.Common.currentDateString = function() {
-  var now = new Date();
-  var dy = now.getFullYear();
-  var dm = ('0' + (now.getMonth() + 1)).slice(-2);
-  var dd = ('0' + now.getDate()).slice(-2);
-  var th = ('0' + now.getHours()).slice(-2);
-  var tm = ('0' + now.getMinutes()).slice(-2);
-  var ts = ('0' + now.getSeconds()).slice(-2);
-  return dy + '-' + dm + '-' + dd + ' ' + th + ':' + tm + ':' + ts;
 };
 
 /**
