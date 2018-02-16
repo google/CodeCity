@@ -259,7 +259,15 @@ CCC.clear = function() {
   CCC.commandTemp = '';
   CCC.commandHistoryPointer = -1;
   if (CCC.pauseBuffer) {
-    CCC.pauseBuffer.length = 0;
+    var datum;
+    while ((datum = CCC.pauseBuffer[0]) &&
+           datum[0] != CCC.MessageTypes.DISCONNECT_MSG) {
+      CCC.pauseBuffer.shift();
+    }
+    // Clear the date/time on the 'Reconnect?' line (if it exists).
+    if (datum) {
+      datum[1] = '...';
+    }
   }
   CCC.postToAllFrames({'mode': 'clear'});
   CCC.commandTextarea.focus();

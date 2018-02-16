@@ -125,9 +125,17 @@ CCC.World.receiveMessage = function(e) {
   var mode = data['mode'];
   var text = data['text'];
   if (mode === CCC.Common.MessageTypes.CLEAR) {
+    // Clear all content, except for the 'Reconnect?' panel (if it exists).
     document.getElementById('iframeStorage').innerHTML = '';
     CCC.World.historyMessages.length = 0;
-    CCC.World.panoramaMessages.length = 0;
+    var firstPanoramaMessage = CCC.World.panoramaMessages[0];
+    if (firstPanoramaMessage && firstPanoramaMessage.type == 'connected' &&
+        !firstPanoramaMessage.isConnected) {
+      // Clear the date/time on the 'Reconnect?' panel (if it exists).
+      firstPanoramaMessage.time = '...';
+    } else {
+      CCC.World.panoramaMessages.length = 0;
+    }
     CCC.World.removeNode(CCC.World.scratchHistory);
     CCC.World.removeNode(CCC.World.scratchPanorama);
     var scene = CCC.World.scene;  // Save the scene.
@@ -154,7 +162,7 @@ CCC.World.receiveMessage = function(e) {
       var msg = JSON.parse(text);
     } catch (e) {
       // Not valid JSON, treat as string literal.
-      msg = {type: 'narrate', text: text}
+      msg = {type: 'narrate', text: text};
     }
     CCC.World.preprocessMessage(msg);
     CCC.World.renderMessage(msg);
@@ -608,7 +616,7 @@ CCC.World.drawScene = function(svg) {
   }
   // Menu icons should be added after all the sprites so that they aren't
   // occluded by user content.
-  for (var i = 0, icon; icon = icons[i]; i++) {
+  for (var i = 0, icon; (icon = icons[i]); i++) {
     svg.appendChild(icon);
   }
 };
