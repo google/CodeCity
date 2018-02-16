@@ -358,14 +358,14 @@ CCC.receiveMessage = function(e) {
 /**
  * Distribute a line of text to all frames.  If paused, hold this message back.
  * @param {!CCC.MessageTypes} mode Message type.
- * @param {string} line Text to or from Code City.
+ * @param {string} text Text to or from Code City.
  */
-CCC.distributeMessage = function(mode, line) {
+CCC.distributeMessage = function(mode, text) {
   if (CCC.pauseBuffer) {
     CCC.pauseBuffer.push(arguments);
     return;
   }
-  CCC.postToAllFrames({'mode': mode, 'text': line});
+  CCC.postToAllFrames({'mode': mode, 'text': text});
 };
 
 /**
@@ -513,9 +513,8 @@ CCC.terminate = function() {
 CCC.parse = function(receivedJson) {
   if (CCC.connectionState === CCC.ConnectionStates.DISCONNECTED) {
     console.error('Ignoring JSON received after disconnection.');
-    console.log(receivedJson);
-  }
-  if (CCC.connectionState === CCC.ConnectionStates.NEVER_CONNECTED) {
+    throw receivedJson;
+  } else if (CCC.connectionState === CCC.ConnectionStates.NEVER_CONNECTED) {
     CCC.postToAllFrames({'mode': CCC.MessageTypes.CONNECTION, 'state': true});
     CCC.distributeMessage(CCC.MessageTypes.CONNECT_MSG,
                           CCC.currentDateString());

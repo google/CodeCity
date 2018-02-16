@@ -157,7 +157,6 @@ CCC.World.receiveMessage = function(e) {
                              isConnected: false,
                              time: data['text']});
   } else if (mode === CCC.Common.MessageTypes.MESSAGE) {
-    CCC.World.setConnected(true);
     try {
       var msg = JSON.parse(text);
     } catch (e) {
@@ -1151,6 +1150,7 @@ CCC.World.setConnected = function(newConnected) {
   if (newConnected === CCC.Common.isConnected) {
     return;  // No change.
   }
+  // TODO: Disable any menus in the panorama (can happen if scroll is paused).
   CCC.Common.isConnected = newConnected;
 };
 
