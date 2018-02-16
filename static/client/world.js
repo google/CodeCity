@@ -124,7 +124,7 @@ CCC.World.receiveMessage = function(e) {
   }
   var mode = data['mode'];
   var text = data['text'];
-  if (mode === 'clear') {
+  if (mode === CCC.Common.MessageTypes.CLEAR) {
     document.getElementById('iframeStorage').innerHTML = '';
     CCC.World.historyMessages.length = 0;
     CCC.World.panoramaMessages.length = 0;
@@ -133,11 +133,22 @@ CCC.World.receiveMessage = function(e) {
     var scene = CCC.World.scene;  // Save the scene.
     CCC.World.renderHistory();
     CCC.World.scene = scene;  // Restore the scene.
-  } else if (mode === 'blur') {
+  } else if (mode === CCC.Common.MessageTypes.BLUR) {
       CCC.Common.closeMenu();
-  } else if (mode === 'terminate') {
-    CCC.World.setConnected(false);
-  } else if (mode === 'message') {
+  } else if (mode === CCC.Common.MessageTypes.CONNECTION) {
+    CCC.World.setConnected(data['state']);
+
+  } else if (mode === CCC.Common.MessageTypes.CONNECT_MSG) {
+    // Notify the user of the connection.
+    CCC.World.renderMessage({type: 'connected',
+                             isConnected: true,
+                             time: data['text']});
+  } else if (mode === CCC.Common.MessageTypes.DISCONNECT_MSG) {
+    // Notify the user of the disconnection.
+    CCC.World.renderMessage({type: 'connected',
+                             isConnected: false,
+                             time: data['text']});
+  } else if (mode === CCC.Common.MessageTypes.MESSAGE) {
     CCC.World.setConnected(true);
     try {
       var msg = JSON.parse(text);
@@ -1133,10 +1144,6 @@ CCC.World.setConnected = function(newConnected) {
     return;  // No change.
   }
   CCC.Common.isConnected = newConnected;
-  // Notify the user of the status change.
-  CCC.World.renderMessage({type: 'connected',
-                           isConnected: CCC.Common.isConnected,
-                           time: CCC.Common.currentDateString()});
 };
 
 /**

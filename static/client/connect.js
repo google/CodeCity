@@ -147,12 +147,20 @@ CCC.ConnectionStates = {
 CCC.connectionState = CCC.ConnectionStates.NEVER_CONNECTED;
 
 /**
- * Enum for message types.
+ * Enum for message types to the log/world frames.
+ * Should be identical to CCC.Common.MessageTypes
  * @enum {string}
  */
 CCC.MessageTypes = {
-  COMMAND: 'command',
-  MESSAGE: 'message'
+  // Messages that may be paused:
+  COMMAND: 'command',  // User-generated command echoed.
+  MESSAGE: 'message',  // Block of text from Code City.
+  CONNECT_MSG: 'connect msg',  // User-visible connection message.
+  DISCONNECT_MSG: 'disconnect msg',  // User-visible disconnection message.
+  // Messages that may be sent while paused:
+  CONNECTION: 'connection',  // Signal change of connection state.
+  CLEAR: 'clear',  // Signal to clear history.
+  BLUR: 'blur'  // Signal to close pop-up menus.
 };
 
 /**
@@ -340,16 +348,16 @@ CCC.receiveMessage = function(e) {
 };
 
 /**
- * Distribute a line of text to all frames.
+ * Distribute a line of text to all frames.  If paused, hold this message back.
+ * @param {!CCC.MessageTypes} mode Message type.
  * @param {string} line Text to or from Code City.
- * @param {!CCC.MessageTypes} type Command or message.
  */
-CCC.distributeMessage = function(line, type) {
+CCC.distributeMessage = function(mode, line) {
   if (CCC.pauseBuffer) {
     CCC.pauseBuffer.push(arguments);
     return;
   }
-  CCC.postToAllFrames({'mode': type, 'text': line});
+  CCC.postToAllFrames({'mode': mode, 'text': line});
 };
 
 /**
@@ -389,7 +397,7 @@ CCC.sendCommand = function(commands, echo) {
     }
     // Echo command onscreen.
     if (echo) {
-      CCC.distributeMessage(commands[i], CCC.MessageTypes.COMMAND);
+      CCC.distributeMessage(CCC.MessageTypes.COMMAND, commands[i]);
     }
   }
   CCC.commandTemp = '';
@@ -483,7 +491,11 @@ CCC.xhrStateChange = function() {
 CCC.terminate = function() {
   CCC.connectionState = CCC.ConnectionStates.DISCONNECTED;
   clearTimeout(CCC.nextPingPid);
-  CCC.postToAllFrames({'mode': 'terminate'});
+  // Send immediate signal to enter readonly-mode for all frames.
+  CCC.postToAllFrames({'mode': CCC.MessageTypes.CONNECTION, 'state': false});
+  // Send user-visible message (which might be delayed due to pause).
+  CCC.distributeMessage(CCC.MessageTypes.DISCONNECT_MSG,
+                        CCC.currentDateString());
 };
 
 /**
@@ -496,6 +508,9 @@ CCC.parse = function(receivedJson) {
     console.log(receivedJson);
   }
   if (CCC.connectionState === CCC.ConnectionStates.NEVER_CONNECTED) {
+    CCC.postToAllFrames({'mode': CCC.MessageTypes.CONNECTION, 'state': true});
+    CCC.distributeMessage(CCC.MessageTypes.CONNECT_MSG,
+                          CCC.currentDateString());
     CCC.connectionState = CCC.ConnectionStates.CONNECTED;
   }
   var ackCmd = receivedJson['ackCmd'];
@@ -520,7 +535,7 @@ CCC.parse = function(receivedJson) {
     for (var i = 0; i < msgs.length; i++) {
       if (currentIndex > CCC.messageIndex) {
         CCC.messageIndex = currentIndex;
-        CCC.distributeMessage(msgs[i], CCC.MessageTypes.MESSAGE);
+        CCC.distributeMessage(CCC.MessageTypes.MESSAGE, msgs[i]);
         // Reduce ping interval.
         CCC.pingInterval =
             Math.max(CCC.MIN_PING_INTERVAL, CCC.pingInterval * 0.8);
@@ -658,6 +673,21 @@ CCC.setUnreadLines = function(n) {
     title += ' (' + n + ')';
   }
   document.title = title;
+};
+
+/**
+ * Return a local date/time in 'yyyy-mm-dd hh:mm:ss' format.
+ * @return {string} Current date/time.
+ */
+CCC.currentDateString = function() {
+  var now = new Date();
+  var dy = now.getFullYear();
+  var dm = ('0' + (now.getMonth() + 1)).slice(-2);
+  var dd = ('0' + now.getDate()).slice(-2);
+  var th = ('0' + now.getHours()).slice(-2);
+  var tm = ('0' + now.getMinutes()).slice(-2);
+  var ts = ('0' + now.getSeconds()).slice(-2);
+  return dy + '-' + dm + '-' + dd + ' ' + th + ':' + tm + ':' + ts;
 };
 
 window.addEventListener('message', CCC.receiveMessage, false);
