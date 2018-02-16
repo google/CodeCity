@@ -84,8 +84,20 @@ CCC.Log.receiveMessage = function(e) {
     return;
   }
   var mode = data['mode'];
-    CCC.Log.scrollDiv.innerHTML = '';
   if (mode === CCC.Common.MessageTypes.CLEAR) {
+    // Clear all lines, except for the 'Reconnect?' line (if it exists).
+    var div;
+    while ((div = CCC.Log.scrollDiv.firstChild) &&
+           div.className !== 'disconnectDiv') {
+      CCC.Log.scrollDiv.removeChild(div);
+    }
+    // Clear the date/time on the 'Reconnect?' line (if it exists).
+    if (div) {
+      var dates = div.getElementsByClassName('date');
+      if (dates[0]) {
+        dates[0].textContent = '...';
+      }
+    }
   } else if (mode === CCC.Common.MessageTypes.BLUR) {
     CCC.Common.closeMenu();
   } else if (mode === CCC.Common.MessageTypes.COMMAND) {
@@ -128,9 +140,9 @@ CCC.Log.setConnected = function(newConnected) {
   CCC.Common.isConnected = newConnected;
   // Add/remove a classname on body, so that links and menus can change style.
   if (CCC.Common.isConnected) {
-    document.body.classList.remove("disconnected");
+    document.body.classList.remove('disconnected');
   } else {
-    document.body.classList.add("disconnected");
+    document.body.classList.add('disconnected');
   }
 };
 
