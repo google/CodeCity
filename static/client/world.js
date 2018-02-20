@@ -144,8 +144,7 @@ CCC.World.receiveMessage = function(e) {
   } else if (mode === CCC.Common.MessageTypes.BLUR) {
       CCC.Common.closeMenu();
   } else if (mode === CCC.Common.MessageTypes.CONNECTION) {
-    CCC.World.setConnected(data['state']);
-
+    CCC.Common.setConnected(data['state']);
   } else if (mode === CCC.Common.MessageTypes.CONNECT_MSG) {
     // Notify the user of the connection.
     CCC.World.renderMessage({type: 'connected',
@@ -1140,18 +1139,6 @@ CCC.World.positionIframe = function(iframe, container) {
            (container !== CCC.World.scrollDiv));
   iframe.style.top = (y + borderWidth) + 'px';
   iframe.style.left = (x + borderWidth) + 'px';
-};
-
-/**
- * Change the connection status between being connected or disconnected.
- * @param {boolean} newConnected New status.
- */
-CCC.World.setConnected = function(newConnected) {
-  if (newConnected === CCC.Common.isConnected) {
-    return;  // No change.
-  }
-  // TODO: Disable any menus in the panorama (can happen if scroll is paused).
-  CCC.Common.isConnected = newConnected;
 };
 
 /**

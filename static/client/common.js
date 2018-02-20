@@ -84,6 +84,24 @@ CCC.Common.verifyMessage = function(e) {
 };
 
 /**
+ * Change the connection status between being connected or disconnected.
+ * @param {boolean} newConnected New status.
+ */
+CCC.Common.setConnected = function(newConnected) {
+  if (newConnected === CCC.Common.isConnected) {
+    return;  // No change.
+  }
+  CCC.Common.isConnected = newConnected;
+  // Add/remove a classname on body, so that links and menus can change style.
+  if (CCC.Common.isConnected) {
+    document.body.classList.remove('disconnected');
+  } else {
+    document.body.classList.add('disconnected');
+  }
+};
+
+
+/**
  * Create a command menu icon.  Attach the menu commands to the icon.
  * @param {!Array<string>|!Element} cmds Array of menu commands,
  *     or root DOM element describing the menu commands.

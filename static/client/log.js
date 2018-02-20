@@ -106,7 +106,7 @@ CCC.Log.receiveMessage = function(e) {
     div.className = 'commandDiv';
     CCC.Log.appendRow(div);
   } else if (mode === CCC.Common.MessageTypes.CONNECTION) {
-    CCC.Log.setConnected(data['state']);
+    CCC.Common.setConnected(data['state']);
   } else if (mode === CCC.Common.MessageTypes.CONNECT_MSG) {
     // Notify the user of the connection.
     var div = CCC.Log.connectDiv(true, data['text']);
@@ -126,23 +126,6 @@ CCC.Log.receiveMessage = function(e) {
       return;
     }
     CCC.Log.addJson(json);
-  }
-};
-
-/**
- * Change the connection status between being connected or disconnected.
- * @param {boolean} newConnected New status.
- */
-CCC.Log.setConnected = function(newConnected) {
-  if (newConnected === CCC.Common.isConnected) {
-    return;  // No change.
-  }
-  CCC.Common.isConnected = newConnected;
-  // Add/remove a classname on body, so that links and menus can change style.
-  if (CCC.Common.isConnected) {
-    document.body.classList.remove('disconnected');
-  } else {
-    document.body.classList.add('disconnected');
   }
 };
 
