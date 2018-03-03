@@ -38,7 +38,7 @@ interpreter.createThread(common.es5);
 interpreter.run();
 interpreter.createThread(common.es6);
 interpreter.run();
-interpreter.createThread(common.net);
+interpreter.createThread(common.cc);
 interpreter.run();
 interpreter.addVariableToScope(interpreter.global, 'src');
 
@@ -101,7 +101,7 @@ function runComplexTest(t, name, src, expected, initFunc, asyncFunc) {
   intrp.run();
   intrp.createThread(common.es6);
   intrp.run();
-  intrp.createThread(common.net);
+  intrp.createThread(common.cc);
   intrp.run();
   if (initFunc) {
     initFunc(intrp);
@@ -158,7 +158,7 @@ async function runAsyncTest(t, name, src, expected, initFunc, sideFunc) {
   intrp.run();
   intrp.createThread(common.es6);
   intrp.run();
-  intrp.createThread(common.net);
+  intrp.createThread(common.cc);
   intrp.run();
   if (initFunc) {
     initFunc(intrp);
@@ -1047,7 +1047,7 @@ exports.testStartStop = async function(t) {
   intrp.run();
   intrp.createThread(common.es6);
   intrp.run();
-  intrp.createThread(common.net);
+  intrp.createThread(common.cc);
   intrp.run();
   try {
     intrp.start();
@@ -1178,7 +1178,7 @@ exports.testNetworking = async function(t) {
           }
         }
       } finally {
-        connectionUnlisten(9999);
+        CC.connectionUnlisten(9999);
       }
       resolve('OK');
    `;

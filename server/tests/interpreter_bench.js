@@ -42,7 +42,7 @@ function runBench(b, name, src) {
     interpreter.run();
     interpreter.createThread(common.es6);
     interpreter.run();
-    interpreter.createThread(common.net);
+    interpreter.createThread(common.cc);
     interpreter.run();
 
     var err = undefined;

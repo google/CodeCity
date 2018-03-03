@@ -56,7 +56,7 @@ function runTest(t, name, src1, src2, expected, steps) {
     intrp1.run();
     intrp1.createThread(common.es6);
     intrp1.run();
-    intrp1.createThread(common.net);
+    intrp1.createThread(common.cc);
     intrp1.run();
     if (src1) {
       intrp1.createThread(src1);
@@ -155,7 +155,7 @@ async function runAsyncTest(t, name, src1, src2, expected, initFunc) {
   intrp1.run();
   intrp1.createThread(common.es6);
   intrp1.run();
-  intrp1.createThread(common.net);
+  intrp1.createThread(common.cc);
   intrp1.run();
   if (initFunc) {
     initFunc(intrp1);
@@ -306,10 +306,10 @@ exports.testRoundtripAsync = async function(t) {
         data += d;
       };
       conn.onEnd = function() {
-        connectionUnlisten(8888);
+        CC.connectionUnlisten(8888);
         resolve(data);
       };
-      connectionListen(8888, conn);
+      CC.connectionListen(8888, conn);
       resolve();
    `;
   var src2 = `
