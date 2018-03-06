@@ -266,15 +266,18 @@ exports.testRoundtripSimple = function(t) {
 };
 
 /**
- * Run a round trip of serializing the Interpreter.SCOPE_REFERENCE sentinel.
+ * Run a round trip of serializing the Interpreter.SCOPE_REFERENCE
+ * sentinel and and an Interpreter.prototype.PropertyIterator.
  * @param {!T} t The test runner object.
  */
-exports.testRoundtripScopeReference = function(t) {
-  runTest(t, 'testRoundtripScopeReference', `
-      var x;
-  `, `
-      x = 'OK';
-  `, 'x;', 'OK', 1);
+exports.testRoundtripScopeRefAndPropIter = function(t) {
+  runTest(t, 'testRoundtripScopeRefAndPropIter', `
+      var r = 0, o = {a: 1, b: 2};
+  `,`
+      for (var k in o) {
+       r += o[k];
+      }
+  `, 'r;', 3, 1);
 };
 
 /**
