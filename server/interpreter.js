@@ -154,24 +154,33 @@ Interpreter.READONLY_NONENUMERABLE_DESCRIPTOR = {
 };
 
 /**
- * Unique symbol for indicating that a step has encountered an error, has
+ * Class for unique sentinel values passed to various functions.
+ * Declared so that sentinel values can have a specific type that we
+ * can type-check against (though as they share a single type you
+ * could still pass the wrong sentinel value to a function).
+ * @constructor
+ */
+Interpreter.Sentinel = function Sentinel() {};
+
+/**
+ * Unique sentinel for indicating that a step has encountered an error, has
  * added it to the stack, and will be thrown within the user's program.
  * When STEP_ERROR is thrown by the interpreter the error can be ignored.
  */
-Interpreter.STEP_ERROR = {};
+Interpreter.STEP_ERROR = new Interpreter.Sentinel();
 
 /**
- * Unique symbol for indicating that a reference is a variable on the scope,
+ * Unique sentinel for indicating that a reference is a variable on the scope,
  * not an object property.
  */
-Interpreter.SCOPE_REFERENCE = {};
+Interpreter.SCOPE_REFERENCE = new Interpreter.Sentinel();
 
 /**
- * Unique symbol for indicating, when used as the value of the value
+ * Unique sentinel for indicating, when used as the value of the value
  * parameter in calls to setProperty and friends, that the value
  * should be taken from the property descriptor instead.
  */
-Interpreter.VALUE_IN_DESCRIPTOR = {};
+Interpreter.VALUE_IN_DESCRIPTOR = new Interpreter.Sentinel();
 
 /**
  * Parse a code string into an AST.
@@ -1357,8 +1366,7 @@ Interpreter.prototype.initDate = function(scope) {
     })(functions[i]);
     this.createNativeFunction('Date.prototype.' + functions[i], wrapper, false);
   }
-  var functions =
-      ['toLocaleDateString', 'toLocaleString', 'toLocaleTimeString'];
+  functions = ['toLocaleDateString', 'toLocaleString', 'toLocaleTimeString'];
   for (var i = 0; i < functions.length; i++) {
     wrapper = (function(nativeFunc) {
       return function(/*locales, options*/) {
@@ -1793,7 +1801,8 @@ Interpreter.prototype.callAsyncFunction = function(state) {
 Interpreter.prototype.nativeToPseudo = function(nativeObj) {
   if ((typeof nativeObj !== 'object' && typeof nativeObj !== 'function') ||
       nativeObj === null) {
-    return nativeObj;
+    // It's a primitive; just return it.
+    return /** @type {boolean|number|string|undefined|null} */ (nativeObj);
   }
 
   var pseudoObj;
@@ -1803,7 +1812,7 @@ Interpreter.prototype.nativeToPseudo = function(nativeObj) {
       break;
     case '[object RegExp]':
       pseudoObj = new this.RegExp;
-      pseudoObj.populate(nativeObj);
+      pseudoObj.populate(/** @type {!RegExp} */(nativeObj));
       break;
     case '[object Error]':
       var proto;
@@ -1828,7 +1837,10 @@ Interpreter.prototype.nativeToPseudo = function(nativeObj) {
       pseudoObj = new this.Object;
   }
 
-  var keys = Object.getOwnPropertyNames(nativeObj);
+  // Cast to satisfy type-checker; it might be a lie: nativeObj could
+  // be an object (i.e., non-primitive) but not an Object (i.e.,
+  // inherits from Object.prototype).  Fortunately we don't care.
+  var keys = Object.getOwnPropertyNames(/** @type {!Object} */(nativeObj));
   for (var i = 0; i < keys.length; i++) {
     var key = keys[i];
     var desc = Object.getOwnPropertyDescriptor(nativeObj, key);
@@ -1874,7 +1886,7 @@ Interpreter.prototype.pseudoToNative = function(pseudoObj, opt_cycles) {
     nativeObj = [];
     cycles.native.push(nativeObj);
     var length = this.getProperty(pseudoObj, 'length');
-    for (var i = 0; i < length; i++) {
+    for (i = 0; i < length; i++) {
       if (this.hasProperty(pseudoObj, i)) {
         nativeObj[i] =
             this.pseudoToNative(this.getProperty(pseudoObj, i), cycles);
@@ -1901,14 +1913,17 @@ Interpreter.prototype.pseudoToNative = function(pseudoObj, opt_cycles) {
  * Converts from a native JS array to a JS interpreter array.
  * Does handle non-numeric properties (like str.match's index prop).
  * Does NOT recurse into the array's contents.
- * @param {!Array} nativeArray The JS array to be converted.
- * @return {!Interpreter.Object} The equivalent JS interpreter array.
+ * @param {!Array<Interpreter.Value>} nativeArray The JS array to be converted.
+ * @return {!Interpreter.prototype.Array} The equivalent JS interpreter array.
  */
 Interpreter.prototype.arrayNativeToPseudo = function(nativeArray) {
+  // For the benefit of closure-compiler, which doesn't think Arrays
+  // should have non-numeric indices:
+  var /** Object<Interpreter.Value> */ nativeObject = nativeArray;
   var pseudoArray = new this.Array;
   var props = Object.getOwnPropertyNames(nativeArray);
   for (var i = 0; i < props.length; i++) {
-    this.setProperty(pseudoArray, props[i], nativeArray[props[i]]);
+    this.setProperty(pseudoArray, props[i], nativeObject[props[i]]);
   }
   return pseudoArray;
 };
@@ -1917,14 +1932,22 @@ Interpreter.prototype.arrayNativeToPseudo = function(nativeArray) {
  * Converts from a JS interpreter array to native JS array.
  * Does handle non-numeric properties (like str.match's index prop).
  * Does NOT recurse into the array's contents.
- * @param {!Interpreter.Object} pseudoObj The JS interpreter array,
- *     or JS interpreter object pretending to be an array.
- * @return {!Array} The equivalent native JS array.
+ * @param {!Interpreter.prototype.Object} pseudoArray The JS interpreter array
+ *     or arraylike.
+ * @return {!Array<Interpreter.Value>} The equivalent native JS array.
  */
 Interpreter.prototype.arrayPseudoToNative = function(pseudoArray) {
   var nativeArray = [];
+  // For the benefit of closure-compiler, which doesn't think Arrays
+  // should have non-numeric indices:
+  var /** Object<Interpreter.Value> */ nativeObject = nativeArray;
+
+  // TODO(cpcallen): If pseudoArray is an arraylike, length might be
+  // <= one of the previously-copied indices, which could result in
+  // truncating the partially-copied array.  So length should probably
+  // be special-cased here as well as below.
   for (var key in pseudoArray.properties) {
-    nativeArray[key] = this.getProperty(pseudoArray, key);
+    nativeObject[key] = this.getProperty(pseudoArray, key);
   }
   // pseudoArray might be an object pretending to be an array.  In this case
   // it's possible that length is non-existent, invalid, or smaller than the
@@ -2014,9 +2037,9 @@ Interpreter.prototype.hasProperty = function(obj, name) {
  * Set a property value on a data object.
  * @param {!Interpreter.prototype.Object} obj Data object.
  * @param {Interpreter.Value} name Name of property.
- * @param {Interpreter.Value} value New property value.  Use
- *     Interpreter.VALUE_IN_DESCRIPTOR if value is handled by
- *     descriptor instead.
+ * @param {Interpreter.Value|Interpreter.Sentinel} value New property
+ *     value.  Use Interpreter.VALUE_IN_DESCRIPTOR if value is handled
+ *     by descriptor instead.
  * @param {Object=} opt_descriptor Optional descriptor object.
  */
 Interpreter.prototype.setProperty = function(obj, name, value, opt_descriptor) {
@@ -2034,6 +2057,12 @@ Interpreter.prototype.setProperty = function(obj, name, value, opt_descriptor) {
     var i;
     if (name === 'length') {
       // Delete elements if length is smaller.
+
+      // BUG(cpcallen): this will break if user calls
+      //     Object.defineProperty([], 'length', {...})
+      // because then value === Interpreter.VALUE_IN_DESCRIPTOR
+      // N.B.: there might not actually be a 'value' key in the descriptor.
+
       value = Interpreter.legalArrayLength(value);
       if (isNaN(value)) {
         this.throwException(this.RANGE_ERROR, 'Invalid array length');
@@ -2969,10 +2998,12 @@ Interpreter.prototype.installTypes = function() {
    * API.  In its present form it is not suitable for exposure as a
    * userland pseduoObject, but it is intended to be easily adaptable
    * for that if desired.
+   * 
+   * FIXME(cpcallen): this should be typed to permit being called
+   * without arguments when deserializing.
    * @constructor
    * @extends {Interpreter.prototype.Server}
-   * @param {number=} port Port to listen on.  Should be undefined
-   *     only when deserializing.
+   * @param {number} port Port to listen on.
    * @param {!Interpreter.prototype.Object} proto Prototype object for
    *     new connections.
    */
@@ -3000,7 +3031,7 @@ Interpreter.prototype.installTypes = function() {
     }
     var server = this;  // Because this will be undefined in handlers below.
     // Create net.Server, start it listening, and attached it to this.
-    var netServer = net.Server(/* { allowHalfOpen: true } */);
+    var netServer = new net.Server(/* { allowHalfOpen: true } */);
     netServer.on('connection', function (socket) {
       // TODO(cpcallen): Add localhost test here, like this - only
       // also allow IPV6 connections:
@@ -3283,7 +3314,7 @@ Interpreter.prototype['stepCallExpression'] = function(stack, state, node) {
         this.throwException(this.TYPE_ERROR, func + ' is not a constructor');
       }
       // Constructor, 'this' is new object.
-      // TODO(cpcallen): need type check to make sure .prototype is an object.
+      // BUG(cpcallen): Must type check to make sure .prototype is an object.
       state.funcThis_ = new this.Object(this.getProperty(func, 'prototype'));
       state.isConstructor = true;
     }
