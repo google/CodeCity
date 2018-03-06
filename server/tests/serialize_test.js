@@ -32,6 +32,25 @@ var common = require('./interpreter_common');
 const Serializer = require('../serialize');
 
 /**
+ * Serialize an interpreter to JSON, then create and return a new
+ * interpreter by deserializing that JSON.
+ * @param {!Interpreter} intrp The interpreter to be serialized.
+ * @return {?Interpreter} the freshly deserialized interpreter, or
+ *     null if an error occurred.
+ */
+function roundTrip(intrp) {
+  intrp.pause();  // Save timer info.
+  var json = JSON.stringify(Serializer.serialize(intrp), null, '  ');
+
+  var intrp2 = new Interpreter;
+  Serializer.deserialize(JSON.parse(json), intrp2);
+  // Deserialized interpreter was stopped, but we want to be able to
+  // step/run it, so wake it up to PAUSED.
+  intrp2.pause();
+  return intrp2;
+}
+
+/**
  * Run a roundtrip test:
  * - Create an interpreter instance.
  * - Append src1 and run specified number of steps.
@@ -50,8 +69,8 @@ const Serializer = require('../serialize');
  *     (run to completion if unspecified).
  */
 function runTest(t, name, src1, src2, expected, steps) {
+  var intrp1 = new Interpreter;
   try {
-    var intrp1 = new Interpreter;
     intrp1.createThread(common.es5);
     intrp1.run();
     intrp1.createThread(common.es6);
@@ -68,27 +87,15 @@ function runTest(t, name, src1, src2, expected, steps) {
         intrp1.run();
       }
     }
-    intrp1.pause();  // Save timer info.
   } catch (e) {
     t.crash(name + 'Pre', e);
     return;
   }
 
   try {
-    var json = JSON.stringify(Serializer.serialize(intrp1), null, '  ');
+    var intrp2 = roundTrip(intrp1);
   } catch (e) {
-    t.crash(name + 'Serialize', e);
-    return;
-  }
-
-  try {
-    var intrp2 = new Interpreter;
-    Serializer.deserialize(JSON.parse(json), intrp2);
-    // Deserialized interpreter was stopped, but we want to be able to
-    // step/run it, so wake it up to PAUSED.
-    intrp2.pause();
-  } catch (e) {
-    t.crash(name + 'Deserialize', e);
+    t.crash(name + 'RoundTrip', e);
     return;
   }
 
