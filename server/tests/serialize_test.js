@@ -53,21 +53,23 @@ function roundTrip(intrp) {
 /**
  * Run a (possibly multiple) roundtrip test:
  * - Create an interpreter instance.
- * - Create a thread to eval src1.
- * - Run thread to completion, round-tripping every specified number of steps.
- * - Round trip, if steps not specified or not reached.
- * - Append src2 (if specified) and run that to completion.
- * - Verify result is as expected.
+ * - Create a thread to eval src1, and run it to completion.
+ * - Create a thread to eval src2
+ * - Step through src2, periodically serializing and unserializing.
+ * - Do a final round-trip serialization, if none done yet.
+ * - Create a thread to eval src3, and run it to completion.
+ * - Verify value of final expression evaluated is === expected.
  * @param {!T} t The test runner object.
  * @param {string} name The name of the test.
- * @param {string} src1 The code to be evaled before serialization.
- * @param {string} src2 The code to be evaled after serialization.
+ * @param {string} src1 The code to be evaled before any serialization.
+ * @param {string} src2 The code to be evaled while periodically serializing.
+ * @param {string} src3 The code to be evaled after final serialization.
  * @param {number|string|boolean|null|undefined} expected The expected
  *     completion value.
  * @param {number=} steps How many steps to run between serializations
  *     (run src1 to completion if unspecified).
  */
-function runTest(t, name, src1, src2, expected, steps) {
+function runTest(t, name, src1, src2, src3, expected, steps) {
   var intrp = new Interpreter;
   try {
     intrp.createThread(common.es5);
@@ -78,6 +80,7 @@ function runTest(t, name, src1, src2, expected, steps) {
     intrp.run();
     if (src1) {
       intrp.createThread(src1);
+      intrp.run();
     }
   } catch (e) {
     t.crash(name + 'Pre', e);
@@ -85,6 +88,9 @@ function runTest(t, name, src1, src2, expected, steps) {
   }
 
   try {
+    if (src2) {
+      intrp.createThread(src2);
+    }
     var trips = 0;
     if (steps === undefined) {
       intrp.run();
@@ -101,18 +107,18 @@ function runTest(t, name, src1, src2, expected, steps) {
       trips++;
     }
   } catch (e) {
-    t.crash(name + 'RunSrc1', e);
+    t.crash(name, e);
     return;
   }
 
   try {
     intrp.run();
-    if (src2) {
-      intrp.createThread(src2);
+    if (src3) {
+      intrp.createThread(src3);
       intrp.run();
     }
   } catch (e) {
-    t.crash(name + 'RunSrc2', e);
+    t.crash(name + 'Post', e);
     return;
   }
 
@@ -121,8 +127,8 @@ function runTest(t, name, src1, src2, expected, steps) {
     t.pass(name);
   } else {
     t.fail(name, util.format(
-        '%s\n/* roundtrip */\n%s\ngot: %s  want: %s',
-        src1, src2, String(r), String(expected)));
+        '%s\n/* begin roundtrips */\n%s\n/* end roundtrips */\n%s\n' +
+        'got: %s  want: %s', src1, src2, src3, String(r), String(expected)));
   }
 };
 
@@ -251,13 +257,12 @@ async function runAsyncTest(t, name, src1, src2, expected, initFunc) {
  * @param {!T} t The test runner object.
  */
 exports.testRoundtripSimple = function(t) {
-  runTest(t, 'testRoundtripSimple', `
+  runTest(t, 'testRoundtripSimple', '', `
       var x = 1;
       for (var i = 0; i < 8; i++) {
         x *= 2;
       }
-      x;
-  `, '', 256, 100);
+  `, 'x;', 256, 100);
 };
 
 /**
@@ -267,9 +272,9 @@ exports.testRoundtripSimple = function(t) {
 exports.testRoundtripScopeReference = function(t) {
   runTest(t, 'testRoundtripScopeReference', `
       var x;
+  `, `
       x = 'OK';
-      x;
-  `, '', 'OK', 1);
+  `, 'x;', 'OK', 1);
 };
 
 /**
@@ -284,7 +289,7 @@ exports.testRoundtripDetails = function(t) {
           boolProto = Object.getPrototypeOf(false),
           numProto = Object.getPrototypeOf(0),
           strProto =  Object.getPrototypeOf('');
-  `,`
+  `, '', `
       Object.getPrototypeOf({}) === objProto &&
       Object.getPrototypeOf({}) === Object.prototype &&
       Object.getPrototypeOf([]) === arrProto &&
