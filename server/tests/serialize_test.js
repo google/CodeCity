@@ -261,6 +261,18 @@ exports.testRoundtripSimple = function(t) {
 };
 
 /**
+ * Run a round trip of serializing the Interpreter.SCOPE_REFERENCE sentinel.
+ * @param {!T} t The test runner object.
+ */
+exports.testRoundtripScopeReference = function(t) {
+  runTest(t, 'testRoundtripScopeReference', `
+      var x;
+      x = 'OK';
+      x;
+  `, '', 'OK', 1);
+};
+
+/**
  * Run more detailed tests of the state of the post-rountrip interpreter.
  * @param {!T} t The test runner object.
  */
