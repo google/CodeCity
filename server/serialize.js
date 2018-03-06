@@ -221,11 +221,7 @@ Serializer.serialize = function(intrp) {
         jsonObj['type'] = 'Map';
         break;
       case Object.prototype:
-        if (obj === Interpreter.SCOPE_REFERENCE) {
-          jsonObj['type'] = 'ScopeReference';
-        } else {
-          jsonObj['type'] = 'Object';
-        }
+        jsonObj['type'] = 'Object';
         break;
       case Function.prototype:
         jsonObj['type'] = 'Function';
@@ -256,8 +252,17 @@ Serializer.serialize = function(intrp) {
         var type = types.get(proto);
         if (!type) {
           throw TypeError('Unknown type: ' + obj);
+        } else if (type === 'Sentinel') {
+          switch (obj) {
+            case Interpreter.SCOPE_REFERENCE:
+              jsonObj['type'] = 'ScopeReference';
+              break;
+            default:
+              throw new Error("Unknown sentinel value encountered");
+          }
+        } else {
+          jsonObj['type'] = type;
         }
-        jsonObj['type'] = type;
     }
     var props = Object.create(null);
     var names = Object.getOwnPropertyNames(obj);
@@ -311,6 +316,7 @@ Serializer.getTypesDeserialize_ = function (intrp) {
   return {
     'Interpreter': Interpreter,
     'Scope': Interpreter.Scope,
+    'Sentinel': Interpreter.Sentinel,
     'State': Interpreter.State,
     'Thread': Interpreter.Thread,
     'PseudoObject': intrp.Object,
