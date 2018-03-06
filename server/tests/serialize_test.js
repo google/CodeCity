@@ -51,12 +51,11 @@ function roundTrip(intrp) {
 }
 
 /**
- * Run a roundtrip test:
+ * Run a (possibly multiple) roundtrip test:
  * - Create an interpreter instance.
- * - Append src1 and run specified number of steps.
- * - Serialize interpreter to JSON.
- * - Create new interpreter instance and deserialize JSON into it.
- * - Run new instance to completion.
+ * - Create a thread to eval src1.
+ * - Run thread to completion, round-tripping every specified number of steps.
+ * - Round trip, if steps not specified or not reached.
  * - Append src2 (if specified) and run that to completion.
  * - Verify result is as expected.
  * @param {!T} t The test runner object.
@@ -65,27 +64,20 @@ function roundTrip(intrp) {
  * @param {string} src2 The code to be evaled after serialization.
  * @param {number|string|boolean|null|undefined} expected The expected
  *     completion value.
- * @param {number=} steps How many steps to run before serializing
- *     (run to completion if unspecified).
+ * @param {number=} steps How many steps to run between serializations
+ *     (run src1 to completion if unspecified).
  */
 function runTest(t, name, src1, src2, expected, steps) {
-  var intrp1 = new Interpreter;
+  var intrp = new Interpreter;
   try {
-    intrp1.createThread(common.es5);
-    intrp1.run();
-    intrp1.createThread(common.es6);
-    intrp1.run();
-    intrp1.createThread(common.cc);
-    intrp1.run();
+    intrp.createThread(common.es5);
+    intrp.run();
+    intrp.createThread(common.es6);
+    intrp.run();
+    intrp.createThread(common.cc);
+    intrp.run();
     if (src1) {
-      intrp1.createThread(src1);
-      if (steps !== undefined) {
-        for (var i = 0; i < steps; i++) {
-          intrp1.step();
-        }
-      } else {
-        intrp1.run();
-      }
+      intrp.createThread(src1);
     }
   } catch (e) {
     t.crash(name + 'Pre', e);
@@ -93,24 +85,38 @@ function runTest(t, name, src1, src2, expected, steps) {
   }
 
   try {
-    var intrp2 = roundTrip(intrp1);
+    var trips = 0;
+    if (steps === undefined) {
+      intrp.run();
+    } else {
+      for (var s = 0; intrp.step(); s++) {
+        if ((s % steps) === 0) {
+            intrp = roundTrip(intrp);
+            trips++;
+        }
+      }
+    }
+    if (trips === 0) {
+      intrp = roundTrip(intrp);
+      trips++;
+    }
   } catch (e) {
-    t.crash(name + 'RoundTrip', e);
+    t.crash(name + 'RunSrc1', e);
     return;
   }
 
   try {
-    intrp2.run();
+    intrp.run();
     if (src2) {
-      intrp2.createThread(src2);
-      intrp2.run();
+      intrp.createThread(src2);
+      intrp.run();
     }
   } catch (e) {
-    t.crash(name + 'Post', e);
+    t.crash(name + 'RunSrc2', e);
     return;
   }
 
-  var r = intrp2.pseudoToNative(intrp2.value);
+  var r = intrp.pseudoToNative(intrp.value);
   if (Object.is(r, expected)) {
     t.pass(name);
   } else {
@@ -148,8 +154,6 @@ function runTest(t, name, src1, src2, expected, steps) {
  * @param {string} src2 The code to be evaled after serialization.
  * @param {number|string|boolean|null|undefined} expected The expected
  *     completion value.
- * @param {number=} steps How many steps to run before serializing
- *     (run to completion if unspecified).
  * @param {Function(Interpreter)=} initFunc Optional function to be
  *     called after creating and initialzing new interpreter but
  *     before running src.  Can be used to insert extra native
