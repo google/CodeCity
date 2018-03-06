@@ -280,7 +280,7 @@ exports.testRoundtripScopeRefAndPropIter = function(t) {
       var r = 0, o = {a: 1, b: 2};
   `,`
       for (var k in o) {
-       r += o[k];
+        r += o[k];
       }
   `, 'r;', 3, 1, true);
 };
