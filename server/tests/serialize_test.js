@@ -68,16 +68,21 @@ function roundTrip(intrp) {
  *     completion value.
  * @param {number=} steps How many steps to run between serializations
  *     (run src1 to completion if unspecified).
+ * @param {boolean=} noBuiltins Skip initialization of global scope
+ *     (e.g., evaluation of es5.js, es6.js, and cc.js at startup).
+ *     Speeds up tests with many roundtrips that do not need builtins.
  */
-function runTest(t, name, src1, src2, src3, expected, steps) {
+function runTest(t, name, src1, src2, src3, expected, steps, noBuiltins) {
   var intrp = new Interpreter;
   try {
-    intrp.createThread(common.es5);
-    intrp.run();
-    intrp.createThread(common.es6);
-    intrp.run();
-    intrp.createThread(common.cc);
-    intrp.run();
+    if (!noBuiltins) {
+      intrp.createThread(common.es5);
+      intrp.run();
+      intrp.createThread(common.es6);
+      intrp.run();
+      intrp.createThread(common.cc);
+      intrp.run();
+    }
     if (src1) {
       intrp.createThread(src1);
       intrp.run();
@@ -277,7 +282,7 @@ exports.testRoundtripScopeRefAndPropIter = function(t) {
       for (var k in o) {
        r += o[k];
       }
-  `, 'r;', 3, 1);
+  `, 'r;', 3, 1, true);
 };
 
 /**
