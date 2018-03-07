@@ -25,6 +25,67 @@
 // IDE object.
 $.code = {};
 
+$.code.getGlobal = function(name) {
+  if ($.code.getGlobal.globals.indexOf(name) === -1) {
+    return null;
+  }
+  // This eval is known to be safe since the content is on the whitelist.
+  return eval(name);
+};
+
+$.code.getGlobal.globals = [
+  '$',
+  'Array',
+  'Boolean',
+  'clearTimeout',
+  'Date',
+  'decodeURI',
+  'decodeURIComponent',
+  'encodeURI',
+  'encodeURIComponent',
+  'Error',
+  'escape',
+  'eval',
+  'EvalError',
+  'Function',
+  'isFinite',
+  'isNaN',
+  'JSON',
+  'Math',
+  'Number',
+  'Object',
+  'parseFloat',
+  'parseInt',
+  'RangeError',
+  'ReferenceError',
+  'RegExp',
+  'setTimeout',
+  'String',
+  'suspend',
+  'SyntaxError',
+  'TypeError',
+  'unescape',
+  'URIError',
+  'user'
+];
+
+$.code.getObject = function(parts) {
+  if (!parts.length) {
+    return undefined;  // Global namespace.
+  }
+  var obj = $.code.getGlobal(parts[0]);
+  if (obj !== null) {
+    for (var i = 1; i < parts.length; i++) {
+      obj = obj[parts[i]];
+      if (!obj || (typeof obj !== 'object' && typeof obj !== 'function')) {
+        return null;  // Specified path doesn't exist.
+      }
+    }
+  }
+  return obj;
+};
+
+
 $.code.frameset = function(request, response) {
   // Overwrite on first execution.
   $.code.frameset = $.jssp.compile($.code.frameset);
@@ -64,6 +125,7 @@ $.code.explorer.jssp = [
   '<body>',
   '  <input type="text" id="input" autocomplete="off">',
   '  <div id="autocompleteMenu"><div id="autocompleteMenuScroll"></div></div>',
+  '  <div id="panels"><div id="panelsScroll"><span id="panelSpacer"></span></div></div>',
   '</body>',
   '</html>'
 ].join('\n');
@@ -75,63 +137,45 @@ $.code.autocomplete = function(request, response) {
   var parts = JSON.parse(request.parameters.parts);
   var options = null;
   if (parts.length) {
-    var first = parts[0];
-    if ($.code.autocomplete.global.indexOf(first) !== -1) {
-      var obj = eval(first);
-      for (var i = 1; i < parts.length; i++) {
-        obj = obj[parts[i]];
-        if (!obj || (typeof obj !== 'object' && typeof obj !== 'function')) {
-          obj = null;
-          break;
-        }
-      }
-      if (obj) {
-        options = [];
-        do {
-          options.push(Object.getOwnPropertyNames(obj));
-        } while ((obj = Object.getPrototypeOf(obj)));
-      }
+    var obj = $.code.getObject(parts);
+    if (obj !== null) {
+      options = [];
+      do {
+        options.push(Object.getOwnPropertyNames(obj));
+      } while ((obj = Object.getPrototypeOf(obj)));
     }
   } else {
-    options = [$.code.autocomplete.global];
+    options = [$.code.getGlobal.globals];
   }
   response.write(JSON.stringify(options));
 };
 
-$.code.autocomplete.global = [
-  '$',
-  'Array',
-  'Boolean',
-  'clearTimeout',
-  'Date',
-  'decodeURI',
-  'decodeURIComponent',
-  'encodeURI',
-  'encodeURIComponent',
-  'Error',
-  'escape',
-  'eval',
-  'EvalError',
-  'Function',
-  'isFinite',
-  'isNaN',
-  'JSON',
-  'Math',
-  'Number',
-  'Object',
-  'parseFloat',
-  'parseInt',
-  'RangeError',
-  'ReferenceError',
-  'RegExp',
-  'setTimeout',
-  'String',
-  'suspend',
-  'SyntaxError',
-  'TypeError',
-  'unescape',
-  'URIError',
-  'user'
-];
-
 $.http.router.codeAutocomplete = {regexp: /^\/code\/autocomplete$/, handler: $.code.autocomplete};
+
+
+$.code.objectPanel = function(request, response) {
+  // Overwrite on first execution.
+  $.code.objectPanel = $.jssp.compile($.code.objectPanel);
+  $.code.objectPanel.call(this, request, response);
+};
+$.code.objectPanel.jssp = [
+  '<!doctype html>',
+  '<html>',
+  '<head>',
+  '  <title>Code City: Code Object Panel</title>',
+  '  <link rel="stylesheet" href="/static/code/style.css">',
+  '  <link href="https://fonts.googleapis.com/css?family=Roboto+Mono" rel="stylesheet">',
+  '  <script src="/static/code/objectPanel.js"></script>',
+  '</head>',
+  '<body>',
+  '<%',
+  '  var parts = JSON.parse(request.parameters.parts);',
+  '  var obj = $.code.getObject(parts);',
+  '%>',
+  '<h1><%= obj %></h1>',
+  '<%= JSON.stringify(parts) %>',
+  '</body>',
+  '</html>'
+].join('\n');
+
+$.http.router.objectPanel = {regexp: /^\/code\/objectPanel(\?|$)/, handler: $.code.objectPanel};

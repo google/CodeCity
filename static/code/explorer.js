@@ -32,7 +32,7 @@ var scrollDiv;
 var SIZE_OF_INPUT_CHARS = 10.8;
 
 var oldInputValue;
-var oldInputParts;
+var oldInputPartsJSON;
 var inputPollPid = 0;
 
 function tokenizeSelector(text) {
@@ -301,25 +301,26 @@ function inputChange() {
       lastName = null;
     }
   }
-  var parts = JSON.stringify(parts);
-  if (oldInputParts === parts) {
+  var partsJSON = JSON.stringify(parts);
+  if (oldInputPartsJSON === partsJSON) {
     updateAutocompleteMenu(lastToken);
   } else {
-    oldInputParts = parts;
-    sendAutocomplete(parts);
+    oldInputPartsJSON = partsJSON;
+    sendAutocomplete(partsJSON);
     hideAutocompleteMenu();
+    loadPanels(parts);
   }
 }
 
 // Send a request to Code City's autocomplete service.
-function sendAutocomplete(parts) {
+function sendAutocomplete(partsJSON) {
   var xhr = sendAutocomplete.httpRequest;
   xhr.abort();
   xhr.open('POST', '/code/autocomplete', true);
   xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
   xhr.onreadystatechange = receiveAutocomplete;
-  xhr.send('parts=' + encodeURIComponent(parts));
-  console.log('Sending to CC: ' + parts);
+  xhr.send('parts=' + encodeURIComponent(partsJSON));
+  console.log('Sending to CC: ' + partsJSON);
 }
 sendAutocomplete.httpRequest = new XMLHttpRequest();
 
@@ -472,7 +473,7 @@ function autocompleteSelect(div) {
 // An autocompletion option has been clicked by the user.
 function autocompleteClick(e) {
   var option = e.target.getAttribute('data-option');
-  var parts = JSON.parse(oldInputParts);
+  var parts = JSON.parse(oldInputPartsJSON);
   parts.push(option);
   setInput(parts);
 }
@@ -502,6 +503,7 @@ function setInput(parts) {
   input.value = value;
   oldInputValue = value;  // Don't autocomplete this value.
   input.focus();
+  loadPanels(parts);
 }
 
 // Start polling for changes.
@@ -581,6 +583,78 @@ function inputMouseDown() {
   setTimeout(autocompleteCursorMonitor, 1);
 }
 
+// Number of object panels.
+var panelCount = 0;
+// Size of temporary spacer margin for smooth scrolling after deletion.
+var panelSpacerMargin = 0;
+
+// Add an object panel to the right.
+function addPanel(component) {
+  panelsScroll = document.getElementById('panelsScroll');
+  var iframe = document.createElement('iframe');
+  iframe.id = 'objectPanel' + panelCount;
+  iframe.src = '/code/objectPanel?parts=' + encodeURIComponent(component);
+  iframe.setAttribute('data-component', component);
+  var spacer = document.getElementById('panelSpacer');
+  panelsScroll.insertBefore(iframe, spacer);
+  panelCount++;
+  panelSpacerMargin = Math.max(0, panelSpacerMargin - iframe.offsetWidth);
+  scrollPanel();
+}
+
+// After addition, quickly scroll the panels all the way to see the right edge.
+// After deletion, reduce the spacer so that the panels scroll to the edge.
+function scrollPanel() {
+  var speed = 20;
+  clearTimeout(scrollPanel.pid_);
+  if (panelSpacerMargin > 0) {
+    // Reduce spacer.
+    var spacer = document.getElementById('panelSpacer');
+    panelSpacerMargin = Math.max(0, panelSpacerMargin - speed);
+    spacer.style.marginRight = panelSpacerMargin + 'px';
+    if (panelSpacerMargin > 0) {
+      scrollPanel.pid_ = setTimeout(scrollPanel, 10);
+    }
+  } else {
+    // Scroll right.
+    panels = document.getElementById('panels');
+    var oldScroll = panels.scrollLeft;
+    panels.scrollLeft += speed;
+    if (panels.scrollLeft > oldScroll) {
+      scrollPanel.pid_ = setTimeout(scrollPanel, 10);
+    }
+  }
+}
+
+// Remove the right-most panel.
+function removePanel() {
+  panelCount--;
+  var iframe = document.getElementById('objectPanel' + panelCount);
+  panelSpacerMargin += iframe.offsetWidth;
+  iframe.parentNode.removeChild(iframe);
+  scrollPanel();
+}
+
+function loadPanels(parts) {
+  for (var i = 0; i <= parts.length; i++) {
+    var component = JSON.stringify(parts.slice(0, i));
+    var iframe = document.getElementById('objectPanel' + i);
+    if (iframe) {
+      if (iframe.getAttribute('data-component') === component) {
+        continue;
+      } else {
+        while (panelCount >= i) {
+          removePanel();
+        }
+      }
+    }
+    addPanel(component);
+  }
+  while (panelCount > i) {
+    removePanel();
+  }
+}
+
 // Page has loaded, initialize the explorer.
 function init() {
   input = document.getElementById('input');
@@ -588,12 +662,11 @@ function init() {
   input.addEventListener('blur', inputBlur);
   input.addEventListener('keydown', inputKey);
   input.addEventListener('mousedown', inputMouseDown);
-  input.value = '$';
-  input.focus();
   menuDiv = document.getElementById('autocompleteMenu');
   scrollDiv = document.getElementById('autocompleteMenuScroll');
   scrollDiv.addEventListener('mousedown', autocompleteMouseDown);
   scrollDiv.addEventListener('click', autocompleteClick);
+  setInput(['$']);
 }
 
 window.addEventListener('load', init);

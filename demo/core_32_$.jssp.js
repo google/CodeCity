@@ -45,7 +45,6 @@ $.jssp.compile = function(func) {
     }
     switch (state) {
       case STATES.LITERAL:
-        var flush = true;
         if (token === '<%') {
           state = STATES.STATEMENT;
         } else if (token === '<%=') {
