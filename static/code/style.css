@@ -55,6 +55,7 @@ input {
 
 #panelsScroll {
   height: 100%;
+  padding-left: 5px;
   white-space: nowrap;
 }
 

@@ -37,12 +37,14 @@ var inputPollPid = 0;
 
 function tokenizeSelector(text) {
   // Trim left whitespace.
-  text = text.replace(/^[\s\xa0]+/, '');
-  if (!text) {
+  var trimText = text.replace(/^[\s\xa0]+/, '');
+  if (!trimText) {
     return [];
   }
+  var whitespaceLength = text.length - trimText.length;
+  text = trimText;
 
-  function pushString(state, buffer) {
+  function pushString(state, buffer, index) {
     // Convert state into quote type.
     var quotes;
     switch (state) {
@@ -60,8 +62,9 @@ function tokenizeSelector(text) {
     var token = {
       type: '"',
       raw: quotes + buffer.join('') + quotes,
-      valid: true,
+      valid: true
     };
+    token.index = whitespaceLength + index - (token.raw.length - 1);
     do {
       var raw = quotes + buffer.join('') + quotes;
       // Attempt to parse a string.
@@ -78,6 +81,18 @@ function tokenizeSelector(text) {
     token.value = str;
     tokens.push(token);
   }
+  function pushUnparsed(buffer, index) {
+    var raw = buffer.join('');
+    buffer.length = 0;
+    if (raw) {
+      var token = {
+        type: 'unparsed',
+        raw: raw,
+        index: whitespaceLength + index - raw.length
+      };
+      tokens.push(token);
+    }
+  }
 
   // Split out strings.
   var state = 0;
@@ -92,19 +107,17 @@ function tokenizeSelector(text) {
     var char = text[i];
     if (state === 0) {
       if (char === "'") {
-        tokens.push(buffer.join(''));
-        buffer.length = 0;
+        pushUnparsed(buffer, i);
         state = 1;
       } else if (char === '"') {
-        tokens.push(buffer.join(''));
-        buffer.length = 0;
+        pushUnparsed(buffer, i);
         state = 2;
       } else {
         buffer.push(char);
       }
     } else if (state === 1) {
       if (char === "'") {
-        pushString(state, buffer);
+        pushString(state, buffer, i);
         state = 0;
       } else {
         buffer.push(char);
@@ -114,7 +127,7 @@ function tokenizeSelector(text) {
       }
     } else if (state === 2) {
       if (char === '"') {
-        pushString(state, buffer);
+        pushString(state, buffer, i);
         state = 0;
       } else {
         buffer.push(char);
@@ -131,35 +144,41 @@ function tokenizeSelector(text) {
     }
   }
   if (state !== 0) {
-    pushString(state, buffer);
+    pushString(state, buffer, i);
   } else if (buffer.length) {
-    tokens.push(buffer.join(''));
+    pushUnparsed(buffer, i);
   }
 
   // Split out brackets: [ ]
   for (var i = tokens.length - 1; i >= 0; i--) {
     var token = tokens[i];
-    if (typeof token === 'string') {
-      // Eliminate surrounding whitespace.
-      token = token.replace(/\s*(\[|\])\s*/g, '$1');
+    if (token.type === 'unparsed') {
+      var index = token.index + token.raw.length;
       // Split string on brackets.
-      var split = token.split(/(\[|\])/);
-      for (var j = split.length; j >= 0; j--) {
-        if (split[j] === '') {
-          split.splice(j, 1);
-        } else if (split[j] === '[') {
+      var split = token.raw.split(/(\s*(?:\[|\])\s*)/);
+      for (var j = split.length - 1; j >= 0; j--) {
+        var raw = split[j];
+        index -= raw.length;
+        if (raw === '') {
+          split.splice(j, 1);  // Delete the empty string.
+          continue;
+        } else if (raw.trim() === '[') {
           split[j] = {
             type: '[',
-            raw: '[',
             valid: true
           };
-        } else if (split[j] === ']') {
+        } else if (raw.trim() === ']') {
           split[j] = {
             type: ']',
-            raw: ']',
             valid: true
           };
+        } else {
+          split[j] = {
+            type: 'unparsed'
+          };
         }
+        split[j].raw = raw;
+        split[j].index = index;
       }
       // Replace token with split array.
       split.unshift(i, 1);
@@ -170,17 +189,14 @@ function tokenizeSelector(text) {
   // Parse numbers.
   for (var i = 1; i < tokens.length; i++) {
     var token = tokens[i];
-    if (tokens[i - 1].type === '[' && typeof token === 'string') {
-      tokens[i] = {
-        type: '#',
-        raw: token,
-        value: NaN,
-        valid: false
-      };
+    if (tokens[i - 1].type === '[' && token.type === 'unparsed') {
+      token.type = '#';
+      token.value = NaN;
+      token.valid = false;
       // Does not support E-notation or NaN.
-      if (/^\s*[-+]?(\d*\.?\d*|Infinity)\s*$/.test(token)) {
-        tokens[i].value = Number(token);
-        tokens[i].valid = !isNaN(tokens[i].value);
+      if (/^\s*[-+]?(\d*\.?\d*|Infinity)\s*$/.test(token.raw)) {
+        token.value = Number(token.raw);
+        token.valid = !isNaN(token.value);
       }
     }
   }
@@ -192,18 +208,19 @@ function tokenizeSelector(text) {
   }
   for (var i = tokens.length - 1; i >= 0; i--) {
     var token = tokens[i];
-    if (typeof token === 'string') {
-      // Eliminate surrounding whitespace.
-      token = token.replace(/\s*\.\s*/g, '.');
+    if (token.type === 'unparsed') {
+      var index = token.index + token.raw.length;
       // Split string on periods.
-      var split = token.split(/(\.)/);
+      var split = token.raw.split(/(\s*\.\s*)/);
       for (var j = split.length - 1; j >= 0; j--) {
-        if (split[j] === '') {
-          split.splice(j, 1);
-        } else if (split[j] === '.') {
+        var raw = split[j];
+        index -= raw.length;
+        if (raw === '') {
+          split.splice(j, 1);  // Delete the empty string.
+          continue;
+        } else if (raw.trim() === '.') {
           split[j] = {
             type: '.',
-            raw: '.',
             valid: true
           };
         } else {
@@ -224,10 +241,11 @@ function tokenizeSelector(text) {
           split[j] = {
             type: 'id',
             value: value,
-            raw: split[j],
             valid: valid
           };
         }
+        split[j].raw = raw;
+        split[j].index = index;
       }
       // Replace token with split array.
       split.unshift(i, 1);
@@ -536,6 +554,7 @@ function inputKey(e) {
     return;
   }
   var key = {
+    tab: 9,
     enter: 13,
     esc: 27,
     up: 38,
