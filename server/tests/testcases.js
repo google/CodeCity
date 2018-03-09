@@ -690,6 +690,27 @@ module.exports = [
     `,
     expected: 5 },
 
+  { name: 'deleteNonexistentFromPrimitive', src: `
+    (delete false.nonexistent) && 
+    (delete (42).toString);
+    `,
+    expected: true },
+
+  // This "actually" tries to delete the non-configurable own .length
+  // property from the auto-boxed String instance created by step 4a
+  // of algorithm in §11.4.1 of the ES 5.1 spec.  We have to use a
+  // string here, because only String instances have own properties
+  // (and yes: they are all non-configurable, so delete *always*
+  // fails).
+  { name: 'deleteOwnFromPrimitive', src: `
+    try {
+      delete 'hello'.length;
+    } catch (e) {
+      e.name;
+    }
+    `,
+    expected: "TypeError" },
+
   { name: 'funcDecl', src: `
     var v;
     function f() {
