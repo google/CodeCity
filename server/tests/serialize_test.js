@@ -100,8 +100,9 @@ function runTest(t, name, src1, src2, src3, expected, steps, noBuiltins) {
     if (steps === undefined) {
       intrp.run();
     } else {
-      for (var s = 0; intrp.step(); s++) {
-        if ((s % steps) === 0) {
+      var s = 0;
+      while(intrp.step()) {
+        if ((++s % steps) === 0) {
             intrp = roundTrip(intrp);
             trips++;
         }
