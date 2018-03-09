@@ -656,16 +656,11 @@ Interpreter.prototype.initObject = function(scope) {
 
   wrapper = function(obj) {
     throwIfNullUndefined(obj);
-    if (!(obj instanceof thisInterpreter.Object)) {
+    if (obj instanceof thisInterpreter.Object) {
+      return thisInterpreter.arrayNativeToPseudo(Object.keys(obj.properties));
+    } else {
       return thisInterpreter.arrayNativeToPseudo(Object.keys(obj));
     }
-    var list = [];
-    for (var key in obj.properties) {
-      if (!obj.notEnumerable.has(key)) {
-        list.push(key);
-      }
-    }
-    return thisInterpreter.arrayNativeToPseudo(list);
   };
   this.createNativeFunction('Object.keys', wrapper, false);
 
@@ -725,17 +720,14 @@ Interpreter.prototype.initObject = function(scope) {
           'Object.getOwnPropertyDescriptor called on non-object');
     }
     prop = String(prop);
-    if (!(prop in obj.properties)) {
+    var pd = Object.getOwnPropertyDescriptor(obj.properties, prop);
+    if (!pd) {
       return undefined;
     }
-    var configurable = !obj.notConfigurable.has(prop);
-    var enumerable = !obj.notEnumerable.has(prop);
-    var writable = !obj.notWritable.has(prop);
-
     var descriptor = new thisInterpreter.Object;
-    thisInterpreter.setProperty(descriptor, 'configurable', configurable);
-    thisInterpreter.setProperty(descriptor, 'enumerable', enumerable);
-    thisInterpreter.setProperty(descriptor, 'writable', writable);
+    thisInterpreter.setProperty(descriptor, 'configurable', pd.configurable);
+    thisInterpreter.setProperty(descriptor, 'enumerable', pd.enumerable);
+    thisInterpreter.setProperty(descriptor, 'writable', pd.writable);
     thisInterpreter.setProperty(descriptor, 'value',
         thisInterpreter.getProperty(obj, prop));
     return descriptor;
@@ -952,23 +944,12 @@ Interpreter.prototype.initArray = function(scope) {
                             this.Array.prototype.toString, false);
 
   wrapper = function() {
-    if (this.properties.length) {
-      var value = this.properties[this.properties.length - 1];
-      delete this.properties[this.properties.length - 1];
-      this.properties.length--;
-    } else {
-      var value = undefined;
-    }
-    return value;
+    return Array.prototype.pop.apply(this.properties, arguments);
   };
   this.createNativeFunction('Array.prototype.pop', wrapper, false);
 
   wrapper = function(var_args) {
-    for (var i = 0; i < arguments.length; i++) {
-      this.properties[this.properties.length] = arguments[i];
-      this.properties.length++;
-    }
-    return this.properties.length;
+    return Array.prototype.push.apply(this.properties, arguments);
   };
   this.createNativeFunction('Array.prototype.push', wrapper, false);
 
@@ -1895,12 +1876,10 @@ Interpreter.prototype.pseudoToNative = function(pseudoObj, opt_cycles) {
   } else {  // Object.
     nativeObj = {};
     cycles.native.push(nativeObj);
-    var val;
-    for (var key in pseudoObj.properties) {
-      if (pseudoObj.notEnumerable.has(key)) {
-        continue;
-      }
-      val = pseudoObj.properties[key];
+    var keys = Object.keys(pseudoObj.properties);
+    for (i = 0; i < keys.length; i++) {
+      var key = keys[i];
+      var val = pseudoObj.properties[key];
       nativeObj[key] = this.pseudoToNative(val, cycles);
     }
   }
@@ -1989,27 +1968,19 @@ Interpreter.prototype.getProperty = function(obj, name) {
     this.throwException(this.TYPE_ERROR,
                         "Cannot read property '" + name + "' of " + obj);
   }
-  if (name === 'length') {
-    // Special cases for magic length property.
-    if (typeof obj === 'string') {
-      return obj.length;
-    }
-  } else if (name.charCodeAt(0) < 0x40) {
-    // Might have numbers in there?
-    // Special cases for string array indexing
-    if (typeof obj === 'string') {
-      var n = Interpreter.legalArrayIndex(name);
-      if (!isNaN(n) && n < obj.length) {
-        return obj[n];
-      }
+  if (obj instanceof this.Object) {
+    return obj.properties[name];
+  } else {
+    // obj is actually a primitive - but we might still be able to get
+    // a property descriptor from it, e.g., if it is a string and name
+    // === length (or a numeric index).  Otherwise look at proto.
+    var pd = Object.getOwnPropertyDescriptor(obj, name);
+    if (pd) {
+      return /** @type {Interpreter.Value} */(pd.value);
+    } else {
+      return this.getPrototype(obj).properties[name];
     }
   }
-  do {
-    if (obj.properties && name in obj.properties) {
-      return obj.properties[name];
-    }
-  } while ((obj = this.getPrototype(obj)));
-  return undefined;
 };
 
 /**
@@ -2035,110 +2006,41 @@ Interpreter.prototype.hasProperty = function(obj, name) {
 
 /**
  * Set a property value on a data object.
+ *
+ * TODO(cpcallen): This should be split into (at least) two different
+ * functions, because non-writable properties are treated quite
+ * differently by assignment and Object.defineProperty.
  * @param {!Interpreter.prototype.Object} obj Data object.
  * @param {Interpreter.Value} name Name of property.
  * @param {Interpreter.Value|Interpreter.Sentinel} value New property
  *     value.  Use Interpreter.VALUE_IN_DESCRIPTOR if value is handled
  *     by descriptor instead.
- * @param {Object=} opt_descriptor Optional descriptor object.
+ * @param {Object=} desc Optional descriptor object.
  */
-Interpreter.prototype.setProperty = function(obj, name, value, opt_descriptor) {
+Interpreter.prototype.setProperty = function(obj, name, value, desc) {
   name = String(name);
-  if (opt_descriptor && obj.notConfigurable.has(name)) {
-    this.throwException(this.TYPE_ERROR, 'Cannot redefine property: ' + name);
-  }
-  if (!(obj instanceof this.Object)) {
-    this.throwException(this.TYPE_ERROR, "Can't create property '" + name +
-                        "' on '" + obj + "'");
-  }
-  if (obj instanceof this.Array) {
-    // Arrays have a magic length variable that is bound to the elements.
-    var length = obj.properties.length;
-    var i;
-    if (name === 'length') {
-      // Delete elements if length is smaller.
-
-      // BUG(cpcallen): this will break if user calls
-      //     Object.defineProperty([], 'length', {...})
-      // because then value === Interpreter.VALUE_IN_DESCRIPTOR
-      // N.B.: there might not actually be a 'value' key in the descriptor.
-
-      value = Interpreter.legalArrayLength(value);
-      if (isNaN(value)) {
-        this.throwException(this.RANGE_ERROR, 'Invalid array length');
+  if (desc) {
+    var pd = {};
+    if ('configurable' in desc) pd.configurable = desc.configurable;
+    if ('enumerable' in desc) pd.enumerable = desc.enumerable;
+    if ('writable' in desc) pd.writable = desc.writable;
+    if (value === Interpreter.VALUE_IN_DESCRIPTOR) {
+      if ('value' in desc) {
+        pd.value = desc.value;
       }
-      if (value < length) {
-        for (i in obj.properties) {
-          i = Interpreter.legalArrayIndex(i);
-          if (!isNaN(i) && value <= i) {
-            delete obj.properties[i];
-          }
-        }
-      }
-    } else if (!isNaN(i = Interpreter.legalArrayIndex(name))) {
-      // Increase length if this index is larger.
-      obj.properties.length = Math.max(length, i + 1);
+    } else {
+      pd.value = value;
     }
-  }
-  if (obj.preventExtensions && !(name in obj.properties)) {
-    this.throwException(this.TYPE_ERROR, "Can't add property '" + name +
-                        "', object is not extensible");
-  }
-  if (opt_descriptor) {
-    var newlyDefined = !(name in obj.properties);
-    // Define the property.
-    if ('configurable' in opt_descriptor) {
-      if (opt_descriptor.configurable) {
-        obj.notConfigurable.delete(name);  // No-op.
-      } else {
-        obj.notConfigurable.add(name);
-      }
-    } else if (newlyDefined) {
-      obj.notConfigurable.add(name);
-    }
-    if ('enumerable' in opt_descriptor) {
-      if (opt_descriptor.enumerable) {
-        obj.notEnumerable.delete(name);
-      } else {
-        obj.notEnumerable.add(name);
-      }
-    } else if (newlyDefined) {
-      obj.notEnumerable.add(name);
-    }
-    if ('writable' in opt_descriptor) {
-      if (opt_descriptor.writable) {
-        obj.notWritable.delete(name);
-      } else {
-        obj.notWritable.add(name);
-      }
-    } else if (newlyDefined) {
-      obj.notWritable.add(name);
-    }
-    if ('value' in opt_descriptor) {
-      obj.properties[name] = opt_descriptor.value;
-    } else if (value !== Interpreter.VALUE_IN_DESCRIPTOR) {
-      obj.properties[name] = value;
+    try {
+      Object.defineProperty(obj.properties, name, pd);
+    } catch (e) {
+      this.throwNativeException(e);
     }
   } else {
-    // Set the property.
-    if (value === Interpreter.VALUE_IN_DESCRIPTOR) {
-      throw ReferenceError('Value not specified.');
-    }
-    // Determine the parent (possibly self) where the property is defined.
-    var defObj = obj;
-    while (!(name in defObj.properties)) {
-       defObj = this.getPrototype(defObj);
-       if (!defObj) {
-         // This is a new property.
-         defObj = obj;
-         break;
-       }
-    }
-    if (defObj.notWritable.has(name)) {
-      this.throwException(this.TYPE_ERROR, "Cannot assign to read only " +
-          "property '" + name + "' of object '" + obj + "'");
-    } else {
+    try {
       obj.properties[name] = value;
+    } catch (e) {
+      this.throwNativeException(e);
     }
   }
 };
@@ -2317,6 +2219,18 @@ Interpreter.prototype.throwException = function(value, opt_message) {
   this.unwind(Interpreter.Completion.THROW, error, undefined);
   // Abort anything related to the current step.
   throw Interpreter.STEP_ERROR;
+};
+
+/**
+ * Rethrow a native exception as an interpreter object that can be
+ * handled by a interpreter try/catch statement.
+ *
+ * BUG(cpcallen): exception should have user (not native) stack trace.
+ * @param {*} value Native value to be converted and thrown.
+ */
+Interpreter.prototype.throwNativeException = function(value) {
+  value = this.nativeToPseudo(value);
+  this.throwException(value);
 };
 
 /**
@@ -2501,11 +2415,8 @@ Interpreter.Value;
  * @constructor
  */
 Interpreter.prototype.Object = function(proto) {
-  this.notConfigurable = new Set();
-  this.notEnumerable = new Set();
-  this.notWritable = new Set();
-  this.properties = Object.create(null);
   this.proto = null;
+  this.properties = Object.create(null);
   throw Error('Inner class constructor not callable on prototype');
 };
 /** @type {Interpreter.prototype.Object} */
@@ -2642,11 +2553,16 @@ Interpreter.prototype.installTypes = function() {
    * @param {Interpreter.prototype.Object=} proto Prototype object or null.
    */
   intrp.Object = function(proto) {
-    this.notConfigurable = new Set();
-    this.notEnumerable = new Set();
-    this.notWritable = new Set();
-    this.properties = Object.create(null);
-    this.proto = (proto === undefined ? intrp.OBJECT : proto);
+    if (proto === undefined) {
+      proto = intrp.OBJECT;
+    }
+    // We must define .proto before .properties, because our
+    // children's .properties will inherit from ours, and the
+    // deserializer is not smart enough to deal with encountering
+    // children's .properties before it has resurrected the
+    // .proto.properties.
+    this.proto = proto;
+    this.properties = Object.create((proto === null) ? null : proto.properties);
   };
 
   /** @type {Interpreter.prototype.Object} */
@@ -2767,10 +2683,13 @@ Interpreter.prototype.installTypes = function() {
    * @param {Interpreter.prototype.Object=} proto Prototype object.
    */
   intrp.Array = function(proto) {
-    intrp.Object.call(/** @type {?} */(this),
-        (proto === undefined ? intrp.ARRAY : proto));
-    intrp.setProperty(this, 'length', 0,
-                      Interpreter.NONENUMERABLE_NONCONFIGURABLE_DESCRIPTOR);
+    if (proto === undefined) {
+      proto = intrp.ARRAY;
+    }
+    intrp.Object.call(/** @type {?} */(this), proto);
+    this.properties = [];
+    Object.setPrototypeOf(this.properties,
+                          (proto === null) ? null : proto.properties);
   };
 
   intrp.Array.prototype = Object.create(intrp.Object.prototype);
@@ -3132,20 +3051,15 @@ Interpreter.prototype.installTypes = function() {
   intrp.PropertyIterator.prototype.getKeys_ = function() {
     if (this.value === null || this.value === undefined) {
       this.keys = [];
-    } else if (this.value instanceof intrp.Object) {
-      this.keys = Object.getOwnPropertyNames(this.value.properties);
     } else {
-      this.keys = Object.getOwnPropertyNames(this.value);
+      this.properties = (this.value instanceof intrp.Object) ?
+          this.value.properties : this.value;
+      // Call to Object() is not required in ES6 or later, but in
+      // ES5.1 Object.getOwnPropertyNames only accepts objects, so we
+      // actually do want to create a boxed primitive here.
+      this.keys = Object.getOwnPropertyNames(Object(this.properties));
     }
     this.i = 0;
-  };
-
-  intrp.PropertyIterator.prototype.isEnumerable_ = function(key) {
-    if (this.value instanceof intrp.Object) {
-      return !this.value.notEnumerable.has(key);
-    } else {
-      return Object.getOwnPropertyDescriptor(this.value, key).enumerable;
-    }
   };
 
   /**
@@ -3162,15 +3076,13 @@ Interpreter.prototype.installTypes = function() {
         this.getKeys_();
       }
       var key = this.keys[this.i++];
-      var v = (this.value instanceof intrp.Object) ? this.value.properties :
-          this.value;
-      var pd = Object.getOwnPropertyDescriptor(v, key);
+      var pd = Object.getOwnPropertyDescriptor(this.properties, key);
       // Skip deleted or already-visited properties.
       if (!pd || this.visited.has(key)) {
         continue;
       }
       this.visited.add(key);
-      if (this.isEnumerable_(key)) {
+      if (pd.enumerable) {
         return key;
       }
     }
@@ -3917,24 +3829,32 @@ Interpreter.prototype['stepUnaryExpression'] = function(stack, state, node) {
   } else if (node['operator'] === '~') {
     value = ~value;
   } else if (node['operator'] === 'delete') {
-    // If value is not an array, then it is a primitive, or some other value.
-    // If so, skip the delete and return true.
-    if (Array.isArray(value)) {
+    // Expect result of evaluating argument to be reference components
+    // array.  If not, skip delete and return true.
+    if (!Array.isArray(value)) {
+      value = true;
+    } else {
       var obj = value[0];
-      // Obj should be an object.  But if the AST parser is in non-strict mode
-      // then obj will be a scope if the argument was a variable.
-      // If so, skip the delete and return true.
+      var key = value[1];
       if (obj instanceof this.Object) {
-        var name = String(value[1]);
-        if (obj.notWritable.has(name) ||
-            (name === 'length' && obj instanceof this.Array)) {
-          this.throwException(this.TYPE_ERROR, "Cannot delete property '" +
-                              name + "' of '" + obj + "'");
+        try {
+          value = delete obj.properties[key];
+        } catch (e) {
+          this.throwNativeException(e);
         }
-        delete obj.properties[name];
+      } else if (obj instanceof Interpreter.Sentinel) {
+        // Whoops; this should have been caught by acorn (because strict).
+        throw Error("Uncaught illegal deletion of unqualified identifier");
+      } else {
+        // Attempting to delete property from primitive value.
+        if (Object.getOwnPropertyDescriptor(obj, key)) {
+          this.throwException(this.TYPE_ERROR,
+              "Cannot delete property '" + key + "' from primitive.");
+        } else {
+          value = true;
+        }
       }
     }
-    value = true;
   } else if (node['operator'] === 'typeof') {
     value = (value instanceof this.Function) ? 'function' : typeof value;
   } else if (node['operator'] === 'void') {
