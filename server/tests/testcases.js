@@ -548,10 +548,13 @@ module.exports = [
     var a = [];
     Object.defineProperty(a, 0,
         {value: 'hi', writable: false, configurable: false});
-    a.length = 0;
-    a[0] === 'hi' && a.length === 1;
+    try {
+      a.length = 0;
+    } catch (e) {
+      e.name;
+    }
     `,
-    expected: true },
+    expected: 'TypeError' },
 
   { name: 'compValEmptyBlock', src: `
     {};
@@ -613,7 +616,7 @@ module.exports = [
   { name: 'unaryTypeofUndeclared', src: `
     try {
       typeof undeclaredVar;
-    } catch(e) {
+    } catch (e) {
       'whoops!'
     }
     `,
