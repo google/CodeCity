@@ -79,8 +79,8 @@ Serializer.deserialize = function(json, intrp) {
       functionHash[objectList[i].id] = objectList[i];
     }
   }
-  // Get types.
-  var types = this.getTypesDeserialize_(intrp);
+  // Get constructors
+  var constructors = this.getTypesDeserialize_(intrp);
 
   // First pass: Create object stubs for every object.  We don't need
   // to (re)create object #0, because that's the interpreter proper.
@@ -121,11 +121,14 @@ Serializer.deserialize = function(json, intrp) {
         obj = RegExp(jsonObj['source'], jsonObj['flags']);
         break;
       default:
-        var constructor = types[type];
-        if (!constructor) {
+        var protoRef;
+        if (constructors[type]) {
+          obj = new constructors[type];
+        } else if ((protoRef = jsonObj['proto'])) {
+          obj = Object.create(decodeValue(protoRef));
+        } else {
           throw TypeError('Unknown type: ' + jsonObj['type']);
         }
-        obj = new constructor;
     }
     objectList[i] = obj;
   }
@@ -136,10 +139,17 @@ Serializer.deserialize = function(json, intrp) {
     // Repopulate objects.
     var props = jsonObj['props'];
     if (props) {
+      var nonConfigurable = jsonObj['nonConfigurable'] || [];
+      var nonEnumerable = jsonObj['nonEnumerable'] || [];
+      var nonWritable = jsonObj['nonWritable'] || [];
       var names = Object.getOwnPropertyNames(props);
       for (var j = 0; j < names.length; j++) {
         var name = names[j];
-        obj[name] = decodeValue(props[name]);
+        Object.defineProperty(obj, name,
+            {configurable: nonConfigurable.indexOf(name) === -1,
+             enumerable: nonEnumerable.indexOf(name) === -1,
+             writable: nonWritable.indexOf(name) === -1,
+             value: decodeValue(props[name])});
       }
     }
     // Repopulate sets.
@@ -250,9 +260,7 @@ Serializer.serialize = function(intrp) {
         continue;  // No need to index properties.
       default:
         var type = types.get(proto);
-        if (!type) {
-          throw TypeError('Unknown type: ' + obj);
-        } else if (type === 'Sentinel') {
+        if (type === 'Sentinel') {
           switch (obj) {
             case Interpreter.SCOPE_REFERENCE:
               jsonObj['type'] = 'ScopeReference';
@@ -260,20 +268,45 @@ Serializer.serialize = function(intrp) {
             default:
               throw new Error("Unknown sentinel value encountered");
           }
-        } else {
+        } else if (type) {
           jsonObj['type'] = type;
+        } else {
+          jsonObj['proto'] = encodeValue(proto);
         }
     }
     var props = Object.create(null);
+    var nonConfigurable = [];
+    var nonEnumerable = [];
+    var nonWritable = [];
     var names = Object.getOwnPropertyNames(obj);
     for (var j = 0; j < names.length; j++) {
       var name = names[j];
-      if (obj !== intrp || !exclude.includes(name)) {
-        props[name] = encodeValue(obj[name]);
+      if (obj === intrp && exclude.includes(name)) {
+        continue;
+      }
+      props[name] = encodeValue(obj[name]);
+      var descriptor = Object.getOwnPropertyDescriptor(obj, name);
+      if (!descriptor.configurable) {
+        nonConfigurable.push(name);
+      }
+      if (!descriptor.enumerable) {
+        nonEnumerable.push(name);
+      }
+      if (!descriptor.writable) {
+        nonWritable.push(name);
       }
     }
     if (names.length) {
       jsonObj['props'] = props;
+    }
+    if (nonConfigurable.length) {
+      jsonObj['nonConfigurable'] = nonConfigurable;
+    }
+    if (nonEnumerable.length) {
+      jsonObj['nonEnumerable'] = nonEnumerable;
+    }
+    if (nonWritable.length) {
+      jsonObj['nonWritable'] = nonWritable;
     }
   }
   return json;
