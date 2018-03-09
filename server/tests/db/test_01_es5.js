@@ -1026,9 +1026,13 @@ tests.arrayLengthWithNonConfigurableProps = function() {
   var a = [];
   Object.defineProperty(a, 0,
       {value: 'hi', writable: false, configurable: false});
-  a.length = 0;
-  console.assert(a[0] === 'hi' && a.length === 1,
-                 'arrayLengthWithNonConfigurableProps');
+  try {
+    a.length = 0;
+    console.assert(false, 'arrayLengthWithNonConfigurableProps');
+  } catch (e) {
+    console.assert(e.name === 'TypeError',
+                   'arrayLengthWithNonConfigurableProps');
+  }
 };
 
 tests.compValEmptyBlock = function() {
