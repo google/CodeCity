@@ -1136,6 +1136,25 @@ tests.deleteProp = function() {
   console.assert(delete o.foo, 'deleteProp5');
 };
 
+tests.deleteNonexistentFromPrimitive = function() {
+  console.assert(delete false.nonexistent, 'deleteNonexistentFromPrimitive');
+  console.assert(delete (42).toString, 'deleteInheritedFromPrimitive');
+};
+
+// This "actually" tries to delete the non-configurable own .length
+// property from the auto-boxed String instance created by step 4a of
+// algorithm in §11.4.1 of the ES 5.1 spec.  We have to use a string
+// here, because only String instances have own properties (and yes:
+// they are all non-configurable, so delete *always* fails).
+tests.deleteOwnFromPrimitive = function() {
+  try {
+    delete "hello".length;
+    console.assert(false, 'deleteOwnFromPrimitive');
+  } catch (e) {
+    console.assert(e.name === 'TypeError', 'deleteOwnFromPrimitive');
+  }
+};
+
 tests.funcDecl = function() {
   var v;
   function f() {
