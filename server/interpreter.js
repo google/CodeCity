@@ -336,7 +336,7 @@ Interpreter.prototype.schedule = function() {
  */
 Interpreter.prototype.step = function() {
   if (this.status !== Interpreter.Status.PAUSED) {
-    throw new Error('Can only step paused interpreter');
+    throw Error('Can only step paused interpreter');
   }
   if (!this.thread || this.thread.status !== Interpreter.Thread.Status.READY) {
     if (this.schedule() > 0) {
@@ -380,7 +380,7 @@ Interpreter.prototype.step = function() {
  */
 Interpreter.prototype.run = function() {
   if (this.status === Interpreter.Status.STOPPED) {
-    throw new Error("Can't run stopped interpreter");
+    throw Error("Can't run stopped interpreter");
   }
   var t;
   while ((t = this.schedule()) === 0) {
@@ -796,7 +796,7 @@ Interpreter.prototype.initObject = function(scope) {
   wrapper = function(obj) {
     while (true) {
       // Note, circular loops shouldn't be possible.
-      // TODO(cpcallen): behaviour of getPrototype is wrong for
+      // BUG(cpcallen): behaviour of getPrototype is wrong for
       // isPrototypeOf, according to either ES5.1 or ES6.
       obj = thisInterpreter.getPrototype(obj);
       if (!obj) {
@@ -1773,8 +1773,7 @@ Interpreter.prototype.callAsyncFunction = function(state) {
  * object.  Can handle JSON-style values plus regexps and errors (of
  * all standard native types), and handles additional properties on
  * arrays, regexps and errors (just as for plain objects).  Ignores
- * prototype and inherited properties; ignores property attributes
- * (but this may change in a future version).  Efficiently handles
+ * prototype and inherited properties.  Efficiently handles
  * sparse arrays.  Does NOT handle cyclic data.
  * @param {*} nativeObj The native JS object to be converted.
  * @return {Interpreter.Value} The equivalent JS interpreter object.
@@ -1826,9 +1825,7 @@ Interpreter.prototype.nativeToPseudo = function(nativeObj) {
     var key = keys[i];
     var desc = Object.getOwnPropertyDescriptor(nativeObj, key);
     desc.value = this.nativeToPseudo(desc.value);
-    // TODO(cpcallen): use this when setProperty fixed (update docs above!):
-    // this.setProperty(pseudoObj, key, Interpreter.VALUE_IN_DESCRIPTOR, desc);
-    this.setProperty(pseudoObj, key, desc.value);
+    this.setProperty(pseudoObj, key, Interpreter.VALUE_IN_DESCRIPTOR, desc);
   }
   return pseudoObj;
 };
@@ -1836,6 +1833,10 @@ Interpreter.prototype.nativeToPseudo = function(nativeObj) {
 /**
  * Converts from a JS interpreter object to native JS object.
  * Can handle JSON-style values, plus cycles.
+ *
+ * TODO(cpcallen): Audit this to ensure that it can safely accept any
+ * user object (especially because it is used by our implementations
+ * of JSON.stringify, String.prototype.localeCompare, etc.)
  * @param {Interpreter.Value} pseudoObj The JS interpreter object to
  *     be converted.
  * @param {Object=} opt_cycles Cycle detection (used in recursive calls).
@@ -1868,6 +1869,7 @@ Interpreter.prototype.pseudoToNative = function(pseudoObj, opt_cycles) {
     cycles.native.push(nativeObj);
     var length = this.getProperty(pseudoObj, 'length');
     for (i = 0; i < length; i++) {
+      // TODO(cpcallen): do we really want to include inherited properties?
       if (this.hasProperty(pseudoObj, i)) {
         nativeObj[i] =
             this.pseudoToNative(this.getProperty(pseudoObj, i), cycles);
@@ -1987,6 +1989,9 @@ Interpreter.prototype.getProperty = function(obj, name) {
  * Does the named property exist on a data object.  Implements 'in'.
  * Note that although primitives have (inherited) properties, 'in' does not
  * recognize them.  Thus "'length' in 'str'" is an error.
+ *
+ * TODO(cpcallen): Change typing.  There is almost certainly no reason
+ * for this to accept primitives.
  * @param {Interpreter.Value} obj Data object.
  * @param {Interpreter.Value} name Name of property.
  * @return {boolean|undefined} True if property exists, undefined if primitive.
@@ -2712,7 +2717,7 @@ Interpreter.prototype.installTypes = function() {
     cycles.push(this);
     try {
       var strs = [];
-      // TODO(cpcallen): Array.prototype.toString should be generic,
+      // BUG(cpcallen): Array.prototype.toString should be generic,
       // but here we depend on .length.
       for (var i = 0; i < this.properties.length; i++) {
         var value = this.properties[i];
@@ -2794,7 +2799,7 @@ Interpreter.prototype.installTypes = function() {
     if (this.regexp instanceof RegExp) {
       return this.regexp.toString();
     }
-    // TODO(cpcallen): this should do some weird stuff per §21.2.5.14 of
+    // BUG(cpcallen): this should do some weird stuff per §21.2.5.14 of
     // the ES6 spec.  For most non-RegExp objects it will return
     // "/undefined/undefined"...  :-/
     return '//';
@@ -2917,8 +2922,8 @@ Interpreter.prototype.installTypes = function() {
    * API.  In its present form it is not suitable for exposure as a
    * userland pseduoObject, but it is intended to be easily adaptable
    * for that if desired.
-   * 
-   * FIXME(cpcallen): this should be typed to permit being called
+   *
+   * TODO(cpcallen): this should be typed to permit being called
    * without arguments when deserializing.
    * @constructor
    * @extends {Interpreter.prototype.Server}
@@ -3815,7 +3820,7 @@ Interpreter.prototype['stepUnaryExpression'] = function(stack, state, node) {
   if (!state.done_) {
     state.done_ = true;
     var nextState = new Interpreter.State(node['argument'], state.scope);
-    nextState.components = node['operator'] === 'delete';
+    nextState.components = (node['operator'] === 'delete');
     return nextState;
   }
   stack.pop();
