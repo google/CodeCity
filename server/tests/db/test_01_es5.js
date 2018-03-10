@@ -1148,7 +1148,7 @@ tests.deleteNonexistentFromPrimitive = function() {
 // they are all non-configurable, so delete *always* fails).
 tests.deleteOwnFromPrimitive = function() {
   try {
-    delete "hello".length;
+    delete 'hello'.length;
     console.assert(false, 'deleteOwnFromPrimitive');
   } catch (e) {
     console.assert(e.name === 'TypeError', 'deleteOwnFromPrimitive');

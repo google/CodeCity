@@ -3848,8 +3848,8 @@ Interpreter.prototype['stepUnaryExpression'] = function(stack, state, node) {
           this.throwNativeException(e);
         }
       } else if (obj instanceof Interpreter.Sentinel) {
-        // Whoops; this should have been caught by acorn (because strict).
-        throw Error("Uncaught illegal deletion of unqualified identifier");
+        // Whoops; this should have been caught by Acorn (because strict).
+        throw Error('Uncaught illegal deletion of unqualified identifier');
       } else {
         // Attempting to delete property from primitive value.
         if (Object.getOwnPropertyDescriptor(obj, key)) {
