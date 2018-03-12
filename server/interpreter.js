@@ -3048,6 +3048,11 @@ Interpreter.prototype.installTypes = function() {
    *     iterated over.
    */
   intrp.PropertyIterator = function(value) {
+    // N.B.: .value must be defined before .properties (defined/set in
+    // .getKeys_), and must not point at the .properties object of an
+    // interpreter Object other than the one pointed to by .value, or
+    // there will be problems when deserializing; see comment in
+    // Interpreter.prototype.Object constructor for details.
     this.value = value;
     this.getKeys_();
     this.visited = new Set();
