@@ -2608,7 +2608,7 @@ Interpreter.prototype.installTypes = function() {
   /**
    * Class for a function
    * @constructor
-   * @extends{Interpreter.prototype.Function}
+   * @extends {Interpreter.prototype.Function}
    * @param {Interpreter.prototype.Object=} proto Prototype object.
    */
   intrp.Function = function(proto) {
@@ -2684,7 +2684,7 @@ Interpreter.prototype.installTypes = function() {
   /**
    * Class for an array
    * @constructor
-   * @extends{Interpreter.prototype.Array}
+   * @extends {Interpreter.prototype.Array}
    * @param {Interpreter.prototype.Object=} proto Prototype object.
    */
   intrp.Array = function(proto) {
@@ -2733,7 +2733,7 @@ Interpreter.prototype.installTypes = function() {
   /**
    * Class for a date.
    * @constructor
-   * @extends{Interpreter.prototype.Date}
+   * @extends {Interpreter.prototype.Date}
    * @param {Interpreter.prototype.Object=} proto Prototype object.
    */
   intrp.Date = function(proto) {
@@ -2776,7 +2776,7 @@ Interpreter.prototype.installTypes = function() {
   /**
    * Class for a regexp
    * @constructor
-   * @extends{Interpreter.prototype.RegExp}
+   * @extends {Interpreter.prototype.RegExp}
    * @param {Interpreter.prototype.Object=} proto Prototype object.
    */
   intrp.RegExp = function(proto) {
@@ -2827,7 +2827,7 @@ Interpreter.prototype.installTypes = function() {
   /**
    * Class for an error object
    * @constructor
-   * @extends{Interpreter.prototype.Error}
+   * @extends {Interpreter.prototype.Error}
    * @param {Interpreter.prototype.Object=} proto Prototype object.
    * @param {string=} message Optional message to be attached to error object.
    */
