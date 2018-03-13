@@ -66,7 +66,7 @@ var Interpreter = function() {
   this.toStringCycles_ = [];
   // Create and initialize the global scope.
   this.global = new Interpreter.Scope;
-  this.initGlobalScope(this.global);
+  this.initBuiltins_();
   // Set up threads and scheduler stuff:
   this.threads = [];
   this.thread = null;
@@ -530,15 +530,16 @@ Interpreter.prototype.stop = function() {
 };
 
 /**
- * Initialize the global scope with buitin properties and functions.
- * @param {!Interpreter.Scope} scope Global scope.
+ * Create and register the builtin classes and functions specified in
+ * the ECMAScript specification plus our extensions.  Add a few items
+ * (e.g., eval) to the global scope that can't be added any other way.
  */
-Interpreter.prototype.initGlobalScope = function(scope) {
+Interpreter.prototype.initBuiltins_ = function() {
   // Initialize uneditable global properties.
-  this.addVariableToScope(scope, 'NaN', NaN, true);
-  this.addVariableToScope(scope, 'Infinity', Infinity, true);
-  this.addVariableToScope(scope, 'undefined', undefined, true);
-  this.addVariableToScope(scope, 'this', undefined, true);
+  this.addVariableToScope(this.global, 'NaN', NaN, true);
+  this.addVariableToScope(this.global, 'Infinity', Infinity, true);
+  this.addVariableToScope(this.global, 'undefined', undefined, true);
+  this.addVariableToScope(this.global, 'this', undefined, true);
 
   // Create the objects which will become Object.prototype and
   // Function.prototype, which are needed to bootstrap everything else.
@@ -550,17 +551,17 @@ Interpreter.prototype.initGlobalScope = function(scope) {
   this.FUNCTION.proto = this.OBJECT;
 
   // Initialize global objects.
-  this.initObject(scope);
-  this.initFunction(scope);
-  this.initArray(scope);
-  this.initString(scope);
-  this.initBoolean(scope);
-  this.initNumber(scope);
-  this.initDate(scope);
-  this.initRegExp(scope);
-  this.initError(scope);
-  this.initMath(scope);
-  this.initJSON(scope);
+  this.initObject_();
+  this.initFunction_();
+  this.initArray_();
+  this.initString_();
+  this.initBoolean_();
+  this.initNumber_();
+  this.initDate_();
+  this.initRegExp_();
+  this.initError_();
+  this.initMath_();
+  this.initJSON_();
 
   // Initialize ES standard global functions.
   var thisInterpreter = this;
@@ -571,7 +572,7 @@ Interpreter.prototype.initGlobalScope = function(scope) {
   var func = this.createNativeFunction('eval',
       function(x) {throw EvalError("Can't happen");}, false);
   func.eval = true;  // Recognized specially by stepCallExpresion.
-  this.addVariableToScope(scope, 'eval', func);
+  this.addVariableToScope(this.global, 'eval', func);
 
   this.createNativeFunction('isFinite', isFinite, false);
   this.createNativeFunction('isNaN', isNaN, false);
@@ -598,15 +599,14 @@ Interpreter.prototype.initGlobalScope = function(scope) {
   }
 
   // Initialize CC-specific globals.
-  this.initThreads(scope);
-  this.initNetwork(scope);
+  this.initThreads_();
+  this.initNetwork_();
 };
 
 /**
  * Initialize the Object class.
- * @param {!Interpreter.Scope} scope Global scope.
  */
-Interpreter.prototype.initObject = function(scope) {
+Interpreter.prototype.initObject_ = function() {
   var thisInterpreter = this;
   var wrapper;
   // Object constructor.
@@ -813,9 +813,8 @@ Interpreter.prototype.initObject = function(scope) {
 
 /**
  * Initialize the Function class.
- * @param {!Interpreter.Scope} scope Global scope.
  */
-Interpreter.prototype.initFunction = function(scope) {
+Interpreter.prototype.initFunction_ = function() {
   var thisInterpreter = this;
   var wrapper;
   var identifierRegexp = /^[A-Za-z_$][\w$]*$/;
@@ -897,9 +896,8 @@ Interpreter.prototype.initFunction = function(scope) {
 
 /**
  * Initialize the Array class.
- * @param {!Interpreter.Scope} scope Global scope.
  */
-Interpreter.prototype.initArray = function(scope) {
+Interpreter.prototype.initArray_ = function() {
   var thisInterpreter = this;
   // Array prototype.
   this.ARRAY = new this.Array(this.OBJECT);
@@ -1125,9 +1123,8 @@ Interpreter.prototype.initArray = function(scope) {
 
 /**
  * Initialize the String class.
- * @param {!Interpreter.Scope} scope Global scope.
  */
-Interpreter.prototype.initString = function(scope) {
+Interpreter.prototype.initString_ = function() {
   var thisInterpreter = this;
   var wrapper;
   // String prototype.
@@ -1209,9 +1206,8 @@ Interpreter.prototype.initString = function(scope) {
 
 /**
  * Initialize the Boolean class.
- * @param {!Interpreter.Scope} scope Global scope.
  */
-Interpreter.prototype.initBoolean = function(scope) {
+Interpreter.prototype.initBoolean_ = function() {
   var thisInterpreter = this;
   // Boolean prototype.
   this.BOOLEAN = new this.Object;
@@ -1223,9 +1219,8 @@ Interpreter.prototype.initBoolean = function(scope) {
 
 /**
  * Initialize the Number class.
- * @param {!Interpreter.Scope} scope Global scope.
  */
-Interpreter.prototype.initNumber = function(scope) {
+Interpreter.prototype.initNumber_ = function() {
   var thisInterpreter = this;
   var wrapper;
   // Number prototype.
@@ -1295,9 +1290,8 @@ Interpreter.prototype.initNumber = function(scope) {
 
 /**
  * Initialize the Date class.
- * @param {!Interpreter.Scope} scope Global scope.
  */
-Interpreter.prototype.initDate = function(scope) {
+Interpreter.prototype.initDate_ = function() {
   var thisInterpreter = this;
   var wrapper;
   // Date prototype.  As of ES6 this is just an ordinary object.  (In
@@ -1365,9 +1359,8 @@ Interpreter.prototype.initDate = function(scope) {
 
 /**
  * Initialize Regular Expression object.
- * @param {!Interpreter.Scope} scope Global scope.
  */
-Interpreter.prototype.initRegExp = function(scope) {
+Interpreter.prototype.initRegExp_ = function() {
   var thisInterpreter = this;
   var wrapper;
   // RegExp prototype.  As of ES6 this is just an ordinary object.
@@ -1424,9 +1417,8 @@ Interpreter.prototype.initRegExp = function(scope) {
 
 /**
  * Initialize the Error class.
- * @param {!Interpreter.Scope} scope Global scope.
  */
-Interpreter.prototype.initError = function(scope) {
+Interpreter.prototype.initError_ = function() {
   var thisInterpreter = this;
   // Error prototype.
   this.ERROR = new this.Error(this.OBJECT);
@@ -1472,9 +1464,8 @@ Interpreter.prototype.initError = function(scope) {
 
 /**
  * Initialize Math object.
- * @param {!Interpreter.Scope} scope Global scope.
  */
-Interpreter.prototype.initMath = function(scope) {
+Interpreter.prototype.initMath_ = function() {
   var numFunctions = ['abs', 'acos', 'asin', 'atan', 'atan2', 'ceil', 'cos',
                       'exp', 'floor', 'log', 'max', 'min', 'pow', 'random',
                       'round', 'sign', 'sin', 'sqrt', 'tan', 'trunc'];
@@ -1486,9 +1477,8 @@ Interpreter.prototype.initMath = function(scope) {
 
 /**
  * Initialize JSON object.
- * @param {!Interpreter.Scope} scope Global scope.
  */
-Interpreter.prototype.initJSON = function(scope) {
+Interpreter.prototype.initJSON_ = function() {
   var thisInterpreter = this;
 
   var wrapper = function(text) {
@@ -1515,9 +1505,8 @@ Interpreter.prototype.initJSON = function(scope) {
 
 /**
  * Initialize the thread system API
- * @param {!Interpreter.Scope} scope Global scope.
  */
-Interpreter.prototype.initThreads = function(scope) {
+Interpreter.prototype.initThreads_ = function() {
   var intrp = this;
   this.createNativeFunction('suspend',
       function(delay) {
@@ -1547,9 +1536,8 @@ Interpreter.prototype.initThreads = function(scope) {
 
 /**
  * Initialize the networking subsystem API.
- * @param {!Interpreter.Scope} scope Global scope.
  */
-Interpreter.prototype.initNetwork = function(scope) {
+Interpreter.prototype.initNetwork_ = function() {
   var intrp = this;
 
   this.createAsyncFunction('CC.connectionListen', function(res, rej, port, proto) {
