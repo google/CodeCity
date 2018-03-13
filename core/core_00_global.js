@@ -18,7 +18,8 @@
  */
 
 /**
- * @fileoverview Initialisation code to set up CC-specific extensions.
+ * @fileoverview Initialisation code for CC-specific extensions that
+ * go directly in the global namespace.
  * @author cpcallen@google.com (Christopher Allen)
  */
 
@@ -28,12 +29,3 @@
 var suspend = new 'suspend';
 var setTimeout = new 'setTimeout';
 var clearTimeout = new 'clearTimeout';
-
-// Namespace for CodeCity-specific extensions:
-var CC = {};
-
-// Networking functions.
-CC.connectionListen = new 'CC.connectionListen';
-CC.connectionUnlisten = new 'CC.connectionUnlisten';
-CC.connectionWrite = new 'CC.connectionWrite';
-CC.connectionClose = new 'CC.connectionClose';
