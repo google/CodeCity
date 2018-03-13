@@ -579,6 +579,12 @@ Interpreter.prototype.initBuiltins_ = function() {
       this.createNativeFunction('Function.prototype', function() {}, false);
   this.FUNCTION.proto = this.OBJECT;
 
+  // Create the object that will own all of the system objects.
+  this.ROOT = new this.Object(this.OBJECT);
+  this.builtins_['CC.root'] = this.ROOT;
+  this.global.perms = this.ROOT;
+  // TODO(cpcallen:perms): make stuff owned by ROOT (including itself)
+  
   // Initialize global objects.
   this.initObject_();
   this.initFunction_();
