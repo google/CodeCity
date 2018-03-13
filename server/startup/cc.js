@@ -32,6 +32,9 @@ var clearTimeout = new 'clearTimeout';
 // Namespace for CodeCity-specific extensions:
 var CC = {};
 
+// Permissions API.
+CC.root = new 'CC.root';
+
 // Networking functions.
 CC.connectionListen = new 'CC.connectionListen';
 CC.connectionUnlisten = new 'CC.connectionUnlisten';
