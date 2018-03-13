@@ -1,0 +1,1 @@
+../server/startup/es6.js
