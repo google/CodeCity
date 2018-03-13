@@ -1640,7 +1640,7 @@ Interpreter.legalArrayIndex = function(x) {
 Interpreter.prototype.createFunctionFromAST = function(node, scope, source) {
   var func = new this.Function;
   func.addPrototype();
-  func.parentScope = scope;
+  func.outerScope = scope;
   func.node = node;
   this.setProperty(func, 'length', func.node['params'].length,
       Interpreter.READONLY_DESCRIPTOR);
@@ -2057,7 +2057,7 @@ Interpreter.prototype.setProperty = function(obj, name, value, desc) {
  * @return {Interpreter.Value} Value (may be undefined).
  */
 Interpreter.prototype.getValueFromScope = function(scope, name) {
-  for (var s = scope; s; s = s.parentScope) {
+  for (var s = scope; s; s = s.outerScope) {
     if (name in s.properties) {
       return s.properties[name];
     }
@@ -2078,7 +2078,7 @@ Interpreter.prototype.getValueFromScope = function(scope, name) {
  * @param {Interpreter.Value} value Value.
  */
 Interpreter.prototype.setValueToScope = function(scope, name, value) {
-  for (var s = scope; s; s = s.parentScope) {
+  for (var s = scope; s; s = s.outerScope) {
     if (name in s.properties) {
       if (s.notWritable.has(name)) {
         this.throwException(this.TYPE_ERROR,
@@ -2320,13 +2320,15 @@ Interpreter.prototype.unwind = function(type, value, label) {
 
 /**
  * Class for a scope.
- * @param {Interpreter.Scope=} parentScope Inherited scope.  Defaults to null.
+ * @param {?Interpreter.Scope=} outerScope The enclosing scope ("outer
+ *     lexical environment reference", in ECMAScript spec parlance).
+ *     Defaults to null.
  * @constructor
  */
-Interpreter.Scope = function(parentScope) {
-  this.notWritable = new Set();
+Interpreter.Scope = function(outerScope) {
+  this.outerScope = outerScope || null;
   this.properties = Object.create(null);
-  this.parentScope = parentScope || null;
+  this.notWritable = new Set();
 };
 
 /**
@@ -3311,7 +3313,7 @@ Interpreter.prototype['stepCallExpression'] = function(stack, state, node) {
     }
     var funcNode = func.node;
     if (funcNode) {
-      var scope = new Interpreter.Scope(func.parentScope);
+      var scope = new Interpreter.Scope(func.outerScope);
       this.populateScope_(funcNode['body'], scope, this.thread.getSource());
       // Add all arguments.
       for (var i = 0; i < funcNode['params'].length; i++) {
