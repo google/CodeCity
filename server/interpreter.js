@@ -79,6 +79,7 @@ var Interpreter = function() {
 
   /**
    * The interpreter's global scope.
+   * TODO(cpcallen:perms): this should be owned by System / root / whatever.
    * @const
    */
   this.global = new Interpreter.Scope;
@@ -244,7 +245,8 @@ Interpreter.prototype.now = function() {
 };
 
 /**
- * Create a new thread and add it to .threads.
+ * Create a new thread and add it to .threads.  New thread runs with
+ * same permissions (i.e., owner) as global scope was created with.
  * @param {!Interpreter.State|!Interpreter.Node|string} runnable Initial
  *     state, or AST node to construct state from, or raw JavaScript
  *     text to parse into AST.
@@ -2130,7 +2132,7 @@ Interpreter.prototype.addVariableToScope =
 };
 
 /**
- * Populate a scope for the given node.
+ * Populate a scope with declarations from given node.
  * @param {!Interpreter.Node} node AST node (program or function).
  * @param {!Interpreter.Scope} scope Scope dictionary to populate.
  * @param {string} source Original source code.
@@ -2341,10 +2343,18 @@ Interpreter.prototype.unwind_ = function(type, value, label) {
  * @param {?Interpreter.Scope=} outerScope The enclosing scope ("outer
  *     lexical environment reference", in ECMAScript spec parlance).
  *     Defaults to null.
+ * @param {?Interpreter.prototype.Object=} perms The permissions with
+ *     which code in the current scope is executing.  Defaults to
+ *     outerScope.perms (if supplied; otherwise null).
  * @constructor
  */
-Interpreter.Scope = function(outerScope) {
+Interpreter.Scope = function(outerScope, perms) {
   this.outerScope = outerScope || null;
+  if (perms === undefined) {
+    this.perms = outerScope ? outerScope.perms : null;
+  } else {
+    this.perms = perms;
+  }
   this.properties = Object.create(null);
   this.notWritable = new Set();
 };
@@ -3342,6 +3352,7 @@ Interpreter.prototype['stepCallExpression'] = function(stack, state, node) {
     }
     var funcNode = func.node;
     if (funcNode) {
+      // TODO(cpcallen:perms): this should use func.owner
       var scope = new Interpreter.Scope(func.outerScope);
       if(func.source === undefined) {
         throw Error("No source for user-defined function??");
