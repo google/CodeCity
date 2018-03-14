@@ -3301,7 +3301,7 @@ Interpreter.prototype['stepCallExpression'] = function(stack, state, node) {
     var funcNode = func.node;
     if (funcNode) {
       var scope = new Interpreter.Scope(func.outerScope);
-      this.populateScope_(funcNode['body'], scope, this.thread.getSource());
+      this.populateScope_(funcNode['body'], scope, func.source);
       // Add all arguments.
       for (var i = 0; i < funcNode['params'].length; i++) {
         var paramName = funcNode['params'][i]['name'];
