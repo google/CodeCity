@@ -41,11 +41,20 @@ acorn.plugins.alwaysStrict = function(parser, configValue) {
  */
 var Interpreter = function() {
   this.installTypes();
-  // Map of natively implemented JS functions.  E.g. Array.pop
+  /** 
+   * Map of builtins - e.g. Object, Function.prototype, Array.pop, etc.
+   * @private @const {Object<Interpreter.Value>}
+   */
   this.builtins_ = Object.create(null);
-  // Map node types to our step function names; a property lookup is faster
-  // than string concatenation with "step" prefix.
-  // Note that a Map is much slower than a null-parent object (v8 in 2017).
+  /**
+   * Map node types to our step function names; a property lookup is
+   * faster than string concatenation with "step" prefix.  Note that a
+   * Map is much slower than a null-parent object (v8 in 2017).
+   * @private @const {Object<function(!Array<!Interpreter.State>,
+   *                                  !Interpreter.State,
+   *                                  !Interpreter.Node)
+   *                             : ?Interpreter.State>}
+   */
   this.stepFunctions_ = Object.create(null);
   var stepMatch = /^step([A-Z]\w*)$/;
   var m;
@@ -55,29 +64,45 @@ var Interpreter = function() {
       this.stepFunctions_[m[1]] = this[methodName].bind(this);
     }
   }
-  // For cycle detection in array to string and error conversion; see
-  // spec bug github.com/tc39/ecma262/issues/289. At the moment this
-  // is used only for actions which are atomic (i.e., take place
-  // entirely within the duration of a single call to .step), so it
-  // could be a global or class property, but better to have it be
-  // per-instance so that we can eventually call user toString
-  // methods.
-  // TODO(cpcallen): Make this per-thread when threads are introduced.
+  /**
+   * For cycle detection in array to string and error conversion; see
+   * spec bug github.com/tc39/ecma262/issues/289. At the moment this
+   * is used only for actions which are atomic (i.e., take place
+   * entirely within the duration of a single call to .step), so it
+   * could be a global or class property, but better to have it be
+   * per-instance so that we can eventually call user toString
+   * methods.
+   * TODO(cpcallen): Make this per-thread when threads are introduced.
+   * @private @const { !Array<!Interpreter.prototype.Object> }
+   */
   this.toStringCycles_ = [];
-  // Create and initialize the global scope.
+
+  /**
+   * The interpreter's global scope.
+   * @const
+   */
   this.global = new Interpreter.Scope;
+  // Create builtins and (minimally) initialize global scope:
   this.initBuiltins_();
-  // Set up threads and scheduler stuff:
+
+  /**  @private @const {!Array<!Interpreter.Thread>} */
   this.threads = [];
+  /** @private @type {?Interpreter.Thread} */
   this.thread = null;
+  /** @private (Type is whatever is returned by setTimeout()) */
   this.runner_ = null;
+  /** @type {boolean} */
   this.done = true;  // True if any non-ZOMBIE threads exist.
-  // Set up networking stuff:
-  this.listeners = Object.create(null);
+
+  /** @private @const { !Object<number,!Interpreter.prototype.Server> } */
+  this.listeners_ = Object.create(null);
 
   // Bring interpreter up to PAUSED status, setting up timers etc.
+  /** @type {!Interpreter.Status} */
   this.status = Interpreter.Status.STOPPED;
+  /** @private @type {number} */
   this.previousTime_ = 0;
+  /** @private @type {number} */
   this.cumulativeTime_ = 0;
   this.pause();
 };
@@ -271,7 +296,7 @@ Interpreter.prototype.createThreadForFuncCall =
   state.doneCallee_ = 2;
   state.arguments_ = args;
   state.doneArgs_ = true;
-  return this.createThread(state, runAt || this.now());
+  return this.createThread(state, runAt);
 };
 
 /**
@@ -289,7 +314,7 @@ Interpreter.prototype.schedule = function() {
   var threads = this.threads;
   // Assume all remaining threads are ZOMBIEs until proven otherwise.
   this.done = true;
-  this.thread = undefined;
+  this.thread = null;
   // .threads will be very sparse, so use for-in loop.
   for (var i in threads) {
     i = Number(i);  // Make Closure Compiler happy.
@@ -344,7 +369,7 @@ Interpreter.prototype.step = function() {
     }
   }
   var thread = this.thread;
-  var stack = thread.stateStack;
+  var stack = thread.stateStack_;
   var state = stack[stack.length - 1];
   var node = state.node;
   try {
@@ -385,7 +410,7 @@ Interpreter.prototype.run = function() {
   var t;
   while ((t = this.schedule()) === 0) {
     var thread = this.thread;
-    var stack = thread.stateStack;
+    var stack = thread.stateStack_;
     while (thread.status === Interpreter.Thread.Status.READY) {
       var state = stack[stack.length - 1];
       var node = state.node;
@@ -416,6 +441,7 @@ Interpreter.prototype.run = function() {
 /**
  * If interpreter status is RUNNING, use setTimeout to repeatedly call
  * .run() until there are no more sleeping threads.
+ * @private
  */
 Interpreter.prototype.go_ = function() {
   // Ignore calls to .go_ when PAUSED or STOPPED
@@ -487,9 +513,9 @@ Interpreter.prototype.pause = function() {
       break;
     case Interpreter.Status.STOPPED:
       // Re-listen to any previously listened ports:
-      for (var port in this.listeners) {
+      for (var port in this.listeners_) {
         var intrp = this;
-        var server = this.listeners[port];
+        var server = this.listeners_[Number(port)];
         server.listen(undefined, function(error) {
           // Something went wrong while re-listening.  Maybe port in use.
           console.log('Re-listen on port %s failed: %s: %s', server.port,
@@ -523,8 +549,8 @@ Interpreter.prototype.stop = function() {
   // Do RUNNING -> PAUSED transition if required; update elapsed time.
   this.pause();
   // Unlisten to network sockets.
-  for (var port in this.listeners) {
-    this.listeners[port].unlisten();
+  for (var port in this.listeners_) {
+    this.listeners_[Number(port)].unlisten();
   }
   this.status = Interpreter.Status.STOPPED;
 };
@@ -533,6 +559,7 @@ Interpreter.prototype.stop = function() {
  * Create and register the builtin classes and functions specified in
  * the ECMAScript specification plus our extensions.  Add a few items
  * (e.g., eval) to the global scope that can't be added any other way.
+ * @private
  */
 Interpreter.prototype.initBuiltins_ = function() {
   // Initialize uneditable global properties.
@@ -605,6 +632,7 @@ Interpreter.prototype.initBuiltins_ = function() {
 
 /**
  * Initialize the Object class.
+ * @private
  */
 Interpreter.prototype.initObject_ = function() {
   var intrp = this;
@@ -813,6 +841,7 @@ Interpreter.prototype.initObject_ = function() {
 
 /**
  * Initialize the Function class.
+ * @private
  */
 Interpreter.prototype.initFunction_ = function() {
   var intrp = this;
@@ -857,8 +886,7 @@ Interpreter.prototype.initFunction_ = function() {
                             this.Function.prototype.toString, false);
 
   wrapper = function(thisArg, args) {
-    var state = intrp.thread.stateStack[
-        intrp.thread.stateStack.length - 1];
+    var state = intrp.thread.stateStack_[intrp.thread.stateStack_.length - 1];
     // Rewrite the current 'CallExpression' to apply a different function.
     state.func_ = this;
     // Assign the 'this' object.
@@ -878,8 +906,7 @@ Interpreter.prototype.initFunction_ = function() {
 
   wrapper = function(thisArg /*, var_args*/) {
     var state =
-        intrp.thread.stateStack[
-            intrp.thread.stateStack.length - 1];
+        intrp.thread.stateStack_[intrp.thread.stateStack_.length - 1];
     // Rewrite the current 'CallExpression' to call a different function.
     state.func_ = this;
     // Assign the 'this' object.
@@ -896,6 +923,7 @@ Interpreter.prototype.initFunction_ = function() {
 
 /**
  * Initialize the Array class.
+ * @private
  */
 Interpreter.prototype.initArray_ = function() {
   var intrp = this;
@@ -1123,6 +1151,7 @@ Interpreter.prototype.initArray_ = function() {
 
 /**
  * Initialize the String class.
+ * @private
  */
 Interpreter.prototype.initString_ = function() {
   var intrp = this;
@@ -1206,6 +1235,7 @@ Interpreter.prototype.initString_ = function() {
 
 /**
  * Initialize the Boolean class.
+ * @private
  */
 Interpreter.prototype.initBoolean_ = function() {
   var intrp = this;
@@ -1219,6 +1249,7 @@ Interpreter.prototype.initBoolean_ = function() {
 
 /**
  * Initialize the Number class.
+ * @private
  */
 Interpreter.prototype.initNumber_ = function() {
   var intrp = this;
@@ -1290,6 +1321,7 @@ Interpreter.prototype.initNumber_ = function() {
 
 /**
  * Initialize the Date class.
+ * @private
  */
 Interpreter.prototype.initDate_ = function() {
   var intrp = this;
@@ -1359,6 +1391,7 @@ Interpreter.prototype.initDate_ = function() {
 
 /**
  * Initialize Regular Expression object.
+ * @private
  */
 Interpreter.prototype.initRegExp_ = function() {
   var intrp = this;
@@ -1417,6 +1450,7 @@ Interpreter.prototype.initRegExp_ = function() {
 
 /**
  * Initialize the Error class.
+ * @private
  */
 Interpreter.prototype.initError_ = function() {
   var intrp = this;
@@ -1464,6 +1498,7 @@ Interpreter.prototype.initError_ = function() {
 
 /**
  * Initialize Math object.
+ * @private
  */
 Interpreter.prototype.initMath_ = function() {
   var numFunctions = ['abs', 'acos', 'asin', 'atan', 'atan2', 'ceil', 'cos',
@@ -1477,6 +1512,7 @@ Interpreter.prototype.initMath_ = function() {
 
 /**
  * Initialize JSON object.
+ * @private
  */
 Interpreter.prototype.initJSON_ = function() {
   var intrp = this;
@@ -1505,6 +1541,7 @@ Interpreter.prototype.initJSON_ = function() {
 
 /**
  * Initialize the thread system API
+ * @private
  */
 Interpreter.prototype.initThreads_ = function() {
   var intrp = this;
@@ -1536,6 +1573,7 @@ Interpreter.prototype.initThreads_ = function() {
 
 /**
  * Initialize the networking subsystem API.
+ * @private
  */
 Interpreter.prototype.initNetwork_ = function() {
   var intrp = this;
@@ -1544,12 +1582,12 @@ Interpreter.prototype.initNetwork_ = function() {
     if (port !== (port >>> 0) || port > 0xffff) {
       rej(new intrp.Error(intrp.RANGE_ERROR, 'invalid port'));
       return;
-    } else  if (port in intrp.listeners) {
+    } else  if (port in intrp.listeners_) {
       rej(new intrp.Error(intrp.RANGE_ERROR, 'port already listened'));
       return;
     }
     var server = new intrp.Server(port, proto);
-    intrp.listeners[port] = server;
+    intrp.listeners_[port] = server;
     server.listen(function() {
       res();
     }, function(e) {
@@ -1558,14 +1596,14 @@ Interpreter.prototype.initNetwork_ = function() {
   });
 
   this.createAsyncFunction('CC.connectionUnlisten', function(res, rej, port) {
-    if (!(port in intrp.listeners)) {
+    if (!(port in intrp.listeners_)) {
       rej(new intrp.Error(intrp.RANGE_ERROR, 'port not listening'));
       return;
     }
-    if (!(intrp.listeners[port].server_ instanceof net.Server)) {
+    if (!(intrp.listeners_[port].server_ instanceof net.Server)) {
       throw Error('server already closed??');
     }
-    intrp.listeners[port].unlisten(function(e) {
+    intrp.listeners_[port].unlisten(function(e) {
       if (e instanceof Error) {
         // Somehow something has gone wrong.  (Maybe mulitple
         // concurrent calls to .close on the same net.Server?)
@@ -1575,7 +1613,7 @@ Interpreter.prototype.initNetwork_ = function() {
         res();
       }
     });
-    delete intrp.listeners[port];
+    delete intrp.listeners_[port];
   });
 
   this.createNativeFunction('CC.connectionWrite', function(obj, data) {
@@ -1639,7 +1677,7 @@ Interpreter.prototype.createFunctionFromAST = function(node, scope, source) {
   // needed by the (pseudo)Error constructor when generating stack
   // traces (via Thread.prototype.getSource); we store it on the body
   // node (rather than on the function node) because the function node
-  // never appears on the stateStack when the function is being
+  // never appears on the stateStack_ when the function is being
   // executed.  We save the full original source (not just the bit
   // containing the function) because the start and end offsets on the
   // AST nodes (that will be used to generate the stack trace) are
@@ -1661,6 +1699,7 @@ Interpreter.prototype.createNativeFunction =
   var func = new this.Function;
   func.nativeFunc = nativeFunc;
   var surname = name.replace(/^.*\./, '');
+  // TODO(cpcallen): should include formal parameter names.
   func.source = 'function ' + surname + '() { [native code] }';
   nativeFunc.id = name;
   this.setProperty(func, 'length', nativeFunc.length,
@@ -1720,7 +1759,7 @@ Interpreter.prototype.callAsyncFunction = function(state) {
     var thread = intrp.threads[id];
     if (!(thread instanceof Interpreter.Thread) ||
         thread.status !== Interpreter.Thread.Status.BLOCKED ||
-        thread.stateStack[thread.stateStack.length - 1].node.type !=
+        thread.stateStack_[thread.stateStack_.length - 1].node.type !=
         'CallExpression') {
       throw Error('Async function thread state looks wrong');
     }
@@ -1742,10 +1781,10 @@ Interpreter.prototype.callAsyncFunction = function(state) {
         var node = new Interpreter.Node;
         node['type'] = 'ThrowStatement';
         var throwState = new Interpreter.State(node,
-            thread.stateStack[thread.stateStack.length - 1].scope);
+            thread.stateStack_[thread.stateStack_.length - 1].scope);
         throwState.done_ = true;
         throwState.value = value;
-        thread.stateStack.push(throwState);
+        thread.stateStack_.push(throwState);
         intrp.threads[id].status = Interpreter.Thread.Status.READY;
         intrp.go_();
       }];
@@ -2050,7 +2089,8 @@ Interpreter.prototype.getValueFromScope = function(scope, name) {
     }
   }
   // Typeof operator is unique: it can safely look at non-defined variables.
-  var prevNode = this.thread.stateStack[this.thread.stateStack.length - 1].node;
+  var stack = this.thread.stateStack_;
+  var prevNode = stack[stack.length - 1].node;
   if (prevNode['type'] === 'UnaryExpression' &&
       prevNode['operator'] === 'typeof') {
     return undefined;
@@ -2097,7 +2137,7 @@ Interpreter.prototype.addVariableToScope =
 };
 
 /**
- * Create a new scope for the given node.
+ * Populate a scope for the given node.
  * @param {!Interpreter.Node} node AST node (program or function).
  * @param {!Interpreter.Scope} scope Scope dictionary to populate.
  * @param {string} source Original source code.
@@ -2141,7 +2181,7 @@ Interpreter.prototype.populateScope_ = function(node, scope, source) {
  * @return {boolean} True if 'new foo()', false if 'foo()'.
  */
 Interpreter.prototype.calledWithNew = function() {
-  return this.thread.stateStack[this.thread.stateStack.length - 1].
+  return this.thread.stateStack_[this.thread.stateStack_.length - 1].
       isConstructor;
 };
 
@@ -2244,7 +2284,7 @@ Interpreter.prototype.unwind = function(type, value, label) {
     throw TypeError('Should not unwind for NORMAL completions');
   }
 
-  for (var stack = this.thread.stateStack; stack.length > 0; stack.pop()) {
+  for (var stack = this.thread.stateStack_; stack.length > 0; stack.pop()) {
     var state = stack[stack.length - 1];
     switch (state.node['type']) {
       case 'TryStatement':
@@ -2340,18 +2380,22 @@ Interpreter.State = function(node, scope) {
  * @param {number=} runAt Time at which to start running thread.
  */
 Interpreter.Thread = function(id, state, runAt) {
-  if (id === undefined || state === undefined) {
+  if (id === undefined || state === undefined || runAt === undefined) {
     // Deserialising. Props will be filled in later.
+    /** @type {number} */
     this.id = -1;
+    /** @type {!Interpreter.Thread.Status} */
     this.status = Interpreter.Thread.Status.ZOMBIE;
-    this.stateStack = [];
+    /** @private @type {!Array<!Interpreter.State>} */
+    this.stateStack_ = [];
+    /** @type {number} */
     this.runAt = 0;
     return;
   }
   this.id = id;
   // Say it's sleeping for now.  May be woken immediately.
   this.status = Interpreter.Thread.Status.SLEEPING;
-  this.stateStack = [state];
+  this.stateStack_ = [state];
   this.runAt = runAt;
 };
 
@@ -2370,11 +2414,10 @@ Interpreter.Thread.prototype.sleepUntil = function(resumeAt) {
  * @return {string|undefined} Source code or undefined if none.
  */
 Interpreter.Thread.prototype.getSource = function(index) {
-  var i = (index === undefined) ?
-      this.stateStack.length - 1 : index;
+  var i = (index === undefined) ? this.stateStack_.length - 1 : index;
   var source;
   while (source === undefined && i >= 0) {
-    source = this.stateStack[i--].node['source'];
+    source = this.stateStack_[i--].node['source'];
   }
   return source;
 };
@@ -2511,9 +2554,12 @@ Interpreter.prototype.Error.prototype.toString = function() {
  * @param {!Interpreter.prototype.Object} proto
  */
 Interpreter.prototype.Server = function(port, proto) {
+  /** @type {number} */
   this.port = 0;
-  /** @type {Interpreter.prototype.Object} */ this.proto = null;
-  /** @type {net.Server} */ this.server_ = null;
+  /** @type {Interpreter.prototype.Object} */
+  this.proto = null;
+  /** @private @type {net.Server} */
+  this.server_ = null;
   throw Error('Inner class constructor not callable on prototype');
 };
 
@@ -2831,8 +2877,8 @@ Interpreter.prototype.installTypes = function() {
     // Don't bother when building Error.prototype.
     if (intrp.thread) {
       var stack = [];
-      for (var i = intrp.thread.stateStack.length - 1; i >= 0; i--) {
-        var state = intrp.thread.stateStack[i];
+      for (var i = intrp.thread.stateStack_.length - 1; i >= 0; i--) {
+        var state = intrp.thread.stateStack_[i];
         var node = state.node;
         // Always add the first state to the stack.
         // Also add any call expression that is executing.
@@ -2939,8 +2985,8 @@ Interpreter.prototype.installTypes = function() {
     if (this.port === undefined || !(this.proto instanceof intrp.Object)) {
       throw Error('Invalid Server state');
     }
-    if (intrp.listeners[this.port] !== this) {
-      throw Error('Listening on server not listed in .listeners??');
+    if (intrp.listeners_[this.port] !== this) {
+      throw Error('Listening on server not listed in .listeners_??');
     }
     var server = this;  // Because this will be undefined in handlers below.
     // Create net.Server, start it listening, and attached it to this.
@@ -3047,6 +3093,11 @@ Interpreter.prototype.installTypes = function() {
     this.visited = new Set();
   };
 
+  /**
+   * Load the property keys of this.value into this.keys and reset
+   * this.i to 0.
+   * @private
+   */
   intrp.PropertyIterator.prototype.getKeys_ = function() {
     if (this.value === null || this.value === undefined) {
       this.keys = [];
@@ -3055,7 +3106,7 @@ Interpreter.prototype.installTypes = function() {
           this.value.properties : this.value;
       // Call to Object() is not required in ES6 or later, but in
       // ES5.1 Object.getOwnPropertyNames only accepts objects, so we
-      // actually do want to create a boxed primitive here.
+      // actually need to create a boxed primitive here.
       this.keys = Object.getOwnPropertyNames(Object(this.properties));
     }
     this.i = 0;
@@ -3301,6 +3352,9 @@ Interpreter.prototype['stepCallExpression'] = function(stack, state, node) {
     var funcNode = func.node;
     if (funcNode) {
       var scope = new Interpreter.Scope(func.outerScope);
+      if(func.source === undefined) {
+        throw Error("No source for user-defined function??");
+      }
       this.populateScope_(funcNode['body'], scope, func.source);
       // Add all arguments.
       for (var i = 0; i < funcNode['params'].length; i++) {
@@ -3571,8 +3625,12 @@ Interpreter.prototype['stepFunctionDeclaration'] =
 
 Interpreter.prototype['stepFunctionExpression'] = function(stack, state, node) {
   stack.pop();
+  var src = this.thread.getSource();
+  if(src === undefined) {
+    throw Error("No source found when evaluating function expression??");
+  }
   stack[stack.length - 1].value =
-      this.createFunctionFromAST(node, state.scope, this.thread.getSource());
+      this.createFunctionFromAST(node, state.scope, src);
 };
 
 Interpreter.prototype['stepIdentifier'] = function(stack, state, node) {
