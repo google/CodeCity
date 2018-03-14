@@ -1023,14 +1023,14 @@ Interpreter.prototype.initArray_ = function() {
   };
   this.createNativeFunction('Array.prototype.splice', wrapper, false);
 
-  wrapper = function(opt_begin, opt_end) {
+  wrapper = function(begin, end) {
     var list = new intrp.Array;
-    var begin = getInt(opt_begin, 0);
+    begin = getInt(begin, 0);
     if (begin < 0) {
       begin = this.properties.length + begin;
     }
     begin = Math.max(0, Math.min(begin, this.properties.length));
-    var end = getInt(opt_end, this.properties.length);
+    end = getInt(end, this.properties.length);
     if (end < 0) {
       end = this.properties.length + end;
     }
@@ -1044,7 +1044,7 @@ Interpreter.prototype.initArray_ = function() {
   };
   this.createNativeFunction('Array.prototype.slice', wrapper, false);
 
-  wrapper = function(opt_separator) {
+  wrapper = function(separator) {
     var cycles = intrp.toStringCycles_;
     cycles.push(this);
     try {
@@ -1058,7 +1058,7 @@ Interpreter.prototype.initArray_ = function() {
     } finally {
       cycles.pop();
     }
-    return text.join(opt_separator);
+    return text.join(separator);
   };
   this.createNativeFunction('Array.prototype.join', wrapper, false);
 
@@ -1086,9 +1086,9 @@ Interpreter.prototype.initArray_ = function() {
   };
   this.createNativeFunction('Array.prototype.concat', wrapper, false);
 
-  wrapper = function(searchElement, opt_fromIndex) {
+  wrapper = function(searchElement, fromIndex) {
     searchElement = searchElement || undefined;
-    var fromIndex = getInt(opt_fromIndex, 0);
+    fromIndex = getInt(fromIndex, 0);
     if (fromIndex < 0) {
       fromIndex = this.properties.length + fromIndex;
     }
@@ -1103,9 +1103,9 @@ Interpreter.prototype.initArray_ = function() {
   };
   this.createNativeFunction('Array.prototype.indexOf', wrapper, false);
 
-  wrapper = function(searchElement, opt_fromIndex) {
+  wrapper = function(searchElement, fromIndex) {
     searchElement = searchElement || undefined;
-    var fromIndex = getInt(opt_fromIndex, this.properties.length);
+    fromIndex = getInt(fromIndex, this.properties.length);
     if (fromIndex < 0) {
       fromIndex = this.properties.length + fromIndex;
     }
@@ -1424,10 +1424,10 @@ Interpreter.prototype.initError_ = function() {
   this.ERROR = new this.Error(this.OBJECT);
   this.builtins_['Error.prototype'] = this.ERROR;
   // Error constructor.
-  var wrapper = function(opt_message) {
+  var wrapper = function(message) {
     var newError = new intrp.Error;
-    if (opt_message) {
-      intrp.setProperty(newError, 'message', String(opt_message),
+    if (message) {
+      intrp.setProperty(newError, 'message', String(message),
           Interpreter.NONENUMERABLE_DESCRIPTOR);
     }
     return newError;
@@ -1441,11 +1441,11 @@ Interpreter.prototype.initError_ = function() {
     var prototype = new intrp.Error;
     intrp.builtins_[name + '.prototype'] = prototype;
 
-    wrapper = function(opt_message) {
+    wrapper = function(message) {
       var newError = new intrp.Error(prototype);
-      if (opt_message) {
+      if (message) {
         intrp.setProperty(newError, 'message',
-            String(opt_message), Interpreter.NONENUMERABLE_DESCRIPTOR);
+            String(message), Interpreter.NONENUMERABLE_DESCRIPTOR);
       }
       return newError;
     };
@@ -1827,10 +1827,10 @@ Interpreter.prototype.nativeToPseudo = function(nativeObj) {
  * of JSON.stringify, String.prototype.localeCompare, etc.)
  * @param {Interpreter.Value} pseudoObj The JS interpreter object to
  *     be converted.
- * @param {Object=} opt_cycles Cycle detection (used in recursive calls).
+ * @param {Object=} cycles Cycle detection (used only in recursive calls).
  * @return {*} The equivalent native JS object or value.
  */
-Interpreter.prototype.pseudoToNative = function(pseudoObj, opt_cycles) {
+Interpreter.prototype.pseudoToNative = function(pseudoObj, cycles) {
   if (typeof pseudoObj === 'boolean' ||
       typeof pseudoObj === 'number' ||
       typeof pseudoObj === 'string' ||
@@ -1842,10 +1842,9 @@ Interpreter.prototype.pseudoToNative = function(pseudoObj, opt_cycles) {
     return pseudoObj.regexp;
   }
 
-  var cycles = opt_cycles || {
-    pseudo: [],
-    native: []
-  };
+  if (!cycles) {
+    cycles = {pseudo: [], native: []};
+  }
   var i = cycles.pseudo.indexOf(pseudoObj);
   if (i !== -1) {
     return cycles.native[i];
@@ -2084,15 +2083,15 @@ Interpreter.prototype.setValueToScope = function(scope, name, value) {
  * @param {!Interpreter.Scope} scope Scope to write to.
  * @param {Interpreter.Value} name Name of variable.
  * @param {Interpreter.Value} value Initial value.
- * @param {boolean=} opt_notWritable True if constant.  Defaults to false.
+ * @param {boolean=} notWritable True if constant.  Defaults to false.
  */
 Interpreter.prototype.addVariableToScope =
-    function(scope, name, value, opt_notWritable) {
+    function(scope, name, value, notWritable) {
   name = String(name);
   if (!(name in scope.properties)) {
     scope.properties[name] = value;
   }
-  if (opt_notWritable) {
+  if (notWritable) {
     scope.notWritable.add(name);
   }
 };
@@ -2197,17 +2196,17 @@ Interpreter.Completion = {
  * @param {Interpreter.Value} value Value to be thrown.  If message is
  *     provided a new error object is created using value as the
  *     prototype; if not it is used directly.
- * @param {string=} opt_message Message being thrown.
+ * @param {string=} message Message being thrown.
  */
-Interpreter.prototype.throwException = function(value, opt_message) {
+Interpreter.prototype.throwException = function(value, message) {
   var error;
-  if (opt_message === undefined) {
+  if (message === undefined) {
     error = value;  // This is a value to throw, not an error proto.
   } else {
     if (!(value === null || value instanceof this.Error)) {
       throw TypeError("Can't attach message to non-Error value");
     }
-    error = new this.Error(value, opt_message);
+    error = new this.Error(value, message);
   }
   this.unwind(Interpreter.Completion.THROW, error, undefined);
   // Abort anything related to the current step.
@@ -2367,12 +2366,12 @@ Interpreter.Thread.prototype.sleepUntil = function(resumeAt) {
 
 /**
  * Returns the original source code for current state.
- * @param {number=} opt_index Optional index in stack to look from.
+ * @param {number=} index Optional index in stack to look from.
  * @return {string|undefined} Source code or undefined if none.
  */
-Interpreter.Thread.prototype.getSource = function(opt_index) {
-  var i = (opt_index === undefined) ?
-      this.stateStack.length - 1 : opt_index;
+Interpreter.Thread.prototype.getSource = function(index) {
+  var i = (index === undefined) ?
+      this.stateStack.length - 1 : index;
   var source;
   while (source === undefined && i >= 0) {
     source = this.stateStack[i--].node['source'];
