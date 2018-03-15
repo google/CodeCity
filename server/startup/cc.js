@@ -34,6 +34,8 @@ var CC = {};
 
 // Permissions API.
 CC.root = new 'CC.root';
+var perms = new 'perms';
+var setPerms = new 'setPerms';
 
 // Networking functions.
 CC.connectionListen = new 'CC.connectionListen';

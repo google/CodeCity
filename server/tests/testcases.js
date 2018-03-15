@@ -1392,6 +1392,32 @@ module.exports = [
         '"null":null,"object":{"obj":{},"arr":[]},"array":[{},[]]}' },
 
   /******************************************************************/
+  // Permissions system:
+
+  { name: 'permsReturnsRoot', src: `
+
+    perms() === CC.root;
+    `,
+    expected: true
+  },
+
+  { name: 'setPerms', src: `
+    CC.root.name = 'Root';
+    var bob = new Object;
+    bob.name = 'Bob';
+    var r = "";
+    r += perms().name;
+    (function() {
+      setPerms(bob);
+      r += perms().name;
+      // Perms revert at end of scope.
+    })();
+    r += perms().name;
+    r;`,
+    expected: "RootBobRoot"
+  },
+
+  /******************************************************************/
   // Other tests:
 
   { name: 'newHack', src: `
@@ -1400,7 +1426,6 @@ module.exports = [
     expected: true
   },
 
-  // FIXME: use instanceof or the like to check that error is returned.
   { name: 'newHackUnknown', src: `
     try {
       new 'nonexistent-builtin-name';

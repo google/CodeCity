@@ -597,6 +597,7 @@ Interpreter.prototype.initBuiltins_ = function() {
   this.initError_();
   this.initMath_();
   this.initJSON_();
+  this.initPerms_();
 
   // Initialize ES standard global functions.
   var intrp = this;
@@ -1541,7 +1542,7 @@ Interpreter.prototype.initJSON_ = function() {
 };
 
 /**
- * Initialize the thread system API
+ * Initialize the thread system API.
  * @private
  */
 Interpreter.prototype.initThreads_ = function() {
@@ -1570,6 +1571,32 @@ Interpreter.prototype.initThreads_ = function() {
           intrp.threads[id].status = Interpreter.Thread.Status.ZOMBIE;
         }
       }, false);
+};
+
+/**
+ * Initialize the permissions model API.
+ * @private
+ */
+Interpreter.prototype.initPerms_ = function() {
+  var intrp = this;
+  this.createNativeFunction('perms', function() {
+    if (!intrp.thread) {
+      throw Error('No current thread??');
+    }
+    return intrp.thread.perms();
+  }, false);
+
+  this.createNativeFunction('setPerms', function(perms) {
+    if (!intrp.thread) {
+      throw Error('No current thread??');
+    }
+    if (!(perms instanceof intrp.Object)) {
+      intrp.throwError(intrp.TYPE_ERROR, 'New perms must be an object');
+    }
+    // TODO(cpcallen:perms): throw if current perms does not
+    // control new perms.
+    return intrp.thread.setPerms(perms);
+  }, false);
 };
 
 /**
@@ -2427,6 +2454,33 @@ Interpreter.Thread.prototype.getSource = function(index) {
     source = this.stateStack_[i--].node['source'];
   }
   return source;
+};
+
+/**
+ * Returns the permissions with which currently-executing code is
+ * running (equivalent to a unix EUID, but in the form of a
+ * user/group/etc. object) - or undefined if the thread is a zombie.e
+ * a zombie.
+
+ * @return {!Interpreter.prototype.Object|undefined}
+ */
+Interpreter.Thread.prototype.perms = function() {
+  if (this.status === Interpreter.Thread.Status.ZOMBIE) {
+    return undefined;
+  }
+  return this.stateStack_[this.stateStack_.length - 1].scope.perms;
+};
+
+/**
+ * Sets the permissions with which currently-executing code will
+ * run until the end of the innermost scope.
+ * @param {!Interpreter.prototype.Object} perms New perms.
+ */
+Interpreter.Thread.prototype.setPerms = function(perms) {
+  if (this.status === Interpreter.Thread.Status.ZOMBIE) {
+    throw Error("Can't set perms of zombie thread");
+  }
+  this.stateStack_[this.stateStack_.length - 1].scope.perms = perms;
 };
 
 /**
