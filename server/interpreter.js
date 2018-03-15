@@ -3395,9 +3395,13 @@ Interpreter.prototype['stepCallExpression'] = function(stack, state, node) {
         // Illegal: new escape();
         this.throwError(this.TYPE_ERROR, func + ' is not a constructor');
       }
-      // Constructor, 'this' is new object.
-      // BUG(cpcallen): Must type check to make sure .prototype is an object.
-      state.funcThis_ = new this.Object(this.getProperty(func, 'prototype'));
+      // Constructor; 'this' will be new object being constructed.
+      var proto = this.getProperty(func, 'prototype');
+      // Per §13.2.2 (step 7) of ES5.1 spec:
+      if (!(proto instanceof this.Object)) {
+        proto = this.OBJECT;
+      }
+      state.funcThis_ = new this.Object(proto);
       state.isConstructor = true;
     }
     state.doneArgs_ = true;
