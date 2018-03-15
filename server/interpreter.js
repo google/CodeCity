@@ -2248,7 +2248,7 @@ Interpreter.prototype.throwException = function(value, message) {
     }
     error = new this.Error(value, message);
   }
-  this.unwind(Interpreter.Completion.THROW, error, undefined);
+  this.unwind_(Interpreter.Completion.THROW, error, undefined);
   // Abort anything related to the current step.
   throw Interpreter.STEP_ERROR;
 };
@@ -2275,11 +2275,12 @@ Interpreter.prototype.throwNativeException = function(value) {
  * (i.e., do NOT do stack.pop() before calling unwind) because the
  * target label of a break statement can be the statement itself
  * (e.g., `foo: break foo;`).
+ * @private
  * @param {Interpreter.Completion} type Completion type.
  * @param {Interpreter.Value=} value Value computed, returned or thrown.
  * @param {string=} label Target label for break or return.
  */
-Interpreter.prototype.unwind = function(type, value, label) {
+Interpreter.prototype.unwind_ = function(type, value, label) {
   if (type === Interpreter.Completion.NORMAL) {
     throw TypeError('Should not unwind for NORMAL completions');
   }
@@ -3272,8 +3273,8 @@ Interpreter.prototype['stepBlockStatement'] = function(stack, state, node) {
 };
 
 Interpreter.prototype['stepBreakStatement'] = function(stack, state, node) {
-  this.unwind(Interpreter.Completion.BREAK, undefined,
-              node['label'] ? node['label']['name'] : undefined);
+  this.unwind_(Interpreter.Completion.BREAK, undefined,
+      node['label'] ? node['label']['name'] : undefined);
 };
 
 Interpreter.prototype['stepCallExpression'] = function(stack, state, node) {
@@ -3466,8 +3467,8 @@ Interpreter.prototype['stepConditionalExpression'] =
 };
 
 Interpreter.prototype['stepContinueStatement'] = function(stack, state, node) {
-  this.unwind(Interpreter.Completion.CONTINUE, undefined,
-              node['label'] ? node['label']['name'] : undefined);
+  this.unwind_(Interpreter.Completion.CONTINUE, undefined,
+      node['label'] ? node['label']['name'] : undefined);
 };
 
 Interpreter.prototype['stepDebuggerStatement'] = function(stack, state, node) {
@@ -3759,7 +3760,7 @@ Interpreter.prototype['stepReturnStatement'] = function(stack, state, node) {
     state.done_ = true;
     return new Interpreter.State(node['argument'], state.scope);
   }
-  this.unwind(Interpreter.Completion.RETURN, state.value, undefined);
+  this.unwind_(Interpreter.Completion.RETURN, state.value, undefined);
 };
 
 Interpreter.prototype['stepSequenceExpression'] = function(stack, state, node) {
@@ -3864,7 +3865,7 @@ Interpreter.prototype['stepTryStatement'] = function(stack, state, node) {
     // There was no catch handler, or the catch/finally threw an
     // error.  Resume unwinding the stack in search of TryStatement /
     // CallExpression / target of break or continue.
-    this.unwind(state.cv.type, state.cv.value, state.cv.label);
+    this.unwind_(state.cv.type, state.cv.value, state.cv.label);
   }
 };
 
