@@ -216,7 +216,7 @@ Interpreter.prototype.parse = function(str) {
     return acorn.parse(str, Interpreter.PARSE_OPTIONS);
   } catch (e) {
     // Acorn threw a SyntaxError.  Rethrow as a trappable error.
-    this.throwException(this.SYNTAX_ERROR, 'Invalid code: ' + e.message);
+    this.throwError(this.SYNTAX_ERROR, 'Invalid code: ' + e.message);
   }
 };
 
@@ -286,7 +286,7 @@ Interpreter.prototype.createThread = function(runnable, runAt) {
 Interpreter.prototype.createThreadForFuncCall =
     function(func, funcThis, args, runAt) {
   if (!(func instanceof this.Function)) {
-    this.throwException(this.TYPE_ERROR, func + ' is not a function');
+    this.throwError(this.TYPE_ERROR, func + ' is not a function');
   }
   var node = new Interpreter.Node;
   node['type'] = 'CallExpression';
@@ -618,7 +618,7 @@ Interpreter.prototype.initBuiltins_ = function() {
           return nativeFunc(str);
         } catch (e) {
           // decodeURI('%xy') will throw an error.  Catch and rethrow.
-          intrp.throwException(intrp.URI_ERROR, e.message);
+          intrp.throwError(intrp.URI_ERROR, e.message);
         }
       };
     })(strFunctions[i][0]);
@@ -651,8 +651,7 @@ Interpreter.prototype.initObject_ = function() {
     }
     if (!(value instanceof intrp.Object)) {
       // No boxed primitives in Code City.
-      intrp.throwException(intrp.TYPE_ERROR,
-          'Boxing of primitives not supported.');
+      intrp.throwError(intrp.TYPE_ERROR, 'Boxing of primitives not supported.');
     }
     // Return the provided object.
     return value;
@@ -666,7 +665,7 @@ Interpreter.prototype.initObject_ = function() {
    */
   var throwIfNullUndefined = function(value) {
     if (value === undefined || value === null) {
-      intrp.throwException(intrp.TYPE_ERROR,
+      intrp.throwError(intrp.TYPE_ERROR,
           "Cannot convert '" + value + "' to object");
     }
   };
@@ -677,8 +676,7 @@ Interpreter.prototype.initObject_ = function() {
   wrapper = function(obj) {
     throwIfNullUndefined(obj);
     var props = (obj instanceof intrp.Object) ? obj.properties : obj;
-    return intrp.arrayNativeToPseudo(
-        Object.getOwnPropertyNames(props));
+    return intrp.arrayNativeToPseudo(Object.getOwnPropertyNames(props));
   };
   this.createNativeFunction('Object.getOwnPropertyNames', wrapper, false);
 
@@ -698,7 +696,7 @@ Interpreter.prototype.initObject_ = function() {
       return new intrp.Object(null);
     }
     if (!(proto === null || proto instanceof intrp.Object)) {
-      intrp.throwException(intrp.TYPE_ERROR,
+      intrp.throwError(intrp.TYPE_ERROR,
           'Object prototype may only be an Object or null');
     }
     return new intrp.Object(proto);
@@ -708,15 +706,15 @@ Interpreter.prototype.initObject_ = function() {
   wrapper = function(obj, prop, descriptor) {
     prop = String(prop);
     if (!(obj instanceof intrp.Object)) {
-      intrp.throwException(intrp.TYPE_ERROR,
+      intrp.throwError(intrp.TYPE_ERROR,
           'Object.defineProperty called on non-object');
     }
     if (!(descriptor instanceof intrp.Object)) {
-      intrp.throwException(intrp.TYPE_ERROR,
+      intrp.throwError(intrp.TYPE_ERROR,
           'Property description must be an object');
     }
     if (!obj.properties[prop] && obj.preventExtensions) {
-      intrp.throwException(intrp.TYPE_ERROR,
+      intrp.throwError(intrp.TYPE_ERROR,
           "Can't define property '" + prop + "', object is not extensible");
     }
     // Can't just use pseudoToNative since descriptors can inherit properties.
@@ -730,21 +728,20 @@ Interpreter.prototype.initObject_ = function() {
           !!intrp.getProperty(descriptor, 'enumerable');
     }
     if (intrp.hasProperty(descriptor, 'writable')) {
-      nativeDescriptor.writable =
-          !!intrp.getProperty(descriptor, 'writable');
+      nativeDescriptor.writable = !!intrp.getProperty(descriptor, 'writable');
     }
     if (intrp.hasProperty(descriptor, 'value')) {
       nativeDescriptor.value = intrp.getProperty(descriptor, 'value');
     }
     intrp.setProperty(obj, prop, Interpreter.VALUE_IN_DESCRIPTOR,
-                                nativeDescriptor);
+                      nativeDescriptor);
     return obj;
   };
   this.createNativeFunction('Object.defineProperty', wrapper, false);
 
   wrapper = function(obj, prop) {
     if (!(obj instanceof intrp.Object)) {
-      intrp.throwException(intrp.TYPE_ERROR,
+      intrp.throwError(intrp.TYPE_ERROR,
           'Object.getOwnPropertyDescriptor called on non-object');
     }
     prop = String(prop);
@@ -756,8 +753,7 @@ Interpreter.prototype.initObject_ = function() {
     intrp.setProperty(descriptor, 'configurable', pd.configurable);
     intrp.setProperty(descriptor, 'enumerable', pd.enumerable);
     intrp.setProperty(descriptor, 'writable', pd.writable);
-    intrp.setProperty(descriptor, 'value',
-        intrp.getProperty(obj, prop));
+    intrp.setProperty(descriptor, 'value', intrp.getProperty(obj, prop));
     return descriptor;
   };
   this.createNativeFunction('Object.getOwnPropertyDescriptor', wrapper, false);
@@ -773,7 +769,7 @@ Interpreter.prototype.initObject_ = function() {
   wrapper = function(obj, proto) {
     throwIfNullUndefined(obj);
     if (proto !== null && !(proto instanceof intrp.Object)) {
-      intrp.throwException(intrp.TYPE_ERROR,
+      intrp.throwError(intrp.TYPE_ERROR,
           'Object prototype may only be an Object or null');
     }
     if (!(obj instanceof intrp.Object)) {
@@ -860,7 +856,7 @@ Interpreter.prototype.initFunction_ = function() {
       for (var i = 0; i < args.length; i++) {
         var name = args[i];
         if (!identifierRegexp.test(name)) {
-          intrp.throwException(intrp.SYNTAX_ERROR,
+          intrp.throwError(intrp.SYNTAX_ERROR,
               'Invalid function argument: ' + name);
         }
       }
@@ -872,8 +868,7 @@ Interpreter.prototype.initFunction_ = function() {
     var ast = intrp.parse(code);
     if (ast['body'].length !== 1) {
       // Function('a', 'return a + 6;}; {alert(1);');
-      intrp.throwException(intrp.SYNTAX_ERROR,
-          'Invalid code in function body.');
+      intrp.throwError(intrp.SYNTAX_ERROR, 'Invalid code in function body.');
     }
     // Interestingly, the scope for constructed functions is the global scope,
     // even if they were constructed in some other scope.
@@ -895,7 +890,7 @@ Interpreter.prototype.initFunction_ = function() {
     state.arguments_ = [];
     if (args !== null && args !== undefined) {
       if (!(args instanceof intrp.Object)) {
-        intrp.throwException(intrp.TYPE_ERROR,
+        intrp.throwError(intrp.TYPE_ERROR,
             'CreateListFromArrayLike called on non-object');
       }
       state.arguments_ = intrp.arrayPseudoToNative(args);
@@ -945,8 +940,7 @@ Interpreter.prototype.initArray_ = function() {
     var first = arguments[0];
     if (arguments.length === 1 && typeof first === 'number') {
       if (isNaN(Interpreter.legalArrayLength(first))) {
-        intrp.throwException(intrp.RANGE_ERROR,
-                                       'Invalid array length');
+        intrp.throwError(intrp.RANGE_ERROR, 'Invalid array length');
       }
       newArray.properties.length = first;
     } else {
@@ -1227,7 +1221,7 @@ Interpreter.prototype.initString_ = function() {
       return this.repeat(count);
     } catch (e) {
       // 'abc'.repeat(-1) will throw an error.  Catch and rethrow.
-      intrp.throwException(intrp.RANGE_ERROR, e.message);
+      intrp.throwError(intrp.RANGE_ERROR, e.message);
     }
   };
   this.createNativeFunction('String.prototype.repeat', wrapper, false);
@@ -1273,7 +1267,7 @@ Interpreter.prototype.initNumber_ = function() {
       return this.toExponential(fractionDigits);
     } catch (e) {
       // Throws if fractionDigits isn't within 0-20.
-      intrp.throwException(intrp.RANGE_ERROR, e.message);
+      intrp.throwError(intrp.RANGE_ERROR, e.message);
     }
   };
   this.createNativeFunction('Number.prototype.toExponential', wrapper, false);
@@ -1283,7 +1277,7 @@ Interpreter.prototype.initNumber_ = function() {
       return this.toFixed(digits);
     } catch (e) {
       // Throws if digits isn't within 0-20.
-      intrp.throwException(intrp.RANGE_ERROR, e.message);
+      intrp.throwError(intrp.RANGE_ERROR, e.message);
     }
   };
   this.createNativeFunction('Number.prototype.toFixed', wrapper, false);
@@ -1293,7 +1287,7 @@ Interpreter.prototype.initNumber_ = function() {
       return this.toPrecision(precision);
     } catch (e) {
       // Throws if precision isn't within range (depends on implementation).
-      intrp.throwException(intrp.RANGE_ERROR, e.message);
+      intrp.throwError(intrp.RANGE_ERROR, e.message);
     }
   };
   this.createNativeFunction('Number.prototype.toPrecision', wrapper, false);
@@ -1303,7 +1297,7 @@ Interpreter.prototype.initNumber_ = function() {
       return this.toString(radix);
     } catch (e) {
       // Throws if radix isn't within 2-36.
-      intrp.throwException(intrp.RANGE_ERROR, e.message);
+      intrp.throwError(intrp.RANGE_ERROR, e.message);
     }
   };
   this.createNativeFunction('Number.prototype.toString', wrapper, false);
@@ -1416,8 +1410,7 @@ Interpreter.prototype.initRegExp_ = function() {
   wrapper = function(str) {
     if (!(this instanceof intrp.RegExp) ||
         !(this.regexp instanceof RegExp)) {
-      intrp.throwException(
-          intrp.TYPE_ERROR,
+      intrp.throwError(intrp.TYPE_ERROR,
           'Method RegExp.prototype.exec called on incompatible receiver' +
               this.toString());
     }
@@ -1521,7 +1514,7 @@ Interpreter.prototype.initJSON_ = function() {
     try {
       var nativeObj = JSON.parse(text.toString());
     } catch (e) {
-      intrp.throwException(intrp.SYNTAX_ERROR, e.message);
+      intrp.throwError(intrp.SYNTAX_ERROR, e.message);
     }
     return intrp.nativeToPseudo(nativeObj);
   };
@@ -1532,7 +1525,7 @@ Interpreter.prototype.initJSON_ = function() {
     try {
       var str = JSON.stringify(nativeObj);
     } catch (e) {
-      intrp.throwException(intrp.TYPE_ERROR, e.message);
+      intrp.throwError(intrp.TYPE_ERROR, e.message);
     }
     return str;
   };
@@ -1618,14 +1611,14 @@ Interpreter.prototype.initNetwork_ = function() {
 
   this.createNativeFunction('CC.connectionWrite', function(obj, data) {
     if (!(obj instanceof intrp.Object) || !obj.socket) {
-      intrp.throwException(intrp.TYPE_ERROR, 'object is not connected');
+      intrp.throwError(intrp.TYPE_ERROR, 'object is not connected');
     }
     obj.socket.write(String(data));
   }, false);
 
   this.createNativeFunction('CC.connectionClose', function(obj) {
     if (!(obj instanceof intrp.Object) || !obj.socket) {
-      intrp.throwException(intrp.TYPE_ERROR, 'object is not connected');
+      intrp.throwError(intrp.TYPE_ERROR, 'object is not connected');
     }
     obj.socket.end();
   }, false);
@@ -1993,8 +1986,8 @@ Interpreter.prototype.getPrototype = function(value) {
 Interpreter.prototype.getProperty = function(obj, name) {
   name = String(name);
   if (obj === undefined || obj === null) {
-    this.throwException(this.TYPE_ERROR,
-                        "Cannot read property '" + name + "' of " + obj);
+    this.throwError(this.TYPE_ERROR,
+        "Cannot read property '" + name + "' of " + obj);
   }
   if (obj instanceof this.Object) {
     return obj.properties[name];
@@ -2095,7 +2088,7 @@ Interpreter.prototype.getValueFromScope = function(scope, name) {
       prevNode['operator'] === 'typeof') {
     return undefined;
   }
-  this.throwException(this.REFERENCE_ERROR, name + ' is not defined');
+  this.throwError(this.REFERENCE_ERROR, name + ' is not defined');
 };
 
 /**
@@ -2108,14 +2101,14 @@ Interpreter.prototype.setValueToScope = function(scope, name, value) {
   for (var s = scope; s; s = s.outerScope) {
     if (name in s.properties) {
       if (s.notWritable.has(name)) {
-        this.throwException(this.TYPE_ERROR,
-                            'Assignment to constant variable: ' + name);
+        this.throwError(this.TYPE_ERROR,
+            'Assignment to constant variable: ' + name);
       }
       s.properties[name] = value;
       return;
     }
   }
-  this.throwException(this.REFERENCE_ERROR, name + ' is not defined');
+  this.throwError(this.REFERENCE_ERROR, name + ' is not defined');
 };
 
 /**
@@ -2231,26 +2224,23 @@ Interpreter.Completion = {
 
 /**
  * Throw an exception in the interpreter that can be handled by a
- * interpreter try/catch statement.  Can be called with either an
- * error class and a message, or with an actual object to be thrown.
- * @param {Interpreter.Value} value Value to be thrown.  If message is
- *     provided a new error object is created using value as the
- *     prototype; if not it is used directly.
- * @param {string=} message Message being thrown.
+ * interpreter try/catch statement.
+ * @param {Interpreter.Value} value Value to be thrown.
  */
-Interpreter.prototype.throwException = function(value, message) {
-  var error;
-  if (message === undefined) {
-    error = value;  // This is a value to throw, not an error proto.
-  } else {
-    if (!(value === null || value instanceof this.Error)) {
-      throw TypeError("Can't attach message to non-Error value");
-    }
-    error = new this.Error(value, message);
-  }
-  this.unwind_(Interpreter.Completion.THROW, error, undefined);
+Interpreter.prototype.throwException = function(value) {
+  this.unwind_(Interpreter.Completion.THROW, value, undefined);
   // Abort anything related to the current step.
   throw Interpreter.STEP_ERROR;
+};
+
+/**
+ * Throw an Error in the interpreter.  A convenience method that just
+ * does this.throwException(new this.Error(arguments)
+ * @param {!Interpreter.prototype.Error} proto Prototype new Error object.
+ * @param {string=} message Message to attach to new Error object.
+ */
+Interpreter.prototype.throwError = function(proto, message) {
+  this.throwException(new this.Error(proto, message));
 };
 
 /**
@@ -2663,7 +2653,7 @@ Interpreter.prototype.installTypes = function() {
    */
   intrp.Function.prototype.toString = function() {
     if (!(this instanceof intrp.Function)) {
-      intrp.throwException(intrp.TYPE_ERROR,
+      intrp.throwError(intrp.TYPE_ERROR,
           'Function.prototype.toString is not generic');
     }
     // N.B. that ES5.1 spec stipulates that output must be in syntax of
@@ -2684,7 +2674,7 @@ Interpreter.prototype.installTypes = function() {
     }
     var prot = intrp.getProperty(this, 'prototype');
     if (!(prot instanceof intrp.Object)) {
-      intrp.throwException(intrp.TYPE_ERROR,
+      intrp.throwError(intrp.TYPE_ERROR,
           "Function has non-object prototype '" + prot +
           "' in instanceof check");
     }
@@ -2721,7 +2711,7 @@ Interpreter.prototype.installTypes = function() {
    * Class for an array
    * @constructor
    * @extends {Interpreter.prototype.Array}
-   * @param {Interpreter.prototype.Object=} proto Prototype object.
+   * @param {?Interpreter.prototype.Object=} proto Prototype object or null.
    */
   intrp.Array = function(proto) {
     if (proto === undefined) {
@@ -2770,7 +2760,7 @@ Interpreter.prototype.installTypes = function() {
    * Class for a date.
    * @constructor
    * @extends {Interpreter.prototype.Date}
-   * @param {Interpreter.prototype.Object=} proto Prototype object.
+   * @param {?Interpreter.prototype.Object=} proto Prototype object or null.
    */
   intrp.Date = function(proto) {
     intrp.Object.call(/** @type {?} */(this),
@@ -2790,7 +2780,7 @@ Interpreter.prototype.installTypes = function() {
    */
   intrp.Date.prototype.toString = function() {
     if (!(this.date instanceof Date)) {
-      intrp.throwException(intrp.TYPE_ERROR,
+      intrp.throwError(intrp.TYPE_ERROR,
           'Date.prototype.toString is not generic');
     }
     return this.date.toString();
@@ -2803,7 +2793,7 @@ Interpreter.prototype.installTypes = function() {
    */
   intrp.Date.prototype.valueOf = function() {
     if (!(this.date instanceof Date)) {
-      intrp.throwException(intrp.TYPE_ERROR,
+      intrp.throwError(intrp.TYPE_ERROR,
           'Date.prototype.valueOf is not generic');
     }
     return this.date.valueOf();
@@ -2813,7 +2803,7 @@ Interpreter.prototype.installTypes = function() {
    * Class for a regexp
    * @constructor
    * @extends {Interpreter.prototype.RegExp}
-   * @param {Interpreter.prototype.Object=} proto Prototype object.
+   * @param {?Interpreter.prototype.Object=} proto Prototype object or null.
    */
   intrp.RegExp = function(proto) {
     intrp.Object.call(/** @type {?} */(this),
@@ -2864,7 +2854,7 @@ Interpreter.prototype.installTypes = function() {
    * Class for an error object
    * @constructor
    * @extends {Interpreter.prototype.Error}
-   * @param {Interpreter.prototype.Object=} proto Prototype object.
+   * @param {?Interpreter.prototype.Object=} proto Prototype object or null.
    * @param {string=} message Optional message to be attached to error object.
    */
   intrp.Error = function(proto, message) {
@@ -3244,14 +3234,14 @@ Interpreter.prototype['stepBinaryExpression'] = function(stack, state, node) {
     case '>>>': value = leftValue >>> rightValue; break;
     case 'in':
       if (!(rightValue instanceof this.Object)) {
-        this.throwException(this.TYPE_ERROR,
+        this.throwError(this.TYPE_ERROR,
             "'in' expects an object, not '" + rightValue + "'");
       }
       value = this.hasProperty(rightValue, leftValue);
       break;
     case 'instanceof':
       if (!(rightValue instanceof this.Function)) {
-        this.throwException(this.TYPE_ERROR,
+        this.throwError(this.TYPE_ERROR,
             'Right-hand side of instanceof is not an object');
       }
       value = rightValue.hasInstance(leftValue);
@@ -3321,7 +3311,7 @@ Interpreter.prototype['stepCallExpression'] = function(stack, state, node) {
       if (typeof func === 'string' && state.arguments_.length === 0) {
         // Special hack for Code City's "new 'foo'" syntax.
         if (!this.builtins_[func]) {
-          this.throwException(this.REFERENCE_ERROR, func + ' is not a builtin');
+          this.throwError(this.REFERENCE_ERROR, func + ' is not a builtin');
         }
         stack.pop();
         if (stack.length > 0) {
@@ -3330,10 +3320,10 @@ Interpreter.prototype['stepCallExpression'] = function(stack, state, node) {
         return;
       }
       if (!(func instanceof this.Function)) {
-        this.throwException(this.TYPE_ERROR, func + ' is not a function');
+        this.throwError(this.TYPE_ERROR, func + ' is not a function');
       } else if (func.illegalConstructor) {
         // Illegal: new escape();
-        this.throwException(this.TYPE_ERROR, func + ' is not a constructor');
+        this.throwError(this.TYPE_ERROR, func + ' is not a constructor');
       }
       // Constructor, 'this' is new object.
       // BUG(cpcallen): Must type check to make sure .prototype is an object.
@@ -3348,7 +3338,7 @@ Interpreter.prototype['stepCallExpression'] = function(stack, state, node) {
     // TODO(fraser): determine if this check is redundant; remove it or add
     // tests that depend on it.
     if (!(func instanceof this.Function)) {
-      this.throwException(this.TYPE_ERROR, func + ' is not a function');
+      this.throwError(this.TYPE_ERROR, func + ' is not a function');
     }
     var funcNode = func.node;
     if (funcNode) {
@@ -3410,7 +3400,7 @@ Interpreter.prototype['stepCallExpression'] = function(stack, state, node) {
       var f = new F();
       f();
       */
-      this.throwException(this.TYPE_ERROR, func.class + ' is not a function');
+      this.throwError(this.TYPE_ERROR, func.class + ' is not a function');
     }
   } else {
     // Execution complete.  Put the return value on the stack.
@@ -3532,7 +3522,7 @@ Interpreter.prototype['stepForInStatement'] = function(stack, state, node) {
     state.doneObject_ = true;
     if (node['left']['declarations'] &&
         node['left']['declarations'][0]['init']) {
-      this.throwException(this.SYNTAX_ERROR,
+      this.throwError(this.SYNTAX_ERROR,
           'for-in loop variable declaration may not have an initializer.');
     }
     // Second, look up the object.  Only do so once, ever.
@@ -3736,7 +3726,7 @@ Interpreter.prototype['stepObjectExpression'] = function(stack, state, node) {
   }
   if (property) {
     if (property['kind'] !== 'init') {
-      this.throwException(this.SYNTAX_ERROR, "Object kind: '" +
+      this.throwError(this.SYNTAX_ERROR, "Object kind: '" +
           property['kind'] + "'.  Getters and setters are not supported.");
     }
     return new Interpreter.State(property['value'], state.scope);
@@ -3906,7 +3896,7 @@ Interpreter.prototype['stepUnaryExpression'] = function(stack, state, node) {
       } else {
         // Attempting to delete property from primitive value.
         if (Object.getOwnPropertyDescriptor(obj, key)) {
-          this.throwException(this.TYPE_ERROR,
+          this.throwError(this.TYPE_ERROR,
               "Cannot delete property '" + key + "' from primitive.");
         } else {
           value = true;
@@ -3976,8 +3966,8 @@ Interpreter.prototype['stepVariableDeclaration'] =
 };
 
 Interpreter.prototype['stepWithStatement'] = function(stack, state, node) {
-  this.throwException(this.SYNTAX_ERROR,
-                      'Strict mode code may not include a with statement');
+  this.throwError(this.SYNTAX_ERROR,
+      'Strict mode code may not include a with statement');
 };
 
 Interpreter.prototype['stepWhileStatement'] =
