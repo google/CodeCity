@@ -79,10 +79,9 @@ var Interpreter = function() {
 
   /**
    * The interpreter's global scope.
-   * TODO(cpcallen:perms): this should be owned by System / root / whatever.
-   * @const
+   * @const {!Interpreter.Scope}
    */
-  this.global = new Interpreter.Scope;
+  this.global = new Interpreter.Scope(/** @type{?} */ (undefined), null);
   // Create builtins and (minimally) initialize global scope:
   this.initBuiltins_();
 
@@ -2374,22 +2373,22 @@ Interpreter.prototype.unwind_ = function(type, value, label) {
 
 /**
  * Class for a scope.
- * @param {?Interpreter.Scope=} outerScope The enclosing scope ("outer
- *     lexical environment reference", in ECMAScript spec parlance).
- *     Defaults to null.
- * @param {?Interpreter.Owner=} perms The permissions with
+ * TODO(cpcallen): this should be typed to permit being called
+ * without arguments when deserializing.
+ * @param {!Interpreter.Owner} perms The permissions with
  *     which code in the current scope is executing.  Defaults to
  *     outerScope.perms (if supplied; otherwise null).
+ * @param {?Interpreter.Scope} outerScope The enclosing scope ("outer
+ *     lexical environment reference", in ECMAScript spec parlance).
+ *     Defaults to null.
  * @constructor
  */
-Interpreter.Scope = function(outerScope, perms) {
-  this.outerScope = outerScope || null;
-  if (perms === undefined) {
-    /** @type {?Interpreter.Owner} */
-    this.perms = outerScope ? outerScope.perms : null;
-  } else {
-    this.perms = perms;
-  }
+Interpreter.Scope = function(perms, outerScope) {
+  /** @type {?Interpreter.Scope} */
+  this.outerScope = outerScope;
+  /** @type {!Interpreter.Owner} */
+  this.perms = perms;
+  /** @const {!Object<string, Interpreter.Value>} */
   this.properties = Object.create(null);
   this.notWritable = new Set();
 };
@@ -2463,7 +2462,7 @@ Interpreter.Thread.prototype.getSource = function(index) {
  * running (equivalent to a unix EUID, but in the form of a
  * user/group/etc. object).  It is an error to call this function on a
  * thread that is a zombie.
- * @return {?Interpreter.Owner}
+ * @return {!Interpreter.Owner}
  */
 Interpreter.Thread.prototype.perms = function() {
   if (this.status === Interpreter.Thread.Status.ZOMBIE) {
@@ -3427,7 +3426,7 @@ Interpreter.prototype['stepCallExpression'] = function(stack, state, node) {
     var funcNode = func.node;
     if (funcNode) {
       // TODO(cpcallen:perms): this should use func.owner
-      var scope = new Interpreter.Scope(func.outerScope);
+      var scope = new Interpreter.Scope(func.outerScope.perms, func.outerScope);
       if(func.source === undefined) {
         throw Error("No source for user-defined function??");
       }
@@ -3468,7 +3467,7 @@ Interpreter.prototype['stepCallExpression'] = function(stack, state, node) {
         evalNode['source'] = code;
         // Create new scope and update it with definitions in eval().
         var outerScope = state.directEval_ ? state.scope : this.global;
-        var scope = new Interpreter.Scope(outerScope);
+        var scope = new Interpreter.Scope(state.scope.perms, outerScope);
         this.populateScope_(ast, scope, code);
         this.value = undefined;  // Default value if no code.
         return new Interpreter.State(evalNode, scope);
@@ -3505,7 +3504,7 @@ Interpreter.prototype['stepCatchClause'] = function(stack, state, node) {
   if (!state.done_) {
     state.done_ = true;
     // Create an empty scope.
-    var scope = new Interpreter.Scope(state.scope);
+    var scope = new Interpreter.Scope(state.scope.perms, state.scope);
     // Add the argument.
     this.addVariableToScope(scope, node['param']['name'], state.throwValue);
     // Execute catch clause.
