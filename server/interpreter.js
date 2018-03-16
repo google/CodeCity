@@ -580,8 +580,9 @@ Interpreter.prototype.initBuiltins_ = function() {
   this.FUNCTION.proto = this.OBJECT;
 
   // Create the object that will own all of the system objects.
-  this.ROOT = new this.Object(this.OBJECT);
-  this.builtins_['CC.root'] = this.ROOT;
+  var root = new this.Object(this.OBJECT);
+  this.ROOT = /** @type {!Interpreter.Owner} */ (root);
+  this.builtins_['CC.root'] = root;
   this.global.perms = this.ROOT;
   // TODO(cpcallen:perms): make stuff owned by ROOT (including itself)
   
@@ -2376,7 +2377,7 @@ Interpreter.prototype.unwind_ = function(type, value, label) {
  * @param {?Interpreter.Scope=} outerScope The enclosing scope ("outer
  *     lexical environment reference", in ECMAScript spec parlance).
  *     Defaults to null.
- * @param {?Interpreter.prototype.Object=} perms The permissions with
+ * @param {?Interpreter.Owner=} perms The permissions with
  *     which code in the current scope is executing.  Defaults to
  *     outerScope.perms (if supplied; otherwise null).
  * @constructor
@@ -2384,6 +2385,7 @@ Interpreter.prototype.unwind_ = function(type, value, label) {
 Interpreter.Scope = function(outerScope, perms) {
   this.outerScope = outerScope || null;
   if (perms === undefined) {
+    /** @type {?Interpreter.Owner} */
     this.perms = outerScope ? outerScope.perms : null;
   } else {
     this.perms = perms;
@@ -2459,14 +2461,13 @@ Interpreter.Thread.prototype.getSource = function(index) {
 /**
  * Returns the permissions with which currently-executing code is
  * running (equivalent to a unix EUID, but in the form of a
- * user/group/etc. object) - or undefined if the thread is a zombie.e
- * a zombie.
-
- * @return {!Interpreter.prototype.Object|undefined}
+ * user/group/etc. object).  It is an error to call this function on a
+ * thread that is a zombie.
+ * @return {?Interpreter.Owner}
  */
 Interpreter.Thread.prototype.perms = function() {
   if (this.status === Interpreter.Thread.Status.ZOMBIE) {
-    return undefined;
+    throw Error("Zombie thread has no perms");
   }
   return this.stateStack_[this.stateStack_.length - 1].scope.perms;
 };
@@ -2474,7 +2475,7 @@ Interpreter.Thread.prototype.perms = function() {
 /**
  * Sets the permissions with which currently-executing code will
  * run until the end of the innermost scope.
- * @param {!Interpreter.prototype.Object} perms New perms.
+ * @param {!Interpreter.Owner} perms New perms.
  */
 Interpreter.Thread.prototype.setPerms = function(perms) {
   if (this.status === Interpreter.Thread.Status.ZOMBIE) {
@@ -2509,8 +2510,17 @@ Interpreter.Thread.Status = {
 Interpreter.Value;
 
 /**
- * @param {Interpreter.prototype.Object=} proto
+ * Interface for owners.  Anything that is an Owner is really just a
+ * normal !Interpreter.prototype.Object, but since since no concrete
+ * class @implements this interface we force oruselves to cast back
+ * and forth, helping to catch type errors.
+ * @interface
+ */
+Interpreter.Owner = function() {};
+
+/**
  * @constructor
+ * @param {?Interpreter.prototype.Object=} proto
  */
 Interpreter.prototype.Object = function(proto) {
   this.proto = null;
