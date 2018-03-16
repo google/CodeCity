@@ -267,6 +267,8 @@ Interpreter.prototype.createThread = function(runnable, runAt) {
     }
     this.populateScope_(runnable, this.global, source);
     runnable = new Interpreter.State(runnable, this.global);
+  } else if (!(runnable instanceof Interpreter.State)) {
+    throw TypeError("Can't create thread for " + runnable);
   }
   var id = this.threads.length;
   var thread = new Interpreter.Thread(id, runnable, runAt || this.now());
@@ -2373,8 +2375,6 @@ Interpreter.prototype.unwind_ = function(type, value, label) {
 
 /**
  * Class for a scope.
- * TODO(cpcallen): this should be typed to permit being called
- * without arguments when deserializing.
  * @param {!Interpreter.Owner} perms The permissions with
  *     which code in the current scope is executing.  Defaults to
  *     outerScope.perms (if supplied; otherwise null).
@@ -2406,31 +2406,21 @@ Interpreter.State = function(node, scope) {
 
 /**
  * Class for a thread of execution.
- *
- * Parameters should only be undefined when called from the deserializer.
  * @constructor
- * @param {number=} id Thread ID.  Should correspond to index of this
+ * @param {number} id Thread ID.  Should correspond to index of this
  *     thread in .threads array.
- * @param {!Interpreter.State=} state Starting state for thread.
- * @param {number=} runAt Time at which to start running thread.
+ * @param {!Interpreter.State} state Starting state for thread.
+ * @param {number} runAt Time at which to start running thread.
  */
 Interpreter.Thread = function(id, state, runAt) {
-  if (id === undefined || state === undefined || runAt === undefined) {
-    // Deserialising. Props will be filled in later.
-    /** @type {number} */
-    this.id = -1;
-    /** @type {!Interpreter.Thread.Status} */
-    this.status = Interpreter.Thread.Status.ZOMBIE;
-    /** @private @type {!Array<!Interpreter.State>} */
-    this.stateStack_ = [];
-    /** @type {number} */
-    this.runAt = 0;
-    return;
-  }
+  /** @type {number} */
   this.id = id;
   // Say it's sleeping for now.  May be woken immediately.
+  /** @type {!Interpreter.Thread.Status} */
   this.status = Interpreter.Thread.Status.SLEEPING;
+  /** @private @type {!Array<!Interpreter.State>} */
   this.stateStack_ = [state];
+  /** @type {number} */
   this.runAt = runAt;
 };
 
@@ -3027,9 +3017,6 @@ Interpreter.prototype.installTypes = function() {
    * API.  In its present form it is not suitable for exposure as a
    * userland pseduoObject, but it is intended to be easily adaptable
    * for that if desired.
-   *
-   * TODO(cpcallen): this should be typed to permit being called
-   * without arguments when deserializing.
    * @constructor
    * @extends {Interpreter.prototype.Server}
    * @param {number} port Port to listen on.
@@ -3037,6 +3024,8 @@ Interpreter.prototype.installTypes = function() {
    *     new connections.
    */
   intrp.Server = function(port, proto) {
+    // Special excpetion: port === undefined when deserializing, in
+    // violation of usual type rules.
     if ((port !== (port >>> 0) || port > 0xffff) && port !== undefined) {
       throw RangeError('invalid port ' + port);
     }
