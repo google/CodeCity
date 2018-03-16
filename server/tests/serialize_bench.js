@@ -44,7 +44,7 @@ function runInterpreterBench(b, name, src) {
     intrp1.run();
     intrp1.createThread(common.es6);
     intrp1.run();
-    intrp1.createThread(common.net);
+    intrp1.createThread(common.cc);
     intrp1.run();
 
     var err = undefined;
