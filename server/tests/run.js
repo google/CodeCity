@@ -100,7 +100,11 @@ async function runBenchmarks(files) {
     var b = new B;
     for (var k in benchmarks) {
       if (k.startsWith('bench') && typeof benchmarks[k] === 'function') {
-        await benchmarks[k](b);
+        try {
+          await benchmarks[k](b);
+        } catch (e) {
+          b.crash(k, e);
+        }
       }
     }
   }
@@ -166,7 +170,11 @@ async function runTests(files) {
     var tests = require(files[i]);
     for (var k in tests) {
       if (k.startsWith('test') && typeof tests[k] === 'function') {
-        await tests[k](t);
+        try {
+          await tests[k](t);
+        } catch (e) {
+          t.crash(k, e);
+        }
       }
     }
   }
