@@ -526,8 +526,8 @@ Interpreter.prototype.pause = function() {
           // Report this to userland by calling .onError on proto
           // (with this === proto) - for lack of a better option.
           var func = intrp.getProperty(server.proto, 'onError');
-          var userError = intrp.nativeToPseudo(error);
-          if (func instanceof intrp.Function) {
+          if (func instanceof intrp.Function && func.owner !== null) {
+            var userError = intrp.nativeToPseudo(error, func.owner);
             intrp.createThreadForFuncCall(func, server.proto, [userError]);
           }
         });
@@ -573,7 +573,7 @@ Interpreter.prototype.initBuiltins_ = function() {
 
   // Create the objects which will become Object.prototype and
   // Function.prototype, which are needed to bootstrap everything else.
-  this.OBJECT = new this.Object(null);
+  this.OBJECT = new this.Object(null, null);
   this.builtins_['Object.prototype'] = this.OBJECT;
   // createNativeFunction adds the argument to the map of builtins.
   this.FUNCTION =
@@ -581,7 +581,7 @@ Interpreter.prototype.initBuiltins_ = function() {
   this.FUNCTION.proto = this.OBJECT;
 
   // Create the object that will own all of the system objects.
-  var root = new this.Object(this.OBJECT);
+  var root = new this.Object(null, this.OBJECT);
   this.ROOT = /** @type {!Interpreter.Owner} */ (root);
   this.builtins_['CC.root'] = root;
   this.global.perms = this.ROOT;
@@ -657,7 +657,7 @@ Interpreter.prototype.initObject_ = function() {
         return this;
       } else {
         // Called as Object().
-        return new intrp.Object;
+        return new intrp.Object(intrp.thread.perms());
       }
     }
     if (!(value instanceof intrp.Object)) {
@@ -686,31 +686,30 @@ Interpreter.prototype.initObject_ = function() {
 
   wrapper = function(obj) {
     throwIfNullUndefined(obj);
-    var props = (obj instanceof intrp.Object) ? obj.properties : obj;
-    return intrp.arrayNativeToPseudo(Object.getOwnPropertyNames(props));
+    var propsObj = (obj instanceof intrp.Object) ? obj.properties : obj;
+    var names = Object.getOwnPropertyNames(propsObj);
+    return intrp.arrayNativeToPseudo(names, intrp.thread.perms());
   };
   this.createNativeFunction('Object.getOwnPropertyNames', wrapper, false);
 
   wrapper = function(obj) {
     throwIfNullUndefined(obj);
-    if (obj instanceof intrp.Object) {
-      return intrp.arrayNativeToPseudo(Object.keys(obj.properties));
-    } else {
-      return intrp.arrayNativeToPseudo(Object.keys(obj));
-    }
+    var propsObj = (obj instanceof intrp.Object) ? obj.properties : obj;
+    var keys = Object.keys(propsObj);
+    return intrp.arrayNativeToPseudo(keys, intrp.thread.perms());
   };
   this.createNativeFunction('Object.keys', wrapper, false);
 
   wrapper = function(proto) {
     // Support for the second argument is the responsibility of a polyfill.
     if (proto === null) {
-      return new intrp.Object(null);
+      return new intrp.Object(intrp.thread.perms(), null);
     }
     if (!(proto === null || proto instanceof intrp.Object)) {
       intrp.throwError(intrp.TYPE_ERROR,
           'Object prototype may only be an Object or null');
     }
-    return new intrp.Object(proto);
+    return new intrp.Object(intrp.thread.perms(), proto);
   };
   this.createNativeFunction('Object.create', wrapper, false);
 
@@ -760,7 +759,7 @@ Interpreter.prototype.initObject_ = function() {
     if (!pd) {
       return undefined;
     }
-    var descriptor = new intrp.Object;
+    var descriptor = new intrp.Object(intrp.thread.perms());
     intrp.setProperty(descriptor, 'configurable', pd.configurable);
     intrp.setProperty(descriptor, 'enumerable', pd.enumerable);
     intrp.setProperty(descriptor, 'writable', pd.writable);
@@ -904,6 +903,8 @@ Interpreter.prototype.initFunction_ = function() {
         intrp.throwError(intrp.TYPE_ERROR,
             'CreateListFromArrayLike called on non-object');
       }
+      // BUG(cpcallen:perms): This allows circumvention of
+      // non-readability of properties with numeric names.
       state.arguments_ = intrp.arrayPseudoToNative(args);
     }
     state.doneExec = false;
@@ -934,7 +935,7 @@ Interpreter.prototype.initFunction_ = function() {
 Interpreter.prototype.initArray_ = function() {
   var intrp = this;
   // Array prototype.
-  this.ARRAY = new this.Array(this.OBJECT);
+  this.ARRAY = new this.Array(this.ROOT, this.OBJECT);
   this.builtins_['Array.prototype'] = this.ARRAY;
   // Array constructor.
   var getInt = function(obj, def) {
@@ -947,7 +948,7 @@ Interpreter.prototype.initArray_ = function() {
   };
   var wrapper;
   wrapper = function(var_args) {
-    var newArray = new intrp.Array;
+    var newArray = new intrp.Array(intrp.thread.perms());
     var first = arguments[0];
     if (arguments.length === 1 && typeof first === 'number') {
       if (isNaN(Interpreter.legalArrayLength(first))) {
@@ -1029,7 +1030,7 @@ Interpreter.prototype.initArray_ = function() {
     }
     howmany = getInt(howmany, Infinity);
     howmany = Math.min(howmany, this.properties.length - index);
-    var removed = new intrp.Array;
+    var removed = new intrp.Array(intrp.thread.perms());
     // Remove specified elements.
     for (var i = index; i < index + howmany; i++) {
       removed.properties[removed.properties.length++] = this.properties[i];
@@ -1057,7 +1058,7 @@ Interpreter.prototype.initArray_ = function() {
   this.createNativeFunction('Array.prototype.splice', wrapper, false);
 
   wrapper = function(begin, end) {
-    var list = new intrp.Array;
+    var list = new intrp.Array(intrp.thread.perms());
     begin = getInt(begin, 0);
     if (begin < 0) {
       begin = this.properties.length + begin;
@@ -1096,7 +1097,7 @@ Interpreter.prototype.initArray_ = function() {
   this.createNativeFunction('Array.prototype.join', wrapper, false);
 
   wrapper = function(var_args) {
-    var list = new intrp.Array;
+    var list = new intrp.Array(intrp.thread.perms());
     var length = 0;
     // Start by copying the current array.
     for (var i = 0; i < this.properties.length; i++) {
@@ -1162,7 +1163,7 @@ Interpreter.prototype.initString_ = function() {
   var intrp = this;
   var wrapper;
   // String prototype.
-  this.STRING = new this.Object;
+  this.STRING = new this.Object(this.ROOT);
   this.builtins_['String.prototype'] = this.STRING;
   this.STRING.class = 'String';
   // String constructor.
@@ -1197,7 +1198,7 @@ Interpreter.prototype.initString_ = function() {
       separator = separator.regexp;
     }
     var jsList = this.split(separator, limit);
-    return intrp.arrayNativeToPseudo(jsList);
+    return intrp.arrayNativeToPseudo(jsList, intrp.thread.perms());
   };
   this.createNativeFunction('String.prototype.split', wrapper, false);
 
@@ -1206,7 +1207,7 @@ Interpreter.prototype.initString_ = function() {
       regexp = regexp.regexp;
     }
     var m = this.match(regexp);
-    return m && intrp.arrayNativeToPseudo(m);
+    return m && intrp.arrayNativeToPseudo(m, intrp.thread.perms());
   };
   this.createNativeFunction('String.prototype.match', wrapper, false);
 
@@ -1245,7 +1246,7 @@ Interpreter.prototype.initString_ = function() {
 Interpreter.prototype.initBoolean_ = function() {
   var intrp = this;
   // Boolean prototype.
-  this.BOOLEAN = new this.Object;
+  this.BOOLEAN = new this.Object(this.ROOT);
   this.builtins_['Boolean.prototype'] = this.BOOLEAN;
   this.BOOLEAN.class = 'Boolean';
   // Boolean constructor.
@@ -1260,7 +1261,7 @@ Interpreter.prototype.initNumber_ = function() {
   var intrp = this;
   var wrapper;
   // Number prototype.
-  this.NUMBER = new this.Object;
+  this.NUMBER = new this.Object(this.ROOT);
   this.builtins_['Number.prototype'] = this.NUMBER;
   this.NUMBER.class = 'Number';
   // Number constructor.
@@ -1333,7 +1334,7 @@ Interpreter.prototype.initDate_ = function() {
   var wrapper;
   // Date prototype.  As of ES6 this is just an ordinary object.  (In
   // ES5 it had [[Class]] Date.)
-  this.DATE = new this.Object;
+  this.DATE = new this.Object(this.ROOT);
   this.builtins_['Date.prototype'] = this.DATE;
   // Date constructor.
   wrapper = function(value, var_args) {
@@ -1344,7 +1345,7 @@ Interpreter.prototype.initDate_ = function() {
     }
     // Called as new Date().
     var args = [null].concat(Array.from(arguments));
-    var date = new intrp.Date;
+    var date = new intrp.Date(intrp.thread.perms());
     date.date = new (Function.prototype.bind.apply(Date, args));
     return date;
   };
@@ -1403,11 +1404,11 @@ Interpreter.prototype.initRegExp_ = function() {
   var wrapper;
   // RegExp prototype.  As of ES6 this is just an ordinary object.
   // (In ES5 it had [[Class]] RegExp.)
-  this.REGEXP = new this.Object;
+  this.REGEXP = new this.Object(this.ROOT);
   this.builtins_['RegExp.prototype'] = this.REGEXP;
   // RegExp constructor.
   wrapper = function(pattern, flags) {
-    var regexp = new intrp.RegExp;
+    var regexp = new intrp.RegExp(intrp.thread.perms());
     pattern = pattern ? pattern.toString() : '';
     flags = flags ? flags.toString() : '';
     regexp.populate(new RegExp(pattern, flags));
@@ -1438,7 +1439,7 @@ Interpreter.prototype.initRegExp_ = function() {
     intrp.setProperty(this, 'lastIndex', this.regexp.lastIndex);
 
     if (match) {
-      var result = new intrp.Array;
+      var result = new intrp.Array(intrp.thread.perms());
       for (var i = 0; i < match.length; i++) {
         intrp.setProperty(result, i, match[i]);
       }
@@ -1459,11 +1460,11 @@ Interpreter.prototype.initRegExp_ = function() {
 Interpreter.prototype.initError_ = function() {
   var intrp = this;
   // Error prototype.
-  this.ERROR = new this.Error(this.OBJECT);
+  this.ERROR = new this.Error(this.ROOT, this.OBJECT);
   this.builtins_['Error.prototype'] = this.ERROR;
   // Error constructor.
   var wrapper = function(message) {
-    var newError = new intrp.Error;
+    var newError = new intrp.Error(intrp.thread.perms());
     if (message) {
       intrp.setProperty(newError, 'message', String(message),
           Interpreter.NONENUMERABLE_DESCRIPTOR);
@@ -1476,11 +1477,11 @@ Interpreter.prototype.initError_ = function() {
                             this.Error.prototype.toString, false);
 
   var createErrorSubclass = function(name) {
-    var prototype = new intrp.Error;
+    var prototype = new intrp.Error(intrp.ROOT);
     intrp.builtins_[name + '.prototype'] = prototype;
 
     wrapper = function(message) {
-      var newError = new intrp.Error(prototype);
+      var newError = new intrp.Error(intrp.thread.perms(), prototype);
       if (message) {
         intrp.setProperty(newError, 'message',
             String(message), Interpreter.NONENUMERABLE_DESCRIPTOR);
@@ -1527,7 +1528,7 @@ Interpreter.prototype.initJSON_ = function() {
     } catch (e) {
       intrp.throwError(intrp.SYNTAX_ERROR, e.message);
     }
-    return intrp.nativeToPseudo(nativeObj);
+    return intrp.nativeToPseudo(nativeObj, intrp.thread.perms());
   };
   this.createNativeFunction('JSON.parse', wrapper, false);
 
@@ -1609,25 +1610,27 @@ Interpreter.prototype.initNetwork_ = function() {
   var intrp = this;
 
   this.createAsyncFunction('CC.connectionListen', function(res, rej, port, proto) {
+    var perms = intrp.thread.perms();
     if (port !== (port >>> 0) || port > 0xffff) {
-      rej(new intrp.Error(intrp.RANGE_ERROR, 'invalid port'));
+      rej(new intrp.Error(perms, intrp.RANGE_ERROR, 'invalid port'));
       return;
     } else  if (port in intrp.listeners_) {
-      rej(new intrp.Error(intrp.RANGE_ERROR, 'port already listened'));
+      rej(new intrp.Error(perms, intrp.RANGE_ERROR, 'port already listened'));
       return;
     }
-    var server = new intrp.Server(port, proto);
+    var server = new intrp.Server(perms, port, proto);
     intrp.listeners_[port] = server;
     server.listen(function() {
       res();
     }, function(e) {
-      rej(intrp.nativeToPseudo(e));
+      rej(intrp.nativeToPseudo(e, perms));
     });
   });
 
   this.createAsyncFunction('CC.connectionUnlisten', function(res, rej, port) {
+    var perms = intrp.thread.perms();
     if (!(port in intrp.listeners_)) {
-      rej(new intrp.Error(intrp.RANGE_ERROR, 'port not listening'));
+      rej(new intrp.Error(perms, intrp.RANGE_ERROR, 'port not listening'));
       return;
     }
     if (!(intrp.listeners_[port].server_ instanceof net.Server)) {
@@ -1637,7 +1640,7 @@ Interpreter.prototype.initNetwork_ = function() {
       if (e instanceof Error) {
         // Somehow something has gone wrong.  (Maybe mulitple
         // concurrent calls to .close on the same net.Server?)
-        rej(intrp.nativeToPseudo(e));
+        rej(intrp.nativeToPseudo(e, perms));
       } else {
         // All socket (and all open connections on it) now closed.
         res();
@@ -1694,7 +1697,7 @@ Interpreter.legalArrayIndex = function(x) {
  * @return {!Interpreter.prototype.Function} New function.
  */
 Interpreter.prototype.createFunctionFromAST = function(node, scope, source) {
-  var func = new this.Function;
+  var func = new this.Function(scope.perms);
   func.addPrototype();
   func.outerScope = scope;
   func.node = node;
@@ -1717,7 +1720,7 @@ Interpreter.prototype.createFunctionFromAST = function(node, scope, source) {
 };
 
 /**
- * Create a new native function.
+ * Create a new native function.  Function will be owned by root.
  * @param {string} name Name of new function.
  * @param {!Function} nativeFunc JavaScript function.
  * @param {boolean} legalConstructor True if the function can be used as a
@@ -1726,7 +1729,7 @@ Interpreter.prototype.createFunctionFromAST = function(node, scope, source) {
 */
 Interpreter.prototype.createNativeFunction =
     function(name, nativeFunc, legalConstructor) {
-  var func = new this.Function;
+  var func = new this.Function(this.ROOT);
   func.nativeFunc = nativeFunc;
   var surname = name.replace(/^.*\./, '');
   // TODO(cpcallen): should include formal parameter names.
@@ -1744,13 +1747,14 @@ Interpreter.prototype.createNativeFunction =
 
 /**
  * Create a new native asynchronous function.  Asynchronous native
- * functions are presumed not to be legal constructors.
+ * functions are presumed not to be legal constructors.  Function will
+ * be owned by root.
  * @param {string} name Name of new function.
  * @param {!Function} asyncFunc JavaScript function.
  * @return {!Interpreter.prototype.Function} New function.
  */
 Interpreter.prototype.createAsyncFunction = function(name, asyncFunc) {
-  var func = new this.Function;
+  var func = new this.Function(this.ROOT);
   func.asyncFunc = asyncFunc;
   var surname = name.replace(/^.*\./, '');
   func.source = 'function ' + surname + '() { [native async code] }';
@@ -1834,8 +1838,9 @@ Interpreter.prototype.callAsyncFunction = function(state) {
  * sparse arrays.  Does NOT handle cyclic data.
  * @param {*} nativeObj The native JS object to be converted.
  * @return {Interpreter.Value} The equivalent JS interpreter object.
+ * @param {!Interpreter.Owner} owner Owner for new Error
  */
-Interpreter.prototype.nativeToPseudo = function(nativeObj) {
+Interpreter.prototype.nativeToPseudo = function(nativeObj, owner) {
   if ((typeof nativeObj !== 'object' && typeof nativeObj !== 'function') ||
       nativeObj === null) {
     // It's a primitive; just return it.
@@ -1845,10 +1850,10 @@ Interpreter.prototype.nativeToPseudo = function(nativeObj) {
   var pseudoObj;
   switch (Object.prototype.toString.apply(nativeObj)) {
     case '[object Array]':
-      pseudoObj = new this.Array;
+      pseudoObj = new this.Array(owner);
       break;
     case '[object RegExp]':
-      pseudoObj = new this.RegExp;
+      pseudoObj = new this.RegExp(owner);
       pseudoObj.populate(/** @type {!RegExp} */(nativeObj));
       break;
     case '[object Error]':
@@ -1868,10 +1873,10 @@ Interpreter.prototype.nativeToPseudo = function(nativeObj) {
       } else {
         proto = this.ERROR;
       }
-      pseudoObj = new this.Error(proto);
+      pseudoObj = new this.Error(owner, proto);
       break;
     default:
-      pseudoObj = new this.Object;
+      pseudoObj = new this.Object(owner);
   }
 
   // Cast to satisfy type-checker; it might be a lie: nativeObj could
@@ -1881,7 +1886,7 @@ Interpreter.prototype.nativeToPseudo = function(nativeObj) {
   for (var i = 0; i < keys.length; i++) {
     var key = keys[i];
     var desc = Object.getOwnPropertyDescriptor(nativeObj, key);
-    desc.value = this.nativeToPseudo(desc.value);
+    desc.value = this.nativeToPseudo(desc.value, owner);
     this.setProperty(pseudoObj, key, Interpreter.VALUE_IN_DESCRIPTOR, desc);
   }
   return pseudoObj;
@@ -1894,6 +1899,9 @@ Interpreter.prototype.nativeToPseudo = function(nativeObj) {
  * TODO(cpcallen): Audit this to ensure that it can safely accept any
  * user object (especially because it is used by our implementations
  * of JSON.stringify, String.prototype.localeCompare, etc.)
+ *
+ * TODO(cpcallen:perms): Audit all callers of this to ensure that they
+ * do not allow circumvention of access control.
  * @param {Interpreter.Value} pseudoObj The JS interpreter object to
  *     be converted.
  * @param {Object=} cycles Cycle detection (used only in recursive calls).
@@ -1951,13 +1959,14 @@ Interpreter.prototype.pseudoToNative = function(pseudoObj, cycles) {
  * Does handle non-numeric properties (like str.match's index prop).
  * Does NOT recurse into the array's contents.
  * @param {!Array<Interpreter.Value>} nativeArray The JS array to be converted.
+ * @param {!Interpreter.Owner} owner Owner for new Error
  * @return {!Interpreter.prototype.Array} The equivalent JS interpreter array.
  */
-Interpreter.prototype.arrayNativeToPseudo = function(nativeArray) {
+Interpreter.prototype.arrayNativeToPseudo = function(nativeArray, owner) {
   // For the benefit of closure-compiler, which doesn't think Arrays
   // should have non-numeric indices:
   var /** Object<Interpreter.Value> */ nativeObject = nativeArray;
-  var pseudoArray = new this.Array;
+  var pseudoArray = new this.Array(owner);
   var props = Object.getOwnPropertyNames(nativeArray);
   for (var i = 0; i < props.length; i++) {
     this.setProperty(pseudoArray, props[i], nativeObject[props[i]]);
@@ -2071,6 +2080,11 @@ Interpreter.prototype.hasProperty = function(obj, name) {
  * TODO(cpcallen): This should be split into (at least) two different
  * functions, because non-writable properties are treated quite
  * differently by assignment and Object.defineProperty.
+ *
+ * TODO(cpcallen:perms): add perms argument.  At the moment we just
+ * assume running thread, which can be wrong (e.g. in case of async
+ * function)
+ *
  * @param {!Interpreter.prototype.Object} obj Data object.
  * @param {Interpreter.Value} name Name of property.
  * @param {Interpreter.Value|Interpreter.Sentinel} value New property
@@ -2095,7 +2109,8 @@ Interpreter.prototype.setProperty = function(obj, name, value, desc) {
     try {
       Object.defineProperty(obj.properties, name, pd);
     } catch (e) {
-      this.throwNativeException(e);
+      // TODO(cpcallen:perms): use perms argument.
+      this.throwNativeException(e, this.thread.perms());
     }
   } else {
     if (value instanceof Interpreter.Sentinel) {
@@ -2104,7 +2119,8 @@ Interpreter.prototype.setProperty = function(obj, name, value, desc) {
     try {
       obj.properties[name] = value;
     } catch (e) {
-      this.throwNativeException(e);
+      // TODO(cpcallen:perms): use perms argument.
+      this.throwNativeException(e, this.thread.perms());
     }
   }
 };
@@ -2276,11 +2292,19 @@ Interpreter.prototype.throwException = function(value) {
 /**
  * Throw an Error in the interpreter.  A convenience method that just
  * does (roughly): this.throwException(new this.Error(...arguments)
+ *
+ * TODO(cpcallen:perms): audit all callers of this to see which need
+ * to supply an owner.
  * @param {!Interpreter.prototype.Error} proto Prototype new Error object.
  * @param {string=} message Message to attach to new Error object.
+ * @param {!Interpreter.Owner=} owner Owner for new Error
+ *     object.  Defaults to current thread perms.
  */
-Interpreter.prototype.throwError = function(proto, message) {
-  this.throwException(new this.Error(proto, message));
+Interpreter.prototype.throwError = function(proto, message, owner) {
+  if (owner === undefined) {
+    owner = this.thread.perms();
+  }
+  this.throwException(new this.Error(owner, proto, message));
 };
 
 /**
@@ -2289,9 +2313,10 @@ Interpreter.prototype.throwError = function(proto, message) {
  *
  * BUG(cpcallen): exception should have user (not native) stack trace.
  * @param {*} value Native value to be converted and thrown.
+ * @param {!Interpreter.Owner} owner Owner for new object.
  */
-Interpreter.prototype.throwNativeException = function(value) {
-  value = this.nativeToPseudo(value);
+Interpreter.prototype.throwNativeException = function(value, owner) {
+  value = this.nativeToPseudo(value, owner);
   this.throwException(value);
 };
 
@@ -2512,11 +2537,14 @@ Interpreter.Owner = function() {};
 
 /**
  * @constructor
+ * @param {?Interpreter.Owner=} owner
  * @param {?Interpreter.prototype.Object=} proto
  */
-Interpreter.prototype.Object = function(proto) {
+Interpreter.prototype.Object = function(owner, proto) {
   /** @type {?Interpreter.prototype.Object} */
   this.proto;
+  /** @type {?Interpreter.Owner} */
+  this.owner;
   /** @const {!Object<Interpreter.Value>} */
   this.properties;
   throw Error('Inner class constructor not callable on prototype');
@@ -2535,11 +2563,12 @@ Interpreter.prototype.Object.prototype.valueOf = function() {
 };
 
 /**
- * @param {Interpreter.prototype.Object=} proto
  * @constructor
  * @extends {Interpreter.prototype.Object}
+ * @param {?Interpreter.Owner=} owner
+ * @param {?Interpreter.prototype.Object=} proto
  */
-Interpreter.prototype.Function = function(proto) {
+Interpreter.prototype.Function = function(owner, proto) {
   throw Error('Inner class constructor not callable on prototype');
 };
 /** @return {string} @override */
@@ -2551,11 +2580,12 @@ Interpreter.prototype.Function.prototype.addPrototype = function() {
 };
 
 /**
- * @param {Interpreter.prototype.Object=} proto
  * @constructor
  * @extends {Interpreter.prototype.Object}
+ * @param {?Interpreter.Owner=} owner
+ * @param {?Interpreter.prototype.Object=} proto
  */
-Interpreter.prototype.Array = function(proto) {
+Interpreter.prototype.Array = function(owner, proto) {
   throw Error('Inner class constructor not callable on prototype');
 };
 /** @return {string} @override */
@@ -2564,11 +2594,12 @@ Interpreter.prototype.Array.prototype.toString = function() {
 };
 
 /**
- * @param {Interpreter.prototype.Object=} proto
  * @constructor
  * @extends {Interpreter.prototype.Object}
+ * @param {?Interpreter.Owner=} owner
+ * @param {?Interpreter.prototype.Object=} proto
  */
-Interpreter.prototype.Date = function(proto) {
+Interpreter.prototype.Date = function(owner, proto) {
   /** @type {!Date} */
   this.date;
   throw Error('Inner class constructor not callable on prototype');
@@ -2583,11 +2614,12 @@ Interpreter.prototype.Date.prototype.valueOf = function() {
 };
 
 /**
- * @param {Interpreter.prototype.Object=} proto
  * @constructor
  * @extends {Interpreter.prototype.Object}
+ * @param {?Interpreter.Owner=} owner
+ * @param {?Interpreter.prototype.Object=} proto
  */
-Interpreter.prototype.RegExp = function(proto) {
+Interpreter.prototype.RegExp = function(owner, proto) {
   /** @type {!RegExp} */
   this.regexp;
   throw Error('Inner class constructor not callable on prototype');
@@ -2602,12 +2634,13 @@ Interpreter.prototype.RegExp.prototype.populate = function(nativeRegexp) {
 };
 
 /**
- * @param {Interpreter.prototype.Object=} proto
- * @param {string=} message
  * @constructor
  * @extends {Interpreter.prototype.Object}
+ * @param {?Interpreter.Owner=} owner
+ * @param {?Interpreter.prototype.Object=} proto
+ * @param {string=} message
  */
-Interpreter.prototype.Error = function(proto, message) {
+Interpreter.prototype.Error = function(owner, proto, message) {
   throw Error('Inner class constructor not callable on prototype');
 };
 /** @return {string} @override */
@@ -2617,10 +2650,13 @@ Interpreter.prototype.Error.prototype.toString = function() {
 
 /**
  * @constructor
+ * @param {?Interpreter.Owner} owner
  * @param {number} port
  * @param {!Interpreter.prototype.Object} proto
  */
-Interpreter.prototype.Server = function(port, proto) {
+Interpreter.prototype.Server = function(owner, port, proto) {
+  /** @type {?Interpreter.Owner} */
+  this.owner;
   /** @type {number} */
   this.port;
   /** @type {Interpreter.prototype.Object} */
@@ -2657,11 +2693,15 @@ Interpreter.prototype.installTypes = function() {
    * Class for an object.
    * @constructor
    * @extends {Interpreter.prototype.Object}
-   * @param {Interpreter.prototype.Object=} proto Prototype object or null.
+   * @param {?Interpreter.Owner=} owner Owner object or null.
+   * @param {?Interpreter.prototype.Object=} proto Prototype object or null.
    */
-  intrp.Object = function(proto) {
+  intrp.Object = function(owner, proto) {
     if (proto === undefined) {
       proto = intrp.OBJECT;
+    }
+    if (owner === undefined) {
+      owner =  null;
     }
     // We must define .proto before .properties, because our
     // children's .properties will inherit from ours, and the
@@ -2669,6 +2709,7 @@ Interpreter.prototype.installTypes = function() {
     // children's .properties before it has resurrected the
     // .proto.properties.
     this.proto = proto;
+    this.owner = owner;
     this.properties = Object.create((proto === null) ? null : proto.properties);
   };
 
@@ -2711,10 +2752,11 @@ Interpreter.prototype.installTypes = function() {
    * Class for a function
    * @constructor
    * @extends {Interpreter.prototype.Function}
-   * @param {Interpreter.prototype.Object=} proto Prototype object.
+   * @param {?Interpreter.Owner=} owner Owner object or null.
+   * @param {?Interpreter.prototype.Object=} proto Prototype object or null.
    */
-  intrp.Function = function(proto) {
-    intrp.Object.call(/** @type {?} */(this),
+  intrp.Function = function(owner, proto) {
+    intrp.Object.call(/** @type {?} */ (this), owner,
         (proto === undefined ? intrp.FUNCTION : proto));
   };
 
@@ -2765,8 +2807,8 @@ Interpreter.prototype.installTypes = function() {
   /**
    * Add a .prototype property to this function object, setting
    * this.properties[prototype] to prototype and
-   * prototype.properites[constructor] to func.
-   * A newly-created object is used.
+   * prototype.properites[constructor] to func.  A newly-created
+   * object is used; it will have the same owner as the function.
    */
   intrp.Function.prototype.addPrototype = function() {
     if (this.illegalConstructor) {
@@ -2776,7 +2818,7 @@ Interpreter.prototype.installTypes = function() {
       // don't do it accidentally when bootstrapping or whatever.)
       throw TypeError("Illogical addition of .prototype to non-constructor");
     }
-    var protoObj = new intrp.Object();
+    var protoObj = new intrp.Object(this.owner);
     intrp.setProperty(this, 'prototype', protoObj,
         Interpreter.NONENUMERABLE_NONCONFIGURABLE_DESCRIPTOR);
     intrp.setProperty(protoObj, 'constructor', this,
@@ -2787,13 +2829,14 @@ Interpreter.prototype.installTypes = function() {
    * Class for an array
    * @constructor
    * @extends {Interpreter.prototype.Array}
+   * @param {?Interpreter.Owner=} owner Owner object or null.
    * @param {?Interpreter.prototype.Object=} proto Prototype object or null.
    */
-  intrp.Array = function(proto) {
+  intrp.Array = function(owner, proto) {
     if (proto === undefined) {
       proto = intrp.ARRAY;
     }
-    intrp.Object.call(/** @type {?} */(this), proto);
+    intrp.Object.call(/** @type {?} */ (this), owner, proto);
     this.properties = [];
     Object.setPrototypeOf(this.properties,
                           (proto === null) ? null : proto.properties);
@@ -2836,10 +2879,11 @@ Interpreter.prototype.installTypes = function() {
    * Class for a date.
    * @constructor
    * @extends {Interpreter.prototype.Date}
+   * @param {?Interpreter.Owner=} owner Owner object or null.
    * @param {?Interpreter.prototype.Object=} proto Prototype object or null.
    */
-  intrp.Date = function(proto) {
-    intrp.Object.call(/** @type {?} */(this),
+  intrp.Date = function(owner, proto) {
+    intrp.Object.call(/** @type {?} */ (this), owner,
         (proto === undefined ? intrp.DATE : proto));
     /** @type {Date} */
     this.date = null;
@@ -2879,10 +2923,11 @@ Interpreter.prototype.installTypes = function() {
    * Class for a regexp
    * @constructor
    * @extends {Interpreter.prototype.RegExp}
+   * @param {?Interpreter.Owner=} owner Owner object or null.
    * @param {?Interpreter.prototype.Object=} proto Prototype object or null.
    */
-  intrp.RegExp = function(proto) {
-    intrp.Object.call(/** @type {?} */(this),
+  intrp.RegExp = function(owner, proto) {
+    intrp.Object.call(/** @type {?} */ (this), owner,
         (proto === undefined ? intrp.REGEXP : proto));
     /** @type {RegExp} */
     this.regexp = null;
@@ -2930,11 +2975,12 @@ Interpreter.prototype.installTypes = function() {
    * Class for an error object
    * @constructor
    * @extends {Interpreter.prototype.Error}
+   * @param {?Interpreter.Owner=} owner Owner object or null.
    * @param {?Interpreter.prototype.Object=} proto Prototype object or null.
    * @param {string=} message Optional message to be attached to error object.
    */
-  intrp.Error = function(proto, message) {
-    intrp.Object.call(/** @type {?} */(this),
+  intrp.Error = function(owner, proto, message) {
+    intrp.Object.call(/** @type {?} */ (this), owner,
         (proto === undefined ? intrp.ERROR : proto));
     if (message !== undefined) {
       intrp.setProperty(this, 'message', message,
@@ -3005,7 +3051,7 @@ Interpreter.prototype.installTypes = function() {
   };
 
   /**
-   * Server is a (port, proto, (extra info)) tuple representing a
+   * Server is an (owner, port, proto, (extra info)) tuple representing a
    * listening server.  It encapsulates node's net.Server type, with
    * some additional info needed to implement the connectionListen()
    * API.  In its present form it is not suitable for exposure as a
@@ -3013,16 +3059,19 @@ Interpreter.prototype.installTypes = function() {
    * for that if desired.
    * @constructor
    * @extends {Interpreter.prototype.Server}
+   * @param {?Interpreter.Owner} owner Owner object or null.
    * @param {number} port Port to listen on.
    * @param {!Interpreter.prototype.Object} proto Prototype object for
    *     new connections.
    */
-  intrp.Server = function(port, proto) {
+  intrp.Server = function(owner, port, proto) {
     // Special excpetion: port === undefined when deserializing, in
     // violation of usual type rules.
     if ((port !== (port >>> 0) || port > 0xffff) && port !== undefined) {
       throw RangeError('invalid port ' + port);
     }
+    /** @type {?Interpreter.Owner} */
+    this.owner = owner;
     /** @type {number} */
     this.port = port;
     /** @type {!Interpreter.prototype.Object} */
@@ -3058,7 +3107,7 @@ Interpreter.prototype.installTypes = function() {
       console.log('Connection from %s', socket.remoteAddress);
 
       // Create new object from proto and call onConnect.
-      var obj = new intrp.Object(server.proto);
+      var obj = new intrp.Object(server.owner, server.proto);
       obj.socket = socket;
       var func = intrp.getProperty(obj, 'onConnect');
       if (func instanceof intrp.Function) {
@@ -3088,8 +3137,8 @@ Interpreter.prototype.installTypes = function() {
       socket.on('error', function(error) {
         console.log('Socket error:', error);
         var func = intrp.getProperty(obj, 'onError');
-        var userError = intrp.nativeToPseudo(error);
-        if (func instanceof intrp.Function) {
+        if (func instanceof intrp.Function && func.owner !== null) {
+          var userError = intrp.nativeToPseudo(error, func.owner);
           intrp.createThreadForFuncCall(func, obj, [userError]);
         }
       });
@@ -3203,7 +3252,7 @@ Interpreter.prototype['stepArrayExpression'] = function(stack, state, node) {
   var elements = node['elements'];
   var n = state.n_ || 0;
   if (!state.array_) {
-    state.array_ = new this.Array;
+    state.array_ = new this.Array(state.scope.perms);
     state.array_.properties.length = elements.length;
   } else {
     this.setProperty(state.array_, n, state.value);
@@ -3395,7 +3444,7 @@ Interpreter.prototype['stepCallExpression'] = function(stack, state, node) {
       if (!(proto instanceof this.Object)) {
         proto = this.OBJECT;
       }
-      state.funcThis_ = new this.Object(proto);
+      state.funcThis_ = new this.Object(state.scope.perms, proto);
       state.isConstructor = true;
     }
     state.doneArgs_ = true;
@@ -3410,8 +3459,11 @@ Interpreter.prototype['stepCallExpression'] = function(stack, state, node) {
     }
     var funcNode = func.node;
     if (funcNode) {
-      // TODO(cpcallen:perms): this should use func.owner
-      var scope = new Interpreter.Scope(func.outerScope.perms, func.outerScope);
+      // Aside: we only need to pass func.owner for new scope perms
+      // because we want to be able to change the owner of a function.
+      // Otherwise, new Scope() would take .perms from outerScope,
+      // which will have same .perms as initial value of func.owner.
+          var scope = new Interpreter.Scope(func.owner, func.outerScope);
       if(func.source === undefined) {
         throw Error("No source for user-defined function??");
       }
@@ -3424,7 +3476,8 @@ Interpreter.prototype['stepCallExpression'] = function(stack, state, node) {
         this.addVariableToScope(scope, paramName, paramValue);
       }
       // Build arguments variable.
-      var argsList = new this.Array;
+      // TODO(cpcallen:perms): Should this be callerPerms()?
+      var argsList = new this.Array(func.owner);
       for (var i = 0; i < state.arguments_.length; i++) {
         this.setProperty(argsList, i, state.arguments_[i]);
       }
@@ -3720,7 +3773,7 @@ Interpreter.prototype['stepLiteral'] = function(stack, state, node) {
   stack.pop();
   var value = node['value'];
   if (value instanceof RegExp) {
-    var pseudoRegexp = new this.RegExp;
+    var pseudoRegexp = new this.RegExp(state.scope.perms);
     pseudoRegexp.populate(value);
     value = pseudoRegexp;
   }
@@ -3777,7 +3830,7 @@ Interpreter.prototype['stepObjectExpression'] = function(stack, state, node) {
   var property = node['properties'][n];
   if (!state.object_) {
     // First execution.
-    state.object_ = new this.Object;
+    state.object_ = new this.Object(state.scope.perms);
   } else {
     // Determine property name.
     var key = property['key'];
@@ -3957,7 +4010,7 @@ Interpreter.prototype['stepUnaryExpression'] = function(stack, state, node) {
         try {
           value = delete obj.properties[key];
         } catch (e) {
-          this.throwNativeException(e);
+          this.throwNativeException(e, state.scope.perms);
         }
       } else if (obj instanceof Interpreter.Sentinel) {
         // Whoops; this should have been caught by Acorn (because strict).
