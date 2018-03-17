@@ -41,7 +41,7 @@ acorn.plugins.alwaysStrict = function(parser, configValue) {
  */
 var Interpreter = function() {
   this.installTypes();
-  /** 
+  /**
    * Map of builtins - e.g. Object, Function.prototype, Array.pop, etc.
    * @private @const {Object<Interpreter.Value>}
    */
@@ -586,7 +586,7 @@ Interpreter.prototype.initBuiltins_ = function() {
   this.builtins_['CC.root'] = root;
   this.global.perms = this.ROOT;
   // TODO(cpcallen:perms): make stuff owned by ROOT (including itself)
-  
+
   // Initialize global objects.
   this.initObject_();
   this.initFunction_();
@@ -2034,7 +2034,7 @@ Interpreter.prototype.getProperty = function(obj, name) {
     // === length (or a numeric index).  Otherwise look at proto.
     var pd = Object.getOwnPropertyDescriptor(obj, name);
     if (pd) {
-      return /** @type {Interpreter.Value} */(pd.value);
+      return /** @type {Interpreter.Value} */ (pd.value);
     } else {
       return this.getPrototype(obj).properties[name];
     }
@@ -2098,6 +2098,9 @@ Interpreter.prototype.setProperty = function(obj, name, value, desc) {
       this.throwNativeException(e);
     }
   } else {
+    if (value instanceof Interpreter.Sentinel) {
+      throw Error('VALUE_IN_DESCRIPTOR but no descriptor??');
+    }
     try {
       obj.properties[name] = value;
     } catch (e) {
@@ -2272,7 +2275,7 @@ Interpreter.prototype.throwException = function(value) {
 
 /**
  * Throw an Error in the interpreter.  A convenience method that just
- * does this.throwException(new this.Error(arguments)
+ * does (roughly): this.throwException(new this.Error(...arguments)
  * @param {!Interpreter.prototype.Error} proto Prototype new Error object.
  * @param {string=} message Message to attach to new Error object.
  */
@@ -2512,8 +2515,10 @@ Interpreter.Owner = function() {};
  * @param {?Interpreter.prototype.Object=} proto
  */
 Interpreter.prototype.Object = function(proto) {
-  this.proto = null;
-  this.properties = Object.create(null);
+  /** @type {?Interpreter.prototype.Object} */
+  this.proto;
+  /** @const {!Object<Interpreter.Value>} */
+  this.properties;
   throw Error('Inner class constructor not callable on prototype');
 };
 /** @type {Interpreter.prototype.Object} */
@@ -2564,7 +2569,8 @@ Interpreter.prototype.Array.prototype.toString = function() {
  * @extends {Interpreter.prototype.Object}
  */
 Interpreter.prototype.Date = function(proto) {
-  this.date = null;
+  /** @type {!Date} */
+  this.date;
   throw Error('Inner class constructor not callable on prototype');
 };
 /** @return {string} @override */
@@ -2582,7 +2588,8 @@ Interpreter.prototype.Date.prototype.valueOf = function() {
  * @extends {Interpreter.prototype.Object}
  */
 Interpreter.prototype.RegExp = function(proto) {
-  this.regexp = null;
+  /** @type {!RegExp} */
+  this.regexp;
   throw Error('Inner class constructor not callable on prototype');
 };
 /** @return {string} @override */
@@ -2615,11 +2622,11 @@ Interpreter.prototype.Error.prototype.toString = function() {
  */
 Interpreter.prototype.Server = function(port, proto) {
   /** @type {number} */
-  this.port = 0;
+  this.port;
   /** @type {Interpreter.prototype.Object} */
-  this.proto = null;
+  this.proto;
   /** @private @type {net.Server} */
-  this.server_ = null;
+  this.server_;
   throw Error('Inner class constructor not callable on prototype');
 };
 
@@ -3029,7 +3036,9 @@ Interpreter.prototype.installTypes = function() {
     if ((port !== (port >>> 0) || port > 0xffff) && port !== undefined) {
       throw RangeError('invalid port ' + port);
     }
+    /** @type {number} */
     this.port = port;
+    /** @type {!Interpreter.prototype.Object} */
     this.proto = proto;
     this.server_ = null;
   };
