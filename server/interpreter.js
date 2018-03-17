@@ -2989,32 +2989,19 @@ Interpreter.prototype.installTypes = function() {
     if (cycles.indexOf(this) !== -1) {
       return '[object Error]';
     }
-    var name, message;
-    var obj = this;
-    do {
-      if ('name' in obj.properties) {
-        name = obj.properties['name'];
-        break;
-      }
-    } while ((obj = obj.proto));
-    obj = this;
-    do {
-      if ('message' in obj.properties) {
-        message = obj.properties['message'];
-        break;
-      }
-    } while ((obj = obj.proto));
     cycles.push(this);
     try {
+      var name = intrp.getProperty(this, 'name');
+      var message = intrp.getProperty(this, 'message');
       name = (name === undefined) ? 'Error' : String(name);
       message = (message === undefined) ? '' : String(message);
+      if (name) {
+        return message ? (name + ': ' + message) : name;
+      }
+      return message;
     } finally {
       cycles.pop();
     }
-    if (name) {
-      return message ? (name + ': ' + message) : name;
-    }
-    return message;
   };
 
   /**
