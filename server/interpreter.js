@@ -1584,14 +1584,14 @@ Interpreter.prototype.initPerms_ = function() {
   var intrp = this;
   this.createNativeFunction('perms', function() {
     if (!intrp.thread) {
-      throw Error('No current thread??');
+      throw Error('No current thread when getting perms??');
     }
     return intrp.thread.perms();
   }, false);
 
   this.createNativeFunction('setPerms', function(perms) {
     if (!intrp.thread) {
-      throw Error('No current thread??');
+      throw Error('No current thread when setting perms??');
     }
     if (!(perms instanceof intrp.Object)) {
       intrp.throwError(intrp.TYPE_ERROR, 'New perms must be an object');
@@ -2484,7 +2484,7 @@ Interpreter.Thread.prototype.getSource = function(index) {
  */
 Interpreter.Thread.prototype.perms = function() {
   if (this.status === Interpreter.Thread.Status.ZOMBIE) {
-    throw Error("Zombie thread has no perms");
+    throw Error('Zombie thread has no perms');
   }
   return this.stateStack_[this.stateStack_.length - 1].scope.perms;
 };
