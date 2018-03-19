@@ -876,18 +876,18 @@ tests.forInNullUndefined = function() {
   console.assert(x === 0, 'forInNullUndefined');
 };
   
-tests.methodCall = function() {
+tests.thisInMethod = function() {
   var o = {
     f: function() { return this.foo; },
     foo: 70
   };
-  console.assert(o.f() === 70, 'methodCall');
+  console.assert(o.f() === 70, 'thisInMethod');
 };
 
-tests.demethodedCall = function() {
+tests.thisInFormerMethod = function() {
   var o = { f: function() { return this; }};
   var g = o.f;
-  console.assert(g() === undefined, 'demethodedCall');
+  console.assert(g() === undefined, 'thisInFormerMethod');
 };
 
 tests.testThis = function() {
