@@ -3488,8 +3488,6 @@ stepFuncs_['CallExpression'] = function (stack, state, node) {
   if (!state.doneExec) {
     state.doneExec = true;
     var func = state.func_;
-    // TODO(fraser): determine if this check is redundant; remove it or add
-    // tests that depend on it.
     if (!(func instanceof this.Function)) {
       this.throwError(this.TYPE_ERROR, func + ' is not a function');
     }
@@ -3552,13 +3550,7 @@ stepFuncs_['CallExpression'] = function (stack, state, node) {
       this.callAsyncFunction(state);
       return;
     } else {
-      /* A child of a function is a function but is not callable.  For example:
-      var F = function() {};
-      F.prototype = escape;
-      var f = new F();
-      f();
-      */
-      this.throwError(this.TYPE_ERROR, func.class + ' is not a function');
+      throw Error('Unknown function type??');
     }
   } else {
     // Execution complete.  Put the return value on the stack.
