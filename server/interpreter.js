@@ -47,24 +47,6 @@ var Interpreter = function() {
    */
   this.builtins_ = Object.create(null);
   /**
-   * Map node types to our step function names; a property lookup is
-   * faster than string concatenation with "step" prefix.  Note that a
-   * Map is much slower than a null-parent object (v8 in 2017).
-   * @private @const {Object<function(!Array<!Interpreter.State>,
-   *                                  !Interpreter.State,
-   *                                  !Interpreter.Node)
-   *                             : ?Interpreter.State>}
-   */
-  this.stepFunctions_ = Object.create(null);
-  var stepMatch = /^step([A-Z]\w*)$/;
-  var m;
-  for (var methodName in this) {
-    if ((typeof this[methodName] === 'function') &&
-        (m = methodName.match(stepMatch))) {
-      this.stepFunctions_[m[1]] = this[methodName].bind(this);
-    }
-  }
-  /**
    * For cycle detection in array to string and error conversion; see
    * spec bug github.com/tc39/ecma262/issues/289. At the moment this
    * is used only for actions which are atomic (i.e., take place
@@ -376,7 +358,7 @@ Interpreter.prototype.step = function() {
   var state = stack[stack.length - 1];
   var node = state.node;
   try {
-    var nextState = this.stepFunctions_[node['type']](stack, state, node);
+    var nextState = stepFuncs_[node['type']].call(this, stack, state, node);
   } catch (e) {
     // Eat any step errors.  They have been thrown on the stack.
     if (e !== Interpreter.STEP_ERROR) {
@@ -418,7 +400,7 @@ Interpreter.prototype.run = function() {
       var state = stack[stack.length - 1];
       var node = state.node;
       try {
-        var nextState = this.stepFunctions_[node['type']](stack, state, node);
+        var nextState = stepFuncs_[node['type']].call(this, stack, state, node);
       } catch (e) {
         nextState = undefined;
         // Eat any step errors.  They have been thrown on the stack.
@@ -2536,6 +2518,16 @@ Interpreter.Value;
 Interpreter.Owner = function() {};
 
 /**
+ * Typedef for step functions.
+ * @typedef {function(this: Interpreter,
+ *                    !Array<!Interpreter.State>,
+ *                    !Interpreter.State,
+ *                    !Interpreter.Node)
+ *               : (!Interpreter.State|undefined)}
+ */
+Interpreter.StepFunction;
+
+/**
  * @constructor
  * @param {?Interpreter.Owner=} owner
  * @param {?Interpreter.prototype.Object=} proto
@@ -3248,7 +3240,21 @@ Interpreter.prototype.installTypes = function() {
 // Functions to handle each node type.
 ///////////////////////////////////////////////////////////////////////////////
 
-Interpreter.prototype['stepArrayExpression'] = function(stack, state, node) {
+/**
+ * 'Map' of node types to their corresponding step functions.  Note
+ * that a Map is much slower than a null-parent object (v8 in 2017).
+ * @const {Object<string,Interpreter.StepFunction>}
+ */
+var stepFuncs_ = {};
+
+/**  
+ * @this {!Interpreter}
+ * @param {!Array<!Interpreter.State>} stack
+ * @param {!Interpreter.State} state
+ * @param {!Interpreter.Node} node
+ * @return {!Interpreter.State|undefined}
+ */
+stepFuncs_['ArrayExpression'] = function (stack, state, node) {
   var elements = node['elements'];
   var n = state.n_ || 0;
   if (!state.array_) {
@@ -3270,8 +3276,14 @@ Interpreter.prototype['stepArrayExpression'] = function(stack, state, node) {
   stack[stack.length - 1].value = state.array_;
 };
 
-Interpreter.prototype['stepAssignmentExpression'] =
-    function(stack, state, node) {
+/**  
+ * @this {!Interpreter}
+ * @param {!Array<!Interpreter.State>} stack
+ * @param {!Interpreter.State} state
+ * @param {!Interpreter.Node} node
+ * @return {!Interpreter.State|undefined}
+ */
+stepFuncs_['AssignmentExpression'] = function (stack, state, node) {
   if (!state.doneLeft_) {
     state.doneLeft_ = true;
     var nextState = new Interpreter.State(node['left'], state.scope);
@@ -3311,7 +3323,14 @@ Interpreter.prototype['stepAssignmentExpression'] =
   stack[stack.length - 1].value = value;
 };
 
-Interpreter.prototype['stepBinaryExpression'] = function(stack, state, node) {
+/**  
+ * @this {!Interpreter}
+ * @param {!Array<!Interpreter.State>} stack
+ * @param {!Interpreter.State} state
+ * @param {!Interpreter.Node} node
+ * @return {!Interpreter.State|undefined}
+ */
+stepFuncs_['BinaryExpression'] = function (stack, state, node) {
   if (!state.doneLeft_) {
     state.doneLeft_ = true;
     return new Interpreter.State(node['left'], state.scope);
@@ -3365,7 +3384,14 @@ Interpreter.prototype['stepBinaryExpression'] = function(stack, state, node) {
   stack[stack.length - 1].value = value;
 };
 
-Interpreter.prototype['stepBlockStatement'] = function(stack, state, node) {
+/**  
+ * @this {!Interpreter}
+ * @param {!Array<!Interpreter.State>} stack
+ * @param {!Interpreter.State} state
+ * @param {!Interpreter.Node} node
+ * @return {!Interpreter.State|undefined}
+ */
+stepFuncs_['BlockStatement'] = function (stack, state, node) {
   var n = state.n_ || 0;
   var expression = node['body'][n];
   if (expression) {
@@ -3375,12 +3401,26 @@ Interpreter.prototype['stepBlockStatement'] = function(stack, state, node) {
   stack.pop();
 };
 
-Interpreter.prototype['stepBreakStatement'] = function(stack, state, node) {
+/**  
+ * @this {!Interpreter}
+ * @param {!Array<!Interpreter.State>} stack
+ * @param {!Interpreter.State} state
+ * @param {!Interpreter.Node} node
+ * @return {!Interpreter.State|undefined}
+ */
+stepFuncs_['BreakStatement'] = function (stack, state, node) {
   this.unwind_(Interpreter.Completion.BREAK, undefined,
       node['label'] ? node['label']['name'] : undefined);
 };
 
-Interpreter.prototype['stepCallExpression'] = function(stack, state, node) {
+/**  
+ * @this {!Interpreter}
+ * @param {!Array<!Interpreter.State>} stack
+ * @param {!Interpreter.State} state
+ * @param {!Interpreter.Node} node
+ * @return {!Interpreter.State|undefined}
+ */
+stepFuncs_['CallExpression'] = function (stack, state, node) {
   if (!state.doneCallee_) {
     state.doneCallee_ = 1;
     // Fallback for global function, 'this' is undefined.
@@ -3538,7 +3578,14 @@ Interpreter.prototype['stepCallExpression'] = function(stack, state, node) {
   }
 };
 
-Interpreter.prototype['stepCatchClause'] = function(stack, state, node) {
+/**  
+ * @this {!Interpreter}
+ * @param {!Array<!Interpreter.State>} stack
+ * @param {!Interpreter.State} state
+ * @param {!Interpreter.Node} node
+ * @return {!Interpreter.State|undefined}
+ */
+stepFuncs_['CatchClause'] = function (stack, state, node) {
   if (!state.done_) {
     state.done_ = true;
     // Create an empty scope.
@@ -3551,8 +3598,14 @@ Interpreter.prototype['stepCatchClause'] = function(stack, state, node) {
   stack.pop();
 };
 
-Interpreter.prototype['stepConditionalExpression'] =
-    function(stack, state, node) {
+/**  
+ * @this {!Interpreter}
+ * @param {!Array<!Interpreter.State>} stack
+ * @param {!Interpreter.State} state
+ * @param {!Interpreter.Node} node
+ * @return {!Interpreter.State|undefined}
+ */
+stepFuncs_['ConditionalExpression'] = function (stack, state, node) {
   var mode = state.mode_ || 0;
   if (mode === 0) {
     state.mode_ = 1;
@@ -3578,17 +3631,38 @@ Interpreter.prototype['stepConditionalExpression'] =
   }
 };
 
-Interpreter.prototype['stepContinueStatement'] = function(stack, state, node) {
+/**  
+ * @this {!Interpreter}
+ * @param {!Array<!Interpreter.State>} stack
+ * @param {!Interpreter.State} state
+ * @param {!Interpreter.Node} node
+ * @return {!Interpreter.State|undefined}
+ */
+stepFuncs_['ContinueStatement'] = function (stack, state, node) {
   this.unwind_(Interpreter.Completion.CONTINUE, undefined,
       node['label'] ? node['label']['name'] : undefined);
 };
 
-Interpreter.prototype['stepDebuggerStatement'] = function(stack, state, node) {
+/**  
+ * @this {!Interpreter}
+ * @param {!Array<!Interpreter.State>} stack
+ * @param {!Interpreter.State} state
+ * @param {!Interpreter.Node} node
+ * @return {!Interpreter.State|undefined}
+ */
+stepFuncs_['DebuggerStatement'] = function (stack, state, node) {
   // Do nothing.  May be overridden by developers.
   stack.pop();
 };
 
-Interpreter.prototype['stepDoWhileStatement'] = function(stack, state, node) {
+/**  
+ * @this {!Interpreter}
+ * @param {!Array<!Interpreter.State>} stack
+ * @param {!Interpreter.State} state
+ * @param {!Interpreter.Node} node
+ * @return {!Interpreter.State|undefined}
+ */
+stepFuncs_['DoWhileStatement'] = function (stack, state, node) {
   if (node['type'] === 'DoWhileStatement' && state.test_ === undefined) {
     // First iteration of do/while executes without checking test.
     state.value = true;
@@ -3607,11 +3681,25 @@ Interpreter.prototype['stepDoWhileStatement'] = function(stack, state, node) {
   }
 };
 
-Interpreter.prototype['stepEmptyStatement'] = function(stack, state, node) {
+/**  
+ * @this {!Interpreter}
+ * @param {!Array<!Interpreter.State>} stack
+ * @param {!Interpreter.State} state
+ * @param {!Interpreter.Node} node
+ * @return {!Interpreter.State|undefined}
+ */
+stepFuncs_['EmptyStatement'] = function (stack, state, node) {
   stack.pop();
 };
 
-Interpreter.prototype['stepEvalProgram_'] = function(stack, state, node) {
+/**  
+ * @this {!Interpreter}
+ * @param {!Array<!Interpreter.State>} stack
+ * @param {!Interpreter.State} state
+ * @param {!Interpreter.Node} node
+ * @return {!Interpreter.State|undefined}
+ */
+stepFuncs_['EvalProgram_'] = function (stack, state, node) {
   var n = state.n_ || 0;
   var expression = node['body'][n];
   if (expression) {
@@ -3622,8 +3710,14 @@ Interpreter.prototype['stepEvalProgram_'] = function(stack, state, node) {
   stack[stack.length - 1].value = this.value;
 };
 
-Interpreter.prototype['stepExpressionStatement'] =
-    function(stack, state, node) {
+/**  
+ * @this {!Interpreter}
+ * @param {!Array<!Interpreter.State>} stack
+ * @param {!Interpreter.State} state
+ * @param {!Interpreter.Node} node
+ * @return {!Interpreter.State|undefined}
+ */
+stepFuncs_['ExpressionStatement'] = function (stack, state, node) {
   if (!state.done_) {
     state.done_ = true;
     return new Interpreter.State(node['expression'], state.scope);
@@ -3638,7 +3732,14 @@ Interpreter.prototype['stepExpressionStatement'] =
   this.value = state.value;
 };
 
-Interpreter.prototype['stepForInStatement'] = function(stack, state, node) {
+/**  
+ * @this {!Interpreter}
+ * @param {!Array<!Interpreter.State>} stack
+ * @param {!Interpreter.State} state
+ * @param {!Interpreter.Node} node
+ * @return {!Interpreter.State|undefined}
+ */
+stepFuncs_['ForInStatement'] = function (stack, state, node) {
   if (!state.doneObject_) {
     // First, variable initialization is illegal in strict mode.
     state.doneObject_ = true;
@@ -3701,7 +3802,14 @@ Interpreter.prototype['stepForInStatement'] = function(stack, state, node) {
   // step per iteration.  Fix that.
 };
 
-Interpreter.prototype['stepForStatement'] = function(stack, state, node) {
+/**  
+ * @this {!Interpreter}
+ * @param {!Array<!Interpreter.State>} stack
+ * @param {!Interpreter.State} state
+ * @param {!Interpreter.Node} node
+ * @return {!Interpreter.State|undefined}
+ */
+stepFuncs_['ForStatement'] = function (stack, state, node) {
   var mode = state.mode_ || 0;
   if (mode === 0) {
     state.mode_ = 1;
@@ -3730,13 +3838,26 @@ Interpreter.prototype['stepForStatement'] = function(stack, state, node) {
   }
 };
 
-Interpreter.prototype['stepFunctionDeclaration'] =
-    function(stack, state, node) {
+/**  
+ * @this {!Interpreter}
+ * @param {!Array<!Interpreter.State>} stack
+ * @param {!Interpreter.State} state
+ * @param {!Interpreter.Node} node
+ * @return {!Interpreter.State|undefined}
+ */
+stepFuncs_['FunctionDeclaration'] = function (stack, state, node) {
   // This was found and handled when the scope was populated.
   stack.pop();
 };
 
-Interpreter.prototype['stepFunctionExpression'] = function(stack, state, node) {
+/**  
+ * @this {!Interpreter}
+ * @param {!Array<!Interpreter.State>} stack
+ * @param {!Interpreter.State} state
+ * @param {!Interpreter.Node} node
+ * @return {!Interpreter.State|undefined}
+ */
+stepFuncs_['FunctionExpression'] = function (stack, state, node) {
   stack.pop();
   var src = this.thread.getSource();
   if(src === undefined) {
@@ -3746,7 +3867,14 @@ Interpreter.prototype['stepFunctionExpression'] = function(stack, state, node) {
       this.createFunctionFromAST(node, state.scope, src);
 };
 
-Interpreter.prototype['stepIdentifier'] = function(stack, state, node) {
+/**  
+ * @this {!Interpreter}
+ * @param {!Array<!Interpreter.State>} stack
+ * @param {!Interpreter.State} state
+ * @param {!Interpreter.Node} node
+ * @return {!Interpreter.State|undefined}
+ */
+stepFuncs_['Identifier'] = function (stack, state, node) {
   stack.pop();
   var name = node['name'];
   var value = state.components ?
@@ -3755,10 +3883,16 @@ Interpreter.prototype['stepIdentifier'] = function(stack, state, node) {
   stack[stack.length - 1].value = value;
 };
 
-Interpreter.prototype['stepIfStatement'] =
-    Interpreter.prototype['stepConditionalExpression'];
+stepFuncs_['IfStatement'] = stepFuncs_['ConditionalExpression'];
 
-Interpreter.prototype['stepLabeledStatement'] = function(stack, state, node) {
+/**  
+ * @this {!Interpreter}
+ * @param {!Array<!Interpreter.State>} stack
+ * @param {!Interpreter.State} state
+ * @param {!Interpreter.Node} node
+ * @return {!Interpreter.State|undefined}
+ */
+stepFuncs_['LabeledStatement'] = function (stack, state, node) {
   // No need to hit this node again on the way back up the stack.
   stack.pop();
   // Note that a statement might have multiple labels.
@@ -3769,7 +3903,14 @@ Interpreter.prototype['stepLabeledStatement'] = function(stack, state, node) {
   return nextState;
 };
 
-Interpreter.prototype['stepLiteral'] = function(stack, state, node) {
+/**  
+ * @this {!Interpreter}
+ * @param {!Array<!Interpreter.State>} stack
+ * @param {!Interpreter.State} state
+ * @param {!Interpreter.Node} node
+ * @return {!Interpreter.State|undefined}
+ */
+stepFuncs_['Literal'] = function (stack, state, node) {
   stack.pop();
   var value = node['value'];
   if (value instanceof RegExp) {
@@ -3780,7 +3921,14 @@ Interpreter.prototype['stepLiteral'] = function(stack, state, node) {
   stack[stack.length - 1].value = value;
 };
 
-Interpreter.prototype['stepLogicalExpression'] = function(stack, state, node) {
+/**  
+ * @this {!Interpreter}
+ * @param {!Array<!Interpreter.State>} stack
+ * @param {!Interpreter.State} state
+ * @param {!Interpreter.Node} node
+ * @return {!Interpreter.State|undefined}
+ */
+stepFuncs_['LogicalExpression'] = function (stack, state, node) {
   if (node['operator'] !== '&&' && node['operator'] !== '||') {
     throw SyntaxError('Unknown logical operator: ' + node['operator']);
   }
@@ -3799,7 +3947,14 @@ Interpreter.prototype['stepLogicalExpression'] = function(stack, state, node) {
   stack[stack.length - 1].value = state.value;
 };
 
-Interpreter.prototype['stepMemberExpression'] = function(stack, state, node) {
+/**  
+ * @this {!Interpreter}
+ * @param {!Array<!Interpreter.State>} stack
+ * @param {!Interpreter.State} state
+ * @param {!Interpreter.Node} node
+ * @return {!Interpreter.State|undefined}
+ */
+stepFuncs_['MemberExpression'] = function (stack, state, node) {
   if (!state.doneObject_) {
     state.doneObject_ = true;
     return new Interpreter.State(node['object'], state.scope);
@@ -3822,10 +3977,16 @@ Interpreter.prototype['stepMemberExpression'] = function(stack, state, node) {
       [state.object_, propName] : this.getProperty(state.object_, propName);
 };
 
-Interpreter.prototype['stepNewExpression'] =
-    Interpreter.prototype['stepCallExpression'];
+stepFuncs_['NewExpression'] = stepFuncs_['CallExpression'];
 
-Interpreter.prototype['stepObjectExpression'] = function(stack, state, node) {
+/**  
+ * @this {!Interpreter}
+ * @param {!Array<!Interpreter.State>} stack
+ * @param {!Interpreter.State} state
+ * @param {!Interpreter.Node} node
+ * @return {!Interpreter.State|undefined}
+ */
+stepFuncs_['ObjectExpression'] = function (stack, state, node) {
   var n = state.n_ || 0;
   var property = node['properties'][n];
   if (!state.object_) {
@@ -3857,7 +4018,14 @@ Interpreter.prototype['stepObjectExpression'] = function(stack, state, node) {
   stack[stack.length - 1].value = state.object_;
 };
 
-Interpreter.prototype['stepProgram'] = function(stack, state, node) {
+/**  
+ * @this {!Interpreter}
+ * @param {!Array<!Interpreter.State>} stack
+ * @param {!Interpreter.State} state
+ * @param {!Interpreter.Node} node
+ * @return {!Interpreter.State|undefined}
+ */
+stepFuncs_['Program'] = function (stack, state, node) {
   var n = state.n_ || 0;
   var expression = node['body'][n];
   if (expression) {
@@ -3867,7 +4035,14 @@ Interpreter.prototype['stepProgram'] = function(stack, state, node) {
   stack.pop();
 };
 
-Interpreter.prototype['stepReturnStatement'] = function(stack, state, node) {
+/**  
+ * @this {!Interpreter}
+ * @param {!Array<!Interpreter.State>} stack
+ * @param {!Interpreter.State} state
+ * @param {!Interpreter.Node} node
+ * @return {!Interpreter.State|undefined}
+ */
+stepFuncs_['ReturnStatement'] = function (stack, state, node) {
   if (node['argument'] && !state.done_) {
     state.done_ = true;
     return new Interpreter.State(node['argument'], state.scope);
@@ -3875,7 +4050,14 @@ Interpreter.prototype['stepReturnStatement'] = function(stack, state, node) {
   this.unwind_(Interpreter.Completion.RETURN, state.value, undefined);
 };
 
-Interpreter.prototype['stepSequenceExpression'] = function(stack, state, node) {
+/**  
+ * @this {!Interpreter}
+ * @param {!Array<!Interpreter.State>} stack
+ * @param {!Interpreter.State} state
+ * @param {!Interpreter.Node} node
+ * @return {!Interpreter.State|undefined}
+ */
+stepFuncs_['SequenceExpression'] = function (stack, state, node) {
   var n = state.n_ || 0;
   var expression = node['expressions'][n];
   if (expression) {
@@ -3886,7 +4068,14 @@ Interpreter.prototype['stepSequenceExpression'] = function(stack, state, node) {
   stack[stack.length - 1].value = state.value;
 };
 
-Interpreter.prototype['stepSwitchStatement'] = function(stack, state, node) {
+/**  
+ * @this {!Interpreter}
+ * @param {!Array<!Interpreter.State>} stack
+ * @param {!Interpreter.State} state
+ * @param {!Interpreter.Node} node
+ * @return {!Interpreter.State|undefined}
+ */
+stepFuncs_['SwitchStatement'] = function (stack, state, node) {
   if (!state.test_) {
     state.test_ = 1;
     return new Interpreter.State(node['discriminant'], state.scope);
@@ -3939,12 +4128,26 @@ Interpreter.prototype['stepSwitchStatement'] = function(stack, state, node) {
   }
 };
 
-Interpreter.prototype['stepThisExpression'] = function(stack, state, node) {
+/**  
+ * @this {!Interpreter}
+ * @param {!Array<!Interpreter.State>} stack
+ * @param {!Interpreter.State} state
+ * @param {!Interpreter.Node} node
+ * @return {!Interpreter.State|undefined}
+ */
+stepFuncs_['ThisExpression'] = function (stack, state, node) {
   stack.pop();
   stack[stack.length - 1].value = this.getValueFromScope(state.scope, 'this');
 };
 
-Interpreter.prototype['stepThrowStatement'] = function(stack, state, node) {
+/**  
+ * @this {!Interpreter}
+ * @param {!Array<!Interpreter.State>} stack
+ * @param {!Interpreter.State} state
+ * @param {!Interpreter.Node} node
+ * @return {!Interpreter.State|undefined}
+ */
+stepFuncs_['ThrowStatement'] = function (stack, state, node) {
   if (!state.done_) {
     state.done_ = true;
     return new Interpreter.State(node['argument'], state.scope);
@@ -3952,7 +4155,14 @@ Interpreter.prototype['stepThrowStatement'] = function(stack, state, node) {
   this.throwException(state.value);
 };
 
-Interpreter.prototype['stepTryStatement'] = function(stack, state, node) {
+/**  
+ * @this {!Interpreter}
+ * @param {!Array<!Interpreter.State>} stack
+ * @param {!Interpreter.State} state
+ * @param {!Interpreter.Node} node
+ * @return {!Interpreter.State|undefined}
+ */
+stepFuncs_['TryStatement'] = function (stack, state, node) {
   if (!state.doneBlock_) {
     state.doneBlock_ = true;
     return new Interpreter.State(node['block'], state.scope);
@@ -3981,7 +4191,14 @@ Interpreter.prototype['stepTryStatement'] = function(stack, state, node) {
   }
 };
 
-Interpreter.prototype['stepUnaryExpression'] = function(stack, state, node) {
+/**  
+ * @this {!Interpreter}
+ * @param {!Array<!Interpreter.State>} stack
+ * @param {!Interpreter.State} state
+ * @param {!Interpreter.Node} node
+ * @return {!Interpreter.State|undefined}
+ */
+stepFuncs_['UnaryExpression'] = function (stack, state, node) {
   if (!state.done_) {
     state.done_ = true;
     var nextState = new Interpreter.State(node['argument'], state.scope);
@@ -4035,7 +4252,14 @@ Interpreter.prototype['stepUnaryExpression'] = function(stack, state, node) {
   stack[stack.length - 1].value = value;
 };
 
-Interpreter.prototype['stepUpdateExpression'] = function(stack, state, node) {
+/**  
+ * @this {!Interpreter}
+ * @param {!Array<!Interpreter.State>} stack
+ * @param {!Interpreter.State} state
+ * @param {!Interpreter.Node} node
+ * @return {!Interpreter.State|undefined}
+ */
+stepFuncs_['UpdateExpression'] = function (stack, state, node) {
   if (!state.doneLeft_) {
     state.doneLeft_ = true;
     var nextState = new Interpreter.State(node['argument'], state.scope);
@@ -4061,8 +4285,14 @@ Interpreter.prototype['stepUpdateExpression'] = function(stack, state, node) {
   stack[stack.length - 1].value = returnValue;
 };
 
-Interpreter.prototype['stepVariableDeclaration'] =
-    function(stack, state, node) {
+/**  
+ * @this {!Interpreter}
+ * @param {!Array<!Interpreter.State>} stack
+ * @param {!Interpreter.State} state
+ * @param {!Interpreter.Node} node
+ * @return {!Interpreter.State|undefined}
+ */
+stepFuncs_['VariableDeclaration'] = function (stack, state, node) {
   var declarations = node['declarations'];
   var n = state.n_ || 0;
   var declarationNode = declarations[n];
@@ -4087,13 +4317,20 @@ Interpreter.prototype['stepVariableDeclaration'] =
   stack.pop();
 };
 
-Interpreter.prototype['stepWithStatement'] = function(stack, state, node) {
+/**  
+ * @this {!Interpreter}
+ * @param {!Array<!Interpreter.State>} stack
+ * @param {!Interpreter.State} state
+ * @param {!Interpreter.Node} node
+ * @return {!Interpreter.State|undefined}
+ */
+stepFuncs_['WithStatement'] = function (stack, state, node) {
   this.throwError(this.SYNTAX_ERROR,
       'Strict mode code may not include a with statement');
 };
 
-Interpreter.prototype['stepWhileStatement'] =
-    Interpreter.prototype['stepDoWhileStatement'];
+stepFuncs_['WhileStatement'] = stepFuncs_['DoWhileStatement'];
+
 
 module.exports = Interpreter;
 
