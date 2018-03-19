@@ -896,6 +896,52 @@ module.exports = [
     `,
     expected: 'undefined' },
 
+  { name: 'callEvalOrder', src: `
+    var r = "";
+    function log(x) {
+      r += x;
+      return function () {};
+    };
+    (log('f'))(log('a'), log('b'), log('c'));
+    r;
+    `,
+    expected: 'fabc' },
+  
+  { name: 'callEvalArgsBeforeCallability', src: `
+    try {
+      var invalid = undefined;
+      function t() { throw {name: 'args'}; };
+      invalid(t());
+    } catch(e) {
+      e.name;
+    }
+    `,
+    expected: 'args' },
+
+  { name: 'callNonCallable', src: `
+    var tests = [
+      undefined,
+      null,
+      false,
+      42,
+      'hello',
+      Object.create(Function.prototype),
+    ];
+    var ok = 0;
+    for (var i = 0; i < tests.length; i++) {
+      try {
+        tests[i]();
+      } catch (e) {
+        var r = e;
+        if (e.name === 'TypeError') {
+          ok++;
+        }
+      }
+    }
+    (ok === tests.length) ? 'pass' : 'fail';
+    `,
+    expected: 'pass' },
+
   /******************************************************************/
   // Object and Object.prototype
 

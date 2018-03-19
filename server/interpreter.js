@@ -3087,7 +3087,7 @@ Interpreter.prototype.installTypes = function() {
     var server = this;  // Because this will be undefined in handlers below.
     // Create net.Server, start it listening, and attached it to this.
     var netServer = new net.Server(/* { allowHalfOpen: true } */);
-    netServer.on('connection', function (socket) {
+    netServer.on('connection', function(socket) {
       // TODO(cpcallen): Add localhost test here, like this - only
       // also allow IPV6 connections:
       // if (socket.remoteAddress != '127.0.0.1') {
@@ -3109,7 +3109,7 @@ Interpreter.prototype.installTypes = function() {
       // Handle incoming data from clients.  N.B. that data is a
       // node buffer object, so we must convert it to a string
       // before passing it to user code.
-      socket.on('data', function (data) {
+      socket.on('data', function(data) {
         var func = intrp.getProperty(obj, 'onReceive');
         if (func instanceof intrp.Function) {
           intrp.createThreadForFuncCall(func, obj, [String(data)]);
@@ -3423,29 +3423,25 @@ stepFuncs_['BreakStatement'] = function (stack, state, node) {
 stepFuncs_['CallExpression'] = function (stack, state, node) {
   if (!state.doneCallee_) {
     state.doneCallee_ = 1;
-    // Fallback for global function, 'this' is undefined.
-    state.funcThis_ = undefined;
-    // Components needed to determine value of 'this'.
+    state.funcThis_ = undefined; // Default for non-methods: this === undefined.
     var nextState = new Interpreter.State(node['callee'], state.scope);
-    nextState.components = true;
+    nextState.components = true; // Components needed to get value of 'this'.
     return nextState;
   }
-  if (state.doneCallee_ === 1) {
+  if (state.doneCallee_ === 1) { // Evaluated callee, possibly got a reference.
     // Determine value of the function.
     state.doneCallee_ = 2;
     var func = state.value;
-    if (Array.isArray(func)) {
+    if (Array.isArray(func)) { // Callee was MemberExpression or Identifier.
       state.func_ = this.getValue(state.scope, func);
       if (func[0] === Interpreter.SCOPE_REFERENCE) {
         // (Globally or locally) named function.  Is it named 'eval'?
         state.directEval_ = (func[1] === 'eval');
       } else {
-        // Method function, 'this' is object (ignored if invoked as 'new').
+        // Method call; save 'this' value (overwritten below if NewExpression).
         state.funcThis_ = func[0];
       }
-    } else {
-      // Callee was not an Identifier or MemberExpression, and is
-      // already fully evaluated.
+    } else { // Callee already fully evaluated.
       state.func_ = func;
     }
     state.arguments_ = [];
@@ -3458,7 +3454,7 @@ stepFuncs_['CallExpression'] = function (stack, state, node) {
     if (node['arguments'][state.n_]) {
       return new Interpreter.State(node['arguments'][state.n_++], state.scope);
     }
-    // Determine value of 'this' in function.
+    // All args evaluated.  Construct new object for this, if applicable:
     if (node['type'] === 'NewExpression') {
       var func = state.func_;
       if (typeof func === 'string' && state.arguments_.length === 0) {
@@ -3475,7 +3471,7 @@ stepFuncs_['CallExpression'] = function (stack, state, node) {
       if (!(func instanceof this.Function)) {
         this.throwError(this.TYPE_ERROR, func + ' is not a function');
       } else if (func.illegalConstructor) {
-        // Illegal: new escape();
+        // Some functions can't be constrcuted (e.g.: new escape(); fails.)
         this.throwError(this.TYPE_ERROR, func + ' is not a constructor');
       }
       // Constructor; 'this' will be new object being constructed.
