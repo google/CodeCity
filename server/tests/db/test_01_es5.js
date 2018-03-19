@@ -1315,6 +1315,44 @@ tests.evalNoLeakingDecls = function() {
   console.assert(typeof n === 'undefined', 'evalNoLeakingDecls');
 };
 
+tests.callEvalOrder = function() {
+  var r = "";
+  function log(x) {
+    r += x;
+    return function () {};
+  };
+  (log('f'))(log('a'), log('b'), log('c'));
+  console.assert(r === 'fabc', 'callEvalOrder');
+};
+
+tests.callEvalArgsBeforeCallability = function() {
+  try {
+    var invalid = undefined;
+    function t() { throw {name: 'args'}; };
+    invalid(t());
+    console.assert(false, 'callEvalArgsBeforeCallability');
+  } catch(e) {
+    console.assert(e.name === 'args', 'callEvalArgsBeforeCallability');
+  }
+};
+
+tests.callNonCallable = function() {
+  function check(v) {
+    try {
+      v();
+      console.assert(false, 'callNonCallable' + v);
+    } catch(e) {
+      console.assert(e.name === 'TypeError', 'callNonCallable' + v);
+    }
+  }
+  check(undefined);
+  check(null);
+  check(false);
+  check(42);
+  check('hello');
+  check(Object.create(Function.prototype));
+};
+
 //////////////////////////////////////////////////////////////
 // Object and Object.prototype
 
