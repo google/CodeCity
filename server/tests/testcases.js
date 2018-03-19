@@ -400,7 +400,7 @@ module.exports = [
     `,
     expected: 0 },
 
-  { name: 'methodCall', src: `
+  { name: 'thisInMethod', src: `
     var o = {
       f: function() { return this.foo; },
       foo: 70
@@ -409,14 +409,14 @@ module.exports = [
     `,
     expected: 70 },
 
-  { name: 'demethodedCall', src: `
+  { name: 'thisInFormerMethod', src: `
     var o = { f: function() { return this; }};
     var g = o.f;
     g();
     `,
     expected: undefined },
 
-  { name: 'bareThis', src: `
+  { name: 'thisGlobal', src: `
     this;
     `,
     expected: undefined },
