@@ -3,7 +3,7 @@
  * @license
  * Code City: JavaScript Read Eval Print Loop
  *
- * Copyright 2013 Google Inc.
+ * Copyright 2018 Google Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,6 +49,6 @@ rl.on('line', function(line) {
   intrp.run();
   console.log(intrp.pseudoToNative(intrp.value));
   rl.prompt();
-}).on('close', () => {
+}).on('close', function() {
   process.exit(0);
 });
