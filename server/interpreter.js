@@ -1817,7 +1817,7 @@ Interpreter.prototype.callAsyncFunction = function(state) {
  * all standard native types), and handles additional properties on
  * arrays, regexps and errors (just as for plain objects).  Ignores
  * prototype and inherited properties.  Efficiently handles
- * sparse arrays.  Does NOT handle cyclic data.
+ * sparse arrays.  Does NOT handle cyclic 
  * @param {*} nativeObj The native JS object to be converted.
  * @return {Interpreter.Value} The equivalent JS interpreter object.
  * @param {!Interpreter.Owner} owner Owner for new Error
@@ -3057,7 +3057,7 @@ Interpreter.prototype.installTypes = function() {
    *     new connections.
    */
   intrp.Server = function(owner, port, proto) {
-    // Special excpetion: port === undefined when deserializing, in
+    // Special excepetion: port === undefined when deserializing, in
     // violation of usual type rules.
     if ((port !== (port >>> 0) || port > 0xffff) && port !== undefined) {
       throw RangeError('invalid port ' + port);
@@ -3497,7 +3497,7 @@ stepFuncs_['CallExpression'] = function (stack, state, node) {
       // because we want to be able to change the owner of a function.
       // Otherwise, new Scope() would take .perms from outerScope,
       // which will have same .perms as initial value of func.owner.
-          var scope = new Interpreter.Scope(func.owner, func.outerScope);
+      var scope = new Interpreter.Scope(func.owner, func.outerScope);
       if(func.source === undefined) {
         throw Error("No source for user-defined function??");
       }
