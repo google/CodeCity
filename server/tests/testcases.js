@@ -975,19 +975,30 @@ module.exports = [
 
   // This also tests iteration over (non-)enumerable properties.
   { name: 'ObjectDefineProperty', src: `
-    var o = { foo: 70 }, r = 0;
+    var o = { foo: 50 }, r = 0;
     Object.defineProperty(o, 'bar', {
       writable: true,
       enumerable: true,
       configurable: true,
-      value: 8,
+      value: 0
+    });
+    o.bar = 20;
+    Object.defineProperty(o, 'baz', {
+      writable: true,
+      enumerable: true,
+      configurable: false
     });
     Object.defineProperty(o, 'baz', {
-      value: 13,
+      value: 4,
+    });
+    Object.defineProperty(o, 'quux', {
+      enumerable: false,
+      value: 13
     });
     for (var k in o) {
       r += o[k];
     }
+    r += Object.getOwnPropertyNames(o).length;
     r;
     `,
     expected: 78 },

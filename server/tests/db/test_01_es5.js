@@ -1584,20 +1584,37 @@ tests.ObjectDefinePropertiesBadDescriptor = function() {
   }
 };
 
-tests.ObjectDefineProperties = function() {
-  var o = { foo: 70 }, r = 0;
-  Object.defineProperties(o, {
-      bar: {
-          writable: true,
-          enumerable: true,
-          configurable: true,
-          value: 8 },
-      baz: { value: 999 }});
+tests.ObjectDefineProperty = function() {
+  var o = { foo: 50 }, r = 0;
+  Object.defineProperty(o, 'bar', {
+    writable: true,
+    enumerable: true,
+    configurable: true,
+    value: 0
+  });
+  o.bar = 20;
+  console.assert(o.bar === 20, 'ObjectDefineProperty+WEC');
+  Object.defineProperty(o, 'baz', {
+    writable: true,
+    enumerable: true,
+    configurable: false
+  });
+  console.assert(o.baz === undefined, 'ObjectDefineProperty+WE-C1');
+  Object.defineProperty(o, 'baz', {
+    value: 8
+  });
+  console.assert(o.baz === 8, 'ObjectDefineProperty+WE-C2');
+  Object.defineProperty(o, 'quux', {
+    enumerable: false,
+    value: 13
+  });
+  console.assert(o.baz === 8, 'ObjectDefineProperty-WEC');
   for (var k in o) {
     r += o[k];
   }
-  r += Object.getOwnPropertyNames(o).length;
-  console.assert(r === 81, 'ObjectDefineProperties');
+  console.assert(r === 78, 'ObjectDefinePropertyEnumerability');
+  console.assert(Object.getOwnPropertyNames(o).length === 4,
+                 'ObjectDefinePropertyCount');
 };
 
 tests.ObjectCreateWithProperties = function() {
