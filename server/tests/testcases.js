@@ -977,7 +977,7 @@ module.exports = [
   { name: 'ObjectDefineProperty', src: `
     var o = { foo: 70 }, r = 0;
     Object.defineProperty(o, 'bar', {
-      writeable: true,
+      writable: true,
       enumerable: true,
       configurable: true,
       value: 8,
@@ -1073,7 +1073,7 @@ module.exports = [
     Object.defineProperty(o, 'foo', { value: 'bar' });
     var desc = Object.getOwnPropertyDescriptor(o, 'foo');
     desc.value === o.foo &&
-        !desc.writeable && !desc.enumerable && !desc.configurable;
+        !desc.writable && !desc.enumerable && !desc.configurable;
     `,
     expected: true },
 
@@ -1179,7 +1179,7 @@ module.exports = [
     var o = { foo: 70 }, r = 0;
     Object.defineProperties(o, {
         bar: {
-            writeable: true,
+            writable: true,
             enumerable: true,
             configurable: true,
             value: 8 },
@@ -1194,7 +1194,7 @@ module.exports = [
   { name: 'ObjectCreateWithProperties', src: `
     var o = Object.create({ foo: 70 }, {
         bar: {
-            writeable: true,
+            writable: true,
             enumerable: true,
             configurable: true,
             value: 10 },

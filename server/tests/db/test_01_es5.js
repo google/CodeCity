@@ -1388,7 +1388,7 @@ tests.ObjectDefineProperty = function() {
   // This also tests iteration over (non-)enumerable properties.
   var o = { foo: 70 }, r = 0;
   Object.defineProperty(o, 'bar', {
-    writeable: true,
+    writable: true,
     enumerable: true,
     configurable: true,
     value: 8
@@ -1482,7 +1482,7 @@ tests.ObjectGetOwnPropertyDescriptor = function() {
   Object.defineProperty(o, 'foo', { value: 'bar' });
   var desc = Object.getOwnPropertyDescriptor(o, 'foo');
   console.assert(desc.value === o.foo, 'ObjectGetOwnPropertyDescriptorValue');
-  console.assert(!desc.writeable, 'ObjectGetOwnPropertyDescriptorWritable');
+  console.assert(!desc.writable, 'ObjectGetOwnPropertyDescriptorWritable');
   console.assert(!desc.enumerable, 'ObjectGetOwnPropertyDescriptorEnumerable');
   console.assert(!desc.configurable, 'ObjectGetOwnPropertyDescriptorConfigurable');
 };
@@ -1588,7 +1588,7 @@ tests.ObjectDefineProperties = function() {
   var o = { foo: 70 }, r = 0;
   Object.defineProperties(o, {
       bar: {
-          writeable: true,
+          writable: true,
           enumerable: true,
           configurable: true,
           value: 8 },
@@ -1603,7 +1603,7 @@ tests.ObjectDefineProperties = function() {
 tests.ObjectCreateWithProperties = function() {
   var o = Object.create({ foo: 70 }, {
       bar: {
-          writeable: true,
+          writable: true,
           enumerable: true,
           configurable: true,
           value: 10 },
