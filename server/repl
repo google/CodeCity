@@ -1,0 +1,54 @@
+#!/usr/bin/env node
+/**
+ * @license
+ * Code City: JavaScript Read Eval Print Loop
+ *
+ * Copyright 2018 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/**
+ * @fileoverview Read Eval Print Loop (REPL) for JavaScript Interpreter.
+ * @author cpcallen@google.com (Christopher Allen)
+ */
+'use strict';
+
+const readline = require('readline');
+const Interpreter = require('./interpreter');
+const fs = require('fs');
+
+var intrp = new Interpreter;
+intrp.createThread(fs.readFileSync('startup/es5.js', 'utf8'));
+intrp.run();
+intrp.createThread(fs.readFileSync('startup/es6.js', 'utf8'));
+intrp.run();
+intrp.createThread(fs.readFileSync('startup/cc.js', 'utf8'));
+intrp.run();
+
+var rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout,
+  removeHistoryDuplicates: true,
+});
+
+rl.prompt();
+rl.on('line', function(line) {
+  intrp.value = undefined;
+  intrp.createThread(line);
+  intrp.run();
+  console.log(intrp.pseudoToNative(intrp.value));
+  rl.prompt();
+}).on('close', function() {
+  process.exit(0);
+});
