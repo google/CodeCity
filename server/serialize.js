@@ -207,9 +207,20 @@ Serializer.serialize = function(intrp) {
   }
 
   // Properties on Interpreter instances to ignore.
-  var exclude = ['stepFunctions_', 'hrStartTime_', 'previousTime_', 'runner_',
-                 'Object', 'Function', 'Array', 'Date', 'RegExp', 'Error',
-                 'Thread', 'Server', 'PropertyIterator'];
+  var exclude = ['stepFunctions_',
+                 'hrStartTime_',
+                 'previousTime_',
+                 'runner_',
+                 'Object',
+                 'Function',
+                 'OldNativeFunction',
+                 'Array',
+                 'Date',
+                 'RegExp',
+                 'Error',
+                 'Thread',
+                 'Server',
+                 'PropertyIterator'];
   // Find all objects.
   var objectList = [];
   Serializer.objectHunt_(intrp, objectList, Serializer.excludeTypes, exclude);
@@ -354,6 +365,7 @@ Serializer.getTypesDeserialize_ = function (intrp) {
     'Thread': Interpreter.Thread,
     'PseudoObject': intrp.Object,
     'PseudoFunction': intrp.Function,
+    'PseudoNativeFunction': intrp.OldNativeFunction,
     'PseudoArray': intrp.Array,
     'PseudoDate': intrp.Date,
     'PseudoRegExp': intrp.RegExp,
