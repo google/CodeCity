@@ -2557,6 +2557,10 @@ Interpreter.prototype.Function = function(owner, proto) {
 Interpreter.prototype.Function.prototype.toString = function() {
   throw Error('Inner class method not callable on prototype');
 };
+/** @param {Interpreter.Value} value @return {boolean} */
+Interpreter.prototype.Function.prototype.hasInstance = function(value) {
+  throw Error('Inner class method not callable on prototype');
+};
 Interpreter.prototype.Function.prototype.addPrototype = function() {
   throw Error('Inner class method not callable on prototype');
 };
@@ -2647,15 +2651,10 @@ Interpreter.prototype.Server = function(owner, port, proto) {
   this.server_;
   throw Error('Inner class constructor not callable on prototype');
 };
-
-/**
- * @param {!Function=} onListening
- * @param {!Function=} onError
- */
+/** @param {!Function=} onListening @param {!Function=} onError */
 Interpreter.prototype.Server.prototype.listen = function(onListening, onError) {
   throw Error('Inner class method not callable on prototype');
 };
-
 /** @param {!Function=} onClose */
 Interpreter.prototype.Server.prototype.unlisten = function(onClose) {
   throw Error('Inner class method not callable on prototype');
@@ -2767,6 +2766,7 @@ Interpreter.prototype.installTypes = function() {
    * The [[HasInstance]] internal method from §15.3.5.3 of the ES5.1 spec.
    * @param {Interpreter.Value} value The value to be checked for
    *     being an instance of this function.
+   * @return {boolean}
    */
   intrp.Function.prototype.hasInstance = function(value) {
     if (!(value instanceof intrp.Object)) {
