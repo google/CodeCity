@@ -2518,16 +2518,6 @@ Interpreter.Value;
 Interpreter.Owner = function() {};
 
 /**
- * Typedef for step functions.
- * @typedef {function(this: Interpreter,
- *                    !Array<!Interpreter.State>,
- *                    !Interpreter.State,
- *                    !Interpreter.Node)
- *               : (!Interpreter.State|undefined)}
- */
-Interpreter.StepFunction;
-
-/**
  * @constructor
  * @param {?Interpreter.Owner=} owner
  * @param {?Interpreter.prototype.Object=} proto
@@ -3237,8 +3227,23 @@ Interpreter.prototype.installTypes = function() {
 };
 
 ///////////////////////////////////////////////////////////////////////////////
-// Functions to handle each node type.
+// Step Functions: one to handle each node type.
 ///////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Typedef for step functions.
+ * 
+ * TODO(cpcallen): It should be possible to declare individual
+ * functions below using this typedef (instead of listing full type
+ * details for each once 
+ * https://github.com/google/closure-compiler/issues/2857 is fixed.
+ * @typedef {function(this: Interpreter,
+ *                    !Array<!Interpreter.State>,
+ *                    !Interpreter.State,
+ *                    !Interpreter.Node)
+ *               : (!Interpreter.State|undefined)}
+ */
+Interpreter.StepFunction;
 
 /**
  * 'Map' of node types to their corresponding step functions.  Note
