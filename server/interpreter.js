@@ -1709,17 +1709,15 @@ Interpreter.prototype.createFunctionFromAST = function(node, scope, source) {
  *     constructor (e.g. Array), false if not (e.g. escape).
  * @return {!Interpreter.prototype.Function} New function.
 */
-Interpreter.prototype.createNativeFunction =
-    function(name, nativeFunc, legalConstructor) {
-  var func = new this.Function(this.ROOT);
-  func.nativeFunc = nativeFunc;
-  var surname = name.replace(/^.*\./, '');
-  // TODO(cpcallen): should include formal parameter names.
-  func.source = 'function ' + surname + '() { [native code] }';
-  nativeFunc.id = name;
-  this.setProperty(func, 'length', nativeFunc.length,
-      Interpreter.READONLY_DESCRIPTOR);
-  func.illegalConstructor = !legalConstructor;
+Interpreter.prototype.createNativeFunction = function(
+    name, nativeFunc, legalConstructor) {
+  // Make sure impl function has an id for serialization.
+  if (!nativeFunc.id) {
+    nativeFunc.id = name;
+  }
+  var func = new this.OldNativeFunction(nativeFunc, legalConstructor);
+  this.setProperty(func, 'name', name.replace(/^.*\./, ''),
+      Interpreter.READONLY_NONENUMERABLE_DESCRIPTOR);
   if (this.builtins_[name]) {
     throw ReferenceError('Builtin "' + name + '" already exists.');
   }
@@ -2567,6 +2565,23 @@ Interpreter.prototype.Function.prototype.addPrototype = function() {
 
 /**
  * @constructor
+ * @extends {Interpreter.prototype.Function}
+ * @param {!Function} impl
+ * @param {boolean} legalConstructor
+ * @param {?Interpreter.Owner=} owner
+ * @param {?Interpreter.prototype.Object=} proto
+ */
+Interpreter.prototype.OldNativeFunction =
+    function(impl, legalConstructor, owner, proto) {
+  /** @type {!Function} */
+  this.impl;
+  /** @type {boolean} */
+  this.illegalConstructor;
+  throw Error('Inner class constructor not callable on prototype');
+};
+
+/**
+ * @constructor
  * @extends {Interpreter.prototype.Object}
  * @param {?Interpreter.Owner=} owner
  * @param {?Interpreter.prototype.Object=} proto
@@ -2805,6 +2820,44 @@ Interpreter.prototype.installTypes = function() {
         Interpreter.NONENUMERABLE_NONCONFIGURABLE_DESCRIPTOR);
     intrp.setProperty(protoObj, 'constructor', this,
         Interpreter.NONENUMERABLE_DESCRIPTOR);
+  };
+
+  /**
+   * Class for a native function.
+   * @constructor
+   * @extends {Interpreter.prototype.OldNativeFunction}
+   * @param {!Function} impl Old-style native function implementation
+   * @param {boolean} legalConstructor True if the function can be used as a
+   *     constructor (e.g. Array), false if not (e.g. escape).
+   * @param {?Interpreter.Owner=} owner Owner object or null (defaults to root).
+   * @param {?Interpreter.prototype.Object=} proto Prototype object or null.
+   */
+  intrp.OldNativeFunction = function(impl, legalConstructor, owner, proto) {
+    intrp.Function.call(/** @type {?} */ (this),
+        (owner === undefined ? intrp.ROOT : owner), proto);
+    if (!impl) { // Deserializing
+      this.impl = function () {};
+      this.illegalConstructor = true;
+      return;
+    }
+    this.impl = impl;
+    intrp.setProperty(this, 'length', impl.length,
+        {writable: false, enumerable: false, configurable: false});
+    this.illegalConstructor = !legalConstructor;
+  };
+
+  intrp.OldNativeFunction.prototype = Object.create(intrp.Function.prototype);
+  intrp.OldNativeFunction.prototype.constructor = intrp.OldNativeFunction;
+
+  /**
+   * Convert this function into a string.
+   * @return {string} String value.
+   * @override
+   */
+  intrp.OldNativeFunction.prototype.toString = function() {
+    // TODO(cpcallen): include formal parameter names?
+    return 'function ' + intrp.getProperty(this, 'name') +
+        '() { [native code] }';
   };
 
   /**
@@ -3549,8 +3602,8 @@ stepFuncs_['CallExpression'] = function (stack, state, node) {
         this.value = undefined;  // Default value if no code.
         return new Interpreter.State(evalNode, scope);
       }
-    } else if (func.nativeFunc) {
-      state.value = func.nativeFunc.apply(state.funcThis_, state.arguments_);
+    } else if (func instanceof this.OldNativeFunction) {
+      state.value = func.impl.apply(state.funcThis_, state.arguments_);
     } else if (func.asyncFunc) {
       this.callAsyncFunction(state);
       return;
