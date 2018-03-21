@@ -2497,6 +2497,29 @@ Interpreter.prototype.Function.prototype.hasInstance = function(value) {
 Interpreter.prototype.Function.prototype.addPrototype = function() {
   throw Error('Inner class method not callable on prototype');
 };
+/**
+ * @param {!Interpreter} intrp The interpreter.
+ * @param {!Interpreter.Thread} thread The current thread.
+ * @param {!Interpreter.State} state The current state.
+ * @param {Interpreter.Value} thisVal The this value passed into function.
+ * @param {!Array<Interpreter.Value>} args The arguments to the call.
+ * @return {Interpreter.Value}
+ */
+Interpreter.prototype.Function.prototype.call = function(
+    intrp, thread, state, thisVal, args) {
+  throw Error('Inner class method not callable on prototype');
+};
+/**
+ * @param {!Interpreter} intrp The interpreter.
+ * @param {!Interpreter.Thread} thread The current thread.
+ * @param {!Interpreter.State} state The current state.
+ * @param {!Array<Interpreter.Value>} args The arguments to the call.
+ * @return {Interpreter.Value}
+ */
+Interpreter.prototype.Function.prototype.construct = function(
+    intrp, thread, state, args) {
+  throw Error('Inner class method not callable on prototype');
+};
 
 /**
  * @constructor
@@ -2513,29 +2536,6 @@ Interpreter.prototype.OldNativeFunction =
   /** @type {boolean} */
   this.illegalConstructor;
   throw Error('Inner class constructor not callable on prototype');
-};
-/**
- * @param {!Interpreter} intrp The interpreter.
- * @param {!Interpreter.Thread} thread The current thread.
- * @param {!Interpreter.State} state The current state.
- * @param {Interpreter.Value} thisVal The this value passed into function.
- * @param {!Array<Interpreter.Value>} args The arguments to the call.
- * @return {Interpreter.Value}
- */
-Interpreter.prototype.OldNativeFunction.prototype.call = function(
-    intrp, thread, state, thisVal, args) {
-  throw Error('Inner class method not callable on prototype');
-};
-/**
- * @param {!Interpreter} intrp The interpreter.
- * @param {!Interpreter.Thread} thread The current thread.
- * @param {!Interpreter.State} state The current state.
- * @param {!Array<Interpreter.Value>} args The arguments to the call.
- * @return {Interpreter.Value}
- */
-Interpreter.prototype.OldNativeFunction.prototype.construct = function(
-    intrp, thread, state, args) {
-  throw Error('Inner class method not callable on prototype');
 };
 
 /**
@@ -2793,6 +2793,34 @@ Interpreter.prototype.installTypes = function() {
   };
 
   /**
+   * Generic functions (neither native nor user) can't be called.
+   * @param {!Interpreter} intrp The interpreter.
+   * @param {!Interpreter.Thread} thread The current thread.
+   * @param {!Interpreter.State} state The current state.
+   * @param {Interpreter.Value} thisVal The this value passed into function.
+   * @param {!Array<Interpreter.Value>} args The arguments to the call.
+   * @return {Interpreter.Value}
+   */
+  intrp.Function.prototype.call = function(
+      intrp, thread, state, thisVal, args) {
+    intrp.throwError(intrp.TYPE_ERROR,
+         "Class constructor " + this + " cannot be invoked without 'new'");
+  };
+
+  /**
+   * Generic functions (neither native nor user) can't be constructed.
+   * @param {!Interpreter} intrp The interpreter.
+   * @param {!Interpreter.Thread} thread The current thread.
+   * @param {!Interpreter.State} state The current state.
+   * @param {!Array<Interpreter.Value>} args The arguments to the call.
+   * @return {Interpreter.Value}
+   */
+  intrp.Function.prototype.construct = function(
+      intrp, thread, state, args) {
+    intrp.throwError(intrp.TYPE_ERROR, this + ' is not a constructor');
+  };
+
+  /**
    * Class for a native function.
    * @constructor
    * @extends {Interpreter.prototype.OldNativeFunction}
@@ -2837,6 +2865,7 @@ Interpreter.prototype.installTypes = function() {
    * @param {Interpreter.Value} thisVal The this value passed into function.
    * @param {!Array<Interpreter.Value>} args The arguments to the call.
    * @return {Interpreter.Value}
+   * @override
    */
   intrp.OldNativeFunction.prototype.call = function(
       intrp, thread, state, thisVal, args) {
@@ -2849,12 +2878,14 @@ Interpreter.prototype.installTypes = function() {
    * @param {!Interpreter.State} state The current state.
    * @param {!Array<Interpreter.Value>} args The arguments to the call.
    * @return {Interpreter.Value}
+   * @override
    */
   intrp.OldNativeFunction.prototype.construct = function(
       intrp, thread, state, args) {
     if (this.illegalConstructor) {
-      // Some functions can't be constrcuted (e.g.: new escape(); fails.)
-      intrp.throwError(intrp.TYPE_ERROR, this + ' is not a constructor');
+      // Pass to super, which will complain about non-callability:
+      intrp.Function.prototype.construct.call(
+          /** @type {?} */ (this), intrp, thread, state, args);
     }
     return this.impl.apply(undefined, args);
   };
@@ -2891,6 +2922,7 @@ Interpreter.prototype.installTypes = function() {
    * @param {Interpreter.Value} thisVal The this value passed into function.
    * @param {!Array<Interpreter.Value>} args The arguments to the call.
    * @return {Interpreter.Value}
+   * @override
    */
   intrp.OldAsyncFunction.prototype.call = function(
       intrp, thread, state, thisVal, args) {
@@ -2942,17 +2974,9 @@ Interpreter.prototype.installTypes = function() {
         /** @type {?} */ (this), intrp, thread, state, thisVal, args);
   };
 
-  /**
-   * @param {!Interpreter} intrp The interpreter.
-   * @param {!Interpreter.Thread} thread The current thread.
-   * @param {!Interpreter.State} state The current state.
-   * @param {!Array<Interpreter.Value>} args The arguments to the call.
-   * @return {Interpreter.Value}
-   */
-  intrp.OldAsyncFunction.prototype.construct = function(
-      intrp, thread, state, args) {
-    intrp.throwError(intrp.TYPE_ERROR, this + ' is not a constructor');
-  };
+  // Async functions not constructable:
+  intrp.OldAsyncFunction.prototype.construct =
+      intrp.Function.prototype.construct;
 
   /**
    * Class for an array
@@ -3696,7 +3720,7 @@ stepFuncs_['CallExpression'] = function (stack, state, node) {
         this.value = undefined;  // Default value if no code.
         return new Interpreter.State(evalNode, scope);
       }
-    } else if (func instanceof this.OldNativeFunction) {
+    } else {
       // TODO(cpcallen): this is here just to satisy type checking of
       // args to .call and .construct.  Perhaps have (non-null)
       // thread arg to step functions?
@@ -3710,8 +3734,6 @@ stepFuncs_['CallExpression'] = function (stack, state, node) {
         state.value = func.call(
             this, this.thread, state, state.funcThis_, state.arguments_);
       }
-    } else {
-      throw Error('Unknown function type??');
     }
   } else {
     // Execution complete.  Put the return value on the stack.
