@@ -155,8 +155,8 @@ $.http.IncomingMessage.prototype.parseParameters_ = function(data) {
     } else {
       var name = vars[i].substring(0, eqIndex);
       var value = vars[i].substring(eqIndex + 1);
+      value = decodeURIComponent(value.replace(/\+/g, ' '));
     }
-    value = decodeURIComponent(value.replace(/\+/g, ' '));
     if (name in this.parameters) {
       // ?foo=1&foo=2&foo=3
       var array = this.parameters[name];

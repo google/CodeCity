@@ -50,7 +50,7 @@ input {
   overflow-x: auto;
   overflow-y: hidden;
   position: absolute;
-  width: 100%
+  width: 100%;
 }
 
 #panelsScroll {
@@ -68,3 +68,48 @@ input {
   height: 100%;
   width: 300px;
 }
+
+#objectPanel {
+  margin: 0;
+}
+
+#objectFail {
+  display: none;
+  padding: 8px;
+}
+
+.objectFailTitle {
+  background-color: #d00;
+  color: #fff;
+}
+
+#objectTitle {
+  border-bottom: 2px solid #444;
+  padding: 8px;
+}
+
+#objectPanel {
+  margin: 0;
+}
+
+#objectResults {
+  margin: 5px 0;
+}
+
+#objectResults>a {
+  color: #444;
+  text-decoration: none;
+}
+
+#objectResults>a>div {
+  padding-left: 8px;
+}
+
+#objectResults>a>div:hover {
+  background-color: #d6e9f8;
+}
+
+#objectResults>a.highlighted>div {
+  background-color: #ccc;
+}
+

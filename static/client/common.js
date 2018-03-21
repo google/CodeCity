@@ -73,12 +73,12 @@ CCC.Common.init = function() {
 /**
  * Verify that a received message is from our parent frame.
  * @param {!Event} e Incoming message event.
+ * @return {*} Value from message.
  */
 CCC.Common.verifyMessage = function(e) {
   var origin = e.origin || e.originalEvent.origin;
   if (origin !== location.origin) {
-    console.error('Message received by frame from unknown origin: ' + origin);
-    return null;
+    throw 'Message received by frame from unknown origin: ' + origin;
   }
   return e.data;
 };

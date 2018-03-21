@@ -65,8 +65,7 @@ $.code.getGlobal.globals = [
   'SyntaxError',
   'TypeError',
   'unescape',
-  'URIError',
-  'user'
+  'URIError'
 ];
 
 $.code.getObject = function(parts) {
@@ -97,10 +96,12 @@ $.code.frameset.jssp = [
   '<head>',
   '  <title>Code City: Code</title>',
   '  <link href="/static/favicon.ico" rel="shortcut icon">',
+  '  <script src="/static/code/common.js"></script>',
+  '  <script src="/static/code/code.js"></script>',
   '</head>',
   '<frameset rows="40%,60%">',
-  '  <frame src="/code/explorer" />',
-  '  <frame src="about:blank" />',
+  '  <frame id="explorer" src="about:blank" />',
+  '  <frame id="editor" src="about:blank" />',
   '</frameset>',
   '<noframes>Sorry, your browser does not support frames!</noframes>',
   '</html>'
@@ -120,6 +121,7 @@ $.code.explorer.jssp = [
   '  <title>Code City: Code Explorer</title>',
   '  <link rel="stylesheet" href="/static/code/style.css">',
   '  <link href="https://fonts.googleapis.com/css?family=Roboto+Mono" rel="stylesheet">',
+  '  <script src="/static/code/common.js"></script>',
   '  <script src="/static/code/explorer.js"></script>',
   '</head>',
   '<body>',
@@ -154,28 +156,20 @@ $.http.router.codeAutocomplete = {regexp: /^\/code\/autocomplete$/, handler: $.c
 
 
 $.code.objectPanel = function(request, response) {
-  // Overwrite on first execution.
-  $.code.objectPanel = $.jssp.compile($.code.objectPanel);
-  $.code.objectPanel.call(this, request, response);
+  var data = {};
+  var parts = JSON.parse(request.parameters.parts);
+  if (parts.length) {
+    var obj = $.code.getObject(parts);
+    if (obj !== null) {
+      data.properties = [];
+      do {
+        data.properties.push(Object.getOwnPropertyNames(obj));
+      } while ((obj = Object.getPrototypeOf(obj)));
+    }
+  } else {
+    data.roots = $.code.getGlobal.globals;
+  }
+  response.write('Code.ObjectPanel.init(' + JSON.stringify(data) + ');');
 };
-$.code.objectPanel.jssp = [
-  '<!doctype html>',
-  '<html>',
-  '<head>',
-  '  <title>Code City: Code Object Panel</title>',
-  '  <link rel="stylesheet" href="/static/code/style.css">',
-  '  <link href="https://fonts.googleapis.com/css?family=Roboto+Mono" rel="stylesheet">',
-  '  <script src="/static/code/objectPanel.js"></script>',
-  '</head>',
-  '<body>',
-  '<%',
-  '  var parts = JSON.parse(request.parameters.parts);',
-  '  var obj = $.code.getObject(parts);',
-  '%>',
-  '<h1><%= obj %></h1>',
-  '<%= JSON.stringify(parts) %>',
-  '</body>',
-  '</html>'
-].join('\n');
 
 $.http.router.objectPanel = {regexp: /^\/code\/objectPanel(\?|$)/, handler: $.code.objectPanel};

@@ -22,278 +22,46 @@
  * @author fraser@google.com (Neil Fraser)
  */
 
+Code.Explorer = {};
+
 // Common DOM elements.
 var input;
 var menuDiv;
 var scrollDiv;
 
-// Width in pixels of each monospaced character in the input.
-// Used to line up the autocomplete menu.
-var SIZE_OF_INPUT_CHARS = 10.8;
+/**
+ * Width in pixels of each monospaced character in the input.
+ * Used to line up the autocomplete menu.
+ */
+Code.Explorer.SIZE_OF_INPUT_CHARS = 10.8;
 
 var oldInputValue;
 var oldInputPartsJSON;
 var oldInputPartsLast;
 var inputPollPid = 0;
 
-function tokenizeSelector(text) {
-  // Trim left whitespace.
-  var trimText = text.replace(/^[\s\xa0]+/, '');
-  if (!trimText) {
-    return [];
-  }
-  var whitespaceLength = text.length - trimText.length;
-  text = trimText;
+/**
+ * Raw string of selector.
+ * E.g. '$.foo["bar"]'
+ */
+Code.Explorer.selector = '';
 
-  function pushString(state, buffer, index) {
-    // Convert state into quote type.
-    var quotes;
-    switch (state) {
-      case 1:
-      case 3:
-        quotes = "'";
-        break;
-      case 2:
-      case 4:
-        quotes = '"';
-        break;
-      default:
-        throw 'Unknown state';
-    }
-    var token = {
-      type: '"',
-      raw: quotes + buffer.join('') + quotes,
-      valid: true
-    };
-    token.index = whitespaceLength + index - (token.raw.length - 1);
-    do {
-      var raw = quotes + buffer.join('') + quotes;
-      // Attempt to parse a string.
-      try {
-        var str = eval(raw);
-        break;
-      } catch (e) {
-        // Invalid escape found.  Trim off last char and try again.
-        buffer.pop();
-        token.valid = false;
-      }
-    } while (true);
-    buffer.length = 0;
-    token.value = str;
-    tokens.push(token);
+/**
+ * Got a ping from someone.  Something might have changed and need updating.
+ */
+Code.Explorer.receiveMessage = function() {
+  // Check to see if the stored values have changed.
+  var selector = sessionStorage.getItem(Code.Common.SELECTOR);
+  if (selector === Code.Explorer.selector) {
+    return;
   }
-  function pushUnparsed(buffer, index) {
-    var raw = buffer.join('');
-    buffer.length = 0;
-    if (raw) {
-      var token = {
-        type: 'unparsed',
-        raw: raw,
-        index: whitespaceLength + index - raw.length
-      };
-      tokens.push(token);
-    }
+  // Propagate the ping down the tree of frames.
+  Code.Explorer.selector = selector;
+  if (oldInputValue !== selector) {
+    var parts = Code.Common.selectorToParts(selector);
+    setInput(parts);
   }
-
-  // Split out strings.
-  var state = 0;
-  // 0 - non-string state
-  // 1 - single quote string
-  // 2 - double quote string
-  // 3 - backslash in single quote string
-  // 4 - backslash in double quote string
-  var tokens = [];
-  var buffer = [];
-  for (var i = 0; i < text.length; i++) {
-    var char = text[i];
-    if (state === 0) {
-      if (char === "'") {
-        pushUnparsed(buffer, i);
-        state = 1;
-      } else if (char === '"') {
-        pushUnparsed(buffer, i);
-        state = 2;
-      } else {
-        buffer.push(char);
-      }
-    } else if (state === 1) {
-      if (char === "'") {
-        pushString(state, buffer, i);
-        state = 0;
-      } else {
-        buffer.push(char);
-        if (char === '\\') {
-          state = 3;
-        }
-      }
-    } else if (state === 2) {
-      if (char === '"') {
-        pushString(state, buffer, i);
-        state = 0;
-      } else {
-        buffer.push(char);
-        if (char === '\\') {
-          state = 4;
-        }
-      }
-    } else if (state === 3) {
-      buffer.push(char);
-      state = 1;
-    } else if (state === 4) {
-      buffer.push(char);
-      state = 2;
-    }
-  }
-  if (state !== 0) {
-    pushString(state, buffer, i);
-  } else if (buffer.length) {
-    pushUnparsed(buffer, i);
-  }
-
-  // Split out brackets: [ ]
-  for (var i = tokens.length - 1; i >= 0; i--) {
-    var token = tokens[i];
-    if (token.type === 'unparsed') {
-      var index = token.index + token.raw.length;
-      // Split string on brackets.
-      var split = token.raw.split(/(\s*(?:\[|\])\s*)/);
-      for (var j = split.length - 1; j >= 0; j--) {
-        var raw = split[j];
-        index -= raw.length;
-        if (raw === '') {
-          split.splice(j, 1);  // Delete the empty string.
-          continue;
-        } else if (raw.trim() === '[') {
-          split[j] = {
-            type: '[',
-            valid: true
-          };
-        } else if (raw.trim() === ']') {
-          split[j] = {
-            type: ']',
-            valid: true
-          };
-        } else {
-          split[j] = {
-            type: 'unparsed'
-          };
-        }
-        split[j].raw = raw;
-        split[j].index = index;
-      }
-      // Replace token with split array.
-      split.unshift(i, 1);
-      Array.prototype.splice.apply(tokens, split);
-    }
-  }
-
-  // Parse numbers.
-  for (var i = 1; i < tokens.length; i++) {
-    var token = tokens[i];
-    if (tokens[i - 1].type === '[' && token.type === 'unparsed') {
-      token.type = '#';
-      token.value = NaN;
-      token.valid = false;
-      // Does not support E-notation or NaN.
-      if (/^\s*[-+]?(\d*\.?\d*|Infinity)\s*$/.test(token.raw)) {
-        token.value = Number(token.raw);
-        token.valid = !isNaN(token.value);
-      }
-    }
-  }
-
-  // Split member expressions and parse identifiers.
-  var unicodeRegex = /\\u([0-9A-F]{4})/ig;
-  function decodeUnicode(m, p1) {
-    return String.fromCodePoint(parseInt(p1, 16));
-  }
-  for (var i = tokens.length - 1; i >= 0; i--) {
-    var token = tokens[i];
-    if (token.type === 'unparsed') {
-      var index = token.index + token.raw.length;
-      // Split string on periods.
-      var split = token.raw.split(/(\s*\.\s*)/);
-      for (var j = split.length - 1; j >= 0; j--) {
-        var raw = split[j];
-        index -= raw.length;
-        if (raw === '') {
-          split.splice(j, 1);  // Delete the empty string.
-          continue;
-        } else if (raw.trim() === '.') {
-          split[j] = {
-            type: '.',
-            valid: true
-          };
-        } else {
-          // Parse Unicode escapes in identifiers.
-          var valid = true;
-          var value = split[j];
-          while (true) {
-            var test = value.replace(unicodeRegex, '');
-            if (test.indexOf('\\') === -1) {
-              break;
-            }
-            // Invalid escape found.  Trim off last char and try again.
-            value = value.substring(0, value.length - 1);
-            valid = false;
-          }
-          // Decode Unicode.
-          value = value.replace(unicodeRegex, decodeUnicode);
-          split[j] = {
-            type: 'id',
-            value: value,
-            valid: valid
-          };
-        }
-        split[j].raw = raw;
-        split[j].index = index;
-      }
-      // Replace token with split array.
-      split.unshift(i, 1);
-      Array.prototype.splice.apply(tokens, split);
-    }
-  }
-
-  // Validate order of tokens.
-  var state = 0;
-  for (var i = 0; i < tokens.length; i++) {
-    var token = tokens[i];
-    if (state === 0) {
-      if (token.type === 'id') {
-        state = 1;
-      } else {
-        break;
-      }
-    } else if (state === 1) {
-      if (token.type === '.') {
-        state = 0;
-      } else if (token.type === '[') {
-        state = 2;
-      } else {
-        break;
-      }
-    } else if (state === 2) {
-      if (token.type === '"' || token.type === '#') {
-        state = 3;
-      } else {
-        break;
-      }
-    } else if (state === 3) {
-      if (token.type === ']') {
-        state = 1;
-      } else {
-        break;
-      }
-    }
-  }
-  // Remove any illegal tokens.
-  if (i < tokens.length) {
-    tokens = tokens.slice(0, i);
-    // Add fail token to prevent autocompletion.
-    tokens.push({type: '?', raw: '', valid: false});
-  }
-  return tokens;
-}
+};
 
 // Handle any changes to the input field.
 function inputChange() {
@@ -301,7 +69,7 @@ function inputChange() {
     return;
   }
   oldInputValue = input.value;
-  var tokens = tokenizeSelector(input.value);
+  var tokens = Code.Common.tokenizeSelector(input.value);
   var parts = [];
   var lastToken = null;
   var lastName = null;
@@ -328,7 +96,7 @@ function inputChange() {
     oldInputPartsJSON = partsJSON;
     sendAutocomplete(partsJSON);
     hideAutocompleteMenu();
-    loadPanels(parts);
+    Code.Explorer.loadPanels(parts);
   }
 }
 
@@ -454,7 +222,7 @@ function showAutocompleteMenu(options, index) {
   }
   menuDiv.style.display = 'block';
   menuDiv.scrollTop = 0;
-  var left = Math.round(index * SIZE_OF_INPUT_CHARS);
+  var left = Math.round(index * Code.Explorer.SIZE_OF_INPUT_CHARS);
   var maxLeft = window.innerWidth - menuDiv.offsetWidth;
   menuDiv.style.left = Math.min(left, maxLeft) + 'px';
 }
@@ -500,37 +268,25 @@ function autocompleteClick(e) {
   var option = e.target.getAttribute('data-option');
   var parts = JSON.parse(oldInputPartsJSON);
   parts.push(option);
-  setInput(parts);
+  Code.Explorer.setParts(parts);
 }
+
+Code.Explorer.setParts = function(parts) {
+  var selector = Code.Common.partsToSelector(parts);
+  sessionStorage.setItem(Code.Common.SELECTOR, selector);
+  window.parent.postMessage('ping', '*');
+};
 
 // Set the input to be the specified path (e.g. ['$', 'user', 'location']).
 function setInput(parts) {
   hideAutocompleteMenu();
-  var value = '';
-  for (var i = 0; i < parts.length; i++) {
-    var part = parts[i];
-    if (/^[A-Z_$][0-9A-Z_$]*$/i.test(part)) {
-      if (i !== 0) {
-        value += '.';
-      }
-      value += part;
-    } else {
-      value += '[';
-      if (/^-?\d{1,15}$/.test(part)) {
-        value += part;
-      } else {
-        value += JSON.stringify(part);
-      }
-      value += ']';
-    }
-
-  }
+  var value = Code.Common.partsToSelector(parts);
   input.value = value;
   input.focus();
   oldInputValue = value;  // Don't autocomplete this value.
   oldInputPartsJSON = JSON.stringify(parts);
   oldInputPartsLast = null;
-  loadPanels(parts);
+  Code.Explorer.loadPanels(parts);
 }
 
 // Start polling for changes.
@@ -582,7 +338,7 @@ function inputKey(e) {
       if (oldInputPartsLast && oldInputPartsLast.valid) {
         parts.push(oldInputPartsLast.value);
       }
-      setInput(parts);
+      Code.Explorer.setParts(parts);
     }
   }
   if (e.keyCode === key.tab) {
@@ -592,18 +348,20 @@ function inputKey(e) {
       var optionCount = 0;
       do {
         optionCount++;
-        prefix = getPrefix(prefix, option.getAttribute('data-option'));
+        prefix = Code.Explorer.getPrefix(prefix,
+            option.getAttribute('data-option'));
         option = option.nextSibling;
       } while (option);
       if (optionCount === 1) {
         // There was only one option.  Choose it.
         var parts = JSON.parse(oldInputPartsJSON);
         parts.push(prefix);
-        setInput(parts);
+        Code.Explorer.setParts(parts);
       } else if (oldInputPartsLast) {
         if (oldInputPartsLast.type === 'id') {
           // Append the common prefix to the input.
-          input.value = input.value.substring(0, oldInputPartsLast.index) + prefix;
+          input.value = input.value.substring(0, oldInputPartsLast.index) +
+              prefix;
         }
         // TODO: Tab-completion of partial strings and numbers.
       }
@@ -636,7 +394,13 @@ function inputKey(e) {
   }
 }
 
-function getPrefix(str1, str2) {
+/**
+ * Compute and return the common prefix of two (relatively short) strings.
+ * @param {string} str1 One string.
+ * @param {string} str1 Another string.
+ * @return {string} Common prefix.
+ */
+Code.Explorer.getPrefix = function(str1, str2) {
   var len = Math.min(str1.length, str2.length);
   for (var i = 0; i < len; i++) {
     if (str1[i] !== str2[i]) {
@@ -644,7 +408,7 @@ function getPrefix(str1, str2) {
     }
   }
   return str1.substring(0, i);
-}
+};
 
 // If the cursor moves away from the end as a result of the mouse,
 // close the autocomplete menu.
@@ -657,61 +421,77 @@ var panelCount = 0;
 // Size of temporary spacer margin for smooth scrolling after deletion.
 var panelSpacerMargin = 0;
 
-function loadPanels(parts) {
+/**
+ * Update the panels with the specified list of parts.
+ * @param {!Array<string>} parts List of parts.
+ */
+Code.Explorer.loadPanels = function(parts) {
+  // Store parts in a sessionStorage so that the panels can highlight
+  // the current items.
+  sessionStorage.setItem('code parts', JSON.stringify(parts));
   for (var i = 0; i <= parts.length; i++) {
     var component = JSON.stringify(parts.slice(0, i));
     var iframe = document.getElementById('objectPanel' + i);
     if (iframe) {
       if (iframe.getAttribute('data-component') === component) {
+        // Highlight current item.
+        iframe.contentWindow.postMessage('ping', '*');
         continue;
       } else {
         while (panelCount > i) {
-          removePanel();
+          Code.Explorer.removePanel();
         }
       }
     }
-    addPanel(component);
+    iframe = Code.Explorer.addPanel(component);
   }
   while (panelCount > i) {
-    removePanel();
+    Code.Explorer.removePanel();
   }
-}
+};
 
-// Add an object panel to the right.
-function addPanel(component) {
+/**
+ * Add an object panel to the right.
+ * @param {string} component Stringified parts list.
+ */
+Code.Explorer.addPanel = function(component) {
   panelsScroll = document.getElementById('panelsScroll');
   var iframe = document.createElement('iframe');
   iframe.id = 'objectPanel' + panelCount;
-  iframe.src = '/code/objectPanel?parts=' + encodeURIComponent(component);
+  iframe.src = '/static/code/objectPanel.html#' + encodeURI(component);
   iframe.setAttribute('data-component', component);
   var spacer = document.getElementById('panelSpacer');
   panelsScroll.insertBefore(iframe, spacer);
   panelCount++;
   panelSpacerMargin = Math.max(0, panelSpacerMargin - iframe.offsetWidth);
-  scrollPanel();
-}
+  Code.Explorer.scrollPanel();
+};
 
-// Remove the right-most panel.
-function removePanel() {
+/**
+ * Remove the right-most panel.
+ */
+Code.Explorer.removePanel = function() {
   panelCount--;
   var iframe = document.getElementById('objectPanel' + panelCount);
   panelSpacerMargin += iframe.offsetWidth;
   iframe.parentNode.removeChild(iframe);
-  scrollPanel();
-}
+  Code.Explorer.scrollPanel();
+};
 
-// After addition, quickly scroll the panels all the way to see the right edge.
-// After deletion, reduce the spacer so that the panels scroll to the edge.
-function scrollPanel() {
+/**
+ * After addition, quickly scroll the panels all the way to see the right edge.
+ * After deletion, reduce the spacer so that the panels scroll to the edge.
+ */
+Code.Explorer.scrollPanel = function() {
   var spacer = document.getElementById('panelSpacer');
   var speed = 20;
-  clearTimeout(scrollPanel.pid_);
+  clearTimeout(Code.Explorer.scrollPid_);
   if (panelSpacerMargin > 0) {
     // Reduce spacer.
     panelSpacerMargin = Math.max(0, panelSpacerMargin - speed);
     spacer.style.marginRight = panelSpacerMargin + 'px';
     if (panelSpacerMargin > 0) {
-      scrollPanel.pid_ = setTimeout(scrollPanel, 10);
+      Code.Explorer.scrollPid_ = setTimeout(Code.Explorer.scrollPanel, 10);
     }
   } else {
     spacer.style.marginRight = 0;
@@ -720,13 +500,21 @@ function scrollPanel() {
     var oldScroll = panels.scrollLeft;
     panels.scrollLeft += speed;
     if (panels.scrollLeft > oldScroll) {
-      scrollPanel.pid_ = setTimeout(scrollPanel, 10);
+      Code.Explorer.scrollPid_ = setTimeout(Code.Explorer.scrollPanel, 10);
     }
   }
-}
+};
 
-// Page has loaded, initialize the explorer.
-function init() {
+/**
+ * PID of currently executing scroll animation.
+ * @private
+ */
+Code.Explorer.scrollPid_ = 0;
+
+/**
+ * Page has loaded, initialize the explorer.
+ */
+Code.Explorer.init = function() {
   input = document.getElementById('input');
   input.addEventListener('focus', inputFocus);
   input.addEventListener('blur', inputBlur);
@@ -736,8 +524,9 @@ function init() {
   scrollDiv = document.getElementById('autocompleteMenuScroll');
   scrollDiv.addEventListener('mousedown', autocompleteMouseDown);
   scrollDiv.addEventListener('click', autocompleteClick);
-  setInput(['$']);
-  oldInputPartsJSON = null;  // Allow autocompletion of initial value.;
-}
+  oldInputPartsJSON = null;  // Allow autocompletion of initial value.
+  Code.Explorer.receiveMessage();
+};
 
-window.addEventListener('load', init);
+window.addEventListener('load', Code.Explorer.init);
+window.addEventListener('message', Code.Explorer.receiveMessage, false);
