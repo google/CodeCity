@@ -1724,84 +1724,24 @@ Interpreter.prototype.createNativeFunction = function(
  * Create a new native asynchronous function.  Asynchronous native
  * functions are presumed not to be legal constructors.  Function will
  * be owned by root.
+ * TODO(cpcallen): de-dupe this with createNativeFunction, above.
  * @param {string} name Name of new function.
  * @param {!Function} asyncFunc JavaScript function.
  * @return {!Interpreter.prototype.Function} New function.
  */
 Interpreter.prototype.createAsyncFunction = function(name, asyncFunc) {
-  var func = new this.Function(this.ROOT);
-  func.asyncFunc = asyncFunc;
-  var surname = name.replace(/^.*\./, '');
-  func.source = 'function ' + surname + '() { [native async code] }';
-  asyncFunc.id = name;
-  this.setProperty(func, 'length', asyncFunc.length,
-      Interpreter.READONLY_DESCRIPTOR);
-  func.illegalConstructor = true;
+  // Make sure impl function has an id for serialization.
+  if (!asyncFunc.id) {
+    asyncFunc.id = name;
+  }
+  var func = new this.OldAsyncFunction(asyncFunc);
+  this.setProperty(func, 'name', name.replace(/^.*\./, ''),
+      Interpreter.READONLY_NONENUMERABLE_DESCRIPTOR);
   if (this.builtins_[name]) {
     throw ReferenceError('Builtin "' + name + '" already exists.');
   }
   this.builtins_[name] = func;
   return func;
-};
-
-/**
- * Call a native asynchronous function.
- * @param {!Interpreter.State} state State for currently-being-invoked
- *     CallExpression.
- */
-Interpreter.prototype.callAsyncFunction = function(state) {
-  var intrp = this;
-  var done = false;
-
-  /**
-   * Invariant check to verify it's safe to resolve or reject this
-   * async function call.  Blow up if the call has already been
-   * resolved/rejected, or if the thread does not appear to be in a
-   * plausible state.
-   * @param {!number} id Thread ID for this async function call.
-   */
-  var check = function(id) {
-    if (done) {
-      throw Error('Async function resolved or rejected more than once');
-    }
-    done = true;
-    var thread = intrp.threads[id];
-    if (!(thread instanceof Interpreter.Thread) ||
-        thread.status !== Interpreter.Thread.Status.BLOCKED ||
-        thread.stateStack_[thread.stateStack_.length - 1].node.type !=
-        'CallExpression') {
-      throw Error('Async function thread state looks wrong');
-    }
-  };
-
-  var callbacks = (function(id) {
-    return [
-      function resolve(value) {
-        check(id);
-        state.value = value;
-        intrp.threads[id].status = Interpreter.Thread.Status.READY;
-        intrp.go_();
-      },
-      function reject(value) {
-        check(id);
-        // Create fake 'throw' state on appropriate thread.
-        // TODO(cpcallen): find a more elegant way to do this.
-        var thread = intrp.threads[id];
-        var node = new Interpreter.Node;
-        node['type'] = 'ThrowStatement';
-        var throwState = new Interpreter.State(node,
-            thread.stateStack_[thread.stateStack_.length - 1].scope);
-        throwState.done_ = true;
-        throwState.value = value;
-        thread.stateStack_.push(throwState);
-        intrp.threads[id].status = Interpreter.Thread.Status.READY;
-        intrp.go_();
-      }];
-  })(this.thread.id);
-  // Prepend resolve, reject to arguments.
-  var args = callbacks.concat(state.arguments_);
-  this.thread.status = Interpreter.Thread.Status.BLOCKED;
-  state.func_.asyncFunc.apply(state.funcThis_, args);
 };
 
 /**
@@ -2574,15 +2514,40 @@ Interpreter.prototype.OldNativeFunction =
   this.illegalConstructor;
   throw Error('Inner class constructor not callable on prototype');
 };
-/** @type {Interpreter.CallImpl} */
+/**
+ * @param {!Interpreter} intrp The interpreter.
+ * @param {!Interpreter.Thread} thread The current thread.
+ * @param {!Interpreter.State} state The current state.
+ * @param {Interpreter.Value} thisVal The this value passed into function.
+ * @param {!Array<Interpreter.Value>} args The arguments to the call.
+ * @return {Interpreter.Value}
+ */
 Interpreter.prototype.OldNativeFunction.prototype.call = function(
     intrp, thread, state, thisVal, args) {
   throw Error('Inner class method not callable on prototype');
 };
-/** @type {Interpreter.ConstructImpl} */
+/**
+ * @param {!Interpreter} intrp The interpreter.
+ * @param {!Interpreter.Thread} thread The current thread.
+ * @param {!Interpreter.State} state The current state.
+ * @param {!Array<Interpreter.Value>} args The arguments to the call.
+ * @return {Interpreter.Value}
+ */
 Interpreter.prototype.OldNativeFunction.prototype.construct = function(
     intrp, thread, state, args) {
   throw Error('Inner class method not callable on prototype');
+};
+
+/**
+ * @constructor
+ * @extends {Interpreter.prototype.OldNativeFunction}
+ * @param {!Function} impl
+ * @param {?Interpreter.Owner=} owner
+ * @param {?Interpreter.prototype.Object=} proto
+ */
+Interpreter.prototype.OldAsyncFunction =
+    function(impl, owner, proto) {
+  throw Error('Inner class constructor not callable on prototype');
 };
 
 /**
@@ -2902,6 +2867,88 @@ Interpreter.prototype.installTypes = function() {
       intrp.throwError(intrp.TYPE_ERROR, this + ' is not a constructor');
     }
     return this.impl.apply(undefined, args);
+  };
+
+  /**
+   * Class for an async function.
+   * @constructor
+   * @extends {Interpreter.prototype.OldAsyncFunction}
+   * @param {!Function} impl Old-style native function implementation
+   * @param {?Interpreter.Owner=} owner Owner object or null.
+   * @param {?Interpreter.prototype.Object=} proto Prototype object or null.
+   */
+  intrp.OldAsyncFunction = function(impl, owner, proto) {
+    intrp.Function.call(/** @type {?} */ (this), owner, proto);
+    if (!impl) { // Deserializing
+      this.impl = function () {};
+      this.illegalConstructor = true;
+      return;
+    }
+    this.impl = impl;
+    intrp.setProperty(this, 'length', impl.length,
+        {writable: false, enumerable: false, configurable: false});
+    this.illegalConstructor = true;
+  };
+
+  intrp.OldAsyncFunction.prototype =
+      Object.create(intrp.OldNativeFunction.prototype);
+  intrp.OldAsyncFunction.prototype.constructor = intrp.OldAsyncFunction;
+
+  /** @type {Interpreter.CallImpl} */
+  intrp.OldAsyncFunction.prototype.call = function(
+      intrp, thread, state, thisVal, args) {
+    var done = false;
+
+    /**
+     * Invariant check to verify it's safe to resolve or reject this
+     * async function call.  Blow up if the call has already been
+     * resolved/rejected, or if the thread does not appear to be in a
+     * plausible state.
+     */
+    var check = function() {
+      if (done) {
+        throw Error('Async function resolved or rejected more than once');
+      }
+      done = true;
+      if (thread.status !== Interpreter.Thread.Status.BLOCKED ||
+          thread.stateStack_[thread.stateStack_.length - 1] !== state) {
+        throw Error('Thread state corrupt completing async function call??');
+      }
+    };
+
+    var callbacks = [
+      function resolve(value) {
+        check();
+        state.value = value;
+        thread.status = Interpreter.Thread.Status.READY;
+        intrp.go_();
+      },
+      function reject(value) {
+        check();
+        // Create fake 'throw' state on appropriate thread.
+        // TODO(cpcallen): find a more elegant way to do this.
+        var node = new Interpreter.Node;
+        node['type'] = 'ThrowStatement';
+        var throwState = new Interpreter.State(node,
+            thread.stateStack_[thread.stateStack_.length - 1].scope);
+        throwState.done_ = true;
+          throwState.value = value;
+        thread.stateStack_.push(throwState);
+        thread.status = Interpreter.Thread.Status.READY;
+        intrp.go_();
+      }];
+    // Prepend resolve, reject to arguments.
+    args = callbacks.concat(args);
+    thread.status = Interpreter.Thread.Status.BLOCKED;
+    // return super(arguments):
+    return intrp.OldNativeFunction.prototype.call.call(
+        this, intrp, thread, state, thisVal, args);
+  };
+
+  /** @type {Interpreter.ConstructImpl} */
+  intrp.OldAsyncFunction.prototype.construct = function(
+      intrp, thread, state, args) {
+    intrp.throwError(intrp.TYPE_ERROR, this + ' is not a constructor');
   };
 
   /**
@@ -3660,8 +3707,6 @@ stepFuncs_['CallExpression'] = function (stack, state, node) {
         state.value = func.call(
             this, this.thread, state, state.funcThis_, state.arguments_);
       }
-    } else if (func.asyncFunc) {
-      this.callAsyncFunction(state);
     } else {
       throw Error('Unknown function type??');
     }
