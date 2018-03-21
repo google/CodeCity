@@ -632,22 +632,17 @@ Interpreter.prototype.initObject_ = function() {
   var wrapper;
   // Object constructor.
   wrapper = function(value) {
-    if (value === undefined || value === null) {
-      // Create a new object.
-      if (intrp.calledWithNew()) {
-        // Called as new Object().
-        return this;
-      } else {
-        // Called as Object().
-        return new intrp.Object(intrp.thread.perms());
-      }
-    }
-    if (!(value instanceof intrp.Object)) {
+    if (value instanceof intrp.Object) {
+      return value;
+    } else if (typeof value === 'boolean' || typeof value === 'number' ||
+        typeof value === 'string') {
       // No boxed primitives in Code City.
-      intrp.throwError(intrp.TYPE_ERROR, 'Boxing of primitives not supported.');
-    }
-    // Return the provided object.
-    return value;
+      intrp.throwError(intrp.TYPE_ERROR, 'Boxed primitives not supported.');
+    } else if (value === undefined || value === null) {
+      return new intrp.Object(intrp.thread.perms());
+    } else {
+      throw TypeError('Unknown value type??');
+    }      
   };
   this.createNativeFunction('Object', wrapper, true);
 
@@ -2579,6 +2574,16 @@ Interpreter.prototype.OldNativeFunction =
   this.illegalConstructor;
   throw Error('Inner class constructor not callable on prototype');
 };
+/** @type {Interpreter.CallImpl} */
+Interpreter.prototype.OldNativeFunction.prototype.call = function(
+    intrp, thread, state, thisVal, args) {
+  throw Error('Inner class method not callable on prototype');
+};
+/** @type {Interpreter.ConstructImpl} */
+Interpreter.prototype.OldNativeFunction.prototype.construct = function(
+    intrp, thread, state, args) {
+  throw Error('Inner class method not callable on prototype');
+};
 
 /**
  * @constructor
@@ -2674,6 +2679,29 @@ Interpreter.prototype.Server.prototype.listen = function(onListening, onError) {
 Interpreter.prototype.Server.prototype.unlisten = function(onClose) {
   throw Error('Inner class method not callable on prototype');
 };
+
+/**
+ * Typedef for the functions used to implement OldNativeFunction.call.
+ * @typedef {function(this: Interpreter.prototype.OldNativeFunction,
+ *                    !Interpreter,
+ *                    !Interpreter.Thread,
+ *                    !Interpreter.State,
+ *                    Interpreter.Value,
+ *                    !Array<Interpreter.Value>)
+ *               : Interpreter.Value}
+ */
+Interpreter.CallImpl;
+
+/**
+ * Typedef for the functions used to implement OldNativeFunction.construct.
+ * @typedef {function(this: Interpreter.prototype.OldNativeFunction,
+ *                    !Interpreter,
+ *                    !Interpreter.Thread,
+ *                    !Interpreter.State,
+ *                    !Array<Interpreter.Value>)
+ *               : Interpreter.Value}
+ */
+Interpreter.ConstructImpl;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -2858,6 +2886,22 @@ Interpreter.prototype.installTypes = function() {
     // TODO(cpcallen): include formal parameter names?
     return 'function ' + intrp.getProperty(this, 'name') +
         '() { [native code] }';
+  };
+
+  /** @type {Interpreter.CallImpl} */
+  intrp.OldNativeFunction.prototype.call = function(
+      intrp, thread, state, thisVal, args) {
+    return this.impl.apply(thisVal, args);
+  };
+
+  /** @type {Interpreter.ConstructImpl} */
+  intrp.OldNativeFunction.prototype.construct = function(
+      intrp, thread, state, args) {
+    if (this.illegalConstructor) {
+      // Some functions can't be constrcuted (e.g.: new escape(); fails.)
+      intrp.throwError(intrp.TYPE_ERROR, this + ' is not a constructor');
+    }
+    return this.impl.apply(undefined, args);
   };
 
   /**
@@ -3603,17 +3647,28 @@ stepFuncs_['CallExpression'] = function (stack, state, node) {
         return new Interpreter.State(evalNode, scope);
       }
     } else if (func instanceof this.OldNativeFunction) {
-      state.value = func.impl.apply(state.funcThis_, state.arguments_);
+      // TODO(cpcallen): this is here just to satisy type checking of
+      // args to .call and .construct.  Perhaps have (non-null)
+      // thread arg to step functions?
+      if (this.thread === null) {
+        throw TypeError('No current thread??');
+      }
+      if (state.isConstructor) {
+        state.value = func.construct(
+            this, this.thread, state, state.arguments_);
+      } else {
+        state.value = func.call(
+            this, this.thread, state, state.funcThis_, state.arguments_);
+      }
     } else if (func.asyncFunc) {
       this.callAsyncFunction(state);
-      return;
     } else {
       throw Error('Unknown function type??');
     }
   } else {
     // Execution complete.  Put the return value on the stack.
     stack.pop();
-    // Program node may not exist if this is a setTimeout function.
+    // Previous stack frame may not exist if this is a setTimeout function.
     if (stack.length > 0) {
       if (state.isConstructor && typeof state.value !== 'object') {
         stack[stack.length - 1].value = state.funcThis_;
