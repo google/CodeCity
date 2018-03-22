@@ -24,21 +24,35 @@
 
 Code.Explorer = {};
 
-// Common DOM elements.
-var input;
-var menuDiv;
-var scrollDiv;
-
 /**
  * Width in pixels of each monospaced character in the input.
  * Used to line up the autocomplete menu.
  */
 Code.Explorer.SIZE_OF_INPUT_CHARS = 10.8;
 
-var oldInputValue;
-var oldInputPartsJSON;
-var oldInputPartsLast;
-var inputPollPid = 0;
+/**
+ * Value of the input field last time it was processed.
+ * @type {?string}
+ */
+Code.Explorer.oldInputValue = null;
+
+/**
+ * JSON-encoded list of complete object selector parts.
+ * @type {string}
+ */
+Code.Explorer.oldInputPartsJSON = 'null';
+
+/**
+ * Final part which may not be complete and isn't included in the parts list.
+ * E.g. '$.foo.bar' the 'bar' might become 'bart' or 'barf'.
+ * @type {?Object}
+ */
+Code.Explorer.oldInputPartsLast = null;
+
+/**
+ * PID of task polling for changes to the input field.
+ */
+Code.Explorer.inputPollPid = 0;
 
 /**
  * Raw string of selector.
@@ -57,18 +71,21 @@ Code.Explorer.receiveMessage = function() {
   }
   // Propagate the ping down the tree of frames.
   Code.Explorer.selector = selector;
-  if (oldInputValue !== selector) {
+  if (Code.Explorer.oldInputValue !== selector) {
     var parts = Code.Common.selectorToParts(selector);
-    setInput(parts);
+    Code.Explorer.setInput(parts);
   }
 };
 
-// Handle any changes to the input field.
-function inputChange() {
-  if (oldInputValue === input.value) {
+/**
+ * Handle any changes to the input field.
+ */
+Code.Explorer.inputChange = function() {
+  var input = document.getElementById('input');
+  if (Code.Explorer.oldInputValue === input.value) {
     return;
   }
-  oldInputValue = input.value;
+  Code.Explorer.oldInputValue = input.value;
   var tokens = Code.Common.tokenizeSelector(input.value);
   var parts = [];
   var lastToken = null;
@@ -88,33 +105,38 @@ function inputChange() {
       lastName = null;
     }
   }
-  oldInputPartsLast = lastName;
+  Code.Explorer.oldInputPartsLast = lastName;
   var partsJSON = JSON.stringify(parts);
-  if (oldInputPartsJSON === partsJSON) {
-    updateAutocompleteMenu(lastToken);
+  if (Code.Explorer.oldInputPartsJSON === partsJSON) {
+    Code.Explorer.updateAutocompleteMenu(lastToken);
   } else {
-    oldInputPartsJSON = partsJSON;
-    sendAutocomplete(partsJSON);
-    hideAutocompleteMenu();
+    Code.Explorer.oldInputPartsJSON = partsJSON;
+    Code.Explorer.sendAutocomplete(partsJSON);
+    Code.Explorer.hideAutocompleteMenu();
     Code.Explorer.loadPanels(parts);
   }
-}
+};
 
-// Send a request to Code City's autocomplete service.
-function sendAutocomplete(partsJSON) {
-  var xhr = sendAutocomplete.httpRequest;
+/**
+ * Send a request to Code City's autocomplete service.
+ * @param {string} partsJSON Stringified array of parts to send to Code City.
+ */
+Code.Explorer.sendAutocomplete = function(partsJSON) {
+  var xhr = Code.Explorer.sendAutocomplete.httpRequest_;
   xhr.abort();
   xhr.open('POST', '/code/autocomplete', true);
   xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-  xhr.onreadystatechange = receiveAutocomplete;
+  xhr.onreadystatechange = Code.Explorer.receiveAutocomplete;
   xhr.send('parts=' + encodeURIComponent(partsJSON));
   console.log('Sending to CC: ' + partsJSON);
-}
-sendAutocomplete.httpRequest = new XMLHttpRequest();
+};
+Code.Explorer.sendAutocomplete.httpRequest_ = new XMLHttpRequest();
 
-// Got a response from Code City's autocomplete service.
-function receiveAutocomplete() {
-  var xhr = sendAutocomplete.httpRequest;
+/**
+ * Got a response from Code City's autocomplete service.
+ */
+Code.Explorer.receiveAutocomplete = function() {
+  var xhr = Code.Explorer.sendAutocomplete.httpRequest_;
   if (xhr.readyState !== 4) {
     return;  // Not ready yet.
   }
@@ -123,14 +145,19 @@ function receiveAutocomplete() {
     return;
   }
   var data = JSON.parse(xhr.responseText);
-  filterShadowed(data);
-  autocompleteData = data || [];
+  Code.Explorer.filterShadowed(data);
+  Code.Explorer.autocompleteData = data || [];
   // Trigger the input to show autocompletion.
-  oldInputValue = undefined;
-  inputChange();
-}
+  Code.Explorer.oldInputValue = null;
+  Code.Explorer.inputChange();
+};
 
-function updateAutocompleteMenu(token) {
+/**
+ * Given a partial prefix, filter the autocompletion menu and display
+ * all matching options.
+ * @param {!Object} token Last token in the parts list.
+ */
+Code.Explorer.updateAutocompleteMenu = function(token) {
   var prefix = '';
   var index = token ? token.index : 0;
   if (token) {
@@ -148,9 +175,9 @@ function updateAutocompleteMenu(token) {
   if (!token || token.type === '.' || token.type === 'id' ||
       token.type === '[' || token.type === '"' || token.type === '#') {
     // Flatten the options and filter.
-    for (var i = 0; i < autocompleteData.length; i++) {
-      for (var j = 0; j < autocompleteData[i].length; j++) {
-        var option = autocompleteData[i][j];
+    for (var i = 0; i < Code.Explorer.autocompleteData.length; i++) {
+      for (var j = 0; j < Code.Explorer.autocompleteData[i].length; j++) {
+        var option = Code.Explorer.autocompleteData[i][j];
         if (option.substring(0, prefix.length).toLowerCase() === prefix) {
             options.push(option);
         }
@@ -158,102 +185,140 @@ function updateAutocompleteMenu(token) {
     }
   }
   if ((options.length === 1 && options[0] === prefix) || !options.length) {
-    hideAutocompleteMenu();
+    Code.Explorer.hideAutocompleteMenu();
   } else {
-    showAutocompleteMenu(options, index);
+    Code.Explorer.showAutocompleteMenu(options, index);
   }
-}
+};
 
-// The last set of autocompletion options from Code City.
-// This is an array of arrays of strings.  The first array contains the
-// properties on the object, the second array contains the properties on the
-// object's prototype, and so on.
-var autocompleteData = [];
+/**
+ * The last set of autocompletion options from Code City.
+ * This is an array of arrays of strings.  The first array contains the
+ * properties on the object, the second array contains the properties on the
+ * object's prototype, and so on.
+ * @type {!Array<!Array<string>>}
+ */
+Code.Explorer.autocompleteData = [];
 
-// Remove any properties that are shadowed by objects higher on the inheritance
-// chain.  Also sort the properties alphabetically.
-function filterShadowed(data) {
+/**
+ * Remove any properties that are shadowed by objects higher on the inheritance
+ * chain.  Also sort the properties alphabetically.
+ * @param {Array<!Array<string>>} data Property names from Code City.
+ */
+Code.Explorer.filterShadowed = function(data) {
   if (!data || data.length < 2) {
     return;
   }
   var properties = Object.create(null);
   for (var i = 0; i < data.length; i++) {
-    for (var j = data[i].length - 1; j >= 0; j--) {
-      var prop = data[i][j];
+    var datum = data[i];
+    for (var j = datum.length - 1; j >= 0; j--) {
+      var prop = datum[j];
       if (properties[prop]) {
-        data[i].splice(j, 1);
+        datum.splice(j, 1);
       } else {
         properties[prop] = true;
       }
     }
-    data[i].sort(caseInsensitiveComp);
+    data[i].sort(Code.Explorer.caseInsensitiveComp);
   }
-}
+};
 
-// Comparison function to sort strings A-Z without regard to case.
-function caseInsensitiveComp(a, b) {
+/**
+ * Comparison function to sort strings A-Z without regard to case.
+ * @param {string} a One string.
+ * @param {string} b Another string.
+ * @return {number} -1/0/1 comparator value.
+ */
+Code.Explorer.caseInsensitiveComp = function(a, b) {
   a = a.toLowerCase();
   b = b.toLowerCase();
   return (a < b) ? -1 : ((a > b) ? 1 : 0);
-}
+};
 
-// Don't show any autocompletions if the cursor isn't at the end.
-function autocompleteCursorMonitor() {
+/**
+ * Don't show any autocompletions if the cursor isn't at the end.
+ */
+Code.Explorer.autocompleteCursorMonitor = function() {
+  var input = document.getElementById('input');
   if (typeof input.selectionStart === 'number' &&
       input.selectionStart !== input.value.length) {
-    hideAutocompleteMenu();
+    Code.Explorer.hideAutocompleteMenu();
     return true;
   }
   return false;
-}
+};
 
-function showAutocompleteMenu(options, index) {
-  if (autocompleteCursorMonitor()) {
+/**
+ * Display the autocomplete menu, populated with the provided options.
+ * @param {!Array<string>} options Array of options.
+ * @param {number} index Left offset (in characters) to position menu.
+ */
+Code.Explorer.showAutocompleteMenu = function(options, index) {
+  if (Code.Explorer.autocompleteCursorMonitor()) {
     return;
   }
+  var scrollDiv = document.getElementById('autocompleteMenuScroll');
   scrollDiv.innerHTML = '';
   for (var i = 0; i < options.length; i++) {
     var div = document.createElement('div');
     div.appendChild(document.createTextNode(options[i]));
-    div.addEventListener('mouseover', autocompleteMouseOver);
-    div.addEventListener('mouseout', autocompleteMouseOut);
+    div.addEventListener('mouseover', Code.Explorer.autocompleteMouseOver);
+    div.addEventListener('mouseout', Code.Explorer.autocompleteMouseOut);
     div.setAttribute('data-option', options[i]);
     scrollDiv.appendChild(div);
   }
+  var menuDiv = document.getElementById('autocompleteMenu');
   menuDiv.style.display = 'block';
   menuDiv.scrollTop = 0;
   var left = Math.round(index * Code.Explorer.SIZE_OF_INPUT_CHARS);
   var maxLeft = window.innerWidth - menuDiv.offsetWidth;
   menuDiv.style.left = Math.min(left, maxLeft) + 'px';
-}
+};
 
-function hideAutocompleteMenu() {
-  menuDiv.style.display = 'none';
-  autocompleteSelect(null);
-}
+/**
+ * Stop displaying the autocomplete menu.
+ */
+Code.Explorer.hideAutocompleteMenu = function() {
+  document.getElementById('autocompleteMenu').style.display = 'none';
+  Code.Explorer.autocompleteSelect(null);
+};
 
-// Don't allow mouse movements to change the autocompletion selection
-// Right after a keyboard navigation.  Otherwise an arrow keypress could cause
-// a scroll which could cause an apparent mouse move, which could cause an
-// unwanted selection change.
-var keyNavigationTime = 0;
+/**
+ * Date/time of last keyboard navigation.
+ * Don't allow mouse movements to change the autocompletion selection
+ * Right after a keyboard navigation.  Otherwise an arrow keypress could cause
+ * a scroll which could cause an apparent mouse move, which could cause an
+ * unwanted selection change.
+ */
+Code.Explorer.keyNavigationTime = 0;
 
-// Highlight one option.
-function autocompleteMouseOver(e) {
-  if (Date.now() - keyNavigationTime > 250) {
-    autocompleteSelect(e.target);
+/**
+ * Highlight one autocomplete option.
+ * @param {!Event} e Mouse over event.
+ */
+Code.Explorer.autocompleteMouseOver = function(e) {
+  if (Date.now() - Code.Explorer.keyNavigationTime > 250) {
+    Code.Explorer.autocompleteSelect(e.target);
   }
-}
+};
 
-// Remove highlighting.
-function autocompleteMouseOut() {
-  if (Date.now() - keyNavigationTime > 250) {
-    autocompleteSelect(null);
+/**
+ * Remove highlighting from autocomplete option.
+ * @param {!Event} e Mouse out event.
+ */
+Code.Explorer.autocompleteMouseOut = function() {
+  if (Date.now() - Code.Explorer.keyNavigationTime > 250) {
+    Code.Explorer.autocompleteSelect(null);
   }
-}
+};
 
-// Highlight one option.
-function autocompleteSelect(div) {
+/**
+ * Highlight one option.  Unhighlight all other options.
+ * @param {?Element} div Option to highlight or null for none.
+ */
+Code.Explorer.autocompleteSelect = function(div) {
+  var scrollDiv = document.getElementById('autocompleteMenuScroll');
   var cursors = scrollDiv.querySelectorAll('.cursor');
   for (var i = 0, cursor; (cursor = cursors[i]); i++) {
     cursor.className = '';
@@ -261,15 +326,18 @@ function autocompleteSelect(div) {
   if (div) {
     div.className = 'cursor';
   }
-}
+};
 
-// An autocompletion option has been clicked by the user.
-function autocompleteClick(e) {
+/**
+ * An autocompletion option has been clicked by the user.
+ * @param {!Event} e Click event.
+ */
+Code.Explorer.autocompleteClick = function(e) {
   var option = e.target.getAttribute('data-option');
-  var parts = JSON.parse(oldInputPartsJSON);
+  var parts = JSON.parse(Code.Explorer.oldInputPartsJSON);
   parts.push(option);
   Code.Explorer.setParts(parts);
-}
+};
 
 Code.Explorer.setParts = function(parts) {
   var selector = Code.Common.partsToSelector(parts);
@@ -277,44 +345,55 @@ Code.Explorer.setParts = function(parts) {
   window.parent.postMessage('ping', '*');
 };
 
-// Set the input to be the specified path (e.g. ['$', 'user', 'location']).
-function setInput(parts) {
-  hideAutocompleteMenu();
+/**
+ * Set the input to be the specified path (e.g. ['$', 'user', 'location']).
+ * @param {!Array<string>} parts List of parts.
+ */
+Code.Explorer.setInput = function(parts) {
+  Code.Explorer.hideAutocompleteMenu();
   var value = Code.Common.partsToSelector(parts);
+  var input = document.getElementById('input');
   input.value = value;
   input.focus();
-  oldInputValue = value;  // Don't autocomplete this value.
-  oldInputPartsJSON = JSON.stringify(parts);
-  oldInputPartsLast = null;
+  Code.Explorer.oldInputValue = value;  // Don't autocomplete this value.
   Code.Explorer.loadPanels(parts);
-}
+};
 
-// Start polling for changes.
-function inputFocus() {
-  clearInterval(inputPollPid);
-  inputPollPid = setInterval(inputChange, 10);
-  oldInputValue = undefined;
-}
+/**
+ * Start polling for changes.
+ */
+Code.Explorer.inputFocus = function() {
+  clearInterval(Code.Explorer.inputPollPid);
+  Code.Explorer.inputPollPid = setInterval(Code.Explorer.inputChange, 10);
+  Code.Explorer.oldInputValue = null;
+};
 
-// Stop polling for changes.
-function inputBlur() {
-  if (inputBlur.disable) {
-    inputBlur.disable = false;
+/**
+ * Stop polling for changes.
+ */
+Code.Explorer.inputBlur = function() {
+  if (Code.Explorer.inputBlur.disable_) {
+    Code.Explorer.inputBlur.disable_ = false;
     return;
   }
-  clearInterval(inputPollPid);
-  hideAutocompleteMenu();
-}
-inputBlur.disable = false;
+  clearInterval(Code.Explorer.inputPollPid);
+  Code.Explorer.hideAutocompleteMenu();
+};
+Code.Explorer.inputBlur.disable_ = false;
 
-// When clicking on the autocomplete menu, disable the blur
-// (which would otherwise close the menu).
-function autocompleteMouseDown() {
-  inputBlur.disable = true;
-}
+/**
+ * When clicking on the autocomplete menu, disable the blur
+ * (which would otherwise close the menu).
+ */
+Code.Explorer.autocompleteMouseDown = function() {
+  Code.Explorer.inputBlur.disable_ = true;
+};
 
-// Intercept some control keys to control the autocomplete menu.
-function inputKey(e) {
+/**
+ * Intercept some control keys to control the autocomplete menu.
+ * @param {!Event} e Keypress event.
+ */
+Code.Explorer.inputKey = function(e) {
   var key = {
     tab: 9,
     enter: 13,
@@ -323,20 +402,23 @@ function inputKey(e) {
     down: 40
   };
   if (e.keyCode === key.esc) {
-    hideAutocompleteMenu();
+    Code.Explorer.hideAutocompleteMenu();
   }
-  autocompleteCursorMonitor();
+  Code.Explorer.autocompleteCursorMonitor();
+  var scrollDiv = document.getElementById('autocompleteMenuScroll');
   var cursor = scrollDiv.querySelector('.cursor');
+  var menuDiv = document.getElementById('autocompleteMenu');
   var hasMenu = menuDiv.style.display !== 'none';
   if (e.keyCode === key.enter) {
     if (cursor) {
       var fakeEvent = {target: cursor};
-      autocompleteClick(fakeEvent);
+      Code.Explorer.autocompleteClick(fakeEvent);
       e.preventDefault();
     } else {
-      var parts = JSON.parse(oldInputPartsJSON);
-      if (oldInputPartsLast && oldInputPartsLast.valid) {
-        parts.push(oldInputPartsLast.value);
+      var parts = JSON.parse(Code.Explorer.oldInputPartsJSON);
+      if (Code.Explorer.oldInputPartsLast &&
+          Code.Explorer.oldInputPartsLast.valid) {
+        parts.push(Code.Explorer.oldInputPartsLast.value);
       }
       Code.Explorer.setParts(parts);
     }
@@ -354,14 +436,15 @@ function inputKey(e) {
       } while (option);
       if (optionCount === 1) {
         // There was only one option.  Choose it.
-        var parts = JSON.parse(oldInputPartsJSON);
+        var parts = JSON.parse(Code.Explorer.oldInputPartsJSON);
         parts.push(prefix);
         Code.Explorer.setParts(parts);
-      } else if (oldInputPartsLast) {
-        if (oldInputPartsLast.type === 'id') {
+      } else if (Code.Explorer.oldInputPartsLast) {
+        if (Code.Explorer.oldInputPartsLast.type === 'id') {
           // Append the common prefix to the input.
-          input.value = input.value.substring(0, oldInputPartsLast.index) +
-              prefix;
+          var input = document.getElementById('input');
+          input.value = input.value.substring(0,
+              Code.Explorer.oldInputPartsLast.index) + prefix;
         }
         // TODO: Tab-completion of partial strings and numbers.
       }
@@ -369,7 +452,7 @@ function inputKey(e) {
     e.preventDefault();
   }
   if (hasMenu && (e.keyCode === key.up || e.keyCode === key.down)) {
-    keyNavigationTime = Date.now();
+    Code.Explorer.keyNavigationTime = Date.now();
     var newCursor;
     if (e.keyCode === key.up) {
       if (!cursor) {
@@ -385,19 +468,19 @@ function inputKey(e) {
       }
     }
     if (newCursor) {
-      autocompleteSelect(newCursor);
+      Code.Explorer.autocompleteSelect(newCursor);
       if (newCursor.scrollIntoView) {
         newCursor.scrollIntoView({block: 'nearest', inline: 'nearest'});
       }
     }
     e.preventDefault();
   }
-}
+};
 
 /**
  * Compute and return the common prefix of two (relatively short) strings.
  * @param {string} str1 One string.
- * @param {string} str1 Another string.
+ * @param {string} str2 Another string.
  * @return {string} Common prefix.
  */
 Code.Explorer.getPrefix = function(str1, str2) {
@@ -410,16 +493,23 @@ Code.Explorer.getPrefix = function(str1, str2) {
   return str1.substring(0, i);
 };
 
-// If the cursor moves away from the end as a result of the mouse,
-// close the autocomplete menu.
-function inputMouseDown() {
+/**
+ * If the cursor moves away from the end as a result of the mouse,
+ * close the autocomplete menu.
+ */
+Code.Explorer.inputMouseDown = function() {
   setTimeout(autocompleteCursorMonitor, 1);
-}
+};
 
-// Number of object panels.
-var panelCount = 0;
-// Size of temporary spacer margin for smooth scrolling after deletion.
-var panelSpacerMargin = 0;
+/**
+ * Number of object panels.
+ */
+Code.Explorer.panelCount = 0;
+
+/**
+ * Size of temporary spacer margin for smooth scrolling after deletion.
+ */
+Code.Explorer.panelSpacerMargin = 0;
 
 /**
  * Update the panels with the specified list of parts.
@@ -438,14 +528,14 @@ Code.Explorer.loadPanels = function(parts) {
         iframe.contentWindow.postMessage('ping', '*');
         continue;
       } else {
-        while (panelCount > i) {
+        while (Code.Explorer.panelCount > i) {
           Code.Explorer.removePanel();
         }
       }
     }
     iframe = Code.Explorer.addPanel(component);
   }
-  while (panelCount > i) {
+  while (Code.Explorer.panelCount > i) {
     Code.Explorer.removePanel();
   }
 };
@@ -457,13 +547,14 @@ Code.Explorer.loadPanels = function(parts) {
 Code.Explorer.addPanel = function(component) {
   panelsScroll = document.getElementById('panelsScroll');
   var iframe = document.createElement('iframe');
-  iframe.id = 'objectPanel' + panelCount;
+  iframe.id = 'objectPanel' + Code.Explorer.panelCount;
   iframe.src = '/static/code/objectPanel.html#' + encodeURI(component);
   iframe.setAttribute('data-component', component);
   var spacer = document.getElementById('panelSpacer');
   panelsScroll.insertBefore(iframe, spacer);
-  panelCount++;
-  panelSpacerMargin = Math.max(0, panelSpacerMargin - iframe.offsetWidth);
+  Code.Explorer.panelCount++;
+  Code.Explorer.panelSpacerMargin =
+      Math.max(0, Code.Explorer.panelSpacerMargin - iframe.offsetWidth);
   Code.Explorer.scrollPanel();
 };
 
@@ -471,9 +562,10 @@ Code.Explorer.addPanel = function(component) {
  * Remove the right-most panel.
  */
 Code.Explorer.removePanel = function() {
-  panelCount--;
-  var iframe = document.getElementById('objectPanel' + panelCount);
-  panelSpacerMargin += iframe.offsetWidth;
+  Code.Explorer.panelCount--;
+  var iframe = document.getElementById('objectPanel' +
+      Code.Explorer.panelCount);
+  Code.Explorer.panelSpacerMargin += iframe.offsetWidth;
   iframe.parentNode.removeChild(iframe);
   Code.Explorer.scrollPanel();
 };
@@ -486,11 +578,12 @@ Code.Explorer.scrollPanel = function() {
   var spacer = document.getElementById('panelSpacer');
   var speed = 20;
   clearTimeout(Code.Explorer.scrollPid_);
-  if (panelSpacerMargin > 0) {
+  if (Code.Explorer.panelSpacerMargin > 0) {
     // Reduce spacer.
-    panelSpacerMargin = Math.max(0, panelSpacerMargin - speed);
-    spacer.style.marginRight = panelSpacerMargin + 'px';
-    if (panelSpacerMargin > 0) {
+    Code.Explorer.panelSpacerMargin =
+        Math.max(0, Code.Explorer.panelSpacerMargin - speed);
+    spacer.style.marginRight = Code.Explorer.panelSpacerMargin + 'px';
+    if (Code.Explorer.panelSpacerMargin > 0) {
       Code.Explorer.scrollPid_ = setTimeout(Code.Explorer.scrollPanel, 10);
     }
   } else {
@@ -515,16 +608,14 @@ Code.Explorer.scrollPid_ = 0;
  * Page has loaded, initialize the explorer.
  */
 Code.Explorer.init = function() {
-  input = document.getElementById('input');
-  input.addEventListener('focus', inputFocus);
-  input.addEventListener('blur', inputBlur);
-  input.addEventListener('keydown', inputKey);
-  input.addEventListener('mousedown', inputMouseDown);
-  menuDiv = document.getElementById('autocompleteMenu');
-  scrollDiv = document.getElementById('autocompleteMenuScroll');
-  scrollDiv.addEventListener('mousedown', autocompleteMouseDown);
-  scrollDiv.addEventListener('click', autocompleteClick);
-  oldInputPartsJSON = null;  // Allow autocompletion of initial value.
+  var input = document.getElementById('input');
+  input.addEventListener('focus', Code.Explorer.inputFocus);
+  input.addEventListener('blur', Code.Explorer.inputBlur);
+  input.addEventListener('keydown', Code.Explorer.inputKey);
+  input.addEventListener('mousedown', Code.Explorer.inputMouseDown);
+  var scrollDiv = document.getElementById('autocompleteMenuScroll');
+  scrollDiv.addEventListener('mousedown', Code.Explorer.autocompleteMouseDown);
+  scrollDiv.addEventListener('click', Code.Explorer.autocompleteClick);
   Code.Explorer.receiveMessage();
 };
 

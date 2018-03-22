@@ -59,6 +59,7 @@ Code.ObjectPanel.init = function(data) {
     }
   }
   if (data.properties) {
+    Code.ObjectPanel.filterShadowed(data.properties);
     // Print all properties of this object.
     for (var i = 0; i < data.properties.length; i++) {
       var propList = data.properties[i];
@@ -75,28 +76,54 @@ Code.ObjectPanel.init = function(data) {
 
 /**
  * Create the DOM to add one property link to the list.
- * @param {string} name Property name.
+ * @param {!Object} prop Property info.
  */
-Code.ObjectPanel.addLink = function(name) {
+Code.ObjectPanel.addLink = function(prop) {
+  var name = prop.name;
+  var type = prop.type;
   var newParts = Code.ObjectPanel.parts.concat(name);
   var selector = Code.Common.partsToSelector(newParts);
-  var div = document.createElement('div');
   var a = document.createElement('a');
   a.href = '/code?' + encodeURI(selector);
   a.target = '_blank';
-  div.appendChild(document.createTextNode(name));
-  a.appendChild(div);
   a.setAttribute('data-link', name);
   a.addEventListener('click', Code.ObjectPanel.click);
+  var typeSymbol = Code.ObjectPanel.TYPES[type];
+  if (typeSymbol) {
+    var span = document.createElement('span');
+    span.className = 'objectType';
+    span.appendChild(document.createTextNode(typeSymbol));
+    span.title = type;
+    a.appendChild(span);
+  }
+  var div = document.createElement('div');
+  div.appendChild(document.createTextNode(name));
+  a.appendChild(div);
   results.appendChild(a);
 };
 
+/**
+ * Symbols to print next to properties.
+ */
+Code.ObjectPanel.TYPES = {
+  'object': '{}',
+  'symbol': '☆',
+  'function': '𝑓'
+};
+
+/**
+ * When a property is clicked, trigger an update.
+ * @param {!Event} e Click event.
+ */
 Code.ObjectPanel.click = function(e) {
   var name = e.currentTarget.getAttribute('data-link');
   var newParts = Code.ObjectPanel.parts.concat(name);
   var selector = Code.Common.partsToSelector(newParts);
+  // Store the new selector in sessionStorage for all frames to see.
   sessionStorage.setItem(Code.Common.SELECTOR, selector);
+  // Alert the top "/code" frameset that there's been a selector change.
   window.parent.parent.postMessage('ping', '*');
+  // Don't navigate to this link.
   e.preventDefault();
 };
 
@@ -132,6 +159,42 @@ Code.ObjectPanel.highlight = function() {
     }
     Code.ObjectPanel.highlighted = newHighlighted;
   }
+};
+
+/**
+ * Remove any properties that are shadowed by objects higher on the inheritance
+ * chain.  Also sort the properties alphabetically.
+ * @param {Array<!Array<string>>} data Property names from Code City.
+ */
+Code.ObjectPanel.filterShadowed = function(data) {
+  if (!data || data.length < 2) {
+    return;
+  }
+  var properties = Object.create(null);
+  for (var i = 0; i < data.length; i++) {
+    var datum = data[i];
+    for (var j = datum.length - 1; j >= 0; j--) {
+      var prop = datum[j];
+      if (properties[prop.name]) {
+        datum.splice(j, 1);
+      } else {
+        properties[prop.name] = true;
+      }
+    }
+    data[i].sort(Code.ObjectPanel.caseInsensitiveComp);
+  }
+};
+
+/**
+ * Comparison function to sort named objects A-Z without regard to case.
+ * @param {string} a One string.
+ * @param {string} b Another string.
+ * @return {number} -1/0/1 comparator value.
+ */
+Code.ObjectPanel.caseInsensitiveComp = function(a, b) {
+  a = a.name.toLowerCase();
+  b = b.name.toLowerCase();
+  return (a < b) ? -1 : ((a > b) ? 1 : 0);
 };
 
 (function() {

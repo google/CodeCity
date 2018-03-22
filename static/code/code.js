@@ -65,7 +65,7 @@ Code.receiveMessage = function(event) {
  * @param {!Event} event History change event.
  */
 Code.popState = function(event) {
-  var selector = event.statevent || Code.DEFAULT;
+  var selector = event.state || Code.DEFAULT;
   sessionStorage.setItem(Code.Common.SELECTOR, selector);
   Code.receiveMessage(null);
 };
@@ -74,7 +74,8 @@ Code.popState = function(event) {
  * Raw string of selector.
  * E.g. '$.foo["bar"]'
  */
-Code.selector = location.search ? location.search.substring(1) : Code.DEFAULT;
+Code.selector = location.search ?
+    decodeURI(location.search.substring(1)) : Code.DEFAULT;
 sessionStorage.setItem(Code.Common.SELECTOR, Code.selector);
 
 window.addEventListener('load', Code.init);

@@ -113,3 +113,11 @@ input {
   background-color: #ccc;
 }
 
+.objectType {
+  position: absolute;
+  right: 0;
+  color: #888;
+  font-family: monospace;
+  width: 3ex;
+  text-align: center;
+}

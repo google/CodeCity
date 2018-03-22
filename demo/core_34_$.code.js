@@ -26,6 +26,7 @@
 $.code = {};
 
 $.code.getGlobal = function(name) {
+  // Given a name (string), return the global object of that name.
   if ($.code.getGlobal.globals.indexOf(name) === -1) {
     return null;
   }
@@ -69,6 +70,8 @@ $.code.getGlobal.globals = [
 ];
 
 $.code.getObject = function(parts) {
+  // Given an array of parts, return the described object.
+  // E.g. ['$', 'foo', 'bar'] -> $.foo.bar
   if (!parts.length) {
     return undefined;  // Global namespace.
   }
@@ -107,7 +110,8 @@ $.code.frameset.jssp = [
   '</html>'
 ].join('\n');
 
-$.http.router.codeFrameset = {regexp: /^\/code(\?|$)/, handler: $.code.frameset};
+$.http.router.codeFrameset =
+    {regexp: /^\/code(\?|$)/, handler: $.code.frameset};
 
 $.code.explorer = function(request, response) {
   // Overwrite on first execution.
@@ -132,10 +136,12 @@ $.code.explorer.jssp = [
   '</html>'
 ].join('\n');
 
-$.http.router.codeExplorer = {regexp: /^\/code\/explorer(\?|$)/, handler: $.code.explorer};
+$.http.router.codeExplorer =
+    {regexp: /^\/code\/explorer(\?|$)/, handler: $.code.explorer};
 
 
 $.code.autocomplete = function(request, response) {
+  // Provide object autocompletion service for the IDE's explorer.
   var parts = JSON.parse(request.parameters.parts);
   var options = null;
   if (parts.length) {
@@ -152,10 +158,12 @@ $.code.autocomplete = function(request, response) {
   response.write(JSON.stringify(options));
 };
 
-$.http.router.codeAutocomplete = {regexp: /^\/code\/autocomplete$/, handler: $.code.autocomplete};
+$.http.router.codeAutocomplete =
+    {regexp: /^\/code\/autocomplete$/, handler: $.code.autocomplete};
 
 
 $.code.objectPanel = function(request, response) {
+  // Provide data for the IDE's object panels.
   var data = {};
   var parts = JSON.parse(request.parameters.parts);
   if (parts.length) {
@@ -163,13 +171,28 @@ $.code.objectPanel = function(request, response) {
     if (obj !== null) {
       data.properties = [];
       do {
-        data.properties.push(Object.getOwnPropertyNames(obj));
+        var ownProps = Object.getOwnPropertyNames(obj);
+        // Add typeof information.
+        for (var i = 0; i < ownProps.length; i++) {
+          var prop = ownProps[i];
+          var type = typeof obj[prop];
+          ownProps[i] = {name: prop, type: type};
+        }
+        data.properties.push(ownProps);
       } while ((obj = Object.getPrototypeOf(obj)));
     }
   } else {
-    data.roots = $.code.getGlobal.globals;
+    data.roots = [];
+    // Add typeof information.
+    // TODO: Cache this.
+    for (var i = 0; i < $.code.getGlobal.globals.length; i++) {
+      var prop = $.code.getGlobal.globals[i];
+      var type = typeof $.code.getGlobal(prop);
+      data.roots[i] = {name: prop, type: type};
+    }
   }
   response.write('Code.ObjectPanel.init(' + JSON.stringify(data) + ');');
 };
 
-$.http.router.objectPanel = {regexp: /^\/code\/objectPanel(\?|$)/, handler: $.code.objectPanel};
+$.http.router.objectPanel =
+    {regexp: /^\/code\/objectPanel(\?|$)/, handler: $.code.objectPanel};
