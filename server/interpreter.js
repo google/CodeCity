@@ -586,13 +586,44 @@ Interpreter.prototype.initBuiltins_ = function() {
   // Initialize ES standard global functions.
   var intrp = this;
 
+  var eval_ = new this.NativeFunction;
+  eval_.setName('eval');
+  intrp.setProperty(eval_, 'length', 1,
+      {writable: false, enumerable: false, configurable: false});
+  /**
+   * @param {!Interpreter} intrp The interpreter.
+   * @param {!Interpreter.Thread} thread The current thread.
+   * @param {!Interpreter.State} state The current state.
+   * @param {Interpreter.Value} thisVal The this value passed into function.
+   * @param {!Array<Interpreter.Value>} args The arguments to the call.
+   * @return {Interpreter.Value}
+   */
+  eval_.call = function(intrp, thread, state, thisVal, args) {
+    var code = args[0];
+    if (typeof code !== 'string') {  // eval()
+      // Eval returns the argument if the argument is not a string.
+      // eval(Array) -> Array
+      return code;
+    }
+    code = String(code);
+    var ast = intrp.parse(code);
+    var evalNode = new Interpreter.Node;
+    evalNode['type'] = 'EvalProgram_';
+    evalNode['body'] = ast['body'];
+    evalNode['source'] = code;
+    // Create new scope and update it with definitions in eval().
+    var outerScope = state.directEval_ ? state.scope : intrp.global;
+    var scope = new Interpreter.Scope(state.scope.perms, outerScope);
+    intrp.populateScope_(ast, scope, code);
+    thread.stateStack_.push(new Interpreter.State(evalNode, scope));
+    return undefined; // Default value if no code to overwrite it.
+  };
+  eval_.call.id = 'eval';  // For serialization.
+  this.builtins_['eval'] = eval_;
   // eval is a special case; it must be added to the global scope at
   // startup time (rather than by a "var eval = new 'eval';" statement
   // in es5.js) because binding eval is illegal in strict mode.
-  var func = this.createNativeFunction('eval',
-      function(x) {throw EvalError("Can't happen");}, false);
-  func.eval = true;  // Recognized specially by stepCallExpresion.
-  this.addVariableToScope(this.global, 'eval', func);
+  this.addVariableToScope(this.global, 'eval', eval_);
 
   this.createNativeFunction('isFinite', isFinite, false);
   this.createNativeFunction('isNaN', isNaN, false);
@@ -3642,7 +3673,6 @@ stepFuncs_['BreakStatement'] = function (stack, state, node) {
 stepFuncs_['CallExpression'] = function (stack, state, node) {
   if (!state.doneCallee_) {
     state.doneCallee_ = 1;
-    state.funcThis_ = undefined; // Default for non-methods: this === undefined.
     var nextState = new Interpreter.State(node['callee'], state.scope);
     nextState.components = true; // Components needed to get value of 'this'.
     return nextState;
@@ -3654,6 +3684,7 @@ stepFuncs_['CallExpression'] = function (stack, state, node) {
     if (Array.isArray(func)) { // Callee was MemberExpression or Identifier.
       state.func_ = this.getValue(state.scope, func);
       if (func[0] === Interpreter.SCOPE_REFERENCE) {
+        state.funcThis_ = undefined; // Since we have no global object.
         // (Globally or locally) named function.  Is it named 'eval'?
         state.directEval_ = (func[1] === 'eval');
       } else {
@@ -3743,26 +3774,6 @@ stepFuncs_['CallExpression'] = function (stack, state, node) {
       this.addVariableToScope(scope, 'this', state.funcThis_, true);
       state.value = undefined;  // Default value if no explicit return.
       return new Interpreter.State(funcNode['body'], scope);
-    } else if (func.eval) {
-      var code = state.arguments_[0];
-      if (typeof code !== 'string') {  // eval()
-        // Eval returns the argument if the argument is not a string.
-        // eval(Array) -> Array
-        state.value = code;
-      } else {
-        code = String(code);
-        var ast = this.parse(code);
-        var evalNode = new Interpreter.Node;
-        evalNode['type'] = 'EvalProgram_';
-        evalNode['body'] = ast['body'];
-        evalNode['source'] = code;
-        // Create new scope and update it with definitions in eval().
-        var outerScope = state.directEval_ ? state.scope : this.global;
-        var scope = new Interpreter.Scope(state.scope.perms, outerScope);
-        this.populateScope_(ast, scope, code);
-        this.value = undefined;  // Default value if no code.
-        return new Interpreter.State(evalNode, scope);
-      }
     } else {
       // TODO(cpcallen): this is here just to satisy type checking of
       // args to .call and .construct.  Perhaps have (non-null)
