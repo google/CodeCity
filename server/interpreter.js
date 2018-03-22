@@ -2529,6 +2529,16 @@ Interpreter.prototype.Function.prototype.construct = function(
 /**
  * @constructor
  * @extends {Interpreter.prototype.Function}
+ * @param {?Interpreter.Owner=} owner
+ * @param {?Interpreter.prototype.Object=} proto
+ */
+Interpreter.prototype.NativeFunction = function(owner, proto) {
+  throw Error('Inner class constructor not callable on prototype');
+};
+
+/**
+ * @constructor
+ * @extends {Interpreter.prototype.NativeFunction}
  * @param {!Function} impl
  * @param {boolean} legalConstructor
  * @param {?Interpreter.Owner=} owner
@@ -2841,6 +2851,32 @@ Interpreter.prototype.installTypes = function() {
   /**
    * Class for a native function.
    * @constructor
+   * @extends {Interpreter.prototype.NativeFunction}
+   * @param {?Interpreter.Owner=} owner Owner object or null (defaults to root).
+   * @param {?Interpreter.prototype.Object=} proto Prototype object or null.
+   */
+  intrp.NativeFunction = function(owner, proto) {
+    intrp.Function.call(/** @type {?} */ (this),
+        (owner === undefined ? intrp.ROOT : owner), proto);
+  };
+
+  intrp.NativeFunction.prototype = Object.create(intrp.Function.prototype);
+  intrp.NativeFunction.prototype.constructor = intrp.NativeFunction;
+
+  /**
+   * Convert this function into a string.
+   * @return {string} String value.
+   * @override
+   */
+  intrp.NativeFunction.prototype.toString = function() {
+    // TODO(cpcallen): include formal parameter names?
+    return 'function ' + intrp.getProperty(this, 'name') +
+        '() { [native code] }';
+  };
+
+  /**
+   * Class for an old native function.
+   * @constructor
    * @extends {Interpreter.prototype.OldNativeFunction}
    * @param {!Function} impl Old-style native function implementation
    * @param {boolean} legalConstructor True if the function can be used as a
@@ -2849,8 +2885,7 @@ Interpreter.prototype.installTypes = function() {
    * @param {?Interpreter.prototype.Object=} proto Prototype object or null.
    */
   intrp.OldNativeFunction = function(impl, legalConstructor, owner, proto) {
-    intrp.Function.call(/** @type {?} */ (this),
-        (owner === undefined ? intrp.ROOT : owner), proto);
+    intrp.NativeFunction.call(/** @type {?} */ (this), owner, proto);
     if (!impl) { // Deserializing
       this.impl = function () {};
       this.illegalConstructor = true;
@@ -2862,19 +2897,9 @@ Interpreter.prototype.installTypes = function() {
     this.illegalConstructor = !legalConstructor;
   };
 
-  intrp.OldNativeFunction.prototype = Object.create(intrp.Function.prototype);
+  intrp.OldNativeFunction.prototype =
+      Object.create(intrp.NativeFunction.prototype);
   intrp.OldNativeFunction.prototype.constructor = intrp.OldNativeFunction;
-
-  /**
-   * Convert this function into a string.
-   * @return {string} String value.
-   * @override
-   */
-  intrp.OldNativeFunction.prototype.toString = function() {
-    // TODO(cpcallen): include formal parameter names?
-    return 'function ' + intrp.getProperty(this, 'name') +
-        '() { [native code] }';
-  };
 
   /**
    * @param {!Interpreter} intrp The interpreter.
