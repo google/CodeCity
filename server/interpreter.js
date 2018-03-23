@@ -126,42 +126,6 @@ Interpreter.PARSE_OPTIONS = {
 };
 
 /**
- * Property descriptor of readonly properties.
- */
-Interpreter.READONLY_DESCRIPTOR = {
-  configurable: true,
-  enumerable: true,
-  writable: false
-};
-
-/**
- * Property descriptor of non-enumerable properties.
- */
-Interpreter.NONENUMERABLE_DESCRIPTOR = {
-  configurable: true,
-  enumerable: false,
-  writable: true
-};
-
-/**
- * Property descriptor of non-enumerable, non-configurable properties.
- */
-Interpreter.NONENUMERABLE_NONCONFIGURABLE_DESCRIPTOR = {
-  configurable: false,
-  enumerable: false,
-  writable: true
-};
-
-/**
- * Property descriptor of readonly, non-enumerable properties.
- */
-Interpreter.READONLY_NONENUMERABLE_DESCRIPTOR = {
-  configurable: true,
-  enumerable: false,
-  writable: false
-};
-
-/**
  * Class for unique sentinel values passed to various functions.
  * Declared so that sentinel values can have a specific type that we
  * can type-check against (though as they share a single type you
@@ -589,8 +553,8 @@ Interpreter.prototype.initBuiltins_ = function() {
 
   var eval_ = new this.NativeFunction;
   eval_.setName('eval');
-  intrp.setProperty(eval_, 'length', 1,
-      {writable: false, enumerable: false, configurable: false});
+  intrp.setProperty(eval_, 'length', 1, Descriptor.c);
+
   /**
    * @param {!Interpreter} intrp The interpreter.
    * @param {!Interpreter.Thread} thread The current thread.
@@ -753,7 +717,7 @@ Interpreter.prototype.initObject_ = function() {
       nativeDescriptor.value = intrp.getProperty(descriptor, 'value');
     }
     intrp.setProperty(obj, prop, Interpreter.VALUE_IN_DESCRIPTOR,
-                      nativeDescriptor);
+        nativeDescriptor);
     return obj;
   };
   this.createNativeFunction('Object.defineProperty', wrapper, false);
@@ -1475,8 +1439,7 @@ Interpreter.prototype.initError_ = function() {
   var wrapper = function(message) {
     var newError = new intrp.Error(intrp.thread.perms());
     if (message) {
-      intrp.setProperty(newError, 'message', String(message),
-          Interpreter.NONENUMERABLE_DESCRIPTOR);
+      intrp.setProperty(newError, 'message', String(message), Descriptor.wc);
     }
     return newError;
   };
@@ -1492,8 +1455,7 @@ Interpreter.prototype.initError_ = function() {
     wrapper = function(message) {
       var newError = new intrp.Error(intrp.thread.perms(), prototype);
       if (message) {
-        intrp.setProperty(newError, 'message',
-            String(message), Interpreter.NONENUMERABLE_DESCRIPTOR);
+        intrp.setProperty(newError, 'message', String(message), Descriptor.wc);
       }
       return newError;
     };
@@ -1713,8 +1675,7 @@ Interpreter.prototype.createFunctionFromAST = function(node, scope, source) {
   func.addPrototype();
   func.outerScope = scope;
   func.node = node;
-  this.setProperty(func, 'length', func.node['params'].length,
-      Interpreter.READONLY_DESCRIPTOR);
+  this.setProperty(func, 'length', func.node['params'].length, Descriptor.none);
   // Record the source on the function object.  This is needed by
   // (pseudo)Function.toString().
   func.source = source.substring(node['start'], node['end']);
@@ -2039,7 +2000,7 @@ Interpreter.prototype.hasProperty = function(obj, name) {
  * @param {Interpreter.Value|Interpreter.Sentinel} value New property
  *     value.  Use Interpreter.VALUE_IN_DESCRIPTOR if value is handled
  *     by descriptor instead.
- * @param {Object=} desc Optional descriptor object.
+ * @param {!Object=} desc Optional descriptor object.
  */
 Interpreter.prototype.setProperty = function(obj, name, value, desc) {
   name = String(name);
@@ -2834,10 +2795,8 @@ Interpreter.prototype.installTypes = function() {
       throw TypeError("Illogical addition of .prototype to non-constructor");
     }
     var protoObj = new intrp.Object(this.owner);
-    intrp.setProperty(this, 'prototype', protoObj,
-        Interpreter.NONENUMERABLE_NONCONFIGURABLE_DESCRIPTOR);
-    intrp.setProperty(protoObj, 'constructor', this,
-        Interpreter.NONENUMERABLE_DESCRIPTOR);
+    intrp.setProperty(this, 'prototype', protoObj, Descriptor.w);
+    intrp.setProperty(protoObj, 'constructor', this, Descriptor.wc);
   };
 
   /**
@@ -2849,8 +2808,7 @@ Interpreter.prototype.installTypes = function() {
     if (Object.getOwnPropertyDescriptor(this.properties, 'name')) {
       throw Error('Function alreay has name??');
     }
-    intrp.setProperty(this, 'name', name,
-        Interpreter.READONLY_NONENUMERABLE_DESCRIPTOR);
+    intrp.setProperty(this, 'name', name, Descriptor.c);
   };
 
   /**
@@ -2928,8 +2886,7 @@ Interpreter.prototype.installTypes = function() {
       return;
     }
     this.impl = impl;
-    intrp.setProperty(this, 'length', impl.length,
-        {writable: false, enumerable: false, configurable: false});
+    intrp.setProperty(this, 'length', impl.length, Descriptor.none);
     this.illegalConstructor = !legalConstructor;
   };
 
@@ -2985,8 +2942,7 @@ Interpreter.prototype.installTypes = function() {
       return;
     }
     this.impl = impl;
-    intrp.setProperty(this, 'length', impl.length,
-        {writable: false, enumerable: false, configurable: false});
+    intrp.setProperty(this, 'length', impl.length, Descriptor.none);
     this.illegalConstructor = true;
   };
 
@@ -3191,16 +3147,13 @@ Interpreter.prototype.installTypes = function() {
   intrp.RegExp.prototype.populate = function(nativeRegexp) {
     this.regexp = nativeRegexp;
     // lastIndex is settable, all others are read-only attributes
-    intrp.setProperty(this, 'lastIndex', nativeRegexp.lastIndex,
-      Interpreter.NONENUMERABLE_DESCRIPTOR);
-    intrp.setProperty(this, 'source', nativeRegexp.source,
-        Interpreter.READONLY_NONENUMERABLE_DESCRIPTOR);
-    intrp.setProperty(this, 'global', nativeRegexp.global,
-        Interpreter.READONLY_NONENUMERABLE_DESCRIPTOR);
+    intrp.setProperty(this, 'lastIndex', nativeRegexp.lastIndex, Descriptor.w);
+    intrp.setProperty(this, 'source', nativeRegexp.source, Descriptor.none);
+    intrp.setProperty(this, 'global', nativeRegexp.global, Descriptor.none);
     intrp.setProperty(this, 'ignoreCase', nativeRegexp.ignoreCase,
-        Interpreter.READONLY_NONENUMERABLE_DESCRIPTOR);
+        Descriptor.none);
     intrp.setProperty(this, 'multiline', nativeRegexp.multiline,
-        Interpreter.READONLY_NONENUMERABLE_DESCRIPTOR);
+        Descriptor.none);
   };
 
   /**
@@ -3215,8 +3168,7 @@ Interpreter.prototype.installTypes = function() {
     intrp.Object.call(/** @type {?} */ (this), owner,
         (proto === undefined ? intrp.ERROR : proto));
     if (message !== undefined) {
-      intrp.setProperty(this, 'message', message,
-                        Interpreter.NONENUMERABLE_DESCRIPTOR);
+      intrp.setProperty(this, 'message', message, Descriptor.wc);
     }
     // Construct a text-based stack.
     // Don't bother when building Error.prototype.
@@ -3248,8 +3200,7 @@ Interpreter.prototype.installTypes = function() {
         var line = code.substring(lineStart, lineEnd);
         stack.push(line);
       }
-      intrp.setProperty(this, 'stack', stack.join('\n'),
-          Interpreter.NONENUMERABLE_DESCRIPTOR);
+      intrp.setProperty(this, 'stack', stack.join('\n'), Descriptor.wc);
     }
   };
 
@@ -3475,6 +3426,31 @@ Interpreter.prototype.installTypes = function() {
   };
 
 };
+
+///////////////////////////////////////////////////////////////////////////////
+// Property Descriptors
+///////////////////////////////////////////////////////////////////////////////
+/**
+ * Class for property descriptors, with commonly-used examples.
+ * @constructor
+ * @param {boolean=} writable Is the property writable?
+ * @param {boolean=} enumerable Is the property enumerable?
+ * @param {boolean=} configurable Is the property configurable?
+ */
+var Descriptor = function(writable, enumerable, configurable) {
+  this.writable = writable;
+  this.enumerable = enumerable;
+  this.configurable = configurable;
+};
+
+/** @const */ Descriptor.wec = new Descriptor(true, true, true);
+/** @const */ Descriptor.ec = new Descriptor(false, true, true);
+/** @const */ Descriptor.wc = new Descriptor(true, false, true);
+/** @const */ Descriptor.we = new Descriptor(true, true, false);
+/** @const */ Descriptor.w = new Descriptor(true, false, false);
+/** @const */ Descriptor.e = new Descriptor(false, true, false);
+/** @const */ Descriptor.c = new Descriptor(false, false, true);
+/** @const */ Descriptor.none = new Descriptor(false, false, false);
 
 ///////////////////////////////////////////////////////////////////////////////
 // Step Functions: one to handle each node type.
