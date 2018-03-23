@@ -54,8 +54,9 @@ var Interpreter = function() {
    * could be a global or class property, but better to have it be
    * per-instance so that we can eventually call user toString
    * methods.
+   *
    * TODO(cpcallen): Make this per-thread when threads are introduced.
-   * @private @const { !Array<!Interpreter.prototype.Object> }
+   * @private @const {!Array<!Interpreter.prototype.Object>}
    */
   this.toStringCycles_ = [];
 
@@ -76,7 +77,7 @@ var Interpreter = function() {
   /** @type {boolean} */
   this.done = true;  // True if any non-ZOMBIE threads exist.
 
-  /** @private @const { !Object<number,!Interpreter.prototype.Server> } */
+  /** @private @const {!Object<number,!Interpreter.prototype.Server>} */
   this.listeners_ = Object.create(null);
 
   // Bring interpreter up to PAUSED status, setting up timers etc.
@@ -121,7 +122,7 @@ Interpreter.Status = {
  */
 Interpreter.PARSE_OPTIONS = {
   ecmaVersion: 5,
-  plugins: { alwaysStrict: true }
+  plugins: {alwaysStrict: true}
 };
 
 /**
@@ -232,7 +233,7 @@ Interpreter.prototype.now = function() {
  *     state, or AST node to construct state from, or raw JavaScript
  *     text to parse into AST.
  * @param {number=} runAt Time at which thread should begin execution
- *     (defaults to now).
+ *     (default: now).
  * @return {number} thread ID.
  */
 Interpreter.prototype.createThread = function(runnable, runAt) {
@@ -265,7 +266,7 @@ Interpreter.prototype.createThread = function(runnable, runAt) {
  * @param {Interpreter.Value} funcThis value of 'this' in function call.
  * @param {!Array<Interpreter.Value>} args Arguments to pass.
  * @param {number=} runAt Time at which thread should begin execution
- *     (defaults to now).
+ *     (default: now).
  * @return {number} thread ID.
  */
 Interpreter.prototype.createThreadForFuncCall =
@@ -673,7 +674,7 @@ Interpreter.prototype.initObject_ = function() {
       return new intrp.Object(intrp.thread.perms());
     } else {
       throw TypeError('Unknown value type??');
-    }      
+    }
   };
   this.createNativeFunction('Object', wrapper, true);
 
@@ -1757,6 +1758,7 @@ Interpreter.prototype.createNativeFunction = function(
  * Create a new native asynchronous function.  Asynchronous native
  * functions are presumed not to be legal constructors.  Function will
  * be owned by root.
+ *
  * TODO(cpcallen): de-dupe this with createNativeFunction, above.
  * @param {string} name Name of new function.
  * @param {!Function} asyncFunc JavaScript function.
@@ -1782,7 +1784,7 @@ Interpreter.prototype.createAsyncFunction = function(name, asyncFunc) {
  * all standard native types), and handles additional properties on
  * arrays, regexps and errors (just as for plain objects).  Ignores
  * prototype and inherited properties.  Efficiently handles
- * sparse arrays.  Does NOT handle cyclic 
+ * sparse arrays.  Does NOT handle cyclic
  * @param {*} nativeObj The native JS object to be converted.
  * @return {Interpreter.Value} The equivalent JS interpreter object.
  * @param {!Interpreter.Owner} owner Owner for new Error
@@ -2119,7 +2121,7 @@ Interpreter.prototype.setValueToScope = function(scope, name, value) {
  * @param {!Interpreter.Scope} scope Scope to write to.
  * @param {Interpreter.Value} name Name of variable.
  * @param {Interpreter.Value} value Initial value.
- * @param {boolean=} notWritable True if constant.  Defaults to false.
+ * @param {boolean=} notWritable True if constant (default: false).
  */
 Interpreter.prototype.addVariableToScope =
     function(scope, name, value, notWritable) {
@@ -2244,8 +2246,8 @@ Interpreter.prototype.throwException = function(value) {
  * to supply an owner.
  * @param {!Interpreter.prototype.Error} proto Prototype new Error object.
  * @param {string=} message Message to attach to new Error object.
- * @param {!Interpreter.Owner=} owner Owner for new Error
- *     object.  Defaults to current thread perms.
+ * @param {!Interpreter.Owner=} owner Owner for new Error object
+ *     (default: current thread perms);
  */
 Interpreter.prototype.throwError = function(proto, message, owner) {
   if (owner === undefined) {
@@ -2350,12 +2352,12 @@ Interpreter.prototype.unwind_ = function(type, value, label) {
 
 /**
  * Class for a scope.
- * @param {!Interpreter.Owner} perms The permissions with
- *     which code in the current scope is executing.  Defaults to
- *     outerScope.perms (if supplied; otherwise null).
+ * @param {!Interpreter.Owner} perms The permissions with which code
+ *     in the current scope is executing (default: outerScope.perms if
+ *     supplied; otherwise null).
  * @param {?Interpreter.Scope} outerScope The enclosing scope ("outer
- *     lexical environment reference", in ECMAScript spec parlance).
- *     Defaults to null.
+ *     lexical environment reference", in ECMAScript spec parlance)
+ *     (default: null).
  * @constructor
  */
 Interpreter.Scope = function(perms, outerScope) {
@@ -2761,10 +2763,10 @@ Interpreter.prototype.installTypes = function() {
   };
 
   /**
-   * Class for a function
+   * Class for a function.
    * @constructor
    * @extends {Interpreter.prototype.Function}
-   * @param {?Interpreter.Owner=} owner Owner object or null.
+   * @param {?Interpreter.Owner=} owner Owner object (default: null).
    * @param {?Interpreter.prototype.Object=} proto Prototype object or null.
    */
   intrp.Function = function(owner, proto) {
@@ -2852,6 +2854,7 @@ Interpreter.prototype.installTypes = function() {
   };
 
   /**
+   * The [[Call]] internal method defined by §13.2.1 of the ES5.1 spec.
    * Generic functions (neither native nor user) can't be called.
    * @param {!Interpreter} intrp The interpreter.
    * @param {!Interpreter.Thread} thread The current thread.
@@ -2867,6 +2870,8 @@ Interpreter.prototype.installTypes = function() {
   };
 
   /**
+   * The [[Constructl]] internal method defined by §13.2.2 of the
+   * ES5.1 spec.
    * Generic functions (neither native nor user) can't be constructed.
    * @param {!Interpreter} intrp The interpreter.
    * @param {!Interpreter.Thread} thread The current thread.
@@ -2883,7 +2888,7 @@ Interpreter.prototype.installTypes = function() {
    * Class for a native function.
    * @constructor
    * @extends {Interpreter.prototype.NativeFunction}
-   * @param {?Interpreter.Owner=} owner Owner object or null (defaults to root).
+   * @param {?Interpreter.Owner=} owner Owner object or null (default: root).
    * @param {?Interpreter.prototype.Object=} proto Prototype object or null.
    */
   intrp.NativeFunction = function(owner, proto) {
@@ -2912,7 +2917,7 @@ Interpreter.prototype.installTypes = function() {
    * @param {!Function} impl Old-style native function implementation
    * @param {boolean} legalConstructor True if the function can be used as a
    *     constructor (e.g. Array), false if not (e.g. escape).
-   * @param {?Interpreter.Owner=} owner Owner object or null (defaults to root).
+   * @param {?Interpreter.Owner=} owner Owner object or null (default: root).
    * @param {?Interpreter.prototype.Object=} proto Prototype object or null.
    */
   intrp.OldNativeFunction = function(impl, legalConstructor, owner, proto) {
@@ -3321,7 +3326,7 @@ Interpreter.prototype.installTypes = function() {
     }
     var server = this;  // Because this will be undefined in handlers below.
     // Create net.Server, start it listening, and attached it to this.
-    var netServer = new net.Server(/* { allowHalfOpen: true } */);
+    var netServer = new net.Server(/* {allowHalfOpen: true} */);
     netServer.on('connection', function(socket) {
       // TODO(cpcallen): Add localhost test here, like this - only
       // also allow IPV6 connections:
@@ -3477,10 +3482,10 @@ Interpreter.prototype.installTypes = function() {
 
 /**
  * Typedef for step functions.
- * 
+ *
  * TODO(cpcallen): It should be possible to declare individual
  * functions below using this typedef (instead of listing full type
- * details for each once 
+ * details for each once.
  * https://github.com/google/closure-compiler/issues/2857 is fixed.
  * @typedef {function(this: Interpreter,
  *                    !Array<!Interpreter.State>,
@@ -3497,7 +3502,7 @@ Interpreter.StepFunction;
  */
 var stepFuncs_ = {};
 
-/**  
+/**
  * @this {!Interpreter}
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
@@ -3526,7 +3531,7 @@ stepFuncs_['ArrayExpression'] = function (stack, state, node) {
   stack[stack.length - 1].value = state.array_;
 };
 
-/**  
+/**
  * @this {!Interpreter}
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
@@ -3573,7 +3578,7 @@ stepFuncs_['AssignmentExpression'] = function (stack, state, node) {
   stack[stack.length - 1].value = value;
 };
 
-/**  
+/**
  * @this {!Interpreter}
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
@@ -3634,7 +3639,7 @@ stepFuncs_['BinaryExpression'] = function (stack, state, node) {
   stack[stack.length - 1].value = value;
 };
 
-/**  
+/**
  * @this {!Interpreter}
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
@@ -3651,7 +3656,7 @@ stepFuncs_['BlockStatement'] = function (stack, state, node) {
   stack.pop();
 };
 
-/**  
+/**
  * @this {!Interpreter}
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
@@ -3663,7 +3668,7 @@ stepFuncs_['BreakStatement'] = function (stack, state, node) {
       node['label'] ? node['label']['name'] : undefined);
 };
 
-/**  
+/**
  * @this {!Interpreter}
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
@@ -3803,7 +3808,7 @@ stepFuncs_['CallExpression'] = function (stack, state, node) {
   }
 };
 
-/**  
+/**
  * @this {!Interpreter}
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
@@ -3823,7 +3828,7 @@ stepFuncs_['CatchClause'] = function (stack, state, node) {
   stack.pop();
 };
 
-/**  
+/**
  * @this {!Interpreter}
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
@@ -3856,7 +3861,7 @@ stepFuncs_['ConditionalExpression'] = function (stack, state, node) {
   }
 };
 
-/**  
+/**
  * @this {!Interpreter}
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
@@ -3868,7 +3873,7 @@ stepFuncs_['ContinueStatement'] = function (stack, state, node) {
       node['label'] ? node['label']['name'] : undefined);
 };
 
-/**  
+/**
  * @this {!Interpreter}
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
@@ -3880,7 +3885,7 @@ stepFuncs_['DebuggerStatement'] = function (stack, state, node) {
   stack.pop();
 };
 
-/**  
+/**
  * @this {!Interpreter}
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
@@ -3906,7 +3911,7 @@ stepFuncs_['DoWhileStatement'] = function (stack, state, node) {
   }
 };
 
-/**  
+/**
  * @this {!Interpreter}
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
@@ -3917,7 +3922,7 @@ stepFuncs_['EmptyStatement'] = function (stack, state, node) {
   stack.pop();
 };
 
-/**  
+/**
  * @this {!Interpreter}
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
@@ -3935,7 +3940,7 @@ stepFuncs_['EvalProgram_'] = function (stack, state, node) {
   stack[stack.length - 1].value = this.value;
 };
 
-/**  
+/**
  * @this {!Interpreter}
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
@@ -3957,7 +3962,7 @@ stepFuncs_['ExpressionStatement'] = function (stack, state, node) {
   this.value = state.value;
 };
 
-/**  
+/**
  * @this {!Interpreter}
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
@@ -4027,7 +4032,7 @@ stepFuncs_['ForInStatement'] = function (stack, state, node) {
   // step per iteration.  Fix that.
 };
 
-/**  
+/**
  * @this {!Interpreter}
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
@@ -4063,7 +4068,7 @@ stepFuncs_['ForStatement'] = function (stack, state, node) {
   }
 };
 
-/**  
+/**
  * @this {!Interpreter}
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
@@ -4075,7 +4080,7 @@ stepFuncs_['FunctionDeclaration'] = function (stack, state, node) {
   stack.pop();
 };
 
-/**  
+/**
  * @this {!Interpreter}
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
@@ -4092,7 +4097,7 @@ stepFuncs_['FunctionExpression'] = function (stack, state, node) {
       this.createFunctionFromAST(node, state.scope, src);
 };
 
-/**  
+/**
  * @this {!Interpreter}
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
@@ -4110,7 +4115,7 @@ stepFuncs_['Identifier'] = function (stack, state, node) {
 
 stepFuncs_['IfStatement'] = stepFuncs_['ConditionalExpression'];
 
-/**  
+/**
  * @this {!Interpreter}
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
@@ -4128,7 +4133,7 @@ stepFuncs_['LabeledStatement'] = function (stack, state, node) {
   return nextState;
 };
 
-/**  
+/**
  * @this {!Interpreter}
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
@@ -4146,7 +4151,7 @@ stepFuncs_['Literal'] = function (stack, state, node) {
   stack[stack.length - 1].value = value;
 };
 
-/**  
+/**
  * @this {!Interpreter}
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
@@ -4172,7 +4177,7 @@ stepFuncs_['LogicalExpression'] = function (stack, state, node) {
   stack[stack.length - 1].value = state.value;
 };
 
-/**  
+/**
  * @this {!Interpreter}
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
@@ -4204,7 +4209,7 @@ stepFuncs_['MemberExpression'] = function (stack, state, node) {
 
 stepFuncs_['NewExpression'] = stepFuncs_['CallExpression'];
 
-/**  
+/**
  * @this {!Interpreter}
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
@@ -4243,7 +4248,7 @@ stepFuncs_['ObjectExpression'] = function (stack, state, node) {
   stack[stack.length - 1].value = state.object_;
 };
 
-/**  
+/**
  * @this {!Interpreter}
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
@@ -4260,7 +4265,7 @@ stepFuncs_['Program'] = function (stack, state, node) {
   stack.pop();
 };
 
-/**  
+/**
  * @this {!Interpreter}
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
@@ -4275,7 +4280,7 @@ stepFuncs_['ReturnStatement'] = function (stack, state, node) {
   this.unwind_(Interpreter.Completion.RETURN, state.value, undefined);
 };
 
-/**  
+/**
  * @this {!Interpreter}
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
@@ -4293,7 +4298,7 @@ stepFuncs_['SequenceExpression'] = function (stack, state, node) {
   stack[stack.length - 1].value = state.value;
 };
 
-/**  
+/**
  * @this {!Interpreter}
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
@@ -4353,7 +4358,7 @@ stepFuncs_['SwitchStatement'] = function (stack, state, node) {
   }
 };
 
-/**  
+/**
  * @this {!Interpreter}
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
@@ -4365,7 +4370,7 @@ stepFuncs_['ThisExpression'] = function (stack, state, node) {
   stack[stack.length - 1].value = this.getValueFromScope(state.scope, 'this');
 };
 
-/**  
+/**
  * @this {!Interpreter}
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
@@ -4380,7 +4385,7 @@ stepFuncs_['ThrowStatement'] = function (stack, state, node) {
   this.throwException(state.value);
 };
 
-/**  
+/**
  * @this {!Interpreter}
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
@@ -4416,7 +4421,7 @@ stepFuncs_['TryStatement'] = function (stack, state, node) {
   }
 };
 
-/**  
+/**
  * @this {!Interpreter}
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
@@ -4477,7 +4482,7 @@ stepFuncs_['UnaryExpression'] = function (stack, state, node) {
   stack[stack.length - 1].value = value;
 };
 
-/**  
+/**
  * @this {!Interpreter}
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
@@ -4510,7 +4515,7 @@ stepFuncs_['UpdateExpression'] = function (stack, state, node) {
   stack[stack.length - 1].value = returnValue;
 };
 
-/**  
+/**
  * @this {!Interpreter}
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
@@ -4542,7 +4547,7 @@ stepFuncs_['VariableDeclaration'] = function (stack, state, node) {
   stack.pop();
 };
 
-/**  
+/**
  * @this {!Interpreter}
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
@@ -4569,5 +4574,5 @@ module.exports = Interpreter;
 
 var acornNode = acorn.parse('', Interpreter.PARSE_OPTIONS).constructor;
 /** @constructor */ Interpreter.Node =
-    acornNode.bind(acorn, { options: Interpreter.PARSE_OPTIONS });
+    acornNode.bind(acorn, {options: Interpreter.PARSE_OPTIONS});
 Interpreter.Node.prototype = acornNode.prototype;
