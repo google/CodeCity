@@ -27,6 +27,7 @@ Code.Explorer = {};
 /**
  * Width in pixels of each monospaced character in the input.
  * Used to line up the autocomplete menu.
+ * TODO: If the menu starts getting out of alignment, measure the text instead.
  */
 Code.Explorer.SIZE_OF_INPUT_CHARS = 10.8;
 
@@ -73,7 +74,17 @@ Code.Explorer.receiveMessage = function() {
   Code.Explorer.selector = selector;
   if (Code.Explorer.oldInputValue !== selector) {
     var parts = Code.Common.selectorToParts(selector);
-    Code.Explorer.setInput(parts);
+    if (parts) {
+      // Valid parts, set the input to be canonical version.
+      Code.Explorer.setInput(parts);
+    } else {
+      // Invalid parts, set the input to the raw string.
+      // Can be caused by going to: /code?$.foo...bar
+      var input = document.getElementById('input');
+      input.value = selector;
+      Code.Explorer.inputChange();
+      input.focus();
+    }
   }
 };
 
@@ -88,11 +99,10 @@ Code.Explorer.inputChange = function() {
   Code.Explorer.oldInputValue = input.value;
   var tokens = Code.Common.tokenizeSelector(input.value);
   var parts = [];
-  var lastToken = null;
+  var token = null;
   var lastName = null;
   for (var i = 0; i < tokens.length; i++) {
-    var token = tokens[i];
-    lastToken = token;
+    token = tokens[i];
     if (token.type === 'id' || token.type === '"' || token.type === '#') {
       lastName = token;
     }
@@ -108,7 +118,7 @@ Code.Explorer.inputChange = function() {
   Code.Explorer.oldInputPartsLast = lastName;
   var partsJSON = JSON.stringify(parts);
   if (Code.Explorer.oldInputPartsJSON === partsJSON) {
-    Code.Explorer.updateAutocompleteMenu(lastToken);
+    Code.Explorer.updateAutocompleteMenu(token);
   } else {
     Code.Explorer.oldInputPartsJSON = partsJSON;
     Code.Explorer.sendAutocomplete(partsJSON);
@@ -155,16 +165,16 @@ Code.Explorer.receiveAutocomplete = function() {
 /**
  * Given a partial prefix, filter the autocompletion menu and display
  * all matching options.
- * @param {!Object} token Last token in the parts list.
+ * @param {Object} token Last token in the parts list.
  */
 Code.Explorer.updateAutocompleteMenu = function(token) {
   var prefix = '';
   var index = token ? token.index : 0;
   if (token) {
-    if (token.type === 'id' || token.type === '"') {
+    if (token.type === 'id' || token.type === 'str') {
       prefix = token.value.toLowerCase();
     }
-    if ((token.type === '#') && !isNaN(token.value)) {
+    if ((token.type === 'num') && !isNaN(token.value)) {
       prefix = String(token.value);
     }
     if (token.type === '.' || token.type === '[') {
@@ -173,7 +183,7 @@ Code.Explorer.updateAutocompleteMenu = function(token) {
   }
   var options = [];
   if (!token || token.type === '.' || token.type === 'id' ||
-      token.type === '[' || token.type === '"' || token.type === '#') {
+      token.type === '[' || token.type === 'str' || token.type === 'num') {
     // Flatten the options and filter.
     for (var i = 0; i < Code.Explorer.autocompleteData.length; i++) {
       for (var j = 0; j < Code.Explorer.autocompleteData[i].length; j++) {
@@ -209,17 +219,19 @@ Code.Explorer.filterShadowed = function(data) {
   if (!data || data.length < 2) {
     return;
   }
-  var properties = Object.create(null);
+  var seen = Object.create(null);
   for (var i = 0; i < data.length; i++) {
     var datum = data[i];
-    for (var j = datum.length - 1; j >= 0; j--) {
-      var prop = datum[j];
-      if (properties[prop]) {
-        datum.splice(j, 1);
-      } else {
-        properties[prop] = true;
+    var cursorInsert = 0;
+    var cursorRead = 0;
+    while (cursorRead < datum.length) {
+      var prop = datum[cursorRead++];
+      if (!seen[prop]) {
+        seen[prop] = true;
+        datum[cursorInsert++] = prop;
       }
     }
+    datum.length = cursorInsert;
     data[i].sort(Code.Explorer.caseInsensitiveComp);
   }
 };
@@ -238,6 +250,7 @@ Code.Explorer.caseInsensitiveComp = function(a, b) {
 
 /**
  * Don't show any autocompletions if the cursor isn't at the end.
+ * @return {boolean} True if cursor is not at the end.
  */
 Code.Explorer.autocompleteCursorMonitor = function() {
   var input = document.getElementById('input');
@@ -318,13 +331,15 @@ Code.Explorer.autocompleteMouseOut = function() {
  * @param {?Element} div Option to highlight or null for none.
  */
 Code.Explorer.autocompleteSelect = function(div) {
-  var scrollDiv = document.getElementById('autocompleteMenuScroll');
-  var cursors = scrollDiv.querySelectorAll('.cursor');
-  for (var i = 0, cursor; (cursor = cursors[i]); i++) {
-    cursor.className = '';
+  // There should only be zero or one option selected, but deselect them
+  // all in case there was a UI bug.
+  var selections =
+      document.querySelectorAll('#autocompleteMenuScroll>.selected');
+  for (var i = 0, selected; (selected = selections[i]); i++) {
+    selected.className = '';
   }
   if (div) {
-    div.className = 'cursor';
+    div.className = 'selected';
   }
 };
 
@@ -406,15 +421,18 @@ Code.Explorer.inputKey = function(e) {
   }
   Code.Explorer.autocompleteCursorMonitor();
   var scrollDiv = document.getElementById('autocompleteMenuScroll');
-  var cursor = scrollDiv.querySelector('.cursor');
+  var selected = scrollDiv.querySelector('.selected');
   var menuDiv = document.getElementById('autocompleteMenu');
   var hasMenu = menuDiv.style.display !== 'none';
   if (e.keyCode === key.enter) {
-    if (cursor) {
-      var fakeEvent = {target: cursor};
+    if (selected) {
+      // Add the selected autocomplete option to the input.
+      var fakeEvent = {target: selected};
       Code.Explorer.autocompleteClick(fakeEvent);
       e.preventDefault();
     } else {
+      // The currently typed input should be considered complete.
+      // E.g. $.foo<enter> is not waiting to become $.foot
       var parts = JSON.parse(Code.Explorer.oldInputPartsJSON);
       if (Code.Explorer.oldInputPartsLast &&
           Code.Explorer.oldInputPartsLast.valid) {
@@ -453,24 +471,24 @@ Code.Explorer.inputKey = function(e) {
   }
   if (hasMenu && (e.keyCode === key.up || e.keyCode === key.down)) {
     Code.Explorer.keyNavigationTime = Date.now();
-    var newCursor;
+    var newSelected;
     if (e.keyCode === key.up) {
-      if (!cursor) {
-        newCursor = scrollDiv.lastChild;
-      } else if (cursor.previousSibling) {
-        newCursor = cursor.previousSibling;
+      if (!selected) {
+        newSelected = scrollDiv.lastChild;
+      } else if (selected.previousSibling) {
+        newSelected = selected.previousSibling;
       }
     } else if (e.keyCode === key.down) {
-      if (!cursor) {
-        newCursor = scrollDiv.firstChild;
-      } else if (cursor.nextSibling) {
-        newCursor = cursor.nextSibling;
+      if (!selected) {
+        newSelected = scrollDiv.firstChild;
+      } else if (selected.nextSibling) {
+        newSelected = selected.nextSibling;
       }
     }
-    if (newCursor) {
-      Code.Explorer.autocompleteSelect(newCursor);
-      if (newCursor.scrollIntoView) {
-        newCursor.scrollIntoView({block: 'nearest', inline: 'nearest'});
+    if (newSelected) {
+      Code.Explorer.autocompleteSelect(newSelected);
+      if (newSelected.scrollIntoView) {
+        newSelected.scrollIntoView({block: 'nearest', inline: 'nearest'});
       }
     }
     e.preventDefault();
@@ -494,11 +512,11 @@ Code.Explorer.getPrefix = function(str1, str2) {
 };
 
 /**
- * If the cursor moves away from the end as a result of the mouse,
+ * If a mouse-click caused the cursor co move away from the end,
  * close the autocomplete menu.
  */
 Code.Explorer.inputMouseDown = function() {
-  setTimeout(autocompleteCursorMonitor, 1);
+  setTimeout(Code.Explorer.autocompleteCursorMonitor, 1);
 };
 
 /**
@@ -516,9 +534,6 @@ Code.Explorer.panelSpacerMargin = 0;
  * @param {!Array<string>} parts List of parts.
  */
 Code.Explorer.loadPanels = function(parts) {
-  // Store parts in a sessionStorage so that the panels can highlight
-  // the current items.
-  sessionStorage.setItem('code parts', JSON.stringify(parts));
   for (var i = 0; i <= parts.length; i++) {
     var component = JSON.stringify(parts.slice(0, i));
     var iframe = document.getElementById('objectPanel' + i);

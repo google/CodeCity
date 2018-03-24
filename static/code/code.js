@@ -22,7 +22,17 @@
  * @author fraser@google.com (Neil Fraser)
  */
 
+/**
+ * If not otherwise specified, what should /code point at?
+ */
 Code.DEFAULT = '$';
+
+/**
+ * Raw string of selector.
+ * E.g. '$.foo["bar"]'
+ */
+Code.selector = location.search ?
+    decodeURI(location.search.substring(1)) : Code.DEFAULT;
 
 /**
  * Page has loaded, load the explorer.
@@ -33,7 +43,8 @@ Code.init = function() {
 };
 
 /**
- * Got a ping from someone.  Something might have changed and need updating.
+ * Got a ping from someone.  Check sessionStorage to see if selector has
+ * changed and, if so, propagate ping to subframes.
  * @param {?Event} event Message event, or null if called from popState.
  */
 Code.receiveMessage = function(event) {
@@ -70,14 +81,7 @@ Code.popState = function(event) {
   Code.receiveMessage(null);
 };
 
-/**
- * Raw string of selector.
- * E.g. '$.foo["bar"]'
- */
-Code.selector = location.search ?
-    decodeURI(location.search.substring(1)) : Code.DEFAULT;
 sessionStorage.setItem(Code.Common.SELECTOR, Code.selector);
-
 window.addEventListener('load', Code.init);
 window.addEventListener('message', Code.receiveMessage, false);
 window.addEventListener('popstate', Code.popState, false);

@@ -42,7 +42,14 @@ Code.Common.tokenizeSelector = function(text) {
   var whitespaceLength = text.length - trimText.length;
   text = trimText;
 
-  function pushString(state, buffer, index) {
+  /**
+   * Push a 'str' token type onto the list of tokens.
+   * @param {number} state Current FSM state (0-5).
+   * @param {!Array<string>} buffer Array of chars that make the string.
+   * @param {number} index Character index of this token in original input.
+   * @param {!Array<!Object>} tokens List of tokens.
+   */
+  function pushString(state, buffer, index, tokens) {
     // Convert state into quote type.
     var quotes;
     switch (state) {
@@ -58,7 +65,7 @@ Code.Common.tokenizeSelector = function(text) {
         throw 'Unknown state';
     }
     var token = {
-      type: '"',
+      type: 'str',
       raw: quotes + buffer.join('') + quotes,
       valid: true
     };
@@ -79,7 +86,14 @@ Code.Common.tokenizeSelector = function(text) {
     token.value = str;
     tokens.push(token);
   }
-  function pushUnparsed(buffer, index) {
+
+  /**
+   * Push an 'unparsed' token type onto the list of tokens.
+   * @param {!Array<string>} buffer Array of chars that make the value.
+   * @param {number} index Character index of this token in original input.
+   * @param {!Array<!Object>} tokens List of tokens.
+   */
+  function pushUnparsed(buffer, index, tokens) {
     var raw = buffer.join('');
     buffer.length = 0;
     if (raw) {
@@ -92,7 +106,8 @@ Code.Common.tokenizeSelector = function(text) {
     }
   }
 
-  // Split out strings.
+  // Split the text into an array of tokens.
+  // First step is to create two types of tokens: 'str' and 'unparsed'.
   var state = 0;
   // 0 - non-string state
   // 1 - single quote string
@@ -105,17 +120,17 @@ Code.Common.tokenizeSelector = function(text) {
     var char = text[i];
     if (state === 0) {
       if (char === "'") {
-        pushUnparsed(buffer, i);
+        pushUnparsed(buffer, i, tokens);
         state = 1;
       } else if (char === '"') {
-        pushUnparsed(buffer, i);
+        pushUnparsed(buffer, i, tokens);
         state = 2;
       } else {
         buffer.push(char);
       }
     } else if (state === 1) {
       if (char === "'") {
-        pushString(state, buffer, i);
+        pushString(state, buffer, i, tokens);
         state = 0;
       } else {
         buffer.push(char);
@@ -125,7 +140,7 @@ Code.Common.tokenizeSelector = function(text) {
       }
     } else if (state === 2) {
       if (char === '"') {
-        pushString(state, buffer, i);
+        pushString(state, buffer, i, tokens);
         state = 0;
       } else {
         buffer.push(char);
@@ -142,12 +157,12 @@ Code.Common.tokenizeSelector = function(text) {
     }
   }
   if (state !== 0) {
-    pushString(state, buffer, i);
+    pushString(state, buffer, i, tokens);
   } else if (buffer.length) {
-    pushUnparsed(buffer, i);
+    pushUnparsed(buffer, i, tokens);
   }
 
-  // Split out brackets: [ ]
+  // Second step is to parse each 'unparsed' token and split out brackets: [ ]
   for (var i = tokens.length - 1; i >= 0; i--) {
     var token = tokens[i];
     if (token.type === 'unparsed') {
@@ -184,11 +199,12 @@ Code.Common.tokenizeSelector = function(text) {
     }
   }
 
-  // Parse numbers.
+  // Third step is to parse each 'unparsed' token as a number, if it was
+  // preceded by a '[' token.
   for (var i = 1; i < tokens.length; i++) {
     var token = tokens[i];
     if (tokens[i - 1].type === '[' && token.type === 'unparsed') {
-      token.type = '#';
+      token.type = 'num';
       token.value = NaN;
       token.valid = false;
       // Does not support E-notation or NaN.
@@ -199,7 +215,8 @@ Code.Common.tokenizeSelector = function(text) {
     }
   }
 
-  // Split member expressions and parse identifiers.
+  // Fourth step is to split remaining 'unparsed' tokens into 'id' and '.'
+  // tokens.
   var unicodeRegex = /\\u([0-9A-F]{4})/ig;
   function decodeUnicode(m, p1) {
     return String.fromCodePoint(parseInt(p1, 16));
@@ -251,7 +268,9 @@ Code.Common.tokenizeSelector = function(text) {
     }
   }
 
-  // Validate order of tokens.
+  // Finally, validate order of tokens.  Only check for permanent errors.
+  // E.g. '$..foo' can never be legal.
+  // E.g. '$["foo' isn't legal now, but could become legal after more typing.
   var state = 0;
   for (var i = 0; i < tokens.length; i++) {
     var token = tokens[i];
@@ -270,7 +289,7 @@ Code.Common.tokenizeSelector = function(text) {
         break;
       }
     } else if (state === 2) {
-      if (token.type === '"' || token.type === '#') {
+      if (token.type === 'str' || token.type === 'num') {
         state = 3;
       } else {
         break;
@@ -307,7 +326,7 @@ Code.Common.selectorToParts = function(text) {
     if (!token.valid) {
       return null;
     }
-    if (token.type === 'id' || token.type === '"' || token.type === '#') {
+    if (token.type === 'id' || token.type === 'str' || token.type === 'num') {
       parts.push(token.value);
     }
   }

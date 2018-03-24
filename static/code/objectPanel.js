@@ -37,13 +37,19 @@ Code.ObjectPanel.parts = null;
 Code.ObjectPanel.results = null;
 
 /**
- * Page has loaded, initialize the panel.  Called by Code City with data.
- * @param {!Object} data Structured data from Code City.
+ * Structured data from Code City.
+ * @type {Object}
  */
-Code.ObjectPanel.init = function(data) {
+Code.ObjectPanel.data = null;
+
+/**
+ * Page has loaded, initialize the panel.  Called by Code City with data.
+ */
+Code.ObjectPanel.init = function() {
   // Clear the '...'
   results = document.getElementById('objectResults');
   results.innerHTML = '';
+  var data = Code.ObjectPanel.data;
   if (!data) {
     // Server error.  Should not happen.
     var title = document.getElementById('objectTitle');
@@ -55,7 +61,7 @@ Code.ObjectPanel.init = function(data) {
   if (data.roots) {
     // Print all root objects.
     for (var i = 0; i < data.roots.length; i++) {
-      Code.ObjectPanel.addLink(data.roots[i]);
+      Code.ObjectPanel.addLink(data.roots[i], false);
     }
   }
   if (data.properties) {
@@ -64,7 +70,7 @@ Code.ObjectPanel.init = function(data) {
     for (var i = 0; i < data.properties.length; i++) {
       var propList = data.properties[i];
       for (var j = 0; j < propList.length; j++) {
-        Code.ObjectPanel.addLink(propList[j]);
+        Code.ObjectPanel.addLink(propList[j], i && !j);
       }
     }
   }
@@ -75,10 +81,11 @@ Code.ObjectPanel.init = function(data) {
 };
 
 /**
- * Create the DOM to add one property link to the list.
+ * Create the DOM elements to add one property link to the list.
  * @param {!Object} prop Property info.
+ * @param {boolean} section Flag indicating a new section.
  */
-Code.ObjectPanel.addLink = function(prop) {
+Code.ObjectPanel.addLink = function(prop, section) {
   var name = prop.name;
   var type = prop.type;
   var newParts = Code.ObjectPanel.parts.concat(name);
@@ -98,6 +105,9 @@ Code.ObjectPanel.addLink = function(prop) {
   }
   var div = document.createElement('div');
   div.appendChild(document.createTextNode(name));
+  if (section) {
+    div.className = 'section';
+  }
   a.appendChild(div);
   results.appendChild(a);
 };
@@ -170,17 +180,19 @@ Code.ObjectPanel.filterShadowed = function(data) {
   if (!data || data.length < 2) {
     return;
   }
-  var properties = Object.create(null);
+  var seen = Object.create(null);
   for (var i = 0; i < data.length; i++) {
     var datum = data[i];
-    for (var j = datum.length - 1; j >= 0; j--) {
-      var prop = datum[j];
-      if (properties[prop.name]) {
-        datum.splice(j, 1);
-      } else {
-        properties[prop.name] = true;
+    var cursorInsert = 0;
+    var cursorRead = 0;
+    while (cursorRead < datum.length) {
+      var prop = datum[cursorRead++];
+      if (!seen[prop.name]) {
+        seen[prop.name] = true;
+        datum[cursorInsert++] = prop;
       }
     }
+    datum.length = cursorInsert;
     data[i].sort(Code.ObjectPanel.caseInsensitiveComp);
   }
 };
@@ -216,3 +228,5 @@ Code.ObjectPanel.caseInsensitiveComp = function(a, b) {
   div.innerHTML = '';
   div.appendChild(document.createTextNode(name));
 })();
+
+window.addEventListener('load', Code.ObjectPanel.init);

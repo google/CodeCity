@@ -25,49 +25,44 @@
 // IDE object.
 $.code = {};
 
-$.code.getGlobal = function(name) {
-  // Given a name (string), return the global object of that name.
-  if ($.code.getGlobal.globals.indexOf(name) === -1) {
-    return null;
-  }
-  // This eval is known to be safe since the content is on the whitelist.
-  return eval(name);
+$.code.getGlobal = function() {
+  // Return a pseudo global object.
+  // TODO: Cache this object.
+  var global = Object.create(null);
+  global.$ = $;
+  global.Array = Array;
+  global.Boolean = Boolean;
+  global.clearTimeout = clearTimeout;
+  global.Date = Date;
+  global.decodeURI = decodeURI;
+  global.decodeURIComponent = decodeURIComponent;
+  global.encodeURI = encodeURI;
+  global.encodeURIComponent = encodeURIComponent;
+  global.Error = Error;
+  global.escape = escape;
+  global.eval = eval;
+  global.EvalError = EvalError;
+  global.Function = Function;
+  global.isFinite = isFinite;
+  global.isNaN = isNaN;
+  global.JSON = JSON;
+  global.Math = Math;
+  global.Number = Number;
+  global.Object = Object;
+  global.parseFloat = parseFloat;
+  global.parseInt = parseInt;
+  global.RangeError = RangeError;
+  global.ReferenceError = ReferenceError;
+  global.RegExp = RegExp;
+  global.setTimeout = setTimeout;
+  global.String = String;
+  global.suspend = suspend;
+  global.SyntaxError = SyntaxError;
+  global.TypeError = TypeError;
+  global.unescape = unescape;
+  global.URIError = URIError;
+  return global;
 };
-
-$.code.getGlobal.globals = [
-  '$',
-  'Array',
-  'Boolean',
-  'clearTimeout',
-  'Date',
-  'decodeURI',
-  'decodeURIComponent',
-  'encodeURI',
-  'encodeURIComponent',
-  'Error',
-  'escape',
-  'eval',
-  'EvalError',
-  'Function',
-  'isFinite',
-  'isNaN',
-  'JSON',
-  'Math',
-  'Number',
-  'Object',
-  'parseFloat',
-  'parseInt',
-  'RangeError',
-  'ReferenceError',
-  'RegExp',
-  'setTimeout',
-  'String',
-  'suspend',
-  'SyntaxError',
-  'TypeError',
-  'unescape',
-  'URIError'
-];
 
 $.code.getObject = function(parts) {
   // Given an array of parts, return the described object.
@@ -75,18 +70,15 @@ $.code.getObject = function(parts) {
   if (!parts.length) {
     return undefined;  // Global namespace.
   }
-  var obj = $.code.getGlobal(parts[0]);
-  if (obj !== null) {
-    for (var i = 1; i < parts.length; i++) {
-      obj = obj[parts[i]];
-      if (!obj || (typeof obj !== 'object' && typeof obj !== 'function')) {
-        return null;  // Specified path doesn't exist.
-      }
+  var obj = $.code.getGlobal();
+  for (var i = 0; i < parts.length; i++) {
+    obj = obj[parts[i]];
+    if (!obj || (typeof obj !== 'object' && typeof obj !== 'function')) {
+      return null;  // Specified path doesn't exist.
     }
   }
   return obj;
 };
-
 
 $.code.frameset = function(request, response) {
   // Overwrite on first execution.
@@ -141,7 +133,10 @@ $.http.router.codeExplorer =
 
 
 $.code.autocomplete = function(request, response) {
+  // HTTP handler for /code/autocomplete
   // Provide object autocompletion service for the IDE's explorer.
+  // Takes one input: a JSON-encoded list of parts.
+  // Prints a flat list of autocomplete options for the specified object.
   var parts = JSON.parse(request.parameters.parts);
   var options = null;
   if (parts.length) {
@@ -153,7 +148,7 @@ $.code.autocomplete = function(request, response) {
       } while ((obj = Object.getPrototypeOf(obj)));
     }
   } else {
-    options = [$.code.getGlobal.globals];
+    options = [Object.getOwnPropertyNames($.code.getGlobal())];
   }
   response.write(JSON.stringify(options));
 };
@@ -163,7 +158,10 @@ $.http.router.codeAutocomplete =
 
 
 $.code.objectPanel = function(request, response) {
+  // HTTP handler for /code/objectPanel
   // Provide data for the IDE's object panels.
+  // Takes one input: a JSON-encoded list of parts.
+  // Prints a browser-executed JS data assignment.
   var data = {};
   var parts = JSON.parse(request.parameters.parts);
   if (parts.length) {
@@ -184,14 +182,13 @@ $.code.objectPanel = function(request, response) {
   } else {
     data.roots = [];
     // Add typeof information.
-    // TODO: Cache this.
-    for (var i = 0; i < $.code.getGlobal.globals.length; i++) {
-      var prop = $.code.getGlobal.globals[i];
-      var type = typeof $.code.getGlobal(prop);
-      data.roots[i] = {name: prop, type: type};
+    var global = $.code.getGlobal();
+    for (var name in global) {
+      var type = typeof global[name];
+      data.roots.push({name: name, type: type});
     }
   }
-  response.write('Code.ObjectPanel.init(' + JSON.stringify(data) + ');');
+  response.write('Code.ObjectPanel.data = ' + JSON.stringify(data) + ';');
 };
 
 $.http.router.objectPanel =

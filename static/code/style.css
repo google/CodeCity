@@ -38,7 +38,7 @@ input {
   white-space: nowrap;
 }
 
-#autocompleteMenuScroll>div.cursor {
+#autocompleteMenuScroll>div.selected {
   background-color: #def;
 }
 
@@ -111,6 +111,10 @@ input {
 
 #objectResults>a.highlighted>div {
   background-color: #ccc;
+}
+
+#objectResults>a>div.section {
+  border-top: 1px solid #444;
 }
 
 .objectType {
