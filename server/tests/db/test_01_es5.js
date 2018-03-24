@@ -1274,6 +1274,18 @@ tests.newExpression = function() {
   console.assert(t.sum === 77.7, 'newExpression');
 };
 
+tests.newExpressionReturnObj = function() {
+  function T() { return {}; };
+  T.prototype = { p: 'the prototype' };
+  console.assert((new T).p === undefined, 'newExpressionReturnObj');
+};
+
+tests.newExpressionReturnObj = function() {
+  function T() { return 0; };
+  T.prototype = { p: 'the prototype' };
+  console.assert((new T).p === 'the prototype', 'newExpressionReturnObj');
+};
+
 tests.regexpSimple = function() {
   console.assert(/foo/.test('foobar'), 'regexpSimple');
 };

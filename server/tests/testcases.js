@@ -846,6 +846,20 @@ module.exports = [
     `,
     expected: 77.7 },
 
+  { name: 'newExpressionReturnObj', src: `
+    function T() { return {}; };
+    T.prototype = { p: 'the prototype' };
+    (new T).p;
+    `,
+    expected: undefined },
+
+  { name: 'newExpressionReturnPrimitive', src: `
+    function T() { return 0; };
+    T.prototype = { p: 'the prototype' };
+    (new T).p;
+    `,
+    expected: 'the prototype' },
+
   { name: 'regexpSimple', src: `
     /foo/.test('foobar');
     `,
