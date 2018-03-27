@@ -561,7 +561,7 @@ Interpreter.prototype.initBuiltins_ = function() {
    * @param {!Interpreter.State} state The current state.
    * @param {Interpreter.Value} thisVal The this value passed into function.
    * @param {!Array<Interpreter.Value>} args The arguments to the call.
-   * @return {Interpreter.Value}
+   * @return {Interpreter.Value|!FunctionResult}
    */
   eval_.call = function(intrp, thread, state, thisVal, args) {
     var code = args[0];
@@ -581,7 +581,8 @@ Interpreter.prototype.initBuiltins_ = function() {
     var scope = new Interpreter.Scope(state.scope.perms, outerScope);
     intrp.populateScope_(ast, scope, code);
     thread.stateStack_.push(new Interpreter.State(evalNode, scope));
-    return undefined; // Default value if no code to overwrite it.
+    state.value = undefined;  // Default value if no explicit return.
+    return FunctionResult.AwaitValue;
   };
   eval_.call.id = 'eval';  // For serialization.
   this.builtins_['eval'] = eval_;
@@ -880,7 +881,8 @@ Interpreter.prototype.initFunction_ = function() {
       // non-readability of properties with numeric names.
       state.arguments_ = intrp.arrayPseudoToNative(args);
     }
-    state.doneExec = false;
+    state.value = undefined;
+    return FunctionResult.CallAgain;
   };
   this.createNativeFunction('Function.prototype.apply', wrapper, false);
 
@@ -896,7 +898,8 @@ Interpreter.prototype.initFunction_ = function() {
     for (var i = 1; i < arguments.length; i++) {
       state.arguments_.push(arguments[i]);
     }
-    state.doneExec = false;
+    state.value = undefined;
+    return FunctionResult.CallAgain;
   };
   this.createNativeFunction('Function.prototype.call', wrapper, false);
 };
@@ -2502,7 +2505,7 @@ Interpreter.prototype.Function.prototype.setName = function(name) {
  * @param {!Interpreter.State} state The current state.
  * @param {Interpreter.Value} thisVal The this value passed into function.
  * @param {!Array<Interpreter.Value>} args The arguments to the call.
- * @return {Interpreter.Value}
+ * @return {Interpreter.Value|!FunctionResult}
  */
 Interpreter.prototype.Function.prototype.call = function(
     intrp, thread, state, thisVal, args) {
@@ -2513,7 +2516,7 @@ Interpreter.prototype.Function.prototype.call = function(
  * @param {!Interpreter.Thread} thread The current thread.
  * @param {!Interpreter.State} state The current state.
  * @param {!Array<Interpreter.Value>} args The arguments to the call.
- * @return {Interpreter.Value}
+ * @return {Interpreter.Value|!FunctionResult}
  */
 Interpreter.prototype.Function.prototype.construct = function(
     intrp, thread, state, args) {
@@ -2819,7 +2822,7 @@ Interpreter.prototype.installTypes = function() {
    * @param {!Interpreter.State} state The current state.
    * @param {Interpreter.Value} thisVal The this value passed into function.
    * @param {!Array<Interpreter.Value>} args The arguments to the call.
-   * @return {Interpreter.Value}
+   * @return {Interpreter.Value|!FunctionResult}
    */
   intrp.Function.prototype.call = function(
       intrp, thread, state, thisVal, args) {
@@ -2835,7 +2838,7 @@ Interpreter.prototype.installTypes = function() {
    * @param {!Interpreter.Thread} thread The current thread.
    * @param {!Interpreter.State} state The current state.
    * @param {!Array<Interpreter.Value>} args The arguments to the call.
-   * @return {Interpreter.Value}
+   * @return {Interpreter.Value|!FunctionResult}
    */
   intrp.Function.prototype.construct = function(
       intrp, thread, state, args) {
@@ -2956,7 +2959,7 @@ Interpreter.prototype.installTypes = function() {
    * @param {!Interpreter.State} state The current state.
    * @param {Interpreter.Value} thisVal The this value passed into function.
    * @param {!Array<Interpreter.Value>} args The arguments to the call.
-   * @return {Interpreter.Value}
+   * @return {Interpreter.Value|!FunctionResult}
    * @override
    */
   intrp.OldAsyncFunction.prototype.call = function(
@@ -3004,9 +3007,9 @@ Interpreter.prototype.installTypes = function() {
     // Prepend resolve, reject to arguments.
     args = callbacks.concat(args);
     thread.status = Interpreter.Thread.Status.BLOCKED;
-    // return super(arguments):
-    return intrp.OldNativeFunction.prototype.call.call(
+    intrp.OldNativeFunction.prototype.call.call(
         /** @type {?} */ (this), intrp, thread, state, thisVal, args);
+    return FunctionResult.AwaitValue;
   };
 
   // Async functions not constructable:
@@ -3179,6 +3182,8 @@ Interpreter.prototype.installTypes = function() {
         var node = state.node;
         // Always add the first state to the stack.
         // Also add any call expression that is executing.
+        // BUG(cpcallen): state.doneExec is no longer a correct way
+        // check if args have been evaluated.
         if (stack.length &&
             !(node['type'] === 'CallExpression' && state.doneExec)) {
           continue;
@@ -3428,8 +3433,30 @@ Interpreter.prototype.installTypes = function() {
 };
 
 ///////////////////////////////////////////////////////////////////////////////
-// Property Descriptors
+// Miscellaneous internal classes not used for storing state
 ///////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Special sentinel values returned by the call or construct method of
+ * a (pseudo)Function to indicate that a return value is not
+ * immediately available (e.g., in the case of a user function that
+ * needs to be evaluated, or an async function that blocks).
+ * @constructor
+ */
+var FunctionResult = function() {};
+/**
+ * Please evaluate whatever state(s) have been pushed onto the stack,
+ * and use their completion value as the return value of the function.
+ * @const
+ */
+FunctionResult.AwaitValue = new FunctionResult;
+/**
+ * Please invoke .call or .construct again the next time this state is
+ * encountered.
+ * @const
+ */
+FunctionResult.CallAgain = new FunctionResult;
+
 /**
  * Class for property descriptors, with commonly-used examples.
  * @constructor
@@ -3762,13 +3789,18 @@ stepFuncs_['CallExpression'] = function (stack, state, node) {
       if (this.thread === null) {
         throw TypeError('No current thread??');
       }
-      if (state.isConstructor) {
-        state.value = func.construct(
-            this, this.thread, state, state.arguments_);
-      } else {
-        state.value = func.call(
-            this, this.thread, state, state.funcThis_, state.arguments_);
+      var r = 
+          state.isConstructor ?
+          func.construct(this, this.thread, state, state.arguments_) :
+          func.call(this, this.thread, state, state.funcThis_,
+                    state.arguments_);
+      if (r instanceof FunctionResult) {
+        if (r === FunctionResult.CallAgain) {
+          state.doneExec = false;
+        }
+        return;
       }
+      state.value = r;
     }
   } else {
     // Execution complete.  Put the return value on the stack.
