@@ -1675,6 +1675,9 @@ Interpreter.legalArrayIndex = function(x) {
  */
 Interpreter.prototype.createFunctionFromAST = function(node, scope, source) {
   var func = new this.Function(scope.perms);
+  if(node['id']) {
+    func.setName(node['id']['name']);
+  }
   func.addPrototype();
   func.outerScope = scope;
   func.node = node;
@@ -1711,8 +1714,7 @@ Interpreter.prototype.createNativeFunction = function(
     nativeFunc.id = name;
   }
   var func = new this.OldNativeFunction(nativeFunc, legalConstructor);
-  this.setProperty(func, 'name', name.replace(/^.*\./, ''),
-      Interpreter.READONLY_NONENUMERABLE_DESCRIPTOR);
+  func.setName(name.replace(/^.*\./, ''));
   if (this.builtins_[name]) {
     throw ReferenceError('Builtin "' + name + '" already exists.');
   }
@@ -1735,8 +1737,7 @@ Interpreter.prototype.createAsyncFunction = function(name, asyncFunc) {
     asyncFunc.id = name;
   }
   var func = new this.OldAsyncFunction(asyncFunc);
-  this.setProperty(func, 'name', name.replace(/^.*\./, ''),
-      Interpreter.READONLY_NONENUMERABLE_DESCRIPTOR);
+  func.setName(name.replace(/^.*\./, ''));
   if (this.builtins_[name]) {
     throw ReferenceError('Builtin "' + name + '" already exists.');
   }
@@ -2497,6 +2498,10 @@ Interpreter.prototype.Function.prototype.hasInstance = function(value) {
 Interpreter.prototype.Function.prototype.addPrototype = function() {
   throw Error('Inner class method not callable on prototype');
 };
+/** @param {string} name */
+Interpreter.prototype.Function.prototype.setName = function(name) {
+  throw Error('Inner class method not callable on prototype');
+};
 /**
  * @param {!Interpreter} intrp The interpreter.
  * @param {!Interpreter.Thread} thread The current thread.
@@ -2790,6 +2795,19 @@ Interpreter.prototype.installTypes = function() {
         Interpreter.NONENUMERABLE_NONCONFIGURABLE_DESCRIPTOR);
     intrp.setProperty(protoObj, 'constructor', this,
         Interpreter.NONENUMERABLE_DESCRIPTOR);
+  };
+
+  /**
+   * Add a .name property to this function object.  Partially
+   * implements SetFunctionName from §9.2.11 of the ES6 spec.
+   * @param {string} name Name of function.
+   */
+  intrp.Function.prototype.setName = function(name) {
+    if (Object.getOwnPropertyDescriptor(this.properties, 'name')) {
+      throw Error('Function alreay has name??');
+    }
+    intrp.setProperty(this, 'name', name,
+        Interpreter.READONLY_NONENUMERABLE_DESCRIPTOR);
   };
 
   /**
