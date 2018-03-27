@@ -856,8 +856,8 @@ Interpreter.prototype.initFunction_ = function() {
     }
     // Interestingly, the scope for constructed functions is the global scope,
     // even if they were constructed in some other scope.
-    return intrp.createFunctionFromAST(
-        ast['body'][0]['expression'], intrp.global, code);
+    return new intrp.UserFunction(
+        ast['body'][0]['expression'], intrp.global, code, intrp.thread.perms());
   };
   this.createNativeFunction('Function', wrapper, true);
 
@@ -1664,38 +1664,6 @@ Interpreter.legalArrayIndex = function(x) {
 };
 
 /**
- * Create a new function.
- * @param {!Interpreter.Node} node AST node defining the function.
- * @param {!Interpreter.Scope} scope Parent scope.
- * @param {string} source Raw source code.
- * @return {!Interpreter.prototype.Function} New function.
- */
-Interpreter.prototype.createFunctionFromAST = function(node, scope, source) {
-  var func = new this.Function(scope.perms);
-  if(node['id']) {
-    func.setName(node['id']['name']);
-  }
-  func.addPrototype();
-  func.outerScope = scope;
-  func.node = node;
-  this.setProperty(func, 'length', func.node['params'].length, Descriptor.none);
-  // Record the source on the function object.  This is needed by
-  // (pseudo)Function.toString().
-  func.source = source.substring(node['start'], node['end']);
-  // Record the source on the function node's body node.  This is
-  // needed by the (pseudo)Error constructor when generating stack
-  // traces (via Thread.prototype.getSource); we store it on the body
-  // node (rather than on the function node) because the function node
-  // never appears on the stateStack_ when the function is being
-  // executed.  We save the full original source (not just the bit
-  // containing the function) because the start and end offsets on the
-  // AST nodes (that will be used to generate the stack trace) are
-  // relative to the start of the whole source string.
-  node['body']['source'] = source;
-  return func;
-};
-
-/**
  * Create a new native function.  Function will be owned by root.
  * @param {string} name Name of new function.
  * @param {!Function} nativeFunc JavaScript function.
@@ -2113,7 +2081,7 @@ Interpreter.prototype.populateScope_ = function(node, scope, source) {
     }
   } else if (node['type'] === 'FunctionDeclaration') {
     this.addVariableToScope(scope, node['id']['name'],
-                            this.createFunctionFromAST(node, scope, source));
+        new this.UserFunction(node, scope, source, scope.perms));
     return;  // Do not recurse into function.
   } else if (node['type'] === 'FunctionExpression') {
     return;  // Do not recurse into function.
@@ -2492,9 +2460,6 @@ Interpreter.prototype.Function.prototype.toString = function() {
 Interpreter.prototype.Function.prototype.hasInstance = function(value) {
   throw Error('Inner class method not callable on prototype');
 };
-Interpreter.prototype.Function.prototype.addPrototype = function() {
-  throw Error('Inner class method not callable on prototype');
-};
 /** @param {string} name */
 Interpreter.prototype.Function.prototype.setName = function(name) {
   throw Error('Inner class method not callable on prototype');
@@ -2521,6 +2486,25 @@ Interpreter.prototype.Function.prototype.call = function(
 Interpreter.prototype.Function.prototype.construct = function(
     intrp, thread, state, args) {
   throw Error('Inner class method not callable on prototype');
+};
+
+/**
+ * @constructor
+ * @extends {Interpreter.prototype.Function}
+ * @param {!Interpreter.Node} node
+ * @param {!Interpreter.Scope} scope Enclosing scope.
+ * @param {string} src
+ * @param {?Interpreter.Owner=} owner
+ * @param {?Interpreter.prototype.Object=} proto
+ */
+Interpreter.prototype.UserFunction = function(node, scope, src, owner, proto) {
+  /** @type {!Interpreter.Node} */
+  this.node;
+  /** @type {!Interpreter.Scope} */
+  this.scope;
+  /** @type {string} */
+  this.source;
+  throw Error('Inner class constructor not callable on prototype');
 };
 
 /**
@@ -2784,23 +2768,83 @@ Interpreter.prototype.installTypes = function() {
   };
 
   /**
-   * Add a .prototype property to this function object, setting
-   * this.properties[prototype] to prototype and
-   * prototype.properites[constructor] to func.  A newly-created
-   * object is used; it will have the same owner as the function.
+   * The [[Call]] internal method defined by §13.2.1 of the ES5.1 spec.
+   * Generic functions (neither native nor user) can't be called.
+   * @param {!Interpreter} intrp The interpreter.
+   * @param {!Interpreter.Thread} thread The current thread.
+   * @param {!Interpreter.State} state The current state.
+   * @param {Interpreter.Value} thisVal The this value passed into function.
+   * @param {!Array<Interpreter.Value>} args The arguments to the call.
+   * @return {Interpreter.Value}
    */
-  intrp.Function.prototype.addPrototype = function() {
-    if (this.illegalConstructor) {
-      // It's almost certainly an error to add a .prototype property
-      // to a function we have declared isn't a constructor.  (This
-      // doesn't prevent user code from doing so - just makes sure we
-      // don't do it accidentally when bootstrapping or whatever.)
-      throw TypeError("Illogical addition of .prototype to non-constructor");
+  intrp.Function.prototype.call = function(
+      intrp, thread, state, thisVal, args) {
+    intrp.throwError(intrp.TYPE_ERROR,
+         "Class constructor " + this + " cannot be invoked without 'new'");
+  };
+
+  /**
+   * The [[Construct]] internal method defined by §13.2.2 of the ES5.1
+   * spec.
+   * Generic functions (neither native nor user) can't be constructed.
+   * @param {!Interpreter} intrp The interpreter.
+   * @param {!Interpreter.Thread} thread The current thread.
+   * @param {!Interpreter.State} state The current state.
+   * @param {!Array<Interpreter.Value>} args The arguments to the call.
+   * @return {Interpreter.Value}
+   */
+  intrp.Function.prototype.construct = function(
+      intrp, thread, state, args) {
+    intrp.throwError(intrp.TYPE_ERROR, this + ' is not a constructor');
+  };
+
+  /**
+   * Class for a user-defined function.
+   * @constructor
+   * @extends {Interpreter.prototype.UserFunction}
+   * @param {!Interpreter.Node} node AST node for function body.
+   * @param {!Interpreter.Scope} scope Enclosing scope.
+   * @param {string} src (Whole) source from which AST was parsed.
+   * @param {?Interpreter.Owner=} owner Owner object (default: null).
+   * @param {?Interpreter.prototype.Object=} proto Prototype object or null.
+   */
+  intrp.UserFunction = function(node, scope, src, owner, proto) {
+    if (!node) { // Deserializing
+      this.node = /** @type {?} */ (null);
+      this.scope = /** @type {?} */ (null);
+      this.source = '';
+      return;
     }
+    intrp.Function.call(/** @type {?} */ (this), owner, proto);
+    this.node = node;
+    this.scope = scope;
+    if(node['id']) {
+      this.setName(node['id']['name']);
+    }
+    var length = node['params'].length;
+    intrp.setProperty(this, 'length', length, Descriptor.none);
+    // Record the source for the function (only), for use by
+    // (pseudo)Function.toString().
+    this.source = src.substring(node['start'], node['end']);
+    // Record the (whole) source on the function node's body node, for
+    // use by the the (pseudo)Error constructor when generating stack
+    // traces (via Thread.prototype.getSource).  We store it on the
+    // body node (rather than on the function node) because the
+    // function node never appears on the stateStack_ when the
+    // function is being executed.  We save the full original source
+    // (not just the part containing the function) because the start
+    // and end offsets on the AST nodes are absolute, not relative.
+    if (!(node['body']['source'])) {
+      node['body']['source'] = src;
+    }
+    // Add .prototype property pointing at a new plain Object.
     var protoObj = new intrp.Object(this.owner);
     intrp.setProperty(this, 'prototype', protoObj, Descriptor.w);
     intrp.setProperty(protoObj, 'constructor', this, Descriptor.wc);
   };
+
+  intrp.UserFunction.prototype = Object.create(intrp.Function.prototype);
+  intrp.UserFunction.prototype.constructor = intrp.UserFunction;
 
   /**
    * Add a .name property to this function object.  Partially
@@ -2816,33 +2860,84 @@ Interpreter.prototype.installTypes = function() {
 
   /**
    * The [[Call]] internal method defined by §13.2.1 of the ES5.1 spec.
-   * Generic functions (neither native nor user) can't be called.
    * @param {!Interpreter} intrp The interpreter.
    * @param {!Interpreter.Thread} thread The current thread.
    * @param {!Interpreter.State} state The current state.
    * @param {Interpreter.Value} thisVal The this value passed into function.
    * @param {!Array<Interpreter.Value>} args The arguments to the call.
    * @return {Interpreter.Value|!FunctionResult}
+   * @override
    */
-  intrp.Function.prototype.call = function(
+  intrp.UserFunction.prototype.call = function(
       intrp, thread, state, thisVal, args) {
-    intrp.throwError(intrp.TYPE_ERROR,
-         "Class constructor " + this + " cannot be invoked without 'new'");
+    if (this.owner === null) {
+      // TODO(cpcallen): PermError?
+      intrp.throwError(intrp.ERROR,
+          'Functions with null owner cannot be called');
+      return undefined; // Not reached; only proves this.owner !== null after.
+    }
+    // Aside: we need to pass this.owner, rather than
+    // this.scope.perms, for the new scope perms because (1) we want
+    // to be able to change the owner of a function after it's
+    // created, and (2) functions created using the Function
+    // constructor have this.scope set to the global scope, which is
+    // owned by root!
+    var scope = new Interpreter.Scope(this.owner, this.scope);
+    intrp.populateScope_(this.node['body'], scope, this.source);
+    // Add all arguments.
+    for (var i = 0; i < this.node['params'].length; i++) {
+      var paramName = this.node['params'][i]['name'];
+      var paramValue = args.length > i ? args[i] :
+          undefined;
+      intrp.addVariableToScope(scope, paramName, paramValue);
+    }
+    // Build arguments variable.
+    var argsList = new intrp.Array(this.owner);
+    for (var i = 0; i < args.length; i++) {
+      intrp.setProperty(argsList, i, args[i]);
+    }
+    intrp.addVariableToScope(scope, 'arguments', argsList, true);
+    // Add the function's name (var x = function foo(){};)
+    var name = this.node['id'] && this.node['id']['name'];
+    if (name) {
+      intrp.addVariableToScope(scope, name, this, true);
+    }
+    intrp.addVariableToScope(scope, 'this', thisVal, true);
+    state.value = undefined;  // Default value if no explicit return.
+    thread.stateStack_.push(new Interpreter.State(this.node['body'], scope));
+    return FunctionResult.AwaitValue;
   };
 
   /**
-   * The [[Constructl]] internal method defined by §13.2.2 of the
-   * ES5.1 spec.
-   * Generic functions (neither native nor user) can't be constructed.
+   * The [[Construct]] internal method defined by §13.2.2 of the ES5.1
+   * spec.
    * @param {!Interpreter} intrp The interpreter.
    * @param {!Interpreter.Thread} thread The current thread.
    * @param {!Interpreter.State} state The current state.
    * @param {!Array<Interpreter.Value>} args The arguments to the call.
    * @return {Interpreter.Value|!FunctionResult}
+   * @override
    */
-  intrp.Function.prototype.construct = function(
+  intrp.UserFunction.prototype.construct = function(
       intrp, thread, state, args) {
-    intrp.throwError(intrp.TYPE_ERROR, this + ' is not a constructor');
+    if (!state.object_) {
+      var proto = intrp.getProperty(this, 'prototype');
+      // Per ES5.1 §13.2.2 step 7: if .prototype is primitive, use
+      // Object.prototype instead.
+      if (!(proto instanceof intrp.Object)) {
+        proto = intrp.OBJECT;
+      }
+      state.object_= new intrp.Object(state.scope.perms, proto);
+      this.call(intrp, thread, state, state.object_, args);
+      return FunctionResult.CallAgain;
+    } else {
+      // Per ES5.1 §13.2.2 steps 9,10: if constructor returns
+      // primitive, return constructed object instead.
+      if (!(state.value instanceof intrp.Object)) {
+        return state.object_;
+      }
+      return state.value;
+    }
   };
 
   /**
@@ -3726,19 +3821,6 @@ stepFuncs_['CallExpression'] = function (stack, state, node) {
         }
         return;
       }
-      if (!(func instanceof this.Function)) {
-        this.throwError(this.TYPE_ERROR, func + ' is not a function');
-      } else if (func.illegalConstructor) {
-        // Some functions can't be constrcuted (e.g.: new escape(); fails.)
-        this.throwError(this.TYPE_ERROR, func + ' is not a constructor');
-      }
-      // Constructor; 'this' will be new object being constructed.
-      var proto = this.getProperty(func, 'prototype');
-      // Per §13.2.2 (step 7) of ES5.1 spec:
-      if (!(proto instanceof this.Object)) {
-        proto = this.OBJECT;
-      }
-      state.funcThis_ = new this.Object(state.scope.perms, proto);
       state.isConstructor = true;
     }
     state.doneArgs_ = true;
@@ -3749,70 +3831,29 @@ stepFuncs_['CallExpression'] = function (stack, state, node) {
     if (!(func instanceof this.Function)) {
       this.throwError(this.TYPE_ERROR, func + ' is not a function');
     }
-    var funcNode = func.node;
-    if (funcNode) {
-      // Aside: we only need to pass func.owner for new scope perms
-      // because we want to be able to change the owner of a function.
-      // Otherwise, new Scope() would take .perms from outerScope,
-      // which will have same .perms as initial value of func.owner.
-      var scope = new Interpreter.Scope(func.owner, func.outerScope);
-      if(func.source === undefined) {
-        throw Error("No source for user-defined function??");
-      }
-      this.populateScope_(funcNode['body'], scope, func.source);
-      // Add all arguments.
-      for (var i = 0; i < funcNode['params'].length; i++) {
-        var paramName = funcNode['params'][i]['name'];
-        var paramValue = state.arguments_.length > i ? state.arguments_[i] :
-            undefined;
-        this.addVariableToScope(scope, paramName, paramValue);
-      }
-      // Build arguments variable.
-      // TODO(cpcallen:perms): Should this be callerPerms()?
-      var argsList = new this.Array(func.owner);
-      for (var i = 0; i < state.arguments_.length; i++) {
-        this.setProperty(argsList, i, state.arguments_[i]);
-      }
-      this.addVariableToScope(scope, 'arguments', argsList, true);
-      // Add the function's name (var x = function foo(){};)
-      var name = funcNode['id'] && funcNode['id']['name'];
-      if (name) {
-        this.addVariableToScope(scope, name, func, true);
-      }
-      this.addVariableToScope(scope, 'this', state.funcThis_, true);
-      state.value = undefined;  // Default value if no explicit return.
-      return new Interpreter.State(funcNode['body'], scope);
-    } else {
-      // TODO(cpcallen): this is here just to satisy type checking of
-      // args to .call and .construct.  Perhaps have (non-null)
-      // thread arg to step functions?
-      if (this.thread === null) {
-        throw TypeError('No current thread??');
-      }
-      var r = 
-          state.isConstructor ?
-          func.construct(this, this.thread, state, state.arguments_) :
-          func.call(this, this.thread, state, state.funcThis_,
-                    state.arguments_);
-      if (r instanceof FunctionResult) {
-        if (r === FunctionResult.CallAgain) {
-          state.doneExec = false;
-        }
-        return;
-      }
-      state.value = r;
+    // TODO(cpcallen): this is here just to satisfy type checking of
+    // args to .call and .construct.  Perhaps have (non-null) thread
+    // arg to step functions?
+    if (this.thread === null) {
+      throw TypeError('No current thread??');
     }
-  } else {
-    // Execution complete.  Put the return value on the stack.
-    stack.pop();
-    // Previous stack frame may not exist if this is a setTimeout function.
-    if (stack.length > 0) {
-      if (state.isConstructor && typeof state.value !== 'object') {
-        stack[stack.length - 1].value = state.funcThis_;
-      } else {
-        stack[stack.length - 1].value = state.value;
+    var r = 
+        state.isConstructor ?
+        func.construct(this, this.thread, state, state.arguments_) :
+        func.call(this, this.thread, state, state.funcThis_, state.arguments_);
+    if (r instanceof FunctionResult) {
+      if (r === FunctionResult.CallAgain) {
+        state.doneExec = false;
       }
+      return;
     }
+    state.value = r;
+  }
+  // Execution complete.  Put the return value on the stack.
+  stack.pop();
+  // Previous stack frame may not exist if this is a setTimeout function.
+  if (stack.length > 0) {
+    stack[stack.length - 1].value = state.value;
   }
 };
 
@@ -4102,7 +4143,7 @@ stepFuncs_['FunctionExpression'] = function (stack, state, node) {
     throw Error("No source found when evaluating function expression??");
   }
   stack[stack.length - 1].value =
-      this.createFunctionFromAST(node, state.scope, src);
+      new this.UserFunction(node, state.scope, src, state.scope.perms);
 };
 
 /**
