@@ -2503,10 +2503,9 @@ Interpreter.prototype.UserFunction = function(node, scope, src, owner, proto) {
 /**
  * @constructor
  * @extends {Interpreter.prototype.Function}
- * @param {?Interpreter.Owner=} owner
- * @param {?Interpreter.prototype.Object=} proto
+ * @param {!NativeFunctionOptions=} options
  */
-Interpreter.prototype.NativeFunction = function(owner, proto) {
+Interpreter.prototype.NativeFunction = function(options) {
   throw Error('Inner class constructor not callable on prototype');
 };
 
@@ -2949,12 +2948,38 @@ Interpreter.prototype.installTypes = function() {
    * Class for a native function.
    * @constructor
    * @extends {Interpreter.prototype.NativeFunction}
-   * @param {?Interpreter.Owner=} owner Owner object or null (default: root).
-   * @param {?Interpreter.prototype.Object=} proto Prototype object or null.
+   * @param {!NativeFunctionOptions=} options Options object for
+   *     constructing native function.
    */
-  intrp.NativeFunction = function(owner, proto) {
-    intrp.Function.call(/** @type {?} */ (this),
-        (owner === undefined ? intrp.ROOT : owner), proto);
+  intrp.NativeFunction = function(options) {
+    options = options || {};
+    var owner = (options.owner !== undefined ? options.owner : intrp.ROOT);
+    // Invoke super constructor.
+    intrp.Function.call(/** @type {?} */ (this), owner, options.proto);
+    if (options.length !== undefined) {
+      intrp.setProperty(this, 'length', options.length, Descriptor.none);
+    }
+    if (options.call) {
+      this.call = options.call;
+    }
+    if (options.construct) {
+      this.construct = options.construct;
+    }
+    if (options.name || options.id) {
+      var id = (options.id || options.name);
+      this.setName(options.name || options.id.replace(/^.*\./, ''));
+      // Register builtin and make sure call and construct are serializable.
+      if (intrp.builtins_[id]) {
+        throw ReferenceError('Duplicate builtin id ' + id);
+      }
+      intrp.builtins_[id] = this;
+      if (this.call && this.call.id === undefined) {
+        this.call.id = id;
+      }
+      if (this.construct && this.construct.id === undefined) {
+        this.construct.id = id + ' [[construct]]';
+      }
+    }
   };
 
   intrp.NativeFunction.prototype = Object.create(intrp.Function.prototype);
@@ -2981,14 +3006,15 @@ Interpreter.prototype.installTypes = function() {
    * @param {?Interpreter.prototype.Object=} proto Prototype object or null.
    */
   intrp.OldNativeFunction = function(impl, legalConstructor, owner, proto) {
-    intrp.NativeFunction.call(/** @type {?} */ (this), owner, proto);
     if (!impl) { // Deserializing
+      intrp.NativeFunction.call(/** @type {?} */ (this));
       this.impl = function () {};
       this.illegalConstructor = true;
       return;
     }
+    intrp.NativeFunction.call(/** @type {?} */ (this),
+        {owner: owner, proto: proto, length: impl.length});
     this.impl = impl;
-    intrp.setProperty(this, 'length', impl.length, Descriptor.none);
     this.illegalConstructor = !legalConstructor;
   };
 
@@ -3313,7 +3339,7 @@ Interpreter.prototype.installTypes = function() {
   };
 
   /**
-   * Server is an (owner, port, proto, (extra info)) tuple representing a
+   * Server is an (owner, port, proto, (extra info) tuple representing a
    * listening server.  It encapsulates node's net.Server type, with
    * some additional info needed to implement the connectionListen()
    * API.  In its present form it is not suitable for exposure as a
@@ -3530,6 +3556,18 @@ FunctionResult.AwaitValue = new FunctionResult;
  * @const
  */
 FunctionResult.CallAgain = new FunctionResult;
+
+/**
+ * Options object for constructing a NativeFunction.
+ * @typedef {{name: (string|undefined),
+ *            length: (number|undefined),
+ *            id: (string|undefined),
+ *            call: (Interpreter.NativeCallImpl|undefined),
+ *            construct: (Interpreter.NativeConstructImpl|undefined),
+ *            owner: (?Interpreter.Owner|undefined),
+ *            proto: (?Interpreter.prototype.Object|undefined)}}
+ */
+var NativeFunctionOptions;
 
 /**
  * Class for property descriptors, with commonly-used examples.
