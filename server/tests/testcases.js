@@ -1254,6 +1254,24 @@ module.exports = [
     `,
     expected: 'TypeError' },
 
+  { name: 'FunctionPrototypeApplyNonFuncThrows', src: `
+    var o = {};
+    o.apply = Function.prototype.apply;
+    try {
+      o.apply();
+    } catch (e) {
+      e.name;
+    }
+    `,
+    expected: 'TypeError' },
+
+  { name: 'FunctionPrototypeApplyThis', src: `
+    var o = {};
+    function f() { return this; }
+    f.apply(o, []) === o;
+    `,
+    expected: true },
+
   { name: 'FunctionPrototypeApplyArgsUndefinedOrNull', src: `
     var n = 0;
     function f() { n += arguments.length; }
@@ -1295,6 +1313,40 @@ module.exports = [
     }).apply(undefined, {0: 1, 1: 2, 2: 4});
     `,
     expected: NaN },  // Because undefined + undefined === NaN.
+
+  { name: 'FunctionPrototypeCallNonFuncThrows', src: `
+    var o = {};
+    o.call = Function.prototype.call;
+    try {
+      o.call();
+    } catch (e) {
+      e.name;
+    }
+    `,
+    expected: 'TypeError' },
+
+  { name: 'FunctionPrototypeCallThis', src: `
+    var o = {};
+    function f() { return this; }
+    f.call(o) === o;
+    `,
+    expected: true },
+
+  { name: 'FunctionPrototypeCallNoArgs', src: `
+    function f() { return arguments.length; }
+    f.call(undefined);
+    `,
+    expected: 0 },
+
+  { name: 'FunctionPrototypeCall', src: `
+    (function(a, b, c) {
+      if (!(1 in arguments)) {
+        throw Error("Argument 1 missing");
+      }
+      return a + c;
+    }).call(undefined, 1, 2, 3);
+    `,
+    expected: 4 },
 
   /******************************************************************/
   // Array and Array.prototype

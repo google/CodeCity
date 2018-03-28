@@ -1683,6 +1683,24 @@ tests.FunctionPrototypeToStringApplyNonFunctionThrows = function() {
   }
 };
 
+tests.FunctionPrototypeApplyNonFuncThrows = function() {
+  try {
+    var o = {};
+    o.apply = Function.prototype.apply;
+    o.apply();
+    console.assert(false, 'FunctionPrototypeApplyNonFuncThrows');
+  } catch (e) {
+    console.assert(e.name === 'TypeError',
+                   'FunctionPrototypeApplyNonFuncThrowsError');
+  }
+};
+
+tests.FunctionPrototypeApplyThis = function() {
+  var o = {};
+  function f() { return this; }
+  console.assert(f.apply(o, []) === o, 'FunctionPrototypeApplyThis');
+};
+
 tests.FunctionPrototypeApplyArgsUndefinedOrNull = function() {
   var n = 0;
   function f() { n += arguments.length; }
@@ -1724,6 +1742,39 @@ tests.FunctionPrototypeApplyArgsNonArraylike = function() {
     return a + b + c;
   }).apply(undefined, {0: 1, 1: 2, 2: 4})),
                  'FunctionPrototypeApplyArgsNonArraylike');
+};
+
+tests.FunctionPrototypeCallNonFuncThrows = function() {
+  try {
+    var o = {};
+    o.call = Function.prototype.call;
+    o.call();
+    console.assert(false, 'FunctionPrototypeCallNonFuncThrows');
+  } catch (e) {
+    console.assert(e.name === 'TypeError',
+                   'FunctionPrototypeCallNonFuncThrowsError');
+  }
+};
+
+tests.FunctionPrototypeCallThis = function() {
+  var o = {};
+  function f() { return this; }
+  console.assert(f.call(o) === o, 'FunctionPrototypeCallThis');
+};
+
+tests.FunctionPrototypeCallNoArgs = function() {
+  function f() { return arguments.length; }
+  console.assert(f.call(undefined) === 0, 'FunctionPrototypeCallNoArgs');
+};
+
+tests.FunctionPrototypeCall = function() {
+  var f = function(a, b, c) {
+    if (!(1 in arguments)) {
+      throw Error("Argument 1 missing");
+    }
+    return a + c;
+  };
+  console.assert(f.call(undefined, 1, 2, 3) === 4, 'FunctionPrototypeCallArgs');
 };
 
 //////////////////////////////////////////////////////////////
