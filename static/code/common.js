@@ -42,70 +42,6 @@ Code.Common.tokenizeSelector = function(text) {
   var whitespaceLength = text.length - trimText.length;
   text = trimText;
 
-  /**
-   * Push a 'str' token type onto the list of tokens.
-   * @param {number} state Current FSM state (0-5).
-   * @param {!Array<string>} buffer Array of chars that make the string.
-   * @param {number} index Character index of this token in original input.
-   * @param {!Array<!Object>} tokens List of tokens.
-   */
-  function pushString(state, buffer, index, tokens) {
-    // Convert state into quote type.
-    var quotes;
-    switch (state) {
-      case 1:
-      case 3:
-        quotes = "'";
-        break;
-      case 2:
-      case 4:
-        quotes = '"';
-        break;
-      default:
-        throw 'Unknown state';
-    }
-    var token = {
-      type: 'str',
-      raw: quotes + buffer.join('') + quotes,
-      valid: true
-    };
-    token.index = whitespaceLength + index - (token.raw.length - 1);
-    do {
-      var raw = quotes + buffer.join('') + quotes;
-      // Attempt to parse a string.
-      try {
-        var str = eval(raw);
-        break;
-      } catch (e) {
-        // Invalid escape found.  Trim off last char and try again.
-        buffer.pop();
-        token.valid = false;
-      }
-    } while (true);
-    buffer.length = 0;
-    token.value = str;
-    tokens.push(token);
-  }
-
-  /**
-   * Push an 'unparsed' token type onto the list of tokens.
-   * @param {!Array<string>} buffer Array of chars that make the value.
-   * @param {number} index Character index of this token in original input.
-   * @param {!Array<!Object>} tokens List of tokens.
-   */
-  function pushUnparsed(buffer, index, tokens) {
-    var raw = buffer.join('');
-    buffer.length = 0;
-    if (raw) {
-      var token = {
-        type: 'unparsed',
-        raw: raw,
-        index: whitespaceLength + index - raw.length
-      };
-      tokens.push(token);
-    }
-  }
-
   // Split the text into an array of tokens.
   // First step is to create two types of tokens: 'str' and 'unparsed'.
   var state = 0;
@@ -118,19 +54,20 @@ Code.Common.tokenizeSelector = function(text) {
   var buffer = [];
   for (var i = 0; i < text.length; i++) {
     var char = text[i];
+    var index = whitespaceLength + i;
     if (state === 0) {
       if (char === "'") {
-        pushUnparsed(buffer, i, tokens);
+        Code.Common.tokenizeSelector.pushUnparsed(buffer, index, tokens);
         state = 1;
       } else if (char === '"') {
-        pushUnparsed(buffer, i, tokens);
+        Code.Common.tokenizeSelector.pushUnparsed(buffer, index, tokens);
         state = 2;
       } else {
         buffer.push(char);
       }
     } else if (state === 1) {
       if (char === "'") {
-        pushString(state, buffer, i, tokens);
+        Code.Common.tokenizeSelector.pushString(state, buffer, index, tokens);
         state = 0;
       } else {
         buffer.push(char);
@@ -140,7 +77,7 @@ Code.Common.tokenizeSelector = function(text) {
       }
     } else if (state === 2) {
       if (char === '"') {
-        pushString(state, buffer, i, tokens);
+        Code.Common.tokenizeSelector.pushString(state, buffer, index, tokens);
         state = 0;
       } else {
         buffer.push(char);
@@ -157,18 +94,19 @@ Code.Common.tokenizeSelector = function(text) {
     }
   }
   if (state !== 0) {
-    pushString(state, buffer, i, tokens);
+    Code.Common.tokenizeSelector.pushString(state, buffer, index + 1, tokens);
   } else if (buffer.length) {
-    pushUnparsed(buffer, i, tokens);
+    Code.Common.tokenizeSelector.pushUnparsed(buffer, index + 1, tokens);
   }
 
-  // Second step is to parse each 'unparsed' token and split out brackets: [ ]
+  // Second step is to parse each 'unparsed' token and split out '[',  ']' and
+  // '^' tokens.
   for (var i = tokens.length - 1; i >= 0; i--) {
     var token = tokens[i];
     if (token.type === 'unparsed') {
       var index = token.index + token.raw.length;
       // Split string on brackets.
-      var split = token.raw.split(/(\s*(?:\[|\])\s*)/);
+      var split = token.raw.split(/(\s*[\[\]\^]\s*)/);
       for (var j = split.length - 1; j >= 0; j--) {
         var raw = split[j];
         index -= raw.length;
@@ -185,6 +123,11 @@ Code.Common.tokenizeSelector = function(text) {
             type: ']',
             valid: true
           };
+        } else if (raw.trim() === '^') {
+          split[j] = {
+            type: '^',
+            valid: true
+          };
         } else {
           split[j] = {
             type: 'unparsed'
@@ -199,7 +142,7 @@ Code.Common.tokenizeSelector = function(text) {
     }
   }
 
-  // Third step is to parse each 'unparsed' token as a number, if it was
+  // Third step is to parse each 'unparsed' token as a number, if it is
   // preceded by a '[' token.
   for (var i = 1; i < tokens.length; i++) {
     var token = tokens[i];
@@ -216,7 +159,8 @@ Code.Common.tokenizeSelector = function(text) {
   }
 
   // Fourth step is to split remaining 'unparsed' tokens into 'id' and '.'
-  // tokens.
+  // tokens.  The '.' tokens could not be split out before numbers were parsed,
+  // since numbers have decimal points.
   var unicodeRegex = /\\u([0-9A-F]{4})/ig;
   function decodeUnicode(m, p1) {
     return String.fromCodePoint(parseInt(p1, 16));
@@ -272,6 +216,10 @@ Code.Common.tokenizeSelector = function(text) {
   // E.g. '$..foo' can never be legal.
   // E.g. '$["foo' isn't legal now, but could become legal after more typing.
   var state = 0;
+  // 0 - Start or after '.'.  Waiting for 'id'.
+  // 1 - After 'id' or ']' or '^'.  Expecting '.' or '[' or '^' or 'id'.
+  // 2 - After '['.  Expecting 'str' or 'num'.
+  // 3 - After 'str' or 'num'.  Expecting ']'.
   for (var i = 0; i < tokens.length; i++) {
     var token = tokens[i];
     if (state === 0) {
@@ -283,6 +231,8 @@ Code.Common.tokenizeSelector = function(text) {
     } else if (state === 1) {
       if (token.type === '.') {
         state = 0;
+      } else if (token.type === '^' || token.type === 'id') {
+        state = 1;
       } else if (token.type === '[') {
         state = 2;
       } else {
@@ -312,10 +262,76 @@ Code.Common.tokenizeSelector = function(text) {
 };
 
 /**
+ * Push a 'str' token type onto the list of tokens.
+ * @param {number} state Current FSM state (0-5).
+ * @param {!Array<string>} buffer Array of chars that make the string.
+ * @param {number} index Character index of this token in original input.
+ * @param {!Array<!Object>} tokens List of tokens.
+ */
+Code.Common.tokenizeSelector.pushString =
+    function(state, buffer, index, tokens) {
+  // Convert state into quote type.
+  var quotes;
+  switch (state) {
+    case 1:
+    case 3:
+      quotes = "'";
+      break;
+    case 2:
+    case 4:
+      quotes = '"';
+      break;
+    default:
+      throw 'Unknown state';
+  }
+  var token = {
+    type: 'str',
+    raw: quotes + buffer.join('') + quotes,
+    valid: true
+  };
+  token.index = index - (token.raw.length - 1);
+  do {
+    var raw = quotes + buffer.join('') + quotes;
+    // Attempt to parse a string.
+    try {
+      var str = eval(raw);
+      break;
+    } catch (e) {
+      // Invalid escape found.  Trim off last char and try again.
+      buffer.pop();
+      token.valid = false;
+    }
+  } while (true);
+  buffer.length = 0;
+  token.value = str;
+  tokens.push(token);
+};
+
+/**
+ * Push an 'unparsed' token type onto the list of tokens.
+ * @param {!Array<string>} buffer Array of chars that make the value.
+ * @param {number} index Character index of this token in original input.
+ * @param {!Array<!Object>} tokens List of tokens.
+ */
+Code.Common.tokenizeSelector.pushUnparsed = function(buffer, index, tokens) {
+  var raw = buffer.join('');
+  buffer.length = 0;
+  if (raw) {
+    var token = {
+      type: 'unparsed',
+      raw: raw,
+      index: index - raw.length
+    };
+    tokens.push(token);
+  }
+};
+
+/**
  * Split a path selector into a list of parts.
- * e.g. '$.foo.bar' -> ['$', 'foo', 'bar']
+ * E.g. '$^.foo' ->
+ *   [{type: 'id', value: '$'}, {type: '^'}, {type: 'id', value: 'foo'}]
  * @param {string} text Selector string.
- * @return {Array<string>} Array of parts or null if invalid.
+ * @return {?Array<!Object>} Array of parts or null if invalid.
  */
 Code.Common.selectorToParts = function(text) {
   // TODO: Try caching the results for performance.
@@ -327,7 +343,9 @@ Code.Common.selectorToParts = function(text) {
       return null;
     }
     if (token.type === 'id' || token.type === 'str' || token.type === 'num') {
-      parts.push(token.value);
+      parts.push({type: 'id', value: token.value});
+    } else if (token.type === '^') {
+      parts.push({type: '^'});
     }
   }
   return parts;
@@ -335,27 +353,33 @@ Code.Common.selectorToParts = function(text) {
 
 /**
  * Join a list of parts into a path selector.
- * e.g. ['$', 'foo', 'bar'] -> '$.foo.bar'
- * @param {!Array<string>} parts Array of parts.
+ * E.g. [{type: 'id', value: '$'}, {type: '^'}, {type: 'id', value: 'foo'}] ->
+ *   '$^.foo'
+ * @param {!Array<!Object>} parts Array of parts.
  * @return {string} Selector string.
  */
 Code.Common.partsToSelector = function(parts) {
   var text = '';
   for (var i = 0; i < parts.length; i++) {
     var part = parts[i];
-    if (/^[A-Z_$][0-9A-Z_$]*$/i.test(part)) {
-      if (i !== 0) {
-        text += '.';
-      }
-      text += part;
-    } else {
-      text += '[';
-      if (/^-?\d{1,15}$/.test(part)) {
-        text += part;
+    if (part.type === 'id') {
+      var value = part.value;
+      if (/^[A-Z_$][0-9A-Z_$]*$/i.test(value)) {
+        if (i !== 0) {
+          text += '.';
+        }
+        text += value;
       } else {
-        text += JSON.stringify(part);
+        text += '[';
+        if (/^-?\d{1,15}$/.test(value)) {
+          text += value;
+        } else {
+          text += JSON.stringify(value);
+        }
+        text += ']';
       }
-      text += ']';
+    } else if (part.type === '^') {
+      text += '^';
     }
   }
   return text;

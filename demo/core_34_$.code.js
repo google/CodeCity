@@ -64,17 +64,18 @@ $.code.getGlobal = function() {
   return global;
 };
 
-$.code.getObject = function(parts) {
+$.code.partsToValue = function(parts) {
   // Given an array of parts, return the described object.
-  // E.g. ['$', 'foo', 'bar'] -> $.foo.bar
-  if (!parts.length) {
-    return undefined;  // Global namespace.
-  }
+  // E.g. [{type: 'id', value: '$'}, {type: '^'}, {type: 'id', value: 'foo'}] ->
+  //   Object.getPrototypeOf($).foo
   var obj = $.code.getGlobal();
-  for (var i = 0; i < parts.length; i++) {
-    obj = obj[parts[i]];
-    if (!obj || (typeof obj !== 'object' && typeof obj !== 'function')) {
-      return null;  // Specified path doesn't exist.
+  for (var i = 0, part; (part = parts[i]); i++) {
+    if (part.type === '^') {
+      obj = Object.getPrototypeOf(obj);
+    } else if (part.type === 'id') {
+      obj = obj[part.value];
+    } else {
+      throw 'Invalid part.';
     }
   }
   return obj;
@@ -136,19 +137,21 @@ $.code.autocomplete = function(request, response) {
   // HTTP handler for /code/autocomplete
   // Provide object autocompletion service for the IDE's explorer.
   // Takes one input: a JSON-encoded list of parts.
-  // Prints a flat list of autocomplete options for the specified object.
+  // Prints a 2D list of autocomplete options for the specified object,
+  // and each of its prototypes.
   var parts = JSON.parse(request.parameters.parts);
-  var options = null;
-  if (parts.length) {
-    var obj = $.code.getObject(parts);
-    if (obj !== null) {
-      options = [];
-      do {
-        options.push(Object.getOwnPropertyNames(obj));
-      } while ((obj = Object.getPrototypeOf(obj)));
-    }
-  } else {
-    options = [Object.getOwnPropertyNames($.code.getGlobal())];
+  try {
+    var obj = $.code.partsToValue(parts);
+  } catch (e) {
+    obj = null;
+  }
+  var options = [];
+  if (obj !== null && (typeof obj === 'object' || typeof obj === 'function')) {
+    // For simplicity, don't provide options for primitives (despite the fact
+    // that (for example) numbers inherit a '.toFixed' function).
+    do {
+      options.push(Object.getOwnPropertyNames(obj));
+    } while ((obj = Object.getPrototypeOf(obj)));
   }
   response.write(JSON.stringify(options));
 };
@@ -165,10 +168,16 @@ $.code.objectPanel = function(request, response) {
   var data = {};
   var parts = JSON.parse(request.parameters.parts);
   if (parts.length) {
-    var obj = $.code.getObject(parts);
-    if (obj !== null) {
+    try {
+      var obj = $.code.partsToValue(parts);
+    } catch (e) {
+      // Parts don't match a valid path.
+      // TODO: Send an informative error message.
+      data = null;
+    }
+    if (data) {
       data.properties = [];
-      do {
+      while (obj !== null && obj !== undefined) {
         var ownProps = Object.getOwnPropertyNames(obj);
         // Add typeof information.
         for (var i = 0; i < ownProps.length; i++) {
@@ -177,7 +186,8 @@ $.code.objectPanel = function(request, response) {
           ownProps[i] = {name: prop, type: type};
         }
         data.properties.push(ownProps);
-      } while ((obj = Object.getPrototypeOf(obj)));
+        obj = Object.getPrototypeOf(obj)
+      }
     }
   } else {
     data.roots = [];

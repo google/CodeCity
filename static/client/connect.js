@@ -261,7 +261,7 @@ CCC.clear = function() {
   if (CCC.pauseBuffer) {
     var datum;
     while ((datum = CCC.pauseBuffer[0]) &&
-           datum[0] != CCC.MessageTypes.DISCONNECT_MSG) {
+           datum[0] !== CCC.MessageTypes.DISCONNECT_MSG) {
       CCC.pauseBuffer.shift();
     }
     // Clear the date/time on the 'Reconnect?' line (if it exists).

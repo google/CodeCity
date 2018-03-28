@@ -26,7 +26,7 @@ Code.ObjectPanel = {};
 
 /**
  * List of parts (passed in by the URL hash).
- * @type {?Array<string>}
+ * @type {?Array<!Object>}
  */
 Code.ObjectPanel.parts = null;
 
@@ -38,7 +38,7 @@ Code.ObjectPanel.results = null;
 
 /**
  * Structured data from Code City.
- * @type {Object}
+ * @type {?Object}
  */
 Code.ObjectPanel.data = null;
 
@@ -61,7 +61,8 @@ Code.ObjectPanel.init = function() {
   if (data.roots) {
     // Print all root objects.
     for (var i = 0; i < data.roots.length; i++) {
-      Code.ObjectPanel.addLink(data.roots[i], false);
+      var part = {type: 'id', value: data.roots[i].name};
+      Code.ObjectPanel.addLink(part, data.roots[i].type, false);
     }
   }
   if (data.properties) {
@@ -70,9 +71,12 @@ Code.ObjectPanel.init = function() {
     for (var i = 0; i < data.properties.length; i++) {
       var propList = data.properties[i];
       for (var j = 0; j < propList.length; j++) {
-        Code.ObjectPanel.addLink(propList[j], i && !j);
+        var part = {type: 'id', value: propList[j].name};
+        Code.ObjectPanel.addLink(part, propList[j].type, i && !j);
       }
     }
+    var part = {type: '^'};
+    Code.ObjectPanel.addLink(part, 'object', true);
   }
 
   // Highlight current item, and monitor for changes.
@@ -82,18 +86,17 @@ Code.ObjectPanel.init = function() {
 
 /**
  * Create the DOM elements to add one property link to the list.
- * @param {!Object} prop Property info.
+ * @param {!Object} part Single selector part.
+ * @param {string} type Type of the property value.
  * @param {boolean} section Flag indicating a new section.
  */
-Code.ObjectPanel.addLink = function(prop, section) {
-  var name = prop.name;
-  var type = prop.type;
-  var newParts = Code.ObjectPanel.parts.concat(name);
+Code.ObjectPanel.addLink = function(part, type, section) {
+  var newParts = Code.ObjectPanel.parts.concat(part);
   var selector = Code.Common.partsToSelector(newParts);
   var a = document.createElement('a');
   a.href = '/code?' + encodeURI(selector);
   a.target = '_blank';
-  a.setAttribute('data-link', name);
+  a.setAttribute('data-link', JSON.stringify(part));
   a.addEventListener('click', Code.ObjectPanel.click);
   var typeSymbol = Code.ObjectPanel.TYPES[type];
   if (typeSymbol) {
@@ -104,7 +107,7 @@ Code.ObjectPanel.addLink = function(prop, section) {
     a.appendChild(span);
   }
   var div = document.createElement('div');
-  div.appendChild(document.createTextNode(name));
+  div.appendChild(document.createTextNode(Code.Common.partsToSelector([part])));
   if (section) {
     div.className = 'section';
   }
@@ -126,8 +129,8 @@ Code.ObjectPanel.TYPES = {
  * @param {!Event} e Click event.
  */
 Code.ObjectPanel.click = function(e) {
-  var name = e.currentTarget.getAttribute('data-link');
-  var newParts = Code.ObjectPanel.parts.concat(name);
+  var part = JSON.parse(e.currentTarget.getAttribute('data-link'));
+  var newParts = Code.ObjectPanel.parts.concat(part);
   var selector = Code.Common.partsToSelector(newParts);
   // Store the new selector in sessionStorage for all frames to see.
   sessionStorage.setItem(Code.Common.SELECTOR, selector);
@@ -151,9 +154,10 @@ Code.ObjectPanel.highlight = function() {
   var selector = sessionStorage.getItem(Code.Common.SELECTOR);
   var parts = Code.Common.selectorToParts(selector);
   var part = parts ? parts[Code.ObjectPanel.parts.length] : null;
+  var jsonPart = JSON.stringify(part);
   var newHighlighted = null;
   for (var i = 0, link; (link = results.childNodes[i]); i++) {
-    if (link.getAttribute('data-link') === part) {
+    if (link.getAttribute('data-link') === jsonPart) {
       newHighlighted = link;
     }
   }
@@ -219,11 +223,17 @@ Code.ObjectPanel.caseInsensitiveComp = function(a, b) {
   // Fill in the object name.
   Code.ObjectPanel.parts = JSON.parse(decodeURI(hash));
   var div = document.getElementById('objectTitle');
-  var name = Code.ObjectPanel.parts[Code.ObjectPanel.parts.length - 1];
-  if (!name) {
+  var lastPart = Code.ObjectPanel.parts[Code.ObjectPanel.parts.length - 1];
+  var name;
+  if (!lastPart) {
     name = 'Globals';
-  } else if (Code.ObjectPanel.parts.length > 1) {
-    name = Code.Common.partsToSelector(['X', name]).substring(1);
+  } else if (Code.ObjectPanel.parts.length === 1) {
+    // Render as 'foo' or '[42]' or '["???"]' or '^'.
+    name = Code.Common.partsToSelector([lastPart]);
+  } else {
+    // Render as '.foo' or '[42]' or '["???"]' or '^'.
+    var mockParts = [{type: 'id', value: 'X'}, lastPart];
+    name = Code.Common.partsToSelector(mockParts).substring(1);
   }
   div.innerHTML = '';
   div.appendChild(document.createTextNode(name));

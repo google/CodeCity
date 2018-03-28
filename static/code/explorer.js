@@ -41,14 +41,14 @@ Code.Explorer.oldInputValue = null;
  * JSON-encoded list of complete object selector parts.
  * @type {string}
  */
-Code.Explorer.oldInputPartsJSON = 'null';
+Code.Explorer.partsJSON = 'null';
 
 /**
- * Final part which may not be complete and isn't included in the parts list.
+ * Final token which may not be complete and isn't included in the parts list.
  * E.g. '$.foo.bar' the 'bar' might become 'bart' or 'barf'.
  * @type {?Object}
  */
-Code.Explorer.oldInputPartsLast = null;
+Code.Explorer.lastToken = null;
 
 /**
  * PID of task polling for changes to the input field.
@@ -56,74 +56,89 @@ Code.Explorer.oldInputPartsLast = null;
 Code.Explorer.inputPollPid = 0;
 
 /**
- * Raw string of selector.
- * E.g. '$.foo["bar"]'
+ * Is it ok to normalize the input?  False if the user is typing.
  */
-Code.Explorer.selector = '';
+Code.Explorer.inputUpdatable = true;
+
+/**
+ * The last set of autocompletion options from Code City.
+ * This is an array of arrays of strings.  The first array contains the
+ * properties on the object, the second array contains the properties on the
+ * object's prototype, and so on.
+ * @type {!Array<!Array<string>>}
+ */
+Code.Explorer.autocompleteData = [];
 
 /**
  * Got a ping from someone.  Something might have changed and need updating.
  */
 Code.Explorer.receiveMessage = function() {
-  // Check to see if the stored values have changed.
   var selector = sessionStorage.getItem(Code.Common.SELECTOR);
-  if (selector === Code.Explorer.selector) {
-    return;
-  }
   // Propagate the ping down the tree of frames.
-  Code.Explorer.selector = selector;
-  if (Code.Explorer.oldInputValue !== selector) {
-    var parts = Code.Common.selectorToParts(selector);
-    if (parts) {
+  var parts = Code.Common.selectorToParts(selector);
+  if (parts) {
+    if (Code.Explorer.inputUpdatable) {
       // Valid parts, set the input to be canonical version.
       Code.Explorer.setInput(parts);
-    } else {
-      // Invalid parts, set the input to the raw string.
-      // Can be caused by going to: /code?$.foo...bar
-      var input = document.getElementById('input');
-      input.value = selector;
-      Code.Explorer.inputChange();
-      input.focus();
     }
+    Code.Explorer.loadPanels(parts);
+  } else {
+    // Invalid parts, set the input to the raw string.
+    // Can be caused by going to: /code?$.foo...bar
+    var input = document.getElementById('input');
+    input.value = selector;
+    Code.Explorer.inputChange();
+    input.focus();
   }
 };
 
 /**
  * Handle any changes to the input field.
+ * @param {boolean=} autocomplete If true, just trigger the autocomplete menu
+ *     in the correct location.
  */
-Code.Explorer.inputChange = function() {
+Code.Explorer.inputChange = function(autocomplete) {
   var input = document.getElementById('input');
-  if (Code.Explorer.oldInputValue === input.value) {
-    return;
+  if (Code.Explorer.oldInputValue !== input.value) {
+    autocomplete = false;  // Input has actually changed.
+  } else if (!autocomplete) {
+    return;  // No change.
   }
   Code.Explorer.oldInputValue = input.value;
   var tokens = Code.Common.tokenizeSelector(input.value);
   var parts = [];
   var token = null;
-  var lastName = null;
+  var lastNameToken = null;
   for (var i = 0; i < tokens.length; i++) {
     token = tokens[i];
-    if (token.type === 'id' || token.type === '"' || token.type === '#') {
-      lastName = token;
+    if (token.type === 'id' || token.type === 'str' || token.type === 'num') {
+      lastNameToken = token;
     }
     if (!token.valid) {
       break;
     }
-    if ((token.type === '.' || token.type === '[' || token.type === ']') &&
-        lastName) {
-      parts.push(lastName.value);
-      lastName = null;
+    if ('.[]^'.indexOf(token.type) !== -1) {
+      if (lastNameToken) {
+        parts.push({type: 'id', value: lastNameToken.value});
+        lastNameToken = null;
+      }
+      if (token.type === '^') {
+        parts.push({type: '^'});
+      }
     }
   }
-  Code.Explorer.oldInputPartsLast = lastName;
+  if (autocomplete) {
+    // All we want to do is trigger the autocomplete.
+    Code.Explorer.updateAutocompleteMenu(token);
+    return;
+  }
+  Code.Explorer.lastToken = lastNameToken;
   var partsJSON = JSON.stringify(parts);
-  if (Code.Explorer.oldInputPartsJSON === partsJSON) {
+  if (Code.Explorer.partsJSON === partsJSON) {
     Code.Explorer.updateAutocompleteMenu(token);
   } else {
-    Code.Explorer.oldInputPartsJSON = partsJSON;
-    Code.Explorer.sendAutocomplete(partsJSON);
     Code.Explorer.hideAutocompleteMenu();
-    Code.Explorer.loadPanels(parts);
+    Code.Explorer.setParts(parts, false);
   }
 };
 
@@ -132,6 +147,7 @@ Code.Explorer.inputChange = function() {
  * @param {string} partsJSON Stringified array of parts to send to Code City.
  */
 Code.Explorer.sendAutocomplete = function(partsJSON) {
+  Code.Explorer.autocompleteData.length = 0;
   var xhr = Code.Explorer.sendAutocomplete.httpRequest_;
   xhr.abort();
   xhr.open('POST', '/code/autocomplete', true);
@@ -156,10 +172,9 @@ Code.Explorer.receiveAutocomplete = function() {
   }
   var data = JSON.parse(xhr.responseText);
   Code.Explorer.filterShadowed(data);
-  Code.Explorer.autocompleteData = data || [];
+  Code.Explorer.autocompleteData = data;
   // Trigger the input to show autocompletion.
-  Code.Explorer.oldInputValue = null;
-  Code.Explorer.inputChange();
+  Code.Explorer.inputChange(true);
 };
 
 /**
@@ -194,7 +209,9 @@ Code.Explorer.updateAutocompleteMenu = function(token) {
       }
     }
   }
-  if ((options.length === 1 && options[0] === prefix) || !options.length) {
+  if (!options.length ||
+      (options.length === 1 && options[0].length === prefix.length)) {
+    // Length equality above is needed since prefix is lowercased.
     Code.Explorer.hideAutocompleteMenu();
   } else {
     Code.Explorer.showAutocompleteMenu(options, index);
@@ -202,21 +219,12 @@ Code.Explorer.updateAutocompleteMenu = function(token) {
 };
 
 /**
- * The last set of autocompletion options from Code City.
- * This is an array of arrays of strings.  The first array contains the
- * properties on the object, the second array contains the properties on the
- * object's prototype, and so on.
- * @type {!Array<!Array<string>>}
- */
-Code.Explorer.autocompleteData = [];
-
-/**
  * Remove any properties that are shadowed by objects higher on the inheritance
  * chain.  Also sort the properties alphabetically.
- * @param {Array<!Array<string>>} data Property names from Code City.
+ * @param {!Array<!Array<string>>} data Property names from Code City.
  */
 Code.Explorer.filterShadowed = function(data) {
-  if (!data || data.length < 2) {
+  if (data.length < 2) {
     return;
   }
   var seen = Object.create(null);
@@ -349,12 +357,22 @@ Code.Explorer.autocompleteSelect = function(div) {
  */
 Code.Explorer.autocompleteClick = function(e) {
   var option = e.target.getAttribute('data-option');
-  var parts = JSON.parse(Code.Explorer.oldInputPartsJSON);
-  parts.push(option);
-  Code.Explorer.setParts(parts);
+  var parts = JSON.parse(Code.Explorer.partsJSON);
+  parts.push({type: 'id', value: option});
+  Code.Explorer.setParts(parts, true);
 };
 
-Code.Explorer.setParts = function(parts) {
+/**
+ * Set the currently specified path (e.g. ['$', 'user', 'location']).
+ * Notify the parent frame.
+ * @param {!Array<!Object>} parts List of parts.
+ * @param {boolean} updateInput Normalize the input if true.
+ */
+Code.Explorer.setParts = function(parts, updateInput) {
+  Code.Explorer.partsJSON = JSON.stringify(parts);
+  Code.Explorer.sendAutocomplete(Code.Explorer.partsJSON);
+  Code.Explorer.inputUpdatable = updateInput;
+  Code.Explorer.hideAutocompleteMenu();
   var selector = Code.Common.partsToSelector(parts);
   sessionStorage.setItem(Code.Common.SELECTOR, selector);
   window.parent.postMessage('ping', '*');
@@ -362,7 +380,7 @@ Code.Explorer.setParts = function(parts) {
 
 /**
  * Set the input to be the specified path (e.g. ['$', 'user', 'location']).
- * @param {!Array<string>} parts List of parts.
+ * @param {!Array<!Object>} parts List of parts.
  */
 Code.Explorer.setInput = function(parts) {
   Code.Explorer.hideAutocompleteMenu();
@@ -371,7 +389,6 @@ Code.Explorer.setInput = function(parts) {
   input.value = value;
   input.focus();
   Code.Explorer.oldInputValue = value;  // Don't autocomplete this value.
-  Code.Explorer.loadPanels(parts);
 };
 
 /**
@@ -381,6 +398,7 @@ Code.Explorer.inputFocus = function() {
   clearInterval(Code.Explorer.inputPollPid);
   Code.Explorer.inputPollPid = setInterval(Code.Explorer.inputChange, 10);
   Code.Explorer.oldInputValue = null;
+  Code.Explorer.inputUpdatable = false;
 };
 
 /**
@@ -393,6 +411,7 @@ Code.Explorer.inputBlur = function() {
   }
   clearInterval(Code.Explorer.inputPollPid);
   Code.Explorer.hideAutocompleteMenu();
+  Code.Explorer.inputUpdatable = true;
 };
 Code.Explorer.inputBlur.disable_ = false;
 
@@ -425,21 +444,18 @@ Code.Explorer.inputKey = function(e) {
   var menuDiv = document.getElementById('autocompleteMenu');
   var hasMenu = menuDiv.style.display !== 'none';
   if (e.keyCode === key.enter) {
+    var parts = JSON.parse(Code.Explorer.partsJSON);
     if (selected) {
       // Add the selected autocomplete option to the input.
-      var fakeEvent = {target: selected};
-      Code.Explorer.autocompleteClick(fakeEvent);
-      e.preventDefault();
-    } else {
+      var option = selected.getAttribute('data-option');
+      parts.push({type: 'id', value: option});
+    } else if (Code.Explorer.lastToken && Code.Explorer.lastToken.valid) {
       // The currently typed input should be considered complete.
       // E.g. $.foo<enter> is not waiting to become $.foot
-      var parts = JSON.parse(Code.Explorer.oldInputPartsJSON);
-      if (Code.Explorer.oldInputPartsLast &&
-          Code.Explorer.oldInputPartsLast.valid) {
-        parts.push(Code.Explorer.oldInputPartsLast.value);
-      }
-      Code.Explorer.setParts(parts);
+      parts.push({type: 'id', value: Code.Explorer.lastToken.value});
     }
+    Code.Explorer.setParts(parts, true);
+    e.preventDefault();
   }
   if (e.keyCode === key.tab) {
     if (hasMenu) {
@@ -454,15 +470,15 @@ Code.Explorer.inputKey = function(e) {
       } while (option);
       if (optionCount === 1) {
         // There was only one option.  Choose it.
-        var parts = JSON.parse(Code.Explorer.oldInputPartsJSON);
-        parts.push(prefix);
-        Code.Explorer.setParts(parts);
-      } else if (Code.Explorer.oldInputPartsLast) {
-        if (Code.Explorer.oldInputPartsLast.type === 'id') {
+        var parts = JSON.parse(Code.Explorer.partsJSON);
+        parts.push({type: 'id', value: prefix});
+        Code.Explorer.setParts(parts, true);
+      } else if (Code.Explorer.lastToken) {
+        if (Code.Explorer.lastToken.type === 'id') {
           // Append the common prefix to the input.
           var input = document.getElementById('input');
           input.value = input.value.substring(0,
-              Code.Explorer.oldInputPartsLast.index) + prefix;
+              Code.Explorer.lastToken.index) + prefix;
         }
         // TODO: Tab-completion of partial strings and numbers.
       }
@@ -531,7 +547,7 @@ Code.Explorer.panelSpacerMargin = 0;
 
 /**
  * Update the panels with the specified list of parts.
- * @param {!Array<string>} parts List of parts.
+ * @param {!Array<!Object>} parts List of parts.
  */
 Code.Explorer.loadPanels = function(parts) {
   for (var i = 0; i <= parts.length; i++) {

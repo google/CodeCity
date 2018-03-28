@@ -78,6 +78,14 @@ Code.receiveMessage = function(event) {
 Code.popState = function(event) {
   var selector = event.state || Code.DEFAULT;
   sessionStorage.setItem(Code.Common.SELECTOR, selector);
+  // Attempt to pull the focus away from the explorer's input field.
+  // This will allow it to update the displayed selector.
+  try {
+    document.getElementById('explorer').contentDocument
+        .getElementById('input').blur();
+  } catch (e) {
+    console.log('Unable to blur input: ' + e);
+  }
   Code.receiveMessage(null);
 };
 
