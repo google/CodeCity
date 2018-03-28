@@ -853,44 +853,39 @@ Interpreter.prototype.initFunction_ = function() {
   this.createNativeFunction('Function.prototype.toString',
                             this.Function.prototype.toString, false);
 
-  wrapper = function(thisArg, args) {
-    var state = intrp.thread.stateStack_[intrp.thread.stateStack_.length - 1];
-    // Rewrite the current 'CallExpression' to apply a different function.
-    state.func_ = this;
-    // Assign the 'this' object.
-    state.funcThis_ = thisArg;
-    // Bind any provided arguments.
-    state.arguments_ = [];
-    if (args !== null && args !== undefined) {
-      if (!(args instanceof intrp.Object)) {
+  new this.NativeFunction({
+    id: 'Function.prototype.apply', length: 2,
+    call: function(intrp, thread, state, thisVal, args) {
+      var func = thisVal;
+      var thisArg = args[0];
+      var argArray = args[1];
+      if (!(func instanceof intrp.Function)) {
+        intrp.throwError(intrp.TYPE_ERROR, func + ' is not a function');
+      } else if (argArray === null || argArray === undefined) {
+        return func.call(intrp, thread, state, thisArg, []);
+      } else if (!(argArray instanceof intrp.Object)) {
         intrp.throwError(intrp.TYPE_ERROR,
-            'CreateListFromArrayLike called on non-object');
+                         'CreateListFromArrayLike called on non-object');
       }
       // BUG(cpcallen:perms): This allows circumvention of
       // non-readability of properties with numeric names.
-      state.arguments_ = intrp.arrayPseudoToNative(args);
+      var argList = intrp.arrayPseudoToNative(argArray);
+      return func.call(intrp, thread, state, thisArg, argList);
     }
-    state.value = undefined;
-    return FunctionResult.CallAgain;
-  };
-  this.createNativeFunction('Function.prototype.apply', wrapper, false);
+  });
 
-  wrapper = function(thisArg /*, var_args*/) {
-    var state =
-        intrp.thread.stateStack_[intrp.thread.stateStack_.length - 1];
-    // Rewrite the current 'CallExpression' to call a different function.
-    state.func_ = this;
-    // Assign the 'this' object.
-    state.funcThis_ = thisArg;
-    // Bind any provided arguments.
-    state.arguments_ = [];
-    for (var i = 1; i < arguments.length; i++) {
-      state.arguments_.push(arguments[i]);
+  new this.NativeFunction({
+    id: 'Function.prototype.call', length: 1,
+    call: function(intrp, thread, state, thisVal, args) {
+      var func = thisVal;
+      if (!(func instanceof intrp.Function)) {
+        intrp.throwError(intrp.TYPE_ERROR, func + ' is not a function');
+      }
+      var thisArg = args[0];
+      var argList = args.slice(1);
+      return func.call(intrp, thread, state, thisArg, argList);
     }
-    state.value = undefined;
-    return FunctionResult.CallAgain;
-  };
-  this.createNativeFunction('Function.prototype.call', wrapper, false);
+  });
 };
 
 /**
