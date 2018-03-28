@@ -555,14 +555,7 @@ Interpreter.prototype.initBuiltins_ = function() {
   eval_.setName('eval');
   intrp.setProperty(eval_, 'length', 1, Descriptor.c);
 
-  /**
-   * @param {!Interpreter} intrp The interpreter.
-   * @param {!Interpreter.Thread} thread The current thread.
-   * @param {!Interpreter.State} state The current state.
-   * @param {Interpreter.Value} thisVal The this value passed into function.
-   * @param {!Array<Interpreter.Value>} args The arguments to the call.
-   * @return {Interpreter.Value|!FunctionResult}
-   */
+  /** @override */
   eval_.call = function(intrp, thread, state, thisVal, args) {
     var code = args[0];
     if (typeof code !== 'string') {  // eval()
@@ -2452,7 +2445,7 @@ Interpreter.prototype.Object.prototype.valueOf = function() {
 Interpreter.prototype.Function = function(owner, proto) {
   throw Error('Inner class constructor not callable on prototype');
 };
-/** @return {string} @override */
+/** @override */
 Interpreter.prototype.Function.prototype.toString = function() {
   throw Error('Inner class method not callable on prototype');
 };
@@ -2555,7 +2548,7 @@ Interpreter.prototype.OldAsyncFunction =
 Interpreter.prototype.Array = function(owner, proto) {
   throw Error('Inner class constructor not callable on prototype');
 };
-/** @return {string} @override */
+/** @override */
 Interpreter.prototype.Array.prototype.toString = function() {
   throw Error('Inner class method not callable on prototype');
 };
@@ -2571,7 +2564,7 @@ Interpreter.prototype.Date = function(owner, proto) {
   this.date;
   throw Error('Inner class constructor not callable on prototype');
 };
-/** @return {string} @override */
+/** @override */
 Interpreter.prototype.Date.prototype.toString = function() {
   throw Error('Inner class method not callable on prototype');
 };
@@ -2591,7 +2584,7 @@ Interpreter.prototype.RegExp = function(owner, proto) {
   this.regexp;
   throw Error('Inner class constructor not callable on prototype');
 };
-/** @return {string} @override */
+/** @override */
 Interpreter.prototype.RegExp.prototype.toString = function() {
   throw Error('Inner class method not callable on prototype');
 };
@@ -2610,7 +2603,7 @@ Interpreter.prototype.RegExp.prototype.populate = function(nativeRegexp) {
 Interpreter.prototype.Error = function(owner, proto, message) {
   throw Error('Inner class constructor not callable on prototype');
 };
-/** @return {string} @override */
+/** @override */
 Interpreter.prototype.Error.prototype.toString = function() {
   throw Error('Inner class method not callable on prototype');
 };
@@ -2751,7 +2744,6 @@ Interpreter.prototype.installTypes = function() {
 
   /**
    * Convert this function into a string.
-   * @return {string} String value.
    * @override
    */
   intrp.Function.prototype.toString = function() {
@@ -2799,6 +2791,7 @@ Interpreter.prototype.installTypes = function() {
    * @param {Interpreter.Value} thisVal The this value passed into function.
    * @param {!Array<Interpreter.Value>} args The arguments to the call.
    * @return {Interpreter.Value}
+   * @override
    */
   intrp.Function.prototype.call = function(
       intrp, thread, state, thisVal, args) {
@@ -2883,12 +2876,6 @@ Interpreter.prototype.installTypes = function() {
 
   /**
    * The [[Call]] internal method defined by §13.2.1 of the ES5.1 spec.
-   * @param {!Interpreter} intrp The interpreter.
-   * @param {!Interpreter.Thread} thread The current thread.
-   * @param {!Interpreter.State} state The current state.
-   * @param {Interpreter.Value} thisVal The this value passed into function.
-   * @param {!Array<Interpreter.Value>} args The arguments to the call.
-   * @return {Interpreter.Value|!FunctionResult}
    * @override
    */
   intrp.UserFunction.prototype.call = function(
@@ -2934,11 +2921,6 @@ Interpreter.prototype.installTypes = function() {
   /**
    * The [[Construct]] internal method defined by §13.2.2 of the ES5.1
    * spec.
-   * @param {!Interpreter} intrp The interpreter.
-   * @param {!Interpreter.Thread} thread The current thread.
-   * @param {!Interpreter.State} state The current state.
-   * @param {!Array<Interpreter.Value>} args The arguments to the call.
-   * @return {Interpreter.Value|!FunctionResult}
    * @override
    */
   intrp.UserFunction.prototype.construct = function(
@@ -2980,7 +2962,6 @@ Interpreter.prototype.installTypes = function() {
 
   /**
    * Convert this function into a string.
-   * @return {string} String value.
    * @override
    */
   intrp.NativeFunction.prototype.toString = function() {
@@ -3015,28 +2996,13 @@ Interpreter.prototype.installTypes = function() {
       Object.create(intrp.NativeFunction.prototype);
   intrp.OldNativeFunction.prototype.constructor = intrp.OldNativeFunction;
 
-  /**
-   * @param {!Interpreter} intrp The interpreter.
-   * @param {!Interpreter.Thread} thread The current thread.
-   * @param {!Interpreter.State} state The current state.
-   * @param {Interpreter.Value} thisVal The this value passed into function.
-   * @param {!Array<Interpreter.Value>} args The arguments to the call.
-   * @return {Interpreter.Value}
-   * @override
-   */
+  /** @override */
   intrp.OldNativeFunction.prototype.call = function(
       intrp, thread, state, thisVal, args) {
     return this.impl.apply(thisVal, args);
   };
 
-  /**
-   * @param {!Interpreter} intrp The interpreter.
-   * @param {!Interpreter.Thread} thread The current thread.
-   * @param {!Interpreter.State} state The current state.
-   * @param {!Array<Interpreter.Value>} args The arguments to the call.
-   * @return {Interpreter.Value}
-   * @override
-   */
+  /** @override */
   intrp.OldNativeFunction.prototype.construct = function(
       intrp, thread, state, args) {
     if (this.illegalConstructor) {
@@ -3071,15 +3037,7 @@ Interpreter.prototype.installTypes = function() {
       Object.create(intrp.OldNativeFunction.prototype);
   intrp.OldAsyncFunction.prototype.constructor = intrp.OldAsyncFunction;
 
-  /**
-   * @param {!Interpreter} intrp The interpreter.
-   * @param {!Interpreter.Thread} thread The current thread.
-   * @param {!Interpreter.State} state The current state.
-   * @param {Interpreter.Value} thisVal The this value passed into function.
-   * @param {!Array<Interpreter.Value>} args The arguments to the call.
-   * @return {Interpreter.Value|!FunctionResult}
-   * @override
-   */
+  /** @override */
   intrp.OldAsyncFunction.prototype.call = function(
       intrp, thread, state, thisVal, args) {
     var done = false;
@@ -3130,7 +3088,10 @@ Interpreter.prototype.installTypes = function() {
     return FunctionResult.AwaitValue;
   };
 
-  // Async functions not constructable:
+  /**
+   * Async functions not constructable; use generc construct which
+   * always throws.
+   * @override */
   intrp.OldAsyncFunction.prototype.construct =
       intrp.Function.prototype.construct;
 
@@ -3157,7 +3118,6 @@ Interpreter.prototype.installTypes = function() {
 
   /**
    * Convert array-like objects into a string.
-   * @return {string} String value.
    * @override
    */
   intrp.Array.prototype.toString = function() {
@@ -3204,7 +3164,6 @@ Interpreter.prototype.installTypes = function() {
 
   /**
    * Return the date as a string.
-   * @return {string} Value.
    * @override
    */
   intrp.Date.prototype.toString = function() {
@@ -3217,7 +3176,6 @@ Interpreter.prototype.installTypes = function() {
 
   /**
    * Return the date as a numeric value.
-   * @return {number} Value.
    * @override
    */
   intrp.Date.prototype.valueOf = function() {
@@ -3248,7 +3206,6 @@ Interpreter.prototype.installTypes = function() {
 
   /**
    * Return the regexp as a string.
-   * @return {string} Value.
    * @override
    */
   intrp.RegExp.prototype.toString = function() {
@@ -3333,7 +3290,6 @@ Interpreter.prototype.installTypes = function() {
 
   /**
    * Return the error as a string.
-   * @return {string} Value.
    * @override
    */
   intrp.Error.prototype.toString = function() {
