@@ -551,34 +551,30 @@ Interpreter.prototype.initBuiltins_ = function() {
   // Initialize ES standard global functions.
   var intrp = this;
 
-  var eval_ = new this.NativeFunction;
-  eval_.setName('eval');
-  intrp.setProperty(eval_, 'length', 1, Descriptor.c);
-
-  /** @override */
-  eval_.call = function(intrp, thread, state, thisVal, args) {
-    var code = args[0];
-    if (typeof code !== 'string') {  // eval()
-      // Eval returns the argument if the argument is not a string.
-      // eval(Array) -> Array
-      return code;
+  var eval_ = new this.NativeFunction({
+    id: 'eval', length: 1,
+    call: function(intrp, thread, state, thisVal, args) {
+      var code = args[0];
+      if (typeof code !== 'string') {  // eval()
+        // Eval returns the argument if the argument is not a string.
+        // eval(Array) -> Array
+        return code;
+      }
+      code = String(code);
+      var ast = intrp.parse(code);
+      var evalNode = new Interpreter.Node;
+      evalNode['type'] = 'EvalProgram_';
+      evalNode['body'] = ast['body'];
+      evalNode['source'] = code;
+      // Create new scope and update it with definitions in eval().
+      var outerScope = state.directEval_ ? state.scope : intrp.global;
+      var scope = new Interpreter.Scope(state.scope.perms, outerScope);
+      intrp.populateScope_(ast, scope, code);
+      thread.stateStack_.push(new Interpreter.State(evalNode, scope));
+      state.value = undefined;  // Default value if no explicit return.
+      return FunctionResult.AwaitValue;
     }
-    code = String(code);
-    var ast = intrp.parse(code);
-    var evalNode = new Interpreter.Node;
-    evalNode['type'] = 'EvalProgram_';
-    evalNode['body'] = ast['body'];
-    evalNode['source'] = code;
-    // Create new scope and update it with definitions in eval().
-    var outerScope = state.directEval_ ? state.scope : intrp.global;
-    var scope = new Interpreter.Scope(state.scope.perms, outerScope);
-    intrp.populateScope_(ast, scope, code);
-    thread.stateStack_.push(new Interpreter.State(evalNode, scope));
-    state.value = undefined;  // Default value if no explicit return.
-    return FunctionResult.AwaitValue;
-  };
-  eval_.call.id = 'eval';  // For serialization.
-  this.builtins_['eval'] = eval_;
+  });
   // eval is a special case; it must be added to the global scope at
   // startup time (rather than by a "var eval = new 'eval';" statement
   // in es5.js) because binding eval is illegal in strict mode.
