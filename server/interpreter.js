@@ -2641,6 +2641,29 @@ Interpreter.prototype.Server.prototype.unlisten = function(onClose) {
   throw Error('Inner class method not callable on prototype');
 };
 
+/**
+ * Typedef for the functions used to implement NativeFunction.call.
+ * @typedef {function(this: Interpreter.prototype.NativeFunction,
+ *                    !Interpreter,
+ *                    !Interpreter.Thread,
+ *                    !Interpreter.State,
+ *                    Interpreter.Value,
+ *                    !Array<Interpreter.Value>)
+ *               : (Interpreter.Value|!FunctionResult)}
+ */
+Interpreter.NativeCallImpl;
+
+/**
+ * Typedef for the functions used to implement NativeFunction.construct.
+ * @typedef {function(this: Interpreter.prototype.NativeFunction,
+ *                    !Interpreter,
+ *                    !Interpreter.Thread,
+ *                    !Interpreter.State,
+ *                    !Array<Interpreter.Value>)
+ *               : (Interpreter.Value|!FunctionResult)}
+ */
+Interpreter.NativeConstructImpl;
+
 ///////////////////////////////////////////////////////////////////////////////
 
 /**
