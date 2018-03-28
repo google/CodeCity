@@ -3874,13 +3874,12 @@ Interpreter.prototype.installTypes = function() {
    * spec.
    * @override
    */
-  intrp.UserFunction.prototype.construct = function(intrp, thread, state) {
+  intrp.UserFunction.prototype.construct = function(intrp, thread, state, ...args) {
     if (!state.info_.funcState) {  // First visit.
       if (this.owner === null) {
         throw new intrp.Error(state.scope.perms, intrp.PERM_ERROR,
             'Functions with null owner are not constructable');
       }
-      var args = Array.prototype.slice.call(arguments, 3);
       // TODO(cpcallen:perms): Is it really OK to construct if caller
       // can't read .prototype?
       var proto = this.get('prototype', this.owner);
@@ -3890,8 +3889,7 @@ Interpreter.prototype.installTypes = function() {
         proto = intrp.OBJECT;
       }
       state.info_.funcState = new intrp.Object(state.scope.perms, proto);
-      this.call.apply(
-          this, [intrp, thread, state, state.info_.funcState].concat(args));
+      this.call(intrp, thread, state, state.info_.funcState, ...args);
       return FunctionResult.CallAgain;
     } else {  // Construction done.  Check result.
       // Per ES5.1 §13.2.2 steps 9,10: if constructor returns
@@ -3987,29 +3985,27 @@ Interpreter.prototype.installTypes = function() {
 
   /** @override */
   intrp.OldNativeFunction.prototype.call = function(
-      intrp, thread, state, thisVal) {
+      intrp, thread, state, thisVal, ...args) {
     if (this.owner === null) {
       throw new intrp.Error(state.scope.perms, intrp.PERM_ERROR,
           'Functions with null owner are not executable');
     }
-    var args = Array.prototype.slice.call(arguments, 4);
-    return this.impl.apply(thisVal, args);
+    return this.impl.call(thisVal, ...args);
   };
 
   /** @override */
   intrp.OldNativeFunction.prototype.construct = function(
-      intrp, thread, state) {
-    var args = Array.prototype.slice.call(arguments, 3);
+      intrp, thread, state, ...args) {
     if (this.illegalConstructor) {
       // Pass to super, which will complain about non-callability:
-      intrp.Function.prototype.construct.apply(
-          /** @type {?} */ (this), [intrp, thread, state].concat(args));
+      intrp.Function.prototype.construct.call(
+          /** @type {?} */ (this), intrp, thread, state, ...args);
     }
     if (this.owner === null) {
       throw new intrp.Error(state.scope.perms, intrp.PERM_ERROR,
           'Functions with null owner are not constructable');
     }
-    return this.impl.apply(undefined, args);
+    return this.impl.call(undefined, ...args);
   };
 
   /**
@@ -4032,13 +4028,12 @@ Interpreter.prototype.installTypes = function() {
 
   /** @override */
   intrp.OldAsyncFunction.prototype.call = function(
-      intrp, thread, state, thisVal) {
+      intrp, thread, state, thisVal, ...args) {
     if (this.owner === null) {
       throw new intrp.Error(state.scope.perms, intrp.PERM_ERROR,
           'Functions with null owner are not executable');
     }
     var done = false;
-    var args = Array.prototype.slice.call(arguments, 4);
 
     /**
      * Invariant check to verify it's safe to resolve or reject this
@@ -4070,10 +4065,10 @@ Interpreter.prototype.installTypes = function() {
           thread, Interpreter.CompletionType.THROW, value, undefined);
       intrp.go_();
     };
-    // Prepend resolve, reject to (the 'actual') arguments.
-    args = [intrp, thread, state, thisVal, resolve, reject].concat(args);
     thread.status = Interpreter.Thread.Status.BLOCKED;
-    intrp.OldNativeFunction.prototype.call.apply(/** @type {?} */ (this), args);
+    intrp.OldNativeFunction.prototype.call.call(
+        /** @type {?} */ (this), intrp, thread, state, thisVal,
+        resolve, reject, ...args);
     return FunctionResult.AwaitValue;
   };
 
@@ -5032,10 +5027,9 @@ stepFuncs_['CallExpression'] = function (thread, stack, state, node) {
     }
     var args = state.info_.arguments;
     if (state.node['type'] === 'NewExpression') {
-      var r = func.construct.apply(func, [this, thread, state].concat(args));
+      var r = func.construct(this, thread, state, ...args);
     } else {
-      r = func.call.apply(
-          func, [this, thread, state, state.info_.this].concat(args));
+      r = func.call(this, thread, state, state.info_.this, ...args);
     }
     if (r instanceof FunctionResult) {
       if (r === FunctionResult.CallAgain) {
