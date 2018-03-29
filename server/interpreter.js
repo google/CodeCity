@@ -617,23 +617,29 @@ Interpreter.prototype.initBuiltins_ = function() {
  * @private
  */
 Interpreter.prototype.initObject_ = function() {
-  var intrp = this;
-  var wrapper;
   // Object constructor.
-  wrapper = function(value) {
-    if (value instanceof intrp.Object) {
-      return value;
-    } else if (typeof value === 'boolean' || typeof value === 'number' ||
-        typeof value === 'string') {
-      // No boxed primitives in Code City.
-      intrp.throwError(intrp.TYPE_ERROR, 'Boxed primitives not supported.');
-    } else if (value === undefined || value === null) {
-      return new intrp.Object(intrp.thread.perms());
-    } else {
-      throw TypeError('Unknown value type??');
+  new this.NativeFunction({
+    id: 'Object', length: 1,
+    construct: function(intrp, thread, state, args) {
+      var value = args[0];
+      if (value instanceof intrp.Object) {
+        return value;
+      } else if (typeof value === 'boolean' || typeof value === 'number' ||
+          typeof value === 'string') {
+        // No boxed primitives in Code City.
+        intrp.throwError(intrp.TYPE_ERROR, 'Boxed primitives not supported.');
+      } else if (value === undefined || value === null) {
+        return new intrp.Object(state.scope.perms);
+      } else {
+        throw TypeError('Unknown value type??');
+      }
+    },
+    call: function(intrp, thread, state, thisVal, args) {
+      this.construct.call(intrp, thread, state, args);
     }
-  };
-  this.createNativeFunction('Object', wrapper, true);
+  });
+                          
+  var intrp = this;
 
   /**
    * Checks if the provided value is null or undefined.
@@ -650,124 +656,158 @@ Interpreter.prototype.initObject_ = function() {
   // Static methods on Object.
   this.createNativeFunction('Object.is', Object.is, false);
 
-  wrapper = function(obj) {
-    throwIfNullUndefined(obj);
-    var propsObj = (obj instanceof intrp.Object) ? obj.properties : obj;
-    var names = Object.getOwnPropertyNames(propsObj);
-    return intrp.arrayNativeToPseudo(names, intrp.thread.perms());
-  };
-  this.createNativeFunction('Object.getOwnPropertyNames', wrapper, false);
+  new this.NativeFunction({
+    id: 'Object.getOwnPropertyNames', length: 1,
+    call: function(intrp, thread, state, thisVal, args) {
+      var obj = args[0];
+      throwIfNullUndefined(obj);
+      var propsObj = (obj instanceof intrp.Object) ? obj.properties : obj;
+      var names = Object.getOwnPropertyNames(propsObj);
+      return intrp.arrayNativeToPseudo(names, state.scope.perms);
+    }
+  });
+      
+  new this.NativeFunction({
+    id: 'Object.keys', length: 1,
+    call: function(intrp, thread, state, thisVal, args) {
+      var obj = args[0];
+      throwIfNullUndefined(obj);
+      var propsObj = (obj instanceof intrp.Object) ? obj.properties : obj;
+      var keys = Object.keys(propsObj);
+      return intrp.arrayNativeToPseudo(keys, state.scope.perms);
+    }
+  });
 
-  wrapper = function(obj) {
-    throwIfNullUndefined(obj);
-    var propsObj = (obj instanceof intrp.Object) ? obj.properties : obj;
-    var keys = Object.keys(propsObj);
-    return intrp.arrayNativeToPseudo(keys, intrp.thread.perms());
-  };
-  this.createNativeFunction('Object.keys', wrapper, false);
+  new this.NativeFunction({
+    id: 'Object.create', length: 2,
+    call: function(intrp, thread, state, thisVal, args) {
+      var proto = args[0];
+      // Support for the second argument is the responsibility of a polyfill.
+      if (proto === null) {
+        return new intrp.Object(state.scope.perms, null);
+      }
+      if (!(proto === null || proto instanceof intrp.Object)) {
+        intrp.throwError(intrp.TYPE_ERROR,
+            'Object prototype may only be an Object or null');
+      }
+      return new intrp.Object(state.scope.perms, proto);
+    }
+  });
 
-  wrapper = function(proto) {
-    // Support for the second argument is the responsibility of a polyfill.
-    if (proto === null) {
-      return new intrp.Object(intrp.thread.perms(), null);
-    }
-    if (!(proto === null || proto instanceof intrp.Object)) {
-      intrp.throwError(intrp.TYPE_ERROR,
-          'Object prototype may only be an Object or null');
-    }
-    return new intrp.Object(intrp.thread.perms(), proto);
-  };
-  this.createNativeFunction('Object.create', wrapper, false);
-
-  wrapper = function(obj, prop, descriptor) {
-    prop = String(prop);
-    if (!(obj instanceof intrp.Object)) {
-      intrp.throwError(intrp.TYPE_ERROR,
-          'Object.defineProperty called on non-object');
-    }
-    if (!(descriptor instanceof intrp.Object)) {
-      intrp.throwError(intrp.TYPE_ERROR,
-          'Property description must be an object');
-    }
-    if (!obj.properties[prop] && obj.preventExtensions) {
-      intrp.throwError(intrp.TYPE_ERROR,
-          "Can't define property '" + prop + "', object is not extensible");
-    }
-    // Can't just use pseudoToNative since descriptors can inherit properties.
-    var nativeDescriptor = {};
-    if (intrp.hasProperty(descriptor, 'configurable')) {
-      nativeDescriptor.configurable =
-          !!intrp.getProperty(descriptor, 'configurable');
-    }
-    if (intrp.hasProperty(descriptor, 'enumerable')) {
-      nativeDescriptor.enumerable =
-          !!intrp.getProperty(descriptor, 'enumerable');
-    }
-    if (intrp.hasProperty(descriptor, 'writable')) {
-      nativeDescriptor.writable = !!intrp.getProperty(descriptor, 'writable');
-    }
-    if (intrp.hasProperty(descriptor, 'value')) {
-      nativeDescriptor.value = intrp.getProperty(descriptor, 'value');
-    }
-    intrp.setProperty(obj, prop, Interpreter.VALUE_IN_DESCRIPTOR,
-        nativeDescriptor);
-    return obj;
-  };
-  this.createNativeFunction('Object.defineProperty', wrapper, false);
-
-  wrapper = function(obj, prop) {
-    if (!(obj instanceof intrp.Object)) {
-      intrp.throwError(intrp.TYPE_ERROR,
-          'Object.getOwnPropertyDescriptor called on non-object');
-    }
-    prop = String(prop);
-    var pd = Object.getOwnPropertyDescriptor(obj.properties, prop);
-    if (!pd) {
-      return undefined;
-    }
-    var descriptor = new intrp.Object(intrp.thread.perms());
-    intrp.setProperty(descriptor, 'configurable', pd.configurable);
-    intrp.setProperty(descriptor, 'enumerable', pd.enumerable);
-    intrp.setProperty(descriptor, 'writable', pd.writable);
-    intrp.setProperty(descriptor, 'value', intrp.getProperty(obj, prop));
-    return descriptor;
-  };
-  this.createNativeFunction('Object.getOwnPropertyDescriptor', wrapper, false);
-
-  wrapper = function(obj) {
-    throwIfNullUndefined(obj);
-    // TODO(cpcallen): behaviour of our getPrototype is wrong for
-    // getPrototypeOf according to ES5.1 (but correct for ES6).
-    return intrp.getPrototype(obj);
-  };
-  this.createNativeFunction('Object.getPrototypeOf', wrapper, false);
-
-  wrapper = function(obj, proto) {
-    throwIfNullUndefined(obj);
-    if (proto !== null && !(proto instanceof intrp.Object)) {
-      intrp.throwError(intrp.TYPE_ERROR,
-          'Object prototype may only be an Object or null');
-    }
-    if (!(obj instanceof intrp.Object)) {
+  new this.NativeFunction({
+    id: 'Object.defineProperty', length: 3,
+    call: function(intrp, thread, state, thisVal, args) {
+      var obj = args[0];
+      var prop = args[1];
+      var descriptor = args[2];
+      if (!(obj instanceof intrp.Object)) {
+        intrp.throwError(intrp.TYPE_ERROR,
+            'Object.defineProperty called on non-object');
+      }
+      prop = String(prop)
+      if (!(descriptor instanceof intrp.Object)) {
+        intrp.throwError(intrp.TYPE_ERROR,
+            'Property description must be an object');
+      }
+      if (!obj.properties[prop] && obj.preventExtensions) {
+        intrp.throwError(intrp.TYPE_ERROR,
+            "Can't define property '" + prop + "', object is not extensible");
+      }
+      // Can't just use pseudoToNative since descriptors can inherit properties.
+      var nativeDescriptor = {};
+      if (intrp.hasProperty(descriptor, 'configurable')) {
+        nativeDescriptor.configurable =
+            !!intrp.getProperty(descriptor, 'configurable');
+      }
+      if (intrp.hasProperty(descriptor, 'enumerable')) {
+        nativeDescriptor.enumerable =
+            !!intrp.getProperty(descriptor, 'enumerable');
+      }
+      if (intrp.hasProperty(descriptor, 'writable')) {
+        nativeDescriptor.writable = !!intrp.getProperty(descriptor, 'writable');
+      }
+      if (intrp.hasProperty(descriptor, 'value')) {
+        nativeDescriptor.value = intrp.getProperty(descriptor, 'value');
+      }
+      intrp.setProperty(obj, prop, Interpreter.VALUE_IN_DESCRIPTOR,
+          nativeDescriptor);
       return obj;
     }
-    // TODO(cpcallen): actually implement prototype change.
-    return obj;
-  };
-  this.createNativeFunction('Object.setPrototypeOf', wrapper, false);
+  });
 
-  wrapper = function(obj) {
-    return Boolean(obj) && !obj.preventExtensions;
-  };
-  this.createNativeFunction('Object.isExtensible', wrapper, false);
-
-  wrapper = function(obj) {
-    if (obj instanceof intrp.Object) {
-      obj.preventExtensions = true;
+  new this.NativeFunction({
+    id: 'Object.getOwnPropertyDescriptor', length: 2,
+    call: function(intrp, thread, state, thisVal, args) {
+      var obj = args[0];
+      var prop = args[1];
+      if (!(obj instanceof intrp.Object)) {
+        intrp.throwError(intrp.TYPE_ERROR,
+            'Object.getOwnPropertyDescriptor called on non-object');
+      }
+      prop = String(prop);
+      var pd = Object.getOwnPropertyDescriptor(obj.properties, prop);
+      if (!pd) {
+        return undefined;
+      }
+      var descriptor = new intrp.Object(state.scope.perms);
+      intrp.setProperty(descriptor, 'configurable', pd.configurable);
+      intrp.setProperty(descriptor, 'enumerable', pd.enumerable);
+      intrp.setProperty(descriptor, 'writable', pd.writable);
+      intrp.setProperty(descriptor, 'value', intrp.getProperty(obj, prop));
+      return descriptor;
     }
-    return obj;
-  };
-  this.createNativeFunction('Object.preventExtensions', wrapper, false);
+  });
+
+  new this.NativeFunction({
+    id: 'Object.getPrototypeOf', length: 1,
+    call: function(intrp, thread, state, thisVal, args) {
+      var obj = args[0];
+      throwIfNullUndefined(obj);
+      // TODO(cpcallen): behaviour of our getPrototype is wrong for
+      // getPrototypeOf according to ES5.1 (but correct for ES6).
+      return intrp.getPrototype(obj);
+    }
+  });
+
+  new this.NativeFunction({
+    id: 'Object.setPrototypeOf', length: 2,
+    call: function(intrp, thread, state, thisVal, args) {
+      var obj = args[0];
+      var proto = args[1];
+      throwIfNullUndefined(obj);
+      if (proto !== null && !(proto instanceof intrp.Object)) {
+        intrp.throwError(intrp.TYPE_ERROR,
+            'Object prototype may only be an Object or null');
+      }
+      if (!(obj instanceof intrp.Object)) {
+        return obj;
+      }
+      // TODO(cpcallen): actually implement prototype change.
+      return obj;
+    }
+  });
+
+  new this.NativeFunction({
+    id: 'Object.isExtensible', length: 1,
+    call: function(intrp, thread, state, thisVal, args) {
+      var obj = args[0];
+      if (!(obj instanceof intrp.Object)) {
+        return false;  // ES6 §19.1.2.11.  ES5.1 would throw TypeError.
+      }
+      return !obj.preventExtensions;
+    }
+  });
+
+  new this.NativeFunction({
+    id: 'Object.preventExtensions', length: 1,
+    call: function(intrp, thread, state, thisVal, args) {
+      var obj = args[0];
+      if (obj instanceof intrp.Object) {
+        obj.preventExtensions = true;
+      }
+      return obj;
+    }
+  });
 
   // Instance methods on Object.
   this.createNativeFunction('Object.prototype.toString',
@@ -777,38 +817,49 @@ Interpreter.prototype.initObject_ = function() {
   this.createNativeFunction('Object.prototype.valueOf',
                             this.Object.prototype.valueOf, false);
 
-  wrapper = function(prop) {
-    throwIfNullUndefined(this);
-    if (!(this instanceof intrp.Object)) {
-      return this.hasOwnProperty(prop);
-    }
-    return String(prop) in this.properties;
-  };
-  this.createNativeFunction('Object.prototype.hasOwnProperty', wrapper, false);
 
-  wrapper = function(prop) {
-    throwIfNullUndefined(this);
-    return String(prop) in this.properties && !this.notEnumerable.has(prop);
-  };
-  this.createNativeFunction('Object.prototype.propertyIsEnumerable', wrapper,
-                            false);
-
-  wrapper = function(obj) {
-    while (true) {
-      // Note, circular loops shouldn't be possible.
-      // BUG(cpcallen): behaviour of getPrototype is wrong for
-      // isPrototypeOf, according to either ES5.1 or ES6.
-      obj = intrp.getPrototype(obj);
-      if (!obj) {
-        // No parent; reached the top.
-        return false;
+  new this.NativeFunction({
+    id: 'Object.prototype.hasOwnProperty', length: 1,
+    call: function(intrp, thread, state, thisVal, args) {
+      var key = args[0];
+      throwIfNullUndefined(thisVal);
+      if (!(thisVal instanceof intrp.Object)) {
+        return thisVal.hasOwnProperty(key);
       }
-      if (obj === this) {
-        return true;
+      return Object.prototype.hasOwnProperty.call(thisVal.properties, key);
+    }
+  });
+
+  new this.NativeFunction({
+    id: 'Object.prototype.propertyIsEnumerable', length: 1,
+    call: function(intrp, thread, state, thisVal, args) {
+      // BUG(cpcallen): Previous implementation was totally broken and
+      // has been removed.
+      // TODO(cpallen): Implement from scratch once .properties
+      // fully encapsulated.
+      intrp.throwError(intrp.ERROR, 'Not implemented');
+    }
+  });
+
+  new this.NativeFunction({
+    id: 'Object.prototype.isPrototypeOf', length: 1,
+    call: function(intrp, thread, state, thisVal, args) {
+      var obj = args[0];
+      while (true) {
+        // Note, circular loops shouldn't be possible.
+        // BUG(cpcallen): behaviour of getPrototype is wrong for
+        // isPrototypeOf, according to either ES5.1 or ES6.
+        obj = intrp.getPrototype(obj);
+        if (obj === null) {
+          // No parent; reached the top.
+          return false;
+        }
+        if (obj === this) {
+          return true;
+        }
       }
     }
-  };
-  this.createNativeFunction('Object.prototype.isPrototypeOf', wrapper, false);
+  });
 };
 
 /**
