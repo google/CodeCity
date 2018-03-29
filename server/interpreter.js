@@ -1593,25 +1593,25 @@ Interpreter.prototype.initThreads_ = function() {
  * @private
  */
 Interpreter.prototype.initPerms_ = function() {
-  var intrp = this;
-  this.createNativeFunction('perms', function() {
-    if (!intrp.thread) {
-      throw Error('No current thread when getting perms??');
+  new this.NativeFunction({
+    id: 'perms', length: 0,
+    call: function(intrp, thread, state, thisVal, args) {
+      return state.scope.perms;
     }
-    return intrp.thread.perms();
-  }, false);
+  });
 
-  this.createNativeFunction('setPerms', function(perms) {
-    if (!intrp.thread) {
-      throw Error('No current thread when setting perms??');
+  new this.NativeFunction({
+    id: 'setPerms', length: 0,
+    call: function(intrp, thread, state, thisVal, args) {
+      var perms = args[0];
+      if (!(perms instanceof intrp.Object)) {
+        intrp.throwError(intrp.TYPE_ERROR, 'New perms must be an object');
+      }
+      // TODO(cpcallen:perms): throw if current perms does not
+      // control new perms.
+      state.scope.perms = perms;
     }
-    if (!(perms instanceof intrp.Object)) {
-      intrp.throwError(intrp.TYPE_ERROR, 'New perms must be an object');
-    }
-    // TODO(cpcallen:perms): throw if current perms does not
-    // control new perms.
-    return intrp.thread.setPerms(perms);
-  }, false);
+  });
 };
 
 /**
@@ -2406,18 +2406,6 @@ Interpreter.Thread.prototype.perms = function() {
     throw Error('Zombie thread has no perms');
   }
   return this.stateStack_[this.stateStack_.length - 1].scope.perms;
-};
-
-/**
- * Sets the permissions with which currently-executing code will
- * run until the end of the innermost scope.
- * @param {!Interpreter.Owner} perms New perms.
- */
-Interpreter.Thread.prototype.setPerms = function(perms) {
-  if (this.status === Interpreter.Thread.Status.ZOMBIE) {
-    throw Error("Can't set perms of zombie thread");
-  }
-  this.stateStack_[this.stateStack_.length - 1].scope.perms = perms;
 };
 
 /**
