@@ -1549,7 +1549,8 @@ tests.ObjectGetOwnPropertyNamesUndefined = function() {
 };
 
 tests.ObjectGetOwnPropertyNames = function() {
-  var o = { foo: 42 }, r = 0;
+  var o = Object.create({baz: 999});
+  o.foo = 42;
   Object.defineProperty(o, 'bar', { value: 38 });
   var keys = Object.getOwnPropertyNames(o);
   var r = 0;
@@ -1647,6 +1648,18 @@ tests.ObjectCreateWithProperties = function() {
 
 tests.ObjectPrototypeToString = function() {
   console.assert(({}).toString() === '[object Object]', 'ObjectPrototypeToString');
+};
+
+tests.ObjectPrototypeHasOwnProperty = function() {
+  var o = Object.create({baz: 999});
+  o.foo = 42;
+  Object.defineProperty(o, 'bar', { value: 41, enumerable: true });
+  var r = 0;
+  for (var key in o) {
+    if (!o.hasOwnProperty(key)) continue;
+    r += o[key];
+  }
+  console.assert(r === 83, 'ObjectGetOwnPropertyNames');
 };
 
 //////////////////////////////////////////////////////////////

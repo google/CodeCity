@@ -1152,7 +1152,8 @@ module.exports = [
     expected: 'TypeError' },
 
   { name: 'ObjectGetOwnPropertyNames', src: `
-    var o = { foo: 42 }, r = 0;
+    var o = Object.create({baz: 999});
+    o.foo = 42;
     Object.defineProperty(o, 'bar', { value: 38 });
     var keys = Object.getOwnPropertyNames(o);
     var r = 0;
@@ -1236,6 +1237,20 @@ module.exports = [
     ({}).toString();
     `,
     expected: '[object Object]' },
+
+  { name: 'ObjectProtoypeHasOwnProperty', src: `
+    var o = Object.create({baz: 999});
+    o.foo = 42;
+    Object.defineProperty(o, 'bar', {value: 41, enumerable: true});
+    var r = 0;
+    for (var key in o) {
+      if (!o.hasOwnProperty(key)) continue;
+      r += o[key];
+    }
+    r;
+    `,
+    expected: 83 },
+    
 
   /******************************************************************/
   // Function and Function.prototype
