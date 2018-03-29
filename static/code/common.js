@@ -29,7 +29,20 @@ Code.Common = {};
 Code.Common.SELECTOR = 'code selector';
 
 /**
- * Tokenize a string such as '$.foo["bar"]'
+ * Tokenize a string such as '$.foo["bar"]' into tokens:
+ *   {type: "id",  raw: "$",     valid: true, index: 0, value: "$"}
+ *   {type: ".",   raw: ".",     valid: true, index: 1}
+ *   {type: "id",  raw: "foo",   valid: true, index: 2, value: "foo"}
+ *   {type: "[",   raw: "[",     valid: true, index: 5}
+ *   {type: "str", raw: ""bar"", valid: true, index: 6, value: "bar"}
+ *   {type: "]",   raw: "]",     valid: true, index: 11}
+ * Other tokens include:
+ *   {type: "num", raw: "42",    valid: true, index: 2, value: 42}
+ *   {type: "^",   raw: "^",     valid: true, index: 5}
+ * If the string is permanently invalid, the last token is:
+ *   {type: "?",   raw: "",      valid: false}
+ * A temporary token is used internally during parsing:
+ *   {type: "unparsed", raw: "[42].foo", index: 8}
  * @param {string} text Selector string.
  * @return {!Array<!Object>} Array of tokens.
  */
@@ -44,56 +57,56 @@ Code.Common.tokenizeSelector = function(text) {
 
   // Split the text into an array of tokens.
   // First step is to create two types of tokens: 'str' and 'unparsed'.
-  var state = 0;
-  // 0 - non-string state
-  // 1 - single quote string
-  // 2 - double quote string
-  // 3 - backslash in single quote string
-  // 4 - backslash in double quote string
+  var state = null;
+  // null - non-string state
+  // 'sqStr' - single quote string
+  // 'dqStr' - double quote string
+  // "sqSlash" - backslash in single quote string
+  // 'dqSlash' - backslash in double quote string
   var tokens = [];
   var buffer = [];
   for (var i = 0; i < text.length; i++) {
     var char = text[i];
     var index = whitespaceLength + i;
-    if (state === 0) {
+    if (state === null) {
       if (char === "'") {
         Code.Common.tokenizeSelector.pushUnparsed(buffer, index, tokens);
-        state = 1;
+        state = 'sqStr';
       } else if (char === '"') {
         Code.Common.tokenizeSelector.pushUnparsed(buffer, index, tokens);
-        state = 2;
+        state = 'dqStr';
       } else {
         buffer.push(char);
       }
-    } else if (state === 1) {
+    } else if (state === 'sqStr') {
       if (char === "'") {
         Code.Common.tokenizeSelector.pushString(state, buffer, index, tokens);
-        state = 0;
+        state = null;
       } else {
         buffer.push(char);
         if (char === '\\') {
-          state = 3;
+          state = 'sqSlash';
         }
       }
-    } else if (state === 2) {
+    } else if (state === 'dqStr') {
       if (char === '"') {
         Code.Common.tokenizeSelector.pushString(state, buffer, index, tokens);
-        state = 0;
+        state = null;
       } else {
         buffer.push(char);
         if (char === '\\') {
-          state = 4;
+          state = 'dqSlash';
         }
       }
-    } else if (state === 3) {
+    } else if (state === 'sqSlash') {
       buffer.push(char);
-      state = 1;
-    } else if (state === 4) {
+      state = 'sqStr';
+    } else if (state === 'dqSlash') {
       buffer.push(char);
-      state = 2;
+      state = 'dqStr';
     }
   }
-  if (state !== 0) {
+  if (state !== null) {
     Code.Common.tokenizeSelector.pushString(state, buffer, index + 1, tokens);
   } else if (buffer.length) {
     Code.Common.tokenizeSelector.pushUnparsed(buffer, index + 1, tokens);
@@ -114,24 +127,13 @@ Code.Common.tokenizeSelector = function(text) {
           split.splice(j, 1);  // Delete the empty string.
           continue;
         } else if (raw.trim() === '[') {
-          split[j] = {
-            type: '[',
-            valid: true
-          };
+          split[j] = {type: '[', valid: true};
         } else if (raw.trim() === ']') {
-          split[j] = {
-            type: ']',
-            valid: true
-          };
+          split[j] = {type: ']', valid: true};
         } else if (raw.trim() === '^') {
-          split[j] = {
-            type: '^',
-            valid: true
-          };
+          split[j] = {type: '^', valid: true};
         } else {
-          split[j] = {
-            type: 'unparsed'
-          };
+          split[j] = {type: 'unparsed'};
         }
         split[j].raw = raw;
         split[j].index = index;
@@ -167,49 +169,46 @@ Code.Common.tokenizeSelector = function(text) {
   }
   for (var i = tokens.length - 1; i >= 0; i--) {
     var token = tokens[i];
-    if (token.type === 'unparsed') {
-      var index = token.index + token.raw.length;
-      // Split string on periods.
-      var split = token.raw.split(/(\s*\.\s*)/);
-      for (var j = split.length - 1; j >= 0; j--) {
-        var raw = split[j];
-        index -= raw.length;
-        if (raw === '') {
-          split.splice(j, 1);  // Delete the empty string.
-          continue;
-        } else if (raw.trim() === '.') {
-          split[j] = {
-            type: '.',
-            valid: true
-          };
-        } else {
-          // Parse Unicode escapes in identifiers.
-          var valid = true;
-          var value = split[j];
-          while (true) {
-            var test = value.replace(unicodeRegex, '');
-            if (test.indexOf('\\') === -1) {
-              break;
-            }
-            // Invalid escape found.  Trim off last char and try again.
-            value = value.substring(0, value.length - 1);
-            valid = false;
-          }
-          // Decode Unicode.
-          value = value.replace(unicodeRegex, decodeUnicode);
-          split[j] = {
-            type: 'id',
-            value: value,
-            valid: valid
-          };
-        }
-        split[j].raw = raw;
-        split[j].index = index;
-      }
-      // Replace token with split array.
-      split.unshift(i, 1);
-      Array.prototype.splice.apply(tokens, split);
+    if (token.type !== 'unparsed') {
+      continue;
     }
+    var index = token.index + token.raw.length;
+    // Split string on periods.
+    var split = token.raw.split(/(\s*\.\s*)/);
+    for (var j = split.length - 1; j >= 0; j--) {
+      var raw = split[j];
+      index -= raw.length;
+      if (raw === '') {
+        split.splice(j, 1);  // Delete the empty string.
+        continue;
+      } else if (raw.trim() === '.') {
+        split[j] = {
+          type: '.',
+          valid: true
+        };
+      } else {
+        // Parse Unicode escapes in identifiers.
+        var valid = true;
+        var value = split[j];
+        while (true) {
+          var test = value.replace(unicodeRegex, '');
+          if (test.indexOf('\\') === -1) {
+            break;
+          }
+          // Invalid escape found.  Trim off last char and try again.
+          value = value.substring(0, value.length - 1);
+          valid = false;
+        }
+        // Decode Unicode.
+        value = value.replace(unicodeRegex, decodeUnicode);
+        split[j] = {type: 'id', value: value, valid: valid};
+      }
+      split[j].raw = raw;
+      split[j].index = index;
+    }
+    // Replace token with split array.
+    split.unshift(i, 1);
+    Array.prototype.splice.apply(tokens, split);
   }
 
   // Finally, validate order of tokens.  Only check for permanent errors.

@@ -169,24 +169,26 @@ $.code.objectPanel = function(request, response) {
   var parts = JSON.parse(request.parameters.parts);
   if (parts.length) {
     try {
-      var obj = $.code.partsToValue(parts);
+      var value = $.code.partsToValue(parts);
     } catch (e) {
       // Parts don't match a valid path.
       // TODO: Send an informative error message.
       data = null;
     }
     if (data) {
-      data.properties = [];
-      while (obj !== null && obj !== undefined) {
-        var ownProps = Object.getOwnPropertyNames(obj);
-        // Add typeof information.
-        for (var i = 0; i < ownProps.length; i++) {
-          var prop = ownProps[i];
-          var type = typeof obj[prop];
-          ownProps[i] = {name: prop, type: type};
+      if (value && (typeof value === 'object' || typeof value === 'function')) {
+        data.properties = [];
+        while (value !== null && value !== undefined) {
+          var ownProps = Object.getOwnPropertyNames(value);
+          // Add typeof information.
+          for (var i = 0; i < ownProps.length; i++) {
+            var prop = ownProps[i];
+            var type = typeof value[prop];
+            ownProps[i] = {name: prop, type: type};
+          }
+          data.properties.push(ownProps);
+          value = Object.getPrototypeOf(value);
         }
-        data.properties.push(ownProps);
-        obj = Object.getPrototypeOf(obj)
       }
     }
   } else {
