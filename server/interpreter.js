@@ -522,17 +522,20 @@ Interpreter.prototype.initBuiltins_ = function() {
   // Function.prototype, which are needed to bootstrap everything else.
   this.OBJECT = new this.Object(null, null);
   this.builtins_['Object.prototype'] = this.OBJECT;
-  // createNativeFunction adds the argument to the map of builtins.
-  this.FUNCTION =
-      this.createNativeFunction('Function.prototype', function() {}, false);
-  this.FUNCTION.proto = this.OBJECT;
 
   // Create the object that will own all of the system objects.
   var root = new this.Object(null, this.OBJECT);
   this.ROOT = /** @type {!Interpreter.Owner} */ (root);
   this.builtins_['CC.root'] = root;
   this.global.perms = this.ROOT;
-  // TODO(cpcallen:perms): make stuff owned by ROOT (including itself)
+  // Retroactively apply root ownership to Object.prototype:
+  this.OBJECT.owner = this.ROOT;
+
+  // NativeFunction constructor adds new function to the map of builtins.
+  this.FUNCTION = new this.NativeFunction({
+    id: 'Function.prototype', name: '', length: 0, proto: this.OBJECT,
+    call: function(intrp, thread, state, thisVal, args) { /* do nothing */ }
+  });
 
   // Initialize global objects.
   this.initObject_();
@@ -2669,7 +2672,7 @@ Interpreter.prototype.installTypes = function() {
       proto = intrp.OBJECT;
     }
     if (owner === undefined) {
-      owner =  null;
+      owner = null;
     }
     // We must define .proto before .properties, because our
     // children's .properties will inherit from ours, and the
@@ -2677,8 +2680,11 @@ Interpreter.prototype.installTypes = function() {
     // children's .properties before it has resurrected the
     // .proto.properties.
     this.proto = proto;
-    this.owner = owner;
     this.properties = Object.create((proto === null) ? null : proto.properties);
+    // We must define .owner after .properties because we need to make
+    // sure that Object.prototype's .properties object is serialized
+    // before root, or a similar problem occurs.
+    this.owner = owner;
   };
 
   /** @type {Interpreter.prototype.Object} */
@@ -2958,7 +2964,8 @@ Interpreter.prototype.installTypes = function() {
     }
     if (options.name || options.id) {
       var id = (options.id || options.name);
-      this.setName(options.name || options.id.replace(/^.*\./, ''));
+      this.setName(options.name !== undefined ?
+          options.name : options.id.replace(/^.*\./, ''));
       // Register builtin and make sure call and construct are serializable.
       if (intrp.builtins_[id]) {
         throw ReferenceError('Duplicate builtin id ' + id);
