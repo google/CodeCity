@@ -148,19 +148,6 @@ Interpreter.SCOPE_REFERENCE = new Interpreter.Sentinel();
 Interpreter.VALUE_IN_DESCRIPTOR = new Interpreter.Sentinel();
 
 /**
- * Parse a code string into an AST.
- * @param {string} str
- */
-Interpreter.prototype.parse = function(str) {
-  try {
-    return acorn.parse(str, Interpreter.PARSE_OPTIONS);
-  } catch (e) {
-    // Acorn threw a SyntaxError.  Rethrow as a trappable error.
-    this.throwError(this.SYNTAX_ERROR, 'Invalid code: ' + e.message);
-  }
-};
-
-/**
  * Return a monotonically increasing count of milliseconds since this
  * Interpreter was last brought to PAUSED or RUNNING status from
  * STOPPED.  This excludes time when Node was suspended by the host OS
@@ -197,7 +184,7 @@ Interpreter.prototype.createThread = function(runnable, runAt) {
   var source = '';
   if (typeof runnable === 'string') {
     source = runnable;
-    // Acorn may throw a Syntax error.
+    // Acorn may throw a Syntax error, but it's the caller's problem.
     runnable = acorn.parse(runnable, Interpreter.PARSE_OPTIONS);
     runnable['source'] = source;
   }
@@ -565,7 +552,12 @@ Interpreter.prototype.initBuiltins_ = function() {
         return code;
       }
       code = String(code);
-      var ast = intrp.parse(code);
+      try {
+        var ast = acorn.parse(code, Interpreter.PARSE_OPTIONS);
+      } catch (e) {
+        // Acorn threw a SyntaxError.  Rethrow as a trappable error.
+        throw new intrp.Error(state.scope.perms, intrp.SYNTAX_ERROR, e.message);
+      }
       var evalNode = new Interpreter.Node;
       evalNode['type'] = 'EvalProgram_';
       evalNode['body'] = ast['body'];
@@ -872,38 +864,49 @@ Interpreter.prototype.initFunction_ = function() {
   var wrapper;
   var identifierRegexp = /^[A-Za-z_$][\w$]*$/;
   // Function constructor.
-  wrapper = function(var_args) {
-    if (arguments.length) {
-      var code = String(arguments[arguments.length - 1]);
-    } else {
-      var code = '';
-    }
-    var argsStr = Array.prototype.slice.call(arguments, 0, -1).join(',').trim();
-    if (argsStr) {
-      var args = argsStr.split(/\s*,\s*/);
-      for (var i = 0; i < args.length; i++) {
-        var name = args[i];
-        if (!identifierRegexp.test(name)) {
-          intrp.throwError(intrp.SYNTAX_ERROR,
-              'Invalid function argument: ' + name);
-        }
+  new this.NativeFunction({
+    id: 'Function', length: 1,
+    construct: function(intrp, thread, state, args) {
+      var argList = args.slice();
+      if (args.length) {
+        var code = String(argList.pop());
+      } else {
+        var code = '';
       }
-      argsStr = args.join(', ');
+      var argsStr = argList.join(',').trim();
+      if (argsStr) {
+        argsStr.split(/\s*,\s*/).map(function(name) {
+          if (!identifierRegexp.test(name)) {
+            throw new intrp.Error(state.scope.perms, intrp.SYNTAX_ERROR,
+                'Invalid function argument: ' + name);
+          }
+        });
+        argsStr = argList.join(', ');
+      }
+      // Acorn needs to parse code in the context of a function or
+      // else 'return' statements will be syntax errors.
+      var code = '(function(' + argsStr + ') {' + code + '})';
+      try {
+        var ast = acorn.parse(code, Interpreter.PARSE_OPTIONS);
+      } catch (e) {
+        // Acorn threw a SyntaxError.  Rethrow as a trappable error.
+        throw new intrp.Error(state.scope.perms, intrp.SYNTAX_ERROR, e.message);
+      }
+      if (ast['body'].length !== 1) {
+        // Function('a', 'return a + 6;}; {alert(1);');
+        // TODO: there must be a cleaner way to detect this!
+        throw new intrp.Error(state.scope.perms, intrp.SYNTAX_ERROR,
+            'Invalid code in function body');
+      }
+      // Interestingly, the scope for constructed functions is the global
+      // scope, even if they were constructed in some other scope.
+      return new intrp.UserFunction(
+          ast['body'][0]['expression'], intrp.global, code, state.scope.perms);
+    },
+    call: function(intrp, thread, state, thisVal, args) {
+      this.construct.call(intrp, thread, state, args);
     }
-    // Acorn needs to parse code in the context of a function or else 'return'
-    // statements will be syntax errors.
-    var code = '(function(' + argsStr + ') {' + code + '})';
-    var ast = intrp.parse(code);
-    if (ast['body'].length !== 1) {
-      // Function('a', 'return a + 6;}; {alert(1);');
-      intrp.throwError(intrp.SYNTAX_ERROR, 'Invalid code in function body.');
-    }
-    // Interestingly, the scope for constructed functions is the global scope,
-    // even if they were constructed in some other scope.
-    return new intrp.UserFunction(
-        ast['body'][0]['expression'], intrp.global, code, intrp.thread.perms());
-  };
-  this.createNativeFunction('Function', wrapper, true);
+  });
 
   this.createNativeFunction('Function.prototype.toString',
                             this.Function.prototype.toString, false);
