@@ -1666,18 +1666,28 @@ tests.ObjectPrototypeHasOwnProperty = function() {
 // Function and Function.prototype
 
 tests.FunctionConstructor = function() {
-  var f = new Function('return 42;');
-  console.assert(f() === 42, 'FunctionConstructorNoArgs');
-  var expected = 'function() {return 42;}';
+  var f = new Function;
+  console.assert(f() === undefined, 'FunctionConstructorNoArgsExec');
+  console.assert(f.length === 0, 'FunctionConstructorNoArgsLength');
   var actual = String(f);
-  console.assert(actual === expected, 'FunctionConstructorNoArgs Actual: "'
+  var expected = 'function() {}';
+  console.assert(actual === expected, 'FunctionConstructorNoArgsSrc Actual: "'
       + actual + '" Expected: "' + expected + '"');
 
-  var f = new Function('a, b', 'c', 'return a + b * c;');
-  console.assert(f(2, 3, 10) === 32, 'FunctionConstructorArgs');
-  var expected = 'function(a, b, c) {return a + b * c;}';
-  var actual = String(f);
-  console.assert(actual === expected, 'FunctionConstructorArgs Actual: "'
+  f = new Function('return 42;');
+  console.assert(f() === 42, 'FunctionConstructorSimpleExec');
+  console.assert(f.length === 0, 'FunctionConstructorSimpleLength');
+  actual = String(f);
+  expected = 'function() {return 42;}';
+  console.assert(actual === expected, 'FunctionConstructorSimpleSrc Actual: "'
+      + actual + '" Expected: "' + expected + '"');
+
+  f = new Function('a, b', 'c', 'return a + b * c;');
+  console.assert(f(2, 3, 10) === 32, 'FunctionConstructorWithArgsExec');
+  console.assert(f.length === 3, 'FunctionConstructorWithArgsLength');
+  actual = String(f);
+  expected = 'function(a, b, c) {return a + b * c;}';
+  console.assert(actual === expected, 'FunctionConstructorWithArgsSrc Actual: "'
       + actual + '" Expected: "' + expected + '"');
 };
 
