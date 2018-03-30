@@ -638,7 +638,7 @@ Interpreter.prototype.initObject_ = function() {
       this.construct.call(intrp, thread, state, args);
     }
   });
-                          
+
   var intrp = this;
 
   /**
@@ -666,7 +666,7 @@ Interpreter.prototype.initObject_ = function() {
       return intrp.arrayNativeToPseudo(names, state.scope.perms);
     }
   });
-      
+
   new this.NativeFunction({
     id: 'Object.keys', length: 1,
     call: function(intrp, thread, state, thisVal, args) {
@@ -2456,14 +2456,18 @@ Interpreter.prototype.Object = function(owner, proto) {
   this.properties;
   throw Error('Inner class constructor not callable on prototype');
 };
+
 /** @type {Interpreter.prototype.Object} */
 Interpreter.prototype.Object.prototype.proto = null;
+
 /** @type {string} */
 Interpreter.prototype.Object.prototype.class = '';
+
 /** @return {string} */
 Interpreter.prototype.Object.prototype.toString = function() {
   throw Error('Inner class method not callable on prototype');
 };
+
 /** @return {Interpreter.Value} */
 Interpreter.prototype.Object.prototype.valueOf = function() {
   throw Error('Inner class method not callable on prototype');
@@ -2478,18 +2482,22 @@ Interpreter.prototype.Object.prototype.valueOf = function() {
 Interpreter.prototype.Function = function(owner, proto) {
   throw Error('Inner class constructor not callable on prototype');
 };
+
 /** @override */
 Interpreter.prototype.Function.prototype.toString = function() {
   throw Error('Inner class method not callable on prototype');
 };
+
 /** @param {Interpreter.Value} value @return {boolean} */
 Interpreter.prototype.Function.prototype.hasInstance = function(value) {
   throw Error('Inner class method not callable on prototype');
 };
+
 /** @param {string} name */
 Interpreter.prototype.Function.prototype.setName = function(name) {
   throw Error('Inner class method not callable on prototype');
 };
+
 /**
  * @param {!Interpreter} intrp The interpreter.
  * @param {!Interpreter.Thread} thread The current thread.
@@ -2502,6 +2510,7 @@ Interpreter.prototype.Function.prototype.call = function(
     intrp, thread, state, thisVal, args) {
   throw Error('Inner class method not callable on prototype');
 };
+
 /**
  * @param {!Interpreter} intrp The interpreter.
  * @param {!Interpreter.Thread} thread The current thread.
@@ -2580,6 +2589,7 @@ Interpreter.prototype.OldAsyncFunction =
 Interpreter.prototype.Array = function(owner, proto) {
   throw Error('Inner class constructor not callable on prototype');
 };
+
 /** @override */
 Interpreter.prototype.Array.prototype.toString = function() {
   throw Error('Inner class method not callable on prototype');
@@ -2596,10 +2606,12 @@ Interpreter.prototype.Date = function(owner, proto) {
   this.date;
   throw Error('Inner class constructor not callable on prototype');
 };
+
 /** @override */
 Interpreter.prototype.Date.prototype.toString = function() {
   throw Error('Inner class method not callable on prototype');
 };
+
 /** @return {Interpreter.Value} */
 Interpreter.prototype.Date.prototype.valueOf = function() {
   throw Error('Inner class method not callable on prototype');
@@ -2616,10 +2628,12 @@ Interpreter.prototype.RegExp = function(owner, proto) {
   this.regexp;
   throw Error('Inner class constructor not callable on prototype');
 };
+
 /** @override */
 Interpreter.prototype.RegExp.prototype.toString = function() {
   throw Error('Inner class method not callable on prototype');
 };
+
 /** @param {!RegExp} nativeRegexp The native regular expression. */
 Interpreter.prototype.RegExp.prototype.populate = function(nativeRegexp) {
   throw Error('Inner class method not callable on prototype');
@@ -2635,6 +2649,7 @@ Interpreter.prototype.RegExp.prototype.populate = function(nativeRegexp) {
 Interpreter.prototype.Error = function(owner, proto, message) {
   throw Error('Inner class constructor not callable on prototype');
 };
+
 /** @override */
 Interpreter.prototype.Error.prototype.toString = function() {
   throw Error('Inner class method not callable on prototype');
@@ -2657,10 +2672,12 @@ Interpreter.prototype.Server = function(owner, port, proto) {
   this.server_;
   throw Error('Inner class constructor not callable on prototype');
 };
+
 /** @param {!Function=} onListening @param {!Function=} onError */
 Interpreter.prototype.Server.prototype.listen = function(onListening, onError) {
   throw Error('Inner class method not callable on prototype');
 };
+
 /** @param {!Function=} onClose */
 Interpreter.prototype.Server.prototype.unlisten = function(onClose) {
   throw Error('Inner class method not callable on prototype');
@@ -2869,7 +2886,7 @@ Interpreter.prototype.installTypes = function() {
     intrp.Function.call(/** @type {?} */ (this), owner, proto);
     this.node = node;
     this.scope = scope;
-    if(node['id']) {
+    if (node['id']) {
       this.setName(node['id']['name']);
     }
     var length = node['params'].length;
@@ -2885,7 +2902,7 @@ Interpreter.prototype.installTypes = function() {
     // function is being executed.  We save the full original source
     // (not just the part containing the function) because the start
     // and end offsets on the AST nodes are absolute, not relative.
-    if (!(node['body']['source'])) {
+    if (!node['body']['source']) {
       node['body']['source'] = src;
     }
     // Add .prototype property pointing at a new plain Object.
@@ -2930,10 +2947,10 @@ Interpreter.prototype.installTypes = function() {
     var scope = new Interpreter.Scope(this.owner, this.scope);
     intrp.populateScope_(this.node['body'], scope, this.source);
     // Add all arguments.
-    for (var i = 0; i < this.node['params'].length; i++) {
-      var paramName = this.node['params'][i]['name'];
-      var paramValue = args.length > i ? args[i] :
-          undefined;
+    var params = this.node['params'];
+    for (var i = 0; i < params.length; i++) {
+      var paramName = params[i]['name'];
+      var paramValue = args.length > i ? args[i] : undefined;
       intrp.addVariableToScope(scope, paramName, paramValue);
     }
     // Build arguments variable.
@@ -2967,7 +2984,7 @@ Interpreter.prototype.installTypes = function() {
       if (!(proto instanceof intrp.Object)) {
         proto = intrp.OBJECT;
       }
-      state.object_= new intrp.Object(state.scope.perms, proto);
+      state.object_ = new intrp.Object(state.scope.perms, proto);
       this.call(intrp, thread, state, state.object_, args);
       return FunctionResult.CallAgain;
     } else {
@@ -3376,7 +3393,7 @@ Interpreter.prototype.installTypes = function() {
   };
 
   /**
-   * Server is an (owner, port, proto, (extra info) tuple representing a
+   * Server is an (owner, port, proto, (extra info)) tuple representing a
    * listening server.  It encapsulates node's net.Server type, with
    * some additional info needed to implement the connectionListen()
    * API.  In its present form it is not suitable for exposure as a
@@ -3891,7 +3908,7 @@ stepFuncs_['CallExpression'] = function (stack, state, node) {
     if (this.thread === null) {
       throw TypeError('No current thread??');
     }
-    var r = 
+    var r =
         state.isConstructor ?
         func.construct(this, this.thread, state, state.arguments_) :
         func.call(this, this.thread, state, state.funcThis_, state.arguments_);
@@ -4193,7 +4210,7 @@ stepFuncs_['FunctionDeclaration'] = function (stack, state, node) {
 stepFuncs_['FunctionExpression'] = function (stack, state, node) {
   stack.pop();
   var src = this.thread.getSource();
-  if(src === undefined) {
+  if (src === undefined) {
     throw Error("No source found when evaluating function expression??");
   }
   stack[stack.length - 1].value =
