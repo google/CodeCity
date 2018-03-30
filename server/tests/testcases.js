@@ -691,7 +691,7 @@ module.exports = [
     expected: 5 },
 
   { name: 'deleteNonexistentFromPrimitive', src: `
-    (delete false.nonexistent) && 
+    (delete false.nonexistent) &&
     (delete (42).toString);
     `,
     expected: true },
@@ -920,7 +920,7 @@ module.exports = [
     r;
     `,
     expected: 'fabc' },
-  
+
   { name: 'callEvalArgsBeforeCallability', src: `
     try {
       var invalid = undefined;
@@ -1250,10 +1250,54 @@ module.exports = [
     r;
     `,
     expected: 83 },
-    
 
   /******************************************************************/
   // Function and Function.prototype
+
+  { name: 'FunctionConstructorNoArgsExec', src: `
+    (new Function)();
+    `,
+    expected: undefined },
+
+  { name: 'FunctionConstructorNoArgsLength', src: `
+    (new Function).length;
+    `,
+    expected: 0 },
+
+  { name: 'FunctionConstructorNoArgsToString', src: `
+    String(new Function)
+    `,
+    expected: 'function() {}' },
+
+  { name: 'FunctionConstructorSimpleExec', src: `
+    (new Function('return 42;'))();
+    `,
+    expected: 42 },
+
+  { name: 'FunctionConstructorSimpleLength', src: `
+    (new Function('return 42;')).length;
+    `,
+    expected: 0 },
+
+  { name: 'FunctionConstructorSimpleToString', src: `
+    String(new Function('return 42;'))
+    `,
+    expected: 'function() {return 42;}' },
+
+  { name: 'FunctionConstructorWithArgsExec', src: `
+    (new Function('a, b', 'c', 'return a + b * c;'))(2, 3, 10);
+    `,
+    expected: 32 },
+
+  { name: 'FunctionConstructorWithArgsLength', src: `
+    (new Function('a, b', 'c', 'return a + b * c;')).length;
+    `,
+    expected: 3 },
+
+  { name: 'FunctionConstructorWithArgsToString', src: `
+    String(new Function('a, b', 'c', 'return a + b * c;'))
+    `,
+    expected: 'function(a, b, c) {return a + b * c;}' },
 
   { name: 'FunctionPrototypeHasNoPrototype', src: `
     Function.prototype.hasOwnProperty('prototype');
