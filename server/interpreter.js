@@ -220,22 +220,22 @@ Interpreter.prototype.createThread = function(runnable, runAt) {
 /**
  * Create a new thread to execute a particular function call.
  * @param {!Interpreter.prototype.Function} func Function to call.
- * @param {Interpreter.Value} funcThis value of 'this' in function call.
+ * @param {Interpreter.Value} thisVal value of 'this' in function call.
  * @param {!Array<Interpreter.Value>} args Arguments to pass.
  * @param {number=} runAt Time at which thread should begin execution
  *     (default: now).
  * @return {number} thread ID.
  */
-Interpreter.prototype.createThreadForFuncCall =
-    function(func, funcThis, args, runAt) {
-  if (!(func instanceof this.Function)) {
-    this.throwError(this.TYPE_ERROR, func + ' is not a function');
-  }
+Interpreter.prototype.createThreadForFuncCall = function(
+    func, thisVal, args, runAt) {
+  // TODO(cpcallen:perms): decide how caller perms will work.  Does it
+  // need to be passed in as ane extra argument?  Otherwise, if
+  // reading from outer scope perms will always be root.  :-(
   var node = new Interpreter.Node;
   node['type'] = 'CallExpression';
   var state = new Interpreter.State(node, this.global);
   state.func_ = func;
-  state.funcThis_ = funcThis;
+  state.funcThis_ = thisVal;
   state.doneCallee_ = 2;
   state.arguments_ = args;
   state.doneArgs_ = true;
@@ -1574,6 +1574,9 @@ Interpreter.prototype.initThreads_ = function() {
 
   this.createNativeFunction('setTimeout',
       function(func) {
+        if (!(func instanceof intrp.Function)) {
+          this.throwError(intrp.TYPE_ERROR, func + ' is not a function');
+        }
         var delay = Number(arguments[1]) || 0;
         var args = Array.prototype.slice.call(arguments, 2);
         return intrp.createThreadForFuncCall(func, undefined, args,
