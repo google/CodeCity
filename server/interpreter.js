@@ -135,13 +135,6 @@ Interpreter.PARSE_OPTIONS = {
 Interpreter.Sentinel = function Sentinel() {};
 
 /**
- * Unique sentinel for indicating that a step has encountered an error, has
- * added it to the stack, and will be thrown within the user's program.
- * When STEP_ERROR is thrown by the interpreter the error can be ignored.
- */
-Interpreter.STEP_ERROR = new Interpreter.Sentinel();
-
-/**
  * Unique sentinel for indicating that a reference is a variable on the scope,
  * not an object property.
  */
@@ -325,11 +318,15 @@ Interpreter.prototype.step = function() {
   try {
     var nextState = stepFuncs_[node['type']].call(this, stack, state, node);
   } catch (e) {
-    // Eat any step errors.  They have been thrown on the stack.
-    if (e !== Interpreter.STEP_ERROR) {
+    if (e instanceof Error) {
       // Uh oh.  This is a real error in the interpreter.  Rethrow.
       throw e;
+    } else if (typeof e !== 'boolean' && typeof e !== 'number' &&
+        typeof e !== 'string' && e !== undefined && e !== null &&
+        !(e instanceof this.Object)) {
+      throw TypeError('Unexpected exception value ' + String(e));
     }
+    this.unwind_(Interpreter.Completion.THROW, e, undefined);
   }
   if (nextState) {
     stack.push(nextState);
@@ -367,12 +364,16 @@ Interpreter.prototype.run = function() {
       try {
         var nextState = stepFuncs_[node['type']].call(this, stack, state, node);
       } catch (e) {
-        nextState = undefined;
-        // Eat any step errors.  They have been thrown on the stack.
-        if (e !== Interpreter.STEP_ERROR) {
+        if (e instanceof Error) {
           // Uh oh.  This is a real error in the interpreter.  Rethrow.
           throw e;
+        } else if (typeof e !== 'boolean' && typeof e !== 'number' &&
+            typeof e !== 'string' && e !== undefined && e !== null &&
+            !(e instanceof this.Object)) {
+          throw TypeError('Unexpected exception value ' + String(e));
         }
+        this.unwind_(Interpreter.Completion.THROW, e, undefined);
+        nextState = undefined;
       }
       if (nextState) {
         stack.push(nextState);
@@ -2198,17 +2199,6 @@ Interpreter.Completion = {
 };
 
 /**
- * Throw an exception in the interpreter that can be handled by a
- * interpreter try/catch statement.
- * @param {Interpreter.Value} value Value to be thrown.
- */
-Interpreter.prototype.throwException = function(value) {
-  this.unwind_(Interpreter.Completion.THROW, value, undefined);
-  // Abort anything related to the current step.
-  throw Interpreter.STEP_ERROR;
-};
-
-/**
  * Throw an Error in the interpreter.  A convenience method that just
  * does (roughly): this.throwException(new this.Error(...arguments)
  *
@@ -2223,7 +2213,7 @@ Interpreter.prototype.throwError = function(proto, message, owner) {
   if (owner === undefined) {
     owner = this.thread.perms();
   }
-  this.throwException(new this.Error(owner, proto, message));
+  throw new this.Error(owner, proto, message);
 };
 
 /**
@@ -2235,8 +2225,7 @@ Interpreter.prototype.throwError = function(proto, message, owner) {
  * @param {!Interpreter.Owner} owner Owner for new object.
  */
 Interpreter.prototype.throwNativeException = function(value, owner) {
-  value = this.nativeToPseudo(value, owner);
-  this.throwException(value);
+  throw this.nativeToPseudo(value, owner);
 };
 
 /**
@@ -4502,7 +4491,7 @@ stepFuncs_['ThrowStatement'] = function (stack, state, node) {
     state.done_ = true;
     return new Interpreter.State(node['argument'], state.scope);
   }
-  this.throwException(state.value);
+  throw state.value;
 };
 
 /**
