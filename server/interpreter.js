@@ -556,7 +556,7 @@ Interpreter.prototype.initBuiltins_ = function() {
         var ast = acorn.parse(code, Interpreter.PARSE_OPTIONS);
       } catch (e) {
         // Acorn threw a SyntaxError.  Rethrow as a trappable error.
-        throw new intrp.Error(state.scope.perms, intrp.SYNTAX_ERROR, e.message);
+        throw intrp.errorNativeToPseudo(e, state.scope.perms);
       }
       var evalNode = new Interpreter.Node;
       evalNode['type'] = 'EvalProgram_';
@@ -593,7 +593,7 @@ Interpreter.prototype.initBuiltins_ = function() {
           return nativeFunc(str);
         } catch (e) {
           // decodeURI('%xy') will throw an error.  Catch and rethrow.
-          intrp.throwError(intrp.URI_ERROR, e.message);
+          throw intrp.errorNativeToPseudo(e, intrp.thread.perms());
         }
       };
     })(strFunctions[i][0]);
@@ -890,7 +890,7 @@ Interpreter.prototype.initFunction_ = function() {
         var ast = acorn.parse(code, Interpreter.PARSE_OPTIONS);
       } catch (e) {
         // Acorn threw a SyntaxError.  Rethrow as a trappable error.
-        throw new intrp.Error(state.scope.perms, intrp.SYNTAX_ERROR, e.message);
+        throw intrp.errorNativeToPseudo(e, state.scope.perms);
       }
       if (ast['body'].length !== 1) {
         // Function('a', 'return a + 6;}; {alert(1);');
@@ -1642,7 +1642,7 @@ Interpreter.prototype.initNetwork_ = function() {
     server.listen(function() {
       res();
     }, function(e) {
-      rej(intrp.nativeToPseudo(e, perms));
+      rej(intrp.errorNativeToPseudo(e, perms));
     });
   });
 
@@ -1659,7 +1659,7 @@ Interpreter.prototype.initNetwork_ = function() {
       if (e instanceof Error) {
         // Somehow something has gone wrong.  (Maybe mulitple
         // concurrent calls to .close on the same net.Server?)
-        rej(intrp.nativeToPseudo(e, perms));
+        rej(intrp.errorNativeToPseudo(e, perms));
       } else {
         // All socket (and all open connections on it) now closed.
         res();
@@ -1930,6 +1930,33 @@ Interpreter.prototype.arrayPseudoToNative = function(pseudoArray) {
 };
 
 /**
+ * Converts from a native Error to a JS interpreter Error.  Unlike
+ * pseudoToNative, this fucntion only converts type and .message.
+ * @param {!Error} err Native Error value to be converted.
+ * @param {!Interpreter.Owner} owner Owner for new (pseudo) Error object.
+ * @return {!Interpreter.prototype.Error}
+ */
+Interpreter.prototype.errorNativeToPseudo = function(err, owner) {
+  var proto;
+  if (err instanceof EvalError) {
+    proto = this.EVAL_ERROR;
+  } else if (err instanceof RangeError) {
+    proto = this.RANGE_ERROR;
+  } else if (err instanceof ReferenceError) {
+    proto = this.REFERENCE_ERROR;
+  } else if (err instanceof SyntaxError) {
+    proto = this.SYNTAX_ERROR;
+  } else if (err instanceof TypeError) {
+    proto = this.TYPE_ERROR;
+  } else if (err instanceof URIError) {
+    proto = this.URI_ERROR;
+  } else {
+    proto = this.ERROR;
+  }
+  return new this.Error(owner, proto, err.message);
+};
+
+/**
  * Look up the prototype for this value.
  * @param {Interpreter.Value} value Data object.
  * @return {Interpreter.prototype.Object} Prototype object, null if none.
@@ -2036,7 +2063,7 @@ Interpreter.prototype.setProperty = function(obj, name, value, desc) {
       Object.defineProperty(obj.properties, name, pd);
     } catch (e) {
       // TODO(cpcallen:perms): use perms argument.
-      this.throwNativeException(e, this.thread.perms());
+      throw this.errorNativeToPseudo(e, this.thread.perms());
     }
   } else {
     if (value instanceof Interpreter.Sentinel) {
@@ -2046,7 +2073,7 @@ Interpreter.prototype.setProperty = function(obj, name, value, desc) {
       obj.properties[name] = value;
     } catch (e) {
       // TODO(cpcallen:perms): use perms argument.
-      this.throwNativeException(e, this.thread.perms());
+      throw this.errorNativeToPseudo(e, this.thread.perms());
     }
   }
 };
@@ -2220,18 +2247,6 @@ Interpreter.prototype.throwError = function(proto, message, owner) {
     owner = this.thread.perms();
   }
   throw new this.Error(owner, proto, message);
-};
-
-/**
- * Rethrow a native exception as an interpreter object that can be
- * handled by a interpreter try/catch statement.
- *
- * BUG(cpcallen): exception should have user (not native) stack trace.
- * @param {*} value Native value to be converted and thrown.
- * @param {!Interpreter.Owner} owner Owner for new object.
- */
-Interpreter.prototype.throwNativeException = function(value, owner) {
-  throw this.nativeToPseudo(value, owner);
 };
 
 /**
@@ -3475,7 +3490,7 @@ Interpreter.prototype.installTypes = function() {
         console.log('Socket error:', error);
         var func = intrp.getProperty(obj, 'onError');
         if (func instanceof intrp.Function && func.owner !== null) {
-          var userError = intrp.nativeToPseudo(error, func.owner);
+          var userError = intrp.errorNativeToPseudo(error, func.owner);
           intrp.createThreadForFuncCall(func, obj, [userError]);
         }
       });
@@ -4572,7 +4587,7 @@ stepFuncs_['UnaryExpression'] = function (stack, state, node) {
         try {
           value = delete obj.properties[key];
         } catch (e) {
-          this.throwNativeException(e, state.scope.perms);
+          throw this.errorNativeToPseudo(e, state.scope.perms);
         }
       } else if (obj instanceof Interpreter.Sentinel) {
         // Whoops; this should have been caught by Acorn (because strict).
