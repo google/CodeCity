@@ -35,14 +35,6 @@ Code.selector = location.search ?
     decodeURI(location.search.substring(1)) : Code.DEFAULT;
 
 /**
- * Page has loaded, load the explorer.
- */
-Code.init = function() {
-  var explorer = document.getElementById('explorer');
-  explorer.src = '/code/explorer';
-};
-
-/**
  * Got a ping from someone.  Check sessionStorage to see if selector has
  * changed and, if so, propagate ping to subframes.
  * @param {?Event} event Message event, or null if called from popState.
@@ -90,6 +82,5 @@ Code.popState = function(event) {
 };
 
 sessionStorage.setItem(Code.Common.SELECTOR, Code.selector);
-window.addEventListener('load', Code.init);
 window.addEventListener('message', Code.receiveMessage, false);
 window.addEventListener('popstate', Code.popState, false);

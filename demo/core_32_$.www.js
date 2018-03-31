@@ -1,6 +1,6 @@
 /**
  * @license
- * Code City: Web pages.
+ * Code City: Web www.
  *
  * Copyright 2017 Google Inc.
  *
@@ -18,19 +18,21 @@
  */
 
 /**
- * @fileoverview Web pages for Code City.
+ * @fileoverview Web www for Code City.
  * @author fraser@google.com (Neil Fraser)
  */
 
-// Web pages object:
-$.pages = {};
+// HTTP router object:
+$.www = Object.create(null);
 
-$.pages['404'] = function(request, response) {
+$.www['404'] = {};
+
+$.www['404'].www = function(request, response) {
   // Overwrite on first execution.
-  $.pages['404'] = $.jssp.compile($.pages['404']);
-  $.pages['404'].call(this, request, response);
+  $.www['404'].www = $.jssp.compile($.www['404'].www);
+  $.www['404'].www.call(this, request, response);
 };
-$.pages['404'].jssp = [
+$.www['404'].www.jssp = [
   '<% response.statusCode = 404 %>',
   '<html>',
   '<head>',
@@ -65,12 +67,14 @@ $.pages['404'].jssp = [
 ].join('\n');
 
 
-$.pages.home = function(request, response) {
+$.www['/'] = {};
+
+$.www['/'].www = function(request, response) {
   // Overwrite on first execution.
-  $.pages.home = $.jssp.compile($.pages.home);
-  $.pages.home.call(this, request, response);
+  $.www['/'].www = $.jssp.compile($.www['/'].www);
+  $.www['/'].www.call(this, request, response);
 };
-$.pages.home.jssp = [
+$.www['/'].www.jssp = [
   '<!doctype html>',
   '<html lang="en">',
   '<head>',
@@ -126,19 +130,17 @@ $.pages.home.jssp = [
   '</html>'
 ].join('\n');
 
-$.http.router.homepage = {regexp: /^\/(\?|$)/, handler: $.pages.home};
 
+$.www['/robots.txt'] = {};
 
-$.pages.robots = function(request, response) {
+$.www['/robots.txt'].www = function(request, response) {
   // Overwrite on first execution.
-  $.pages.robots = $.jssp.compile($.pages.robots);
-  $.pages.robots.call(this, request, response);
+  $.www['/robots.txt'].www = $.jssp.compile($.www['/robots.txt'].www);
+  $.www['/robots.txt'].www.call(this, request, response);
 };
-$.pages.robots.jssp = [
+$.www['/robots.txt'].www.jssp = [
   '<% response.setHeader(\'Content-Type\', \'text/plain; charset=utf-8\') %>',
   '# Don\'t index this Code City instance at this time.',
   'User-agent: *',
   'Disallow: /',
 ].join('\n');
-
-$.http.router.robots = {regexp: /^\/robots\.txt(\?|$)/, handler: $.pages.robots};

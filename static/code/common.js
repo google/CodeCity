@@ -61,7 +61,7 @@ Code.Common.tokenizeSelector = function(text) {
   // null - non-string state
   // 'sqStr' - single quote string
   // 'dqStr' - double quote string
-  // "sqSlash" - backslash in single quote string
+  // 'sqSlash' - backslash in single quote string
   // 'dqSlash' - backslash in double quote string
   var tokens = [];
   var buffer = [];
@@ -262,7 +262,7 @@ Code.Common.tokenizeSelector = function(text) {
 
 /**
  * Push a 'str' token type onto the list of tokens.
- * @param {number} state Current FSM state (0-5).
+ * @param {string} state Current FSM state.
  * @param {!Array<string>} buffer Array of chars that make the string.
  * @param {number} index Character index of this token in original input.
  * @param {!Array<!Object>} tokens List of tokens.
@@ -272,12 +272,12 @@ Code.Common.tokenizeSelector.pushString =
   // Convert state into quote type.
   var quotes;
   switch (state) {
-    case 1:
-    case 3:
+    case 'sqStr':
+    case 'sqSlash':
       quotes = "'";
       break;
-    case 2:
-    case 4:
+    case 'dqStr':
+    case 'dqSlash':
       quotes = '"';
       break;
     default:

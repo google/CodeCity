@@ -108,8 +108,7 @@ function handleRequest(request, response) {
           checksum = crypto.createHash('sha').update(checksum).digest('hex');
           // For future reference, the user's email address is: data.email
           response.writeHead(302, {  // Temporary redirect
-              'Set-Cookie': 'id=' + id + '_' + checksum + '; HttpOnly' +
-              '; Domain=' + CFG.cookieDomain + '; Path=' + CFG.connectPath,
+              'Set-Cookie': 'id=' + id + '_' + checksum + '; HttpOnly;',
               'Location': CFG.connectPath
            });
           response.end('Login OK.  Redirecting.');

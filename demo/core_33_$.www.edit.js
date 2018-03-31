@@ -22,9 +22,9 @@
  * @author cpcallen@google.com (Christopher Allen)
  */
 
-$.editor = { objs: [] };
+$.www['/edit'] = { objs: [] };
 
-$.editor.edit = function(obj, name, key) {
+$.www['/edit'].edit = function(obj, name, key) {
   /* Return a (valid) URL for a web editing session editing obj[key],
    * where obj might more commonly be known as name.
    */
@@ -42,7 +42,7 @@ $.editor.edit = function(obj, name, key) {
   return url;
 };
 
-$.editor.objIdFor = function(obj) {
+$.www['/edit'].objIdFor = function(obj) {
   /* Find index of obj in this.objs, adding it if it's not already there.
    */
   for (var i = 0; i < this.objs.length; i++) {
@@ -55,7 +55,7 @@ $.editor.objIdFor = function(obj) {
   return id;
 };
 
-$.editor.load = function(obj, key) {
+$.www['/edit'].load = function(obj, key) {
   /* Return string containing initial editor contents for editing
    * obj[key].
    */
@@ -68,7 +68,7 @@ $.editor.load = function(obj, key) {
       String(v));
 };
 
-$.editor.save = function(obj, key, src) {
+$.www['/edit'].save = function(obj, key, src) {
   /* Eval the string src and (if successful) save the resulting value
    * as obj[key].  If the value produced from src and the existing
    * value of obj[key] are both objects, then an attempt will be made
@@ -91,16 +91,16 @@ $.editor.save = function(obj, key, src) {
 };
 
 
-$.editor.page = function(request, response) {
+$.www['/edit'].www = function(request, response) {
   // Overwrite on first execution.
-  $.editor.page = $.jssp.compile($.editor.page);
-  $.editor.page.call(this, request, response);
+  $.www['/edit'].www = $.jssp.compile($.www['/edit'].www);
+  $.www['/edit'].www.call(this, request, response);
 };
-$.editor.page.jssp = [
+$.www['/edit'].www.jssp = [
   '<%',
   'var params = request.parameters;',
   'var objId = params.objId;',
-  'var obj = $.editor.objs[params.objId];',
+  'var obj = $.www[\'/edit\'].objs[params.objId];',
   'if (!$.utils.isObject(obj)) {',
   '  // Bad edit URL.',
   '  $.pages[\'404\'](request, response);',
@@ -114,7 +114,7 @@ $.editor.page.jssp = [
   '    // Use Acorn to trim source to first expression.',
   '    var ast = $.utils.acorn.parseExpressionAt(src, 0, { ecmaVersion: 5 });',
   '    src = src.substring(ast.start, ast.end);',
-  '    src = $.editor.save(obj, key, src);',
+  '    src = $.www[\'/edit\'].save(obj, key, src);',
   '    status = \'(saved)\';',
   '    if (typeof obj[key] === \'function\') {',
   '      if (params.isVerb) {',
@@ -133,7 +133,7 @@ $.editor.page.jssp = [
   '    status = \'(ERROR: \' + String(e) + \')\';',
   '  }',
   '} else {',
-  '  src = $.editor.load(obj, key);',
+  '  src = $.www[\'/edit\'].load(obj, key);',
   '}',
   'var isVerb = (Object.getOwnPropertyDescriptor(obj, key) && typeof obj[key] === \'function\') && obj[key].verb ? \'checked\' : \'\';',
   'var verb = $.utils.htmlEscape((obj[key] && obj[key].verb) || \'\');',
@@ -209,5 +209,3 @@ $.editor.page.jssp = [
   '  </script>',
   '</body></html>',
 ].join('\n');
-
-$.http.router.edit = {regexp: /^\/edit(\?|$)/, handler: $.editor.page};
