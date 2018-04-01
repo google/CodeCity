@@ -22,9 +22,35 @@
  * @author cpcallen@google.com (Christopher Allen)
  */
 
-// Threads API; parts are roughly conformant with HTML Living
-// Standard, plus our local extensions:
+// Extra Error subclasses.
+var PermissionError = new 'PermissionError';
+(function() {
+  var errors = ['PermissionError'];
+  for (var i = 0; i < errors.length; i++) {
+    var constructor = new errors[i];
+    Object.defineProperty(constructor, 'prototype', {
+                          configurable: false,
+                          enumerable: false,
+                          writable: false,
+                          value: new (errors[i] + '.prototype')
+                          });
+    Object.defineProperty(constructor.prototype, 'constructor', {
+                          configurable: true,
+                          enumerable: false,
+                          writable: true,
+                          value: constructor
+                          });
+    Object.defineProperty(constructor.prototype, 'name', {
+                          configurable: true,
+                          enumerable: false,
+                          writable: true,
+                          value: errors[i]
+                          });
+  }
+})();
 
+// Threads API; parts are roughly conformant with HTML Living
+// Standard, plus our local extensions.
 var suspend = new 'suspend';
 var setTimeout = new 'setTimeout';
 var clearTimeout = new 'clearTimeout';

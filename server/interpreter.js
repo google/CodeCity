@@ -1557,6 +1557,7 @@ Interpreter.prototype.initError_ = function() {
   this.SYNTAX_ERROR = createErrorSubclass('SyntaxError');
   this.TYPE_ERROR = createErrorSubclass('TypeError');
   this.URI_ERROR = createErrorSubclass('URIError');
+  this.PERM_ERROR = createErrorSubclass('PermissionError');
 };
 
 /**
@@ -2982,9 +2983,8 @@ Interpreter.prototype.installTypes = function() {
   intrp.UserFunction.prototype.call = function(
       intrp, thread, state, thisVal, args) {
     if (this.owner === null) {
-      // TODO(cpcallen): PermError?
-      throw new intrp.Error(state.scope.perms, intrp.ERROR,
-          'Functions with null owner cannot be called');
+      throw new intrp.Error(state.scope.perms, intrp.PERM_ERROR,
+          'Functions with null owner are not executable');
     }
     // Aside: we need to pass this.owner, rather than
     // this.scope.perms, for the new scope perms because (1) we want
