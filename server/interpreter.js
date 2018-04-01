@@ -551,7 +551,6 @@ Interpreter.prototype.initBuiltins_ = function() {
         // eval(Array) -> Array
         return code;
       }
-      code = String(code);
       try {
         var ast = acorn.parse(code, Interpreter.PARSE_OPTIONS);
       } catch (e) {
@@ -699,7 +698,7 @@ Interpreter.prototype.initObject_ = function() {
         throw new intrp.Error(state.scope.perms, intrp.TYPE_ERROR,
             'Object.defineProperty called on non-object');
       }
-      prop = String(prop)
+      prop = String(prop);
       if (!(descriptor instanceof intrp.Object)) {
         throw new intrp.Error(state.scope.perms, intrp.TYPE_ERROR,
             'Property description must be an object');
@@ -1526,7 +1525,7 @@ Interpreter.prototype.initError_ = function() {
   // Error constructor.
   var wrapper = function(message) {
     var newError = new intrp.Error(intrp.thread.perms());
-    if (message) {
+    if (message !== undefined) {
       intrp.setProperty(newError, 'message', String(message), Descriptor.wc);
     }
     return newError;
@@ -1540,9 +1539,10 @@ Interpreter.prototype.initError_ = function() {
     var prototype = new intrp.Error(intrp.ROOT);
     intrp.builtins_[name + '.prototype'] = prototype;
 
+    // TODO(cpcallen): Constructors can (probably) be polyfills.
     wrapper = function(message) {
       var newError = new intrp.Error(intrp.thread.perms(), prototype);
-      if (message) {
+      if (message !== undefined) {
         intrp.setProperty(newError, 'message', String(message), Descriptor.wc);
       }
       return newError;
@@ -4405,7 +4405,7 @@ stepFuncs_['ObjectExpression'] = function (stack, state, node) {
   if (property) {
     if (property['kind'] !== 'init') {
       throw new this.Error(state.scope.perms, this.SYNTAX_ERROR,
-          "Object kind: '" + property['kind'] + 
+          "Object kind: '" + property['kind'] +
           "'.  Getters and setters are not supported.");
     }
     return new Interpreter.State(property['value'], state.scope);
