@@ -2857,6 +2857,18 @@ Interpreter.prototype.installTypes = function() {
   };
 
   /**
+   * Add a .name property to this function object.  Partially
+   * implements SetFunctionName from §9.2.11 of the ES6 spec.
+   * @param {string} name Name of function.
+   */
+  intrp.Function.prototype.setName = function(name) {
+    if (Object.getOwnPropertyDescriptor(this.properties, 'name')) {
+      throw Error('Function alreay has name??');
+    }
+    intrp.setProperty(this, 'name', name, Descriptor.c);
+  };
+
+  /**
    * The [[Call]] internal method defined by §13.2.1 of the ES5.1 spec.
    * Generic functions (neither native nor user) can't be called.
    * @param {!Interpreter} intrp The interpreter.
@@ -2936,18 +2948,6 @@ Interpreter.prototype.installTypes = function() {
 
   intrp.UserFunction.prototype = Object.create(intrp.Function.prototype);
   intrp.UserFunction.prototype.constructor = intrp.UserFunction;
-
-  /**
-   * Add a .name property to this function object.  Partially
-   * implements SetFunctionName from §9.2.11 of the ES6 spec.
-   * @param {string} name Name of function.
-   */
-  intrp.Function.prototype.setName = function(name) {
-    if (Object.getOwnPropertyDescriptor(this.properties, 'name')) {
-      throw Error('Function alreay has name??');
-    }
-    intrp.setProperty(this, 'name', name, Descriptor.c);
-  };
 
   /**
    * The [[Call]] internal method defined by §13.2.1 of the ES5.1 spec.
