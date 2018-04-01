@@ -911,8 +911,18 @@ Interpreter.prototype.initFunction_ = function() {
     }
   });
 
-  this.createNativeFunction('Function.prototype.toString',
-                            this.Function.prototype.toString, false);
+  new this.NativeFunction({
+    id: 'Function.prototype.toString', length: 0,
+    call: function(intrp, thread, state, thisVal, args) {
+      var func = thisVal;
+      if (!(func instanceof intrp.Function)) {
+        throw new intrp.Error(state.scope.perms, intrp.TYPE_ERROR,
+            'Function.prototype.toString is not generic');
+      }
+      // TODO(cpcallen:perms): Perm check here?  Or in toString?
+      return func.toString();
+    }
+  });
 
   new this.NativeFunction({
     id: 'Function.prototype.apply', length: 2,
@@ -1388,8 +1398,18 @@ Interpreter.prototype.initDate_ = function() {
   this.createNativeFunction('Date.UTC', Date.UTC, false);
 
   // Instance methods on Date.
-  this.createNativeFunction('Date.prototype.toString',
-                            this.Date.prototype.toString, false);
+  new this.NativeFunction({
+    id: 'Date.prototype.toString', length: 0,
+    call: function(intrp, thread, state, thisVal, args) {
+      var date = thisVal;
+      if (!(date instanceof intrp.Date)) {
+        throw new intrp.Error(state.scope.perms, intrp.TYPE_ERROR,
+            'Date.prototype.toString is not generic');
+      }
+      // TODO(cpcallen:perms): Perm check here?  Or in toString?
+      return date.toString();
+    }
+  });
 
   var functions = ['getDate', 'getDay', 'getFullYear', 'getHours',
       'getMilliseconds', 'getMinutes', 'getMonth', 'getSeconds', 'getTime',
@@ -1447,8 +1467,18 @@ Interpreter.prototype.initRegExp_ = function() {
   };
   this.createNativeFunction('RegExp', wrapper, true);
 
-  this.createNativeFunction('RegExp.prototype.toString',
-                            this.RegExp.prototype.toString, false);
+  new this.NativeFunction({
+    id: 'RegExp.prototype.toString', length: 0,
+    call: function(intrp, thread, state, thisVal, args) {
+      var regexp= thisVal;
+      if (!(regexp instanceof intrp.RegExp)) {
+        throw new intrp.Error(state.scope.perms, intrp.TYPE_ERROR,
+            'RegExp.prototype.toString is not generic');
+      }
+      // TODO(cpcallen:perms): Perm check here?  Or in toString?
+      return regexp.toString();
+    }
+  });
 
   wrapper = function(str) {
     if (!(this instanceof intrp.RegExp) ||
@@ -2508,8 +2538,12 @@ Interpreter.prototype.Function.prototype.toString = function() {
   throw Error('Inner class method not callable on prototype');
 };
 
-/** @param {Interpreter.Value} value @return {boolean} */
-Interpreter.prototype.Function.prototype.hasInstance = function(value) {
+/**
+ * @param {Interpreter.Value} value
+ * @param {!Interpreter.Owner} perms
+ * @return {boolean}
+ */
+Interpreter.prototype.Function.prototype.hasInstance = function(value, perms) {
   throw Error('Inner class method not callable on prototype');
 };
 
@@ -2815,36 +2849,21 @@ Interpreter.prototype.installTypes = function() {
   intrp.Function.prototype.class = 'Function';
 
   /**
-   * Convert this function into a string.
-   * @override
-   */
-  intrp.Function.prototype.toString = function() {
-    if (!(this instanceof intrp.Function)) {
-      // TODO(cpcallen:perms): owner is not correct here.  Rethink.
-      throw new intrp.Error(intrp.thread.perms(), intrp.TYPE_ERROR,
-          'Function.prototype.toString is not generic');
-    }
-    // N.B. that ES5.1 spec stipulates that output must be in syntax of
-    // a function declaration; ES6 corrects this by also allowing
-    // function expressions (plus generators, classes, arrow functions,
-    // methods etc...) - but in any case it should look like source code.
-    return this.source || 'function() { [unknown] }';
-  };
-
-  /**
    * The [[HasInstance]] internal method from §15.3.5.3 of the ES5.1 spec.
    * @param {Interpreter.Value} value The value to be checked for
    *     being an instance of this function.
+   * @param {!Interpreter.Owner} perms Who wants to know?  Used in
+   *     readability chec of .constructor property and as owner of any
+   *     Errors thrown.
    * @return {boolean}
    */
-  intrp.Function.prototype.hasInstance = function(value) {
+  intrp.Function.prototype.hasInstance = function(value, perms) {
     if (!(value instanceof intrp.Object)) {
       return false;
     }
     var prot = intrp.getProperty(this, 'prototype');
     if (!(prot instanceof intrp.Object)) {
-      // TODO(cpcallen:perms): owner is not correct here.  Rethink.
-      throw new intrp.Error(intrp.thread.perms(), intrp.TYPE_ERROR,
+      throw new intrp.Error(perms, intrp.TYPE_ERROR,
           "Function has non-object prototype '" + prot +
           "' in instanceof check");
     }
@@ -2948,6 +2967,14 @@ Interpreter.prototype.installTypes = function() {
 
   intrp.UserFunction.prototype = Object.create(intrp.Function.prototype);
   intrp.UserFunction.prototype.constructor = intrp.UserFunction;
+
+  /**
+   * Convert this function into a string.
+   * @override
+   */
+  intrp.UserFunction.prototype.toString = function() {
+    return this.source;
+  };
 
   /**
    * The [[Call]] internal method defined by §13.2.1 of the ES5.1 spec.
@@ -3269,11 +3296,6 @@ Interpreter.prototype.installTypes = function() {
    * @override
    */
   intrp.Date.prototype.toString = function() {
-    if (!(this.date instanceof Date)) {
-      // TODO(cpcallen:perms): owner is not correct here.  Rethink.
-      throw new intrp.Error(intrp.thread.perms(), intrp.TYPE_ERROR,
-          'Date.prototype.toString is not generic');
-    }
     return this.date.toString();
   };
 
@@ -3282,11 +3304,6 @@ Interpreter.prototype.installTypes = function() {
    * @override
    */
   intrp.Date.prototype.valueOf = function() {
-    if (!(this.date instanceof Date)) {
-      // TODO(cpcallen:perms): owner is not correct here.  Rethink.
-      throw new intrp.Error(intrp.thread.perms(), intrp.TYPE_ERROR,
-          'Date.prototype.toString is not generic');
-    }
     return this.date.valueOf();
   };
 
@@ -3313,13 +3330,14 @@ Interpreter.prototype.installTypes = function() {
    * @override
    */
   intrp.RegExp.prototype.toString = function() {
-    if (this.regexp instanceof RegExp) {
-      return this.regexp.toString();
+    if (!(this.regexp instanceof RegExp)) {
+      // TODO(cpcallen): ES5.1 §15.10.6.4 doesn't say what happens
+      // when this is applied to a non-RegExp.  ES6 §21.2.5.14 does -
+      // and the results are possibly weird, e.g. returning
+      // "/undefined/undefined" or the like...  :-/
+      return '//';
     }
-    // BUG(cpcallen): this should do some weird stuff per §21.2.5.14 of
-    // the ES6 spec.  For most non-RegExp objects it will return
-    // "/undefined/undefined"...  :-/
-    return '//';
+    return this.regexp.toString();
   };
 
   /**
@@ -3825,7 +3843,7 @@ stepFuncs_['BinaryExpression'] = function (stack, state, node) {
         throw new this.Error(state.scope.perms, this.TYPE_ERROR,
             'Right-hand side of instanceof is not an object');
       }
-      value = rightValue.hasInstance(leftValue);
+      value = rightValue.hasInstance(leftValue, state.scope.perms);
       break;
     default:
       throw SyntaxError('Unknown binary operator: ' + node['operator']);
