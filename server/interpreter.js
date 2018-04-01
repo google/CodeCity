@@ -1565,34 +1565,42 @@ Interpreter.prototype.initJSON_ = function() {
  * @private
  */
 Interpreter.prototype.initThreads_ = function() {
-  var intrp = this;
-  this.createNativeFunction('suspend',
-      function(delay) {
-        delay = Number(delay) || 0;
-        if (delay < 0) {
-          delay = 0;
-        }
-        intrp.thread.sleepUntil(intrp.now() + delay);
-      }, false);
+  new this.NativeFunction({
+    id: 'suspend', length: 1,
+    call: function(intrp, thread, state, thisVal, args) {
+      var delay = Number(args[0]) || 0;
+      if (delay < 0) {
+        delay = 0;
+      }
+      intrp.thread.sleepUntil(intrp.now() + delay);
+    }
+  });
 
-  this.createNativeFunction('setTimeout',
-      function(func) {
-        if (!(func instanceof intrp.Function)) {
-          this.throwError(intrp.TYPE_ERROR, func + ' is not a function');
-        }
-        var delay = Number(arguments[1]) || 0;
-        var args = Array.prototype.slice.call(arguments, 2);
-        return intrp.createThreadForFuncCall(func, undefined, args,
-                                             intrp.now() + delay);
-      }, false);
+  new this.NativeFunction({
+    id: 'setTimeout', length: 1,
+    call: function(intrp, thread, state, thisVal, args) {
+      var func = args[0];
+      if (!(func instanceof intrp.Function)) {
+        throw new intrp.Error(state.scope.perms, intrp.TYPE_ERROR,
+            func + ' is not a function');
+      }
+      var delay = Number(args[1]) || 0;
+      args = Array.prototype.slice.call(args, 2);
+      return intrp.createThreadForFuncCall(func, undefined, args,
+                                           intrp.now() + delay);
+    }
+  });
 
-  this.createNativeFunction('clearTimeout',
-      function(id) {
-        id = Number(id);
-        if (intrp.threads[id]) {
-          intrp.threads[id].status = Interpreter.Thread.Status.ZOMBIE;
-        }
-      }, false);
+  new this.NativeFunction({
+    id: 'clearTimeout', length: 1,
+    call: function(intrp, thread, state, thisVal, args) {
+      var id = Number(args[0]);
+      if (intrp.threads[id]) {
+        // BUG(cpcallen): add security check here.
+        intrp.threads[id].status = Interpreter.Thread.Status.ZOMBIE;
+      }
+    }
+  });
 };
 
 /**
