@@ -620,7 +620,8 @@ Interpreter.prototype.initObject_ = function() {
       } else if (typeof value === 'boolean' || typeof value === 'number' ||
           typeof value === 'string') {
         // No boxed primitives in Code City.
-        intrp.throwError(intrp.TYPE_ERROR, 'Boxed primitives not supported.');
+        throw new intrp.Error(state.scope.perms, intrp.TYPE_ERROR,
+            'Boxed primitives not supported.');
       } else if (value === undefined || value === null) {
         return new intrp.Object(state.scope.perms);
       } else {
@@ -641,7 +642,8 @@ Interpreter.prototype.initObject_ = function() {
    */
   var throwIfNullUndefined = function(value) {
     if (value === undefined || value === null) {
-      intrp.throwError(intrp.TYPE_ERROR,
+      // TODO(cpcallen): use state.scope.perms instead.
+      throw new intrp.Error(intrp.thread.perms(), intrp.TYPE_ERROR,
           "Cannot convert '" + value + "' to object");
     }
   };
@@ -680,7 +682,7 @@ Interpreter.prototype.initObject_ = function() {
         return new intrp.Object(state.scope.perms, null);
       }
       if (!(proto === null || proto instanceof intrp.Object)) {
-        intrp.throwError(intrp.TYPE_ERROR,
+        throw new intrp.Error(state.scope.perms, intrp.TYPE_ERROR,
             'Object prototype may only be an Object or null');
       }
       return new intrp.Object(state.scope.perms, proto);
@@ -694,16 +696,16 @@ Interpreter.prototype.initObject_ = function() {
       var prop = args[1];
       var descriptor = args[2];
       if (!(obj instanceof intrp.Object)) {
-        intrp.throwError(intrp.TYPE_ERROR,
+        throw new intrp.Error(state.scope.perms, intrp.TYPE_ERROR,
             'Object.defineProperty called on non-object');
       }
       prop = String(prop)
       if (!(descriptor instanceof intrp.Object)) {
-        intrp.throwError(intrp.TYPE_ERROR,
+        throw new intrp.Error(state.scope.perms, intrp.TYPE_ERROR,
             'Property description must be an object');
       }
       if (!obj.properties[prop] && obj.preventExtensions) {
-        intrp.throwError(intrp.TYPE_ERROR,
+        throw new intrp.Error(state.scope.perms, intrp.TYPE_ERROR,
             "Can't define property '" + prop + "', object is not extensible");
       }
       // Can't just use pseudoToNative since descriptors can inherit properties.
@@ -734,7 +736,7 @@ Interpreter.prototype.initObject_ = function() {
       var obj = args[0];
       var prop = args[1];
       if (!(obj instanceof intrp.Object)) {
-        intrp.throwError(intrp.TYPE_ERROR,
+        throw new intrp.Error(state.scope.perms, intrp.TYPE_ERROR,
             'Object.getOwnPropertyDescriptor called on non-object');
       }
       prop = String(prop);
@@ -769,7 +771,7 @@ Interpreter.prototype.initObject_ = function() {
       var proto = args[1];
       throwIfNullUndefined(obj);
       if (proto !== null && !(proto instanceof intrp.Object)) {
-        intrp.throwError(intrp.TYPE_ERROR,
+        throw new intrp.Error(state.scope.perms, intrp.TYPE_ERROR,
             'Object prototype may only be an Object or null');
       }
       if (!(obj instanceof intrp.Object)) {
@@ -830,7 +832,8 @@ Interpreter.prototype.initObject_ = function() {
       // has been removed.
       // TODO(cpallen): Implement from scratch once .properties
       // fully encapsulated.
-      intrp.throwError(intrp.ERROR, 'Not implemented');
+      throw new intrp.Error(state.scope.perms, intrp.TYPE_ERROR,
+          'Not implemented');
     }
   });
 
@@ -918,12 +921,13 @@ Interpreter.prototype.initFunction_ = function() {
       var thisArg = args[0];
       var argArray = args[1];
       if (!(func instanceof intrp.Function)) {
-        intrp.throwError(intrp.TYPE_ERROR, func + ' is not a function');
+        throw new intrp.Error(state.scope.perms, intrp.TYPE_ERROR,
+            func + ' is not a function');
       } else if (argArray === null || argArray === undefined) {
         return func.call(intrp, thread, state, thisArg, []);
       } else if (!(argArray instanceof intrp.Object)) {
-        intrp.throwError(intrp.TYPE_ERROR,
-                         'CreateListFromArrayLike called on non-object');
+        throw new intrp.Error(state.scope.perms, intrp.TYPE_ERROR,
+            'CreateListFromArrayLike called on non-object');
       }
       // BUG(cpcallen:perms): This allows circumvention of
       // non-readability of properties with numeric names.
@@ -937,7 +941,8 @@ Interpreter.prototype.initFunction_ = function() {
     call: function(intrp, thread, state, thisVal, args) {
       var func = thisVal;
       if (!(func instanceof intrp.Function)) {
-        intrp.throwError(intrp.TYPE_ERROR, func + ' is not a function');
+        throw new intrp.Error(state.scope.perms, intrp.TYPE_ERROR,
+            func + ' is not a function');
       }
       var thisArg = args[0];
       var argList = args.slice(1);
@@ -970,7 +975,8 @@ Interpreter.prototype.initArray_ = function() {
     var first = arguments[0];
     if (arguments.length === 1 && typeof first === 'number') {
       if (isNaN(Interpreter.legalArrayLength(first))) {
-        intrp.throwError(intrp.RANGE_ERROR, 'Invalid array length');
+        throw new this.Error(intrp.perms(), intrp.RANGE_ERROR,
+            'Invalid array length');
       }
       newArray.properties.length = first;
     } else {
@@ -1251,7 +1257,7 @@ Interpreter.prototype.initString_ = function() {
       return this.repeat(count);
     } catch (e) {
       // 'abc'.repeat(-1) will throw an error.  Catch and rethrow.
-      intrp.throwError(intrp.RANGE_ERROR, e.message);
+      throw intrp.errorNativeToPseudo(e, intrp.thread.perms());
     }
   };
   this.createNativeFunction('String.prototype.repeat', wrapper, false);
@@ -1297,7 +1303,7 @@ Interpreter.prototype.initNumber_ = function() {
       return this.toExponential(fractionDigits);
     } catch (e) {
       // Throws if fractionDigits isn't within 0-20.
-      intrp.throwError(intrp.RANGE_ERROR, e.message);
+      throw intrp.errorNativeToPseudo(e, intrp.thread.perms());
     }
   };
   this.createNativeFunction('Number.prototype.toExponential', wrapper, false);
@@ -1307,7 +1313,7 @@ Interpreter.prototype.initNumber_ = function() {
       return this.toFixed(digits);
     } catch (e) {
       // Throws if digits isn't within 0-20.
-      intrp.throwError(intrp.RANGE_ERROR, e.message);
+      throw intrp.errorNativeToPseudo(e, intrp.thread.perms());
     }
   };
   this.createNativeFunction('Number.prototype.toFixed', wrapper, false);
@@ -1317,7 +1323,7 @@ Interpreter.prototype.initNumber_ = function() {
       return this.toPrecision(precision);
     } catch (e) {
       // Throws if precision isn't within range (depends on implementation).
-      intrp.throwError(intrp.RANGE_ERROR, e.message);
+      throw intrp.errorNativeToPseudo(e, intrp.thread.perms());
     }
   };
   this.createNativeFunction('Number.prototype.toPrecision', wrapper, false);
@@ -1327,7 +1333,7 @@ Interpreter.prototype.initNumber_ = function() {
       return this.toString(radix);
     } catch (e) {
       // Throws if radix isn't within 2-36.
-      intrp.throwError(intrp.RANGE_ERROR, e.message);
+      throw intrp.errorNativeToPseudo(e, intrp.thread.perms());
     }
   };
   this.createNativeFunction('Number.prototype.toString', wrapper, false);
@@ -1440,7 +1446,7 @@ Interpreter.prototype.initRegExp_ = function() {
   wrapper = function(str) {
     if (!(this instanceof intrp.RegExp) ||
         !(this.regexp instanceof RegExp)) {
-      intrp.throwError(intrp.TYPE_ERROR,
+      throw new intrp.Error(intrp.thread.perms(), intrp.TYPE_ERROR,
           'Method RegExp.prototype.exec called on incompatible receiver' +
               this.toString());
     }
@@ -1542,7 +1548,7 @@ Interpreter.prototype.initJSON_ = function() {
     try {
       var nativeObj = JSON.parse(text.toString());
     } catch (e) {
-      intrp.throwError(intrp.SYNTAX_ERROR, e.message);
+      throw intrp.errorNativeToPseudo(e, intrp.thread.perms());
     }
     return intrp.nativeToPseudo(nativeObj, intrp.thread.perms());
   };
@@ -1553,7 +1559,7 @@ Interpreter.prototype.initJSON_ = function() {
     try {
       var str = JSON.stringify(nativeObj);
     } catch (e) {
-      intrp.throwError(intrp.TYPE_ERROR, e.message);
+      throw intrp.errorNativeToPseudo(e, intrp.thread.perms());
     }
     return str;
   };
@@ -1620,7 +1626,8 @@ Interpreter.prototype.initPerms_ = function() {
     call: function(intrp, thread, state, thisVal, args) {
       var perms = args[0];
       if (!(perms instanceof intrp.Object)) {
-        intrp.throwError(intrp.TYPE_ERROR, 'New perms must be an object');
+        throw new intrp.Error(state.scope.perms, intrp.TYPE_ERROR,
+            'New perms must be an object');
       }
       // TODO(cpcallen:perms): throw if current perms does not
       // control new perms.
@@ -1678,14 +1685,16 @@ Interpreter.prototype.initNetwork_ = function() {
 
   this.createNativeFunction('CC.connectionWrite', function(obj, data) {
     if (!(obj instanceof intrp.Object) || !obj.socket) {
-      intrp.throwError(intrp.TYPE_ERROR, 'object is not connected');
+      throw new intrp.Error(intrp.thread.perms(), intrp.TYPE_ERROR,
+          'object is not connected');
     }
     obj.socket.write(String(data));
   }, false);
 
   this.createNativeFunction('CC.connectionClose', function(obj) {
     if (!(obj instanceof intrp.Object) || !obj.socket) {
-      intrp.throwError(intrp.TYPE_ERROR, 'object is not connected');
+      throw new intrp.Error(intrp.thread.perms(), intrp.TYPE_ERROR,
+          'object is not connected');
     }
     obj.socket.end();
   }, false);
@@ -1993,7 +2002,7 @@ Interpreter.prototype.getPrototype = function(value) {
 Interpreter.prototype.getProperty = function(obj, name) {
   name = String(name);
   if (obj === undefined || obj === null) {
-    this.throwError(this.TYPE_ERROR,
+    throw new this.Error(this.thread.perms(), this.TYPE_ERROR,
         "Cannot read property '" + name + "' of " + obj);
   }
   if (obj instanceof this.Object) {
@@ -2105,7 +2114,8 @@ Interpreter.prototype.getValueFromScope = function(scope, name) {
       prevNode['operator'] === 'typeof') {
     return undefined;
   }
-  this.throwError(this.REFERENCE_ERROR, name + ' is not defined');
+  throw new this.Error(this.thread.perms(), this.REFERENCE_ERROR,
+      name + ' is not defined');
 };
 
 /**
@@ -2118,14 +2128,17 @@ Interpreter.prototype.setValueToScope = function(scope, name, value) {
   for (var s = scope; s; s = s.outerScope) {
     if (name in s.properties) {
       if (s.notWritable.has(name)) {
-        this.throwError(this.TYPE_ERROR,
+        // TODO(cpcallen:perms): we have a scope here, but scope.perms
+        // is probably not the right value for owner of new error.
+        throw new this.Error(this.thread.perms(), this.TYPE_ERROR,
             'Assignment to constant variable: ' + name);
       }
       s.properties[name] = value;
       return;
     }
   }
-  this.throwError(this.REFERENCE_ERROR, name + ' is not defined');
+  throw new this.Error(this.thread.perms(), this.REFERENCE_ERROR,
+      name + ' is not defined');
 };
 
 /**
@@ -2237,24 +2250,6 @@ Interpreter.Completion = {
   CONTINUE: 2,
   RETURN: 3,
   THROW: 4
-};
-
-/**
- * Throw an Error in the interpreter.  A convenience method that just
- * does (roughly): this.throwException(new this.Error(...arguments)
- *
- * TODO(cpcallen:perms): audit all callers of this to see which need
- * to supply an owner.
- * @param {!Interpreter.prototype.Error} proto Prototype new Error object.
- * @param {string=} message Message to attach to new Error object.
- * @param {!Interpreter.Owner=} owner Owner for new Error object
- *     (default: current thread perms);
- */
-Interpreter.prototype.throwError = function(proto, message, owner) {
-  if (owner === undefined) {
-    owner = this.thread.perms();
-  }
-  throw new this.Error(owner, proto, message);
 };
 
 /**
@@ -2818,7 +2813,8 @@ Interpreter.prototype.installTypes = function() {
    */
   intrp.Function.prototype.toString = function() {
     if (!(this instanceof intrp.Function)) {
-      intrp.throwError(intrp.TYPE_ERROR,
+      // TODO(cpcallen:perms): owner is not correct here.  Rethink.
+      throw new intrp.Error(intrp.thread.perms(), intrp.TYPE_ERROR,
           'Function.prototype.toString is not generic');
     }
     // N.B. that ES5.1 spec stipulates that output must be in syntax of
@@ -2840,7 +2836,8 @@ Interpreter.prototype.installTypes = function() {
     }
     var prot = intrp.getProperty(this, 'prototype');
     if (!(prot instanceof intrp.Object)) {
-      intrp.throwError(intrp.TYPE_ERROR,
+      // TODO(cpcallen:perms): owner is not correct here.  Rethink.
+      throw new intrp.Error(intrp.thread.perms(), intrp.TYPE_ERROR,
           "Function has non-object prototype '" + prot +
           "' in instanceof check");
     }
@@ -2865,8 +2862,8 @@ Interpreter.prototype.installTypes = function() {
    */
   intrp.Function.prototype.call = function(
       intrp, thread, state, thisVal, args) {
-    intrp.throwError(intrp.TYPE_ERROR,
-         "Class constructor " + this + " cannot be invoked without 'new'");
+    throw new intrp.Error(state.scope.perms, intrp.TYPE_ERROR,
+        "Class constructor " + this + " cannot be invoked without 'new'");
   };
 
   /**
@@ -2881,7 +2878,8 @@ Interpreter.prototype.installTypes = function() {
    */
   intrp.Function.prototype.construct = function(
       intrp, thread, state, args) {
-    intrp.throwError(intrp.TYPE_ERROR, this + ' is not a constructor');
+    throw new intrp.Error(state.scope.perms, intrp.TYPE_ERROR,
+        this + ' is not a constructor');
   };
 
   /**
@@ -2952,9 +2950,8 @@ Interpreter.prototype.installTypes = function() {
       intrp, thread, state, thisVal, args) {
     if (this.owner === null) {
       // TODO(cpcallen): PermError?
-      intrp.throwError(intrp.ERROR,
+      throw new intrp.Error(state.scope.perms, intrp.ERROR,
           'Functions with null owner cannot be called');
-      return undefined; // Not reached; only proves this.owner !== null after.
     }
     // Aside: we need to pass this.owner, rather than
     // this.scope.perms, for the new scope perms because (1) we want
@@ -3266,7 +3263,8 @@ Interpreter.prototype.installTypes = function() {
    */
   intrp.Date.prototype.toString = function() {
     if (!(this.date instanceof Date)) {
-      intrp.throwError(intrp.TYPE_ERROR,
+      // TODO(cpcallen:perms): owner is not correct here.  Rethink.
+      throw new intrp.Error(intrp.thread.perms(), intrp.TYPE_ERROR,
           'Date.prototype.toString is not generic');
     }
     return this.date.toString();
@@ -3278,8 +3276,9 @@ Interpreter.prototype.installTypes = function() {
    */
   intrp.Date.prototype.valueOf = function() {
     if (!(this.date instanceof Date)) {
-      intrp.throwError(intrp.TYPE_ERROR,
-          'Date.prototype.valueOf is not generic');
+      // TODO(cpcallen:perms): owner is not correct here.  Rethink.
+      throw new intrp.Error(intrp.thread.perms(), intrp.TYPE_ERROR,
+          'Date.prototype.toString is not generic');
     }
     return this.date.valueOf();
   };
@@ -3808,14 +3807,15 @@ stepFuncs_['BinaryExpression'] = function (stack, state, node) {
     case '>>>': value = leftValue >>> rightValue; break;
     case 'in':
       if (!(rightValue instanceof this.Object)) {
-        this.throwError(this.TYPE_ERROR,
+      // TODO(cpcallen:perms): owner is not correct here.  Rethink.
+      throw new this.Error(state.scope.perms, this.TYPE_ERROR,
             "'in' expects an object, not '" + rightValue + "'");
       }
       value = this.hasProperty(rightValue, leftValue);
       break;
     case 'instanceof':
       if (!(rightValue instanceof this.Function)) {
-        this.throwError(this.TYPE_ERROR,
+        throw new this.Error(state.scope.perms, this.TYPE_ERROR,
             'Right-hand side of instanceof is not an object');
       }
       value = rightValue.hasInstance(leftValue);
@@ -3902,7 +3902,8 @@ stepFuncs_['CallExpression'] = function (stack, state, node) {
       if (typeof func === 'string' && state.arguments_.length === 0) {
         // Special hack for Code City's "new 'foo'" syntax.
         if (!this.builtins_[func]) {
-          this.throwError(this.REFERENCE_ERROR, func + ' is not a builtin');
+          throw new this.Error(state.scope.perms, this.REFERENCE_ERROR,
+              func + ' is not a builtin');
         }
         stack.pop();
         if (stack.length > 0) {
@@ -3918,7 +3919,8 @@ stepFuncs_['CallExpression'] = function (stack, state, node) {
     state.doneExec = true;
     var func = state.func_;
     if (!(func instanceof this.Function)) {
-      this.throwError(this.TYPE_ERROR, func + ' is not a function');
+      throw new this.Error(state.scope.perms, this.TYPE_ERROR,
+          func + ' is not a function');
     }
     // TODO(cpcallen): this is here just to satisfy type checking of
     // args to .call and .construct.  Perhaps have (non-null) thread
@@ -4113,7 +4115,7 @@ stepFuncs_['ForInStatement'] = function (stack, state, node) {
     state.doneObject_ = true;
     if (node['left']['declarations'] &&
         node['left']['declarations'][0]['init']) {
-      this.throwError(this.SYNTAX_ERROR,
+      throw new this.Error(state.scope.perms, this.SYNTAX_ERROR,
           'for-in loop variable declaration may not have an initializer.');
     }
     // Second, look up the object.  Only do so once, ever.
@@ -4377,8 +4379,9 @@ stepFuncs_['ObjectExpression'] = function (stack, state, node) {
   }
   if (property) {
     if (property['kind'] !== 'init') {
-      this.throwError(this.SYNTAX_ERROR, "Object kind: '" +
-          property['kind'] + "'.  Getters and setters are not supported.");
+      throw new this.Error(state.scope.perms, this.SYNTAX_ERROR,
+          "Object kind: '" + property['kind'] + 
+          "'.  Getters and setters are not supported.");
     }
     return new Interpreter.State(property['value'], state.scope);
   }
@@ -4603,7 +4606,7 @@ stepFuncs_['UnaryExpression'] = function (stack, state, node) {
       } else {
         // Attempting to delete property from primitive value.
         if (Object.getOwnPropertyDescriptor(obj, key)) {
-          this.throwError(this.TYPE_ERROR,
+          throw new this.Error(state.scope.perms, this.TYPE_ERROR,
               "Cannot delete property '" + key + "' from primitive.");
         } else {
           value = true;
@@ -4693,7 +4696,7 @@ stepFuncs_['VariableDeclaration'] = function (stack, state, node) {
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['WithStatement'] = function (stack, state, node) {
-  this.throwError(this.SYNTAX_ERROR,
+  throw new this.Error(state.scope.perms, this.SYNTAX_ERROR,
       'Strict mode code may not include a with statement');
 };
 
