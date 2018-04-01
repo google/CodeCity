@@ -276,6 +276,10 @@ exports.testClasses = function(t) {
       prototypeProto: 'Error.prototype',
       class: 'Error'
     },
+    PermissionError: {
+      prototypeProto: 'Error.prototype',
+      class: 'Error'
+    },
     Boolean: {
       literal: 'false',
       literalType: 'boolean',
