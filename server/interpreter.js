@@ -956,11 +956,37 @@ Interpreter.prototype.initFunction_ = function() {
  * @private
  */
 Interpreter.prototype.initArray_ = function() {
-  var intrp = this;
   // Array prototype.
   this.ARRAY = new this.Array(this.ROOT, this.OBJECT);
   this.builtins_['Array.prototype'] = this.ARRAY;
+
   // Array constructor.
+  new this.NativeFunction({
+    id: 'Array', length: 1,
+    construct: function(intrp, thread, state, args) {
+      var first = args[0];
+      var newArray = new intrp.Array(intrp.thread.perms());
+      if (args.length === 1 && typeof first === 'number') {
+        if (isNaN(Interpreter.legalArrayLength(first))) {
+          throw new intrp.Error(state.scope.perms, intrp.RANGE_ERROR,
+              'Invalid array length');
+        }
+        intrp.setProperty(newArray, 'length', first);
+      } else {
+        for (var i = 0; i < arguments.length; i++) {
+          intrp.setProperty(newArray, i, args[i]);
+        }
+        intrp.setProperty(newArray, 'length', i);
+      }
+      return newArray;
+    },
+    call: function(intrp, thread, state, thisVal, args) {
+      this.construct.call(intrp, thread, state, args);
+    }
+  });
+
+  var intrp = this;
+  var wrapper;
   var getInt = function(obj, def) {
     // Return an integer, or the default.
     var n = obj ? Math.floor(obj) : def;
@@ -969,25 +995,6 @@ Interpreter.prototype.initArray_ = function() {
     }
     return n;
   };
-  var wrapper;
-  wrapper = function(var_args) {
-    var newArray = new intrp.Array(intrp.thread.perms());
-    var first = arguments[0];
-    if (arguments.length === 1 && typeof first === 'number') {
-      if (isNaN(Interpreter.legalArrayLength(first))) {
-        throw new this.Error(intrp.perms(), intrp.RANGE_ERROR,
-            'Invalid array length');
-      }
-      newArray.properties.length = first;
-    } else {
-      for (var i = 0; i < arguments.length; i++) {
-        newArray.properties[i] = arguments[i];
-      }
-      newArray.properties.length = i;
-    }
-    return newArray;
-  };
-  this.createNativeFunction('Array', wrapper, true);
 
   // Static methods on Array.
   wrapper = function(obj) {
