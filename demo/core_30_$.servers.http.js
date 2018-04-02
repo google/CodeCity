@@ -28,7 +28,7 @@ $.servers.http = {};
 // Web request object:
 $.servers.http.IncomingMessage = function() {
   this.headers = Object.create(null);
-  this.headers['cookie'] = Object.create(null);
+  this.headers.cookie = Object.create(null);
   this.parameters = Object.create(null);
   // State -1: Invalid.
   // State 0: Parsing request line.
@@ -78,6 +78,7 @@ $.servers.http.IncomingMessage.prototype.parse = function(line) {
     var value = m[2];
     var existing = this.headers[name];
     if (name === 'cookie') {
+      // Cookies are processed and presented as: request.headers.cookie.foo
       var cookies = value.split(/\s*;\s*/);
       for (var i = 0; i < cookies.length; i++) {
         var eqIndex = cookies[i].indexOf('=');
@@ -100,6 +101,7 @@ $.servers.http.IncomingMessage.prototype.parse = function(line) {
           }
         }
       }
+      value = existing;
     } else if (name in this.headers) {
       if ($.servers.http.IncomingMessage.parse.discardDuplicates.indexOf(name) === -1) {
         // Discard this duplicate.
@@ -125,22 +127,16 @@ $.servers.http.IncomingMessage.prototype.parse = function(line) {
   return true;
 };
 $.servers.http.IncomingMessage.prototype.parse.discardDuplicates = [
-  'age',
   'authorization',
   'content-length',
   'content-type',
-  'etag',
-  'expires',
   'from',
   'host',
   'if-modified-since',
   'if-unmodified-since',
-  'last-modified',
-  'location',
   'max-forwards',
   'proxy-authorization',
   'referer',
-  'retry-after',
   'user-agent'
 ];
 
@@ -189,9 +185,9 @@ $.servers.http.IncomingMessage.prototype.parseParameters_ = function(data) {
 $.servers.http.ServerResponse = function(connection) {
   this.headersSent = false;
   this.statusCode = 200;
-  this.headers_ = {
-    'Content-Type': 'text/html; charset=utf-8',
-  };
+  this.headers_ = Object.create(null);
+  this.cookies = [];
+  this.setHeader('content-type', 'text/html; charset=utf-8');
   this.connection_ = connection;
 };
 
@@ -199,8 +195,34 @@ $.servers.http.ServerResponse.prototype.setHeader = function(name, value) {
   if (this.headersSent) {
     throw Error('Header already sent.');
   }
-  this.headers_[name] = value;
+  // Normalize all header names as lowercase.
+  name = name.toLowerCase(name);
+  if (name === 'set-cookie') {
+    this.cookies.push(value);
+  } else {
+    var existing = this.headers_[name];
+    if (name in this.headers_) {
+      if ($.servers.http.IncomingMessage.parse.discardDuplicates.indexOf(name) === -1) {
+        // Discard this duplicate.
+        value = existing;
+      } else {
+        // Append this header onto previously defined header.
+        value = existing + ', ' + value;
+      }
+    }
+    this.headers_[name] = value;
+  }
 };
+$.servers.http.ServerResponse.prototype.setHeader.discardDuplicates = [
+  'age',
+  'content-length',
+  'content-type',
+  'etag',
+  'expires',
+  'last-modified',
+  'location',
+  'retry-after'
+];
 
 $.servers.http.ServerResponse.prototype.writeHead = function() {
   if (this.headersSent) {
@@ -211,9 +233,21 @@ $.servers.http.ServerResponse.prototype.writeHead = function() {
   this.connection_.write('HTTP/1.0 ' + this.statusCode + ' ' + statusMessage +
                          '\r\n');
   for (var name in this.headers_) {
-    this.connection_.write(name + ': ' + this.headers_[name] + '\r\n');
+    // Print all header names as Title-Case.
+    var title = name.replace(/\w+/g, this.capitalize);
+    this.connection_.write(title + ': ' + this.headers_[name] + '\r\n');
+  }
+  for (var i = 0; i < this.cookies.length; i++) {
+    // Print all cookies.
+    this.connection_.write('Set-Cookie: ' + this.cookies[i] + '\r\n');
   }
   this.connection_.write('\r\n');
+};
+
+$.servers.http.ServerResponse.prototype.capitalize = function(txt) {
+  // 'foo' -> 'Foo'
+  // Assumes incoming text is already lowercase.
+  return txt[0].toUpperCase() + txt.substring(1);
 };
 
 $.servers.http.ServerResponse.prototype.setStatus = function(code) {
