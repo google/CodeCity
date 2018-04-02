@@ -463,7 +463,7 @@ Interpreter.prototype.pause = function() {
                       error.name, error.message);
           // Report this to userland by calling .onError on proto
           // (with this === proto) - for lack of a better option.
-          var func = intrp.getProperty(server.proto, 'onError');
+          var func = server.proto.get('onError', intrp.ROOT);
           if (func instanceof intrp.Function && func.owner !== null) {
             var userError = intrp.nativeToPseudo(error, func.owner);
             intrp.createThreadForFuncCall(func, server.proto, [userError]);
@@ -714,17 +714,18 @@ Interpreter.prototype.initObject_ = function() {
       var nativeDescriptor = {};
       if (intrp.hasProperty(descriptor, 'configurable')) {
         nativeDescriptor.configurable =
-            !!intrp.getProperty(descriptor, 'configurable');
+            !!descriptor.get('configurable', state.scope.perms);
       }
       if (intrp.hasProperty(descriptor, 'enumerable')) {
         nativeDescriptor.enumerable =
-            !!intrp.getProperty(descriptor, 'enumerable');
+            !!descriptor.get('enumerable', state.scope.perms);
       }
       if (intrp.hasProperty(descriptor, 'writable')) {
-        nativeDescriptor.writable = !!intrp.getProperty(descriptor, 'writable');
+        nativeDescriptor.writable =
+            !!descriptor.get('writable', state.scope.perms);
       }
       if (intrp.hasProperty(descriptor, 'value')) {
-        nativeDescriptor.value = intrp.getProperty(descriptor, 'value');
+        nativeDescriptor.value = descriptor.get('value', state.scope.perms);
       }
       intrp.setProperty(obj, prop, Interpreter.VALUE_IN_DESCRIPTOR,
           nativeDescriptor);
@@ -750,7 +751,7 @@ Interpreter.prototype.initObject_ = function() {
       intrp.setProperty(descriptor, 'configurable', pd.configurable);
       intrp.setProperty(descriptor, 'enumerable', pd.enumerable);
       intrp.setProperty(descriptor, 'writable', pd.writable);
-      intrp.setProperty(descriptor, 'value', intrp.getProperty(obj, prop));
+      intrp.setProperty(descriptor, 'value', pd.value);
       return descriptor;
     }
   });
@@ -1114,6 +1115,7 @@ Interpreter.prototype.initArray_ = function() {
     end = Math.max(0, Math.min(end, this.properties.length));
     var length = 0;
     for (var i = begin; i < end; i++) {
+      // TODO(cpcallen:perms): Use .get() - but is this always an intrpObject?
       var element = intrp.getProperty(this, i);
       intrp.setProperty(list, length++, element);
     }
@@ -1144,6 +1146,7 @@ Interpreter.prototype.initArray_ = function() {
     var length = 0;
     // Start by copying the current array.
     for (var i = 0; i < this.properties.length; i++) {
+      // TODO(cpcallen:perms): Use .get() - but is this always an intrpObject?
       var element = intrp.getProperty(this, i);
       intrp.setProperty(list, length++, element);
     }
@@ -1152,6 +1155,7 @@ Interpreter.prototype.initArray_ = function() {
       var value = arguments[i];
       if (value instanceof intrp.Array) {
         for (var j = 0; j < value.properties.length; j++) {
+          // TODO(cpcallen:perms): Use .get()
           var element = intrp.getProperty(value, j);
           intrp.setProperty(list, length++, element);
         }
@@ -1171,6 +1175,7 @@ Interpreter.prototype.initArray_ = function() {
     }
     fromIndex = Math.max(0, fromIndex);
     for (var i = fromIndex; i < this.properties.length; i++) {
+      // TODO(cpcallen:perms): Use .get() - but is this always an intrpObject?
       var element = intrp.getProperty(this, i);
       if (element === searchElement) {
         return i;
@@ -1188,6 +1193,7 @@ Interpreter.prototype.initArray_ = function() {
     }
     fromIndex = Math.min(fromIndex, this.properties.length - 1);
     for (var i = fromIndex; i >= 0; i--) {
+      // TODO(cpcallen:perms): Use .get() - but is this always an intrpObject?
       var element = intrp.getProperty(this, i);
       if (element === searchElement) {
         return i;
@@ -1496,6 +1502,7 @@ Interpreter.prototype.initRegExp_ = function() {
   wrapper = function(str) {
     str = str.toString();
     // Get lastIndex from wrapped regex, since this is settable.
+    // TODO(cpcallen:perms): Use .get() - but is this always an intrpObject?
     this.regexp.lastIndex =
         Number(intrp.getProperty(this, 'lastIndex'));
     var match = this.regexp.exec(str);
@@ -1885,6 +1892,13 @@ Interpreter.prototype.nativeToPseudo = function(nativeObj, owner) {
  * @return {*} The equivalent native JS object or value.
  */
 Interpreter.prototype.pseudoToNative = function(pseudoObj, cycles) {
+  // BUG(cpcallen:perms): Kludge.  Incorrect except when doing .step
+  // or run.  Should be an argument instead, forcing caller to decide.
+  try {
+    var perms = this.thread.perms();
+  } catch (e) {
+    perms = this.ROOT;
+  }
   if (typeof pseudoObj === 'boolean' ||
       typeof pseudoObj === 'number' ||
       typeof pseudoObj === 'string' ||
@@ -1908,12 +1922,12 @@ Interpreter.prototype.pseudoToNative = function(pseudoObj, cycles) {
   if (pseudoObj instanceof this.Array) {  // Array.
     nativeObj = [];
     cycles.native.push(nativeObj);
-    var length = this.getProperty(pseudoObj, 'length');
+    var length = pseudoObj.get('length', perms);
     for (i = 0; i < length; i++) {
       // TODO(cpcallen): do we really want to include inherited properties?
       if (this.hasProperty(pseudoObj, i)) {
         nativeObj[i] =
-            this.pseudoToNative(this.getProperty(pseudoObj, i), cycles);
+            this.pseudoToNative(pseudoObj.get(String(i), perms), cycles);
       }
     }
   } else {  // Object.
@@ -1960,6 +1974,8 @@ Interpreter.prototype.arrayNativeToPseudo = function(nativeArray, owner) {
  * @return {!Array<Interpreter.Value>} The equivalent native JS array.
  */
 Interpreter.prototype.arrayPseudoToNative = function(pseudoArray) {
+  // BUG(cpcallen:perms): Not necessarily correct.  Should be an argument.
+  var perms = this.thread.perms();
   var nativeArray = [];
   // For the benefit of closure-compiler, which doesn't think Arrays
   // should have non-numeric indices:
@@ -1970,13 +1986,14 @@ Interpreter.prototype.arrayPseudoToNative = function(pseudoArray) {
   // truncating the partially-copied array.  So length should probably
   // be special-cased here as well as below.
   for (var key in pseudoArray.properties) {
-    nativeObject[key] = this.getProperty(pseudoArray, key);
+    // BUG(cpcallen:perms): Perms not necessarily correct here.  Use perms arg.
+    nativeObject[key] = pseudoArray.get(key, perms);
   }
   // pseudoArray might be an object pretending to be an array.  In this case
   // it's possible that length is non-existent, invalid, or smaller than the
   // largest defined numeric property.  Set length explicitly here.
   nativeArray.length = Interpreter.legalArrayLength(
-      this.getProperty(pseudoArray, 'length')) || 0;
+      pseudoArray.get('length', perms)) || 0;
   return nativeArray;
 };
 
@@ -2353,10 +2370,8 @@ Interpreter.prototype.unwind_ = function(type, value, label) {
   if (type === Interpreter.Completion.THROW) {
     // Log exception and stack trace.
     if (value instanceof this.Error) {
-      var name = this.getProperty(value, 'name');
-      var message = this.getProperty(value, 'message');
-      console.log('Unhandled %s: %s', name, message);
-      var stackTrace = this.getProperty(value, 'stack');
+      console.log('Unhandled %s', value.toString());
+      var stackTrace = value.get('stack', this.ROOT);
       if (stackTrace) {
         console.log(stackTrace);
       }
@@ -2886,15 +2901,15 @@ Interpreter.prototype.installTypes = function() {
    * @param {Interpreter.Value} value The value to be checked for
    *     being an instance of this function.
    * @param {!Interpreter.Owner} perms Who wants to know?  Used in
-   *     readability chec of .constructor property and as owner of any
-   *     Errors thrown.
+   *     readability check of .constructor property and as owner of
+   *     any Errors thrown.
    * @return {boolean}
    */
   intrp.Function.prototype.hasInstance = function(value, perms) {
     if (!(value instanceof intrp.Object)) {
       return false;
     }
-    var prot = intrp.getProperty(this, 'prototype');
+    var prot = this.get('prototype', perms);
     if (!(prot instanceof intrp.Object)) {
       throw new intrp.Error(perms, intrp.TYPE_ERROR,
           "Function has non-object prototype '" + prot +
@@ -3056,7 +3071,13 @@ Interpreter.prototype.installTypes = function() {
   intrp.UserFunction.prototype.construct = function(
       intrp, thread, state, args) {
     if (!state.object_) {
-      var proto = intrp.getProperty(this, 'prototype');
+      if (this.owner === null) {
+        throw new intrp.Error(state.scope.perms, intrp.PERM_ERROR,
+            'Functions with null owner are not constructable');
+      }
+      // TODO(cpcallen:perms): Is it really OK to construct if caller
+      // can't read .prototype?
+      var proto = this.get('prototype', this.owner);
       // Per ES5.1 §13.2.2 step 7: if .prototype is primitive, use
       // Object.prototype instead.
       if (!(proto instanceof intrp.Object)) {
@@ -3123,7 +3144,12 @@ Interpreter.prototype.installTypes = function() {
    */
   intrp.NativeFunction.prototype.toString = function() {
     // TODO(cpcallen): include formal parameter names?
-    return 'function ' + intrp.getProperty(this, 'name') +
+    // TODO(cpcallen:perms): readability check?  Would need to add
+    // perms param, in which case method should probably be renamed
+    // and we need ot audit all use of String() throughout the
+    // interpreter (including implicit use inside v8-native
+    // functions).
+    return 'function ' + this.get('name', intrp.ROOT) +
         '() { [native code] }';
   };
 
@@ -3453,8 +3479,10 @@ Interpreter.prototype.installTypes = function() {
     }
     cycles.push(this);
     try {
-      var name = intrp.getProperty(this, 'name');
-      var message = intrp.getProperty(this, 'message');
+      // TODO(cpcallen:perms): Wrong perms here.  Should have/use
+      // perms arg, but see note in intrp.Function.prototype.toString.
+      var name = this.get('name', intrp.ROOT);
+      var message = this.get('message', intrp.ROOT);
       name = (name === undefined) ? 'Error' : String(name);
       message = (message === undefined) ? '' : String(message);
       if (name) {
@@ -3525,7 +3553,7 @@ Interpreter.prototype.installTypes = function() {
       // Create new object from proto and call onConnect.
       var obj = new intrp.Object(server.owner, server.proto);
       obj.socket = socket;
-      var func = intrp.getProperty(obj, 'onConnect');
+      var func = obj.get('onConnect', this.owner);
       if (func instanceof intrp.Function) {
         intrp.createThreadForFuncCall(func, obj, []);
       }
@@ -3534,7 +3562,7 @@ Interpreter.prototype.installTypes = function() {
       // node buffer object, so we must convert it to a string
       // before passing it to user code.
       socket.on('data', function(data) {
-        var func = intrp.getProperty(obj, 'onReceive');
+        var func = obj.get('onReceive', this.owner);
         if (func instanceof intrp.Function) {
           intrp.createThreadForFuncCall(func, obj, [String(data)]);
         }
@@ -3542,7 +3570,7 @@ Interpreter.prototype.installTypes = function() {
 
       socket.on('end', function() {
         console.log('Connection from %s closed.', socket.remoteAddress);
-        var func = intrp.getProperty(obj, 'onEnd');
+        var func = obj.get('onEnd', this.owner);
         if (func instanceof intrp.Function) {
           intrp.createThreadForFuncCall(func, obj, []);
         }
@@ -3552,7 +3580,7 @@ Interpreter.prototype.installTypes = function() {
 
       socket.on('error', function(error) {
         console.log('Socket error:', error);
-        var func = intrp.getProperty(obj, 'onError');
+        var func = obj.get('onError', this.owner);
         if (func instanceof intrp.Function && func.owner !== null) {
           var userError = intrp.errorNativeToPseudo(error, func.owner);
           intrp.createThreadForFuncCall(func, obj, [userError]);
