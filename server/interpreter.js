@@ -2034,13 +2034,20 @@ Interpreter.prototype.getPrototype = function(value) {
  * @return {Interpreter.Value} Property value (may be undefined).
  */
 Interpreter.prototype.getProperty = function(obj, name) {
+  // BUG(cpcallen:perms): Kludge.  Incorrect except when doing .step
+  // or run.  Should be an argument instead, forcing caller to decide.
+  try {
+    var perms = this.thread.perms();
+  } catch (e) {
+    perms = this.ROOT;
+  }
   name = String(name);
   if (obj === undefined || obj === null) {
-    throw new this.Error(this.thread.perms(), this.TYPE_ERROR,
+    throw new this.Error(perms, this.TYPE_ERROR,
         "Cannot read property '" + name + "' of " + obj);
   }
   if (obj instanceof this.Object) {
-    return obj.properties[name];
+    return obj.get(name, perms);
   } else {
     // obj is actually a primitive - but we might still be able to get
     // a property descriptor from it, e.g., if it is a string and name
@@ -2510,6 +2517,15 @@ Interpreter.prototype.Object.prototype.proto = null;
 /** @type {string} */
 Interpreter.prototype.Object.prototype.class = '';
 
+/**
+ * @param {string} key
+ * @param{!Interpreter.Owner} perms
+ * @return {Interpreter.Value}
+ */
+Interpreter.prototype.Object.prototype.get = function(key, perms) {
+  throw Error('Inner class method not callable on prototype');
+};
+
 /** @return {string} */
 Interpreter.prototype.Object.prototype.toString = function() {
   throw Error('Inner class method not callable on prototype');
@@ -2798,6 +2814,26 @@ Interpreter.prototype.installTypes = function() {
   intrp.Object.prototype.proto = null;
   /** @type {string} */
   intrp.Object.prototype.class = 'Object';
+
+  /**
+   * The [[Get]] internal method from ES5.1 §8.12.3, with substantial
+   * adaptations for code city including added perms checks (but no
+   * support for getters).
+   *
+   * TODO(cpcallen:perms): decide whether null user can read
+   * properties.  (At the moment this is forbidden redundantly by type
+   * siganture an runtime check; one or both should be removed.)
+   * @param {string} key Key (name) of property to get.
+   * @param {!Interpreter.Owner} perms Who is trying to get it?
+   * @return {Interpreter.Value} The value of the property, or undefined.
+   */
+  intrp.Object.prototype.get = function(key, perms) {
+    if (perms === null) {
+      throw new intrp.Error(perms, intrp.PERM_ERROR,
+          'The null user cannot access any properties');
+    }  // TODO(cpcallen:perms): add check for readability.
+    return this.properties[key];
+  };
 
   /**
    * Convert this object into a string.
