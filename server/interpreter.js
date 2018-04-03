@@ -2121,6 +2121,13 @@ Interpreter.prototype.hasProperty = function(obj, name) {
  * @param {!Object=} desc Optional descriptor object.
  */
 Interpreter.prototype.setProperty = function(obj, name, value, desc) {
+  // BUG(cpcallen:perms): Kludge.  Incorrect except when doing .step
+  // or run.  Should be an argument instead, forcing caller to decide.
+  try {
+    var perms = this.thread.perms();
+  } catch (e) {
+    perms = this.ROOT;
+  }
   name = String(name);
   if (desc) {
     var pd = {};
@@ -2137,19 +2144,13 @@ Interpreter.prototype.setProperty = function(obj, name, value, desc) {
     try {
       Object.defineProperty(obj.properties, name, pd);
     } catch (e) {
-      // TODO(cpcallen:perms): use perms argument.
-      throw this.errorNativeToPseudo(e, this.thread.perms());
+      throw this.errorNativeToPseudo(e, perms);
     }
   } else {
     if (value instanceof Interpreter.Sentinel) {
       throw Error('VALUE_IN_DESCRIPTOR but no descriptor??');
     }
-    try {
-      obj.properties[name] = value;
-    } catch (e) {
-      // TODO(cpcallen:perms): use perms argument.
-      throw this.errorNativeToPseudo(e, this.thread.perms());
-    }
+    obj.set(name, value, perms);
   }
 };
 
@@ -2541,6 +2542,15 @@ Interpreter.prototype.Object.prototype.get = function(key, perms) {
   throw Error('Inner class method not callable on prototype');
 };
 
+/**
+ * @param {string} key
+ * @param{Interpreter.Value} value
+ * @param{!Interpreter.Owner} perms
+ */
+Interpreter.prototype.Object.prototype.set = function(key, value, perms) {
+  throw Error('Inner class method not callable on prototype');
+};
+
 /** @return {string} */
 Interpreter.prototype.Object.prototype.toString = function() {
   throw Error('Inner class method not callable on prototype');
@@ -2845,9 +2855,30 @@ Interpreter.prototype.installTypes = function() {
   intrp.Object.prototype.get = function(key, perms) {
     if (perms === null) {
       throw new intrp.Error(perms, intrp.PERM_ERROR,
-          'The null user cannot access any properties');
+          'The null user cannot get any properties');
     }  // TODO(cpcallen:perms): add check for readability.
     return this.properties[key];
+  };
+
+  /**
+   * The [[Set]] internal method from ES5.1 §8.12.5, with substantial
+   * adaptations for code city including added perms checks (but no
+   * support for setters).
+   * @param {string} key Key (name) of property to set.
+   * @param {!Interpreter.Owner} perms Who is trying to set it?
+   * @param {Interpreter.Value} value The new value of the property.
+   */
+  intrp.Object.prototype.set = function(key, value, perms) {
+    if (perms === null) {
+      throw new intrp.Error(perms, intrp.PERM_ERROR,
+          'The null user cannot set any properties');
+    }  // TODO(cpcallen:perms): add "controls"-type perm check.
+    try {
+      this.properties[key] = value;
+    } catch (e) {
+      throw intrp.errorNativeToPseudo(e, perms);
+    }
+
   };
 
   /**
