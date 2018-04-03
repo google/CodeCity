@@ -22,14 +22,14 @@
  * @author fraser@google.com (Neil Fraser)
  */
 
-$.www['/code'] = {};
+$.www.code = {};
 
-$.www['/code'].www = function(request, response) {
+$.www.code.www = function(request, response) {
   // Overwrite on first execution.
-  $.www['/code'].www = $.jssp.compile($.www['/code'].www);
-  $.www['/code'].www.call(this, request, response);
+  $.www.code.www = $.jssp.compile($.www.code.www);
+  $.www.code.www.call(this, request, response);
 };
-$.www['/code'].www.jssp = [
+$.www.code.www.jssp = [
   '<!DOCTYPE HTML Frameset DTD>',
   '<html>',
   '<head>',
@@ -46,10 +46,12 @@ $.www['/code'].www.jssp = [
   '</html>'
 ].join('\n');
 
+$.www.ROUTER.code = {regexp: /^\/code(\?|$)/, handler: $.www.code};
 
-$.www['/code/autocomplete'] = {};
 
-$.www['/code/autocomplete'].www = function(request, response) {
+$.www.code.autocomplete = {};
+
+$.www.code.autocomplete.www = function(request, response) {
   // HTTP handler for /code/autocomplete
   // Provide object autocompletion service for the IDE's explorer.
   // Takes one input: a JSON-encoded list of parts.
@@ -72,10 +74,13 @@ $.www['/code/autocomplete'].www = function(request, response) {
   response.write(JSON.stringify(completions));
 };
 
+$.www.ROUTER.codeAutocomplete =
+    {regexp: /^\/code\/autocomplete\?/, handler: $.www.code.autocomplete};
 
-$.www['/code/objectPanel'] = {};
 
-$.www['/code/objectPanel'].www = function(request, response) {
+$.www.code.objectPanel = {};
+
+$.www.code.objectPanel.www = function(request, response) {
   // HTTP handler for /code/objectPanel
   // Provide data for the IDE's object panels.
   // Takes one input: a JSON-encoded list of parts.
@@ -117,3 +122,6 @@ $.www['/code/objectPanel'].www = function(request, response) {
   }
   response.write('Code.ObjectPanel.data = ' + JSON.stringify(data) + ';');
 };
+
+$.www.ROUTER.codeObjectPanel =
+    {regexp: /^\/code\/objectPanel\?/, handler: $.www.code.objectPanel};

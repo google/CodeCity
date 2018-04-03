@@ -22,9 +22,9 @@
  * @author cpcallen@google.com (Christopher Allen)
  */
 
-$.www['/edit'] = { objs: [] };
+$.www.editor = { objs: [] };
 
-$.www['/edit'].edit = function(obj, name, key) {
+$.www.editor.edit = function(obj, name, key) {
   /* Return a (valid) URL for a web editing session editing obj[key],
    * where obj might more commonly be known as name.
    */
@@ -32,7 +32,7 @@ $.www['/edit'].edit = function(obj, name, key) {
     throw TypeError('Can only edit objects');
   }
   var objId = this.objIdFor(obj);
-  var url = '/edit?objId=' + objId;
+  var url = '/editor?objId=' + objId;
   if (name) {
     url += '&name=' + encodeURIComponent(name);
   }
@@ -42,7 +42,7 @@ $.www['/edit'].edit = function(obj, name, key) {
   return url;
 };
 
-$.www['/edit'].objIdFor = function(obj) {
+$.www.editor.objIdFor = function(obj) {
   /* Find index of obj in this.objs, adding it if it's not already there.
    */
   for (var i = 0; i < this.objs.length; i++) {
@@ -55,7 +55,7 @@ $.www['/edit'].objIdFor = function(obj) {
   return id;
 };
 
-$.www['/edit'].load = function(obj, key) {
+$.www.editor.load = function(obj, key) {
   /* Return string containing initial editor contents for editing
    * obj[key].
    */
@@ -68,7 +68,7 @@ $.www['/edit'].load = function(obj, key) {
       String(v));
 };
 
-$.www['/edit'].save = function(obj, key, src) {
+$.www.editor.save = function(obj, key, src) {
   /* Eval the string src and (if successful) save the resulting value
    * as obj[key].  If the value produced from src and the existing
    * value of obj[key] are both objects, then an attempt will be made
@@ -91,19 +91,19 @@ $.www['/edit'].save = function(obj, key, src) {
 };
 
 
-$.www['/edit'].www = function(request, response) {
+$.www.editor.www = function(request, response) {
   // Overwrite on first execution.
-  $.www['/edit'].www = $.jssp.compile($.www['/edit'].www);
-  $.www['/edit'].www.call(this, request, response);
+  $.www.editor.www = $.jssp.compile($.www.editor.www);
+  $.www.editor.www.call(this, request, response);
 };
-$.www['/edit'].www.jssp = [
+$.www.editor.www.jssp = [
   '<%',
   'var params = request.parameters;',
   'var objId = params.objId;',
-  'var obj = $.www[\'/edit\'].objs[params.objId];',
+  'var obj = $.www.editor.objs[params.objId];',
   'if (!$.utils.isObject(obj)) {',
   '  // Bad edit URL.',
-  '  $.pages[\'404\'](request, response);',
+  '  $.www[\'404\'](request, response);',
   '  return;',
   '}',
   'var key = params.key;',
@@ -114,7 +114,7 @@ $.www['/edit'].www.jssp = [
   '    // Use Acorn to trim source to first expression.',
   '    var ast = $.utils.acorn.parseExpressionAt(src, 0, { ecmaVersion: 5 });',
   '    src = src.substring(ast.start, ast.end);',
-  '    src = $.www[\'/edit\'].save(obj, key, src);',
+  '    src = $.www.editor.save(obj, key, src);',
   '    status = \'(saved)\';',
   '    if (typeof obj[key] === \'function\') {',
   '      if (params.isVerb) {',
@@ -133,7 +133,7 @@ $.www['/edit'].www.jssp = [
   '    status = \'(ERROR: \' + String(e) + \')\';',
   '  }',
   '} else {',
-  '  src = $.www[\'/edit\'].load(obj, key);',
+  '  src = $.www.editor.load(obj, key);',
   '}',
   'var isVerb = (Object.getOwnPropertyDescriptor(obj, key) && typeof obj[key] === \'function\') && obj[key].verb ? \'checked\' : \'\';',
   'var verb = $.utils.htmlEscape((obj[key] && obj[key].verb) || \'\');',
@@ -159,7 +159,7 @@ $.www['/edit'].www.jssp = [
   '  <script src="/static/CodeMirror/codemirror.js"></script>',
   '  <script src="/static/CodeMirror/javascript.js"></script>',
   '</head><body>',
-  '  <form action="/edit" method="post">',
+  '  <form action="/editor" method="post">',
   '  <button type="submit" class="jfk-button-submit" id="submit"',
   '    onclick="document.getElementById(\'src\').value = editor.getValue()">Save</button>',
   '  <h1>Editing <%= name %>.<%= key %>',
@@ -209,3 +209,5 @@ $.www['/edit'].www.jssp = [
   '  </script>',
   '</body></html>',
 ].join('\n');
+
+$.www.ROUTER.editor = {regexp: /^\/editor(\?|$)/, handler: $.www.editor};

@@ -150,10 +150,10 @@ Code.Explorer.sendAutocomplete = function(partsJSON) {
   Code.Explorer.autocompleteData.length = 0;
   var xhr = Code.Explorer.sendAutocomplete.httpRequest_;
   xhr.abort();
-  xhr.open('POST', '/code/autocomplete', true);
-  xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+  xhr.open('GET', '/code/autocomplete?parts=' +
+      encodeURIComponent(partsJSON), true);
   xhr.onreadystatechange = Code.Explorer.receiveAutocomplete;
-  xhr.send('parts=' + encodeURIComponent(partsJSON));
+  xhr.send();
   console.log('Sending to CC: ' + partsJSON);
 };
 Code.Explorer.sendAutocomplete.httpRequest_ = new XMLHttpRequest();

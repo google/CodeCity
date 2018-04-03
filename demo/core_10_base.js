@@ -454,7 +454,7 @@ $.user.eval.iobj = 'any';
 
 $.user.edit = function(cmd) {
   try {
-    var url = $.editor.edit(cmd.iobj, cmd.iobjstr, cmd.dobjstr);
+    var url = $.www.editor.edit(cmd.iobj, cmd.iobjstr, cmd.dobjstr);
   } catch (e) {
     user.narrate(e);
     return;

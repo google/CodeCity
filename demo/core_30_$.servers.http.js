@@ -331,18 +331,16 @@ $.servers.http.STATUS_CODES[510] = 'Not Extended';
 $.servers.http.STATUS_CODES[511] = 'Network Authentication Required';
 
 $.servers.http.route = function(url, table) {
-  // Given a URL and a router table, find the longest property on the table
-  // that is a prefix of the URL, and return the value in that property.
+  // Given a URL and a router table, find the first property that matches.
+  // Each property is a (regexp, handler) tuple.
   // Returns undefined if no match.
-  var matchLength = -1;
-  var matchObject;
   for (var name in table) {
-    if (url.startsWith(name) && name.length > matchLength) {
-      matchLength = name.length;
-      matchObject = table[name];
+    var rule = table[name];
+    if (rule.regexp.test(url)) {
+      return rule.handler;
     }
   }
-  return matchObject;
+  return undefined;
 };
 
 // Web server:
@@ -377,7 +375,7 @@ $.servers.http.connection.onReceiveChunk = function(chunk) {
   if (!this.request.parse(chunk)) {
     return;  // Wait for more lines to arrive.
   }
-  var obj = $.servers.http.route(this.request.url, $.www) || $.www['404'];
+  var obj = $.servers.http.route(this.request.url, $.www.ROUTER) || $.www['404'];
   try {
     obj.www(this.request, this.response);
   } finally {

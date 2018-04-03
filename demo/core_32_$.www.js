@@ -23,7 +23,8 @@
  */
 
 // HTTP router object:
-$.www = Object.create(null);
+$.www = {};
+$.www.ROUTER = Object.create(null);
 
 $.www['404'] = {};
 
@@ -67,14 +68,14 @@ $.www['404'].www.jssp = [
 ].join('\n');
 
 
-$.www['/'] = {};
+$.www.homepage = {};
 
-$.www['/'].www = function(request, response) {
+$.www.homepage.www = function(request, response) {
   // Overwrite on first execution.
-  $.www['/'].www = $.jssp.compile($.www['/'].www);
-  $.www['/'].www.call(this, request, response);
+  $.www.homepage.www = $.jssp.compile($.www.homepage.www);
+  $.www.homepage.www.call(this, request, response);
 };
-$.www['/'].www.jssp = [
+$.www.homepage.www.jssp = [
   '<!doctype html>',
   '<html lang="en">',
   '<head>',
@@ -130,17 +131,21 @@ $.www['/'].www.jssp = [
   '</html>'
 ].join('\n');
 
+$.www.ROUTER.homepage = {regexp: /^\/(\?|$)/, handler: $.www.homepage};
 
-$.www['/robots.txt'] = {};
 
-$.www['/robots.txt'].www = function(request, response) {
+$.www.robots = {};
+
+$.www.robots.www = function(request, response) {
   // Overwrite on first execution.
-  $.www['/robots.txt'].www = $.jssp.compile($.www['/robots.txt'].www);
-  $.www['/robots.txt'].www.call(this, request, response);
+  $.www.robots.www = $.jssp.compile($.www.robots.www);
+  $.www.robots.www.call(this, request, response);
 };
-$.www['/robots.txt'].www.jssp = [
+$.www.robots.www.jssp = [
   '<% response.setHeader(\'Content-Type\', \'text/plain; charset=utf-8\') %>',
   '# Don\'t index this Code City instance at this time.',
   'User-agent: *',
   'Disallow: /',
 ].join('\n');
+
+$.www.ROUTER.homepage = {regexp: /^\/robots\.txt(\?|$)/, handler: $.www.robots};
