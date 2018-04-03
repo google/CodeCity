@@ -738,8 +738,9 @@ Interpreter.prototype.initObject_ = function() {
     call: function(intrp, thread, state, thisVal, args) {
       var obj = args[0];
       var prop = args[1];
+      var perms = state.scope.perms;
       if (!(obj instanceof intrp.Object)) {
-        throw new intrp.Error(state.scope.perms, intrp.TYPE_ERROR,
+        throw new intrp.Error(perms, intrp.TYPE_ERROR,
             'Object.getOwnPropertyDescriptor called on non-object');
       }
       prop = String(prop);
@@ -747,11 +748,11 @@ Interpreter.prototype.initObject_ = function() {
       if (!pd) {
         return undefined;
       }
-      var descriptor = new intrp.Object(state.scope.perms);
-      intrp.setProperty(descriptor, 'configurable', pd.configurable);
-      intrp.setProperty(descriptor, 'enumerable', pd.enumerable);
-      intrp.setProperty(descriptor, 'writable', pd.writable);
-      intrp.setProperty(descriptor, 'value', pd.value);
+      var descriptor = new intrp.Object(perms);
+      descriptor.set('configurable', pd.configurable, perms);
+      descriptor.set('enumerable', pd.enumerable, perms);
+      descriptor.set('writable', pd.writable, perms);
+      descriptor.set('value', pd.value, perms);
       return descriptor;
     }
   });
@@ -978,18 +979,19 @@ Interpreter.prototype.initArray_ = function() {
     id: 'Array', length: 1,
     construct: function(intrp, thread, state, args) {
       var first = args[0];
-      var newArray = new intrp.Array(intrp.thread.perms());
+      var perms = state.scope.perms;
+      var newArray = new intrp.Array(perms);
       if (args.length === 1 && typeof first === 'number') {
         if (isNaN(Interpreter.legalArrayLength(first))) {
-          throw new intrp.Error(state.scope.perms, intrp.RANGE_ERROR,
+          throw new intrp.Error(perms, intrp.RANGE_ERROR,
               'Invalid array length');
         }
-        intrp.setProperty(newArray, 'length', first);
+        newArray.set('length', first, perms);
       } else {
         for (var i = 0; i < arguments.length; i++) {
-          intrp.setProperty(newArray, i, args[i]);
+          newArray.set(i, args[i], perms);
         }
-        intrp.setProperty(newArray, 'length', i);
+        newArray.set('length', i, perms);
       }
       return newArray;
     },
@@ -1102,7 +1104,8 @@ Interpreter.prototype.initArray_ = function() {
   this.createNativeFunction('Array.prototype.splice', wrapper, false);
 
   wrapper = function(begin, end) {
-    var list = new intrp.Array(intrp.thread.perms());
+    var perms = intrp.thread.perms();
+    var list = new intrp.Array(perms);
     begin = getInt(begin, 0);
     if (begin < 0) {
       begin = this.properties.length + begin;
@@ -1117,7 +1120,7 @@ Interpreter.prototype.initArray_ = function() {
     for (var i = begin; i < end; i++) {
       // TODO(cpcallen:perms): Use .get() - but is this always an intrpObject?
       var element = intrp.getProperty(this, i);
-      intrp.setProperty(list, length++, element);
+      list.set(String(length++), element, perms);
     }
     return list;
   };
@@ -1142,13 +1145,14 @@ Interpreter.prototype.initArray_ = function() {
   this.createNativeFunction('Array.prototype.join', wrapper, false);
 
   wrapper = function(var_args) {
-    var list = new intrp.Array(intrp.thread.perms());
+    var perms = intrp.thread.perms();
+    var list = new intrp.Array(perms);
     var length = 0;
     // Start by copying the current array.
     for (var i = 0; i < this.properties.length; i++) {
       // TODO(cpcallen:perms): Use .get() - but is this always an intrpObject?
       var element = intrp.getProperty(this, i);
-      intrp.setProperty(list, length++, element);
+      list.set(String(length++), element, perms);
     }
     // Loop through all arguments and copy them in.
     for (var i = 0; i < arguments.length; i++) {
@@ -1157,10 +1161,10 @@ Interpreter.prototype.initArray_ = function() {
         for (var j = 0; j < value.properties.length; j++) {
           // TODO(cpcallen:perms): Use .get()
           var element = intrp.getProperty(value, j);
-          intrp.setProperty(list, length++, element);
+          list.set(String(length++), element, perms);
         }
       } else {
-        intrp.setProperty(list, length++, value);
+        list.set(String(length++), value, perms);
       }
     }
     return list;
@@ -1500,22 +1504,26 @@ Interpreter.prototype.initRegExp_ = function() {
   this.createNativeFunction('RegExp.prototype.test', wrapper, false);
 
   wrapper = function(str) {
+    var perms = intrp.thread.perms();
+    if (!(this instanceof intrp.RegExp)) {
+      throw new intrp.Error(perms, intrp.TYPE_ERROR,
+          'Method RegExp.prototype.exec called on incompatible receiver ' +
+          this);
+    }
     str = str.toString();
     // Get lastIndex from wrapped regex, since this is settable.
-    // TODO(cpcallen:perms): Use .get() - but is this always an intrpObject?
-    this.regexp.lastIndex =
-        Number(intrp.getProperty(this, 'lastIndex'));
+    this.regexp.lastIndex = this.get('lastIndex', perms);
     var match = this.regexp.exec(str);
-    intrp.setProperty(this, 'lastIndex', this.regexp.lastIndex);
+    this.set('lastIndex', this.regexp.lastIndex, perms);
 
     if (match) {
-      var result = new intrp.Array(intrp.thread.perms());
+      var result = new intrp.Array(perms);
       for (var i = 0; i < match.length; i++) {
-        intrp.setProperty(result, i, match[i]);
+        result.set(String(i), match[i], perms);
       }
       // match has additional properties.
-      intrp.setProperty(result, 'index', match.index);
-      intrp.setProperty(result, 'input', match.input);
+      result.set('index', match.index, perms);
+      result.set('input', match.input, perms);
       return result;
     }
     return null;
@@ -1954,13 +1962,20 @@ Interpreter.prototype.pseudoToNative = function(pseudoObj, cycles) {
  * @return {!Interpreter.prototype.Array} The equivalent JS interpreter array.
  */
 Interpreter.prototype.arrayNativeToPseudo = function(nativeArray, owner) {
+  // BUG(cpcallen:perms): Kludge.  Incorrect except when doing .step
+  // or run.  Should be an argument instead, forcing caller to decide.
+  try {
+    var perms = this.thread.perms();
+  } catch (e) {
+    perms = this.ROOT;
+  }
   // For the benefit of closure-compiler, which doesn't think Arrays
   // should have non-numeric indices:
   var /** Object<Interpreter.Value> */ nativeObject = nativeArray;
   var pseudoArray = new this.Array(owner);
   var props = Object.getOwnPropertyNames(nativeArray);
   for (var i = 0; i < props.length; i++) {
-    this.setProperty(pseudoArray, props[i], nativeObject[props[i]]);
+    pseudoArray.set(props[i], nativeObject[props[i]], perms);
   }
   return pseudoArray;
 };
@@ -1974,8 +1989,13 @@ Interpreter.prototype.arrayNativeToPseudo = function(nativeArray, owner) {
  * @return {!Array<Interpreter.Value>} The equivalent native JS array.
  */
 Interpreter.prototype.arrayPseudoToNative = function(pseudoArray) {
-  // BUG(cpcallen:perms): Not necessarily correct.  Should be an argument.
-  var perms = this.thread.perms();
+  // BUG(cpcallen:perms): Kludge.  Incorrect except when doing .step
+  // or run.  Should be an argument instead, forcing caller to decide.
+  try {
+    var perms = this.thread.perms();
+  } catch (e) {
+    perms = this.ROOT;
+  }
   var nativeArray = [];
   // For the benefit of closure-compiler, which doesn't think Arrays
   // should have non-numeric indices:
@@ -2103,22 +2123,13 @@ Interpreter.prototype.hasProperty = function(obj, name) {
 };
 
 /**
- * Set a property value on a data object.
- *
- * TODO(cpcallen): This should be split into (at least) two different
- * functions, because non-writable properties are treated quite
- * differently by assignment and Object.defineProperty.
- *
- * TODO(cpcallen:perms): add perms argument.  At the moment we just
- * assume running thread, which can be wrong (e.g. in case of async
- * function)
- *
+ * Define a property value on a data object.
  * @param {!Interpreter.prototype.Object} obj Data object.
  * @param {Interpreter.Value} name Name of property.
  * @param {Interpreter.Value|Interpreter.Sentinel} value New property
  *     value.  Use Interpreter.VALUE_IN_DESCRIPTOR if value is handled
  *     by descriptor instead.
- * @param {!Object=} desc Optional descriptor object.
+ * @param {!Object} desc Descriptor object.
  */
 Interpreter.prototype.setProperty = function(obj, name, value, desc) {
   // BUG(cpcallen:perms): Kludge.  Incorrect except when doing .step
@@ -2129,28 +2140,21 @@ Interpreter.prototype.setProperty = function(obj, name, value, desc) {
     perms = this.ROOT;
   }
   name = String(name);
-  if (desc) {
-    var pd = {};
-    if ('configurable' in desc) pd.configurable = desc.configurable;
-    if ('enumerable' in desc) pd.enumerable = desc.enumerable;
-    if ('writable' in desc) pd.writable = desc.writable;
-    if (value === Interpreter.VALUE_IN_DESCRIPTOR) {
-      if ('value' in desc) {
-        pd.value = desc.value;
-      }
-    } else {
-      pd.value = value;
-    }
-    try {
-      Object.defineProperty(obj.properties, name, pd);
-    } catch (e) {
-      throw this.errorNativeToPseudo(e, perms);
+  var pd = {};
+  if ('configurable' in desc) pd.configurable = desc.configurable;
+  if ('enumerable' in desc) pd.enumerable = desc.enumerable;
+  if ('writable' in desc) pd.writable = desc.writable;
+  if (value === Interpreter.VALUE_IN_DESCRIPTOR) {
+    if ('value' in desc) {
+      pd.value = desc.value;
     }
   } else {
-    if (value instanceof Interpreter.Sentinel) {
-      throw Error('VALUE_IN_DESCRIPTOR but no descriptor??');
-    }
-    obj.set(name, value, perms);
+    pd.value = value;
+  }
+  try {
+    Object.defineProperty(obj.properties, name, pd);
+  } catch (e) {
+    throw this.errorNativeToPseudo(e, perms);
   }
 };
 
@@ -2295,7 +2299,7 @@ Interpreter.prototype.setValue = function(scope, ref, value) {
     this.setValueToScope(scope, ref[1], value);
   } else {
     // An obj/prop components tuple (foo.bar).
-    this.setProperty(ref[0], ref[1], value);
+    ref[0].set(ref[1], value, scope.perms);
   }
 };
 
@@ -3080,7 +3084,7 @@ Interpreter.prototype.installTypes = function() {
     // Build arguments variable.
     var argsList = new intrp.Array(this.owner);
     for (var i = 0; i < args.length; i++) {
-      intrp.setProperty(argsList, i, args[i]);
+      argsList.set(String(i), args[i], this.owner);
     }
     intrp.addVariableToScope(scope, 'arguments', argsList, true);
     // Add the function's name (var x = function foo(){};)
@@ -3818,7 +3822,7 @@ stepFuncs_['ArrayExpression'] = function (stack, state, node) {
     state.array_ = new this.Array(state.scope.perms);
     state.array_.properties.length = elements.length;
   } else {
-    this.setProperty(state.array_, n, state.value);
+    state.array_.set(String(n), state.value, state.scope.perms);
     n++;
   }
   while (n < elements.length) {
@@ -4489,7 +4493,7 @@ stepFuncs_['ObjectExpression'] = function (stack, state, node) {
       throw SyntaxError('Unknown object structure: ' + key['type']);
     }
     // Set the property computed in the previous execution.
-    this.setProperty(state.object_, propName, state.value);
+    state.object_.set(propName, state.value, state.scope.perms);
     state.n_ = ++n;
     property = node['properties'][n];
   }
