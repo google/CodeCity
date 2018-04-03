@@ -308,9 +308,8 @@ Interpreter.prototype.step = function() {
     if (e instanceof Error) {
       // Uh oh.  This is a real error in the interpreter.  Rethrow.
       throw e;
-    } else if (typeof e !== 'boolean' && typeof e !== 'number' &&
-        typeof e !== 'string' && e !== undefined && e !== null &&
-        !(e instanceof this.Object)) {
+    } else if (!(e instanceof this.Object) && e !== null &&
+        (typeof e === 'object' || typeof e === 'function')) {
       throw TypeError('Unexpected exception value ' + String(e));
     }
     this.unwind_(Interpreter.Completion.THROW, e, undefined);
