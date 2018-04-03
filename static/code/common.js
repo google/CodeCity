@@ -147,7 +147,8 @@ Code.Common.tokenizeSelector = function(text) {
   }
 
   // Third step is to parse each 'unparsed' token as a number, if it is
-  // preceded by a '[' token.
+  // preceded by a '[' token.  If the result is NaN (e.g. in the case it is an
+  // unquoted identifier) mark the token as invalid.
   for (var i = 1; i < tokens.length; i++) {
     var token = tokens[i];
     if (tokens[i - 1].type === '[' && token.type === 'unparsed') {

@@ -178,7 +178,7 @@ Code.ObjectPanel.highlight = function() {
 /**
  * Remove any properties that are shadowed by objects higher on the inheritance
  * chain.  Also sort the properties alphabetically.
- * @param {Array<!Array<string>>} data Property names from Code City.
+ * @param {Array<!Array<!Object>>} data Property names from Code City.
  */
 Code.ObjectPanel.filterShadowed = function(data) {
   if (!data || data.length < 2) {

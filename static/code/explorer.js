@@ -48,7 +48,7 @@ Code.Explorer.partsJSON = 'null';
  * E.g. '$.foo.bar' the 'bar' might become 'bart' or 'barf'.
  * @type {?Object}
  */
-Code.Explorer.lastToken = null;
+Code.Explorer.lastNameToken = null;
 
 /**
  * PID of task polling for changes to the input field.
@@ -94,19 +94,34 @@ Code.Explorer.receiveMessage = function() {
 
 /**
  * Handle any changes to the input field.
- * @param {boolean=} autocomplete If true, just trigger the autocomplete menu
- *     in the correct location.  Gets ignored if the input was changed by the
- *     user while the autocomplete data was being fetched.
  */
-Code.Explorer.inputChange = function(autocomplete) {
+Code.Explorer.inputChange = function() {
   var input = document.getElementById('input');
-  if (Code.Explorer.oldInputValue !== input.value) {
-    autocomplete = false;  // Input has actually changed.
-  } else if (!autocomplete) {
+  if (Code.Explorer.oldInputValue === input.value) {
     return;  // No change.
   }
   Code.Explorer.oldInputValue = input.value;
-  var tokens = Code.Common.tokenizeSelector(input.value);
+  var parsed = Code.Explorer.parseInput(input.value);
+  Code.Explorer.lastNameToken = parsed.lastNameToken;
+  var partsJSON = JSON.stringify(parsed.parts);
+  if (Code.Explorer.partsJSON === partsJSON) {
+    Code.Explorer.updateAutocompleteMenu(parsed.lastToken);
+  } else {
+    Code.Explorer.hideAutocompleteMenu();
+    Code.Explorer.setParts(parsed.parts, false);
+  }
+};
+
+/**
+ * Parse the input value.
+ * @param {string} inputValue Selector string from input field.
+ * @return {!Object} Object with three fields:
+ *     parts: Array of selector parts.
+ *     lastNameToken: Last token that was an id, str, or num.
+ *     lastToken: Last token.
+ */
+Code.Explorer.parseInput = function(inputValue) {
+  var tokens = Code.Common.tokenizeSelector(inputValue);
   var parts = [];
   var token = null;
   var lastNameToken = null;
@@ -128,19 +143,7 @@ Code.Explorer.inputChange = function(autocomplete) {
       }
     }
   }
-  if (autocomplete) {
-    // All we want to do is trigger the autocomplete.
-    Code.Explorer.updateAutocompleteMenu(token);
-    return;
-  }
-  Code.Explorer.lastToken = lastNameToken;
-  var partsJSON = JSON.stringify(parts);
-  if (Code.Explorer.partsJSON === partsJSON) {
-    Code.Explorer.updateAutocompleteMenu(token);
-  } else {
-    Code.Explorer.hideAutocompleteMenu();
-    Code.Explorer.setParts(parts, false);
-  }
+  return {parts: parts, lastNameToken: lastNameToken, lastToken: token};
 };
 
 /**
@@ -174,14 +177,19 @@ Code.Explorer.receiveAutocomplete = function() {
   var data = JSON.parse(xhr.responseText);
   Code.Explorer.filterShadowed(data);
   Code.Explorer.autocompleteData = data;
-  // Trigger the input to show autocompletion.
-  Code.Explorer.inputChange(true);
+
+  // If the input value is unchanged, display the autocompletion menu.
+  var input = document.getElementById('input');
+  if (Code.Explorer.oldInputValue === input.value) {
+    var parsed = Code.Explorer.parseInput(input.value);
+    Code.Explorer.updateAutocompleteMenu(parsed.lastToken);
+  }
 };
 
 /**
  * Given a partial prefix, filter the autocompletion menu and display
  * all matching options.
- * @param {Object} token Last token in the parts list.
+ * @param {?Object} token Last token in the parts list.
  */
 Code.Explorer.updateAutocompleteMenu = function(token) {
   var prefix = '';
@@ -258,7 +266,7 @@ Code.Explorer.caseInsensitiveComp = function(a, b) {
 };
 
 /**
- * Don't show any autocompletions if the cursor isn't at the end.
+ * Hide any autocompletions if the cursor isn't at the end.
  * @return {boolean} True if cursor is not at the end.
  */
 Code.Explorer.autocompleteCursorMonitor = function() {
@@ -403,7 +411,7 @@ Code.Explorer.inputFocus = function() {
 };
 
 /**
- * Stop polling for changes.
+ * Stop polling for changes and hide the autocomplete menu.
  */
 Code.Explorer.inputBlur = function() {
   if (Code.Explorer.inputBlur.disable_) {
@@ -450,11 +458,11 @@ Code.Explorer.inputKey = function(e) {
       // Add the selected autocomplete option to the input.
       var option = selected.getAttribute('data-option');
       parts.push({type: 'id', value: option});
-    } else if (Code.Explorer.lastToken && Code.Explorer.lastToken.valid) {
+    } else if (Code.Explorer.lastNameToken && Code.Explorer.lastNameToken.valid) {
       // The currently typed input should be considered complete.
       // E.g. $.foo<enter> is not waiting to become $.foot
-      parts.push({type: 'id', value: Code.Explorer.lastToken.value});
-      Code.Explorer.lastToken = null;
+      parts.push({type: 'id', value: Code.Explorer.lastNameToken.value});
+      Code.Explorer.lastNameToken = null;
     }
     Code.Explorer.setParts(parts, true);
     e.preventDefault();
@@ -475,12 +483,12 @@ Code.Explorer.inputKey = function(e) {
         var parts = JSON.parse(Code.Explorer.partsJSON);
         parts.push({type: 'id', value: prefix});
         Code.Explorer.setParts(parts, true);
-      } else if (Code.Explorer.lastToken) {
-        if (Code.Explorer.lastToken.type === 'id') {
+      } else if (Code.Explorer.lastNameToken) {
+        if (Code.Explorer.lastNameToken.type === 'id') {
           // Append the common prefix to the input.
           var input = document.getElementById('input');
           input.value = input.value.substring(0,
-              Code.Explorer.lastToken.index) + prefix;
+              Code.Explorer.lastNameToken.index) + prefix;
         }
         // TODO: Tab-completion of partial strings and numbers.
       }
@@ -530,7 +538,7 @@ Code.Explorer.getPrefix = function(str1, str2) {
 };
 
 /**
- * If a mouse-click caused the cursor co move away from the end,
+ * If a mouse-click caused the cursor to move away from the end,
  * close the autocomplete menu.
  */
 Code.Explorer.inputMouseDown = function() {
