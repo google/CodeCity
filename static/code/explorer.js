@@ -95,7 +95,8 @@ Code.Explorer.receiveMessage = function() {
 /**
  * Handle any changes to the input field.
  * @param {boolean=} autocomplete If true, just trigger the autocomplete menu
- *     in the correct location.
+ *     in the correct location.  Gets ignored if the input was changed by the
+ *     user while the autocomplete data was being fetched.
  */
 Code.Explorer.inputChange = function(autocomplete) {
   var input = document.getElementById('input');
@@ -363,7 +364,7 @@ Code.Explorer.autocompleteClick = function(e) {
 };
 
 /**
- * Set the currently specified path (e.g. ['$', 'user', 'location']).
+ * Set the currently specified path.
  * Notify the parent frame.
  * @param {!Array<!Object>} parts List of parts.
  * @param {boolean} updateInput Normalize the input if true.
@@ -379,7 +380,7 @@ Code.Explorer.setParts = function(parts, updateInput) {
 };
 
 /**
- * Set the input to be the specified path (e.g. ['$', 'user', 'location']).
+ * Set the input to be the specified path.
  * @param {!Array<!Object>} parts List of parts.
  */
 Code.Explorer.setInput = function(parts) {
@@ -453,6 +454,7 @@ Code.Explorer.inputKey = function(e) {
       // The currently typed input should be considered complete.
       // E.g. $.foo<enter> is not waiting to become $.foot
       parts.push({type: 'id', value: Code.Explorer.lastToken.value});
+      Code.Explorer.lastToken = null;
     }
     Code.Explorer.setParts(parts, true);
     e.preventDefault();

@@ -54,9 +54,9 @@ $.www.code.autocomplete = {};
 $.www.code.autocomplete.www = function(request, response) {
   // HTTP handler for /code/autocomplete
   // Provide object autocompletion service for the IDE's explorer.
-  // Takes one input: a JSON-encoded list of parts.
-  // Prints a 2D list of autocomplete options for the specified object,
-  // and each of its prototypes.
+  // Takes one input: a JSON-encoded list of parts from the 'parts' parameter.
+  // Prints a JSON-encoded 2D list of autocomplete options for the specified
+  // object, and each of its prototypes.
   var parts = JSON.parse(request.parameters.parts);
   try {
     var obj = $.utils.selector.partsToValue(parts);
@@ -83,8 +83,8 @@ $.www.code.objectPanel = {};
 $.www.code.objectPanel.www = function(request, response) {
   // HTTP handler for /code/objectPanel
   // Provide data for the IDE's object panels.
-  // Takes one input: a JSON-encoded list of parts.
-  // Prints a browser-executed JS data assignment.
+  // Takes one input: a JSON-encoded list of parts from the 'parts' parameter.
+  // Prints a browser-executed JavaScript data assignment.
   var data = {};
   var parts = JSON.parse(request.parameters.parts);
   if (parts.length) {

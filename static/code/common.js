@@ -70,17 +70,17 @@ Code.Common.tokenizeSelector = function(text) {
     var index = whitespaceLength + i;
     if (state === null) {
       if (char === "'") {
-        Code.Common.tokenizeSelector.pushUnparsed(buffer, index, tokens);
+        Code.Common.pushUnparsed(buffer, index, tokens);
         state = 'sqStr';
       } else if (char === '"') {
-        Code.Common.tokenizeSelector.pushUnparsed(buffer, index, tokens);
+        Code.Common.pushUnparsed(buffer, index, tokens);
         state = 'dqStr';
       } else {
         buffer.push(char);
       }
     } else if (state === 'sqStr') {
       if (char === "'") {
-        Code.Common.tokenizeSelector.pushString(state, buffer, index, tokens);
+        Code.Common.pushString("'", buffer, index, tokens);
         state = null;
       } else {
         buffer.push(char);
@@ -90,7 +90,7 @@ Code.Common.tokenizeSelector = function(text) {
       }
     } else if (state === 'dqStr') {
       if (char === '"') {
-        Code.Common.tokenizeSelector.pushString(state, buffer, index, tokens);
+        Code.Common.pushString('"', buffer, index, tokens);
         state = null;
       } else {
         buffer.push(char);
@@ -107,9 +107,11 @@ Code.Common.tokenizeSelector = function(text) {
     }
   }
   if (state !== null) {
-    Code.Common.tokenizeSelector.pushString(state, buffer, index + 1, tokens);
+    // Convert state into quote type.
+    var quotes = (state === 'sqStr' || state === 'sqSlash') ? "'" : '"';
+    Code.Common.pushString(quotes, buffer, index + 1, tokens);
   } else if (buffer.length) {
-    Code.Common.tokenizeSelector.pushUnparsed(buffer, index + 1, tokens);
+    Code.Common.pushUnparsed(buffer, index + 1, tokens);
   }
 
   // Second step is to parse each 'unparsed' token and split out '[',  ']' and
@@ -262,27 +264,13 @@ Code.Common.tokenizeSelector = function(text) {
 
 /**
  * Push a 'str' token type onto the list of tokens.
- * @param {string} state Current FSM state.
+ * Handles invalid strings, e.g. 'abc \u---- xyz'
+ * @param {string} quotes Quote type (' vs ").
  * @param {!Array<string>} buffer Array of chars that make the string.
- * @param {number} index Character index of this token in original input.
+ * @param {number} index Char index of start of this token in original input.
  * @param {!Array<!Object>} tokens List of tokens.
  */
-Code.Common.tokenizeSelector.pushString =
-    function(state, buffer, index, tokens) {
-  // Convert state into quote type.
-  var quotes;
-  switch (state) {
-    case 'sqStr':
-    case 'sqSlash':
-      quotes = "'";
-      break;
-    case 'dqStr':
-    case 'dqSlash':
-      quotes = '"';
-      break;
-    default:
-      throw 'Unknown state';
-  }
+Code.Common.pushString = function(quotes, buffer, index, tokens) {
   var token = {
     type: 'str',
     raw: quotes + buffer.join('') + quotes,
@@ -312,7 +300,7 @@ Code.Common.tokenizeSelector.pushString =
  * @param {number} index Character index of this token in original input.
  * @param {!Array<!Object>} tokens List of tokens.
  */
-Code.Common.tokenizeSelector.pushUnparsed = function(buffer, index, tokens) {
+Code.Common.pushUnparsed = function(buffer, index, tokens) {
   var raw = buffer.join('');
   buffer.length = 0;
   if (raw) {
