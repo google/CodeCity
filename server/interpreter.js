@@ -141,13 +141,6 @@ Interpreter.Sentinel = function Sentinel() {};
 Interpreter.SCOPE_REFERENCE = new Interpreter.Sentinel();
 
 /**
- * Unique sentinel for indicating, when used as the value of the value
- * parameter in calls to setProperty and friends, that the value
- * should be taken from the property descriptor instead.
- */
-Interpreter.VALUE_IN_DESCRIPTOR = new Interpreter.Sentinel();
-
-/**
  * Return a monotonically increasing count of milliseconds since this
  * Interpreter was last brought to PAUSED or RUNNING status from
  * STOPPED.  This excludes time when Node was suspended by the host OS
@@ -727,8 +720,7 @@ Interpreter.prototype.initObject_ = function() {
       if (intrp.hasProperty(descriptor, 'value')) {
         nativeDescriptor.value = descriptor.get('value', state.scope.perms);
       }
-      intrp.setProperty(obj, prop, Interpreter.VALUE_IN_DESCRIPTOR,
-          nativeDescriptor);
+      obj.defineProperty(prop, nativeDescriptor, state.scope.perms);
       return obj;
     }
   });
@@ -1879,7 +1871,7 @@ Interpreter.prototype.nativeToPseudo = function(nativeObj, owner) {
     var key = keys[i];
     var desc = Object.getOwnPropertyDescriptor(nativeObj, key);
     desc.value = this.nativeToPseudo(desc.value, owner);
-    this.setProperty(pseudoObj, key, Interpreter.VALUE_IN_DESCRIPTOR, desc);
+    pseudoObj.defineProperty(key, desc, owner);
   }
   return pseudoObj;
 };
@@ -2126,9 +2118,7 @@ Interpreter.prototype.hasProperty = function(obj, name) {
  * Define a property value on a data object.
  * @param {!Interpreter.prototype.Object} obj Data object.
  * @param {Interpreter.Value} name Name of property.
- * @param {Interpreter.Value|Interpreter.Sentinel} value New property
- *     value.  Use Interpreter.VALUE_IN_DESCRIPTOR if value is handled
- *     by descriptor instead.
+ * @param {Interpreter.Value} value New property value.
  * @param {!Object} desc Descriptor object.
  */
 Interpreter.prototype.setProperty = function(obj, name, value, desc) {
@@ -2140,9 +2130,7 @@ Interpreter.prototype.setProperty = function(obj, name, value, desc) {
     perms = this.ROOT;
   }
   name = String(name);
-  if (value !== Interpreter.VALUE_IN_DESCRIPTOR) {
-    desc = Object.create(desc, {value: {value: value}});
-  }
+  desc = Object.create(desc, {value: {value: value}});
   obj.defineProperty(name, desc, perms);
 };
 
