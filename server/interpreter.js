@@ -627,7 +627,7 @@ Interpreter.prototype.initObject_ = function() {
       }
     },
     call: function(intrp, thread, state, thisVal, args) {
-      this.construct.call(intrp, thread, state, args);
+      return this.construct.call(this, intrp, thread, state, args);
     }
   });
 
@@ -905,7 +905,7 @@ Interpreter.prototype.initFunction_ = function() {
           ast['body'][0]['expression'], intrp.global, code, state.scope.perms);
     },
     call: function(intrp, thread, state, thisVal, args) {
-      this.construct.call(intrp, thread, state, args);
+      return this.construct.call(this, intrp, thread, state, args);
     }
   });
 
@@ -989,7 +989,7 @@ Interpreter.prototype.initArray_ = function() {
       return newArray;
     },
     call: function(intrp, thread, state, thisVal, args) {
-      this.construct.call(intrp, thread, state, args);
+      return this.construct.call(this, intrp, thread, state, args);
     }
   });
 

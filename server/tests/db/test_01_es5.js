@@ -53,7 +53,8 @@ tests.builtinClasses = function() {
     {
       constructor: Date,
       classStr: '[object Date]',
-      prototypeClass: '[object Object]' // Was 'RegExp' in ES5.1.
+      prototypeClass: '[object Object]', // Was 'RegExp' in ES5.1.
+      functionNotConstructor: true
     },
     {
       constructor: Error,
@@ -147,6 +148,19 @@ tests.builtinClasses = function() {
           c + ' instanceClassIs');
       // Check instance is instanceof its contructor:
       console.assert((new c) instanceof c, c + ' instanceIsInstanceof');
+      if (!tc.functionNotConstructor) {
+        // Recheck instances when constructor called as function:
+        // Recheck instance's type:
+        console.assert(typeof c() === prototypeType, c + ' returnIs');
+        // Recheck instance's proto:
+        console.assert(Object.getPrototypeOf(c()) === c.prototype,
+            c + ' returnPrototypeIs');
+        // Recheck instance's class:
+        console.assert(Object.prototype.toString.apply(c()) === tc.classStr,
+            c + ' returnClassIs');
+        // Recheck instance is instanceof its contructor:
+        console.assert(c() instanceof c, c + ' returnIsInstanceof');
+      }
     }
     if (tc.literal) {
       var literalType = (tc.literalType || prototypeType);
