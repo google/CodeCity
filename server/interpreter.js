@@ -1924,7 +1924,7 @@ Interpreter.prototype.pseudoToNative = function(pseudoObj, cycles) {
     var length = pseudoObj.get('length', perms);
     for (i = 0; i < length; i++) {
       // TODO(cpcallen): do we really want to include inherited properties?
-      if (this.hasProperty(pseudoObj, i)) {
+      if (pseudoObj.has(String(i), perms)) {
         nativeObj[i] =
             this.pseudoToNative(pseudoObj.get(String(i), perms), cycles);
       }
@@ -2087,35 +2087,6 @@ Interpreter.prototype.getProperty = function(obj, name) {
       return this.getPrototype(obj).properties[name];
     }
   }
-};
-
-/**
- * Does the named property exist on a data object.  Implements 'in'.
- * Note that although primitives have (inherited) properties, 'in' does not
- * recognize them.  Thus "'length' in 'str'" is an error.
- *
- * TODO(cpcallen): Change typing.  There is almost certainly no reason
- * for this to accept primitives.
- * @param {Interpreter.Value} obj Data object.
- * @param {Interpreter.Value} name Name of property.
- * @return {boolean|undefined} True if property exists, undefined if primitive.
- */
-Interpreter.prototype.hasProperty = function(obj, name) {
-  // BUG(cpcallen:perms): Kludge.  Incorrect except when doing .step
-  // or run.  Should be an argument instead, forcing caller to decide.
-  try {
-    var perms = this.thread.perms();
-  } catch (e) {
-    perms = this.ROOT;
-  }
-  if (!(obj instanceof this.Object)) {
-    return undefined;
-  }
-  name = String(name);
-  if (!(obj instanceof this.Object)) {
-    obj = this.getPrototype(obj);
-  }
-  return obj.has(name, perms);
 };
 
 /**
@@ -3989,7 +3960,7 @@ stepFuncs_['BinaryExpression'] = function (stack, state, node) {
       throw new this.Error(state.scope.perms, this.TYPE_ERROR,
             "'in' expects an object, not '" + rightValue + "'");
       }
-      value = this.hasProperty(rightValue, leftValue);
+      value = rightValue.has(leftValue, state.scope.perms);
       break;
     case 'instanceof':
       if (!(rightValue instanceof this.Function)) {
