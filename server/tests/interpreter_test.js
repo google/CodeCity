@@ -249,7 +249,8 @@ exports.testClasses = function(t) {
       literal: '/foo/'
     },
     Date: {
-      prototypeClass: 'Object' // Was 'RegExp' in ES5.1.
+      prototypeClass: 'Object', // Was 'RegExp' in ES5.1.
+      functionNotConstructor: true  // Date() is not a constructor.
     },
     Error: {},
     EvalError: {
@@ -345,6 +346,25 @@ exports.testClasses = function(t) {
       name = c + 'InstanceIsInstanceof' + c;
       src = '(new ' + c + ') instanceof ' + c + ';';
       runTest(t, name, src, true);
+      if (!tc.functionNotConstructor) {
+        // Recheck instances when constructor called as function:
+        // Recheck instance's type:
+        name = c + 'ReturnIs' + prototypeType;
+        src = 'typeof ' + c + '();';
+        runTest(t, name, src, prototypeType);
+        // Recheck instance's proto:
+        name = c + 'ReturnPrototypeIs' + c + 'Prototype';
+        src = 'Object.getPrototypeOf(' + c + '()) === ' + c + '.prototype;';
+        runTest(t, name, src, true);
+        // Recheck instance's class:
+        name = c + 'ReturnClassIs' + cls;
+        src = 'Object.prototype.toString.apply(' + c + '());';
+        runTest(t, name, src, '[object ' + cls + ']');
+        // Recheck instance is instanceof its contructor:
+        name = c + 'ReturnIsInstanceof' + c;
+        src = c + '() instanceof ' + c + ';';
+        runTest(t, name, src, true);
+      }
     }
     if (tc.literal) {
       // Check literal's type:
