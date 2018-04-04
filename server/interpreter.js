@@ -2100,16 +2100,21 @@ Interpreter.prototype.getProperty = function(obj, name) {
  * @return {boolean|undefined} True if property exists, undefined if primitive.
  */
 Interpreter.prototype.hasProperty = function(obj, name) {
+  // BUG(cpcallen:perms): Kludge.  Incorrect except when doing .step
+  // or run.  Should be an argument instead, forcing caller to decide.
+  try {
+    var perms = this.thread.perms();
+  } catch (e) {
+    perms = this.ROOT;
+  }
   if (!(obj instanceof this.Object)) {
     return undefined;
   }
   name = String(name);
-  do {
-    if (obj.properties && name in obj.properties) {
-      return true;
-    }
-  } while ((obj = this.getPrototype(obj)));
-  return false;
+  if (!(obj instanceof this.Object)) {
+    obj = this.getPrototype(obj);
+  }
+  return obj.has(name, perms);
 };
 
 /**
@@ -2503,6 +2508,15 @@ Interpreter.prototype.Object.prototype.defineProperty = function(
 
 /**
  * @param {string} key
+ * @param {!Interpreter.Owner} perms
+ * @return {boolean}
+ */
+Interpreter.prototype.Object.prototype.has = function(key, perms) {
+  throw Error('Inner class method not callable on prototype');
+};
+
+/**
+ * @param {string} key
  * @param{!Interpreter.Owner} perms
  * @return {Interpreter.Value}
  */
@@ -2828,6 +2842,26 @@ Interpreter.prototype.installTypes = function() {
     } catch (e) {
       throw intrp.errorNativeToPseudo(e, perms);
     }
+  };
+
+  /**
+   * The [[HasProperty]] internal method from ES5.1 §8.12.6, with
+   * substantial adaptations for code city including added perms
+   * checks.
+   *
+   * TODO(cpcallen:perms): decide whether null user can test existence
+   * of properties.  (At the moment this is forbidden redundantly by
+   * type siganture an runtime check; one or both should be removed.)
+   * @param {string} key Key (name) of property to get.
+   * @param {!Interpreter.Owner} perms Who is trying to get it?
+   * @return {boolean} The value of the property, or undefined.
+   */
+  intrp.Object.prototype.has = function(key, perms) {
+    if (perms === null) {
+      throw new intrp.Error(perms, intrp.PERM_ERROR,
+          'The null user cannot test for existence of any properties');
+    }  // TODO(cpcallen:perms): add check for readability.
+    return key in this.properties;
   };
 
   /**
