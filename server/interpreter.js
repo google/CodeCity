@@ -688,39 +688,36 @@ Interpreter.prototype.initObject_ = function() {
     id: 'Object.defineProperty', length: 3,
     call: function(intrp, thread, state, thisVal, args) {
       var obj = args[0];
-      var prop = args[1];
-      var descriptor = args[2];
+      var key = args[1];
+      var attr = args[2];
       if (!(obj instanceof intrp.Object)) {
         throw new intrp.Error(state.scope.perms, intrp.TYPE_ERROR,
             'Object.defineProperty called on non-object');
       }
-      prop = String(prop);
-      if (!(descriptor instanceof intrp.Object)) {
+      key = String(key);
+      if (!(attr instanceof intrp.Object)) {
         throw new intrp.Error(state.scope.perms, intrp.TYPE_ERROR,
             'Property description must be an object');
       }
-      if (!obj.properties[prop] && obj.preventExtensions) {
+      if (!obj.properties[key] && obj.preventExtensions) {
         throw new intrp.Error(state.scope.perms, intrp.TYPE_ERROR,
-            "Can't define property '" + prop + "', object is not extensible");
+            "Can't define property '" + key + "', object is not extensible");
       }
       // Can't just use pseudoToNative since descriptors can inherit properties.
-      var nativeDescriptor = {};
-      if (intrp.hasProperty(descriptor, 'configurable')) {
-        nativeDescriptor.configurable =
-            !!descriptor.get('configurable', state.scope.perms);
+      var desc = new Descriptor;
+      if (intrp.hasProperty(attr, 'configurable')) {
+        desc.configurable = !!attr.get('configurable', state.scope.perms);
       }
-      if (intrp.hasProperty(descriptor, 'enumerable')) {
-        nativeDescriptor.enumerable =
-            !!descriptor.get('enumerable', state.scope.perms);
+      if (intrp.hasProperty(attr, 'enumerable')) {
+        desc.enumerable = !!attr.get('enumerable', state.scope.perms);
       }
-      if (intrp.hasProperty(descriptor, 'writable')) {
-        nativeDescriptor.writable =
-            !!descriptor.get('writable', state.scope.perms);
+      if (intrp.hasProperty(attr, 'writable')) {
+        desc.writable = !!attr.get('writable', state.scope.perms);
       }
-      if (intrp.hasProperty(descriptor, 'value')) {
-        nativeDescriptor.value = descriptor.get('value', state.scope.perms);
+      if (intrp.hasProperty(attr, 'value')) {
+        desc.value = attr.get('value', state.scope.perms);
       }
-      obj.defineProperty(prop, nativeDescriptor, state.scope.perms);
+      obj.defineProperty(key, desc, state.scope.perms);
       return obj;
     }
   });
@@ -1871,7 +1868,7 @@ Interpreter.prototype.nativeToPseudo = function(nativeObj, owner) {
     var key = keys[i];
     var desc = Object.getOwnPropertyDescriptor(nativeObj, key);
     desc.value = this.nativeToPseudo(desc.value, owner);
-    pseudoObj.defineProperty(key, desc, owner);
+    pseudoObj.defineProperty(key, /** @type {!Descriptor} */ (desc), owner);
   }
   return pseudoObj;
 };
@@ -2119,7 +2116,7 @@ Interpreter.prototype.hasProperty = function(obj, name) {
  * @param {!Interpreter.prototype.Object} obj Data object.
  * @param {Interpreter.Value} name Name of property.
  * @param {Interpreter.Value} value New property value.
- * @param {!Object} desc Descriptor object.
+ * @param {!Descriptor} desc Property descriptor object.
  */
 Interpreter.prototype.setProperty = function(obj, name, value, desc) {
   // BUG(cpcallen:perms): Kludge.  Incorrect except when doing .step
@@ -2130,7 +2127,7 @@ Interpreter.prototype.setProperty = function(obj, name, value, desc) {
     perms = this.ROOT;
   }
   name = String(name);
-  desc = Object.create(desc, {value: {value: value}});
+  desc = desc.withValue(value);
   obj.defineProperty(name, desc, perms);
 };
 
@@ -2515,7 +2512,7 @@ Interpreter.prototype.Object.prototype.class = '';
 
 /**
  * @param {string} key
- * @param {!Object<Interpreter.Value>} desc
+ * @param {!Descriptor} desc
  * @param {!Interpreter.Owner} perms
  */
 Interpreter.prototype.Object.prototype.defineProperty = function(
@@ -2835,7 +2832,7 @@ Interpreter.prototype.installTypes = function() {
    * with substantial adaptations for code city including added perms
    * checks (but no support for getter or setters).
    * @param {string} key Key (name) of property to set.
-   * @param {!Object<Interpreter.Value>} desc The property descriptor.
+   * @param {!Descriptor} desc The property descriptor.
    * @param {!Interpreter.Owner} perms Who is trying to set it?
    */
   intrp.Object.prototype.defineProperty = function(key, desc, perms) {
