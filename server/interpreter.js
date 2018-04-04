@@ -1518,46 +1518,39 @@ Interpreter.prototype.initRegExp_ = function() {
  */
 Interpreter.prototype.initError_ = function() {
   var intrp = this;
-  // Error prototype.
-  this.ERROR = new this.Error(this.ROOT, this.OBJECT);
-  this.builtins_['Error.prototype'] = this.ERROR;
-  // Error constructor.
-  var wrapper = function(message) {
-    var newError = new intrp.Error(intrp.thread.perms());
-    if (message !== undefined) {
-      intrp.setProperty(newError, 'message', String(message), Descriptor.wc);
-    }
-    return newError;
+
+  var createErrorClass = function(name) {
+    var protoproto = name === 'Error' ? intrp.OBJECT : intrp.ERROR;
+    var proto = new intrp.Error(intrp.ROOT, protoproto);
+    intrp.builtins_[name + '.prototype'] = proto;
+    new intrp.NativeFunction({
+      name: name, length: 1,
+      construct: function(intrp, thread, state, args) {
+        var message = args[0];
+        var err = new intrp.Error(state.scope.perms, proto);
+        if (message !== undefined) {
+          intrp.setProperty(err, 'message', String(message), Descriptor.wc);
+        }
+        return err;
+      },
+      call: function(intrp, thread, state, thisVal, args) {
+        return this.construct.call(this, intrp, thread, state, args);
+      }
+    });
+    return proto;
   };
-  this.createNativeFunction('Error', wrapper, true);
+
+  this.ERROR = createErrorClass('Error');  // Must be first!
+  this.EVAL_ERROR = createErrorClass('EvalError');
+  this.RANGE_ERROR = createErrorClass('RangeError');
+  this.REFERENCE_ERROR = createErrorClass('ReferenceError');
+  this.SYNTAX_ERROR = createErrorClass('SyntaxError');
+  this.TYPE_ERROR = createErrorClass('TypeError');
+  this.URI_ERROR = createErrorClass('URIError');
+  this.PERM_ERROR = createErrorClass('PermissionError');
 
   this.createNativeFunction('Error.prototype.toString',
                             this.Error.prototype.toString, false);
-
-  var createErrorSubclass = function(name) {
-    var prototype = new intrp.Error(intrp.ROOT);
-    intrp.builtins_[name + '.prototype'] = prototype;
-
-    // TODO(cpcallen): Constructors can (probably) be polyfills.
-    wrapper = function(message) {
-      var newError = new intrp.Error(intrp.thread.perms(), prototype);
-      if (message !== undefined) {
-        intrp.setProperty(newError, 'message', String(message), Descriptor.wc);
-      }
-      return newError;
-    };
-    intrp.createNativeFunction(name, wrapper, true);
-
-    return prototype;
-  };
-
-  this.EVAL_ERROR = createErrorSubclass('EvalError');
-  this.RANGE_ERROR = createErrorSubclass('RangeError');
-  this.REFERENCE_ERROR = createErrorSubclass('ReferenceError');
-  this.SYNTAX_ERROR = createErrorSubclass('SyntaxError');
-  this.TYPE_ERROR = createErrorSubclass('TypeError');
-  this.URI_ERROR = createErrorSubclass('URIError');
-  this.PERM_ERROR = createErrorSubclass('PermissionError');
 };
 
 /**
