@@ -2140,22 +2140,10 @@ Interpreter.prototype.setProperty = function(obj, name, value, desc) {
     perms = this.ROOT;
   }
   name = String(name);
-  var pd = {};
-  if ('configurable' in desc) pd.configurable = desc.configurable;
-  if ('enumerable' in desc) pd.enumerable = desc.enumerable;
-  if ('writable' in desc) pd.writable = desc.writable;
-  if (value === Interpreter.VALUE_IN_DESCRIPTOR) {
-    if ('value' in desc) {
-      pd.value = desc.value;
-    }
-  } else {
-    pd.value = value;
+  if (value !== Interpreter.VALUE_IN_DESCRIPTOR) {
+    desc = Object.create(desc, {value: {value: value}});
   }
-  try {
-    Object.defineProperty(obj.properties, name, pd);
-  } catch (e) {
-    throw this.errorNativeToPseudo(e, perms);
-  }
+  obj.defineProperty(name, desc, perms);
 };
 
 /**
@@ -2539,6 +2527,16 @@ Interpreter.prototype.Object.prototype.class = '';
 
 /**
  * @param {string} key
+ * @param {!Object<Interpreter.Value>} desc
+ * @param {!Interpreter.Owner} perms
+ */
+Interpreter.prototype.Object.prototype.defineProperty = function(
+    key, desc, perms) {
+  throw Error('Inner class method not callable on prototype');
+};
+
+/**
+ * @param {string} key
  * @param{!Interpreter.Owner} perms
  * @return {Interpreter.Value}
  */
@@ -2843,6 +2841,26 @@ Interpreter.prototype.installTypes = function() {
   intrp.Object.prototype.proto = null;
   /** @type {string} */
   intrp.Object.prototype.class = 'Object';
+
+  /**
+   * The [[DefineOwnProperty]] internal method from ES5.1 §8.12.9,
+   * with substantial adaptations for code city including added perms
+   * checks (but no support for getter or setters).
+   * @param {string} key Key (name) of property to set.
+   * @param {!Object<Interpreter.Value>} desc The property descriptor.
+   * @param {!Interpreter.Owner} perms Who is trying to set it?
+   */
+  intrp.Object.prototype.defineProperty = function(key, desc, perms) {
+    if (perms === null) {
+      throw new intrp.Error(perms, intrp.PERM_ERROR,
+          'The null user cannot define any properties');
+    }  // TODO(cpcallen:perms): add "controls"-type perm check.
+    try {
+      Object.defineProperty(this.properties, key, desc);
+    } catch (e) {
+      throw intrp.errorNativeToPseudo(e, perms);
+    }
+  };
 
   /**
    * The [[Get]] internal method from ES5.1 §8.12.3, with substantial
