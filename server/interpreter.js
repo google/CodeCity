@@ -3767,16 +3767,43 @@ FunctionResult.CallAgain = new FunctionResult;
 var NativeFunctionOptions;
 
 /**
- * Class for property descriptors, with commonly-used examples.
+ * Class for property descriptors, with commonly-used examples and a
+ * function to easily create new descriptors from a prototype.
  * @constructor
  * @param {boolean=} writable Is the property writable?
  * @param {boolean=} enumerable Is the property enumerable?
  * @param {boolean=} configurable Is the property configurable?
  */
 var Descriptor = function(writable, enumerable, configurable) {
-  this.writable = writable;
-  this.enumerable = enumerable;
-  this.configurable = configurable;
+  if (writable !== undefined) this.writable = writable;
+  if (enumerable !== undefined) this.enumerable = enumerable;
+  if (configurable !== undefined) this.configurable = configurable;
+};
+
+/* Type declaration for the properties that
+ * intrp.Object.prototype.defineProperty expects to see on a
+ * descriptor.  We use "|undefined)", but what we really mean is "|not
+ * defined)" because unfortunately closure-compiler's type system has
+ * no way to represent the latter.
+ */
+/** @type {(Interpreter.Value|undefined)} */
+Descriptor.prototype.value;
+/** @type {boolean|undefined} */
+Descriptor.prototype.writable;
+/** @type {boolean|undefined} */
+Descriptor.prototype.enumerable;
+/** @type {boolean|undefined} */
+Descriptor.prototype.configurable;
+
+/**
+ * Returns a new descriptor with the same properties as this one, with
+ * the addition of a value: member with the given value.
+ * @param{Interpreter.Value} value Value for the new descriptor.
+ */
+Descriptor.prototype.withValue = function(value) {
+  var desc = Object.create(this);
+  desc.value = value;
+  return desc;
 };
 
 /** @const */ Descriptor.wec = new Descriptor(true, true, true);
