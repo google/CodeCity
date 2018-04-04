@@ -690,34 +690,35 @@ Interpreter.prototype.initObject_ = function() {
       var obj = args[0];
       var key = args[1];
       var attr = args[2];
+      var perms = state.scope.perms;
       if (!(obj instanceof intrp.Object)) {
-        throw new intrp.Error(state.scope.perms, intrp.TYPE_ERROR,
+        throw new intrp.Error(perms, intrp.TYPE_ERROR,
             'Object.defineProperty called on non-object');
       }
       key = String(key);
       if (!(attr instanceof intrp.Object)) {
-        throw new intrp.Error(state.scope.perms, intrp.TYPE_ERROR,
+        throw new intrp.Error(perms, intrp.TYPE_ERROR,
             'Property description must be an object');
       }
       if (!obj.properties[key] && obj.preventExtensions) {
-        throw new intrp.Error(state.scope.perms, intrp.TYPE_ERROR,
+        throw new intrp.Error(perms, intrp.TYPE_ERROR,
             "Can't define property '" + key + "', object is not extensible");
       }
       // Can't just use pseudoToNative since descriptors can inherit properties.
       var desc = new Descriptor;
-      if (intrp.hasProperty(attr, 'configurable')) {
-        desc.configurable = !!attr.get('configurable', state.scope.perms);
+      if (attr.has('configurable', perms)) {
+        desc.configurable = !!attr.get('configurable', perms);
       }
-      if (intrp.hasProperty(attr, 'enumerable')) {
-        desc.enumerable = !!attr.get('enumerable', state.scope.perms);
+      if (attr.has('enumerable', perms)) {
+        desc.enumerable = !!attr.get('enumerable', perms);
       }
-      if (intrp.hasProperty(attr, 'writable')) {
-        desc.writable = !!attr.get('writable', state.scope.perms);
+      if (attr.has('writable', perms)) {
+        desc.writable = !!attr.get('writable', perms);
       }
-      if (intrp.hasProperty(attr, 'value')) {
-        desc.value = attr.get('value', state.scope.perms);
+      if (attr.has('value', perms)) {
+        desc.value = attr.get('value', perms);
       }
-      obj.defineProperty(key, desc, state.scope.perms);
+      obj.defineProperty(key, desc, perms);
       return obj;
     }
   });
