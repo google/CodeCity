@@ -3127,6 +3127,10 @@ Interpreter.prototype.installTypes = function() {
   /** @override */
   intrp.OldNativeFunction.prototype.call = function(
       intrp, thread, state, thisVal, args) {
+    if (this.owner === null) {
+      throw new intrp.Error(state.scope.perms, intrp.PERM_ERROR,
+          'Functions with null owner are not executable');
+    }
     return this.impl.apply(thisVal, args);
   };
 
@@ -3137,6 +3141,10 @@ Interpreter.prototype.installTypes = function() {
       // Pass to super, which will complain about non-callability:
       intrp.Function.prototype.construct.call(
           /** @type {?} */ (this), intrp, thread, state, args);
+    }
+    if (this.owner === null) {
+      throw new intrp.Error(state.scope.perms, intrp.PERM_ERROR,
+          'Functions with null owner are not constructable');
     }
     return this.impl.apply(undefined, args);
   };
@@ -3150,15 +3158,9 @@ Interpreter.prototype.installTypes = function() {
    * @param {?Interpreter.prototype.Object=} proto Prototype object or null.
    */
   intrp.OldAsyncFunction = function(impl, owner, proto) {
-    intrp.Function.call(/** @type {?} */ (this), owner, proto);
-    if (!impl) { // Deserializing
-      this.impl = function () {};
-      this.illegalConstructor = true;
-      return;
-    }
-    this.impl = impl;
-    intrp.setProperty(this, 'length', impl.length, Descriptor.none);
-    this.illegalConstructor = true;
+    // BUG(cpcallen): This results in .length being +2 too large.
+    intrp.OldNativeFunction.call(
+        /** @type {?} */ (this), impl, false, owner, proto);
   };
 
   intrp.OldAsyncFunction.prototype =
@@ -3168,6 +3170,10 @@ Interpreter.prototype.installTypes = function() {
   /** @override */
   intrp.OldAsyncFunction.prototype.call = function(
       intrp, thread, state, thisVal, args) {
+    if (this.owner === null) {
+      throw new intrp.Error(state.scope.perms, intrp.PERM_ERROR,
+          'Functions with null owner are not executable');
+    }
     var done = false;
 
     /**
@@ -3217,7 +3223,7 @@ Interpreter.prototype.installTypes = function() {
   };
 
   /**
-   * Async functions not constructable; use generc construct which
+   * Async functions not constructable; use generic construct which
    * always throws.
    * @override */
   intrp.OldAsyncFunction.prototype.construct =
