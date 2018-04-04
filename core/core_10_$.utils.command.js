@@ -22,39 +22,6 @@
  * @author fraser@google.com (Neil Fraser)
  */
 
-$.utils.$ = function(str) {
-  /* Parse the string to extract a reference.
-   * This is the actual implementation of the $() function.
-   */
-  // TODO: Support notations starting with @roomname and ~username.
-  var m = str.match(/^\s*(\$|me|~|here|@)(.*)\s*$/);
-  if (!m) {
-    return undefined;
-  }
-  var root = m[1];
-  var suffix = m[2];
-  if (root === '$') {
-    root = $;
-  } else if (root === '~' || root === 'me') {
-    root = user;
-  } else if (root === '@' || root === 'here') {
-    root = user.location;
-  } else {
-    throw Error("Can't happen.  Regex is too liberal.");
-  }
-  if (!suffix) {
-    return root;
-  }
-  // This regex has two main groups:
-  // 1) match .foo
-  // 2) match [42] or ['bar'] or ["baz"]
-  if (suffix.search(/^((\s*\.\s*[A-Za-z$_][A-Za-z0-9$_]*\s*)|(\s*\[\s*(\d+|'([^'\\]*(\\.[^'\\]*)*)'|"([^"\\]*(\\.[^"\\]*)*)")\s*\]\s*))+$/) === 0) {
-    // TODO: Handle permissions for -r properties.
-    return eval('(root)' + suffix);
-  }
-  return undefined;
-};
-
 $.utils.command = {};
 
 $.utils.command.prepositions = Object.create(null);

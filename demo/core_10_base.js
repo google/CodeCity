@@ -24,7 +24,8 @@
 
 var user = null;
 var $ = function() {
-  return $.utils.$.apply($.utils, arguments);
+  // $() is an alias for $.utils.selector.toValue().
+  return $.utils.selector.toValue.apply($.utils, arguments);
 };
 
 // System object: $.system
@@ -453,7 +454,7 @@ $.user.eval.iobj = 'any';
 
 $.user.edit = function(cmd) {
   try {
-    var url = $.editor.edit(cmd.iobj, cmd.iobjstr, cmd.dobjstr);
+    var url = $.www.editor.edit(cmd.iobj, cmd.iobjstr, cmd.dobjstr);
   } catch (e) {
     user.narrate(e);
     return;
@@ -590,10 +591,11 @@ $.connection.close = function() {
   $.system.connectionClose(this);
 };
 
+$.servers = {};
 
-$.telnet = Object.create($.connection);
+$.servers.telnet = Object.create($.connection);
 
-$.telnet.onReceiveLine = function(text) {
+$.servers.telnet.onReceiveLine = function(text) {
   if (this.user) {
     user = this.user;
     $.execute(text);
@@ -607,7 +609,7 @@ $.telnet.onReceiveLine = function(text) {
   }
   if (!$.userDatabase[m[1]]) {
     var guest = Object.create($.user);
-    guest.name = 'Guest' + $.telnet.onReceiveLine.guestCount++;
+    guest.name = 'Guest' + $.servers.telnet.onReceiveLine.guestCount++;
     $.userDatabase[m[1]] = guest;
     guest.description = 'A new user who has not yet set his/her description.';
     guest.moveTo($.startRoom);
@@ -630,9 +632,9 @@ $.telnet.onReceiveLine = function(text) {
     user.location.narrate(user.name + ' connects.');
   }
 };
-$.telnet.onReceiveLine.guestCount = 0;
+$.servers.telnet.onReceiveLine.guestCount = 0;
 
-$.telnet.onEnd = function() {
+$.servers.telnet.onEnd = function() {
   if (this.user) {
     if (user.location) {
       user.location.narrate(user.name + ' disconnects.');

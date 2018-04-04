@@ -22,9 +22,9 @@
  * @author cpcallen@google.com (Christopher Allen)
  */
 
-$.editor = { objs: [] };
+$.www.editor = { objs: [] };
 
-$.editor.edit = function(obj, name, key) {
+$.www.editor.edit = function(obj, name, key) {
   /* Return a (valid) URL for a web editing session editing obj[key],
    * where obj might more commonly be known as name.
    */
@@ -32,7 +32,7 @@ $.editor.edit = function(obj, name, key) {
     throw TypeError('Can only edit objects');
   }
   var objId = this.objIdFor(obj);
-  var url = '/edit?objId=' + objId;
+  var url = '/editor?objId=' + objId;
   if (name) {
     url += '&name=' + encodeURIComponent(name);
   }
@@ -42,7 +42,7 @@ $.editor.edit = function(obj, name, key) {
   return url;
 };
 
-$.editor.objIdFor = function(obj) {
+$.www.editor.objIdFor = function(obj) {
   /* Find index of obj in this.objs, adding it if it's not already there.
    */
   for (var i = 0; i < this.objs.length; i++) {
@@ -55,7 +55,7 @@ $.editor.objIdFor = function(obj) {
   return id;
 };
 
-$.editor.load = function(obj, key) {
+$.www.editor.load = function(obj, key) {
   /* Return string containing initial editor contents for editing
    * obj[key].
    */
@@ -68,7 +68,7 @@ $.editor.load = function(obj, key) {
       String(v));
 };
 
-$.editor.save = function(obj, key, src) {
+$.www.editor.save = function(obj, key, src) {
   /* Eval the string src and (if successful) save the resulting value
    * as obj[key].  If the value produced from src and the existing
    * value of obj[key] are both objects, then an attempt will be made
@@ -91,19 +91,19 @@ $.editor.save = function(obj, key, src) {
 };
 
 
-$.editor.page = function(request, response) {
+$.www.editor.www = function(request, response) {
   // Overwrite on first execution.
-  $.editor.page = $.jssp.compile($.editor.page);
-  $.editor.page.call(this, request, response);
+  $.www.editor.www = $.jssp.compile($.www.editor.www);
+  $.www.editor.www.call(this, request, response);
 };
-$.editor.page.jssp = [
+$.www.editor.www.jssp = [
   '<%',
   'var params = request.parameters;',
   'var objId = params.objId;',
-  'var obj = $.editor.objs[params.objId];',
+  'var obj = $.www.editor.objs[params.objId];',
   'if (!$.utils.isObject(obj)) {',
   '  // Bad edit URL.',
-  '  $.pages[\'404\'](request, response);',
+  '  $.www[\'404\'](request, response);',
   '  return;',
   '}',
   'var key = params.key;',
@@ -114,7 +114,7 @@ $.editor.page.jssp = [
   '    // Use Acorn to trim source to first expression.',
   '    var ast = $.utils.acorn.parseExpressionAt(src, 0, { ecmaVersion: 5 });',
   '    src = src.substring(ast.start, ast.end);',
-  '    src = $.editor.save(obj, key, src);',
+  '    src = $.www.editor.save(obj, key, src);',
   '    status = \'(saved)\';',
   '    if (typeof obj[key] === \'function\') {',
   '      if (params.isVerb) {',
@@ -133,7 +133,7 @@ $.editor.page.jssp = [
   '    status = \'(ERROR: \' + String(e) + \')\';',
   '  }',
   '} else {',
-  '  src = $.editor.load(obj, key);',
+  '  src = $.www.editor.load(obj, key);',
   '}',
   'var isVerb = (Object.getOwnPropertyDescriptor(obj, key) && typeof obj[key] === \'function\') && obj[key].verb ? \'checked\' : \'\';',
   'var verb = $.utils.htmlEscape((obj[key] && obj[key].verb) || \'\');',
@@ -159,7 +159,7 @@ $.editor.page.jssp = [
   '  <script src="/static/CodeMirror/codemirror.js"></script>',
   '  <script src="/static/CodeMirror/javascript.js"></script>',
   '</head><body>',
-  '  <form action="/edit" method="post">',
+  '  <form action="/editor" method="post">',
   '  <button type="submit" class="jfk-button-submit" id="submit"',
   '    onclick="document.getElementById(\'src\').value = editor.getValue()">Save</button>',
   '  <h1>Editing <%= name %>.<%= key %>',
@@ -210,4 +210,4 @@ $.editor.page.jssp = [
   '</body></html>',
 ].join('\n');
 
-$.http.router.edit = {regexp: /^\/edit(\?|$)/, handler: $.editor.page};
+$.www.ROUTER.editor = {regexp: /^\/editor(\?|$)/, handler: $.www.editor};

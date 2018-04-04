@@ -129,7 +129,7 @@ CCC.World.receiveMessage = function(e) {
     document.getElementById('iframeStorage').innerHTML = '';
     CCC.World.historyMessages.length = 0;
     var firstPanoramaMessage = CCC.World.panoramaMessages[0];
-    if (firstPanoramaMessage && firstPanoramaMessage.type == 'connected' &&
+    if (firstPanoramaMessage && firstPanoramaMessage.type === 'connected' &&
         !firstPanoramaMessage.isConnected) {
       // Clear the date/time on the 'Reconnect?' panel (if it exists).
       firstPanoramaMessage.time = '...';

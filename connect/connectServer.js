@@ -101,6 +101,8 @@ function serveFile(response, filename, subs) {
     // Serve page to user.
     response.statusCode = 200;
     response.setHeader('Content-Type', 'text/html');
+    // Prevent a user from iframing this page and scraping the session ID.
+    response.setHeader('X-Frame-Options', 'DENY');
     response.end(data);
   });
 }
