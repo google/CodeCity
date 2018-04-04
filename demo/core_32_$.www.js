@@ -1,6 +1,6 @@
 /**
  * @license
- * Code City: Web www.
+ * Code City: Web handlers.
  *
  * Copyright 2017 Google Inc.
  *
@@ -18,7 +18,7 @@
  */
 
 /**
- * @fileoverview Web www for Code City.
+ * @fileoverview Top-level URL handlers for Code City.
  * @author fraser@google.com (Neil Fraser)
  */
 

@@ -30,41 +30,37 @@ $.servers.http.IncomingMessage = function() {
   this.headers = Object.create(null);
   this.headers.cookie = Object.create(null);
   this.parameters = Object.create(null);
-  // State -1: Invalid.
-  // State 0: Parsing request line.
-  // State 1: Parsing headers.
-  // State 2: Parsing body.
-  // State 3: Fully parsed.
-  this.state_ = 0;
+  // One of 'invalid', 'request', 'headers', 'body', 'done'.
+  this.state_ = 'request';
 };
 
 $.servers.http.IncomingMessage.prototype.parse = function(line) {
   // Returns true if parsing is complete, false if more lines are needed.
-  if (this.state_ === 0) {
+  if (this.state_ === 'request') {
     // Match "GET /images/logo.png HTTP/1.1"
     line = line.trim();
     var m = line.match(/^(GET|POST) +(\S+)/);
     if (!m) {
       $.system.log('Unrecognized WWW request line:', line);
-      this.state_ = -1;
+      this.state_ = 'invalid';
       return true;
     }
     this.method = m[1];
     this.url = m[2];
     this.parseUrl_(this.url);
-    this.state_ = 1;
+    this.state_ = 'headers';
     return false;
   }
-  if (this.state_ === 1) {
+  if (this.state_ === 'headers') {
     line = line.trim();
     if (!line) {
       if (this.method === 'POST') {
-        this.state_ = 2;
+        this.state_ = 'body';
         this.data = '';
         return false;
       } else {
         this.parseParameters_(this.query);
-        this.state_ = 3;
+        this.state_ = 'done';
         this.data = undefined;
         return true;
       }
@@ -114,11 +110,11 @@ $.servers.http.IncomingMessage.prototype.parse = function(line) {
     this.headers[name] = value;
     return false;
   }
-  if (this.state_ === 2) {
+  if (this.state_ === 'body') {
     this.data += line;
     if (this.data.length >= this.headers['content-length']) {
       this.parseParameters_(this.data);
-      this.state_ = 3;
+      this.state_ = 'done';
       return true;
     }
     return false;

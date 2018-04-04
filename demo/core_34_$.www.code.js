@@ -1,6 +1,6 @@
 /**
  * @license
- * Code City: Code.
+ * Code City: Code IDE.
  *
  * Copyright 2018 Google Inc.
  *
@@ -64,9 +64,9 @@ $.www.code.autocomplete.www = function(request, response) {
     obj = null;
   }
   var completions = [];
+  // For simplicity, don't provide completions for primitives (despite the
+  // fact that (for example) numbers inherit a '.toFixed' function).
   if (obj !== null && (typeof obj === 'object' || typeof obj === 'function')) {
-    // For simplicity, don't provide completions for primitives (despite the
-    // fact that (for example) numbers inherit a '.toFixed' function).
     do {
       completions.push(Object.getOwnPropertyNames(obj));
     } while ((obj = Object.getPrototypeOf(obj)));
@@ -92,7 +92,7 @@ $.www.code.objectPanel.www = function(request, response) {
       var value = $.utils.selector.partsToValue(parts);
     } catch (e) {
       // Parts don't match a valid path.
-      // TODO: Send an informative error message.
+      // TODO(fraser): Send an informative error message.
       data = null;
     }
     if (data) {
