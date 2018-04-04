@@ -1537,7 +1537,8 @@ Interpreter.prototype.initError_ = function() {
         var message = args[0];
         var err = new intrp.Error(state.scope.perms, proto);
         if (message !== undefined) {
-          intrp.setProperty(err, 'message', String(message), Descriptor.wc);
+          err.defineProperty('message',
+              Descriptor.wc.withValue(String(message)), state.scope.perms);
         }
         return err;
       },
@@ -2112,26 +2113,6 @@ Interpreter.prototype.hasProperty = function(obj, name) {
 };
 
 /**
- * Define a property value on a data object.
- * @param {!Interpreter.prototype.Object} obj Data object.
- * @param {Interpreter.Value} name Name of property.
- * @param {Interpreter.Value} value New property value.
- * @param {!Descriptor} desc Property descriptor object.
- */
-Interpreter.prototype.setProperty = function(obj, name, value, desc) {
-  // BUG(cpcallen:perms): Kludge.  Incorrect except when doing .step
-  // or run.  Should be an argument instead, forcing caller to decide.
-  try {
-    var perms = this.thread.perms();
-  } catch (e) {
-    perms = this.ROOT;
-  }
-  name = String(name);
-  desc = desc.withValue(value);
-  obj.defineProperty(name, desc, perms);
-};
-
-/**
  * Retrieves a value from the scope chain.
  * @param {!Interpreter.Scope} scope Scope to read from.
  * @param {string} name Name of variable.
@@ -2513,7 +2494,7 @@ Interpreter.prototype.Object.prototype.class = '';
 /**
  * @param {string} key
  * @param {!Descriptor} desc
- * @param {!Interpreter.Owner} perms
+ * @param {?Interpreter.Owner} perms
  */
 Interpreter.prototype.Object.prototype.defineProperty = function(
     key, desc, perms) {
@@ -2833,11 +2814,13 @@ Interpreter.prototype.installTypes = function() {
    * checks (but no support for getter or setters).
    * @param {string} key Key (name) of property to set.
    * @param {!Descriptor} desc The property descriptor.
-   * @param {!Interpreter.Owner} perms Who is trying to set it?
+   * @param {?Interpreter.Owner} perms Who is trying to set it?
    */
   intrp.Object.prototype.defineProperty = function(key, desc, perms) {
     if (perms === null) {
-      throw new intrp.Error(perms, intrp.PERM_ERROR,
+      // throw new TypeError;
+      // Owned by root since null can't set .message.
+      throw new intrp.Error(intrp.ROOT, intrp.PERM_ERROR,
           'The null user cannot define any properties');
     }  // TODO(cpcallen:perms): add "controls"-type perm check.
     try {
@@ -2877,7 +2860,8 @@ Interpreter.prototype.installTypes = function() {
    */
   intrp.Object.prototype.set = function(key, value, perms) {
     if (perms === null) {
-      throw new intrp.Error(perms, intrp.PERM_ERROR,
+      // Owned by root since null can't set .message.
+      throw new intrp.Error(intrp.ROOT, intrp.PERM_ERROR,
           'The null user cannot set any properties');
     }  // TODO(cpcallen:perms): add "controls"-type perm check.
     try {
@@ -2970,7 +2954,7 @@ Interpreter.prototype.installTypes = function() {
     if (Object.getOwnPropertyDescriptor(this.properties, 'name')) {
       throw Error('Function alreay has name??');
     }
-    intrp.setProperty(this, 'name', name, Descriptor.c);
+    this.defineProperty('name', Descriptor.c.withValue(name), this.owner);
   };
 
   /**
@@ -3027,7 +3011,8 @@ Interpreter.prototype.installTypes = function() {
       this.setName(node['id']['name']);
     }
     var length = node['params'].length;
-    intrp.setProperty(this, 'length', length, Descriptor.none);
+    this.defineProperty('length',
+        Descriptor.none.withValue(length), this.owner);
     // Record the source for the function (only), for use by
     // (pseudo)Function.toString().
     this.source = src.substring(node['start'], node['end']);
@@ -3044,8 +3029,10 @@ Interpreter.prototype.installTypes = function() {
     }
     // Add .prototype property pointing at a new plain Object.
     var protoObj = new intrp.Object(this.owner);
-    intrp.setProperty(this, 'prototype', protoObj, Descriptor.w);
-    intrp.setProperty(protoObj, 'constructor', this, Descriptor.wc);
+    this.defineProperty('prototype',
+        Descriptor.w.withValue(protoObj), this.owner);
+    protoObj.defineProperty('constructor',
+        Descriptor.wc.withValue(this), this.owner);
   };
 
   intrp.UserFunction.prototype = Object.create(intrp.Function.prototype);
@@ -3147,7 +3134,8 @@ Interpreter.prototype.installTypes = function() {
     // Invoke super constructor.
     intrp.Function.call(/** @type {?} */ (this), owner, options.proto);
     if (options.length !== undefined) {
-      intrp.setProperty(this, 'length', options.length, Descriptor.none);
+      this.defineProperty('length', Descriptor.none.withValue(options.length),
+                          owner);
     }
     if (options.call) {
       this.call = options.call;
@@ -3443,13 +3431,16 @@ Interpreter.prototype.installTypes = function() {
   intrp.RegExp.prototype.populate = function(nativeRegexp) {
     this.regexp = nativeRegexp;
     // lastIndex is settable, all others are read-only attributes
-    intrp.setProperty(this, 'lastIndex', nativeRegexp.lastIndex, Descriptor.w);
-    intrp.setProperty(this, 'source', nativeRegexp.source, Descriptor.none);
-    intrp.setProperty(this, 'global', nativeRegexp.global, Descriptor.none);
-    intrp.setProperty(this, 'ignoreCase', nativeRegexp.ignoreCase,
-        Descriptor.none);
-    intrp.setProperty(this, 'multiline', nativeRegexp.multiline,
-        Descriptor.none);
+    this.defineProperty('lastIndex',
+        Descriptor.w.withValue(nativeRegexp.lastIndex), this.owner);
+    this.defineProperty('source',
+        Descriptor.none.withValue(nativeRegexp.source), this.owner);
+    this.defineProperty('global',
+        Descriptor.none.withValue(nativeRegexp.global), this.owner);
+    this.defineProperty('ignoreCase',
+        Descriptor.none.withValue(nativeRegexp.ignoreCase), this.owner);
+    this.defineProperty('multiline',
+        Descriptor.none.withValue(nativeRegexp.multiline), this.owner);
   };
 
   /**
@@ -3464,7 +3455,8 @@ Interpreter.prototype.installTypes = function() {
     intrp.Object.call(/** @type {?} */ (this), owner,
         (proto === undefined ? intrp.ERROR : proto));
     if (message !== undefined) {
-      intrp.setProperty(this, 'message', message, Descriptor.wc);
+      this.defineProperty('message',
+          Descriptor.wc.withValue(message), this.owner);
     }
     // Construct a text-based stack.
     // Don't bother when building Error.prototype.
@@ -3498,7 +3490,8 @@ Interpreter.prototype.installTypes = function() {
         var line = code.substring(lineStart, lineEnd);
         stack.push(line);
       }
-      intrp.setProperty(this, 'stack', stack.join('\n'), Descriptor.wc);
+      this.defineProperty('stack',
+          Descriptor.wc.withValue(stack.join('\n')), this.owner);
     }
   };
 
