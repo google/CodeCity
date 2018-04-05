@@ -49,6 +49,7 @@ Code.ObjectPanel.init = function() {
   // Clear the '...'
   results = document.getElementById('objectResults');
   results.innerHTML = '';
+  results.className = '';
   var data = Code.ObjectPanel.data;
   if (!data) {
     // Server error.  Should not happen.

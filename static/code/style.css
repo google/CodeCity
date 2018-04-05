@@ -129,3 +129,18 @@ input {
   width: 3ex;
   text-align: center;
 }
+
+.loading:after {
+  animation: ellipsis steps(5, end) 1000ms infinite;
+  content: "...";
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: bottom;
+  width: 0;
+}
+
+@keyframes ellipsis {
+  to {
+    width: 3.2em;
+  }
+}
