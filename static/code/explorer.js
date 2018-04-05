@@ -152,21 +152,21 @@ Code.Explorer.parseInput = function(inputValue) {
  */
 Code.Explorer.sendAutocomplete = function(partsJSON) {
   Code.Explorer.autocompleteData.length = 0;
-  var xhr = Code.Explorer.sendAutocomplete.httpRequest_;
+  var xhr = Code.Explorer.autocompleteRequest_;
   xhr.abort();
   xhr.open('GET', '/code/autocomplete?parts=' +
       encodeURIComponent(partsJSON), true);
   xhr.onreadystatechange = Code.Explorer.receiveAutocomplete;
   xhr.send();
-  console.log('Sending to CC: ' + partsJSON);
 };
-Code.Explorer.sendAutocomplete.httpRequest_ = new XMLHttpRequest();
+
+Code.Explorer.autocompleteRequest_ = new XMLHttpRequest();
 
 /**
  * Got a response from Code City's autocomplete service.
  */
 Code.Explorer.receiveAutocomplete = function() {
-  var xhr = Code.Explorer.sendAutocomplete.httpRequest_;
+  var xhr = Code.Explorer.autocompleteRequest_;
   if (xhr.readyState !== 4) {
     return;  // Not ready yet.
   }

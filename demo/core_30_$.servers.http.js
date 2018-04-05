@@ -99,7 +99,7 @@ $.servers.http.IncomingMessage.prototype.parse = function(line) {
       }
       value = existing;
     } else if (name in this.headers) {
-      if ($.servers.http.IncomingMessage.parse.discardDuplicates.indexOf(name) === -1) {
+      if ($.servers.http.IncomingMessage.discardDuplicates.indexOf(name) === -1) {
         // Discard this duplicate.
         value  = existing;
       } else {
@@ -122,7 +122,7 @@ $.servers.http.IncomingMessage.prototype.parse = function(line) {
   // Invalid state?  Extra lines?  Ignore.
   return true;
 };
-$.servers.http.IncomingMessage.prototype.parse.discardDuplicates = [
+$.servers.http.IncomingMessage.discardDuplicates = [
   'authorization',
   'content-length',
   'content-type',
@@ -198,7 +198,7 @@ $.servers.http.ServerResponse.prototype.setHeader = function(name, value) {
   } else {
     var existing = this.headers_[name];
     if (name in this.headers_) {
-      if ($.servers.http.IncomingMessage.parse.discardDuplicates.indexOf(name) === -1) {
+      if ($.servers.http.ServerResponse.discardDuplicates.indexOf(name) === -1) {
         // Discard this duplicate.
         value = existing;
       } else {
@@ -209,7 +209,7 @@ $.servers.http.ServerResponse.prototype.setHeader = function(name, value) {
     this.headers_[name] = value;
   }
 };
-$.servers.http.ServerResponse.prototype.setHeader.discardDuplicates = [
+$.servers.http.ServerResponse.discardDuplicates = [
   'age',
   'content-length',
   'content-type',
