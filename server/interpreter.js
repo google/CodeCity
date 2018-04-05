@@ -734,7 +734,7 @@ Interpreter.prototype.initObject_ = function() {
             'Object.getOwnPropertyDescriptor called on non-object');
       }
       prop = String(prop);
-      var pd = Object.getOwnPropertyDescriptor(obj.properties, prop);
+      var pd = obj.getOwnPropertyDescriptor(prop, perms);
       if (!pd) {
         return undefined;
       }
@@ -2470,6 +2470,16 @@ Interpreter.prototype.Object.prototype.class = '';
 
 /**
  * @param {string} key
+ * @param {?Interpreter.Owner} perms
+ * @return {!Descriptor}
+ */
+Interpreter.prototype.Object.prototype.getOwnPropertyDescriptor = function(
+    key, perms) {
+  throw Error('Inner class method not callable on prototype');
+};
+
+/**
+ * @param {string} key
  * @param {!Descriptor} desc
  * @param {?Interpreter.Owner} perms
  */
@@ -2795,6 +2805,28 @@ Interpreter.prototype.installTypes = function() {
   intrp.Object.prototype.class = 'Object';
 
   /**
+   * The [[GetOwnOwnProperty]] internal method from ES5.1 §8.12.1,
+   * with substantial adaptations for code city including added perms
+   * checks (but no support for getter or setters).
+   * @param {string} key Key (name) of property to get.
+   * @param {?Interpreter.Owner} perms Who is trying to get it?
+   * @return {!Descriptor} The property descriptor, or undefined if no
+   *     such property exists.
+   */
+  intrp.Object.prototype.getOwnPropertyDescriptor = function(key, perms) {
+    if (perms === null) {
+      // Owned by root since null can't set .message.
+      throw new intrp.Error(intrp.ROOT, intrp.PERM_ERROR,
+          'The null user cannot get any property descriptors');
+    }  // TODO(cpcallen:perms): add "controls"-type perm check.
+    var pd = Object.getOwnPropertyDescriptor(this.properties, key);
+    // TODO(cpcallen): can we eliminate this pointless busywork while
+    // still maintaining type safety?
+    return pd && new Descriptor(pd.writable, pd.enumerable, pd.configurable)
+        .withValue(/** @type {Interpreter.Value} */ (pd.value));
+  };
+
+  /**
    * The [[DefineOwnProperty]] internal method from ES5.1 §8.12.9,
    * with substantial adaptations for code city including added perms
    * checks (but no support for getter or setters).
@@ -2804,7 +2836,6 @@ Interpreter.prototype.installTypes = function() {
    */
   intrp.Object.prototype.defineProperty = function(key, desc, perms) {
     if (perms === null) {
-      // throw new TypeError;
       // Owned by root since null can't set .message.
       throw new intrp.Error(intrp.ROOT, intrp.PERM_ERROR,
           'The null user cannot define any properties');
@@ -2957,7 +2988,7 @@ Interpreter.prototype.installTypes = function() {
    * @param {string} name Name of function.
    */
   intrp.Function.prototype.setName = function(name) {
-    if (Object.getOwnPropertyDescriptor(this.properties, 'name')) {
+    if (this.getOwnPropertyDescriptor('name', this.owner)) {
       throw Error('Function alreay has name??');
     }
     this.defineProperty('name', Descriptor.c.withValue(name), this.owner);
@@ -3711,6 +3742,8 @@ Interpreter.prototype.installTypes = function() {
         this.getKeys_();
       }
       var key = this.keys[this.i++];
+      // TODO(cpcallen:perms): this should use
+      // intrp.Object.prototype.getOwnPropertyDescriptor instead.
       var pd = Object.getOwnPropertyDescriptor(this.properties, key);
       // Skip deleted or already-visited properties.
       if (!pd || this.visited.has(key)) {
