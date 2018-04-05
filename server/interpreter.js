@@ -651,9 +651,13 @@ Interpreter.prototype.initObject_ = function() {
     call: function(intrp, thread, state, thisVal, args) {
       var obj = args[0];
       throwIfNullUndefined(obj);
-      var propsObj = (obj instanceof intrp.Object) ? obj.properties : obj;
-      var names = Object.getOwnPropertyNames(propsObj);
-      return intrp.arrayNativeToPseudo(names, state.scope.perms);
+      if(obj instanceof intrp.Object) {
+        var keys = obj.ownKeys(state.scope.perms);
+      } else {  // obj is actually a primitive.
+        // N.B.: ES6 definition.  ES5.1 would throw TypeError.
+        keys = Object.getOwnPropertyNames(obj);
+      }
+      return intrp.arrayNativeToPseudo(keys, state.scope.perms);
     }
   });
 
@@ -2515,6 +2519,11 @@ Interpreter.prototype.Object.prototype.set = function(key, value, perms) {
   throw Error('Inner class method not callable on prototype');
 };
 
+/** @param {!Interpreter.Owner} perms @return {!Array<string>} */
+Interpreter.prototype.Object.prototype.ownKeys = function(perms) {
+  throw Error('Inner class method not callable on prototype');
+};
+
 /** @return {string} */
 Interpreter.prototype.Object.prototype.toString = function() {
   throw Error('Inner class method not callable on prototype');
@@ -2907,6 +2916,25 @@ Interpreter.prototype.installTypes = function() {
       throw intrp.errorNativeToPseudo(e, perms);
     }
 
+  };
+
+  /**
+   * The [[OwnPropertyKeys]] internal method from ES6 §9.1.12, with
+   * substantial adaptations for code city including added perms
+   * checks.
+   *
+   * TODO(cpcallen:perms): decide whether null user can read
+   * properties.  (At the moment this is forbidden redundantly by type
+   * siganture an runtime check; one or both should be removed.)
+   * @param {!Interpreter.Owner} perms Who is trying to get it?
+   * @return {!Array<string>} An array of own property keys.
+   */
+  intrp.Object.prototype.ownKeys = function(perms) {
+    if (perms === null) {
+      throw new intrp.Error(perms, intrp.PERM_ERROR,
+          'The null user cannot get own property keys');
+    }  // TODO(cpcallen:perms): add check for readability.
+    return Object.getOwnPropertyNames(this.properties);
   };
 
   /**
