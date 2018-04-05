@@ -69,6 +69,10 @@ input {
   width: 300px;
 }
 
+#panelsScroll>iframe:last-of-type {
+  width: 500px;
+}
+
 #objectPanel {
   margin: 0;
 }
