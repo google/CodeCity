@@ -2040,6 +2040,25 @@ Interpreter.prototype.errorNativeToPseudo = function(err, owner) {
 };
 
 /**
+ * Implements the ToObject method from ES5.1 §9.9, but returning
+ * temporary Box objects instead of boxed Boolean, Number or String
+ * instances.
+ * @param {Interpreter.Value} value The value to be converted to an Object.
+ * @param {?Interpreter.Owner} perms Who is trying convert it?
+ * @return {!Interpreter.ObjectLike}
+ */
+Interpreter.prototype.toObject = function(value, perms) {
+  if (value === null || value === undefined) {
+    throw new this.Error(perms, this.TYPE_ERROR,
+        "Can't convert " + value + ' to Object');
+  } else if (typeof value === 'boolean' || typeof value === 'number' ||
+      typeof value === 'string') {
+    return new this.Box(value);
+  }
+  return value;
+};
+
+/**
  * Look up the prototype for this value.
  * @param {Interpreter.Value} value Data object.
  * @return {Interpreter.prototype.Object} Prototype object, null if none.
@@ -2452,7 +2471,65 @@ Interpreter.Value;
 Interpreter.Owner = function() {};
 
 /**
+ * An interface for object-like entities: either actual
+ * Interpreter.prototype.Objects or by non-user-visible boxed
+ * primitives.
+ * @interface
+ */
+Interpreter.ObjectLike = function() {};
+
+/** @type {?Interpreter.prototype.Object} */
+Interpreter.ObjectLike.prototype.proto;
+
+/**
+ * @param {string} key
+ * @param {?Interpreter.Owner} perms
+ * @return {!Descriptor}
+ */
+Interpreter.ObjectLike.prototype.getOwnPropertyDescriptor =
+    function(key, perms) {};
+
+/**
+ * @param {string} key
+ * @param {!Descriptor} desc
+ * @param {?Interpreter.Owner} perms
+ */
+Interpreter.ObjectLike.prototype.defineProperty =
+    function(key, desc, perms) {};
+
+/**
+ * @param {string} key
+ * @param {!Interpreter.Owner} perms
+ * @return {boolean}
+ */
+Interpreter.ObjectLike.prototype.has = function(key, perms) {};
+
+/**
+ * @param {string} key
+ * @param {!Interpreter.Owner} perms
+ * @return {Interpreter.Value}
+ */
+Interpreter.ObjectLike.prototype.get = function(key, perms) {};
+
+/**
+ * @param {string} key
+ * @param {Interpreter.Value} value
+ * @param {!Interpreter.Owner} perms
+ */
+Interpreter.ObjectLike.prototype.set = function(key, value, perms) {};
+
+/** @param {!Interpreter.Owner} perms @return {!Array<string>} */
+Interpreter.ObjectLike.prototype.ownKeys = function(perms) {};
+
+/** @return {string} */
+Interpreter.ObjectLike.prototype.toString = function() {};
+
+/** @return {Interpreter.Value} */
+Interpreter.ObjectLike.prototype.valueOf = function() {};
+
+/**
  * @constructor
+ * @implements {Interpreter.ObjectLike}
  * @param {?Interpreter.Owner=} owner
  * @param {?Interpreter.prototype.Object=} proto
  */
@@ -2503,7 +2580,7 @@ Interpreter.prototype.Object.prototype.has = function(key, perms) {
 
 /**
  * @param {string} key
- * @param{!Interpreter.Owner} perms
+ * @param {!Interpreter.Owner} perms
  * @return {Interpreter.Value}
  */
 Interpreter.prototype.Object.prototype.get = function(key, perms) {
@@ -2512,8 +2589,8 @@ Interpreter.prototype.Object.prototype.get = function(key, perms) {
 
 /**
  * @param {string} key
- * @param{Interpreter.Value} value
- * @param{!Interpreter.Owner} perms
+ * @param {Interpreter.Value} value
+ * @param {!Interpreter.Owner} perms
  */
 Interpreter.prototype.Object.prototype.set = function(key, value, perms) {
   throw Error('Inner class method not callable on prototype');
@@ -2749,6 +2826,85 @@ Interpreter.prototype.Server.prototype.unlisten = function(onClose) {
 };
 
 /**
+ * @constructor
+ * @implements {Interpreter.ObjectLike}
+ * @param {(boolean|number|string)} prim
+ */
+Interpreter.prototype.Box = function(prim) {
+  /** @private @type {(undefined|null|boolean|number|string)} */
+  this.primitive_;
+  /** @type {!Interpreter.prototype.Object} */
+  this.proto;
+  throw Error('Inner class constructor not callable on prototype');
+};
+
+/**
+ * @param {string} key
+ * @param {?Interpreter.Owner} perms
+ * @return {!Descriptor}
+ */
+Interpreter.prototype.Box.prototype.getOwnPropertyDescriptor = function(
+    key, perms) {
+  throw Error('Inner class method not callable on prototype');
+}
+/**
+ * @param {string} key
+ * @param {!Descriptor} desc
+ * @param {?Interpreter.Owner} perms
+ */
+Interpreter.prototype.Box.prototype.defineProperty = function(
+    key, desc, perms) {
+  throw Error('Inner class method not callable on prototype');
+};
+
+/**
+ * @param {string} key
+ * @param {!Interpreter.Owner} perms
+ * @return {boolean}
+ */
+Interpreter.prototype.Box.prototype.has = function(key, perms) {
+  throw Error('Inner class method not callable on prototype');
+};
+
+/**
+ * The [[Get]] internal method from ES5.1 §8.12.3, as applied to
+ * temporary Boolean, Number and String class objects.
+ * @param {string} key Key (name) of property to get.
+ * @param {!Interpreter.Owner} perms Who is trying to get it?
+ * @return {Interpreter.Value} The value of the property, or undefined.
+ */
+Interpreter.prototype.Box.prototype.get = function(key, perms) {
+  throw Error('Inner class method not callable on prototype');
+};
+
+/**
+ * @param {string} key
+ * @param {!Interpreter.Owner} perms
+ * @param {Interpreter.Value} value
+ */
+Interpreter.prototype.Box.prototype.set = function(key, value, perms) {
+  throw Error('Inner class method not callable on prototype');
+};
+
+/**
+ * @param {!Interpreter.Owner} perms
+ * @return {!Array<string>}
+ */
+Interpreter.prototype.Box.prototype.ownKeys = function(perms) {
+  throw Error('Inner class method not callable on prototype');
+};
+
+/** @return {string} String value. */
+Interpreter.prototype.Box.prototype.toString = function() {
+  throw Error('Inner class method not callable on prototype');
+};
+
+/** @return {Interpreter.Value} Value. */
+Interpreter.prototype.Box.prototype.valueOf = function() {
+  throw Error('Inner class method not callable on prototype');
+};
+
+/**
  * Typedef for the functions used to implement NativeFunction.call.
  * @typedef {function(this: Interpreter.prototype.NativeFunction,
  *                    !Interpreter,
@@ -2815,7 +2971,7 @@ Interpreter.prototype.installTypes = function() {
 
   /**
    * The [[GetOwnOwnProperty]] internal method from ES5.1 §8.12.1,
-   * with substantial adaptations for code city including added perms
+   * with substantial adaptations for Code City including added perms
    * checks (but no support for getter or setters).
    * @param {string} key Key (name) of property to get.
    * @param {?Interpreter.Owner} perms Who is trying to get it?
@@ -2837,7 +2993,7 @@ Interpreter.prototype.installTypes = function() {
 
   /**
    * The [[DefineOwnProperty]] internal method from ES5.1 §8.12.9,
-   * with substantial adaptations for code city including added perms
+   * with substantial adaptations for Code City including added perms
    * checks (but no support for getter or setters).
    * @param {string} key Key (name) of property to set.
    * @param {!Descriptor} desc The property descriptor.
@@ -2858,7 +3014,7 @@ Interpreter.prototype.installTypes = function() {
 
   /**
    * The [[HasProperty]] internal method from ES5.1 §8.12.6, with
-   * substantial adaptations for code city including added perms
+   * substantial adaptations for Code City including added perms
    * checks.
    *
    * TODO(cpcallen:perms): decide whether null user can test existence
@@ -2878,7 +3034,7 @@ Interpreter.prototype.installTypes = function() {
 
   /**
    * The [[Get]] internal method from ES5.1 §8.12.3, with substantial
-   * adaptations for code city including added perms checks (but no
+   * adaptations for Code City including added perms checks (but no
    * support for getters).
    *
    * TODO(cpcallen:perms): decide whether null user can read
@@ -2898,7 +3054,7 @@ Interpreter.prototype.installTypes = function() {
 
   /**
    * The [[Set]] internal method from ES5.1 §8.12.5, with substantial
-   * adaptations for code city including added perms checks (but no
+   * adaptations for Code City including added perms checks (but no
    * support for setters).
    * @param {string} key Key (name) of property to set.
    * @param {!Interpreter.Owner} perms Who is trying to set it?
@@ -2920,7 +3076,7 @@ Interpreter.prototype.installTypes = function() {
 
   /**
    * The [[OwnPropertyKeys]] internal method from ES6 §9.1.12, with
-   * substantial adaptations for code city including added perms
+   * substantial adaptations for Code City including added perms
    * checks.
    *
    * TODO(cpcallen:perms): decide whether null user can read
@@ -3722,6 +3878,144 @@ Interpreter.prototype.installTypes = function() {
   };
 
   /**
+   * Class for a boxed primitive.  Does not @extend
+   * Interpreter.prototype.Object, because we do not want to expose
+   * these to the users.  They're just used internally to simplify the
+   * implementation of various bits of code that are specified by
+   * ES5.1 or ES6 to do ToObject().
+   *
+   * @constructor
+   * @extends {Interpreter.prototype.Box}
+   * @param {(boolean|number|string)} prim Primitive to box
+   */
+  intrp.Box = function(prim) {
+    /** @private @type {(undefined|null|boolean|number|string)} */
+    this.primitive_ = prim;
+    if(typeof prim === 'boolean') {
+      /** @type {!Interpreter.prototype.Object} */
+      this.proto = intrp.BOOLEAN;
+    } else if(typeof prim === 'number') {
+      this.proto = intrp.NUMBER;
+    } else if(typeof prim === 'string') {
+      this.proto = intrp.STRING;
+    } else {
+      throw Error('Invalid type in Box');
+    }
+  };
+
+  /**
+   * The [[GetOwnOwnProperty]] internal method from ES5.1 §8.12.1, as
+   * applied to temporary Boolean, Number and String class objects.
+   * @param {string} key Key (name) of property to get.
+   * @param {?Interpreter.Owner} perms Who is trying to get it?
+   * @return {!Descriptor} The property descriptor, or undefined if no
+   *     such property exists.
+   * @override
+   */
+  intrp.Box.prototype.getOwnPropertyDescriptor = function(key, perms) {
+    var pd = Object.getOwnPropertyDescriptor(this.primitive_, key);
+    // TODO(cpcallen): can we eliminate this pointless busywork while
+    // still maintaining type safety?
+    return pd && new Descriptor(pd.writable, pd.enumerable, pd.configurable)
+        .withValue(/** @type {Interpreter.Value} */ (pd.value));
+  };
+
+  /**
+   * The [[DefineOwnProperty]] internal method from ES5.1 §8.12.9, as
+   * applied to temporary Boolean, Number and String class objects.
+   * @param {string} key Key (name) of property to set.
+   * @param {!Descriptor} desc The property descriptor.
+   * @param {?Interpreter.Owner} perms Who is trying to set it?
+   * @override
+   */
+  intrp.Box.prototype.defineProperty = function(key, desc, perms) {
+    throw new intrp.Error(perms, intrp.TYPE_ERROR, "Cannot create property '" +
+        key + "' on string '" + this.primitive_+ "'");
+  };
+
+  /**
+   * The [[HasProperty]] internal method from ES5.1 §8.12.6, as
+   * applied to temporary Boolean, Number and String class objects.
+   * @param {string} key Key (name) of property to get.
+   * @param {!Interpreter.Owner} perms Who is trying to get it?
+   * @return {boolean} The value of the property, or undefined.
+   * @override
+   */
+  intrp.Box.prototype.has = function(key, perms) {
+    // Important: we want to ignore any extra properties on (e.g.) the
+    // native String.prototype, but be sure to find ones on
+    // intrp.String.prototype.
+    if (Object.getOwnPropertyDescriptor(this.primitive_, key)) {
+      return true;
+    }
+    // Defer to prototype.
+    return this.proto.has(key, perms);
+  };
+
+  /**
+   * The [[Get]] internal method from ES5.1 §8.12.3, as applied to
+   * temporary Boolean, Number and String class objects.
+   * @param {string} key Key (name) of property to get.
+   * @param {!Interpreter.Owner} perms Who is trying to get it?
+   * @return {Interpreter.Value} The value of the property, or undefined.
+   * @override
+   */
+  intrp.Box.prototype.get = function(key, perms) {
+    // Important: we want to ignore any extra properties on (e.g.) the
+    // native String.prototype, but be sure to find ones on
+    // intrp.String.prototype.
+    var pd = Object.getOwnPropertyDescriptor(this.primitive_, key);
+    if (pd) {
+      return /** @type {string|number} */(pd.value);
+    }
+    // Defer to prototype.
+    return this.proto.get(key, perms);
+  };
+
+  /**
+   * The [[Set]] internal method from ES5.1 §8.12.5, as
+   * applied to temporary Boolean, Number and String class objects.
+   * @param {string} key Key (name) of property to set.
+   * @param {!Interpreter.Owner} perms Who is trying to set it?
+   * @param {Interpreter.Value} value The new value of the property.
+   * @override
+   */
+  intrp.Box.prototype.set = function(key, value, perms) {
+    throw new intrp.Error(perms, intrp.TYPE_ERROR, "Cannot create property '" +
+        key + "' on string '" + this.primitive_+ "'");
+  };
+
+  /**
+   * The [[OwnPropertyKeys]] internal method from ES6 §9.1.12, as
+   * applied to temporary Boolean, Number and String class objects.
+   * @param {!Interpreter.Owner} perms Who is trying to get it?
+   * @return {!Array<string>} An array of own property keys.
+   */
+  intrp.Box.prototype.ownKeys = function(perms) {
+    // Cast necessitated by compiler bug:
+    // https://github.com/google/closure-compiler/issues/2878
+    return Object.getOwnPropertyNames(/** @type {?} */(this.primitive_));
+  };
+
+  /**
+   * Convert this boxed primitive into a string.
+   * @return {string} String value.
+   * @override
+   */
+  intrp.Box.prototype.toString = function() {
+    return String(this.primitive_);
+  };
+
+  /**
+   * Return the boxed primitive value.
+   * @return {Interpreter.Value} Value.
+   * @override
+   */
+  intrp.Box.prototype.valueOf = function() {
+    return this.primitive_;
+  };
+
+  /**
    * @constructor
    * @param {Interpreter.Value} value Value whose properties are to be
    *     iterated over.
@@ -3855,7 +4149,7 @@ Descriptor.prototype.configurable;
 /**
  * Returns a new descriptor with the same properties as this one, with
  * the addition of a value: member with the given value.
- * @param{Interpreter.Value} value Value for the new descriptor.
+ * @param {Interpreter.Value} value Value for the new descriptor.
  */
 Descriptor.prototype.withValue = function(value) {
   var desc = Object.create(this);

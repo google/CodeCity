@@ -226,6 +226,7 @@ Serializer.serialize = function(intrp) {
                  'Error',
                  'Thread',
                  'Server',
+                 'Box',
                  'PropertyIterator'];
   // Find all objects.
   var objectList = [];
@@ -383,6 +384,7 @@ Serializer.getTypesDeserialize_ = function (intrp) {
     'PseudoRegExp': intrp.RegExp,
     'PseudoError': intrp.Error,
     'Server': intrp.Server,
+    'Box': intrp.Box,
     'PropertyIterator': intrp.PropertyIterator,
     'Node': Interpreter.Node
   };
