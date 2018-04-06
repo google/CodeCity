@@ -147,17 +147,35 @@ Code.Explorer.parseInput = function(inputValue) {
 };
 
 /**
+ * Cache of autocomplete responses from the last minute.
+ */
+Code.Explorer.autocompleteCache = Object.create(null);
+
+/**
+ * Time to live for cached values in milliseconds.
+ */
+Code.Explorer.autocompleteCacheMs = 60 * 1000;
+
+/**
  * Send a request to Code City's autocomplete service.
  * @param {string} partsJSON Stringified array of parts to send to Code City.
  */
 Code.Explorer.sendAutocomplete = function(partsJSON) {
-  Code.Explorer.autocompleteData.length = 0;
   var xhr = Code.Explorer.autocompleteRequest_;
   xhr.abort();
-  xhr.open('GET', '/code/autocomplete?parts=' +
-      encodeURIComponent(partsJSON), true);
-  xhr.onreadystatechange = Code.Explorer.receiveAutocomplete;
-  xhr.send();
+  var cache = Code.Explorer.autocompleteCache[partsJSON];
+  if (cache && cache.date + Code.Explorer.autocompleteCacheMs > Date.now()) {
+    // Cache hit.
+    Code.Explorer.processAutocomplete(cache.data);
+  } else {
+    // Cache miss.
+    Code.Explorer.autocompleteData = [];
+    xhr.open('GET', '/code/autocomplete?parts=' +
+        encodeURIComponent(partsJSON), true);
+    xhr.onreadystatechange = Code.Explorer.receiveAutocomplete;
+    xhr.send();
+    xhr.partsJSON = partsJSON;
+  }
 };
 
 Code.Explorer.autocompleteRequest_ = new XMLHttpRequest();
@@ -176,8 +194,18 @@ Code.Explorer.receiveAutocomplete = function() {
   }
   var data = JSON.parse(xhr.responseText);
   Code.Explorer.filterShadowed(data);
-  Code.Explorer.autocompleteData = data;
 
+  Code.Explorer.autocompleteCache[xhr.partsJSON] =
+      {date: Date.now(), data: data};
+  Code.Explorer.processAutocomplete(data);
+};
+
+/**
+ * Autocomplete data obtained (either by network or cache).  Use it.
+ * @param {!Array<!Array<string>>} data Property names from Code City.
+ */
+Code.Explorer.processAutocomplete = function(data) {
+  Code.Explorer.autocompleteData = data;
   // If the input value is unchanged, display the autocompletion menu.
   var input = document.getElementById('input');
   if (Code.Explorer.oldInputValue === input.value) {
@@ -379,9 +407,9 @@ Code.Explorer.autocompleteClick = function(e) {
  */
 Code.Explorer.setParts = function(parts, updateInput) {
   Code.Explorer.partsJSON = JSON.stringify(parts);
-  Code.Explorer.sendAutocomplete(Code.Explorer.partsJSON);
   Code.Explorer.inputUpdatable = updateInput;
   Code.Explorer.hideAutocompleteMenu();
+  Code.Explorer.sendAutocomplete(Code.Explorer.partsJSON);
   var selector = Code.Common.partsToSelector(parts);
   sessionStorage.setItem(Code.Common.SELECTOR, selector);
   window.parent.postMessage('ping', '*');
