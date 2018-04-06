@@ -1676,6 +1676,24 @@ tests.ObjectPrototypeHasOwnProperty = function() {
   console.assert(r === 83, 'ObjectGetOwnPropertyNames');
 };
 
+tests.ObjectPrototypeGetPrototypeOf = function() {
+  var g = {};
+  var p = Object.create(g);
+  var o = Object.create(p);
+  console.assert(!o.isPrototypeOf(o), 'ObjectPrototypeGetPrototypeOfSelf');
+  console.assert(!o.isPrototypeOf({}),
+     'ObjectPrototypeGetPrototypeOfSiblings');
+  console.assert(g.isPrototypeOf(o),
+     'ObjectPrototypeGetPrototypeOfGrandchild');
+  console.assert(p.isPrototypeOf(o),
+     'ObjectPrototypeGetPrototypeOfChild');
+  console.assert(!o.isPrototypeOf(p),
+     'ObjectPrototypeGetPrototypeOfParent');
+  console.assert(!o.isPrototypeOf(g),
+                 'ObjectPrototypeGetPrototypeOfGrandparent');
+};
+  
+
 //////////////////////////////////////////////////////////////
 // Function and Function.prototype
 

@@ -848,7 +848,7 @@ Interpreter.prototype.initObject_ = function() {
           // No parent; reached the top.
           return false;
         }
-        if (obj === this) {
+        if (obj === thisVal) {
           return true;
         }
       }
