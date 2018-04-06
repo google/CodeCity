@@ -1251,6 +1251,22 @@ module.exports = [
     `,
     expected: 83 },
 
+  { name: 'ObjectProtoypeGetPrototypeOfSelf', src: `
+    var o = {};
+    o.isPrototypeOf(o);
+    `,
+    expected: false },
+
+  { name: 'ObjectProtoypeGetPrototypeOfRelated', src: `
+    var g = {};
+    var p = Object.create(g);
+    var o = Object.create(p);
+    !o.isPrototypeOf({}) &&
+    g.isPrototypeOf(o) && p.isPrototypeOf(o) &&
+    !o.isPrototypeOf(p) && !o.isPrototypeOf(g);
+    `,
+    expected: true },
+
   /******************************************************************/
   // Function and Function.prototype
 
