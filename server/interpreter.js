@@ -306,7 +306,9 @@ Interpreter.prototype.step = function() {
     var nextState = stepFuncs_[node['type']].call(this, stack, state, node);
   } catch (e) {
     if (e instanceof Error) {
-      // Uh oh.  This is a real error in the interpreter.  Rethrow.
+      // Uh oh.  This is a real error in the interpreter.  Kill thread
+      // and rethrow.
+      thread.status = Interpreter.Thread.Status.ZOMBIE;
       throw e;
     } else if (!(e instanceof this.Object) && e !== null &&
         (typeof e === 'object' || typeof e === 'function')) {
@@ -351,7 +353,9 @@ Interpreter.prototype.run = function() {
         var nextState = stepFuncs_[node['type']].call(this, stack, state, node);
       } catch (e) {
         if (e instanceof Error) {
-          // Uh oh.  This is a real error in the interpreter.  Rethrow.
+          // Uh oh.  This is a real error in the interpreter.  Kill
+          // thread and rethrow.
+          thread.status = Interpreter.Thread.Status.ZOMBIE;
           throw e;
         } else if (typeof e !== 'boolean' && typeof e !== 'number' &&
             typeof e !== 'string' && e !== undefined && e !== null &&
