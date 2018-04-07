@@ -1,8 +1,7 @@
 #!/bin/bash
 
-OPTIONS='-O ADVANCED_OPTIMIZATIONS'
+OPTIONS='-O ADVANCED_OPTIMIZATIONS --checks-only --assume_function_wrapper'
 EXTERNS='--externs=externs.js'
-OUTPUT='--js_output_file /dev/null'
 FILES=interpreter.js
 
-closure-compiler $OPTIONS $EXTERNS $OUTPUT $FILES
+closure-compiler $OPTIONS $EXTERNS $FILES
