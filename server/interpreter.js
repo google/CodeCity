@@ -2574,6 +2574,13 @@ Interpreter.ObjectLike.prototype.get = function(key, perms) {};
  */
 Interpreter.ObjectLike.prototype.set = function(key, value, perms) {};
 
+/**
+ * @param {string} key
+ * @param {!Interpreter.Owner} perms
+ * @return {boolean}
+ */
+Interpreter.ObjectLike.prototype.deleteProperty = function(key, perms) {};
+
 /** @param {!Interpreter.Owner} perms @return {!Array<string>} */
 Interpreter.ObjectLike.prototype.ownKeys = function(perms) {};
 
@@ -2649,6 +2656,15 @@ Interpreter.prototype.Object.prototype.get = function(key, perms) {
  * @param {!Interpreter.Owner} perms
  */
 Interpreter.prototype.Object.prototype.set = function(key, value, perms) {
+  throw Error('Inner class method not callable on prototype');
+};
+
+/**
+ * @param {string} key
+ * @param {!Interpreter.Owner} perms
+ * @return {boolean}
+ */
+Interpreter.prototype.Object.prototype.deleteProperty = function(key, perms) {
   throw Error('Inner class method not callable on prototype');
 };
 
@@ -2923,11 +2939,9 @@ Interpreter.prototype.Box.prototype.has = function(key, perms) {
 };
 
 /**
- * The [[Get]] internal method from ES5.1 §8.12.3, as applied to
- * temporary Boolean, Number and String class objects.
- * @param {string} key Key (name) of property to get.
- * @param {!Interpreter.Owner} perms Who is trying to get it?
- * @return {Interpreter.Value} The value of the property, or undefined.
+ * @param {string} key
+ * @param {!Interpreter.Owner} perms
+ * @return {Interpreter.Value}
  */
 Interpreter.prototype.Box.prototype.get = function(key, perms) {
   throw Error('Inner class method not callable on prototype');
@@ -2939,6 +2953,15 @@ Interpreter.prototype.Box.prototype.get = function(key, perms) {
  * @param {Interpreter.Value} value
  */
 Interpreter.prototype.Box.prototype.set = function(key, value, perms) {
+  throw Error('Inner class method not callable on prototype');
+};
+
+/**
+ * @param {string} key
+ * @param {!Interpreter.Owner} perms
+ * @return {boolean}
+ */
+Interpreter.prototype.Box.prototype.deleteProperty = function(key, perms) {
   throw Error('Inner class method not callable on prototype');
 };
 
@@ -3128,6 +3151,27 @@ Interpreter.prototype.installTypes = function() {
       throw intrp.errorNativeToPseudo(e, perms);
     }
 
+  };
+
+  /**
+   * The [[Delete]] internal method from ES5.1 §8.12.7, with
+   * substantial adaptations for Code City including added perms
+   * checks (but no support for getters).
+   * @param {string} key Key (name) of property to get.
+   * @param {!Interpreter.Owner} perms Who is trying to get it?
+   * @return {boolean} True iff successful.
+   */
+  intrp.Object.prototype.deleteProperty = function(key, perms) {
+    if (perms === null) {
+      throw new intrp.Error(perms, intrp.PERM_ERROR,
+          'The null user cannot delete any properties');
+    }  // TODO(cpcallen:perms): add "controls"-type perm check.
+    try {
+      delete this.properties[key];
+    } catch (e) {
+      throw intrp.errorNativeToPseudo(e, perms);
+    }
+    return true;
   };
 
   /**
@@ -3986,7 +4030,7 @@ Interpreter.prototype.installTypes = function() {
    */
   intrp.Box.prototype.defineProperty = function(key, desc, perms) {
     throw new intrp.Error(perms, intrp.TYPE_ERROR, "Cannot create property '" +
-        key + "' on string '" + this.primitive_+ "'");
+        key + "' on " + typeof this.primitive_ + " '" + this.primitive_ + "'");
   };
 
   /**
@@ -4037,8 +4081,26 @@ Interpreter.prototype.installTypes = function() {
    * @override
    */
   intrp.Box.prototype.set = function(key, value, perms) {
-    throw new intrp.Error(perms, intrp.TYPE_ERROR, "Cannot create property '" +
-        key + "' on string '" + this.primitive_+ "'");
+    throw new intrp.Error(perms, intrp.TYPE_ERROR, "Cannot set property '" +
+        key + "' on " + typeof this.primitive_ + " '" + this.primitive_ + "'");
+  };
+
+  /**
+   * The [[Delete]] internal method from ES5.1 §8.12.7, as applied to
+   * temporary Boolean, Number and String class objects.
+   * @param {string} key Key (name) of property to get.
+   * @param {!Interpreter.Owner} perms Who is trying to get it?
+   * @return {boolean} True iff successful.
+   */
+  intrp.Box.prototype.deleteProperty = function(key, perms) {
+    // Attempting to delete property from primitive value.  Succeeds
+    // only if property doesn't exist.
+    if (Object.getOwnPropertyDescriptor(this.primitive_, key)) {
+      throw new intrp.Error(perms, intrp.TYPE_ERROR,
+          "Cannot delete property '" + key + "' on " + typeof this.primitive_ +
+          " '" + this.primitive_ + "'");
+    }
+    return true;
   };
 
   /**
@@ -5095,26 +5157,12 @@ stepFuncs_['UnaryExpression'] = function (stack, state, node) {
     if (!Array.isArray(value)) {
       value = true;
     } else {
-      var obj = value[0];
-      var key = value[1];
-      if (obj instanceof this.Object) {
-        try {
-          value = delete obj.properties[key];
-        } catch (e) {
-          throw this.errorNativeToPseudo(e, state.scope.perms);
-        }
-      } else if (obj instanceof Interpreter.Sentinel) {
+      if (value[0] instanceof Interpreter.Sentinel) {
         // Whoops; this should have been caught by Acorn (because strict).
         throw Error('Uncaught illegal deletion of unqualified identifier');
-      } else {
-        // Attempting to delete property from primitive value.
-        if (Object.getOwnPropertyDescriptor(obj, key)) {
-          throw new this.Error(state.scope.perms, this.TYPE_ERROR,
-              "Cannot delete property '" + key + "' from primitive.");
-        } else {
-          value = true;
-        }
       }
+      var obj = this.toObject(value[0], state.scope.perms);
+      value = obj.deleteProperty(value[1], state.scope.perms);
     }
   } else if (node['operator'] === 'typeof') {
     value = (value instanceof this.Function) ? 'function' : typeof value;
