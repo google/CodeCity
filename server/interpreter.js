@@ -2929,9 +2929,6 @@ Interpreter.prototype.installTypes = function() {
    */
   intrp.UserFunction = function(node, scope, src, owner, proto) {
     if (!node) { // Deserializing
-      this.node = /** @type {?} */ (null);
-      this.scope = /** @type {?} */ (null);
-      this.source = '';
       return;
     }
     intrp.Function.call(/** @type {?} */ (this), owner, proto);
@@ -3106,9 +3103,6 @@ Interpreter.prototype.installTypes = function() {
    */
   intrp.OldNativeFunction = function(impl, legalConstructor, owner, proto) {
     if (!impl) { // Deserializing
-      intrp.NativeFunction.call(/** @type {?} */ (this));
-      this.impl = function () {};
-      this.illegalConstructor = true;
       return;
     }
     intrp.NativeFunction.call(/** @type {?} */ (this),
