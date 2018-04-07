@@ -2016,7 +2016,7 @@ Interpreter.prototype.arrayPseudoToNative = function(pseudoArray) {
  * Converts from a native Error to a JS interpreter Error.  Unlike
  * pseudoToNative, this fucntion only converts type and .message.
  * @param {!Error} err Native Error value to be converted.
- * @param {!Interpreter.Owner} owner Owner for new (pseudo) Error object.
+ * @param {?Interpreter.Owner} owner Owner for new (pseudo) Error object.
  * @return {!Interpreter.prototype.Error}
  */
 Interpreter.prototype.errorNativeToPseudo = function(err, owner) {
@@ -2044,7 +2044,7 @@ Interpreter.prototype.errorNativeToPseudo = function(err, owner) {
  * temporary Box objects instead of boxed Boolean, Number or String
  * instances.
  * @param {Interpreter.Value} value The value to be converted to an Object.
- * @param {?Interpreter.Owner} perms Who is trying convert it?
+ * @param {!Interpreter.Owner} perms Who is trying convert it?
  * @return {!Interpreter.ObjectLike}
  */
 Interpreter.prototype.toObject = function(value, perms) {
@@ -2539,7 +2539,7 @@ Interpreter.ObjectLike.prototype.proto;
 
 /**
  * @param {string} key
- * @param {?Interpreter.Owner} perms
+ * @param {!Interpreter.Owner} perms
  * @return {!Descriptor}
  */
 Interpreter.ObjectLike.prototype.getOwnPropertyDescriptor =
@@ -2548,7 +2548,7 @@ Interpreter.ObjectLike.prototype.getOwnPropertyDescriptor =
 /**
  * @param {string} key
  * @param {!Descriptor} desc
- * @param {?Interpreter.Owner} perms
+ * @param {!Interpreter.Owner} perms
  */
 Interpreter.ObjectLike.prototype.defineProperty =
     function(key, desc, perms) {};
@@ -2614,7 +2614,7 @@ Interpreter.prototype.Object.prototype.class = '';
 
 /**
  * @param {string} key
- * @param {?Interpreter.Owner} perms
+ * @param {!Interpreter.Owner} perms
  * @return {!Descriptor}
  */
 Interpreter.prototype.Object.prototype.getOwnPropertyDescriptor = function(
@@ -2625,7 +2625,7 @@ Interpreter.prototype.Object.prototype.getOwnPropertyDescriptor = function(
 /**
  * @param {string} key
  * @param {!Descriptor} desc
- * @param {?Interpreter.Owner} perms
+ * @param {!Interpreter.Owner=} perms
  */
 Interpreter.prototype.Object.prototype.defineProperty = function(
     key, desc, perms) {
@@ -2912,7 +2912,7 @@ Interpreter.prototype.Box = function(prim) {
 
 /**
  * @param {string} key
- * @param {?Interpreter.Owner} perms
+ * @param {!Interpreter.Owner} perms
  * @return {!Descriptor}
  */
 Interpreter.prototype.Box.prototype.getOwnPropertyDescriptor = function(
@@ -2922,7 +2922,7 @@ Interpreter.prototype.Box.prototype.getOwnPropertyDescriptor = function(
 /**
  * @param {string} key
  * @param {!Descriptor} desc
- * @param {?Interpreter.Owner} perms
+ * @param {!Interpreter.Owner} perms
  */
 Interpreter.prototype.Box.prototype.defineProperty = function(
     key, desc, perms) {
@@ -3053,16 +3053,13 @@ Interpreter.prototype.installTypes = function() {
    * with substantial adaptations for Code City including added perms
    * checks (but no support for getter or setters).
    * @param {string} key Key (name) of property to get.
-   * @param {?Interpreter.Owner} perms Who is trying to get it?
+   * @param {!Interpreter.Owner} perms Who is trying to get it?
    * @return {!Descriptor} The property descriptor, or undefined if no
    *     such property exists.
    */
   intrp.Object.prototype.getOwnPropertyDescriptor = function(key, perms) {
-    if (perms === null) {
-      // Owned by root since null can't set .message.
-      throw new intrp.Error(intrp.ROOT, intrp.PERM_ERROR,
-          'The null user cannot get any property descriptors');
-    }  // TODO(cpcallen:perms): add "controls"-type perm check.
+    if (perms === null) throw TypeError("null can't getOwnPropertyDescriptor");
+    // TODO(cpcallen:perms): add check for (property) readability.
     var pd = Object.getOwnPropertyDescriptor(this.properties, key);
     // TODO(cpcallen): can we eliminate this pointless busywork while
     // still maintaining type safety?
@@ -3076,18 +3073,19 @@ Interpreter.prototype.installTypes = function() {
    * checks (but no support for getter or setters).
    * @param {string} key Key (name) of property to set.
    * @param {!Descriptor} desc The property descriptor.
-   * @param {?Interpreter.Owner} perms Who is trying to set it?
+   * @param {!Interpreter.Owner=} perms Who is trying to set it?  If
+   *     omitted, defaults to this.owner but skips perm check.  (This
+   *     is intended to be used only when constructing.)
    */
   intrp.Object.prototype.defineProperty = function(key, desc, perms) {
-    if (perms === null) {
-      // Owned by root since null can't set .message.
-      throw new intrp.Error(intrp.ROOT, intrp.PERM_ERROR,
-          'The null user cannot define any properties');
-    }  // TODO(cpcallen:perms): add "controls"-type perm check.
+    if (perms !== undefined) {
+      if (perms === null) throw TypeError("null can't defineProperty");
+      // TODO(cpcallen:perms): add "controls"-type perm check.
+    }
     try {
       Object.defineProperty(this.properties, key, desc);
     } catch (e) {
-      throw intrp.errorNativeToPseudo(e, perms);
+      throw intrp.errorNativeToPseudo(e, perms || this.owner);
     }
   };
 
@@ -3095,19 +3093,13 @@ Interpreter.prototype.installTypes = function() {
    * The [[HasProperty]] internal method from ES5.1 §8.12.6, with
    * substantial adaptations for Code City including added perms
    * checks.
-   *
-   * TODO(cpcallen:perms): decide whether null user can test existence
-   * of properties.  (At the moment this is forbidden redundantly by
-   * type siganture an runtime check; one or both should be removed.)
    * @param {string} key Key (name) of property to get.
    * @param {!Interpreter.Owner} perms Who is trying to get it?
    * @return {boolean} The value of the property, or undefined.
    */
   intrp.Object.prototype.has = function(key, perms) {
-    if (perms === null) {
-      throw new intrp.Error(perms, intrp.PERM_ERROR,
-          'The null user cannot test for existence of any properties');
-    }  // TODO(cpcallen:perms): add check for readability.
+    if (perms === null) throw TypeError("null can't has");
+    // TODO(cpcallen:perms): add check for (object) readability.
     return key in this.properties;
   };
 
@@ -3115,19 +3107,13 @@ Interpreter.prototype.installTypes = function() {
    * The [[Get]] internal method from ES5.1 §8.12.3, with substantial
    * adaptations for Code City including added perms checks (but no
    * support for getters).
-   *
-   * TODO(cpcallen:perms): decide whether null user can read
-   * properties.  (At the moment this is forbidden redundantly by type
-   * siganture an runtime check; one or both should be removed.)
    * @param {string} key Key (name) of property to get.
    * @param {!Interpreter.Owner} perms Who is trying to get it?
    * @return {Interpreter.Value} The value of the property, or undefined.
    */
   intrp.Object.prototype.get = function(key, perms) {
-    if (perms === null) {
-      throw new intrp.Error(perms, intrp.PERM_ERROR,
-          'The null user cannot get any properties');
-    }  // TODO(cpcallen:perms): add check for readability.
+    if (perms === null) throw TypeError("null can't get");
+    // TODO(cpcallen:perms): add check for (property) readability.
     return this.properties[key];
   };
 
@@ -3140,11 +3126,8 @@ Interpreter.prototype.installTypes = function() {
    * @param {Interpreter.Value} value The new value of the property.
    */
   intrp.Object.prototype.set = function(key, value, perms) {
-    if (perms === null) {
-      // Owned by root since null can't set .message.
-      throw new intrp.Error(intrp.ROOT, intrp.PERM_ERROR,
-          'The null user cannot set any properties');
-    }  // TODO(cpcallen:perms): add "controls"-type perm check.
+    if (perms === null) throw TypeError("null can't set");
+    // TODO(cpcallen:perms): add "controls"-type perm check.
     try {
       this.properties[key] = value;
     } catch (e) {
@@ -3162,10 +3145,8 @@ Interpreter.prototype.installTypes = function() {
    * @return {boolean} True iff successful.
    */
   intrp.Object.prototype.deleteProperty = function(key, perms) {
-    if (perms === null) {
-      throw new intrp.Error(perms, intrp.PERM_ERROR,
-          'The null user cannot delete any properties');
-    }  // TODO(cpcallen:perms): add "controls"-type perm check.
+    if (perms === null) throw TypeError("null can't delete");
+    // TODO(cpcallen:perms): add "controls"-type perm check.
     try {
       delete this.properties[key];
     } catch (e) {
@@ -3186,10 +3167,8 @@ Interpreter.prototype.installTypes = function() {
    * @return {!Array<string>} An array of own property keys.
    */
   intrp.Object.prototype.ownKeys = function(perms) {
-    if (perms === null) {
-      throw new intrp.Error(perms, intrp.PERM_ERROR,
-          'The null user cannot get own property keys');
-    }  // TODO(cpcallen:perms): add check for readability.
+    if (perms === null) throw TypeError("null can't ownPropertyKeys");
+    // TODO(cpcallen:perms): add check for (object) readability.
     return Object.getOwnPropertyNames(this.properties);
   };
 
@@ -3272,10 +3251,10 @@ Interpreter.prototype.installTypes = function() {
    * @param {string} name Name of function.
    */
   intrp.Function.prototype.setName = function(name) {
-    if (this.getOwnPropertyDescriptor('name', this.owner)) {
+    if (this.getOwnPropertyDescriptor('name', intrp.ROOT)) {
       throw Error('Function alreay has name??');
     }
-    this.defineProperty('name', Descriptor.c.withValue(name), this.owner);
+    this.defineProperty('name', Descriptor.c.withValue(name));
   };
 
   /**
@@ -3332,8 +3311,7 @@ Interpreter.prototype.installTypes = function() {
       this.setName(node['id']['name']);
     }
     var length = node['params'].length;
-    this.defineProperty('length',
-        Descriptor.none.withValue(length), this.owner);
+    this.defineProperty('length', Descriptor.none.withValue(length));
     // Record the source for the function (only), for use by
     // (pseudo)Function.toString().
     this.source = src.substring(node['start'], node['end']);
@@ -3350,10 +3328,8 @@ Interpreter.prototype.installTypes = function() {
     }
     // Add .prototype property pointing at a new plain Object.
     var protoObj = new intrp.Object(this.owner);
-    this.defineProperty('prototype',
-        Descriptor.w.withValue(protoObj), this.owner);
-    protoObj.defineProperty('constructor',
-        Descriptor.wc.withValue(this), this.owner);
+    this.defineProperty('prototype', Descriptor.w.withValue(protoObj));
+    protoObj.defineProperty('constructor', Descriptor.wc.withValue(this));
   };
 
   intrp.UserFunction.prototype = Object.create(intrp.Function.prototype);
@@ -3753,15 +3729,15 @@ Interpreter.prototype.installTypes = function() {
     this.regexp = nativeRegexp;
     // lastIndex is settable, all others are read-only attributes
     this.defineProperty('lastIndex',
-        Descriptor.w.withValue(nativeRegexp.lastIndex), this.owner);
+        Descriptor.w.withValue(nativeRegexp.lastIndex));
     this.defineProperty('source',
-        Descriptor.none.withValue(nativeRegexp.source), this.owner);
+        Descriptor.none.withValue(nativeRegexp.source));
     this.defineProperty('global',
-        Descriptor.none.withValue(nativeRegexp.global), this.owner);
+        Descriptor.none.withValue(nativeRegexp.global));
     this.defineProperty('ignoreCase',
-        Descriptor.none.withValue(nativeRegexp.ignoreCase), this.owner);
+        Descriptor.none.withValue(nativeRegexp.ignoreCase));
     this.defineProperty('multiline',
-        Descriptor.none.withValue(nativeRegexp.multiline), this.owner);
+        Descriptor.none.withValue(nativeRegexp.multiline));
   };
 
   /**
@@ -3776,8 +3752,7 @@ Interpreter.prototype.installTypes = function() {
     intrp.Object.call(/** @type {?} */ (this), owner,
         (proto === undefined ? intrp.ERROR : proto));
     if (message !== undefined) {
-      this.defineProperty('message',
-          Descriptor.wc.withValue(message), this.owner);
+      this.defineProperty('message', Descriptor.wc.withValue(message));
     }
     // Construct a text-based stack.
     // Don't bother when building Error.prototype.
@@ -3811,8 +3786,7 @@ Interpreter.prototype.installTypes = function() {
         var line = code.substring(lineStart, lineEnd);
         stack.push(line);
       }
-      this.defineProperty('stack',
-          Descriptor.wc.withValue(stack.join('\n')), this.owner);
+      this.defineProperty('stack', Descriptor.wc.withValue(stack.join('\n')));
     }
   };
 
@@ -4007,7 +3981,7 @@ Interpreter.prototype.installTypes = function() {
    * The [[GetOwnOwnProperty]] internal method from ES5.1 §8.12.1, as
    * applied to temporary Boolean, Number and String class objects.
    * @param {string} key Key (name) of property to get.
-   * @param {?Interpreter.Owner} perms Who is trying to get it?
+   * @param {!Interpreter.Owner} perms Who is trying to get it?
    * @return {!Descriptor} The property descriptor, or undefined if no
    *     such property exists.
    * @override
@@ -4025,7 +3999,7 @@ Interpreter.prototype.installTypes = function() {
    * applied to temporary Boolean, Number and String class objects.
    * @param {string} key Key (name) of property to set.
    * @param {!Descriptor} desc The property descriptor.
-   * @param {?Interpreter.Owner} perms Who is trying to set it?
+   * @param {!Interpreter.Owner} perms Who is trying to set it?
    * @override
    */
   intrp.Box.prototype.defineProperty = function(key, desc, perms) {
