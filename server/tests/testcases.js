@@ -94,6 +94,20 @@ module.exports = [
     `,
     expected: 45 },
 
+  { name: 'getPropertyOnPrimitive', src: `
+    "foo".length;
+    `,
+    expected: 3 },
+
+  { name: 'setPropertyOnPrimitive', src: `
+    try {
+      "foo".bar = 42;
+    } catch (e) {
+      e.name;
+    }
+    `,
+    expected: 'TypeError' },
+
   { name: 'postincrement', src: `
     var x = 45;
     x++;

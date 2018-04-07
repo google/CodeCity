@@ -2228,32 +2228,34 @@ Interpreter.prototype.calledWithNew = function() {
 /**
  * Gets a value from the scope chain or from an object property.
  * @param {!Interpreter.Scope} scope Current scope dictionary.
- * @param {!Array} ref Name of variable or object/propname tuple.
+ * @param {!Array} ref Reference tuple.
+ * @param {!Interpreter.Owner} perms Who is trying to get it?
  * @return {Interpreter.Value} Value (may be undefined).
  */
-Interpreter.prototype.getValue = function(scope, ref) {
+Interpreter.prototype.getValue = function(scope, ref, perms) {
   if (ref[0] === Interpreter.SCOPE_REFERENCE) {
     // A null/varname variable lookup.
     return this.getValueFromScope(scope, ref[1]);
   } else {
     // An obj/prop components tuple (foo.bar).
-    return this.getProperty(ref[0], ref[1]);
+    return this.toObject(ref[0], perms).get(ref[1], perms);
   }
 };
 
 /**
  * Sets a value to the scope chain or to an object property.
  * @param {!Interpreter.Scope} scope Current scope dictionary.
- * @param {!Array} ref Name of variable or object/propname tuple.
+ * @param {!Array} ref Reference tuple.
  * @param {Interpreter.Value} value Value.
+ * @param {!Interpreter.Owner} perms Who is trying to set it?
  */
-Interpreter.prototype.setValue = function(scope, ref, value) {
+Interpreter.prototype.setValue = function(scope, ref, value, perms) {
   if (ref[0] === Interpreter.SCOPE_REFERENCE) {
     // A null/varname variable lookup.
     this.setValueToScope(scope, ref[1], value);
   } else {
     // An obj/prop components tuple (foo.bar).
-    ref[0].set(ref[1], value, scope.perms);
+    this.toObject(ref[0], perms).set(ref[1], value, perms);
   }
 };
 
@@ -4230,7 +4232,8 @@ stepFuncs_['AssignmentExpression'] = function (stack, state, node) {
       state.leftReference_ = state.value;
     }
     if (node['operator'] !== '=') {
-      state.leftValue_ = this.getValue(state.scope, state.leftReference_);
+      state.leftValue_ =
+          this.getValue(state.scope, state.leftReference_, state.scope.perms);
     }
     state.doneRight_ = true;
     return new Interpreter.State(node['right'], state.scope);
@@ -4253,7 +4256,7 @@ stepFuncs_['AssignmentExpression'] = function (stack, state, node) {
     default:
       throw SyntaxError('Unknown assignment expression: ' + node['operator']);
   }
-  this.setValue(state.scope, state.leftReference_, value);
+  this.setValue(state.scope, state.leftReference_, value, state.scope.perms);
   stack.pop();
   stack[stack.length - 1].value = value;
 };
@@ -4368,7 +4371,7 @@ stepFuncs_['CallExpression'] = function (stack, state, node) {
     state.doneCallee_ = 2;
     var func = state.value;
     if (Array.isArray(func)) { // Callee was MemberExpression or Identifier.
-      state.func_ = this.getValue(state.scope, func);
+      state.func_ = this.getValue(state.scope, func, state.scope.perms);
       if (func[0] === Interpreter.SCOPE_REFERENCE) {
         state.funcThis_ = undefined; // Since we have no global object.
         // (Globally or locally) named function.  Is it named 'eval'?
@@ -4657,7 +4660,7 @@ stepFuncs_['ForInStatement'] = function (stack, state, node) {
   }
   // Fifth, set the variable.
   var value = state.name_;
-  this.setValue(state.scope, state.variable_, value);
+  this.setValue(state.scope, state.variable_, value, state.scope.perms);
   // Next step will be step three.
   state.name_ = undefined;
   // Only reevaluate LHS if it wasn't a variable.
@@ -5140,7 +5143,8 @@ stepFuncs_['UpdateExpression'] = function (stack, state, node) {
   if (!state.leftSide_) {
     state.leftSide_ = state.value;
   }
-  state.leftValue_ = this.getValue(state.scope, state.leftSide_);
+  state.leftValue_ =
+      this.getValue(state.scope, state.leftSide_, state.scope.perms);
   var leftValue = Number(state.leftValue_);
   var changeValue;
   if (node['operator'] === '++') {
@@ -5151,7 +5155,7 @@ stepFuncs_['UpdateExpression'] = function (stack, state, node) {
     throw SyntaxError('Unknown update expression: ' + node['operator']);
   }
   var returnValue = node['prefix'] ? changeValue : leftValue;
-  this.setValue(state.scope, state.leftSide_, changeValue);
+  this.setValue(state.scope, state.leftSide_, changeValue, state.scope.perms);
   stack.pop();
   stack[stack.length - 1].value = returnValue;
 };

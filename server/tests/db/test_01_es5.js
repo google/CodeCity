@@ -664,6 +664,16 @@ tests.propertyAssignment = function() {
   console.assert(o.foo == 45, 'propertyAssignment');
 };
 
+tests.propertyOnPrimitive = function() {
+  console.assert('foo'.length === 3, 'propertyOnPrimitiveGet');
+  try {
+    'foo'.bar = 42;
+    console.assert('foo'.length === 3, 'propertyOnPrimitiveSet');
+  } catch (e) {
+    console.assert(e.name === 'TypeError', 'propertyOnPrimitiveSetError');
+  }
+};
+
 tests.increment = function() {
   var postincrement = 45;
   postincrement++;
