@@ -273,7 +273,7 @@ exports.testRoundtripSimple = function(t) {
 
 /**
  * Run a round trip of serializing the Interpreter.SCOPE_REFERENCE
- * sentinel and and an Interpreter.prototype.PropertyIterator.
+ * sentinel and and an Interpreter.PropertyIterator.
  * @param {!T} t The test runner object.
  */
 exports.testRoundtripScopeRefAndPropIter = function(t) {

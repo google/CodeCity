@@ -2451,6 +2451,60 @@ Interpreter.Thread.Status = {
   SLEEPING: 3,
 }
 
+/**
+ * An iterator over the properties of an ObjectLike and its
+ * prototypes, following the usual for-in loop rules.
+ * @constructor
+ * @param {!Interpreter.ObjectLike} obj Object or Box whose properties
+ *     are to be iterated over.
+ * @param {!Interpreter.Owner} perms Who is doing the iteration?
+ */
+Interpreter.PropertyIterator = function(obj, perms) {
+  if(obj === undefined) {  // Deserializing
+    return;
+  }
+  /** @private @type {?Interpreter.ObjectLike} */
+  this.obj_ = obj;
+  /** @private @const @type {!Interpreter.Owner} */
+  this.perms_ = perms;
+  /** @private @type {!Array<string>} */
+  this.keys_ = this.obj_.ownKeys(this.perms_);
+  /** @private @type {number} */
+  this.i_ = 0;
+  /** @private @const @type {!Set<string>} */
+  this.visited_ = new Set();
+};
+
+/**
+ * Return the next key in the iteration, skipping non-enumerable keys
+ * or keys already seen earlier in the prototype chain (even if they
+ * were non-enumerable).  Returns undefined when iteration is done.
+ * @return {string|undefined}
+ */
+Interpreter.PropertyIterator.prototype.next = function() {
+  while (true) {
+    if (this.i_ >= this.keys_.length) {
+      this.obj_ = this.obj_.proto;
+      if (this.obj_ === null) {
+        // Done iteration.
+        return undefined;
+      }
+      this.keys_ = this.obj_.ownKeys(this.perms_);
+      this.i_ = 0;
+    }
+    var key = this.keys_[this.i_++];
+    var pd = this.obj_.getOwnPropertyDescriptor(key, this.perms_);
+    // Skip deleted or already-visited properties.
+    if (!pd || this.visited_.has(key)) {
+      continue;
+    }
+    this.visited_.add(key);
+    if (pd.enumerable) {
+      return key;
+    }
+  }
+};
+
 ///////////////////////////////////////////////////////////////////////////////
 // Types representing JS objects - Object, Function, Array, etc.
 ///////////////////////////////////////////////////////////////////////////////
@@ -4014,70 +4068,6 @@ Interpreter.prototype.installTypes = function() {
   intrp.Box.prototype.valueOf = function() {
     return this.primitive_;
   };
-
-  /**
-   * @constructor
-   * @param {Interpreter.Value} value Value whose properties are to be
-   *     iterated over.
-   */
-  intrp.PropertyIterator = function(value) {
-    // N.B.: .value must be defined before .properties (defined/set in
-    // .getKeys_), and must not point at the .properties object of an
-    // interpreter Object other than the one pointed to by .value, or
-    // there will be problems when deserializing; see comment in
-    // Interpreter.prototype.Object constructor for details.
-    this.value = value;
-    this.getKeys_();
-    this.visited = new Set();
-  };
-
-  /**
-   * Load the property keys of this.value into this.keys and reset
-   * this.i to 0.
-   * @private
-   */
-  intrp.PropertyIterator.prototype.getKeys_ = function() {
-    if (this.value === null || this.value === undefined) {
-      this.keys = [];
-    } else {
-      this.properties = (this.value instanceof intrp.Object) ?
-          this.value.properties : this.value;
-      // Call to Object() is not required in ES6 or later, but in
-      // ES5.1 Object.getOwnPropertyNames only accepts objects, so we
-      // actually need to create a boxed primitive here.
-      this.keys = Object.getOwnPropertyNames(Object(this.properties));
-    }
-    this.i = 0;
-  };
-
-  /**
-   * @return {string|undefined}
-   */
-  intrp.PropertyIterator.prototype.next = function() {
-    while (true) {
-      if (this.i >= this.keys.length) {
-        this.value = intrp.getPrototype(this.value);
-        if (this.value === null || this.value === undefined) {
-          // Done iteration.
-          return undefined;
-        }
-        this.getKeys_();
-      }
-      var key = this.keys[this.i++];
-      // TODO(cpcallen:perms): this should use
-      // intrp.Object.prototype.getOwnPropertyDescriptor instead.
-      var pd = Object.getOwnPropertyDescriptor(this.properties, key);
-      // Skip deleted or already-visited properties.
-      if (!pd || this.visited.has(key)) {
-        continue;
-      }
-      this.visited.add(key);
-      if (pd.enumerable) {
-        return key;
-      }
-    }
-  };
-
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -4626,15 +4616,21 @@ stepFuncs_['ForInStatement'] = function (stack, state, node) {
     return new Interpreter.State(node['right'], state.scope);
   }
   if (!state.isLoop) {
+    if (state.value === null || state.value === undefined) {
+      // No iterations to do; exit loop.
+      stack.pop();
+      return;
+    }
     // First iteration.
     state.isLoop = true;
-    state.iter_ = new this.PropertyIterator(state.value);
+    var o = this.toObject(state.value, state.scope.perms);
+    state.iter_ = new Interpreter.PropertyIterator(o, state.scope.perms);
   }
   // Third, find the property name for this iteration.
   if (state.name_ === undefined) {
     var next = state.iter_.next();
     if (next === undefined) {
-      // Done, exit loop.
+      // Done; exit loop.
       stack.pop();
       return;
     }
