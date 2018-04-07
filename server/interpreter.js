@@ -64,7 +64,7 @@ var Interpreter = function() {
    * The interpreter's global scope.
    * @const {!Interpreter.Scope}
    */
-  this.global = new Interpreter.Scope(/** @type{?} */ (undefined), null);
+  this.global = new Interpreter.Scope(/** @type {?} */ (undefined), null);
   // Create builtins and (minimally) initialize global scope:
   this.initBuiltins_();
 
