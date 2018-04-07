@@ -226,8 +226,7 @@ Serializer.serialize = function(intrp) {
                  'Error',
                  'Thread',
                  'Server',
-                 'Box',
-                 'PropertyIterator'];
+                 'Box'];
   // Find all objects.
   var objectList = [];
   Serializer.objectHunt_(intrp, objectList, Serializer.excludeTypes, exclude);
@@ -373,6 +372,7 @@ Serializer.getTypesDeserialize_ = function (intrp) {
     'Sentinel': Interpreter.Sentinel,
     'State': Interpreter.State,
     'Thread': Interpreter.Thread,
+    'PropertyIterator': Interpreter.PropertyIterator,
     'PseudoObject': intrp.Object,
     'PseudoFunction': intrp.Function,
     'PseudoUserFunction': intrp.UserFunction,
@@ -385,7 +385,6 @@ Serializer.getTypesDeserialize_ = function (intrp) {
     'PseudoError': intrp.Error,
     'Server': intrp.Server,
     'Box': intrp.Box,
-    'PropertyIterator': intrp.PropertyIterator,
     'Node': Interpreter.Node
   };
 };
