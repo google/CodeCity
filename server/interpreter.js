@@ -2093,8 +2093,8 @@ Interpreter.prototype.getProperty = function(obj, name) {
  */
 Interpreter.prototype.getValueFromScope = function(scope, name) {
   for (var s = scope; s; s = s.outerScope) {
-    if (name in s.properties) {
-      return s.properties[name];
+    if (name in s.vars) {
+      return s.vars[name];
     }
   }
   // Typeof operator is unique: it can safely look at non-defined variables.
@@ -2116,14 +2116,14 @@ Interpreter.prototype.getValueFromScope = function(scope, name) {
  */
 Interpreter.prototype.setValueToScope = function(scope, name, value) {
   for (var s = scope; s; s = s.outerScope) {
-    if (name in s.properties) {
+    if (name in s.vars) {
       if (s.notWritable.has(name)) {
         // TODO(cpcallen:perms): we have a scope here, but scope.perms
         // is probably not the right value for owner of new error.
         throw new this.Error(this.thread.perms(), this.TYPE_ERROR,
             'Assignment to constant variable: ' + name);
       }
-      s.properties[name] = value;
+      s.vars[name] = value;
       return;
     }
   }
@@ -2141,8 +2141,8 @@ Interpreter.prototype.setValueToScope = function(scope, name, value) {
 Interpreter.prototype.addVariableToScope =
     function(scope, name, value, notWritable) {
   name = String(name);
-  if (!(name in scope.properties)) {
-    scope.properties[name] = value;
+  if (!(name in scope.vars)) {
+    scope.vars[name] = value;
   }
   if (notWritable) {
     scope.notWritable.add(name);
@@ -2339,7 +2339,7 @@ Interpreter.Scope = function(perms, outerScope) {
   /** @type {!Interpreter.Owner} */
   this.perms = perms;
   /** @const {!Object<string, Interpreter.Value>} */
-  this.properties = Object.create(null);
+  this.vars = Object.create(null);
   this.notWritable = new Set();
 };
 
