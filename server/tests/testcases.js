@@ -1265,19 +1265,51 @@ module.exports = [
     `,
     expected: 83 },
 
-  { name: 'ObjectProtoypeGetPrototypeOfSelf', src: `
+  { name: 'ObjectProtoypeIsPrototypeOfSelf', src: `
     var o = {};
     o.isPrototypeOf(o);
     `,
     expected: false },
 
-  { name: 'ObjectProtoypeGetPrototypeOfRelated', src: `
+  { name: 'ObjectProtoypeIsPrototypeOfRelated', src: `
     var g = {};
     var p = Object.create(g);
     var o = Object.create(p);
     !o.isPrototypeOf({}) &&
     g.isPrototypeOf(o) && p.isPrototypeOf(o) &&
     !o.isPrototypeOf(p) && !o.isPrototypeOf(g);
+    `,
+    expected: true },
+
+  { name: 'ObjectProtoypePropertyIsEnumerableNull', src: `
+    try {
+      Object.prototype.propertyIsEnumerable.call(null, '');
+    } catch(e) {
+      e.name;
+    }
+    `,
+    expected: 'TypeError' },
+
+  { name: 'ObjectProtoypePropertyIsEnumerableUndefined', src: `
+    try {
+      Object.prototype.propertyIsEnumerable.call(undefined, '');
+    } catch(e) {
+      e.name;
+    }
+    `,
+    expected: 'TypeError' },
+
+  { name: 'ObjectProtoypePropertyIsEnumerablePrimitives', src: `
+    var OppIE = Object.prototype.propertyIsEnumerable;
+    OppIE.call('foo', '0') && !OppIE.call('foo', 'length');
+    `,
+    expected: true },
+
+  { name: 'ObjectProtoypePropertyIsEnumerable', src: `
+    var o = {foo: 'foo'};
+    Object.defineProperty(o, 'bar', {value: 'bar', enumerable: false});
+    o.propertyIsEnumerable('foo') && !o.propertyIsEnumerable('bar') &&
+        !o.propertyIsEnumerable('baz');
     `,
     expected: true },
 

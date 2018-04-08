@@ -1702,7 +1702,36 @@ tests.ObjectPrototypeGetPrototypeOf = function() {
   console.assert(!o.isPrototypeOf(g),
                  'ObjectPrototypeGetPrototypeOfGrandparent');
 };
-  
+
+tests.ObjectPrototypePropertyIsEnumerable = function() {
+  try {
+    Object.prototype.propertyIsEnumerable.call(null, '');
+    console.assert(false, 'ObjectPrototypePropertyIsEnumerableNullThrows');
+  } catch (e) {
+    console.assert(e.name === 'TypeError',
+                   'ObjectPrototypePropertyIsEnumerableNullThrowsError');
+  }
+  try {
+    Object.prototype.propertyIsEnumerable.call(undefined, '');
+    console.assert(false, 'ObjectPrototypePropertyIsEnumerableUndefinedThrows');
+  } catch (e) {
+    console.assert(e.name === 'TypeError',
+                   'ObjectPrototypePropertyIsEnumerableUndefinedThrowsError');
+  }
+  var OppIE = Object.prototype.propertyIsEnumerable;
+  console.assert(OppIE.call('foo', '0'),
+                 'ObjectPrototypePropertyIsEnumerablePrimitiveTrue');
+  console.assert(!OppIE.call('foo', 'length'),
+                 'ObjectPrototypePropertyIsEnumerablePrimitiveFalse');
+  var o = {foo: 'foo'};
+  Object.defineProperty(o, 'bar', {value: 'bar', enumerable: false});
+  console.assert(o.propertyIsEnumerable('foo'),
+                 'ObjectPrototypePropertyIsEnumerableTrue');
+  console.assert(!o.propertyIsEnumerable('bar'),
+                 'ObjectPrototypePropertyIsEnumerableFalse');
+  console.assert(!o.propertyIsEnumerable('baz'),
+                 'ObjectPrototypePropertyIsEnumerableFalse');
+};
 
 //////////////////////////////////////////////////////////////
 // Function and Function.prototype

@@ -664,11 +664,9 @@ Interpreter.prototype.initObject_ = function() {
   new this.NativeFunction({
     id: 'Object.keys', length: 1,
     call: function(intrp, thread, state, thisVal, args) {
-      var obj = args[0];
-      throwIfNullUndefined(obj);
-      var propsObj = (obj instanceof intrp.Object) ? obj.properties : obj;
-      var keys = Object.keys(propsObj);
-      return intrp.arrayNativeToPseudo(keys, state.scope.perms);
+      var perms = state.scope.perms;
+      var obj = intrp.toObject(args[0], perms);
+      return intrp.arrayNativeToPseudo(obj.ownKeys(perms), perms);
     }
   });
 
@@ -703,10 +701,6 @@ Interpreter.prototype.initObject_ = function() {
       if (!(attr instanceof intrp.Object)) {
         throw new intrp.Error(perms, intrp.TYPE_ERROR,
             'Property description must be an object');
-      }
-      if (!obj.properties[key] && obj.preventExtensions) {
-        throw new intrp.Error(perms, intrp.TYPE_ERROR,
-            "Can't define property '" + key + "', object is not extensible");
       }
       // Can't just use pseudoToNative since descriptors can inherit properties.
       var desc = new Descriptor;
@@ -815,23 +809,23 @@ Interpreter.prototype.initObject_ = function() {
     id: 'Object.prototype.hasOwnProperty', length: 1,
     call: function(intrp, thread, state, thisVal, args) {
       var key = args[0];
-      throwIfNullUndefined(thisVal);
-      if (!(thisVal instanceof intrp.Object)) {
-        return thisVal.hasOwnProperty(key);
-      }
-      return Object.prototype.hasOwnProperty.call(thisVal.properties, key);
+      var perms = state.scope.perms;
+      var obj = intrp.toObject(thisVal, perms);
+      return !!obj.getOwnPropertyDescriptor(key, perms);
     }
   });
 
   new this.NativeFunction({
     id: 'Object.prototype.propertyIsEnumerable', length: 1,
     call: function(intrp, thread, state, thisVal, args) {
-      // BUG(cpcallen): Previous implementation was totally broken and
-      // has been removed.
-      // TODO(cpallen): Implement from scratch once .properties
-      // fully encapsulated.
-      throw new intrp.Error(state.scope.perms, intrp.TYPE_ERROR,
-          'Not implemented');
+      var key = String(args[0]);
+      var perms = state.scope.perms;
+      var obj = intrp.toObject(thisVal, perms);
+      var desc = obj.getOwnPropertyDescriptor(key, perms);
+      if (desc === undefined) {
+        return false;
+      }
+      return desc.enumerable;
     }
   });
 
@@ -928,18 +922,17 @@ Interpreter.prototype.initFunction_ = function() {
       var func = thisVal;
       var thisArg = args[0];
       var argArray = args[1];
+      var perms = state.scope.perms;
       if (!(func instanceof intrp.Function)) {
-        throw new intrp.Error(state.scope.perms, intrp.TYPE_ERROR,
+        throw new intrp.Error(perms, intrp.TYPE_ERROR,
             func + ' is not a function');
       } else if (argArray === null || argArray === undefined) {
         return func.call(intrp, thread, state, thisArg, []);
       } else if (!(argArray instanceof intrp.Object)) {
-        throw new intrp.Error(state.scope.perms, intrp.TYPE_ERROR,
+        throw new intrp.Error(perms, intrp.TYPE_ERROR,
             'CreateListFromArrayLike called on non-object');
       }
-      // BUG(cpcallen:perms): This allows circumvention of
-      // non-readability of properties with numeric names.
-      var argList = intrp.arrayPseudoToNative(argArray);
+      var argList = intrp.arrayPseudoToNative(argArray, perms);
       return func.call(intrp, thread, state, thisArg, argList);
     }
   });
@@ -1936,10 +1929,10 @@ Interpreter.prototype.pseudoToNative = function(pseudoObj, cycles) {
   } else {  // Object.
     nativeObj = {};
     cycles.native.push(nativeObj);
-    var keys = Object.keys(pseudoObj.properties);
+    var keys = pseudoObj.ownKeys(perms);
     for (i = 0; i < keys.length; i++) {
       var key = keys[i];
-      var val = pseudoObj.properties[key];
+      var val = pseudoObj.get(key, perms);
       nativeObj[key] = this.pseudoToNative(val, cycles);
     }
   }
@@ -2065,24 +2058,8 @@ Interpreter.prototype.getProperty = function(obj, name) {
   } catch (e) {
     perms = this.ROOT;
   }
-  name = String(name);
-  if (obj === undefined || obj === null) {
-    throw new this.Error(perms, this.TYPE_ERROR,
-        "Cannot read property '" + name + "' of " + obj);
-  }
-  if (obj instanceof this.Object) {
-    return obj.get(name, perms);
-  } else {
-    // obj is actually a primitive - but we might still be able to get
-    // a property descriptor from it, e.g., if it is a string and name
-    // === length (or a numeric index).  Otherwise look at proto.
-    var pd = Object.getOwnPropertyDescriptor(obj, name);
-    if (pd) {
-      return /** @type {Interpreter.Value} */ (pd.value);
-    } else {
-      return this.getPrototype(obj).properties[name];
-    }
-  }
+  var key = String(name);
+  return this.toObject(obj, perms).get(key, perms);
 };
 
 /**
@@ -3055,6 +3032,12 @@ Interpreter.prototype.installTypes = function() {
       if (perms === null) throw TypeError("null can't defineProperty");
       // TODO(cpcallen:perms): add "controls"-type perm check.
     }
+    // TODO(cpcallen:perms): Encapsulate extensibility and declare or
+    //     deprecate .preventExtensions.
+    if (!this.properties[key] && this.preventExtensions) {
+      throw new intrp.Error(perms, intrp.TYPE_ERROR,
+          "Can't define property '" + key + "', object is not extensible");
+    }
     try {
       Object.defineProperty(this.properties, key, desc);
     } catch (e) {
@@ -3101,6 +3084,12 @@ Interpreter.prototype.installTypes = function() {
   intrp.Object.prototype.set = function(key, value, perms) {
     if (perms === null) throw TypeError("null can't set");
     // TODO(cpcallen:perms): add "controls"-type perm check.
+    // TODO(cpcallen:perms): Encapsulate extensibility and declare or
+    //     deprecate .preventExtensions.
+    if (!this.properties[key] && this.preventExtensions) {
+      throw new intrp.Error(perms, intrp.TYPE_ERROR,
+          "Can't define property '" + key + "', object is not extensible");
+    }
     try {
       this.properties[key] = value;
     } catch (e) {
@@ -4205,7 +4194,7 @@ stepFuncs_['ArrayExpression'] = function (stack, state, node) {
   var n = state.n_ || 0;
   if (!state.array_) {
     state.array_ = new this.Array(state.scope.perms);
-    state.array_.properties.length = elements.length;
+    state.array_.set('length', elements.length, state.scope.perms);
   } else {
     state.array_.set(String(n), state.value, state.scope.perms);
     n++;
@@ -4855,8 +4844,13 @@ stepFuncs_['MemberExpression'] = function (stack, state, node) {
     propName = state.value;
   }
   stack.pop();
-  stack[stack.length - 1].value = state.components ?
-      [state.object_, propName] : this.getProperty(state.object_, propName);
+  if (state.components) {
+    stack[stack.length - 1].value = [state.object_, propName];
+  } else {
+    var perms = state.scope.perms;
+    stack[stack.length - 1].value =
+        this.toObject(state.object_, perms).get(propName, perms);
+  }
 };
 
 stepFuncs_['NewExpression'] = stepFuncs_['CallExpression'];
