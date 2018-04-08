@@ -291,7 +291,37 @@ exports.testRoundtripScopeRefAndPropIter = function(t) {
  * @param {!T} t The test runner object.
  */
 exports.testRoundtripDetails = function(t) {
-  runTest(t, 'testRoundtripDetails', `
+  runTest(t, 'testRoundtripPropertyAttributes', `
+    var obj = {};
+    for (var i = 0; i < 8; i++) {
+      var desc = {value: i,
+                  writable: !!(i & 0x1),
+                  enumerable: !!(i & 0x2),
+                  configurable: !!(i & 0x4)};
+      Object.defineProperty(obj, i, desc);
+    }
+  `, '', `
+    for (var i = 0; i < 8; i++) {
+      desc = Object.getOwnPropertyDescriptor(obj, i);
+      if (desc.value !== i ||
+          desc.writable !== !!(i & 0x1) ||
+          desc.enumerable !== !!(i & 0x2) ||
+          desc.configurable !== !!(i & 0x4)) {
+        throw Error('Roundtrip failure for property ' + i);
+      }
+    }
+    'All good';
+  `, 'All good');
+
+  runTest(t, 'testRoundtripObjectExtensibility', `
+    var ext = {};
+    var nonExt = {};
+    Object.preventExtensions(nonExt);
+  `, '', `
+    Object.isExtensible(ext) && !Object.isExtensible(nonExt);
+  `, true);
+
+  runTest(t, 'testRoundtripBuiltinPrototypes', `
       var objProto = Object.getPrototypeOf({}),
           arrProto = Object.getPrototypeOf([]),
           reProto = Object.getPrototypeOf(/foo/),
