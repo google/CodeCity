@@ -781,7 +781,7 @@ Interpreter.prototype.initObject_ = function() {
       if (!(obj instanceof intrp.Object)) {
         return false;  // ES6 §19.1.2.11.  ES5.1 would throw TypeError.
       }
-      return !obj.preventExtensions;
+      return obj.isExtensible(state.scope.perms);
     }
   });
 
@@ -789,8 +789,14 @@ Interpreter.prototype.initObject_ = function() {
     id: 'Object.preventExtensions', length: 1,
     call: function(intrp, thread, state, thisVal, args) {
       var obj = args[0];
-      if (obj instanceof intrp.Object) {
-        obj.preventExtensions = true;
+      var perms = state.scope.perms;
+      if (!(obj instanceof intrp.Object)) {
+        return obj;  // ES6 §19.1.2.15.  ES5.1 would throw TypeError.
+      }
+      if (!obj.preventExtensions(perms)) {
+        // Can only happen once we have Proxy objects.
+        throw new intrp.Error(perms, intrp.TYPE_ERROR,
+            obj.toString() + " can't be made non-extensible.");
       }
       return obj;
     }
@@ -2562,6 +2568,12 @@ Interpreter.prototype.Object.prototype.proto = null;
 /** @type {string} */
 Interpreter.prototype.Object.prototype.class = '';
 
+/** @param {!Interpreter.Owner} perms @return {boolean} */
+Interpreter.prototype.Object.prototype.isExtensible = function(perms) {};
+
+/** @param {!Interpreter.Owner} perms @return {boolean} */
+Interpreter.prototype.Object.prototype.preventExtensions = function(perms) {};
+
 /**
  * @param {string} key
  * @param {!Interpreter.Owner} perms
@@ -2999,6 +3011,33 @@ Interpreter.prototype.installTypes = function() {
   intrp.Object.prototype.class = 'Object';
 
   /**
+   * The [[IsExtensible]] internal method from ES6 §9.1.3, with
+   * substantial adaptations for Code City including added perms
+   * checks.
+   * @param {!Interpreter.Owner} perms Who is trying to check?
+   * @return {boolean} Is the object extensible? 
+   */
+  intrp.Object.prototype.isExtensible = function(perms) {
+    if (perms === null) throw TypeError("null can't check extensibility");
+    // TODO(cpcallen:perms): add check for (object) readability.
+    return Object.isExtensible(this.properties);
+  };
+
+  /**
+   * The [[PreventExtensions]] internal method from ES6 §9.1.4, with
+   * substantial adaptations for Code City including added perms
+   * checks.
+   * @param {!Interpreter.Owner} perms Who is trying to prevent extensions?
+   * @return {boolean} Is the object extensible afterwards? 
+   */
+  intrp.Object.prototype.preventExtensions = function(perms) {
+    if (perms === null) throw TypeError("null can't prevent extensibions");
+    // TODO(cpcallen:perms): add "controls"-type perm check.
+    Object.preventExtensions(this.properties);
+    return true;
+  };
+
+  /**
    * The [[GetOwnOwnProperty]] internal method from ES5.1 §8.12.1,
    * with substantial adaptations for Code City including added perms
    * checks (but no support for getter or setters).
@@ -3031,12 +3070,6 @@ Interpreter.prototype.installTypes = function() {
     if (perms !== undefined) {
       if (perms === null) throw TypeError("null can't defineProperty");
       // TODO(cpcallen:perms): add "controls"-type perm check.
-    }
-    // TODO(cpcallen:perms): Encapsulate extensibility and declare or
-    //     deprecate .preventExtensions.
-    if (!this.properties[key] && this.preventExtensions) {
-      throw new intrp.Error(perms, intrp.TYPE_ERROR,
-          "Can't define property '" + key + "', object is not extensible");
     }
     try {
       Object.defineProperty(this.properties, key, desc);
@@ -3084,12 +3117,6 @@ Interpreter.prototype.installTypes = function() {
   intrp.Object.prototype.set = function(key, value, perms) {
     if (perms === null) throw TypeError("null can't set");
     // TODO(cpcallen:perms): add "controls"-type perm check.
-    // TODO(cpcallen:perms): Encapsulate extensibility and declare or
-    //     deprecate .preventExtensions.
-    if (!this.properties[key] && this.preventExtensions) {
-      throw new intrp.Error(perms, intrp.TYPE_ERROR,
-          "Can't define property '" + key + "', object is not extensible");
-    }
     try {
       this.properties[key] = value;
     } catch (e) {
