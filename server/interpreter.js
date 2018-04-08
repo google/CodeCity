@@ -1949,67 +1949,40 @@ Interpreter.prototype.pseudoToNative = function(pseudoObj, cycles) {
 };
 
 /**
- * Converts from a native JS array to a JS interpreter array.
- * Does handle non-numeric properties (like str.match's index prop).
- * Does NOT recurse into the array's contents.
- * @param {!Array<Interpreter.Value>} nativeArray The JS array to be converted.
- * @param {!Interpreter.Owner} owner Owner for new Error
- * @return {!Interpreter.prototype.Array} The equivalent JS interpreter array.
+ * Converts from a native array to an Interpreter.prototype.Array.
+ * Does NOT recursively convert the type of the array's contents.
+ * Algorithm intended to be inverse of arrayPseudoToNative, so only
+ * numeric properties up to .length are copied, and property
+ * attributes are ignored.
+ * @param {!Array<Interpreter.Value>} nArray The native array to be converted.
+ * @param {!Interpreter.Owner} owner Owner for new object.
+ * @return {!Interpreter.prototype.Array} The equivalent interpreter array.
  */
-Interpreter.prototype.arrayNativeToPseudo = function(nativeArray, owner) {
-  // BUG(cpcallen:perms): Kludge.  Incorrect except when doing .step
-  // or run.  Should be an argument instead, forcing caller to decide.
-  try {
-    var perms = this.thread.perms();
-  } catch (e) {
-    perms = this.ROOT;
+Interpreter.prototype.arrayNativeToPseudo = function(nArray, owner) {
+  var pArray = new this.Array(owner);
+  for (var i = 0; i < nArray.length; i++) {
+    pArray.set(String(i), nArray[i], owner);
   }
-  // For the benefit of closure-compiler, which doesn't think Arrays
-  // should have non-numeric indices:
-  var /** Object<Interpreter.Value> */ nativeObject = nativeArray;
-  var pseudoArray = new this.Array(owner);
-  var props = Object.getOwnPropertyNames(nativeArray);
-  for (var i = 0; i < props.length; i++) {
-    pseudoArray.set(props[i], nativeObject[props[i]], perms);
-  }
-  return pseudoArray;
+  return pArray;
 };
 
 /**
- * Converts from a JS interpreter array to native JS array.
- * Does handle non-numeric properties (like str.match's index prop).
- * Does NOT recurse into the array's contents.
- * @param {!Interpreter.prototype.Object} pseudoArray The JS interpreter array
- *     or arraylike.
+ * Converts from an Interpreter.prototype.Array or array-like ..Object
+ * to a native array, using the algorithm from ES5.1 §15.3.4.3
+ * (Function.prototype.apply).  Does NOT recursively convert the type
+ * of the array's contents.
+ * @param {!Interpreter.prototype.Object} pArray The interpreter array
+ *     or array-like object to be converted.
+ * @param {!Interpreter.Owner} perms Who is trying convert it?
  * @return {!Array<Interpreter.Value>} The equivalent native JS array.
  */
-Interpreter.prototype.arrayPseudoToNative = function(pseudoArray) {
-  // BUG(cpcallen:perms): Kludge.  Incorrect except when doing .step
-  // or run.  Should be an argument instead, forcing caller to decide.
-  try {
-    var perms = this.thread.perms();
-  } catch (e) {
-    perms = this.ROOT;
+Interpreter.prototype.arrayPseudoToNative = function(pArray, perms) {
+  var len = Interpreter.legalArrayLength(pArray.get('length', perms)) || 0;
+  var nArray = [];
+  for (var i = 0; i < len; i++) {
+    nArray.push(pArray.get(String(i), perms));
   }
-  var nativeArray = [];
-  // For the benefit of closure-compiler, which doesn't think Arrays
-  // should have non-numeric indices:
-  var /** Object<Interpreter.Value> */ nativeObject = nativeArray;
-
-  // TODO(cpcallen): If pseudoArray is an arraylike, length might be
-  // <= one of the previously-copied indices, which could result in
-  // truncating the partially-copied array.  So length should probably
-  // be special-cased here as well as below.
-  for (var key in pseudoArray.properties) {
-    // BUG(cpcallen:perms): Perms not necessarily correct here.  Use perms arg.
-    nativeObject[key] = pseudoArray.get(key, perms);
-  }
-  // pseudoArray might be an object pretending to be an array.  In this case
-  // it's possible that length is non-existent, invalid, or smaller than the
-  // largest defined numeric property.  Set length explicitly here.
-  nativeArray.length = Interpreter.legalArrayLength(
-      pseudoArray.get('length', perms)) || 0;
-  return nativeArray;
+  return nArray;
 };
 
 /**
