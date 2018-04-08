@@ -161,6 +161,9 @@ Serializer.deserialize = function(json, intrp) {
         }
       }
     }
+    if (jsonObj['isExtensible'] === false) { // N.B. normally omitted if true.
+      Object.preventExtensions(obj);
+    }
   }
   // Finally: fixup interpreter state.  Checkpointed interpreter was
   // probably paused, but because we're restoring from a checkpoint
@@ -321,6 +324,9 @@ Serializer.serialize = function(intrp) {
     }
     if (nonWritable.length) {
       jsonObj['nonWritable'] = nonWritable;
+    }
+    if (!Object.isExtensible(obj)) {
+      jsonObj['isExtensible'] = false;
     }
   }
   return json;
