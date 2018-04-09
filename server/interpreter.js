@@ -3015,7 +3015,7 @@ Interpreter.prototype.installTypes = function() {
    * substantial adaptations for Code City including added perms
    * checks.
    * @param {!Interpreter.Owner} perms Who is trying to check?
-   * @return {boolean} Is the object extensible? 
+   * @return {boolean} Is the object extensible?
    */
   intrp.Object.prototype.isExtensible = function(perms) {
     if (perms === null) throw TypeError("null can't check extensibility");
@@ -3028,7 +3028,7 @@ Interpreter.prototype.installTypes = function() {
    * substantial adaptations for Code City including added perms
    * checks.
    * @param {!Interpreter.Owner} perms Who is trying to prevent extensions?
-   * @return {boolean} Is the object extensible afterwards? 
+   * @return {boolean} Is the object extensible afterwards?
    */
   intrp.Object.prototype.preventExtensions = function(perms) {
     if (perms === null) throw TypeError("null can't prevent extensibions");
