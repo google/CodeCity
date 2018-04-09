@@ -4615,15 +4615,16 @@ stepFuncs_['CallExpression'] = function (stack, state, node) {
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['CatchClause'] = function (stack, state, node) {
-  if (!state.done_) {
-    state.done_ = true;
+  if (state.step_ === 0) {
+    state.step_ = 1;
     // Create an empty scope.
     var scope = new Interpreter.Scope(state.scope.perms, state.scope);
-    // Add the argument.
-    this.addVariableToScope(scope, node['param']['name'], state.throwValue);
+    // Add the argument.  The .value actually supplied by parent TryStatement.
+    this.addVariableToScope(scope, node['param']['name'], state.value);
     // Execute catch clause.
     return new Interpreter.State(node['body'], scope);
   }
+  // state.step_ === 1:
   stack.pop();
 };
 
@@ -5209,7 +5210,7 @@ stepFuncs_['TryStatement'] = function (stack, state, node) {
       !state.doneHandler_ && node['handler']) {
     state.doneHandler_ = true;
     var nextState = new Interpreter.State(node['handler'], state.scope);
-    nextState.throwValue = state.cv.value;
+    nextState.value = state.cv.value;
     state.cv = undefined;  // This error has been handled, don't rethrow.
     return nextState;
   }
