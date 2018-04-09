@@ -4687,6 +4687,7 @@ stepFuncs_['DebuggerStatement'] = function (stack, state, node) {
 };
 
 /**
+ * DoWhileStatement AND WhileStatement.
  * @this {!Interpreter}
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
@@ -4694,19 +4695,23 @@ stepFuncs_['DebuggerStatement'] = function (stack, state, node) {
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['DoWhileStatement'] = function (stack, state, node) {
-  if (node['type'] === 'DoWhileStatement' && state.test_ === undefined) {
-    // First iteration of do/while executes without checking test.
-    state.value = true;
-    state.test_ = true;
+  if (state.step_ === 0) {
+    state.step_ = 1;
+    if (node['type'] === 'DoWhileStatement') {
+      // First iteration of do/while executes without checking test.
+      state.value = true;
+      state.step_ = 2;
+    }
   }
-  if (!state.test_) {
-    state.test_ = true;
+  if (state.step_ === 1) {  // Evaluate condition.
+    state.step_ = 2;
     return new Interpreter.State(node['test'], state.scope);
   }
+  // state.step_ === 2:
   if (!state.value) {  // Done, exit loop.
     stack.pop();
   } else if (node['body']) {  // Execute the body.
-    state.test_ = false;
+    state.step_ = 1;
     state.isLoop = true;
     return new Interpreter.State(node['body'], state.scope);
   }
