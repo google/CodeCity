@@ -4848,30 +4848,34 @@ stepFuncs_['ForInStatement'] = function (stack, state, node) {
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['ForStatement'] = function (stack, state, node) {
-  var step = state.step_ || 0;
-  if (step === 0) {
-    state.step_ = 1;
-    if (node['init']) {
-      return new Interpreter.State(node['init'], state.scope);
-    }
-  } else if (step === 1) {
-    state.step_ = 2;
-    if (node['test']) {
-      return new Interpreter.State(node['test'], state.scope);
-    }
-  } else if (step === 2) {
-    state.step_ = 3;
-    if (node['test'] && !state.value) {
-      // Done, exit loop.
-      stack.pop();
-    } else {  // Execute the body.
-      state.isLoop = true;
-      return new Interpreter.State(node['body'], state.scope);
-    }
-  } else if (step === 3) {
-    state.step_ = 1;
-    if (node['update']) {
-      return new Interpreter.State(node['update'], state.scope);
+  // If we've just evaluated node.test, and result was false, terminate loop.
+  if  (state.step_ === 2 && !state.value) {
+    stack.pop();
+    return;
+  }
+  while (true) {
+    switch (state.step_) {
+      case 0:  // Eval init expression.
+        state.step_ = 1;
+        state.isLoop = true;  // TODO(cpcallen): remove or declare.
+        if (node['init']) {
+          return new Interpreter.State(node['init'], state.scope);
+        }
+        // FALL THROUGH
+      case 1: // Eval test expression.
+        state.step_ = 2;
+        if (node['test']) {
+          return new Interpreter.State(node['test'], state.scope);
+        }
+        // FALL THROUGH
+      case 2: // Eval body.
+        state.step_ = 3;
+        return new Interpreter.State(node['body'], state.scope);
+      case 3: // Eval update expression.
+        state.step_ = 1;
+        if (node['update']) {
+          return new Interpreter.State(node['update'], state.scope);
+        }
     }
   }
 };
