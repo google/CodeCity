@@ -2432,7 +2432,7 @@ Interpreter.State = function(node, scope, wantRef) {
   this.tmp_ = undefined;
   /** @private @type {?Interpreter.prototype.Object} */
   this.obj_ = null;
-  /** @private @type {?Interpreter.CallInfo} */
+  /** @private @type {?Interpreter.CallInfo|?Interpreter.ForInInfo} */
   this.info_ = null;
 };
 
@@ -4770,6 +4770,13 @@ stepFuncs_['ExpressionStatement'] = function (stack, state, node) {
 };
 
 /**
+ * Extra info used by ForInStatement step function.
+ * @typedef {{iter: !Interpreter.PropertyIterator,
+              key: string}}
+ */
+Interpreter.ForInInfo;
+
+/**
  * @this {!Interpreter}
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
@@ -4777,68 +4784,60 @@ stepFuncs_['ExpressionStatement'] = function (stack, state, node) {
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['ForInStatement'] = function (stack, state, node) {
-  if (!state.doneObject_) {
-    // First, variable initialization is illegal in strict mode.
-    state.doneObject_ = true;
-    if (node['left']['declarations'] &&
-        node['left']['declarations'][0]['init']) {
-      throw new this.Error(state.scope.perms, this.SYNTAX_ERROR,
-          'for-in loop variable declaration may not have an initializer.');
+  while (true) {
+    switch (state.step_) {
+      case 0:  // Initial set-up.
+        // First, variable initialization is illegal in strict mode.
+        if (node['left']['declarations'] &&
+            node['left']['declarations'][0]['init']) {
+          throw new this.Error(state.scope.perms, this.SYNTAX_ERROR,
+              'for-in loop variable declaration may not have an initializer.');
+        }
+        state.step_ = 1;
+        state.isLoop = true;  // TODO(cpcallen): remove or declare.
+        // Second, look up the object.  Only do so once, ever.
+        return new Interpreter.State(node['right'], state.scope);
+      case 1:  // Check right, create PropertyIterator.
+        if (state.value === null || state.value === undefined) {
+          // No iterations to do; exit loop.
+          stack.pop();
+          return;
+        }
+        var obj = this.toObject(state.value, state.scope.perms);
+        var iter = new Interpreter.PropertyIterator(obj, state.scope.perms);
+        state.info_ = {iter: iter, key: ''};
+        // FALL THROUGH
+      case 2: // Find the property name for this iteration; do node.left.
+        var key = state.info_.iter.next();
+        if (key === undefined) {
+          // Done; exit loop.
+          stack.pop();
+          return;
+        }
+        state.info_.key = key;
+        // Get (or create) a Reference to node.left:
+        var /** ?Interpreter.Node */ left = node['left'];
+        if (left['type'] !== 'VariableDeclaration') {
+          state.step_ = 3;
+          // Arbitrary left side, e.g.: for (foo().bar in y).
+          // Get Reference to whatever left side turns out to be.
+          return new Interpreter.State(left, state.scope, true);
+        }
+        // Inline variable declaration: for (var x in y)
+        state.ref = [Interpreter.SCOPE_REFERENCE,
+                     left['declarations'][0]['id']['name']];
+        // FALL THROUGH
+      case 3:  // Got .ref to variable to set.  Set it next key.
+        if (!state.ref) throw TypeError('loop variable not an LVALUE??');
+        this.setValue(state.scope, state.ref, state.info_.key,
+                      state.scope.perms);
+        // Execute the body if there is one, followed by next iteration.
+        state.step_ = 2;
+        if (node['body']) {
+          return new Interpreter.State(node['body'], state.scope);
+        }
     }
-    // Second, look up the object.  Only do so once, ever.
-    return new Interpreter.State(node['right'], state.scope);
   }
-  if (!state.isLoop) {
-    if (state.value === null || state.value === undefined) {
-      // No iterations to do; exit loop.
-      stack.pop();
-      return;
-    }
-    // First iteration.
-    state.isLoop = true;
-    var o = this.toObject(state.value, state.scope.perms);
-    state.iter_ = new Interpreter.PropertyIterator(o, state.scope.perms);
-  }
-  // Third, find the property name for this iteration.
-  if (state.name_ === undefined) {
-    var next = state.iter_.next();
-    if (next === undefined) {
-      // Done; exit loop.
-      stack.pop();
-      return;
-    }
-    state.name_ = next;
-  }
-  // Fourth, find the variable
-  if (!state.doneVariable_) {
-    state.doneVariable_ = true;
-    var left = node['left'];
-    if (left['type'] === 'VariableDeclaration') {
-      // Inline variable declaration: for (var x in y)
-      state.ref =
-          [Interpreter.SCOPE_REFERENCE, left['declarations'][0]['id']['name']];
-    } else {
-      // Arbitrary left side, e.g.: for (foo().bar in y).
-      // Get Reference to whatever left side turns out to be.
-      return new Interpreter.State(left, state.scope, true);
-    }
-  }
-  // Fifth, set the variable.
-  var value = state.name_;
-  if (!state.ref) throw TypeError('loop variable not an LVALUE??');
-  this.setValue(state.scope, state.ref, value, state.scope.perms);
-  // Next step will be step three.
-  state.name_ = undefined;
-  // Only reevaluate LHS if it wasn't a variable.
-  if (state.ref[0] !== Interpreter.SCOPE_REFERENCE) {
-    state.doneVariable_ = false;
-  }
-  // Sixth and finally, execute the body if there was one.
-  if (node['body']) {
-    return new Interpreter.State(node['body'], state.scope);
-  }
-  // TODO(cpcallen): in the absence of a body there is an unnecessary
-  // step per iteration.  Fix that.
 };
 
 /**
