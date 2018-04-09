@@ -2423,6 +2423,10 @@ Interpreter.State = function(node, scope, wantRef) {
 
   /** @private @type {number} */
   this.step_ = 0;
+  /** @private @type {number} */
+  this.n_ = 0;
+  /** @private @type {?Interpreter.prototype.Object} */
+  this.obj_ = null;
 };
 
 /**
@@ -4335,25 +4339,26 @@ var stepFuncs_ = {};
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['ArrayExpression'] = function (stack, state, node) {
-  var elements = node['elements'];
-  var n = state.n_ || 0;
-  if (!state.array_) {
-    state.array_ = new this.Array(state.scope.perms);
-    state.array_.set('length', elements.length, state.scope.perms);
+  var n = state.n_;
+  if (!state.obj_) {
+    state.obj_ = new this.Array(state.scope.perms);
   } else {
-    state.array_.set(String(n), state.value, state.scope.perms);
+    state.obj_.set(String(n), state.value, state.scope.perms);
     n++;
   }
-  while (n < elements.length) {
-    // Skip missing elements - they're not defined, not undefined.
-    if (elements[n]) {
-      state.n_ = n;
-      return new Interpreter.State(elements[n], state.scope);
-    }
+  var /** !Array<!Interpreter.Node> */ elements = node['elements'];
+  // Skip any elided elements - they're not defined, not undefined.
+  while (n < elements.length && ! elements[n]) {
     n++;
   }
+  // Evaluate next element, if we've not run past end.
+  if (n < elements.length) {
+    state.n_ = n;
+    return new Interpreter.State(elements[n], state.scope);
+  }
+  state.obj_.set('length', elements.length, state.scope.perms);
   stack.pop();
-  stack[stack.length - 1].value = state.array_;
+  stack[stack.length - 1].value = state.obj_;
 };
 
 /**
