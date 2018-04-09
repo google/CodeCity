@@ -4516,6 +4516,7 @@ stepFuncs_['BreakStatement'] = function (stack, state, node) {
 };
 
 /**
+ * ConditionalExpression AND IfStatement
  * @this {!Interpreter}
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
@@ -4636,12 +4637,11 @@ stepFuncs_['CatchClause'] = function (stack, state, node) {
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['ConditionalExpression'] = function (stack, state, node) {
-  var step = state.step_ || 0;
-  if (step === 0) {
+  if (state.step_ === 0) {
     state.step_ = 1;
     return new Interpreter.State(node['test'], state.scope);
   }
-  if (step === 1) {
+  if (state.step_ === 1) {
     state.step_ = 2;
     var value = Boolean(state.value);
     if (value && node['consequent']) {
@@ -4655,6 +4655,7 @@ stepFuncs_['ConditionalExpression'] = function (stack, state, node) {
     // eval('1;if(false){2}') -> undefined
     this.value = undefined;
   }
+  // state.step_ === 2:
   stack.pop();
   if (node['type'] === 'ConditionalExpression') {
     stack[stack.length - 1].value = state.value;
