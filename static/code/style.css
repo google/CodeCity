@@ -144,3 +144,48 @@ input {
     width: 3.2em;
   }
 }
+
+#editorConfirm {
+  display: none;
+}
+
+#editorConfirmMask {
+  position: absolute;
+  background-color: #000;
+  opacity: 0;
+  top: 0;
+  right: 0;
+  left: 0;
+  bottom: 0;
+  transition-property: opacity;
+}
+
+#editorConfirmBox {
+  position: absolute;
+  background-color: #fff;
+  border: 2px solid #444;
+  border-radius: 2px;
+  border-top: none;
+  top: -120px;
+  right: 0;
+  left: 0;
+  margin: 0 auto;
+  width: 20em;
+  padding: 1em;
+  text-align: center;
+  transition-property: top;
+}
+
+#editorConfirmDiscard {
+  float: left;
+  margin-left: 25px;
+}
+
+#editorConfirmCancel {
+  float: right;
+}
+
+#editorConfirmSave {
+  float: right;
+  margin-right: 25px;
+}

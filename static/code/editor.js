@@ -38,5 +38,38 @@ Code.Editor.init = function() {
   Code.Editor.receiveMessage();
 };
 
+/**
+ * Show the save dialog.
+ */
+Code.Editor.showSave = function() {
+  document.getElementById('editorConfirm').style.display = 'block';
+  var mask = document.getElementById('editorConfirmMask');
+  var box = document.getElementById('editorConfirmBox');
+  mask.style.transitionDuration = '.4s';
+  box.style.transitionDuration = '.4s';
+  // Add a little bounce at the end of the animation.
+  box.style.transitionTimingFunction = 'cubic-bezier(.6,1.36,.75,1)';
+  setTimeout(function() {
+    mask.style.opacity = 0.2;
+    box.style.top = '-10px';
+  }, 100);  // Firefox requires at least 10ms to process this timing function.
+};
+
+/**
+ * Hide the save dialog.
+ */
+Code.Editor.hideSave = function() {
+  var mask = document.getElementById('editorConfirmMask');
+  var box = document.getElementById('editorConfirmBox');
+  mask.style.transitionDuration = '.2s';
+  box.style.transitionDuration = '.2s';
+  box.style.transitionTimingFunction = 'ease-in';
+  mask.style.opacity = 0;
+  box.style.top = '-120px';
+  setTimeout(function() {
+    document.getElementById('editorConfirm').style.display = 'none';
+  }, 250);
+};
+
 window.addEventListener('load', Code.Editor.init);
 window.addEventListener('message', Code.Editor.receiveMessage, false);
