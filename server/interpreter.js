@@ -2413,12 +2413,16 @@ Interpreter.State = function(node, scope, wantRef) {
   this.node = node;
   /** @const @type {!Interpreter.Scope} */
   this.scope = scope;
+  /** @private @const @type {boolean} */
+  this.wantRef_ = wantRef || false;
+
   /** @type {Interpreter.Value} */
   this.value = undefined;
   /** @type {!Array|undefined} */
   this.ref = undefined;
-  /** @private @const @type {boolean} */
-  this.wantRef_ = wantRef || false;
+
+  /** @private @type {number} */
+  this.step_ = 0;
 };
 
 /**
@@ -4610,13 +4614,13 @@ stepFuncs_['CatchClause'] = function (stack, state, node) {
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['ConditionalExpression'] = function (stack, state, node) {
-  var mode = state.mode_ || 0;
-  if (mode === 0) {
-    state.mode_ = 1;
+  var step = state.step_ || 0;
+  if (step === 0) {
+    state.step_ = 1;
     return new Interpreter.State(node['test'], state.scope);
   }
-  if (mode === 1) {
-    state.mode_ = 2;
+  if (step === 1) {
+    state.step_ = 2;
     var value = Boolean(state.value);
     if (value && node['consequent']) {
       // Execute 'if' block.
@@ -4816,19 +4820,19 @@ stepFuncs_['ForInStatement'] = function (stack, state, node) {
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['ForStatement'] = function (stack, state, node) {
-  var mode = state.mode_ || 0;
-  if (mode === 0) {
-    state.mode_ = 1;
+  var step = state.step_ || 0;
+  if (step === 0) {
+    state.step_ = 1;
     if (node['init']) {
       return new Interpreter.State(node['init'], state.scope);
     }
-  } else if (mode === 1) {
-    state.mode_ = 2;
+  } else if (step === 1) {
+    state.step_ = 2;
     if (node['test']) {
       return new Interpreter.State(node['test'], state.scope);
     }
-  } else if (mode === 2) {
-    state.mode_ = 3;
+  } else if (step === 2) {
+    state.step_ = 3;
     if (node['test'] && !state.value) {
       // Done, exit loop.
       stack.pop();
@@ -4836,8 +4840,8 @@ stepFuncs_['ForStatement'] = function (stack, state, node) {
       state.isLoop = true;
       return new Interpreter.State(node['body'], state.scope);
     }
-  } else if (mode === 3) {
-    state.mode_ = 1;
+  } else if (step === 3) {
+    state.step_ = 1;
     if (node['update']) {
       return new Interpreter.State(node['update'], state.scope);
     }
