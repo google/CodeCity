@@ -9,5 +9,17 @@
     <script src="editor.js"></script>
   </head>
   <body>
+    <div id="editorConfirm">
+      <div id="editorConfirmMask">
+      </div>
+      <div id="editorConfirmBox">
+        <p>Do you want to save changes?</p>
+        <p>
+          <button id="editorConfirmDiscard" class="jfk-button">Discard</button>
+          <button id="editorConfirmSave" class="jfk-button jfk-button-submit">Save</button>
+          <button id="editorConfirmCancel" class="jfk-button" onclick="Code.Editor.hideSave()">Cancel</button>
+        </p>
+      </div>
+    </div>
   </body>
 </html>
