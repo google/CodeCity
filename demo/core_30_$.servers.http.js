@@ -360,7 +360,7 @@ $.servers.http.connection.onReceive = function(data) {
       this.buffer = this.buffer.substring(lf + 1);
     }
   }
-  if (this.request.state_ === 2) {
+  if (this.request.state_ === 'body') {
     // Waiting for POST data, not line-delimited.
     this.onReceiveChunk(this.buffer);
     this.buffer = '';
