@@ -2404,11 +2404,21 @@ Interpreter.Scope = function(perms, outerScope) {
  * Class for a state.
  * @param {!Interpreter.Node} node AST node for the state.
  * @param {!Interpreter.Scope} scope Scope dictionary for the state.
+ * @param {boolean=} wantRef Does parent state want reference (rather
+ *     than evaluated value)?  (Default: false.)
  * @constructor
  */
-Interpreter.State = function(node, scope) {
+Interpreter.State = function(node, scope, wantRef) {
+  /** @const @type {!Interpreter.Node} */
   this.node = node;
+  /** @const @type {!Interpreter.Scope} */
   this.scope = scope;
+  /** @type {Interpreter.Value} */
+  this.value = undefined;
+  /** @type {!Array|undefined} */
+  this.ref = undefined;
+  /** @private @const @type {boolean} */
+  this.wantRef_ = wantRef || false;
 };
 
 /**
@@ -4352,17 +4362,14 @@ stepFuncs_['ArrayExpression'] = function (stack, state, node) {
 stepFuncs_['AssignmentExpression'] = function (stack, state, node) {
   if (!state.doneLeft_) {
     state.doneLeft_ = true;
-    var nextState = new Interpreter.State(node['left'], state.scope);
-    nextState.components = true;
-    return nextState;
+    // Get Reference for left subexpression.
+    return new Interpreter.State(node['left'], state.scope, true);
   }
+  if (!state.ref) throw TypeError('left subexpression not an LVALUE??');
   if (!state.doneRight_) {
-    if (!state.leftReference_) {
-      state.leftReference_ = state.value;
-    }
     if (node['operator'] !== '=') {
       state.leftValue_ =
-          this.getValue(state.scope, state.leftReference_, state.scope.perms);
+          this.getValue(state.scope, state.ref, state.scope.perms);
     }
     state.doneRight_ = true;
     return new Interpreter.State(node['right'], state.scope);
@@ -4385,7 +4392,7 @@ stepFuncs_['AssignmentExpression'] = function (stack, state, node) {
     default:
       throw SyntaxError('Unknown assignment expression: ' + node['operator']);
   }
-  this.setValue(state.scope, state.leftReference_, value, state.scope.perms);
+  this.setValue(state.scope, state.ref, value, state.scope.perms);
   stack.pop();
   stack[stack.length - 1].value = value;
 };
@@ -4491,26 +4498,27 @@ stepFuncs_['BreakStatement'] = function (stack, state, node) {
 stepFuncs_['CallExpression'] = function (stack, state, node) {
   if (!state.doneCallee_) {
     state.doneCallee_ = 1;
-    var nextState = new Interpreter.State(node['callee'], state.scope);
-    nextState.components = true; // Components needed to get value of 'this'.
-    return nextState;
+    // Get refernce for calee, because we need to get value of 'this'.
+    return new Interpreter.State(node['callee'], state.scope, true);
   }
   if (state.doneCallee_ === 1) { // Evaluated callee, possibly got a reference.
     // Determine value of the function.
     state.doneCallee_ = 2;
-    var func = state.value;
-    if (Array.isArray(func)) { // Callee was MemberExpression or Identifier.
-      state.func_ = this.getValue(state.scope, func, state.scope.perms);
-      if (func[0] === Interpreter.SCOPE_REFERENCE) {
+    if (state.ref) { // Callee was MemberExpression or Identifier.
+      state.func_ = this.getValue(state.scope, state.ref, state.scope.perms);
+      if (state.ref[0] === Interpreter.SCOPE_REFERENCE) {
         state.funcThis_ = undefined; // Since we have no global object.
         // (Globally or locally) named function.  Is it named 'eval'?
-        state.directEval_ = (func[1] === 'eval');
+        state.directEval_ = (state.ref[1] === 'eval');
       } else {
         // Method call; save 'this' value (overwritten below if NewExpression).
-        state.funcThis_ = func[0];
+        state.funcThis_ = state.ref[0];
+        state.directEval_ = false;
       }
     } else { // Callee already fully evaluated.
-      state.func_ = func;
+      state.func_ = state.value;
+      state.funcThis_ = undefined;
+      state.directEval_ = false;
     }
     state.arguments_ = [];
     state.n_ = 0;
@@ -4774,26 +4782,22 @@ stepFuncs_['ForInStatement'] = function (stack, state, node) {
     var left = node['left'];
     if (left['type'] === 'VariableDeclaration') {
       // Inline variable declaration: for (var x in y)
-      state.variable_ =
+      state.ref =
           [Interpreter.SCOPE_REFERENCE, left['declarations'][0]['id']['name']];
     } else {
-      // Arbitrary left side: for (foo().bar in y)
-      state.variable_ = null;
-      var nextState = new Interpreter.State(left, state.scope);
-      nextState.components = true;
-      return nextState;
+      // Arbitrary left side, e.g.: for (foo().bar in y).
+      // Get Reference to whatever left side turns out to be.
+      return new Interpreter.State(left, state.scope, true);
     }
-  }
-  if (!state.variable_) {
-    state.variable_ = state.value;
   }
   // Fifth, set the variable.
   var value = state.name_;
-  this.setValue(state.scope, state.variable_, value, state.scope.perms);
+  if (!state.ref) throw TypeError('loop variable not an LVALUE??');
+  this.setValue(state.scope, state.ref, value, state.scope.perms);
   // Next step will be step three.
   state.name_ = undefined;
   // Only reevaluate LHS if it wasn't a variable.
-  if (state.variable_[0] !== Interpreter.SCOPE_REFERENCE) {
+  if (state.ref[0] !== Interpreter.SCOPE_REFERENCE) {
     state.doneVariable_ = false;
   }
   // Sixth and finally, execute the body if there was one.
@@ -4879,10 +4883,11 @@ stepFuncs_['FunctionExpression'] = function (stack, state, node) {
 stepFuncs_['Identifier'] = function (stack, state, node) {
   stack.pop();
   var name = node['name'];
-  var value = state.components ?
-      [Interpreter.SCOPE_REFERENCE, name] :
-      this.getValueFromScope(state.scope, name);
-  stack[stack.length - 1].value = value;
+  if (state.wantRef_) {
+    stack[stack.length - 1].ref = [Interpreter.SCOPE_REFERENCE, name];
+  } else {
+    stack[stack.length - 1].value =  this.getValueFromScope(state.scope, name);
+  }
 };
 
 stepFuncs_['IfStatement'] = stepFuncs_['ConditionalExpression'];
@@ -4975,8 +4980,8 @@ stepFuncs_['MemberExpression'] = function (stack, state, node) {
     propName = state.value;
   }
   stack.pop();
-  if (state.components) {
-    stack[stack.length - 1].value = [state.object_, propName];
+  if (state.wantRef_) {
+    stack[stack.length - 1].ref = [state.object_, propName];
   } else {
     var perms = state.scope.perms;
     stack[stack.length - 1].value =
@@ -5209,9 +5214,9 @@ stepFuncs_['TryStatement'] = function (stack, state, node) {
 stepFuncs_['UnaryExpression'] = function (stack, state, node) {
   if (!state.done_) {
     state.done_ = true;
-    var nextState = new Interpreter.State(node['argument'], state.scope);
-    nextState.components = (node['operator'] === 'delete');
-    return nextState;
+    // Get argument - need Reference if operator is 'delete':
+    return new Interpreter.State(
+        node['argument'], state.scope, node['operator'] === 'delete');
   }
   stack.pop();
   var value = state.value;
@@ -5224,17 +5229,17 @@ stepFuncs_['UnaryExpression'] = function (stack, state, node) {
   } else if (node['operator'] === '~') {
     value = ~value;
   } else if (node['operator'] === 'delete') {
-    // Expect result of evaluating argument to be reference components
-    // array.  If not, skip delete and return true.
-    if (!Array.isArray(value)) {
-      value = true;
-    } else {
-      if (value[0] instanceof Interpreter.Sentinel) {
+    if (state.ref) {
+      if (state.ref[0] instanceof Interpreter.Sentinel) {
         // Whoops; this should have been caught by Acorn (because strict).
         throw Error('Uncaught illegal deletion of unqualified identifier');
       }
-      var obj = this.toObject(value[0], state.scope.perms);
-      value = obj.deleteProperty(value[1], state.scope.perms);
+      var obj = this.toObject(state.ref[0], state.scope.perms);
+      value = obj.deleteProperty(state.ref[1], state.scope.perms);
+    } else {
+      // Attempted to deleted some expression that wasn't a reference
+      // to a variable or property.  Skip delete; return true.
+      value = true;
     }
   } else if (node['operator'] === 'typeof') {
     value = (value instanceof this.Function) ? 'function' : typeof value;
@@ -5256,28 +5261,23 @@ stepFuncs_['UnaryExpression'] = function (stack, state, node) {
 stepFuncs_['UpdateExpression'] = function (stack, state, node) {
   if (!state.doneLeft_) {
     state.doneLeft_ = true;
-    var nextState = new Interpreter.State(node['argument'], state.scope);
-    nextState.components = true;
-    return nextState;
+    // Get Reference to argument.
+    return new Interpreter.State(node['argument'], state.scope, true);
   }
-  if (!state.leftSide_) {
-    state.leftSide_ = state.value;
-  }
-  state.leftValue_ =
-      this.getValue(state.scope, state.leftSide_, state.scope.perms);
-  var leftValue = Number(state.leftValue_);
-  var changeValue;
+  if (!state.ref) throw TypeError('argument not an LVALUE??');
+  var value = Number(this.getValue(state.scope, state.ref, state.scope.perms));
+  var newValue;
   if (node['operator'] === '++') {
-    changeValue = leftValue + 1;
+    newValue = value + 1;
   } else if (node['operator'] === '--') {
-    changeValue = leftValue - 1;
+    newValue = value - 1;
   } else {
     throw SyntaxError('Unknown update expression: ' + node['operator']);
   }
-  var returnValue = node['prefix'] ? changeValue : leftValue;
-  this.setValue(state.scope, state.leftSide_, changeValue, state.scope.perms);
+  this.setValue(state.scope, state.ref, newValue, state.scope.perms);
   stack.pop();
-  stack[stack.length - 1].value = returnValue;
+  stack[stack.length - 1].value = (node['prefix'] ? newValue : value);
+
 };
 
 /**
