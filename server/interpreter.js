@@ -208,17 +208,20 @@ Interpreter.prototype.createThread = function(runnable, runAt) {
  */
 Interpreter.prototype.createThreadForFuncCall = function(
     func, thisVal, args, runAt) {
+  // TODO(cpcallen): Find a more elegant way to do this.  We shouldn't
+  //     depend on details of internal implementation of
+  //     CallExpression step function.
   // TODO(cpcallen:perms): decide how caller perms will work.  Does it
-  // need to be passed in as ane extra argument?  Otherwise, if
-  // reading from outer scope perms will always be root.  :-(
+  //     need to be passed in as ane extra argument?  Otherwise, if
+  //     reading from outer scope perms will always be root.  :-(
   var node = new Interpreter.Node;
   node['type'] = 'CallExpression';
   var state = new Interpreter.State(node, this.global);
-  state.func_ = func;
-  state.funcThis_ = thisVal;
-  state.doneCallee_ = 2;
-  state.arguments_ = args;
-  state.doneArgs_ = true;
+  state.info_ = {callee: func,
+                 this: thisVal,
+                 directEval: false,
+                 arguments: args};
+  state.step_ = 3;
   return this.createThread(state, runAt);
 };
 
@@ -559,7 +562,7 @@ Interpreter.prototype.initBuiltins_ = function() {
       evalNode['body'] = ast['body'];
       evalNode['source'] = code;
       // Create new scope and update it with definitions in eval().
-      var outerScope = state.directEval_ ? state.scope : intrp.global;
+      var outerScope = state.info_.directEval ? state.scope : intrp.global;
       var scope = new Interpreter.Scope(state.scope.perms, outerScope);
       intrp.populateScope_(ast, scope, code);
       thread.stateStack_.push(new Interpreter.State(evalNode, scope));
@@ -2251,8 +2254,8 @@ Interpreter.prototype.populateScope_ = function(node, scope, source) {
  * @return {boolean} True if 'new foo()', false if 'foo()'.
  */
 Interpreter.prototype.calledWithNew = function() {
-  return this.thread.stateStack_[this.thread.stateStack_.length - 1].
-      isConstructor;
+  return this.thread.stateStack_[this.thread.stateStack_.length - 1]
+      .node['type'] === 'NewExpression';
 };
 
 /**
@@ -2429,6 +2432,8 @@ Interpreter.State = function(node, scope, wantRef) {
   this.tmp_ = undefined;
   /** @private @type {?Interpreter.prototype.Object} */
   this.obj_ = null;
+  /** @private @type {?Interpreter.CallInfo} */
+  this.info_ = null;
 };
 
 /**
@@ -3858,10 +3863,10 @@ Interpreter.prototype.installTypes = function() {
         var node = state.node;
         // Always add the first state to the stack.
         // Also add any call expression that is executing.
-        // BUG(cpcallen): state.doneExec is no longer a correct way
-        // check if args have been evaluated.
+        // TODO(cpcallen): this shouldn't rely on internal details of
+        // the CallExpression step function.
         if (stack.length &&
-            !(node['type'] === 'CallExpression' && state.doneExec)) {
+            !(node['type'] === 'CallExpression' && state.step_ === 4)) {
           continue;
         }
         var code = intrp.thread.getSource(i);
@@ -4410,6 +4415,16 @@ stepFuncs_['AssignmentExpression'] = function (stack, state, node) {
 };
 
 /**
+ * Extra info used by CallExpression step function.
+ * @typedef {{callee: Interpreter.Value,
+ *            this: Interpreter.Value,
+ *            directEval: boolean,
+ *            arguments: !Array<Interpreter.Value>}}
+ */
+Interpreter.CallInfo;
+
+/**
+ * CallExpression AND NewExpression
  * @this {!Interpreter}
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
@@ -4508,62 +4523,59 @@ stepFuncs_['BreakStatement'] = function (stack, state, node) {
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['CallExpression'] = function (stack, state, node) {
-  if (!state.doneCallee_) {
-    state.doneCallee_ = 1;
+  if (state.step_ === 0) {
+    state.step_ = 1;
     // Get refernce for calee, because we need to get value of 'this'.
     return new Interpreter.State(node['callee'], state.scope, true);
   }
-  if (state.doneCallee_ === 1) { // Evaluated callee, possibly got a reference.
+  if (state.step_ === 1) { // Evaluated callee, possibly got a reference.
     // Determine value of the function.
-    state.doneCallee_ = 2;
+    state.step_ = 2;
+    var info = {callee: undefined,
+                this: undefined,  // Since we have no global object.
+                directEval: false,
+                arguments: []};
     if (state.ref) { // Callee was MemberExpression or Identifier.
-      state.func_ = this.getValue(state.scope, state.ref, state.scope.perms);
+      info.callee = this.getValue(state.scope, state.ref, state.scope.perms);
       if (state.ref[0] === Interpreter.SCOPE_REFERENCE) {
-        state.funcThis_ = undefined; // Since we have no global object.
-        // (Globally or locally) named function.  Is it named 'eval'?
-        state.directEval_ = (state.ref[1] === 'eval');
+        // (Globally or locally) named function - maybe named 'eval'?
+        info.directEval = (state.ref[1] === 'eval');
       } else {
-        // Method call; save 'this' value (overwritten below if NewExpression).
-        state.funcThis_ = state.ref[0];
-        state.directEval_ = false;
+        // Method call; save 'this' value.
+        info.this =  state.ref[0];
       }
     } else { // Callee already fully evaluated.
-      state.func_ = state.value;
-      state.funcThis_ = undefined;
-      state.directEval_ = false;
+      info.callee = state.value;
     }
-    state.arguments_ = [];
+    state.info_ = info;
     state.n_ = 0;
   }
-  if (!state.doneArgs_) {
+  if (state.step_ === 2) {  // Evaluating arguments.
     if (state.n_ !== 0) {
-      state.arguments_.push(state.value);
+      state.info_.arguments.push(state.value);
     }
     if (node['arguments'][state.n_]) {
       return new Interpreter.State(node['arguments'][state.n_++], state.scope);
     }
-    // All args evaluated.  Construct new object for this, if applicable:
+    // All args evaluated.  Check for new hack.
     if (node['type'] === 'NewExpression') {
-      var func = state.func_;
-      if (typeof func === 'string' && state.arguments_.length === 0) {
+      var callee = state.info_.callee;
+      if (typeof callee === 'string' && state.info_.arguments.length === 0) {
         // Special hack for Code City's "new 'foo'" syntax.
-        if (!this.builtins_[func]) {
+        if (!this.builtins_[callee]) {
           throw new this.Error(state.scope.perms, this.REFERENCE_ERROR,
-              func + ' is not a builtin');
+              callee + ' is not a builtin');
         }
         stack.pop();
-        if (stack.length > 0) {
-          stack[stack.length - 1].value = this.builtins_[func];
-        }
+        stack[stack.length - 1].value = this.builtins_[callee];
         return;
       }
-      state.isConstructor = true;
     }
-    state.doneArgs_ = true;
+    state.step_ = 3;
   }
-  if (!state.doneExec) {
-    state.doneExec = true;
-    var func = state.func_;
+  if (state.step_ === 3) {  // Done valuating arguments; do function call.
+    state.step_ = 4;
+    var func = state.info_.callee;
     if (!(func instanceof this.Function)) {
       throw new this.Error(state.scope.perms, this.TYPE_ERROR,
           func + ' is not a function');
@@ -4574,19 +4586,20 @@ stepFuncs_['CallExpression'] = function (stack, state, node) {
     if (this.thread === null) {
       throw TypeError('No current thread??');
     }
+    var args = state.info_.arguments;
     var r =
-        state.isConstructor ?
-        func.construct(this, this.thread, state, state.arguments_) :
-        func.call(this, this.thread, state, state.funcThis_, state.arguments_);
+        state.node['type'] === 'NewExpression' ?
+        func.construct(this, this.thread, state, args) :
+        func.call(this, this.thread, state, state.info_.this, args);
     if (r instanceof FunctionResult) {
       if (r === FunctionResult.CallAgain) {
-        state.doneExec = false;
+        state.step_ = 3;
       }
       return;
     }
     state.value = r;
   }
-  // Execution complete.  Put the return value on the stack.
+  // state.step_ === 4: Execution done; handle return value.
   stack.pop();
   // Previous stack frame may not exist if this is a setTimeout function.
   if (stack.length > 0) {
