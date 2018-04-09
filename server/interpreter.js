@@ -4754,10 +4754,11 @@ stepFuncs_['EvalProgram_'] = function (stack, state, node) {
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['ExpressionStatement'] = function (stack, state, node) {
-  if (!state.done_) {
-    state.done_ = true;
+  if (state.step_ === 0) {
+    state.step_ = 1;
     return new Interpreter.State(node['expression'], state.scope);
   }
+  // state.step_ === 1:
   stack.pop();
   // Save this value to interpreter.value for use as a return value if
   // this code is inside an eval function.
