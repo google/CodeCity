@@ -2425,6 +2425,8 @@ Interpreter.State = function(node, scope, wantRef) {
   this.step_ = 0;
   /** @private @type {number} */
   this.n_ = 0;
+  /** @private @type {Interpreter.Value|undefined} */
+  this.tmp_ = undefined;
   /** @private @type {?Interpreter.prototype.Object} */
   this.obj_ = null;
 };
@@ -4369,22 +4371,23 @@ stepFuncs_['ArrayExpression'] = function (stack, state, node) {
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['AssignmentExpression'] = function (stack, state, node) {
-  if (!state.doneLeft_) {
-    state.doneLeft_ = true;
+  if (state.step_ === 0) {
+    state.step_ = 1;
     // Get Reference for left subexpression.
     return new Interpreter.State(node['left'], state.scope, true);
   }
   if (!state.ref) throw TypeError('left subexpression not an LVALUE??');
-  if (!state.doneRight_) {
+  if (state.step_ === 1) {
     if (node['operator'] !== '=') {
-      state.leftValue_ =
+      state.tmp_ =
           this.getValue(state.scope, state.ref, state.scope.perms);
     }
-    state.doneRight_ = true;
+    state.step_ = 2;
     return new Interpreter.State(node['right'], state.scope);
   }
+  // state.step_ === 2: Got operand(s); do assignment.
   var rightValue = state.value;
-  var value = state.leftValue_;
+  var value = state.tmp_;
   switch (node['operator']) {
     case '=':    value =    rightValue; break;
     case '+=':   value +=   rightValue; break;
