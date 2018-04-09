@@ -4417,19 +4417,19 @@ stepFuncs_['AssignmentExpression'] = function (stack, state, node) {
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['BinaryExpression'] = function (stack, state, node) {
-  if (!state.doneLeft_) {
-    state.doneLeft_ = true;
+  if (state.step_ === 0) {
+    state.step_ = 1;
     return new Interpreter.State(node['left'], state.scope);
   }
-  if (!state.doneRight_) {
-    state.doneRight_ = true;
-    state.leftValue_ = state.value;
+  if (state.step_ === 1) {
+    state.step_ = 2;
+    state.tmp_ = state.value;
     return new Interpreter.State(node['right'], state.scope);
   }
-  stack.pop();
-  var leftValue = state.leftValue_;
+  // state.step_ === 2: Got operands; do binary operation.
+  var leftValue = state.tmp_;
   var rightValue = state.value;
-  var value;
+  var /** Interpreter.Value */ value;
   switch (node['operator']) {
     case '==':  value = leftValue ==  rightValue; break;
     case '!=':  value = leftValue !=  rightValue; break;
@@ -4452,11 +4452,10 @@ stepFuncs_['BinaryExpression'] = function (stack, state, node) {
     case '>>>': value = leftValue >>> rightValue; break;
     case 'in':
       if (!(rightValue instanceof this.Object)) {
-      // TODO(cpcallen:perms): owner is not correct here.  Rethink.
       throw new this.Error(state.scope.perms, this.TYPE_ERROR,
             "'in' expects an object, not '" + rightValue + "'");
       }
-      value = rightValue.has(leftValue, state.scope.perms);
+      value = rightValue.has(String(leftValue), state.scope.perms);
       break;
     case 'instanceof':
       if (!(rightValue instanceof this.Function)) {
@@ -4468,6 +4467,7 @@ stepFuncs_['BinaryExpression'] = function (stack, state, node) {
     default:
       throw SyntaxError('Unknown binary operator: ' + node['operator']);
   }
+  stack.pop();
   stack[stack.length - 1].value = value;
 };
 
