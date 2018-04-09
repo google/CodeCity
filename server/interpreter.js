@@ -651,7 +651,7 @@ Interpreter.prototype.initObject_ = function() {
     call: function(intrp, thread, state, thisVal, args) {
       var obj = args[0];
       throwIfNullUndefined(obj);
-      if(obj instanceof intrp.Object) {
+      if (obj instanceof intrp.Object) {
         var keys = obj.ownKeys(state.scope.perms);
       } else {  // obj is actually a primitive.
         // N.B.: ES6 definition.  ES5.1 would throw TypeError.
@@ -2287,14 +2287,14 @@ Interpreter.prototype.unwind_ = function(type, value, label) {
   if (type === Interpreter.Completion.THROW) {
     // Log exception and stack trace.
     if (value instanceof this.Error) {
-      console.log('Unhandled %s', value.toString());
+      console.log('Unhandled %s', value);
       var stackTrace = value.get('stack', this.ROOT);
       if (stackTrace) {
         console.log(stackTrace);
       }
     } else {
-      // TODO(cpcallen): log toSource(error), for clarity?
-      console.log('Unhandled exception with value:', value);
+      var native = this.pseudoToNative(value);
+      console.log('Unhandled exception with value: %o', native);
     }
   } else {
     throw Error('Unsynatctic break/continue/return not rejected by Acorn');
@@ -2418,7 +2418,7 @@ Interpreter.Thread.Status = {
  * @param {!Interpreter.Owner} perms Who is doing the iteration?
  */
 Interpreter.PropertyIterator = function(obj, perms) {
-  if(obj === undefined) {  // Deserializing
+  if (obj === undefined) {  // Deserializing
     return;
   }
   /** @private @type {?Interpreter.ObjectLike} */
@@ -3151,7 +3151,7 @@ Interpreter.prototype.installTypes = function() {
    *
    * TODO(cpcallen:perms): decide whether null user can read
    * properties.  (At the moment this is forbidden redundantly by type
-   * siganture an runtime check; one or both should be removed.)
+   * signature an runtime check; one or both should be removed.)
    * @param {!Interpreter.Owner} perms Who is trying to get it?
    * @return {!Array<string>} An array of own property keys.
    */
@@ -3954,12 +3954,12 @@ Interpreter.prototype.installTypes = function() {
   intrp.Box = function(prim) {
     /** @private @type {(undefined|null|boolean|number|string)} */
     this.primitive_ = prim;
-    if(typeof prim === 'boolean') {
+    if (typeof prim === 'boolean') {
       /** @type {!Interpreter.prototype.Object} */
       this.proto = intrp.BOOLEAN;
-    } else if(typeof prim === 'number') {
+    } else if (typeof prim === 'number') {
       this.proto = intrp.NUMBER;
-    } else if(typeof prim === 'string') {
+    } else if (typeof prim === 'string') {
       this.proto = intrp.STRING;
     } else {
       throw Error('Invalid type in Box');
