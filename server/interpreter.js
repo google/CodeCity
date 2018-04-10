@@ -4980,20 +4980,21 @@ stepFuncs_['Literal'] = function (stack, state, node) {
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['LogicalExpression'] = function (stack, state, node) {
-  if (node['operator'] !== '&&' && node['operator'] !== '||') {
-    throw SyntaxError('Unknown logical operator: ' + node['operator']);
-  }
-  if (!state.doneLeft_) {
-    state.doneLeft_ = true;
+  if (state.step_ === 0) {  // Eval left.
+    state.step_ = 1;
     return new Interpreter.State(node['left'], state.scope);
   }
-  if (!state.doneRight_ &&
-      ((node['operator'] === '&&' && state.value) ||
-      (node['operator'] === '||' && !state.value))) {
-    // No short-circuit this time.
-    state.doneRight_ = true;
-    return new Interpreter.State(node['right'], state.scope);
+  if (state.step_ == 1) { // Check for short-circuit; eval right.
+    var /** string */ op = node['operator'];
+    if (op !== '&&' && op !== '||') {
+      throw SyntaxError("Unknown logical operator '" + op + "'");
+    } else if ((op === '&&' && state.value) || (op === '||' && !state.value)) {
+      // No short-circuit this time.
+      state.step_ = 2;
+      return new Interpreter.State(node['right'], state.scope);
+    }
   }
+  // state.step_ === 2: return most recently evaluated subexpression.
   stack.pop();
   stack[stack.length - 1].value = state.value;
 };
