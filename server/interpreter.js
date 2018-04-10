@@ -2421,8 +2421,14 @@ Interpreter.State = function(node, scope, wantRef) {
 
   /** @type {Interpreter.Value} */
   this.value = undefined;
-  /** @type {!Array|undefined} */
-  this.ref = undefined;
+  /** @type {?Array} */
+  this.ref = null;
+  /** @type {?Array<string>} */
+  this.labels = null;
+  /** @type {boolean} */
+  this.isLoop = false;
+  /** @type {boolean} */
+  this.isSwitch = false;
 
   /** @private @type {number} */
   this.step_ = 0;
