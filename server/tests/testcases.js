@@ -414,6 +414,36 @@ module.exports = [
     `,
     expected: 0 },
 
+  { name: 'switchDefaultFirst', src: `
+    switch ('not found') {
+      default: 
+        'OK';
+        break;
+      case 'decoy':
+        'fail';
+    };
+    `,
+    expected: 'OK' },
+
+  { name: 'switchDefaultOnly', src: `
+    switch ('not found') {
+      default: 
+        'OK';
+    };
+    `,
+    expected: 'OK' },
+
+  { name: 'switchEmptyToEnd', src: `
+    'ok';
+    switch ('foo') {
+      default: 
+        'fail';
+      case 'foo':
+      case 'bar':
+    };
+    `,
+    expected: 'ok' },
+
   { name: 'thisInMethod', src: `
     var o = {
       f: function() { return this.foo; },

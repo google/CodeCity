@@ -899,7 +899,38 @@ tests.forInNullUndefined = function() {
   for (f().foo in undefined) { x++; }
   console.assert(x === 0, 'forInNullUndefined');
 };
-  
+
+tests.switchDefaultFirst = function() {
+  var r;
+  switch ('not found') {
+    default: 
+      r = 'OK';
+      break;
+    case 'decoy':
+      r = 'fail';
+  };
+  console.assert(r === 'OK', 'switchDefaultFirst');
+}
+
+tests.switchDefaultOnly = function() {
+  var r;
+  switch ('not found') {
+    default: 
+      r = 'OK';
+      break;
+  };
+  console.assert(r === 'OK', 'switchDefaultOnly');
+}
+
+tests.switchEmptyToEnd = function() {
+  switch ('foo') {
+    default: 
+      console.assert(false, 'switchEmptyToEnd');
+    case 'foo':
+    case 'bar':
+  }
+};
+
 tests.thisInMethod = function() {
   var o = {
     f: function() { return this.foo; },
