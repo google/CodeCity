@@ -5040,36 +5040,33 @@ stepFuncs_['NewExpression'] = stepFuncs_['CallExpression'];
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['ObjectExpression'] = function (stack, state, node) {
-  var n = state.n_ || 0;
-  var property = node['properties'][n];
-  if (!state.object_) {
-    // First execution.
-    state.object_ = new this.Object(state.scope.perms);
-  } else {
+  var n = state.n_;
+  if (!state.obj_) {  // First execution.  Create object.
+    state.obj_ = new this.Object(state.scope.perms);
+  } else {  // Save just-evaluated property value in object.
     // Determine property name.
-    var key = property['key'];
-    if (key['type'] === 'Identifier') {
-      var propName = key['name'];
-    } else if (key['type'] === 'Literal') {
-      var propName = key['value'];
+    var /** ?Interpreter.Node */ keyNode = node['properties'][n]['key'];
+    if (keyNode['type'] === 'Identifier') {
+      var /** string */ key = keyNode['name'];
+    } else if (keyNode['type'] === 'Literal') {
+      key = keyNode['value'];
     } else {
-      throw SyntaxError('Unknown object structure: ' + key['type']);
+      throw SyntaxError('Unknown object structure: ' + keyNode['type']);
     }
     // Set the property computed in the previous execution.
-    state.object_.set(propName, state.value, state.scope.perms);
+    state.obj_.set(key, state.value, state.scope.perms);
     state.n_ = ++n;
-    property = node['properties'][n];
   }
+  var /** ?Interpreter.Node */ property = node['properties'][n];
   if (property) {
     if (property['kind'] !== 'init') {
       throw new this.Error(state.scope.perms, this.SYNTAX_ERROR,
-          "Object kind: '" + property['kind'] +
-          "'.  Getters and setters are not supported.");
+          'Only plain properties are supported - not getters or setters');
     }
     return new Interpreter.State(property['value'], state.scope);
   }
   stack.pop();
-  stack[stack.length - 1].value = state.object_;
+  stack[stack.length - 1].value = state.obj_;
 };
 
 /**
