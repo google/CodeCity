@@ -5007,30 +5007,26 @@ stepFuncs_['LogicalExpression'] = function (stack, state, node) {
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['MemberExpression'] = function (stack, state, node) {
-  if (!state.doneObject_) {
-    state.doneObject_ = true;
+  if (state.step_ === 0) {  // Evaluate LHS (object).
+    state.step_ = 1;
     return new Interpreter.State(node['object'], state.scope);
-  }
-  var propName;
-  if (!node['computed']) {
-    state.object_ = state.value;
-    // obj.foo -- Just access 'foo' directly.
-    propName = node['property']['name'];
-  } else if (!state.doneProperty_) {
-    state.object_ = state.value;
-    // obj[foo] -- Compute value of 'foo'.
-    state.doneProperty_ = true;
-    return new Interpreter.State(node['property'], state.scope);
-  } else {
-    propName = state.value;
+  } else if (state.step_ === 1) {  // Evaluate RHS (property key) if necessary.
+    state.tmp_ = state.value;
+    if (node['computed']) {  // obj[foo] -- Compute value of 'foo'.
+      state.step_ = 2;
+      return new Interpreter.State(node['property'], state.scope);
+    }
+    var /** string */ key = node['property']['name'];
+  } else { // state.step_ === 2
+    key = String(state.value);
   }
   stack.pop();
   if (state.wantRef_) {
-    stack[stack.length - 1].ref = [state.object_, propName];
+    stack[stack.length - 1].ref = [state.tmp_, key];
   } else {
     var perms = state.scope.perms;
     stack[stack.length - 1].value =
-        this.toObject(state.object_, perms).get(propName, perms);
+        this.toObject(state.tmp_, perms).get(key, perms);
   }
 };
 
