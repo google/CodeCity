@@ -1625,7 +1625,7 @@ Interpreter.prototype.initWeakMap_ = function() {
    * @param {!Interpreter.NativeCallImpl} func Function to decorate.
    * @param {string=} name Name of decorated function (default:
    *     func.name).  (N.B. needed because 'delete' is a reserve word.
-   * @return {!Interpreter.NativeCallImpl} The decorated function.
+   * @return {!Interpreter.NativeCallImpl} The decorated function.)
    */
   var withChecks = function(func, name) {
     name = (name === undefined ? func.name : name);
