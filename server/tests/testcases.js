@@ -1590,6 +1590,69 @@ module.exports = [
         '"null":null,"object":{"obj":{},"arr":[]},"array":[{},[]]}' },
 
   /******************************************************************/
+  // WeakMap
+
+  { name: 'WeakMap', src: `
+    var w = new WeakMap;
+    var p = {};
+    var o = Object.create(p);
+    var fails = 0;
+    !w.has(p) || fails++;
+    !w.delete(p) || fails++;
+    w.set(o, 'o') === w || fails++;
+    w.get(o) === 'o' || fails++;
+    w.get(p) === undefined || fails++;
+    w.has(o) || fails++;
+    w.delete(o) || fails++;
+    !w.has(o) || fails++;
+    fails;
+    `,
+    expected: 0 },
+
+  { name: 'WeakMapPrototypeMethodsRejectInvalid', src: `
+    var w = new WeakMap;
+    var fails = 0;
+    function expectError(method, thisVal, args) {
+      try {
+        w[method].apply(thisVal, args);
+        fails++;
+      } catch (e) {
+        if (e.name !== 'TypeError') fails++;
+      }
+    }
+    var methods = ['delete', 'get', 'has', 'set'];
+    var values = [null, undefined, true, false, 0, 42, '', 'hi'];
+    for (var i = 0; i < methods.length; i++) {
+      var method = methods[i];
+      for (var j = 0; j < values.length; j++) {
+        var value = values[j];
+        expectError(method, value, [{}]);
+        expectError(method, w, [value]);
+      }
+      expectError(method, WeakMap.prototpye, [{}]);  // Ordinary object.
+    }
+    fails;
+    `,
+    expected: 0 },
+
+  { name: 'WeakMap', src: `
+    var w = new WeakMap;
+    var p = {};
+    var o = Object.create(p);
+    var fails = 0;
+    !w.has(p) || fails++;
+    !w.delete(p) || fails++;
+    w.set(o, 'o') === w || fails++;
+    w.get(o) === 'o' || fails++;
+    w.get(p) === undefined || fails++;
+    w.has(o) || fails++;
+    w.delete(o) || fails++;
+    !w.has(o) || fails++;
+    fails;
+    `,
+    expected: 0 },
+
+  /******************************************************************/
   // Permissions system:
 
   { name: 'permsReturnsRoot', src: `

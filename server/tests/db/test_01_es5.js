@@ -54,7 +54,7 @@ tests.builtinClasses = function() {
       constructor: Date,
       classStr: '[object Date]',
       prototypeClass: '[object Object]', // Was 'RegExp' in ES5.1.
-      functionNotConstructor: true
+      functionNotConstructor: true  // Date() doesn't construct.
     },
     {
       constructor: Error,
