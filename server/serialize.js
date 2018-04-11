@@ -224,6 +224,7 @@ Serializer.serialize = function(intrp) {
                  'Date',
                  'RegExp',
                  'Error',
+                 'WeakMap',
                  'Thread',
                  'Server',
                  'PropertyIterator'];
@@ -382,6 +383,7 @@ Serializer.getTypesDeserialize_ = function (intrp) {
     'PseudoDate': intrp.Date,
     'PseudoRegExp': intrp.RegExp,
     'PseudoError': intrp.Error,
+    'PseudoWeakMap': intrp.WeakMap,
     'Server': intrp.Server,
     'PropertyIterator': intrp.PropertyIterator,
     'Node': Interpreter.Node
