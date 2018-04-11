@@ -250,7 +250,7 @@ exports.testClasses = function(t) {
     },
     Date: {
       prototypeClass: 'Object', // Was 'RegExp' in ES5.1.
-      functionNotConstructor: true  // Date() is not a constructor.
+      functionNotConstructor: true  // Date() doesn't construct.
     },
     Error: {},
     EvalError: {
@@ -295,6 +295,10 @@ exports.testClasses = function(t) {
       literal: '"hello"',
       literalType: 'string',
       noInstance: true,
+    },
+    WeakMap: {
+      prototypeClass: 'Object',
+      functionNotConstructor: true  // WeakMap() can't be called without new.
     },
   };
   for (var c in classes) {
