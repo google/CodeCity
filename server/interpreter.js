@@ -533,6 +533,7 @@ Interpreter.prototype.initBuiltins_ = function() {
   this.initError_();
   this.initMath_();
   this.initJSON_();
+  this.initWeakMap_();
   this.initPerms_();
 
   // Initialize ES standard global functions.
@@ -1607,6 +1608,79 @@ Interpreter.prototype.initJSON_ = function() {
     return str;
   };
   this.createNativeFunction('JSON.stringify', wrapper, false);
+};
+
+/**
+ * Initialize the WeakMap class.
+ * @private
+ */
+Interpreter.prototype.initWeakMap_ = function() {
+  // WeakMap prototype.
+  this.WEAKMAP = new this.Object(this.ROOT);
+  this.builtins_['WeakMap.prototype'] = this.WEAKMAP;
+
+  // WeakMap constructor.
+  new this.NativeFunction({
+    id: 'WeakMap', length: 0,  // N.B. length is correct; arg is optional!
+    construct: function(intrp, thread, state, args) {
+      // TODO(cpcallen): Support interator argument to populate map.
+      return new intrp.WeakMap(intrp.thread.perms());
+    }
+  });
+
+  /**
+   * Decorator to add standard permission and type checks for HashMap
+   * prototype methods.
+   * @param {!Interpreter.NativeCallImpl} func Function to decorate.
+   * @param {string=} name Name of decorated function (default:
+   *     func.name).  (N.B. needed because 'delete' is a reserve word.
+   * @return {!Interpreter.NativeCallImpl} The decorated function.
+   */
+  var withChecks = function(func, name) {
+    name = (name === undefined ? func.name : name);
+    return function call(intrp, thred, state, thisVal, args) {
+      // TODO(cpcallen:perms): add controls()-type and/or
+      // object-readability check(s) here.
+      if (!(thisVal instanceof intrp.WeakMap)) {
+        throw new intrp.Error(state.scope.perms, intrp.TYPE_ERROR,
+            'Method WeakMap.prototype.' + name +
+            ' called on incompatible receiver ' + String(thisVal));
+      } else if (!(args[0] instanceof intrp.Object)) {
+        throw new intrp.Error(state.scope.perms, intrp.TYPE_ERROR,
+            'Invalid value used as weak map key');
+      }
+      return func.apply(this, arguments);
+    };
+  };
+
+  new this.NativeFunction({
+    id: 'WeakMap.prototype.delete', length: 1,
+    call: withChecks(function (intrp, thread, state, thisVal, args) {
+      return thisVal.weakMap.delete(args[0]);
+    }, 'delete')
+  });
+
+  new this.NativeFunction({
+    id: 'WeakMap.prototype.get', length: 1,
+    call: withChecks(function get(intrp, thread, state, thisVal, args) {
+      return thisVal.weakMap.get(args[0]);
+    })
+  });
+
+  new this.NativeFunction({
+    id: 'WeakMap.prototype.has', length: 1,
+    call: withChecks(function has(intrp, thread, state, thisVal, args) {
+      return thisVal.weakMap.has(args[0]);
+    })
+  });
+
+  new this.NativeFunction({
+    id: 'WeakMap.prototype.set', length: 2,
+    call: withChecks(function set(intrp, thread, state, thisVal, args) {
+      thisVal.weakMap.set(args[0], args[1]);
+      return thisVal;
+    })
+  });
 };
 
 /**
@@ -2833,6 +2907,18 @@ Interpreter.prototype.Error.prototype.toString = function() {
 
 /**
  * @constructor
+ * @extends {Interpreter.prototype.Object}
+ * @param {?Interpreter.Owner=} owner
+ * @param {?Interpreter.prototype.Object=} proto
+ */
+Interpreter.prototype.WeakMap = function(owner, proto) {
+  /** @type {!WeakMap} */
+  this.weakMap;
+  throw Error('Inner class constructor not callable on prototype');
+};
+
+/**
+ * @constructor
  * @param {?Interpreter.Owner} owner
  * @param {number} port
  * @param {!Interpreter.prototype.Object} proto
@@ -3808,6 +3894,24 @@ Interpreter.prototype.installTypes = function() {
       cycles.pop();
     }
   };
+
+  /**
+   * The WeakMap class from ES6.
+   * @constructor
+   * @extends {Interpreter.prototype.WeakMap}
+   * @param {?Interpreter.Owner=} owner Owner object or null.
+   * @param {?Interpreter.prototype.Object=} proto Prototype object or null.
+   */
+  intrp.WeakMap = function(owner, proto) {
+    intrp.Object.call(/** @type {?} */ (this), owner,
+        (proto === undefined ? intrp.WEAKMAP : proto));
+    /** @type {!WeakMap} */
+    this.weakMap = new WeakMap;
+  };
+
+  intrp.WeakMap.prototype = Object.create(intrp.Object.prototype);
+  intrp.WeakMap.prototype.constructor = intrp.WeakMap;
+  intrp.WeakMap.prototype.class = 'WeakMap';
 
   /**
    * Server is an (owner, port, proto, (extra info)) tuple representing a

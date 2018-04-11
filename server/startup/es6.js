@@ -23,7 +23,28 @@
  * @author fraser@google.com (Neil Fraser)
  */
 
+// Global objects.
+var WeakMap = new 'WeakMap';
+
 (function() {
+  var classes = ['WeakMap'];
+  // Prototypes of global constructors.
+  for (var i = 0; i < classes.length; i++) {
+    var constructor = new classes[i];
+    Object.defineProperty(constructor, 'prototype', {
+                          configurable: false,
+                          enumerable: false,
+                          writable: false,
+                          value: new (classes[i] + '.prototype')
+                          });
+    Object.defineProperty(constructor.prototype, 'constructor', {
+                          configurable: true,
+                          enumerable: false,
+                          writable: true,
+                          value: constructor
+                          });
+  }
+
   // Struct is a list of tuples:
   //     [Object, 'Object', [static methods], [instance methods]]
 
@@ -32,6 +53,7 @@
     [String, 'String', [], ['endsWith', 'includes', 'repeat', 'startsWith']],
     [Number, 'Number', ['isFinite', 'isNaN', 'isSafeInteger'], []],
     [Math, 'Math', ['sign', 'trunc'], []],
+    [WeakMap, 'WeakMap', [], ['delete', 'get', 'has', 'set']],
   ];
   for (var i = 0; i < struct.length; i++) {
     var obj = struct[i][0];
