@@ -2438,7 +2438,10 @@ Interpreter.State = function(node, scope, wantRef) {
   this.tmp_ = undefined;
   /** @private @type {?Interpreter.prototype.Object} */
   this.obj_ = null;
-  /** @private @type {?Interpreter.CallInfo|?Interpreter.ForInInfo} */
+  /** @private @type {?Interpreter.CallInfo|
+   *                  ?Interpreter.ForInInfo|
+   *                  Interpreter.SwitchInfo}
+   */
   this.info_ = null;
 };
 
@@ -5120,6 +5123,12 @@ stepFuncs_['SequenceExpression'] = function (stack, state, node) {
 };
 
 /**
+ * Extra info used by SwitchStatement step function.
+ * @typedef {{default: number}}
+ */
+Interpreter.SwitchInfo;
+
+/**
  * @this {!Interpreter}
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
@@ -5127,56 +5136,56 @@ stepFuncs_['SequenceExpression'] = function (stack, state, node) {
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['SwitchStatement'] = function (stack, state, node) {
-  if (!state.test_) {
-    state.test_ = 1;
-    return new Interpreter.State(node['discriminant'], state.scope);
+  // First check return value to see if case test succeeded.
+  if (state.step_ === 2 && state.value === state.tmp_) {
+    state.step_ = 3;
   }
-  if (state.test_ === 1) {
-    state.test_ = 2;
-    // Preserve switch value between case tests.
-    state.switchValue_ = state.value;
-    state.defaultCase_ = -1;
-  }
-
-  while (true) {
-    var index = state.index_ || 0;
-    var switchCase = node['cases'][index];
-    if (!state.matched_ && switchCase && !switchCase['test']) {
-      // Test on the default case is null.
-      // Bypass (but store) the default case, and get back to it later.
-      state.defaultCase_ = index;
-      state.index_ = index + 1;
-      continue;
-    }
-    if (!switchCase && !state.matched_ && state.defaultCase_ !== -1) {
-      // Ran through all cases, no match.  Jump to the default.
-      state.matched_ = true;
-      state.index_ = state.defaultCase_;
-      continue;
-    }
-    if (switchCase) {
-      if (!state.matched_ && !state.tested_ && switchCase['test']) {
-        state.tested_ = true;
-        return new Interpreter.State(switchCase['test'], state.scope);
+  switch (state.step_) {
+    case 0: // Start by evaluating discriminant.
+      state.step_ = 1;
+      return new Interpreter.State(node['discriminant'], state.scope);
+    case 1:  // Got evaluated discriminant.  Save it.
+      state.tmp_ = state.value;
+      state.isSwitch = true;
+      state.info_ = {default: -1};
+      state.n_ = -1;
+      state.step_ = 2;
+      // FALL THROUGH
+    case 2:  // Find case with non-empty test and evaluate test expression.
+      var /** Array<!Interpreter.Node> */ cases = node['cases'];
+      var /** number */ len = cases.length;
+      var n = state.n_ + 1;
+      if (n < len && !cases[n]['test']) {  // Found default case. Record & skip.
+        state.info_.default = n++;
       }
-      if (state.matched_ || state.value === state.switchValue_) {
-        state.matched_ = true;
-        var n = state.n_ || 0;
-        if (switchCase['consequent'][n]) {
-          state.isSwitch = true;
-          state.n_ = n + 1;
-          return new Interpreter.State(
-              switchCase['consequent'][n], state.scope);
+      if (n < len) {  // Found non-empty test expression.  Evaluate.
+        state.n_ = n;
+        return new Interpreter.State(cases[n]['test'], state.scope);
+      }
+      // Ran out of cases to test.
+      if (state.info_.default === -1) {  // And there's no default.  Terminate.
+        stack.pop();
+        return;
+      }
+      // Use default case.
+      state.n_ = state.info_.default;
+      // FALL THROUGH
+    case 3:  // Found correct case.  Prep for executing consequents.
+      state.tmp_ = 0;  // Begin with the 0th consequent of current case.
+      state.step_ = 4;
+      // FALL THROUGH
+    case 4:  // Execute case[n_].consequent[tmp_] (or next available).
+      cases = node['cases'];
+      len = cases.length;
+      for (n = state.n_; n < len; n++) {
+        var /** ?Interpreter.Node */ conseq = cases[n]['consequent'];
+        if (conseq && conseq[state.tmp_]) {
+          state.n_ = n;
+          return new Interpreter.State(conseq[state.tmp_++], state.scope);
         }
+        state.tmp_ = 0;  // Done this case; fall through 0th statement of next.
       }
-      // Move on to next case.
-      state.tested_ = false;
-      state.n_ = 0;
-      state.index_ = index + 1;
-    } else {
-      stack.pop();
-      return;
-    }
+      stack.pop();  // All done.
   }
 };
 
