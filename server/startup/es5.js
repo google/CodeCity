@@ -99,7 +99,8 @@ Object.defineProperty(Object, 'defineProperty', {enumerable: false});
                         value: ''
                         });
 
-  // Struct is a list of tuples: [Object, 'Object', [static methods], [instance methods]]
+  // Struct is a list of tuples:
+  //     [Object, 'Object', [static methods], [instance methods]]
 
   var struct = [
     [Object, 'Object',

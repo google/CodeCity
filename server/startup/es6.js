@@ -23,66 +23,44 @@
  * @author fraser@google.com (Neil Fraser)
  */
 
-Object.defineProperty(Object, 'is',
-    {configurable: true,
-     enumerable: false,
-     writable: true,
-     value: new 'Object.is'});
-Object.defineProperty(Object, 'setPrototypeOf',
-    {configurable: true,
-     enumerable: false,
-     writable: true,
-     value: new 'Object.setPrototypeOf'});
+(function() {
+  // Struct is a list of tuples:
+  //     [Object, 'Object', [static methods], [instance methods]]
 
-Object.defineProperty(String.prototype, 'endsWith',
-    {configurable: true,
-     enumerable: false,
-     writable: true,
-     value: new 'String.prototype.endsWith'});
-Object.defineProperty(String.prototype, 'includes',
-    {configurable: true,
-     enumerable: false,
-     writable: true,
-     value: new 'String.prototype.includes'});
-Object.defineProperty(String.prototype, 'repeat',
-    {configurable: true,
-     enumerable: false,
-     writable: true,
-     value: new 'String.prototype.repeat'});
-Object.defineProperty(String.prototype, 'startsWith',
-    {configurable: true,
-     enumerable: false,
-     writable: true,
-     value: new 'String.prototype.startsWith'});
+  var struct = [
+    [Object, 'Object', ['is', 'setPrototypeOf'], []],
+    [String, 'String', [], ['endsWith', 'includes', 'repeat', 'startsWith']],
+    [Number, 'Number', ['isFinite', 'isNaN', 'isSafeInteger'], []],
+    [Math, 'Math', ['sign', 'trunc'], []],
+  ];
+  for (var i = 0; i < struct.length; i++) {
+    var obj = struct[i][0];
+    var objName = struct[i][1];
+    var staticMethods = struct[i][2];
+    var instanceMethods = struct[i][3];
+    for (var j = 0; j < staticMethods.length; j++) {
+      var member = staticMethods[j];
+      Object.defineProperty(obj, member,
+          {configurable: true,
+           enumerable: false,
+           writable: true,
+           value: new (objName + '.' + member)});
+    }
+    for (var j = 0; j < instanceMethods.length; j++) {
+      var member = instanceMethods[j];
+      Object.defineProperty(obj.prototype, member,
+          {configurable: true,
+           enumerable: false,
+           writable: true,
+           value: new (objName + '.prototype.' + member)});
+    }
+  }
+})();
+
+
 
 Object.defineProperty(Number, 'EPSILON',
     {configurable: false,
      enumerable: false,
      writable: false,
      value: Math.pow(2, -52)});
-Object.defineProperty(Number, 'isFinite',
-    {configurable: false,
-     enumerable: false,
-     writable: false,
-     value: new 'Number.isFinite'});
-Object.defineProperty(Number, 'isNaN',
-    {configurable: false,
-     enumerable: false,
-     writable: false,
-     value: new 'Number.isNaN'});
-Object.defineProperty(Number, 'isSafeInteger',
-    {configurable: false,
-     enumerable: false,
-     writable: false,
-     value: new 'Number.isSafeInteger'});
-
-Object.defineProperty(Math, 'sign',
-    {configurable: false,
-     enumerable: false,
-     writable: false,
-     value: new 'Math.sign'});
-Object.defineProperty(Math, 'trunc',
-    {configurable: false,
-     enumerable: false,
-     writable: false,
-     value: new 'Math.trunc'});
