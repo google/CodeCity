@@ -4479,11 +4479,11 @@ stepFuncs_['BinaryExpression'] = function (stack, state, node) {
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['BlockStatement'] = function (stack, state, node) {
-  var n = state.n_ || 0;
-  var expression = node['body'][n];
-  if (expression) {
+  var n = state.n_;
+  var /** ?Interpreter.Node */ statement = node['body'][n];
+  if (statement) {
     state.n_ = n + 1;
-    return new Interpreter.State(expression, state.scope);
+    return new Interpreter.State(statement, state.scope);
   }
   stack.pop();
 };
