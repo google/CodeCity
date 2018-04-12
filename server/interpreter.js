@@ -4942,13 +4942,13 @@ stepFuncs_['IfStatement'] = stepFuncs_['ConditionalExpression'];
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['LabeledStatement'] = function (stack, state, node) {
-  // No need to hit this node again on the way back up the stack.
-  stack.pop();
   // Note that a statement might have multiple labels.
-  var labels = state.labels || [];
+  var /** !Array<string> */ labels = state.labels || [];
   labels.push(node['label']['name']);
   var nextState = new Interpreter.State(node['body'], state.scope);
   nextState.labels = labels;
+  // No need to hit LabelStatement node again on the way back up the stack.
+  stack.pop();
   return nextState;
 };
 
