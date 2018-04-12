@@ -298,7 +298,7 @@ Interpreter.prototype.step = function() {
         (typeof e === 'object' || typeof e === 'function')) {
       throw TypeError('Unexpected exception value ' + String(e));
     }
-    this.unwind_(Interpreter.CompletionType.THROW, e, undefined);
+    this.unwind_(thread, Interpreter.CompletionType.THROW, e, undefined);
   }
   if (nextState) {
     stack.push(nextState);
@@ -346,7 +346,7 @@ Interpreter.prototype.run = function() {
             !(e instanceof this.Object)) {
           throw TypeError('Unexpected exception value ' + String(e));
         }
-        this.unwind_(Interpreter.CompletionType.THROW, e, undefined);
+        this.unwind_(thread, Interpreter.CompletionType.THROW, e, undefined);
         nextState = undefined;
       }
       if (nextState) {
@@ -2311,16 +2311,16 @@ Interpreter.Completion;
  * target label of a break statement can be the statement itself
  * (e.g., `foo: break foo;`).
  * @private
+ * @param {!Interpreter.Thread} thread The thread whose stack is to be unwound.
  * @param {Interpreter.CompletionType} type Completion type.
  * @param {Interpreter.Value=} value Value computed, returned or thrown.
  * @param {string=} label Target label for break or return.
  */
-Interpreter.prototype.unwind_ = function(type, value, label) {
+Interpreter.prototype.unwind_ = function(thread, type, value, label) {
   if (type === Interpreter.CompletionType.NORMAL) {
     throw TypeError('Should not unwind for NORMAL completions');
   }
-
-  for (var stack = this.thread.stateStack_; stack.length > 0; stack.pop()) {
+  for (var stack = thread.stateStack_; stack.length > 0; stack.pop()) {
     var state = stack[stack.length - 1];
     switch (state.node['type']) {
       case 'TryStatement':
@@ -3731,6 +3731,7 @@ Interpreter.prototype.installTypes = function() {
             thread.stateStack_[thread.stateStack_.length - 1].scope);
         // TODO(cpcallen): this shouldn't rely on internal details of
         // the ThrowStatement step function.
+        // FIXME
         throwState.step_ = 1;
           throwState.value = value;
         thread.stateStack_.push(throwState);
@@ -4555,8 +4556,12 @@ stepFuncs_['BlockStatement'] = function (stack, state, node) {
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['BreakStatement'] = function (stack, state, node) {
-  this.unwind_(Interpreter.CompletionType.BREAK, undefined,
-      node['label'] ? node['label']['name'] : undefined);
+  // TODO(cpcallen): thread should be a param, or something.
+  var thread = this.thread;
+  if (!thread) throw Error('No thread in BreakStatement??');
+  this.unwind_(thread, Interpreter.CompletionType.BREAK, undefined,
+      node['label'] ? node['label']['name'] : undefined
+  );
 };
 
 /**
@@ -4699,7 +4704,10 @@ stepFuncs_['ConditionalExpression'] = function (stack, state, node) {
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['ContinueStatement'] = function (stack, state, node) {
-  this.unwind_(Interpreter.CompletionType.CONTINUE, undefined,
+  // TODO(cpcallen): thread should be a param, or something.
+  var thread = this.thread;
+  if (!thread) throw Error('No thread in ContinueStatement??');
+  this.unwind_(thread, Interpreter.CompletionType.CONTINUE, undefined,
       node['label'] ? node['label']['name'] : undefined);
 };
 
@@ -5122,7 +5130,11 @@ stepFuncs_['ReturnStatement'] = function (stack, state, node) {
     state.done_ = true;
     return new Interpreter.State(node['argument'], state.scope);
   }
-  this.unwind_(Interpreter.CompletionType.RETURN, state.value, undefined);
+  // TODO(cpcallen): thread should be a param, or something.
+  var thread = this.thread;
+  if (!thread) throw Error('No thread in ReturnStatement??');
+  this.unwind_(
+      thread, Interpreter.CompletionType.RETURN, state.value, undefined);
 };
 
 /**
@@ -5276,7 +5288,11 @@ stepFuncs_['TryStatement'] = function (stack, state, node) {
         // There was no catch handler, or the catch/finally threw an
         // error.  Resume unwinding the stack in search of
         // TryStatement / CallExpression / target of break or continue.
-        this.unwind_(state.info_.type, state.info_.value, state.info_.label);
+        // TODO(cpcallen): thread should be a param, or something.
+        var thread = this.thread;
+        if (!thread) throw Error('No thread in TryStatement??');
+        this.unwind_(
+            thread, state.info_.type, state.info_.value, state.info_.label);
       }
   }
 };
