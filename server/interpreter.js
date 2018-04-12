@@ -310,7 +310,7 @@ Interpreter.prototype.step = function() {
         (typeof e === 'object' || typeof e === 'function')) {
       throw TypeError('Unexpected exception value ' + String(e));
     }
-    this.unwind_(Interpreter.Completion.THROW, e, undefined);
+    this.unwind_(Interpreter.CompletionType.THROW, e, undefined);
   }
   if (nextState) {
     stack.push(nextState);
@@ -358,7 +358,7 @@ Interpreter.prototype.run = function() {
             !(e instanceof this.Object)) {
           throw TypeError('Unexpected exception value ' + String(e));
         }
-        this.unwind_(Interpreter.Completion.THROW, e, undefined);
+        this.unwind_(Interpreter.CompletionType.THROW, e, undefined);
         nextState = undefined;
       }
       if (nextState) {
@@ -2296,7 +2296,7 @@ Interpreter.prototype.setValue = function(scope, ref, value, perms) {
  * Completion Value Types.
  * @enum {number}
  */
-Interpreter.Completion = {
+Interpreter.CompletionType = {
   NORMAL: 0,
   BREAK: 1,
   CONTINUE: 2,
@@ -2315,12 +2315,12 @@ Interpreter.Completion = {
  * target label of a break statement can be the statement itself
  * (e.g., `foo: break foo;`).
  * @private
- * @param {Interpreter.Completion} type Completion type.
+ * @param {Interpreter.CompletionType} type Completion type.
  * @param {Interpreter.Value=} value Value computed, returned or thrown.
  * @param {string=} label Target label for break or return.
  */
 Interpreter.prototype.unwind_ = function(type, value, label) {
-  if (type === Interpreter.Completion.NORMAL) {
+  if (type === Interpreter.CompletionType.NORMAL) {
     throw TypeError('Should not unwind for NORMAL completions');
   }
 
@@ -2333,16 +2333,16 @@ Interpreter.prototype.unwind_ = function(type, value, label) {
       case 'CallExpression':
       case 'NewExpression':
         switch (type) {
-          case Interpreter.Completion.BREAK:
-          case Interpreter.Completion.CONTINUE:
+          case Interpreter.CompletionType.BREAK:
+          case Interpreter.CompletionType.CONTINUE:
             throw Error('Unsynatctic break/continue not rejected by Acorn');
-          case Interpreter.Completion.RETURN:
+          case Interpreter.CompletionType.RETURN:
             state.value = value;
             return;
         }
         break;
     }
-    if (type === Interpreter.Completion.BREAK) {
+    if (type === Interpreter.CompletionType.BREAK) {
       if (label ? (state.labels && state.labels.indexOf(label) !== -1) :
           (state.isLoop || state.isSwitch)) {
         // Top of stack is now target of break.  But we are breaking
@@ -2350,7 +2350,7 @@ Interpreter.prototype.unwind_ = function(type, value, label) {
         stack.pop();
         return;
       }
-    } else if (type === Interpreter.Completion.CONTINUE) {
+    } else if (type === Interpreter.CompletionType.CONTINUE) {
       if (label ? (state.labels && state.labels.indexOf(label) !== -1) :
           state.isLoop) {
         return;
@@ -2361,7 +2361,7 @@ Interpreter.prototype.unwind_ = function(type, value, label) {
   // Unhandled completion.  Terminate thread.
   this.thread.status = Interpreter.Thread.Status.ZOMBIE;
 
-  if (type === Interpreter.Completion.THROW) {
+  if (type === Interpreter.CompletionType.THROW) {
     // Log exception and stack trace.
     if (value instanceof this.Error) {
       console.log('Unhandled %s', value);
@@ -4522,7 +4522,7 @@ stepFuncs_['BlockStatement'] = function (stack, state, node) {
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['BreakStatement'] = function (stack, state, node) {
-  this.unwind_(Interpreter.Completion.BREAK, undefined,
+  this.unwind_(Interpreter.CompletionType.BREAK, undefined,
       node['label'] ? node['label']['name'] : undefined);
 };
 
@@ -4681,7 +4681,7 @@ stepFuncs_['ConditionalExpression'] = function (stack, state, node) {
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['ContinueStatement'] = function (stack, state, node) {
-  this.unwind_(Interpreter.Completion.CONTINUE, undefined,
+  this.unwind_(Interpreter.CompletionType.CONTINUE, undefined,
       node['label'] ? node['label']['name'] : undefined);
 };
 
@@ -5103,7 +5103,7 @@ stepFuncs_['ReturnStatement'] = function (stack, state, node) {
     state.done_ = true;
     return new Interpreter.State(node['argument'], state.scope);
   }
-  this.unwind_(Interpreter.Completion.RETURN, state.value, undefined);
+  this.unwind_(Interpreter.CompletionType.RETURN, state.value, undefined);
 };
 
 /**
@@ -5230,7 +5230,7 @@ stepFuncs_['TryStatement'] = function (stack, state, node) {
     state.doneBlock_ = true;
     return new Interpreter.State(node['block'], state.scope);
   }
-  if (state.cv && state.cv.type === Interpreter.Completion.THROW &&
+  if (state.cv && state.cv.type === Interpreter.CompletionType.THROW &&
       !state.doneHandler_ && node['handler']) {
     state.doneHandler_ = true;
     var nextState = new Interpreter.State(node['handler'], state.scope);
