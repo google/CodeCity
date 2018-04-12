@@ -5077,8 +5077,8 @@ stepFuncs_['ObjectExpression'] = function (stack, state, node) {
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['Program'] = function (stack, state, node) {
-  var n = state.n_ || 0;
-  var expression = node['body'][n];
+  var n = state.n_;
+  var /** ?Interpreter.Node */ expression = node['body'][n];
   if (expression) {
     state.n_ = n + 1;
     return new Interpreter.State(expression, state.scope);
