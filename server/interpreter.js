@@ -3417,7 +3417,7 @@ Interpreter.prototype.installTypes = function() {
    * @param {?Interpreter.prototype.Object=} proto Prototype object or null.
    */
   intrp.UserFunction = function(node, scope, src, owner, proto) {
-    if (!node) { // Deserializing
+    if (!node) {  // Deserializing
       return;
     }
     intrp.Function.call(/** @type {?} */ (this), owner, proto);
@@ -3603,7 +3603,7 @@ Interpreter.prototype.installTypes = function() {
    * @param {?Interpreter.prototype.Object=} proto Prototype object or null.
    */
   intrp.OldNativeFunction = function(impl, legalConstructor, owner, proto) {
-    if (!impl) { // Deserializing
+    if (!impl) {  // Deserializing
       return;
     }
     intrp.NativeFunction.call(/** @type {?} */ (this),
@@ -4547,14 +4547,14 @@ stepFuncs_['CallExpression'] = function (stack, state, node) {
     // Get refernce for calee, because we need to get value of 'this'.
     return new Interpreter.State(node['callee'], state.scope, true);
   }
-  if (state.step_ === 1) { // Evaluated callee, possibly got a reference.
+  if (state.step_ === 1) {  // Evaluated callee, possibly got a reference.
     // Determine value of the function.
     state.step_ = 2;
     var info = {callee: undefined,
                 this: undefined,  // Since we have no global object.
                 directEval: false,
                 arguments: []};
-    if (state.ref) { // Callee was MemberExpression or Identifier.
+    if (state.ref) {  // Callee was MemberExpression or Identifier.
       info.callee = this.getValue(state.scope, state.ref, state.scope.perms);
       if (state.ref[0] === Interpreter.SCOPE_REFERENCE) {
         // (Globally or locally) named function - maybe named 'eval'?
@@ -4563,7 +4563,7 @@ stepFuncs_['CallExpression'] = function (stack, state, node) {
         // Method call; save 'this' value.
         info.this =  state.ref[0];
       }
-    } else { // Callee already fully evaluated.
+    } else {  // Callee already fully evaluated.
       info.callee = state.value;
     }
     state.info_ = info;
@@ -4804,7 +4804,7 @@ stepFuncs_['ForInStatement'] = function (stack, state, node) {
         var iter = new Interpreter.PropertyIterator(obj, state.scope.perms);
         state.info_ = {iter: iter, key: ''};
         // FALL THROUGH
-      case 2: // Find the property name for this iteration; do node.left.
+      case 2:  // Find the property name for this iteration; do node.left.
         var key = state.info_.iter.next();
         if (key === undefined) {
           // Done; exit loop.
@@ -4859,16 +4859,16 @@ stepFuncs_['ForStatement'] = function (stack, state, node) {
           return new Interpreter.State(node['init'], state.scope);
         }
         // FALL THROUGH
-      case 1: // Eval test expression.
+      case 1:  // Eval test expression.
         state.step_ = 2;
         if (node['test']) {
           return new Interpreter.State(node['test'], state.scope);
         }
         // FALL THROUGH
-      case 2: // Eval body.
+      case 2:  // Eval body.
         state.step_ = 3;
         return new Interpreter.State(node['body'], state.scope);
-      case 3: // Eval update expression.
+      case 3:  // Eval update expression.
         state.step_ = 1;
         if (node['update']) {
           return new Interpreter.State(node['update'], state.scope);
@@ -4975,7 +4975,7 @@ stepFuncs_['LogicalExpression'] = function (stack, state, node) {
     state.step_ = 1;
     return new Interpreter.State(node['left'], state.scope);
   }
-  if (state.step_ == 1) { // Check for short-circuit; eval right.
+  if (state.step_ == 1) {  // Check for short-circuit; eval right.
     var /** string */ op = node['operator'];
     if (op !== '&&' && op !== '||') {
       throw SyntaxError("Unknown logical operator '" + op + "'");
@@ -5008,7 +5008,7 @@ stepFuncs_['MemberExpression'] = function (stack, state, node) {
       return new Interpreter.State(node['property'], state.scope);
     }
     var /** string */ key = node['property']['name'];
-  } else { // state.step_ === 2
+  } else {  // state.step_ === 2
     key = String(state.value);
   }
   stack.pop();
@@ -5129,7 +5129,7 @@ stepFuncs_['SwitchStatement'] = function (stack, state, node) {
     state.step_ = 3;
   }
   switch (state.step_) {
-    case 0: // Start by evaluating discriminant.
+    case 0:  // Start by evaluating discriminant.
       state.step_ = 1;
       return new Interpreter.State(node['discriminant'], state.scope);
     case 1:  // Got evaluated discriminant.  Save it.
@@ -5228,7 +5228,7 @@ stepFuncs_['TryStatement'] = function (stack, state, node) {
         return new Interpreter.State(handler['body'], scope);
       }
       // FALL THROUGH
-    case 2: // Done 'try' and 'catch'.  Do 'finally'?
+    case 2:  // Done 'try' and 'catch'.  Do 'finally'?
       if (node['finalizer']) {
         state.step_ = 3;
         return new Interpreter.State(node['finalizer'], state.scope);
