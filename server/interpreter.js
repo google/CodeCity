@@ -4635,27 +4635,6 @@ stepFuncs_['CallExpression'] = function (stack, state, node) {
  * @param {!Interpreter.Node} node
  * @return {!Interpreter.State|undefined}
  */
-stepFuncs_['CatchClause'] = function (stack, state, node) {
-  if (state.step_ === 0) {
-    state.step_ = 1;
-    // Create an empty scope.
-    var scope = new Interpreter.Scope(state.scope.perms, state.scope);
-    // Add the argument.  The .value actually supplied by parent TryStatement.
-    this.addVariableToScope(scope, node['param']['name'], state.value);
-    // Execute catch clause.
-    return new Interpreter.State(node['body'], scope);
-  }
-  // state.step_ === 1:
-  stack.pop();
-};
-
-/**
- * @this {!Interpreter}
- * @param {!Array<!Interpreter.State>} stack
- * @param {!Interpreter.State} state
- * @param {!Interpreter.Node} node
- * @return {!Interpreter.State|undefined}
- */
 stepFuncs_['ConditionalExpression'] = function (stack, state, node) {
   if (state.step_ === 0) {
     state.step_ = 1;
@@ -5240,12 +5219,14 @@ stepFuncs_['TryStatement'] = function (stack, state, node) {
     return new Interpreter.State(node['block'], state.scope);
   } else if (state.step_ === 1) {  // Back from 'try' block.  Run catch?
     state.step_ = 2;
-    if (state.info_ && state.info_.type === Interpreter.CompletionType.THROW &&
-        node['handler']) {
-      var nextState = new Interpreter.State(node['handler'], state.scope);
-      nextState.value = state.info_.value;
-      state.info_ = null;  // This error has been handled, don't rethrow.
-      return nextState;
+    var /** ?Interpreter.Node */ handler = node['handler'];
+    var cv = /** ?Interpreter.Completion */ (state.info_);
+    if (handler && cv && cv.type === Interpreter.CompletionType.THROW) {
+      state.info_ = null;  // This error is being handled, don't rethrow.
+      // Execute catch clause with varible bound to exception value.
+      var scope = new Interpreter.Scope(state.scope.perms, state.scope);
+      this.addVariableToScope(scope, handler['param']['name'], cv.value);
+      return new Interpreter.State(handler['body'], scope);
     }
   }
   if (state.step_ === 2)  { // Done 'try' and 'catch'.  Do 'finally'?
