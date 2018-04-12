@@ -212,7 +212,7 @@ Interpreter.prototype.createThreadForFuncCall = function(
   //     depend on details of internal implementation of
   //     CallExpression step function.
   // TODO(cpcallen:perms): decide how caller perms will work.  Does it
-  //     need to be passed in as ane extra argument?  Otherwise, if
+  //     need to be passed in as an extra argument?  Otherwise, if
   //     reading from outer scope perms will always be root.  :-(
   var node = new Interpreter.Node;
   node['type'] = 'CallExpression';
@@ -4394,13 +4394,13 @@ stepFuncs_['ArrayExpression'] = function (stack, state, node) {
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['AssignmentExpression'] = function (stack, state, node) {
-  if (state.step_ === 0) {
+  if (state.step_ === 0) {  // Get Reference to left.
     state.step_ = 1;
     // Get Reference for left subexpression.
     return new Interpreter.State(node['left'], state.scope, true);
   }
   if (!state.ref) throw TypeError('left subexpression not an LVALUE??');
-  if (state.step_ === 1) {
+  if (state.step_ === 1) {  // Evaluate right.
     if (node['operator'] !== '=') {
       state.tmp_ =
           this.getValue(state.scope, state.ref, state.scope.perms);
@@ -4450,11 +4450,11 @@ Interpreter.CallInfo;
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['BinaryExpression'] = function (stack, state, node) {
-  if (state.step_ === 0) {
+  if (state.step_ === 0) {  // Evaluate left.
     state.step_ = 1;
     return new Interpreter.State(node['left'], state.scope);
   }
-  if (state.step_ === 1) {
+  if (state.step_ === 1) {  // Save left; evaluate right.
     state.step_ = 2;
     state.tmp_ = state.value;
     return new Interpreter.State(node['right'], state.scope);
@@ -4542,7 +4542,7 @@ stepFuncs_['BreakStatement'] = function (stack, state, node) {
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['CallExpression'] = function (stack, state, node) {
-  if (state.step_ === 0) {
+  if (state.step_ === 0) {  // Evaluate callee.
     state.step_ = 1;
     // Get refernce for calee, because we need to get value of 'this'.
     return new Interpreter.State(node['callee'], state.scope, true);
@@ -4627,6 +4627,8 @@ stepFuncs_['CallExpression'] = function (stack, state, node) {
 };
 
 /**
+ * ConditionalExpression AND IfStatement.  The only difference is the
+ * latter does not return a value to the parent state.
  * @this {!Interpreter}
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
@@ -4634,11 +4636,11 @@ stepFuncs_['CallExpression'] = function (stack, state, node) {
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['ConditionalExpression'] = function (stack, state, node) {
-  if (state.step_ === 0) {
+  if (state.step_ === 0) {  // Evaluate test.
     state.step_ = 1;
     return new Interpreter.State(node['test'], state.scope);
   }
-  if (state.step_ === 1) {
+  if (state.step_ === 1) {  // Test evaluated; result is in .value
     state.step_ = 2;
     var value = Boolean(state.value);
     if (value && node['consequent']) {
@@ -4652,7 +4654,7 @@ stepFuncs_['ConditionalExpression'] = function (stack, state, node) {
     // eval('1;if(false){2}') -> undefined
     this.value = undefined;
   }
-  // state.step_ === 2:
+  // state.step_ === 2: Consequent or alternate done.  Do return?
   stack.pop();
   if (node['type'] === 'ConditionalExpression') {
     stack[stack.length - 1].value = state.value;
@@ -4684,7 +4686,8 @@ stepFuncs_['DebuggerStatement'] = function (stack, state, node) {
 };
 
 /**
- * DoWhileStatement AND WhileStatement.
+ * DoWhileStatement AND WhileStatement.  The only difference is the
+ * former skips evaluating the test expression the first time through.
  * @this {!Interpreter}
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
@@ -4692,7 +4695,7 @@ stepFuncs_['DebuggerStatement'] = function (stack, state, node) {
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['DoWhileStatement'] = function (stack, state, node) {
-  if (state.step_ === 0) {
+  if (state.step_ === 0) {  // Decide whether to skip first test.
     state.step_ = 1;
     if (node['type'] === 'DoWhileStatement') {
       // First iteration of do/while executes without checking test.
@@ -4704,7 +4707,7 @@ stepFuncs_['DoWhileStatement'] = function (stack, state, node) {
     state.step_ = 2;
     return new Interpreter.State(node['test'], state.scope);
   }
-  // state.step_ === 2:
+  // state.step_ === 2: Check result of evaluation.
   if (!state.value) {  // Done, exit loop.
     stack.pop();
   } else if (node['body']) {  // Execute the body.
@@ -4751,11 +4754,11 @@ stepFuncs_['EvalProgram_'] = function (stack, state, node) {
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['ExpressionStatement'] = function (stack, state, node) {
-  if (state.step_ === 0) {
+  if (state.step_ === 0) {  // Evaluate expression.
     state.step_ = 1;
     return new Interpreter.State(node['expression'], state.scope);
   }
-  // state.step_ === 1:
+  // state.step_ === 1: Handle completion value.
   stack.pop();
   // Save this value to interpreter.value for use as a return value if
   // this code is inside an eval function.
@@ -4846,7 +4849,7 @@ stepFuncs_['ForInStatement'] = function (stack, state, node) {
  */
 stepFuncs_['ForStatement'] = function (stack, state, node) {
   // If we've just evaluated node.test, and result was false, terminate loop.
-  if  (state.step_ === 2 && !state.value) {
+  if (state.step_ === 2 && !state.value) {
     stack.pop();
     return;
   }
@@ -4985,7 +4988,7 @@ stepFuncs_['LogicalExpression'] = function (stack, state, node) {
       return new Interpreter.State(node['right'], state.scope);
     }
   }
-  // state.step_ === 2: return most recently evaluated subexpression.
+  // state.step_ === 2: Return most recently evaluated subexpression.
   stack.pop();
   stack[stack.length - 1].value = state.value;
 };
@@ -5008,7 +5011,7 @@ stepFuncs_['MemberExpression'] = function (stack, state, node) {
       return new Interpreter.State(node['property'], state.scope);
     }
     var /** string */ key = node['property']['name'];
-  } else {  // state.step_ === 2
+  } else {  // state.step_ === 2: Save computed property key.
     key = String(state.value);
   }
   stack.pop();
@@ -5197,7 +5200,7 @@ stepFuncs_['ThisExpression'] = function (stack, state, node) {
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['ThrowStatement'] = function (stack, state, node) {
-  if (state.step_ === 0) {
+  if (state.step_ === 0) {  // Evaluate value to throw.
     state.step_ = 1;
     return new Interpreter.State(node['argument'], state.scope);
   }
@@ -5256,7 +5259,7 @@ stepFuncs_['TryStatement'] = function (stack, state, node) {
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['UnaryExpression'] = function (stack, state, node) {
-  if (state.step_ === 0) {
+  if (state.step_ === 0) {  // Evaluate (or get reference) to argument.
     state.step_ = 1;
     // Get argument - need Reference if operator is 'delete':
     return new Interpreter.State(
@@ -5334,8 +5337,8 @@ stepFuncs_['VariableDeclaration'] = function (stack, state, node) {
   var declarations = node['declarations'];
   var n = state.n_;
   var decl = declarations[n];
-  if (state.step_ === 1) {
-    // Note that this is setting the init value, not defining the variable.
+  if (state.step_ === 1) {  // Initialise variable with evaluated init value.
+    // Note that this is setting the value, not defining the variable.
     // Variable definition (addVariableToScope) is done when scope is populated.
     this.setValueToScope(state.scope, decl['id']['name'], state.value);
     decl = declarations[++n];
