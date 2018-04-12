@@ -208,20 +208,8 @@ Interpreter.prototype.createThread = function(runnable, runAt) {
  */
 Interpreter.prototype.createThreadForFuncCall = function(
     func, thisVal, args, runAt) {
-  // TODO(cpcallen): Find a more elegant way to do this.  We shouldn't
-  //     depend on details of internal implementation of
-  //     CallExpression step function.
-  // TODO(cpcallen:perms): decide how caller perms will work.  Does it
-  //     need to be passed in as an extra argument?  Otherwise, if
-  //     reading from outer scope perms will always be root.  :-(
-  var node = new Interpreter.Node;
-  node['type'] = 'CallExpression';
-  var state = new Interpreter.State(node, this.global);
-  state.info_ = {callee: func,
-                 this: thisVal,
-                 directEval: false,
-                 arguments: args};
-  state.step_ = 3;
+  // TODO(cpcallen:perms): add perms argument.
+  var state = Interpreter.State.newForCall(func, thisVal, args, this.ROOT);
   return this.createThread(state, runAt);
 };
 
@@ -2453,6 +2441,47 @@ Interpreter.State = function(node, scope, wantRef) {
 };
 
 /**
+ * Create a new State pre-configured to begin executing a function call.
+ * @param {!Interpreter.prototype.Function} func Function to call.
+ * @param {Interpreter.Value} thisVal value of 'this' in function call.
+ * @param {!Array<Interpreter.Value>} args Arguments to pass.
+ * @param {!Interpreter.Owner} perms Who is doing the call?
+ * @return {!Interpreter.State} The newly-created state.
+ */
+Interpreter.State.newForCall = function(func, thisVal, args, perms) {
+  // N.B.: numeric constants in this function must correspond with the
+  // CallExpresion step function.
+
+  // Dummy node (used only for type).
+  var node = new Interpreter.Node;
+  node['type'] = 'CallExpression';
+  // Dummy outer scope (used ony for perms, which will be caller perms).
+  var scope = new Interpreter.Scope(perms, null);
+
+  var state = new Interpreter.State(node, scope);
+  state.info_ = {callee: func,
+                 this: thisVal,
+                 directEval: false,
+                 arguments: args};
+  state.step_ = 3;  // Skip evaluation of func/this/args; begin execution next.
+  return state;
+};
+
+/**
+ * Should this state be included in the stack trace generated for
+ * Error objects?
+ * @return {boolean}
+ */
+Interpreter.State.prototype.includeInStack = function() {
+  // N.B.: numeric constants in this function must correspond with the
+  // CallExpresion step function.
+
+  // Is state in the last step of execution (i.e., .call called)?
+  return this.node && this.node['type'] === 'CallExpression' &&
+      this.step_ === 4;
+};
+
+/**
  * Class for a thread of execution.
  * @constructor
  * @param {number} id Thread ID.  Should correspond to index of this
@@ -3881,10 +3910,7 @@ Interpreter.prototype.installTypes = function() {
         var node = state.node;
         // Always add the first state to the stack.
         // Also add any call expression that is executing.
-        // TODO(cpcallen): this shouldn't rely on internal details of
-        // the CallExpression step function.
-        if (stack.length &&
-            !(node['type'] === 'CallExpression' && state.step_ === 4)) {
+        if (stack.length && !state.includeInStack()) {
           continue;
         }
         var code = intrp.thread.getSource(i);
@@ -4542,6 +4568,10 @@ stepFuncs_['BreakStatement'] = function (stack, state, node) {
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['CallExpression'] = function (stack, state, node) {
+  // N.B. If you edit any of the step_ values in this function, be
+  // sure to also update the following functions to match!:
+  // - Interpreter.State.prototype.includeInStack
+  // - Interpreter.State.newForCall
   if (state.step_ === 0) {  // Evaluate callee.
     state.step_ = 1;
     // Get refernce for calee, because we need to get value of 'this'.
@@ -4590,10 +4620,10 @@ stepFuncs_['CallExpression'] = function (stack, state, node) {
         return;
       }
     }
-    state.step_ = 3;
+    state.step_ = 3;  // N.B: SEE NOTE ABOVE!
   }
   if (state.step_ === 3) {  // Done valuating arguments; do function call.
-    state.step_ = 4;
+    state.step_ = 4;  // N.B: SEE NOTE ABOVE!
     var func = state.info_.callee;
     if (!(func instanceof this.Function)) {
       throw new this.Error(state.scope.perms, this.TYPE_ERROR,
@@ -4612,7 +4642,7 @@ stepFuncs_['CallExpression'] = function (stack, state, node) {
         func.call(this, this.thread, state, state.info_.this, args);
     if (r instanceof FunctionResult) {
       if (r === FunctionResult.CallAgain) {
-        state.step_ = 3;
+        state.step_ = 3;  // N.B: SEE NOTE ABOVE!
       }
       return;
     }
