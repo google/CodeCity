@@ -5214,36 +5214,39 @@ stepFuncs_['ThrowStatement'] = function (stack, state, node) {
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['TryStatement'] = function (stack, state, node) {
-  if (state.step_ === 0) {  // Evaluate 'try' block.
-    state.step_ = 1;
-    return new Interpreter.State(node['block'], state.scope);
-  } else if (state.step_ === 1) {  // Back from 'try' block.  Run catch?
-    state.step_ = 2;
-    var /** ?Interpreter.Node */ handler = node['handler'];
-    var cv = /** ?Interpreter.Completion */ (state.info_);
-    if (handler && cv && cv.type === Interpreter.CompletionType.THROW) {
-      state.info_ = null;  // This error is being handled, don't rethrow.
-      // Execute catch clause with varible bound to exception value.
-      var scope = new Interpreter.Scope(state.scope.perms, state.scope);
-      this.addVariableToScope(scope, handler['param']['name'], cv.value);
-      return new Interpreter.State(handler['body'], scope);
-    }
-  }
-  if (state.step_ === 2)  { // Done 'try' and 'catch'.  Do 'finally'?
-    if (node['finalizer']) {
-      state.step_ = 3;
-      return new Interpreter.State(node['finalizer'], state.scope);
-    }
-  }
-  // Regardless of whether we are exiting normally or about to resume
-  // unwinding the stack, we are done with this TryStatement and do
-  // not want to examine it again.
-  stack.pop();
-  if (state.info_) {
-    // There was no catch handler, or the catch/finally threw an
-    // error.  Resume unwinding the stack in search of TryStatement /
-    // CallExpression / target of break or continue.
-    this.unwind_(state.info_.type, state.info_.value, state.info_.label);
+  switch (state.step_) {
+    case 0:  // Evaluate 'try' block.
+      state.step_ = 1;
+      return new Interpreter.State(node['block'], state.scope);
+    case 1:  // Back from 'try' block.  Run catch?
+      state.step_ = 2;
+      var /** ?Interpreter.Node */ handler = node['handler'];
+      var cv = /** ?Interpreter.Completion */ (state.info_);
+      if (handler && cv && cv.type === Interpreter.CompletionType.THROW) {
+        state.info_ = null;  // This error is being handled, don't rethrow.
+        // Execute catch clause with varible bound to exception value.
+        var scope = new Interpreter.Scope(state.scope.perms, state.scope);
+        this.addVariableToScope(scope, handler['param']['name'], cv.value);
+        return new Interpreter.State(handler['body'], scope);
+      }
+      // FALL THROUGH
+    case 2: // Done 'try' and 'catch'.  Do 'finally'?
+      if (node['finalizer']) {
+        state.step_ = 3;
+        return new Interpreter.State(node['finalizer'], state.scope);
+      }
+      // FALL TRHOUGH
+    case 3:
+      // Regardless of whether we are exiting normally or about to
+      // resume unwinding the stack, we are done with this
+      // TryStatement and do not want to examine it again.
+      stack.pop();
+      if (state.info_) {
+        // There was no catch handler, or the catch/finally threw an
+        // error.  Resume unwinding the stack in search of
+        // TryStatement / CallExpression / target of break or continue.
+        this.unwind_(state.info_.type, state.info_.value, state.info_.label);
+      }
   }
 };
 
