@@ -5331,25 +5331,23 @@ stepFuncs_['UpdateExpression'] = function (stack, state, node) {
  */
 stepFuncs_['VariableDeclaration'] = function (stack, state, node) {
   var declarations = node['declarations'];
-  var n = state.n_ || 0;
-  var declarationNode = declarations[n];
-  if (state.init_ && declarationNode) {
+  var n = state.n_;
+  var decl = declarations[n];
+  if (state.step_ === 1) {
     // Note that this is setting the init value, not defining the variable.
     // Variable definition (addVariableToScope) is done when scope is populated.
-    this.setValueToScope(state.scope, declarationNode['id']['name'],
-        state.value);
-    state.init_ = false;
-    declarationNode = declarations[++n];
+    this.setValueToScope(state.scope, decl['id']['name'], state.value);
+    decl = declarations[++n];
   }
-  while (declarationNode) {
+  while (decl) {
     // Skip any declarations that are not initialized.  They have already
     // been defined as undefined in populateScope_.
-    if (declarationNode['init']) {
+    if (decl['init']) {
       state.n_ = n;
-      state.init_ = true;
-      return new Interpreter.State(declarationNode['init'], state.scope);
+      state.step_ = 1;
+      return new Interpreter.State(decl['init'], state.scope);
     }
-    declarationNode = declarations[++n];
+    decl = declarations[++n];
   }
   stack.pop();
 };
