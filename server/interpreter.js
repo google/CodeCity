@@ -5255,13 +5255,12 @@ stepFuncs_['TryStatement'] = function (stack, state, node) {
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['UnaryExpression'] = function (stack, state, node) {
-  if (!state.done_) {
-    state.done_ = true;
+  if (state.step_ === 0) {
+    state.step_ = 1;
     // Get argument - need Reference if operator is 'delete':
     return new Interpreter.State(
         node['argument'], state.scope, node['operator'] === 'delete');
   }
-  stack.pop();
   var value = state.value;
   if (node['operator'] === '-') {
     value = -value;
@@ -5291,6 +5290,7 @@ stepFuncs_['UnaryExpression'] = function (stack, state, node) {
   } else {
     throw SyntaxError('Unknown unary operator: ' + node['operator']);
   }
+  stack.pop();
   stack[stack.length - 1].value = value;
 };
 
