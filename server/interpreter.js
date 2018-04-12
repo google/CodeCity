@@ -2305,6 +2305,14 @@ Interpreter.CompletionType = {
 };
 
 /**
+ * The Completion Specification Type, from ES5.1 §8.9
+ * @typedef {{type: Interpreter.CompletionType,
+ *            value: Interpreter.Value,
+ *            label: (string|undefined)}}
+ */
+Interpreter.Completion;
+
+/**
  * Unwind the stack to the innermost relevant enclosing TryStatement,
  * For/ForIn/WhileStatement or Call/NewExpression.  If this results in
  * the stack being completely unwound the thread will be terminated
@@ -2328,7 +2336,7 @@ Interpreter.prototype.unwind_ = function(type, value, label) {
     var state = stack[stack.length - 1];
     switch (state.node['type']) {
       case 'TryStatement':
-        state.cv = {type: type, value: value, label: label};
+        state.info_ = {type: type, value: value, label: label};
         return;
       case 'CallExpression':
       case 'NewExpression':
@@ -2440,7 +2448,8 @@ Interpreter.State = function(node, scope, wantRef) {
   this.obj_ = null;
   /** @private @type {?Interpreter.CallInfo|
    *                  ?Interpreter.ForInInfo|
-   *                  Interpreter.SwitchInfo}
+   *                  ?Interpreter.SwitchInfo|
+   *                  ?Interpreter.Completion}
    */
   this.info_ = null;
 };
@@ -5230,12 +5239,12 @@ stepFuncs_['TryStatement'] = function (stack, state, node) {
     state.doneBlock_ = true;
     return new Interpreter.State(node['block'], state.scope);
   }
-  if (state.cv && state.cv.type === Interpreter.CompletionType.THROW &&
+  if (state.info_ && state.info_.type === Interpreter.CompletionType.THROW &&
       !state.doneHandler_ && node['handler']) {
     state.doneHandler_ = true;
     var nextState = new Interpreter.State(node['handler'], state.scope);
-    nextState.value = state.cv.value;
-    state.cv = undefined;  // This error has been handled, don't rethrow.
+    nextState.value = state.info_.value;
+    state.info_ = undefined;  // This error has been handled, don't rethrow.
     return nextState;
   }
   if (!state.doneFinalizer_ && node['finalizer']) {
@@ -5246,11 +5255,11 @@ stepFuncs_['TryStatement'] = function (stack, state, node) {
   // unwinding the stack, we are done with this TryStatement and do
   // not want to examine it again.
   stack.pop();
-  if (state.cv) {
+  if (state.info_) {
     // There was no catch handler, or the catch/finally threw an
     // error.  Resume unwinding the stack in search of TryStatement /
     // CallExpression / target of break or continue.
-    this.unwind_(state.cv.type, state.cv.value, state.cv.label);
+    this.unwind_(state.info_.type, state.info_.value, state.info_.label);
   }
 };
 
