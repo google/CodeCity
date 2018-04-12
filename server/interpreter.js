@@ -4960,13 +4960,15 @@ stepFuncs_['LabeledStatement'] = function (stack, state, node) {
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['Literal'] = function (stack, state, node) {
-  stack.pop();
-  var value = node['value'];
-  if (value instanceof RegExp) {
-    var pseudoRegexp = new this.RegExp(state.scope.perms);
-    pseudoRegexp.populate(value);
-    value = pseudoRegexp;
+  var /** (null|boolean|number|string|!RegExp) */ literal = node['value'];
+  var /** Interpreter.Value */ value;
+  if (literal instanceof RegExp) {
+    value = new this.RegExp(state.scope.perms);
+    value.populate(literal);
+  } else {
+    value = literal;
   }
+  stack.pop();
   stack[stack.length - 1].value = value;
 };
 
