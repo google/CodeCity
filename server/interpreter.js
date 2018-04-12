@@ -4918,7 +4918,7 @@ stepFuncs_['FunctionExpression'] = function (stack, state, node) {
  */
 stepFuncs_['Identifier'] = function (stack, state, node) {
   stack.pop();
-  var name = node['name'];
+  var /** string */ name = node['name'];
   if (state.wantRef_) {
     stack[stack.length - 1].ref = [Interpreter.SCOPE_REFERENCE, name];
   } else {
