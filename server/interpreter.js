@@ -5235,21 +5235,24 @@ stepFuncs_['ThrowStatement'] = function (stack, state, node) {
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['TryStatement'] = function (stack, state, node) {
-  if (!state.doneBlock_) {
-    state.doneBlock_ = true;
+  if (state.step_ === 0) {  // Evaluate 'try' block.
+    state.step_ = 1;
     return new Interpreter.State(node['block'], state.scope);
+  } else if (state.step_ === 1) {  // Back from 'try' block.  Run catch?
+    state.step_ = 2;
+    if (state.info_ && state.info_.type === Interpreter.CompletionType.THROW &&
+        node['handler']) {
+      var nextState = new Interpreter.State(node['handler'], state.scope);
+      nextState.value = state.info_.value;
+      state.info_ = null;  // This error has been handled, don't rethrow.
+      return nextState;
+    }
   }
-  if (state.info_ && state.info_.type === Interpreter.CompletionType.THROW &&
-      !state.doneHandler_ && node['handler']) {
-    state.doneHandler_ = true;
-    var nextState = new Interpreter.State(node['handler'], state.scope);
-    nextState.value = state.info_.value;
-    state.info_ = undefined;  // This error has been handled, don't rethrow.
-    return nextState;
-  }
-  if (!state.doneFinalizer_ && node['finalizer']) {
-    state.doneFinalizer_ = true;
-    return new Interpreter.State(node['finalizer'], state.scope);
+  if (state.step_ === 2)  { // Done 'try' and 'catch'.  Do 'finally'?
+    if (node['finalizer']) {
+      state.step_ = 3;
+      return new Interpreter.State(node['finalizer'], state.scope);
+    }
   }
   // Regardless of whether we are exiting normally or about to resume
   // unwinding the stack, we are done with this TryStatement and do
