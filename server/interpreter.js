@@ -2444,8 +2444,6 @@ Interpreter.State = function(node, scope, wantRef) {
   this.n_ = 0;
   /** @private @type {Interpreter.Value|undefined} */
   this.tmp_ = undefined;
-  /** @private @type {?Interpreter.prototype.Object} */
-  this.obj_ = null;
   /** @private @type {?Interpreter.CallInfo|
    *                  ?Interpreter.ForInInfo|
    *                  ?Interpreter.SwitchInfo|
@@ -4367,10 +4365,10 @@ var stepFuncs_ = {};
  */
 stepFuncs_['ArrayExpression'] = function (stack, state, node) {
   var n = state.n_;
-  if (!state.obj_) {
-    state.obj_ = new this.Array(state.scope.perms);
-  } else {
-    state.obj_.set(String(n), state.value, state.scope.perms);
+  if (!state.tmp_) {  // Create Array object
+    state.tmp_ = new this.Array(state.scope.perms);
+  } else {  // Save most recently-evaluated element.
+    state.tmp_.set(String(n), state.value, state.scope.perms);
     n++;
   }
   var /** !Array<!Interpreter.Node> */ elements = node['elements'];
@@ -4383,9 +4381,9 @@ stepFuncs_['ArrayExpression'] = function (stack, state, node) {
     state.n_ = n;
     return new Interpreter.State(elements[n], state.scope);
   }
-  state.obj_.set('length', elements.length, state.scope.perms);
+  state.tmp_.set('length', elements.length, state.scope.perms);
   stack.pop();
-  stack[stack.length - 1].value = state.obj_;
+  stack[stack.length - 1].value = state.tmp_;
 };
 
 /**
@@ -5034,8 +5032,8 @@ stepFuncs_['NewExpression'] = stepFuncs_['CallExpression'];
  */
 stepFuncs_['ObjectExpression'] = function (stack, state, node) {
   var n = state.n_;
-  if (!state.obj_) {  // First execution.  Create object.
-    state.obj_ = new this.Object(state.scope.perms);
+  if (!state.tmp_) {  // First execution.  Create object.
+    state.tmp_ = new this.Object(state.scope.perms);
   } else {  // Save just-evaluated property value in object.
     // Determine property name.
     var /** ?Interpreter.Node */ keyNode = node['properties'][n]['key'];
@@ -5047,7 +5045,7 @@ stepFuncs_['ObjectExpression'] = function (stack, state, node) {
       throw SyntaxError('Unknown object structure: ' + keyNode['type']);
     }
     // Set the property computed in the previous execution.
-    state.obj_.set(key, state.value, state.scope.perms);
+    state.tmp_.set(key, state.value, state.scope.perms);
     state.n_ = ++n;
   }
   var /** ?Interpreter.Node */ property = node['properties'][n];
@@ -5059,7 +5057,7 @@ stepFuncs_['ObjectExpression'] = function (stack, state, node) {
     return new Interpreter.State(property['value'], state.scope);
   }
   stack.pop();
-  stack[stack.length - 1].value = state.obj_;
+  stack[stack.length - 1].value = state.tmp_;
 };
 
 /**
