@@ -2,14 +2,18 @@ body {
   background: #fff;
   color: #444;
   font-family: "Roboto Mono", monospace;
+  font-size: 11pt;
 }
 
-input {
+input,
+textarea {
   font-family: "Roboto Mono", monospace;
-  font-size: large;
+  font-size: 11pt;
 }
 
 #input {
+  box-sizing: border-box;
+  margin-left: -2px;
   width: 100%;
 }
 
@@ -43,7 +47,6 @@ input {
 }
 
 #panels {
-  top: 45px;
   bottom: 5px;
   right: 0;
   left: 0;
@@ -128,6 +131,7 @@ input {
   font-family: monospace;
   width: 3ex;
   text-align: center;
+  font-size: medium;
 }
 
 .loading:after {
@@ -158,6 +162,7 @@ input {
   left: 0;
   bottom: 0;
   transition-property: opacity;
+  z-index: 998;
 }
 
 #editorConfirmBox {
@@ -174,6 +179,7 @@ input {
   padding: 1em;
   text-align: center;
   transition-property: top;
+  z-index: 999;
 }
 
 #editorConfirmDiscard {

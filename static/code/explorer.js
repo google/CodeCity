@@ -29,7 +29,14 @@ Code.Explorer = {};
  * Used to line up the autocomplete menu.
  * TODO: If the menu starts getting out of alignment, measure the text instead.
  */
-Code.Explorer.SIZE_OF_INPUT_CHARS = 10.8;
+Code.Explorer.SIZE_OF_INPUT_CHARS = 8.8;
+
+/**
+ * Offset in pixels of start of first character in the input.
+ * Used to line up the autocomplete menu.
+ * TODO: If the menu starts getting out of alignment, measure the text instead.
+ */
+Code.Explorer.LEFT_OF_INPUT_CHARS = 6;
 
 /**
  * Value of the input field last time it was processed.
@@ -329,7 +336,8 @@ Code.Explorer.showAutocompleteMenu = function(options, index) {
   var menuDiv = document.getElementById('autocompleteMenu');
   menuDiv.style.display = 'block';
   menuDiv.scrollTop = 0;
-  var left = Math.round(index * Code.Explorer.SIZE_OF_INPUT_CHARS);
+  var left = Math.round(index * Code.Explorer.SIZE_OF_INPUT_CHARS -
+                        Code.Explorer.LEFT_OF_INPUT_CHARS);
   var maxLeft = window.innerWidth - menuDiv.offsetWidth;
   menuDiv.style.left = Math.min(left, maxLeft) + 'px';
 };
