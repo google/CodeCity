@@ -5302,25 +5302,24 @@ stepFuncs_['UnaryExpression'] = function (stack, state, node) {
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['UpdateExpression'] = function (stack, state, node) {
-  if (!state.doneLeft_) {
-    state.doneLeft_ = true;
-    // Get Reference to argument.
+  if (state.step_ === 0) {  // Get Reference to argument.
+    state.step_ = 1;
     return new Interpreter.State(node['argument'], state.scope, true);
   }
   if (!state.ref) throw TypeError('argument not an LVALUE??');
   var value = Number(this.getValue(state.scope, state.ref, state.scope.perms));
-  var newValue;
+  var prefix = Boolean(node['prefix']);
+  var /** Interpreter.Value */ rval;
   if (node['operator'] === '++') {
-    newValue = value + 1;
+    rval = (prefix ? ++value : value++);
   } else if (node['operator'] === '--') {
-    newValue = value - 1;
+    rval = (prefix ? --value : value--);
   } else {
     throw SyntaxError('Unknown update expression: ' + node['operator']);
   }
-  this.setValue(state.scope, state.ref, newValue, state.scope.perms);
+  this.setValue(state.scope, state.ref, value, state.scope.perms);
   stack.pop();
-  stack[stack.length - 1].value = (node['prefix'] ? newValue : value);
-
+  stack[stack.length - 1].value = rval;
 };
 
 /**
