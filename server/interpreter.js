@@ -5109,8 +5109,8 @@ stepFuncs_['ReturnStatement'] = function (stack, state, node) {
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['SequenceExpression'] = function (stack, state, node) {
-  var n = state.n_ || 0;
-  var expression = node['expressions'][n];
+  var n = state.n_;
+  var /** ?Interpreter.Node */ expression = node['expressions'][n];
   if (expression) {
     state.n_ = n + 1;
     return new Interpreter.State(expression, state.scope);
