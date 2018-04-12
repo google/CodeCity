@@ -3693,7 +3693,9 @@ Interpreter.prototype.installTypes = function() {
         node['type'] = 'ThrowStatement';
         var throwState = new Interpreter.State(node,
             thread.stateStack_[thread.stateStack_.length - 1].scope);
-        throwState.done_ = true;
+        // TODO(cpcallen): this shouldn't rely on internal details of
+        // the ThrowStatement step function.
+        throwState.step_ = 1;
           throwState.value = value;
         thread.stateStack_.push(throwState);
         thread.status = Interpreter.Thread.Status.READY;
@@ -5209,8 +5211,8 @@ stepFuncs_['ThisExpression'] = function (stack, state, node) {
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['ThrowStatement'] = function (stack, state, node) {
-  if (!state.done_) {
-    state.done_ = true;
+  if (state.step_ === 0) {
+    state.step_ = 1;
     return new Interpreter.State(node['argument'], state.scope);
   }
   throw state.value;
