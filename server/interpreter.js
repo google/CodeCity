@@ -274,6 +274,10 @@ Interpreter.prototype.schedule = function() {
  *     READY threads.
  */
 Interpreter.prototype.step = function() {
+  /* NOTE: Beware that an async (user) Function might reject
+   * immediately, unwinding the stack before the CallExpression step
+   * function returns.
+   */
   if (this.status !== Interpreter.Status.PAUSED) {
     throw Error('Can only step paused interpreter');
   }
@@ -323,6 +327,10 @@ Interpreter.prototype.step = function() {
  * @return {number} See description.
  */
 Interpreter.prototype.run = function() {
+  /* NOTE: Beware that an async (user) Function might reject
+   * immediately, unwinding the stack before the CallExpression step
+   * function returns.
+   */
   if (this.status === Interpreter.Status.STOPPED) {
     throw Error("Can't run stopped interpreter");
   }
@@ -3723,19 +3731,9 @@ Interpreter.prototype.installTypes = function() {
       },
       function reject(value) {
         check();
-        // Create fake 'throw' state on appropriate thread.
-        // TODO(cpcallen): find a more elegant way to do this.
-        var node = new Interpreter.Node;
-        node['type'] = 'ThrowStatement';
-        var throwState = new Interpreter.State(node,
-            thread.stateStack_[thread.stateStack_.length - 1].scope);
-        // TODO(cpcallen): this shouldn't rely on internal details of
-        // the ThrowStatement step function.
-        // FIXME
-        throwState.step_ = 1;
-          throwState.value = value;
-        thread.stateStack_.push(throwState);
         thread.status = Interpreter.Thread.Status.READY;
+        intrp.unwind_(
+            thread, Interpreter.CompletionType.THROW, value, undefined);
         intrp.go_();
       }];
     // Prepend resolve, reject to arguments.
@@ -4573,10 +4571,27 @@ stepFuncs_['BreakStatement'] = function (stack, state, node) {
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['CallExpression'] = function (stack, state, node) {
-  // N.B. If you edit any of the step_ values in this function, be
-  // sure to also update the following functions to match!:
-  // - Interpreter.State.prototype.includeInStack
-  // - Interpreter.State.newForCall
+  /* NOTE 1: If you edit any of the step_ values in this function, be
+   * sure to also update the following functions to match!:
+   *
+   *  - Interpreter.State.prototype.includeInStack
+   *  - Interpreter.State.newForCall
+   *
+   * NOTE 2: Beware that, because
+   *
+   *  - an async function might not *actually* be async, and thus
+   *  - its .call function might call its reject before returning, and
+   *  - reject will unwind the stack, and
+   *  - Interpreter#step and Interpreter#run will push any State
+   *    returned by a step function such as this one,
+   *
+   * this CallExpression step function MUST NOT return a State after
+   * calling .call (or .construct), or the thread might end up in some
+   * nonsensical, corrupt configuration.
+   * 
+   * (It's fine for CallExpresssion to return a State the *next* time
+   * it's invoked, though there is no obvious reason to do so.)
+   */
   if (state.step_ === 0) {  // Evaluate callee.
     state.step_ = 1;
     // Get refernce for calee, because we need to get value of 'this'.
@@ -4625,10 +4640,10 @@ stepFuncs_['CallExpression'] = function (stack, state, node) {
         return;
       }
     }
-    state.step_ = 3;  // N.B: SEE NOTE ABOVE!
+    state.step_ = 3;  // N.B: SEE NOTE 1 ABOVE!
   }
   if (state.step_ === 3) {  // Done valuating arguments; do function call.
-    state.step_ = 4;  // N.B: SEE NOTE ABOVE!
+    state.step_ = 4;  // N.B: SEE NOTE 1 ABOVE!
     var func = state.info_.callee;
     if (!(func instanceof this.Function)) {
       throw new this.Error(state.scope.perms, this.TYPE_ERROR,
@@ -4647,9 +4662,9 @@ stepFuncs_['CallExpression'] = function (stack, state, node) {
         func.call(this, this.thread, state, state.info_.this, args);
     if (r instanceof FunctionResult) {
       if (r === FunctionResult.CallAgain) {
-        state.step_ = 3;  // N.B: SEE NOTE ABOVE!
+        state.step_ = 3;  // N.B: SEE NOTE 1 ABOVE!
       }
-      return;
+      return;  // N.B. SEE NOTE 2 ABOVE!
     }
     state.value = r;
   }
