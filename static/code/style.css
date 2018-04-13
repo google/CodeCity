@@ -47,6 +47,7 @@ textarea {
 }
 
 #panels {
+  top: 42px;
   bottom: 5px;
   right: 0;
   left: 0;
