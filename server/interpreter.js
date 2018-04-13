@@ -517,6 +517,7 @@ Interpreter.prototype.initBuiltins_ = function() {
   // NativeFunction constructor adds new function to the map of builtins.
   this.FUNCTION = new this.NativeFunction({
     id: 'Function.prototype', name: '', length: 0, proto: this.OBJECT,
+    /** @type {!Interpreter.NativeCallImpl} */
     call: function(intrp, thread, state, thisVal, args) { /* do nothing */ }
   });
 
@@ -540,6 +541,7 @@ Interpreter.prototype.initBuiltins_ = function() {
 
   var eval_ = new this.NativeFunction({
     id: 'eval', length: 1,
+    /** @type {!Interpreter.NativeCallImpl} */
     call: function(intrp, thread, state, thisVal, args) {
       var code = args[0];
       if (typeof code !== 'string') {  // eval()
@@ -608,6 +610,7 @@ Interpreter.prototype.initObject_ = function() {
   // Object constructor.
   new this.NativeFunction({
     id: 'Object', length: 1,
+    /** @type {!Interpreter.NativeConstructImpl} */
     construct: function(intrp, thread, state, args) {
       var value = args[0];
       if (value instanceof intrp.Object) {
@@ -623,6 +626,7 @@ Interpreter.prototype.initObject_ = function() {
         throw TypeError('Unknown value type??');
       }
     },
+    /** @type {!Interpreter.NativeCallImpl} */
     call: function(intrp, thread, state, thisVal, args) {
       return this.construct.call(this, intrp, thread, state, args);
     }
@@ -648,14 +652,18 @@ Interpreter.prototype.initObject_ = function() {
 
   new this.NativeFunction({
     id: 'Object.getOwnPropertyNames', length: 1,
+    /** @type {!Interpreter.NativeCallImpl} */
     call: function(intrp, thread, state, thisVal, args) {
       var obj = args[0];
       throwIfNullUndefined(obj);
       if (obj instanceof intrp.Object) {
         var keys = obj.ownKeys(state.scope.perms);
       } else {  // obj is actually a primitive.
-        // N.B.: ES6 definition.  ES5.1 would throw TypeError.
-        keys = Object.getOwnPropertyNames(obj);
+        // N.B.: we use ES6 definition; ES5.1 would throw TypeError.
+        // TODO(cpcallen): the cast below is just to satisfy
+        // closure-compiler which by default assumes input language is
+        // ES5.1.  Remove it once compiler knows we use ES6.
+        keys = Object.getOwnPropertyNames(/** @type{?} */ (obj));
       }
       return intrp.arrayNativeToPseudo(keys, state.scope.perms);
     }
@@ -663,6 +671,7 @@ Interpreter.prototype.initObject_ = function() {
 
   new this.NativeFunction({
     id: 'Object.keys', length: 1,
+    /** @type {!Interpreter.NativeCallImpl} */
     call: function(intrp, thread, state, thisVal, args) {
       var perms = state.scope.perms;
       var obj = intrp.toObject(args[0], perms);
@@ -672,6 +681,7 @@ Interpreter.prototype.initObject_ = function() {
 
   new this.NativeFunction({
     id: 'Object.create', length: 2,
+    /** @type {!Interpreter.NativeCallImpl} */
     call: function(intrp, thread, state, thisVal, args) {
       var proto = args[0];
       // Support for the second argument is the responsibility of a polyfill.
@@ -688,6 +698,7 @@ Interpreter.prototype.initObject_ = function() {
 
   new this.NativeFunction({
     id: 'Object.defineProperty', length: 3,
+    /** @type {!Interpreter.NativeCallImpl} */
     call: function(intrp, thread, state, thisVal, args) {
       var obj = args[0];
       var key = args[1];
@@ -723,6 +734,7 @@ Interpreter.prototype.initObject_ = function() {
 
   new this.NativeFunction({
     id: 'Object.getOwnPropertyDescriptor', length: 2,
+    /** @type {!Interpreter.NativeCallImpl} */
     call: function(intrp, thread, state, thisVal, args) {
       var obj = args[0];
       var prop = args[1];
@@ -747,6 +759,7 @@ Interpreter.prototype.initObject_ = function() {
 
   new this.NativeFunction({
     id: 'Object.getPrototypeOf', length: 1,
+    /** @type {!Interpreter.NativeCallImpl} */
     call: function(intrp, thread, state, thisVal, args) {
       var obj = args[0];
       throwIfNullUndefined(obj);
@@ -758,6 +771,7 @@ Interpreter.prototype.initObject_ = function() {
 
   new this.NativeFunction({
     id: 'Object.setPrototypeOf', length: 2,
+    /** @type {!Interpreter.NativeCallImpl} */
     call: function(intrp, thread, state, thisVal, args) {
       var obj = args[0];
       var proto = args[1];
@@ -776,6 +790,7 @@ Interpreter.prototype.initObject_ = function() {
 
   new this.NativeFunction({
     id: 'Object.isExtensible', length: 1,
+    /** @type {!Interpreter.NativeCallImpl} */
     call: function(intrp, thread, state, thisVal, args) {
       var obj = args[0];
       if (!(obj instanceof intrp.Object)) {
@@ -787,6 +802,7 @@ Interpreter.prototype.initObject_ = function() {
 
   new this.NativeFunction({
     id: 'Object.preventExtensions', length: 1,
+    /** @type {!Interpreter.NativeCallImpl} */
     call: function(intrp, thread, state, thisVal, args) {
       var obj = args[0];
       var perms = state.scope.perms;
@@ -813,16 +829,18 @@ Interpreter.prototype.initObject_ = function() {
 
   new this.NativeFunction({
     id: 'Object.prototype.hasOwnProperty', length: 1,
+    /** @type {!Interpreter.NativeCallImpl} */
     call: function(intrp, thread, state, thisVal, args) {
       var key = args[0];
       var perms = state.scope.perms;
       var obj = intrp.toObject(thisVal, perms);
-      return Boolean(obj.getOwnPropertyDescriptor(key, perms));
+      return Boolean(obj.getOwnPropertyDescriptor(String(key), perms));
     }
   });
 
   new this.NativeFunction({
     id: 'Object.prototype.propertyIsEnumerable', length: 1,
+    /** @type {!Interpreter.NativeCallImpl} */
     call: function(intrp, thread, state, thisVal, args) {
       var key = String(args[0]);
       var perms = state.scope.perms;
@@ -837,6 +855,7 @@ Interpreter.prototype.initObject_ = function() {
 
   new this.NativeFunction({
     id: 'Object.prototype.isPrototypeOf', length: 1,
+    /** @type {!Interpreter.NativeCallImpl} */
     call: function(intrp, thread, state, thisVal, args) {
       var obj = args[0];
       while (true) {
@@ -867,6 +886,7 @@ Interpreter.prototype.initFunction_ = function() {
   // Function constructor.
   new this.NativeFunction({
     id: 'Function', length: 1,
+    /** @type {!Interpreter.NativeConstructImpl} */
     construct: function(intrp, thread, state, args) {
       var argList = args.slice();
       if (args.length) {
@@ -904,6 +924,7 @@ Interpreter.prototype.initFunction_ = function() {
       return new intrp.UserFunction(
           ast['body'][0]['expression'], intrp.global, code, state.scope.perms);
     },
+    /** @type {!Interpreter.NativeCallImpl} */
     call: function(intrp, thread, state, thisVal, args) {
       return this.construct.call(this, intrp, thread, state, args);
     }
@@ -911,6 +932,7 @@ Interpreter.prototype.initFunction_ = function() {
 
   new this.NativeFunction({
     id: 'Function.prototype.toString', length: 0,
+    /** @type {!Interpreter.NativeCallImpl} */
     call: function(intrp, thread, state, thisVal, args) {
       var func = thisVal;
       if (!(func instanceof intrp.Function)) {
@@ -924,6 +946,7 @@ Interpreter.prototype.initFunction_ = function() {
 
   new this.NativeFunction({
     id: 'Function.prototype.apply', length: 2,
+    /** @type {!Interpreter.NativeCallImpl} */
     call: function(intrp, thread, state, thisVal, args) {
       var func = thisVal;
       var thisArg = args[0];
@@ -945,6 +968,7 @@ Interpreter.prototype.initFunction_ = function() {
 
   new this.NativeFunction({
     id: 'Function.prototype.call', length: 1,
+    /** @type {!Interpreter.NativeCallImpl} */
     call: function(intrp, thread, state, thisVal, args) {
       var func = thisVal;
       if (!(func instanceof intrp.Function)) {
@@ -970,6 +994,7 @@ Interpreter.prototype.initArray_ = function() {
   // Array constructor.
   new this.NativeFunction({
     id: 'Array', length: 1,
+    /** @type {!Interpreter.NativeConstructImpl} */
     construct: function(intrp, thread, state, args) {
       var first = args[0];
       var perms = state.scope.perms;
@@ -982,12 +1007,13 @@ Interpreter.prototype.initArray_ = function() {
         newArray.set('length', first, perms);
       } else {
         for (var i = 0; i < arguments.length; i++) {
-          newArray.set(i, args[i], perms);
+          newArray.set(String(i), args[i], perms);
         }
         newArray.set('length', i, perms);
       }
       return newArray;
     },
+    /** @type {!Interpreter.NativeCallImpl} */
     call: function(intrp, thread, state, thisVal, args) {
       return this.construct.call(this, intrp, thread, state, args);
     }
@@ -1405,6 +1431,7 @@ Interpreter.prototype.initDate_ = function() {
   // Instance methods on Date.
   new this.NativeFunction({
     id: 'Date.prototype.toString', length: 0,
+    /** @type {!Interpreter.NativeCallImpl} */
     call: function(intrp, thread, state, thisVal, args) {
       var date = thisVal;
       if (!(date instanceof intrp.Date)) {
@@ -1474,6 +1501,7 @@ Interpreter.prototype.initRegExp_ = function() {
 
   new this.NativeFunction({
     id: 'RegExp.prototype.toString', length: 0,
+    /** @type {!Interpreter.NativeCallImpl} */
     call: function(intrp, thread, state, thisVal, args) {
       var regexp= thisVal;
       if (!(regexp instanceof intrp.RegExp)) {
@@ -1537,6 +1565,7 @@ Interpreter.prototype.initError_ = function() {
     intrp.builtins_[name + '.prototype'] = proto;
     new intrp.NativeFunction({
       name: name, length: 1,
+      /** @type {!Interpreter.NativeConstructImpl} */
       construct: function(intrp, thread, state, args) {
         var message = args[0];
         var err = new intrp.Error(state.scope.perms, proto);
@@ -1546,6 +1575,7 @@ Interpreter.prototype.initError_ = function() {
         }
         return err;
       },
+    /** @type {!Interpreter.NativeCallImpl} */
       call: function(intrp, thread, state, thisVal, args) {
         return this.construct.call(this, intrp, thread, state, args);
       }
@@ -1621,6 +1651,7 @@ Interpreter.prototype.initWeakMap_ = function() {
   // WeakMap constructor.
   new this.NativeFunction({
     id: 'WeakMap', length: 0,  // N.B. length is correct; arg is optional!
+    /** @type {!Interpreter.NativeConstructImpl} */
     construct: function(intrp, thread, state, args) {
       // TODO(cpcallen): Support interator argument to populate map.
       return new intrp.WeakMap(intrp.thread.perms());
@@ -1654,6 +1685,7 @@ Interpreter.prototype.initWeakMap_ = function() {
 
   new this.NativeFunction({
     id: 'WeakMap.prototype.delete', length: 1,
+    /** @type {!Interpreter.NativeCallImpl} */
     call: withChecks(function (intrp, thread, state, thisVal, args) {
       return thisVal.weakMap.delete(args[0]);
     }, 'delete')
@@ -1661,6 +1693,7 @@ Interpreter.prototype.initWeakMap_ = function() {
 
   new this.NativeFunction({
     id: 'WeakMap.prototype.get', length: 1,
+    /** @type {!Interpreter.NativeCallImpl} */
     call: withChecks(function get(intrp, thread, state, thisVal, args) {
       return thisVal.weakMap.get(args[0]);
     })
@@ -1668,6 +1701,7 @@ Interpreter.prototype.initWeakMap_ = function() {
 
   new this.NativeFunction({
     id: 'WeakMap.prototype.has', length: 1,
+    /** @type {!Interpreter.NativeCallImpl} */
     call: withChecks(function has(intrp, thread, state, thisVal, args) {
       return thisVal.weakMap.has(args[0]);
     })
@@ -1675,6 +1709,7 @@ Interpreter.prototype.initWeakMap_ = function() {
 
   new this.NativeFunction({
     id: 'WeakMap.prototype.set', length: 2,
+    /** @type {!Interpreter.NativeCallImpl} */
     call: withChecks(function set(intrp, thread, state, thisVal, args) {
       thisVal.weakMap.set(args[0], args[1]);
       return thisVal;
@@ -1689,6 +1724,7 @@ Interpreter.prototype.initWeakMap_ = function() {
 Interpreter.prototype.initThreads_ = function() {
   new this.NativeFunction({
     id: 'suspend', length: 1,
+    /** @type {!Interpreter.NativeCallImpl} */
     call: function(intrp, thread, state, thisVal, args) {
       var delay = Number(args[0]) || 0;
       if (delay < 0) {
@@ -1700,6 +1736,7 @@ Interpreter.prototype.initThreads_ = function() {
 
   new this.NativeFunction({
     id: 'setTimeout', length: 1,
+    /** @type {!Interpreter.NativeCallImpl} */
     call: function(intrp, thread, state, thisVal, args) {
       var func = args[0];
       if (!(func instanceof intrp.Function)) {
@@ -1715,6 +1752,7 @@ Interpreter.prototype.initThreads_ = function() {
 
   new this.NativeFunction({
     id: 'clearTimeout', length: 1,
+    /** @type {!Interpreter.NativeCallImpl} */
     call: function(intrp, thread, state, thisVal, args) {
       var id = Number(args[0]);
       if (intrp.threads[id]) {
@@ -1732,13 +1770,15 @@ Interpreter.prototype.initThreads_ = function() {
 Interpreter.prototype.initPerms_ = function() {
   new this.NativeFunction({
     id: 'perms', length: 0,
+    /** @type {!Interpreter.NativeCallImpl} */
     call: function(intrp, thread, state, thisVal, args) {
-      return state.scope.perms;
+      return /** @type {!Interpreter.prototype.Object} */ (state.scope.perms);
     }
   });
 
   new this.NativeFunction({
     id: 'setPerms', length: 0,
+    /** @type {!Interpreter.NativeCallImpl} */
     call: function(intrp, thread, state, thisVal, args) {
       var perms = args[0];
       if (!(perms instanceof intrp.Object)) {
@@ -1747,7 +1787,7 @@ Interpreter.prototype.initPerms_ = function() {
       }
       // TODO(cpcallen:perms): throw if current perms does not
       // control new perms.
-      state.scope.perms = perms;
+      state.scope.perms = /** @type {!Interpreter.Owner} */ (perms);
     }
   });
 };
