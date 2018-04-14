@@ -71,7 +71,7 @@ tfoot {
 .jfk-button {
   border-top-left-radius: 0;
   border-top-right-radius: 0;
-  border-top: none;
+  border-top: none !important;
 }
 
 #playIcon {

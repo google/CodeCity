@@ -71,5 +71,29 @@ Code.Editor.hideSave = function() {
   }, 250);
 };
 
+/**
+ * Show the text in the butter bar for a period of time.
+ * Clobber any existing display.
+ * @param {string} text Text to display.
+ * @param {number} time Number of milliseconds to display butter.
+ */
+Code.Editor.showButter = function(text, time) {
+  clearTimeout(Code.Editor.showButter.pid_);
+  var textDiv = document.getElementById('editorButterText');
+  textDiv.innerHTML = '';
+  textDiv.appendChild(document.createTextNode(text));
+  document.getElementById('editorButter').style.display = 'block';
+  Code.Editor.showButter.pid_ = setTimeout(Code.Editor.hideButter, time);
+};
+
+Code.Editor.showButter.pid_ = 0;
+
+/**
+ * Hide the butter bar.
+ */
+Code.Editor.hideButter = function() {
+  document.getElementById('editorButter').style.display = 'none';
+};
+
 window.addEventListener('load', Code.Editor.init);
 window.addEventListener('message', Code.Editor.receiveMessage, false);
