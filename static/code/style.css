@@ -23,11 +23,11 @@ textarea {
   border-style: solid;
   border-width: 1px;
   display: none;
+  max-height: 15em;
+  max-width: 20em;
   overflow-y: auto;
   padding: 4px 0;
   position: absolute;
-  max-height: 15em;
-  max-width: 20em;
   z-index: 1;
 }
 
@@ -35,9 +35,9 @@ textarea {
 }
 
 #autocompleteMenuScroll>div {
-  padding: 0 1em;
   cursor: default;
   overflow-x: hidden;
+  padding: 0 1em;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -47,13 +47,13 @@ textarea {
 }
 
 #panels {
-  top: 42px;
   bottom: 5px;
-  right: 0;
   left: 0;
   overflow-x: auto;
   overflow-y: hidden;
   position: absolute;
+  right: 0;
+  top: 42px;
   width: 100%;
 }
 
@@ -126,13 +126,13 @@ textarea {
 }
 
 .objectType {
-  position: absolute;
-  right: 0;
   color: #888;
   font-family: monospace;
-  width: 3ex;
-  text-align: center;
   font-size: medium;
+  position: absolute;
+  right: 0;
+  text-align: center;
+  width: 3ex;
 }
 
 .loading:after {
@@ -148,6 +148,28 @@ textarea {
   to {
     width: 3.2em;
   }
+}
+
+#editorButter {
+  display: none;
+  left: 0;
+  position: absolute;
+  right: 0;
+  top: 0;
+}
+
+#editorButter>div {
+  text-align: center;
+}
+
+#editorButterText {
+  background: #f9edbe;
+  border: 1px solid #f0c36d;
+  border-radius: 0 0 2px 2px;
+  border-top: 0;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  display: inline-block;
+  padding: 0 10px;
 }
 
 #editorConfirm {
