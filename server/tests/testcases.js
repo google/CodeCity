@@ -416,7 +416,7 @@ module.exports = [
 
   { name: 'switchDefaultFirst', src: `
     switch ('not found') {
-      default: 
+      default:
         'OK';
         break;
       case 'decoy':
@@ -427,7 +427,7 @@ module.exports = [
 
   { name: 'switchDefaultOnly', src: `
     switch ('not found') {
-      default: 
+      default:
         'OK';
     };
     `,
@@ -436,7 +436,7 @@ module.exports = [
   { name: 'switchEmptyToEnd', src: `
     'ok';
     switch ('foo') {
-      default: 
+      default:
         'fail';
       case 'foo':
       case 'bar':
