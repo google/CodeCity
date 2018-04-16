@@ -903,7 +903,7 @@ tests.forInNullUndefined = function() {
 tests.switchDefaultFirst = function() {
   var r;
   switch ('not found') {
-    default: 
+    default:
       r = 'OK';
       break;
     case 'decoy':
@@ -915,7 +915,7 @@ tests.switchDefaultFirst = function() {
 tests.switchDefaultOnly = function() {
   var r;
   switch ('not found') {
-    default: 
+    default:
       r = 'OK';
       break;
   };
@@ -924,7 +924,7 @@ tests.switchDefaultOnly = function() {
 
 tests.switchEmptyToEnd = function() {
   switch ('foo') {
-    default: 
+    default:
       console.assert(false, 'switchEmptyToEnd');
     case 'foo':
     case 'bar':

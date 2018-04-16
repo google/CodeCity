@@ -4628,7 +4628,7 @@ stepFuncs_['CallExpression'] = function (stack, state, node) {
    * this CallExpression step function MUST NOT return a State after
    * calling .call (or .construct), or the thread might end up in some
    * nonsensical, corrupt configuration.
-   * 
+   *
    * (It's fine for CallExpresssion to return a State the *next* time
    * it's invoked, though there is no obvious reason to do so.)
    */
