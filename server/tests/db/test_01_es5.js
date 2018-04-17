@@ -1996,8 +1996,37 @@ tests.ArrayPrototypeConcat = function() {
       'Array.prototype.concat.call(object, ...)');
 };
 
+tests.ArrayPrototypeIndexOf = function() {
+  console.assert([1, 2, 3, 2, 1].indexOf(2) === 1, 'Array.prototype.indexOf');
+  console.assert([1, 2, 3, 2, 1].indexOf(4) === -1,
+      'Array.prototype.indexOf not found');
+  console.assert([1, 2, 3, 2, 1].indexOf(2, 2) === 3,
+      'Array.prototype.indexOf(..., +)');
+  console.assert([1, 2, 3, 2, 1].indexOf(1, -3) === 4,
+      'Array.prototype.indexOf(..., -)');
+
+  var o = {0: 1, 1: 2, 2: 3, 3: 2, 4: 1, length: 5};
+  console.assert(Array.prototype.indexOf.call(o, 2) === 1,
+      'Array.prototype.indexOf.call(array-like, ...)');
+};
+
 tests.ArrayPrototypeJoin = function() {
   console.assert([1, 2, 3].join('-') === '1-2-3', 'Array.prototype.join');
+};
+
+tests.ArrayPrototypeLastIndexOf = function() {
+  console.assert([1, 2, 3, 2, 1].lastIndexOf(2) === 3,
+      'Array.prototype.lastIndexOf');
+  console.assert([1, 2, 3, 2, 1].lastIndexOf(4) === -1,
+      'Array.prototype.lastIndexOf not found');
+  console.assert([1, 2, 3, 2, 1].lastIndexOf(2, 2) === 1,
+      'Array.prototype.lastIndexOf(..., +)');
+  console.assert([1, 2, 3, 2, 1].lastIndexOf(1, -3) === 0,
+      'Array.prototype.lastIndexOf(..., -)');
+
+  var o = {0: 1, 1: 2, 2: 3, 3: 2, 4: 1, length: 5};
+  console.assert(Array.prototype.lastIndexOf.call(o, 2) === 3,
+      'Array.prototype.lastIndexOf.call(array-like, ...)');
 };
 
 tests.ArrayPrototypeJoinCycleDetection = function() {

@@ -1567,6 +1567,32 @@ module.exports = [
     `,
     expected: '[object Object],baz,,quux,quuux' },
 
+  { name: 'Array.prototype.indexOf', src: `
+    [1, 2, 3, 2, 1].indexOf(2);
+    `,
+    expected: 1 },
+
+  { name: 'Array.prototype.indexOf not found', src: `
+    [1, 2, 3, 2, 1].indexOf(4);
+    `,
+    expected: -1 },
+
+  { name: 'Array.prototype.indexOf(..., +)', src: `
+    [1, 2, 3, 2, 1].indexOf(2, 2);
+    `,
+    expected: 3 },
+
+  { name: 'Array.prototype.indexOf(..., -)', src: `
+    [1, 2, 3, 2, 1].indexOf(1, -3);
+    `,
+    expected: 4 },
+
+  { name: 'Array.prototype.indexOf.call(array-like, ...)', src: `
+    var o = {0: 1, 1: 2, 2: 3, 3: 2, 4: 1, length: 5};
+    Array.prototype.indexOf.call(o, 2);
+    `,
+    expected: 1 },
+
   { name: 'Array.prototype.join', src: `
     [1, 2, 3].join('-');
     `,
@@ -1579,6 +1605,32 @@ module.exports = [
     "Didn't crash!";
     `,
     expected: "Didn't crash!" },
+
+  { name: 'Array.prototype.lastIndexOf', src: `
+    [1, 2, 3, 2, 1].lastIndexOf(2);
+    `,
+    expected: 3 },
+
+  { name: 'Array.prototype.lastIndexOf not found', src: `
+    [1, 2, 3, 2, 1].lastIndexOf(4);
+    `,
+    expected: -1 },
+
+  { name: 'Array.prototype.lastIndexOf(..., +)', src: `
+    [1, 2, 3, 2, 1].lastIndexOf(2, 2);
+    `,
+    expected: 1 },
+
+  { name: 'Array.prototype.lastIndexOf(..., -)', src: `
+    [1, 2, 3, 2, 1].lastIndexOf(1, -3);
+    `,
+    expected: 0 },
+
+  { name: 'Array.prototype.lastIndexOf.call(array-like, ...)', src: `
+    var o = {0: 1, 1: 2, 2: 3, 3: 2, 4: 1, length: 5};
+    Array.prototype.lastIndexOf.call(o, 2);
+    `,
+    expected: 3 },
 
   { name: 'Array.prototype.pop', src: `
         var a = ['foo', 'bar', 'baz'];

@@ -1031,14 +1031,6 @@ Interpreter.prototype.initArray_ = function() {
 
   var intrp = this;
   var wrapper;
-  var getInt = function(obj, def) {
-    // Return an integer, or the default.
-    var n = obj ? Math.floor(obj) : def;
-    if (isNaN(n)) {
-      n = def;
-    }
-    return n;
-  };
 
   // Static methods on Array.
   new this.NativeFunction({
@@ -1095,6 +1087,52 @@ Interpreter.prototype.initArray_ = function() {
       }
       arr.set('length', n, perms);
       return arr;
+    }
+  });
+
+  new this.NativeFunction({
+    id: 'Array.prototype.indexOf', length: 1,
+    /** @type {!Interpreter.NativeCallImpl} */
+    call:  function(intrp, thread, state, thisVal, args) {
+      var searchElement = args[0];
+      var fromIndex = args[1];
+      var perms = state.scope.perms;
+      var obj = intrp.toObject(thisVal, perms);
+      var len = Interpreter.toLength(obj.get('length', perms));
+      if (len === 0) return -1;
+      var n = (fromIndex === undefined ? 0 : Interpreter.toInteger(fromIndex));
+      if (n >= len) return -1;
+      var k = (n >= 0 ? n : Math.max(len - Math.abs(n), 0));
+      for (; k < len; k++) {
+        if (obj.has(String(k), perms) &&
+            obj.get(String(k), perms) === searchElement) {
+          return k;
+        }
+      }
+      return -1;
+    }
+  });
+
+  new this.NativeFunction({
+    id: 'Array.prototype.lastIndexOf', length: 1,
+    /** @type {!Interpreter.NativeCallImpl} */
+    call:  function(intrp, thread, state, thisVal, args) {
+      var searchElement = args[0];
+      var fromIndex = args[1];
+      var perms = state.scope.perms;
+      var obj = intrp.toObject(thisVal, perms);
+      var len = Interpreter.toLength(obj.get('length', perms));
+      if (len === 0) return -1;
+      var n = (fromIndex === undefined ? len - 1 :
+          Interpreter.toInteger(fromIndex));
+      var k = (n >= 0 ? Math.min(n, len - 1) : len - Math.abs(n));
+      for (; k >= 0 ; k--) {
+        if (obj.has(String(k), perms) &&
+            obj.get(String(k), perms) === searchElement) {
+          return k;
+        }
+      }
+      return -1;
     }
   });
 
@@ -1355,42 +1393,6 @@ Interpreter.prototype.initArray_ = function() {
     return text.join(separator);
   };
   this.createNativeFunction('Array.prototype.join', wrapper, false);
-
-  wrapper = function(searchElement, fromIndex) {
-    searchElement = searchElement || undefined;
-    fromIndex = getInt(fromIndex, 0);
-    if (fromIndex < 0) {
-      fromIndex = this.properties.length + fromIndex;
-    }
-    fromIndex = Math.max(0, fromIndex);
-    for (var i = fromIndex; i < this.properties.length; i++) {
-      // TODO(cpcallen:perms): Use .get() - but is this always an intrpObject?
-      var element = intrp.getProperty(this, i);
-      if (element === searchElement) {
-        return i;
-      }
-    }
-    return -1;
-  };
-  this.createNativeFunction('Array.prototype.indexOf', wrapper, false);
-
-  wrapper = function(searchElement, fromIndex) {
-    searchElement = searchElement || undefined;
-    fromIndex = getInt(fromIndex, this.properties.length);
-    if (fromIndex < 0) {
-      fromIndex = this.properties.length + fromIndex;
-    }
-    fromIndex = Math.min(fromIndex, this.properties.length - 1);
-    for (var i = fromIndex; i >= 0; i--) {
-      // TODO(cpcallen:perms): Use .get() - but is this always an intrpObject?
-      var element = intrp.getProperty(this, i);
-      if (element === searchElement) {
-        return i;
-      }
-    }
-    return -1;
-  };
-  this.createNativeFunction('Array.prototype.lastIndexOf', wrapper, false);
 };
 
 /**
