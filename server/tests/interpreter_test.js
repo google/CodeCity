@@ -877,62 +877,6 @@ exports.testToIntegerEtc = function(t) {
 };
 
 /**
- * Unit tests for Interpreter.legalArrayIndex and
- * Interpreter.legalArrayLength.
- * @param {!T} t The test runner object.
- */
-exports.testLegalArrayIndexLength = function(t) {
-  var intrp = new Interpreter;
-  var cases = [
-    // [value, asIndex, asLength]
-    [false, NaN, 0],
-    [true, NaN, 1],
-
-    [0, 0, 0],
-    [1, 1, 1],
-    [0xfffffffe, 0xfffffffe, 0xfffffffe],
-    [0xffffffff, NaN, 0xffffffff],
-    [0x100000000, NaN, NaN],
-    [4.5, NaN, NaN],
-    [-1, NaN, NaN],
-
-    ['0', 0, 0],
-    ['1', 1, 1],
-    ['0xfffffffe', NaN, 0xfffffffe],
-    ['0xffffffff', NaN, 0xffffffff],
-    ['0x100000000', NaN, NaN],
-    ['4294967294', 0xfffffffe, 0xfffffffe],
-    ['4294967295', NaN, 0xffffffff],
-    ['4294967296', NaN, NaN],
-    ['4.5', NaN, NaN],
-    ['-1', NaN, NaN],
-
-    ['hello', NaN, NaN],
-    [null, NaN, 0],  // wat
-    [undefined, NaN, NaN],
-    [new intrp.Array, NaN, 0],  // wat!
-    [new intrp.Object, NaN, NaN],
-  ];
-  for (var i = 0; i < cases.length; i++) {
-    var tc = cases[i];
-    var name = 'testLegalArrayIndex: ' + tc[0];
-    var r = Interpreter.legalArrayIndex(tc[0]);
-    if (Object.is(r, tc[1])) {
-      t.pass(name);
-    } else {
-      t.fail(name, util.format('got %o  want %o', r, tc[1]));
-    }
-    name = 'testLegalArrayLength: ' + tc[0];
-    r = Interpreter.legalArrayLength(tc[0]);
-    if (Object.is(r, tc[2])) {
-      t.pass(name);
-    } else {
-      t.fail(name, util.format('got %o  want %o', r, tc[2]));
-    }
-  }
-};
-
-/**
  * Unit tests for Interpreter.prototype.nativeToPseudo.
  * @param {!T} t The test runner object.
  */
