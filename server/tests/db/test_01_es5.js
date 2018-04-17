@@ -2096,6 +2096,78 @@ tests.ArrayPrototypeShift = function() {
   //     'Array.prototype.shift.apply(huge array-like)');
 };
 
+tests.ArrayPrototypeSlice = function() {
+  var a = ['foo', 'bar', 'baz', , 'quux', 'quuux'];
+  var s = a.slice();
+  console.assert(a.length === 6 && s.length === 6 && String(s) === String(a),
+      'Array.prototype.slice()');
+
+  s = a.slice(-2);
+  console.assert(a.length === 6 && s.length === 2 && String(s) === 'quux,quuux',
+      'Array.prototype.slice(-)');
+
+  s = a.slice(1, 4);
+  console.assert(a.length === 6 && s.length === 3 && !('2' in s) &&
+      String(s) === 'bar,baz,', 'Array.prototype.slice(+, +)');
+
+  s = a.slice(1, -2);
+  console.assert(a.length === 6 && s.length === 3 && !('2' in s) &&
+      String(s) === 'bar,baz,', 'Array.prototype.slice(+, +)');
+
+  var o = {0: 'foo', 1: 'bar', 2: 'baz', 4: 'quux', 5: 'quuux', length: 6};
+  s = Array.prototype.slice.call(o, 1, -2);
+  console.assert(o.length === 6 && s.length === 3 && !('2' in s) &&
+      String(s) === 'bar,baz,', 'Array.prototype.slice.call(array-like, -, +)');
+
+  o = {
+    5000000000000000: 'foo', 5000000000000001: 'bar',
+    5000000000000002: 'baz', 5000000000000004: 'quux',
+    5000000000000005: 'quuux', length: 5000000000000006
+  };
+  s = Array.prototype.slice.call(o, -5, -2);
+  console.assert(o.length === 5000000000000006 &&
+      s.length === 3 && !('2' in s) && String(s) === 'bar,baz,',
+      'Array.prototype.slice.call(huge array-like, -, -)');
+};
+
+tests.ArrayPrototypeSplice = function() {
+  var a = ['foo', 'bar', 'baz', , 'quux', 'quuux'];
+  var s = a.splice();
+  console.assert(a.length === 6 && String(a) === 'foo,bar,baz,,quux,quuux' &&
+      s.length === 0 && String(s) === '', 'Array.prototype.splice()');
+
+  a = ['foo', 'bar', 'baz', , 'quux', 'quuux'];
+  s = a.splice(-2);
+  console.assert(a.length === 4 && String(a) === 'foo,bar,baz,' &&
+      s.length === 2 && String(s) === 'quux,quuux',
+      'Array.prototype.splice(-)');
+
+  a = ['foo', 'bar', 'baz', , 'quux', 'quuux'];
+  s = a.splice(1, 3, 'bletch');
+  console.assert(a.length === 4 && String(a) === 'foo,bletch,quux,quuux' &&
+      s.length === 3 && String(s) === 'bar,baz,',
+      'Array.prototype.splice(+, +, ...)');
+
+  var o = {0: 'foo', 1: 'bar', 2: 'baz', 4: 'quux', 5: 'quuux', length: 6};
+  s = Array.prototype.splice.call(o, 0, 100, 'bletch');
+  console.assert(!Array.isArray(o) && o.length === 1 &&
+      Object.keys(o).length === 2 && o[0] === 'bletch' &&
+      s.length === 6 && !('3' in s) && String(s) === 'foo,bar,baz,,quux,quuux',
+      'Array.prototype.splice.call(array-like, 0, large, ...)');
+
+  o = {
+    5000000000000000: 'foo', 5000000000000001: 'bar',
+    5000000000000002: 'baz', 5000000000000004: 'quux',
+    5000000000000005: 'quuux', length: 5000000000000006
+  };
+  s = Array.prototype.splice.call(o, -2, -999, 'bletch', 'qux');
+  console.assert(!Array.isArray(o) && o.length === 5000000000000008 &&
+      o[5000000000000004] === 'bletch' && o[5000000000000005] === 'qux' &&
+      o[5000000000000006] === 'quux' && o[5000000000000007] === 'quuux' &&
+      Array.isArray(s) && s.length === 0,
+      'Array.prototype.splice.call(huge array-like, -, -)');
+};
+
 tests.ArrayPrototypeToStringCycleDetection = function() {
   var a = [1, , 3];
   a[1] = a;

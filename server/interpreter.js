@@ -1161,6 +1161,107 @@ Interpreter.prototype.initArray_ = function() {
   });
 
   new this.NativeFunction({
+    id: 'Array.prototype.slice', length: 2,
+    /** @type {!Interpreter.NativeCallImpl} */
+    call:  function(intrp, thread, state, thisVal, args) {
+      var start = args[0];
+      var end = args[1];
+      var perms = state.scope.perms;
+      var obj = intrp.toObject(thisVal, perms);
+      var len = Interpreter.toLength(obj.get('length', perms));
+      var relativeStart = Interpreter.toInteger(start);
+      var k = (relativeStart < 0 ? Math.max(len + relativeStart, 0) :
+          Math.min(relativeStart, len));
+      var relativeEnd = (end === undefined ? len : Interpreter.toInteger(end));
+      var final = (relativeEnd < 0 ? Math.max(len + relativeEnd, 0) :
+          Math.min(relativeEnd, len));
+      // TODO(cpcallen): ArraySpeciesCreate should take count as an argument.
+      // var count = Math.max(final - k, 0);
+      var arr = new intrp.Array(perms);
+      for (var n = 0; k < final; k++, n++) {
+        var kP = String(k);
+        if (obj.has(kP, perms)) {
+          arr.defineProperty(
+              String(n), Descriptor.wec.withValue(obj.get(kP, perms)), perms);
+        }
+      }
+      arr.set('length', n, perms);
+      return arr;
+    }
+  });
+
+  new this.NativeFunction({
+    id: 'Array.prototype.splice', length: 2,
+    /** @type {!Interpreter.NativeCallImpl} */
+    call:  function(intrp, thread, state, thisVal, args) {
+      var start = args[0];
+      var deleteCount = args[1];
+      var perms = state.scope.perms;
+      var obj = intrp.toObject(thisVal, perms);
+      var len = Interpreter.toLength(obj.get('length', perms));
+      var relativeStart = Interpreter.toInteger(start);
+      var actualStart = relativeStart < 0 ? Math.max(len + relativeStart, 0) :
+          Math.min(relativeStart, len);
+      if (args.length === 0) {
+        var insertCount = 0;
+        var actualDeleteCount = 0;
+      } else if (args.length === 1) {
+        insertCount = 0;
+        actualDeleteCount = len - actualStart;
+      } else {
+        insertCount = args.length - 2;
+        var dc = Interpreter.toInteger(deleteCount);
+        actualDeleteCount = Math.min(Math.max(dc, 0), len - actualStart);
+      }
+      if (len + insertCount - actualDeleteCount > Number.MAX_SAFE_INTEGER) {
+        throw new intrp.Error(perms, intrp.TYPE_ERROR, 'Splicing ' +
+            insertCount - actualDeleteCount +
+            ' elements on an array-like of length ' + len +
+            ' is disallowed, as the total surpasses 2**53-1');
+      }
+      var arr = new intrp.Array(perms);
+      for (var k = 0; k < actualDeleteCount; k++) {
+        var from = String(actualStart + k);
+        if (obj.has(from, perms)) {
+          arr.defineProperty(
+              String(k), Descriptor.wec.withValue(obj.get(from, perms)), perms);
+        }
+      }
+      arr.set('length', actualDeleteCount, perms);
+      var itemCount = Math.max(args.length - 2, 0);
+      if (itemCount < actualDeleteCount) {
+        for (k = actualStart; k < len - actualDeleteCount; k++) {
+          from = String(k + actualDeleteCount);
+          var to = String(k + itemCount);
+          if (obj.has(from, perms)) {
+            obj.set(to, obj.get(from, perms), perms);
+          } else {
+            obj.deleteProperty(to, perms);
+          }
+        }
+        for (k = len; k > len - actualDeleteCount + itemCount; k--) {
+          obj.deleteProperty(String(k - 1), perms);
+        }
+      } else if (itemCount > actualDeleteCount) {
+        for (k = len - actualDeleteCount; k > actualStart; k--) {
+          from = String(k + actualDeleteCount - 1);
+          to = String(k + itemCount - 1);
+          if (obj.has(from, perms)) {
+            obj.set(to, obj.get(from, perms), perms);
+          } else {
+            obj.deleteProperty(to, perms);
+          }
+        }
+      }
+      for (var j = 2, k = actualStart; j < args.length; j++, k++) {
+        obj.set(String(k), args[j], perms);
+      }
+      obj.set('length', len - actualDeleteCount + itemCount, perms);
+      return arr;
+    }
+  });
+
+  new this.NativeFunction({
     id: 'Array.prototype.unshift', length: 1,
     /** @type {!Interpreter.NativeCallImpl} */
     call:  function(intrp, thread, state, thisVal, args) {
@@ -1191,65 +1292,6 @@ Interpreter.prototype.initArray_ = function() {
       return len + argCount;
     }
   });
-
-  wrapper = function(index, howmany /*, var_args*/) {
-    index = getInt(index, 0);
-    if (index < 0) {
-      index = Math.max(this.properties.length + index, 0);
-    } else {
-      index = Math.min(index, this.properties.length);
-    }
-    howmany = getInt(howmany, Infinity);
-    howmany = Math.min(howmany, this.properties.length - index);
-    var removed = new intrp.Array(intrp.thread.perms());
-    // Remove specified elements.
-    for (var i = index; i < index + howmany; i++) {
-      removed.properties[removed.properties.length++] = this.properties[i];
-      this.properties[i] = this.properties[i + howmany];
-    }
-    // Move other element to fill the gap.
-    for (var i = index + howmany; i < this.properties.length - howmany; i++) {
-      this.properties[i] = this.properties[i + howmany];
-    }
-    // Delete superfluous properties.
-    for (var i = this.properties.length - howmany; i < this.properties.length; i++) {
-      delete this.properties[i];
-    }
-    this.properties.length -= howmany;
-    // Insert specified items.
-    for (var i = this.properties.length - 1; i >= index; i--) {
-      this.properties[i + arguments.length - 2] = this.properties[i];
-    }
-    this.properties.length += arguments.length - 2;
-    for (var i = 2; i < arguments.length; i++) {
-      this.properties[index + i - 2] = arguments[i];
-    }
-    return removed;
-  };
-  this.createNativeFunction('Array.prototype.splice', wrapper, false);
-
-  wrapper = function(begin, end) {
-    var perms = intrp.thread.perms();
-    var list = new intrp.Array(perms);
-    begin = getInt(begin, 0);
-    if (begin < 0) {
-      begin = this.properties.length + begin;
-    }
-    begin = Math.max(0, Math.min(begin, this.properties.length));
-    end = getInt(end, this.properties.length);
-    if (end < 0) {
-      end = this.properties.length + end;
-    }
-    end = Math.max(0, Math.min(end, this.properties.length));
-    var length = 0;
-    for (var i = begin; i < end; i++) {
-      // TODO(cpcallen:perms): Use .get() - but is this always an intrpObject?
-      var element = intrp.getProperty(this, i);
-      list.set(String(length++), element, perms);
-    }
-    return list;
-  };
-  this.createNativeFunction('Array.prototype.slice', wrapper, false);
 
   wrapper = function(separator) {
     var cycles = intrp.toStringCycles_;

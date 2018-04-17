@@ -1698,6 +1698,102 @@ module.exports = [
     // SKIP until more efficient shift implementation available.
     /* expected: 'foo' */ },
 
+  { name: 'Array.prototype.slice()', src: `
+        var a = ['foo', 'bar', 'baz', , 'quux', 'quuux'];
+        var s = a.slice();
+        a.length === 6 && s.length === 6 && String(s);
+    `,
+    expected: 'foo,bar,baz,,quux,quuux' },
+
+  { name: 'Array.prototype.slice(-)', src: `
+        var a = ['foo', 'bar', 'baz', , 'quux', 'quuux'];
+        var s = a.slice(-2);
+        a.length === 6 && s.length === 2 && String(s);
+    `,
+    expected: 'quux,quuux' },
+
+  { name: 'Array.prototype.slice(+, +)', src: `
+        var a = ['foo', 'bar', 'baz', , 'quux', 'quuux'];
+        var s = a.slice(1, 4);
+        a.length === 6 && s.length === 3 && !('2' in s) && String(s);
+    `,
+    expected: 'bar,baz,' },
+
+  { name: 'Array.prototype.slice(+, -)', src: `
+        var a = ['foo', 'bar', 'baz', , 'quux', 'quuux'];
+        var s = a.slice(1, -2);
+        a.length === 6 && s.length === 3 && !('2' in s) && String(s);
+    `,
+    expected: 'bar,baz,' },
+
+  { name: 'Array.prototype.slice.call(array-like, -, +)', src: `
+        var o = {
+          0: 'foo', 1: 'bar', 2: 'baz', 4: 'quux', 5: 'quuux', length: 6
+        };
+        var s = Array.prototype.slice.call(o, -5, 4);
+        !Array.isArray(o) && o.length === 6 &&
+            Array.isArray(s) && s.length === 3 && !('2' in s) && String(s);
+    `,
+    expected: 'bar,baz,' },
+
+  { name: 'Array.prototype.slice.call(huge array-like, -, -)', src: `
+        var o = {
+          5000000000000000: 'foo', 5000000000000001: 'bar',
+          5000000000000002: 'baz', 5000000000000004: 'quux',
+          5000000000000005: 'quuux', length: 5000000000000006
+        };
+        var s = Array.prototype.slice.call(o, -5, -2);
+        !Array.isArray(o) && o.length === 5000000000000006 &&
+            Array.isArray(s) && s.length === 3 && !('2' in s) && String(s);
+    `,
+    expected: 'bar,baz,' },
+
+  { name: 'Array.prototype.splice()', src: `
+        var a = ['foo', 'bar', 'baz', , 'quux', 'quuux'];
+        var s = a.splice();
+        a.length === 6 && s.length === 0 && String(a) + ':' + String(s);
+    `,
+    expected: 'foo,bar,baz,,quux,quuux:' },
+
+  { name: 'Array.prototype.splice(-)', src: `
+        var a = ['foo', 'bar', 'baz', , 'quux', 'quuux'];
+        var s = a.splice(-2);
+        a.length === 4 && s.length === 2 && String(a) + ':' + String(s);
+    `,
+    expected: 'foo,bar,baz,:quux,quuux' },
+
+  { name: 'Array.prototype.splice(+, +, ...)', src: `
+        var a = ['foo', 'bar', 'baz', , 'quux', 'quuux'];
+        var s = a.splice(1, 3, 'bletch');
+        a.length === 4 && s.length === 3 && String(a) + ':' + String(s);
+    `,
+    expected: 'foo,bletch,quux,quuux:bar,baz,' },
+
+  { name: 'Array.prototype.splice.call(array-like, 0, large, ...)', src: `
+        var o = {
+          0: 'foo', 1: 'bar', 2: 'baz', 4: 'quux', 5: 'quuux', length: 6
+        };
+        var s = Array.prototype.splice.call(o, 0, 100, 'bletch');
+        !Array.isArray(o) && o.length === 1 && Object.keys(o).length === 2 &&
+        o[0] === 'bletch' &&
+        Array.isArray(s) && s.length === 6 && !('3' in s) && String(s);
+    `,
+    expected: 'foo,bar,baz,,quux,quuux' },
+
+  { name: 'Array.prototype.splice.call(huge array-like, -, -, many...)', src: `
+        var o = {
+          5000000000000000: 'foo', 5000000000000001: 'bar',
+          5000000000000002: 'baz', 5000000000000004: 'quux',
+          5000000000000005: 'quuux', length: 5000000000000006
+        };
+        var s = Array.prototype.splice.call(o, -2, -999, 'bletch', 'qux');
+        !Array.isArray(o) && o.length === 5000000000000008 &&
+            o[5000000000000004] === 'bletch' && o[5000000000000005] === 'qux' &&
+            o[5000000000000006] === 'quux' && o[5000000000000007] === 'quuux' &&
+            Array.isArray(s) && s.length === 0;
+    `,
+    expected: true },
+
   { name: 'Array.prototype.toString cycle detection', src: `
     var a = [1, , 3];
     a[1] = a;
