@@ -1502,6 +1502,30 @@ module.exports = [
   /******************************************************************/
   // Array and Array.prototype
 
+  { name: 'new Array()NoArgs', src: `
+    var a = new Array;
+    Array.isArray(a) && a.length;
+    `,
+    expected: 0 },
+
+  { name: 'newArray(number)', src: `
+    var a = new Array(42);
+    Array.isArray(a) && !(0 in a) && !(41 in a) && a.length;
+    `,
+    expected: 42 },
+
+  { name: 'new Array(non-number)', src: `
+    var a = new Array('foo');
+    Array.isArray(a) && a.length === 1 && a[0];
+    `,
+    expected: 'foo' },
+
+  { name: 'new Array multiple args', src: `
+    var a = new Array(1, 2, 3);
+    Array.isArray(a) && a.length === 3 && String(a);
+    `,
+    expected: '1,2,3' },
+
   { name: 'Array.isArray Array.prototype', src: `
     Array.isArray(Array.prototype);
     `,

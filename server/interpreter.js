@@ -996,22 +996,32 @@ Interpreter.prototype.initArray_ = function() {
     id: 'Array', length: 1,
     /** @type {!Interpreter.NativeConstructImpl} */
     construct: function(intrp, thread, state, args) {
-      var first = args[0];
+      var len = args[0];
       var perms = state.scope.perms;
-      var newArray = new intrp.Array(perms);
-      if (args.length === 1 && typeof first === 'number') {
-        if (isNaN(Interpreter.legalArrayLength(first))) {
-          throw new intrp.Error(perms, intrp.RANGE_ERROR,
-              'Invalid array length');
+      // TODO(ES6): Need to do GetPrototypeFromConstructor, ArrayCreate, etc.
+      var arr = new intrp.Array(perms);
+      if (args.length === 0) {  // ES6 §22.1.1.1
+        // Nothing to do.
+      } else if (args.length === 1) {
+        if (typeof len !== 'number') {
+          arr.defineProperty('0', Descriptor.wec.withValue(len), perms);
+          var intLen = 1;
+        } else {  // ES6 §22.1.1.2
+          intLen = Interpreter.toUint32(len);
+          if (intLen !== len) {
+            throw new intrp.Error(perms, intrp.RANGE_ERROR,
+                 'Invalid array length');
+          }
         }
-        newArray.set('length', first, perms);
-      } else {
-        for (var i = 0; i < arguments.length; i++) {
-          newArray.set(String(i), args[i], perms);
+        arr.set('length', intLen, perms);
+      } else {  // ES6 §22.1.1.3
+        arr.set('length', args.length, perms);
+        for (var k = 0; k < args.length; k++) {
+          arr.defineProperty(
+              String(k), Descriptor.wec.withValue(args[k]), perms);
         }
-        newArray.set('length', i, perms);
       }
-      return newArray;
+      return arr;
     },
     /** @type {!Interpreter.NativeCallImpl} */
     call: function(intrp, thread, state, thisVal, args) {
