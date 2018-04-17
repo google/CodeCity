@@ -1882,6 +1882,48 @@ Interpreter.legalArrayIndex = function(x) {
 };
 
 /**
+ * The ToInteger function from ES6 §7.1.4.  The abstract operation
+ * ToInteger converts argument to an integral numeric value.
+ * @param {Interpreter.Value} value
+ * @return {number} An integer if the value can be converted to such;
+ *     0 otherwise.
+ */
+Interpreter.toInteger = function toInteger(value) {
+  var number = Number(value);
+  if (isNaN(number)) {
+    return 0;
+  } else if (number === 0 || number === Infinity || number === -Infinity) {
+    return number;
+  }
+  return Math.trunc(number);
+};
+
+/**
+ * The ToUint32 function from ES6 §7.1.6.  The abstract operation
+ * ToUint32 converts argument to one of 2**32 integer values in the
+ * range 0 through 2**32−1, inclusive.
+ * @param {Interpreter.Value} value
+ * @return {number} A non-negative integer less than 2**32.
+ */
+Interpreter.toUint32 = function toUint32(value) {
+  return Interpreter.toInteger(value) >>> 0;
+};
+
+/**
+ * The ToLength function from ES6 §7.1.15.  Note that this does NOT
+ * enforce the actual array length limit of 2^32-1, but deals with
+ * lengths up to 2^53-1, which is correct for the polymorphic
+ * Array.prototype methods.
+ * @param {Interpreter.Value} value
+ * @return {number} A non-negative integer less than 2**53.
+ */
+Interpreter.toLength = function toLength(value) {
+  var len = Interpreter.toInteger(value);
+  if (len <= 0) return 0;
+  return Math.min(len, Number.MAX_SAFE_INTEGER);  // Handles len === Infinity.
+};
+
+/**
  * Create a new native function.  Function will be owned by root.
  * @param {string} name Name of new function.
  * @param {!Function} nativeFunc JavaScript function.
