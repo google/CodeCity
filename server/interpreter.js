@@ -1093,31 +1093,64 @@ Interpreter.prototype.initArray_ = function() {
     }
   });
 
-  wrapper = function() {
-    if (!this.properties.length) {
-      return undefined;
+  new this.NativeFunction({
+    id: 'Array.prototype.shift', length: 0,
+    /** @type {!Interpreter.NativeCallImpl} */
+    call:  function(intrp, thread, state, thisVal, args) {
+      var perms = state.scope.perms;
+      var obj = intrp.toObject(thisVal, perms);
+      var len = Interpreter.toLength(obj.get('length', perms));
+      if (len === 0) {
+        obj.set('length', 0, perms);
+        return undefined;
+      }
+      var first = obj.get('0', perms);
+      for (var k = 1; k < len; k++) {
+        var from = String(k);
+        var to = String(k - 1);
+        if (obj.has(from, perms)) {
+          obj.set(to, obj.get(from, perms), perms);
+        } else {
+          obj.deleteProperty(to, perms);
+        }
+      }
+      obj.deleteProperty(String(len - 1), perms);
+      obj.set('length', len - 1, perms);
+      return first;
     }
-    var value = this.properties[0];
-    for (var i = 1; i < this.properties.length; i++) {
-      this.properties[i - 1] = this.properties[i];
-    }
-    this.properties.length--;
-    delete this.properties[this.properties.length];
-    return value;
-  };
-  this.createNativeFunction('Array.prototype.shift', wrapper, false);
+  });
 
-  wrapper = function(var_args) {
-    for (var i = this.properties.length - 1; i >= 0; i--) {
-      this.properties[i + arguments.length] = this.properties[i];
+  new this.NativeFunction({
+    id: 'Array.prototype.unshift', length: 1,
+    /** @type {!Interpreter.NativeCallImpl} */
+    call:  function(intrp, thread, state, thisVal, args) {
+      var perms = state.scope.perms;
+      var obj = intrp.toObject(thisVal, perms);
+      var len = Interpreter.toLength(obj.get('length', perms));
+      var argCount = args.length;
+      if (argCount > 0) {
+        if (len + args.length > Number.MAX_SAFE_INTEGER) {
+          throw new intrp.Error(perms, intrp.TYPE_ERROR, 'Unshifting ' +
+              argCount + ' elements on an array-like of length ' + len +
+              ' is disallowed, as the total surpasses 2**53-1');
+        }
+        for (var k = len; k > 0; k--) {
+          var from = String(k - 1);
+          var to = String(k);
+          if (obj.has(from, perms)) {
+            obj.set(to, obj.get(from, perms), perms);
+          } else {
+            obj.deleteProperty(to, perms);
+          }
+        }
+        for (var j = 0; j < argCount; j++) {
+          obj.set(String(j), args[j], perms);
+        }
+      }
+      obj.set('length', len + argCount, perms);
+      return len + argCount;
     }
-    this.properties.length += arguments.length;
-    for (var i = 0; i < arguments.length; i++) {
-      this.properties[i] = arguments[i];
-    }
-    return this.properties.length;
-  };
-  this.createNativeFunction('Array.prototype.unshift', wrapper, false);
+  });
 
   wrapper = function() {
     for (var i = 0; i < this.properties.length / 2; i++) {

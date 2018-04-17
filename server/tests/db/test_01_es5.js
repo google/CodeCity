@@ -2037,12 +2037,65 @@ tests.ArrayPrototypePush = function() {
       'Array.prototype.push.call(huge array-like, ...)');
 };
 
+tests.ArrayPrototypeShift = function() {
+  var a = ['foo', 'bar', 'baz'];
+  var r = a.shift();
+  console.assert(a.length === 2 && a[0] === 'bar' && a[1] === 'baz' &&
+      r === 'foo', 'Array.prototype.shift');
+
+  a = [];
+  r = a.shift();
+  console.assert(
+      a.length === 0 && r === undefined, 'Array.prototype.shift empty array');
+
+  var o = {0: 'foo', 1: 'bar', 2: 'baz', length: 3};
+  r = Array.prototype.shift.apply(o);
+  console.assert(o.length === 2 && o[0] === 'bar' && o[1] === 'baz' &&
+      r === 'foo', 'Array.prototype.shift.apply(array-like)');
+
+  o = {length: 0};
+  r = Array.prototype.shift.apply(o);
+  console.assert(o.length === 0 && r === undefined,
+      'Array.prototype.shift.apply(empty array-like)');
+
+  // SKIP until more efficient shift implementation available.
+  console.log('SKIP:\tArray.prototype.shift.apply(huge array-like)');
+  // o = {5000000000000000: 'foo',
+  //      5000000000000001: 'quux',
+  //      length: 5000000000000002};
+  // r = Array.prototype.shift.apply(o);
+  // console.assert(o.length === 5000000000000001 && o[5000000000000000] === 'quux',
+  //     'Array.prototype.shift.apply(huge array-like)');
+};
+
 tests.ArrayPrototypeToStringCycleDetection = function() {
   var a = [1, , 3];
   a[1] = a;
   a.toString();
   // Didn't crash!
   console.assert(true, 'Array.prototype.toString cycle detection');
+};
+
+tests.ArrayPrototypeUnshift = function() {
+  var a = [];
+  console.assert(a.unshift('foo') === 1 && a.unshift('bar') === 2 &&
+      a.length === 2 && a[0] === 'bar' && a[1] === 'foo',
+      'Array.prototype.unshift');
+
+  var o = {length: 0};
+  console.assert(Array.prototype.unshift.call(o, 'foo') === 1 &&
+      Array.prototype.unshift.call(o, 'bar') === 2 &&
+      o.length === 2 && o[0] === 'bar' && o[1] === 'foo',
+      'Array.prototype.unshift.call(array-like, ...)');
+
+  // SKIP until more efficient unshift implementation available.
+  console.log('SKIP:\tArray.prototype.unshift.apply(huge array-like, ...)');
+  // var o = {length: 5000000000000000};
+  // console.assert(Array.prototype.unshift.call(o, 'foo') === 5000000000000001 &&
+  //     Array.prototype.unshift.call(o, 'bar') === 5000000000000002 &&
+  //     o[5000000000000000] === 'foo' && o[5000000000000001] === 'bar' &&
+  //     o.length === 5000000000000002,
+  //     'Array.prototype.unshift.call(huge array-like, ...)');
 };
 
 tests.ArrayLegalIndexLength = function() {
