@@ -1622,6 +1622,44 @@ module.exports = [
     `,
     expected: true },
 
+  { name: 'Array.prototype.shift', src: `
+        var a = ['foo', 'bar', 'baz'];
+        var r = a.shift();
+        a.length === 2 && a[0] === 'bar' && a[1] === 'baz' && r;
+    `,
+    expected: 'foo' },
+
+  { name: 'Array.prototype.shift empty array', src: `
+        var a = [];
+        var r = a.shift();
+        a.length === 0 && r;
+    `,
+    expected: undefined },
+
+  { name: 'Array.prototype.shift.apply(array-like)', src: `
+        var o = {0: 'foo', 1: 'bar', 2: 'baz', length: 3};
+        var r = Array.prototype.shift.apply(o);
+        o.length === 2 && o[0] === 'bar' && o[1] === 'baz' && r;
+    `,
+    expected: 'foo' },
+
+  { name: 'Array.prototype.shift.apply(empty array-like)', src: `
+        var o = {length: 0};
+        var r = Array.prototype.shift.apply(o);
+        o.length === 0 && r;
+    `,
+    expected: undefined },
+
+  { name: 'Array.prototype.shift.apply(huge array-like)', src: `
+        var o = {5000000000000000: 'foo',
+                 5000000000000001: 'quux',
+                 length: 5000000000000002};
+        var r = Array.prototype.shift.apply(o);
+        o.length === 5000000000000001 && o[5000000000000000] === 'quux' && r;
+    `,
+    // SKIP until more efficient shift implementation available.
+    /* expected: 'foo' */ },
+
   { name: 'Array.prototype.toString cycle detection', src: `
     var a = [1, , 3];
     a[1] = a;
@@ -1629,6 +1667,33 @@ module.exports = [
     "Didn't crash!";
     `,
     expected: "Didn't crash!" },
+
+  { name: 'Array.prototype.unshift', src: `
+        var a = [];
+        a.unshift('foo') === 1 && a.unshift('bar') === 2 &&
+            a.length === 2 && a[0] === 'bar' && a[1] === 'foo';
+    `,
+    expected: true },
+
+  { name: 'Array.prototype.unshift.call(array-like, ...)', src: `
+        var o = {length: 0};
+        Array.prototype.unshift.call(o, 'foo') === 1 &&
+            Array.prototype.unshift.call(o, 'bar') === 2 &&
+            o.length === 2 && o[0] === 'bar' && o[1] === 'foo';
+
+    `,
+    expected: true },
+
+  { name: 'Array.prototype.unshift.call(huge array-like, ...)', src: `
+        var o = {length: 5000000000000000};
+        var o = {length: 5000000000000000};
+        Array.prototype.unshift.call(o, 'foo') === 5000000000000001 &&
+            Array.prototype.push.call(o, 'bar') === 5000000000000002 &&
+            o[5000000000000000] === 'bar' && o[5000000000000001] === 'foo' &&
+            o.length === 5000000000000002
+    `,
+    // SKIP until more efficient unshift implementation available.
+    /* expected: true */ },
 
   /******************************************************************/
   // Boolean
