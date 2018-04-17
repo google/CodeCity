@@ -1931,6 +1931,34 @@ tests.FunctionPrototypeCall = function() {
 //////////////////////////////////////////////////////////////
 // Array and Array.prototype
 
+tests.ArrayNoArgs = function() {
+  var a = new Array;
+  console.assert(Array.isArray(a), 'new Array() returns array');
+  console.assert(a.length === 0, '(new Array().length');
+};
+
+tests.ArrayNumericArg = function() {
+  var a = new Array(42);
+  console.assert(Array.isArray(a), 'new Array(number) returns array');
+  console.assert(!(0 in a), 'new Array(number) has no first item');
+  console.assert(!(41 in a), 'new Array(number) has no last item');
+  console.assert(a.length === 42, 'new Array(number).length');
+};
+
+tests.ArrayNonNumericArg = function() {
+  var a = new Array('foo');
+  console.assert(Array.isArray(a), 'new Array(non-number) returns array');
+  console.assert(a.length === 1, 'new Array(non-number).length');
+  console.assert(a[0] ==='foo', 'new Array(non-number)[0]');
+};
+
+tests.ArrayMultipleArgs = function() {
+  var a = new Array(1, 2, 3);
+  console.assert(Array.isArray(a), 'new Array(multiple...) return array');
+  console.assert(a.length === 3, 'new Array(multiple...).ength');
+  console.assert(String(a) ==='1,2,3', 'new Array(multiple...).toString()');
+};
+
 tests.ArrayIsArrayArrayPrototype = function() {
   console.assert(
       Array.isArray(Array.prototype), 'Array.isArray Array.prototype');
