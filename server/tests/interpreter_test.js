@@ -815,6 +815,68 @@ exports.testNumberToString = function(t) {
 };
 
 /**
+ * Unit tests for Interpreter.toInteger, .toLength. and .toUint32
+ * @param {!T} t The test runner object.
+ */
+exports.testToIntegerEtc = function(t) {
+  var intrp = new Interpreter;
+  var cases = [
+    // [value, ToInteger(value), ToLength(value), ToUint32(value)]
+    [false, 0, 0, 0],
+    [true, 1, 1, 1],
+
+    [0, 0, 0, 0],
+    [-0, -0, 0, 0],
+    [1, 1, 1, 1],
+    [-1, -1, 0, 0xffffffff],
+    [0xfffffffe, 0xfffffffe, 0xfffffffe, 0xfffffffe],
+    [0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff],
+    [0x100000000, 0x100000000, 0x100000000, 0],
+    [4.5, 4, 4, 4],
+    [2**53-1, 2**53-1, 2**53-1, 0xffffffff],
+    [2**53, 2**53, 2**53-1, 0],
+    [Infinity, Infinity, 2**53-1, 0],
+    [-Infinity, -Infinity, 0, 0],
+    [NaN, 0, 0, 0],
+
+    ['0', 0, 0, 0],
+    ['-0', -0, 0, 0],
+    ['1', 1, 1, 1],
+    ['-1', -1, 0, 0xffffffff],
+    ['0xfffffffe', 0xfffffffe, 0xfffffffe, 0xfffffffe],
+    ['0xffffffff', 0xffffffff, 0xffffffff, 0xffffffff],
+    ['0x100000000', 0x100000000, 0x100000000, 0],
+    ['4294967294', 0xfffffffe, 0xfffffffe, 0xfffffffe], 
+    ['4294967295', 0xffffffff, 0xffffffff, 0xffffffff], 
+    ['4294967296',  0x100000000, 0x100000000, 0],
+    ['4.5', 4, 4, 4],
+    ['9007199254740991', 2**53-1, 2**53-1, 0xffffffff],
+    ['9007199254740992', 2**53, 2**53-1, 0],
+
+    ['hello', 0, 0, 0],
+    [null, 0, 0, 0],
+    [undefined, 0, 0, 0],
+    [new intrp.Array, 0, 0, 0],
+    [new intrp.Object, 0, 0, 0],
+  ];
+  var funcs = [Interpreter.toInteger,
+               Interpreter.toLength,
+               Interpreter.toUint32];
+  for (var i = 0; i < cases.length; i++) {
+    var tc = cases[i];
+    for (var j = 0; j < funcs.length; j++) {
+      var name =  util.format('%s(%o)', funcs[j].name, tc[0]);
+      var r = funcs[j](tc[0]);
+      if (Object.is(r, tc[j + 1])) {
+        t.pass(name);
+      } else {
+        t.fail(name, util.format('got: %o  want: %o', r, tc[j + 1]));
+      }
+    }
+  }
+};
+
+/**
  * Unit tests for Interpreter.legalArrayIndex and
  * Interpreter.legalArrayLength.
  * @param {!T} t The test runner object.
