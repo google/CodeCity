@@ -1054,6 +1054,51 @@ Interpreter.prototype.initArray_ = function() {
                             this.Array.prototype.toString, false);
 
   new this.NativeFunction({
+    id: 'Array.prototype.concat', length: 1,
+    /** @type {!Interpreter.NativeCallImpl} */
+    call:  function(intrp, thread, state, thisVal, args) {
+      var perms = state.scope.perms;
+      var obj = intrp.toObject(thisVal, perms);
+      var arr = new intrp.Array(perms);
+      var n = 0;
+
+      var doConcat = function(item) {
+        // TODO(ES6): IsConcatSpreadable?
+        if (item instanceof intrp.Array) {  // Add elements of item.
+          var len = Interpreter.toLength(item.get('length', perms));
+          if (len + n > Number.MAX_SAFE_INTEGER) {
+            throw new intrp.Error(perms, intrp.TYPE_ERROR, 'Concatenating ' +
+                len + ' elements on an array-like of length ' + n +
+                ' is disallowed, as the total surpasses 2**53-1');
+          }
+          for (var k = 0; k < len; n++, k++) {
+            var kP = String(k);
+            if (item.has(kP, perms)) {
+              arr.defineProperty(String(n),
+                  Descriptor.wec.withValue(item.get(kP, perms)), perms);
+            }
+          }
+        } else {  // Add item as single element, rather than spread.
+          if (n >= Number.MAX_SAFE_INTEGER) {
+            throw new intrp.Error(perms, intrp.TYPE_ERROR,
+                'Concatenating onto an array-like of length ' + n +
+                ' is disallowed, as the total surpasses 2**53-1');
+          }
+          arr.defineProperty(
+              String(n++), Descriptor.wec.withValue(item), perms);
+        }
+      };
+
+      doConcat(thisVal);
+      for (var i = 0; i < args.length; i++) {
+        doConcat(args[i]);
+      }
+      arr.set('length', n, perms);
+      return arr;
+    }
+  });
+
+  new this.NativeFunction({
     id: 'Array.prototype.pop', length: 0,
     /** @type {!Interpreter.NativeCallImpl} */
     call:  function(intrp, thread, state, thisVal, args) {
@@ -1310,33 +1355,6 @@ Interpreter.prototype.initArray_ = function() {
     return text.join(separator);
   };
   this.createNativeFunction('Array.prototype.join', wrapper, false);
-
-  wrapper = function(var_args) {
-    var perms = intrp.thread.perms();
-    var list = new intrp.Array(perms);
-    var length = 0;
-    // Start by copying the current array.
-    for (var i = 0; i < this.properties.length; i++) {
-      // TODO(cpcallen:perms): Use .get() - but is this always an intrpObject?
-      var element = intrp.getProperty(this, i);
-      list.set(String(length++), element, perms);
-    }
-    // Loop through all arguments and copy them in.
-    for (var i = 0; i < arguments.length; i++) {
-      var value = arguments[i];
-      if (value instanceof intrp.Array) {
-        for (var j = 0; j < value.properties.length; j++) {
-          // TODO(cpcallen:perms): Use .get()
-          var element = intrp.getProperty(value, j);
-          list.set(String(length++), element, perms);
-        }
-      } else {
-        list.set(String(length++), value, perms);
-      }
-    }
-    return list;
-  };
-  this.createNativeFunction('Array.prototype.concat', wrapper, false);
 
   wrapper = function(searchElement, fromIndex) {
     searchElement = searchElement || undefined;

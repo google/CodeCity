@@ -1977,6 +1977,25 @@ tests.ArrayIsArrayArrayLike = function() {
       'Array.isArray(array-like)');
 };
 
+tests.ArrayPrototypeConcat = function() {
+  var a = ['foo', 'bar', 'baz', , 'quux', 'quuux'];
+  var c = a.concat();
+  console.assert(a.length === 6 && c.length === 6 && c !== a &&
+      String(c) === String(a), 'Array.prototype.concat()');
+
+  var o = {0: 'quux', 1: 'quuux', length: 2};
+  c = [].concat(['foo', 'bar'], 'baz', undefined, o);
+  console.assert(c.length === 5 && '3' in c && c[3] === undefined &&
+      String(c) === 'foo,bar,baz,,[object Object]',
+      'Array.prototype.concat(...)');
+  
+  o = {0: 'foo', 1: 'bar', length: 2};
+  c = Array.prototype.concat.call(o, 'baz', [, 'quux', 'quuux']);
+  console.assert(c.length === 5 &&
+      String(c) === '[object Object],baz,,quux,quuux',
+      'Array.prototype.concat.call(object, ...)');
+};
+
 tests.ArrayPrototypeJoin = function() {
   console.assert([1, 2, 3].join('-') === '1-2-3', 'Array.prototype.join');
 };
