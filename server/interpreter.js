@@ -2025,31 +2025,6 @@ Interpreter.prototype.initNetwork_ = function() {
 };
 
 /**
- * Is a value a legal integer for an array length?
- * @param {Interpreter.Value} x Value to check.
- * @return {number} Zero, or a positive integer if the value can be
- *     converted to such.  NaN otherwise.
- */
-Interpreter.legalArrayLength = function(x) {
-  var n = x >>> 0;
-  // Array length must be between 0 and 2^32-1 (inclusive).
-  return (n === Number(x)) ? n : NaN;
-};
-
-/**
- * Is a value a legal integer for an array index?
- * @param {Interpreter.Value} x Value to check.
- * @return {number} Zero, or a positive integer if the value can be
- *     converted to such.  NaN otherwise.
- */
-Interpreter.legalArrayIndex = function(x) {
-  var n = x >>> 0;
-  // Array index cannot be 2^32-1, otherwise length would be 2^32.
-  // 0xffffffff is 2^32-1.
-  return (String(n) === String(x) && n !== 0xffffffff) ? n : NaN;
-};
-
-/**
  * The ToInteger function from ES6 §7.1.4.  The abstract operation
  * ToInteger converts argument to an integral numeric value.
  * @param {Interpreter.Value} value
@@ -2293,13 +2268,16 @@ Interpreter.prototype.arrayNativeToPseudo = function(nArray, owner) {
  * to a native array, using the algorithm from ES5.1 §15.3.4.3
  * (Function.prototype.apply).  Does NOT recursively convert the type
  * of the array's contents.
+ *
+ * TODO(ES6): Add elementTypes param to become CreateListFromArrayLike
+ * (ES6 §7.3.17).
  * @param {!Interpreter.prototype.Object} pArray The interpreter array
  *     or array-like object to be converted.
  * @param {!Interpreter.Owner} perms Who is trying convert it?
  * @return {!Array<Interpreter.Value>} The equivalent native JS array.
  */
 Interpreter.prototype.arrayPseudoToNative = function(pArray, perms) {
-  var len = Interpreter.legalArrayLength(pArray.get('length', perms)) || 0;
+  var len = Interpreter.toLength(pArray.get('length', perms));
   var nArray = [];
   for (var i = 0; i < len; i++) {
     nArray.push(pArray.get(String(i), perms));
