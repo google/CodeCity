@@ -2037,6 +2037,34 @@ tests.ArrayPrototypePush = function() {
       'Array.prototype.push.call(huge array-like, ...)');
 };
 
+tests.ArrayPrototypeReverse = function () {
+  var a = [1, 2, 3];
+  console.assert(a.reverse() === a && a.length === 3 && String(a) === '3,2,1',
+      'Array.prototype.reverse odd-length');
+
+  a = [1, 2, , 4];
+  console.assert(a.reverse() === a && a.length === 4 && String(a) === '4,,2,1',
+      'Array.prototype.reverse even-length');
+
+  a = [];
+  console.assert(a.reverse() === a && a.length === 0,
+      'Array.prototype.reverse empty');
+
+  var o = {0: 1, 1: 2, 2: 3, length: 3};
+  console.assert(Array.prototype.reverse.call(o) === o &&
+      o.length === 3 && Array.prototype.toString.apply(o) === '3,2,1',
+      'Array.prototype.reverse.call(odd-length array-like)');
+
+  o = {0: 1, 1: 2, 3: 4, length: 4};
+  console.assert(Array.prototype.reverse.call(o) === o &&
+      o.length === 4 && Array.prototype.toString.apply(o) === '4,,2,1',
+      'Array.prototype.reverse.call(even-length array-like)');
+
+  o = {length: 0};
+  console.assert(Array.prototype.reverse.call(o) === o && o.length === 0,
+      'Array.prototype.reverse.call(empty array-like)');
+};
+
 tests.ArrayPrototypeShift = function() {
   var a = ['foo', 'bar', 'baz'];
   var r = a.shift();

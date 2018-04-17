@@ -1094,6 +1094,46 @@ Interpreter.prototype.initArray_ = function() {
   });
 
   new this.NativeFunction({
+    id: 'Array.prototype.reverse', length: 0,
+    /** @type {!Interpreter.NativeCallImpl} */
+    call:  function(intrp, thread, state, thisVal, args) {
+      var perms = state.scope.perms;
+      var obj = intrp.toObject(thisVal, perms);
+      var len = Interpreter.toLength(obj.get('length', perms));
+      var middle = Math.floor(len / 2);
+      for (var lower = 0; lower < middle; lower++) {
+        var upper = len - lower - 1;
+        var upperP = String(upper);
+        var lowerP = String(lower);
+        var lowerExists = obj.has(lowerP, perms);
+        if (lowerExists) {
+          var lowerValue = obj.get(lowerP, perms);
+        }
+        var upperExists = obj.has(upperP, perms);
+        if (upperExists) {
+          var upperValue = obj.get(upperP, perms);
+        }
+        if (lowerExists && upperExists) {
+          obj.set(lowerP, upperValue, perms);
+          obj.set(upperP, lowerValue, perms);
+        } else if (!lowerExists && upperExists) {
+          obj.set(lowerP, upperValue, perms);
+          obj.deleteProperty(upperP, perms);
+        } else if (lowerExists && !upperExists) {
+          obj.deleteProperty(lowerP, perms);
+          obj.set(upperP, lowerValue, perms);
+        }  // else neither exist, and no action required.
+      }
+      // ES spec would have us return obj, which would be a boxed
+      // primitive (Boolean, Number or String object) if thisVal was a
+      // number, boolean or the empty string.  We decline to do that.
+      // (Note that nonempty strings will already have thrown
+      // TypeError due to non-writable properties.)
+      return thisVal;
+    }
+  });
+
+  new this.NativeFunction({
     id: 'Array.prototype.shift', length: 0,
     /** @type {!Interpreter.NativeCallImpl} */
     call:  function(intrp, thread, state, thisVal, args) {
@@ -1151,16 +1191,6 @@ Interpreter.prototype.initArray_ = function() {
       return len + argCount;
     }
   });
-
-  wrapper = function() {
-    for (var i = 0; i < this.properties.length / 2; i++) {
-      var tmp = this.properties[this.properties.length - i - 1];
-      this.properties[this.properties.length - i - 1] = this.properties[i];
-      this.properties[i] = tmp;
-    }
-    return this;
-  };
-  this.createNativeFunction('Array.prototype.reverse', wrapper, false);
 
   wrapper = function(index, howmany /*, var_args*/) {
     index = getInt(index, 0);

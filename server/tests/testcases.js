@@ -1622,6 +1622,44 @@ module.exports = [
     `,
     expected: true },
 
+  { name: 'Array.prototype.reverse odd-length', src: `
+        var a = [1, 2, 3];
+        a.reverse() === a && a.length === 3 && String(a);
+    `,
+    expected: '3,2,1' },
+
+  { name: 'Array.prototype.reverse even-length', src: `
+        var a = [1, 2, , 4];
+        a.reverse() === a && a.length === 4 && String(a);
+    `,
+    expected: '4,,2,1' },
+
+  { name: 'Array.prototype.reverse empty', src: `
+        var a = [];
+        a.reverse() === a && a.length;
+    `,
+    expected: 0 },
+
+  { name: 'Array.prototype.reverse.call(odd-length array-like)', src: `
+        var o = {0: 1, 1: 2, 2: 3, length: 3};
+        Array.prototype.reverse.call(o) === o && o.length === 3 &&
+            Array.prototype.toString.apply(o);
+    `,
+    expected: '3,2,1' },
+
+  { name: 'Array.prototype.reverse.call(even-length array-like)', src: `
+        var o = {0: 1, 1: 2, 3: 4, length: 4};
+        Array.prototype.reverse.call(o) === o && o.length === 4 &&
+            Array.prototype.toString.apply(o);
+    `,
+    expected: '4,,2,1' },
+
+  { name: 'Array.prototype.reverse.call(empty array-like)', src: `
+        var o = {length: 0};
+        Array.prototype.reverse.call(o) === o && o.length;
+    `,
+    expected: 0 },
+
   { name: 'Array.prototype.shift', src: `
         var a = ['foo', 'bar', 'baz'];
         var r = a.shift();
