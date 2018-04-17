@@ -1053,15 +1053,45 @@ Interpreter.prototype.initArray_ = function() {
   this.createNativeFunction('Array.prototype.toString',
                             this.Array.prototype.toString, false);
 
-  wrapper = function() {
-    return Array.prototype.pop.apply(this.properties, arguments);
-  };
-  this.createNativeFunction('Array.prototype.pop', wrapper, false);
+  new this.NativeFunction({
+    id: 'Array.prototype.pop', length: 0,
+    /** @type {!Interpreter.NativeCallImpl} */
+    call:  function(intrp, thread, state, thisVal, args) {
+      var perms = state.scope.perms;
+      var obj = intrp.toObject(thisVal, perms);
+      var len = Interpreter.toLength(obj.get('length', perms));
+      if (len === 0) {
+        obj.set('length', 0, perms);
+        return undefined;
+      }
+      var newLen = len - 1;
+      var element = obj.get(String(newLen), perms);
+      obj.deleteProperty(String(newLen), perms);
+      obj.set('length', newLen, perms);
+      return element;
+    }
+  });
 
-  wrapper = function(var_args) {
-    return Array.prototype.push.apply(this.properties, arguments);
-  };
-  this.createNativeFunction('Array.prototype.push', wrapper, false);
+  new this.NativeFunction({
+    id: 'Array.prototype.push', length: 1,
+    /** @type {!Interpreter.NativeCallImpl} */
+    call:  function(intrp, thread, state, thisVal, args) {
+      var perms = state.scope.perms;
+      var obj = intrp.toObject(thisVal, perms);
+      var len = Interpreter.toLength(obj.get('length', perms));
+      var argCount = args.length;
+      if (len + args.length > Number.MAX_SAFE_INTEGER) {
+        throw new intrp.Error(perms, intrp.TYPE_ERROR, 'Pushing ' + argCount +
+              ' elements on an array-like of length ' + len +
+              ' is disallowed, as the total surpasses 2**53-1');
+      }
+      for (var i = 0; i < argCount; i++) {
+        obj.set(String(len++), args[i], perms);
+      }
+      obj.set('length', len, perms);
+      return len;
+    }
+  });
 
   wrapper = function() {
     if (!this.properties.length) {

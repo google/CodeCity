@@ -1559,6 +1559,69 @@ module.exports = [
     `,
     expected: "Didn't crash!" },
 
+  { name: 'Array.prototype.pop', src: `
+        var a = ['foo', 'bar', 'baz'];
+        var r = a.pop();
+        a.length === 2 && r;
+    `,
+    expected: 'baz' },
+
+  { name: 'Array.prototype.pop empty array', src: `
+        var a = [];
+        var r = a.pop();
+        a.length === 0 && r;
+    `,
+    expected: undefined },
+
+  { name: 'Array.prototype.pop.apply(array-like)', src: `
+        var o = {0: 'foo', 1: 'bar', 2: 'baz', length: 3};
+        var r = Array.prototype.pop.apply(o);
+        o.length === 2 && r;
+    `,
+    expected: 'baz' },
+
+  { name: 'Array.prototype.pop.apply(empty array-like)', src: `
+        var o = {length: 0};
+        var r = Array.prototype.pop.apply(o);
+        o.length === 0 && r;
+    `,
+    expected: undefined },
+
+  { name: 'Array.prototype.pop.apply(huge array-like)', src: `
+        var o = {5000000000000000: 'foo',
+                 5000000000000001: 'quux',
+                 length: 5000000000000002};
+        var r = Array.prototype.pop.apply(o);
+        o.length === 5000000000000001 && o[5000000000000000] === 'foo' && r;
+    `,
+    expected: 'quux' },
+
+  { name: 'Array.prototype.push', src: `
+        var a = [];
+        a.push('foo') === 1 && a.push('bar') === 2 &&
+            a.length === 2 && a[0] === 'foo' && a[1] === 'bar';
+    `,
+    expected: true },
+
+  { name: 'Array.prototype.push.call(array-like, ...)', src: `
+        var o = {length: 0};
+        Array.prototype.push.call(o, 'foo') === 1 &&
+            Array.prototype.push.call(o, 'bar') === 2 &&
+            o.length === 2 && o[0] === 'foo' && o[1] === 'bar';
+
+    `,
+    expected: true },
+
+  { name: 'Array.prototype.push.call(huge array-like, ...)', src: `
+        var o = {length: 5000000000000000};
+        var o = {length: 5000000000000000};
+        Array.prototype.push.call(o, 'foo') === 5000000000000001 &&
+            Array.prototype.push.call(o, 'bar') === 5000000000000002 &&
+            o[5000000000000000] === 'foo' && o[5000000000000001] === 'bar' &&
+            o.length === 5000000000000002
+    `,
+    expected: true },
+
   { name: 'Array.prototype.toString cycle detection', src: `
     var a = [1, , 3];
     a[1] = a;

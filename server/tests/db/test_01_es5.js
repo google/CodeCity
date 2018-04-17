@@ -1989,6 +1989,54 @@ tests.ArrayPrototypeJoinCycleDetection = function() {
   console.assert(true, 'Array.prototype.join cycle detection');
 };
 
+tests.ArrayPrototypePop = function() {
+  var a = ['foo', 'bar', 'baz'];
+  var r = a.pop();
+  console.assert(a.length === 2 && r === 'baz', 'Array.prototype.pop');
+
+  a = [];
+  r = a.pop();
+  console.assert(
+      a.length === 0 && r === undefined, 'Array.prototype.pop empty array');
+
+  var o = {0: 'foo', 1: 'bar', 2: 'baz', length: 3};
+  r = Array.prototype.pop.apply(o);
+  console.assert(
+      o.length === 2 && r === 'baz', 'Array.prototype.pop.apply(array-like)');
+
+  o = {length: 0};
+  r = Array.prototype.pop.apply(o);
+  console.assert(o.length === 0 && r === undefined,
+      'Array.prototype.pop.apply(empty array-like)');
+
+  o = {5000000000000000: 'foo',
+       5000000000000001: 'quux',
+       length: 5000000000000002};
+  r = Array.prototype.pop.apply(o);
+  console.assert(o.length === 5000000000000001 && o[5000000000000000] === 'foo',
+      'Array.prototype.pop.apply(huge array-like)');
+};
+
+tests.ArrayPrototypePush = function() {
+  var a = [];
+  console.assert(a.push('foo') === 1 && a.push('bar') === 2 &&
+      a.length === 2 && a[0] === 'foo' && a[1] === 'bar',
+      'Array.prototype.push');
+
+  var o = {length: 0};
+  console.assert(Array.prototype.push.call(o, 'foo') === 1 &&
+      Array.prototype.push.call(o, 'bar') === 2 &&
+      o.length === 2 && o[0] === 'foo' && o[1] === 'bar',
+      'Array.prototype.push.call(array-like, ...)');
+
+  var o = {length: 5000000000000000};
+  console.assert(Array.prototype.push.call(o, 'foo') === 5000000000000001 &&
+      Array.prototype.push.call(o, 'bar') === 5000000000000002 &&
+      o[5000000000000000] === 'foo' && o[5000000000000001] === 'bar' &&
+      o.length === 5000000000000002,
+      'Array.prototype.push.call(huge array-like, ...)');
+};
+
 tests.ArrayPrototypeToStringCycleDetection = function() {
   var a = [1, , 3];
   a[1] = a;
