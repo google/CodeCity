@@ -1546,6 +1546,27 @@ module.exports = [
     `,
     expected: false },
 
+  { name: 'Array.prototype.concat()', src: `
+        var a = ['foo', 'bar', 'baz', , 'quux', 'quuux'];
+        var c = a.concat();
+        a.length === 6 && c.length === 6 && c !== a && String(c);
+    `,
+    expected: 'foo,bar,baz,,quux,quuux' },
+
+  { name: 'Array.prototype.concat(...)', src: `
+        var o = {0: 'quux', 1: 'quuux', length: 2};
+        var c = [].concat(['foo', 'bar'], 'baz', undefined, o);
+        c.length === 5 && '3' in c && c[3] === undefined && String(c);
+    `,
+    expected: 'foo,bar,baz,,[object Object]' },
+
+  { name: 'Array.prototype.concat.call(object, ...)', src: `
+        var o = {0: 'foo', 1: 'bar', length: 2};
+        var c = Array.prototype.concat.call(o, 'baz', [, 'quux', 'quuux']);
+        c.length === 5 && String(c);
+    `,
+    expected: '[object Object],baz,,quux,quuux' },
+
   { name: 'Array.prototype.join', src: `
     [1, 2, 3].join('-');
     `,
