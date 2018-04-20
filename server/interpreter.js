@@ -1041,10 +1041,13 @@ Interpreter.prototype.initArray_ = function() {
   };
 
   // Static methods on Array.
-  wrapper = function(obj) {
-    return obj instanceof intrp.Array;
-  };
-  this.createNativeFunction('Array.isArray', wrapper, false);
+  new this.NativeFunction({
+    id: 'Array.isArray', length: 1,
+    /** @type {!Interpreter.NativeCallImpl} */
+    call: function(intrp, thread, state, thisVal, args) {
+      return args[0] instanceof intrp.Array;
+    }
+  });
 
   // Instance methods on Array.
   this.createNativeFunction('Array.prototype.toString',
