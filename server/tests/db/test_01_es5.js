@@ -1426,18 +1426,20 @@ tests.callNonCallable = function() {
 tests.ObjectDefinePropertyNoArgs = function() {
   try {
     Object.defineProperty();
-    console.assert(false, 'ObjectDefinePropertyNoArgs');
+    console.assert(false, "Object.defineProperty() didn't throw");
   } catch (e) {
-    console.assert(e.name === 'TypeError', 'ObjectDefinePropertyNoArgsError');
+    console.assert(
+        e.name === 'TypeError', 'Object.defineProperty() wrong error');
   }
 };
 
 tests.ObjectDefinePropertyNonObject = function() {
   try {
     Object.defineProperty('not an object', 'foo', {});
-    console.assert(false, 'ObjectDefinePropertyNonObject');
+    console.assert(false, "Object.defineProperty non-object didn't throw");
   } catch (e) {
-    console.assert(e.name === 'TypeError', 'ObjectDefinePropertyNonObjectError');
+    console.assert(
+        e.name === 'TypeError', 'Object.defineProperty non-object wrong error');
   }
 };
 
@@ -1445,9 +1447,10 @@ tests.ObjectDefinePropertyBadDescriptor = function() {
   var o = {};
   try {
     Object.defineProperty(o, 'foo', 'not an object');
-    console.assert(false, 'ObjectDefinePropertyBadDescriptor');
+    console.assert(false, "Object.defineProperty bad descriptor didn't throw");
   } catch (e) {
-    console.assert(e.name === 'TypeError', 'ObjectDefinePropertyBadDescriptorError');
+    console.assert(e.name === 'TypeError',
+        'Object.defineProperty bad descriptor wrong error');
   }
 };
 
@@ -1466,100 +1469,112 @@ tests.ObjectDefineProperty = function() {
   for (var k in o) {
     r += o[k];
   }
-  console.assert(r === 78, 'ObjectDefineProperty');
+  console.assert(r === 78, 'Object.defineProperty');
 };
 
 tests.ObjectGetPrototypeOfNullUndefined = function() {
   try {
     Object.getPrototypeOf(null);
-    console.assert(false, 'ObjectGetPrototypeOfNull');
+    console.assert(false, "Object.getPrototypeOf null didn't throw");
   } catch (e) {
-    console.assert(e.name === 'TypeError', 'ObjectGetPrototypeOfNullError');
+    console.assert(
+        e.name === 'TypeError', 'Object.getPrototypeOf null wrong error');
   }
   try {
     Object.getPrototypeOf(undefined);
-    console.assert(false, 'ObjectGetPrototypeOfUndefined');
+    console.assert(false, "Object.getPrototypeOf undefined didn't throw");
   } catch (e) {
-    console.assert(e.name === 'TypeError', 'ObjectGetPrototypeOfUndefinedError');
+    console.assert(
+        e.name === 'TypeError', 'Object.getPrototypeOf undefined wrong error');
   }
 };
 
 tests.ObjectGetPrototypeOfPrimitives = function() {
   // This tests for ES6 behaviour.
-  console.assert(Object.getPrototypeOf(true) === Boolean.prototype, 'ObjectGetPrototypeOfBoolean');
-  console.assert(Object.getPrototypeOf(1337) === Number.prototype, 'ObjectGetPrototypeOfNumber');
-  console.assert(Object.getPrototypeOf('hi') === String.prototype, 'ObjectGetPrototypeOfString');
+  console.assert(Object.getPrototypeOf(true) === Boolean.prototype,
+      'Object.getPrototypeOf boolean');
+  console.assert(Object.getPrototypeOf(1337) === Number.prototype,
+      'Object.getPrototypeOf number');
+  console.assert(Object.getPrototypeOf('hi') === String.prototype,
+      'Object.getPrototypeOf string');
 };
 
 tests.ObjectCreateNoArgs = function() {
   try {
     Object.create();
-    console.assert(false, 'ObjectCreateNoArgs');
+    console.assert(false, "Object.create() didn't throw");
   } catch (e) {
-    console.assert(e.name === 'TypeError', 'ObjectCreateNoArgsError');
+    console.assert(e.name === 'TypeError', 'Object.create() wrong error');
   }
 };
 
 tests.ObjectCreateNonObject = function() {
   try {
     Object.create(42);
-    console.assert(false, 'ObjectCreateNonObject');
+    console.assert(false, "Object.create non-object didn't throw");
   } catch (e) {
-    console.assert(e.name === 'TypeError', 'ObjectCreateNonObjectError');
+    console.assert(
+        e.name === 'TypeError', 'Object.create non-object wrong error');
   }
 };
 
 tests.ObjectCreateNull = function() {
   var o = Object.create(null);
-  console.assert(Object.getPrototypeOf(o) === null, 'ObjectCreateNull');
+  console.assert(Object.getPrototypeOf(o) === null, 'Object.create null');
 };
 
 tests.ObjectCreate = function() {
   var o = Object.create({foo: 79});
   delete o.foo;
-  console.assert(o.foo === 79, 'ObjectCreate');
+  console.assert(o.foo === 79, 'Object.create');
 };
 
 tests.ObjectGetOwnPropertyDescriptorNoArgs = function() {
   try {
     Object.getOwnPropertyDescriptor();
-    console.assert(false, 'ObjectGetOwnPropertyDescriptorNoArgs');
+    console.assert(false, "Object.getOwnPropertyDescriptor() didn't throw");
   } catch (e) {
-    console.assert(e.name === 'TypeError', 'ObjectGetOwnPropertyDescriptorNoArgsError');
+    console.assert(e.name === 'TypeError',
+        'Object.getOwnPropertyDescriptor() wrong error');
   }
 };
 
 tests.ObjectGetOwnPropertyDescriptorNonObject = function() {
   try {
     Object.getOwnPropertyDescriptor('not an object', 'foo');
-    console.assert(false, 'ObjectGetOwnPropertyDescriptorNonObject');
+    console.assert(
+        false, "Object.getOwnPropertyDescriptor non-object didn't throw");
   } catch (e) {
-    console.assert(e.name === 'TypeError', 'ObjectGetOwnPropertyDescriptorNonObjectError');
+    console.assert(e.name === 'TypeError',
+        'Object.getOwnPropertyDescriptor non-object wrong error');
   }
 };
 
 tests.ObjectGetOwnPropertyDescriptorBadKey = function() {
   var o = {};
   console.assert(Object.getOwnPropertyDescriptor(o, 'foo') === undefined,
-                 'ObjectGetOwnPropertyDescriptorBadKey');
+      'Object.getOwnPropertyDescriptor bad key');
 };
 
 tests.ObjectGetOwnPropertyDescriptor = function() {
   var o = {}, r = 0;
   Object.defineProperty(o, 'foo', { value: 'bar' });
   var desc = Object.getOwnPropertyDescriptor(o, 'foo');
-  console.assert(desc.value === o.foo, 'ObjectGetOwnPropertyDescriptorValue');
-  console.assert(!desc.writable, 'ObjectGetOwnPropertyDescriptorWritable');
-  console.assert(!desc.enumerable, 'ObjectGetOwnPropertyDescriptorEnumerable');
-  console.assert(!desc.configurable, 'ObjectGetOwnPropertyDescriptorConfigurable');
+  console.assert(desc.value === o.foo, 'Object.getOwnPropertyDescriptor value');
+  console.assert(!desc.writable, 'Object.getOwnPropertyDescriptor writable');
+  console.assert(
+      !desc.enumerable, 'Object.getOwnPropertyDescriptor enumerable');
+  console.assert(
+      !desc.configurable, 'Object.getOwnPropertyDescriptor configurable');
 };
 
 tests.ObjectGetOwnPropertyNamesNoArgs = function() {
   try {
     Object.getOwnPropertyNames();
-    console.assert(false, 'ObjectGetOwnPropertyNamesNoArgs');
+    console.assert(false, "Object.getOwnPropertyNames() didn't throw");
   } catch (e) {
-    console.assert(e.name === 'TypeError', 'ObjectGetOwnPropertyNamesNoArgsError');
+    console.assert(
+        e.name === 'TypeError', 'Object.getOwnPropertyNames() wrong error');
   }
 };
 
@@ -1572,34 +1587,36 @@ tests.ObjectGetOwnPropertyNamesString = function() {
       r += Number(names[i]) + 1;
     }
   }
-  console.assert(r === 16, 'ObjectGetOwnPropertyNamesString');
+  console.assert(r === 16, 'Object.getOwnPropertyNames(string)');
 };
 
 tests.ObjectGetOwnPropertyNamesNumber = function() {
   console.assert( Object.getOwnPropertyNames(42).length === 0,
-                 'ObjectGetOwnPropertyNamesNumber');
+                 'Object.getOwnPropertyNames(number)');
 };
 
 tests.ObjectGetOwnPropertyNamesBoolean = function() {
   console.assert(Object.getOwnPropertyNames(true).length === 0,
-                 'ObjectGetOwnPropertyNamesBoolean');
+                 'Object.getOwnPropertyNames(boolean)');
 };
 
 tests.ObjectGetOwnPropertyNamesNull = function() {
   try {
-    Object.getOwnPropertyNames(null).length;
-    console.assert(false, 'ObjectGetOwnPropertyNamesNull');
+    Object.getOwnPropertyNames(null);
+    console.assert(false, "Object.getOwnPropertyNames(null) didn't throw");
   } catch (e) {
-    console.assert(e.name === 'TypeError', 'ObjectGetOwnPropertyNamesNullError');
+    console.assert(e.name === 'TypeError',
+        'Object.getOwnPropertyNames(null) wrong error');
   }
 };
 
 tests.ObjectGetOwnPropertyNamesUndefined = function() {
   try {
-    Object.getOwnPropertyNames(undefined).length;
-    console.assert(false, 'ObjectGetOwnPropertyNamesUndefined');
+    Object.getOwnPropertyNames(undefined);
+    console.assert(false, "Object.getOwnPropertyNames(undefined) didn't throw");
   } catch (e) {
-    console.assert(e.name === 'TypeError', 'ObjectGetOwnPropertyNamesUndefinedError');
+    console.assert(e.name === 'TypeError',
+        'Object.getOwnPropertyNames(undefined) wrong error');
   }
 };
 
@@ -1612,33 +1629,37 @@ tests.ObjectGetOwnPropertyNames = function() {
   for (var i = 0; i < keys.length; i++) {
     r += o[keys[i]];
   }
-  console.assert(r === 80, 'ObjectGetOwnPropertyNames');
+  console.assert(r === 80, 'Object.getOwnPropertyNames');
 };
 
 tests.ObjectDefinePropertiesNoArgs = function() {
   try {
     Object.defineProperties();
-    console.assert(false, 'ObjectDefinePropertiesNoArgs');
+    console.assert(false, "Object.defineProperties() didn't throw");
   } catch (e) {
-    console.assert(e.name === 'TypeError', 'ObjectDefinePropertiesNoArgsError');
+    console.assert(
+        e.name === 'TypeError', 'Object.defineProperties() wrong error');
   }
 };
 
 tests.ObjectDefinePropertiesNonObject = function() {
   try {
     Object.defineProperties('not an object', {});
-    console.assert(false, 'ObjectDefinePropertiesNonObject');
+    console.assert(false, "Object.defineProperties non-object didn't throw");
   } catch (e) {
-    console.assert(e.name === 'TypeError', 'ObjectDefinePropertiesNonObjectError');
+    console.assert(e.name === 'TypeError',
+        'Object.defineProperties non-object wrong error');
   }
 };
 
 tests.ObjectDefinePropertiesNonObjectProps = function() {
   try {
     Object.defineProperties({}, undefined);
-    console.assert(false, 'ObjectDefinePropertiesNonObjectProps');
+    console.assert(
+        false, "Object.defineProperties non-object props didn't throw");
   } catch (e) {
-    console.assert(e.name === 'TypeError', 'ObjectDefinePropertiesNonObjectPropsError');
+    console.assert(e.name === 'TypeError',
+        'Object.defineProperties non-object props wrong error');
   }
 };
 
@@ -1646,9 +1667,11 @@ tests.ObjectDefinePropertiesBadDescriptor = function() {
   var o = {};
   try {
     Object.defineProperties(o, { foo: 'not an object' });
-    console.assert(false, 'ObjectDefinePropertiesBadDescriptor');
+    console.assert(
+        false, "Object.defineProperties bad descriptor didn't throw");
   } catch (e) {
-    console.assert(e.name === 'TypeError', 'ObjectDefinePropertiesBadDescriptorError');
+    console.assert(e.name === 'TypeError',
+        'Object.defineProperties bad descriptor wrong error');
   }
 };
 
@@ -1661,28 +1684,28 @@ tests.ObjectDefineProperty = function() {
     value: 0
   });
   o.bar = 20;
-  console.assert(o.bar === 20, 'ObjectDefineProperty+WEC');
+  console.assert(o.bar === 20, 'Object.defineProperty +WEC');
   Object.defineProperty(o, 'baz', {
     writable: true,
     enumerable: true,
     configurable: false
   });
-  console.assert(o.baz === undefined, 'ObjectDefineProperty+WE-C1');
+  console.assert(o.baz === undefined, 'Object.defineProperty +WE-C 1');
   Object.defineProperty(o, 'baz', {
     value: 8
   });
-  console.assert(o.baz === 8, 'ObjectDefineProperty+WE-C2');
+  console.assert(o.baz === 8, 'Object.defineProperty +WE-C 2');
   Object.defineProperty(o, 'quux', {
     enumerable: false,
     value: 13
   });
-  console.assert(o.baz === 8, 'ObjectDefineProperty-WEC');
+  console.assert(o.baz === 8, 'Object.defineProperty -WEC');
   for (var k in o) {
     r += o[k];
   }
-  console.assert(r === 78, 'ObjectDefinePropertyEnumerability');
+  console.assert(r === 78, 'Object.defineProperty enumerability');
   console.assert(Object.getOwnPropertyNames(o).length === 4,
-                 'ObjectDefinePropertyCount');
+      'Object.defineProperty result .length wrong');
 };
 
 tests.ObjectCreateWithProperties = function() {
@@ -1698,11 +1721,12 @@ tests.ObjectCreateWithProperties = function() {
     r += o[k];
   }
   r += Object.getOwnPropertyNames(o).length;
-  console.assert(r === 82, 'ObjectCreateWithProperties');
+  console.assert(r === 82, 'Object.create(..., properties)');
 };
 
 tests.ObjectPrototypeToString = function() {
-  console.assert(({}).toString() === '[object Object]', 'ObjectPrototypeToString');
+  console.assert(({}).toString() === '[object Object]',
+      'Object.prototype.toString');
 };
 
 tests.ObjectPrototypeHasOwnProperty = function() {
@@ -1714,54 +1738,54 @@ tests.ObjectPrototypeHasOwnProperty = function() {
     if (!o.hasOwnProperty(key)) continue;
     r += o[key];
   }
-  console.assert(r === 83, 'ObjectGetOwnPropertyNames');
+  console.assert(r === 83, 'Object.prototype.hasOwnProperty');
 };
 
 tests.ObjectPrototypeGetPrototypeOf = function() {
   var g = {};
   var p = Object.create(g);
   var o = Object.create(p);
-  console.assert(!o.isPrototypeOf(o), 'ObjectPrototypeGetPrototypeOfSelf');
-  console.assert(!o.isPrototypeOf({}),
-     'ObjectPrototypeGetPrototypeOfSiblings');
-  console.assert(g.isPrototypeOf(o),
-     'ObjectPrototypeGetPrototypeOfGrandchild');
-  console.assert(p.isPrototypeOf(o),
-     'ObjectPrototypeGetPrototypeOfChild');
-  console.assert(!o.isPrototypeOf(p),
-     'ObjectPrototypeGetPrototypeOfParent');
-  console.assert(!o.isPrototypeOf(g),
-                 'ObjectPrototypeGetPrototypeOfGrandparent');
+  console.assert(!o.isPrototypeOf(o), 'Object.prototype.getPrototypeOf self');
+  console.assert(
+      !o.isPrototypeOf({}), 'Object.prototype.getPrototypeOf siblings');
+  console.assert(
+      g.isPrototypeOf(o), 'Object.prototype.getPrototypeOf grandchild');
+  console.assert(p.isPrototypeOf(o), 'Object.prototype.getPrototypeOf child');
+  console.assert(!o.isPrototypeOf(p), 'Object.prototype.getPrototypeOf parent');
+  console.assert(
+      !o.isPrototypeOf(g), 'Object.prototype.getPrototypeOf grandparent');
 };
 
 tests.ObjectPrototypePropertyIsEnumerable = function() {
   try {
     Object.prototype.propertyIsEnumerable.call(null, '');
-    console.assert(false, 'ObjectPrototypePropertyIsEnumerableNullThrows');
+    console.assert(
+        false, "Object.prototype.propertyIsEnumerable(null) didn't throw");
   } catch (e) {
     console.assert(e.name === 'TypeError',
-                   'ObjectPrototypePropertyIsEnumerableNullThrowsError');
+        'Object.prototype.propertyIsEnumerable(null) wrong error');
   }
   try {
     Object.prototype.propertyIsEnumerable.call(undefined, '');
-    console.assert(false, 'ObjectPrototypePropertyIsEnumerableUndefinedThrows');
+    console.assert(
+        false, "Object.prototype.propertyIsEnumerable(undefined) didn't throw");
   } catch (e) {
     console.assert(e.name === 'TypeError',
-                   'ObjectPrototypePropertyIsEnumerableUndefinedThrowsError');
+        'Object.prototype.propertyIsEnumerable(undefined) wrong error');
   }
   var OppIE = Object.prototype.propertyIsEnumerable;
   console.assert(OppIE.call('foo', '0'),
-                 'ObjectPrototypePropertyIsEnumerablePrimitiveTrue');
+                 'Object.prototype.propertyIsEnumerable primitive true');
   console.assert(!OppIE.call('foo', 'length'),
-                 'ObjectPrototypePropertyIsEnumerablePrimitiveFalse');
+                 'Object.prototype.propertyIsEnumerable primitive false');
   var o = {foo: 'foo'};
   Object.defineProperty(o, 'bar', {value: 'bar', enumerable: false});
   console.assert(o.propertyIsEnumerable('foo'),
-                 'ObjectPrototypePropertyIsEnumerableTrue');
+                 'Object.prototype.propertyIsEnumerable true');
   console.assert(!o.propertyIsEnumerable('bar'),
-                 'ObjectPrototypePropertyIsEnumerableFalse');
+                 'Object.prototype.propertyIsEnumerable false 1');
   console.assert(!o.propertyIsEnumerable('baz'),
-                 'ObjectPrototypePropertyIsEnumerableFalse');
+                 'Object.prototype.propertyIsEnumerable false 2');
 };
 
 //////////////////////////////////////////////////////////////
@@ -1769,42 +1793,43 @@ tests.ObjectPrototypePropertyIsEnumerable = function() {
 
 tests.FunctionConstructor = function() {
   var f = new Function;
-  console.assert(f() === undefined, 'FunctionConstructorNoArgsExec');
-  console.assert(f.length === 0, 'FunctionConstructorNoArgsLength');
+  console.assert(f() === undefined, 'new Function() returns callable');
+  console.assert(f.length === 0, 'new Function() .length');
   var actual = String(f);
   var expected = 'function() {}';
-  console.assert(actual === expected, 'FunctionConstructorNoArgsSrc Actual: "'
-      + actual + '" Expected: "' + expected + '"');
+  console.assert(actual === expected, 'new Function() .toString() ' +
+      'Actual: "' + actual + '" Expected: "' + expected + '"');
 
   f = new Function('return 42;');
-  console.assert(f() === 42, 'FunctionConstructorSimpleExec');
-  console.assert(f.length === 0, 'FunctionConstructorSimpleLength');
+  console.assert(f() === 42, 'new Function simple returns callable');
+  console.assert(f.length === 0, 'new Function simple .length');
   actual = String(f);
   expected = 'function() {return 42;}';
-  console.assert(actual === expected, 'FunctionConstructorSimpleSrc Actual: "'
-      + actual + '" Expected: "' + expected + '"');
+  console.assert(actual === expected, 'new Function simple .toString() ' +
+      'Actual: "' + actual + '" Expected: "' + expected + '"');
 
   f = new Function('a, b', 'c', 'return a + b * c;');
-  console.assert(f(2, 3, 10) === 32, 'FunctionConstructorWithArgsExec');
-  console.assert(f.length === 3, 'FunctionConstructorWithArgsLength');
+  console.assert(f(2, 3, 10) === 32, 'new Function with args returns callable');
+  console.assert(f.length === 3, 'new Function with args .length');
   actual = String(f);
   expected = 'function(a, b, c) {return a + b * c;}';
-  console.assert(actual === expected, 'FunctionConstructorWithArgsSrc Actual: "'
-      + actual + '" Expected: "' + expected + '"');
+  console.assert(actual === expected, 'new Function with args .toString() ' +
+      'Actual: "' + actual + '" Expected: "' + expected + '"');
 };
 
 tests.FunctionPrototypeHasNoPrototype = function() {
   console.assert(Function.prototype.hasOwnProperty('prototype') === false,
-                 'FunctionPrototypeHasNoPrototype');
+      'Function.prototype has no .prototype');
 };
 
 tests.FunctionPrototypeToStringApplyNonFunctionThrows = function() {
   try {
     Function.prototype.toString.apply({});
-    console.assert(false, 'FunctionPrototypeToStringApplyNonFunctionThrows');
+    console.assert(
+        false, "Function.prototype.toString.apply non-function didn't throw");
   } catch (e) {
     console.assert(e.name === 'TypeError',
-                   'FunctionPrototypeToStringApplyNonFunctionThrowsError');
+        'Function.prototype.toString().apply non-function wrong error');
   }
 };
 
@@ -1813,17 +1838,17 @@ tests.FunctionPrototypeApplyNonFuncThrows = function() {
     var o = {};
     o.apply = Function.prototype.apply;
     o.apply();
-    console.assert(false, 'FunctionPrototypeApplyNonFuncThrows');
+    console.assert(false, "Function.prototype.apply non-function didn't throw");
   } catch (e) {
     console.assert(e.name === 'TypeError',
-                   'FunctionPrototypeApplyNonFuncThrowsError');
+        'Function.prototype.apply non-function wrong error');
   }
 };
 
 tests.FunctionPrototypeApplyThis = function() {
   var o = {};
   function f() { return this; }
-  console.assert(f.apply(o, []) === o, 'FunctionPrototypeApplyThis');
+  console.assert(f.apply(o, []) === o, 'Function.prototype.apply this');
 };
 
 tests.FunctionPrototypeApplyArgsUndefinedOrNull = function() {
@@ -1831,16 +1856,17 @@ tests.FunctionPrototypeApplyArgsUndefinedOrNull = function() {
   function f() { n += arguments.length; }
   f.apply(undefined, undefined);
   f.apply(undefined, null);
-  console.assert(n === 0, 'FunctionPrototypeApplyArgsUndefinedOrNull');
+  console.assert(n === 0, 'Function.prototype.apply(undefined) or null');
 };
 
 tests.FunctionPrototypeApplyArgsNonObject = function() {
   try {
     (function() {}).apply(undefined, 'not an object');
-    console.assert(false, 'FunctionPrototypeApplyArgsNonObject');
+    console.assert(
+        false, "Function.prototype.apply(..., non-object) didn't throw");
   } catch (e) {
     console.assert(e.name === 'TypeError',
-                   'FunctionPrototypeApplyArgsNonObjectError');
+        'Function.prototype.apply(...., non-object) wrong error');
   }
 };
 
@@ -1852,21 +1878,21 @@ tests.FunctionPrototypeApplyArgsSparse = function() {
     return a + c;
   };
   console.assert(f.apply(undefined, [1, , 3]) === 4,
-                 'FunctionPrototypeApplyArgsSparse');
+      'Function.prototype.apply(..., sparse)');
 };
 
 tests.FunctionPrototypeApplyArgsArraylike = function() {
   var n = (function(a, b, c) {
        return a + b + c;
      }).apply(undefined, {0: 1, 1: 2, 2: 3, length: 3});
-  console.assert(n === 6, 'FunctionPrototypeApplyArgsArraylike');
+  console.assert(n === 6, 'Function.prototype.apply(..., array-like)');
 };
 
 tests.FunctionPrototypeApplyArgsNonArraylike = function() {
   console.assert(isNaN((function(a, b, c) {
     return a + b + c;
   }).apply(undefined, {0: 1, 1: 2, 2: 4})),
-                 'FunctionPrototypeApplyArgsNonArraylike');
+      'Function.prototype.apply(..., non-array-like)');
 };
 
 tests.FunctionPrototypeCallNonFuncThrows = function() {
@@ -1874,22 +1900,22 @@ tests.FunctionPrototypeCallNonFuncThrows = function() {
     var o = {};
     o.call = Function.prototype.call;
     o.call();
-    console.assert(false, 'FunctionPrototypeCallNonFuncThrows');
+    console.assert(false, "Function.prototype.call non-func didn't throw");
   } catch (e) {
     console.assert(e.name === 'TypeError',
-                   'FunctionPrototypeCallNonFuncThrowsError');
+        'Function.prototype.call non-func wrong error');
   }
 };
 
 tests.FunctionPrototypeCallThis = function() {
   var o = {};
   function f() { return this; }
-  console.assert(f.call(o) === o, 'FunctionPrototypeCallThis');
+  console.assert(f.call(o) === o, 'Function.prototype.call this');
 };
 
 tests.FunctionPrototypeCallNoArgs = function() {
   function f() { return arguments.length; }
-  console.assert(f.call(undefined) === 0, 'FunctionPrototypeCallNoArgs');
+  console.assert(f.call(undefined) === 0, 'Function.prototype.call no args');
 };
 
 tests.FunctionPrototypeCall = function() {
@@ -1899,22 +1925,23 @@ tests.FunctionPrototypeCall = function() {
     }
     return a + c;
   };
-  console.assert(f.call(undefined, 1, 2, 3) === 4, 'FunctionPrototypeCallArgs');
+  console.assert(f.call(undefined, 1, 2, 3) === 4, 'Function.prototype.call');
 };
 
 //////////////////////////////////////////////////////////////
 // Array and Array.prototype
 
 tests.ArrayIsArrayArrayPrototype = function() {
-  console.assert(Array.isArray(Array.prototype), 'ArrayIsArrayArrayPrototype');
+  console.assert(
+      Array.isArray(Array.prototype), 'Array.isArray Array.prototype');
 };
 
 tests.ArrayIsArrayArrayInstance = function() {
-  console.assert(Array.isArray(new Array), 'ArrayIsArrayArrayInstance');
+  console.assert(Array.isArray(new Array), 'Array.isArray Array instance');
 };
 
 tests.ArrayIsArrayArrayLiteral = function() {
-  console.assert(Array.isArray([]), 'ArrayIsArrayArrayLiteral');
+  console.assert(Array.isArray([]), 'Array.isArray Array literal');
 };
 
 tests.ArrayPrototypeToStringCycleDetection = function() {
@@ -1922,11 +1949,11 @@ tests.ArrayPrototypeToStringCycleDetection = function() {
   a[1] = a;
   a.toString();
   // Didn't crash!
-  console.assert(true, 'ArrayPrototypeToStringCycleDetection');
+  console.assert(true, 'Array.prototype.toString cycle detection');
 };
 
 tests.ArrayPrototypeJoin = function() {
-  console.assert([1, 2, 3].join('-') === '1-2-3', 'ArrayPrototypeJoin');
+  console.assert([1, 2, 3].join('-') === '1-2-3', 'Array.prototype.join');
 };
 
 tests.ArrayPrototypeJoinCycleDetection = function() {
@@ -1934,7 +1961,7 @@ tests.ArrayPrototypeJoinCycleDetection = function() {
   a[1] = a;
   a.join('-');
   // Didn't crash!
-  console.assert(true, 'ArrayPrototypeJoinCycleDetection');
+  console.assert(true, 'Array.prototype.join cycle detection');
 };
 
 tests.ArrayLegalIndexLength = function() {
@@ -1972,16 +1999,17 @@ tests.ArrayLegalIndexLength = function() {
     var a = [];
     a[tc[0]] = true;
     console.assert(a.length === tc[1],
-                   'ArrayLegalIndex ' + JSON.stringify(tc[0]));
+                   'Array legal index ' + JSON.stringify(tc[0]));
     var a = [];
     try {
       a.length = tc[0];
       if (isNaN(tc[2])) {
-        console.assert(false, 'ArrayLegalLength ' + JSON.stringify(tc[0]));
+        console.assert(false,
+            "Array illegal .length didn't throw " + JSON.stringify(tc[0]));
       }
     } catch (e) {
       console.assert(e.name === 'RangeError',
-                     'ArrayLegalLengthError ' + JSON.stringify(tc[0]));
+           'Array illegal .length wrong error ' + JSON.stringify(tc[0]));
     }
   }
 };
@@ -1991,88 +2019,96 @@ tests.ArrayLegalIndexLength = function() {
 // Boolean
 
 tests.Boolean = function() {
-  console.assert(Boolean(undefined) === false, 'BooleanUndefined');
-  console.assert(Boolean(null) === false, 'BooleanNull');
-  console.assert(Boolean(false) === false, 'BooleanFalse');
-  console.assert(Boolean(true) === true, 'BooleanTrue');
-  console.assert(Boolean(NaN) === false, 'BooleanNaN');
-  console.assert(Boolean(0) === false, 'BooleanZero');
-  console.assert(Boolean(1) === true, 'BooleanOne');
-  console.assert(Boolean('') === false, 'BooleanEmptyString');
-  console.assert(Boolean('foo') === true, 'BooleanString');
-  console.assert(Boolean({}) === true, 'BooleanObject');
-  console.assert(Boolean([]) === true, 'BooleanArray');
-  console.assert(Boolean(function() {}) === true, 'BooleanFunction');
+  console.assert(Boolean(undefined) === false, 'Boolean undefined');
+  console.assert(Boolean(null) === false, 'Boolean null');
+  console.assert(Boolean(false) === false, 'Boolean false');
+  console.assert(Boolean(true) === true, 'Boolean true');
+  console.assert(Boolean(NaN) === false, 'Boolean NaN');
+  console.assert(Boolean(0) === false, 'Boolean 0');
+  console.assert(Boolean(1) === true, 'Boolean 1');
+  console.assert(Boolean('') === false, 'Boolean empty string');
+  console.assert(Boolean('foo') === true, 'Boolean non-empty string');
+  console.assert(Boolean({}) === true, 'Boolean object');
+  console.assert(Boolean([]) === true, 'Boolean array');
+  console.assert(Boolean(function() {}) === true, 'Boolean function');
 };
 
 //////////////////////////////////////////////////////////////
 // Number
 
 tests.Number = function() {
-  console.assert(isNaN(Number(undefined)), 'NumberUndefined');
-  console.assert(Number(null) === 0, 'NumberNull');
-  console.assert(Number(true) === 1, 'NumberTrue');
-  console.assert(Number(false) === 0, 'NumberFalse');
-  console.assert(Number('42') === 42, 'NumberString42');
-  console.assert(isNaN(Number('Hello')), 'NumberString');
-  console.assert(Number('') === 0, 'NumberEmptyString');
-  console.assert(Number(3.1) === 3.1, 'NumberNumber');
-  console.assert(isNaN(Number({})), 'NumberObject');
-  console.assert(Number([]) === 0, 'NumberArrayEmpty');
-  console.assert(Number([42]) === 42, 'NumberArray42');
-  console.assert(isNaN(Number([1,2,3])), 'NumberArray123');
-  console.assert(isNaN(Number(function() {})), 'NumberFunction');
-  console.assert(isNaN(Number.NaN), 'NumberNaN');
-  console.assert(!isFinite(Number.POSITIVE_INFINITY), 'Number +Infinity');
-  console.assert(!isFinite(Number.NEGATIVE_INFINITY), 'Number -Infinity');
+  console.assert(isNaN(Number(undefined)), 'Number undefined');
+  console.assert(Number(null) === 0, 'Number null');
+  console.assert(Number(true) === 1, 'Number true');
+  console.assert(Number(false) === 0, 'Number false');
+  console.assert(Number('42') === 42, "Number '42'");
+  console.assert(isNaN(Number('Hello')), 'Number non-empty string');
+  console.assert(Number('') === 0, 'Number empty string');
+  console.assert(Number(3.1) === 3.1, 'Number number');
+  console.assert(isNaN(Number({})), 'Number object');
+  console.assert(Number([]) === 0, 'Number []');
+  console.assert(Number([42]) === 42, 'Number [42]');
+  console.assert(isNaN(Number([1,2,3])), 'Number [1,2,3]');
+  console.assert(isNaN(Number(function() {})), 'Number function');
+  console.assert(isNaN(Number.NaN), 'Number NaN');
+  console.assert(!isFinite(Number.POSITIVE_INFINITY), 'Number  +Infinity');
+  console.assert(!isFinite(Number.NEGATIVE_INFINITY), 'Number  -Infinity');
   console.assert(Number.POSITIVE_INFINITY === -Number.NEGATIVE_INFINITY,
-      'Number Infinities');
+      'Number infinities');
 };
 
 //////////////////////////////////////////////////////////////
 // String
 
 tests.String = function() {
-  console.assert(String(undefined) === 'undefined', 'StringUndefined');
-  console.assert(String(null) === 'null', 'StringNull');
-  console.assert(String(true) === 'true', 'StringTrue');
-  console.assert(String(false) === 'false', 'StringFalse');
-  console.assert(String(0) === '0', 'StringZero');
-  console.assert(String(-0) === '0', 'StringNegativeZero');
-  console.assert(String(Infinity) === 'Infinity', 'StringInfinity');
-  console.assert(String(-Infinity) === '-Infinity', 'StringNegativeInfinity');
-  console.assert(String(NaN) === 'NaN', 'StringNaN');
-  console.assert(String({}) === '[object Object]', 'StringObject');
-  console.assert(String([1, 2, 3,,5]) === '1,2,3,,5', 'StringArray');
+  console.assert(String(undefined) === 'undefined', 'String undefined');
+  console.assert(String(null) === 'null', 'String null');
+  console.assert(String(true) === 'true', 'String true');
+  console.assert(String(false) === 'false', 'String false');
+  console.assert(String(0) === '0', 'String 0');
+  console.assert(String(-0) === '0', 'String -0');
+  console.assert(String(Infinity) === 'Infinity', 'String +Infinity');
+  console.assert(String(-Infinity) === '-Infinity', 'String -Infinity');
+  console.assert(String(NaN) === 'NaN', 'String NaN');
+  console.assert(String({}) === '[object Object]', 'String object');
+  console.assert(String([1, 2, 3,,5]) === '1,2,3,,5', 'String array');
 };
 
-tests.replaceStringString = function() {
-  console.assert('xxxx'.replace('xx', 'y') === 'yxx', 'replaceStringString');
+test.StringPrototypeReplaceStringString = function() {
+  console.assert('xxxx'.replace('xx', 'y') === 'yxx',
+      'String.prototype.replace(string, string)');
 };
 
-tests.replaceRegExpString = function() {
-  console.assert('xxxx'.replace(/(X)\1/ig, 'y') === 'yy', 'replaceRegExpString');
+test.StringPrototypeReplaceRegExpString = function() {
+  console.assert('xxxx'.replace(/(X)\1/ig, 'y') === 'yy',
+      'String.prototype.replace(regexp, string)');
 };
 
-tests.replaceStringFunction = function() {
+test.StringPrototypeReplaceStringFunction = function() {
   var str = 'xxxx'.replace('xx', function () {
       return '[' + Array.prototype.join.apply(arguments) + ']';
   });
-  console.assert(str === '[xx,0,xxxx]xx', 'replaceStringFunction');
+  console.assert(str === '[xx,0,xxxx]xx',
+      'String.prototype.replace(string, function)');
 };
 
-tests.replaceRegExpFunction = function() {
+test.StringPrototypeReplaceRegExpFunction = function() {
   var str = 'xxxx'.replace(/(X)\1/ig, function () {
       return '[' + Array.prototype.join.apply(arguments) + ']';
   });
-  console.assert(str === '[xx,x,0,xxxx][xx,x,2,xxxx]', 'replaceRegExpFunction');
+  console.assert(str === '[xx,x,0,xxxx][xx,x,2,xxxx]',
+      'String.prototype.replace(regexp, function)');
 };
 
-tests.search = function() {
-  console.assert('hello'.search('H') === -1, 'searchStringCase');
-  console.assert('hello'.search('ll') === 2, 'searchString');
-  console.assert('hello'.search(/H/) === -1, 'searchRegExpCase');
-  console.assert('hello'.search(/(.)\1/) === 2, 'searchRegExp');
+tests.StringPrototypeSearch = function() {
+  console.assert('hello'.search('H') === -1,
+      'String.prototype.search(string) not found');
+  console.assert('hello'.search('ll') === 2,
+      'String.prototype.search(string) found');
+  console.assert('hello'.search(/H/) === -1,
+      'String.prototype.search(regexp) not found');
+  console.assert('hello'.search(/(.)\1/) === 2,
+      'String.prototype.search(regexp) found');
 };
 
 //////////////////////////////////////////////////////////////
@@ -2081,10 +2117,11 @@ tests.search = function() {
 tests.RegExpPrototypeTestApplyNonRegExpThrows = function() {
   try {
     /foo/.test.apply({}, ['foo']);
-    console.assert(false, 'RegExpPrototypeTestApplyNonRegExpThrows');
+    console.assert(
+        false, "RegExp.prototype.test.apply(non-regexp) didn't throw");
   } catch (e) {
     console.assert(e.name === 'TypeError',
-                   'RegExpPrototypeTestApplyNonRegExpThrowsError');
+        'RegExp.prototype.test.apply(non-regexp) wrong error');
   }
 };
 
@@ -2096,24 +2133,25 @@ tests.JsonStringify = function () {
        object: { obj: {}, arr: [] }, array: [{}, []] };
   var str = '{"string":"foo","number":42,"true":true,"false":false,' +
       '"null":null,"object":{"obj":{},"arr":[]},"array":[{},[]]}';
-  console.assert(JSON.stringify(obj) === str, 'JsonStringify');
+  console.assert(JSON.stringify(obj) === str, 'JSON.stringify');
 };
 
 //////////////////////////////////////////////////////////////
 // Other tests
 
 tests.newHack = function() {
-  console.assert((new 'Array.prototype.push') === Array.prototype.push,
-                 'newHack');
+  console.assert(
+      (new 'Array.prototype.push') === Array.prototype.push, 'new hack');
 };
 
 tests.newHackUnknown = function() {
   // FIXME: use instanceof or the like to check that error is returned.
   try {
     new 'nonexistent-builtin-name';
-    console.assert(false, 'newHackUnknown');
+    console.assert(false, "new hack with unknown built-in didn't throw");
   } catch (e) {
-    console.assert(e.name === 'ReferenceError', 'newHackUnknownError');
+    console.assert(e.name === 'ReferenceError',
+        'new hack with unknown built-in wrong error');
   }
 };
 
@@ -2140,9 +2178,10 @@ tests.strictModeSyntaxErrors = function() {
     var src = tests[i];
     try {
       eval(tests[i]);
-      console.assert(false, 'strictModeSyntaxErrors ' + src);
+      console.assert(false, "strict mode didn't throw for: " + src);
     } catch (e) {
-      console.assert(e.name === 'SyntaxError', 'strictModeSyntaxErrors ' + src);
+      console.assert(e.name === 'SyntaxError',
+          'strict mode wrong error for: ' + src);
     }
   }
 };

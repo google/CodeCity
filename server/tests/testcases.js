@@ -1003,7 +1003,7 @@ module.exports = [
   /******************************************************************/
   // Object and Object.prototype
 
-  { name: 'ObjectDefinePropertyNoArgs', src: `
+  { name: 'Object.defineProperty()', src: `
     try {
       Object.defineProperty();
     } catch (e) {
@@ -1012,7 +1012,7 @@ module.exports = [
     `,
     expected: 'TypeError' },
 
-  { name: 'ObjectDefinePropertyNonObject', src: `
+  { name: 'Object.defineProperty non-object', src: `
     try {
       Object.defineProperty('not an object', 'foo', {});
     } catch (e) {
@@ -1021,7 +1021,7 @@ module.exports = [
     `,
     expected: 'TypeError' },
 
-  { name: 'ObjectDefinePropertyBadDescriptor', src: `
+  { name: 'Object.defineProperty bad descriptor', src: `
     var o = {};
     try {
       Object.defineProperty(o, 'foo', 'not an object');
@@ -1032,7 +1032,7 @@ module.exports = [
     expected: 'TypeError' },
 
   // This also tests iteration over (non-)enumerable properties.
-  { name: 'ObjectDefineProperty', src: `
+  { name: 'Object.defineProperty', src: `
     var o = { foo: 50 }, r = 0;
     Object.defineProperty(o, 'bar', {
       writable: true,
@@ -1061,7 +1061,7 @@ module.exports = [
     `,
     expected: 78 },
 
-  { name: 'ObjectGetPrototypeOfNullUndefined', src: `
+  { name: 'Object.getPrototypeOf(null) and undefined', src: `
     var r = '', prims = [null, undefined];
     for (var i = 0; i < prims.length; i++) {
       try {
@@ -1075,14 +1075,14 @@ module.exports = [
     expected: 'TypeErrorTypeError' },
 
   // This tests for ES6 behaviour:
-  { name: 'ObjectGetPrototypeOfPrimitives', src: `
+  { name: 'Object.getPrototypeOf primitives', src: `
     Object.getPrototypeOf(true) === Boolean.prototype &&
     Object.getPrototypeOf(1337) === Number.prototype &&
     Object.getPrototypeOf('hi') === String.prototype;
     `,
     expected: true },
 
-  { name: 'ObjectCreateNoArgs', src: `
+  { name: 'Object.create()', src: `
     try {
       Object.create();
     } catch (e) {
@@ -1091,7 +1091,7 @@ module.exports = [
     `,
     expected: 'TypeError' },
 
-  { name: 'ObjectCreateNonObject', src: `
+  { name: 'Object.create non-object prototype', src: `
     try {
       Object.create(42);
     } catch (e) {
@@ -1100,20 +1100,20 @@ module.exports = [
     `,
     expected: 'TypeError' },
 
-  { name: 'ObjectCreateNull', src: `
+  { name: 'Object.create(null) prototype', src: `
     var o = Object.create(null);
     Object.getPrototypeOf(o);
     `,
     expected: null },
 
-  { name: 'ObjectCreate', src: `
+  { name: 'Object.create', src: `
     var o = Object.create({foo: 79});
     delete o.foo
     o.foo;
     `,
     expected: 79 },
 
-  { name: 'ObjectGetOwnPropertyDescriptorNoArgs', src: `
+  { name: 'Object.getOwnPropertyDescriptor()', src: `
     try {
       Object.getOwnPropertyDescriptor();
     } catch (e) {
@@ -1122,7 +1122,7 @@ module.exports = [
     `,
     expected: 'TypeError' },
 
-  { name: 'ObjectGetOwnPropertyDescriptorNonObject', src: `
+  { name: 'Object.getOwnPropertyDescriptor non-object', src: `
     try {
       Object.getOwnPropertyDescriptor('not an object', 'foo');
     } catch (e) {
@@ -1131,13 +1131,13 @@ module.exports = [
     `,
     expected: 'TypeError' },
 
-  { name: 'ObjectGetOwnPropertyDescriptorBadKey', src: `
+  { name: 'Object.getOwnPropertyDescriptor bad keyy', src: `
     var o = {};
     Object.getOwnPropertyDescriptor(o, 'foo');
     `,
     expected: undefined },
 
-  { name: 'ObjectGetOwnPropertyDescriptor', src: `
+  { name: 'Object.getOwnPropertyDescriptor', src: `
     var o = {}, r = 0;
     Object.defineProperty(o, 'foo', { value: 'bar' });
     var desc = Object.getOwnPropertyDescriptor(o, 'foo');
@@ -1146,7 +1146,7 @@ module.exports = [
     `,
     expected: true },
 
-  { name: 'ObjectGetOwnPropertyNamesNoArgs', src: `
+  { name: 'Object.getOwnPropertyNames()', src: `
     try {
       Object.getOwnPropertyNames();
     } catch (e) {
@@ -1155,7 +1155,7 @@ module.exports = [
     `,
     expected: 'TypeError' },
 
-  { name: 'ObjectGetOwnPropertyNamesString', src: `
+  { name: 'Object.getOwnPropertyNames string', src: `
     var i, r = 0, names = Object.getOwnPropertyNames('foo');
     for (i = 0; i < names.length; i++) {
       if (names[i] === 'length') {
@@ -1167,17 +1167,17 @@ module.exports = [
     `,
     expected: 16 },
 
-  { name: 'ObjectGetOwnPropertyNamesNumber', src: `
+  { name: 'Object.getOwnPropertyNames number', src: `
     Object.getOwnPropertyNames(42).length
     `,
     expected: 0 },
 
-  { name: 'ObjectGetOwnPropertyNamesBoolean', src: `
+  { name: 'Object.getOwnPropertyNames boolean', src: `
     Object.getOwnPropertyNames(true).length
     `,
     expected: 0 },
 
-  { name: 'ObjectGetOwnPropertyNamesNull', src: `
+  { name: 'Object.getOwnPropertyNames(null)', src: `
     try {
       Object.getOwnPropertyNames(null).length;
     } catch (e) {
@@ -1186,7 +1186,7 @@ module.exports = [
     `,
     expected: 'TypeError' },
 
-  { name: 'ObjectGetOwnPropertyNamesUndefined', src: `
+  { name: 'Object.getOwnPropertyNames(undefined)', src: `
     try {
       Object.getOwnPropertyNames(undefined).length;
     } catch (e) {
@@ -1195,7 +1195,7 @@ module.exports = [
     `,
     expected: 'TypeError' },
 
-  { name: 'ObjectGetOwnPropertyNames', src: `
+  { name: 'Object.getOwnPropertyNames', src: `
     var o = Object.create({baz: 999});
     o.foo = 42;
     Object.defineProperty(o, 'bar', { value: 38 });
@@ -1208,7 +1208,7 @@ module.exports = [
     `,
     expected: 80 },
 
-  { name: 'ObjectDefinePropertiesNoArgs', src: `
+  { name: 'Object.defineProperties()', src: `
     try {
       Object.defineProperties();
     } catch (e) {
@@ -1217,7 +1217,7 @@ module.exports = [
     `,
     expected: 'TypeError' },
 
-  { name: 'ObjectDefinePropertiesNonObject', src: `
+  { name: 'Object.defineProperties non-object', src: `
     try {
       Object.defineProperties('not an object', {});
     } catch (e) {
@@ -1226,7 +1226,7 @@ module.exports = [
     `,
     expected: 'TypeError' },
 
-  { name: 'ObjectDefinePropertiesNonObjectProps', src: `
+  { name: 'Object.defineProperties non-object props', src: `
     try {
       Object.defineProperties({}, undefined);
     } catch (e) {
@@ -1235,7 +1235,7 @@ module.exports = [
     `,
     expected: 'TypeError' },
 
-  { name: 'ObjectDefinePropertiesBadDescriptor', src: `
+  { name: 'Object.defineProperties bad descriptor', src: `
     var o = {};
     try {
       Object.defineProperties(o, { foo: 'not an object' });
@@ -1245,7 +1245,7 @@ module.exports = [
     `,
     expected: 'TypeError' },
 
-  { name: 'ObjectDefineProperties', src: `
+  { name: 'Object.defineProperties', src: `
     var o = { foo: 70 }, r = 0;
     Object.defineProperties(o, {
         bar: {
@@ -1261,7 +1261,7 @@ module.exports = [
     `,
     expected: 81 },
 
-  { name: 'ObjectCreateWithProperties', src: `
+  { name: 'Object.create(..., properties)', src: `
     var o = Object.create({ foo: 70 }, {
         bar: {
             writable: true,
@@ -1277,12 +1277,12 @@ module.exports = [
     `,
     expected: 82 },
 
-  { name: 'ObjectPrototypeToString', src: `
+  { name: 'Object.prototype.toString', src: `
     ({}).toString();
     `,
     expected: '[object Object]' },
 
-  { name: 'ObjectProtoypeHasOwnProperty', src: `
+  { name: 'Object.protoype.hasOwnProperty', src: `
     var o = Object.create({baz: 999});
     o.foo = 42;
     Object.defineProperty(o, 'bar', {value: 41, enumerable: true});
@@ -1295,13 +1295,13 @@ module.exports = [
     `,
     expected: 83 },
 
-  { name: 'ObjectProtoypeIsPrototypeOfSelf', src: `
+  { name: 'Object.protoype.isPrototypeOf self', src: `
     var o = {};
     o.isPrototypeOf(o);
     `,
     expected: false },
 
-  { name: 'ObjectProtoypeIsPrototypeOfRelated', src: `
+  { name: 'Object.protoype.isPrototypeOf related', src: `
     var g = {};
     var p = Object.create(g);
     var o = Object.create(p);
@@ -1311,7 +1311,7 @@ module.exports = [
     `,
     expected: true },
 
-  { name: 'ObjectProtoypePropertyIsEnumerableNull', src: `
+  { name: 'Object.protoype.propertyIsEnumerable(null)', src: `
     try {
       Object.prototype.propertyIsEnumerable.call(null, '');
     } catch(e) {
@@ -1329,13 +1329,13 @@ module.exports = [
     `,
     expected: 'TypeError' },
 
-  { name: 'ObjectProtoypePropertyIsEnumerablePrimitives', src: `
+  { name: 'Object.protoype.propertyIsEnumerable primitives', src: `
     var OppIE = Object.prototype.propertyIsEnumerable;
     OppIE.call('foo', '0') && !OppIE.call('foo', 'length');
     `,
     expected: true },
 
-  { name: 'ObjectProtoypePropertyIsEnumerable', src: `
+  { name: 'Object.protoype.propertyIsEnumerable', src: `
     var o = {foo: 'foo'};
     Object.defineProperty(o, 'bar', {value: 'bar', enumerable: false});
     o.propertyIsEnumerable('foo') && !o.propertyIsEnumerable('bar') &&
@@ -1346,57 +1346,57 @@ module.exports = [
   /******************************************************************/
   // Function and Function.prototype
 
-  { name: 'FunctionConstructorNoArgsExec', src: `
+  { name: 'new Function() returns callable', src: `
     (new Function)();
     `,
     expected: undefined },
 
-  { name: 'FunctionConstructorNoArgsLength', src: `
+  { name: 'new Function() .length', src: `
     (new Function).length;
     `,
     expected: 0 },
 
-  { name: 'FunctionConstructorNoArgsToString', src: `
+  { name: 'new Function() .toString()', src: `
     String(new Function)
     `,
     expected: 'function() {}' },
 
-  { name: 'FunctionConstructorSimpleExec', src: `
+  { name: 'new Function simple returns callable', src: `
     (new Function('return 42;'))();
     `,
     expected: 42 },
 
-  { name: 'FunctionConstructorSimpleLength', src: `
+  { name: 'new Function simple .length', src: `
     (new Function('return 42;')).length;
     `,
     expected: 0 },
 
-  { name: 'FunctionConstructorSimpleToString', src: `
+  { name: 'new Function simple .toString()', src: `
     String(new Function('return 42;'))
     `,
     expected: 'function() {return 42;}' },
 
-  { name: 'FunctionConstructorWithArgsExec', src: `
+  { name: 'new Function with args returns callable', src: `
     (new Function('a, b', 'c', 'return a + b * c;'))(2, 3, 10);
     `,
     expected: 32 },
 
-  { name: 'FunctionConstructorWithArgsLength', src: `
+  { name: 'new Function with args .length', src: `
     (new Function('a, b', 'c', 'return a + b * c;')).length;
     `,
     expected: 3 },
 
-  { name: 'FunctionConstructorWithArgsToString', src: `
+ { name: 'new Function with args .toString()', src: `
     String(new Function('a, b', 'c', 'return a + b * c;'))
     `,
     expected: 'function(a, b, c) {return a + b * c;}' },
 
-  { name: 'FunctionPrototypeHasNoPrototype', src: `
+  { name: 'Function.prototype has no .prototype', src: `
     Function.prototype.hasOwnProperty('prototype');
     `,
     expected: false },
 
-  { name: 'FunctionPrototypeToStringApplyNonFunctionThrows', src: `
+  { name: 'Function.prototype.toString applied to non-fucntion throws', src: `
     try {
       Function.prototype.toString.apply({});
     } catch (e) {
@@ -1405,7 +1405,7 @@ module.exports = [
     `,
     expected: 'TypeError' },
 
-  { name: 'FunctionPrototypeApplyNonFuncThrows', src: `
+  { name: 'Function.prototype.apply non-function throws', src: `
     var o = {};
     o.apply = Function.prototype.apply;
     try {
@@ -1416,14 +1416,14 @@ module.exports = [
     `,
     expected: 'TypeError' },
 
-  { name: 'FunctionPrototypeApplyThis', src: `
+  { name: 'Function.prototype.apply this', src: `
     var o = {};
     function f() { return this; }
     f.apply(o, []) === o;
     `,
     expected: true },
 
-  { name: 'FunctionPrototypeApplyArgsUndefinedOrNull', src: `
+  { name: 'Function.prototype.apply(..., undefined) or null', src: `
     var n = 0;
     function f() { n += arguments.length; }
     f.apply(undefined, undefined);
@@ -1432,7 +1432,7 @@ module.exports = [
     `,
     expected: 0 },
 
-  { name: 'FunctionPrototypeApplyArgsNonObject', src: `
+  { name: 'Function.prototype.apply(..., non-object)', src: `
     try {
       (function() {}).apply(undefined, 'not an object');
     } catch (e) {
@@ -1441,7 +1441,7 @@ module.exports = [
     `,
     expected: 'TypeError' },
 
-  { name: 'FunctionPrototypeApplyArgsSparse', src: `
+  { name: 'Function.prototype.apply(..., sparse)', src: `
     (function(a, b, c) {
       if (!(1 in arguments)) {
         throw Error("Argument 1 missing");
@@ -1451,21 +1451,21 @@ module.exports = [
     `,
     expected: 4 },
 
-  { name: 'FunctionPrototypeApplyArgsArraylike', src: `
+  { name: 'Function.prototype.apply(..., array-like)', src: `
     (function(a, b, c) {
       return a + b + c;
     }).apply(undefined, {0: 1, 1: 2, 2: 3, length: 3});
     `,
     expected: 6 },
 
-  { name: 'FunctionPrototypeApplyArgsNonArraylike', src: `
+  { name: 'Function.prototype.apply(..., non-array-like)', src: `
     (function(a, b, c) {
       return a + b + c;
     }).apply(undefined, {0: 1, 1: 2, 2: 4});
     `,
     expected: NaN },  // Because undefined + undefined === NaN.
 
-  { name: 'FunctionPrototypeCallNonFuncThrows', src: `
+  { name: 'Function.prototype.call non-function throws', src: `
     var o = {};
     o.call = Function.prototype.call;
     try {
@@ -1476,20 +1476,20 @@ module.exports = [
     `,
     expected: 'TypeError' },
 
-  { name: 'FunctionPrototypeCallThis', src: `
+  { name: 'Function.prototype.call this', src: `
     var o = {};
     function f() { return this; }
     f.call(o) === o;
     `,
     expected: true },
 
-  { name: 'FunctionPrototypeCallNoArgs', src: `
+  { name: 'Function.prototype.call no args', src: `
     function f() { return arguments.length; }
     f.call(undefined);
     `,
     expected: 0 },
 
-  { name: 'FunctionPrototypeCall', src: `
+  { name: 'Function.prototype.call', src: `
     (function(a, b, c) {
       if (!(1 in arguments)) {
         throw Error("Argument 1 missing");
@@ -1502,22 +1502,22 @@ module.exports = [
   /******************************************************************/
   // Array and Array.prototype
 
-  { name: 'ArrayIsArrayArrayPrototype', src: `
+  { name: 'Array.isArray Array.prototype', src: `
     Array.isArray(Array.prototype);
     `,
     expected: true },
 
-  { name: 'ArrayIsArrayArrayInstance', src: `
+  { name: 'Array.isArray Array instance', src: `
     Array.isArray(new Array);
     `,
     expected: true },
 
-  { name: 'ArrayIsArrayArrayLiteral', src: `
+  { name: 'Array.isArray array literal', src: `
     Array.isArray([]);
     `,
     expected: true },
 
-  { name: 'ArrayPrototypeToStringCycleDetection', src: `
+  { name: 'Array.prototype.toString cycle detection', src: `
     var a = [1, , 3];
     a[1] = a;
     a.toString();
@@ -1525,12 +1525,12 @@ module.exports = [
     `,
     expected: "Didn't crash!" },
 
-  { name: 'ArrayPrototypeJoin', src: `
+  { name: 'Array.prototype.join', src: `
     [1, 2, 3].join('-');
     `,
     expected: '1-2-3' },
 
-  { name: 'ArrayPrototypeJoinCycleDetection', src: `
+  { name: 'Array.prototype.join cycle detection', src: `
     var a = [1, , 3];
     a[1] = a;
     a.join('-');
@@ -1641,11 +1641,26 @@ module.exports = [
     `,
     expected: '[xx,x,0,xxxx][xx,x,2,xxxx]' },
 
+  { name: 'String.prototype.search(string) not found',
+    src: `'hello'.search('H')`,
+    expected: -1 },
+
+  { name: 'String.prototype.search(string) found',
+    src: `'hello'.search('ll')`,
+    expected: 2 },
+
+  { name: 'String.prototype.search(regexp) not found',
+    src: `'hello'.search(/H/)`,
+    expected: -1 },
+
+  { name: 'String.prototype.search(regexp) found',
+    src: `'hello'.search(/(.)\\1/)`,
+    expected: 2 },
 
   /******************************************************************/
   // RegExp
 
-  { name: 'RegExpPrototypeTestApplyNonRegExpThrows', src: `
+  { name: 'RegExp.prototype.test.apply(non-regexp) throws', src: `
     try {
       /foo/.test.apply({}, ['foo']);
     } catch (e) {
@@ -1685,7 +1700,7 @@ module.exports = [
     `,
     expected: 0 },
 
-  { name: 'WeakMapPrototypeMethodsRejectInvalid', src: `
+  { name: 'WeakMap.prototype methods reject non-WeakMap this', src: `
     var w = new WeakMap;
     var fails = 0;
     function expectError(method, thisVal, args) {
@@ -1731,7 +1746,7 @@ module.exports = [
   /******************************************************************/
   // Permissions system:
 
-  { name: 'permsReturnsRoot', src: `
+  { name: 'perms returns root', src: `
 
     perms() === CC.root;
     `,
@@ -1757,13 +1772,13 @@ module.exports = [
   /******************************************************************/
   // Other tests:
 
-  { name: 'newHack', src: `
+  { name: 'new hack', src: `
     (new 'Array.prototype.push') === Array.prototype.push
     `,
     expected: true
   },
 
-  { name: 'newHackUnknown', src: `
+  { name: 'new hack with unkown builtin', src: `
     try {
       new 'nonexistent-builtin-name';
     } catch (e) {
@@ -1773,7 +1788,7 @@ module.exports = [
     expected: 'ReferenceError'
   },
 
-  { name: 'strictModeSyntaxErrors', src: `
+  { name: 'Strict mode syntax errors', src: `
     var tests = [
       // With statement.
       'var o = { foo: 42 }; var f = function() { with (o) { foo; }};',
