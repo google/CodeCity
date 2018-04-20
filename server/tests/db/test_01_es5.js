@@ -1972,6 +1972,11 @@ tests.ArrayIsArrayArrayLiteral = function() {
   console.assert(Array.isArray([]), 'Array.isArray Array literal');
 };
 
+tests.ArrayIsArrayArrayLike = function() {
+  console.assert(!Array.isArray({0: 'foo', 1: 'bar', length: 2}),
+      'Array.isArray(array-like)');
+};
+
 tests.ArrayPrototypeJoin = function() {
   console.assert([1, 2, 3].join('-') === '1-2-3', 'Array.prototype.join');
 };

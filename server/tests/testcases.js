@@ -1541,6 +1541,11 @@ module.exports = [
     `,
     expected: true },
 
+  { name: 'Array.isArray(array-like)', src: `
+    Array.isArray({0: 'foo', 1: 'bar', length: 2});
+    `,
+    expected: false },
+
   { name: 'Array.prototype.join', src: `
     [1, 2, 3].join('-');
     `,
