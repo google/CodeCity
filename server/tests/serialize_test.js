@@ -134,7 +134,7 @@ function runTest(t, name, src1, src2, src3, expected, steps, noBuiltins) {
   } else {
     t.fail(name, util.format(
         '%s\n/* begin roundtrips */\n%s\n/* end roundtrips */\n%s\n' +
-        'got: %s  want: %s', src1, src2, src3, String(r), String(expected)));
+        'got: %o  want: %o', src1, src2, src3, r, expected));
   }
 };
 
@@ -253,8 +253,8 @@ async function runAsyncTest(t, name, src1, src2, expected, initFunc) {
     t.pass(name);
   } else {
     t.fail(name, util.format(
-        '%s\n/* roundtrip */\n%s\ngot: %s  want: %s',
-        src1, src2, String(r), String(expected)));
+        '%s\n/* roundtrip */\n%s\ngot: %o  want: %o',
+        src1, src2, r, expected));
   }
 };
 

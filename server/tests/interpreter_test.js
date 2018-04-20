@@ -71,8 +71,7 @@ function runTest(t, name, src, expected) {
   if (Object.is(r, expected)) {
     t.pass(name);
   } else {
-    t.fail(name, util.format('%s\ngot: %s  want: %s', src,
-        String(r), String(expected)));
+    t.fail(name, util.format('%s\ngot %o  want %o', src, r, expected));
   }
 }
 
@@ -122,8 +121,7 @@ function runComplexTest(t, name, src, expected, initFunc, asyncFunc) {
   if (Object.is(r, expected)) {
     t.pass(name);
   } else {
-    t.fail(name, util.format('%s\ngot: %s  want: %s', src,
-        String(r), String(expected)));
+    t.fail(name, util.format('%s\ngot %o  want %o', src, r, expected));
   }
 }
 
@@ -191,8 +189,7 @@ async function runAsyncTest(t, name, src, expected, initFunc, sideFunc) {
   if (Object.is(r, expected)) {
     t.pass(name);
   } else {
-    t.fail(name, util.format('%s\ngot: %s  want: %s', src,
-        String(r), String(expected)));
+    t.fail(name, util.format('%s\ngot %o  want %o', src, r, expected));
   }
 }
 
@@ -861,14 +858,14 @@ exports.testLegalArrayIndexLength = function(t) {
     if (Object.is(r, tc[1])) {
       t.pass(name);
     } else {
-      t.fail(name, util.format('got: %s  want: %s', String(r), String(tc[1])));
+      t.fail(name, util.format('got %o  want %o', r, tc[1]));
     }
     name = 'testLegalArrayLength: ' + tc[0];
     r = Interpreter.legalArrayLength(tc[0]);
     if (Object.is(r, tc[2])) {
       t.pass(name);
     } else {
-      t.fail(name, util.format('got: %s  want: %s', String(r), String(tc[2])));
+      t.fail(name, util.format('got %o  want %o', r, tc[2]));
     }
   }
 };
@@ -882,8 +879,8 @@ exports.testNativeToPseudo = function(t) {
     if (Object.is(result, expected)) {
       t.pass(name + feature);
     } else {
-      t.fail(name + feature, util.format('got: %s  want: %s',
-                                         String(result), String(expected)));
+      t.fail(name + feature,
+          util.format('got %o  want %o', result, expected));
     }
   };
 
@@ -1099,8 +1096,8 @@ exports.testStartStop = async function(t) {
   if (Object.is(r, expected)) {
     t.pass(name);
   } else {
-    t.fail(name, util.format('%s\ngot: %s  want: %s (after %d ms)', src,
-        String(r), String(expected), 29));
+    t.fail(name, util.format('%s\ngot %o  want %o (after %d ms)',
+                             src, r, expected, 29));
   }
 
   // Check that .pause() actually paused execution.
@@ -1111,8 +1108,8 @@ exports.testStartStop = async function(t) {
   if (Object.is(r, expected)) {
     t.pass(name);
   } else {
-    t.fail(name, util.format('%s\ngot: %s  want: %s (after %d ms)', src,
-        String(r), String(expected), 39));
+    t.fail(name, util.format('%s\ngot %o  want %o (after %d ms)',
+                             src, r, expected, 39));
   }
 };
 

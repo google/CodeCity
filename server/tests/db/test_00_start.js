@@ -23,13 +23,12 @@
  */
 
 var console = {};
+console.log = $.system.log;
 console.assert = function(value, message) {
   if (value) {
     console.goodCount++;
   } else {
-    $.system.log('');
-    $.system.log('Fail!');
-    $.system.log(message);
+    $.system.log('FAIL:\t%s', message);
     console.badCount++;
   }
 };
