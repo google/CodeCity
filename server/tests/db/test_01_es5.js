@@ -1944,14 +1944,6 @@ tests.ArrayIsArrayArrayLiteral = function() {
   console.assert(Array.isArray([]), 'Array.isArray Array literal');
 };
 
-tests.ArrayPrototypeToStringCycleDetection = function() {
-  var a = [1, , 3];
-  a[1] = a;
-  a.toString();
-  // Didn't crash!
-  console.assert(true, 'Array.prototype.toString cycle detection');
-};
-
 tests.ArrayPrototypeJoin = function() {
   console.assert([1, 2, 3].join('-') === '1-2-3', 'Array.prototype.join');
 };
@@ -1962,6 +1954,14 @@ tests.ArrayPrototypeJoinCycleDetection = function() {
   a.join('-');
   // Didn't crash!
   console.assert(true, 'Array.prototype.join cycle detection');
+};
+
+tests.ArrayPrototypeToStringCycleDetection = function() {
+  var a = [1, , 3];
+  a[1] = a;
+  a.toString();
+  // Didn't crash!
+  console.assert(true, 'Array.prototype.toString cycle detection');
 };
 
 tests.ArrayLegalIndexLength = function() {
