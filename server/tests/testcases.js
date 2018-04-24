@@ -1517,14 +1517,6 @@ module.exports = [
     `,
     expected: true },
 
-  { name: 'Array.prototype.toString cycle detection', src: `
-    var a = [1, , 3];
-    a[1] = a;
-    a.toString();
-    "Didn't crash!";
-    `,
-    expected: "Didn't crash!" },
-
   { name: 'Array.prototype.join', src: `
     [1, 2, 3].join('-');
     `,
@@ -1534,6 +1526,14 @@ module.exports = [
     var a = [1, , 3];
     a[1] = a;
     a.join('-');
+    "Didn't crash!";
+    `,
+    expected: "Didn't crash!" },
+
+  { name: 'Array.prototype.toString cycle detection', src: `
+    var a = [1, , 3];
+    a[1] = a;
+    a.toString();
     "Didn't crash!";
     `,
     expected: "Didn't crash!" },
