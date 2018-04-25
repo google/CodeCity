@@ -705,13 +705,13 @@ Interpreter.prototype.initObject_ = function() {
       // Can't just use pseudoToNative since descriptors can inherit properties.
       var desc = new Descriptor;
       if (attr.has('configurable', perms)) {
-        desc.configurable = !!attr.get('configurable', perms);
+        desc.configurable = Boolean(attr.get('configurable', perms));
       }
       if (attr.has('enumerable', perms)) {
-        desc.enumerable = !!attr.get('enumerable', perms);
+        desc.enumerable = Boolean(attr.get('enumerable', perms));
       }
       if (attr.has('writable', perms)) {
-        desc.writable = !!attr.get('writable', perms);
+        desc.writable = Boolean(attr.get('writable', perms));
       }
       if (attr.has('value', perms)) {
         desc.value = attr.get('value', perms);
@@ -817,7 +817,7 @@ Interpreter.prototype.initObject_ = function() {
       var key = args[0];
       var perms = state.scope.perms;
       var obj = intrp.toObject(thisVal, perms);
-      return !!obj.getOwnPropertyDescriptor(key, perms);
+      return Boolean(obj.getOwnPropertyDescriptor(key, perms));
     }
   });
 
