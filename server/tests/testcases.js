@@ -1716,14 +1716,14 @@ module.exports = [
   { name: 'Array.prototype.reverse.call(odd-length array-like)', src: `
         var o = {0: 1, 1: 2, 2: 3, length: 3};
         Array.prototype.reverse.call(o) === o && o.length === 3 &&
-            Array.prototype.toString.apply(o);
+            Array.prototype.slice.apply(o).toString();
     `,
     expected: '3,2,1' },
 
   { name: 'Array.prototype.reverse.call(even-length array-like)', src: `
         var o = {0: 1, 1: 2, 3: 4, length: 4};
         Array.prototype.reverse.call(o) === o && o.length === 4 &&
-            Array.prototype.toString.apply(o);
+            Array.prototype.slice.apply(o).toString();
     `,
     expected: '4,,2,1' },
 
@@ -1874,6 +1874,18 @@ module.exports = [
     "Didn't crash!";
     `,
     expected: "Didn't crash!" },
+
+  { name: 'Array.prototype.toString.call(obj-w/join)', src: `
+    var o = {join: function() {return 'OK';}};
+    Array.prototype.toString.apply(o);
+    `,
+    expected: 'OK' },
+
+  { name: 'Array.prototype.toString.call(array-like)', src: `
+    var o = {0: 'foo', 1: 'bar', length: 2};
+    Array.prototype.toString.apply(o);
+    `,
+    expected: '[object Object]' },
 
   { name: 'Array.prototype.unshift', src: `
         var a = [];
