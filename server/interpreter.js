@@ -4790,16 +4790,6 @@ stepFuncs_['AssignmentExpression'] = function (thread, stack, state, node) {
 };
 
 /**
- * Extra info used by CallExpression step function.
- * @typedef {{callee: Interpreter.Value,
- *            this: Interpreter.Value,
- *            directEval: boolean,
- *            arguments: !Array<Interpreter.Value>}}
- */
-Interpreter.CallInfo;
-
-/**
- * CallExpression AND NewExpression
  * @this {!Interpreter}
  * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
@@ -4896,7 +4886,16 @@ stepFuncs_['BreakStatement'] = function (thread, stack, state, node) {
 };
 
 /**
- * ConditionalExpression AND IfStatement
+ * Extra info used by CallExpression step function.
+ * @typedef {{callee: Interpreter.Value,
+ *            this: Interpreter.Value,
+ *            directEval: boolean,
+ *            arguments: !Array<Interpreter.Value>}}
+ */
+Interpreter.CallInfo;
+
+/**
+ * CallExpression AND NewExpression
  * @this {!Interpreter}
  * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
