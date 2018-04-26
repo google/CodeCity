@@ -81,7 +81,7 @@ $.servers.http.IncomingMessage.prototype.parse = function(line) {
         if (eqIndex !== -1) {
           var cookieName = cookies[i].substring(0, eqIndex);
           var cookieValue = cookies[i].substring(eqIndex + 1);
-          if (cookieName === 'id') {
+          if (cookieName === 'ID') {
             // Special-case the 'id' cookie for user login.
             // Do not expose this id string to anyone.
             var m = cookieValue.match(/^([0-9a-f]+)_[0-9a-f]+$/);

@@ -226,7 +226,7 @@ CCC.init = function() {
 CCC.tab = function(mode) {
   if (!mode) {
     // Check for a cookie preference.
-    var m = document.cookie.match(/(?:^|;\s*)tab=(\w+)(?:;|$)/);
+    var m = document.cookie.match(/(?:^|;\s*)TAB=(\w+)(?:;|$)/);
     mode = m ? m[1] : 'world';
   }
   CCC.userActive();
@@ -246,7 +246,7 @@ CCC.tab = function(mode) {
     logButton.classList.add('jfk-checked');
   }
   // Set a session cookie to preserve this setting.
-  document.cookie = 'tab=' + mode + '; path=/connect';
+  document.cookie = 'TAB=' + mode + '; path=/connect';
   CCC.commandTextarea.focus();
 };
 
