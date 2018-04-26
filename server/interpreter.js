@@ -828,7 +828,7 @@ Interpreter.prototype.initObject_ = function() {
     }
   });
 
-  // Instance methods on Object.
+  // Properties of the Object prototype object.
   this.createNativeFunction('Object.prototype.toString',
                             this.Object.prototype.toString, false);
   this.createNativeFunction('Object.prototype.toLocaleString',
@@ -940,6 +940,7 @@ Interpreter.prototype.initFunction_ = function() {
     }
   });
 
+  // Properties of the Function prototype object.
   new this.NativeFunction({
     id: 'Function.prototype.toString', length: 0,
     /** @type {!Interpreter.NativeCallImpl} */
@@ -1048,10 +1049,10 @@ Interpreter.prototype.initArray_ = function() {
     }
   });
 
-  // Instance methods on Array.
   this.createNativeFunction('Array.prototype.toString',
                             this.Array.prototype.toString, false);
 
+  // Properties of the Array prototype object.
   new this.NativeFunction({
     id: 'Array.prototype.concat', length: 1,
     /** @type {!Interpreter.NativeCallImpl} */
@@ -1419,7 +1420,7 @@ Interpreter.prototype.initString_ = function() {
   // Static methods on String.
   this.createNativeFunction('String.fromCharCode', String.fromCharCode, false);
 
-  // Instance methods on String.
+  // Properties of the String prototype object.
   // Methods with exclusively primitive arguments.
   var functions = ['charAt', 'charCodeAt', 'concat', 'endsWith', 'includes',
       'indexOf', 'lastIndexOf', 'slice', 'startsWith', 'substr', 'substring',
@@ -1520,7 +1521,7 @@ Interpreter.prototype.initNumber_ = function() {
   this.createNativeFunction('Number.isSafeInteger', Number.isSafeInteger,
                             false);
 
-  // Instance methods on Number.
+  // Properties of the Number prototype object.
   wrapper = function(fractionDigits) {
     try {
       return this.toExponential(fractionDigits);
@@ -1750,7 +1751,7 @@ Interpreter.prototype.initError_ = function() {
         }
         return err;
       },
-    /** @type {!Interpreter.NativeCallImpl} */
+      /** @type {!Interpreter.NativeCallImpl} */
       call: function(intrp, thread, state, thisVal, args) {
         return this.construct.call(this, intrp, thread, state, args);
       }
@@ -1833,6 +1834,7 @@ Interpreter.prototype.initWeakMap_ = function() {
     }
   });
 
+  // Properties of the WeakMap prototype object.
   /**
    * Decorator to add standard permission and type checks for HashMap
    * prototype methods.
