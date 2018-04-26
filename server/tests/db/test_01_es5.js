@@ -2100,12 +2100,12 @@ tests.ArrayPrototypeReverse = function () {
 
   var o = {0: 1, 1: 2, 2: 3, length: 3};
   console.assert(Array.prototype.reverse.call(o) === o &&
-      o.length === 3 && Array.prototype.toString.apply(o) === '3,2,1',
+      o.length === 3 && Array.prototype.slice.apply(o).toString() === '3,2,1',
       'Array.prototype.reverse.call(odd-length array-like)');
 
   o = {0: 1, 1: 2, 3: 4, length: 4};
   console.assert(Array.prototype.reverse.call(o) === o &&
-      o.length === 4 && Array.prototype.toString.apply(o) === '4,,2,1',
+      o.length === 4 && Array.prototype.slice.apply(o).toString() === '4,,2,1',
       'Array.prototype.reverse.call(even-length array-like)');
 
   o = {length: 0};
