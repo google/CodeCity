@@ -3844,7 +3844,7 @@ Interpreter.prototype.installTypes = function() {
    */
   intrp.UserFunction.prototype.construct = function(
       intrp, thread, state, args) {
-    if (!state.object_) {
+    if (!state.info_.funcState) {
       if (this.owner === null) {
         throw new intrp.Error(state.scope.perms, intrp.PERM_ERROR,
             'Functions with null owner are not constructable');
@@ -3857,14 +3857,14 @@ Interpreter.prototype.installTypes = function() {
       if (!(proto instanceof intrp.Object)) {
         proto = intrp.OBJECT;
       }
-      state.object_ = new intrp.Object(state.scope.perms, proto);
-      this.call(intrp, thread, state, state.object_, args);
+      state.info_.funcState = new intrp.Object(state.scope.perms, proto);
+      this.call(intrp, thread, state, state.info_.funcState, args);
       return FunctionResult.CallAgain;
     } else {
       // Per ES5.1 §13.2.2 steps 9,10: if constructor returns
       // primitive, return constructed object instead.
       if (!(state.value instanceof intrp.Object)) {
-        return state.object_;
+        return /** @type {Interpreter.Value} */ (state.info_.funcState);
       }
       return state.value;
     }
