@@ -1102,7 +1102,7 @@ Interpreter.prototype.initArray_ = function() {
       if (len === 0) return -1;
       var n = (fromIndex === undefined ? 0 : Interpreter.toInteger(fromIndex));
       if (n >= len) return -1;
-      var k = (n >= 0 ? n : Math.max(len - Math.abs(n), 0));
+      var k = (n >= 0) ? n : Math.max(len - Math.abs(n), 0);
       for (; k < len; k++) {
         if (obj.has(String(k), perms) &&
             obj.get(String(k), perms) === searchElement) {
@@ -1123,9 +1123,9 @@ Interpreter.prototype.initArray_ = function() {
       var obj = intrp.toObject(thisVal, perms);
       var len = Interpreter.toLength(obj.get('length', perms));
       if (len === 0) return -1;
-      var n = (fromIndex === undefined ? len - 1 :
-          Interpreter.toInteger(fromIndex));
-      var k = (n >= 0 ? Math.min(n, len - 1) : len - Math.abs(n));
+      var n = (fromIndex === undefined) ? len - 1 :
+          Interpreter.toInteger(fromIndex);
+      var k = (n >= 0) ? Math.min(n, len - 1) : len - Math.abs(n);
       for (; k >= 0 ; k--) {
         if (obj.has(String(k), perms) &&
             obj.get(String(k), perms) === searchElement) {
@@ -1253,11 +1253,11 @@ Interpreter.prototype.initArray_ = function() {
       var obj = intrp.toObject(thisVal, perms);
       var len = Interpreter.toLength(obj.get('length', perms));
       var relativeStart = Interpreter.toInteger(start);
-      var k = (relativeStart < 0 ? Math.max(len + relativeStart, 0) :
-          Math.min(relativeStart, len));
-      var relativeEnd = (end === undefined ? len : Interpreter.toInteger(end));
-      var final = (relativeEnd < 0 ? Math.max(len + relativeEnd, 0) :
-          Math.min(relativeEnd, len));
+      var k = (relativeStart < 0) ? Math.max(len + relativeStart, 0) :
+          Math.min(relativeStart, len);
+      var relativeEnd = (end === undefined) ? len : Interpreter.toInteger(end);
+      var final = (relativeEnd < 0) ? Math.max(len + relativeEnd, 0) :
+          Math.min(relativeEnd, len);
       // TODO(cpcallen): ArraySpeciesCreate should take count as an argument.
       // var count = Math.max(final - k, 0);
       var arr = new intrp.Array(perms);
@@ -2054,8 +2054,8 @@ Interpreter.toUint32 = function toUint32(value) {
 
 /**
  * The ToLength function from ES6 §7.1.15.  Note that this does NOT
- * enforce the actual array length limit of 2^32-1, but deals with
- * lengths up to 2^53-1, which is correct for the polymorphic
+ * enforce the actual array length limit of 2**32-1, but deals with
+ * lengths up to 2**53-1, which is correct for the polymorphic
  * Array.prototype methods.
  * @param {Interpreter.Value} value
  * @return {number} A non-negative integer less than 2**53.
