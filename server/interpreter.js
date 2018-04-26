@@ -2745,7 +2745,8 @@ Interpreter.State.newForCall = function(func, thisVal, args, perms) {
   state.info_ = {callee: func,
                  this: thisVal,
                  arguments: args,
-                 directEval: false};
+                 directEval: false,
+                 funcState: undefined};
   state.step_ = 3;  // Skip evaluation of func/this/args; begin execution next.
   return state;
 };
@@ -4893,10 +4894,13 @@ stepFuncs_['BreakStatement'] = function (thread, stack, state, node) {
  * - this: the value of 'this' for the call.
  * - arguments: (evaluated) arguments to the call.
  * - directEval: is this a direct call to the global eval function?
+ * - funcState: place for NativeFunction impls to save additional state info.
+ * TODO(cpcallen): give funcState a narrower type.
  * @typedef {{callee: Interpreter.Value,
  *            this: Interpreter.Value,
  *            arguments: !Array<Interpreter.Value>,
- *            directEval: boolean}}
+ *            directEval: boolean,
+ *            funcState: *}}
  */
 Interpreter.CallInfo;
 
@@ -4942,7 +4946,8 @@ stepFuncs_['CallExpression'] = function (thread, stack, state, node) {
     var info = {callee: undefined,
                 this: undefined,  // Since we have no global object.
                 arguments: [],
-                directEval: false};
+                directEval: false,
+                funcState: undefined};
     if (state.ref) {  // Callee was MemberExpression or Identifier.
       info.callee = this.getValue(state.scope, state.ref, state.scope.perms);
       if (state.ref[0] === Interpreter.SCOPE_REFERENCE) {
