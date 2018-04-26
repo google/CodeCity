@@ -116,6 +116,21 @@ Interpreter.Status = {
 };
 
 /**
+ * Legal thread statuses.
+ * @enum {number}
+ */
+Interpreter.ThreadStatus = {
+  /** Execution of the thread has terminated. */
+  ZOMBIE: 0,
+  /** The thread is ready to run (or is running). */
+  READY: 1,
+  /** The thread is blocked, awaiting an external event (e.g. callback). */
+  BLOCKED: 2,
+  /** The thread is sleeping, awaiting arrival of its .runAt time. */
+  SLEEPING: 3,
+}
+
+/**
  * @const {!Object} Configuration used for all Acorn parsing.
  */
 Interpreter.PARSE_OPTIONS = {
@@ -235,24 +250,24 @@ Interpreter.prototype.schedule = function() {
       continue;
     }
     switch (threads[i].status) {
-      case Interpreter.Thread.Status.ZOMBIE:
+      case Interpreter.ThreadStatus.ZOMBIE:
         // Remove zombie from threads.
         delete threads[i];
         continue;
-      case Interpreter.Thread.Status.BLOCKED:
+      case Interpreter.ThreadStatus.BLOCKED:
         // Ignore blocked threads except noting existence.
         this.done = false;
         continue;
-      case Interpreter.Thread.Status.SLEEPING:
+      case Interpreter.ThreadStatus.SLEEPING:
         if (threads[i].runAt > now) {
           runAt = Math.min(runAt, threads[i].runAt);
           this.done = false;
           continue;
         }
         // Done sleeping; wake thread.
-        threads[i].status = Interpreter.Thread.Status.READY;
+        threads[i].status = Interpreter.ThreadStatus.READY;
         // fall through
-      case Interpreter.Thread.Status.READY:
+      case Interpreter.ThreadStatus.READY:
         // Is this this most-overdue thread found so far?
         if (threads[i].runAt < runAt) {
           this.thread = threads[i];
@@ -280,7 +295,7 @@ Interpreter.prototype.step = function() {
   if (this.status !== Interpreter.Status.PAUSED) {
     throw Error('Can only step paused interpreter');
   }
-  if (!this.thread || this.thread.status !== Interpreter.Thread.Status.READY) {
+  if (!this.thread || this.thread.status !== Interpreter.ThreadStatus.READY) {
     if (this.schedule() > 0) {
       return false;
     }
@@ -296,7 +311,7 @@ Interpreter.prototype.step = function() {
     if (e instanceof Error) {
       // Uh oh.  This is a real error in the interpreter.  Kill thread
       // and rethrow.
-      thread.status = Interpreter.Thread.Status.ZOMBIE;
+      thread.status = Interpreter.ThreadStatus.ZOMBIE;
       throw e;
     } else if (!(e instanceof this.Object) && e !== null &&
         (typeof e === 'object' || typeof e === 'function')) {
@@ -308,7 +323,7 @@ Interpreter.prototype.step = function() {
     stack[stack.length] = nextState;
   }
   if (stack.length === 0) {
-    thread.status = Interpreter.Thread.Status.ZOMBIE;
+    thread.status = Interpreter.ThreadStatus.ZOMBIE;
   }
   return true;
 };
@@ -338,7 +353,7 @@ Interpreter.prototype.run = function() {
   while ((t = this.schedule()) === 0) {
     var thread = this.thread;
     var stack = thread.stateStack_;
-    while (thread.status === Interpreter.Thread.Status.READY) {
+    while (thread.status === Interpreter.ThreadStatus.READY) {
       var state = stack[stack.length - 1];
       var node = state.node;
       try {
@@ -348,7 +363,7 @@ Interpreter.prototype.run = function() {
         if (e instanceof Error) {
           // Uh oh.  This is a real error in the interpreter.  Kill
           // thread and rethrow.
-          thread.status = Interpreter.Thread.Status.ZOMBIE;
+          thread.status = Interpreter.ThreadStatus.ZOMBIE;
           throw e;
         } else if (typeof e !== 'boolean' && typeof e !== 'number' &&
             typeof e !== 'string' && e !== undefined && e !== null &&
@@ -362,7 +377,7 @@ Interpreter.prototype.run = function() {
         stack[stack.length] = nextState;
       }
       if (stack.length === 0) {
-        thread.status = Interpreter.Thread.Status.ZOMBIE;
+        thread.status = Interpreter.ThreadStatus.ZOMBIE;
       }
     }
   }
@@ -1999,7 +2014,7 @@ Interpreter.prototype.initThread_ = function() {
       // TODO(cpcallen:perms): add security check here.
       var id = t.thread.id;
       if (intrp.threads[id]) {
-        intrp.threads[id].status = Interpreter.Thread.Status.ZOMBIE;
+        intrp.threads[id].status = Interpreter.ThreadStatus.ZOMBIE;
       }
     }
   });
@@ -2691,7 +2706,7 @@ Interpreter.prototype.unwind_ = function(thread, type, value, label) {
   }
 
   // Unhandled completion.  Terminate thread.
-  this.thread.status = Interpreter.Thread.Status.ZOMBIE;
+  this.thread.status = Interpreter.ThreadStatus.ZOMBIE;
 
   if (type === Interpreter.CompletionType.THROW) {
     // Log exception and stack trace.
@@ -2835,8 +2850,8 @@ Interpreter.Thread = function(id, state, runAt) {
   /** @type {number} */
   this.id = id;
   // Say it's sleeping for now.  May be woken immediately.
-  /** @type {!Interpreter.Thread.Status} */
-  this.status = Interpreter.Thread.Status.SLEEPING;
+  /** @type {!Interpreter.ThreadStatus} */
+  this.status = Interpreter.ThreadStatus.SLEEPING;
   /** @private @type {!Array<!Interpreter.State>} */
   this.stateStack_ = [state];
   /** @type {number} */
@@ -2852,7 +2867,7 @@ Interpreter.Thread = function(id, state, runAt) {
  * @param {number} resumeAt Time at which to wake thread.
  */
 Interpreter.Thread.prototype.sleepUntil = function(resumeAt) {
-  this.status = Interpreter.Thread.Status.SLEEPING;
+  this.status = Interpreter.ThreadStatus.SLEEPING;
   this.runAt = resumeAt;
 };
 
@@ -2878,26 +2893,11 @@ Interpreter.Thread.prototype.getSource = function(index) {
  * @return {!Interpreter.Owner}
  */
 Interpreter.Thread.prototype.perms = function() {
-  if (this.status === Interpreter.Thread.Status.ZOMBIE) {
+  if (this.status === Interpreter.ThreadStatus.ZOMBIE) {
     throw Error('Zombie thread has no perms');
   }
   return this.stateStack_[this.stateStack_.length - 1].scope.perms;
 };
-
-/**
- * Legal thread statuses.
- * @enum {number}
- */
-Interpreter.Thread.Status = {
-  /** Execution of the thread has terminated. */
-  ZOMBIE: 0,
-  /** The thread is ready to run (or is running). */
-  READY: 1,
-  /** The thread is blocked, awaiting an external event (e.g. callback). */
-  BLOCKED: 2,
-  /** The thread is sleeping, awaiting arrival of its .runAt time. */
-  SLEEPING: 3,
-}
 
 /**
  * An iterator over the properties of an ObjectLike and its
@@ -4068,7 +4068,7 @@ Interpreter.prototype.installTypes = function() {
         throw Error('Async function resolved or rejected more than once');
       }
       done = true;
-      if (thread.status !== Interpreter.Thread.Status.BLOCKED ||
+      if (thread.status !== Interpreter.ThreadStatus.BLOCKED ||
           thread.stateStack_[thread.stateStack_.length - 1] !== state) {
         throw Error('Thread state corrupt completing async function call??');
       }
@@ -4078,19 +4078,19 @@ Interpreter.prototype.installTypes = function() {
       function resolve(value) {
         check();
         state.value = value;
-        thread.status = Interpreter.Thread.Status.READY;
+        thread.status = Interpreter.ThreadStatus.READY;
         intrp.go_();
       },
       function reject(value) {
         check();
-        thread.status = Interpreter.Thread.Status.READY;
+        thread.status = Interpreter.ThreadStatus.READY;
         intrp.unwind_(
             thread, Interpreter.CompletionType.THROW, value, undefined);
         intrp.go_();
       }];
     // Prepend resolve, reject to arguments.
     args = callbacks.concat(args);
-    thread.status = Interpreter.Thread.Status.BLOCKED;
+    thread.status = Interpreter.ThreadStatus.BLOCKED;
     intrp.OldNativeFunction.prototype.call.call(
         /** @type {?} */ (this), intrp, thread, state, thisVal, args);
     return FunctionResult.AwaitValue;
