@@ -2074,17 +2074,17 @@ tests.String = function() {
   console.assert(String([1, 2, 3,,5]) === '1,2,3,,5', 'String array');
 };
 
-test.StringPrototypeReplaceStringString = function() {
+tests.StringPrototypeReplaceStringString = function() {
   console.assert('xxxx'.replace('xx', 'y') === 'yxx',
       'String.prototype.replace(string, string)');
 };
 
-test.StringPrototypeReplaceRegExpString = function() {
+tests.StringPrototypeReplaceRegExpString = function() {
   console.assert('xxxx'.replace(/(X)\1/ig, 'y') === 'yy',
       'String.prototype.replace(regexp, string)');
 };
 
-test.StringPrototypeReplaceStringFunction = function() {
+tests.StringPrototypeReplaceStringFunction = function() {
   var str = 'xxxx'.replace('xx', function () {
       return '[' + Array.prototype.join.apply(arguments) + ']';
   });
@@ -2092,7 +2092,7 @@ test.StringPrototypeReplaceStringFunction = function() {
       'String.prototype.replace(string, function)');
 };
 
-test.StringPrototypeReplaceRegExpFunction = function() {
+tests.StringPrototypeReplaceRegExpFunction = function() {
   var str = 'xxxx'.replace(/(X)\1/ig, function () {
       return '[' + Array.prototype.join.apply(arguments) + ']';
   });
