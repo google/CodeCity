@@ -599,7 +599,7 @@ Interpreter.prototype.initBuiltins_ = function() {
   }
 
   // Initialize CC-specific globals.
-  this.initThreads_();
+  this.initThread_();
   this.initNetwork_();
 };
 
@@ -1887,7 +1887,7 @@ Interpreter.prototype.initWeakMap_ = function() {
  * Initialize the thread system API.
  * @private
  */
-Interpreter.prototype.initThreads_ = function() {
+Interpreter.prototype.initThread_ = function() {
   new this.NativeFunction({
     id: 'suspend', length: 1,
     /** @type {!Interpreter.NativeCallImpl} */
