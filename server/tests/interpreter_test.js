@@ -1012,6 +1012,14 @@ exports.testThreading = function(t) {
   `;
   runComplexTest(t, 'suspend()', src, 'after');
 
+  // Check that Threads have ids.
+  src = `
+      var t1 = setTimeout(function() {});
+      var t2 = setTimeout(function() {});
+      typeof t1.id === 'number' && typeof t2.id === 'number' && t1.id !== t2.id;
+  `;
+  runTest(t, '(new Thread).id', src, true);
+
   // Function that simulates time passing, 100ms per invocation.
   var wait = function(intrp) {
     intrp.previousTime_ += 100;
