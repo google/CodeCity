@@ -2282,7 +2282,7 @@ Interpreter.prototype.createListFromArrayLike = function(obj, perms) {
   var len = Interpreter.toLength(obj.get('length', perms));
   var list = [];
   for (var i = 0; i < len; i++) {
-    list.push(obj.get(String(i), perms));
+    list[i] = obj.get(String(i), perms);
   }
   return list;
 };
