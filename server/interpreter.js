@@ -4245,6 +4245,9 @@ Interpreter.prototype.installTypes = function() {
 
   /**
    * Class for the user-visible representation of an Interpreter.Thread.
+   *
+   * Note that there should be at most one of these wrappers for each
+   * Interpreter.Thread, and this constructor enforces this.
    * @constructor
    * @extends {Interpreter.prototype.Thread}
    * @param {!Interpreter.Thread} thread Thread represented by this object.
@@ -4253,10 +4256,14 @@ Interpreter.prototype.installTypes = function() {
    */
   intrp.Thread = function(thread, owner, proto) {
     if (!thread) return;  // Deserializing
+    if (thread.wrapper) {
+      throw Error('Duplicate Thread wrapper??');
+    }
     intrp.Object.call(/** @type {?} */ (this), owner,
         (proto === undefined ? intrp.THREAD : proto));
     /** @type {Interpreter.Thread} */
     this.thread = thread;
+    this.thread.wrapper = this;
   };
 
   intrp.Thread.prototype = Object.create(intrp.Object.prototype);
