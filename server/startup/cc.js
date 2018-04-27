@@ -22,17 +22,19 @@
  * @author cpcallen@google.com (Christopher Allen)
  */
 
-// Extra Error subclasses.
+// Global objects.
 var PermissionError = new 'PermissionError';
+
 (function() {
-  var errors = ['PermissionError'];
-  for (var i = 0; i < errors.length; i++) {
-    var constructor = new errors[i];
+  var classes = ['PermissionError'];
+  // Prototypes of global constructors.
+  for (var i = 0; i < classes.length; i++) {
+    var constructor = new classes[i];
     Object.defineProperty(constructor, 'prototype', {
                           configurable: false,
                           enumerable: false,
                           writable: false,
-                          value: new (errors[i] + '.prototype')
+                          value: new (classes[i] + '.prototype')
                           });
     Object.defineProperty(constructor.prototype, 'constructor', {
                           configurable: true,
@@ -40,6 +42,12 @@ var PermissionError = new 'PermissionError';
                           writable: true,
                           value: constructor
                           });
+  }
+
+  // Configure Error subclasses.
+  var errors = ['PermissionError'];
+  for (var i = 0; i < errors.length; i++) {
+    var constructor = new errors[i];
     Object.defineProperty(constructor.prototype, 'name', {
                           configurable: true,
                           enumerable: false,
