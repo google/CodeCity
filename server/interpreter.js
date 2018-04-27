@@ -665,7 +665,7 @@ Interpreter.prototype.initObject_ = function() {
         // ES5.1.  Remove it once compiler knows we use ES6.
         keys = Object.getOwnPropertyNames(/** @type{?} */ (obj));
       }
-      return intrp.arrayNativeToPseudo(keys, state.scope.perms);
+      return intrp.createArrayFromList(keys, state.scope.perms);
     }
   });
 
@@ -675,7 +675,7 @@ Interpreter.prototype.initObject_ = function() {
     call: function(intrp, thread, state, thisVal, args) {
       var perms = state.scope.perms;
       var obj = intrp.toObject(args[0], perms);
-      return intrp.arrayNativeToPseudo(obj.ownKeys(perms), perms);
+      return intrp.createArrayFromList(obj.ownKeys(perms), perms);
     }
   });
 
@@ -1435,7 +1435,7 @@ Interpreter.prototype.initString_ = function() {
       separator = separator.regexp;
     }
     var jsList = this.split(separator, limit);
-    return intrp.arrayNativeToPseudo(jsList, intrp.thread.perms());
+    return intrp.createArrayFromList(jsList, intrp.thread.perms());
   };
   this.createNativeFunction('String.prototype.split', wrapper, false);
 
@@ -1444,7 +1444,7 @@ Interpreter.prototype.initString_ = function() {
       regexp = regexp.regexp;
     }
     var m = this.match(regexp);
-    return m && intrp.arrayNativeToPseudo(m, intrp.thread.perms());
+    return m && intrp.createArrayFromList(m, intrp.thread.perms());
   };
   this.createNativeFunction('String.prototype.match', wrapper, false);
 
@@ -2243,21 +2243,21 @@ Interpreter.prototype.pseudoToNative = function(pseudoObj, cycles) {
 };
 
 /**
+ * CreateArrayFromList from ES6 §7.3.16
+ *
  * Converts from a native array to an Interpreter.prototype.Array.
  * Does NOT recursively convert the type of the array's contents.
- * Algorithm intended to be inverse of createListFromArrayLike, so only
- * numeric properties up to .length are copied, and property
- * attributes are ignored.
- * @param {!Array<Interpreter.Value>} nArray The native array to be converted.
+ * @param {!Array<Interpreter.Value>} elements The native array to be converted.
  * @param {!Interpreter.Owner} owner Owner for new object.
  * @return {!Interpreter.prototype.Array} The equivalent interpreter array.
  */
-Interpreter.prototype.arrayNativeToPseudo = function(nArray, owner) {
-  var pArray = new this.Array(owner);
-  for (var i = 0; i < nArray.length; i++) {
-    pArray.set(String(i), nArray[i], owner);
+Interpreter.prototype.createArrayFromList = function(elements, owner) {
+  var array = new this.Array(owner);
+  for (var n = 0; n < elements.length; n++) {
+    array.defineProperty(
+        String(n), Descriptor.wec.withValue(elements[n]), owner);
   }
-  return pArray;
+  return array;
 };
 
 /**
