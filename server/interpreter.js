@@ -2119,7 +2119,7 @@ Interpreter.prototype.createAsyncFunction = function(name, asyncFunc) {
  * sparse arrays.  Does NOT handle cyclic
  * @param {*} nativeObj The native JS object to be converted.
  * @return {Interpreter.Value} The equivalent JS interpreter object.
- * @param {!Interpreter.Owner} owner Owner for new Error
+ * @param {!Interpreter.Owner} owner Owner for new object.
  */
 Interpreter.prototype.nativeToPseudo = function(nativeObj, owner) {
   if ((typeof nativeObj !== 'object' && typeof nativeObj !== 'function') ||
