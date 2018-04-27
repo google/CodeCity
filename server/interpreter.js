@@ -1888,6 +1888,10 @@ Interpreter.prototype.initWeakMap_ = function() {
  * @private
  */
 Interpreter.prototype.initThread_ = function() {
+  // Thread prototype.
+  this.THREAD = new this.Object(this.ROOT);
+  this.builtins_['Thread.prototype'] = this.THREAD;
+
   new this.NativeFunction({
     id: 'suspend', length: 1,
     /** @type {!Interpreter.NativeCallImpl} */
@@ -2722,6 +2726,11 @@ Interpreter.State.prototype.includeInStack = function() {
 
 /**
  * Class for a thread of execution.
+ *
+ * Note that this is an internal class; it has a companion wrapper
+ * class - Interpreter.prototype.Thread a.k.a. intrp.Thread - which
+ * serves as a user-visible wrapper for this class.  The two are
+ * separate for performance reasons only.
  * @constructor
  * @param {number} id Thread ID.  Should correspond to index of this
  *     thread in .threads array.
@@ -2738,6 +2747,8 @@ Interpreter.Thread = function(id, state, runAt) {
   this.stateStack_ = [state];
   /** @type {number} */
   this.runAt = runAt;
+  /** @type {?Interpreter.prototype.Thread} */
+  this.wrapper = null;
 };
 
 /**
@@ -3223,6 +3234,19 @@ Interpreter.prototype.Error.prototype.toString = function() {
 Interpreter.prototype.WeakMap = function(owner, proto) {
   /** @type {!WeakMap} */
   this.weakMap;
+  throw Error('Inner class constructor not callable on prototype');
+};
+
+/**
+ * @constructor
+ * @extends {Interpreter.prototype.Object}
+ * @param {!Interpreter.Thread} thread
+ * @param {?Interpreter.Owner=} owner
+ * @param {?Interpreter.prototype.Object=} proto
+ */
+Interpreter.prototype.Thread = function(thread, owner, proto) {
+  /** @type {Interpreter.Thread} */
+  this.thread;
   throw Error('Inner class constructor not callable on prototype');
 };
 
@@ -4212,6 +4236,26 @@ Interpreter.prototype.installTypes = function() {
   intrp.WeakMap.prototype = Object.create(intrp.Object.prototype);
   intrp.WeakMap.prototype.constructor = intrp.WeakMap;
   intrp.WeakMap.prototype.class = 'WeakMap';
+
+  /**
+   * Class for the user-visible representation of an Interpreter.Thread.
+   * @constructor
+   * @extends {Interpreter.prototype.Thread}
+   * @param {!Interpreter.Thread} thread Thread represented by this object.
+   * @param {?Interpreter.Owner=} owner Owner object or null.
+   * @param {?Interpreter.prototype.Object=} proto Prototype object or null.
+   */
+  intrp.Thread = function(thread, owner, proto) {
+    if (!thread) return;  // Deserializing
+    intrp.Object.call(/** @type {?} */ (this), owner,
+        (proto === undefined ? intrp.THREAD : proto));
+    /** @type {Interpreter.Thread} */
+    this.thread = thread;
+  };
+
+  intrp.Thread.prototype = Object.create(intrp.Object.prototype);
+  intrp.Thread.prototype.constructor = intrp.Thread;
+  intrp.Thread.prototype.class = 'Thread';
 
   /**
    * Server is an (owner, port, proto, (extra info)) tuple representing a
