@@ -164,19 +164,20 @@ Interpreter.prototype.now = function() {
 };
 
 /**
- * Create a new Interpreter.Thread and add it to this.threads.
+ * Create a new thread and add it to .threads, and create a companion
+ * user-visible wrapper object and return it.
  * @param {!Interpreter.Owner} owner Owner of new thread.
  * @param {!Interpreter.State} state Initial state
  * @param {number=} runAt Time at which thread should begin execution
  *     (default: now).
- * @return {number} thread ID.
+ * @return {!Interpreter.prototype.Thread} Userland Thread object.
  */
 Interpreter.prototype.createThread = function(owner, state, runAt) {
   var id = this.threads.length;
   var thread = new Interpreter.Thread(id, state, runAt || this.now());
   this.threads[this.threads.length] = thread;
   this.go_();
-  return id;
+  return new this.Thread(thread, owner);
 };
 
 /**
@@ -185,7 +186,7 @@ Interpreter.prototype.createThread = function(owner, state, runAt) {
  * global scope and will consequently runs wit whatever permissions
  * the global scope has.
  * @param {string} src JavaScript source code to parse and run.
- * @return {number} thread ID.
+ * @return {!Interpreter.prototype.Thread} Userland Thread object.
  */
 Interpreter.prototype.createThreadForSrc = function(src, runAt) {
   // Acorn may throw a Syntax error, but it's the caller's problem.
@@ -205,7 +206,7 @@ Interpreter.prototype.createThreadForSrc = function(src, runAt) {
  * @param {!Array<Interpreter.Value>} args Arguments to pass.
  * @param {number=} runAt Time at which thread should begin execution
  *     (default: now).
- * @return {number} thread ID.
+ * @return {!Interpreter.prototype.Thread} Userland Thread object.
  */
 Interpreter.prototype.createThreadForFuncCall = function(
     owner, func, thisVal, args, runAt) {
@@ -1930,9 +1931,16 @@ Interpreter.prototype.initThread_ = function() {
     id: 'clearTimeout', length: 1,
     /** @type {!Interpreter.NativeCallImpl} */
     call: function(intrp, thread, state, thisVal, args) {
-      var id = Number(args[0]);
+      var t = args[0];
+      var perms = state.scope.perms;
+      // Ignore attempts to clearTimeout anything which is not a
+      // Thread other than the current thread.
+      if (!(t instanceof intrp.Thread) || t.thread === thread) {
+        return;
+      }
+      // TODO(cpcallen:perms): add security check here.
+      var id = t.thread.id;
       if (intrp.threads[id]) {
-        // BUG(cpcallen): add security check here.
         intrp.threads[id].status = Interpreter.Thread.Status.ZOMBIE;
       }
     }
