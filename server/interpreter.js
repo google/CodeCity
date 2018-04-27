@@ -165,12 +165,13 @@ Interpreter.prototype.now = function() {
 
 /**
  * Create a new Interpreter.Thread and add it to this.threads.
+ * @param {!Interpreter.Owner} owner Owner of new thread.
  * @param {!Interpreter.State} state Initial state
  * @param {number=} runAt Time at which thread should begin execution
  *     (default: now).
  * @return {number} thread ID.
  */
-Interpreter.prototype.createThread = function(state, runAt) {
+Interpreter.prototype.createThread = function(owner, state, runAt) {
   var id = this.threads.length;
   var thread = new Interpreter.Thread(id, state, runAt || this.now());
   this.threads[this.threads.length] = thread;
@@ -179,10 +180,10 @@ Interpreter.prototype.createThread = function(state, runAt) {
 };
 
 /**
- * Create a new thread to execute arbitrary JavaScript code, which
- * will be evaluated directly in global scope.  As a consequence, it
- * runs with whatever permissions the global scope has - probably
- * root's.
+ * Create a new thread to execute arbitrary JavaScript code.  Thread
+ * will have specified owner, but code will be evaluated directly in
+ * global scope and will consequently runs wit whatever permissions
+ * the global scope has.
  * @param {string} src JavaScript source code to parse and run.
  * @return {number} thread ID.
  */
@@ -192,11 +193,13 @@ Interpreter.prototype.createThreadForSrc = function(src, runAt) {
   ast['source'] = src;
   this.populateScope_(ast, this.global, src);
   var state = new Interpreter.State(ast, this.global);
-  return this.createThread(state);
+  return this.createThread(this.ROOT, state);
 };
 
 /**
  * Create a new thread to execute a particular function call.
+ * @param {!Interpreter.Owner} owner Owner of new thread; also becomes
+ *     caller perms of function.
  * @param {!Interpreter.prototype.Function} func Function to call.
  * @param {Interpreter.Value} thisVal value of 'this' in function call.
  * @param {!Array<Interpreter.Value>} args Arguments to pass.
@@ -205,10 +208,9 @@ Interpreter.prototype.createThreadForSrc = function(src, runAt) {
  * @return {number} thread ID.
  */
 Interpreter.prototype.createThreadForFuncCall = function(
-    func, thisVal, args, runAt) {
-  // TODO(cpcallen:perms): add perms argument.
-  var state = Interpreter.State.newForCall(func, thisVal, args, this.ROOT);
-  return this.createThread(state, runAt);
+    owner, func, thisVal, args, runAt) {
+  var state = Interpreter.State.newForCall(func, thisVal, args, owner);
+  return this.createThread(owner, state, runAt);
 };
 
 /**
@@ -457,7 +459,12 @@ Interpreter.prototype.pause = function() {
           var func = server.proto.get('onError', server.owner);
           if (!(func instanceof intrp.Function)) return;
           var userError = intrp.nativeToPseudo(error, server.owner);
-          intrp.createThreadForFuncCall(func, server.proto, [userError]);
+          // TODO(cpcallen:perms): Is server.owner the correct owner
+          // for this thread?  Note that this will typically be root,
+          // and .onError will therefore get caller perms === root,
+          // which is probably dangerous.
+          intrp.createThreadForFuncCall(
+              server.owner, func, server.proto, [userError]);
         });
       }
       // Reset .uptime() to start counting from *NOW*, and .now() to
@@ -1907,14 +1914,15 @@ Interpreter.prototype.initThread_ = function() {
     /** @type {!Interpreter.NativeCallImpl} */
     call: function(intrp, thread, state, thisVal, args) {
       var func = args[0];
+      var perms = state.scope.perms;
       if (!(func instanceof intrp.Function)) {
-        throw new intrp.Error(state.scope.perms, intrp.TYPE_ERROR,
+        throw new intrp.Error(perms, intrp.TYPE_ERROR,
             func + ' is not a function');
       }
       var delay = Number(args[1]) || 0;
       args = Array.prototype.slice.call(args, 2);
-      return intrp.createThreadForFuncCall(func, undefined, args,
-                                           intrp.now() + delay);
+      return intrp.createThreadForFuncCall(
+          perms, func, undefined, args, intrp.now() + delay);
     }
   });
 
@@ -4315,8 +4323,12 @@ Interpreter.prototype.installTypes = function() {
       var obj = new intrp.Object(server.owner, server.proto);
       obj.socket = socket;
       var func = obj.get('onConnect', this.owner);
-      if (func instanceof intrp.Function) {
-        intrp.createThreadForFuncCall(func, obj, []);
+      if (func instanceof intrp.Function && server.owner !== null) {
+        // TODO(cpcallen:perms): Is server.owner the correct owner for
+        // this thread?  Note that this will typically be root, and
+        // .onError will therefore get caller perms === root, which is
+        // probably dangerous.  Here and several places below.
+        intrp.createThreadForFuncCall(server.owner, func, obj, []);
       }
 
       // Handle incoming data from clients.  N.B. that data is a
@@ -4324,16 +4336,17 @@ Interpreter.prototype.installTypes = function() {
       // before passing it to user code.
       socket.on('data', function(data) {
         var func = obj.get('onReceive', this.owner);
-        if (func instanceof intrp.Function) {
-          intrp.createThreadForFuncCall(func, obj, [String(data)]);
+        if (func instanceof intrp.Function && server.owner !== null) {
+          intrp.createThreadForFuncCall(
+              server.owner, func, obj, [String(data)]);
         }
       });
 
       socket.on('end', function() {
         console.log('Connection from %s closed.', socket.remoteAddress);
         var func = obj.get('onEnd', this.owner);
-        if (func instanceof intrp.Function) {
-          intrp.createThreadForFuncCall(func, obj, []);
+        if (func instanceof intrp.Function && server.owner !== null) {
+          intrp.createThreadForFuncCall(server.owner, func, obj, []);
         }
         // TODO(cpcallen): Don't fully close half-closed connection yet.
         socket.end();
@@ -4344,7 +4357,7 @@ Interpreter.prototype.installTypes = function() {
         var func = obj.get('onError', this.owner);
         if (func instanceof intrp.Function && server.owner !== null) {
           var userError = intrp.errorNativeToPseudo(error, server.owner);
-          intrp.createThreadForFuncCall(func, obj, [userError]);
+          intrp.createThreadForFuncCall(server.owner, func, obj, [userError]);
         }
       });
 
