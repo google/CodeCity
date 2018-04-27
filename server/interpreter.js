@@ -453,11 +453,11 @@ Interpreter.prototype.pause = function() {
                       error.name, error.message);
           // Report this to userland by calling .onError on proto
           // (with this === proto) - for lack of a better option.
-          var func = server.proto.get('onError', intrp.ROOT);
-          if (func instanceof intrp.Function && func.owner !== null) {
-            var userError = intrp.nativeToPseudo(error, func.owner);
-            intrp.createThreadForFuncCall(func, server.proto, [userError]);
-          }
+          if (!server.owner) return;
+          var func = server.proto.get('onError', server.owner);
+          if (!(func instanceof intrp.Function)) return;
+          var userError = intrp.nativeToPseudo(error, server.owner);
+          intrp.createThreadForFuncCall(func, server.proto, [userError]);
         });
       }
       // Reset .uptime() to start counting from *NOW*, and .now() to
@@ -4342,8 +4342,8 @@ Interpreter.prototype.installTypes = function() {
       socket.on('error', function(error) {
         console.log('Socket error:', error);
         var func = obj.get('onError', this.owner);
-        if (func instanceof intrp.Function && func.owner !== null) {
-          var userError = intrp.errorNativeToPseudo(error, func.owner);
+        if (func instanceof intrp.Function && server.owner !== null) {
+          var userError = intrp.errorNativeToPseudo(error, server.owner);
           intrp.createThreadForFuncCall(func, obj, [userError]);
         }
       });
