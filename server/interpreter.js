@@ -957,11 +957,8 @@ Interpreter.prototype.initFunction_ = function() {
             func + ' is not a function');
       } else if (argArray === null || argArray === undefined) {
         return func.call(intrp, thread, state, thisArg, []);
-      } else if (!(argArray instanceof intrp.Object)) {
-        throw new intrp.Error(perms, intrp.TYPE_ERROR,
-            'CreateListFromArrayLike called on non-object');
       }
-      var argList = intrp.arrayPseudoToNative(argArray, perms);
+      var argList = intrp.createListFromArrayLike(argArray, perms);
       return func.call(intrp, thread, state, thisArg, argList);
     }
   });
@@ -2248,7 +2245,7 @@ Interpreter.prototype.pseudoToNative = function(pseudoObj, cycles) {
 /**
  * Converts from a native array to an Interpreter.prototype.Array.
  * Does NOT recursively convert the type of the array's contents.
- * Algorithm intended to be inverse of arrayPseudoToNative, so only
+ * Algorithm intended to be inverse of createListFromArrayLike, so only
  * numeric properties up to .length are copied, and property
  * attributes are ignored.
  * @param {!Array<Interpreter.Value>} nArray The native array to be converted.
@@ -2264,25 +2261,30 @@ Interpreter.prototype.arrayNativeToPseudo = function(nArray, owner) {
 };
 
 /**
- * Converts from an Interpreter.prototype.Array or array-like ..Object
- * to a native array, using the algorithm from ES5.1 §15.3.4.3
- * (Function.prototype.apply).  Does NOT recursively convert the type
- * of the array's contents.
+ * CreateListFromArrayLike from ES6 §7.3.17.
  *
- * TODO(ES6): Add elementTypes param to become CreateListFromArrayLike
- * (ES6 §7.3.17).
- * @param {!Interpreter.prototype.Object} pArray The interpreter array
- *     or array-like object to be converted.
+ * This function converts from an Interpreter.prototype.Array (or
+ * array-like I.p.Object) to a native array.  This is an evolution of
+ * the algorithm from ES5.1 §15.3.4.3 (Function.prototype.apply).  It
+ * does NOT recursively convert the type of the array's contents.
+ *
+ * TODO(ES6): Add elementTypes param and associated type checks.
+ * @param {Interpreter.Value} obj The interpreter array or array-like
+ *     object to be converted.  Error thrown if non-object.
  * @param {!Interpreter.Owner} perms Who is trying convert it?
  * @return {!Array<Interpreter.Value>} The equivalent native JS array.
  */
-Interpreter.prototype.arrayPseudoToNative = function(pArray, perms) {
-  var len = Interpreter.toLength(pArray.get('length', perms));
-  var nArray = [];
-  for (var i = 0; i < len; i++) {
-    nArray.push(pArray.get(String(i), perms));
+Interpreter.prototype.createListFromArrayLike = function(obj, perms) {
+  if (!(obj instanceof this.Object)) {
+    throw new this.Error(perms, this.TYPE_ERROR,
+        'CreateListFromArrayLike called on non-object');
   }
-  return nArray;
+  var len = Interpreter.toLength(obj.get('length', perms));
+  var list = [];
+  for (var i = 0; i < len; i++) {
+    list.push(obj.get(String(i), perms));
+  }
+  return list;
 };
 
 /**
