@@ -76,7 +76,7 @@ CodeCity.startup = function(opt_databaseDirectory) {
         var filename = path.join(CodeCity.databaseDirectory, files[i]);
         var contents = CodeCity.loadFile(filename);
         console.log('Loading startup file %s', filename);
-        CodeCity.interpreter.createThread(contents);
+        CodeCity.interpreter.createThreadForSrc(contents);
         fileCount++;
       }
     }

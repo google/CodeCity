@@ -164,37 +164,35 @@ Interpreter.prototype.now = function() {
 };
 
 /**
- * Create a new thread and add it to .threads.  New thread runs with
- * same permissions (i.e., owner) as global scope was created with.
- * @param {!Interpreter.State|!Interpreter.Node|string} runnable Initial
- *     state, or AST node to construct state from, or raw JavaScript
- *     text to parse into AST.
+ * Create a new Interpreter.Thread and add it to this.threads.
+ * @param {!Interpreter.State} state Initial state
  * @param {number=} runAt Time at which thread should begin execution
  *     (default: now).
  * @return {number} thread ID.
  */
-Interpreter.prototype.createThread = function(runnable, runAt) {
-  var source = '';
-  if (typeof runnable === 'string') {
-    source = runnable;
-    // Acorn may throw a Syntax error, but it's the caller's problem.
-    runnable = acorn.parse(runnable, Interpreter.PARSE_OPTIONS);
-    runnable['source'] = source;
-  }
-  if (runnable instanceof Interpreter.Node) {
-    if (runnable['type'] !== 'Program') {
-      throw Error('Expecting AST to start with a Program node.');
-    }
-    this.populateScope_(runnable, this.global, source);
-    runnable = new Interpreter.State(runnable, this.global);
-  } else if (!(runnable instanceof Interpreter.State)) {
-    throw TypeError("Can't create thread for " + runnable);
-  }
+Interpreter.prototype.createThread = function(state, runAt) {
   var id = this.threads.length;
-  var thread = new Interpreter.Thread(id, runnable, runAt || this.now());
+  var thread = new Interpreter.Thread(id, state, runAt || this.now());
   this.threads[this.threads.length] = thread;
   this.go_();
   return id;
+};
+
+/**
+ * Create a new thread to execute arbitrary JavaScript code, which
+ * will be evaluated directly in global scope.  As a consequence, it
+ * runs with whatever permissions the global scope has - probably
+ * root's.
+ * @param {string} src JavaScript source code to parse and run.
+ * @return {number} thread ID.
+ */
+Interpreter.prototype.createThreadForSrc = function(src, runAt) {
+  // Acorn may throw a Syntax error, but it's the caller's problem.
+  var ast = acorn.parse(src, Interpreter.PARSE_OPTIONS);
+  ast['source'] = src;
+  this.populateScope_(ast, this.global, src);
+  var state = new Interpreter.State(ast, this.global);
+  return this.createThread(state);
 };
 
 /**

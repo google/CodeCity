@@ -76,15 +76,15 @@ function runTest(t, name, src1, src2, src3, expected, steps, noBuiltins) {
   var intrp = new Interpreter;
   try {
     if (!noBuiltins) {
-      intrp.createThread(common.es5);
+      intrp.createThreadForSrc(common.es5);
       intrp.run();
-      intrp.createThread(common.es6);
+      intrp.createThreadForSrc(common.es6);
       intrp.run();
-      intrp.createThread(common.cc);
+      intrp.createThreadForSrc(common.cc);
       intrp.run();
     }
     if (src1) {
-      intrp.createThread(src1);
+      intrp.createThreadForSrc(src1);
       intrp.run();
     }
   } catch (e) {
@@ -94,7 +94,7 @@ function runTest(t, name, src1, src2, src3, expected, steps, noBuiltins) {
 
   try {
     if (src2) {
-      intrp.createThread(src2);
+      intrp.createThreadForSrc(src2);
     }
     var trips = 0;
     if (steps === undefined) {
@@ -120,7 +120,7 @@ function runTest(t, name, src1, src2, src3, expected, steps, noBuiltins) {
   try {
     intrp.run();
     if (src3) {
-      intrp.createThread(src3);
+      intrp.createThreadForSrc(src3);
       intrp.run();
     }
   } catch (e) {
@@ -174,11 +174,11 @@ function runTest(t, name, src1, src2, src3, expected, steps, noBuiltins) {
  */
 async function runAsyncTest(t, name, src1, src2, expected, initFunc) {
   var intrp1 = new Interpreter;
-  intrp1.createThread(common.es5);
+  intrp1.createThreadForSrc(common.es5);
   intrp1.run();
-  intrp1.createThread(common.es6);
+  intrp1.createThreadForSrc(common.es6);
   intrp1.run();
-  intrp1.createThread(common.cc);
+  intrp1.createThreadForSrc(common.cc);
   intrp1.run();
   if (initFunc) {
     initFunc(intrp1);
@@ -197,7 +197,7 @@ async function runAsyncTest(t, name, src1, src2, expected, initFunc) {
   try {
     intrp1.start();
     if (src1) {
-      intrp1.createThread(src1);
+      intrp1.createThreadForSrc(src1);
     }
     await p;
     intrp1.pause();
@@ -239,7 +239,7 @@ async function runAsyncTest(t, name, src1, src2, expected, initFunc) {
   try {
     intrp2.start();
     if (src2) {
-      intrp2.createThread(src2);
+      intrp2.createThreadForSrc(src2);
     }
     var r = await p;
   } catch (e) {

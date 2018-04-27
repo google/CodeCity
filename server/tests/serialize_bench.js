@@ -40,16 +40,16 @@ const Serializer = require('../serialize');
 function runInterpreterBench(b, name, src) {
   for (var i = 0; i < 4; i++) {
     var intrp1 = new Interpreter;
-    intrp1.createThread(common.es5);
+    intrp1.createThreadForSrc(common.es5);
     intrp1.run();
-    intrp1.createThread(common.es6);
+    intrp1.createThreadForSrc(common.es6);
     intrp1.run();
-    intrp1.createThread(common.cc);
+    intrp1.createThreadForSrc(common.cc);
     intrp1.run();
 
     var err = undefined;
     try {
-      intrp1.createThread(src);
+      intrp1.createThreadForSrc(src);
       intrp1.stop();
       var json = Serializer.serialize(intrp1);
       var intrp2 = new Interpreter;
