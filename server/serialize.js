@@ -385,6 +385,7 @@ Serializer.getTypesDeserialize_ = function (intrp) {
     'PseudoRegExp': intrp.RegExp,
     'PseudoError': intrp.Error,
     'PseudoWeakMap': intrp.WeakMap,
+    'PseudoThread': intrp.Thread,
     'Server': intrp.Server,
     'Box': intrp.Box,
     'Node': Interpreter.Node
