@@ -34,11 +34,11 @@ var testcases = require('./testcases');
 
 // Prepare static interpreter instance for runTest.
 var interpreter = new Interpreter;
-interpreter.createThread(common.es5);
+interpreter.createThreadForSrc(common.es5);
 interpreter.run();
-interpreter.createThread(common.es6);
+interpreter.createThreadForSrc(common.es6);
 interpreter.run();
-interpreter.createThread(common.cc);
+interpreter.createThreadForSrc(common.cc);
 interpreter.run();
 interpreter.addVariableToScope(interpreter.global, 'src');
 
@@ -61,7 +61,7 @@ function runTest(t, name, src, expected) {
     // symptom of incorrect completion value handling by the
     // interpreter.
     interpreter.value = undefined;
-    interpreter.createThread('eval(src);');
+    interpreter.createThreadForSrc('eval(src);');
     interpreter.run();
   } catch (e) {
     t.crash(name, util.format('%s\n%s', src, e.stack));
@@ -96,18 +96,18 @@ function runTest(t, name, src, expected) {
  */
 function runComplexTest(t, name, src, expected, initFunc, asyncFunc) {
   var intrp = new Interpreter;
-  intrp.createThread(common.es5);
+  intrp.createThreadForSrc(common.es5);
   intrp.run();
-  intrp.createThread(common.es6);
+  intrp.createThreadForSrc(common.es6);
   intrp.run();
-  intrp.createThread(common.cc);
+  intrp.createThreadForSrc(common.cc);
   intrp.run();
   if (initFunc) {
     initFunc(intrp);
   }
 
   try {
-    intrp.createThread(src);
+    intrp.createThreadForSrc(src);
     while (intrp.run()) {
       if (asyncFunc) {
         asyncFunc(intrp);
@@ -152,11 +152,11 @@ function runComplexTest(t, name, src, expected, initFunc, asyncFunc) {
  */
 async function runAsyncTest(t, name, src, expected, initFunc, sideFunc) {
   var intrp = new Interpreter;
-  intrp.createThread(common.es5);
+  intrp.createThreadForSrc(common.es5);
   intrp.run();
-  intrp.createThread(common.es6);
+  intrp.createThreadForSrc(common.es6);
   intrp.run();
-  intrp.createThread(common.cc);
+  intrp.createThreadForSrc(common.cc);
   intrp.run();
   if (initFunc) {
     initFunc(intrp);
@@ -173,7 +173,7 @@ async function runAsyncTest(t, name, src, expected, initFunc, sideFunc) {
       intrp.createNativeFunction('reject', reject));
 
   try {
-    intrp.createThread(src);
+    intrp.createThreadForSrc(src);
     intrp.start();
     if (sideFunc) {
       await sideFunc(intrp);
@@ -891,7 +891,7 @@ exports.testNativeToPseudo = function(t) {
   };
 
   var intrp = new Interpreter;
-  intrp.createThread(common.es5);  // Ensure Error.prototype.name etc. defined.
+  intrp.createThreadForSrc(common.es5);  // Ensure Error.prototype.name etc. defined.
   intrp.run();
 
   // Test handling of Arrays (including extra non-index properties).
@@ -1074,21 +1074,21 @@ exports.testStartStop = async function(t) {
         x++;
       };
   `;
-  intrp.createThread(common.es5);
+  intrp.createThreadForSrc(common.es5);
   intrp.run();
-  intrp.createThread(common.es6);
+  intrp.createThreadForSrc(common.es6);
   intrp.run();
-  intrp.createThread(common.cc);
+  intrp.createThreadForSrc(common.cc);
   intrp.run();
   try {
     intrp.start();
     // .start() will create a zero-delay timeout to check for sleeping
     // tasks to awaken.  Snooze briefly to allow it to run, after
     // which there should be no outstanding timeouts.  This will
-    // ensure that we verify .createThread() frobs .start() to get
+    // ensure that we verify .createThreadForSrc() frobs .start() to get
     // things going again.
     await snooze(0);
-    intrp.createThread(src);
+    intrp.createThreadForSrc(src);
     await snooze(29);
     intrp.pause();
   } catch (e) {

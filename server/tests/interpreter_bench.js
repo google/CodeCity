@@ -38,16 +38,16 @@ var common = require('./interpreter_common');
 function runBench(b, name, src) {
   for (var i = 0; i < 4; i++) {
     var interpreter = new Interpreter();
-    interpreter.createThread(common.es5);
+    interpreter.createThreadForSrc(common.es5);
     interpreter.run();
-    interpreter.createThread(common.es6);
+    interpreter.createThreadForSrc(common.es6);
     interpreter.run();
-    interpreter.createThread(common.cc);
+    interpreter.createThreadForSrc(common.cc);
     interpreter.run();
 
     var err = undefined;
     try {
-      interpreter.createThread(src);
+      interpreter.createThreadForSrc(src);
       b.start(name, i);
       interpreter.run();
       b.end(name, i);

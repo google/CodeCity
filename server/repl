@@ -29,11 +29,11 @@ const Interpreter = require('./interpreter');
 const fs = require('fs');
 
 var intrp = new Interpreter;
-intrp.createThread(fs.readFileSync('startup/es5.js', 'utf8'));
+intrp.createThreadForSrc(fs.readFileSync('startup/es5.js', 'utf8'));
 intrp.run();
-intrp.createThread(fs.readFileSync('startup/es6.js', 'utf8'));
+intrp.createThreadForSrc(fs.readFileSync('startup/es6.js', 'utf8'));
 intrp.run();
-intrp.createThread(fs.readFileSync('startup/cc.js', 'utf8'));
+intrp.createThreadForSrc(fs.readFileSync('startup/cc.js', 'utf8'));
 intrp.run();
 
 var rl = readline.createInterface({
@@ -45,7 +45,7 @@ var rl = readline.createInterface({
 rl.prompt();
 rl.on('line', function(line) {
   intrp.value = undefined;
-  intrp.createThread(line);
+  intrp.createThreadForSrc(line);
   intrp.run();
   console.log(intrp.pseudoToNative(intrp.value));
   rl.prompt();
