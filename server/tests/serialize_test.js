@@ -84,7 +84,7 @@ function runTest(t, name, src1, src2, src3, expected, steps, noBuiltins) {
       intrp.run();
     }
     if (src1) {
-      var thread = intrp.createThreadForSrc(src1).thread;
+      var thread = intrp.createThreadForSrc(src1);
       intrp.run();
     }
   } catch (e) {
@@ -94,7 +94,7 @@ function runTest(t, name, src1, src2, src3, expected, steps, noBuiltins) {
 
   try {
     if (src2) {
-      thread = intrp.createThreadForSrc(src2).thread;
+      thread = intrp.createThreadForSrc(src2);
     }
     var trips = 0;
     if (steps === undefined) {
@@ -120,7 +120,7 @@ function runTest(t, name, src1, src2, src3, expected, steps, noBuiltins) {
   try {
     intrp.run();
     if (src3) {
-      thread = intrp.createThreadForSrc(src3).thread;
+      thread = intrp.createThreadForSrc(src3);
       intrp.run();
     }
   } catch (e) {

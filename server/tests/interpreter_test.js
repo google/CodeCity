@@ -56,7 +56,7 @@ interpreter.addVariableToScope(interpreter.global, 'src');
 function runTest(t, name, src, expected) {
   try {
     interpreter.setValueToScope(interpreter.global, 'src', src);
-    var thread = interpreter.createThreadForSrc('eval(src);').thread;
+    var thread = interpreter.createThreadForSrc('eval(src);');
     interpreter.run();
   } catch (e) {
     t.crash(name, util.format('%s\n%s', src, e.stack));
@@ -102,7 +102,7 @@ function runComplexTest(t, name, src, expected, initFunc, asyncFunc) {
   }
 
   try {
-    var thread = intrp.createThreadForSrc(src).thread;
+    var thread = intrp.createThreadForSrc(src);
     while (intrp.run()) {
       if (asyncFunc) {
         asyncFunc(intrp);

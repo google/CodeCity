@@ -416,7 +416,6 @@ Serializer.getTypesDeserialize_ = function (intrp) {
     'Scope': Interpreter.Scope,
     'Sentinel': Interpreter.Sentinel,
     'State': Interpreter.State,
-    'Thread': Interpreter.Thread,
     'PropertyIterator': Interpreter.PropertyIterator,
     'PseudoObject': intrp.Object,
     'PseudoFunction': intrp.Function,
@@ -429,7 +428,7 @@ Serializer.getTypesDeserialize_ = function (intrp) {
     'PseudoRegExp': intrp.RegExp,
     'PseudoError': intrp.Error,
     'PseudoWeakMap': intrp.WeakMap,
-    'PseudoThread': intrp.Thread,
+    'Thread': intrp.Thread,
     'Server': intrp.Server,
     'Box': intrp.Box,
     'Node': Interpreter.Node

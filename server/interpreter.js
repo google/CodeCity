@@ -66,9 +66,9 @@ var Interpreter = function() {
   // Create builtins and (minimally) initialize global scope:
   this.initBuiltins_();
 
-  /** @private @const {!Array<!Interpreter.Thread>} */
+  /** @private @const {!Array<!Interpreter.prototype.Thread>} */
   this.threads = [];
-  /** @private @type {?Interpreter.Thread} */
+  /** @private @type {?Interpreter.prototype.Thread} */
   this.thread = null;
   /** @private (Type is whatever is returned by setTimeout()) */
   this.runner_ = null;
@@ -187,10 +187,10 @@ Interpreter.prototype.now = function() {
  */
 Interpreter.prototype.createThread = function(owner, state, runAt) {
   var id = this.threads.length;
-  var thread = new Interpreter.Thread(id, state, runAt || this.now());
+  var thread = new this.Thread(id, state, runAt || this.now(), owner);
   this.threads[this.threads.length] = thread;
   this.go_();
-  return new this.Thread(thread, owner);
+  return thread;
 };
 
 /**
@@ -1998,7 +1998,7 @@ Interpreter.prototype.initThread_ = function() {
     id: 'Thread.current', length: 0,
     /** @type {!Interpreter.NativeCallImpl} */
     call: function(intrp, thread, state, thisVal, args) {
-      return thread.wrapper;
+      return thread;
     }
   });
 
@@ -2012,7 +2012,7 @@ Interpreter.prototype.initThread_ = function() {
         throw new intrp.Error(perms, intrp.TYPE_ERROR, t + ' is not a Thread');
       }
       // TODO(cpcallen:perms): add security check here.
-      var id = t.thread.id;
+      var id = t.id;
       if (intrp.threads[id]) {
         intrp.threads[id].status = Interpreter.ThreadStatus.ZOMBIE;
       }
@@ -2662,7 +2662,8 @@ Interpreter.Completion;
  * target label of a break statement can be the statement itself
  * (e.g., `foo: break foo;`).
  * @private
- * @param {!Interpreter.Thread} thread The thread whose stack is to be unwound.
+ * @param {!Interpreter.prototype.Thread} thread The thread whose
+ *     stack is to be unwound.
  * @param {Interpreter.CompletionType} type Completion type.
  * @param {Interpreter.Value=} value Value computed, returned or thrown.
  * @param {string=} label Target label for break or return.
@@ -2831,72 +2832,6 @@ Interpreter.State.prototype.includeInStack = function() {
   // Is state in the last step of execution (i.e., .call called)?
   return this.node && this.node['type'] === 'CallExpression' &&
       this.step_ === 4;
-};
-
-/**
- * Class for a thread of execution.
- *
- * Note that this is an internal class; it has a companion wrapper
- * class - Interpreter.prototype.Thread a.k.a. intrp.Thread - which
- * serves as a user-visible wrapper for this class.  The two are
- * separate for performance reasons only.
- * @constructor
- * @param {number} id Thread ID.  Should correspond to index of this
- *     thread in .threads array.
- * @param {!Interpreter.State} state Starting state for thread.
- * @param {number} runAt Time at which to start running thread.
- */
-Interpreter.Thread = function(id, state, runAt) {
-  /** @type {number} */
-  this.id = id;
-  // Say it's sleeping for now.  May be woken immediately.
-  /** @type {!Interpreter.ThreadStatus} */
-  this.status = Interpreter.ThreadStatus.SLEEPING;
-  /** @private @type {!Array<!Interpreter.State>} */
-  this.stateStack_ = [state];
-  /** @type {number} */
-  this.runAt = runAt;
-  /** @type {?Interpreter.prototype.Thread} */
-  this.wrapper = null;
-  /** @type {Interpreter.Value} */
-  this.value = undefined;
-};
-
-/**
- * Put thread to sleep until a specified time.
- * @param {number} resumeAt Time at which to wake thread.
- */
-Interpreter.Thread.prototype.sleepUntil = function(resumeAt) {
-  this.status = Interpreter.ThreadStatus.SLEEPING;
-  this.runAt = resumeAt;
-};
-
-/**
- * Returns the original source code for current state.
- * @param {number=} index Optional index in stack to look from.
- * @return {string|undefined} Source code or undefined if none.
- */
-Interpreter.Thread.prototype.getSource = function(index) {
-  var i = (index === undefined) ? this.stateStack_.length - 1 : index;
-  var source;
-  while (source === undefined && i >= 0) {
-    source = this.stateStack_[i--].node['source'];
-  }
-  return source;
-};
-
-/**
- * Returns the permissions with which currently-executing code is
- * running (equivalent to a unix EUID, but in the form of a
- * user/group/etc. object).  It is an error to call this function on a
- * thread that is a zombie.
- * @return {!Interpreter.Owner}
- */
-Interpreter.Thread.prototype.perms = function() {
-  if (this.status === Interpreter.ThreadStatus.ZOMBIE) {
-    throw Error('Zombie thread has no perms');
-  }
-  return this.stateStack_[this.stateStack_.length - 1].scope.perms;
 };
 
 /**
@@ -3166,7 +3101,7 @@ Interpreter.prototype.Function.prototype.setName = function(name) {
 
 /**
  * @param {!Interpreter} intrp The interpreter.
- * @param {!Interpreter.Thread} thread The current thread.
+ * @param {!Interpreter.prototype.Thread} thread The current thread.
  * @param {!Interpreter.State} state The current state.
  * @param {Interpreter.Value} thisVal The this value passed into function.
  * @param {!Array<Interpreter.Value>} args The arguments to the call.
@@ -3179,7 +3114,7 @@ Interpreter.prototype.Function.prototype.call = function(
 
 /**
  * @param {!Interpreter} intrp The interpreter.
- * @param {!Interpreter.Thread} thread The current thread.
+ * @param {!Interpreter.prototype.Thread} thread The current thread.
  * @param {!Interpreter.State} state The current state.
  * @param {!Array<Interpreter.Value>} args The arguments to the call.
  * @return {Interpreter.Value|!FunctionResult}
@@ -3336,14 +3271,51 @@ Interpreter.prototype.WeakMap = function(owner, proto) {
 /**
  * @constructor
  * @extends {Interpreter.prototype.Object}
- * @param {!Interpreter.Thread} thread
+ * @param {number} id
+ * @param {!Interpreter.State} state
+ * @param {number} runAt
  * @param {!Interpreter.Owner} owner
  * @param {?Interpreter.prototype.Object=} proto
  */
-Interpreter.prototype.Thread = function(thread, owner, proto) {
-  /** @type {Interpreter.Thread} */
-  this.thread;
+Interpreter.prototype.Thread = function(id, state, runAt, owner, proto) {
+  /** @type {number} */
+  this.id;
+  /** @type {!Interpreter.ThreadStatus} */
+  this.status;
+  /** @private @type {!Array<!Interpreter.State>} */
+  this.stateStack_;
+  /** @type {number} */
+  this.runAt;
+  /** @type {Interpreter.Value} */
+  this.value;
   throw Error('Inner class constructor not callable on prototype');
+};
+
+/**
+ * @param {number} resumeAt
+ */
+Interpreter.prototype.Thread.prototype.sleepUntil = function(resumeAt) {
+  throw Error('Inner class method not callable on prototype');
+};
+
+/**
+ * Returns the original source code for current state.
+ * @param {number=} index Optional index in stack to look from.
+ * @return {string|undefined} Source code or undefined if none.
+ */
+Interpreter.prototype.Thread.prototype.getSource = function(index) {
+  throw Error('Inner class method not callable on prototype');
+};
+
+/**
+ * Returns the permissions with which currently-executing code is
+ * running (equivalent to a unix EUID, but in the form of a
+ * user/group/etc. object).  It is an error to call this function on a
+ * thread that is a zombie.
+ * @return {!Interpreter.Owner}
+ */
+Interpreter.prototype.Thread.prototype.perms = function() {
+  throw Error('Inner class method not callable on prototype');
 };
 
 /**
@@ -3464,7 +3436,7 @@ Interpreter.prototype.Box.prototype.valueOf = function() {
  * Typedef for the functions used to implement NativeFunction.call.
  * @typedef {function(this: Interpreter.prototype.NativeFunction,
  *                    !Interpreter,
- *                    !Interpreter.Thread,
+ *                    !Interpreter.prototype.Thread,
  *                    !Interpreter.State,
  *                    Interpreter.Value,
  *                    !Array<Interpreter.Value>)
@@ -3476,7 +3448,7 @@ Interpreter.NativeCallImpl;
  * Typedef for the functions used to implement NativeFunction.construct.
  * @typedef {function(this: Interpreter.prototype.NativeFunction,
  *                    !Interpreter,
- *                    !Interpreter.Thread,
+ *                    !Interpreter.prototype.Thread,
  *                    !Interpreter.State,
  *                    !Array<Interpreter.Value>)
  *               : (Interpreter.Value|!FunctionResult)}
@@ -3765,7 +3737,7 @@ Interpreter.prototype.installTypes = function() {
    * The [[Call]] internal method defined by §13.2.1 of the ES5.1 spec.
    * Generic functions (neither native nor user) can't be called.
    * @param {!Interpreter} intrp The interpreter.
-   * @param {!Interpreter.Thread} thread The current thread.
+   * @param {!Interpreter.prototype.Thread} thread The current thread.
    * @param {!Interpreter.State} state The current state.
    * @param {Interpreter.Value} thisVal The this value passed into function.
    * @param {!Array<Interpreter.Value>} args The arguments to the call.
@@ -3783,7 +3755,7 @@ Interpreter.prototype.installTypes = function() {
    * spec.
    * Generic functions (neither native nor user) can't be constructed.
    * @param {!Interpreter} intrp The interpreter.
-   * @param {!Interpreter.Thread} thread The current thread.
+   * @param {!Interpreter.prototype.Thread} thread The current thread.
    * @param {!Interpreter.State} state The current state.
    * @param {!Array<Interpreter.Value>} args The arguments to the call.
    * @return {Interpreter.Value}
@@ -4337,32 +4309,74 @@ Interpreter.prototype.installTypes = function() {
   intrp.WeakMap.prototype.class = 'WeakMap';
 
   /**
-   * Class for the user-visible representation of an Interpreter.Thread.
-   *
-   * Note that there should be at most one of these wrappers for each
-   * Interpreter.Thread, and this constructor enforces this.
+   * Class for a thread of execution.
    * @constructor
    * @extends {Interpreter.prototype.Thread}
-   * @param {!Interpreter.Thread} thread Thread represented by this object.
+   * @param {number} id Thread ID.  Should correspond to index of this
+   *     thread in .threads array.
+   * @param {!Interpreter.State} state Starting state for thread.
+   * @param {number} runAt Time at which to start running thread.
    * @param {!Interpreter.Owner} owner Owner of this thread.
    * @param {?Interpreter.prototype.Object=} proto Prototype object or null.
    */
-  intrp.Thread = function(thread, owner, proto) {
-    if (!thread) return;  // Deserializing
-    if (thread.wrapper) {
-      throw Error('Duplicate Thread wrapper??');
-    }
+  intrp.Thread = function(id, state, runAt, owner, proto) {
+    // TODO(cpcallen): add owner parameter.
     intrp.Object.call(/** @type {?} */ (this), owner,
         (proto === undefined ? intrp.THREAD : proto));
-    /** @type {Interpreter.Thread} */
-    this.thread = thread;
-    this.thread.wrapper = this;
-    this.defineProperty('id', Descriptor.none.withValue(thread.id), owner);
+    /** @type {number} */
+    this.id = id;
+    // Say it's sleeping for now.  May be woken immediately.
+    /** @type {!Interpreter.ThreadStatus} */
+    this.status = Interpreter.ThreadStatus.SLEEPING;
+    /** @private @type {!Array<!Interpreter.State>} */
+    this.stateStack_ = [state];
+    /** @type {number} */
+    this.runAt = runAt;
+    /** @type {Interpreter.Value} */
+    this.value = undefined;
+    this.defineProperty('id', Descriptor.none.withValue(id), owner);
   };
 
   intrp.Thread.prototype = Object.create(intrp.Object.prototype);
   intrp.Thread.prototype.constructor = intrp.Thread;
   intrp.Thread.prototype.class = 'Thread';
+
+  /**
+   * Put thread to sleep until a specified time.
+   * @param {number} resumeAt Time at which to wake thread.
+   */
+  intrp.Thread.prototype.sleepUntil = function(resumeAt) {
+    this.status = Interpreter.ThreadStatus.SLEEPING;
+    this.runAt = resumeAt;
+  };
+
+  /**
+   * Returns the original source code for current state.
+   * @param {number=} index Optional index in stack to look from.
+   * @return {string|undefined} Source code or undefined if none.
+   */
+  intrp.Thread.prototype.getSource = function(index) {
+    var i = (index === undefined) ? this.stateStack_.length - 1 : index;
+    var source;
+    while (source === undefined && i >= 0) {
+      source = this.stateStack_[i--].node['source'];
+    }
+    return source;
+  };
+
+  /**
+   * Returns the permissions with which currently-executing code is
+   * running (equivalent to a unix EUID, but in the form of a
+   * user/group/etc. object).  It is an error to call this function on a
+   * thread that is a zombie.
+   * @return {!Interpreter.Owner}
+   */
+  intrp.Thread.prototype.perms = function() {
+    if (this.status === Interpreter.ThreadStatus.ZOMBIE) {
+      throw Error('Zombie thread has no perms');
+    }
+    return this.stateStack_[this.stateStack_.length - 1].scope.perms;
+  };
 
   /**
    * Server is an (owner, port, proto, (extra info)) tuple representing a
@@ -4755,7 +4769,7 @@ Descriptor.prototype.withValue = function(value) {
  * details for each once
  * https://github.com/google/closure-compiler/issues/2857 is fixed.
  * @typedef {function(this: Interpreter,
- *                    !Interpreter.Thread,
+ *                    !Interpreter.prototype.Thread,
  *                    !Array<!Interpreter.State>,
  *                    !Interpreter.State,
  *                    !Interpreter.Node)
@@ -4772,7 +4786,7 @@ var stepFuncs_ = {};
 
 /**
  * @this {!Interpreter}
- * @param {!Interpreter.Thread} thread
+ * @param {!Interpreter.prototype.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
@@ -4803,7 +4817,7 @@ stepFuncs_['ArrayExpression'] = function (thread, stack, state, node) {
 
 /**
  * @this {!Interpreter}
- * @param {!Interpreter.Thread} thread
+ * @param {!Interpreter.prototype.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
@@ -4850,7 +4864,7 @@ stepFuncs_['AssignmentExpression'] = function (thread, stack, state, node) {
 
 /**
  * @this {!Interpreter}
- * @param {!Interpreter.Thread} thread
+ * @param {!Interpreter.prototype.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
@@ -4913,7 +4927,7 @@ stepFuncs_['BinaryExpression'] = function (thread, stack, state, node) {
 
 /**
  * @this {!Interpreter}
- * @param {!Interpreter.Thread} thread
+ * @param {!Interpreter.prototype.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
@@ -4931,7 +4945,7 @@ stepFuncs_['BlockStatement'] = function (thread, stack, state, node) {
 
 /**
  * @this {!Interpreter}
- * @param {!Interpreter.Thread} thread
+ * @param {!Interpreter.prototype.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
@@ -4963,7 +4977,7 @@ Interpreter.CallInfo;
 /**
  * CallExpression AND NewExpression
  * @this {!Interpreter}
- * @param {!Interpreter.Thread} thread
+ * @param {!Interpreter.prototype.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
@@ -5074,7 +5088,7 @@ stepFuncs_['CallExpression'] = function (thread, stack, state, node) {
  * ConditionalExpression AND IfStatement.  The only difference is the
  * latter does not return a value to the parent state.
  * @this {!Interpreter}
- * @param {!Interpreter.Thread} thread
+ * @param {!Interpreter.prototype.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
@@ -5108,7 +5122,7 @@ stepFuncs_['ConditionalExpression'] = function (thread, stack, state, node) {
 
 /**
  * @this {!Interpreter}
- * @param {!Interpreter.Thread} thread
+ * @param {!Interpreter.prototype.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
@@ -5121,7 +5135,7 @@ stepFuncs_['ContinueStatement'] = function (thread, stack, state, node) {
 
 /**
  * @this {!Interpreter}
- * @param {!Interpreter.Thread} thread
+ * @param {!Interpreter.prototype.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
@@ -5136,7 +5150,7 @@ stepFuncs_['DebuggerStatement'] = function (thread, stack, state, node) {
  * DoWhileStatement AND WhileStatement.  The only difference is the
  * former skips evaluating the test expression the first time through.
  * @this {!Interpreter}
- * @param {!Interpreter.Thread} thread
+ * @param {!Interpreter.prototype.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
@@ -5167,7 +5181,7 @@ stepFuncs_['DoWhileStatement'] = function (thread, stack, state, node) {
 
 /**
  * @this {!Interpreter}
- * @param {!Interpreter.Thread} thread
+ * @param {!Interpreter.prototype.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
@@ -5179,7 +5193,7 @@ stepFuncs_['EmptyStatement'] = function (thread, stack, state, node) {
 
 /**
  * @this {!Interpreter}
- * @param {!Interpreter.Thread} thread
+ * @param {!Interpreter.prototype.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
@@ -5198,7 +5212,7 @@ stepFuncs_['EvalProgram_'] = function (thread, stack, state, node) {
 
 /**
  * @this {!Interpreter}
- * @param {!Interpreter.Thread} thread
+ * @param {!Interpreter.prototype.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
@@ -5229,7 +5243,7 @@ Interpreter.ForInInfo;
 
 /**
  * @this {!Interpreter}
- * @param {!Interpreter.Thread} thread
+ * @param {!Interpreter.prototype.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
@@ -5294,7 +5308,7 @@ stepFuncs_['ForInStatement'] = function (thread, stack, state, node) {
 
 /**
  * @this {!Interpreter}
- * @param {!Interpreter.Thread} thread
+ * @param {!Interpreter.prototype.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
@@ -5335,7 +5349,7 @@ stepFuncs_['ForStatement'] = function (thread, stack, state, node) {
 
 /**
  * @this {!Interpreter}
- * @param {!Interpreter.Thread} thread
+ * @param {!Interpreter.prototype.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
@@ -5348,7 +5362,7 @@ stepFuncs_['FunctionDeclaration'] = function (thread, stack, state, node) {
 
 /**
  * @this {!Interpreter}
- * @param {!Interpreter.Thread} thread
+ * @param {!Interpreter.prototype.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
@@ -5366,7 +5380,7 @@ stepFuncs_['FunctionExpression'] = function (thread, stack, state, node) {
 
 /**
  * @this {!Interpreter}
- * @param {!Interpreter.Thread} thread
+ * @param {!Interpreter.prototype.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
@@ -5386,7 +5400,7 @@ stepFuncs_['IfStatement'] = stepFuncs_['ConditionalExpression'];
 
 /**
  * @this {!Interpreter}
- * @param {!Interpreter.Thread} thread
+ * @param {!Interpreter.prototype.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
@@ -5405,7 +5419,7 @@ stepFuncs_['LabeledStatement'] = function (thread, stack, state, node) {
 
 /**
  * @this {!Interpreter}
- * @param {!Interpreter.Thread} thread
+ * @param {!Interpreter.prototype.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
@@ -5426,7 +5440,7 @@ stepFuncs_['Literal'] = function (thread, stack, state, node) {
 
 /**
  * @this {!Interpreter}
- * @param {!Interpreter.Thread} thread
+ * @param {!Interpreter.prototype.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
@@ -5454,7 +5468,7 @@ stepFuncs_['LogicalExpression'] = function (thread, stack, state, node) {
 
 /**
  * @this {!Interpreter}
- * @param {!Interpreter.Thread} thread
+ * @param {!Interpreter.prototype.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
@@ -5488,7 +5502,7 @@ stepFuncs_['NewExpression'] = stepFuncs_['CallExpression'];
 
 /**
  * @this {!Interpreter}
- * @param {!Interpreter.Thread} thread
+ * @param {!Interpreter.prototype.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
@@ -5526,7 +5540,7 @@ stepFuncs_['ObjectExpression'] = function (thread, stack, state, node) {
 
 /**
  * @this {!Interpreter}
- * @param {!Interpreter.Thread} thread
+ * @param {!Interpreter.prototype.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
@@ -5544,7 +5558,7 @@ stepFuncs_['Program'] = function (thread, stack, state, node) {
 
 /**
  * @this {!Interpreter}
- * @param {!Interpreter.Thread} thread
+ * @param {!Interpreter.prototype.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
@@ -5561,7 +5575,7 @@ stepFuncs_['ReturnStatement'] = function (thread, stack, state, node) {
 
 /**
  * @this {!Interpreter}
- * @param {!Interpreter.Thread} thread
+ * @param {!Interpreter.prototype.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
@@ -5586,7 +5600,7 @@ Interpreter.SwitchInfo;
 
 /**
  * @this {!Interpreter}
- * @param {!Interpreter.Thread} thread
+ * @param {!Interpreter.prototype.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
@@ -5648,7 +5662,7 @@ stepFuncs_['SwitchStatement'] = function (thread, stack, state, node) {
 
 /**
  * @this {!Interpreter}
- * @param {!Interpreter.Thread} thread
+ * @param {!Interpreter.prototype.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
@@ -5661,7 +5675,7 @@ stepFuncs_['ThisExpression'] = function (thread, stack, state, node) {
 
 /**
  * @this {!Interpreter}
- * @param {!Interpreter.Thread} thread
+ * @param {!Interpreter.prototype.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
@@ -5677,7 +5691,7 @@ stepFuncs_['ThrowStatement'] = function (thread, stack, state, node) {
 
 /**
  * @this {!Interpreter}
- * @param {!Interpreter.Thread} thread
+ * @param {!Interpreter.prototype.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
@@ -5723,7 +5737,7 @@ stepFuncs_['TryStatement'] = function (thread, stack, state, node) {
 
 /**
  * @this {!Interpreter}
- * @param {!Interpreter.Thread} thread
+ * @param {!Interpreter.prototype.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
@@ -5771,7 +5785,7 @@ stepFuncs_['UnaryExpression'] = function (thread, stack, state, node) {
 
 /**
  * @this {!Interpreter}
- * @param {!Interpreter.Thread} thread
+ * @param {!Interpreter.prototype.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
@@ -5800,7 +5814,7 @@ stepFuncs_['UpdateExpression'] = function (thread, stack, state, node) {
 
 /**
  * @this {!Interpreter}
- * @param {!Interpreter.Thread} thread
+ * @param {!Interpreter.prototype.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
@@ -5831,7 +5845,7 @@ stepFuncs_['VariableDeclaration'] = function (thread, stack, state, node) {
 
 /**
  * @this {!Interpreter}
- * @param {!Interpreter.Thread} thread
+ * @param {!Interpreter.prototype.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
