@@ -3255,7 +3255,7 @@ Interpreter.prototype.WeakMap = function(owner, proto) {
  * @constructor
  * @extends {Interpreter.prototype.Object}
  * @param {!Interpreter.Thread} thread
- * @param {?Interpreter.Owner=} owner
+ * @param {!Interpreter.Owner} owner
  * @param {?Interpreter.prototype.Object=} proto
  */
 Interpreter.prototype.Thread = function(thread, owner, proto) {
@@ -4259,7 +4259,7 @@ Interpreter.prototype.installTypes = function() {
    * @constructor
    * @extends {Interpreter.prototype.Thread}
    * @param {!Interpreter.Thread} thread Thread represented by this object.
-   * @param {?Interpreter.Owner=} owner Owner object or null.
+   * @param {!Interpreter.Owner} owner Owner of this thread.
    * @param {?Interpreter.prototype.Object=} proto Prototype object or null.
    */
   intrp.Thread = function(thread, owner, proto) {
@@ -4272,6 +4272,7 @@ Interpreter.prototype.installTypes = function() {
     /** @type {Interpreter.Thread} */
     this.thread = thread;
     this.thread.wrapper = this;
+    this.defineProperty('id', Descriptor.none.withValue(thread.id), owner);
   };
 
   intrp.Thread.prototype = Object.create(intrp.Object.prototype);
