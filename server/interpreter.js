@@ -1956,7 +1956,7 @@ Interpreter.prototype.initThread_ = function() {
   });
 
   new this.NativeFunction({
-    id: 'suspend', length: 1,
+    id: 'Thread.suspend', length: 1,
     /** @type {!Interpreter.NativeCallImpl} */
     call: function(intrp, thread, state, thisVal, args) {
       var delay = Number(args[0]) || 0;
