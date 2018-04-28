@@ -1039,6 +1039,14 @@ exports.testThreading = function(t) {
   runComplexTest(t, 'new Thread', src, '12345', undefined, wait);
 
   src = `
+      var current;
+      var thread = new Thread(function() {current = Thread.current();});
+      suspend();
+      current === thread;
+  `;
+  runComplexTest(t, 'Thread.current()', src, true);
+
+  src = `
       'before';
       suspend(10000);
       'after';
