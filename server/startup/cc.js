@@ -107,7 +107,21 @@ var setTimeout = function(func, delay) {
   return new Thread(func, undefined, args, delay);
 };
 
-var clearTimeout = new 'clearTimeout';
+var clearTimeout = function(thread) {
+  /* clearTimeout(thread)
+   *
+   * Arguments:
+   *   thread <Thread>: The Thread object whose execution to be cancelled.
+   *
+   * Note that attempts to cancel the current thread (or any non-Thread
+   * value) is silently ignored.
+   */
+  // TODO(cpcallen:perms): setPerms(callerPerms());
+  if (!(thread instanceof Thread) || thread === Thread.current()) {
+    return;
+  }
+  Thread.kill(thread);
+}
 
 // Namespace for CodeCity-specific extensions:
 var CC = {};

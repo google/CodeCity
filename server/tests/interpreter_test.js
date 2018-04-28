@@ -1079,6 +1079,10 @@ exports.testThreading = function(t) {
   runComplexTest(t, 'setTimeout', src, '12345', undefined, wait);
 
   src = `
+      // Should have no effect:
+      clearTimeout('foo');
+      clearTimeout(Thread.current());
+
       var s = '';
       var tid = setTimeout(function(a, b) {
           s += a;

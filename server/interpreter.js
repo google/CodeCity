@@ -1966,25 +1966,6 @@ Interpreter.prototype.initThread_ = function() {
       intrp.thread.sleepUntil(intrp.now() + delay);
     }
   });
-
-  new this.NativeFunction({
-    id: 'clearTimeout', length: 1,
-    /** @type {!Interpreter.NativeCallImpl} */
-    call: function(intrp, thread, state, thisVal, args) {
-      var t = args[0];
-      var perms = state.scope.perms;
-      // Ignore attempts to clearTimeout anything which is not a
-      // Thread other than the current thread.
-      if (!(t instanceof intrp.Thread) || t.thread === thread) {
-        return;
-      }
-      // TODO(cpcallen:perms): add security check here.
-      var id = t.thread.id;
-      if (intrp.threads[id]) {
-        intrp.threads[id].status = Interpreter.Thread.Status.ZOMBIE;
-      }
-    }
-  });
 };
 
 /**
