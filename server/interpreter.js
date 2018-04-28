@@ -1435,8 +1435,15 @@ Interpreter.prototype.initString_ = function() {
   this.STRING = new this.Object(this.ROOT);
   this.builtins_['String.prototype'] = this.STRING;
   this.STRING.class = 'String';
+
   // String constructor.
-  this.createNativeFunction('String', String, false);  // No: new String()
+  new this.NativeFunction({
+    id: 'String', length: 1,
+    /** @type {!Interpreter.NativeCallImpl} */
+    call: function(intrp, thread, state, thisVal, args) {
+      return String(args[0]);
+    }
+  });
 
   // Static methods on String.
   this.createNativeFunction('String.fromCharCode', String.fromCharCode, false);
