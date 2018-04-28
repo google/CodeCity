@@ -61,7 +61,7 @@ var PermissionError = new 'PermissionError';
   //     [Object, 'Object', [static methods], [instance methods]]
 
   var struct = [
-    [Thread, 'Thread', ['current', 'kill'], []],
+    [Thread, 'Thread', ['current', 'kill', 'suspend'], []],
   ];
   for (var i = 0; i < struct.length; i++) {
     var obj = struct[i][0];
@@ -89,7 +89,7 @@ var PermissionError = new 'PermissionError';
 
 // Threads API; parts are roughly conformant with HTML Living
 // Standard, plus our local extensions.
-var suspend = new 'suspend';
+var suspend = new 'Thread.suspend';
 
 var setTimeout = function(func, delay) {
   /* setTimeout(func, delay[, ...args]) -> thread
