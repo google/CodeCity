@@ -2340,7 +2340,7 @@ tests.Number = function() {
 };
 
 ///////////////////////////////////////////////////////////////////////////////
-// String
+// String and String.prototype
 
 tests.String = function() {
   console.assert(String(undefined) === 'undefined', 'String undefined');
@@ -2354,6 +2354,10 @@ tests.String = function() {
   console.assert(String(NaN) === 'NaN', 'String NaN');
   console.assert(String({}) === '[object Object]', 'String object');
   console.assert(String([1, 2, 3,,5]) === '1,2,3,,5', 'String array');
+};
+
+tests.StringPrototypeLength = function() {
+  console.assert(String.prototype.length === 0, 'String.prototype.length');
 };
 
 tests.StringPrototypeReplaceStringString = function() {

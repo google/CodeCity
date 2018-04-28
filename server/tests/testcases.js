@@ -1957,7 +1957,7 @@ module.exports = [
     expected: 'pass' },
 
   /////////////////////////////////////////////////////////////////////////////
-  // String
+  // String and String.prototype
 
   { name: 'String', src: `
     var tests = [
@@ -1983,6 +1983,10 @@ module.exports = [
     `,
     expected: 'pass' },
 
+  { name: 'String.prototype.length',
+    src: `String.prototype.length;`,
+    expected: 0 },
+    
   { name: 'String.prototype.replace(string, string)',
     src: `'xxxx'.replace('xx', 'y');`,
     expected: 'yxx' },

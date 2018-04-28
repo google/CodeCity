@@ -504,6 +504,9 @@ Object.defineProperty(Array.prototype, 'toLocaleString',
 // String.prototype polyfills
 ///////////////////////////////////////////////////////////////////////////////
 
+// String.prototype.length is always 0.
+Object.defineProperty(String.prototype, 'length', {value: 0});
+
 // Polyfill to handle String.prototype.replace's second argument being
 // a function.
 Object.defineProperty(String.prototype, 'replace',
