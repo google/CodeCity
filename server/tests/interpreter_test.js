@@ -1014,8 +1014,8 @@ exports.testThreading = function(t) {
 
   // Check that Threads have ids.
   src = `
-      var t1 = setTimeout(function() {});
-      var t2 = setTimeout(function() {});
+      var t1 = new Thread(function() {});
+      var t2 = new Thread(function() {});
       typeof t1.id === 'number' && typeof t2.id === 'number' && t1.id !== t2.id;
   `;
   runTest(t, '(new Thread).id', src, true);
@@ -1024,6 +1024,19 @@ exports.testThreading = function(t) {
   var wait = function(intrp) {
     intrp.previousTime_ += 100;
   };
+
+  src = `
+      var s = '';
+      new Thread(function() { s += this; }, 2, undefined, 500);
+      new Thread(function(x) { s += x; }, undefined, [4], 1500);
+      new Thread(function() { s += '1'; })
+      suspend(1000);
+      s += '3';
+      suspend(1000);
+      s += '5';
+      s;
+  `;
+  runComplexTest(t, 'new Thread', src, '12345', undefined, wait);
 
   src = `
       'before';

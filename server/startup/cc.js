@@ -23,10 +23,11 @@
  */
 
 // Global objects.
+var Thread = new 'Thread';
 var PermissionError = new 'PermissionError';
 
 (function() {
-  var classes = ['PermissionError'];
+  var classes = ['PermissionError', 'Thread'];
   // Prototypes of global constructors.
   for (var i = 0; i < classes.length; i++) {
     var constructor = new classes[i];
@@ -54,6 +55,35 @@ var PermissionError = new 'PermissionError';
                           writable: true,
                           value: errors[i]
                           });
+  }
+
+  // Struct is a list of tuples:
+  //     [Object, 'Object', [static methods], [instance methods]]
+
+  var struct = [
+    [Thread, 'Thread', [], []],
+  ];
+  for (var i = 0; i < struct.length; i++) {
+    var obj = struct[i][0];
+    var objName = struct[i][1];
+    var staticMethods = struct[i][2];
+    var instanceMethods = struct[i][3];
+    for (var j = 0; j < staticMethods.length; j++) {
+      var member = staticMethods[j];
+      Object.defineProperty(obj, member,
+          {configurable: true,
+           enumerable: false,
+           writable: true,
+           value: new (objName + '.' + member)});
+    }
+    for (var j = 0; j < instanceMethods.length; j++) {
+      var member = instanceMethods[j];
+      Object.defineProperty(obj.prototype, member,
+          {configurable: true,
+           enumerable: false,
+           writable: true,
+           value: new (objName + '.prototype.' + member)});
+    }
   }
 })();
 
