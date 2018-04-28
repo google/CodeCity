@@ -1943,23 +1943,6 @@ Interpreter.prototype.initThread_ = function() {
   });
 
   new this.NativeFunction({
-    id: 'setTimeout', length: 1,
-    /** @type {!Interpreter.NativeCallImpl} */
-    call: function(intrp, thread, state, thisVal, args) {
-      var func = args[0];
-      var perms = state.scope.perms;
-      if (!(func instanceof intrp.Function)) {
-        throw new intrp.Error(perms, intrp.TYPE_ERROR,
-            func + ' is not a function');
-      }
-      var delay = Number(args[1]) || 0;
-      args = Array.prototype.slice.call(args, 2);
-      return intrp.createThreadForFuncCall(
-          perms, func, undefined, args, intrp.now() + delay);
-    }
-  });
-
-  new this.NativeFunction({
     id: 'clearTimeout', length: 1,
     /** @type {!Interpreter.NativeCallImpl} */
     call: function(intrp, thread, state, thisVal, args) {

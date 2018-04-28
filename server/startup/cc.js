@@ -90,7 +90,23 @@ var PermissionError = new 'PermissionError';
 // Threads API; parts are roughly conformant with HTML Living
 // Standard, plus our local extensions.
 var suspend = new 'suspend';
-var setTimeout = new 'setTimeout';
+
+var setTimeout = function(func, delay) {
+  /* setTimeout(func, delay[, ...args]) -> thread
+   *
+   * Arguments:
+   *   func <Function>: A function to call when the timer elapses.
+   *   delay <number>: Time to wait (in ms) before calling the callback.
+   *   ...args <any>: Optional arguments to pass to func.
+   *
+   * Returns:
+   *   <Thread>, which may be passed to clearTimeout() to cancel.
+   */
+  // TODO(cpcallen:perms): setPerms(callerPerms());
+  var args = arguments.slice(2);
+  return new Thread(func, undefined, args, delay);
+};
+
 var clearTimeout = new 'clearTimeout';
 
 // Namespace for CodeCity-specific extensions:
