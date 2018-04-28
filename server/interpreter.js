@@ -1931,6 +1931,14 @@ Interpreter.prototype.initThread_ = function() {
   });
     
   new this.NativeFunction({
+    id: 'Thread.current', length: 0,
+    /** @type {!Interpreter.NativeCallImpl} */
+    call: function(intrp, thread, state, thisVal, args) {
+      return thread.wrapper;
+    }
+  });
+
+  new this.NativeFunction({
     id: 'suspend', length: 1,
     /** @type {!Interpreter.NativeCallImpl} */
     call: function(intrp, thread, state, thisVal, args) {
