@@ -1939,6 +1939,23 @@ Interpreter.prototype.initThread_ = function() {
   });
 
   new this.NativeFunction({
+    id: 'Thread.kill', length: 1,
+    /** @type {!Interpreter.NativeCallImpl} */
+    call: function(intrp, thread, state, thisVal, args) {
+      var t = args[0];
+      var perms = state.scope.perms;
+      if (!(t instanceof intrp.Thread)) {
+        throw new intrp.Error(perms, intrp.TYPE_ERROR, t + ' is not a Thread');
+      }
+      // TODO(cpcallen:perms): add security check here.
+      var id = t.thread.id;
+      if (intrp.threads[id]) {
+        intrp.threads[id].status = Interpreter.Thread.Status.ZOMBIE;
+      }
+    }
+  });
+
+  new this.NativeFunction({
     id: 'suspend', length: 1,
     /** @type {!Interpreter.NativeCallImpl} */
     call: function(intrp, thread, state, thisVal, args) {

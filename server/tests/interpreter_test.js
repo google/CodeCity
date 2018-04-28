@@ -1047,6 +1047,18 @@ exports.testThreading = function(t) {
   runComplexTest(t, 'Thread.current()', src, true);
 
   src = `
+      var result;
+      new Thread(function() {
+        result = 'OK';
+        Thread.kill(Thread.current());
+        result = 'The reports of my death are greatly exaggerated.';
+      });
+      suspend();
+      result;
+  `;
+  runComplexTest(t, 'Thread.kill', src, 'OK');
+
+  src = `
       'before';
       suspend(10000);
       'after';
