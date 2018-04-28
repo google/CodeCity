@@ -1410,7 +1410,7 @@ Interpreter.prototype.initArray_ = function() {
 Interpreter.prototype.initString_ = function() {
   var intrp = this;
   var wrapper;
-  // String prototype.
+  // String prototype.  It's a String object (but the only one!)
   this.STRING = new this.Object(this.ROOT);
   this.builtins_['String.prototype'] = this.STRING;
   this.STRING.class = 'String';
