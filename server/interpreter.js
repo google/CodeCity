@@ -192,7 +192,7 @@ Interpreter.prototype.createThread = function(runnable, runAt) {
   }
   var id = this.threads.length;
   var thread = new Interpreter.Thread(id, runnable, runAt || this.now());
-  this.threads.push(thread);
+  this.threads[this.threads.length] = thread;
   this.go_();
   return id;
 };
@@ -305,7 +305,7 @@ Interpreter.prototype.step = function() {
     this.unwind_(thread, Interpreter.CompletionType.THROW, e, undefined);
   }
   if (nextState) {
-    stack.push(nextState);
+    stack[stack.length] = nextState;
   }
   if (stack.length === 0) {
     thread.status = Interpreter.Thread.Status.ZOMBIE;
@@ -358,7 +358,7 @@ Interpreter.prototype.run = function() {
         nextState = undefined;
       }
       if (nextState) {
-        stack.push(nextState);
+        stack[stack.length] = nextState;
       }
       if (stack.length === 0) {
         thread.status = Interpreter.Thread.Status.ZOMBIE;
@@ -563,7 +563,8 @@ Interpreter.prototype.initBuiltins_ = function() {
       var outerScope = state.info_.directEval ? state.scope : intrp.global;
       var scope = new Interpreter.Scope(state.scope.perms, outerScope);
       intrp.populateScope_(ast, scope, code);
-      thread.stateStack_.push(new Interpreter.State(evalNode, scope));
+      thread.stateStack_[thread.stateStack_.length] =
+          new Interpreter.State(evalNode, scope);
       state.value = undefined;  // Default value if no explicit return.
       return FunctionResult.AwaitValue;
     }
@@ -1375,7 +1376,7 @@ Interpreter.prototype.initArray_ = function() {
 
   wrapper = function(separator) {
     var cycles = intrp.toStringCycles_;
-    cycles.push(this);
+    cycles[cycles.length] = this;
     try {
       var text = [];
       for (var i = 0; i < this.properties.length; i++) {
@@ -2214,11 +2215,11 @@ Interpreter.prototype.pseudoToNative = function(pseudoObj, cycles) {
   if (i !== -1) {
     return cycles.native[i];
   }
-  cycles.pseudo.push(pseudoObj);
+  cycles.pseudo[cycles.pseudo.length] = pseudoObj;
   var nativeObj;
   if (pseudoObj instanceof this.Array) {  // Array.
     nativeObj = [];
-    cycles.native.push(nativeObj);
+    cycles.native[cycles.native.length] = nativeObj;
     var length = pseudoObj.get('length', perms);
     for (i = 0; i < length; i++) {
       // TODO(cpcallen): do we really want to include inherited properties?
@@ -2229,7 +2230,7 @@ Interpreter.prototype.pseudoToNative = function(pseudoObj, cycles) {
     }
   } else {  // Object.
     nativeObj = {};
-    cycles.native.push(nativeObj);
+    cycles.native[cycles.native.length] = nativeObj;
     var keys = pseudoObj.ownKeys(perms);
     for (i = 0; i < keys.length; i++) {
       var key = keys[i];
@@ -3764,7 +3765,8 @@ Interpreter.prototype.installTypes = function() {
     }
     intrp.addVariableToScope(scope, 'this', thisVal, true);
     state.value = undefined;  // Default value if no explicit return.
-    thread.stateStack_.push(new Interpreter.State(this.node['body'], scope));
+    thread.stateStack_[thread.stateStack_.length] =
+        new Interpreter.State(this.node['body'], scope);
     return FunctionResult.AwaitValue;
   };
 
@@ -4014,7 +4016,7 @@ Interpreter.prototype.installTypes = function() {
       return Array.prototype.toString.apply(/** @type {?} */(this));
     }
     var cycles = intrp.toStringCycles_;
-    cycles.push(this);
+    cycles[cycles.length] = this;
     try {
       var strs = [];
       // BUG(cpcallen): Array.prototype.toString should be generic,
@@ -4157,7 +4159,7 @@ Interpreter.prototype.installTypes = function() {
           lineEnd = code.length;
         }
         var line = code.substring(lineStart, lineEnd);
-        stack.push(line);
+        stack[stack.length] = line;
       }
       this.defineProperty('stack', Descriptor.wc.withValue(stack.join('\n')));
     }
@@ -4176,7 +4178,7 @@ Interpreter.prototype.installTypes = function() {
     if (cycles.indexOf(this) !== -1) {
       return '[object Error]';
     }
-    cycles.push(this);
+    cycles[cycles.length] = this;
     try {
       // TODO(cpcallen:perms): Wrong perms here.  Should have/use
       // perms arg, but see note in intrp.Function.prototype.toString.
@@ -4851,7 +4853,7 @@ stepFuncs_['CallExpression'] = function (stack, state, node) {
   }
   if (state.step_ === 2) {  // Evaluating arguments.
     if (state.n_ !== 0) {
-      state.info_.arguments.push(state.value);
+      state.info_.arguments[state.info_.arguments.length] = state.value;
     }
     if (node['arguments'][state.n_]) {
       return new Interpreter.State(node['arguments'][state.n_++], state.scope);
@@ -5221,7 +5223,7 @@ stepFuncs_['IfStatement'] = stepFuncs_['ConditionalExpression'];
 stepFuncs_['LabeledStatement'] = function (stack, state, node) {
   // Note that a statement might have multiple labels.
   var /** !Array<string> */ labels = state.labels || [];
-  labels.push(node['label']['name']);
+  labels[labels.length] = node['label']['name'];
   var nextState = new Interpreter.State(node['body'], state.scope);
   nextState.labels = labels;
   // No need to hit LabelStatement node again on the way back up the stack.
