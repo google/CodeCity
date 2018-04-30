@@ -2002,10 +2002,62 @@ module.exports = [
     `,
     expected: 'pass' },
 
+  { name: 'String calls valueOf', src: `
+        var o = Object.create(null);
+        o.valueOf = function() {return 'OK';};
+        String(o);
+    `,
+    expected: 'OK' },
+
+  { name: 'String calling valueOf returns string', src: `
+        var o = Object.create(null);
+        o.valueOf = function() {return 42;};
+        String(o);
+    `,
+    expected: '42' },
+
+  { name: 'String calling valueOf throws', src: `
+        var o = Object.create(null);
+        o.valueOf = function() {return {};};
+        try {
+          String(o);
+        } catch (e) {
+          e.name;
+        }
+    `,
+    expected: 'TypeError' },
+
+  { name: 'String calls toString', src: `
+        var o = Object.create(null);
+        o.valueOf = function() {return 'Whoops: called valueOf';};
+        o.toString = function() {return 'OK';};
+        String(o);
+    `,
+    expected: 'OK' },
+
+  { name: 'String calling toString returns string', src: `
+        var o = Object.create(null);
+        o.valueOf = function() {return 42;};
+        String(o);
+    `,
+    expected: '42' },
+
+  { name: 'String calling toString throws', src: `
+        var o = Object.create(null);
+        o.valueOf = function() {return {};};
+        o.toString = function() {return {};};
+        try {
+          String(o);
+        } catch (e) {
+          e.name;
+        }
+    `,
+    expected: 'TypeError' },
+
   { name: 'String.prototype.length',
     src: `String.prototype.length;`,
     expected: 0 },
-    
+
   { name: 'String.prototype.replace(string, string)',
     src: `'xxxx'.replace('xx', 'y');`,
     expected: 'yxx' },
