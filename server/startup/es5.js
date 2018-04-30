@@ -263,6 +263,38 @@ Object.defineProperty(RegExp.prototype, 'source', {
                       value: '(?:)'
                       });
 
+///////////////////////////////////////////////////////////////////////////////
+// Object polyfills
+///////////////////////////////////////////////////////////////////////////////
+
+// Add a polyfill to handle create's second argument.
+Object.defineProperty(Object, 'create',
+                      {configurable: true, writable: true, value:
+  function(proto, props) {
+    var obj = (new 'Object.create')(proto);
+    props && Object.defineProperties(obj, props);
+    return obj;
+  }
+});
+
+Object.defineProperty(Object, 'defineProperties',
+    {configurable: true, writable: true, value:
+  function(obj, props) {
+    if (!obj || (typeof obj !== 'object' && typeof obj !== 'function')) {
+      throw new TypeError('Object.defineProperties called on non-object');
+    }
+    var keys = Object.keys(props);
+    for (var i = 0; i < keys.length; i++) {
+      Object.defineProperty(obj, keys[i], props[keys[i]]);
+    }
+    return obj;
+  }
+});
+
+///////////////////////////////////////////////////////////////////////////////
+// Function.prototype polyfills
+///////////////////////////////////////////////////////////////////////////////
+
 // Polyfill copied from:
 // developer.mozilla.org/en/docs/Web/JavaScript/Reference/Global_objects/Function/bind
 Object.defineProperty(Function.prototype, 'bind',
@@ -288,29 +320,9 @@ Object.defineProperty(Function.prototype, 'bind',
   }
 });
 
-// Add a polyfill to handle create's second argument.
-Object.defineProperty(Object, 'create',
-                      {configurable: true, writable: true, value:
-  function(proto, props) {
-    var obj = (new 'Object.create')(proto);
-    props && Object.defineProperties(obj, props);
-    return obj;
-  }
-});
-
-Object.defineProperty(Object, 'defineProperties',
-    {configurable: true, writable: true, value:
-  function(obj, props) {
-    if (!obj || (typeof obj !== 'object' && typeof obj !== 'function')) {
-      throw new TypeError('Object.defineProperties called on non-object');
-    }
-    var keys = Object.keys(props);
-    for (var i = 0; i < keys.length; i++) {
-      Object.defineProperty(obj, keys[i], props[keys[i]]);
-    }
-    return obj;
-  }
-});
+///////////////////////////////////////////////////////////////////////////////
+// Array.prototype polyfills
+///////////////////////////////////////////////////////////////////////////////
 
 // Polyfill copied from:
 // developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/every
@@ -488,7 +500,12 @@ Object.defineProperty(Array.prototype, 'toLocaleString',
   }
 });
 
-// Add a polyfill to handle replace's second argument being a function.
+///////////////////////////////////////////////////////////////////////////////
+// String.prototype polyfills
+///////////////////////////////////////////////////////////////////////////////
+
+// Polyfill to handle String.prototype.replace's second argument being
+// a function.
 Object.defineProperty(String.prototype, 'replace',
                       {configurable: true, writable: true, value:
   function(substr, newSubstr) {
