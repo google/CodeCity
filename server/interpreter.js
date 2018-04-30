@@ -2006,6 +2006,15 @@ Interpreter.prototype.initThread_ = function() {
  * @private
  */
 Interpreter.prototype.initPerms_ = function() {
+  // Create object, never available to userland, to be used to
+  // rpresent the permissions of "a generic user" when such a thing is
+  // needed (e.g., for internal toString implementations, which have
+  // no information about caller perms but need to access properties
+  // on the object - something which can't be done with the null
+  // permissions).
+  var anybody = new this.Object(null, this.OBJECT);
+  this.ANYBODY = /** @type {!Interpreter.Owner} */ (anybody);
+
   new this.NativeFunction({
     id: 'perms', length: 0,
     /** @type {!Interpreter.NativeCallImpl} */
