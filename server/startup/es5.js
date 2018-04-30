@@ -111,7 +111,7 @@ Object.defineProperty(Object, 'defineProperty', {enumerable: false});
      ['toString', 'apply', 'call']],
     [Array, 'Array',
      ['isArray'],
-     ['toString', 'pop', 'push', 'shift', 'unshift', 'reverse', 'splice', 'slice', 'join', 'concat', 'indexOf', 'lastIndexOf']],
+     ['toString', 'pop', 'push', 'shift', 'unshift', 'reverse', 'splice', 'slice', 'concat', 'indexOf', 'lastIndexOf']],
     [String, 'String',
      ['fromCharCode'],
      ['trim', 'toLowerCase', 'toUpperCase', 'toLocaleLowerCase', 'toLocaleUpperCase', 'charAt', 'charCodeAt', 'substring', 'slice', 'substr', 'indexOf', 'lastIndexOf', 'concat', 'localeCompare', 'split', 'match', 'search', 'replace']],
@@ -382,6 +382,46 @@ Object.defineProperty(Array.prototype, 'forEach',
     }
   }
 });
+
+(function() {
+  // For cycle detection in array to string and error conversion; see
+  // spec bug github.com/tc39/ecma262/issues/289.
+  // BUG(cpcallen): This should be per-thread.
+  var visited = [];
+
+  Object.defineProperty(Array.prototype, 'join', {
+    configurable: true, writable: true,
+    value: function(separator) {
+      var isObj = (typeof this === 'object' || typeof this === 'function') &&
+          this !== null;
+      if (isObj) {
+        if (visited.indexOf(this) !== -1) {
+          return '';
+        }
+        visited.push(this);
+      }
+      try {
+        // TODO(cpcallen): setPerms(callerPerms());
+        var len = this.length >>> 0;
+        var sep = (separator === undefined) ? ',' : String(separator);
+        if (len === 0) {
+          return '';
+        }
+        var r = '';
+        for (var k = 0; k < len; k++) {
+          if (k > 0) r += sep;
+          var element = this[k];
+          if (element !== undefined && element !== null) {
+            r += String(element);
+          }
+        }
+        return r;
+      } finally {
+        if (isObj) visited.pop();
+      }
+    }
+  });
+})();
 
 // Polyfill copied from:
 // developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/map

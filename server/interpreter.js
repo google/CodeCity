@@ -1037,9 +1037,6 @@ Interpreter.prototype.initArray_ = function() {
     }
   });
 
-  var intrp = this;
-  var wrapper;
-
   // Static methods on Array.
   new this.NativeFunction({
     id: 'Array.isArray', length: 1,
@@ -1404,32 +1401,6 @@ Interpreter.prototype.initArray_ = function() {
       return len + argCount;
     }
   });
-
-  wrapper = function(separator) {
-    var isArray = (this instanceof intrp.Array);
-    if (isArray) {
-      var cycles = intrp.toStringCycles_;
-      if (cycles.indexOf(this) !== -1) {
-        return '';
-      }
-      cycles[cycles.length] = this;
-    }
-    try {
-      var text = [];
-      for (var i = 0; i < this.properties.length; i++) {
-        var value = this.properties[i];
-        if (value === null || value === undefined) {
-          text[i] = '';
-        } else {
-          text[i] = String(value);
-        }
-      }
-    } finally {
-      if (isArray) cycles.pop();
-    }
-    return text.join(separator);
-  };
-  this.createNativeFunction('Array.prototype.join', wrapper, false);
 };
 
 /**
