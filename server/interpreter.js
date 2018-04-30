@@ -4113,22 +4113,24 @@ Interpreter.prototype.installTypes = function() {
    * @override
    */
   intrp.Array.prototype.toString = function() {
-    if (!(this instanceof intrp.Object)) {
-      // TODO(cpcallen): this is supposed to do a ToObject.  Fake it
-      // for now using native Array.prototype.toString.  Need to
-      // verify whether this is good enough.
-      return Array.prototype.toString.apply(/** @type {?} */(this));
-    }
+    // BUG(cpcallen): toString should access properties on this with
+    // the caller's permissions - but at present there is no way to
+    // determine who it was called by, so use intrp.ANYBODY instead.
     var cycles = intrp.toStringCycles_;
+    if (cycles.indexOf(this) !== -1) {
+      return '';
+    }
     cycles[cycles.length] = this;
     try {
       var strs = [];
-      // BUG(cpcallen): Array.prototype.toString should be generic,
-      // but here we depend on .length.
+      var len = this.get('length', intrp.ANYBODY);
       for (var i = 0; i < this.properties.length; i++) {
-        var value = this.properties[i];
-        strs[i] = (value instanceof intrp.Object &&
-            cycles.indexOf(value) !== -1) ? '...' : value;
+        var value = this.get(String(i), intrp.ANYBODY);
+        if (value === null || value === undefined) {
+          strs[i] = '';
+        } else {
+          strs[i] = String(value);
+        }
       }
     } finally {
       cycles.pop();
