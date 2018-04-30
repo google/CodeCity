@@ -1444,12 +1444,52 @@ Interpreter.prototype.initString_ = function() {
   this.builtins_['String.prototype'] = this.STRING;
   this.STRING.class = 'String';
 
-  // String constructor.
+  // String constructor.  ES6 §21.1.1.1.
   new this.NativeFunction({
     id: 'String', length: 1,
     /** @type {!Interpreter.NativeCallImpl} */
     call: function(intrp, thread, state, thisVal, args) {
-      return String(args[0]);
+      // We don't handle symbols, so String(x) should just return
+      // ToString(x) (ES6 §7.1.12) if x is primitive, or
+      // ToString(ToPrimitive(x, hint String)) if not.  Note that
+      // ToPrimitive (ES6 §7.1.1) is guaranteed to return a primitive
+      // or throw.
+      var value = args[0];
+      var perms = state.scope.perms;
+      if (!(value instanceof intrp.Object)) {
+        return String(value);
+      }
+      var step = Number(state.info_.funcState) || 0;
+      if (step > 0 && !(state.value instanceof intrp.Object)) {
+        // Call of .toString or .valueOf by previous visit returned a
+        // primitive.  Convert to string and return.
+        return String(state.value);
+      }
+      switch(step) {
+        case 0:  // Try calling toString.
+          var method = value.get('toString', perms);
+          if (method instanceof intrp.Function) {
+            thread.stateStack_[thread.stateStack_.length] =
+                Interpreter.State.newForCall(method, value, [], perms);
+            state.info_.funcState = 1;
+            return FunctionResult.CallAgain;
+          }
+          // FALL THROUGH
+        case 1:  // toString call complete (or skipped); try calling valueOf.
+          method = value.get('valueOf', perms);
+          if (method instanceof intrp.Function) {
+            thread.stateStack_[thread.stateStack_.length] =
+                Interpreter.State.newForCall(method, value, [], perms);
+            state.info_.funcState = 2;
+            return FunctionResult.CallAgain;
+          }
+          // FALL THROUGH
+        case 2:  // valueOf complete (or skipped); throw TypeError.
+          throw new intrp.Error(perms, intrp.TYPE_ERROR,
+             'Cannot convert object to primitive value');
+        default:
+          throw Error('Invalid funcStep in String??');
+      }
     }
   });
 
@@ -3889,7 +3929,7 @@ Interpreter.prototype.installTypes = function() {
    */
   intrp.UserFunction.prototype.construct = function(
       intrp, thread, state, args) {
-    if (!state.info_.funcState) {
+    if (!state.info_.funcState) {  // First visit.
       if (this.owner === null) {
         throw new intrp.Error(state.scope.perms, intrp.PERM_ERROR,
             'Functions with null owner are not constructable');
@@ -3905,7 +3945,7 @@ Interpreter.prototype.installTypes = function() {
       state.info_.funcState = new intrp.Object(state.scope.perms, proto);
       this.call(intrp, thread, state, state.info_.funcState, args);
       return FunctionResult.CallAgain;
-    } else {
+    } else {  // Construction done.  Check result.
       // Per ES5.1 §13.2.2 steps 9,10: if constructor returns
       // primitive, return constructed object instead.
       if (!(state.value instanceof intrp.Object)) {
