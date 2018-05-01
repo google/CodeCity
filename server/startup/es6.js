@@ -87,46 +87,46 @@ var WeakMap = new 'WeakMap';
 // developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/find
 Object.defineProperty(Array.prototype, 'find',
     {configurable: true, writable: true, value:
-  function(callback/*, thisArg*/) {
-    if (this === null || this === undefined || typeof callback !== 'function') {
-      throw new TypeError;
-    }
-    var o = Object(this);
-    var len = o.length >>> 0;
-    var k = 0;
-    var thisArg = arguments[1];
-    while (k < len) {
-      var kValue = o[k];
-      if (callback.call(thisArg, kValue, k, o)) {
-        return kValue;
-      }
-      k++;
-    }
-    return undefined;
+function(callback/*, thisArg*/) {
+  if (this === null || this === undefined || typeof callback !== 'function') {
+    throw new TypeError;
   }
+  var o = Object(this);
+  var len = o.length >>> 0;
+  var k = 0;
+  var thisArg = arguments[1];
+  while (k < len) {
+    var kValue = o[k];
+    if (callback.call(thisArg, kValue, k, o)) {
+      return kValue;
+    }
+    k++;
+  }
+  return undefined;
+}
 });
 
 // Polyfill copied from:
 // developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/findIndex
 Object.defineProperty(Array.prototype, 'findIndex',
     {configurable: true, writable: true, value:
-  function(callback/*, thisArg*/) {
-    if (this === null || this === undefined || typeof callback !== 'function') {
-      throw new TypeError;
-    }
-    var o = Object(this);
-    var len = o.length >>> 0;
-    var k = 0;
-    var thisArg = arguments[1];
-    while (k < len) {
-      var kValue = o[k];
-      if (callback.call(thisArg, kValue, k, o)) {
-        return k;
-      }
-      k++;
-    }
-    return -1;
+function(callback/*, thisArg*/) {
+  if (this === null || this === undefined || typeof callback !== 'function') {
+    throw new TypeError;
   }
+  var o = Object(this);
+  var len = o.length >>> 0;
+  var k = 0;
+  var thisArg = arguments[1];
+  while (k < len) {
+    var kValue = o[k];
+    if (callback.call(thisArg, kValue, k, o)) {
+      return k;
+    }
+    k++;
+  }
+  return -1;
+}
 });
 
 (function() {
