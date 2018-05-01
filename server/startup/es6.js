@@ -86,3 +86,10 @@ Object.defineProperty(Number, 'EPSILON',
      enumerable: false,
      writable: false,
      value: Math.pow(2, -52)});
+
+Object.defineProperty(Number, 'MAX_SAFE_INTEGER',
+    {configurable: false,
+     enumerable: false,
+     writable: false,
+     // Fortunately 2**53 is also safe as long as you dont' increment it!:
+     value: Math.pow(2, 53) - 1 });  

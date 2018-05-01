@@ -196,6 +196,15 @@ tests.NumberIsSafeInteger = function() {
   console.assert(Number.isSafeInteger(3.0), 'Number.isSafeInteger 3.0');
 };
 
+tests.NumberMaxSafeInteger = function() {
+  console.assert(Number.MAX_SAFE_INTEGER + 1 === Math.pow(2, 53),
+      'Number.MAX_SAFE_INTEGER');
+  console.assert(Number.isSafeInteger(Number.MAX_SAFE_INTEGER),
+      'Number.isSafeInteger(Number.MAX_SAFE_INTEGER);');
+  console.assert(!Number.isSafeInteger(Number.MAX_SAFE_INTEGER + 1),
+      'Number.isSafeInteger(Number.MAX_SAFE_INTEGER + 1);');
+};
+
 tests.MathSign = function() {
   console.assert(Math.sign(3) === 1, 'Math.sign 3');
   console.assert(Math.sign(-3) === -1, 'Math.sign -3');

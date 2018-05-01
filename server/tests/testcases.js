@@ -1956,6 +1956,13 @@ module.exports = [
     `,
     expected: 'pass' },
 
+  { name: 'Number.MAX_SAFE_INTEGER', src: `
+    Number.MAX_SAFE_INTEGER + 1 === Math.pow(2, 53) &&
+        Number.isSafeInteger(Number.MAX_SAFE_INTEGER) &&
+        !Number.isSafeInteger(Number.MAX_SAFE_INTEGER + 1);
+    `,
+    expected: true },
+
   /////////////////////////////////////////////////////////////////////////////
   // String and String.prototype
 
