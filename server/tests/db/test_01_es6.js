@@ -109,6 +109,35 @@ tests.ObjectIs = function() {
 };
 
 ///////////////////////////////////////////////////////////////////////////////
+// Array and Array.prototype
+
+tests.ArrayFind = function() {
+  var inventory = [
+      {name: 'apples', quantity: 2},
+      {name: 'bananas', quantity: 0},
+      {name: 'cherries', quantity: 5}
+  ];
+  function isCherries(fruit) {
+    return fruit.name === 'cherries';
+  }
+  console.assert([].find(isCherries) === undefined, 'Array.find 0');
+  console.assert(inventory.find(isCherries) === inventory[2], 'Array.find 1');
+};
+
+tests.ArrayFindIndex = function() {
+  var inventory = [
+      {name: 'apples', quantity: 2},
+      {name: 'bananas', quantity: 0},
+      {name: 'cherries', quantity: 5}
+  ];
+  function isCherries(fruit) {
+    return fruit.name === 'cherries';
+  }
+  console.assert([].findIndex(isCherries) === -1, 'Array.findIndex 0');
+  console.assert(inventory.findIndex(isCherries) === 2, 'Array.findIndex 1');
+};
+
+///////////////////////////////////////////////////////////////////////////////
 // String and String.prototype
 
 tests.StringBooleanSearchFunctions = function() {
