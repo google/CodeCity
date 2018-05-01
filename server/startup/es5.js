@@ -386,7 +386,6 @@ Object.defineProperty(Array.prototype, 'forEach',
 (function() {
   // For cycle detection in array to string and error conversion; see
   // spec bug github.com/tc39/ecma262/issues/289.
-  // BUG(cpcallen): This should be per-thread.
   var visited = [];
 
   Object.defineProperty(Array.prototype, 'join', {
