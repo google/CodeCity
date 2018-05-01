@@ -328,15 +328,16 @@ Object.defineProperty(Function.prototype, 'bind',
 // developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/every
 Object.defineProperty(Array.prototype, 'every',
     {configurable: true, writable: true, value:
-  function(callbackfn, thisArg) {
-    if (this == null || typeof callbackfn !== 'function') throw new TypeError;
-    var T, k;
-    var O = Object(this);
-    var len = O.length >>> 0;
-    if (arguments.length > 1) T = thisArg;
-    k = 0;
+  function(callback/*, thisArg*/) {
+    if (this === null || this === undefined || typeof callback !== 'function') {
+      throw new TypeError;
+    }
+    var o = Object(this);
+    var len = o.length >>> 0;
+    var k = 0;
+    var thisArg = arguments[1];
     while (k < len) {
-      if (k in O && !callbackfn.call(T, O[k], k, O)) return false;
+      if (k in o && !callback.call(thisArg, o[k], k, o)) return false;
       k++;
     }
     return true;
@@ -347,18 +348,18 @@ Object.defineProperty(Array.prototype, 'every',
 // developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/filter
 Object.defineProperty(Array.prototype, 'filter',
     {configurable: true, writable: true, value:
-  function(fun/*, thisArg*/) {
-    if (this === void 0 || this === null || typeof fun !== 'function') {
+  function(callback/*, thisArg*/) {
+    if (this === null || this === undefined || typeof callback !== 'function') {
       throw new TypeError;
     }
-    var t = Object(this);
-    var len = t.length >>> 0;
+    var o = Object(this);
+    var len = o.length >>> 0;
     var res = [];
-    var thisArg = arguments.length >= 2 ? arguments[1] : void 0;
+    var thisArg = arguments[1];
     for (var i = 0; i < len; i++) {
-      if (i in t) {
-        var val = t[i];
-        if (fun.call(thisArg, val, i, t)) res.push(val);
+      if (i in o) {
+        var val = o[i];
+        if (callback.call(thisArg, val, i, o)) res.push(val);
       }
     }
     return res;
@@ -369,15 +370,16 @@ Object.defineProperty(Array.prototype, 'filter',
 // developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/forEach
 Object.defineProperty(Array.prototype, 'forEach',
     {configurable: true, writable: true, value:
-  function(callback, thisArg) {
-    if (this == null || typeof callback !== 'function') throw new TypeError;
-    var T, k;
-    var O = Object(this);
-    var len = O.length >>> 0;
-    if (arguments.length > 1) T = thisArg;
-    k = 0;
+  function(callback/*, thisArg*/) {
+    if (this === null || this === undefined || typeof callback !== 'function') {
+      throw new TypeError;
+    }
+    var o = Object(this);
+    var len = o.length >>> 0;
+    var k = 0;
+    var thisArg = arguments[1];
     while (k < len) {
-      if (k in O) callback.call(T, O[k], k, O);
+      if (k in o) callback.call(thisArg, o[k], k, o);
       k++;
     }
   }
@@ -433,16 +435,17 @@ Object.defineProperty(Array.prototype, 'forEach',
 // developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/map
 Object.defineProperty(Array.prototype, 'map',
     {configurable: true, writable: true, value:
-  function(callback, thisArg) {
-    if (this == null || typeof callback !== 'function') new TypeError;
-    var T, A, k;
-    var O = Object(this);
-    var len = O.length >>> 0;
-    if (arguments.length > 1) T = thisArg;
-    A = new Array(len);
-    k = 0;
+  function(callback/*, thisArg*/) {
+    if (this === null || this === undefined || typeof callback !== 'function') {
+      throw new TypeError;
+    }
+    var o = Object(this);
+    var len = o.length >>> 0;
+    var A = new Array(len);
+    var k = 0;
+    var thisArg = arguments[1];
     while (k < len) {
-      if (k in O) A[k] = callback.call(T, O[k], k, O);
+      if (k in o) A[k] = callback.call(thisArg, o[k], k, o);
       k++;
     }
     return A;
@@ -454,19 +457,24 @@ Object.defineProperty(Array.prototype, 'map',
 Object.defineProperty(Array.prototype, 'reduce',
     {configurable: true, writable: true, value:
   function(callback /*, initialValue*/) {
-    if (this == null || typeof callback !== 'function') throw new TypeError;
-    var t = Object(this), len = t.length >>> 0, k = 0, value;
-    if (arguments.length == 2) {
+    if (this === null || this === undefined || typeof callback !== 'function') {
+      throw new TypeError;
+    }
+    var o = Object(this);
+    var len = o.length >>> 0;
+    var k = 0;
+    var value;
+    if (arguments.length > 1) {
       value = arguments[1];
     } else {
-      while (k < len && !(k in t)) k++;
+      while (k < len && !(k in o)) k++;
       if (k >= len) {
         throw new TypeError('Reduce of empty array with no initial value');
       }
-      value = t[k++];
+      value = o[k++];
     }
     for (; k < len; k++) {
-      if (k in t) value = callback(value, t[k], k, t);
+      if (k in o) value = callback(value, o[k], k, o);
     }
     return value;
   }
@@ -477,20 +485,24 @@ Object.defineProperty(Array.prototype, 'reduce',
 Object.defineProperty(Array.prototype, 'reduceRight',
     {configurable: true, writable: true, value:
   function(callback /*, initialValue*/) {
-    if (null === this || 'undefined' === typeof this ||
-        'function' !== typeof callback) throw new TypeError;
-    var t = Object(this), len = t.length >>> 0, k = len - 1, value;
-    if (arguments.length >= 2) {
+    if (this === null || this === undefined || typeof callback !== 'function') {
+      throw new TypeError;
+    }
+    var o = Object(this);
+    var len = o.length >>> 0;
+    var k = len - 1;
+    var value;
+    if (arguments.length > 1) {
       value = arguments[1];
     } else {
-      while (k >= 0 && !(k in t)) k--;
+      while (k >= 0 && !(k in o)) k--;
       if (k < 0) {
         throw new TypeError('Reduce of empty array with no initial value');
       }
-      value = t[k--];
+      value = o[k--];
     }
     for (; k >= 0; k--) {
-      if (k in t) value = callback(value, t[k], k, t);
+      if (k in o) value = callback(value, o[k], k, o);
     }
     return value;
   }
@@ -500,13 +512,15 @@ Object.defineProperty(Array.prototype, 'reduceRight',
 // developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/some
 Object.defineProperty(Array.prototype, 'some',
     {configurable: true, writable: true, value:
-  function(fun/*, thisArg*/) {
-    if (this == null || typeof fun !== 'function') throw new TypeError;
-    var t = Object(this);
-    var len = t.length >>> 0;
-    var thisArg = arguments.length >= 2 ? arguments[1] : void 0;
+  function(callback/*, thisArg*/) {
+    if (this === null || this === undefined || typeof callback !== 'function') {
+      throw new TypeError;
+    }
+    var o = Object(this);
+    var len = o.length >>> 0;
+    var thisArg = arguments[1];
     for (var i = 0; i < len; i++) {
-      if (i in t && fun.call(thisArg, t[i], i, t)) {
+      if (i in o && callback.call(thisArg, o[i], i, o)) {
         return true;
       }
     }
