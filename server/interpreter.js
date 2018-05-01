@@ -1871,6 +1871,11 @@ Interpreter.prototype.initWeakMap_ = function() {
   // WeakMap constructor.
   new this.NativeFunction({
     id: 'WeakMap', length: 0,  // N.B. length is correct; arg is optional!
+    /** @type {!Interpreter.NativeCallImpl} */
+    call: function(intrp, thread, state, thisVal, args) {
+      throw new intrp.Error(state.scope.perms, intrp.TYPE_ERROR,
+         "Constructor WeakMap requires 'new'");
+    },
     /** @type {!Interpreter.NativeConstructImpl} */
     construct: function(intrp, thread, state, args) {
       // TODO(cpcallen): Support interator argument to populate map.
@@ -1978,7 +1983,7 @@ Interpreter.prototype.initThread_ = function() {
           perms, func, thisArg, argList, intrp.now() + delay);
     }
   });
-    
+
   new this.NativeFunction({
     id: 'Thread.current', length: 0,
     /** @type {!Interpreter.NativeCallImpl} */
@@ -3178,11 +3183,12 @@ Interpreter.prototype.Function.prototype.call = function(
 };
 
 /**
- * @param {!Interpreter} intrp The interpreter.
- * @param {!Interpreter.Thread} thread The current thread.
- * @param {!Interpreter.State} state The current state.
- * @param {!Array<Interpreter.Value>} args The arguments to the call.
- * @return {Interpreter.Value|!FunctionResult}
+ * @type {?function(this: Interpreter.prototype.Object,
+ *                  !Interpreter,
+ *                  !Interpreter.Thread,
+ *                  !Interpreter.State,
+ *                  !Array<Interpreter.Value>)
+ *                : (Interpreter.Value|!FunctionResult)}
  */
 Interpreter.prototype.Function.prototype.construct = function(
     intrp, thread, state, args) {
@@ -3763,7 +3769,9 @@ Interpreter.prototype.installTypes = function() {
 
   /**
    * The [[Call]] internal method defined by §13.2.1 of the ES5.1 spec.
-   * Generic functions (neither native nor user) can't be called.
+   *
+   * Abstract functions (neither native nor user) should not be
+   * callable, so throw (internal) error if that ever happens.
    * @param {!Interpreter} intrp The interpreter.
    * @param {!Interpreter.Thread} thread The current thread.
    * @param {!Interpreter.State} state The current state.
@@ -3774,25 +3782,19 @@ Interpreter.prototype.installTypes = function() {
    */
   intrp.Function.prototype.call = function(
       intrp, thread, state, thisVal, args) {
-    throw new intrp.Error(state.scope.perms, intrp.TYPE_ERROR,
-        "Class constructor " + this + " cannot be invoked without 'new'");
+    throw Error('Non-callable function called??');
   };
 
   /**
    * The [[Construct]] internal method defined by §13.2.2 of the ES5.1
    * spec.
-   * Generic functions (neither native nor user) can't be constructed.
-   * @param {!Interpreter} intrp The interpreter.
-   * @param {!Interpreter.Thread} thread The current thread.
-   * @param {!Interpreter.State} state The current state.
-   * @param {!Array<Interpreter.Value>} args The arguments to the call.
-   * @return {Interpreter.Value}
+   *
+   * Abstract functions (neither native nor user) can't be constructed
+   * at all, and other functions default to not being constructable,
+   * so .construct is null by default.
+   * @override
    */
-  intrp.Function.prototype.construct = function(
-      intrp, thread, state, args) {
-    throw new intrp.Error(state.scope.perms, intrp.TYPE_ERROR,
-        this + ' is not a constructor');
-  };
+  intrp.Function.prototype.construct = null;
 
   /**
    * Class for a user-defined function.
@@ -3894,6 +3896,11 @@ Interpreter.prototype.installTypes = function() {
    * The [[Construct]] internal method defined by §13.2.2 of the ES5.1
    * spec.
    * @override
+   * @param {!Interpreter} intrp The interpreter.
+   * @param {!Interpreter.Thread} thread The current thread.
+   * @param {!Interpreter.State} state The current state.
+   * @param {!Array<Interpreter.Value>} args The arguments to the call.
+   * @return {Interpreter.Value|!FunctionResult}
    */
   intrp.UserFunction.prototype.construct = function(
       intrp, thread, state, args) {
@@ -4095,13 +4102,6 @@ Interpreter.prototype.installTypes = function() {
         /** @type {?} */ (this), intrp, thread, state, thisVal, args);
     return FunctionResult.AwaitValue;
   };
-
-  /**
-   * Async functions not constructable; use generic construct which
-   * always throws.
-   * @override */
-  intrp.OldAsyncFunction.prototype.construct =
-      intrp.Function.prototype.construct;
 
   /**
    * Class for an array
@@ -5050,10 +5050,15 @@ stepFuncs_['CallExpression'] = function (thread, stack, state, node) {
           func + ' is not a function');
     }
     var args = state.info_.arguments;
-    var r =
-        state.node['type'] === 'NewExpression' ?
-        func.construct(this, thread, state, args) :
-        func.call(this, thread, state, state.info_.this, args);
+    if (state.node['type'] === 'NewExpression') {
+      if (!func.construct) {
+        throw new this.Error(state.scope.perms, this.TYPE_ERROR,
+            func + ' is not a constructor');
+      }
+      var r = func.construct(this, thread, state, args);
+    } else {
+      r = func.call(this, thread, state, state.info_.this, args);
+    }
     if (r instanceof FunctionResult) {
       if (r === FunctionResult.CallAgain) {
         state.step_ = 3;  // N.B: SEE NOTE 1 ABOVE!
