@@ -2180,7 +2180,11 @@ Interpreter.prototype.createNativeFunction = function(
   if (!nativeFunc.id) {
     nativeFunc.id = name;
   }
-  var func = new this.OldNativeFunction(nativeFunc, legalConstructor);
+  if (legalConstructor) {
+    var func = new this.OldConstructorFunction(nativeFunc);
+  } else {
+    func = new this.OldNativeFunction(nativeFunc);
+  }
   func.setName(name.replace(/^.*\./, ''));
   if (this.builtins_[name]) {
     throw ReferenceError('Builtin "' + name + '" already exists.');
@@ -3227,16 +3231,12 @@ Interpreter.prototype.NativeFunction = function(options) {
  * @constructor
  * @extends {Interpreter.prototype.NativeFunction}
  * @param {!Function} impl
- * @param {boolean} legalConstructor
  * @param {?Interpreter.Owner=} owner
  * @param {?Interpreter.prototype.Object=} proto
  */
-Interpreter.prototype.OldNativeFunction =
-    function(impl, legalConstructor, owner, proto) {
+Interpreter.prototype.OldNativeFunction = function(impl, owner, proto) {
   /** @type {!Function} */
   this.impl;
-  /** @type {boolean} */
-  this.illegalConstructor;
   throw Error('Inner class constructor not callable on prototype');
 };
 
@@ -3247,8 +3247,18 @@ Interpreter.prototype.OldNativeFunction =
  * @param {?Interpreter.Owner=} owner
  * @param {?Interpreter.prototype.Object=} proto
  */
-Interpreter.prototype.OldAsyncFunction =
-    function(impl, owner, proto) {
+Interpreter.prototype.OldConstructorFunction = function(impl, owner, proto) {
+  throw Error('Inner class constructor not callable on prototype');
+};
+
+/**
+ * @constructor
+ * @extends {Interpreter.prototype.OldNativeFunction}
+ * @param {!Function} impl
+ * @param {?Interpreter.Owner=} owner
+ * @param {?Interpreter.prototype.Object=} proto
+ */
+Interpreter.prototype.OldAsyncFunction = function(impl, owner, proto) {
   throw Error('Inner class constructor not callable on prototype');
 };
 
@@ -3989,23 +3999,18 @@ Interpreter.prototype.installTypes = function() {
   };
 
   /**
-   * Class for an old native function.
+   * Class for an old native function.  Not constructible.
    * @constructor
    * @extends {Interpreter.prototype.OldNativeFunction}
    * @param {!Function} impl Old-style native function implementation
-   * @param {boolean} legalConstructor True if the function can be used as a
-   *     constructor (e.g. Array), false if not (e.g. escape).
    * @param {?Interpreter.Owner=} owner Owner object or null (default: root).
    * @param {?Interpreter.prototype.Object=} proto Prototype object or null.
    */
-  intrp.OldNativeFunction = function(impl, legalConstructor, owner, proto) {
-    if (!impl) {  // Deserializing
-      return;
-    }
+  intrp.OldNativeFunction = function(impl, owner, proto) {
+    if (!impl) return;  // Deserializing
     intrp.NativeFunction.call(/** @type {?} */ (this),
         {owner: owner, proto: proto, length: impl.length});
     this.impl = impl;
-    this.illegalConstructor = !legalConstructor;
   };
 
   intrp.OldNativeFunction.prototype =
@@ -4022,14 +4027,27 @@ Interpreter.prototype.installTypes = function() {
     return this.impl.apply(thisVal, args);
   };
 
+  /**
+   * Class for an old native function that can be used as a constructor.
+   * @constructor
+   * @extends {Interpreter.prototype.OldConstructorFunction}
+   * @param {!Function} impl Old-style native function implementation
+   * @param {?Interpreter.Owner=} owner Owner object or null (default: root).
+   * @param {?Interpreter.prototype.Object=} proto Prototype object or null.
+   */
+  intrp.OldConstructorFunction = function(impl, owner, proto) {
+    if (!impl) return;  // Deserializing
+    intrp.OldNativeFunction.call(/** @type {?} */ (this), impl, owner, proto);
+  };
+
+  intrp.OldConstructorFunction.prototype =
+      Object.create(intrp.OldNativeFunction.prototype);
+  intrp.OldConstructorFunction.prototype.constructor =
+      intrp.OldConstructorFunction;
+
   /** @override */
-  intrp.OldNativeFunction.prototype.construct = function(
+  intrp.OldConstructorFunction.prototype.construct = function(
       intrp, thread, state, args) {
-    if (this.illegalConstructor) {
-      // Pass to super, which will complain about non-callability:
-      intrp.Function.prototype.construct.call(
-          /** @type {?} */ (this), intrp, thread, state, args);
-    }
     if (this.owner === null) {
       throw new intrp.Error(state.scope.perms, intrp.PERM_ERROR,
           'Functions with null owner are not constructable');
@@ -4047,8 +4065,7 @@ Interpreter.prototype.installTypes = function() {
    */
   intrp.OldAsyncFunction = function(impl, owner, proto) {
     // BUG(cpcallen): This results in .length being +2 too large.
-    intrp.OldNativeFunction.call(
-        /** @type {?} */ (this), impl, false, owner, proto);
+    intrp.OldNativeFunction.call(/** @type {?} */ (this), impl, owner, proto);
   };
 
   intrp.OldAsyncFunction.prototype =
