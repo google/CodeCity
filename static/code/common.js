@@ -343,6 +343,7 @@ Code.Common.selectorToParts = function(text) {
  * Join a list of parts into a path selector.
  * E.g. [{type: 'id', value: '$'}, {type: '^'}, {type: 'id', value: 'foo'}] ->
  *   '$^.foo'
+ * Try to keep this code in sync with $.utils.selector
  * @param {!Array<!Object>} parts Array of parts.
  * @return {string} Selector string.
  */
@@ -371,4 +372,21 @@ Code.Common.partsToSelector = function(parts) {
     }
   }
   return text;
+};
+
+/**
+ * Turn a selector string into a valid code reference.
+ * E.g. "$.foo" -> "$.foo"
+ * E.g. "$^.foo" -> "$('$^.foo')"
+ * Join a list of parts into a valid code reference.
+ * Try to keep this code in sync with $.utils.selector
+ * @param {string} selector Selector string.
+ * @return {string} Code reference.
+ */
+Code.Common.selectorToReference = function(selector) {
+  var noStrings = selector.replace(/(["'])(?:[^\1\\]|\\.)*?\1/g, '');
+  if (/[\^]/.test(noStrings)) {
+    return "$('" + selector + "')";
+  }
+  return selector;
 };

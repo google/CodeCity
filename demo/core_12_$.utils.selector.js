@@ -112,3 +112,46 @@ $.utils.selector.partsToValue = function(parts) {
   }
   return obj;
 };
+
+$.utils.selector.partsToSelector = function(parts) {
+  // Join a list of parts into a path selector.
+  // E.g. [{type: 'id', value: '$'}, {type: '^'}, {type: 'id', value: 'foo'}] ->
+  //   '$^.foo'
+  // Try to keep this code in sync with /static/code/common.js
+  var text = '';
+  for (var i = 0; i < parts.length; i++) {
+    var part = parts[i];
+    if (part.type === 'id') {
+      var value = part.value;
+      if (/^[A-Z_$][0-9A-Z_$]*$/i.test(value)) {
+        if (i !== 0) {
+          text += '.';
+        }
+        text += value;
+      } else {
+        text += '[';
+        if (/^-?\d{1,15}$/.test(value)) {
+          text += value;
+        } else {
+          text += JSON.stringify(value);
+        }
+        text += ']';
+      }
+    } else if (part.type === '^') {
+      text += '^';
+    }
+  }
+  return text;
+};
+
+$.utils.selector.selectorToReference = function(selector) {
+  // Turn a selector string into a valid code reference.
+  // E.g. "$.foo" -> "$.foo"
+  // E.g. "$^.foo" -> "$('$^.foo')"
+  // Try to keep this code in sync with /static/code/common.js
+  var noStrings = selector.replace(/(["'])(?:[^\1\\]|\\.)*?\1/g, '');
+  if (/[\^]/.test(noStrings)) {
+    return "$('" + selector + "')";
+  }
+  return selector;
+};
