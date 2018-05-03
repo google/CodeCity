@@ -155,3 +155,47 @@ $.utils.selector.selectorToReference = function(selector) {
   }
   return selector;
 };
+
+$.utils.selector.setSelector = function(object, selector) {
+  // Register a selector as mapping to the specified object.
+  if (!object || (typeof object !== 'object' && typeof object !== 'function')) {
+    return;
+  }
+  // SECURITY: Does not validate that the selector maps to the object.
+  // Either add validation, or only allow trusted callers.
+  // HACK: This implementation is temporary, replace with WeakMap ASAP.
+  // Grossly inefficient and breaks garbage collection.
+  var map = $.utils.selector.objectMap_;
+  for (var i = 0; i < map.length; i++) {
+    if (map[i][0] === object) {
+      // Update existing selector.
+      // TODO: Either choose the shortest/most stable one,
+      // or store a list of the n best selectors.
+      var oldSelector = map[i][1];
+      if (selector.length < oldSelector.length) {
+        map[i][1] = selector;
+      }
+      return;
+    }
+  }
+  // Add new selector.
+  map.push([object, selector]);
+};
+
+$.utils.selector.getSelector = function(object) {
+  // Given an object, return a selector that defines that object.
+  // Returns undefined if no selector is known.
+  // HACK: This implementation is temporary, replace with WeakMap ASAP.
+  // Grossly inefficient and breaks garbage collection.
+  var map = $.utils.selector.objectMap_;
+  for (var i = 0; i < map.length; i++) {
+    if (map[i][0] === object) {
+      return map[i][1];
+    }
+  }
+  return undefined;
+};
+
+// HACK: This implementation is temporary, replace with WeakMap ASAP.
+// Grossly inefficient and breaks garbage collection.
+$.utils.selector.objectMap_ = [];
