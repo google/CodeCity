@@ -420,6 +420,23 @@ $.user.eval = function($$$cmd) {
     var me = this;
     var here = this.location;
     $$$cmd = eval($$$cmd);
+    try {
+      // Attempt to print a source-legal representation.
+      $$$cmd = $.utils.code.valueToSource($$$cmd);
+    } catch (e) {
+      try {
+        // Maybe it's something JSON can deal with (like an array).
+        $$$cmd = JSON.stringify($$$cmd);
+      } catch (e) {
+        try {
+          // Maybe it's a recursive data structure.
+          $$$cmd = String($$$cmd);
+        } catch (e) {
+          // Maybe it's Object.create(null).
+          $$$cmd = '[Unprintable value]';
+        }
+      }
+    }
   } catch (e) {
     if (e instanceof Error) {
       $$$cmd = String(e.name);
@@ -433,18 +450,6 @@ $.user.eval = function($$$cmd) {
       $$$cmd = 'Unhandled exception: ' + String(e);
     }
   }
-  // Save the value without creating a new variable.
-  $.user.eval.value_ = $$$cmd;
-  try {
-    $$$cmd = JSON.stringify($$$cmd);
-  } catch (e) {
-    $$$cmd = undefined;
-  }
-  if ($$$cmd === undefined) {
-    // JSON.stringify either failed with an error or just returned undefined.
-    $$$cmd = String($.user.eval.value_);
-  }
-  delete $.user.eval.value_;
   user.narrate('⇒ ' + $$$cmd);
 };
 $.user.eval.verb = 'eval|;.*';

@@ -59,13 +59,9 @@ $.www.editor.load = function(obj, key) {
   /* Return string containing initial editor contents for editing
    * obj[key].
    */
-  // TODO(cpcallen): This should call toSource, once we have such a
-  // function.
   var pd = Object.getOwnPropertyDescriptor(obj, key);
-  var v = pd ? pd.value : undefined;
-  return (typeof v === 'string' ?
-      "'" + v.replace(/[\\']/g, '\$&') + "'" :
-      String(v));
+  var value = pd ? pd.value : undefined;
+  return $.utils.code.valueToSourceSafe(value);
 };
 
 $.www.editor.save = function(obj, key, src) {
