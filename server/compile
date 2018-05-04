@@ -1,6 +1,7 @@
 #!/bin/bash
 
 OPTIONS='-O ADVANCED_OPTIMIZATIONS --checks-only --assume_function_wrapper'
+OPTIONS+=' --module_resolution NODE'
 EXTERNS='--externs=externs.js'
 FILES=interpreter.js
 
