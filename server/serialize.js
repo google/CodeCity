@@ -24,6 +24,7 @@
 'use strict';
 
 var Interpreter = require('./interpreter');
+var IterableWeakMap = require('./iterable_weakmap');
 var net = require('net');
 
 var Serializer = {};
@@ -120,6 +121,9 @@ Serializer.deserialize = function(json, intrp) {
       case 'RegExp':
         obj = RegExp(jsonObj['source'], jsonObj['flags']);
         break;
+      case 'IterableWeakMap':
+        obj = new IterableWeakMap;
+        break;
       default:
         var protoRef;
         if (constructors[type]) {
@@ -136,7 +140,7 @@ Serializer.deserialize = function(json, intrp) {
   for (var i = 0; i < json.length; i++) {
     var jsonObj = json[i];
     var obj = objectList[i];
-    // Repopulate objects.
+    // Repopulate properties.
     var props = jsonObj['props'];
     if (props) {
       var nonConfigurable = jsonObj['nonConfigurable'] || [];
@@ -158,6 +162,17 @@ Serializer.deserialize = function(json, intrp) {
       if (data) {
         for (var j = 0; j < data.length; j++) {
           obj.add(decodeValue(data[j]));
+        }
+      }
+    }
+    // Repopulate maps.
+    if (obj instanceof IterableWeakMap) {
+      var entries = jsonObj['entries'];
+      if (entries) {
+        for (var j = 0; j < entries.length; j++) {
+          var key = decodeValue(entries[j][0]);
+          var value = decodeValue(entries[j][1]);
+          obj.set(key, value);
         }
       }
     }
@@ -264,7 +279,7 @@ Serializer.serialize = function(intrp) {
       case Set.prototype:
         jsonObj['type'] = 'Set';
         if (obj.size) {
-          jsonObj['data'] = Array.from(obj.values()).map(encodeValue);
+          jsonObj['data'] = Array.from(obj.values(), encodeValue);
         }
         continue;  // No need to index properties.
       case Date.prototype:
@@ -275,6 +290,16 @@ Serializer.serialize = function(intrp) {
         jsonObj['type'] = 'RegExp';
         jsonObj['source'] = obj.source;
         jsonObj['flags'] = obj.flags;
+        continue;  // No need to index properties.
+      case IterableWeakMap.prototype:
+        jsonObj['type'] = 'IterableWeakMap';
+        if (obj.size) {
+          jsonObj['entries'] = Array.from(obj, function(entry) {
+            var key = encodeValue(entry[0]);
+            var value = encodeValue(entry[1]);
+            return [key, value];
+          });
+        }
         continue;  // No need to index properties.
       default:
         var type = types.get(proto);
@@ -348,13 +373,32 @@ Serializer.objectHunt_ = function(node, objectList, excludeTypes, exclude) {
   }
   objectList.push(node);
   if (typeof node === 'object') {  // Recurse.
-    var names = Object.getOwnPropertyNames(node);
-    for (var i = 0; i < names.length; i++) {
-      var name = names[i];
-      if (!exclude || !exclude.includes(name)) {
-        // Don't pass exclude; it's only for top-level property keys.
-        Serializer.objectHunt_(node[names[i]], objectList, excludeTypes);
+    // Properties.
+    if (!(node instanceof Date) &&
+        !(node instanceof IterableWeakMap) &&
+        !(node instanceof RegExp) &&
+        !(node instanceof Set)) {
+      var names = Object.getOwnPropertyNames(node);
+      for (var i = 0; i < names.length; i++) {
+        var name = names[i];
+        if (!exclude || !exclude.includes(name)) {
+          // Don't pass exclude; it's only for top-level property keys.
+          Serializer.objectHunt_(node[names[i]], objectList, excludeTypes);
+        }
       }
+    }
+    // Set members.
+    if (node instanceof Set) {
+      node.forEach(function (value) {
+        Serializer.objectHunt_(value, objectList, excludeTypes);
+      });
+    }
+    // Map entries.
+    if (node instanceof IterableWeakMap) {
+      node.forEach(function (value, key) {
+        Serializer.objectHunt_(key, objectList, excludeTypes);
+        Serializer.objectHunt_(value, objectList, excludeTypes);
+      });
     }
   }
 };

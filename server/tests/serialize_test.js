@@ -287,6 +287,24 @@ exports.testRoundtripScopeRefAndPropIter = function(t) {
 };
 
 /**
+ * Run a round trip of serializing WeakMaps.
+ * @param {!T} t The test runner object.
+ */
+exports.testRoundtripWeakMap = function(t) {
+  runTest(t, 'testRoundtripWeakMap', `
+      var o1 = {};
+      var wm = new WeakMap;
+      var o2 = {};
+      wm.set(o1, 105);
+      wm.set(o2, 42);
+      var empty = new WeakMap;
+  `, '', `
+      (empty instanceof WeakMap) && (wm instanceof WeakMap) &&
+          wm.get(o1) - wm.get(o2);
+  `, 105 - 42);
+};
+
+/**
  * Run more detailed tests of the state of the post-rountrip interpreter.
  * @param {!T} t The test runner object.
  */
