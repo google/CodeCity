@@ -105,3 +105,44 @@ $.utils.code.valueToSourceSafe = function(value) {
     throw e;
   }
 };
+
+
+$.utils.code.getTempObj = function(id) {
+  // Find object temporarily stored with the given ID.
+  var tuple = $.utils.code.tempIds_[id];
+  if (tuple) {
+     tuple[1] = Date.now();
+     return tuple[0];
+  }
+  return undefined;
+}
+
+$.utils.code.storeTempObj = function(obj) {
+  // Find temporary ID for obj in this.tempIds_,
+  // adding it if it's not already there.
+  var objs = $.utils.code.tempIds_;
+  for (var id in objs) {
+    if (Object.is(objs[id][0], obj)) {
+      objs[id][1] = Date.now();
+      return key;
+    }
+  }
+  var id = String(Math.random()).substring(2);
+  objs[id] = [obj, Date.now()];
+  // Lazy call of cleanup.
+  setTimeout($.utils.code.cleanTempId, 1);
+  return id;
+};
+
+$.utils.code.tempIds_ = Object.create(null);
+
+$.utils.code.cleanTempId = function() {
+  // Cleanup IDs/objects that have not been accessed in an hour.
+  var ttl = Date.now() - 60 * 60 * 1000;
+  var objs = $.utils.code.tempIds_;
+  for (var id in objs) {
+    if (objs[id][1] < ttl) {
+      delete objs[id];
+    }
+  }
+};

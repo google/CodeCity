@@ -22,7 +22,7 @@
  * @author cpcallen@google.com (Christopher Allen)
  */
 
-$.www.editor = { objs: [] };
+$.www.editor = {};
 
 $.www.editor.edit = function(obj, name, key) {
   /* Return a (valid) URL for a web editing session editing obj[key],
@@ -31,7 +31,7 @@ $.www.editor.edit = function(obj, name, key) {
   if (typeof obj !== 'object' && typeof obj !== 'function') {
     $.utils.command.abort('Can only edit objects');
   }
-  var objId = this.objIdFor(obj);
+  var objId = $.utils.code.storeTempObj(obj);
   var url = '/editor?objId=' + objId;
   if (name) {
     url += '&name=' + encodeURIComponent(name);
@@ -40,19 +40,6 @@ $.www.editor.edit = function(obj, name, key) {
     url += '&key=' + encodeURIComponent(key);
   }
   return url;
-};
-
-$.www.editor.objIdFor = function(obj) {
-  /* Find index of obj in this.objs, adding it if it's not already there.
-   */
-  for (var i = 0; i < this.objs.length; i++) {
-    if (this.objs[i] === obj) {
-      return i;
-    }
-  }
-  var id = this.objs.length;
-  this.objs.push(obj);
-  return id;
 };
 
 $.www.editor.load = function(obj, key) {
@@ -96,10 +83,10 @@ $.www.editor.www.jssp = [
   '<%',
   'var params = request.parameters;',
   'var objId = params.objId;',
-  'var obj = $.www.editor.objs[params.objId];',
+  'var obj = $.utils.code.getTempObj(params.objId);',
   'if (!$.utils.isObject(obj)) {',
   '  // Bad edit URL.',
-  '  $.www[\'404\'](request, response);',
+  '  $.www[\'404\'].www(request, response);',
   '  return;',
   '}',
   'var key = params.key;',
