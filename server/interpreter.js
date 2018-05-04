@@ -24,6 +24,7 @@
 'use strict';
 
 var acorn = require('acorn');
+var IterableWeakMap = /** @type {?} */(require('./iterable_weakmap'));
 var net = require('net');
 
 // Create an Acorn plugin called 'alwaysStrict'.
@@ -3267,7 +3268,7 @@ Interpreter.prototype.Error.prototype.toString = function() {
  * @param {?Interpreter.prototype.Object=} proto
  */
 Interpreter.prototype.WeakMap = function(owner, proto) {
-  /** @type {!WeakMap} */
+  /** @type {!IterableWeakMap} */
   this.weakMap;
   throw Error('Inner class constructor not callable on prototype');
 };
@@ -4264,8 +4265,8 @@ Interpreter.prototype.installTypes = function() {
   intrp.WeakMap = function(owner, proto) {
     intrp.Object.call(/** @type {?} */ (this), owner,
         (proto === undefined ? intrp.WEAKMAP : proto));
-    /** @type {!WeakMap} */
-    this.weakMap = new WeakMap;
+    /** @type {!IterableWeakMap} */
+    this.weakMap = new IterableWeakMap;
   };
 
   intrp.WeakMap.prototype = Object.create(intrp.Object.prototype);
