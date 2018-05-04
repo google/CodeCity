@@ -29,7 +29,7 @@ $.www.editor.edit = function(obj, name, key) {
    * where obj might more commonly be known as name.
    */
   if (typeof obj !== 'object' && typeof obj !== 'function') {
-    throw TypeError('Can only edit objects');
+    $.utils.command.abort('Can only edit objects');
   }
   var objId = this.objIdFor(obj);
   var url = '/editor?objId=' + objId;
