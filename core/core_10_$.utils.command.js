@@ -179,6 +179,13 @@ $.utils.command.execute = function(cmdstr, user) {
   return false;
 };
 
+$.utils.command.abort = function(msg) {
+  if (typeof msg === 'string') {
+    throw msg;
+  }
+  throw TypeError('Aborts should have string messages.');
+};
+
 $.utils.match = function(str, context) {
   // Attempt to match a string with the environmental context.
   // Context can be anything (including null) but is normally a place or a user.

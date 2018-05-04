@@ -458,12 +458,7 @@ $.user.eval.prep = 'any';
 $.user.eval.iobj = 'any';
 
 $.user.edit = function(cmd) {
-  try {
-    var url = $.www.editor.edit(cmd.iobj, cmd.iobjstr, cmd.dobjstr);
-  } catch (e) {
-    user.narrate(e);
-    return;
-  }
+  var url = $.www.editor.edit(cmd.iobj, cmd.iobjstr, cmd.dobjstr);
 
   var iframe = {
     type: 'iframe',
@@ -551,8 +546,19 @@ $.user.quit.iobj = 'none';
 
 // Command parser.
 $.execute = function(command) {
-  if (!$.utils.command.execute(command, user)) {
-    user.narrate('Command not understood.');
+  try {
+    if (!$.utils.command.execute(command, user)) {
+      user.narrate('Command not understood.');
+    }
+  } catch (e) {
+    if (typeof e === 'string') {
+      // A thrown string (probably from $.utils.command.abort) should just be
+      // printed to the user.
+      user.narrate(e);
+    } else {
+      // A real error should be rethrown in full.
+      throw e;
+    }
   }
 };
 
