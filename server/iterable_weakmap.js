@@ -65,6 +65,12 @@ class Cell {
 
 /**
  * A WeakMap implementing the full Map interface, including iterability.
+ *
+ * BUG(cpcallen): This implementation causes layered collection of
+ * chained entries.  That is, if you have N entries in the
+ * IterableWeakMap, where key_i === value_i+1, but none of the keys
+ * are referenced elsewhere, it will take N garbage collections to
+ * completely empty the map.
  * @struct
  * @implements {Iterable<!Array<KEY|VALUE>>}
  * @template KEY, VALUE
