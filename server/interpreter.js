@@ -293,7 +293,8 @@ Interpreter.prototype.step = function() {
   var state = stack[stack.length - 1];
   var node = state.node;
   try {
-    var nextState = stepFuncs_[node['type']].call(this, stack, state, node);
+    var nextState =
+        stepFuncs_[node['type']].call(this, thread, stack, state, node);
   } catch (e) {
     if (e instanceof Error) {
       // Uh oh.  This is a real error in the interpreter.  Kill thread
@@ -344,7 +345,8 @@ Interpreter.prototype.run = function() {
       var state = stack[stack.length - 1];
       var node = state.node;
       try {
-        var nextState = stepFuncs_[node['type']].call(this, stack, state, node);
+        var nextState =
+            stepFuncs_[node['type']].call(this, thread, stack, state, node);
       } catch (e) {
         if (e instanceof Error) {
           // Uh oh.  This is a real error in the interpreter.  Kill
@@ -4689,9 +4691,10 @@ Descriptor.prototype.withValue = function(value) {
  *
  * TODO(cpcallen): It should be possible to declare individual
  * functions below using this typedef (instead of listing full type
- * details for each once.
+ * details for each once
  * https://github.com/google/closure-compiler/issues/2857 is fixed.
  * @typedef {function(this: Interpreter,
+ *                    !Interpreter.Thread,
  *                    !Array<!Interpreter.State>,
  *                    !Interpreter.State,
  *                    !Interpreter.Node)
@@ -4708,12 +4711,13 @@ var stepFuncs_ = {};
 
 /**
  * @this {!Interpreter}
+ * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
  * @return {!Interpreter.State|undefined}
  */
-stepFuncs_['ArrayExpression'] = function (stack, state, node) {
+stepFuncs_['ArrayExpression'] = function (thread, stack, state, node) {
   var n = state.n_;
   if (!state.tmp_) {  // Create Array object
     state.tmp_ = new this.Array(state.scope.perms);
@@ -4738,12 +4742,13 @@ stepFuncs_['ArrayExpression'] = function (stack, state, node) {
 
 /**
  * @this {!Interpreter}
+ * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
  * @return {!Interpreter.State|undefined}
  */
-stepFuncs_['AssignmentExpression'] = function (stack, state, node) {
+stepFuncs_['AssignmentExpression'] = function (thread, stack, state, node) {
   if (state.step_ === 0) {  // Get Reference to left.
     state.step_ = 1;
     // Get Reference for left subexpression.
@@ -4794,12 +4799,13 @@ Interpreter.CallInfo;
 /**
  * CallExpression AND NewExpression
  * @this {!Interpreter}
+ * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
  * @return {!Interpreter.State|undefined}
  */
-stepFuncs_['BinaryExpression'] = function (stack, state, node) {
+stepFuncs_['BinaryExpression'] = function (thread, stack, state, node) {
   if (state.step_ === 0) {  // Evaluate left.
     state.step_ = 1;
     return new Interpreter.State(node['left'], state.scope);
@@ -4856,12 +4862,13 @@ stepFuncs_['BinaryExpression'] = function (stack, state, node) {
 
 /**
  * @this {!Interpreter}
+ * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
  * @return {!Interpreter.State|undefined}
  */
-stepFuncs_['BlockStatement'] = function (stack, state, node) {
+stepFuncs_['BlockStatement'] = function (thread, stack, state, node) {
   var n = state.n_;
   var /** ?Interpreter.Node */ statement = node['body'][n];
   if (statement) {
@@ -4873,14 +4880,13 @@ stepFuncs_['BlockStatement'] = function (stack, state, node) {
 
 /**
  * @this {!Interpreter}
+ * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
  * @return {!Interpreter.State|undefined}
  */
-stepFuncs_['BreakStatement'] = function (stack, state, node) {
-  // TODO(cpcallen): thread should be a param, or something.
-  var thread = this.thread;
+stepFuncs_['BreakStatement'] = function (thread, stack, state, node) {
   if (!thread) throw Error('No thread in BreakStatement??');
   this.unwind_(thread, Interpreter.CompletionType.BREAK, undefined,
       node['label'] ? node['label']['name'] : undefined
@@ -4890,12 +4896,13 @@ stepFuncs_['BreakStatement'] = function (stack, state, node) {
 /**
  * ConditionalExpression AND IfStatement
  * @this {!Interpreter}
+ * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
  * @return {!Interpreter.State|undefined}
  */
-stepFuncs_['CallExpression'] = function (stack, state, node) {
+stepFuncs_['CallExpression'] = function (thread, stack, state, node) {
   /* NOTE 1: If you edit any of the step_ values in this function, be
    * sure to also update the following functions to match!:
    *
@@ -4974,17 +4981,11 @@ stepFuncs_['CallExpression'] = function (stack, state, node) {
       throw new this.Error(state.scope.perms, this.TYPE_ERROR,
           func + ' is not a function');
     }
-    // TODO(cpcallen): this is here just to satisfy type checking of
-    // args to .call and .construct.  Perhaps have (non-null) thread
-    // arg to step functions?
-    if (this.thread === null) {
-      throw TypeError('No current thread??');
-    }
     var args = state.info_.arguments;
     var r =
         state.node['type'] === 'NewExpression' ?
-        func.construct(this, this.thread, state, args) :
-        func.call(this, this.thread, state, state.info_.this, args);
+        func.construct(this, thread, state, args) :
+        func.call(this, thread, state, state.info_.this, args);
     if (r instanceof FunctionResult) {
       if (r === FunctionResult.CallAgain) {
         state.step_ = 3;  // N.B: SEE NOTE 1 ABOVE!
@@ -5005,12 +5006,13 @@ stepFuncs_['CallExpression'] = function (stack, state, node) {
  * ConditionalExpression AND IfStatement.  The only difference is the
  * latter does not return a value to the parent state.
  * @this {!Interpreter}
+ * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
  * @return {!Interpreter.State|undefined}
  */
-stepFuncs_['ConditionalExpression'] = function (stack, state, node) {
+stepFuncs_['ConditionalExpression'] = function (thread, stack, state, node) {
   if (state.step_ === 0) {  // Evaluate test.
     state.step_ = 1;
     return new Interpreter.State(node['test'], state.scope);
@@ -5038,27 +5040,26 @@ stepFuncs_['ConditionalExpression'] = function (stack, state, node) {
 
 /**
  * @this {!Interpreter}
+ * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
  * @return {!Interpreter.State|undefined}
  */
-stepFuncs_['ContinueStatement'] = function (stack, state, node) {
-  // TODO(cpcallen): thread should be a param, or something.
-  var thread = this.thread;
-  if (!thread) throw Error('No thread in ContinueStatement??');
+stepFuncs_['ContinueStatement'] = function (thread, stack, state, node) {
   this.unwind_(thread, Interpreter.CompletionType.CONTINUE, undefined,
       node['label'] ? node['label']['name'] : undefined);
 };
 
 /**
  * @this {!Interpreter}
+ * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
  * @return {!Interpreter.State|undefined}
  */
-stepFuncs_['DebuggerStatement'] = function (stack, state, node) {
+stepFuncs_['DebuggerStatement'] = function (thread, stack, state, node) {
   // Do nothing.  May be overridden by developers.
   stack.pop();
 };
@@ -5067,12 +5068,13 @@ stepFuncs_['DebuggerStatement'] = function (stack, state, node) {
  * DoWhileStatement AND WhileStatement.  The only difference is the
  * former skips evaluating the test expression the first time through.
  * @this {!Interpreter}
+ * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
  * @return {!Interpreter.State|undefined}
  */
-stepFuncs_['DoWhileStatement'] = function (stack, state, node) {
+stepFuncs_['DoWhileStatement'] = function (thread, stack, state, node) {
   if (state.step_ === 0) {  // Decide whether to skip first test.
     state.step_ = 1;
     if (node['type'] === 'DoWhileStatement') {
@@ -5097,23 +5099,25 @@ stepFuncs_['DoWhileStatement'] = function (stack, state, node) {
 
 /**
  * @this {!Interpreter}
+ * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
  * @return {!Interpreter.State|undefined}
  */
-stepFuncs_['EmptyStatement'] = function (stack, state, node) {
+stepFuncs_['EmptyStatement'] = function (thread, stack, state, node) {
   stack.pop();
 };
 
 /**
  * @this {!Interpreter}
+ * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
  * @return {!Interpreter.State|undefined}
  */
-stepFuncs_['EvalProgram_'] = function (stack, state, node) {
+stepFuncs_['EvalProgram_'] = function (thread, stack, state, node) {
   var n = state.n_;
   var /** ?Interpreter.Node */ expression = node['body'][n];
   if (expression) {
@@ -5126,12 +5130,13 @@ stepFuncs_['EvalProgram_'] = function (stack, state, node) {
 
 /**
  * @this {!Interpreter}
+ * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
  * @return {!Interpreter.State|undefined}
  */
-stepFuncs_['ExpressionStatement'] = function (stack, state, node) {
+stepFuncs_['ExpressionStatement'] = function (thread, stack, state, node) {
   if (state.step_ === 0) {  // Evaluate expression.
     state.step_ = 1;
     return new Interpreter.State(node['expression'], state.scope);
@@ -5156,12 +5161,13 @@ Interpreter.ForInInfo;
 
 /**
  * @this {!Interpreter}
+ * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
  * @return {!Interpreter.State|undefined}
  */
-stepFuncs_['ForInStatement'] = function (stack, state, node) {
+stepFuncs_['ForInStatement'] = function (thread, stack, state, node) {
   while (true) {
     switch (state.step_) {
       case 0:  // Initial set-up.
@@ -5220,12 +5226,13 @@ stepFuncs_['ForInStatement'] = function (stack, state, node) {
 
 /**
  * @this {!Interpreter}
+ * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
  * @return {!Interpreter.State|undefined}
  */
-stepFuncs_['ForStatement'] = function (stack, state, node) {
+stepFuncs_['ForStatement'] = function (thread, stack, state, node) {
   // If we've just evaluated node.test, and result was false, terminate loop.
   if (state.step_ === 2 && !state.value) {
     stack.pop();
@@ -5260,26 +5267,28 @@ stepFuncs_['ForStatement'] = function (stack, state, node) {
 
 /**
  * @this {!Interpreter}
+ * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
  * @return {!Interpreter.State|undefined}
  */
-stepFuncs_['FunctionDeclaration'] = function (stack, state, node) {
+stepFuncs_['FunctionDeclaration'] = function (thread, stack, state, node) {
   // This was found and handled when the scope was populated.
   stack.pop();
 };
 
 /**
  * @this {!Interpreter}
+ * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
  * @return {!Interpreter.State|undefined}
  */
-stepFuncs_['FunctionExpression'] = function (stack, state, node) {
+stepFuncs_['FunctionExpression'] = function (thread, stack, state, node) {
   stack.pop();
-  var src = this.thread.getSource();
+  var src = thread.getSource();
   if (src === undefined) {
     throw Error("No source found when evaluating function expression??");
   }
@@ -5289,12 +5298,13 @@ stepFuncs_['FunctionExpression'] = function (stack, state, node) {
 
 /**
  * @this {!Interpreter}
+ * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
  * @return {!Interpreter.State|undefined}
  */
-stepFuncs_['Identifier'] = function (stack, state, node) {
+stepFuncs_['Identifier'] = function (thread, stack, state, node) {
   stack.pop();
   var /** string */ name = node['name'];
   if (state.wantRef_) {
@@ -5308,12 +5318,13 @@ stepFuncs_['IfStatement'] = stepFuncs_['ConditionalExpression'];
 
 /**
  * @this {!Interpreter}
+ * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
  * @return {!Interpreter.State|undefined}
  */
-stepFuncs_['LabeledStatement'] = function (stack, state, node) {
+stepFuncs_['LabeledStatement'] = function (thread, stack, state, node) {
   // Note that a statement might have multiple labels.
   var /** !Array<string> */ labels = state.labels || [];
   labels[labels.length] = node['label']['name'];
@@ -5326,12 +5337,13 @@ stepFuncs_['LabeledStatement'] = function (stack, state, node) {
 
 /**
  * @this {!Interpreter}
+ * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
  * @return {!Interpreter.State|undefined}
  */
-stepFuncs_['Literal'] = function (stack, state, node) {
+stepFuncs_['Literal'] = function (thread, stack, state, node) {
   var /** (null|boolean|number|string|!RegExp) */ literal = node['value'];
   var /** Interpreter.Value */ value;
   if (literal instanceof RegExp) {
@@ -5346,12 +5358,13 @@ stepFuncs_['Literal'] = function (stack, state, node) {
 
 /**
  * @this {!Interpreter}
+ * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
  * @return {!Interpreter.State|undefined}
  */
-stepFuncs_['LogicalExpression'] = function (stack, state, node) {
+stepFuncs_['LogicalExpression'] = function (thread, stack, state, node) {
   if (state.step_ === 0) {  // Eval left.
     state.step_ = 1;
     return new Interpreter.State(node['left'], state.scope);
@@ -5373,12 +5386,13 @@ stepFuncs_['LogicalExpression'] = function (stack, state, node) {
 
 /**
  * @this {!Interpreter}
+ * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
  * @return {!Interpreter.State|undefined}
  */
-stepFuncs_['MemberExpression'] = function (stack, state, node) {
+stepFuncs_['MemberExpression'] = function (thread, stack, state, node) {
   if (state.step_ === 0) {  // Evaluate LHS (object).
     state.step_ = 1;
     return new Interpreter.State(node['object'], state.scope);
@@ -5406,12 +5420,13 @@ stepFuncs_['NewExpression'] = stepFuncs_['CallExpression'];
 
 /**
  * @this {!Interpreter}
+ * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
  * @return {!Interpreter.State|undefined}
  */
-stepFuncs_['ObjectExpression'] = function (stack, state, node) {
+stepFuncs_['ObjectExpression'] = function (thread, stack, state, node) {
   var n = state.n_;
   if (!state.tmp_) {  // First execution.  Create object.
     state.tmp_ = new this.Object(state.scope.perms);
@@ -5443,12 +5458,13 @@ stepFuncs_['ObjectExpression'] = function (stack, state, node) {
 
 /**
  * @this {!Interpreter}
+ * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
  * @return {!Interpreter.State|undefined}
  */
-stepFuncs_['Program'] = function (stack, state, node) {
+stepFuncs_['Program'] = function (thread, stack, state, node) {
   var n = state.n_;
   var /** ?Interpreter.Node */ expression = node['body'][n];
   if (expression) {
@@ -5460,31 +5476,30 @@ stepFuncs_['Program'] = function (stack, state, node) {
 
 /**
  * @this {!Interpreter}
+ * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
  * @return {!Interpreter.State|undefined}
  */
-stepFuncs_['ReturnStatement'] = function (stack, state, node) {
+stepFuncs_['ReturnStatement'] = function (thread, stack, state, node) {
   if (node['argument'] && !state.done_) {
     state.done_ = true;
     return new Interpreter.State(node['argument'], state.scope);
   }
-  // TODO(cpcallen): thread should be a param, or something.
-  var thread = this.thread;
-  if (!thread) throw Error('No thread in ReturnStatement??');
   this.unwind_(
       thread, Interpreter.CompletionType.RETURN, state.value, undefined);
 };
 
 /**
  * @this {!Interpreter}
+ * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
  * @return {!Interpreter.State|undefined}
  */
-stepFuncs_['SequenceExpression'] = function (stack, state, node) {
+stepFuncs_['SequenceExpression'] = function (thread, stack, state, node) {
   var n = state.n_;
   var /** ?Interpreter.Node */ expression = node['expressions'][n];
   if (expression) {
@@ -5503,12 +5518,13 @@ Interpreter.SwitchInfo;
 
 /**
  * @this {!Interpreter}
+ * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
  * @return {!Interpreter.State|undefined}
  */
-stepFuncs_['SwitchStatement'] = function (stack, state, node) {
+stepFuncs_['SwitchStatement'] = function (thread, stack, state, node) {
   // First check return value to see if case test succeeded.
   if (state.step_ === 2 && state.value === state.tmp_) {
     state.step_ = 3;
@@ -5564,24 +5580,26 @@ stepFuncs_['SwitchStatement'] = function (stack, state, node) {
 
 /**
  * @this {!Interpreter}
+ * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
  * @return {!Interpreter.State|undefined}
  */
-stepFuncs_['ThisExpression'] = function (stack, state, node) {
+stepFuncs_['ThisExpression'] = function (thread, stack, state, node) {
   stack.pop();
   stack[stack.length - 1].value = this.getValueFromScope(state.scope, 'this');
 };
 
 /**
  * @this {!Interpreter}
+ * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
  * @return {!Interpreter.State|undefined}
  */
-stepFuncs_['ThrowStatement'] = function (stack, state, node) {
+stepFuncs_['ThrowStatement'] = function (thread, stack, state, node) {
   if (state.step_ === 0) {  // Evaluate value to throw.
     state.step_ = 1;
     return new Interpreter.State(node['argument'], state.scope);
@@ -5591,12 +5609,13 @@ stepFuncs_['ThrowStatement'] = function (stack, state, node) {
 
 /**
  * @this {!Interpreter}
+ * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
  * @return {!Interpreter.State|undefined}
  */
-stepFuncs_['TryStatement'] = function (stack, state, node) {
+stepFuncs_['TryStatement'] = function (thread, stack, state, node) {
   switch (state.step_) {
     case 0:  // Evaluate 'try' block.
       state.step_ = 1;
@@ -5628,9 +5647,6 @@ stepFuncs_['TryStatement'] = function (stack, state, node) {
         // There was no catch handler, or the catch/finally threw an
         // error.  Resume unwinding the stack in search of
         // TryStatement / CallExpression / target of break or continue.
-        // TODO(cpcallen): thread should be a param, or something.
-        var thread = this.thread;
-        if (!thread) throw Error('No thread in TryStatement??');
         this.unwind_(
             thread, state.info_.type, state.info_.value, state.info_.label);
       }
@@ -5639,12 +5655,13 @@ stepFuncs_['TryStatement'] = function (stack, state, node) {
 
 /**
  * @this {!Interpreter}
+ * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
  * @return {!Interpreter.State|undefined}
  */
-stepFuncs_['UnaryExpression'] = function (stack, state, node) {
+stepFuncs_['UnaryExpression'] = function (thread, stack, state, node) {
   if (state.step_ === 0) {  // Evaluate (or get reference) to argument.
     state.step_ = 1;
     // Get argument - need Reference if operator is 'delete':
@@ -5686,12 +5703,13 @@ stepFuncs_['UnaryExpression'] = function (stack, state, node) {
 
 /**
  * @this {!Interpreter}
+ * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
  * @return {!Interpreter.State|undefined}
  */
-stepFuncs_['UpdateExpression'] = function (stack, state, node) {
+stepFuncs_['UpdateExpression'] = function (thread, stack, state, node) {
   if (state.step_ === 0) {  // Get Reference to argument.
     state.step_ = 1;
     return new Interpreter.State(node['argument'], state.scope, true);
@@ -5714,12 +5732,13 @@ stepFuncs_['UpdateExpression'] = function (stack, state, node) {
 
 /**
  * @this {!Interpreter}
+ * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
  * @return {!Interpreter.State|undefined}
  */
-stepFuncs_['VariableDeclaration'] = function (stack, state, node) {
+stepFuncs_['VariableDeclaration'] = function (thread, stack, state, node) {
   var declarations = node['declarations'];
   var n = state.n_;
   var decl = declarations[n];
@@ -5744,12 +5763,13 @@ stepFuncs_['VariableDeclaration'] = function (stack, state, node) {
 
 /**
  * @this {!Interpreter}
+ * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
  * @param {!Interpreter.Node} node
  * @return {!Interpreter.State|undefined}
  */
-stepFuncs_['WithStatement'] = function (stack, state, node) {
+stepFuncs_['WithStatement'] = function (thread, stack, state, node) {
   throw new this.Error(state.scope.perms, this.SYNTAX_ERROR,
       'Strict mode code may not include a with statement');
 };
