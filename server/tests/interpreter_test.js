@@ -56,18 +56,13 @@ interpreter.addVariableToScope(interpreter.global, 'src');
 function runTest(t, name, src, expected) {
   try {
     interpreter.setValueToScope(interpreter.global, 'src', src);
-    // TODO(cpcallen): it shouldn't be necessary to reset
-    // interpreter.value to undefined between tests; that it is is a
-    // symptom of incorrect completion value handling by the
-    // interpreter.
-    interpreter.value = undefined;
-    interpreter.createThreadForSrc('eval(src);');
+    var thread = interpreter.createThreadForSrc('eval(src);').thread;
     interpreter.run();
   } catch (e) {
     t.crash(name, util.format('%s\n%s', src, e.stack));
     return;
   }
-  var r = interpreter.pseudoToNative(interpreter.value);
+  var r = interpreter.pseudoToNative(thread.value);
   if (Object.is(r, expected)) {
     t.pass(name);
   } else {
@@ -107,7 +102,7 @@ function runComplexTest(t, name, src, expected, initFunc, asyncFunc) {
   }
 
   try {
-    intrp.createThreadForSrc(src);
+    var thread = intrp.createThreadForSrc(src).thread;
     while (intrp.run()) {
       if (asyncFunc) {
         asyncFunc(intrp);
@@ -117,7 +112,7 @@ function runComplexTest(t, name, src, expected, initFunc, asyncFunc) {
     t.crash(name, util.format('%s\n%s', src, e.stack));
     return;
   }
-  var r = intrp.pseudoToNative(intrp.value);
+  var r = intrp.pseudoToNative(thread.value);
   if (Object.is(r, expected)) {
     t.pass(name);
   } else {
