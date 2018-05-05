@@ -87,8 +87,10 @@ var PermissionError = new 'PermissionError';
   }
 })();
 
+///////////////////////////////////////////////////////////////////////////////
 // Threads API; parts are roughly conformant with HTML Living
 // Standard, plus our local extensions.
+//
 var suspend = new 'Thread.suspend';
 
 var setTimeout = function(func, delay) {
@@ -123,15 +125,21 @@ var clearTimeout = function(thread) {
   Thread.kill(thread);
 }
 
-// Namespace for CodeCity-specific extensions:
+///////////////////////////////////////////////////////////////////////////////
+// Namespace for CodeCity-specific extensions.
+//
 var CC = {};
 
+///////////////////////////////////////////////////////////////////////////////
 // Permissions API.
+//
 CC.root = new 'CC.root';
 var perms = new 'perms';
 var setPerms = new 'setPerms';
 
-// Networking functions.
+///////////////////////////////////////////////////////////////////////////////
+// Networking API.
+//
 CC.connectionListen = new 'CC.connectionListen';
 CC.connectionUnlisten = new 'CC.connectionUnlisten';
 CC.connectionWrite = new 'CC.connectionWrite';
