@@ -88,6 +88,74 @@ var PermissionError = new 'PermissionError';
 })();
 
 ///////////////////////////////////////////////////////////////////////////////
+// Array.prototype polyfills
+///////////////////////////////////////////////////////////////////////////////
+
+(function() {
+  function toInteger(value) {
+    var number = Number(value);
+    if (isNaN(number)) {
+      return 0;
+    } else if (number === 0 || number === Infinity || number === -Infinity) {
+      return number;
+    }
+    return Math.trunc(number);
+  }
+
+  function toLength(value) {
+    var len = toInteger(value);
+    if (len <= 0) return 0;
+    return Math.min(len, Number.MAX_SAFE_INTEGER);  // Handles len === Infinity.
+  };
+
+  // For cycle detection in array to string and error conversion; see
+  // spec bug github.com/tc39/ecma262/issues/289.
+  var visitedByThread = new WeakMap;
+
+  Object.defineProperty(Array.prototype, 'join', {
+    configurable: true, writable: true,
+    value: function(separator) {
+      var isObj = (typeof this === 'object' || typeof this === 'function') &&
+          this !== null;
+      if (isObj) {
+        if (visitedByThread.has(Thread.current())) {
+          var visited = visitedByThread.get(Thread.current());
+        } else {
+          visited = [];
+          visitedByThread.set(Thread.current(), visited);
+        }
+        if (visited.indexOf(this) !== -1) {
+          return '';
+        }
+        visited.push(this);
+      }
+      try {
+        // TODO(cpcallen): setPerms(callerPerms());
+        var len = toLength(this.length);
+        var sep = (separator === undefined) ? ',' : String(separator);
+        if (len === 0) {
+          return '';
+        }
+        var r = '';
+        for (var k = 0; k < len; k++) {
+          if (k > 0) r += sep;
+          var element = this[k];
+          if (element !== undefined && element !== null) {
+            r += String(element);
+          }
+        }
+        return r;
+      } finally {
+        if (isObj) visited.pop();
+        if (visited.length === 0) {
+          visitedByThread.delete(Thread.current());
+        }
+      }
+    }
+  });
+})();
+
+///////////////////////////////////////////////////////////////////////////////
 // Threads API; parts are roughly conformant with HTML Living
 // Standard, plus our local extensions.
 //

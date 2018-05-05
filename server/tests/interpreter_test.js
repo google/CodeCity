@@ -1276,3 +1276,27 @@ exports.testNetworking = async function(t) {
    `;
   await runAsyncTest(t, name, src, 'OK');
 };
+
+/**
+ * Run a test of multiple simultaneous calls to Array.prototype.join.
+ * @param {!T} t The test runner object.
+ */
+exports.testArrayPrototypeJoinParallelism = function(t) {
+  var src = `
+      // Make String() do a suspend(), to tend to cause multiple
+      // simultaneous .join() calls become badly interleved with each
+      // other.
+      String = function(value) {
+        suspend();
+        return (new 'String')(value);  // Call original.
+      };
+
+      var arr = [1, [2, [3, [4, 5]]]];
+      // Set up another Array.prototype.join traversing a subset of
+      // the same objects to screw with us.
+      new Thread(function() { arr[1].join(); });
+      // Try to do the join anyway.
+      arr.join()
+  `;
+  runComplexTest(t, 'Array.prototype.join parallel', src, '1,2,3,4,5');
+};
