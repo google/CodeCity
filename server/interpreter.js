@@ -2787,6 +2787,8 @@ Interpreter.Thread = function(id, state, runAt) {
   this.runAt = runAt;
   /** @type {?Interpreter.prototype.Thread} */
   this.wrapper = null;
+  /** @type {Interpreter.Value} */
+  this.value = undefined;
 };
 
 /**
@@ -5029,7 +5031,7 @@ stepFuncs_['ConditionalExpression'] = function (thread, stack, state, node) {
       return new Interpreter.State(node['alternate'], state.scope);
     }
     // eval('1;if(false){2}') -> undefined
-    this.value = undefined;
+    thread.value = undefined;
   }
   // state.step_ === 2: Consequent or alternate done.  Do return?
   stack.pop();
@@ -5125,7 +5127,7 @@ stepFuncs_['EvalProgram_'] = function (thread, stack, state, node) {
     return new Interpreter.State(expression, state.scope);
   }
   stack.pop();
-  stack[stack.length - 1].value = this.value;
+  stack[stack.length - 1].value = thread.value;
 };
 
 /**
@@ -5149,7 +5151,7 @@ stepFuncs_['ExpressionStatement'] = function (thread, stack, state, node) {
   // TODO(cpcallen): This is suspected to not be strictly correct
   // compared to how the ES5.1 spec defines completion values.  Add
   // tests to prove it one way or the other.
-  this.value = state.value;
+  thread.value = state.value;
 };
 
 /**

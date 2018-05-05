@@ -84,7 +84,7 @@ function runTest(t, name, src1, src2, src3, expected, steps, noBuiltins) {
       intrp.run();
     }
     if (src1) {
-      intrp.createThreadForSrc(src1);
+      var thread = intrp.createThreadForSrc(src1).thread;
       intrp.run();
     }
   } catch (e) {
@@ -94,7 +94,7 @@ function runTest(t, name, src1, src2, src3, expected, steps, noBuiltins) {
 
   try {
     if (src2) {
-      intrp.createThreadForSrc(src2);
+      thread = intrp.createThreadForSrc(src2).thread;
     }
     var trips = 0;
     if (steps === undefined) {
@@ -120,7 +120,7 @@ function runTest(t, name, src1, src2, src3, expected, steps, noBuiltins) {
   try {
     intrp.run();
     if (src3) {
-      intrp.createThreadForSrc(src3);
+      thread = intrp.createThreadForSrc(src3).thread;
       intrp.run();
     }
   } catch (e) {
@@ -128,7 +128,7 @@ function runTest(t, name, src1, src2, src3, expected, steps, noBuiltins) {
     return;
   }
 
-  var r = intrp.pseudoToNative(intrp.value);
+  var r = intrp.pseudoToNative(thread.value);
   if (Object.is(r, expected)) {
     t.pass(name);
   } else {
