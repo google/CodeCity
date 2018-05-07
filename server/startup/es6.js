@@ -86,19 +86,19 @@ var WeakMap = new 'WeakMap';
 // Polyfill copied from:
 // developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/find
 Object.defineProperty(Array.prototype, 'find', {value: function(callback/*, thisArg*/) {
-  if (this === null || this === undefined || typeof callback !== 'function') {
-    throw new TypeError;
+  if (this === null || this === undefined) {
+    throw new TypeError('Array.prototype.find called on ' + this);
+  } else if (typeof callback !== 'function') {
+    throw new TypeError('callback is type ' + typeof callback + ', not type function');
   }
   var o = Object(this);
   var len = o.length >>> 0;
-  var k = 0;
   var thisArg = arguments[1];
-  while (k < len) {
+  for (var k = 0; k < len; k++) {
     var kValue = o[k];
     if (callback.call(thisArg, kValue, k, o)) {
       return kValue;
     }
-    k++;
   }
   return undefined;
 }, configurable: true, writable: true});
@@ -106,19 +106,19 @@ Object.defineProperty(Array.prototype, 'find', {value: function(callback/*, this
 // Polyfill copied from:
 // developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/findIndex
 Object.defineProperty(Array.prototype, 'findIndex', {value: function(callback/*, thisArg*/) {
-  if (this === null || this === undefined || typeof callback !== 'function') {
-    throw new TypeError;
+  if (this === null || this === undefined) {
+    throw new TypeError('Array.prototype.findIndex called on ' + this);
+  } else if (typeof callback !== 'function') {
+    throw new TypeError('callback is type ' + typeof callback + ', not type function');
   }
   var o = Object(this);
   var len = o.length >>> 0;
-  var k = 0;
   var thisArg = arguments[1];
-  while (k < len) {
+  for (var k = 0; k < len; k++) {
     var kValue = o[k];
     if (callback.call(thisArg, kValue, k, o)) {
       return k;
     }
-    k++;
   }
   return -1;
 }, configurable: true, writable: true});
@@ -136,9 +136,11 @@ Object.defineProperty(Array.prototype, 'findIndex', {value: function(callback/*,
 
   function toLength(value) {
     var len = toInteger(value);
-    if (len <= 0) return 0;
+    if (len <= 0) {
+      return 0;
+    }
     return Math.min(len, Number.MAX_SAFE_INTEGER);  // Handles len === Infinity.
-  };
+  }
 
   // For cycle detection in array to string and error conversion; see
   // spec bug github.com/tc39/ecma262/issues/289.
@@ -175,7 +177,9 @@ Object.defineProperty(Array.prototype, 'findIndex', {value: function(callback/*,
         }
         var r = '';
         for (var k = 0; k < len; k++) {
-          if (k > 0) r += sep;
+          if (k > 0) {
+            r += sep;
+          }
           var element = this[k];
           if (element !== undefined && element !== null) {
             r += String(element);
@@ -183,7 +187,9 @@ Object.defineProperty(Array.prototype, 'findIndex', {value: function(callback/*,
         }
         return r;
       } finally {
-        if (isObj) visited.pop();
+        if (isObj) {
+          visited.pop();
+        }
       }
     }
   });
@@ -204,4 +210,4 @@ Object.defineProperty(Number, 'MAX_SAFE_INTEGER',
      enumerable: false,
      writable: false,
      // Fortunately 2**53 is also safe as long as you dont' increment it!:
-     value: Math.pow(2, 53) - 1 });  
+     value: Math.pow(2, 53) - 1 });

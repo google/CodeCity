@@ -276,7 +276,7 @@ Object.defineProperty(Object, 'create', {value: function(proto, props) {
 
 Object.defineProperty(Object, 'defineProperties', {value: function(obj, props) {
   if (!obj || (typeof obj !== 'object' && typeof obj !== 'function')) {
-    throw new TypeError('Object.defineProperties called on non-object');
+    throw new TypeError('Object.defineProperties called on type ' + typeof obj + ', not type object or function');
   }
   var keys = Object.keys(props);
   for (var i = 0; i < keys.length; i++) {
@@ -293,7 +293,7 @@ Object.defineProperty(Object, 'defineProperties', {value: function(obj, props) {
 // developer.mozilla.org/en/docs/Web/JavaScript/Reference/Global_objects/Function/bind
 Object.defineProperty(Function.prototype, 'bind', {value: function(oThis) {
   if (typeof this !== 'function') {
-    throw new TypeError('What is trying to be bound is not callable');
+    throw new TypeError('What is trying to be bound is type ' + typeof this + ', not type function');
   }
   var aArgs   = Array.prototype.slice.call(arguments, 1),
       fToBind = this,
@@ -318,16 +318,16 @@ Object.defineProperty(Function.prototype, 'bind', {value: function(oThis) {
 // Polyfill copied from:
 // developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/every
 Object.defineProperty(Array.prototype, 'every', {value: function(callback/*, thisArg*/) {
-  if (this === null || this === undefined || typeof callback !== 'function') {
-    throw new TypeError;
+  if (this === null || this === undefined) {
+    throw new TypeError('Array.prototype.every called on ' + this);
+  } else if (typeof callback !== 'function') {
+    throw new TypeError('callback is type ' + typeof callback + ', not type function');
   }
   var o = Object(this);
   var len = o.length >>> 0;
-  var k = 0;
   var thisArg = arguments[1];
-  while (k < len) {
+  for (var k = 0; k < len; k++) {
     if (k in o && !callback.call(thisArg, o[k], k, o)) return false;
-    k++;
   }
   return true;
 }, configurable: true, writable: true});
@@ -335,8 +335,10 @@ Object.defineProperty(Array.prototype, 'every', {value: function(callback/*, thi
 // Polyfill copied from:
 // developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/filter
 Object.defineProperty(Array.prototype, 'filter', {value: function(callback/*, thisArg*/) {
-  if (this === null || this === undefined || typeof callback !== 'function') {
-    throw new TypeError;
+  if (this === null || this === undefined) {
+    throw new TypeError('Array.prototype.filter called on ' + this);
+  } else if (typeof callback !== 'function') {
+    throw new TypeError('callback is type ' + typeof callback + ', not type function');
   }
   var o = Object(this);
   var len = o.length >>> 0;
@@ -354,16 +356,16 @@ Object.defineProperty(Array.prototype, 'filter', {value: function(callback/*, th
 // Polyfill copied from:
 // developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/forEach
 Object.defineProperty(Array.prototype, 'forEach', {value: function(callback/*, thisArg*/) {
-  if (this === null || this === undefined || typeof callback !== 'function') {
-    throw new TypeError;
+  if (this === null || this === undefined) {
+    throw new TypeError('Array.prototype.forEach called on ' + this);
+  } else if (typeof callback !== 'function') {
+    throw new TypeError('callback is type ' + typeof callback + ', not type function');
   }
   var o = Object(this);
   var len = o.length >>> 0;
-  var k = 0;
   var thisArg = arguments[1];
-  while (k < len) {
+  for (var k = 0; k < len; k++) {
     if (k in o) callback.call(thisArg, o[k], k, o);
-    k++;
   }
 }, configurable: true, writable: true});
 
@@ -371,7 +373,7 @@ Object.defineProperty(Array.prototype, 'forEach', {value: function(callback/*, t
   // For cycle detection in array to string and error conversion; see
   // spec bug github.com/tc39/ecma262/issues/289.
   var visited = [];
-  
+
   Object.defineProperty(Array.prototype, 'join', {value: function(separator) {
     // This implements Array.prototype.join from ES5 §15.4.4.5, with
     // the addition of cycle detection as discussed in
@@ -413,17 +415,17 @@ Object.defineProperty(Array.prototype, 'forEach', {value: function(callback/*, t
 // Polyfill copied from:
 // developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/map
 Object.defineProperty(Array.prototype, 'map', {value: function(callback/*, thisArg*/) {
-  if (this === null || this === undefined || typeof callback !== 'function') {
-    throw new TypeError;
+  if (this === null || this === undefined) {
+    throw new TypeError('Array.prototype.map called on ' + this);
+  } else if (typeof callback !== 'function') {
+    throw new TypeError('callback is type ' + typeof callback + ', not type function');
   }
   var o = Object(this);
   var len = o.length >>> 0;
   var A = new Array(len);
-  var k = 0;
   var thisArg = arguments[1];
-  while (k < len) {
+  for (var k = 0; k < len; k++) {
     if (k in o) A[k] = callback.call(thisArg, o[k], k, o);
-    k++;
   }
   return A;
 }, configurable: true, writable: true});
@@ -431,8 +433,10 @@ Object.defineProperty(Array.prototype, 'map', {value: function(callback/*, thisA
 // Polyfill copied from:
 // developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/Reduce
 Object.defineProperty(Array.prototype, 'reduce', {value: function(callback /*, initialValue*/) {
-  if (this === null || this === undefined || typeof callback !== 'function') {
-    throw new TypeError;
+  if (this === null || this === undefined) {
+    throw new TypeError('Array.prototype.reduce called on ' + this);
+  } else if (typeof callback !== 'function') {
+    throw new TypeError('callback is type ' + typeof callback + ', not type function');
   }
   var o = Object(this);
   var len = o.length >>> 0;
@@ -456,8 +460,10 @@ Object.defineProperty(Array.prototype, 'reduce', {value: function(callback /*, i
 // Polyfill copied from:
 // developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/ReduceRight
 Object.defineProperty(Array.prototype, 'reduceRight', {value: function(callback /*, initialValue*/) {
-  if (this === null || this === undefined || typeof callback !== 'function') {
-    throw new TypeError;
+  if (this === null || this === undefined) {
+    throw new TypeError('Array.prototype.reduceRight called on ' + this);
+  } else if (typeof callback !== 'function') {
+    throw new TypeError('callback is type ' + typeof callback + ', not type function');
   }
   var o = Object(this);
   var len = o.length >>> 0;
@@ -481,8 +487,10 @@ Object.defineProperty(Array.prototype, 'reduceRight', {value: function(callback 
 // Polyfill copied from:
 // developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/some
 Object.defineProperty(Array.prototype, 'some', {value: function(callback/*, thisArg*/) {
-  if (this === null || this === undefined || typeof callback !== 'function') {
-    throw new TypeError;
+  if (this === null || this === undefined) {
+    throw new TypeError('Array.prototype.some called on ' + this);
+  } else if (typeof callback !== 'function') {
+    throw new TypeError('callback is type ' + typeof callback + ', not type function');
   }
   var o = Object(this);
   var len = o.length >>> 0;
