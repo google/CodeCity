@@ -3977,7 +3977,7 @@ Interpreter.prototype.installTypes = function() {
     // and we need ot audit all use of String() throughout the
     // interpreter (including implicit use inside v8-native
     // functions).
-    return 'function ' + this.get('name', intrp.ROOT) +
+    return 'function ' + this.get('name', intrp.ANYBODY) +
         '() { [native code] }';
   };
 
@@ -4296,16 +4296,17 @@ Interpreter.prototype.installTypes = function() {
    * @override
    */
   intrp.Error.prototype.toString = function() {
+    // BUG(cpcallen): toString should access properties on this with
+    // the caller's permissions - but at present there is no way to
+    // determine who it was called by, so use intrp.ANYBODY instead.
     var visited = intrp.toStringVisited_;
     if (visited.has(this)) {
       return '';
     }
     visited.add(this);
     try {
-      // TODO(cpcallen:perms): Wrong perms here.  Should have/use
-      // perms arg, but see note in intrp.Function.prototype.toString.
-      var name = this.get('name', intrp.ROOT);
-      var message = this.get('message', intrp.ROOT);
+      var name = this.get('name', intrp.ANYBODY);
+      var message = this.get('message', intrp.ANYBODY);
       name = (name === undefined) ? 'Error' : String(name);
       message = (message === undefined) ? '' : String(message);
       if (name) {
