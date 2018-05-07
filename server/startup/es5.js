@@ -391,6 +391,13 @@ Object.defineProperty(Array.prototype, 'forEach',
   Object.defineProperty(Array.prototype, 'join', {
     configurable: true, writable: true,
     value: function(separator) {
+      // This implements Array.prototype.join from ES5 §15.4.4.5, with
+      // the addition of cycle detection as discussed in
+      // https://github.com/tc39/ecma262/issues/289.
+      //
+      // Variable names reflect those in the spec.
+      //
+      // N.B. This function is defined in a closure!
       var isObj = (typeof this === 'object' || typeof this === 'function') &&
           this !== null;
       if (isObj) {
