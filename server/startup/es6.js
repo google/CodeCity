@@ -107,6 +107,17 @@ var WeakMap = new 'WeakMap';
   Object.defineProperty(Array.prototype, 'join', {
     configurable: true, writable: true,
     value: function(separator) {
+      // This implements Array.prototype.join from ES6 §22.1.3.12, with
+      // the addition of cycle detection as discussed in
+      // https://github.com/tc39/ecma262/issues/289.
+      //
+      // The only difference from the ES5 version of the spec is that
+      // .length is normalised using the specification function
+      // ToLength rather than ToUint32.
+      //
+      // Variable names reflect those in the spec.
+      //
+      // N.B. This function is defined in a closure!
       var isObj = (typeof this === 'object' || typeof this === 'function') &&
           this !== null;
       if (isObj) {

@@ -115,6 +115,17 @@ var PermissionError = new 'PermissionError';
   Object.defineProperty(Array.prototype, 'join', {
     configurable: true, writable: true,
     value: function(separator) {
+      // This implements Array.prototype.join from ES6 §22.1.3.12,
+      // with the addition of cycle detection as discussed in
+      // https://github.com/tc39/ecma262/issues/289.
+      //
+      // The only difference from the ES6 version is that the cycle
+      // detection mechanism is thread-aware, so multiple parallel
+      // invocations of .join will not interfere with each other.
+      //
+      // Variable names reflect those in the spec.
+      //
+      // N.B. This function is defined in a closure!
       var isObj = (typeof this === 'object' || typeof this === 'function') &&
           this !== null;
       if (isObj) {
