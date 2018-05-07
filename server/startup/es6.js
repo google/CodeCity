@@ -88,7 +88,7 @@ var WeakMap = new 'WeakMap';
     var number = Number(value);
     if (isNaN(number)) {
       return 0;
-    } else if (number === 0 || number === Infinity || number === -Infinity) {
+    } else if (number === 0 || !isFinite(number)) {
       return number;
     }
     return Math.trunc(number);
