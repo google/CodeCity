@@ -69,7 +69,7 @@ var Interpreter = function() {
   // Create builtins and (minimally) initialize global scope:
   this.initBuiltins_();
 
-  /**  @private @const {!Array<!Interpreter.Thread>} */
+  /** @private @const {!Array<!Interpreter.Thread>} */
   this.threads = [];
   /** @private @type {?Interpreter.Thread} */
   this.thread = null;
@@ -1050,7 +1050,7 @@ Interpreter.prototype.initArray_ = function() {
   new this.NativeFunction({
     id: 'Array.prototype.concat', length: 1,
     /** @type {!Interpreter.NativeCallImpl} */
-    call:  function(intrp, thread, state, thisVal, args) {
+    call: function(intrp, thread, state, thisVal, args) {
       var perms = state.scope.perms;
       var obj = intrp.toObject(thisVal, perms);
       var arr = new intrp.Array(perms);
@@ -1095,7 +1095,7 @@ Interpreter.prototype.initArray_ = function() {
   new this.NativeFunction({
     id: 'Array.prototype.indexOf', length: 1,
     /** @type {!Interpreter.NativeCallImpl} */
-    call:  function(intrp, thread, state, thisVal, args) {
+    call: function(intrp, thread, state, thisVal, args) {
       var searchElement = args[0];
       var fromIndex = args[1];
       var perms = state.scope.perms;
@@ -1118,7 +1118,7 @@ Interpreter.prototype.initArray_ = function() {
   new this.NativeFunction({
     id: 'Array.prototype.lastIndexOf', length: 1,
     /** @type {!Interpreter.NativeCallImpl} */
-    call:  function(intrp, thread, state, thisVal, args) {
+    call: function(intrp, thread, state, thisVal, args) {
       var searchElement = args[0];
       var fromIndex = args[1];
       var perms = state.scope.perms;
@@ -1141,7 +1141,7 @@ Interpreter.prototype.initArray_ = function() {
   new this.NativeFunction({
     id: 'Array.prototype.pop', length: 0,
     /** @type {!Interpreter.NativeCallImpl} */
-    call:  function(intrp, thread, state, thisVal, args) {
+    call: function(intrp, thread, state, thisVal, args) {
       var perms = state.scope.perms;
       var obj = intrp.toObject(thisVal, perms);
       var len = Interpreter.toLength(obj.get('length', perms));
@@ -1160,7 +1160,7 @@ Interpreter.prototype.initArray_ = function() {
   new this.NativeFunction({
     id: 'Array.prototype.push', length: 1,
     /** @type {!Interpreter.NativeCallImpl} */
-    call:  function(intrp, thread, state, thisVal, args) {
+    call: function(intrp, thread, state, thisVal, args) {
       var perms = state.scope.perms;
       var obj = intrp.toObject(thisVal, perms);
       var len = Interpreter.toLength(obj.get('length', perms));
@@ -1181,7 +1181,7 @@ Interpreter.prototype.initArray_ = function() {
   new this.NativeFunction({
     id: 'Array.prototype.reverse', length: 0,
     /** @type {!Interpreter.NativeCallImpl} */
-    call:  function(intrp, thread, state, thisVal, args) {
+    call: function(intrp, thread, state, thisVal, args) {
       var perms = state.scope.perms;
       var obj = intrp.toObject(thisVal, perms);
       var len = Interpreter.toLength(obj.get('length', perms));
@@ -1221,7 +1221,7 @@ Interpreter.prototype.initArray_ = function() {
   new this.NativeFunction({
     id: 'Array.prototype.shift', length: 0,
     /** @type {!Interpreter.NativeCallImpl} */
-    call:  function(intrp, thread, state, thisVal, args) {
+    call: function(intrp, thread, state, thisVal, args) {
       var perms = state.scope.perms;
       var obj = intrp.toObject(thisVal, perms);
       var len = Interpreter.toLength(obj.get('length', perms));
@@ -1248,7 +1248,7 @@ Interpreter.prototype.initArray_ = function() {
   new this.NativeFunction({
     id: 'Array.prototype.slice', length: 2,
     /** @type {!Interpreter.NativeCallImpl} */
-    call:  function(intrp, thread, state, thisVal, args) {
+    call: function(intrp, thread, state, thisVal, args) {
       var start = args[0];
       var end = args[1];
       var perms = state.scope.perms;
@@ -1278,7 +1278,7 @@ Interpreter.prototype.initArray_ = function() {
   new this.NativeFunction({
     id: 'Array.prototype.splice', length: 2,
     /** @type {!Interpreter.NativeCallImpl} */
-    call:  function(intrp, thread, state, thisVal, args) {
+    call: function(intrp, thread, state, thisVal, args) {
       var start = args[0];
       var deleteCount = args[1];
       var perms = state.scope.perms;
@@ -1349,7 +1349,7 @@ Interpreter.prototype.initArray_ = function() {
   new this.NativeFunction({
     id: 'Array.prototype.toString', length: 0,
     /** @type {!Interpreter.NativeCallImpl} */
-    call:  function(intrp, thread, state, thisVal, args) {
+    call: function(intrp, thread, state, thisVal, args) {
       if (!state.info_.funcState) {  // First visit: call .join().
         state.info_.funcState = true;
         var perms = state.scope.perms;
@@ -1373,7 +1373,7 @@ Interpreter.prototype.initArray_ = function() {
   new this.NativeFunction({
     id: 'Array.prototype.unshift', length: 1,
     /** @type {!Interpreter.NativeCallImpl} */
-    call:  function(intrp, thread, state, thisVal, args) {
+    call: function(intrp, thread, state, thisVal, args) {
       var perms = state.scope.perms;
       var obj = intrp.toObject(thisVal, perms);
       var len = Interpreter.toLength(obj.get('length', perms));
@@ -2070,7 +2070,7 @@ Interpreter.prototype.initNetwork_ = function() {
     if (port !== (port >>> 0) || port > 0xffff) {
       rej(new intrp.Error(perms, intrp.RANGE_ERROR, 'invalid port'));
       return;
-    } else  if (port in intrp.listeners_) {
+    } else if (port in intrp.listeners_) {
       rej(new intrp.Error(perms, intrp.RANGE_ERROR, 'port already listened'));
       return;
     }
@@ -5013,7 +5013,7 @@ stepFuncs_['CallExpression'] = function (thread, stack, state, node) {
         info.directEval = (state.ref[1] === 'eval');
       } else {
         // Method call; save 'this' value.
-        info.this =  state.ref[0];
+        info.this = state.ref[0];
       }
     } else {  // Callee already fully evaluated.
       info.callee = state.value;
@@ -5380,7 +5380,7 @@ stepFuncs_['Identifier'] = function (thread, stack, state, node) {
   if (state.wantRef_) {
     stack[stack.length - 1].ref = [Interpreter.SCOPE_REFERENCE, name];
   } else {
-    stack[stack.length - 1].value =  this.getValueFromScope(state.scope, name);
+    stack[stack.length - 1].value = this.getValueFromScope(state.scope, name);
   }
 };
 
