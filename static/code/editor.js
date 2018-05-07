@@ -28,6 +28,9 @@ Code.Editor = {};
  * Got a ping from someone.  Something might have changed and need updating.
  */
 Code.Editor.receiveMessage = function() {
+  if (document.getElementById('editorConfirm').style.display === 'block') {
+    return;  // Ignore messages if the modal save dialog is up.
+  }
   var selector = sessionStorage.getItem(Code.Common.SELECTOR);
 };
 
@@ -35,10 +38,34 @@ Code.Editor.receiveMessage = function() {
  * Page has loaded, initialize the editor.
  */
 Code.Editor.init = function() {
+  // Initialize button handlers.
+  document.getElementById('editorConfirmDiscard').addEventListener('click',
+      Code.Editor.reload);
+  document.getElementById('editorConfirmCancel').addEventListener('click',
+      Code.Editor.hideSave);
+  document.getElementById('editorConfirmSave').addEventListener('click',
+      Code.Editor.save);
+  document.getElementById('editorSave').addEventListener('click',
+      Code.Editor.save);
+
   Code.Editor.receiveMessage();
 };
 
 /**
+/**
+ * Save the current editor content.
+ */
+Code.Editor.save = function() {
+};
+
+/**
+ * Force a reload of this editor.  Used to switch to edit something else.
+ */
+Code.Editor.reload = function() {
+  Code.Editor.hideSave();
+  location.reload();
+};
+
  * Show the save dialog.
  */
 Code.Editor.showSave = function() {
@@ -53,6 +80,9 @@ Code.Editor.showSave = function() {
     mask.style.opacity = 0.2;
     box.style.top = '-10px';
   }, 100);  // Firefox requires at least 10ms to process this timing function.
+  // Desaturate save button.  Don't visually conflict with the 'save' button
+  // in save dialog.
+  document.getElementById('editorSave').className = 'jfk-button';
 };
 
 /**
@@ -69,6 +99,9 @@ Code.Editor.hideSave = function() {
   setTimeout(function() {
     document.getElementById('editorConfirm').style.display = 'none';
   }, 250);
+  // Resaturate the save button.
+  document.getElementById('editorSave').className =
+      'jfk-button jfk-button-submit';
 };
 
 /**
