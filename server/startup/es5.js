@@ -268,18 +268,13 @@ Object.defineProperty(RegExp.prototype, 'source', {
 ///////////////////////////////////////////////////////////////////////////////
 
 // Add a polyfill to handle create's second argument.
-Object.defineProperty(Object, 'create',
-                      {configurable: true, writable: true, value:
-function(proto, props) {
+Object.defineProperty(Object, 'create', {value: function(proto, props) {
   var obj = (new 'Object.create')(proto);
   props && Object.defineProperties(obj, props);
   return obj;
-}
-});
+}, configurable: true, writable: true});
 
-Object.defineProperty(Object, 'defineProperties',
-    {configurable: true, writable: true, value:
-function(obj, props) {
+Object.defineProperty(Object, 'defineProperties', {value: function(obj, props) {
   if (!obj || (typeof obj !== 'object' && typeof obj !== 'function')) {
     throw new TypeError('Object.defineProperties called on non-object');
   }
@@ -288,8 +283,7 @@ function(obj, props) {
     Object.defineProperty(obj, keys[i], props[keys[i]]);
   }
   return obj;
-}
-});
+}, configurable: true, writable: true});
 
 ///////////////////////////////////////////////////////////////////////////////
 // Function.prototype polyfills
@@ -297,9 +291,7 @@ function(obj, props) {
 
 // Polyfill copied from:
 // developer.mozilla.org/en/docs/Web/JavaScript/Reference/Global_objects/Function/bind
-Object.defineProperty(Function.prototype, 'bind',
-    {configurable: true, writable: true, value:
-function(oThis) {
+Object.defineProperty(Function.prototype, 'bind', {value: function(oThis) {
   if (typeof this !== 'function') {
     throw new TypeError('What is trying to be bound is not callable');
   }
@@ -317,8 +309,7 @@ function(oThis) {
   }
   fBound.prototype = new fNOP();
   return fBound;
-}
-});
+}, configurable: true, writable: true});
 
 ///////////////////////////////////////////////////////////////////////////////
 // Array.prototype polyfills
@@ -326,9 +317,7 @@ function(oThis) {
 
 // Polyfill copied from:
 // developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/every
-Object.defineProperty(Array.prototype, 'every',
-    {configurable: true, writable: true, value:
-function(callback/*, thisArg*/) {
+Object.defineProperty(Array.prototype, 'every', {value: function(callback/*, thisArg*/) {
   if (this === null || this === undefined || typeof callback !== 'function') {
     throw new TypeError;
   }
@@ -341,14 +330,11 @@ function(callback/*, thisArg*/) {
     k++;
   }
   return true;
-}
-});
+}, configurable: true, writable: true});
 
 // Polyfill copied from:
 // developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/filter
-Object.defineProperty(Array.prototype, 'filter',
-    {configurable: true, writable: true, value:
-function(callback/*, thisArg*/) {
+Object.defineProperty(Array.prototype, 'filter', {value: function(callback/*, thisArg*/) {
   if (this === null || this === undefined || typeof callback !== 'function') {
     throw new TypeError;
   }
@@ -363,14 +349,11 @@ function(callback/*, thisArg*/) {
     }
   }
   return res;
-}
-});
+}, configurable: true, writable: true});
 
 // Polyfill copied from:
 // developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/forEach
-Object.defineProperty(Array.prototype, 'forEach',
-    {configurable: true, writable: true, value:
-function(callback/*, thisArg*/) {
+Object.defineProperty(Array.prototype, 'forEach', {value: function(callback/*, thisArg*/) {
   if (this === null || this === undefined || typeof callback !== 'function') {
     throw new TypeError;
   }
@@ -382,60 +365,54 @@ function(callback/*, thisArg*/) {
     if (k in o) callback.call(thisArg, o[k], k, o);
     k++;
   }
-}
-});
+}, configurable: true, writable: true});
 
 (function() {
   // For cycle detection in array to string and error conversion; see
   // spec bug github.com/tc39/ecma262/issues/289.
   var visited = [];
-
-  Object.defineProperty(Array.prototype, 'join', {
-    configurable: true, writable: true,
-    value: function(separator) {
-      // This implements Array.prototype.join from ES5 §15.4.4.5, with
-      // the addition of cycle detection as discussed in
-      // https://github.com/tc39/ecma262/issues/289.
-      //
-      // Variable names reflect those in the spec.
-      //
-      // N.B. This function is defined in a closure!
-      var isObj = (typeof this === 'object' || typeof this === 'function') &&
-          this !== null;
-      if (isObj) {
-        if (visited.indexOf(this) !== -1) {
-          return '';
-        }
-        visited.push(this);
+  
+  Object.defineProperty(Array.prototype, 'join', {value: function(separator) {
+    // This implements Array.prototype.join from ES5 §15.4.4.5, with
+    // the addition of cycle detection as discussed in
+    // https://github.com/tc39/ecma262/issues/289.
+    //
+    // Variable names reflect those in the spec.
+    //
+    // N.B. This function is defined in a closure!
+    var isObj = (typeof this === 'object' || typeof this === 'function') &&
+        this !== null;
+    if (isObj) {
+      if (visited.indexOf(this) !== -1) {
+        return '';
       }
-      try {
-        // TODO(cpcallen): setPerms(callerPerms());
-        var len = this.length >>> 0;
-        var sep = (separator === undefined) ? ',' : String(separator);
-        if (!len) {
-          return '';
-        }
-        var r = '';
-        for (var k = 0; k < len; k++) {
-          if (k > 0) r += sep;
-          var element = this[k];
-          if (element !== undefined && element !== null) {
-            r += String(element);
-          }
-        }
-        return r;
-      } finally {
-        if (isObj) visited.pop();
-      }
+      visited.push(this);
     }
-  });
+    try {
+      // TODO(cpcallen): setPerms(callerPerms());
+      var len = this.length >>> 0;
+      var sep = (separator === undefined) ? ',' : String(separator);
+      if (!len) {
+        return '';
+      }
+      var r = '';
+      for (var k = 0; k < len; k++) {
+        if (k > 0) r += sep;
+        var element = this[k];
+        if (element !== undefined && element !== null) {
+          r += String(element);
+        }
+      }
+      return r;
+    } finally {
+      if (isObj) visited.pop();
+    }
+  }, configurable: true, writable: true});
 })();
 
 // Polyfill copied from:
 // developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/map
-Object.defineProperty(Array.prototype, 'map',
-    {configurable: true, writable: true, value:
-function(callback/*, thisArg*/) {
+Object.defineProperty(Array.prototype, 'map', {value: function(callback/*, thisArg*/) {
   if (this === null || this === undefined || typeof callback !== 'function') {
     throw new TypeError;
   }
@@ -449,14 +426,11 @@ function(callback/*, thisArg*/) {
     k++;
   }
   return A;
-}
-});
+}, configurable: true, writable: true});
 
 // Polyfill copied from:
 // developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/Reduce
-Object.defineProperty(Array.prototype, 'reduce',
-    {configurable: true, writable: true, value:
-function(callback /*, initialValue*/) {
+Object.defineProperty(Array.prototype, 'reduce', {value: function(callback /*, initialValue*/) {
   if (this === null || this === undefined || typeof callback !== 'function') {
     throw new TypeError;
   }
@@ -477,14 +451,11 @@ function(callback /*, initialValue*/) {
     if (k in o) value = callback(value, o[k], k, o);
   }
   return value;
-}
-});
+}, configurable: true, writable: true});
 
 // Polyfill copied from:
 // developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/ReduceRight
-Object.defineProperty(Array.prototype, 'reduceRight',
-    {configurable: true, writable: true, value:
-function(callback /*, initialValue*/) {
+Object.defineProperty(Array.prototype, 'reduceRight', {value: function(callback /*, initialValue*/) {
   if (this === null || this === undefined || typeof callback !== 'function') {
     throw new TypeError;
   }
@@ -505,14 +476,11 @@ function(callback /*, initialValue*/) {
     if (k in o) value = callback(value, o[k], k, o);
   }
   return value;
-}
-});
+}, configurable: true, writable: true});
 
 // Polyfill copied from:
 // developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/some
-Object.defineProperty(Array.prototype, 'some',
-    {configurable: true, writable: true, value:
-function(callback/*, thisArg*/) {
+Object.defineProperty(Array.prototype, 'some', {value: function(callback/*, thisArg*/) {
   if (this === null || this === undefined || typeof callback !== 'function') {
     throw new TypeError;
   }
@@ -525,12 +493,9 @@ function(callback/*, thisArg*/) {
     }
   }
   return false;
-}
-});
+}, configurable: true, writable: true});
 
-Object.defineProperty(Array.prototype, 'sort',
-    {configurable: true, writable: true, value:
-function(opt_comp) {
+Object.defineProperty(Array.prototype, 'sort', {value: function(opt_comp) {
   for (var i = 0; i < this.length; i++) {
     var changes = 0;
     for (var j = 0; j < this.length - i - 1; j++) {
@@ -545,20 +510,16 @@ function(opt_comp) {
     if (!changes) break;
   }
   return this;
-}
-});
+}, configurable: true, writable: true});
 
-Object.defineProperty(Array.prototype, 'toLocaleString',
-    {configurable: true, writable: true, value:
-function() {
+Object.defineProperty(Array.prototype, 'toLocaleString', {value: function() {
   var out = [];
   for (var i = 0; i < this.length; i++) {
     out[i] = (this[i] === null || this[i] === undefined) ?
         '' : this[i].toLocaleString();
   }
   return out.join(',');
-}
-});
+}, configurable: true, writable: true});
 
 ///////////////////////////////////////////////////////////////////////////////
 // String.prototype polyfills
@@ -569,9 +530,7 @@ Object.defineProperty(String.prototype, 'length', {value: 0});
 
 // Polyfill to handle String.prototype.replace's second argument being
 // a function.
-Object.defineProperty(String.prototype, 'replace',
-                      {configurable: true, writable: true, value:
-function(substr, newSubstr) {
+Object.defineProperty(String.prototype, 'replace', {value: function(substr, newSubstr) {
   if (typeof newSubstr !== 'function') {
     // string.replace(string|regexp, string)
     return (new 'String.prototype.replace').call(this, substr, newSubstr);
@@ -599,5 +558,4 @@ function(substr, newSubstr) {
     }
   }
   return str;
-}
-});
+}, configurable: true, writable: true});
