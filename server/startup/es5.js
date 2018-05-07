@@ -403,7 +403,7 @@ Object.defineProperty(Array.prototype, 'forEach',
         // TODO(cpcallen): setPerms(callerPerms());
         var len = this.length >>> 0;
         var sep = (separator === undefined) ? ',' : String(separator);
-        if (len === 0) {
+        if (!len) {
           return '';
         }
         var r = '';
