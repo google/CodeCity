@@ -119,7 +119,7 @@ var WeakMap = new 'WeakMap';
         // TODO(cpcallen): setPerms(callerPerms());
         var len = toLength(this.length);
         var sep = (separator === undefined) ? ',' : String(separator);
-        if (len === 0) {
+        if (!len) {
           return '';
         }
         var r = '';

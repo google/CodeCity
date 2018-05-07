@@ -133,7 +133,7 @@ var PermissionError = new 'PermissionError';
         // TODO(cpcallen): setPerms(callerPerms());
         var len = toLength(this.length);
         var sep = (separator === undefined) ? ',' : String(separator);
-        if (len === 0) {
+        if (!len) {
           return '';
         }
         var r = '';
@@ -147,7 +147,7 @@ var PermissionError = new 'PermissionError';
         return r;
       } finally {
         if (isObj) visited.pop();
-        if (visited.length === 0) {
+        if (!visited.length) {
           visitedByThread.delete(Thread.current());
         }
       }
