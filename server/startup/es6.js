@@ -85,9 +85,7 @@ var WeakMap = new 'WeakMap';
 
 // Polyfill copied from:
 // developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/find
-Object.defineProperty(Array.prototype, 'find',
-    {configurable: true, writable: true, value:
-function(callback/*, thisArg*/) {
+Object.defineProperty(Array.prototype, 'find', {value: function(callback/*, thisArg*/) {
   if (this === null || this === undefined || typeof callback !== 'function') {
     throw new TypeError;
   }
@@ -103,14 +101,11 @@ function(callback/*, thisArg*/) {
     k++;
   }
   return undefined;
-}
-});
+}, configurable: true, writable: true});
 
 // Polyfill copied from:
 // developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/findIndex
-Object.defineProperty(Array.prototype, 'findIndex',
-    {configurable: true, writable: true, value:
-function(callback/*, thisArg*/) {
+Object.defineProperty(Array.prototype, 'findIndex', {value: function(callback/*, thisArg*/) {
   if (this === null || this === undefined || typeof callback !== 'function') {
     throw new TypeError;
   }
@@ -126,8 +121,7 @@ function(callback/*, thisArg*/) {
     k++;
   }
   return -1;
-}
-});
+}, configurable: true, writable: true});
 
 (function() {
   function toInteger(value) {
