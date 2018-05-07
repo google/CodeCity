@@ -48,18 +48,15 @@ var Interpreter = function() {
    */
   this.builtins_ = Object.create(null);
   /**
-   * For cycle detection in array to string and error conversion; see
-   * spec bug github.com/tc39/ecma262/issues/289. At the moment this
-   * is used only for actions which are atomic (i.e., take place
-   * entirely within the duration of a single call to .step), so it
-   * could be a global or class property, but better to have it be
-   * per-instance so that we can eventually call user toString
-   * methods.
-   *
-   * TODO(cpcallen): Make this per-thread when threads are introduced.
-   * @private @const {!Array<!Interpreter.prototype.Object>}
+   * For cycle detection in Array.prototype.toString; see spec bug
+   * github.com/tc39/ecma262/issues/289.  (Also used in
+   * Error.prototype.toString, which has same issue.)  Since these
+   * functions are atomic (i.e., take place entirely within the
+   * duration of a single call to .step) and do not call user code
+   * which could suspend, it's fine that it's not per-Thread.
+   * @private @const {!Set<!Interpreter.prototype.Object>}
    */
-  this.toStringCycles_ = [];
+  this.toStringVisited_ = new Set;
 
   /**
    * The interpreter's global scope.
@@ -4135,11 +4132,11 @@ Interpreter.prototype.installTypes = function() {
     // BUG(cpcallen): toString should access properties on this with
     // the caller's permissions - but at present there is no way to
     // determine who it was called by, so use intrp.ANYBODY instead.
-    var cycles = intrp.toStringCycles_;
-    if (cycles.indexOf(this) !== -1) {
+    var visited = intrp.toStringVisited_;
+    if (visited.has(this)) {
       return '';
     }
-    cycles[cycles.length] = this;
+    visited.add(this);
     try {
       var strs = [];
       var len = this.get('length', intrp.ANYBODY);
@@ -4152,7 +4149,7 @@ Interpreter.prototype.installTypes = function() {
         }
       }
     } finally {
-      cycles.pop();
+      visited.delete(this);
     }
     return strs.join(',');
   };
@@ -4299,11 +4296,11 @@ Interpreter.prototype.installTypes = function() {
    * @override
    */
   intrp.Error.prototype.toString = function() {
-    var cycles = intrp.toStringCycles_;
-    if (cycles.indexOf(this) !== -1) {
-      return '[object Error]';
+    var visited = intrp.toStringVisited_;
+    if (visited.has(this)) {
+      return '';
     }
-    cycles[cycles.length] = this;
+    visited.add(this);
     try {
       // TODO(cpcallen:perms): Wrong perms here.  Should have/use
       // perms arg, but see note in intrp.Function.prototype.toString.
@@ -4316,7 +4313,7 @@ Interpreter.prototype.installTypes = function() {
       }
       return message;
     } finally {
-      cycles.pop();
+      visited.delete(this);
     }
   };
 
