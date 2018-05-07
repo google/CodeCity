@@ -172,6 +172,12 @@ textarea {
   padding: 0 10px;
 }
 
+#editorSave {
+  float: right;
+  margin-right: 10px;
+  margin-top: 8px;
+}
+
 #editorConfirm {
   display: none;
 }
