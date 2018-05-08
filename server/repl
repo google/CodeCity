@@ -28,7 +28,7 @@ const readline = require('readline');
 const Interpreter = require('./interpreter');
 const fs = require('fs');
 
-var intrp = new Interpreter;
+const intrp = new Interpreter;
 intrp.createThreadForSrc(fs.readFileSync('startup/es5.js', 'utf8'));
 intrp.run();
 intrp.createThreadForSrc(fs.readFileSync('startup/es6.js', 'utf8'));
@@ -38,7 +38,7 @@ intrp.run();
 intrp.createThreadForSrc(fs.readFileSync('startup/cc.js', 'utf8'));
 intrp.run();
 
-var rl = readline.createInterface({
+const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout,
   removeHistoryDuplicates: true,
@@ -46,10 +46,9 @@ var rl = readline.createInterface({
 
 rl.prompt();
 rl.on('line', function(line) {
-  intrp.value = undefined;
-  intrp.createThreadForSrc(line);
+  const thread = intrp.createThreadForSrc(line).thread;
   intrp.run();
-  console.log(intrp.pseudoToNative(intrp.value));
+  console.log(intrp.pseudoToNative(thread.value));
   rl.prompt();
 }).on('close', function() {
   process.exit(0);
