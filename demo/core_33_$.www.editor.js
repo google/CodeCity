@@ -31,7 +31,7 @@ $.www.editor.edit = function(obj, name, key) {
   if (typeof obj !== 'object' && typeof obj !== 'function') {
     $.utils.command.abort('Can only edit objects');
   }
-  var objId = $.db.tempObject.storeObj(obj);
+  var objId = $.db.tempId.storeObj(obj);
   var url = '/editor?objId=' + objId;
   if (name) {
     url += '&name=' + encodeURIComponent(name);
@@ -83,7 +83,7 @@ $.www.editor.www.jssp = [
   '<%',
   'var params = request.parameters;',
   'var objId = params.objId;',
-  'var obj = $.db.tempObject.getObjById(params.objId);',
+  'var obj = $.db.tempId.getObjById(params.objId);',
   'if (!$.utils.isObject(obj)) {',
   '  // Bad edit URL.',
   '  $.www[\'404\'].www(request, response);',

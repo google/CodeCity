@@ -1,6 +1,6 @@
 /**
  * @license
- * Code City: Temp object database.
+ * Code City: Temp ID database.
  *
  * Copyright 2018 Google Inc.
  *
@@ -18,28 +18,28 @@
  */
 
 /**
- * @fileoverview Temporary object database for Code City.
+ * @fileoverview Temporary ID database for Code City.
  * @author fraser@google.com (Neil Fraser)
  */
 
 $.db = {};
-$.db.tempObject = {};
+$.db.tempId = {};
 
 
-$.db.tempObject.getObjById = function(id) {
+$.db.tempId.getObjById = function(id) {
   // Find object temporarily stored with the given ID.
-  var record = $.db.tempObject.tempIds_[id];
+  var record = $.db.tempId.tempIds_[id];
   if (record) {
      record.time = Date.now();
      return record.obj;
   }
   return undefined;
-}
+};
 
-$.db.tempObject.storeObj = function(obj) {
+$.db.tempId.storeObj = function(obj) {
   // Find temporary ID for obj in this.tempIds_,
   // adding it if it's not already there.
-  var records = $.db.tempObject.tempIds_;
+  var records = $.db.tempId.tempIds_;
   for (var id in records) {
     if (Object.is(records[id].obj, obj)) {
       records[id].time = Date.now();
@@ -48,32 +48,32 @@ $.db.tempObject.storeObj = function(obj) {
   }
   do {
     var id = String(Math.random()).substring(2);
-  } while (!records[id]);
+  } while (records[id]);
   records[id] = {obj: obj, time: Date.now()};
   // Lazy call of cleanup.
-  $.db.tempObject.cleanSoon();
+  $.db.tempId.cleanSoon();
   return id;
 };
 
-$.db.tempObject.tempIds_ = Object.create(null);
+$.db.tempId.tempIds_ = Object.create(null);
 
-$.db.tempObject.cleanPid_ = null;
+$.db.tempId.cleanThread_ = null;
 
-$.db.tempObject.cleanSoon = function() {
+$.db.tempId.cleanSoon = function() {
   // Schedule a cleanup to happen in a minute.
   // Allows multiple calls to be batched together.
-  if (!$.db.tempObject.cleanPid_) {
-    $.db.tempObject.cleanPid_ =
-        setTimeout($.db.tempObject.cleanNow, 60 * 1000);
+  if (!$.db.tempId.cleanThread_) {
+    $.db.tempId.cleanThread_ =
+        setTimeout($.db.tempId.cleanNow, 60 * 1000);
   }
 };
 
-$.db.tempObject.cleanNow = function() {
+$.db.tempId.cleanNow = function() {
   // Cleanup IDs/objects that have not been accessed in an hour.
-  clearTimeout($.db.tempObject.cleanPid_);
-  $.db.tempObject.cleanPid_ = null;
-  var ttl = Date.now() - $.db.tempObject.timeoutMs;
-  var records = $.db.tempObject.tempIds_;
+  clearTimeout($.db.tempId.cleanThread_);
+  $.db.tempId.cleanThread_ = null;
+  var ttl = Date.now() - $.db.tempId.timeoutMs;
+  var records = $.db.tempId.tempIds_;
   for (var id in records) {
     if (records[id].time < ttl) {
       delete records[id];
@@ -81,4 +81,4 @@ $.db.tempObject.cleanNow = function() {
   }
 };
 
-$.db.tempObject.timeoutMs = 60 * 60 * 1000;
+$.db.tempId.timeoutMs = 60 * 60 * 1000;
