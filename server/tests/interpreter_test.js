@@ -24,24 +24,17 @@
  */
 'use strict';
 
-var net = require('net');
-var util = require('util');
-//var toSource = require('tosource');
+const net = require('net');
+//const toSource = require('tosource');
+const util = require('util');
 
-var Interpreter = require('../interpreter');
-var common = require('./interpreter_common');
-var testcases = require('./testcases');
+const Interpreter = require('../interpreter');
+const common = require('./interpreter_common');
+const getInterpreter = common.getInterpreter;
+const testcases = require('./testcases');
 
 // Prepare static interpreter instance for runTest.
-var interpreter = new Interpreter;
-interpreter.createThreadForSrc(common.es5);
-interpreter.run();
-interpreter.createThreadForSrc(common.es6);
-interpreter.run();
-interpreter.createThreadForSrc(common.esx);
-interpreter.run();
-interpreter.createThreadForSrc(common.cc);
-interpreter.run();
+var interpreter = getInterpreter();
 interpreter.addVariableToScope(interpreter.global, 'src');
 
 /**
@@ -92,15 +85,7 @@ function runTest(t, name, src, expected) {
  *     of asynchronous events for testing purposes.
  */
 function runComplexTest(t, name, src, expected, initFunc, asyncFunc) {
-  var intrp = new Interpreter;
-  intrp.createThreadForSrc(common.es5);
-  intrp.run();
-  intrp.createThreadForSrc(common.es6);
-  intrp.run();
-  intrp.createThreadForSrc(common.esx);
-  intrp.run();
-  intrp.createThreadForSrc(common.cc);
-  intrp.run();
+  var intrp = getInterpreter();
   if (initFunc) {
     initFunc(intrp);
   }
@@ -150,15 +135,7 @@ function runComplexTest(t, name, src, expected, initFunc, asyncFunc) {
  *     .start()ed.
  */
 async function runAsyncTest(t, name, src, expected, initFunc, sideFunc) {
-  var intrp = new Interpreter;
-  intrp.createThreadForSrc(common.es5);
-  intrp.run();
-  intrp.createThreadForSrc(common.es6);
-  intrp.run();
-  intrp.createThreadForSrc(common.esx);
-  intrp.run();
-  intrp.createThreadForSrc(common.cc);
-  intrp.run();
+  var intrp = getInterpreter();
   if (initFunc) {
     initFunc(intrp);
   }
@@ -892,7 +869,8 @@ exports.testNativeToPseudo = function(t) {
   };
 
   var intrp = new Interpreter;
-  intrp.createThreadForSrc(common.es5);  // Ensure Error.prototype.name etc. defined.
+  // Ensure Error.prototype.name etc. defined.
+  intrp.createThreadForSrc(common.startupFiles.es5);  
   intrp.run();
 
   // Test handling of Arrays (including extra non-index properties).
@@ -1111,7 +1089,7 @@ exports.testStartStop = async function(t) {
   function snooze(ms) {
     return new Promise(function(resolve, reject) { setTimeout(resolve, ms); });
   }
-  var intrp = new Interpreter;
+  var intrp = getInterpreter();
   var name = 'testStart';
   var src = `
       var x = 0;
@@ -1120,14 +1098,6 @@ exports.testStartStop = async function(t) {
         x++;
       };
   `;
-  intrp.createThreadForSrc(common.es5);
-  intrp.run();
-  intrp.createThreadForSrc(common.es6);
-  intrp.run();
-  intrp.createThreadForSrc(common.esx);
-  intrp.run();
-  intrp.createThreadForSrc(common.cc);
-  intrp.run();
   try {
     intrp.start();
     // .start() will create a zero-delay timeout to check for sleeping

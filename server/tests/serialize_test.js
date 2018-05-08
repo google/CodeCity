@@ -24,11 +24,11 @@
  */
 'use strict';
 
-var net = require('net');
+const net = require('net');
 const util = require('util');
 
 const Interpreter = require('../interpreter');
-var common = require('./interpreter_common');
+const getInterpreter = require('./interpreter_common').getInterpreter;
 const Serializer = require('../serialize');
 
 /**
@@ -73,18 +73,8 @@ function roundTrip(intrp) {
  *     Speeds up tests with many roundtrips that do not need builtins.
  */
 function runTest(t, name, src1, src2, src3, expected, steps, noBuiltins) {
-  var intrp = new Interpreter;
+  var intrp = noBuiltins ? new Interpreter :  intrp = getInterpreter();
   try {
-    if (!noBuiltins) {
-      intrp.createThreadForSrc(common.es5);
-      intrp.run();
-      intrp.createThreadForSrc(common.es6);
-      intrp.run();
-      intrp.createThreadForSrc(common.esx);
-      intrp.run();
-      intrp.createThreadForSrc(common.cc);
-      intrp.run();
-    }
     if (src1) {
       var thread = intrp.createThreadForSrc(src1).thread;
       intrp.run();
@@ -175,15 +165,7 @@ function runTest(t, name, src1, src2, src3, expected, steps, noBuiltins) {
  *     interpreter instance to be configured as its parameter.
  */
 async function runAsyncTest(t, name, src1, src2, expected, initFunc) {
-  var intrp1 = new Interpreter;
-  intrp1.createThreadForSrc(common.es5);
-  intrp1.run();
-  intrp1.createThreadForSrc(common.es6);
-  intrp1.run();
-  intrp1.createThreadForSrc(common.esx);
-  intrp1.run();
-  intrp1.createThreadForSrc(common.cc);
-  intrp1.run();
+  var intrp1 = getInterpreter();
   if (initFunc) {
     initFunc(intrp1);
   }
