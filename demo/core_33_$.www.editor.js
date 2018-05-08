@@ -31,7 +31,7 @@ $.www.editor.edit = function(obj, name, key) {
   if (typeof obj !== 'object' && typeof obj !== 'function') {
     $.utils.command.abort('Can only edit objects');
   }
-  var objId = $.utils.code.storeTempObj(obj);
+  var objId = $.db.tempObject.storeObj(obj);
   var url = '/editor?objId=' + objId;
   if (name) {
     url += '&name=' + encodeURIComponent(name);
@@ -48,7 +48,7 @@ $.www.editor.load = function(obj, key) {
    */
   var pd = Object.getOwnPropertyDescriptor(obj, key);
   var value = pd ? pd.value : undefined;
-  return $.utils.code.valueToSourceSafe(value);
+  return $.utils.code.toSourceSafe(value);
 };
 
 $.www.editor.save = function(obj, key, src) {
@@ -83,7 +83,7 @@ $.www.editor.www.jssp = [
   '<%',
   'var params = request.parameters;',
   'var objId = params.objId;',
-  'var obj = $.utils.code.getTempObj(params.objId);',
+  'var obj = $.db.tempObject.getObjById(params.objId);',
   'if (!$.utils.isObject(obj)) {',
   '  // Bad edit URL.',
   '  $.www[\'404\'].www(request, response);',

@@ -422,7 +422,7 @@ $.user.eval = function($$$cmd) {
     $$$cmd = eval($$$cmd);
     try {
       // Attempt to print a source-legal representation.
-      $$$cmd = $.utils.code.valueToSource($$$cmd);
+      $$$cmd = $.utils.code.toSource($$$cmd);
     } catch (e) {
       try {
         // Maybe it's something JSON can deal with (like an array).

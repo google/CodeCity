@@ -25,62 +25,91 @@
 $.utils.code = {};
 
 
-$.utils.code.valueToSource = function(value) {
+$.utils.code.toSource = function(value, opt_seen) {
   // Given an arbitrary value, produce a source code representation.
   // Primitive values are straightforward: "42", "'abc'", "false", etc.
-  // Functions, RegExps, Dates, and errors are returned as their definitions.
-  // Other objects are returned as selector expression.
-  if (Object.is(value, -0)) {
-    return '-0';
-  }
+  // Functions, RegExps, Dates, Arrays, and errors are returned as their
+  // definitions.
+  // Other objects and symbols are returned as selector expression.
+  // Throws if a code representation can't be made.
   var type = typeof value;
   if (value === undefined || value === null ||
       type === 'number' || type === 'boolean') {
+    if (Object.is(value, -0)) {
+      return '-0';
+    }
     return String(value);
-  }
-  if (type === 'string') {
+  } else if (type === 'string') {
     return JSON.stringify(value);
-  }
-  if (type === 'function') {
-    // TODO(cpcallen): This should call toSource, once we have such a function.
-    return String(value);
-  }
-  var proto = Object.getPrototypeOf(value);
-  if (proto === RegExp.prototype) {
-    return String(value);
-  }
-  if (proto === Date.prototype) {
-    return 'Date(\'' + value.toJSON() + '\')';
-  }
-  if ((value instanceof Error) && !(value.message instanceof Error)) {
-    var msg;
-    if (value.message === undefined) {
-      msg = '';
-    } else {
-      try {
-        msg = $.utils.code.valueToSource(value.message);
-      } catch (e) {
-        // Leave msg undefined.
+  } else if (type === 'function') {
+    return Function.prototype.toString.call(value);
+  } else if (type === 'object') {
+    // TODO: Replace opt_seen with Set, once available.
+    if (opt_seen) {
+      if (opt_seen.indexOf(value) !== -1) {
+        throw RangeError('[Recursive data structure]');
       }
+      opt_seen.push(value);
+    } else {
+      opt_seen = [value];
     }
-    var constructor;
-    if (proto === Error.prototype) {
-      constructor = 'Error';
-    } else if (proto === EvalError.prototype) {
-      constructor = 'EvalError';
-    } else if (proto === RangeError.prototype) {
-      constructor = 'RangeError';
-    } else if (proto === ReferenceError.prototype) {
-      constructor = 'ReferenceError';
-    } else if (proto === SyntaxError.prototype) {
-      constructor = 'SyntaxError';
-    } else if (proto === TypeError.prototype) {
-      constructor = 'TypeError';
-    } else if (proto === URIError.prototype) {
-      constructor = 'URIError';
-    }
-    if (msg !== undefined && constructor) {
-      return constructor + '(' + msg + ')';
+    var proto = Object.getPrototypeOf(value);
+    if (proto === RegExp.prototype) {
+      return String(value);
+    } else if (proto === Date.prototype) {
+      return 'Date(\'' + value.toJSON() + '\')';
+    } else if (proto === Array.prototype && Array.isArray(value) &&
+               value.length <= 100) {
+      var props = Object.getOwnPropertyNames(value);
+      var data = [];
+      for (var i = 0; i < value.length; i++) {
+        if (props.indexOf(String(i)) === -1) {
+          data[i] = '';
+        } else {
+          try {
+            data[i] = $.utils.code.toSource(value[i], opt_seen);
+          } catch (e) {
+            // Recursive data structure.  Bail.
+            data = null;
+            break;
+          }
+        }
+      }
+      if (data) {
+        return '[' + data.join(', ') + ']';
+      }
+    } else if (value instanceof Error) {
+      var constructor;
+      if (proto === Error.prototype) {
+        constructor = 'Error';
+      } else if (proto === EvalError.prototype) {
+        constructor = 'EvalError';
+      } else if (proto === RangeError.prototype) {
+        constructor = 'RangeError';
+      } else if (proto === ReferenceError.prototype) {
+        constructor = 'ReferenceError';
+      } else if (proto === SyntaxError.prototype) {
+        constructor = 'SyntaxError';
+      } else if (proto === TypeError.prototype) {
+        constructor = 'TypeError';
+      } else if (proto === URIError.prototype) {
+        constructor = 'URIError';
+      } else if (proto === PermissionError.prototype) {
+        constructor = 'PermissionError';
+      }
+      var msg;
+      if (value.message === undefined) {
+        msg = '';
+      } else {
+        try {
+          msg = $.utils.code.toSource(value.message, opt_seen);
+        } catch (e) {
+          // Leave msg undefined.
+        }
+      }
+      if (constructor && msg !== undefined) {
+        return constructor + '(' + msg + ')';
+      }
     }
   }
   if (type === 'object' || type === 'symbol') {
@@ -94,55 +123,16 @@ $.utils.code.valueToSource = function(value) {
   throw TypeError('[' + type + ']');
 };
 
-$.utils.code.valueToSourceSafe = function(value) {
-  // Same as $.utils.code.valueToSource, but don't throw any selector errors.
+$.utils.code.toSource.processingError = false;
+
+$.utils.code.toSourceSafe = function(value) {
+  // Same as $.utils.code.toSource, but don't throw any selector errors.
   try {
-    return $.utils.code.valueToSource(value);
+    return $.utils.code.toSource(value);
   } catch (e) {
     if (e instanceof ReferenceError) {
       return e.message;
     }
     throw e;
-  }
-};
-
-
-$.utils.code.getTempObj = function(id) {
-  // Find object temporarily stored with the given ID.
-  var tuple = $.utils.code.tempIds_[id];
-  if (tuple) {
-     tuple[1] = Date.now();
-     return tuple[0];
-  }
-  return undefined;
-}
-
-$.utils.code.storeTempObj = function(obj) {
-  // Find temporary ID for obj in this.tempIds_,
-  // adding it if it's not already there.
-  var objs = $.utils.code.tempIds_;
-  for (var id in objs) {
-    if (Object.is(objs[id][0], obj)) {
-      objs[id][1] = Date.now();
-      return key;
-    }
-  }
-  var id = String(Math.random()).substring(2);
-  objs[id] = [obj, Date.now()];
-  // Lazy call of cleanup.
-  setTimeout($.utils.code.cleanTempId, 1);
-  return id;
-};
-
-$.utils.code.tempIds_ = Object.create(null);
-
-$.utils.code.cleanTempId = function() {
-  // Cleanup IDs/objects that have not been accessed in an hour.
-  var ttl = Date.now() - 60 * 60 * 1000;
-  var objs = $.utils.code.tempIds_;
-  for (var id in objs) {
-    if (objs[id][1] < ttl) {
-      delete objs[id];
-    }
   }
 };
