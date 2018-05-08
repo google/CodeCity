@@ -1,1 +1,0 @@
-../core/core_00_global.js

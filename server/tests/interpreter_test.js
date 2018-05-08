@@ -38,6 +38,8 @@ interpreter.createThreadForSrc(common.es5);
 interpreter.run();
 interpreter.createThreadForSrc(common.es6);
 interpreter.run();
+interpreter.createThreadForSrc(common.esx);
+interpreter.run();
 interpreter.createThreadForSrc(common.cc);
 interpreter.run();
 interpreter.addVariableToScope(interpreter.global, 'src');
@@ -95,6 +97,8 @@ function runComplexTest(t, name, src, expected, initFunc, asyncFunc) {
   intrp.run();
   intrp.createThreadForSrc(common.es6);
   intrp.run();
+  intrp.createThreadForSrc(common.esx);
+  intrp.run();
   intrp.createThreadForSrc(common.cc);
   intrp.run();
   if (initFunc) {
@@ -150,6 +154,8 @@ async function runAsyncTest(t, name, src, expected, initFunc, sideFunc) {
   intrp.createThreadForSrc(common.es5);
   intrp.run();
   intrp.createThreadForSrc(common.es6);
+  intrp.run();
+  intrp.createThreadForSrc(common.esx);
   intrp.run();
   intrp.createThreadForSrc(common.cc);
   intrp.run();
@@ -1117,6 +1123,8 @@ exports.testStartStop = async function(t) {
   intrp.createThreadForSrc(common.es5);
   intrp.run();
   intrp.createThreadForSrc(common.es6);
+  intrp.run();
+  intrp.createThreadForSrc(common.esx);
   intrp.run();
   intrp.createThreadForSrc(common.cc);
   intrp.run();
