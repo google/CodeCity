@@ -25,7 +25,24 @@
 'use strict';
 
 const fs = require('fs');
-exports.es5 = fs.readFileSync('startup/es5.js', 'utf8');
-exports.es6 = fs.readFileSync('startup/es6.js', 'utf8');
-exports.esx = fs.readFileSync('startup/esx.js', 'utf8');
-exports.cc = fs.readFileSync('startup/cc.js', 'utf8');
+const Interpreter = require('../interpreter');
+
+exports.startupFiles = {
+  es5: fs.readFileSync('startup/es5.js', 'utf8'),
+  es6: fs.readFileSync('startup/es6.js', 'utf8'),
+  esx: fs.readFileSync('startup/esx.js', 'utf8'),
+  cc: fs.readFileSync('startup/cc.js', 'utf8'),
+};
+
+/**
+ * Create an initialize an Interpreter instance.
+ * @return {!Interpreter}
+ */
+exports.getInterpreter = function() {
+  var intrp = new Interpreter;
+  for (const file of Object.values(exports.startupFiles)) {
+    intrp.createThreadForSrc(file);
+    intrp.run();
+  }
+  return intrp;
+}

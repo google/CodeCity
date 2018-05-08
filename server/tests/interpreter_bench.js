@@ -24,10 +24,11 @@
  */
 'use strict';
 
-var util = require('util');
+const util = require('util');
 
-var Interpreter = require('../interpreter');
-var common = require('./interpreter_common');
+const Interpreter = require('../interpreter');
+const getInterpreter = require('./interpreter_common').getInterpreter;
+const testcases = require('./testcases');
 
 /**
  * Run a benchmark of the interpreter.
@@ -37,15 +38,7 @@ var common = require('./interpreter_common');
  */
 function runBench(b, name, src) {
   for (var i = 0; i < 4; i++) {
-    var interpreter = new Interpreter();
-    interpreter.createThreadForSrc(common.es5);
-    interpreter.run();
-    interpreter.createThreadForSrc(common.es6);
-    interpreter.run();
-    interpreter.createThreadForSrc(common.esx);
-    interpreter.run();
-    interpreter.createThreadForSrc(common.cc);
-    interpreter.run();
+    var interpreter = getInterpreter();
 
     var err = undefined;
     try {
