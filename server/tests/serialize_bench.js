@@ -44,6 +44,8 @@ function runInterpreterBench(b, name, src) {
     intrp1.run();
     intrp1.createThreadForSrc(common.es6);
     intrp1.run();
+    intrp1.createThreadForSrc(common.esx);
+    intrp1.run();
     intrp1.createThreadForSrc(common.cc);
     intrp1.run();
 

@@ -1,1 +1,1 @@
-../server/startup/es5.js
+../core/core_00_es5.js

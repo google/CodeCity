@@ -42,6 +42,8 @@ function runBench(b, name, src) {
     interpreter.run();
     interpreter.createThreadForSrc(common.es6);
     interpreter.run();
+    interpreter.createThreadForSrc(common.esx);
+    interpreter.run();
     interpreter.createThreadForSrc(common.cc);
     interpreter.run();
 

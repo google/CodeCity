@@ -27,4 +27,5 @@
 const fs = require('fs');
 exports.es5 = fs.readFileSync('startup/es5.js', 'utf8');
 exports.es6 = fs.readFileSync('startup/es6.js', 'utf8');
+exports.esx = fs.readFileSync('startup/esx.js', 'utf8');
 exports.cc = fs.readFileSync('startup/cc.js', 'utf8');

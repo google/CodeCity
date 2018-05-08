@@ -80,6 +80,8 @@ function runTest(t, name, src1, src2, src3, expected, steps, noBuiltins) {
       intrp.run();
       intrp.createThreadForSrc(common.es6);
       intrp.run();
+      intrp.createThreadForSrc(common.esx);
+      intrp.run();
       intrp.createThreadForSrc(common.cc);
       intrp.run();
     }
@@ -177,6 +179,8 @@ async function runAsyncTest(t, name, src1, src2, expected, initFunc) {
   intrp1.createThreadForSrc(common.es5);
   intrp1.run();
   intrp1.createThreadForSrc(common.es6);
+  intrp1.run();
+  intrp1.createThreadForSrc(common.esx);
   intrp1.run();
   intrp1.createThreadForSrc(common.cc);
   intrp1.run();
