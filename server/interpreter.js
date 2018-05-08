@@ -1978,7 +1978,7 @@ Interpreter.prototype.initThread_ = function() {
           perms, func, thisArg, argList, intrp.now() + delay);
     }
   });
-    
+
   new this.NativeFunction({
     id: 'Thread.current', length: 0,
     /** @type {!Interpreter.NativeCallImpl} */
@@ -5042,7 +5042,7 @@ stepFuncs_['CallExpression'] = function (thread, stack, state, node) {
     }
     state.step_ = 3;  // N.B: SEE NOTE 1 ABOVE!
   }
-  if (state.step_ === 3) {  // Done valuating arguments; do function call.
+  if (state.step_ === 3) {  // Done evaluating arguments; do function call.
     state.step_ = 4;  // N.B: SEE NOTE 1 ABOVE!
     var func = state.info_.callee;
     if (!(func instanceof this.Function)) {
