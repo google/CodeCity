@@ -3174,12 +3174,13 @@ Interpreter.prototype.Function.prototype.setName = function(name) {
 };
 
 /**
- * @param {!Interpreter} intrp The interpreter.
- * @param {!Interpreter.Thread} thread The current thread.
- * @param {!Interpreter.State} state The current state.
- * @param {Interpreter.Value} thisVal The this value passed into function.
- * @param {!Array<Interpreter.Value>} args The arguments to the call.
- * @return {Interpreter.Value|!FunctionResult}
+ * @type {?function(this: Interpreter.prototype.Object,
+ *                  !Interpreter,
+ *                  !Interpreter.Thread,
+ *                  !Interpreter.State,
+ *                  Interpreter.Value,
+ *                  !Array<Interpreter.Value>)
+ *                : (Interpreter.Value|!FunctionResult)}
  */
 Interpreter.prototype.Function.prototype.call = function(
     intrp, thread, state, thisVal, args) {
@@ -3780,20 +3781,10 @@ Interpreter.prototype.installTypes = function() {
   /**
    * The [[Call]] internal method defined by §13.2.1 of the ES5.1 spec.
    *
-   * Abstract functions (neither native nor user) should not be
-   * callable, so throw (internal) error if that ever happens.
-   * @param {!Interpreter} intrp The interpreter.
-   * @param {!Interpreter.Thread} thread The current thread.
-   * @param {!Interpreter.State} state The current state.
-   * @param {Interpreter.Value} thisVal The this value passed into function.
-   * @param {!Array<Interpreter.Value>} args The arguments to the call.
-   * @return {Interpreter.Value}
+   * Abstract functions (neither native nor user) can't be called.
    * @override
    */
-  intrp.Function.prototype.call = function(
-      intrp, thread, state, thisVal, args) {
-    throw Error('Non-callable function called??');
-  };
+  intrp.Function.prototype.call = null;
 
   /**
    * The [[Construct]] internal method defined by §13.2.2 of the ES5.1
@@ -3862,6 +3853,12 @@ Interpreter.prototype.installTypes = function() {
   /**
    * The [[Call]] internal method defined by §13.2.1 of the ES5.1 spec.
    * @override
+   * @param {!Interpreter} intrp The interpreter.
+   * @param {!Interpreter.Thread} thread The current thread.
+   * @param {!Interpreter.State} state The current state.
+   * @param {Interpreter.Value} thisVal The this value passed into function.
+   * @param {!Array<Interpreter.Value>} args The arguments to the call.
+   * @return {Interpreter.Value|!FunctionResult} 
    */
   intrp.UserFunction.prototype.call = function(
       intrp, thread, state, thisVal, args) {
@@ -5074,6 +5071,10 @@ stepFuncs_['CallExpression'] = function (thread, stack, state, node) {
       }
       var r = func.construct(this, thread, state, args);
     } else {
+      if (!func.call) {
+        throw new this.Error(state.scope.perms, this.TYPE_ERROR,
+            func + ' is not callable');
+      }
       r = func.call(this, thread, state, state.info_.this, args);
     }
     if (r instanceof FunctionResult) {
