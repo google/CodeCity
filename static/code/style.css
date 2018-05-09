@@ -178,6 +178,39 @@ textarea {
   margin-top: 8px;
 }
 
+#editorHeader {
+  margin-top: 5px;
+  overflow-x: auto;
+}
+
+#editorTabs>span {
+  border-radius: 2px;
+  color: #888;
+  cursor: default;
+  margin-left: 5px;
+  outline: none;
+  padding: 0 5px;
+  user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+#editorTabs.enabled>span {
+  color: #444;
+}
+
+#editorTabs.enabled>span:hover {
+  background-color: #d6e9f8;
+}
+
+#editorTabs>span.highlighted {
+  background-color: #ccc;
+}
+
+#editorContainers>div {
+  display: none;
+}
+
 #editorConfirm {
   display: none;
 }
@@ -223,4 +256,8 @@ textarea {
 #editorConfirmSave {
   float: right;
   margin-right: 25px;
+}
+
+.CodeMirror {
+  border: 1px solid #ddd;
 }

@@ -25,6 +25,18 @@
 Code.Editor = {};
 
 /**
+ * JSON-encoded list of complete object selector parts.
+ * @type {?string}
+ */
+Code.Editor.partsJSON = null;
+
+/**
+ * Currently selected editor.
+ * @type {?Code.GenericEditor}
+ */
+Code.Editor.currentEditor = null;
+
+/**
  * Got a ping from someone.  Something might have changed and need updating.
  */
 Code.Editor.receiveMessage = function() {
@@ -32,6 +44,21 @@ Code.Editor.receiveMessage = function() {
     return;  // Ignore messages if the modal save dialog is up.
   }
   var selector = sessionStorage.getItem(Code.Common.SELECTOR);
+  var parts = Code.Common.selectorToParts(selector);
+  if (!parts || !parts.length) {
+    return;  // Invalid parts, ignore.
+  }
+  if (JSON.stringify(parts) === Code.Editor.partsJSON) {
+    return;  // No change.
+  }
+  if (Code.Editor.partsJSON === null) {
+    Code.Editor.load();  // Initial load of content.
+  } else if (!Code.Editor.currentEditor ||
+             Code.Editor.currentEditor.isSaved()) {
+    Code.Editor.reload();  // Reload to load different content.
+  } else {
+    Code.Editor.showSave();  // User needs to save/discard/cancel.
+  }
 };
 
 /**
@@ -48,14 +75,73 @@ Code.Editor.init = function() {
   document.getElementById('editorSave').addEventListener('click',
       Code.Editor.save);
 
+  // Create the tabs.
+  var tabRow = document.getElementById('editorTabs');
+  var containerRow = document.getElementById('editorContainers');
+  for (var i = 0, editor; (editor = Code.Editor.editors[i]); i++) {
+    var span = document.createElement('span');
+    span.appendChild(document.createTextNode(editor.name));
+    span.setAttribute('role', 'button');
+    span.setAttribute('tabindex', i);
+    span.addEventListener('click', Code.Editor.tabClick);
+    tabRow.appendChild(span);
+    var div = document.createElement('div');
+    editor.createDom(div);
+    containerRow.appendChild(div);
+    // Cross-link span/div to editor.
+    span.editor = editor;
+    div.editor = editor;
+    editor.tabElement = span;
+    editor.containerElement = div;
+  }
+
   Code.Editor.receiveMessage();
 };
 
 /**
+ * Load content into the editors.
+ */
+Code.Editor.load = function() {
+  var selector = sessionStorage.getItem(Code.Common.SELECTOR);
+  var parts = Code.Common.selectorToParts(selector);
+  if (!parts) {
+    return;  // Invalid parts, ignore.
+  }
+  Code.Editor.partsJSON = JSON.stringify(parts);
+  // Request data from Code City server.
+  Code.Editor.key = undefined;
+  Code.Editor.sendCode();
+
+  // Set the header.
+  var header = document.getElementById('editorHeader');
+  header.innerHTML = '';
+  // TODO: Fix assignments to selectors with ^ in the path.
+  // $('$.foo^') should be Object.setPrototypeOf($.foo, ...)
+  // Remove the last part.
+  var lastPart = parts.pop();
+  var selector = Code.Common.partsToSelector(parts);
+  var reference = Code.Common.selectorToReference(selector);
+  // Put the last part back on.
+  console.log(lastPart);
+  // Render as '.foo' or '[42]' or '["???"]' or '^'.
+  if (lastPart.type === 'id') {
+    var mockParts = [{type: 'id', value: 'X'}, lastPart];
+    reference += Code.Common.partsToSelector(mockParts).substring(1) + ' = ';
+  } else if (lastPart.type === '^') {
+    reference = 'Object.setPrototypeOf(' + reference + ', ...) ';
+  } else {
+    // Unknown part type.
+    throw lastPart;
+  }
+
+  header.appendChild(document.createTextNode(reference));
+};
+
 /**
  * Save the current editor content.
  */
 Code.Editor.save = function() {
+  Code.Editor.sendCode();
 };
 
 /**
@@ -63,9 +149,163 @@ Code.Editor.save = function() {
  */
 Code.Editor.reload = function() {
   Code.Editor.hideSave();
+  Code.Editor.beforeUnload.disabled = true;
   location.reload();
 };
 
+/**
+ * Issue a warning if the user has unsaved changes and is attempting to leave
+ * the code editor (e.g. typing a new URL).  This is not triggered due to
+ * in-editor navigation.
+ */
+Code.Editor.beforeUnload = function(e) {
+  if (document.getElementById('editorConfirm').style.display === 'block') {
+    // The user has already got a warning but is ignoring it.  Just leave.
+    Code.Editor.hideSave();
+    return;
+  }
+  if (!Code.Editor.beforeUnload.disabled && Code.Editor.currentEditor &&
+      !Code.Editor.currentEditor.isSaved()) {
+    e.returnValue = 'You have unsaved changes.';
+    e.preventDefault();
+  }
+};
+
+/**
+ * In-editor navigation should not trigger the beforeUnload dialog.
+ */
+Code.Editor.beforeUnload.disabled = false;
+
+/**
+ * When a tab is clicked, highlight it and show its container.
+ * @param {!Event|!Object} e Click event or object pretending to be and event.
+ */
+Code.Editor.tabClick = function(e) {
+  if (Code.Editor.tabClick.disabled) {
+    return;
+  }
+  // Unhighlight all tabs, hide all containers.
+  var tabs = document.querySelectorAll('#editorTabs>.highlighted');
+  for (var i = 0, tab; (tab = tabs[i]); i++) {
+    tab.className = '';
+  }
+  var containers = document.querySelectorAll('#editorContainers>div');
+  for (var i = 0, container; (container = containers[i]); i++) {
+    container.style.display = 'none';
+  }
+
+  // Copy current data into all other editors.
+  if (Code.Editor.currentEditor && !Code.Editor.currentEditor.isSaved()) {
+    var text = Code.Editor.currentEditor.getText();
+    Code.Editor.setTextToAllEditors(text);
+  }
+
+  // Highlight one tab, show one container.
+  var tab = e.target;
+  tab.className = 'highlighted';
+  Code.Editor.currentEditor = tab.editor;
+  var container = Code.Editor.currentEditor.containerElement;
+  container.style.display = 'block';
+  // If e is an event, then this click is the result of a user's direct action.
+  // If not, then it's a fake event as a result of page load.
+  var userAction = e instanceof Event;
+  Code.Editor.currentEditor.focus(userAction);
+};
+
+/**
+ * Don't allow clicking of tabs before data is received from Code City.
+ */
+Code.Editor.tabClick.disabled = true;
+
+/**
+ * Send a request to Code City's code editor service.
+ */
+Code.Editor.sendCode = function() {
+  var xhr = Code.Editor.codeRequest_;
+  xhr.abort();
+  xhr.open('POST', '/code/editor');
+  xhr.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+  xhr.onreadystatechange = Code.Editor.receiveCode;
+  var src = Code.Editor.currentEditor ?
+      Code.Editor.currentEditor.getText() : '';
+  var data =
+      'key=' + encodeURIComponent(Code.Editor.key) +
+      '&parts=' + encodeURIComponent(Code.Editor.partsJSON);
+  if (src) {
+    data += '&src=' + encodeURIComponent(src);
+  }
+  xhr.send(data);
+};
+
+/**
+ * Reusable XHR object for server pings.
+ */
+Code.Editor.codeRequest_ = new XMLHttpRequest();
+
+/**
+ * Got a response from Code City's code editor service.
+ */
+Code.Editor.receiveCode = function() {
+  var xhr = Code.Editor.codeRequest_;
+  if (xhr.readyState !== 4) {
+    return;  // Not ready yet.
+  }
+  if (xhr.status !== 200) {
+    console.warn('Editor XHR returned status ' + xhr.status);
+    return;
+  }
+  var data = JSON.parse(xhr.responseText);
+  if (data.hasOwnProperty('key')) {
+    Code.Editor.key = data.key;
+  }
+  if (data.hasOwnProperty('text')) {
+    Code.Editor.setTextToAllEditors(data.text);
+  }
+  Code.Editor.ready && Code.Editor.ready();
+};
+
+/**
+ * Data has been received, ready to allow the user to edit.
+ */
+Code.Editor.ready = function() {
+  // Configure tabs.
+  document.getElementById('editorTabs').className = 'enabled';
+  Code.Editor.tabClick.disabled = false;
+
+  // Find the editor with the highest confidence.
+  var bestEditor = null;
+  var bestConfidence = -Infinity;
+  for (var i = 0, editor; (editor = Code.Editor.editors[i]); i++) {
+    if (bestConfidence < editor.confidence) {
+      bestConfidence = editor.confidence;
+      bestEditor = editor;
+    }
+  }
+  // Switch tabs to show the highest confidence editor.
+  if (bestEditor) {
+    var fakeEvent = {target: bestEditor.tabElement};
+    Code.Editor.tabClick(fakeEvent);
+  }
+
+  // Remove the loading animation.
+  var header = document.getElementById('editorHeader');
+  header.className = '';
+
+  // Only run this code once.
+  delete Code.Editor.ready;
+};
+
+/**
+ * Set the values of the editors to the initial value sent from Code City.
+ * @param {string} text Plain text contents.
+ */
+Code.Editor.setTextToAllEditors = function(text) {
+  for (var i = 0, editor; (editor = Code.Editor.editors[i]); i++) {
+    editor.setText(text);
+  }
+};
+
+/**
  * Show the save dialog.
  */
 Code.Editor.showSave = function() {
@@ -130,3 +370,224 @@ Code.Editor.hideButter = function() {
 
 window.addEventListener('load', Code.Editor.init);
 window.addEventListener('message', Code.Editor.receiveMessage, false);
+window.addEventListener('beforeunload', Code.Editor.beforeUnload);
+
+
+Code.Editor.editors = [];
+
+/**
+ * Base class for editors.
+ * @param {string} name User-facing name of editor (used in tab).
+ * @constructor
+ */
+Code.GenericEditor = function(name) {
+  /**
+   * Human-readable name of editor.
+   */
+  this.name = name;
+  /**
+   * A float from 0 (bad) to 1 (perfect) indicating the editor's fitness to
+   * edit the given content.
+   */
+  this.confidence = 0;
+  // Register this editor.
+  Code.Editor.editors.push(this);
+};
+
+/**
+ * Span that forms the tab button.
+ * @type {?Element}
+ */
+Code.GenericEditor.prototype.tabElement = null;
+
+/**
+ * Div that forms the editor's container.
+ * @type {?Element}
+ */
+Code.GenericEditor.prototype.containerElement = null;
+
+/**
+ * Plain text representation of this editor's contents as of load or last save.
+ * @type {?string}
+ */
+Code.GenericEditor.prototype.lastSavedText = null;
+
+/**
+ * Create the DOM for this editor.
+ * @param {!Element} container DOM should be appended to this div.
+ */
+Code.GenericEditor.prototype.createDom = function(container) {
+  var text = 'TODO: Implement createDom for ' + this.name + ' editor.';
+  container.appendChild(document.createTextNode(text));
+};
+
+/**
+ * Get the contents of the editor.
+ * @return {string} Plain text contents.
+ */
+Code.GenericEditor.prototype.getText = function() {
+  throw ReferenceError('getText not implemented on editor');
+};
+
+/**
+ * Set the contents of the editor.
+ * @param {string} text Plain text contents.
+ */
+Code.GenericEditor.prototype.setText = function(text) {
+  throw ReferenceError('setText not implemented on editor');
+};
+
+/**
+ * Is the user's work in this editor saved?
+ * @return {boolean} True if work is saved.
+ */
+Code.GenericEditor.prototype.isSaved = function() {
+  return this.getText() === this.lastSavedText;
+};
+
+/**
+ * Notification that this editor has just been displayed.
+ * @param {boolean} userAction True if user clicked on a tab.
+ */
+Code.GenericEditor.prototype.focus = function(userAction) {
+};
+
+
+////////////////////////////////////////////////////////////////////////////////
+Code.ValueEditor = new Code.GenericEditor('Value');
+
+// The value editor can handle any content, but express a low confidence in
+// order to defer to more specialized editors.
+Code.ValueEditor.confidence = 0.1;
+
+/**
+ * Create the DOM for this editor.
+ * @param {!Element} container DOM should be appended to this div.
+ */
+Code.ValueEditor.createDom = function(container) {
+  container.innerHTML = `
+<style>
+#valueEditor {
+  position: absolute;
+  top: 60px;
+  bottom: 20px;
+  left: 10px;
+  right: 20px
+}
+</style>
+  `;
+  container.id = 'valueEditor';
+  var options = {
+    tabSize: 2,
+    undoDepth: 1024,
+    lineNumbers: true,
+    matchBrackets: true
+  };
+  this.editor = CodeMirror(container, options);
+  this.editor.setSize('100%', '100%');
+};
+
+/**
+ * Get the contents of the editor.
+ * @return {string} Plain text contents.
+ */
+Code.ValueEditor.getText = function() {
+  return this.editor.getValue();
+};
+
+/**
+ * Set the contents of the editor.
+ * @param {string} text Plain text contents.
+ */
+Code.ValueEditor.setText = function(text) {
+  this.editor.setValue(text);
+  this.lastSavedText = Code.ValueEditor.getText();
+};
+
+/**
+ * Notification that this editor has just been displayed.
+ * @param {boolean} userAction True if user clicked on a tab.
+ */
+Code.ValueEditor.focus = function(userAction) {
+  this.editor.refresh();
+  if (userAction) {
+    this.editor.focus();
+  }
+};
+
+////////////////////////////////////////////////////////////////////////////////
+//Code.FunctionEditor = new Code.GenericEditor('Function');
+
+////////////////////////////////////////////////////////////////////////////////
+//Code.JsspEditor = new Code.GenericEditor('JSSP');
+
+////////////////////////////////////////////////////////////////////////////////
+//Code.SvgEditor = new Code.GenericEditor('SVG');
+
+////////////////////////////////////////////////////////////////////////////////
+Code.TextEditor = new Code.GenericEditor('Text');
+
+/**
+ * Create the DOM for this editor.
+ * @param {!Element} container DOM should be appended to this div.
+ */
+Code.TextEditor.createDom = function(container) {
+  container.innerHTML = `
+<style>
+.editorBigQuotes {
+  font-family: serif;
+  font-size: 48pt;
+  position: absolute;
+}
+</style>
+<div style="position: absolute; top: 60px; bottom: 20px; left: 45px; right: 50px">
+  <textarea style="height: 100%; width: 100%; resize: none;"></textarea>
+</div>
+<div class="editorBigQuotes" style="left: 10px; top: 57px">“</div>
+<div class="editorBigQuotes" style="right: 10px; bottom: 0">”</div>
+  `;
+  this.textarea = container.querySelector('textarea');
+};
+
+/**
+ * Get the contents of the editor.
+ * @return {string} Plain text contents.
+ */
+Code.TextEditor.getText = function() {
+  return JSON.stringify(this.textarea.value);
+};
+
+/**
+ * Set the contents of the editor.
+ * @param {string} text Plain text contents.
+ */
+Code.TextEditor.setText = function(text) {
+  var str;
+  try {
+    str = JSON.parse(text);
+  } catch (e) {}
+  if (typeof str !== 'string') {
+    str = '';
+    this.confidence = 0;
+  } else {
+    this.confidence = 0.9;
+  }
+  this.textarea.value = str;
+  this.lastSavedText = Code.TextEditor.getText();
+};
+
+/**
+ * Notification that this editor has just been displayed.
+ * @param {boolean} userAction True if user clicked on a tab.
+ */
+Code.TextEditor.focus = function(userAction) {
+  if (userAction) {
+    this.textarea.focus();
+  }
+};
+
+////////////////////////////////////////////////////////////////////////////////
+//Code.RegExpEditor = new Code.GenericEditor('RegExp');
+
+////////////////////////////////////////////////////////////////////////////////
+//Code.DateEditor = new Code.GenericEditor('Date');

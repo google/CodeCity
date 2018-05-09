@@ -5,7 +5,10 @@
     <title>Code City: Code Editor</title>
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css?family=Roboto+Mono" rel="stylesheet">
+    <link href="/static/CodeMirror/codemirror.css" rel="stylesheet">
     <link href="/static/jfk.css" rel="stylesheet">
+    <script src="/static/CodeMirror/codemirror.js"></script>
+    <script src="/static/CodeMirror/javascript.js"></script>
     <script src="common.js"></script>
     <script src="editor.js"></script>
   </head>
@@ -24,5 +27,9 @@
     </div>
     <div id="editorButter"><div><div id="editorButterText"></div></div></div>
     <button class="jfk-button jfk-button-submit" id="editorSave">Save</button>
+    <div id="editorTabs">Edit as:</div>
+    <div id="editorHeader" class="loading"></div>
+    <div id="editorContainers">
+    </div>
   </body>
 </html>
