@@ -125,3 +125,87 @@ $.www.code.objectPanel.www = function(request, response) {
 
 $.www.ROUTER.codeObjectPanel =
     {regexp: /^\/code\/objectPanel\?/, handler: $.www.code.objectPanel};
+
+
+$.www.code.editor = {};
+
+$.www.code.editor.www = function(request, response) {
+  // HTTP handler for /code/editor
+  // Provide data for the IDE's editors.
+  // Takes one input: a JSON-encoded list of parts from the 'parts' parameter.
+  // Prints a browser-executed JavaScript data assignment.
+  var data = {};
+  var parts = JSON.parse(request.parameters.parts);
+  if (parts.length) {
+    // Find the origin object.  '$.foo' is the origin of '$.foo.bar'.
+    var lastPart = parts.pop();
+    var object;
+    if (request.parameters.key) {
+      // See if temp ID DB still knows about this key.  If so, we're done.
+      object = $.db.tempId.getObjById(request.parameters.key);
+    }
+    if (!object) {
+      // Parse the parts list.
+      try {
+        var object = $.utils.selector.partsToValue(parts);
+      } catch (e) {
+        // Parts don't match a valid path.
+        // TODO(fraser): Send an informative error message.
+      }
+    }
+    if (object) {
+      // Store the origin key for next time.
+      data.key = $.db.tempId.storeObj(object);
+      // Populate the origin object in the selector lookup cache.
+      var selector = $.utils.selector.partsToSelector(parts);
+      $.utils.selector.setSelector(object, selector);
+
+      // Save any changes.
+      if (request.parameters.src) {
+        var ok = true;
+        try {
+          // TODO(fraser): Make this secure -- somehow.
+          var saveValue = eval(request.parameters.src);
+        } catch (e) {
+          ok = false;
+          // TODO(fraser): Send an informative error message.
+        }
+        if (ok) {
+          if (lastPart.type === 'id') {
+            object[lastPart.value] = saveValue;
+          } else if (lastPart.type === '^') {
+            Object.setPrototypeOf(object, saveValue);
+          } else {
+            // Unknown part type.
+            throw lastPart;
+          }
+        }
+      }
+
+      // Find the edited value.
+      var value;
+      if (lastPart.type === 'id') {
+        value = object[lastPart.value];
+      } else if (lastPart.type === '^') {
+        value = Object.getPrototypeOf(object);
+      } else {
+        // Unknown part type.
+        throw lastPart;
+      }
+      // Populate the value object in the selector lookup cache.
+      parts.push(lastPart);
+      var selector = $.utils.selector.partsToSelector(parts);
+      $.utils.selector.setSelector(value, selector);
+      // Render the current value as a string.
+      try {
+        data.text = $.utils.code.toSource(value);
+      } catch (e) {
+        data.text = e.message;
+      }
+    }
+  }
+  response.write(JSON.stringify(data));
+};
+
+$.www.ROUTER.codeEditor =
+    {regexp: /^\/code\/editor$/, handler: $.www.code.editor};
