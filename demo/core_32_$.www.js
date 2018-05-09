@@ -148,4 +148,4 @@ $.www.robots.www.jssp = [
   'Disallow: /',
 ].join('\n');
 
-$.www.ROUTER.homepage = {regexp: /^\/robots\.txt(\?|$)/, handler: $.www.robots};
+$.www.ROUTER.robots = {regexp: /^\/robots\.txt(\?|$)/, handler: $.www.robots};
