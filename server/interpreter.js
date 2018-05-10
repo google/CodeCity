@@ -768,11 +768,10 @@ Interpreter.prototype.initObject_ = function() {
     id: 'Object.getPrototypeOf', length: 1,
     /** @type {!Interpreter.NativeCallImpl} */
     call: function(intrp, thread, state, thisVal, args) {
-      var obj = args[0];
-      throwIfNullUndefined(obj);
-      // TODO(cpcallen): behaviour of our getPrototype is wrong for
-      // getPrototypeOf according to ES5.1 (but correct for ES6).
-      return intrp.getPrototype(obj);
+      // N.B.: This conforms to ES6.  ES5.1 would throw TypeError for
+      // Object.getPrototypeOf(<boolean, string or number>)
+      var o = intrp.toObject(args[0], state.scope.perms);
+      return o.proto;
     }
   });
 
