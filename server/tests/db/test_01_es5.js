@@ -1741,19 +1741,50 @@ tests.ObjectPrototypeHasOwnProperty = function() {
   console.assert(r === 83, 'Object.prototype.hasOwnProperty');
 };
 
-tests.ObjectPrototypeGetPrototypeOf = function() {
+tests.ObjectPrototypeIsPrototypeOf = function() {
+  var pfx = 'Object.prototype.isPrototypeOf';
+  console.assert(!Boolean.prototype.isPrototypeOf(false),
+                 'Boolean.prototype.isPrototypeOf(false)');
+  console.assert(!Number.prototype.isPrototypeOf(0),
+                 'Number.prototype.isPrototypeOf(0)');
+  console.assert(!String.prototype.isPrototypeOf(''),
+                 "String.prototype.isPrototypeOf('')");
+  console.assert(!Object.prototype.isPrototypeOf.call(false, false),
+                 pfx + '.call(false, false)');
+  console.assert(!Object.prototype.isPrototypeOf.call(0, 0),
+                 pfx + '.call(0, 0)');
+  console.assert(!Object.prototype.isPrototypeOf.call('', ''),
+                pfx + ".call('', '')");
+  console.assert(!Object.prototype.isPrototypeOf.call(null, null),
+                 pfx + '.call(null, null)');
+  console.assert(!Object.prototype.isPrototypeOf.call(undefined, undefined),
+                 pfx + '.call(undefined, undefined)');
+  try {
+    Object.prototype.isPrototypeOf.call(null, Object.create(null));
+    console.assert(false, pfx + ".call(null, ...) didn't throw");
+  } catch (e) {
+    console.assert(e.name === 'TypeError',
+                   pfx + '.call(null, ...) wrong error');
+  }
+  try {
+    Object.prototype.isPrototypeOf.call(undefined, Object.create(undefined));
+    console.assert(false, pfx + ".call(undefined, ...) didn't throw");
+  } catch (e) {
+    console.assert(e.name === 'TypeError',
+                   pfx + '.call(undefined, ...) wrong error');
+  }
+
   var g = {};
   var p = Object.create(g);
   var o = Object.create(p);
-  console.assert(!o.isPrototypeOf(o), 'Object.prototype.getPrototypeOf self');
-  console.assert(
-      !o.isPrototypeOf({}), 'Object.prototype.getPrototypeOf siblings');
-  console.assert(
-      g.isPrototypeOf(o), 'Object.prototype.getPrototypeOf grandchild');
-  console.assert(p.isPrototypeOf(o), 'Object.prototype.getPrototypeOf child');
-  console.assert(!o.isPrototypeOf(p), 'Object.prototype.getPrototypeOf parent');
-  console.assert(
-      !o.isPrototypeOf(g), 'Object.prototype.getPrototypeOf grandparent');
+  console.assert(!o.isPrototypeOf(o), pfx + ' self');
+  console.assert(!Object.prototype.isPrototypeOf(Object.create(null)),
+                 pfx + ' unrelated');
+  console.assert(!o.isPrototypeOf({}), pfx + ' siblings');
+  console.assert(g.isPrototypeOf(o), pfx + ' grandchild');
+  console.assert(p.isPrototypeOf(o), pfx + ' child');
+  console.assert(!o.isPrototypeOf(p), pfx + ' parent');
+  console.assert(!o.isPrototypeOf(g), pfx + ' grandparent');
 };
 
 tests.ObjectPrototypePropertyIsEnumerable = function() {

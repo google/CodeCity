@@ -1295,9 +1295,44 @@ module.exports = [
     `,
     expected: 83 },
 
+  { name: 'Object.protoype.isPrototypeOf primitives', src: `
+    Boolean.prototype.isPrototypeOf(false) ||
+    Number.prototype.isPrototypeOf(0) ||
+    String.prototype.isPrototypeOf('') ||
+    Object.prototype.isPrototypeOf.call(false, false) ||
+    Object.prototype.isPrototypeOf.call(0, 0) ||
+    Object.prototype.isPrototypeOf.call('', '') ||
+    Object.prototype.isPrototypeOf.call(null, null) ||
+    Object.prototype.isPrototypeOf.call(undefined, undefined);
+    `,
+    expected: false },
+
+  { name: 'Object.protoype.isPrototypeOf.call(null, ...)', src: `
+    try {
+      Object.prototype.isPrototypeOf.call(null, Object.create(null));
+    } catch (e) {
+      e.name;
+    }
+    `,
+    expected: 'TypeError' },
+
+  { name: 'Object.protoype.isPrototypeOf.call(undefined, ...)', src: `
+    try {
+      Object.prototype.isPrototypeOf.call(undefined, Object.create(undefined));
+    } catch (e) {
+      e.name;
+    }
+    `,
+    expected: 'TypeError' },
+
   { name: 'Object.protoype.isPrototypeOf self', src: `
     var o = {};
     o.isPrototypeOf(o);
+    `,
+    expected: false },
+
+  { name: 'Object.protoype.isPrototypeOf unrelated', src: `
+    Object.prototype.isPrototypeOf(Object.create(null))
     `,
     expected: false },
 
