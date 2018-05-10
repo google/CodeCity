@@ -3734,6 +3734,7 @@ Interpreter.prototype.installTypes = function() {
    */
   intrp.Object.prototype.toString = function() {
     var c;
+    // TODO(cpcallen:perms): perms check here?
     if (this instanceof intrp.Object) {
       c = this.class;
     } else {
@@ -3918,6 +3919,7 @@ Interpreter.prototype.installTypes = function() {
    * @override
    */
   intrp.UserFunction.prototype.toString = function() {
+    // TODO(cpcallen:perms): perms check here?
     return this.source;
   };
 
@@ -4301,6 +4303,7 @@ Interpreter.prototype.installTypes = function() {
    * @override
    */
   intrp.Date.prototype.toString = function() {
+    // TODO(cpcallen:perms): perms check here?
     return this.date.toString();
   };
 
@@ -4335,6 +4338,7 @@ Interpreter.prototype.installTypes = function() {
    * @override
    */
   intrp.RegExp.prototype.toString = function() {
+    // TODO(cpcallen:perms): perms check here?
     if (!(this.regexp instanceof RegExp)) {
       // TODO(cpcallen): ES5.1 §15.10.6.4 doesn't say what happens
       // when this is applied to a non-RegExp.  ES6 §21.2.5.14 does -
