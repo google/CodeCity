@@ -3211,6 +3211,24 @@ Interpreter.prototype.UserFunction = function(node, scope, src, owner, proto) {
 /**
  * @constructor
  * @extends {Interpreter.prototype.Function}
+ * @param {!Interpreter.prototype.Function} func
+ * @param {Interpreter.Value} thisVal
+ * @param {!Array<Interpreter.Value>} args
+ * @param {?Interpreter.Owner=} owner
+ */
+Interpreter.prototype.BoundFunction = function(func, thisVal, args, owner) {
+  /** @type {!Interpreter.prototype.Function} */
+  this.boundFunc;
+  /** @type {Interpreter.Value} */
+  this.thisVal;
+  /** @type {!Array<Interpreter.Value>} */
+  this.args;
+  throw Error('Inner class constructor not callable on prototype');
+};
+
+/**
+ * @constructor
+ * @extends {Interpreter.prototype.Function}
  * @param {!NativeFunctionOptions=} options
  */
 Interpreter.prototype.NativeFunction = function(options) {
@@ -3939,6 +3957,72 @@ Interpreter.prototype.installTypes = function() {
       }
       return state.value;
     }
+  };
+
+  /**
+   * Class for bound functions.  See ES5 §15.3.4.5 / ES6 §9.4.1.
+   * @constructor
+   * @extends {Interpreter.prototype.BoundFunction}
+   * @param {!Interpreter.prototype.Function} func Function to be bound.
+   * @param {Interpreter.Value} thisVal The this value passed into function.
+   * @param {!Array<Interpreter.Value>} args Arguments to prefix to the call.
+   * @param {?Interpreter.Owner=} owner Owner object (default: null).
+   */
+  intrp.BoundFunction = function(func, thisVal, args, owner) {
+    if (!func) return;  // Deserializing
+    intrp.Function.call(/** @type {?} */ (this), owner, func.proto);
+    /** @type {!Interpreter.prototype.Function} */
+    this.boundFunc = func;
+    /** @type {Interpreter.Value} */
+    this.thisVal = thisVal;
+    /** @type {!Array<Interpreter.Value>} */
+    this.args = args;
+    
+  };
+
+  intrp.BoundFunction.prototype = Object.create(intrp.Function.prototype);
+  intrp.BoundFunction.prototype.constructor = intrp.BoundFunction;
+
+  /**
+   * The [[Call]] internal method for bound functions, defined by
+   * ES5.1 §15.3.4.5.1 / ES6 §9.4.1.1.
+   * @override
+   */
+  intrp.BoundFunction.prototype.call = function(
+      intrp, thread, state, thisVal, args) {
+    // TODO(cpcallen:perms): Consider carefully whose perms should be
+    // used where!
+    if (this.owner === null) {
+      throw new intrp.Error(state.scope.perms, intrp.PERM_ERROR,
+          'Functions with null owner are not executable');
+    }
+    args = this.args.concat(args);
+    var s = Interpreter.State.newForCall(
+        this.boundFunc, this.thisVal, args, this.owner);
+    thread.stateStack_[thread.stateStack_.length - 1] = s;
+    return FunctionResult.CallAgain;
+  };
+
+  /**
+   * The [[Call]] internal method for bound functions, defined by
+   * ES5.1 §15.3.4.5.2 / ES6 §9.4.1.2.
+   * @override
+   */
+  intrp.BoundFunction.prototype.construct = function(
+      intrp, thread, state, args) {
+    // TODO(cpcallen:perms): Consider carefully whose perms should be
+    // used where!
+    if (this.owner === null) {
+      throw new intrp.Error(state.scope.perms, intrp.PERM_ERROR,
+          'Functions with null owner are not constructable');
+    }
+    args = this.args.concat(args);
+    var s = Interpreter.State.newForCall(
+        this.boundFunc, undefined, args, this.owner);
+    // TODO(cpcallen): Remove this ugly kludge.
+    s.node['type'] = 'NewExpression';
+    thread.stateStack_[thread.stateStack_.length - 1] = s;
+    return FunctionResult.CallAgain;
   };
 
   /**
