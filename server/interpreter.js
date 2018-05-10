@@ -3723,6 +3723,24 @@ Interpreter.prototype.installTypes = function() {
   intrp.Function.prototype.class = 'Function';
 
   /**
+   * Convert this function into a string.  Since
+   * http://tc39.github.io/Function-prototype-toString-revision/
+   * proposes that (more or less) anything that's not a user-defined
+   * function will return "{ [native code] }", do that here.
+   * @override
+   */
+  intrp.Function.prototype.toString = function() {
+    // TODO(cpcallen): include formal parameter names.
+    // TODO(cpcallen:perms): readability check?  Would need to add
+    // perms param, in which case method should probably be renamed
+    // and we need to audit all use of String() throughout the
+    // interpreter (including implicit use inside v8-native
+    // functions).
+    return 'function ' + this.get('name', intrp.ANYBODY) +
+        '() { [native code] }';
+  };
+
+  /**
    * The [[HasInstance]] internal method from §15.3.5.3 of the ES5.1 spec.
    * @param {Interpreter.Value} value The value to be checked for
    *     being an instance of this function.
@@ -3965,21 +3983,6 @@ Interpreter.prototype.installTypes = function() {
 
   intrp.NativeFunction.prototype = Object.create(intrp.Function.prototype);
   intrp.NativeFunction.prototype.constructor = intrp.NativeFunction;
-
-  /**
-   * Convert this function into a string.
-   * @override
-   */
-  intrp.NativeFunction.prototype.toString = function() {
-    // TODO(cpcallen): include formal parameter names?
-    // TODO(cpcallen:perms): readability check?  Would need to add
-    // perms param, in which case method should probably be renamed
-    // and we need ot audit all use of String() throughout the
-    // interpreter (including implicit use inside v8-native
-    // functions).
-    return 'function ' + this.get('name', intrp.ANYBODY) +
-        '() { [native code] }';
-  };
 
   /**
    * Class for an old native function.
