@@ -2425,44 +2425,6 @@ Interpreter.prototype.toObject = function(value, perms) {
 };
 
 /**
- * Look up the prototype for this value.
- * @param {Interpreter.Value} value Data object.
- * @return {Interpreter.prototype.Object} Prototype object, null if none.
- */
-Interpreter.prototype.getPrototype = function(value) {
-  switch (typeof value) {
-    case 'number':
-      return this.NUMBER;
-    case 'boolean':
-      return this.BOOLEAN;
-    case 'string':
-      return this.STRING;
-  }
-  if (value) {
-    return value.proto;
-  }
-  return null;
-};
-
-/**
- * Fetch a property value from a data object.
- * @param {Interpreter.Value} obj Data object.
- * @param {Interpreter.Value} name Name of property.
- * @return {Interpreter.Value} Property value (may be undefined).
- */
-Interpreter.prototype.getProperty = function(obj, name) {
-  // BUG(cpcallen:perms): Kludge.  Incorrect except when doing .step
-  // or run.  Should be an argument instead, forcing caller to decide.
-  try {
-    var perms = this.thread.perms();
-  } catch (e) {
-    perms = this.ROOT;
-  }
-  var key = String(name);
-  return this.toObject(obj, perms).get(key, perms);
-};
-
-/**
  * Retrieves a value from the scope chain.
  * @param {!Interpreter.Scope} scope Scope to read from.
  * @param {string} name Name of variable.
