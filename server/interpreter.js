@@ -350,9 +350,8 @@ Interpreter.prototype.run = function() {
           // thread and rethrow.
           thread.status = Interpreter.Thread.Status.ZOMBIE;
           throw e;
-        } else if (typeof e !== 'boolean' && typeof e !== 'number' &&
-            typeof e !== 'string' && e !== undefined && e !== null &&
-            !(e instanceof this.Object)) {
+        } else if (!(e instanceof this.Object) && e !== null &&
+            (typeof e === 'object' || typeof e === 'function')) {
           throw TypeError('Unexpected exception value ' + String(e));
         }
         this.unwind_(thread, Interpreter.CompletionType.THROW, e, undefined);
@@ -620,7 +619,7 @@ Interpreter.prototype.initObject_ = function() {
     /** @type {!Interpreter.NativeConstructImpl} */
     construct: function(intrp, thread, state, args) {
       var value = args[0];
-      if (value instanceof intrp.Object) {
+      if (typeof value === 'object' && value !== null) {
         return value;
       } else if (typeof value === 'boolean' || typeof value === 'number' ||
           typeof value === 'string') {
@@ -663,7 +662,7 @@ Interpreter.prototype.initObject_ = function() {
     call: function(intrp, thread, state, thisVal, args) {
       var obj = args[0];
       throwIfNullUndefined(obj);
-      if (obj instanceof intrp.Object) {
+      if (typeof obj === 'object' && obj !== null) {
         var keys = obj.ownKeys(state.scope.perms);
       } else {  // obj is actually a primitive.
         // N.B.: we use ES6 definition; ES5.1 would throw TypeError.
@@ -695,7 +694,7 @@ Interpreter.prototype.initObject_ = function() {
       if (proto === null) {
         return new intrp.Object(state.scope.perms, null);
       }
-      if (!(proto === null || proto instanceof intrp.Object)) {
+      if (typeof proto !== 'object') {
         throw new intrp.Error(state.scope.perms, intrp.TYPE_ERROR,
             'Object prototype may only be an Object or null');
       }
@@ -711,12 +710,12 @@ Interpreter.prototype.initObject_ = function() {
       var key = args[1];
       var attr = args[2];
       var perms = state.scope.perms;
-      if (!(obj instanceof intrp.Object)) {
+      if (typeof obj !== 'object' || obj === null) {
         throw new intrp.Error(perms, intrp.TYPE_ERROR,
             'Object.defineProperty called on non-object');
       }
       key = String(key);
-      if (!(attr instanceof intrp.Object)) {
+      if (typeof attr !== 'object' || attr === null) {
         throw new intrp.Error(perms, intrp.TYPE_ERROR,
             'Property description must be an object');
       }
@@ -746,7 +745,7 @@ Interpreter.prototype.initObject_ = function() {
       var obj = args[0];
       var prop = args[1];
       var perms = state.scope.perms;
-      if (!(obj instanceof intrp.Object)) {
+      if (typeof obj !== 'object' || obj === null) {
         throw new intrp.Error(perms, intrp.TYPE_ERROR,
             'Object.getOwnPropertyDescriptor called on non-object');
       }
@@ -783,11 +782,11 @@ Interpreter.prototype.initObject_ = function() {
       var obj = args[0];
       var proto = args[1];
       throwIfNullUndefined(obj);
-      if (proto !== null && !(proto instanceof intrp.Object)) {
+      if (typeof proto !== 'object') {
         throw new intrp.Error(state.scope.perms, intrp.TYPE_ERROR,
             'Object prototype may only be an Object or null');
       }
-      if (!(obj instanceof intrp.Object)) {
+      if (typeof obj !== 'object' || obj === null) {
         return obj;
       }
       // TODO(cpcallen): actually implement prototype change.
@@ -800,7 +799,7 @@ Interpreter.prototype.initObject_ = function() {
     /** @type {!Interpreter.NativeCallImpl} */
     call: function(intrp, thread, state, thisVal, args) {
       var obj = args[0];
-      if (!(obj instanceof intrp.Object)) {
+      if (typeof obj !== 'object' || obj === null) {
         return false;  // ES6 §19.1.2.11.  ES5.1 would throw TypeError.
       }
       return obj.isExtensible(state.scope.perms);
@@ -813,7 +812,7 @@ Interpreter.prototype.initObject_ = function() {
     call: function(intrp, thread, state, thisVal, args) {
       var obj = args[0];
       var perms = state.scope.perms;
-      if (!(obj instanceof intrp.Object)) {
+      if (typeof obj !== 'object' || obj === null) {
         return obj;  // ES6 §19.1.2.15.  ES5.1 would throw TypeError.
       }
       if (!obj.preventExtensions(perms)) {
@@ -1896,7 +1895,7 @@ Interpreter.prototype.initWeakMap_ = function() {
         throw new intrp.Error(state.scope.perms, intrp.TYPE_ERROR,
             'Method WeakMap.prototype.' + name +
             ' called on incompatible receiver ' + String(thisVal));
-      } else if (!(args[0] instanceof intrp.Object)) {
+      } else if (typeof args[0] !== 'object' || args[0] === null) {
         throw new intrp.Error(state.scope.perms, intrp.TYPE_ERROR,
             'Invalid value used as weak map key');
       }
@@ -2044,7 +2043,7 @@ Interpreter.prototype.initPerms_ = function() {
     /** @type {!Interpreter.NativeCallImpl} */
     call: function(intrp, thread, state, thisVal, args) {
       var perms = args[0];
-      if (!(perms instanceof intrp.Object)) {
+      if (typeof perms !== 'object' || perms === null) {
         throw new intrp.Error(state.scope.perms, intrp.TYPE_ERROR,
             'New perms must be an object');
       }
@@ -2103,7 +2102,7 @@ Interpreter.prototype.initNetwork_ = function() {
   });
 
   this.createNativeFunction('CC.connectionWrite', function(obj, data) {
-    if (!(obj instanceof intrp.Object) || !obj.socket) {
+    if (typeof obj !== 'object' || obj === null || !obj.socket) {
       throw new intrp.Error(intrp.thread.perms(), intrp.TYPE_ERROR,
           'object is not connected');
     }
@@ -2111,7 +2110,7 @@ Interpreter.prototype.initNetwork_ = function() {
   }, false);
 
   this.createNativeFunction('CC.connectionClose', function(obj) {
-    if (!(obj instanceof intrp.Object) || !obj.socket) {
+    if (typeof obj !== 'object' || obj === null || !obj.socket) {
       throw new intrp.Error(intrp.thread.perms(), intrp.TYPE_ERROR,
           'object is not connected');
     }
@@ -2373,7 +2372,7 @@ Interpreter.prototype.createArrayFromList = function(elements, owner) {
  * @return {!Array<Interpreter.Value>} The equivalent native JS array.
  */
 Interpreter.prototype.createListFromArrayLike = function(obj, perms) {
-  if (!(obj instanceof this.Object)) {
+  if (typeof obj !== 'object' || obj === null) {
     throw new this.Error(perms, this.TYPE_ERROR,
         'CreateListFromArrayLike called on non-object');
   }
@@ -3683,7 +3682,7 @@ Interpreter.prototype.installTypes = function() {
    */
   intrp.Object.prototype.toString = function() {
     var c;
-    if (this instanceof intrp.Object) {
+    if (typeof this === 'object' && this !== null) {
       c = this.class;
     } else {
       c = ({
@@ -3732,11 +3731,11 @@ Interpreter.prototype.installTypes = function() {
    * @return {boolean}
    */
   intrp.Function.prototype.hasInstance = function(value, perms) {
-    if (!(value instanceof intrp.Object)) {
+    if (typeof value !== 'object' || value === null) {
       return false;
     }
     var prot = this.get('prototype', perms);
-    if (!(prot instanceof intrp.Object)) {
+    if (typeof prot !== 'object' || prot == null) {
       throw new intrp.Error(perms, intrp.TYPE_ERROR,
           "Function has non-object prototype '" + prot +
           "' in instanceof check");
@@ -3907,7 +3906,7 @@ Interpreter.prototype.installTypes = function() {
       var proto = this.get('prototype', this.owner);
       // Per ES5.1 §13.2.2 step 7: if .prototype is primitive, use
       // Object.prototype instead.
-      if (!(proto instanceof intrp.Object)) {
+      if (typeof proto !== 'object' || proto === null) {
         proto = intrp.OBJECT;
       }
       state.info_.funcState = new intrp.Object(state.scope.perms, proto);
@@ -3916,7 +3915,7 @@ Interpreter.prototype.installTypes = function() {
     } else {  // Construction done.  Check result.
       // Per ES5.1 §13.2.2 steps 9,10: if constructor returns
       // primitive, return constructed object instead.
-      if (!(state.value instanceof intrp.Object)) {
+      if (typeof state.value !== 'object' || state.value === null) {
         return /** @type {Interpreter.Value} */ (state.info_.funcState);
       }
       return state.value;
@@ -4400,7 +4399,8 @@ Interpreter.prototype.installTypes = function() {
    */
   intrp.Server.prototype.listen = function(onListening, onError) {
     // Invariant checks.
-    if (this.port === undefined || !(this.proto instanceof intrp.Object)) {
+    if (this.port === undefined ||
+        typeof this.proto !== 'object' || this.proto === null) {
       throw Error('Invalid Server state');
     }
     if (intrp.listeners_[this.port] !== this) {
@@ -4891,7 +4891,7 @@ stepFuncs_['BinaryExpression'] = function (thread, stack, state, node) {
     case '>>':  value = leftValue >>  rightValue; break;
     case '>>>': value = leftValue >>> rightValue; break;
     case 'in':
-      if (!(rightValue instanceof this.Object)) {
+      if (typeof rightValue !== 'object' || rightValue === null) {
       throw new this.Error(state.scope.perms, this.TYPE_ERROR,
             "'in' expects an object, not '" + rightValue + "'");
       }
