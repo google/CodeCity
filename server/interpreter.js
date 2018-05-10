@@ -2983,6 +2983,12 @@ Interpreter.ObjectLike = function() {};
 /** @type {?Interpreter.prototype.Object} */
 Interpreter.ObjectLike.prototype.proto;
 
+/** @param {!Interpreter.Owner} perms @return {boolean} */
+Interpreter.ObjectLike.prototype.isExtensible = function(perms) {};
+
+/** @param {!Interpreter.Owner} perms @return {boolean} */
+Interpreter.ObjectLike.prototype.preventExtensions = function(perms) {};
+
 /**
  * @param {string} key
  * @param {!Interpreter.Owner} perms
@@ -3386,6 +3392,12 @@ Interpreter.prototype.Box = function(prim) {
   this.proto;
   throw Error('Inner class constructor not callable on prototype');
 };
+
+/** @param {!Interpreter.Owner} perms @return {boolean} */
+Interpreter.prototype.Box.prototype.isExtensible = function(perms) {};
+
+/** @param {!Interpreter.Owner} perms @return {boolean} */
+Interpreter.prototype.Box.prototype.preventExtensions = function(perms) {};
 
 /**
  * @param {string} key
@@ -4524,6 +4536,26 @@ Interpreter.prototype.installTypes = function() {
     } else {
       throw Error('Invalid type in Box');
     }
+  };
+
+  /**
+   * The [[IsExtensible]] internal method from ES6 §9.1.3, as
+   * applied to temporary Boolean, Number and String class objects.
+   * @param {!Interpreter.Owner} perms Who is trying to check?
+   * @return {boolean} Is the object extensible?
+   */
+  intrp.Box.prototype.isExtensible = function(perms) {
+    return false;
+  };
+
+  /**
+   * The [[PreventExtensions]] internal method from ES6 §9.1.4, as
+   * applied to temporary Boolean, Number and String class objects.
+   * @param {!Interpreter.Owner} perms Who is trying to prevent extensions?
+   * @return {boolean} Is the object extensible afterwards?
+   */
+  intrp.Box.prototype.preventExtensions = function(perms) {
+    return true;
   };
 
   /**
