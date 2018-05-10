@@ -727,6 +727,42 @@ module.exports = [
     `,
     expected: 'TypeError' },
 
+  { name: 'undefined.foo', src: `
+    try {
+      undefined.foo;
+    } catch (e) {
+      e.name;
+    }
+    `,
+    expected: 'TypeError' },
+
+  { name: 'undefined.foo = ...', src: `
+    try {
+      undefined.foo = undefined;
+    } catch (e) {
+      e.name;
+    }
+    `,
+    expected: 'TypeError' },
+
+  { name: 'null.foo', src: `
+    try {
+      null.foo;
+    } catch (e) {
+      e.name;
+    }
+    `,
+    expected: 'TypeError' },
+
+  { name: 'null.foo = ...', src: `
+    try {
+      null.foo = undefined;
+    } catch (e) {
+      e.name;
+    }
+    `,
+    expected: 'TypeError' },
+
   { name: 'deleteProp', src: `
     var o = {foo: 'bar'};
     (delete o.quux) + ('foo' in o) + (delete o.foo) +
