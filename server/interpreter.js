@@ -3073,6 +3073,15 @@ Interpreter.prototype.Object.prototype.proto = null;
 /** @type {string} */
 Interpreter.prototype.Object.prototype.class = '';
 
+/**
+ * @param {?Interpreter.prototype.Object} proto
+ * @param {!Interpreter.Owner} perms
+ * @return {boolean}
+ */
+Interpreter.prototype.Object.prototype.setPrototypeOf = function(proto, perms) {
+  throw Error('Inner class method not callable on prototype');
+};
+
 /** @param {!Interpreter.Owner} perms @return {boolean} */
 Interpreter.prototype.Object.prototype.isExtensible = function(perms) {
   throw Error('Inner class method not callable on prototype');
@@ -3564,6 +3573,38 @@ Interpreter.prototype.installTypes = function() {
   intrp.Object.prototype.proto = null;
   /** @type {string} */
   intrp.Object.prototype.class = 'Object';
+
+  /**
+   * The [[SetPrototypeOf]] internal method from ES6 §9.1.2, with
+   * substantial adaptations for Code City including added perms
+   * checks.
+   *
+   * N.B.: Note that instead of returning false, this implementation
+   * will throw a more specific error in the event that the set fails.
+   * approriate error upon failure.
+   * @param {?Interpreter.prototype.Object} proto The new prototype or null.
+   * @param {!Interpreter.Owner} perms Who is trying set the prototype?
+   * @return {boolean} True iff the set succeeded.
+   */
+  intrp.Object.prototype.setPrototypeOf = function(proto, perms) {
+    if (perms === null) throw TypeError("null can't check extensibility");
+    // TODO(cpcallen:perms): add "controls"-type perm check.
+    if (proto === this.proto) {  // Doing nothing always succeeds.
+      return true;
+    } else if (!this.isExtensible(perms)) {
+      throw new intrp.Error(perms, intrp.TYPE_ERROR,
+          "Can't set prototype of non-extensible object");
+    }
+    for (var p = proto; p !== null; p = p.proto) {
+      if (p === this) {
+        throw new intrp.Error(perms, intrp.TYPE_ERROR,
+            "An object's prototype chain can't include the object itself");
+      }
+    }
+    Object.setPrototypeOf(this.properties, proto.properties);
+    this.proto = proto;
+    return true;
+  };
 
   /**
    * The [[IsExtensible]] internal method from ES6 §9.1.3, with
