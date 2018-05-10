@@ -2083,6 +2083,40 @@ Interpreter.prototype.initPerms_ = function() {
       state.scope.perms = /** @type {!Interpreter.Owner} */ (perms);
     }
   });
+
+  new this.NativeFunction({
+    id: 'Object.getOwnerOf', length: 0,
+    /** @type {!Interpreter.NativeCallImpl} */
+    call: function(intrp, thread, state, thisVal, args) {
+      var obj = args[0];
+      if (!(obj instanceof intrp.Object)) {
+        throw new intrp.Error(state.scope.perms, intrp.TYPE_ERROR,
+            "Can't get owner of non-object");
+      }
+      return /** @type {?Interpreter.prototype.Object} */(obj.owner);
+    }
+  });
+
+  new this.NativeFunction({
+    id: 'Object.setOwnerOf', length: 0,
+    /** @type {!Interpreter.NativeCallImpl} */
+    call: function(intrp, thread, state, thisVal, args) {
+      var obj = args[0];
+      var owner = args[1];
+      var perms = state.scope.perms;
+      if (!(obj instanceof intrp.Object)) {
+        throw new intrp.Error(perms, intrp.TYPE_ERROR,
+            "Can't set owner of non-object");
+      }
+      if (!(owner instanceof intrp.Object) && owner !== null) {
+        throw new intrp.Error(perms, intrp.TYPE_ERROR,
+            'New owner must be an object or null');
+      }
+      // TODO(cpcallen:perms): throw if current perms does not
+      // control new owner.
+      obj.owner = /** @type {?Interpreter.Owner} */(owner);
+    }
+  });
 };
 
 /**
