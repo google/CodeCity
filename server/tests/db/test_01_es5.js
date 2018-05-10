@@ -1182,6 +1182,33 @@ tests.instanceofNonObjectPrototype = function() {
   }
 };
 
+tests.nulUndefinedProps = function() {
+  try {
+    undefined.foo;
+    console.assert(false, "undefined.foo didn't throw");
+  } catch (e) {
+    console.assert(e.name === 'TypeError', 'undefined.foo wrong error');
+  }
+  try {
+    undefined.foo = undefined;
+    console.assert(false, "undefined.foo = ... didn't throw");
+  } catch (e) {
+    console.assert(e.name === 'TypeError', 'undefined.foo = ... wrong error');
+  }
+  try {
+    null.foo;
+    console.assert(false, "null.foo didn't throw");
+  } catch (e) {
+    console.assert(e.name === 'TypeError', 'null.foo wrong error');
+  }
+  try {
+    null.foo = undefined;
+    console.assert(false, "null.foo = ... didn't throw");
+  } catch (e) {
+    console.assert(e.name === 'TypeError', 'null.foo = ... wrong error');
+  }
+};
+
 tests.deleteProp = function() {
   var o = {foo: 'bar'};
   console.assert(delete o.quux, 'deleteProp1');
