@@ -984,16 +984,18 @@ Interpreter.prototype.initFunction_ = function() {
       var argList = args.slice(1);
       var perms = state.scope.perms;
       var f = new intrp.BoundFunction(target, thisArg, argList, perms);
-      var l = 0;
+      var len = 0;
       if (target.has('length', perms)) {
         var targetLen = target.get('length', perms);
         if (typeof targetLen === 'number') {
-          l = Math.max(0, targetLen - argList.length);
+          len = Math.max(0, targetLen - argList.length);
         }
       }
-      f.defineProperty('length', Descriptor.c.withValue(l), perms);
+      f.defineProperty('length', Descriptor.c.withValue(len), perms);
       var targetName = target.get('name', perms);
-      if (typeof targetName !== 'string') targetName = '';
+      if (typeof targetName !== 'string') {
+        targetName = '';
+      }
       f.setName(targetName, 'bound');
       return f;
     }
@@ -4013,7 +4015,6 @@ Interpreter.prototype.installTypes = function() {
     this.thisVal = thisVal;
     /** @type {!Array<Interpreter.Value>} */
     this.args = args;
-    
   };
 
   intrp.BoundFunction.prototype = Object.create(intrp.Function.prototype);
