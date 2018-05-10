@@ -28,15 +28,22 @@ var Thread = new 'Thread';
 var PermissionError = new 'PermissionError';
 
 (function() {
+  // Hack to work around restriction that the 'new hack' only works on
+  // literal strings.  Note name must not contain any double quotes or
+  // backslashes, because we have no easy way to escape them yet!
+  var builtin = function(name) {
+    return eval('new "' + name + '"');
+  };
+
   var classes = ['PermissionError', 'Thread'];
   // Prototypes of global constructors.
   for (var i = 0; i < classes.length; i++) {
-    var constructor = new classes[i];
+    var constructor = builtin(classes[i]);
     Object.defineProperty(constructor, 'prototype', {
                           configurable: false,
                           enumerable: false,
                           writable: false,
-                          value: new (classes[i] + '.prototype')
+                          value: builtin(classes[i] + '.prototype')
                           });
     Object.defineProperty(constructor.prototype, 'constructor', {
                           configurable: true,
@@ -49,7 +56,7 @@ var PermissionError = new 'PermissionError';
   // Configure Error subclasses.
   var errors = ['PermissionError'];
   for (var i = 0; i < errors.length; i++) {
-    var constructor = new errors[i];
+    var constructor = builtin(errors[i]);
     Object.defineProperty(constructor.prototype, 'name', {
                           configurable: true,
                           enumerable: false,
@@ -75,7 +82,7 @@ var PermissionError = new 'PermissionError';
           {configurable: true,
            enumerable: false,
            writable: true,
-           value: new (objName + '.' + member)});
+           value: builtin(objName + '.' + member)});
     }
     for (var j = 0; j < instanceMethods.length; j++) {
       var member = instanceMethods[j];
@@ -83,7 +90,7 @@ var PermissionError = new 'PermissionError';
           {configurable: true,
            enumerable: false,
            writable: true,
-           value: new (objName + '.prototype.' + member)});
+           value: builtin(objName + '.prototype.' + member)});
     }
   }
 })();

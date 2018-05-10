@@ -2509,13 +2509,23 @@ tests.newHack = function() {
 };
 
 tests.newHackUnknown = function() {
-  // FIXME: use instanceof or the like to check that error is returned.
   try {
     new 'nonexistent-builtin-name';
     console.assert(false, "new hack with unknown built-in didn't throw");
   } catch (e) {
     console.assert(e.name === 'ReferenceError',
         'new hack with unknown built-in wrong error');
+  }
+};
+
+tests.newHacknNonLiteral = function() {
+  try {
+    var builtin = 'Object.prototype';
+    new builtin;
+    console.assert(false, "new hack with non-literal didn't throw");
+  } catch (e) {
+    console.assert(e.name === 'TypeError',
+        'new hack with non-literal wrong error');
   }
 };
 

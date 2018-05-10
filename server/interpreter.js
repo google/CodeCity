@@ -5120,8 +5120,22 @@ stepFuncs_['CallExpression'] = function (thread, stack, state, node) {
    * it's invoked, though there is no obvious reason to do so.)
    */
   if (state.step_ === 0) {  // Evaluate callee.
+    // Special hack for Code City's "new 'foo'" syntax.
+    if (node['type'] === 'NewExpression' &&
+        node['callee']['type'] === 'Literal' &&
+        typeof node['callee']['value'] === 'string' &&
+        node['arguments'].length === 0) {
+      var builtin = node['callee']['value'];
+      if (!this.builtins_[builtin]) {
+        throw new this.Error(state.scope.perms, this.REFERENCE_ERROR,
+            builtin + ' is not a builtin');
+      }
+      stack.pop();
+      stack[stack.length - 1].value = this.builtins_[builtin];
+      return;
+    }
     state.step_ = 1;
-    // Get refernce for calee, because we need to get value of 'this'.
+    // Get reference for calee, because we need to get value of 'this'.
     return new Interpreter.State(node['callee'], state.scope, true);
   }
   if (state.step_ === 1) {  // Evaluated callee, possibly got a reference.
@@ -5148,26 +5162,13 @@ stepFuncs_['CallExpression'] = function (thread, stack, state, node) {
     state.n_ = 0;
   }
   if (state.step_ === 2) {  // Evaluating arguments.
-    if (state.n_ !== 0) {
+    if (state.n_ !== 0) {  // Save previous arg.
       state.info_.arguments[state.info_.arguments.length] = state.value;
     }
-    if (node['arguments'][state.n_]) {
+    if (node['arguments'][state.n_]) {  // Evaluate next arg.
       return new Interpreter.State(node['arguments'][state.n_++], state.scope);
     }
-    // All args evaluated.  Check for new hack.
-    if (node['type'] === 'NewExpression') {
-      var callee = state.info_.callee;
-      if (typeof callee === 'string' && state.info_.arguments.length === 0) {
-        // Special hack for Code City's "new 'foo'" syntax.
-        if (!this.builtins_[callee]) {
-          throw new this.Error(state.scope.perms, this.REFERENCE_ERROR,
-              callee + ' is not a builtin');
-        }
-        stack.pop();
-        stack[stack.length - 1].value = this.builtins_[callee];
-        return;
-      }
-    }
+    // All args evaluated.
     state.step_ = 3;  // N.B: SEE NOTE 1 ABOVE!
   }
   if (state.step_ === 3) {  // Done evaluating arguments; do function call.
