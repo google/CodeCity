@@ -3159,8 +3159,11 @@ Interpreter.prototype.Function.prototype.hasInstance = function(value, perms) {
   throw Error('Inner class method not callable on prototype');
 };
 
-/** @param {string} name */
-Interpreter.prototype.Function.prototype.setName = function(name) {
+/**
+ * @param {string} name
+ * @param {string=} prefix
+ */
+Interpreter.prototype.Function.prototype.setName = function(name, prefix) {
   throw Error('Inner class method not callable on prototype');
 };
 
@@ -3786,13 +3789,15 @@ Interpreter.prototype.installTypes = function() {
   };
 
   /**
-   * Add a .name property to this function object.  Partially
-   * implements SetFunctionName from §9.2.11 of the ES6 spec.
+   * Add a .name property to this function object.  Implements
+   * SetFunctionName from ES6 §9.2.11.
+   * TODO(ES6): allow name to be type Symbol.
    * @param {string} name Name of function.
+   * @param {string=} prefix Prefix for function name (e.g. 'get', 'bound').
    */
-  intrp.Function.prototype.setName = function(name) {
-    if (this.getOwnPropertyDescriptor('name', intrp.ROOT)) {
-      throw Error('Function alreay has name??');
+  intrp.Function.prototype.setName = function(name, prefix) {
+    if (prefix) {
+      name = prefix + ' ' + name;
     }
     this.defineProperty('name', Descriptor.c.withValue(name));
   };
