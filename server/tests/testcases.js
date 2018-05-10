@@ -1499,6 +1499,57 @@ module.exports = [
     `,
     expected: 4 },
 
+  { name: 'Function.prototype.bind non-function throws', src: `
+    var o = {};
+    o.bind = Function.prototype.bind;
+    try {
+      o.bind();
+    } catch (e) {
+      e.name;
+    }
+    `,
+    expected: 'TypeError' },
+
+  { name: 'Function.prototype.bind this', src: `
+    var o = {};
+    function f() { return this; }
+    f.bind(o)() === o;
+    `,
+    expected: true },
+
+  { name: 'Function.prototype.bind no args', src: `
+    function f() { return arguments.length; }
+    f.bind(undefined)();
+    `,
+    expected: 0 },
+
+  { name: 'Function.prototype.bind', src: `
+    (function(a, b, c) {
+      if (!(1 in arguments)) {
+        throw Error("Argument 1 missing");
+      }
+      return a + c;
+    }).bind(undefined, 1)(2, 3);
+    `,
+    expected: 4 },
+
+  // TODO(cpcallen): Is there a way to do this and next test using
+  // only ES5 constructs?
+  { name: 'Function.protote.bind class constructor', src: `
+    var f = WeakMap.bind();  // Should be O.K.
+    try {
+      f();
+    } catch (e) {
+      e.name;
+    }
+    `,
+    expected: 'TypeError' },
+
+  { name: 'Function.protote.bind class constructor w/o new', src: `
+    String(new (WeakMap.bind()));
+    `,
+    expected: '[object WeakMap]' },
+
   /////////////////////////////////////////////////////////////////////////////
   // Array and Array.prototype
 
