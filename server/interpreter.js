@@ -3769,6 +3769,7 @@ Interpreter.prototype.installTypes = function() {
    *     readability check of .constructor property and as owner of
    *     any Errors thrown.
    * @return {boolean}
+   * @override
    */
   intrp.Function.prototype.hasInstance = function(value, perms) {
     if (!(value instanceof intrp.Object)) {
@@ -3794,6 +3795,7 @@ Interpreter.prototype.installTypes = function() {
    * TODO(ES6): allow name to be type Symbol.
    * @param {string} name Name of function.
    * @param {string=} prefix Prefix for function name (e.g. 'get', 'bound').
+   * @override
    */
   intrp.Function.prototype.setName = function(name, prefix) {
     if (prefix) {
@@ -3828,6 +3830,7 @@ Interpreter.prototype.installTypes = function() {
    * @param {!Interpreter.State} state The current state.
    * @param {!Array<Interpreter.Value>} args The arguments to the call.
    * @return {Interpreter.Value}
+   * @override
    */
   intrp.Function.prototype.construct = function(
       intrp, thread, state, args) {
