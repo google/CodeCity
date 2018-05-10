@@ -884,7 +884,7 @@ exports.testNativeToPseudo = function(t) {
   for (var k in props) {
     if (!props.hasOwnProperty(k)) continue;
     var name = 'testNativeToPseudo(array)["' + k + '"]';
-    var r = intrp.getProperty(pArr, k);
+    var r = pArr.get(k, intrp.ROOT);
     check('.' + k, r, props[k]);
   }
 
@@ -906,9 +906,9 @@ exports.testNativeToPseudo = function(t) {
 
     check(' instanceof intrp.Error', pError instanceof intrp.Error, true);
     check('.proto', pError.proto, proto);
-    check('.name', intrp.getProperty(pError, 'name'), Err.prototype.name);
-    check('.message', intrp.getProperty(pError, 'message'), errMessage);
-    check('.stack', intrp.getProperty(pError, 'stack'), error.stack);
+    check('.name', pError.get('name', intrp.ROOT), Err.prototype.name);
+    check('.message', pError.get('message', intrp.ROOT), errMessage);
+    check('.stack', pError.get('stack', intrp.ROOT), error.stack);
   }
 };
 
