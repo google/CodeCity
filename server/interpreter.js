@@ -972,6 +972,34 @@ Interpreter.prototype.initFunction_ = function() {
   });
 
   new this.NativeFunction({
+    id: 'Function.prototype.bind', length: 1,
+    /** @type {!Interpreter.NativeCallImpl} */
+    call: function(intrp, thread, state, thisVal, args) {
+      var target = thisVal;
+      if (!(target instanceof intrp.Function)) {
+        throw new intrp.Error(state.scope.perms, intrp.TYPE_ERROR,
+            target + ' is not a function');
+      }
+      var thisArg = args[0];
+      var argList = args.slice(1);
+      var perms = state.scope.perms;
+      var f = new intrp.BoundFunction(target, thisArg, argList, perms);
+      var l = 0;
+      if (target.has('length', perms)) {
+        var targetLen = target.get('length', perms);
+        if (typeof targetLen === 'number') {
+          l = Math.max(0, targetLen - argList.length);
+        }
+      }
+      f.defineProperty('length', Descriptor.c.withValue(l), perms);
+      var targetName = target.get('name', perms);
+      if (typeof targetName !== 'string') targetName = '';
+      f.setName(targetName, 'bound');
+      return f;
+    }
+  });
+
+  new this.NativeFunction({
     id: 'Function.prototype.call', length: 1,
     /** @type {!Interpreter.NativeCallImpl} */
     call: function(intrp, thread, state, thisVal, args) {
