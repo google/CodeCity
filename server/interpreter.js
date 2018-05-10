@@ -543,8 +543,6 @@ Interpreter.prototype.initBuiltins_ = function() {
   this.initPerms_();
 
   // Initialize ES standard global functions.
-  var intrp = this;
-
   var eval_ = new this.NativeFunction({
     id: 'eval', length: 1,
     /** @type {!Interpreter.NativeCallImpl} */
@@ -580,28 +578,42 @@ Interpreter.prototype.initBuiltins_ = function() {
   // in es5.js) because binding eval is illegal in strict mode.
   this.addVariableToScope(this.global, 'eval', eval_);
 
-  this.createNativeFunction('isFinite', isFinite, false);
-  this.createNativeFunction('isNaN', isNaN, false);
-  this.createNativeFunction('parseFloat', parseFloat, false);
-  this.createNativeFunction('parseInt', parseInt, false);
+  var funcs = {isFinite: isFinite, isNaN: isNaN,
+    parseFloat: parseFloat, parseInt: parseInt};
+  for (var id in funcs) {
+    if (!funcs.hasOwnProperty(id)) continue;
+    new this.NativeFunction({
+      id: id, length: funcs[id].length,
+      // Put impl in closure so call functions don't all use last one.
+      call: (function(impl) {
+        return /** @type {!Interpreter.NativeCallImpl} */ (
+            function(intrp, thread, state, thisVal, args) {
+              return impl.apply(thisVal, args);
+            });
+      })(funcs[id])
+    });
+  }
 
-  var strFunctions = [
-    [escape, 'escape'], [unescape, 'unescape'],
-    [decodeURI, 'decodeURI'], [decodeURIComponent, 'decodeURIComponent'],
-    [encodeURI, 'encodeURI'], [encodeURIComponent, 'encodeURIComponent']
-  ];
-  for (var i = 0; i < strFunctions.length; i++) {
-    var wrapper = (function(nativeFunc) {
-      return function(str) {
-        try {
-          return nativeFunc(str);
-        } catch (e) {
-          // decodeURI('%xy') will throw an error.  Catch and rethrow.
-          throw intrp.errorNativeToPseudo(e, intrp.thread.perms());
-        }
-      };
-    })(strFunctions[i][0]);
-    this.createNativeFunction(strFunctions[i][1], wrapper, false);
+  var strFuncs = {escape: escape, unescape: unescape,
+    decodeURI: decodeURI, decodeURIComponent: decodeURIComponent,
+    encodeURI: encodeURI, encodeURIComponent: encodeURIComponent};
+  for (var id in strFuncs) {
+    if (!strFuncs.hasOwnProperty(id)) continue;
+    new this.NativeFunction({
+      id: id, length: strFuncs[id].length,
+      // Put impl in closure so call functions don't all use last one.
+      call: (function(impl) {
+        return /** @type {!Interpreter.NativeCallImpl} */ (
+            function(intrp, thread, state, thisVal, args) {
+              try {
+                return impl(args[0]);
+              } catch (e) {
+                // decodeURI('%xy') will throw an error.  Catch and rethrow.
+                throw intrp.errorNativeToPseudo(e, state.scope.perms);
+              }
+            });
+      })(strFuncs[id])
+    });
   }
 
   // Initialize CC-specific globals.
