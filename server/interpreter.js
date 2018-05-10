@@ -5135,7 +5135,7 @@ stepFuncs_['CallExpression'] = function (thread, stack, state, node) {
       return;
     }
     state.step_ = 1;
-    // Get reference for calee, because we need to get value of 'this'.
+    // Get reference for callee, because we need to get value of 'this'.
     return new Interpreter.State(node['callee'], state.scope, true);
   }
   if (state.step_ === 1) {  // Evaluated callee, possibly got a reference.
