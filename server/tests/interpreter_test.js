@@ -1006,8 +1006,8 @@ exports.testThreading = function(t) {
 
   src = `
       var s = '';
-      new Thread(function() { s += this; }, 2, undefined, 500);
-      new Thread(function(x) { s += x; }, undefined, [4], 1500);
+      new Thread(function() { s += this; }, 500, 2);
+      new Thread(function(x) { s += x; }, 1500, undefined, [4]);
       new Thread(function() { s += '1'; })
       suspend(1000);
       s += '3';
