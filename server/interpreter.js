@@ -3074,10 +3074,14 @@ Interpreter.prototype.Object.prototype.proto = null;
 Interpreter.prototype.Object.prototype.class = '';
 
 /** @param {!Interpreter.Owner} perms @return {boolean} */
-Interpreter.prototype.Object.prototype.isExtensible = function(perms) {};
+Interpreter.prototype.Object.prototype.isExtensible = function(perms) {
+  throw Error('Inner class method not callable on prototype');
+};
 
 /** @param {!Interpreter.Owner} perms @return {boolean} */
-Interpreter.prototype.Object.prototype.preventExtensions = function(perms) {};
+Interpreter.prototype.Object.prototype.preventExtensions = function(perms) {
+  throw Error('Inner class method not callable on prototype');
+};
 
 /**
  * @param {string} key
