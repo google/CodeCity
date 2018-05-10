@@ -864,19 +864,13 @@ Interpreter.prototype.initObject_ = function() {
     id: 'Object.prototype.isPrototypeOf', length: 1,
     /** @type {!Interpreter.NativeCallImpl} */
     call: function(intrp, thread, state, thisVal, args) {
-      var obj = args[0];
+      var v = args[0];
+      if (!(v instanceof intrp.Object)) return false;
+      var o = intrp.toObject(thisVal, state.scope.perms);
       while (true) {
-        // Note, circular loops shouldn't be possible.
-        // BUG(cpcallen): behaviour of getPrototype is wrong for
-        // isPrototypeOf, according to either ES5.1 or ES6.
-        obj = intrp.getPrototype(obj);
-        if (obj === null) {
-          // No parent; reached the top.
-          return false;
-        }
-        if (obj === thisVal) {
-          return true;
-        }
+        v = v.proto;
+        if (v === null) return false;  // No parent; reached the top.
+        if (o === v) return true;
       }
     }
   });
