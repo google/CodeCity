@@ -108,7 +108,7 @@ Object.defineProperty(Object, 'defineProperty', {enumerable: false});
      ['toString', 'toLocaleString', 'valueOf', 'hasOwnProperty', 'propertyIsEnumerable', 'isPrototypeOf']],
     [Function, 'Function',
      [],
-     ['toString', 'apply', 'call']],
+     ['apply', 'bind', 'call', 'toString']],
     [Array, 'Array',
      ['isArray'],
      ['toString', 'pop', 'push', 'shift', 'unshift', 'reverse', 'splice', 'slice', 'concat', 'indexOf', 'lastIndexOf']],
@@ -283,32 +283,6 @@ Object.defineProperty(Object, 'defineProperties', {value: function(obj, props) {
     Object.defineProperty(obj, keys[i], props[keys[i]]);
   }
   return obj;
-}, configurable: true, writable: true});
-
-///////////////////////////////////////////////////////////////////////////////
-// Function.prototype polyfills
-///////////////////////////////////////////////////////////////////////////////
-
-// Polyfill copied from:
-// developer.mozilla.org/en/docs/Web/JavaScript/Reference/Global_objects/Function/bind
-Object.defineProperty(Function.prototype, 'bind', {value: function(oThis) {
-  if (typeof this !== 'function') {
-    throw new TypeError('What is trying to be bound is type ' + typeof this + ', not type function');
-  }
-  var aArgs   = Array.prototype.slice.call(arguments, 1),
-      fToBind = this,
-      fNOP    = function() {},
-      fBound  = function() {
-        return fToBind.apply(this instanceof fNOP
-               ? this
-               : oThis,
-               aArgs.concat(Array.prototype.slice.call(arguments)));
-      };
-  if (this.prototype) {
-    fNOP.prototype = this.prototype;
-  }
-  fBound.prototype = new fNOP();
-  return fBound;
 }, configurable: true, writable: true});
 
 ///////////////////////////////////////////////////////////////////////////////
