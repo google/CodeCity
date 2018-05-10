@@ -2316,7 +2316,7 @@ module.exports = [
 
   { name: 'setPerms', src: `
     CC.root.name = 'Root';
-    var bob = new Object;
+    var bob = {};
     bob.name = 'Bob';
     var r = "";
     r += perms().name;
@@ -2328,6 +2328,26 @@ module.exports = [
     r += perms().name;
     r;`,
     expected: "RootBobRoot"
+  },
+
+  { name: 'getOwnerOf', src: `
+    var bob = {};
+    var roots = {};
+    setPerms(bob);
+    var bobs = new Object;
+    Object.getOwnerOf(Object) === CC.root &&
+    Object.getOwnerOf(roots) === CC.root &&
+    Object.getOwnerOf(bobs) === bob`,
+    expected: true
+  },
+
+  { name: 'setOwnerOf', src: `
+    var bob = {};
+    var obj = {};
+    Object.setOwnerOf(obj, bob);
+    Object.getOwnerOf(obj) === bob;
+    `,
+    expected: true
   },
 
   /////////////////////////////////////////////////////////////////////////////

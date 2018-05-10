@@ -69,6 +69,7 @@ var PermissionError = new 'PermissionError';
   //     [Object, 'Object', [static methods], [instance methods]]
 
   var struct = [
+    [Object, 'Object', ['getOwnerOf', 'setOwnerOf'], []],
     [Thread, 'Thread', ['current', 'kill', 'suspend'], []],
   ];
   for (var i = 0; i < struct.length; i++) {
