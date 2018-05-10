@@ -63,16 +63,23 @@ Object.defineProperty = new 'Object.defineProperty';
 Object.defineProperty(Object, 'defineProperty', {enumerable: false});
 
 (function() {
+  // Hack to work around restriction that the 'new hack' only works on
+  // literal strings.  Note name must not contain any double quotes or
+  // backslashes, because we have no easy way to escape them yet!
+  var builtin = function(name) {
+    return eval('new "' + name + '"');
+  };
+
   var classes = ['Object', 'Function', 'Array', 'String', 'Boolean', 'Number', 'Date', 'RegExp', 'Error',
                  'EvalError', 'RangeError', 'ReferenceError', 'SyntaxError', 'TypeError', 'URIError'];
   // Prototypes of global constructors.
   for (var i = 0; i < classes.length; i++) {
-    var constructor = new classes[i];
+    var constructor = builtin(classes[i]);
     Object.defineProperty(constructor, 'prototype', {
                           configurable: false,
                           enumerable: false,
                           writable: false,
-                          value: new (classes[i] + '.prototype')
+                          value: builtin(classes[i] + '.prototype')
                           });
     Object.defineProperty(constructor.prototype, 'constructor', {
                           configurable: true,
@@ -84,7 +91,7 @@ Object.defineProperty(Object, 'defineProperty', {enumerable: false});
   // Configure Error and its subclasses.
   var errors = ['Error', 'EvalError', 'RangeError', 'ReferenceError', 'SyntaxError', 'TypeError', 'URIError'];
   for (var i = 0; i < errors.length; i++) {
-    var constructor = new errors[i];
+    var constructor = builtin(errors[i]);
     Object.defineProperty(constructor.prototype, 'name', {
                           configurable: true,
                           enumerable: false,
@@ -145,7 +152,7 @@ Object.defineProperty(Object, 'defineProperty', {enumerable: false});
           {configurable: true,
            enumerable: false,
            writable: true,
-           value: new (objName + '.' + member)});
+           value: builtin(objName + '.' + member)});
     }
     for (var j = 0; j < instanceMethods.length; j++) {
       var member = instanceMethods[j];
@@ -153,7 +160,7 @@ Object.defineProperty(Object, 'defineProperty', {enumerable: false});
           {configurable: true,
            enumerable: false,
            writable: true,
-           value: new (objName + '.prototype.' + member)});
+           value: builtin(objName + '.prototype.' + member)});
     }
   }
 })();

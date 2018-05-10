@@ -2349,6 +2349,17 @@ module.exports = [
     expected: 'ReferenceError'
   },
 
+  { name: 'new hack with other than string literal', src: `
+    try {
+      var builtin = 'Object.prototype';
+      new builtin;
+    } catch (e) {
+      e.name;
+    }
+    `,
+    expected: 'TypeError'
+  },
+
   { name: 'Strict mode syntax errors', src: `
     var tests = [
       // With statement.
