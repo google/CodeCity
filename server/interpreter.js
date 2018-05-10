@@ -615,7 +615,7 @@ Interpreter.prototype.initBuiltins_ = function() {
  */
 Interpreter.prototype.initObject_ = function() {
   // Object constructor.
-  new this.NativeFunction({
+  new this.NativeConstructorFunction({
     id: 'Object', length: 1,
     /** @type {!Interpreter.NativeConstructImpl} */
     construct: function(intrp, thread, state, args) {
@@ -632,10 +632,6 @@ Interpreter.prototype.initObject_ = function() {
       } else {
         throw TypeError('Unknown value type??');
       }
-    },
-    /** @type {!Interpreter.NativeCallImpl} */
-    call: function(intrp, thread, state, thisVal, args) {
-      return this.construct.call(this, intrp, thread, state, args);
     }
   });
 
@@ -891,7 +887,7 @@ Interpreter.prototype.initFunction_ = function() {
   var wrapper;
   var identifierRegexp = /^[A-Za-z_$][\w$]*$/;
   // Function constructor.
-  new this.NativeFunction({
+  new this.NativeConstructorFunction({
     id: 'Function', length: 1,
     /** @type {!Interpreter.NativeConstructImpl} */
     construct: function(intrp, thread, state, args) {
@@ -930,10 +926,6 @@ Interpreter.prototype.initFunction_ = function() {
       // scope, even if they were constructed in some other scope.
       return new intrp.UserFunction(
           ast['body'][0]['expression'], intrp.global, code, state.scope.perms);
-    },
-    /** @type {!Interpreter.NativeCallImpl} */
-    call: function(intrp, thread, state, thisVal, args) {
-      return this.construct.call(this, intrp, thread, state, args);
     }
   });
 
@@ -997,7 +989,7 @@ Interpreter.prototype.initArray_ = function() {
   this.builtins_['Array.prototype'] = this.ARRAY;
 
   // Array constructor.
-  new this.NativeFunction({
+  new this.NativeConstructorFunction({
     id: 'Array', length: 1,
     /** @type {!Interpreter.NativeConstructImpl} */
     construct: function(intrp, thread, state, args) {
@@ -1027,10 +1019,6 @@ Interpreter.prototype.initArray_ = function() {
         }
       }
       return arr;
-    },
-    /** @type {!Interpreter.NativeCallImpl} */
-    call: function(intrp, thread, state, thisVal, args) {
-      return this.construct.call(this, intrp, thread, state, args);
     }
   });
 
@@ -1783,7 +1771,7 @@ Interpreter.prototype.initError_ = function() {
     var protoproto = name === 'Error' ? intrp.OBJECT : intrp.ERROR;
     var proto = new intrp.Error(intrp.ROOT, protoproto);
     intrp.builtins_[name + '.prototype'] = proto;
-    new intrp.NativeFunction({
+    new intrp.NativeConstructorFunction({
       name: name, length: 1,
       /** @type {!Interpreter.NativeConstructImpl} */
       construct: function(intrp, thread, state, args) {
@@ -1794,10 +1782,6 @@ Interpreter.prototype.initError_ = function() {
               Descriptor.wc.withValue(String(message)), state.scope.perms);
         }
         return err;
-      },
-      /** @type {!Interpreter.NativeCallImpl} */
-      call: function(intrp, thread, state, thisVal, args) {
-        return this.construct.call(this, intrp, thread, state, args);
       }
     });
     return proto;
@@ -3220,6 +3204,15 @@ Interpreter.prototype.NativeFunction = function(options) {
 /**
  * @constructor
  * @extends {Interpreter.prototype.NativeFunction}
+ * @param {!NativeFunctionOptions=} options
+ */
+Interpreter.prototype.NativeConstructorFunction = function(options) {
+  throw Error('Inner class constructor not callable on prototype');
+};
+
+/**
+ * @constructor
+ * @extends {Interpreter.prototype.NativeFunction}
  * @param {!Function} impl
  * @param {boolean} legalConstructor
  * @param {?Interpreter.Owner=} owner
@@ -3979,6 +3972,35 @@ Interpreter.prototype.installTypes = function() {
     // functions).
     return 'function ' + this.get('name', intrp.ANYBODY) +
         '() { [native code] }';
+  };
+
+  /**
+   * Class for a native constructor which behaves the same when called
+   * as a function (e.g., Object, Function, Error, etc. - basically,
+   * all the builtin classes except Date.)
+   * @constructor
+   * @extends {Interpreter.prototype.NativeConstructorFunction}
+   * @param {!NativeFunctionOptions=} options Options object for
+   *     constructing native function.
+   */
+  intrp.NativeConstructorFunction = function(options) {
+    // Invoke super constructor.
+    intrp.NativeFunction.call(/** @type {?} */ (this), options);
+  };
+
+  intrp.NativeConstructorFunction.prototype =
+      Object.create(intrp.NativeFunction.prototype);
+  intrp.NativeConstructorFunction.prototype.constructor =
+      intrp.NativeConstructorFunction;
+
+  /**
+   * For NativeConstructorFunctions, [[Call]] does the same things as
+   * [[Construct]].
+   * @override
+   */
+  intrp.NativeConstructorFunction.prototype.call = function(
+      intrp, thread, state, thisVal, args) {
+    return this.construct.call(this, intrp, thread, state, args);
   };
 
   /**
