@@ -186,7 +186,8 @@ var setTimeout = function(func, delay) {
    */
   // TODO(cpcallen:perms): setPerms(callerPerms());
   var args = arguments.slice(2);
-  return new Thread(func, undefined, args, delay);
+  args = [undefined, func, delay, undefined].concat(args);
+  return new (Thread.bind.apply(Thread, args));
 };
 
 var clearTimeout = function(thread) {

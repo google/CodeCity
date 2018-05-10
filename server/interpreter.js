@@ -1979,33 +1979,29 @@ Interpreter.prototype.initThread_ = function() {
 
   /* Thread constructor.  Usage:
    *
-   *     var thread = new Thread(func, thisArg, argArray, delay);
+   *     var thread = new Thread(func, delay, thisArg, ...args);
    *
    * - func is function to run in thread.  (Maybe in future we will
    *   accept src to eval, but not for now.)
-   * - thsArg is the 'this' value to use for the call (as if via .apply).
-   * - argArray is array or array-like of arguments to pass.
    * - delay is time to wait, in ms, before starting thread.
+   * - thisArg is the 'this' value to use for the call (as if via .apply).
+   * - ...args are additional arguments to pass to func.
    */
   new this.NativeFunction({
-    id: 'Thread', length: 4,
+    id: 'Thread', length: 1,
     /** @type {!Interpreter.NativeConstructImpl} */
     construct: function(intrp, thread, state, args) {
       var func = args[0];
-      var thisArg = args[1];
-      var argArray = args[2];
-      var delay = Number(args[3]) || 0;
+      var delay = Number(args[1]) || 0;
+      var thisArg = args[2];
+      args = args.slice(3);
       var perms = state.scope.perms;
       if (!(func instanceof intrp.Function)) {
         throw new intrp.Error(perms, intrp.TYPE_ERROR,
             func + ' is not a function');
-      } else if (argArray === null || argArray === undefined) {
-        var argList = [];
-      } else {
-        argList = intrp.createListFromArrayLike(argArray, perms);
       }
       return intrp.createThreadForFuncCall(
-          perms, func, thisArg, argList, intrp.now() + delay);
+          perms, func, thisArg, args, intrp.now() + delay);
     }
   });
 
