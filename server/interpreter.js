@@ -4184,6 +4184,9 @@ Interpreter.prototype.installTypes = function() {
 
   /**
    * The [[Call]] internal method defined by §13.2.1 of the ES5.1 spec.
+   * N.B.: This function (or any called from or overriding it) must
+   * not use state.info_.funcState, as that it used by
+   * Userfunction.prototype.construct, which calls us.
    * @override
    */
   intrp.UserFunction.prototype.call = function(
