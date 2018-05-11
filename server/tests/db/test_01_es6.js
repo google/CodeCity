@@ -91,6 +91,56 @@ tests.builtinClassesES6 = function() {
 ///////////////////////////////////////////////////////////////////////////////
 // Object and Object.prototype
 
+tests.ObjectSetPrototypeOfNullUndefined = function() {
+  try {
+    Object.setPrototypeOf(null, null);
+    console.assert(false, "Object.setPrototypeOf(null, ...) didn't throw");
+  } catch (e) {
+    console.assert(e.name === 'TypeError',
+        'Object.setPrototypeOf(null, ...) wrong error');
+  }
+  try {
+    Object.setPrototypeOf(undefined, null);
+    console.assert(false, "Object.setPrototypeOf(undefined, ...) didn't throw");
+  } catch (e) {
+    console.assert(e.name === 'TypeError',
+        'Object.setPrototypeOf(undefined, ...) wrong error');
+  }
+};
+
+tests.ObjectSetPrototypeOfPrimitives = function() {
+  console.assert(Object.setPrototypeOf(true, null) === true,
+      'Object.setPrototypeOf boolean');
+  console.assert(Object.setPrototypeOf(1337, null) === 1337,
+      'Object.setPrototypeOf number');
+  console.assert(Object.setPrototypeOf('hi', null) === 'hi',
+      'Object.setPrototypeOf string');
+};
+
+tests.ObjectSetPrototypeOf = function() {
+  var o = {parent: 'o'};
+  var p = {parent: 'p'};
+  var q = Object.create(o);
+  console.assert(Object.setPrototypeOf(q, p) === q,
+      'Object.setPrototypeOf(q, p) return value');
+  console.assert(Object.getPrototypeOf(q) === p,
+      'Object.setPrototypeOf(q, p) new parent');
+  console.assert(q.parent === 'p',
+      'Object.setPrototypeOf(q, p) inheritance');
+};
+
+tests.ObjectSetPrototypeOf = function() {
+  var o = {};
+  var p = Object.create(o);
+  try {
+    Object.setPrototypeOf(o, p);
+    console.assert(false, "Object.setPrototypeOf(o, p) didn't throw");
+  } catch (e) {
+    console.assert(e.name === 'TypeError',
+        'Object.setPrototypeOf(o, p) wrong error');
+  }
+};
+
 tests.ObjectIs = function() {
   console.assert(Object.is('foo', 'foo'), 'equal strings');
   console.assert(Object.is(Array, Array), 'equal objects');
