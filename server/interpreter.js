@@ -792,7 +792,7 @@ Interpreter.prototype.initObject_ = function() {
       }
       if (obj instanceof intrp.Object) {
         // obj.setPrototypeOf handles security and circularity checks.
-        if(!obj.setPrototypeOf(proto, perms)) {
+        if (!obj.setPrototypeOf(proto, perms)) {
 	  throw new intrp.Error(perms, intrp.TYPE_ERROR,
               'setPrototypeOf failed');
         }
