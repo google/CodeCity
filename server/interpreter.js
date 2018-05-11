@@ -4211,10 +4211,8 @@ Interpreter.prototype.installTypes = function() {
       intrp.addVariableToScope(scope, paramName, paramValue);
     }
     // Build arguments variable.
-    var argsList = new intrp.Array(this.owner);
-    for (var i = 0; i < args.length; i++) {
-      argsList.set(String(i), args[i], this.owner);
-    }
+    // TODO(cpcallen): use Arguments object.
+    var argsList = intrp.createArrayFromList(args, this.owner);
     intrp.addVariableToScope(scope, 'arguments', argsList, true);
     // Add the function's name (var x = function foo(){};)
     var name = this.node['id'] && this.node['id']['name'];
