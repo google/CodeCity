@@ -1118,6 +1118,46 @@ module.exports = [
     `,
     expected: true },
 
+  { name: 'Object.setPrototypeOf(null, ...) and undefined', src: `
+    var r = '', prims = [null, undefined];
+    for (var i = 0; i < prims.length; i++) {
+      try {
+        Object.setPrototypeOf(prims[i], null);
+      } catch (e) {
+        r += e.name;
+      }
+    }
+    r;
+    `,
+    expected: 'TypeErrorTypeError' },
+
+  { name: 'Object.setPrototypeOf primitives', src: `
+    Object.setPrototypeOf(true, null) === true &&
+    Object.setPrototypeOf(1337, null) === 1337 &&
+    Object.setPrototypeOf('hi', null) === 'hi';
+    `,
+    expected: true },
+
+  { name: 'Object.setPrototypeOf', src: `
+    var o = {parent: 'o'};
+    var p = {parent: 'p'};
+    var q = Object.create(o);
+    Object.setPrototypeOf(q, p) === q && 
+        Object.getPrototypeOf(q) === p && q.parent;
+    `,
+    expected: 'p' },
+
+  { name: 'Object.setPrototypeOf circular', src: `
+    var o = {};
+    var p = Object.create(o);
+    try {    
+      Object.setPrototypeOf(o, p);
+    } catch (e) {
+      e.name;
+    }
+    `,
+    expected: 'TypeError' },
+
   { name: 'Object.create()', src: `
     try {
       Object.create();

@@ -781,15 +781,22 @@ Interpreter.prototype.initObject_ = function() {
     call: function(intrp, thread, state, thisVal, args) {
       var obj = args[0];
       var proto = args[1];
-      throwIfNullUndefined(obj);
+      var perms = state.scope.perms;
+      if (obj === null || obj === undefined) {
+        throw new intrp.Error(perms, intrp.TYPE_ERROR,
+            'Object.setPrototypeOf called on null or undefined');
+      }
       if (proto !== null && !(proto instanceof intrp.Object)) {
-        throw new intrp.Error(state.scope.perms, intrp.TYPE_ERROR,
+        throw new intrp.Error(perms, intrp.TYPE_ERROR,
             'Object prototype may only be an Object or null');
       }
-      if (!(obj instanceof intrp.Object)) {
-        return obj;
+      if (obj instanceof intrp.Object) {
+        // obj.setPrototypeOf handles security and circularity checks.
+        if(!obj.setPrototypeOf(proto, perms)) {
+	  throw new intrp.Error(perms, intrp.TYPE_ERROR,
+              'setPrototypeOf failed');
+        }
       }
-      // TODO(cpcallen): actually implement prototype change.
       return obj;
     }
   });
