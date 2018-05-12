@@ -1635,14 +1635,12 @@ module.exports = [
     expected: 0 },
 
   { name: 'Function.prototype.bind', src: `
+    var d = 4;
     (function(a, b, c) {
-      if (!(1 in arguments)) {
-        throw Error("Argument 1 missing");
-      }
-      return a + c;
-    }).bind(undefined, 1)(2, 3);
+      return a + b + c + d;
+    }).bind(undefined, 1).bind(undefined, 2)(3);
     `,
-    expected: 4 },
+    expected: 10 },
 
   { name: 'Function.prototype.bind call BF', src: `
     var constructed;
