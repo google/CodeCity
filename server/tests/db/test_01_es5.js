@@ -2010,13 +2010,12 @@ tests.FunctionPrototypeBindNoArgs = function() {
 };
 
 tests.FunctionPrototypeBind = function() {
+  var d = 4;
   var f = function(a, b, c) {
-    if (!(1 in arguments)) {
-      throw Error("Argument 1 missing");
-    }
-    return a + c;
+    return a + b + c + d;
   };
-  console.assert(f.bind(undefined, 1)(2, 3) === 4, 'Function.prototype.bind');
+  console.assert(f.bind(undefined, 1).bind(undefined, 2)(3) === 10,
+      'Function.prototype.bind');
 };
 
 tests.FunctionPrototypeBindCallBF = function() {
