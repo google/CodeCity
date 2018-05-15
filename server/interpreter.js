@@ -626,19 +626,6 @@ Interpreter.prototype.initObject_ = function() {
 
   var intrp = this;
 
-  /**
-   * Checks if the provided value is null or undefined.
-   * If so, then throw an error in the call stack.
-   * @param {Interpreter.Value} value Value to check.
-   */
-  var throwIfNullUndefined = function(value) {
-    if (value === undefined || value === null) {
-      // TODO(cpcallen): use state.scope.perms instead.
-      throw new intrp.Error(intrp.thread.perms(), intrp.TYPE_ERROR,
-          "Cannot convert '" + value + "' to object");
-    }
-  };
-
   // Static methods on Object.
   this.createNativeFunction('Object.is', Object.is, false);
 
@@ -646,17 +633,11 @@ Interpreter.prototype.initObject_ = function() {
     id: 'Object.getOwnPropertyNames', length: 1,
     /** @type {!Interpreter.NativeCallImpl} */
     call: function(intrp, thread, state, thisVal, args) {
-      var obj = args[0];
-      throwIfNullUndefined(obj);
-      if (obj instanceof intrp.Object) {
-        var keys = obj.ownKeys(state.scope.perms);
-      } else {  // obj is actually a primitive.
-        // N.B.: we use ES6 definition; ES5.1 would throw TypeError.
-        // TODO(cpcallen): the cast below is just to satisfy
-        // closure-compiler which by default assumes input language is
-        // ES5.1.  Remove it once compiler knows we use ES6.
-        keys = Object.getOwnPropertyNames(/** @type{?} */ (obj));
-      }
+      var perms = state.scope.perms;
+      // N.B.: we use ES6 definition; ES5.1 would throw TypeError if
+      // passed a non-object.
+      var obj = intrp.toObject(args[0], perms);
+      var keys = obj.ownKeys(state.scope.perms);
       return intrp.createArrayFromList(keys, state.scope.perms);
     }
   });
