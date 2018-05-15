@@ -124,21 +124,6 @@ Interpreter.PARSE_OPTIONS = {
 };
 
 /**
- * Class for unique sentinel values passed to various functions.
- * Declared so that sentinel values can have a specific type that we
- * can type-check against (though as they share a single type you
- * could still pass the wrong sentinel value to a function).
- * @constructor
- */
-Interpreter.Sentinel = function Sentinel() {};
-
-/**
- * Unique sentinel for indicating that a reference is a variable on the scope,
- * not an object property.
- */
-Interpreter.SCOPE_REFERENCE = new Interpreter.Sentinel();
-
-/**
  * Return a monotonically increasing count of milliseconds since this
  * Interpreter was last brought to PAUSED or RUNNING status from
  * STOPPED.  This excludes time when Node was suspended by the host OS
@@ -2736,6 +2721,21 @@ Interpreter.prototype.unwind_ = function(thread, type, value, label) {
 ///////////////////////////////////////////////////////////////////////////////
 // Nested (but not fully inner) classes: Scope, State, Thread, etc.
 ///////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Class for unique sentinel values passed to various functions.
+ * Declared so that sentinel values can have a specific type that we
+ * can type-check against (though as they share a single type you
+ * could still pass the wrong sentinel value to a function).
+ * @constructor
+ */
+Interpreter.Sentinel = function Sentinel() {};
+
+/**
+ * Unique sentinel for indicating that a reference is a variable on the scope,
+ * not an object property.
+ */
+Interpreter.SCOPE_REFERENCE = new Interpreter.Sentinel();
 
 /**
  * Class for a scope.
