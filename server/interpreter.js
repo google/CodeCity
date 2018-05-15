@@ -1870,7 +1870,7 @@ Interpreter.prototype.initWeakMap_ = function() {
     /** @type {!Interpreter.NativeConstructImpl} */
     construct: function(intrp, thread, state, args) {
       // TODO(cpcallen): Support interator argument to populate map.
-      return new intrp.WeakMap(intrp.thread.perms());
+      return new intrp.WeakMap(state.scope.perms);
     }
   });
 
@@ -2878,6 +2878,7 @@ Interpreter.Thread.prototype.getSource = function(index) {
  * running (equivalent to a unix EUID, but in the form of a
  * user/group/etc. object).  It is an error to call this function on a
  * thread that is a zombie.
+ * @deprecated
  * @return {!Interpreter.Owner}
  */
 Interpreter.Thread.prototype.perms = function() {
