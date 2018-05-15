@@ -224,7 +224,7 @@ Code.Editor.sendXhr = function() {
   xhr.abort();
   xhr.open('POST', '/code/editor');
   xhr.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
-  xhr.onreadystatechange = Code.Editor.receiveCode;
+  xhr.onreadystatechange = Code.Editor.receiveXhr;
   var src = Code.Editor.currentEditor ?
       Code.Editor.currentEditor.getText() : '';
   var data =
@@ -244,7 +244,7 @@ Code.Editor.codeRequest_ = new XMLHttpRequest();
 /**
  * Got a response from Code City's code editor service.
  */
-Code.Editor.receiveCode = function() {
+Code.Editor.receiveXhr = function() {
   var xhr = Code.Editor.codeRequest_;
   if (xhr.readyState !== 4) {
     return;  // Not ready yet.
