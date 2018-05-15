@@ -29,6 +29,22 @@ const util = require('util');
 const Interpreter = require('../interpreter');
 
 /**
+ * Check Object.is(got, want) and record test pass if so or test
+ * failure otherwise.
+ * @param {!T} t The test runner object.
+ * @param {string} name The name of the test.
+ * @param {*} got The actual result of the test.
+ * @param {*} want The expected result of the test.
+ */
+var check = function(t, name, got, want) {
+  if (Object.is(got, want)) {
+    t.pass(name);
+  } else {
+    t.fail(name, util.format('got %o  want %o', got, want));
+  }
+};
+
+/**
  * Unit tests for Interpreter.toInteger, .toLength. and .toUint32
  * @param {!T} t The test runner object.
  */
@@ -60,8 +76,8 @@ exports.testToIntegerEtc = function(t) {
     ['0xfffffffe', 0xfffffffe, 0xfffffffe, 0xfffffffe],
     ['0xffffffff', 0xffffffff, 0xffffffff, 0xffffffff],
     ['0x100000000', 0x100000000, 0x100000000, 0],
-    ['4294967294', 0xfffffffe, 0xfffffffe, 0xfffffffe], 
-    ['4294967295', 0xffffffff, 0xffffffff, 0xffffffff], 
+    ['4294967294', 0xfffffffe, 0xfffffffe, 0xfffffffe],
+    ['4294967295', 0xffffffff, 0xffffffff, 0xffffffff],
     ['4294967296',  0x100000000, 0x100000000, 0],
     ['4.5', 4, 4, 4],
     ['9007199254740991', 2**53-1, 2**53-1, 0xffffffff],
@@ -80,12 +96,7 @@ exports.testToIntegerEtc = function(t) {
     var tc = cases[i];
     for (var j = 0; j < funcs.length; j++) {
       var name =  util.format('%s(%o)', funcs[j].name, tc[0]);
-      var r = funcs[j](tc[0]);
-      if (Object.is(r, tc[j + 1])) {
-        t.pass(name);
-      } else {
-        t.fail(name, util.format('got: %o  want: %o', r, tc[j + 1]));
-      }
+      check(t, name, funcs[j](tc[0]), tc[j + 1]);
     }
   }
 };
@@ -95,15 +106,6 @@ exports.testToIntegerEtc = function(t) {
  * @param {!T} t The test runner object.
  */
 exports.testNativeToPseudo = function(t) {
-  var check = function(feature, result, expected) {
-    if (Object.is(result, expected)) {
-      t.pass(name + feature);
-    } else {
-      t.fail(name + feature,
-          util.format('got %o  want %o', result, expected));
-    }
-  };
-
   var intrp = new Interpreter;
 
   // Test handling of Arrays (including extra non-index properties).
@@ -118,7 +120,7 @@ exports.testNativeToPseudo = function(t) {
     if (!props.hasOwnProperty(k)) continue;
     var name = 'testNativeToPseudo(array)["' + k + '"]';
     var r = pArr.get(k, intrp.ROOT);
-    check('.' + k, r, props[k]);
+    check(t, name, r, props[k]);
   }
 
   // Test handling of Errors.
@@ -142,5 +144,16 @@ exports.testNativeToPseudo = function(t) {
     check('.proto', pError.proto, proto);
     check('.message', pError.get('message', intrp.ROOT), errMessage);
     check('.stack', pError.get('stack', intrp.ROOT), error.stack);
+    check(t, name + '.proto', pError.proto, proto);
+    check(t, name + '.message', pError.get('message', intrp.ROOT), errMessage);
+    check(t, name + '.stack', pError.get('stack', intrp.ROOT), error.stack);
   }
+};
+
+/**
+ * Unit tests for Interpreter.Source class.
+ * @param {!T} t The test runner object.
+ */
+exports.testSource = function(t) {
+  var s = Interpreter.Source('ABCDEF');
 };
