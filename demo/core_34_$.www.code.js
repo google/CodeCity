@@ -132,8 +132,13 @@ $.www.code.editor = {};
 $.www.code.editor.www = function(request, response) {
   // HTTP handler for /code/editor
   // Provide data for the IDE's editors.
-  // Takes one input: a JSON-encoded list of parts from the 'parts' parameter.
-  // Prints a browser-executed JavaScript data assignment.
+  // Takes several inputs:
+  // - parts: a JSON-encoded list of parts to the origin object
+  // - key: a temporary key to the origin object
+  // - src: JavaScript source representation of new value
+  // Writes JSON-encoded information about what is to be edited:
+  // - key: a temporary key to the origin object
+  // - src: JavaScript source representation of current value
   var data = {};
   var parts = JSON.parse(request.parameters.parts);
   if (parts.length) {
@@ -154,7 +159,7 @@ $.www.code.editor.www = function(request, response) {
       }
     }
     if (object) {
-      // Store the origin key for next time.
+      // Save origin object; obtain a key to retrieve it later.
       data.key = $.db.tempId.storeObj(object);
       // Populate the origin object in the selector lookup cache.
       var selector = $.utils.selector.partsToSelector(parts);
@@ -177,7 +182,7 @@ $.www.code.editor.www = function(request, response) {
             Object.setPrototypeOf(object, saveValue);
           } else {
             // Unknown part type.
-            throw lastPart;
+            throw SyntaxError(lastPart);
           }
         }
       }
@@ -198,9 +203,9 @@ $.www.code.editor.www = function(request, response) {
       $.utils.selector.setSelector(value, selector);
       // Render the current value as a string.
       try {
-        data.text = $.utils.code.toSource(value);
+        data.src = $.utils.code.toSource(value);
       } catch (e) {
-        data.text = e.message;
+        data.src = e.message;
       }
     }
   }
