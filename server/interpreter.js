@@ -2109,7 +2109,7 @@ Interpreter.prototype.initPerms_ = function() {
             'New owner must be an object or null');
       }
       // TODO(cpcallen:perms): throw if current perms does not
-      // control new owner.
+      // control obj and (new) owner.
       obj.owner = /** @type {?Interpreter.Owner} */(owner);
     }
   });
