@@ -2817,8 +2817,10 @@ Interpreter.State.prototype.includeInStack = function() {
   // CallExpresion step function.
 
   // Is state in the last step of execution (i.e., .call called)?
-  return this.node && this.node['type'] === 'CallExpression' &&
-      this.step_ === 4;
+  return this.node &&
+      (this.node['type'] === 'CallExpression' ||
+       this.node['type'] === 'NewExpression') &&
+      this.step_ >= 3;
 };
 
 /**
