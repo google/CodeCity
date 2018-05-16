@@ -419,6 +419,7 @@ Serializer.getTypesDeserialize_ = function (intrp) {
     'State': Interpreter.State,
     'Thread': Interpreter.Thread,
     'PropertyIterator': Interpreter.PropertyIterator,
+    'Source': Interpreter.Source,
     'PseudoObject': intrp.Object,
     'PseudoFunction': intrp.Function,
     'PseudoUserFunction': intrp.UserFunction,

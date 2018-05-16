@@ -2959,6 +2959,65 @@ Interpreter.PropertyIterator.prototype.next = function() {
   }
 };
 
+/**
+ * Source is an encapsulated hunk of source text.  Source objects can
+ * be sliced to obtain a Source object representing a substring of the
+ * original source text.  Such sliced objects "remember" their
+ * position within the original source text.
+ * @constructor
+ * @param {string} src Some source text
+ * @param {number=} start_ For internal use only.
+ * @param {number=} end_ For internal use only.
+ */
+Interpreter.Source = function(src, start_, end_) {
+  /** @private @type {string} */
+  this.src_ = src;
+  if (start_ === undefined) {
+    /** @private @type {number} */
+    this.start_ = 0;
+  } else if (start_ < 0 || start_ >= src.length) {
+    throw RangeError('Source start out of range');
+  } else {
+    this.start_ = start_;
+  }
+  if (end_ === undefined) {
+    /** @private @type {number} */
+    this.end_ = src.length;
+  } else if (end_ < 0 || end_ >= src.length) {
+    throw RangeError('Source end out of range');
+  } else {
+    this.end_ = end_;
+  }
+  Object.freeze(this);
+};
+
+/**
+ * Return the contents of a Source object as an ordinary string.
+ * @return {string}
+ */
+Interpreter.Source.prototype.toString = function() {
+  return this.src_.slice(this.start_, this.end_);
+};
+
+/**
+ * Return a Source object representing a substring of this Source
+ * object.
+ * @param {number} start Offset of first character of slice, as an absolute
+ *     position within the original source text.
+ * @param {number} end Offset of character following last character of
+ *     slice, as an absolute position within the original source text.
+ * @return {!Interpreter.Source} The sliced source.
+ */
+Interpreter.Source.prototype.slice = function(start, end) {
+  if (start < this.start_ || start > this.end_) {
+    throw RangeError('Source slice start out of range');
+  }
+  if (end < this.start_ || end > this.end_) {
+    throw RangeError('Source slice end out of range');
+  }
+  return new Interpreter.Source(this.src_, start, end);
+};
+
 ///////////////////////////////////////////////////////////////////////////////
 // Types representing JS objects - Object, Function, Array, etc.
 ///////////////////////////////////////////////////////////////////////////////
