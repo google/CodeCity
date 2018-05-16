@@ -547,16 +547,15 @@ Interpreter.prototype.initBuiltins_ = function() {
         throw intrp.errorNativeToPseudo(e, state.scope.perms);
       }
       var source = new Interpreter.Source(code);
-      var evalNode = new Interpreter.Node;
-      evalNode['type'] = 'EvalProgram_';
-      evalNode['body'] = ast['body'];
-      evalNode['source'] = source;
+      // Change node type from Program to EvalProgram_.
+      ast['type'] = 'EvalProgram_';
+      ast['source'] = source;
       // Create new scope and update it with definitions in eval().
       var outerScope = state.info_.directEval ? state.scope : intrp.global;
       var scope = new Interpreter.Scope(state.scope.perms, outerScope);
-      intrp.populateScope_(evalNode, scope);
+      intrp.populateScope_(ast, scope);
       thread.stateStack_[thread.stateStack_.length] =
-          new Interpreter.State(evalNode, scope);
+          new Interpreter.State(ast, scope);
       state.value = undefined;  // Default value if no explicit return.
       return FunctionResult.AwaitValue;
     }
