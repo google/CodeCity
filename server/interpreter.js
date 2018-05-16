@@ -174,9 +174,8 @@ Interpreter.prototype.createThread = function(owner, state, runAt) {
 Interpreter.prototype.createThreadForSrc = function(src, runAt) {
   // Acorn may throw a Syntax error, but it's the caller's problem.
   var ast = acorn.parse(src, Interpreter.PARSE_OPTIONS);
-  var source = new Interpreter.Source(src);
-  ast['source'] = source;
-  this.populateScope_(ast, this.global, source);
+  ast['source'] = new Interpreter.Source(src);
+  this.populateScope_(ast, this.global);
   var state = new Interpreter.State(ast, this.global);
   return this.createThread(this.ROOT, state);
 };
@@ -555,7 +554,7 @@ Interpreter.prototype.initBuiltins_ = function() {
       // Create new scope and update it with definitions in eval().
       var outerScope = state.info_.directEval ? state.scope : intrp.global;
       var scope = new Interpreter.Scope(state.scope.perms, outerScope);
-      intrp.populateScope_(ast, scope, source);
+      intrp.populateScope_(evalNode, scope);
       thread.stateStack_[thread.stateStack_.length] =
           new Interpreter.State(evalNode, scope);
       state.value = undefined;  // Default value if no explicit return.
@@ -2527,10 +2526,15 @@ Interpreter.prototype.addVariableToScope =
  * Populate a scope with declarations from given node.
  * @param {!Interpreter.Node} node AST node (program or function).
  * @param {!Interpreter.Scope} scope Scope dictionary to populate.
- * @param {!Interpreter.Source} source Original source code.
+ * @param {!Interpreter.Source=} source Original source code.  If not
+ *     supplied, will use node['source'] instead.
  * @private
  */
 Interpreter.prototype.populateScope_ = function(node, scope, source) {
+  if (!source) {
+    if (!node['source']) throw Error('Source not found');
+    source = node['source'];
+  }
   if (node['type'] === 'VariableDeclaration') {
     for (var i = 0; i < node['declarations'].length; i++) {
       this.addVariableToScope(scope, node['declarations'][i]['id']['name'],
@@ -4033,7 +4037,7 @@ Interpreter.prototype.installTypes = function() {
     // constructor have this.scope set to the global scope, which is
     // owned by root!
     var scope = new Interpreter.Scope(this.owner, this.scope);
-    intrp.populateScope_(this.node['body'], scope, this.node['body']['source']);
+    intrp.populateScope_(this.node['body'], scope);
     // Add all arguments.
     var params = this.node['params'];
     for (var i = 0; i < params.length; i++) {
