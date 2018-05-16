@@ -86,7 +86,6 @@ Code.Editor.init = function() {
     span.addEventListener('click', Code.Editor.tabClick);
     tabRow.appendChild(span);
     var div = document.createElement('div');
-    editor.createDom(div);
     containerRow.appendChild(div);
     // Cross-link span/div to editor.
     span.editor = editor;
@@ -156,6 +155,7 @@ Code.Editor.reload = function() {
  * Issue a warning if the user has unsaved changes and is attempting to leave
  * the code editor (e.g. typing a new URL).  This is not triggered due to
  * in-editor navigation.
+ * @param {!Event} e A beforeunload event.
  */
 Code.Editor.beforeUnload = function(e) {
   if (document.getElementById('editorConfirm').style.display === 'block') {
@@ -177,7 +177,7 @@ Code.Editor.beforeUnload.disabled = false;
 
 /**
  * When a tab is clicked, highlight it and show its container.
- * @param {!Event|!Object} e Click event or object pretending to be and event.
+ * @param {!Event|!Object} e Click event or object pretending to be an event.
  */
 Code.Editor.tabClick = function(e) {
   if (Code.Editor.tabClick.disabled) {
@@ -195,20 +195,27 @@ Code.Editor.tabClick = function(e) {
 
   // If working on an unsaved draft, copy current data into all other editors.
   if (Code.Editor.currentEditor && !Code.Editor.currentEditor.isSaved()) {
-    var src = Code.Editor.currentEditor.getText();
-    Code.Editor.setTextToAllEditors(src);
+    var src = Code.Editor.currentEditor.getSource();
+    Code.Editor.setSourceToAllEditors(src);
   }
 
   // Highlight one tab, show one container.
   var tab = e.target;
   tab.className = 'highlighted';
-  Code.Editor.currentEditor = tab.editor;
-  var container = Code.Editor.currentEditor.containerElement;
+  var editor = tab.editor;
+  Code.Editor.currentEditor = editor;
+  var container = editor.containerElement;
+  if (!editor.created) {
+    var source = editor.getSource();
+    editor.createDom(container);
+    editor.created = true;
+    editor.setSource(source);
+  }
   container.style.display = 'block';
   // If e is an event, then this click is the result of a user's direct action.
   // If not, then it's a fake event as a result of page load.
   var userAction = e instanceof Event;
-  Code.Editor.currentEditor.focus(userAction);
+  editor.focus(userAction);
 };
 
 /**
@@ -226,7 +233,7 @@ Code.Editor.sendXhr = function() {
   xhr.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
   xhr.onreadystatechange = Code.Editor.receiveXhr;
   var src = Code.Editor.currentEditor ?
-      Code.Editor.currentEditor.getText() : '';
+      Code.Editor.currentEditor.getSource() : '';
   var data =
       'key=' + encodeURIComponent(Code.Editor.key) +
       '&parts=' + encodeURIComponent(Code.Editor.partsJSON);
@@ -258,7 +265,7 @@ Code.Editor.receiveXhr = function() {
     Code.Editor.key = data.key;
   }
   if (data.hasOwnProperty('src')) {
-    Code.Editor.setTextToAllEditors(data.src);
+    Code.Editor.setSourceToAllEditors(data.src);
   }
   Code.Editor.ready && Code.Editor.ready();
 };
@@ -289,7 +296,7 @@ Code.Editor.ready = function() {
 /**
  * Find the editor with the highest confidence for the current text.
  * Confidence levels are recorded when text is set in each editor.
- * @return {Code.AbstractEditor} Best editor, or null if none.
+ * @return {Code.GenericEditor} Best editor, or null if none.
  */
 Code.Editor.mostConfidentEditor = function() {
   var bestEditor = null;
@@ -307,9 +314,9 @@ Code.Editor.mostConfidentEditor = function() {
  * Set the values of the editors to the initial value sent from Code City.
  * @param {string} src Plain text contents.
  */
-Code.Editor.setTextToAllEditors = function(src) {
+Code.Editor.setSourceToAllEditors = function(src) {
   for (var i = 0, editor; (editor = Code.Editor.editors[i]); i++) {
-    editor.setText(src);
+    editor.setSource(src);
   }
 };
 
@@ -394,14 +401,26 @@ Code.GenericEditor = function(name) {
    * @type {string}
    */
   this.name = name;
-  /**
-   * A float from 0 (bad) to 1 (perfect) indicating the editor's fitness to
-   * edit the given content.
-   */
-  this.confidence = 0;
   // Register this editor.
   Code.Editor.editors.push(this);
 };
+
+/**
+ * A float from 0 (bad) to 1 (perfect) indicating the editor's fitness to
+ * edit the given content.
+ */
+Code.GenericEditor.prototype.confidence = 0;
+
+/**
+ * Has the DOM for this editor been created yet?
+ */
+Code.GenericEditor.prototype.created = false;
+
+/**
+ * Stored text from before the editor is created.
+ * @private
+ */
+Code.GenericEditor.prequelSource_ = '';
 
 /**
  * Span that forms the tab button.
@@ -419,11 +438,11 @@ Code.GenericEditor.prototype.containerElement = null;
  * Plain text representation of this editor's contents as of load or last save.
  * @type {?string}
  */
-Code.GenericEditor.prototype.lastSavedText = null;
+Code.GenericEditor.prototype.lastSavedSource = null;
 
 /**
  * Create the DOM for this editor.
- * @param {!Element} container DOM should be appended to this div.
+ * @param {!Element} container DOM should be appended to this containing div.
  */
 Code.GenericEditor.prototype.createDom = function(container) {
   var text = 'TODO: Implement createDom for ' + this.name + ' editor.';
@@ -434,16 +453,16 @@ Code.GenericEditor.prototype.createDom = function(container) {
  * Get the contents of the editor.
  * @return {string} Plain text contents.
  */
-Code.GenericEditor.prototype.getText = function() {
-  throw ReferenceError('getText not implemented on editor');
+Code.GenericEditor.prototype.getSource = function() {
+  throw ReferenceError('getSource not implemented on editor');
 };
 
 /**
  * Set the contents of the editor.
- * @param {string} text Plain text contents.
+ * @param {string} source Plain text contents.
  */
-Code.GenericEditor.prototype.setText = function(text) {
-  throw ReferenceError('setText not implemented on editor');
+Code.GenericEditor.prototype.setSource = function(source) {
+  throw ReferenceError('setSource not implemented on editor');
 };
 
 /**
@@ -451,7 +470,7 @@ Code.GenericEditor.prototype.setText = function(text) {
  * @return {boolean} True if work is saved.
  */
 Code.GenericEditor.prototype.isSaved = function() {
-  return this.getText() === this.lastSavedText;
+  return this.getSource() === this.lastSavedSource;
 };
 
 /**
@@ -470,8 +489,15 @@ Code.valueEditor = new Code.GenericEditor('Value');
 Code.valueEditor.confidence = 0.1;
 
 /**
+ * Code Mirror editor.  Does not exist until tab is selected.
+ * @type {Object}
+ * @private
+ */
+Code.valueEditor.editor_ = null;
+
+/**
  * Create the DOM for this editor.
- * @param {!Element} container DOM should be appended to this div.
+ * @param {!Element} container DOM should be appended to this containing div.
  */
 Code.valueEditor.createDom = function(container) {
   container.innerHTML = `
@@ -492,25 +518,29 @@ Code.valueEditor.createDom = function(container) {
     lineNumbers: true,
     matchBrackets: true
   };
-  this.editor = CodeMirror(container, options);
-  this.editor.setSize('100%', '100%');
+  this.editor_ = CodeMirror(container, options);
+  this.editor_.setSize('100%', '100%');
 };
 
 /**
  * Get the contents of the editor.
  * @return {string} Plain text contents.
  */
-Code.valueEditor.getText = function() {
-  return this.editor.getValue();
+Code.valueEditor.getSource = function() {
+  return this.created ? this.editor_.getValue() : this.prequelSource_;
 };
 
 /**
  * Set the contents of the editor.
- * @param {string} text Plain text contents.
+ * @param {string} source Plain text contents.
  */
-Code.valueEditor.setText = function(text) {
-  this.editor.setValue(text);
-  this.lastSavedText = Code.valueEditor.getText();
+Code.valueEditor.setSource = function(source) {
+  if (this.created) {
+    this.editor_.setValue(source);
+  } else {
+    this.prequelSource_ = source;
+  }
+  this.lastSavedSource = Code.valueEditor.getSource();
 };
 
 /**
@@ -518,9 +548,9 @@ Code.valueEditor.setText = function(text) {
  * @param {boolean} userAction True if user clicked on a tab.
  */
 Code.valueEditor.focus = function(userAction) {
-  this.editor.refresh();
+  this.editor_.refresh();
   if (userAction) {
-    this.editor.focus();
+    this.editor_.focus();
   }
 };
 
@@ -538,7 +568,7 @@ Code.stringEditor = new Code.GenericEditor('String');
 
 /**
  * Create the DOM for this editor.
- * @param {!Element} container DOM should be appended to this div.
+ * @param {!Element} container DOM should be appended to this containing div.
  */
 Code.stringEditor.createDom = function(container) {
   container.innerHTML = `
@@ -555,25 +585,27 @@ Code.stringEditor.createDom = function(container) {
 <div class="editorBigQuotes" style="left: 10px; top: 57px">“</div>
 <div class="editorBigQuotes" style="right: 10px; bottom: 0">”</div>
   `;
-  this.textarea = container.querySelector('textarea');
+  this.textarea_ = container.querySelector('textarea');
 };
 
 /**
  * Get the contents of the editor.
  * @return {string} Plain text contents.
  */
-Code.stringEditor.getText = function() {
-  return JSON.stringify(this.textarea.value);
+Code.stringEditor.getSource = function() {
+  return this.created ?
+      JSON.stringify(this.textarea_.value) :
+      this.prequelSource_;
 };
 
 /**
  * Set the contents of the editor.
  * @param {string} text Plain text contents.
  */
-Code.stringEditor.setText = function(text) {
+Code.stringEditor.setSource = function(source) {
   var str;
   try {
-    str = JSON.parse(text);
+    str = JSON.parse(source);
   } catch (e) {}
   if (typeof str !== 'string') {
     str = '';
@@ -581,8 +613,12 @@ Code.stringEditor.setText = function(text) {
   } else {
     this.confidence = 0.9;
   }
-  this.textarea.value = str;
-  this.lastSavedText = Code.stringEditor.getText();
+  if (this.created) {
+    this.textarea_.value = str;
+  } else {
+    this.prequelSource_ = source;
+  }
+  this.lastSavedSource = Code.stringEditor.getSource();
 };
 
 /**
@@ -591,7 +627,7 @@ Code.stringEditor.setText = function(text) {
  */
 Code.stringEditor.focus = function(userAction) {
   if (userAction) {
-    this.textarea.focus();
+    this.textarea_.focus();
   }
 };
 
