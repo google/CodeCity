@@ -139,7 +139,10 @@ $.www.code.editor.www = function(request, response) {
   // Writes JSON-encoded information about what is to be edited:
   // - key: a temporary key to the origin object
   // - src: JavaScript source representation of current value
+  // - butter: short status message to be displayed to user
+  // - saved: boolean indicating if a save was successful
   var data = {};
+  data.saved = false;
   var parts = JSON.parse(request.parameters.parts);
   if (parts.length) {
     // Find the origin object.  '$.foo' is the origin of '$.foo.bar'.
@@ -155,7 +158,7 @@ $.www.code.editor.www = function(request, response) {
         var object = $.utils.selector.partsToValue(parts);
       } catch (e) {
         // Parts don't match a valid path.
-        // TODO(fraser): Send an informative error message.
+        data.butter = 'Unknown object';
       }
     }
     if (object) {
@@ -173,17 +176,21 @@ $.www.code.editor.www = function(request, response) {
           var saveValue = eval(request.parameters.src);
         } catch (e) {
           ok = false;
-          // TODO(fraser): Send an informative error message.
+          // TODO(fraser): Send a more informative error message.
+          data.butter = String(e);
         }
         if (ok) {
           if (lastPart.type === 'id') {
             object[lastPart.value] = saveValue;
+            data.butter = 'Saved';
           } else if (lastPart.type === '^') {
             Object.setPrototypeOf(object, saveValue);
+            data.butter = 'Prototype Set';
           } else {
             // Unknown part type.
             throw SyntaxError(lastPart);
           }
+          data.saved = true;
         }
       }
 

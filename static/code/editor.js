@@ -280,6 +280,23 @@ Code.Editor.receiveXhr = function() {
   mask.style.display = 'none';
   mask.style.opacity = 0;
 
+  // While a save is in-flight, the user might have navigated away and be
+  // currently blocked by a warning dialog regarding unsaved work.
+  if (Code.Editor.isSaveDialogVisible) {
+    if (data.saved) {
+      // If the save was successful, then proceed with the requested navigation.
+      Code.Editor.reload();
+    } else {
+      // If the save was not successful, close the dialog and show the butter.
+      Code.Editor.hideSave();
+    }
+  }
+
+  // If there's a message, show it in the butter.
+  if (data.butter) {
+    Code.Editor.showButter(data.butter, 5000);
+  }
+
   Code.Editor.ready && Code.Editor.ready();
 };
 
