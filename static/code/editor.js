@@ -40,7 +40,7 @@ Code.Editor.currentEditor = null;
  * Got a ping from someone.  Something might have changed and need updating.
  */
 Code.Editor.receiveMessage = function() {
-  if (document.getElementById('editorConfirm').style.display === 'block') {
+  if (Code.Editor.isSaveDialogVisible) {
     return;  // Ignore messages if the modal save dialog is up.
   }
   var selector = sessionStorage.getItem(Code.Common.SELECTOR);
@@ -158,7 +158,7 @@ Code.Editor.reload = function() {
  * @param {!Event} e A beforeunload event.
  */
 Code.Editor.beforeUnload = function(e) {
-  if (document.getElementById('editorConfirm').style.display === 'block') {
+  if (Code.Editor.isSaveDialogVisible) {
     // The user has already got a warning but is ignoring it.  Just leave.
     Code.Editor.hideSave();
     return;
@@ -324,6 +324,8 @@ Code.Editor.setSourceToAllEditors = function(src) {
  * Show the save dialog.
  */
 Code.Editor.showSave = function() {
+  clearTimeout(Code.Editor.saveDialogAnimationPid);
+  Code.Editor.hideButter();
   document.getElementById('editorConfirm').style.display = 'block';
   var mask = document.getElementById('editorConfirmMask');
   var box = document.getElementById('editorConfirmBox');
@@ -331,19 +333,21 @@ Code.Editor.showSave = function() {
   box.style.transitionDuration = '.4s';
   // Add a little bounce at the end of the animation.
   box.style.transitionTimingFunction = 'cubic-bezier(.6,1.36,.75,1)';
-  setTimeout(function() {
+  Code.Editor.saveDialogAnimationPid = setTimeout(function() {
     mask.style.opacity = 0.2;
     box.style.top = '-10px';
   }, 100);  // Firefox requires at least 10ms to process this timing function.
   // Desaturate save button.  Don't visually conflict with the 'save' button
   // in save dialog.
-  document.getElementById('editorSave').className = 'jfk-button';
+  Code.Editor.saturateSave(false);
+  Code.Editor.isSaveDialogVisible = true;
 };
 
 /**
  * Hide the save dialog.
  */
 Code.Editor.hideSave = function() {
+  clearTimeout(Code.Editor.saveDialogAnimationPid);
   var mask = document.getElementById('editorConfirmMask');
   var box = document.getElementById('editorConfirmBox');
   mask.style.transitionDuration = '.2s';
@@ -351,12 +355,32 @@ Code.Editor.hideSave = function() {
   box.style.transitionTimingFunction = 'ease-in';
   mask.style.opacity = 0;
   box.style.top = '-120px';
-  setTimeout(function() {
+  Code.Editor.saveDialogAnimationPid = setTimeout(function() {
     document.getElementById('editorConfirm').style.display = 'none';
   }, 250);
   // Resaturate the save button.
-  document.getElementById('editorSave').className =
-      'jfk-button jfk-button-submit';
+  Code.Editor.saturateSave(true);
+  Code.Editor.isSaveDialogVisible = false;
+};
+
+/**
+ * Is the save dialog currently visible?
+ */
+Code.Editor.isSaveDialogVisible = false;
+
+/**
+ * PID of any animation task.  Allows animations to be canceled so that two
+ * near-simultaneous actions don't collide.
+ */
+Code.Editor.saveDialogAnimationPid = 0;
+
+/**
+ * Saturate or desaturate the editor's save button.
+ * @param {boolean} saturated True if button should be saturated.
+ */
+Code.Editor.saturateSave = function(saturated) {
+  var button = document.getElementById('editorSave');
+  button.className = saturated ? 'jfk-button jfk-button-submit' : 'jfk-button';
 };
 
 /**
