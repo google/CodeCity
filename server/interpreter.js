@@ -3018,6 +3018,21 @@ Interpreter.Source.prototype.slice = function(start, end) {
   return new Interpreter.Source(this.src_, start, end);
 };
 
+/**
+ * Return the (1-based) line number of a given position within the
+ * given Source object.
+ * @param {number} pos Position whose line number we are interested
+ *     in, as an absolute position within the original source text.
+ * @return {number} Number of the line containing pos, relative to the
+ *     start of this particular slice.
+ */
+Interpreter.Source.prototype.lineForPos = function(pos) {
+  if (pos < this.start_ || pos > this.end_) {
+    throw RangeError('Source position out of range');
+  }
+  return this.src_.slice(this.start_, pos).split('\n').length;
+};
+
 ///////////////////////////////////////////////////////////////////////////////
 // Types representing JS objects - Object, Function, Array, etc.
 ///////////////////////////////////////////////////////////////////////////////

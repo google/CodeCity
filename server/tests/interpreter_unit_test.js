@@ -164,4 +164,16 @@ exports.testSource = function(t) {
   src = src.slice(2, 4);
   name += '.slice(2, 4)';
   check(t, name + '.toString()', String(src), 'CD');
+
+  var s = '1\n2\n3\n4\n5\n';
+  var pos3 = s.indexOf('3');
+  src = new Interpreter.Source(s);
+  name = "Source('" + s + "')";
+  check(t, name + '.lineForPos(' + pos3 + ')', src.lineForPos(pos3), 3);
+
+  src = src.slice(2, 8);
+  name += '.slice(2, 8)';
+  check(t, name + '.toString()', String(src), '2\n3\n4\n');
+
+  check(t, name + '.lineForPos(' + pos3 + ')', src.lineForPos(pos3), 2);
 };
