@@ -3026,18 +3026,19 @@ Interpreter.Source.prototype.slice = function(start, end) {
 };
 
 /**
- * Return the (1-based) line number of a given position within the
- * given Source object.
+ * Return the (1-based) line and column numbers of a given position
+ * within the Source object.
  * @param {number} pos Position whose line number we are interested
  *     in, as an absolute position within the original source text.
- * @return {number} Number of the line containing pos, relative to the
- *     start of this particular slice.
+ * @return {{line: number, col: number}} {line, col} tuple for the
+ *     position pos, relative to the start of this particular slice.
  */
-Interpreter.Source.prototype.lineForPos = function(pos) {
+Interpreter.Source.prototype.lineColForPos = function(pos) {
   if (pos < this.start_ || pos > this.end_) {
     throw RangeError('Source position out of range');
   }
-  return this.src_.slice(this.start_, pos).split('\n').length;
+  var lines = this.src_.slice(this.start_, pos).split('\n');
+  return {line: lines.length, col: lines[lines.length - 1].length + 1};
 };
 
 ///////////////////////////////////////////////////////////////////////////////
