@@ -165,15 +165,19 @@ exports.testSource = function(t) {
   name += '.slice(2, 4)';
   check(t, name + '.toString()', String(src), 'CD');
 
-  var s = '1\n2\n3\n4\n5\n';
+  var s = '1\n.2\n..3\n.4\n5\n';
   var pos3 = s.indexOf('3');
   src = new Interpreter.Source(s);
   name = "Source('" + s + "')";
-  check(t, name + '.lineForPos(' + pos3 + ')', src.lineForPos(pos3), 3);
+  var lc = src.lineColForPos(pos3);
+  check(t, name + '.lineColForPos(' + pos3 + ').line', lc.line, 3);
+  check(t, name + '.lineColForPos(' + pos3 + ').col', lc.col, 3);
 
-  src = src.slice(2, 8);
-  name += '.slice(2, 8)';
-  check(t, name + '.toString()', String(src), '2\n3\n4\n');
+  src = src.slice(2, 12);
+  name += '.slice(2, 12)';
+  lc = src.lineColForPos(pos3);
+  check(t, name + '.toString()', String(src), '.2\n..3\n.4\n');
 
-  check(t, name + '.lineForPos(' + pos3 + ')', src.lineForPos(pos3), 2);
+  check(t, name + '.lineColForPos(' + pos3 + ').line', lc.line, 2);
+  check(t, name + '.lineColForPos(' + pos3 + ').col', lc.col, 3);
 };
