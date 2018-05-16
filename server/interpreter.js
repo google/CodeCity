@@ -174,8 +174,9 @@ Interpreter.prototype.createThread = function(owner, state, runAt) {
 Interpreter.prototype.createThreadForSrc = function(src, runAt) {
   // Acorn may throw a Syntax error, but it's the caller's problem.
   var ast = acorn.parse(src, Interpreter.PARSE_OPTIONS);
-  ast['source'] = src;
-  this.populateScope_(ast, this.global, src);
+  var source = new Interpreter.Source(src);
+  ast['source'] = source;
+  this.populateScope_(ast, this.global, source);
   var state = new Interpreter.State(ast, this.global);
   return this.createThread(this.ROOT, state);
 };
@@ -546,14 +547,15 @@ Interpreter.prototype.initBuiltins_ = function() {
         // Acorn threw a SyntaxError.  Rethrow as a trappable error.
         throw intrp.errorNativeToPseudo(e, state.scope.perms);
       }
+      var source = new Interpreter.Source(code);
       var evalNode = new Interpreter.Node;
       evalNode['type'] = 'EvalProgram_';
       evalNode['body'] = ast['body'];
-      evalNode['source'] = code;
+      evalNode['source'] = source;
       // Create new scope and update it with definitions in eval().
       var outerScope = state.info_.directEval ? state.scope : intrp.global;
       var scope = new Interpreter.Scope(state.scope.perms, outerScope);
-      intrp.populateScope_(ast, scope, code);
+      intrp.populateScope_(ast, scope, source);
       thread.stateStack_[thread.stateStack_.length] =
           new Interpreter.State(evalNode, scope);
       state.value = undefined;  // Default value if no explicit return.
@@ -894,8 +896,8 @@ Interpreter.prototype.initFunction_ = function() {
       }
       // Interestingly, the scope for constructed functions is the global
       // scope, even if they were constructed in some other scope.
-      return new intrp.UserFunction(
-          ast['body'][0]['expression'], intrp.global, code, state.scope.perms);
+      return new intrp.UserFunction(ast['body'][0]['expression'],
+          intrp.global, new Interpreter.Source(code), state.scope.perms);
     },
     /** @type {!Interpreter.NativeCallImpl} */
     call: function(intrp, thread, state, thisVal, args) {
@@ -2525,7 +2527,7 @@ Interpreter.prototype.addVariableToScope =
  * Populate a scope with declarations from given node.
  * @param {!Interpreter.Node} node AST node (program or function).
  * @param {!Interpreter.Scope} scope Scope dictionary to populate.
- * @param {string} source Original source code.
+ * @param {!Interpreter.Source} source Original source code.
  * @private
  */
 Interpreter.prototype.populateScope_ = function(node, scope, source) {
@@ -2864,15 +2866,15 @@ Interpreter.Thread.prototype.sleepUntil = function(resumeAt) {
 /**
  * Returns the original source code for current state.
  * @param {number=} index Optional index in stack to look from.
- * @return {string|undefined} Source code or undefined if none.
+ * @return {?Interpreter.Source} Source code or null if none.
  */
 Interpreter.Thread.prototype.getSource = function(index) {
-  var i = (index === undefined) ? this.stateStack_.length - 1 : index;
-  var source;
-  while (source === undefined && i >= 0) {
-    source = this.stateStack_[i--].node['source'];
+  index = (index === undefined) ? this.stateStack_.length - 1 : index;
+  for (var i = index; i >= 0; i--) {
+    var source = this.stateStack_[i].node['source'];
+    if (source) return source;
   }
-  return source;
+  return null;
 };
 
 /**
@@ -2970,6 +2972,7 @@ Interpreter.PropertyIterator.prototype.next = function() {
  * @param {number=} end_ For internal use only.
  */
 Interpreter.Source = function(src, start_, end_) {
+  if (src === undefined) return;  // Deserializing.
   /** @private @type {string} */
   this.src_ = src;
   if (start_ === undefined) {
@@ -3290,16 +3293,17 @@ Interpreter.prototype.Function.prototype.construct = function(
  * @extends {Interpreter.prototype.Function}
  * @param {!Interpreter.Node} node
  * @param {!Interpreter.Scope} scope Enclosing scope.
- * @param {string} src
+ * @param {!Interpreter.Source} source
  * @param {?Interpreter.Owner=} owner
  * @param {?Interpreter.prototype.Object=} proto
  */
-Interpreter.prototype.UserFunction = function(node, scope, src, owner, proto) {
+Interpreter.prototype.UserFunction = function(
+    node, scope, source, owner, proto) {
   /** @type {!Interpreter.Node} */
   this.node;
   /** @type {!Interpreter.Scope} */
   this.scope;
-  /** @type {string} */
+  /** @type {!Interpreter.Source} */
   this.source;
   throw Error('Inner class constructor not callable on prototype');
 };
@@ -3970,11 +3974,11 @@ Interpreter.prototype.installTypes = function() {
    * @extends {Interpreter.prototype.UserFunction}
    * @param {!Interpreter.Node} node AST node for function body.
    * @param {!Interpreter.Scope} scope Enclosing scope.
-   * @param {string} src (Whole) source from which AST was parsed.
+   * @param {!Interpreter.Source} source Source from which AST was parsed.
    * @param {?Interpreter.Owner=} owner Owner object (default: null).
    * @param {?Interpreter.prototype.Object=} proto Prototype object or null.
    */
-  intrp.UserFunction = function(node, scope, src, owner, proto) {
+  intrp.UserFunction = function(node, scope, source, owner, proto) {
     if (!node) {  // Deserializing
       return;
     }
@@ -3986,20 +3990,18 @@ Interpreter.prototype.installTypes = function() {
     }
     var length = node['params'].length;
     this.defineProperty('length', Descriptor.none.withValue(length));
-    // Record the source for the function (only), for use by
-    // (pseudo)Function.toString().
-    this.source = src.substring(node['start'], node['end']);
-    // Record the (whole) source on the function node's body node, for
+    // Record the source on the function node's body node, for
     // use by the the (pseudo)Error constructor when generating stack
     // traces (via Thread.prototype.getSource).  We store it on the
     // body node (rather than on the function node) because the
     // function node never appears on the stateStack_ when the
-    // function is being executed.  We save the full original source
-    // (not just the part containing the function) because the start
-    // and end offsets on the AST nodes are absolute, not relative.
+    // function is being executed.
     if (!node['body']['source']) {
-      node['body']['source'] = src;
+      node['body']['source'] = source.slice(node['start'], node['end']);
     }
+    // Record the source for the function (only), for use by
+    // (pseudo)Function.toString().
+    this.source = node['body']['source'];
     // Add .prototype property pointing at a new plain Object.
     var protoObj = new intrp.Object(this.owner);
     this.defineProperty('prototype', Descriptor.w.withValue(protoObj));
@@ -4015,7 +4017,7 @@ Interpreter.prototype.installTypes = function() {
    */
   intrp.UserFunction.prototype.toString = function() {
     // TODO(cpcallen:perms): perms check here?
-    return this.source;
+    return String(this.source);
   };
 
   /**
@@ -4489,10 +4491,11 @@ Interpreter.prototype.installTypes = function() {
         if (stack.length && !state.includeInStack()) {
           continue;
         }
-        var code = intrp.thread.getSource(i);
-        if (code === undefined) {
+        var source = intrp.thread.getSource(i);
+        if (!source) {
           continue;
         }
+        var code = String(source);
         var lineStart = code.lastIndexOf('\n', node['start']);
         if (lineStart === -1) {
           lineStart = 0;
@@ -5580,12 +5583,12 @@ stepFuncs_['FunctionDeclaration'] = function (thread, stack, state, node) {
  */
 stepFuncs_['FunctionExpression'] = function (thread, stack, state, node) {
   stack.pop();
-  var src = thread.getSource();
-  if (src === undefined) {
+  var source = thread.getSource();
+  if (!source) {
     throw Error("No source found when evaluating function expression??");
   }
   stack[stack.length - 1].value =
-      new this.UserFunction(node, state.scope, src, state.scope.perms);
+      new this.UserFunction(node, state.scope, source, state.scope.perms);
 };
 
 /**
