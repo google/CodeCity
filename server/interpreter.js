@@ -3303,8 +3303,6 @@ Interpreter.prototype.UserFunction = function(
   this.node;
   /** @type {!Interpreter.Scope} */
   this.scope;
-  /** @type {!Interpreter.Source} */
-  this.source;
   throw Error('Inner class constructor not callable on prototype');
 };
 
@@ -3990,18 +3988,16 @@ Interpreter.prototype.installTypes = function() {
     }
     var length = node['params'].length;
     this.defineProperty('length', Descriptor.none.withValue(length));
-    // Record the source on the function node's body node, for
-    // use by the the (pseudo)Error constructor when generating stack
-    // traces (via Thread.prototype.getSource).  We store it on the
-    // body node (rather than on the function node) because the
+    // Record the source on the function node's body node.  Store it
+    // on the AST (rather than on the UserFunction instance) because
+    // each time a function expression is evaluated a new UserFunction
+    // is created, but they all have identical source code.  Store it
+    // on the body node (rather than on the function node) because the
     // function node never appears on the stateStack_ when the
     // function is being executed.
     if (!node['body']['source']) {
       node['body']['source'] = source.slice(node['start'], node['end']);
     }
-    // Record the source for the function (only), for use by
-    // (pseudo)Function.toString().
-    this.source = node['body']['source'];
     // Add .prototype property pointing at a new plain Object.
     var protoObj = new intrp.Object(this.owner);
     this.defineProperty('prototype', Descriptor.w.withValue(protoObj));
@@ -4017,7 +4013,7 @@ Interpreter.prototype.installTypes = function() {
    */
   intrp.UserFunction.prototype.toString = function() {
     // TODO(cpcallen:perms): perms check here?
-    return String(this.source);
+    return String(this.node['body']['source']);
   };
 
   /**
@@ -4037,7 +4033,7 @@ Interpreter.prototype.installTypes = function() {
     // constructor have this.scope set to the global scope, which is
     // owned by root!
     var scope = new Interpreter.Scope(this.owner, this.scope);
-    intrp.populateScope_(this.node['body'], scope, this.source);
+    intrp.populateScope_(this.node['body'], scope, this.node['body']['source']);
     // Add all arguments.
     var params = this.node['params'];
     for (var i = 0; i < params.length; i++) {
