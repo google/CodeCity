@@ -140,6 +140,13 @@ Code.Editor.load = function() {
  */
 Code.Editor.save = function() {
   Code.Editor.sendXhr();
+  // Prevent the user from interacting with the editor during an async save.
+  // TODO: Implement merging.
+  var mask = document.getElementById('editorSavingMask');
+  mask.style.display = 'block';
+  Code.Editor.saveMaskPid = setTimeout(function() {
+    mask.style.opacity = 0.2;
+  }, 1000);  // Wait a second before starting visible transition.
 };
 
 /**
@@ -267,6 +274,12 @@ Code.Editor.receiveXhr = function() {
   if (data.hasOwnProperty('src')) {
     Code.Editor.setSourceToAllEditors(data.src);
   }
+  // Remove saving mask.
+  clearTimeout(Code.Editor.saveMaskPid);
+  var mask = document.getElementById('editorSavingMask');
+  mask.style.display = 'none';
+  mask.style.opacity = 0;
+
   Code.Editor.ready && Code.Editor.ready();
 };
 
