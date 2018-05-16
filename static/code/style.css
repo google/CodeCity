@@ -215,7 +215,8 @@ textarea {
   display: none;
 }
 
-#editorConfirmMask {
+#editorConfirmMask,
+#editorSavingMask {
   background-color: #000;
   bottom: 0;
   left: 0;
@@ -225,6 +226,12 @@ textarea {
   top: 0;
   transition-property: opacity;
   z-index: 998;
+}
+
+#editorSavingMask {
+  cursor: wait;
+  display: none;
+  transition-duration: 1s;
 }
 
 #editorConfirmBox {
