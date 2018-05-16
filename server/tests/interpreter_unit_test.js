@@ -147,3 +147,21 @@ exports.testNativeToPseudo = function(t) {
     check(t, name + '.stack', pError.get('stack', intrp.ROOT), error.stack);
   }
 };
+
+/**
+ * Unit tests for Interpreter.Source class.
+ * @param {!T} t The test runner object.
+ */
+exports.testSource = function(t) {
+  var src = new Interpreter.Source('ABCDEF');
+  var name = "Source('ABCDEF')";
+  check(t, name + '.toString()', String(src), 'ABCDEF');
+
+  src = src.slice(1, 5);
+  name += '.slice(1, 5)';
+  check(t, name + '.toString()', String(src), 'BCDE');
+  
+  src = src.slice(2, 4);
+  name += '.slice(2, 4)';
+  check(t, name + '.toString()', String(src), 'CD');
+};
