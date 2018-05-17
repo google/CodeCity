@@ -1646,7 +1646,7 @@ module.exports = [
 
   // TODO(cpcallen): Is there a way to do this and next test using
   // only ES5 constructs?
-  { name: 'Function.protote.bind class constructor', src: `
+  { name: 'Function.protote.bind class constructor w/o new', src: `
     var f = WeakMap.bind();  // Should be O.K.
     try {
       f();
@@ -1656,7 +1656,7 @@ module.exports = [
     `,
     expected: 'TypeError' },
 
-  { name: 'Function.protote.bind class constructor w/o new', src: `
+  { name: 'Function.protote.bind class constructor', src: `
     String(new (WeakMap.bind()));
     `,
     expected: '[object WeakMap]' },
