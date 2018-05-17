@@ -145,8 +145,5 @@ exports.testNativeToPseudo = function(t) {
     check(t, name + '.proto', pError.proto, proto);
     check(t, name + '.message', pError.get('message', intrp.ROOT), errMessage);
     check(t, name + '.stack', pError.get('stack', intrp.ROOT), error.stack);
-    check(t, name + '.proto', pError.proto, proto);
-    check(t, name + '.message', pError.get('message', intrp.ROOT), errMessage);
-    check(t, name + '.stack', pError.get('stack', intrp.ROOT), error.stack);
   }
 };
