@@ -259,8 +259,8 @@ Interpreter.prototype.schedule = function() {
  */
 Interpreter.prototype.step = function() {
   /* NOTE: Beware that an async (user) Function might reject
-   * immediately, unwinding the stack before the CallExpression step
-   * function returns.
+   * immediately, unwinding the stack before the Call step function
+   * returns.
    */
   if (this.status !== Interpreter.Status.PAUSED) {
     throw Error('Can only step paused interpreter');
@@ -313,8 +313,8 @@ Interpreter.prototype.step = function() {
  */
 Interpreter.prototype.run = function() {
   /* NOTE: Beware that an async (user) Function might reject
-   * immediately, unwinding the stack before the CallExpression step
-   * function returns.
+   * immediately, unwinding the stack before the Call step function
+   * returns.
    */
   if (this.status === Interpreter.Status.STOPPED) {
     throw Error("Can't run stopped interpreter");
@@ -2650,7 +2650,7 @@ Interpreter.Completion;
 
 /**
  * Unwind the stack to the innermost relevant enclosing TryStatement,
- * For/ForIn/WhileStatement or Call/NewExpression.  If this results in
+ * For/ForIn/WhileStatement or Call.  If this results in
  * the stack being completely unwound the thread will be terminated
  * and an appropriate error being logged.
  *
@@ -2674,8 +2674,7 @@ Interpreter.prototype.unwind_ = function(thread, type, value, label) {
       case 'TryStatement':
         state.info_ = {type: type, value: value, label: label};
         return;
-      case 'CallExpression':
-      case 'NewExpression':
+      case 'Call':
         switch (type) {
           case Interpreter.CompletionType.BREAK:
           case Interpreter.CompletionType.CONTINUE:
@@ -2812,12 +2811,9 @@ Interpreter.State = function(node, scope, wantRef) {
  * @return {!Interpreter.State} The newly-created state.
  */
 Interpreter.State.newForCall = function(func, thisVal, args, perms) {
-  // N.B.: numeric constants in this function must correspond with the
-  // CallExpresion step function.
-
   // Dummy node (used only for type).
   var node = new Interpreter.Node;
-  node['type'] = 'CallExpression';
+  node['type'] = 'Call';
   // Dummy outer scope (used ony for perms, which will be caller perms).
   var scope = new Interpreter.Scope(perms, null);
 
@@ -2828,7 +2824,6 @@ Interpreter.State.newForCall = function(func, thisVal, args, perms) {
                  directEval: false,
                  construct: false,
                  funcState: undefined};
-  state.step_ = 3;  // Skip evaluation of func/this/args; begin execution next.
   return state;
 };
 
@@ -4524,9 +4519,10 @@ Interpreter.prototype.installTypes = function() {
       for (var i = intrp.thread.stateStack_.length - 1; i >= 0; i--) {
         var state = intrp.thread.stateStack_[i];
         var node = state.node;
-        // Always add the first state to the stack.
-        // Also add any call expression that is executing.
-        if (stack.length && !state.includeInStack()) {
+        // Always add the first state to the stack if it has position
+        // info.  Also add any call expression that is executing.
+        if ((stack.length || node['start'] === undefined) &&
+            !state.includeInStack()) {
           continue;
         }
         var source = intrp.thread.getSource(i);
@@ -5209,7 +5205,8 @@ stepFuncs_['BreakStatement'] = function (thread, stack, state, node) {
 };
 
 /**
- * Extra info used by CallExpression / NewExpression step function.
+ * Extra info used by CallExpression, NewExpression and Call step
+ * functions:
  * - func: the function to be called or constructed.
  * - this: the value of 'this' for the call.
  * - arguments: (evaluated) arguments to the call.
@@ -5227,7 +5224,8 @@ stepFuncs_['BreakStatement'] = function (thread, stack, state, node) {
 Interpreter.CallInfo;
 
 /**
- * CallExpression AND NewExpression
+ * CallExpression AND NewExpression: the initial part that evaluates
+ * the arguments etc.
  * @this {!Interpreter}
  * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
@@ -5236,27 +5234,6 @@ Interpreter.CallInfo;
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['CallExpression'] = function (thread, stack, state, node) {
-  /* NOTE 1: If you edit any of the step_ values in this function, be
-   * sure to also update the following functions to match!:
-   *
-   *  - Interpreter.State.prototype.includeInStack
-   *  - Interpreter.State.newForCall
-   *
-   * NOTE 2: Beware that, because
-   *
-   *  - an async function might not *actually* be async, and thus
-   *  - its .call function might call its reject before returning, and
-   *  - reject will unwind the stack, and
-   *  - Interpreter#step and Interpreter#run will push any State
-   *    returned by a step function such as this one,
-   *
-   * this CallExpression step function MUST NOT return a State after
-   * calling .call (or .construct), or the thread might end up in some
-   * nonsensical, corrupt configuration.
-   *
-   * (It's fine for CallExpresssion to return a State the *next* time
-   * it's invoked, though there is no obvious reason to do so.)
-   */
   if (state.step_ === 0) {  // Evaluate callee.
     // Special hack for Code City's "new 'foo'" syntax.
     if (node['type'] === 'NewExpression' &&
@@ -5317,6 +5294,51 @@ stepFuncs_['CallExpression'] = function (thread, stack, state, node) {
   }
   if (state.step_ === 3) {  // Done evaluating arguments; do function call.
     state.step_ = 4;  // N.B: SEE NOTE 1 ABOVE!
+    // Dummy node (used only for type).
+    var callNode = new Interpreter.Node;
+    callNode['type'] = 'Call';
+    // Separate State for Call (or Construct).
+    var newState = new Interpreter.State(callNode, state.scope);
+    newState.info_ = state.info_;
+    return newState;
+  }
+  // state.step_ === 4: Execution done; handle return value.
+  stack.pop();
+  // Previous stack frame may not exist if this is a setTimeout function.
+  if (stack.length > 0) {
+    stack[stack.length - 1].value = state.value;
+  }
+};
+
+/**
+ * Call: the latter part of CallExpression / NewExpression, when the
+ * actual call/construct takes place.
+ * @this {!Interpreter}
+ * @param {!Interpreter.Thread} thread
+ * @param {!Array<!Interpreter.State>} stack
+ * @param {!Interpreter.State} state
+ * @param {!Interpreter.Node} node
+ * @return {!Interpreter.State|undefined}
+ */
+stepFuncs_['Call'] = function (thread, stack, state, node) {
+  /* NOTE: Beware that, because
+   *
+   *  - an async function might not *actually* be async, and thus
+   *  - its .call function might call its reject before returning, and
+   *  - reject will unwind the stack, and
+   *  - Interpreter#step and Interpreter#run will push any State
+   *    returned by a step function such as this one,
+   *
+   * this Call step function MUST NOT return a State after
+   * calling .call (or .construct), or the thread might end up in some
+   * nonsensical, corrupt configuration.
+   *
+   * (It's fine to return a State if it *hasn't* called .call or
+   * .construct - for example, on a subsequent invocation - though
+   * there is no obvious reason to do so.)
+   */
+  if (state.step_ === 0) {  // Done evaluating arguments; do function call.
+    state.step_ = 1;
     var func = state.info_.func;
     var args = state.info_.arguments;
     var r =
@@ -5325,13 +5347,13 @@ stepFuncs_['CallExpression'] = function (thread, stack, state, node) {
         func.call(this, thread, state, state.info_.this, args);
     if (r instanceof FunctionResult) {
       if (r === FunctionResult.CallAgain) {
-        state.step_ = 3;  // N.B: SEE NOTE 1 ABOVE!
+        state.step_ = 0;
       }
-      return;  // N.B. SEE NOTE 2 ABOVE!
+      return;  // N.B. SEE NOTE ABOVE!
     }
     state.value = r;
   }
-  // state.step_ === 4: Execution done; handle return value.
+  // state.step_ === 1: Execution done; handle return value.
   stack.pop();
   // Previous stack frame may not exist if this is a setTimeout function.
   if (stack.length > 0) {
@@ -5983,7 +6005,7 @@ stepFuncs_['TryStatement'] = function (thread, stack, state, node) {
       if (state.info_) {
         // There was no catch handler, or the catch/finally threw an
         // error.  Resume unwinding the stack in search of
-        // TryStatement / CallExpression / target of break or continue.
+        // TryStatement / Call / target of break or continue.
         this.unwind_(
             thread, state.info_.type, state.info_.value, state.info_.label);
       }
