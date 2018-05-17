@@ -145,28 +145,35 @@ $.www.code.editor.www = function(request, response) {
   data.saved = false;
   var parts = JSON.parse(request.parameters.parts);
   if (parts.length) {
-    // Find the origin object.  '$.foo' is the origin of '$.foo.bar'.
     var lastPart = parts.pop();
     var object;
-    if (request.parameters.key) {
-      // See if temp ID DB still knows about this key.  If so, we're done.
-      object = $.db.tempId.getObjById(request.parameters.key);
-    }
-    if (!object) {
-      // Parse the parts list.
-      try {
-        var object = $.utils.selector.partsToValue(parts);
-      } catch (e) {
-        // Parts don't match a valid path.
-        data.butter = 'Unknown object';
+    var isGlobal = parts.length < 1;
+    if (isGlobal) {
+      object = $.utils.selector.getGlobal();
+    } else {
+      // Find the origin object.  '$.foo' is the origin of '$.foo.bar'.
+      if (request.parameters.key) {
+        // See if temp ID DB still knows about this key.  If so, we're done.
+        object = $.db.tempId.getObjById(request.parameters.key);
+      }
+      if (!object) {
+        // Parse the parts list.
+        try {
+          var object = $.utils.selector.partsToValue(parts);
+        } catch (e) {
+          // Parts don't match a valid path.
+          data.butter = 'Unknown object';
+        }
       }
     }
     if (object) {
-      // Save origin object; obtain a key to retrieve it later.
-      data.key = $.db.tempId.storeObj(object);
-      // Populate the origin object in the selector lookup cache.
-      var selector = $.utils.selector.partsToSelector(parts);
-      $.utils.selector.setSelector(object, selector);
+      if (!isGlobal) {
+        // Save origin object; obtain a key to retrieve it later.
+        data.key = $.db.tempId.storeObj(object);
+        // Populate the origin object in the selector lookup cache.
+        var selector = $.utils.selector.partsToSelector(parts);
+        $.utils.selector.setSelector(object, selector);
+      }
 
       // Save any changes.
       if (request.parameters.src) {
@@ -181,19 +188,30 @@ $.www.code.editor.www = function(request, response) {
         }
         if (ok) {
           if (lastPart.type === 'id') {
-            object[lastPart.value] = saveValue;
+            if (isGlobal) {
+              if (lastPart.value in object) {
+                eval(lastPart.value + ' = saveValue');
+                // Fetch a fresh global pseudo object for the returned src.
+                object = $.utils.selector.getGlobal();
+                data.saved = true;
+              } else {
+                data.butter = 'Unknown Global';
+              }
+            } else {
+              object[lastPart.value] = saveValue;
+              data.saved = true;
+            }
             data.butter = 'Saved';
           } else if (lastPart.type === '^') {
             Object.setPrototypeOf(object, saveValue);
             data.butter = 'Prototype Set';
+            data.saved = true;
           } else {
             // Unknown part type.
             throw SyntaxError(lastPart);
           }
-          data.saved = true;
         }
       }
-
       // Find the edited value.
       var value;
       if (lastPart.type === 'id') {

@@ -114,24 +114,26 @@ Code.Editor.load = function() {
   // Set the header.
   var header = document.getElementById('editorHeader');
   header.innerHTML = '';
-  // TODO: Fix assignments to selectors with ^ in the path.
-  // $('$.foo^') should be Object.setPrototypeOf($.foo, ...)
-  // Remove the last part.
-  var lastPart = parts.pop();
-  var selector = Code.Common.partsToSelector(parts);
-  var reference = Code.Common.selectorToReference(selector);
-  // Put the last part back on.
-  // Render as '.foo' or '[42]' or '["???"]' or '^'.
-  if (lastPart.type === 'id') {
-    var mockParts = [{type: 'id', value: 'X'}, lastPart];
-    reference += Code.Common.partsToSelector(mockParts).substring(1) + ' = ';
-  } else if (lastPart.type === '^') {
-    reference = 'Object.setPrototypeOf(' + reference + ', ...) ';
+  if (parts.length < 2) {
+    // Global object.
+    var reference = Code.Common.partsToSelector(parts) + ' = ';
   } else {
-    // Unknown part type.
-    throw lastPart;
+    // Remove the last part.
+    var lastPart = parts.pop();
+    var selector = Code.Common.partsToSelector(parts);
+    var reference = Code.Common.selectorToReference(selector);
+    // Put the last part back on.
+    // Render as '.foo' or '[42]' or '["???"]' or '^'.
+    if (lastPart.type === 'id') {
+      var mockParts = [{type: 'id', value: 'X'}, lastPart];
+      reference += Code.Common.partsToSelector(mockParts).substring(1) + ' = ';
+    } else if (lastPart.type === '^') {
+      reference = 'Object.setPrototypeOf(' + reference + ', ...) ';
+    } else {
+      // Unknown part type.
+      throw lastPart;
+    }
   }
-
   header.appendChild(document.createTextNode(reference));
 };
 
