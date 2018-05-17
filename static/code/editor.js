@@ -53,11 +53,13 @@ Code.Editor.receiveMessage = function() {
   }
   if (Code.Editor.partsJSON === null) {
     Code.Editor.load();  // Initial load of content.
-  } else if (!Code.Editor.currentEditor ||
-             Code.Editor.currentEditor.isSaved()) {
-    Code.Editor.reload();  // Reload to load different content.
   } else {
-    Code.Editor.showSave();  // User needs to save/discard/cancel.
+    Code.Editor.updateCurrentSource();
+    if (Code.Editor.currentSource === Code.Editor.originalSource) {
+      Code.Editor.reload();  // Reload to load different content.
+    } else {
+      Code.Editor.showSave();  // User needs to save/discard/cancel.
+    }
   }
 };
 
@@ -138,9 +140,24 @@ Code.Editor.load = function() {
 };
 
 /**
+ * Check the currently active editor and update Code.Editor.currentSource
+ * if there has been a change.
+ */
+Code.Editor.updateCurrentSource = function() {
+  if (Code.Editor.currentEditor && !Code.Editor.currentEditor.isSaved()) {
+    Code.Editor.currentSource = Code.Editor.currentEditor.getSource();
+  }
+  if (!Code.Editor.isSaveDialogVisible) {
+    Code.Editor.saturateSave(
+        Code.Editor.currentSource !== Code.Editor.originalSource);
+  }
+};
+
+/**
  * Save the current editor content.
  */
 Code.Editor.save = function() {
+  Code.Editor.updateCurrentSource();
   Code.Editor.sendXhr();
   // Prevent the user from interacting with the editor during an async save.
   // TODO: Implement merging.
@@ -172,8 +189,9 @@ Code.Editor.beforeUnload = function(e) {
     Code.Editor.hideSave();
     return;
   }
-  if (!Code.Editor.beforeUnload.disabled && Code.Editor.currentEditor &&
-      !Code.Editor.currentEditor.isSaved()) {
+  Code.Editor.updateCurrentSource();
+  if (!Code.Editor.beforeUnload.disabled &&
+      Code.Editor.currentSource !== Code.Editor.originalSource) {
     e.returnValue = 'You have unsaved changes.';
     e.preventDefault();
   }
@@ -192,6 +210,7 @@ Code.Editor.tabClick = function(e) {
   if (Code.Editor.tabClick.disabled) {
     return;
   }
+
   // Unhighlight all tabs, hide all containers.
   var tabs = document.querySelectorAll('#editorTabs>.highlighted');
   for (var i = 0, tab; (tab = tabs[i]); i++) {
@@ -202,11 +221,8 @@ Code.Editor.tabClick = function(e) {
     container.style.display = 'none';
   }
 
-  // If working on an unsaved draft, copy current data into all other editors.
-  if (Code.Editor.currentEditor && !Code.Editor.currentEditor.isSaved()) {
-    var src = Code.Editor.currentEditor.getSource();
-    Code.Editor.setSourceToAllEditors(src);
-  }
+  Code.Editor.updateCurrentSource();
+  Code.Editor.setSourceToAllEditors(Code.Editor.currentSource);
 
   // Highlight one tab, show one container.
   var tab = e.target;
@@ -241,8 +257,7 @@ Code.Editor.sendXhr = function() {
   xhr.open('POST', '/code/editor');
   xhr.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
   xhr.onreadystatechange = Code.Editor.receiveXhr;
-  var src = Code.Editor.currentEditor ?
-      Code.Editor.currentEditor.getSource() : '';
+  var src = Code.Editor.currentSource || '';
   var data =
       'key=' + encodeURIComponent(Code.Editor.key) +
       '&parts=' + encodeURIComponent(Code.Editor.partsJSON);
@@ -274,7 +289,13 @@ Code.Editor.receiveXhr = function() {
     Code.Editor.key = data.key;
   }
   if (data.hasOwnProperty('src')) {
-    Code.Editor.setSourceToAllEditors(data.src);
+    Code.Editor.originalSource = data.src;
+    // Only update the displayed source if a) this is the initial load,
+    // or b) the previous save was successful.
+    if (Code.Editor.currentSource === null || data.saved) {
+      Code.Editor.currentSource = data.src;
+      Code.Editor.setSourceToAllEditors(data.src);
+    }
   }
   // Remove saving mask.
   clearTimeout(Code.Editor.saveMaskPid);
@@ -303,6 +324,18 @@ Code.Editor.receiveXhr = function() {
 };
 
 /**
+ * The original source text from the server.
+ * @type {?string}
+ */
+Code.Editor.originalSource = null;
+
+/**
+ * Current source text from the most recent active editor.
+ * @type {?string}
+ */
+Code.Editor.currentSource = null;
+
+/**
  * Data has been received, ready to allow the user to edit.
  */
 Code.Editor.ready = function() {
@@ -321,9 +354,13 @@ Code.Editor.ready = function() {
   var header = document.getElementById('editorHeader');
   header.className = '';
 
+  // Update the save button's saturation state once a second.
+  setInterval(Code.Editor.updateCurrentSource, 1000);
+  
   // Only run this code once.
   Code.Editor.ready = undefined;
 };
+
 
 /**
  * Find the editor with the highest confidence for the current text.
@@ -493,8 +530,9 @@ Code.GenericEditor.prototype.containerElement = null;
 /**
  * Plain text representation of this editor's contents as of load or last save.
  * @type {?string}
+ * @private
  */
-Code.GenericEditor.prototype.lastSavedSource = null;
+Code.GenericEditor.prototype.lastSavedSource_ = null;
 
 /**
  * Create the DOM for this editor.
@@ -526,7 +564,7 @@ Code.GenericEditor.prototype.setSource = function(source) {
  * @return {boolean} True if work is saved.
  */
 Code.GenericEditor.prototype.isSaved = function() {
-  return this.getSource() === this.lastSavedSource;
+  return this.getSource() === this.lastSavedSource_;
 };
 
 /**
@@ -596,7 +634,7 @@ Code.valueEditor.setSource = function(source) {
   } else {
     this.prequelSource_ = source;
   }
-  this.lastSavedSource = Code.valueEditor.getSource();
+  this.lastSavedSource_ = Code.valueEditor.getSource();
 };
 
 /**
@@ -674,7 +712,7 @@ Code.stringEditor.setSource = function(source) {
   } else {
     this.prequelSource_ = source;
   }
-  this.lastSavedSource = Code.stringEditor.getSource();
+  this.lastSavedSource_ = Code.stringEditor.getSource();
 };
 
 /**
