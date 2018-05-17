@@ -4141,7 +4141,7 @@ Interpreter.prototype.installTypes = function() {
   };
 
   /**
-   * The [[Call]] internal method for bound functions, defined by
+   * The [[Construct]] internal method for bound functions, defined by
    * ES5.1 §15.3.4.5.2 / ES6 §9.4.1.2.
    * @override
    */
@@ -6086,4 +6086,6 @@ module.exports = Interpreter;
 var acornNode = acorn.parse('', Interpreter.PARSE_OPTIONS).constructor;
 /** @constructor */ Interpreter.Node =
     acornNode.bind(acorn, {options: Interpreter.PARSE_OPTIONS});
+// Only needed to help serializser; not needed for `new Node` since
+// contructing a bound function uses the target function's .prototype.
 Interpreter.Node.prototype = acornNode.prototype;
