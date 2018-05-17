@@ -140,20 +140,13 @@ exports.testNativeToPseudo = function(t) {
     var error = Err(errMessage);
     var pError = intrp.nativeToPseudo(error);
 
-    check(' instanceof intrp.Error', pError instanceof intrp.Error, true);
-    check('.proto', pError.proto, proto);
-    check('.message', pError.get('message', intrp.ROOT), errMessage);
-    check('.stack', pError.get('stack', intrp.ROOT), error.stack);
+    check(t, name + ' instanceof intrp.Error',
+        pError instanceof intrp.Error, true);
+    check(t, name + '.proto', pError.proto, proto);
+    check(t, name + '.message', pError.get('message', intrp.ROOT), errMessage);
+    check(t, name + '.stack', pError.get('stack', intrp.ROOT), error.stack);
     check(t, name + '.proto', pError.proto, proto);
     check(t, name + '.message', pError.get('message', intrp.ROOT), errMessage);
     check(t, name + '.stack', pError.get('stack', intrp.ROOT), error.stack);
   }
-};
-
-/**
- * Unit tests for Interpreter.Source class.
- * @param {!T} t The test runner object.
- */
-exports.testSource = function(t) {
-  var s = Interpreter.Source('ABCDEF');
 };
