@@ -930,9 +930,19 @@ Interpreter.prototype.initFunction_ = function() {
         throw new intrp.Error(perms, intrp.TYPE_ERROR,
             func + ' is not a function');
       } else if (argArray === null || argArray === undefined) {
-        return func.call(intrp, thread, state, thisArg, []);
+        var argList = [];
+      } else {
+        argList = intrp.createListFromArrayLike(argArray, perms);
       }
-      var argList = intrp.createListFromArrayLike(argArray, perms);
+      // Rewrite state.info_, as a short-circuit optimisation in case
+      // we get called again due to FunctionResult.CallAgain, and also
+      // to produce more useful callers() output / stack traces.
+      var info = state.info_;
+      info.func = func;
+      info.this = thisArg;
+      info.args = argList;
+      info.construct = false;
+      // But just go and do the first .call directly.
       return func.call(intrp, thread, state, thisArg, argList);
     }
   });
@@ -978,6 +988,15 @@ Interpreter.prototype.initFunction_ = function() {
       }
       var thisArg = args[0];
       var argList = args.slice(1);
+      // Rewrite state.info_, as a short-circuit optimisation in case
+      // we get called again due to FunctionResult.CallAgain, and also
+      // to produce more useful callers() output / stack traces.
+      var info = state.info_;
+      info.func = func;
+      info.this = thisArg;
+      info.args = argList;
+      info.construct = false;
+      // But just go and do the first .call directly.
       return func.call(intrp, thread, state, thisArg, argList);
     }
   });
@@ -4123,6 +4142,10 @@ Interpreter.prototype.installTypes = function() {
   /**
    * The [[Call]] internal method for bound functions, defined by
    * ES5.1 §15.3.4.5.1 / ES6 §9.4.1.1.
+   *
+   * BUG(cpcallen:perms): the target function will see callerPerms
+   * being whoever called the bound function, but should see
+   * callerPerms being the owner of the bound function.
    * @override
    */
   intrp.BoundFunction.prototype.call = function(
@@ -4133,16 +4156,26 @@ Interpreter.prototype.installTypes = function() {
       throw new intrp.Error(state.scope.perms, intrp.PERM_ERROR,
           'Functions with null owner are not executable');
     }
-    args = this.args.concat(args);
-    var s = Interpreter.State.newForCall(
-        this.boundFunc, this.thisVal, args, this.owner);
-    thread.stateStack_[thread.stateStack_.length - 1] = s;
-    return FunctionResult.CallAgain;
+    var argList = this.args.concat(args);
+    // Rewrite state.info_, as a short-circuit optimisation in case
+    // we get called again due to FunctionResult.CallAgain, and also
+    // to produce more useful callers() output / stack traces.
+    var info = state.info_;
+    info.func = this.boundFunc;
+    info.this = this.thisVal;
+    info.args = argList;
+    info.construct = false;
+    // But just go and do the first .call directly.
+    return this.boundFunc.call(intrp, thread, state, this.thisVal, argList);
   };
 
   /**
    * The [[Construct]] internal method for bound functions, defined by
    * ES5.1 §15.3.4.5.2 / ES6 §9.4.1.2.
+   *
+   * BUG(cpcallen:perms): the target function will see callerPerms
+   * being whoever called the bound function, but should see
+   * callerPerms being the owner of the bound function.
    * @override
    */
   intrp.BoundFunction.prototype.construct = function(
@@ -4153,12 +4186,17 @@ Interpreter.prototype.installTypes = function() {
       throw new intrp.Error(state.scope.perms, intrp.PERM_ERROR,
           'Functions with null owner are not constructable');
     }
-    args = this.args.concat(args);
-    var s = Interpreter.State.newForCall(
-        this.boundFunc, undefined, args, this.owner);
-    s.info_.construct = true;
-    thread.stateStack_[thread.stateStack_.length - 1] = s;
-    return FunctionResult.CallAgain;
+    var argList = this.args.concat(args);
+    // Rewrite state.info_, as a short-circuit optimisation in case
+    // we get called again due to FunctionResult.CallAgain, and also
+    // to produce more useful callers() output / stack traces.
+    var info = state.info_;
+    info.func = this.boundFunc;
+    info.this = this.thisVal;
+    info.args = argList;
+    info.construct = true;
+    // But just go and do the first .construct directly.
+    return this.boundFunc.construct(intrp, thread, state, argList);
   };
 
   /**
