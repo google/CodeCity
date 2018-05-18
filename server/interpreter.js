@@ -2572,7 +2572,7 @@ Interpreter.prototype.populateScope_ = function(node, scope, source) {
  */
 Interpreter.prototype.calledWithNew = function() {
   return this.thread.stateStack_[this.thread.stateStack_.length - 1]
-      .node['type'] === 'NewExpression';
+      .info_.construct;
 };
 
 /**
@@ -2807,6 +2807,7 @@ Interpreter.State.newForCall = function(func, thisVal, args, perms) {
                  this: thisVal,
                  arguments: args,
                  directEval: false,
+                 construct: false,
                  funcState: undefined};
   state.step_ = 3;  // Skip evaluation of func/this/args; begin execution next.
   return state;
@@ -4155,8 +4156,7 @@ Interpreter.prototype.installTypes = function() {
     args = this.args.concat(args);
     var s = Interpreter.State.newForCall(
         this.boundFunc, undefined, args, this.owner);
-    // TODO(cpcallen): Remove this ugly kludge.
-    s.node['type'] = 'NewExpression';
+    s.info_.construct = true;
     thread.stateStack_[thread.stateStack_.length - 1] = s;
     return FunctionResult.CallAgain;
   };
@@ -5176,12 +5176,14 @@ stepFuncs_['BreakStatement'] = function (thread, stack, state, node) {
  * - this: the value of 'this' for the call.
  * - arguments: (evaluated) arguments to the call.
  * - directEval: is this a direct call to the global eval function?
+ * - construct: is this a [[Construct]] call (rather than default [[Call]])?
  * - funcState: place for NativeFunction impls to save additional state info.
  * TODO(cpcallen): give funcState a narrower type.
  * @typedef {{func: ?Interpreter.prototype.Function,
  *            this: Interpreter.Value,
  *            arguments: !Array<Interpreter.Value>,
  *            directEval: boolean,
+ *            construct: boolean,
  *            funcState: *}}
  */
 Interpreter.CallInfo;
@@ -5243,6 +5245,7 @@ stepFuncs_['CallExpression'] = function (thread, stack, state, node) {
                 this: undefined,  // Since we have no global object.
                 arguments: [],
                 directEval: false,
+                construct: state.node['type'] === 'NewExpression',
                 funcState: undefined};
     if (state.ref) {  // Callee was MemberExpression or Identifier.
       state.tmp_ = this.getValue(state.scope, state.ref, state.scope.perms);
@@ -5279,7 +5282,7 @@ stepFuncs_['CallExpression'] = function (thread, stack, state, node) {
     var func = state.info_.func;
     var args = state.info_.arguments;
     var r =
-        state.node['type'] === 'NewExpression' ?
+        state.info_.construct ?
         func.construct(this, thread, state, args) :
         func.call(this, thread, state, state.info_.this, args);
     if (r instanceof FunctionResult) {
