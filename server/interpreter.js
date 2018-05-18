@@ -2803,7 +2803,7 @@ Interpreter.State.newForCall = function(func, thisVal, args, perms) {
   var scope = new Interpreter.Scope(perms, null);
 
   var state = new Interpreter.State(node, scope);
-  state.info_ = {callee: func,
+  state.info_ = {func: func,
                  this: thisVal,
                  arguments: args,
                  directEval: false,
@@ -5171,14 +5171,14 @@ stepFuncs_['BreakStatement'] = function (thread, stack, state, node) {
 };
 
 /**
- * Extra info used by CallExpression step function.
- * - callee: the thing being called - usually a function.
+ * Extra info used by CallExpression / NewExpression step function.
+ * - func: the function to be called or constructed.
  * - this: the value of 'this' for the call.
  * - arguments: (evaluated) arguments to the call.
  * - directEval: is this a direct call to the global eval function?
  * - funcState: place for NativeFunction impls to save additional state info.
  * TODO(cpcallen): give funcState a narrower type.
- * @typedef {{callee: Interpreter.Value,
+ * @typedef {{func: ?Interpreter.prototype.Function,
  *            this: Interpreter.Value,
  *            arguments: !Array<Interpreter.Value>,
  *            directEval: boolean,
@@ -5239,13 +5239,13 @@ stepFuncs_['CallExpression'] = function (thread, stack, state, node) {
   if (state.step_ === 1) {  // Evaluated callee, possibly got a reference.
     // Determine value of the function.
     state.step_ = 2;
-    var info = {callee: undefined,
+    var info = {func: null,
                 this: undefined,  // Since we have no global object.
                 arguments: [],
                 directEval: false,
                 funcState: undefined};
     if (state.ref) {  // Callee was MemberExpression or Identifier.
-      info.callee = this.getValue(state.scope, state.ref, state.scope.perms);
+      state.tmp_ = this.getValue(state.scope, state.ref, state.scope.perms);
       if (state.ref[0] === Interpreter.SCOPE_REFERENCE) {
         // (Globally or locally) named function - maybe named 'eval'?
         info.directEval = (state.ref[1] === 'eval');
@@ -5254,7 +5254,7 @@ stepFuncs_['CallExpression'] = function (thread, stack, state, node) {
         info.this = state.ref[0];
       }
     } else {  // Callee already fully evaluated.
-      info.callee = state.value;
+      state.tmp_ = state.value;
     }
     state.info_ = info;
     state.n_ = 0;
@@ -5266,16 +5266,17 @@ stepFuncs_['CallExpression'] = function (thread, stack, state, node) {
     if (node['arguments'][state.n_]) {  // Evaluate next arg.
       return new Interpreter.State(node['arguments'][state.n_++], state.scope);
     }
-    // All args evaluated.
+    // All args evaluated.  Check info_.func is actually a function.
     state.step_ = 3;  // N.B: SEE NOTE 1 ABOVE!
+    if (!(state.tmp_ instanceof this.Function)) {
+      throw new this.Error(state.scope.perms, this.TYPE_ERROR,
+          state.tmp_ + ' is not a function');
+    }
+    state.info_.func = state.tmp_;
   }
   if (state.step_ === 3) {  // Done evaluating arguments; do function call.
     state.step_ = 4;  // N.B: SEE NOTE 1 ABOVE!
-    var func = state.info_.callee;
-    if (!(func instanceof this.Function)) {
-      throw new this.Error(state.scope.perms, this.TYPE_ERROR,
-          func + ' is not a function');
-    }
+    var func = state.info_.func;
     var args = state.info_.arguments;
     var r =
         state.node['type'] === 'NewExpression' ?
