@@ -159,6 +159,25 @@ tests.ObjectIs = function() {
 };
 
 ///////////////////////////////////////////////////////////////////////////////
+// Function and Funciton.prototype
+
+tests.FunctionPrototypeBindClassConstructor = function() {
+  var f = WeakMap.bind();
+  try {
+    f();
+    console.assert(false, "Calling bound class constructor didn't throw");
+  } catch (e) {
+    console.assert(e.name === 'TypeError',
+        'Calling bound class constructor threw wrong error');
+  }
+}
+
+tests.FunctionPrototypeBindClassConstructorNew = function() {
+  console.assert(String(new (WeakMap.bind())) === '[object WeakMap]',
+      'FunctionPrototypeBindClassConstructorNew');
+};
+
+///////////////////////////////////////////////////////////////////////////////
 // Array and Array.prototype
 
 tests.ArrayFind = function() {

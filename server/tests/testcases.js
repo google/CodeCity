@@ -1644,8 +1644,7 @@ module.exports = [
     `,
     expected: 4 },
 
-  // TODO(cpcallen): Is there a way to do this and next test using
-  // only ES5 constructs?
+  // N.B.: tests of class constructor semantics unavoidably ES6.
   { name: 'Function.protote.bind class constructor w/o new', src: `
     var f = WeakMap.bind();  // Should be O.K.
     try {
@@ -1656,6 +1655,7 @@ module.exports = [
     `,
     expected: 'TypeError' },
 
+  // N.B.: tests of class constructor semantics unavoidably ES6.
   { name: 'Function.protote.bind class constructor', src: `
     String(new (WeakMap.bind()));
     `,
