@@ -2833,14 +2833,7 @@ Interpreter.State.newForCall = function(func, thisVal, args, perms) {
  * @return {boolean}
  */
 Interpreter.State.prototype.includeInStack = function() {
-  // N.B.: numeric constants in this function must correspond with the
-  // CallExpresion step function.
-
-  // Is state in the last step of execution (i.e., .call called)?
-  return this.node &&
-      (this.node['type'] === 'CallExpression' ||
-       this.node['type'] === 'NewExpression') &&
-      this.step_ >= 3;
+  return this.node['type'] === 'Call';
 };
 
 /**
@@ -5292,22 +5285,16 @@ stepFuncs_['CallExpression'] = function (thread, stack, state, node) {
     }
     state.info_.func = state.tmp_;
   }
-  if (state.step_ === 3) {  // Done evaluating arguments; do function call.
-    state.step_ = 4;  // N.B: SEE NOTE 1 ABOVE!
-    // Dummy node (used only for type).
-    var callNode = new Interpreter.Node;
-    callNode['type'] = 'Call';
-    // Separate State for Call (or Construct).
-    var newState = new Interpreter.State(callNode, state.scope);
-    newState.info_ = state.info_;
-    return newState;
-  }
-  // state.step_ === 4: Execution done; handle return value.
+  // state.step_ === 3: Done evaluating arguments; do function call.
+  // Dummy Node (used only for type and position).
+  var callNode = new Interpreter.Node;
+  callNode['type'] = 'Call';
+  callNode['start'] = node['start'];
+  // New State for Call (or Construct).
+  var callState = new Interpreter.State(callNode, state.scope);
+  callState.info_ = state.info_;
   stack.pop();
-  // Previous stack frame may not exist if this is a setTimeout function.
-  if (stack.length > 0) {
-    stack[stack.length - 1].value = state.value;
-  }
+  return callState;
 };
 
 /**
