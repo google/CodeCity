@@ -1142,7 +1142,7 @@ module.exports = [
     var o = {parent: 'o'};
     var p = {parent: 'p'};
     var q = Object.create(o);
-    Object.setPrototypeOf(q, p) === q && 
+    Object.setPrototypeOf(q, p) === q &&
         Object.getPrototypeOf(q) === p && q.parent;
     `,
     expected: 'p' },
@@ -1150,7 +1150,7 @@ module.exports = [
   { name: 'Object.setPrototypeOf circular', src: `
     var o = {};
     var p = Object.create(o);
-    try {    
+    try {
       Object.setPrototypeOf(o, p);
     } catch (e) {
       e.name;
@@ -1644,8 +1644,38 @@ module.exports = [
     `,
     expected: 4 },
 
+  { name: 'Function.prototype.bind call BF', src: `
+    var constructed;
+    function Foo() {constructed = (this instanceof Foo)}
+    var f = Foo.bind();
+    f();
+    constructed;
+    `,
+    expected: false },
+
+  { name: 'Function.prototype.bind construct BF', src: `
+    var constructed;
+    function Foo() {constructed = (this instanceof Foo)}
+    var f = Foo.bind();
+    new f;
+    constructed;
+    `,
+    expected: true },
+
+  { name: 'Function.prototype.call.bind construct BF', src: `
+    var invoked;
+    function Foo() {invoked = true};
+    var f = Foo.call.bind(Foo);
+    try {
+      new f;
+    } catch (e) {
+      !invoked && e.name;
+    }
+    `,
+    expected: 'TypeError' },
+
   // N.B.: tests of class constructor semantics unavoidably ES6.
-  { name: 'Function.protote.bind class constructor w/o new', src: `
+  { name: 'Function.prototype.bind class constructor w/o new', src: `
     var f = WeakMap.bind();  // Should be O.K.
     try {
       f();
