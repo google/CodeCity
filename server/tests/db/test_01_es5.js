@@ -2019,6 +2019,38 @@ tests.FunctionPrototypeBind = function() {
   console.assert(f.bind(undefined, 1)(2, 3) === 4, 'Function.prototype.bind');
 };
 
+tests.FunctionPrototypeBindCallBF = function() {
+  var constructed;
+  function Foo() {constructed = (this instanceof Foo)}
+  var f = Foo.bind();
+  f();
+  console.assert(constructed === false,
+      'Function.prototype.bind: calling bound function calls target');
+};
+
+tests.FunctionPrototypeBindConstructBF = function() {
+  var constructed;
+  function Foo() {constructed = (this instanceof Foo)}
+  var f = Foo.bind();
+  new f;
+  console.assert(constructed === true,
+      'Function.prototype.bind: constructing bound function constructs target');
+};
+
+tests.FunctionPrototypeCallBindConstructBF = function() {
+  var invoked;
+  function Foo() {invoked = true;}
+  var f = Foo.call.bind(Foo);
+  try {
+    new f;
+    console.assert(false, "Calling bound call function didn't throw");
+  } catch (e) {
+    console.assert(e.name === 'TypeError',
+        'Calling bound call function threw wrong error');
+  }
+  console.assert(!invoked, 'Calling bound call function invoked call target');
+};
+
 ///////////////////////////////////////////////////////////////////////////////
 // Array and Array.prototype
 
@@ -2079,7 +2111,7 @@ tests.ArrayPrototypeConcat = function() {
   console.assert(c.length === 5 && '3' in c && c[3] === undefined &&
       String(c) === 'foo,bar,baz,,[object Object]',
       'Array.prototype.concat(...)');
-  
+
   o = {0: 'foo', 1: 'bar', length: 2};
   c = Array.prototype.concat.call(o, 'baz', [, 'quux', 'quuux']);
   console.assert(c.length === 5 &&
