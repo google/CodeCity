@@ -5293,8 +5293,11 @@ stepFuncs_['CallExpression'] = function (thread, stack, state, node) {
   // New State for Call (or Construct).
   var callState = new Interpreter.State(callNode, state.scope);
   callState.info_ = state.info_;
-  stack.pop();
-  return callState;
+  // Replace this CallExpression State with the new Call State.
+  stack[stack.length - 1] = callState;
+  // We know exactly which step function will get called next, so go
+  // straight there:
+  return stepFuncs_['Call'].call(this, thread, stack, callState, callNode);
 };
 
 /**
