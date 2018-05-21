@@ -2837,6 +2837,56 @@ Interpreter.State.prototype.includeInStack = function() {
 };
 
 /**
+ * @typedef{(!{func: !Interpreter.prototype.Function,
+ *             this: Interpreter.Value,
+ *             callerPerms: !Interpreter.Owner}|
+ *           !{func: !Interpreter.prototype.Function,
+ *             this: Interpreter.Value,
+ *             callerPerms: !Interpreter.Owner,
+ *             line: number,
+ *             col: number}|
+ *           !{program: string}|
+ *           !{program: string,
+ *             line: number,
+ *             col: number}|
+ *           !{eval: string}|
+ *           !{eval: string,
+ *             line: number,
+ *             col: number})}
+ */
+var FrameInfo;
+
+/**
+ * If this state represents a call stack frame, or otherwise should be
+ * reported in the output of callers() or in the .stack of an Error
+ * object, return an object containing information about it;
+ * otherwise return undefined.
+ * @return {!FrameInfo|undefined}
+ */
+Interpreter.State.prototype.frame = function() {
+  switch (this.node['type']) {
+    case 'Call':
+      var info = /** @type{!Interpreter.CallInfo} */(this.info_);
+      if (!info.func) throw Error('No function for Call??');
+      return {
+        func: info.func,
+        this: info.this,
+        callerPerms: this.scope.perms,  // BUG(cpcallen:perms): wrong for bind.
+      };
+    case 'Program':
+      var source = this.node['source'];
+      if (!source) throw Error('No source for Program??');
+      return {program: String(source)};
+    case 'EvalProgram_':
+      source = this.node['source'];
+      if (!source) throw Error('No source for EvalProgram_??');
+      return {eval: String(source)};
+    default:
+      return undefined;
+  }
+};
+
+/**
  * Class for a thread of execution.
  *
  * Note that this is an internal class; it has a companion wrapper
@@ -2886,6 +2936,41 @@ Interpreter.Thread.prototype.getSource = function(index) {
     if (source) return source;
   }
   return null;
+};
+
+/**
+ * Return information about the call stack.
+ * @param {!Interpreter.Owner} perms Who wants callers info?
+ * @return {!Array<!FrameInfo>} The thread's call stack.
+ */
+Interpreter.Thread.prototype.callers = function(perms) {
+  var frames = [];
+  var pos;
+  var lc;
+  for (var i = this.stateStack_.length - 1; i >= 0; i--) {
+    var state = this.stateStack_[i];
+    var node = state.node;
+    if (pos !== undefined && 'source' in node) {
+      lc = node['source'].lineColForPos(pos);
+    }
+    var frame;
+    if ((frame = state.frame())) {
+      // TODO(cpcallen:perms): Only include line/column info if func
+      // is readable by perms - otherwise it leaks some information
+      // about a supposedly-unreadable function.
+      if (lc) {
+        frame.line = lc.line;
+        frame.col = lc.col;
+        lc = pos = undefined;
+      }
+      frames[frames.length++] = frame;
+    }
+    if ((frame || frames.length === 0) && ('start' in node)) {
+      pos = node['start'];
+    }
+  }
+  // TODO(cpcallen): add thread-initiator info.
+  return frames;
 };
 
 /**
