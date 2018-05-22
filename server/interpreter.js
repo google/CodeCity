@@ -4270,26 +4270,28 @@ Interpreter.prototype.installTypes = function() {
       this.defineProperty('length', Descriptor.none.withValue(options.length),
                           owner);
     }
-    if (options.call) {
-      this.call = options.call;
-    }
-    if (options.construct) {
-      this.construct = options.construct;
-    }
-    if (options.name || options.id) {
-      var id = (options.id || options.name);
+    // Register builtin if possible.
+    var id = (options.id || options.name);
+    if (id) {
       this.setName(options.name !== undefined ?
           options.name : options.id.replace(/^.*\./, ''));
-      // Register builtin and make sure call and construct are serializable.
       if (intrp.builtins_[id]) {
         throw ReferenceError('Duplicate builtin id ' + id);
       }
       intrp.builtins_[id] = this;
-      if (this.call && this.call.id === undefined) {
-        this.call.id = id;
+    }
+    // Install [[Call]] and [[Construct]] methods, making sure they
+    // are labelled for serialization (if possible and not already).
+    if (options.call) {
+      this.call = options.call;
+      if (id && !('id' in this.call)) {
+        this.call.id = id + ' [[Call]]';
       }
-      if (this.construct && this.construct.id === undefined) {
-        this.construct.id = id + ' [[construct]]';
+    }
+    if (options.construct) {
+      this.construct = options.construct;
+      if (id && !('id' in this.construct)) {
+        this.construct.id = id + ' [[Construct]]';
       }
     }
   };
