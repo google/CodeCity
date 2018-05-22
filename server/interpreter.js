@@ -2009,7 +2009,8 @@ Interpreter.prototype.initThread_ = function() {
       if (delay < 0) {
         delay = 0;
       }
-      intrp.thread.sleepUntil(intrp.now() + delay);
+      thread.runAt = intrp.now() + delay;
+      return Interpreter.FunctionResult.Sleep;
     }
   });
 };
@@ -2726,11 +2727,22 @@ Interpreter.FunctionResult = function() {};
  */
 Interpreter.FunctionResult.AwaitValue = new Interpreter.FunctionResult;
 /**
+ * Please mark this thread as blocked awaiting eternal event (e.g.,
+ * async callback).
+ * @const
+ */
+Interpreter.FunctionResult.Block = new Interpreter.FunctionResult;
+/**
  * Please invoke .call or .construct again the next time this state is
  * encountered.
  * @const
  */
 Interpreter.FunctionResult.CallAgain = new Interpreter.FunctionResult;
+/**
+ * Please mark this thread as sleeping until its .runAt time.
+ * @const
+ */
+Interpreter.FunctionResult.Sleep = new Interpreter.FunctionResult;
 
 /**
  * Class for unique sentinel values passed to various functions.
@@ -3071,15 +3083,6 @@ Interpreter.Thread = function(id, state, runAt) {
   this.wrapper = null;
   /** @type {Interpreter.Value} */
   this.value = undefined;
-};
-
-/**
- * Put thread to sleep until a specified time.
- * @param {number} resumeAt Time at which to wake thread.
- */
-Interpreter.Thread.prototype.sleepUntil = function(resumeAt) {
-  this.status = Interpreter.Thread.Status.SLEEPING;
-  this.runAt = resumeAt;
 };
 
 /**
@@ -5430,10 +5433,21 @@ stepFuncs_['Call'] = function (thread, stack, state, node) {
         func.construct(this, thread, state, args) :
         func.call(this, thread, state, state.info_.this, args);
     if (r instanceof Interpreter.FunctionResult) {
-      if (r === Interpreter.FunctionResult.CallAgain) {
-        state.step_ = 0;
-      }
-      return;  // N.B. SEE NOTE ABOVE!
+      switch (r) {
+        case Interpreter.FunctionResult.AwaitValue:
+          return;
+        case Interpreter.FunctionResult.Block:
+          thread.status = Interpreter.Thread.Status.BLOCKED;
+          return;
+        case Interpreter.FunctionResult.CallAgain:
+          state.step_ = 0;
+          return;
+        case Interpreter.FunctionResult.Sleep:
+          thread.status = Interpreter.Thread.Status.SLEEPING;
+          return;
+        default:
+          throw Error('Unknown FunctionResult??');
+      }          
     }
     state.value = r;
   }
