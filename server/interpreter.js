@@ -1802,13 +1802,10 @@ Interpreter.prototype.initError_ = function() {
       name: name, length: 1,
       /** @type {!Interpreter.NativeConstructImpl} */
       construct: function(intrp, thread, state, args) {
-        var message = args[0];
-        var err = new intrp.Error(state.scope.perms, proto);
-        if (message !== undefined) {
-          err.defineProperty('message',
-              Descriptor.wc.withValue(String(message)), state.scope.perms);
-        }
-        return err;
+        var message = (args[0] === undefined) ? undefined : String(args[0]);
+        var perms = state.scope.perms;
+        var callers = thread.callers(perms).slice(1);
+        return new intrp.Error(perms, proto, message, callers);
       },
       /** @type {!Interpreter.NativeCallImpl} */
       call: function(intrp, thread, state, thisVal, args) {
@@ -2828,15 +2825,6 @@ Interpreter.State.newForCall = function(func, thisVal, args, perms) {
 };
 
 /**
- * Should this state be included in the stack trace generated for
- * Error objects?
- * @return {boolean}
- */
-Interpreter.State.prototype.includeInStack = function() {
-  return this.node['type'] === 'Call';
-};
-
-/**
  * @typedef{(!{func: !Interpreter.prototype.Function,
  *             this: Interpreter.Value,
  *             callerPerms: !Interpreter.Owner}|
@@ -3524,8 +3512,9 @@ Interpreter.prototype.RegExp.prototype.populate = function(nativeRegexp) {
  * @param {?Interpreter.Owner=} owner
  * @param {?Interpreter.prototype.Object=} proto
  * @param {string=} message
+ * @param {!Array<!FrameInfo>=} callers
  */
-Interpreter.prototype.Error = function(owner, proto, message) {
+Interpreter.prototype.Error = function(owner, proto, message, callers) {
   throw Error('Inner class constructor not callable on prototype');
 };
 
@@ -4583,46 +4572,46 @@ Interpreter.prototype.installTypes = function() {
    * @param {?Interpreter.Owner=} owner Owner object or null.
    * @param {?Interpreter.prototype.Object=} proto Prototype object or null.
    * @param {string=} message Optional message to be attached to error object.
+   * @param {!Array<!FrameInfo>=} callers Call stack to use for stack trace.
    */
-  intrp.Error = function(owner, proto, message) {
+  intrp.Error = function(owner, proto, message, callers) {
     intrp.Object.call(/** @type {?} */ (this), owner,
         (proto === undefined ? intrp.ERROR : proto));
     if (message !== undefined) {
       this.defineProperty('message', Descriptor.wc.withValue(message));
     }
-    // Construct a text-based stack.
-    // Don't bother when building Error.prototype.
-    if (intrp.thread) {
-      var stack = [];
-      for (var i = intrp.thread.stateStack_.length - 1; i >= 0; i--) {
-        var state = intrp.thread.stateStack_[i];
-        var node = state.node;
-        // Always add the first state to the stack if it has position
-        // info.  Also add any call expression that is executing.
-        if ((stack.length || node['start'] === undefined) &&
-            !state.includeInStack()) {
-          continue;
+    var perms = this.owner || intrp.ANYBODY;
+    callers = callers || (intrp.thread ? intrp.thread.callers(perms) : []);
+    var stack = [];
+    for (var i = 0; i < callers.length; i++) {
+      var line = '    ';
+      var frame = callers[i];
+      if ('func' in frame) {
+        var func = frame.func;
+        var name;
+        try {
+          if (func.has('name', owner)) {
+            name = func.get('name', owner);
+          } else {
+            name = 'anonymous function';
+          }
+        } catch (e) {
+          name = 'unreadable function';
         }
-        var source = intrp.thread.getSource(i);
-        if (!source) {
-          continue;
-        }
-        var code = String(source);
-        var lineStart = code.lastIndexOf('\n', node['start']);
-        if (lineStart === -1) {
-          lineStart = 0;
-        } else {
-          lineStart++;
-        }
-        var lineEnd = code.indexOf('\n', lineStart + 1);
-        if (lineEnd === -1) {
-          lineEnd = code.length;
-        }
-        var line = code.substring(lineStart, lineEnd);
-        stack[stack.length] = line;
+      } else if ('eval' in frame) {
+        name = '"' + frame.eval + '"';
+      } else if ('program' in frame) {
+        name = '"' + frame.program + '"';
       }
-      this.defineProperty('stack', Descriptor.wc.withValue(stack.join('\n')));
+      if ('line' in frame) {
+        line += 'at ' + name + ' ' +
+            String(frame.line) + ':' + String(frame.col);
+      } else {
+        line += 'in ' + name;
+      }
+      stack.push(line);
     }
+    this.defineProperty('stack', Descriptor.wc.withValue(stack.join('\n')));
   };
 
   intrp.Error.prototype = Object.create(intrp.Object.prototype);
