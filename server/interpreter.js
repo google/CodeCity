@@ -3437,6 +3437,15 @@ Interpreter.prototype.NativeFunction = function(options) {
 /**
  * @constructor
  * @extends {Interpreter.prototype.NativeFunction}
+ * @param {!AsyncFunctionOptions=} options
+ */
+Interpreter.prototype.AsyncNativeFunction = function(options) {
+  throw Error('Inner class constructor not callable on prototype');
+};
+
+/**
+ * @constructor
+ * @extends {Interpreter.prototype.NativeFunction}
  * @param {!Function} impl
  * @param {boolean} legalConstructor
  * @param {?Interpreter.Owner=} owner
@@ -4300,6 +4309,92 @@ Interpreter.prototype.installTypes = function() {
   intrp.NativeFunction.prototype.constructor = intrp.NativeFunction;
 
   /**
+   * Class for an asynchronous native function.
+   * @constructor
+   * @extends {Interpreter.prototype.AsyncNativeFunction}
+   * @param {!AsyncFunctionOptions=} options Options object for
+   *     constructing native function.
+   */
+  intrp.AsyncNativeFunction = function(options) {
+    options = options || {};
+    // Make new options object omitting call and construct.
+    var /** !NativeFunctionOptions */ superOptions = {};
+    for (var k in options) {
+      if (k === 'call' || k === 'construct') continue;
+      superOptions[k] = options[k];
+    }
+    // Invoke super constructor.
+    intrp.NativeFunction.call(/** @type {?} */ (this), superOptions);
+    // Install [[Call]] and [[Construct]] methods, making sure they
+    // are labelled for serialization (if possible and not already).
+    var id = (options.id || options.name);
+    if (options.call) {
+      this.asyncCall = options.call;
+      if (id && !('id' in this.asyncCall)) {
+        this.asyncCall.id = id + ' [[Call]]';
+      }
+    }
+    if (options.construct) {
+      this.asyncConstruct = options.construct;
+      if (id && !('id' in this.asyncConstruct)) {
+        this.asyncConstruct.id = id + ' [[Construct]]';
+      }
+    }
+  };
+
+  intrp.AsyncNativeFunction.prototype =
+      Object.create(intrp.NativeFunction.prototype);
+  intrp.AsyncNativeFunction.prototype.constructor = intrp.AsyncNativeFunction;
+
+  /** @override */
+  intrp.AsyncNativeFunction.prototype.call = function(
+      intrp, thread, state, thisVal, args) {
+    if (this.owner === null) {
+      throw new intrp.Error(state.scope.perms, intrp.PERM_ERROR,
+          'Functions with null owner are not executable');
+    }
+    var done = false;
+
+    /**
+     * Invariant check to verify it's safe to resolve or reject this
+     * async function call.  Blow up if the call has already been
+     * resolved/rejected, or if the thread does not appear to be in a
+     * plausible state.
+     */
+    var check = function() {
+      if (done) {
+        throw Error('Async function resolved or rejected more than once');
+      }
+      done = true;
+      if (thread.status !== Interpreter.Thread.Status.BLOCKED ||
+          thread.stateStack_[thread.stateStack_.length - 1] !== state) {
+        throw Error('Thread state corrupt completing async function call??');
+      }
+    };
+
+    var resolve = function(value) {
+      check();
+      state.value = value;
+      thread.status = Interpreter.Thread.Status.READY;
+      intrp.go_();
+    };
+    var reject = function(value) {
+      check();
+      thread.status = Interpreter.Thread.Status.READY;
+      intrp.unwind_(
+          thread, Interpreter.CompletionType.THROW, value, undefined);
+      intrp.go_();
+    };
+    thread.status = Interpreter.Thread.Status.BLOCKED;
+    this.asyncCall(intrp, thread, state, resolve, reject, thisVal, args);
+    return FunctionResult.AwaitValue;
+  };
+
+  /* Async functions not constructable; default to generic construct
+   * which always throws.
+   */
+
+  /**
    * Class for an old native function.
    * @constructor
    * @extends {Interpreter.prototype.OldNativeFunction}
@@ -5038,6 +5133,45 @@ var NativeCallImpl;
  *               : (Interpreter.Value|!FunctionResult)}
  */
 var NativeConstructImpl;
+
+/**
+ * Options object for constructing a AsyncNativeFunction.
+ * @typedef {{name: (string|undefined),
+ *            length: (number|undefined),
+ *            id: (string|undefined),
+ *            call: (AsyncCallImpl|undefined),
+ *            construct: (AsyncConstructImpl|undefined),
+ *            owner: (?Interpreter.Owner|undefined),
+ *            proto: (?Interpreter.prototype.Object|undefined)}}
+ */
+var AsyncFunctionOptions;
+
+/**
+ * Typedef for the functions used to implement AsyncNativeFunction.call.
+ * @typedef {function(this: Interpreter.prototype.AsyncNativeFunction,
+ *                    !Interpreter,
+ *                    !Interpreter.Thread,
+ *                    !Interpreter.State,
+ *                    function(Interpreter.Value):void,
+ *                    function(Interpreter.Value):void,
+ *                    Interpreter.Value,
+ *                    !Array<Interpreter.Value>)
+ *               : void}
+ */
+var AsyncCallImpl;
+
+/**
+ * Typedef for the functions used to implement AsyncNativeFunction.construct.
+ * @typedef {function(this: Interpreter.prototype.AsyncNativeFunction,
+ *                    !Interpreter,
+ *                    !Interpreter.Thread,
+ *                    !Interpreter.State,
+ *                    function(Interpreter.Value):void,
+ *                    function(Interpreter.Value):void,
+ *                    !Array<Interpreter.Value>)
+ *               : void}
+ */
+var AsyncConstructImpl;
 
 /**
  * Class for property descriptors, with commonly-used examples and a
