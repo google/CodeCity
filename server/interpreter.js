@@ -2688,6 +2688,60 @@ Interpreter.prototype.unwind_ = function(thread, type, value, label) {
   }
 };
 
+/**
+ * Get a {resovle, reject} tuple for the specified thread and state,
+ * which is presumed to be about to block on an async function call.
+ *
+ * The resolve function takes a single argument and, when called, will
+ * unblock the thread and save its argument in state.value.
+ *
+ * The reject function takes a single argument and, when called, will
+ * unblock the thread and unwind the stack as if its argument had been
+ * thrown.
+ *
+ * Only one of these may be called, and only once, or an internal
+ * Error will be thrown.
+ * @param {!Interpreter.Thread} thread The thread to be controlled.
+ * @param {!Interpreter.State} state The state in which thread to block.
+ * @return {{resolve: function(Interpreter.Value=):void,
+ *           reject: function(Interpreter.Value):void}}
+ */
+Interpreter.prototype.getResolveReject = function(thread, state) {
+  var /** boolean */ done = false;
+
+  /**
+   * Throw an internal error if previously invoked or if the thread
+   * does not appear to be in a plausible state.
+   */
+  var check = function() {
+    if (done) {
+      throw Error('Async resolved or rejected more than once??');
+    }
+    done = true;
+    if (thread.status !== Interpreter.Thread.Status.BLOCKED ||
+        thread.stateStack_[thread.stateStack_.length - 1] !== state) {
+      throw Error('Thread state corrupt at async resolve/reject??');
+    }
+  };
+
+  var intrp = this;
+  return {
+    resolve: function resolve(value) {
+      check();
+      state.value = value;
+      thread.status = Interpreter.Thread.Status.READY;
+      intrp.go_();
+    },
+    reject: function reject(value) {
+      check();
+      thread.status = Interpreter.Thread.Status.READY;
+      intrp.unwind_(
+          thread, Interpreter.CompletionType.THROW, value, undefined);
+      intrp.go_();
+    }
+  };
+};
+
 ///////////////////////////////////////////////////////////////////////////////
 // Nested types & constants (not fully-fledged classes)
 ///////////////////////////////////////////////////////////////////////////////
@@ -3162,7 +3216,7 @@ Interpreter.Thread.Status = {
   BLOCKED: 2,
   /** The thread is sleeping, awaiting arrival of its .runAt time. */
   SLEEPING: 3,
-}
+};
 
 ///////////////////////////////////////////////////////////////////////////////
 // Types representing JS objects - Object, Function, Array, etc.
@@ -4423,41 +4477,11 @@ Interpreter.prototype.installTypes = function() {
       throw new intrp.Error(state.scope.perms, intrp.PERM_ERROR,
           'Functions with null owner are not executable');
     }
-    var done = false;
 
-    /**
-     * Invariant check to verify it's safe to resolve or reject this
-     * async function call.  Blow up if the call has already been
-     * resolved/rejected, or if the thread does not appear to be in a
-     * plausible state.
-     */
-    var check = function() {
-      if (done) {
-        throw Error('Async function resolved or rejected more than once');
-      }
-      done = true;
-      if (thread.status !== Interpreter.Thread.Status.BLOCKED ||
-          thread.stateStack_[thread.stateStack_.length - 1] !== state) {
-        throw Error('Thread state corrupt completing async function call??');
-      }
-    };
+    var callbacks = intrp.getResolveReject(thread, state);
 
-    var callbacks = [
-      function resolve(value) {
-        check();
-        state.value = value;
-        thread.status = Interpreter.Thread.Status.READY;
-        intrp.go_();
-      },
-      function reject(value) {
-        check();
-        thread.status = Interpreter.Thread.Status.READY;
-        intrp.unwind_(
-            thread, Interpreter.CompletionType.THROW, value, undefined);
-        intrp.go_();
-      }];
     // Prepend resolve, reject to arguments.
-    args = callbacks.concat(args);
+    args = [callbacks.resolve, callbacks.reject].concat(args);
     thread.status = Interpreter.Thread.Status.BLOCKED;
     intrp.OldNativeFunction.prototype.call.call(
         /** @type {?} */ (this), intrp, thread, state, thisVal, args);
