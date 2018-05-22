@@ -2094,23 +2094,34 @@ Interpreter.prototype.initPerms_ = function() {
 Interpreter.prototype.initNetwork_ = function() {
   var intrp = this;
 
-  this.createAsyncFunction('CC.connectionListen', function(res, rej, port, proto) {
-    var perms = intrp.thread.perms();
-    if (port !== (port >>> 0) || port > 0xffff) {
-      rej(new intrp.Error(perms, intrp.RANGE_ERROR, 'invalid port'));
-      return;
-    } else if (port in intrp.listeners_) {
-      rej(new intrp.Error(perms, intrp.RANGE_ERROR, 'port already listened'));
-      return;
+  new this.NativeFunction({
+    id: 'CC.connectionListen', length: 2,
+    /** @type {!Interpreter.NativeCallImpl} */
+    call: function(intrp, thread, state, thisVal, args) {
+      var port = args[0];
+      var proto = args[1];
+      var perms = intrp.thread.perms();
+      if (port !== (port >>> 0) || port > 0xffff) {
+        throw new intrp.Error(perms, intrp.RANGE_ERROR, 'invalid port');
+      } else if (port in intrp.listeners_) {
+        throw new intrp.Error(perms, intrp.RANGE_ERROR,
+            'port already listened');
+      }
+      if (!(proto instanceof intrp.Object)) {
+        throw new intrp.Error(perms, intrp.TYPE_ERROR,
+           'prototype argument to connectionListen must be an object');
+      }
+      var server = new intrp.Server(perms, port, proto);
+      intrp.listeners_[port] = server;
+      var rr = intrp.getResolveReject(thread, state);
+      server.listen(function() {
+        rr.resolve();
+      }, function(e) {
+        rr.reject(intrp.errorNativeToPseudo(e, perms));
+      });
+      return Interpreter.FunctionResult.Block;
     }
-    var server = new intrp.Server(perms, port, proto);
-    intrp.listeners_[port] = server;
-    server.listen(function() {
-      res();
-    }, function(e) {
-      rej(intrp.errorNativeToPseudo(e, perms));
-    });
-  });
+  });                   
 
   this.createAsyncFunction('CC.connectionUnlisten', function(res, rej, port) {
     var perms = intrp.thread.perms();
