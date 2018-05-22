@@ -37,7 +37,10 @@ acorn.plugins.alwaysStrict = function(parser, configValue) {
 };
 
 /**
- * @typedef {!Object}
+ * @typedef {{
+ *     trimEval: (boolean|undefined),
+ *     trimProgram: (boolean|undefined),
+ * }}
  */
 var InterpreterOptions;
 
@@ -179,6 +182,9 @@ Interpreter.prototype.createThread = function(owner, state, runAt) {
  * @return {!Interpreter.prototype.Thread} Userland Thread object.
  */
 Interpreter.prototype.createThreadForSrc = function(src, runAt) {
+  if (this.options.trimProgram) {
+    src = src.trim();
+  }
   // Acorn may throw a Syntax error, but it's the caller's problem.
   var ast = acorn.parse(src, Interpreter.PARSE_OPTIONS);
   ast['source'] = new Interpreter.Source(src);
@@ -542,6 +548,9 @@ Interpreter.prototype.initBuiltins_ = function() {
     /** @type {!Interpreter.NativeCallImpl} */
     call: function(intrp, thread, state, thisVal, args) {
       var code = args[0];
+      if (intrp.options.trimEval) {
+        code = code.trim();
+      }
       if (typeof code !== 'string') {  // eval()
         // Eval returns the argument if the argument is not a string.
         // eval(Array) -> Array
