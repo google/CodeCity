@@ -37,10 +37,17 @@ acorn.plugins.alwaysStrict = function(parser, configValue) {
 };
 
 /**
+ * @typedef {!Object}
+ */
+var InterpreterOptions;
+
+/**
  * Create a new interpreter.
  * @constructor
+ * @param {!InterpreterOptions=} options
  */
-var Interpreter = function() {
+var Interpreter = function(options) {
+  this.options = options || {};
   this.installTypes();
   /**
    * Map of builtins - e.g. Object, Function.prototype, Array.pop, etc.
