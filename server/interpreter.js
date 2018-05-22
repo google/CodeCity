@@ -2123,26 +2123,34 @@ Interpreter.prototype.initNetwork_ = function() {
     }
   });                   
 
-  this.createAsyncFunction('CC.connectionUnlisten', function(res, rej, port) {
-    var perms = intrp.thread.perms();
-    if (!(port in intrp.listeners_)) {
-      rej(new intrp.Error(perms, intrp.RANGE_ERROR, 'port not listening'));
-      return;
-    }
-    if (!(intrp.listeners_[port].server_ instanceof net.Server)) {
-      throw Error('server already closed??');
-    }
-    intrp.listeners_[port].unlisten(function(e) {
-      if (e instanceof Error) {
-        // Somehow something has gone wrong.  (Maybe mulitple
-        // concurrent calls to .close on the same net.Server?)
-        rej(intrp.errorNativeToPseudo(e, perms));
-      } else {
-        // All socket (and all open connections on it) now closed.
-        res();
+  new this.NativeFunction({
+    id: 'CC.connectionUnlisten', length: 1,
+    /** @type {!Interpreter.NativeCallImpl} */
+    call: function(intrp, thread, state, thisVal, args) {
+      var port = args[0];
+      var perms = intrp.thread.perms();
+      if (port !== (port >>> 0) || port > 0xffff) {
+        throw new intrp.Error(perms, intrp.RANGE_ERROR, 'invalid port');
+      } else if (!(port in intrp.listeners_)) {
+        throw  new intrp.Error(perms, intrp.RANGE_ERROR, 'port not listening');
       }
-    });
-    delete intrp.listeners_[port];
+      if (!(intrp.listeners_[port].server_ instanceof net.Server)) {
+        throw Error('server already closed??');
+      }
+      var rr = intrp.getResolveReject(thread, state);
+      intrp.listeners_[port].unlisten(function(e) {
+        delete intrp.listeners_[/** @type {number} */(port)];
+        if (e instanceof Error) {
+          // Somehow something has gone wrong.  (Maybe mulitple
+          // concurrent calls to .close on the same net.Server?)
+          rr.reject(intrp.errorNativeToPseudo(e, perms));
+        } else {
+          // All socket (and all open connections on it) now closed.
+          rr.resolve();
+        }
+      });
+      return Interpreter.FunctionResult.Block;
+    }
   });
 
   this.createNativeFunction('CC.connectionWrite', function(obj, data) {
