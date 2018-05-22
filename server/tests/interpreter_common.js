@@ -39,7 +39,10 @@ exports.startupFiles = {
  * @return {!Interpreter}
  */
 exports.getInterpreter = function() {
-  var intrp = new Interpreter;
+  var intrp = new Interpreter({
+    trimEval: true,
+    trimProgram: true,
+  });
   for (const file of Object.values(exports.startupFiles)) {
     intrp.createThreadForSrc(file);
     intrp.run();
