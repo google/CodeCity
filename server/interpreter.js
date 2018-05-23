@@ -3428,11 +3428,6 @@ Interpreter.prototype.Function = function(owner, proto) {
   throw Error('Inner class constructor not callable on prototype');
 };
 
-/** @override */
-Interpreter.prototype.Function.prototype.toString = function() {
-  throw Error('Inner class method not callable on prototype');
-};
-
 /**
  * @param {Interpreter.Value} value
  * @param {!Interpreter.Owner} perms
@@ -3547,11 +3542,6 @@ Interpreter.prototype.Array = function(owner, proto) {
   throw Error('Inner class constructor not callable on prototype');
 };
 
-/** @override */
-Interpreter.prototype.Array.prototype.toString = function() {
-  throw Error('Inner class method not callable on prototype');
-};
-
 /**
  * @constructor
  * @extends {Interpreter.prototype.Object}
@@ -3564,16 +3554,6 @@ Interpreter.prototype.Date = function(owner, proto) {
   throw Error('Inner class constructor not callable on prototype');
 };
 
-/** @override */
-Interpreter.prototype.Date.prototype.toString = function() {
-  throw Error('Inner class method not callable on prototype');
-};
-
-/** @return {Interpreter.Value} */
-Interpreter.prototype.Date.prototype.valueOf = function() {
-  throw Error('Inner class method not callable on prototype');
-};
-
 /**
  * @constructor
  * @extends {Interpreter.prototype.Object}
@@ -3584,11 +3564,6 @@ Interpreter.prototype.RegExp = function(owner, proto) {
   /** @type {!RegExp} */
   this.regexp;
   throw Error('Inner class constructor not callable on prototype');
-};
-
-/** @override */
-Interpreter.prototype.RegExp.prototype.toString = function() {
-  throw Error('Inner class method not callable on prototype');
 };
 
 /** @param {!RegExp} nativeRegexp The native regular expression. */
@@ -3606,11 +3581,6 @@ Interpreter.prototype.RegExp.prototype.populate = function(nativeRegexp) {
  */
 Interpreter.prototype.Error = function(owner, proto, message, callers) {
   throw Error('Inner class constructor not callable on prototype');
-};
-
-/** @override */
-Interpreter.prototype.Error.prototype.toString = function() {
-  throw Error('Inner class method not callable on prototype');
 };
 
 /**
