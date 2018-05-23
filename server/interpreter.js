@@ -2100,7 +2100,7 @@ Interpreter.prototype.initNetwork_ = function() {
     call: function(intrp, thread, state, thisVal, args) {
       var port = args[0];
       var proto = args[1];
-      var perms = intrp.thread.perms();
+      var perms = state.scope.perms;
       if (port !== (port >>> 0) || port > 0xffff) {
         throw new intrp.Error(perms, intrp.RANGE_ERROR, 'invalid port');
       } else if (port in intrp.listeners_) {
@@ -2128,7 +2128,7 @@ Interpreter.prototype.initNetwork_ = function() {
     /** @type {!Interpreter.NativeCallImpl} */
     call: function(intrp, thread, state, thisVal, args) {
       var port = args[0];
-      var perms = intrp.thread.perms();
+      var perms = state.scope.perms;
       if (port !== (port >>> 0) || port > 0xffff) {
         throw new intrp.Error(perms, intrp.RANGE_ERROR, 'invalid port');
       } else if (!(port in intrp.listeners_)) {
