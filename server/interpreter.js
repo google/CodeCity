@@ -99,33 +99,6 @@ var Interpreter = function(options) {
 };
 
 /**
- * Interpreter statuses.
- * @enum {number}
- */
-Interpreter.Status = {
-  /**
-   * Won't run code.  Any listening sockets are unlistened.  No time
-   * passes (as measured by .uptime() and .now(), which underly
-   * setTimeout etc.)
-   */
-  STOPPED: 0,
-
-  /**
-   * Will run code *only* if .step() or .run() is called.  Will listen
-   * on network sockets (including re-listening on any that were
-   * unlistened because the interpreter was stopped).  Time will pass
-   * (as measured by .uptime() and .now()).
-   */
-  PAUSED: 1,
-
-  /**
-   * Will run code automatically in response to thread creation,
-   * timeouts and network activity.
-   */
-  RUNNING: 2
-};
-
-/**
  * @const {!Object} Configuration used for all Acorn parsing.
  */
 Interpreter.PARSE_OPTIONS = {
@@ -573,7 +546,7 @@ Interpreter.prototype.initBuiltins_ = function() {
       thread.stateStack_[thread.stateStack_.length] =
           new Interpreter.State(ast, scope);
       state.value = undefined;  // Default value if no explicit return.
-      return FunctionResult.AwaitValue;
+      return Interpreter.FunctionResult.AwaitValue;
     }
   });
   // eval is a special case; it must be added to the global scope at
@@ -1391,7 +1364,7 @@ Interpreter.prototype.initArray_ = function() {
         }
         var newState = Interpreter.State.newForCall(func, thisVal, [], perms);
         thread.stateStack_.push(newState);
-        return FunctionResult.CallAgain;
+        return Interpreter.FunctionResult.CallAgain;
       } else {  // Second visit: return value returned by .join().
         return state.value;
       }
@@ -1471,7 +1444,7 @@ Interpreter.prototype.initString_ = function() {
             thread.stateStack_[thread.stateStack_.length] =
                 Interpreter.State.newForCall(method, value, [], perms);
             state.info_.funcState = 1;
-            return FunctionResult.CallAgain;
+            return Interpreter.FunctionResult.CallAgain;
           }
           // FALL THROUGH
         case 1:  // toString call complete (or skipped); try calling valueOf.
@@ -1480,7 +1453,7 @@ Interpreter.prototype.initString_ = function() {
             thread.stateStack_[thread.stateStack_.length] =
                 Interpreter.State.newForCall(method, value, [], perms);
             state.info_.funcState = 2;
-            return FunctionResult.CallAgain;
+            return Interpreter.FunctionResult.CallAgain;
           }
           // FALL THROUGH
         case 2:  // valueOf complete (or skipped); throw TypeError.
@@ -2642,26 +2615,6 @@ Interpreter.prototype.setValue = function(scope, ref, value, perms) {
 };
 
 /**
- * Completion Value Types.
- * @enum {number}
- */
-Interpreter.CompletionType = {
-  NORMAL: 0,
-  BREAK: 1,
-  CONTINUE: 2,
-  RETURN: 3,
-  THROW: 4
-};
-
-/**
- * The Completion Specification Type, from ES5.1 §8.9
- * @typedef {{type: Interpreter.CompletionType,
- *            value: Interpreter.Value,
- *            label: (string|undefined)}}
- */
-Interpreter.Completion;
-
-/**
  * Unwind the stack to the innermost relevant enclosing TryStatement,
  * For/ForIn/WhileStatement or Call.  If this results in
  * the stack being completely unwound the thread will be terminated
@@ -2734,10 +2687,50 @@ Interpreter.prototype.unwind_ = function(thread, type, value, label) {
   }
 };
 
+///////////////////////////////////////////////////////////////////////////////
+// Nested types & constants (not fully-fledged classes)
+///////////////////////////////////////////////////////////////////////////////
 
-///////////////////////////////////////////////////////////////////////////////
-// Nested (but not fully inner) classes: Scope, State, Thread, etc.
-///////////////////////////////////////////////////////////////////////////////
+/**
+ * The Completion Specification Type, from ES5.1 §8.9
+ * @typedef {{type: Interpreter.CompletionType,
+ *            value: Interpreter.Value,
+ *            label: (string|undefined)}}
+ */
+Interpreter.Completion;
+
+/**
+ * Completion Value Types.
+ * @enum {number}
+ */
+Interpreter.CompletionType = {
+  NORMAL: 0,
+  BREAK: 1,
+  CONTINUE: 2,
+  RETURN: 3,
+  THROW: 4
+};
+
+/**
+ * Special sentinel values returned by the call or construct method of
+ * a (pseudo)Function to indicate that a return value is not
+ * immediately available (e.g., in the case of a user function that
+ * needs to be evaluated, or an async function that blocks).
+ * @constructor
+ */
+Interpreter.FunctionResult = function() {};
+/**
+ * Please evaluate whatever state(s) have been pushed onto the stack,
+ * and use their completion value as the return value of the function.
+ * @const
+ */
+Interpreter.FunctionResult.AwaitValue = new Interpreter.FunctionResult;
+/**
+ * Please invoke .call or .construct again the next time this state is
+ * encountered.
+ * @const
+ */
+Interpreter.FunctionResult.CallAgain = new Interpreter.FunctionResult;
 
 /**
  * Class for unique sentinel values passed to various functions.
@@ -2753,6 +2746,91 @@ Interpreter.Sentinel = function Sentinel() {};
  * not an object property.
  */
 Interpreter.SCOPE_REFERENCE = new Interpreter.Sentinel();
+
+/**
+ * Interpreter statuses.
+ * @enum {number}
+ */
+Interpreter.Status = {
+  /**
+   * Won't run code.  Any listening sockets are unlistened.  No time
+   * passes (as measured by .uptime() and .now(), which underly
+   * setTimeout etc.)
+   */
+  STOPPED: 0,
+
+  /**
+   * Will run code *only* if .step() or .run() is called.  Will listen
+   * on network sockets (including re-listening on any that were
+   * unlistened because the interpreter was stopped).  Time will pass
+   * (as measured by .uptime() and .now()).
+   */
+  PAUSED: 1,
+
+  /**
+   * Will run code automatically in response to thread creation,
+   * timeouts and network activity.
+   */
+  RUNNING: 2
+};
+
+///////////////////////////////////////////////////////////////////////////////
+// Nested (but not fully inner) classes: Scope, State, Thread, etc.
+///////////////////////////////////////////////////////////////////////////////
+
+/**
+ * An iterator over the properties of an ObjectLike and its
+ * prototypes, following the usual for-in loop rules.
+ * @constructor
+ * @param {!Interpreter.ObjectLike} obj Object or Box whose properties
+ *     are to be iterated over.
+ * @param {!Interpreter.Owner} perms Who is doing the iteration?
+ */
+Interpreter.PropertyIterator = function(obj, perms) {
+  if (obj === undefined) {  // Deserializing
+    return;
+  }
+  /** @private @type {?Interpreter.ObjectLike} */
+  this.obj_ = obj;
+  /** @private @const @type {!Interpreter.Owner} */
+  this.perms_ = perms;
+  /** @private @type {!Array<string>} */
+  this.keys_ = this.obj_.ownKeys(this.perms_);
+  /** @private @type {number} */
+  this.i_ = 0;
+  /** @private @const @type {!Set<string>} */
+  this.visited_ = new Set();
+};
+
+/**
+ * Return the next key in the iteration, skipping non-enumerable keys
+ * or keys already seen earlier in the prototype chain (even if they
+ * were non-enumerable).  Returns undefined when iteration is done.
+ * @return {string|undefined}
+ */
+Interpreter.PropertyIterator.prototype.next = function() {
+  while (true) {
+    if (this.i_ >= this.keys_.length) {
+      this.obj_ = this.obj_.proto;
+      if (this.obj_ === null) {
+        // Done iteration.
+        return undefined;
+      }
+      this.keys_ = this.obj_.ownKeys(this.perms_);
+      this.i_ = 0;
+    }
+    var key = this.keys_[this.i_++];
+    var pd = this.obj_.getOwnPropertyDescriptor(key, this.perms_);
+    // Skip deleted or already-visited properties.
+    if (!pd || this.visited_.has(key)) {
+      continue;
+    }
+    this.visited_.add(key);
+    if (pd.enumerable) {
+      return key;
+    }
+  }
+};
 
 /**
  * Class for a scope.
@@ -2772,6 +2850,82 @@ Interpreter.Scope = function(perms, outerScope) {
   /** @const {!Object<string, Interpreter.Value>} */
   this.vars = Object.create(null);
   this.notWritable = new Set();
+};
+
+/**
+ * Source is an encapsulated hunk of source text.  Source objects can
+ * be sliced to obtain a Source object representing a substring of the
+ * original source text.  Such sliced objects "remember" their
+ * position within the original source text.
+ * @constructor
+ * @param {string} src Some source text
+ * @param {number=} start_ For internal use only.
+ * @param {number=} end_ For internal use only.
+ */
+Interpreter.Source = function(src, start_, end_) {
+  if (src === undefined) return;  // Deserializing.
+  /** @private @type {string} */
+  this.src_ = src;
+  if (start_ === undefined) {
+    /** @private @type {number} */
+    this.start_ = 0;
+  } else if (start_ < 0 || start_ >= src.length) {
+    throw RangeError('Source start out of range');
+  } else {
+    this.start_ = start_;
+  }
+  if (end_ === undefined) {
+    /** @private @type {number} */
+    this.end_ = src.length;
+  } else if (end_ < 0 || end_ >= src.length) {
+    throw RangeError('Source end out of range');
+  } else {
+    this.end_ = end_;
+  }
+  Object.freeze(this);
+};
+
+/**
+ * Return the contents of a Source object as an ordinary string.
+ * @return {string}
+ */
+Interpreter.Source.prototype.toString = function() {
+  return this.src_.slice(this.start_, this.end_);
+};
+
+/**
+ * Return a Source object representing a substring of this Source
+ * object.
+ * @param {number} start Offset of first character of slice, as an absolute
+ *     position within the original source text.
+ * @param {number} end Offset of character following last character of
+ *     slice, as an absolute position within the original source text.
+ * @return {!Interpreter.Source} The sliced source.
+ */
+Interpreter.Source.prototype.slice = function(start, end) {
+  if (start < this.start_ || start > this.end_) {
+    throw RangeError('Source slice start out of range');
+  }
+  if (end < this.start_ || end > this.end_) {
+    throw RangeError('Source slice end out of range');
+  }
+  return new Interpreter.Source(this.src_, start, end);
+};
+
+/**
+ * Return the (1-based) line and column numbers of a given position
+ * within the Source object.
+ * @param {number} pos Position whose line number we are interested
+ *     in, as an absolute position within the original source text.
+ * @return {{line: number, col: number}} {line, col} tuple for the
+ *     position pos, relative to the start of this particular slice.
+ */
+Interpreter.Source.prototype.lineColForPos = function(pos) {
+  if (pos < this.start_ || pos > this.end_) {
+    throw RangeError('Source position out of range');
+  }
+  var lines = this.src_.slice(this.start_, pos).split('\n');
+  return {line: lines.length, col: lines[lines.length - 1].length + 1};
 };
 
 /**
@@ -3007,136 +3161,6 @@ Interpreter.Thread.Status = {
   SLEEPING: 3,
 }
 
-/**
- * An iterator over the properties of an ObjectLike and its
- * prototypes, following the usual for-in loop rules.
- * @constructor
- * @param {!Interpreter.ObjectLike} obj Object or Box whose properties
- *     are to be iterated over.
- * @param {!Interpreter.Owner} perms Who is doing the iteration?
- */
-Interpreter.PropertyIterator = function(obj, perms) {
-  if (obj === undefined) {  // Deserializing
-    return;
-  }
-  /** @private @type {?Interpreter.ObjectLike} */
-  this.obj_ = obj;
-  /** @private @const @type {!Interpreter.Owner} */
-  this.perms_ = perms;
-  /** @private @type {!Array<string>} */
-  this.keys_ = this.obj_.ownKeys(this.perms_);
-  /** @private @type {number} */
-  this.i_ = 0;
-  /** @private @const @type {!Set<string>} */
-  this.visited_ = new Set();
-};
-
-/**
- * Return the next key in the iteration, skipping non-enumerable keys
- * or keys already seen earlier in the prototype chain (even if they
- * were non-enumerable).  Returns undefined when iteration is done.
- * @return {string|undefined}
- */
-Interpreter.PropertyIterator.prototype.next = function() {
-  while (true) {
-    if (this.i_ >= this.keys_.length) {
-      this.obj_ = this.obj_.proto;
-      if (this.obj_ === null) {
-        // Done iteration.
-        return undefined;
-      }
-      this.keys_ = this.obj_.ownKeys(this.perms_);
-      this.i_ = 0;
-    }
-    var key = this.keys_[this.i_++];
-    var pd = this.obj_.getOwnPropertyDescriptor(key, this.perms_);
-    // Skip deleted or already-visited properties.
-    if (!pd || this.visited_.has(key)) {
-      continue;
-    }
-    this.visited_.add(key);
-    if (pd.enumerable) {
-      return key;
-    }
-  }
-};
-
-/**
- * Source is an encapsulated hunk of source text.  Source objects can
- * be sliced to obtain a Source object representing a substring of the
- * original source text.  Such sliced objects "remember" their
- * position within the original source text.
- * @constructor
- * @param {string} src Some source text
- * @param {number=} start_ For internal use only.
- * @param {number=} end_ For internal use only.
- */
-Interpreter.Source = function(src, start_, end_) {
-  if (src === undefined) return;  // Deserializing.
-  /** @private @type {string} */
-  this.src_ = src;
-  if (start_ === undefined) {
-    /** @private @type {number} */
-    this.start_ = 0;
-  } else if (start_ < 0 || start_ >= src.length) {
-    throw RangeError('Source start out of range');
-  } else {
-    this.start_ = start_;
-  }
-  if (end_ === undefined) {
-    /** @private @type {number} */
-    this.end_ = src.length;
-  } else if (end_ < 0 || end_ >= src.length) {
-    throw RangeError('Source end out of range');
-  } else {
-    this.end_ = end_;
-  }
-  Object.freeze(this);
-};
-
-/**
- * Return the contents of a Source object as an ordinary string.
- * @return {string}
- */
-Interpreter.Source.prototype.toString = function() {
-  return this.src_.slice(this.start_, this.end_);
-};
-
-/**
- * Return a Source object representing a substring of this Source
- * object.
- * @param {number} start Offset of first character of slice, as an absolute
- *     position within the original source text.
- * @param {number} end Offset of character following last character of
- *     slice, as an absolute position within the original source text.
- * @return {!Interpreter.Source} The sliced source.
- */
-Interpreter.Source.prototype.slice = function(start, end) {
-  if (start < this.start_ || start > this.end_) {
-    throw RangeError('Source slice start out of range');
-  }
-  if (end < this.start_ || end > this.end_) {
-    throw RangeError('Source slice end out of range');
-  }
-  return new Interpreter.Source(this.src_, start, end);
-};
-
-/**
- * Return the (1-based) line and column numbers of a given position
- * within the Source object.
- * @param {number} pos Position whose line number we are interested
- *     in, as an absolute position within the original source text.
- * @return {{line: number, col: number}} {line, col} tuple for the
- *     position pos, relative to the start of this particular slice.
- */
-Interpreter.Source.prototype.lineColForPos = function(pos) {
-  if (pos < this.start_ || pos > this.end_) {
-    throw RangeError('Source position out of range');
-  }
-  var lines = this.src_.slice(this.start_, pos).split('\n');
-  return {line: lines.length, col: lines[lines.length - 1].length + 1};
-};
-
 ///////////////////////////////////////////////////////////////////////////////
 // Types representing JS objects - Object, Function, Array, etc.
 ///////////////////////////////////////////////////////////////////////////////
@@ -3370,7 +3394,7 @@ Interpreter.prototype.Function.prototype.setName = function(name, prefix) {
  * @param {!Interpreter.State} state The current state.
  * @param {Interpreter.Value} thisVal The this value passed into function.
  * @param {!Array<Interpreter.Value>} args The arguments to the call.
- * @return {Interpreter.Value|!FunctionResult}
+ * @return {Interpreter.Value|!Interpreter.FunctionResult}
  */
 Interpreter.prototype.Function.prototype.call = function(
     intrp, thread, state, thisVal, args) {
@@ -3382,7 +3406,7 @@ Interpreter.prototype.Function.prototype.call = function(
  * @param {!Interpreter.Thread} thread The current thread.
  * @param {!Interpreter.State} state The current state.
  * @param {!Array<Interpreter.Value>} args The arguments to the call.
- * @return {Interpreter.Value|!FunctionResult}
+ * @return {Interpreter.Value|!Interpreter.FunctionResult}
  */
 Interpreter.prototype.Function.prototype.construct = function(
     intrp, thread, state, args) {
@@ -3686,7 +3710,7 @@ Interpreter.prototype.Box.prototype.valueOf = function() {
  *                    !Interpreter.State,
  *                    Interpreter.Value,
  *                    !Array<Interpreter.Value>)
- *               : (Interpreter.Value|!FunctionResult)}
+ *               : (Interpreter.Value|!Interpreter.FunctionResult)}
  */
 Interpreter.NativeCallImpl;
 
@@ -3697,7 +3721,7 @@ Interpreter.NativeCallImpl;
  *                    !Interpreter.Thread,
  *                    !Interpreter.State,
  *                    !Array<Interpreter.Value>)
- *               : (Interpreter.Value|!FunctionResult)}
+ *               : (Interpreter.Value|!Interpreter.FunctionResult)}
  */
 Interpreter.NativeConstructImpl;
 
@@ -4158,7 +4182,7 @@ Interpreter.prototype.installTypes = function() {
     state.value = undefined;  // Default value if no explicit return.
     thread.stateStack_[thread.stateStack_.length] =
         new Interpreter.State(this.node['body'], scope);
-    return FunctionResult.AwaitValue;
+    return Interpreter.FunctionResult.AwaitValue;
   };
 
   /**
@@ -4183,7 +4207,7 @@ Interpreter.prototype.installTypes = function() {
       }
       state.info_.funcState = new intrp.Object(state.scope.perms, proto);
       this.call(intrp, thread, state, state.info_.funcState, args);
-      return FunctionResult.CallAgain;
+      return Interpreter.FunctionResult.CallAgain;
     } else {  // Construction done.  Check result.
       // Per ES5.1 §13.2.2 steps 9,10: if constructor returns
       // primitive, return constructed object instead.
@@ -4432,7 +4456,7 @@ Interpreter.prototype.installTypes = function() {
     thread.status = Interpreter.Thread.Status.BLOCKED;
     intrp.OldNativeFunction.prototype.call.call(
         /** @type {?} */ (this), intrp, thread, state, thisVal, args);
-    return FunctionResult.AwaitValue;
+    return Interpreter.FunctionResult.AwaitValue;
   };
 
   /**
@@ -5000,29 +5024,8 @@ Interpreter.prototype.installTypes = function() {
 };
 
 ///////////////////////////////////////////////////////////////////////////////
-// Miscellaneous internal classes not used for storing state
+// Miscellaneous internal classes not used for storing state and not exported
 ///////////////////////////////////////////////////////////////////////////////
-
-/**
- * Special sentinel values returned by the call or construct method of
- * a (pseudo)Function to indicate that a return value is not
- * immediately available (e.g., in the case of a user function that
- * needs to be evaluated, or an async function that blocks).
- * @constructor
- */
-var FunctionResult = function() {};
-/**
- * Please evaluate whatever state(s) have been pushed onto the stack,
- * and use their completion value as the return value of the function.
- * @const
- */
-FunctionResult.AwaitValue = new FunctionResult;
-/**
- * Please invoke .call or .construct again the next time this state is
- * encountered.
- * @const
- */
-FunctionResult.CallAgain = new FunctionResult;
 
 /**
  * Options object for constructing a NativeFunction.
@@ -5424,8 +5427,8 @@ stepFuncs_['Call'] = function (thread, stack, state, node) {
         state.info_.construct ?
         func.construct(this, thread, state, args) :
         func.call(this, thread, state, state.info_.this, args);
-    if (r instanceof FunctionResult) {
-      if (r === FunctionResult.CallAgain) {
+    if (r instanceof Interpreter.FunctionResult) {
+      if (r === Interpreter.FunctionResult.CallAgain) {
         state.step_ = 0;
       }
       return;  // N.B. SEE NOTE ABOVE!
