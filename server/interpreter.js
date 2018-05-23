@@ -2470,13 +2470,6 @@ Interpreter.prototype.getValueFromScope = function(scope, name) {
       return s.vars[name];
     }
   }
-  // Typeof operator is unique: it can safely look at non-defined variables.
-  var stack = this.thread.stateStack_;
-  var prevNode = stack[stack.length - 1].node;
-  if (prevNode['type'] === 'UnaryExpression' &&
-      prevNode['operator'] === 'typeof') {
-    return undefined;
-  }
   throw new this.Error(this.thread.perms(), this.REFERENCE_ERROR,
       name + ' is not defined');
 };
@@ -2574,6 +2567,23 @@ Interpreter.prototype.populateScope_ = function(node, scope, source) {
 Interpreter.prototype.calledWithNew = function() {
   return this.thread.stateStack_[this.thread.stateStack_.length - 1]
       .info_.construct;
+};
+
+/**
+ * Implements IsUnresolvableReference from ES5 §8.7 / ES6 §6.2.3.
+ * @param {!Interpreter.Scope} scope Current scope dictionary.
+ * @param {!Array} ref Reference tuple.
+ * @param {!Interpreter.Owner} perms Who is trying to get it?
+ * @return {boolean} True iff refernece is unresolvable.
+ */
+Interpreter.prototype.isUnresolvableReference = function(scope, ref, perms) {
+  // Property references never unresolvable.
+  if (ref[0] !== Interpreter.SCOPE_REFERENCE) return false;
+  var name = ref[1];
+  for (var s = scope; s; s = s.outerScope) {
+    if (name in s.vars) return false;
+  }
+  return true;
 };
 
 /**
@@ -6086,9 +6096,9 @@ stepFuncs_['TryStatement'] = function (thread, stack, state, node) {
 stepFuncs_['UnaryExpression'] = function (thread, stack, state, node) {
   if (state.step_ === 0) {  // Evaluate (or get reference) to argument.
     state.step_ = 1;
-    // Get argument - need Reference if operator is 'delete':
-    return new Interpreter.State(
-        node['argument'], state.scope, node['operator'] === 'delete');
+    // Get argument - need Reference if operator is 'delete' or 'typeof:
+    var wr = (node['operator'] === 'delete') || (node['operator'] === 'typeof');
+    return new Interpreter.State(node['argument'], state.scope, wr);
   }
   var value = state.value;
   if (node['operator'] === '-') {
@@ -6113,6 +6123,14 @@ stepFuncs_['UnaryExpression'] = function (thread, stack, state, node) {
       value = true;
     }
   } else if (node['operator'] === 'typeof') {
+    if (state.ref) {
+      var perms = state.scope.perms;
+      if (this.isUnresolvableReference(state.scope, state.ref, perms)) {
+        value = undefined;
+      } else {
+        value = this.getValue(state.scope, state.ref, perms);
+      }
+    }
     value = (value instanceof this.Function) ? 'function' : typeof value;
   } else if (node['operator'] === 'void') {
     value = undefined;
