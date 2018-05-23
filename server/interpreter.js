@@ -4620,8 +4620,7 @@ Interpreter.prototype.installTypes = function() {
         name = '"' + frame.program + '"';
       }
       if ('line' in frame) {
-        line += 'at ' + name + ' ' +
-            String(frame.line) + ':' + String(frame.col);
+        line += 'at ' + name + ' ' + frame.line + ':' + frame.col;
       } else {
         line += 'in ' + name;
       }
