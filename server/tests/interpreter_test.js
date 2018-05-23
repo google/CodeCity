@@ -1065,16 +1065,16 @@ exports.testNetworking = async function(t) {
         CC.connectionClose(this);
       };
       CC.connectionListen(8888, conn);
-      resolve(recieve());
+      resolve(receive());
       CC.connectionUnlisten(8888);
    `;
   initFunc = function(intrp) {
-    intrp.addVariableToScope(intrp.global, 'recieve', new intrp.NativeFunction({
-      name: 'recieve', length: 0,
+    intrp.addVariableToScope(intrp.global, 'receive', new intrp.NativeFunction({
+      name: 'receive', length: 0,
       call: function(intrp, thread, state, thisVal, args) {
         var reply = '';
         var rr = intrp.getResolveReject(thread, state);
-        // Recieve some data from the server.
+        // Receive some data from the server.
         var client = net.createConnection({ port: 8888 }, function() {
           client.on('data', function(data) {
             reply += data;

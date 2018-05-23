@@ -4358,7 +4358,7 @@ Interpreter.prototype.installTypes = function() {
                           owner);
     }
     // Register builtin if possible.
-    var id = (options.id || options.name);
+    var id = options.id || options.name;
     if (id) {
       this.setName(options.name !== undefined ?
           options.name : options.id.replace(/^.*\./, ''));
