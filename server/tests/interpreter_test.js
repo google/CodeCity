@@ -799,13 +799,16 @@ exports.testNumberToString = function(t) {
 exports.testAsync = function(t) {
   var resolve, reject, arg, name, asyncFunc;
   var initFunc = function(intrp) {
-    var wrapper = function(res, rej, a) {
-      resolve = res;
-      reject = rej;
-      arg = a;
-    };
-    intrp.addVariableToScope(intrp.global, 'async',
-        intrp.createAsyncFunction('async', wrapper));
+    intrp.addVariableToScope(intrp.global, 'async', new intrp.NativeFunction({
+      name: 'async', length: 0,
+      call: function(intrp, thread, state, thisVal, args) {
+        arg = args[0];
+        var rr = intrp.getResolveReject(thread, state);
+        resolve = rr.resolve;
+        reject = rr.reject;
+        return Interpreter.FunctionResult.Block;
+      }
+    }));
   };
 
   // Test ordinary return.
@@ -1066,22 +1069,26 @@ exports.testNetworking = async function(t) {
       CC.connectionUnlisten(8888);
    `;
   initFunc = function(intrp) {
-    intrp.addVariableToScope(intrp.global, 'recieve', intrp.createAsyncFunction(
-        'recieve', function(resolve, reject) {
-          var reply = '';
-          // Recieve some data from the server.
-          var client = net.createConnection({ port: 8888 }, function() {
-            client.on('data', function(data) {
-              reply += data;
-            });
-            client.on('end', function() {
-              resolve(reply);
-            });
-            client.on('error', function() {
-              reject();
-            });
+    intrp.addVariableToScope(intrp.global, 'recieve', new intrp.NativeFunction({
+      name: 'recieve', length: 0,
+      call: function(intrp, thread, state, thisVal, args) {
+        var reply = '';
+        var rr = intrp.getResolveReject(thread, state);
+        // Recieve some data from the server.
+        var client = net.createConnection({ port: 8888 }, function() {
+          client.on('data', function(data) {
+            reply += data;
           });
-        }));
+          client.on('end', function() {
+            rr.resolve(reply);
+          });
+          client.on('error', function() {
+            rr.reject();
+          });
+        });
+        return Interpreter.FunctionResult.Block;
+      }
+    }));
   };
   await runAsyncTest(t, name, src, 'foobar', initFunc);
 
