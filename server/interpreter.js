@@ -2236,30 +2236,6 @@ Interpreter.prototype.createNativeFunction = function(
 };
 
 /**
- * Create a new native asynchronous function.  Asynchronous native
- * functions are presumed not to be legal constructors.  Function will
- * be owned by root.
- *
- * TODO(cpcallen): de-dupe this with createNativeFunction, above.
- * @param {string} name Name of new function.
- * @param {!Function} asyncFunc JavaScript function.
- * @return {!Interpreter.prototype.Function} New function.
- */
-Interpreter.prototype.createAsyncFunction = function(name, asyncFunc) {
-  // Make sure impl function has an id for serialization.
-  if (!asyncFunc.id) {
-    asyncFunc.id = name;
-  }
-  var func = new this.OldAsyncFunction(asyncFunc);
-  func.setName(name.replace(/^.*\./, ''));
-  if (this.builtins_[name]) {
-    throw ReferenceError('Builtin "' + name + '" already exists.');
-  }
-  this.builtins_[name] = func;
-  return func;
-};
-
-/**
  * Converts from a native JS object or value to a JS interpreter
  * object.  Can handle JSON-style values plus regexps and errors (of
  * all standard native types), and handles additional properties on
@@ -3553,18 +3529,6 @@ Interpreter.prototype.OldNativeFunction =
 
 /**
  * @constructor
- * @extends {Interpreter.prototype.OldNativeFunction}
- * @param {!Function} impl
- * @param {?Interpreter.Owner=} owner
- * @param {?Interpreter.prototype.Object=} proto
- */
-Interpreter.prototype.OldAsyncFunction =
-    function(impl, owner, proto) {
-  throw Error('Inner class constructor not callable on prototype');
-};
-
-/**
- * @constructor
  * @extends {Interpreter.prototype.Object}
  * @param {?Interpreter.Owner=} owner
  * @param {?Interpreter.prototype.Object=} proto
@@ -4470,49 +4434,6 @@ Interpreter.prototype.installTypes = function() {
     }
     return this.impl.apply(undefined, args);
   };
-
-  /**
-   * Class for an async function.
-   * @constructor
-   * @extends {Interpreter.prototype.OldAsyncFunction}
-   * @param {!Function} impl Old-style native function implementation
-   * @param {?Interpreter.Owner=} owner Owner object or null.
-   * @param {?Interpreter.prototype.Object=} proto Prototype object or null.
-   */
-  intrp.OldAsyncFunction = function(impl, owner, proto) {
-    // BUG(cpcallen): This results in .length being +2 too large.
-    intrp.OldNativeFunction.call(
-        /** @type {?} */ (this), impl, false, owner, proto);
-  };
-
-  intrp.OldAsyncFunction.prototype =
-      Object.create(intrp.OldNativeFunction.prototype);
-  intrp.OldAsyncFunction.prototype.constructor = intrp.OldAsyncFunction;
-
-  /** @override */
-  intrp.OldAsyncFunction.prototype.call = function(
-      intrp, thread, state, thisVal, args) {
-    if (this.owner === null) {
-      throw new intrp.Error(state.scope.perms, intrp.PERM_ERROR,
-          'Functions with null owner are not executable');
-    }
-
-    var callbacks = intrp.getResolveReject(thread, state);
-
-    // Prepend resolve, reject to arguments.
-    args = [callbacks.resolve, callbacks.reject].concat(args);
-    thread.status = Interpreter.Thread.Status.BLOCKED;
-    intrp.OldNativeFunction.prototype.call.call(
-        /** @type {?} */ (this), intrp, thread, state, thisVal, args);
-    return Interpreter.FunctionResult.AwaitValue;
-  };
-
-  /**
-   * Async functions not constructable; use generic construct which
-   * always throws.
-   * @override */
-  intrp.OldAsyncFunction.prototype.construct =
-      intrp.Function.prototype.construct;
 
   /**
    * Class for an array
