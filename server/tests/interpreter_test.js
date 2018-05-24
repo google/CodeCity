@@ -784,7 +784,10 @@ exports.testNumberToString = function(t) {
  * @param {!T} t The test runner object.
  */
 exports.testAsync = function(t) {
-  var resolve, reject, arg, name, waitFunc;
+  // Function to install an async NativeFunction on new Interpreter
+  // instances.  The function, when called, will save its
+  // resolve/reject callbacks and first arg in test-local variables.
+  var resolve, reject, arg;
   var initFunc = function(intrp) {
     intrp.addVariableToScope(intrp.global, 'async', new intrp.NativeFunction({
       name: 'async', length: 0,
@@ -799,8 +802,8 @@ exports.testAsync = function(t) {
   };
 
   // Test ordinary return.
-  name = 'testAsyncResolve';
-  waitFunc = function(intrp) {
+  var name = 'testAsyncResolve';
+  var waitFunc = function(intrp) {
     resolve(arg);
   };
   var src = `
@@ -850,13 +853,7 @@ exports.testAsync = function(t) {
   // thread when an async function throws.
   name = 'testAsyncRejectUnwind';
   var intrp = getInterpreter();
-  intrp.addVariableToScope(intrp.global, 'async', new intrp.NativeFunction({
-    name: 'async', length: 0,
-    call: function(intrp, thread, state, thisVal, args) {
-      reject = intrp.getResolveReject(thread, state).reject;
-      return Interpreter.FunctionResult.Block;
-    }
-  }));
+  initFunc(intrp);  // Install async function.
   // Create cannon-fodder thread that will usually be ready to run.
   var bgThread = intrp.createThreadForSrc(`
       // Repeatedly suspend; every 10th time suspend for a long time.
@@ -864,6 +861,7 @@ exports.testAsync = function(t) {
         suspend((i % 10) ? 0 : 1000);
       }
   `).thread;
+  // Create thread to call async function.
   var asyncThread = intrp.createThreadForSrc('async()').thread;
   intrp.run();
   // asyncThread has run once and blocked; bgThread has run ten times
