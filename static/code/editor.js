@@ -37,6 +37,12 @@ Code.Editor.partsJSON = null;
 Code.Editor.currentEditor = null;
 
 /**
+ * Current source code for editors that haven't yet been created.
+ * @type {string}
+ */
+Code.Editor.uncreatedEditorSource = '';
+
+/**
  * Got a ping from someone.  Something might have changed and need updating.
  */
 Code.Editor.receiveMessage = function() {
@@ -310,7 +316,8 @@ Code.Editor.receiveXhr = function() {
       // If the save was successful, then proceed with the requested navigation.
       Code.Editor.reload();
     } else {
-      // If the save was not successful, close the dialog and show the butter.
+      // If the save was not successful, close the dialog and hope there's some
+      // butter to show.
       Code.Editor.hideSave();
     }
   }
@@ -494,45 +501,40 @@ Code.GenericEditor = function(name) {
    * @type {string}
    */
   this.name = name;
+
+  /**
+   * A float from 0 (bad) to 1 (perfect) indicating the editor's fitness to
+   * edit the given content.
+   */
+  this.confidence = 0;
+  
+  /**
+   * Has the DOM for this editor been created yet?
+   */
+  this.created = false;
+  
+  /**
+   * Span that forms the tab button.
+   * @type {?Element}
+   */
+  this.tabElement = null;
+
+  /**
+   * Div that forms the editor's container.
+   * @type {?Element}
+   */
+  this.containerElement = null;
+  
+  /**
+   * Plain text representation of this editor's contents as of load or last save.
+   * @type {?string}
+   * @private
+   */
+  this.lastSavedSource_ = null;
+
   // Register this editor.
   Code.Editor.editors.push(this);
 };
-
-/**
- * A float from 0 (bad) to 1 (perfect) indicating the editor's fitness to
- * edit the given content.
- */
-Code.GenericEditor.prototype.confidence = 0;
-
-/**
- * Has the DOM for this editor been created yet?
- */
-Code.GenericEditor.prototype.created = false;
-
-/**
- * Stored text from before the editor is created.
- * @private
- */
-Code.GenericEditor.prequelSource_ = '';
-
-/**
- * Span that forms the tab button.
- * @type {?Element}
- */
-Code.GenericEditor.prototype.tabElement = null;
-
-/**
- * Div that forms the editor's container.
- * @type {?Element}
- */
-Code.GenericEditor.prototype.containerElement = null;
-
-/**
- * Plain text representation of this editor's contents as of load or last save.
- * @type {?string}
- * @private
- */
-Code.GenericEditor.prototype.lastSavedSource_ = null;
 
 /**
  * Create the DOM for this editor.
@@ -621,7 +623,8 @@ Code.valueEditor.createDom = function(container) {
  * @return {string} Plain text contents.
  */
 Code.valueEditor.getSource = function() {
-  return this.created ? this.editor_.getValue() : this.prequelSource_;
+  return this.created ?
+      this.editor_.getValue() : Code.Editor.uncreatedEditorSource;
 };
 
 /**
@@ -632,7 +635,7 @@ Code.valueEditor.setSource = function(source) {
   if (this.created) {
     this.editor_.setValue(source);
   } else {
-    this.prequelSource_ = source;
+    Code.Editor.uncreatedEditorSource = source;
   }
   this.lastSavedSource_ = Code.valueEditor.getSource();
 };
@@ -689,7 +692,7 @@ Code.stringEditor.createDom = function(container) {
 Code.stringEditor.getSource = function() {
   return this.created ?
       JSON.stringify(this.textarea_.value) :
-      this.prequelSource_;
+      Code.Editor.uncreatedEditorSource;
 };
 
 /**
@@ -710,7 +713,7 @@ Code.stringEditor.setSource = function(source) {
   if (this.created) {
     this.textarea_.value = str;
   } else {
-    this.prequelSource_ = source;
+    Code.Editor.uncreatedEditorSource = source;
   }
   this.lastSavedSource_ = Code.stringEditor.getSource();
 };
