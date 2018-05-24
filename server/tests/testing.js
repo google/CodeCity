@@ -142,11 +142,28 @@ T.prototype.pass = function(name, message) {
 
 /**
  * Report a test failure.
- * @param {string} name
- * @param {string=} message
+ * @param {string} name Name of test.
+ * @param {string=} message Additional info to log.
  */
 T.prototype.fail = function(name, message) {
   this.result('FAIL', name, message);
+};
+
+/**
+ * Check if Object.is(got, want) and record test pass if so or test
+ * failure otherwise.
+ * @param {string} name The name of the test.
+ * @param {*} got The actual result of the test.
+ * @param {*} want The expected result of the test.
+ * @param {string=} message Additional info to log on failure only.
+ */
+T.prototype.expect = function(name, got, want, message) {
+  if (Object.is(got, want)) {
+    this.pass(name);
+  } else {
+    message = message ? message + '\n' : '';
+    this.fail(name, util.format('%sgot %o  want %o', message, got, want));
+  }
 };
 
 exports.B = B;
