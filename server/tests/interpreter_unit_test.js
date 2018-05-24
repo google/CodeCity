@@ -27,22 +27,7 @@
 const util = require('util');
 
 const Interpreter = require('../interpreter');
-
-/**
- * Check Object.is(got, want) and record test pass if so or test
- * failure otherwise.
- * @param {!T} t The test runner object.
- * @param {string} name The name of the test.
- * @param {*} got The actual result of the test.
- * @param {*} want The expected result of the test.
- */
-var check = function(t, name, got, want) {
-  if (Object.is(got, want)) {
-    t.pass(name);
-  } else {
-    t.fail(name, util.format('got %o  want %o', got, want));
-  }
-};
+const {T} = require('./testing');
 
 /**
  * Unit tests for Interpreter.toInteger, .toLength. and .toUint32
@@ -96,7 +81,7 @@ exports.testToIntegerEtc = function(t) {
     var tc = cases[i];
     for (var j = 0; j < funcs.length; j++) {
       var name =  util.format('%s(%o)', funcs[j].name, tc[0]);
-      check(t, name, funcs[j](tc[0]), tc[j + 1]);
+      t.expect(name, funcs[j](tc[0]), tc[j + 1]);
     }
   }
 };
@@ -120,7 +105,7 @@ exports.testNativeToPseudo = function(t) {
     if (!props.hasOwnProperty(k)) continue;
     var name = 'testNativeToPseudo(array)["' + k + '"]';
     var r = pArr.get(k, intrp.ROOT);
-    check(t, name, r, props[k]);
+    t.expect(name, r, props[k]);
   }
 
   // Test handling of Errors.
@@ -140,11 +125,11 @@ exports.testNativeToPseudo = function(t) {
     var error = Err(errMessage);
     var pError = intrp.nativeToPseudo(error);
 
-    check(t, name + ' instanceof intrp.Error',
+    t.expect(name + ' instanceof intrp.Error',
         pError instanceof intrp.Error, true);
-    check(t, name + '.proto', pError.proto, proto);
-    check(t, name + '.message', pError.get('message', intrp.ROOT), errMessage);
-    check(t, name + '.stack', pError.get('stack', intrp.ROOT), error.stack);
+    t.expect(name + '.proto', pError.proto, proto);
+    t.expect(name + '.message', pError.get('message', intrp.ROOT), errMessage);
+    t.expect(name + '.stack', pError.get('stack', intrp.ROOT), error.stack);
   }
 };
 
@@ -155,29 +140,29 @@ exports.testNativeToPseudo = function(t) {
 exports.testSource = function(t) {
   var src = new Interpreter.Source('ABCDEF');
   var name = "Source('ABCDEF')";
-  check(t, name + '.toString()', String(src), 'ABCDEF');
+  t.expect(name + '.toString()', String(src), 'ABCDEF');
 
   src = src.slice(1, 5);
   name += '.slice(1, 5)';
-  check(t, name + '.toString()', String(src), 'BCDE');
+  t.expect(name + '.toString()', String(src), 'BCDE');
   
   src = src.slice(2, 4);
   name += '.slice(2, 4)';
-  check(t, name + '.toString()', String(src), 'CD');
+  t.expect(name + '.toString()', String(src), 'CD');
 
   var s = '1\n.2\n..3\n.4\n5\n';
   var pos3 = s.indexOf('3');
   src = new Interpreter.Source(s);
   name = "Source('" + s + "')";
   var lc = src.lineColForPos(pos3);
-  check(t, name + '.lineColForPos(' + pos3 + ').line', lc.line, 3);
-  check(t, name + '.lineColForPos(' + pos3 + ').col', lc.col, 3);
+  t.expect(name + '.lineColForPos(' + pos3 + ').line', lc.line, 3);
+  t.expect(name + '.lineColForPos(' + pos3 + ').col', lc.col, 3);
 
   src = src.slice(2, 12);
   name += '.slice(2, 12)';
   lc = src.lineColForPos(pos3);
-  check(t, name + '.toString()', String(src), '.2\n..3\n.4\n');
+  t.expect(name + '.toString()', String(src), '.2\n..3\n.4\n');
 
-  check(t, name + '.lineColForPos(' + pos3 + ').line', lc.line, 2);
-  check(t, name + '.lineColForPos(' + pos3 + ').col', lc.col, 3);
+  t.expect(name + '.lineColForPos(' + pos3 + ').line', lc.line, 2);
+  t.expect(name + '.lineColForPos(' + pos3 + ').col', lc.col, 3);
 };
