@@ -2674,7 +2674,7 @@ Interpreter.prototype.unwind_ = function(thread, type, value, label) {
   }
 
   // Unhandled completion.  Terminate thread.
-  this.thread.status = Interpreter.Thread.Status.ZOMBIE;
+  thread.status = Interpreter.Thread.Status.ZOMBIE;
 
   if (type === Interpreter.CompletionType.THROW) {
     // Log exception and stack trace.
