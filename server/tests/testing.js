@@ -149,6 +149,22 @@ T.prototype.fail = function(name, message) {
   this.result('FAIL', name, message);
 };
 
+
+/**
+ * Check if assertion is true and nd record test pass if so or test
+ * failure otherwise.
+ * @param {string} name The name of the test.
+ * @param {*} assertion Condition to verify.
+ * @param {string=} message Additional info to log on failure only.
+ */
+T.prototype.assert = function(name, assertion, message) {
+  if (assertion) {
+    this.pass(name);
+  } else {
+    this.fail(name, message);
+  }
+};
+
 /**
  * Check if Object.is(got, want) and record test pass if so or test
  * failure otherwise.
