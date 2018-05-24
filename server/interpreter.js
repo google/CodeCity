@@ -264,7 +264,11 @@ Interpreter.prototype.step = function() {
     var nextState =
         stepFuncs_[node['type']].call(this, thread, stack, state, node);
   } catch (e) {
-    if (e instanceof Error) {
+    if (e instanceof this.Error) {
+      // Userland Error object thrown; make sure it has a .stack.
+      var perms = state.scope.perms;
+      e.makeStack(thread.callers(perms), perms);
+    } else if (e instanceof Error) {
       // Uh oh.  This is a real error in the interpreter.  Kill thread
       // and rethrow.
       thread.status = Interpreter.Thread.Status.ZOMBIE;
@@ -316,14 +320,17 @@ Interpreter.prototype.run = function() {
         var nextState =
             stepFuncs_[node['type']].call(this, thread, stack, state, node);
       } catch (e) {
-        if (e instanceof Error) {
+        if (e instanceof this.Error) {
+          // Userland Error object thrown; make sure it has a .stack.
+          var perms = state.scope.perms;
+          e.makeStack(thread.callers(perms), perms);
+        } else if (e instanceof Error) {
           // Uh oh.  This is a real error in the interpreter.  Kill
           // thread and rethrow.
           thread.status = Interpreter.Thread.Status.ZOMBIE;
           throw e;
-        } else if (typeof e !== 'boolean' && typeof e !== 'number' &&
-            typeof e !== 'string' && e !== undefined && e !== null &&
-            !(e instanceof this.Object)) {
+        } else if (!(e instanceof this.Object) && e !== null &&
+            (typeof e === 'object' || typeof e === 'function')) {
           throw TypeError('Unexpected exception value ' + String(e));
         }
         this.unwind_(thread, Interpreter.CompletionType.THROW, e, undefined);
@@ -1793,8 +1800,9 @@ Interpreter.prototype.initError_ = function() {
       construct: function(intrp, thread, state, args) {
         var message = (args[0] === undefined) ? undefined : String(args[0]);
         var perms = state.scope.perms;
-        var callers = thread.callers(perms).slice(1);
-        return new intrp.Error(perms, proto, message, callers);
+        var err = new intrp.Error(perms, proto, message);
+        err.makeStack(thread.callers(perms).slice(1), perms);
+        return err;
       },
       /** @type {!Interpreter.NativeCallImpl} */
       call: function(intrp, thread, state, thisVal, args) {
@@ -3066,6 +3074,7 @@ Interpreter.State.newForCall = function(func, thisVal, args, perms) {
 };
 
 /**
+ * Information about a single call stack frame.
  * @typedef{(!{func: !Interpreter.prototype.Function,
  *             this: Interpreter.Value,
  *             callerPerms: !Interpreter.Owner}|
@@ -3581,6 +3590,14 @@ Interpreter.prototype.RegExp.prototype.populate = function(nativeRegexp) {
  */
 Interpreter.prototype.Error = function(owner, proto, message, callers) {
   throw Error('Inner class constructor not callable on prototype');
+};
+
+/**
+ * @param {!Array<!FrameInfo>} callers
+ * @param {!Interpreter.Owner} perms
+ */
+Interpreter.prototype.Error.prototype.makeStack = function(callers, perms) {
+  throw Error('Inner class method not callable on prototype');
 };
 
 /**
@@ -4562,45 +4579,13 @@ Interpreter.prototype.installTypes = function() {
    * @param {?Interpreter.Owner=} owner Owner object or null.
    * @param {?Interpreter.prototype.Object=} proto Prototype object or null.
    * @param {string=} message Optional message to be attached to error object.
-   * @param {!Array<!FrameInfo>=} callers Call stack to use for stack trace.
    */
-  intrp.Error = function(owner, proto, message, callers) {
+  intrp.Error = function(owner, proto, message) {
     intrp.Object.call(/** @type {?} */ (this), owner,
         (proto === undefined ? intrp.ERROR : proto));
     if (message !== undefined) {
       this.defineProperty('message', Descriptor.wc.withValue(message));
     }
-    var perms = this.owner || intrp.ANYBODY;
-    callers = callers || (intrp.thread ? intrp.thread.callers(perms) : []);
-    var stack = [];
-    for (var i = 0; i < callers.length; i++) {
-      var line = '    ';
-      var frame = callers[i];
-      if ('func' in frame) {
-        var func = frame.func;
-        var name;
-        try {
-          if (func.has('name', owner)) {
-            name = func.get('name', owner);
-          } else {
-            name = 'anonymous function';
-          }
-        } catch (e) {
-          name = 'unreadable function';
-        }
-      } else if ('eval' in frame) {
-        name = '"' + frame.eval + '"';
-      } else if ('program' in frame) {
-        name = '"' + frame.program + '"';
-      }
-      if ('line' in frame) {
-        line += 'at ' + name + ' ' + frame.line + ':' + frame.col;
-      } else {
-        line += 'in ' + name;
-      }
-      stack.push(line);
-    }
-    this.defineProperty('stack', Descriptor.wc.withValue(stack.join('\n')));
   };
 
   intrp.Error.prototype = Object.create(intrp.Object.prototype);
@@ -4632,6 +4617,58 @@ Interpreter.prototype.installTypes = function() {
     } finally {
       visited.delete(this);
     }
+  };
+
+  /**
+   * Create a .stack property on the error from the given call stack
+   * information, if it does not already have one.  The stack property
+   * will be created with the permissions of the owner of the Error
+   * object.
+   *
+   * BUG(cpcallen): because this is called before unwinding the stack
+   * when an intrp.Error is thrown, and because .stack is set
+   * unconditionally (without perm check), any user can set .stack on
+   * any Error object that doesn't already have one (including
+   * e.g. Error.prototype) just by throwing it.
+   * @param {!Array<!FrameInfo>} callers List of call stack frames,
+   *     as returned by Thread.prototype.callers.
+   * @param {!Interpreter.Owner} perms Whose perms should be used to
+   *     obtain (e.g.) function names, etc.?
+   * @override
+   */
+  intrp.Error.prototype.makeStack = function(callers, perms) {
+    if (this.has('stack', intrp.ROOT)) {
+      return;  // Do not overwrite existing .stack
+    }
+    var stack = [];
+    for (var i = 0; i < callers.length; i++) {
+      var line = '    ';
+      var frame = callers[i];
+      if ('func' in frame) {
+        var func = frame.func;
+        var name;
+        try {
+          if (func.has('name', perms)) {
+            name = func.get('name', perms);
+          } else {
+            name = 'anonymous function';
+          }
+        } catch (e) {
+          name = 'unreadable function';
+        }
+      } else if ('eval' in frame) {
+        name = '"' + frame.eval + '"';
+      } else if ('program' in frame) {
+        name = '"' + frame.program + '"';
+      }
+      if ('line' in frame) {
+        line += 'at ' + name + ' ' + frame.line + ':' + frame.col;
+      } else {
+        line += 'in ' + name;
+      }
+      stack.push(line);
+    }
+    this.defineProperty('stack', Descriptor.wc.withValue(stack.join('\n')));
   };
 
   /**
