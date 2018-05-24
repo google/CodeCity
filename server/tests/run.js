@@ -25,6 +25,7 @@
 'use strict';
 
 const fs = require('fs');
+const util = require('util');
 
 /**
  * Class that records benchmark results; much like Go's testing.B type.
@@ -86,6 +87,18 @@ B.prototype.crash = function(name, opt_message) {
  */
 B.prototype.skip = function(name, opt_message) {
   this.result('SKIP', name, opt_message);
+};
+
+/**
+ * Return test results as string.
+ * @return {string}
+ */
+B.prototype.toString = function() {
+  var lines = ['Totals:'];
+  for (var status in this.results) {
+    lines.push(util.format('%s\t%d tests', status, this.results[status]));
+  }
+  return lines.join('\n');
 };
 
 /********************************************************************/
@@ -179,11 +192,8 @@ async function runTests(files) {
     }
   }
 
-  console.log('\nTotals:');
-  for (var status in t.results) {
-    console.log('%s\t%d tests', status, t.results[status]);
-  }
-  console.log();
+  // Print results summary.
+  console.log('\n%s\n', t);
 }
 
 /********************************************************************/
