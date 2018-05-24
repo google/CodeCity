@@ -25,83 +25,7 @@
 'use strict';
 
 const fs = require('fs');
-const util = require('util');
-
-/**
- * Class that records benchmark results; much like Go's testing.B type.
- * @constructor
- */
-function B() {
-  this.results = {};
-}
-
-/**
- * Report a benchmark or test result.
- * @param {string} status The test result status (e.g., 'OK', 'FAIL', 'SKIP').
- * @param {string} name Name of test.
- * @param {*} opt_message Additional information to lot about result.
- */
-B.prototype.result = function (status, name, opt_message) {
-  console.log('%s\t%s', status, name);
-  if (opt_message) {
-    console.log(opt_message);
-  }
-  this.results[status] = this.results[status] + 1 || 1;
-};
-
-/**
- * Report a benchmark start.
- * @param {string} name Name of test.
- * @param {number} run Which run is this?  (Run 0 is warm-up run.)
- */
-B.prototype.start = function (name, run) {
-  var r = (run === 0) ? 'WARMUP' : ('RUN ' + run);
-  console.log('%s\t%s...', r, name);
-  this.startTime = Date.now();
-};
-
-/**
- * Report a benchmark end.
- * @param {string} name Name of test.
- * @param {number} run Which run is this?  (Run 0 is warm-up run.)
- */
-B.prototype.end = function (name, run) {
-  this.endTime = Date.now();
-  var r = (run === 0) ? 'WARMUP' : ('RUN ' + run);
-  console.log('%s\t%s: %d ms', r, name, this.endTime - this.startTime);
-};
-
-/**
- * Report a benchmark or test failure due to crash.
- * @param {string} name Name of test.
- * @param {*} opt_message Additional info (e.g., stack trace) to log.
- */
-B.prototype.crash = function(name, opt_message) {
-  this.result('CRASH', name, opt_message);
-};
-
-/**
- * Report a bench or test skip.
- * @param {string} name Name of test.
- * @param {*} opt_message Additional info to log.
- */
-B.prototype.skip = function(name, opt_message) {
-  this.result('SKIP', name, opt_message);
-};
-
-/**
- * Return test results as string.
- * @return {string}
- */
-B.prototype.toString = function() {
-  var lines = ['Totals:'];
-  for (var status in this.results) {
-    lines.push(util.format('%s\t%d tests', status, this.results[status]));
-  }
-  return lines.join('\n');
-};
-
-/********************************************************************/
+const {T, B} = require('./testing');
 
 /**
  * Run benchmarks.
@@ -122,55 +46,6 @@ async function runBenchmarks(files) {
     }
   }
 }
-
-/********************************************************************/
-
-/**
- * Class that records test results; much like Go's testing.T type.
- * @constructor
- */
-function T() {
-  B.call(this);
-  this.results['OK'] = 0;
-  this.results['FAIL'] = 0;
-}
-
-T.prototype = Object.create(B.prototype);
-T.prototype.constructor = T;
-
-/**
- * Report a test result.
- * @param {string} status The test result status (e.g., 'OK', 'FAIL', 'SKIP').
- * @param {string} name Name of test.
- * @param {*} opt_message Additional info to log.
- */
-T.prototype.result = function (status, name, opt_message) {
-  status === 'OK' || console.log('%s:\t%s', status, name);
-  if (opt_message) {
-    console.log(opt_message);
-  }
-  this.results[status] = this.results[status] + 1 || 1;
-};
-
-/**
- * Report a test pass.
- * @param {string} name Name of test.
- * @param {*} opt_message Additional info to log.
- */
-T.prototype.pass = function(name, opt_message) {
-  this.result('OK', name, opt_message);
-};
-
-/**
- * Report a test failure.
- * @param {string} name
- * @param {*} opt_message
- */
-T.prototype.fail = function(name, opt_message) {
-  this.result('FAIL', name, opt_message);
-};
-
-/********************************************************************/
 
 /**
  * Run tests.
@@ -196,8 +71,6 @@ async function runTests(files) {
   console.log('\n%s\n', t);
 }
 
-/********************************************************************/
-
 /**
  * Get list of test filenames matching a particular regexp.
  * @param {!RegExp} pattern RegExp to match.
@@ -208,6 +81,10 @@ function getFiles(pattern) {
   return f.filter(function (fn) { return pattern.test(fn); }).
       map(function (fn) { return './' + fn; });
 }
+
+///////////////////////////////////////////////////////////////////////////////
+// Main program
+//
 
 (async function main() {
   await runTests(getFiles(/_test.js$/));
