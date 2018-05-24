@@ -829,7 +829,7 @@ exports.testAsync = function(t) {
 
   // Extra check to verify async function can't resolve/reject more
   // than once without an asertion failure.
-  name ='testAsyncSafetyCheck';
+  name = 'testAsyncSafetyCheck';
   var ok;
   asyncFunc = function(intrp) {
     resolve(ok);
@@ -846,11 +846,45 @@ exports.testAsync = function(t) {
   `;
   runComplexTest(t, name, src, 'ok', initFunc, asyncFunc);
 
+  // A test of unwind_, to make sure it unwinds and kills the correct
+  // thread when an async function throws.
+  name = 'testAsyncRejectUnwind';
+  var intrp = getInterpreter();
+  intrp.addVariableToScope(intrp.global, 'async', new intrp.NativeFunction({
+    name: 'async', length: 0,
+    call: function(intrp, thread, state, thisVal, args) {
+      reject = intrp.getResolveReject(thread, state).reject;
+      return Interpreter.FunctionResult.Block;
+    }
+  }));
+  // Create cannon-fodder thread that will usually be ready to run.
+  var bgThread = intrp.createThreadForSrc(`
+      // Repeatedly suspend; every 10th time suspend for a long time.
+      for (var i = 1; true; i++) {
+        suspend((i % 10) ? 0 : 1000);
+      }
+  `).thread;
+  var asyncThread = intrp.createThreadForSrc('async()').thread;
+  intrp.run();
+  // asyncThread has run once and blocked; bgThread has run ten times
+  // and is now sleeping for 1s.
+  intrp.thread = bgThread;  // Try to trick reject into killing wrong thread.
+  reject(undefined);  // Throw unhandled exception in asyncThread.
+
+  // Verify correct thread was unwound and killed.
+  t.assert(name + ': unwound thread stack empty',
+      asyncThread.stateStack_.length === 0);
+  t.expect(name + ': unwound thread status',
+      asyncThread.status, Interpreter.Thread.Status.ZOMBIE);
+  t.assert(name + ': background thread stack non-empty',
+      bgThread.stateStack_.length > 0);
+  t.expect(name + ': background thread status',
+      bgThread.status, Interpreter.Thread.Status.SLEEPING);
 };
 
 /**
- * Run a test of the suspend(), setTimeout() and clearTimeout()
- * functions.
+ * Run tests of the Thread constructor and the suspend(), setTimeout()
+ * and clearTimeout() functions.
  * @param {!T} t The test runner object.
  */
 exports.testThreading = function(t) {
