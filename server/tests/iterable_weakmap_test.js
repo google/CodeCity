@@ -24,8 +24,10 @@
  */
 'use strict';
 
-let IterableWeakMap = require('../iterable_weakmap');
-let util = require('util');
+const util = require('util');
+
+const IterableWeakMap = require('../iterable_weakmap');
+const {T} = require('./testing');
 
 /**
  * Run some basic tests of IterableWeakMap.
@@ -35,11 +37,7 @@ exports.testIterableWeakMap = function(t) {
   let name = 'IterableWeakMap';
 
   let assertSame = function(got, want, desc) {
-    if (got === want) {
-      t.pass(name + ': ' + desc);
-    } else {
-      t.fail(name + ': ' + desc, util.format('got %o  want %o', got, want));
-    }
+    t.expect(name + ': ' + desc, got, want);
   };
 
   const obj1 = {};

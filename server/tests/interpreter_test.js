@@ -25,12 +25,11 @@
 'use strict';
 
 const net = require('net');
-//const toSource = require('tosource');
 const util = require('util');
 
 const Interpreter = require('../interpreter');
-const common = require('./interpreter_common');
-const getInterpreter = common.getInterpreter;
+const {getInterpreter} = require('./interpreter_common');
+const {T} = require('./testing');
 const testcases = require('./testcases');
 
 // Prepare static interpreter instance for runTest.
@@ -58,11 +57,7 @@ function runTest(t, name, src, expected) {
     return;
   }
   var r = interpreter.pseudoToNative(thread.value);
-  if (Object.is(r, expected)) {
-    t.pass(name);
-  } else {
-    t.fail(name, util.format('%s\ngot %o  want %o', src, r, expected));
-  }
+  t.expect(name, r, expected, src);
 }
 
 /**
@@ -102,11 +97,7 @@ function runComplexTest(t, name, src, expected, initFunc, asyncFunc) {
     return;
   }
   var r = intrp.pseudoToNative(thread.value);
-  if (Object.is(r, expected)) {
-    t.pass(name);
-  } else {
-    t.fail(name, util.format('%s\ngot %o  want %o', src, r, expected));
-  }
+  t.expect(name, r, expected, src);
 }
 
 /**
@@ -164,11 +155,7 @@ async function runAsyncTest(t, name, src, expected, initFunc, sideFunc) {
     intrp.stop();
   }
   var r = intrp.pseudoToNative(result);
-  if (Object.is(r, expected)) {
-    t.pass(name);
-  } else {
-    t.fail(name, util.format('%s\ngot %o  want %o', src, r, expected));
-  }
+  t.expect(name, r, expected, src);
 }
 
 /**
@@ -1000,24 +987,13 @@ exports.testStartStop = async function(t) {
   }
   var r = intrp.getValueFromScope(intrp.global, 'x');
   var expected = 2;
-  if (Object.is(r, expected)) {
-    t.pass(name);
-  } else {
-    t.fail(name, util.format('%s\ngot %o  want %o (after %d ms)',
-                             src, r, expected, 29));
-  }
+  t.expect(name, r, expected, src + '\n(after 29ms)');
 
   // Check that .pause() actually paused execution.
   name = 'testPause';
   await snooze(10);
-  var r = intrp.getValueFromScope(intrp.global, 'x');
-  var expected = 2;
-  if (Object.is(r, expected)) {
-    t.pass(name);
-  } else {
-    t.fail(name, util.format('%s\ngot %o  want %o (after %d ms)',
-                             src, r, expected, 39));
-  }
+  r = intrp.getValueFromScope(intrp.global, 'x');
+  t.expect(name, r, expected, src + '\n(after 39ms)');
 };
 
 /**

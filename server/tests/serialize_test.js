@@ -28,8 +28,9 @@ const net = require('net');
 const util = require('util');
 
 const Interpreter = require('../interpreter');
-const getInterpreter = require('./interpreter_common').getInterpreter;
+const {getInterpreter} = require('./interpreter_common');
 const Serializer = require('../serialize');
+const {T} = require('./testing');
 
 /**
  * Serialize an interpreter to JSON, then create and return a new
@@ -121,13 +122,10 @@ function runTest(t, name, src1, src2, src3, expected, steps, noBuiltins) {
   }
 
   var r = intrp.pseudoToNative(thread.value);
-  if (Object.is(r, expected)) {
-    t.pass(name);
-  } else {
-    t.fail(name, util.format(
-        '%s\n/* begin roundtrips */\n%s\n/* end roundtrips */\n%s\n' +
-        'got: %o  want: %o', src1, src2, src3, r, expected));
-  }
+  var allSrc = util.format(
+      '%s\n/* begin roundtrips */\n%s\n/* end roundtrips */\n%s',
+      src1, src2, src3);
+  t.expect(name, r, expected, allSrc);
 };
 
 /**
@@ -235,13 +233,8 @@ async function runAsyncTest(t, name, src1, src2, expected, initFunc) {
     intrp2.stop();
   }
 
-  if (Object.is(r, expected)) {
-    t.pass(name);
-  } else {
-    t.fail(name, util.format(
-        '%s\n/* roundtrip */\n%s\ngot: %o  want: %o',
-        src1, src2, r, expected));
-  }
+  var allSrc = util.format('%s\n/* roundtrip */\n%s', src1, src2);
+  t.expect(name, r, expected, allSrc);
 };
 
 /**
