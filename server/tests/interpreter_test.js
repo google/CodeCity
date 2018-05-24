@@ -75,11 +75,11 @@ function runTest(t, name, src, expected) {
  *     native functions into the interpreter.  initFunc is called
  *     with the interpreter instance to be configured as its
  *     parameter.
- * @param {Function(Interpreter)=} asyncFunc Optional function to be
+ * @param {Function(Interpreter)=} waitFunc Optional function to be
  *     called if .run() returns true.  Can be used to fake completion
  *     of asynchronous events for testing purposes.
  */
-function runComplexTest(t, name, src, expected, initFunc, asyncFunc) {
+function runComplexTest(t, name, src, expected, initFunc, waitFunc) {
   var intrp = getInterpreter();
   if (initFunc) {
     initFunc(intrp);
@@ -88,8 +88,8 @@ function runComplexTest(t, name, src, expected, initFunc, asyncFunc) {
   try {
     var thread = intrp.createThreadForSrc(src).thread;
     while (intrp.run()) {
-      if (asyncFunc) {
-        asyncFunc(intrp);
+      if (waitFunc) {
+        waitFunc(intrp);
       }
     }
   } catch (e) {
@@ -784,7 +784,7 @@ exports.testNumberToString = function(t) {
  * @param {!T} t The test runner object.
  */
 exports.testAsync = function(t) {
-  var resolve, reject, arg, name, asyncFunc;
+  var resolve, reject, arg, name, waitFunc;
   var initFunc = function(intrp) {
     intrp.addVariableToScope(intrp.global, 'async', new intrp.NativeFunction({
       name: 'async', length: 0,
@@ -800,7 +800,7 @@ exports.testAsync = function(t) {
 
   // Test ordinary return.
   name = 'testAsyncResolve';
-  asyncFunc = function(intrp) {
+  waitFunc = function(intrp) {
     resolve(arg);
   };
   var src = `
@@ -809,11 +809,11 @@ exports.testAsync = function(t) {
       'between';
       async('af') + 'ter';
   `;
-  runComplexTest(t, name, src, 'after', initFunc, asyncFunc);
+  runComplexTest(t, name, src, 'after', initFunc, waitFunc);
 
   // Test throwing an exception.
   name ='testAsyncReject';
-  asyncFunc = function(intrp) {
+  waitFunc = function(intrp) {
     reject('except');
   };
   src = `
@@ -825,13 +825,13 @@ exports.testAsync = function(t) {
         e;
       }
   `;
-  runComplexTest(t, name, src, 'except', initFunc, asyncFunc);
+  runComplexTest(t, name, src, 'except', initFunc, waitFunc);
 
   // Extra check to verify async function can't resolve/reject more
   // than once without an asertion failure.
   name = 'testAsyncSafetyCheck';
   var ok;
-  asyncFunc = function(intrp) {
+  waitFunc = function(intrp) {
     resolve(ok);
     // Call reject; this is expected to blow up.
     try {
@@ -844,7 +844,7 @@ exports.testAsync = function(t) {
      async();
      async();
   `;
-  runComplexTest(t, name, src, 'ok', initFunc, asyncFunc);
+  runComplexTest(t, name, src, 'ok', initFunc, waitFunc);
 
   // A test of unwind_, to make sure it unwinds and kills the correct
   // thread when an async function throws.
