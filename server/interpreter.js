@@ -264,20 +264,7 @@ Interpreter.prototype.step = function() {
     var nextState =
         stepFuncs_[node['type']].call(this, thread, stack, state, node);
   } catch (e) {
-    if (e instanceof this.Error) {
-      // Userland Error object thrown; make sure it has a .stack.
-      var perms = state.scope.perms;
-      e.makeStack(thread.callers(perms), perms);
-    } else if (e instanceof Error) {
-      // Uh oh.  This is a real error in the interpreter.  Kill thread
-      // and rethrow.
-      thread.status = Interpreter.Thread.Status.ZOMBIE;
-      throw e;
-    } else if (!(e instanceof this.Object) && e !== null &&
-        (typeof e === 'object' || typeof e === 'function')) {
-      throw TypeError('Unexpected exception value ' + String(e));
-    }
-    this.unwind_(thread, Interpreter.CompletionType.THROW, e, undefined);
+    this.throw_(thread, e, state.scope.perms);
   }
   if (nextState) {
     stack[stack.length] = nextState;
@@ -320,20 +307,7 @@ Interpreter.prototype.run = function() {
         var nextState =
             stepFuncs_[node['type']].call(this, thread, stack, state, node);
       } catch (e) {
-        if (e instanceof this.Error) {
-          // Userland Error object thrown; make sure it has a .stack.
-          var perms = state.scope.perms;
-          e.makeStack(thread.callers(perms), perms);
-        } else if (e instanceof Error) {
-          // Uh oh.  This is a real error in the interpreter.  Kill
-          // thread and rethrow.
-          thread.status = Interpreter.Thread.Status.ZOMBIE;
-          throw e;
-        } else if (!(e instanceof this.Object) && e !== null &&
-            (typeof e === 'object' || typeof e === 'function')) {
-          throw TypeError('Unexpected exception value ' + String(e));
-        }
-        this.unwind_(thread, Interpreter.CompletionType.THROW, e, undefined);
+        this.throw_(thread, e, state.scope.perms);
         nextState = undefined;
       }
       if (nextState) {
@@ -2628,6 +2602,35 @@ Interpreter.prototype.setValue = function(scope, ref, value, perms) {
   }
 };
 
+/**
+ * Carry out the mechanics of throwing an exception.
+ *
+ * This is intended only to be called from exception handlers in
+ * .step() and .run(), and from async function's reject() callback.
+ * Elsewhere, just throw.
+ * @param {!Interpreter.Thread} thread in which throw is occurring.
+ * @param {Interpreter.Value} e Exception being thrown.
+ * @param {!Interpreter.Owner} perms Perm to use to obtain (e.g.)
+ *     function names, etc.
+ */
+Interpreter.prototype.throw_ = function(thread, e, perms) {
+  if (e instanceof this.Error) {
+    // Userland Error object thrown; make sure it has a .stack.
+    e.makeStack(thread.callers(perms), perms);
+  } else if (e instanceof Error) {
+    // Uh oh.  This is an internal error in the interpreter.  Kill
+    // thread and rethrow.
+    thread.status = Interpreter.Thread.Status.ZOMBIE;
+    throw e;
+  } else if (!(e instanceof this.Object) && e !== null &&
+      (typeof e === 'object' || typeof e === 'function')) {
+    // WTF: not a native exception, not an interpreter object and not
+    // a primitive, but just some random (internal) object.
+    throw TypeError('Unexpected exception value ' + String(e));
+  }
+  this.unwind_(thread, Interpreter.CompletionType.THROW, e, undefined);
+};
+  
 /**
  * Unwind the stack to the innermost relevant enclosing TryStatement,
  * For/ForIn/WhileStatement or Call.  If this results in
