@@ -40,12 +40,12 @@ function B() {
  * Report a benchmark or test result.
  * @param {string} status The test result status (e.g., 'OK', 'FAIL', 'SKIP').
  * @param {string} name Name of test.
- * @param {*} opt_message Additional information to lot about result.
+ * @param {string=} message Additional information to lot about result.
  */
-B.prototype.result = function (status, name, opt_message) {
+B.prototype.result = function (status, name, message) {
   console.log('%s\t%s', status, name);
-  if (opt_message) {
-    console.log(opt_message);
+  if (message) {
+    console.log(message);
   }
   this.results[status] = this.results[status] + 1 || 1;
 };
@@ -75,19 +75,19 @@ B.prototype.end = function (name, run) {
 /**
  * Report a benchmark or test failure due to crash.
  * @param {string} name Name of test.
- * @param {*} opt_message Additional info (e.g., stack trace) to log.
+ * @param {string=} message Additional info (e.g., stack trace) to log.
  */
-B.prototype.crash = function(name, opt_message) {
-  this.result('CRASH', name, opt_message);
+B.prototype.crash = function(name, message) {
+  this.result('CRASH', name, message);
 };
 
 /**
  * Report a bench or test skip.
  * @param {string} name Name of test.
- * @param {*} opt_message Additional info to log.
+ * @param {string=} message Additional info to log.
  */
-B.prototype.skip = function(name, opt_message) {
-  this.result('SKIP', name, opt_message);
+B.prototype.skip = function(name, message) {
+  this.result('SKIP', name, message);
 };
 
 /**
@@ -121,12 +121,12 @@ T.prototype.constructor = T;
  * Report a test result.
  * @param {string} status The test result status (e.g., 'OK', 'FAIL', 'SKIP').
  * @param {string} name Name of test.
- * @param {*} opt_message Additional info to log.
+ * @param {string=} message Additional info to log.
  */
-T.prototype.result = function (status, name, opt_message) {
+T.prototype.result = function (status, name, message) {
   status === 'OK' || console.log('%s:\t%s', status, name);
-  if (opt_message) {
-    console.log(opt_message);
+  if (message) {
+    console.log(message);
   }
   this.results[status] = this.results[status] + 1 || 1;
 };
@@ -134,19 +134,19 @@ T.prototype.result = function (status, name, opt_message) {
 /**
  * Report a test pass.
  * @param {string} name Name of test.
- * @param {*} opt_message Additional info to log.
+ * @param {string=} message Additional info to log.
  */
-T.prototype.pass = function(name, opt_message) {
-  this.result('OK', name, opt_message);
+T.prototype.pass = function(name, message) {
+  this.result('OK', name, message);
 };
 
 /**
  * Report a test failure.
  * @param {string} name
- * @param {*} opt_message
+ * @param {string=} message
  */
-T.prototype.fail = function(name, opt_message) {
-  this.result('FAIL', name, opt_message);
+T.prototype.fail = function(name, message) {
+  this.result('FAIL', name, message);
 };
 
 exports.B = B;
