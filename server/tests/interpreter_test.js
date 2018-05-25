@@ -862,12 +862,20 @@ exports.testAsync = function(t) {
       }
   `).thread;
   // Create thread to call async function.
-  var asyncThread = intrp.createThreadForSrc('async()').thread;
+  var asyncThread = intrp.createThreadForSrc('async();').thread;
   intrp.run();
   // asyncThread has run once and blocked; bgThread has run ten times
   // and is now sleeping for 1s.
+
+  // Create Error err to throw.  It should have no stack to start with.
+  var err = new intrp.Error(intrp.ROOT, intrp.ERROR, 'sample error');
+  t.assert(name + ': Error has no .stack initially',
+      !err.has('stack', intrp.ROOT));
+
+  // Throw err.
+  intrp.verbose = true;  // REMOVE THIS BEFORE COMMIT
   intrp.thread = bgThread;  // Try to trick reject into killing wrong thread.
-  reject(undefined);  // Throw unhandled exception in asyncThread.
+  reject(err);  // Throw unhandled Error in asyncThread.
 
   // Verify correct thread was unwound and killed.
   t.assert(name + ': unwound thread stack empty',
@@ -878,6 +886,15 @@ exports.testAsync = function(t) {
       bgThread.stateStack_.length > 0);
   t.expect(name + ': background thread status',
       bgThread.status, Interpreter.Thread.Status.SLEEPING);
+
+  // Verify err has aquired a stack.
+  t.assert(name + ': Error has .stack after being thrown',
+      err.has('stack', intrp.ROOT));
+  var stack = err.get('stack', intrp.ROOT);
+  t.assert(name + ': Error .stack mentions function that threw',
+      stack.match(/in async/));
+  t.assert(name + ': Error .stack mentions call site',
+      stack.match(/at "async\(\);" 1:1/));
 };
 
 /**

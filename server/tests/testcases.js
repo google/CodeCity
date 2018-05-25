@@ -2299,6 +2299,27 @@ module.exports = [
     expected: 'TypeError' },
 
   /////////////////////////////////////////////////////////////////////////////
+  // Error and Error.prototype (and all the other native error types too)
+
+  { name: 'new Error has .stack', src: `
+    // Use eval to make parsing .stack easier.
+    var e = eval('new Error;');
+    var lines = e.stack.split('\\n');
+    Boolean(lines[0].match(/at "new Error;" 1:1/));
+    `,
+    expected: true },
+
+  { name: 'thrown Error has .stack', src: `
+    try {
+      (function buggy() {1 instanceof 2;})();
+    } catch (e) {
+      var lines = e.stack.split('\\n');
+    }
+    Boolean(lines[0].match(/at buggy 1:1/));
+    `,
+    expected: true },
+
+  /////////////////////////////////////////////////////////////////////////////
   // JSON
 
   { name: 'JSON.stringify', src: `
