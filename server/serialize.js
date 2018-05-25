@@ -250,24 +250,26 @@ Serializer.serialize = function(intrp) {
   }
 
   // Properties on Interpreter instances to ignore.
-  var exclude = ['hrStartTime_',
-                 'previousTime_',
-                 'runner_',
-                 'Object',
-                 'Function',
-                 'UserFunction',
-                 'BoundFunction',
-                 'NativeFunction',
-                 'OldNativeFunction',
-                 'Array',
-                 'Date',
-                 'RegExp',
-                 'Error',
-                 'Arguments',
-                 'WeakMap',
-                 'Thread',
-                 'Box',
-                 'Server'];
+  var exclude = [
+    'hrStartTime_',
+    'previousTime_',
+    'runner_',
+    'Object',
+    'Function',
+    'UserFunction',
+    'BoundFunction',
+    'NativeFunction',
+    'OldNativeFunction',
+    'Array',
+    'Date',
+    'RegExp',
+    'Error',
+    'Arguments',
+    'WeakMap',
+    'Thread',
+    'Box',
+    'Server'
+  ];
   // Find all objects.
   var objectList = Serializer.getObjectList_(
       intrp, Serializer.excludeTypes, exclude);
