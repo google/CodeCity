@@ -254,6 +254,7 @@ Serializer.serialize = function(intrp) {
     'hrStartTime_',
     'previousTime_',
     'runner_',
+    'unhandledException',
     'Object',
     'Function',
     'UserFunction',

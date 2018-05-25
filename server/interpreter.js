@@ -3048,19 +3048,28 @@ Interpreter.prototype.unwind_ = function(thread, type, value, label) {
   thread.status = Interpreter.Thread.Status.ZOMBIE;
 
   if (type === Interpreter.CompletionType.THROW) {
-    // Log exception and stack trace.
-    if (value instanceof this.Error) {
-      this.log('unhandled', 'Unhandled %s', value);
-      var stackTrace = value.get('stack', this.ROOT);
-      if (stackTrace) {
-        this.log('unhandled', stackTrace);
-      }
-    } else {
-      var native = this.pseudoToNative(value);
-      this.log('unhandled', 'Unhandled exception with value: %o', native);
-    }
+    this.unhandledException(thread, value);
   } else {
     throw new Error('Unsynatctic break/continue/return not rejected by Acorn');
+  }
+};
+
+/**
+ * Called in the event of an unhandled exception.  This is a
+ * user-servicable part: it can be replaced (e.g. for testing).
+ * @param {!Interpreter.Thread} thread The thread whose stack is to be unwound.
+ * @param {Interpreter.Value=} value Value computed, returned or thrown.
+ */
+Interpreter.prototype.unhandledException = function(thread, value) {
+  if (value instanceof this.Error) {
+    this.log('unhandled', 'Unhandled %s', value);
+    var stackTrace = value.get('stack', this.ROOT);
+    if (stackTrace) {
+      this.log('unhandled', stackTrace);
+    }
+  } else {
+    var native = this.pseudoToNative(value);
+    this.log('unhandled', 'Unhandled exception with value: %o', native);
   }
 };
 
