@@ -2616,6 +2616,7 @@ Interpreter.prototype.setValue = function(scope, ref, value, perms) {
 Interpreter.prototype.throw_ = function(thread, e, perms) {
   if (e instanceof this.Error) {
     // Userland Error object thrown; make sure it has a .stack.
+    // BUG(cpcallen): this will set .stack on Error.prototype, etc.
     e.makeStack(thread.callers(perms), perms);
   } else if (e instanceof Error) {
     // Uh oh.  This is an internal error in the interpreter.  Kill
