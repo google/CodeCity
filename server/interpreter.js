@@ -2099,7 +2099,7 @@ Interpreter.prototype.initNetwork_ = function() {
       server.listen(function() {
         rr.resolve();
       }, function(e) {
-        rr.reject(intrp.errorNativeToPseudo(e, perms));
+        rr.reject(intrp.errorNativeToPseudo(e, perms), perms);
       });
       return Interpreter.FunctionResult.Block;
     }
@@ -2125,7 +2125,7 @@ Interpreter.prototype.initNetwork_ = function() {
         if (e instanceof Error) {
           // Somehow something has gone wrong.  (Maybe mulitple
           // concurrent calls to .close on the same net.Server?)
-          rr.reject(intrp.errorNativeToPseudo(e, perms));
+          rr.reject(intrp.errorNativeToPseudo(e, perms), perms);
         } else {
           // All socket (and all open connections on it) now closed.
           rr.resolve();
@@ -2720,7 +2720,7 @@ Interpreter.prototype.unwind_ = function(thread, type, value, label) {
  * @param {!Interpreter.Thread} thread The thread to be controlled.
  * @param {!Interpreter.State} state The state in which thread to block.
  * @return {{resolve: function(Interpreter.Value=):void,
- *           reject: function(Interpreter.Value):void}}
+ *           reject: function(Interpreter.Value, !Interpreter.Owner):void}}
  */
 Interpreter.prototype.getResolveReject = function(thread, state) {
   var /** boolean */ done = false;
@@ -2748,11 +2748,10 @@ Interpreter.prototype.getResolveReject = function(thread, state) {
       thread.status = Interpreter.Thread.Status.READY;
       intrp.go_();
     },
-    reject: function reject(value) {
+    reject: function reject(value, perms) {
       check();
       thread.status = Interpreter.Thread.Status.READY;
-      intrp.unwind_(
-          thread, Interpreter.CompletionType.THROW, value, undefined);
+      intrp.throw_(thread, value, perms);
       intrp.go_();
     }
   };
