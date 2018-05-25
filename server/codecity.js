@@ -64,7 +64,10 @@ CodeCity.startup = function(opt_databaseDirectory) {
     }
   }
   // Load the interpreter.
-  CodeCity.interpreter = new Interpreter();
+  CodeCity.interpreter = new Interpreter({
+    trimEval: true,
+    trimProgram: true,
+  });
   CodeCity.initSystemFunctions();
   if (i === -1) {
     // Database not found, load one or more startup files instead.
