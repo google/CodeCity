@@ -38,6 +38,7 @@ acorn.plugins.alwaysStrict = function(parser, configValue) {
 
 /**
  * @typedef {{
+ *     noLog: (!Array<string>|undefined),
  *     trimEval: (boolean|undefined),
  *     trimProgram: (boolean|undefined),
  * }}
@@ -404,7 +405,7 @@ Interpreter.prototype.pause = function() {
         var server = this.listeners_[Number(port)];
         server.listen(undefined, function(error) {
           // Something went wrong while re-listening.  Maybe port in use.
-          console.log('Re-listen on port %s failed: %s: %s', server.port,
+          this.log('net', 'Re-listen on port %s failed: %s: %s', server.port,
                       error.name, error.message);
           // Report this to userland by calling .onError on proto
           // (with this === proto) - for lack of a better option.
@@ -445,6 +446,9 @@ Interpreter.prototype.stop = function() {
   }
   this.status = Interpreter.Status.STOPPED;
 };
+
+/**
+ * Log 
 
 /**
  * Create and register the builtin classes and functions specified in
@@ -2691,14 +2695,14 @@ Interpreter.prototype.unwind_ = function(thread, type, value, label) {
   if (type === Interpreter.CompletionType.THROW) {
     // Log exception and stack trace.
     if (value instanceof this.Error) {
-      console.log('Unhandled %s', value);
+      this.log('unhandled', 'Unhandled %s', value);
       var stackTrace = value.get('stack', this.ROOT);
       if (stackTrace) {
-        console.log(stackTrace);
+        this.log('unhandled', stackTrace);
       }
     } else {
       var native = this.pseudoToNative(value);
-      console.log('Unhandled exception with value: %o', native);
+      this.log('unhandled', 'Unhandled exception with value: %o', native);
     }
   } else {
     throw Error('Unsynatctic break/continue/return not rejected by Acorn');
@@ -2756,6 +2760,18 @@ Interpreter.prototype.getResolveReject = function(thread, state) {
       intrp.go_();
     }
   };
+};
+
+/**
+ * Log something.
+ * @param {string} category About what topic is this log?
+ * @param {...*} var_args
+ */
+Interpreter.prototype.log = function(category, var_args) {
+  if (this.options.noLog && this.options.noLog.includes(category)) {
+    return;
+  }
+  console.log.apply(console, Array.prototype.slice.call(arguments, 1));
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -4770,11 +4786,12 @@ Interpreter.prototype.installTypes = function() {
       // also allow IPV6 connections:
       // if (socket.remoteAddress != '127.0.0.1') {
       //   // Reject connections other than from localhost.
-      //   console.log('Rejecting connection from ' + socket.remoteAddress);
+      //   intrp.log('net', 'Rejecting connection from ' +
+      //       socket.remoteAddress);
       //   socket.end('Connection rejected.');
       //   return;
       // }
-      console.log('Connection from %s', socket.remoteAddress);
+      intrp.log('net', 'Connection from %s', socket.remoteAddress);
 
       // Create new object from proto and call onConnect.
       var obj = new intrp.Object(server.owner, server.proto);
@@ -4800,7 +4817,7 @@ Interpreter.prototype.installTypes = function() {
       });
 
       socket.on('end', function() {
-        console.log('Connection from %s closed.', socket.remoteAddress);
+        intrp.log('net', 'Connection from %s closed.', socket.remoteAddress);
         var func = obj.get('onEnd', this.owner);
         if (func instanceof intrp.Function && server.owner !== null) {
           intrp.createThreadForFuncCall(server.owner, func, obj, []);
@@ -4810,7 +4827,7 @@ Interpreter.prototype.installTypes = function() {
       });
 
       socket.on('error', function(error) {
-        console.log('Socket error:', error);
+        intrp.log('net', 'Socket error:', error);
         var func = obj.get('onError', this.owner);
         if (func instanceof intrp.Function && server.owner !== null) {
           var userError = intrp.errorNativeToPseudo(error, server.owner);
@@ -4824,7 +4841,7 @@ Interpreter.prototype.installTypes = function() {
 
     netServer.on('listening', function() {
       var addr = netServer.address();
-      console.log('Listening on %s address %s port %s', addr.family,
+      intrp.log('net', 'Listening on %s address %s port %s', addr.family,
                   addr.address, addr.port);
       onListening && onListening();
     });
@@ -4832,13 +4849,13 @@ Interpreter.prototype.installTypes = function() {
     netServer.on('error', function(error) {
       // TODO(cpcallen): attach additional information about
       // reason for failure.
-      console.log('Listen on port %s failed: %s: %s', server.port,
+      intrp.log('net', 'Listen on port %s failed: %s: %s', server.port,
                   error.name, error.message);
       onError && onError(error);
     });
 
     netServer.on('close', function() {
-      console.log('Done listening on port %s', server.port);
+      intrp.log('net', 'Done listening on port %s', server.port);
       server.server_ = null;
     });
 

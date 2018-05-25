@@ -40,6 +40,7 @@ exports.startupFiles = {
  */
 exports.getInterpreter = function() {
   var intrp = new Interpreter({
+    noLog: ['net', 'unhandled'],
     trimEval: true,
     trimProgram: true,
   });
