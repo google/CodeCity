@@ -3609,6 +3609,16 @@ Interpreter.prototype.Error.prototype.makeStack = function(callers, perms) {
  * @param {?Interpreter.Owner=} owner
  * @param {?Interpreter.prototype.Object=} proto
  */
+Interpreter.prototype.Arguments = function(owner, proto) {
+  throw Error('Inner class constructor not callable on prototype');
+};
+
+/**
+ * @constructor
+ * @extends {Interpreter.prototype.Object}
+ * @param {?Interpreter.Owner=} owner
+ * @param {?Interpreter.prototype.Object=} proto
+ */
 Interpreter.prototype.WeakMap = function(owner, proto) {
   /** @type {!IterableWeakMap} */
   this.weakMap;
@@ -4673,6 +4683,27 @@ Interpreter.prototype.installTypes = function() {
     }
     this.defineProperty('stack', Descriptor.wc.withValue(stack.join('\n')));
   };
+
+  /**
+   * Class for an arguments object.  See ES5 §10.6 / ES6 §9.4.4.
+   *
+   * N.B.: Does not support mapped properties because we are always in
+   * strict mode.  Does not implement the special always-throw getters
+   * for .callee and .caller, because we do not support getters.
+   * What's left is basically an ordinary object with a special
+   * [[Class]].
+   * @constructor
+   * @extends {Interpreter.prototype.Arguments}
+   * @param {?Interpreter.Owner=} owner Owner object or null.
+   * @param {?Interpreter.prototype.Object=} proto Prototype object or null.
+   */
+  intrp.Arguments = function(owner, proto) {
+    intrp.Object.call(/** @type {?} */ (this), owner, proto);
+  };
+
+  intrp.Arguments.prototype = Object.create(intrp.Object.prototype);
+  intrp.Arguments.prototype.constructor = intrp.Arguments;
+  intrp.Arguments.prototype.class = 'Arguments';
 
   /**
    * The WeakMap class from ES6.
