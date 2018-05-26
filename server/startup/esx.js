@@ -193,7 +193,7 @@ var setTimeout = function(func, delay) {
    *   <Thread>, which may be passed to clearTimeout() to cancel.
    */
   // TODO(cpcallen:perms): setPerms(callerPerms());
-  var args = arguments.slice(2);
+  var args = Array.prototype.slice.call(arguments, 2);
   args = [undefined, func, delay, undefined].concat(args);
   return new (Thread.bind.apply(Thread, args));
 };
