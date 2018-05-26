@@ -4221,8 +4221,17 @@ Interpreter.prototype.installTypes = function() {
       intrp.addVariableToScope(scope, paramName, paramValue);
     }
     // Build arguments variable.
-    // TODO(cpcallen): use Arguments object.
-    var argsList = intrp.createArrayFromList(args, this.owner);
+    // 
+    // BUG(cpcallen): mustn't create arguments object if 'arguments'
+    // the name of a local variable or named parameter.  Needn't
+    // create arguments object if it is never referecned.
+    var argsList = new intrp.Arguments(this.owner);
+    argsList.defineProperty(
+        'length', Descriptor.wc.withValue(args.length), this.owner);
+    for (i = 0; i < args.length; i++) {
+      argsList.defineProperty(
+          String(i), Descriptor.wec.withValue(args[i]), this.owner);
+    }
     intrp.addVariableToScope(scope, 'arguments', argsList, true);
     // Add the function's name (var x = function foo(){};)
     var name = this.node['id'] && this.node['id']['name'];
