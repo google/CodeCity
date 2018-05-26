@@ -1,0 +1,16 @@
+body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+#editorContainer {
+  position: absolute;
+}
+
+#toolbox {
+}
+
+#svgroot {
+  overflow: hidden;
+}

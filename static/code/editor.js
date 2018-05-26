@@ -228,7 +228,6 @@ Code.Editor.tabClick = function(e) {
   }
 
   Code.Editor.updateCurrentSource();
-  Code.Editor.setSourceToAllEditors(Code.Editor.currentSource);
 
   // Highlight one tab, show one container.
   var tab = e.target;
@@ -237,12 +236,11 @@ Code.Editor.tabClick = function(e) {
   Code.Editor.currentEditor = editor;
   var container = editor.containerElement;
   if (!editor.created) {
-    var source = editor.getSource();
     editor.createDom(container);
     editor.created = true;
-    editor.setSource(source);
   }
   container.style.display = 'block';
+  Code.Editor.setSourceToAllEditors(Code.Editor.currentSource);
   // If e is an event, then this click is the result of a user's direct action.
   // If not, then it's a fake event as a result of page load.
   var userAction = e instanceof Event;
