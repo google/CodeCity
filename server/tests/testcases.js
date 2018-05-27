@@ -373,6 +373,13 @@ module.exports = [
     `,
     expected: 0 },
 
+  { name: 'sequenceExpresion', src: `
+    var x, y, z;
+    x = (y = 60, z = 5, 0.5);
+    x + y + z;
+    `,
+    expected: 65.5 },
+
   { name: 'forTriangular', src: `
     var t = 0;
     for (var i = 0; i < 12; i++) {

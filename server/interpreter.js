@@ -5993,13 +5993,12 @@ stepFuncs_['ReturnStatement'] = function (thread, stack, state, node) {
  */
 stepFuncs_['SequenceExpression'] = function (thread, stack, state, node) {
   var n = state.n_;
-  var /** ?Interpreter.Node */ expression = node['expressions'][n];
-  if (expression) {
-    state.n_ = n + 1;
-    return new Interpreter.State(expression, state.scope);
+  var /** ?Interpreter.Node */ expression = node['expressions'][n++];
+  if (n >= node['expressions'].length) {
+    stack.pop();
   }
-  stack.pop();
-  stack[stack.length - 1].value = state.value;
+  state.n_ = n;
+  return new Interpreter.State(expression, state.scope);
 };
 
 /**
