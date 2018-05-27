@@ -5516,25 +5516,19 @@ stepFuncs_['ConditionalExpression'] = function (thread, stack, state, node) {
     state.step_ = 1;
     return new Interpreter.State(node['test'], state.scope);
   }
-  if (state.step_ === 1) {  // Test evaluated; result is in .value
-    state.step_ = 2;
-    var value = Boolean(state.value);
-    if (value && node['consequent']) {
-      // Execute 'if' block.
-      return new Interpreter.State(node['consequent'], state.scope);
-    }
-    if (!value && node['alternate']) {
-      // Execute 'else' block.
-      return new Interpreter.State(node['alternate'], state.scope);
-    }
-    // eval('1;if(false){2}') -> undefined
-    thread.value = undefined;
-  }
-  // state.step_ === 2: Consequent or alternate done.  Do return?
+  // state.step_ === 1: Test evaluated; result is in .value
   stack.pop();
-  if (node['type'] === 'ConditionalExpression') {
-    stack[stack.length - 1].value = state.value;
+  var value = Boolean(state.value);
+  if (value && node['consequent']) {
+    // Execute 'if' block.
+    return new Interpreter.State(node['consequent'], state.scope);
   }
+  if (!value && node['alternate']) {
+    // Execute 'else' block.
+    return new Interpreter.State(node['alternate'], state.scope);
+  }
+  // eval('1;if(false){2}') -> undefined
+  thread.value = undefined;
 };
 
 /**
