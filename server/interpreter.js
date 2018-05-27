@@ -5862,19 +5862,18 @@ stepFuncs_['LogicalExpression'] = function (thread, stack, state, node) {
     state.step_ = 1;
     return new Interpreter.State(node['left'], state.scope);
   }
-  if (state.step_ == 1) {  // Check for short-circuit; eval right.
-    var /** string */ op = node['operator'];
-    if (op !== '&&' && op !== '||') {
-      throw SyntaxError("Unknown logical operator '" + op + "'");
-    } else if ((op === '&&' && state.value) || (op === '||' && !state.value)) {
-      // No short-circuit this time.
-      state.step_ = 2;
-      return new Interpreter.State(node['right'], state.scope);
-    }
-  }
-  // state.step_ === 2: Return most recently evaluated subexpression.
+  // state.step_ == 1: Check for short-circuit; optionally eval right.
   stack.pop();
-  stack[stack.length - 1].value = state.value;
+  var /** string */ op = node['operator'];
+  if (op !== '&&' && op !== '||') {
+    throw SyntaxError("Unknown logical operator '" + op + "'");
+  } else if ((op === '&&' && !state.value) || (op === '||' && state.value)) {
+    // Short circuit.  Return left value.
+    stack[stack.length - 1].value = state.value;
+  } else {
+    // Tail-eval right.
+    return new Interpreter.State(node['right'], state.scope);
+  }
 };
 
 /**
