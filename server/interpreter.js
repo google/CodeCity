@@ -1447,6 +1447,11 @@ Interpreter.prototype.initString_ = function() {
         default:
           throw Error('Invalid funcStep in String??');
       }
+    },
+    /** @type {!Interpreter.NativeConstructImpl} */
+    construct: function(intrp, thread, state, args) {
+      throw new intrp.Error(state.scope.perms, intrp.TYPE_ERROR,
+         'String objects not supported.');
     }
   });
 
@@ -1525,13 +1530,24 @@ Interpreter.prototype.initString_ = function() {
  * @private
  */
 Interpreter.prototype.initBoolean_ = function() {
-  var intrp = this;
-  // Boolean prototype.
+  // Boolean prototype.  It's a Boolean object (but the only one!)
   this.BOOLEAN = new this.Object(this.ROOT);
   this.builtins_['Boolean.prototype'] = this.BOOLEAN;
   this.BOOLEAN.class = 'Boolean';
+
   // Boolean constructor.
-  this.createNativeFunction('Boolean', Boolean, false);  // No: new Boolean()
+  new this.NativeFunction({
+    id: 'Boolean', length: 1,
+    /** @type {!Interpreter.NativeCallImpl} */
+    call: function(intrp, thread, state, thisVal, args) {
+      return Boolean(args[0]);
+    },
+    /** @type {!Interpreter.NativeConstructImpl} */
+    construct: function(intrp, thread, state, args) {
+      throw new intrp.Error(state.scope.perms, intrp.TYPE_ERROR,
+          'Boolean objects not supported.');
+    }
+  });
 };
 
 /**
@@ -1541,12 +1557,24 @@ Interpreter.prototype.initBoolean_ = function() {
 Interpreter.prototype.initNumber_ = function() {
   var intrp = this;
   var wrapper;
-  // Number prototype.
+  // Number prototype.  It's a Number object (but the only one!)
   this.NUMBER = new this.Object(this.ROOT);
   this.builtins_['Number.prototype'] = this.NUMBER;
   this.NUMBER.class = 'Number';
+
   // Number constructor.
-  this.createNativeFunction('Number', Number, false);  // No: new Number()
+  new this.NativeFunction({
+    id: 'Number', length: 1,
+    /** @type {!Interpreter.NativeCallImpl} */
+    call: function(intrp, thread, state, thisVal, args) {
+      return Number(args[0]);
+    },
+    /** @type {!Interpreter.NativeConstructImpl} */
+    construct: function(intrp, thread, state, args) {
+      throw new intrp.Error(state.scope.perms, intrp.TYPE_ERROR,
+          'Number objects not supported.');
+    }
+  });
 
   // Static methods on Number.
   this.createNativeFunction('Number.isFinite', Number.isFinite, false);
