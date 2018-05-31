@@ -2112,7 +2112,7 @@ module.exports = [
     /* expected: true */ },
 
   /////////////////////////////////////////////////////////////////////////////
-  // Boolean
+  // Boolean and Boolean.prototype
   { name: 'Boolean', src: `
     var tests = [
       [undefined, false],
@@ -2142,7 +2142,7 @@ module.exports = [
     Boolean.prototype.toString();
     `,
     expected: 'false' },
-  
+
   { name: 'Boolean.prototype.toString.call(true)', src: `
     Boolean.prototype.toString.call(true);
     `,
@@ -2152,7 +2152,7 @@ module.exports = [
     Boolean.prototype.toString.call(false);
     `,
     expected: 'false' },
-  
+
   { name: 'Boolean.prototype.toString.call non-Boolean object', src: `
     try {
       Boolean.prototype.toString.call({});
@@ -2166,13 +2166,13 @@ module.exports = [
     Boolean.prototype.valueOf();
     `,
     expected: false },
-  
+
   { name: 'Boolean.prototype.valueOf.call primitive', src: `
     Boolean.prototype.valueOf.call(true) &&
         !Boolean.prototype.valueOf.call(false);
     `,
     expected: true },
-  
+
   { name: 'Boolean.prototype.valueOf.call non-Boolean object', src: `
     try {
       Boolean.prototype.valueOf.call({});
@@ -2183,7 +2183,7 @@ module.exports = [
     expected: 'TypeError' },
 
   /////////////////////////////////////////////////////////////////////////////
-  // Number
+  // Number and Number.prototype
 
   { name: 'Number', src: `
     var tests = [
@@ -2220,12 +2220,12 @@ module.exports = [
     Number.prototype.toString();
     `,
     expected: '0' },
-  
+
   { name: 'Number.prototype.toString.call primitive', src: `
     Number.prototype.toString.call(84);
     `,
     expected: '84' },
-  
+
   { name: 'Number.prototype.toString.call non-Number object', src: `
     try {
       Number.prototype.toString.call({});
@@ -2239,12 +2239,12 @@ module.exports = [
     Number.prototype.valueOf();
     `,
     expected: 0 },
-  
+
   { name: 'Number.prototype.valueOf.call primitive', src: `
     Number.prototype.valueOf.call(85);
     `,
     expected: 85 },
-  
+
   { name: 'Number.prototype.valueOf.call non-Number object', src: `
     try {
       Number.prototype.valueOf.call({});
@@ -2379,12 +2379,12 @@ module.exports = [
     String.prototype.toString();
     `,
     expected: '' },
-  
+
   { name: 'String.prototype.toString.call primitive', src: `
     String.prototype.toString.call('a string');
     `,
     expected: 'a string' },
-  
+
   { name: 'String.prototype.toString.call non-String object', src: `
     try {
       String.prototype.toString.call({});
@@ -2398,12 +2398,12 @@ module.exports = [
     String.prototype.valueOf();
     `,
     expected: '' },
-  
+
   { name: 'String.prototype.valueOf.call primitive', src: `
     String.prototype.valueOf.call('a string');
     `,
     expected: 'a string' },
-  
+
   { name: 'String.prototype.valueOf.call non-String object', src: `
     try {
       String.prototype.valueOf.call({});
