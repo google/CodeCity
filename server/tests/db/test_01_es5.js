@@ -2437,6 +2437,22 @@ tests.Boolean = function() {
   console.assert(Boolean(function() {}) === true, 'Boolean function');
 };
 
+tests.BooleanPrototypeValueOf = function () {
+  console.assert(Boolean.prototype.valueOf() === false,
+      'Boolean.prototype.valueOf()');
+  console.assert(Boolean.prototype.valueOf.call(true) === true,
+      'Boolean.prototype.valueOf.call(true)');
+  console.assert(Boolean.prototype.valueOf.call(false) === false,
+                 'Boolean.prototype.valueOf.call(false)');
+  try {
+    Boolean.prototype.valueOf.call({});
+    console.assert(false, "Boolean.prototype.valueOf.call({}) didn't throw");
+  } catch (e) {
+    console.assert(e.name === 'TypeError',
+        'Boolean.prototype.valueOf.call({}) wrong error');
+  }    
+};
+
 ///////////////////////////////////////////////////////////////////////////////
 // Number
 
@@ -2459,6 +2475,20 @@ tests.Number = function() {
   console.assert(!isFinite(Number.NEGATIVE_INFINITY), 'Number  -Infinity');
   console.assert(Number.POSITIVE_INFINITY === -Number.NEGATIVE_INFINITY,
       'Number infinities');
+};
+
+tests.NumberPrototypeValueOf = function () {
+  console.assert(Number.prototype.valueOf() === 0,
+      'Number.prototype.valueOf()');
+  console.assert(Number.prototype.valueOf.call(85) === 85,
+      'Number.prototype.valueOf.call(85)');
+  try {
+    Number.prototype.valueOf.call({});
+    console.assert(false, "Number.prototype.valueOf.call({}) didn't throw");
+  } catch (e) {
+    console.assert(e.name === 'TypeError',
+        'Number.prototype.valueOf.call({}) wrong error');
+  }    
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -2517,6 +2547,20 @@ tests.StringPrototypeSearch = function() {
       'String.prototype.search(regexp) not found');
   console.assert('hello'.search(/(.)\1/) === 2,
       'String.prototype.search(regexp) found');
+};
+
+tests.StringPrototypeValueOf = function () {
+  console.assert(String.prototype.valueOf() === '',
+      'String.prototype.valueOf()');
+  console.assert(String.prototype.valueOf.call('a string') === 'a string',
+      "String.prototype.valueOf.call('a string')");
+  try {
+    String.prototype.valueOf.call({});
+    console.assert(false, "String.prototype.valueOf.call({}) didn't throw");
+  } catch (e) {
+    console.assert(e.name === 'TypeError',
+        'String.prototype.valueOf.call({}) wrong error');
+  }    
 };
 
 ///////////////////////////////////////////////////////////////////////////////
