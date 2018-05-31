@@ -2138,6 +2138,26 @@ module.exports = [
     `,
     expected: 'pass' },
 
+  { name: 'Boolean.prototype.valueOf()', src: `
+    Boolean.prototype.valueOf();
+    `,
+    expected: false },
+  
+  { name: 'Boolean.prototype.valueOf.call primitive', src: `
+    Boolean.prototype.valueOf.call(true) &&
+        !Boolean.prototype.valueOf.call(false);
+    `,
+    expected: true },
+  
+  { name: 'Boolean.prototype.valueOf.call non-Boolean object', src: `
+    try {
+      Boolean.prototype.valueOf.call({});
+    } catch (e) {
+      e.name;
+    }
+    `,
+    expected: 'TypeError' },
+
   /////////////////////////////////////////////////////////////////////////////
   // Number
 
@@ -2171,6 +2191,25 @@ module.exports = [
         !Number.isSafeInteger(Number.MAX_SAFE_INTEGER + 1);
     `,
     expected: true },
+
+  { name: 'Number.prototype.valueOf()', src: `
+    Number.prototype.valueOf();
+    `,
+    expected: 0 },
+  
+  { name: 'Number.prototype.valueOf.call primitive', src: `
+    Number.prototype.valueOf.call(85);
+    `,
+    expected: 85 },
+  
+  { name: 'Number.prototype.valueOf.call non-Number object', src: `
+    try {
+      Number.prototype.valueOf.call({});
+    } catch (e) {
+      e.name;
+    }
+    `,
+    expected: 'TypeError' },
 
   /////////////////////////////////////////////////////////////////////////////
   // String and String.prototype
@@ -2292,6 +2331,25 @@ module.exports = [
   { name: 'String.prototype.search(regexp) found',
     src: `'hello'.search(/(.)\\1/)`,
     expected: 2 },
+
+  { name: 'String.prototype.valueOf()', src: `
+    String.prototype.valueOf();
+    `,
+    expected: '' },
+  
+  { name: 'String.prototype.valueOf.call primitive', src: `
+    String.prototype.valueOf.call('a string');
+    `,
+    expected: 'a string' },
+  
+  { name: 'String.prototype.valueOf.call non-String object', src: `
+    try {
+      String.prototype.valueOf.call({});
+    } catch (e) {
+      e.name;
+    }
+    `,
+    expected: 'TypeError' },
 
   /////////////////////////////////////////////////////////////////////////////
   // RegExp

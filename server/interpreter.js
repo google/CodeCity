@@ -1523,6 +1523,20 @@ Interpreter.prototype.initString_ = function() {
     }
   };
   this.createNativeFunction('String.prototype.repeat', wrapper, false);
+
+  new this.NativeFunction({
+    id: 'String.prototype.valueOf', length: 0,
+    /** @type {!Interpreter.NativeCallImpl} */
+    call: function(intrp, thread, state, thisVal, args) {
+      if (typeof thisVal === 'string') {  // String primitive.
+        return thisVal;
+      } else if (thisVal === intrp.STRING) {  // The only String object.
+        return '';
+      }
+      throw new intrp.Error(state.scope.perms, intrp.TYPE_ERROR,
+          "String.prototype.valueOf requires that 'this' be a String");
+    }
+  });
 };
 
 /**
@@ -1546,6 +1560,21 @@ Interpreter.prototype.initBoolean_ = function() {
     construct: function(intrp, thread, state, args) {
       throw new intrp.Error(state.scope.perms, intrp.TYPE_ERROR,
           'Boolean objects not supported.');
+    }
+  });
+
+  // Instance methods on Boolean.
+  new this.NativeFunction({
+    id: 'Boolean.prototype.valueOf', length: 0,
+    /** @type {!Interpreter.NativeCallImpl} */
+    call: function(intrp, thread, state, thisVal, args) {
+      if (typeof thisVal === 'boolean') {  // Boolean primitive.
+        return thisVal;
+      } else if (thisVal === intrp.BOOLEAN) {  // The only Boolen object.
+        return false;
+      }
+      throw new intrp.Error(state.scope.perms, intrp.TYPE_ERROR,
+          "Boolean.prototype.valueOf requires that 'this' be a Boolean");
     }
   });
 };
@@ -1632,6 +1661,20 @@ Interpreter.prototype.initNumber_ = function() {
     return this.toLocaleString(locales, options);
   };
   this.createNativeFunction('Number.prototype.toLocaleString', wrapper, false);
+
+  new this.NativeFunction({
+    id: 'Number.prototype.valueOf', length: 0,
+    /** @type {!Interpreter.NativeCallImpl} */
+    call: function(intrp, thread, state, thisVal, args) {
+      if (typeof thisVal === 'number') {  // Number primitive.
+        return thisVal;
+      } else if (thisVal === intrp.NUMBER) {  // The only Number object.
+        return 0;
+      }
+      throw new intrp.Error(state.scope.perms, intrp.TYPE_ERROR,
+          "Number.prototype.valueOf requires that 'this' be a Number");
+    }
+  });
 };
 
 /**
