@@ -448,9 +448,6 @@ Interpreter.prototype.stop = function() {
 };
 
 /**
- * Log 
-
-/**
  * Create and register the builtin classes and functions specified in
  * the ECMAScript specification plus our extensions.  Add a few items
  * (e.g., eval) to the global scope that can't be added any other way.
@@ -1473,7 +1470,7 @@ Interpreter.prototype.initString_ = function() {
     throw new intrp.Error(perms, intrp.TYPE_ERROR,
         name + " requires that 'this' be a String");
   };
-    
+
   // Static methods on String.
   this.createNativeFunction('String.fromCharCode', String.fromCharCode, false);
 
@@ -1586,7 +1583,7 @@ Interpreter.prototype.initBoolean_ = function() {
     }
   });
 
-  /** 
+  /**
    * The thisBooleanValue specification method from ES6 §19.3.3.
    * Converts value arg to boolean or throws TypeError.
    * @param {!Interpreter} intrp The interpreter.
@@ -1604,7 +1601,7 @@ Interpreter.prototype.initBoolean_ = function() {
     throw new intrp.Error(perms, intrp.TYPE_ERROR,
         name + " requires that 'this' be a Boolean");
   };
-    
+
   // Instance methods on Boolean.
   new this.NativeFunction({
     id: 'Boolean.prototype.toString', length: 0,
@@ -1669,7 +1666,7 @@ Interpreter.prototype.initNumber_ = function() {
     throw new intrp.Error(perms, intrp.TYPE_ERROR,
         name + " requires that 'this' be a Number");
   };
-    
+
   // Static methods on Number.
   this.createNativeFunction('Number.isFinite', Number.isFinite, false);
   this.createNativeFunction('Number.isNaN', Number.isNaN, false);
@@ -2245,7 +2242,7 @@ Interpreter.prototype.initNetwork_ = function() {
       });
       return Interpreter.FunctionResult.Block;
     }
-  });                   
+  });
 
   new this.NativeFunction({
     id: 'CC.connectionUnlisten', length: 1,
@@ -2773,7 +2770,7 @@ Interpreter.prototype.throw_ = function(thread, e, perms) {
   }
   this.unwind_(thread, Interpreter.CompletionType.THROW, e, undefined);
 };
-  
+
 /**
  * Unwind the stack to the innermost relevant enclosing TryStatement,
  * For/ForIn/WhileStatement or Call.  If this results in
@@ -4375,7 +4372,7 @@ Interpreter.prototype.installTypes = function() {
       intrp.addVariableToScope(scope, paramName, paramValue);
     }
     // Build arguments variable.
-    // 
+    //
     // BUG(cpcallen): mustn't create arguments object if 'arguments'
     // the name of a local variable or named parameter.  Needn't
     // create arguments object if it is never referecned.
@@ -5627,7 +5624,7 @@ stepFuncs_['Call'] = function (thread, stack, state, node) {
           return;
         default:
           throw Error('Unknown FunctionResult??');
-      }          
+      }
     }
     state.value = r;
   }

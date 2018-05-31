@@ -2400,7 +2400,7 @@ tests.ArrayLegalIndexLength = function() {
 
 
 ///////////////////////////////////////////////////////////////////////////////
-// Boolean
+// Boolean and Boolean.prototype
 
 tests.Boolean = function() {
   console.assert(Boolean(undefined) === false, 'Boolean undefined');
@@ -2430,7 +2430,7 @@ tests.BooleanPrototypeToString = function () {
   } catch (e) {
     console.assert(e.name === 'TypeError',
         'Boolean.prototype.toString.call({}) wrong error');
-  }    
+  }
 };
 
 tests.BooleanPrototypeValueOf = function () {
@@ -2446,11 +2446,11 @@ tests.BooleanPrototypeValueOf = function () {
   } catch (e) {
     console.assert(e.name === 'TypeError',
         'Boolean.prototype.valueOf.call({}) wrong error');
-  }    
+  }
 };
 
 ///////////////////////////////////////////////////////////////////////////////
-// Number
+// Number and Number.prototype
 
 tests.Number = function() {
   console.assert(isNaN(Number(undefined)), 'Number undefined');
@@ -2484,7 +2484,7 @@ tests.NumberPrototypeToString = function () {
   } catch (e) {
     console.assert(e.name === 'TypeError',
         'Number.prototype.toString.call({}) wrong error');
-  }    
+  }
 };
 
 // Run some tests of Number.toString(radix) with various different
@@ -2519,7 +2519,7 @@ tests.NumberPrototypeValueOf = function () {
   } catch (e) {
     console.assert(e.name === 'TypeError',
         'Number.prototype.valueOf.call({}) wrong error');
-  }    
+  }
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -2591,7 +2591,7 @@ tests.StringPrototypeToString = function () {
   } catch (e) {
     console.assert(e.name === 'TypeError',
         'String.prototype.toString.call({}) wrong error');
-  }    
+  }
 };
 
 tests.StringPrototypeValueOf = function () {
@@ -2605,7 +2605,7 @@ tests.StringPrototypeValueOf = function () {
   } catch (e) {
     console.assert(e.name === 'TypeError',
         'String.prototype.valueOf.call({}) wrong error');
-  }    
+  }
 };
 
 ///////////////////////////////////////////////////////////////////////////////
