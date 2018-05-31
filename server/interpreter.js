@@ -1455,6 +1455,25 @@ Interpreter.prototype.initString_ = function() {
     }
   });
 
+  /**
+   * The thisStringValue specification method from ES6 §21.1.3.
+   * Converts value arg to string or throws TypeError.
+   * @param {!Interpreter} intrp The interpreter.
+   * @param {Interpreter.Value} value The this value passed into function.
+   * @param {string} name Name of built-in function (for TypeError message).
+   * @param {!Interpreter.Owner} perms Who called built-in?
+   * @return {string}
+   */
+  var thisStringValue = function(intrp, value, name, perms) {
+    if (typeof value === 'string') {  // String primitive.
+      return value;
+    } else if (value === intrp.STRING) {  // The only Boolen object.
+      return '';
+    }
+    throw new intrp.Error(perms, intrp.TYPE_ERROR,
+        name + " requires that 'this' be a String");
+  };
+    
   // Static methods on String.
   this.createNativeFunction('String.fromCharCode', String.fromCharCode, false);
 
@@ -1528,13 +1547,8 @@ Interpreter.prototype.initString_ = function() {
     id: 'String.prototype.valueOf', length: 0,
     /** @type {!Interpreter.NativeCallImpl} */
     call: function(intrp, thread, state, thisVal, args) {
-      if (typeof thisVal === 'string') {  // String primitive.
-        return thisVal;
-      } else if (thisVal === intrp.STRING) {  // The only String object.
-        return '';
-      }
-      throw new intrp.Error(state.scope.perms, intrp.TYPE_ERROR,
-          "String.prototype.valueOf requires that 'this' be a String");
+      return thisStringValue(intrp, thisVal,
+          'String.prototype.valueOf', state.scope.perms);
     }
   });
 };
@@ -1563,18 +1577,32 @@ Interpreter.prototype.initBoolean_ = function() {
     }
   });
 
+  /** 
+   * The thisBooleanValue specification method from ES6 §19.3.3.
+   * Converts value arg to boolean or throws TypeError.
+   * @param {!Interpreter} intrp The interpreter.
+   * @param {Interpreter.Value} value The this value passed into function.
+   * @param {string} name Name of built-in function (for TypeError message).
+   * @param {!Interpreter.Owner} perms Who called built-in?
+   * @return {boolean}
+   */
+  var thisBooleanValue = function(intrp, value, name, perms) {
+    if (typeof value === 'boolean') {  // Boolean primitive.
+      return value;
+    } else if (value === intrp.BOOLEAN) {  // The only Boolen object.
+      return false;
+    }
+    throw new intrp.Error(perms, intrp.TYPE_ERROR,
+        name + " requires that 'this' be a Boolean");
+  };
+    
   // Instance methods on Boolean.
   new this.NativeFunction({
     id: 'Boolean.prototype.valueOf', length: 0,
     /** @type {!Interpreter.NativeCallImpl} */
     call: function(intrp, thread, state, thisVal, args) {
-      if (typeof thisVal === 'boolean') {  // Boolean primitive.
-        return thisVal;
-      } else if (thisVal === intrp.BOOLEAN) {  // The only Boolen object.
-        return false;
-      }
-      throw new intrp.Error(state.scope.perms, intrp.TYPE_ERROR,
-          "Boolean.prototype.valueOf requires that 'this' be a Boolean");
+      return thisBooleanValue(intrp, thisVal,
+          'Boolean.prototype.valueOf', state.scope.perms);
     }
   });
 };
@@ -1605,6 +1633,25 @@ Interpreter.prototype.initNumber_ = function() {
     }
   });
 
+  /**
+   * The thisNumberValue specification method from ES6 §20.1.3.
+   * Converts value arg to number or throws TypeError.
+   * @param {!Interpreter} intrp The interpreter.
+   * @param {Interpreter.Value} value The this value passed into function.
+   * @param {string} name Name of built-in function (for TypeError message).
+   * @param {!Interpreter.Owner} perms Who called built-in?
+   * @return {number}
+   */
+  var thisNumberValue = function(intrp, value, name, perms) {
+    if (typeof value === 'number') {  // Number primitive.
+      return value;
+    } else if (value === intrp.NUMBER) {  // The only Boolen object.
+      return 0;
+    }
+    throw new intrp.Error(perms, intrp.TYPE_ERROR,
+        name + " requires that 'this' be a Number");
+  };
+    
   // Static methods on Number.
   this.createNativeFunction('Number.isFinite', Number.isFinite, false);
   this.createNativeFunction('Number.isNaN', Number.isNaN, false);
@@ -1666,13 +1713,8 @@ Interpreter.prototype.initNumber_ = function() {
     id: 'Number.prototype.valueOf', length: 0,
     /** @type {!Interpreter.NativeCallImpl} */
     call: function(intrp, thread, state, thisVal, args) {
-      if (typeof thisVal === 'number') {  // Number primitive.
-        return thisVal;
-      } else if (thisVal === intrp.NUMBER) {  // The only Number object.
-        return 0;
-      }
-      throw new intrp.Error(state.scope.perms, intrp.TYPE_ERROR,
-          "Number.prototype.valueOf requires that 'this' be a Number");
+      return thisNumberValue(intrp, thisVal,
+          'Number.prototype.valueOf', state.scope.perms);
     }
   });
 };
