@@ -602,26 +602,6 @@ tests.isNaN = function() {
   console.assert(!isNaN(' '), 'isNaN " "');
 };
 
-// Run some tests of Number.toString(radix) with various different
-// radix arguments.
-tests.toString = function() {
-  var cases = [
-    ['(42).toString()', '42'],
-    ['(42).toString(16)', '2a'],
-    // Old versions of Node incorrectly reports '-132.144444'.
-    ['(-42.4).toString(5)', '-132.2'],
-    ['(42).toString("2")', '101010'],
-    ['(-3.14).toString()', '-3.14'],
-    ['(999999999999999999999999999).toString()', '1e+27'],
-    ['(NaN).toString()', 'NaN'],
-    ['(Infinity).toString()', 'Infinity'],
-    ['(-Infinity).toString()', '-Infinity'],
-  ];
-  for (var i = 0, tc; (tc = cases[i]); i++) {
-    console.assert(tc[1] === eval(tc[0]), 'toString: ' + tc[0]);
-  }
-};
-
 tests.basicMath = function() {
   console.assert(1 + 1 === 2, 'onePlusOne');
   console.assert(2 + 2 === 4,'twoPlusTwo');
@@ -2437,6 +2417,22 @@ tests.Boolean = function() {
   console.assert(Boolean(function() {}) === true, 'Boolean function');
 };
 
+tests.BooleanPrototypeToString = function () {
+  console.assert(Boolean.prototype.toString() === 'false',
+      'Boolean.prototype.toString()');
+  console.assert(Boolean.prototype.toString.call(true) === 'true',
+      'Boolean.prototype.toString.call(true)');
+  console.assert(Boolean.prototype.toString.call(false) === 'false',
+                 'Boolean.prototype.toString.call(false)');
+  try {
+    Boolean.prototype.toString.call({});
+    console.assert(false, "Boolean.prototype.toString.call({}) didn't throw");
+  } catch (e) {
+    console.assert(e.name === 'TypeError',
+        'Boolean.prototype.toString.call({}) wrong error');
+  }    
+};
+
 tests.BooleanPrototypeValueOf = function () {
   console.assert(Boolean.prototype.valueOf() === false,
       'Boolean.prototype.valueOf()');
@@ -2475,6 +2471,41 @@ tests.Number = function() {
   console.assert(!isFinite(Number.NEGATIVE_INFINITY), 'Number  -Infinity');
   console.assert(Number.POSITIVE_INFINITY === -Number.NEGATIVE_INFINITY,
       'Number infinities');
+};
+
+tests.NumberPrototypeToString = function () {
+  console.assert(Number.prototype.toString() === '0',
+      'Number.prototype.toString()');
+  console.assert(Number.prototype.toString.call(84) === '84',
+      'Number.prototype.toString.call(85)');
+  try {
+    Number.prototype.toString.call({});
+    console.assert(false, "Number.prototype.toString.call({}) didn't throw");
+  } catch (e) {
+    console.assert(e.name === 'TypeError',
+        'Number.prototype.toString.call({}) wrong error');
+  }    
+};
+
+// Run some tests of Number.toString(radix) with various different
+// radix arguments.
+tests.NumberPrototypeToStringRadix = function() {
+  var cases = [
+    [42, , '42'],
+    [42, 16, '2a'],
+    // Old versions of Node incorrectly reports '-132.144444'.
+    [-42.4, 5, '-132.2'],
+    [42, '2', '101010'],
+    [-3.14, , '-3.14'],
+    [999999999999999999999999999, undefined, '1e+27'],
+    [NaN, undefined, 'NaN'],
+    [Infinity, , 'Infinity'],
+    [-Infinity, , '-Infinity'],
+  ];
+  for (var i = 0, tc; (tc = cases[i]); i++) {
+    console.assert(Number.prototype.toString.call(tc[0], tc[1]) === tc[2],
+        'Number.prototype.toString.call(' + tc[0] + ', ' + tc[1] + ')');
+  }
 };
 
 tests.NumberPrototypeValueOf = function () {
@@ -2547,6 +2578,20 @@ tests.StringPrototypeSearch = function() {
       'String.prototype.search(regexp) not found');
   console.assert('hello'.search(/(.)\1/) === 2,
       'String.prototype.search(regexp) found');
+};
+
+tests.StringPrototypeToString = function () {
+  console.assert(String.prototype.toString() === '',
+      'String.prototype.toString()');
+  console.assert(String.prototype.toString.call('a string') === 'a string',
+      "String.prototype.toString.call('a string')");
+  try {
+    String.prototype.toString.call({});
+    console.assert(false, "String.prototype.toString.call({}) didn't throw");
+  } catch (e) {
+    console.assert(e.name === 'TypeError',
+        'String.prototype.toString.call({}) wrong error');
+  }    
 };
 
 tests.StringPrototypeValueOf = function () {
