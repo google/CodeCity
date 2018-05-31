@@ -1544,6 +1544,15 @@ Interpreter.prototype.initString_ = function() {
   this.createNativeFunction('String.prototype.repeat', wrapper, false);
 
   new this.NativeFunction({
+    id: 'String.prototype.toString', length: 0,
+    /** @type {!Interpreter.NativeCallImpl} */
+    call: function(intrp, thread, state, thisVal, args) {
+      return thisStringValue(intrp, thisVal,
+          'String.prototype.toString', state.scope.perms);
+    }
+  });
+
+  new this.NativeFunction({
     id: 'String.prototype.valueOf', length: 0,
     /** @type {!Interpreter.NativeCallImpl} */
     call: function(intrp, thread, state, thisVal, args) {
@@ -1597,6 +1606,15 @@ Interpreter.prototype.initBoolean_ = function() {
   };
     
   // Instance methods on Boolean.
+  new this.NativeFunction({
+    id: 'Boolean.prototype.toString', length: 0,
+    /** @type {!Interpreter.NativeCallImpl} */
+    call: function(intrp, thread, state, thisVal, args) {
+      return String(thisBooleanValue(intrp, thisVal,
+          'Boolean.prototype.toString', state.scope.perms));
+    }
+  });
+
   new this.NativeFunction({
     id: 'Boolean.prototype.valueOf', length: 0,
     /** @type {!Interpreter.NativeCallImpl} */
@@ -1689,16 +1707,6 @@ Interpreter.prototype.initNumber_ = function() {
   };
   this.createNativeFunction('Number.prototype.toPrecision', wrapper, false);
 
-  wrapper = function(radix) {
-    try {
-      return this.toString(radix);
-    } catch (e) {
-      // Throws if radix isn't within 2-36.
-      throw intrp.errorNativeToPseudo(e, intrp.thread.perms());
-    }
-  };
-  this.createNativeFunction('Number.prototype.toString', wrapper, false);
-
   wrapper = function(/*locales, options*/) {
     // Messing around with arguments so that function's length is 0.
     var locales = arguments.length > 0 ?
@@ -1708,6 +1716,23 @@ Interpreter.prototype.initNumber_ = function() {
     return this.toLocaleString(locales, options);
   };
   this.createNativeFunction('Number.prototype.toLocaleString', wrapper, false);
+
+  new this.NativeFunction({
+    id: 'Number.prototype.toString', length: 1,
+    /** @type {!Interpreter.NativeCallImpl} */
+    call: function(intrp, thread, state, thisVal, args) {
+      var x = thisNumberValue(
+          intrp, thisVal, 'Number.prototype.toString', state.scope.perms);
+      var radix = args[0];
+      try {
+        // Throws if radix isn't within 2-36.  Cast requried because
+        // closure-compiler thinks radix should be a number.
+        return Number.prototype.toString.call(x, /** @type {?} */(radix));
+      } catch (e) {
+        throw intrp.errorNativeToPseudo(e, intrp.thread.perms());
+      }
+    }
+  });
 
   new this.NativeFunction({
     id: 'Number.prototype.valueOf', length: 0,

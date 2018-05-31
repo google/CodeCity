@@ -2131,6 +2131,30 @@ module.exports = [
     `,
     expected: 'pass' },
 
+  { name: 'Boolean.prototype.toString()', src: `
+    Boolean.prototype.toString();
+    `,
+    expected: 'false' },
+  
+  { name: 'Boolean.prototype.toString.call(true)', src: `
+    Boolean.prototype.toString.call(true);
+    `,
+    expected: 'true' },
+
+  { name: 'Boolean.prototype.toString.call(false)', src: `
+    Boolean.prototype.toString.call(false);
+    `,
+    expected: 'false' },
+  
+  { name: 'Boolean.prototype.toString.call non-Boolean object', src: `
+    try {
+      Boolean.prototype.toString.call({});
+    } catch (e) {
+      e.name;
+    }
+    `,
+    expected: 'TypeError' },
+
   { name: 'Boolean.prototype.valueOf()', src: `
     Boolean.prototype.valueOf();
     `,
@@ -2184,6 +2208,25 @@ module.exports = [
         !Number.isSafeInteger(Number.MAX_SAFE_INTEGER + 1);
     `,
     expected: true },
+
+  { name: 'Number.prototype.toString()', src: `
+    Number.prototype.toString();
+    `,
+    expected: '0' },
+  
+  { name: 'Number.prototype.toString.call primitive', src: `
+    Number.prototype.toString.call(84);
+    `,
+    expected: '84' },
+  
+  { name: 'Number.prototype.toString.call non-Number object', src: `
+    try {
+      Number.prototype.toString.call({});
+    } catch (e) {
+      e.name;
+    }
+    `,
+    expected: 'TypeError' },
 
   { name: 'Number.prototype.valueOf()', src: `
     Number.prototype.valueOf();
@@ -2324,6 +2367,25 @@ module.exports = [
   { name: 'String.prototype.search(regexp) found',
     src: `'hello'.search(/(.)\\1/)`,
     expected: 2 },
+
+  { name: 'String.prototype.toString()', src: `
+    String.prototype.toString();
+    `,
+    expected: '' },
+  
+  { name: 'String.prototype.toString.call primitive', src: `
+    String.prototype.toString.call('a string');
+    `,
+    expected: 'a string' },
+  
+  { name: 'String.prototype.toString.call non-String object', src: `
+    try {
+      String.prototype.toString.call({});
+    } catch (e) {
+      e.name;
+    }
+    `,
+    expected: 'TypeError' },
 
   { name: 'String.prototype.valueOf()', src: `
     String.prototype.valueOf();
