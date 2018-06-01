@@ -5298,6 +5298,15 @@ var isAnonymousFunctionDefinition = function(node) {
   return node['type'] === 'FunctionExpression' && !node['id'];
 };
 
+/**
+ * The IsIdentifierRef specification method from ES6 §12.2.1.4 and §12.3.1.4
+ * @param {!Interpreter.Node} node The node to be tested.
+ * @return {boolean} True if node is an identifier.
+ */
+var isIdentifierRef = function(node) {
+  return node['type'] === 'Identifier';
+};
+
 ///////////////////////////////////////////////////////////////////////////////
 // Step Functions: one to handle each node type.
 ///////////////////////////////////////////////////////////////////////////////
@@ -5373,8 +5382,7 @@ stepFuncs_['AssignmentExpression'] = function (thread, stack, state, node) {
   if (!state.ref) throw TypeError('left subexpression not an LVALUE??');
   if (state.step_ === 1) {  // Evaluate right.
     if (node['operator'] !== '=') {
-      state.tmp_ =
-          this.getValue(state.scope, state.ref, state.scope.perms);
+      state.tmp_ = this.getValue(state.scope, state.ref, state.scope.perms);
     }
     state.step_ = 2;
     return new Interpreter.State(node['right'], state.scope);
@@ -5383,7 +5391,20 @@ stepFuncs_['AssignmentExpression'] = function (thread, stack, state, node) {
   var rightValue = state.value;
   var value = state.tmp_;
   switch (node['operator']) {
-    case '=':    value =    rightValue; break;
+    // Regular assignment is special due to function naming & destructuring.
+    case '=':
+      value = rightValue;
+      // Set name if anonymous function expression.
+      if (isAnonymousFunctionDefinition(node['right']) &&
+          isIdentifierRef(node['left'])) {
+        var func = /** @type {!Interpreter.prototype.Function} */(value);
+        // TODO(ES6): Check that func does not already have a 'name'
+        // own property before calling setName?  (Spec requires, but
+        // unclear why since we know RHS is anonymous.  Proxies?)
+        func.setName(node['left']['name']);
+      }
+      break;
+    // All the rest are simple and similar.
     case '+=':   value +=   rightValue; break;
     case '-=':   value -=   rightValue; break;
     case '*=':   value *=   rightValue; break;
