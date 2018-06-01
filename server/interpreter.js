@@ -6436,9 +6436,18 @@ stepFuncs_['VariableDeclaration'] = function (thread, stack, state, node) {
   var n = state.n_;
   var decl = declarations[n];
   if (state.step_ === 1) {  // Initialise variable with evaluated init value.
+    var name = decl['id']['name'];
+    var value = state.value;
+    if (isAnonymousFunctionDefinition(decl['init'])) {
+      var func = /** @type {!Interpreter.prototype.Function} */(value);
+      // TODO(ES6): Check that func does not already have a 'name' own
+      // property before calling setName?  (Spec requires, but unclear
+      // why since we know RHS is anonymous.  Proxies?)
+      func.setName(name);
+    }
     // Note that this is setting the value, not defining the variable.
     // Variable definition (addVariableToScope) is done when scope is populated.
-    this.setValueToScope(state.scope, decl['id']['name'], state.value);
+    this.setValueToScope(state.scope, name, value);
     decl = declarations[++n];
   }
   while (decl) {
