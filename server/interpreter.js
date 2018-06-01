@@ -4248,6 +4248,16 @@ Interpreter.prototype.installTypes = function() {
   /**
    * Add a .name property to this function object.  Implements
    * SetFunctionName from ES6 §9.2.11.
+   *
+   * N.B.: The setting is not subject to any perms checks, so it must
+   * not be possible for a user to cause this internal method to be
+   * invoked on any function object owned by another user.  Typically
+   * this will be enforced by only invoking this method at the time
+   * the function is constructed, or immediately afterwards by a
+   * lexically-enclosing expression having first used tested the
+   * expression which resulted in the function value with
+   * isAnonymousFunctionDefinition (q.v.).
+   *
    * TODO(ES6): allow name to be type Symbol.
    * @param {string} name Name of function.
    * @param {string=} prefix Prefix for function name (e.g. 'get', 'bound').
@@ -5276,6 +5286,19 @@ Descriptor.prototype.withValue = function(value) {
 /** @const */ Descriptor.none = new Descriptor(false, false, false);
 
 ///////////////////////////////////////////////////////////////////////////////
+// Static Analysis Functions
+///////////////////////////////////////////////////////////////////////////////
+
+/**
+ * The IsAnonymousFunctionDefinition specification method from ES6 §14.1.9
+ * @param {!Interpreter.Node} node The node to be tested.
+ * @return {boolean} True if node is an anonymous function expression.
+ */
+var isAnonymousFunctionDefinition = function(node) {
+  return node['type'] === 'FunctionExpression' && !node['id'];
+};
+
+///////////////////////////////////////////////////////////////////////////////
 // Step Functions: one to handle each node type.
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -6072,8 +6095,18 @@ stepFuncs_['ObjectExpression'] = function (thread, stack, state, node) {
     } else {
       throw SyntaxError('Unknown object structure: ' + keyNode['type']);
     }
+    var value = state.value;
+    var perms = state.scope.perms;
+    // Set name if anonymous function expression.
+    if (isAnonymousFunctionDefinition(node['properties'][n]['value'])) {
+      var func = /** @type {!Interpreter.prototype.Function} */(value);
+      // TODO(ES6): Check that func does not already have a 'name' own
+      // property before calling setName?  (Spec requires, but unclear
+      // why since we know RHS is anonymous.  Proxies?)
+      func.setName(key);
+    }
     // Set the property computed in the previous execution.
-    state.tmp_.set(key, state.value, state.scope.perms);
+    state.tmp_.defineProperty(key, Descriptor.wec.withValue(value), perms);
     state.n_ = ++n;
   }
   var /** ?Interpreter.Node */ property = node['properties'][n];

@@ -22,6 +22,12 @@
  * @author fraser@google.com (Neil Fraser)
  */
 
+// Test automatic setting of function .name properties.
+tests.functionNameSetting = function() {
+  var o = {myPropFunc: function() {}};
+  console.assert(o.myPropFunc.name === 'myPropFunc',
+      'Object expression sets anonymous function name');
+};
 
 // Run some tests of the various constructors and their associated
 // literals and prototype objects.
@@ -159,7 +165,7 @@ tests.ObjectIs = function() {
 };
 
 ///////////////////////////////////////////////////////////////////////////////
-// Function and Funciton.prototype
+// Function and Function.prototype
 
 tests.FunctionPrototypeBindClassConstructor = function() {
   var f = WeakMap.bind();

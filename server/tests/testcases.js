@@ -149,6 +149,12 @@ module.exports = [
     `,
     expected: 49 },
 
+  { name: 'objectExprSetsAnonFuncName', src: `
+    var o = {myPropFunc: function() {}};
+    o.myPropFunc.name;
+    `,
+    expected: 'myPropFunc' },
+
   { name: 'fExpWithParameter', src: `
     var v;
     var f = function(x) { v = x; };
