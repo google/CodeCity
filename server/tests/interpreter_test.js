@@ -1061,6 +1061,21 @@ exports.testClasses = function(t) {
 };
 
 /**
+ * Run a destructive test of Function.prototype.toString.
+ * @param {!T} t The test runner object.
+ */
+exports.testFunctionPrototypeToString = function(t) {
+  var name = 'Funciton.prototype.toString applied to anonymous NativeFunction';
+  var src = `
+      var parent = function parent() {};
+      delete escape.name;
+      Object.setPrototypeOf(escape, parent);
+      escape.toString().replace(/\\s*/g, '');  // Strip whitespace.
+  `;
+  runCustomTest(t, name, src, 'function(){[nativecode]}');
+};
+
+/**
  * Run a test of multiple simultaneous calls to Array.prototype.join.
  * @param {!T} t The test runner object.
  */
