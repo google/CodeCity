@@ -36,17 +36,23 @@ exports.startupFiles = {
 
 /**
  * Create an initialize an Interpreter instance.
+ * @param {!Interpreter.Options=} options Interpreter constructor
+ *     options.  (Default: see implementation.)
+ * @param {boolean=} init Load the standard startup files?  (Default: true.)
  * @return {!Interpreter}
  */
-exports.getInterpreter = function() {
-  var intrp = new Interpreter({
+exports.getInterpreter = function(options, init) {
+  options = options || {
     noLog: ['net', 'unhandled'],
     trimEval: true,
     trimProgram: true,
-  });
-  for (const file of Object.values(exports.startupFiles)) {
-    intrp.createThreadForSrc(file);
-    intrp.run();
+  };
+  var intrp = new Interpreter(options);
+  if (init || init === undefined) {
+    for (const file of Object.values(exports.startupFiles)) {
+      intrp.createThreadForSrc(file);
+      intrp.run();
+    }
   }
   return intrp;
 }

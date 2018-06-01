@@ -61,6 +61,31 @@ function runTest(t, name, src, expected) {
 }
 
 /**
+ * Run a test of the interpreter using an independent Interpreter
+ * instance, which may be created with non-default options and/or
+ * without the standard startup files.
+ * @param {!T} t The test runner object.
+ * @param {string} name The name of the test.
+ * @param {string} src The code to be evaled.
+ * @param {number|string|boolean|null|undefined} expected The expected
+ *     completion value.
+ * @param {!InterpreterOptions=} options Interpreter constructor options.
+ * @param {boolean=} init Load the standard startup files (Default: true.)
+ */
+function runCustomTest(t, name, src, expected, options, init) {
+  var intrp = getInterpreter(options, init);
+  try {
+    var thread = intrp.createThreadForSrc(src).thread;
+    intrp.run();
+  } catch (e) {
+    t.crash(name, util.format('%s\n%s', src, e.stack));
+    return;
+  }
+  var r = intrp.pseudoToNative(thread.value);
+  t.expect(name, r, expected, src);
+}
+
+/**
  * Run a more complicated test of the interpreter.  A new interpreter
  * instance is created for each test, and the caller can supply
  * callbacks to be run before beginning and between calls to .run().
@@ -173,7 +198,6 @@ exports.testSimple = function(t) {
   }
 };
 
-
 /**
  * Run a (destructive) test to ensure that 'this' is a primitive in
  * methods invoked on primitives.  (This also tests that interpreter
@@ -181,12 +205,11 @@ exports.testSimple = function(t) {
  */
 exports.testStrictBoxedThis = function(t) {
   var name = 'strictBoxedThis', src = `
-      Object.prototype.foo = function() { return typeof this; };
-      'foo'.foo();
+      String.prototype.foo = function() { return typeof this; };
+      'a primitive string'.foo();
   `;
-  runComplexTest(t, name, src, 'string');
+  runCustomTest(t, name, src, 'string');
 };
-
 
 /**
  * Run some tests of the various constructors and their associated
