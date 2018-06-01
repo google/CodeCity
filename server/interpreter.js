@@ -4212,8 +4212,9 @@ Interpreter.prototype.installTypes = function() {
     // and we need to audit all use of String() throughout the
     // interpreter (including implicit use inside v8-native
     // functions).
-    return 'function ' + this.get('name', intrp.ANYBODY) +
-        '() { [native code] }';
+    var pd = this.getOwnPropertyDescriptor('name', intrp.ANYBODY);
+    var name = pd ? pd.value : '';
+    return 'function ' + name + '() { [native code] }';
   };
 
   /**
@@ -4311,6 +4312,9 @@ Interpreter.prototype.installTypes = function() {
     this.node = node;
     this.scope = scope;
     if (node['id']) {
+      // BUG(cpcallen): Per ES5 §13 / ES6 §14.1.20, we should actually
+      // create a new scope for the BindingIdentifier here, rather
+      // than inserting it into the scope created at call time.
       this.setName(node['id']['name']);
     }
     var length = node['params'].length;
@@ -4821,8 +4825,9 @@ Interpreter.prototype.installTypes = function() {
         var func = frame.func;
         var name;
         try {
-          if (func.has('name', perms)) {
-            name = func.get('name', perms);
+          var pd = func.getOwnPropertyDescriptor('name', perms);
+          if (pd) {
+            name = pd.value;
           } else {
             name = 'anonymous function';
           }

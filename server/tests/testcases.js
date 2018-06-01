@@ -2432,9 +2432,9 @@ module.exports = [
     // Use eval to make parsing .stack easier.
     var e = eval('new Error;');
     var lines = e.stack.split('\\n');
-    Boolean(lines[0].match(/at "new Error;" 1:1/));
+    lines[0].trim();
     `,
-    expected: true },
+    expected: 'at "new Error;" 1:1' },
 
   { name: 'thrown Error has .stack', src: `
     try {
@@ -2442,9 +2442,17 @@ module.exports = [
     } catch (e) {
       var lines = e.stack.split('\\n');
     }
-    Boolean(lines[0].match(/at buggy 1:1/));
+    lines[0].trim();
     `,
-    expected: true },
+    expected: 'at buggy 1:19' },
+
+  { name: 'Error .stack correctly reports anonymous function', src: `
+    // Use eval to make parsing .stack easier.
+    var e = eval('(function () {return new Error;})()');
+    var lines = e.stack.split('\\n');
+    lines[0].trim();
+    `,
+    expected: 'at anonymous function 1:21' },
 
   /////////////////////////////////////////////////////////////////////////////
   // JSON
