@@ -68,6 +68,7 @@ CodeCity.startup = function(configFile) {
     methodNames: true,
     stackLimit: 10000,
   });
+  CodeCity.interpreter.unhandledException = CodeCity.unhandledException;
   CodeCity.initSystemFunctions();
   CodeCity.initLibraryFunctions();
   if (checkpoint) {
@@ -250,6 +251,28 @@ CodeCity.chooseCheckpointToDelete = function(checkpoints) {
 CodeCity.fileSize = function(fileName) {
   var fullPath = path.join(CodeCity.databaseDirectory, fileName);
   return fs.statSync(fullPath).size;
+};
+
+/**
+ * Method to be installed on Interprerter instance, to be called in
+ * the event of an unhandled exception.
+ * @this {!Interpreter}
+ * param {!Interpreter.Thread} thread The thread whose stack is to be unwound.
+ * @param {!Interpreter.Thread} thread The thread whose stack is to be unwound.
+ * @param {Interpreter.Value=} value Value computed, returned or thrown.
+ */
+CodeCity.unhandledException = function(thread, value) {
+  // Log exception and stack trace.
+  if (value instanceof this.Error) {
+    console.log('Unhandled %s', value);
+    var stackTrace = value.get('stack', this.ROOT);
+    if (stackTrace) {
+      console.log(stackTrace);
+    }
+  } else {
+    var native = this.pseudoToNative(value);
+    console.log('Unhandled exception with value: %o', native);
+  }
 };
 
 /**
