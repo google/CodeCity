@@ -32,6 +32,10 @@ const {getInterpreter} = require('./interpreter_common');
 const {T} = require('./testing');
 const testcases = require('./testcases');
 
+///////////////////////////////////////////////////////////////////////////////
+// Test helper functions.
+///////////////////////////////////////////////////////////////////////////////
+
 // Prepare static interpreter instance for runTest.
 var interpreter = getInterpreter();
 interpreter.addVariableToScope(interpreter.global, 'src');
@@ -183,6 +187,10 @@ async function runAsyncTest(t, name, src, expected, initFunc, sideFunc) {
   t.expect(name, r, expected, src);
 }
 
+///////////////////////////////////////////////////////////////////////////////
+// Tests: external simple testcases
+///////////////////////////////////////////////////////////////////////////////
+
 /**
  * Run the simple tests in testcases.js
  * @param {!T} t The test runner object.
@@ -198,6 +206,10 @@ exports.testSimple = function(t) {
   }
 };
 
+///////////////////////////////////////////////////////////////////////////////
+// Tests: interpreter internals
+///////////////////////////////////////////////////////////////////////////////
+
 /**
  * Run a (destructive) test to ensure that 'this' is a primitive in
  * methods invoked on primitives.  (This also tests that interpreter
@@ -209,176 +221,6 @@ exports.testStrictBoxedThis = function(t) {
       'a primitive string'.foo();
   `;
   runCustomTest(t, name, src, 'string');
-};
-
-/**
- * Run some tests of the various constructors and their associated
- * literals and prototype objects.
- * @param {!T} t The test runner object.
- */
-exports.testClasses = function(t) {
-  var classes = {
-    Object: {
-      prototypeProto: 'null',
-      literal: '{}'
-    },
-    Function: {
-      prototypeType: 'function',
-      literal: 'function(){}'
-    },
-    Array: {
-      literal: '[]'
-    },
-    RegExp: {
-      prototypeClass: 'Object', // Was 'RegExp' in ES5.1.
-      literal: '/foo/'
-    },
-    Date: {
-      prototypeClass: 'Object', // Was 'RegExp' in ES5.1.
-      functionNotConstructor: true  // Date() doesn't construct.
-    },
-    Error: {},
-    EvalError: {
-      prototypeProto: 'Error.prototype',
-      class: 'Error'
-    },
-    RangeError: {
-      prototypeProto: 'Error.prototype',
-      class: 'Error'
-    },
-    ReferenceError: {
-      prototypeProto: 'Error.prototype',
-      class: 'Error'
-    },
-    SyntaxError: {
-      prototypeProto: 'Error.prototype',
-      class: 'Error'
-    },
-    TypeError: {
-      prototypeProto: 'Error.prototype',
-      class: 'Error'
-    },
-    URIError: {
-      prototypeProto: 'Error.prototype',
-      class: 'Error'
-    },
-    PermissionError: {
-      prototypeProto: 'Error.prototype',
-      class: 'Error'
-    },
-    Boolean: {
-      literal: 'false',
-      literalType: 'boolean',
-      noInstance: true,
-    },
-    Number: {
-      literal: '42',
-      literalType: 'number',
-      noInstance: true,
-    },
-    String: {
-      literal: '"hello"',
-      literalType: 'string',
-      noInstance: true,
-    },
-    WeakMap: {
-      prototypeClass: 'Object',
-      functionNotConstructor: true  // WeakMap() can't be called without new.
-    },
-  };
-  for (var c in classes) {
-    var name, src, tc = classes[c];
-    // Check constructor is a function:
-    name = c + 'IsFunction';
-    src = 'typeof ' + c + ';';
-    runTest(t, name, src, 'function');
-    // Check constructor's proto is Function.prototype
-    name = c + 'ProtoIsFunctionPrototype';
-    src = 'Object.getPrototypeOf(' + c + ') === Function.prototype;';
-    runTest(t, name, src, true);
-    // Check prototype is of correct type:
-    var prototypeType = (tc.prototypeType || 'object');
-    name = c + 'PrototypeIs' + prototypeType
-    src = 'typeof ' + c + '.prototype;';
-    runTest(t, name, src, prototypeType);
-    // Check prototype has correct class:
-    var prototypeClass = (tc.prototypeClass || tc.class || c);
-    name = c + 'PrototypeClassIs' + prototypeClass;
-    src = 'Object.prototype.toString.apply(' + c + '.prototype);';
-    runTest(t, name, src, '[object ' + prototypeClass + ']');
-    // Check prototype has correct proto:
-    var prototypeProto = (tc.prototypeProto || 'Object.prototype');
-    name = c + 'PrototypeProtoIs' + prototypeProto;
-    src = 'Object.getPrototypeOf(' + c + '.prototype) === ' +
-        prototypeProto + ';';
-    runTest(t, name, src, true);
-    // Check prototype's .constructor is constructor:
-    name = c + 'PrototypeConstructorIs' + c;
-    src = c + '.prototype.constructor === ' + c + ';';
-    runTest(t, name, src, true);
-
-    var cls = tc.class || c;
-    if (!tc.noInstance) {
-      // Check instance's type:
-      name = c + 'InstanceIs' + prototypeType;
-      src = 'typeof (new ' + c + ');';
-      runTest(t, name, src, prototypeType);
-      // Check instance's proto:
-      name = c + 'InstancePrototypeIs' + c + 'Prototype';
-      src = 'Object.getPrototypeOf(new ' + c + ') === ' + c + '.prototype;';
-      runTest(t, name, src, true);
-      // Check instance's class:
-      name = c + 'InstanceClassIs' + cls;
-      src = 'Object.prototype.toString.apply(new ' + c + ');';
-      runTest(t, name, src, '[object ' + cls + ']');
-      // Check instance is instanceof its contructor:
-      name = c + 'InstanceIsInstanceof' + c;
-      src = '(new ' + c + ') instanceof ' + c + ';';
-      runTest(t, name, src, true);
-      if (!tc.functionNotConstructor) {
-        // Recheck instances when constructor called as function:
-        // Recheck instance's type:
-        name = c + 'ReturnIs' + prototypeType;
-        src = 'typeof ' + c + '();';
-        runTest(t, name, src, prototypeType);
-        // Recheck instance's proto:
-        name = c + 'ReturnPrototypeIs' + c + 'Prototype';
-        src = 'Object.getPrototypeOf(' + c + '()) === ' + c + '.prototype;';
-        runTest(t, name, src, true);
-        // Recheck instance's class:
-        name = c + 'ReturnClassIs' + cls;
-        src = 'Object.prototype.toString.apply(' + c + '());';
-        runTest(t, name, src, '[object ' + cls + ']');
-        // Recheck instance is instanceof its contructor:
-        name = c + 'ReturnIsInstanceof' + c;
-        src = c + '() instanceof ' + c + ';';
-        runTest(t, name, src, true);
-      }
-    }
-    if (tc.literal) {
-      // Check literal's type:
-      var literalType = (tc.literalType || prototypeType);
-      name = c + 'LiteralIs' + literalType;
-      src = 'typeof (' + tc.literal + ');';
-      runTest(t, name, src, literalType);
-      // Check literal's proto:
-      name = c + 'LiteralPrototypeIs' + c + 'Prototype';
-      src = 'Object.getPrototypeOf(' + tc.literal + ') === ' + c +
-          '.prototype;';
-      runTest(t, name, src, true);
-      // Check literal's class:
-      name = c + 'LiteralClassIs' + cls;
-      src = 'Object.prototype.toString.apply(' + tc.literal + ');';
-      runTest(t, name, src, '[object ' + cls + ']');
-      // Primitives can never be instances.
-      if (literalType === 'object' || literalType === 'function') {
-        // Check literal is instanceof its contructor.
-        name = c + 'LiteralIsInstanceof' + c;
-        src = '(' + tc.literal + ') instanceof ' + c + ';';
-        runTest(t, name, src, true);
-      }
-    }
-  }
 };
 
 /**
@@ -779,30 +621,6 @@ exports.testAeca = function(t) {
 };
 
 /**
- * Run some tests of Number.toString(radix) with various different
- * radix arguments.
- * @param {!T} t The test runner object.
- */
-exports.testNumberToString = function(t) {
-  var cases = [
-    ['(42).toString()', '42'],
-    ['(42).toString(16)', '2a'],
-    //['(-42.4).toString(5)', '-132.2'], Node incorrectly reports '-132.144444'.
-    ['(42).toString("2")', '101010'],
-    ['(-3.14).toString()', '-3.14'],
-    ['(999999999999999999999999999).toString()', '1e+27'],
-    ['(NaN).toString()', 'NaN'],
-    ['(Infinity).toString()', 'Infinity'],
-    ['(-Infinity).toString()', '-Infinity'],
-  ];
-  for (var i = 0; i < cases.length; i++) {
-    var tc = cases[i];
-    var src = tc[0] + ';';
-    runTest(t, 'testNumberToString: ' + tc[0], src, tc[1]);
-  }
-};
-
-/**
  * Run a test of asynchronous functions:
  * @param {!T} t The test runner object.
  */
@@ -1068,6 +886,228 @@ exports.testStartStop = async function(t) {
   t.expect(name, r, expected, src + '\n(after 39ms)');
 };
 
+///////////////////////////////////////////////////////////////////////////////
+// Tests: builtins
+///////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Run some tests of the various constructors and their associated
+ * literals and prototype objects.
+ * @param {!T} t The test runner object.
+ */
+exports.testClasses = function(t) {
+  var classes = {
+    Object: {
+      prototypeProto: 'null',
+      literal: '{}'
+    },
+    Function: {
+      prototypeType: 'function',
+      literal: 'function(){}'
+    },
+    Array: {
+      literal: '[]'
+    },
+    RegExp: {
+      prototypeClass: 'Object', // Was 'RegExp' in ES5.1.
+      literal: '/foo/'
+    },
+    Date: {
+      prototypeClass: 'Object', // Was 'RegExp' in ES5.1.
+      functionNotConstructor: true  // Date() doesn't construct.
+    },
+    Error: {},
+    EvalError: {
+      prototypeProto: 'Error.prototype',
+      class: 'Error'
+    },
+    RangeError: {
+      prototypeProto: 'Error.prototype',
+      class: 'Error'
+    },
+    ReferenceError: {
+      prototypeProto: 'Error.prototype',
+      class: 'Error'
+    },
+    SyntaxError: {
+      prototypeProto: 'Error.prototype',
+      class: 'Error'
+    },
+    TypeError: {
+      prototypeProto: 'Error.prototype',
+      class: 'Error'
+    },
+    URIError: {
+      prototypeProto: 'Error.prototype',
+      class: 'Error'
+    },
+    PermissionError: {
+      prototypeProto: 'Error.prototype',
+      class: 'Error'
+    },
+    Boolean: {
+      literal: 'false',
+      literalType: 'boolean',
+      noInstance: true,
+    },
+    Number: {
+      literal: '42',
+      literalType: 'number',
+      noInstance: true,
+    },
+    String: {
+      literal: '"hello"',
+      literalType: 'string',
+      noInstance: true,
+    },
+    WeakMap: {
+      prototypeClass: 'Object',
+      functionNotConstructor: true  // WeakMap() can't be called without new.
+    },
+  };
+  for (var c in classes) {
+    var name, src, tc = classes[c];
+    // Check constructor is a function:
+    name = c + 'IsFunction';
+    src = 'typeof ' + c + ';';
+    runTest(t, name, src, 'function');
+    // Check constructor's proto is Function.prototype
+    name = c + 'ProtoIsFunctionPrototype';
+    src = 'Object.getPrototypeOf(' + c + ') === Function.prototype;';
+    runTest(t, name, src, true);
+    // Check prototype is of correct type:
+    var prototypeType = (tc.prototypeType || 'object');
+    name = c + 'PrototypeIs' + prototypeType
+    src = 'typeof ' + c + '.prototype;';
+    runTest(t, name, src, prototypeType);
+    // Check prototype has correct class:
+    var prototypeClass = (tc.prototypeClass || tc.class || c);
+    name = c + 'PrototypeClassIs' + prototypeClass;
+    src = 'Object.prototype.toString.apply(' + c + '.prototype);';
+    runTest(t, name, src, '[object ' + prototypeClass + ']');
+    // Check prototype has correct proto:
+    var prototypeProto = (tc.prototypeProto || 'Object.prototype');
+    name = c + 'PrototypeProtoIs' + prototypeProto;
+    src = 'Object.getPrototypeOf(' + c + '.prototype) === ' +
+        prototypeProto + ';';
+    runTest(t, name, src, true);
+    // Check prototype's .constructor is constructor:
+    name = c + 'PrototypeConstructorIs' + c;
+    src = c + '.prototype.constructor === ' + c + ';';
+    runTest(t, name, src, true);
+
+    var cls = tc.class || c;
+    if (!tc.noInstance) {
+      // Check instance's type:
+      name = c + 'InstanceIs' + prototypeType;
+      src = 'typeof (new ' + c + ');';
+      runTest(t, name, src, prototypeType);
+      // Check instance's proto:
+      name = c + 'InstancePrototypeIs' + c + 'Prototype';
+      src = 'Object.getPrototypeOf(new ' + c + ') === ' + c + '.prototype;';
+      runTest(t, name, src, true);
+      // Check instance's class:
+      name = c + 'InstanceClassIs' + cls;
+      src = 'Object.prototype.toString.apply(new ' + c + ');';
+      runTest(t, name, src, '[object ' + cls + ']');
+      // Check instance is instanceof its contructor:
+      name = c + 'InstanceIsInstanceof' + c;
+      src = '(new ' + c + ') instanceof ' + c + ';';
+      runTest(t, name, src, true);
+      if (!tc.functionNotConstructor) {
+        // Recheck instances when constructor called as function:
+        // Recheck instance's type:
+        name = c + 'ReturnIs' + prototypeType;
+        src = 'typeof ' + c + '();';
+        runTest(t, name, src, prototypeType);
+        // Recheck instance's proto:
+        name = c + 'ReturnPrototypeIs' + c + 'Prototype';
+        src = 'Object.getPrototypeOf(' + c + '()) === ' + c + '.prototype;';
+        runTest(t, name, src, true);
+        // Recheck instance's class:
+        name = c + 'ReturnClassIs' + cls;
+        src = 'Object.prototype.toString.apply(' + c + '());';
+        runTest(t, name, src, '[object ' + cls + ']');
+        // Recheck instance is instanceof its contructor:
+        name = c + 'ReturnIsInstanceof' + c;
+        src = c + '() instanceof ' + c + ';';
+        runTest(t, name, src, true);
+      }
+    }
+    if (tc.literal) {
+      // Check literal's type:
+      var literalType = (tc.literalType || prototypeType);
+      name = c + 'LiteralIs' + literalType;
+      src = 'typeof (' + tc.literal + ');';
+      runTest(t, name, src, literalType);
+      // Check literal's proto:
+      name = c + 'LiteralPrototypeIs' + c + 'Prototype';
+      src = 'Object.getPrototypeOf(' + tc.literal + ') === ' + c +
+          '.prototype;';
+      runTest(t, name, src, true);
+      // Check literal's class:
+      name = c + 'LiteralClassIs' + cls;
+      src = 'Object.prototype.toString.apply(' + tc.literal + ');';
+      runTest(t, name, src, '[object ' + cls + ']');
+      // Primitives can never be instances.
+      if (literalType === 'object' || literalType === 'function') {
+        // Check literal is instanceof its contructor.
+        name = c + 'LiteralIsInstanceof' + c;
+        src = '(' + tc.literal + ') instanceof ' + c + ';';
+        runTest(t, name, src, true);
+      }
+    }
+  }
+};
+
+/**
+ * Run a test of multiple simultaneous calls to Array.prototype.join.
+ * @param {!T} t The test runner object.
+ */
+exports.testArrayPrototypeJoinParallelism = function(t) {
+  var src = `
+      // Make String() do a suspend(), to tend to cause multiple
+      // simultaneous .join() calls become badly interleved with each
+      // other.
+      String = function(value) {
+        suspend();
+        return (new 'String')(value);  // Call original.
+      };
+
+      var arr = [1, [2, [3, [4, 5]]]];
+      // Set up another Array.prototype.join traversing a subset of
+      // the same objects to screw with us.
+      new Thread(function() { arr[1].join(); });
+      // Try to do the join anyway.
+      arr.join()
+  `;
+  runComplexTest(t, 'Array.prototype.join parallel', src, '1,2,3,4,5');
+};
+
+/**
+ * Run some tests of Number.toString(radix) with various different
+ * radix arguments.
+ * @param {!T} t The test runner object.
+ */
+exports.testNumberToString = function(t) {
+  var cases = [
+    ['(42).toString()', '42'],
+    ['(42).toString(16)', '2a'],
+    //['(-42.4).toString(5)', '-132.2'], Node incorrectly reports '-132.144444'.
+    ['(42).toString("2")', '101010'],
+    ['(-3.14).toString()', '-3.14'],
+    ['(999999999999999999999999999).toString()', '1e+27'],
+    ['(NaN).toString()', 'NaN'],
+    ['(Infinity).toString()', 'Infinity'],
+    ['(-Infinity).toString()', '-Infinity'],
+  ];
+  for (var i = 0; i < cases.length; i++) {
+    var tc = cases[i];
+    var src = tc[0] + ';';
+    runTest(t, 'testNumberToString: ' + tc[0], src, tc[1]);
+  }
+};
+
 /**
  * Run tests of the networking subsystem.
  * @param {!T} t The test runner object.
@@ -1188,28 +1228,4 @@ exports.testNetworking = async function(t) {
       resolve('OK');
    `;
   await runAsyncTest(t, name, src, 'OK');
-};
-
-/**
- * Run a test of multiple simultaneous calls to Array.prototype.join.
- * @param {!T} t The test runner object.
- */
-exports.testArrayPrototypeJoinParallelism = function(t) {
-  var src = `
-      // Make String() do a suspend(), to tend to cause multiple
-      // simultaneous .join() calls become badly interleved with each
-      // other.
-      String = function(value) {
-        suspend();
-        return (new 'String')(value);  // Call original.
-      };
-
-      var arr = [1, [2, [3, [4, 5]]]];
-      // Set up another Array.prototype.join traversing a subset of
-      // the same objects to screw with us.
-      new Thread(function() { arr[1].join(); });
-      // Try to do the join anyway.
-      arr.join()
-  `;
-  runComplexTest(t, 'Array.prototype.join parallel', src, '1,2,3,4,5');
 };
