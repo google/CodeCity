@@ -32,6 +32,10 @@ tests.functionNameSetting = function() {
   var o = {myPropFunc: function() {}};
   console.assert(o.myPropFunc.name === 'myPropFunc',
       'Object expression sets anonymous function name');
+
+  var myVarDeclFunc = function() {};
+  console.assert(myVarDeclFunc.name === 'myVarDeclFunc',
+      'Variable declaration sets anonymous function name');
 };
 
 // Run some tests of the various constructors and their associated

@@ -162,6 +162,12 @@ module.exports = [
     `,
     expected: 'myPropFunc' },
 
+  { name: 'varDeclSetsAnonFuncName', src: `
+    var myVarDeclFunc = function() {};
+    myVarDeclFunc.name;
+    `,
+    expected: 'myVarDeclFunc' },
+
   { name: 'fExpWithParameter', src: `
     var v;
     var f = function(x) { v = x; };
