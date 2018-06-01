@@ -42,6 +42,8 @@ diffEditor.init = function() {
   var oldSource = window.originalSource;
   if (newSource && oldSource) {
     diffEditor.setString(newSource, oldSource);
+    window.initialSource = undefined;
+    window.originalSource = undefined;
   }
 };
 

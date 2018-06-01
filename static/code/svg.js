@@ -37,6 +37,13 @@ svgEditor.init = function() {
 
   svgEditor.canvas = new $.SvgCanvas(container, config);
   svgEditor.resize();
+
+  // Check to see if the parent window left us an initial source to render.
+  var source = window.initialSource;
+  if (source) {
+    svgEditor.setString(source);
+    window.initialSource = undefined;
+  }
 };
 
 /**
@@ -59,7 +66,6 @@ svgEditor.resize = function() {
  * @param {string} xmlString SVG rendered as text.
  */
 svgEditor.setString = function(xmlString) {
-  xmlString = '<svg xmlns="http://www.w3.org/2000/svg">' + xmlString + '</svg>';
   svgEditor.canvas.setSvgString(xmlString);
 };
 
@@ -68,12 +74,23 @@ svgEditor.setString = function(xmlString) {
  * @return {string} SVG rendered as text.
  */
 svgEditor.getString = function() {
-  // The user's image is wrapped in "Layer 1".  Extract the source from there.
-  var source = svgEditor.canvas.svgToString(document.querySelector(
-      '#editorContainer g.layer'), -1);
-  source =
-      source.replace(/^\s*<g class="layer">\s*<title>[^<]*<\/title>\s*/, '')
-      .replace(/\s*<\/g>\s*$/, '');
+  var rootSvg = svgEditor.canvas.getContentElem();
+  // The user's image is the wrapped in the first group.
+  var contentSvg = rootSvg.querySelector('svg g').cloneNode(true);
+  // Remove the layer title.
+  var title = contentSvg.querySelector('g>title');
+  title.parentNode.removeChild(title);
+  // Walk the tree removing IDs.
+  var tw = document.createTreeWalker(contentSvg, NodeFilter.SHOW_ELEMENT);
+  do {
+    var node = tw.currentNode;
+    node.removeAttribute('id');
+  } while (tw.nextNode());
+
+  var source = svgEditor.canvas.svgToString(contentSvg, -1);
+  // Remove the wrapping <g>.
+  source = source.replace(/^\s*<g[^>]*>\s*/i, '');
+  source = source.replace(/\s*<\/g>\s*$/i, '');
   return source;
 };
 
