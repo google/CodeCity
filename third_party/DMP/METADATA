@@ -1,0 +1,13 @@
+name: "diff-match-patch"
+description:
+    "Library required for synchronizing plain text."
+
+third_party {
+  url {
+    type: GIT
+    value: "https://github.com/google/diff-match-patch"
+  }
+  version: "41788a5d63f7682991da5724e84db88ae6cbf6bf"
+  last_upgrade_date { year: 2018 month: 5 day: 21 }
+  license_type: NOTICE
+}
