@@ -24,6 +24,11 @@
 
 // Test automatic setting of function .name properties.
 tests.functionNameSetting = function() {
+  var myAssignedFunc;
+  myAssignedFunc = function() {};
+  console.assert(myAssignedFunc.name === 'myAssignedFunc',
+      'Assignment expression sets anonymous function name');
+
   var o = {myPropFunc: function() {}};
   console.assert(o.myPropFunc.name === 'myPropFunc',
       'Object expression sets anonymous function name');

@@ -149,6 +149,13 @@ module.exports = [
     `,
     expected: 49 },
 
+  { name: 'assignmentSetsAnonFuncName', src: `
+    var myAssignedFunc;
+    myAssignedFunc = function() {};
+    myAssignedFunc.name;
+    `,
+    expected: 'myAssignedFunc' },
+
   { name: 'objectExprSetsAnonFuncName', src: `
     var o = {myPropFunc: function() {}};
     o.myPropFunc.name;
