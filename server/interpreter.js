@@ -5307,6 +5307,15 @@ var isIdentifierRef = function(node) {
   return node['type'] === 'Identifier';
 };
 
+/**
+ * Returns true iff node is a MemberExpression.
+ * @param {!Interpreter.Node} node The node to be tested.
+ * @return {boolean} True if node is an identifier.
+ */
+var isMemberRef = function(node) {
+  return node['type'] === 'MemberExpression';
+};
+
 ///////////////////////////////////////////////////////////////////////////////
 // Step Functions: one to handle each node type.
 ///////////////////////////////////////////////////////////////////////////////
@@ -5396,12 +5405,13 @@ stepFuncs_['AssignmentExpression'] = function (thread, stack, state, node) {
       value = rightValue;
       // Set name if anonymous function expression.
       if (isAnonymousFunctionDefinition(node['right']) &&
-          isIdentifierRef(node['left'])) {
+          (isIdentifierRef(node['left']) ||
+           (this.options.methodNames && isMemberRef(node['left'])))) {
         var func = /** @type {!Interpreter.prototype.Function} */(value);
         // TODO(ES6): Check that func does not already have a 'name'
         // own property before calling setName?  (Spec requires, but
         // unclear why since we know RHS is anonymous.  Proxies?)
-        func.setName(node['left']['name']);
+        func.setName(state.ref[1]);
       }
       break;
     // All the rest are simple and similar.

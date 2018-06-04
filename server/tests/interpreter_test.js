@@ -475,6 +475,33 @@ exports.testBinaryOp = function(t) {
 };
 
 /**
+ * Run tests of setting the name of an anonymous function in an
+ * assignment expression where the LHS is a member expression.  This
+ * is CodeCity-specific behaviour controlled by a server flag.
+ */
+exports.testFunctionNameSetting = function(t) {
+  // Tests of the methodNames option which causes the functions that
+  // result from evaluating anonymous function expressions to get a
+  // .name when assigned to a property.
+  var name = "Assignment to property doesn't set anonymous function name";
+  var src = `
+      var o = {};
+      o.myMethod = function() {};
+      var gOPD = new 'Object.getOwnPropertyDescriptor';
+      gOPD(o.myMethod, 'name');
+  `;
+  runCustomTest(t, name, src, undefined, {methodNames: false}, false);
+  
+  name = 'Assignment to property sets anonymous function name';
+  src = `
+      var o = {};
+      o.myMethod = function() {};
+      o.myMethod.name;
+  `;
+  runCustomTest(t, name, src, 'myMethod', {methodNames: true}, false);
+};
+
+/**
  * Run some tests of the Abstract Relational Comparison Algorithm, as
  * defined in §11.8.5 of the ES5.1 spec and as embodied by the '<'
  * operator.
