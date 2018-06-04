@@ -67,6 +67,7 @@ CodeCity.startup = function(opt_databaseDirectory) {
   CodeCity.interpreter = new Interpreter({
     trimEval: true,
     trimProgram: true,
+    methodNames: true,
   });
   CodeCity.initSystemFunctions();
   if (i === -1) {
