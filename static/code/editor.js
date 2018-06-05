@@ -389,6 +389,7 @@ Code.Editor.mostConfidentEditor = function() {
  * @param {string} src Plain text contents.
  */
 Code.Editor.setSourceToAllEditors = function(src) {
+  Code.Editor.uncreatedEditorSource = src;
   for (var i = 0, editor; (editor = Code.Editor.editors[i]); i++) {
     editor.setSource(src);
   }
@@ -632,10 +633,8 @@ Code.valueEditor.getSource = function() {
 Code.valueEditor.setSource = function(source) {
   if (this.created) {
     this.editor_.setValue(source);
-  } else {
-    Code.Editor.uncreatedEditorSource = source;
   }
-  this.lastSavedSource_ = Code.valueEditor.getSource();
+  this.lastSavedSource_ = this.getSource();
 };
 
 /**
@@ -710,10 +709,8 @@ Code.stringEditor.setSource = function(source) {
   }
   if (this.created) {
     this.textarea_.value = str;
-  } else {
-    Code.Editor.uncreatedEditorSource = source;
   }
-  this.lastSavedSource_ = Code.stringEditor.getSource();
+  this.lastSavedSource_ = this.getSource();
 };
 
 /**

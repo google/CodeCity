@@ -1083,12 +1083,12 @@ CCC.World.publishPanorama = function() {
     CCC.World.svgZoom(content);
     // Add event handlers on all <a class="command"> links.
     var commands = content.querySelectorAll('a.command');
-    for (var i = 0, command; command = commands[i]; i++) {
+    for (var i = 0, command; (command = commands[i]); i++) {
       command.addEventListener('click', CCC.Common.commandFunction, false);
     }
     // Add event handlers on all <svg class="menuIcon"> menus.
     var menus = content.querySelectorAll('svg.menuIcon');
-    for (var i = 0, menu; menu = menus[i]; i++) {
+    for (var i = 0, menu; (menu = menus[i]); i++) {
       menu.addEventListener('click', CCC.Common.openMenu, false);
     }
     // Add an event handler to a reload icon.
@@ -1392,7 +1392,7 @@ CCC.World.xmlToHtml = function(dom) {
         return null;
       }
       var element = document.createElement(dom.tagName);
-      for (var i = 0, attr; attr = dom.attributes[i]; i++) {
+      for (var i = 0, attr; (attr = dom.attributes[i]); i++) {
         if (CCC.World.xmlToHtml.ATTRIBUTE_NAMES.indexOf(attr.name) === -1) {
           console.log('HTML attribute not in whitelist: ' +
               '<' + dom.tagName + ' ' + attr.name + '="' + attr.value + '">');
@@ -1413,7 +1413,7 @@ CCC.World.xmlToHtml = function(dom) {
           }
         }
       }
-      for (var i = 0, childDom; childDom = dom.childNodes[i]; i++) {
+      for (var i = 0, childDom; (childDom = dom.childNodes[i]); i++) {
         var childNode = CCC.World.xmlToHtml(childDom);
         if (childNode) {
           element.appendChild(childNode);
@@ -1607,7 +1607,7 @@ CCC.World.xmlToSvg = function(dom) {
         return null;
       }
       var svg = document.createElementNS(CCC.Common.NS, dom.tagName);
-      for (var i = 0, attr; attr = dom.attributes[i]; i++) {
+      for (var i = 0, attr; (attr = dom.attributes[i]); i++) {
         if (CCC.World.xmlToSvg.ATTRIBUTE_NAMES.indexOf(attr.name) === -1) {
           console.log('SVG attribute not in whitelist: ' +
               '<' + dom.tagName + ' ' + attr.name + '="' + attr.value + '">');
@@ -1626,7 +1626,7 @@ CCC.World.xmlToSvg = function(dom) {
           svg.setAttribute(attr.name, attr.value);
         }
       }
-      for (var i = 0, childDom; childDom = dom.childNodes[i]; i++) {
+      for (var i = 0, childDom; (childDom = dom.childNodes[i]); i++) {
         var childSvg = CCC.World.xmlToSvg(childDom);
         if (childSvg) {
           svg.appendChild(childSvg);
