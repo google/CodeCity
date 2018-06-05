@@ -130,7 +130,7 @@ $.www.editor.www.jssp = [
   '<!DOCTYPE html>',
   '<html><head>',
   '  <title>Code Editor for <%= name %>.<%= key %></title>',
-  '  <link href="/static/jfk.css" rel="stylesheet">',
+  '  <link href="/static/style/jfk.css" rel="stylesheet">',
   '  <link href="/static/CodeMirror/codemirror.css" rel="stylesheet">',
   '  <style>',
   '    body {margin: 0; font-family: sans-serif}',
