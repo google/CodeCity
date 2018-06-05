@@ -156,6 +156,7 @@ textarea {
   position: absolute;
   right: 0;
   top: 0;
+  pointer-events: none;
 }
 
 #editorButter>div {
@@ -170,6 +171,7 @@ textarea {
   box-shadow: 0 2px 4px rgba(0,0,0,0.2);
   display: inline-block;
   padding: 0 10px;
+  pointer-events: auto;
 }
 
 #editorSave {
@@ -180,7 +182,9 @@ textarea {
 
 #editorHeader {
   margin-top: 5px;
-  overflow-x: auto;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 #editorTabs>span {
