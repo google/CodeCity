@@ -4830,15 +4830,15 @@ Interpreter.prototype.installTypes = function() {
     }
     var stack = [];
     for (var i = 0; i < callers.length; i++) {
-      var line = '    ';
+      var /** string */ line = '    ';
       var frame = callers[i];
       if ('func' in frame) {
-        var func = frame.func;
-        var name;
+        var /** !Interpreter.prototype.Function */ func = frame.func;
+        var /** string */ name;
         try {
           var pd = func.getOwnPropertyDescriptor('name', perms);
           if (pd) {
-            name = pd.value;
+            name = String(pd.value);
           } else {
             name = 'anonymous function';
           }
