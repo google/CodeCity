@@ -4213,7 +4213,7 @@ Interpreter.prototype.installTypes = function() {
     // interpreter (including implicit use inside v8-native
     // functions).
     var pd = this.getOwnPropertyDescriptor('name', intrp.ANYBODY);
-    var name = pd ? pd.value : '';
+    var name = pd && typeof pd.value === 'string' ? pd.value : '';
     return 'function ' + name + '() { [native code] }';
   };
 
