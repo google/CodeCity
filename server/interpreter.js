@@ -2413,8 +2413,9 @@ Interpreter.prototype.nativeToPseudo = function(nativeObj, owner) {
   for (var i = 0; i < keys.length; i++) {
     var key = keys[i];
     var desc = Object.getOwnPropertyDescriptor(nativeObj, key);
-    desc.value = this.nativeToPseudo(desc.value, owner);
-    pseudoObj.defineProperty(key, /** @type {!Descriptor} */ (desc), owner);
+    var pd = new Descriptor(desc.writable, desc.enumerable, desc.configurable);
+    pd.value = this.nativeToPseudo(desc.value, owner);
+    pseudoObj.defineProperty(key, pd, owner);
   }
   return pseudoObj;
 };
@@ -3419,14 +3420,14 @@ Interpreter.ObjectLike.prototype.proto;
 /**
  * @param {string} key
  * @param {!Interpreter.Owner} perms
- * @return {!Descriptor}
+ * @return {!Interpreter.Descriptor|undefined}
  */
 Interpreter.ObjectLike.prototype.getOwnPropertyDescriptor =
     function(key, perms) {};
 
 /**
  * @param {string} key
- * @param {!Descriptor} desc
+ * @param {!Interpreter.Descriptor} desc
  * @param {!Interpreter.Owner} perms
  */
 Interpreter.ObjectLike.prototype.defineProperty =
@@ -3513,7 +3514,7 @@ Interpreter.prototype.Object.prototype.preventExtensions = function(perms) {
 /**
  * @param {string} key
  * @param {!Interpreter.Owner} perms
- * @return {!Descriptor}
+ * @return {!Interpreter.Descriptor|undefined}
  */
 Interpreter.prototype.Object.prototype.getOwnPropertyDescriptor = function(
     key, perms) {
@@ -3522,7 +3523,7 @@ Interpreter.prototype.Object.prototype.getOwnPropertyDescriptor = function(
 
 /**
  * @param {string} key
- * @param {!Descriptor} desc
+ * @param {!Interpreter.Descriptor} desc
  * @param {!Interpreter.Owner=} perms
  */
 Interpreter.prototype.Object.prototype.defineProperty = function(
@@ -3833,7 +3834,7 @@ Interpreter.prototype.Box = function(prim) {
 /**
  * @param {string} key
  * @param {!Interpreter.Owner} perms
- * @return {!Descriptor}
+ * @return {!Interpreter.Descriptor|undefined}
  */
 Interpreter.prototype.Box.prototype.getOwnPropertyDescriptor = function(
     key, perms) {
@@ -3841,7 +3842,7 @@ Interpreter.prototype.Box.prototype.getOwnPropertyDescriptor = function(
 }
 /**
  * @param {string} key
- * @param {!Descriptor} desc
+ * @param {!Interpreter.Descriptor} desc
  * @param {!Interpreter.Owner} perms
  */
 Interpreter.prototype.Box.prototype.defineProperty = function(
@@ -4033,8 +4034,8 @@ Interpreter.prototype.installTypes = function() {
    * checks (but no support for getter or setters).
    * @param {string} key Key (name) of property to get.
    * @param {!Interpreter.Owner} perms Who is trying to get it?
-   * @return {!Descriptor} The property descriptor, or undefined if no
-   *     such property exists.
+   * @return {!Interpreter.Descriptor|undefined} The property
+   *     descriptor, or undefined if no such property exists.
    */
   intrp.Object.prototype.getOwnPropertyDescriptor = function(key, perms) {
     if (perms === null) throw TypeError("null can't getOwnPropertyDescriptor");
@@ -4051,7 +4052,7 @@ Interpreter.prototype.installTypes = function() {
    * with substantial adaptations for Code City including added perms
    * checks (but no support for getter or setters).
    * @param {string} key Key (name) of property to set.
-   * @param {!Descriptor} desc The property descriptor.
+   * @param {!Interpreter.Descriptor} desc The property descriptor.
    * @param {!Interpreter.Owner=} perms Who is trying to set it?  If
    *     omitted, defaults to this.owner but skips perm check.  (This
    *     is intended to be used only when constructing.)
@@ -5094,8 +5095,8 @@ Interpreter.prototype.installTypes = function() {
    * applied to temporary Boolean, Number and String class objects.
    * @param {string} key Key (name) of property to get.
    * @param {!Interpreter.Owner} perms Who is trying to get it?
-   * @return {!Descriptor} The property descriptor, or undefined if no
-   *     such property exists.
+   * @return {!Interpreter.Descriptor|undefined} The property
+   *     descriptor, or undefined if no such property exists.
    * @override
    */
   intrp.Box.prototype.getOwnPropertyDescriptor = function(key, perms) {
@@ -5110,7 +5111,7 @@ Interpreter.prototype.installTypes = function() {
    * The [[DefineOwnProperty]] internal method from ES5.1 §8.12.9, as
    * applied to temporary Boolean, Number and String class objects.
    * @param {string} key Key (name) of property to set.
-   * @param {!Descriptor} desc The property descriptor.
+   * @param {!Interpreter.Descriptor} desc The property descriptor.
    * @param {!Interpreter.Owner} perms Who is trying to set it?
    * @override
    */
@@ -5225,7 +5226,7 @@ Interpreter.prototype.installTypes = function() {
 ///////////////////////////////////////////////////////////////////////////////
 
 /**
- * Options object for constructing a NativeFunction.
+ * Type for options object for constructing a NativeFunction.
  * @typedef {{name: (string|undefined),
  *            length: (number|undefined),
  *            id: (string|undefined),
@@ -5237,9 +5238,31 @@ Interpreter.prototype.installTypes = function() {
 var NativeFunctionOptions;
 
 /**
- * Class for property descriptors, with commonly-used examples and a
- * function to easily create new descriptors from a prototype.
+ * Type for property descriptors, as used by
+ * Interpreter.prototype.Object.prototype.defineProperty and
+ * ...getOwnPropertyDescriptor.
+ * @record
+ */
+Interpreter.Descriptor = function() {};
+
+/** @type {(Interpreter.Value|undefined)} */
+Interpreter.Descriptor.prototype.value;
+
+/** @type {boolean|undefined} */
+Interpreter.Descriptor.prototype.writable;
+
+/** @type {boolean|undefined} */
+Interpreter.Descriptor.prototype.enumerable;
+
+/** @type {boolean|undefined} */
+Interpreter.Descriptor.prototype.configurable;
+
+/**
+ * Convenience class for creating Interpreter.Descriptors, with
+ * commonly-used examples and a function to easily create new
+ * descriptors from a prototype.
  * @constructor
+ * @implements {Interpreter.Descriptor}
  * @param {boolean=} writable Is the property writable?
  * @param {boolean=} enumerable Is the property enumerable?
  * @param {boolean=} configurable Is the property configurable?
@@ -5269,9 +5292,10 @@ Descriptor.prototype.configurable;
  * Returns a new descriptor with the same properties as this one, with
  * the addition of a value: member with the given value.
  * @param {Interpreter.Value} value Value for the new descriptor.
+ * @return {!Descriptor}
  */
 Descriptor.prototype.withValue = function(value) {
-  var desc = Object.create(this);
+  var desc = /** @type{!Descriptor} */(Object.create(this));
   desc.value = value;
   return desc;
 };
