@@ -2622,13 +2622,12 @@ Interpreter.prototype.setValueToScope = function(scope, name, value) {
 /**
  * Creates a variable in the given scope.
  * @param {!Interpreter.Scope} scope Scope to write to.
- * @param {Interpreter.Value} name Name of variable.
+ * @param {string} name Name of variable.
  * @param {Interpreter.Value} value Initial value.
  * @param {boolean=} notWritable True if constant (default: false).
  */
 Interpreter.prototype.addVariableToScope =
     function(scope, name, value, notWritable) {
-  name = String(name);
   if (!(name in scope.vars)) {
     scope.vars[name] = value;
   }
