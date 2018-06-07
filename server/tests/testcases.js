@@ -168,7 +168,7 @@ module.exports = [
     `,
     expected: 'myVarDeclFunc' },
 
-  { name: 'fExpWithParameter', src: `
+  { name: 'funExpWithParameter', src: `
     var v;
     var f = function(x) { v = x; };
     f(50);
@@ -828,29 +828,39 @@ module.exports = [
     expected: 75 },
 
   { name: 'namedFunctionExpression', src: `
-    var f = function foo(x) {
+    var f = function half(x) {
       if (x < 100) {
         return x;
       }
-      return foo(x / 2);
+      return half(x / 2);
     };
     f(152)
     `,
     expected: 76 },
 
-  { name: 'namedFunExpNoLeak', src: `
+  { name: 'namedFunExpNameBinding', src: `
+    var f = function foo() {return foo;};
+    f() === f;
+    `,
+    expected: true },
+
+  { name: 'namedFunExpNameBindingNoLeak', src: `
     var f = function foo() {};
     typeof foo;
     `,
     expected: 'undefined' },
 
-  { name: 'namedFunExpSameSame', src: `
+  { name: 'namedFunExpNameBindingImmutable', src: `
     var f = function foo() {
-      return f === foo;
+      try {
+        foo = null;
+      } catch (e) {
+        return e.name;
+      }
     };
     f();
     `,
-    expected: true },
+    expected: 'TypeError' },
 
   { name: 'closureIndependence', src: `
     function makeAdder(x) {

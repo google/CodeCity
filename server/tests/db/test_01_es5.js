@@ -684,7 +684,7 @@ tests.simpleFunctionExpression = function() {
   console.assert(value === 49, 'simpleFunctionExpression');
 };
 
-tests.fExpWithParameter = function() {
+tests.funExpWithParameter = function() {
   var value;
   var f = function(x) {
     value = x;
@@ -1227,25 +1227,27 @@ tests.funcDecl = function() {
 };
 
 tests.namedFunctionExpression = function() {
-  var f = function foo(x) {
+  var f = function half(x) {
     if (x < 100) {
       return x;
     }
-    return foo(x / 2);
+    return half(x / 2);
   };
   console.assert(f(152) === 76, 'namedFunctionExpression');
-};
 
-tests.namedFunExpNoLeak = function() {
-  var f = function foo() {};
-  console.assert(typeof foo === 'undefined', 'namedFunExpNoLeak');
-};
+  f = function foo() {return foo;};
+  console.assert(f() === f, 'namedFunExpNameBinding');
 
-tests.namedFunExpSameSame = function() {
-  var f = function foo() {
-    return f === foo;
-  };
-  console.assert(f(), 'namedFunExpSameSame');
+  f = function foo() {};
+  console.assert(typeof foo === 'undefined', 'namedFunExpBindingNoLeak');
+
+  try {
+    (function foo() {foo = null;})();
+    console.assert(false, "namedFunExpNameBindingImmutable didn't throw");
+  } catch (e) {
+    console.assert(e.name === 'TypeError',
+      'namedFunExpNameBindingImmutable wrong error');
+  }
 };
 
 tests.closureIndependence = function() {
