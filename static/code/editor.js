@@ -735,6 +735,17 @@ Code.svgEditor.setSource = function(source) {
 };
 
 /**
+ * Notification that this editor has just been displayed.
+ * @param {boolean} userAction True if user clicked on a tab.
+ */
+Code.svgEditor.focus = function(userAction) {
+  if (userAction) {
+    // Window may have resized since this tab was last visible.
+    this.frameWindow_.svgEditor.resize();
+  }
+};
+
+/**
  * Whitelist of all allowed SVG element names.
  * Try to keep this list in sync with CCC.World.xmlToSvg.ELEMENT_NAMES.
  */
