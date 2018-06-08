@@ -38,7 +38,7 @@ const testcases = require('./testcases');
 
 // Prepare static interpreter instance for runTest.
 var interpreter = getInterpreter();
-interpreter.addVariableToScope(interpreter.global, 'src');
+interpreter.global.createMutableBinding('src');
 
 /**
  * Run a simple test of the interpreter.  Only a single Interpreter
@@ -165,10 +165,10 @@ async function runAsyncTest(t, name, src, expected, initFunc, sideFunc) {
   // called.
   var resolve, reject, result;
   var p = new Promise(function(res, rej) { resolve = res; reject = rej; });
-  intrp.addVariableToScope(intrp.global, 'resolve',
-      intrp.createNativeFunction('resolve', resolve));
-  intrp.addVariableToScope(intrp.global, 'reject',
-      intrp.createNativeFunction('reject', reject));
+  intrp.global.createMutableBinding(
+      'resolve', intrp.createNativeFunction('resolve', resolve));
+  intrp.global.createMutableBinding(
+      'reject', intrp.createNativeFunction('reject', reject));
 
   try {
     intrp.createThreadForSrc(src);
@@ -657,7 +657,7 @@ exports.testAsync = function(t) {
   // resolve/reject callbacks and first arg in test-local variables.
   var resolve, reject, arg;
   var initFunc = function(intrp) {
-    intrp.addVariableToScope(intrp.global, 'async', new intrp.NativeFunction({
+    intrp.global.createMutableBinding('async', new intrp.NativeFunction({
       name: 'async', length: 0,
       call: function(intrp, thread, state, thisVal, args) {
         arg = args[0];
@@ -1172,7 +1172,7 @@ exports.testNetworking = async function(t) {
       send();
    `;
   var initFunc = function(intrp) {
-    intrp.addVariableToScope(intrp.global, 'send', intrp.createNativeFunction(
+    intrp.global.createMutableBinding('send', intrp.createNativeFunction(
         'send', function() {
           // Send some data to server.
           var client = net.createConnection({ port: 8888 }, function() {
@@ -1199,7 +1199,7 @@ exports.testNetworking = async function(t) {
       CC.connectionUnlisten(8888);
    `;
   initFunc = function(intrp) {
-    intrp.addVariableToScope(intrp.global, 'receive', new intrp.NativeFunction({
+    intrp.global.createMutableBinding('receive', new intrp.NativeFunction({
       name: 'receive', length: 0,
       call: function(intrp, thread, state, thisVal, args) {
         var reply = '';

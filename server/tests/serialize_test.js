@@ -173,10 +173,10 @@ async function runAsyncTest(t, name, src1, src2, expected, initFunc) {
   // called.
   var resolve, reject, result;
   var p = new Promise(function(res, rej) { resolve = res; reject = rej; });
-  intrp1.addVariableToScope(intrp1.global, 'resolve',
-      intrp1.createNativeFunction('resolve', resolve));
-  intrp1.addVariableToScope(intrp1.global, 'reject',
-      intrp1.createNativeFunction('reject', reject));
+  intrp1.global.createMutableBinding(
+      'resolve', intrp1.createNativeFunction('resolve', resolve));
+  intrp1.global.createMutableBinding(
+      'reject', intrp1.createNativeFunction('reject', reject));
 
   try {
     intrp1.start();
@@ -208,10 +208,10 @@ async function runAsyncTest(t, name, src1, src2, expected, initFunc) {
 
   // New promise.
   p = new Promise(function(res, rej) { resolve = res; reject = rej; });
-  intrp2.addVariableToScope(intrp2.global, 'resolve',
-      intrp2.createNativeFunction('resolve', resolve));
-  intrp2.addVariableToScope(intrp2.global, 'reject',
-      intrp2.createNativeFunction('reject', reject));
+  intrp2.global.createMutableBinding(
+      'resolve', intrp2.createNativeFunction('resolve', resolve));
+  intrp2.global.createMutableBinding(
+      'reject', intrp2.createNativeFunction('reject', reject));
 
   try {
     Serializer.deserialize(JSON.parse(json), intrp2);
@@ -380,7 +380,7 @@ exports.testRoundtripAsync = async function(t) {
       send();
    `;
   var initFunc = function(intrp) {
-    intrp.addVariableToScope(intrp.global, 'send', intrp.createNativeFunction(
+    intrp.global.createMutableBinding('send', intrp.createNativeFunction(
         'send', function() {
           // Send some data to server.
           var client = net.createConnection({ port: 8888 }, function() {
