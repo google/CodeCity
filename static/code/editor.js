@@ -728,3 +728,51 @@ Code.stringEditor.focus = function(userAction) {
 
 ////////////////////////////////////////////////////////////////////////////////
 //Code.dateEditor = new Code.GenericEditor('Date');
+
+////////////////////////////////////////////////////////////////////////////////
+Code.diffEditor = new Code.GenericEditor('Diff');
+
+/**
+ * Create the DOM for this editor.
+ * @param {!Element} container DOM should be appended to this containing div.
+ */
+Code.diffEditor.createDom = function(container) {
+  container.innerHTML = `
+<div style="position: absolute; top: 60px; bottom: 0; left: 0; right: 0; overflow: hidden;">
+  <iframe src="/static/code/diff.html" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0"></iframe>
+</div>
+  `;
+  this.frameWindow_ = container.querySelector('iframe').contentWindow;
+};
+
+/**
+ * Get the contents of the editor.
+ * @return {string} Plain text contents.
+ */
+Code.diffEditor.getSource = function() {
+  if (!this.created) {
+    return Code.Editor.uncreatedEditorSource;
+  }
+  if (this.frameWindow_.initialSource) {
+     return this.frameWindow_.initialSource;
+  }
+  return this.frameWindow_.diffEditor.getString();
+};
+
+/**
+ * Set the contents of the editor.
+ * @param {string} source Plain text contents.
+ */
+Code.diffEditor.setSource = function(source) {
+  if (this.created) {
+    if (this.frameWindow_.diffEditor) {
+      this.frameWindow_.diffEditor.setString(source, Code.Editor.originalSource);
+    } else {
+      // The iframe exists, but the editor hasn't loaded yet.
+      // Save the source in a property on the iframe, so it can load when ready.
+      this.frameWindow_.initialSource = source;
+      this.frameWindow_.originalSource = Code.Editor.originalSource;
+    }
+  }
+  this.lastSavedSource_ = this.getSource();
+};
