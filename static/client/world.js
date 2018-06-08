@@ -1644,6 +1644,7 @@ CCC.World.xmlToSvg = function(dom) {
 
 /**
  * Whitelist of all allowed SVG element names.
+ * Try to keep this list in sync with Code.svgEditor.ELEMENT_NAMES.
  */
 CCC.World.xmlToSvg.ELEMENT_NAMES = [
   'circle',

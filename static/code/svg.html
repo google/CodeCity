@@ -1,0 +1,24 @@
+<html>
+  <head>
+    <title>Code City Svg Editor</title>
+    <script src="SVG-Edit/jquery.min.js"></script>
+    <script src="SVG-Edit/jquery-ui/jquery-ui-1.8.17.custom.min.js"></script>
+    <script src="svg.js" type="module"></script>
+    <link href="../style/svg.css" rel="stylesheet">
+    <link href="svg.css" rel="stylesheet">
+  </head>
+
+  <body>
+    <div id="toolbox">
+<button onclick="svgEditor.canvas.setMode('select')">Select</button><br>
+<button onclick="svgEditor.canvas.setMode('circle')">Circle</button><br>
+<button onclick="svgEditor.canvas.setMode('rect')">Rect</button><br>
+<br>
+<button onclick="svgEditor.canvas.deleteSelectedElements()">Delete Selected</button><br>
+<button onclick="svgEditor.canvas.clear(); svgEditor.resize();">Clear All</button><br>
+<button onclick="alert(svgEditor.canvas.getSvgString())">Get SVG</button>
+    </div>
+
+    <div id="editorContainer"></div>
+  </body>
+</html>
