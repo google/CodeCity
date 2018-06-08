@@ -455,10 +455,10 @@ Interpreter.prototype.stop = function() {
  */
 Interpreter.prototype.initBuiltins_ = function() {
   // Initialize uneditable global properties.
-  this.addVariableToScope(this.global, 'NaN', NaN, true);
-  this.addVariableToScope(this.global, 'Infinity', Infinity, true);
-  this.addVariableToScope(this.global, 'undefined', undefined, true);
-  this.addVariableToScope(this.global, 'this', undefined, true);
+  this.global.createImmutableBinding('NaN', NaN);
+  this.global.createImmutableBinding('Infinity', Infinity);
+  this.global.createImmutableBinding('undefined', undefined);
+  this.global.createImmutableBinding('this', undefined);
 
   // Create the objects which will become Object.prototype and
   // Function.prototype, which are needed to bootstrap everything else.
@@ -533,8 +533,8 @@ Interpreter.prototype.initBuiltins_ = function() {
   });
   // eval is a special case; it must be added to the global scope at
   // startup time (rather than by a "var eval = new 'eval';" statement
-  // in es5.js) because binding eval is illegal in strict mode.
-  this.addVariableToScope(this.global, 'eval', eval_);
+  // in es5.js) because assigning to eval is illegal in strict mode.
+  this.global.createMutableBinding('eval', eval_);
 
   this.createNativeFunction('isFinite', isFinite, false);
   this.createNativeFunction('isNaN', isNaN, false);
@@ -2619,23 +2619,6 @@ Interpreter.prototype.setValueToScope = function(scope, name, value) {
 };
 
 /**
- * Creates a variable in the given scope.
- * @param {!Interpreter.Scope} scope Scope to write to.
- * @param {string} name Name of variable.
- * @param {Interpreter.Value} value Initial value.
- * @param {boolean=} notWritable True if constant (default: false).
- */
-Interpreter.prototype.addVariableToScope =
-    function(scope, name, value, notWritable) {
-  if (!(name in scope.vars)) {
-    scope.vars[name] = value;
-  }
-  if (notWritable) {
-    scope.notWritable.add(name);
-  }
-};
-
-/**
  * Populate a scope with declarations from given node.
  * @param {!Interpreter.Node} node AST node (program or function).
  * @param {!Interpreter.Scope} scope Scope dictionary to populate.
@@ -2650,12 +2633,19 @@ Interpreter.prototype.populateScope_ = function(node, scope, source) {
   }
   if (node['type'] === 'VariableDeclaration') {
     for (var i = 0; i < node['declarations'].length; i++) {
-      this.addVariableToScope(scope, node['declarations'][i]['id']['name'],
-                              undefined);
+      var name = node['declarations'][i]['id']['name'];
+      if (!scope.hasBinding(name)) {
+        scope.createMutableBinding(name);
+      }
     }
   } else if (node['type'] === 'FunctionDeclaration') {
-    this.addVariableToScope(scope, node['id']['name'],
-        new this.UserFunction(node, scope, source, scope.perms));
+    name = node['id']['name'];
+    var func = new this.UserFunction(node, scope, source, scope.perms);
+    if (scope.hasBinding(name)) {
+      this.setValueToScope(scope, name, func);
+    } else {
+      scope.createMutableBinding(name, func);
+    }
     return;  // Do not recurse into function.
   } else if (node['type'] === 'FunctionExpression') {
     return;  // Do not recurse into function.
@@ -4401,7 +4391,9 @@ Interpreter.prototype.installTypes = function() {
           'Functions with null owner are not executable');
     }
     var scope = this.instantiateDeclarations(this.owner, args);
-    intrp.addVariableToScope(scope, 'this', thisVal, true);
+    // Slightly hacky way to store 'this' value on scope.  Safe
+    // because no variable can ever be named 'this'.
+    scope.createImmutableBinding('this', thisVal);
     state.value = undefined;  // Default value if no explicit return.
     thread.stateStack_[thread.stateStack_.length] =
         new Interpreter.State(this.node['body'], scope);
@@ -4460,13 +4452,17 @@ Interpreter.prototype.installTypes = function() {
     // constructor have this.scope set to the global scope, which is
     // owned by root!
     var scope = new Interpreter.Scope(owner, this.scope);
-    intrp.populateScope_(this.node['body'], scope);
-    // Add all arguments.
+    // Add the function's name to the scope.
+    var name = this.node['id'] && this.node['id']['name'];
+    if (name) {
+      scope.createImmutableBinding(name, this);
+    }
+    // Add all arguments to the scope.
     var params = this.node['params'];
     for (var i = 0; i < params.length; i++) {
       var paramName = params[i]['name'];
       var paramValue = args.length > i ? args[i] : undefined;
-      intrp.addVariableToScope(scope, paramName, paramValue);
+      scope.createMutableBinding(paramName, paramValue);
     }
     // Build arguments object.
     //
@@ -4480,12 +4476,9 @@ Interpreter.prototype.installTypes = function() {
       argsObj.defineProperty(
           String(i), Descriptor.wec.withValue(args[i]), owner);
     }
-    intrp.addVariableToScope(scope, 'arguments', argsObj, true);
-    // Add the function's name (var x = function foo(){};)
-    var name = this.node['id'] && this.node['id']['name'];
-    if (name) {
-      intrp.addVariableToScope(scope, name, this, true);
-    }
+    scope.createImmutableBinding('arguments', argsObj);
+    // Populate local variables and other inner declarations.
+    intrp.populateScope_(this.node['body'], scope);
     return scope;
   };
 
@@ -6314,7 +6307,7 @@ stepFuncs_['TryStatement'] = function (thread, stack, state, node) {
         state.info_ = null;  // This error is being handled, don't rethrow.
         // Execute catch clause with varible bound to exception value.
         var scope = new Interpreter.Scope(state.scope.perms, state.scope);
-        this.addVariableToScope(scope, handler['param']['name'], cv.value);
+        scope.createMutableBinding(handler['param']['name'], cv.value);
         return new Interpreter.State(handler['body'], scope);
       }
       // FALL THROUGH
@@ -6438,7 +6431,7 @@ stepFuncs_['VariableDeclaration'] = function (thread, stack, state, node) {
   var decl = declarations[n];
   if (state.step_ === 1) {  // Initialise variable with evaluated init value.
     // Note that this is setting the value, not defining the variable.
-    // Variable definition (addVariableToScope) is done when scope is populated.
+    // Variable definition is done when scope is populated.
     this.setValueToScope(state.scope, decl['id']['name'], state.value);
     decl = declarations[++n];
   }
