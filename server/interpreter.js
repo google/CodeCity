@@ -3421,9 +3421,9 @@ Interpreter.Thread.Status = {
 };
 
 ///////////////////////////////////////////////////////////////////////////////
-// Types representing JS objects - Object, Function, Array, etc.
+// Inner classes of Interpreter: Declarations.
 ///////////////////////////////////////////////////////////////////////////////
-
+// Types representing JS objects - Object, Function, Array, etc.
 /**
  * Typedef for JS values.
  * @typedef {!Interpreter.prototype.Object|boolean|number|string|undefined|null}
@@ -3823,6 +3823,8 @@ Interpreter.prototype.Thread = function(thread, owner, proto) {
   throw Error('Inner class constructor not callable on prototype');
 };
 
+///////////////////////////////////////////////////////////////////////////////
+// Other types, not representing JS objects.
 /**
  * @constructor
  * @param {?Interpreter.Owner} owner
@@ -3961,15 +3963,19 @@ Interpreter.NativeCallImpl;
 Interpreter.NativeConstructImpl;
 
 ///////////////////////////////////////////////////////////////////////////////
+// Inner classes of Interpreter: Implementations.
+///////////////////////////////////////////////////////////////////////////////
 
 /**
  * Install the actual Object, Function, Array, RegExp, Error,
- * etc. data-object constructors on an Interpreter instance.  Should
- * be called just once at interpreter-creation time.
+ * etc. constructors on an Interpreter instance.  Should
+ * be called just once, from the Interpreter constructor.
  */
 Interpreter.prototype.installTypes = function() {
-  var intrp = this;
+  var intrp = this;  // The interpreter istance to which these classes belong.
 
+  /////////////////////////////////////////////////////////////////////////////
+  // Types representing JS objects - Object, Function, Array, etc.
   /**
    * Class for an object.
    * @constructor
@@ -4974,6 +4980,8 @@ Interpreter.prototype.installTypes = function() {
   intrp.Thread.prototype.constructor = intrp.Thread;
   intrp.Thread.prototype.class = 'Thread';
 
+  /////////////////////////////////////////////////////////////////////////////
+  // Other types, not representing JS objects.
   /**
    * Server is an (owner, port, proto, (extra info)) tuple representing a
    * listening server.  It encapsulates node's net.Server type, with
