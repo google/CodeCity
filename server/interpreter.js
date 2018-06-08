@@ -3086,6 +3086,51 @@ Interpreter.Scope = function(perms, outerScope) {
 };
 
 /**
+ * Returns true iff this scope has a binding for the given name.
+ *
+ * Based on HasBinding for declarative environment records,
+ * from ES5.1 §10.2.1.1.1 / ES6 §8.1.1.1.1.
+ * @param {string} name Name of variable.
+ * @return {boolean} True iff name is bound in this scope.
+ */
+Interpreter.Scope.prototype.hasBinding = function(name) {
+  return name in this.vars;
+};
+
+/**
+ * Creates a mutable binding in the given scope and initialises it to
+ * undefined or the provided valued.
+ *
+ * Based on CreateMutableBinding for declarative environment records,
+ * from ES5.1 §10.2.1.1.2 / ES6 §8.1.1.1.2.
+ * @param {string} name Name of variable.
+ * @param {Interpreter.Value=} value Initial value (default: undefined).
+ */
+Interpreter.Scope.prototype.createMutableBinding = function(name, value) {
+  if (name in this.vars) {
+    throw Error(name + ' already has binding in this scope??');
+  }
+  this.vars[name] = value;
+};
+
+/**
+ * Creates an immutable binding in the given scope and initialises it
+ * to the provided valued.
+ *
+ * Based on CreateImmutableBinding for declarative environment records,
+ * from ES5.1 §10.2.1.1.7 / ES6 §8.1.1.1.3.
+ * @param {string} name Name of variable.
+ * @param {Interpreter.Value} value Initial value.
+ */
+Interpreter.Scope.prototype.createImmutableBinding = function(name, value) {
+  if (name in this.vars) {
+    throw Error(name + ' already has binding in this scope??');
+  }
+  this.vars[name] = value;
+  this.notWritable.add(name);
+};
+
+/**
  * Source is an encapsulated hunk of source text.  Source objects can
  * be sliced to obtain a Source object representing a substring of the
  * original source text.  Such sliced objects "remember" their
