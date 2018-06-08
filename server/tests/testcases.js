@@ -157,6 +157,12 @@ module.exports = [
     `,
     expected: 50 },
 
+  { name: 'funExpParameterNotShadowedByVar', src: `
+    var f = function(x) { var x; return x; };
+    f(50.1);
+    `,
+    expected: 50.1 },
+
   { name: 'functionWithReturn', src: `
     (function(x) { return x; })(51);
     `,
@@ -842,6 +848,25 @@ module.exports = [
     f();
     `,
     expected: 'TypeError' },
+
+  { name: 'namedFunExpNameBindingShadowedByParam', src: `
+    var f = function foo(foo) {
+      foo += 0.1;  // Verify mutability.
+      return foo;
+    };
+    f(76);
+    `,
+    expected: 76.1 },
+
+  { name: 'namedFunExpNameBindingShadowedByVar', src: `
+    var f = function foo() {
+      var foo;
+      foo = 76.2;  // Verify mutability.
+      return foo;
+    };
+    f();
+    `,
+    expected: 76.2 },
 
   { name: 'closureIndependence', src: `
     function makeAdder(x) {

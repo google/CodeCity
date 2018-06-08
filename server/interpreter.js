@@ -3057,8 +3057,7 @@ Interpreter.PropertyIterator.prototype.next = function() {
 /**
  * Class for a scope.
  * @param {!Interpreter.Owner} perms The permissions with which code
- *     in the current scope is executing (default: outerScope.perms if
- *     supplied; otherwise null).
+ *     in the current scope is executing.
  * @param {?Interpreter.Scope} outerScope The enclosing scope ("outer
  *     lexical environment reference", in ECMAScript spec parlance)
  *     (default: null).
@@ -4452,11 +4451,6 @@ Interpreter.prototype.installTypes = function() {
     // constructor have this.scope set to the global scope, which is
     // owned by root!
     var scope = new Interpreter.Scope(owner, this.scope);
-    // Add the function's name to the scope.
-    var name = this.node['id'] && this.node['id']['name'];
-    if (name) {
-      scope.createImmutableBinding(name, this);
-    }
     // Add all arguments to the scope.
     var params = this.node['params'];
     for (var i = 0; i < params.length; i++) {
@@ -5973,8 +5967,15 @@ stepFuncs_['FunctionExpression'] = function (thread, stack, state, node) {
   if (!source) {
     throw Error("No source found when evaluating function expression??");
   }
-  stack[stack.length - 1].value =
-      new this.UserFunction(node, state.scope, source, state.scope.perms);
+  var scope = state.scope;
+  var perms = scope.perms;
+  // If the function expression has a name, create an outer scope to
+  // bind that name.  See ES5.1 §13 / ES6 §14.1.20.
+  var name = node['id'] && node['id']['name'];
+  if (name) scope = new Interpreter.Scope(perms, scope);
+  var func = new this.UserFunction(node, scope, source, perms);
+  if (name) scope.createImmutableBinding(name, func);
+  stack[stack.length - 1].value = func;
 };
 
 /**
