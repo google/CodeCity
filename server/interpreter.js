@@ -4370,39 +4370,7 @@ Interpreter.prototype.installTypes = function() {
       throw new intrp.Error(state.scope.perms, intrp.PERM_ERROR,
           'Functions with null owner are not executable');
     }
-    // Aside: we need to pass this.owner, rather than
-    // this.scope.perms, for the new scope perms because (1) we want
-    // to be able to change the owner of a function after it's
-    // created, and (2) functions created using the Function
-    // constructor have this.scope set to the global scope, which is
-    // owned by root!
-    var scope = new Interpreter.Scope(this.owner, this.scope);
-    intrp.populateScope_(this.node['body'], scope);
-    // Add all arguments.
-    var params = this.node['params'];
-    for (var i = 0; i < params.length; i++) {
-      var paramName = params[i]['name'];
-      var paramValue = args.length > i ? args[i] : undefined;
-      intrp.addVariableToScope(scope, paramName, paramValue);
-    }
-    // Build arguments variable.
-    //
-    // BUG(cpcallen): mustn't create arguments object if 'arguments'
-    // the name of a local variable or named parameter.  Needn't
-    // create arguments object if it is never referecned.
-    var argsList = new intrp.Arguments(this.owner);
-    argsList.defineProperty(
-        'length', Descriptor.wc.withValue(args.length), this.owner);
-    for (i = 0; i < args.length; i++) {
-      argsList.defineProperty(
-          String(i), Descriptor.wec.withValue(args[i]), this.owner);
-    }
-    intrp.addVariableToScope(scope, 'arguments', argsList, true);
-    // Add the function's name (var x = function foo(){};)
-    var name = this.node['id'] && this.node['id']['name'];
-    if (name) {
-      intrp.addVariableToScope(scope, name, this, true);
-    }
+    var scope = this.instantiateDeclarations(this.owner, args);
     intrp.addVariableToScope(scope, 'this', thisVal, true);
     state.value = undefined;  // Default value if no explicit return.
     thread.stateStack_[thread.stateStack_.length] =
@@ -4441,6 +4409,54 @@ Interpreter.prototype.installTypes = function() {
       }
       return state.value;
     }
+  };
+
+  /**
+   * A simplified version of the FunctionDeclarationInstantiation
+   * specification function from ES6 §9.2.12 (see also Declaration
+   * Binding Instantiation in ES5.1 §10.5).
+   *
+   * Creates a new Scope and sets up the bindings of the function's
+   * parameters and variables.
+   * @param {!Interpreter.Owner} owner Owner for new Scope.
+   * @param {!Array<Interpreter.Value>} args The arguments to the call.
+   * @return {!Interpreter.Scope} The initialised scope
+   */
+  intrp.UserFunction.prototype.instantiateDeclarations = function(owner, args) {
+    // Aside: we need to pass owner, rather than
+    // this.scope.perms, for the new scope perms because (1) we want
+    // to be able to change the owner of a function after it's
+    // created, and (2) functions created using the Function
+    // constructor have this.scope set to the global scope, which is
+    // owned by root!
+    var scope = new Interpreter.Scope(owner, this.scope);
+    intrp.populateScope_(this.node['body'], scope);
+    // Add all arguments.
+    var params = this.node['params'];
+    for (var i = 0; i < params.length; i++) {
+      var paramName = params[i]['name'];
+      var paramValue = args.length > i ? args[i] : undefined;
+      intrp.addVariableToScope(scope, paramName, paramValue);
+    }
+    // Build arguments variable.
+    //
+    // BUG(cpcallen): mustn't create arguments object if 'arguments'
+    // the name of a local variable or named parameter.  Needn't
+    // create arguments object if it is never referecned.
+    var argsList = new intrp.Arguments(owner);
+    argsList.defineProperty(
+        'length', Descriptor.wc.withValue(args.length), owner);
+    for (i = 0; i < args.length; i++) {
+      argsList.defineProperty(
+          String(i), Descriptor.wec.withValue(args[i]), owner);
+    }
+    intrp.addVariableToScope(scope, 'arguments', argsList, true);
+    // Add the function's name (var x = function foo(){};)
+    var name = this.node['id'] && this.node['id']['name'];
+    if (name) {
+      intrp.addVariableToScope(scope, name, this, true);
+    }
+    return scope;
   };
 
   /**
