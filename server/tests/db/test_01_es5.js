@@ -1248,6 +1248,19 @@ tests.namedFunctionExpression = function() {
     console.assert(e.name === 'TypeError',
       'namedFunExpNameBindingImmutable wrong error');
   }
+
+  f = function foo(foo) {
+    foo += 0.1;  // Verify mutability.
+    return foo;
+  };
+  console.assert(f(76) === 76.1, 'nameFunExpNameBindingShadowedByParam');
+
+  f = function foo() {
+    var foo;
+    foo = 76.2;  // Verify mutability.
+    return foo;
+  };
+  console.assert(f(76) === 76.2, 'nameFunExpNameBindingShadowedByVar');
 };
 
 tests.closureIndependence = function() {
