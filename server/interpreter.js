@@ -4423,19 +4423,19 @@ Interpreter.prototype.installTypes = function() {
       var paramValue = args.length > i ? args[i] : undefined;
       intrp.addVariableToScope(scope, paramName, paramValue);
     }
-    // Build arguments variable.
+    // Build arguments object.
     //
     // BUG(cpcallen): mustn't create arguments object if 'arguments'
-    // the name of a local variable or named parameter.  Needn't
+    // is the name of a local variable or named parameter.  Needn't
     // create arguments object if it is never referecned.
-    var argsList = new intrp.Arguments(owner);
-    argsList.defineProperty(
+    var argsObj = new intrp.Arguments(owner);
+    argsObj.defineProperty(
         'length', Descriptor.wc.withValue(args.length), owner);
     for (i = 0; i < args.length; i++) {
-      argsList.defineProperty(
+      argsObj.defineProperty(
           String(i), Descriptor.wec.withValue(args[i]), owner);
     }
-    intrp.addVariableToScope(scope, 'arguments', argsList, true);
+    intrp.addVariableToScope(scope, 'arguments', argsObj, true);
     // Add the function's name (var x = function foo(){};)
     var name = this.node['id'] && this.node['id']['name'];
     if (name) {
