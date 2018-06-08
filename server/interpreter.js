@@ -71,9 +71,9 @@ var Interpreter = function(options) {
 
   /**
    * The interpreter's global scope.
-   * @const {!Interpreter.Scope}
+   * @const {!Interpreter.prototype.Scope}
    */
-  this.global = new Interpreter.Scope(/** @type {?} */ (undefined), null);
+  this.global = new this.Scope(/** @type {?} */ (undefined), null);
   // Create builtins and (minimally) initialize global scope:
   this.initBuiltins_();
 
@@ -180,7 +180,8 @@ Interpreter.prototype.createThreadForSrc = function(src, runAt) {
  */
 Interpreter.prototype.createThreadForFuncCall = function(
     owner, func, thisVal, args, runAt) {
-  var state = Interpreter.State.newForCall(func, thisVal, args, owner);
+  var state =
+      Interpreter.State.newForCall(this.Scope, func, thisVal, args, owner);
   return this.createThread(owner, state, runAt);
 };
 
@@ -523,7 +524,7 @@ Interpreter.prototype.initBuiltins_ = function() {
       ast['source'] = source;
       // Create new scope and update it with definitions in eval().
       var outerScope = state.info_.directEval ? state.scope : intrp.global;
-      var scope = new Interpreter.Scope(state.scope.perms, outerScope);
+      var scope = new intrp.Scope(state.scope.perms, outerScope);
       intrp.populateScope_(ast, scope);
       thread.stateStack_[thread.stateStack_.length] =
           new Interpreter.State(ast, scope);
@@ -1344,7 +1345,8 @@ Interpreter.prototype.initArray_ = function() {
           func = /** @type {!Interpreter.prototype.Function} */ (
               intrp.builtins_['Object.prototype.toString']);
         }
-        var newState = Interpreter.State.newForCall(func, thisVal, [], perms);
+        var newState =
+            Interpreter.State.newForCall(intrp.Scope, func, thisVal, [], perms);
         thread.stateStack_.push(newState);
         return Interpreter.FunctionResult.CallAgain;
       } else {  // Second visit: return value returned by .join().
@@ -1424,7 +1426,8 @@ Interpreter.prototype.initString_ = function() {
           var method = value.get('toString', perms);
           if (method instanceof intrp.Function) {
             thread.stateStack_[thread.stateStack_.length] =
-                Interpreter.State.newForCall(method, value, [], perms);
+                Interpreter.State.newForCall(
+                    intrp.Scope, method, value, [], perms);
             state.info_.funcState = 1;
             return Interpreter.FunctionResult.CallAgain;
           }
@@ -1433,7 +1436,8 @@ Interpreter.prototype.initString_ = function() {
           method = value.get('valueOf', perms);
           if (method instanceof intrp.Function) {
             thread.stateStack_[thread.stateStack_.length] =
-                Interpreter.State.newForCall(method, value, [], perms);
+                Interpreter.State.newForCall(
+                    intrp.Scope, method, value, [], perms);
             state.info_.funcState = 2;
             return Interpreter.FunctionResult.CallAgain;
           }
@@ -2581,7 +2585,7 @@ Interpreter.prototype.toObject = function(value, perms) {
 
 /**
  * Retrieves a value from the scope chain.
- * @param {!Interpreter.Scope} scope Scope to read from.
+ * @param {!Interpreter.prototype.Scope} scope Scope to read from.
  * @param {string} name Name of variable.
  * @return {Interpreter.Value} Value (may be undefined).
  */
@@ -2597,7 +2601,7 @@ Interpreter.prototype.getValueFromScope = function(scope, name) {
 
 /**
  * Sets a value to the current scope.
- * @param {!Interpreter.Scope} scope Scope to write to.
+ * @param {!Interpreter.prototype.Scope} scope Scope to write to.
  * @param {string} name Name of variable.
  * @param {Interpreter.Value} value Value.
  */
@@ -2621,7 +2625,7 @@ Interpreter.prototype.setValueToScope = function(scope, name, value) {
 /**
  * Populate a scope with declarations from given node.
  * @param {!Interpreter.Node} node AST node (program or function).
- * @param {!Interpreter.Scope} scope Scope dictionary to populate.
+ * @param {!Interpreter.prototype.Scope} scope Scope dictionary to populate.
  * @param {!Interpreter.Source=} source Original source code.  If not
  *     supplied, will use node['source'] instead.
  * @private
@@ -2681,7 +2685,7 @@ Interpreter.prototype.calledWithNew = function() {
 
 /**
  * Implements IsUnresolvableReference from ES5 §8.7 / ES6 §6.2.3.
- * @param {!Interpreter.Scope} scope Current scope dictionary.
+ * @param {!Interpreter.prototype.Scope} scope Current scope dictionary.
  * @param {!Array} ref Reference tuple.
  * @param {!Interpreter.Owner} perms Who is trying to get it?
  * @return {boolean} True iff refernece is unresolvable.
@@ -2698,7 +2702,7 @@ Interpreter.prototype.isUnresolvableReference = function(scope, ref, perms) {
 
 /**
  * Gets a value from the scope chain or from an object property.
- * @param {!Interpreter.Scope} scope Current scope dictionary.
+ * @param {!Interpreter.prototype.Scope} scope Current scope dictionary.
  * @param {!Array} ref Reference tuple.
  * @param {!Interpreter.Owner} perms Who is trying to get it?
  * @return {Interpreter.Value} Value (may be undefined).
@@ -2715,7 +2719,7 @@ Interpreter.prototype.getValue = function(scope, ref, perms) {
 
 /**
  * Sets a value to the scope chain or to an object property.
- * @param {!Interpreter.Scope} scope Current scope dictionary.
+ * @param {!Interpreter.prototype.Scope} scope Current scope dictionary.
  * @param {!Array} ref Reference tuple.
  * @param {Interpreter.Value} value Value.
  * @param {!Interpreter.Owner} perms Who is trying to set it?
@@ -3078,70 +3082,6 @@ Interpreter.PropertyIterator.prototype.next = function() {
 };
 
 /**
- * Class for a scope.
- * @param {!Interpreter.Owner} perms The permissions with which code
- *     in the current scope is executing.
- * @param {?Interpreter.Scope} outerScope The enclosing scope ("outer
- *     lexical environment reference", in ECMAScript spec parlance)
- *     (default: null).
- * @constructor
- */
-Interpreter.Scope = function(perms, outerScope) {
-  /** @type {?Interpreter.Scope} */
-  this.outerScope = outerScope;
-  /** @type {!Interpreter.Owner} */
-  this.perms = perms;
-  /** @const {!Object<string, Interpreter.Value>} */
-  this.vars = Object.create(null);
-  this.notWritable = new Set();
-};
-
-/**
- * Returns true iff this scope has a binding for the given name.
- *
- * Based on HasBinding for declarative environment records,
- * from ES5.1 §10.2.1.1.1 / ES6 §8.1.1.1.1.
- * @param {string} name Name of variable.
- * @return {boolean} True iff name is bound in this scope.
- */
-Interpreter.Scope.prototype.hasBinding = function(name) {
-  return name in this.vars;
-};
-
-/**
- * Creates a mutable binding in the given scope and initialises it to
- * undefined or the provided valued.
- *
- * Based on CreateMutableBinding for declarative environment records,
- * from ES5.1 §10.2.1.1.2 / ES6 §8.1.1.1.2.
- * @param {string} name Name of variable.
- * @param {Interpreter.Value=} value Initial value (default: undefined).
- */
-Interpreter.Scope.prototype.createMutableBinding = function(name, value) {
-  if (name in this.vars) {
-    throw Error(name + ' already has binding in this scope??');
-  }
-  this.vars[name] = value;
-};
-
-/**
- * Creates an immutable binding in the given scope and initialises it
- * to the provided valued.
- *
- * Based on CreateImmutableBinding for declarative environment records,
- * from ES5.1 §10.2.1.1.7 / ES6 §8.1.1.1.3.
- * @param {string} name Name of variable.
- * @param {Interpreter.Value} value Initial value.
- */
-Interpreter.Scope.prototype.createImmutableBinding = function(name, value) {
-  if (name in this.vars) {
-    throw Error(name + ' already has binding in this scope??');
-  }
-  this.vars[name] = value;
-  this.notWritable.add(name);
-};
-
-/**
  * Source is an encapsulated hunk of source text.  Source objects can
  * be sliced to obtain a Source object representing a substring of the
  * original source text.  Such sliced objects "remember" their
@@ -3220,7 +3160,7 @@ Interpreter.Source.prototype.lineColForPos = function(pos) {
 /**
  * Class for a state.
  * @param {!Interpreter.Node} node AST node for the state.
- * @param {!Interpreter.Scope} scope Scope dictionary for the state.
+ * @param {!Interpreter.prototype.Scope} scope Scope dictionary for the state.
  * @param {boolean=} wantRef Does parent state want reference (rather
  *     than evaluated value)?  (Default: false.)
  * @constructor
@@ -3228,7 +3168,7 @@ Interpreter.Source.prototype.lineColForPos = function(pos) {
 Interpreter.State = function(node, scope, wantRef) {
   /** @const @type {!Interpreter.Node} */
   this.node = node;
-  /** @const @type {!Interpreter.Scope} */
+  /** @const @type {!Interpreter.prototype.Scope} */
   this.scope = scope;
   /** @private @const @type {boolean} */
   this.wantRef_ = wantRef || false;
@@ -3260,18 +3200,24 @@ Interpreter.State = function(node, scope, wantRef) {
 
 /**
  * Create a new State pre-configured to begin executing a function call.
+ *
+ * TODO(cpcallen): having to pass in the Scope constructor is an ugly
+ * but temporarily necessary hack now that Scope is an inner class of
+ * Interpreter.  Find a more elegant solution.
+ * @param {!Function} Scope The scope constructor function for the
+ *     interpreter instance for which the new state will belong.
  * @param {!Interpreter.prototype.Function} func Function to call.
  * @param {Interpreter.Value} thisVal value of 'this' in function call.
  * @param {!Array<Interpreter.Value>} args Arguments to pass.
  * @param {!Interpreter.Owner} perms Who is doing the call?
  * @return {!Interpreter.State} The newly-created state.
  */
-Interpreter.State.newForCall = function(func, thisVal, args, perms) {
+Interpreter.State.newForCall = function(Scope, func, thisVal, args, perms) {
   // Dummy node (used only for type).
   var node = new Interpreter.Node;
   node['type'] = 'Call';
   // Dummy outer scope (used ony for perms, which will be caller perms).
-  var scope = new Interpreter.Scope(perms, null);
+  var scope = new Scope(perms, null);
 
   var state = new Interpreter.State(node, scope);
   state.info_ = {func: func,
@@ -3693,7 +3639,7 @@ Interpreter.prototype.Function.prototype.construct = function(
  * @constructor
  * @extends {Interpreter.prototype.Function}
  * @param {!Interpreter.Node} node
- * @param {!Interpreter.Scope} scope Enclosing scope.
+ * @param {!Interpreter.prototype.Scope} scope Enclosing scope.
  * @param {!Interpreter.Source} source
  * @param {?Interpreter.Owner=} owner
  * @param {?Interpreter.prototype.Object=} proto
@@ -3702,7 +3648,7 @@ Interpreter.prototype.UserFunction = function(
     node, scope, source, owner, proto) {
   /** @type {!Interpreter.Node} */
   this.node;
-  /** @type {!Interpreter.Scope} */
+  /** @type {!Interpreter.prototype.Scope} */
   this.scope;
   throw Error('Inner class constructor not callable on prototype');
 };
@@ -3930,6 +3876,44 @@ Interpreter.prototype.Box.prototype.toString = function() {
 
 /** @return {Interpreter.Value} Value. */
 Interpreter.prototype.Box.prototype.valueOf = function() {
+  throw Error('Inner class method not callable on prototype');
+};
+
+/**
+ * Class for a scope.
+ * @constructor
+ * @param {!Interpreter.Owner} perms The permissions with which code
+ *     in the current scope is executing.
+ * @param {?Interpreter.prototype.Scope} outerScope The enclosing
+ *     scope ("outer lexical environment reference", in ECMAScript
+ *     spec parlance) (default: null).
+ */
+Interpreter.prototype.Scope = function(perms, outerScope) {
+  /** @type {?Interpreter.prototype.Scope} */
+  this.outerScope;
+  /** @type {!Interpreter.Owner} */
+  this.perms;
+  /** @const {!Object<string, Interpreter.Value>} */
+  this.vars;
+  /** @const {!Set<string>} */
+  this.notWritable;
+  throw Error('Inner class constructor not callable on prototype');
+};
+
+/** @param {string} name @return {boolean} */
+Interpreter.prototype.Scope.prototype.hasBinding = function(name) {
+  return name in this.vars;
+};
+
+/** @param {string} name @param {Interpreter.Value=} value */
+Interpreter.prototype.Scope.prototype.createMutableBinding = function(
+    name, value) {
+  throw Error('Inner class method not callable on prototype');
+};
+
+/** @param {string} name @param {Interpreter.Value} value */
+Interpreter.prototype.Scope.prototype.createImmutableBinding = function(
+    name, value) {
   throw Error('Inner class method not callable on prototype');
 };
 
@@ -4337,7 +4321,7 @@ Interpreter.prototype.installTypes = function() {
    * @constructor
    * @extends {Interpreter.prototype.UserFunction}
    * @param {!Interpreter.Node} node AST node for function body.
-   * @param {!Interpreter.Scope} scope Enclosing scope.
+   * @param {!Interpreter.prototype.Scope} scope Enclosing scope.
    * @param {!Interpreter.Source} source Source from which AST was parsed.
    * @param {?Interpreter.Owner=} owner Owner object (default: null).
    * @param {?Interpreter.prototype.Object=} proto Prototype object or null.
@@ -4447,7 +4431,7 @@ Interpreter.prototype.installTypes = function() {
    * parameters and variables.
    * @param {!Interpreter.Owner} owner Owner for new Scope.
    * @param {!Array<Interpreter.Value>} args The arguments to the call.
-   * @return {!Interpreter.Scope} The initialised scope
+   * @return {!Interpreter.prototype.Scope} The initialised scope
    */
   intrp.UserFunction.prototype.instantiateDeclarations = function(owner, args) {
     // Aside: we need to pass owner, rather than
@@ -4456,7 +4440,7 @@ Interpreter.prototype.installTypes = function() {
     // created, and (2) functions created using the Function
     // constructor have this.scope set to the global scope, which is
     // owned by root!
-    var scope = new Interpreter.Scope(owner, this.scope);
+    var scope = new intrp.Scope(owner, this.scope);
     // Add all arguments to the scope.
     var params = this.node['params'];
     for (var i = 0; i < params.length; i++) {
@@ -5149,6 +5133,72 @@ Interpreter.prototype.installTypes = function() {
     /** @type {!Interpreter.prototype.Object} */
     this.proto = proto;
     this.server_ = null;
+  };
+
+  /**
+   * Class for a scope.
+   * @constructor
+   * @extends {Interpreter.prototype.Scope}
+   * @param {!Interpreter.Owner} perms The permissions with which code
+   *     in the current scope is executing.
+   * @param {?Interpreter.prototype.Scope} outerScope The enclosing
+   *     scope ("outer lexical environment reference", in ECMAScript
+   *     spec parlance) (default: null).
+   */
+  intrp.Scope = function(perms, outerScope) {
+    /** @type {?Interpreter.prototype.Scope} */
+    this.outerScope = outerScope;
+    /** @type {!Interpreter.Owner} */
+    this.perms = perms;
+    /** @const {!Object<string, Interpreter.Value>} */
+    this.vars = Object.create(null);
+    /** @const {!Set<string>} */
+    this.notWritable = new Set();
+  };
+
+  /**
+   * Returns true iff this scope has a binding for the given name.
+   *
+   * Based on HasBinding for declarative environment records,
+   * from ES5.1 §10.2.1.1.1 / ES6 §8.1.1.1.1.
+   * @param {string} name Name of variable.
+   * @return {boolean} True iff name is bound in this scope.
+   */
+  intrp.Scope.prototype.hasBinding = function(name) {
+    return name in this.vars;
+  };
+
+  /**
+   * Creates a mutable binding in the given scope and initialises it to
+   * undefined or the provided valued.
+   *
+   * Based on CreateMutableBinding for declarative environment records,
+   * from ES5.1 §10.2.1.1.2 / ES6 §8.1.1.1.2.
+   * @param {string} name Name of variable.
+   * @param {Interpreter.Value=} value Initial value (default: undefined).
+   */
+  intrp.Scope.prototype.createMutableBinding = function(name, value) {
+    if (name in this.vars) {
+      throw Error(name + ' already has binding in this scope??');
+    }
+    this.vars[name] = value;
+  };
+
+  /**
+   * Creates an immutable binding in the given scope and initialises it
+   * to the provided valued.
+   *
+   * Based on CreateImmutableBinding for declarative environment records,
+   * from ES5.1 §10.2.1.1.7 / ES6 §8.1.1.1.3.
+   * @param {string} name Name of variable.
+   * @param {Interpreter.Value} value Initial value.
+   */
+  intrp.Scope.prototype.createImmutableBinding = function(name, value) {
+    if (name in this.vars) {
+      throw Error(name + ' already has binding in this scope??');
+    }
+    this.vars[name] = value;
+    this.notWritable.add(name);
   };
 
   /**
@@ -5980,7 +6030,7 @@ stepFuncs_['FunctionExpression'] = function (thread, stack, state, node) {
   // If the function expression has a name, create an outer scope to
   // bind that name.  See ES5.1 §13 / ES6 §14.1.20.
   var name = node['id'] && node['id']['name'];
-  if (name) scope = new Interpreter.Scope(perms, scope);
+  if (name) scope = new this.Scope(perms, scope);
   var func = new this.UserFunction(node, scope, source, perms);
   if (name) scope.createImmutableBinding(name, func);
   stack[stack.length - 1].value = func;
@@ -6315,7 +6365,7 @@ stepFuncs_['TryStatement'] = function (thread, stack, state, node) {
       if (handler && cv && cv.type === Interpreter.CompletionType.THROW) {
         state.info_ = null;  // This error is being handled, don't rethrow.
         // Execute catch clause with varible bound to exception value.
-        var scope = new Interpreter.Scope(state.scope.perms, state.scope);
+        var scope = new this.Scope(state.scope.perms, state.scope);
         scope.createMutableBinding(handler['param']['name'], cv.value);
         return new Interpreter.State(handler['body'], scope);
       }
