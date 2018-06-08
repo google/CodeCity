@@ -3001,6 +3001,29 @@ Interpreter.Status = {
 ///////////////////////////////////////////////////////////////////////////////
 
 /**
+ * Typedef for the functions used to implement NativeFunction.call.
+ * @typedef {function(this: Interpreter.prototype.NativeFunction,
+ *                    !Interpreter,
+ *                    !Interpreter.Thread,
+ *                    !Interpreter.State,
+ *                    Interpreter.Value,
+ *                    !Array<Interpreter.Value>)
+ *               : (Interpreter.Value|!Interpreter.FunctionResult)}
+ */
+Interpreter.NativeCallImpl;
+
+/**
+ * Typedef for the functions used to implement NativeFunction.construct.
+ * @typedef {function(this: Interpreter.prototype.NativeFunction,
+ *                    !Interpreter,
+ *                    !Interpreter.Thread,
+ *                    !Interpreter.State,
+ *                    !Array<Interpreter.Value>)
+ *               : (Interpreter.Value|!Interpreter.FunctionResult)}
+ */
+Interpreter.NativeConstructImpl;
+
+/**
  * An iterator over the properties of an ObjectLike and its
  * prototypes, following the usual for-in loop rules.
  * @constructor
@@ -3826,34 +3849,6 @@ Interpreter.prototype.Thread = function(thread, owner, proto) {
 // Other types, not representing JS objects.
 /**
  * @constructor
- * @param {?Interpreter.Owner} owner
- * @param {number} port
- * @param {!Interpreter.prototype.Object} proto
- */
-Interpreter.prototype.Server = function(owner, port, proto) {
-  /** @type {?Interpreter.Owner} */
-  this.owner;
-  /** @type {number} */
-  this.port;
-  /** @type {Interpreter.prototype.Object} */
-  this.proto;
-  /** @private @type {net.Server} */
-  this.server_;
-  throw Error('Inner class constructor not callable on prototype');
-};
-
-/** @param {!Function=} onListening @param {!Function=} onError */
-Interpreter.prototype.Server.prototype.listen = function(onListening, onError) {
-  throw Error('Inner class method not callable on prototype');
-};
-
-/** @param {!Function=} onClose */
-Interpreter.prototype.Server.prototype.unlisten = function(onClose) {
-  throw Error('Inner class method not callable on prototype');
-};
-
-/**
- * @constructor
  * @implements {Interpreter.ObjectLike}
  * @param {(boolean|number|string)} prim
  */
@@ -3939,27 +3934,32 @@ Interpreter.prototype.Box.prototype.valueOf = function() {
 };
 
 /**
- * Typedef for the functions used to implement NativeFunction.call.
- * @typedef {function(this: Interpreter.prototype.NativeFunction,
- *                    !Interpreter,
- *                    !Interpreter.Thread,
- *                    !Interpreter.State,
- *                    Interpreter.Value,
- *                    !Array<Interpreter.Value>)
- *               : (Interpreter.Value|!Interpreter.FunctionResult)}
+ * @constructor
+ * @param {?Interpreter.Owner} owner
+ * @param {number} port
+ * @param {!Interpreter.prototype.Object} proto
  */
-Interpreter.NativeCallImpl;
+Interpreter.prototype.Server = function(owner, port, proto) {
+  /** @type {?Interpreter.Owner} */
+  this.owner;
+  /** @type {number} */
+  this.port;
+  /** @type {Interpreter.prototype.Object} */
+  this.proto;
+  /** @private @type {net.Server} */
+  this.server_;
+  throw Error('Inner class constructor not callable on prototype');
+};
 
-/**
- * Typedef for the functions used to implement NativeFunction.construct.
- * @typedef {function(this: Interpreter.prototype.NativeFunction,
- *                    !Interpreter,
- *                    !Interpreter.Thread,
- *                    !Interpreter.State,
- *                    !Array<Interpreter.Value>)
- *               : (Interpreter.Value|!Interpreter.FunctionResult)}
- */
-Interpreter.NativeConstructImpl;
+/** @param {!Function=} onListening @param {!Function=} onError */
+Interpreter.prototype.Server.prototype.listen = function(onListening, onError) {
+  throw Error('Inner class method not callable on prototype');
+};
+
+/** @param {!Function=} onClose */
+Interpreter.prototype.Server.prototype.unlisten = function(onClose) {
+  throw Error('Inner class method not callable on prototype');
+};
 
 ///////////////////////////////////////////////////////////////////////////////
 // Inner classes of Interpreter: Implementations.
@@ -4967,143 +4967,6 @@ Interpreter.prototype.installTypes = function() {
   /////////////////////////////////////////////////////////////////////////////
   // Other types, not representing JS objects.
   /**
-   * Server is an (owner, port, proto, (extra info)) tuple representing a
-   * listening server.  It encapsulates node's net.Server type, with
-   * some additional info needed to implement the connectionListen()
-   * API.  In its present form it is not suitable for exposure as a
-   * userland pseduoObject, but it is intended to be easily adaptable
-   * for that if desired.
-   * @constructor
-   * @extends {Interpreter.prototype.Server}
-   * @param {?Interpreter.Owner} owner Owner object or null.
-   * @param {number} port Port to listen on.
-   * @param {!Interpreter.prototype.Object} proto Prototype object for
-   *     new connections.
-   */
-  intrp.Server = function(owner, port, proto) {
-    // Special excepetion: port === undefined when deserializing, in
-    // violation of usual type rules.
-    if ((port !== (port >>> 0) || port > 0xffff) && port !== undefined) {
-      throw RangeError('invalid port ' + port);
-    }
-    /** @type {?Interpreter.Owner} */
-    this.owner = owner;
-    /** @type {number} */
-    this.port = port;
-    /** @type {!Interpreter.prototype.Object} */
-    this.proto = proto;
-    this.server_ = null;
-  };
-
-  /**
-   * Start a Server object listening on its assigned port.
-   * @param {!Function=} onListening Callback to call once listening has begun.
-   * @param {!Function=} onError Callback to call in case of error.
-   */
-  intrp.Server.prototype.listen = function(onListening, onError) {
-    // Invariant checks.
-    if (this.port === undefined || !(this.proto instanceof intrp.Object)) {
-      throw Error('Invalid Server state');
-    }
-    if (intrp.listeners_[this.port] !== this) {
-      throw Error('Listening on server not listed in .listeners_??');
-    }
-    var server = this;  // Because this will be undefined in handlers below.
-    // Create net.Server, start it listening, and attached it to this.
-    var netServer = new net.Server(/* {allowHalfOpen: true} */);
-    netServer.on('connection', function(socket) {
-      // TODO(cpcallen): Add localhost test here, like this - only
-      // also allow IPV6 connections:
-      // if (socket.remoteAddress != '127.0.0.1') {
-      //   // Reject connections other than from localhost.
-      //   intrp.log('net', 'Rejecting connection from ' +
-      //       socket.remoteAddress);
-      //   socket.end('Connection rejected.');
-      //   return;
-      // }
-      intrp.log('net', 'Connection from %s', socket.remoteAddress);
-
-      // Create new object from proto and call onConnect.
-      var obj = new intrp.Object(server.owner, server.proto);
-      obj.socket = socket;
-      var func = obj.get('onConnect', this.owner);
-      if (func instanceof intrp.Function && server.owner !== null) {
-        // TODO(cpcallen:perms): Is server.owner the correct owner for
-        // this thread?  Note that this will typically be root, and
-        // .onError will therefore get caller perms === root, which is
-        // probably dangerous.  Here and several places below.
-        intrp.createThreadForFuncCall(server.owner, func, obj, []);
-      }
-
-      // Handle incoming data from clients.  N.B. that data is a
-      // node buffer object, so we must convert it to a string
-      // before passing it to user code.
-      socket.on('data', function(data) {
-        var func = obj.get('onReceive', this.owner);
-        if (func instanceof intrp.Function && server.owner !== null) {
-          intrp.createThreadForFuncCall(
-              server.owner, func, obj, [String(data)]);
-        }
-      });
-
-      socket.on('end', function() {
-        intrp.log('net', 'Connection from %s closed.', socket.remoteAddress);
-        var func = obj.get('onEnd', this.owner);
-        if (func instanceof intrp.Function && server.owner !== null) {
-          intrp.createThreadForFuncCall(server.owner, func, obj, []);
-        }
-        // TODO(cpcallen): Don't fully close half-closed connection yet.
-        socket.end();
-      });
-
-      socket.on('error', function(error) {
-        intrp.log('net', 'Socket error:', error);
-        var func = obj.get('onError', this.owner);
-        if (func instanceof intrp.Function && server.owner !== null) {
-          var userError = intrp.errorNativeToPseudo(error, server.owner);
-          intrp.createThreadForFuncCall(server.owner, func, obj, [userError]);
-        }
-      });
-
-      // TODO(cpcallen): save new object somewhere we can find it
-      // later (when we want to obtain list of connected objects).
-    });
-
-    netServer.on('listening', function() {
-      var addr = netServer.address();
-      intrp.log('net', 'Listening on %s address %s port %s', addr.family,
-                  addr.address, addr.port);
-      onListening && onListening();
-    });
-
-    netServer.on('error', function(error) {
-      // TODO(cpcallen): attach additional information about
-      // reason for failure.
-      intrp.log('net', 'Listen on port %s failed: %s: %s', server.port,
-                  error.name, error.message);
-      onError && onError(error);
-    });
-
-    netServer.on('close', function() {
-      intrp.log('net', 'Done listening on port %s', server.port);
-      server.server_ = null;
-    });
-
-    netServer.listen(this.port);
-    this.server_ = netServer;
-  };
-
-  /**
-   * Stop a Server object listening on its assigned port.
-   * @param {!Function=} onClose Callback to call once listening has ceased.
-   */
-  intrp.Server.prototype.unlisten = function(onClose) {
-    this.server_.close(onClose);
-    // Existing .on('close', ...) event handler will take care of
-    // setting this.server_ = null.
-  };
-
-  /**
    * Class for a boxed primitive.  Does not @extend
    * Interpreter.prototype.Object, because we do not want to expose
    * these to the users.  They're just used internally to simplify the
@@ -5257,6 +5120,143 @@ Interpreter.prototype.installTypes = function() {
    */
   intrp.Box.prototype.valueOf = function() {
     return this.primitive_;
+  };
+
+  /**
+   * Server is an (owner, port, proto, (extra info)) tuple representing a
+   * listening server.  It encapsulates node's net.Server type, with
+   * some additional info needed to implement the connectionListen()
+   * API.  In its present form it is not suitable for exposure as a
+   * userland pseduoObject, but it is intended to be easily adaptable
+   * for that if desired.
+   * @constructor
+   * @extends {Interpreter.prototype.Server}
+   * @param {?Interpreter.Owner} owner Owner object or null.
+   * @param {number} port Port to listen on.
+   * @param {!Interpreter.prototype.Object} proto Prototype object for
+   *     new connections.
+   */
+  intrp.Server = function(owner, port, proto) {
+    // Special excepetion: port === undefined when deserializing, in
+    // violation of usual type rules.
+    if ((port !== (port >>> 0) || port > 0xffff) && port !== undefined) {
+      throw RangeError('invalid port ' + port);
+    }
+    /** @type {?Interpreter.Owner} */
+    this.owner = owner;
+    /** @type {number} */
+    this.port = port;
+    /** @type {!Interpreter.prototype.Object} */
+    this.proto = proto;
+    this.server_ = null;
+  };
+
+  /**
+   * Start a Server object listening on its assigned port.
+   * @param {!Function=} onListening Callback to call once listening has begun.
+   * @param {!Function=} onError Callback to call in case of error.
+   */
+  intrp.Server.prototype.listen = function(onListening, onError) {
+    // Invariant checks.
+    if (this.port === undefined || !(this.proto instanceof intrp.Object)) {
+      throw Error('Invalid Server state');
+    }
+    if (intrp.listeners_[this.port] !== this) {
+      throw Error('Listening on server not listed in .listeners_??');
+    }
+    var server = this;  // Because this will be undefined in handlers below.
+    // Create net.Server, start it listening, and attached it to this.
+    var netServer = new net.Server(/* {allowHalfOpen: true} */);
+    netServer.on('connection', function(socket) {
+      // TODO(cpcallen): Add localhost test here, like this - only
+      // also allow IPV6 connections:
+      // if (socket.remoteAddress != '127.0.0.1') {
+      //   // Reject connections other than from localhost.
+      //   intrp.log('net', 'Rejecting connection from ' +
+      //       socket.remoteAddress);
+      //   socket.end('Connection rejected.');
+      //   return;
+      // }
+      intrp.log('net', 'Connection from %s', socket.remoteAddress);
+
+      // Create new object from proto and call onConnect.
+      var obj = new intrp.Object(server.owner, server.proto);
+      obj.socket = socket;
+      var func = obj.get('onConnect', this.owner);
+      if (func instanceof intrp.Function && server.owner !== null) {
+        // TODO(cpcallen:perms): Is server.owner the correct owner for
+        // this thread?  Note that this will typically be root, and
+        // .onError will therefore get caller perms === root, which is
+        // probably dangerous.  Here and several places below.
+        intrp.createThreadForFuncCall(server.owner, func, obj, []);
+      }
+
+      // Handle incoming data from clients.  N.B. that data is a
+      // node buffer object, so we must convert it to a string
+      // before passing it to user code.
+      socket.on('data', function(data) {
+        var func = obj.get('onReceive', this.owner);
+        if (func instanceof intrp.Function && server.owner !== null) {
+          intrp.createThreadForFuncCall(
+              server.owner, func, obj, [String(data)]);
+        }
+      });
+
+      socket.on('end', function() {
+        intrp.log('net', 'Connection from %s closed.', socket.remoteAddress);
+        var func = obj.get('onEnd', this.owner);
+        if (func instanceof intrp.Function && server.owner !== null) {
+          intrp.createThreadForFuncCall(server.owner, func, obj, []);
+        }
+        // TODO(cpcallen): Don't fully close half-closed connection yet.
+        socket.end();
+      });
+
+      socket.on('error', function(error) {
+        intrp.log('net', 'Socket error:', error);
+        var func = obj.get('onError', this.owner);
+        if (func instanceof intrp.Function && server.owner !== null) {
+          var userError = intrp.errorNativeToPseudo(error, server.owner);
+          intrp.createThreadForFuncCall(server.owner, func, obj, [userError]);
+        }
+      });
+
+      // TODO(cpcallen): save new object somewhere we can find it
+      // later (when we want to obtain list of connected objects).
+    });
+
+    netServer.on('listening', function() {
+      var addr = netServer.address();
+      intrp.log('net', 'Listening on %s address %s port %s', addr.family,
+                  addr.address, addr.port);
+      onListening && onListening();
+    });
+
+    netServer.on('error', function(error) {
+      // TODO(cpcallen): attach additional information about
+      // reason for failure.
+      intrp.log('net', 'Listen on port %s failed: %s: %s', server.port,
+                  error.name, error.message);
+      onError && onError(error);
+    });
+
+    netServer.on('close', function() {
+      intrp.log('net', 'Done listening on port %s', server.port);
+      server.server_ = null;
+    });
+
+    netServer.listen(this.port);
+    this.server_ = netServer;
+  };
+
+  /**
+   * Stop a Server object listening on its assigned port.
+   * @param {!Function=} onClose Callback to call once listening has ceased.
+   */
+  intrp.Server.prototype.unlisten = function(onClose) {
+    this.server_.close(onClose);
+    // Existing .on('close', ...) event handler will take care of
+    // setting this.server_ = null.
   };
 };
 
