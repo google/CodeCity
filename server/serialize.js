@@ -242,8 +242,8 @@ Serializer.serialize = function(intrp) {
                  'Arguments',
                  'WeakMap',
                  'Thread',
-                 'Server',
-                 'Box'];
+                 'Box',
+                 'Server'];
   // Find all objects.
   var objectList = [];
   Serializer.objectHunt_(intrp, objectList, Serializer.excludeTypes, exclude);
@@ -433,8 +433,8 @@ Serializer.getTypesDeserialize_ = function (intrp) {
     'PseudoArguments': intrp.Arguments,
     'PseudoWeakMap': intrp.WeakMap,
     'PseudoThread': intrp.Thread,
-    'Server': intrp.Server,
     'Box': intrp.Box,
+    'Server': intrp.Server,
     'Node': Interpreter.Node
   };
 };
