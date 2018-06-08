@@ -21,6 +21,7 @@
  * @fileoverview Integrated Development Environment for Code City.
  * @author fraser@google.com (Neil Fraser)
  */
+'use strict';
 
 /**
  * If not otherwise specified, what should /code point at?
