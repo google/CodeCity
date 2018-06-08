@@ -43,7 +43,6 @@ svgEditor.init = function() {
   };
 
   svgEditor.canvas = new Canvas(container, config);
-  svgEditor.resize();
 
   // Check to see if the parent window left us an initial source to render.
   var source = window.initialSource;
@@ -51,10 +50,12 @@ svgEditor.init = function() {
     svgEditor.setString(source);
     window.initialSource = undefined;
   }
+  svgEditor.resize();
 };
 
 /**
  * Resize and reposition the SVG canvas when the window has changed shape.
+ * Zoom so that a 100 unit tall image fills the screen.
  */
 svgEditor.resize = function() {
   var top = 0;
@@ -64,7 +65,12 @@ svgEditor.resize = function() {
   var container = document.getElementById('editorContainer');
   container.style.top = top + 'px';
   container.style.left = left + 'px';
-  svgEditor.canvas.setResolution(width, height);
+
+  // Code City sprites are 100 units tall.
+  var FIXED_HEIGHT = 100;
+  var zoom = height / FIXED_HEIGHT;
+  svgEditor.canvas.setZoom(zoom);
+  svgEditor.canvas.setResolution(width / height * FIXED_HEIGHT, FIXED_HEIGHT);
   svgEditor.canvas.updateCanvas(width, height);
 };
 
