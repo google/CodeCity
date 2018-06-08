@@ -21,6 +21,7 @@
  * @fileoverview Integrated Development Environment for Code City.
  * @author fraser@google.com (Neil Fraser)
  */
+'use strict';
 
 Code.ObjectPanel = {};
 
@@ -47,7 +48,7 @@ Code.ObjectPanel.data = null;
  */
 Code.ObjectPanel.init = function() {
   // Clear the '...'
-  results = document.getElementById('objectResults');
+  var results = document.getElementById('objectResults');
   results.innerHTML = '';
   results.className = '';
   var data = Code.ObjectPanel.data;
@@ -113,7 +114,7 @@ Code.ObjectPanel.addLink = function(part, type, section) {
     div.className = 'section';
   }
   a.appendChild(div);
-  results.appendChild(a);
+  document.getElementById('objectResults').appendChild(a);
 };
 
 /**
@@ -157,6 +158,7 @@ Code.ObjectPanel.highlight = function() {
   var part = parts ? parts[Code.ObjectPanel.parts.length] : null;
   var jsonPart = JSON.stringify(part);
   var newHighlighted = null;
+  var results = document.getElementById('objectResults');
   for (var i = 0, link; (link = results.childNodes[i]); i++) {
     if (link.getAttribute('data-link') === jsonPart) {
       newHighlighted = link;

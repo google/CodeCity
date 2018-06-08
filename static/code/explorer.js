@@ -21,6 +21,7 @@
  * @fileoverview Integrated Development Environment for Code City.
  * @author fraser@google.com (Neil Fraser)
  */
+'use strict';
 
 Code.Explorer = {};
 
@@ -622,7 +623,7 @@ Code.Explorer.loadPanels = function(parts) {
  * @param {string} component Stringified parts list.
  */
 Code.Explorer.addPanel = function(component) {
-  panelsScroll = document.getElementById('panelsScroll');
+  var panelsScroll = document.getElementById('panelsScroll');
   var iframe = document.createElement('iframe');
   iframe.id = 'objectPanel' + Code.Explorer.panelCount;
   iframe.src = '/static/code/objectPanel.html#' + encodeURI(component);
@@ -666,7 +667,7 @@ Code.Explorer.scrollPanel = function() {
   } else {
     spacer.style.marginRight = 0;
     // Scroll right.
-    panels = document.getElementById('panels');
+    var panels = document.getElementById('panels');
     var oldScroll = panels.scrollLeft;
     panels.scrollLeft += speed;
     if (panels.scrollLeft > oldScroll) {
