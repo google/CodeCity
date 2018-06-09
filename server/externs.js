@@ -182,3 +182,75 @@ IterableWeakMap.prototype.values = function() {};
  * @return {!Iterator<!Array<KEY|VALUE>>}
  */
 IterableWeakMap.prototype[Symbol.iterator] = function() {};
+
+/**
+ * @constructor @struct
+ * @param {Iterable<VALUE>|Array<VALUE>=} opt_iterable
+ * @template VALUE
+ * @nosideeffects
+ * @see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Set
+ */
+function IterableWeakSet(opt_iterable) {}
+
+/**
+ * @param {VALUE} value
+ * @return {THIS}
+ * @this {THIS}
+ * @template THIS
+ */
+IterableWeakSet.prototype.add = function(value) {};
+
+/**
+ * @return {void}
+ */
+IterableWeakSet.prototype.clear = function() {};
+
+/**
+ * @param {VALUE} value
+ * @return {boolean}
+ */
+IterableWeakSet.prototype.delete = function(value) {};
+
+/**
+ * @return {!IteratorIterable<!Array<VALUE>>}
+ * @nosideeffects
+ */
+IterableWeakSet.prototype.entries = function() {};
+
+/**
+ * @param {function(this:THIS, VALUE, VALUE, SET)} callback
+ * @param {THIS=} thisArg
+ * @this {SET}
+ * @template SET,THIS
+ */
+IterableWeakSet.prototype.forEach = function(callback, thisArg) {};
+
+/**
+ * @param {VALUE} value
+ * @return {boolean}
+ * @nosideeffects
+ */
+IterableWeakSet.prototype.has = function(value) {};
+
+/**
+ * @return {!IteratorIterable<VALUE>}
+ * @nosideeffects
+ */
+IterableWeakSet.prototype.keys = function() {};
+
+/**
+ * @type {number}
+ * (readonly)
+ */
+IterableWeakMap.prototype.size;
+
+/**
+ * @return {!IteratorIterable<VALUE>}
+ * @nosideeffects
+ */
+IterableWeakSet.prototype.values = function() {};
+
+/**
+ * @return {!Iterator<!Array<VALUE>>}
+ */
+IterableWeakSet.prototype[Symbol.iterator] = function() {};
