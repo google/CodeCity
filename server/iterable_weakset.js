@@ -27,44 +27,6 @@
 const weak = require('weak');
 
 /**
- * Function to clean up dead cells from an IterableWeakSet when a
- * value object has been garbaged collected.
- * @this {!IterableWeakSet} IterableWeakSet to remove GCed value from.
- * @param {!Cell} cell Cell containing GCed value.
- * @return {void}
- */
-function cleanup(cell) {
-  this.cells_.delete(cell);
-}
-
-// TODO(cpcallen): This exists mostly as legacy copied from
-// IterableWeakMap, though it does have the useful feature of
-// encapsulating the weakref.  Consider removing entirely, and just
-// storing weakrefs directly.
-/**
- * A wrapper to hold a value weakly in an IterableWeakSet.
- * @template VALUE
- */
-class Cell {
-  /**
-   * @param {!IterableWeakSet} iws Set this cell will belong to (for cleanup).
-   * @param {VALUE} value The value for this cell.
-   */
-  constructor(iws, value) {
-    /** @type {!WeakRef<VALUE>} */
-    this.wv = weak(value, cleanup.bind(iws, this));
-  }
-
-  /**
-   * Return the cell's value (as a strong reference).
-   * @return {VALUE}
-   */
-  getValue() {
-    return weak.get(this.wv);
-  }
-}
-
-/**
  * A WeakSet implementing the full Set interface, including iterability.
  * @extends {WeakSet}
  * @implements {Iterable<!Array<VALUE>>}
@@ -77,10 +39,10 @@ class IterableWeakSet {
    * @param {Iterable<!Array<VALUE>>|!Array<!Array<VALUE>>=} iterable
    */
   constructor(iterable = undefined) {
-    /** @private @const @type {!WeakMap<VALUE,!Cell>} */
+    /** @private @const @type {!WeakMap<VALUE,!WeakRef<VALUE>>} */
     this.map_ = new WeakMap();
-    /** @private @const @type {!Set<!Cell>} */
-    this.cells_ = new Set();
+    /** @private @const @type {!Set<!WeakRef<VALUE>>} */
+    this.set_ = new Set();
 
     if (iterable === null || iterable === undefined) {
       return;
@@ -109,9 +71,9 @@ class IterableWeakSet {
    */
   add(value) {
     if (!this.map_.has(value)) {
-      const cell = new Cell(this, value);
-      this.map_.set(value, cell);
-      this.cells_.add(cell);
+      const wr = weak(value, () => this.set_.delete(wr));
+      this.map_.set(value, wr);
+      this.set_.add(wr);
     }
     return this;
   }
@@ -122,8 +84,8 @@ class IterableWeakSet {
    * @override
    */
   clear() {
-    for (const cell of this.cells_) {
-      const value = cell.getValue();
+    for (const wr of this.set_) {
+      const value = weak.get(wr);
       if (value !== undefined) this.delete(value);
     }
   }
@@ -135,9 +97,9 @@ class IterableWeakSet {
    * @override
    */
   delete(value) {
-    const cell = this.map_.get(value);
-    if (cell) {
-      this.cells_.delete(cell);
+    const wr = this.map_.get(value);
+    if (wr) {
+      this.set_.delete(wr);
     }
     return this.map_.delete(value);
   }
@@ -147,10 +109,10 @@ class IterableWeakSet {
    * @return {!IteratorIterable<!Array<VALUE>>}
    */
   *entries() {
-    for (const cell of this.cells_) {
-      const value = cell.getValue();
-      if (value === undefined) {  // value was garbage collected.  Remove cell.
-        this.cells_.delete(cell);
+    for (const wr of this.set_) {
+      const value = weak.get(wr);
+      if (value === undefined) {  // value was garbage collected.  Remove wr.
+        this.set_.delete(wr);
       } else {
         yield [value, value];
       }
@@ -186,7 +148,7 @@ class IterableWeakSet {
    * @return {number}
    */
   get size() {
-    return this.cells_.size;
+    return this.set_.size;
   }
 
   /**
@@ -194,10 +156,10 @@ class IterableWeakSet {
    * @return {!IteratorIterable<VALUE>}
    */
   *values() {
-    for (const cell of this.cells_) {
-      const value = cell.getValue();
-      if (value === undefined) {  // value was garbage collected.  Remove cell.
-        this.cells_.delete(cell);
+    for (const wr of this.set_) {
+      const value = weak.get(wr);
+      if (value === undefined) {  // value was garbage collected.  Remove wr.
+        this.set_.delete(wr);
       } else {
         yield value;
       }
