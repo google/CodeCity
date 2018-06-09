@@ -78,7 +78,7 @@ exports.testIterableWeakMap = function(t) {
 
   assertSame(iwm.delete({}), false, 'iwm.delete({})');
   assertSame(iwm.delete(obj2), true, 'iwm.delete(obj)');
-  assertSame(iwm.size, 1, 'iwm.size (still)');
+  assertSame(iwm.size, 1, 'iwm.size (after delete)');
   const entries = Array.from(iwm);
   assertSame(entries.length, 1, 'Array.from(iwm).length (after delete)');
   assertSame(entries[0][0], obj1, 'Array.from(iwm)[0][0]');
