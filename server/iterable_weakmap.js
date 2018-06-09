@@ -89,7 +89,8 @@ class IterableWeakMap extends WeakMap {
     if (iterable === null || iterable === undefined) {
       return;
     }
-    if (typeof this.set !== 'function') {
+    const adder = this.set;
+    if (typeof adder !== 'function') {
       throw TypeError("'" + this.set + "' returned for property 'set' " +
           'of object ' + this + ' is not a function');
     }
@@ -98,7 +99,7 @@ class IterableWeakMap extends WeakMap {
           entry === null) {
         throw TypeError('Iterator value ' + entry + ' is not an entry object');
       }
-      this.set(entry[0], entry[1]);
+      adder.call(this, entry[0], entry[1]);
     }
   }
 
