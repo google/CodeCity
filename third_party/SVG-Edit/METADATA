@@ -7,7 +7,7 @@ third_party {
     type: GIT
     value: "https://github.com/SVG-Edit/svgedit"
   }
-  version: "2deaf4710a4e6f2c99ce40bea8377e9773b3b9df"
-  last_upgrade_date { year: 2018 month: 6 day: 5 }
+  version: "a2df54881f6b3a4aabb646e60838ea6a7725c913"
+  last_upgrade_date { year: 2018 month: 6 day: 11 }
   license_type: NOTICE
 }
