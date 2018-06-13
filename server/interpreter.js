@@ -2713,57 +2713,6 @@ Interpreter.prototype.calledWithNew = function() {
 };
 
 /**
- * Implements IsUnresolvableReference from ES5 §8.7 / ES6 §6.2.3.
- * @param {!Interpreter.Scope} scope Current scope dictionary.
- * @param {!Array} ref Reference tuple.
- * @param {!Interpreter.Owner} perms Who is trying to get it?
- * @return {boolean} True iff refernece is unresolvable.
- */
-Interpreter.prototype.isUnresolvableReference = function(scope, ref, perms) {
-  // Property references never unresolvable.
-  return ref[0] === null;
-};
-
-/**
- * Gets the value of a referenced name from the scope or object referred to.
- * @param {!Array} ref Reference tuple.
- * @param {!Interpreter.Owner} perms Who is trying to get it?
- * @return {Interpreter.Value} Value (may be undefined).
- */
-Interpreter.prototype.getValue = function(ref, perms) {
-  var base = ref[0];
-  var name = ref[1];
-  if (base === null) {  // Unresolvable reference.
-    throw new this.Error(perms, this.REFERENCE_ERROR, name + ' is not defined');
-  } else if (base instanceof Interpreter.Scope) {  // An environment reference.
-    return base.get(name);
-  } else {  // A property reference.
-    return this.toObject(base, perms).get(name, perms);
-  }
-};
-
-/**
- * Sets value of a referenced name to the scope or object referred to.
- * @param {!Array} ref Reference tuple.
- * @param {Interpreter.Value} value Value.
- * @param {!Interpreter.Owner} perms Who is trying to set it?
- */
-Interpreter.prototype.setValue = function(ref, value, perms) {
-  var base = ref[0];
-  var name = ref[1];
-  if (base === null) {  // Unresolvable reference.
-    throw new this.Error(perms, this.REFERENCE_ERROR, name + ' is not defined');
-  } else if (base instanceof Interpreter.Scope) {  // An environment reference.
-    var err = base.set(name, value);
-    if (err) {
-      throw this.errorNativeToPseudo(err, perms);
-    }
-  } else {  // A property reference.
-    this.toObject(ref[0], perms).set(name, value, perms);
-  }
-};
-
-/**
  * Carry out the mechanics of throwing an exception.
  *
  * This is intended only to be called from exception handlers in
@@ -3343,7 +3292,7 @@ Interpreter.State = function(node, scope, wantRef) {
   this.wantRef_ = wantRef || false;
   /** @type {Interpreter.Value} */
   this.value = undefined;
-  /** @type {?Array} */
+  /** @type {?Interpreter.Reference} */
   this.ref = null;
   /** @type {?Array<string>} */
   this.labels = null;
@@ -5366,7 +5315,7 @@ Interpreter.prototype.installTypes = function() {
    * An environment (scope) reference.
    * @constructor @extends {Interpreter.prototype.ScopeReference}
    * @param {?Interpreter.Scope} scope The scope which is the base of
-   *     this reference.
+   *     this reference, or null for unresolvable references.
    * @param {string} name The variable name being referenced.
    */
   intrp.ScopeReference = function(scope, name) {
@@ -5750,7 +5699,7 @@ stepFuncs_['AssignmentExpression'] = function (thread, stack, state, node) {
   if (!state.ref) throw TypeError('left subexpression not an LVALUE??');
   if (state.step_ === 1) {  // Evaluate right.
     if (node['operator'] !== '=') {
-      state.tmp_ = this.getValue(state.ref, state.scope.perms);
+      state.tmp_ = state.ref.get(state.scope.perms);
     }
     state.step_ = 2;
     return new Interpreter.State(node['right'], state.scope);
@@ -5763,14 +5712,18 @@ stepFuncs_['AssignmentExpression'] = function (thread, stack, state, node) {
     case '=':
       value = rightValue;
       // Set name if anonymous function expression.
-      if (isAnonymousFunctionDefinition(node['right']) &&
-          (isIdentifierRef(node['left']) ||
-           (this.options.methodNames && isMemberRef(node['left'])))) {
+      if (isAnonymousFunctionDefinition(node['right'])) {
         var func = /** @type {!Interpreter.prototype.Function} */(value);
         // TODO(ES6): Check that func does not already have a 'name'
         // own property before calling setName?  (Spec requires, but
         // unclear why since we know RHS is anonymous.  Proxies?)
-        func.setName(state.ref[1]);
+        if (isIdentifierRef(node['left'])) {
+          // TODO(cpcallen): don't violate privacy.
+          func.setName(state.ref.name_);
+        } else if (this.options.methodNames && isMemberRef(node['left'])) {
+          // TODO(cpcallen): don't violate privacy.
+          func.setName(state.ref.key_);
+        }
       }
       break;
     // All the rest are simple and similar.
@@ -5788,7 +5741,7 @@ stepFuncs_['AssignmentExpression'] = function (thread, stack, state, node) {
     default:
       throw SyntaxError('Unknown assignment expression: ' + node['operator']);
   }
-  this.setValue(state.ref, value, state.scope.perms);
+  state.ref.set(value, state.scope.perms);
   stack.pop();
   stack[stack.length - 1].value = value;
 };
@@ -5948,14 +5901,12 @@ stepFuncs_['CallExpression'] = function (thread, stack, state, node) {
                 construct: state.node['type'] === 'NewExpression',
                 funcState: undefined};
     if (state.ref) {  // Callee was MemberExpression or Identifier.
-      state.tmp_ = this.getValue(state.ref, state.scope.perms);
-      if (state.ref[0] instanceof Interpreter.Scope) {
-        // (Globally or locally) named function - maybe named 'eval'?
-        info.directEval = (state.ref[1] === 'eval');
-      } else {
-        // Method call; save 'this' value.
-        info.this = state.ref[0];
-      }
+      state.tmp_ = state.ref.get(state.scope.perms);
+      // TODO(cpcallen): Don't violate ScopeReference member privacy.
+      info.directEval =
+          state.ref && state.ref instanceof this.ScopeReference &&
+          state.ref.name_ === 'eval';
+      info.this = state.ref.getThis();
     } else {  // Callee already fully evaluated.
       state.tmp_ = state.value;
     }
@@ -6256,11 +6207,12 @@ stepFuncs_['ForInStatement'] = function (thread, stack, state, node) {
         }
         // Inline variable declaration: for (var x in y)
         var lhsName = left['declarations'][0]['id']['name'];
-        state.ref = [state.scope.resolve(lhsName), lhsName];
+        state.ref =
+            new this.ScopeReference(state.scope.resolve(lhsName), lhsName);
         // FALL THROUGH
       case 3:  // Got .ref to variable to set.  Set it next key.
         if (!state.ref) throw TypeError('loop variable not an LVALUE??');
-        this.setValue(state.ref, state.info_.key, state.scope.perms);
+        state.ref.set(state.info_.key, state.scope.perms);
         // Execute the body if there is one, followed by next iteration.
         state.step_ = 2;
         if (node['body']) {
@@ -6361,7 +6313,8 @@ stepFuncs_['Identifier'] = function (thread, stack, state, node) {
   stack.pop();
   var /** string */ name = node['name'];
   if (state.wantRef_) {
-    stack[stack.length - 1].ref = [state.scope.resolve(name), name];
+    stack[stack.length - 1].ref =
+        new this.ScopeReference(state.scope.resolve(name), name);
   } else {
     stack[stack.length - 1].value = this.getValueFromScope(state.scope, name);
   }
@@ -6468,7 +6421,7 @@ stepFuncs_['MemberExpression'] = function (thread, stack, state, node) {
   var /** string */ key =
       node['computed'] ? String(state.value) : node['property']['name'];
   if (state.wantRef_) {
-    stack[stack.length - 1].ref = [base, key];
+    stack[stack.length - 1].ref = new this.PropertyReference(base, key);
   } else {
     var perms = state.scope.perms;
     stack[stack.length - 1].value = this.toObject(base, perms).get(key, perms);
@@ -6747,12 +6700,7 @@ stepFuncs_['UnaryExpression'] = function (thread, stack, state, node) {
     value = ~value;
   } else if (node['operator'] === 'delete') {
     if (state.ref) {
-      if (state.ref[0] instanceof Interpreter.Scope) {
-        // Whoops; this should have been caught by Acorn (because strict).
-        throw Error('Uncaught illegal deletion of unqualified identifier');
-      }
-      var obj = this.toObject(state.ref[0], state.scope.perms);
-      value = obj.deleteProperty(state.ref[1], state.scope.perms);
+      value = state.ref.delete(state.scope.perms);
     } else {
       // Attempted to deleted some expression that wasn't a reference
       // to a variable or property.  Skip delete; return true.
@@ -6761,10 +6709,10 @@ stepFuncs_['UnaryExpression'] = function (thread, stack, state, node) {
   } else if (node['operator'] === 'typeof') {
     if (state.ref) {
       var perms = state.scope.perms;
-      if (this.isUnresolvableReference(state.scope, state.ref, perms)) {
+      if (state.ref.isUnresolvable()) {
         value = undefined;
       } else {
-        value = this.getValue(state.ref, perms);
+        value = state.ref.get(perms);
       }
     }
     value = (value instanceof this.Function) ? 'function' : typeof value;
@@ -6791,7 +6739,7 @@ stepFuncs_['UpdateExpression'] = function (thread, stack, state, node) {
     return new Interpreter.State(node['argument'], state.scope, true);
   }
   if (!state.ref) throw TypeError('argument not an LVALUE??');
-  var value = Number(this.getValue(state.ref, state.scope.perms));
+  var value = Number(state.ref.get(state.scope.perms));
   var prefix = Boolean(node['prefix']);
   var /** Interpreter.Value */ rval;
   if (node['operator'] === '++') {
@@ -6801,7 +6749,7 @@ stepFuncs_['UpdateExpression'] = function (thread, stack, state, node) {
   } else {
     throw SyntaxError('Unknown update expression: ' + node['operator']);
   }
-  this.setValue(state.ref, value, state.scope.perms);
+  state.ref.set(value, state.scope.perms);
   stack.pop();
   stack[stack.length - 1].value = rval;
 };
