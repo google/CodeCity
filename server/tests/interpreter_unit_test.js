@@ -165,4 +165,18 @@ exports.testSource = function(t) {
 
   t.expect(name + '.lineColForPos(' + pos3 + ').line', lc.line, 2);
   t.expect(name + '.lineColForPos(' + pos3 + ').col', lc.col, 3);
+
+  src = new Interpreter.Source('startBound').slice(0, 0);
+  name = "Source('startBound').slice(0, 0)";
+  lc = src.lineColForPos(0);
+  t.expect(name + '.lineColForPos(0).line', lc.line, 1);
+  t.expect(name + '.lineColForPos(0).col', lc.line, 1);
+  t.expect(name + '.toString()', String(src), '');
+
+  src = new Interpreter.Source('endBound').slice(8, 8);
+  name = "Source('endBound').slice(8, 8)";
+  lc = src.lineColForPos(8);
+  t.expect(name + '.lineColForPos(8).line', lc.line, 1);
+  t.expect(name + '.lineColForPos(8).col', lc.line, 1);
+  t.expect(name + '.toString()', String(src), '');
 };

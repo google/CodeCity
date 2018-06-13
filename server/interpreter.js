@@ -3159,7 +3159,7 @@ Interpreter.Source = function(src, start_, end_) {
   if (start_ === undefined) {
     /** @private @type {number} */
     this.start_ = 0;
-  } else if (start_ < 0 || start_ >= src.length) {
+  } else if (start_ < 0 || start_ > src.length) {
     throw RangeError('Source start out of range');
   } else {
     this.start_ = start_;
@@ -3167,7 +3167,7 @@ Interpreter.Source = function(src, start_, end_) {
   if (end_ === undefined) {
     /** @private @type {number} */
     this.end_ = src.length;
-  } else if (end_ < 0 || end_ >= src.length) {
+  } else if (end_ < 0 || end_ > src.length) {
     throw RangeError('Source end out of range');
   } else {
     this.end_ = end_;
