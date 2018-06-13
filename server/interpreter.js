@@ -3045,45 +3045,6 @@ Interpreter.PropertyIterator.prototype.next = function() {
 };
 
 /**
- * The Reference specification type, from ES5.1 §8.7
- * @abstract @constructor
- */
-Interpreter.Reference = function() {};
-
-/**
- * Delete whatever the reference refers to (if possible).
- * @param {!Interpreter.Owner} perms Who is deleting?
- * @return {boolean} True iff successful.
- */
-Interpreter.Reference.prototype.delete = function(perms) {};
-
-/**
- * The GetValue method from ES5.1 §8.7.1.
- * @param {!Interpreter.Owner} perms Who is getting?
- * @return {Interpreter.Value} Current value of referee.
- */
-Interpreter.Reference.prototype.get = function(perms) {};
-
-/**
- * The getThisValue method from ES6 §6.2.3.3.
- * @return {Interpreter.Value} Current 'this' value for reference.
- */
-Interpreter.Reference.prototype.getThis = function() {};
-
-/**
- * The IsUnresolvableReference method from ES6 §6.2.3.
- * @return {boolean} True iff reference is unresolvable.
- */
-Interpreter.Reference.prototype.isUnresolvable = function() {};
-
-/**
- * The PutValue method from ES5.1 §8.7.2.
- * @param {!Interpreter.Owner} perms Who is setting?
- * @param {Interpreter.Value} value New value to set referee to.
- */
-Interpreter.Reference.prototype.set = function(value, perms) {};
-
-/**
  * Class for a scope.
  * @param {!Interpreter.Owner} perms The permissions with which code
  *     in the current scope is executing.
@@ -3292,7 +3253,7 @@ Interpreter.State = function(node, scope, wantRef) {
   this.wantRef_ = wantRef || false;
   /** @type {Interpreter.Value} */
   this.value = undefined;
-  /** @type {?Interpreter.Reference} */
+  /** @type {?Interpreter.prototype.Reference} */
   this.ref = null;
   /** @type {?Array<string>} */
   this.labels = null;
@@ -3998,70 +3959,44 @@ Interpreter.prototype.Box.prototype.valueOf = function() {
 };
 
 /**
- * @constructor @extends {Interpreter.Reference}
- * @param {Interpreter.Coercible} base
- * @param {string} key
- */
-Interpreter.prototype.PropertyReference = function(base, key) {
-  throw Error('Inner class constructor not callable on prototype');
-};
-
-/** @override */
-Interpreter.prototype.PropertyReference.prototype.delete = function(perms) {
-  throw Error('Inner class method not callable on prototype');
-};
-
-/** @override */
-Interpreter.prototype.PropertyReference.prototype.get = function(perms) {
-  throw Error('Inner class method not callable on prototype');
-};
-
-/** @override */
-Interpreter.prototype.PropertyReference.prototype.getThis = function() {
-  throw Error('Inner class method not callable on prototype');
-};
-
-/** @override */
-Interpreter.prototype.PropertyReference.prototype.isUnresolvable = function() {
-  throw Error('Inner class method not callable on prototype');
-};
-
-/** @override */
-Interpreter.prototype.PropertyReference.prototype.set = function(value, perms) {
-  throw Error('Inner class method not callable on prototype');
-};
-
-/**
- * @constructor @extends {Interpreter.Reference}
- * @param {?Interpreter.Scope} scope
+ * @constructor
+ * @param {!Interpreter.prototype.Object|boolean|number|string|
+ *         ?Interpreter.Scope} base
  * @param {string} name
  */
-Interpreter.prototype.ScopeReference = function(scope, name) {
+Interpreter.prototype.Reference = function(base, name) {
+  /** 
+   * @type {!Interpreter.prototype.Object|boolean|number|string|
+   *        ?Interpreter.Scope}
+   */
+  this.base;
+  /** @type{string} */
+  this.name;
   throw Error('Inner class constructor not callable on prototype');
 };
 
-/** @override */
-Interpreter.prototype.ScopeReference.prototype.delete = function(perms) {
+/** @param {!Interpreter.Owner} perms @return {boolean} */
+Interpreter.prototype.Reference.prototype.delete = function(perms) {
   throw Error('Inner class method not callable on prototype');
 };
 
-/** @override */
-Interpreter.prototype.ScopeReference.prototype.get = function(perms) {
+/** @param {!Interpreter.Owner} perms @return {Interpreter.Value} */
+Interpreter.prototype.Reference.prototype.get = function(perms) {
   throw Error('Inner class method not callable on prototype');
 };
 
-/** @override */
-Interpreter.prototype.ScopeReference.prototype.getThis = function() {
+/** @return {Interpreter.Value} */
+Interpreter.prototype.Reference.prototype.getThis = function() {
   throw Error('Inner class method not callable on prototype');
 };
 
-/** @override */
-Interpreter.prototype.ScopeReference.prototype.isUnresolvable = function() {
+/** @return {boolean} */
+Interpreter.prototype.Reference.prototype.isUnresolvable = function() {
   throw Error('Inner class method not callable on prototype');
 };
 
-/** @override */
-Interpreter.prototype.ScopeReference.prototype.set = function(value, perms) {
+/** @param {Interpreter.Value} value @param {!Interpreter.Owner} perms */
+Interpreter.prototype.Reference.prototype.set = function(value, perms) {
   throw Error('Inner class method not callable on prototype');
 };
 
@@ -5270,100 +5205,93 @@ Interpreter.prototype.installTypes = function() {
   };
 
   /**
-   * A property reference.
-   * @constructor @extends {Interpreter.prototype.PropertyReference}
-   * @param {Interpreter.Coercible} base The base value of the reference.
-   * @param {string} key The property key being referenced.
+   * The Reference specification type, from ES5.1 §8.7 / ES6 §6.2.3.
+   * We use null instead of undefined to denote an unresolvable reference.
+   * @constructor @extends {Interpreter.prototype.Reference}
+   * @param {!Interpreter.prototype.Object|boolean|number|string|
+   *         ?Interpreter.Scope} base The base value of the reference.
+   * @param {string} name The referenced name.
    */
-  intrp.PropertyReference = function(base, key) {
-    /** @const @type {Interpreter.Coercible} */
-    this.base_ = base;
+  intrp.Reference = function(base, name) {
+    /** 
+     * @const {!Interpreter.prototype.Object|boolean|number|string|
+     *         ?Interpreter.Scope}
+     */
+    this.base = base;
     /** @const @type {string} */
-    this.key_ = key;
-  };
-
-  intrp.PropertyReference.prototype =
-      Object.create(Interpreter.Reference.prototype);
-  intrp.PropertyReference.prototype.constructor = intrp.PropertyReference;
-
-  /** @override */
-  intrp.PropertyReference.prototype.delete = function(perms) {
-    return intrp.toObject(this.base_, perms).deleteProperty(this.key_, perms);
-  };
-
-  /** @override */
-  intrp.PropertyReference.prototype.get = function(perms) {
-    return intrp.toObject(this.base_, perms).get(this.key_, perms);
-  };
-
-  /** @override */
-  intrp.PropertyReference.prototype.getThis = function() {
-    return this.base_;
-  };
-
-  /** @override */
-  intrp.PropertyReference.prototype.isUnresolvable = function() {
-    return false;
-  };
-
-  /** @override */
-  intrp.PropertyReference.prototype.set = function(value, perms) {
-    intrp.toObject(this.base_, perms).set(this.key_, value, perms);
+    this.name = name;
   };
 
   /**
-   * An environment (scope) reference.
-   * @constructor @extends {Interpreter.prototype.ScopeReference}
-   * @param {?Interpreter.Scope} scope The scope which is the base of
-   *     this reference, or null for unresolvable references.
-   * @param {string} name The variable name being referenced.
+   * Delete whatever the reference refers to (if possible).
+   * @param {!Interpreter.Owner} perms Who is deleting?
+   * @return {boolean} True iff successful.
+   * @override
    */
-  intrp.ScopeReference = function(scope, name) {
-    /** @private @const @type {?Interpreter.Scope} */
-    this.scope_ = scope;
-    /** @private @const @type {string} */
-    this.name_ = name;
-  };
-
-  intrp.ScopeReference.prototype =
-      Object.create(Interpreter.Reference.prototype);
-  intrp.ScopeReference.prototype.constructor = intrp.ScopeReference;
-
-  /** @override */
-  intrp.ScopeReference.prototype.delete = function(perms) {
-    // Whoops; this should have been caught by Acorn (because strict).
-    throw Error('Uncaught illegal deletion of unqualified identifier');
-  };
-
-  /** @override */
-  intrp.ScopeReference.prototype.get = function(perms) {
-    if (!this.scope_) {
-      throw new intrp.Error(perms, intrp.REFERENCE_ERROR,
-          name + ' is not defined');
+  intrp.Reference.prototype.delete = function(perms) {
+    if (this.base === null || this.base instanceof Interpreter.Scope) {
+      // Whoops; this should have been caught by Acorn (because strict).
+      throw Error('Uncaught illegal deletion of unqualified identifier');
     }
-    return this.scope_.get(this.name_);
+    return intrp.toObject(this.base, perms).deleteProperty(this.name, perms);
   };
 
-  /** @override */
-  intrp.ScopeReference.prototype.getThis = function() {
-    // In CC JS, global 'this' is always undefined.
-    return undefined;
-  };
-
-  /** @override */
-  intrp.ScopeReference.prototype.isUnresolvable = function() {
-    return !this.scope_;
-  };
-
-  /** @override */
-  intrp.ScopeReference.prototype.set = function(value, perms) {
-    if (!this.scope_) {
+  /**
+   * The GetValue method from ES5.1 §8.7.1.
+   * @param {!Interpreter.Owner} perms Who is getting?
+   * @return {Interpreter.Value} Current value of referee.
+   * @override
+   */
+  intrp.Reference.prototype.get = function(perms) {
+    if (this.base === null) {
       throw new intrp.Error(perms, intrp.REFERENCE_ERROR,
-          this.name_ + ' is not defined');
+          this.name + ' is not defined');
+    } else if (!(this.base instanceof Interpreter.Scope)) {
+      return intrp.toObject(this.base, perms).get(this.name, perms);
+    } else {
+      return this.base.get(this.name);
     }
-    var err = this.scope_.set(this.name_, value);
-    if (err) {
-      throw intrp.errorNativeToPseudo(err, perms);
+  };
+
+  /**
+   * The getThisValue method from ES6 §6.2.3.3.
+   * @return {Interpreter.Value} Current 'this' value for reference.
+   * @override
+   */
+  intrp.Reference.prototype.getThis = function() {
+    if (this.base === null || this.base instanceof Interpreter.Scope) {
+      // In CC JS, global 'this' is always undefined.
+      return undefined;
+    }
+    return this.base;
+  };
+
+  /**
+   * The IsUnresolvableReference method from ES6 §6.2.3.
+   * @return {boolean} True iff reference is unresolvable.
+   * @override
+   */
+  intrp.Reference.prototype.isUnresolvable = function() {
+    return this.base === null;
+  };
+
+  /**
+   * The PutValue method from ES5.1 §8.7.2.
+   * @param {!Interpreter.Owner} perms Who is setting?
+   * @param {Interpreter.Value} value New value to set referee to.
+   * @override
+   */
+  intrp.Reference.prototype.set = function(value, perms) {
+    if (this.base === null) {
+      throw new intrp.Error(perms, intrp.REFERENCE_ERROR,
+          this.name + ' is not defined');
+    } else if (!(this.base instanceof Interpreter.Scope)) {
+      intrp.toObject(this.base, perms).set(this.name, value, perms);
+    } else {
+      var err = this.base.set(this.name, value);
+      if (err) {
+        throw intrp.errorNativeToPseudo(err, perms);
+      }
     }
   };
 
@@ -5712,18 +5640,14 @@ stepFuncs_['AssignmentExpression'] = function (thread, stack, state, node) {
     case '=':
       value = rightValue;
       // Set name if anonymous function expression.
-      if (isAnonymousFunctionDefinition(node['right'])) {
+      if (isAnonymousFunctionDefinition(node['right']) &&
+          (isIdentifierRef(node['left']) ||
+           (this.options.methodNames && isMemberRef(node['left'])))) {
         var func = /** @type {!Interpreter.prototype.Function} */(value);
         // TODO(ES6): Check that func does not already have a 'name'
         // own property before calling setName?  (Spec requires, but
         // unclear why since we know RHS is anonymous.  Proxies?)
-        if (isIdentifierRef(node['left'])) {
-          // TODO(cpcallen): don't violate privacy.
-          func.setName(state.ref.name_);
-        } else if (this.options.methodNames && isMemberRef(node['left'])) {
-          // TODO(cpcallen): don't violate privacy.
-          func.setName(state.ref.key_);
-        }
+        func.setName(state.ref.name);
       }
       break;
     // All the rest are simple and similar.
@@ -5904,8 +5828,8 @@ stepFuncs_['CallExpression'] = function (thread, stack, state, node) {
       state.tmp_ = state.ref.get(state.scope.perms);
       // TODO(cpcallen): Don't violate ScopeReference member privacy.
       info.directEval =
-          state.ref && state.ref instanceof this.ScopeReference &&
-          state.ref.name_ === 'eval';
+          state.ref && state.ref.base instanceof Interpreter.Scope &&
+          state.ref.name === 'eval';
       info.this = state.ref.getThis();
     } else {  // Callee already fully evaluated.
       state.tmp_ = state.value;
@@ -6207,8 +6131,7 @@ stepFuncs_['ForInStatement'] = function (thread, stack, state, node) {
         }
         // Inline variable declaration: for (var x in y)
         var lhsName = left['declarations'][0]['id']['name'];
-        state.ref =
-            new this.ScopeReference(state.scope.resolve(lhsName), lhsName);
+        state.ref = new this.Reference(state.scope.resolve(lhsName), lhsName);
         // FALL THROUGH
       case 3:  // Got .ref to variable to set.  Set it next key.
         if (!state.ref) throw TypeError('loop variable not an LVALUE??');
@@ -6314,7 +6237,7 @@ stepFuncs_['Identifier'] = function (thread, stack, state, node) {
   var /** string */ name = node['name'];
   if (state.wantRef_) {
     stack[stack.length - 1].ref =
-        new this.ScopeReference(state.scope.resolve(name), name);
+        new this.Reference(state.scope.resolve(name), name);
   } else {
     stack[stack.length - 1].value = this.getValueFromScope(state.scope, name);
   }
@@ -6421,7 +6344,7 @@ stepFuncs_['MemberExpression'] = function (thread, stack, state, node) {
   var /** string */ key =
       node['computed'] ? String(state.value) : node['property']['name'];
   if (state.wantRef_) {
-    stack[stack.length - 1].ref = new this.PropertyReference(base, key);
+    stack[stack.length - 1].ref = new this.Reference(base, key);
   } else {
     var perms = state.scope.perms;
     stack[stack.length - 1].value = this.toObject(base, perms).get(key, perms);

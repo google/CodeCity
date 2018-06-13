@@ -246,8 +246,7 @@ Serializer.serialize = function(intrp) {
                  'WeakMap',
                  'Thread',
                  'Box',
-                 'PropertyReference',
-                 'ScopeReference',
+                 'Reference',
                  'Server'];
   // Find all objects.
   var objectList = [];
@@ -430,8 +429,7 @@ Serializer.getTypesDeserialize_ = function (intrp) {
     'PseudoWeakMap': intrp.WeakMap,
     'PseudoThread': intrp.Thread,
     'Box': intrp.Box,
-    'PropertyReference': intrp.PropertyReference,
-    'ScopeReference': intrp.ScopeReference,
+    'Reference': intrp.Reference,
     'Server': intrp.Server,
     'Node': Interpreter.Node
   };
