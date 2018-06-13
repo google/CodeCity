@@ -2648,13 +2648,14 @@ Interpreter.prototype.getValueFromScope = function(scope, name) {
 Interpreter.prototype.setValueToScope = function(scope, name, value) {
   for (var s = scope; s; s = s.outerScope) {
     if (name in s.vars) {
-      if (s.notWritable.has(name)) {
+      try {
+        s.vars[name] = value;
+      } catch (e) {  // Trying to set immutable binding.
         // TODO(cpcallen:perms): we have a scope here, but scope.perms
         // is probably not the right value for owner of new error.
         throw new this.Error(this.thread.perms(), this.TYPE_ERROR,
-            'Assignment to constant variable: ' + name);
+            'Assignment to constant variable ' + name);
       }
-      s.vars[name] = value;
       return;
     }
   }
@@ -3132,7 +3133,6 @@ Interpreter.Scope = function(perms, outerScope) {
   this.perms = perms;
   /** @const {!Object<string, Interpreter.Value>} */
   this.vars = Object.create(null);
-  this.notWritable = new Set();
 };
 
 /**
@@ -3176,8 +3176,7 @@ Interpreter.Scope.prototype.createImmutableBinding = function(name, value) {
   if (name in this.vars) {
     throw Error(name + ' already has binding in this scope??');
   }
-  this.vars[name] = value;
-  this.notWritable.add(name);
+  Object.defineProperty(this.vars, name, Descriptor.ec.withValue(value));
 };
 
 /**
@@ -3195,10 +3194,11 @@ Interpreter.Scope.prototype.createImmutableBinding = function(name, value) {
  *     prototypes.)
  */
 Interpreter.Scope.prototype.set = function(name, value) {
-  if (this.notWritable.has(name)) {
-    return new TypeError('Assignment to constant variable: ' + name);
+  try {
+    this.vars[name] = value;
+  } catch (e) {  // Trying to set immutable binding.
+    return TypeError('Assignment to constant variable ' + name);
   }
-  this.vars[name] = value;
 };
 
 /**
