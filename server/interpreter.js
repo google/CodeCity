@@ -3096,6 +3096,45 @@ Interpreter.PropertyIterator.prototype.next = function() {
 };
 
 /**
+ * The Reference specification type, from ES5.1 §8.7
+ * @abstract @constructor
+ */
+Interpreter.Reference = function() {};
+
+/**
+ * Delete whatever the reference refers to (if possible).
+ * @param {!Interpreter.Owner} perms Who is deleting?
+ * @return {boolean} True iff successful.
+ */
+Interpreter.Reference.prototype.delete = function(perms) {};
+
+/**
+ * The GetValue method from ES5.1 §8.7.1.
+ * @param {!Interpreter.Owner} perms Who is getting?
+ * @return {Interpreter.Value} Current value of referee.
+ */
+Interpreter.Reference.prototype.get = function(perms) {};
+
+/**
+ * The getThisValue method from ES6 §6.2.3.3.
+ * @return {Interpreter.Value} Current 'this' value for reference.
+ */
+Interpreter.Reference.prototype.getThis = function() {};
+
+/**
+ * The IsUnresolvableReference method from ES6 §6.2.3.
+ * @return {boolean} True iff reference is unresolvable.
+ */
+Interpreter.Reference.prototype.isUnresolvable = function() {};
+
+/**
+ * The PutValue method from ES5.1 §8.7.2.
+ * @param {!Interpreter.Owner} perms Who is setting?
+ * @param {Interpreter.Value} value New value to set referee to.
+ */
+Interpreter.Reference.prototype.set = function(value, perms) {};
+
+/**
  * Class for a scope.
  * @param {!Interpreter.Owner} perms The permissions with which code
  *     in the current scope is executing.
@@ -3521,6 +3560,12 @@ Interpreter.Thread.Status = {
  * @typedef {!Interpreter.prototype.Object|boolean|number|string|undefined|null}
  */
 Interpreter.Value;
+
+/**
+ * Typedef for JS values coercible to Object.
+ * @typedef {!Interpreter.prototype.Object|boolean|number|string}
+ */
+Interpreter.Coercible;
 
 /**
  * Interface for owners.  Anything that is an Owner is really just a
@@ -4000,6 +4045,74 @@ Interpreter.prototype.Box.prototype.toString = function() {
 
 /** @return {Interpreter.Value} Value. */
 Interpreter.prototype.Box.prototype.valueOf = function() {
+  throw Error('Inner class method not callable on prototype');
+};
+
+/**
+ * @constructor @extends {Interpreter.Reference}
+ * @param {Interpreter.Coercible} base
+ * @param {string} key
+ */
+Interpreter.prototype.PropertyReference = function(base, key) {
+  throw Error('Inner class constructor not callable on prototype');
+};
+
+/** @override */
+Interpreter.prototype.PropertyReference.prototype.delete = function(perms) {
+  throw Error('Inner class method not callable on prototype');
+};
+
+/** @override */
+Interpreter.prototype.PropertyReference.prototype.get = function(perms) {
+  throw Error('Inner class method not callable on prototype');
+};
+
+/** @override */
+Interpreter.prototype.PropertyReference.prototype.getThis = function() {
+  throw Error('Inner class method not callable on prototype');
+};
+
+/** @override */
+Interpreter.prototype.PropertyReference.prototype.isUnresolvable = function() {
+  throw Error('Inner class method not callable on prototype');
+};
+
+/** @override */
+Interpreter.prototype.PropertyReference.prototype.set = function(value, perms) {
+  throw Error('Inner class method not callable on prototype');
+};
+
+/**
+ * @constructor @extends {Interpreter.Reference}
+ * @param {?Interpreter.Scope} scope
+ * @param {string} name
+ */
+Interpreter.prototype.ScopeReference = function(scope, name) {
+  throw Error('Inner class constructor not callable on prototype');
+};
+
+/** @override */
+Interpreter.prototype.ScopeReference.prototype.delete = function(perms) {
+  throw Error('Inner class method not callable on prototype');
+};
+
+/** @override */
+Interpreter.prototype.ScopeReference.prototype.get = function(perms) {
+  throw Error('Inner class method not callable on prototype');
+};
+
+/** @override */
+Interpreter.prototype.ScopeReference.prototype.getThis = function() {
+  throw Error('Inner class method not callable on prototype');
+};
+
+/** @override */
+Interpreter.prototype.ScopeReference.prototype.isUnresolvable = function() {
+  throw Error('Inner class method not callable on prototype');
+};
+
+/** @override */
+Interpreter.prototype.ScopeReference.prototype.set = function(value, perms) {
   throw Error('Inner class method not callable on prototype');
 };
 
@@ -5205,6 +5318,104 @@ Interpreter.prototype.installTypes = function() {
    */
   intrp.Box.prototype.valueOf = function() {
     return this.primitive_;
+  };
+
+  /**
+   * A property reference.
+   * @constructor @extends {Interpreter.prototype.PropertyReference}
+   * @param {Interpreter.Coercible} base The base value of the reference.
+   * @param {string} key The property key being referenced.
+   */
+  intrp.PropertyReference = function(base, key) {
+    /** @const @type {Interpreter.Coercible} */
+    this.base_ = base;
+    /** @const @type {string} */
+    this.key_ = key;
+  };
+
+  intrp.PropertyReference.prototype =
+      Object.create(Interpreter.Reference.prototype);
+  intrp.PropertyReference.prototype.constructor = intrp.PropertyReference;
+
+  /** @override */
+  intrp.PropertyReference.prototype.delete = function(perms) {
+    return intrp.toObject(this.base_, perms).deleteProperty(this.key_, perms);
+  };
+
+  /** @override */
+  intrp.PropertyReference.prototype.get = function(perms) {
+    return intrp.toObject(this.base_, perms).get(this.key_, perms);
+  };
+
+  /** @override */
+  intrp.PropertyReference.prototype.getThis = function() {
+    return this.base_;
+  };
+
+  /** @override */
+  intrp.PropertyReference.prototype.isUnresolvable = function() {
+    return false;
+  };
+
+  /** @override */
+  intrp.PropertyReference.prototype.set = function(value, perms) {
+    intrp.toObject(this.base_, perms).set(this.key_, value, perms);
+  };
+
+  /**
+   * An environment (scope) reference.
+   * @constructor @extends {Interpreter.prototype.ScopeReference}
+   * @param {?Interpreter.Scope} scope The scope which is the base of
+   *     this reference.
+   * @param {string} name The variable name being referenced.
+   */
+  intrp.ScopeReference = function(scope, name) {
+    /** @private @const @type {?Interpreter.Scope} */
+    this.scope_ = scope;
+    /** @private @const @type {string} */
+    this.name_ = name;
+  };
+
+  intrp.ScopeReference.prototype =
+      Object.create(Interpreter.Reference.prototype);
+  intrp.ScopeReference.prototype.constructor = intrp.ScopeReference;
+
+  /** @override */
+  intrp.ScopeReference.prototype.delete = function(perms) {
+    // Whoops; this should have been caught by Acorn (because strict).
+    throw Error('Uncaught illegal deletion of unqualified identifier');
+  };
+
+  /** @override */
+  intrp.ScopeReference.prototype.get = function(perms) {
+    if (!this.scope_) {
+      throw new intrp.Error(perms, intrp.REFERENCE_ERROR,
+          name + ' is not defined');
+    }
+    return this.scope_.get(this.name_);
+  };
+
+  /** @override */
+  intrp.ScopeReference.prototype.getThis = function() {
+    // In CC JS, global 'this' is always undefined.
+    return undefined;
+  };
+
+  /** @override */
+  intrp.ScopeReference.prototype.isUnresolvable = function() {
+    return !this.scope_;
+  };
+
+  /** @override */
+  intrp.ScopeReference.prototype.set = function(value, perms) {
+    if (!this.scope_) {
+      throw new intrp.Error(perms, intrp.REFERENCE_ERROR,
+          this.name_ + ' is not defined');
+    }
+    var err = this.scope_.set(this.name_, value);
+    if (err) {
+      throw intrp.errorNativeToPseudo(err, perms);
+    }
   };
 
   /**
