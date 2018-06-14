@@ -134,6 +134,63 @@ exports.testNativeToPseudo = function(t) {
 };
 
 /**
+ * Unit tests for Interpreter.Scope class.
+ * @param {!T} t The test runner object.
+ */
+exports.testScope = function(t) {
+  var intrp = new Interpreter;
+  var outer = new Interpreter.Scope(intrp.ROOT, null);
+  var inner = new Interpreter.Scope(intrp.ROOT, outer);
+
+  // 0: Initial condition.
+  t.expect("outer.hasBinding('foo') [0]", outer.hasBinding('foo'), false);
+
+  // 1: Create outer binding.
+  outer.createMutableBinding('foo', 42);
+  t.expect("outer.hasBinding('foo') [1]", outer.hasBinding('foo'), true);
+  t.expect("inner.hasBinding('foo') [1]", inner.hasBinding('foo'), false);
+  t.expect("getValueFromScope(inner, 'foo', ...) [1]",
+      intrp.getValueFromScope(inner, 'foo', intrp.ROOT), 42);
+
+  try {
+    outer.createMutableBinding('foo', 42);
+    t.fail("outer.createMutableBinding('foo', ...) [1]", "Didn't throw.");
+  } catch (e) {
+    t.pass("outer.createMutableBinding('foo', ...) [1]");
+  }
+
+  // 2: Set outer binding.
+  intrp.setValueToScope(inner, 'foo', 69, intrp.ROOT);
+  t.expect("getValueFromScope(inner, 'foo', ...) [2]",
+      intrp.getValueFromScope(inner, 'foo', intrp.ROOT), 69);
+  t.expect("getValueFromScope(outer, 'foo', ...) [2]",
+      intrp.getValueFromScope(outer, 'foo', intrp.ROOT), 69);
+
+  // 3: Create inner binding.
+  inner.createImmutableBinding('foo', 105);
+  t.expect("outer.hasBinding('foo') [3]", outer.hasBinding('foo'), true);
+  t.expect("inner.hasBinding('foo') [3]", inner.hasBinding('foo'), true);
+  t.expect("getValueFromScope(inner, 'foo', ...) [3]",
+      intrp.getValueFromScope(inner, 'foo', intrp.ROOT), 105);
+  t.expect("getValueFromScope(outer, 'foo', ...) [3]",
+      intrp.getValueFromScope(outer, 'foo', intrp.ROOT), 69);
+
+  try {
+    inner.createImmutableBinding('foo', 105);
+    t.fail("inner.createImmutableBinding('foo', ...) [3]", "Didn't throw.");
+  } catch (e) {
+    t.pass("inner.createImmutableBinding('foo', ...) [3]");
+  }
+
+  try {
+    intrp.setValueToScope(inner, 'foo', 17, intrp.ROOT);
+    t.fail("setValueToScope(inner, 'foo', ...) [3]", "Didn't throw.");
+  } catch (e) {
+    t.pass("setValueToScope(inner, 'foo', ...) [3]");
+  }
+};
+
+/**
  * Unit tests for Interpreter.Source class.
  * @param {!T} t The test runner object.
  */
