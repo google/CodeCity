@@ -2725,12 +2725,11 @@ Interpreter.prototype.isUnresolvableReference = function(scope, ref, perms) {
 
 /**
  * Gets the value of a referenced name from the scope or object referred to.
- * @param {!Interpreter.Scope} scope Current scope dictionary.
  * @param {!Array} ref Reference tuple.
  * @param {!Interpreter.Owner} perms Who is trying to get it?
  * @return {Interpreter.Value} Value (may be undefined).
  */
-Interpreter.prototype.getValue = function(scope, ref, perms) {
+Interpreter.prototype.getValue = function(ref, perms) {
   var base = ref[0];
   var name = ref[1];
   if (base === null) {  // Unresolvable reference
@@ -2744,12 +2743,11 @@ Interpreter.prototype.getValue = function(scope, ref, perms) {
 
 /**
  * Sets value of a referenced name to the scope or object referred to.
- * @param {!Interpreter.Scope} scope Current scope dictionary.
  * @param {!Array} ref Reference tuple.
  * @param {Interpreter.Value} value Value.
  * @param {!Interpreter.Owner} perms Who is trying to set it?
  */
-Interpreter.prototype.setValue = function(scope, ref, value, perms) {
+Interpreter.prototype.setValue = function(ref, value, perms) {
   var base = ref[0];
   var name = ref[1];
   if (base === null) {  // Unresolvable reference
@@ -5541,7 +5539,7 @@ stepFuncs_['AssignmentExpression'] = function (thread, stack, state, node) {
   if (!state.ref) throw TypeError('left subexpression not an LVALUE??');
   if (state.step_ === 1) {  // Evaluate right.
     if (node['operator'] !== '=') {
-      state.tmp_ = this.getValue(state.scope, state.ref, state.scope.perms);
+      state.tmp_ = this.getValue(state.ref, state.scope.perms);
     }
     state.step_ = 2;
     return new Interpreter.State(node['right'], state.scope);
@@ -5579,7 +5577,7 @@ stepFuncs_['AssignmentExpression'] = function (thread, stack, state, node) {
     default:
       throw SyntaxError('Unknown assignment expression: ' + node['operator']);
   }
-  this.setValue(state.scope, state.ref, value, state.scope.perms);
+  this.setValue(state.ref, value, state.scope.perms);
   stack.pop();
   stack[stack.length - 1].value = value;
 };
@@ -5739,7 +5737,7 @@ stepFuncs_['CallExpression'] = function (thread, stack, state, node) {
                 construct: state.node['type'] === 'NewExpression',
                 funcState: undefined};
     if (state.ref) {  // Callee was MemberExpression or Identifier.
-      state.tmp_ = this.getValue(state.scope, state.ref, state.scope.perms);
+      state.tmp_ = this.getValue(state.ref, state.scope.perms);
       if (state.ref[0] instanceof Interpreter.Scope) {
         // (Globally or locally) named function - maybe named 'eval'?
         info.directEval = (state.ref[1] === 'eval');
@@ -6051,8 +6049,7 @@ stepFuncs_['ForInStatement'] = function (thread, stack, state, node) {
         // FALL THROUGH
       case 3:  // Got .ref to variable to set.  Set it next key.
         if (!state.ref) throw TypeError('loop variable not an LVALUE??');
-        this.setValue(state.scope, state.ref, state.info_.key,
-                      state.scope.perms);
+        this.setValue(state.ref, state.info_.key, state.scope.perms);
         // Execute the body if there is one, followed by next iteration.
         state.step_ = 2;
         if (node['body']) {
@@ -6556,7 +6553,7 @@ stepFuncs_['UnaryExpression'] = function (thread, stack, state, node) {
       if (this.isUnresolvableReference(state.scope, state.ref, perms)) {
         value = undefined;
       } else {
-        value = this.getValue(state.scope, state.ref, perms);
+        value = this.getValue(state.ref, perms);
       }
     }
     value = (value instanceof this.Function) ? 'function' : typeof value;
@@ -6583,7 +6580,7 @@ stepFuncs_['UpdateExpression'] = function (thread, stack, state, node) {
     return new Interpreter.State(node['argument'], state.scope, true);
   }
   if (!state.ref) throw TypeError('argument not an LVALUE??');
-  var value = Number(this.getValue(state.scope, state.ref, state.scope.perms));
+  var value = Number(this.getValue(state.ref, state.scope.perms));
   var prefix = Boolean(node['prefix']);
   var /** Interpreter.Value */ rval;
   if (node['operator'] === '++') {
@@ -6593,7 +6590,7 @@ stepFuncs_['UpdateExpression'] = function (thread, stack, state, node) {
   } else {
     throw SyntaxError('Unknown update expression: ' + node['operator']);
   }
-  this.setValue(state.scope, state.ref, value, state.scope.perms);
+  this.setValue(state.ref, value, state.scope.perms);
   stack.pop();
   stack[stack.length - 1].value = rval;
 };
