@@ -97,9 +97,6 @@ Serializer.deserialize = function(json, intrp) {
       case 'Object':
         obj = {};
         break;
-      case 'ScopeReference':
-        obj = Interpreter.SCOPE_REFERENCE;
-        break;
       case 'Function':
         obj = functionHash[jsonObj['id']];
         if (!obj) {
@@ -310,15 +307,7 @@ Serializer.serialize = function(intrp) {
         continue;  // No need to index properties.
       default:
         var type = types.get(proto);
-        if (type === 'Sentinel') {
-          switch (obj) {
-            case Interpreter.SCOPE_REFERENCE:
-              jsonObj['type'] = 'ScopeReference';
-              break;
-            default:
-              throw new Error("Unknown sentinel value encountered");
-          }
-        } else if (type) {
+        if (type) {
           jsonObj['type'] = type;
         } else {
           jsonObj['proto'] = encodeValue(proto);
@@ -421,7 +410,6 @@ Serializer.getTypesDeserialize_ = function (intrp) {
   return {
     'Interpreter': Interpreter,
     'Scope': Interpreter.Scope,
-    'Sentinel': Interpreter.Sentinel,
     'State': Interpreter.State,
     'Thread': Interpreter.Thread,
     'PropertyIterator': Interpreter.PropertyIterator,

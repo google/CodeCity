@@ -2982,21 +2982,6 @@ Interpreter.FunctionResult.CallAgain = new Interpreter.FunctionResult;
 Interpreter.FunctionResult.Sleep = new Interpreter.FunctionResult;
 
 /**
- * Class for unique sentinel values passed to various functions.
- * Declared so that sentinel values can have a specific type that we
- * can type-check against (though as they share a single type you
- * could still pass the wrong sentinel value to a function).
- * @constructor
- */
-Interpreter.Sentinel = function Sentinel() {};
-
-/**
- * Unique sentinel for indicating that a reference is a variable on the scope,
- * not an object property.
- */
-Interpreter.SCOPE_REFERENCE = new Interpreter.Sentinel();
-
-/**
  * Interpreter statuses.
  * @enum {number}
  */
