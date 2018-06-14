@@ -2562,9 +2562,9 @@ Interpreter.prototype.errorNativeToPseudo = function(err, owner) {
 };
 
 /**
- * Implements the ToObject method from ES5.1 §9.9, but returning
- * temporary Box objects instead of boxed Boolean, Number or String
- * instances.
+ * Implements the ToObject specification method from ES5.1 §9.9 / ES6
+ * §7.1.13, but returning temporary Box objects instead of boxed
+ * Boolean, Number or String instances.
  * @param {Interpreter.Value} value The value to be converted to an Object.
  * @param {!Interpreter.Owner} perms Who is trying convert it?
  * @return {!Interpreter.ObjectLike}
