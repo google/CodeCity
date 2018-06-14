@@ -3174,6 +3174,23 @@ Interpreter.Scope.prototype.createImmutableBinding = function(name, value) {
 };
 
 /**
+ * Searches through this scope and its outer scopes to find a binding
+ * for name, and returns the scope containing that binding or null if
+ * name is not bound.
+ *
+ * Based on the Identifier Resolution algorithm of ES5.1 §10.3.1, or
+ * equivalently the ResolveBinding specification function from ES6
+ * §8.3.1.
+ * @param {string} name Name of variable.
+ * @return {?Interpreter.Scope} The scope that binds name, or null if none.
+ */
+Interpreter.Scope.prototype.resolve = function(name, value) {
+  for (var s = this; s; s = s.outerScope) {
+    if (name in s.vars) break;
+  }
+  return s;
+};
+/**
  * Source is an encapsulated hunk of source text.  Source objects can
  * be sliced to obtain a Source object representing a substring of the
  * original source text.  Such sliced objects "remember" their

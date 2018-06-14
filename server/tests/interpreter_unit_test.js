@@ -144,11 +144,15 @@ exports.testScope = function(t) {
 
   // 0: Initial condition.
   t.expect("outer.hasBinding('foo') [0]", outer.hasBinding('foo'), false);
+  t.expect("outer.resolve('foo') [0]", outer.resolve('foo'), null);
+  t.expect("inner.resolve('foo') [0]", inner.resolve('foo'), null);
 
   // 1: Create outer binding.
   outer.createMutableBinding('foo', 42);
   t.expect("outer.hasBinding('foo') [1]", outer.hasBinding('foo'), true);
   t.expect("inner.hasBinding('foo') [1]", inner.hasBinding('foo'), false);
+  t.expect("outer.resolve('foo') [1]", outer.resolve('foo'), outer);
+  t.expect("inner.resolve('foo') [1]", inner.resolve('foo'), outer);
   t.expect("getValueFromScope(inner, 'foo', ...) [1]",
       intrp.getValueFromScope(inner, 'foo', intrp.ROOT), 42);
 
@@ -170,6 +174,8 @@ exports.testScope = function(t) {
   inner.createImmutableBinding('foo', 105);
   t.expect("outer.hasBinding('foo') [3]", outer.hasBinding('foo'), true);
   t.expect("inner.hasBinding('foo') [3]", inner.hasBinding('foo'), true);
+  t.expect("outer.resolve('foo') [3]", outer.resolve('foo'), outer);
+  t.expect("inner.resolve('foo') [3]", inner.resolve('foo'), inner);
   t.expect("getValueFromScope(inner, 'foo', ...) [3]",
       intrp.getValueFromScope(inner, 'foo', intrp.ROOT), 105);
   t.expect("getValueFromScope(outer, 'foo', ...) [3]",
