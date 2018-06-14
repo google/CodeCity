@@ -3121,8 +3121,8 @@ Interpreter.Scope.prototype.hasBinding = function(name) {
 };
 
 /**
- * Creates a mutable binding in the given scope and initialises it to
- * undefined or the provided valued.
+ * Creates a mutable binding in this scope and initialises it to
+ * undefined or the provided value.
  *
  * Based on CreateMutableBinding for declarative environment records,
  * from ES5.1 §10.2.1.1.2 / ES6 §8.1.1.1.2.
@@ -3137,8 +3137,8 @@ Interpreter.Scope.prototype.createMutableBinding = function(name, value) {
 };
 
 /**
- * Creates an immutable binding in the given scope and initialises it
- * to the provided valued.
+ * Creates an immutable binding in this scope and initialises it
+ * to the provided value.
  *
  * Based on CreateImmutableBinding for declarative environment records,
  * from ES5.1 §10.2.1.1.7 / ES6 §8.1.1.1.3.
@@ -3151,6 +3151,46 @@ Interpreter.Scope.prototype.createImmutableBinding = function(name, value) {
   }
   this.vars[name] = value;
   this.notWritable.add(name);
+};
+
+/**
+ * Updates a mutable binding in this scope to the the provided value.
+ *
+ * Based on SetMutableBinding for declarative environment records,
+ * from ES5.1 §10.2.1.1.3 / ES6 §8.1.1.1.5.
+ * @param {string} name Name of variable.
+ * @param {Interpreter.Value} value New value to set it to.
+ * @return {Error|undefined} If an error occurs, a (native) Error
+ *     object is returned.  It shoud be converted into a user error
+ *     (e.g., by errorNativeToPseudo) and thrown.  (This is done
+ *     because Scope is not an inner class of interpreter, and thus
+ *     this method has no access to the Error constructor or error
+ *     prototypes.)
+ */
+Interpreter.Scope.prototype.set = function(name, value) {
+  if (!(name in this.vars)) {
+    throw Error(name + ' not defined??');
+  }
+  if (this.notWritable.has(name)) {
+    return new TypeError('Assignment to constant variable: ' + name);
+  }
+  this.vars[name] = value;
+};
+
+/**
+ * Returns the value of a binding in this scope.
+ *
+ * Based on GetBindingValue for declarative environment records, from
+ * ES5.1 §10.2.1.1.4 / ES6 §8.1.1.1.6.
+ * @param {string} name Name of variable.
+ * @return {Interpreter.Value} The current value of the named variable
+ *     in this scope.
+ */
+Interpreter.Scope.prototype.get = function(name) {
+  if (!(name in this.vars)) {
+    throw Error(name + ' not defined??');
+  }
+  return this.vars[name];
 };
 
 /**
