@@ -1162,7 +1162,7 @@ tests.instanceofNonObjectPrototype = function() {
   }
 };
 
-tests.nulUndefinedProps = function() {
+tests.nullUndefinedProps = function() {
   try {
     undefined.foo;
     console.assert(false, "undefined.foo didn't throw");
@@ -1170,10 +1170,12 @@ tests.nulUndefinedProps = function() {
     console.assert(e.name === 'TypeError', 'undefined.foo wrong error');
   }
   try {
-    undefined.foo = undefined;
+    var c = 0;
+    undefined.foo = c++;
     console.assert(false, "undefined.foo = ... didn't throw");
   } catch (e) {
     console.assert(e.name === 'TypeError', 'undefined.foo = ... wrong error');
+    console.assert(c === 0, 'undefined.foo = ... evaluated RHS');
   }
   try {
     null.foo;
@@ -1182,10 +1184,12 @@ tests.nulUndefinedProps = function() {
     console.assert(e.name === 'TypeError', 'null.foo wrong error');
   }
   try {
-    null.foo = undefined;
+    c = 0;
+    null.foo = c++;
     console.assert(false, "null.foo = ... didn't throw");
   } catch (e) {
     console.assert(e.name === 'TypeError', 'null.foo = ... wrong error');
+    console.assert(c === 0, 'null.foo = ... evaluated RHS');
   }
 };
 
