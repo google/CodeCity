@@ -2724,36 +2724,43 @@ Interpreter.prototype.isUnresolvableReference = function(scope, ref, perms) {
 };
 
 /**
- * Gets a value from the scope chain or from an object property.
+ * Gets the value of a referenced name from the scope or object referred to.
  * @param {!Interpreter.Scope} scope Current scope dictionary.
  * @param {!Array} ref Reference tuple.
  * @param {!Interpreter.Owner} perms Who is trying to get it?
  * @return {Interpreter.Value} Value (may be undefined).
  */
 Interpreter.prototype.getValue = function(scope, ref, perms) {
-  if (ref[0] instanceof Interpreter.Scope) {
-    // A null/varname variable lookup.
-    return this.getValueFromScope(scope, ref[1]);
-  } else {
-    // An obj/prop components tuple (foo.bar).
-    return this.toObject(ref[0], perms).get(ref[1], perms);
+  var base = ref[0];
+  var name = ref[1];
+  if (base === null) {  // Unresolvable reference
+    throw new this.Error(perms, this.REFERENCE_ERROR, name + ' is not defined');
+  } else if (base instanceof Interpreter.Scope) {  // An environment reference.
+    return base.get(name);
+  } else {  // A property reference.
+    return this.toObject(base, perms).get(name, perms);
   }
 };
 
 /**
- * Sets a value to the scope chain or to an object property.
+ * Sets value of a referenced name to the scope or object referred to.
  * @param {!Interpreter.Scope} scope Current scope dictionary.
  * @param {!Array} ref Reference tuple.
  * @param {Interpreter.Value} value Value.
  * @param {!Interpreter.Owner} perms Who is trying to set it?
  */
 Interpreter.prototype.setValue = function(scope, ref, value, perms) {
-  if (ref[0] instanceof Interpreter.Scope) {
-    // A null/varname variable lookup.
-    this.setValueToScope(scope, ref[1], value);
-  } else {
-    // An obj/prop components tuple (foo.bar).
-    this.toObject(ref[0], perms).set(ref[1], value, perms);
+  var base = ref[0];
+  var name = ref[1];
+  if (base === null) {  // Unresolvable reference
+    throw new this.Error(perms, this.REFERENCE_ERROR, name + ' is not defined');
+  } else if (base instanceof Interpreter.Scope) {  // An environment reference.
+    var err = base.set(name, value);
+    if (err) {
+      throw this.errorNativeToPseudo(err, perms);
+    }
+  } else {  // A property reference.
+    this.toObject(ref[0], perms).set(name, value, perms);
   }
 };
 
