@@ -3175,9 +3175,6 @@ Interpreter.Scope.prototype.createImmutableBinding = function(name, value) {
  *     prototypes.)
  */
 Interpreter.Scope.prototype.set = function(name, value) {
-  if (!(name in this.vars)) {
-    throw Error(name + ' not defined??');
-  }
   if (this.notWritable.has(name)) {
     return new TypeError('Assignment to constant variable: ' + name);
   }
@@ -3194,9 +3191,6 @@ Interpreter.Scope.prototype.set = function(name, value) {
  *     in this scope.
  */
 Interpreter.Scope.prototype.get = function(name) {
-  if (!(name in this.vars)) {
-    throw Error(name + ' not defined??');
-  }
   return this.vars[name];
 };
 
