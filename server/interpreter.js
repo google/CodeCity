@@ -6174,22 +6174,24 @@ stepFuncs_['MemberExpression'] = function (thread, stack, state, node) {
       state.step_ = 2;
       return new Interpreter.State(node['property'], state.scope);
     }
-    var /** string */ key = node['property']['name'];
-  } else {  // state.step_ === 2: Save computed property key.
-    key = String(state.value);
   }
   stack.pop();
+  // TODO(cpcallen): add test for order of following two specification
+  // method calls from the algorithm in ES6 §2.3.2.1.
+  // Step 7: bv = RequireObjectCoercible(baseValue).
+  var /** Interpreter.Value */ base = state.tmp_;
+  if (base === null || base === undefined) {
+    throw new this.Error(perms, this.TYPE_ERROR,
+        "Can't convert " + base + ' to Object');
+  }
+  // Step 9: propertyKey = ToPropertyKey(propertyNameValue).
+  var /** string */ key =
+      node['computed'] ? String(state.value) : node['property']['name'];
   if (state.wantRef_) {
-    var base = state.tmp_;
-    if (base === null || base === undefined) {
-      throw new this.Error(perms, this.TYPE_ERROR,
-          "Can't convert " + base + ' to Object');
-    }
     stack[stack.length - 1].ref = [base, key];
   } else {
     var perms = state.scope.perms;
-    stack[stack.length - 1].value =
-        this.toObject(state.tmp_, perms).get(key, perms);
+    stack[stack.length - 1].value = this.toObject(base, perms).get(key, perms);
   }
 };
 
