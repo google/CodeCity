@@ -770,12 +770,13 @@ module.exports = [
 
   { name: 'undefined.foo = ...', src: `
     try {
-      undefined.foo = undefined;
+      var c = 0;
+      undefined.foo = c++;
     } catch (e) {
-      e.name;
+      e.name + ',' + c;
     }
     `,
-    expected: 'TypeError' },
+    expected: 'TypeError,0' },
 
   { name: 'null.foo', src: `
     try {
@@ -788,12 +789,13 @@ module.exports = [
 
   { name: 'null.foo = ...', src: `
     try {
-      null.foo = undefined;
+      var c = 0;
+      null.foo = c++;
     } catch (e) {
-      e.name;
+      e.name + ',' + c;
     }
     `,
-    expected: 'TypeError' },
+    expected: 'TypeError,0' },
 
   { name: 'deleteProp', src: `
     var o = {foo: 'bar'};

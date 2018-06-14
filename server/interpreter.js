@@ -6180,7 +6180,12 @@ stepFuncs_['MemberExpression'] = function (thread, stack, state, node) {
   }
   stack.pop();
   if (state.wantRef_) {
-    stack[stack.length - 1].ref = [state.tmp_, key];
+    var base = state.tmp_;
+    if (base === null || base === undefined) {
+      throw new this.Error(perms, this.TYPE_ERROR,
+          "Can't convert " + base + ' to Object');
+    }
+    stack[stack.length - 1].ref = [base, key];
   } else {
     var perms = state.scope.perms;
     stack[stack.length - 1].value =
