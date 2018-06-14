@@ -2720,12 +2720,7 @@ Interpreter.prototype.calledWithNew = function() {
  */
 Interpreter.prototype.isUnresolvableReference = function(scope, ref, perms) {
   // Property references never unresolvable.
-  if (ref[0] !== Interpreter.SCOPE_REFERENCE) return false;
-  var name = ref[1];
-  for (var s = scope; s; s = s.outerScope) {
-    if (name in s.vars) return false;
-  }
-  return true;
+  return ref[0] === null;
 };
 
 /**
@@ -2736,7 +2731,7 @@ Interpreter.prototype.isUnresolvableReference = function(scope, ref, perms) {
  * @return {Interpreter.Value} Value (may be undefined).
  */
 Interpreter.prototype.getValue = function(scope, ref, perms) {
-  if (ref[0] === Interpreter.SCOPE_REFERENCE) {
+  if (ref[0] instanceof Interpreter.Scope) {
     // A null/varname variable lookup.
     return this.getValueFromScope(scope, ref[1]);
   } else {
@@ -2753,7 +2748,7 @@ Interpreter.prototype.getValue = function(scope, ref, perms) {
  * @param {!Interpreter.Owner} perms Who is trying to set it?
  */
 Interpreter.prototype.setValue = function(scope, ref, value, perms) {
-  if (ref[0] === Interpreter.SCOPE_REFERENCE) {
+  if (ref[0] instanceof Interpreter.Scope) {
     // A null/varname variable lookup.
     this.setValueToScope(scope, ref[1], value);
   } else {
@@ -3184,7 +3179,7 @@ Interpreter.Scope.prototype.createImmutableBinding = function(name, value) {
  * @param {string} name Name of variable.
  * @return {?Interpreter.Scope} The scope that binds name, or null if none.
  */
-Interpreter.Scope.prototype.resolve = function(name, value) {
+Interpreter.Scope.prototype.resolve = function(name) {
   for (var s = this; s; s = s.outerScope) {
     if (name in s.vars) break;
   }
@@ -5719,7 +5714,7 @@ stepFuncs_['CallExpression'] = function (thread, stack, state, node) {
                 funcState: undefined};
     if (state.ref) {  // Callee was MemberExpression or Identifier.
       state.tmp_ = this.getValue(state.scope, state.ref, state.scope.perms);
-      if (state.ref[0] === Interpreter.SCOPE_REFERENCE) {
+      if (state.ref[0] instanceof Interpreter.Scope) {
         // (Globally or locally) named function - maybe named 'eval'?
         info.directEval = (state.ref[1] === 'eval');
       } else {
@@ -6025,8 +6020,8 @@ stepFuncs_['ForInStatement'] = function (thread, stack, state, node) {
           return new Interpreter.State(left, state.scope, true);
         }
         // Inline variable declaration: for (var x in y)
-        state.ref = [Interpreter.SCOPE_REFERENCE,
-                     left['declarations'][0]['id']['name']];
+        var lhsName = left['declarations'][0]['id']['name'];
+        state.ref = [state.scope.resolve(lhsName), lhsName];
         // FALL THROUGH
       case 3:  // Got .ref to variable to set.  Set it next key.
         if (!state.ref) throw TypeError('loop variable not an LVALUE??');
@@ -6132,7 +6127,7 @@ stepFuncs_['Identifier'] = function (thread, stack, state, node) {
   stack.pop();
   var /** string */ name = node['name'];
   if (state.wantRef_) {
-    stack[stack.length - 1].ref = [Interpreter.SCOPE_REFERENCE, name];
+    stack[stack.length - 1].ref = [state.scope.resolve(name), name];
   } else {
     stack[stack.length - 1].value = this.getValueFromScope(state.scope, name);
   }
@@ -6518,7 +6513,7 @@ stepFuncs_['UnaryExpression'] = function (thread, stack, state, node) {
     value = ~value;
   } else if (node['operator'] === 'delete') {
     if (state.ref) {
-      if (state.ref[0] instanceof Interpreter.Sentinel) {
+      if (state.ref[0] instanceof Interpreter.Scope) {
         // Whoops; this should have been caught by Acorn (because strict).
         throw Error('Uncaught illegal deletion of unqualified identifier');
       }
