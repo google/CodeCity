@@ -1015,22 +1015,26 @@ module.exports = [
     expected: 77.77 },
 
   { name: 'evalIndirectNoSeeEnclosing', src: `
-    var n = 77.77, gEval = eval;
-    try {
-      gEval('n');
-    } catch (e) {
-      e.name;
-    }
+    (function () {
+      var n = 77.77, gEval = eval;
+      try {
+        gEval('n');
+      } catch (e) {
+        return e.name;
+      }
+    })();
     `,
     expected: 'ReferenceError' },
 
   { name: 'evalIndirectNoSeeEnclosing2', src: `
-    var n = 77.77;
-    try {
-      (function() { return eval; })()('n');
-    } catch (e) {
-      e.name;
-    }
+    (function () {
+      var n = 77.77;
+      try {
+        (function() { return eval; })()('n');
+      } catch (e) {
+        return e.name;
+      }
+    })();
     `,
     expected: 'ReferenceError' },
 
