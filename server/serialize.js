@@ -124,6 +124,12 @@ Serializer.deserialize = function(json, intrp) {
       case 'IterableWeakMap':
         obj = new IterableWeakMap;
         break;
+      case 'State':
+        // TODO(cpcallen): this is just a little performance kludge so
+        // that the State constructor doesn't need a conditional in it.
+        // Find a more general solution to constructors requiring args.
+        obj = new Interpreter.State({type: 'Identifier'});
+        break;
       default:
         var protoRef;
         if (constructors[type]) {
