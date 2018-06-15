@@ -165,9 +165,7 @@ Interpreter.prototype.createThreadForSrc = function(src, runAt) {
   if (this.options.trimProgram) {
     src = src.trim();
   }
-  // Acorn may throw a Syntax error, but it's the caller's problem.
-  var ast = acorn.parse(src, Interpreter.PARSE_OPTIONS);
-  ast['source'] = new Interpreter.Source(src);
+  var ast = this.compile_(src);
   this.populateScope_(ast, this.global);
   var state = new Interpreter.State(ast, this.global);
   return this.createThread(this.ROOT, state);
@@ -452,6 +450,25 @@ Interpreter.prototype.stop = function() {
 };
 
 /**
+ * Convert source code into a ready-to-execute parse tree.
+ * @private
+ * @param {string} src The source code to be compiled.
+ * @param {!Interpreter.Owner=} perms Re-throw Acorn parse errors as
+ *     user errors owned by perms.  (Default: re-throw Acorn parse
+ *     errors as internal (native) errors.)
+ * @return {!Interpreter.Node} node Root AST node.
+ */
+Interpreter.prototype.compile_ = function(src, perms) {
+  try {
+    var ast = acorn.parse(src, Interpreter.PARSE_OPTIONS);
+  } catch (e) {  // Acorn threw a SyntaxError.  Rethrow as a trappable error?
+    throw perms ? this.errorNativeToPseudo(e, perms) : e;
+  }
+  ast['source'] = new Interpreter.Source(src);
+  return ast;
+};
+
+/**
  * Create and register the builtin classes and functions specified in
  * the ECMAScript specification plus our extensions.  Add a few items
  * (e.g., eval) to the global scope that can't be added any other way.
@@ -515,16 +532,9 @@ Interpreter.prototype.initBuiltins_ = function() {
         // eval(Array) -> Array
         return code;
       }
-      try {
-        var ast = acorn.parse(code, Interpreter.PARSE_OPTIONS);
-      } catch (e) {
-        // Acorn threw a SyntaxError.  Rethrow as a trappable error.
-        throw intrp.errorNativeToPseudo(e, state.scope.perms);
-      }
-      var source = new Interpreter.Source(code);
+      var ast = intrp.compile_(code, state.scope.perms);
       // Change node type from Program to EvalProgram_.
       ast['type'] = 'EvalProgram_';
-      ast['source'] = source;
       // Create new scope and update it with definitions in eval().
       var outerScope = state.info_.directEval ? state.scope : intrp.global;
       var scope = new Interpreter.Scope(state.scope.perms, outerScope);
@@ -854,13 +864,8 @@ Interpreter.prototype.initFunction_ = function() {
       }
       // Acorn needs to parse code in the context of a function or
       // else 'return' statements will be syntax errors.
-      var code = '(function(' + argsStr + ') {' + code + '})';
-      try {
-        var ast = acorn.parse(code, Interpreter.PARSE_OPTIONS);
-      } catch (e) {
-        // Acorn threw a SyntaxError.  Rethrow as a trappable error.
-        throw intrp.errorNativeToPseudo(e, state.scope.perms);
-      }
+      code = '(function(' + argsStr + ') {' + code + '})';
+      var ast = intrp.compile_(code, state.scope.perms);
       if (ast['body'].length !== 1) {
         // Function('a', 'return a + 6;}; {alert(1);');
         // TODO: there must be a cleaner way to detect this!
