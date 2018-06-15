@@ -464,6 +464,27 @@ Interpreter.prototype.compile_ = function(src, perms) {
   } catch (e) {  // Acorn threw a SyntaxError.  Rethrow as a trappable error?
     throw perms ? this.errorNativeToPseudo(e, perms) : e;
   }
+
+  (function analyse(node) {
+    for (var name in node) {  // Recursively analyse subtrees.
+      var prop = node[name];
+      if (prop && typeof prop !== 'object') continue;
+      if (Array.isArray(prop)) {
+        for (var i = 0; i < prop.length; i++) {
+          if (prop[i] && prop[i] instanceof Interpreter.Node) {
+            analyse(prop[i]);
+          }
+        }
+      } else {
+        if (prop instanceof Interpreter.Node) {
+          analyse(prop);
+        }
+      }
+    }
+    // Populate props on this node.
+    node['stepFunc'] = stepFuncs_[node['type']];
+  })(ast);
+
   ast['source'] = new Interpreter.Source(src);
   return ast;
 };
@@ -535,6 +556,7 @@ Interpreter.prototype.initBuiltins_ = function() {
       var ast = intrp.compile_(code, state.scope.perms);
       // Change node type from Program to EvalProgram_.
       ast['type'] = 'EvalProgram_';
+      ast['stepFunc'] = stepFuncs_['EvalProgram_'];
       // Create new scope and update it with definitions in eval().
       var outerScope = state.info_.directEval ? state.scope : intrp.global;
       var scope = new Interpreter.Scope(state.scope.perms, outerScope);
@@ -3281,6 +3303,7 @@ Interpreter.State.newForCall = function(func, thisVal, args, perms) {
   // Dummy node (used only for type).
   var node = new Interpreter.Node;
   node['type'] = 'Call';
+  node['stepFunc'] = stepFuncs_['Call'];
   // Dummy outer scope (used ony for perms, which will be caller perms).
   var scope = new Interpreter.Scope(perms, null);
 
@@ -5711,6 +5734,7 @@ stepFuncs_['CallExpression'] = function (thread, stack, state, node) {
   // Dummy Node (used only for type and position).
   var callNode = new Interpreter.Node;
   callNode['type'] = 'Call';
+  callNode['stepFunc'] = stepFuncs_['Call'];
   callNode['start'] = node['start'];
   // New State for Call (or Construct).
   var callState = new Interpreter.State(callNode, state.scope);
