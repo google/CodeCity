@@ -89,6 +89,12 @@ var Interpreter = function(options) {
   /** @private @const {!Object<number,!Interpreter.prototype.Server>} */
   this.listeners_ = Object.create(null);
 
+  // TODO(cpcallen): This is an ugly hack to allow the serialiser to
+  // know the names of step functions in an otherwise-empty
+  // interpreter.  Find a better way to do this.
+  /** @private @const {Object<string,Interpreter.StepFunction>} */
+  this.stepFuncs_ = stepFuncs_;
+
   // Bring interpreter up to PAUSED status, setting up timers etc.
   /** @type {!Interpreter.Status} */
   this.status = Interpreter.Status.STOPPED;
@@ -262,8 +268,7 @@ Interpreter.prototype.step = function() {
   var state = stack[stack.length - 1];
   var node = state.node;
   try {
-    var nextState =
-        stepFuncs_[node['type']].call(this, thread, stack, state, node);
+    var nextState = state.stepFunc.call(this, thread, stack, state, node);
   } catch (e) {
     this.throw_(thread, e, state.scope.perms);
   }
@@ -305,8 +310,7 @@ Interpreter.prototype.run = function() {
       var state = stack[stack.length - 1];
       var node = state.node;
       try {
-        var nextState =
-            stepFuncs_[node['type']].call(this, thread, stack, state, node);
+        var nextState = state.stepFunc.call(this, thread, stack, state, node);
       } catch (e) {
         this.throw_(thread, e, state.scope.perms);
         nextState = undefined;
@@ -3227,13 +3231,15 @@ Interpreter.Source.prototype.lineColForPos = function(pos) {
  * @constructor
  */
 Interpreter.State = function(node, scope, wantRef) {
+  if (!node) return;  // Deserializing
   /** @const @type {!Interpreter.Node} */
   this.node = node;
   /** @const @type {!Interpreter.Scope} */
   this.scope = scope;
+  /** @const @type {!Interpreter.StepFunction} */
+  this.stepFunc = stepFuncs_[node['type']];
   /** @private @const @type {boolean} */
   this.wantRef_ = wantRef || false;
-
   /** @type {Interpreter.Value} */
   this.value = undefined;
   /** @type {?Array} */
@@ -6581,6 +6587,10 @@ stepFuncs_['WithStatement'] = function (thread, stack, state, node) {
 
 stepFuncs_['WhileStatement'] = stepFuncs_['DoWhileStatement'];
 
+// Give each step function a serialisation id.
+for (var name in stepFuncs_) {
+  stepFuncs_[name].id = 'Step Function: ' + name;
+}
 
 module.exports = Interpreter;
 
