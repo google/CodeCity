@@ -5420,7 +5420,7 @@ Interpreter.StepFunction;
  * that a Map is much slower than a null-parent object (v8 in 2017).
  * @const {Object<string,Interpreter.StepFunction>}
  */
-var stepFuncs_ = {};
+var stepFuncs_ = Object.create(null);
 
 /**
  * @this {!Interpreter}
