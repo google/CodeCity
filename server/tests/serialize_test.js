@@ -96,8 +96,8 @@ function runTest(t, name, src1, src2, src3, expected, steps, noBuiltins) {
       var s = 0;
       while(intrp.step()) {
         if ((++s % steps) === 0) {
-            intrp = roundTrip(intrp);
-            trips++;
+          intrp = roundTrip(intrp);
+          trips++;
         }
       }
     }
@@ -253,6 +253,9 @@ exports.testRoundtripSimple = function(t) {
 /**
  * Run a round trip of serializing the Interpreter.SCOPE_REFERENCE
  * sentinel and and an Interpreter.PropertyIterator.
+ *
+ * BUG(#193): running this test causes *subsequent* benchmarks to run
+ *     about 15% slower for no obvious reason.  Investigate.
  * @param {!T} t The test runner object.
  */
 exports.testRoundtripScopeRefAndPropIter = function(t) {
