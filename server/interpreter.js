@@ -3263,7 +3263,7 @@ Interpreter.State = function(node, scope, wantRef) {
   /** @const @type {!Interpreter.Scope} */
   this.scope = scope;
   /** @const @type {!Interpreter.StepFunction} */
-  this.stepFunc = stepFuncs_[node['type']];
+  this.stepFunc = node['stepFunc'];
   /** @private @const @type {boolean} */
   this.wantRef_ = wantRef || false;
   /** @type {Interpreter.Value} */
