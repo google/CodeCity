@@ -128,7 +128,7 @@ Serializer.deserialize = function(json, intrp) {
         // TODO(cpcallen): this is just a little performance kludge so
         // that the State constructor doesn't need a conditional in it.
         // Find a more general solution to constructors requiring args.
-        obj = new Interpreter.State({type: 'Identifier'});
+        obj = new Interpreter.State({});
         break;
       default:
         var protoRef;
