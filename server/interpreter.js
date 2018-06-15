@@ -3231,7 +3231,6 @@ Interpreter.Source.prototype.lineColForPos = function(pos) {
  * @constructor
  */
 Interpreter.State = function(node, scope, wantRef) {
-  if (!node) return;  // Deserializing
   /** @const @type {!Interpreter.Node} */
   this.node = node;
   /** @const @type {!Interpreter.Scope} */
