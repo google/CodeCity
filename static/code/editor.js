@@ -228,7 +228,6 @@ Code.Editor.tabClick = function(e) {
   }
 
   Code.Editor.updateCurrentSource();
-  Code.Editor.setSourceToAllEditors(Code.Editor.currentSource);
 
   // Highlight one tab, show one container.
   var tab = e.target;
@@ -237,12 +236,11 @@ Code.Editor.tabClick = function(e) {
   Code.Editor.currentEditor = editor;
   var container = editor.containerElement;
   if (!editor.created) {
-    var source = editor.getSource();
     editor.createDom(container);
     editor.created = true;
-    editor.setSource(source);
   }
   container.style.display = 'block';
+  Code.Editor.setSourceToAllEditors(Code.Editor.currentSource);
   // If e is an event, then this click is the result of a user's direct action.
   // If not, then it's a fake event as a result of page load.
   var userAction = e instanceof Event;
@@ -391,6 +389,7 @@ Code.Editor.mostConfidentEditor = function() {
  * @param {string} src Plain text contents.
  */
 Code.Editor.setSourceToAllEditors = function(src) {
+  Code.Editor.uncreatedEditorSource = src;
   for (var i = 0, editor; (editor = Code.Editor.editors[i]); i++) {
     editor.setSource(src);
   }
@@ -634,10 +633,8 @@ Code.valueEditor.getSource = function() {
 Code.valueEditor.setSource = function(source) {
   if (this.created) {
     this.editor_.setValue(source);
-  } else {
-    Code.Editor.uncreatedEditorSource = source;
   }
-  this.lastSavedSource_ = Code.valueEditor.getSource();
+  this.lastSavedSource_ = this.getSource();
 };
 
 /**
@@ -658,7 +655,103 @@ Code.valueEditor.focus = function(userAction) {
 //Code.jsspEditor = new Code.GenericEditor('JSSP');
 
 ////////////////////////////////////////////////////////////////////////////////
-//Code.svgEditor = new Code.GenericEditor('SVG');
+Code.svgEditor = new Code.GenericEditor('SVG');
+
+/**
+ * DOMParser used to determine if the source is SVG.
+ */
+Code.svgEditor.parser = new DOMParser();
+
+/**
+ * Create the DOM for this editor.
+ * @param {!Element} container DOM should be appended to this containing div.
+ */
+Code.svgEditor.createDom = function(container) {
+  container.innerHTML = `
+<div style="position: absolute; top: 60px; bottom: 0; left: 0; right: 0; overflow: hidden;">
+  <iframe src="/static/code/svg.html" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0"></iframe>
+</div>
+  `;
+  this.frameWindow_ = container.querySelector('iframe').contentWindow;
+};
+
+/**
+ * Get the contents of the editor.
+ * @return {string} Plain text contents.
+ */
+Code.svgEditor.getSource = function() {
+  if (!this.created) {
+    return Code.Editor.uncreatedEditorSource;
+  }
+  var xmlString = this.frameWindow_.initialSource ?
+      this.frameWindow_.initialSource :
+      this.frameWindow_.svgEditor.getString();
+  return JSON.stringify(xmlString);
+};
+
+/**
+ * Set the contents of the editor.
+ * @param {string} text Plain text contents.
+ */
+Code.svgEditor.setSource = function(source) {
+  var str = '';
+  this.confidence = 0;
+  try {
+    str = JSON.parse(source);
+  } catch (e) {}
+  if (typeof str === 'string') {
+    // SvgCanvas needs contents wrapped in a throw-away SVG node.
+    var str = '<svg xmlns="http://www.w3.org/2000/svg">' + str + '</svg>';
+    var dom = Code.svgEditor.parser.parseFromString(str, 'text/xml');
+    // Let's see if this DOM contains only SVG tags.
+    var nodes = dom.documentElement.querySelectorAll('*');
+    var isSvg = nodes.length > 0;
+    for (var i = 0, node; (node = nodes[i]); i++) {
+      if (Code.svgEditor.ELEMENT_NAMES.indexOf(node.tagName) === -1) {
+        isSvg = false;
+        break;
+      }
+    }
+    if (isSvg) {
+      this.confidence = 0.95;
+    } else {
+      str = '';
+    }
+  } else {
+    str = '';
+  }
+
+  if (this.created) {
+    if (this.frameWindow_.svgEditor) {
+      this.frameWindow_.svgEditor.setString(str);
+    } else {
+      // The iframe exists, but the editor hasn't loaded yet.
+      // Save the source in a property on the iframe, so it can load when ready.
+      this.frameWindow_.initialSource = str;
+    }
+  }
+  this.lastSavedSource_ = this.getSource();
+};
+
+/**
+ * Whitelist of all allowed SVG element names.
+ * Try to keep this list in sync with CCC.World.xmlToSvg.ELEMENT_NAMES.
+ */
+Code.svgEditor.ELEMENT_NAMES = [
+  'circle',
+  'desc',
+  'ellipse',
+  'g',
+  'line',
+  'path',
+  'polygon',
+  'polyline',
+  'rect',
+  'svg',
+  'text',
+  'title',
+  'tspan',
+];
 
 ////////////////////////////////////////////////////////////////////////////////
 Code.stringEditor = new Code.GenericEditor('String');
@@ -712,10 +805,8 @@ Code.stringEditor.setSource = function(source) {
   }
   if (this.created) {
     this.textarea_.value = str;
-  } else {
-    Code.Editor.uncreatedEditorSource = source;
   }
-  this.lastSavedSource_ = Code.stringEditor.getSource();
+  this.lastSavedSource_ = this.getSource();
 };
 
 /**
@@ -733,3 +824,51 @@ Code.stringEditor.focus = function(userAction) {
 
 ////////////////////////////////////////////////////////////////////////////////
 //Code.dateEditor = new Code.GenericEditor('Date');
+
+////////////////////////////////////////////////////////////////////////////////
+Code.diffEditor = new Code.GenericEditor('Diff');
+
+/**
+ * Create the DOM for this editor.
+ * @param {!Element} container DOM should be appended to this containing div.
+ */
+Code.diffEditor.createDom = function(container) {
+  container.innerHTML = `
+<div style="position: absolute; top: 60px; bottom: 0; left: 0; right: 0; overflow: hidden;">
+  <iframe src="/static/code/diff.html" style="position: absolute; top: 0px; left: 0; width: 100%; height: 100%; border: 0"></iframe>
+</div>
+  `;
+  this.frameWindow_ = container.querySelector('iframe').contentWindow;
+};
+
+/**
+ * Get the contents of the editor.
+ * @return {string} Plain text contents.
+ */
+Code.diffEditor.getSource = function() {
+  if (!this.created) {
+    return Code.Editor.uncreatedEditorSource;
+  }
+  if (this.frameWindow_.initialSource) {
+     return this.frameWindow_.initialSource;
+  }
+  return this.frameWindow_.diffEditor.getString();
+};
+
+/**
+ * Set the contents of the editor.
+ * @param {string} source Plain text contents.
+ */
+Code.diffEditor.setSource = function(source) {
+  if (this.created) {
+    if (this.frameWindow_.diffEditor) {
+      this.frameWindow_.diffEditor.setString(source, Code.Editor.originalSource);
+    } else {
+      // The iframe exists, but the editor hasn't loaded yet.
+      // Save the source in a property on the iframe, so it can load when ready.
+      this.frameWindow_.initialSource = source;
+      this.frameWindow_.originalSource = Code.Editor.originalSource;
+    }
+  }
+  this.lastSavedSource_ = this.getSource();
+};
