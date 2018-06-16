@@ -9,8 +9,43 @@ body {
 }
 
 #toolbox {
+  padding-left: 2px;
 }
 
 #svgroot {
   overflow: hidden;
+}
+
+#toolbox1 {
+  left: 3px;
+  position: absolute;
+  top: 0;
+}
+
+#toolbox2 {
+  left: 40px;
+  position: absolute;
+  top: 0;
+}
+
+#toolbox button {
+  background: #eee;
+  border-radius: 3px;
+  box-shadow: inset 1px 1px 2px white, 1px 1px 1px rgba(0,0,0,0.3);
+  margin: 4px;
+  padding: 1px;
+  display: block;
+}
+
+#toolbox button:hover {
+  background: #d6e9f8;
+}
+
+#toolbox button.selected {
+  background: #ccc;
+  box-shadow: inset 1px 1px 2px rgba(0,0,0,0.4), 1px 1px 0 #fff;
+}
+
+#toolbox button:focus {
+  outline: 0;
 }
