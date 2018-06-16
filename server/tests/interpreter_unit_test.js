@@ -139,12 +139,14 @@ exports.testNativeToPseudo = function(t) {
  */
 exports.testScope = function(t) {
   var intrp = new Interpreter;
-  var outer =
-      new Interpreter.Scope(Interpreter.Scope.Type.DUMMY, intrp.ROOT, null);
-  var inner =
-      new Interpreter.Scope(Interpreter.Scope.Type.DUMMY, intrp.ROOT, outer);
+  var outer = new Interpreter.Scope(
+      Interpreter.Scope.Type.DUMMY, intrp.ROOT, null, 'this');
+  var inner = new Interpreter.Scope(
+      Interpreter.Scope.Type.DUMMY, intrp.ROOT, outer);
 
   // 0: Initial condition.
+  t.expect("outer.this [0]", outer.this, 'this');
+  t.expect("inner.this [0]", inner.this, 'this');
   t.expect("outer.hasBinding('foo') [0]", outer.hasBinding('foo'), false);
   t.expect("outer.resolve('foo') [0]", outer.resolve('foo'), null);
   t.expect("inner.resolve('foo') [0]", inner.resolve('foo'), null);
