@@ -65,7 +65,8 @@ var Interpreter = function(options) {
    * The interpreter's global scope.
    * @const {!Interpreter.Scope}
    */
-  this.global = new Interpreter.Scope(/** @type {?} */ (undefined), null);
+  this.global = new Interpreter.Scope(Interpreter.Scope.Type.GLOBAL,
+      /** @type {?} */ (undefined), null);
   // Create builtins and (minimally) initialize global scope:
   this.initBuiltins_();
 
@@ -537,6 +538,7 @@ Interpreter.prototype.initBuiltins_ = function() {
     /** @type {!Interpreter.NativeCallImpl} */
     call: function(intrp, thread, state, thisVal, args) {
       var code = args[0];
+      var perms = state.scope.perms;
       if (intrp.options.trimEval) {
         code = code.trim();
       }
@@ -545,13 +547,14 @@ Interpreter.prototype.initBuiltins_ = function() {
         // eval(Array) -> Array
         return code;
       }
-      var ast = intrp.compile_(code, state.scope.perms);
+      var ast = intrp.compile_(code, perms);
       // Change node type from Program to EvalProgram_.
       ast['type'] = 'EvalProgram_';
       ast['stepFunc'] = stepFuncs_['EvalProgram_'];
       // Create new scope and update it with definitions in eval().
       var outerScope = state.info_.directEval ? state.scope : intrp.global;
-      var scope = new Interpreter.Scope(state.scope.perms, outerScope);
+      var scope =
+          new Interpreter.Scope(Interpreter.Scope.Type.EVAL, perms, outerScope);
       intrp.populateScope_(ast, scope);
       thread.stateStack_[thread.stateStack_.length] =
           new Interpreter.State(ast, scope);
@@ -3119,6 +3122,7 @@ Interpreter.PropertyIterator.prototype.next = function() {
 
 /**
  * Class for a scope.
+ * @param {Interpreter.Scope.Type} type What variety of scope is it?
  * @param {!Interpreter.Owner} perms The permissions with which code
  *     in the current scope is executing.
  * @param {?Interpreter.Scope} outerScope The enclosing scope ("outer
@@ -3126,11 +3130,13 @@ Interpreter.PropertyIterator.prototype.next = function() {
  *     (default: null).
  * @constructor
  */
-Interpreter.Scope = function(perms, outerScope) {
-  /** @type {?Interpreter.Scope} */
-  this.outerScope = outerScope;
+Interpreter.Scope = function(type, perms, outerScope) {
+  /** @type {Interpreter.Scope.Type} */
+  this.type = type;
   /** @type {!Interpreter.Owner} */
   this.perms = perms;
+  /** @type {?Interpreter.Scope} */
+  this.outerScope = outerScope;
   /** @const {!Object<string, Interpreter.Value>} */
   this.vars = Object.create(null);
 };
@@ -3231,6 +3237,31 @@ Interpreter.Scope.prototype.resolve = function(name) {
   }
   return null;
 };
+
+/**
+ * Scope types.  These correspond roughly to the list of environment
+ * record types in ES6 §8.1.1 (declarative, object, function, global),
+ * but omit ones we do not use (e.g., object), and distinguish between
+ * different uses of declarative environment records (e.g., for
+ * binding the name of a named function expression vs. binding the
+ * name of the exception in a catch clause).
+ * @enum {string}
+ */
+Interpreter.Scope.Type = {
+  /** The global scope. */
+  GLOBAL: 'global',
+  /** A function invocation scope. */
+  FUNCTION: 'function',
+  /** A scope to contain the name of a named function expression. */
+  FUNEXP: 'funexp',
+  /** An eval body scope. */
+  EVAL: 'eval',
+  /** A catch clause scope. */
+  CATCH: 'catch',
+  /** For use as a dummy - e.g. the caller scope in createThreadForFuncCall */
+  DUMMY: 'dummy',
+};
+
 /**
  * Source is an encapsulated hunk of source text.  Source objects can
  * be sliced to obtain a Source object representing a substring of the
@@ -3363,7 +3394,7 @@ Interpreter.State.newForCall = function(func, thisVal, args, perms) {
   node['type'] = 'Call';
   node['stepFunc'] = stepFuncs_['Call'];
   // Dummy outer scope (used ony for perms, which will be caller perms).
-  var scope = new Interpreter.Scope(perms, null);
+  var scope = new Interpreter.Scope(Interpreter.Scope.Type.DUMMY, perms, null);
 
   var state = new Interpreter.State(node, scope);
   state.info_ = {func: func,
@@ -4559,7 +4590,8 @@ Interpreter.prototype.installTypes = function() {
     // created, and (2) functions created using the Function
     // constructor have this.scope set to the global scope, which is
     // owned by root!
-    var scope = new Interpreter.Scope(owner, this.scope);
+    var scope = new Interpreter.Scope(Interpreter.Scope.Type.FUNCTION,
+        owner, this.scope);
     // Add all arguments to the scope.
     var params = this.node['params'];
     for (var i = 0; i < params.length; i++) {
@@ -6164,7 +6196,9 @@ stepFuncs_['FunctionExpression'] = function (thread, stack, state, node) {
   // If the function expression has a name, create an outer scope to
   // bind that name.  See ES5.1 §13 / ES6 §14.1.20.
   var name = node['id'] && node['id']['name'];
-  if (name) scope = new Interpreter.Scope(perms, scope);
+  if (name) {
+    scope = new Interpreter.Scope(Interpreter.Scope.Type.FUNEXP, perms, scope);
+  }
   var func = new this.UserFunction(node, scope, source, perms);
   if (name) scope.createImmutableBinding(name, func);
   stack[stack.length - 1].value = func;
@@ -6515,7 +6549,8 @@ stepFuncs_['TryStatement'] = function (thread, stack, state, node) {
       if (handler && cv && cv.type === Interpreter.CompletionType.THROW) {
         state.info_ = null;  // This error is being handled, don't rethrow.
         // Execute catch clause with varible bound to exception value.
-        var scope = new Interpreter.Scope(state.scope.perms, state.scope);
+        var scope = new Interpreter.Scope(
+            Interpreter.Scope.Type.CATCH, state.scope.perms, state.scope);
         scope.createMutableBinding(handler['param']['name'], cv.value);
         return new Interpreter.State(handler['body'], scope);
       }
