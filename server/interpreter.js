@@ -66,7 +66,7 @@ var Interpreter = function(options) {
    * @const {!Interpreter.Scope}
    */
   this.global = new Interpreter.Scope(Interpreter.Scope.Type.GLOBAL,
-      /** @type {?} */ (undefined), null);
+      /** @type {?} */ (undefined), null, undefined);
   // Create builtins and (minimally) initialize global scope:
   this.initBuiltins_();
 
@@ -493,7 +493,6 @@ Interpreter.prototype.initBuiltins_ = function() {
   this.global.createImmutableBinding('NaN', NaN);
   this.global.createImmutableBinding('Infinity', Infinity);
   this.global.createImmutableBinding('undefined', undefined);
-  this.global.createImmutableBinding('this', undefined);
 
   // Create the objects which will become Object.prototype and
   // Function.prototype, which are needed to bootstrap everything else.
@@ -3121,22 +3120,27 @@ Interpreter.PropertyIterator.prototype.next = function() {
 };
 
 /**
- * Class for a scope.
+ * Class for a scope.  Implements Lexical Environments and the
+ * Environment Record specification type from E5.1 §10.2 / ES6 §8.1.
  * @param {Interpreter.Scope.Type} type What variety of scope is it?
  * @param {!Interpreter.Owner} perms The permissions with which code
  *     in the current scope is executing.
  * @param {?Interpreter.Scope} outerScope The enclosing scope ("outer
  *     lexical environment reference", in ECMAScript spec parlance)
- *     (default: null).
+ * @param {Interpreter.Value=} thisVal Value of 'this' in scope.
+ *     (Default: copy value from outerScope.  N.B.: passing undefined
+ *     is NOT treated the same as passing no value!)
  * @constructor
  */
-Interpreter.Scope = function(type, perms, outerScope) {
+Interpreter.Scope = function(type, perms, outerScope, thisVal) {
   /** @type {Interpreter.Scope.Type} */
   this.type = type;
   /** @type {!Interpreter.Owner} */
   this.perms = perms;
   /** @type {?Interpreter.Scope} */
   this.outerScope = outerScope;
+  /** @type {Interpreter.Value} */
+  this.this = (outerScope && arguments.length < 4) ? outerScope.this : thisVal;
   /** @const {!Object<string, Interpreter.Value>} */
   this.vars = Object.create(null);
 };
@@ -4529,10 +4533,7 @@ Interpreter.prototype.installTypes = function() {
       throw new intrp.Error(state.scope.perms, intrp.PERM_ERROR,
           'Functions with null owner are not executable');
     }
-    var scope = this.instantiateDeclarations(this.owner, args);
-    // Slightly hacky way to store 'this' value on scope.  Safe
-    // because no variable can ever be named 'this'.
-    scope.createImmutableBinding('this', thisVal);
+    var scope = this.instantiateDeclarations(this.owner, thisVal, args);
     state.value = undefined;  // Default value if no explicit return.
     thread.stateStack_[thread.stateStack_.length] =
         new Interpreter.State(this.node['body'], scope);
@@ -4580,18 +4581,20 @@ Interpreter.prototype.installTypes = function() {
    * Creates a new Scope and sets up the bindings of the function's
    * parameters and variables.
    * @param {!Interpreter.Owner} owner Owner for new Scope.
+   * @param {Interpreter.Value} thisVal The value of 'this' for the call.
    * @param {!Array<Interpreter.Value>} args The arguments to the call.
    * @return {!Interpreter.Scope} The initialised scope
    */
-  intrp.UserFunction.prototype.instantiateDeclarations = function(owner, args) {
+  intrp.UserFunction.prototype.instantiateDeclarations = function(
+      owner, thisVal, args) {
     // Aside: we need to pass owner, rather than
     // this.scope.perms, for the new scope perms because (1) we want
     // to be able to change the owner of a function after it's
     // created, and (2) functions created using the Function
     // constructor have this.scope set to the global scope, which is
     // owned by root!
-    var scope = new Interpreter.Scope(Interpreter.Scope.Type.FUNCTION,
-        owner, this.scope);
+    var scope = new Interpreter.Scope(
+        Interpreter.Scope.Type.FUNCTION, owner, this.scope, thisVal);
     // Add all arguments to the scope.
     var params = this.node['params'];
     for (var i = 0; i < params.length; i++) {
@@ -6510,7 +6513,7 @@ stepFuncs_['SwitchStatement'] = function (thread, stack, state, node) {
  */
 stepFuncs_['ThisExpression'] = function (thread, stack, state, node) {
   stack.pop();
-  stack[stack.length - 1].value = this.getValueFromScope(state.scope, 'this');
+  stack[stack.length - 1].value = state.scope.this;
 };
 
 /**
