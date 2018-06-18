@@ -2714,24 +2714,24 @@ Interpreter.prototype.calledWithNew = function() {
 /**
  * Implements IsUnresolvableReference from ES5 §8.7 / ES6 §6.2.3.
  * @param {!Interpreter.Scope} scope Current scope dictionary.
- * @param {!Array} ref Reference tuple.
+ * @param {!Interpreter.Reference} ref Reference tuple.
  * @param {!Interpreter.Owner} perms Who is trying to get it?
  * @return {boolean} True iff refernece is unresolvable.
  */
 Interpreter.prototype.isUnresolvableReference = function(scope, ref, perms) {
   // Property references never unresolvable.
-  return ref[0] === null;
+  return ref.base === null;
 };
 
 /**
  * Gets the value of a referenced name from the scope or object referred to.
- * @param {!Array} ref Reference tuple.
+ * @param {!Interpreter.Reference} ref Reference tuple.
  * @param {!Interpreter.Owner} perms Who is trying to get it?
  * @return {Interpreter.Value} Value (may be undefined).
  */
 Interpreter.prototype.getValue = function(ref, perms) {
-  var base = ref[0];
-  var name = ref[1];
+  var base = ref.base;
+  var name = ref.name;
   if (base === null) {  // Unresolvable reference.
     throw new this.Error(perms, this.REFERENCE_ERROR, name + ' is not defined');
   } else if (base instanceof Interpreter.Scope) {  // An environment reference.
@@ -2743,13 +2743,13 @@ Interpreter.prototype.getValue = function(ref, perms) {
 
 /**
  * Sets value of a referenced name to the scope or object referred to.
- * @param {!Array} ref Reference tuple.
+ * @param {!Interpreter.Reference} ref Reference tuple.
  * @param {Interpreter.Value} value Value.
  * @param {!Interpreter.Owner} perms Who is trying to set it?
  */
 Interpreter.prototype.setValue = function(ref, value, perms) {
-  var base = ref[0];
-  var name = ref[1];
+  var base = ref.base;
+  var name = ref.name;
   if (base === null) {  // Unresolvable reference.
     throw new this.Error(perms, this.REFERENCE_ERROR, name + ' is not defined');
   } else if (base instanceof Interpreter.Scope) {  // An environment reference.
@@ -2758,7 +2758,7 @@ Interpreter.prototype.setValue = function(ref, value, perms) {
       throw this.errorNativeToPseudo(err, perms);
     }
   } else {  // A property reference.
-    this.toObject(ref[0], perms).set(name, value, perms);
+    this.toObject(base, perms).set(name, value, perms);
   }
 };
 
@@ -2985,6 +2985,13 @@ Interpreter.FunctionResult.CallAgain = new Interpreter.FunctionResult;
  * @const
  */
 Interpreter.FunctionResult.Sleep = new Interpreter.FunctionResult;
+
+/**
+ * @typedef {{base: (?Interpreter.Scope|!Interpreter.prototype.Object|
+ *                  string|number|boolean),
+ *            name: string}}
+ */
+Interpreter.Reference;
 
 /**
  * Interpreter statuses.
@@ -3304,7 +3311,7 @@ Interpreter.State = function(node, scope, wantRef) {
   this.wantRef_ = wantRef || false;
   /** @type {Interpreter.Value} */
   this.value = undefined;
-  /** @type {?Array} */
+  /** @type {?Interpreter.Reference} */
   this.ref = null;
   /** @type {?Array<string>} */
   this.labels = null;
@@ -5559,7 +5566,7 @@ stepFuncs_['AssignmentExpression'] = function (thread, stack, state, node) {
         // TODO(ES6): Check that func does not already have a 'name'
         // own property before calling setName?  (Spec requires, but
         // unclear why since we know RHS is anonymous.  Proxies?)
-        func.setName(state.ref[1]);
+        func.setName(state.ref.name);
       }
       break;
     // All the rest are simple and similar.
@@ -5738,12 +5745,12 @@ stepFuncs_['CallExpression'] = function (thread, stack, state, node) {
                 funcState: undefined};
     if (state.ref) {  // Callee was MemberExpression or Identifier.
       state.tmp_ = this.getValue(state.ref, state.scope.perms);
-      if (state.ref[0] instanceof Interpreter.Scope) {
+      if (state.ref.base instanceof Interpreter.Scope) {
         // (Globally or locally) named function - maybe named 'eval'?
-        info.directEval = (state.ref[1] === 'eval');
+        info.directEval = (state.ref.name === 'eval');
       } else {
         // Method call; save 'this' value.
-        info.this = state.ref[0];
+        info.this = state.ref.base;
       }
     } else {  // Callee already fully evaluated.
       state.tmp_ = state.value;
@@ -6045,7 +6052,7 @@ stepFuncs_['ForInStatement'] = function (thread, stack, state, node) {
         }
         // Inline variable declaration: for (var x in y)
         var lhsName = left['declarations'][0]['id']['name'];
-        state.ref = [state.scope.resolve(lhsName), lhsName];
+        state.ref = {base: state.scope.resolve(lhsName), name: lhsName};
         // FALL THROUGH
       case 3:  // Got .ref to variable to set.  Set it next key.
         if (!state.ref) throw TypeError('loop variable not an LVALUE??');
@@ -6150,7 +6157,7 @@ stepFuncs_['Identifier'] = function (thread, stack, state, node) {
   stack.pop();
   var /** string */ name = node['name'];
   if (state.wantRef_) {
-    stack[stack.length - 1].ref = [state.scope.resolve(name), name];
+    stack[stack.length - 1].ref = {base: state.scope.resolve(name), name: name};
   } else {
     stack[stack.length - 1].value = this.getValueFromScope(state.scope, name);
   }
@@ -6257,7 +6264,7 @@ stepFuncs_['MemberExpression'] = function (thread, stack, state, node) {
   var /** string */ key =
       node['computed'] ? String(state.value) : node['property']['name'];
   if (state.wantRef_) {
-    stack[stack.length - 1].ref = [base, key];
+    stack[stack.length - 1].ref = {base: base, name: key};
   } else {
     var perms = state.scope.perms;
     stack[stack.length - 1].value = this.toObject(base, perms).get(key, perms);
@@ -6536,12 +6543,12 @@ stepFuncs_['UnaryExpression'] = function (thread, stack, state, node) {
     value = ~value;
   } else if (node['operator'] === 'delete') {
     if (state.ref) {
-      if (state.ref[0] instanceof Interpreter.Scope) {
+      if (state.ref.base instanceof Interpreter.Scope) {
         // Whoops; this should have been caught by Acorn (because strict).
         throw Error('Uncaught illegal deletion of unqualified identifier');
       }
-      var obj = this.toObject(state.ref[0], state.scope.perms);
-      value = obj.deleteProperty(state.ref[1], state.scope.perms);
+      var obj = this.toObject(state.ref.base, state.scope.perms);
+      value = obj.deleteProperty(state.ref.name, state.scope.perms);
     } else {
       // Attempted to deleted some expression that wasn't a reference
       // to a variable or property.  Skip delete; return true.
