@@ -16,13 +16,13 @@ body {
   overflow: hidden;
 }
 
-#toolbox1 {
+#toolboxColumn1 {
   left: 3px;
   position: absolute;
   top: 0;
 }
 
-#toolbox2 {
+#toolboxColumn2 {
   left: 40px;
   position: absolute;
   top: 0;
