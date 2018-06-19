@@ -2732,7 +2732,7 @@ Interpreter.prototype.isUnresolvableReference = function(scope, ref, perms) {
 Interpreter.prototype.getValue = function(ref, perms) {
   var base = ref[0];
   var name = ref[1];
-  if (base === null) {  // Unresolvable reference
+  if (base === null) {  // Unresolvable reference.
     throw new this.Error(perms, this.REFERENCE_ERROR, name + ' is not defined');
   } else if (base instanceof Interpreter.Scope) {  // An environment reference.
     return base.get(name);
@@ -2750,7 +2750,7 @@ Interpreter.prototype.getValue = function(ref, perms) {
 Interpreter.prototype.setValue = function(ref, value, perms) {
   var base = ref[0];
   var name = ref[1];
-  if (base === null) {  // Unresolvable reference
+  if (base === null) {  // Unresolvable reference.
     throw new this.Error(perms, this.REFERENCE_ERROR, name + ' is not defined');
   } else if (base instanceof Interpreter.Scope) {  // An environment reference.
     var err = base.set(name, value);
@@ -3205,9 +3205,9 @@ Interpreter.Scope.prototype.get = function(name) {
  */
 Interpreter.Scope.prototype.resolve = function(name) {
   for (var s = this; s; s = s.outerScope) {
-    if (name in s.vars) break;
+    if (name in s.vars) return s;
   }
-  return s;
+  return null;
 };
 /**
  * Source is an encapsulated hunk of source text.  Source objects can
