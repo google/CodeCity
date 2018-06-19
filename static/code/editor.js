@@ -695,15 +695,15 @@ Code.svgEditor.getSource = function() {
  * @param {string} text Plain text contents.
  */
 Code.svgEditor.setSource = function(source) {
-  var str = '';
+  var str = undefined;
   this.confidence = 0;
   try {
     str = JSON.parse(source);
   } catch (e) {}
   if (typeof str === 'string') {
-    // SvgCanvas needs contents wrapped in a throw-away SVG node.
-    var str = '<svg xmlns="http://www.w3.org/2000/svg">' + str + '</svg>';
-    var dom = Code.svgEditor.parser.parseFromString(str, 'text/xml');
+    // DOMParser needs contents wrapped in a parent SVG node.
+    var dom = Code.svgEditor.parser.parseFromString('<svg>' + str + '</svg>',
+        'text/xml');
     // Let's see if this DOM contains only SVG tags.
     var nodes = dom.documentElement.querySelectorAll('*');
     var isSvg = nodes.length > 0;

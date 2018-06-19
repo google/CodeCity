@@ -53,6 +53,8 @@ svgEditor.init = function() {
   svgEditor.resize();
 
   // Update the toolbox whenever a button is clicked.
+  // Don't wait for up to a quarter second until the next scheduled call.
+  // Also force a heavier update to catch changes such as open-close path.
   var buttons = document.querySelectorAll('#toolbox button');
   var update = svgEditor.updateToolbox.bind(svgEditor, true);
   for (var i = 0, button; (button = buttons[i]); i++) {
@@ -86,6 +88,8 @@ svgEditor.resize = function() {
  * @param {string} xmlString SVG rendered as text.
  */
 svgEditor.setString = function(xmlString) {
+  // SvgCanvas needs contents wrapped in a throw-away SVG node.
+  xmlString = '<svg xmlns="http://www.w3.org/2000/svg">' + xmlString + '</svg>';
   svgEditor.canvas.setSvgString(xmlString);
   svgEditor.resize();
 };
@@ -119,7 +123,7 @@ svgEditor.getString = function() {
 
 /**
  * Update the toolbox visualization in response to the editor state.
- * This function polls the editor state four times a second.
+ * This function is called four times a second, and when a button is clicked.
  * @param {boolean=} force If true, force a redraw.
  */
 svgEditor.updateToolbox = function(force) {
@@ -135,6 +139,7 @@ svgEditor.updateToolbox = function(force) {
       styleSelect.display = 'none';
       stylePathEdit.display = 'block';
       styleNodeActions.display = 'block';
+      // Show or hide the appropriate open/close path button.
       var styleCloseAction = document.getElementById('close-action').style;
       var styleOpenAction = document.getElementById('open-action').style;
       if (svgEditor.canvas.pathActions.closed_subpath) {
