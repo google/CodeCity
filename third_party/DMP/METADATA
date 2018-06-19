@@ -7,7 +7,7 @@ third_party {
     type: GIT
     value: "https://github.com/google/diff-match-patch"
   }
-  version: "41788a5d63f7682991da5724e84db88ae6cbf6bf"
-  last_upgrade_date { year: 2018 month: 5 day: 21 }
+  version: "f7ec0851994c8989cfb709dbda202ad1881472d4"
+  last_upgrade_date { year: 2018 month: 6 day: 18 }
   license_type: NOTICE
 }
