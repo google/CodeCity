@@ -32,6 +32,7 @@
 const compileTargets = [
   require('../codecity'),
   require('./code_test'),
+  require('./dump_test'),
   require('./interpreter_test'),
   require('./interpreter_unit_test'),
   require('./interpreter_test'),
