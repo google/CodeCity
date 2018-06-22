@@ -684,7 +684,7 @@ Code.svgEditor.getSource = function() {
   if (!this.created) {
     return Code.Editor.uncreatedEditorSource;
   }
-  var xmlString = this.frameWindow_.initialSource ?
+  var xmlString = this.frameWindow_.hasOwnProperty('initialSource') ?
       this.frameWindow_.initialSource :
       this.frameWindow_.svgEditor.getString();
   return JSON.stringify(xmlString);
@@ -739,7 +739,7 @@ Code.svgEditor.setSource = function(source) {
  * @param {boolean} userAction True if user clicked on a tab.
  */
 Code.svgEditor.focus = function(userAction) {
-  if (userAction) {
+  if (userAction && this.frameWindow_.svgEditor) {
     // Window may have resized since this tab was last visible.
     this.frameWindow_.svgEditor.resize();
   }
@@ -861,8 +861,8 @@ Code.diffEditor.getSource = function() {
   if (!this.created) {
     return Code.Editor.uncreatedEditorSource;
   }
-  if (this.frameWindow_.initialSource) {
-     return this.frameWindow_.initialSource;
+  if (this.frameWindow_.hasOwnProperty('initialSource')) {
+    return this.frameWindow_.initialSource;
   }
   return this.frameWindow_.diffEditor.getString();
 };
