@@ -234,6 +234,7 @@ class DaemonMobWrite(BaseHTTPRequestHandler, mobwrite_core.MobWrite):
     self.end_headers()
 
     self.wfile.write(self.handleRequest(data))
+    self.wfile.write("\n")  # Terminating blank line.
 
     # Goodbye
     mobwrite_core.LOG.debug("Disconnecting.")

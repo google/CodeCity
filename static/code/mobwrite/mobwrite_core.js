@@ -40,7 +40,7 @@ mobwrite.syncGateway = '/scripts/q.py';
  * Print diagnostic messages to the browser's console.
  * @type {boolean}
  */
-mobwrite.debug = false;
+mobwrite.debug = true;
 
 
 /**
@@ -138,7 +138,7 @@ mobwrite.uniqueId = function() {
   var id = soup.charAt(Math.random() * soup.length);
   // Subsequent characters may include these.
   soup += '0123456789-_:.';
-  for (var x = 1; x < 8; x++) {
+  for (var i = 1; i < 8; i++) {
     id += soup.charAt(Math.random() * soup.length);
   }
   // Don't allow IDs with '--' in them since it might close a comment.
@@ -175,19 +175,18 @@ mobwrite.shareHandlers = [];
 
 /**
  * Prototype of shared object.
- * @param {string} id Unique file ID.
+ * @param {string=} id Unique file ID.
  * @constructor
  */
 mobwrite.shareObj = function(id) {
-  if (id) {
-    this.file = id;
-    this.dmp = new diff_match_patch();
-    this.dmp.Diff_Timeout = 0.5;
-    // List of unacknowledged edits sent to the server.
-    this.editStack = [];
-    if (mobwrite.debug) {
-      window.console.info('Creating shareObj: "' + id + '"');
-    }
+  if (!id) return;  // Creating prototype object.
+  this.file = id;
+  this.dmp = new diff_match_patch();
+  this.dmp.Diff_Timeout = 0.5;
+  // List of unacknowledged edits sent to the server.
+  this.editStack = [];
+  if (mobwrite.debug) {
+    window.console.info('Creating shareObj: "' + id + '"');
   }
 };
 
@@ -235,8 +234,7 @@ mobwrite.shareObj.prototype.mergeChanges = true;
  * @return {string} Plaintext content.
  */
 mobwrite.shareObj.prototype.getClientText = function() {
-  window.alert('Defined by subclass');
-  return '';
+  throw Error('Defined by subclass');
 };
 
 
@@ -245,7 +243,7 @@ mobwrite.shareObj.prototype.getClientText = function() {
  * @param {string} text New text.
  */
 mobwrite.shareObj.prototype.setClientText = function(text) {
-  window.alert('Defined by subclass');
+  throw Error('Defined by subclass');
 };
 
 
@@ -348,8 +346,8 @@ mobwrite.shareObj.prototype.syncText = function() {
   // Create the output starting with the file statement, followed by the edits.
   var data = 'F:' + this.serverVersion + ':' +
       mobwrite.idPrefix + this.file + '\n';
-  for (var x = 0; x < this.editStack.length; x++) {
-    data += this.editStack[x][1] + '\n';
+  for (var i = 0; i < this.editStack.length; i++) {
+    data += this.editStack[i][1] + '\n';
   }
   // Opera doesn't know how to encode char 0. (fixed in Opera 9.63)
   return data.replace(/\x00/g, '%00');
@@ -443,12 +441,10 @@ mobwrite.syncRun2_ = function(text) {
   if (mobwrite.debug) {
     window.console.info('FROM server:\n' + text);
   }
-  // Opera doesn't know how to decode char 0. (fixed in Opera 9.63)
-  text = text.replace(/%00/g, '\0');
   // There must be a linefeed followed by a blank line.
   if (text.length < 2 || text.substring(text.length - 2) != '\n\n') {
     text = '';
-    if (mobwrite.error) {
+    if (mobwrite.debug) {
       window.console.info('Truncated data.  Abort.');
     }
   }
@@ -510,10 +506,10 @@ mobwrite.syncRun2_ = function(text) {
         clientVersion = version;
         // Remove any elements from the edit stack with low version numbers
         // which have been acked by the server.
-        for (var x = 0; x < file.editStack.length; x++) {
-          if (file.editStack[x][0] <= clientVersion) {
-            file.editStack.splice(x, 1);
-            x--;
+        for (var j = 0; j < file.editStack.length; j++) {
+          if (file.editStack[j][0] <= clientVersion) {
+            file.editStack.splice(j, 1);
+            j--;
           }
         }
 
@@ -750,11 +746,7 @@ mobwrite.unload_ = function() {
 
 
 // Attach unload event to window.
-if (window.addEventListener) {  // W3
-  window.addEventListener('unload', mobwrite.unload_, false);
-} else if (window.attachEvent) {  // IE
-  window.attachEvent('onunload', mobwrite.unload_);
-}
+window.addEventListener('unload', mobwrite.unload_, false);
 
 
 /**
@@ -766,8 +758,8 @@ mobwrite.share = function(var_args) {
     var el = arguments[i];
     var result = null;
     // Ask every registered handler if it knows what to do with this object.
-    for (var x = 0; x < mobwrite.shareHandlers.length && !result; x++) {
-      result = mobwrite.shareHandlers[x].call(mobwrite, el);
+    for (var j = 0; j < mobwrite.shareHandlers.length && !result; j++) {
+      result = mobwrite.shareHandlers[j].call(mobwrite, el);
     }
     if (result && result.file) {
       if (!result.file.match(/^[A-Za-z][-.:\w]*$/)) {
@@ -823,8 +815,8 @@ mobwrite.unshare = function(var_args) {
       // its ID to locate and kill the existing shareObj that's already shared.
       var result = null;
       // Ask every registered handler if it knows what to do with this object.
-      for (var x = 0; x < mobwrite.shareHandlers.length && !result; x++) {
-        result = mobwrite.shareHandlers[x].call(mobwrite, el);
+      for (var j = 0; j < mobwrite.shareHandlers.length && !result; j++) {
+        result = mobwrite.shareHandlers[j].call(mobwrite, el);
       }
       if (result && result.file) {
         if (mobwrite.shared.hasOwnProperty(result.file)) {

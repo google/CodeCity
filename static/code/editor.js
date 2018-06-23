@@ -362,7 +362,10 @@ Code.Editor.ready = function() {
 
   // Update the save button's saturation state once a second.
   setInterval(Code.Editor.updateCurrentSource, 1000);
-  
+
+  // TODO: Don't share MobWrite globally.
+  //mobwrite.share('Code');
+
   // Only run this code once.
   Code.Editor.ready = undefined;
 };
@@ -489,6 +492,65 @@ window.addEventListener('beforeunload', Code.Editor.beforeUnload);
 
 
 Code.Editor.editors = [];
+
+
+/**
+ * Constructor of sharing object representing the code editor.
+ * @constructor
+ */
+Code.mobwriteShare = function() {
+  // Call our prototype's constructor.
+  mobwrite.shareObj.call(this, 'CodeCityGlobal');
+};
+
+
+// The sharing object's parent is a shareObj.
+Code.mobwriteShare.prototype = new mobwrite.shareObj();
+
+
+/**
+ * Retrieve the user's content.
+ * @return {string} Plaintext content.
+ */
+Code.mobwriteShare.prototype.getClientText = function() {
+  var value = '';
+  if (Code.Editor.currentEditor) {
+    value = Code.Editor.currentEditor.getSource() || '';
+  }
+  // Numeric data should use overwrite mode.
+  this.mergeChanges = !value.match(/^\s*-?[\d.]+\s*$/);
+  return value;
+};
+
+
+/**
+ * Set the user's content.
+ * @param {string} text New content.
+ */
+Code.mobwriteShare.prototype.setClientText = function(text) {
+  Code.Editor.setSourceToAllEditors(text);
+};
+
+
+/**
+ * Handler to accept the code editor as an element that can be shared.
+ * @param {string} type Type of object to share
+ *     ('Code' is currently the only option).
+ * @return {Object?} A sharing object or null.
+ */
+Code.mobwriteShare.shareHandler = function(type) {
+  if (type === 'Code') {
+    return new Code.mobwriteShare();
+  }
+  return null;
+};
+
+
+// Register this shareHandler with MobWrite.
+mobwrite.shareHandlers.push(Code.mobwriteShare.shareHandler);
+// Point MobWrite at the daemon on Code City.
+mobwrite.syncGateway = '/mobwrite';
+
 
 /**
  * Base class for editors.
