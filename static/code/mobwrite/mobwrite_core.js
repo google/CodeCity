@@ -128,26 +128,18 @@ mobwrite.syncAjaxObj_ = null;
 
 /**
  * Return a random id that's 8 letters long.
- * 26*(26+10+4)^7 = 4,259,840,000,000
+ * 79^8 = 1,517,108,809,906,561
  * @return {string} Random id.
  */
 mobwrite.uniqueId = function() {
-  // First character must be a letter.
-  // IE is case insensitive (in violation of the W3 spec).
-  var soup = 'abcdefghijklmnopqrstuvwxyz';
-  var id = soup.charAt(Math.random() * soup.length);
-  // Subsequent characters may include these.
-  soup += '0123456789-_:.';
-  for (var i = 1; i < 8; i++) {
+  // All the legal characters for a URL 'fragment' (hash) as per RFC 3986.
+  var soup = 'ABCDEFGHIJKLMNOPQUSTPVWXYZabcdefghijklmnopqrstuvwxyz' +
+      '0123456789-._~!$&\'()*+,;=?/';
+  var id = '';
+  for (var i = 0; i < 8; i++) {
     id += soup.charAt(Math.random() * soup.length);
   }
-  // Don't allow IDs with '--' in them since it might close a comment.
-  if (id.indexOf('--') != -1) {
-    id = mobwrite.uniqueId();
-  }
   return id;
-  // Getting the maximum possible density in the ID is worth the extra code,
-  // since the ID is transmitted to the server a lot.
 };
 
 
@@ -162,7 +154,7 @@ mobwrite.syncUsername = mobwrite.uniqueId();
  * Hash of all shared objects.
  * @type {Object}
  */
-mobwrite.shared = {};
+mobwrite.shared = Object.create(null);
 
 
 /**
@@ -366,7 +358,7 @@ mobwrite.syncRun1_ = function() {
   var empty = true;
   // Ask every shared object for their deltas.
   for (var x in mobwrite.shared) {
-    if (mobwrite.shared.hasOwnProperty(x)) {
+    if (mobwrite.shared[x]) {
       if (mobwrite.nullifyAll) {
         data.push(mobwrite.shared[x].nullify());
       } else {
@@ -500,7 +492,7 @@ mobwrite.syncRun2_ = function(text) {
         }
         continue;
       }
-      if (mobwrite.shared.hasOwnProperty(value)) {
+      if (mobwrite.shared[value]) {
         file = mobwrite.shared[value];
         file.deltaOk = true;
         clientVersion = version;
@@ -762,7 +754,7 @@ mobwrite.share = function(var_args) {
       result = mobwrite.shareHandlers[j].call(mobwrite, el);
     }
     if (result && result.file) {
-      if (!result.file.match(/^[A-Za-z][-.:\w]*$/)) {
+      if (!result.file.match(/^[-.~!$&\'()*+,;=?\/\w]*$/)) {
         if (mobwrite.debug) {
           window.console.error('Illegal id "' + result.file + '".');
         }
@@ -805,7 +797,7 @@ mobwrite.share = function(var_args) {
 mobwrite.unshare = function(var_args) {
   for (var i = 0; i < arguments.length; i++) {
     var el = arguments[i];
-    if (typeof el == 'string' && mobwrite.shared.hasOwnProperty(el)) {
+    if (typeof el == 'string' && mobwrite.shared[el]) {
       delete mobwrite.shared[el];
       if (mobwrite.debug) {
         window.console.info('Unshared: ' + el);
@@ -819,7 +811,7 @@ mobwrite.unshare = function(var_args) {
         result = mobwrite.shareHandlers[j].call(mobwrite, el);
       }
       if (result && result.file) {
-        if (mobwrite.shared.hasOwnProperty(result.file)) {
+        if (mobwrite.shared[result.file]) {
           delete mobwrite.shared[result.file];
           if (mobwrite.debug) {
             window.console.info('Unshared: ' + el);
