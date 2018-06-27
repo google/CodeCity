@@ -241,7 +241,7 @@ Code.Editor.tabClick = function(e) {
     editor.created = true;
   }
   container.style.display = 'block';
-  Code.Editor.setSourceToAllEditors(Code.Editor.currentSource);
+  Code.Editor.setSourceToAllEditors(Code.Editor.currentSource, false);
   // If e is an event, then this click is the result of a user's direct action.
   // If not, then it's a fake event as a result of page load.
   var userAction = e instanceof Event;
@@ -299,7 +299,7 @@ Code.Editor.receiveXhr = function() {
     // or b) the previous save was successful.
     if (Code.Editor.currentSource === null || data.saved) {
       Code.Editor.currentSource = data.src;
-      Code.Editor.setSourceToAllEditors(data.src);
+      Code.Editor.setSourceToAllEditors(data.src, true);
     }
   }
   // Remove saving mask.
@@ -389,13 +389,17 @@ Code.Editor.mostConfidentEditor = function() {
 };
 
 /**
- * Set the values of the editors to the initial value sent from Code City.
+ * Set the values of all the editors.
  * @param {string} src Plain text contents.
+ * @param {boolean} isSaved True if this is the saved source.
  */
-Code.Editor.setSourceToAllEditors = function(src) {
+Code.Editor.setSourceToAllEditors = function(src, isSaved) {
   Code.Editor.uncreatedEditorSource = src;
   for (var i = 0, editor; (editor = Code.Editor.editors[i]); i++) {
     editor.setSource(src);
+    if (isSaved) {
+      editor.lastSavedSource = editor.getSource();
+    }
   }
 };
 
@@ -569,12 +573,12 @@ Code.GenericEditor = function(name) {
    * edit the given content.
    */
   this.confidence = 0;
-  
+
   /**
    * Has the DOM for this editor been created yet?
    */
   this.created = false;
-  
+
   /**
    * Span that forms the tab button.
    * @type {?Element}
@@ -586,13 +590,12 @@ Code.GenericEditor = function(name) {
    * @type {?Element}
    */
   this.containerElement = null;
-  
+
   /**
    * Plain text representation of this editor's contents as of load or last save.
    * @type {?string}
-   * @private
    */
-  this.lastSavedSource_ = null;
+  this.lastSavedSource = null;
 
   // Register this editor.
   Code.Editor.editors.push(this);
@@ -628,7 +631,7 @@ Code.GenericEditor.prototype.setSource = function(source) {
  * @return {boolean} True if work is saved.
  */
 Code.GenericEditor.prototype.isSaved = function() {
-  return this.getSource() === this.lastSavedSource_;
+  return this.getSource() === this.lastSavedSource;
 };
 
 /**
@@ -697,7 +700,6 @@ Code.valueEditor.setSource = function(source) {
   if (this.created) {
     this.editor_.setValue(source);
   }
-  this.lastSavedSource_ = this.getSource();
 };
 
 /**
@@ -793,7 +795,6 @@ Code.svgEditor.setSource = function(source) {
       this.frameWindow_.initialSource = str;
     }
   }
-  this.lastSavedSource_ = this.getSource();
 };
 
 /**
@@ -880,7 +881,6 @@ Code.stringEditor.setSource = function(source) {
   if (this.created) {
     this.textarea_.value = str;
   }
-  this.lastSavedSource_ = this.getSource();
 };
 
 /**
@@ -944,5 +944,4 @@ Code.diffEditor.setSource = function(source) {
       this.frameWindow_.originalSource = Code.Editor.originalSource;
     }
   }
-  this.lastSavedSource_ = this.getSource();
 };
