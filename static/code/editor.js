@@ -78,11 +78,18 @@ Code.Editor.init = function() {
   document.getElementById('editorConfirmDiscard').addEventListener('click',
       Code.Editor.reload);
   document.getElementById('editorConfirmCancel').addEventListener('click',
-      Code.Editor.hideSave);
+      Code.Editor.hideDialog);
   document.getElementById('editorConfirmSave').addEventListener('click',
       Code.Editor.save);
   document.getElementById('editorSave').addEventListener('click',
       Code.Editor.save);
+  document.getElementById('editorShare').addEventListener('click',
+      Code.Editor.showShare);
+  document.getElementById('editorShareOk').addEventListener('click',
+      Code.Editor.hideDialog);
+  document.getElementById('editorShareCheck').addEventListener('change',
+      Code.Editor.checkShare);
+
 
   // Create the tabs.
   var tabRow = document.getElementById('editorTabs');
@@ -179,7 +186,7 @@ Code.Editor.save = function() {
  * Force a reload of this editor.  Used to switch to edit something else.
  */
 Code.Editor.reload = function() {
-  Code.Editor.hideSave();
+  Code.Editor.hideDialog();
   Code.Editor.beforeUnload.disabled = true;
   location.reload();
 };
@@ -193,7 +200,7 @@ Code.Editor.reload = function() {
 Code.Editor.beforeUnload = function(e) {
   if (Code.Editor.isSaveDialogVisible) {
     // The user has already got a warning but is ignoring it.  Just leave.
-    Code.Editor.hideSave();
+    Code.Editor.hideDialog();
     return;
   }
   Code.Editor.updateCurrentSource();
@@ -208,6 +215,44 @@ Code.Editor.beforeUnload = function(e) {
  * Flag to allow navigation away from current page, despite unsaved changes.
  */
 Code.Editor.beforeUnload.disabled = false;
+
+/**
+ * Asynchronously load MobWrite's JavaScript files.
+ * @param {!Function} callback Function to call when MobWrite is loaded.
+ */
+Code.Editor.loadMobWrite = function(callback) {
+  if (!Code.Editor.waitMobWrite_.isLoaded) {
+    var files = ['dmp.js', 'mobwrite_core.js', 'mobwrite_cc.js'];
+    for (var i = 0; i < files.length; i++) {
+      var script = document.createElement('script');
+      script.src = 'mobwrite/' + files[i];
+      document.head.appendChild(script);
+    }
+  }
+  Code.Editor.waitMobWrite_(callback);
+};
+
+/**
+ * Wait for MobWrite to load.  Initialize it, then run the callback.
+ * @param {!Function} callback Function to call when MobWrite is loaded.
+ * @private
+ */
+Code.Editor.waitMobWrite_ = function(callback) {
+  if (typeof diff_match_patch === 'undefined' ||
+      typeof mobwrite === 'undefined' ||
+      typeof Code.mobwriteShare === 'undefined') {
+    // Not loaded, try again later.
+    setTimeout(Code.Editor.waitMobWrite_, 50, callback);
+  } else {
+    if (!Code.Editor.waitMobWrite_.isLoaded) {
+      Code.mobwriteShare.init();
+      Code.Editor.waitMobWrite_.isLoaded = true;
+    }
+    callback();
+  }
+};
+
+Code.Editor.waitMobWrite_.isLoaded = false;
 
 /**
  * When a tab is clicked, highlight it and show its container.
@@ -317,7 +362,7 @@ Code.Editor.receiveXhr = function() {
     } else {
       // If the save was not successful, close the dialog and hope there's some
       // butter to show.
-      Code.Editor.hideSave();
+      Code.Editor.hideDialog();
     }
   }
 
@@ -363,8 +408,12 @@ Code.Editor.ready = function() {
   // Update the save button's saturation state once a second.
   setInterval(Code.Editor.updateCurrentSource, 1000);
 
-  // TODO: Don't share MobWrite globally.
-  //mobwrite.share('Code');
+  var hash = parent && parent.location && parent.location.hash;
+  if (hash.length > 1) {
+    Code.Editor.loadMobWrite(function() {
+      mobwrite.share('Code');
+    });
+  }
 
   // Only run this code once.
   Code.Editor.ready = undefined;
@@ -407,19 +456,7 @@ Code.Editor.setSourceToAllEditors = function(src, isSaved) {
  * Show the save dialog.
  */
 Code.Editor.showSave = function() {
-  clearTimeout(Code.Editor.saveDialogAnimationPid);
-  Code.Editor.hideButter();
-  document.getElementById('editorConfirm').style.display = 'block';
-  var mask = document.getElementById('editorConfirmMask');
-  var box = document.getElementById('editorConfirmBox');
-  mask.style.transitionDuration = '.4s';
-  box.style.transitionDuration = '.4s';
-  // Add a little bounce at the end of the animation.
-  box.style.transitionTimingFunction = 'cubic-bezier(.6,1.36,.75,1)';
-  Code.Editor.saveDialogAnimationPid = setTimeout(function() {
-    mask.style.opacity = 0.2;
-    box.style.top = '-10px';
-  }, 100);  // Firefox requires at least 10ms to process this timing function.
+  Code.Editor.showDialog('editorConfirmBox');
   // Desaturate save button.  Don't visually conflict with the 'save' button
   // in save dialog.
   Code.Editor.saturateSave(false);
@@ -427,19 +464,98 @@ Code.Editor.showSave = function() {
 };
 
 /**
- * Hide the save dialog.
+ * Show the share dialog.
  */
-Code.Editor.hideSave = function() {
-  clearTimeout(Code.Editor.saveDialogAnimationPid);
-  var mask = document.getElementById('editorConfirmMask');
-  var box = document.getElementById('editorConfirmBox');
+Code.Editor.showShare = function() {
+  Code.Editor.showDialog('editorShareBox');
+  document.body.style.cursor = 'wait';
+  Code.Editor.loadMobWrite(Code.Editor.populateShare);
+};
+
+/**
+ * Show the share dialog.
+ */
+Code.Editor.populateShare = function() {
+  document.body.style.cursor = '';
+  document.getElementById('editorShareBox').className = '';
+  var check = document.getElementById('editorShareCheck');
+  check.disabled = '';
+  check.checked = !!Object.keys(mobwrite.shared).length;
+  Code.Editor.checkShare();
+};
+
+/**
+ * Called when the sharing checkbox is ticked or unticked.
+ */
+Code.Editor.checkShare = function() {
+  var check = document.getElementById('editorShareCheck');
+  var input = document.getElementById('editorShareAddress');
+  input.disabled = !check.checked;
+
+  var shared = !!Object.keys(mobwrite.shared).length;
+  var hash = '#';
+  if (check.checked) {
+    if (!shared) {
+      mobwrite.share('Code');
+    }
+    hash += Code.mobwriteShare.id;
+  } else if (!check.checked) {
+    if (shared) {
+      mobwrite.unshare('Code');
+    }
+  }
+  if (parent && parent.history) {
+    // Update the URL on the parent frame.
+    parent.history.replaceState(undefined, undefined, hash);
+    // Update the address field the user can copy from.
+    input.value = check.checked ? parent.location : '';
+    input.select();
+  }
+};
+
+/**
+ * Show a dialog.
+ * @param {string} contentId ID of dialog's content div.
+ */
+Code.Editor.showDialog = function(contentId) {
+  // Clean up and hide existing things that might be visible.
+  clearTimeout(Code.Editor.dialogAnimationPid);
+  Code.Editor.hideButter();
+  document.getElementById('editorConfirmBox').style.display = 'none';
+  document.getElementById('editorShareBox').style.display = 'none';
+  // Show the requested dialog.
+  document.getElementById(contentId).style.display = 'block';
+  document.getElementById('editorDialog').style.display = 'block';
+  var mask = document.getElementById('editorDialogMask');
+  var box = document.getElementById('editorDialogBox');
+  box.style.display = 'block';
+  mask.style.transitionDuration = '.4s';
+  box.style.transitionDuration = '.4s';
+  // Add a little bounce at the end of the animation.
+  box.style.transitionTimingFunction = 'cubic-bezier(.6,1.36,.75,1)';
+  Code.Editor.dialogAnimationPid = setTimeout(function() {
+    mask.style.opacity = 0.2;
+    box.style.top = '-10px';
+  }, 100);  // Firefox requires at least 10ms to process this timing function.
+};
+
+/**
+ * Hide the dialog.
+ */
+Code.Editor.hideDialog = function() {
+  clearTimeout(Code.Editor.dialogAnimationPid);
+  var mask = document.getElementById('editorDialogMask');
+  var box = document.getElementById('editorDialogBox');
   mask.style.transitionDuration = '.2s';
   box.style.transitionDuration = '.2s';
   box.style.transitionTimingFunction = 'ease-in';
   mask.style.opacity = 0;
   box.style.top = '-120px';
-  Code.Editor.saveDialogAnimationPid = setTimeout(function() {
-    document.getElementById('editorConfirm').style.display = 'none';
+  Code.Editor.dialogAnimationPid = setTimeout(function() {
+    document.getElementById('editorDialog').style.display = 'none';
+    box.style.display = 'none';
+    document.getElementById('editorConfirmBox').style.display = 'none';
+    document.getElementById('editorShareBox').style.display = 'none';
   }, 250);
   // Resaturate the save button.
   Code.Editor.saturateSave(true);
@@ -455,7 +571,7 @@ Code.Editor.isSaveDialogVisible = false;
  * PID of any animation task.  Allows animations to be canceled so that two
  * near-simultaneous actions don't collide.
  */
-Code.Editor.saveDialogAnimationPid = 0;
+Code.Editor.dialogAnimationPid = 0;
 
 /**
  * Saturate or desaturate the editor's save button.
@@ -496,65 +612,6 @@ window.addEventListener('beforeunload', Code.Editor.beforeUnload);
 
 
 Code.Editor.editors = [];
-
-
-/**
- * Constructor of sharing object representing the code editor.
- * @constructor
- */
-Code.mobwriteShare = function() {
-  // Call our prototype's constructor.
-  mobwrite.shareObj.call(this, 'CodeCityGlobal');
-};
-
-
-// The sharing object's parent is a shareObj.
-Code.mobwriteShare.prototype = new mobwrite.shareObj();
-
-
-/**
- * Retrieve the user's content.
- * @return {string} Plaintext content.
- */
-Code.mobwriteShare.prototype.getClientText = function() {
-  var value = '';
-  if (Code.Editor.currentEditor) {
-    value = Code.Editor.currentEditor.getSource() || '';
-  }
-  // Numeric data should use overwrite mode.
-  this.mergeChanges = !value.match(/^\s*-?[\d.]+\s*$/);
-  return value;
-};
-
-
-/**
- * Set the user's content.
- * @param {string} text New content.
- */
-Code.mobwriteShare.prototype.setClientText = function(text) {
-  Code.Editor.setSourceToAllEditors(text);
-};
-
-
-/**
- * Handler to accept the code editor as an element that can be shared.
- * @param {string} type Type of object to share
- *     ('Code' is currently the only option).
- * @return {Object?} A sharing object or null.
- */
-Code.mobwriteShare.shareHandler = function(type) {
-  if (type === 'Code') {
-    return new Code.mobwriteShare();
-  }
-  return null;
-};
-
-
-// Register this shareHandler with MobWrite.
-mobwrite.shareHandlers.push(Code.mobwriteShare.shareHandler);
-// Point MobWrite at the daemon on Code City.
-mobwrite.syncGateway = '/mobwrite';
-
 
 /**
  * Base class for editors.
