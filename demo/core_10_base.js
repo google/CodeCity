@@ -43,7 +43,7 @@ $.utils = {};
 
 $.utils.isObject = function(v) {
   /* Returns true iff v is an object (of any class, including Array
-   * and Function. */
+   * and Function). */
   return (typeof v === 'object' && v !== null) || typeof v === 'function';
 };
 
@@ -57,7 +57,7 @@ $.utils.commandMenu = function(commands) {
   if (commands.length) {
     cmdXml += '<cmds>';
     for (var i = 0; i < commands.length; i++) {
-      cmdXml += '<cmd>' + commands[i] + '</cmd>';
+      cmdXml += '<cmd>' + $.utils.htmlEscape(commands[i]) + '</cmd>';
     }
     cmdXml += '</cmds>';
   }
