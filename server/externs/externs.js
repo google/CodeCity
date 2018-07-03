@@ -45,44 +45,6 @@ var process;
 process.hrtime = function(time) {};
 
 /**
- * @suppress {duplicate}
- */
-var net = {};
-
-/**
- * @constructor
- */
-net.Server = function() {};
-
-/**
- * @return {{port: number, family: string, address: string}}
- */
-net.Server.prototype.address;
-
-/**
- * @param {function(...)=} callback
- * @return {void}
- */
-net.Server.prototype.close;
-
-/**
- *
- * @param {number|*} port
- * @param {(string|number|function(...))=} host
- * @param {(number|function(...))=} backlog
- * @param {function(...)=} callback
- * @return {void}
- */
-net.Server.prototype.listen;
-
-/**
- * @param {string} event
- * @param {function(...)} listener
- * @return {net.Server}
- */
-net.Server.prototype.on;
-
-/**
  * @constructor
  * @template REF
  */
