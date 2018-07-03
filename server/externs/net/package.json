@@ -1,0 +1,5 @@
+{
+  "description": "Fake package.json for require('net')",
+  "main": "net.js",
+  "name": "net",
+}
