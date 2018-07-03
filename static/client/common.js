@@ -203,8 +203,15 @@ CCC.Common.closeMenu = function() {
  * @this {!Element} Clicked element.
  */
 CCC.Common.commandFunction = function() {
+  var command = this.innerText;
+  // Menu commands should never be multi-line.
+  // This should never happen and be caught earlier.
+  // But if it does, fail here rather than be a security hole.
+  if (command.split(/[\r\n]/).length !== 1) {
+    throw Error('Multi-line command: ' + command);
+  }
   if (CCC.Common.isConnected) {
-    parent.postMessage({'commands': [this.innerText]}, location.origin);
+    parent.postMessage({'commands': [command]}, location.origin);
   }
   CCC.Common.parentFocus();
 };
