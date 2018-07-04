@@ -38,6 +38,7 @@ node_modules/weak/**.js
 
 iterable_weakmap.js
 iterable_weakset.js
+registry.js
 interpreter.js
 serialize.js
 codecity.js
