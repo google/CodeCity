@@ -156,7 +156,7 @@ function runTest(t, name, src1, src2, src3, expected, steps, noBuiltins) {
  * @param {string} src2 The code to be evaled after serialization.
  * @param {number|string|boolean|null|undefined} expected The expected
  *     completion value.
- * @param {Function(Interpreter)=} initFunc Optional function to be
+ * @param {function(!Interpreter)=} initFunc Optional function to be
  *     called after creating and initialzing new interpreter but
  *     before running src.  Can be used to insert extra native
  *     functions into the interpreter.  initFunc is called with the

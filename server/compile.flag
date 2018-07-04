@@ -6,9 +6,6 @@
 --assume_function_wrapper
 --dependency_mode=STRICT
 
---entry_point=codecity.js
-
-
 --externs=externs/node_externs.js
 --externs=externs/weak_externs.js
 
@@ -23,6 +20,9 @@ node_modules/net/net.js
 
 node_modules/path/package.json
 node_modules/path/path.js
+
+node_modules/util/package.json
+node_modules/util/util.js
 
 
 --hide_warnings_for=node_modules/acorn
@@ -40,4 +40,3 @@ iterable_weakmap.js
 iterable_weakset.js
 interpreter.js
 serialize.js
-codecity.js

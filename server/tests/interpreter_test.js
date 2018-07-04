@@ -98,13 +98,13 @@ function runCustomTest(t, name, src, expected, options, init) {
  * @param {string} src The code to be evaled.
  * @param {number|string|boolean|null|undefined} expected The expected
  *     completion value.
- * @param {Function(Interpreter)=} initFunc Optional function to be
+ * @param {function(!Interpreter)=} initFunc Optional function to be
  *     called after creating new interpreter instance and running
  *     es5 but before running src.  Can be used to insert extra
  *     native functions into the interpreter.  initFunc is called
  *     with the interpreter instance to be configured as its
  *     parameter.
- * @param {Function(Interpreter)=} waitFunc Optional function to be
+ * @param {function(!Interpreter)=} waitFunc Optional function to be
  *     called if .run() returns true.  Can be used to fake completion
  *     of asynchronous events for testing purposes.
  */
@@ -145,12 +145,12 @@ function runComplexTest(t, name, src, expected, initFunc, waitFunc) {
  * @param {string} src The code to be evaled.
  * @param {number|string|boolean|null|undefined} expected The expected
  *     completion value.
- * @param {Function(Interpreter)=} initFunc Optional function to be
+ * @param {function(!Interpreter)=} initFunc Optional function to be
  *     called after creating and initialzing new interpreter but
  *     before running src.  Can be used to insert extra native
  *     functions into the interpreter.  initFunc is called with the
  *     interpreter instance to be configured as its parameter.
- * @param {Function(Interpreter)=} sideFunc Optional (optionally
+ * @param {function(!Interpreter)=} sideFunc Optional (optionally
  *     async) function to be called after the interpreter has been
  *     .start()ed.
  */
