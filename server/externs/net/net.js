@@ -23,7 +23,12 @@
  * @author cpcallen@google.com (Christopher Allen)
  */
 
+var events = require('events');
+
 var net = {};
+
+///////////////////////////////////////////////////////////////////////////////
+// net.Server
 
 /**
  * @constructor
@@ -57,5 +62,16 @@ net.Server.prototype.listen;
  * @return {net.Server}
  */
 net.Server.prototype.on;
+
+///////////////////////////////////////////////////////////////////////////////
+// net.Socket
+
+/**
+ * @constructor
+ * @param {{fd: ?*, type: ?string, allowHalfOpen: ?boolean}=} options
+ * @extends events.EventEmitter
+ */
+net.Socket = function(options) {};
+
 
 module.exports = net;

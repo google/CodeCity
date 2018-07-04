@@ -18,10 +18,14 @@
  */
 
 /**
- * @fileoverview Closure Compiler externs for node.js
+ * @fileoverview Closure Compiler externs for node.js, mostly
+ *     excerpted from contrib/nodejs/globals.js from
+ *     https://github.com/google/closure-compiler.git
  * @author cpcallen@google.com (Christopher Allen)
  * @externs
  */
+
+// TODO(cpcallen): Use official externs directly.
 
 /** @const {string} */
 var __filename;
@@ -41,14 +45,49 @@ var module;
  */
 function require(name) {}
 
-/** @constructor */
-function Process() {}
+/** @type {!Object} */
+require.main;
 
-/** @const {Process} */
-var process;
+///////////////////////////////////////////////////////////////////////////////
+// process
+
+/** @const */
+var process = {};
+
+/** @type {!Array<string>} */
+process.argv;
+
+/** @param {number=} code */
+process.exit = function (code) {};
 
 /**
  * @param {!Array<number>=} time
  * @return {!Array<number>}
  */
 process.hrtime = function(time) {};
+
+/**
+ * @param {number} pid
+ * @param {string|number} signal
+ */
+process.kill = function (pid, signal) {};
+
+/**
+ * This is actually inherited from EventEmitter
+ *     (===require('events')), but redefined here since
+ *     closure-compiler won't let us require() that definition in an
+ *     externs file.
+ * @param {string} event
+ * @param {function(...)} listener
+ */
+process.on = function(event, listener) {};
+
+/**
+ * Also inherited from EventEmitter.
+ * @param {string} event
+ * @param {function(...)} listener
+ */
+process.once = function(event, listener) {};
+
+/** @type {number} */
+process.pid;
