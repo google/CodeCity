@@ -1,20 +1,19 @@
-"""MobWrite - Real-time Synchronization and Collaboration Service
-
-Copyright 2009 Google Inc.
-http://code.google.com/p/google-mobwrite/
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-  http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-"""
+# MobWrite - Real-time Synchronization and Collaboration Service
+#
+# Copyright 2009 Google Inc.
+# http://code.google.com/p/google-mobwrite/
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 """Core functions for a MobWrite client/server in Python.
 """
@@ -22,11 +21,11 @@ limitations under the License.
 __author__ = "fraser@google.com (Neil Fraser)"
 
 import datetime
+import logging
+import re
 
 import diff_match_patch as dmp_module
 
-import logging
-import re
 
 class Configuration(dict):
   def initConfig(self, filename):
@@ -35,7 +34,7 @@ class Configuration(dict):
     Args:
       filename: Path to the config file.
 
-    Throws:
+    Raises:
       If the config is invalid, this function will thow an error.
     """
     global MAX_CHARS, TIMEOUT_VIEW, TIMEOUT_TEXT
@@ -308,4 +307,3 @@ DMP = dmp_module.diff_match_patch()
 LOG = logging.getLogger("mobwrite")
 # Configuration object.
 CFG = Configuration()
-

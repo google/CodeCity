@@ -1,24 +1,23 @@
-#!/usr/bin/python2.4
+#!/usr/bin/python
 
-"""MobWrite - Real-time Synchronization and Collaboration Service
+# MobWrite - Real-time Synchronization and Collaboration Service
+#
+# Copyright 2006 Google Inc.
+# http://code.google.com/p/google-mobwrite/
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-Copyright 2006 Google Inc.
-http://code.google.com/p/google-mobwrite/
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-  http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-"""
-
-"""This file is the server-side daemon.
+"""This file is MobWrite's server-side daemon.
 
 Runs in the background listening to a port, accepting synchronization sessions
 from clients.
@@ -33,7 +32,8 @@ import sys
 import time
 import thread
 import urllib
-from BaseHTTPServer import BaseHTTPRequestHandler,HTTPServer
+from BaseHTTPServer import BaseHTTPRequestHandler
+from BaseHTTPServer import HTTPServer
 
 import mobwrite_core
 
@@ -438,7 +438,7 @@ class DaemonMobWrite(BaseHTTPRequestHandler, mobwrite_core.MobWrite):
     return "".join(output)
 
 def cleanup_thread():
-  # Every minute cleanup
+  # Every minute cleanup.
   while True:
     mobwrite_core.LOG.info("Running cleanup task.")
     for v in views.values():
@@ -452,8 +452,8 @@ def cleanup_thread():
 
 
 def main():
-  mobwrite_core.CFG.initConfig("./mobwrite_config.txt")
-  # Start up a thread that does timeouts and cleanup
+  mobwrite_core.CFG.initConfig("./mobwrite.cfg")
+  # Start up a thread that does timeouts and cleanup.
   thread.start_new_thread(cleanup_thread, ())
 
   port = int(mobwrite_core.CFG.get("LOCAL_PORT", 3017))

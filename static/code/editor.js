@@ -240,12 +240,12 @@ Code.Editor.loadMobWrite = function(callback) {
 Code.Editor.waitMobWrite_ = function(callback) {
   if (typeof diff_match_patch === 'undefined' ||
       typeof mobwrite === 'undefined' ||
-      typeof Code.mobwriteShare === 'undefined') {
+      typeof Code.MobwriteShare === 'undefined') {
     // Not loaded, try again later.
     setTimeout(Code.Editor.waitMobWrite_, 50, callback);
   } else {
     if (!Code.Editor.waitMobWrite_.isLoaded) {
-      Code.mobwriteShare.init();
+      Code.MobwriteShare.init();
       Code.Editor.waitMobWrite_.isLoaded = true;
     }
     callback();
@@ -498,7 +498,7 @@ Code.Editor.checkShare = function() {
     if (!shared) {
       mobwrite.share('Code');
     }
-    hash += Code.mobwriteShare.id;
+    hash += Code.MobwriteShare.id;
   } else if (!check.checked) {
     if (shared) {
       mobwrite.unshare('Code');
