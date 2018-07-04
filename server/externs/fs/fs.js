@@ -18,11 +18,50 @@
  */
 
 /**
- * @fileoverview Fake implementation of node.js's fs module to
- *     satisfy Closure Compiler dependencies.
+ * @fileoverview Fake implementation of node.js's fs module to satisfy
+ *     Closure Compiler dependencies.  This is mostly an excerpt from
+ *     contrib/nodejs/fs.js from
+ *     https://github.com/google/closure-compiler.git
  * @author cpcallen@google.com (Christopher Allen)
  */
 
+// TODO(cpcallen): Use official externs directly.
+
+/** @const */
 var fs = {};
+
+/**
+ * @param {string} path
+ * @return {Array.<string>}
+ */
+fs.readdirSync;
+
+/**
+ * @param {string} filename
+ * @param {string=} encoding
+ * @return {string|Buffer}
+ */
+fs.readFileSync;
+
+/**
+ * @param {string} oldPath
+ * @param {string} newPath
+ * @return {void}
+ */
+fs.renameSync;
+
+/**
+ * @param {string} path
+ * @return {void}
+ */
+fs.unlinkSync;
+
+/**
+ * @param {string} filename
+ * @param {*} data
+ * @param {string=} encoding
+ * @return {void}
+ */
+fs.writeFileSync;
 
 module.exports = fs;

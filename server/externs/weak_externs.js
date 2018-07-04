@@ -23,9 +23,31 @@
  * @externs
  */
 
-// Closure Compiler can find and understand the weak npm, but the code
-// in weak.js uses some names that are provided by C++ code which of
-// course isn't understood.  Define them here.
+/**
+ * @constructor
+ * @template REF
+ */
+var WeakRef = function() {};
+
+/**
+ * @param {T} obj
+ * @param {!Function} callback
+ * @return {!WeakRef<T>}
+ * @template T
+ * @suppress {duplicate}
+ */
+var weak = function(obj, callback) {};
+
+/**
+ * @param {!WeakRef<T>} ref
+ * @return {T}
+ * @template T
+ */
+weak.get = function(ref) {};
+
+// TODO(cpcallen): The following declarations exist only to work
+// around https://github.com/google/closure-compiler/issues/2932, and
+// should be removed once that bug is fixed.
 
 /** @type {!Function} */
 var addCallback;
