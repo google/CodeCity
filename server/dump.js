@@ -37,10 +37,17 @@ var toParts = function(selector) {
 
 /**
  * @typedef {{filename: string,
- *            contents: (!Array<string|ContentEntry>|undefined),
- *            rest: (boolean|undefined)}}
+ *            contents: !Array<!ContentEntry>,
+ *            rest: boolean}}
  */
 var ConfigEntry;
+
+/**
+ * @typedef {{filename: string,
+ *            contents: (!Array<string|!ContentEntry>|undefined),
+ *            rest: (boolean|undefined)}}
+ */
+var SpecEntry;
 
 /**
  * The type of the values of contents: entries of the config spec.
@@ -131,23 +138,31 @@ ConfigNode.prototype.kidFor = function(name) {
 
 /**
  * @constructor
- * @param {!Array<ConfigEntry>} spec
+ * @param {!Array<SpecEntry>} spec
  */
 var Config = function(spec) {
-  /** @type {!Array<ConfigEntry>} */
-  this.spec = spec;
+  /** @type {!Array<!ConfigEntry>} */
+  this.entries = [];
   /** @type {number|undefined} */
   this.defaultFileNo = undefined;
   /** @type {!ConfigNode} */
   this.tree = new ConfigNode;
 
   for (var fileNo = 0; fileNo < spec.length; fileNo++) {
-    var entry = spec[fileNo];
-    if (entry.contents) {
-      for (var i = 0; i < entry.contents.length; i++) {
-        var content = entry.contents[i];
-        if (typeof content === 'string') {
-          content = {path: content, do: 'recurse'};
+    var /** !SpecEntry */ se = spec[fileNo];
+    var /** !ConfigEntry */ entry = {
+      filename: se.filename,
+      contents: [],
+      rest: Boolean(se.rest)
+    };
+    if (se.contents) {
+      for (var i = 0; i < se.contents.length; i++) {
+        var sc = se.contents[i];
+        if (typeof sc === 'string') {
+          var /** !ContentEntry */ content =
+              {path: sc, do: 'recurse', reorder: false};
+        } else {
+          content = {path: sc.path, do: sc.do, reorder: Boolean(sc.reorder)};
         }
         var parts = toParts(content.path);
         var /** ?ConfigNode */ cn = this.tree;
