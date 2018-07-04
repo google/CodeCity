@@ -48,14 +48,30 @@ function require(name) {}
 /** @type {!Object} */
 require.main;
 
+/**
+ * @param {string} request
+ * @param {!Object=} options
+ * @return {string}
+ */
+require.resolve = function(request, options) {};
+
 ///////////////////////////////////////////////////////////////////////////////
 // process
 
 /** @const */
 var process = {};
 
+/** @type {string} */
+process.arch;
+
 /** @type {!Array<string>} */
 process.argv;
+
+/** @return {string} */
+process.cwd = function () {};
+
+/** @type {!Object<string, string>} */
+process.env;
 
 /** @param {number=} code */
 process.exit = function (code) {};
@@ -91,3 +107,12 @@ process.once = function(event, listener) {};
 
 /** @type {number} */
 process.pid;
+
+/** @type {string} */
+process.platform;
+
+/** @type {string} */
+process.version;
+
+/** @type {!Object<string>} */
+process.versions;

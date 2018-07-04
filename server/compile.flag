@@ -8,7 +8,6 @@
 
 --entry_point=codecity.js
 
---hide_warnings_for=node_modules
 
 --externs=externs/node_externs.js
 --externs=externs/weak_externs.js
@@ -26,9 +25,11 @@ node_modules/path/package.json
 node_modules/path/path.js
 
 
+--hide_warnings_for=node_modules/acorn
 node_modules/acorn/package.json
 node_modules/acorn/**.js
 
+--hide_warnings_for=node_modules/bindings
 node_modules/bindings/package.json
 node_modules/bindings/**.js
 

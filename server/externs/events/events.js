@@ -23,6 +23,10 @@
  * @author cpcallen@google.com (Christopher Allen)
  */
 
+/** @const */
 var events = {};
+
+/** @constructor */
+events.EventEmitter = function() {};
 
 module.exports = events;

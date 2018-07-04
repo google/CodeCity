@@ -123,7 +123,7 @@ CodeCity.startup = function(opt_databaseDirectory) {
 CodeCity.loadFile = function(filename) {
   // Load the specified file from disk.
   try {
-    return fs.readFileSync(filename, 'utf8');
+    return fs.readFileSync(filename, 'utf8').toString();
   } catch (e) {
     console.error('Unable to open file: %s\nCheck permissions.', filename);
     console.info(e);

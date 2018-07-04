@@ -27,34 +27,44 @@
 
 // TODO(cpcallen): Use official externs directly.
 
+// TODO(cpcallen): Factor this out to a separate buffer module extern.
+/** @constructor */
+var Buffer = function() {};
+
 /** @const */
 var fs = {};
 
 /**
  * @param {string} path
+ * @param {number} mode
+ */
+fs.accessSync = function(path, mode) {};
+
+/**
+ * @param {string} path
  * @return {Array.<string>}
  */
-fs.readdirSync;
+fs.readdirSync = function(path) {};
 
 /**
  * @param {string} filename
  * @param {string=} encoding
  * @return {string|Buffer}
  */
-fs.readFileSync;
+fs.readFileSync = function(filename, encoding) {};
 
 /**
  * @param {string} oldPath
  * @param {string} newPath
  * @return {void}
  */
-fs.renameSync;
+fs.renameSync = function(oldPath, newPath) {};
 
 /**
  * @param {string} path
  * @return {void}
  */
-fs.unlinkSync;
+fs.unlinkSync = function(path) {};
 
 /**
  * @param {string} filename
@@ -62,6 +72,6 @@ fs.unlinkSync;
  * @param {string=} encoding
  * @return {void}
  */
-fs.writeFileSync;
+fs.writeFileSync = function(filename, data, encoding) {};
 
 module.exports = fs;

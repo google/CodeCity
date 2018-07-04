@@ -38,13 +38,13 @@ net.Server = function() {};
 /**
  * @return {{port: number, family: string, address: string}}
  */
-net.Server.prototype.address;
+net.Server.prototype.address = function() {};
 
 /**
  * @param {function(...)=} callback
  * @return {void}
  */
-net.Server.prototype.close;
+net.Server.prototype.close = function(callback) {};
 
 /**
  *
@@ -54,14 +54,14 @@ net.Server.prototype.close;
  * @param {function(...)=} callback
  * @return {void}
  */
-net.Server.prototype.listen;
+net.Server.prototype.listen = function(port, host, backlog, callback) {};
 
 /**
  * @param {string} event
  * @param {function(...)} listener
  * @return {net.Server}
  */
-net.Server.prototype.on;
+net.Server.prototype.on = function(event, listener) {};
 
 ///////////////////////////////////////////////////////////////////////////////
 // net.Socket
