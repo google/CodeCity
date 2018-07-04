@@ -31,9 +31,21 @@
 var path = {};
 
 /**
+ * @param {string} path
+ * @return {string}
+ */
+path.dirname = function(path) {};
+
+/**
+ * @param {string} path
+ * @return {string}
+ */
+path.extname = function(path) {};
+
+/**
  * @param {...string} var_args
  * @return {string}
  */
-path.join;
+path.join = function(var_args) {};
 
 module.exports = path;
