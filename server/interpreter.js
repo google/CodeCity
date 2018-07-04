@@ -1939,7 +1939,7 @@ Interpreter.prototype.initError_ = function() {
     var proto = new intrp.Error(intrp.ROOT, protoproto);
     intrp.builtins_[name + '.prototype'] = proto;
     new intrp.NativeFunction({
-      name: name, length: 1,
+      id: name, name: name, length: 1,
       /** @type {!Interpreter.NativeConstructImpl} */
       construct: function(intrp, thread, state, args) {
         var message = (args[0] === undefined) ? undefined : String(args[0]);
@@ -4650,7 +4650,27 @@ Interpreter.prototype.installTypes = function() {
   };
 
   /**
-   * Class for a native function.
+   * Class for a native function.  Options are as follows:
+   *
+   * If options.name is a non-empty string, the new function object's
+   * .name property will be set to this value.  Otherwise, if
+   * options.id is a non-empty string, the part following the last '.'
+   * will be used instead.
+   * 
+   * If options.length is supplied, the new object's .length will be
+   * set to this value.
+   *
+   * If options.id is a non-empty string, the new native function
+   * object will be registered as a builtin with that id value.
+   *
+   * The options.call and .construct will be used for the [[Call]] and
+   * [[Construct]] specifications methods respectively.  If omitted,
+   * the function will not be callable / constructable.
+   *
+   * The new object will be owned by options.owner (default:
+   * intrp.ROOT), and have prototype options.proto (default:
+   * intrp.FUNCTION - i.e., Function.prototype).
+   *
    * @constructor
    * @extends {Interpreter.prototype.NativeFunction}
    * @param {!NativeFunctionOptions=} options Options object for
@@ -4661,32 +4681,37 @@ Interpreter.prototype.installTypes = function() {
     var owner = (options.owner !== undefined ? options.owner : intrp.ROOT);
     // Invoke super constructor.
     intrp.Function.call(/** @type {?} */ (this), owner, options.proto);
+    // Set .name if name or id supplied.
+    if (options.name !== undefined) {
+      this.setName(options.name);
+    } else if (options.id) {
+      this.setName(options.id.replace(/^.*\./, ''));
+    }
+    // Set .length if length supplied.
     if (options.length !== undefined) {
       this.defineProperty('length', Descriptor.none.withValue(options.length),
                           owner);
     }
-    // Register builtin if possible.
-    var id = options.id || options.name;
-    if (id) {
-      this.setName(options.name !== undefined ?
-          options.name : options.id.replace(/^.*\./, ''));
-      if (intrp.builtins_[id]) {
-        throw ReferenceError('Duplicate builtin id ' + id);
+    // Register as builtin if id supplied.
+    if (options.id) {
+      if (intrp.builtins_[options.id]) {
+        throw ReferenceError('Duplicate builtin id ' + options.id);
       }
-      intrp.builtins_[id] = this;
+      intrp.builtins_[options.id] = this;
     }
     // Install [[Call]] and [[Construct]] methods, making sure they
     // are labelled for serialization (if possible and not already).
+    var serialId = options.id || options.name;
     if (options.call) {
       this.call = options.call;
-      if (id && !('id' in this.call)) {
-        this.call.id = id + ' [[Call]]';
+      if (serialId && !('id' in this.call)) {
+        this.call.id = serialId + ' [[Call]]';
       }
     }
     if (options.construct) {
       this.construct = options.construct;
-      if (id && !('id' in this.construct)) {
-        this.construct.id = id + ' [[Construct]]';
+      if (serialId && !('id' in this.construct)) {
+        this.construct.id = serialId + ' [[Construct]]';
       }
     }
   };
