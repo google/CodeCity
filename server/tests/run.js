@@ -24,6 +24,9 @@
  */
 'use strict';
 
+// Force compilation of server (for syntax/type checking):
+const server = require('../codecity');
+
 const fs = require('fs');
 const {T, B} = require('./testing');
 
