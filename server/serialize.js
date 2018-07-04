@@ -81,7 +81,7 @@ Serializer.deserialize = function(json, intrp) {
     }
   }
   // Get constructors
-  var constructors = this.getTypesDeserialize_(intrp);
+  var constructors = Serializer.getTypesDeserialize_(intrp);
 
   // First pass: Create object stubs for every object.  We don't need
   // to (re)create object #0, because that's the interpreter proper.
@@ -125,7 +125,7 @@ Serializer.deserialize = function(json, intrp) {
         // TODO(cpcallen): this is just a little performance kludge so
         // that the State constructor doesn't need a conditional in it.
         // Find a more general solution to constructors requiring args.
-        obj = new Interpreter.State({});
+        obj = new Interpreter.State({}, /** @type {?} */(undefined));
         break;
       default:
         var protoRef;
@@ -251,7 +251,7 @@ Serializer.serialize = function(intrp) {
   var objectList = [];
   Serializer.objectHunt_(intrp, objectList, Serializer.excludeTypes, exclude);
   // Get types.
-  var types = this.getTypesSerialize_(intrp);
+  var types = Serializer.getTypesSerialize_(intrp);
   // Serialize every object.
   var json = [];
   for (var i = 0; i < objectList.length; i++) {
@@ -358,40 +358,44 @@ Serializer.serialize = function(intrp) {
  * Recursively search the stack to find all non-primitives.
  * @param {*} node JavaScript value to search.
  * @param {!Array<!Object>} objectList Array to add objects to.
- * @param {!Set<!Object>} excludeTypes Set of prototypes not to spider.
- * @param {!Array<string>} exclude List of properties not to spider.
+ * @param {!Set<?Object>} excludeTypes Set of prototypes not to spider.
+ * @param {!Array<string>=} exclude List of properties not to spider.
  */
 Serializer.objectHunt_ = function(node, objectList, excludeTypes, exclude) {
-  if (!node || (typeof node !== 'object' && typeof node !== 'function') ||
-      excludeTypes.has(Object.getPrototypeOf(node)) ||
-      objectList.includes(node)) {
+  if (!node || (typeof node !== 'object' && typeof node !== 'function')) {
+    // node is primitive.  Nothing to do.
     return;
   }
-  objectList.push(node);
-  if (typeof node === 'object') {  // Recurse.
+  var obj = /** @type {!Object} */(node);
+  if (excludeTypes.has(Object.getPrototypeOf(/** @type {!Object} */(obj))) ||
+      objectList.includes(/** @type {!Object} */(obj))) {
+    return;
+  }
+  objectList.push(obj);
+  if (typeof obj === 'object') {  // Recurse.
     // Properties.
-    if (!(node instanceof Date) &&
-        !(node instanceof IterableWeakMap) &&
-        !(node instanceof RegExp) &&
-        !(node instanceof Set)) {
-      var names = Object.getOwnPropertyNames(node);
+    if (!(obj instanceof Date) &&
+        !(obj instanceof IterableWeakMap) &&
+        !(obj instanceof RegExp) &&
+        !(obj instanceof Set)) {
+      var names = Object.getOwnPropertyNames(obj);
       for (var i = 0; i < names.length; i++) {
         var name = names[i];
         if (!exclude || !exclude.includes(name)) {
           // Don't pass exclude; it's only for top-level property keys.
-          Serializer.objectHunt_(node[names[i]], objectList, excludeTypes);
+          Serializer.objectHunt_(obj[name], objectList, excludeTypes);
         }
       }
     }
     // Set members.
-    if (node instanceof Set) {
-      node.forEach(function (value) {
+    if (obj instanceof Set) {
+      obj.forEach(function (value) {
         Serializer.objectHunt_(value, objectList, excludeTypes);
       });
     }
     // Map entries.
-    if (node instanceof IterableWeakMap) {
-      node.forEach(function (value, key) {
+    if (obj instanceof IterableWeakMap) {
+      obj.forEach(function (value, key) {
         Serializer.objectHunt_(key, objectList, excludeTypes);
         Serializer.objectHunt_(value, objectList, excludeTypes);
       });
@@ -441,7 +445,7 @@ Serializer.getTypesDeserialize_ = function (intrp) {
  * @return {!Map} A key/value map of protoytype objects to typesnames.
  */
 Serializer.getTypesSerialize_ = function (intrp) {
-  var types = this.getTypesDeserialize_(intrp);
+  var types = Serializer.getTypesDeserialize_(intrp);
   var map = new Map;
   for (var t in types) {
     if (types.hasOwnProperty(t)) {

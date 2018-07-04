@@ -24,7 +24,7 @@
 'use strict';
 
 var acorn = require('acorn');
-var IterableWeakMap = /** @type {?} */(require('./iterable_weakmap'));
+var IterableWeakMap = require('./iterable_weakmap');
 var net = require('net');
 
 // Create an Acorn plugin called 'alwaysStrict'.
@@ -161,7 +161,7 @@ Interpreter.prototype.createThread = function(owner, state, runAt) {
  * @param {string} src JavaScript source code to parse and run.
  * @return {!Interpreter.prototype.Thread} Userland Thread object.
  */
-Interpreter.prototype.createThreadForSrc = function(src, runAt) {
+Interpreter.prototype.createThreadForSrc = function(src) {
   if (this.options.trimProgram) {
     src = src.trim();
   }

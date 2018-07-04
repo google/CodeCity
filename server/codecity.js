@@ -191,7 +191,7 @@ CodeCity.shutdown = function(code) {
  * @param {...*} var_args Arbitrary arguments for console.log.
  */
 CodeCity.log = function(var_args) {
-  console.log.apply(console.log, arguments);
+  console.log.apply(console, arguments);
 };
 
 /**
