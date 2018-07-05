@@ -27,9 +27,7 @@
 
 // TODO(cpcallen): Use official externs directly.
 
-// TODO(cpcallen): Factor this out to a separate buffer module extern.
-/** @constructor */
-var Buffer = function() {};
+var Buffer = require('buffer');
 
 /** @const */
 var fs = {};
