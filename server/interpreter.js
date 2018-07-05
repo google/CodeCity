@@ -2830,7 +2830,7 @@ Interpreter.prototype.unwind_ = function(thread, type, value, label) {
         break;
     }
     if (type === Interpreter.CompletionType.BREAK) {
-      if (label ? (state.labels && state.labels.indexOf(label) !== -1) :
+      if (label ? (state.labels && state.labels.includes(label)) :
           (state.isLoop || state.isSwitch)) {
         // Top of stack is now target of break.  But we are breaking
         // out of this statement, so pop to discard it.
@@ -2838,7 +2838,7 @@ Interpreter.prototype.unwind_ = function(thread, type, value, label) {
         return;
       }
     } else if (type === Interpreter.CompletionType.CONTINUE) {
-      if (label ? (state.labels && state.labels.indexOf(label) !== -1) :
+      if (label ? (state.labels && state.labels.includes(label)) :
           state.isLoop) {
         return;
       }
