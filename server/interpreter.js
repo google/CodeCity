@@ -26,6 +26,7 @@
 var acorn = require('acorn');
 var IterableWeakMap = require('./iterable_weakmap');
 var net = require('net');
+var Registry = require('./registry');
 
 // Create an Acorn plugin called 'alwaysStrict'.
 acorn.plugins.alwaysStrict = function(parser, configValue) {
@@ -54,10 +55,10 @@ var Interpreter = function(options) {
   this.options = options || {};
   this.installTypes();
   /**
-   * Map of builtins - e.g. Object, Function.prototype, Array.pop, etc.
-   * @private @const {Object<Interpreter.Value>}
+   * Registry of builtins - e.g. Object, Function.prototype, Array.pop, etc.
+   * @const {Registry<Interpreter.Value>}
    */
-  this.builtins_ = Object.create(null);
+  this.builtins = new Registry;
   /**
    * For cycle detection in Array.prototype.toString; see spec bug
    * github.com/tc39/ecma262/issues/289.  (Also used in
@@ -505,12 +506,12 @@ Interpreter.prototype.initBuiltins_ = function() {
   // Create the objects which will become Object.prototype and
   // Function.prototype, which are needed to bootstrap everything else.
   this.OBJECT = new this.Object(null, null);
-  this.builtins_['Object.prototype'] = this.OBJECT;
+  this.builtins.set('Object.prototype', this.OBJECT);
 
   // Create the object that will own all of the system objects.
   var root = new this.Object(null, this.OBJECT);
   this.ROOT = /** @type {!Interpreter.Owner} */ (root);
-  this.builtins_['CC.root'] = root;
+  this.builtins.set('CC.root', root);
   this.global.perms = this.ROOT;
   // Retroactively apply root ownership to Object.prototype:
   this.OBJECT.owner = this.ROOT;
@@ -1011,7 +1012,7 @@ Interpreter.prototype.initFunction_ = function() {
 Interpreter.prototype.initArray_ = function() {
   // Array prototype.
   this.ARRAY = new this.Array(this.ROOT, this.OBJECT);
-  this.builtins_['Array.prototype'] = this.ARRAY;
+  this.builtins.set('Array.prototype', this.ARRAY);
 
   // Array constructor.
   new this.NativeFunction({
@@ -1373,7 +1374,7 @@ Interpreter.prototype.initArray_ = function() {
           var func = join;
         } else {
           func = /** @type {!Interpreter.prototype.Function} */ (
-              intrp.builtins_['Object.prototype.toString']);
+              intrp.builtins.get('Object.prototype.toString'));
         }
         var newState = Interpreter.State.newForCall(func, thisVal, [], perms);
         thread.stateStack_.push(newState);
@@ -1426,7 +1427,7 @@ Interpreter.prototype.initString_ = function() {
   var wrapper;
   // String prototype.  It's a String object (but the only one!)
   this.STRING = new this.Object(this.ROOT);
-  this.builtins_['String.prototype'] = this.STRING;
+  this.builtins.set('String.prototype', this.STRING);
   this.STRING.class = 'String';
 
   // String constructor.  ES6 §21.1.1.1.
@@ -1597,7 +1598,7 @@ Interpreter.prototype.initString_ = function() {
 Interpreter.prototype.initBoolean_ = function() {
   // Boolean prototype.  It's a Boolean object (but the only one!)
   this.BOOLEAN = new this.Object(this.ROOT);
-  this.builtins_['Boolean.prototype'] = this.BOOLEAN;
+  this.builtins.set('Boolean.prototype', this.BOOLEAN);
   this.BOOLEAN.class = 'Boolean';
 
   // Boolean constructor.
@@ -1662,7 +1663,7 @@ Interpreter.prototype.initNumber_ = function() {
   var wrapper;
   // Number prototype.  It's a Number object (but the only one!)
   this.NUMBER = new this.Object(this.ROOT);
-  this.builtins_['Number.prototype'] = this.NUMBER;
+  this.builtins.set('Number.prototype', this.NUMBER);
   this.NUMBER.class = 'Number';
 
   // Number constructor.
@@ -1782,7 +1783,7 @@ Interpreter.prototype.initDate_ = function() {
   // Date prototype.  As of ES6 this is just an ordinary object.  (In
   // ES5 it had [[Class]] Date.)
   this.DATE = new this.Object(this.ROOT);
-  this.builtins_['Date.prototype'] = this.DATE;
+  this.builtins.set('Date.prototype', this.DATE);
   // Date constructor.
   wrapper = function(value, var_args) {
     if (!intrp.calledWithNew()) {
@@ -1863,7 +1864,7 @@ Interpreter.prototype.initRegExp_ = function() {
   // RegExp prototype.  As of ES6 this is just an ordinary object.
   // (In ES5 it had [[Class]] RegExp.)
   this.REGEXP = new this.Object(this.ROOT);
-  this.builtins_['RegExp.prototype'] = this.REGEXP;
+  this.builtins.set('RegExp.prototype', this.REGEXP);
   // RegExp constructor.
   wrapper = function(pattern, flags) {
     var regexp = new intrp.RegExp(intrp.thread.perms());
@@ -1937,7 +1938,7 @@ Interpreter.prototype.initError_ = function() {
   var createErrorClass = function(name) {
     var protoproto = name === 'Error' ? intrp.OBJECT : intrp.ERROR;
     var proto = new intrp.Error(intrp.ROOT, protoproto);
-    intrp.builtins_[name + '.prototype'] = proto;
+    intrp.builtins.set(name + '.prototype', proto);
     new intrp.NativeFunction({
       id: name, name: name, length: 1,
       /** @type {!Interpreter.NativeConstructImpl} */
@@ -2019,7 +2020,7 @@ Interpreter.prototype.initJSON_ = function() {
 Interpreter.prototype.initWeakMap_ = function() {
   // WeakMap prototype.
   this.WEAKMAP = new this.Object(this.ROOT);
-  this.builtins_['WeakMap.prototype'] = this.WEAKMAP;
+  this.builtins.set('WeakMap.prototype', this.WEAKMAP);
 
   // WeakMap constructor.
   new this.NativeFunction({
@@ -2098,7 +2099,7 @@ Interpreter.prototype.initWeakMap_ = function() {
 Interpreter.prototype.initThread_ = function() {
   // Thread prototype.
   this.THREAD = new this.Object(this.ROOT);
-  this.builtins_['Thread.prototype'] = this.THREAD;
+  this.builtins.set('Thread.prototype', this.THREAD);
 
   /* Thread constructor.  Usage:
    *
@@ -2380,10 +2381,7 @@ Interpreter.prototype.createNativeFunction = function(
   }
   var func = new this.OldNativeFunction(nativeFunc, legalConstructor);
   func.setName(name.replace(/^.*\./, ''));
-  if (this.builtins_[name]) {
-    throw ReferenceError('Builtin "' + name + '" already exists.');
-  }
-  this.builtins_[name] = func;
+  this.builtins.set(name, func);
   return func;
 };
 
@@ -4694,10 +4692,7 @@ Interpreter.prototype.installTypes = function() {
     }
     // Register as builtin if id supplied.
     if (options.id) {
-      if (intrp.builtins_[options.id]) {
-        throw ReferenceError('Duplicate builtin id ' + options.id);
-      }
-      intrp.builtins_[options.id] = this;
+      intrp.builtins.set(options.id, this);
     }
     // Install [[Call]] and [[Construct]] methods, making sure they
     // are labelled for serialization (if possible and not already).
@@ -5740,12 +5735,12 @@ stepFuncs_['CallExpression'] = function (thread, stack, state, node) {
         typeof node['callee']['value'] === 'string' &&
         node['arguments'].length === 0) {
       var builtin = node['callee']['value'];
-      if (!this.builtins_[builtin]) {
+      if (!this.builtins.has(builtin)) {
         throw new this.Error(state.scope.perms, this.REFERENCE_ERROR,
             builtin + ' is not a builtin');
       }
       stack.pop();
-      stack[stack.length - 1].value = this.builtins_[builtin];
+      stack[stack.length - 1].value = this.builtins.get(builtin);
       return;
     }
     state.step_ = 1;
