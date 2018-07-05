@@ -55,7 +55,7 @@ var SpecEntry;
  */
 var ContentEntry = function() {};
 
-/** 
+/**
  * Path is a string like "eval", "Object.prototype" or
  * "$.util.command" identifying the variable or property binding this
  * entry applies to.
@@ -155,6 +155,7 @@ var Config = function(spec) {
       contents: [],
       rest: Boolean(se.rest)
     };
+    this.entries.push(entry);
     if (se.contents) {
       for (var i = 0; i < se.contents.length; i++) {
         var sc = se.contents[i];
@@ -164,6 +165,7 @@ var Config = function(spec) {
         } else {
           content = {path: sc.path, do: sc.do, reorder: Boolean(sc.reorder)};
         }
+        entry.contents.push(content);
         var parts = toParts(content.path);
         var /** ?ConfigNode */ cn = this.tree;
         for (var j = 0; j < parts.length; j++) {
@@ -182,8 +184,52 @@ var Config = function(spec) {
   }
 };
 
+/**
+ * Dump-state information for a single scope.
+ * @constructor
+ * @param {!Interpreter.Scope} scope The scope to keep state for.
+ */
+function ScopeInfo(scope) {
+  this.scope = scope;
+}
+
+/**
+ * Dump-state information for a single object.
+ * @constructor
+ * @param {!Interpreter.prototype.Object} obj The object to keep state for.
+ */
+function ObjectInfo(obj) {
+  this.obj = obj;
+}
+
 var dump = function(intrp, spec) {
   var config = new Config(spec);
+  var /** !Map<!Interpreter.Scope,!ScopeInfo> */ scopeInfo = new Map;
+  var /** !Map<!Interpreter.prototype.Object,!ObjectInfo> */ objInfo = new Map;
+
+  /**
+   * Get interned ScopeInfo for sope.
+   * @param {!Interpreter.Scope} scope The scope to get info for.
+   * @return {!ScopeInfo} The ScopeInfo for scope.
+   */
+  function getScopeInfo(scope) {
+    if (scopeInfo.has(scope)) return scopeInfo.get(scope);
+    var si = new ScopeInfo(scope);
+    scopeInfo.set(scope, si);
+    return si;
+  }
+
+  /**
+   * Get interned ObjectInfo for sope.
+   * @param {!Interpreter.prototype.Object} obj The object to get info for.
+   * @return {!ObjectInfo} The ObjectInfo for obj.
+   */
+  function getObjectInfo(obj) {
+    if (objInfo.has(obj)) return objInfo.get(obj);
+    var oi = new ObjectInfo(obj);
+    objInfo.set(obj, oi);
+    return oi;
+  }
 
 };
 
