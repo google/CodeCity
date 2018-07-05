@@ -38,18 +38,9 @@ acorn.plugins.alwaysStrict = function(parser, configValue) {
 };
 
 /**
- * @typedef {{
- *     noLog: (!Array<string>|undefined),
- *     trimEval: (boolean|undefined),
- *     trimProgram: (boolean|undefined),
- * }}
- */
-var InterpreterOptions;
-
-/**
  * Create a new interpreter.
  * @constructor
- * @param {!InterpreterOptions=} options
+ * @param {!Interpreter.Options=} options
  */
 var Interpreter = function(options) {
   this.options = options || {};
@@ -2983,6 +2974,16 @@ Interpreter.FunctionResult.CallAgain = new Interpreter.FunctionResult;
  * @const
  */
 Interpreter.FunctionResult.Sleep = new Interpreter.FunctionResult;
+
+/**
+ * Options object for Interpreter constructor.
+ * @typedef {{
+ *     noLog: (!Array<string>|undefined),
+ *     trimEval: (boolean|undefined),
+ *     trimProgram: (boolean|undefined),
+ * }}
+ */
+Interpreter.Options;
 
 /**
  * Interpreter statuses.

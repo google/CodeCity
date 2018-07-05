@@ -23,9 +23,27 @@
  * @author cpcallen@google.com (Christopher Allen)
  */
 
+var Buffer = require('buffer');
 var events = require('events');
 
 var net = {};
+
+/**
+ * @typedef {{port: (number|undefined),
+ *            host: (string|undefined),
+ *            localAddress: (string|undefined),
+ *            path: (string|undefined),
+ *            allowHalfOpen: (boolean|undefined)}}
+ */
+net.ConnectOptions;
+
+/**
+ * @param {net.ConnectOptions|number|string} arg1
+ * @param {(function(...)|string)=} arg2
+ * @param {function(...)=} arg3
+ * @return {!net.Socket}
+ */
+net.createConnection = function(arg1, arg2, arg3) {};
 
 ///////////////////////////////////////////////////////////////////////////////
 // net.Server
@@ -73,5 +91,12 @@ net.Server.prototype.on = function(event, listener) {};
  */
 net.Socket = function(options) {};
 
+/**
+ * @param {string|Buffer} data
+ * @param {(string|function(...))=} encoding
+ * @param {function(...)=} callback
+ * @return {void}
+ */
+net.Socket.prototype.write = function(data, encoding, callback) {};
 
 module.exports = net;
