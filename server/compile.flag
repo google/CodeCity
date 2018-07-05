@@ -9,6 +9,9 @@
 --externs=externs/node_externs.js
 --externs=externs/weak_externs.js
 
+node_modules/buffer/package.json
+node_modules/buffer/buffer.js
+
 node_modules/events/package.json
 node_modules/events/events.js
 
