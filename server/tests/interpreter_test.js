@@ -73,7 +73,7 @@ function runTest(t, name, src, expected) {
  * @param {string} src The code to be evaled.
  * @param {number|string|boolean|null|undefined} expected The expected
  *     completion value.
- * @param {!InterpreterOptions=} options Interpreter constructor options.
+ * @param {!Interpreter.Options=} options Interpreter constructor options.
  * @param {boolean=} init Load the standard startup files (Default: true.)
  */
 function runCustomTest(t, name, src, expected, options, init) {
@@ -166,9 +166,9 @@ async function runAsyncTest(t, name, src, expected, initFunc, sideFunc) {
   var resolve, reject, result;
   var p = new Promise(function(res, rej) { resolve = res; reject = rej; });
   intrp.global.createMutableBinding(
-      'resolve', intrp.createNativeFunction('resolve', resolve));
+      'resolve', intrp.createNativeFunction('resolve', resolve, false));
   intrp.global.createMutableBinding(
-      'reject', intrp.createNativeFunction('reject', reject));
+      'reject', intrp.createNativeFunction('reject', reject, false));
 
   try {
     intrp.createThreadForSrc(src);
@@ -650,6 +650,7 @@ exports.testAeca = function(t) {
 /**
  * Run a test of asynchronous functions:
  * @param {!T} t The test runner object.
+ * @suppress {visibility}
  */
 exports.testAsync = function(t) {
   // Function to install an async NativeFunction on new Interpreter

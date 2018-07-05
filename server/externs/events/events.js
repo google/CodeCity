@@ -29,4 +29,18 @@ var events = {};
 /** @constructor */
 events.EventEmitter = function() {};
 
+/**
+ * @param {string} event
+ * @param {function(...)} listener
+ * @return {events.EventEmitter}
+ */
+events.EventEmitter.prototype.on = function(event, listener) {};
+
+/**
+ * @param {string} event
+ * @param {function(...)} listener
+ * @return {events.EventEmitter}
+ */
+events.EventEmitter.prototype.once = function(event, listener) {};
+
 module.exports = events;

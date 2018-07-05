@@ -74,7 +74,7 @@ function roundTrip(intrp) {
  *     Speeds up tests with many roundtrips that do not need builtins.
  */
 function runTest(t, name, src1, src2, src3, expected, steps, noBuiltins) {
-  var intrp = noBuiltins ? new Interpreter :  intrp = getInterpreter();
+  var intrp = noBuiltins ? new Interpreter : getInterpreter();
   try {
     if (src1) {
       var thread = intrp.createThreadForSrc(src1).thread;
@@ -174,9 +174,9 @@ async function runAsyncTest(t, name, src1, src2, expected, initFunc) {
   var resolve, reject, result;
   var p = new Promise(function(res, rej) { resolve = res; reject = rej; });
   intrp1.global.createMutableBinding(
-      'resolve', intrp1.createNativeFunction('resolve', resolve));
+      'resolve', intrp1.createNativeFunction('resolve', resolve, false));
   intrp1.global.createMutableBinding(
-      'reject', intrp1.createNativeFunction('reject', reject));
+      'reject', intrp1.createNativeFunction('reject', reject, false));
 
   try {
     intrp1.start();
@@ -209,9 +209,9 @@ async function runAsyncTest(t, name, src1, src2, expected, initFunc) {
   // New promise.
   p = new Promise(function(res, rej) { resolve = res; reject = rej; });
   intrp2.global.createMutableBinding(
-      'resolve', intrp2.createNativeFunction('resolve', resolve));
+      'resolve', intrp2.createNativeFunction('resolve', resolve, false));
   intrp2.global.createMutableBinding(
-      'reject', intrp2.createNativeFunction('reject', reject));
+      'reject', intrp2.createNativeFunction('reject', reject, false));
 
   try {
     Serializer.deserialize(JSON.parse(json), intrp2);
@@ -366,8 +366,8 @@ exports.testRoundtripAsync = async function(t) {
 
   //  Run a test of the server re-listening to sockets after being
   //  deserialized.
-  var name = 'testPostRestoreNetworkInbound';
-  var src1 = `
+  name = 'testPostRestoreNetworkInbound';
+  src1 = `
       var data = '', conn = {};
       conn.onReceive = function(d) {
         data += d;
@@ -379,7 +379,7 @@ exports.testRoundtripAsync = async function(t) {
       CC.connectionListen(8888, conn);
       resolve();
    `;
-  var src2 = `
+  src2 = `
       send();
    `;
   var initFunc = function(intrp) {
