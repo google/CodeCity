@@ -43,9 +43,6 @@ const weak = require('weak');
 
 /**
  * Declared to quiet closure-compiler warnings.
- * @param {!WeakRef<T>} ref
- * @return {T}
- * @template T
  */
 weak.get;
 
