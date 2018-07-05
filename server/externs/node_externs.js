@@ -36,6 +36,9 @@ var __dirname;
 /** @type {!Object} */
 var exports;
 
+/** @param {boolean=} full */
+var gc = function(full) {};
+
 /** @type {!Object} */
 var module;
 

@@ -24,8 +24,27 @@
  */
 'use strict';
 
-// Force compilation of server (for syntax/type checking):
-const server = require('../codecity');
+// Force closure-compiler to compile server and testst/benchmarks (for
+// syntax/type checking).  Server could be compiled separately but
+// it's faster to have do both in one run.  Tests and benchmark files
+// need to be enumerated explicitly because closure-compiler ignores
+// require statements with arguments that are not a string literal.
+const compileTargets = [
+  require('../codecity'),
+
+  require('./interpreter_test'),
+  require('./interpreter_unit_test'),
+  require('./interpreter_test'),
+  require('./iterable_weakmap_test'),
+  require('./iterable_weakset_test'),
+  require('./registry_test'),
+  require('./serialize_test'),
+
+  require('./interpreter_bench'),
+  require('./serialize_bench'),
+];
+
+// Force compilation of tests/benchmarks (for synta
 
 const fs = require('fs');
 const {T, B} = require('./testing');
@@ -38,6 +57,9 @@ async function runBenchmarks(files) {
   for (var i = 0; i < files.length; i++) {
     var benchmarks = require(files[i]);
     var b = new B;
+    if (compileTargets.indexOf(benchmarks) === -1) {
+      b.result('WARN', files[i] + ' is not being checked by closure-compiler');
+    }
     for (var k in benchmarks) {
       if (k.startsWith('bench') && typeof benchmarks[k] === 'function') {
         try {
@@ -59,6 +81,9 @@ async function runTests(files) {
 
   for (var i = 0; i < files.length; i++) {
     var tests = require(files[i]);
+    if (compileTargets.indexOf(tests) === -1) {
+      t.result('WARN', files[i] + ' is not being checked by closure-compiler');
+    }
     for (var k in tests) {
       if (k.startsWith('test') && typeof tests[k] === 'function') {
         try {
