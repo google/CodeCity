@@ -57,7 +57,7 @@ async function runBenchmarks(files) {
   for (var i = 0; i < files.length; i++) {
     var benchmarks = require(files[i]);
     var b = new B;
-    if (compileTargets.indexOf(benchmarks) === -1) {
+    if (!compileTargets.includes(benchmarks)) {
       b.result('WARN', files[i] + ' is not being checked by closure-compiler');
     }
     for (var k in benchmarks) {
@@ -81,7 +81,7 @@ async function runTests(files) {
 
   for (var i = 0; i < files.length; i++) {
     var tests = require(files[i]);
-    if (compileTargets.indexOf(tests) === -1) {
+    if (!compileTargets.includes(tests)) {
       t.result('WARN', files[i] + ' is not being checked by closure-compiler');
     }
     for (var k in tests) {
