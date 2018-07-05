@@ -46,7 +46,7 @@ $.utils.code.toSource = function(value, opt_seen) {
   } else if (type === 'object') {
     // TODO: Replace opt_seen with Set, once available.
     if (opt_seen) {
-      if (opt_seen.indexOf(value) !== -1) {
+      if (opt_seen.includes(value)) {
         throw RangeError('[Recursive data structure]');
       }
       opt_seen.push(value);
@@ -63,9 +63,7 @@ $.utils.code.toSource = function(value, opt_seen) {
       var props = Object.getOwnPropertyNames(value);
       var data = [];
       for (var i = 0; i < value.length; i++) {
-        if (props.indexOf(String(i)) === -1) {
-          data[i] = '';
-        } else {
+        if (props.includes(String(i))) {
           try {
             data[i] = $.utils.code.toSource(value[i], opt_seen);
           } catch (e) {
@@ -73,6 +71,8 @@ $.utils.code.toSource = function(value, opt_seen) {
             data = null;
             break;
           }
+        } else {
+          data[i] = '';
         }
       }
       if (data) {
