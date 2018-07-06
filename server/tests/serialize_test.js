@@ -70,7 +70,7 @@ function roundTrip(intrp) {
  * @param {number=} steps How many steps to run between serializations
  *     (run src1 to completion if unspecified).
  * @param {boolean=} noBuiltins Skip initialization of global scope
- *     (e.g., evaluation of es5.js, es6.js, and cc.js at startup).
+ *     (e.g., evaluation of es5.js, es6.js, es7.js, and cc.js at startup).
  *     Speeds up tests with many roundtrips that do not need builtins.
  */
 function runTest(t, name, src1, src2, src3, expected, steps, noBuiltins) {

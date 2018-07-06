@@ -164,9 +164,9 @@ Serializer.deserialize = function(json, intrp) {
       for (var j = 0; j < names.length; j++) {
         var name = names[j];
         Object.defineProperty(obj, name,
-            {configurable: nonConfigurable.indexOf(name) === -1,
-             enumerable: nonEnumerable.indexOf(name) === -1,
-             writable: nonWritable.indexOf(name) === -1,
+            {configurable: !nonConfigurable.includes(name),
+             enumerable: !nonEnumerable.includes(name),
+             writable: !nonWritable.includes(name),
              value: decodeValue(props[name])});
       }
     }

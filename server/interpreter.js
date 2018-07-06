@@ -1099,6 +1099,32 @@ Interpreter.prototype.initArray_ = function() {
   });
 
   new this.NativeFunction({
+    id: 'Array.prototype.includes', length: 1,
+    /** @type {!Interpreter.NativeCallImpl} */
+    call: function(intrp, thread, state, thisVal, args) {
+      var searchElement = args[0];
+      var fromIndex = args[1];
+      var perms = state.scope.perms;
+      var obj = intrp.toObject(thisVal, perms);
+      var len = Interpreter.toLength(obj.get('length', perms));
+      if (len === 0) return false;
+      var n = (fromIndex === undefined ? 0 : Interpreter.toInteger(fromIndex));
+      if (n >= len) return false;
+      var k = (n >= 0) ? n : Math.max(len - Math.abs(n), 0);
+      for (; k < len; k++) {
+        if (obj.has(String(k), perms)) {
+          var v = obj.get(String(k), perms);
+          if (v === searchElement ||
+              (Number.isNaN(v) && Number.isNaN(searchElement))) {
+            return true;
+          }
+        }
+      }
+      return false;
+    }
+  });
+
+  new this.NativeFunction({
     id: 'Array.prototype.indexOf', length: 1,
     /** @type {!Interpreter.NativeCallImpl} */
     call: function(intrp, thread, state, thisVal, args) {
@@ -2819,7 +2845,7 @@ Interpreter.prototype.unwind_ = function(thread, type, value, label) {
         break;
     }
     if (type === Interpreter.CompletionType.BREAK) {
-      if (label ? (state.labels && state.labels.indexOf(label) !== -1) :
+      if (label ? (state.labels && state.labels.includes(label)) :
           (state.isLoop || state.isSwitch)) {
         // Top of stack is now target of break.  But we are breaking
         // out of this statement, so pop to discard it.
@@ -2827,7 +2853,7 @@ Interpreter.prototype.unwind_ = function(thread, type, value, label) {
         return;
       }
     } else if (type === Interpreter.CompletionType.CONTINUE) {
-      if (label ? (state.labels && state.labels.indexOf(label) !== -1) :
+      if (label ? (state.labels && state.labels.includes(label)) :
           state.isLoop) {
         return;
       }
