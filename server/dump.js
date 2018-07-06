@@ -64,37 +64,8 @@ var ContentEntry = function() {};
 ContentEntry.prototype.path;
 
 /**
- * Do is one of 'prune', 'defer', 'decl', 'set', 'recurse' (default:
- * 'recurse'), specifying what should be done for the specified path.
- * The choices are:
- *
- * - 'prune' will skip the named binding entirely (unless it or an
- *    extension of it is explicitly mentioned in a later config
- *    directive); if the data accessible via the named binding is not
- *    accessible via any other (non-pruned) path from the global scope
- *    it will consequently not be included in the dump.  This option is
- *    intended to cause data loss, so be careful!
- *
- * - 'defer' will skip the named binding for now, but it will be
- *   included in the file with rest: true.
- *
- * - 'decl' will ensure that the specified path exists, but will leave
- *   the value undefined.  If the path is a property, it will not
- *   (yet) be made non-configurable.
- *
- * - 'set' will do what 'decl' does and then ensure that the specified
- *   path is set to its final value (if primitive) or an object of the
- *   correct class (if non-primitive).  It will also ensure the final
- *   property attributes (enumerable, writable and/or configurable)
- *   are set.  If a new object is created to be the value of the
- *   specified path it will not (yet) have its properties or internal
- *   set/map data set (but immutable internal data, such as function
- *   code, must be set at this time).
- *
- * - 'recurse' will do what 'set' does and then additionally do the
- *   same, recursively, to properties and set/map data of the object
- *   which is the value of the specified path.
- * @type {string}
+ * Do is what to to do with the specified path.
+ * @type {Do}
  */
 ContentEntry.prototype.do;
 
@@ -114,6 +85,56 @@ ContentEntry.prototype.do;
  * @type {boolean|undefined}
  */
 ContentEntry.prototype.reorder;
+
+/**
+ * Possible things to do (or have done) with a variable / property
+ * binding.
+ * @enum {number}
+ */
+var Do = {
+  /** 
+   * Skip the named binding entirely (unless it or an extension of it
+   * is explicitly mentioned in a later config directive); if the data
+   * accessible via the named binding is not accessible via any other
+   * (non-pruned) path from the global scope it will consequently not
+   * be included in the dump.  This option is intended to cause data
+   * loss, so be careful!
+   */
+  PRUNE: 1,
+  
+  /**
+   * Skip the named binding for now, but include it in a later file
+   * (whichever has rest: true).
+   */
+  SKIP: 2,
+
+  /**
+   * Ensure that the specified path exists, but do not yet set it to
+   * its final value.  If the path is a property, it will not (yet) be
+   * made non-configurable.
+   */
+  DECL: 3,
+
+  /**
+   * Ensure theat the specified path exists and has been set to its
+   * final value (if primitive) or an object of the correct class (if
+   * non-primitive).  It will also ensure the final property
+   * attributes (enumerable, writable and/or configurable) are set.
+   *
+   * If a new object is created to be the value of the specified path
+   * it will not (yet) have its properties or internal set/map data
+   * set (but immutable internal data, such as function code, must be
+   * set at this time).
+   */
+  SET: 4,
+
+  /**
+   * Ensure the specified path is has been set to its final value (and
+   * marked immuable, if applicable) and that the same has been done
+   * recursively to all bindings reachable via path.
+   */
+  RECURSE: 5,
+};
 
 /**
  * @constructor
@@ -161,7 +182,7 @@ var Config = function(spec) {
         var sc = se.contents[i];
         if (typeof sc === 'string') {
           var /** !ContentEntry */ content =
-              {path: sc, do: 'recurse', reorder: false};
+              {path: sc, do: Do.RECURSE, reorder: false};
         } else {
           content = {path: sc.path, do: sc.do, reorder: Boolean(sc.reorder)};
         }
@@ -234,3 +255,4 @@ var dump = function(intrp, spec) {
 };
 
 exports.dump = dump;
+exports.Do = Do;
