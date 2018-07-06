@@ -26,18 +26,19 @@
 'use strict';
 
 const Interpreter = require('../interpreter');
-const {dump, Do} = require('../dump');
+const {dump, Do, testOnly} = require('../dump');
 const fs = require('fs');
 const {getInterpreter} = require('./interpreter_common');
 const path = require('path');
 const {T} = require('./testing');
 
+const {primitiveToSource} = testOnly;
 
 /**
  * @param {!T} t The test runner object.
  */
 exports.testDump = function(t) {
-  let intrp = new Interpreter;
+  const intrp = new Interpreter;
 
   // Hack to install stubs for builtins found in codecity.js:
   const builtins = ['CC.log', 'CC.checkpoint', 'CC.shutdown'];
