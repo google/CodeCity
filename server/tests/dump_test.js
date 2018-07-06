@@ -31,8 +31,34 @@ const fs = require('fs');
 const {getInterpreter} = require('./interpreter_common');
 const path = require('path');
 const {T} = require('./testing');
+const util = require('util');
 
 const {primitiveToSource} = testOnly;
+
+/**
+ * Unit tests for the primitiveToSource function.  Leave most of the
+ * string cases to testQuote, below.
+ * @param {!T} t The test runner object.
+ */
+exports.testPrimitiveToSource = function(t) {
+  var cases = [
+    [undefined, 'undefined'],
+    [null, 'null'],
+    [false, 'false'],
+    [true, 'true'],
+    [0, '0'],
+    [-0, '-0'],
+    [Infinity, 'Infinity'],
+    [-Infinity, '-Infinity'],
+    [NaN, 'NaN'],
+    ['foo', "'foo'"],
+  ];
+  for (const tc of cases) {
+    var r = primitiveToSource(tc[0]);
+    t.expect(util.format('quote(%o)', tc[0]), r, tc[1]);
+    t.expect(util.format('eval(quote(%o))', tc[0]), eval(r), tc[0]);
+  }
+};
 
 /**
  * @param {!T} t The test runner object.

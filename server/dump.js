@@ -24,7 +24,8 @@
  */
 'use strict';
 
-const Interpreter = require('./interpreter.js');
+var code = require('./code');
+var Interpreter = require('./interpreter');
 
 /**
  * Break a selector into an array of parts.
@@ -261,6 +262,32 @@ Dumper.prototype.getObjectInfo = function(obj) {
   var oi = new ObjectInfo(obj);
   this.objInfo.set(obj, oi);
   return oi;
+};
+
+/**
+ * Get a source text representation of a given primitive value.
+ * @param {undefined|null|boolean|number|string} value Primitive JS value.
+ * @return {string} An eval-able representation of the value.
+ */
+var primitiveToSource = function(value) {
+  switch (typeof value) {
+    case 'undefined':
+    case 'boolean':
+      return String(value);
+    case 'number':
+      // TODO(cpcallen): is this correct?  See
+      //     https://stackoverflow.com/q/51202901
+      if (Object.is(value, -0)) return '-0';
+      return String(value);
+    case 'string':
+      return code.quote(value);
+    default:
+      if (value === null) {
+        return 'null';
+      } else {
+        throw TypeError('primitiveToSource called on non-primitive value');
+      }
+  }
 };
 
 var dump = function(intrp, spec) {
