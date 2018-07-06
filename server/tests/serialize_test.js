@@ -70,11 +70,11 @@ function roundTrip(intrp) {
  * @param {number=} steps How many steps to run between serializations
  *     (run src1 to completion if unspecified).
  * @param {boolean=} noBuiltins Skip initialization of global scope
- *     (e.g., evaluation of es5.js, es6.js, and cc.js at startup).
+ *     (e.g., evaluation of es5.js, es6.js, es7.js, and cc.js at startup).
  *     Speeds up tests with many roundtrips that do not need builtins.
  */
 function runTest(t, name, src1, src2, src3, expected, steps, noBuiltins) {
-  var intrp = noBuiltins ? new Interpreter :  intrp = getInterpreter();
+  var intrp = noBuiltins ? new Interpreter : getInterpreter();
   try {
     if (src1) {
       var thread = intrp.createThreadForSrc(src1).thread;
@@ -156,7 +156,7 @@ function runTest(t, name, src1, src2, src3, expected, steps, noBuiltins) {
  * @param {string} src2 The code to be evaled after serialization.
  * @param {number|string|boolean|null|undefined} expected The expected
  *     completion value.
- * @param {Function(Interpreter)=} initFunc Optional function to be
+ * @param {function(!Interpreter)=} initFunc Optional function to be
  *     called after creating and initialzing new interpreter but
  *     before running src.  Can be used to insert extra native
  *     functions into the interpreter.  initFunc is called with the
@@ -174,9 +174,9 @@ async function runAsyncTest(t, name, src1, src2, expected, initFunc) {
   var resolve, reject, result;
   var p = new Promise(function(res, rej) { resolve = res; reject = rej; });
   intrp1.global.createMutableBinding(
-      'resolve', intrp1.createNativeFunction('resolve', resolve));
+      'resolve', intrp1.createNativeFunction('resolve', resolve, false));
   intrp1.global.createMutableBinding(
-      'reject', intrp1.createNativeFunction('reject', reject));
+      'reject', intrp1.createNativeFunction('reject', reject, false));
 
   try {
     intrp1.start();
@@ -209,9 +209,9 @@ async function runAsyncTest(t, name, src1, src2, expected, initFunc) {
   // New promise.
   p = new Promise(function(res, rej) { resolve = res; reject = rej; });
   intrp2.global.createMutableBinding(
-      'resolve', intrp2.createNativeFunction('resolve', resolve));
+      'resolve', intrp2.createNativeFunction('resolve', resolve, false));
   intrp2.global.createMutableBinding(
-      'reject', intrp2.createNativeFunction('reject', reject));
+      'reject', intrp2.createNativeFunction('reject', reject, false));
 
   try {
     Serializer.deserialize(JSON.parse(json), intrp2);
@@ -366,8 +366,8 @@ exports.testRoundtripAsync = async function(t) {
 
   //  Run a test of the server re-listening to sockets after being
   //  deserialized.
-  var name = 'testPostRestoreNetworkInbound';
-  var src1 = `
+  name = 'testPostRestoreNetworkInbound';
+  src1 = `
       var data = '', conn = {};
       conn.onReceive = function(d) {
         data += d;
@@ -379,7 +379,7 @@ exports.testRoundtripAsync = async function(t) {
       CC.connectionListen(8888, conn);
       resolve();
    `;
-  var src2 = `
+  src2 = `
       send();
    `;
   var initFunc = function(intrp) {

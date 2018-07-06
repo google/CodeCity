@@ -1,0 +1,5 @@
+{
+  "description": "Fake package.json for require('events')",
+  "main": "events.js",
+  "name": "events",
+}

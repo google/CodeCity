@@ -24,7 +24,27 @@
  */
 'use strict';
 
+// TODO(cpcallen): Improve (or better: remove) weakref-related type decls.
+
+/**
+ * @constructor
+ * @template REF
+ */
+var WeakRef = function() {};
+
+/**
+ * @param {T} obj
+ * @param {!Function} callback
+ * @return {!WeakRef<T>}
+ * @template T
+ * @suppress {duplicate}
+ */
 const weak = require('weak');
+
+/**
+ * Declared to quiet closure-compiler warnings.
+ */
+weak.get;
 
 /**
  * Function to clean up dead cells from an IterableWeakMap when a key

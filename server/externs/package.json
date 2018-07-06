@@ -1,0 +1,4 @@
+{
+  "description": "Fake package.json to satisfy require(builtin)",
+  "main": "externs.js",
+}

@@ -24,8 +24,9 @@
 'use strict';
 
 var acorn = require('acorn');
-var IterableWeakMap = /** @type {?} */(require('./iterable_weakmap'));
+var IterableWeakMap = require('./iterable_weakmap');
 var net = require('net');
+var Registry = require('./registry');
 
 // Create an Acorn plugin called 'alwaysStrict'.
 acorn.plugins.alwaysStrict = function(parser, configValue) {
@@ -37,27 +38,18 @@ acorn.plugins.alwaysStrict = function(parser, configValue) {
 };
 
 /**
- * @typedef {{
- *     noLog: (!Array<string>|undefined),
- *     trimEval: (boolean|undefined),
- *     trimProgram: (boolean|undefined),
- * }}
- */
-var InterpreterOptions;
-
-/**
  * Create a new interpreter.
  * @constructor
- * @param {!InterpreterOptions=} options
+ * @param {!Interpreter.Options=} options
  */
 var Interpreter = function(options) {
   this.options = options || {};
   this.installTypes();
   /**
-   * Map of builtins - e.g. Object, Function.prototype, Array.pop, etc.
-   * @private @const {Object<Interpreter.Value>}
+   * Registry of builtins - e.g. Object, Function.prototype, Array.pop, etc.
+   * @const {Registry<Interpreter.Value>}
    */
-  this.builtins_ = Object.create(null);
+  this.builtins = new Registry;
   /**
    * For cycle detection in Array.prototype.toString; see spec bug
    * github.com/tc39/ecma262/issues/289.  (Also used in
@@ -161,7 +153,7 @@ Interpreter.prototype.createThread = function(owner, state, runAt) {
  * @param {string} src JavaScript source code to parse and run.
  * @return {!Interpreter.prototype.Thread} Userland Thread object.
  */
-Interpreter.prototype.createThreadForSrc = function(src, runAt) {
+Interpreter.prototype.createThreadForSrc = function(src) {
   if (this.options.trimProgram) {
     src = src.trim();
   }
@@ -505,12 +497,12 @@ Interpreter.prototype.initBuiltins_ = function() {
   // Create the objects which will become Object.prototype and
   // Function.prototype, which are needed to bootstrap everything else.
   this.OBJECT = new this.Object(null, null);
-  this.builtins_['Object.prototype'] = this.OBJECT;
+  this.builtins.set('Object.prototype', this.OBJECT);
 
   // Create the object that will own all of the system objects.
   var root = new this.Object(null, this.OBJECT);
   this.ROOT = /** @type {!Interpreter.Owner} */ (root);
-  this.builtins_['CC.root'] = root;
+  this.builtins.set('CC.root', root);
   this.global.perms = this.ROOT;
   // Retroactively apply root ownership to Object.prototype:
   this.OBJECT.owner = this.ROOT;
@@ -1011,7 +1003,7 @@ Interpreter.prototype.initFunction_ = function() {
 Interpreter.prototype.initArray_ = function() {
   // Array prototype.
   this.ARRAY = new this.Array(this.ROOT, this.OBJECT);
-  this.builtins_['Array.prototype'] = this.ARRAY;
+  this.builtins.set('Array.prototype', this.ARRAY);
 
   // Array constructor.
   new this.NativeFunction({
@@ -1103,6 +1095,32 @@ Interpreter.prototype.initArray_ = function() {
       }
       arr.set('length', n, perms);
       return arr;
+    }
+  });
+
+  new this.NativeFunction({
+    id: 'Array.prototype.includes', length: 1,
+    /** @type {!Interpreter.NativeCallImpl} */
+    call: function(intrp, thread, state, thisVal, args) {
+      var searchElement = args[0];
+      var fromIndex = args[1];
+      var perms = state.scope.perms;
+      var obj = intrp.toObject(thisVal, perms);
+      var len = Interpreter.toLength(obj.get('length', perms));
+      if (len === 0) return false;
+      var n = (fromIndex === undefined ? 0 : Interpreter.toInteger(fromIndex));
+      if (n >= len) return false;
+      var k = (n >= 0) ? n : Math.max(len - Math.abs(n), 0);
+      for (; k < len; k++) {
+        if (obj.has(String(k), perms)) {
+          var v = obj.get(String(k), perms);
+          if (v === searchElement ||
+              (Number.isNaN(v) && Number.isNaN(searchElement))) {
+            return true;
+          }
+        }
+      }
+      return false;
     }
   });
 
@@ -1373,7 +1391,7 @@ Interpreter.prototype.initArray_ = function() {
           var func = join;
         } else {
           func = /** @type {!Interpreter.prototype.Function} */ (
-              intrp.builtins_['Object.prototype.toString']);
+              intrp.builtins.get('Object.prototype.toString'));
         }
         var newState = Interpreter.State.newForCall(func, thisVal, [], perms);
         thread.stateStack_.push(newState);
@@ -1426,7 +1444,7 @@ Interpreter.prototype.initString_ = function() {
   var wrapper;
   // String prototype.  It's a String object (but the only one!)
   this.STRING = new this.Object(this.ROOT);
-  this.builtins_['String.prototype'] = this.STRING;
+  this.builtins.set('String.prototype', this.STRING);
   this.STRING.class = 'String';
 
   // String constructor.  ES6 §21.1.1.1.
@@ -1597,7 +1615,7 @@ Interpreter.prototype.initString_ = function() {
 Interpreter.prototype.initBoolean_ = function() {
   // Boolean prototype.  It's a Boolean object (but the only one!)
   this.BOOLEAN = new this.Object(this.ROOT);
-  this.builtins_['Boolean.prototype'] = this.BOOLEAN;
+  this.builtins.set('Boolean.prototype', this.BOOLEAN);
   this.BOOLEAN.class = 'Boolean';
 
   // Boolean constructor.
@@ -1662,7 +1680,7 @@ Interpreter.prototype.initNumber_ = function() {
   var wrapper;
   // Number prototype.  It's a Number object (but the only one!)
   this.NUMBER = new this.Object(this.ROOT);
-  this.builtins_['Number.prototype'] = this.NUMBER;
+  this.builtins.set('Number.prototype', this.NUMBER);
   this.NUMBER.class = 'Number';
 
   // Number constructor.
@@ -1782,7 +1800,7 @@ Interpreter.prototype.initDate_ = function() {
   // Date prototype.  As of ES6 this is just an ordinary object.  (In
   // ES5 it had [[Class]] Date.)
   this.DATE = new this.Object(this.ROOT);
-  this.builtins_['Date.prototype'] = this.DATE;
+  this.builtins.set('Date.prototype', this.DATE);
   // Date constructor.
   wrapper = function(value, var_args) {
     if (!intrp.calledWithNew()) {
@@ -1863,7 +1881,7 @@ Interpreter.prototype.initRegExp_ = function() {
   // RegExp prototype.  As of ES6 this is just an ordinary object.
   // (In ES5 it had [[Class]] RegExp.)
   this.REGEXP = new this.Object(this.ROOT);
-  this.builtins_['RegExp.prototype'] = this.REGEXP;
+  this.builtins.set('RegExp.prototype', this.REGEXP);
   // RegExp constructor.
   wrapper = function(pattern, flags) {
     var regexp = new intrp.RegExp(intrp.thread.perms());
@@ -1937,9 +1955,9 @@ Interpreter.prototype.initError_ = function() {
   var createErrorClass = function(name) {
     var protoproto = name === 'Error' ? intrp.OBJECT : intrp.ERROR;
     var proto = new intrp.Error(intrp.ROOT, protoproto);
-    intrp.builtins_[name + '.prototype'] = proto;
+    intrp.builtins.set(name + '.prototype', proto);
     new intrp.NativeFunction({
-      name: name, length: 1,
+      id: name, name: name, length: 1,
       /** @type {!Interpreter.NativeConstructImpl} */
       construct: function(intrp, thread, state, args) {
         var message = (args[0] === undefined) ? undefined : String(args[0]);
@@ -2019,7 +2037,7 @@ Interpreter.prototype.initJSON_ = function() {
 Interpreter.prototype.initWeakMap_ = function() {
   // WeakMap prototype.
   this.WEAKMAP = new this.Object(this.ROOT);
-  this.builtins_['WeakMap.prototype'] = this.WEAKMAP;
+  this.builtins.set('WeakMap.prototype', this.WEAKMAP);
 
   // WeakMap constructor.
   new this.NativeFunction({
@@ -2098,7 +2116,7 @@ Interpreter.prototype.initWeakMap_ = function() {
 Interpreter.prototype.initThread_ = function() {
   // Thread prototype.
   this.THREAD = new this.Object(this.ROOT);
-  this.builtins_['Thread.prototype'] = this.THREAD;
+  this.builtins.set('Thread.prototype', this.THREAD);
 
   /* Thread constructor.  Usage:
    *
@@ -2380,10 +2398,7 @@ Interpreter.prototype.createNativeFunction = function(
   }
   var func = new this.OldNativeFunction(nativeFunc, legalConstructor);
   func.setName(name.replace(/^.*\./, ''));
-  if (this.builtins_[name]) {
-    throw ReferenceError('Builtin "' + name + '" already exists.');
-  }
-  this.builtins_[name] = func;
+  this.builtins.set(name, func);
   return func;
 };
 
@@ -2830,7 +2845,7 @@ Interpreter.prototype.unwind_ = function(thread, type, value, label) {
         break;
     }
     if (type === Interpreter.CompletionType.BREAK) {
-      if (label ? (state.labels && state.labels.indexOf(label) !== -1) :
+      if (label ? (state.labels && state.labels.includes(label)) :
           (state.isLoop || state.isSwitch)) {
         // Top of stack is now target of break.  But we are breaking
         // out of this statement, so pop to discard it.
@@ -2838,7 +2853,7 @@ Interpreter.prototype.unwind_ = function(thread, type, value, label) {
         return;
       }
     } else if (type === Interpreter.CompletionType.CONTINUE) {
-      if (label ? (state.labels && state.labels.indexOf(label) !== -1) :
+      if (label ? (state.labels && state.labels.includes(label)) :
           state.isLoop) {
         return;
       }
@@ -2985,6 +3000,16 @@ Interpreter.FunctionResult.CallAgain = new Interpreter.FunctionResult;
  * @const
  */
 Interpreter.FunctionResult.Sleep = new Interpreter.FunctionResult;
+
+/**
+ * Options object for Interpreter constructor.
+ * @typedef {{
+ *     noLog: (!Array<string>|undefined),
+ *     trimEval: (boolean|undefined),
+ *     trimProgram: (boolean|undefined),
+ * }}
+ */
+Interpreter.Options;
 
 /**
  * Interpreter statuses.
@@ -4650,7 +4675,27 @@ Interpreter.prototype.installTypes = function() {
   };
 
   /**
-   * Class for a native function.
+   * Class for a native function.  Options are as follows:
+   *
+   * If options.name is a non-empty string, the new function object's
+   * .name property will be set to this value.  Otherwise, if
+   * options.id is a non-empty string, the part following the last '.'
+   * will be used instead.
+   * 
+   * If options.length is supplied, the new object's .length will be
+   * set to this value.
+   *
+   * If options.id is a non-empty string, the new native function
+   * object will be registered as a builtin with that id value.
+   *
+   * The options.call and .construct will be used for the [[Call]] and
+   * [[Construct]] specifications methods respectively.  If omitted,
+   * the function will not be callable / constructable.
+   *
+   * The new object will be owned by options.owner (default:
+   * intrp.ROOT), and have prototype options.proto (default:
+   * intrp.FUNCTION - i.e., Function.prototype).
+   *
    * @constructor
    * @extends {Interpreter.prototype.NativeFunction}
    * @param {!NativeFunctionOptions=} options Options object for
@@ -4661,32 +4706,34 @@ Interpreter.prototype.installTypes = function() {
     var owner = (options.owner !== undefined ? options.owner : intrp.ROOT);
     // Invoke super constructor.
     intrp.Function.call(/** @type {?} */ (this), owner, options.proto);
+    // Set .name if name or id supplied.
+    if (options.name !== undefined) {
+      this.setName(options.name);
+    } else if (options.id) {
+      this.setName(options.id.replace(/^.*\./, ''));
+    }
+    // Set .length if length supplied.
     if (options.length !== undefined) {
       this.defineProperty('length', Descriptor.none.withValue(options.length),
                           owner);
     }
-    // Register builtin if possible.
-    var id = options.id || options.name;
-    if (id) {
-      this.setName(options.name !== undefined ?
-          options.name : options.id.replace(/^.*\./, ''));
-      if (intrp.builtins_[id]) {
-        throw ReferenceError('Duplicate builtin id ' + id);
-      }
-      intrp.builtins_[id] = this;
+    // Register as builtin if id supplied.
+    if (options.id) {
+      intrp.builtins.set(options.id, this);
     }
     // Install [[Call]] and [[Construct]] methods, making sure they
     // are labelled for serialization (if possible and not already).
+    var serialId = options.id || options.name;
     if (options.call) {
       this.call = options.call;
-      if (id && !('id' in this.call)) {
-        this.call.id = id + ' [[Call]]';
+      if (serialId && !('id' in this.call)) {
+        this.call.id = serialId + ' [[Call]]';
       }
     }
     if (options.construct) {
       this.construct = options.construct;
-      if (id && !('id' in this.construct)) {
-        this.construct.id = id + ' [[Construct]]';
+      if (serialId && !('id' in this.construct)) {
+        this.construct.id = serialId + ' [[Construct]]';
       }
     }
   };
@@ -5715,12 +5762,12 @@ stepFuncs_['CallExpression'] = function (thread, stack, state, node) {
         typeof node['callee']['value'] === 'string' &&
         node['arguments'].length === 0) {
       var builtin = node['callee']['value'];
-      if (!this.builtins_[builtin]) {
+      if (!this.builtins.has(builtin)) {
         throw new this.Error(state.scope.perms, this.REFERENCE_ERROR,
             builtin + ' is not a builtin');
       }
       stack.pop();
-      stack[stack.length - 1].value = this.builtins_[builtin];
+      stack[stack.length - 1].value = this.builtins.get(builtin);
       return;
     }
     state.step_ = 1;

@@ -25,6 +25,8 @@
 
 var Interpreter = require('./interpreter');
 var IterableWeakMap = require('./iterable_weakmap');
+var IterableWeakSet = require('./iterable_weakset');
+var Registry = require('./registry');
 var net = require('net');
 
 var Serializer = {};
@@ -81,7 +83,7 @@ Serializer.deserialize = function(json, intrp) {
     }
   }
   // Get constructors
-  var constructors = this.getTypesDeserialize_(intrp);
+  var constructors = Serializer.getTypesDeserialize_(intrp);
 
   // First pass: Create object stubs for every object.  We don't need
   // to (re)create object #0, because that's the interpreter proper.
@@ -91,7 +93,7 @@ Serializer.deserialize = function(json, intrp) {
     var obj;
     var type = jsonObj['type'];
     switch (type) {
-      case 'Map':
+      case 'NullProtoObject':
         obj = Object.create(null);
         break;
       case 'Object':
@@ -106,9 +108,6 @@ Serializer.deserialize = function(json, intrp) {
       case 'Array':
         obj = [];
         break;
-      case 'Set':
-        obj = new Set();
-        break;
       case 'Date':
         obj = new Date(jsonObj['data']);
         if (isNaN(obj)) {
@@ -118,14 +117,26 @@ Serializer.deserialize = function(json, intrp) {
       case 'RegExp':
         obj = RegExp(jsonObj['source'], jsonObj['flags']);
         break;
+      case 'Map':
+        obj = new Map;
+        break;
+      case 'Set':
+        obj = new Set;
+        break;
       case 'IterableWeakMap':
         obj = new IterableWeakMap;
+        break;
+      case 'IterableWeakSet':
+        obj = new IterableWeakSet;
+        break;
+      case 'Registry':
+        obj = new Registry;
         break;
       case 'State':
         // TODO(cpcallen): this is just a little performance kludge so
         // that the State constructor doesn't need a conditional in it.
         // Find a more general solution to constructors requiring args.
-        obj = new Interpreter.State({});
+        obj = new Interpreter.State({}, /** @type {?} */(undefined));
         break;
       default:
         var protoRef;
@@ -153,14 +164,14 @@ Serializer.deserialize = function(json, intrp) {
       for (var j = 0; j < names.length; j++) {
         var name = names[j];
         Object.defineProperty(obj, name,
-            {configurable: nonConfigurable.indexOf(name) === -1,
-             enumerable: nonEnumerable.indexOf(name) === -1,
-             writable: nonWritable.indexOf(name) === -1,
+            {configurable: !nonConfigurable.includes(name),
+             enumerable: !nonEnumerable.includes(name),
+             writable: !nonWritable.includes(name),
              value: decodeValue(props[name])});
       }
     }
     // Repopulate sets.
-    if (obj instanceof Set) {
+    if (obj instanceof Set || obj instanceof IterableWeakSet) {
       var data = jsonObj['data'];
       if (data) {
         for (var j = 0; j < data.length; j++) {
@@ -169,7 +180,7 @@ Serializer.deserialize = function(json, intrp) {
       }
     }
     // Repopulate maps.
-    if (obj instanceof IterableWeakMap) {
+    if (obj instanceof Map || obj instanceof IterableWeakMap) {
       var entries = jsonObj['entries'];
       if (entries) {
         for (var j = 0; j < entries.length; j++) {
@@ -251,7 +262,7 @@ Serializer.serialize = function(intrp) {
   var objectList = [];
   Serializer.objectHunt_(intrp, objectList, Serializer.excludeTypes, exclude);
   // Get types.
-  var types = this.getTypesSerialize_(intrp);
+  var types = Serializer.getTypesSerialize_(intrp);
   // Serialize every object.
   var json = [];
   for (var i = 0; i < objectList.length; i++) {
@@ -265,7 +276,7 @@ Serializer.serialize = function(intrp) {
     var proto = Object.getPrototypeOf(obj);
     switch (proto) {
       case null:
-        jsonObj['type'] = 'Map';
+        jsonObj['type'] = 'NullProtoObject';
         break;
       case Object.prototype:
         jsonObj['type'] = 'Object';
@@ -280,12 +291,6 @@ Serializer.serialize = function(intrp) {
       case Array.prototype:
         jsonObj['type'] = 'Array';
         break;
-      case Set.prototype:
-        jsonObj['type'] = 'Set';
-        if (obj.size) {
-          jsonObj['data'] = Array.from(obj.values(), encodeValue);
-        }
-        continue;  // No need to index properties.
       case Date.prototype:
         jsonObj['type'] = 'Date';
         jsonObj['data'] = obj.toJSON();
@@ -295,6 +300,22 @@ Serializer.serialize = function(intrp) {
         jsonObj['source'] = obj.source;
         jsonObj['flags'] = obj.flags;
         continue;  // No need to index properties.
+      case Map.prototype:
+        jsonObj['type'] = 'Map';
+        if (obj.size) {
+          jsonObj['entries'] = Array.from(obj, function(entry) {
+            var key = encodeValue(entry[0]);
+            var value = encodeValue(entry[1]);
+            return [key, value];
+          });
+        }
+        break;
+      case Set.prototype:
+        jsonObj['type'] = 'Set';
+        if (obj.size) {
+          jsonObj['data'] = Array.from(obj.values(), encodeValue);
+        }
+        break;
       case IterableWeakMap.prototype:
         jsonObj['type'] = 'IterableWeakMap';
         if (obj.size) {
@@ -304,7 +325,16 @@ Serializer.serialize = function(intrp) {
             return [key, value];
           });
         }
-        continue;  // No need to index properties.
+        continue;  // Mustn't index internal properties for IterableWeakMap
+      case IterableWeakSet.prototype:
+        jsonObj['type'] = 'IterableWeakSet';
+        if (obj.size) {
+          jsonObj['data'] = Array.from(obj.values(), encodeValue);
+        }
+        continue;  // Mustn't index internal properties for IterableWeakSet
+      case Registry.prototype:
+        jsonObj['type'] = 'Registry';
+        break;
       default:
         var type = types.get(proto);
         if (type) {
@@ -356,42 +386,51 @@ Serializer.serialize = function(intrp) {
 
 /**
  * Recursively search the stack to find all non-primitives.
+ *
+ * TODO(cpcallen): use a Registry instead of Array for objectList;
+ *     this would allow more readable references by using paths
+ *     instead of numerical indices.
  * @param {*} node JavaScript value to search.
  * @param {!Array<!Object>} objectList Array to add objects to.
- * @param {!Set<!Object>} excludeTypes Set of prototypes not to spider.
- * @param {!Array<string>} exclude List of properties not to spider.
+ * @param {!Set<?Object>} excludeTypes Set of prototypes not to spider.
+ * @param {!Array<string>=} exclude List of properties not to spider.
  */
 Serializer.objectHunt_ = function(node, objectList, excludeTypes, exclude) {
-  if (!node || (typeof node !== 'object' && typeof node !== 'function') ||
-      excludeTypes.has(Object.getPrototypeOf(node)) ||
-      objectList.includes(node)) {
+  if (!node || (typeof node !== 'object' && typeof node !== 'function')) {
+    // node is primitive.  Nothing to do.
     return;
   }
-  objectList.push(node);
-  if (typeof node === 'object') {  // Recurse.
+  var obj = /** @type {!Object} */(node);
+  if (excludeTypes.has(Object.getPrototypeOf(/** @type {!Object} */(obj))) ||
+      objectList.includes(/** @type {!Object} */(obj))) {
+    return;
+  }
+  objectList.push(obj);
+  if (typeof obj === 'object') {  // Recurse.
     // Properties.
-    if (!(node instanceof Date) &&
-        !(node instanceof IterableWeakMap) &&
-        !(node instanceof RegExp) &&
-        !(node instanceof Set)) {
-      var names = Object.getOwnPropertyNames(node);
+    if (!(obj instanceof Date) &&
+        !(obj instanceof IterableWeakMap) &&
+        !(obj instanceof IterableWeakSet) &&
+        !(obj instanceof RegExp) &&
+        !(obj instanceof Set)) {
+      var names = Object.getOwnPropertyNames(obj);
       for (var i = 0; i < names.length; i++) {
         var name = names[i];
         if (!exclude || !exclude.includes(name)) {
           // Don't pass exclude; it's only for top-level property keys.
-          Serializer.objectHunt_(node[names[i]], objectList, excludeTypes);
+          Serializer.objectHunt_(obj[name], objectList, excludeTypes);
         }
       }
     }
     // Set members.
-    if (node instanceof Set) {
-      node.forEach(function (value) {
+    if (obj instanceof Set || obj instanceof IterableWeakSet) {
+      obj.forEach(function (value) {
         Serializer.objectHunt_(value, objectList, excludeTypes);
       });
     }
     // Map entries.
-    if (node instanceof IterableWeakMap) {
-      node.forEach(function (value, key) {
+    if (obj instanceof Map || obj instanceof IterableWeakMap) {
+      obj.forEach(function (value, key) {
         Serializer.objectHunt_(key, objectList, excludeTypes);
         Serializer.objectHunt_(value, objectList, excludeTypes);
       });
@@ -441,7 +480,7 @@ Serializer.getTypesDeserialize_ = function (intrp) {
  * @return {!Map} A key/value map of protoytype objects to typesnames.
  */
 Serializer.getTypesSerialize_ = function (intrp) {
-  var types = this.getTypesDeserialize_(intrp);
+  var types = Serializer.getTypesDeserialize_(intrp);
   var map = new Map;
   for (var t in types) {
     if (types.hasOwnProperty(t)) {

@@ -123,7 +123,7 @@ CodeCity.startup = function(opt_databaseDirectory) {
 CodeCity.loadFile = function(filename) {
   // Load the specified file from disk.
   try {
-    return fs.readFileSync(filename, 'utf8');
+    return fs.readFileSync(filename, 'utf8').toString();
   } catch (e) {
     console.error('Unable to open file: %s\nCheck permissions.', filename);
     console.info(e);
@@ -191,7 +191,7 @@ CodeCity.shutdown = function(code) {
  * @param {...*} var_args Arbitrary arguments for console.log.
  */
 CodeCity.log = function(var_args) {
-  console.log.apply(console.log, arguments);
+  console.log.apply(console, arguments);
 };
 
 /**

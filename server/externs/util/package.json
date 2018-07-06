@@ -1,0 +1,5 @@
+{
+  "description": "Fake package.json for require('util')",
+  "main": "util.js",
+  "name": "util",
+}

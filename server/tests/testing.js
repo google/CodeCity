@@ -107,6 +107,7 @@ B.prototype.toString = function() {
 /**
  * Class that records test results; much like Go's testing.T type.
  * @constructor
+ * @extends {B}
  */
 function T() {
   B.call(this);

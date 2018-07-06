@@ -98,9 +98,9 @@ exports.testNativeToPseudo = function(t) {
   var arr = [];
   for (var k in props) {
     if (!props.hasOwnProperty(k)) continue;
-    arr[k] = props[k];
+    arr[/** @type{?} */(k)] = props[k];
   }
-  var pArr = intrp.nativeToPseudo(arr);
+  var pArr = intrp.nativeToPseudo(arr, intrp.ROOT);
   for (var k in props) {
     if (!props.hasOwnProperty(k)) continue;
     var name = 'testNativeToPseudo(array)["' + k + '"]';
@@ -123,7 +123,7 @@ exports.testNativeToPseudo = function(t) {
     var name = 'testNativeToPseudo(' + Err.prototype.name + ')';
     var errName, errMessage = 'test ' + Err.prototype.name;
     var error = Err(errMessage);
-    var pError = intrp.nativeToPseudo(error);
+    var pError = intrp.nativeToPseudo(error, intrp.ROOT);
 
     t.expect(name + ' instanceof intrp.Error',
         pError instanceof intrp.Error, true);
@@ -155,9 +155,9 @@ exports.testScope = function(t) {
   t.expect("inner.resolve('foo') [1]", inner.resolve('foo'), outer);
   t.expect("outer.get('foo') [1]", outer.get('foo'), 42);
   t.expect("getValueFromScope(outer, 'foo', ...) [1]",
-      intrp.getValueFromScope(outer, 'foo', intrp.ROOT), 42);
+      intrp.getValueFromScope(outer, 'foo'), 42);
   t.expect("getValueFromScope(inner, 'foo', ...) [1]",
-      intrp.getValueFromScope(inner, 'foo', intrp.ROOT), 42);
+      intrp.getValueFromScope(inner, 'foo'), 42);
 
   try {
     outer.createMutableBinding('foo', 42);
@@ -167,12 +167,12 @@ exports.testScope = function(t) {
   }
 
   // 2: Set outer binding.
-  outer.set('foo', 69, intrp.ROOT, intrp);
+  outer.set('foo', 69);
   t.expect("outer.get('foo') [2]", outer.get('foo'), 69);
   t.expect("getValueFromScope(inner, 'foo', ...) [2]",
-      intrp.getValueFromScope(inner, 'foo', intrp.ROOT), 69);
+      intrp.getValueFromScope(inner, 'foo'), 69);
   t.expect("getValueFromScope(outer, 'foo', ...) [2]",
-      intrp.getValueFromScope(outer, 'foo', intrp.ROOT), 69);
+      intrp.getValueFromScope(outer, 'foo'), 69);
 
   // 3: Create inner binding.
   inner.createImmutableBinding('foo', 105);
@@ -183,9 +183,9 @@ exports.testScope = function(t) {
   t.expect("outer.get('foo') [3]", outer.get('foo'), 69);
   t.expect("inner.get('foo') [3]", inner.get('foo'), 105);
   t.expect("getValueFromScope(inner, 'foo', ...) [3]",
-      intrp.getValueFromScope(inner, 'foo', intrp.ROOT), 105);
+      intrp.getValueFromScope(inner, 'foo'), 105);
   t.expect("getValueFromScope(outer, 'foo', ...) [3]",
-      intrp.getValueFromScope(outer, 'foo', intrp.ROOT), 69);
+      intrp.getValueFromScope(outer, 'foo'), 69);
 
   // 4: Try to create duplicate binding.
   try {
@@ -199,7 +199,7 @@ exports.testScope = function(t) {
   t.assert("inner.set('foo', 37) instanceof TypeError",
            inner.set('foo', 37) instanceof TypeError);
   try {
-    intrp.setValueToScope(inner, 'foo', 37, intrp.ROOT);
+    intrp.setValueToScope(inner, 'foo', 37);
     t.fail("setValueToScope(inner, 'foo', 37, ...) [5]", "Didn't throw.");
   } catch (e) {
     t.pass("setValueToScope(inner, 'foo', 37, ...) [5]");

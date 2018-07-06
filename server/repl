@@ -33,6 +33,8 @@ intrp.createThreadForSrc(fs.readFileSync('startup/es5.js', 'utf8'));
 intrp.run();
 intrp.createThreadForSrc(fs.readFileSync('startup/es6.js', 'utf8'));
 intrp.run();
+intrp.createThreadForSrc(fs.readFileSync('startup/es7.js', 'utf8'));
+intrp.run();
 intrp.createThreadForSrc(fs.readFileSync('startup/esx.js', 'utf8'));
 intrp.run();
 intrp.createThreadForSrc(fs.readFileSync('startup/cc.js', 'utf8'));

@@ -1,8 +1,7 @@
 #!/bin/bash
 
-OPTIONS='-O ADVANCED_OPTIMIZATIONS --checks-only --assume_function_wrapper'
-OPTIONS+=' --module_resolution NODE'
-EXTERNS='--externs=externs.js'
-FILES=interpreter.js
+# Compile server alone:
+# closure-compiler --flagfile compile.flag --entry_point=codecity.js
 
-closure-compiler $OPTIONS $EXTERNS $FILES
+# Compile tests, which also compile server:
+closure-compiler --flagfile compile.flag --entry_point=tests/run.js tests/**.js

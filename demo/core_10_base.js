@@ -135,7 +135,7 @@ $.physical.getContents = function() {
 
 $.physical.addContents = function(thing) {
   var contents = this.getContents();
-  contents.indexOf(thing) === -1 && contents.push(thing);
+  contents.includes(thing) || contents.push(thing);
   this.contents_ = contents;
 };
 

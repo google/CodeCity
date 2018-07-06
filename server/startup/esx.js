@@ -144,7 +144,7 @@ var PermissionError = new 'PermissionError';
           visited = [];
           visitedByThread.set(Thread.current(), visited);
         }
-        if (visited.indexOf(this) !== -1) {
+        if (visited.includes(this)) {
           return '';
         }
         visited.push(this);

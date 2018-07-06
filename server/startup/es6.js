@@ -19,7 +19,7 @@
 
 /**
  * @fileoverview Polyfills to bring the server's partial JavaScript
- * implementation beyond JavaScript 5.1.
+ * implementation to include some features of JavaScript 6.
  * @author fraser@google.com (Neil Fraser)
  */
 
