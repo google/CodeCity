@@ -1115,7 +1115,8 @@ Interpreter.prototype.initArray_ = function() {
         if (obj.has(String(k), perms)) {
           var v = obj.get(String(k), perms);
           if (v === searchElement ||
-              (Number.isNaN(v) && Number.isNaN(searchElement))) {
+              (Number.isNaN(/** @type{?} */(v)) &&
+               Number.isNaN(/** @type{?} */(searchElement)))) {
             return true;
           }
         }
