@@ -11,3 +11,4 @@ server/node_modules
 
 *.city
 *.city.partial
+*.pyc

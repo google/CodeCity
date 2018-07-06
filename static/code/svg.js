@@ -48,7 +48,7 @@ svgEditor.init = function() {
   var source = window.initialSource;
   if (source) {
     svgEditor.setString(source);
-    window.initialSource = undefined;
+    delete window.initialSource;
   }
   svgEditor.resize();
 

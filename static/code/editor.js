@@ -78,11 +78,18 @@ Code.Editor.init = function() {
   document.getElementById('editorConfirmDiscard').addEventListener('click',
       Code.Editor.reload);
   document.getElementById('editorConfirmCancel').addEventListener('click',
-      Code.Editor.hideSave);
+      Code.Editor.hideDialog);
   document.getElementById('editorConfirmSave').addEventListener('click',
       Code.Editor.save);
   document.getElementById('editorSave').addEventListener('click',
       Code.Editor.save);
+  document.getElementById('editorShare').addEventListener('click',
+      Code.Editor.showShare);
+  document.getElementById('editorShareOk').addEventListener('click',
+      Code.Editor.hideDialog);
+  document.getElementById('editorShareCheck').addEventListener('change',
+      Code.Editor.checkShare);
+
 
   // Create the tabs.
   var tabRow = document.getElementById('editorTabs');
@@ -179,7 +186,7 @@ Code.Editor.save = function() {
  * Force a reload of this editor.  Used to switch to edit something else.
  */
 Code.Editor.reload = function() {
-  Code.Editor.hideSave();
+  Code.Editor.hideDialog();
   Code.Editor.beforeUnload.disabled = true;
   location.reload();
 };
@@ -193,7 +200,7 @@ Code.Editor.reload = function() {
 Code.Editor.beforeUnload = function(e) {
   if (Code.Editor.isSaveDialogVisible) {
     // The user has already got a warning but is ignoring it.  Just leave.
-    Code.Editor.hideSave();
+    Code.Editor.hideDialog();
     return;
   }
   Code.Editor.updateCurrentSource();
@@ -208,6 +215,44 @@ Code.Editor.beforeUnload = function(e) {
  * Flag to allow navigation away from current page, despite unsaved changes.
  */
 Code.Editor.beforeUnload.disabled = false;
+
+/**
+ * Asynchronously load MobWrite's JavaScript files.
+ * @param {!Function} callback Function to call when MobWrite is loaded.
+ */
+Code.Editor.loadMobWrite = function(callback) {
+  if (!Code.Editor.waitMobWrite_.isLoaded) {
+    var files = ['dmp.js', 'mobwrite_core.js', 'mobwrite_cc.js'];
+    for (var i = 0; i < files.length; i++) {
+      var script = document.createElement('script');
+      script.src = 'mobwrite/' + files[i];
+      document.head.appendChild(script);
+    }
+  }
+  Code.Editor.waitMobWrite_(callback);
+};
+
+/**
+ * Wait for MobWrite to load.  Initialize it, then run the callback.
+ * @param {!Function} callback Function to call when MobWrite is loaded.
+ * @private
+ */
+Code.Editor.waitMobWrite_ = function(callback) {
+  if (typeof diff_match_patch === 'undefined' ||
+      typeof mobwrite === 'undefined' ||
+      typeof Code.MobwriteShare === 'undefined') {
+    // Not loaded, try again later.
+    setTimeout(Code.Editor.waitMobWrite_, 50, callback);
+  } else {
+    if (!Code.Editor.waitMobWrite_.isLoaded) {
+      Code.MobwriteShare.init();
+      Code.Editor.waitMobWrite_.isLoaded = true;
+    }
+    callback();
+  }
+};
+
+Code.Editor.waitMobWrite_.isLoaded = false;
 
 /**
  * When a tab is clicked, highlight it and show its container.
@@ -241,7 +286,7 @@ Code.Editor.tabClick = function(e) {
     editor.created = true;
   }
   container.style.display = 'block';
-  Code.Editor.setSourceToAllEditors(Code.Editor.currentSource);
+  Code.Editor.setSourceToAllEditors(Code.Editor.currentSource, false);
   // If e is an event, then this click is the result of a user's direct action.
   // If not, then it's a fake event as a result of page load.
   var userAction = e instanceof Event;
@@ -299,7 +344,7 @@ Code.Editor.receiveXhr = function() {
     // or b) the previous save was successful.
     if (Code.Editor.currentSource === null || data.saved) {
       Code.Editor.currentSource = data.src;
-      Code.Editor.setSourceToAllEditors(data.src);
+      Code.Editor.setSourceToAllEditors(data.src, true);
     }
   }
   // Remove saving mask.
@@ -317,7 +362,7 @@ Code.Editor.receiveXhr = function() {
     } else {
       // If the save was not successful, close the dialog and hope there's some
       // butter to show.
-      Code.Editor.hideSave();
+      Code.Editor.hideDialog();
     }
   }
 
@@ -362,7 +407,14 @@ Code.Editor.ready = function() {
 
   // Update the save button's saturation state once a second.
   setInterval(Code.Editor.updateCurrentSource, 1000);
-  
+
+  var hash = parent && parent.location && parent.location.hash;
+  if (hash.length > 1) {
+    Code.Editor.loadMobWrite(function() {
+      mobwrite.share('Code');
+    });
+  }
+
   // Only run this code once.
   Code.Editor.ready = undefined;
 };
@@ -386,13 +438,17 @@ Code.Editor.mostConfidentEditor = function() {
 };
 
 /**
- * Set the values of the editors to the initial value sent from Code City.
+ * Set the values of all the editors.
  * @param {string} src Plain text contents.
+ * @param {boolean} isSaved True if this is the saved source.
  */
-Code.Editor.setSourceToAllEditors = function(src) {
+Code.Editor.setSourceToAllEditors = function(src, isSaved) {
   Code.Editor.uncreatedEditorSource = src;
   for (var i = 0, editor; (editor = Code.Editor.editors[i]); i++) {
     editor.setSource(src);
+    if (isSaved) {
+      editor.lastSavedSource = editor.getSource();
+    }
   }
 };
 
@@ -400,19 +456,7 @@ Code.Editor.setSourceToAllEditors = function(src) {
  * Show the save dialog.
  */
 Code.Editor.showSave = function() {
-  clearTimeout(Code.Editor.saveDialogAnimationPid);
-  Code.Editor.hideButter();
-  document.getElementById('editorConfirm').style.display = 'block';
-  var mask = document.getElementById('editorConfirmMask');
-  var box = document.getElementById('editorConfirmBox');
-  mask.style.transitionDuration = '.4s';
-  box.style.transitionDuration = '.4s';
-  // Add a little bounce at the end of the animation.
-  box.style.transitionTimingFunction = 'cubic-bezier(.6,1.36,.75,1)';
-  Code.Editor.saveDialogAnimationPid = setTimeout(function() {
-    mask.style.opacity = 0.2;
-    box.style.top = '-10px';
-  }, 100);  // Firefox requires at least 10ms to process this timing function.
+  Code.Editor.showDialog('editorConfirmBox');
   // Desaturate save button.  Don't visually conflict with the 'save' button
   // in save dialog.
   Code.Editor.saturateSave(false);
@@ -420,19 +464,98 @@ Code.Editor.showSave = function() {
 };
 
 /**
- * Hide the save dialog.
+ * Show the share dialog.
  */
-Code.Editor.hideSave = function() {
-  clearTimeout(Code.Editor.saveDialogAnimationPid);
-  var mask = document.getElementById('editorConfirmMask');
-  var box = document.getElementById('editorConfirmBox');
+Code.Editor.showShare = function() {
+  Code.Editor.showDialog('editorShareBox');
+  document.body.style.cursor = 'wait';
+  Code.Editor.loadMobWrite(Code.Editor.populateShare);
+};
+
+/**
+ * Show the share dialog.
+ */
+Code.Editor.populateShare = function() {
+  document.body.style.cursor = '';
+  document.getElementById('editorShareBox').className = '';
+  var check = document.getElementById('editorShareCheck');
+  check.disabled = '';
+  check.checked = !!Object.keys(mobwrite.shared).length;
+  Code.Editor.checkShare();
+};
+
+/**
+ * Called when the sharing checkbox is ticked or unticked.
+ */
+Code.Editor.checkShare = function() {
+  var check = document.getElementById('editorShareCheck');
+  var input = document.getElementById('editorShareAddress');
+  input.disabled = !check.checked;
+
+  var shared = !!Object.keys(mobwrite.shared).length;
+  var hash = '#';
+  if (check.checked) {
+    if (!shared) {
+      mobwrite.share('Code');
+    }
+    hash += Code.MobwriteShare.id;
+  } else if (!check.checked) {
+    if (shared) {
+      mobwrite.unshare('Code');
+    }
+  }
+  if (parent && parent.history) {
+    // Update the URL on the parent frame.
+    parent.history.replaceState(undefined, undefined, hash);
+    // Update the address field the user can copy from.
+    input.value = check.checked ? parent.location : '';
+    input.select();
+  }
+};
+
+/**
+ * Show a dialog.
+ * @param {string} contentId ID of dialog's content div.
+ */
+Code.Editor.showDialog = function(contentId) {
+  // Clean up and hide existing things that might be visible.
+  clearTimeout(Code.Editor.dialogAnimationPid);
+  Code.Editor.hideButter();
+  document.getElementById('editorConfirmBox').style.display = 'none';
+  document.getElementById('editorShareBox').style.display = 'none';
+  // Show the requested dialog.
+  document.getElementById(contentId).style.display = 'block';
+  document.getElementById('editorDialog').style.display = 'block';
+  var mask = document.getElementById('editorDialogMask');
+  var box = document.getElementById('editorDialogBox');
+  box.style.display = 'block';
+  mask.style.transitionDuration = '.4s';
+  box.style.transitionDuration = '.4s';
+  // Add a little bounce at the end of the animation.
+  box.style.transitionTimingFunction = 'cubic-bezier(.6,1.36,.75,1)';
+  Code.Editor.dialogAnimationPid = setTimeout(function() {
+    mask.style.opacity = 0.2;
+    box.style.top = '-10px';
+  }, 100);  // Firefox requires at least 10ms to process this timing function.
+};
+
+/**
+ * Hide the dialog.
+ */
+Code.Editor.hideDialog = function() {
+  clearTimeout(Code.Editor.dialogAnimationPid);
+  var mask = document.getElementById('editorDialogMask');
+  var box = document.getElementById('editorDialogBox');
   mask.style.transitionDuration = '.2s';
   box.style.transitionDuration = '.2s';
   box.style.transitionTimingFunction = 'ease-in';
   mask.style.opacity = 0;
   box.style.top = '-120px';
-  Code.Editor.saveDialogAnimationPid = setTimeout(function() {
-    document.getElementById('editorConfirm').style.display = 'none';
+  Code.Editor.dialogAnimationPid = setTimeout(function() {
+    document.getElementById('editorDialog').style.display = 'none';
+    box.style.display = 'none';
+    document.getElementById('editorConfirmBox').style.display = 'none';
+    document.getElementById('editorShareBox').style.display = 'none';
   }, 250);
   // Resaturate the save button.
   Code.Editor.saturateSave(true);
@@ -448,7 +571,7 @@ Code.Editor.isSaveDialogVisible = false;
  * PID of any animation task.  Allows animations to be canceled so that two
  * near-simultaneous actions don't collide.
  */
-Code.Editor.saveDialogAnimationPid = 0;
+Code.Editor.dialogAnimationPid = 0;
 
 /**
  * Saturate or desaturate the editor's save button.
@@ -507,12 +630,12 @@ Code.GenericEditor = function(name) {
    * edit the given content.
    */
   this.confidence = 0;
-  
+
   /**
    * Has the DOM for this editor been created yet?
    */
   this.created = false;
-  
+
   /**
    * Span that forms the tab button.
    * @type {?Element}
@@ -524,13 +647,12 @@ Code.GenericEditor = function(name) {
    * @type {?Element}
    */
   this.containerElement = null;
-  
+
   /**
    * Plain text representation of this editor's contents as of load or last save.
    * @type {?string}
-   * @private
    */
-  this.lastSavedSource_ = null;
+  this.lastSavedSource = null;
 
   // Register this editor.
   Code.Editor.editors.push(this);
@@ -566,7 +688,7 @@ Code.GenericEditor.prototype.setSource = function(source) {
  * @return {boolean} True if work is saved.
  */
 Code.GenericEditor.prototype.isSaved = function() {
-  return this.getSource() === this.lastSavedSource_;
+  return this.getSource() === this.lastSavedSource;
 };
 
 /**
@@ -635,7 +757,6 @@ Code.valueEditor.setSource = function(source) {
   if (this.created) {
     this.editor_.setValue(source);
   }
-  this.lastSavedSource_ = this.getSource();
 };
 
 /**
@@ -684,7 +805,7 @@ Code.svgEditor.getSource = function() {
   if (!this.created) {
     return Code.Editor.uncreatedEditorSource;
   }
-  var xmlString = this.frameWindow_.initialSource ?
+  var xmlString = this.frameWindow_.hasOwnProperty('initialSource') ?
       this.frameWindow_.initialSource :
       this.frameWindow_.svgEditor.getString();
   return JSON.stringify(xmlString);
@@ -731,7 +852,6 @@ Code.svgEditor.setSource = function(source) {
       this.frameWindow_.initialSource = str;
     }
   }
-  this.lastSavedSource_ = this.getSource();
 };
 
 /**
@@ -739,7 +859,7 @@ Code.svgEditor.setSource = function(source) {
  * @param {boolean} userAction True if user clicked on a tab.
  */
 Code.svgEditor.focus = function(userAction) {
-  if (userAction) {
+  if (userAction && this.frameWindow_.svgEditor) {
     // Window may have resized since this tab was last visible.
     this.frameWindow_.svgEditor.resize();
   }
@@ -818,7 +938,6 @@ Code.stringEditor.setSource = function(source) {
   if (this.created) {
     this.textarea_.value = str;
   }
-  this.lastSavedSource_ = this.getSource();
 };
 
 /**
@@ -861,8 +980,8 @@ Code.diffEditor.getSource = function() {
   if (!this.created) {
     return Code.Editor.uncreatedEditorSource;
   }
-  if (this.frameWindow_.initialSource) {
-     return this.frameWindow_.initialSource;
+  if (this.frameWindow_.hasOwnProperty('initialSource')) {
+    return this.frameWindow_.initialSource;
   }
   return this.frameWindow_.diffEditor.getString();
 };
@@ -882,5 +1001,4 @@ Code.diffEditor.setSource = function(source) {
       this.frameWindow_.originalSource = Code.Editor.originalSource;
     }
   }
-  this.lastSavedSource_ = this.getSource();
 };

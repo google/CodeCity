@@ -13,21 +13,37 @@
     <script src="editor.js"></script>
   </head>
   <body>
-    <div id="editorConfirm">
-      <div id="editorConfirmMask">
+    <div id="editorDialog">
+      <div id="editorDialogMask">
       </div>
-      <div id="editorConfirmBox">
-        <p>Do you want to save changes?</p>
-        <p>
-          <button id="editorConfirmDiscard" class="jfk-button">Discard</button>
-          <button id="editorConfirmSave" class="jfk-button jfk-button-submit">Save</button>
-          <button id="editorConfirmCancel" class="jfk-button">Cancel</button>
-        </p>
+      <div id="editorDialogBox">
+        <div id="editorConfirmBox">
+          <p>Do you want to save changes?</p>
+          <p>
+            <button id="editorConfirmDiscard" class="jfk-button">Discard</button>
+            <button id="editorConfirmSave" class="jfk-button jfk-button-submit">Save</button>
+            <button id="editorConfirmCancel" class="jfk-button">Cancel</button>
+          </p>
+        </div>
+        <div id="editorShareBox" class="disabled">
+          <p>
+            <label><input type="checkbox" id="editorShareCheck" disabled> Share this editor:</label>
+          </p>
+          <p>
+            <input id="editorShareAddress" readonly>
+          </p>
+          <p>
+            <button id="editorShareOk" class="jfk-button jfk-button-submit">Ok</button>
+          </p>
+        </div>
       </div>
     </div>
     <div id="editorButter"><div><div id="editorButterText"></div></div></div>
     <div id="editorSavingMask"></div>
-    <button id="editorSave" class="jfk-button">Save</button>
+    <div id="editorButtons">
+      <button id="editorShare" class="jfk-button">Share...</button>
+      <button id="editorSave" class="jfk-button">Save</button>
+    </div>
     <div id="editorTabs">Edit as:</div>
     <div id="editorHeader" class="loading"></div>
     <div id="editorContainers"></div>
