@@ -271,3 +271,8 @@ var dump = function(intrp, spec) {
 
 exports.dump = dump;
 exports.Do = Do;
+
+// For unit testing only!
+exports.testOnly = {
+  primitiveToSource: primitiveToSource,
+}
