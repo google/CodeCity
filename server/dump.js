@@ -212,6 +212,7 @@ var Config = function(spec) {
  */
 function ScopeInfo(scope) {
   this.scope = scope;
+  this.done /** !Object<string, Do> */ = Object.create(null);
 }
 
 /**
@@ -223,34 +224,48 @@ function ObjectInfo(obj) {
   this.obj = obj;
 }
 
+/**
+ * Dumper encapsulates all the state required to keep track of what
+ * has and hasn't yet been written when dumping an Interpreter.
+ * @constructor
+ * @param {!Interpreter} intrp
+ * @param {!Array<SpecEntry>} spec
+ */
+var Dumper = function(intrp, spec) {
+  this.config = new Config(spec);
+  /** @type {!Map<!Interpreter.Scope,!ScopeInfo>} */
+  this.scopeInfo = new Map;
+  /** @type {!Map<!Interpreter.prototype.Object,!ObjectInfo>} */
+  this.objInfo = new Map;
+};
+
+/**
+ * Get interned ScopeInfo for sope.
+ * @param {!Interpreter.Scope} scope The scope to get info for.
+ * @return {!ScopeInfo} The ScopeInfo for scope.
+ */
+Dumper.prototype.getScopeInfo = function(scope) {
+  if (this.scopeInfo.has(scope)) return this.scopeInfo.get(scope);
+  var si = new ScopeInfo(scope);
+  this.scopeInfo.set(scope, si);
+  return si;
+};
+
+/**
+ * Get interned ObjectInfo for sope.
+ * @param {!Interpreter.prototype.Object} obj The object to get info for.
+ * @return {!ObjectInfo} The ObjectInfo for obj.
+ */
+Dumper.prototype.getObjectInfo = function(obj) {
+  if (this.objInfo.has(obj)) return this.objInfo.get(obj);
+  var oi = new ObjectInfo(obj);
+  this.objInfo.set(obj, oi);
+  return oi;
+};
+
 var dump = function(intrp, spec) {
-  var config = new Config(spec);
-  var /** !Map<!Interpreter.Scope,!ScopeInfo> */ scopeInfo = new Map;
-  var /** !Map<!Interpreter.prototype.Object,!ObjectInfo> */ objInfo = new Map;
-
-  /**
-   * Get interned ScopeInfo for sope.
-   * @param {!Interpreter.Scope} scope The scope to get info for.
-   * @return {!ScopeInfo} The ScopeInfo for scope.
-   */
-  function getScopeInfo(scope) {
-    if (scopeInfo.has(scope)) return scopeInfo.get(scope);
-    var si = new ScopeInfo(scope);
-    scopeInfo.set(scope, si);
-    return si;
-  }
-
-  /**
-   * Get interned ObjectInfo for sope.
-   * @param {!Interpreter.prototype.Object} obj The object to get info for.
-   * @return {!ObjectInfo} The ObjectInfo for obj.
-   */
-  function getObjectInfo(obj) {
-    if (objInfo.has(obj)) return objInfo.get(obj);
-    var oi = new ObjectInfo(obj);
-    objInfo.set(obj, oi);
-    return oi;
-  }
+  var dumper = new Dumper(intrp, spec);
+  
 
 };
 
