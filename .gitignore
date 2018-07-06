@@ -10,4 +10,5 @@ connect/node_modules
 server/node_modules
 
 *.city
+*.city.partial
 *.pyc
