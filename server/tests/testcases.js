@@ -1820,6 +1820,37 @@ module.exports = [
     `,
     expected: '[object Object],baz,,quux,quuux' },
 
+  { name: 'Array.prototype.includes', src: `
+    [1, 2, 3, 2, 1].includes(2);
+    `,
+    expected: true },
+
+  { name: 'Array.prototype.includes not found', src: `
+    [1, 2, 3, 2, 1].includes(4);
+    `,
+    expected: false },
+
+  { name: 'Array.prototype.includes(..., +)', src: `
+    [1, 2, 3, 2, 1].includes(2, 2);
+    `,
+    expected: true },
+
+  { name: 'Array.prototype.includes(..., -)', src: `
+    [1, 2, 3, 2, 1].includes(1, -3);
+    `,
+    expected: true },
+
+  { name: 'Array.prototype.includes NaN', src: `
+    ['x', NaN, 'y'].includes(NaN);
+    `,
+    expected: true },
+
+  { name: 'Array.prototype.includes.call(array-like, ...)', src: `
+    var o = {0: 1, 1: 2, 2: 3, 3: 2, 4: 1, length: 5};
+    Array.prototype.includes.call(o, 2);
+    `,
+    expected: true },
+
   { name: 'Array.prototype.indexOf', src: `
     [1, 2, 3, 2, 1].indexOf(2);
     `,
@@ -1839,6 +1870,11 @@ module.exports = [
     [1, 2, 3, 2, 1].indexOf(1, -3);
     `,
     expected: 4 },
+
+  { name: 'Array.prototype.indexOf NaN', src: `
+    ['x', NaN, 'y'].indexOf(NaN);
+    `,
+    expected: -1 },
 
   { name: 'Array.prototype.indexOf.call(array-like, ...)', src: `
     var o = {0: 1, 1: 2, 2: 3, 3: 2, 4: 1, length: 5};

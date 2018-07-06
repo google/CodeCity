@@ -28,27 +28,8 @@
 // Array.prototype polyfills
 ///////////////////////////////////////////////////////////////////////////////
 
-// Polyfill copied from:
-// developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/includes
-Object.defineProperty(Array.prototype, 'includes', {value: function(searchElement, fromIndex) {
-  if (this === null || this === undefined) {
-    throw new TypeError('Array.prototype.includes called on ' + this);
-  }
-  var o = Object(this);
-  var len = o.length >>> 0;
-  if (len === 0) {
-    return false;
-  }
-  var n = fromIndex | 0;
-  var k = Math.max(n >= 0 ? n : len - Math.abs(n), 0);
-  function sameValueZero(x, y) {
-    return x === y || (typeof x === 'number' && typeof y === 'number' && isNaN(x) && isNaN(y));
-  }
-  while (k < len) {
-    if (sameValueZero(o[k], searchElement)) {
-      return true;
-    }
-    k++;
-  }
-  return false;
-}, configurable: true, writable: true});
+Object.defineProperty(Array.prototype, 'includes',
+    {configurable: true,
+     enumerable: false,
+     writable: true,
+     value: new 'Array.prototype.includes'});

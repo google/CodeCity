@@ -2125,6 +2125,8 @@ tests.ArrayPrototypeIndexOf = function() {
       'Array.prototype.indexOf(..., +)');
   console.assert([1, 2, 3, 2, 1].indexOf(1, -3) === 4,
       'Array.prototype.indexOf(..., -)');
+  console.assert(['x', NaN, 'y'].indexOf(NaN) === -1,
+      'Array.prototype.indexOf NaN');
 
   var o = {0: 1, 1: 2, 2: 3, 3: 2, 4: 1, length: 5};
   console.assert(Array.prototype.indexOf.call(o, 2) === 1,

@@ -30,6 +30,7 @@ const Interpreter = require('../interpreter');
 exports.startupFiles = {
   es5: fs.readFileSync('startup/es5.js', 'utf8'),
   es6: fs.readFileSync('startup/es6.js', 'utf8'),
+  es7: fs.readFileSync('startup/es7.js', 'utf8'),
   esx: fs.readFileSync('startup/esx.js', 'utf8'),
   cc: fs.readFileSync('startup/cc.js', 'utf8'),
 };
