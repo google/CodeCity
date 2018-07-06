@@ -26,7 +26,7 @@
 'use strict';
 
 const Interpreter = require('../interpreter');
-const {dump} = require('../dump');
+const {dump, Do} = require('../dump');
 const fs = require('fs');
 const {getInterpreter} = require('./interpreter_common');
 const path = require('path');
@@ -127,18 +127,18 @@ exports.testDump = function(t) {
     }, {
       filename: 'core_10_base',
       contents: [
-        {path: 'user', do: 'decl'},
-        {path: '$', do: 'set'},
+        {path: 'user', do: Do.DECL},
+        {path: '$', do: Do.SET},
         '$.system',
-        {path: '$.utils', do: 'set'},
+        {path: '$.utils', do: Do.SET},
         '$.physical',
         '$.thing',
         '$.room',
         '$.user',
         '$.execute',
-        {path: '$.userDatabase', do: 'set'},
+        {path: '$.userDatabase', do: Do.SET},
         '$.connection',
-        {path: '$.servers', do: 'set'},
+        {path: '$.servers', do: Do.SET},
         '$.servers.telnet',
       ],
     }, {
@@ -169,8 +169,8 @@ exports.testDump = function(t) {
     }, {
       filename: 'core_32_$.www',
       contents: [
-        {path: '$.www', do: 'set'},
-        {path: '$.www.ROUTER', do: 'set'},
+        {path: '$.www', do: Do.SET},
+        {path: '$.www.ROUTER', do: Do.SET},
         '$.www.404',  // TODO(cpcallen): support proper selectors.
         '$.www.homepage',
         '$.www.robots',
@@ -184,7 +184,7 @@ exports.testDump = function(t) {
     }, {
       filename: 'core_40_$.db.tempId',
       contents: [
-        {path: '$.db', do: 'set'},
+        {path: '$.db', do: Do.SET},
         '$.db.tempID',
       ],
     }, {
