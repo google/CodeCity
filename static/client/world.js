@@ -504,7 +504,7 @@ CCC.World.mergeBubbles = function(svg, msg) {
  */
 CCC.World.sceneDescription = function(msg) {
   var title = msg.where;
-  if (!title) {
+  if (typeof title !== 'string') {
     return {};
   }
   var text = [title];
@@ -1785,10 +1785,8 @@ CCC.World.getScrollBarWidth = function() {
  * @return {!SVGElement} SVG group containing text.
  */
 CCC.World.createTextArea = function(svg, text, width, height) {
-  text = text.replace(/  /g, '\u00A0 ');
-  text = text.replace(/  /g, '\u00A0 ');
-  text = text.replace(/^ /gm, '\u00A0');
   text = CCC.World.wrap(svg, text, width, height);
+  text = CCC.Common.escapeSpaces(text);
   var lines = text.split('\n');
   var textNode = document.createElementNS(CCC.Common.NS, 'text');
   textNode.setAttribute('alignment-baseline', 'hanging');

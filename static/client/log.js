@@ -160,12 +160,9 @@ CCC.Log.connectDiv = function(isConnected, date) {
  * @return {!Element} HTML div element.
  */
 CCC.Log.textToHtml = function(text) {
-  text = text.replace(/  /g, '\u00A0 ');
-  text = text.replace(/  /g, '\u00A0 ');
-  text = text.replace(/^ /gm, '\u00A0');
+  text = CCC.Common.escapeSpaces(text);
   var lines = text.split('\n');
   var div = document.createElement('div');
-  div.className = 'textDiv';
   for (var i = 0; i < lines.length; i++) {
     if (i !== 0) {
       div.appendChild(document.createElement('br'));

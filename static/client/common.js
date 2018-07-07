@@ -287,3 +287,15 @@ CCC.Common.createSvgElement = function(name, attrs, opt_parent) {
   }
   return el;
 };
+
+/**
+ * Given plain text, encode spaces and tabs such that HTML won't crush it.
+ * Does not handle line breaks in any way.
+ * @param {string} text Plain text.
+ * @return {string} HTML with any runs of spaces encoded.
+ */
+CCC.Common.escapeSpaces = function(text) {
+  return text.replace(/\t/g, '\u00A0 \u00A0 ')
+      .replace(/  /g, '\u00A0 ').replace(/  /g, '\u00A0 ')
+      .replace(/^ /gm, '\u00A0');
+};
