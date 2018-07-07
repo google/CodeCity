@@ -47,17 +47,12 @@ $.utils.isObject = function(v) {
   return (typeof v === 'object' && v !== null) || typeof v === 'function';
 };
 
-$.utils.htmlEscape = function(text) {
-  return String(text).replace(/&/g, '&amp;').replace(/"/g, '&quot;')
-                     .replace(/</g, '&lt;').replace(/>/g, '&gt;');
-};
-
 $.utils.commandMenu = function(commands) {
   var cmdXml = '';
   if (commands.length) {
     cmdXml += '<cmds>';
     for (var i = 0; i < commands.length; i++) {
-      cmdXml += '<cmd>' + $.utils.htmlEscape(commands[i]) + '</cmd>';
+      cmdXml += '<cmd>' + $.utils.html.escape(commands[i]) + '</cmd>';
     }
     cmdXml += '</cmds>';
   }
@@ -194,20 +189,20 @@ $.physical.lookJssp.jssp = [
   '      </svg>',
   '    </td>',
   '    <td>',
-  '    <h1><%= $.utils.htmlEscape(this.name) + $.utils.commandMenu(this.getCommands(user)) %></h1>',
-  '    <p><%= this.getDescription() %></p>',
+  '    <h1><%= $.utils.html.escape(this.name) + $.utils.commandMenu(this.getCommands(user)) %></h1>',
+  '    <p><%= $.utils.html.preserveWhitespace(this.getDescription()) %></p>',
   '<%',
   'var contents = this.getContents();',
   'if (contents.length) {',
   '  var contentsHtml = [];',
   '  for (var i = 0; i < contents.length; i++) {',
-  '    contentsHtml[i] = contents[i].name +',
+  '    contentsHtml[i] = $.utils.html.escape(contents[i].name) +',
   '        $.utils.commandMenu(contents[i].getCommands(user));',
   '  }',
   '  response.write(\'<p>Contents: \' + contentsHtml.join(\', \') + \'</p>\');',
   '}',
   'if (this.location) {',
-  '  response.write(\'<p>Location: \' + this.location.name +',
+  '  response.write(\'<p>Location: \' + $.utils.html.escape(this.location.name) +',
   '      $.utils.commandMenu(this.location.getCommands(user)) + \'</p>\');',
   '}',
   '%>',
@@ -617,7 +612,7 @@ $.servers.telnet.onReceiveLine = function(text) {
   var m = text.match(/identify as ([0-9a-f]+)/);
   if (!m) {
     this.write('{type: "narrate", text: "Unknown command: ' +
-               $.utils.htmlEscape(text) + '"}');
+               $.utils.html.preserveWhitespace(text) + '"}');
   }
   if (!$.userDatabase[m[1]]) {
     var guest = Object.create($.user);

@@ -312,8 +312,7 @@ CCC.Log.renderJson = function(json) {
         div.appendChild(titleDiv);
       }
       if (json.description) {
-        var descriptionDiv = document.createElement('div');
-        descriptionDiv.appendChild(document.createTextNode(json.description));
+        var descriptionDiv = CCC.Log.textToHtml(json.description);
         div.appendChild(descriptionDiv);
       }
       if (objects.length) {
