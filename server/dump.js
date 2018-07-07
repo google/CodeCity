@@ -93,7 +93,7 @@ ContentEntry.prototype.reorder;
  * @enum {number}
  */
 var Do = {
-  /** 
+  /**
    * Skip the named binding entirely (unless it or an extension of it
    * is explicitly mentioned in a later config directive); if the data
    * accessible via the named binding is not accessible via any other
@@ -102,7 +102,7 @@ var Do = {
    * loss, so be careful!
    */
   PRUNE: 1,
-  
+
   /**
    * Skip the named binding for now, but include it in a later file
    * (whichever has rest: true).
