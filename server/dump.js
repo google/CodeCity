@@ -233,6 +233,7 @@ function ObjectInfo(obj) {
  * @param {!Array<SpecEntry>} spec
  */
 var Dumper = function(intrp, spec) {
+  this.intrp = intrp;
   this.config = new Config(spec);
   /** @type {!Map<!Interpreter.Scope,!ScopeInfo>} */
   this.scopeInfo = new Map;
@@ -265,7 +266,62 @@ Dumper.prototype.getObjectInfo = function(obj) {
 };
 
 /**
- * Get a source text representation of a given primitive value.
+ * Get the present value in the interpreter of a referenced by a given
+ * part array, starting from the global scope.  If the parts array
+ * does not correspond to a valid binding an error is thrown.
+ * @param {!Array<string>} parts A parts array
+ * @return {Interpreter.Value} The
+ */
+Dumper.prototype.getValueForParts = function(parts) {
+  if (parts.length < 1) throw RangeError('Zero-length parts list??');
+  var v = this.intrp.global.get(parts[0]);
+  for (var i = 1; i < parts.length; i++) {
+    var key = parts[i];
+    if (!(v instanceof this.intrp.Object)) {
+      throw TypeError("Can't get property '" + key + "' of non-object " + v);
+    }
+    v = v.get(key, this.intrp.ROOT);
+  }
+  return v;
+};
+
+/**
+ * Get a source text representation of a given value.  The source text
+ * will vary depending on the state of the dump; for instance, if the
+ * value is an object that has not yet apepared in the dump it will be
+ * represented by an expression creating the object - but if it has
+ * appeared before, then it will instead be represented by an
+ * expression referenceing the previously-constructed object.
+ *
+ * TODO(cpcallen): rename to toSource once
+ *     https://github.com/google/closure-compiler/issues/3013 is fixed.
+ * @param {Interpreter.Value} value Arbitrary JS value from this.intrp.
+ * @return {string} An eval-able representation of the value.
+ */
+Dumper.prototype.toExpr = function(value) {
+  if (value instanceof Interpreter.prototype.Object) {
+    var oi = this.getObjectInfo(value);
+
+    // TODO(cpcallen): implement references.
+
+    // Object not yet created.
+    // TODO(cpcallen): check class.
+    switch (value.proto) {
+      case this.intrp.OBJECT:
+        return '{}';
+      case null:
+        return 'Object.create(null)';
+      default:
+        return 'Object.create(' + this.toExpr(value.proto) + ')';
+    }
+  } else {
+    return primitiveToSource(value);
+  }
+};
+
+/**
+ * Get a source text representation of a given primitive value (not
+ * including symbols).
  * @param {undefined|null|boolean|number|string} value Primitive JS value.
  * @return {string} An eval-able representation of the value.
  */
@@ -296,10 +352,12 @@ var dump = function(intrp, spec) {
 
 };
 
-exports.dump = dump;
 exports.Do = Do;
+exports.dump = dump;
 
 // For unit testing only!
 exports.testOnly = {
+  Dumper: Dumper,
   primitiveToSource: primitiveToSource,
+  toParts: toParts,
 }

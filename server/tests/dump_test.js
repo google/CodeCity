@@ -33,7 +33,8 @@ const path = require('path');
 const {T} = require('./testing');
 const util = require('util');
 
-const {primitiveToSource} = testOnly;
+// Unpack test-only exports from dump:
+const {Dumper, primitiveToSource, toParts} = testOnly;
 
 /**
  * Unit tests for the primitiveToSource function.  Leave most of the
@@ -61,33 +62,48 @@ exports.testPrimitiveToSource = function(t) {
 };
 
 /**
+ * Unit tests for the Dumper class
  * @param {!T} t The test runner object.
  */
-exports.testDump = function(t) {
-  const intrp = new Interpreter;
+exports.testDumper = function(t) {
+  let intrp = getInterpreter();
+  let spec = [{filename: 'all', rest: true}];
+  let dumper = new Dumper(intrp, spec);
 
-  // Hack to install stubs for builtins found in codecity.js:
-  const builtins = ['CC.log', 'CC.checkpoint', 'CC.shutdown'];
-  for (const bi of builtins) {
-    new intrp.NativeFunction({
-      id: bi, length: 0,
-    });
+  // Test toExpr.
+  const cases = [
+    ['Infinity', 'Infinity'],
+    ['NaN', 'NaN'],
+    ['undefined', 'undefined'],
+    ['Object.name', "'Object'"],
+    ['String.prototype.split.length', '2'],
+  ];
+  for (const tc of cases) {
+    const parts = toParts(tc[0]);
+    let r = dumper.toExpr(dumper.getValueForParts(parts));
+    t.expect('toExpr(/* ' + tc[0] + ' */)', r, tc[1]);
   }
 
-  // Load 
+  // Test dump.
+  intrp = new Interpreter;
+
+  // Hack to install stubs for builtins found in codecity.js.
+  for (const bi of ['CC.log', 'CC.checkpoint', 'CC.shutdown']) {
+    new intrp.NativeFunction({id: bi, length: 0,});
+  }
+
+  // Load demo core.
   const coreDir = '../demo';
-  let  files = fs.readdirSync(coreDir) || [];
-  for (const file of files) {
+  for (const file of fs.readdirSync(coreDir) || []) {
     if (file.match(/^(core|test).*\.js$/)) {
-      var filename = path.join(coreDir, file);
-      var contents = String(fs.readFileSync(filename, 'utf8'));
-      intrp.createThreadForSrc(contents);
+      const filename = path.join(coreDir, file);
+      intrp.createThreadForSrc(String(fs.readFileSync(filename, 'utf8')));
       intrp.run();
     }
   }
   intrp.stop();  // Close any listening sockets, so node will exit.
 
-  const spec = [
+  spec = [
     {
       filename: 'core_00_es5',
       contents: [
@@ -220,5 +236,4 @@ exports.testDump = function(t) {
     },
   ];
 
-  dump(intrp, spec);
 };
