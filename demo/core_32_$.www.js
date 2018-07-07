@@ -62,7 +62,7 @@ $.www['404'].www.jssp = [
   '    <img src="/static/logo-error.svg" alt="">',
   '    404 Page Not Found',
   '  </h1>',
-  '  <pre><%= request.method %> <%= $.utils.htmlEscape(request.url) %></pre>',
+  '  <pre><%= request.method %> <%= $.utils.html.escape(request.url) %></pre>',
   '</body>',
   '</html>'
 ].join('\n');

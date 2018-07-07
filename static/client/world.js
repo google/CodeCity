@@ -507,6 +507,8 @@ CCC.World.sceneDescription = function(msg) {
   if (typeof title !== 'string') {
     return {};
   }
+  // Render title with HTML collapsing space rules.
+  title = title.replace(/\s+/g, ' ');
   var text = [title];
   var description = msg.description;
   if (description) {
