@@ -65,7 +65,8 @@ exports.testDumperPrototypePrimitiveToExpr = function(t) {
   const intrp = getInterpreter();
   const spec = [{filename: 'all', rest: true}];
   const dumper = new Dumper(intrp, spec);
-  const cases = [
+
+  let cases = [
     [undefined, 'undefined'],
     [null, 'null'],
     [false, 'false'],
@@ -82,6 +83,28 @@ exports.testDumperPrototypePrimitiveToExpr = function(t) {
     t.expect(util.format('quote(%o)', tc[0]), r, tc[1]);
     t.expect(util.format('eval(quote(%o))', tc[0]), eval(r), tc[0]);
   }
+
+  // Shadow some names and check results are still correct.
+  const inner = new Interpreter.Scope(Interpreter.Scope.Type.FUNCTION,
+      intrp.ROOT, intrp.global);
+  inner.createMutableBinding('Infinity', '42');
+  inner.createMutableBinding('NaN', '42');
+  inner.createMutableBinding('undefined', '42');
+  dumper.scope = inner;
+
+  cases = [
+    [undefined, '(void 0)'],
+    [Infinity, '(1/0)'],
+    [-Infinity, '(-1/0)'],
+    [NaN, '(0/0)'],
+  ];
+  for (const tc of cases) {
+    var r = dumper.primitiveToExpr(tc[0]);
+    t.expect(util.format('quote(%o)', tc[0]), r, tc[1]);
+    t.expect(util.format('eval(quote(%o))', tc[0]), eval(r), tc[0]);
+  }
+
+
 };
 
 /**
