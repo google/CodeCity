@@ -293,8 +293,9 @@ Dumper.prototype.getValueForParts = function(parts) {
  * appeared before, then it will instead be represented by an
  * expression referenceing the previously-constructed object.
  *
- * TODO(cpcallen): rename to toSource once
- *     https://github.com/google/closure-compiler/issues/3013 is fixed.
+ * TODO(cpcallen): rename this (and other *ToExpr) to toSource once
+ *     https://github.com/google/closure-compiler/issues/3013 is
+ *     fixed.
  * @param {Interpreter.Value} value Arbitrary JS value from this.intrp.
  * @return {string} An eval-able representation of the value.
  */
@@ -315,7 +316,7 @@ Dumper.prototype.toExpr = function(value) {
         return 'Object.create(' + this.toExpr(value.proto) + ')';
     }
   } else {
-    return primitiveToSource(value);
+    return this.primitiveToExpr(value);
   }
 };
 
@@ -325,16 +326,26 @@ Dumper.prototype.toExpr = function(value) {
  * @param {undefined|null|boolean|number|string} value Primitive JS value.
  * @return {string} An eval-able representation of the value.
  */
-var primitiveToSource = function(value) {
+Dumper.prototype.primitiveToExpr = function(value) {
   switch (typeof value) {
     case 'undefined':
     case 'boolean':
       return String(value);
     case 'number':
-      // TODO(cpcallen): is this correct?  See
-      //     https://stackoverflow.com/q/51202901
-      if (Object.is(value, -0)) return '-0';
-      return String(value);
+      // All finite values (except -0) will convert back to exactly
+      // equal number, but Infinity and NaN could be shadowed.  See
+      // https://stackoverflow.com/a/51218373/4969945
+      if (Object.is(value, -0)) {
+        return '-0';
+      } else if (Number.isFinite(value)) {
+        return String(value);
+      } else if (Number.isNaN(value)) {
+        // TODO(cpcallen): check if NaN is shadowed in current scope.
+        return 'NaN';  // Or 0/0.
+      } else {  // value is Infinity or -Infinity.
+        // TODO(cpcallen): check if Infinity is shadowed in current scope.
+        return String(value);  // Or ±1/0.
+      }
     case 'string':
       return code.quote(value);
     default:
@@ -358,6 +369,5 @@ exports.dump = dump;
 // For unit testing only!
 exports.testOnly = {
   Dumper: Dumper,
-  primitiveToSource: primitiveToSource,
   toParts: toParts,
 }
