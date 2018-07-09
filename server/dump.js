@@ -239,6 +239,11 @@ var Dumper = function(intrp, spec) {
   this.scopeInfo = new Map;
   /** @type {!Map<!Interpreter.prototype.Object,!ObjectInfo>} */
   this.objInfo = new Map;
+  /**
+   * Which scope are we presently outputting code in the context of?
+   * @type {!Interpreter.Scope}
+   */
+  this.scope = intrp.global;
 };
 
 /**
@@ -355,6 +360,25 @@ Dumper.prototype.primitiveToExpr = function(value) {
         throw TypeError('primitiveToSource called on non-primitive value');
       }
   }
+};
+
+/**
+ * Returns true if a given name is shadowed in the current scope.
+ * @param {string} name Variable name that might be shadowed.
+ * @param {!Interpreter.Scope=} scope Scope in which name is defind
+ *     (default: the global scope).
+ * @return {boolean} True iff name is bound in a scope between the
+ *     current scope (this.scope) (inclusive) and scope (exclusive).
+ */
+Dumper.prototype.isShadowed = function(name, scope) {
+  scope = scope || this.intrp.global;
+  for (var s = this.scope; s !== scope; s = s.outerScope) {
+    if (s === null) {
+      throw Error("Looking for name '" + name + "' from non-enclosing scope??");
+    }
+    if (s.hasBinding(name)) return true;
+  }
+  return false;
 };
 
 var dump = function(intrp, spec) {

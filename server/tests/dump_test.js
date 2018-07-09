@@ -37,14 +37,35 @@ const util = require('util');
 const {Dumper, toParts} = testOnly;
 
 /**
- * Unit tests for the Dumper primitiveToExpr function.
+ * Unit tests for the Dumper.prototype.isShadowed method.
  * @param {!T} t The test runner object.
  */
-exports.testPrimitiveToExpr = function(t) {
-  let intrp = getInterpreter();
-  let spec = [{filename: 'all', rest: true}];
-  let dumper = new Dumper(intrp, spec);
-  var cases = [
+exports.testDumperPrototypeIsShadowed = function(t) {
+  const intrp = getInterpreter();
+  const spec = [{filename: 'all', rest: true}];
+  const dumper = new Dumper(intrp, spec);
+
+  intrp.global.createMutableBinding('foo', 'foo');
+  intrp.global.createMutableBinding('bar', 'bar');
+
+  const inner = new Interpreter.Scope(Interpreter.Scope.Type.FUNCTION,
+      intrp.ROOT, intrp.global);
+  inner.createMutableBinding('foo', 'foobar!');
+  dumper.scope = inner;
+
+  t.expect("isShadowed('foo')", dumper.isShadowed('foo'), true);
+  t.expect("isShadowed('bar')", dumper.isShadowed('bar'), false);
+};
+
+/**
+ * Unit tests for the Dumper.prototype.primitiveToExpr method.
+ * @param {!T} t The test runner object.
+ */
+exports.testDumperPrototypePrimitiveToExpr = function(t) {
+  const intrp = getInterpreter();
+  const spec = [{filename: 'all', rest: true}];
+  const dumper = new Dumper(intrp, spec);
+  const cases = [
     [undefined, 'undefined'],
     [null, 'null'],
     [false, 'false'],
