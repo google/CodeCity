@@ -34,14 +34,16 @@ const {T} = require('./testing');
 const util = require('util');
 
 // Unpack test-only exports from dump:
-const {Dumper, primitiveToSource, toParts} = testOnly;
+const {Dumper, toParts} = testOnly;
 
 /**
- * Unit tests for the primitiveToSource function.  Leave most of the
- * string cases to testQuote, below.
+ * Unit tests for the Dumper primitiveToExpr function.
  * @param {!T} t The test runner object.
  */
-exports.testPrimitiveToSource = function(t) {
+exports.testPrimitiveToExpr = function(t) {
+  let intrp = getInterpreter();
+  let spec = [{filename: 'all', rest: true}];
+  let dumper = new Dumper(intrp, spec);
   var cases = [
     [undefined, 'undefined'],
     [null, 'null'],
@@ -55,7 +57,7 @@ exports.testPrimitiveToSource = function(t) {
     ['foo', "'foo'"],
   ];
   for (const tc of cases) {
-    var r = primitiveToSource(tc[0]);
+    var r = dumper.primitiveToExpr(tc[0]);
     t.expect(util.format('quote(%o)', tc[0]), r, tc[1]);
     t.expect(util.format('eval(quote(%o))', tc[0]), eval(r), tc[0]);
   }
