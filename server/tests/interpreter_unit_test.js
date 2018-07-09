@@ -145,58 +145,58 @@ exports.testScope = function(t) {
       Interpreter.Scope.Type.DUMMY, intrp.ROOT, outer);
 
   // 0: Initial condition.
-  t.expect("outer.this [0]", outer.this, 'this');
-  t.expect("inner.this [0]", inner.this, 'this');
-  t.expect("outer.hasBinding('foo') [0]", outer.hasBinding('foo'), false);
-  t.expect("outer.resolve('foo') [0]", outer.resolve('foo'), null);
-  t.expect("inner.resolve('foo') [0]", inner.resolve('foo'), null);
+  t.expect("outer.this  // 0", outer.this, 'this');
+  t.expect("inner.this  // 0", inner.this, 'this');
+  t.expect("outer.hasBinding('foo')  // 0", outer.hasBinding('foo'), false);
+  t.expect("outer.resolve('foo')  // 0", outer.resolve('foo'), null);
+  t.expect("inner.resolve('foo')  // 0", inner.resolve('foo'), null);
 
   // 1: Create outer binding.
   outer.createMutableBinding('foo', 42);
-  t.expect("outer.hasBinding('foo') [1]", outer.hasBinding('foo'), true);
-  t.expect("inner.hasBinding('foo') [1]", inner.hasBinding('foo'), false);
-  t.expect("outer.resolve('foo') [1]", outer.resolve('foo'), outer);
-  t.expect("inner.resolve('foo') [1]", inner.resolve('foo'), outer);
-  t.expect("outer.get('foo') [1]", outer.get('foo'), 42);
-  t.expect("getValueFromScope(outer, 'foo', ...) [1]",
+  t.expect("outer.hasBinding('foo')  // 1", outer.hasBinding('foo'), true);
+  t.expect("inner.hasBinding('foo')  // 1", inner.hasBinding('foo'), false);
+  t.expect("outer.resolve('foo')  // 1", outer.resolve('foo'), outer);
+  t.expect("inner.resolve('foo')  // 1", inner.resolve('foo'), outer);
+  t.expect("outer.get('foo')  // 1", outer.get('foo'), 42);
+  t.expect("getValueFromScope(outer, 'foo', ...)  // 1",
       intrp.getValueFromScope(outer, 'foo'), 42);
-  t.expect("getValueFromScope(inner, 'foo', ...) [1]",
+  t.expect("getValueFromScope(inner, 'foo', ...)  // 1",
       intrp.getValueFromScope(inner, 'foo'), 42);
 
   try {
     outer.createMutableBinding('foo', 42);
-    t.fail("outer.createMutableBinding('foo', ...) [1]", "Didn't throw.");
+    t.fail("outer.createMutableBinding('foo', ...)  // 1", "Didn't throw.");
   } catch (e) {
-    t.pass("outer.createMutableBinding('foo', ...) [1]");
+    t.pass("outer.createMutableBinding('foo', ...)  // 1");
   }
 
   // 2: Set outer binding.
   outer.set('foo', 69);
-  t.expect("outer.get('foo') [2]", outer.get('foo'), 69);
-  t.expect("getValueFromScope(inner, 'foo', ...) [2]",
+  t.expect("outer.get('foo')  // 2", outer.get('foo'), 69);
+  t.expect("getValueFromScope(inner, 'foo', ...)  // 2",
       intrp.getValueFromScope(inner, 'foo'), 69);
-  t.expect("getValueFromScope(outer, 'foo', ...) [2]",
+  t.expect("getValueFromScope(outer, 'foo', ...)  // 2",
       intrp.getValueFromScope(outer, 'foo'), 69);
 
   // 3: Create inner binding.
   inner.createImmutableBinding('foo', 105);
-  t.expect("outer.hasBinding('foo') [3]", outer.hasBinding('foo'), true);
-  t.expect("inner.hasBinding('foo') [3]", inner.hasBinding('foo'), true);
-  t.expect("outer.resolve('foo') [3]", outer.resolve('foo'), outer);
-  t.expect("inner.resolve('foo') [3]", inner.resolve('foo'), inner);
-  t.expect("outer.get('foo') [3]", outer.get('foo'), 69);
-  t.expect("inner.get('foo') [3]", inner.get('foo'), 105);
-  t.expect("getValueFromScope(inner, 'foo', ...) [3]",
+  t.expect("outer.hasBinding('foo')  // 3", outer.hasBinding('foo'), true);
+  t.expect("inner.hasBinding('foo')  // 3", inner.hasBinding('foo'), true);
+  t.expect("outer.resolve('foo')  // 3", outer.resolve('foo'), outer);
+  t.expect("inner.resolve('foo')  // 3", inner.resolve('foo'), inner);
+  t.expect("outer.get('foo')  // 3", outer.get('foo'), 69);
+  t.expect("inner.get('foo')  // 3", inner.get('foo'), 105);
+  t.expect("getValueFromScope(inner, 'foo', ...)  // 3",
       intrp.getValueFromScope(inner, 'foo'), 105);
-  t.expect("getValueFromScope(outer, 'foo', ...) [3]",
+  t.expect("getValueFromScope(outer, 'foo', ...)  // 3",
       intrp.getValueFromScope(outer, 'foo'), 69);
 
   // 4: Try to create duplicate binding.
   try {
     outer.createMutableBinding('foo', 17);
-    t.fail("outer.createMutableBinding('foo', ...) [4]", "Didn't throw.");
+    t.fail("outer.createMutableBinding('foo', ...)  // 4", "Didn't throw.");
   } catch (e) {
-    t.pass("outer.createMutableBinding('foo', ...) [4]");
+    t.pass("outer.createMutableBinding('foo', ...)  // 4");
   }
 
   // 5: Try to set immutable binding (two different ways)
@@ -204,9 +204,9 @@ exports.testScope = function(t) {
            inner.set('foo', 37) instanceof TypeError);
   try {
     intrp.setValueToScope(inner, 'foo', 37);
-    t.fail("setValueToScope(inner, 'foo', 37, ...) [5]", "Didn't throw.");
+    t.fail("setValueToScope(inner, 'foo', 37, ...)  // 5", "Didn't throw.");
   } catch (e) {
-    t.pass("setValueToScope(inner, 'foo', 37, ...) [5]");
+    t.pass("setValueToScope(inner, 'foo', 37, ...)  // 5");
   }
 };
 
