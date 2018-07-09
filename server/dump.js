@@ -327,13 +327,16 @@ Dumper.prototype.toExpr = function(value) {
 
 /**
  * Get a source text representation of a given primitive value (not
- * including symbols).
+ * including symbols).  Correctly handles having Infinity, NaN and/or
+ * undefiend shadowed by binding in the current scope.
  * @param {undefined|null|boolean|number|string} value Primitive JS value.
  * @return {string} An eval-able representation of the value.
  */
 Dumper.prototype.primitiveToExpr = function(value) {
   switch (typeof value) {
     case 'undefined':
+      if (this.isShadowed('undefined')) return '(void 0)';
+      // FALL THROUGH
     case 'boolean':
       return String(value);
     case 'number':
@@ -345,11 +348,15 @@ Dumper.prototype.primitiveToExpr = function(value) {
       } else if (Number.isFinite(value)) {
         return String(value);
       } else if (Number.isNaN(value)) {
-        // TODO(cpcallen): check if NaN is shadowed in current scope.
-        return 'NaN';  // Or 0/0.
+        if (this.isShadowed('NaN')) {
+          return '(0/0)';
+        }
+        return 'NaN';
       } else {  // value is Infinity or -Infinity.
-        // TODO(cpcallen): check if Infinity is shadowed in current scope.
-        return String(value);  // Or ±1/0.
+        if (this.isShadowed('Infinity')) {
+          return (value > 0) ? '(1/0)' : '(-1/0)';
+        }
+        return String(value);
       }
     case 'string':
       return code.quote(value);
