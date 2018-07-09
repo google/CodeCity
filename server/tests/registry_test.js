@@ -36,40 +36,40 @@ exports.testRegistry = function(t) {
   const obj = {};
   
   // 0: Initial condition.
-  t.expect("reg.has('foo') [0]", reg.has('foo'), false);
+  t.expect("reg.has('foo')  // 0", reg.has('foo'), false);
   try {
     reg.get('foo');
-    t.fail("reg.get('foo') [0]", "Didn't throw.");
+    t.fail("reg.get('foo')  // 0", "Didn't throw.");
   } catch(e) {
-    t.pass("reg.get('foo') [0]");
+    t.pass("reg.get('foo')  // 0");
   }
   try {
     reg.getKey(obj);
-    t.fail("reg.getKey(obj) [0]", "Didn't throw.");
+    t.fail("reg.getKey(obj)  // 0", "Didn't throw.");
   } catch(e) {
-    t.pass("reg.getKey(obj) [0]");
+    t.pass("reg.getKey(obj)  // 0");
   }
 
   // 1: Register obj as 'foo'.
   reg.set('foo', obj);
-  t.expect("reg.has('foo') [1]", reg.has('foo'), true);
-  t.expect("reg.get('foo') [1]", reg.get('foo'), obj);
-  t.expect("reg.getKey(obj) [1]", reg.getKey(obj), 'foo');
+  t.expect("reg.has('foo')  // 1", reg.has('foo'), true);
+  t.expect("reg.get('foo')  // 1", reg.get('foo'), obj);
+  t.expect("reg.getKey(obj)  // 1", reg.getKey(obj), 'foo');
 
   // 2: Register another object as 'foo'.
   try {
     reg.set('foo', {});
-    t.fail("reg.set('foo', {}) [2]", "Didn't throw.");
+    t.fail("reg.set('foo', {})  // 2", "Didn't throw.");
   } catch(e) {
-    t.pass("reg.set('foo', {}) [2]");
+    t.pass("reg.set('foo', {})  // 2");
   }
-  t.expect("reg.has('foo') [2]", reg.has('foo'), true);
-  t.expect("reg.get('foo') [2]", reg.get('foo'), obj);
-  t.expect("reg.getKey(obj) [2]", reg.getKey(obj), 'foo');
+  t.expect("reg.has('foo')  // 2", reg.has('foo'), true);
+  t.expect("reg.get('foo')  // 2", reg.get('foo'), obj);
+  t.expect("reg.getKey(obj)  // 2", reg.getKey(obj), 'foo');
   try {
     reg.getKey({});
-    t.fail("reg.getKey({}) [2]", "Didn't throw.");
+    t.fail("reg.getKey({})  // 2", "Didn't throw.");
   } catch(e) {
-    t.pass("reg.getKey({}) [2]");
+    t.pass("reg.getKey({})  // 2");
   }
 };
