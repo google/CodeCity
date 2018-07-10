@@ -13,6 +13,11 @@ text {
   stroke-width: 0;
 }
 
+a {
+  cursor: pointer;
+  text-decoration: underline;
+}
+
 .strokeNone {
   stroke: none;
 }
