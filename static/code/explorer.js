@@ -134,7 +134,6 @@ Code.Explorer.parseInput = function(inputValue) {
   var token = null;
   var lastNameToken = null;
   for (token of tokens) {
-    token = tokens[i];
     if (token.type === 'id' || token.type === 'str' || token.type === 'num') {
       lastNameToken = token;
     }
