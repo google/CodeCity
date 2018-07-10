@@ -13,7 +13,13 @@ body {
 }
 
 #svgroot {
+  border: 1px solid #ccc;
+  box-sizing: border-box;
   overflow: hidden;
+}
+
+#canvasBackground {
+  display: none;
 }
 
 #toolboxColumn1 {
