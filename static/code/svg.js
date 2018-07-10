@@ -55,9 +55,8 @@ svgEditor.init = function() {
   // Update the toolbox whenever a button is clicked.
   // Don't wait for up to a quarter second until the next scheduled call.
   // Also force a heavier update to catch changes such as open-close path.
-  var buttons = document.querySelectorAll('#toolbox button');
   var update = svgEditor.updateToolbox.bind(svgEditor, true);
-  for (var i = 0, button; (button = buttons[i]); i++) {
+  for (var button of document.querySelectorAll('#toolbox button')) {
     button.addEventListener('click', update, false);
   }
 };

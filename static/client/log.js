@@ -288,8 +288,7 @@ CCC.Log.renderJson = function(json) {
       var objects = [];
       var users = [];
       if (json.contents) {
-        for (var i = 0; i < json.contents.length; i++) {
-          var content = json.contents[i];
+        for (var content of json.contents) {
           if (content.type === 'user' && CCC.Log.userName === content.what) {
             continue;  // Don't show the current user.
           }
@@ -412,7 +411,7 @@ CCC.Log.openIcon = function(src) {
  * @param {!Node} node DOM to walk.
  */
 CCC.Log.renderHtmltext = function(div, node) {
-  if (node.nodeType === 1) {
+  if (node.nodeType === Node.ELEMENT_NODE) {
     // Element.
     if (node.tagName === 'svg') {  // XML tagNames are lowercase.
       return;  // No text content of this tag should be rendered.
@@ -434,14 +433,14 @@ CCC.Log.renderHtmltext = function(div, node) {
       div.appendChild(a);
       return;
     }
-    for (var i = 0, child; (child = node.childNodes[i]); i++) {
-      CCC.Log.renderHtmltext(div, node.childNodes[i]);
+    for (var child of node.childNodes) {
+      CCC.Log.renderHtmltext(div, child);
     }
     if (CCC.Log.renderHtmltext.BLOCK_NAMES.indexOf(node.tagName) !== -1) {
       // Add a <br> tag, but not if there's already one.
       var lastTag = div.lastChild;
-      while (lastTag && lastTag.nodeType !== 1) {
-        if (lastTag.nodeType === 3 && lastTag.nodeValue.trim()) {
+      while (lastTag && lastTag.nodeType !== Node.ELEMENT_NODE) {
+        if (lastTag.nodeType === Node.TEXT_NODE && lastTag.nodeValue.trim()) {
           // Found text that's not whitespace.  Bail.
           lastTag = null;
         } else {
@@ -453,7 +452,7 @@ CCC.Log.renderHtmltext = function(div, node) {
         div.appendChild(document.createElement('br'));
       }
     }
-  } else if (node.nodeType === 3) {
+  } else if (node.nodeType === Node.TEXT_NODE) {
     // Text node.
     div.appendChild(document.createTextNode(node.data));
   }
@@ -496,8 +495,7 @@ CCC.Log.getMsg = function(key, var_args) {
   var parts = text.split(/(%\d)/);
   var df = document.createDocumentFragment();
   // Inject any substitutions.
-  for (var i = 0; i < parts.length; i++) {
-    var part = parts[i];
+  for (var part of parts) {
     var m = part.match(/^%(\d)$/);
     if (m) {
       var inject = arguments[m[1]];

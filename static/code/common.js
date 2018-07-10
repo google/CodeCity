@@ -326,8 +326,7 @@ Code.Common.selectorToParts = function(text) {
   // TODO: Try caching the results for performance.
   var tokens = Code.Common.tokenizeSelector(text);
   var parts = [];
-  for (var i = 0; i < tokens.length; i++) {
-    var token = tokens[i];
+  for (var token of tokens) {
     if (!token.valid) {
       return null;
     }
