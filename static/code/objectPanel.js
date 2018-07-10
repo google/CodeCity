@@ -62,9 +62,9 @@ Code.ObjectPanel.init = function() {
   }
   if (data.roots) {
     // Print all root objects.
-    for (var i = 0; i < data.roots.length; i++) {
-      var part = {type: 'id', value: data.roots[i].name};
-      Code.ObjectPanel.addLink(part, data.roots[i].type, false);
+    for (var root of data.roots) {
+      var part = {type: 'id', value: root.name};
+      Code.ObjectPanel.addLink(part, root.type, false);
     }
   }
   if (data.properties) {
@@ -159,7 +159,7 @@ Code.ObjectPanel.highlight = function() {
   var jsonPart = JSON.stringify(part);
   var newHighlighted = null;
   var results = document.getElementById('objectResults');
-  for (var i = 0, link; (link = results.childNodes[i]); i++) {
+  for (var link of results.childNodes) {
     if (link.getAttribute('data-link') === jsonPart) {
       newHighlighted = link;
     }
@@ -188,8 +188,7 @@ Code.ObjectPanel.filterShadowed = function(data) {
     return;
   }
   var seen = Object.create(null);
-  for (var i = 0; i < data.length; i++) {
-    var datum = data[i];
+  for (var datum of data) {
     var cursorInsert = 0;
     var cursorRead = 0;
     while (cursorRead < datum.length) {
@@ -200,7 +199,7 @@ Code.ObjectPanel.filterShadowed = function(data) {
       }
     }
     datum.length = cursorInsert;
-    data[i].sort(Code.ObjectPanel.caseInsensitiveComp);
+    datum.sort(Code.ObjectPanel.caseInsensitiveComp);
   }
 };
 

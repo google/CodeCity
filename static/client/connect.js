@@ -297,7 +297,7 @@ CCC.pause = function() {
     // Fire off all accumulated messages.
     var buffer = CCC.pauseBuffer;
     CCC.pauseBuffer = null;
-    for (var i = 0, args; (args = buffer[i]); i++) {
+    for (var args of buffer) {
       CCC.distributeMessage.apply(null, args);
     }
   }
@@ -347,8 +347,8 @@ CCC.receiveMessage = function(e) {
     CCC.countdown();
   } else if (e.data['commands'] && e.data['commands'].length) {
     // User has clicked a command link or command menu.
-    for (var i = 0; i < e.data['commands'].length; i++) {
-      CCC.sendCommand(e.data['commands'][i], true);
+    for (var command of e.data['commands']) {
+      CCC.sendCommand(command, true);
     }
   } else {
     console.log('Unknown message received by client frame: ' + e.data);
@@ -389,15 +389,15 @@ CCC.sendCommand = function(commands, echo) {
   if (commands.length > 1 && !commands[commands.length - 1]) {
     commands.pop();
   }
-  for (var i = 0; i < commands.length; i++) {
+  for (var command of commands) {
     // Add command to list of commands to send to server.
-    CCC.commandOutput.push(commands[i] + '\n');
+    CCC.commandOutput.push(command + '\n');
     CCC.commandIndex++;
     // Add command to history.
     if (echo) {
       if (!CCC.commandHistory.length ||
-          CCC.commandHistory[CCC.commandHistory.length - 1] !== commands[i]) {
-        CCC.commandHistory.push(commands[i]);
+          CCC.commandHistory[CCC.commandHistory.length - 1] !== command) {
+        CCC.commandHistory.push(command);
       }
     }
     while (CCC.commandHistory.length > CCC.MAX_HISTORY_SIZE) {
@@ -405,7 +405,7 @@ CCC.sendCommand = function(commands, echo) {
     }
     // Echo command onscreen.
     if (echo) {
-      CCC.distributeMessage(CCC.MessageTypes.COMMAND, commands[i]);
+      CCC.distributeMessage(CCC.MessageTypes.COMMAND, command);
     }
   }
   CCC.commandTemp = '';
@@ -539,10 +539,10 @@ CCC.parse = function(receivedJson) {
   if (typeof msgNum === 'number') {
     // Server sent messages.  Increase client's index for acknowledgment.
     var currentIndex = msgNum - msgs.length + 1;
-    for (var i = 0; i < msgs.length; i++) {
+    for (var msg of msgs) {
       if (currentIndex > CCC.messageIndex) {
         CCC.messageIndex = currentIndex;
-        CCC.distributeMessage(CCC.MessageTypes.MESSAGE, msgs[i]);
+        CCC.distributeMessage(CCC.MessageTypes.MESSAGE, msg);
         // Reduce ping interval.
         CCC.pingInterval =
             Math.max(CCC.MIN_PING_INTERVAL, CCC.pingInterval * 0.8);
