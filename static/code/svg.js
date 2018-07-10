@@ -81,6 +81,9 @@ svgEditor.resize = function() {
   svgEditor.canvas.setZoom(zoom);
   svgEditor.canvas.setResolution(width / height * FIXED_HEIGHT, FIXED_HEIGHT);
   svgEditor.canvas.updateCanvas(width, height);
+  // Recenter the origin to be the middle of the screen.
+  svgEditor.canvas.getRootElem().setAttribute('viewBox',
+      (-width / 2) + ' 0 ' + width + ' ' + height);
 };
 
 /**
