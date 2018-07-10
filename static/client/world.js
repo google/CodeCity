@@ -1360,7 +1360,9 @@ CCC.World.stringToHtml = function(htmlText) {
     console.log('Syntax error in HTML: ' + htmlText);
     return null;
   }
-  return CCC.World.xmlToHtml(dom.body);
+  var body = CCC.World.xmlToHtml(dom.body);
+  CCC.Common.autoHyperlink(body);
+  return body;
 };
 
 /**
@@ -1804,6 +1806,7 @@ CCC.World.createTextArea = function(svg, text, width, height) {
     }
   }
   var g = document.createElementNS(CCC.Common.NS, 'g');
+  CCC.Common.autoHyperlink(textNode);
   g.appendChild(textNode);
   return g;
 };

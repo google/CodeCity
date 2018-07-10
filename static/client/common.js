@@ -299,3 +299,53 @@ CCC.Common.escapeSpaces = function(text) {
       .replace(/  /g, '\u00A0 ').replace(/  /g, '\u00A0 ')
       .replace(/^ /gm, '\u00A0');
 };
+
+/**
+ * Detect URLs in the provided document fragment and replace with links.
+ * @param {!Element} el A DOM element to scan and modify.
+ */
+CCC.Common.autoHyperlink = function(el) {
+  var isSvg = el.namespaceURI == CCC.Common.NS;
+  var children = el.childNodes;  // This is a live NodeList.
+  for (var i = children.length - 1, child; (child = children[i]); i--) {
+    if (child.nodeType === 3) {
+      var text = child.nodeValue;
+      var parts = text.split(CCC.Common.autoHyperlink.urlRegex);
+      if (parts.length > 1) {
+        for (var j = 0; j < parts.length; j++) {
+          var part = parts[j];
+          var m = part.match(CCC.Common.autoHyperlink.urlRegex);
+          if (m && m[0] === part) {
+            // This part is a URL.
+            var lastChar = part.substr(-1);
+            if (part.length && '.,!)]?\''.includes(lastChar)) {
+              // Move any trailing punctuation out of URL.
+              part = part.substring(0, part.length - 1);
+              parts[j + 1] = lastChar + (parts[j + 1] || '');
+            }
+            var href = part;
+            if (!/^https?:\/\//.test(href)) {
+              href = 'http://' + href;
+            }
+            var link = isSvg ? document.createElementNS(CCC.Common.NS, 'a') :
+                document.createElement('a');
+            link.setAttribute('href', href);
+            link.setAttribute('target', '_blank');
+            link.setAttribute('rel', 'noopener noreferrer');
+            link.appendChild(document.createTextNode(part));
+            newNode = link;
+          } else {
+            // This part is plain text.
+            var newNode = document.createTextNode(part);
+          }
+          el.insertBefore(newNode, child);
+        }
+        el.removeChild(child);
+      }
+    } else {
+      CCC.Common.autoHyperlink(child);
+    }
+  }
+};
+
+CCC.Common.autoHyperlink.urlRegex = /((?:https?:\/\/|www\.)[-\w.~:\/?#\[\]@!$&'()*+,;=%]+)/i;

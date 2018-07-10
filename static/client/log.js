@@ -251,6 +251,7 @@ CCC.Log.renderJson = function(json) {
       if (dom.body) {
         var div = document.createElement('div');
         CCC.Log.renderHtmltext(div, dom.body);
+        CCC.Common.autoHyperlink(div);
         return div;
       }
       return undefined;  // Illegal HTML.
@@ -313,6 +314,7 @@ CCC.Log.renderJson = function(json) {
       }
       if (json.description) {
         var descriptionDiv = CCC.Log.textToHtml(json.description);
+        CCC.Common.autoHyperlink(descriptionDiv);
         div.appendChild(descriptionDiv);
       }
       if (objects.length) {
@@ -345,11 +347,11 @@ CCC.Log.renderJson = function(json) {
       // {type: "think", text: "Don't be evil."}
       // {type: "think", source: "Max", where: "Hangout", text: "I'm hungry."}
       // {type: "think", source: "Cat", where: "Hangout", text: "I'm evil."}
-      var text = json.text;
+      var text = CCC.Common.escapeSpaces(json.text);
       if (json.type === 'think') {
         var type = 'think';
       } else {
-        var lastLetter = text[text.length - 1];
+        var lastLetter = text[text.length - 1].trim();
         var type = (lastLetter === '?') ? 'ask' :
             ((lastLetter === '!') ? 'exclaim' : 'say');
       }
@@ -359,6 +361,7 @@ CCC.Log.renderJson = function(json) {
         var who = json.source || CCC.Log.getMsg('unknownMsg');
         var fragment = CCC.Log.getMsg(type + 'Msg', who, text);
       }
+      CCC.Common.autoHyperlink(fragment);
       var div = document.createElement('div');
       div.appendChild(fragment);
       return div;
@@ -373,6 +376,7 @@ CCC.Log.renderJson = function(json) {
         text = json.source + ': ' + text;
       }
       div.appendChild(document.createTextNode(text));
+      CCC.Common.autoHyperlink(div);
       return div;
   }
   // Unknown XML.
@@ -394,6 +398,7 @@ CCC.Log.openIcon = function(src) {
   var link = document.createElement('a');
   link.href = src;
   link.target = '_blank';
+  link.rel = 'noopener noreferrer';
   var svg = CCC.Common.createSvgElement('svg',
       {'class': 'openIcon', 'viewBox': '0 3 24 24'}, link);
   CCC.Common.createSvgElement('path',
