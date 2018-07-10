@@ -46,7 +46,7 @@ svgEditor.init = function() {
 
   // Check to see if the parent window left us an initial source to render.
   var source = window.initialSource;
-  if (source) {
+  if (source !== undefined) {
     svgEditor.setString(source);
     delete window.initialSource;
   }
@@ -91,8 +91,13 @@ svgEditor.resize = function() {
  */
 svgEditor.setString = function(xmlString) {
   // SvgCanvas needs contents wrapped in a throw-away SVG node.
-  xmlString = '<svg xmlns="http://www.w3.org/2000/svg">' + xmlString + '</svg>';
-  svgEditor.canvas.setSvgString(xmlString);
+  if (xmlString) {
+    xmlString = '<svg xmlns="http://www.w3.org/2000/svg">' +
+        xmlString + '</svg>';
+    svgEditor.canvas.setSvgString(xmlString);
+  } else {
+    svgEditor.canvas.clear();
+  }
   svgEditor.resize();
 };
 
