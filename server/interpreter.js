@@ -555,7 +555,7 @@ Interpreter.prototype.initBuiltins_ = function() {
       intrp.populateScope_(ast, scope);
       thread.stateStack_[thread.stateStack_.length] =
           new Interpreter.State(ast, scope);
-      state.value = undefined;  // Default value if no explicit return.
+      thread.value = undefined;  // In case no ExpressionStatements evaluated.
       return Interpreter.FunctionResult.AwaitValue;
     }
   });

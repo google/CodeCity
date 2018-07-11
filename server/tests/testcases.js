@@ -1053,6 +1053,15 @@ module.exports = [
     `,
     expected: 'undefined' },
 
+  // A bug in eval would cause it to return the value of the
+  // previously-evaluated ExpressionStatement if the eval program did
+  // not contain any ExpressionStatements.
+  { name: 'evalEmptyBlock', src: `
+    'fail';
+    eval('{}');
+    `,
+    expected: undefined },
+  
   { name: 'callEvalOrder', src: `
     var r = "";
     function log(x) {
