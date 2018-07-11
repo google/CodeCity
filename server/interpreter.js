@@ -2406,7 +2406,7 @@ Interpreter.prototype.createNativeFunction = function(
  * all standard native types), and handles additional properties on
  * arrays, regexps and errors (just as for plain objects).  Ignores
  * prototype and inherited properties.  Efficiently handles
- * sparse arrays.  Does NOT handle cyclic
+ * sparse arrays.  Does NOT handle cyclic structures.
  * @param {*} nativeObj The native JS object to be converted.
  * @return {Interpreter.Value} The equivalent JS interpreter object.
  * @param {!Interpreter.Owner} owner Owner for new object.
