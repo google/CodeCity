@@ -1408,6 +1408,14 @@ tests.evalNoLeakingDecls = function() {
   console.assert(typeof n === 'undefined', 'evalNoLeakingDecls');
 };
 
+tests.evalEmptyBlock = function() {
+  // A bug in eval would cause it to return the value of the
+  // previously-evaluated ExpressionStatement if the eval program did
+  // not contain any ExpressionStatements.
+  'fail';
+  console.assert(eval('{}') === undefined, 'evalEmptyBlock');
+};
+
 tests.callEvalOrder = function() {
   var r = "";
   function log(x) {
