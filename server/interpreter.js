@@ -1811,9 +1811,8 @@ Interpreter.prototype.initDate_ = function() {
     }
     // Called as new Date().
     var args = [null].concat(Array.from(arguments));
-    var date = new intrp.Date(intrp.thread.perms());
-    date.date = new (Function.prototype.bind.apply(Date, args));
-    return date;
+    var date = new (Function.prototype.bind.apply(Date, args));
+    return new intrp.Date(date, intrp.thread.perms());
   };
   this.createNativeFunction('Date', wrapper, true);
 
@@ -3860,10 +3859,11 @@ Interpreter.prototype.Array = function(owner, proto) {
 /**
  * @constructor
  * @extends {Interpreter.prototype.Object}
+ * @param {!Date} date
  * @param {?Interpreter.Owner=} owner
  * @param {?Interpreter.prototype.Object=} proto
  */
-Interpreter.prototype.Date = function(owner, proto) {
+Interpreter.prototype.Date = function(date, owner, proto) {
   /** @type {!Date} */
   this.date;
   throw Error('Inner class constructor not callable on prototype');
@@ -4846,14 +4846,16 @@ Interpreter.prototype.installTypes = function() {
    * Class for a date.
    * @constructor
    * @extends {Interpreter.prototype.Date}
+   * @param {!Date} date Date value for this Date object.
    * @param {?Interpreter.Owner=} owner Owner object or null.
    * @param {?Interpreter.prototype.Object=} proto Prototype object or null.
    */
-  intrp.Date = function(owner, proto) {
+  intrp.Date = function(date, owner, proto) {
+    if (!date) return;  // Deserializing
     intrp.Object.call(/** @type {?} */ (this), owner,
         (proto === undefined ? intrp.DATE : proto));
     /** @type {Date} */
-    this.date = null;
+    this.date = date;
   };
 
   intrp.Date.prototype = Object.create(intrp.Object.prototype);
