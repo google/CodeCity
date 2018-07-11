@@ -1884,11 +1884,9 @@ Interpreter.prototype.initRegExp_ = function() {
   this.builtins.set('RegExp.prototype', this.REGEXP);
   // RegExp constructor.
   wrapper = function(pattern, flags) {
-    var regexp = new intrp.RegExp(intrp.thread.perms());
     pattern = pattern ? pattern.toString() : '';
     flags = flags ? flags.toString() : '';
-    regexp.populate(new RegExp(pattern, flags));
-    return regexp;
+    return new intrp.RegExp(new RegExp(pattern, flags), intrp.thread.perms());
   };
   this.createNativeFunction('RegExp', wrapper, true);
 
@@ -2426,8 +2424,7 @@ Interpreter.prototype.nativeToPseudo = function(nativeObj, owner) {
       pseudoObj = new this.Array(owner);
       break;
     case '[object RegExp]':
-      pseudoObj = new this.RegExp(owner);
-      pseudoObj.populate(/** @type {!RegExp} */(nativeObj));
+      pseudoObj = new this.RegExp(/** @type {!RegExp} */(nativeObj), owner);
       break;
     case '[object Error]':
       var proto;
@@ -3872,18 +3869,14 @@ Interpreter.prototype.Date = function(date, owner, proto) {
 /**
  * @constructor
  * @extends {Interpreter.prototype.Object}
+ * @param {!RegExp=} re
  * @param {?Interpreter.Owner=} owner
  * @param {?Interpreter.prototype.Object=} proto
  */
-Interpreter.prototype.RegExp = function(owner, proto) {
+Interpreter.prototype.RegExp = function(re, owner, proto) {
   /** @type {!RegExp} */
   this.regexp;
   throw Error('Inner class constructor not callable on prototype');
-};
-
-/** @param {!RegExp} nativeRegexp The native regular expression. */
-Interpreter.prototype.RegExp.prototype.populate = function(nativeRegexp) {
-  throw Error('Inner class method not callable on prototype');
 };
 
 /**
@@ -4883,14 +4876,22 @@ Interpreter.prototype.installTypes = function() {
    * Class for a regexp
    * @constructor
    * @extends {Interpreter.prototype.RegExp}
+   * @param {!RegExp=} re The RegExp value for this RegExp object.
    * @param {?Interpreter.Owner=} owner Owner object or null.
    * @param {?Interpreter.prototype.Object=} proto Prototype object or null.
    */
-  intrp.RegExp = function(owner, proto) {
+  intrp.RegExp = function(re, owner, proto) {
+    if (!re) return;  // Deserializing
     intrp.Object.call(/** @type {?} */ (this), owner,
         (proto === undefined ? intrp.REGEXP : proto));
     /** @type {RegExp} */
-    this.regexp = null;
+    this.regexp = re;
+    // lastIndex is settable, all others are read-only attributes
+    this.defineProperty('lastIndex', Descriptor.w.withValue(re.lastIndex));
+    this.defineProperty('source', Descriptor.none.withValue(re.source));
+    this.defineProperty('global', Descriptor.none.withValue(re.global));
+    this.defineProperty('ignoreCase', Descriptor.none.withValue(re.ignoreCase));
+    this.defineProperty('multiline', Descriptor.none.withValue(re.multiline));
   };
 
   intrp.RegExp.prototype = Object.create(intrp.Object.prototype);
@@ -4911,25 +4912,6 @@ Interpreter.prototype.installTypes = function() {
       return '//';
     }
     return this.regexp.toString();
-  };
-
-  /**
-   * Initialize a (pseudo) RegExp from a native regular expression object.
-   * @param {!RegExp} nativeRegexp The native regular expression.
-   */
-  intrp.RegExp.prototype.populate = function(nativeRegexp) {
-    this.regexp = nativeRegexp;
-    // lastIndex is settable, all others are read-only attributes
-    this.defineProperty('lastIndex',
-        Descriptor.w.withValue(nativeRegexp.lastIndex));
-    this.defineProperty('source',
-        Descriptor.none.withValue(nativeRegexp.source));
-    this.defineProperty('global',
-        Descriptor.none.withValue(nativeRegexp.global));
-    this.defineProperty('ignoreCase',
-        Descriptor.none.withValue(nativeRegexp.ignoreCase));
-    this.defineProperty('multiline',
-        Descriptor.none.withValue(nativeRegexp.multiline));
   };
 
   /**
@@ -6239,8 +6221,7 @@ stepFuncs_['Literal'] = function (thread, stack, state, node) {
   var /** (null|boolean|number|string|!RegExp) */ literal = node['value'];
   var /** Interpreter.Value */ value;
   if (literal instanceof RegExp) {
-    value = new this.RegExp(state.scope.perms);
-    value.populate(literal);
+    value = new this.RegExp(literal, state.scope.perms);
   } else {
     value = literal;
   }
