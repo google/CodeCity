@@ -416,7 +416,7 @@ $.user.eval = function($$$cmd) {
   // aliases for commonly-used values.
   $$$cmd =
       ($$$cmd.cmdstr[0] === ';') ? $$$cmd.cmdstr.substring(1) : $$$cmd.argstr;
-  $$$cmd = $.utils.code.formatForEval($$$cmd);
+  $$$cmd = $.utils.code.rewriteForEval($$$cmd);
   try {
     var me = this;
     var here = this.location;
