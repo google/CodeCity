@@ -28,15 +28,6 @@ var code = require('./code');
 var Interpreter = require('./interpreter');
 
 /**
- * Break a selector into an array of parts.
- * @param {string} selector The selector
- * @return {!Array<string>} The parts
- */
-var toParts = function(selector) {
-  return selector.split('.');
-};
-
-/**
  * @typedef {{filename: string,
  *            contents: !Array<!ContentEntry>,
  *            rest: boolean}}
@@ -211,19 +202,33 @@ var Config = function(spec) {
  * @constructor
  * @param {!Interpreter.Scope} scope The scope to keep state for.
  */
-function ScopeInfo(scope) {
+var ScopeInfo = function(scope) {
   this.scope = scope;
-  this.done /** !Object<string, Do> */ = Object.create(null);
-}
+  /**
+   * Map of variable name -> dump status.
+   * @type {!Object<string, Do>}
+   */
+  this.done = Object.create(null);
+};
 
 /**
  * Dump-state information for a single object.
  * @constructor
  * @param {!Interpreter.prototype.Object} obj The object to keep state for.
  */
-function ObjectInfo(obj) {
+var ObjectInfo = function(obj) {
   this.obj = obj;
-}
+  /**
+   * Referecne to this object, once created.
+   * @type {Parts|undefined}
+   */
+  this.ref = undefined;
+  /**
+   * Map of property name -> dump status.
+   * @type {!Object<string, Do>}
+   */
+  this.done = Object.create(null);
+};
 
 /**
  * Dumper encapsulates all the state required to keep track of what
@@ -291,6 +296,51 @@ Dumper.prototype.getValueForParts = function(parts) {
 };
 
 /**
+ * Get a source text to declare and optionally initialise a particular
+ * binding.
+ * @param {Parts} parts The parts for the path to be dumped.
+ * @param {Do} what How much to dump.  Must be >= Do.DECL.
+ * @return {string} An eval-able program to initialise the specified binding.
+ */
+Dumper.prototype.dumpBinding = function(parts, what) {
+  var line = [];
+  var lhs = fromParts(parts);
+
+  // Figure out if we need to prefix with 'var', plus record what we
+  // are about to do.
+  if (parts.length === 1) {
+    var varName = parts[0];
+    var si = this.getScopeInfo(this.scope);
+    var sidvn = si.done[varName];
+    if (sidvn === undefined || sidvn < Do.DECL ) {
+      line.push('var ');
+      si.done[varName] = (what === Do.DECL) ? Do.DECL : Do.SET;
+    }
+  } else {
+    var obj = this.getValueForParts(parts.slice(0, parts.length - 1));
+    if (!(obj instanceof this.intrp.Object)) {
+      throw Error("Can't set properties of primitive");
+    }
+    var oi = this.getObjectInfo(obj);
+    var propName = parts[parts.length - 1];
+    oi.done[propName] = (what === Do.DECL) ? Do.DECL : Do.SET;
+    if (what === Do.DECL) {
+      // Can't "declare" a property, but can make sure it exists.
+      line.push(' = undefined');
+    }
+  }
+  line.push(fromParts(parts));
+
+  // Add initialiser if not just declaring.
+  if (what >= Do.SET) {
+    var value = this.getValueForParts(parts);
+    line.push(' = ', this.toExpr(value, parts));
+  }
+  line.push(';');
+  return line.join('');
+};
+
+/**
  * Get a source text representation of a given value.  The source text
  * will vary depending on the state of the dump; for instance, if the
  * value is an object that has not yet apepared in the dump it will be
@@ -302,19 +352,26 @@ Dumper.prototype.getValueForParts = function(parts) {
  *     https://github.com/google/closure-compiler/issues/3013 is
  *     fixed.
  * @param {Interpreter.Value} value Arbitrary JS value from this.intrp.
+ * @param {Parts=} parts Reference in which value will be stored.
  * @return {string} An eval-able representation of the value.
  */
-Dumper.prototype.toExpr = function(value) {
+Dumper.prototype.toExpr = function(value, parts) {
   var intrp = this.intrp;
   if (!(value instanceof intrp.Object)) {
     return this.primitiveToExpr(value);
   }
 
-  // TODO(cpcallen): implement references.
+  // Return existing reference to object (if already created).
+  var vi = this.getObjectInfo(value);
+  if (vi.ref) return fromParts(vi.ref);
+
+  // New object.  Save referece for later use.
+  if (!parts) throw Error('Refusing to create non-referable object');
+  vi.ref = parts;
 
   // Object not yet referenced.  Is it a builtin?
   var key = intrp.builtins.getKey(value);
-  if (key) return 'new ' + quote(key);
+  if (key) return 'new ' + code.quote(key);
 
   // Object not yet created.
   if (value instanceof intrp.Function) {
@@ -448,6 +505,30 @@ Dumper.prototype.isShadowed = function(name, scope) {
     if (s.hasBinding(name)) return true;
   }
   return false;
+};
+
+///////////////////////////////////////////////////////////////////////////////
+// Selectors and Parts.
+
+/** @typedef !Array<string> */
+var Parts;
+
+/**
+ * Break a selector into an array of parts.
+ * @param {string} selector The selector.
+ * @return {Parts} The parts.
+ */
+var toParts = function(selector) {
+  return selector.split('.');
+};
+
+/**
+ * Turn an array of parts into an expression.
+ * @param {Parts} parts The parts.
+ * @return {string} The expression.
+ */
+var fromParts = function(parts) {
+  return parts.join('.');
 };
 
 var dump = function(intrp, spec) {

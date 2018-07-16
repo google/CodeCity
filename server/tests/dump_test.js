@@ -127,8 +127,9 @@ exports.testDumperPrototypeToExpr = function(t) {
         "new Date('1975-07-27T00:00:00.000Z')"],
     [new intrp.RegExp(/foo/ig, intrp.ROOT), '/foo/gi'],
   ];
-  for (const tc of cases) {
-    var r = dumper.toExpr(tc[0]);
+  for (let i = 0; i < cases.length; i++) {
+    const tc = cases[i];
+    var r = dumper.toExpr(tc[0], ['tc', String(i)]);
     t.expect(util.format('Dumper.p.toExpr(%s)', tc[1]), r, tc[1]);
   }
 };
@@ -213,10 +214,10 @@ exports.testDumper = function(t) {
         'Object.setPrototypeOf',
         'Array.prototype.find',
         'Array.prototype.findIndex',
-        'String.endsWith',
-        'String.includes',
-        'String.repeat',
-        'String.startsWith',
+        'String.prototype.endsWith',
+        'String.prototype.includes',
+        'String.prototype.repeat',
+        'String.prototype.startsWith',
         'Number.isFinite',
         'Number.isNaN',
         'Number.isSafeInteger',
