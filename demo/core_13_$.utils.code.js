@@ -187,14 +187,14 @@ $.utils.code.rewriteForEval.unittest = function() {
     '{a: 1};': '{a: 1};',
     '{a: 1}  // Comment': '({a: 1}  // Comment\n)',
     '{a: 1, b: 2}': '({a: 1, b: 2}\n)',
+    '{a: 1; b: 2}': '{a: 1; b: 2}',
     '{} + []': '{} + []'
   };
   for (var key in cases) {
-    if (cases.hasOwnProperty(key)) {
-      var actual = $.utils.code.rewriteForEval(key);
-      if (actual !== cases[key]) {
-        throw Error('Expected: ' + cases[key] + ' Actual: ' + actual);
-      }
+    if (!cases.hasOwnProperty(key)) continue;
+    var actual = $.utils.code.rewriteForEval(key);
+    if (actual !== cases[key]) {
+      throw Error('Expected: ' + cases[key] + ' Actual: ' + actual);
     }
   }
 };
