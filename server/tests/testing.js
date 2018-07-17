@@ -179,7 +179,15 @@ T.prototype.expect = function(name, got, want, message) {
     this.pass(name);
   } else {
     message = message ? message + '\n' : '';
-    this.fail(name, util.format('%sgot %o  want %o', message, got, want));
+    // Are they both strings, and at least one has multiple lines?
+    if (typeof(got) === 'string' && typeof(want) === 'string' &&
+        (got.trimRight().split('\n').length > 1 ||
+        want.trimRight().split('\n').length > 1)) {
+      message = util.format('%sgot:\n%s\nwant:\n%s', message, got, want);
+    } else {
+      message = util.format('%sgot %o  want %o', message, got, want);
+    }
+    this.fail(name, message);
   }
 };
 
