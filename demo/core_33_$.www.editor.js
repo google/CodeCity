@@ -58,7 +58,7 @@ $.www.editor.save = function(obj, key, src) {
    * to copy any properties from the old value to the new one.
    */
   // Use Acorn to trim source to first expression.
-  var ast = $.utils.acorn.parseExpressionAt(src, 0, { ecmaVersion: 5 });
+  var ast = $.utils.acorn.parseExpressionAt(src, 0);
   src = src.substring(ast.start, ast.end);
   // Evaluate src in global scope (eval by any other name, literally).
   // TODO: don't use eval - prefer Function constructor for
@@ -95,7 +95,7 @@ $.www.editor.www.jssp = [
   'if (src) {',
   '  try {',
   '    // Use Acorn to trim source to first expression.',
-  '    var ast = $.utils.acorn.parseExpressionAt(src, 0, { ecmaVersion: 5 });',
+  '    var ast = $.utils.acorn.parseExpressionAt(src, 0);',
   '    src = src.substring(ast.start, ast.end);',
   '    src = $.www.editor.save(obj, key, src);',
   '    status = \'(saved)\';',

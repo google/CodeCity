@@ -136,3 +136,65 @@ $.utils.code.toSourceSafe = function(value) {
     throw e;
   }
 };
+
+$.utils.code.rewriteForEval = function(src) {
+  // Eval treats {} as an empty block (return value undefined).
+  // Eval treats {'a': 1} as a syntax error.
+  // Eval treats {a: 1} as block with a labeled statement (return value 1).
+  // Detect these cases and enclose in parenthesis.
+  // But don't mess with: {var x = 1; x + x;}
+  // This is consistent with the console on Chrome and Node.
+  try {
+    var ast = $.utils.acorn.parse(src);
+  } catch (e) {
+    try {
+      ast = $.utils.acorn.parseExpressionAt(src, 0);
+      if (src.substring(ast.end).trim() !== '') {
+        throw SyntaxError('Not just an expression');
+      }
+    } catch (e) {
+      // This eval will fail.  Have fun.
+      return src;
+    }
+    // This is an object literal: {'a': 1}
+    return '(' + src + '\n)';
+  }
+  if (ast.type === 'Program' && ast.body.length === 1 &&
+      ast.body[0].type === 'BlockStatement') {
+    if (ast.body[0].body.length === 0) {
+      // This is an empty object: {}
+      return '(' + src + '\n)';
+    }
+    if (ast.body[0].body.length === 1 &&
+        ast.body[0].body[0].type === 'LabeledStatement' &&
+        ast.body[0].body[0].body.type === 'ExpressionStatement') {
+      // This is an object literal: {a: 1}
+      return '(' + src + '\n)';
+    }
+  }
+  return src;
+};
+
+$.utils.code.rewriteForEval.unittest = function() {
+  var cases = {
+    '1 + 2': '1 + 2',
+    '1 + 2;\n3 + 4;': '1 + 2;\n3 + 4;',
+    '{}': '({}\n)',
+    '{};\n3 + 4;': '{};\n3 + 4;',
+    '{"a": 1}': '({"a": 1}\n)',
+    '{"a": 1};': '{"a": 1};',
+    '{a: 1}': '({a: 1}\n)',
+    '{a: 1};': '{a: 1};',
+    '{a: 1}  // Comment': '({a: 1}  // Comment\n)',
+    '{a: 1, b: 2}': '({a: 1, b: 2}\n)',
+    '{a: 1; b: 2}': '{a: 1; b: 2}',
+    '{} + []': '{} + []'
+  };
+  for (var key in cases) {
+    if (!cases.hasOwnProperty(key)) continue;
+    var actual = $.utils.code.rewriteForEval(key);
+    if (actual !== cases[key]) {
+      throw Error('Expected: ' + cases[key] + ' Actual: ' + actual);
+    }
+  }
+};

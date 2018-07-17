@@ -26,3 +26,5 @@
 // possible.
 var exports = undefined;
 var module = undefined;
+
+$.utils.acorn.defaultOptions.ecmaVersion = 5;
