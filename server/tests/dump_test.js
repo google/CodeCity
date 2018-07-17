@@ -135,6 +135,52 @@ exports.testDumperPrototypeToExpr = function(t) {
 };
 
 /**
+ * Unit tests for the Dumper.prototype.dumpBinding method.
+ * @param {!T} t The test runner object.
+ */
+exports.testDumperPrototypeDumpBinding = function(t) {
+  const intrp = getInterpreter();
+  const dumper = new Dumper(intrp, simpleSpec);
+
+  // Create UserFunction to dump.
+  intrp.createThreadForSrc(`
+      function f1(arg) {}
+      var f2 = function(arg) {};
+      f2.f3 = function f4(arg) {};
+      var obj = {a: 1, b: 2, c:3};
+      var arr = [42, 69, 105];
+      var date = new Date('1975-07-27');
+      var re = /foo/ig;
+  `);
+  intrp.run();
+  const func = intrp.global.get('foo');
+
+  const cases = [  // Order matters.
+    ['Object', Do.DECL, 'var Object;'],
+    ['Object', Do.SET, "Object = new 'Object';"],
+    ['f1', Do.DECL, 'var f1;'],
+    // Actually want 'function f1(arg) {};'.
+    ['f1', Do.SET, 'f1 = function f1(arg) {};'],
+    ['f2', Do.SET, 'var f2 = function(arg) {};'],
+    ['f2.f3', Do.DECL, 'f2.f3 = undefined;'],
+    ['f2.f3', Do.SET, 'f2.f3 = function f4(arg) {};'],
+    // Actually want 'var obj = {a: 1, b:2, c: 3};'.
+    ['obj', Do.SET, 'var obj = {};'],
+    // Actually want 'var arr = [42, 69, 105];'
+    ['arr', Do.SET, 'var arr = [];'],
+    ['date', Do.SET, "var date = new Date('1975-07-27T00:00:00.000Z');"],
+    ['re', Do.SET, 'var re = /foo/gi;'],
+  ];
+  for (const tc of cases) {
+    const parts = toParts(tc[0]);
+    var r = dumper.dumpBinding(parts, tc[1]);
+    t.expect(
+        util.format('Dumper.p.dumpBinding(%o, %o)', parts, tc[1]), r, tc[2]);
+  }
+
+};
+
+/**
  * Unit tests for the Dumper class
  * @param {!T} t The test runner object.
  */
