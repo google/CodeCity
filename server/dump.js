@@ -80,10 +80,15 @@ ContentEntry.prototype.reorder;
 
 /**
  * Possible things to do (or have done) with a variable / property
- * binding.
+ * binding.  Note that all valid 'do' values are truthy.
  * @enum {number}
  */
 var Do = {
+  /**
+   * Not started yet.  Only valid as a 'done' value, not as a 'do' value.
+   */
+  UNSTARTED: 0,
+  
   /**
    * Skip the named binding entirely (unless it or an extension of it
    * is explicitly mentioned in a later config directive); if the data
@@ -318,41 +323,47 @@ Dumper.prototype.getValueForParts = function(parts) {
  * @return {string} An eval-able program to initialise the specified binding.
  */
 Dumper.prototype.dumpBinding = function(parts, todo) {
-  var line = [];
+  var output = [];
   var lhs = fromParts(parts);
   var /** Info */ info;
+  var /** string */ name;
 
-  // Figure out if we need to prefix with 'var', plus record what we
-  // are about to do.
-  if (parts.length === 1) {
-    var varName = parts[0];
+  // Find info for scope/object on which we will be creating a binding.
+  if (parts.length < 1) {
+    throw RangeError("Can't bind nothing");
+  } else if (parts.length === 1) {
+    name = parts[0];
     info = this.getScopeInfo(this.scope);
-    var done = info.done[varName];
-    if (done === undefined || done < Do.DECL ) {
-      line.push('var ');
-      info.done[varName] = (todo === Do.DECL) ? Do.DECL : Do.SET;
-    }
   } else {
     var obj = this.getValueForParts(parts.slice(0, parts.length - 1));
     if (!(obj instanceof this.intrp.Object)) {
       throw Error("Can't set properties of primitive");
     }
+    name = parts[parts.length - 1];
     info = this.getObjectInfo(obj);
-    var propName = parts[parts.length - 1];
-    info.done[propName] = (todo === Do.DECL) ? Do.DECL : Do.SET;
   }
-  line.push(fromParts(parts));
 
-  if (todo === Do.DECL && parts.length > 1) {
-    // Can't "declare" a property, but can make sure it exists.
-    line.push(' = undefined');
-  } else if (todo >= Do.SET) {
-    // Add initialiser.
+  var done = info.done[name] || Do.UNSTARTED;
+  var doDecl = (todo >= Do.DECL && done < Do.DECL);
+  var doInit = (todo >= Do.SET && done < Do.SET);
+
+  // Begin with var if declaring a variable.
+  if (doDecl && parts.length === 1) output.push('var ');
+  // Mention name we are declaring / initializing (if we are doing either).
+  if (doDecl || doInit) output.push(lhs);
+  // Add initialiser.
+  if (doInit) {
     var value = this.getValueForParts(parts);
-    line.push(' = ', this.toExpr(value, parts));
+    output.push(' = ', this.toExpr(value, parts));
+  } else if (doDecl && parts.length > 1) {
+    // Can't "declare" a property, but can make sure it exists.
+    output.push(' = undefined');
   }
-  line.push(';');
-  return line.join('');
+  // End line if non-empty.
+  if (output.length > 0) output.push(';\n');
+  // Record what we've just done.
+  info.done[name] = /** @type {Do} */(Math.max(done, Math.min(todo, Do.SET)));
+  return output.join('');
 };
 
 /**
