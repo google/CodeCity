@@ -198,8 +198,22 @@ var Config = function(spec) {
 };
 
 /**
+ * Dump-state information for a single scope or object.  Implemented
+ * by ScopeInfo and ObjectInfo.
+ * @interface
+ */
+var Info = function() {
+  /**
+   * Map of variable or property name -> dump status.
+   * @type {!Object<string, Do>}
+   */
+  this.done;
+};
+
+/**
  * Dump-state information for a single scope.
  * @constructor
+ * @implements {Info}
  * @param {!Interpreter.Scope} scope The scope to keep state for.
  */
 var ScopeInfo = function(scope) {
@@ -214,6 +228,7 @@ var ScopeInfo = function(scope) {
 /**
  * Dump-state information for a single object.
  * @constructor
+ * @implements {Info}
  * @param {!Interpreter.prototype.Object} obj The object to keep state for.
  */
 var ObjectInfo = function(obj) {
@@ -299,32 +314,33 @@ Dumper.prototype.getValueForParts = function(parts) {
  * Get a source text to declare and optionally initialise a particular
  * binding.
  * @param {Parts} parts The parts for the path to be dumped.
- * @param {Do} what How much to dump.  Must be >= Do.DECL.
+ * @param {Do} todo How much to dump.  Must be >= Do.DECL.
  * @return {string} An eval-able program to initialise the specified binding.
  */
-Dumper.prototype.dumpBinding = function(parts, what) {
+Dumper.prototype.dumpBinding = function(parts, todo) {
   var line = [];
   var lhs = fromParts(parts);
+  var /** Info */ info;
 
   // Figure out if we need to prefix with 'var', plus record what we
   // are about to do.
   if (parts.length === 1) {
     var varName = parts[0];
-    var si = this.getScopeInfo(this.scope);
-    var sidvn = si.done[varName];
-    if (sidvn === undefined || sidvn < Do.DECL ) {
+    info = this.getScopeInfo(this.scope);
+    var done = info.done[varName];
+    if (done === undefined || done < Do.DECL ) {
       line.push('var ');
-      si.done[varName] = (what === Do.DECL) ? Do.DECL : Do.SET;
+      info.done[varName] = (todo === Do.DECL) ? Do.DECL : Do.SET;
     }
   } else {
     var obj = this.getValueForParts(parts.slice(0, parts.length - 1));
     if (!(obj instanceof this.intrp.Object)) {
       throw Error("Can't set properties of primitive");
     }
-    var oi = this.getObjectInfo(obj);
+    info = this.getObjectInfo(obj);
     var propName = parts[parts.length - 1];
-    oi.done[propName] = (what === Do.DECL) ? Do.DECL : Do.SET;
-    if (what === Do.DECL) {
+    info.done[propName] = (todo === Do.DECL) ? Do.DECL : Do.SET;
+    if (todo === Do.DECL) {
       // Can't "declare" a property, but can make sure it exists.
       line.push(' = undefined');
     }
@@ -332,7 +348,7 @@ Dumper.prototype.dumpBinding = function(parts, what) {
   line.push(fromParts(parts));
 
   // Add initialiser if not just declaring.
-  if (what >= Do.SET) {
+  if (todo >= Do.SET) {
     var value = this.getValueForParts(parts);
     line.push(' = ', this.toExpr(value, parts));
   }
