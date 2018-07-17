@@ -340,15 +340,14 @@ Dumper.prototype.dumpBinding = function(parts, todo) {
     info = this.getObjectInfo(obj);
     var propName = parts[parts.length - 1];
     info.done[propName] = (todo === Do.DECL) ? Do.DECL : Do.SET;
-    if (todo === Do.DECL) {
-      // Can't "declare" a property, but can make sure it exists.
-      line.push(' = undefined');
-    }
   }
   line.push(fromParts(parts));
 
-  // Add initialiser if not just declaring.
-  if (todo >= Do.SET) {
+  if (todo === Do.DECL && parts.length > 1) {
+    // Can't "declare" a property, but can make sure it exists.
+    line.push(' = undefined');
+  } else if (todo >= Do.SET) {
+    // Add initialiser.
     var value = this.getValueForParts(parts);
     line.push(' = ', this.toExpr(value, parts));
   }
