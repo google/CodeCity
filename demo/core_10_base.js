@@ -402,56 +402,58 @@ $.user.think.dobj = 'any';
 $.user.think.prep = 'any';
 $.user.think.iobj = 'any';
 
-$.user.eval = function($$$cmd) {
+$.user.eval = function(cmd) {
   // Format:  ;1+1    -or-    eval 1+1
-  // To reduce the likelihood of clashes with identifiers in the evaled
-  // code, this function has only a single, awkwardly-named parameter
-  // and has no local variables of its own.  Conversely, however, we
-  // create a few local variables with short, convenient names as
-  // aliases for commonly-used values.
-  $$$cmd =
-      ($$$cmd.cmdstr[0] === ';') ? $$$cmd.cmdstr.substring(1) : $$$cmd.argstr;
-  $$$cmd = $.utils.code.rewriteForEval($$$cmd);
+  var src = (cmd.cmdstr[0] === ';') ? cmd.cmdstr.substring(1) : cmd.argstr;
+  src = $.utils.code.rewriteForEval(src);
+  var out;
   try {
-    var me = this;
-    var here = this.location;
-    $$$cmd = eval($$$cmd);
+    // Can't
+    out = this.eval.doEval_(src);
     try {
       // Attempt to print a source-legal representation.
-      $$$cmd = $.utils.code.toSource($$$cmd);
+      out = $.utils.code.toSource(out);
     } catch (e) {
       try {
         // Maybe it's something JSON can deal with (like an array).
-        $$$cmd = JSON.stringify($$$cmd);
+        out = JSON.stringify(out);
       } catch (e) {
         try {
           // Maybe it's a recursive data structure.
-          $$$cmd = String($$$cmd);
+          out = String(out);
         } catch (e) {
           // Maybe it's Object.create(null).
-          $$$cmd = '[Unprintable value]';
+          out = '[Unprintable value]';
         }
       }
     }
   } catch (e) {
     if (e instanceof Error) {
-      $$$cmd = String(e.name);
+      out = String(e.name);
       if (e.message) {
-        $$$cmd += ': ' + String(e.message);
+        out += ': ' + String(e.message);
       }
       if (e.stack) {
-        $$$cmd += '\n' + e.stack;
+        out += '\n' + e.stack;
       }
     } else {
-      $$$cmd = 'Unhandled exception: ' + String(e);
+      out = 'Unhandled exception: ' + String(e);
     }
   }
-  user.narrate('⇒ ' + $$$cmd);
+  user.narrate('⇒ ' + out);
 };
 $.user.eval.verb = 'eval|;.*';
 $.user.eval.dobj = 'any';
 $.user.eval.prep = 'any';
 $.user.eval.iobj = 'any';
+
+$.user.eval.doEval_ = function($$$src) {
+  // Execute eval in a scope with minimal variables.
+  var me = this;
+  var here = this.location;
+  return eval($$$src);
+};
+
 
 $.user.edit = function(cmd) {
   var url = $.www.editor.edit(cmd.iobj, cmd.iobjstr, cmd.dobjstr);
