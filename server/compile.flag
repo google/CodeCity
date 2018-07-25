@@ -45,5 +45,6 @@ registry.js
 interpreter.js
 serialize.js
 code.js
+selector.js
 dump.js
 codecity.js
