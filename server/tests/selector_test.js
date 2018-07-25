@@ -44,9 +44,9 @@ exports.testSelector = function(t) {
   for (const tc of cases) {
     const s = new Selector(tc[0]);
     const name = util.format('new Selector(%o)', tc[0]);
-    t.expect(name + '.parts.length', s.parts.length, tc[1]);
-    t.expect(name + '.parts[0]', s.parts[0], tc[2]);
-    t.expect(name + '.parts[/*last*/]', s.parts[s.parts.length - 1], tc[3]);
+    t.expect(name + '.length', s.length, tc[1]);
+    t.expect(name + '[0]', s[0], tc[2]);
+    t.expect(name + '[/*last*/]', s[s.length - 1], tc[3]);
     t.expect(name + '.toString()', s.toString(), tc[4]);
     t.expect(name + '.toExpr()', s.toExpr(), tc[4]);
   }
