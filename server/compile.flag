@@ -44,4 +44,5 @@ iterable_weakset.js
 registry.js
 interpreter.js
 serialize.js
+selector.js
 codecity.js
