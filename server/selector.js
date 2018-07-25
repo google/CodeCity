@@ -25,29 +25,38 @@
 'use strict';
 
 /**
+ * A Selector is just an array of Parts, which happens to have
+ * Selector.prototype (with various useful convenience methods) in its
+ * prototype chain.
  * @constructor
- * @param {string|!Array<Selector.Part>} selector
+ * @extends {Array<Selector.Part>}
+ * @param {string|!Array<Selector.Part>|!Selector} s A Selector, Parts
+ *     array or selector string.
  */
-var Selector = function(selector) {
+var Selector = function(s) {
   var /** !Array<Selector.Part> */ parts;
-  if (Array.isArray(selector)) {
-    // Validate parts list.
-    if (selector.length < 1) throw RangeError('Zero-length parts list??');
-    for (var i = 0; i < selector.length; i++) {
-      if (typeof selector[i] !== 'string') {
-        throw TypeError('Invalid part in selector parts array');
+  if (Array.isArray(s)) {
+    parts = [];
+    // Validate & copy parts list.
+    if (typeof s.length < 1) throw RangeError('Zero-length parts list??');
+    if (s.length < 1) throw RangeError('Zero-length parts list??');
+    for (var i = 0; i < s.length; i++) {
+      if (typeof s[i] !== 'string') {
+        throw TypeError('Invalid part in parts array');
       }
+      parts[i] = s[i];
     }
-    parts = selector;
-  } else if (typeof selector === 'string') {
+  } else if (typeof s === 'string') {
     // Parse selector text.
-    parts = selector.split('.');
+    parts = s.split('.');
   } else {
     throw TypeError('Not a selector or parts array');
   }
-  /** @const @type {!Array<Selector.Part>} */
-  this.parts = parts;
+  Object.setPrototypeOf(parts, Selector.prototype);
+  return parts;
 };
+
+Object.setPrototypeOf(Selector.prototype, Array.prototype);
 
 /**
  * Return the selector as an evaluable expression yeilding the
@@ -55,7 +64,7 @@ var Selector = function(selector) {
  * @return {string} The selector as a string.
  */
 Selector.prototype.toExpr = function() {
-  return this.parts.join('.');
+  return this.join('.');
 };
 
 /**
@@ -68,7 +77,7 @@ Selector.prototype.toExpr = function() {
  * @return {string} The selector as a string.
  */
 Selector.prototype.toSetExpr = function(valueExpr) {
-  return this.parts.join('.') + ' = ' + valueExpr;
+  return this.join('.') + ' = ' + valueExpr;
 };
 
 /**
@@ -76,7 +85,7 @@ Selector.prototype.toSetExpr = function(valueExpr) {
  * @return {string} The selector as a string.
  */
 Selector.prototype.toString = function() {
-  return this.parts.join('.');
+  return this.join('.');
 };
 
 /** @typedef {string} */
