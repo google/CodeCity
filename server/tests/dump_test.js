@@ -167,13 +167,16 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     ['f2', Do.SET, 'var f2 = function(arg) {};\n'],
     ['f2.f3', Do.DECL, 'f2.f3 = undefined;\n'],
     ['f2.f3', Do.SET, 'f2.f3 = function f4(arg) {};\n'],
-    // Actually want 'var obj = {a: 1, b:2, c: 3};\n'.
     ['obj', Do.SET, 'var obj = {};\n'],
-    // Actually want 'var arr = [42, 69, 105, obj];\n'
-    ['arr', Do.SET, 'var arr = [];\n'],
+    ['obj', Do.RECURSE, 'obj.a = 1;\nobj.b = 2;\nobj.c = 3;\n'],
+    // Actually want 'var arr = [42, 69, 105, obj];\n'.
+    ['arr', Do.RECURSE, 'var arr = [];\narr[0] = 42;\narr[1] = 69;\n' +
+        'arr[2] = 105;\narr[3] = obj;\n'],
     ['date', Do.SET, "var date = new Date('1975-07-27T00:00:00.000Z');\n"],
     ['re', Do.SET, 'var re = /foo/gi;\n'],
   ];
+
+  
   for (const tc of cases) {
     const s = new Selector(tc[0]);
     let r = dumper.dumpBinding(s, tc[1]);
