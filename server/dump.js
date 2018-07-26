@@ -329,9 +329,7 @@ Dumper.prototype.dumpBinding = function(selector, todo) {
   var /** string */ name;
 
   // Find info for scope/object on which we will be creating a binding.
-  if (selector.length < 1) {
-    throw RangeError("Can't bind nothing");
-  } else if (selector.length === 1) {
+  if (selector.isVar()) {
     name = selector[0];
     info = this.getScopeInfo(this.scope);
   } else {
@@ -350,14 +348,14 @@ Dumper.prototype.dumpBinding = function(selector, todo) {
   var doInit = (todo >= Do.SET && done < Do.SET);
 
   // Begin with var if declaring a variable.
-  if (doDecl && selector.length === 1) output.push('var ');
+  if (doDecl && selector.isVar()) output.push('var ');
   // Mention name we are declaring / initializing (if we are doing either).
   if (doDecl || doInit) output.push(selector.toExpr());
   // Add initialiser.
   if (doInit) {
     var value = this.getValueForSelector(selector);
     output.push(' = ', this.toExpr(value, selector));
-  } else if (doDecl && selector.length > 1) {
+  } else if (doDecl && !selector.isVar()) {
     // Can't "declare" a property, but can make sure it exists.
     output.push(' = undefined');
   }
