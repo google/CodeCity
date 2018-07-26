@@ -346,23 +346,54 @@ Dumper.prototype.dumpBinding = function(selector, todo) {
   var done = info.done[name] || Do.UNSTARTED;
   var doDecl = (todo >= Do.DECL && done < Do.DECL);
   var doInit = (todo >= Do.SET && done < Do.SET);
+  var doRecurse = (todo >= Do.RECURSE && done < Do.RECURSE);
 
-  // Begin with var if declaring a variable.
-  if (doDecl && selector.isVar()) output.push('var ');
-  if (doInit) {
+  // Get value for initialiser or recursion.
+  if (doInit || doRecurse) {
     var value = this.getValueForSelector(selector);
-    output.push(selector.toSetExpr(this.toExpr(value, selector)));
-  } else if (doDecl) {
-    if (selector.isVar()) {
-      output.push(selector.toExpr());
-    } else {  // Can't "declare" a property, but can make sure it exists.
-      output.push(selector.toSetExpr('undefined'));
-    }
   }
-  // End line if non-empty.
-  if (output.length > 0) output.push(';\n');
-  // Record what we've just done.
-  info.done[name] = /** @type {Do} */(Math.max(done, Math.min(todo, Do.SET)));
+
+  // Do declaration / initialisation.
+  if (doDecl || doInit) {
+    // Begin with var if declaring a variable.
+    if (doDecl && selector.isVar()) output.push('var ');
+    if (doInit) {
+      output.push(selector.toSetExpr(this.toExpr(value, selector)));
+    } else if (doDecl) {
+      if (selector.isVar()) {
+        output.push(selector.toExpr());
+      } else {  // Can't "declare" a property, but can make sure it exists.
+        output.push(selector.toSetExpr('undefined'));
+      }
+    }
+    output.push(';\n');
+  }
+
+  // Record what we've done (and are about to do, before recursing, to
+  // avoid infinite loops!)
+  //
+  // TODO(cpcallen): We should probably record some intermediate
+  // state: enough to stop further recursive calls, but not indicating
+  // final completion.
+  info.done[name] = /** @type {Do} */(Math.max(done, todo));
+
+  // Do recursive binding of properties.
+  if (doRecurse && (value instanceof this.intrp.Object)) {
+    var oi = this.getObjectInfo(value);
+    var root = this.intrp.ROOT;
+    var keys = value.ownKeys(root);
+    var subselector = new Selector(selector);
+    for (var i = 0; i < keys.length; i++) {
+      var key = keys[i];
+      if (oi.done[key] >= todo) continue;  // Skip already-done properties.
+      subselector.push(key);
+      output.push(this.dumpBinding(subselector, todo));
+      subselector.pop();
+    }
+    // Record completion.
+    info.done[name] = todo;
+  }
+
   return output.join('');
 };
 
@@ -490,9 +521,20 @@ Dumper.prototype.functionToExpr = function(func) {
 /**
  * Get a source text representation of a given Array object.
  * @param {!Interpreter.prototype.Array} arr Array object to be recreated.
+ * @param {!ObjectInfo=} oi Dump-state info about arr.
  * @return {string} An eval-able representation of obj.
  */
-Dumper.prototype.arrayToExpr = function(arr) {
+Dumper.prototype.arrayToExpr = function(arr, oi) {
+  oi = oi || this.getObjectInfo(arr);
+  var root = this.intrp.ROOT;
+  var lastIndex = arr.get('length', root) - 1;
+  if (lastIndex < 0 || arr.getOwnPropertyDescriptor(String(lastIndex),  root)) {
+    // No need to set .length if it will be set via setting final index.
+    oi.done['length'] = Do.SET;
+  } else {
+    // Length exists; don't worry about it when preserving propery order.
+    oi.done['length'] = Do.DECL;
+  }
   return '[]';
 };
 
