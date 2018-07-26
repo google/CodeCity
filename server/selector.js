@@ -59,6 +59,15 @@ var Selector = function(s) {
 Object.setPrototypeOf(Selector.prototype, Array.prototype);
 
 /**
+ * Returns true iff the selector represents a top-level variable
+ * binding.
+ * @return {boolean} Is selector for a variable?
+ */
+Selector.prototype.isVar = function() {
+  return this.length === 1 && typeof this[0] === 'string';
+};
+
+/**
  * Return the selector as an evaluable expression yeilding the
  * selected value.
  * @return {string} The selector as a string.
