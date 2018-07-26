@@ -26,6 +26,7 @@
 
 var code = require('./code');
 var Interpreter = require('./interpreter');
+var Selector = require('./selector');
 
 /**
  * @typedef {{filename: string,
@@ -184,10 +185,10 @@ var Config = function(spec) {
           content = {path: sc.path, do: sc.do, reorder: Boolean(sc.reorder)};
         }
         entry.contents.push(content);
-        var parts = toParts(content.path);
+        var selector = new Selector(content.path);
         var /** ?ConfigNode */ cn = this.tree;
-        for (var j = 0; j < parts.length; j++) {
-          cn = cn.kidFor(parts[j]);
+        for (var j = 0; j < selector.length; j++) {
+          cn = cn.kidFor(selector[j]);
         }
         // Now cn is final ConfigNode for path (often a leaf).
         cn.firstFileNo = fileNo;
@@ -240,7 +241,7 @@ var ObjectInfo = function(obj) {
   this.obj = obj;
   /**
    * Referecne to this object, once created.
-   * @type {Parts|undefined}
+   * @type {!Selector|undefined}
    */
   this.ref = undefined;
   /**
@@ -296,17 +297,17 @@ Dumper.prototype.getObjectInfo = function(obj) {
 };
 
 /**
- * Get the present value in the interpreter of a referenced by a given
- * part array, starting from the global scope.  If the parts array
- * does not correspond to a valid binding an error is thrown.
- * @param {!Array<string>} parts A parts array
- * @return {Interpreter.Value} The
+ * Get the present value in the interpreter of a particular binding,
+ * specified by selector.  If selector does not correspond to a valid
+ * binding an error is thrown.
+ * @param {!Selector} selector A selector, specifiying a binding.
+ * @return {Interpreter.Value} The value of that binding.
  */
-Dumper.prototype.getValueForParts = function(parts) {
-  if (parts.length < 1) throw RangeError('Zero-length parts list??');
-  var v = this.intrp.global.get(parts[0]);
-  for (var i = 1; i < parts.length; i++) {
-    var key = parts[i];
+Dumper.prototype.getValueForSelector = function(selector) {
+  if (selector.length < 1) throw RangeError('Zero-length selector??');
+  var v = this.intrp.global.get(selector[0]);
+  for (var i = 1; i < selector.length; i++) {
+    var key = selector[i];
     if (!(v instanceof this.intrp.Object)) {
       throw TypeError("Can't get property '" + key + "' of non-object " + v);
     }
@@ -318,28 +319,29 @@ Dumper.prototype.getValueForParts = function(parts) {
 /**
  * Get a source text to declare and optionally initialise a particular
  * binding.
- * @param {Parts} parts The parts for the path to be dumped.
+ * @param {!Selector} selector The selector for the binding to be dumped.
  * @param {Do} todo How much to dump.  Must be >= Do.DECL.
  * @return {string} An eval-able program to initialise the specified binding.
  */
-Dumper.prototype.dumpBinding = function(parts, todo) {
+Dumper.prototype.dumpBinding = function(selector, todo) {
   var output = [];
-  var lhs = fromParts(parts);
   var /** Info */ info;
   var /** string */ name;
 
   // Find info for scope/object on which we will be creating a binding.
-  if (parts.length < 1) {
+  if (selector.length < 1) {
     throw RangeError("Can't bind nothing");
-  } else if (parts.length === 1) {
-    name = parts[0];
+  } else if (selector.length === 1) {
+    name = selector[0];
     info = this.getScopeInfo(this.scope);
   } else {
-    var obj = this.getValueForParts(parts.slice(0, parts.length - 1));
+    var objSel = new Selector(selector);
+    objSel.pop();
+    var obj = this.getValueForSelector(objSel);
     if (!(obj instanceof this.intrp.Object)) {
       throw Error("Can't set properties of primitive");
     }
-    name = parts[parts.length - 1];
+    name = selector[selector.length - 1];
     info = this.getObjectInfo(obj);
   }
 
@@ -348,14 +350,14 @@ Dumper.prototype.dumpBinding = function(parts, todo) {
   var doInit = (todo >= Do.SET && done < Do.SET);
 
   // Begin with var if declaring a variable.
-  if (doDecl && parts.length === 1) output.push('var ');
+  if (doDecl && selector.length === 1) output.push('var ');
   // Mention name we are declaring / initializing (if we are doing either).
-  if (doDecl || doInit) output.push(lhs);
+  if (doDecl || doInit) output.push(selector.toExpr());
   // Add initialiser.
   if (doInit) {
-    var value = this.getValueForParts(parts);
-    output.push(' = ', this.toExpr(value, parts));
-  } else if (doDecl && parts.length > 1) {
+    var value = this.getValueForSelector(selector);
+    output.push(' = ', this.toExpr(value, selector));
+  } else if (doDecl && selector.length > 1) {
     // Can't "declare" a property, but can make sure it exists.
     output.push(' = undefined');
   }
@@ -378,10 +380,10 @@ Dumper.prototype.dumpBinding = function(parts, todo) {
  *     https://github.com/google/closure-compiler/issues/3013 is
  *     fixed.
  * @param {Interpreter.Value} value Arbitrary JS value from this.intrp.
- * @param {Parts=} parts Reference in which value will be stored.
+ * @param {Selector=} selector Location in which value will be stored.
  * @return {string} An eval-able representation of the value.
  */
-Dumper.prototype.toExpr = function(value, parts) {
+Dumper.prototype.toExpr = function(value, selector) {
   var intrp = this.intrp;
   if (!(value instanceof intrp.Object)) {
     return this.primitiveToExpr(value);
@@ -389,11 +391,11 @@ Dumper.prototype.toExpr = function(value, parts) {
 
   // Return existing reference to object (if already created).
   var vi = this.getObjectInfo(value);
-  if (vi.ref) return fromParts(vi.ref);
+  if (vi.ref) return vi.ref.toExpr();
 
   // New object.  Save referece for later use.
-  if (!parts) throw Error('Refusing to create non-referable object');
-  vi.ref = parts;
+  if (!selector) throw Error('Refusing to create non-referable object');
+  vi.ref = selector;
 
   // Object not yet referenced.  Is it a builtin?
   var key = intrp.builtins.getKey(value);
@@ -533,30 +535,6 @@ Dumper.prototype.isShadowed = function(name, scope) {
   return false;
 };
 
-///////////////////////////////////////////////////////////////////////////////
-// Selectors and Parts.
-
-/** @typedef !Array<string> */
-var Parts;
-
-/**
- * Break a selector into an array of parts.
- * @param {string} selector The selector.
- * @return {Parts} The parts.
- */
-var toParts = function(selector) {
-  return selector.split('.');
-};
-
-/**
- * Turn an array of parts into an expression.
- * @param {Parts} parts The parts.
- * @return {string} The expression.
- */
-var fromParts = function(parts) {
-  return parts.join('.');
-};
-
 var dump = function(intrp, spec) {
   var dumper = new Dumper(intrp, spec);
   
@@ -569,5 +547,4 @@ exports.dump = dump;
 // For unit testing only!
 exports.testOnly = {
   Dumper: Dumper,
-  toParts: toParts,
 }

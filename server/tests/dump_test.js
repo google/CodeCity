@@ -30,11 +30,12 @@ const {dump, Do, testOnly} = require('../dump');
 const fs = require('fs');
 const {getInterpreter} = require('./interpreter_common');
 const path = require('path');
+const Selector = require('../selector');
 const {T} = require('./testing');
 const util = require('util');
 
 // Unpack test-only exports from dump:
-const {Dumper, toParts} = testOnly;
+const {Dumper} = testOnly;
 
 /** A very simle Dumper config specification, for testing. */
 const simpleSpec = [{filename: 'all', rest: true}];
@@ -69,7 +70,7 @@ exports.testDumperPrototypePrimitiveToExpr = function(t) {
 
   function doCases(cases) {
     for (const tc of cases) {
-      var r = dumper.primitiveToExpr(tc[0]);
+      const r = dumper.primitiveToExpr(tc[0]);
       t.expect(util.format('dumper.primitiveToExpr(%o)', tc[0]), r, tc[1]);
       t.expect(util.format('eval(dumper.primitiveToExpr(%o))', tc[0]),
           eval(r), tc[0]);
@@ -129,7 +130,7 @@ exports.testDumperPrototypeToExpr = function(t) {
   ];
   for (let i = 0; i < cases.length; i++) {
     const tc = cases[i];
-    var r = dumper.toExpr(tc[0], ['tc', String(i)]);
+    const r = dumper.toExpr(tc[0], new Selector(['tc', String(i)]));
     t.expect(util.format('Dumper.p.toExpr(%s)', tc[1]), r, tc[1]);
   }
 };
@@ -174,9 +175,9 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     ['re', Do.SET, 'var re = /foo/gi;\n'],
   ];
   for (const tc of cases) {
-    const parts = toParts(tc[0]);
-    var r = dumper.dumpBinding(parts, tc[1]);
-    t.expect(util.format('Dumper.p.dumpBinding(%o, %o)', parts, tc[1]),
+    const s = new Selector(tc[0]);
+    let r = dumper.dumpBinding(s, tc[1]);
+    t.expect(util.format('Dumper.p.dumpBinding(%o, %o)', s, tc[1]),
         r, tc[2]);
   }
 
@@ -199,8 +200,8 @@ exports.testDumper = function(t) {
     ['String.prototype.split.length', '2'],
   ];
   for (const tc of cases) {
-    const parts = toParts(tc[0]);
-    let r = dumper.toExpr(dumper.getValueForParts(parts));
+    const s = new Selector(tc[0]);
+    let r = dumper.toExpr(dumper.getValueForSelector(s));
     t.expect('toExpr(/* ' + tc[0] + ' */)', r, tc[1]);
   }
 
@@ -334,7 +335,7 @@ exports.testDumper = function(t) {
       contents: [
         {path: '$.www', do: Do.SET},
         {path: '$.www.ROUTER', do: Do.SET},
-        '$.www.404',  // TODO(cpcallen): support proper selectors.
+        '$.www[404]',
         '$.www.homepage',
         '$.www.robots',
       ],
