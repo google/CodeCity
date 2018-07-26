@@ -349,15 +349,15 @@ Dumper.prototype.dumpBinding = function(selector, todo) {
 
   // Begin with var if declaring a variable.
   if (doDecl && selector.isVar()) output.push('var ');
-  // Mention name we are declaring / initializing (if we are doing either).
-  if (doDecl || doInit) output.push(selector.toExpr());
-  // Add initialiser.
   if (doInit) {
     var value = this.getValueForSelector(selector);
-    output.push(' = ', this.toExpr(value, selector));
-  } else if (doDecl && !selector.isVar()) {
-    // Can't "declare" a property, but can make sure it exists.
-    output.push(' = undefined');
+    output.push(selector.toSetExpr(this.toExpr(value, selector)));
+  } else if (doDecl) {
+    if (selector.isVar()) {
+      output.push(selector.toExpr());
+    } else {  // Can't "declare" a property, but can make sure it exists.
+      output.push(selector.toSetExpr('undefined'));
+    }
   }
   // End line if non-empty.
   if (output.length > 0) output.push(';\n');
