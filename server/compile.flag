@@ -44,5 +44,6 @@ iterable_weakset.js
 registry.js
 interpreter.js
 serialize.js
+code.js
 dump.js
 codecity.js
