@@ -31,7 +31,7 @@
 // require statements with arguments that are not a string literal.
 const compileTargets = [
   require('../codecity'),
-
+  require('./code_test'),
   require('./interpreter_test'),
   require('./interpreter_unit_test'),
   require('./interpreter_test'),
