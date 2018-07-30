@@ -229,6 +229,38 @@ CCC.World.renderMessage = function(msg) {
     CCC.World.panoramaMessages.push(msg);
     return;
   }
+
+  if (msg.type === 'scene' && msg.user) {
+    // This is the user's current location.  Save this environment data.
+    CCC.World.scene = msg;
+  }
+  // Unrequested scenes should only show if either there is no immediately
+  // following message (within half a second), or the following message is
+  // something other than say/think/narrate.
+  if (msg.type === 'scene' && !msg.requested) {
+    msg.requested = true;
+    CCC.World.renderMessage.pendingSceneMsg_ = msg;
+    clearTimeout(CCC.World.renderMessage.pendingScenePid_);
+    CCC.World.renderMessage.pendingScenePid_ = setTimeout(function() {
+        // No following message arrived.  Render scene change.
+        CCC.World.renderMessage(msg);
+      }, 500);
+    return;
+  }
+  if (msg.type === 'say' || msg.type === 'think' || msg.type === 'narrate' ||
+      msg.type === 'scene') {
+    // Throw away any pending scene change since say/think/narrate will show
+    // the updated scene.
+    CCC.World.renderMessage.pendingSceneMsg_ = null;
+    clearTimeout(CCC.World.renderMessage.pendingScenePid_);
+  }
+  if (CCC.World.renderMessage.pendingSceneMsg_) {
+    // Show any pending scene before the current message.
+    CCC.World.renderMessage(CCC.World.renderMessage.pendingSceneMsg_);
+    CCC.World.renderMessage.pendingSceneMsg_ = null;
+    clearTimeout(CCC.World.renderMessage.pendingScenePid_);
+  }
+
   if (!CCC.World.panelWidths.length) {
     CCC.World.panelWidths = CCC.World.rowWidths();
   }
@@ -255,6 +287,9 @@ CCC.World.renderMessage = function(msg) {
     CCC.World.renderMessage(msg);
   }
 };
+
+CCC.World.renderMessage.pendingSceneMsg_ = null;
+CCC.World.renderMessage.pendingScenePid_ = 0;
 
 /**
  * Experimentally render a new message onto the most recent history frame.
@@ -338,10 +373,6 @@ CCC.World.prerenderHistory = function(msg) {
     //    }
     //  ]
     //}
-    if (msg.user) {
-      // This is the user's current location.  Save this environment data.
-      CCC.World.scene = msg;
-    }
     // Each scene message needs its own frame.
     if (CCC.World.scratchHistory) {
       return false;
