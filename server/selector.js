@@ -24,6 +24,8 @@
  */
 'use strict';
 
+var code = require('./code');
+
 /**
  * A Selector is just an array of Parts, which happens to have
  * Selector.prototype (with various useful convenience methods) in its
@@ -73,7 +75,19 @@ Selector.prototype.isVar = function() {
  * @return {string} The selector as a string.
  */
 Selector.prototype.toExpr = function() {
-  return this.join('.');
+  var /** !Array<string> */ out = [this[0]];
+  for (var i = 1; i < this.length; i++) {
+    var part = this[i];
+    if (identifierRE.test(part)) {
+      out.push('.', part);
+    } else if (String(Number(part)) === part) {
+      // String represents a number with same string representation.
+      out.push('[', part, ']');
+    } else {
+      out.push('[', code.quote(part), ']');
+    }
+  }
+ return out.join('');
 };
 
 /**
@@ -86,7 +100,8 @@ Selector.prototype.toExpr = function() {
  * @return {string} The selector as a string.
  */
 Selector.prototype.toSetExpr = function(valueExpr) {
-  return this.join('.') + ' = ' + valueExpr;
+  // TODO(cpcallen): rewrite when support for __proto__  / owner is added.
+  return this.toExpr() + ' = ' + valueExpr;
 };
 
 /**
@@ -94,10 +109,18 @@ Selector.prototype.toSetExpr = function(valueExpr) {
  * @return {string} The selector as a string.
  */
 Selector.prototype.toString = function() {
-  return this.join('.');
+  // TODO(cpcallen): rewrite when support for __proto__  / owner is added.
+  return this.toExpr();
 };
 
 /** @typedef {string} */
 Selector.Part;
+
+/**
+ * RegExp matching valid JavaScript identifiers.
+ * TODO(cpcallen): Make this correspond to ES spec.
+ * @const @type{!RegExp}
+ */
+var identifierRE = /^[A-Za-z_]\w*$/;
 
 module.exports = Selector;
