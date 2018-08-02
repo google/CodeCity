@@ -212,8 +212,7 @@ $.physical.lookJssp.jssp = [
 
 $.physical.inspect = function(cmd) {
   // Open this object in the code editor.
-  // TODO: Deal with selectors that include '#' (part of a bigger problem).
-  var link = '/code?' + $.utils.selector.getSelector(this);
+  var link = '/code?' + encodeURIComponent($.utils.selector.getSelector(this));
   user.writeJson({type: "link", href: link});
 };
 $.physical.inspect.verb = 'inspect';
