@@ -210,8 +210,20 @@ $.physical.lookJssp.jssp = [
   '  </tr>',
   '</table>'].join('\n');
 
+$.physical.inspect = function(cmd) {
+  // Open this object in the code editor.
+  // TODO: Deal with selectors that include '#' (part of a bigger problem).
+  var link = '/code?' + $.utils.selector.getSelector(this);
+  user.writeJson({type: "link", href: link});
+};
+$.physical.inspect.verb = 'inspect';
+$.physical.inspect.dobj = 'this';
+$.physical.inspect.prep = 'none';
+$.physical.inspect.iobj = 'none';
+
 $.physical.getCommands = function(who) {
-  return ['look ' + this.name];
+  return ['look ' + this.name,
+          'inspect ' + this.name];
 };
 
 $.physical.tell = function(json) {
