@@ -194,14 +194,15 @@ $.www.code.editor.www = function(request, response) {
                 // Fetch a fresh global pseudo object for the returned src.
                 object = $.utils.selector.getGlobal();
                 data.saved = true;
+                data.butter = 'Saved';
               } else {
                 data.butter = 'Unknown Global';
               }
             } else {
               object[lastPart.value] = saveValue;
               data.saved = true;
+              data.butter = 'Saved';
             }
-            data.butter = 'Saved';
           } else if (lastPart.type === '^') {
             Object.setPrototypeOf(object, saveValue);
             data.butter = 'Prototype Set';
