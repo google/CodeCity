@@ -448,7 +448,9 @@ $.user.eval.prep = 'any';
 $.user.eval.iobj = 'any';
 
 $.user.eval.doEval_ = function($$$src, me, here) {
-  // Execute eval in a scope with minimal variables.
+  // Execute eval in a scope with no variables.
+  // The '$$$src' parameter is awkwardly-named so as not to collide with user
+  // evaled code.  The 'me' and 'here' parameters are exposed to the user.
   return eval($$$src);
 };
 
