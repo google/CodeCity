@@ -71,17 +71,17 @@ Code.Common.tokenizeSelector = function(text) {
     var index = whitespaceLength + i;
     if (state === null) {
       if (char === "'") {
-        Code.Common.pushUnparsed(buffer, index, tokens);
+        Code.Common.pushUnparsed_(buffer, index, tokens);
         state = 'sqStr';
       } else if (char === '"') {
-        Code.Common.pushUnparsed(buffer, index, tokens);
+        Code.Common.pushUnparsed_(buffer, index, tokens);
         state = 'dqStr';
       } else {
         buffer.push(char);
       }
     } else if (state === 'sqStr') {
       if (char === "'") {
-        Code.Common.pushString("'", buffer, index, tokens);
+        Code.Common.pushString_("'", buffer, index, tokens);
         state = null;
       } else {
         buffer.push(char);
@@ -91,7 +91,7 @@ Code.Common.tokenizeSelector = function(text) {
       }
     } else if (state === 'dqStr') {
       if (char === '"') {
-        Code.Common.pushString('"', buffer, index, tokens);
+        Code.Common.pushString_('"', buffer, index, tokens);
         state = null;
       } else {
         buffer.push(char);
@@ -110,9 +110,9 @@ Code.Common.tokenizeSelector = function(text) {
   if (state !== null) {
     // Convert state into quote type.
     var quotes = (state === 'sqStr' || state === 'sqSlash') ? "'" : '"';
-    Code.Common.pushString(quotes, buffer, index + 1, tokens);
+    Code.Common.pushString_(quotes, buffer, index + 1, tokens);
   } else if (buffer.length) {
-    Code.Common.pushUnparsed(buffer, index + 1, tokens);
+    Code.Common.pushUnparsed_(buffer, index + 1, tokens);
   }
 
   // Second step is to parse each 'unparsed' token and split out '[',  ']' and
@@ -271,8 +271,9 @@ Code.Common.tokenizeSelector = function(text) {
  * @param {!Array<string>} buffer Array of chars that make the string.
  * @param {number} index Char index of start of this token in original input.
  * @param {!Array<!Object>} tokens List of tokens.
+ * @private
  */
-Code.Common.pushString = function(quotes, buffer, index, tokens) {
+Code.Common.pushString_ = function(quotes, buffer, index, tokens) {
   var token = {
     type: 'str',
     raw: quotes + buffer.join('') + quotes,
@@ -301,8 +302,9 @@ Code.Common.pushString = function(quotes, buffer, index, tokens) {
  * @param {!Array<string>} buffer Array of chars that make the value.
  * @param {number} index Character index of this token in original input.
  * @param {!Array<!Object>} tokens List of tokens.
+ * @private
  */
-Code.Common.pushUnparsed = function(buffer, index, tokens) {
+Code.Common.pushUnparsed_ = function(buffer, index, tokens) {
   var raw = buffer.join('');
   buffer.length = 0;
   if (raw) {
