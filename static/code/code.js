@@ -33,7 +33,7 @@ Code.DEFAULT = '$';
  * E.g. '$.foo["bar"]'
  */
 Code.selector = location.search ?
-    decodeURI(location.search.substring(1)) : Code.DEFAULT;
+    decodeURIComponent(location.search.substring(1)) : Code.DEFAULT;
 
 /**
  * Got a ping from someone.  Check sessionStorage to see if selector has
@@ -49,7 +49,8 @@ Code.receiveMessage = function(event) {
   Code.selector = selector;
   if (event) {
     // Change the URL if this is NOT the result of a forwards/back navigation.
-    history.pushState(selector, selector, '/code?' + encodeURI(selector));
+    history.pushState(selector, selector,
+                      '/code?' + encodeURIComponent(selector));
   }
   // Propagate the ping down the tree of frames.
   try {

@@ -96,7 +96,7 @@ Code.ObjectPanel.addLink = function(part, type, section) {
   var newParts = Code.ObjectPanel.parts.concat(part);
   var selector = Code.Common.partsToSelector(newParts);
   var a = document.createElement('a');
-  a.href = '/code?' + encodeURI(selector);
+  a.href = '/code?' + encodeURIComponent(selector);
   a.target = '_blank';
   a.setAttribute('data-link', JSON.stringify(part));
   a.addEventListener('click', Code.ObjectPanel.click);
@@ -223,7 +223,7 @@ Code.ObjectPanel.caseInsensitiveComp = function(a, b) {
   document.head.appendChild(script);
 
   // Fill in the object name.
-  Code.ObjectPanel.parts = JSON.parse(decodeURI(hash));
+  Code.ObjectPanel.parts = JSON.parse(decodeURIComponent(hash));
   var div = document.getElementById('objectTitle');
   var lastPart = Code.ObjectPanel.parts[Code.ObjectPanel.parts.length - 1];
   var name;

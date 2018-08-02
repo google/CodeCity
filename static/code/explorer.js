@@ -623,7 +623,7 @@ Code.Explorer.addPanel = function(component) {
   var panelsScroll = document.getElementById('panelsScroll');
   var iframe = document.createElement('iframe');
   iframe.id = 'objectPanel' + Code.Explorer.panelCount;
-  iframe.src = '/static/code/objectPanel.html#' + encodeURI(component);
+  iframe.src = '/static/code/objectPanel.html#' + encodeURIComponent(component);
   iframe.setAttribute('data-component', component);
   var spacer = document.getElementById('panelSpacer');
   panelsScroll.insertBefore(iframe, spacer);
