@@ -377,6 +377,18 @@ CCC.Log.renderJson = function(json) {
       div.appendChild(document.createTextNode(text));
       CCC.Common.autoHyperlink(div);
       return div;
+    case 'link':
+      // {type: "link", href: "https://example.com/"}
+      var div = document.createElement('div');
+      var a = document.createElement('a');
+      a.href = json.href;
+      a.target = '_blank';
+      a.appendChild(document.createTextNode(json.href));
+      div.appendChild(a);
+      // Note: this opens the link in a new tab regardless of whether the user
+      // is in world or log view.
+      window.open(json.href);
+      return div;
   }
   // Unknown XML.
   return undefined;
