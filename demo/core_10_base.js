@@ -409,7 +409,7 @@ $.user.eval = function(cmd) {
   var out;
   try {
     // Can't
-    out = this.eval.doEval_(src);
+    out = this.eval.doEval_(src, this, this.location);
     try {
       // Attempt to print a source-legal representation.
       out = $.utils.code.toSource(out);
@@ -447,10 +447,8 @@ $.user.eval.dobj = 'any';
 $.user.eval.prep = 'any';
 $.user.eval.iobj = 'any';
 
-$.user.eval.doEval_ = function($$$src) {
+$.user.eval.doEval_ = function($$$src, me, here) {
   // Execute eval in a scope with minimal variables.
-  var me = this;
-  var here = this.location;
   return eval($$$src);
 };
 
