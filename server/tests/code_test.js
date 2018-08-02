@@ -52,7 +52,8 @@ exports.testQuote = function(t) {
     ['"Hi", he said.', "'\"Hi\", he said.'"],
     ["Don't.", '"Don\'t."'],
     ['\'"', "'\\'\"'"],
-    ['\r\n\b\t\\', "'\\r\\n\\b\\t\\\\'"],
+    ['\0\/\b\n\r\t\v\\\x05\u2028\u2029',
+         "'\\0/\\b\\n\\r\\t\\v\\\\\\x05\\u2028\\u2029'"],
   ];
   for (const tc of cases) {
     const r = quote(tc[0]);
