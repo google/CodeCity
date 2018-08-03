@@ -57,6 +57,9 @@ exports.testSelector = function(t) {
 
     ['foo.bar.baz', 3, 'foo', 'baz', 'foo.bar.baz'],
     [['foo', 'bar', 'baz'], 3, 'foo', 'baz', 'foo.bar.baz'],
+
+    ['$._.__.$$', 4, '$', '$$', '$._.__.$$'],
+    [['$', '_', '__', '$$'], 4, '$', '$$', '$._.__.$$'],
   ];
   for (const tc of cases) {
     const s = new Selector(tc[0]);

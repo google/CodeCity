@@ -207,7 +207,7 @@ var tokenize = function(selector) {
   var REs = {
     whitespace: /\s+/y,
     '.': /\./y,
-    id: /[A-Za-z_]\w*/y,  // See also identifierRE below.
+    id: /[A-Za-z_$][A-Za-z0-9_$]*/y,  // See also identifierRE below.
     number: /\d+/y,
     '[': /\[/y,
     ']': /\]/y,
@@ -249,9 +249,8 @@ var tokenize = function(selector) {
 
 /**
  * RegExp matching valid JavaScript identifiers.
- * TODO(cpcallen): Make this correspond to ES spec.
  * @const @type{!RegExp}
  */
-var identifierRE = /^[A-Za-z_]\w*$/;
+var identifierRE = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
 
 module.exports = Selector;
