@@ -24,7 +24,7 @@
  */
 'use strict';
 
-const {quote, testOnly} = require('../code');
+const {quote, parseString, testOnly} = require('../code');
 const {T} = require('./testing');
 const util = require('util');
 
@@ -59,5 +59,41 @@ exports.testQuote = function(t) {
     const r = quote(tc[0]);
     t.expect(util.format('quote(%o)', tc[0]), r, tc[1]);
     t.expect(util.format('eval(quote(%o))', tc[0]), eval(r), tc[0]);
+  }
+};
+
+/**
+ * Unit tests for the parseString function.
+ * @param {!T} t The test runner object.
+ */
+exports.testParseString = function(t) {
+  const cases = [
+    `'foo'`,
+    `'"Hi", he said.'`,
+    `"\\"Hi\\", he said."`,
+    `'Don\\'t.'`,
+    `"Don't."`,
+    `'\\0 \\' \\" \\/ \\b \\n \\r \\t \\v \\\\ \\x00 \\xff \\u1234'`,
+  ];
+  for (const tc of cases) {
+    const r = parseString(tc);
+    t.expect(util.format('parseString(%o)', tc), r, eval(tc));
+  }
+
+  const badCases = [
+    `'foo`,
+    `""Hi", he said."`,
+    `'Don't.'`,
+    `'\\j'`,
+    `'\\x0'`,
+    `'\\u123'`,
+  ];
+  for (const tc of badCases) {
+    try {
+      const r = parseString(tc);
+      t.fail(util.format('parseString(%o)', tc), "Didn't throw.");
+    } catch (e) {
+      t.pass(util.format('parseString(%o)', tc));
+    }
   }
 };
