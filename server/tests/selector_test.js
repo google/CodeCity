@@ -38,14 +38,21 @@ exports.testSelector = function(t) {
     [['foo'], 1, 'foo', 'foo', 'foo'],
 
     ['foo.bar', 2, 'foo', 'bar', 'foo.bar'],
+    ['foo["bar"]', 2, 'foo', 'bar', 'foo.bar'],
+    ["foo['bar']", 2, 'foo', 'bar', 'foo.bar'],
     [['foo', 'bar'], 2, 'foo', 'bar', 'foo.bar'],
 
+    ['foo[42]', 2, 'foo', '42', 'foo[42]'],
     [['foo', '42'], 2, 'foo', '42', 'foo[42]'],
 
+    ['foo["bar baz"]', 2, 'foo', 'bar baz', "foo['bar baz']"],
+    ["foo['bar baz']", 2, 'foo', 'bar baz', "foo['bar baz']"],
     [['foo', 'bar baz'], 2, 'foo', 'bar baz', "foo['bar baz']"],
 
+    ["foo['\"\\'\"']", 2, 'foo', '"\'"', "foo['\"\\'\"']"],
     [['foo', '"\'"'], 2, 'foo', '"\'"', "foo['\"\\'\"']"],
 
+    ['foo["\'\\"\'"]', 2, 'foo', "'\"'", 'foo["\'\\"\'"]'],
     [['foo', "'\"'"], 2, 'foo', "'\"'", 'foo["\'\\"\'"]'],
 
     ['foo.bar.baz', 3, 'foo', 'baz', 'foo.bar.baz'],
