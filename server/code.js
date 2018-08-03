@@ -25,6 +25,74 @@
 'use strict';
 
 /**
+ * A collection of useful regular expressions.
+ */
+var regexps = {};
+
+/**
+ * Matches (globally) escape sequences found in string and regexp
+ * literals.
+ */
+regexps.escapes = /\\(?:["'\\\/0bfnrtv]|u[0-9a-zA-Z]{4}|x[0-9a-zA-Z]{2})/g;
+
+/** Matches a single-quoted string literal. */
+regexps.singleQuotedString =
+    new RegExp("'(?:[^\'\\\\]+|" + regexps.escapes.source + ")*'");
+
+/** Matches a double-quoted string literal. */
+regexps.doubleQuotedString =
+    new RegExp('"(?:[^\"\\\\]+|' + regexps.escapes.source + ')*"');
+
+/** Matches a string literal. */
+regexps.string = new RegExp('(?:' + regexps.singleQuotedString.source + '|' +
+    regexps.doubleQuotedString.source + ')');
+
+/** Matches exaclty a string literal. */
+regexps.stringExact = new RegExp('^' + regexps.string.source + '$');
+
+/**
+ * Convert a string representation of a string literal to a string.
+ * Basically does eval(s), but safely and only if s is a string literal.
+ * @param {string} s A string containing a string literal.
+ * @return {string} The string value of the literal s.
+ */
+var parseString = function(s) {
+  if (!regexps.stringExact.test(s)) {
+    throw new TypeError(quote(s) + ' is not a string literal');
+  };
+  return s.slice(1, -1).replace(regexps.escapes, function(esc) {
+    switch (esc[1]) {
+      case "'":
+      case '"':
+      case '/':
+      case '\\':
+        return esc[1];
+      case '0':
+        return '\0';
+      case 'b':
+        return '\b';
+      case 'f':
+        return '\f';
+      case 'n':
+        return '\n';
+      case 'r':
+        return '\r';
+      case 't':
+        return '\t';
+      case 'v':
+        return '\v';
+      case 'u':
+      case 'x':
+        return String.fromCharCode(parseInt(esc.slice(2), 16));
+      default:
+        // RegExp in call to replace has accepted something we
+        // don't know how to decode.
+        throw new Error('unknown escape sequence "' + esc + '"??');
+    }
+  });
+};
+
+/**
  * Convert a string into a string literal.  We use single or double
  * quotes depending on which occurs less frequently in the string to
  * be escaped (prefering single quotes if it's a tie).  Strictly
@@ -101,6 +169,8 @@ var count = function(str, searchString) {
 };
 
 exports.quote = quote;
+exports.regexps = regexps;
+exports.parseString = parseString;
 
 // For unit testing only!
 exports.testOnly = {
