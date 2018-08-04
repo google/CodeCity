@@ -223,6 +223,11 @@ CCC.World.preprocessMessage = function(msg) {
  * @param {!Object} msg JSON structure.
  */
 CCC.World.renderMessage = function(msg) {
+  if (msg.type === 'link') {
+    // {type: "link", href: "https://example.com/"}
+    // Link is opened by log.  No visualization in world.
+    return;
+  }
   if (isNaN(CCC.World.lastWidth)) {
     // Race condition, message has arrived before world is ready to render.
     // Just add to the panorama queue, it will be rendered later.
