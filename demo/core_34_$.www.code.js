@@ -179,8 +179,10 @@ $.www.code.editor.www = function(request, response) {
       if (request.parameters.src) {
         var ok = true;
         try {
-          // TODO(fraser): Make this secure -- somehow.
-          var saveValue = eval(request.parameters.src);
+          var src = $.utils.code.rewriteForEval(request.parameters.src, true);
+          // Evaluate src in global scope (eval by any other name, literally).
+          var evalGlobal = eval;
+          var saveValue = evalGlobal(src);
         } catch (e) {
           ok = false;
           // TODO(fraser): Send a more informative error message.
