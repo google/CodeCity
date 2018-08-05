@@ -305,23 +305,28 @@ Dumper.prototype.getValueForParts = function(parts) {
  * @return {string} An eval-able representation of the value.
  */
 Dumper.prototype.toExpr = function(value) {
-  if (value instanceof Interpreter.prototype.Object) {
-    var oi = this.getObjectInfo(value);
-
-    // TODO(cpcallen): implement references.
-
-    // Object not yet created.
-    // TODO(cpcallen): check class.
-    switch (value.proto) {
-      case this.intrp.OBJECT:
-        return '{}';
-      case null:
-        return 'Object.create(null)';
-      default:
-        return 'Object.create(' + this.toExpr(value.proto) + ')';
-    }
-  } else {
+  var intrp = this.intrp;
+  if (!(value instanceof intrp.Object)) {
     return this.primitiveToExpr(value);
+  }
+
+  // TODO(cpcallen): implement references.
+
+  // Object not yet referenced.  Is it a builtin?
+  var key = intrp.builtins.getKey(value);
+  if (key) return 'new ' + code.quote(key);
+
+  // Object not yet created.
+  if (value instanceof intrp.Function) {
+    return this.functionToExpr(value);
+  } else if (value instanceof intrp.Array) {
+    return this.arrayToExpr(value);
+  } else if (value instanceof intrp.Date) {
+    return this.dateToExpr(value);
+  } else if (value instanceof intrp.RegExp) {
+    return this.regExpToExpr(value);
+  } else {
+    return this.objectToExpr(value);
   }
 };
 
@@ -367,6 +372,63 @@ Dumper.prototype.primitiveToExpr = function(value) {
         throw TypeError('primitiveToSource called on non-primitive value');
       }
   }
+};
+
+/**
+ * Get a source text representation of a given Object.  May or may not
+ * include all properties, etc.
+ * @param {!Interpreter.prototype.Object} obj Object to be recreated.
+ * @return {string} An eval-able representation of obj.
+ */
+Dumper.prototype.objectToExpr = function(obj) {
+  switch (obj.proto) {
+    case this.intrp.OBJECT:
+      return '{}';
+    case null:
+      return 'Object.create(null)';
+    default:
+      return 'Object.create(' + this.toExpr(obj.proto) + ')';
+  }
+};
+
+/**
+ * Get a source text representation of a given Function object.
+ * @param {!Interpreter.prototype.Function} func Function object to be
+ *     recreated.
+ * @return {string} An eval-able representation of obj.
+ */
+Dumper.prototype.functionToExpr = function(func) {
+  if (!(func instanceof this.intrp.UserFunction)) {
+    throw Error('Unable to dump non-UserFunction');
+  }
+  return func.toString();
+};
+
+/**
+ * Get a source text representation of a given Array object.
+ * @param {!Interpreter.prototype.Array} arr Array object to be recreated.
+ * @return {string} An eval-able representation of obj.
+ */
+Dumper.prototype.arrayToExpr = function(arr) {
+  return '[]';
+};
+
+/**
+ * Get a source text representation of a given Date object.
+ * @param {!Interpreter.prototype.Date} date Date object to be recreated.
+ * @return {string} An eval-able representation of obj.
+ */
+Dumper.prototype.dateToExpr = function(date) {
+  return "new Date('" + date.date.toISOString() + "')";
+};
+
+/**
+ * Get a source text representation of a given RegExp object.
+ * @param {!Interpreter.prototype.RegExp} re RegExp to be recreated.
+ * @return {string} An eval-able representation of obj.
+ */
+Dumper.prototype.regExpToExpr = function(re) {
+  return re.regexp.toString();
 };
 
 /**

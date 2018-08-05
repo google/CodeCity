@@ -43,12 +43,7 @@ exports.testRegistry = function(t) {
   } catch(e) {
     t.pass("reg.get('foo')  // 0");
   }
-  try {
-    reg.getKey(obj);
-    t.fail("reg.getKey(obj)  // 0", "Didn't throw.");
-  } catch(e) {
-    t.pass("reg.getKey(obj)  // 0");
-  }
+  t.expect("reg.getKey(obj)  // 0", reg.getKey(obj), undefined);
 
   // 1: Register obj as 'foo'.
   reg.set('foo', obj);
@@ -66,10 +61,5 @@ exports.testRegistry = function(t) {
   t.expect("reg.has('foo')  // 2", reg.has('foo'), true);
   t.expect("reg.get('foo')  // 2", reg.get('foo'), obj);
   t.expect("reg.getKey(obj)  // 2", reg.getKey(obj), 'foo');
-  try {
-    reg.getKey({});
-    t.fail("reg.getKey({})  // 2", "Didn't throw.");
-  } catch(e) {
-    t.pass("reg.getKey({})  // 2");
-  }
+  t.expect("reg.getKey({})  // 2", reg.getKey({}), undefined);
 };

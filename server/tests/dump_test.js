@@ -36,14 +36,16 @@ const util = require('util');
 // Unpack test-only exports from dump:
 const {Dumper, toParts} = testOnly;
 
+/** A very simle Dumper config specification, for testing. */
+const simpleSpec = [{filename: 'all', rest: true}];
+
 /**
  * Unit tests for the Dumper.prototype.isShadowed method.
  * @param {!T} t The test runner object.
  */
 exports.testDumperPrototypeIsShadowed = function(t) {
   const intrp = getInterpreter();
-  const spec = [{filename: 'all', rest: true}];
-  const dumper = new Dumper(intrp, spec);
+  const dumper = new Dumper(intrp, simpleSpec);
 
   intrp.global.createMutableBinding('foo', 'foo');
   intrp.global.createMutableBinding('bar', 'bar');
@@ -63,10 +65,18 @@ exports.testDumperPrototypeIsShadowed = function(t) {
  */
 exports.testDumperPrototypePrimitiveToExpr = function(t) {
   const intrp = getInterpreter();
-  const spec = [{filename: 'all', rest: true}];
-  const dumper = new Dumper(intrp, spec);
+  const dumper = new Dumper(intrp, simpleSpec);
 
-  let cases = [
+  function doCases(cases) {
+    for (const tc of cases) {
+      var r = dumper.primitiveToExpr(tc[0]);
+      t.expect(util.format('dumper.primitiveToExpr(%o)', tc[0]), r, tc[1]);
+      t.expect(util.format('eval(dumper.primitiveToExpr(%o))', tc[0]),
+          eval(r), tc[0]);
+    }
+  }
+
+  doCases([
     [undefined, 'undefined'],
     [null, 'null'],
     [false, 'false'],
@@ -77,12 +87,7 @@ exports.testDumperPrototypePrimitiveToExpr = function(t) {
     [-Infinity, '-Infinity'],
     [NaN, 'NaN'],
     ['foo', "'foo'"],
-  ];
-  for (const tc of cases) {
-    var r = dumper.primitiveToExpr(tc[0]);
-    t.expect(util.format('quote(%o)', tc[0]), r, tc[1]);
-    t.expect(util.format('eval(quote(%o))', tc[0]), eval(r), tc[0]);
-  }
+  ]);
 
   // Shadow some names and check results are still correct.
   const inner = new Interpreter.Scope(Interpreter.Scope.Type.FUNCTION,
@@ -92,19 +97,40 @@ exports.testDumperPrototypePrimitiveToExpr = function(t) {
   inner.createMutableBinding('undefined', '42');
   dumper.scope = inner;
 
-  cases = [
+  doCases([
     [undefined, '(void 0)'],
     [Infinity, '(1/0)'],
     [-Infinity, '(-1/0)'],
     [NaN, '(0/0)'],
+  ]);
+};
+
+/**
+ * Unit tests for the Dumper.prototype.toExpr method.
+ * @param {!T} t The test runner object.
+ */
+exports.testDumperPrototypeToExpr = function(t) {
+  const intrp = getInterpreter();
+  const dumper = new Dumper(intrp, simpleSpec);
+
+  // Create UserFunction to dump.
+  intrp.createThreadForSrc('function foo(bar) {}');
+  intrp.run();
+  const func = intrp.global.get('foo');
+
+  const cases = [
+    [intrp.OBJECT, "new 'Object.prototype'"],
+    [func, 'function foo(bar) {}'],
+    [new intrp.Object(intrp.ROOT), '{}'],
+    [new intrp.Array(intrp.ROOT), '[]'],
+    [new intrp.Date(new Date('1975-07-27'), intrp.ROOT),
+        "new Date('1975-07-27T00:00:00.000Z')"],
+    [new intrp.RegExp(/foo/ig, intrp.ROOT), '/foo/gi'],
   ];
   for (const tc of cases) {
-    var r = dumper.primitiveToExpr(tc[0]);
-    t.expect(util.format('quote(%o)', tc[0]), r, tc[1]);
-    t.expect(util.format('eval(quote(%o))', tc[0]), eval(r), tc[0]);
+    var r = dumper.toExpr(tc[0]);
+    t.expect(util.format('Dumper.p.toExpr(%s)', tc[1]), r, tc[1]);
   }
-
-
 };
 
 /**
@@ -113,8 +139,7 @@ exports.testDumperPrototypePrimitiveToExpr = function(t) {
  */
 exports.testDumper = function(t) {
   let intrp = getInterpreter();
-  let spec = [{filename: 'all', rest: true}];
-  let dumper = new Dumper(intrp, spec);
+  let dumper = new Dumper(intrp, simpleSpec);
 
   // Test toExpr.
   const cases = [
@@ -149,7 +174,7 @@ exports.testDumper = function(t) {
   }
   intrp.stop();  // Close any listening sockets, so node will exit.
 
-  spec = [
+  const spec = [
     {
       filename: 'core_00_es5',
       contents: [
