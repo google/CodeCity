@@ -209,7 +209,7 @@ exports.testDumper = function(t) {
   }
 
   // Test dump.
-  intrp = new Interpreter;
+  intrp = new Interpreter({noLog: ['net', 'unhandled']});
 
   // Hack to install stubs for builtins found in codecity.js.
   for (const bi of ['CC.log', 'CC.checkpoint', 'CC.shutdown']) {
