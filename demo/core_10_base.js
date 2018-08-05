@@ -418,7 +418,7 @@ $.user.think.iobj = 'any';
 $.user.eval = function(cmd) {
   // Format:  ;1+1    -or-    eval 1+1
   var src = (cmd.cmdstr[0] === ';') ? cmd.cmdstr.substring(1) : cmd.argstr;
-  src = $.utils.code.rewriteForEval(src, false);
+  src = $.utils.code.rewriteForEval(src, /* forceExpression= */ false);
   var out;
   try {
     // Can't
