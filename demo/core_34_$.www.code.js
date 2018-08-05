@@ -179,7 +179,8 @@ $.www.code.editor.www = function(request, response) {
       if (request.parameters.src) {
         var ok = true;
         try {
-          var src = $.utils.code.rewriteForEval(request.parameters.src, true);
+          var src = $.utils.code.rewriteForEval(request.parameters.src,
+                                                /* forceExpression= */ true);
           // Evaluate src in global scope (eval by any other name, literally).
           var evalGlobal = eval;
           var saveValue = evalGlobal(src);

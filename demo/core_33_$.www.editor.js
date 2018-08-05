@@ -58,7 +58,7 @@ $.www.editor.save = function(obj, key, src) {
    * to copy any properties from the old value to the new one.
    */
   var old = obj[key];
-  src = $.utils.code.rewriteForEval(src, true);
+  src = $.utils.code.rewriteForEval(src, /* forceExpression= */ true);
   // Evaluate src in global scope (eval by any other name, literally).
   // TODO: don't use eval - prefer Function constructor for
   // functions; generate other values from an Acorn parse tree.

@@ -177,7 +177,8 @@ $.utils.code.rewriteForEval = function(src, forceExpression) {
   ast = $.utils.acorn.parseExpressionAt(src, 0);
   var remainder = src.substring(ast.end).trim();
   if (remainder !== '') {
-    // Trim off any trailing comments.
+    // Remainder might legally include trailing comments or semicolons.
+    // Remainder might illegally include more statements.
     var remainderAst = null;
     try {
       remainderAst = $.utils.acorn.parse(remainder);
@@ -231,17 +232,25 @@ $.utils.code.rewriteForEval.unittest = function() {
   var actual;
   for (var key in cases) {
     if (!cases.hasOwnProperty(key)) continue;
-    for (var i = 0; i < 1; i++) {
-      // Alternate between expression and statement evals.
-      try {
-        actual = $.utils.code.rewriteForEval(key, i === 0);
-      } catch (e) {
-        actual = SyntaxError;
-      }
-      if (actual !== cases[key][i]) {
-        throw Error((i ? 'Eval Statement' : 'Eval Expression') +
-                    '\nExpected: ' + cases[key][i] + ' Actual: ' + actual);
-      }
+    // Test eval as an expression.
+    try {
+      actual = $.utils.code.rewriteForEval(key, true);
+    } catch (e) {
+      actual = SyntaxError;
+    }
+    if (actual !== cases[key][0]) {
+      throw Error('Eval Expression\n' +
+                  'Expected: ' + cases[key][0] + ' Actual: ' + actual);
+    }
+    // Test eval as a statement.
+    try {
+      actual = $.utils.code.rewriteForEval(key, false);
+    } catch (e) {
+      actual = SyntaxError;
+    }
+    if (actual !== cases[key][1]) {
+      throw Error('Eval Statement\n' +
+                  'Expected: ' + cases[key][1] + ' Actual: ' + actual);
     }
   }
 };
