@@ -265,11 +265,11 @@ Code.Editor.tabClick = function(e) {
 
   // Unhighlight all tabs, hide all containers.
   var tabs = document.querySelectorAll('#editorTabs>.highlighted');
-  for (var i = 0, tab; (tab = tabs[i]); i++) {
+  for (var tab of tabs) {
     tab.className = '';
   }
   var containers = document.querySelectorAll('#editorContainers>div');
-  for (var i = 0, container; (container = containers[i]); i++) {
+  for (var container of containers) {
     container.style.display = 'none';
   }
 
@@ -428,7 +428,7 @@ Code.Editor.ready = function() {
 Code.Editor.mostConfidentEditor = function() {
   var bestEditor = null;
   var bestConfidence = -Infinity;
-  for (var i = 0, editor; (editor = Code.Editor.editors[i]); i++) {
+  for (var editor of Code.Editor.editors) {
     if (bestConfidence < editor.confidence) {
       bestConfidence = editor.confidence;
       bestEditor = editor;
@@ -444,7 +444,7 @@ Code.Editor.mostConfidentEditor = function() {
  */
 Code.Editor.setSourceToAllEditors = function(src, isSaved) {
   Code.Editor.uncreatedEditorSource = src;
-  for (var i = 0, editor; (editor = Code.Editor.editors[i]); i++) {
+  for (var editor of Code.Editor.editors) {
     editor.setSource(src);
     if (isSaved) {
       editor.lastSavedSource = editor.getSource();
@@ -828,7 +828,7 @@ Code.svgEditor.setSource = function(source) {
     // Let's see if this DOM contains only SVG tags.
     var nodes = dom.documentElement.querySelectorAll('*');
     var isSvg = nodes.length > 0;
-    for (var i = 0, node; (node = nodes[i]); i++) {
+    for (var node of nodes) {
       if (Code.svgEditor.ELEMENT_NAMES.indexOf(node.tagName) === -1) {
         isSvg = false;
         break;

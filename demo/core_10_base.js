@@ -43,13 +43,8 @@ $.utils = {};
 
 $.utils.isObject = function(v) {
   /* Returns true iff v is an object (of any class, including Array
-   * and Function. */
+   * and Function). */
   return (typeof v === 'object' && v !== null) || typeof v === 'function';
-};
-
-$.utils.htmlEscape = function(text) {
-  return String(text).replace(/&/g, '&amp;').replace(/"/g, '&quot;')
-                     .replace(/</g, '&lt;').replace(/>/g, '&gt;');
 };
 
 $.utils.commandMenu = function(commands) {
@@ -57,7 +52,7 @@ $.utils.commandMenu = function(commands) {
   if (commands.length) {
     cmdXml += '<cmds>';
     for (var i = 0; i < commands.length; i++) {
-      cmdXml += '<cmd>' + commands[i] + '</cmd>';
+      cmdXml += '<cmd>' + $.utils.html.escape(commands[i]) + '</cmd>';
     }
     cmdXml += '</cmds>';
   }
@@ -194,20 +189,20 @@ $.physical.lookJssp.jssp = [
   '      </svg>',
   '    </td>',
   '    <td>',
-  '    <h1><%= $.utils.htmlEscape(this.name) + $.utils.commandMenu(this.getCommands(user)) %></h1>',
-  '    <p><%= this.getDescription() %></p>',
+  '    <h1><%= $.utils.html.escape(this.name) + $.utils.commandMenu(this.getCommands(user)) %></h1>',
+  '    <p><%= $.utils.html.preserveWhitespace(this.getDescription()) %></p>',
   '<%',
   'var contents = this.getContents();',
   'if (contents.length) {',
   '  var contentsHtml = [];',
   '  for (var i = 0; i < contents.length; i++) {',
-  '    contentsHtml[i] = contents[i].name +',
+  '    contentsHtml[i] = $.utils.html.escape(contents[i].name) +',
   '        $.utils.commandMenu(contents[i].getCommands(user));',
   '  }',
   '  response.write(\'<p>Contents: \' + contentsHtml.join(\', \') + \'</p>\');',
   '}',
   'if (this.location) {',
-  '  response.write(\'<p>Location: \' + this.location.name +',
+  '  response.write(\'<p>Location: \' + $.utils.html.escape(this.location.name) +',
   '      $.utils.commandMenu(this.location.getCommands(user)) + \'</p>\');',
   '}',
   '%>',
@@ -215,8 +210,19 @@ $.physical.lookJssp.jssp = [
   '  </tr>',
   '</table>'].join('\n');
 
+$.physical.inspect = function(cmd) {
+  // Open this object in the code editor.
+  var link = '/code?' + encodeURIComponent($.utils.selector.getSelector(this));
+  user.writeJson({type: "link", href: link});
+};
+$.physical.inspect.verb = 'inspect';
+$.physical.inspect.dobj = 'this';
+$.physical.inspect.prep = 'none';
+$.physical.inspect.iobj = 'none';
+
 $.physical.getCommands = function(who) {
-  return ['look ' + this.name];
+  return ['look ' + this.name,
+          'inspect ' + this.name];
 };
 
 $.physical.tell = function(json) {
@@ -407,56 +413,58 @@ $.user.think.dobj = 'any';
 $.user.think.prep = 'any';
 $.user.think.iobj = 'any';
 
-$.user.eval = function($$$cmd) {
+$.user.eval = function(cmd) {
   // Format:  ;1+1    -or-    eval 1+1
-  // To reduce the likelihood of clashes with identifiers in the evaled
-  // code, this function has only a single, awkwardly-named parameter
-  // and has no local variables of its own.  Conversely, however, we
-  // create a few local variables with short, convenient names as
-  // aliases for commonly-used values.
-  $$$cmd =
-      ($$$cmd.cmdstr[0] === ';') ? $$$cmd.cmdstr.substring(1) : $$$cmd.argstr;
-  $$$cmd = $.utils.code.rewriteForEval($$$cmd);
+  var src = (cmd.cmdstr[0] === ';') ? cmd.cmdstr.substring(1) : cmd.argstr;
+  src = $.utils.code.rewriteForEval(src);
+  var out;
   try {
-    var me = this;
-    var here = this.location;
-    $$$cmd = eval($$$cmd);
+    // Can't
+    out = this.eval.doEval_(src, this, this.location);
     try {
       // Attempt to print a source-legal representation.
-      $$$cmd = $.utils.code.toSource($$$cmd);
+      out = $.utils.code.toSource(out);
     } catch (e) {
       try {
         // Maybe it's something JSON can deal with (like an array).
-        $$$cmd = JSON.stringify($$$cmd);
+        out = JSON.stringify(out);
       } catch (e) {
         try {
           // Maybe it's a recursive data structure.
-          $$$cmd = String($$$cmd);
+          out = String(out);
         } catch (e) {
           // Maybe it's Object.create(null).
-          $$$cmd = '[Unprintable value]';
+          out = '[Unprintable value]';
         }
       }
     }
   } catch (e) {
     if (e instanceof Error) {
-      $$$cmd = String(e.name);
+      out = String(e.name);
       if (e.message) {
-        $$$cmd += ': ' + String(e.message);
+        out += ': ' + String(e.message);
       }
       if (e.stack) {
-        $$$cmd += '\n' + e.stack;
+        out += '\n' + e.stack;
       }
     } else {
-      $$$cmd = 'Unhandled exception: ' + String(e);
+      out = 'Unhandled exception: ' + String(e);
     }
   }
-  user.narrate('⇒ ' + $$$cmd);
+  user.narrate('⇒ ' + out);
 };
 $.user.eval.verb = 'eval|;.*';
 $.user.eval.dobj = 'any';
 $.user.eval.prep = 'any';
 $.user.eval.iobj = 'any';
+
+$.user.eval.doEval_ = function($$$src, me, here) {
+  // Execute eval in a scope with no variables.
+  // The '$$$src' parameter is awkwardly-named so as not to collide with user
+  // evaled code.  The 'me' and 'here' parameters are exposed to the user.
+  return eval($$$src);
+};
+
 
 $.user.edit = function(cmd) {
   var url = $.www.editor.edit(cmd.iobj, cmd.iobjstr, cmd.dobjstr);
@@ -617,7 +625,7 @@ $.servers.telnet.onReceiveLine = function(text) {
   var m = text.match(/identify as ([0-9a-f]+)/);
   if (!m) {
     this.write('{type: "narrate", text: "Unknown command: ' +
-               $.utils.htmlEscape(text) + '"}');
+               $.utils.html.preserveWhitespace(text) + '"}');
   }
   if (!$.userDatabase[m[1]]) {
     var guest = Object.create($.user);

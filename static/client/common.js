@@ -135,11 +135,11 @@ CCC.Common.newMenuIcon = function(cmds) {
  */
 CCC.Common.innerText = function(node) {
   var text = '';
-  if (node.nodeType === 3) {
+  if (node.nodeType === Node.TEXT_NODE) {
     text = node.data;
-  } else if (node.nodeType === 1) {
-    for (var i = 0; i < node.childNodes.length; i++) {
-      text += CCC.Common.innerText(node.childNodes[i]);
+  } else if (node.nodeType === Node.ELEMENT_NODE) {
+    for (var child of node.childNodes) {
+      text += CCC.Common.innerText(child);
     }
   }
   return text;
@@ -155,10 +155,10 @@ CCC.Common.openMenu = function(e) {
   var cmds = JSON.parse(this.getAttribute('data-cmds'));
   var menu = document.createElement('div');
   menu.id = 'menu';
-  for (var i = 0; i < cmds.length; i++) {
+  for (var cmd of cmds) {
     var menuItem = document.createElement('div');
     menuItem.className = 'menuitem';
-    menuItem.appendChild(document.createTextNode(cmds[i]));
+    menuItem.appendChild(document.createTextNode(cmd));
     menuItem.addEventListener('click', CCC.Common.commandFunction, false);
     menu.appendChild(menuItem);
   }
@@ -203,8 +203,15 @@ CCC.Common.closeMenu = function() {
  * @this {!Element} Clicked element.
  */
 CCC.Common.commandFunction = function() {
+  var command = this.innerText;
+  // Menu commands should never be multi-line.
+  // This should never happen and be caught earlier.
+  // But if it does, fail here rather than be a security hole.
+  if (command.split(/[\r\n]/).length !== 1) {
+    throw Error('Multi-line command: ' + command);
+  }
   if (CCC.Common.isConnected) {
-    parent.postMessage({'commands': [this.innerText]}, location.origin);
+    parent.postMessage({'commands': [command]}, location.origin);
   }
   CCC.Common.parentFocus();
 };
@@ -280,3 +287,67 @@ CCC.Common.createSvgElement = function(name, attrs, opt_parent) {
   }
   return el;
 };
+
+/**
+ * Given plain text, encode spaces and tabs such that HTML won't crush it.
+ * Does not handle line breaks in any way.
+ * @param {string} text Plain text.
+ * @return {string} HTML with any runs of spaces encoded.
+ */
+CCC.Common.escapeSpaces = function(text) {
+  return text.replace(/\t/g, '\u00A0 \u00A0 \u00A0 \u00A0 ')
+      .replace(/  /g, '\u00A0 ').replace(/  /g, '\u00A0 ')
+      .replace(/^ /gm, '\u00A0');
+};
+
+/**
+ * Detect URLs in the provided document fragment and replace with links.
+ * @param {!Element} el A DOM element to scan and modify.
+ */
+CCC.Common.autoHyperlink = function(el) {
+  var isSvg = el.namespaceURI === CCC.Common.NS;
+  var children = el.childNodes;  // This is a live NodeList.
+  for (var i = children.length - 1, child; (child = children[i]); i--) {
+    if (child.nodeType !== Node.TEXT_NODE) {
+      CCC.Common.autoHyperlink(child);
+      continue;
+    }
+    var text = child.nodeValue;
+    var parts = text.split(CCC.Common.autoHyperlink.urlRegex);
+    if (parts.length <= 1) {  // No hyperlinks found.
+      continue;
+    }
+    for (var j = 0; j < parts.length; j++) {
+      var part = parts[j];
+      var m = part.match(CCC.Common.autoHyperlink.urlRegex);
+      if (m && m[0] === part) {
+        // This part is a URL.
+        var lastChar = part.substr(-1);
+        if (part.length && '.,!)]?\''.includes(lastChar)) {
+          // Move any trailing punctuation out of URL.
+          part = part.substring(0, part.length - 1);
+          parts[j + 1] = lastChar + (parts[j + 1] || '');
+        }
+        var href = part;
+        if (!/^https?:\/\//.test(href)) {
+          href = 'http://' + href;
+        }
+        var link = isSvg ? document.createElementNS(CCC.Common.NS, 'a') :
+            document.createElement('a');
+        link.setAttribute('href', href);
+        link.setAttribute('target', '_blank');
+        link.setAttribute('rel', 'noopener noreferrer');
+        link.appendChild(document.createTextNode(part));
+        newNode = link;
+      } else {
+        // This part is plain text.
+        var newNode = document.createTextNode(part);
+      }
+      el.insertBefore(newNode, child);
+    }
+    el.removeChild(child);
+  }
+};
+
+CCC.Common.autoHyperlink.urlRegex =
+    /((?:https?:\/\/|www\.)[-\w.~:\/?#\[\]@!$&'()*+,;=%]+)/i;

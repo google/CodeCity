@@ -160,12 +160,9 @@ CCC.Log.connectDiv = function(isConnected, date) {
  * @return {!Element} HTML div element.
  */
 CCC.Log.textToHtml = function(text) {
-  text = text.replace(/  /g, '\u00A0 ');
-  text = text.replace(/  /g, '\u00A0 ');
-  text = text.replace(/^ /gm, '\u00A0');
+  text = CCC.Common.escapeSpaces(text);
   var lines = text.split('\n');
   var div = document.createElement('div');
-  div.className = 'textDiv';
   for (var i = 0; i < lines.length; i++) {
     if (i !== 0) {
       div.appendChild(document.createElement('br'));
@@ -254,6 +251,7 @@ CCC.Log.renderJson = function(json) {
       if (dom.body) {
         var div = document.createElement('div');
         CCC.Log.renderHtmltext(div, dom.body);
+        CCC.Common.autoHyperlink(div);
         return div;
       }
       return undefined;  // Illegal HTML.
@@ -290,8 +288,7 @@ CCC.Log.renderJson = function(json) {
       var objects = [];
       var users = [];
       if (json.contents) {
-        for (var i = 0; i < json.contents.length; i++) {
-          var content = json.contents[i];
+        for (var content of json.contents) {
           if (content.type === 'user' && CCC.Log.userName === content.what) {
             continue;  // Don't show the current user.
           }
@@ -315,8 +312,8 @@ CCC.Log.renderJson = function(json) {
         div.appendChild(titleDiv);
       }
       if (json.description) {
-        var descriptionDiv = document.createElement('div');
-        descriptionDiv.appendChild(document.createTextNode(json.description));
+        var descriptionDiv = CCC.Log.textToHtml(json.description);
+        CCC.Common.autoHyperlink(descriptionDiv);
         div.appendChild(descriptionDiv);
       }
       if (objects.length) {
@@ -349,11 +346,11 @@ CCC.Log.renderJson = function(json) {
       // {type: "think", text: "Don't be evil."}
       // {type: "think", source: "Max", where: "Hangout", text: "I'm hungry."}
       // {type: "think", source: "Cat", where: "Hangout", text: "I'm evil."}
-      var text = json.text;
+      var text = CCC.Common.escapeSpaces(json.text);
       if (json.type === 'think') {
         var type = 'think';
       } else {
-        var lastLetter = text[text.length - 1];
+        var lastLetter = text[text.length - 1].trim();
         var type = (lastLetter === '?') ? 'ask' :
             ((lastLetter === '!') ? 'exclaim' : 'say');
       }
@@ -363,6 +360,7 @@ CCC.Log.renderJson = function(json) {
         var who = json.source || CCC.Log.getMsg('unknownMsg');
         var fragment = CCC.Log.getMsg(type + 'Msg', who, text);
       }
+      CCC.Common.autoHyperlink(fragment);
       var div = document.createElement('div');
       div.appendChild(fragment);
       return div;
@@ -377,6 +375,19 @@ CCC.Log.renderJson = function(json) {
         text = json.source + ': ' + text;
       }
       div.appendChild(document.createTextNode(text));
+      CCC.Common.autoHyperlink(div);
+      return div;
+    case 'link':
+      // {type: "link", href: "https://example.com/"}
+      var div = document.createElement('div');
+      var a = document.createElement('a');
+      a.href = json.href;
+      a.target = '_blank';
+      a.appendChild(document.createTextNode(json.href));
+      div.appendChild(a);
+      // Note: this opens the link in a new tab regardless of whether the user
+      // is in world or log view.
+      window.open(json.href);
       return div;
   }
   // Unknown XML.
@@ -398,6 +409,7 @@ CCC.Log.openIcon = function(src) {
   var link = document.createElement('a');
   link.href = src;
   link.target = '_blank';
+  link.rel = 'noopener noreferrer';
   var svg = CCC.Common.createSvgElement('svg',
       {'class': 'openIcon', 'viewBox': '0 3 24 24'}, link);
   CCC.Common.createSvgElement('path',
@@ -411,7 +423,7 @@ CCC.Log.openIcon = function(src) {
  * @param {!Node} node DOM to walk.
  */
 CCC.Log.renderHtmltext = function(div, node) {
-  if (node.nodeType === 1) {
+  if (node.nodeType === Node.ELEMENT_NODE) {
     // Element.
     if (node.tagName === 'svg') {  // XML tagNames are lowercase.
       return;  // No text content of this tag should be rendered.
@@ -433,14 +445,14 @@ CCC.Log.renderHtmltext = function(div, node) {
       div.appendChild(a);
       return;
     }
-    for (var i = 0, child; (child = node.childNodes[i]); i++) {
-      CCC.Log.renderHtmltext(div, node.childNodes[i]);
+    for (var child of node.childNodes) {
+      CCC.Log.renderHtmltext(div, child);
     }
     if (CCC.Log.renderHtmltext.BLOCK_NAMES.indexOf(node.tagName) !== -1) {
       // Add a <br> tag, but not if there's already one.
       var lastTag = div.lastChild;
-      while (lastTag && lastTag.nodeType !== 1) {
-        if (lastTag.nodeType === 3 && lastTag.nodeValue.trim()) {
+      while (lastTag && lastTag.nodeType !== Node.ELEMENT_NODE) {
+        if (lastTag.nodeType === Node.TEXT_NODE && lastTag.nodeValue.trim()) {
           // Found text that's not whitespace.  Bail.
           lastTag = null;
         } else {
@@ -452,7 +464,7 @@ CCC.Log.renderHtmltext = function(div, node) {
         div.appendChild(document.createElement('br'));
       }
     }
-  } else if (node.nodeType === 3) {
+  } else if (node.nodeType === Node.TEXT_NODE) {
     // Text node.
     div.appendChild(document.createTextNode(node.data));
   }
@@ -495,8 +507,7 @@ CCC.Log.getMsg = function(key, var_args) {
   var parts = text.split(/(%\d)/);
   var df = document.createDocumentFragment();
   // Inject any substitutions.
-  for (var i = 0; i < parts.length; i++) {
-    var part = parts[i];
+  for (var part of parts) {
     var m = part.match(/^%(\d)$/);
     if (m) {
       var inject = arguments[m[1]];

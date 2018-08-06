@@ -133,8 +133,7 @@ Code.Explorer.parseInput = function(inputValue) {
   var parts = [];
   var token = null;
   var lastNameToken = null;
-  for (var i = 0; i < tokens.length; i++) {
-    token = tokens[i];
+  for (token of tokens) {
     if (token.type === 'id' || token.type === 'str' || token.type === 'num') {
       lastNameToken = token;
     }
@@ -245,9 +244,8 @@ Code.Explorer.updateAutocompleteMenu = function(token) {
   if (!token || token.type === '.' || token.type === 'id' ||
       token.type === '[' || token.type === 'str' || token.type === 'num') {
     // Flatten the options and filter.
-    for (var i = 0; i < Code.Explorer.autocompleteData.length; i++) {
-      for (var j = 0; j < Code.Explorer.autocompleteData[i].length; j++) {
-        var option = Code.Explorer.autocompleteData[i][j];
+    for (var optionGroup of Code.Explorer.autocompleteData) {
+      for (var option of optionGroup) {
         if (option.substring(0, prefix.length).toLowerCase() === prefix) {
             options.push(option);
         }
@@ -273,8 +271,7 @@ Code.Explorer.filterShadowed = function(data) {
     return;
   }
   var seen = Object.create(null);
-  for (var i = 0; i < data.length; i++) {
-    var datum = data[i];
+  for (var datum of data) {
     var cursorInsert = 0;
     var cursorRead = 0;
     while (cursorRead < datum.length) {
@@ -285,7 +282,7 @@ Code.Explorer.filterShadowed = function(data) {
       }
     }
     datum.length = cursorInsert;
-    data[i].sort(Code.Explorer.caseInsensitiveComp);
+    datum.sort(Code.Explorer.caseInsensitiveComp);
   }
 };
 
@@ -326,12 +323,12 @@ Code.Explorer.showAutocompleteMenu = function(options, index) {
   }
   var scrollDiv = document.getElementById('autocompleteMenuScroll');
   scrollDiv.innerHTML = '';
-  for (var i = 0; i < options.length; i++) {
+  for (var option of options) {
     var div = document.createElement('div');
-    div.appendChild(document.createTextNode(options[i]));
+    div.appendChild(document.createTextNode(option));
     div.addEventListener('mouseover', Code.Explorer.autocompleteMouseOver);
     div.addEventListener('mouseout', Code.Explorer.autocompleteMouseOut);
-    div.setAttribute('data-option', options[i]);
+    div.setAttribute('data-option', option);
     scrollDiv.appendChild(div);
   }
   var menuDiv = document.getElementById('autocompleteMenu');
@@ -389,7 +386,7 @@ Code.Explorer.autocompleteSelect = function(div) {
   // all in case there was a UI bug.
   var selections =
       document.querySelectorAll('#autocompleteMenuScroll>.selected');
-  for (var i = 0, selected; (selected = selections[i]); i++) {
+  for (var selected of selections) {
     selected.className = '';
   }
   if (div) {
@@ -626,7 +623,7 @@ Code.Explorer.addPanel = function(component) {
   var panelsScroll = document.getElementById('panelsScroll');
   var iframe = document.createElement('iframe');
   iframe.id = 'objectPanel' + Code.Explorer.panelCount;
-  iframe.src = '/static/code/objectPanel.html#' + encodeURI(component);
+  iframe.src = '/static/code/objectPanel.html#' + encodeURIComponent(component);
   iframe.setAttribute('data-component', component);
   var spacer = document.getElementById('panelSpacer');
   panelsScroll.insertBefore(iframe, spacer);

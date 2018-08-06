@@ -129,7 +129,7 @@ function handleRequest(request, response) {
         cookieList[parts.shift().trim()] = decodeURI(parts.join('='));
     });
     // Decrypt the ID to ensure there was no tampering.
-    var m = cookieList.id && cookieList.id.match(/^([0-9a-f]+)_([0-9a-f]+)$/);
+    var m = cookieList.ID && cookieList.ID.match(/^([0-9a-f]+)_([0-9a-f]+)$/);
     if (!m) {
       console.log('Missing login cookie.  Redirecting.');
       response.writeHead(302, {  // Temporary redirect
@@ -142,14 +142,14 @@ function handleRequest(request, response) {
     var checksum = CFG.password + loginId;
     checksum = crypto.createHash('sha').update(checksum).digest('hex');
     if (checksum != m[2]) {
-      console.log('Invalid login cookie: ' + cookieList.id);
+      console.log('Invalid login cookie: ' + cookieList.ID);
       response.writeHead(302, {  // Temporary redirect
          'Location': CFG.loginPath
        });
       response.end('Login invalid.  Redirecting.');
       return;
     }
-    var seed = (Date.now() * Math.random()).toString() + cookieList.id;
+    var seed = (Date.now() * Math.random()).toString() + cookieList.ID;
     // This ID gets transmitted a *lot* so keep it short.
     var sessionId = crypto.createHash('sha').update(seed).digest('base64');
     if (Object.keys(queueList).length > 1000) {
