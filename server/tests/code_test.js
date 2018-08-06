@@ -73,7 +73,7 @@ exports.testParseString = function(t) {
     `"\\"Hi\\", he said."`,
     `'Don\\'t.'`,
     `"Don't."`,
-    `'\\0 \\' \\" \\/ \\b \\n \\r \\t \\v \\\\ \\x00 \\xff \\u1234'`,
+    `'\\0 \\' \\" \\/ \\b \\n \\r \\t \\v \\\\ \\x00 \\xfF \\u09aF'`,
   ];
   for (const tc of cases) {
     const r = parseString(tc);
@@ -87,6 +87,10 @@ exports.testParseString = function(t) {
     `'\\j'`,
     `'\\x0'`,
     `'\\u123'`,
+    `'\\x1g'`,
+    `'\\x1G'`,
+    `'\\u1g00'`,
+    `'\\u1G00'`,
   ];
   for (const tc of badCases) {
     try {

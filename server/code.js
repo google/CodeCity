@@ -31,29 +31,42 @@ var regexps = {};
 
 /**
  * Matches (globally) escape sequences found in string and regexp
- * literals.
+ * literals, like '\n' or '\x20' or '\u1234'.
  */
-regexps.escapes = /\\(?:["'\\\/0bfnrtv]|u[0-9a-zA-Z]{4}|x[0-9a-zA-Z]{2})/g;
+regexps.escapes = /\\(?:["'\\\/0bfnrtv]|u[0-9a-fA-F]{4}|x[0-9a-fA-F]{2})/g;
 
-/** Matches a single-quoted string literal. */
+/** 
+ * Matches a single-quoted string literal, like "'this one'" and
+ * "'it\\'s'".
+ */
 regexps.singleQuotedString =
     new RegExp("'(?:[^\'\\\\]+|" + regexps.escapes.source + ")*'");
 
-/** Matches a double-quoted string literal. */
+/**
+ * Matches a double-quoted string literal, like '"this one"' and
+ * '"it\'s"'.
+ */
 regexps.doubleQuotedString =
     new RegExp('"(?:[^\"\\\\]+|' + regexps.escapes.source + ')*"');
 
-/** Matches a string literal. */
+/**
+ * Matches a string literal, like "'this one' and '"that one"' as well
+ * as "the 'string literal' substring of this longer string" too.
+ */
 regexps.string = new RegExp('(?:' + regexps.singleQuotedString.source + '|' +
     regexps.doubleQuotedString.source + ')');
 
-/** Matches exaclty a string literal. */
+/**
+ * Matches exaclty a string literal, like "'this one'" but notably not
+ * " 'this one' " (because it contains other characters not part of
+ * the literal).
+ */
 regexps.stringExact = new RegExp('^' + regexps.string.source + '$');
 
 /**
  * Convert a string representation of a string literal to a string.
  * Basically does eval(s), but safely and only if s is a string literal.
- * @param {string} s A string containing a string literal.
+ * @param {string} s A string consisting of exactly a string literal.
  * @return {string} The string value of the literal s.
  */
 var parseString = function(s) {
