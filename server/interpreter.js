@@ -4095,7 +4095,7 @@ Interpreter.prototype.Server.prototype.unlisten = function(onClose) {
  * be called just once, from the Interpreter constructor.
  */
 Interpreter.prototype.installTypes = function() {
-  var intrp = this;  // The interpreter istance to which these classes belong.
+  var intrp = this;  // The interpreter instance to which these classes belong.
 
   /////////////////////////////////////////////////////////////////////////////
   // Types representing JS objects - Object, Function, Array, etc.
