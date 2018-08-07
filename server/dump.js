@@ -656,4 +656,5 @@ exports.dump = dump;
 // For unit testing only!
 exports.testOnly = {
   Dumper: Dumper,
+  BindingInfo: BindingInfo,
 }
