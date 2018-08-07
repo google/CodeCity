@@ -332,11 +332,14 @@ Dumper.prototype.getObjectInfo = function(obj) {
  * specified by selector.  If selector does not correspond to a valid
  * binding an error is thrown.
  * @param {!Selector} selector A selector, specifiying a binding.
+ * @param {!Interpreter.Scope=} scope Scope which selector is relative
+ *     to.  Defaults to global scope.
  * @return {Interpreter.Value} The value of that binding.
  */
-Dumper.prototype.getValueForSelector = function(selector) {
+Dumper.prototype.getValueForSelector = function(selector, scope) {
   if (selector.length < 1) throw RangeError('Zero-length selector??');
-  var v = this.intrp.global.get(selector[0]);
+  if (!scope) scope = this.intrp.global;
+  var v = scope.get(selector[0]);
   for (var i = 1; i < selector.length; i++) {
     var key = selector[i];
     if (!(v instanceof this.intrp.Object)) {
