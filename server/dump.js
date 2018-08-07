@@ -19,7 +19,8 @@
  */
 
 /**
- * @fileoverview Saving the state of the interpreter as eval-able JS.
+ * @fileoverview Infrastructure to save the state of an Interpreter as
+ *     eval-able JS.
  * @author cpcallen@google.com (Christohper Allen)
  */
 'use strict';
@@ -29,234 +30,24 @@ var Interpreter = require('./interpreter');
 var Selector = require('./selector');
 
 /**
- * @typedef {{filename: string,
- *            contents: !Array<!ContentEntry>,
- *            rest: boolean}}
+ * Dump an Interpreter using a given dump specification.
+ * @param {!Interpreter} intrp The interpreter to dump.
+ * @param {!Array<SpecEntry>} spec The dump specificaiton.
  */
-var ConfigEntry;
+var dump = function(intrp, spec) {
+  var dumper = new Dumper(intrp, spec);
 
-/**
- * @typedef {{filename: string,
- *            contents: (!Array<string|!ContentEntry>|undefined),
- *            rest: (boolean|undefined)}}
- */
-var SpecEntry;
-
-/**
- * The type of the values of contents: entries of the config spec.
- * @record
- */
-var ContentEntry = function() {};
-
-/**
- * Path is a string like "eval", "Object.prototype" or
- * "$.util.command" identifying the variable or property binding this
- * entry applies to.
- * @type {string}
- */
-ContentEntry.prototype.path;
-
-/**
- * Do is what to to do with the specified path.
- * @type {Do}
- */
-ContentEntry.prototype.do;
-
-/**
- * Reorder is a boolean (default: false) specifying whether it is
- * acceptable to allow property or set/map entry entries to be created
- * (by the output JS) in a different order than they apear in the
- * interpreter instance being serialised.  If false, output may
- * contain placeholder entries like:
- *
- *     var obj = {};
- *     obj.foo = undefined;  // placeholder
- *     obj.bar = function() { ... };
- *
- * to allow obj.foo to be defined later while still
- * preserving property order.
- * @type {boolean|undefined}
- */
-ContentEntry.prototype.reorder;
-
-/**
- * Possible things to do (or have done) with a variable / property
- * binding.  Note that all valid 'do' values are truthy.
- * @enum {number}
- */
-var Do = {
-  /**
-   * Not started yet.  Only valid as a 'done' value, not as a 'do' value.
-   */
-  UNSTARTED: 0,
-  
-  /**
-   * Skip the named binding entirely (unless it or an extension of it
-   * is explicitly mentioned in a later config directive); if the data
-   * accessible via the named binding is not accessible via any other
-   * (non-pruned) path from the global scope it will consequently not
-   * be included in the dump.  This option is intended to cause data
-   * loss, so be careful!
-   */
-  PRUNE: 1,
-
-  /**
-   * Skip the named binding for now, but include it in a later file
-   * (whichever has rest: true).
-   */
-  SKIP: 2,
-
-  /**
-   * Ensure that the specified path exists, but do not yet set it to
-   * its final value.  If the path is a property, it will not (yet) be
-   * made non-configurable.
-   */
-  DECL: 3,
-
-  /**
-   * Ensure theat the specified path exists and has been set to its
-   * final value (if primitive) or an object of the correct class (if
-   * non-primitive).  It will also ensure the final property
-   * attributes (enumerable, writable and/or configurable) are set.
-   *
-   * If a new object is created to be the value of the specified path
-   * it will not (yet) have its properties or internal set/map data
-   * set (but immutable internal data, such as function code, must be
-   * set at this time).
-   */
-  SET: 4,
-
-  /**
-   * Ensure the specified path is has been set to its final value (and
-   * marked immuable, if applicable) and that the same has been done
-   * recursively to all bindings reachable via path.
-   */
-  RECURSE: 5,
 };
 
-/**
- * @constructor
- */
-var ConfigNode = function() {
-  /** @type {number|undefined} */
-  this.firstFileNo = undefined;
-  /** @type {!Object<string, !ConfigNode>} */
-  this.kids = Object.create(null);
-};
-
-/**
- * @param {string} name
- * @return {ConfigNode}
- */
-ConfigNode.prototype.kidFor = function(name) {
-  if (!this.kids[name]) {
-    this.kids[name] = new ConfigNode;
-  }
-  return this.kids[name];
-};
-
-/**
- * @constructor
- * @param {!Array<SpecEntry>} spec
- */
-var Config = function(spec) {
-  /** @type {!Array<!ConfigEntry>} */
-  this.entries = [];
-  /** @type {number|undefined} */
-  this.defaultFileNo = undefined;
-  /** @type {!ConfigNode} */
-  this.tree = new ConfigNode;
-
-  for (var fileNo = 0; fileNo < spec.length; fileNo++) {
-    var /** !SpecEntry */ se = spec[fileNo];
-    var /** !ConfigEntry */ entry = {
-      filename: se.filename,
-      contents: [],
-      rest: Boolean(se.rest)
-    };
-    this.entries.push(entry);
-    if (se.contents) {
-      for (var i = 0; i < se.contents.length; i++) {
-        var sc = se.contents[i];
-        if (typeof sc === 'string') {
-          var /** !ContentEntry */ content =
-              {path: sc, do: Do.RECURSE, reorder: false};
-        } else {
-          content = {path: sc.path, do: sc.do, reorder: Boolean(sc.reorder)};
-        }
-        entry.contents.push(content);
-        var selector = new Selector(content.path);
-        var /** ?ConfigNode */ cn = this.tree;
-        for (var j = 0; j < selector.length; j++) {
-          cn = cn.kidFor(selector[j]);
-        }
-        // Now cn is final ConfigNode for path (often a leaf).
-        cn.firstFileNo = fileNo;
-      }
-    }
-    if (spec[fileNo].rest) {
-      if (this.defaultFileNo !== undefined) {
-        throw Error('Only one rest entry permitted');
-      }
-      this.defaultFileNo = fileNo;
-    }
-  }
-};
-
-/**
- * Dump-state information for a single scope or object.  Implemented
- * by ScopeInfo and ObjectInfo.
- * @interface
- */
-var Info = function() {
-  /**
-   * Map of variable or property name -> dump status.
-   * @type {!Object<string, Do>}
-   */
-  this.done;
-};
-
-/**
- * Dump-state information for a single scope.
- * @constructor
- * @implements {Info}
- * @param {!Interpreter.Scope} scope The scope to keep state for.
- */
-var ScopeInfo = function(scope) {
-  this.scope = scope;
-  /**
-   * Map of variable name -> dump status.
-   * @type {!Object<string, Do>}
-   */
-  this.done = Object.create(null);
-};
-
-/**
- * Dump-state information for a single object.
- * @constructor
- * @implements {Info}
- * @param {!Interpreter.prototype.Object} obj The object to keep state for.
- */
-var ObjectInfo = function(obj) {
-  this.obj = obj;
-  /**
-   * Referecne to this object, once created.
-   * @type {!Selector|undefined}
-   */
-  this.ref = undefined;
-  /**
-   * Map of property name -> dump status.
-   * @type {!Object<string, Do>}
-   */
-  this.done = Object.create(null);
-};
+///////////////////////////////////////////////////////////////////////////////
+// Dumper.
 
 /**
  * Dumper encapsulates all the state required to keep track of what
  * has and hasn't yet been written when dumping an Interpreter.
  * @constructor
- * @param {!Interpreter} intrp
- * @param {!Array<SpecEntry>} spec
+ * @param {!Interpreter} intrp The interpreter to be dumped.
+ * @param {!Array<SpecEntry>} spec The dump specification.
  */
 var Dumper = function(intrp, spec) {
   this.intrp = intrp;
@@ -270,50 +61,6 @@ var Dumper = function(intrp, spec) {
    * @type {!Interpreter.Scope}
    */
   this.scope = intrp.global;
-};
-
-/**
- * Get interned ScopeInfo for sope.
- * @param {!Interpreter.Scope} scope The scope to get info for.
- * @return {!ScopeInfo} The ScopeInfo for scope.
- */
-Dumper.prototype.getScopeInfo = function(scope) {
-  if (this.scopeInfo.has(scope)) return this.scopeInfo.get(scope);
-  var si = new ScopeInfo(scope);
-  this.scopeInfo.set(scope, si);
-  return si;
-};
-
-/**
- * Get interned ObjectInfo for sope.
- * @param {!Interpreter.prototype.Object} obj The object to get info for.
- * @return {!ObjectInfo} The ObjectInfo for obj.
- */
-Dumper.prototype.getObjectInfo = function(obj) {
-  if (this.objInfo.has(obj)) return this.objInfo.get(obj);
-  var oi = new ObjectInfo(obj);
-  this.objInfo.set(obj, oi);
-  return oi;
-};
-
-/**
- * Get the present value in the interpreter of a particular binding,
- * specified by selector.  If selector does not correspond to a valid
- * binding an error is thrown.
- * @param {!Selector} selector A selector, specifiying a binding.
- * @return {Interpreter.Value} The value of that binding.
- */
-Dumper.prototype.getValueForSelector = function(selector) {
-  if (selector.length < 1) throw RangeError('Zero-length selector??');
-  var v = this.intrp.global.get(selector[0]);
-  for (var i = 1; i < selector.length; i++) {
-    var key = selector[i];
-    if (!(v instanceof this.intrp.Object)) {
-      throw TypeError("Can't get property '" + key + "' of non-object " + v);
-    }
-    v = v.get(key, this.intrp.ROOT);
-  }
-  return v;
 };
 
 /**
@@ -557,6 +304,50 @@ Dumper.prototype.regExpToExpr = function(re) {
 };
 
 /**
+ * Get interned ScopeInfo for sope.
+ * @param {!Interpreter.Scope} scope The scope to get info for.
+ * @return {!ScopeInfo} The ScopeInfo for scope.
+ */
+Dumper.prototype.getScopeInfo = function(scope) {
+  if (this.scopeInfo.has(scope)) return this.scopeInfo.get(scope);
+  var si = new ScopeInfo(scope);
+  this.scopeInfo.set(scope, si);
+  return si;
+};
+
+/**
+ * Get interned ObjectInfo for sope.
+ * @param {!Interpreter.prototype.Object} obj The object to get info for.
+ * @return {!ObjectInfo} The ObjectInfo for obj.
+ */
+Dumper.prototype.getObjectInfo = function(obj) {
+  if (this.objInfo.has(obj)) return this.objInfo.get(obj);
+  var oi = new ObjectInfo(obj);
+  this.objInfo.set(obj, oi);
+  return oi;
+};
+
+/**
+ * Get the present value in the interpreter of a particular binding,
+ * specified by selector.  If selector does not correspond to a valid
+ * binding an error is thrown.
+ * @param {!Selector} selector A selector, specifiying a binding.
+ * @return {Interpreter.Value} The value of that binding.
+ */
+Dumper.prototype.getValueForSelector = function(selector) {
+  if (selector.length < 1) throw RangeError('Zero-length selector??');
+  var v = this.intrp.global.get(selector[0]);
+  for (var i = 1; i < selector.length; i++) {
+    var key = selector[i];
+    if (!(v instanceof this.intrp.Object)) {
+      throw TypeError("Can't get property '" + key + "' of non-object " + v);
+    }
+    v = v.get(key, this.intrp.ROOT);
+  }
+  return v;
+};
+
+/**
  * Returns true if a given name is shadowed in the current scope.
  * @param {string} name Variable name that might be shadowed.
  * @param {!Interpreter.Scope=} scope Scope in which name is defind
@@ -575,11 +366,251 @@ Dumper.prototype.isShadowed = function(name, scope) {
   return false;
 };
 
-var dump = function(intrp, spec) {
-  var dumper = new Dumper(intrp, spec);
-  
+///////////////////////////////////////////////////////////////////////////////
+// Data types used to track progress of a Dumper's dump.
 
+/**
+ * Dump-state information for a single scope or object.  Implemented
+ * by ScopeInfo and ObjectInfo.
+ * @interface
+ */
+var Info = function() {
+  /**
+   * Map of variable or property name -> dump status.
+   * @type {!Object<string, Do>}
+   */
+  this.done;
 };
+
+/**
+ * Dump-state information for a single scope.
+ * @constructor
+ * @implements {Info}
+ * @param {!Interpreter.Scope} scope The scope to keep state for.
+ */
+var ScopeInfo = function(scope) {
+  this.scope = scope;
+  /**
+   * Map of variable name -> dump status.
+   * @type {!Object<string, Do>}
+   */
+  this.done = Object.create(null);
+};
+
+/**
+ * Dump-state information for a single object.
+ * @constructor
+ * @implements {Info}
+ * @param {!Interpreter.prototype.Object} obj The object to keep state for.
+ */
+var ObjectInfo = function(obj) {
+  this.obj = obj;
+  /**
+   * Selector reference to this object, once created.
+   * @type {!Selector|undefined}
+   */
+  this.ref = undefined;
+  /**
+   * Map of property name -> dump status.
+   * @type {!Object<string, Do>}
+   */
+  this.done = Object.create(null);
+};
+
+/**
+ * Possible things to do (or have done) with a variable / property
+ * binding.  Note that all valid 'do' values are truthy.
+ * @enum {number}
+ */
+var Do = {
+  /**
+   * Nothing has been done about this binding yet.  Only valid as a
+   * 'done' value, not as a 'do' value.
+   */
+  UNSTARTED: 0,
+
+  /**
+   * Skip the named binding entirely (unless it or an extension of it
+   * is explicitly mentioned in a later config directive); if the data
+   * accessible via the named binding is not accessible via any other
+   * (non-pruned) path from the global scope it will consequently not
+   * be included in the dump.  Only valid as a 'do' value.
+   *
+   * This option is intended to cause data loss, so be careful!
+   */
+  PRUNE: 1,
+
+  /**
+   * Skip the named binding for now, but include it in a later file
+   * (whichever has rest: true).  Only valid as a 'do' value.
+   */
+  SKIP: 2,
+
+  /**
+   * Ensure that the specified binding exists, but do not yet set it
+   * to its final value.  If the binding is a variable, it has been /
+   * will be declared; if it is a property, it has been / will be
+   * created but not (yet) set to a value other than undefined (nor
+   * made non-configurable).
+   */
+  DECL: 3,
+
+  /**
+   * Ensure theat the specified binding exists and has been set to its
+   * final value (if primitive) or an object of the correct class (if
+   * non-primitive).  It will also ensure the final property
+   * attributes (enumerable, writable and/or configurable) are set.
+   *
+   * If a new object is created to be the value of the specified path
+   * it will not (yet) have its properties or internal set/map data
+   * set (but immutable internal data, such as function code, must be
+   * set at this time).
+   */
+  SET: 4,
+
+  /**
+   * Ensure the specified path is has been set to its final value (and
+   * marked immuable, if applicable) and that the same has been done
+   * recursively to all bindings reachable via path.
+   */
+  RECURSE: 5,
+};
+
+
+///////////////////////////////////////////////////////////////////////////////
+// Data types used to specify a dump configuration.
+
+/**
+ * A processed-and-ready-to-use configuration entry for a single
+ * output file.
+ * @typedef {{filename: string,
+ *            contents: !Array<!ContentEntry>,
+ *            rest: boolean}}
+ */
+var ConfigEntry;
+
+/**
+ * A configuration entry as supplied by the caller, possibly omitting
+ * or abridging certain information.
+ * @typedef {{filename: string,
+ *            contents: (!Array<string|!ContentEntry>|undefined),
+ *            rest: (boolean|undefined)}}
+ */
+var SpecEntry;
+
+/**
+ * The type of the values of .contents entries of a ConfigEntry.
+ * @record
+ */
+var ContentEntry = function() {};
+
+/**
+ * Path is a string like "eval", "Object.prototype" or
+ * "$.util.command" identifying the variable or property binding this
+ * entry applies to.
+ * @type {string}
+ */
+ContentEntry.prototype.path;
+
+/**
+ * Do is what to to do with the specified path.
+ * @type {Do}
+ */
+ContentEntry.prototype.do;
+
+/**
+ * Reorder is a boolean (default: false) specifying whether it is
+ * acceptable to allow property or set/map entry entries to be created
+ * (by the output JS) in a different order than they apear in the
+ * interpreter instance being serialised.  If false, output may
+ * contain placeholder entries like:
+ *
+ *     var obj = {};
+ *     obj.foo = undefined;  // placeholder
+ *     obj.bar = function() { ... };
+ *
+ * to allow obj.foo to be defined later while still
+ * preserving property order.
+ * @type {boolean|undefined}
+ */
+ContentEntry.prototype.reorder;
+
+/**
+ * A single node of a trie-like datastructure constructed from
+ * ContentEntry path selectors.  It is used to determine in which
+ * ConfigEntry a path is first mentioned in, so that e.g. $.foo can be
+ * dumped to one file except for $.foo.bar which is held to be written
+ * to a later file.
+ * @constructor
+ */
+var ConfigNode = function() {
+  /** @type {number|undefined} */
+  this.firstFileNo = undefined;
+  /** @type {!Object<string, !ConfigNode>} */
+  this.kids = Object.create(null);
+};
+
+/**
+ * @param {string} name
+ * @return {ConfigNode}
+ */
+ConfigNode.prototype.kidFor = function(name) {
+  if (!this.kids[name]) {
+    this.kids[name] = new ConfigNode;
+  }
+  return this.kids[name];
+};
+
+/**
+ * @constructor
+ * @param {!Array<SpecEntry>} spec
+ */
+var Config = function(spec) {
+  /** @type {!Array<!ConfigEntry>} */
+  this.entries = [];
+  /** @type {number|undefined} */
+  this.defaultFileNo = undefined;
+  /** @type {!ConfigNode} */
+  this.tree = new ConfigNode;
+
+  for (var fileNo = 0; fileNo < spec.length; fileNo++) {
+    var /** !SpecEntry */ se = spec[fileNo];
+    var /** !ConfigEntry */ entry = {
+      filename: se.filename,
+      contents: [],
+      rest: Boolean(se.rest)
+    };
+    this.entries.push(entry);
+    if (se.contents) {
+      for (var i = 0; i < se.contents.length; i++) {
+        var sc = se.contents[i];
+        if (typeof sc === 'string') {
+          var /** !ContentEntry */ content =
+              {path: sc, do: Do.RECURSE, reorder: false};
+        } else {
+          content = {path: sc.path, do: sc.do, reorder: Boolean(sc.reorder)};
+        }
+        entry.contents.push(content);
+        var selector = new Selector(content.path);
+        var /** ?ConfigNode */ cn = this.tree;
+        for (var j = 0; j < selector.length; j++) {
+          cn = cn.kidFor(selector[j]);
+        }
+        // Now cn is final ConfigNode for path (often a leaf).
+        cn.firstFileNo = fileNo;
+      }
+    }
+    if (spec[fileNo].rest) {
+      if (this.defaultFileNo !== undefined) {
+        throw Error('Only one rest entry permitted');
+      }
+      this.defaultFileNo = fileNo;
+    }
+  }
+};
+
+///////////////////////////////////////////////////////////////////////////////
+// Exports.
 
 exports.Do = Do;
 exports.dump = dump;
