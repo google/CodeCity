@@ -35,7 +35,7 @@ const {T} = require('./testing');
 const util = require('util');
 
 // Unpack test-only exports from dump:
-const {Dumper} = testOnly;
+const {Dumper, BindingInfo} = testOnly;
 
 /** A very simle Dumper config specification, for testing. */
 const simpleSpec = [{filename: 'all', rest: true}];
@@ -143,13 +143,15 @@ exports.testDumperPrototypeDumpBinding = function(t) {
   const intrp = getInterpreter();
   const dumper = new Dumper(intrp, simpleSpec);
 
-  // Create UserFunction to dump.
+  // Create various objects to dump.
   intrp.createThreadForSrc(`
       function f1(arg) {}
       var f2 = function(arg) {};
       f2.f3 = function f4(arg) {};
       var obj = {a: 1, b: 2, c:3};
       var arr = [42, 69, 105, obj];
+      var sparse = [0, , 2];
+      sparse.length = 4;
       var date = new Date('1975-07-27');
       var re = /foo/ig;
   `);
@@ -162,26 +164,33 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     ['Object', Do.SET, "Object = new 'Object';\n"],
     ['Object', Do.SET, ''],
     ['f1', Do.DECL, 'var f1;\n'],
-    // Actually want 'function f1(arg) {};\n'.
+    // TODO(cpcallen): Really want 'function f1(arg) {};\n'.
     ['f1', Do.SET, 'f1 = function f1(arg) {};\n'],
     ['f2', Do.SET, 'var f2 = function(arg) {};\n'],
     ['f2.f3', Do.DECL, 'f2.f3 = undefined;\n'],
     ['f2.f3', Do.SET, 'f2.f3 = function f4(arg) {};\n'],
     ['obj', Do.SET, 'var obj = {};\n'],
     ['obj', Do.RECURSE, 'obj.a = 1;\nobj.b = 2;\nobj.c = 3;\n'],
-    // Actually want 'var arr = [42, 69, 105, obj];\n'.
+    // TODO(cpcallen): Realy want 'var arr = [42, 69, 105, obj];\n'.
     ['arr', Do.RECURSE, 'var arr = [];\narr[0] = 42;\narr[1] = 69;\n' +
         'arr[2] = 105;\narr[3] = obj;\n'],
+    // TODO(cpcallen): really want 'var sparse = [0, , 2];\nsparse.length = 4;'.
+    ['sparse', Do.RECURSE, 'var sparse = [];\n' +
+        'sparse[0] = 0;\nsparse[2] = 2;\nsparse.length = 4;\n'],
     ['date', Do.SET, "var date = new Date('1975-07-27T00:00:00.000Z');\n"],
     ['re', Do.SET, 'var re = /foo/gi;\n'],
   ];
 
-  
   for (const tc of cases) {
     const s = new Selector(tc[0]);
-    let r = dumper.dumpBinding(s, tc[1]);
+    // Check output code.
+    const code = dumper.dumpBinding(s, tc[1]);
     t.expect(util.format('Dumper.p.dumpBinding(%o, %o)', s, tc[1]),
-        r, tc[2]);
+             code, tc[2]);
+    // Check work recorded.
+    const binding = new BindingInfo(dumper, s);
+    t.expect(util.format('Binding status of %s', s),
+        binding.getDone(), tc[1]);
   }
 
 };
@@ -193,20 +202,6 @@ exports.testDumperPrototypeDumpBinding = function(t) {
 exports.testDumper = function(t) {
   let intrp = getInterpreter();
   let dumper = new Dumper(intrp, simpleSpec);
-
-  // Test toExpr.
-  const cases = [
-    ['Infinity', 'Infinity'],
-    ['NaN', 'NaN'],
-    ['undefined', 'undefined'],
-    ['Object.name', "'Object'"],
-    ['String.prototype.split.length', '2'],
-  ];
-  for (const tc of cases) {
-    const s = new Selector(tc[0]);
-    let r = dumper.toExpr(dumper.getValueForSelector(s));
-    t.expect('toExpr(/* ' + tc[0] + ' */)', r, tc[1]);
-  }
 
   // Test dump.
   intrp = new Interpreter({noLog: ['net', 'unhandled']});
