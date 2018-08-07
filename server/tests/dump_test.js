@@ -158,6 +158,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
   intrp.run();
   const func = intrp.global.get('foo');
 
+  // Check generated output for (and post-dump status of) specific bindings.
   const cases = [  // Order matters.
     ['Object', Do.DECL, 'var Object;\n'],
     ['Object', Do.DECL, ''],
@@ -180,7 +181,6 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     ['date', Do.SET, "var date = new Date('1975-07-27T00:00:00.000Z');\n"],
     ['re', Do.SET, 'var re = /foo/gi;\n'],
   ];
-
   for (const tc of cases) {
     const s = new Selector(tc[0]);
     // Check output code.
@@ -193,6 +193,29 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         binding.getDone(), tc[1]);
   }
 
+  // Check status of additional bindings that will be set implicitly
+  // as a side effect of the code generated above.
+  const implicit = [
+    ['Object.length', Do.SET],
+    ['Object.name', Do.SET],
+    ['f1.length', Do.SET],
+    ['f1.name', Do.SET],
+    ['f2.length', Do.SET],
+    ['f2.name', Do.SET],
+    ['f2.f3.length', Do.SET],
+    // TODO(cpcallen): enable this once code is correct.
+    // ['f2.f3.name', Do.UNSTARTED],  // N.B.: not implicitly set.
+    ['arr.length', Do.SET],
+    ['sparse.length', Do.SET],
+    // TODO(cpcallen): enable this once code is correct.
+    // ['re.lastIndex', Do.SET],
+  ];
+  for (const tc of implicit) {
+    const s = new Selector(tc[0]);
+    const binding = new BindingInfo(dumper, s);
+    t.expect(util.format('Binding status of %s', s),
+        binding.getDone(), tc[1]);
+  }
 };
 
 /**

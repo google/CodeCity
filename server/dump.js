@@ -79,12 +79,12 @@ Dumper.prototype.dumpBinding = function(selector, todo) {
   var doInit = (todo >= Do.SET && done < Do.SET);
   var doRecurse = (todo >= Do.RECURSE && done < Do.RECURSE);
 
-  // Get value for initialiser or recursion.
+  // Get value for initialiser and/or recursion.
   if (doInit || doRecurse) {
     var value = this.getValueForSelector(selector);
   }
 
-  // Do declaration / initialisation.
+  // Do declaration and/or initialisation.
   if (doDecl || doInit) {
     // Begin with var if declaring a variable.
     if (doDecl && selector.isVar()) output.push('var ');
@@ -100,17 +100,18 @@ Dumper.prototype.dumpBinding = function(selector, todo) {
     output.push(';\n');
   }
 
-  // Record what we've done (and are about to do, before recursing, to
-  // avoid infinite loops!)
-  //
-  // TODO(cpcallen): We should probably record some intermediate
-  // state: enough to stop further recursive calls, but not indicating
-  // final completion.  At the moment this makes the setDone call
-  // below a no-op.
-  binding.setDone(todo);
+  if (!doRecurse || !(value instanceof this.intrp.Object)) {
+    // No recursion requested/possible.
+    binding.setDone(/** @type {Do} */(Math.min(todo, Do.SET)));
+  } else {
+    // Record what we're about to do, to avoid infinite recursion.
+    //
+    // TODO(cpcallen): We should probably record some intermediate
+    // state: enough to stop further recursive calls, but not indicating
+    // final completion.  At the moment this makes the setDone call
+    // below a no-op.
+    binding.setDone(todo);
 
-  // Do recursive binding of properties.
-  if (doRecurse && (value instanceof this.intrp.Object)) {
     var oi = this.getObjectInfo(value);
     var root = this.intrp.ROOT;
     var keys = value.ownKeys(root);
@@ -151,22 +152,21 @@ Dumper.prototype.toExpr = function(value, selector) {
   }
 
   // Return existing reference to object (if already created).
-  var vi = this.getObjectInfo(value);
-  if (vi.ref) return vi.ref.toExpr();
+  var info = this.getObjectInfo(value);
+  if (info.ref) return info.ref.toExpr();
 
   // New object.  Save referece for later use.
   if (!selector) throw Error('Refusing to create non-referable object');
-  vi.ref = selector;
+  info.ref = selector;
 
-  // Object not yet referenced.  Is it a builtin?
+  // Object not yet referenced.  Is it a builtin?  If not, create it.
   var key = intrp.builtins.getKey(value);
-  if (key) return 'new ' + code.quote(key);
-
-  // Object not yet created.
-  if (value instanceof intrp.Function) {
-    return this.functionToExpr(value);
+  if (key) {
+    return this.builtinToExpr (value, key, info);
+  } else if (value instanceof intrp.Function) {
+    return this.functionToExpr(value, info);
   } else if (value instanceof intrp.Array) {
-    return this.arrayToExpr(value);
+    return this.arrayToExpr(value, info);
   } else if (value instanceof intrp.Date) {
     return this.dateToExpr(value);
   } else if (value instanceof intrp.RegExp) {
@@ -221,6 +221,23 @@ Dumper.prototype.primitiveToExpr = function(value) {
 };
 
 /**
+ * Get a source text representation of a given builtin.  May or may not
+ * include all properties, etc.
+ * @param {!Interpreter.prototype.Object} obj Object to be recreated.
+ * @param {string} key The name of the builtin.
+ * @param {!ObjectInfo} info Dump-state info about func.
+ * @return {string} An eval-able representation of obj.
+ */
+Dumper.prototype.builtinToExpr = function(obj, key, info) {
+  if (obj instanceof this.intrp.Function) {
+    // The .length property and .name properties are pre-set.
+    info.done['length'] = Do.SET;
+    info.done['name'] = Do.SET;
+  }
+  return 'new ' + code.quote(key);
+};
+
+/**
  * Get a source text representation of a given Object.  May or may not
  * include all properties, etc.
  * @param {!Interpreter.prototype.Object} obj Object to be recreated.
@@ -241,31 +258,35 @@ Dumper.prototype.objectToExpr = function(obj) {
  * Get a source text representation of a given Function object.
  * @param {!Interpreter.prototype.Function} func Function object to be
  *     recreated.
- * @return {string} An eval-able representation of obj.
+ * @param {!ObjectInfo} info Dump-state info about func.
+ * @return {string} An eval-able representation of func.
  */
-Dumper.prototype.functionToExpr = function(func) {
+Dumper.prototype.functionToExpr = function(func, info) {
   if (!(func instanceof this.intrp.UserFunction)) {
     throw Error('Unable to dump non-UserFunction');
   }
+  // The .length property will be set implicitly.
+  info.done['length'] = Do.SET;
+  // TODO(cpcallen): .name is only set in certain circumstances.
+  info.done['name'] = Do.SET;
   return func.toString();
 };
 
 /**
  * Get a source text representation of a given Array object.
  * @param {!Interpreter.prototype.Array} arr Array object to be recreated.
- * @param {!ObjectInfo=} oi Dump-state info about arr.
+ * @param {!ObjectInfo} info Dump-state info about arr.
  * @return {string} An eval-able representation of obj.
  */
-Dumper.prototype.arrayToExpr = function(arr, oi) {
-  oi = oi || this.getObjectInfo(arr);
+Dumper.prototype.arrayToExpr = function(arr, info) {
   var root = this.intrp.ROOT;
   var lastIndex = arr.get('length', root) - 1;
   if (lastIndex < 0 || arr.getOwnPropertyDescriptor(String(lastIndex),  root)) {
     // No need to set .length if it will be set via setting final index.
-    oi.done['length'] = Do.SET;
+    info.done['length'] = Do.SET;
   } else {
     // Length exists; don't worry about it when preserving propery order.
-    oi.done['length'] = Do.DECL;
+    info.done['length'] = Do.DECL;
   }
   return '[]';
 };
