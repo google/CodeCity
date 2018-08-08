@@ -231,6 +231,8 @@ Dumper.prototype.primitiveToExpr = function(value) {
 Dumper.prototype.builtinToExpr = function(obj, key, info) {
   if (obj instanceof this.intrp.Function) {
     // The .length property and .name properties are pre-set.
+    // BUG(cpcallen): Actually, .name can be changed, so we should
+    // compare it to the value in a pristine Interpreter.
     info.done['length'] = Do.SET;
     info.done['name'] = Do.SET;
   }
@@ -267,7 +269,7 @@ Dumper.prototype.functionToExpr = function(func, info) {
   }
   // The .length property will be set implicitly.
   info.done['length'] = Do.SET;
-  // TODO(cpcallen): .name is only set in certain circumstances.
+  // BUG(cpcallen): .name is only set in certain circumstances.
   info.done['name'] = Do.SET;
   return func.toString();
 };
