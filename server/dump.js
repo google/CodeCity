@@ -43,8 +43,9 @@ var dump = function(intrp, spec) {
 // Dumper.
 
 /**
- * Dumper encapsulates all the state required to keep track of what
- * has and hasn't yet been written when dumping an Interpreter.
+ * Dumper encapsulates all machinery to dump an Interpreter object to
+ * eval-able JS, including maintaining all the dump-state info
+ * required to keep track of what has and hasn't yet been dumped.
  * @constructor
  * @param {!Interpreter} intrp The interpreter to be dumped.
  * @param {!Array<SpecEntry>} spec The dump specification.
@@ -64,8 +65,20 @@ var Dumper = function(intrp, spec) {
 };
 
 /**
- * Get a source text to declare and optionally initialise a particular
- * binding.
+ * Generate JS source text to declare and optionally initialise a
+ * particular binding (as specified by a Selector).
+ * 
+ * E.g., if foo = [42, 69, 105], then:
+ *
+ * myDumper.dumpBinding(new Selector('foo'), Do.DECL)
+ * // => 'var foo;\n'
+ * myDumper.dumpBinding(new Selector('foo'), Do.SET)
+ * // => 'foo = [];\n'
+ * myDumper.dumpBinding(new Selector('foo[0]'), Do.SET)
+ * // => 'foo[0] = 42;\n'
+ * myDumper.dumpBinding(new Selector('foo'), Do.RECURSE)
+ * // => 'foo[1] = 69;\nfoo[2] = 105;\n'
+ *
  * @param {!Selector} selector The selector for the binding to be dumped.
  * @param {Do} todo How much to dump.  Must be >= Do.DECL.
  * @return {string} An eval-able program to initialise the specified binding.
