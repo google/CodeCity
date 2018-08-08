@@ -153,7 +153,9 @@ exports.testDumperPrototypeDumpBinding = function(t) {
       var sparse = [0, , 2];
       sparse.length = 4;
       var date = new Date('1975-07-27');
-      var re = /foo/ig;
+      var re1 = /foo/ig;
+      var re2 = /bar/g;
+      re2.lastIndex = 42;
   `);
   intrp.run();
   const func = intrp.global.get('foo');
@@ -179,7 +181,8 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     ['sparse', Do.RECURSE, 'var sparse = [];\n' +
         'sparse[0] = 0;\nsparse[2] = 2;\nsparse.length = 4;\n'],
     ['date', Do.SET, "var date = new Date('1975-07-27T00:00:00.000Z');\n"],
-    ['re', Do.SET, 'var re = /foo/gi;\n'],
+    ['re1', Do.SET, 'var re1 = /foo/gi;\n'],
+    ['re2', Do.RECURSE, 'var re2 = /bar/g;\nre2.lastIndex = 42;\n'],
   ];
   for (const tc of cases) {
     const s = new Selector(tc[0]);
@@ -193,8 +196,8 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         binding.getDone(), tc[1]);
   }
 
-  // Check status of additional bindings that will be set implicitly
-  // as a side effect of the code generated above.
+  // Check status of (some of the) additional bindings that will be
+  // set implicitly as a side effect of the code generated above.
   const implicit = [
     ['Object.length', Do.SET],
     ['Object.name', Do.SET],
@@ -207,8 +210,11 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     // ['f2.f3.name', Do.UNSTARTED],  // N.B.: not implicitly set.
     ['arr.length', Do.SET],
     ['sparse.length', Do.SET],
-    // TODO(cpcallen): enable this once code is correct.
-    // ['re.lastIndex', Do.SET],
+    ['re1.source', Do.SET],
+    ['re1.global', Do.SET],
+    ['re1.ignoreCase', Do.SET],
+    ['re1.multiline', Do.SET],
+    ['re1.lastIndex', Do.SET],
   ];
   for (const tc of implicit) {
     const s = new Selector(tc[0]);
