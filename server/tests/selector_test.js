@@ -60,6 +60,18 @@ exports.testSelector = function(t) {
 
     ['$._.__.$$', 4, '$', '$$', '$._.__.$$'],
     [['$', '_', '__', '$$'], 4, '$', '$$', '$._.__.$$'],
+
+    ['foo^', 2, 'foo', Selector.PROTOTYPE, 'foo^',
+        'Object.getPrototypeOf(foo)', 'Object.setPrototypeOf(foo, NEW)'],
+    [['foo', Selector.PROTOTYPE], 2, 'foo', Selector.PROTOTYPE, 'foo^',
+        'Object.getPrototypeOf(foo)', 'Object.setPrototypeOf(foo, NEW)'],
+
+    ['foo^.bar', 3, 'foo', 'bar', 'foo^.bar',
+        'Object.getPrototypeOf(foo).bar',
+        'Object.getPrototypeOf(foo).bar = NEW'],
+    [['foo', Selector.PROTOTYPE, 'bar'], 3, 'foo', 'bar', 'foo^.bar',
+        'Object.getPrototypeOf(foo).bar',
+        'Object.getPrototypeOf(foo).bar = NEW'],
   ];
   for (const tc of cases) {
     const s = new Selector(tc[0]);
@@ -68,7 +80,10 @@ exports.testSelector = function(t) {
     t.expect(name + '[0]', s[0], tc[2]);
     t.expect(name + '[/*last*/]', s[s.length - 1], tc[3]);
     t.expect(name + '.toString()', s.toString(), tc[4]);
-    t.expect(name + '.toExpr()', s.toExpr(), tc[4]);
+    const expr = tc[5] || tc[4];
+    t.expect(name + '.toExpr()', s.toExpr(), expr);
+    const setExpr = tc[6] || tc[4] + ' = NEW';
+    t.expect(name + '.toSetExpr()', s.toSetExpr('NEW'), setExpr);
   }
 };
 
