@@ -170,7 +170,7 @@ Dumper.prototype.toExpr = function(value, selector) {
   } else if (value instanceof intrp.Date) {
     return this.dateToExpr(value);
   } else if (value instanceof intrp.RegExp) {
-    return this.regExpToExpr(value);
+    return this.regExpToExpr(value, info);
   } else {
     return this.objectToExpr(value);
   }
@@ -303,9 +303,19 @@ Dumper.prototype.dateToExpr = function(date) {
 /**
  * Get a source text representation of a given RegExp object.
  * @param {!Interpreter.prototype.RegExp} re RegExp to be recreated.
+ * @param {!ObjectInfo} info Dump-state info about arr.
  * @return {string} An eval-able representation of obj.
  */
-Dumper.prototype.regExpToExpr = function(re) {
+Dumper.prototype.regExpToExpr = function(re, info) {
+  // Some properties are implicitly pre-set.
+  info.done['source'] = Do.SET;
+  info.done['global'] = Do.SET;
+  info.done['ignoreCase'] = Do.SET;
+  info.done['multiline'] = Do.SET;
+  // Can skip .lastIndex iff it is 0.
+  if (re.get('lastIndex', this.intrp.ROOT) === 0) {
+    info.done['lastIndex'] = Do.SET;
+  }
   return re.regexp.toString();
 };
 
