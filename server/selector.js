@@ -43,7 +43,7 @@ var Selector = function(s) {
     if (typeof s.length < 1) throw RangeError('Zero-length parts list??');
     if (s.length < 1) throw RangeError('Zero-length parts list??');
     for (var i = 0; i < s.length; i++) {
-      if (typeof s[i] !== 'string') {
+      if (typeof s[i] !== 'string' && !(s[i] instanceof SpecialPart)) {
         throw TypeError('Invalid part in parts array');
       }
       parts[i] = s[i];
@@ -75,19 +75,14 @@ Selector.prototype.isVar = function() {
  * @return {string} The selector as a string.
  */
 Selector.prototype.toExpr = function() {
-  var /** !Array<string> */ out = [this[0]];
-  for (var i = 1; i < this.length; i++) {
-    var part = this[i];
-    if (identifierRE.test(part)) {
-      out.push('.', part);
-    } else if (String(Number(part)) === part) {
-      // String represents a number with same string representation.
-      out.push('[', part, ']');
+  return this.toString(function(part, out) {
+    if (part === Selector.PROTOTYPE) {
+      out.unshift('Object.getPrototypeOf(');
+      out.push(')');
     } else {
-      out.push('[', code.quote(part), ']');
+      throw new TypeError('Invalid part in parts array');
     }
-  }
- return out.join('');
+  });
 };
 
 /**
@@ -100,22 +95,68 @@ Selector.prototype.toExpr = function() {
  * @return {string} The selector as a string.
  */
 Selector.prototype.toSetExpr = function(valueExpr) {
-  // TODO(cpcallen): rewrite when support for __proto__  / owner is added.
-  return this.toExpr() + ' = ' + valueExpr;
+  var lastPart = this[this.length - 1];
+  if (!(lastPart instanceof SpecialPart)) {
+    return this.toExpr() + ' = ' + valueExpr;
+  } else if (lastPart === Selector.PROTOTYPE) {
+    var objExpr = new Selector(this.slice(0, -1)).toExpr();
+    return 'Object.setPrototypeOf(' + objExpr + ', ' + valueExpr + ')';
+  } else {
+    throw new TypeError('Invalid part in parts array');
+  }
 };
 
 /**
  * Return the selector string corresponding to this selector.
+ * @param {function(!SpecialPart, !Array<string>)=} specialHandler
+ *     Optional function to handle stringifying SpecialParts.
  * @return {string} The selector as a string.
  */
-Selector.prototype.toString = function() {
-  // TODO(cpcallen): rewrite when support for __proto__  / owner is added.
-  return this.toExpr();
+Selector.prototype.toString = function(specialHandler) {
+  var /** !Array<string> */ out = [this[0]];
+  for (var i = 1; i < this.length; i++) {
+    var part = this[i];
+    if (part instanceof SpecialPart) {
+      if (specialHandler) {
+        specialHandler(part, out);
+      } else if (part === Selector.PROTOTYPE) {
+        out.push('^');
+      } else {
+        throw new TypeError('Invalid SpecialPart');
+      }
+    } else if (identifierRE.test(part)) {
+      out.push('.', part);
+    } else if (String(Number(part)) === part) {
+      // String represents a number with same string representation.
+      out.push('[', part, ']');
+    } else {
+      out.push('[', code.quote(part), ']');
+    }
+  }
+  return out.join('');
 };
 
-/** @typedef {string} */
+/**
+ * A Selector fundamentally an array of Parts, and Parts are either
+ * strings (representing variable or property names) or SpecialParts
+ * (representing everything else, like ^ for prottype.
+ * @typedef {string|!SpecialPart}
+ */
 Selector.Part;
 
+/**
+ * Type for all "special" selector parts (ones which do not represent
+ * named variables / properties).
+ * @constructor
+ */
+var SpecialPart = function(type) {
+  this.type = type;
+};
+
+/**
+ * Special singleton Part for refering to an object's prototype.
+ */
+Selector.PROTOTYPE = new SpecialPart('^');
 
 /**
  * Parse a selector into an array of Parts.
@@ -144,6 +185,9 @@ var parse = function(selector) {
           state = State.DOT;
         } else if (token.type === '[') {
           state = State.BRACKET;
+        } else if (token.type === '^') {
+          // state remains unchanged.
+          parts.push(Selector.PROTOTYPE);
         } else {
           throw new SyntaxError(
               'Invalid token ' + code.quote(token.raw)  + ' in selector');
@@ -211,6 +255,7 @@ var tokenize = function(selector) {
     number: /\d+/y,
     '[': /\[/y,
     ']': /\]/y,
+    '^': /\^/y,
     str: new RegExp(code.regexps.string, 'y'),
   };
   
