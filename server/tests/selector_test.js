@@ -85,5 +85,28 @@ exports.testSelector = function(t) {
     t.expect(name + '.toExpr()', s.toExpr(), expectedExpr);
     t.expect(name + '.toSetExpr()', s.toSetExpr('NEW'), expectedSetExpr);
   }
+
+  const invalidCases = [
+    '1foo',
+    'foo.',
+    'foo["bar]',
+    "foo[bar']",
+    'foo.[42]',
+    'foo[42',
+    'foo42]',
+    "foo['\"'\"']",
+    'foo["\'"\'"]',
+    'foo^.bar',
+  ];
+  for (const input of cases) {
+    // Do test with selector string.
+    const name = util.format('new Selector(%o)', input);
+    try {
+      new Selector(input);
+      t.fail(name, "didn't throw");
+    } catch (e) {
+      t.pass(name);
+    }
+  }
 };
 
