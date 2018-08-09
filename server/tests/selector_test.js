@@ -34,56 +34,56 @@ const util = require('util');
  */
 exports.testSelector = function(t) {
   const cases = [
-    ['foo', 1, 'foo', 'foo', 'foo'],
-    [['foo'], 1, 'foo', 'foo', 'foo'],
+    // Test cases  of form [SS, [P1, P2, ...], tS, tE, tSE] where
+    // SS: selector string, to use as argument to Selector constructor,
+    // [Pn...]: expected parts array,
+    // tS: expected toString output,
+    // tE: expected toExpr output (can be omitted if same),
+    // tSE: expected toSetExpr output (if different not same + ' = NEW').
 
-    ['foo.bar', 2, 'foo', 'bar', 'foo.bar'],
-    ['foo["bar"]', 2, 'foo', 'bar', 'foo.bar'],
-    ["foo['bar']", 2, 'foo', 'bar', 'foo.bar'],
-    [['foo', 'bar'], 2, 'foo', 'bar', 'foo.bar'],
+    ['foo', ['foo'], 'foo'],
 
-    ['foo[42]', 2, 'foo', '42', 'foo[42]'],
-    [['foo', '42'], 2, 'foo', '42', 'foo[42]'],
+    ['foo.bar', ['foo', 'bar'], 'foo.bar'],
+    ['foo["bar"]', ['foo', 'bar'], 'foo.bar'],
+    ["foo['bar']", ['foo', 'bar'], 'foo.bar'],
 
-    ['foo["bar baz"]', 2, 'foo', 'bar baz', "foo['bar baz']"],
-    ["foo['bar baz']", 2, 'foo', 'bar baz', "foo['bar baz']"],
-    [['foo', 'bar baz'], 2, 'foo', 'bar baz', "foo['bar baz']"],
+    ['foo[42]', ['foo', '42'], 'foo[42]'],
+    ["foo['42']", ['foo', '42'], 'foo[42]'],
+    ['foo["42"]', ['foo', '42'], 'foo[42]'],
 
-    ["foo['\"\\'\"']", 2, 'foo', '"\'"', "foo['\"\\'\"']"],
-    [['foo', '"\'"'], 2, 'foo', '"\'"', "foo['\"\\'\"']"],
+    ['foo["bar baz"]', ['foo', 'bar baz'], "foo['bar baz']"],
+    ["foo['bar baz']", ['foo', 'bar baz'], "foo['bar baz']"],
 
-    ['foo["\'\\"\'"]', 2, 'foo', "'\"'", 'foo["\'\\"\'"]'],
-    [['foo', "'\"'"], 2, 'foo', "'\"'", 'foo["\'\\"\'"]'],
-
-    ['foo.bar.baz', 3, 'foo', 'baz', 'foo.bar.baz'],
-    [['foo', 'bar', 'baz'], 3, 'foo', 'baz', 'foo.bar.baz'],
-
-    ['$._.__.$$', 4, '$', '$$', '$._.__.$$'],
-    [['$', '_', '__', '$$'], 4, '$', '$$', '$._.__.$$'],
-
-    ['foo^', 2, 'foo', Selector.PROTOTYPE, 'foo^',
+    ["foo['\"\\'\"']", ['foo', '"\'"'], "foo['\"\\'\"']"],
+    ['foo["\'\\"\'"]', ['foo', "'\"'"], 'foo["\'\\"\'"]'],
+    ['foo.bar.baz', ['foo', 'bar', 'baz'], 'foo.bar.baz'],
+    ['$._.__.$$', ['$', '_', '__', '$$'], '$._.__.$$'],
+    ['foo^', ['foo', Selector.PROTOTYPE], 'foo^',
         'Object.getPrototypeOf(foo)', 'Object.setPrototypeOf(foo, NEW)'],
-    [['foo', Selector.PROTOTYPE], 2, 'foo', Selector.PROTOTYPE, 'foo^',
-        'Object.getPrototypeOf(foo)', 'Object.setPrototypeOf(foo, NEW)'],
-
-    ['foo^.bar', 3, 'foo', 'bar', 'foo^.bar',
-        'Object.getPrototypeOf(foo).bar',
-        'Object.getPrototypeOf(foo).bar = NEW'],
-    [['foo', Selector.PROTOTYPE, 'bar'], 3, 'foo', 'bar', 'foo^.bar',
+    ['foo^.bar', ['foo', Selector.PROTOTYPE, 'bar'], 'foo^.bar',
         'Object.getPrototypeOf(foo).bar',
         'Object.getPrototypeOf(foo).bar = NEW'],
   ];
-  for (const tc of cases) {
-    const s = new Selector(tc[0]);
-    const name = util.format('new Selector(%o)', tc[0]);
-    t.expect(name + '.length', s.length, tc[1]);
-    t.expect(name + '[0]', s[0], tc[2]);
-    t.expect(name + '[/*last*/]', s[s.length - 1], tc[3]);
-    t.expect(name + '.toString()', s.toString(), tc[4]);
-    const expr = tc[5] || tc[4];
-    t.expect(name + '.toExpr()', s.toExpr(), expr);
-    const setExpr = tc[6] || tc[4] + ' = NEW';
-    t.expect(name + '.toSetExpr()', s.toSetExpr('NEW'), setExpr);
+  for (const [input, parts, str, expr, setExpr] of cases) {
+    // Do test with selector string.
+    let name = util.format('new Selector(%o)', input);
+    let s = new Selector(input);
+    t.expect(name + '.length', s.length, parts.length);
+    for (let i = 0; i < s.length; i++) {
+      t.expect(util.format('%s[%d]', name, i), s[i], parts[i]);
+    }
+    t.expect(name + '.toString()', s.toString(), str);
+    let expectedExpr = expr || str;
+    t.expect(name + '.toExpr()', s.toExpr(), expectedExpr);
+    let expectedSetExpr = setExpr || expectedExpr + ' = NEW';
+    t.expect(name + '.toSetExpr()', s.toSetExpr('NEW'), expectedSetExpr);
+
+    // Repeat test using parts array.
+    name = util.format('new Selector(%o)', parts);
+    s = new Selector(parts);
+    t.expect(name + '.toString()', s.toString(), str);
+    t.expect(name + '.toExpr()', s.toExpr(), expectedExpr);
+    t.expect(name + '.toSetExpr()', s.toSetExpr('NEW'), expectedSetExpr);
   }
 };
 
