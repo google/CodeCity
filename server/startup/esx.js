@@ -70,7 +70,7 @@ var PermissionError = new 'PermissionError';
 
   var struct = [
     [Object, 'Object', ['getOwnerOf', 'setOwnerOf'], []],
-    [Thread, 'Thread', ['current', 'kill', 'suspend'], []],
+    [Thread, 'Thread', ['current', 'kill', 'suspend', 'callers'], []],
   ];
   for (var i = 0; i < struct.length; i++) {
     var obj = struct[i][0];
