@@ -227,7 +227,7 @@ module.exports = [
 
   // N.B.: This and next tests have no equivalent in the test DB.
   { name: 'throwUnhandledError', src: `
-    throw Error('not caught');
+    throw new Error('not caught');
     `,
     expected: undefined },
 
@@ -238,7 +238,7 @@ module.exports = [
 
   { name: 'throwUnhandledErrorWithFinally', src: `
     try {
-      throw Error('not caught');
+      throw new Error('not caught');
     } finally {
     }
     `,
@@ -526,7 +526,7 @@ module.exports = [
       function checkLen(exp, desc) {
         if (a.length !== exp) {
           var msg = 'a.length === ' + a.length + ' (expected: ' + exp + ')'
-          throw Error(desc ? msg + ' ' + desc : msg);
+          throw new Error(desc ? msg + ' ' + desc : msg);
         }
       }
 
@@ -570,7 +570,7 @@ module.exports = [
         var r = a.hasOwnProperty(idx);
         if (r !== exp) {
           var msg = 'a.hasOwnProperty(' + idx + ') === ' + r;
-          throw Error(desc ? msg + ' ' + desc : msg);
+          throw new Error(desc ? msg + ' ' + desc : msg);
         }
       }
 
@@ -596,13 +596,15 @@ module.exports = [
           continue;
         }
         if (String(key >>> 0) === key && (key >>> 0) !== 0xffffffff) {
-          throw Error('Setting a.length = 0 failed to remove property ' + key);
+          throw new Error(
+              'Setting a.length = 0 failed to remove property ' + key);
         }
       }
 
       // Make sure we didn't wipe everything!
       if (Object.getOwnPropertyNames(a).length !== 4) {
-        throw Error('Setting .length == 0 removed some non-index properties');
+        throw new Error(
+            'Setting .length == 0 removed some non-index properties');
       }
       'OK';
     } catch (e) {
@@ -1638,7 +1640,7 @@ module.exports = [
   { name: 'Function.prototype.apply(..., sparse)', src: `
     (function(a, b, c) {
       if (!(1 in arguments)) {
-        throw Error("Argument 1 missing");
+        throw new Error("Argument 1 missing");
       }
       return a + c;
     }).apply(undefined, [1, , 3]);
@@ -1686,7 +1688,7 @@ module.exports = [
   { name: 'Function.prototype.call', src: `
     (function(a, b, c) {
       if (!(1 in arguments)) {
-        throw Error("Argument 1 missing");
+        throw new Error("Argument 1 missing");
       }
       return a + c;
     }).call(undefined, 1, 2, 3);

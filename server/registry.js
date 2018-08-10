@@ -46,7 +46,7 @@ class Registry {
    */
   get(key) {
     if (!this.has(key)) {
-      throw Error('Key "' + key + '" not registered');
+      throw new Error('Key "' + key + '" not registered');
     }
     return this.values_[key];
   }
@@ -61,7 +61,7 @@ class Registry {
    */
   getKey(value) {
     if (!this.keys_.has(value)) {
-      throw Error('Value ' + value + ' not registered');
+      throw new Error('Value ' + value + ' not registered');
     }
     return this.keys_.get(value);
   }
@@ -83,7 +83,7 @@ class Registry {
    */
   set(key, value) {
     if (key in this.values_) {
-      throw Error('Key "' + key + '" already registered');
+      throw new Error('Key "' + key + '" already registered');
     }
     this.values_[key] = value;
     this.keys_.set(value, key);

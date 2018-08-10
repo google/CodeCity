@@ -230,7 +230,7 @@ Interpreter.prototype.schedule = function() {
         this.done = false;
         break;
       default:
-        throw Error('Unknown thread state');
+        throw new Error('Unknown thread state');
     }
   }
   return runAt < now ? 0 : runAt;
@@ -247,7 +247,7 @@ Interpreter.prototype.step = function() {
    * returns.
    */
   if (this.status !== Interpreter.Status.PAUSED) {
-    throw Error('Can only step paused interpreter');
+    throw new Error('Can only step paused interpreter');
   }
   if (!this.thread || this.thread.status !== Interpreter.Thread.Status.READY) {
     if (this.schedule() > 0) {
@@ -291,7 +291,7 @@ Interpreter.prototype.run = function() {
    * returns.
    */
   if (this.status === Interpreter.Status.STOPPED) {
-    throw Error("Can't run stopped interpreter");
+    throw new Error("Can't run stopped interpreter");
   }
   var t;
   while ((t = this.schedule()) === 0) {
@@ -337,7 +337,7 @@ Interpreter.prototype.go_ = function() {
     // Invariant check: pausing or stopping interpreter should cancel
     // timeout, so we should never get here while it is not RUNNING.
     if (intrp.status !== Interpreter.Status.RUNNING) {
-      throw Error('Un-cancelled runner on non-RUNNING interpreteter');
+      throw new Error('Un-cancelled runner on non-RUNNING interpreteter');
     }
     // N.B.: .run may indirectly call .go_ or even .pause or .stop
     // (e.g. via native function calling .createThread, .pause, etc.).
@@ -616,7 +616,7 @@ Interpreter.prototype.initObject_ = function() {
       } else if (value === undefined || value === null) {
         return new intrp.Object(state.scope.perms);
       } else {
-        throw TypeError('Unknown value type??');
+        throw new TypeError('Unknown value type??');
       }
     },
     /** @type {!Interpreter.NativeCallImpl} */
@@ -1494,7 +1494,7 @@ Interpreter.prototype.initString_ = function() {
           throw new intrp.Error(perms, intrp.TYPE_ERROR,
              'Cannot convert object to primitive value');
         default:
-          throw Error('Invalid funcStep in String??');
+          throw new Error('Invalid funcStep in String??');
       }
     },
     /** @type {!Interpreter.NativeConstructImpl} */
@@ -2327,10 +2327,10 @@ Interpreter.prototype.initNetwork_ = function() {
       if (port !== (port >>> 0) || port > 0xffff) {
         throw new intrp.Error(perms, intrp.RANGE_ERROR, 'invalid port');
       } else if (!(port in intrp.listeners_)) {
-        throw  new intrp.Error(perms, intrp.RANGE_ERROR, 'port not listening');
+        throw new intrp.Error(perms, intrp.RANGE_ERROR, 'port not listening');
       }
       if (!(intrp.listeners_[port].server_ instanceof net.Server)) {
-        throw Error('server already closed??');
+        throw new Error('server already closed??');
       }
       var rr = intrp.getResolveReject(thread, state);
       intrp.listeners_[port].unlisten(function(e) {
@@ -2700,7 +2700,7 @@ Interpreter.prototype.setValueToScope = function(scope, name, value) {
  */
 Interpreter.prototype.populateScope_ = function(node, scope, source) {
   if (!source) {
-    if (!node['source']) throw Error('Source not found');
+    if (!node['source']) throw new Error('Source not found');
     source = node['source'];
   }
   if (node['type'] === 'VariableDeclaration') {
@@ -2827,7 +2827,7 @@ Interpreter.prototype.throw_ = function(thread, e, perms) {
       (typeof e === 'object' || typeof e === 'function')) {
     // WTF: not a native exception, not an interpreter object and not
     // a primitive, but just some random (internal) object.
-    throw TypeError('Unexpected exception value ' + String(e));
+    throw new TypeError('Unexpected exception value ' + String(e));
   }
   this.unwind_(thread, Interpreter.CompletionType.THROW, e, undefined);
 };
@@ -2850,7 +2850,7 @@ Interpreter.prototype.throw_ = function(thread, e, perms) {
  */
 Interpreter.prototype.unwind_ = function(thread, type, value, label) {
   if (type === Interpreter.CompletionType.NORMAL) {
-    throw TypeError('Should not unwind for NORMAL completions');
+    throw new TypeError('Should not unwind for NORMAL completions');
   }
   for (var stack = thread.stateStack_; stack.length > 0; stack.pop()) {
     var state = stack[stack.length - 1];
@@ -2862,7 +2862,7 @@ Interpreter.prototype.unwind_ = function(thread, type, value, label) {
         switch (type) {
           case Interpreter.CompletionType.BREAK:
           case Interpreter.CompletionType.CONTINUE:
-            throw Error('Unsynatctic break/continue not rejected by Acorn');
+            throw new Error('Unsynatctic break/continue not rejected by Acorn');
           case Interpreter.CompletionType.RETURN:
             state.value = value;
             return;
@@ -2901,7 +2901,7 @@ Interpreter.prototype.unwind_ = function(thread, type, value, label) {
       this.log('unhandled', 'Unhandled exception with value: %o', native);
     }
   } else {
-    throw Error('Unsynatctic break/continue/return not rejected by Acorn');
+    throw new Error('Unsynatctic break/continue/return not rejected by Acorn');
   }
 };
 
@@ -2932,12 +2932,12 @@ Interpreter.prototype.getResolveReject = function(thread, state) {
    */
   var check = function() {
     if (done) {
-      throw Error('Async resolved or rejected more than once??');
+      throw new Error('Async resolved or rejected more than once??');
     }
     done = true;
     if (thread.status !== Interpreter.Thread.Status.BLOCKED ||
         thread.stateStack_[thread.stateStack_.length - 1] !== state) {
-      throw Error('Thread state corrupt at async resolve/reject??');
+      throw new Error('Thread state corrupt at async resolve/reject??');
     }
   };
 
@@ -3193,7 +3193,7 @@ Interpreter.Scope.prototype.hasBinding = function(name) {
  */
 Interpreter.Scope.prototype.createMutableBinding = function(name, value) {
   if (name in this.vars) {
-    throw Error(name + ' already has binding in this scope??');
+    throw new Error(name + ' already has binding in this scope??');
   }
   this.vars[name] = value;
 };
@@ -3209,7 +3209,7 @@ Interpreter.Scope.prototype.createMutableBinding = function(name, value) {
  */
 Interpreter.Scope.prototype.createImmutableBinding = function(name, value) {
   if (name in this.vars) {
-    throw Error(name + ' already has binding in this scope??');
+    throw new Error(name + ' already has binding in this scope??');
   }
   Object.defineProperty(this.vars, name, Descriptor.ec.withValue(value));
 };
@@ -3309,7 +3309,7 @@ Interpreter.Source = function(src, start_, end_) {
     /** @private @type {number} */
     this.start_ = 0;
   } else if (start_ < 0 || start_ > src.length) {
-    throw RangeError('Source start out of range');
+    throw new RangeError('Source start out of range');
   } else {
     this.start_ = start_;
   }
@@ -3317,7 +3317,7 @@ Interpreter.Source = function(src, start_, end_) {
     /** @private @type {number} */
     this.end_ = src.length;
   } else if (end_ < 0 || end_ > src.length) {
-    throw RangeError('Source end out of range');
+    throw new RangeError('Source end out of range');
   } else {
     this.end_ = end_;
   }
@@ -3343,10 +3343,10 @@ Interpreter.Source.prototype.toString = function() {
  */
 Interpreter.Source.prototype.slice = function(start, end) {
   if (start < this.start_ || start > this.end_) {
-    throw RangeError('Source slice start out of range');
+    throw new RangeError('Source slice start out of range');
   }
   if (end < this.start_ || end > this.end_) {
-    throw RangeError('Source slice end out of range');
+    throw new RangeError('Source slice end out of range');
   }
   return new Interpreter.Source(this.src_, start, end);
 };
@@ -3361,7 +3361,7 @@ Interpreter.Source.prototype.slice = function(start, end) {
  */
 Interpreter.Source.prototype.lineColForPos = function(pos) {
   if (pos < this.start_ || pos > this.end_) {
-    throw RangeError('Source position out of range');
+    throw new RangeError('Source position out of range');
   }
   var lines = this.src_.slice(this.start_, pos).split('\n');
   return {line: lines.length, col: lines[lines.length - 1].length + 1};
@@ -3467,7 +3467,7 @@ Interpreter.State.prototype.frame = function() {
   switch (this.node['type']) {
     case 'Call':
       var info = /** @type{!Interpreter.CallInfo} */(this.info_);
-      if (!info.func) throw Error('No function for Call??');
+      if (!info.func) throw new Error('No function for Call??');
       return {
         func: info.func,
         this: info.this,
@@ -3475,11 +3475,11 @@ Interpreter.State.prototype.frame = function() {
       };
     case 'Program':
       var source = this.node['source'];
-      if (!source) throw Error('No source for Program??');
+      if (!source) throw new Error('No source for Program??');
       return {program: String(source)};
     case 'EvalProgram_':
       source = this.node['source'];
-      if (!source) throw Error('No source for EvalProgram_??');
+      if (!source) throw new Error('No source for EvalProgram_??');
       return {eval: String(source)};
     default:
       return undefined;
@@ -3574,7 +3574,7 @@ Interpreter.Thread.prototype.callers = function(perms) {
  */
 Interpreter.Thread.prototype.perms = function() {
   if (this.status === Interpreter.Thread.Status.ZOMBIE) {
-    throw Error('Zombie thread has no perms');
+    throw new Error('Zombie thread has no perms');
   }
   return this.stateStack_[this.stateStack_.length - 1].scope.perms;
 };
@@ -3690,7 +3690,7 @@ Interpreter.prototype.Object = function(owner, proto) {
   this.owner;
   /** @const {!Object<Interpreter.Value>} */
   this.properties;
-  throw Error('Inner class constructor not callable on prototype');
+  throw new Error('Inner class constructor not callable on prototype');
 };
 
 /** @type {Interpreter.prototype.Object} */
@@ -3705,17 +3705,17 @@ Interpreter.prototype.Object.prototype.class = '';
  * @return {boolean}
  */
 Interpreter.prototype.Object.prototype.setPrototypeOf = function(proto, perms) {
-  throw Error('Inner class method not callable on prototype');
+  throw new Error('Inner class method not callable on prototype');
 };
 
 /** @param {!Interpreter.Owner} perms @return {boolean} */
 Interpreter.prototype.Object.prototype.isExtensible = function(perms) {
-  throw Error('Inner class method not callable on prototype');
+  throw new Error('Inner class method not callable on prototype');
 };
 
 /** @param {!Interpreter.Owner} perms @return {boolean} */
 Interpreter.prototype.Object.prototype.preventExtensions = function(perms) {
-  throw Error('Inner class method not callable on prototype');
+  throw new Error('Inner class method not callable on prototype');
 };
 
 /**
@@ -3725,7 +3725,7 @@ Interpreter.prototype.Object.prototype.preventExtensions = function(perms) {
  */
 Interpreter.prototype.Object.prototype.getOwnPropertyDescriptor = function(
     key, perms) {
-  throw Error('Inner class method not callable on prototype');
+  throw new Error('Inner class method not callable on prototype');
 };
 
 /**
@@ -3735,7 +3735,7 @@ Interpreter.prototype.Object.prototype.getOwnPropertyDescriptor = function(
  */
 Interpreter.prototype.Object.prototype.defineProperty = function(
     key, desc, perms) {
-  throw Error('Inner class method not callable on prototype');
+  throw new Error('Inner class method not callable on prototype');
 };
 
 /**
@@ -3744,7 +3744,7 @@ Interpreter.prototype.Object.prototype.defineProperty = function(
  * @return {boolean}
  */
 Interpreter.prototype.Object.prototype.has = function(key, perms) {
-  throw Error('Inner class method not callable on prototype');
+  throw new Error('Inner class method not callable on prototype');
 };
 
 /**
@@ -3753,7 +3753,7 @@ Interpreter.prototype.Object.prototype.has = function(key, perms) {
  * @return {Interpreter.Value}
  */
 Interpreter.prototype.Object.prototype.get = function(key, perms) {
-  throw Error('Inner class method not callable on prototype');
+  throw new Error('Inner class method not callable on prototype');
 };
 
 /**
@@ -3762,7 +3762,7 @@ Interpreter.prototype.Object.prototype.get = function(key, perms) {
  * @param {!Interpreter.Owner} perms
  */
 Interpreter.prototype.Object.prototype.set = function(key, value, perms) {
-  throw Error('Inner class method not callable on prototype');
+  throw new Error('Inner class method not callable on prototype');
 };
 
 /**
@@ -3771,22 +3771,22 @@ Interpreter.prototype.Object.prototype.set = function(key, value, perms) {
  * @return {boolean}
  */
 Interpreter.prototype.Object.prototype.deleteProperty = function(key, perms) {
-  throw Error('Inner class method not callable on prototype');
+  throw new Error('Inner class method not callable on prototype');
 };
 
 /** @param {!Interpreter.Owner} perms @return {!Array<string>} */
 Interpreter.prototype.Object.prototype.ownKeys = function(perms) {
-  throw Error('Inner class method not callable on prototype');
+  throw new Error('Inner class method not callable on prototype');
 };
 
 /** @return {string} */
 Interpreter.prototype.Object.prototype.toString = function() {
-  throw Error('Inner class method not callable on prototype');
+  throw new Error('Inner class method not callable on prototype');
 };
 
 /** @return {Interpreter.Value} */
 Interpreter.prototype.Object.prototype.valueOf = function() {
-  throw Error('Inner class method not callable on prototype');
+  throw new Error('Inner class method not callable on prototype');
 };
 
 /**
@@ -3796,7 +3796,7 @@ Interpreter.prototype.Object.prototype.valueOf = function() {
  * @param {?Interpreter.prototype.Object=} proto
  */
 Interpreter.prototype.Function = function(owner, proto) {
-  throw Error('Inner class constructor not callable on prototype');
+  throw new Error('Inner class constructor not callable on prototype');
 };
 
 /**
@@ -3805,7 +3805,7 @@ Interpreter.prototype.Function = function(owner, proto) {
  * @return {boolean}
  */
 Interpreter.prototype.Function.prototype.hasInstance = function(value, perms) {
-  throw Error('Inner class method not callable on prototype');
+  throw new Error('Inner class method not callable on prototype');
 };
 
 /**
@@ -3813,7 +3813,7 @@ Interpreter.prototype.Function.prototype.hasInstance = function(value, perms) {
  * @param {string=} prefix
  */
 Interpreter.prototype.Function.prototype.setName = function(name, prefix) {
-  throw Error('Inner class method not callable on prototype');
+  throw new Error('Inner class method not callable on prototype');
 };
 
 /**
@@ -3826,7 +3826,7 @@ Interpreter.prototype.Function.prototype.setName = function(name, prefix) {
  */
 Interpreter.prototype.Function.prototype.call = function(
     intrp, thread, state, thisVal, args) {
-  throw Error('Inner class method not callable on prototype');
+  throw new Error('Inner class method not callable on prototype');
 };
 
 /**
@@ -3838,7 +3838,7 @@ Interpreter.prototype.Function.prototype.call = function(
  */
 Interpreter.prototype.Function.prototype.construct = function(
     intrp, thread, state, args) {
-  throw Error('Inner class method not callable on prototype');
+  throw new Error('Inner class method not callable on prototype');
 };
 
 /**
@@ -3856,7 +3856,7 @@ Interpreter.prototype.UserFunction = function(
   this.node;
   /** @type {!Interpreter.Scope} */
   this.scope;
-  throw Error('Inner class constructor not callable on prototype');
+  throw new Error('Inner class constructor not callable on prototype');
 };
 
 /**
@@ -3874,7 +3874,7 @@ Interpreter.prototype.BoundFunction = function(func, thisVal, args, owner) {
   this.thisVal;
   /** @type {!Array<Interpreter.Value>} */
   this.args;
-  throw Error('Inner class constructor not callable on prototype');
+  throw new Error('Inner class constructor not callable on prototype');
 };
 
 /**
@@ -3883,7 +3883,7 @@ Interpreter.prototype.BoundFunction = function(func, thisVal, args, owner) {
  * @param {!NativeFunctionOptions=} options
  */
 Interpreter.prototype.NativeFunction = function(options) {
-  throw Error('Inner class constructor not callable on prototype');
+  throw new Error('Inner class constructor not callable on prototype');
 };
 
 /**
@@ -3900,7 +3900,7 @@ Interpreter.prototype.OldNativeFunction =
   this.impl;
   /** @type {boolean} */
   this.illegalConstructor;
-  throw Error('Inner class constructor not callable on prototype');
+  throw new Error('Inner class constructor not callable on prototype');
 };
 
 /**
@@ -3910,7 +3910,7 @@ Interpreter.prototype.OldNativeFunction =
  * @param {?Interpreter.prototype.Object=} proto
  */
 Interpreter.prototype.Array = function(owner, proto) {
-  throw Error('Inner class constructor not callable on prototype');
+  throw new Error('Inner class constructor not callable on prototype');
 };
 
 /**
@@ -3923,7 +3923,7 @@ Interpreter.prototype.Array = function(owner, proto) {
 Interpreter.prototype.Date = function(date, owner, proto) {
   /** @type {!Date} */
   this.date;
-  throw Error('Inner class constructor not callable on prototype');
+  throw new Error('Inner class constructor not callable on prototype');
 };
 
 /**
@@ -3936,7 +3936,7 @@ Interpreter.prototype.Date = function(date, owner, proto) {
 Interpreter.prototype.RegExp = function(re, owner, proto) {
   /** @type {!RegExp} */
   this.regexp;
-  throw Error('Inner class constructor not callable on prototype');
+  throw new Error('Inner class constructor not callable on prototype');
 };
 
 /**
@@ -3948,7 +3948,7 @@ Interpreter.prototype.RegExp = function(re, owner, proto) {
  * @param {!Array<!FrameInfo>=} callers
  */
 Interpreter.prototype.Error = function(owner, proto, message, callers) {
-  throw Error('Inner class constructor not callable on prototype');
+  throw new Error('Inner class constructor not callable on prototype');
 };
 
 /**
@@ -3956,7 +3956,7 @@ Interpreter.prototype.Error = function(owner, proto, message, callers) {
  * @param {!Interpreter.Owner} perms
  */
 Interpreter.prototype.Error.prototype.makeStack = function(callers, perms) {
-  throw Error('Inner class method not callable on prototype');
+  throw new Error('Inner class method not callable on prototype');
 };
 
 /**
@@ -3966,7 +3966,7 @@ Interpreter.prototype.Error.prototype.makeStack = function(callers, perms) {
  * @param {?Interpreter.prototype.Object=} proto
  */
 Interpreter.prototype.Arguments = function(owner, proto) {
-  throw Error('Inner class constructor not callable on prototype');
+  throw new Error('Inner class constructor not callable on prototype');
 };
 
 /**
@@ -3978,7 +3978,7 @@ Interpreter.prototype.Arguments = function(owner, proto) {
 Interpreter.prototype.WeakMap = function(owner, proto) {
   /** @type {!IterableWeakMap} */
   this.weakMap;
-  throw Error('Inner class constructor not callable on prototype');
+  throw new Error('Inner class constructor not callable on prototype');
 };
 
 /**
@@ -3991,7 +3991,7 @@ Interpreter.prototype.WeakMap = function(owner, proto) {
 Interpreter.prototype.Thread = function(thread, owner, proto) {
   /** @type {Interpreter.Thread} */
   this.thread;
-  throw Error('Inner class constructor not callable on prototype');
+  throw new Error('Inner class constructor not callable on prototype');
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -4006,7 +4006,7 @@ Interpreter.prototype.Box = function(prim) {
   this.primitive_;
   /** @type {!Interpreter.prototype.Object} */
   this.proto;
-  throw Error('Inner class constructor not callable on prototype');
+  throw new Error('Inner class constructor not callable on prototype');
 };
 
 /**
@@ -4016,7 +4016,7 @@ Interpreter.prototype.Box = function(prim) {
  */
 Interpreter.prototype.Box.prototype.getOwnPropertyDescriptor = function(
     key, perms) {
-  throw Error('Inner class method not callable on prototype');
+  throw new Error('Inner class method not callable on prototype');
 }
 /**
  * @param {string} key
@@ -4025,7 +4025,7 @@ Interpreter.prototype.Box.prototype.getOwnPropertyDescriptor = function(
  */
 Interpreter.prototype.Box.prototype.defineProperty = function(
     key, desc, perms) {
-  throw Error('Inner class method not callable on prototype');
+  throw new Error('Inner class method not callable on prototype');
 };
 
 /**
@@ -4034,7 +4034,7 @@ Interpreter.prototype.Box.prototype.defineProperty = function(
  * @return {boolean}
  */
 Interpreter.prototype.Box.prototype.has = function(key, perms) {
-  throw Error('Inner class method not callable on prototype');
+  throw new Error('Inner class method not callable on prototype');
 };
 
 /**
@@ -4043,7 +4043,7 @@ Interpreter.prototype.Box.prototype.has = function(key, perms) {
  * @return {Interpreter.Value}
  */
 Interpreter.prototype.Box.prototype.get = function(key, perms) {
-  throw Error('Inner class method not callable on prototype');
+  throw new Error('Inner class method not callable on prototype');
 };
 
 /**
@@ -4052,7 +4052,7 @@ Interpreter.prototype.Box.prototype.get = function(key, perms) {
  * @param {Interpreter.Value} value
  */
 Interpreter.prototype.Box.prototype.set = function(key, value, perms) {
-  throw Error('Inner class method not callable on prototype');
+  throw new Error('Inner class method not callable on prototype');
 };
 
 /**
@@ -4061,7 +4061,7 @@ Interpreter.prototype.Box.prototype.set = function(key, value, perms) {
  * @return {boolean}
  */
 Interpreter.prototype.Box.prototype.deleteProperty = function(key, perms) {
-  throw Error('Inner class method not callable on prototype');
+  throw new Error('Inner class method not callable on prototype');
 };
 
 /**
@@ -4069,17 +4069,17 @@ Interpreter.prototype.Box.prototype.deleteProperty = function(key, perms) {
  * @return {!Array<string>}
  */
 Interpreter.prototype.Box.prototype.ownKeys = function(perms) {
-  throw Error('Inner class method not callable on prototype');
+  throw new Error('Inner class method not callable on prototype');
 };
 
 /** @return {string} String value. */
 Interpreter.prototype.Box.prototype.toString = function() {
-  throw Error('Inner class method not callable on prototype');
+  throw new Error('Inner class method not callable on prototype');
 };
 
 /** @return {Interpreter.Value} Value. */
 Interpreter.prototype.Box.prototype.valueOf = function() {
-  throw Error('Inner class method not callable on prototype');
+  throw new Error('Inner class method not callable on prototype');
 };
 
 /**
@@ -4097,17 +4097,17 @@ Interpreter.prototype.Server = function(owner, port, proto) {
   this.proto;
   /** @private @type {net.Server} */
   this.server_;
-  throw Error('Inner class constructor not callable on prototype');
+  throw new Error('Inner class constructor not callable on prototype');
 };
 
 /** @param {!Function=} onListening @param {!Function=} onError */
 Interpreter.prototype.Server.prototype.listen = function(onListening, onError) {
-  throw Error('Inner class method not callable on prototype');
+  throw new Error('Inner class method not callable on prototype');
 };
 
 /** @param {!Function=} onClose */
 Interpreter.prototype.Server.prototype.unlisten = function(onClose) {
-  throw Error('Inner class method not callable on prototype');
+  throw new Error('Inner class method not callable on prototype');
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -4169,7 +4169,7 @@ Interpreter.prototype.installTypes = function() {
    * @return {boolean} True iff the set succeeded.
    */
   intrp.Object.prototype.setPrototypeOf = function(proto, perms) {
-    if (perms === null) throw TypeError("null can't check extensibility");
+    if (perms === null) throw new TypeError("null can't check extensibility");
     // TODO(cpcallen:perms): add "controls"-type perm check.
     if (proto === this.proto) {  // Doing nothing always succeeds.
       return true;
@@ -4196,7 +4196,7 @@ Interpreter.prototype.installTypes = function() {
    * @return {boolean} Is the object extensible?
    */
   intrp.Object.prototype.isExtensible = function(perms) {
-    if (perms === null) throw TypeError("null can't check extensibility");
+    if (perms === null) throw new TypeError("null can't check extensibility");
     // TODO(cpcallen:perms): add check for (object) readability.
     return Object.isExtensible(this.properties);
   };
@@ -4209,7 +4209,7 @@ Interpreter.prototype.installTypes = function() {
    * @return {boolean} Is the object extensible afterwards?
    */
   intrp.Object.prototype.preventExtensions = function(perms) {
-    if (perms === null) throw TypeError("null can't prevent extensibions");
+    if (perms === null) throw new TypeError("null can't prevent extensibions");
     // TODO(cpcallen:perms): add "controls"-type perm check.
     Object.preventExtensions(this.properties);
     return true;
@@ -4225,7 +4225,9 @@ Interpreter.prototype.installTypes = function() {
    *     descriptor, or undefined if no such property exists.
    */
   intrp.Object.prototype.getOwnPropertyDescriptor = function(key, perms) {
-    if (perms === null) throw TypeError("null can't getOwnPropertyDescriptor");
+    if (perms === null) {
+      throw new TypeError("null can't getOwnPropertyDescriptor");
+    }
     // TODO(cpcallen:perms): add check for (property) readability.
     var pd = Object.getOwnPropertyDescriptor(this.properties, key);
     // TODO(cpcallen): can we eliminate this pointless busywork while
@@ -4246,7 +4248,7 @@ Interpreter.prototype.installTypes = function() {
    */
   intrp.Object.prototype.defineProperty = function(key, desc, perms) {
     if (perms !== undefined) {
-      if (perms === null) throw TypeError("null can't defineProperty");
+      if (perms === null) throw new TypeError("null can't defineProperty");
       // TODO(cpcallen:perms): add "controls"-type perm check.
     }
     try {
@@ -4265,7 +4267,7 @@ Interpreter.prototype.installTypes = function() {
    * @return {boolean} The value of the property, or undefined.
    */
   intrp.Object.prototype.has = function(key, perms) {
-    if (perms === null) throw TypeError("null can't has");
+    if (perms === null) throw new TypeError("null can't has");
     // TODO(cpcallen:perms): add check for (object) readability.
     return key in this.properties;
   };
@@ -4279,7 +4281,7 @@ Interpreter.prototype.installTypes = function() {
    * @return {Interpreter.Value} The value of the property, or undefined.
    */
   intrp.Object.prototype.get = function(key, perms) {
-    if (perms === null) throw TypeError("null can't get");
+    if (perms === null) throw new TypeError("null can't get");
     // TODO(cpcallen:perms): add check for (property) readability.
     return this.properties[key];
   };
@@ -4293,7 +4295,7 @@ Interpreter.prototype.installTypes = function() {
    * @param {Interpreter.Value} value The new value of the property.
    */
   intrp.Object.prototype.set = function(key, value, perms) {
-    if (perms === null) throw TypeError("null can't set");
+    if (perms === null) throw new TypeError("null can't set");
     // TODO(cpcallen:perms): add "controls"-type perm check.
     try {
       this.properties[key] = value;
@@ -4312,7 +4314,7 @@ Interpreter.prototype.installTypes = function() {
    * @return {boolean} True iff successful.
    */
   intrp.Object.prototype.deleteProperty = function(key, perms) {
-    if (perms === null) throw TypeError("null can't delete");
+    if (perms === null) throw new TypeError("null can't delete");
     // TODO(cpcallen:perms): add "controls"-type perm check.
     try {
       delete this.properties[key];
@@ -4334,7 +4336,7 @@ Interpreter.prototype.installTypes = function() {
    * @return {!Array<string>} An array of own property keys.
    */
   intrp.Object.prototype.ownKeys = function(perms) {
-    if (perms === null) throw TypeError("null can't ownPropertyKeys");
+    if (perms === null) throw new TypeError("null can't ownPropertyKeys");
     // TODO(cpcallen:perms): add check for (object) readability.
     return Object.getOwnPropertyNames(this.properties);
   };
@@ -5127,7 +5129,7 @@ Interpreter.prototype.installTypes = function() {
   intrp.Thread = function(thread, owner, proto) {
     if (!thread) return;  // Deserializing
     if (thread.wrapper) {
-      throw Error('Duplicate Thread wrapper??');
+      throw new Error('Duplicate Thread wrapper??');
     }
     intrp.Object.call(/** @type {?} */ (this), owner,
         (proto === undefined ? intrp.THREAD : proto));
@@ -5165,7 +5167,7 @@ Interpreter.prototype.installTypes = function() {
     } else if (typeof prim === 'string') {
       this.proto = intrp.STRING;
     } else {
-      throw Error('Invalid type in Box');
+      throw new Error('Invalid type in Box');
     }
   };
 
@@ -5317,7 +5319,7 @@ Interpreter.prototype.installTypes = function() {
     // Special excepetion: port === undefined when deserializing, in
     // violation of usual type rules.
     if ((port !== (port >>> 0) || port > 0xffff) && port !== undefined) {
-      throw RangeError('invalid port ' + port);
+      throw new RangeError('invalid port ' + port);
     }
     /** @type {?Interpreter.Owner} */
     this.owner = owner;
@@ -5336,10 +5338,10 @@ Interpreter.prototype.installTypes = function() {
   intrp.Server.prototype.listen = function(onListening, onError) {
     // Invariant checks.
     if (this.port === undefined || !(this.proto instanceof intrp.Object)) {
-      throw Error('Invalid Server state');
+      throw new Error('Invalid Server state');
     }
     if (intrp.listeners_[this.port] !== this) {
-      throw Error('Listening on server not listed in .listeners_??');
+      throw new Error('Listening on server not listed in .listeners_??');
     }
     var server = this;  // Because this will be undefined in handlers below.
     // Create net.Server, start it listening, and attached it to this.
@@ -5628,7 +5630,7 @@ stepFuncs_['AssignmentExpression'] = function (thread, stack, state, node) {
     // Get Reference for left subexpression.
     return new Interpreter.State(node['left'], state.scope, true);
   }
-  if (!state.ref) throw TypeError('left subexpression not an LVALUE??');
+  if (!state.ref) throw new TypeError('left subexpression not an LVALUE??');
   if (state.step_ === 1) {  // Evaluate right.
     if (node['operator'] !== '=') {
       state.tmp_ = this.getValue(state.ref, state.scope.perms);
@@ -5667,7 +5669,8 @@ stepFuncs_['AssignmentExpression'] = function (thread, stack, state, node) {
     case '^=':   value ^=   rightValue; break;
     case '|=':   value |=   rightValue; break;
     default:
-      throw SyntaxError('Unknown assignment expression: ' + node['operator']);
+      throw new SyntaxError(
+          'Unknown assignment expression: ' + node['operator']);
   }
   this.setValue(state.ref, value, state.scope.perms);
   stack.pop();
@@ -5731,7 +5734,7 @@ stepFuncs_['BinaryExpression'] = function (thread, stack, state, node) {
       value = rightValue.hasInstance(leftValue, state.scope.perms);
       break;
     default:
-      throw SyntaxError('Unknown binary operator: ' + node['operator']);
+      throw new SyntaxError('Unknown binary operator: ' + node['operator']);
   }
   stack.pop();
   stack[stack.length - 1].value = value;
@@ -5764,7 +5767,7 @@ stepFuncs_['BlockStatement'] = function (thread, stack, state, node) {
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['BreakStatement'] = function (thread, stack, state, node) {
-  if (!thread) throw Error('No thread in BreakStatement??');
+  if (!thread) throw new Error('No thread in BreakStatement??');
   this.unwind_(thread, Interpreter.CompletionType.BREAK, undefined,
       node['label'] ? node['label']['name'] : undefined
   );
@@ -5923,7 +5926,7 @@ stepFuncs_['Call'] = function (thread, stack, state, node) {
           thread.status = Interpreter.Thread.Status.SLEEPING;
           return;
         default:
-          throw Error('Unknown FunctionResult??');
+          throw new Error('Unknown FunctionResult??');
       }
     }
     state.value = r;
@@ -6140,7 +6143,7 @@ stepFuncs_['ForInStatement'] = function (thread, stack, state, node) {
         state.ref = [state.scope.resolve(lhsName), lhsName];
         // FALL THROUGH
       case 3:  // Got .ref to variable to set.  Set it next key.
-        if (!state.ref) throw TypeError('loop variable not an LVALUE??');
+        if (!state.ref) throw new TypeError('loop variable not an LVALUE??');
         this.setValue(state.ref, state.info_.key, state.scope.perms);
         // Execute the body if there is one, followed by next iteration.
         state.step_ = 2;
@@ -6217,7 +6220,7 @@ stepFuncs_['FunctionExpression'] = function (thread, stack, state, node) {
   stack.pop();
   var source = thread.getSource();
   if (!source) {
-    throw Error("No source found when evaluating function expression??");
+    throw new Error("No source found when evaluating function expression??");
   }
   var scope = state.scope;
   var perms = scope.perms;
@@ -6308,7 +6311,7 @@ stepFuncs_['LogicalExpression'] = function (thread, stack, state, node) {
   stack.pop();
   var /** string */ op = node['operator'];
   if (op !== '&&' && op !== '||') {
-    throw SyntaxError("Unknown logical operator '" + op + "'");
+    throw new SyntaxError("Unknown logical operator '" + op + "'");
   } else if ((op === '&&' && !state.value) || (op === '||' && state.value)) {
     // Short circuit.  Return left value.
     stack[stack.length - 1].value = state.value;
@@ -6379,7 +6382,7 @@ stepFuncs_['ObjectExpression'] = function (thread, stack, state, node) {
     } else if (keyNode['type'] === 'Literal') {
       key = keyNode['value'];
     } else {
-      throw SyntaxError('Unknown object structure: ' + keyNode['type']);
+      throw new SyntaxError('Unknown object structure: ' + keyNode['type']);
     }
     var value = state.value;
     var perms = state.scope.perms;
@@ -6632,7 +6635,7 @@ stepFuncs_['UnaryExpression'] = function (thread, stack, state, node) {
     if (state.ref) {
       if (state.ref[0] instanceof Interpreter.Scope) {
         // Whoops; this should have been caught by Acorn (because strict).
-        throw Error('Uncaught illegal deletion of unqualified identifier');
+        throw new Error('Uncaught illegal deletion of unqualified identifier');
       }
       var obj = this.toObject(state.ref[0], state.scope.perms);
       value = obj.deleteProperty(state.ref[1], state.scope.perms);
@@ -6654,7 +6657,7 @@ stepFuncs_['UnaryExpression'] = function (thread, stack, state, node) {
   } else if (node['operator'] === 'void') {
     value = undefined;
   } else {
-    throw SyntaxError('Unknown unary operator: ' + node['operator']);
+    throw new SyntaxError('Unknown unary operator: ' + node['operator']);
   }
   stack.pop();
   stack[stack.length - 1].value = value;
@@ -6673,7 +6676,7 @@ stepFuncs_['UpdateExpression'] = function (thread, stack, state, node) {
     state.step_ = 1;
     return new Interpreter.State(node['argument'], state.scope, true);
   }
-  if (!state.ref) throw TypeError('argument not an LVALUE??');
+  if (!state.ref) throw new TypeError('argument not an LVALUE??');
   var value = Number(this.getValue(state.ref, state.scope.perms));
   var prefix = Boolean(node['prefix']);
   var /** Interpreter.Value */ rval;
@@ -6682,7 +6685,7 @@ stepFuncs_['UpdateExpression'] = function (thread, stack, state, node) {
   } else if (node['operator'] === '--') {
     rval = (prefix ? --value : value--);
   } else {
-    throw SyntaxError('Unknown update expression: ' + node['operator']);
+    throw new SyntaxError('Unknown update expression: ' + node['operator']);
   }
   this.setValue(state.ref, value, state.scope.perms);
   stack.pop();

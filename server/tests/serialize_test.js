@@ -307,7 +307,7 @@ exports.testRoundtripDetails = function(t) {
           desc.writable !== !!(i & 0x1) ||
           desc.enumerable !== !!(i & 0x2) ||
           desc.configurable !== !!(i & 0x4)) {
-        throw Error('Roundtrip failure for property ' + i);
+        throw new Error('Roundtrip failure for property ' + i);
       }
     }
     'All good';
