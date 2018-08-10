@@ -47,7 +47,7 @@ var Interpreter = function(options) {
   this.installTypes();
   /**
    * Registry of builtins - e.g. Object, Function.prototype, Array.pop, etc.
-   * @const {Registry<Interpreter.Value>}
+   * @const {!Registry<?Interpreter.Value>}
    */
   this.builtins = new Registry;
   /**
@@ -79,13 +79,13 @@ var Interpreter = function(options) {
   /** @type {boolean} */
   this.done = true;  // True if any non-ZOMBIE threads exist.
 
-  /** @private @const {!Object<number,!Interpreter.prototype.Server>} */
+  /** @private @const {!Object<number, !Interpreter.prototype.Server>} */
   this.listeners_ = Object.create(null);
 
   // TODO(cpcallen): This is an ugly hack to allow the serialiser to
   // know the names of step functions in an otherwise-empty
   // interpreter.  Find a better way to do this.
-  /** @private @const {Object<string,Interpreter.StepFunction>} */
+  /** @private @const {!Object<string, !Interpreter.StepFunction>} */
   this.stepFuncs_ = stepFuncs_;
 
   // Bring interpreter up to PAUSED status, setting up timers etc.
@@ -169,8 +169,8 @@ Interpreter.prototype.createThreadForSrc = function(src) {
  * @param {!Interpreter.Owner} owner Owner of new thread; also becomes
  *     caller perms of function.
  * @param {!Interpreter.prototype.Function} func Function to call.
- * @param {Interpreter.Value} thisVal value of 'this' in function call.
- * @param {!Array<Interpreter.Value>} args Arguments to pass.
+ * @param {?Interpreter.Value} thisVal value of 'this' in function call.
+ * @param {!Array<?Interpreter.Value>} args Arguments to pass.
  * @param {number=} runAt Time at which thread should begin execution
  *     (default: now).
  * @return {!Interpreter.prototype.Thread} Userland Thread object.
@@ -1508,7 +1508,7 @@ Interpreter.prototype.initString_ = function() {
    * The thisStringValue specification method from ES6 §21.1.3.
    * Converts value arg to string or throws TypeError.
    * @param {!Interpreter} intrp The interpreter.
-   * @param {Interpreter.Value} value The this value passed into function.
+   * @param {?Interpreter.Value} value The this value passed into function.
    * @param {string} name Name of built-in function (for TypeError message).
    * @param {!Interpreter.Owner} perms Who called built-in?
    * @return {string}
@@ -1639,7 +1639,7 @@ Interpreter.prototype.initBoolean_ = function() {
    * The thisBooleanValue specification method from ES6 §19.3.3.
    * Converts value arg to boolean or throws TypeError.
    * @param {!Interpreter} intrp The interpreter.
-   * @param {Interpreter.Value} value The this value passed into function.
+   * @param {?Interpreter.Value} value The this value passed into function.
    * @param {string} name Name of built-in function (for TypeError message).
    * @param {!Interpreter.Owner} perms Who called built-in?
    * @return {boolean}
@@ -1704,7 +1704,7 @@ Interpreter.prototype.initNumber_ = function() {
    * The thisNumberValue specification method from ES6 §20.1.3.
    * Converts value arg to number or throws TypeError.
    * @param {!Interpreter} intrp The interpreter.
-   * @param {Interpreter.Value} value The this value passed into function.
+   * @param {?Interpreter.Value} value The this value passed into function.
    * @param {string} name Name of built-in function (for TypeError message).
    * @param {!Interpreter.Owner} perms Who called built-in?
    * @return {number}
@@ -2343,7 +2343,7 @@ Interpreter.prototype.initNetwork_ = function() {
 /**
  * The ToInteger function from ES6 §7.1.4.  The abstract operation
  * ToInteger converts argument to an integral numeric value.
- * @param {Interpreter.Value} value
+ * @param {?Interpreter.Value} value
  * @return {number} An integer if the value can be converted to such;
  *     0 otherwise.
  */
@@ -2361,7 +2361,7 @@ Interpreter.toInteger = function toInteger(value) {
  * The ToUint32 function from ES6 §7.1.6.  The abstract operation
  * ToUint32 converts argument to one of 2**32 integer values in the
  * range 0 through 2**32−1, inclusive.
- * @param {Interpreter.Value} value
+ * @param {?Interpreter.Value} value
  * @return {number} A non-negative integer less than 2**32.
  */
 Interpreter.toUint32 = function toUint32(value) {
@@ -2373,7 +2373,7 @@ Interpreter.toUint32 = function toUint32(value) {
  * enforce the actual array length limit of 2**32-1, but deals with
  * lengths up to 2**53-1, which is correct for the polymorphic
  * Array.prototype methods.
- * @param {Interpreter.Value} value
+ * @param {?Interpreter.Value} value
  * @return {number} A non-negative integer less than 2**53.
  */
 Interpreter.toLength = function toLength(value) {
@@ -2410,7 +2410,7 @@ Interpreter.prototype.createNativeFunction = function(
  * prototype and inherited properties.  Efficiently handles
  * sparse arrays.  Does NOT handle cyclic structures.
  * @param {*} nativeObj The native JS object to be converted.
- * @return {Interpreter.Value} The equivalent JS interpreter object.
+ * @return {?Interpreter.Value} The equivalent JS interpreter object.
  * @param {!Interpreter.Owner} owner Owner for new object.
  */
 Interpreter.prototype.nativeToPseudo = function(nativeObj, owner) {
@@ -2475,9 +2475,9 @@ Interpreter.prototype.nativeToPseudo = function(nativeObj, owner) {
  *
  * TODO(cpcallen:perms): Audit all callers of this to ensure that they
  * do not allow circumvention of access control.
- * @param {Interpreter.Value} pseudoObj The JS interpreter object to
+ * @param {?Interpreter.Value} pseudoObj The JS interpreter object to
  *     be converted.
- * @param {Object=} cycles Cycle detection (used only in recursive calls).
+ * @param {!Object=} cycles Cycle detection (used only in recursive calls).
  * @return {*} The equivalent native JS object or value.
  */
 Interpreter.prototype.pseudoToNative = function(pseudoObj, cycles) {
@@ -2539,7 +2539,8 @@ Interpreter.prototype.pseudoToNative = function(pseudoObj, cycles) {
  *
  * Converts from a native array to an Interpreter.prototype.Array.
  * Does NOT recursively convert the type of the array's contents.
- * @param {!Array<Interpreter.Value>} elements The native array to be converted.
+ * @param {!Array<?Interpreter.Value>} elements The native array to be
+ *     converted.
  * @param {!Interpreter.Owner} owner Owner for new object.
  * @return {!Interpreter.prototype.Array} The equivalent interpreter array.
  */
@@ -2561,10 +2562,10 @@ Interpreter.prototype.createArrayFromList = function(elements, owner) {
  * does NOT recursively convert the type of the array's contents.
  *
  * TODO(ES6): Add elementTypes param and associated type checks.
- * @param {Interpreter.Value} obj The interpreter array or array-like
+ * @param {?Interpreter.Value} obj The interpreter array or array-like
  *     object to be converted.  Error thrown if non-object.
  * @param {!Interpreter.Owner} perms Who is trying convert it?
- * @return {!Array<Interpreter.Value>} The equivalent native JS array.
+ * @return {!Array<?Interpreter.Value>} The equivalent native JS array.
  */
 Interpreter.prototype.createListFromArrayLike = function(obj, perms) {
   if (!(obj instanceof this.Object)) {
@@ -2610,7 +2611,7 @@ Interpreter.prototype.errorNativeToPseudo = function(err, owner) {
  * Implements the ToObject specification method from ES5.1 §9.9 / ES6
  * §7.1.13, but returning temporary Box objects instead of boxed
  * Boolean, Number or String instances.
- * @param {Interpreter.Value} value The value to be converted to an Object.
+ * @param {?Interpreter.Value} value The value to be converted to an Object.
  * @param {!Interpreter.Owner} perms Who is trying convert it?
  * @return {!Interpreter.ObjectLike}
  */
@@ -2629,7 +2630,7 @@ Interpreter.prototype.toObject = function(value, perms) {
  * Retrieves a value from the scope chain.
  * @param {!Interpreter.Scope} scope Scope to read from.
  * @param {string} name Name of variable.
- * @return {Interpreter.Value} Value (may be undefined).
+ * @return {?Interpreter.Value} Value (may be undefined).
  */
 Interpreter.prototype.getValueFromScope = function(scope, name) {
   for (var s = scope; s; s = s.outerScope) {
@@ -2645,7 +2646,7 @@ Interpreter.prototype.getValueFromScope = function(scope, name) {
  * Sets a value to the current scope.
  * @param {!Interpreter.Scope} scope Scope to write to.
  * @param {string} name Name of variable.
- * @param {Interpreter.Value} value Value.
+ * @param {?Interpreter.Value} value Value.
  */
 Interpreter.prototype.setValueToScope = function(scope, name, value) {
   for (var s = scope; s; s = s.outerScope) {
@@ -2742,7 +2743,7 @@ Interpreter.prototype.isUnresolvableReference = function(scope, ref, perms) {
  * Gets the value of a referenced name from the scope or object referred to.
  * @param {!Array} ref Reference tuple.
  * @param {!Interpreter.Owner} perms Who is trying to get it?
- * @return {Interpreter.Value} Value (may be undefined).
+ * @return {?Interpreter.Value} Value (may be undefined).
  */
 Interpreter.prototype.getValue = function(ref, perms) {
   var base = ref[0];
@@ -2759,7 +2760,7 @@ Interpreter.prototype.getValue = function(ref, perms) {
 /**
  * Sets value of a referenced name to the scope or object referred to.
  * @param {!Array} ref Reference tuple.
- * @param {Interpreter.Value} value Value.
+ * @param {?Interpreter.Value} value Value.
  * @param {!Interpreter.Owner} perms Who is trying to set it?
  */
 Interpreter.prototype.setValue = function(ref, value, perms) {
@@ -2784,7 +2785,7 @@ Interpreter.prototype.setValue = function(ref, value, perms) {
  * .step() and .run(), and from async function's reject() callback.
  * Elsewhere, just throw.
  * @param {!Interpreter.Thread} thread in which throw is occurring.
- * @param {Interpreter.Value} e Exception being thrown.
+ * @param {?Interpreter.Value} e Exception being thrown.
  * @param {!Interpreter.Owner} perms Perm to use to obtain (e.g.)
  *     function names, etc.
  */
@@ -2819,8 +2820,8 @@ Interpreter.prototype.throw_ = function(thread, e, perms) {
  * (e.g., `foo: break foo;`).
  * @private
  * @param {!Interpreter.Thread} thread The thread whose stack is to be unwound.
- * @param {Interpreter.CompletionType} type Completion type.
- * @param {Interpreter.Value=} value Value computed, returned or thrown.
+ * @param {!Interpreter.CompletionType} type Completion type.
+ * @param {?Interpreter.Value=} value Value computed, returned or thrown.
  * @param {string=} label Target label for break or return.
  */
 Interpreter.prototype.unwind_ = function(thread, type, value, label) {
@@ -2895,8 +2896,8 @@ Interpreter.prototype.unwind_ = function(thread, type, value, label) {
  * Error will be thrown.
  * @param {!Interpreter.Thread} thread The thread to be controlled.
  * @param {!Interpreter.State} state The state in which thread to block.
- * @return {{resolve: function(Interpreter.Value=):void,
- *           reject: function(Interpreter.Value, !Interpreter.Owner):void}}
+ * @return {{resolve: function(?Interpreter.Value=):void,
+ *           reject: function(?Interpreter.Value, !Interpreter.Owner):void}}
  */
 Interpreter.prototype.getResolveReject = function(thread, state) {
   var /** boolean */ done = false;
@@ -2952,7 +2953,7 @@ Interpreter.prototype.log = function(category, var_args) {
 /**
  * The Completion Specification Type, from ES5.1 §8.9
  * @typedef {{type: Interpreter.CompletionType,
- *            value: Interpreter.Value,
+ *            value: ?Interpreter.Value,
  *            label: (string|undefined)}}
  */
 Interpreter.Completion;
@@ -3048,9 +3049,9 @@ Interpreter.Status = {
  *                    !Interpreter,
  *                    !Interpreter.Thread,
  *                    !Interpreter.State,
- *                    Interpreter.Value,
- *                    !Array<Interpreter.Value>)
- *               : (Interpreter.Value|!Interpreter.FunctionResult)}
+ *                    ?Interpreter.Value,
+ *                    !Array<?Interpreter.Value>)
+ *               : (?Interpreter.Value|!Interpreter.FunctionResult)}
  */
 Interpreter.NativeCallImpl;
 
@@ -3060,8 +3061,8 @@ Interpreter.NativeCallImpl;
  *                    !Interpreter,
  *                    !Interpreter.Thread,
  *                    !Interpreter.State,
- *                    !Array<Interpreter.Value>)
- *               : (Interpreter.Value|!Interpreter.FunctionResult)}
+ *                    !Array<?Interpreter.Value>)
+ *               : (?Interpreter.Value|!Interpreter.FunctionResult)}
  */
 Interpreter.NativeConstructImpl;
 
@@ -3079,13 +3080,13 @@ Interpreter.PropertyIterator = function(obj, perms) {
   }
   /** @private @type {?Interpreter.ObjectLike} */
   this.obj_ = obj;
-  /** @private @const @type {!Interpreter.Owner} */
+  /** @private @const {!Interpreter.Owner} */
   this.perms_ = perms;
   /** @private @type {!Array<string>} */
   this.keys_ = this.obj_.ownKeys(this.perms_);
   /** @private @type {number} */
   this.i_ = 0;
-  /** @private @const @type {!Set<string>} */
+  /** @private @const {!Set<string>} */
   this.visited_ = new Set();
 };
 
@@ -3122,26 +3123,26 @@ Interpreter.PropertyIterator.prototype.next = function() {
 /**
  * Class for a scope.  Implements Lexical Environments and the
  * Environment Record specification type from E5.1 §10.2 / ES6 §8.1.
- * @param {Interpreter.Scope.Type} type What variety of scope is it?
+ * @param {!Interpreter.Scope.Type} type What variety of scope is it?
  * @param {!Interpreter.Owner} perms The permissions with which code
  *     in the current scope is executing.
  * @param {?Interpreter.Scope} outerScope The enclosing scope ("outer
  *     lexical environment reference", in ECMAScript spec parlance)
- * @param {Interpreter.Value=} thisVal Value of 'this' in scope.
+ * @param {?Interpreter.Value=} thisVal Value of 'this' in scope.
  *     (Default: copy value from outerScope.  N.B.: passing undefined
  *     is NOT treated the same as passing no value!)
  * @constructor
  */
 Interpreter.Scope = function(type, perms, outerScope, thisVal) {
-  /** @type {Interpreter.Scope.Type} */
+  /** @type {!Interpreter.Scope.Type} */
   this.type = type;
   /** @type {!Interpreter.Owner} */
   this.perms = perms;
   /** @type {?Interpreter.Scope} */
   this.outerScope = outerScope;
-  /** @type {Interpreter.Value} */
+  /** @type {?Interpreter.Value} */
   this.this = (outerScope && arguments.length < 4) ? outerScope.this : thisVal;
-  /** @const {!Object<string, Interpreter.Value>} */
+  /** @const {!Object<string, ?Interpreter.Value>} */
   this.vars = Object.create(null);
 };
 
@@ -3164,7 +3165,7 @@ Interpreter.Scope.prototype.hasBinding = function(name) {
  * Based on CreateMutableBinding for declarative environment records,
  * from ES5.1 §10.2.1.1.2 / ES6 §8.1.1.1.2.
  * @param {string} name Name of variable.
- * @param {Interpreter.Value=} value Initial value (default: undefined).
+ * @param {?Interpreter.Value=} value Initial value (default: undefined).
  */
 Interpreter.Scope.prototype.createMutableBinding = function(name, value) {
   if (name in this.vars) {
@@ -3180,7 +3181,7 @@ Interpreter.Scope.prototype.createMutableBinding = function(name, value) {
  * Based on CreateImmutableBinding for declarative environment records,
  * from ES5.1 §10.2.1.1.7 / ES6 §8.1.1.1.3.
  * @param {string} name Name of variable.
- * @param {Interpreter.Value} value Initial value.
+ * @param {?Interpreter.Value} value Initial value.
  */
 Interpreter.Scope.prototype.createImmutableBinding = function(name, value) {
   if (name in this.vars) {
@@ -3195,8 +3196,8 @@ Interpreter.Scope.prototype.createImmutableBinding = function(name, value) {
  * Based on SetMutableBinding for declarative environment records,
  * from ES5.1 §10.2.1.1.3 / ES6 §8.1.1.1.5.
  * @param {string} name Name of variable.
- * @param {Interpreter.Value} value New value to set it to.
- * @return {Error|undefined} If an error occurs, a (native) Error
+ * @param {?Interpreter.Value} value New value to set it to.
+ * @return {!Error|undefined} If an error occurs, a (native) Error
  *     object is returned.  It shoud be converted into a user error
  *     (e.g., by errorNativeToPseudo) and thrown.  (This is done
  *     because Scope is not an inner class of interpreter, and thus
@@ -3217,7 +3218,7 @@ Interpreter.Scope.prototype.set = function(name, value) {
  * Based on GetBindingValue for declarative environment records, from
  * ES5.1 §10.2.1.1.4 / ES6 §8.1.1.1.6.
  * @param {string} name Name of variable.
- * @return {Interpreter.Value} The current value of the named variable
+ * @return {?Interpreter.Value} The current value of the named variable
  *     in this scope.
  */
 Interpreter.Scope.prototype.get = function(name) {
@@ -3351,15 +3352,15 @@ Interpreter.Source.prototype.lineColForPos = function(pos) {
  * @constructor
  */
 Interpreter.State = function(node, scope, wantRef) {
-  /** @const @type {!Interpreter.Node} */
+  /** @const {!Interpreter.Node} */
   this.node = node;
-  /** @const @type {!Interpreter.Scope} */
+  /** @const {!Interpreter.Scope} */
   this.scope = scope;
-  /** @const @type {!Interpreter.StepFunction} */
+  /** @const {!Interpreter.StepFunction} */
   this.stepFunc = node['stepFunc'];
-  /** @private @const @type {boolean} */
+  /** @private @const {boolean} */
   this.wantRef_ = wantRef || false;
-  /** @type {Interpreter.Value} */
+  /** @type {?Interpreter.Value} */
   this.value = undefined;
   /** @type {?Array} */
   this.ref = null;
@@ -3374,7 +3375,7 @@ Interpreter.State = function(node, scope, wantRef) {
   this.step_ = 0;
   /** @private @type {number} */
   this.n_ = 0;
-  /** @private @type {Interpreter.Value|undefined} */
+  /** @private @type {?Interpreter.Value|undefined} */
   this.tmp_ = undefined;
   /** @private @type {?Interpreter.CallInfo|
    *                  ?Interpreter.ForInInfo|
@@ -3387,8 +3388,8 @@ Interpreter.State = function(node, scope, wantRef) {
 /**
  * Create a new State pre-configured to begin executing a function call.
  * @param {!Interpreter.prototype.Function} func Function to call.
- * @param {Interpreter.Value} thisVal value of 'this' in function call.
- * @param {!Array<Interpreter.Value>} args Arguments to pass.
+ * @param {?Interpreter.Value} thisVal value of 'this' in function call.
+ * @param {!Array<?Interpreter.Value>} args Arguments to pass.
  * @param {!Interpreter.Owner} perms Who is doing the call?
  * @return {!Interpreter.State} The newly-created state.
  */
@@ -3413,10 +3414,10 @@ Interpreter.State.newForCall = function(func, thisVal, args, perms) {
 /**
  * Information about a single call stack frame.
  * @typedef{(!{func: !Interpreter.prototype.Function,
- *             this: Interpreter.Value,
+ *             this: ?Interpreter.Value,
  *             callerPerms: !Interpreter.Owner}|
  *           !{func: !Interpreter.prototype.Function,
- *             this: Interpreter.Value,
+ *             this: ?Interpreter.Value,
  *             callerPerms: !Interpreter.Owner,
  *             line: number,
  *             col: number}|
@@ -3486,7 +3487,7 @@ Interpreter.Thread = function(id, state, runAt) {
   this.runAt = runAt;
   /** @type {?Interpreter.prototype.Thread} */
   this.wrapper = null;
-  /** @type {Interpreter.Value} */
+  /** @type {?Interpreter.Value} */
   this.value = undefined;
 };
 
@@ -3625,13 +3626,13 @@ Interpreter.ObjectLike.prototype.has = function(key, perms) {};
 /**
  * @param {string} key
  * @param {!Interpreter.Owner} perms
- * @return {Interpreter.Value}
+ * @return {?Interpreter.Value}
  */
 Interpreter.ObjectLike.prototype.get = function(key, perms) {};
 
 /**
  * @param {string} key
- * @param {Interpreter.Value} value
+ * @param {?Interpreter.Value} value
  * @param {!Interpreter.Owner} perms
  */
 Interpreter.ObjectLike.prototype.set = function(key, value, perms) {};
@@ -3649,7 +3650,7 @@ Interpreter.ObjectLike.prototype.ownKeys = function(perms) {};
 /** @return {string} */
 Interpreter.ObjectLike.prototype.toString = function() {};
 
-/** @return {Interpreter.Value} */
+/** @return {?Interpreter.Value} */
 Interpreter.ObjectLike.prototype.valueOf = function() {};
 
 /**
@@ -3663,12 +3664,12 @@ Interpreter.prototype.Object = function(owner, proto) {
   this.proto;
   /** @type {?Interpreter.Owner} */
   this.owner;
-  /** @const {!Object<Interpreter.Value>} */
+  /** @const {!Object<?Interpreter.Value>} */
   this.properties;
   throw new Error('Inner class constructor not callable on prototype');
 };
 
-/** @type {Interpreter.prototype.Object} */
+/** @type {?Interpreter.prototype.Object} */
 Interpreter.prototype.Object.prototype.proto = null;
 
 /** @type {string} */
@@ -3725,7 +3726,7 @@ Interpreter.prototype.Object.prototype.has = function(key, perms) {
 /**
  * @param {string} key
  * @param {!Interpreter.Owner} perms
- * @return {Interpreter.Value}
+ * @return {?Interpreter.Value}
  */
 Interpreter.prototype.Object.prototype.get = function(key, perms) {
   throw new Error('Inner class method not callable on prototype');
@@ -3733,7 +3734,7 @@ Interpreter.prototype.Object.prototype.get = function(key, perms) {
 
 /**
  * @param {string} key
- * @param {Interpreter.Value} value
+ * @param {?Interpreter.Value} value
  * @param {!Interpreter.Owner} perms
  */
 Interpreter.prototype.Object.prototype.set = function(key, value, perms) {
@@ -3759,7 +3760,7 @@ Interpreter.prototype.Object.prototype.toString = function() {
   throw new Error('Inner class method not callable on prototype');
 };
 
-/** @return {Interpreter.Value} */
+/** @return {?Interpreter.Value} */
 Interpreter.prototype.Object.prototype.valueOf = function() {
   throw new Error('Inner class method not callable on prototype');
 };
@@ -3775,7 +3776,7 @@ Interpreter.prototype.Function = function(owner, proto) {
 };
 
 /**
- * @param {Interpreter.Value} value
+ * @param {?Interpreter.Value} value
  * @param {!Interpreter.Owner} perms
  * @return {boolean}
  */
@@ -3795,9 +3796,9 @@ Interpreter.prototype.Function.prototype.setName = function(name, prefix) {
  * @param {!Interpreter} intrp The interpreter.
  * @param {!Interpreter.Thread} thread The current thread.
  * @param {!Interpreter.State} state The current state.
- * @param {Interpreter.Value} thisVal The this value passed into function.
- * @param {!Array<Interpreter.Value>} args The arguments to the call.
- * @return {Interpreter.Value|!Interpreter.FunctionResult}
+ * @param {?Interpreter.Value} thisVal The this value passed into function.
+ * @param {!Array<?Interpreter.Value>} args The arguments to the call.
+ * @return {?Interpreter.Value|!Interpreter.FunctionResult}
  */
 Interpreter.prototype.Function.prototype.call = function(
     intrp, thread, state, thisVal, args) {
@@ -3808,8 +3809,8 @@ Interpreter.prototype.Function.prototype.call = function(
  * @param {!Interpreter} intrp The interpreter.
  * @param {!Interpreter.Thread} thread The current thread.
  * @param {!Interpreter.State} state The current state.
- * @param {!Array<Interpreter.Value>} args The arguments to the call.
- * @return {Interpreter.Value|!Interpreter.FunctionResult}
+ * @param {!Array<?Interpreter.Value>} args The arguments to the call.
+ * @return {?Interpreter.Value|!Interpreter.FunctionResult}
  */
 Interpreter.prototype.Function.prototype.construct = function(
     intrp, thread, state, args) {
@@ -3838,16 +3839,16 @@ Interpreter.prototype.UserFunction = function(
  * @constructor
  * @extends {Interpreter.prototype.Function}
  * @param {!Interpreter.prototype.Function} func
- * @param {Interpreter.Value} thisVal
- * @param {!Array<Interpreter.Value>} args
+ * @param {?Interpreter.Value} thisVal
+ * @param {!Array<?Interpreter.Value>} args
  * @param {?Interpreter.Owner=} owner
  */
 Interpreter.prototype.BoundFunction = function(func, thisVal, args, owner) {
   /** @type {!Interpreter.prototype.Function} */
   this.boundFunc;
-  /** @type {Interpreter.Value} */
+  /** @type {?Interpreter.Value} */
   this.thisVal;
-  /** @type {!Array<Interpreter.Value>} */
+  /** @type {!Array<?Interpreter.Value>} */
   this.args;
   throw new Error('Inner class constructor not callable on prototype');
 };
@@ -3964,7 +3965,7 @@ Interpreter.prototype.WeakMap = function(owner, proto) {
  * @param {?Interpreter.prototype.Object=} proto
  */
 Interpreter.prototype.Thread = function(thread, owner, proto) {
-  /** @type {Interpreter.Thread} */
+  /** @type {!Interpreter.Thread} */
   this.thread;
   throw new Error('Inner class constructor not callable on prototype');
 };
@@ -4015,7 +4016,7 @@ Interpreter.prototype.Box.prototype.has = function(key, perms) {
 /**
  * @param {string} key
  * @param {!Interpreter.Owner} perms
- * @return {Interpreter.Value}
+ * @return {?Interpreter.Value}
  */
 Interpreter.prototype.Box.prototype.get = function(key, perms) {
   throw new Error('Inner class method not callable on prototype');
@@ -4024,7 +4025,7 @@ Interpreter.prototype.Box.prototype.get = function(key, perms) {
 /**
  * @param {string} key
  * @param {!Interpreter.Owner} perms
- * @param {Interpreter.Value} value
+ * @param {?Interpreter.Value} value
  */
 Interpreter.prototype.Box.prototype.set = function(key, value, perms) {
   throw new Error('Inner class method not callable on prototype');
@@ -4052,7 +4053,7 @@ Interpreter.prototype.Box.prototype.toString = function() {
   throw new Error('Inner class method not callable on prototype');
 };
 
-/** @return {Interpreter.Value} Value. */
+/** @return {?Interpreter.Value} Value. */
 Interpreter.prototype.Box.prototype.valueOf = function() {
   throw new Error('Inner class method not callable on prototype');
 };
@@ -4068,7 +4069,7 @@ Interpreter.prototype.Server = function(owner, port, proto) {
   this.owner;
   /** @type {number} */
   this.port;
-  /** @type {Interpreter.prototype.Object} */
+  /** @type {!Interpreter.prototype.Object} */
   this.proto;
   /** @private @type {net.Server} */
   this.server_;
@@ -4126,7 +4127,7 @@ Interpreter.prototype.installTypes = function() {
     this.owner = owner;
   };
 
-  /** @type {Interpreter.prototype.Object} */
+  /** @type {?Interpreter.prototype.Object} */
   intrp.Object.prototype.proto = null;
   /** @type {string} */
   intrp.Object.prototype.class = 'Object';
@@ -4208,7 +4209,7 @@ Interpreter.prototype.installTypes = function() {
     // TODO(cpcallen): can we eliminate this pointless busywork while
     // still maintaining type safety?
     return pd && new Descriptor(pd.writable, pd.enumerable, pd.configurable)
-        .withValue(/** @type {Interpreter.Value} */ (pd.value));
+        .withValue(/** @type {?Interpreter.Value} */ (pd.value));
   };
 
   /**
@@ -4253,7 +4254,7 @@ Interpreter.prototype.installTypes = function() {
    * support for getters).
    * @param {string} key Key (name) of property to get.
    * @param {!Interpreter.Owner} perms Who is trying to get it?
-   * @return {Interpreter.Value} The value of the property, or undefined.
+   * @return {?Interpreter.Value} The value of the property, or undefined.
    */
   intrp.Object.prototype.get = function(key, perms) {
     if (perms === null) throw new TypeError("null can't get");
@@ -4267,7 +4268,7 @@ Interpreter.prototype.installTypes = function() {
    * support for setters).
    * @param {string} key Key (name) of property to set.
    * @param {!Interpreter.Owner} perms Who is trying to set it?
-   * @param {Interpreter.Value} value The new value of the property.
+   * @param {?Interpreter.Value} value The new value of the property.
    */
   intrp.Object.prototype.set = function(key, value, perms) {
     if (perms === null) throw new TypeError("null can't set");
@@ -4340,7 +4341,7 @@ Interpreter.prototype.installTypes = function() {
 
   /**
    * Return the object value.
-   * @return {Interpreter.Value} Value.
+   * @return {?Interpreter.Value} Value.
    * @override
    */
   intrp.Object.prototype.valueOf = function() {
@@ -4384,7 +4385,7 @@ Interpreter.prototype.installTypes = function() {
 
   /**
    * The [[HasInstance]] internal method from §15.3.5.3 of the ES5.1 spec.
-   * @param {Interpreter.Value} value The value to be checked for
+   * @param {?Interpreter.Value} value The value to be checked for
    *     being an instance of this function.
    * @param {!Interpreter.Owner} perms Who wants to know?  Used in
    *     readability check of .constructor property and as owner of
@@ -4441,9 +4442,9 @@ Interpreter.prototype.installTypes = function() {
    * @param {!Interpreter} intrp The interpreter.
    * @param {!Interpreter.Thread} thread The current thread.
    * @param {!Interpreter.State} state The current state.
-   * @param {Interpreter.Value} thisVal The this value passed into function.
-   * @param {!Array<Interpreter.Value>} args The arguments to the call.
-   * @return {Interpreter.Value}
+   * @param {?Interpreter.Value} thisVal The this value passed into function.
+   * @param {!Array<?Interpreter.Value>} args The arguments to the call.
+   * @return {?Interpreter.Value}
    * @override
    */
   intrp.Function.prototype.call = function(
@@ -4459,8 +4460,8 @@ Interpreter.prototype.installTypes = function() {
    * @param {!Interpreter} intrp The interpreter.
    * @param {!Interpreter.Thread} thread The current thread.
    * @param {!Interpreter.State} state The current state.
-   * @param {!Array<Interpreter.Value>} args The arguments to the call.
-   * @return {Interpreter.Value}
+   * @param {!Array<?Interpreter.Value>} args The arguments to the call.
+   * @return {?Interpreter.Value}
    * @override
    */
   intrp.Function.prototype.construct = function(
@@ -4566,10 +4567,10 @@ Interpreter.prototype.installTypes = function() {
       this.call(intrp, thread, state, state.info_.funcState, args);
       return Interpreter.FunctionResult.CallAgain;
     } else {  // Construction done.  Check result.
-      // Per ES5.1 §13.2.2 steps 9,10: if constructor returns
+      // Per ES5.1 §13.2.2 steps 9, 10: if constructor returns
       // primitive, return constructed object instead.
       if (!(state.value instanceof intrp.Object)) {
-        return /** @type {Interpreter.Value} */ (state.info_.funcState);
+        return /** @type {?Interpreter.Value} */ (state.info_.funcState);
       }
       return state.value;
     }
@@ -4583,8 +4584,8 @@ Interpreter.prototype.installTypes = function() {
    * Creates a new Scope and sets up the bindings of the function's
    * parameters and variables.
    * @param {!Interpreter.Owner} owner Owner for new Scope.
-   * @param {Interpreter.Value} thisVal The value of 'this' for the call.
-   * @param {!Array<Interpreter.Value>} args The arguments to the call.
+   * @param {?Interpreter.Value} thisVal The value of 'this' for the call.
+   * @param {!Array<?Interpreter.Value>} args The arguments to the call.
    * @return {!Interpreter.Scope} The initialised scope
    */
   intrp.UserFunction.prototype.instantiateDeclarations = function(
@@ -4627,8 +4628,8 @@ Interpreter.prototype.installTypes = function() {
    * @constructor
    * @extends {Interpreter.prototype.BoundFunction}
    * @param {!Interpreter.prototype.Function} func Function to be bound.
-   * @param {Interpreter.Value} thisVal The this value passed into function.
-   * @param {!Array<Interpreter.Value>} args Arguments to prefix to the call.
+   * @param {?Interpreter.Value} thisVal The this value passed into function.
+   * @param {!Array<?Interpreter.Value>} args Arguments to prefix to the call.
    * @param {?Interpreter.Owner=} owner Owner object (default: null).
    */
   intrp.BoundFunction = function(func, thisVal, args, owner) {
@@ -4636,9 +4637,9 @@ Interpreter.prototype.installTypes = function() {
     intrp.Function.call(/** @type {?} */ (this), owner, func.proto);
     /** @type {!Interpreter.prototype.Function} */
     this.boundFunc = func;
-    /** @type {Interpreter.Value} */
+    /** @type {?Interpreter.Value} */
     this.thisVal = thisVal;
-    /** @type {!Array<Interpreter.Value>} */
+    /** @type {!Array<?Interpreter.Value>} */
     this.args = args;
   };
 
@@ -4884,7 +4885,7 @@ Interpreter.prototype.installTypes = function() {
     if (!date) return;  // Deserializing
     intrp.Object.call(/** @type {?} */ (this), owner,
         (proto === undefined ? intrp.DATE : proto));
-    /** @type {Date} */
+    /** @type {!Date} */
     this.date = date;
   };
 
@@ -4921,7 +4922,7 @@ Interpreter.prototype.installTypes = function() {
     if (!re) return;  // Deserializing
     intrp.Object.call(/** @type {?} */ (this), owner,
         (proto === undefined ? intrp.REGEXP : proto));
-    /** @type {RegExp} */
+    /** @type {!RegExp} */
     this.regexp = re;
     // lastIndex is settable, all others are read-only attributes
     this.defineProperty('lastIndex', Descriptor.w.withValue(re.lastIndex));
@@ -5108,7 +5109,7 @@ Interpreter.prototype.installTypes = function() {
     }
     intrp.Object.call(/** @type {?} */ (this), owner,
         (proto === undefined ? intrp.THREAD : proto));
-    /** @type {Interpreter.Thread} */
+    /** @type {!Interpreter.Thread} */
     this.thread = thread;
     this.thread.wrapper = this;
     this.defineProperty('id', Descriptor.none.withValue(thread.id), owner);
@@ -5160,7 +5161,7 @@ Interpreter.prototype.installTypes = function() {
     // TODO(cpcallen): can we eliminate this pointless busywork while
     // still maintaining type safety?
     return pd && new Descriptor(pd.writable, pd.enumerable, pd.configurable)
-        .withValue(/** @type {Interpreter.Value} */ (pd.value));
+        .withValue(/** @type {?Interpreter.Value} */ (pd.value));
   };
 
   /**
@@ -5200,7 +5201,7 @@ Interpreter.prototype.installTypes = function() {
    * temporary Boolean, Number and String class objects.
    * @param {string} key Key (name) of property to get.
    * @param {!Interpreter.Owner} perms Who is trying to get it?
-   * @return {Interpreter.Value} The value of the property, or undefined.
+   * @return {?Interpreter.Value} The value of the property, or undefined.
    * @override
    */
   intrp.Box.prototype.get = function(key, perms) {
@@ -5220,7 +5221,7 @@ Interpreter.prototype.installTypes = function() {
    * applied to temporary Boolean, Number and String class objects.
    * @param {string} key Key (name) of property to set.
    * @param {!Interpreter.Owner} perms Who is trying to set it?
-   * @param {Interpreter.Value} value The new value of the property.
+   * @param {?Interpreter.Value} value The new value of the property.
    * @override
    */
   intrp.Box.prototype.set = function(key, value, perms) {
@@ -5269,7 +5270,7 @@ Interpreter.prototype.installTypes = function() {
 
   /**
    * Return the boxed primitive value.
-   * @return {Interpreter.Value} Value.
+   * @return {?Interpreter.Value} Value.
    * @override
    */
   intrp.Box.prototype.valueOf = function() {
@@ -5438,7 +5439,7 @@ var NativeFunctionOptions;
  */
 Interpreter.Descriptor = function() {};
 
-/** @type {(Interpreter.Value|undefined)} */
+/** @type {(?Interpreter.Value|undefined)} */
 Interpreter.Descriptor.prototype.value;
 
 /** @type {boolean|undefined} */
@@ -5472,7 +5473,7 @@ var Descriptor = function(writable, enumerable, configurable) {
  * defined)" because unfortunately closure-compiler's type system has
  * no way to represent the latter.
  */
-/** @type {(Interpreter.Value|undefined)} */
+/** @type {(?Interpreter.Value|undefined)} */
 Descriptor.prototype.value;
 /** @type {boolean|undefined} */
 Descriptor.prototype.writable;
@@ -5484,7 +5485,7 @@ Descriptor.prototype.configurable;
 /**
  * Returns a new descriptor with the same properties as this one, with
  * the addition of a value: member with the given value.
- * @param {Interpreter.Value} value Value for the new descriptor.
+ * @param {?Interpreter.Value} value Value for the new descriptor.
  * @return {!Descriptor}
  */
 Descriptor.prototype.withValue = function(value) {
@@ -5556,7 +5557,7 @@ Interpreter.StepFunction;
 /**
  * 'Map' of node types to their corresponding step functions.  Note
  * that a Map is much slower than a null-parent object (v8 in 2017).
- * @const {Object<string,Interpreter.StepFunction>}
+ * @const {!Object<string, !Interpreter.StepFunction>}
  */
 var stepFuncs_ = Object.create(null);
 
@@ -5673,7 +5674,7 @@ stepFuncs_['BinaryExpression'] = function (thread, stack, state, node) {
   // state.step_ === 2: Got operands; do binary operation.
   var leftValue = state.tmp_;
   var rightValue = state.value;
-  var /** Interpreter.Value */ value;
+  var /** ?Interpreter.Value */ value;
   switch (node['operator']) {
     case '==':  value = leftValue ==  rightValue; break;
     case '!=':  value = leftValue !=  rightValue; break;
@@ -5759,8 +5760,8 @@ stepFuncs_['BreakStatement'] = function (thread, stack, state, node) {
  * - funcState: place for NativeFunction impls to save additional state info.
  * TODO(cpcallen): give funcState a narrower type.
  * @typedef {{func: ?Interpreter.prototype.Function,
- *            this: Interpreter.Value,
- *            arguments: !Array<Interpreter.Value>,
+ *            this: ?Interpreter.Value,
+ *            arguments: !Array<?Interpreter.Value>,
  *            directEval: boolean,
  *            construct: boolean,
  *            funcState: *}}
@@ -6259,7 +6260,7 @@ stepFuncs_['LabeledStatement'] = function (thread, stack, state, node) {
  */
 stepFuncs_['Literal'] = function (thread, stack, state, node) {
   var /** (null|boolean|number|string|!RegExp) */ literal = node['value'];
-  var /** Interpreter.Value */ value;
+  var /** ?Interpreter.Value */ value;
   if (literal instanceof RegExp) {
     value = new this.RegExp(literal, state.scope.perms);
   } else {
@@ -6319,7 +6320,7 @@ stepFuncs_['MemberExpression'] = function (thread, stack, state, node) {
   // TODO(cpcallen): add test for order of following two specification
   // method calls from the algorithm in ES6 §2.3.2.1.
   // Step 7: bv = RequireObjectCoercible(baseValue).
-  var /** Interpreter.Value */ base = state.tmp_;
+  var /** ?Interpreter.Value */ base = state.tmp_;
   if (base === null || base === undefined) {
     throw new this.Error(perms, this.TYPE_ERROR,
         "Can't convert " + base + ' to Object');
@@ -6654,7 +6655,7 @@ stepFuncs_['UpdateExpression'] = function (thread, stack, state, node) {
   if (!state.ref) throw new TypeError('argument not an LVALUE??');
   var value = Number(this.getValue(state.ref, state.scope.perms));
   var prefix = Boolean(node['prefix']);
-  var /** Interpreter.Value */ rval;
+  var /** ?Interpreter.Value */ rval;
   if (node['operator'] === '++') {
     rval = (prefix ? ++value : value++);
   } else if (node['operator'] === '--') {
