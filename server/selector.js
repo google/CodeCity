@@ -42,7 +42,11 @@ var Selector = function(s) {
     // Validate & copy parts list.
     if (typeof s.length < 1) throw RangeError('Zero-length parts list??');
     if (s.length < 1) throw RangeError('Zero-length parts list??');
-    for (var i = 0; i < s.length; i++) {
+    if (typeof s[0] !== 'string' || !identifierRE.test(s[0])) {
+      throw TypeError('Parts array must begin with an identifier');
+    }
+    parts[0] = s[0];
+    for (var i = 1; i < s.length; i++) {
       if (typeof s[i] !== 'string' && !(s[i] instanceof SpecialPart)) {
         throw TypeError('Invalid part in parts array');
       }
