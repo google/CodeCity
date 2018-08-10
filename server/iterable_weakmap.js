@@ -99,7 +99,7 @@ class Cell {
 // closure-compiler supports bounded generic types
 class IterableWeakMap extends WeakMap {
   /**
-   * @param {Iterable<!Array<KEY|VALUE>>|!Array<!Array<KEY|VALUE>>=} iterable
+   * @param {!Iterable<!Array<KEY|VALUE>>|!Array<!Array<KEY|VALUE>>=} iterable
    */
   constructor(iterable = undefined) {
     super();

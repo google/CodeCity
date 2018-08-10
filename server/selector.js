@@ -31,12 +31,12 @@ var code = require('./code');
  * Selector.prototype (with various useful convenience methods) in its
  * prototype chain.
  * @constructor
- * @extends {Array<Selector.Part>}
- * @param {string|!Array<Selector.Part>|!Selector} s A Selector, Parts
+ * @extends {Array<!Selector.Part>}
+ * @param {string|!Array<!Selector.Part>|!Selector} s A Selector, Parts
  *     array or selector string.
  */
 var Selector = function(s) {
-  var /** !Array<Selector.Part> */ parts;
+  var /** !Array<!Selector.Part> */ parts;
   if (Array.isArray(s)) {
     parts = [];
     // Validate & copy parts list.
@@ -201,7 +201,7 @@ var Token;
  * Tokenizes a selector string.  Throws a SyntaxError if any text is
  * found which does not form a valid token.
  * @param {string} selector A selector string.
- * @return {!Array<Token>} An array of tokens.
+ * @return {!Array<!Token>} An array of tokens.
  */
 var tokenize = function(selector) {
   var REs = {

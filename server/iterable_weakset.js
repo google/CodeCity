@@ -56,7 +56,7 @@ weak.get;
 // closure-compiler supports bounded generic types
 class IterableWeakSet {
   /**
-   * @param {Iterable<!Array<VALUE>>|!Array<!Array<VALUE>>=} iterable
+   * @param {!Iterable<!Array<VALUE>>|!Array<!Array<VALUE>>=} iterable
    */
   constructor(iterable = undefined) {
     /** @private @const @type {!WeakMap<VALUE,!WeakRef<VALUE>>} */
