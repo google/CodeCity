@@ -97,6 +97,8 @@ exports.testSelector = function(t) {
     "foo['\"'\"']",
     'foo["\'"\'"]',
     'foo^.bar',
+    ['1foo'],
+    [Selector.PROTOTYPE],
   ];
   for (const input of cases) {
     // Do test with selector string.
