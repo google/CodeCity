@@ -111,13 +111,14 @@ class IterableWeakMap extends WeakMap {
     }
     const adder = this.set;
     if (typeof adder !== 'function') {
-      throw TypeError("'" + this.set + "' returned for property 'set' " +
+      throw new TypeError("'" + this.set + "' returned for property 'set' " +
           'of object ' + this + ' is not a function');
     }
     for (const /** ?Array<KEY|VALUE>> */ entry of iterable) {
       if (typeof entry !== 'object' && typeof entry !== 'function' ||
           entry === null) {
-        throw TypeError('Iterator value ' + entry + ' is not an entry object');
+        throw new TypeError(
+            'Iterator value ' + entry + ' is not an entry object');
       }
       adder.call(this, entry[0], entry[1]);
     }

@@ -44,7 +44,7 @@ Serializer.deserialize = function(json, intrp) {
        // Object reference: {'#': 42}
        value = objectList[data];
         if (!value) {
-          throw ReferenceError('Object reference not found: ' + data);
+          throw new ReferenceError('Object reference not found: ' + data);
         }
         return value;
       }
@@ -63,14 +63,15 @@ Serializer.deserialize = function(json, intrp) {
   }
 
   if (!Array.isArray(json)) {
-    throw TypeError('Top-level JSON is not a list.');
+    throw new TypeError('Top-level JSON is not a list.');
   }
 
   // Require native functions to be present.  Can't just create fresh
   // new interpreter instance because client code may want to add
   // custom builtins.
   if (!intrp.global) {
-    throw Error('Interpreter must be initialized prior to deserialization.');
+    throw new Error(
+        'Interpreter must be initialized prior to deserialization.');
   }
   // Find all native functions in existing interpreter.
   // Find all native functions to get id => func mappings.
@@ -102,7 +103,7 @@ Serializer.deserialize = function(json, intrp) {
       case 'Function':
         obj = functionHash[jsonObj['id']];
         if (!obj) {
-          throw RangeError('Function ID not found: ' + jsonObj['id']);
+          throw new RangeError('Function ID not found: ' + jsonObj['id']);
         }
         break;
       case 'Array':
@@ -111,7 +112,7 @@ Serializer.deserialize = function(json, intrp) {
       case 'Date':
         obj = new Date(jsonObj['data']);
         if (isNaN(obj)) {
-          throw TypeError('Invalid date: ' + jsonObj['data']);
+          throw new TypeError('Invalid date: ' + jsonObj['data']);
         }
         break;
       case 'RegExp':
@@ -145,7 +146,7 @@ Serializer.deserialize = function(json, intrp) {
         } else if ((protoRef = jsonObj['proto'])) {
           obj = Object.create(decodeValue(protoRef));
         } else {
-          throw TypeError('Unknown type: ' + jsonObj['type']);
+          throw new TypeError('Unknown type: ' + jsonObj['type']);
         }
     }
     objectList[i] = obj;
@@ -217,7 +218,7 @@ Serializer.serialize = function(intrp) {
       }
       var ref = objectList.indexOf(value);
       if (ref === -1) {
-        throw RangeError('Object not found in table.');
+        throw new RangeError('Object not found in table.');
       }
       return {'#': ref};
     }
@@ -285,7 +286,7 @@ Serializer.serialize = function(intrp) {
         jsonObj['type'] = 'Function';
         jsonObj['id'] = obj.id;
         if (!obj.id) {
-          throw Error('Native function has no ID: ' + obj);
+          throw new Error('Native function has no ID: ' + obj);
         }
         continue;  // No need to index properties.
       case Array.prototype:

@@ -40,11 +40,11 @@ var Selector = function(s) {
   if (Array.isArray(s)) {
     parts = [];
     // Validate & copy parts list.
-    if (typeof s.length < 1) throw RangeError('Zero-length parts list??');
-    if (s.length < 1) throw RangeError('Zero-length parts list??');
+    if (typeof s.length < 1) throw new RangeError('Zero-length parts list??');
+    if (s.length < 1) throw new RangeError('Zero-length parts list??');
     for (var i = 0; i < s.length; i++) {
       if (typeof s[i] !== 'string') {
-        throw TypeError('Invalid part in parts array');
+        throw new TypeError('Invalid part in parts array');
       }
       parts[i] = s[i];
     }
@@ -52,7 +52,7 @@ var Selector = function(s) {
     // Parse selector text.
     parts = parse(s);
   } else {
-    throw TypeError('Not a selector or parts array');
+    throw new TypeError('Not a selector or parts array');
   }
   Object.setPrototypeOf(parts, Selector.prototype);
   return parts;
@@ -152,7 +152,7 @@ var parse = function(selector) {
 
       case State.DOT:
         if (token.type !== 'id') {
-          throw SyntaxError(
+          throw new SyntaxError(
               '"." must be followed by identifier in selector');
         }
         parts.push(token.raw);
