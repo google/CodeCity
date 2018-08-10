@@ -1065,7 +1065,7 @@ module.exports = [
     eval('{}');
     `,
     expected: undefined },
-  
+
   { name: 'callEvalOrder', src: `
     var r = "";
     function log(x) {
@@ -2639,6 +2639,45 @@ module.exports = [
     fails;
     `,
     expected: 0 },
+
+  /////////////////////////////////////////////////////////////////////////////
+  // Thread and Thread.prototype:
+
+  // TODO(cpallen): change .eval to .program when test harness no
+  //     longer relies on eval.
+  { name: 'Thread.callers() ownership', src: `
+    var owner = {};
+    setPerms(owner);
+    var callers = Thread.callers();
+    Object.getOwnerOf(callers) === owner &&
+        Object.getOwnerOf(callers[0]) === owner;
+    `,
+    expected: true },
+
+  { name: 'Thread.callers()[0].eval',
+    src: 'Thread.callers()[0].eval',
+    expected: 'Thread.callers()[0].eval' },
+
+  { name: 'Thread.callers()[0].line & .col',
+    src: 'var frame = Thread.callers()[0]; frame.line + "," + frame.col;',
+    expected: '1,13' },
+
+  { name: 'Thread.callers()[/*last*/].program', src: `
+    var callers = Thread.callers();
+    Boolean(callers[callers.length - 1].program);
+    `,
+    expected: true },
+
+  { name: 'Thread.callers()[0].callerPerms', src: `
+    CC.root.name = 'root';
+    var user = {name: 'user'};
+    function f() {
+      return Thread.callers()[0].callerPerms.name;
+    }
+    setPerms(user);
+    f();
+    `,
+    expected: 'user' },
 
   /////////////////////////////////////////////////////////////////////////////
   // Permissions system:

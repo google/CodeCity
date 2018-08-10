@@ -2183,6 +2183,32 @@ Interpreter.prototype.initThread_ = function() {
       return Interpreter.FunctionResult.Sleep;
     }
   });
+
+  new this.NativeFunction({
+    id: 'Thread.callers', length: 0,
+    /** @type {!Interpreter.NativeCallImpl} */
+    call: function(intrp, thread, state, thisVal, args) {
+      var perms = state.scope.perms;
+      var frames = thread.callers(state.scope.perms);
+      var callers = [];
+      for (var i = 1; i < frames.length; i ++) {
+        var frame = frames[i];
+        var caller = new intrp.Object(perms);
+        // Copy properties of frame to caller.
+        for (var key in frame) {
+          if (!frame.hasOwnProperty(key)) continue;
+          var value = frame[key];
+          if (typeof value === 'function' || typeof value === 'object' &&
+              !(value instanceof intrp.Object) && value !== null) {
+            throw new TypeError('Unexpected native object');
+          }
+          caller.defineProperty(key, Descriptor.wec.withValue(value), perms);
+        }
+        callers.push(caller);
+      }
+      return intrp.createArrayFromList(callers, perms);
+    }
+  });
 };
 
 /**
@@ -4710,7 +4736,7 @@ Interpreter.prototype.installTypes = function() {
    * .name property will be set to this value.  Otherwise, if
    * options.id is a non-empty string, the part following the last '.'
    * will be used instead.
-   * 
+   *
    * If options.length is supplied, the new object's .length will be
    * set to this value.
    *
