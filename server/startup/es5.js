@@ -70,8 +70,9 @@ Object.defineProperty(Object, 'defineProperty', {enumerable: false});
     return eval('new "' + name + '"');
   };
 
-  var classes = ['Object', 'Function', 'Array', 'String', 'Boolean', 'Number', 'Date', 'RegExp', 'Error',
-                 'EvalError', 'RangeError', 'ReferenceError', 'SyntaxError', 'TypeError', 'URIError'];
+  var classes = ['Object', 'Function', 'Array', 'String', 'Boolean', 'Number',
+                 'Date', 'RegExp', 'Error', 'EvalError', 'RangeError',
+                 'ReferenceError', 'SyntaxError', 'TypeError', 'URIError'];
   // Prototypes of global constructors.
   for (var i = 0; i < classes.length; i++) {
     var constructor = builtin(classes[i]);
@@ -89,7 +90,8 @@ Object.defineProperty(Object, 'defineProperty', {enumerable: false});
                           });
   }
   // Configure Error and its subclasses.
-  var errors = ['Error', 'EvalError', 'RangeError', 'ReferenceError', 'SyntaxError', 'TypeError', 'URIError'];
+  var errors = ['Error', 'EvalError', 'RangeError', 'ReferenceError',
+                'SyntaxError', 'TypeError', 'URIError'];
   for (var i = 0; i < errors.length; i++) {
     var constructor = builtin(errors[i]);
     Object.defineProperty(constructor.prototype, 'name', {
@@ -111,8 +113,10 @@ Object.defineProperty(Object, 'defineProperty', {enumerable: false});
 
   var struct = [
     [Object, 'Object',
-     ['getOwnPropertyNames', 'keys', 'getOwnPropertyDescriptor', 'getPrototypeOf', 'isExtensible', 'preventExtensions'],
-     ['toString', 'toLocaleString', 'valueOf', 'hasOwnProperty', 'propertyIsEnumerable', 'isPrototypeOf']],
+     ['getOwnPropertyNames', 'keys', 'getOwnPropertyDescriptor',
+      'getPrototypeOf', 'isExtensible', 'preventExtensions'],
+     ['toString', 'toLocaleString', 'valueOf', 'hasOwnProperty',
+      'propertyIsEnumerable', 'isPrototypeOf']],
     [Function, 'Function',
      [],
      ['apply', 'bind', 'call', 'toString']],
