@@ -416,7 +416,7 @@ Dumper.prototype.isShadowed = function(name, scope) {
 var BindingInfo = function(dumper, selector, scope) {
   if (!scope) scope = dumper.intrp.global;
   if (selector.isVar()) {
-    /** @type {!Info} */
+    /** @type {!ScopeInfo|!ObjectInfo} */
     this.info = dumper.getScopeInfo(dumper.scope);
   } else {
     var objSel = new Selector(selector);
@@ -427,7 +427,7 @@ var BindingInfo = function(dumper, selector, scope) {
     }
     this.info = dumper.getObjectInfo(obj);
   }
-  /** @type {Selector.Part} */
+  /** @type {Selector.Part} Final part of selector. */
   this.lastPart = selector[selector.length - 1];
 };
 
@@ -454,51 +454,31 @@ BindingInfo.prototype.setDone = function(done) {
 };
 
 /**
- * Dump-state information for a single scope or object.  Implemented
- * by ScopeInfo and ObjectInfo.
- * @interface
- */
-var Info = function() {
-  /**
-   * Map of variable or property name -> dump status.
-   * @type {!Object<string, Do>}
-   */
-  this.done;
-};
-
-/**
  * Dump-state information for a single scope.
  * @constructor
- * @implements {Info}
  * @param {!Interpreter.Scope} scope The scope to keep state for.
  */
 var ScopeInfo = function(scope) {
   this.scope = scope;
-  /**
-   * Map of variable name -> dump status.
-   * @type {!Object<string, Do>}
-   */
+  /** @type {!Object<string, Do>} Map of variable name -> dump status. */
   this.done = Object.create(null);
 };
 
 /**
  * Dump-state information for a single object.
  * @constructor
- * @implements {Info}
  * @param {!Interpreter.prototype.Object} obj The object to keep state for.
  */
 var ObjectInfo = function(obj) {
   this.obj = obj;
-  /**
-   * Selector reference to this object, once created.
-   * @type {!Selector|undefined}
-   */
+  /** @type {!Selector|undefined} Reference to this object, once created. */
   this.ref = undefined;
-  /**
-   * Map of property name -> dump status.
-   * @type {!Object<string, Do>}
-   */
+  /** @type {!Object<string, Do>} Map of property name -> dump status. */
   this.done = Object.create(null);
+  /** @type {boolean} Has prototype been set? */
+  this.doneProto = false;
+  /** @type {boolean}  Has owner been set? */
+  this.doneOwner = false;
 };
 
 /**
