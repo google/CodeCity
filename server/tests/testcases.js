@@ -1223,6 +1223,14 @@ module.exports = [
     `,
     expected: 'p' },
 
+  { name: 'Object.setPrototypeOf(..., null)', src: `
+    var o = {parent: 'o'};
+    var q = Object.create(o);
+    Object.setPrototypeOf(q, null) === q &&
+        Object.getPrototypeOf(q);
+    `,
+    expected: null },
+
   { name: 'Object.setPrototypeOf circular', src: `
     var o = {};
     var p = Object.create(o);
