@@ -4158,7 +4158,7 @@ Interpreter.prototype.installTypes = function() {
             "An object's prototype chain can't include the object itself");
       }
     }
-    Object.setPrototypeOf(this.properties, proto.properties);
+    Object.setPrototypeOf(this.properties, proto && proto.properties);
     this.proto = proto;
     return true;
   };
