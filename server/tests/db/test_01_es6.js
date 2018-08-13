@@ -144,7 +144,16 @@ tests.ObjectSetPrototypeOf = function() {
       'Object.setPrototypeOf(q, p) inheritance');
 };
 
-tests.ObjectSetPrototypeOf = function() {
+tests.ObjectSetPrototypeOfToNull = function() {
+  var o = {parent: 'o'};
+  var q = Object.create(o);
+  console.assert(Object.setPrototypeOf(q, null) === q,
+      'Object.setPrototypeOf(q, null) return value');
+  console.assert(Object.getPrototypeOf(q) === null,
+      'Object.setPrototypeOf(q, null) new parent');
+};
+
+tests.ObjectSetPrototypeOfCircular = function() {
   var o = {};
   var p = Object.create(o);
   try {
