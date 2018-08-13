@@ -148,6 +148,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
       function f1(arg) {}
       var f2 = function(arg) {};
       f2.f3 = function f4(arg) {};
+      Object.setPrototypeOf(f2.f3, null);
       var obj = {a: 1, b: 2, c:3};
       var arr = [42, 69, 105, obj];
       var sparse = [0, , 2];
@@ -156,6 +157,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
       var re1 = /foo/ig;
       var re2 = /bar/g;
       re2.lastIndex = 42;
+      var child = Object.create(obj);
   `);
   intrp.run();
   const func = intrp.global.get('foo');
@@ -172,6 +174,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     ['f2', Do.SET, 'var f2 = function(arg) {};\n'],
     ['f2.f3', Do.DECL, 'f2.f3 = undefined;\n'],
     ['f2.f3', Do.SET, 'f2.f3 = function f4(arg) {};\n'],
+    ['f2.f3^', Do.SET, 'Object.setPrototypeOf(f2.f3, null);\n'],
     ['obj', Do.SET, 'var obj = {};\n'],
     ['obj', Do.RECURSE, 'obj.a = 1;\nobj.b = 2;\nobj.c = 3;\n'],
     // TODO(cpcallen): Realy want 'var arr = [42, 69, 105, obj];\n'.
@@ -183,16 +186,17 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     ['date', Do.SET, "var date = new Date('1975-07-27T00:00:00.000Z');\n"],
     ['re1', Do.SET, 'var re1 = /foo/gi;\n'],
     ['re2', Do.RECURSE, 'var re2 = /bar/g;\nre2.lastIndex = 42;\n'],
+    ['child', Do.RECURSE, 'var child = Object.create(obj);\n'],
   ];
   for (const tc of cases) {
     const s = new Selector(tc[0]);
     // Check output code.
     const code = dumper.dumpBinding(s, tc[1]);
-    t.expect(util.format('Dumper.p.dumpBinding(%o, %o)', s, tc[1]),
+    t.expect(util.format('Dumper.p.dumpBinding(<%s>, %o)', s, tc[1]),
              code, tc[2]);
     // Check work recorded.
     const binding = new BindingInfo(dumper, s);
-    t.expect(util.format('Binding status of %s', s),
+    t.expect(util.format('Binding status of <%s>', s),
         binding.getDone(), tc[1]);
   }
 

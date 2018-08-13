@@ -368,15 +368,24 @@ Dumper.prototype.getObjectInfo = function(obj) {
  * @return {Interpreter.Value} The value of that binding.
  */
 Dumper.prototype.getValueForSelector = function(selector, scope) {
-  if (selector.length < 1) throw RangeError('Zero-length selector??');
   if (!scope) scope = this.intrp.global;
-  var v = scope.get(selector[0]);
+  if (selector.length < 1) throw RangeError('Zero-length selector??');
+  var varname = selector[0];
+  if (typeof varname !== 'string') throw TypeError('Invalid first part??');
+  var v = scope.get(varname);
   for (var i = 1; i < selector.length; i++) {
-    var key = selector[i];
     if (!(v instanceof this.intrp.Object)) {
-      throw TypeError("Can't get property '" + key + "' of non-object " + v);
+      var s = new Selector(selector.slice(0, i));
+      throw TypeError("Can't get select part of primitive " + s + ' === ' + v);
     }
-    v = v.get(key, this.intrp.ROOT);
+    var part = selector[i];
+    if (typeof part === 'string') {
+      v = v.get(part, this.intrp.ROOT);
+    } else if (part === Selector.PROTOTYPE) {
+      v = v.proto;
+    } else {
+      throw new Error('Not implemented');
+    }
   }
   return v;
 };
@@ -436,11 +445,13 @@ var BindingInfo = function(dumper, selector, scope) {
  * @return {Do} The done status of the binding.
  */
 BindingInfo.prototype.getDone = function() {
-  if (typeof this.lastPart !== 'string') {
+  if (typeof this.lastPart === 'string') {
+    return this.info.done[this.lastPart] || Do.UNSTARTED;
+  } else if (this.lastPart === Selector.PROTOTYPE) {
+    return this.info.doneProto;
+  } else {
     throw new Error('Not implemented');
   }
-  var r = this.info.done[this.lastPart] || Do.UNSTARTED;
-  return this.info.done[this.lastPart] || Do.UNSTARTED;
 };
 
 /**
@@ -449,8 +460,14 @@ BindingInfo.prototype.getDone = function() {
  * @param {Do} done The new minimum done status of the binding.
  */
 BindingInfo.prototype.setDone = function(done) {
-  var current = this.getDone();
-  this.info.done[this.lastPart] = /** @type{Do} */(Math.max(current, done));
+  var d = /** @type{Do} */(Math.max(this.getDone(), done));
+  if (typeof this.lastPart === 'string') {
+    this.info.done[this.lastPart] = d;
+  } else if (this.lastPart === Selector.PROTOTYPE) {
+    this.info.doneProto = d;
+  } else {
+    throw new Error('Not implemented');
+  }
 };
 
 /**
@@ -475,10 +492,10 @@ var ObjectInfo = function(obj) {
   this.ref = undefined;
   /** @type {!Object<string, Do>} Map of property name -> dump status. */
   this.done = Object.create(null);
-  /** @type {boolean} Has prototype been set? */
-  this.doneProto = false;
-  /** @type {boolean}  Has owner been set? */
-  this.doneOwner = false;
+  /** @type {!Do} Has prototype been set? */
+  this.doneProto = Do.DECL;  // Never need to 'declare' the [[Prototype]] slot!
+  /** @type {!Do} Has owner been set? */
+  this.doneOwner = Do.DECL;  // Never need to 'declare' that object has owner!
 };
 
 /**
@@ -658,7 +675,11 @@ var Config = function(spec) {
         var selector = new Selector(content.path);
         var /** ?ConfigNode */ cn = this.tree;
         for (var j = 0; j < selector.length; j++) {
-          cn = cn.kidFor(selector[j]);
+          var part = selector[j];
+          if (typeof part !== 'string') {
+            throw TypeError('Only simple selectors supported for Config');
+          }
+          cn = cn.kidFor(part);
         }
         // Now cn is final ConfigNode for path (often a leaf).
         cn.firstFileNo = fileNo;
