@@ -157,6 +157,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
 
       var arr = [42, 69, 105, obj];
       var sparse = [0, , 2];
+      Object.setPrototypeOf(sparse, arr);
       sparse.length = 4;
 
       var date = new Date('1975-07-27');
@@ -192,7 +193,9 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         'arr[2] = 105;\narr[3] = obj;\n'],
     // TODO(cpcallen): really want 'var sparse = [0, , 2];\nsparse.length = 4;'.
     ['sparse', Do.RECURSE, 'var sparse = [];\n' +
+        // Not implemente yet: 'Object.setPrototypeOf(sparse, arr);\n' +
         'sparse[0] = 0;\nsparse[2] = 2;\nsparse.length = 4;\n'],
+
     ['date', Do.SET, "var date = new Date('1975-07-27T00:00:00.000Z');\n"],
     ['re1', Do.SET, 'var re1 = /foo/gi;\n'],
     ['re2', Do.RECURSE, 'var re2 = /bar/g;\nre2.lastIndex = 42;\n'],
@@ -230,8 +233,11 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     // TODO(cpcallen): enable this once code is correct.
     // ['f2.f3.name', Do.UNSTARTED],  // N.B.: not implicitly set.
 
+    ['arr^', Do.SET],
     ['arr.length', Do.SET],
+    ['sparse^', Do.DECL],  // BUG(cpcallen): should be Do.SET.
     ['sparse.length', Do.SET],
+
     ['re1.source', Do.SET],
     ['re1.global', Do.SET],
     ['re1.ignoreCase', Do.SET],

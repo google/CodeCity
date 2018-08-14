@@ -304,6 +304,8 @@ Dumper.prototype.functionToExpr = function(func, info) {
  * @return {string} An eval-able representation of obj.
  */
 Dumper.prototype.arrayToExpr = function(arr, info) {
+  // Do we need to set [[Prototype]]?  Not if it's Array.prototype.
+  if (arr.proto === this.intrp.ARRAY) info.doneProto = Do.SET;
   var root = this.intrp.ROOT;
   var lastIndex = arr.get('length', root) - 1;
   if (lastIndex < 0 || arr.getOwnPropertyDescriptor(String(lastIndex),  root)) {
