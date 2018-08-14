@@ -146,7 +146,8 @@ exports.testDumperPrototypeDumpBinding = function(t) {
   // Create various objects to dump.
   intrp.createThreadForSrc(`
       var obj = {a: 1, b: 2, c:3};
-      var child = Object.create(obj);
+      var child1 = Object.create(obj);
+      var child2 = Object.create(obj);
 
       function f1(arg) {}
       var f2 = function(arg) {};
@@ -157,6 +158,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
       var arr = [42, 69, 105, obj];
       var sparse = [0, , 2];
       sparse.length = 4;
+
       var date = new Date('1975-07-27');
       var re1 = /foo/ig;
       var re2 = /bar/g;
@@ -172,9 +174,10 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     ['Object', Do.SET, "Object = new 'Object';\n"],
     ['Object', Do.SET, ''],
 
+    ['child1', Do.SET, 'var child1 = {};\n'],
     ['obj', Do.SET, 'var obj = {};\n'],
     ['obj', Do.RECURSE, 'obj.a = 1;\nobj.b = 2;\nobj.c = 3;\n'],
-    ['child', Do.RECURSE, 'var child = Object.create(obj);\n'],
+    ['child2', Do.RECURSE, 'var child2 = Object.create(obj);\n'],
 
     ['f1', Do.DECL, 'var f1;\n'],
     // TODO(cpcallen): Really want 'function f1(arg) {};\n'.
@@ -183,6 +186,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     ['f2.f3', Do.DECL, 'f2.f3 = undefined;\n'],
     ['f2.f3', Do.SET, 'f2.f3 = function f4(arg) {};\n'],
     ['f2.f3^', Do.SET, 'Object.setPrototypeOf(f2.f3, null);\n'],
+
     // TODO(cpcallen): Realy want 'var arr = [42, 69, 105, obj];\n'.
     ['arr', Do.RECURSE, 'var arr = [];\narr[0] = 42;\narr[1] = 69;\n' +
         'arr[2] = 105;\narr[3] = obj;\n'],
@@ -210,6 +214,11 @@ exports.testDumperPrototypeDumpBinding = function(t) {
   const implicit = [
     ['Object.length', Do.SET],
     ['Object.name', Do.SET],
+
+    ['obj^', Do.SET],
+    ['child1^', Do.DECL],
+    ['child2^', Do.SET],
+
     ['f1^', Do.SET],
     ['f1.length', Do.SET],
     ['f1.name', Do.SET],
@@ -220,6 +229,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     ['f2.f3.length', Do.SET],
     // TODO(cpcallen): enable this once code is correct.
     // ['f2.f3.name', Do.UNSTARTED],  // N.B.: not implicitly set.
+
     ['arr.length', Do.SET],
     ['sparse.length', Do.SET],
     ['re1.source', Do.SET],

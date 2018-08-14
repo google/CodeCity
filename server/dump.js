@@ -185,7 +185,7 @@ Dumper.prototype.toExpr = function(value, selector) {
   } else if (value instanceof intrp.RegExp) {
     return this.regExpToExpr(value, info);
   } else {
-    return this.objectToExpr(value);
+    return this.objectToExpr(value, info);
   }
 };
 
@@ -256,16 +256,24 @@ Dumper.prototype.builtinToExpr = function(obj, key, info) {
  * Get a source text representation of a given Object.  May or may not
  * include all properties, etc.
  * @param {!Interpreter.prototype.Object} obj Object to be recreated.
+ * @param {!ObjectInfo} info Dump-state info about obj.
  * @return {string} An eval-able representation of obj.
  */
-Dumper.prototype.objectToExpr = function(obj) {
+Dumper.prototype.objectToExpr = function(obj, info) {
+  info.doneProto = Do.SET;
   switch (obj.proto) {
     case this.intrp.OBJECT:
       return '{}';
     case null:
       return 'Object.create(null)';
     default:
-      return 'Object.create(' + this.toExpr(obj.proto) + ')';
+      var protoInfo = this.getObjectInfo(obj.proto);
+      if (protoInfo.ref) {
+        return 'Object.create(' + this.toExpr(obj.proto) + ')';
+      } else {
+        info.doneProto = Do.DECL;
+        return '{}';  // Set [[Prototype]] later.
+      }
   }
 };
 
