@@ -161,6 +161,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
       sparse.length = 4;
 
       var date = new Date('1975-07-27');
+
       var re1 = /foo/ig;
       var re2 = /bar/g;
       re2.lastIndex = 42;
@@ -197,6 +198,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         'sparse[0] = 0;\nsparse[2] = 2;\nsparse.length = 4;\n'],
 
     ['date', Do.SET, "var date = new Date('1975-07-27T00:00:00.000Z');\n"],
+
     ['re1', Do.SET, 'var re1 = /foo/gi;\n'],
     ['re2', Do.RECURSE, 'var re2 = /bar/g;\nre2.lastIndex = 42;\n'],
   ];
@@ -237,6 +239,8 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     ['arr.length', Do.SET],
     ['sparse^', Do.DECL],  // BUG(cpcallen): should be Do.SET.
     ['sparse.length', Do.SET],
+
+    ['date^', Do.SET],
 
     ['re1.source', Do.SET],
     ['re1.global', Do.SET],

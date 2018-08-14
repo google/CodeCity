@@ -181,7 +181,7 @@ Dumper.prototype.toExpr = function(value, selector) {
   } else if (value instanceof intrp.Array) {
     return this.arrayToExpr(value, info);
   } else if (value instanceof intrp.Date) {
-    return this.dateToExpr(value);
+    return this.dateToExpr(value, info);
   } else if (value instanceof intrp.RegExp) {
     return this.regExpToExpr(value, info);
   } else {
@@ -321,9 +321,12 @@ Dumper.prototype.arrayToExpr = function(arr, info) {
 /**
  * Get a source text representation of a given Date object.
  * @param {!Interpreter.prototype.Date} date Date object to be recreated.
+ * @param {!ObjectInfo} info Dump-state info about date.
  * @return {string} An eval-able representation of obj.
  */
-Dumper.prototype.dateToExpr = function(date) {
+Dumper.prototype.dateToExpr = function(date, info) {
+  // Do we need to set [[Prototype]]?  Not if it's Date.prototype.
+  if (date.proto === this.intrp.DATE) info.doneProto = Do.SET;
   return "new Date('" + date.date.toISOString() + "')";
 };
 
