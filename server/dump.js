@@ -280,6 +280,8 @@ Dumper.prototype.functionToExpr = function(func, info) {
   if (!(func instanceof this.intrp.UserFunction)) {
     throw Error('Unable to dump non-UserFunction');
   }
+  // Do we need to set [[Prototype]]?  Not if it's Function.prototype.
+  if (func.proto === this.intrp.FUNCTION) info.doneProto = Do.SET;
   // The .length property will be set implicitly.
   info.done['length'] = Do.SET;
   // BUG(cpcallen): .name is only set in certain circumstances.
