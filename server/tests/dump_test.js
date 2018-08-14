@@ -164,6 +164,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
 
       var re1 = /foo/ig;
       var re2 = /bar/g;
+      Object.setPrototypeOf(re2, re1);
       re2.lastIndex = 42;
   `);
   intrp.run();
@@ -194,13 +195,15 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         'arr[2] = 105;\narr[3] = obj;\n'],
     // TODO(cpcallen): really want 'var sparse = [0, , 2];\nsparse.length = 4;'.
     ['sparse', Do.RECURSE, 'var sparse = [];\n' +
-        // Not implemente yet: 'Object.setPrototypeOf(sparse, arr);\n' +
+        // BUG(cpcallen) should have: 'Object.setPrototypeOf(sparse, arr);\n' +
         'sparse[0] = 0;\nsparse[2] = 2;\nsparse.length = 4;\n'],
 
     ['date', Do.SET, "var date = new Date('1975-07-27T00:00:00.000Z');\n"],
 
     ['re1', Do.SET, 'var re1 = /foo/gi;\n'],
-    ['re2', Do.RECURSE, 'var re2 = /bar/g;\nre2.lastIndex = 42;\n'],
+    ['re2', Do.RECURSE, 'var re2 = /bar/g;\n' +
+        // BUG(cpcallen) should have: 'Object.setPrototypeOf(re2, re1);\n' +
+        're2.lastIndex = 42;\n'],
   ];
   for (const tc of cases) {
     const s = new Selector(tc[0]);
@@ -242,11 +245,13 @@ exports.testDumperPrototypeDumpBinding = function(t) {
 
     ['date^', Do.SET],
 
+    ['re1^', Do.SET],
     ['re1.source', Do.SET],
     ['re1.global', Do.SET],
     ['re1.ignoreCase', Do.SET],
     ['re1.multiline', Do.SET],
     ['re1.lastIndex', Do.SET],
+    ['re2^', Do.DECL],  // BUG(cpcallen): should be Do.SET.
   ];
   for (const tc of implicit) {
     const s = new Selector(tc[0]);

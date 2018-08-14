@@ -333,10 +333,12 @@ Dumper.prototype.dateToExpr = function(date, info) {
 /**
  * Get a source text representation of a given RegExp object.
  * @param {!Interpreter.prototype.RegExp} re RegExp to be recreated.
- * @param {!ObjectInfo} info Dump-state info about arr.
+ * @param {!ObjectInfo} info Dump-state info about re.
  * @return {string} An eval-able representation of obj.
  */
 Dumper.prototype.regExpToExpr = function(re, info) {
+  // Do we need to set [[Prototype]]?  Not if it's RegExp.prototype.
+  if (re.proto === this.intrp.REGEXP) info.doneProto = Do.SET;
   // Some properties are implicitly pre-set.
   info.done['source'] = Do.SET;
   info.done['global'] = Do.SET;
