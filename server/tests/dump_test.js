@@ -152,8 +152,10 @@ exports.testDumperPrototypeDumpBinding = function(t) {
       function f1(arg) {}
       var f2 = function(arg) {};
       Object.setPrototypeOf(f2, null);
+      f2.prototype = Object.prototype;
       f2.f3 = function f4(arg) {};
       Object.setPrototypeOf(f2.f3, null);
+      f2.f3.prototype = obj;
 
       var arr = [42, 69, 105, obj];
       var sparse = [0, , 2];
@@ -176,6 +178,8 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     ['Object', Do.DECL, ''],
     ['Object', Do.SET, "Object = new 'Object';\n"],
     ['Object', Do.SET, ''],
+    ['Object.prototype', Do.SET,
+        "Object.prototype = new 'Object.prototype';\n"],
 
     ['child1', Do.SET, 'var child1 = {};\n'],
     ['obj', Do.SET, 'var obj = {};\n'],
@@ -189,6 +193,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     ['f2.f3', Do.DECL, 'f2.f3 = undefined;\n'],
     ['f2.f3', Do.SET, 'f2.f3 = function f4(arg) {};\n'],
     ['f2.f3^', Do.SET, 'Object.setPrototypeOf(f2.f3, null);\n'],
+    ['f2.f3', Do.RECURSE, "f2.f3.prototype = obj;\n"],
 
     // TODO(cpcallen): Realy want 'var arr = [42, 69, 105, obj];\n'.
     ['arr', Do.RECURSE, 'var arr = [];\narr[0] = 42;\narr[1] = 69;\n' +
@@ -218,29 +223,34 @@ exports.testDumperPrototypeDumpBinding = function(t) {
   }
 
   // Check status of (some of the) additional bindings that will be
-  // set implicitly as a side effect of the code generated above.
+  // set implicitly as a side effect of the code generated above, and
+  // that their values have the expected references (where
+  // object-valued and already dumped).
   const implicit = [
     ['Object.length', Do.SET],
     ['Object.name', Do.SET],
 
-    ['obj^', Do.SET],
-    ['child1^', Do.DECL],
-    ['child2^', Do.SET],
+    ['obj^', Do.SET, 'Object.prototype'],
+    ['child1^', Do.DECL, 'obj'],
+    ['child2^', Do.SET, 'obj'],
 
     ['f1^', Do.SET],
     ['f1.length', Do.SET],
     ['f1.name', Do.SET],
+    ['f1.prototype', Do.SET, 'f1.prototype'],
     ['f2^', Do.DECL],
     ['f2.length', Do.SET],
     ['f2.name', Do.SET],
+    ['f2.prototype', Do.DECL, 'Object.prototype'],
     ['f2.f3^', Do.SET],
     ['f2.f3.length', Do.SET],
     // TODO(cpcallen): enable this once code is correct.
     // ['f2.f3.name', Do.UNSTARTED],  // N.B.: not implicitly set.
+    ['f2.f3.prototype', Do.RECURSE, 'obj'],
 
     ['arr^', Do.SET],
     ['arr.length', Do.SET],
-    ['sparse^', Do.DECL],  // BUG(cpcallen): should be Do.SET.
+    ['sparse^', Do.DECL, 'arr'],  // BUG(cpcallen): should be Do.SET.
     ['sparse.length', Do.SET],
 
     ['date^', Do.SET],
@@ -251,13 +261,18 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     ['re1.ignoreCase', Do.SET],
     ['re1.multiline', Do.SET],
     ['re1.lastIndex', Do.SET],
-    ['re2^', Do.DECL],  // BUG(cpcallen): should be Do.SET.
+    ['re2^', Do.DECL, 're1'],  // BUG(cpcallen): should be Do.SET.
   ];
   for (const tc of implicit) {
     const s = new Selector(tc[0]);
     const binding = new BindingInfo(dumper, s);
     t.expect(util.format('Binding status of %s', s),
-        binding.getDone(), tc[1]);
+             binding.getDone(), tc[1]);
+    if (tc[2]) {
+      const value = dumper.getValueForSelector(s);
+      const valueInfo = dumper.getObjectInfo(value);
+      t.expect(util.format('Ref for %s', s), String(valueInfo.ref), tc[2]);
+    }
   }
 };
 

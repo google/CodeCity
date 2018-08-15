@@ -294,6 +294,24 @@ Dumper.prototype.functionToExpr = function(func, info) {
   info.done['length'] = Do.SET;
   // BUG(cpcallen): .name is only set in certain circumstances.
   info.done['name'] = Do.SET;
+  // The .prototype property will automatically be created, so we
+  // don't need to "declare" it.  Fortunately it's non-configurable,
+  // so we don't need to worry that it might need to be deleted.
+  info.done['prototype'] = Do.DECL;
+  // Better still, we can use the automatically-created .prototype
+  // object if the current value is an ordinary object (regardless of
+  // prototype - that can be set later) and it isn't a built-in or
+  // already instantiated.
+  var prototype = func.get('prototype', this.intrp.ROOT);
+  if (!this.intrp.builtins.getKey(prototype) &&
+      prototype instanceof this.intrp.Object &&
+      prototype.class === 'Object') {
+    var prototypeInfo = this.getObjectInfo(prototype);
+    if(prototypeInfo.ref === undefined) {
+      prototypeInfo.ref = new Selector(info.ref.concat('prototype'));
+      info.done['prototype'] = Do.SET;
+    }
+  }
   return func.toString();
 };
 
