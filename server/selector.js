@@ -74,6 +74,24 @@ Selector.prototype.isVar = function() {
 };
 
 /**
+ * Returns true iff the selector represents an object property
+ * binding.
+ * @return {boolean} Is selector for a property?
+ */
+Selector.prototype.isProp = function() {
+  return this.length > 1 && typeof this[this.length - 1] === 'string';
+};
+
+/**
+ * Returns true iff the selector represents an object prototype
+ * binding.
+ * @return {boolean} Is selector for prototype?
+ */
+Selector.prototype.isProto = function() {
+  return this.length > 1 && this[this.length - 1] === Selector.PROTOTYPE;
+};
+
+/**
  * Return the selector as an evaluable expression yeilding the
  * selected value.
  * @return {string} The selector as a string.
