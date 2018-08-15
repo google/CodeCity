@@ -113,20 +113,22 @@ exports.testSelector = function(t) {
 };
 
 /**
- * Unit tests for Selector.prototype.isVar
+ * Unit tests for Selector.prototype.isVar / isProp / isProto
  * @param {!T} t The test runner object.
  */
-exports.testSelectorPrototypeIsVar = function(t) {
+exports.testSelectorPrototypeIsWhatever = function(t) {
   const cases = [
     // Test cases  of form [selector, isVar].
-    ['foo', true],
-    ['foo.bar', false],
-    ['foo^', false],
+    ['foo', true, false, false],
+    ['foo.bar', false, true, false],
+    ['foo^', false, false, true],
   ];
-  for (const [input, isVar] of cases) {
+  for (const [input, isVar, isProp, isProto] of cases) {
     const name = util.format('new Selector(%o)', input);
     const s = new Selector(input);
     t.expect(name + '.isVar()', s.isVar(), isVar);
+    t.expect(name + '.isProp()', s.isProp(), isProp);
+    t.expect(name + '.isProto()', s.isProto(), isProto);
   }
 };
 
