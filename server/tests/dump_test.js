@@ -238,6 +238,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     ['f1.length', Do.SET],
     ['f1.name', Do.SET],
     ['f1.prototype', Do.SET, 'f1.prototype'],
+    ['f1.prototype.constructor', Do.SET, 'f1'],
     ['f2^', Do.DECL],
     ['f2.length', Do.SET],
     ['f2.name', Do.SET],

@@ -310,6 +310,11 @@ Dumper.prototype.functionToExpr = function(func, info) {
     if(prototypeInfo.ref === undefined) {
       prototypeInfo.ref = new Selector(info.ref.concat('prototype'));
       info.done['prototype'] = Do.SET;
+      // Can we also use implicit .constructor?
+      var constructor = prototype.get('constructor', this.intrp.ROOT);
+      if (constructor === func) {
+        prototypeInfo.done['constructor'] = Do.SET;
+      }
     }
   }
   return func.toString();
