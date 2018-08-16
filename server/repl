@@ -48,10 +48,19 @@ const rl = readline.createInterface({
 
 rl.prompt();
 rl.on('line', function(line) {
-  const thread = intrp.createThreadForSrc(line).thread;
-  intrp.run();
-  console.log(intrp.pseudoToNative(thread.value));
-  rl.prompt();
+  try {
+    let thread;
+    try {
+      thread = intrp.createThreadForSrc(line).thread;
+    } catch (e) {
+      console.log('%s: %s', e.name, e.message);
+      return;
+    }
+    intrp.run();
+    console.log(intrp.pseudoToNative(thread.value));
+  } finally {
+    rl.prompt();
+  }
 }).on('close', function() {
   process.exit(0);
 });
