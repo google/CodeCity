@@ -393,7 +393,7 @@ Dumper.prototype.getScopeInfo = function(scope) {
  */
 Dumper.prototype.getObjectInfo = function(obj) {
   if (this.objInfo.has(obj)) return this.objInfo.get(obj);
-  var oi = new ObjectInfo(obj, this.intrp.ROOT);
+  var oi = new ObjectInfo(this, obj);
   this.objInfo.set(obj, oi);
   return oi;
 };
@@ -457,7 +457,7 @@ Dumper.prototype.isShadowed = function(name, scope) {
  * ObjectInfo or ScopeInfo of the parent scope/object plus the final
  * selector part.
  * @constructor
- * @param {!Dumper} dumper Dumper in which this binding will be dumped.
+ * @param {!Dumper} dumper Dumper to which this BindingInfo belongs.
  * @param {!Selector} selector A selector for the binding in question.
  * @param {!Interpreter.Scope=} scope Scope which selector is relative
  *     to.  Defaults to global scope.
@@ -549,10 +549,10 @@ ScopeInfo.prototype.setDone = function(name, done) {
 /**
  * Dump-state information for a single object.
  * @constructor
+ * @param {!Dumper} dumper Dumper to which this ObjectInfo belongs.
  * @param {!Interpreter.prototype.Object} obj The object to keep state for.
- * @param {!Interpreter.Owner} root The root owner object (for perms).
  */
-var ObjectInfo = function(obj, root) {
+var ObjectInfo = function(dumper, obj) {
   this.obj = obj;
   /** @type {!Selector|undefined} Reference to this object, once created. */
   this.ref = undefined;
@@ -572,7 +572,7 @@ var ObjectInfo = function(obj, root) {
    * @private @const {!Object<string, (boolean|!Object<string, boolean>)>}
    */
   this.todo_ = Object.create(null);
-  var keys = obj.ownKeys(root);
+  var keys = obj.ownKeys(dumper.intrp.ROOT);
   for (var i = 0; i < keys.length; i++) {
     this.todo_[keys[i]] = true;
   }
