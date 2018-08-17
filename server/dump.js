@@ -131,7 +131,7 @@ Dumper.prototype.dumpBinding = function(selector, todo) {
     var subselector = new Selector(selector);
     for (var i = 0; i < keys.length; i++) {
       var key = keys[i];
-      if (oi.done[key] >= todo) continue;  // Skip already-done properties.
+      if (oi.getDone(key) >= todo) continue;  // Skip already-done properties.
       subselector.push(key);
       output.push(this.dumpBinding(subselector, todo));
       subselector.pop();
@@ -246,8 +246,8 @@ Dumper.prototype.builtinToExpr = function(obj, key, info) {
     // The .length property and .name properties are pre-set.
     // BUG(cpcallen): Actually, .name can be changed, so we should
     // compare it to the value in a pristine Interpreter.
-    info.done['length'] = Do.SET;
-    info.done['name'] = Do.SET;
+    info.setDone('length', Do.SET);
+    info.setDone('name', Do.SET);
   }
   return 'new ' + code.quote(key);
 };
@@ -291,13 +291,13 @@ Dumper.prototype.functionToExpr = function(func, info) {
   // Do we need to set [[Prototype]]?  Not if it's Function.prototype.
   if (func.proto === this.intrp.FUNCTION) info.doneProto = Do.SET;
   // The .length property will be set implicitly.
-  info.done['length'] = Do.SET;
+  info.setDone('length', Do.SET);
   // BUG(cpcallen): .name is only set in certain circumstances.
-  info.done['name'] = Do.SET;
+  info.setDone('name', Do.SET);
   // The .prototype property will automatically be created, so we
   // don't need to "declare" it.  Fortunately it's non-configurable,
   // so we don't need to worry that it might need to be deleted.
-  info.done['prototype'] = Do.DECL;
+  info.setDone('prototype', Do.DECL);
   // Better still, we can use the automatically-created .prototype
   // object if the current value is an ordinary object (regardless of
   // prototype - that can be set later) and it isn't a built-in or
@@ -309,11 +309,11 @@ Dumper.prototype.functionToExpr = function(func, info) {
     var prototypeInfo = this.getObjectInfo(prototype);
     if(prototypeInfo.ref === undefined) {
       prototypeInfo.ref = new Selector(info.ref.concat('prototype'));
-      info.done['prototype'] = Do.SET;
+      info.setDone('prototype', Do.SET);
       // Can we also use implicit .constructor?
       var constructor = prototype.get('constructor', this.intrp.ROOT);
       if (constructor === func) {
-        prototypeInfo.done['constructor'] = Do.SET;
+        prototypeInfo.setDone('constructor', Do.SET);
       }
     }
   }
@@ -333,10 +333,10 @@ Dumper.prototype.arrayToExpr = function(arr, info) {
   var lastIndex = arr.get('length', root) - 1;
   if (lastIndex < 0 || arr.getOwnPropertyDescriptor(String(lastIndex),  root)) {
     // No need to set .length if it will be set via setting final index.
-    info.done['length'] = Do.SET;
+    info.setDone('length', Do.SET);
   } else {
     // Length exists; don't worry about it when preserving propery order.
-    info.done['length'] = Do.DECL;
+    info.setDone('length', Do.DECL);
   }
   return '[]';
 };
@@ -363,13 +363,13 @@ Dumper.prototype.regExpToExpr = function(re, info) {
   // Do we need to set [[Prototype]]?  Not if it's RegExp.prototype.
   if (re.proto === this.intrp.REGEXP) info.doneProto = Do.SET;
   // Some properties are implicitly pre-set.
-  info.done['source'] = Do.SET;
-  info.done['global'] = Do.SET;
-  info.done['ignoreCase'] = Do.SET;
-  info.done['multiline'] = Do.SET;
+  info.setDone('source', Do.SET);
+  info.setDone('global', Do.SET);
+  info.setDone('ignoreCase', Do.SET);
+  info.setDone('multiline', Do.SET);
   // Can skip .lastIndex iff it is 0.
   if (re.get('lastIndex', this.intrp.ROOT) === 0) {
-    info.done['lastIndex'] = Do.SET;
+    info.setDone('lastIndex', Do.SET);
   }
   return re.regexp.toString();
 };
@@ -393,7 +393,7 @@ Dumper.prototype.getScopeInfo = function(scope) {
  */
 Dumper.prototype.getObjectInfo = function(obj) {
   if (this.objInfo.has(obj)) return this.objInfo.get(obj);
-  var oi = new ObjectInfo(obj);
+  var oi = new ObjectInfo(obj, this.intrp.ROOT);
   this.objInfo.set(obj, oi);
   return oi;
 };
@@ -485,10 +485,14 @@ var BindingInfo = function(dumper, selector, scope) {
  * @return {Do} The done status of the binding.
  */
 BindingInfo.prototype.getDone = function() {
-  if (typeof this.lastPart === 'string') {
-    return this.info.done[this.lastPart] || Do.UNSTARTED;
-  } else if (this.lastPart === Selector.PROTOTYPE) {
+  if (this.lastPart === Selector.PROTOTYPE) {
     return this.info.doneProto;
+  } else if (typeof this.lastPart === 'string') {
+    if (this.info instanceof ScopeInfo) {
+      return this.info.done[this.lastPart] || Do.UNSTARTED;
+    } else {  // this.info instanceof ObjectInfo.
+      return this.info.getDone(this.lastPart);
+    }
   } else {
     throw new Error('Not implemented');
   }
@@ -501,10 +505,14 @@ BindingInfo.prototype.getDone = function() {
  */
 BindingInfo.prototype.setDone = function(done) {
   var d = /** @type{Do} */(Math.max(this.getDone(), done));
-  if (typeof this.lastPart === 'string') {
-    this.info.done[this.lastPart] = d;
-  } else if (this.lastPart === Selector.PROTOTYPE) {
+  if (this.lastPart === Selector.PROTOTYPE) {
     this.info.doneProto = d;
+  } else if (typeof this.lastPart === 'string') {
+    if (this.info instanceof ScopeInfo) {
+      this.info.done[this.lastPart] = d;
+    } else {  // this.info instanceof ObjectInfo.
+      this.info.setDone(this.lastPart, done);
+    }
   } else {
     throw new Error('Not implemented');
   }
@@ -525,17 +533,85 @@ var ScopeInfo = function(scope) {
  * Dump-state information for a single object.
  * @constructor
  * @param {!Interpreter.prototype.Object} obj The object to keep state for.
+ * @param {!Interpreter.Owner} root The root owner object (for perms).
  */
-var ObjectInfo = function(obj) {
+var ObjectInfo = function(obj, root) {
   this.obj = obj;
   /** @type {!Selector|undefined} Reference to this object, once created. */
   this.ref = undefined;
-  /** @type {!Object<string, Do>} Map of property name -> dump status. */
-  this.done = Object.create(null);
+  /**
+   * Map of property name -> dump status, where:
+   *
+   * - .todo[p] === true means the property p has not yet been created.
+   * - .todo[p] === { ...property descriptor... } means the property p
+   *   has been created, and these are the present values of of the
+   *   property attributes, except that todo[p].value === true means
+   *   that the vaue still needs to be set.
+   * - .todo[p] === false means that all work on property p has been
+   *   completed, but not recursively on the properties of obj.p.
+   * - .todo[p] deleted meands all work has been done on property p
+   *   and its properties (if any).
+   *
+   * @const {!Object<string, (boolean|!Object<string, boolean>)>}
+   */
+  this.todo = Object.create(null);
+  var keys = obj.ownKeys(root);
+  for (var i = 0; i < keys.length; i++) {
+    this.todo[keys[i]] = true;
+  }
   /** @type {!Do} Has prototype been set? */
   this.doneProto = Do.DECL;  // Never need to 'declare' the [[Prototype]] slot!
   /** @type {!Do} Has owner been set? */
   this.doneOwner = Do.DECL;  // Never need to 'declare' that object has owner!
+};
+
+/**
+ * Return the current 'done' status of a property.
+ * @param {string} key The property key to get status for.
+ * @return {Do} The done status of the binding.
+ */
+ObjectInfo.prototype.getDone = function(key) {
+  var status = this.todo[key];
+  if (status === true) {
+    return Do.UNSTARTED;
+  } else if(status && status.value) {
+    return Do.DECL;
+  } else if(status && !status.value || status === false) {
+    return Do.SET;
+  } else if(status === undefined) {
+    return Do.RECURSE;
+  } else {
+    throw new Error('Corrupt .todo status??');
+  }
+};
+
+/**
+ * Update the current 'done' status of a property.  Will throw an
+ * error if caller attempts to un-do or re-do a previously-don action.
+ * @param {string} key The property key to set status for.
+ * @param {Do} done The new minimum done status of the binding.
+ */
+ObjectInfo.prototype.setDone = function(key, done) {
+  var status = this.todo[key];
+  if (done === Do.DECL) {
+    if (status !== true) {
+      throw new RangeError('Property already created??');
+    }
+    // TODO(cpcallen): also include attributes.
+    this.todo[key] = {value: true};
+  } else if (done === Do.SET) {
+    if (status && status['value'] === false) {
+      throw new RangeError('Property already set??');
+    }
+    this.todo[key] = false;
+  } else if (done === Do.RECURSE) {
+    if (status && status['value'] === false) {
+      throw new RangeError('Recursion already complete??');
+    }
+    delete this.todo[key];
+  } else {
+    throw new Error('Not implemented');
+  }
 };
 
 /**
