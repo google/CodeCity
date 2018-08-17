@@ -488,11 +488,7 @@ BindingInfo.prototype.getDone = function() {
   if (this.lastPart === Selector.PROTOTYPE) {
     return this.info.doneProto;
   } else if (typeof this.lastPart === 'string') {
-    if (this.info instanceof ScopeInfo) {
-      return this.info.done[this.lastPart] || Do.UNSTARTED;
-    } else {  // this.info instanceof ObjectInfo.
-      return this.info.getDone(this.lastPart);
-    }
+    return this.info.getDone(this.lastPart);
   } else {
     throw new Error('Not implemented');
   }
@@ -508,11 +504,7 @@ BindingInfo.prototype.setDone = function(done) {
   if (this.lastPart === Selector.PROTOTYPE) {
     this.info.doneProto = d;
   } else if (typeof this.lastPart === 'string') {
-    if (this.info instanceof ScopeInfo) {
-      this.info.done[this.lastPart] = d;
-    } else {  // this.info instanceof ObjectInfo.
-      this.info.setDone(this.lastPart, done);
-    }
+    this.info.setDone(this.lastPart, done);
   } else {
     throw new Error('Not implemented');
   }
@@ -527,6 +519,28 @@ var ScopeInfo = function(scope) {
   this.scope = scope;
   /** @type {!Object<string, Do>} Map of variable name -> dump status. */
   this.done = Object.create(null);
+};
+
+/**
+ * Return the current 'done' status of a variable binding.
+ * @param {string} name The variable get status for.
+ * @return {Do} The done status of the binding.
+ */
+ScopeInfo.prototype.getDone = function(name) {
+  return this.done[name] || Do.UNSTARTED;
+};
+
+/**
+ * Update the current 'done' status of a variable binding.  Will throw
+ * a RangeError if caller attempts to un-do a previously-done action.
+ * @param {string} name The variable get status for.
+ * @param {Do} done The new minimum done status of the binding.
+ */
+ScopeInfo.prototype.setDone = function(name, done) {
+ if (done < this.getDone(name)) {
+    throw new RangeError('Undoing previous variable binding??');
+  }
+  this.done[name] = done;
 };
 
 /**
@@ -586,8 +600,9 @@ ObjectInfo.prototype.getDone = function(key) {
 };
 
 /**
- * Update the current 'done' status of a property.  Will throw an
- * error if caller attempts to un-do or re-do a previously-don action.
+ * Update the current 'done' status of a property.  Will throw a
+ * RangeError if caller attempts to un-do or re-do a previously-done
+ * action.
  * @param {string} key The property key to set status for.
  * @param {Do} done The new minimum done status of the binding.
  */
