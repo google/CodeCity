@@ -517,8 +517,11 @@ BindingInfo.prototype.setDone = function(done) {
  */
 var ScopeInfo = function(scope) {
   this.scope = scope;
-  /** @type {!Object<string, Do>} Map of variable name -> dump status. */
-  this.done = Object.create(null);
+  /**
+   * Map of variable name -> dump status.
+   * @private @const {!Object<string, Do>}
+   */
+  this.done_ = Object.create(null);
 };
 
 /**
@@ -527,7 +530,7 @@ var ScopeInfo = function(scope) {
  * @return {Do} The done status of the binding.
  */
 ScopeInfo.prototype.getDone = function(name) {
-  return this.done[name] || Do.UNSTARTED;
+  return this.done_[name] || Do.UNSTARTED;
 };
 
 /**
@@ -540,7 +543,7 @@ ScopeInfo.prototype.setDone = function(name, done) {
  if (done < this.getDone(name)) {
     throw new RangeError('Undoing previous variable binding??');
   }
-  this.done[name] = done;
+  this.done_[name] = done;
 };
 
 /**
@@ -566,12 +569,12 @@ var ObjectInfo = function(obj, root) {
    * - .todo[p] deleted meands all work has been done on property p
    *   and its properties (if any).
    *
-   * @const {!Object<string, (boolean|!Object<string, boolean>)>}
+   * @private @const {!Object<string, (boolean|!Object<string, boolean>)>}
    */
-  this.todo = Object.create(null);
+  this.todo_ = Object.create(null);
   var keys = obj.ownKeys(root);
   for (var i = 0; i < keys.length; i++) {
-    this.todo[keys[i]] = true;
+    this.todo_[keys[i]] = true;
   }
   /** @type {!Do} Has prototype been set? */
   this.doneProto = Do.DECL;  // Never need to 'declare' the [[Prototype]] slot!
@@ -585,7 +588,7 @@ var ObjectInfo = function(obj, root) {
  * @return {Do} The done status of the binding.
  */
 ObjectInfo.prototype.getDone = function(key) {
-  var status = this.todo[key];
+  var status = this.todo_[key];
   if (status === true) {
     return Do.UNSTARTED;
   } else if(status && status.value) {
@@ -595,7 +598,7 @@ ObjectInfo.prototype.getDone = function(key) {
   } else if(status === undefined) {
     return Do.RECURSE;
   } else {
-    throw new Error('Corrupt .todo status??');
+    throw new Error('Corrupt .todo_ status??');
   }
 };
 
@@ -607,23 +610,23 @@ ObjectInfo.prototype.getDone = function(key) {
  * @param {Do} done The new minimum done status of the binding.
  */
 ObjectInfo.prototype.setDone = function(key, done) {
-  var status = this.todo[key];
+  var status = this.todo_[key];
   if (done === Do.DECL) {
     if (status !== true) {
       throw new RangeError('Property already created??');
     }
     // TODO(cpcallen): also include attributes.
-    this.todo[key] = {value: true};
+    this.todo_[key] = {value: true};
   } else if (done === Do.SET) {
     if (status && status['value'] === false) {
       throw new RangeError('Property already set??');
     }
-    this.todo[key] = false;
+    this.todo_[key] = false;
   } else if (done === Do.RECURSE) {
     if (status && status['value'] === false) {
       throw new RangeError('Recursion already complete??');
     }
-    delete this.todo[key];
+    delete this.todo_[key];
   } else {
     throw new Error('Not implemented');
   }
