@@ -562,8 +562,8 @@ var ObjectInfo = function(dumper, obj) {
    * - .todo[p] === true means the property p has not yet been created.
    * - .todo[p] === { ...property descriptor... } means the property p
    *   has been created, and these are the present values of of the
-   *   property attributes, except that todo[p].value === true means
-   *   that the vaue still needs to be set.
+   *   property attributes, except that todo[p].value === true iff the
+   *   value has been set.
    * - .todo[p] === false means that all work on property p has been
    *   completed, but not recursively on the properties of obj.p.
    * - .todo[p] deleted meands all work has been done on property p
@@ -591,9 +591,9 @@ ObjectInfo.prototype.getDone = function(key) {
   var status = this.todo_[key];
   if (status === true) {
     return Do.UNSTARTED;
-  } else if(status && status.value) {
+  } else if(status && !status.value) {
     return Do.DECL;
-  } else if(status && !status.value || status === false) {
+  } else if(status && status.value || status === false) {
     return Do.SET;
   } else if(status === undefined) {
     return Do.RECURSE;
@@ -616,14 +616,14 @@ ObjectInfo.prototype.setDone = function(key, done) {
       throw new RangeError('Property already created??');
     }
     // TODO(cpcallen): also include attributes.
-    this.todo_[key] = {value: true};
+    this.todo_[key] = {value: false};
   } else if (done === Do.SET) {
-    if (status && status['value'] === false) {
+    if (status && status.value) {
       throw new RangeError('Property already set??');
     }
     this.todo_[key] = false;
   } else if (done === Do.RECURSE) {
-    if (status && status['value'] === false) {
+    if (status && status.value) {
       throw new RangeError('Recursion already complete??');
     }
     delete this.todo_[key];
