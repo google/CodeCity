@@ -2191,8 +2191,7 @@ Interpreter.prototype.initThread_ = function() {
       var perms = state.scope.perms;
       var frames = thread.callers(state.scope.perms);
       var callers = [];
-      for (var i = 1; i < frames.length; i ++) {
-        var frame = frames[i];
+      for (var i = 1, frame; (frame = frames[i]); i++) {
         var caller = new intrp.Object(perms);
         // Copy properties of frame to caller.
         for (var key in frame) {
