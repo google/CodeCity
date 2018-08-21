@@ -1226,8 +1226,7 @@ module.exports = [
   { name: 'Object.setPrototypeOf(..., null)', src: `
     var o = {parent: 'o'};
     var q = Object.create(o);
-    Object.setPrototypeOf(q, null) === q &&
-        Object.getPrototypeOf(q);
+    Object.setPrototypeOf(q, null) === q && Object.getPrototypeOf(q);
     `,
     expected: null },
 
