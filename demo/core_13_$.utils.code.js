@@ -201,8 +201,9 @@ $.utils.code.rewriteForEval = function(src, forceExpression) {
     }
   }
   src = src.substring(0, ast.end);
-  if (ast.type === 'ObjectExpression') {
-    // {a: 1} needs to be wrapped in parens to avoid being a syntax error.
+  if (ast.type === 'ObjectExpression' || ast.type === 'FunctionExpression') {
+    // {a: 1}  and function () {} both need to be wrapped in parens to avoid
+    // being syntax errors.
     src = '(' + src + ')';
   }
   return src;
@@ -227,6 +228,10 @@ $.utils.code.rewriteForEval.unittest = function() {
     '{b: 2}  // Comment': ['({b: 2})', '({b: 2}  // Comment\n)'],
     '{b: 3};': ['({b: 3})', '{b: 3};'],
     '{b: 4}; {b: 4}': [SyntaxError, '{b: 4}; {b: 4}'],
+    'function () {}': ['(function () {})', '(function () {})'],
+    'function () {}  // Comment': ['(function () {})', '(function () {})'],
+    'function () {};': ['(function () {})', '(function () {})'],
+    'function () {}; function () {}': [SyntaxError, SyntaxError],
     '{} + []': ['{} + []', '{} + []']
   };
   var actual;
