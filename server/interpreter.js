@@ -2348,21 +2348,32 @@ Interpreter.prototype.initNetwork_ = function() {
     }
   });
 
-  this.createNativeFunction('CC.connectionWrite', function(obj, data) {
-    if (!(obj instanceof intrp.Object) || !obj.socket) {
-      throw new intrp.Error(intrp.thread.perms(), intrp.TYPE_ERROR,
-          'object is not connected');
+  new this.NativeFunction({
+    id: 'CC.connectionWrite', length: 2,
+    /** @type {!Interpreter.NativeCallImpl} */
+    call: function(intrp, thread, state, thisVal, args) {
+      var obj = args[0];
+      var data = args[1];
+      if (!(obj instanceof intrp.Object) || !obj.socket) {
+        throw new intrp.Error(state.scope.perms, intrp.TYPE_ERROR,
+            'object is not connected');
+      }
+      obj.socket.write(String(data));
     }
-    obj.socket.write(String(data));
-  }, false);
+  });
 
-  this.createNativeFunction('CC.connectionClose', function(obj) {
-    if (!(obj instanceof intrp.Object) || !obj.socket) {
-      throw new intrp.Error(intrp.thread.perms(), intrp.TYPE_ERROR,
-          'object is not connected');
+  new this.NativeFunction({
+    id: 'CC.connectionClose', length: 2,
+    /** @type {!Interpreter.NativeCallImpl} */
+    call: function(intrp, thread, state, thisVal, args) {
+      var obj = args[0];
+      if (!(obj instanceof intrp.Object) || !obj.socket) {
+        throw new intrp.Error(state.scope.perms, intrp.TYPE_ERROR,
+            'object is not connected');
+      }
+      obj.socket.end();
     }
-    obj.socket.end();
-  }, false);
+  });
 };
 
 /**
