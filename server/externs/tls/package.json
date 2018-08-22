@@ -1,0 +1,5 @@
+{
+  "description": "Fake package.json for require('tls')",
+  "main": "tls.js",
+  "name": "tls",
+}
