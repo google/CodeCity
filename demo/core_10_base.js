@@ -317,7 +317,7 @@ $.room.sendScene = function(who, requested) {
 };
 
 $.room.look = function(cmd) {
-  this.sendScene(user, true);
+  this.sendScene(cmd.user, true);
 };
 $.room.look.verb = 'l(ook)?';
 $.room.look.dobj = 'this';
@@ -331,6 +331,36 @@ $.room.lookhere.verb = 'l(ook)?';
 $.room.lookhere.dobj = 'none';
 $.room.lookhere.prep = 'none';
 $.room.lookhere.iobj = 'none';
+
+$.room.say = function(cmd) {
+  // Format:  "Hello.    -or-    say Hello.
+  var text = (cmd.cmdstr[0] === '"') ? cmd.cmdstr.substring(1) : cmd.argstr;
+  var say = {
+    type: "say",
+    source: cmd.user,
+    where: this,
+    text: text
+  };
+  this.tellAll(say);
+};
+$.room.say.verb = 'say|".*';
+$.room.say.dobj = 'any';
+$.room.say.prep = 'any';
+$.room.say.iobj = 'any';
+
+$.room.think = function(cmd) {
+  var think = {
+    type: "think",
+    source: cmd.user,
+    where: this,
+    text: cmd.argstr
+  };
+  this.tellAll(think);
+};
+$.room.think.verb = 'think|\.oO';
+$.room.think.dobj = 'any';
+$.room.think.prep = 'any';
+$.room.think.iobj = 'any';
 
 $.room.narrate = function(text, obj) {
   var contents = this.getContents();
@@ -380,40 +410,6 @@ $.user = Object.create($.physical);
 $.user.name = 'User prototype';
 $.user.connection = null;
 $.user.svgText = '<circle cx="50" cy="50" r="10" class="fillWhite"/><line x1="50" y1="60" x2="50" y2="80" /><line x1="40" y1="70" x2="60" y2="70" /><line x1="50" y1="80" x2="40" y2="100" /><line x1="50" y1="80" x2="60" y2="100" />';
-
-$.user.say = function(cmd) {
-  if (user.location) {
-    // Format:  "Hello.    -or-    say Hello.
-    var text = (cmd.cmdstr[0] === '"') ? cmd.cmdstr.substring(1) : cmd.argstr;
-    var say = {
-      type: "say",
-      source: user,
-      where: user.location,
-      text: text
-    };
-    user.location.tellAll(say);
-  }
-};
-$.user.say.verb = 'say|".*';
-$.user.say.dobj = 'any';
-$.user.say.prep = 'any';
-$.user.say.iobj = 'any';
-
-$.user.think = function(cmd) {
-  if (user.location) {
-    var think = {
-      type: "think",
-      source: user,
-      where: user.location,
-      text: cmd.argstr
-    };
-    user.location.tellAll(think);
-  }
-};
-$.user.think.verb = 'think|\.oO';
-$.user.think.dobj = 'any';
-$.user.think.prep = 'any';
-$.user.think.iobj = 'any';
 
 $.user.eval = function(cmd) {
   // Format:  ;1+1    -or-    eval 1+1
