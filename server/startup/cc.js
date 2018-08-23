@@ -42,3 +42,4 @@ CC.connectionListen = new 'CC.connectionListen';
 CC.connectionUnlisten = new 'CC.connectionUnlisten';
 CC.connectionWrite = new 'CC.connectionWrite';
 CC.connectionClose = new 'CC.connectionClose';
+CC.xhr = new 'CC.xhr';
