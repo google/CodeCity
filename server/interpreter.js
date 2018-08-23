@@ -26,6 +26,8 @@
 var acorn = require('acorn');
 var IterableWeakMap = require('./iterable_weakmap');
 var net = require('net');
+var http = require('http');
+var https = require('https');
 var Registry = require('./registry');
 
 // Create an Acorn plugin called 'alwaysStrict'.
@@ -2372,6 +2374,46 @@ Interpreter.prototype.initNetwork_ = function() {
             'object is not connected');
       }
       obj.socket.end();
+    }
+  });
+
+  new this.NativeFunction({
+    id: 'CC.xhr', length: 1,
+    /** @type {!Interpreter.NativeCallImpl} */
+    call: function(intrp, thread, state, thisVal, args) {
+      var url = String(args[0]);
+      var perms = state.scope.perms;
+      if (url.match(/^http:\/\//)) {
+        var req = http.get(url);
+      } else if (url.match(/^https:\/\//)) {
+        req = https.get(url);
+      } else {
+        throw new intrp.Error(perms, intrp.SYNTAX_ERROR,
+            'Unrecognized URL "' + url + '"');
+      }
+      var rr = intrp.getResolveReject(thread, state);
+      req.on('response', function(res) {
+        if (res.statusCode !== 200) {
+          var err = new intrp.Error(perms, intrp.ERROR,
+              'HTTP request failed: ' + res.statusCode + ' ' +
+              res.statusMessage);
+          err.set('statusCode', Number(res.statusCode), perms);
+          err.set('statusMessage', String(res.statusMessage), perms);
+          res.resume();
+          rr.reject(err, perms);
+          return;
+        }
+        var body = '';
+        res.on('data', function(data) {
+          body += String(data);
+        });
+        res.on('close', function() {
+          rr.resolve(body);
+        });
+      }).on('error', function(e) {
+        rr.reject(intrp.errorNativeToPseudo(e, perms), perms);
+      });
+      return Interpreter.FunctionResult.Block;
     }
   });
 };
