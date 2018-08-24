@@ -190,6 +190,17 @@ $.www.code.editor.www = function(request, response) {
           data.butter = String(e);
         }
         if (ok) {
+          var oldValue;
+          if (lastPart.type === 'id') {
+            oldValue = object[lastPart.value];
+          } else if (lastPart.type === '^') {
+            oldValue = Object.getPrototypeOf(object);
+          } else {
+            // Unknown part type.
+            throw SyntaxError(lastPart);
+          }
+          $.www.code.editor.handleMetaData(request.parameters.src,
+                                           oldValue, saveValue);
           if (lastPart.type === 'id') {
             if (isGlobal) {
               if (lastPart.value in object) {
@@ -210,9 +221,6 @@ $.www.code.editor.www = function(request, response) {
             Object.setPrototypeOf(object, saveValue);
             data.butter = 'Prototype Set';
             data.saved = true;
-          } else {
-            // Unknown part type.
-            throw SyntaxError(lastPart);
           }
         }
       }
@@ -230,9 +238,22 @@ $.www.code.editor.www = function(request, response) {
       parts.push(lastPart);
       var selector = $.utils.selector.partsToSelector(parts);
       $.utils.selector.setSelector(value, selector);
+      // Assemble any meta-data for the editor.
+      var meta = '';
+      if (typeof value === 'function') {
+        meta += '// @copy_properties true\n';
+        meta += '// ' + (value.verb ? '@set_prop verb = ' +
+            JSON.stringify(value.verb) : '@delete_prop verb') + '\n';
+        meta += '// ' + (value.dobj ? '@set_prop dobj = ' +
+            JSON.stringify(value.dobj) : '@delete_prop dobj') + '\n';
+        meta += '// ' + (value.prep ? '@set_prop prep = ' +
+            JSON.stringify(value.prep) : '@delete_prop prep') + '\n';
+        meta += '// ' + (value.iobj ? '@set_prop iobj = ' +
+            JSON.stringify(value.iobj) : '@delete_prop iobj') + '\n';
+      }
       // Render the current value as a string.
       try {
-        data.src = $.utils.code.toSource(value);
+        data.src = meta + $.utils.code.toSource(value);
       } catch (e) {
         data.src = e.message;
       }
@@ -243,3 +264,26 @@ $.www.code.editor.www = function(request, response) {
 
 $.www.ROUTER.codeEditor =
     {regexp: /^\/code\/editor$/, handler: $.www.code.editor};
+
+$.www.code.editor.handleMetaData = function(src, oldValue, newValue) {
+  // Editors may provide metadata in the form of comments when saving.
+  // Match any leading comments.
+  var m = src.match(/^(?:[ \t]*(?:\/\/[^\n]*)?\n)*/);
+  if (!m) {
+    return;
+  }
+  var metaLines = m[0].split('\n');
+  for (var i = 0; i < metaLines.length; i++) {
+    var meta = metaLines[i];
+    if (meta.match(/^\s*\/\/\s*@copy_properties\s*true\s*$/)) {
+      // @copy_properties true
+        $.utils.transplantProperties(oldValue, newValue);
+    } else if ((m = meta.match(/^\s*\/\/\s*@delete_prop\s+(\S+)\s*$/))) {
+      // @delete_prop dobj
+      delete newValue[m[1]];
+    } else if ((m = meta.match(/^\s*\/\/\s*@set_prop\s+(\S+)\s*=(.+)$/))) {
+      // @set_prop dobj = "this"
+      newValue[m[1]] = JSON.parse(m[2]);
+    }
+  }
+};

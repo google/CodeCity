@@ -771,7 +771,181 @@ Code.valueEditor.focus = function(userAction) {
 };
 
 ////////////////////////////////////////////////////////////////////////////////
-//Code.functionEditor = new Code.GenericEditor('Function');
+Code.functionEditor = new Code.GenericEditor('Function');
+
+/**
+ * Code Mirror editor.  Does not exist until tab is selected.
+ * @type {Object}
+ * @private
+ */
+Code.functionEditor.editor_ = null;
+
+Code.functionEditor.updateDisabled = function() {
+  var disabled = this.isVerbElement_.checked ? '' : 'disabled';
+  this.verbElement_.disabled = disabled;
+  this.dobjElement_.disabled = disabled;
+  this.prepElement_.disabled = disabled;
+  this.iobjElement_.disabled = disabled;
+};
+
+/**
+ * Create the DOM for this editor.
+ * @param {!Element} container DOM should be appended to this containing div.
+ */
+Code.functionEditor.createDom = function(container) {
+  container.innerHTML = `
+<style>
+#functionEditor {
+  position: absolute;
+  top: 60px;
+  bottom: 45px;
+  left: 10px;
+  right: 20px
+}
+</style>
+<div>
+  <input type="checkbox" name="isVerb" id="isVerb"
+      onclick="Code.functionEditor.updateDisabled()">
+  <label for="isVerb">Verb:</label>
+  <input id="verb" value="" placeholder="name">
+  <select id="dobj">
+    <option>none</option>
+    <option>this</option>
+    <option>any</option>
+  </select>
+  <select id="prep">
+    <option>none</option>
+    <option>any</option>
+    <option>with/using</option>
+    <option>at/to</option>
+    <option>in front of</option>
+    <option>in/inside/into</option>
+    <option>on top of/on/onto/upon</option>
+    <option>over</option>
+    <option>through</option>
+    <option>under/underneath/beneath</option>
+    <option>behind</option>
+    <option>beside</option>
+    <option>for/about</option>
+    <option>is</option>
+    <option>as</option>
+    <option>off/off of</option>
+  </select>
+  <select id="iobj">
+    <option>none</option>
+    <option>this</option>
+    <option>any</option>
+  </select>
+</div>
+  `;
+  container.id = 'functionEditor';
+  var options = {
+    tabSize: 2,
+    undoDepth: 1024,
+    lineNumbers: true,
+    matchBrackets: true
+  };
+  this.editor_ = CodeMirror(container, options);
+  this.editor_.setSize('100%', '100%');
+
+  this.isVerbElement_ = document.getElementById('isVerb');
+  this.verbElement_ = document.getElementById('verb');
+  this.dobjElement_ = document.getElementById('dobj');
+  this.prepElement_ = document.getElementById('prep');
+  this.iobjElement_ = document.getElementById('iobj');
+};
+
+// Matches the signature of a function declaration.
+// Split the source into leading meta-data comments and function body.
+Code.functionEditor.functionRegex_ =
+    /^((?:[ \t]*(?:\/\/[^\n]*)?\n)*)\s*(function[\S\s]*)$/;
+
+/**
+ * Get the contents of the editor.
+ * @return {string} Plain text contents.
+ */
+Code.functionEditor.getSource = function() {
+  if (!this.created) {
+    return Code.Editor.uncreatedEditorSource;
+  }
+  var source = this.editor_.getValue();
+  var verb = '@delete_prop verb';
+  var dobj = '@delete_prop dobj';
+  var prep = '@delete_prop prep';
+  var iobj = '@delete_prop iobj';
+  if (this.isVerbElement_.checked) {
+    verb = '@set_prop verb = ' + JSON.stringify(this.verbElement_.value);
+    dobj = '@set_prop dobj = ' + JSON.stringify(this.dobjElement_.value);
+    prep = '@set_prop prep = ' + JSON.stringify(this.prepElement_.value);
+    iobj = '@set_prop iobj = ' + JSON.stringify(this.iobjElement_.value);
+  }
+  return `
+// @copy_properties true
+// ${verb}
+// ${dobj}
+// ${prep}
+// ${iobj}
+${source}
+  `.trim();
+};
+
+/**
+ * Set the contents of the editor.
+ * @param {string} source Plain text contents.
+ */
+Code.functionEditor.setSource = function(source) {
+  var m = source.match(Code.functionEditor.functionRegex_);
+  this.confidence = m ? 0.5 : 0;
+  if (this.created) {
+    var meta;
+    if (m) {
+      meta = m[1].split(/\n/);
+      source = m[2];
+    } else {
+      meta = '';
+      source = 'function() {\n}';
+    }
+    var props = {
+      'verb': '',
+      'dobj': 'none',
+      'prep': 'none',
+      'iobj': 'none'
+    };
+    var isVerb = false;
+    for (var line of meta) {
+      var m = line.match(Code.functionEditor.setSource.metaRegex_);
+      if (m) {
+        try {
+          props[m[1]] = JSON.parse(m[2]);
+          isVerb = true;
+        } catch (e) {
+          console.log('Ignoring invalid ' + m[1] + ': ' + m[2]);
+        }
+      }
+    }
+    this.verbElement_.value = props['verb'];
+    this.dobjElement_.value = props['dobj'];
+    this.prepElement_.value = props['prep'];
+    this.iobjElement_.value = props['iobj'];
+    this.isVerbElement_.checked = isVerb;
+    this.editor_.setValue(source);
+  }
+};
+
+// Matches one meta-data comment:  // @set_prop verb = "foobar"
+Code.functionEditor.setSource.metaRegex_ =
+    /^\s*\/\/\s*@set_prop\s+(verb|dobj|prep|iobj)\s*=\s*(.+)$/;
+
+/**
+ * Notification that this editor has just been displayed.
+ * @param {boolean} userAction True if user clicked on a tab.
+ */
+Code.functionEditor.focus = function(userAction) {
+  this.editor_.refresh();
+  if (userAction) {
+    this.editor_.focus();
+  }
+};
 
 ////////////////////////////////////////////////////////////////////////////////
 //Code.jsspEditor = new Code.GenericEditor('JSSP');
