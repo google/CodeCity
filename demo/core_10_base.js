@@ -326,7 +326,7 @@ $.room.look.iobj = 'none';
 
 $.room.lookhere = function(cmd) {
   return this.look(cmd);
-}
+};
 $.room.lookhere.verb = 'l(ook)?';
 $.room.lookhere.dobj = 'none';
 $.room.lookhere.prep = 'none';

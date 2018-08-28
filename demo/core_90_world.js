@@ -22,7 +22,7 @@
  * @author fraser@google.com (Neil Fraser)
  */
 
-// Set up a room, two users, and a rock.
+// Set up a room, two users, and a dog.
 (function () {
   var hangout = Object.create($.room);
   hangout.name = 'Hangout';
