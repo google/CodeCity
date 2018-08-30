@@ -64,7 +64,7 @@ $.www.editor.save = function(obj, key, src) {
   // functions; generate other values from an Acorn parse tree.
   var evalGlobal = eval;
   var val = evalGlobal(src);
-  if ($.utils.shouldTransplantProperties(old, val)) {
+  if (typeof old === 'function' && typeof val === 'function') {
     $.utils.transplantProperties(old, val);
   }
   obj[key] = val;
