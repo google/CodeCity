@@ -199,9 +199,11 @@ $.www.code.editor.www = function(request, response) {
             // Unknown part type.
             throw SyntaxError(lastPart);
           }
-          $.www.code.editor.handleMetaData(request.parameters.src,
-                                           oldValue, saveValue);
-          if (lastPart.type === 'id') {
+          var error = $.www.code.editor.handleMetaData(request.parameters.src,
+                                                       oldValue, saveValue);
+          if (error) {
+            data.butter = String(error);
+          } else if (lastPart.type === 'id') {
             if (isGlobal) {
               if (lastPart.value in object) {
                 eval(lastPart.value + ' = saveValue');
@@ -242,14 +244,30 @@ $.www.code.editor.www = function(request, response) {
       var meta = '';
       if (typeof value === 'function') {
         meta += '// @copy_properties true\n';
-        meta += '// ' + (value.verb ? '@set_prop verb = ' +
-            JSON.stringify(value.verb) : '@delete_prop verb') + '\n';
-        meta += '// ' + (value.dobj ? '@set_prop dobj = ' +
-            JSON.stringify(value.dobj) : '@delete_prop dobj') + '\n';
-        meta += '// ' + (value.prep ? '@set_prop prep = ' +
-            JSON.stringify(value.prep) : '@delete_prop prep') + '\n';
-        meta += '// ' + (value.iobj ? '@set_prop iobj = ' +
-            JSON.stringify(value.iobj) : '@delete_prop iobj') + '\n';
+        try {
+          meta += '// ' + (value.verb ? '@set_prop verb = ' +
+              JSON.stringify(value.verb) : '@delete_prop verb') + '\n';
+        } catch (e) {
+          // Unstringable value, or read perms error.  Skip.
+        }
+        try {
+          meta += '// ' + (value.dobj ? '@set_prop dobj = ' +
+              JSON.stringify(value.dobj) : '@delete_prop dobj') + '\n';
+        } catch (e) {
+          // Unstringable value, or read perms error.  Skip.
+        }
+        try {
+          meta += '// ' + (value.prep ? '@set_prop prep = ' +
+              JSON.stringify(value.prep) : '@delete_prop prep') + '\n';
+        } catch (e) {
+          // Unstringable value, or read perms error.  Skip.
+        }
+        try {
+          meta += '// ' + (value.iobj ? '@set_prop iobj = ' +
+              JSON.stringify(value.iobj) : '@delete_prop iobj') + '\n';
+        } catch (e) {
+          // Unstringable value, or read perms error.  Skip.
+        }
       }
       // Render the current value as a string.
       try {
@@ -268,6 +286,7 @@ $.www.ROUTER.codeEditor =
 $.www.code.editor.handleMetaData = function(src, oldValue, newValue) {
   // Editors may provide metadata in the form of comments when saving.
   // Match any leading comments.
+  // Returns (doesn't throw) an error if unable to complete.
   var m = src.match(/^(?:[ \t]*(?:\/\/[^\n]*)?\n)*/);
   if (!m) {
     return;
@@ -277,13 +296,32 @@ $.www.code.editor.handleMetaData = function(src, oldValue, newValue) {
     var meta = metaLines[i];
     if (meta.match(/^\s*\/\/\s*@copy_properties\s*true\s*$/)) {
       // @copy_properties true
+      if (!$.utils.isObject(newValue)) {
+        return Error("Can't copy properties onto primitive: " + newValue);
+      }
+      // Silently ignore if the old value is a primitive.
+      if ($.utils.isObject(oldValue)) {
         $.utils.transplantProperties(oldValue, newValue);
+      }
     } else if ((m = meta.match(/^\s*\/\/\s*@delete_prop\s+(\S+)\s*$/))) {
       // @delete_prop dobj
-      delete newValue[m[1]];
+      try {
+        delete newValue[m[1]];
+      } catch (e) {
+        return Error("Can't delete '" + m[1] + "' property.");
+      }
     } else if ((m = meta.match(/^\s*\/\/\s*@set_prop\s+(\S+)\s*=(.+)$/))) {
       // @set_prop dobj = "this"
-      newValue[m[1]] = JSON.parse(m[2]);
+      try {
+        var propValue = JSON.parse(m[2]);
+      } catch (e) {
+        return SyntaxError("Can't parse '" + m[1] + "' value: " + m[2]);
+      }
+      try {
+        newValue[m[1]] = propValue;
+      } catch (e) {
+        return Error("Can't set '" + m[1] + "' property.");
+      }
     }
   }
 };
