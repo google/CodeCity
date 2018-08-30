@@ -780,14 +780,6 @@ Code.functionEditor = new Code.GenericEditor('Function');
  */
 Code.functionEditor.editor_ = null;
 
-Code.functionEditor.updateDisabled = function() {
-  var disabled = this.isVerbElement_.checked ? '' : 'disabled';
-  this.verbElement_.disabled = disabled;
-  this.dobjElement_.disabled = disabled;
-  this.prepElement_.disabled = disabled;
-  this.iobjElement_.disabled = disabled;
-};
-
 /**
  * Create the DOM for this editor.
  * @param {!Element} container DOM should be appended to this containing div.
@@ -859,6 +851,17 @@ Code.functionEditor.createDom = function(container) {
 // Split the source into leading meta-data comments and function body.
 Code.functionEditor.functionRegex_ =
     /^((?:[ \t]*(?:\/\/[^\n]*)?\n)*)\s*(function[\S\s]*)$/;
+
+/**
+ * Enable or disable the verb UI elements based on the isVerb checkbox.
+ */
+Code.functionEditor.updateDisabled = function() {
+  var disabled = this.isVerbElement_.checked ? '' : 'disabled';
+  this.verbElement_.disabled = disabled;
+  this.dobjElement_.disabled = disabled;
+  this.prepElement_.disabled = disabled;
+  this.iobjElement_.disabled = disabled;
+};
 
 /**
  * Get the contents of the editor.
