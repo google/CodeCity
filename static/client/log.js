@@ -501,7 +501,7 @@ CCC.Log.renderHtmltext.BLOCK_NAMES = [
 CCC.Log.getMsg = function(key, var_args) {
   var element = document.getElementById(key);
   if (!element) {
-    throw 'Unknown message ' + key;
+    throw new Error('Unknown message ' + key);
   }
   var text = element.textContent;
   var parts = text.split(/(%\d)/);

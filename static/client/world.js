@@ -1779,7 +1779,7 @@ CCC.World.removeNode = function(node) {
 CCC.World.getMsg = function(key) {
   var element = document.getElementById(key);
   if (!element) {
-    throw 'Unknown message ' + key;
+    throw new Error('Unknown message ' + key);
   }
   return element.textContent;
 };

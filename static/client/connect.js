@@ -512,8 +512,7 @@ CCC.terminate = function() {
  */
 CCC.parse = function(receivedJson) {
   if (CCC.connectionState === CCC.ConnectionStates.DISCONNECTED) {
-    console.error('Ignoring JSON received after disconnection.');
-    throw receivedJson;
+    throw new Error('JSON received after disconnection: ' + receivedJson);
   } else if (CCC.connectionState === CCC.ConnectionStates.NEVER_CONNECTED) {
     CCC.postToAllFrames({'mode': CCC.MessageTypes.CONNECTION, 'state': true});
     CCC.distributeMessage(CCC.MessageTypes.CONNECT_MSG,

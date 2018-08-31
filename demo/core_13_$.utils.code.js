@@ -47,7 +47,7 @@ $.utils.code.toSource = function(value, opt_seen) {
     // TODO: Replace opt_seen with Set, once available.
     if (opt_seen) {
       if (opt_seen.includes(value)) {
-        throw RangeError('[Recursive data structure]');
+        throw new RangeError('[Recursive data structure]');
       }
       opt_seen.push(value);
     } else {
@@ -117,10 +117,10 @@ $.utils.code.toSource = function(value, opt_seen) {
     if (selector) {
       return selector;
     }
-    throw ReferenceError('[' + type + ' with no known selector]');
+    throw new ReferenceError('[' + type + ' with no known selector]');
   }
   // Can't happen.
-  throw TypeError('[' + type + ']');
+  throw new TypeError('[' + type + ']');
 };
 
 $.utils.code.toSource.processingError = false;
@@ -186,10 +186,10 @@ $.utils.code.rewriteForEval = function(src, forceExpression) {
       // remainderAst remains null.
     }
     if (!remainderAst) {
-      throw SyntaxError('Syntax error beyond expression');
+      throw new SyntaxError('Syntax error beyond expression');
     }
     if (remainderAst.type !== 'Program') {
-      throw SyntaxError('Unexpected code beyond expression');  // Module?
+      throw new SyntaxError('Unexpected code beyond expression');  // Module?
     }
     // Trim off any unnecessary trailing semicolons.
     while (remainderAst.body[0] &&
@@ -197,7 +197,7 @@ $.utils.code.rewriteForEval = function(src, forceExpression) {
       remainderAst.body.shift();
     }
     if (remainderAst.body.length !== 0) {
-      throw SyntaxError('Only one expression expected');
+      throw new SyntaxError('Only one expression expected');
     }
   }
   src = src.substring(0, ast.end);
@@ -244,8 +244,8 @@ $.utils.code.rewriteForEval.unittest = function() {
       actual = SyntaxError;
     }
     if (actual !== cases[key][0]) {
-      throw Error('Eval Expression\n' +
-                  'Expected: ' + cases[key][0] + ' Actual: ' + actual);
+      throw new Error('Eval Expression\n' +
+                      'Expected: ' + cases[key][0] + ' Actual: ' + actual);
     }
     // Test eval as a statement.
     try {
@@ -254,8 +254,8 @@ $.utils.code.rewriteForEval.unittest = function() {
       actual = SyntaxError;
     }
     if (actual !== cases[key][1]) {
-      throw Error('Eval Statement\n' +
-                  'Expected: ' + cases[key][1] + ' Actual: ' + actual);
+      throw new Error('Eval Statement\n' +
+                      'Expected: ' + cases[key][1] + ' Actual: ' + actual);
     }
   }
 };

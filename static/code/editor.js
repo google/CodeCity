@@ -147,7 +147,7 @@ Code.Editor.load = function() {
       reference = 'Object.setPrototypeOf(' + reference + ', ...) ';
     } else {
       // Unknown part type.
-      throw lastPart;
+      throw new TypeError(lastPart);
     }
   }
   header.appendChild(document.createTextNode(reference));
@@ -672,7 +672,7 @@ Code.GenericEditor.prototype.createDom = function(container) {
  * @return {string} Plain text contents.
  */
 Code.GenericEditor.prototype.getSource = function() {
-  throw ReferenceError('getSource not implemented on editor');
+  throw new ReferenceError('getSource not implemented on editor');
 };
 
 /**
@@ -680,7 +680,7 @@ Code.GenericEditor.prototype.getSource = function() {
  * @param {string} source Plain text contents.
  */
 Code.GenericEditor.prototype.setSource = function(source) {
-  throw ReferenceError('setSource not implemented on editor');
+  throw new ReferenceError('setSource not implemented on editor');
 };
 
 /**

@@ -226,7 +226,7 @@ mobwrite.shareObj.prototype.mergeChanges = true;
  * @return {string} Plaintext content.
  */
 mobwrite.shareObj.prototype.getClientText = function() {
-  throw Error('Defined by subclass');
+  throw new Error('Defined by subclass');
 };
 
 
@@ -235,7 +235,7 @@ mobwrite.shareObj.prototype.getClientText = function() {
  * @param {string} text New text.
  */
 mobwrite.shareObj.prototype.setClientText = function(text) {
-  throw Error('Defined by subclass');
+  throw new Error('Defined by subclass');
 };
 
 
