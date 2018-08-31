@@ -62,7 +62,7 @@ $.utils.commandMenu = function(commands) {
 $.utils.transplantProperties = function(oldObject, newObject) {
   // Copy all properties defined on one object to another.
   if (!$.utils.isObject(newObject) || !$.utils.isObject(oldObject)) {
-    throw TypeError("Can't transplant properties on non-objects.");
+    throw new TypeError("Can't transplant properties on non-objects.");
   }
   var keys = Object.getOwnPropertyNames(oldObject);
   for (var i = 0; i < keys.length; i++) {

@@ -78,7 +78,7 @@ CCC.Common.init = function() {
 CCC.Common.verifyMessage = function(e) {
   var origin = e.origin || e.originalEvent.origin;
   if (origin !== location.origin) {
-    throw 'Message received by frame from unknown origin: ' + origin;
+    throw new Error('Message received by frame from unknown origin: ' + origin);
   }
   return e.data;
 };
@@ -208,7 +208,7 @@ CCC.Common.commandFunction = function() {
   // This should never happen and be caught earlier.
   // But if it does, fail here rather than be a security hole.
   if (command.split(/[\r\n]/).length !== 1) {
-    throw Error('Multi-line command: ' + command);
+    throw new Error('Multi-line command: ' + command);
   }
   if (CCC.Common.isConnected) {
     parent.postMessage({'commands': [command]}, location.origin);
