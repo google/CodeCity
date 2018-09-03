@@ -24,6 +24,7 @@
  */
 'use strict';
 
+const http = require('http');
 const net = require('net');
 const util = require('util');
 
@@ -1272,8 +1273,24 @@ exports.testNetworking = async function(t) {
    `;
   await runAsyncTest(t, name, src, 'OK');
 
-  // Run a test of the xhr() function.
-  // TODO(cpcallen): More tests.  Don't depend on external webserver.
+  // Run test of the xhr() function using HTTP.
+  name = 'testXhrHttp';
+  const httpTestServer = http.createServer(function (req, res) {
+    res.writeHead(200, {'Content-Type': 'text/plain'});
+    res.end('OK HTTP: ' + req.url);
+  }).listen(9980);
+  src = `
+      try {
+        resolve(CC.xhr('http://localhost:9980/foo'));
+      } catch (e) {
+        reject(e);
+      }
+  `;
+  await runAsyncTest(t, name, src, 'OK HTTP: /foo');
+  httpTestServer.close();
+
+  // Run test of the xhr() function using HTTPS.
+  // TODO(cpcallen): Don't depend on external webserver.
   name = 'testXhr';
   src = `
       try {
