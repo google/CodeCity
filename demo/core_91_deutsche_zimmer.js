@@ -60,7 +60,7 @@ $.dz.say.iobj = 'any';
 
 $.tutorial = Object.create($.thing);
 $.tutorial.name = 'tutorial';
-$.tutorial.description = 'A tutorial on how to use the Google Translate API' +
+$.tutorial.description = 'A tutorial on how to use the Google Translate API ' +
     'from within Code City.  To begin, pick it up and then look at it again.';
 $.tutorial.svgText = [
   '<path class=\"fillWhite\" d="M-15,99 L0,79 H15 L0,99 Z"/>',
@@ -206,7 +206,7 @@ $.tutorial.show = function(user) {
         '<h2>Step 6: Test the translate() method</h2>',
         '<p>Let\'s use the eval command to test the the new translate',
         'method:</p>',
-        '<cmd>eval here.translate("Good morning.")<cmd>',
+        '<cmd>eval here.translate("Good morning.")</cmd>',
         '<p>You should see output that looks like this:</p>',
         '<p>=> "Guten Morgen."</p>',
       ];
