@@ -2391,8 +2391,10 @@ Interpreter.prototype.initNetwork_ = function() {
         throw new intrp.Error(perms, intrp.SYNTAX_ERROR,
             'Unrecognized URL "' + url + '"');
       }
+      intrp.log('net', 'XHR for %s: connect', url);
       var rr = intrp.getResolveReject(thread, state);
       req.on('response', function(res) {
+        intrp.log('net', 'XHR for %s: response', url);
         if (res.statusCode !== 200) {
           var err = new intrp.Error(perms, intrp.ERROR,
               'HTTP request failed: ' + res.statusCode + ' ' +
@@ -2408,9 +2410,11 @@ Interpreter.prototype.initNetwork_ = function() {
           body += String(data);
         });
         res.on('end', function() {
+          intrp.log('net', 'XHR for %s: end', url);
           rr.resolve(body);
         });
       }).on('error', function(e) {
+        intrp.log('net', 'XHR for %s: %s', url, e);
         rr.reject(intrp.errorNativeToPseudo(e, perms), perms);
       });
       return Interpreter.FunctionResult.Block;
