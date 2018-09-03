@@ -37,6 +37,7 @@ $.system.connectionListen = new 'CC.connectionListen';
 $.system.connectionUnlisten = new 'CC.connectionUnlisten';
 $.system.connectionWrite = new 'CC.connectionWrite';
 $.system.connectionClose = new 'CC.connectionClose';
+$.system.xhr = new 'CC.xhr';
 
 // Utility object: $.utils
 $.utils = {};
