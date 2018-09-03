@@ -135,7 +135,7 @@
   fido.svgText += '<path d="m 44.2,90.6 c -0.6,3.5 -3.7,5.3 -5.8,5" class="fillWhite" />';
   fido.svgText += '<path d="m 44.7,95 c -0.9,1.7 -3.3,3.7 -5,2.9" class="fillWhite" />';
   fido.svgText += '<path d="m 5.88,84.2 c 0,0 -0.4,1.2 -3.1,0.8" class="fillWhite" />';
-  fido.moveTo(hangout);
+  fido.moveTo(bob);
 
   $.system.connectionListen(7777, $.servers.telnet);
   $.system.connectionListen(7780, $.servers.http.connection);
