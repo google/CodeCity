@@ -2407,7 +2407,7 @@ Interpreter.prototype.initNetwork_ = function() {
         res.on('data', function(data) {
           body += String(data);
         });
-        res.on('close', function() {
+        res.on('end', function() {
           rr.resolve(body);
         });
       }).on('error', function(e) {

@@ -1283,5 +1283,5 @@ exports.testNetworking = async function(t) {
         reject(e);
       }
   `;
-  await runAsyncTest(t, name, src, 'It worked!');
+  await runAsyncTest(t, name, src, 'It worked!\n');
 };
