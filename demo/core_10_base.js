@@ -279,7 +279,7 @@ $.thing.give.prep = 'at/to';
 $.thing.give.iobj = 'any';
 
 $.thing.getCommands = function(who) {
-  var commands = $.physical.getCommands.apply(this);
+  var commands = $.physical.getCommands.call(this, who);
   if (this.location === who) {
     commands.push('drop ' + this.name);
   } else if (this.location === who.location) {
