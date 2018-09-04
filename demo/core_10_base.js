@@ -131,10 +131,25 @@ $.physical.getContents = function() {
   return this.contents_ ? this.contents_.concat() : [];
 };
 
-$.physical.addContents = function(thing) {
+$.physical.addContents = function(newThing, opt_neighbour) {
   var contents = this.getContents();
-  contents.includes(thing) || contents.push(thing);
   this.contents_ = contents;
+  var index = contents.indexOf(newThing);
+  if (index !== -1) {
+    // Remove existing thing.
+    contents.splice(index, 1);
+  }
+  if (opt_neighbour) {
+    for (var i = 0, thing; (thing = contents[i]); i++) {
+      if (thing === opt_neighbour) {
+        contents.splice(i + 1, 0, newThing);
+        return;
+      }
+    }
+    // Neighbour not found, just append.
+  }
+  // Common case of appending a thing.
+  contents.push(newThing);
 };
 
 $.physical.removeContents = function(thing) {
@@ -146,11 +161,13 @@ $.physical.removeContents = function(thing) {
   this.contents_ = contents;
 };
 
-$.physical.moveTo = function(dest) {
+$.physical.moveTo = function(dest, opt_neighbour) {
+  // Move his object to the specified destination location.
+  // If present, attempt to position this object next to a specified neighbour.
   var src = this.location;
   src && src.removeContents && src.removeContents(this);
   this.location = dest;
-  dest && dest.addContents && dest.addContents(this);
+  dest && dest.addContents && dest.addContents(this, opt_neighbour);
   $.physical.moveTo.updateScene_(src);
   if (dest !== src) {
     $.physical.moveTo.updateScene_(dest);
