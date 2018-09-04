@@ -558,6 +558,31 @@ $.user.destroy.dobj = 'any';
 $.user.destroy.prep = 'none';
 $.user.destroy.iobj = 'none';
 
+$.user.join = function(cmd) {
+  var name = cmd.dobjstr.toLowerCase();
+  for (var key in $.userDatabase) {
+    var who = $.userDatabase[key];
+    if (who.name.toLowerCase() === name) {
+      if (who.location === this.location) {
+        user.narrate('' + who.name + ' is already here.');
+      }
+      if (user.location) {
+        user.location.narrate(user.name + ' vanishes into thin air.');
+      }
+      this.moveTo(who.location);
+      user.narrate('You join ' + who.name + '.');
+      if (user.location) {
+        user.location.narrate(user.name + ' appears out of thin air.');
+      }
+      break;
+    }
+  }
+};
+$.user.join.verb = 'join';
+$.user.join.dobj = 'any';
+$.user.join.prep = 'none';
+$.user.join.iobj = 'none';
+
 $.user.quit = function(cmd) {
   if (this.connection) {
     this.connection.close();
