@@ -132,6 +132,10 @@ $.physical.getContents = function() {
 };
 
 $.physical.addContents = function(newThing, opt_neighbour) {
+  // Add newThing to this's contents.  It will be added after
+  // opt_neighbour, or to the end of list if opt_neighbour not given.
+  // An item already in the contents list will be moved to the
+  // specified position.
   var contents = this.getContents();
   this.contents_ = contents;
   var index = contents.indexOf(newThing);
