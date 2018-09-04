@@ -36,7 +36,7 @@ CCC.MIN_PING_INTERVAL = 1000;
  * Largest interval in milliseconds between pings.
  * @constant
  */
-CCC.MAX_PING_INTERVAL = 16000;
+CCC.MAX_PING_INTERVAL = 4000;
 
 /**
  * Maximum number of commands saved in history.

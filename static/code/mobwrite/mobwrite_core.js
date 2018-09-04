@@ -77,7 +77,7 @@ mobwrite.minSyncInterval = 1000;
  * Longest interval (in milliseconds) between connections.
  * @type {number}
  */
-mobwrite.maxSyncInterval = 10000;
+mobwrite.maxSyncInterval = 4000;
 
 
 /**
