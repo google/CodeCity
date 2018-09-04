@@ -82,13 +82,18 @@ $.tutorial.look.dobj = 'this';
 $.tutorial.look.prep = 'none';
 $.tutorial.look.iobj = 'none';
 
+$.tutorial.user = undefined;
+$.tutorial.thread = null;
 $.tutorial.step = 0;
 $.tutorial.room = undefined;
+$.tutorial.origFunc = undefined;
 
 $.tutorial.reset = function(cmd) {
+  this.checkLocation();
   this.step = 0;
   this.room = undefined;
-  this.show(cmd.user);
+  this.origFunc = undefined;
+  this.show();
 };
 $.tutorial.reset.verb = 'reset';
 $.tutorial.reset.dobj = 'this';
@@ -98,7 +103,8 @@ $.tutorial.moveTo($.startRoom);
 
 $.tutorial.continue = function(cmd) {
   this.step++;
-  this.show(cmd.user);
+  this.run();
+  this.show();
 };
 $.tutorial.continue.verb = 'continue';
 $.tutorial.continue.dobj = 'this';
@@ -115,15 +121,136 @@ $.tutorial.getCommands = function(who) {
   return commands;
 };
 
-$.tutorial.show = function(user) {
+$.tutorial.moveTo = function(dest) {
+  // Set this.user th the $.user holding us, or to undefined if not held.
+  var r = $.thing.moveTo.call(this, dest);
+  this.checkLocation();
+  return r;
+};
+
+$.tutorial.checkLocation = function() {
+  if ($.user.isPrototypeOf(this.location)) {
+    this.user = this.location;
+    this.thread = new Thread(this.check.bind(this));
+  } else {
+    this.user = undefined;
+    if (this.t) {
+      Thread.kill(this.thread);
+      this.thread = null;
+    }
+  }
+};
+
+$.tutorial.check = function() {
+  while (true) {
+    var step = this.step;
+    switch (step) {
+      case 1:
+        // See if user has done step 1: are they carrying a room?
+        if (this.room) throw new Error('How is .room set already??');
+        this.room = this.user.getContents().find(function(item) {
+          var props = Object.getOwnPropertyNames(item);
+          return $.room.isPrototypeOf(item) && props.length === 2;
+        });
+        if (this.room) this.step++;
+        break;
+
+      case 3:
+        if (Object.getOwnPropertyDescriptor(this.room, 'description')) {
+          this.step++;
+        }
+        break;
+
+      case 5:
+        var pd = Object.getOwnPropertyDescriptor(this.room, 'translate');
+        if (pd && typeof pd.value === 'function') {
+          this.origFunc = pd.value;
+          var tutorial = this;
+          this.room.translate = function() {
+            // This is just a hook to help automate the tutorial.
+            if (tutorial.step === 6) tutorial.step++;
+            // Restore and call original version of the function.
+            this.translate = tutorial.origFunc;
+            tutorial.origFunc = undefined;
+            new Thread(function() {
+              tutorial.run();
+              tutorial.show();
+            }, 500);
+            return this.translate.apply(this, arguments);
+          };
+          this.step++;
+        }
+        break;
+
+      case 6:
+        // Handled by hook function installed in step 5.
+        break;
+
+      case 7:
+        var pd = Object.getOwnPropertyDescriptor(this.room, 'say');
+        if (pd && typeof pd.value === 'function') {
+          this.origFunc = this.room.translate;
+          var tutorial = this;
+          this.room.translate = function() {
+            // This is just a hook to help automate the tutorial.
+            if (tutorial.step === 8) tutorial.step++;
+            // Restore and call original version of the function.
+            this.translate = tutorial.origFunc;
+            tutorial.origFunc = undefined;
+            new Thread(function() {
+              tutorial.run();
+              tutorial.show();
+            }, 500);
+            return this.translate.apply(this, arguments);
+          };
+          this.step++;
+        }
+        break;
+
+      case 8:
+        // Handled by hook function installed in step 7.
+        break;
+
+      default:
+        // Nothing to do.
+    }
+    if (this.step !== step) {
+      this.run();
+      this.show();
+    }
+    suspend(1000);
+  }
+};
+
+$.tutorial.run = function() {
+  switch (this.step) {
+    case 3:
+      if (this.room.location !== null) this.room.moveTo(null);
+      if (this.user.location !== this.room) this.user.moveTo(this.room);
+      break;
+
+    case 5:
+      // Open room in the code editor.
+      var link = '/code?' + encodeURIComponent('$.tutorial.room.translate');
+      this.user.writeJson({type: "link", href: link});
+      break;
+
+    default:
+      // Nothing to do.
+  }
+};
+
+$.tutorial.show = function() {
   var lines;
-  switch(this.step) {
+  var step = this.step;
+  switch(step) {
     case 0:
       lines = [
         '<h1>Translation API Tutorial</h1>',
         '<p>This tutorial will teach you how to use the Google machine', 
         'translation API to create a room that will automatically',
         'translate everything said to the language of your choice.</p>',
+        '<p>Type <cmd>continue tutorial</cmd> to continue.</p>'
       ];
       break;
 
@@ -139,27 +266,18 @@ $.tutorial.show = function(user) {
     case 2:
       lines = [
         '<h2>Step 2: Move to the newly-created room</h2>',
-        '<p>This step is a bit tricky, so the tutorial will arrange for',
-        'it to happen automagically when you type <cmd>continue tutorial</cmd>',
-        '</p>',
+        '<p>You\'ve created a room named "' + this.room.name + '".  Now type',
+        "<cmd>continue tutorial</cmd> and you'll be transported there",
+        'automagically.</p>',
       ];
       break;
 
     case 3:
-      // See if user has done step 1: are they carrying a room?
-      if (!this.room) {
-        this.room = user.getContents().find(function(item) {
-          var props = Object.getOwnPropertyNames(item);
-          return $.room.isPrototypeOf(item) && props.length === 2;
-        });
-      }
-      if (this.room.location !== null) this.room.moveTo(null);
-      if (user.location !== this.room) user.moveTo(this.room);
       lines = [
         '<h2>Step 3: Give your new room a description</h3>',
-        "<p>You're now in the newly-created " + this.room.name + ".",
-        "Let's give it a description:</p>",
-        '<cmd>;here.description = "Wir sprechen Deutsch hier."</cmd>',
+        "<p>You're now in you're newly-created room.  Let's give it a",
+        'description using the eval command:</p>',
+        '<cmd>eval here.description = "Wir sprechen Deutsch hier."</cmd>',
       ];
       break;
 
@@ -168,16 +286,12 @@ $.tutorial.show = function(user) {
         '<h2>Step 4: Open code editor</h2>',
         "<p>We'll use the code editor to add a translate method to this room.",
         'When you type <cmd>continue tutorial</cmd> the code inspector/editor',
-        'will open in another tab.  Click back to this tab to see the next',
-        'set of instructions.',
+        'will open in another tab.  (You might need to enable pop-ups!)',
+        'Click back to this tab to see the next set of instructions.',
       ];
       break;
 
     case 5:
-      // Open room in the code editor.
-      var link = '/code?' + encodeURIComponent('$.tutorial.room.translate');
-      user.writeJson({type: "link", href: link});
-
       lines = [
         '<h2>Step 5: Add a translate() method</h2>',
         '<p>Make sure the status bar of the code inspector says',
@@ -255,7 +369,7 @@ $.tutorial.show = function(user) {
       break;
 
     case 10:
-      user.moveTo($.startRoom);
+      this.user.moveTo($.startRoom);
       this.room = undefined;
       // FALL THROUGH
     default:
@@ -266,6 +380,5 @@ $.tutorial.show = function(user) {
         '<p>You can always <cmd>reset tutorial</cmd> to do it all again.</p>',
       ];
   }
-  lines = lines.concat('<hr>Type <cmd>continue tutorial</cmd> to continue.');
-  user.writeJson({type: 'html', htmlText: lines.join('\n')});
+  this.user.writeJson({type: 'html', htmlText: lines.join('\n')});
 };
