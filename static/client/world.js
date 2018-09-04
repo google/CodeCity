@@ -1190,7 +1190,7 @@ CCC.World.stripActions = function(div) {
   }
   var commands = div.querySelectorAll('a.command');
   for (var command of commands) {
-    command.className = '';
+    command.className = 'disabled';
   }
 };
 

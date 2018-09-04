@@ -124,3 +124,8 @@ body {
 g.say {
   text-anchor: middle;
 }
+
+a.disabled {
+  cursor: no-drop;
+  text-decoration: underline dotted #ccc;
+}
