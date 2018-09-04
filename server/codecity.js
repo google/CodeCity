@@ -110,7 +110,7 @@ CodeCity.startup = function(opt_databaseDirectory) {
 
   // Checkpoint at regular intervals.
   // TODO: Let the interval be configurable from the database.
-  setInterval(CodeCity.checkpoint, 60 * 1000);
+  setInterval(CodeCity.checkpoint, 600 * 1000);
 
   console.log('Load complete.  Starting Code City.');
   CodeCity.interpreter.start();
