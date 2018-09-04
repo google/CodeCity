@@ -2568,6 +2568,22 @@ module.exports = [
     `,
     expected: 'at anonymous function 1:21' },
 
+  { name: 'Error .stack switch / MemberExpression bug', src: `
+    function foo() {
+      switch (1) {
+        case 1:
+          return undefined.hasNoProperties;
+      }
+    }
+    try {
+      foo();
+    } catch (e) {
+      var lines = e.stack.split('\\n');
+    }
+    lines[0].trim();
+    `,
+    expected: 'at foo 4:17' },
+
   /////////////////////////////////////////////////////////////////////////////
   // JSON
 
