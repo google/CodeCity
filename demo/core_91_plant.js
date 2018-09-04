@@ -29,6 +29,7 @@
   seed.description = 'A harmless looking seed.';
   seed.svgText = "<ellipse class=\"fillWhite\" cx=\"-14.60892\" cy=\"97.64293\" fill-opacity=\"null\" rx=\"2.8451\" ry=\"1.63544\" stroke-dasharray=\"null\" stroke-linecap=\"null\" stroke-linejoin=\"null\" stroke-opacity=\"null\" stroke-width=\"null\" transform=\"rotate(19.9831 -14.6089 97.6429)\"/>\n<path d=\"m-16.80718,96.20653l1.575,1.221l1.57498,-0.04348l1.7717,0.9894\" fill-opacity=\"null\" stroke-dasharray=\"null\" stroke-linecap=\"null\" stroke-linejoin=\"null\" stroke-opacity=\"null\" stroke-width=\"null\"/>";
   $.seed = seed;
+  $.utils.selector.setSelector(seed, '$.seed');
   var startSeed = Object.create(seed);
   startSeed.name = 'a seed';
   startSeed.moveTo($.startRoom);
@@ -72,7 +73,7 @@
     if (this.seed && this.stage < 5) {
       if (this.stage === 2) {
         var newSeed = Object.create(this.seed);
-        newSeed.moveTo(this.location);
+        newSeed.moveTo(this.location, this);
         user.location.narrateAll('A new seed appears.');
       }
       this.stage++;
@@ -83,7 +84,8 @@
   pot.water.dobj = 'this';
   pot.water.prep = 'none';
   pot.water.iobj = 'none';
-
+  $.pot = pot;
+  $.utils.selector.setSelector(pot, '$.pot');
   pot.moveTo($.startRoom);
 
   var thrower = Object.create($.thing);
@@ -139,5 +141,10 @@
   thrower.fire.iobj = 'any';
   // It's Bob's flamethrower.
   thrower.moveTo($.userDatabase['1387bfc24b159b3bd6ea187c66551d6b08f52dafb7fe5c3a5a93478f54ac6202b8f78efe5817015c250173b23a70f7f6ef3205e9f5d28730e0ff2033cc6fcf84']);
+  $.thrower = thrower;
+  $.utils.selector.setSelector(thrower, '$.thrower');
 
+  // Move Alice and the clock to the end of the room.
+  $.alice.moveTo($.startRoom, $.pot);
+  $.clock.moveTo($.startRoom, $.alice);
 })();
