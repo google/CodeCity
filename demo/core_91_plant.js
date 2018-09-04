@@ -26,7 +26,7 @@
   var seed = Object.create($.thing);
   seed.name = 'Generic Seed';
   seed.aliases = ['seed'];
-  seed.description = 'A harmless looking seed.';
+  seed.description = 'A harmless looking seed.  Try planting it in a pot, then watering it.';
   seed.svgText = "<ellipse class=\"fillWhite\" cx=\"-14.60892\" cy=\"97.64293\" fill-opacity=\"null\" rx=\"2.8451\" ry=\"1.63544\" stroke-dasharray=\"null\" stroke-linecap=\"null\" stroke-linejoin=\"null\" stroke-opacity=\"null\" stroke-width=\"null\" transform=\"rotate(19.9831 -14.6089 97.6429)\"/>\n<path d=\"m-16.80718,96.20653l1.575,1.221l1.57498,-0.04348l1.7717,0.9894\" fill-opacity=\"null\" stroke-dasharray=\"null\" stroke-linecap=\"null\" stroke-linejoin=\"null\" stroke-opacity=\"null\" stroke-width=\"null\"/>";
   $.seed = seed;
   $.utils.selector.setSelector(seed, '$.seed');
@@ -37,7 +37,7 @@
   var pot = Object.create($.thing);
   pot.name = 'flower pot';
   pot.aliases = ['pot'];
-  pot.description = 'A clay flower pot.';
+  pot.description = 'A clay flower pot.  Try planting a seed in a pot, then watering it.';
   pot.seed = null;
   pot.stage = 0;
   pot.stages = [
@@ -60,7 +60,7 @@
     this.stage = 0;
     this.seed = cmd.dobj;
   };
-  pot.plant.verb = 'plant';
+  pot.plant.verb = 'plant|put';
   pot.plant.dobj = 'any';
   pot.plant.prep = 'in/inside/into';
   pot.plant.iobj = 'this';
@@ -84,23 +84,31 @@
   pot.water.dobj = 'this';
   pot.water.prep = 'none';
   pot.water.iobj = 'none';
+
+  pot.getCommands = function(who) {
+    var commands = $.thing.getCommands.call(this, who);
+    commands.push('water ' + this.name);
+    return commands;
+  };
+
   $.pot = pot;
   $.utils.selector.setSelector(pot, '$.pot');
   pot.moveTo($.startRoom);
 
   var thrower = Object.create($.thing);
   thrower.name = 'a flame thrower';
-  thrower.aliases = ['flame thrower'];
+  thrower.aliases = ['flame thrower', 'flamethrower'];
   thrower.description = 'A backpack filled with napalm.  A pilot light is burning quietly.';
-  thrower.svgText = "<rect class=\"strokeBlack fillGrey\" height=\"13.06639\" width=\"4.10959\" x=\"-19.44152\" y=\"48.68282\"/>\n<path d=\"m-19.75764,50.15806c-2.23042,-3.16122 -8.40716,0.81052 0.148,10.25242\"/>\n<path class=\"strokeBlack fillGrey\" d=\"m-17.33404,58.58799l-8.74377,0.19224l-7.6768,-4.20565l-0.7354,1.68199l8.09674,4.41641l9.04311,-0.42061\" fill-opacity=\"null\" stroke-dasharray=\"null\" stroke-linecap=\"null\" stroke-linejoin=\"null\" stroke-opacity=\"null\" stroke-width=\"null\"/>";
+  thrower.svgText = "<g transform='scale(-1.5, 1.5) translate(17, -10)'><rect class=\"strokeBlack fillGrey\" height=\"13.06639\" width=\"4.10959\" x=\"-19.44152\" y=\"48.68282\"/>\n<path d=\"m-19.75764,50.15806c-2.23042,-3.16122 -8.40716,0.81052 0.148,10.25242\"/>\n<path class=\"strokeBlack fillGrey\" d=\"m-17.33404,58.58799l-8.74377,0.19224l-7.6768,-4.20565l-0.7354,1.68199l8.09674,4.41641l9.04311,-0.42061\" fill-opacity=\"null\" stroke-dasharray=\"null\" stroke-linecap=\"null\" stroke-linejoin=\"null\" stroke-opacity=\"null\" stroke-width=\"null\"/></g>";
   thrower.wear = function(cmd) {
     this.moveTo(user);
     this.savedSvg = user.svgText;
+    user.svgText += this.svgText;
     user.narrate('You strap on ' + this.name + '.');
     if (user.location) {
       user.location.narrate(user.name + ' straps on ' + this.name + '.');
+      $.physical.moveTo.updateScene_(user.location);
     }
-    user.svgText += this.svgText;
   };
   thrower.wear.verb = 'put|strap';
   thrower.wear.dobj = 'this';
@@ -109,9 +117,11 @@
 
   thrower.unwear = function(cmd) {
     user.svgText = this.savedSvg;
+    this.savedSvg = undefined;
     user.narrate('You unstrap ' + this.name + '.');
     if (user.location) {
       user.location.narrate(user.name + ' unstraps ' + this.name + '.');
+      $.physical.moveTo.updateScene_(user.location);
     }
   };
   thrower.unwear.verb = 'remove|unstrap';
@@ -131,16 +141,28 @@
     if (typeof cmd.iobj.stage === 'number') {
       if (cmd.iobj.stage > 0) {
         cmd.iobj.stage = cmd.iobj.stages.length - 1;
-        $.physical.moveTo.updateScene_(cmd.iobj.location);
       }
     }
+    suspend(5000);
+    $.physical.moveTo.updateScene_(cmd.iobj.location);
   };
   thrower.fire.verb = 'fire';
   thrower.fire.dobj = 'this';
   thrower.fire.prep = 'at/to';
   thrower.fire.iobj = 'any';
+
+  thrower.getCommands = function(who) {
+    var commands = $.thing.getCommands.call(this, who);
+    if (this.savedSvg) {
+      commands.push('remove ' + this.name);
+    } else {
+      commands.push('strap ' + this.name + ' on');
+    }
+    return commands;
+  };
+
   // It's Bob's flamethrower.
-  thrower.moveTo($.userDatabase['1387bfc24b159b3bd6ea187c66551d6b08f52dafb7fe5c3a5a93478f54ac6202b8f78efe5817015c250173b23a70f7f6ef3205e9f5d28730e0ff2033cc6fcf84']);
+  thrower.moveTo($.bob);
   $.thrower = thrower;
   $.utils.selector.setSelector(thrower, '$.thrower');
 
