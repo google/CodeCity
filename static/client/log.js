@@ -350,7 +350,7 @@ CCC.Log.renderJson = function(json) {
       if (json.type === 'think') {
         var type = 'think';
       } else {
-        var lastLetter = text[text.length - 1].trim();
+        var lastLetter = text.trim().slice(-1);
         var type = (lastLetter === '?') ? 'ask' :
             ((lastLetter === '!') ? 'exclaim' : 'say');
       }
