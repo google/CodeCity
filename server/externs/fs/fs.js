@@ -40,7 +40,7 @@ fs.accessSync = function(path, mode) {};
 
 /**
  * @param {string} path
- * @return {Array.<string>}
+ * @return {Array<string>}
  */
 fs.readdirSync = function(path) {};
 
