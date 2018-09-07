@@ -58,8 +58,9 @@ function runSerializationBench(b, name, src, initFunc) {
       intrp1.stop();
       b.start(name, i);
       const json = Serializer.serialize(intrp1);
+      var len = JSON.stringify(json).length;
       Serializer.deserialize(json, intrp2);
-      b.end(name, i);
+      b.end(name + ' (' + Math.ceil(len / 1024) + 'kiB)', i);
     } catch (err) {
       b.crash(name, util.format('%s\n%s', src, err.stack));
     }
