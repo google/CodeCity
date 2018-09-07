@@ -73,22 +73,31 @@ Serializer.deserialize = function(json, intrp) {
     throw new Error(
         'Interpreter must be initialized prior to deserialization.');
   }
-  // Find all native functions in existing interpreter.
+
   // Find all native functions to get id => func mappings.
-  var objectList = [];
-  Serializer.objectHunt_(intrp, objectList, Serializer.excludeTypes);
   var functionHash = Object.create(null);
-  for (var i = 0; i < objectList.length; i++) {
-    if (typeof objectList[i] === 'function') {
-      functionHash[objectList[i].id] = objectList[i];
+  // Builtins.
+  var builtins = Array.from(intrp.builtins.values());
+  var implProps = ['impl', 'call', 'construct'];
+  for (var i = 0; i < builtins.length; i++) {
+    var builtin = builtins[i];
+    for (var j = 0; j < implProps.length; j++) {
+      var func = builtin[implProps[j]];
+      if (func) functionHash[func.id] = func;
     }
   }
+  // Step functions.
+  for (var stepName in intrp.stepFuncs) {
+    var stepFunc = intrp.stepFuncs[stepName];
+    functionHash[stepFunc.id] = stepFunc;
+  }
+
   // Get constructors
   var constructors = Serializer.getTypesDeserialize_(intrp);
 
   // First pass: Create object stubs for every object.  We don't need
   // to (re)create object #0, because that's the interpreter proper.
-  objectList = [intrp];
+  var objectList = [intrp];
   for (var i = 1; i < json.length; i++) {
     var jsonObj = json[i];
     var obj;
@@ -240,8 +249,7 @@ Serializer.serialize = function(intrp) {
   }
 
   // Properties on Interpreter instances to ignore.
-  var exclude = ['stepFunctions_',
-                 'hrStartTime_',
+  var exclude = ['hrStartTime_',
                  'previousTime_',
                  'runner_',
                  'Object',

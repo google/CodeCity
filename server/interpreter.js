@@ -87,8 +87,8 @@ var Interpreter = function(options) {
   // TODO(cpcallen): This is an ugly hack to allow the serialiser to
   // know the names of step functions in an otherwise-empty
   // interpreter.  Find a better way to do this.
-  /** @private @const {!Object<string, !Interpreter.StepFunction>} */
-  this.stepFuncs_ = stepFuncs_;
+  /** @const {!Object<string, !Interpreter.StepFunction>} */
+  this.stepFuncs = stepFuncs_;
 
   // Bring interpreter up to PAUSED status, setting up timers etc.
   /** @type {!Interpreter.Status} */
