@@ -39,6 +39,14 @@ class Registry {
   }
 
   /**
+   * Return an array of [key, value] pairs of the registry.
+   * @return {!Array<!Array<string|T>>}
+   */
+  entries() {
+    return Object.entries(this.values_);
+  }
+
+  /**
    * Look up a registered value.  Throws an error if the given key has
    * not been registered.
    * @param {string} key The key to get the registered value for.
@@ -76,6 +84,14 @@ class Registry {
   }
 
   /**
+   * Return an array of keys of the registry.
+   * @return {!Array<string>}
+   */
+  keys() {
+    return Object.keys(this.values_);
+  }
+
+  /**
    * Register a value.  Throws an error if the given key has already
    * been used for a previous registration.
    * @param {string} key The key to register value with.
@@ -88,6 +104,15 @@ class Registry {
     this.values_[key] = value;
     this.keys_.set(value, key);
   }
+
+  /**
+   * Return an array of values of the registry.
+   * @return {!Array<T>}
+   */
+  values() {
+    return Object.values(this.values_);
+  }
+
 }
 
 module.exports = Registry;
