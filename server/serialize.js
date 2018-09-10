@@ -239,9 +239,9 @@ Serializer.serialize = function(intrp) {
         return {'Number': 'Infinity'};
       } else if (value === -Infinity) {
         return {'Number': '-Infinity'};
-      } else if (isNaN(value)) {
+      } else if (Number.isNaN(value)) {
         return {'Number': 'NaN'};
-      } else if (1 / value === -Infinity) {
+      } else if (Object.is(value, -0)) {
         return {'Number': '-0'};
       }
     }
