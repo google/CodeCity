@@ -73,6 +73,41 @@ function runSerializationBench(b, name, src, initFunc) {
 };
 
 /**
+ * Run a benchmark of the interpreter being serialized/deserialized.
+ * @param {!B} b The benchmark runner object.
+ * @param {string} name The name of the test.
+ * @param {string} src The code to be evaled before roundtripping.
+ * @param {function(!Interpreter)=} initFunc Optional function to be
+ *     called after creating new interpreter instance but before
+ *     running src.  Can be used to insert extra native functions into
+ *     the interpreter.  initFunc is called with the interpreter
+ *     instance to be configured as its parameter.
+ */
+function runDeserializationBench(b, name, src, initFunc) {
+  for (var i = 0; i < 4; i++) {
+    const intrp1 = new Interpreter();
+    const intrp2 = new Interpreter();
+    if (initFunc) {
+      initFunc(intrp1);
+      initFunc(intrp2);
+    }
+    const err = undefined;
+    try {
+      intrp1.createThreadForSrc(src);
+      intrp1.run();
+      intrp1.stop();
+      b.start(name, i);
+      const json = Serializer.serialize(intrp1);
+      var len = JSON.stringify(json).length;
+      Serializer.deserialize(json, intrp2);
+      b.end(name + ' (' + Math.ceil(len / 1024) + 'kiB)', i);
+    } catch (err) {
+      b.crash(name, util.format('%s\n%s', src, err.stack));
+    }
+  }
+};
+
+/**
  * Run a benchmark of the interpreter after being
  * serialized/deserialized.
  * @param {!B} b The benchmark runner object.
