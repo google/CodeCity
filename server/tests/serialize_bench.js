@@ -57,10 +57,15 @@ function runSerializationBench(b, name, src, initFunc) {
       intrp1.run();
       intrp1.stop();
       b.start(name, i);
-      const json = Serializer.serialize(intrp1);
-      var len = JSON.stringify(json).length;
+      let json = Serializer.serialize(intrp1);
+      b.end(name + ' serialize', i);
+      let str = JSON.stringify(json);
+      let len = str.length;
+      b.end(name + ' stringify (' + Math.ceil(len / 1024) + 'kiB)', i);
+      json = JSON.parse(str);
+      b.end(name + ' parse', i);
       Serializer.deserialize(json, intrp2);
-      b.end(name + ' (' + Math.ceil(len / 1024) + 'kiB)', i);
+      b.end(name + ' deserialize', i);
     } catch (err) {
       b.crash(name, util.format('%s\n%s', src, err.stack));
     }
@@ -102,19 +107,11 @@ function runInterpreterBench(b, name, src) {
  * @param {!B} b The test runner object.
  */
 exports.benchRoundtrip = function(b) {
-  let name = 'Roundtrip empty';
-  let src = '';
-  runSerializationBench(b, name, src);
-
-  name = 'Roundtrip builtins';
-  src =  Object.values(startupFiles).reduce((acc, cur) => acc += cur);
-  runSerializationBench(b, name, src);
-
-  name = 'Roundtrip demo';
+  let name = 'Roundtrip demo';
   const demoDir = path.join(__dirname, '../../demo');
   const filenames = fs.readdirSync(demoDir);
   filenames.sort();
-  src = '';
+  let src = '';
   for (const filename of filenames) {
     if (!(filename.match(/.js$/))) continue;
     src += fs.readFileSync(String(path.join(demoDir, filename)));
