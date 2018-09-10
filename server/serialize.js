@@ -225,8 +225,8 @@ Serializer.serialize = function(intrp) {
       if (Serializer.excludeTypes.has(Object.getPrototypeOf(value))) {
         return null;
       }
-      var ref = objectList.indexOf(value);
-      if (ref === -1) {
+      var ref = objectRefs.get(value);
+      if (ref === undefined) {
         throw new RangeError('Object not found in table.');
       }
       return {'#': ref};
@@ -270,6 +270,11 @@ Serializer.serialize = function(intrp) {
   // Find all objects.
   var objectList = Serializer.getObjectList_(
       intrp, Serializer.excludeTypes, exclude);
+  // Build reverse-lookup cache.
+  var /** !Map<Object,number> */ objectRefs = new Map();
+  for (var i = 0; i < objectList.length; i++) {
+    objectRefs.set(objectList[i], i);
+  }
   // Get types.
   var types = Serializer.getTypesSerialize_(intrp);
   // Serialize every object.
