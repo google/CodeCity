@@ -268,8 +268,8 @@ Serializer.serialize = function(intrp) {
                  'Box',
                  'Server'];
   // Find all objects.
-  var objectList = [];
-  Serializer.objectHunt_(intrp, objectList, Serializer.excludeTypes, exclude);
+  var objectList = Serializer.getObjectList_(
+      intrp, Serializer.excludeTypes, exclude);
   // Get types.
   var types = Serializer.getTypesSerialize_(intrp);
   // Serialize every object.
@@ -312,11 +312,12 @@ Serializer.serialize = function(intrp) {
       case Map.prototype:
         jsonObj['type'] = 'Map';
         if (obj.size) {
-          jsonObj['entries'] = Array.from(obj, function(entry) {
-            var key = encodeValue(entry[0]);
-            var value = encodeValue(entry[1]);
-            return [key, value];
-          });
+          jsonObj['entries'] =
+              Array.from(/** @type {?} */(obj),function(entry) {
+                var key = encodeValue(entry[0]);
+                var value = encodeValue(entry[1]);
+                return [key, value];
+              });
         }
         break;
       case Set.prototype:
@@ -328,11 +329,12 @@ Serializer.serialize = function(intrp) {
       case IterableWeakMap.prototype:
         jsonObj['type'] = 'IterableWeakMap';
         if (obj.size) {
-          jsonObj['entries'] = Array.from(obj, function(entry) {
-            var key = encodeValue(entry[0]);
-            var value = encodeValue(entry[1]);
-            return [key, value];
-          });
+          jsonObj['entries'] =
+              Array.from(/** @type {?} */(obj),function(entry) {
+                var key = encodeValue(entry[0]);
+                var value = encodeValue(entry[1]);
+                return [key, value];
+              });
         }
         continue;  // Mustn't index internal properties for IterableWeakMap
       case IterableWeakSet.prototype:
@@ -394,27 +396,41 @@ Serializer.serialize = function(intrp) {
 };
 
 /**
- * Recursively search the stack to find all non-primitives.
+ * Recursively search node to find all non-primitives.
  *
  * TODO(cpcallen): use a Registry instead of Array for objectList;
  *     this would allow more readable references by using paths
  *     instead of numerical indices.
  * @param {*} node JavaScript value to search.
- * @param {!Array<!Object>} objectList Array to add objects to.
+ * @param {!Set<?Object>} excludeTypes Set of prototypes not to spider.
+ * @param {!Array<string>=} exclude List of properties not to spider.
+ * @return {!Array<!Object>} objectList Array of all objects found via node.
+ */
+Serializer.getObjectList_ = function(node, excludeTypes, exclude) {
+  var seen = new Set();
+  Serializer.objectHunt_(node, seen, excludeTypes, exclude);
+  return Array.from(seen.keys());
+}
+
+/**
+ * Recursively search node find all non-primitives.
+ *
+ * @param {*} node JavaScript value to search.
+ * @param {!Set<?Object>} seen Set of objects found so far.
  * @param {!Set<?Object>} excludeTypes Set of prototypes not to spider.
  * @param {!Array<string>=} exclude List of properties not to spider.
  */
-Serializer.objectHunt_ = function(node, objectList, excludeTypes, exclude) {
+Serializer.objectHunt_ = function(node, seen, excludeTypes, exclude) {
   if (!node || (typeof node !== 'object' && typeof node !== 'function')) {
     // node is primitive.  Nothing to do.
     return;
   }
   var obj = /** @type {!Object} */(node);
   if (excludeTypes.has(Object.getPrototypeOf(/** @type {!Object} */(obj))) ||
-      objectList.includes(/** @type {!Object} */(obj))) {
+      seen.has(/** @type {!Object} */(obj))) {
     return;
   }
-  objectList.push(obj);
+  seen.add(obj);
   if (typeof obj === 'object') {  // Recurse.
     // Properties.
     if (!(obj instanceof Date) &&
@@ -427,21 +443,21 @@ Serializer.objectHunt_ = function(node, objectList, excludeTypes, exclude) {
         var name = names[i];
         if (!exclude || !exclude.includes(name)) {
           // Don't pass exclude; it's only for top-level property keys.
-          Serializer.objectHunt_(obj[name], objectList, excludeTypes);
+          Serializer.objectHunt_(obj[name], seen, excludeTypes);
         }
       }
     }
     // Set members.
     if (obj instanceof Set || obj instanceof IterableWeakSet) {
       obj.forEach(function (value) {
-        Serializer.objectHunt_(value, objectList, excludeTypes);
+        Serializer.objectHunt_(value, seen, excludeTypes);
       });
     }
     // Map entries.
     if (obj instanceof Map || obj instanceof IterableWeakMap) {
       obj.forEach(function (value, key) {
-        Serializer.objectHunt_(key, objectList, excludeTypes);
-        Serializer.objectHunt_(value, objectList, excludeTypes);
+        Serializer.objectHunt_(key, seen, excludeTypes);
+        Serializer.objectHunt_(value, seen, excludeTypes);
       });
     }
   }
