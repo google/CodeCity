@@ -344,20 +344,11 @@ exports.testRoundtripDetails = function(t) {
   `, true);
 
   runTest(t, 'testRoundtripArrayProto', `
-    var obj = {foo: 'bar'};
     var arr = [0, 1, 2];
-    Object.setPrototypeOf(arr, obj);
   `, '', `
-    (function() {
-      if (Array.isArray(obj)) return 'obj has become array';
-      if (!Array.isArray(arr)) return 'arr no longer array';
-      if (Object.getPrototypeOf(arr) !== obj) return 'arr proto no longer obj';
-      if (arr.foo !== 'bar') return 'arr.foo not inherited'
-      arr[3] = 3;
-      if (arr.length !== 4) return 'arr.length no longer magic';
-      return 'OK';
-    })();
-  `, 'OK');
+    arr[3] = 3;
+    arr.length;
+  `, 4);
 
 };
 
