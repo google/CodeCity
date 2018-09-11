@@ -3742,10 +3742,10 @@ Interpreter.ObjectLike.prototype.valueOf = function() {};
  * @param {?Interpreter.prototype.Object=} proto
  */
 Interpreter.prototype.Object = function(owner, proto) {
-  /** @type {?Interpreter.prototype.Object} */
-  this.proto;
   /** @type {?Interpreter.Owner} */
   this.owner;
+  /** @type {?Interpreter.prototype.Object} */
+  this.proto;
   /** @const {!Object<?Interpreter.Value>} */
   this.properties;
   throw new Error('Inner class constructor not callable on prototype');
@@ -4196,17 +4196,9 @@ Interpreter.prototype.installTypes = function() {
     if (owner === undefined) {
       owner = null;
     }
-    // We must define .proto before .properties, because our
-    // children's .properties will inherit from ours, and the
-    // deserializer is not smart enough to deal with encountering
-    // children's .properties before it has resurrected the
-    // .proto.properties.
+    this.owner = owner;
     this.proto = proto;
     this.properties = Object.create((proto === null) ? null : proto.properties);
-    // We must define .owner after .properties because we need to make
-    // sure that Object.prototype's .properties object is serialized
-    // before root, or a similar problem occurs.
-    this.owner = owner;
   };
 
   /** @type {?Interpreter.prototype.Object} */
