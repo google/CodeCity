@@ -103,9 +103,6 @@ Serializer.deserialize = function(json, intrp) {
     var obj;
     var type = jsonObj['type'];
     switch (type) {
-      case 'NullProtoObject':
-        obj = Object.create(null);
-        break;
       case 'Object':
         obj = {};
         break;
@@ -149,11 +146,8 @@ Serializer.deserialize = function(json, intrp) {
         obj = new Interpreter.State({}, /** @type {?} */(undefined));
         break;
       default:
-        var protoRef;
         if (constructors[type]) {
           obj = new constructors[type];
-        } else if ((protoRef = jsonObj['proto'])) {
-          obj = Object.create(decodeValue(protoRef));
         } else {
           throw new TypeError('Unknown type: ' + jsonObj['type']);
         }
@@ -164,6 +158,10 @@ Serializer.deserialize = function(json, intrp) {
   for (var i = 0; i < json.length; i++) {
     var jsonObj = json[i];
     var obj = objectList[i];
+    // Set prototype, if specified.
+    if (jsonObj['proto']) {
+      Object.setPrototypeOf(obj, decodeValue(jsonObj['proto']));
+    }
     // Repopulate properties.
     var props = jsonObj['props'];
     if (props) {
@@ -289,9 +287,6 @@ Serializer.serialize = function(intrp) {
     }
     var proto = Object.getPrototypeOf(obj);
     switch (proto) {
-      case null:
-        jsonObj['type'] = 'NullProtoObject';
-        break;
       case Object.prototype:
         jsonObj['type'] = 'Object';
         break;
@@ -356,6 +351,7 @@ Serializer.serialize = function(intrp) {
         if (type) {
           jsonObj['type'] = type;
         } else {
+          jsonObj['type'] = Array.isArray(obj) ? 'Array' : 'Object';
           jsonObj['proto'] = encodeValue(proto);
         }
     }
