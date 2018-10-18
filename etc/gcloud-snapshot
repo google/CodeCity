@@ -1,0 +1,12 @@
+#!/bin/bash
+
+# Put this file in /etc/cron.daily/ to effect automatic daily snapshots.
+#
+# Must also have installed gcloud-snapshot.sh from:
+#
+#     https://github.com/jacksegal/google-compute-snapshot/
+#
+# and enabled the "compute engine" cloud API access scope for this
+# instance.
+
+/usr/local/sbin/gcloud-snapshot.sh -d 30
