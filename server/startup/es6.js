@@ -58,8 +58,8 @@ var WeakMap = new 'WeakMap';
   var struct = [
     [Object, 'Object', ['is', 'setPrototypeOf'], []],
     [String, 'String', [], ['endsWith', 'includes', 'repeat', 'startsWith']],
-    [Number, 'Number', ['isFinite', 'isNaN', 'isSafeInteger'], []],
-    [Math, 'Math', ['sign', 'trunc'], []],
+    [Number, 'Number', ['isFinite', 'isInteger', 'isNaN', 'isSafeInteger'], []],
+    [Math, 'Math', ['acosh', 'asinh', 'atanh', 'cbrt', 'clz32', 'cosh', 'expm1', 'fround', 'hypot', 'imul', 'log10', 'log1p', 'log2', 'sign', 'sinh', 'tanh', 'trunc'], []],
     [WeakMap, 'WeakMap', [], ['delete', 'get', 'has', 'set']],
   ];
   for (var i = 0; i < struct.length; i++) {
@@ -216,5 +216,11 @@ Object.defineProperty(Number, 'MAX_SAFE_INTEGER',
     {configurable: false,
      enumerable: false,
      writable: false,
-     // Fortunately 2**53 is also safe as long as you dont' increment it!:
+     // Fortunately 2**53 is also safe as long as you don't increment it!:
      value: Math.pow(2, 53) - 1 });
+
+Object.defineProperty(Number, 'MIN_SAFE_INTEGER',
+    {configurable: false,
+     enumerable: false,
+     writable: false,
+     value: -Number.MAX_SAFE_INTEGER});

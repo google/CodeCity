@@ -1723,6 +1723,7 @@ Interpreter.prototype.initNumber_ = function() {
 
   // Static methods on Number.
   this.createNativeFunction('Number.isFinite', Number.isFinite, false);
+  this.createNativeFunction('Number.isInteger', Number.isInteger, false);
   this.createNativeFunction('Number.isNaN', Number.isNaN, false);
   this.createNativeFunction('Number.isSafeInteger', Number.isSafeInteger,
                             false);
@@ -1994,9 +1995,11 @@ Interpreter.prototype.initError_ = function() {
  * @private
  */
 Interpreter.prototype.initMath_ = function() {
-  var numFunctions = ['abs', 'acos', 'asin', 'atan', 'atan2', 'ceil', 'cos',
-                      'exp', 'floor', 'log', 'max', 'min', 'pow', 'random',
-                      'round', 'sign', 'sin', 'sqrt', 'tan', 'trunc'];
+  var numFunctions = ['abs', 'acos', 'acosh', 'asin', 'asinh', 'atan', 'atan2',
+      'atanh', 'cbrt', 'ceil', 'clz32', 'cos', 'cosh', 'exp', 'expm1', 'floor',
+      'fround', 'hypot', 'imul', 'log', 'log10', 'log1p', 'log2', 'max', 'min',
+      'pow', 'random', 'round', 'sign', 'sin', 'sinh', 'sqrt', 'tan', 'tanh',
+      'trunc'];
   for (var i = 0; i < numFunctions.length; i++) {
     this.createNativeFunction('Math.' + numFunctions[i], Math[numFunctions[i]],
                               false);
