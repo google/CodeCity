@@ -3610,11 +3610,11 @@ Interpreter.Thread.prototype.callers = function(perms) {
       if (lc) {
         frame.line = lc.line;
         frame.col = lc.col;
-        lc = pos = undefined;
       }
+      lc = pos = undefined;
       frames[frames.length++] = frame;
     }
-    if ((frame || frames.length === 0) && ('start' in node)) {
+    if ((frame || frames.length === 0) && pos === undefined) {
       pos = node['start'];
     }
   }
