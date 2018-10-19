@@ -26,14 +26,41 @@ tests.errorStack = function() {
   // Use eval to make parsing .stack easier.
   var e = eval('new Error;');
   var lines = e.stack.split('\n');
-  console.assert(lines[0].match(/at "new Error;" 1:1/), 'new Error has .stack');
+  console.assert(lines[0].trim() === 'at "new Error;" 1:1',
+      'new Error has .stack');
 
   try {
     (function buggy() {1 instanceof 2;})();
     console.assert(false, "thrown Error wasn't thrown??");
   } catch (e) {
     lines = e.stack.split('\n');
-    console.assert(
-        lines[0].match(/at buggy 1:1/), 'thrown Error has .stack');
+    console.assert(lines[0].trim() === 'at buggy 1:19',
+        'thrown Error has .stack');
+  }
+
+  // Bug #241.
+  function foo() {
+    switch (1) {
+      case 1:
+        return undefined.hasNoProperties;
+    }
+  }
+  try {
+    foo();
+    console.assert(false, "Invalid MemberExpression didn't throw??");
+  } catch (e) {
+    console.assert(lines[0].trim() === 'at foo 4:16',
+        'Invalid MemberExpression escaped blame');
+  }
+
+  function foo() {
+    return undefinedVariable;
+  }
+  try {
+    foo();
+    console.assert(false, "Invalid Identifier didn't throw??");
+  } catch (e) {
+    console.assert(lines[0].trim() === 'at foo 2:12',
+        'Invalid Identifier escaped blame');
   }
 };

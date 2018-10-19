@@ -2568,7 +2568,8 @@ module.exports = [
     `,
     expected: 'at anonymous function 1:21' },
 
-  { name: 'Error .stack switch / MemberExpression bug', src: `
+  // Bug #241.
+  { name: 'Error .stack correctly blames MemberExpression', src: `
     function foo() {
       switch (1) {
         case 1:
@@ -2582,7 +2583,20 @@ module.exports = [
     }
     lines[0].trim();
     `,
-    expected: 'at foo 4:17' },
+    expected: 'at foo 4:18' },
+
+  { name: 'Error .stack correctly blames Identifier', src: `
+    function foo() {
+      return undefinedVariable;
+    }
+    try {
+      foo();
+    } catch (e) {
+      var lines = e.stack.split('\\n');
+    }
+    lines[0].trim();
+    `,
+    expected: 'at foo 2:14' },
 
   /////////////////////////////////////////////////////////////////////////////
   // JSON
