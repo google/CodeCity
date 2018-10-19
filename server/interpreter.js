@@ -6013,8 +6013,8 @@ stepFuncs_['ConditionalExpression'] = function (thread, stack, state, node) {
     return new Interpreter.State(node['test'], state.scope);
   }
   // state.step_ === 1: Test evaluated; result is in .value
-  stack.pop();
   var value = Boolean(state.value);
+  stack.pop();
   if (value && node['consequent']) {
     // Execute 'if' block.
     return new Interpreter.State(node['consequent'], state.scope);
@@ -6275,7 +6275,6 @@ stepFuncs_['FunctionDeclaration'] = function (thread, stack, state, node) {
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['FunctionExpression'] = function (thread, stack, state, node) {
-  stack.pop();
   var source = thread.getSource();
   if (!source) {
     throw new Error("No source found when evaluating function expression??");
@@ -6290,6 +6289,7 @@ stepFuncs_['FunctionExpression'] = function (thread, stack, state, node) {
   }
   var func = new this.UserFunction(node, scope, source, perms);
   if (name) scope.createImmutableBinding(name, func);
+  stack.pop();
   stack[stack.length - 1].value = func;
 };
 
@@ -6302,12 +6302,14 @@ stepFuncs_['FunctionExpression'] = function (thread, stack, state, node) {
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['Identifier'] = function (thread, stack, state, node) {
-  stack.pop();
   var /** string */ name = node['name'];
   if (state.wantRef_) {
+    stack.pop();
     stack[stack.length - 1].ref = [state.scope.resolve(name), name];
   } else {
-    stack[stack.length - 1].value = this.getValueFromScope(state.scope, name);
+    var value = this.getValueFromScope(state.scope, name);
+    stack.pop();  // Must be after call to getValueFromScope, which might throw.
+    stack[stack.length - 1].value = value;
   }
 };
 
@@ -6398,7 +6400,6 @@ stepFuncs_['MemberExpression'] = function (thread, stack, state, node) {
       return new Interpreter.State(node['property'], state.scope);
     }
   }
-  stack.pop();
   // TODO(cpcallen): add test for order of following two specification
   // method calls from the algorithm in ES6 §2.3.2.1.
   // Step 7: bv = RequireObjectCoercible(baseValue).
@@ -6410,10 +6411,12 @@ stepFuncs_['MemberExpression'] = function (thread, stack, state, node) {
   // Step 9: propertyKey = ToPropertyKey(propertyNameValue).
   var /** string */ key =
       node['computed'] ? String(state.value) : node['property']['name'];
+  stack.pop();  // Must be after last throw new this.Error...
   if (state.wantRef_) {
     stack[stack.length - 1].ref = [base, key];
   } else {
     var perms = state.scope.perms;
+    // toObject guaranteed not to throw because of earlier check.
     stack[stack.length - 1].value = this.toObject(base, perms).get(key, perms);
   }
 };
