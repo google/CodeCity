@@ -37,6 +37,7 @@ $.system.connectionListen = new 'CC.connectionListen';
 $.system.connectionUnlisten = new 'CC.connectionUnlisten';
 $.system.connectionWrite = new 'CC.connectionWrite';
 $.system.connectionClose = new 'CC.connectionClose';
+$.system.xhr = new 'CC.xhr';
 
 // Utility object: $.utils
 $.utils = {};
@@ -60,11 +61,13 @@ $.utils.commandMenu = function(commands) {
 };
 
 $.utils.transplantProperties = function(oldObject, newObject) {
+  // Copy all properties defined on one object to another.
   if (!$.utils.isObject(newObject) || !$.utils.isObject(oldObject)) {
-    throw TypeError("Can't transplant properties on non-objects.");
+    throw new TypeError("Can't transplant properties on non-objects.");
   }
   var keys = Object.getOwnPropertyNames(oldObject);
-  for (var i = 0, k; k = keys[i], i < keys.length; i++) {
+  for (var i = 0; i < keys.length; i++) {
+    var k = keys[i];
     if (k === 'length' && typeof newObject === 'function') {
       continue;
     }
@@ -128,10 +131,29 @@ $.physical.getContents = function() {
   return this.contents_ ? this.contents_.concat() : [];
 };
 
-$.physical.addContents = function(thing) {
+$.physical.addContents = function(newThing, opt_neighbour) {
+  // Add newThing to this's contents.  It will be added after
+  // opt_neighbour, or to the end of list if opt_neighbour not given.
+  // An item already in the contents list will be moved to the
+  // specified position.
   var contents = this.getContents();
-  contents.includes(thing) || contents.push(thing);
   this.contents_ = contents;
+  var index = contents.indexOf(newThing);
+  if (index !== -1) {
+    // Remove existing thing.
+    contents.splice(index, 1);
+  }
+  if (opt_neighbour) {
+    for (var i = 0, thing; (thing = contents[i]); i++) {
+      if (thing === opt_neighbour) {
+        contents.splice(i + 1, 0, newThing);
+        return;
+      }
+    }
+    // Neighbour not found, just append.
+  }
+  // Common case of appending a thing.
+  contents.push(newThing);
 };
 
 $.physical.removeContents = function(thing) {
@@ -143,11 +165,13 @@ $.physical.removeContents = function(thing) {
   this.contents_ = contents;
 };
 
-$.physical.moveTo = function(dest) {
+$.physical.moveTo = function(dest, opt_neighbour) {
+  // Move his object to the specified destination location.
+  // If present, attempt to position this object next to a specified neighbour.
   var src = this.location;
   src && src.removeContents && src.removeContents(this);
   this.location = dest;
-  dest && dest.addContents && dest.addContents(this);
+  dest && dest.addContents && dest.addContents(this, opt_neighbour);
   $.physical.moveTo.updateScene_(src);
   if (dest !== src) {
     $.physical.moveTo.updateScene_(dest);
@@ -276,7 +300,7 @@ $.thing.give.prep = 'at/to';
 $.thing.give.iobj = 'any';
 
 $.thing.getCommands = function(who) {
-  var commands = $.physical.getCommands.apply(this);
+  var commands = $.physical.getCommands.call(this, who);
   if (this.location === who) {
     commands.push('drop ' + this.name);
   } else if (this.location === who.location) {
@@ -315,7 +339,7 @@ $.room.sendScene = function(who, requested) {
 };
 
 $.room.look = function(cmd) {
-  this.sendScene(user, true);
+  this.sendScene(cmd.user, true);
 };
 $.room.look.verb = 'l(ook)?';
 $.room.look.dobj = 'this';
@@ -324,11 +348,41 @@ $.room.look.iobj = 'none';
 
 $.room.lookhere = function(cmd) {
   return this.look(cmd);
-}
+};
 $.room.lookhere.verb = 'l(ook)?';
 $.room.lookhere.dobj = 'none';
 $.room.lookhere.prep = 'none';
 $.room.lookhere.iobj = 'none';
+
+$.room.say = function(cmd) {
+  // Format:  "Hello.    -or-    say Hello.
+  var text = (cmd.cmdstr[0] === '"') ? cmd.cmdstr.substring(1) : cmd.argstr;
+  var say = {
+    type: "say",
+    source: cmd.user,
+    where: this,
+    text: text
+  };
+  this.tellAll(say);
+};
+$.room.say.verb = 'say|".*';
+$.room.say.dobj = 'any';
+$.room.say.prep = 'any';
+$.room.say.iobj = 'any';
+
+$.room.think = function(cmd) {
+  var think = {
+    type: "think",
+    source: cmd.user,
+    where: this,
+    text: cmd.argstr
+  };
+  this.tellAll(think);
+};
+$.room.think.verb = 'think|\.oO';
+$.room.think.dobj = 'any';
+$.room.think.prep = 'any';
+$.room.think.iobj = 'any';
 
 $.room.narrate = function(text, obj) {
   var contents = this.getContents();
@@ -379,44 +433,10 @@ $.user.name = 'User prototype';
 $.user.connection = null;
 $.user.svgText = '<circle cx="50" cy="50" r="10" class="fillWhite"/><line x1="50" y1="60" x2="50" y2="80" /><line x1="40" y1="70" x2="60" y2="70" /><line x1="50" y1="80" x2="40" y2="100" /><line x1="50" y1="80" x2="60" y2="100" />';
 
-$.user.say = function(cmd) {
-  if (user.location) {
-    // Format:  "Hello.    -or-    say Hello.
-    var text = (cmd.cmdstr[0] === '"') ? cmd.cmdstr.substring(1) : cmd.argstr;
-    var say = {
-      type: "say",
-      source: user,
-      where: user.location,
-      text: text
-    };
-    user.location.tellAll(say);
-  }
-};
-$.user.say.verb = 'say|".*';
-$.user.say.dobj = 'any';
-$.user.say.prep = 'any';
-$.user.say.iobj = 'any';
-
-$.user.think = function(cmd) {
-  if (user.location) {
-    var think = {
-      type: "think",
-      source: user,
-      where: user.location,
-      text: cmd.argstr
-    };
-    user.location.tellAll(think);
-  }
-};
-$.user.think.verb = 'think|\.oO';
-$.user.think.dobj = 'any';
-$.user.think.prep = 'any';
-$.user.think.iobj = 'any';
-
 $.user.eval = function(cmd) {
   // Format:  ;1+1    -or-    eval 1+1
   var src = (cmd.cmdstr[0] === ';') ? cmd.cmdstr.substring(1) : cmd.argstr;
-  src = $.utils.code.rewriteForEval(src);
+  src = $.utils.code.rewriteForEval(src, /* forceExpression= */ false);
   var out;
   try {
     // Can't
@@ -541,6 +561,31 @@ $.user.destroy.verb = 'destroy';
 $.user.destroy.dobj = 'any';
 $.user.destroy.prep = 'none';
 $.user.destroy.iobj = 'none';
+
+$.user.join = function(cmd) {
+  var name = cmd.dobjstr.toLowerCase();
+  for (var key in $.userDatabase) {
+    var who = $.userDatabase[key];
+    if (who.name.toLowerCase() === name) {
+      if (who.location === this.location) {
+        user.narrate('' + who.name + ' is already here.');
+      }
+      if (user.location) {
+        user.location.narrate(user.name + ' vanishes into thin air.');
+      }
+      this.moveTo(who.location);
+      user.narrate('You join ' + who.name + '.');
+      if (user.location) {
+        user.location.narrate(user.name + ' appears out of thin air.');
+      }
+      break;
+    }
+  }
+};
+$.user.join.verb = 'join';
+$.user.join.dobj = 'any';
+$.user.join.prep = 'none';
+$.user.join.iobj = 'none';
 
 $.user.quit = function(cmd) {
   if (this.connection) {

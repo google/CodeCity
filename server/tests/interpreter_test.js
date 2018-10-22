@@ -24,6 +24,7 @@
  */
 'use strict';
 
+const http = require('http');
 const net = require('net');
 const util = require('util');
 
@@ -178,7 +179,7 @@ async function runAsyncTest(t, name, src, expected, initFunc, sideFunc) {
     }
     result = await p;
   } catch (e) {
-    t.crash(name, util.format('%s\n%s', src, e.stack));
+    t.crash(name, util.format('%s\n%s', src, e));
     return;
   } finally {
     intrp.stop();
@@ -1251,8 +1252,8 @@ exports.testNetworking = async function(t) {
    `;
   await runAsyncTest(t, name, src, 'OK');
 
-  //  Check to make sure that connectionUnlisten() throws if attempting
-  //  to unbind an invalid or not / no longer bound port.
+  // Check to make sure that connectionUnlisten() throws if attempting
+  // to unbind an invalid or not / no longer bound port.
   name = 'testConnectionUnlistenThrows';
   src = `
       var ports = ['foo', {}, -1, 22, 80.8, 4567, 65536];
@@ -1271,4 +1272,33 @@ exports.testNetworking = async function(t) {
       resolve('OK');
    `;
   await runAsyncTest(t, name, src, 'OK');
+
+  // Run test of the xhr() function using HTTP.
+  name = 'testXhrHttp';
+  const httpTestServer = http.createServer(function (req, res) {
+    res.writeHead(200, {'Content-Type': 'text/plain'});
+    res.end('OK HTTP: ' + req.url);
+  }).listen(9980);
+  src = `
+      try {
+        resolve(CC.xhr('http://localhost:9980/foo'));
+      } catch (e) {
+        reject(e);
+      }
+  `;
+  await runAsyncTest(t, name, src, 'OK HTTP: /foo');
+  httpTestServer.close();
+
+  // Run test of the xhr() function using HTTPS.
+  // TODO(cpcallen): Don't depend on external webserver.
+  name = 'testXhr';
+  src = `
+      try {
+        resolve(CC.xhr('https://neil.fraser.name/software/JS-Interpreter/' +
+            'demos/async.txt'));
+      } catch (e) {
+        reject(e);
+      }
+  `;
+  await runAsyncTest(t, name, src, 'It worked!\n');
 };

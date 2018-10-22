@@ -18,11 +18,23 @@ node_modules/events/events.js
 node_modules/fs/package.json
 node_modules/fs/fs.js
 
+node_modules/http/package.json
+node_modules/http/http.js
+
+node_modules/https/package.json
+node_modules/https/https.js
+
 node_modules/net/package.json
 node_modules/net/net.js
 
 node_modules/path/package.json
 node_modules/path/path.js
+
+node_modules/stream/package.json
+node_modules/stream/stream.js
+
+node_modules/tls/package.json
+node_modules/tls/tls.js
 
 node_modules/util/package.json
 node_modules/util/util.js

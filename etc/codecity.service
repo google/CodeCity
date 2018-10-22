@@ -2,7 +2,7 @@
 Description=Code City
 Documentation=https://github.com/NeilFraser/CodeCity
 After=network.target
-Wants=codecity-login.service codecity-connect.service
+Wants=codecity-login.service codecity-connect.service codecity-mobwrite.service
 
 [Service]
 SyslogIdentifier=codecity

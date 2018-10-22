@@ -189,7 +189,7 @@ $.servers.http.ServerResponse = function(connection) {
 
 $.servers.http.ServerResponse.prototype.setHeader = function(name, value) {
   if (this.headersSent) {
-    throw Error('Header already sent.');
+    throw new Error('Header already sent.');
   }
   // Normalize all header names as lowercase.
   name = name.toLowerCase(name);
@@ -222,7 +222,7 @@ $.servers.http.ServerResponse.discardDuplicates = [
 
 $.servers.http.ServerResponse.prototype.writeHead = function() {
   if (this.headersSent) {
-    throw Error('Header already sent.');
+    throw new Error('Header already sent.');
   }
   this.headersSent = true;
   var statusMessage = $.servers.http.STATUS_CODES[this.statusCode] || 'Unknown';
@@ -248,7 +248,7 @@ $.servers.http.ServerResponse.prototype.capitalize = function(txt) {
 
 $.servers.http.ServerResponse.prototype.setStatus = function(code) {
   if (this.headersSent) {
-    throw Error('Header already sent.');
+    throw new Error('Header already sent.');
   }
   this.statusCode = code;
 };

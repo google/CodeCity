@@ -307,7 +307,7 @@ exports.testRoundtripDetails = function(t) {
           desc.writable !== !!(i & 0x1) ||
           desc.enumerable !== !!(i & 0x2) ||
           desc.configurable !== !!(i & 0x4)) {
-        throw Error('Roundtrip failure for property ' + i);
+        throw new Error('Roundtrip failure for property ' + i);
       }
     }
     'All good';
@@ -342,6 +342,14 @@ exports.testRoundtripDetails = function(t) {
       Object.getPrototypeOf('') === strProto &&
       Object.getPrototypeOf('') === String.prototype;
   `, true);
+
+  runTest(t, 'testRoundtripArrayProto', `
+    var arr = [0, 1, 2];
+  `, '', `
+    arr[3] = 3;
+    arr.length;
+  `, 4);
+
 };
 
 /**

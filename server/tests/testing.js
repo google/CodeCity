@@ -52,12 +52,11 @@ B.prototype.result = function (status, name, message) {
 
 /**
  * Report a benchmark start.
- * @param {string} name Name of test.
+ * @param {string} name Name of test.  (Not used.)
  * @param {number} run Which run is this?  (Run 0 is warm-up run.)
  */
 B.prototype.start = function (name, run) {
   var r = (run === 0) ? 'WARMUP' : ('RUN ' + run);
-  console.log('%s\t%s...', r, name);
   this.startTime = Date.now();
 };
 
@@ -67,9 +66,10 @@ B.prototype.start = function (name, run) {
  * @param {number} run Which run is this?  (Run 0 is warm-up run.)
  */
 B.prototype.end = function (name, run) {
-  this.endTime = Date.now();
+  var endTime = Date.now();
   var r = (run === 0) ? 'WARMUP' : ('RUN ' + run);
-  console.log('%s\t%s: %d ms', r, name, this.endTime - this.startTime);
+  console.log('%s\t%s: %d ms', r, name, endTime - this.startTime);
+  this.startTime = Date.now();
 };
 
 /**

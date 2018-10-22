@@ -57,20 +57,18 @@ $.www.editor.save = function(obj, key, src) {
    * value of obj[key] are both objects, then an attempt will be made
    * to copy any properties from the old value to the new one.
    */
-  // Use Acorn to trim source to first expression.
-  var ast = $.utils.acorn.parseExpressionAt(src, 0);
-  src = src.substring(ast.start, ast.end);
+  var old = obj[key];
+  src = $.utils.code.rewriteForEval(src, /* forceExpression= */ true);
   // Evaluate src in global scope (eval by any other name, literally).
   // TODO: don't use eval - prefer Function constructor for
   // functions; generate other values from an Acorn parse tree.
   var evalGlobal = eval;
-  var old = obj[key];
-  var val = evalGlobal('(' + src + ')');
-  if ($.utils.isObject(val) && $.utils.isObject(old)) {
+  var val = evalGlobal(src);
+  if (typeof old === 'function' && typeof val === 'function') {
     $.utils.transplantProperties(old, val);
   }
   obj[key] = val;
-  return src;
+  return this.load(obj, key);
 };
 
 
@@ -94,9 +92,6 @@ $.www.editor.www.jssp = [
   'var status = \'\';',
   'if (src) {',
   '  try {',
-  '    // Use Acorn to trim source to first expression.',
-  '    var ast = $.utils.acorn.parseExpressionAt(src, 0);',
-  '    src = src.substring(ast.start, ast.end);',
   '    src = $.www.editor.save(obj, key, src);',
   '    status = \'(saved)\';',
   '    if (typeof obj[key] === \'function\') {',

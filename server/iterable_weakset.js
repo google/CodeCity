@@ -56,7 +56,7 @@ weak.get;
 // closure-compiler supports bounded generic types
 class IterableWeakSet {
   /**
-   * @param {Iterable<!Array<VALUE>>|!Array<!Array<VALUE>>=} iterable
+   * @param {!Iterable<!Array<VALUE>>|!Array<!Array<VALUE>>=} iterable
    */
   constructor(iterable = undefined) {
     /** @private @const @type {!WeakMap<VALUE,!WeakRef<VALUE>>} */
@@ -69,13 +69,13 @@ class IterableWeakSet {
     }
     const adder = this.add;
     if (typeof adder !== 'function') {
-      throw TypeError("'" + this.add + "' returned for property 'add' " +
+      throw new TypeError("'" + this.add + "' returned for property 'add' " +
           'of object ' + this + ' is not a function');
     }
     for (const /** ?Array<VALUE>> */ value of iterable) {
       if (typeof value !== 'object' && typeof value !== 'function' ||
           value === null) {
-        throw TypeError('Iterator value ' + value + ' is not an object');
+        throw new TypeError('Iterator value ' + value + ' is not an object');
       }
       adder.call(this, value);
     }

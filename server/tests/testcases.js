@@ -227,7 +227,7 @@ module.exports = [
 
   // N.B.: This and next tests have no equivalent in the test DB.
   { name: 'throwUnhandledError', src: `
-    throw Error('not caught');
+    throw new Error('not caught');
     `,
     expected: undefined },
 
@@ -238,7 +238,7 @@ module.exports = [
 
   { name: 'throwUnhandledErrorWithFinally', src: `
     try {
-      throw Error('not caught');
+      throw new Error('not caught');
     } finally {
     }
     `,
@@ -526,7 +526,7 @@ module.exports = [
       function checkLen(exp, desc) {
         if (a.length !== exp) {
           var msg = 'a.length === ' + a.length + ' (expected: ' + exp + ')'
-          throw Error(desc ? msg + ' ' + desc : msg);
+          throw new Error(desc ? msg + ' ' + desc : msg);
         }
       }
 
@@ -570,7 +570,7 @@ module.exports = [
         var r = a.hasOwnProperty(idx);
         if (r !== exp) {
           var msg = 'a.hasOwnProperty(' + idx + ') === ' + r;
-          throw Error(desc ? msg + ' ' + desc : msg);
+          throw new Error(desc ? msg + ' ' + desc : msg);
         }
       }
 
@@ -596,13 +596,15 @@ module.exports = [
           continue;
         }
         if (String(key >>> 0) === key && (key >>> 0) !== 0xffffffff) {
-          throw Error('Setting a.length = 0 failed to remove property ' + key);
+          throw new Error(
+              'Setting a.length = 0 failed to remove property ' + key);
         }
       }
 
       // Make sure we didn't wipe everything!
       if (Object.getOwnPropertyNames(a).length !== 4) {
-        throw Error('Setting .length == 0 removed some non-index properties');
+        throw new Error(
+            'Setting .length == 0 removed some non-index properties');
       }
       'OK';
     } catch (e) {
@@ -1065,7 +1067,7 @@ module.exports = [
     eval('{}');
     `,
     expected: undefined },
-  
+
   { name: 'callEvalOrder', src: `
     var r = "";
     function log(x) {
@@ -1226,8 +1228,7 @@ module.exports = [
   { name: 'Object.setPrototypeOf(..., null)', src: `
     var o = {parent: 'o'};
     var q = Object.create(o);
-    Object.setPrototypeOf(q, null) === q &&
-        Object.getPrototypeOf(q);
+    Object.setPrototypeOf(q, null) === q && Object.getPrototypeOf(q);
     `,
     expected: null },
 
@@ -1639,7 +1640,7 @@ module.exports = [
   { name: 'Function.prototype.apply(..., sparse)', src: `
     (function(a, b, c) {
       if (!(1 in arguments)) {
-        throw Error("Argument 1 missing");
+        throw new Error("Argument 1 missing");
       }
       return a + c;
     }).apply(undefined, [1, , 3]);
@@ -1687,7 +1688,7 @@ module.exports = [
   { name: 'Function.prototype.call', src: `
     (function(a, b, c) {
       if (!(1 in arguments)) {
-        throw Error("Argument 1 missing");
+        throw new Error("Argument 1 missing");
       }
       return a + c;
     }).call(undefined, 1, 2, 3);
@@ -2567,6 +2568,36 @@ module.exports = [
     `,
     expected: 'at anonymous function 1:21' },
 
+  // Bug #241.
+  { name: 'Error .stack correctly blames MemberExpression', src: `
+    function foo() {
+      switch (1) {
+        case 1:
+          return undefined.hasNoProperties;
+      }
+    }
+    try {
+      foo();
+    } catch (e) {
+      var lines = e.stack.split('\\n');
+    }
+    lines[0].trim();
+    `,
+    expected: 'at foo 4:18' },
+
+  { name: 'Error .stack correctly blames Identifier', src: `
+    function foo() {
+      return undefinedVariable;
+    }
+    try {
+      foo();
+    } catch (e) {
+      var lines = e.stack.split('\\n');
+    }
+    lines[0].trim();
+    `,
+    expected: 'at foo 2:14' },
+
   /////////////////////////////////////////////////////////////////////////////
   // JSON
 
@@ -2640,6 +2671,45 @@ module.exports = [
     fails;
     `,
     expected: 0 },
+
+  /////////////////////////////////////////////////////////////////////////////
+  // Thread and Thread.prototype:
+
+  // TODO(cpallen): change .eval to .program when test harness no
+  //     longer relies on eval.
+  { name: 'Thread.callers() ownership', src: `
+    var owner = {};
+    setPerms(owner);
+    var callers = Thread.callers();
+    Object.getOwnerOf(callers) === owner &&
+        Object.getOwnerOf(callers[0]) === owner;
+    `,
+    expected: true },
+
+  { name: 'Thread.callers()[0].eval',
+    src: 'Thread.callers()[0].eval',
+    expected: 'Thread.callers()[0].eval' },
+
+  { name: 'Thread.callers()[0].line & .col',
+    src: 'var frame = Thread.callers()[0]; frame.line + "," + frame.col;',
+    expected: '1,13' },
+
+  { name: 'Thread.callers()[/*last*/].program', src: `
+    var callers = Thread.callers();
+    Boolean(callers[callers.length - 1].program);
+    `,
+    expected: true },
+
+  { name: 'Thread.callers()[0].callerPerms', src: `
+    CC.root.name = 'root';
+    var user = {name: 'user'};
+    function f() {
+      return Thread.callers()[0].callerPerms.name;
+    }
+    setPerms(user);
+    f();
+    `,
+    expected: 'user' },
 
   /////////////////////////////////////////////////////////////////////////////
   // Permissions system:

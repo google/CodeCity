@@ -1,0 +1,12 @@
+[Unit]
+Description=Code City Login Server
+Documentation=https://github.com/NeilFraser/CodeCity
+After=network.target
+
+[Service]
+SyslogIdentifier=cc-mobwrite
+WorkingDirectory=/home/cc/CodeCity/mobwrite
+User=cc
+Group=cc
+ExecStart=@/usr/bin/python cc-mobwrite /home/cc/CodeCity/mobwrite/mobwrite_server.py
+Restart=on-failure

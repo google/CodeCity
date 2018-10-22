@@ -48,8 +48,8 @@ CodeCity.startup = function(opt_databaseDirectory) {
   try {
     var files = fs.readdirSync(CodeCity.databaseDirectory);
   } catch (e) {
-    console.error('Database directory not found.\nUsage: node %s <DB directory>',
-                  process.argv[1]);
+    console.error('Database directory not found.\n' +
+        'Usage: node %s <DB directory>', process.argv[1]);
     if (CodeCity.databaseDirectory) {
       console.info(e);
     }
@@ -59,7 +59,8 @@ CodeCity.startup = function(opt_databaseDirectory) {
   // Find the most recent database file.
   files.sort();
   for (var i = files.length - 1; i >= 0; i--) {
-    if (files[i].match(/^\d{4}-\d\d-\d\dT\d\d\.\d\d\.\d\d(\.\d{1,3})?Z?\.city$/)) {
+    if (files[i].match(
+        /^\d{4}-\d\d-\d\dT\d\d\.\d\d\.\d\d(\.\d{1,3})?Z?\.city$/)) {
       break;
     }
   }
@@ -72,8 +73,8 @@ CodeCity.startup = function(opt_databaseDirectory) {
   CodeCity.initSystemFunctions();
   if (i === -1) {
     // Database not found, load one or more startup files instead.
-    console.log('Unable to find database file in %s, looking for startup file(s) instead.',
-                CodeCity.databaseDirectory);
+    console.log('Unable to find database file in %s, looking for startup ' +
+        'file(s) instead.', CodeCity.databaseDirectory);
     var fileCount = 0;
     for (var i = 0; i < files.length; i++) {
       if (files[i].match(/^(core|test).*\.js$/)) {
@@ -109,7 +110,7 @@ CodeCity.startup = function(opt_databaseDirectory) {
 
   // Checkpoint at regular intervals.
   // TODO: Let the interval be configurable from the database.
-  setInterval(CodeCity.checkpoint, 60 * 1000);
+  setInterval(CodeCity.checkpoint, 600 * 1000);
 
   console.log('Load complete.  Starting Code City.');
   CodeCity.interpreter.start();

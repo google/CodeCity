@@ -223,6 +223,11 @@ CCC.World.preprocessMessage = function(msg) {
  * @param {!Object} msg JSON structure.
  */
 CCC.World.renderMessage = function(msg) {
+  if (msg.type === 'link') {
+    // {type: "link", href: "https://example.com/"}
+    // Link is opened by log.  No visualization in world.
+    return;
+  }
   if (isNaN(CCC.World.lastWidth)) {
     // Race condition, message has arrived before world is ready to render.
     // Just add to the panorama queue, it will be rendered later.
@@ -1185,7 +1190,7 @@ CCC.World.stripActions = function(div) {
   }
   var commands = div.querySelectorAll('a.command');
   for (var command of commands) {
-    command.className = '';
+    command.className = 'disabled';
   }
 };
 
@@ -1774,7 +1779,7 @@ CCC.World.removeNode = function(node) {
 CCC.World.getMsg = function(key) {
   var element = document.getElementById(key);
   if (!element) {
-    throw 'Unknown message ' + key;
+    throw new Error('Unknown message ' + key);
   }
   return element.textContent;
 };

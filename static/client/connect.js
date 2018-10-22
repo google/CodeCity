@@ -36,7 +36,7 @@ CCC.MIN_PING_INTERVAL = 1000;
  * Largest interval in milliseconds between pings.
  * @constant
  */
-CCC.MAX_PING_INTERVAL = 16000;
+CCC.MAX_PING_INTERVAL = 4000;
 
 /**
  * Maximum number of commands saved in history.
@@ -512,8 +512,7 @@ CCC.terminate = function() {
  */
 CCC.parse = function(receivedJson) {
   if (CCC.connectionState === CCC.ConnectionStates.DISCONNECTED) {
-    console.error('Ignoring JSON received after disconnection.');
-    throw receivedJson;
+    throw new Error('JSON received after disconnection: ' + receivedJson);
   } else if (CCC.connectionState === CCC.ConnectionStates.NEVER_CONNECTED) {
     CCC.postToAllFrames({'mode': CCC.MessageTypes.CONNECTION, 'state': true});
     CCC.distributeMessage(CCC.MessageTypes.CONNECT_MSG,

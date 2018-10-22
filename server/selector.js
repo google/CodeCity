@@ -31,24 +31,24 @@ var code = require('./code');
  * Selector.prototype (with various useful convenience methods) in its
  * prototype chain.
  * @constructor
- * @extends {Array<Selector.Part>}
- * @param {string|!Array<Selector.Part>|!Selector} s A Selector, Parts
+ * @extends {Array<!Selector.Part>}
+ * @param {string|!Array<!Selector.Part>|!Selector} s A Selector, Parts
  *     array or selector string.
  */
 var Selector = function(s) {
-  var /** !Array<Selector.Part> */ parts;
+  var /** !Array<!Selector.Part> */ parts;
   if (Array.isArray(s)) {
     parts = [];
     // Validate & copy parts list.
-    if (typeof s.length < 1) throw RangeError('Zero-length parts list??');
-    if (s.length < 1) throw RangeError('Zero-length parts list??');
+    if (typeof s.length < 1) throw new RangeError('Zero-length parts list??');
+    if (s.length < 1) throw new RangeError('Zero-length parts list??');
     if (typeof s[0] !== 'string' || !identifierRE.test(s[0])) {
-      throw TypeError('Parts array must begin with an identifier');
+      throw new TypeError('Parts array must begin with an identifier');
     }
     parts[0] = s[0];
     for (var i = 1; i < s.length; i++) {
       if (typeof s[i] !== 'string' && !(s[i] instanceof SpecialPart)) {
-        throw TypeError('Invalid part in parts array');
+        throw new TypeError('Invalid part in parts array');
       }
       parts[i] = s[i];
     }
@@ -56,7 +56,7 @@ var Selector = function(s) {
     // Parse selector text.
     parts = parse(s);
   } else {
-    throw TypeError('Not a selector or parts array');
+    throw new TypeError('Not a selector or parts array');
   }
   Object.setPrototypeOf(parts, Selector.prototype);
   return parts;
@@ -218,7 +218,7 @@ var parse = function(selector) {
 
       case State.DOT:
         if (token.type !== 'id') {
-          throw SyntaxError(
+          throw new SyntaxError(
               '"." must be followed by identifier in selector');
         }
         parts.push(token.raw);
@@ -267,7 +267,7 @@ var Token;
  * Tokenizes a selector string.  Throws a SyntaxError if any text is
  * found which does not form a valid token.
  * @param {string} selector A selector string.
- * @return {!Array<Token>} An array of tokens.
+ * @return {!Array<!Token>} An array of tokens.
  */
 var tokenize = function(selector) {
   var REs = {

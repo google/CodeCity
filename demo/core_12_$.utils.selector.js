@@ -42,7 +42,7 @@ $.utils.selector.toValue = function(str) {
   } else if (root === '@' || root === 'here') {
     root = user.location;
   } else {
-    throw Error("Can't happen.  Regex is too liberal.");
+    throw new Error("Can't happen.  Regex is too liberal.");
   }
   if (!suffix) {
     return root;
@@ -107,7 +107,7 @@ $.utils.selector.partsToValue = function(parts) {
     } else if (part.type === 'id') {
       obj = obj[part.value];
     } else {
-      throw 'Invalid part.';
+      throw new Error('Invalid part.');
     }
   }
   return obj;

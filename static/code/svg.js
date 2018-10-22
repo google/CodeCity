@@ -223,7 +223,7 @@ svgEditor.updateToolbox.oldSelectedCount_ = 0;
  * @return {!Array<string>} Array with normalized fill and stroke strings.
  */
 svgEditor.getFillStroke = function(element) {
-  if (!element) throw TypeError('Element not provided');
+  if (!element) throw new TypeError('Element not provided');
   var classes = element.getAttribute('class') || '';
   classes = classes.replace(/Gray/g, 'Grey');
   var fill = classes.match(/\b(fill(None|White|Black|Grey))\b/);

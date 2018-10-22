@@ -181,10 +181,11 @@ $.utils.command.execute = function(cmdstr, user) {
 };
 
 $.utils.command.abort = function(msg) {
+  // A thrown string should just be printed to the user.
   if (typeof msg === 'string') {
     throw msg;
   }
-  throw TypeError('Aborts should have string messages.');
+  throw new TypeError('Aborts should have string messages.');
 };
 
 $.utils.match = function(str, context) {

@@ -22,7 +22,7 @@
  * @author fraser@google.com (Neil Fraser)
  */
 
-// Set up a room, two users, and a rock.
+// Set up a room, two users, and a dog.
 (function () {
   var hangout = Object.create($.room);
   hangout.name = 'Hangout';
@@ -39,6 +39,7 @@
   hangout.roll.prep = 'none';
   hangout.roll.iobj = 'none';
   $.startRoom = hangout;
+  $.utils.selector.setSelector(hangout, '$.startRoom');
 
   var clock = Object.create($.thing);
   clock.name = 'clock';
@@ -96,6 +97,8 @@
     }
   };
   clock.chime(true);
+  $.clock = clock;
+  $.utils.selector.setSelector(hangout, '$.clock');
 
   var bob = Object.create($.user);
   bob.name = 'Bob';
@@ -106,6 +109,8 @@
   bob.svgText += '<path d="m 7.01,76.8 c -0.44,-7.45 -0.78,-14.6 -0.11,-18.7" />';
   bob.svgText += '<path d="m 6.59,58.5 c -3.47,-1.83 -6.15,-6.17 -6.06,-10.1 0.07,-3.06 2.25,-6.52 5.10,-7.65 2.94,-1.17 6.90,0.01 9.24,2.12 2.20,1.98 3.12,5.45 2.87,8.39 -0.22,2.57 -1.53,5.42 -3.72,6.80 -2.10,1.33 -5.24,1.59 -7.44,0.42 z" class="fillWhite" />';
   bob.moveTo(hangout);
+  $.bob = bob;
+  $.utils.selector.setSelector(bob, '$.bob');
 
   var alice = Object.create($.user);
   alice.name = 'Alice';
@@ -118,6 +123,8 @@
   alice.svgText += '<path d="m 6.48,53.4 c -0.1,-2.2 1.1,-5.7 4.42,-3.6 6,3.8 12.3,-3.5 11.3,-4.3 l 0,0" />';
   alice.svgText += '<path d="m 6.06,52.6 c -1.34,3.2 -1.54,7.1 -1.18,10.3 -0.15,-2.5 -4.525,-7.7 -4.243,-11.4 0.403,-5.3 2.783,-5.9 4.573,-3.6 0,2.3 0.28,3.8 0.85,4.7 z" class="fillWhite" />';
   alice.moveTo(hangout);
+  $.alice = alice;
+  $.utils.selector.setSelector(alice, '$.alice');
 
   var fido = Object.create($.thing);
   fido.name = 'Fido';
@@ -135,7 +142,9 @@
   fido.svgText += '<path d="m 44.2,90.6 c -0.6,3.5 -3.7,5.3 -5.8,5" class="fillWhite" />';
   fido.svgText += '<path d="m 44.7,95 c -0.9,1.7 -3.3,3.7 -5,2.9" class="fillWhite" />';
   fido.svgText += '<path d="m 5.88,84.2 c 0,0 -0.4,1.2 -3.1,0.8" class="fillWhite" />';
-  fido.moveTo(hangout);
+  fido.moveTo(bob);
+  $.fido = fido;
+  $.utils.selector.setSelector(fido, '$.fido');
 
   $.system.connectionListen(7777, $.servers.telnet);
   $.system.connectionListen(7780, $.servers.http.connection);

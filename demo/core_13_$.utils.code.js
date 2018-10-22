@@ -47,7 +47,7 @@ $.utils.code.toSource = function(value, opt_seen) {
     // TODO: Replace opt_seen with Set, once available.
     if (opt_seen) {
       if (opt_seen.includes(value)) {
-        throw RangeError('[Recursive data structure]');
+        throw new RangeError('[Recursive data structure]');
       }
       opt_seen.push(value);
     } else {
@@ -117,10 +117,10 @@ $.utils.code.toSource = function(value, opt_seen) {
     if (selector) {
       return selector;
     }
-    throw ReferenceError('[' + type + ' with no known selector]');
+    throw new ReferenceError('[' + type + ' with no known selector]');
   }
   // Can't happen.
-  throw TypeError('[' + type + ']');
+  throw new TypeError('[' + type + ']');
 };
 
 $.utils.code.toSource.processingError = false;
@@ -137,64 +137,125 @@ $.utils.code.toSourceSafe = function(value) {
   }
 };
 
-$.utils.code.rewriteForEval = function(src) {
+$.utils.code.rewriteForEval = function(src, forceExpression) {
   // Eval treats {} as an empty block (return value undefined).
   // Eval treats {'a': 1} as a syntax error.
   // Eval treats {a: 1} as block with a labeled statement (return value 1).
   // Detect these cases and enclose in parenthesis.
   // But don't mess with: {var x = 1; x + x;}
   // This is consistent with the console on Chrome and Node.
-  try {
-    var ast = $.utils.acorn.parse(src);
-  } catch (e) {
+  // If 'forceExpression' is true, then throw a SyntaxError if the src is
+  // more than one expression (e.g. '1; 2;').
+  var ast = null;
+  if (!forceExpression) {
+    // Try to parse src as a program.
     try {
-      ast = $.utils.acorn.parseExpressionAt(src, 0);
-      if (src.substring(ast.end).trim() !== '') {
-        throw SyntaxError('Not just an expression');
-      }
+      ast = $.utils.acorn.parse(src);
     } catch (e) {
-      // This eval will fail.  Have fun.
-      return src;
+      // ast remains null.
     }
-    // This is an object literal: {'a': 1}
-    return '(' + src + '\n)';
   }
-  if (ast.type === 'Program' && ast.body.length === 1 &&
-      ast.body[0].type === 'BlockStatement') {
-    if (ast.body[0].body.length === 0) {
-      // This is an empty object: {}
-      return '(' + src + '\n)';
+  if (ast) {
+    if (ast.type === 'Program' && ast.body.length === 1 &&
+        ast.body[0].type === 'BlockStatement') {
+      if (ast.body[0].body.length === 0) {
+        // This is an empty object: {}
+        return '({})';
+      }
+      if (ast.body[0].body.length === 1 &&
+          ast.body[0].body[0].type === 'LabeledStatement' &&
+          ast.body[0].body[0].body.type === 'ExpressionStatement') {
+        // This is an unquoted object literal: {a: 1}
+        // There might be a comment, so add a linebreak.
+        return '(' + src + '\n)';
+      }
     }
-    if (ast.body[0].body.length === 1 &&
-        ast.body[0].body[0].type === 'LabeledStatement' &&
-        ast.body[0].body[0].body.type === 'ExpressionStatement') {
-      // This is an object literal: {a: 1}
-      return '(' + src + '\n)';
+    return src;
+  }
+  // Try parsing src as an expression.
+  // This may throw.
+  ast = $.utils.acorn.parseExpressionAt(src, 0);
+  var remainder = src.substring(ast.end).trim();
+  if (remainder !== '') {
+    // Remainder might legally include trailing comments or semicolons.
+    // Remainder might illegally include more statements.
+    var remainderAst = null;
+    try {
+      remainderAst = $.utils.acorn.parse(remainder);
+    } catch (e) {
+      // remainderAst remains null.
     }
+    if (!remainderAst) {
+      throw new SyntaxError('Syntax error beyond expression');
+    }
+    if (remainderAst.type !== 'Program') {
+      throw new SyntaxError('Unexpected code beyond expression');  // Module?
+    }
+    // Trim off any unnecessary trailing semicolons.
+    while (remainderAst.body[0] &&
+           remainderAst.body[0].type === 'EmptyStatement') {
+      remainderAst.body.shift();
+    }
+    if (remainderAst.body.length !== 0) {
+      throw new SyntaxError('Only one expression expected');
+    }
+  }
+  src = src.substring(0, ast.end);
+  if (ast.type === 'ObjectExpression' || ast.type === 'FunctionExpression') {
+    // {a: 1}  and function () {} both need to be wrapped in parens to avoid
+    // being syntax errors.
+    src = '(' + src + ')';
   }
   return src;
 };
 
 $.utils.code.rewriteForEval.unittest = function() {
   var cases = {
-    '1 + 2': '1 + 2',
-    '1 + 2;\n3 + 4;': '1 + 2;\n3 + 4;',
-    '{}': '({}\n)',
-    '{};\n3 + 4;': '{};\n3 + 4;',
-    '{"a": 1}': '({"a": 1}\n)',
-    '{"a": 1};': '{"a": 1};',
-    '{a: 1}': '({a: 1}\n)',
-    '{a: 1};': '{a: 1};',
-    '{a: 1}  // Comment': '({a: 1}  // Comment\n)',
-    '{a: 1, b: 2}': '({a: 1, b: 2}\n)',
-    '{a: 1; b: 2}': '{a: 1; b: 2}',
-    '{} + []': '{} + []'
+    // Input: [Expression, Statement(s)]
+    '1 + 2': ['1 + 2', '1 + 2'],
+    '2 + 3  // Comment': ['2 + 3', '2 + 3  // Comment'],
+    '3 + 4;': ['3 + 4', '3 + 4;'],
+    '4 + 5; 6 + 7': [SyntaxError, '4 + 5; 6 + 7'],
+    '{}': ['({})', '({})'],
+    '{}  // Comment': ['({})', '({})'],
+    '{};': ['({})', '{};'],
+    '{}; {}': [SyntaxError, '{}; {}'],
+    '{"a": 1}': ['({"a": 1})', '({"a": 1})'],
+    '{"a": 2}  // Comment': ['({"a": 2})', '({"a": 2})'],
+    '{"a": 3};': ['({"a": 3})', '({"a": 3})'],
+    '{"a": 4}; {"a": 4}': [SyntaxError, SyntaxError],
+    '{b: 1}': ['({b: 1})', '({b: 1}\n)'],
+    '{b: 2}  // Comment': ['({b: 2})', '({b: 2}  // Comment\n)'],
+    '{b: 3};': ['({b: 3})', '{b: 3};'],
+    '{b: 4}; {b: 4}': [SyntaxError, '{b: 4}; {b: 4}'],
+    'function () {}': ['(function () {})', '(function () {})'],
+    'function () {}  // Comment': ['(function () {})', '(function () {})'],
+    'function () {};': ['(function () {})', '(function () {})'],
+    'function () {}; function () {}': [SyntaxError, SyntaxError],
+    '{} + []': ['{} + []', '{} + []']
   };
+  var actual;
   for (var key in cases) {
     if (!cases.hasOwnProperty(key)) continue;
-    var actual = $.utils.code.rewriteForEval(key);
-    if (actual !== cases[key]) {
-      throw Error('Expected: ' + cases[key] + ' Actual: ' + actual);
+    // Test eval as an expression.
+    try {
+      actual = $.utils.code.rewriteForEval(key, true);
+    } catch (e) {
+      actual = SyntaxError;
+    }
+    if (actual !== cases[key][0]) {
+      throw new Error('Eval Expression\n' +
+                      'Expected: ' + cases[key][0] + ' Actual: ' + actual);
+    }
+    // Test eval as a statement.
+    try {
+      actual = $.utils.code.rewriteForEval(key, false);
+    } catch (e) {
+      actual = SyntaxError;
+    }
+    if (actual !== cases[key][1]) {
+      throw new Error('Eval Statement\n' +
+                      'Expected: ' + cases[key][1] + ' Actual: ' + actual);
     }
   }
 };

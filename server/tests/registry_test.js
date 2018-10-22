@@ -62,4 +62,19 @@ exports.testRegistry = function(t) {
   t.expect("reg.get('foo')  // 2", reg.get('foo'), obj);
   t.expect("reg.getKey(obj)  // 2", reg.getKey(obj), 'foo');
   t.expect("reg.getKey({})  // 2", reg.getKey({}), undefined);
+
+  // Test iterators.
+  // TODO(cpcallen): test with more than one item to iterate over?
+  const keys = reg.keys();
+  t.expect("reg.keys().length", keys.length, 1);
+  t.expect("reg.keys()[0]", keys[0], 'foo');
+
+  const values = reg.values();
+  t.expect("reg.values().length", values.length, 1);
+  t.expect("reg.values()[0]", values[0], obj);
+  
+  const entries = reg.entries();
+  t.expect("reg.entries().length", entries.length, 1);
+  t.expect("reg.entries()[0][0]", entries[0][0], 'foo');
+  t.expect("reg.entries()[0][1]", entries[0][1], obj);
 };

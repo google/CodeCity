@@ -179,36 +179,63 @@ $.www.code.editor.www = function(request, response) {
       if (request.parameters.src) {
         var ok = true;
         try {
-          // TODO(fraser): Make this secure -- somehow.
-          var saveValue = eval(request.parameters.src);
+          var src = $.utils.code.rewriteForEval(request.parameters.src,
+                                                /* forceExpression= */ true);
+          // Evaluate src in global scope (eval by any other name, literally).
+          var evalGlobal = eval;
+          var saveValue = evalGlobal(src);
         } catch (e) {
           ok = false;
           // TODO(fraser): Send a more informative error message.
           data.butter = String(e);
         }
         if (ok) {
+          var oldValue;
           if (lastPart.type === 'id') {
+            oldValue = object[lastPart.value];
+          } else if (lastPart.type === '^') {
+            oldValue = Object.getPrototypeOf(object);
+          } else {
+            // Unknown part type.
+            throw new SyntaxError(lastPart);
+          }
+          var error = false;
+          try {
+            $.www.code.editor.handleMetaData(request.parameters.src,
+                                             oldValue, saveValue);
+          } catch (e) {
+            if (typeof e === 'string') {
+              // A thrown string (probably from $.utils.command.abort) should
+              // just be printed to the user.
+              data.butter = String(e);
+              error = true;
+            } else {
+              // A real error should be rethrown in full.
+              throw e;
+            }
+          }
+          if (error) {
+            // Stop.  No further actions.
+          } else if (lastPart.type === 'id') {
             if (isGlobal) {
               if (lastPart.value in object) {
                 eval(lastPart.value + ' = saveValue');
                 // Fetch a fresh global pseudo object for the returned src.
                 object = $.utils.selector.getGlobal();
                 data.saved = true;
+                data.butter = 'Saved';
               } else {
                 data.butter = 'Unknown Global';
               }
             } else {
               object[lastPart.value] = saveValue;
               data.saved = true;
+              data.butter = 'Saved';
             }
-            data.butter = 'Saved';
           } else if (lastPart.type === '^') {
             Object.setPrototypeOf(object, saveValue);
             data.butter = 'Prototype Set';
             data.saved = true;
-          } else {
-            // Unknown part type.
-            throw SyntaxError(lastPart);
           }
         }
       }
@@ -220,15 +247,29 @@ $.www.code.editor.www = function(request, response) {
         value = Object.getPrototypeOf(object);
       } else {
         // Unknown part type.
-        throw lastPart;
+        throw new TypeError(lastPart);
       }
       // Populate the value object in the selector lookup cache.
       parts.push(lastPart);
       var selector = $.utils.selector.partsToSelector(parts);
       $.utils.selector.setSelector(value, selector);
+      // Assemble any meta-data for the editor.
+      var meta = '';
+      if (typeof value === 'function') {
+        meta += '// @copy_properties true\n';
+        var props = ['verb', 'dobj', 'prep', 'iobj'];
+        for (var i = 0, prop; (prop = props[i]); i++) {
+          try {
+            meta += '// ' + (value[prop] ? '@set_prop ' + prop + ' = ' +
+                JSON.stringify(value[prop]) : '@delete_prop ' + prop) + '\n';
+          } catch (e) {
+            // Unstringable value, or read perms error.  Skip.
+          }
+        }
+      }
       // Render the current value as a string.
       try {
-        data.src = $.utils.code.toSource(value);
+        data.src = meta + $.utils.code.toSource(value);
       } catch (e) {
         data.src = e.message;
       }
@@ -239,3 +280,47 @@ $.www.code.editor.www = function(request, response) {
 
 $.www.ROUTER.codeEditor =
     {regexp: /^\/code\/editor$/, handler: $.www.code.editor};
+
+$.www.code.editor.handleMetaData = function(src, oldValue, newValue) {
+  // Editors may provide metadata in the form of comments when saving.
+  // Match any leading comments.
+  // Throws user-printed strings (not errors) if unable to complete.
+  var m = src.match(/^(?:[ \t]*(?:\/\/[^\n]*)?\n)*/);
+  if (!m) {
+    return;
+  }
+  var metaLines = m[0].split('\n');
+  for (var i = 0; i < metaLines.length; i++) {
+    var meta = metaLines[i];
+    if (meta.match(/^\s*\/\/\s*@copy_properties\s*true\s*$/)) {
+      // @copy_properties true
+      if (!$.utils.isObject(newValue)) {
+        $.utils.command.abort("Can't copy properties onto primitive: " +
+                              newValue);
+      }
+      // Silently ignore if the old value is a primitive.
+      if ($.utils.isObject(oldValue)) {
+        $.utils.transplantProperties(oldValue, newValue);
+      }
+    } else if ((m = meta.match(/^\s*\/\/\s*@delete_prop\s+(\S+)\s*$/))) {
+      // @delete_prop dobj
+      try {
+        delete newValue[m[1]];
+      } catch (e) {
+        $.utils.command.abort("Can't delete '" + m[1] + "' property.");
+      }
+    } else if ((m = meta.match(/^\s*\/\/\s*@set_prop\s+(\S+)\s*=(.+)$/))) {
+      // @set_prop dobj = "this"
+      try {
+        var propValue = JSON.parse(m[2]);
+      } catch (e) {
+        $.utils.command.abort("Can't parse '" + m[1] + "' value: " + m[2]);
+      }
+      try {
+        newValue[m[1]] = propValue;
+      } catch (e) {
+        $.utils.command.abort("Can't set '" + m[1] + "' property.");
+      }
+    }
+  }
+};

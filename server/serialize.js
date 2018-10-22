@@ -44,7 +44,7 @@ Serializer.deserialize = function(json, intrp) {
        // Object reference: {'#': 42}
        value = objectList[data];
         if (!value) {
-          throw ReferenceError('Object reference not found: ' + data);
+          throw new ReferenceError('Object reference not found: ' + data);
         }
         return value;
       }
@@ -63,46 +63,53 @@ Serializer.deserialize = function(json, intrp) {
   }
 
   if (!Array.isArray(json)) {
-    throw TypeError('Top-level JSON is not a list.');
+    throw new TypeError('Top-level JSON is not a list.');
   }
 
   // Require native functions to be present.  Can't just create fresh
   // new interpreter instance because client code may want to add
   // custom builtins.
   if (!intrp.global) {
-    throw Error('Interpreter must be initialized prior to deserialization.');
+    throw new Error(
+        'Interpreter must be initialized prior to deserialization.');
   }
-  // Find all native functions in existing interpreter.
+
   // Find all native functions to get id => func mappings.
-  var objectList = [];
-  Serializer.objectHunt_(intrp, objectList, Serializer.excludeTypes);
   var functionHash = Object.create(null);
-  for (var i = 0; i < objectList.length; i++) {
-    if (typeof objectList[i] === 'function') {
-      functionHash[objectList[i].id] = objectList[i];
+  // Builtins.
+  var builtins = Array.from(intrp.builtins.values());
+  var implProps = ['impl', 'call', 'construct'];
+  for (var i = 0; i < builtins.length; i++) {
+    var builtin = builtins[i];
+    for (var j = 0; j < implProps.length; j++) {
+      var func = builtin[implProps[j]];
+      if (func) functionHash[func.id] = func;
     }
   }
+  // Step functions.
+  for (var stepName in intrp.stepFuncs) {
+    var stepFunc = intrp.stepFuncs[stepName];
+    functionHash[stepFunc.id] = stepFunc;
+  }
+
   // Get constructors
   var constructors = Serializer.getTypesDeserialize_(intrp);
 
   // First pass: Create object stubs for every object.  We don't need
   // to (re)create object #0, because that's the interpreter proper.
-  objectList = [intrp];
+  var objectList = [intrp];
   for (var i = 1; i < json.length; i++) {
     var jsonObj = json[i];
     var obj;
     var type = jsonObj['type'];
     switch (type) {
-      case 'NullProtoObject':
-        obj = Object.create(null);
-        break;
       case 'Object':
         obj = {};
         break;
       case 'Function':
         obj = functionHash[jsonObj['id']];
         if (!obj) {
-          throw RangeError('Function ID not found: ' + jsonObj['id']);
+          throw new RangeError('Function ID not found: ' + jsonObj['id']);
         }
         break;
       case 'Array':
@@ -111,7 +118,7 @@ Serializer.deserialize = function(json, intrp) {
       case 'Date':
         obj = new Date(jsonObj['data']);
         if (isNaN(obj)) {
-          throw TypeError('Invalid date: ' + jsonObj['data']);
+          throw new TypeError('Invalid date: ' + jsonObj['data']);
         }
         break;
       case 'RegExp':
@@ -139,13 +146,10 @@ Serializer.deserialize = function(json, intrp) {
         obj = new Interpreter.State({}, /** @type {?} */(undefined));
         break;
       default:
-        var protoRef;
         if (constructors[type]) {
           obj = new constructors[type];
-        } else if ((protoRef = jsonObj['proto'])) {
-          obj = Object.create(decodeValue(protoRef));
         } else {
-          throw TypeError('Unknown type: ' + jsonObj['type']);
+          throw new TypeError('Unknown type: ' + jsonObj['type']);
         }
     }
     objectList[i] = obj;
@@ -154,6 +158,10 @@ Serializer.deserialize = function(json, intrp) {
   for (var i = 0; i < json.length; i++) {
     var jsonObj = json[i];
     var obj = objectList[i];
+    // Set prototype, if specified.
+    if (jsonObj['proto']) {
+      Object.setPrototypeOf(obj, decodeValue(jsonObj['proto']));
+    }
     // Repopulate properties.
     var props = jsonObj['props'];
     if (props) {
@@ -215,9 +223,9 @@ Serializer.serialize = function(intrp) {
       if (Serializer.excludeTypes.has(Object.getPrototypeOf(value))) {
         return null;
       }
-      var ref = objectList.indexOf(value);
-      if (ref === -1) {
-        throw RangeError('Object not found in table.');
+      var ref = objectRefs.get(value);
+      if (ref === undefined) {
+        throw new RangeError('Object not found in table.');
       }
       return {'#': ref};
     }
@@ -229,9 +237,9 @@ Serializer.serialize = function(intrp) {
         return {'Number': 'Infinity'};
       } else if (value === -Infinity) {
         return {'Number': '-Infinity'};
-      } else if (isNaN(value)) {
+      } else if (Number.isNaN(value)) {
         return {'Number': 'NaN'};
-      } else if (1 / value === -Infinity) {
+      } else if (Object.is(value, -0)) {
         return {'Number': '-0'};
       }
     }
@@ -239,8 +247,7 @@ Serializer.serialize = function(intrp) {
   }
 
   // Properties on Interpreter instances to ignore.
-  var exclude = ['stepFunctions_',
-                 'hrStartTime_',
+  var exclude = ['hrStartTime_',
                  'previousTime_',
                  'runner_',
                  'Object',
@@ -259,8 +266,13 @@ Serializer.serialize = function(intrp) {
                  'Box',
                  'Server'];
   // Find all objects.
-  var objectList = [];
-  Serializer.objectHunt_(intrp, objectList, Serializer.excludeTypes, exclude);
+  var objectList = Serializer.getObjectList_(
+      intrp, Serializer.excludeTypes, exclude);
+  // Build reverse-lookup cache.
+  var /** !Map<Object,number> */ objectRefs = new Map();
+  for (var i = 0; i < objectList.length; i++) {
+    objectRefs.set(objectList[i], i);
+  }
   // Get types.
   var types = Serializer.getTypesSerialize_(intrp);
   // Serialize every object.
@@ -275,9 +287,6 @@ Serializer.serialize = function(intrp) {
     }
     var proto = Object.getPrototypeOf(obj);
     switch (proto) {
-      case null:
-        jsonObj['type'] = 'NullProtoObject';
-        break;
       case Object.prototype:
         jsonObj['type'] = 'Object';
         break;
@@ -285,7 +294,7 @@ Serializer.serialize = function(intrp) {
         jsonObj['type'] = 'Function';
         jsonObj['id'] = obj.id;
         if (!obj.id) {
-          throw Error('Native function has no ID: ' + obj);
+          throw new Error('Native function has no ID: ' + obj);
         }
         continue;  // No need to index properties.
       case Array.prototype:
@@ -303,11 +312,12 @@ Serializer.serialize = function(intrp) {
       case Map.prototype:
         jsonObj['type'] = 'Map';
         if (obj.size) {
-          jsonObj['entries'] = Array.from(obj, function(entry) {
-            var key = encodeValue(entry[0]);
-            var value = encodeValue(entry[1]);
-            return [key, value];
-          });
+          jsonObj['entries'] =
+              Array.from(/** @type {?} */(obj),function(entry) {
+                var key = encodeValue(entry[0]);
+                var value = encodeValue(entry[1]);
+                return [key, value];
+              });
         }
         break;
       case Set.prototype:
@@ -319,11 +329,12 @@ Serializer.serialize = function(intrp) {
       case IterableWeakMap.prototype:
         jsonObj['type'] = 'IterableWeakMap';
         if (obj.size) {
-          jsonObj['entries'] = Array.from(obj, function(entry) {
-            var key = encodeValue(entry[0]);
-            var value = encodeValue(entry[1]);
-            return [key, value];
-          });
+          jsonObj['entries'] =
+              Array.from(/** @type {?} */(obj),function(entry) {
+                var key = encodeValue(entry[0]);
+                var value = encodeValue(entry[1]);
+                return [key, value];
+              });
         }
         continue;  // Mustn't index internal properties for IterableWeakMap
       case IterableWeakSet.prototype:
@@ -340,6 +351,7 @@ Serializer.serialize = function(intrp) {
         if (type) {
           jsonObj['type'] = type;
         } else {
+          jsonObj['type'] = Array.isArray(obj) ? 'Array' : 'Object';
           jsonObj['proto'] = encodeValue(proto);
         }
     }
@@ -385,27 +397,41 @@ Serializer.serialize = function(intrp) {
 };
 
 /**
- * Recursively search the stack to find all non-primitives.
+ * Recursively search node to find all non-primitives.
  *
  * TODO(cpcallen): use a Registry instead of Array for objectList;
  *     this would allow more readable references by using paths
  *     instead of numerical indices.
  * @param {*} node JavaScript value to search.
- * @param {!Array<!Object>} objectList Array to add objects to.
+ * @param {!Set<?Object>} excludeTypes Set of prototypes not to spider.
+ * @param {!Array<string>=} exclude List of properties not to spider.
+ * @return {!Array<!Object>} objectList Array of all objects found via node.
+ */
+Serializer.getObjectList_ = function(node, excludeTypes, exclude) {
+  var seen = new Set();
+  Serializer.objectHunt_(node, seen, excludeTypes, exclude);
+  return Array.from(seen.keys());
+}
+
+/**
+ * Recursively search node find all non-primitives.
+ *
+ * @param {*} node JavaScript value to search.
+ * @param {!Set<?Object>} seen Set of objects found so far.
  * @param {!Set<?Object>} excludeTypes Set of prototypes not to spider.
  * @param {!Array<string>=} exclude List of properties not to spider.
  */
-Serializer.objectHunt_ = function(node, objectList, excludeTypes, exclude) {
+Serializer.objectHunt_ = function(node, seen, excludeTypes, exclude) {
   if (!node || (typeof node !== 'object' && typeof node !== 'function')) {
     // node is primitive.  Nothing to do.
     return;
   }
   var obj = /** @type {!Object} */(node);
   if (excludeTypes.has(Object.getPrototypeOf(/** @type {!Object} */(obj))) ||
-      objectList.includes(/** @type {!Object} */(obj))) {
+      seen.has(/** @type {!Object} */(obj))) {
     return;
   }
-  objectList.push(obj);
+  seen.add(obj);
   if (typeof obj === 'object') {  // Recurse.
     // Properties.
     if (!(obj instanceof Date) &&
@@ -418,21 +444,21 @@ Serializer.objectHunt_ = function(node, objectList, excludeTypes, exclude) {
         var name = names[i];
         if (!exclude || !exclude.includes(name)) {
           // Don't pass exclude; it's only for top-level property keys.
-          Serializer.objectHunt_(obj[name], objectList, excludeTypes);
+          Serializer.objectHunt_(obj[name], seen, excludeTypes);
         }
       }
     }
     // Set members.
     if (obj instanceof Set || obj instanceof IterableWeakSet) {
       obj.forEach(function (value) {
-        Serializer.objectHunt_(value, objectList, excludeTypes);
+        Serializer.objectHunt_(value, seen, excludeTypes);
       });
     }
     // Map entries.
     if (obj instanceof Map || obj instanceof IterableWeakMap) {
       obj.forEach(function (value, key) {
-        Serializer.objectHunt_(key, objectList, excludeTypes);
-        Serializer.objectHunt_(value, objectList, excludeTypes);
+        Serializer.objectHunt_(key, seen, excludeTypes);
+        Serializer.objectHunt_(value, seen, excludeTypes);
       });
     }
   }
