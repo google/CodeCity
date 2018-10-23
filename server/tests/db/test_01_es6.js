@@ -339,7 +339,7 @@ tests.NumberMaxSafeInteger = function() {
 };
 
 tests.NumberMinSafeInteger = function() {
-  console.assert(Number.MIN_SAFE_INTEGER - 1 === -Math.pow(2, 53),
+  console.assert(Number.MIN_SAFE_INTEGER === -(Math.pow(2, 53) - 1),
       'Number.MIN_SAFE_INTEGER');
   console.assert(Number.isSafeInteger(Number.MIN_SAFE_INTEGER),
       'Number.isSafeInteger(Number.MIN_SAFE_INTEGER);');

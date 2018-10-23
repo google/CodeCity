@@ -59,7 +59,9 @@ var WeakMap = new 'WeakMap';
     [Object, 'Object', ['is', 'setPrototypeOf'], []],
     [String, 'String', [], ['endsWith', 'includes', 'repeat', 'startsWith']],
     [Number, 'Number', ['isFinite', 'isInteger', 'isNaN', 'isSafeInteger'], []],
-    [Math, 'Math', ['acosh', 'asinh', 'atanh', 'cbrt', 'clz32', 'cosh', 'expm1', 'fround', 'hypot', 'imul', 'log10', 'log1p', 'log2', 'sign', 'sinh', 'tanh', 'trunc'], []],
+    [Math, 'Math', ['acosh', 'asinh', 'atanh', 'cbrt', 'clz32', 'cosh', 'expm1',
+                    'fround', 'hypot', 'imul', 'log10', 'log1p', 'log2', 'sign',
+                    'sinh', 'tanh', 'trunc'], []],
     [WeakMap, 'WeakMap', [], ['delete', 'get', 'has', 'set']],
   ];
   for (var i = 0; i < struct.length; i++) {
@@ -92,11 +94,13 @@ var WeakMap = new 'WeakMap';
 
 // Polyfill copied from:
 // developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/find
-Object.defineProperty(Array.prototype, 'find', {value: function(callback/*, thisArg*/) {
+Object.defineProperty(Array.prototype, 'find', {value:
+    function(callback/*, thisArg*/) {
   if (this === null || this === undefined) {
     throw new TypeError('Array.prototype.find called on ' + this);
   } else if (typeof callback !== 'function') {
-    throw new TypeError('callback is type ' + typeof callback + ', not type function');
+    throw new TypeError('callback is type ' + typeof callback +
+                        ', not type function');
   }
   var o = Object(this);
   var len = o.length >>> 0;
@@ -112,11 +116,13 @@ Object.defineProperty(Array.prototype, 'find', {value: function(callback/*, this
 
 // Polyfill copied from:
 // developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/findIndex
-Object.defineProperty(Array.prototype, 'findIndex', {value: function(callback/*, thisArg*/) {
+Object.defineProperty(Array.prototype, 'findIndex', {value:
+    function(callback/*, thisArg*/) {
   if (this === null || this === undefined) {
     throw new TypeError('Array.prototype.findIndex called on ' + this);
   } else if (typeof callback !== 'function') {
-    throw new TypeError('callback is type ' + typeof callback + ', not type function');
+    throw new TypeError('callback is type ' + typeof callback +
+                        ', not type function');
   }
   var o = Object(this);
   var len = o.length >>> 0;
