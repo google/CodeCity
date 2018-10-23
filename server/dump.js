@@ -97,21 +97,25 @@ Dumper.prototype.dumpBinding = function(selector, todo) {
     var value = this.getValueForSelector(selector);
   }
 
-  // Do declaration and/or initialisation.
-  if (doDecl || doInit) {
-    // Begin with var if declaring a variable.
-    if (doDecl && selector.isVar()) output.push('var ');
-    if (doInit) {
-      output.push(selector.toSetExpr(this.toExpr(value, selector)));
-    } else if (doDecl) {
-      if (selector.isVar()) {
-        output.push(selector.toExpr());
-      } else {  // Can't "declare" a property, but can make sure it exists.
-        output.push(selector.toSetExpr('undefined'));
+  if (selector.isVar()) {
+    // Do declaration and/or initialisation.
+    if (doDecl || doInit) {
+      // Begin with var if declaring a variable.
+      if (doDecl && selector.isVar()) output.push('var ');
+      if (doInit) {
+        output.push(selector.toSetExpr(this.toExpr(value, selector)));
+      } else if (doDecl) {
+        if (selector.isVar()) {
+          output.push(selector.toExpr());
+        } else {  // Can't "declare" a property, but can make sure it exists.
+          output.push(selector.toSetExpr('undefined'));
+        }
       }
+      output.push(';\n');
     }
-    output.push(';\n');
-  }
+  } else {
+    output.push(binding.dumpBinding(this, todo));
+  }    
 
   if (!doRecurse || !(value instanceof this.intrp.Object)) {
     // No recursion requested/possible.
@@ -481,6 +485,18 @@ var BindingInfo = function(dumper, selector, scope) {
 };
 
 /**
+ * Generate JS source text to create and/or initialize a single
+ * binding (variable, property, prototype or internal slot).
+ * 
+ * @param {!Dumper} dumper Dumper to which this BindingInfo belongs.
+ * @param {Do} todo How much to do.  Must be >= Do.DECL; > Do.SET ignored.
+ * @return {string} An eval-able program to initialise the specified binding.
+ */
+BindingInfo.prototype.dumpBinding = function(dumper, todo) {
+  return this.info.dumpBinding(dumper, this.lastPart, todo);
+};
+
+/**
  * Return the current 'done' status of the binding.
  * @return {Do} The done status of the binding.
  */
@@ -522,6 +538,20 @@ var ScopeInfo = function(scope) {
    * @private @const {!Object<string, Do>}
    */
   this.done_ = Object.create(null);
+};
+
+/**
+ * Generate JS source text to create and/or initialize a single
+ * variable binding.
+ * 
+ * @param {!Dumper} dumper Dumper to which this ScopeInfo belongs.
+ * @param {!Selector.Part} part The part to dump.  Must be simple string.
+ * @param {Do} todo How much to do.  Must be >= Do.DECL; > Do.SET ignored.
+ * @param {!Selector=} ref Ignored.
+ * @return {string} An eval-able program to initialise the specified variable.
+ */
+ScopeInfo.prototype.dumpBinding = function(dumper, part, todo, ref) {
+  throw new Error('Not implemented');
 };
 
 /**
@@ -583,6 +613,75 @@ var ObjectInfo = function(dumper, obj) {
 };
 
 /**
+ * Generate JS source text to create and/or initialize a single
+ * binding (property or internal slot) of the object.
+ * 
+ * @param {!Dumper} dumper Dumper to which this ObjectInfo belongs.
+ * @param {!Selector.Part} part The part to dump.
+ * @param {Do} todo How much to do.  Must be >= Do.DECL; > Do.SET ignored.
+ * @param {!Selector=} ref Selector refering to this object.
+ *     Optional; defaults to whatever selector was used to create the
+ *     object.
+ * @return {string} An eval-able program to initialise the specified binding.
+ */
+ObjectInfo.prototype.dumpBinding = function(dumper, part, todo, ref) {
+  if (!this.ref) throw new Error("Can't dump part of uncreated object");
+  if (!ref) ref = this.ref;
+  if (part === Selector.PROTOTYPE) {
+    return this.dumpPrototype_(dumper, todo, ref);
+  } else if (typeof part === 'string') {
+    return this.dumpProperty_(dumper, part, todo, ref);
+  } else {
+    throw new Error('Invalid part');
+  }
+};
+
+/**
+ * Generate JS source text to create and/or initialize a single
+ * binding (property or internal slot) of the object.
+ * 
+ * @param {!Dumper} dumper Dumper to which this ObjectInfo belongs.
+ * @param {string} key The property to dump.
+ * @param {Do} todo How much to do.  Must be >= Do.DECL; > Do.SET ignored.
+ * @param {!Selector} ref Selector refering to this object.
+ * @return {string} An eval-able program to initialise the specified binding.
+ */
+ObjectInfo.prototype.dumpProperty_ = function(dumper, key, todo, ref) {
+  var done = this.getDone(key);
+  // TODO(cpcallen): don't recreate a Selector that our caller^3 already has?
+  var sel = new Selector(ref);
+  sel.push(key);
+  if (todo === Do.DECL && done < Do.DECL) {
+    this.setDone(key, Do.DECL);
+    return sel.toExpr() + ' = undefined;\n';
+  } else if (todo >= Do.SET && done < Do.SET) {
+    this.setDone(key, Do.SET);
+    return sel.toExpr() + ' = ' + dumper.toExpr(this.obj.properties[key], sel) +
+        ';\n';
+  } else {
+    return '';
+  }
+};
+
+/**
+ * Generate JS source text to set the object's prototype.
+ * 
+ * @param {!Dumper} dumper Dumper to which this ObjectInfo belongs.
+ * @param {Do} todo How much to do.  Must be >= Do.DECL; > Do.SET ignored.
+ * @param {!Selector} ref Selector refering to this object.
+ * @return {string} An eval-able program to initialise the specified binding.
+ */
+ObjectInfo.prototype.dumpPrototype_ = function(dumper, todo, ref) {
+  if (todo >= Do.SET && this.doneProto < Do.SET) {
+    this.doneProto = Do.SET;
+    return 'Object.setPrototypeOf(' + ref.toExpr() + ', ' +
+        dumper.toExpr(this.obj.proto) + ');\n';
+  } else {
+    return '';
+  }
+};
+
+/**
  * Return the current 'done' status of a property.
  * @param {string} key The property key to get status for.
  * @return {Do} The done status of the binding.
@@ -612,8 +711,9 @@ ObjectInfo.prototype.getDone = function(key) {
 ObjectInfo.prototype.setDone = function(key, done) {
   var status = this.todo_[key];
   if (done === Do.DECL) {
-    if (status !== true) {
-      throw new RangeError('Property already created??');
+    // TODO(cpcallen): fix this conditional (at least for line length!) before submitting.
+    if (status !== true && (typeof status !== 'object' || status.value !== false)) {
+      throw new RangeError('Property ' + key + ' already created??');
     }
     // TODO(cpcallen): also include attributes.
     this.todo_[key] = {value: false};
