@@ -97,25 +97,7 @@ Dumper.prototype.dumpBinding = function(selector, todo) {
     var value = this.getValueForSelector(selector);
   }
 
-  if (selector.isVar()) {
-    // Do declaration and/or initialisation.
-    if (doDecl || doInit) {
-      // Begin with var if declaring a variable.
-      if (doDecl && selector.isVar()) output.push('var ');
-      if (doInit) {
-        output.push(selector.toSetExpr(this.toExpr(value, selector)));
-      } else if (doDecl) {
-        if (selector.isVar()) {
-          output.push(selector.toExpr());
-        } else {  // Can't "declare" a property, but can make sure it exists.
-          output.push(selector.toSetExpr('undefined'));
-        }
-      }
-      output.push(';\n');
-    }
-  } else {
-    output.push(binding.dumpBinding(this, todo));
-  }    
+  output.push(binding.dumpBinding(this, todo));
 
   if (!doRecurse || !(value instanceof this.intrp.Object)) {
     // No recursion requested/possible.
@@ -551,7 +533,24 @@ var ScopeInfo = function(scope) {
  * @return {string} An eval-able program to initialise the specified variable.
  */
 ScopeInfo.prototype.dumpBinding = function(dumper, part, todo, ref) {
-  throw new Error('Not implemented');
+  if (dumper.scope !== this.scope) {
+    throw new Error("Can't create binding other than in current scope");
+  } else if (typeof part !== 'string') {
+    throw new TypeError('Invalid part (not a variable name)');
+  }
+  var done = this.getDone(part);
+  if (todo === Do.DECL && done < Do.DECL) {
+    this.setDone(part, Do.DECL);
+    return 'var ' + part + ';\n';
+  } else if (todo >= Do.SET && done < Do.SET) {
+    this.setDone(part, Do.SET);
+    // TODO(cpcallen): don't recreate a Selector that our caller^3 already has?
+    var sel = new Selector([part]);
+    return (done < Do.DECL ? 'var ' : '') + part + ' = ' +
+        dumper.toExpr(this.scope.get(part), sel) + ';\n';
+  } else {
+    return '';
+  }
 };
 
 /**
