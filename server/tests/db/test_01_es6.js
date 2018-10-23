@@ -310,7 +310,7 @@ tests.NumberIsNaN = function() {
 tests.NumberIsInteger = function() {
   console.assert(Number.isInteger(-17), 'Number.isInteger -17');
   console.assert(Number.isInteger(Math.pow(2, 64)), 'Number.isInteger 2**64');
-  console.assert(-Number.isInteger(Math.pow(2, 64)), 'Number.isInteger -2**64');
+  console.assert(Number.isInteger(-Math.pow(2, 64)), 'Number.isInteger -2**64');
   console.assert(!Number.isInteger(NaN), 'Number.isInteger NaN');
   console.assert(!Number.isInteger(Infinity), 'Number.isInteger Infinity');
   console.assert(!Number.isInteger('3'), 'Number.isInteger "3"');
