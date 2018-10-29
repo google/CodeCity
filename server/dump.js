@@ -98,16 +98,12 @@ Dumper.prototype.dumpBinding = function(selector, todo) {
     }
     info = this.getObjectInfo(obj);
   }
-
   var part = selector[selector.length - 1];
   var done = info.getDone(part);
-  var doDecl = (todo >= Do.DECL && done < Do.DECL);
-  var doInit = (todo >= Do.SET && done < Do.SET);
-  var doRecurse = (todo >= Do.RECURSE && done < Do.RECURSE);
 
   output.push(info.dumpBinding(this, part, todo));
 
-  if (doRecurse) {
+  if (todo >= Do.RECURSE && done < Do.RECURSE) {
     // Record what we're about to do, to avoid infinite recursion.
     //
     // TODO(cpcallen): We should probably record some intermediate
