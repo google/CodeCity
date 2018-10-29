@@ -244,15 +244,15 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     ['f2.name', Do.SET],
     ['f2.prototype', Do.DECL, 'Object.prototype'],
     ['f2.f3^', Do.SET],
-    ['f2.f3.length', Do.SET],
+    ['f2.f3.length', Do.RECURSE],
     // TODO(cpcallen): enable this once code is correct.
     // ['f2.f3.name', Do.UNSTARTED],  // N.B.: not implicitly set.
     ['f2.f3.prototype', Do.RECURSE, 'obj'],
 
     ['arr^', Do.SET],
-    ['arr.length', Do.SET],
+    ['arr.length', Do.RECURSE],
     ['sparse^', Do.DECL, 'arr'],  // BUG(cpcallen): should be Do.SET.
-    ['sparse.length', Do.SET],
+    ['sparse.length', Do.RECURSE],
 
     ['date^', Do.SET],
 

@@ -105,14 +105,9 @@ Dumper.prototype.dumpBinding = function(selector, todo) {
   var doInit = (todo >= Do.SET && done < Do.SET);
   var doRecurse = (todo >= Do.RECURSE && done < Do.RECURSE);
 
-  // Get value for initialiser and/or recursion.
-  if (doInit || doRecurse) {
-    var value = this.getValueForSelector(selector);
-  }
-
   output.push(info.dumpBinding(this, part, todo));
 
-  if (doRecurse && value instanceof this.intrp.Object) {
+  if (doRecurse) {
     // Record what we're about to do, to avoid infinite recursion.
     //
     // TODO(cpcallen): We should probably record some intermediate
@@ -121,16 +116,19 @@ Dumper.prototype.dumpBinding = function(selector, todo) {
     // below a no-op.
     info.setDone(part, todo);
 
-    var oi = this.getObjectInfo(value);
-    var root = this.intrp.ROOT;
-    var keys = value.ownKeys(root);
-    var subselector = new Selector(selector);
-    for (var i = 0; i < keys.length; i++) {
-      var key = keys[i];
-      if (oi.getDone(key) >= todo) continue;  // Skip already-done properties.
-      subselector.push(key);
-      output.push(this.dumpBinding(subselector, todo));
-      subselector.pop();
+    var value = this.getValueForSelector(selector);
+    if (value instanceof this.intrp.Object) {
+      var oi = this.getObjectInfo(value);
+      var root = this.intrp.ROOT;
+      var keys = value.ownKeys(root);
+      var subselector = new Selector(selector);
+      for (var i = 0; i < keys.length; i++) {
+        var key = keys[i];
+        if (oi.getDone(key) >= todo) continue;  // Skip already-done properties.
+        subselector.push(key);
+        output.push(this.dumpBinding(subselector, todo));
+        subselector.pop();
+      }
     }
     // Record completion.
     info.setDone(part, todo);
