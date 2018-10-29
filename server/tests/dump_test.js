@@ -35,7 +35,7 @@ const {T} = require('./testing');
 const util = require('util');
 
 // Unpack test-only exports from dump:
-const {Dumper, BindingInfo} = testOnly;
+const {Dumper} = testOnly;
 
 /** A very simle Dumper config specification, for testing. */
 const simpleSpec = [{filename: 'all', rest: true}];
@@ -217,9 +217,9 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     t.expect(util.format('Dumper.p.dumpBinding(<%s>, %o)', s, tc[1]),
              code, tc[2]);
     // Check work recorded.
-    const binding = new BindingInfo(dumper, s);
+    const info  = dumper.getInfoForSelector(s);
     t.expect(util.format('Binding status of <%s>', s),
-        binding.getDone(), tc[1]);
+        info.getDone(s[s.length - 1]), tc[1]);
   }
 
   // Check status of (some of the) additional bindings that will be
@@ -266,9 +266,9 @@ exports.testDumperPrototypeDumpBinding = function(t) {
   ];
   for (const tc of implicit) {
     const s = new Selector(tc[0]);
-    const binding = new BindingInfo(dumper, s);
-    t.expect(util.format('Binding status of %s', s),
-             binding.getDone(), tc[1]);
+    const info  = dumper.getInfoForSelector(s);
+    t.expect(util.format('Binding status of <%s>', s),
+        info.getDone(s[s.length - 1]), tc[1]);
     if (tc[2]) {
       const value = dumper.getValueForSelector(s);
       const valueInfo = dumper.getObjectInfo(value);

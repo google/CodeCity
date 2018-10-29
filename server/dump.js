@@ -85,9 +85,22 @@ var Dumper = function(intrp, spec) {
  */
 Dumper.prototype.dumpBinding = function(selector, todo) {
   var output = [];
-  var binding = new BindingInfo(this, selector);
 
-  var done = binding.getDone();
+  if (selector.isVar()) {
+    var ref = undefined;
+    var info = this.getScopeInfo(this.scope);
+  } else {
+    ref = new Selector(selector);
+    ref.pop();
+    var obj = this.getValueForSelector(ref);
+    if (!(obj instanceof this.intrp.Object)) {
+      throw new TypeError("Can't set properties of primitive");
+    }
+    info = this.getObjectInfo(obj);
+  }
+
+  var part = selector[selector.length - 1];
+  var done = info.getDone(part);
   var doDecl = (todo >= Do.DECL && done < Do.DECL);
   var doInit = (todo >= Do.SET && done < Do.SET);
   var doRecurse = (todo >= Do.RECURSE && done < Do.RECURSE);
@@ -97,7 +110,7 @@ Dumper.prototype.dumpBinding = function(selector, todo) {
     var value = this.getValueForSelector(selector);
   }
 
-  output.push(binding.dumpBinding(this, todo));
+  output.push(info.dumpBinding(this, part, todo));
 
   if (doRecurse && value instanceof this.intrp.Object) {
     // Record what we're about to do, to avoid infinite recursion.
@@ -106,7 +119,7 @@ Dumper.prototype.dumpBinding = function(selector, todo) {
     // state: enough to stop further recursive calls, but not indicating
     // final completion.  At the moment this makes the setDone call
     // below a no-op.
-    binding.setDone(todo);
+    info.setDone(part, todo);
 
     var oi = this.getObjectInfo(value);
     var root = this.intrp.ROOT;
@@ -120,7 +133,7 @@ Dumper.prototype.dumpBinding = function(selector, todo) {
       subselector.pop();
     }
     // Record completion.
-    binding.setDone(todo);
+    info.setDone(part, todo);
   }
 
   return output.join('');
@@ -358,6 +371,26 @@ Dumper.prototype.regExpToExpr = function(re, info) {
 };
 
 /**
+ * Get ObjectInfo or ScopeInfo of the parent scope/object for the
+ * given selector.
+ * @param {!Selector} selector A selector for the binding in question.
+ * @return {!ObjectInfo|!ScopeInfo};
+ */
+Dumper.prototype.getInfoForSelector = function(selector) {
+  if (selector.isVar()) {
+    return this.getScopeInfo(this.scope);
+  } else {
+    var ref = new Selector(selector);
+    ref.pop();
+    var obj = this.getValueForSelector(ref);
+    if (!(obj instanceof this.intrp.Object)) {
+      throw new TypeError("Can't get info for primitive");
+    }
+    return this.getObjectInfo(obj);
+  }
+};
+
+/**
  * Get interned ScopeInfo for sope.
  * @param {!Interpreter.Scope} scope The scope to get info for.
  * @return {!ScopeInfo} The ScopeInfo for scope.
@@ -430,66 +463,6 @@ Dumper.prototype.isShadowed = function(name, scope) {
     if (s.hasBinding(name)) return true;
   }
   return false;
-};
-
-///////////////////////////////////////////////////////////////////////////////
-// Data types used to track progress of a Dumper's dump.
-
-/**
- * Dump-state information for a single binding.  Encapsulates the
- * ObjectInfo or ScopeInfo of the parent scope/object plus the final
- * selector part.
- * @constructor
- * @param {!Dumper} dumper Dumper to which this BindingInfo belongs.
- * @param {!Selector} selector A selector for the binding in question.
- * @param {!Interpreter.Scope=} scope Scope which selector is relative
- *     to.  Defaults to global scope.
- */
-var BindingInfo = function(dumper, selector, scope) {
-  if (!scope) scope = dumper.intrp.global;
-  if (selector.isVar()) {
-    /** @type {!ScopeInfo|!ObjectInfo} */
-    this.info = dumper.getScopeInfo(dumper.scope);
-  } else {
-    var objSel = new Selector(selector);
-    objSel.pop();
-    var obj = dumper.getValueForSelector(objSel);
-    if (!(obj instanceof dumper.intrp.Object)) {
-      throw Error("Can't set properties of primitive");
-    }
-    this.info = dumper.getObjectInfo(obj);
-  }
-  /** @type {Selector.Part} Final part of selector. */
-  this.lastPart = selector[selector.length - 1];
-};
-
-/**
- * Generate JS source text to create and/or initialize a single
- * binding (variable, property, prototype or internal slot).
- * 
- * @param {!Dumper} dumper Dumper to which this BindingInfo belongs.
- * @param {Do} todo How much to do.  Must be >= Do.DECL; > Do.SET ignored.
- * @return {string} An eval-able program to initialise the specified binding.
- */
-BindingInfo.prototype.dumpBinding = function(dumper, todo) {
-  return this.info.dumpBinding(dumper, this.lastPart, todo);
-};
-
-/**
- * Return the current 'done' status of the binding.
- * @return {Do} The done status of the binding.
- */
-BindingInfo.prototype.getDone = function() {
-  return this.info.getDone(this.lastPart);
-};
-
-/**
- * Update the current 'done' status of the binding to be at least the
- * specified done value.  Will never un-do a previous done state.
- * @param {Do} done The new minimum done status of the binding.
- */
-BindingInfo.prototype.setDone = function(done) {
-  this.info.setDone(this.lastPart, done);
 };
 
 /**
@@ -940,5 +913,4 @@ exports.dump = dump;
 // For unit testing only!
 exports.testOnly = {
   Dumper: Dumper,
-  BindingInfo: BindingInfo,
 }
