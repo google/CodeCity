@@ -99,10 +99,7 @@ Dumper.prototype.dumpBinding = function(selector, todo) {
 
   output.push(binding.dumpBinding(this, todo));
 
-  if (!doRecurse || !(value instanceof this.intrp.Object)) {
-    // No recursion requested/possible.
-    binding.setDone(/** @type {Do} */(Math.min(todo, Do.SET)));
-  } else {
+  if (doRecurse && value instanceof this.intrp.Object) {
     // Record what we're about to do, to avoid infinite recursion.
     //
     // TODO(cpcallen): We should probably record some intermediate
@@ -483,13 +480,7 @@ BindingInfo.prototype.dumpBinding = function(dumper, todo) {
  * @return {Do} The done status of the binding.
  */
 BindingInfo.prototype.getDone = function() {
-  if (this.lastPart === Selector.PROTOTYPE) {
-    return this.info.doneProto;
-  } else if (typeof this.lastPart === 'string') {
-    return this.info.getDone(this.lastPart);
-  } else {
-    throw new Error('Not implemented');
-  }
+  return this.info.getDone(this.lastPart);
 };
 
 /**
@@ -498,14 +489,7 @@ BindingInfo.prototype.getDone = function() {
  * @param {Do} done The new minimum done status of the binding.
  */
 BindingInfo.prototype.setDone = function(done) {
-  var d = /** @type{Do} */(Math.max(this.getDone(), done));
-  if (this.lastPart === Selector.PROTOTYPE) {
-    this.info.doneProto = d;
-  } else if (typeof this.lastPart === 'string') {
-    this.info.setDone(this.lastPart, done);
-  } else {
-    throw new Error('Not implemented');
-  }
+  this.info.setDone(this.lastPart, done);
 };
 
 /**
@@ -555,24 +539,29 @@ ScopeInfo.prototype.dumpBinding = function(dumper, part, todo, ref) {
 
 /**
  * Return the current 'done' status of a variable binding.
- * @param {string} name The variable get status for.
+ * @param {!Selector.Part} part The part get status for.  Must be simple string.
  * @return {Do} The done status of the binding.
  */
-ScopeInfo.prototype.getDone = function(name) {
-  return this.done_[name] || Do.UNSTARTED;
+ScopeInfo.prototype.getDone = function(part) {
+  if (typeof part !== 'string') {
+    throw new TypeError('Invalid part (not a variable name)');
+  }
+  return this.done_[part] || Do.UNSTARTED;
 };
 
 /**
  * Update the current 'done' status of a variable binding.  Will throw
  * a RangeError if caller attempts to un-do a previously-done action.
- * @param {string} name The variable get status for.
- * @param {Do} done The new minimum done status of the binding.
+ * @param {!Selector.Part} part The part set status for.  Must be simple string.
+ * @param {Do} done The new done status of the binding.
  */
-ScopeInfo.prototype.setDone = function(name, done) {
- if (done < this.getDone(name)) {
+ScopeInfo.prototype.setDone = function(part, done) {
+  if (typeof part !== 'string') {
+    throw new TypeError('Invalid part (not a variable name)');
+  } else if (done < this.getDone(part)) {
     throw new RangeError('Undoing previous variable binding??');
   }
-  this.done_[name] = done;
+  this.done_[part] = done;
 };
 
 /**
@@ -616,7 +605,7 @@ var ObjectInfo = function(dumper, obj) {
  * binding (property or internal slot) of the object.
  * 
  * @param {!Dumper} dumper Dumper to which this ObjectInfo belongs.
- * @param {!Selector.Part} part The part to dump.
+ * @param {!Selector.Part} part The binding part to dump.
  * @param {Do} todo How much to do.  Must be >= Do.DECL; > Do.SET ignored.
  * @param {!Selector=} ref Selector refering to this object.
  *     Optional; defaults to whatever selector was used to create the
@@ -681,22 +670,28 @@ ObjectInfo.prototype.dumpPrototype_ = function(dumper, todo, ref) {
 };
 
 /**
- * Return the current 'done' status of a property.
- * @param {string} key The property key to get status for.
+ * Return the current 'done' status of an object binding.
+ * @param {!Selector.Part} part The part to get status for.
  * @return {Do} The done status of the binding.
  */
-ObjectInfo.prototype.getDone = function(key) {
-  var status = this.todo_[key];
-  if (status === true) {
-    return Do.UNSTARTED;
-  } else if(status && !status.value) {
-    return Do.DECL;
-  } else if(status && status.value || status === false) {
-    return Do.SET;
-  } else if(status === undefined) {
-    return Do.RECURSE;
+ObjectInfo.prototype.getDone = function(part) {
+  if (part === Selector.PROTOTYPE) {
+    return this.doneProto;
+  } else if (typeof part === 'string') {
+    var status = this.todo_[part];
+    if (status === true) {
+      return Do.UNSTARTED;
+    } else if(status && !status.value) {
+      return Do.DECL;
+    } else if(status && status.value || status === false) {
+      return Do.SET;
+    } else if(status === undefined) {
+      return Do.RECURSE;
+    } else {
+      throw new Error('Corrupt .todo_ status??');
+    }
   } else {
-    throw new Error('Corrupt .todo_ status??');
+    throw new TypeError('Invalid part');
   }
 };
 
@@ -704,30 +699,39 @@ ObjectInfo.prototype.getDone = function(key) {
  * Update the current 'done' status of a property.  Will throw a
  * RangeError if caller attempts to un-do or re-do a previously-done
  * action.
- * @param {string} key The property key to set status for.
- * @param {Do} done The new minimum done status of the binding.
+ * @param {!Selector.Part} part The part to set status for.
+ * @param {Do} done The new done status of the binding.
  */
-ObjectInfo.prototype.setDone = function(key, done) {
-  var status = this.todo_[key];
-  if (done === Do.DECL) {
-    // TODO(cpcallen): fix this conditional (at least for line length!) before submitting.
-    if (status !== true && (typeof status !== 'object' || status.value !== false)) {
-      throw new RangeError('Property ' + key + ' already created??');
+ObjectInfo.prototype.setDone = function(part, done) {
+  if (part === Selector.PROTOTYPE) {
+    if (done <= this.doneProto) {
+      throw new RangeError('Prototype already done??');
     }
-    // TODO(cpcallen): also include attributes.
-    this.todo_[key] = {value: false};
-  } else if (done === Do.SET) {
-    if (status && status.value) {
-      throw new RangeError('Property already set??');
+    this.doneProto = done;
+  } else if (typeof part === 'string') {
+    var status = this.todo_[part];
+    if (done === Do.DECL) {
+      if (status !== true &&
+          (typeof status !== 'object' || status.value !== false)) {
+        throw new RangeError('Property ' + part + ' already created??');
+      }
+      // TODO(cpcallen): also include attributes.
+      this.todo_[part] = {value: false};
+    } else if (done === Do.SET) {
+      if (status && status.value) {
+        throw new RangeError('Property already set??');
+      }
+      this.todo_[part] = false;
+    } else if (done === Do.RECURSE) {
+      if (status && status.value) {
+        throw new RangeError('Recursion already complete??');
+      }
+      delete this.todo_[part];
+    } else {
+      throw new Error('Not implemented');
     }
-    this.todo_[key] = false;
-  } else if (done === Do.RECURSE) {
-    if (status && status.value) {
-      throw new RangeError('Recursion already complete??');
-    }
-    delete this.todo_[key];
   } else {
-    throw new Error('Not implemented');
+    throw new TypeError('Invalid part');
   }
 };
 
