@@ -33,30 +33,27 @@ const Serializer = require('./serialize');
 var CodeCity = {};
 CodeCity.databaseDirectory = '';
 CodeCity.interpreter = null;
+CodeCity.config = null;
 
 /**
  * Start a running instance of Code City.  May be called on a command line.
- * @param {string=} opt_databaseDirectory Directory containing either a .city
- * database or startup files.  If not present, look for the directory
- * as a command line parameter.
+ * @param {string=} opt_configFile Path and filename of configuration file.
+ * If not present, look for the configuration file as a command line parameter.
  */
-CodeCity.startup = function(opt_databaseDirectory) {
-  // process.argv is a list containing: ['node', 'codecity.js', 'databaseDir']
-  CodeCity.databaseDirectory = opt_databaseDirectory || process.argv[2];
-
-  // Check that the directory was specified and exists.
-  try {
-    var files = fs.readdirSync(CodeCity.databaseDirectory);
-  } catch (e) {
+CodeCity.startup = function(opt_configFile) {
+  // process.argv is a list containing: ['node', 'codecity.js', 'db/google.cfg']
+  const configFile = opt_configFile || process.argv[2];
+  if (!configFile) {
     console.error('Database directory not found.\n' +
         'Usage: node %s <DB directory>', process.argv[1]);
-    if (CodeCity.databaseDirectory) {
-      console.info(e);
-    }
     process.exit(1);
   }
+  var contents = CodeCity.loadFile(configFile);
+  CodeCity.config = CodeCity.parseJson(contents);
 
   // Find the most recent database file.
+  CodeCity.databaseDirectory = path.dirname(configFile);
+  var files = fs.readdirSync(CodeCity.databaseDirectory);
   files.sort();
   for (var i = files.length - 1; i >= 0; i--) {
     if (files[i].match(
@@ -94,15 +91,7 @@ CodeCity.startup = function(opt_databaseDirectory) {
   } else {
     var filename = path.join(CodeCity.databaseDirectory, files[i]);
     var contents = CodeCity.loadFile(filename);
-
-    // Convert from text to JSON.
-    try {
-      contents = JSON.parse(contents);
-    } catch (e) {
-      console.error('Syntax error in parsing JSON: %s', filename);
-      console.info(e);
-      process.exit(1);
-    }
+    contents = CodeCity.parseJson(contents);
 
     Serializer.deserialize(contents, CodeCity.interpreter);
     console.log('Database loaded: %s', filename);
@@ -110,7 +99,10 @@ CodeCity.startup = function(opt_databaseDirectory) {
 
   // Checkpoint at regular intervals.
   // TODO: Let the interval be configurable from the database.
-  setInterval(CodeCity.checkpoint, 600 * 1000);
+  var interval = CodeCity.config.checkpointInterval || 600;
+  if (interval > 0) {
+    setInterval(CodeCity.checkpoint, interval * 1000);
+  }
 
   console.log('Load complete.  Starting Code City.');
   CodeCity.interpreter.start();
@@ -126,7 +118,23 @@ CodeCity.loadFile = function(filename) {
   try {
     return fs.readFileSync(filename, 'utf8').toString();
   } catch (e) {
-    console.error('Unable to open file: %s\nCheck permissions.', filename);
+    console.error('Unable to open file: %s', filename);
+    console.info(e);
+    process.exit(1);
+  }
+};
+
+/**
+ * Parse text as JSON value.  Die if there's an error.
+ * @param {string} text
+ * @return {*} JSON value.
+ */
+CodeCity.parseJson = function(text) {
+  // Convert from text to JSON.
+  try {
+    return JSON.parse(text);
+  } catch (e) {
+    console.error('Syntax error in parsing JSON: %s', filename);
     console.info(e);
     process.exit(1);
   }
