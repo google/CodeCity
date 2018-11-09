@@ -187,7 +187,9 @@ CodeCity.checkpoint = function(sync) {
  * @param {string|number=} code Exit code or signal.
  */
 CodeCity.shutdown = function(code) {
-  CodeCity.checkpoint(true);
+  if (CodeCity.config.checkpointAtShutdown !== false) {
+    CodeCity.checkpoint(true);
+  }
   if (typeof code === 'string') {
     process.kill(process.pid, code);
   } else {

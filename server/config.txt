@@ -1,0 +1,11 @@
+Documentation for config file options:
+
+  "checkpointInterval": number
+    Number of seconds between regular checkpoints.
+    If 0, then no regular checkpoints.
+    Defaults to 600 (10 minutes).
+
+  "checkpointAtShutdown": boolean
+    If true, save a checkpoint when the server shuts down.
+    If false, don't save a checkpoint, which results in lost data.
+    Defaults to true.
