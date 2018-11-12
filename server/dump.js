@@ -84,8 +84,6 @@ var Dumper = function(intrp, spec) {
  * @return {string} An eval-able program to initialise the specified binding.
  */
 Dumper.prototype.dumpBinding = function(selector, todo) {
-  var output = [];
-
   if (selector.isVar()) {
     var ref = undefined;
     var info = this.getScopeInfo(this.scope);
@@ -99,38 +97,7 @@ Dumper.prototype.dumpBinding = function(selector, todo) {
     info = this.getObjectInfo(obj);
   }
   var part = selector[selector.length - 1];
-  var done = info.getDone(part);
-
-  output.push(info.dumpBinding(this, part, todo));
-
-  if (todo >= Do.RECURSE && done < Do.RECURSE) {
-    // Record what we're about to do, to avoid infinite recursion.
-    //
-    // TODO(cpcallen): We should probably record some intermediate
-    // state: enough to stop further recursive calls, but not indicating
-    // final completion.  At the moment this makes the setDone call
-    // below a no-op.
-    info.setDone(part, todo);
-
-    var value = this.getValueForSelector(selector);
-    if (value instanceof this.intrp.Object) {
-      var oi = this.getObjectInfo(value);
-      var root = this.intrp.ROOT;
-      var keys = value.ownKeys(root);
-      var subselector = new Selector(selector);
-      for (var i = 0; i < keys.length; i++) {
-        var key = keys[i];
-        if (oi.getDone(key) >= todo) continue;  // Skip already-done properties.
-        subselector.push(key);
-        output.push(this.dumpBinding(subselector, todo));
-        subselector.pop();
-      }
-    }
-    // Record completion.
-    info.setDone(part, todo);
-  }
-
-  return output.join('');
+  return info.dumpBinding(this, part, todo);
 };
 
 /**
@@ -489,19 +456,31 @@ ScopeInfo.prototype.dumpBinding = function(dumper, part, todo, ref) {
   } else if (typeof part !== 'string') {
     throw new TypeError('Invalid part (not a variable name)');
   }
+  // TODO(cpcallen): don't recreate a Selector that our caller^3 already has?
+  var sel = new Selector([part]);
   var done = this.getDone(part);
-  if (todo === Do.DECL && done < Do.DECL) {
-    this.setDone(part, Do.DECL);
-    return 'var ' + part + ';\n';
-  } else if (todo >= Do.SET && done < Do.SET) {
-    this.setDone(part, Do.SET);
-    // TODO(cpcallen): don't recreate a Selector that our caller^3 already has?
-    var sel = new Selector([part]);
-    return (done < Do.DECL ? 'var ' : '') + part + ' = ' +
-        dumper.toExpr(this.scope.get(part), sel) + ';\n';
-  } else {
-    return '';
+  var value = this.scope.get(part);
+  var output = [];
+
+  if (todo >= Do.DECL && done < todo) {
+    if (done < Do.DECL) output.push('var ');
+    if (done < Do.SET) {
+      output.push(part);
+      if (todo >= Do.SET) {
+        output.push(' = ', dumper.toExpr(value, sel));
+      }
+      output.push(';\n');
+    }
   }
+  if (todo >= Do.RECURSE && done < Do.RECURSE) {
+    if (value instanceof dumper.intrp.Object) {
+      var vi = dumper.getObjectInfo(value);
+      output.push(vi.dumpRecursively(dumper, sel));
+    }
+  }
+  // Record completion.
+  this.setDone(part, todo);
+  return output.join('');
 };
 
 /**
@@ -568,6 +547,34 @@ var ObjectInfo = function(dumper, obj) {
 };
 
 /**
+ * Recursively dumps all bindings of the object (and objects reachable
+ * via it).
+ * 
+ * @param {!Dumper} dumper Dumper to which this ObjectInfo belongs.
+ * @param {!Selector=} ref Selector refering to this object.
+ *     Optional; defaults to whatever selector was used to create the
+ *     object.
+ * @return {string} An eval-able program to initialise the specified binding.
+ */
+ObjectInfo.prototype.dumpRecursively = function(dumper, ref) {
+  if (!this.ref) throw new Error("Can't dump an uncreated object");
+  if (!ref) ref = this.ref;
+
+  var output = [];
+  var root = dumper.intrp.ROOT;
+  var keys = this.obj.ownKeys(root);
+  var subselector = new Selector(ref);
+  for (var i = 0; i < keys.length; i++) {
+    var key = keys[i];
+    if (this.getDone(key) >= Do.RECURSE) continue;  // Skip already-done.
+    subselector.push(key);
+    output.push(dumper.dumpBinding(subselector, Do.RECURSE));
+    subselector.pop();
+  }
+  return output.join('');
+};
+
+/**
  * Generate JS source text to create and/or initialize a single
  * binding (property or internal slot) of the object.
  * 
@@ -595,6 +602,7 @@ ObjectInfo.prototype.dumpBinding = function(dumper, part, todo, ref) {
  * Generate JS source text to create and/or initialize a single
  * binding (property or internal slot) of the object.
  * 
+ * @private
  * @param {!Dumper} dumper Dumper to which this ObjectInfo belongs.
  * @param {string} key The property to dump.
  * @param {Do} todo How much to do.  Must be >= Do.DECL; > Do.SET ignored.
@@ -602,17 +610,43 @@ ObjectInfo.prototype.dumpBinding = function(dumper, part, todo, ref) {
  * @return {string} An eval-able program to initialise the specified binding.
  */
 ObjectInfo.prototype.dumpProperty_ = function(dumper, key, todo, ref) {
-  var done = this.getDone(key);
   // TODO(cpcallen): don't recreate a Selector that our caller^3 already has?
   var sel = new Selector(ref);
   sel.push(key);
+  var done = this.getDone(key);
+  var value = this.obj.get(key, dumper.intrp.ROOT);
+  var output = [];
+
   if (todo === Do.DECL && done < Do.DECL) {
-    this.setDone(key, Do.DECL);
-    return sel.toExpr() + ' = undefined;\n';
+    output.push(sel.toExpr(), ' = undefined;\n');
   } else if (todo >= Do.SET && done < Do.SET) {
-    this.setDone(key, Do.SET);
-    return sel.toExpr() + ' = ' + dumper.toExpr(this.obj.properties[key], sel) +
-        ';\n';
+    output.push(sel.toExpr(), ' = ', dumper.toExpr(value, sel), ';\n');
+  }
+  output.push(this.checkRecurse_(dumper, todo, ref, key, value));
+  // Record completion.
+  this.setDone(key, todo);
+  return output.join('');
+};
+
+/**
+ * Generate JS source text to set the object's prototype.
+ * 
+ * @private
+ * @param {!Dumper} dumper Dumper to which this ObjectInfo belongs.
+ * @param {Do} todo How much to do.  Must be >= Do.DECL; > Do.SET ignored.
+ * @param {!Selector} ref Selector refering to this object.
+ * @return {string} An eval-able program to initialise the specified binding.
+ */
+ObjectInfo.prototype.dumpPrototype_ = function(dumper, todo, ref) {
+  if (todo >= Do.SET && this.doneProto < Do.SET) {
+    var output = [];
+    var value = this.obj.proto;
+    output.push('Object.setPrototypeOf(', ref.toExpr(), ', ',
+                dumper.toExpr(value), ');\n');
+    this.doneProto = Do.SET;
+    output.push(
+        this.checkRecurse_(dumper, todo, ref, Selector.PROTOTYPE, value));
+    return output.join('');
   } else {
     return '';
   }
@@ -621,19 +655,38 @@ ObjectInfo.prototype.dumpProperty_ = function(dumper, key, todo, ref) {
 /**
  * Generate JS source text to set the object's prototype.
  * 
+ * @private
  * @param {!Dumper} dumper Dumper to which this ObjectInfo belongs.
- * @param {Do} todo How much to do.  Must be >= Do.DECL; > Do.SET ignored.
+ * @param {Do} todo How much to do.  '' returned if todo < Do.RECURSE.
  * @param {!Selector} ref Selector refering to this object.
+ * @param {!Selector.Part} part The binding part that has been dumped
+ *     and which might need to be recursed into.
+ * @param {Interpreter.Value} value The value of the specified part.
+ *     '' returned if value not an Interpreter.prototype.Object.
  * @return {string} An eval-able program to initialise the specified binding.
  */
-ObjectInfo.prototype.dumpPrototype_ = function(dumper, todo, ref) {
-  if (todo >= Do.SET && this.doneProto < Do.SET) {
-    this.doneProto = Do.SET;
-    return 'Object.setPrototypeOf(' + ref.toExpr() + ', ' +
-        dumper.toExpr(this.obj.proto) + ');\n';
-  } else {
-    return '';
+ObjectInfo.prototype.checkRecurse_ = function(dumper, todo, ref, part, value) {
+  var output = [];
+  if (todo >= Do.RECURSE) {
+    // Record what we're about to do, to avoid infinite recursion.
+    //
+    // TODO(cpcallen): We should probably record some intermediate
+    // state: enough to stop further recursive calls, but not indicating
+    // final completion.  At the moment this makes the setDone call
+    // below a no-op.
+
+    this.setDone(part, todo);
+    if (value instanceof dumper.intrp.Object) {
+      var sel = new Selector(ref);
+      sel.push(part);
+      var vi = dumper.getObjectInfo(value);
+      output.push(vi.dumpRecursively(dumper, sel));
+    }
+    // Record completion.
+    this.setDone(part, todo);
+
   }
+  return output.join('');
 };
 
 /**

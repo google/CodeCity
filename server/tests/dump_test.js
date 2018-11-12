@@ -218,7 +218,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
              code, tc[2]);
     // Check work recorded.
     const info  = dumper.getInfoForSelector(s);
-    t.expect(util.format('Binding status of <%s>', s),
+    t.expect(util.format('Binding status of <%s> === %d', s, tc[1]),
         info.getDone(s[s.length - 1]), tc[1]);
   }
 
@@ -267,7 +267,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
   for (const tc of implicit) {
     const s = new Selector(tc[0]);
     const info  = dumper.getInfoForSelector(s);
-    t.expect(util.format('Binding status of <%s>', s),
+    t.expect(util.format('Binding status of <%s> === %d', s, tc[1]),
         info.getDone(s[s.length - 1]), tc[1]);
     if (tc[2]) {
       const value = dumper.getValueForSelector(s);
