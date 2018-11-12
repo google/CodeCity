@@ -9,3 +9,15 @@ Documentation for config file options:
     If true, save a checkpoint when the server shuts down.
     If false, don't save a checkpoint, which results in lost data.
     Defaults to true.
+
+  "checkpointMinFiles": number
+    Minimum number of checkpoint files in a directory.  While there are
+    fewer than this number, then no checkpoints will be deleted.
+    Defaults to 0.
+
+  "checkpointMaxDirectorySize": number
+    Maximum number of megabytes allowed for checkpoints in checkpoint
+    directory.  If this value is exceeded and checkpointMinFiles is also
+    satisfied, then one or more old checkpoints will be deleted to make
+    room for the next checkpoint.
+    Defaults to Infinity.
