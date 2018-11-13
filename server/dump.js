@@ -541,26 +541,8 @@ var ObjectInfo = function(dumper, obj) {
   this.obj = obj;
   /** @type {!Selector|undefined} Reference to this object, once created. */
   this.ref = undefined;
-  /**
-   * Map of property name -> dump status, where:
-   *
-   * - .todo[p] === true means the property p has not yet been created.
-   * - .todo[p] === { ...property descriptor... } means the property p
-   *   has been created, and these are the present values of of the
-   *   property attributes, except that todo[p].value === true iff the
-   *   value has been set.
-   * - .todo[p] === false means that all work on property p has been
-   *   completed, but not recursively on the properties of obj.p.
-   * - .todo[p] deleted meands all work has been done on property p
-   *   and its properties (if any).
-   *
-   * @private @const {!Object<string, (boolean|!Object<string, boolean>)>}
-   */
-  this.todo_ = Object.create(null);
-  var keys = obj.ownKeys(dumper.intrp.ROOT);
-  for (var i = 0; i < keys.length; i++) {
-    this.todo_[keys[i]] = true;
-  }
+  /** @type {!Object<string, Do>} Map of property name -> dump status. */
+  this.done_ = Object.create(null);
   /**
    * Map of property name -> property descriptor, where property
    * descriptor is a map of attribute names (writable, enumerable,
@@ -731,18 +713,7 @@ ObjectInfo.prototype.getDone = function(part) {
   if (part === Selector.PROTOTYPE) {
     return this.doneProto;
   } else if (typeof part === 'string') {
-    var status = this.todo_[part];
-    if (status === true) {
-      return Do.UNSTARTED;
-    } else if(status && !status.value) {
-      return Do.DECL;
-    } else if(status && status.value || status === false) {
-      return Do.SET;
-    } else if(status === undefined) {
-      return Do.RECURSE;
-    } else {
-      throw new Error('Corrupt .todo_ status??');
-    }
+    return this.done_[part] || Do.UNSTARTED;
   } else {
     throw new TypeError('Invalid part');
   }
@@ -762,39 +733,21 @@ ObjectInfo.prototype.setDone = function(part, done) {
     }
     this.doneProto = done;
   } else if (typeof part === 'string') {
-    var status = this.todo_[part];
-    if (done === Do.DECL) {
-      if (!(part in this.attributes)) {
-        throw new Error('Attributes for ' + part + ' not recorded??');
-      } else if(!this.attributes[part]['configurable'] &&
-          !this.attributes[part]['writable']) {
-        throw new Error('Property ' + part + ' made unsettable too early??');
-      }
-      if (status !== true &&
-          (typeof status !== 'object' || status.value !== false)) {
-        throw new RangeError('Property ' + part + ' already created??');
-      }
-      // TODO(cpcallen): also include attributes.
-      this.todo_[part] = {value: false};
-    } else if (done === Do.SET) {
-      if (!(part in this.attributes)) {
-        throw new Error('Attributes for ' + part + ' not recorded??');
-      }
-      if (status && status.value) {
-        throw new RangeError('Property already set??');
-      }
-      this.todo_[part] = false;
-    } else if (done === Do.RECURSE) {
-      if (!(part in this.attributes)) {
-        throw new Error('Attributes for ' + part + ' not recorded??');
-      }
-      if (status && status.value) {
-        throw new RangeError('Recursion already complete??');
-      }
-      delete this.todo_[part];
-    } else {
-      throw new Error('Not implemented');
+    var old = this.done_[part];
+    if (done < old) {
+      throw new RangeError("Can't undo work on " + part);
+    } else if(done === old && done < Do.RECURSE) {
+      throw new RangeError("Refusing redundant work on " + part);
     }
+    if (done >= Do.DECL && !(part in this.attributes)) {
+      throw new Error('Attributes for ' + part + ' not recorded');
+    }
+    if (done === Do.DECL &&
+        !this.attributes[part]['configurable'] &&
+        !this.attributes[part]['writable']) {
+      throw new Error('Property ' + part + ' made immutable too early');
+    }
+    this.done_[part] = done;
   } else {
     throw new TypeError('Invalid part');
   }
