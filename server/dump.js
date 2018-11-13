@@ -203,7 +203,11 @@ Dumper.prototype.builtinToExpr = function(obj, key, info) {
     // The .length property and .name properties are pre-set.
     // BUG(cpcallen): Actually, .name can be changed, so we should
     // compare it to the value in a pristine Interpreter.
+    info.attributes['length'] =
+        {writable: false, enumerable: false, configurable: false};
     info.setDone('length', Do.SET);
+    info.attributes['name'] =
+        {writable: false, enumerable: false, configurable: true};
     info.setDone('name', Do.SET);
   }
   return 'new ' + code.quote(key);
@@ -248,12 +252,18 @@ Dumper.prototype.functionToExpr = function(func, info) {
   // Do we need to set [[Prototype]]?  Not if it's Function.prototype.
   if (func.proto === this.intrp.FUNCTION) info.doneProto = Do.SET;
   // The .length property will be set implicitly.
+  info.attributes['length'] =
+      {writable: false, enumerable: false, configurable: false};
   info.setDone('length', Do.SET);
   // BUG(cpcallen): .name is only set in certain circumstances.
+  info.attributes['name'] =
+      {writable: false, enumerable: false, configurable: true};
   info.setDone('name', Do.SET);
   // The .prototype property will automatically be created, so we
   // don't need to "declare" it.  Fortunately it's non-configurable,
   // so we don't need to worry that it might need to be deleted.
+  info.attributes['prototype'] =
+      {writable: true, enumerable: false, configurable: false};
   info.setDone('prototype', Do.DECL);
   // Better still, we can use the automatically-created .prototype
   // object if the current value is an ordinary object (regardless of
@@ -265,13 +275,16 @@ Dumper.prototype.functionToExpr = function(func, info) {
       prototype.class === 'Object') {
     var prototypeInfo = this.getObjectInfo(prototype);
     if(prototypeInfo.ref === undefined) {
+      // We can use automatic .prototype object.
       prototypeInfo.ref = new Selector(info.ref.concat('prototype'));
       info.setDone('prototype', Do.SET);
-      // Can we also use implicit .constructor?
-      var constructor = prototype.get('constructor', this.intrp.ROOT);
-      if (constructor === func) {
-        prototypeInfo.setDone('constructor', Do.SET);
-      }
+      // It gets a .constructor property, which may or may not need to
+      // be overwritten.
+      prototypeInfo.attributes['constructor'] =
+          {writable: true, enumerable: false, configurable: true};
+      var constructorValue = prototype.get('constructor', this.intrp.ROOT);
+      prototypeInfo.setDone('constructor',
+          constructorValue === func ? Do.SET : Do.DECL);
     }
   }
   return func.toString();
@@ -288,6 +301,8 @@ Dumper.prototype.arrayToExpr = function(arr, info) {
   if (arr.proto === this.intrp.ARRAY) info.doneProto = Do.SET;
   var root = this.intrp.ROOT;
   var lastIndex = arr.get('length', root) - 1;
+  info.attributes['length'] =
+      {writable: true, enumerable: false, configurable: false};
   if (lastIndex < 0 || arr.getOwnPropertyDescriptor(String(lastIndex),  root)) {
     // No need to set .length if it will be set via setting final index.
     info.setDone('length', Do.SET);
@@ -320,13 +335,19 @@ Dumper.prototype.regExpToExpr = function(re, info) {
   // Do we need to set [[Prototype]]?  Not if it's RegExp.prototype.
   if (re.proto === this.intrp.REGEXP) info.doneProto = Do.SET;
   // Some properties are implicitly pre-set.
-  info.setDone('source', Do.SET);
-  info.setDone('global', Do.SET);
-  info.setDone('ignoreCase', Do.SET);
-  info.setDone('multiline', Do.SET);
-  // Can skip .lastIndex iff it is 0.
+  var props = ['source', 'global', 'ignoreCase', 'multiline'];
+  for (var prop, i = 0; prop = props[i]; i++) {
+    info.attributes[prop] =
+        {writable: false, enumerable: false, configurable: false};
+    info.setDone(prop, Do.SET);
+  }
+  info.attributes['lastIndex'] =
+      {writable: true, enumerable: false, configurable: false};
   if (re.get('lastIndex', this.intrp.ROOT) === 0) {
+    // Can skip setting .lastIndex iff it is 0.
     info.setDone('lastIndex', Do.SET);
+  } else {
+    info.setDone('lastIndex', Do.DECL);
   }
   return re.regexp.toString();
 };
@@ -540,6 +561,14 @@ var ObjectInfo = function(dumper, obj) {
   for (var i = 0; i < keys.length; i++) {
     this.todo_[keys[i]] = true;
   }
+  /**
+   * Map of property name -> property descriptor, where property
+   * descriptor is a map of attribute names (writable, enumerable,
+   * configurable, more tbd) to boolean values.  (We do not store
+   * values here.)
+   * @type {!Object<string, !Object<string, boolean>>}
+   */
+  this.attributes = Object.create(null);
   /** @type {!Do} Has prototype been set? */
   this.doneProto = Do.DECL;  // Never need to 'declare' the [[Prototype]] slot!
   /** @type {!Do} Has owner been set? */
@@ -628,8 +657,12 @@ ObjectInfo.prototype.dumpProperty_ = function(dumper, key, todo, ref) {
 
   if (todo === Do.DECL && done < Do.DECL) {
     output.push(sel.toExpr(), ' = undefined;\n');
+    this.attributes[key] =
+        {writable: true, enumerable: true, configurable: true};
   } else if (todo >= Do.SET && done < Do.SET) {
     output.push(sel.toExpr(), ' = ', dumper.toExpr(value, sel), ';\n');
+    this.attributes[key] =
+        {writable: true, enumerable: true, configurable: true};
   }
   output.push(this.checkRecurse_(dumper, todo, ref, key, value));
   // Record completion.
@@ -731,6 +764,12 @@ ObjectInfo.prototype.setDone = function(part, done) {
   } else if (typeof part === 'string') {
     var status = this.todo_[part];
     if (done === Do.DECL) {
+      if (!(part in this.attributes)) {
+        throw new Error('Attributes for ' + part + ' not recorded??');
+      } else if(!this.attributes[part]['configurable'] &&
+          !this.attributes[part]['writable']) {
+        throw new Error('Property ' + part + ' made unsettable too early??');
+      }
       if (status !== true &&
           (typeof status !== 'object' || status.value !== false)) {
         throw new RangeError('Property ' + part + ' already created??');
@@ -738,11 +777,17 @@ ObjectInfo.prototype.setDone = function(part, done) {
       // TODO(cpcallen): also include attributes.
       this.todo_[part] = {value: false};
     } else if (done === Do.SET) {
+      if (!(part in this.attributes)) {
+        throw new Error('Attributes for ' + part + ' not recorded??');
+      }
       if (status && status.value) {
         throw new RangeError('Property already set??');
       }
       this.todo_[part] = false;
     } else if (done === Do.RECURSE) {
+      if (!(part in this.attributes)) {
+        throw new Error('Attributes for ' + part + ' not recorded??');
+      }
       if (status && status.value) {
         throw new RangeError('Recursion already complete??');
       }
