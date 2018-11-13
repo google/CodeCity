@@ -547,29 +547,38 @@ var ObjectInfo = function(dumper, obj) {
 };
 
 /**
- * Recursively dumps all bindings of the object (and objects reachable
- * via it).
+ * Generate JS source text to set the object's prototype.
  * 
+ * @private
  * @param {!Dumper} dumper Dumper to which this ObjectInfo belongs.
- * @param {!Selector=} ref Selector refering to this object.
- *     Optional; defaults to whatever selector was used to create the
- *     object.
+ * @param {Do} todo How much to do.  '' returned if todo < Do.RECURSE.
+ * @param {!Selector} ref Selector refering to this object.
+ * @param {!Selector.Part} part The binding part that has been dumped
+ *     and which might need to be recursed into.
+ * @param {Interpreter.Value} value The value of the specified part.
+ *     '' returned if value not an Interpreter.prototype.Object.
  * @return {string} An eval-able program to initialise the specified binding.
  */
-ObjectInfo.prototype.dumpRecursively = function(dumper, ref) {
-  if (!this.ref) throw new Error("Can't dump an uncreated object");
-  if (!ref) ref = this.ref;
-
+ObjectInfo.prototype.checkRecurse_ = function(dumper, todo, ref, part, value) {
   var output = [];
-  var root = dumper.intrp.ROOT;
-  var keys = this.obj.ownKeys(root);
-  var subselector = new Selector(ref);
-  for (var i = 0; i < keys.length; i++) {
-    var key = keys[i];
-    if (this.getDone(key) >= Do.RECURSE) continue;  // Skip already-done.
-    subselector.push(key);
-    output.push(dumper.dumpBinding(subselector, Do.RECURSE));
-    subselector.pop();
+  if (todo >= Do.RECURSE) {
+    // Record what we're about to do, to avoid infinite recursion.
+    //
+    // TODO(cpcallen): We should probably record some intermediate
+    // state: enough to stop further recursive calls, but not indicating
+    // final completion.  At the moment this makes the setDone call
+    // below a no-op.
+
+    this.setDone(part, todo);
+    if (value instanceof dumper.intrp.Object) {
+      var sel = new Selector(ref);
+      sel.push(part);
+      var vi = dumper.getObjectInfo(value);
+      output.push(vi.dumpRecursively(dumper, sel));
+    }
+    // Record completion.
+    this.setDone(part, todo);
+
   }
   return output.join('');
 };
@@ -653,38 +662,29 @@ ObjectInfo.prototype.dumpPrototype_ = function(dumper, todo, ref) {
 };
 
 /**
- * Generate JS source text to set the object's prototype.
+ * Recursively dumps all bindings of the object (and objects reachable
+ * via it).
  * 
- * @private
  * @param {!Dumper} dumper Dumper to which this ObjectInfo belongs.
- * @param {Do} todo How much to do.  '' returned if todo < Do.RECURSE.
- * @param {!Selector} ref Selector refering to this object.
- * @param {!Selector.Part} part The binding part that has been dumped
- *     and which might need to be recursed into.
- * @param {Interpreter.Value} value The value of the specified part.
- *     '' returned if value not an Interpreter.prototype.Object.
+ * @param {!Selector=} ref Selector refering to this object.
+ *     Optional; defaults to whatever selector was used to create the
+ *     object.
  * @return {string} An eval-able program to initialise the specified binding.
  */
-ObjectInfo.prototype.checkRecurse_ = function(dumper, todo, ref, part, value) {
+ObjectInfo.prototype.dumpRecursively = function(dumper, ref) {
+  if (!this.ref) throw new Error("Can't dump an uncreated object");
+  if (!ref) ref = this.ref;
+
   var output = [];
-  if (todo >= Do.RECURSE) {
-    // Record what we're about to do, to avoid infinite recursion.
-    //
-    // TODO(cpcallen): We should probably record some intermediate
-    // state: enough to stop further recursive calls, but not indicating
-    // final completion.  At the moment this makes the setDone call
-    // below a no-op.
-
-    this.setDone(part, todo);
-    if (value instanceof dumper.intrp.Object) {
-      var sel = new Selector(ref);
-      sel.push(part);
-      var vi = dumper.getObjectInfo(value);
-      output.push(vi.dumpRecursively(dumper, sel));
-    }
-    // Record completion.
-    this.setDone(part, todo);
-
+  var root = dumper.intrp.ROOT;
+  var keys = this.obj.ownKeys(root);
+  var subselector = new Selector(ref);
+  for (var i = 0; i < keys.length; i++) {
+    var key = keys[i];
+    if (this.getDone(key) >= Do.RECURSE) continue;  // Skip already-done.
+    subselector.push(key);
+    output.push(dumper.dumpBinding(subselector, Do.RECURSE));
+    subselector.pop();
   }
   return output.join('');
 };
