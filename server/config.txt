@@ -1,9 +1,14 @@
 Documentation for config file options:
 
+  "databaseDirectory": string
+    Relative path from this config file to the database directory.
+    Defaults to "./" (current directory).
+
   "checkpointInterval": number
     Number of seconds between regular checkpoints.
     If 0, then no regular checkpoints.
     Defaults to 600 (10 minutes).
+    TODO: Move this configuration option into the database.
 
   "checkpointAtShutdown": boolean
     If true, save a checkpoint when the server shuts down.
