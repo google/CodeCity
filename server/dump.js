@@ -691,15 +691,11 @@ ObjectInfo.prototype.dumpRecursively = function(dumper, ref) {
   if (!ref) ref = this.ref;
 
   var output = [];
-  var root = dumper.intrp.ROOT;
-  var keys = this.obj.ownKeys(root);
-  var subselector = new Selector(ref);
+  var keys = this.obj.ownKeys(dumper.intrp.ROOT);
   for (var i = 0; i < keys.length; i++) {
     var key = keys[i];
     if (this.getDone(key) >= Do.RECURSE) continue;  // Skip already-done.
-    subselector.push(key);
-    output.push(dumper.dumpBinding(subselector, Do.RECURSE));
-    subselector.pop();
+    output.push(this.dumpProperty_(dumper, key, Do.RECURSE, ref));
   }
   return output.join('');
 };
