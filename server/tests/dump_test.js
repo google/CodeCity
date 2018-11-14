@@ -374,15 +374,15 @@ exports.testDumper = function(t) {
         {path: 'user', do: Do.DECL},
         {path: '$', do: Do.SET},
         '$.system',
-        {path: '$.utils', do: Do.SET},
+        {path: '$.utils', do: Do.ATTR},
         '$.physical',
         '$.thing',
         '$.room',
         '$.user',
         '$.execute',
-        {path: '$.userDatabase', do: Do.SET},
+        {path: '$.userDatabase', do: Do.ATTR},
         '$.connection',
-        {path: '$.servers', do: Do.SET},
+        {path: '$.servers', do: Do.ATTR},
         '$.servers.telnet',
       ],
     }, {
@@ -413,8 +413,8 @@ exports.testDumper = function(t) {
     }, {
       filename: 'core_32_$.www',
       contents: [
-        {path: '$.www', do: Do.SET},
-        {path: '$.www.ROUTER', do: Do.SET},
+        {path: '$.www', do: Do.ATTR},
+        {path: '$.www.ROUTER', do: Do.ATTR},
         '$.www[404]',
         '$.www.homepage',
         '$.www.robots',
@@ -428,7 +428,7 @@ exports.testDumper = function(t) {
     }, {
       filename: 'core_40_$.db.tempId',
       contents: [
-        {path: '$.db', do: Do.SET},
+        {path: '$.db', do: Do.ATTR},
         '$.db.tempID',
       ],
     }, {

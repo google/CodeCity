@@ -792,24 +792,34 @@ var Do = {
   DECL: 3,
 
   /**
-   * Ensure theat the specified binding exists and has been set to its
+   * Ensure that the specified binding exists and has been set to its
    * final value (if primitive) or an object of the correct class (if
-   * non-primitive).  It will also ensure the final property
-   * attributes (enumerable, writable and/or configurable) are set.
+   * non-primitive).
    *
-   * If a new object is created to be the value of the specified path
-   * it will not (yet) have its properties or internal set/map data
-   * set (but immutable internal data, such as function code, must be
-   * set at this time).
+   * For property bindings, the property attributes will generally not
+   * (yet) be set, and if a new object was created to be the value of
+   * the specified binding it will generally not (yet) have its
+   * properties or internal set/map data set (but immutable internal
+   * data, such as function code, will have been set at creation).
+   *
+   * Possibly only useful as a 'done' value; prefer SET for 'do'
+   * values.
    */
   SET: 4,
+
+  /**
+   * Ensure theat the specified binding has been set to its final
+   * value, and additionally that the final property attributes
+   * (enumerable, writable and/or configurable) are set.
+   */
+  ATTR: 5,
 
   /**
    * Ensure the specified path is has been set to its final value (and
    * marked immuable, if applicable) and that the same has been done
    * recursively to all bindings reachable via path.
    */
-  RECURSE: 5,
+  RECURSE: 6,
 };
 
 
