@@ -276,7 +276,6 @@ CodeCity.checkpoint = function(sync) {
     fs.writeFileSync(tmpFilename, text);
     fs.renameSync(tmpFilename, filename);
     console.log('Checkpoint ' + filename + ' complete.');
-    // TODO: Asynchronously gzip the .city checkpoint.
   } catch (e) {
     console.error('Checkpoint failed!  ' + e);
   } finally {
