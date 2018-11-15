@@ -721,29 +721,20 @@ ObjectInfo.prototype.getDone = function(part) {
  * @param {Do} done The new done status of the binding.
  */
 ObjectInfo.prototype.setDone = function(part, done) {
+  var old = this.getDone(part);
+  var name = (part === Selector.PROTOTYPE) ? 'prototype' : '.' + part;
+
+  // Invariant checks.
+  if (done < old) {
+    throw new RangeError("Can't undo work on " + name);
+  } else if(done === old && done < Do.RECURSE) {
+    throw new RangeError('Refusing redundant work on ' + name);
+  }
+  // Do set.
   if (part === Selector.PROTOTYPE) {
-    if (done <= this.doneProto) {
-      throw new RangeError('Prototype already done??');
-    }
     this.doneProto = done;
   } else if (typeof part === 'string') {
-    var old = this.doneProp_[part];
-    if (done < old) {
-      throw new RangeError("Can't undo work on " + part);
-    } else if(done === old && done < Do.RECURSE) {
-      throw new RangeError("Refusing redundant work on " + part);
-    }
-    if (done >= Do.DECL && !(part in this.attributes)) {
-      throw new Error('Attributes for ' + part + ' not recorded');
-    }
-    if (done === Do.DECL &&
-        !this.attributes[part]['configurable'] &&
-        !this.attributes[part]['writable']) {
-      throw new Error('Property ' + part + ' made immutable too early');
-    }
     this.doneProp_[part] = done;
-  } else {
-    throw new TypeError('Invalid part');
   }
 };
 
