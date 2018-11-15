@@ -541,6 +541,8 @@ var ObjectInfo = function(dumper, obj) {
   this.obj = obj;
   /** @type {!Selector|undefined} Reference to this object, once created. */
   this.ref = undefined;
+  /** @type {boolean} Is object being visited in a recursive dump? */
+  this.visiting = false;
   /** @type {!Do} Has prototype been set? */
   this.doneProto = Do.DECL;  // Never need to 'declare' the [[Prototype]] slot!
   /** @type {!Do} Has owner been set? */
@@ -573,14 +575,6 @@ var ObjectInfo = function(dumper, obj) {
 ObjectInfo.prototype.checkRecurse_ = function(dumper, todo, ref, part, value) {
   var output = [];
   if (todo >= Do.RECURSE) {
-    // Record what we're about to do, to avoid infinite recursion.
-    //
-    // TODO(cpcallen): We should probably record some intermediate
-    // state: enough to stop further recursive calls, but not indicating
-    // final completion.  At the moment this makes the setDone call
-    // below a no-op.
-
-    this.setDone(part, todo);
     if (value instanceof dumper.intrp.Object) {
       var sel = new Selector(ref);
       sel.push(part);
@@ -589,7 +583,6 @@ ObjectInfo.prototype.checkRecurse_ = function(dumper, todo, ref, part, value) {
     }
     // Record completion.
     this.setDone(part, todo);
-
   }
   return output.join('');
 };
@@ -690,6 +683,9 @@ ObjectInfo.prototype.dumpRecursively = function(dumper, ref) {
   if (!this.ref) throw new Error("Can't dump an uncreated object");
   if (!ref) ref = this.ref;
 
+  if (this.visiting) return '';
+  this.visiting = true;
+
   var output = [];
   var keys = this.obj.ownKeys(dumper.intrp.ROOT);
   for (var i = 0; i < keys.length; i++) {
@@ -697,6 +693,8 @@ ObjectInfo.prototype.dumpRecursively = function(dumper, ref) {
     if (this.getDone(key) >= Do.RECURSE) continue;  // Skip already-done.
     output.push(this.dumpProperty_(dumper, key, Do.RECURSE, ref));
   }
+
+  this.visiting = false;
   return output.join('');
 };
 
