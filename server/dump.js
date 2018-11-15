@@ -193,6 +193,9 @@ Dumper.prototype.primitiveToExpr = function(value) {
 /**
  * Get a source text representation of a given builtin.  May or may not
  * include all properties, etc.
+ *
+ * BUG(cpcallen): Most of the info setup here should be done in the
+ * ObjectInfo constructor instead.
  * @param {!Interpreter.prototype.Object} obj Object to be recreated.
  * @param {string} key The name of the builtin.
  * @param {!ObjectInfo} info Dump-state info about func.
@@ -201,6 +204,7 @@ Dumper.prototype.primitiveToExpr = function(value) {
 Dumper.prototype.builtinToExpr = function(obj, key, info) {
   if (obj instanceof this.intrp.Function) {
     // BUG(cpcallen): The prototype might have been changed.
+    info.proto = obj.proto;
     info.donePrototype = Do.SET;
     // The .length property and .name properties are pre-set.
     // BUG(cpcallen): Actually, .name can be changed, so we should
@@ -223,21 +227,27 @@ Dumper.prototype.builtinToExpr = function(obj, key, info) {
  * @return {string} An eval-able representation of obj.
  */
 Dumper.prototype.objectToExpr = function(obj, info) {
-  switch (obj.proto) {
-    case this.intrp.OBJECT:
-      info.setDone(Selector.PROTOTYPE, Do.SET);
-      return '{}';
-    case null:
-      info.setDone(Selector.PROTOTYPE, Do.SET);
-      return 'Object.create(null)';
-    default:
-      var protoInfo = this.getObjectInfo(obj.proto);
-      if (protoInfo.ref) {
-        info.setDone(Selector.PROTOTYPE, Do.SET);
-        return 'Object.create(' + this.toExpr(obj.proto) + ')';
-      } else {
-        return '{}';  // Set [[Prototype]] later.
+  try {
+    switch (obj.proto) {
+      case this.intrp.OBJECT:
+        return '{}';
+      case null:
+        return 'Object.create(null)';
+      default:
+        var protoInfo = this.getObjectInfo(obj.proto);
+        if (protoInfo.ref) {
+          return 'Object.create(' + this.toExpr(obj.proto) + ')';
+        } else {
+          // Can't set [[Prototype]] yet.  Do it later.
+          info.proto = this.intrp.OBJECT;
+          return '{}';
       }
+    }
+  } finally {
+    if (info.proto === undefined) {
+      info.proto = obj.proto;
+      info.setDone(Selector.PROTOTYPE, Do.SET);
+    }
   }
 };
 
@@ -252,8 +262,11 @@ Dumper.prototype.functionToExpr = function(func, info) {
   if (!(func instanceof this.intrp.UserFunction)) {
     throw Error('Unable to dump non-UserFunction');
   }
-  // Do we need to set [[Prototype]]?  Not if it's Function.prototype.
-  if (func.proto === this.intrp.FUNCTION) info.doneProto = Do.SET;
+  // Functions' [[Prototype]] default to Function.prototype.
+  // TODO(ES6): not quite so for generators, etc.
+  info.proto = this.intrp.FUNCTION;
+  // Do we need to set [[Prototype]]?  Not if it's already correct.
+  if (func.proto === info.proto) info.setDone(Selector.PROTOTYPE, Do.SET);
   // The .length property will be set implicitly.
   info.attributes['length'] =
       {writable: false, enumerable: false, configurable: false};
@@ -300,8 +313,10 @@ Dumper.prototype.functionToExpr = function(func, info) {
  * @return {string} An eval-able representation of obj.
  */
 Dumper.prototype.arrayToExpr = function(arr, info) {
-  // Do we need to set [[Prototype]]?  Not if it's Array.prototype.
-  if (arr.proto === this.intrp.ARRAY) info.doneProto = Do.SET;
+  // Arrays' [[Prototype]] default to Array.prototype.
+  info.proto = this.intrp.ARRAY;
+  // Do we need to set [[Prototype]]?  Not if it's already correct.
+  if (arr.proto === info.proto) info.setDone(Selector.PROTOTYPE, Do.SET);
   var root = this.intrp.ROOT;
   var lastIndex = arr.get('length', root) - 1;
   info.attributes['length'] =
@@ -335,8 +350,10 @@ Dumper.prototype.dateToExpr = function(date, info) {
  * @return {string} An eval-able representation of obj.
  */
 Dumper.prototype.regExpToExpr = function(re, info) {
-  // Do we need to set [[Prototype]]?  Not if it's RegExp.prototype.
-  if (re.proto === this.intrp.REGEXP) info.doneProto = Do.SET;
+  // RegExps' [[Prototype]] default to RegExp.prototype.
+  info.proto = this.intrp.REGEXP;
+  // Do we need to set [[Prototype]]?  Not if it's already correct.
+  if (re.proto === info.proto) info.setDone(Selector.PROTOTYPE, Do.SET);
   // Some properties are implicitly pre-set.
   var props = ['source', 'global', 'ignoreCase', 'multiline'];
   for (var prop, i = 0; prop = props[i]; i++) {
@@ -554,6 +571,15 @@ var ObjectInfo = function(dumper, obj) {
   this.visiting = false;
   /** @type {!Do} Has prototype been set? */
   this.doneProto = Do.DECL;  // Never need to 'declare' the [[Prototype]] slot!
+  /** 
+   * Current value of [[Prototype]] slot of obj at this point in dump.
+   * Typically initially Object.prototype (or similar); will be ===
+   * obj.proto when complete.  Used to check for unwritable inherited
+   * properties when attempting to set properties by assignment.
+   * Should only be undefined if object has not yet been created.
+   * @type {?Interpreter.prototype.Object|undefined}
+   */
+  this.proto = undefined;
   /** @type {!Do} Has owner been set? */
   this.doneOwner = Do.DECL;  // Never need to 'declare' that object has owner!
   /** @type {!Object<string, Do>} Map of property name -> dump status. */
@@ -672,6 +698,7 @@ ObjectInfo.prototype.dumpPrototype_ = function(dumper, todo, ref) {
   if (todo >= Do.SET && this.doneProto < Do.SET) {
     output.push('Object.setPrototypeOf(', ref.toExpr(), ', ',
                 dumper.toExpr(value, sel), ');\n');
+    this.proto = value;
     this.doneProto = Do.SET;
   }
   output.push(
