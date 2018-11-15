@@ -33,37 +33,34 @@ const Serializer = require('./serialize');
 var CodeCity = {};
 CodeCity.databaseDirectory = '';
 CodeCity.interpreter = null;
+CodeCity.config = null;
 
 /**
  * Start a running instance of Code City.  May be called on a command line.
- * @param {string=} opt_databaseDirectory Directory containing either a .city
- * database or startup files.  If not present, look for the directory
- * as a command line parameter.
+ * @param {string=} configFile Path and filename of configuration file.
+ * If not present, look for the configuration file as a command line parameter.
  */
-CodeCity.startup = function(opt_databaseDirectory) {
-  // process.argv is a list containing: ['node', 'codecity.js', 'databaseDir']
-  CodeCity.databaseDirectory = opt_databaseDirectory || process.argv[2];
-
-  // Check that the directory was specified and exists.
-  try {
-    var files = fs.readdirSync(CodeCity.databaseDirectory);
-  } catch (e) {
-    console.error('Database directory not found.\n' +
-        'Usage: node %s <DB directory>', process.argv[1]);
-    if (CodeCity.databaseDirectory) {
-      console.info(e);
-    }
+CodeCity.startup = function(configFile) {
+  // process.argv is a list containing: ['node', 'codecity.js', 'db/google.cfg']
+  configFile = configFile || process.argv[2];
+  if (!configFile) {
+    console.error('Configuration file not found.\n' +
+        'Usage: node %s <config file>', process.argv[1]);
     process.exit(1);
   }
+  var contents = CodeCity.loadFile(configFile);
+  CodeCity.config = CodeCity.parseJson(contents);
 
   // Find the most recent database file.
-  files.sort();
-  for (var i = files.length - 1; i >= 0; i--) {
-    if (files[i].match(
-        /^\d{4}-\d\d-\d\dT\d\d\.\d\d\.\d\d(\.\d{1,3})?Z?\.city$/)) {
-      break;
-    }
+  CodeCity.databaseDirectory = path.join(path.dirname(configFile),
+      CodeCity.config.databaseDirectory || './');
+  if (!fs.existsSync(CodeCity.databaseDirectory)) {
+    console.error('Database directory not found: ' +
+        CodeCity.databaseDirectory);
+    process.exit(1);
   }
+  // Find the most recent database file.
+  var checkpoint = CodeCity.allCheckpoints().pop();
   // Load the interpreter.
   CodeCity.interpreter = new Interpreter({
     trimEval: true,
@@ -71,11 +68,19 @@ CodeCity.startup = function(opt_databaseDirectory) {
     methodNames: true,
   });
   CodeCity.initSystemFunctions();
-  if (i === -1) {
+  if (checkpoint) {
+    var filename = path.join(CodeCity.databaseDirectory, checkpoint);
+    var contents = CodeCity.loadFile(filename);
+    contents = CodeCity.parseJson(contents);
+
+    Serializer.deserialize(contents, CodeCity.interpreter);
+    console.log('Database loaded: %s', filename);
+  } else {
     // Database not found, load one or more startup files instead.
     console.log('Unable to find database file in %s, looking for startup ' +
         'file(s) instead.', CodeCity.databaseDirectory);
     var fileCount = 0;
+    var files = fs.readdirSync(CodeCity.databaseDirectory);
     for (var i = 0; i < files.length; i++) {
       if (files[i].match(/^(core|test).*\.js$/)) {
         var filename = path.join(CodeCity.databaseDirectory, files[i]);
@@ -91,26 +96,14 @@ CodeCity.startup = function(opt_databaseDirectory) {
       process.exit(1);
     }
     console.log('Loaded %d startup file(s).', fileCount);
-  } else {
-    var filename = path.join(CodeCity.databaseDirectory, files[i]);
-    var contents = CodeCity.loadFile(filename);
-
-    // Convert from text to JSON.
-    try {
-      contents = JSON.parse(contents);
-    } catch (e) {
-      console.error('Syntax error in parsing JSON: %s', filename);
-      console.info(e);
-      process.exit(1);
-    }
-
-    Serializer.deserialize(contents, CodeCity.interpreter);
-    console.log('Database loaded: %s', filename);
   }
 
   // Checkpoint at regular intervals.
   // TODO: Let the interval be configurable from the database.
-  setInterval(CodeCity.checkpoint, 600 * 1000);
+  var interval = CodeCity.config.checkpointInterval || 600;
+  if (interval > 0) {
+    setInterval(CodeCity.checkpoint, interval * 1000);
+  }
 
   console.log('Load complete.  Starting Code City.');
   CodeCity.interpreter.start();
@@ -126,10 +119,132 @@ CodeCity.loadFile = function(filename) {
   try {
     return fs.readFileSync(filename, 'utf8').toString();
   } catch (e) {
-    console.error('Unable to open file: %s\nCheck permissions.', filename);
+    console.error('Unable to open file: %s', filename);
     console.info(e);
     process.exit(1);
   }
+};
+
+/**
+ * Parse text as JSON value.  Die if there's an error.
+ * @param {string} text
+ * @return {*} JSON value.
+ */
+CodeCity.parseJson = function(text) {
+  // Convert from text to JSON.
+  try {
+    return JSON.parse(text);
+  } catch (e) {
+    console.error('Syntax error in parsing JSON');
+    console.info(e);
+    process.exit(1);
+  }
+};
+
+/**
+ * Return an ordered list of all currently saved checkpoints.
+ * @return {!Array<string>} Array of filenames for checkpoints.
+ */
+CodeCity.allCheckpoints = function() {
+  var files = fs.readdirSync(CodeCity.databaseDirectory);
+  files = files.filter((file) => CodeCity.allCheckpoints.regexp_.test(file));
+  files.sort();
+  return files;
+};
+
+CodeCity.allCheckpoints.regexp_ =
+    /^\d{4}-\d\d-\d\dT\d\d\.\d\d\.\d\d(\.\d{1,3})?Z?\.city$/;
+
+
+/**
+ * Delete as many checkpoints as needed until there's room to fit a new one.
+ */
+CodeCity.deleteCheckpointsIfNeeded = function() {
+  var checkpoints = CodeCity.allCheckpoints();
+  var minFiles = Math.max(0, CodeCity.config.checkpointMinFiles || 0);
+  if (!checkpoints.length || checkpoints.length < minFiles) {
+    return;  // Not enough checkpoints saved.
+  }
+  // Look up size of last checkpoint.
+  var lastCheckpointSize =
+      CodeCity.fileSize(checkpoints[checkpoints.length - 1]);
+  var directorySize = checkpoints.reduce((sum, fileName) =>
+      sum + CodeCity.fileSize(fileName), 0);
+  // Budget for a possible 10% growth.
+  var estimateNext = directorySize + lastCheckpointSize * 1.1;
+  var maxSize = CodeCity.config.checkpointMaxDirectorySize;
+  if (typeof maxSize !== 'number') {
+    maxSize = Infinity;
+  }
+  if (estimateNext < maxSize) {
+    return;  // There's room.
+  }
+  // Choose and delete one file.
+  var deleteFile = CodeCity.chooseCheckpointToDelete(checkpoints);
+  var fullPath = path.join(CodeCity.databaseDirectory, deleteFile);
+  console.log('Deleting checkpoint ' + fullPath);
+  fs.unlinkSync(fullPath);
+  // Do it again, until no delete is needed.
+  CodeCity.deleteCheckpointsIfNeeded();
+};
+
+/**
+ * Given a list of checkpoint filenames, choose one to delete.
+ * See https://neil.fraser.name/software/backup/
+ * @param {!Array<string>} checkpoints Array of checkpoint filenames.
+ * @return {string} Filename of checkpoint to delete.
+ */
+CodeCity.chooseCheckpointToDelete = function(checkpoints) {
+  // Convert all filenames (e.g. '2018-11-09T18.49.50.548Z.city')
+  // into ISO-8601 format  (e.g. '2018-11-09T18:49:50.548Z'),
+  // then parse as milliseconds.
+  var checkpointTimes = checkpoints.map((name) =>
+      Date.parse(name.slice(0, -5).replace('.', ':').replace('.', ':')));
+  var currentTime = Date.now();
+  var totalTime = currentTime - checkpointTimes[checkpointTimes.length - 1];
+  // Delete one checkpoint.
+  var checkpointCount = checkpoints.length - 1;
+  // Compute ideal times.
+  var decayRate = (totalTime + 1) ** (1 / checkpointCount);
+  var idealTimes = new Array(checkpointTimes.length);
+  for (var n = 0; n < checkpointTimes.length; n++) {
+    idealTimes[n] = currentTime - (decayRate ** n) + 1;
+  }
+
+  // Choose one backup for deletion.
+  // Compute the cumulative error from the right side.  Store in array.
+  var rightDiff = new Array(checkpointTimes.length);
+  var accumulator = 0;
+  for (var n = checkpointTimes.length - 1; n >= 1; n--) {
+    accumulator += Math.abs(checkpointTimes[n] - idealTimes[n]);
+    rightDiff[n] = accumulator;
+  }
+  // Compute the cumulative error from the left side (with backups shifted by
+  // one position, as would happen after a deletion).
+  // Use rightDiff array to compute total error for each possible deletion.
+  accumulator = 0;
+  var minDiff = Infinity;
+  var minIndex = 0;
+  for (var n = 1; n < checkpointTimes.length - 1; n++) {
+    accumulator += Math.abs(checkpointTimes[n - 1] - idealTimes[n]);
+    var diff = accumulator + rightDiff[n + 1];
+    if (diff < minDiff) {
+      // Smallest total error yet.  Save this candidate.
+      minDiff = diff;
+      minIndex = n;
+    }
+  }
+  return checkpoints[minIndex];
+};
+
+/**
+ * Find the size of a file in the current database directory.
+ * @param {string} fileName Name of file.
+ * @return {number} Number of bytes in file.
+ */
+CodeCity.fileSize = function(fileName) {
+  var fullPath = path.join(CodeCity.databaseDirectory, fileName);
+  return fs.statSync(fullPath).size;
 };
 
 /**
@@ -139,6 +254,7 @@ CodeCity.loadFile = function(filename) {
  */
 CodeCity.checkpoint = function(sync) {
   console.log('Checkpointing...');
+  CodeCity.deleteCheckpointsIfNeeded();
   try {
     CodeCity.interpreter.pause();
     var json = Serializer.serialize(CodeCity.interpreter);
@@ -159,7 +275,7 @@ CodeCity.checkpoint = function(sync) {
   try {
     fs.writeFileSync(tmpFilename, text);
     fs.renameSync(tmpFilename, filename);
-    console.log('Checkpoint complete.');
+    console.log('Checkpoint ' + filename + ' complete.');
   } catch (e) {
     console.error('Checkpoint failed!  ' + e);
   } finally {
@@ -179,7 +295,9 @@ CodeCity.checkpoint = function(sync) {
  * @param {string|number=} code Exit code or signal.
  */
 CodeCity.shutdown = function(code) {
-  CodeCity.checkpoint(true);
+  if (CodeCity.config.checkpointAtShutdown !== false) {
+    CodeCity.checkpoint(true);
+  }
   if (typeof code === 'string') {
     process.kill(process.pid, code);
   } else {
