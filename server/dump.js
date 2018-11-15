@@ -458,7 +458,7 @@ var ScopeInfo = function(scope) {
    * Map of variable name -> dump status.
    * @private @const {!Object<string, Do>}
    */
-  this.done_ = Object.create(null);
+  this.doneVar_ = Object.create(null);
 };
 
 /**
@@ -513,7 +513,7 @@ ScopeInfo.prototype.getDone = function(part) {
   if (typeof part !== 'string') {
     throw new TypeError('Invalid part (not a variable name)');
   }
-  return this.done_[part] || Do.UNSTARTED;
+  return this.doneVar_[part] || Do.UNSTARTED;
 };
 
 /**
@@ -528,7 +528,7 @@ ScopeInfo.prototype.setDone = function(part, done) {
   } else if (done < this.getDone(part)) {
     throw new RangeError('Undoing previous variable binding??');
   }
-  this.done_[part] = done;
+  this.doneVar_[part] = done;
 };
 
 /**
@@ -541,8 +541,12 @@ var ObjectInfo = function(dumper, obj) {
   this.obj = obj;
   /** @type {!Selector|undefined} Reference to this object, once created. */
   this.ref = undefined;
+  /** @type {!Do} Has prototype been set? */
+  this.doneProto = Do.DECL;  // Never need to 'declare' the [[Prototype]] slot!
+  /** @type {!Do} Has owner been set? */
+  this.doneOwner = Do.DECL;  // Never need to 'declare' that object has owner!
   /** @type {!Object<string, Do>} Map of property name -> dump status. */
-  this.done_ = Object.create(null);
+  this.doneProp_ = Object.create(null);
   /**
    * Map of property name -> property descriptor, where property
    * descriptor is a map of attribute names (writable, enumerable,
@@ -551,10 +555,6 @@ var ObjectInfo = function(dumper, obj) {
    * @type {!Object<string, !Object<string, boolean>>}
    */
   this.attributes = Object.create(null);
-  /** @type {!Do} Has prototype been set? */
-  this.doneProto = Do.DECL;  // Never need to 'declare' the [[Prototype]] slot!
-  /** @type {!Do} Has owner been set? */
-  this.doneOwner = Do.DECL;  // Never need to 'declare' that object has owner!
 };
 
 /**
@@ -709,7 +709,7 @@ ObjectInfo.prototype.getDone = function(part) {
   if (part === Selector.PROTOTYPE) {
     return this.doneProto;
   } else if (typeof part === 'string') {
-    return this.done_[part] || Do.UNSTARTED;
+    return this.doneProp_[part] || Do.UNSTARTED;
   } else {
     throw new TypeError('Invalid part');
   }
@@ -729,7 +729,7 @@ ObjectInfo.prototype.setDone = function(part, done) {
     }
     this.doneProto = done;
   } else if (typeof part === 'string') {
-    var old = this.done_[part];
+    var old = this.doneProp_[part];
     if (done < old) {
       throw new RangeError("Can't undo work on " + part);
     } else if(done === old && done < Do.RECURSE) {
@@ -743,7 +743,7 @@ ObjectInfo.prototype.setDone = function(part, done) {
         !this.attributes[part]['writable']) {
       throw new Error('Property ' + part + ' made immutable too early');
     }
-    this.done_[part] = done;
+    this.doneProp_[part] = done;
   } else {
     throw new TypeError('Invalid part');
   }
