@@ -41,6 +41,66 @@ const {Dumper} = testOnly;
 const simpleSpec = [{filename: 'all', rest: true}];
 
 /**
+ * Unit tests for the ObjectInfo.prototype.isWritable method.
+ */
+exports.testObjectInfoPrototypeIsWritable = function(t) {
+  const intrp = getInterpreter();
+  const dumper = new Dumper(intrp, simpleSpec);
+
+  const root = intrp.ROOT;
+  const writable = 
+      {writable: true, enumerable: true, configurable: true, value: true};
+  const nonwritable = 
+      {writable: false, enumerable: true, configurable: true, value: false};
+
+  // Create some objects and properties.
+  intrp.OBJECT.defineProperty('foo', nonwritable, root);
+  const obj = new intrp.Object(root);
+  obj.defineProperty('bar', nonwritable, root);
+  obj.defineProperty('baz', writable, root);
+  const child = new intrp.Object(root, obj);
+  child.defineProperty('foo', writable, root);
+  child.defineProperty('bar', writable, root);
+  child.defineProperty('baz', writable, root);
+
+  const opi = dumper.getObjectInfo(intrp.OBJECT);
+  opi.ref = new Selector('Object.prototype');
+  const oi = dumper.getObjectInfo(obj);
+  oi.ref = new Selector('obj');
+  const ci = dumper.getObjectInfo(child);
+  ci.ref = new Selector('child');
+  opi.proto = null;
+  oi.proto = intrp.OBJECT;
+  ci.proto = intrp.OBJECT;
+
+  opi.dumpBinding(dumper, 'foo', Do.SET);
+  oi.dumpBinding(dumper, Selector.PROTOTYPE, Do.SET);
+  oi.dumpBinding(dumper, 'bar', Do.SET);
+  ci.dumpBinding(dumper, Selector.PROTOTYPE, Do.DECL);
+  t.expect("ci.isWritable('foo')  // 0", ci.isWritable(dumper, 'foo'), true);
+  t.expect("ci.isWritable('bar')  // 0", ci.isWritable(dumper, 'bar'), true);
+  t.expect("ci.isWritable('baz')  // 0", ci.isWritable(dumper, 'baz'), true);
+
+  opi.dumpBinding(dumper, 'foo', Do.ATTR);
+  oi.dumpBinding(dumper, 'bar', Do.ATTR);
+  t.expect("ci.isWritable('foo')  // 1", ci.isWritable(dumper, 'foo'), false);
+  t.expect("ci.isWritable('bar')  // 1", ci.isWritable(dumper, 'bar'), true);
+  t.expect("ci.isWritable('baz')  // 1", ci.isWritable(dumper, 'baz'), true);
+
+  ci.dumpBinding(dumper, Selector.PROTOTYPE, Do.SET);
+  t.expect("ci.isWritable('foo')  // 2", ci.isWritable(dumper, 'foo'), false);
+  t.expect("ci.isWritable('bar')  // 2", ci.isWritable(dumper, 'bar'), false);
+  t.expect("ci.isWritable('baz')  // 2", ci.isWritable(dumper, 'baz'), true);
+
+  ci.dumpBinding(dumper, 'foo', Do.DECL);
+  ci.dumpBinding(dumper, 'bar', Do.DECL);
+  ci.dumpBinding(dumper, 'baz', Do.DECL);
+  t.expect("ci.isWritable('foo')  // 3", ci.isWritable(dumper, 'foo'), true);
+  t.expect("ci.isWritable('bar')  // 3", ci.isWritable(dumper, 'bar'), true);
+  t.expect("ci.isWritable('baz')  // 3", ci.isWritable(dumper, 'baz'), true);
+};
+
+/**
  * Unit tests for the Dumper.prototype.isShadowed method.
  * @param {!T} t The test runner object.
  */

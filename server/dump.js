@@ -674,6 +674,15 @@ ObjectInfo.prototype.dumpProperty_ = function(dumper, key, todo, ref) {
     this.attributes[key] =
         {writable: true, enumerable: true, configurable: true};
   }
+  if (todo >= Do.ATTR && done < Do.ATTR) {
+    var desc = this.obj.getOwnPropertyDescriptor(key, dumper.intrp.ROOT);
+    this.attributes[key] = {
+      writable: desc.writable,
+      enumerable: desc.enumerable,
+      configurable: desc.configurable,
+    };
+    // TODO(cpcallen): actually output code to set attributes.
+  }
   output.push(this.checkRecurse_(dumper, todo, ref, key, value));
   // Record completion.
   this.setDone(key, todo);
@@ -756,6 +765,33 @@ ObjectInfo.prototype.getDone = function(part) {
 };
 
 /**
+ * Return true iff the specifed property can be created or set by
+ * assignment - i.e., that it exists and is writable, or doesn't exist
+ * and doe snot inherit from a non-writable property on the prototype
+ * chain.
+ * @param {!Dumper} dumper Dumper to which this ObjectInfo belongs.
+ * @param {string} key The property key to check for writability of.
+ * @return {boolean} True iff the property can be set by assignment.
+ */
+ObjectInfo.prototype.isWritable = function(dumper, key) {
+  // Invariant checks.
+  if (this.proto === undefined) {
+    throw new Error('Checking writability of property on non-created object');
+  } else if ((key in this.attributes) !== (this.getDone(key) >= Do.DECL)) {
+    throw new Error('Attribute / done mismatch');
+  }
+  if (key in this.attributes) {
+    return this.attributes[key]['writable'];
+  } else {
+    if (this.proto === null) {
+      return true;
+    } else {
+      return dumper.getObjectInfo(this.proto).isWritable(dumper, key);
+    }
+  }
+};
+
+/**
  * Update the current 'done' status of a property.  Will throw a
  * RangeError if caller attempts to un-do or re-do a previously-done
  * action.
@@ -779,6 +815,9 @@ ObjectInfo.prototype.setDone = function(part, done) {
     this.doneProp_[part] = done;
   }
 };
+
+///////////////////////////////////////////////////////////////////////////////
+// Do, etc.
 
 /**
  * Possible things to do (or have done) with a variable / property
