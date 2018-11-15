@@ -200,6 +200,8 @@ Dumper.prototype.primitiveToExpr = function(value) {
  */
 Dumper.prototype.builtinToExpr = function(obj, key, info) {
   if (obj instanceof this.intrp.Function) {
+    // BUG(cpcallen): The prototype might have been changed.
+    info.donePrototype = Do.SET;
     // The .length property and .name properties are pre-set.
     // BUG(cpcallen): Actually, .name can be changed, so we should
     // compare it to the value in a pristine Interpreter.
@@ -221,18 +223,19 @@ Dumper.prototype.builtinToExpr = function(obj, key, info) {
  * @return {string} An eval-able representation of obj.
  */
 Dumper.prototype.objectToExpr = function(obj, info) {
-  info.doneProto = Do.SET;
   switch (obj.proto) {
     case this.intrp.OBJECT:
+      info.setDone(Selector.PROTOTYPE, Do.SET);
       return '{}';
     case null:
+      info.setDone(Selector.PROTOTYPE, Do.SET);
       return 'Object.create(null)';
     default:
       var protoInfo = this.getObjectInfo(obj.proto);
       if (protoInfo.ref) {
+        info.setDone(Selector.PROTOTYPE, Do.SET);
         return 'Object.create(' + this.toExpr(obj.proto) + ')';
       } else {
-        info.doneProto = Do.DECL;
         return '{}';  // Set [[Prototype]] later.
       }
   }
@@ -447,6 +450,9 @@ Dumper.prototype.isShadowed = function(name, scope) {
   return false;
 };
 
+///////////////////////////////////////////////////////////////////////////////
+// ScopeInfo
+
 /**
  * Dump-state information for a single scope.
  * @constructor
@@ -530,6 +536,9 @@ ScopeInfo.prototype.setDone = function(part, done) {
   }
   this.doneVar_[part] = done;
 };
+
+///////////////////////////////////////////////////////////////////////////////
+// ObjectInfo
 
 /**
  * Dump-state information for a single object.
@@ -655,18 +664,19 @@ ObjectInfo.prototype.dumpProperty_ = function(dumper, key, todo, ref) {
  * @return {string} An eval-able program to initialise the specified binding.
  */
 ObjectInfo.prototype.dumpPrototype_ = function(dumper, todo, ref) {
+  // TODO(cpcallen): don't recreate a Selector that our caller^3 already has?
+  var sel = new Selector(ref);
+  sel.push(Selector.PROTOTYPE);
+  var output = [];
+  var value = this.obj.proto;
   if (todo >= Do.SET && this.doneProto < Do.SET) {
-    var output = [];
-    var value = this.obj.proto;
     output.push('Object.setPrototypeOf(', ref.toExpr(), ', ',
-                dumper.toExpr(value), ');\n');
+                dumper.toExpr(value, sel), ');\n');
     this.doneProto = Do.SET;
-    output.push(
-        this.checkRecurse_(dumper, todo, ref, Selector.PROTOTYPE, value));
-    return output.join('');
-  } else {
-    return '';
   }
+  output.push(
+      this.checkRecurse_(dumper, todo, ref, Selector.PROTOTYPE, value));
+  return output.join('');
 };
 
 /**
@@ -680,20 +690,25 @@ ObjectInfo.prototype.dumpPrototype_ = function(dumper, todo, ref) {
  * @return {string} An eval-able program to initialise the specified binding.
  */
 ObjectInfo.prototype.dumpRecursively = function(dumper, ref) {
-  if (!this.ref) throw new Error("Can't dump an uncreated object");
-  if (!ref) ref = this.ref;
-
   if (this.visiting) return '';
   this.visiting = true;
-
+  if (!this.ref) throw new Error("Can't dump an uncreated object");
+  if (!ref) ref = this.ref;
   var output = [];
+  // TODO(cpcallen): Dump owner.
+  // Dump prototype.
+  if (this.doneProto < Do.RECURSE) {
+    output.push(this.dumpPrototype_(dumper, Do.RECURSE, ref));
+  }
+  // Dump properties.
   var keys = this.obj.ownKeys(dumper.intrp.ROOT);
   for (var i = 0; i < keys.length; i++) {
     var key = keys[i];
     if (this.getDone(key) >= Do.RECURSE) continue;  // Skip already-done.
     output.push(this.dumpProperty_(dumper, key, Do.RECURSE, ref));
   }
-
+  // TODO(cpcallen): Dump internal elements.
+  // TODO(cpcallen): Dump extensibility.
   this.visiting = false;
   return output.join('');
 };

@@ -148,6 +148,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
       var obj = {a: 1, b: 2, c:3};
       var child1 = Object.create(obj);
       var child2 = Object.create(obj);
+      var child3 = Object.create(obj);
 
       function f1(arg) {}
       var f2 = function(arg) {};
@@ -168,10 +169,17 @@ exports.testDumperPrototypeDumpBinding = function(t) {
       var re2 = /bar/g;
       Object.setPrototypeOf(re2, re1);
       re2.lastIndex = 42;
+      var re3 = /baz/m;
+      Object.setPrototypeOf(re3, re1);
   `);
   intrp.run();
-  const func = intrp.global.get('foo');
 
+  // Set a few flags in advance, to limit recursive dumping of
+  // builtins in tests.
+  dumper.getObjectInfo(intrp.OBJECT).visiting = true;
+  dumper.getObjectInfo(intrp.ARRAY).visiting = true;
+  dumper.getObjectInfo(intrp.REGEXP).visiting = true;
+  
   // Check generated output for (and post-dump status of) specific bindings.
   const cases = [  // Order matters.
     ['Object', Do.DECL, 'var Object;\n'],
@@ -182,9 +190,11 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         "Object.prototype = new 'Object.prototype';\n"],
 
     ['child1', Do.SET, 'var child1 = {};\n'],
+    ['child2', Do.SET, 'var child2 = {};\n'],
     ['obj', Do.SET, 'var obj = {};\n'],
     ['obj', Do.RECURSE, 'obj.a = 1;\nobj.b = 2;\nobj.c = 3;\n'],
-    ['child2', Do.RECURSE, 'var child2 = Object.create(obj);\n'],
+    ['child2', Do.RECURSE, 'Object.setPrototypeOf(child2, obj);\n'],
+    ['child3', Do.RECURSE, 'var child3 = Object.create(obj);\n'],
 
     ['f1', Do.DECL, 'var f1;\n'],
     // TODO(cpcallen): Really want 'function f1(arg) {};\n'.
@@ -200,15 +210,17 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         'arr[2] = 105;\narr[3] = obj;\n'],
     // TODO(cpcallen): really want 'var sparse = [0, , 2];\nsparse.length = 4;'.
     ['sparse', Do.RECURSE, 'var sparse = [];\n' +
-        // BUG(cpcallen) should have: 'Object.setPrototypeOf(sparse, arr);\n' +
+        'Object.setPrototypeOf(sparse, arr);\n' +
         'sparse[0] = 0;\nsparse[2] = 2;\nsparse.length = 4;\n'],
 
     ['date', Do.SET, "var date = new Date('1975-07-27T00:00:00.000Z');\n"],
 
     ['re1', Do.SET, 'var re1 = /foo/gi;\n'],
     ['re2', Do.RECURSE, 'var re2 = /bar/g;\n' +
-        // BUG(cpcallen) should have: 'Object.setPrototypeOf(re2, re1);\n' +
+        'Object.setPrototypeOf(re2, re1);\n' +
         're2.lastIndex = 42;\n'],
+    ['re3', Do.SET, 'var re3 = /baz/m;\n'],
+    ['re3^', Do.SET, 'Object.setPrototypeOf(re3, re1);\n'],
   ];
   for (const tc of cases) {
     const s = new Selector(tc[0]);
@@ -230,9 +242,10 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     ['Object.length', Do.SET],
     ['Object.name', Do.SET],
 
-    ['obj^', Do.SET, 'Object.prototype'],
+    ['obj^', Do.RECURSE, 'Object.prototype'],
     ['child1^', Do.DECL, 'obj'],
-    ['child2^', Do.SET, 'obj'],
+    ['child2^', Do.RECURSE, 'obj'],
+    ['child3^', Do.RECURSE, 'obj'],
 
     ['f1^', Do.SET],
     ['f1.length', Do.SET],
@@ -243,26 +256,39 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     ['f2.length', Do.SET],
     ['f2.name', Do.SET],
     ['f2.prototype', Do.DECL, 'Object.prototype'],
-    ['f2.f3^', Do.SET],
+    ['f2.f3^', Do.RECURSE],
     ['f2.f3.length', Do.RECURSE],
     // TODO(cpcallen): enable this once code is correct.
     // ['f2.f3.name', Do.UNSTARTED],  // N.B.: not implicitly set.
     ['f2.f3.prototype', Do.RECURSE, 'obj'],
 
-    ['arr^', Do.SET],
+    ['arr^', Do.RECURSE],
     ['arr.length', Do.RECURSE],
-    ['sparse^', Do.DECL, 'arr'],  // BUG(cpcallen): should be Do.SET.
+    ['sparse^', Do.RECURSE, 'arr'],
     ['sparse.length', Do.RECURSE],
 
     ['date^', Do.SET],
 
-    ['re1^', Do.SET],
-    ['re1.source', Do.SET],
-    ['re1.global', Do.SET],
-    ['re1.ignoreCase', Do.SET],
-    ['re1.multiline', Do.SET],
-    ['re1.lastIndex', Do.SET],
-    ['re2^', Do.DECL, 're1'],  // BUG(cpcallen): should be Do.SET.
+    ['re1^', Do.RECURSE],
+    ['re1.source', Do.RECURSE],
+    ['re1.global', Do.RECURSE],
+    ['re1.ignoreCase', Do.RECURSE],
+    ['re1.multiline', Do.RECURSE],
+    ['re1.lastIndex', Do.RECURSE],
+
+    ['re2^', Do.RECURSE, 're1'],
+    ['re2.source', Do.RECURSE],
+    ['re2.global', Do.RECURSE],
+    ['re2.ignoreCase', Do.RECURSE],
+    ['re2.multiline', Do.RECURSE],
+    ['re2.lastIndex', Do.RECURSE],
+
+    ['re3^', Do.SET, 're1'],
+    ['re3.source', Do.SET],
+    ['re3.global', Do.SET],
+    ['re3.ignoreCase', Do.SET],
+    ['re3.multiline', Do.SET],
+    ['re3.lastIndex', Do.SET],
   ];
   for (const tc of implicit) {
     const s = new Selector(tc[0]);
