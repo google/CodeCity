@@ -669,10 +669,12 @@ ObjectInfo.prototype.dumpProperty_ = function(dumper, key, todo, ref) {
     output.push(sel.toExpr(), ' = undefined;\n');
     this.attributes[key] =
         {writable: true, enumerable: true, configurable: true};
+    this.setDone(key, Do.DECL);
   } else if (todo >= Do.SET && done < Do.SET) {
     output.push(sel.toExpr(), ' = ', dumper.toExpr(value, sel), ';\n');
     this.attributes[key] =
         {writable: true, enumerable: true, configurable: true};
+    this.setDone(key, Do.SET);
   }
   if (todo >= Do.ATTR && done < Do.ATTR) {
     var desc = this.obj.getOwnPropertyDescriptor(key, dumper.intrp.ROOT);
@@ -682,10 +684,9 @@ ObjectInfo.prototype.dumpProperty_ = function(dumper, key, todo, ref) {
       configurable: desc.configurable,
     };
     // TODO(cpcallen): actually output code to set attributes.
+    this.setDone(key, Do.ATTR);
   }
   output.push(this.checkRecurse_(dumper, todo, ref, key, value));
-  // Record completion.
-  this.setDone(key, todo);
   return output.join('');
 };
 
@@ -805,8 +806,8 @@ ObjectInfo.prototype.setDone = function(part, done) {
   // Invariant checks.
   if (done < old) {
     throw new RangeError("Can't undo work on " + name);
-  } else if(done === old && done < Do.RECURSE) {
-    throw new RangeError('Refusing redundant work on ' + name);
+  } else if(done === old) {
+    throw new RangeError('Redundant work on ' + name);
   }
   // Do set.
   if (part === Selector.PROTOTYPE) {
