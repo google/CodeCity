@@ -60,7 +60,7 @@ CodeCity.startup = function(configFile) {
     process.exit(1);
   }
   // Find the most recent database file.
-  var checkpoint = CodeCity.allCheckpoints().pop();
+  var checkpoint = CodeCity.allCheckpoints()[0];
   // Load the interpreter.
   CodeCity.interpreter = new Interpreter({
     trimEval: true,
@@ -142,7 +142,8 @@ CodeCity.parseJson = function(text) {
 };
 
 /**
- * Return an ordered list of all currently saved checkpoints.
+ * Return a list of all currently saved checkpoints, ordered from most
+ * to least recent.
  * @return {!Array<string>} Array of filenames for checkpoints.
  */
 CodeCity.allCheckpoints = function() {
