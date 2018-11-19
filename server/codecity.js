@@ -148,7 +148,7 @@ CodeCity.parseJson = function(text) {
 CodeCity.allCheckpoints = function() {
   var files = fs.readdirSync(CodeCity.databaseDirectory);
   files = files.filter((file) => CodeCity.allCheckpoints.regexp_.test(file));
-  files.sort();
+  files.sort().reverse();
   return files;
 };
 
@@ -172,7 +172,7 @@ CodeCity.deleteCheckpointsIfNeeded = function() {
       sum + CodeCity.fileSize(fileName), 0);
   // Budget for a possible 10% growth.
   var estimateNext = directorySize + lastCheckpointSize * 1.1;
-  var maxSize = CodeCity.config.checkpointMaxDirectorySize;
+  var maxSize = CodeCity.config.checkpointMaxDirectorySize * 1024 * 1024;
   if (typeof maxSize !== 'number') {
     maxSize = Infinity;
   }
