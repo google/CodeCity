@@ -45,7 +45,8 @@ const simpleSpec = [{filename: 'all', rest: true}];
  */
 exports.testObjectInfoPrototypeIsWritable = function(t) {
   const intrp = getInterpreter();
-  const dumper = new Dumper(intrp, simpleSpec);
+  const pristine = getInterpreter();
+  const dumper = new Dumper(intrp, pristine, simpleSpec);
 
   const root = intrp.ROOT;
   const writable = 
@@ -106,7 +107,8 @@ exports.testObjectInfoPrototypeIsWritable = function(t) {
  */
 exports.testDumperPrototypeIsShadowed = function(t) {
   const intrp = getInterpreter();
-  const dumper = new Dumper(intrp, simpleSpec);
+  const pristine = getInterpreter();
+  const dumper = new Dumper(intrp, pristine, simpleSpec);
 
   intrp.global.createMutableBinding('foo', 'foo');
   intrp.global.createMutableBinding('bar', 'bar');
@@ -126,7 +128,8 @@ exports.testDumperPrototypeIsShadowed = function(t) {
  */
 exports.testDumperPrototypePrimitiveToExpr = function(t) {
   const intrp = getInterpreter();
-  const dumper = new Dumper(intrp, simpleSpec);
+  const pristine = getInterpreter();
+  const dumper = new Dumper(intrp, pristine, simpleSpec);
 
   function doCases(cases) {
     for (const tc of cases) {
@@ -172,7 +175,8 @@ exports.testDumperPrototypePrimitiveToExpr = function(t) {
  */
 exports.testDumperPrototypeToExpr = function(t) {
   const intrp = getInterpreter();
-  const dumper = new Dumper(intrp, simpleSpec);
+  const pristine = getInterpreter();
+  const dumper = new Dumper(intrp, pristine, simpleSpec);
 
   // Create UserFunction to dump.
   intrp.createThreadForSrc('function foo(bar) {}');
@@ -201,7 +205,8 @@ exports.testDumperPrototypeToExpr = function(t) {
  */
 exports.testDumperPrototypeDumpBinding = function(t) {
   const intrp = getInterpreter();
-  const dumper = new Dumper(intrp, simpleSpec);
+  const pristine = getInterpreter();
+  const dumper = new Dumper(intrp, pristine, simpleSpec);
 
   // Create various objects to dump.
   intrp.createThreadForSrc(`
@@ -368,11 +373,9 @@ exports.testDumperPrototypeDumpBinding = function(t) {
  * @param {!T} t The test runner object.
  */
 exports.testDumper = function(t) {
-  let intrp = getInterpreter();
-  let dumper = new Dumper(intrp, simpleSpec);
-
-  // Test dump.
-  intrp = new Interpreter({noLog: ['net', 'unhandled']});
+  const intrp = getInterpreter();
+  const pristine = getInterpreter();
+  const dumper = new Dumper(intrp, pristine, simpleSpec);
 
   // Hack to install stubs for builtins found in codecity.js.
   for (const bi of ['CC.log', 'CC.checkpoint', 'CC.shutdown']) {

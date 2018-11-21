@@ -32,11 +32,12 @@ var Selector = require('./selector');
 /**
  * Dump an Interpreter using a given dump specification.
  * @param {!Interpreter} intrp The interpreter to dump.
+ * @param {!Interpreter} pristine A pristine interpreter, initialised
+ *     exactly as the one the ouptut JS will be executed by.
  * @param {!Array<SpecEntry>} spec The dump specificaiton.
  */
-var dump = function(intrp, spec) {
-  var dumper = new Dumper(intrp, spec);
-
+var dump = function(intrp, pristine, spec) {
+  var dumper = new Dumper(intrp, pristine, spec);
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -48,10 +49,13 @@ var dump = function(intrp, spec) {
  * required to keep track of what has and hasn't yet been dumped.
  * @constructor
  * @param {!Interpreter} intrp The interpreter to be dumped.
+ * @param {!Interpreter} pristine A pristine interpreter, initialised
+ *     exactly as the one the ouptut JS will be executed by.
  * @param {!Array<SpecEntry>} spec The dump specification.
  */
-var Dumper = function(intrp, spec) {
+var Dumper = function(intrp, pristine, spec) {
   this.intrp = intrp;
+  this.pristine = pristine;
   this.config = new Config(spec);
   /** @type {!Map<!Interpreter.Scope,!ScopeInfo>} */
   this.scopeInfo = new Map;
