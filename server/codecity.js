@@ -101,6 +101,7 @@ CodeCity.startup = function(configFile) {
   // Checkpoint at regular intervals.
   // TODO: Let the interval be configurable from the database.
   var interval = CodeCity.config.checkpointInterval || 600;
+  CodeCity.config.checkpointInterval = interval;
   if (interval > 0) {
     setInterval(CodeCity.checkpoint, interval * 1000);
   }
@@ -203,13 +204,15 @@ CodeCity.chooseCheckpointToDelete = function(checkpoints) {
       Date.parse(name.slice(0, -5).replace('.', ':').replace('.', ':')));
   var currentTime = Date.now();
   var totalTime = currentTime - checkpointTimes[checkpointTimes.length - 1];
-  // Delete one checkpoint.
+  var interval = CodeCity.config.checkpointInterval * 1000;
+  // Planning to delete one checkpoint.
   var checkpointCount = checkpoints.length - 1;
   // Compute ideal times.
-  var decayRate = (totalTime + 1) ** (1 / checkpointCount);
+  var missing = Math.max(totalTime / interval - checkpointCount, 0);
+  var decayRate = (missing + 1) ** (1 / checkpointCount);
   var idealTimes = new Array(checkpointTimes.length);
   for (var n = 0; n < checkpointTimes.length; n++) {
-    idealTimes[n] = currentTime - (decayRate ** n) + 1;
+    idealTimes[n] = currentTime - (interval * (n + decayRate ** n - 1));
   }
 
   // Choose one backup for deletion.
