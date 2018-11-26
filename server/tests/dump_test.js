@@ -214,6 +214,12 @@ exports.testDumperPrototypeDumpBinding = function(t) {
       var child2 = Object.create(obj);
       var child3 = Object.create(obj);
 
+      child1.a = 'a';
+      child2.a = 'a';
+      Object.defineProperty(obj, 'a', {writable: false});
+      Object.defineProperty(child1, 'a', {enumerable: false});
+      Object.defineProperty(child2, 'a', {enumerable: false});
+
       function f1(arg) {}
       var f2 = function(arg) {};
       Object.setPrototypeOf(f2, null);
@@ -248,7 +254,9 @@ exports.testDumperPrototypeDumpBinding = function(t) {
   dumper.getObjectInfo(intrp.REGEXP).visiting = true;
   
   // Check generated output for (and post-dump status of) specific bindings.
-  const cases = [  // Order matters.
+  const cases = [  
+    // [ selector, todo, expected output, expected done (if === todo) ]
+    // Order matters.
     ['Object', Do.DECL, 'var Object;\n'],
     ['Object', Do.DECL, ''],
     ['Object', Do.SET, "Object = new 'Object';\n"],
@@ -256,10 +264,23 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     ['Object.prototype', Do.SET,
         "Object.prototype = new 'Object.prototype';\n"],
 
+    // TODO(cpcallen): Really want "var child1 = {a: 'a'};\n".
     ['child1', Do.SET, 'var child1 = {};\n'],
+    // TODO(cpcallen): Really want "var child2 = {a: 'a'};\n".
     ['child2', Do.SET, 'var child2 = {};\n'],
     ['obj', Do.SET, 'var obj = {};\n'],
     ['obj', Do.RECURSE, 'obj.a = 1;\nobj.b = 2;\nobj.c = 3;\n'],
+    // TODO(cpcallen): Really want
+    // "(new 'Object.defineProperty')(child1, 'a', " +
+    // '{writable: true, enumerable: true, configurable: true});\n'].
+    ['child1.a', Do.DECL, 'child1.a = undefined;\n'],
+    ['child1.a', Do.SET, "child1.a = 'a';\n"],
+    ['Object.defineProperty', Do.SET,
+        "Object.defineProperty = new 'Object.defineProperty';\n"],
+    // TODO(cpcallen): Really want "Object.defineProperty(child2, 'a', " +
+    // "{writable: true, enumerable: false, configurable: true, value: 'a'}\n"
+    // with done === Do.ATTR.
+    ['child2.a', Do.SET, "child2.a = 'a';\n"],
     ['child2', Do.RECURSE, 'Object.setPrototypeOf(child2, obj);\n'],
     ['child3', Do.RECURSE, 'var child3 = Object.create(obj);\n'],
 
@@ -268,7 +289,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     ['f1', Do.SET, 'f1 = function f1(arg) {};\n'],
     ['f2', Do.SET, 'var f2 = function(arg) {};\n'],
     ['f2.f3', Do.DECL, 'f2.f3 = undefined;\n'],
-    ['f2.f3', Do.SET, 'f2.f3 = function f4(arg) {};\n'],
+    ['f2.f3', Do.SET, 'f2.f3 = function f4(arg) {};\n', Do.ATTR],
     ['f2.f3^', Do.SET, 'Object.setPrototypeOf(f2.f3, null);\n'],
     ['f2.f3', Do.RECURSE, "f2.f3.prototype = obj;\n"],
 
@@ -298,7 +319,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     // Check work recorded.
     const info  = dumper.getInfoForSelector(s);
     t.expect(util.format('Binding status of <%s> === %d', s, tc[1]),
-        info.getDone(s[s.length - 1]), tc[1]);
+        info.getDone(s[s.length - 1]), tc[3] || tc[1]);
   }
 
   // Check status of (some of the) additional bindings that will be
@@ -306,6 +327,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
   // that their values have the expected references (where
   // object-valued and already dumped).
   const implicit = [
+    // [ selector, expected done, expected value (as selector) ]
     ['Object.length', Do.ATTR],
     ['Object.name', Do.SET],
 

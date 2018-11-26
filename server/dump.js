@@ -723,16 +723,11 @@ ObjectInfo.prototype.dumpProperty_ = function(dumper, key, todo, ref) {
   var output = [];
 
   if (todo === Do.DECL && done < Do.DECL) {
-    output.push(sel.toExpr(), ' = undefined;\n');
-    this.attributes[key] =
-        {writable: true, enumerable: true, configurable: true};
-    this.setDone(key, Do.DECL);
+    output.push(this.assign_(dumper, key, ref, undefined));
   } else if (todo >= Do.SET && done < Do.SET) {
-    output.push(sel.toExpr(), ' = ', dumper.toExpr(value, sel), ';\n');
-    this.attributes[key] =
-        {writable: true, enumerable: true, configurable: true};
-    this.setDone(key, Do.SET);
+    output.push(this.assign_(dumper, key, ref, value));
   }
+  done = this.getDone(key);  // Update done in case SET did ATTR implicitly.
   if (todo >= Do.ATTR && done < Do.ATTR) {
     var desc = this.obj.getOwnPropertyDescriptor(key, dumper.intrp.ROOT);
     this.attributes[key] = {
@@ -745,6 +740,48 @@ ObjectInfo.prototype.dumpProperty_ = function(dumper, key, todo, ref) {
   }
   output.push(this.checkRecurse_(dumper, todo, ref, key, value));
   return output.join('');
+};
+
+/**
+ * Generate JS source text to do an assignment, and update attribute
+ * state info.
+ * 
+ * @private
+ * @param {!Dumper} dumper Dumper to which this ObjectInfo belongs.
+ * @param {string} key The property to dump.
+ * @param {!Selector} ref Selector refering to this object.
+ * @return {string} An eval-able program to initialise the specified binding.
+ */
+ObjectInfo.prototype.assign_ = function(dumper, key, ref, value) {
+  if (!this.isWritable(dumper, key)) {
+    // TODO(cpcallen): enable this once we have implemnted the
+    // alternative using Object.defineProperty.
+    // throw new Error('Attempting assignment of non-writable property ' + key);
+  }
+
+  // TODO(cpcallen): don't recreate a Selector that our caller already has.
+  var sel = new Selector(ref);
+  sel.push(key);
+
+  var pd = this.obj.getOwnPropertyDescriptor(key, dumper.intrp.ROOT);
+  if (key in this.attributes) {
+    var attr = this.attributes[key];
+  } else {
+    attr = {writable: true, enumerable: true, configurable: true};
+    this.attributes[key] = attr;
+  }
+  if (pd.value === value) {
+    if (pd.writable === attr['writable'] &&
+        pd.enumerable === attr['enumerable'] &&
+        pd.configurable === attr['configurable']) {
+      this.setDone(key, Do.ATTR);
+    } else {
+      this.setDone(key, Do.SET);
+    }
+  } else {
+    this.setDone(key, Do.DECL);
+  }
+  return sel.toExpr() + ' = ' + dumper.toExpr(value, sel) + ';\n';
 };
 
 /**
