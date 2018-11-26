@@ -45,7 +45,7 @@ const simpleSpec = [{filename: 'all', rest: true}];
  */
 exports.testObjectInfoPrototypeIsWritable = function(t) {
   const intrp = getInterpreter();
-  const pristine = getInterpreter();
+  const pristine = new Interpreter();
   const dumper = new Dumper(intrp, pristine, simpleSpec);
 
   const root = intrp.ROOT;
@@ -107,7 +107,7 @@ exports.testObjectInfoPrototypeIsWritable = function(t) {
  */
 exports.testDumperPrototypeIsShadowed = function(t) {
   const intrp = getInterpreter();
-  const pristine = getInterpreter();
+  const pristine = new Interpreter();
   const dumper = new Dumper(intrp, pristine, simpleSpec);
 
   intrp.global.createMutableBinding('foo', 'foo');
@@ -128,7 +128,7 @@ exports.testDumperPrototypeIsShadowed = function(t) {
  */
 exports.testDumperPrototypePrimitiveToExpr = function(t) {
   const intrp = getInterpreter();
-  const pristine = getInterpreter();
+  const pristine = new Interpreter();
   const dumper = new Dumper(intrp, pristine, simpleSpec);
 
   function doCases(cases) {
@@ -175,7 +175,7 @@ exports.testDumperPrototypePrimitiveToExpr = function(t) {
  */
 exports.testDumperPrototypeToExpr = function(t) {
   const intrp = getInterpreter();
-  const pristine = getInterpreter();
+  const pristine = new Interpreter();
   const dumper = new Dumper(intrp, pristine, simpleSpec);
 
   // Create UserFunction to dump.
@@ -205,11 +205,10 @@ exports.testDumperPrototypeToExpr = function(t) {
  */
 exports.testDumperPrototypeDumpBinding = function(t) {
   const intrp = getInterpreter();
-  const pristine = getInterpreter();
-  const dumper = new Dumper(intrp, pristine, simpleSpec);
 
   // Create various objects to dump.
   intrp.createThreadForSrc(`
+      Object.defineProperty(Object, 'name', {writable: true});
       var obj = {a: 1, b: 2, c:3};
       var child1 = Object.create(obj);
       var child2 = Object.create(obj);
@@ -239,6 +238,9 @@ exports.testDumperPrototypeDumpBinding = function(t) {
   `);
   intrp.run();
 
+  // Create Dumper with pristine Interpreter instance to compare to.
+  const pristine = new Interpreter();
+  const dumper = new Dumper(intrp, pristine, simpleSpec);
   // Set a few flags in advance, to limit recursive dumping of
   // builtins in tests.
   dumper.getObjectInfo(intrp.OBJECT).visiting = true;
@@ -304,7 +306,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
   // that their values have the expected references (where
   // object-valued and already dumped).
   const implicit = [
-    ['Object.length', Do.SET],
+    ['Object.length', Do.ATTR],
     ['Object.name', Do.SET],
 
     ['obj^', Do.RECURSE, 'Object.prototype'],

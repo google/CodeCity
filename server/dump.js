@@ -66,6 +66,73 @@ var Dumper = function(intrp, pristine, spec) {
    * @type {!Interpreter.Scope}
    */
   this.scope = intrp.global;
+
+  /**
+   * Map from pristine objects to their corresponding intrp objects.
+   * This is mainly for checking to see if builtins have had their
+   * prototype or object-valued properties modified.
+   * @type {!Map<!Interpreter.prototype.Object, !Interpreter.prototype.Object>}
+   */
+  var intrpObjs = new Map();
+  // Initialise intrpObjs.
+  var attrNames = ['writable', 'configurable', 'enumerable'];
+  var builtins = pristine.builtins.keys();
+  for (var i = 0; i < builtins.length; i++) {
+    var builtin = builtins[i];
+    var obj = this.intrp.builtins.get(builtin);
+    var pobj = this.pristine.builtins.get(builtin);
+    if (!(obj instanceof this.intrp.Object)) {
+      continue;  // Skip primitive-valued builtins.
+    } else if (pobj === undefined) {
+      throw new Error('Builtin not found in pristine Interpreter');
+    } else if (!(pobj instanceof this.pristine.Object)) {
+      throw new Error('Builtin no longer an object in pristine Interpreter');
+    }
+    // TODO(cpcallen): add check for inconsistent duplicate
+    // registrations - e.g., if parseInt and Number.parseInt were
+    // the same in intrp but different in pristine.
+    intrpObjs.set(pobj, obj);
+  }
+
+  // Create and initialise ObjectInfos for builtin objects.
+  for (i = 0; i < builtins.length; i++) {
+    builtin = builtins[i];
+    obj = this.intrp.builtins.get(builtin);
+    if (!(obj instanceof this.intrp.Object)) continue;  // Skip primitives.
+    var oi = this.getObjectInfo(obj);
+    pobj = this.pristine.builtins.get(builtin);
+    // Record pre-set prototype.
+    oi.proto = pobj.proto === null ? null : intrpObjs.get(pobj.proto);
+    oi.doneProto = obj.proto === oi.proto ? Do.SET : Do.DECL;
+    // Record pre-set property values/attributes.
+    var keys = pobj.ownKeys(this.pristine.ROOT);
+    for (var j = 0; j < keys.length; j++) {
+      var key = keys[j];
+      var pd = obj.getOwnPropertyDescriptor(key, this.intrp.ROOT);
+      var ppd = pobj.getOwnPropertyDescriptor(key, this.pristine.ROOT);
+      var doneAttrs = true;
+      var attrs = {};
+      for (var k = 0; k < attrNames.length; k++) {
+        var attr = attrNames[k];
+        attrs[attr] = ppd[attr];
+        if (pd[attr] !== ppd[attr]) {
+          doneAttrs = false;
+        }
+      }
+      oi.attributes[key] = attrs;
+      var value = ppd.value instanceof this.intrp.Object ?
+          intrpObjs.get(ppd.value) : ppd.value;
+      if (Object.is(pd.value, value)) {
+        if (doneAttrs) {
+          oi.setDone(key, Do.ATTR);
+        } else {
+          oi.setDone(key, Do.SET);
+        }
+      } else {
+        oi.setDone(key, Do.DECL);
+      }
+    }
+  }
 };
 
 /**
@@ -206,20 +273,6 @@ Dumper.prototype.primitiveToExpr = function(value) {
  * @return {string} An eval-able representation of obj.
  */
 Dumper.prototype.builtinToExpr = function(obj, key, info) {
-  if (obj instanceof this.intrp.Function) {
-    // BUG(cpcallen): The prototype might have been changed.
-    info.proto = obj.proto;
-    info.donePrototype = Do.SET;
-    // The .length property and .name properties are pre-set.
-    // BUG(cpcallen): Actually, .name can be changed, so we should
-    // compare it to the value in a pristine Interpreter.
-    info.attributes['length'] =
-        {writable: false, enumerable: false, configurable: false};
-    info.setDone('length', Do.SET);
-    info.attributes['name'] =
-        {writable: false, enumerable: false, configurable: true};
-    info.setDone('name', Do.SET);
-  }
   return 'new ' + code.quote(key);
 };
 
