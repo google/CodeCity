@@ -49,9 +49,9 @@ exports.testObjectInfoPrototypeIsWritable = function(t) {
   const dumper = new Dumper(intrp, pristine, simpleSpec);
 
   const root = intrp.ROOT;
-  const writable = 
+  const writable =
       {writable: true, enumerable: true, configurable: true, value: true};
-  const nonwritable = 
+  const nonwritable =
       {writable: false, enumerable: true, configurable: true, value: false};
 
   // Create some objects and properties.
@@ -259,9 +259,9 @@ exports.testDumperPrototypeDumpBinding = function(t) {
   dumper.getObjectInfo(intrp.OBJECT).visiting = true;
   dumper.getObjectInfo(intrp.ARRAY).visiting = true;
   dumper.getObjectInfo(intrp.REGEXP).visiting = true;
-  
+
   // Check generated output for (and post-dump status of) specific bindings.
-  const cases = [  
+  const cases = [
     // [ selector, todo, expected output, expected done (if === todo) ]
     // Order matters.
     ['Object', Do.DECL, 'var Object;\n'],
@@ -352,7 +352,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
   // set implicitly as a side effect of the code generated above, and
   // that their values have the expected references (where
   // object-valued and already dumped).
-  // 
+  //
   // TODO(cpcallen): The value checks are NOT checking the dumped
   // value (or even, for .proto, the internal record of the current
   // value), but instead just the ref of the actual value in the

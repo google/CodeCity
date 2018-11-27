@@ -138,7 +138,7 @@ var Dumper = function(intrp, pristine, spec) {
 /**
  * Generate JS source text to declare and optionally initialise a
  * particular binding (as specified by a Selector).
- * 
+ *
  * E.g., if foo = [42, 69, 105], then:
  *
  * myDumper.dumpBinding(new Selector('foo'), Do.DECL)
@@ -544,7 +544,7 @@ var ScopeInfo = function(scope) {
 /**
  * Generate JS source text to create and/or initialize a single
  * variable binding.
- * 
+ *
  * @param {!Dumper} dumper Dumper to which this ScopeInfo belongs.
  * @param {!Selector.Part} part The part to dump.  Must be simple string.
  * @param {Do} todo How much to do.  Must be >= Do.DECL; > Do.SET ignored.
@@ -628,7 +628,7 @@ var ObjectInfo = function(dumper, obj) {
   this.visiting = false;
   /** @type {!Do} Has prototype been set? */
   this.doneProto = Do.DECL;  // Never need to 'declare' the [[Prototype]] slot!
-  /** 
+  /**
    * Current value of [[Prototype]] slot of obj at this point in dump.
    * Typically initially Object.prototype (or similar); will be ===
    * obj.proto when complete.  Used to check for unwritable inherited
@@ -653,7 +653,7 @@ var ObjectInfo = function(dumper, obj) {
 
 /**
  * Generate JS source text to set the object's prototype.
- * 
+ *
  * @private
  * @param {!Dumper} dumper Dumper to which this ObjectInfo belongs.
  * @param {Do} todo How much to do.  '' returned if todo < Do.RECURSE.
@@ -682,7 +682,7 @@ ObjectInfo.prototype.checkRecurse_ = function(dumper, todo, ref, part, value) {
 /**
  * Generate JS source text to create and/or initialize a single
  * binding (property or internal slot) of the object.
- * 
+ *
  * @param {!Dumper} dumper Dumper to which this ObjectInfo belongs.
  * @param {!Selector.Part} part The binding part to dump.
  * @param {Do} todo How much to do.  Must be >= Do.DECL; > Do.SET ignored.
@@ -707,14 +707,14 @@ ObjectInfo.prototype.dumpBinding = function(dumper, part, todo, ref) {
  * Generate JS source text to create and/or initialize a single
  * binding (property or internal slot) of the object.  The output will
  * consist of:
- * 
+ *
  * - An assignment statement to create the property and/or set its
  *   value, if necessary and possible.
  * - A call to Object.defineProperty, to set the property's attributes
  *   (and value, if the value couldn't be set by assignement), if
  *   necessary.
  * - Any code generated because of recursive dumping.
- * 
+ *
  * @private
  * @param {!Dumper} dumper Dumper to which this ObjectInfo belongs.
  * @param {string} key The property to dump.
@@ -732,13 +732,13 @@ ObjectInfo.prototype.dumpProperty_ = function(dumper, key, todo, ref) {
 
   // If only declaring, set property to undefined.
   var outValue = (todo === Do.DECL) ? undefined : value;
-  
   if (todo >= Do.DECL && done < Do.SET && done < todo) {
     if (this.isWritable(dumper, key)) {
       output.push(this.assign_(dumper, key, ref, outValue));
     } else {
       output.push(this.defineProperty_(dumper, key, todo, ref, outValue));
     }
+
   }
   done = this.getDone(key);  // Update done in case SET did ATTR implicitly.
   if (todo >= Do.ATTR && done < Do.ATTR) {
@@ -751,7 +751,7 @@ ObjectInfo.prototype.dumpProperty_ = function(dumper, key, todo, ref) {
 /**
  * Generate JS source text to do an assignment, and update attribute
  * state info.
- * 
+ *
  * @private
  * @param {!Dumper} dumper Dumper to which this ObjectInfo belongs.
  * @param {string} key The property to dump.
@@ -794,7 +794,7 @@ ObjectInfo.prototype.assign_ = function(dumper, key, ref, value) {
 /**
  * Generate JS source text to do an Object.defineProperty, and update
  * attribute state info.
- * 
+ *
  * @private
  * @param {!Dumper} dumper Dumper to which this ObjectInfo belongs.
  * @param {string} key The property to dump.
@@ -851,7 +851,7 @@ ObjectInfo.prototype.defineProperty_ = function(dumper, key, todo, ref, value) {
 
 /**
  * Generate JS source text to set the object's prototype.
- * 
+ *
  * @private
  * @param {!Dumper} dumper Dumper to which this ObjectInfo belongs.
  * @param {Do} todo How much to do.  Must be >= Do.DECL; > Do.SET ignored.
@@ -878,7 +878,7 @@ ObjectInfo.prototype.dumpPrototype_ = function(dumper, todo, ref) {
 /**
  * Recursively dumps all bindings of the object (and objects reachable
  * via it).
- * 
+ *
  * @param {!Dumper} dumper Dumper to which this ObjectInfo belongs.
  * @param {!Selector=} ref Selector refering to this object.
  *     Optional; defaults to whatever selector was used to create the
