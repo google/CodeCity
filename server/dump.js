@@ -705,7 +705,15 @@ ObjectInfo.prototype.dumpBinding = function(dumper, part, todo, ref) {
 
 /**
  * Generate JS source text to create and/or initialize a single
- * binding (property or internal slot) of the object.
+ * binding (property or internal slot) of the object.  The output will
+ * consist of:
+ * 
+ * - An assignment statement to create the property and/or set its
+ *   value, if necessary and possible.
+ * - A call to Object.defineProperty, to set the property's attributes
+ *   (and value, if the value couldn't be set by assignement), if
+ *   necessary.
+ * - Any code generated because of recursive dumping.
  * 
  * @private
  * @param {!Dumper} dumper Dumper to which this ObjectInfo belongs.
@@ -722,17 +730,14 @@ ObjectInfo.prototype.dumpProperty_ = function(dumper, key, todo, ref) {
   var value = this.obj.get(key, dumper.intrp.ROOT);
   var output = [];
 
-  if (todo === Do.DECL && done < Do.DECL) {
+  // If only declaring, set property to undefined.
+  var outValue = (todo === Do.DECL) ? undefined : value;
+  
+  if (todo >= Do.DECL && done < Do.SET && done < todo) {
     if (this.isWritable(dumper, key)) {
-      output.push(this.assign_(dumper, key, ref, undefined));
+      output.push(this.assign_(dumper, key, ref, outValue));
     } else {
-      output.push(this.defineProperty_(dumper, key, todo, ref, undefined));
-    }
-  } else if (todo >= Do.SET && done < Do.SET) {
-    if (this.isWritable(dumper, key)) {
-      output.push(this.assign_(dumper, key, ref, value));
-    } else {
-      output.push(this.defineProperty_(dumper, key, todo, ref, value));
+      output.push(this.defineProperty_(dumper, key, todo, ref, outValue));
     }
   }
   done = this.getDone(key);  // Update done in case SET did ATTR implicitly.
