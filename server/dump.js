@@ -759,68 +759,44 @@ ObjectInfo.prototype.dumpProperty_ = function(dumper, key, todo, ref) {
   // Output defineProperty call if useful.
   done = this.getDone(key);  // Update done in case SET did ATTR implicitly.
   if (todo >= Do.DECL && todo > done && done < Do.ATTR) {
-    output.push(this.defineProperty_(dumper, key, todo, ref, value));
+    if (this.attributes[key] && !this.attributes[key].configurable) {
+      throw new Error(
+          'Attempting configuration of non-configurable property ' + key);
+    }
+    // TODO(cpcallen): use toExpr to find defineProperty.
+    output.push('Object.defineProperty(');
+    output.push(ref.toExpr(), ', ', dumper.toExpr(key), ', {');
+
+    if (key in this.attributes) {
+      var attr = this.attributes[key];
+    } else {
+      attr = {writable: true, enumerable: true, configurable: true};
+      this.attributes[key] = attr;
+    }
+    attr.writable = pd.writable || todo < Do.SET;
+    attr.enumerable = pd.enumerable || todo < Do.SET;
+    attr.configurable = pd.configurable || todo < Do.SET;
+    output.push('writable: ', attr.writable, ', ',
+                'enumerable: ', attr.enumerable, ', ',
+                'configurable: ', attr.configurable);
+    if (todo >= Do.SET && done < Do.SET) {
+      output.push(', value: ', dumper.toExpr(value));
+    }
+    if (Object.is(pd.value, value)) {
+      if (pd.writable === attr.writable &&
+          pd.enumerable === attr.enumerable &&
+          pd.configurable === attr.configurable) {
+        this.setDone(key, Do.ATTR);
+      } else {
+        this.setDone(key, Do.SET);
+      }
+    } else {
+      this.setDone(key, Do.DECL);
+    }
+    output.push('});\n');
   }
 
   output.push(this.checkRecurse_(dumper, todo, ref, key, pd.value));
-  return output.join('');
-};
-
-/**
- * Generate JS source text to do an Object.defineProperty, and update
- * attribute state info.
- *
- * @private
- * @param {!Dumper} dumper Dumper to which this ObjectInfo belongs.
- * @param {string} key The property to dump.
- * @param {Do} todo How much to do.  Must be >= Do.DECL; > Do.SET ignored.
- * @param {!Selector} ref Selector refering to this object.
- * @return {string} An eval-able program to initialise the specified binding.
- */
-ObjectInfo.prototype.defineProperty_ = function(dumper, key, todo, ref, value) {
-  if (this.attributes[key] && !this.attributes[key].configurable) {
-    throw new Error(
-        'Attempting configuration of non-configurable property ' + key);
-  }
-
-  var done = this.getDone(key);
-  var output = [];
-  // TODO(cpcallen): use toExpr to find defineProperty.
-  output.push('Object.defineProperty(');
-  output.push(ref.toExpr(), ', ', dumper.toExpr(key), ', {');
-
-  var pd = this.obj.getOwnPropertyDescriptor(key, dumper.intrp.ROOT);
-  if (!pd) {
-    throw new RangeError("Can't dump nonexistent property " +
-        ref.toExpr() + '.' + key);
-  }
-  if (key in this.attributes) {
-    var attr = this.attributes[key];
-  } else {
-    attr = {writable: true, enumerable: true, configurable: true};
-    this.attributes[key] = attr;
-  }
-  attr.writable = pd.writable || todo < Do.SET;
-  attr.enumerable = pd.enumerable || todo < Do.SET;
-  attr.configurable = pd.configurable || todo < Do.SET;
-  output.push('writable: ', attr.writable, ', ',
-              'enumerable: ', attr.enumerable, ', ',
-              'configurable: ', attr.configurable);
-  if (todo >= Do.SET && done < Do.SET) {
-    output.push(', value: ', dumper.toExpr(value));
-  }
-  if (Object.is(pd.value, value)) {
-    if (pd.writable === attr.writable &&
-        pd.enumerable === attr.enumerable &&
-        pd.configurable === attr.configurable) {
-      this.setDone(key, Do.ATTR);
-    } else {
-      this.setDone(key, Do.SET);
-    }
-  } else {
-    this.setDone(key, Do.DECL);
-  }
-  output.push('});\n');
   return output.join('');
 };
 
