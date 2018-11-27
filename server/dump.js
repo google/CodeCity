@@ -727,69 +727,43 @@ ObjectInfo.prototype.dumpProperty_ = function(dumper, key, todo, ref) {
   var sel = new Selector(ref);
   sel.push(key);
   var done = this.getDone(key);
-  var value = this.obj.get(key, dumper.intrp.ROOT);
+  var pd = this.obj.getOwnPropertyDescriptor(key, dumper.intrp.ROOT);
+  if (!pd) throw new RangeError("Can't dump nonexistent property " + sel);
   var output = [];
 
-  // If only declaring, set property to undefined.
-  var outValue = (todo === Do.DECL) ? undefined : value;
+  // If only "declaring" property, set it to undefined.
+  var value = (todo === Do.DECL) ? undefined : pd.value;
 
   // Output assignment statement if useful.
   if (todo >= Do.DECL && todo > done && done < Do.SET &&
       this.isWritable(dumper, key)) {
-    output.push(this.assign_(dumper, key, ref, outValue));
+    if (!this.attributes[key]) {
+      this.attributes[key] =
+          {writable: true, enumerable: true, configurable: true};
+    }
+    var attr = this.attributes[key];
+    if (Object.is(pd.value, value)) {
+      if (pd.writable === attr.writable &&
+          pd.enumerable === attr.enumerable &&
+          pd.configurable === attr.configurable) {
+        this.setDone(key, Do.ATTR);
+      } else {
+        this.setDone(key, Do.SET);
+      }
+    } else {
+      this.setDone(key, Do.DECL);
+    }
+    output.push(sel.toExpr(), ' = ', dumper.toExpr(value, sel), ';\n');
   }
 
   // Output defineProperty call if useful.
   done = this.getDone(key);  // Update done in case SET did ATTR implicitly.
   if (todo >= Do.DECL && todo > done && done < Do.ATTR) {
-    output.push(this.defineProperty_(dumper, key, todo, ref, outValue));
+    output.push(this.defineProperty_(dumper, key, todo, ref, value));
   }
 
-  output.push(this.checkRecurse_(dumper, todo, ref, key, value));
+  output.push(this.checkRecurse_(dumper, todo, ref, key, pd.value));
   return output.join('');
-};
-
-/**
- * Generate JS source text to do an assignment, and update attribute
- * state info.
- *
- * @private
- * @param {!Dumper} dumper Dumper to which this ObjectInfo belongs.
- * @param {string} key The property to dump.
- * @param {!Selector} ref Selector refering to this object.
- * @return {string} An eval-able program to initialise the specified binding.
- */
-ObjectInfo.prototype.assign_ = function(dumper, key, ref, value) {
-  if (!this.isWritable(dumper, key)) {
-    throw new Error('Attempting assignment of non-writable property ' + key);
-  }
-
-  // TODO(cpcallen): don't recreate a Selector that our caller already has.
-  var sel = new Selector(ref);
-  sel.push(key);
-
-  var pd = this.obj.getOwnPropertyDescriptor(key, dumper.intrp.ROOT);
-  if (!pd) {
-    throw new RangeError("Can't dump nonexistent property " + sel.toExpr());
-  }
-  if (key in this.attributes) {
-    var attr = this.attributes[key];
-  } else {
-    attr = {writable: true, enumerable: true, configurable: true};
-    this.attributes[key] = attr;
-  }
-  if (Object.is(pd.value, value)) {
-    if (pd.writable === attr.writable &&
-        pd.enumerable === attr.enumerable &&
-        pd.configurable === attr.configurable) {
-      this.setDone(key, Do.ATTR);
-    } else {
-      this.setDone(key, Do.SET);
-    }
-  } else {
-    this.setDone(key, Do.DECL);
-  }
-  return sel.toExpr() + ' = ' + dumper.toExpr(value, sel) + ';\n';
 };
 
 /**

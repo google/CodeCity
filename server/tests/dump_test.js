@@ -228,6 +228,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
       Object.setPrototypeOf(f2, null);
       f2.prototype = Object.prototype;
       f2.f3 = function f4(arg) {};
+      f2.undef = undefined;
       Object.setPrototypeOf(f2.f3, null);
       f2.f3.prototype = obj;
 
@@ -316,6 +317,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     ['f2', Do.SET, 'var f2 = function(arg) {};\n'],
     ['f2.f3', Do.DECL, 'f2.f3 = undefined;\n'],
     ['f2.f3', Do.SET, 'f2.f3 = function f4(arg) {};\n', Do.ATTR],
+    ['f2.undef', Do.DECL, 'f2.undef = undefined;\n', Do.ATTR],
     ['f2.f3^', Do.SET, 'Object.setPrototypeOf(f2.f3, null);\n'],
     ['f2.f3', Do.RECURSE, "f2.f3.prototype = obj;\n"],
 
