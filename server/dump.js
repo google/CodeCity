@@ -327,11 +327,11 @@ Dumper.prototype.functionToExpr = function(func, info) {
   // The .length property will be set implicitly.
   info.attributes['length'] =
       {writable: false, enumerable: false, configurable: false};
-  info.setDone('length', Do.SET);
+  info.setDone('length', Do.ATTR);
   // BUG(cpcallen): .name is only set in certain circumstances.
   info.attributes['name'] =
       {writable: false, enumerable: false, configurable: true};
-  info.setDone('name', Do.SET);
+  info.setDone('name', Do.ATTR);
   // The .prototype property will automatically be created, so we
   // don't need to "declare" it.  Fortunately it's non-configurable,
   // so we don't need to worry that it might need to be deleted.
@@ -380,7 +380,7 @@ Dumper.prototype.arrayToExpr = function(arr, info) {
       {writable: true, enumerable: false, configurable: false};
   if (lastIndex < 0 || arr.getOwnPropertyDescriptor(String(lastIndex),  root)) {
     // No need to set .length if it will be set via setting final index.
-    info.setDone('length', Do.SET);
+    info.setDone('length', Do.ATTR);
   } else {
     // Length exists; don't worry about it when preserving propery order.
     info.setDone('length', Do.DECL);
@@ -416,13 +416,13 @@ Dumper.prototype.regExpToExpr = function(re, info) {
   for (var prop, i = 0; prop = props[i]; i++) {
     info.attributes[prop] =
         {writable: false, enumerable: false, configurable: false};
-    info.setDone(prop, Do.SET);
+    info.setDone(prop, Do.ATTR);
   }
   info.attributes['lastIndex'] =
       {writable: true, enumerable: false, configurable: false};
-  if (re.get('lastIndex', this.intrp.ROOT) === 0) {
+  if (Object.is(re.get('lastIndex', this.intrp.ROOT), 0)) {
     // Can skip setting .lastIndex iff it is 0.
-    info.setDone('lastIndex', Do.SET);
+    info.setDone('lastIndex', Do.ATTR);
   } else {
     info.setDone('lastIndex', Do.DECL);
   }
@@ -710,7 +710,7 @@ ObjectInfo.prototype.dumpBinding = function(dumper, part, todo, ref) {
  * @private
  * @param {!Dumper} dumper Dumper to which this ObjectInfo belongs.
  * @param {string} key The property to dump.
- * @param {Do} todo How much to do.  Must be >= Do.DECL; > Do.SET ignored.
+ * @param {Do} todo How much to do.
  * @param {!Selector} ref Selector refering to this object.
  * @return {string} An eval-able program to initialise the specified binding.
  */
@@ -723,20 +723,21 @@ ObjectInfo.prototype.dumpProperty_ = function(dumper, key, todo, ref) {
   var output = [];
 
   if (todo === Do.DECL && done < Do.DECL) {
-    output.push(this.assign_(dumper, key, ref, undefined));
+    if (this.isWritable(dumper, key)) {
+      output.push(this.assign_(dumper, key, ref, undefined));
+    } else {
+      output.push(this.defineProperty_(dumper, key, todo, ref, undefined));
+    }
   } else if (todo >= Do.SET && done < Do.SET) {
-    output.push(this.assign_(dumper, key, ref, value));
+    if (this.isWritable(dumper, key)) {
+      output.push(this.assign_(dumper, key, ref, value));
+    } else {
+      output.push(this.defineProperty_(dumper, key, todo, ref, value));
+    }
   }
   done = this.getDone(key);  // Update done in case SET did ATTR implicitly.
   if (todo >= Do.ATTR && done < Do.ATTR) {
-    var desc = this.obj.getOwnPropertyDescriptor(key, dumper.intrp.ROOT);
-    this.attributes[key] = {
-      writable: desc.writable,
-      enumerable: desc.enumerable,
-      configurable: desc.configurable,
-    };
-    // TODO(cpcallen): actually output code to set attributes.
-    this.setDone(key, Do.ATTR);
+    output.push(this.defineProperty_(dumper, key, todo, ref, value));
   }
   output.push(this.checkRecurse_(dumper, todo, ref, key, value));
   return output.join('');
@@ -754,9 +755,7 @@ ObjectInfo.prototype.dumpProperty_ = function(dumper, key, todo, ref) {
  */
 ObjectInfo.prototype.assign_ = function(dumper, key, ref, value) {
   if (!this.isWritable(dumper, key)) {
-    // TODO(cpcallen): enable this once we have implemnted the
-    // alternative using Object.defineProperty.
-    // throw new Error('Attempting assignment of non-writable property ' + key);
+    throw new Error('Attempting assignment of non-writable property ' + key);
   }
 
   // TODO(cpcallen): don't recreate a Selector that our caller already has.
@@ -764,13 +763,16 @@ ObjectInfo.prototype.assign_ = function(dumper, key, ref, value) {
   sel.push(key);
 
   var pd = this.obj.getOwnPropertyDescriptor(key, dumper.intrp.ROOT);
+  if (!pd) {
+    throw new RangeError("Can't dump nonexistent property " + sel.toExpr());
+  }
   if (key in this.attributes) {
     var attr = this.attributes[key];
   } else {
     attr = {writable: true, enumerable: true, configurable: true};
     this.attributes[key] = attr;
   }
-  if (pd.value === value) {
+  if (Object.is(pd.value, value)) {
     if (pd.writable === attr.writable &&
         pd.enumerable === attr.enumerable &&
         pd.configurable === attr.configurable) {
@@ -782,6 +784,64 @@ ObjectInfo.prototype.assign_ = function(dumper, key, ref, value) {
     this.setDone(key, Do.DECL);
   }
   return sel.toExpr() + ' = ' + dumper.toExpr(value, sel) + ';\n';
+};
+
+/**
+ * Generate JS source text to do an Object.defineProperty, and update
+ * attribute state info.
+ * 
+ * @private
+ * @param {!Dumper} dumper Dumper to which this ObjectInfo belongs.
+ * @param {string} key The property to dump.
+ * @param {Do} todo How much to do.  Must be >= Do.DECL; > Do.SET ignored.
+ * @param {!Selector} ref Selector refering to this object.
+ * @return {string} An eval-able program to initialise the specified binding.
+ */
+ObjectInfo.prototype.defineProperty_ = function(dumper, key, todo, ref, value) {
+  if (this.attributes[key] && !this.attributes[key].configurable) {
+    throw new Error(
+        'Attempting configuration of non-configurable property ' + key);
+  }
+
+  var done = this.getDone(key);
+  var output = [];
+  // TODO(cpcallen): use toExpr to find defineProperty.
+  output.push('Object.defineProperty(');
+  output.push(ref.toExpr(), ', ', dumper.toExpr(key), ', {');
+
+  var pd = this.obj.getOwnPropertyDescriptor(key, dumper.intrp.ROOT);
+  if (!pd) {
+    throw new RangeError("Can't dump nonexistent property " +
+        ref.toExpr() + '.' + key);
+  }
+  if (key in this.attributes) {
+    var attr = this.attributes[key];
+  } else {
+    attr = {writable: true, enumerable: true, configurable: true};
+    this.attributes[key] = attr;
+  }
+  attr.writable = pd.writable || todo < Do.SET;
+  attr.enumerable = pd.enumerable || todo < Do.SET;
+  attr.configurable = pd.configurable || todo < Do.SET;
+  output.push('writable: ', attr.writable, ', ',
+              'enumerable: ', attr.enumerable, ', ',
+              'configurable: ', attr.configurable);
+  if (todo >= Do.SET && done < Do.SET) {
+    output.push(', value: ', dumper.toExpr(value));
+  }
+  if (Object.is(pd.value, value)) {
+    if (pd.writable === attr.writable &&
+        pd.enumerable === attr.enumerable &&
+        pd.configurable === attr.configurable) {
+      this.setDone(key, Do.ATTR);
+    } else {
+      this.setDone(key, Do.SET);
+    }
+  } else {
+    this.setDone(key, Do.DECL);
+  }
+  output.push('});\n');
+  return output.join('');
 };
 
 /**

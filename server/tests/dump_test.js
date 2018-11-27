@@ -56,18 +56,18 @@ exports.testObjectInfoPrototypeIsWritable = function(t) {
 
   // Create some objects and properties.
   intrp.OBJECT.defineProperty('foo', nonwritable, root);
-  const obj = new intrp.Object(root);
-  obj.defineProperty('bar', nonwritable, root);
-  obj.defineProperty('baz', writable, root);
-  const child = new intrp.Object(root, obj);
+  const parent = new intrp.Object(root);
+  parent.defineProperty('bar', nonwritable, root);
+  parent.defineProperty('baz', writable, root);
+  const child = new intrp.Object(root, parent);
   child.defineProperty('foo', writable, root);
   child.defineProperty('bar', writable, root);
   child.defineProperty('baz', writable, root);
 
   const opi = dumper.getObjectInfo(intrp.OBJECT);
   opi.ref = new Selector('Object.prototype');
-  const oi = dumper.getObjectInfo(obj);
-  oi.ref = new Selector('obj');
+  const oi = dumper.getObjectInfo(parent);
+  oi.ref = new Selector('parent');
   const ci = dumper.getObjectInfo(child);
   ci.ref = new Selector('child');
   opi.proto = null;
@@ -210,15 +210,18 @@ exports.testDumperPrototypeDumpBinding = function(t) {
   intrp.createThreadForSrc(`
       Object.defineProperty(Object, 'name', {writable: true});
       var obj = {a: 1, b: 2, c:3};
-      var child1 = Object.create(obj);
-      var child2 = Object.create(obj);
-      var child3 = Object.create(obj);
 
-      child1.a = 'a';
-      child2.a = 'a';
-      Object.defineProperty(obj, 'a', {writable: false});
-      Object.defineProperty(child1, 'a', {enumerable: false});
-      Object.defineProperty(child2, 'a', {enumerable: false});
+      var parent = {foo: 'foo'};
+      var child1 = Object.create(parent);
+      var child2 = Object.create(parent);
+      var child3 = Object.create(parent);
+      child1.foo = 'foo2';
+      child2.foo = 'foo2';
+      child2.bar = 'bar2';
+      Object.defineProperty(parent, 'foo', {writable: false});
+      Object.defineProperty(child1, 'foo', {enumerable: false});
+      Object.defineProperty(child2, 'foo', {enumerable: false});
+      Object.defineProperty(child2, 'bar', {configurable: false});
 
       function f1(arg) {}
       var f2 = function(arg) {};
@@ -241,6 +244,10 @@ exports.testDumperPrototypeDumpBinding = function(t) {
       re2.lastIndex = 42;
       var re3 = /baz/m;
       Object.setPrototypeOf(re3, re1);
+
+      Object.defineProperty(Object.prototype, 'bar',
+          {writable: false, enumerable: true, configurable: true,
+           value: 'bar'});  // Naughty!
   `);
   intrp.run();
 
@@ -263,26 +270,45 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     ['Object', Do.SET, ''],
     ['Object.prototype', Do.SET,
         "Object.prototype = new 'Object.prototype';\n"],
-
-    // TODO(cpcallen): Really want "var child1 = {a: 'a'};\n".
-    ['child1', Do.SET, 'var child1 = {};\n'],
-    // TODO(cpcallen): Really want "var child2 = {a: 'a'};\n".
-    ['child2', Do.SET, 'var child2 = {};\n'],
-    ['obj', Do.SET, 'var obj = {};\n'],
-    ['obj', Do.RECURSE, 'obj.a = 1;\nobj.b = 2;\nobj.c = 3;\n'],
-    // TODO(cpcallen): Really want
-    // "(new 'Object.defineProperty')(child1, 'a', " +
-    // '{writable: true, enumerable: true, configurable: true});\n'].
-    ['child1.a', Do.DECL, 'child1.a = undefined;\n'],
-    ['child1.a', Do.SET, "child1.a = 'a';\n"],
+    // BUG(cpcallen): Need "(new 'Object.defineProperty')(...".
+    ['Object.prototype.bar', Do.SET, "Object.prototype.bar = 'bar';\n"],
+    // TODO(cpcallen): Really want "..., {writable: false});\n".
+    ['Object.prototype.bar', Do.ATTR, 'Object.defineProperty(' +
+        "Object.prototype, 'bar', {writable: false, enumerable: true, " +
+        "configurable: true});\n"],
     ['Object.defineProperty', Do.SET,
         "Object.defineProperty = new 'Object.defineProperty';\n"],
-    // TODO(cpcallen): Really want "Object.defineProperty(child2, 'a', " +
-    // "{writable: true, enumerable: false, configurable: true, value: 'a'}\n"
-    // with done === Do.ATTR.
-    ['child2.a', Do.SET, "child2.a = 'a';\n"],
-    ['child2', Do.RECURSE, 'Object.setPrototypeOf(child2, obj);\n'],
-    ['child3', Do.RECURSE, 'var child3 = Object.create(obj);\n'],
+
+    ['obj', Do.SET, 'var obj = {};\n'],
+    ['obj', Do.RECURSE, 'obj.a = 1;\nobj.b = 2;\nobj.c = 3;\n'],
+
+    // TODO(cpcallen): Really want "var child1 = {foo: 'foo'};\n".
+    ['child1', Do.SET, 'var child1 = {};\n'],
+    // TODO(cpcallen): Really want "var child2 = {foo: 'foo'};\n".
+    ['child2', Do.SET, 'var child2 = {};\n'],
+    // TODO(cpcallen): Really want "..., {writable: false});\n".
+    ['parent', Do.RECURSE, "var parent = {};\nparent.foo = 'foo';\n" +
+        "Object.defineProperty(parent, 'foo', " +
+        '{writable: false, enumerable: true, configurable: true});\n'],
+
+    ['child1.foo', Do.DECL, 'child1.foo = undefined;\n'],
+    ['child1.foo', Do.SET, "child1.foo = 'foo2';\n"],
+    // TODO(cpcallen): Really want "..., {enumerable: false});\n".
+    ['child1.foo', Do.ATTR, "Object.defineProperty(child1, 'foo', " +
+        '{writable: true, enumerable: false, configurable: true});\n'],
+    ['child2^', Do.SET, 'Object.setPrototypeOf(child2, parent);\n'],
+    ['child2.foo', Do.DECL, "Object.defineProperty(child2, 'foo', " +
+        '{writable: true, enumerable: true, configurable: true});\n'],
+    ['child2.foo', Do.SET, "child2.foo = 'foo2';\n"],
+    // TODO(cpcallen): Really want "..., {enumerable: false});\n".
+    ['child2.foo', Do.ATTR, "Object.defineProperty(child2, 'foo', " +
+        '{writable: true, enumerable: false, configurable: true});\n'],
+    ['child2.bar', Do.SET, "Object.defineProperty(child2, 'bar', " +
+        '{writable: true, enumerable: true, configurable: false, ' +
+        "value: 'bar2'});\n", Do.ATTR],
+    ['child2', Do.RECURSE, ''],
+
+    ['child3', Do.RECURSE, 'var child3 = Object.create(parent);\n'],
 
     ['f1', Do.DECL, 'var f1;\n'],
     // TODO(cpcallen): Really want 'function f1(arg) {};\n'.
@@ -326,24 +352,30 @@ exports.testDumperPrototypeDumpBinding = function(t) {
   // set implicitly as a side effect of the code generated above, and
   // that their values have the expected references (where
   // object-valued and already dumped).
+  // 
+  // TODO(cpcallen): The value checks are NOT checking the dumped
+  // value (or even, for .proto, the internal record of the current
+  // value), but instead just the ref of the actual value in the
+  // interpreter being dumped.  That's not really too useful, so maybe
+  // they should be removed.
   const implicit = [
     // [ selector, expected done, expected value (as selector) ]
     ['Object.length', Do.ATTR],
     ['Object.name', Do.SET],
 
     ['obj^', Do.RECURSE, 'Object.prototype'],
-    ['child1^', Do.DECL, 'obj'],
-    ['child2^', Do.RECURSE, 'obj'],
-    ['child3^', Do.RECURSE, 'obj'],
+    ['child1^', Do.DECL],
+    ['child2^', Do.RECURSE, 'parent'],
+    ['child3^', Do.RECURSE, 'parent'],
 
     ['f1^', Do.SET],
-    ['f1.length', Do.SET],
-    ['f1.name', Do.SET],
+    ['f1.length', Do.ATTR],
+    ['f1.name', Do.ATTR],
     ['f1.prototype', Do.SET, 'f1.prototype'],
     ['f1.prototype.constructor', Do.SET, 'f1'],
     ['f2^', Do.DECL],
-    ['f2.length', Do.SET],
-    ['f2.name', Do.SET],
+    ['f2.length', Do.ATTR],
+    ['f2.name', Do.ATTR],
     ['f2.prototype', Do.DECL, 'Object.prototype'],
     ['f2.f3^', Do.RECURSE],
     ['f2.f3.length', Do.RECURSE],
@@ -373,11 +405,11 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     ['re2.lastIndex', Do.RECURSE],
 
     ['re3^', Do.SET, 're1'],
-    ['re3.source', Do.SET],
-    ['re3.global', Do.SET],
-    ['re3.ignoreCase', Do.SET],
-    ['re3.multiline', Do.SET],
-    ['re3.lastIndex', Do.SET],
+    ['re3.source', Do.ATTR],
+    ['re3.global', Do.ATTR],
+    ['re3.ignoreCase', Do.ATTR],
+    ['re3.multiline', Do.ATTR],
+    ['re3.lastIndex', Do.ATTR],
   ];
   for (const tc of implicit) {
     const s = new Selector(tc[0]);
