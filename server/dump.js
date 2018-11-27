@@ -732,18 +732,19 @@ ObjectInfo.prototype.dumpProperty_ = function(dumper, key, todo, ref) {
 
   // If only declaring, set property to undefined.
   var outValue = (todo === Do.DECL) ? undefined : value;
-  if (todo >= Do.DECL && done < Do.SET && done < todo) {
-    if (this.isWritable(dumper, key)) {
-      output.push(this.assign_(dumper, key, ref, outValue));
-    } else {
-      output.push(this.defineProperty_(dumper, key, todo, ref, outValue));
-    }
 
+  // Output assignment statement if useful.
+  if (todo >= Do.DECL && todo > done && done < Do.SET &&
+      this.isWritable(dumper, key)) {
+    output.push(this.assign_(dumper, key, ref, outValue));
   }
+
+  // Output defineProperty call if useful.
   done = this.getDone(key);  // Update done in case SET did ATTR implicitly.
-  if (todo >= Do.ATTR && done < Do.ATTR) {
-    output.push(this.defineProperty_(dumper, key, todo, ref, value));
+  if (todo >= Do.DECL && todo > done && done < Do.ATTR) {
+    output.push(this.defineProperty_(dumper, key, todo, ref, outValue));
   }
+
   output.push(this.checkRecurse_(dumper, todo, ref, key, value));
   return output.join('');
 };
