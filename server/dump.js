@@ -771,9 +771,9 @@ ObjectInfo.prototype.assign_ = function(dumper, key, ref, value) {
     this.attributes[key] = attr;
   }
   if (pd.value === value) {
-    if (pd.writable === attr['writable'] &&
-        pd.enumerable === attr['enumerable'] &&
-        pd.configurable === attr['configurable']) {
+    if (pd.writable === attr.writable &&
+        pd.enumerable === attr.enumerable &&
+        pd.configurable === attr.configurable) {
       this.setDone(key, Do.ATTR);
     } else {
       this.setDone(key, Do.SET);
@@ -876,7 +876,7 @@ ObjectInfo.prototype.isWritable = function(dumper, key) {
     throw new Error('Attribute / done mismatch');
   }
   if (key in this.attributes) {
-    return this.attributes[key]['writable'];
+    return this.attributes[key].writable;
   } else {
     if (this.proto === null) {
       return true;
