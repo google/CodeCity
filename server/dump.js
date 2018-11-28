@@ -734,6 +734,8 @@ ObjectInfo.prototype.dumpProperty_ = function(dumper, key, todo, ref) {
   var done = this.getDone(key);
   if (todo >= Do.DECL && todo > done && done < Do.ATTR) {
     var attr = this.attributes[key];
+    // If only "declaring" property, set it to undefined.
+    var value = (todo === Do.DECL) ? undefined : pd.value;
 
     /**
      * Helper function to update state after assigning/definePropertying.
@@ -752,12 +754,9 @@ ObjectInfo.prototype.dumpProperty_ = function(dumper, key, todo, ref) {
       this.setDone(key, done);
     };
 
-    // If only "declaring" property, set it to undefined.
-    var value = (todo === Do.DECL) ? undefined : pd.value;
-
     // Output assignment statement if useful.
     if (done < Do.SET && this.isWritable(dumper, key)) {
-      if (!(key in this.attributes)) {
+      if (!attr) {
         attr = this.attributes[key] =
             {writable: true, enumerable: true, configurable: true};
       }
@@ -767,32 +766,36 @@ ObjectInfo.prototype.dumpProperty_ = function(dumper, key, todo, ref) {
 
     // Output defineProperty call if useful.
     if (todo > done && done < Do.ATTR) {
-      if (key in this.attributes) {
-        attr = this.attributes[key];
-        if (!attr.configurable) {
-          throw new Error("Can't redefine non-configurable property " + sel);
-        }
-      } else {
+      if (!attr) {
         attr = this.attributes[key] =
-            {writable: true, enumerable: true, configurable: true};
+            {writable: false, enumerable: false, configurable: false};
+      } else if (!attr.configurable) {
+        throw new Error("Can't redefine non-configurable property " + sel);
       }
-      attr.writable = pd.writable || todo < Do.SET;
-      attr.enumerable = pd.enumerable || todo < Do.SET;
-      attr.configurable = pd.configurable || todo < Do.SET;
-
+      var items = [];
+      if (attr.writable !== (pd.writable || todo < Do.SET)) {
+        attr.writable = pd.writable || todo < Do.SET;
+        items.push('writable: ' +  attr.writable);
+      }
+      if (attr.enumerable !== (pd.enumerable || todo < Do.SET)) {
+        attr.enumerable = pd.enumerable || todo < Do.SET;
+        items.push('enumerable: ' + attr.enumerable);
+      }
+      if (attr.configurable !== (pd.configurable || todo < Do.SET)) {
+        attr.configurable = pd.configurable || todo < Do.SET;
+        items.push('configurable: ' + attr.configurable);
+      }
+      if (todo >= Do.SET && done < Do.SET) {
+        items.push('value: ' + dumper.toExpr(value));
+      }
       // TODO(cpcallen): use toExpr to find defineProperty.
       output.push('Object.defineProperty(');
-      output.push(ref.toExpr(), ', ', dumper.toExpr(key), ', {');
-      output.push('writable: ', attr.writable, ', ',
-                  'enumerable: ', attr.enumerable, ', ',
-                  'configurable: ', attr.configurable);
-      if (todo >= Do.SET && done < Do.SET) {
-        output.push(', value: ', dumper.toExpr(value));
-      }
-      output.push('});\n');
+      output.push(ref.toExpr(), ', ', dumper.toExpr(key));
+      output.push(', {', items.join(', '), '});\n');
       checkDone.call(this);
     }
   }
+
   output.push(this.checkRecurse_(dumper, todo, ref, key, pd.value));
   return output.join('');
 };

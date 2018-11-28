@@ -271,12 +271,10 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     ['Object', Do.SET, ''],
     ['Object.prototype', Do.SET,
         "Object.prototype = new 'Object.prototype';\n"],
-    // BUG(cpcallen): Need "(new 'Object.defineProperty')(...".
     ['Object.prototype.bar', Do.SET, "Object.prototype.bar = 'bar';\n"],
-    // TODO(cpcallen): Really want "..., {writable: false});\n".
+    // BUG(cpcallen): Need "(new 'Object.defineProperty')(...".
     ['Object.prototype.bar', Do.ATTR, 'Object.defineProperty(' +
-        "Object.prototype, 'bar', {writable: false, enumerable: true, " +
-        "configurable: true});\n"],
+        "Object.prototype, 'bar', {writable: false});\n"],
     ['Object.defineProperty', Do.SET,
         "Object.defineProperty = new 'Object.defineProperty';\n"],
 
@@ -287,26 +285,21 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     ['child1', Do.SET, 'var child1 = {};\n'],
     // TODO(cpcallen): Really want "var child2 = {foo: 'foo'};\n".
     ['child2', Do.SET, 'var child2 = {};\n'],
-    // TODO(cpcallen): Really want "..., {writable: false});\n".
     ['parent', Do.RECURSE, "var parent = {};\nparent.foo = 'foo';\n" +
-        "Object.defineProperty(parent, 'foo', " +
-        '{writable: false, enumerable: true, configurable: true});\n'],
+        "Object.defineProperty(parent, 'foo', {writable: false});\n"],
 
     ['child1.foo', Do.DECL, 'child1.foo = undefined;\n'],
     ['child1.foo', Do.SET, "child1.foo = 'foo2';\n"],
-    // TODO(cpcallen): Really want "..., {enumerable: false});\n".
-    ['child1.foo', Do.ATTR, "Object.defineProperty(child1, 'foo', " +
-        '{writable: true, enumerable: false, configurable: true});\n'],
+    ['child1.foo', Do.ATTR,
+        "Object.defineProperty(child1, 'foo', {enumerable: false});\n"],
     ['child2^', Do.SET, 'Object.setPrototypeOf(child2, parent);\n'],
     ['child2.foo', Do.DECL, "Object.defineProperty(child2, 'foo', " +
         '{writable: true, enumerable: true, configurable: true});\n'],
     ['child2.foo', Do.SET, "child2.foo = 'foo2';\n"],
-    // TODO(cpcallen): Really want "..., {enumerable: false});\n".
-    ['child2.foo', Do.ATTR, "Object.defineProperty(child2, 'foo', " +
-        '{writable: true, enumerable: false, configurable: true});\n'],
+    ['child2.foo', Do.ATTR,
+        "Object.defineProperty(child2, 'foo', {enumerable: false});\n"],
     ['child2.bar', Do.SET, "Object.defineProperty(child2, 'bar', " +
-        '{writable: true, enumerable: true, configurable: false, ' +
-        "value: 'bar2'});\n", Do.ATTR],
+        "{writable: true, enumerable: true, value: 'bar2'});\n", Do.ATTR],
     ['child2', Do.RECURSE, ''],
 
     ['child3', Do.RECURSE, 'var child3 = Object.create(parent);\n'],
