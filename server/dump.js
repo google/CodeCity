@@ -79,13 +79,13 @@ var Dumper = function(intrp, pristine, spec) {
   var builtins = pristine.builtins.keys();
   for (var i = 0; i < builtins.length; i++) {
     var builtin = builtins[i];
-    var obj = this.intrp.builtins.get(builtin);
-    var pobj = this.pristine.builtins.get(builtin);
-    if (!(obj instanceof this.intrp.Object)) {
+    var obj = intrp.builtins.get(builtin);
+    var pobj = pristine.builtins.get(builtin);
+    if (!(obj instanceof intrp.Object)) {
       continue;  // Skip primitive-valued builtins.
     } else if (pobj === undefined) {
       throw new Error('Builtin not found in pristine Interpreter');
-    } else if (!(pobj instanceof this.pristine.Object)) {
+    } else if (!(pobj instanceof pristine.Object)) {
       throw new Error('Builtin no longer an object in pristine Interpreter');
     }
     // TODO(cpcallen): add check for inconsistent duplicate
@@ -97,19 +97,19 @@ var Dumper = function(intrp, pristine, spec) {
   // Create and initialise ObjectInfos for builtin objects.
   for (i = 0; i < builtins.length; i++) {
     builtin = builtins[i];
-    obj = this.intrp.builtins.get(builtin);
-    if (!(obj instanceof this.intrp.Object)) continue;  // Skip primitives.
+    obj = intrp.builtins.get(builtin);
+    if (!(obj instanceof intrp.Object)) continue;  // Skip primitives.
     var oi = this.getObjectInfo(obj);
-    pobj = this.pristine.builtins.get(builtin);
+    pobj = pristine.builtins.get(builtin);
     // Record pre-set prototype.
     oi.proto = pobj.proto === null ? null : intrpObjs.get(pobj.proto);
     oi.doneProto = obj.proto === oi.proto ? Do.SET : Do.DECL;
     // Record pre-set property values/attributes.
-    var keys = pobj.ownKeys(this.pristine.ROOT);
+    var keys = pobj.ownKeys(pristine.ROOT);
     for (var j = 0; j < keys.length; j++) {
       var key = keys[j];
-      var pd = obj.getOwnPropertyDescriptor(key, this.intrp.ROOT);
-      var ppd = pobj.getOwnPropertyDescriptor(key, this.pristine.ROOT);
+      var pd = obj.getOwnPropertyDescriptor(key, intrp.ROOT);
+      var ppd = pobj.getOwnPropertyDescriptor(key, pristine.ROOT);
       var doneAttrs = true;
       var attrs = {};
       for (var k = 0; k < attrNames.length; k++) {
@@ -120,7 +120,7 @@ var Dumper = function(intrp, pristine, spec) {
         }
       }
       oi.attributes[key] = attrs;
-      var value = ppd.value instanceof this.intrp.Object ?
+      var value = ppd.value instanceof intrp.Object ?
           intrpObjs.get(ppd.value) : ppd.value;
       if (Object.is(pd.value, value)) {
         if (doneAttrs) {
