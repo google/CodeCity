@@ -272,8 +272,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     ['Object.prototype', Do.SET,
         "Object.prototype = new 'Object.prototype';\n"],
     ['Object.prototype.bar', Do.SET, "Object.prototype.bar = 'bar';\n"],
-    // BUG(cpcallen): Need "(new 'Object.defineProperty')(...".
-    ['Object.prototype.bar', Do.ATTR, 'Object.defineProperty(' +
+    ['Object.prototype.bar', Do.ATTR, "(new 'Object.defineProperty')(" +
         "Object.prototype, 'bar', {writable: false});\n"],
     ['Object.defineProperty', Do.SET,
         "Object.defineProperty = new 'Object.defineProperty';\n"],

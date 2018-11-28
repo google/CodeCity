@@ -133,6 +133,9 @@ var Dumper = function(intrp, pristine, spec) {
       }
     }
   }
+
+  // Save references to important builtin functions.
+  this.defineProperty = intrp.builtins.get('Object.defineProperty');
 };
 
 /**
@@ -184,9 +187,11 @@ Dumper.prototype.dumpBinding = function(selector, todo) {
  *     fixed.
  * @param {Interpreter.Value} value Arbitrary JS value from this.intrp.
  * @param {Selector=} selector Location in which value will be stored.
+ * @param {boolean=} callable Return the expression suitably
+ *     parenthesised to be used as the callee of a CallExpression.
  * @return {string} An eval-able representation of the value.
  */
-Dumper.prototype.toExpr = function(value, selector) {
+Dumper.prototype.toExpr = function(value, selector, callable) {
   var intrp = this.intrp;
   if (!(value instanceof intrp.Object)) {
     return this.primitiveToExpr(value);
@@ -195,16 +200,17 @@ Dumper.prototype.toExpr = function(value, selector) {
   // Return existing reference to object (if already created).
   var info = this.getObjectInfo(value);
   if (info.ref) return info.ref.toExpr();
+  if (selector) info.ref = selector;  // Safe new ref if specified.
 
-  // New object.  Save referece for later use.
-  if (!selector) throw Error('Refusing to create non-referable object');
-  info.ref = selector;
-
-  // Object not yet referenced.  Is it a builtin?  If not, create it.
+ // Object not yet referenced.  Is it a builtin?
   var key = intrp.builtins.getKey(value);
-  if (key) {
+   if (key) {
+    if (callable) return '(' + this.builtinToExpr (value, key, info) + ')';
     return this.builtinToExpr (value, key, info);
-  } else if (value instanceof intrp.Function) {
+  }
+  // New object.  Create and save referece for later use.
+  if (!selector) throw Error('Refusing to create non-referable object');
+  if (value instanceof intrp.Function) {
     return this.functionToExpr(value, info);
   } else if (value instanceof intrp.Array) {
     return this.arrayToExpr(value, info);
@@ -788,8 +794,7 @@ ObjectInfo.prototype.dumpProperty_ = function(dumper, key, todo, ref) {
       if (todo >= Do.SET && done < Do.SET) {
         items.push('value: ' + dumper.toExpr(value));
       }
-      // TODO(cpcallen): use toExpr to find defineProperty.
-      output.push('Object.defineProperty(');
+      output.push(dumper.toExpr(dumper.defineProperty, undefined, true), '(');
       output.push(ref.toExpr(), ', ', dumper.toExpr(key));
       output.push(', {', items.join(', '), '});\n');
       checkDone.call(this);
