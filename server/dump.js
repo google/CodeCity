@@ -133,11 +133,6 @@ var Dumper = function(intrp, pristine, spec) {
       }
     }
   }
-
-  // Save references to important builtin functions.
-  this.defineProperty = intrp.builtins.get('Object.defineProperty');
-  this.getPrototypeOf = intrp.builtins.get('Object.getPrototypeOf');
-  this.setPrototypeOf = intrp.builtins.get('Object.setPrototypeOf');
 };
 
 /**
@@ -421,6 +416,17 @@ Dumper.prototype.exprForRegExp = function(re, info) {
 };
 
 /**
+ * Get a source text representation of a given builtin, for the
+ * purposes of calling it.
+ *
+ * @param {string} builtin The name of the builtin.
+ * @return {string} An eval-able representation of obj.
+ */
+Dumper.prototype.exprForBuiltin = function(builtin) {
+  return this.exprFor(this.intrp.builtins.get(builtin), undefined, true);
+};
+
+/**
  * Get ObjectInfo or ScopeInfo of the parent scope/object for the
  * given selector.
  * @param {!Selector} selector A selector for the binding in question.
@@ -478,7 +484,7 @@ Dumper.prototype.exprForSelector = function(selector) {
   var dumper = this;
   return selector.toString(function(part, out) {
     if (part === Selector.PROTOTYPE) {
-      out.unshift(dumper.exprFor(dumper.getPrototypeOf, undefined, true), '(');
+      out.unshift(dumper.exprForBuiltin('Object.getPrototypeOf'), '(');
       out.push(')');
     } else {
       throw new TypeError('Invalid part in parts array');
@@ -802,9 +808,9 @@ ObjectInfo.prototype.dumpProperty_ = function(dumper, key, todo, ref) {
       if (todo >= Do.SET && done < Do.SET) {
         items.push('value: ' + dumper.exprFor(value));
       }
-      output.push(dumper.exprFor(dumper.defineProperty, undefined, true), '(');
-      output.push(dumper.exprForSelector(ref), ', ', dumper.exprFor(key));
-      output.push(', {', items.join(', '), '});\n');
+      output.push(dumper.exprForBuiltin('Object.defineProperty'), '(',
+                  dumper.exprForSelector(ref), ', ', dumper.exprFor(key),
+                  ', {', items.join(', '), '});\n');
       checkDone.call(this);
     }
   }
@@ -829,7 +835,7 @@ ObjectInfo.prototype.dumpPrototype_ = function(dumper, todo, ref) {
   var output = [];
   var value = this.obj.proto;
   if (todo >= Do.SET && this.doneProto < Do.SET) {
-    output.push(dumper.exprFor(dumper.setPrototypeOf, undefined, true), '(',
+    output.push(dumper.exprForBuiltin('Object.setPrototypeOf'), '(',
                 dumper.exprForSelector(ref), ', ',
                 dumper.exprFor(value, sel), ');\n');
     this.proto = value;
