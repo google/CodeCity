@@ -200,6 +200,27 @@ exports.testDumperPrototypeExprFor = function(t) {
 };
 
 /**
+ * Unit tests for the Dumper.prototype.exprForSelector method.
+ * @param {!T} t The test runner object.
+ */
+exports.testDumperPrototypeExprForSelector = function(t) {
+  const intrp = getInterpreter();
+  const pristine = new Interpreter();
+  const dumper = new Dumper(intrp, pristine, simpleSpec);
+
+  // Test dumping selector before and after dumping Object.getPrototypeOf.
+  const selector = new Selector('foo.bar^.baz');
+  t.expect(util.format('Dumper.p.exprForSelector(%s)  // 0', selector),
+           dumper.exprForSelector(selector),
+           "(new 'Object.getPrototypeOf')(foo.bar).baz");
+  dumper.getObjectInfo(intrp.builtins.get('Object.getPrototypeOf')).ref =
+      new Selector('MyObject.myGetPrototypeOf');
+  t.expect(util.format('Dumper.p.exprForSelector(%s)  // 1', selector),
+           dumper.exprForSelector(selector),
+           'MyObject.myGetPrototypeOf(foo.bar).baz');
+};
+
+/**
  * Unit tests for the Dumper.prototype.dumpBinding method.
  * @param {!T} t The test runner object.
  */

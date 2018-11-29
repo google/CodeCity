@@ -136,6 +136,8 @@ var Dumper = function(intrp, pristine, spec) {
 
   // Save references to important builtin functions.
   this.defineProperty = intrp.builtins.get('Object.defineProperty');
+  this.getPrototypeOf = intrp.builtins.get('Object.getPrototypeOf');
+  this.setPrototypeOf = intrp.builtins.get('Object.setPrototypeOf');
 };
 
 /**
@@ -196,7 +198,7 @@ Dumper.prototype.exprFor = function(value, selector, callable) {
 
   // Return existing reference to object (if already created).
   var info = this.getObjectInfo(value);
-  if (info.ref) return info.ref.toExpr();
+  if (info.ref) return this.exprForSelector(info.ref);
   if (selector) info.ref = selector;  // Safe new ref if specified.
 
  // Object not yet referenced.  Is it a builtin?
@@ -474,6 +476,28 @@ Dumper.prototype.getObjectInfo = function(obj) {
   var oi = new ObjectInfo(this, obj);
   this.objInfo.set(obj, oi);
   return oi;
+};
+
+/**
+ * Get a source text representation of a given selector.  In general,
+ * given Selector s and Dumper d, d.exprForSelector(s) will be the
+ * same as s.toExpr() except when the output needs to call a builtin
+ * function like Object.getPrototypeOf that is not available via its
+ * usual name.
+ *
+ * @param {Selector=} selector Selector to obtain value of.
+ * @return {string} An eval-able representation of the value.
+ */
+Dumper.prototype.exprForSelector = function(selector) {
+  var dumper = this;
+  return selector.toString(function(part, out) {
+    if (part === Selector.PROTOTYPE) {
+      out.unshift(dumper.exprFor(dumper.getPrototypeOf, undefined, true), '(');
+      out.push(')');
+    } else {
+      throw new TypeError('Invalid part in parts array');
+    }
+  });
 };
 
 /**
@@ -763,7 +787,8 @@ ObjectInfo.prototype.dumpProperty_ = function(dumper, key, todo, ref) {
         attr = this.attributes[key] =
             {writable: true, enumerable: true, configurable: true};
       }
-      output.push(sel.toExpr(), ' = ', dumper.exprFor(value, sel), ';\n');
+      output.push(dumper.exprForSelector(sel), ' = ',
+                  dumper.exprFor(value, sel), ';\n');
       checkDone.call(this);
     }
 
@@ -792,7 +817,7 @@ ObjectInfo.prototype.dumpProperty_ = function(dumper, key, todo, ref) {
         items.push('value: ' + dumper.exprFor(value));
       }
       output.push(dumper.exprFor(dumper.defineProperty, undefined, true), '(');
-      output.push(ref.toExpr(), ', ', dumper.exprFor(key));
+      output.push(dumper.exprForSelector(ref), ', ', dumper.exprFor(key));
       output.push(', {', items.join(', '), '});\n');
       checkDone.call(this);
     }
@@ -818,7 +843,7 @@ ObjectInfo.prototype.dumpPrototype_ = function(dumper, todo, ref) {
   var output = [];
   var value = this.obj.proto;
   if (todo >= Do.SET && this.doneProto < Do.SET) {
-    output.push('Object.setPrototypeOf(', ref.toExpr(), ', ',
+    output.push('Object.setPrototypeOf(', dumper.exprForSelector(ref), ', ',
                 dumper.exprFor(value, sel), ');\n');
     this.proto = value;
     this.doneProto = Do.SET;
