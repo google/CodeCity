@@ -203,10 +203,10 @@ Dumper.prototype.exprFor = function(value, selector, callable) {
 
  // Object not yet referenced.  Is it a builtin?
   var key = intrp.builtins.getKey(value);
-   if (key) {
-    if (callable) return '(' + this.exprForBuiltin (value, key, info) + ')';
-    return this.exprForBuiltin (value, key, info);
-  }
+  if (key) {
+    var quoted = code.quote(key);
+    return callable ? '(new ' + quoted + ')' : 'new ' + quoted;
+  }     
   // New object.  Create and save referece for later use.
   if (!selector) throw Error('Refusing to create non-referable object');
   if (value instanceof intrp.Function) {
@@ -264,21 +264,6 @@ Dumper.prototype.exprForPrimitive = function(value) {
         throw TypeError('exprForPrimitive called on non-primitive value');
       }
   }
-};
-
-/**
- * Get a source text representation of a given builtin.  May or may not
- * include all properties, etc.
- *
- * BUG(cpcallen): Most of the info setup here should be done in the
- * ObjectInfo constructor instead.
- * @param {!Interpreter.prototype.Object} obj Object to be recreated.
- * @param {string} key The name of the builtin.
- * @param {!ObjectInfo} info Dump-state info about func.
- * @return {string} An eval-able representation of obj.
- */
-Dumper.prototype.exprForBuiltin = function(obj, key, info) {
-  return 'new ' + code.quote(key);
 };
 
 /**
