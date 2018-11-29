@@ -672,6 +672,31 @@ var ObjectInfo = function(dumper, obj) {
 };
 
 /**
+ * Updates done state of property binding after defining/assigning a
+ * property.  This computes the new done value, calls .setDone(key,
+ * done) and returns the new value.
+ * @param {string} key The property key just updated.
+ * @param {Interpreter.Value} value The value just assigned to the property.
+ * @param {!Object<string, boolean>} attr The property's current attributes.
+ * @param {!Interpreter.Descriptor|undefined} pd Property descriptor
+ *     returned by calling this.obj.getOwnPropertyDescriptor(key, ...).
+ * @return {!Do} New done state.
+ */
+ObjectInfo.prototype.checkProperty_ = function(key, value, attr, pd) {
+  if (!Object.is(value, pd.value)) {
+    var done = Do.DECL;
+  } else if (attr.writable === pd.writable &&
+      attr.enumerable === pd.enumerable &&
+      attr.configurable === pd.configurable) {
+    done = Do.ATTR;
+  } else {
+    done = Do.SET;
+  }
+  this.setDone(key, done);
+  return done;
+};
+
+/**
  * Generate JS source text to set the object's prototype.
  *
  * @private
@@ -757,23 +782,6 @@ ObjectInfo.prototype.dumpProperty_ = function(dumper, key, todo, ref) {
     // If only "declaring" property, set it to undefined.
     var value = (todo === Do.DECL) ? undefined : pd.value;
 
-    /**
-     * Helper function to update state after assigning/definePropertying.
-     * @this {!ObjectInfo}
-     */
-    var checkDone = function() {
-      if (!Object.is(pd.value, value)) {
-        done = Do.DECL;
-      } else if (pd.writable === attr.writable &&
-          pd.enumerable === attr.enumerable &&
-          pd.configurable === attr.configurable) {
-        done = Do.ATTR;
-      } else {
-        done = Do.SET;
-      }
-      this.setDone(key, done);
-    };
-
     // Output assignment statement if useful.
     if (done < Do.SET && this.isWritable(dumper, key)) {
       if (!attr) {
@@ -782,7 +790,7 @@ ObjectInfo.prototype.dumpProperty_ = function(dumper, key, todo, ref) {
       }
       output.push(dumper.exprForSelector(sel), ' = ',
                   dumper.exprFor(value, sel), ';\n');
-      checkDone.call(this);
+      done = this.checkProperty_(key, value, attr, pd);
     }
 
     // Output defineProperty call if useful.
@@ -812,7 +820,7 @@ ObjectInfo.prototype.dumpProperty_ = function(dumper, key, todo, ref) {
       output.push(dumper.exprForBuiltin('Object.defineProperty'), '(',
                   dumper.exprForSelector(ref), ', ', dumper.exprFor(key),
                   ', {', items.join(', '), '});\n');
-      checkDone.call(this);
+      done = this.checkProperty_(key, value, attr, pd);
     }
   }
 
