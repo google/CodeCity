@@ -149,7 +149,6 @@ var Dumper = function(intrp, pristine, spec) {
  * // => 'foo[0] = 42;\n'
  * myDumper.dumpBinding(new Selector('foo'), Do.RECURSE)
  * // => 'foo[1] = 69;\nfoo[2] = 105;\n'
- *
  * @param {!Selector} selector The selector for the binding to be dumped.
  * @param {Do} todo How much to dump.  Must be >= Do.DECL.
  * @return {string} An eval-able program to initialise the specified binding.
@@ -178,7 +177,6 @@ Dumper.prototype.dumpBinding = function(selector, todo) {
  * represented by an expression creating the object - but if it has
  * appeared before, then it will instead be represented by an
  * expression referenceing the previously-constructed object.
- *
  * @param {Interpreter.Value} value Arbitrary JS value from this.intrp.
  * @param {Selector=} selector Location in which value will be stored.
  * @param {boolean=} callable Return the expression suitably
@@ -201,7 +199,7 @@ Dumper.prototype.exprFor = function(value, selector, callable) {
   if (key) {
     var quoted = code.quote(key);
     return callable ? '(new ' + quoted + ')' : 'new ' + quoted;
-  }     
+  }
   // New object.  Create and save referece for later use.
   if (!selector) throw Error('Refusing to create non-referable object');
   if (value instanceof intrp.Function) {
@@ -419,7 +417,6 @@ Dumper.prototype.exprForRegExp = function(re, info) {
 /**
  * Get a source text representation of a given builtin, for the
  * purposes of calling it.
- *
  * @param {string} builtin The name of the builtin.
  * @return {string} An eval-able representation of obj.
  */
@@ -477,7 +474,6 @@ Dumper.prototype.getObjectInfo = function(obj) {
  * same as s.toExpr() except when the output needs to call a builtin
  * function like Object.getPrototypeOf that is not available via its
  * usual name.
- *
  * @param {Selector=} selector Selector to obtain value of.
  * @return {string} An eval-able representation of the value.
  */
@@ -564,7 +560,6 @@ var ScopeInfo = function(scope) {
 /**
  * Generate JS source text to create and/or initialize a single
  * variable binding.
- *
  * @param {!Dumper} dumper Dumper to which this ScopeInfo belongs.
  * @param {!Selector.Part} part The part to dump.  Must be simple string.
  * @param {Do} todo How much to do.  Must be >= Do.DECL; > Do.SET ignored.
@@ -698,7 +693,6 @@ ObjectInfo.prototype.checkProperty_ = function(key, value, attr, pd) {
 
 /**
  * Generate JS source text to set the object's prototype.
- *
  * @private
  * @param {!Dumper} dumper Dumper to which this ObjectInfo belongs.
  * @param {Do} todo How much to do.  '' returned if todo < Do.RECURSE.
@@ -727,7 +721,6 @@ ObjectInfo.prototype.checkRecurse_ = function(dumper, todo, ref, part, value) {
 /**
  * Generate JS source text to create and/or initialize a single
  * binding (property or internal slot) of the object.
- *
  * @param {!Dumper} dumper Dumper to which this ObjectInfo belongs.
  * @param {!Selector.Part} part The binding part to dump.
  * @param {Do} todo How much to do.  Must be >= Do.DECL; > Do.SET ignored.
@@ -752,14 +745,13 @@ ObjectInfo.prototype.dumpBinding = function(dumper, part, todo, ref) {
  * Generate JS source text to create and/or initialize a single
  * binding (property or internal slot) of the object.  The output will
  * consist of:
- *
+
  * - An assignment statement to create the property and/or set its
  *   value, if necessary and possible.
  * - A call to Object.defineProperty, to set the property's attributes
  *   (and value, if the value couldn't be set by assignement), if
  *   necessary.
  * - Any code generated because of recursive dumping.
- *
  * @private
  * @param {!Dumper} dumper Dumper to which this ObjectInfo belongs.
  * @param {string} key The property to dump.
@@ -830,7 +822,6 @@ ObjectInfo.prototype.dumpProperty_ = function(dumper, key, todo, ref) {
 
 /**
  * Generate JS source text to set the object's prototype.
- *
  * @private
  * @param {!Dumper} dumper Dumper to which this ObjectInfo belongs.
  * @param {Do} todo How much to do.  Must be >= Do.DECL; > Do.SET ignored.
@@ -858,7 +849,6 @@ ObjectInfo.prototype.dumpPrototype_ = function(dumper, todo, ref) {
 /**
  * Recursively dumps all bindings of the object (and objects reachable
  * via it).
- *
  * @param {!Dumper} dumper Dumper to which this ObjectInfo belongs.
  * @param {!Selector=} ref Selector refering to this object.
  *     Optional; defaults to whatever selector was used to create the
