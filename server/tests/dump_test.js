@@ -273,6 +273,16 @@ exports.testDumperPrototypeDumpBinding = function(t) {
       var re3 = /baz/m;
       Object.setPrototypeOf(re3, re1);
 
+      var error1 = new Error('message1');
+      error1.stack = 'stack1';  // Because it's otherwise kind of random.
+      var error2 = new TypeError('message2');
+      error2.stack = 'stack2';
+      var error3 = new RangeError();
+      Object.setPrototypeOf(error3, error1);
+      error3.message = 69;
+      Object.defineProperty(error3, 'message', {writable: false});
+      delete error3.stack;
+
       Object.defineProperty(Object.prototype, 'bar',
           {writable: false, enumerable: true, configurable: true,
            value: 'bar'});  // Naughty!
@@ -287,6 +297,9 @@ exports.testDumperPrototypeDumpBinding = function(t) {
   dumper.getObjectInfo(intrp.OBJECT).visiting = true;
   dumper.getObjectInfo(intrp.ARRAY).visiting = true;
   dumper.getObjectInfo(intrp.REGEXP).visiting = true;
+  dumper.getObjectInfo(intrp.ERROR).visiting = true;
+  dumper.getObjectInfo(intrp.TYPE_ERROR).visiting = true;
+  dumper.getObjectInfo(intrp.RANGE_ERROR).visiting = true;
 
   // Check generated output for (and post-dump status of) specific bindings.
   const cases = [
@@ -362,6 +375,18 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         're2.lastIndex = 42;\n'],
     ['re3', Do.SET, 'var re3 = /baz/m;\n'],
     ['re3^', Do.SET, 'Object.setPrototypeOf(re3, re1);\n'],
+    ['error1', Do.SET, "var error1 = new (new 'Error')('message1');\n"],
+    ['error1', Do.RECURSE, "error1.stack = 'stack1';\n"],
+    ['Error', Do.SET, "var Error = new 'Error';\n"],
+    ['TypeError', Do.SET, "var TypeError = new 'TypeError';\n"],
+    ['RangeError', Do.SET, "var RangeError = new 'RangeError';\n"],
+    ['error2', Do.SET, "var error2 = new TypeError('message2');\n"],
+    ['error2', Do.RECURSE, "error2.stack = 'stack2';\n"],
+    ['error3', Do.SET, 'var error3 = new Error();\n'],
+    ['error3.message', Do.ATTR, 'error3.message = 69;\n' +
+        "Object.defineProperty(error3, 'message', {writable: false});\n"],
+    // BUG(cpcallen): Want '... delete error3.stack;\n'.
+    ['error3', Do.RECURSE, 'Object.setPrototypeOf(error3, error1);\n'],
   ];
   for (const tc of cases) {
     const s = new Selector(tc[0]);

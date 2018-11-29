@@ -210,6 +210,12 @@ Dumper.prototype.exprFor = function(value, selector, callable) {
     return this.exprForDate(value, info);
   } else if (value instanceof intrp.RegExp) {
     return this.exprForRegExp(value, info);
+  } else if (value instanceof intrp.Error) {
+    return this.exprForError(value, info);
+  } else if (value instanceof intrp.WeakMap) {
+    // TODO(cpcallen)
+    throw new Error('WeakMap dumping not implemented');
+    // return this.exprForError(value, info);
   } else {
     return this.exprForObject(value, info);
   }
@@ -350,7 +356,7 @@ Dumper.prototype.exprForFunction = function(func, info) {
  * Get a source text representation of a given Array object.
  * @param {!Interpreter.prototype.Array} arr Array object to be recreated.
  * @param {!ObjectInfo} info Dump-state info about arr.
- * @return {string} An eval-able representation of obj.
+ * @return {string} An eval-able representation of arr.
  */
 Dumper.prototype.exprForArray = function(arr, info) {
   // Arrays' [[Prototype]] default to Array.prototype.
@@ -375,7 +381,7 @@ Dumper.prototype.exprForArray = function(arr, info) {
  * Get a source text representation of a given Date object.
  * @param {!Interpreter.prototype.Date} date Date object to be recreated.
  * @param {!ObjectInfo} info Dump-state info about date.
- * @return {string} An eval-able representation of obj.
+ * @return {string} An eval-able representation of date.
  */
 Dumper.prototype.exprForDate = function(date, info) {
   // Do we need to set [[Prototype]]?  Not if it's Date.prototype.
@@ -389,7 +395,7 @@ Dumper.prototype.exprForDate = function(date, info) {
  * Get a source text representation of a given RegExp object.
  * @param {!Interpreter.prototype.RegExp} re RegExp to be recreated.
  * @param {!ObjectInfo} info Dump-state info about re.
- * @return {string} An eval-able representation of obj.
+ * @return {string} An eval-able representation of re.
  */
 Dumper.prototype.exprForRegExp = function(re, info) {
   // RegExps' [[Prototype]] default to RegExp.prototype.
@@ -412,6 +418,64 @@ Dumper.prototype.exprForRegExp = function(re, info) {
     info.setDone('lastIndex', Do.DECL);
   }
   return re.regexp.toString();
+};
+
+/**
+ * Get a source text representation of a given Error object.
+ * @param {!Interpreter.prototype.Error} error Error object to be recreated.
+ * @param {!ObjectInfo} info Dump-state info about error.
+ * @return {string} An eval-able representation of error.
+ */
+Dumper.prototype.exprForError = function(error, info) {
+  // Do we need to set [[Prototype]]?  Not if we can set it implicitly
+  // by using the correct error constructor.
+  var constructor;
+  if (error.proto === this.intrp.ERROR) {
+    constructor = 'Error';
+  } else if (error.proto === this.intrp.EVAL_ERROR) {
+    constructor = 'EvalError';
+  } else if (error.proto === this.intrp.RANGE_ERROR) {
+    constructor = 'RangeError';
+  } else if (error.proto === this.intrp.REFERENCE_ERROR) {
+    constructor = 'ReferenceError';
+  } else if (error.proto === this.intrp.SYNTAX_ERROR) {
+    constructor = 'SyntaxError';
+  } else if (error.proto === this.intrp.TYPE_ERROR) {
+    constructor = 'TypeError';
+  } else if (error.proto === this.intrp.URI_ERROR) {
+    constructor = 'URIError';
+  } else if (error.proto === this.intrp.PERM_ERROR) {
+    constructor = 'PermissionError';
+  }
+  if (constructor) {
+    info.proto = error.proto;
+    info.doneProto = Do.SET;
+  } else {
+    constructor = 'Error';
+    info.proto = this.intrp.ERROR;
+  }
+  // Try to set .message in the constructor call.
+  var message = error.getOwnPropertyDescriptor('message', this.intrp.ROOT);
+  var messageExpr = '';
+  if (message &&
+      (typeof message.value === 'string' || message.value === undefined)) {
+    messageExpr = this.exprFor(message.value);
+    var attr = info.attributes['message'] =
+        {writable: true, enumerable: false, configurable: true};
+    info.checkProperty('message', message.value, attr , message);
+  } else {
+    // TODO(cpcallen): schedule deletion of .message property.
+  }
+  // Make sure we overwrite .stack later (or delete it).
+  var stack = error.getOwnPropertyDescriptor('stack', this.intrp.ROOT);
+  if (stack) {
+    info.attributes['stack'] =
+        {writable: true, enumerable: false, configurable: true};
+    info.setDone('stack', Do.DECL);
+  } else {
+    // TODO(cpcallen): schedule deletion of .stack property.
+  }
+  return 'new ' + this.exprForBuiltin(constructor) + '(' + messageExpr + ')';
 };
 
 /**
@@ -677,7 +741,7 @@ var ObjectInfo = function(dumper, obj) {
  *     returned by calling this.obj.getOwnPropertyDescriptor(key, ...).
  * @return {!Do} New done state.
  */
-ObjectInfo.prototype.checkProperty_ = function(key, value, attr, pd) {
+ObjectInfo.prototype.checkProperty = function(key, value, attr, pd) {
   if (!Object.is(value, pd.value)) {
     var done = Do.DECL;
   } else if (attr.writable === pd.writable &&
@@ -782,7 +846,7 @@ ObjectInfo.prototype.dumpProperty_ = function(dumper, key, todo, ref) {
       }
       output.push(dumper.exprForSelector(sel), ' = ',
                   dumper.exprFor(value, sel), ';\n');
-      done = this.checkProperty_(key, value, attr, pd);
+      done = this.checkProperty(key, value, attr, pd);
     }
 
     // Output defineProperty call if useful.
@@ -812,7 +876,7 @@ ObjectInfo.prototype.dumpProperty_ = function(dumper, key, todo, ref) {
       output.push(dumper.exprForBuiltin('Object.defineProperty'), '(',
                   dumper.exprForSelector(ref), ', ', dumper.exprFor(key),
                   ', {', items.join(', '), '});\n');
-      done = this.checkProperty_(key, value, attr, pd);
+      done = this.checkProperty(key, value, attr, pd);
     }
   }
 
