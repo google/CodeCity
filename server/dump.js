@@ -182,19 +182,16 @@ Dumper.prototype.dumpBinding = function(selector, todo) {
  * appeared before, then it will instead be represented by an
  * expression referenceing the previously-constructed object.
  *
- * TODO(cpcallen): rename this (and other *ToExpr) to toSource once
- *     https://github.com/google/closure-compiler/issues/3013 is
- *     fixed.
  * @param {Interpreter.Value} value Arbitrary JS value from this.intrp.
  * @param {Selector=} selector Location in which value will be stored.
  * @param {boolean=} callable Return the expression suitably
  *     parenthesised to be used as the callee of a CallExpression.
  * @return {string} An eval-able representation of the value.
  */
-Dumper.prototype.toExpr = function(value, selector, callable) {
+Dumper.prototype.exprFor = function(value, selector, callable) {
   var intrp = this.intrp;
   if (!(value instanceof intrp.Object)) {
-    return this.primitiveToExpr(value);
+    return this.exprForPrimitive(value);
   }
 
   // Return existing reference to object (if already created).
@@ -205,21 +202,21 @@ Dumper.prototype.toExpr = function(value, selector, callable) {
  // Object not yet referenced.  Is it a builtin?
   var key = intrp.builtins.getKey(value);
    if (key) {
-    if (callable) return '(' + this.builtinToExpr (value, key, info) + ')';
-    return this.builtinToExpr (value, key, info);
+    if (callable) return '(' + this.exprForBuiltin (value, key, info) + ')';
+    return this.exprForBuiltin (value, key, info);
   }
   // New object.  Create and save referece for later use.
   if (!selector) throw Error('Refusing to create non-referable object');
   if (value instanceof intrp.Function) {
-    return this.functionToExpr(value, info);
+    return this.exprForFunction(value, info);
   } else if (value instanceof intrp.Array) {
-    return this.arrayToExpr(value, info);
+    return this.exprForArray(value, info);
   } else if (value instanceof intrp.Date) {
-    return this.dateToExpr(value, info);
+    return this.exprForDate(value, info);
   } else if (value instanceof intrp.RegExp) {
-    return this.regExpToExpr(value, info);
+    return this.exprForRegExp(value, info);
   } else {
-    return this.objectToExpr(value, info);
+    return this.exprForObject(value, info);
   }
 };
 
@@ -230,7 +227,7 @@ Dumper.prototype.toExpr = function(value, selector, callable) {
  * @param {undefined|null|boolean|number|string} value Primitive JS value.
  * @return {string} An eval-able representation of the value.
  */
-Dumper.prototype.primitiveToExpr = function(value) {
+Dumper.prototype.exprForPrimitive = function(value) {
   switch (typeof value) {
     case 'undefined':
       if (this.isShadowed('undefined')) return '(void 0)';
@@ -262,7 +259,7 @@ Dumper.prototype.primitiveToExpr = function(value) {
       if (value === null) {
         return 'null';
       } else {
-        throw TypeError('primitiveToSource called on non-primitive value');
+        throw TypeError('exprForPrimitive called on non-primitive value');
       }
   }
 };
@@ -278,7 +275,7 @@ Dumper.prototype.primitiveToExpr = function(value) {
  * @param {!ObjectInfo} info Dump-state info about func.
  * @return {string} An eval-able representation of obj.
  */
-Dumper.prototype.builtinToExpr = function(obj, key, info) {
+Dumper.prototype.exprForBuiltin = function(obj, key, info) {
   return 'new ' + code.quote(key);
 };
 
@@ -289,7 +286,7 @@ Dumper.prototype.builtinToExpr = function(obj, key, info) {
  * @param {!ObjectInfo} info Dump-state info about obj.
  * @return {string} An eval-able representation of obj.
  */
-Dumper.prototype.objectToExpr = function(obj, info) {
+Dumper.prototype.exprForObject = function(obj, info) {
   try {
     switch (obj.proto) {
       case this.intrp.OBJECT:
@@ -299,7 +296,7 @@ Dumper.prototype.objectToExpr = function(obj, info) {
       default:
         var protoInfo = this.getObjectInfo(obj.proto);
         if (protoInfo.ref) {
-          return 'Object.create(' + this.toExpr(obj.proto) + ')';
+          return 'Object.create(' + this.exprFor(obj.proto) + ')';
         } else {
           // Can't set [[Prototype]] yet.  Do it later.
           info.proto = this.intrp.OBJECT;
@@ -321,7 +318,7 @@ Dumper.prototype.objectToExpr = function(obj, info) {
  * @param {!ObjectInfo} info Dump-state info about func.
  * @return {string} An eval-able representation of func.
  */
-Dumper.prototype.functionToExpr = function(func, info) {
+Dumper.prototype.exprForFunction = function(func, info) {
   if (!(func instanceof this.intrp.UserFunction)) {
     throw Error('Unable to dump non-UserFunction');
   }
@@ -375,7 +372,7 @@ Dumper.prototype.functionToExpr = function(func, info) {
  * @param {!ObjectInfo} info Dump-state info about arr.
  * @return {string} An eval-able representation of obj.
  */
-Dumper.prototype.arrayToExpr = function(arr, info) {
+Dumper.prototype.exprForArray = function(arr, info) {
   // Arrays' [[Prototype]] default to Array.prototype.
   info.proto = this.intrp.ARRAY;
   // Do we need to set [[Prototype]]?  Not if it's already correct.
@@ -400,7 +397,7 @@ Dumper.prototype.arrayToExpr = function(arr, info) {
  * @param {!ObjectInfo} info Dump-state info about date.
  * @return {string} An eval-able representation of obj.
  */
-Dumper.prototype.dateToExpr = function(date, info) {
+Dumper.prototype.exprForDate = function(date, info) {
   // Do we need to set [[Prototype]]?  Not if it's Date.prototype.
   if (date.proto === this.intrp.DATE) info.doneProto = Do.SET;
   return "new Date('" + date.date.toISOString() + "')";
@@ -412,7 +409,7 @@ Dumper.prototype.dateToExpr = function(date, info) {
  * @param {!ObjectInfo} info Dump-state info about re.
  * @return {string} An eval-able representation of obj.
  */
-Dumper.prototype.regExpToExpr = function(re, info) {
+Dumper.prototype.exprForRegExp = function(re, info) {
   // RegExps' [[Prototype]] default to RegExp.prototype.
   info.proto = this.intrp.REGEXP;
   // Do we need to set [[Prototype]]?  Not if it's already correct.
@@ -574,7 +571,7 @@ ScopeInfo.prototype.dumpBinding = function(dumper, part, todo, ref) {
     if (done < Do.SET) {
       output.push(part);
       if (todo >= Do.SET) {
-        output.push(' = ', dumper.toExpr(value, sel));
+        output.push(' = ', dumper.exprFor(value, sel));
       }
       output.push(';\n');
     }
@@ -766,7 +763,7 @@ ObjectInfo.prototype.dumpProperty_ = function(dumper, key, todo, ref) {
         attr = this.attributes[key] =
             {writable: true, enumerable: true, configurable: true};
       }
-      output.push(sel.toExpr(), ' = ', dumper.toExpr(value, sel), ';\n');
+      output.push(sel.toExpr(), ' = ', dumper.exprFor(value, sel), ';\n');
       checkDone.call(this);
     }
 
@@ -792,10 +789,10 @@ ObjectInfo.prototype.dumpProperty_ = function(dumper, key, todo, ref) {
         items.push('configurable: ' + attr.configurable);
       }
       if (todo >= Do.SET && done < Do.SET) {
-        items.push('value: ' + dumper.toExpr(value));
+        items.push('value: ' + dumper.exprFor(value));
       }
-      output.push(dumper.toExpr(dumper.defineProperty, undefined, true), '(');
-      output.push(ref.toExpr(), ', ', dumper.toExpr(key));
+      output.push(dumper.exprFor(dumper.defineProperty, undefined, true), '(');
+      output.push(ref.toExpr(), ', ', dumper.exprFor(key));
       output.push(', {', items.join(', '), '});\n');
       checkDone.call(this);
     }
@@ -822,7 +819,7 @@ ObjectInfo.prototype.dumpPrototype_ = function(dumper, todo, ref) {
   var value = this.obj.proto;
   if (todo >= Do.SET && this.doneProto < Do.SET) {
     output.push('Object.setPrototypeOf(', ref.toExpr(), ', ',
-                dumper.toExpr(value, sel), ');\n');
+                dumper.exprFor(value, sel), ');\n');
     this.proto = value;
     this.doneProto = Do.SET;
   }

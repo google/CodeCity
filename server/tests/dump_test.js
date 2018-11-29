@@ -123,19 +123,19 @@ exports.testDumperPrototypeIsShadowed = function(t) {
 };
 
 /**
- * Unit tests for the Dumper.prototype.primitiveToExpr method.
+ * Unit tests for the Dumper.prototype.exprForPrimitive method.
  * @param {!T} t The test runner object.
  */
-exports.testDumperPrototypePrimitiveToExpr = function(t) {
+exports.testDumperPrototypeExprForPrimitive = function(t) {
   const intrp = getInterpreter();
   const pristine = new Interpreter();
   const dumper = new Dumper(intrp, pristine, simpleSpec);
 
   function doCases(cases) {
     for (const tc of cases) {
-      const r = dumper.primitiveToExpr(tc[0]);
-      t.expect(util.format('dumper.primitiveToExpr(%o)', tc[0]), r, tc[1]);
-      t.expect(util.format('eval(dumper.primitiveToExpr(%o))', tc[0]),
+      const r = dumper.exprForPrimitive(tc[0]);
+      t.expect(util.format('dumper.exprForPrimitive(%o)', tc[0]), r, tc[1]);
+      t.expect(util.format('eval(dumper.exprForPrimitive(%o))', tc[0]),
           eval(r), tc[0]);
     }
   }
@@ -170,10 +170,10 @@ exports.testDumperPrototypePrimitiveToExpr = function(t) {
 };
 
 /**
- * Unit tests for the Dumper.prototype.toExpr method.
+ * Unit tests for the Dumper.prototype.exprFor method.
  * @param {!T} t The test runner object.
  */
-exports.testDumperPrototypeToExpr = function(t) {
+exports.testDumperPrototypeExprFor = function(t) {
   const intrp = getInterpreter();
   const pristine = new Interpreter();
   const dumper = new Dumper(intrp, pristine, simpleSpec);
@@ -194,8 +194,8 @@ exports.testDumperPrototypeToExpr = function(t) {
   ];
   for (let i = 0; i < cases.length; i++) {
     const tc = cases[i];
-    const r = dumper.toExpr(tc[0], new Selector(['tc', String(i)]));
-    t.expect(util.format('Dumper.p.toExpr(%s)', tc[1]), r, tc[1]);
+    const r = dumper.exprFor(tc[0], new Selector(['tc', String(i)]));
+    t.expect(util.format('Dumper.p.exprFor(%s)', tc[1]), r, tc[1]);
   }
 };
 
