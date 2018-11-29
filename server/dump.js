@@ -402,6 +402,7 @@ Dumper.prototype.exprForArray = function(arr, info) {
 Dumper.prototype.exprForDate = function(date, info) {
   // Do we need to set [[Prototype]]?  Not if it's Date.prototype.
   if (date.proto === this.intrp.DATE) info.doneProto = Do.SET;
+  // BUG(cpcallen): Don't assume Date constructor is already dumped.
   return "new Date('" + date.date.toISOString() + "')";
 };
 
@@ -843,7 +844,8 @@ ObjectInfo.prototype.dumpPrototype_ = function(dumper, todo, ref) {
   var output = [];
   var value = this.obj.proto;
   if (todo >= Do.SET && this.doneProto < Do.SET) {
-    output.push('Object.setPrototypeOf(', dumper.exprForSelector(ref), ', ',
+    output.push(dumper.exprFor(dumper.setPrototypeOf, undefined, true), '(',
+                dumper.exprForSelector(ref), ', ',
                 dumper.exprFor(value, sel), ');\n');
     this.proto = value;
     this.doneProto = Do.SET;

@@ -312,7 +312,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     ['child1.foo', Do.SET, "child1.foo = 'foo2';\n"],
     ['child1.foo', Do.ATTR,
         "Object.defineProperty(child1, 'foo', {enumerable: false});\n"],
-    ['child2^', Do.SET, 'Object.setPrototypeOf(child2, parent);\n'],
+    ['child2^', Do.SET, "(new 'Object.setPrototypeOf')(child2, parent);\n"],
     ['child2.foo', Do.DECL, "Object.defineProperty(child2, 'foo', " +
         '{writable: true, enumerable: true, configurable: true});\n'],
     ['child2.foo', Do.SET, "child2.foo = 'foo2';\n"],
@@ -323,6 +323,9 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     ['child2', Do.RECURSE, ''],
 
     ['child3', Do.RECURSE, 'var child3 = Object.create(parent);\n'],
+
+    ['Object.setPrototypeOf', Do.SET,
+        "Object.setPrototypeOf = new 'Object.setPrototypeOf';\n"],
 
     ['f1', Do.DECL, 'var f1;\n'],
     // TODO(cpcallen): Really want 'function f1(arg) {};\n'.
