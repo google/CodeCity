@@ -411,8 +411,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     t.expect(util.format('Binding status of <%s> === %d', s, tc[1]),
         info.getDone(s[s.length - 1]), tc[1]);
     if (tc[2]) {
-      const value = dumper.getValueForSelector(s);
-      const valueInfo = dumper.getObjectInfo(value);
+      const valueInfo = dumper.getObjectInfo(dumper.valueForSelector(s));
       t.expect(util.format('Ref for %s', s), String(valueInfo.ref), tc[2]);
     }
   }

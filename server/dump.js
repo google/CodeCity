@@ -164,7 +164,7 @@ Dumper.prototype.dumpBinding = function(selector, todo) {
   } else {
     ref = new Selector(selector);
     ref.pop();
-    var obj = this.getValueForSelector(ref);
+    var obj = this.valueForSelector(ref);
     if (!(obj instanceof this.intrp.Object)) {
       throw new TypeError("Can't set properties of primitive");
     }
@@ -444,7 +444,7 @@ Dumper.prototype.getInfoForSelector = function(selector) {
   } else {
     var ref = new Selector(selector);
     ref.pop();
-    var obj = this.getValueForSelector(ref);
+    var obj = this.valueForSelector(ref);
     if (!(obj instanceof this.intrp.Object)) {
       throw new TypeError("Can't get info for primitive");
     }
@@ -485,7 +485,7 @@ Dumper.prototype.getObjectInfo = function(obj) {
  *     to.  Defaults to global scope.
  * @return {Interpreter.Value} The value of that binding.
  */
-Dumper.prototype.getValueForSelector = function(selector, scope) {
+Dumper.prototype.valueForSelector = function(selector, scope) {
   if (!scope) scope = this.intrp.global;
   if (selector.length < 1) throw RangeError('Zero-length selector??');
   var varname = selector[0];
