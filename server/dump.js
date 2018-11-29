@@ -383,7 +383,8 @@ Dumper.prototype.exprForDate = function(date, info) {
   // Do we need to set [[Prototype]]?  Not if it's Date.prototype.
   if (date.proto === this.intrp.DATE) info.doneProto = Do.SET;
   // BUG(cpcallen): Don't assume Date constructor is already dumped.
-  return "new Date('" + date.date.toISOString() + "')";
+  return 'new ' + this.exprForBuiltin('Date') +
+      "('" + date.date.toISOString() + "')";
 };
 
 /**

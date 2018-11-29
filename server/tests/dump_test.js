@@ -178,6 +178,11 @@ exports.testDumperPrototypeExprFor = function(t) {
   const pristine = new Interpreter();
   const dumper = new Dumper(intrp, pristine, simpleSpec);
 
+  // Give references to needed builtins.
+  for (const b of ['Date']) {
+    dumper.getObjectInfo(intrp.builtins.get(b)).ref = new Selector(b);
+  }
+
   // Create UserFunction to dump.
   intrp.createThreadForSrc('function foo(bar) {}');
   intrp.run();
@@ -258,7 +263,8 @@ exports.testDumperPrototypeDumpBinding = function(t) {
       Object.setPrototypeOf(sparse, arr);
       sparse.length = 4;
 
-      var date = new Date('1975-07-27');
+      var date1 = new Date('1975-07-27');
+      var date2 = new Date('1979-01-04');
 
       var re1 = /foo/ig;
       var re2 = /bar/g;
@@ -345,7 +351,10 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         'Object.setPrototypeOf(sparse, arr);\n' +
         'sparse[0] = 0;\nsparse[2] = 2;\nsparse.length = 4;\n'],
 
-    ['date', Do.SET, "var date = new Date('1975-07-27T00:00:00.000Z');\n"],
+    ['date1', Do.SET,
+        "var date1 = new (new 'Date')('1975-07-27T00:00:00.000Z');\n"],
+    ['Date', Do.SET, "var Date = new 'Date';\n"],
+    ['date2', Do.SET, "var date2 = new Date('1979-01-04T00:00:00.000Z');\n"],
 
     ['re1', Do.SET, 'var re1 = /foo/gi;\n'],
     ['re2', Do.RECURSE, 'var re2 = /bar/g;\n' +
@@ -406,7 +415,8 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     ['sparse^', Do.RECURSE, 'arr'],
     ['sparse.length', Do.RECURSE],
 
-    ['date^', Do.SET],
+    ['date1^', Do.SET],
+    ['date2^', Do.SET],
 
     ['re1^', Do.RECURSE],
     ['re1.source', Do.RECURSE],
