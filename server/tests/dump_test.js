@@ -257,6 +257,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
       f2.undef = undefined;
       Object.setPrototypeOf(f2.f3, null);
       f2.f3.prototype = obj;
+      delete f2.f3.name;
 
       var arr = [42, 69, 105, obj];
       var sparse = [0, , 2];
@@ -354,7 +355,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     ['f2.f3', Do.SET, 'f2.f3 = function f4(arg) {};\n', Do.ATTR],
     ['f2.undef', Do.DECL, 'f2.undef = undefined;\n', Do.ATTR],
     ['f2.f3^', Do.SET, 'Object.setPrototypeOf(f2.f3, null);\n'],
-    ['f2.f3', Do.RECURSE, "f2.f3.prototype = obj;\n"],
+    ['f2.f3', Do.RECURSE, "delete f2.f3.name;\nf2.f3.prototype = obj;\n"],
 
     // TODO(cpcallen): Realy want 'var arr = [42, 69, 105, obj];\n'.
     ['arr', Do.RECURSE, 'var arr = [];\narr[0] = 42;\narr[1] = 69;\n' +
@@ -385,8 +386,8 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     ['error3', Do.SET, 'var error3 = new Error();\n'],
     ['error3.message', Do.ATTR, 'error3.message = 69;\n' +
         "Object.defineProperty(error3, 'message', {writable: false});\n"],
-    // BUG(cpcallen): Want '... delete error3.stack;\n'.
-    ['error3', Do.RECURSE, 'Object.setPrototypeOf(error3, error1);\n'],
+    ['error3', Do.RECURSE, 'delete error3.stack;\n' +
+        'Object.setPrototypeOf(error3, error1);\n'],
   ];
   for (const tc of cases) {
     const s = new Selector(tc[0]);

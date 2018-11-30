@@ -336,9 +336,11 @@ Dumper.prototype.exprForFunction = function(func, info, funcName) {
     var attr = info.attributes['name'] =
         {writable: false, enumerable: false, configurable: true};
     var pd = func.getOwnPropertyDescriptor('name', this.intrp.ROOT);
-    info.checkProperty('name', funcName, attr , pd);
-  } else {
-    // TODO(cpcallen): schedule deletion of .name property.
+    if (pd) {
+      info.checkProperty('name', funcName, attr , pd);
+    } else {
+      info.scheduleDeletion('name');
+    }
   }
   // The .prototype property will automatically be created, so we
   // don't need to "declare" it.  Fortunately it's non-configurable,
@@ -482,17 +484,16 @@ Dumper.prototype.exprForError = function(error, info) {
     var attr = info.attributes['message'] =
         {writable: true, enumerable: false, configurable: true};
     info.checkProperty('message', message.value, attr , message);
-  } else {
-    // TODO(cpcallen): schedule deletion of .message property.
   }
-  // Make sure we overwrite .stack later (or delete it).
+  // The .stack property is always created, and we always want to
+  // overwrite (or delete) it.
+  info.attributes['stack'] =
+      {writable: true, enumerable: false, configurable: true};
   var stack = error.getOwnPropertyDescriptor('stack', this.intrp.ROOT);
   if (stack) {
-    info.attributes['stack'] =
-        {writable: true, enumerable: false, configurable: true};
     info.setDone('stack', Do.DECL);
   } else {
-    // TODO(cpcallen): schedule deletion of .stack property.
+    info.scheduleDeletion('stack');
   }
   return 'new ' + this.exprForBuiltin(constructor) + '(' + messageExpr + ')';
 };
@@ -747,6 +748,8 @@ var ObjectInfo = function(dumper, obj) {
    * @type {!Object<string, !Object<string, boolean>>}
    */
   this.attributes = Object.create(null);
+  /** @type {?Array<string>} Properties to delete. */
+  this.toDelete = null;
 };
 
 /**
@@ -944,9 +947,20 @@ ObjectInfo.prototype.dumpPrototype_ = function(dumper, todo, ref) {
 ObjectInfo.prototype.dumpRecursively = function(dumper, ref) {
   if (this.visiting) return '';
   this.visiting = true;
-  if (!this.ref) throw new Error("Can't dump an uncreated object");
+  if (!this.ref || this.proto === undefined) {
+    throw new Error("Can't dump an uncreated object");
+  }
   if (!ref) ref = this.ref;
   var output = [];
+  // Delete properties that shouldn't exist.
+  if (this.toDelete) {
+    var sel = new Selector(this.ref);
+    for (var key, i = 0; key = this.toDelete[i]; i++) {
+      sel.push(key);
+      output.push('delete ', dumper.exprForSelector(sel), ';\n');
+      sel.pop();
+    }
+  }
   // TODO(cpcallen): Dump owner.
   // Dump prototype.
   if (this.doneProto < Do.RECURSE) {
@@ -1004,6 +1018,18 @@ ObjectInfo.prototype.isWritable = function(dumper, key) {
     } else {
       return dumper.getObjectInfo(this.proto).isWritable(dumper, key);
     }
+  }
+};
+
+/**
+ * Record that the (ressurected) object will have a property, not on the original, that needs to be deleted.
+ * @param {string} key The property key to delete.
+ */
+ObjectInfo.prototype.scheduleDeletion = function(key) {
+  if (this.toDelete) {
+    this.toDelete.push(key);
+  } else {
+    this.toDelete = [key];
   }
 };
 
