@@ -181,9 +181,14 @@ Dumper.prototype.dumpBinding = function(selector, todo) {
  * @param {Selector=} selector Location in which value will be stored.
  * @param {boolean=} callable Return the expression suitably
  *     parenthesised to be used as the callee of a CallExpression.
+ * @param {string=} funcName If supplied, and if value is an anonymous
+ *     UserFuncion, then the returned expression is presumed to appear
+ *     on the right hand side of an assignment statement such that the
+ *     resulting Function object has its .name property automatically
+ *     set to this value.
  * @return {string} An eval-able representation of the value.
  */
-Dumper.prototype.exprFor = function(value, selector, callable) {
+Dumper.prototype.exprFor = function(value, selector, callable, funcName) {
   var intrp = this.intrp;
   if (!(value instanceof intrp.Object)) {
     return this.exprForPrimitive(value);
@@ -203,7 +208,7 @@ Dumper.prototype.exprFor = function(value, selector, callable) {
   // New object.  Create and save referece for later use.
   if (!selector) throw Error('Refusing to create non-referable object');
   if (value instanceof intrp.Function) {
-    return this.exprForFunction(value, info);
+    return this.exprForFunction(value, info, funcName);
   } else if (value instanceof intrp.Array) {
     return this.exprForArray(value, info);
   } else if (value instanceof intrp.Date) {
@@ -302,9 +307,14 @@ Dumper.prototype.exprForObject = function(obj, info) {
  * @param {!Interpreter.prototype.Function} func Function object to be
  *     recreated.
  * @param {!ObjectInfo} info Dump-state info about func.
+ * @param {string=} funcName If supplied, and if value is an anonymous
+ *     UserFuncion, then the returned expression is presumed to appear
+ *     on the right hand side of an assignment statement such that the
+ *     resulting Function object has its .name property automatically
+ *     set to this value.
  * @return {string} An eval-able representation of func.
  */
-Dumper.prototype.exprForFunction = function(func, info) {
+Dumper.prototype.exprForFunction = function(func, info, funcName) {
   if (!(func instanceof this.intrp.UserFunction)) {
     throw Error('Unable to dump non-UserFunction');
   }
@@ -313,14 +323,23 @@ Dumper.prototype.exprForFunction = function(func, info) {
   info.proto = this.intrp.FUNCTION;
   // Do we need to set [[Prototype]]?  Not if it's already correct.
   if (func.proto === info.proto) info.setDone(Selector.PROTOTYPE, Do.SET);
-  // The .length property will be set implicitly.
+  // The .length property will be set implicitly (and is immutable).
   info.attributes['length'] =
       {writable: false, enumerable: false, configurable: false};
   info.setDone('length', Do.ATTR);
-  // BUG(cpcallen): .name is only set in certain circumstances.
-  info.attributes['name'] =
-      {writable: false, enumerable: false, configurable: true};
-  info.setDone('name', Do.ATTR);
+  // The .name property is often set automatically.
+  // TODO(ES6): Handle prefix?
+  if (funcName === undefined && func.node['id']) {
+    funcName = func.node['id']['name'];
+  }
+  if (funcName) {
+    var attr = info.attributes['name'] =
+        {writable: false, enumerable: false, configurable: true};
+    var pd = func.getOwnPropertyDescriptor('name', this.intrp.ROOT);
+    info.checkProperty('name', funcName, attr , pd);
+  } else {
+    // TODO(cpcallen): schedule deletion of .name property.
+  }
   // The .prototype property will automatically be created, so we
   // don't need to "declare" it.  Fortunately it's non-configurable,
   // so we don't need to worry that it might need to be deleted.
@@ -647,7 +666,7 @@ ScopeInfo.prototype.dumpBinding = function(dumper, part, todo, ref) {
     if (done < Do.SET) {
       output.push(part);
       if (todo >= Do.SET) {
-        output.push(' = ', dumper.exprFor(value, sel));
+        output.push(' = ', dumper.exprFor(value, sel, false, part));
       }
       output.push(';\n');
     }
@@ -844,8 +863,11 @@ ObjectInfo.prototype.dumpProperty_ = function(dumper, key, todo, ref) {
         attr = this.attributes[key] =
             {writable: true, enumerable: true, configurable: true};
       }
+      // Will this assignemnt set the .name of an anonymous function?
+      // TODO(ES6): Handle prefix?
+      var funcName = dumper.pristine.options.methodNames ? key : undefined;
       output.push(dumper.exprForSelector(sel), ' = ',
-                  dumper.exprFor(value, sel), ';\n');
+                  dumper.exprFor(value, sel, false, funcName), ';\n');
       done = this.checkProperty(key, value, attr, pd);
     }
 
