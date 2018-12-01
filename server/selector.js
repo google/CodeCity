@@ -83,7 +83,7 @@ Selector.prototype.isProp = function() {
 };
 
 /**
- * Returns true iff the selector represents an object prototype
+p * Returns true iff the selector represents an object prototype
  * binding.
  * @return {boolean} Is selector for prototype?
  */
@@ -142,7 +142,7 @@ Selector.prototype.toString = function(specialHandler) {
       if (specialHandler) {
         specialHandler(part, out);
       } else if (part === Selector.PROTOTYPE) {
-        out.push('^');
+        out.push('{', part.type, '}');
       } else {
         throw new TypeError('Invalid SpecialPart');
       }
@@ -178,7 +178,7 @@ var SpecialPart = function(type) {
 /**
  * Special singleton Part for refering to an object's prototype.
  */
-Selector.PROTOTYPE = new SpecialPart('^');
+Selector.PROTOTYPE = new SpecialPart('proto');
 
 /**
  * Parse a selector into an array of Parts.
@@ -188,7 +188,10 @@ var parse = function(selector) {
   var tokens = tokenize(selector);
   var parts = [];
   /** @enum {number} */
-  var State = {START: 0, GOOD: 1, DOT: 2, BRACKET: 3, SUBSCRIPT: 4};
+  var State = {
+    START: 0, GOOD: 1, DOT: 2, BRACKET: 3, BRACKET_DONE: 4,
+    BRACE: 5, BRACE_DONE: 6
+  };
   var state = State.START;
   for (var i = 0; i < tokens.length; i++) {
     var token = tokens[i];
@@ -207,6 +210,8 @@ var parse = function(selector) {
           state = State.DOT;
         } else if (token.type === '[') {
           state = State.BRACKET;
+        } else if (token.type === '{') {
+          state = State.BRACE;
         } else if (token.type === '^') {
           // state remains unchanged.
           parts.push(Selector.PROTOTYPE);
@@ -234,13 +239,30 @@ var parse = function(selector) {
           throw new SyntaxError('"[" must be followed by numeric or string ' +
               'literal in selector');
         }
-        state = State.SUBSCRIPT;
+        state = State.BRACKET_DONE;
         break;
 
-      case State.SUBSCRIPT:
+      case State.BRACKET_DONE:
         if (token.type !== ']') {
           throw new SyntaxError(
               'Invalid token ' + code.quote(token.raw)  + ' after subscript');
+        }
+        state = State.GOOD;
+        break;
+
+      case State.BRACE:
+        if (token.type === 'id' && token.raw === 'proto') {
+          parts.push(Selector.PROTOTYPE);
+        } else {
+          throw new SyntaxError('"{" must be followed by "proto"');
+        }
+        state = State.BRACE_DONE;
+        break;
+
+      case State.BRACE_DONE:
+        if (token.type !== '}') {
+          throw new SyntaxError(
+              'Invalid token ' + code.quote(token.raw)  + ' after special');
         }
         state = State.GOOD;
         break;
@@ -277,6 +299,8 @@ var tokenize = function(selector) {
     number: /\d+/y,
     '[': /\[/y,
     ']': /\]/y,
+    '{': /\{/y,
+    '}': /\}/y,
     '^': /\^/y,
     str: new RegExp(code.regexps.string, 'y'),
   };
