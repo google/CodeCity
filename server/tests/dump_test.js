@@ -385,6 +385,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         're2.lastIndex = 42;\n'],
     ['re3', Do.SET, 'var re3 = /baz/m;\n'],
     ['re3^', Do.SET, 'Object.setPrototypeOf(re3, re1);\n'],
+
     ['error1', Do.SET, "var error1 = new (new 'Error')('message1');\n"],
     ['error1', Do.RECURSE, "error1.stack = 'stack1';\n"],
     ['Error', Do.SET, "var Error = new 'Error';\n"],
@@ -398,8 +399,10 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     ['error3', Do.RECURSE, 'delete error3.stack;\n' +
         'Object.setPrototypeOf(error3, error1);\n'],
 
-    ['alice', Do.RECURSE, 'var alice = {};\nalice.thing = {};\n' +
-        "(new 'Object.setOwnerOf')(alice.thing, alice);\n"],
+    ['alice', Do.SET, 'var alice = {};\n'],
+    ['alice.thing', Do.ATTR, 'alice.thing = {};\n'],
+    ['alice.thing{owner}', Do.SET, "(new 'Object.setOwnerOf')" +
+        '(alice.thing, alice);\n'],
     ['Object.setOwnerOf', Do.SET,
         "Object.setOwnerOf = new 'Object.setOwnerOf';\n"],
     ['bob', Do.RECURSE, 'var bob = {};\nbob.thing = {};\n' +
@@ -466,20 +469,26 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     ['re1.ignoreCase', Do.RECURSE],
     ['re1.multiline', Do.RECURSE],
     ['re1.lastIndex', Do.RECURSE],
-
     ['re2^', Do.RECURSE, 're1'],
     ['re2.source', Do.RECURSE],
     ['re2.global', Do.RECURSE],
     ['re2.ignoreCase', Do.RECURSE],
     ['re2.multiline', Do.RECURSE],
     ['re2.lastIndex', Do.RECURSE],
-
     ['re3^', Do.SET, 're1'],
     ['re3.source', Do.ATTR],
     ['re3.global', Do.ATTR],
     ['re3.ignoreCase', Do.ATTR],
     ['re3.multiline', Do.ATTR],
     ['re3.lastIndex', Do.ATTR],
+
+    ['error1.message', Do.RECURSE],
+    ['error2.message', Do.RECURSE],
+
+    ['alice{owner}', Do.SET, 'CC.root'],
+    ['alice.thing{owner}', Do.SET, 'alice'],
+    ['bob{owner}', Do.RECURSE, 'CC.root'],
+    ['bob.thing{owner}', Do.RECURSE, 'bob'],
   ];
   for (const tc of implicit) {
     const s = new Selector(tc[0]);
