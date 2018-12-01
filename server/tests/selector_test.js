@@ -96,11 +96,11 @@ exports.testSelector = function(t) {
     'foo42]',
     "foo['\"'\"']",
     'foo["\'"\'"]',
-    'foo^.bar',
+    'foo^bar',
     ['1foo'],
     [Selector.PROTOTYPE],
   ];
-  for (const input of cases) {
+  for (const input of invalidCases) {
     // Do test with selector string.
     const name = util.format('new Selector(%o)', input);
     try {
