@@ -284,6 +284,12 @@ exports.testDumperPrototypeDumpBinding = function(t) {
       Object.defineProperty(error3, 'message', {writable: false});
       delete error3.stack;
 
+      var alice = {};
+      alice.thing = (function() {setPerms(alice); return {};})();
+      var bob = {};
+      bob.thing = {};
+      Object.setOwnerOf(bob.thing, bob);
+
       Object.defineProperty(Object.prototype, 'bar',
           {writable: false, enumerable: true, configurable: true,
            value: 'bar'});  // Naughty!
@@ -317,6 +323,9 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         "Object.prototype, 'bar', {writable: false});\n"],
     ['Object.defineProperty', Do.SET,
         "Object.defineProperty = new 'Object.defineProperty';\n"],
+
+    ['CC', Do.SET, 'var CC = {};\n'],
+    ['CC.root', Do.RECURSE, "CC.root = new 'CC.root';\n"],
 
     ['obj', Do.SET, 'var obj = {};\n'],
     ['obj', Do.RECURSE, 'obj.a = 1;\nobj.b = 2;\nobj.c = 3;\n'],
@@ -388,6 +397,13 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         "Object.defineProperty(error3, 'message', {writable: false});\n"],
     ['error3', Do.RECURSE, 'delete error3.stack;\n' +
         'Object.setPrototypeOf(error3, error1);\n'],
+
+    ['alice', Do.RECURSE, 'var alice = {};\nalice.thing = {};\n' +
+        "(new 'Object.setOwnerOf')(alice.thing, alice);\n"],
+    ['Object.setOwnerOf', Do.SET,
+        "Object.setOwnerOf = new 'Object.setOwnerOf';\n"],
+    ['bob', Do.RECURSE, 'var bob = {};\nbob.thing = {};\n' +
+        "Object.setOwnerOf(bob.thing, bob);\n"],
   ];
   for (const tc of cases) {
     const s = new Selector(tc[0]);

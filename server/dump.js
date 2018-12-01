@@ -66,6 +66,8 @@ var Dumper = function(intrp, pristine, spec) {
    * @type {!Interpreter.Scope}
    */
   this.scope = intrp.global;
+  /** @type {!Interpreter.Owner} Perms at present point in output. */
+  this.perms = intrp.ROOT;
 
   /**
    * Map from pristine objects to their corresponding intrp objects.
@@ -102,8 +104,13 @@ var Dumper = function(intrp, pristine, spec) {
     var oi = this.getObjectInfo(obj);
     pobj = pristine.builtins.get(builtin);
     // Record pre-set prototype.
-    oi.proto = pobj.proto === null ? null : intrpObjs.get(pobj.proto);
-    oi.doneProto = obj.proto === oi.proto ? Do.SET : Do.DECL;
+    oi.proto = (pobj.proto === null) ? null : intrpObjs.get(pobj.proto);
+    oi.doneProto = (obj.proto === oi.proto) ? Do.SET : Do.DECL;
+    // Record pre-set owner.
+    var owner = (pobj.owner === null) ? null :
+        intrpObjs.get(/** @type{!Interpreter.prototype.Object} */(pobj.owner));
+    oi.doneOwner = (obj.owner === /** @type{?Interpreter.Owner} */(owner)) ?
+        Do.SET : Do.DECL;
     // Record pre-set property values/attributes.
     var keys = pobj.ownKeys(pristine.ROOT);
     for (var j = 0; j < keys.length; j++) {
@@ -227,6 +234,8 @@ Dumper.prototype.exprFor = function(value, selector, callable, funcName) {
   }
   // Do we need to set [[Prototype]]?  Not if it's already correct.
   if (info.proto == value.proto) info.doneProto = Do.SET;
+  // Do we need to set [[Owner]]?  Not if it's already correct.
+  if (value.owner === this.perms) info.doneOwner = Do.SET;
   return expr;
 };
 
@@ -549,6 +558,9 @@ Dumper.prototype.exprForSelector = function(selector) {
     if (part === Selector.PROTOTYPE) {
       out.unshift(dumper.exprForBuiltin('Object.getPrototypeOf'), '(');
       out.push(')');
+    } else if (part === Selector.OWNER) {
+      out.unshift(dumper.exprForBuiltin('Object.getOwnerOf'), '(');
+      out.push(')');
     } else {
       throw new TypeError('Invalid part in parts array');
     }
@@ -569,7 +581,7 @@ Dumper.prototype.valueForSelector = function(selector, scope) {
   if (selector.length < 1) throw RangeError('Zero-length selector??');
   var varname = selector[0];
   if (typeof varname !== 'string') throw TypeError('Invalid first part??');
-  var v = scope.get(varname);
+  var /** Interpreter.Value */ v = scope.get(varname);
   for (var i = 1; i < selector.length; i++) {
     if (!(v instanceof this.intrp.Object)) {
       var s = new Selector(selector.slice(0, i));
@@ -580,6 +592,8 @@ Dumper.prototype.valueForSelector = function(selector, scope) {
       v = v.get(part, this.intrp.ROOT);
     } else if (part === Selector.PROTOTYPE) {
       v = v.proto;
+    } else if (part === Selector.OWNER) {
+      v = /** @type{?Interpreter.prototype.Object} */(v.owner);
     } else {
       throw new Error('Not implemented');
     }
@@ -802,11 +816,38 @@ ObjectInfo.prototype.dumpBinding = function(dumper, part, todo, ref) {
   if (!ref) ref = this.ref;
   if (part === Selector.PROTOTYPE) {
     return this.dumpPrototype_(dumper, todo, ref);
+  } else if (part === Selector.OWNER) {
+    return this.dumpOwner_(dumper, todo, ref);
   } else if (typeof part === 'string') {
     return this.dumpProperty_(dumper, part, todo, ref);
   } else {
     throw new Error('Invalid part');
   }
+};
+
+/**
+ * Generate JS source text to set the object's owner.
+ * @private
+ * @param {!Dumper} dumper Dumper to which this ObjectInfo belongs.
+ * @param {Do} todo How much to do.  Must be >= Do.DECL; > Do.SET ignored.
+ * @param {!Selector} ref Selector refering to this object.
+ * @return {string} An eval-able program to initialise the specified binding.
+ */
+ObjectInfo.prototype.dumpOwner_ = function(dumper, todo, ref) {
+  // TODO(cpcallen): don't recreate a Selector that our caller^3 already has?
+  var sel = new Selector(ref);
+  sel.push(Selector.OWNER);
+  var output = [];
+  var value = /** @type {?Interpreter.prototype.Object} */(this.obj.owner);
+  if (todo >= Do.SET && this.doneOwner < Do.SET) {
+    output.push(dumper.exprForBuiltin('Object.setOwnerOf'), '(',
+                dumper.exprForSelector(ref), ', ',
+                dumper.exprFor(value, sel), ');\n');
+    this.doneOwner = Do.SET;
+  }
+  output.push(
+      this.checkRecurse_(dumper, todo, ref, Selector.OWNER, value));
+  return output.join('');
 };
 
 /**
@@ -943,10 +984,13 @@ ObjectInfo.prototype.dumpRecursively = function(dumper, ref) {
       sel.pop();
     }
   }
-  // TODO(cpcallen): Dump owner.
   // Dump prototype.
   if (this.doneProto < Do.RECURSE) {
     output.push(this.dumpPrototype_(dumper, Do.RECURSE, ref));
+  }
+  // Dump owner.
+  if (this.doneOwner < Do.RECURSE) {
+    output.push(this.dumpOwner_(dumper, Do.RECURSE, ref));
   }
   // Dump properties.
   var keys = this.obj.ownKeys(dumper.intrp.ROOT);
@@ -969,6 +1013,8 @@ ObjectInfo.prototype.dumpRecursively = function(dumper, ref) {
 ObjectInfo.prototype.getDone = function(part) {
   if (part === Selector.PROTOTYPE) {
     return this.doneProto;
+  } else if (part === Selector.OWNER) {
+    return this.doneOwner;
   } else if (typeof part === 'string') {
     return this.doneProp_[part] || Do.UNSTARTED;
   } else {
@@ -1035,6 +1081,8 @@ ObjectInfo.prototype.setDone = function(part, done) {
   // Do set.
   if (part === Selector.PROTOTYPE) {
     this.doneProto = done;
+  } else if (part === Selector.OWNER) {
+    this.doneOwner = done;
   } else if (typeof part === 'string') {
     this.doneProp_[part] = done;
   }
