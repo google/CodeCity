@@ -58,9 +58,9 @@ exports.testSelector = function(t) {
     ['foo["\'\\"\'"]', ['foo', "'\"'"], 'foo["\'\\"\'"]'],
     ['foo.bar.baz', ['foo', 'bar', 'baz'], 'foo.bar.baz'],
     ['$._.__.$$', ['$', '_', '__', '$$'], '$._.__.$$'],
-    ['foo^', ['foo', Selector.PROTOTYPE], 'foo^',
+    ['foo^', ['foo', Selector.PROTOTYPE], 'foo{proto}',
         'Object.getPrototypeOf(foo)', 'Object.setPrototypeOf(foo, NEW)'],
-    ['foo^.bar', ['foo', Selector.PROTOTYPE, 'bar'], 'foo^.bar',
+    ['foo{proto}.bar', ['foo', Selector.PROTOTYPE, 'bar'], 'foo{proto}.bar',
         'Object.getPrototypeOf(foo).bar',
         'Object.getPrototypeOf(foo).bar = NEW'],
   ];
@@ -97,8 +97,16 @@ exports.testSelector = function(t) {
     "foo['\"'\"']",
     'foo["\'"\'"]',
     'foo^bar',
+    '^.bar',
     ['1foo'],
+    '^',
+    '{proto}',
     [Selector.PROTOTYPE],
+    "foo['bar'}",
+    'foo{proto]',
+    'foo{proto',
+    'foo{blah}',
+    'foo{}',
   ];
   for (const input of invalidCases) {
     // Do test with selector string.
