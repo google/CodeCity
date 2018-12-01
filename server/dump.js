@@ -207,23 +207,27 @@ Dumper.prototype.exprFor = function(value, selector, callable, funcName) {
   }
   // New object.  Create and save referece for later use.
   if (!selector) throw Error('Refusing to create non-referable object');
+  var expr;
   if (value instanceof intrp.Function) {
-    return this.exprForFunction(value, info, funcName);
+    expr = this.exprForFunction(value, info, funcName);
   } else if (value instanceof intrp.Array) {
-    return this.exprForArray(value, info);
+    expr = this.exprForArray(value, info);
   } else if (value instanceof intrp.Date) {
-    return this.exprForDate(value, info);
+    expr = this.exprForDate(value, info);
   } else if (value instanceof intrp.RegExp) {
-    return this.exprForRegExp(value, info);
+    expr = this.exprForRegExp(value, info);
   } else if (value instanceof intrp.Error) {
-    return this.exprForError(value, info);
+    expr = this.exprForError(value, info);
   } else if (value instanceof intrp.WeakMap) {
     // TODO(cpcallen)
     throw new Error('WeakMap dumping not implemented');
-    // return this.exprForError(value, info);
+    // expr = this.exprForWeakMap(value, info);
   } else {
-    return this.exprForObject(value, info);
+    expr = this.exprForObject(value, info);
   }
+  // Do we need to set [[Prototype]]?  Not if it's already correct.
+  if (info.proto == value.proto) info.doneProto = Do.SET;
+  return expr;
 };
 
 /**
@@ -278,27 +282,23 @@ Dumper.prototype.exprForPrimitive = function(value) {
  * @return {string} An eval-able representation of obj.
  */
 Dumper.prototype.exprForObject = function(obj, info) {
-  try {
-    switch (obj.proto) {
-      case this.intrp.OBJECT:
+  switch (obj.proto) {
+    case null:
+      info.proto = null;
+      return 'Object.create(null)';
+    case this.intrp.OBJECT:
+      info.proto = this.intrp.OBJECT;
+      return '{}';
+    default:
+      var protoInfo = this.getObjectInfo(obj.proto);
+      if (protoInfo.ref) {
+        info.proto = obj.proto;
+        return 'Object.create(' + this.exprFor(obj.proto) + ')';
+      } else {
+        // Can't set [[Prototype]] yet.  Do it later.
+        info.proto = this.intrp.OBJECT;
         return '{}';
-      case null:
-        return 'Object.create(null)';
-      default:
-        var protoInfo = this.getObjectInfo(obj.proto);
-        if (protoInfo.ref) {
-          return 'Object.create(' + this.exprFor(obj.proto) + ')';
-        } else {
-          // Can't set [[Prototype]] yet.  Do it later.
-          info.proto = this.intrp.OBJECT;
-          return '{}';
       }
-    }
-  } finally {
-    if (info.proto === undefined) {
-      info.proto = obj.proto;
-      info.setDone(Selector.PROTOTYPE, Do.SET);
-    }
   }
 };
 
@@ -318,11 +318,7 @@ Dumper.prototype.exprForFunction = function(func, info, funcName) {
   if (!(func instanceof this.intrp.UserFunction)) {
     throw Error('Unable to dump non-UserFunction');
   }
-  // Functions' [[Prototype]] default to Function.prototype.
-  // TODO(ES6): not quite so for generators, etc.
-  info.proto = this.intrp.FUNCTION;
-  // Do we need to set [[Prototype]]?  Not if it's already correct.
-  if (func.proto === info.proto) info.setDone(Selector.PROTOTYPE, Do.SET);
+  info.proto = this.intrp.FUNCTION;  // TODO(ES6): generators, etc.?
   // The .length property will be set implicitly (and is immutable).
   info.attributes['length'] =
       {writable: false, enumerable: false, configurable: false};
@@ -380,10 +376,7 @@ Dumper.prototype.exprForFunction = function(func, info, funcName) {
  * @return {string} An eval-able representation of arr.
  */
 Dumper.prototype.exprForArray = function(arr, info) {
-  // Arrays' [[Prototype]] default to Array.prototype.
   info.proto = this.intrp.ARRAY;
-  // Do we need to set [[Prototype]]?  Not if it's already correct.
-  if (arr.proto === info.proto) info.setDone(Selector.PROTOTYPE, Do.SET);
   var root = this.intrp.ROOT;
   var lastIndex = arr.get('length', root) - 1;
   info.attributes['length'] =
@@ -405,8 +398,7 @@ Dumper.prototype.exprForArray = function(arr, info) {
  * @return {string} An eval-able representation of date.
  */
 Dumper.prototype.exprForDate = function(date, info) {
-  // Do we need to set [[Prototype]]?  Not if it's Date.prototype.
-  if (date.proto === this.intrp.DATE) info.doneProto = Do.SET;
+  info.proto = this.intrp.DATE;
   // BUG(cpcallen): Don't assume Date constructor is already dumped.
   return 'new ' + this.exprForBuiltin('Date') +
       "('" + date.date.toISOString() + "')";
@@ -419,10 +411,7 @@ Dumper.prototype.exprForDate = function(date, info) {
  * @return {string} An eval-able representation of re.
  */
 Dumper.prototype.exprForRegExp = function(re, info) {
-  // RegExps' [[Prototype]] default to RegExp.prototype.
   info.proto = this.intrp.REGEXP;
-  // Do we need to set [[Prototype]]?  Not if it's already correct.
-  if (re.proto === info.proto) info.setDone(Selector.PROTOTYPE, Do.SET);
   // Some properties are implicitly pre-set.
   var props = ['source', 'global', 'ignoreCase', 'multiline'];
   for (var prop, i = 0; prop = props[i]; i++) {
@@ -448,12 +437,9 @@ Dumper.prototype.exprForRegExp = function(re, info) {
  * @return {string} An eval-able representation of error.
  */
 Dumper.prototype.exprForError = function(error, info) {
-  // Do we need to set [[Prototype]]?  Not if we can set it implicitly
-  // by using the correct error constructor.
+  info.proto = error.proto;
   var constructor;
-  if (error.proto === this.intrp.ERROR) {
-    constructor = 'Error';
-  } else if (error.proto === this.intrp.EVAL_ERROR) {
+  if (error.proto === this.intrp.EVAL_ERROR) {
     constructor = 'EvalError';
   } else if (error.proto === this.intrp.RANGE_ERROR) {
     constructor = 'RangeError';
@@ -467,10 +453,6 @@ Dumper.prototype.exprForError = function(error, info) {
     constructor = 'URIError';
   } else if (error.proto === this.intrp.PERM_ERROR) {
     constructor = 'PermissionError';
-  }
-  if (constructor) {
-    info.proto = error.proto;
-    info.doneProto = Do.SET;
   } else {
     constructor = 'Error';
     info.proto = this.intrp.ERROR;
