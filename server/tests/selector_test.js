@@ -63,6 +63,11 @@ exports.testSelector = function(t) {
     ['foo{proto}.bar', ['foo', Selector.PROTOTYPE, 'bar'], 'foo{proto}.bar',
         'Object.getPrototypeOf(foo).bar',
         'Object.getPrototypeOf(foo).bar = NEW'],
+    ['foo{owner}', ['foo', Selector.OWNER], 'foo{owner}',
+        'Object.getOwnerOf(foo)', 'Object.setOwnerOf(foo, NEW)'],
+    ['foo{owner}.bar', ['foo', Selector.OWNER, 'bar'], 'foo{owner}.bar',
+        'Object.getOwnerOf(foo).bar',
+        'Object.getOwnerOf(foo).bar = NEW'],
   ];
   for (const [input, parts, str, expr, setExpr] of cases) {
     // Do test with selector string.
@@ -94,6 +99,7 @@ exports.testSelector = function(t) {
     'foo.[42]',
     'foo[42',
     'foo42]',
+    'foo[42}',
     "foo['\"'\"']",
     'foo["\'"\'"]',
     'foo^bar',
@@ -105,8 +111,11 @@ exports.testSelector = function(t) {
     "foo['bar'}",
     'foo{proto]',
     'foo{proto',
+    'foo.proto}',
     'foo{blah}',
     'foo{}',
+    '{owner}',
+    [Selector.OWNER],
   ];
   for (const input of invalidCases) {
     // Do test with selector string.
@@ -127,16 +136,19 @@ exports.testSelector = function(t) {
 exports.testSelectorPrototypeIsWhatever = function(t) {
   const cases = [
     // Test cases  of form [selector, isVar].
-    ['foo', true, false, false],
-    ['foo.bar', false, true, false],
-    ['foo^', false, false, true],
+    ['foo', true, false, false, false],
+    ['foo.bar', false, true, false, false],
+    ['foo^', false, false, true, false],
+    ['foo{proto}', false, false, true, false],
+    ['foo{owner}', false, false, false, true],
   ];
-  for (const [input, isVar, isProp, isProto] of cases) {
+  for (const [input, isVar, isProp, isProto, isOwner] of cases) {
     const name = util.format('new Selector(%o)', input);
     const s = new Selector(input);
     t.expect(name + '.isVar()', s.isVar(), isVar);
     t.expect(name + '.isProp()', s.isProp(), isProp);
     t.expect(name + '.isProto()', s.isProto(), isProto);
+    t.expect(name + '.isOwner()', s.isOwner(), isOwner);
   }
 };
 

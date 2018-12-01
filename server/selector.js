@@ -49,6 +49,9 @@ var Selector = function(s) {
     for (var i = 1; i < s.length; i++) {
       if (typeof s[i] !== 'string' && !(s[i] instanceof SpecialPart)) {
         throw new TypeError('Invalid part in parts array');
+      } else if ((s[i] instanceof SpecialPart) &&
+          s[i] !== Selector.PROTOTYPE && s[i] !== Selector.OWNER) {
+        throw new TypeError('Invalid SpecialPart in parts array');
       }
       parts[i] = s[i];
     }
@@ -65,12 +68,12 @@ var Selector = function(s) {
 Object.setPrototypeOf(Selector.prototype, Array.prototype);
 
 /**
- * Returns true iff the selector represents a top-level variable
+ * Returns true iff the selector represents an object owner
  * binding.
- * @return {boolean} Is selector for a variable?
+ * @return {boolean} Is selector for owner?
  */
-Selector.prototype.isVar = function() {
-  return this.length === 1 && typeof this[0] === 'string';
+Selector.prototype.isOwner = function() {
+  return this.length > 1 && this[this.length - 1] === Selector.OWNER;
 };
 
 /**
@@ -83,12 +86,21 @@ Selector.prototype.isProp = function() {
 };
 
 /**
-p * Returns true iff the selector represents an object prototype
+ * Returns true iff the selector represents an object prototype
  * binding.
  * @return {boolean} Is selector for prototype?
  */
 Selector.prototype.isProto = function() {
   return this.length > 1 && this[this.length - 1] === Selector.PROTOTYPE;
+};
+
+/**
+ * Returns true iff the selector represents a top-level variable
+ * binding.
+ * @return {boolean} Is selector for a variable?
+ */
+Selector.prototype.isVar = function() {
+  return this.length === 1 && typeof this[0] === 'string';
 };
 
 /**
@@ -100,6 +112,9 @@ Selector.prototype.toExpr = function() {
   return this.toString(function(part, out) {
     if (part === Selector.PROTOTYPE) {
       out.unshift('Object.getPrototypeOf(');
+      out.push(')');
+    } else if (part === Selector.OWNER) {
+      out.unshift('Object.getOwnerOf(');
       out.push(')');
     } else {
       throw new TypeError('Invalid part in parts array');
@@ -120,9 +135,12 @@ Selector.prototype.toSetExpr = function(valueExpr) {
   var lastPart = this[this.length - 1];
   if (!(lastPart instanceof SpecialPart)) {
     return this.toExpr() + ' = ' + valueExpr;
-  } else if (lastPart === Selector.PROTOTYPE) {
-    var objExpr = new Selector(this.slice(0, -1)).toExpr();
+  }
+  var objExpr = new Selector(this.slice(0, -1)).toExpr();
+  if (lastPart === Selector.PROTOTYPE) {
     return 'Object.setPrototypeOf(' + objExpr + ', ' + valueExpr + ')';
+  } else if (lastPart === Selector.OWNER) {
+    return 'Object.setOwnerOf(' + objExpr + ', ' + valueExpr + ')';
   } else {
     throw new TypeError('Invalid part in parts array');
   }
@@ -141,10 +159,8 @@ Selector.prototype.toString = function(specialHandler) {
     if (part instanceof SpecialPart) {
       if (specialHandler) {
         specialHandler(part, out);
-      } else if (part === Selector.PROTOTYPE) {
-        out.push('{', part.type, '}');
       } else {
-        throw new TypeError('Invalid SpecialPart');
+        out.push('{', part.type, '}');
       }
     } else if (identifierRE.test(part)) {
       out.push('.', part);
@@ -179,6 +195,11 @@ var SpecialPart = function(type) {
  * Special singleton Part for refering to an object's prototype.
  */
 Selector.PROTOTYPE = new SpecialPart('proto');
+
+/**
+ * Special singleton Part for refering to an object's owner.
+ */
+Selector.OWNER = new SpecialPart('owner');
 
 /**
  * Parse a selector into an array of Parts.
@@ -253,8 +274,10 @@ var parse = function(selector) {
       case State.BRACE:
         if (token.type === 'id' && token.raw === 'proto') {
           parts.push(Selector.PROTOTYPE);
+        } else if (token.type === 'id' && token.raw === 'owner') {
+          parts.push(Selector.OWNER);
         } else {
-          throw new SyntaxError('"{" must be followed by "proto"');
+          throw new SyntaxError('"{" must be followed by "proto" or "owner"');
         }
         state = State.BRACE_DONE;
         break;
