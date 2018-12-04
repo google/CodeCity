@@ -238,7 +238,7 @@ exports.testDumperPrototypeExprForSelector = function(t) {
 };
 
 /**
- * Unit tests for the Dumper.prototype.dumpBinding method, and by
+ * Tests for the Dumper.prototype.dumpBinding method, and by
  * implication most of ScopeDumper and ObjectDumper.
  * @param {!T} t The test runner object.
  */
@@ -525,6 +525,37 @@ exports.testDumperPrototypeDumpBinding = function(t) {
   }
 };
 
+/**
+ * Unit test for the ScopeDumper.prototype.dump method.
+ * @param {!T} t The test runner object.
+ */
+exports.testScopeDumperPrototypeDump = function(t) {
+  const intrp = new Interpreter();
+
+  // Create various variables to dump.
+  intrp.createThreadForSrc(`
+      var value = 42;
+      var obj = (new 'Object.create')(null);
+      obj.prop = 69;
+  `);
+  intrp.run();
+
+  // Create Dumper with pristine Interpreter instance to compare to;
+  // get ScopeDumper for global scope.
+  const pristine = new Interpreter();
+  const dumper = new Dumper(intrp, pristine, simpleSpec);
+  const globalDumper = dumper.getScopeDumper(intrp.global);
+
+  // Dump one binding and check result.
+  let code = globalDumper.dumpBinding(dumper, 'obj', Do.SET);
+  t.expect("ScopeDumper.p.dumpBinding(..., 'obj', Do.SET, ...)",
+      code, "var obj = (new 'Object.create')(null);\n");
+
+  // Dump the rest & check result.
+  code = globalDumper.dump(dumper);
+  t.expect('ScopeDumper.p.dump(...)', code,
+      'var value = 42;\nobj.prop = 69;\n');
+};
 /**
  * Unit tests for the Dumper class
  * @param {!T} t The test runner object.

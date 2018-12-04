@@ -666,6 +666,25 @@ var ScopeDumper = function(scope) {
  * Generate JS source text to create and/or initialize a single
  * variable binding.
  * @param {!Dumper} dumper Dumper to which this ScopeDumper belongs.
+ * @return {string} An eval-able program to initialise the specified variable.
+ */
+ScopeDumper.prototype.dump = function(dumper) {
+  if (dumper.scope !== this.scope) {
+    throw new Error("Can't dump scope other than current scope");
+  }
+  var output = [];
+  // Dump variable bindings.
+  for (var name in this.scope.vars) {
+    if (this.getDone(name) >= Do.RECURSE) continue;  // Skip already-done.
+    output.push(this.dumpBinding(dumper, name, Do.RECURSE));
+  }
+  return output.join('');
+};
+
+/**
+ * Generate JS source text to create and/or initialize a single
+ * variable binding.
+ * @param {!Dumper} dumper Dumper to which this ScopeDumper belongs.
  * @param {!Selector.Part} part The part to dump.  Must be simple string.
  * @param {Do} todo How much to do.  Must be >= Do.DECL; > Do.SET ignored.
  * @param {!Selector=} ref Ignored.
