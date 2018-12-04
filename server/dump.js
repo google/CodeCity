@@ -676,7 +676,7 @@ ScopeDumper.prototype.dumpBinding = function(dumper, part, todo, ref) {
   if (todo >= Do.RECURSE && done < Do.RECURSE) {
     if (value instanceof dumper.intrp.Object) {
       var valueInfo = dumper.getObjectDumper(value);
-      output.push(valueInfo.dumpRecursively(dumper, sel));
+      output.push(valueInfo.dump(dumper, sel));
     }
   }
   // Record completion.
@@ -800,11 +800,62 @@ ObjectDumper.prototype.checkRecurse_ = function(dumper, todo, ref, part, value) 
       var sel = new Selector(ref);
       sel.push(part);
       var valueInfo = dumper.getObjectDumper(value);
-      output.push(valueInfo.dumpRecursively(dumper, sel));
+      output.push(valueInfo.dump(dumper, sel));
     }
     // Record completion.
     this.setDone(part, todo);
   }
+  return output.join('');
+};
+
+/**
+ * Recursively dumps all bindings of the object (and objects reachable
+ * via it).
+ * @param {!Dumper} dumper Dumper to which this ObjectDumper belongs.
+ * @param {!Selector=} ref Selector refering to this object.
+ *     Optional; defaults to whatever selector was used to create the
+ *     object.
+ * @return {string} An eval-able program to initialise the specified binding.
+ */
+ObjectDumper.prototype.dump = function(dumper, ref) {
+  if (this.visiting) return '';
+  this.visiting = true;
+  if (!this.ref || this.proto === undefined) {
+    throw new Error("Can't dump an uncreated object");
+  }
+  if (!ref) ref = this.ref;
+  var output = [];
+  // Delete properties that shouldn't exist.
+  if (this.toDelete) {
+    var sel = new Selector(this.ref);
+    for (var key, i = 0; key = this.toDelete[i]; i++) {
+      sel.push(key);
+      output.push('delete ', dumper.exprForSelector(sel), ';\n');
+      sel.pop();
+    }
+  }
+  // Dump prototype.
+  if (this.doneProto < Do.RECURSE) {
+    output.push(this.dumpPrototype_(dumper, Do.RECURSE, ref));
+  }
+  // Dump owner.
+  if (this.doneOwner < Do.RECURSE) {
+    output.push(this.dumpOwner_(dumper, Do.RECURSE, ref));
+  }
+  // Dump properties.
+  var keys = this.obj.ownKeys(dumper.intrp.ROOT);
+  for (var i = 0; i < keys.length; i++) {
+    var key = keys[i];
+    if (this.getDone(key) >= Do.RECURSE) continue;  // Skip already-done.
+    output.push(this.dumpProperty_(dumper, key, Do.RECURSE, ref));
+  }
+  // TODO(cpcallen): Dump internal elements.
+  // Dump extensibility.
+  if (!this.obj.isExtensible(dumper.intrp.ROOT)) {
+    output.push(dumper.exprForBuiltin('Object.preventExtensions'), '(',
+                dumper.exprForSelector(ref), ');\n');
+  }
+  this.visiting = false;
   return output.join('');
 };
 
@@ -963,57 +1014,6 @@ ObjectDumper.prototype.dumpPrototype_ = function(dumper, todo, ref) {
   }
   output.push(
       this.checkRecurse_(dumper, todo, ref, Selector.PROTOTYPE, value));
-  return output.join('');
-};
-
-/**
- * Recursively dumps all bindings of the object (and objects reachable
- * via it).
- * @param {!Dumper} dumper Dumper to which this ObjectDumper belongs.
- * @param {!Selector=} ref Selector refering to this object.
- *     Optional; defaults to whatever selector was used to create the
- *     object.
- * @return {string} An eval-able program to initialise the specified binding.
- */
-ObjectDumper.prototype.dumpRecursively = function(dumper, ref) {
-  if (this.visiting) return '';
-  this.visiting = true;
-  if (!this.ref || this.proto === undefined) {
-    throw new Error("Can't dump an uncreated object");
-  }
-  if (!ref) ref = this.ref;
-  var output = [];
-  // Delete properties that shouldn't exist.
-  if (this.toDelete) {
-    var sel = new Selector(this.ref);
-    for (var key, i = 0; key = this.toDelete[i]; i++) {
-      sel.push(key);
-      output.push('delete ', dumper.exprForSelector(sel), ';\n');
-      sel.pop();
-    }
-  }
-  // Dump prototype.
-  if (this.doneProto < Do.RECURSE) {
-    output.push(this.dumpPrototype_(dumper, Do.RECURSE, ref));
-  }
-  // Dump owner.
-  if (this.doneOwner < Do.RECURSE) {
-    output.push(this.dumpOwner_(dumper, Do.RECURSE, ref));
-  }
-  // Dump properties.
-  var keys = this.obj.ownKeys(dumper.intrp.ROOT);
-  for (var i = 0; i < keys.length; i++) {
-    var key = keys[i];
-    if (this.getDone(key) >= Do.RECURSE) continue;  // Skip already-done.
-    output.push(this.dumpProperty_(dumper, key, Do.RECURSE, ref));
-  }
-  // TODO(cpcallen): Dump internal elements.
-  // Dump extensibility.
-  if (!this.obj.isExtensible(dumper.intrp.ROOT)) {
-    output.push(dumper.exprForBuiltin('Object.preventExtensions'), '(',
-                dumper.exprForSelector(ref), ');\n');
-  }
-  this.visiting = false;
   return output.join('');
 };
 
