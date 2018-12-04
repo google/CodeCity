@@ -96,6 +96,25 @@ var Dumper = function(intrp, pristine, spec) {
     intrpObjs.set(pobj, obj);
   }
 
+  // Create and initialise ScopeDumper for global scope.
+  var globalDumper = this.getScopeDumper(intrp.global);
+  for (var v in pristine.global.vars) {
+    var val = intrp.global.get(v);
+    var pval = pristine.global.get(v);
+    if (pval instanceof pristine.Object) {
+      if (!(val instanceof intrp.Object)) {
+        throw new TypeError('Primitive / object mistmatch');
+      }
+      pval = intrpObjs.get(pval);
+    }
+    if (Object.is(val, pval)) {
+      globalDumper.setDone(v, Do.SET);
+      if (val instanceof intrp.Object) {
+        this.getObjectDumper(val).ref = new Selector(v);
+      }
+    }
+  }
+  
   // Create and initialise ObjectDumpers for builtin objects.
   for (i = 0; i < builtins.length; i++) {
     builtin = builtins[i];

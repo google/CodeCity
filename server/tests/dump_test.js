@@ -238,7 +238,8 @@ exports.testDumperPrototypeExprForSelector = function(t) {
 };
 
 /**
- * Unit tests for the Dumper.prototype.dumpBinding method.
+ * Unit tests for the Dumper.prototype.dumpBinding method, and by
+ * implication most of ScopeDumper and ObjectDumper.
  * @param {!T} t The test runner object.
  */
 exports.testDumperPrototypeDumpBinding = function(t) {
@@ -315,6 +316,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
   // Set a few flags in advance, to limit recursive dumping of
   // builtins in tests.
   dumper.getObjectDumper(intrp.OBJECT).visiting = true;
+  dumper.getObjectDumper(intrp.FUNCTION).visiting = true;
   dumper.getObjectDumper(intrp.ARRAY).visiting = true;
   dumper.getObjectDumper(intrp.REGEXP).visiting = true;
   dumper.getObjectDumper(intrp.ERROR).visiting = true;
@@ -324,7 +326,12 @@ exports.testDumperPrototypeDumpBinding = function(t) {
   // Check generated output for (and post-dump status of) specific bindings.
   const cases = [
     // [ selector, todo, expected output, expected done (if === todo) ]
-    // Order matters.
+    // Order (somewhat) matters.
+    ['NaN', Do.RECURSE, ''],
+    ['Infinity', Do.RECURSE, ''],
+    ['undefined', Do.RECURSE, ''],
+    ['eval', Do.RECURSE, ''],
+    
     ['Object', Do.DECL, 'var Object;\n'],
     ['Object', Do.DECL, ''],
     ['Object', Do.SET, "Object = new 'Object';\n"],
