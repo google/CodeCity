@@ -820,14 +820,17 @@ ObjectDumper.prototype.checkRecurse_ = function(dumper, todo, ref, part, value) 
 ObjectDumper.prototype.dump = function(dumper, ref) {
   if (this.visiting) return '';
   this.visiting = true;
-  if (!this.ref || this.proto === undefined) {
+  if (this.proto === undefined) {
     throw new Error("Can't dump an uncreated object");
   }
   if (!ref) ref = this.ref;
+  if (!ref) {
+    throw new Error("Can't dump an unreferencable object");
+  }
   var output = [];
   // Delete properties that shouldn't exist.
   if (this.toDelete) {
-    var sel = new Selector(this.ref);
+    var sel = new Selector(ref);
     for (var key, i = 0; key = this.toDelete[i]; i++) {
       sel.push(key);
       output.push('delete ', dumper.exprForSelector(sel), ';\n');
