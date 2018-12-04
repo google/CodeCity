@@ -1000,7 +1000,11 @@ ObjectInfo.prototype.dumpRecursively = function(dumper, ref) {
     output.push(this.dumpProperty_(dumper, key, Do.RECURSE, ref));
   }
   // TODO(cpcallen): Dump internal elements.
-  // TODO(cpcallen): Dump extensibility.
+  // Dump extensibility.
+  if (!this.obj.isExtensible(dumper.intrp.ROOT)) {
+    output.push(dumper.exprForBuiltin('Object.preventExtensions'), '(',
+                dumper.exprForSelector(ref), ');\n');
+  }
   this.visiting = false;
   return output.join('');
 };

@@ -248,6 +248,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
       Object.defineProperty(child1, 'foo', {enumerable: false});
       Object.defineProperty(child2, 'foo', {enumerable: false});
       Object.defineProperty(child2, 'bar', {configurable: false});
+      Object.preventExtensions(child2);
 
       function f1(arg) {}
       var f2 = function(arg) {};
@@ -349,7 +350,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         "Object.defineProperty(child2, 'foo', {enumerable: false});\n"],
     ['child2.bar', Do.SET, "Object.defineProperty(child2, 'bar', " +
         "{writable: true, enumerable: true, value: 'bar2'});\n", Do.ATTR],
-    ['child2', Do.RECURSE, ''],
+    ['child2', Do.RECURSE, '(new \'Object.preventExtensions\')(child2);\n'],
 
     ['child3', Do.RECURSE, 'var child3 = Object.create(parent);\n'],
 
