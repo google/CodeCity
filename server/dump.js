@@ -57,7 +57,7 @@ var Dumper = function(intrp, pristine, spec) {
   this.intrp = intrp;
   this.pristine = pristine;
   this.config = new Config(spec);
-  /** @type {!Map<!Interpreter.Scope,!ScopeInfo>} */
+  /** @type {!Map<!Interpreter.Scope,!ScopeDumper>} */
   this.scopeInfo = new Map;
   /** @type {!Map<!Interpreter.prototype.Object,!ObjectDumper>} */
   this.objDumpers = new Map;
@@ -164,7 +164,7 @@ var Dumper = function(intrp, pristine, spec) {
 Dumper.prototype.dumpBinding = function(selector, todo) {
   if (selector.isVar()) {
     var ref = undefined;
-    var dumper = this.getScopeInfo(this.scope);
+    var dumper = this.getScopeDumper(this.scope);
   } else {
     ref = new Selector(selector);
     ref.pop();
@@ -502,14 +502,14 @@ Dumper.prototype.exprForBuiltin = function(builtin) {
 };
 
 /**
- * Get ObjectDumper or ScopeInfo of the parent scope/object for the
+ * Get ObjectDumper or ScopeDumper of the parent scope/object for the
  * given selector.
  * @param {!Selector} selector A selector for the binding in question.
- * @return {!ObjectDumper|!ScopeInfo};
+ * @return {!ObjectDumper|!ScopeDumper};
  */
 Dumper.prototype.getDumperForSelectorParent = function(selector) {
   if (selector.isVar()) {
-    return this.getScopeInfo(this.scope);
+    return this.getScopeDumper(this.scope);
   } else {
     var ref = new Selector(selector);
     ref.pop();
@@ -522,15 +522,15 @@ Dumper.prototype.getDumperForSelectorParent = function(selector) {
 };
 
 /**
- * Get interned ScopeInfo for sope.
+ * Get interned ScopeDumper for sope.
  * @param {!Interpreter.Scope} scope The scope to get info for.
- * @return {!ScopeInfo} The ScopeInfo for scope.
+ * @return {!ScopeDumper} The ScopeDumper for scope.
  */
-Dumper.prototype.getScopeInfo = function(scope) {
+Dumper.prototype.getScopeDumper = function(scope) {
   if (this.scopeInfo.has(scope)) return this.scopeInfo.get(scope);
-  var si = new ScopeInfo(scope);
-  this.scopeInfo.set(scope, si);
-  return si;
+  var scopeDumper = new ScopeDumper(scope);
+  this.scopeInfo.set(scope, scopeDumper);
+  return scopeDumper;
 };
 
 /**
@@ -623,14 +623,17 @@ Dumper.prototype.isShadowed = function(name, scope) {
 };
 
 ///////////////////////////////////////////////////////////////////////////////
-// ScopeInfo
+// ScopeDumper
 
 /**
- * Dump-state information for a single scope.
+ * ScopeDumper encapsulates all machinery to dump an Interpreter.Scope
+ * to eval-able JS, including maintaining all the dump-state info
+ * required to keep track of what variable bindings have and haven't
+ * yet been dumped.
  * @constructor
  * @param {!Interpreter.Scope} scope The scope to keep state for.
  */
-var ScopeInfo = function(scope) {
+var ScopeDumper = function(scope) {
   this.scope = scope;
   /**
    * Map of variable name -> dump status.
@@ -642,13 +645,13 @@ var ScopeInfo = function(scope) {
 /**
  * Generate JS source text to create and/or initialize a single
  * variable binding.
- * @param {!Dumper} dumper Dumper to which this ScopeInfo belongs.
+ * @param {!Dumper} dumper Dumper to which this ScopeDumper belongs.
  * @param {!Selector.Part} part The part to dump.  Must be simple string.
  * @param {Do} todo How much to do.  Must be >= Do.DECL; > Do.SET ignored.
  * @param {!Selector=} ref Ignored.
  * @return {string} An eval-able program to initialise the specified variable.
  */
-ScopeInfo.prototype.dumpBinding = function(dumper, part, todo, ref) {
+ScopeDumper.prototype.dumpBinding = function(dumper, part, todo, ref) {
   if (dumper.scope !== this.scope) {
     throw new Error("Can't create binding other than in current scope");
   } else if (typeof part !== 'string') {
@@ -686,7 +689,7 @@ ScopeInfo.prototype.dumpBinding = function(dumper, part, todo, ref) {
  * @param {!Selector.Part} part The part get status for.  Must be simple string.
  * @return {Do} The done status of the binding.
  */
-ScopeInfo.prototype.getDone = function(part) {
+ScopeDumper.prototype.getDone = function(part) {
   if (typeof part !== 'string') {
     throw new TypeError('Invalid part (not a variable name)');
   }
@@ -699,7 +702,7 @@ ScopeInfo.prototype.getDone = function(part) {
  * @param {!Selector.Part} part The part set status for.  Must be simple string.
  * @param {Do} done The new done status of the binding.
  */
-ScopeInfo.prototype.setDone = function(part, done) {
+ScopeDumper.prototype.setDone = function(part, done) {
   if (typeof part !== 'string') {
     throw new TypeError('Invalid part (not a variable name)');
   } else if (done < this.getDone(part)) {
