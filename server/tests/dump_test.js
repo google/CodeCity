@@ -249,6 +249,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
   intrp.createThreadForSrc(`
       Object.defineProperty(Object, 'name', {writable: true});
       var obj = {a: 1, b: 2, c:3};
+      var nullProtoObj = Object.create(null);
 
       var parent = {foo: 'foo'};
       var child1 = Object.create(parent);
@@ -349,6 +350,8 @@ exports.testDumperPrototypeDumpBinding = function(t) {
 
     ['obj', Do.SET, 'var obj = {};\n'],
     ['obj', Do.RECURSE, 'obj.a = 1;\nobj.b = 2;\nobj.c = 3;\n'],
+    ['nullProtoObj', Do.RECURSE,
+        "var nullProtoObj = (new 'Object.create')(null);\n"],
 
     // TODO(cpcallen): Really want "var child1 = {foo: 'foo'};\n".
     ['child1', Do.SET, 'var child1 = {};\n'],
@@ -371,7 +374,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         "{writable: true, enumerable: true, value: 'bar2'});\n", Do.ATTR],
     ['child2', Do.RECURSE, '(new \'Object.preventExtensions\')(child2);\n'],
 
-    ['child3', Do.RECURSE, 'var child3 = Object.create(parent);\n'],
+    ['child3', Do.RECURSE, "var child3 = (new 'Object.create')(parent);\n"],
 
     ['Object.setPrototypeOf', Do.SET,
         "Object.setPrototypeOf = new 'Object.setPrototypeOf';\n"],
@@ -430,7 +433,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
   ];
   for (const tc of cases) {
     const s = new Selector(tc[0]);
-    // Check output code.
+    // Dump binding and check output code.
     const code = dumper.dumpBinding(s, tc[1]);
     t.expect(util.format('Dumper.p.dumpBinding(<%s>, %o)', s, tc[1]),
              code, tc[2]);

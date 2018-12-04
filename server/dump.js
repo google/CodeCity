@@ -314,7 +314,7 @@ Dumper.prototype.exprForObject = function(obj, objDumper) {
   switch (obj.proto) {
     case null:
       objDumper.proto = null;
-      return 'Object.create(null)';
+      return this.exprForBuiltin('Object.create') + '(null)';
     case this.intrp.OBJECT:
       objDumper.proto = this.intrp.OBJECT;
       return '{}';
@@ -322,7 +322,8 @@ Dumper.prototype.exprForObject = function(obj, objDumper) {
       var protoDumper = this.getObjectDumper(obj.proto);
       if (protoDumper.ref) {
         objDumper.proto = obj.proto;
-        return 'Object.create(' + this.exprFor(obj.proto) + ')';
+        return this.exprForBuiltin('Object.create') + '(' +
+            this.exprFor(obj.proto) + ')';
       } else {
         // Can't set [[Prototype]] yet.  Do it later.
         objDumper.proto = this.intrp.OBJECT;
