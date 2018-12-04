@@ -44,7 +44,7 @@ var dump = function(intrp, pristine, spec) {
 // Dumper.
 
 /**
- * Dumper encapsulates all machinery to dump an Interpreter object to
+ * Dumper encapsulates all machinery to dump an Interpreter to
  * eval-able JS, including maintaining all the dump-state info
  * required to keep track of what has and hasn't yet been dumped.
  * @constructor
@@ -59,8 +59,8 @@ var Dumper = function(intrp, pristine, spec) {
   this.config = new Config(spec);
   /** @type {!Map<!Interpreter.Scope,!ScopeInfo>} */
   this.scopeInfo = new Map;
-  /** @type {!Map<!Interpreter.prototype.Object,!ObjectInfo>} */
-  this.objInfo = new Map;
+  /** @type {!Map<!Interpreter.prototype.Object,!ObjectDumper>} */
+  this.objDumpers = new Map;
   /**
    * Which scope are we presently outputting code in the context of?
    * @type {!Interpreter.Scope}
@@ -96,20 +96,21 @@ var Dumper = function(intrp, pristine, spec) {
     intrpObjs.set(pobj, obj);
   }
 
-  // Create and initialise ObjectInfos for builtin objects.
+  // Create and initialise ObjectDumpers for builtin objects.
   for (i = 0; i < builtins.length; i++) {
     builtin = builtins[i];
     obj = intrp.builtins.get(builtin);
     if (!(obj instanceof intrp.Object)) continue;  // Skip primitives.
-    var oi = this.getObjectInfo(obj);
+    var objDumper = this.getObjectDumper(obj);
     pobj = pristine.builtins.get(builtin);
     // Record pre-set prototype.
-    oi.proto = (pobj.proto === null) ? null : intrpObjs.get(pobj.proto);
-    oi.doneProto = (obj.proto === oi.proto) ? Do.SET : Do.DECL;
+    objDumper.proto = (pobj.proto === null) ? null : intrpObjs.get(pobj.proto);
+    objDumper.doneProto = (obj.proto === objDumper.proto) ? Do.SET : Do.DECL;
     // Record pre-set owner.
     var owner = (pobj.owner === null) ? null :
         intrpObjs.get(/** @type{!Interpreter.prototype.Object} */(pobj.owner));
-    oi.doneOwner = (obj.owner === /** @type{?Interpreter.Owner} */(owner)) ?
+    objDumper.doneOwner =
+        (obj.owner === /** @type{?Interpreter.Owner} */(owner)) ?
         Do.SET : Do.DECL;
     // Record pre-set property values/attributes.
     var keys = pobj.ownKeys(pristine.ROOT);
@@ -126,17 +127,17 @@ var Dumper = function(intrp, pristine, spec) {
           doneAttrs = false;
         }
       }
-      oi.attributes[key] = attrs;
+      objDumper.attributes[key] = attrs;
       var value = ppd.value instanceof intrp.Object ?
           intrpObjs.get(ppd.value) : ppd.value;
       if (Object.is(pd.value, value)) {
         if (doneAttrs) {
-          oi.setDone(key, Do.ATTR);
+          objDumper.setDone(key, Do.ATTR);
         } else {
-          oi.setDone(key, Do.SET);
+          objDumper.setDone(key, Do.SET);
         }
       } else {
-        oi.setDone(key, Do.DECL);
+        objDumper.setDone(key, Do.DECL);
       }
     }
   }
@@ -163,7 +164,7 @@ var Dumper = function(intrp, pristine, spec) {
 Dumper.prototype.dumpBinding = function(selector, todo) {
   if (selector.isVar()) {
     var ref = undefined;
-    var info = this.getScopeInfo(this.scope);
+    var dumper = this.getScopeInfo(this.scope);
   } else {
     ref = new Selector(selector);
     ref.pop();
@@ -171,10 +172,10 @@ Dumper.prototype.dumpBinding = function(selector, todo) {
     if (!(obj instanceof this.intrp.Object)) {
       throw new TypeError("Can't set properties of primitive");
     }
-    info = this.getObjectInfo(obj);
+    dumper = this.getObjectDumper(obj);
   }
   var part = selector[selector.length - 1];
-  return info.dumpBinding(this, part, todo);
+  return dumper.dumpBinding(this, part, todo);
 };
 
 /**
@@ -202,9 +203,9 @@ Dumper.prototype.exprFor = function(value, selector, callable, funcName) {
   }
 
   // Return existing reference to object (if already created).
-  var info = this.getObjectInfo(value);
-  if (info.ref) return this.exprForSelector(info.ref);
-  if (selector) info.ref = selector;  // Safe new ref if specified.
+  var objDumper = this.getObjectDumper(value);
+  if (objDumper.ref) return this.exprForSelector(objDumper.ref);
+  if (selector) objDumper.ref = selector;  // Safe new ref if specified.
 
  // Object not yet referenced.  Is it a builtin?
   var key = intrp.builtins.getKey(value);
@@ -216,26 +217,26 @@ Dumper.prototype.exprFor = function(value, selector, callable, funcName) {
   if (!selector) throw Error('Refusing to create non-referable object');
   var expr;
   if (value instanceof intrp.Function) {
-    expr = this.exprForFunction(value, info, funcName);
+    expr = this.exprForFunction(value, objDumper, funcName);
   } else if (value instanceof intrp.Array) {
-    expr = this.exprForArray(value, info);
+    expr = this.exprForArray(value, objDumper);
   } else if (value instanceof intrp.Date) {
-    expr = this.exprForDate(value, info);
+    expr = this.exprForDate(value, objDumper);
   } else if (value instanceof intrp.RegExp) {
-    expr = this.exprForRegExp(value, info);
+    expr = this.exprForRegExp(value, objDumper);
   } else if (value instanceof intrp.Error) {
-    expr = this.exprForError(value, info);
+    expr = this.exprForError(value, objDumper);
   } else if (value instanceof intrp.WeakMap) {
     // TODO(cpcallen)
     throw new Error('WeakMap dumping not implemented');
-    // expr = this.exprForWeakMap(value, info);
+    // expr = this.exprForWeakMap(value, objDumper);
   } else {
-    expr = this.exprForObject(value, info);
+    expr = this.exprForObject(value, objDumper);
   }
   // Do we need to set [[Prototype]]?  Not if it's already correct.
-  if (info.proto == value.proto) info.doneProto = Do.SET;
+  if (objDumper.proto == value.proto) objDumper.doneProto = Do.SET;
   // Do we need to set [[Owner]]?  Not if it's already correct.
-  if (value.owner === this.perms) info.doneOwner = Do.SET;
+  if (value.owner === this.perms) objDumper.doneOwner = Do.SET;
   return expr;
 };
 
@@ -287,25 +288,25 @@ Dumper.prototype.exprForPrimitive = function(value) {
  * Get a source text representation of a given Object.  May or may not
  * include all properties, etc.
  * @param {!Interpreter.prototype.Object} obj Object to be recreated.
- * @param {!ObjectInfo} info Dump-state info about obj.
+ * @param {!ObjectDumper} objDumper ObjectDumper for obj.
  * @return {string} An eval-able representation of obj.
  */
-Dumper.prototype.exprForObject = function(obj, info) {
+Dumper.prototype.exprForObject = function(obj, objDumper) {
   switch (obj.proto) {
     case null:
-      info.proto = null;
+      objDumper.proto = null;
       return 'Object.create(null)';
     case this.intrp.OBJECT:
-      info.proto = this.intrp.OBJECT;
+      objDumper.proto = this.intrp.OBJECT;
       return '{}';
     default:
-      var protoInfo = this.getObjectInfo(obj.proto);
-      if (protoInfo.ref) {
-        info.proto = obj.proto;
+      var protoDumper = this.getObjectDumper(obj.proto);
+      if (protoDumper.ref) {
+        objDumper.proto = obj.proto;
         return 'Object.create(' + this.exprFor(obj.proto) + ')';
       } else {
         // Can't set [[Prototype]] yet.  Do it later.
-        info.proto = this.intrp.OBJECT;
+        objDumper.proto = this.intrp.OBJECT;
         return '{}';
       }
   }
@@ -315,7 +316,7 @@ Dumper.prototype.exprForObject = function(obj, info) {
  * Get a source text representation of a given Function object.
  * @param {!Interpreter.prototype.Function} func Function object to be
  *     recreated.
- * @param {!ObjectInfo} info Dump-state info about func.
+ * @param {!ObjectDumper} funcDumper ObjectDumper for func.
  * @param {string=} funcName If supplied, and if value is an anonymous
  *     UserFuncion, then the returned expression is presumed to appear
  *     on the right hand side of an assignment statement such that the
@@ -323,36 +324,36 @@ Dumper.prototype.exprForObject = function(obj, info) {
  *     set to this value.
  * @return {string} An eval-able representation of func.
  */
-Dumper.prototype.exprForFunction = function(func, info, funcName) {
+Dumper.prototype.exprForFunction = function(func, funcDumper, funcName) {
   if (!(func instanceof this.intrp.UserFunction)) {
     throw Error('Unable to dump non-UserFunction');
   }
-  info.proto = this.intrp.FUNCTION;  // TODO(ES6): generators, etc.?
+  funcDumper.proto = this.intrp.FUNCTION;  // TODO(ES6): generators, etc.?
   // The .length property will be set implicitly (and is immutable).
-  info.attributes['length'] =
+  funcDumper.attributes['length'] =
       {writable: false, enumerable: false, configurable: false};
-  info.setDone('length', Do.ATTR);
+  funcDumper.setDone('length', Do.ATTR);
   // The .name property is often set automatically.
   // TODO(ES6): Handle prefix?
   if (funcName === undefined && func.node['id']) {
     funcName = func.node['id']['name'];
   }
   if (funcName) {
-    var attr = info.attributes['name'] =
+    var attr = funcDumper.attributes['name'] =
         {writable: false, enumerable: false, configurable: true};
     var pd = func.getOwnPropertyDescriptor('name', this.intrp.ROOT);
     if (pd) {
-      info.checkProperty('name', funcName, attr , pd);
+      funcDumper.checkProperty('name', funcName, attr , pd);
     } else {
-      info.scheduleDeletion('name');
+      funcDumper.scheduleDeletion('name');
     }
   }
   // The .prototype property will automatically be created, so we
   // don't need to "declare" it.  Fortunately it's non-configurable,
   // so we don't need to worry that it might need to be deleted.
-  info.attributes['prototype'] =
+  funcDumper.attributes['prototype'] =
       {writable: true, enumerable: false, configurable: false};
-  info.setDone('prototype', Do.DECL);
+  funcDumper.setDone('prototype', Do.DECL);
   // Better still, we can use the automatically-created .prototype
   // object if the current value is an ordinary object (regardless of
   // prototype - that can be set later) and it isn't a built-in or
@@ -361,17 +362,18 @@ Dumper.prototype.exprForFunction = function(func, info, funcName) {
   if (!this.intrp.builtins.getKey(prototype) &&
       prototype instanceof this.intrp.Object &&
       prototype.class === 'Object') {
-    var prototypeInfo = this.getObjectInfo(prototype);
-    if(prototypeInfo.ref === undefined) {
+    var prototypeFuncDumper = this.getObjectDumper(prototype);
+    if(prototypeFuncDumper.ref === undefined) {
       // We can use automatic .prototype object.
-      prototypeInfo.ref = new Selector(info.ref.concat('prototype'));
-      info.setDone('prototype', Do.SET);
+      prototypeFuncDumper.ref =
+          new Selector(funcDumper.ref.concat('prototype'));
+      funcDumper.setDone('prototype', Do.SET);
       // It gets a .constructor property, which may or may not need to
       // be overwritten.
-      prototypeInfo.attributes['constructor'] =
+      prototypeFuncDumper.attributes['constructor'] =
           {writable: true, enumerable: false, configurable: true};
       var constructorValue = prototype.get('constructor', this.intrp.ROOT);
-      prototypeInfo.setDone('constructor',
+      prototypeFuncDumper.setDone('constructor',
           constructorValue === func ? Do.SET : Do.DECL);
     }
   }
@@ -381,21 +383,21 @@ Dumper.prototype.exprForFunction = function(func, info, funcName) {
 /**
  * Get a source text representation of a given Array object.
  * @param {!Interpreter.prototype.Array} arr Array object to be recreated.
- * @param {!ObjectInfo} info Dump-state info about arr.
+ * @param {!ObjectDumper} arrDumper ObjectDumper for arr.
  * @return {string} An eval-able representation of arr.
  */
-Dumper.prototype.exprForArray = function(arr, info) {
-  info.proto = this.intrp.ARRAY;
+Dumper.prototype.exprForArray = function(arr, arrDumper) {
+  arrDumper.proto = this.intrp.ARRAY;
   var root = this.intrp.ROOT;
   var lastIndex = arr.get('length', root) - 1;
-  info.attributes['length'] =
+  arrDumper.attributes['length'] =
       {writable: true, enumerable: false, configurable: false};
   if (lastIndex < 0 || arr.getOwnPropertyDescriptor(String(lastIndex),  root)) {
     // No need to set .length if it will be set via setting final index.
-    info.setDone('length', Do.ATTR);
+    arrDumper.setDone('length', Do.ATTR);
   } else {
     // Length exists; don't worry about it when preserving propery order.
-    info.setDone('length', Do.DECL);
+    arrDumper.setDone('length', Do.DECL);
   }
   return '[]';
 };
@@ -403,11 +405,11 @@ Dumper.prototype.exprForArray = function(arr, info) {
 /**
  * Get a source text representation of a given Date object.
  * @param {!Interpreter.prototype.Date} date Date object to be recreated.
- * @param {!ObjectInfo} info Dump-state info about date.
+ * @param {!ObjectDumper} dateDumper ObjectDumper for date.
  * @return {string} An eval-able representation of date.
  */
-Dumper.prototype.exprForDate = function(date, info) {
-  info.proto = this.intrp.DATE;
+Dumper.prototype.exprForDate = function(date, dateDumper) {
+  dateDumper.proto = this.intrp.DATE;
   // BUG(cpcallen): Don't assume Date constructor is already dumped.
   return 'new ' + this.exprForBuiltin('Date') +
       "('" + date.date.toISOString() + "')";
@@ -416,75 +418,75 @@ Dumper.prototype.exprForDate = function(date, info) {
 /**
  * Get a source text representation of a given RegExp object.
  * @param {!Interpreter.prototype.RegExp} re RegExp to be recreated.
- * @param {!ObjectInfo} info Dump-state info about re.
+ * @param {!ObjectDumper} reDumper ObjectDumper for re.
  * @return {string} An eval-able representation of re.
  */
-Dumper.prototype.exprForRegExp = function(re, info) {
-  info.proto = this.intrp.REGEXP;
+Dumper.prototype.exprForRegExp = function(re, reDumper) {
+  reDumper.proto = this.intrp.REGEXP;
   // Some properties are implicitly pre-set.
   var props = ['source', 'global', 'ignoreCase', 'multiline'];
   for (var prop, i = 0; prop = props[i]; i++) {
-    info.attributes[prop] =
+    reDumper.attributes[prop] =
         {writable: false, enumerable: false, configurable: false};
-    info.setDone(prop, Do.ATTR);
+    reDumper.setDone(prop, Do.ATTR);
   }
-  info.attributes['lastIndex'] =
+  reDumper.attributes['lastIndex'] =
       {writable: true, enumerable: false, configurable: false};
   if (Object.is(re.get('lastIndex', this.intrp.ROOT), 0)) {
     // Can skip setting .lastIndex iff it is 0.
-    info.setDone('lastIndex', Do.ATTR);
+    reDumper.setDone('lastIndex', Do.ATTR);
   } else {
-    info.setDone('lastIndex', Do.DECL);
+    reDumper.setDone('lastIndex', Do.DECL);
   }
   return re.regexp.toString();
 };
 
 /**
  * Get a source text representation of a given Error object.
- * @param {!Interpreter.prototype.Error} error Error object to be recreated.
- * @param {!ObjectInfo} info Dump-state info about error.
- * @return {string} An eval-able representation of error.
+ * @param {!Interpreter.prototype.Error} err Error object to be recreated.
+ * @param {!ObjectDumper} errDumper ObjectDumper for err.
+ * @return {string} An eval-able representation of err.
  */
-Dumper.prototype.exprForError = function(error, info) {
-  info.proto = error.proto;
+Dumper.prototype.exprForError = function(err, errDumper) {
+  errDumper.proto = err.proto;
   var constructor;
-  if (error.proto === this.intrp.EVAL_ERROR) {
+  if (err.proto === this.intrp.EVAL_ERROR) {
     constructor = 'EvalError';
-  } else if (error.proto === this.intrp.RANGE_ERROR) {
+  } else if (err.proto === this.intrp.RANGE_ERROR) {
     constructor = 'RangeError';
-  } else if (error.proto === this.intrp.REFERENCE_ERROR) {
+  } else if (err.proto === this.intrp.REFERENCE_ERROR) {
     constructor = 'ReferenceError';
-  } else if (error.proto === this.intrp.SYNTAX_ERROR) {
+  } else if (err.proto === this.intrp.SYNTAX_ERROR) {
     constructor = 'SyntaxError';
-  } else if (error.proto === this.intrp.TYPE_ERROR) {
+  } else if (err.proto === this.intrp.TYPE_ERROR) {
     constructor = 'TypeError';
-  } else if (error.proto === this.intrp.URI_ERROR) {
+  } else if (err.proto === this.intrp.URI_ERROR) {
     constructor = 'URIError';
-  } else if (error.proto === this.intrp.PERM_ERROR) {
+  } else if (err.proto === this.intrp.PERM_ERROR) {
     constructor = 'PermissionError';
   } else {
     constructor = 'Error';
-    info.proto = this.intrp.ERROR;
+    errDumper.proto = this.intrp.ERROR;
   }
   // Try to set .message in the constructor call.
-  var message = error.getOwnPropertyDescriptor('message', this.intrp.ROOT);
+  var message = err.getOwnPropertyDescriptor('message', this.intrp.ROOT);
   var messageExpr = '';
   if (message &&
       (typeof message.value === 'string' || message.value === undefined)) {
     messageExpr = this.exprFor(message.value);
-    var attr = info.attributes['message'] =
+    var attr = errDumper.attributes['message'] =
         {writable: true, enumerable: false, configurable: true};
-    info.checkProperty('message', message.value, attr , message);
+    errDumper.checkProperty('message', message.value, attr , message);
   }
   // The .stack property is always created, and we always want to
   // overwrite (or delete) it.
-  info.attributes['stack'] =
+  errDumper.attributes['stack'] =
       {writable: true, enumerable: false, configurable: true};
-  var stack = error.getOwnPropertyDescriptor('stack', this.intrp.ROOT);
+  var stack = err.getOwnPropertyDescriptor('stack', this.intrp.ROOT);
   if (stack) {
-    info.setDone('stack', Do.DECL);
+    errDumper.setDone('stack', Do.DECL);
   } else {
-    info.scheduleDeletion('stack');
+    errDumper.scheduleDeletion('stack');
   }
   return 'new ' + this.exprForBuiltin(constructor) + '(' + messageExpr + ')';
 };
@@ -500,12 +502,12 @@ Dumper.prototype.exprForBuiltin = function(builtin) {
 };
 
 /**
- * Get ObjectInfo or ScopeInfo of the parent scope/object for the
+ * Get ObjectDumper or ScopeInfo of the parent scope/object for the
  * given selector.
  * @param {!Selector} selector A selector for the binding in question.
- * @return {!ObjectInfo|!ScopeInfo};
+ * @return {!ObjectDumper|!ScopeInfo};
  */
-Dumper.prototype.getInfoForSelector = function(selector) {
+Dumper.prototype.getDumperForSelectorParent = function(selector) {
   if (selector.isVar()) {
     return this.getScopeInfo(this.scope);
   } else {
@@ -513,9 +515,9 @@ Dumper.prototype.getInfoForSelector = function(selector) {
     ref.pop();
     var obj = this.valueForSelector(ref);
     if (!(obj instanceof this.intrp.Object)) {
-      throw new TypeError("Can't get info for primitive");
+      throw new TypeError("Can't get dumper for primitive");
     }
-    return this.getObjectInfo(obj);
+    return this.getObjectDumper(obj);
   }
 };
 
@@ -532,15 +534,15 @@ Dumper.prototype.getScopeInfo = function(scope) {
 };
 
 /**
- * Get interned ObjectInfo for sope.
- * @param {!Interpreter.prototype.Object} obj The object to get info for.
- * @return {!ObjectInfo} The ObjectInfo for obj.
+ * Get interned ObjectDumper for sope.
+ * @param {!Interpreter.prototype.Object} obj The object to get the dumper for.
+ * @return {!ObjectDumper} The ObjectDumper for obj.
  */
-Dumper.prototype.getObjectInfo = function(obj) {
-  if (this.objInfo.has(obj)) return this.objInfo.get(obj);
-  var oi = new ObjectInfo(this, obj);
-  this.objInfo.set(obj, oi);
-  return oi;
+Dumper.prototype.getObjectDumper = function(obj) {
+  if (this.objDumpers.has(obj)) return this.objDumpers.get(obj);
+  var objDumper = new ObjectDumper(this, obj);
+  this.objDumpers.set(obj, objDumper);
+  return objDumper;
 };
 
 /**
@@ -670,8 +672,8 @@ ScopeInfo.prototype.dumpBinding = function(dumper, part, todo, ref) {
   }
   if (todo >= Do.RECURSE && done < Do.RECURSE) {
     if (value instanceof dumper.intrp.Object) {
-      var vi = dumper.getObjectInfo(value);
-      output.push(vi.dumpRecursively(dumper, sel));
+      var valueInfo = dumper.getObjectDumper(value);
+      output.push(valueInfo.dumpRecursively(dumper, sel));
     }
   }
   // Record completion.
@@ -707,15 +709,18 @@ ScopeInfo.prototype.setDone = function(part, done) {
 };
 
 ///////////////////////////////////////////////////////////////////////////////
-// ObjectInfo
+// ObjectDumper
 
 /**
- * Dump-state information for a single object.
+ * ObjectDumper encapsulates all machinery to dump an
+ * Interpreter.prototype.Object to eval-able JS, including maintaining
+ * all the dump-state info required to keep track of what properties
+ * (etc.) have and haven't yet been dumped.
  * @constructor
- * @param {!Dumper} dumper Dumper to which this ObjectInfo belongs.
+ * @param {!Dumper} dumper Dumper to which this ObjectDumper belongs.
  * @param {!Interpreter.prototype.Object} obj The object to keep state for.
  */
-var ObjectInfo = function(dumper, obj) {
+var ObjectDumper = function(dumper, obj) {
   this.obj = obj;
   /** @type {!Selector|undefined} Reference to this object, once created. */
   this.ref = undefined;
@@ -759,7 +764,7 @@ var ObjectInfo = function(dumper, obj) {
  *     returned by calling this.obj.getOwnPropertyDescriptor(key, ...).
  * @return {!Do} New done state.
  */
-ObjectInfo.prototype.checkProperty = function(key, value, attr, pd) {
+ObjectDumper.prototype.checkProperty = function(key, value, attr, pd) {
   if (!Object.is(value, pd.value)) {
     var done = Do.DECL;
   } else if (attr.writable === pd.writable &&
@@ -776,7 +781,7 @@ ObjectInfo.prototype.checkProperty = function(key, value, attr, pd) {
 /**
  * Generate JS source text to set the object's prototype.
  * @private
- * @param {!Dumper} dumper Dumper to which this ObjectInfo belongs.
+ * @param {!Dumper} dumper Dumper to which this ObjectDumper belongs.
  * @param {Do} todo How much to do.  '' returned if todo < Do.RECURSE.
  * @param {!Selector} ref Selector refering to this object.
  * @param {!Selector.Part} part The binding part that has been dumped
@@ -785,14 +790,14 @@ ObjectInfo.prototype.checkProperty = function(key, value, attr, pd) {
  *     '' returned if value not an Interpreter.prototype.Object.
  * @return {string} An eval-able program to initialise the specified binding.
  */
-ObjectInfo.prototype.checkRecurse_ = function(dumper, todo, ref, part, value) {
+ObjectDumper.prototype.checkRecurse_ = function(dumper, todo, ref, part, value) {
   var output = [];
   if (todo >= Do.RECURSE) {
     if (value instanceof dumper.intrp.Object) {
       var sel = new Selector(ref);
       sel.push(part);
-      var vi = dumper.getObjectInfo(value);
-      output.push(vi.dumpRecursively(dumper, sel));
+      var valueInfo = dumper.getObjectDumper(value);
+      output.push(valueInfo.dumpRecursively(dumper, sel));
     }
     // Record completion.
     this.setDone(part, todo);
@@ -803,7 +808,7 @@ ObjectInfo.prototype.checkRecurse_ = function(dumper, todo, ref, part, value) {
 /**
  * Generate JS source text to create and/or initialize a single
  * binding (property or internal slot) of the object.
- * @param {!Dumper} dumper Dumper to which this ObjectInfo belongs.
+ * @param {!Dumper} dumper Dumper to which this ObjectDumper belongs.
  * @param {!Selector.Part} part The binding part to dump.
  * @param {Do} todo How much to do.  Must be >= Do.DECL; > Do.SET ignored.
  * @param {!Selector=} ref Selector refering to this object.
@@ -811,7 +816,7 @@ ObjectInfo.prototype.checkRecurse_ = function(dumper, todo, ref, part, value) {
  *     object.
  * @return {string} An eval-able program to initialise the specified binding.
  */
-ObjectInfo.prototype.dumpBinding = function(dumper, part, todo, ref) {
+ObjectDumper.prototype.dumpBinding = function(dumper, part, todo, ref) {
   if (!this.ref) throw new Error("Can't dump part of uncreated object");
   if (!ref) ref = this.ref;
   if (part === Selector.PROTOTYPE) {
@@ -828,12 +833,12 @@ ObjectInfo.prototype.dumpBinding = function(dumper, part, todo, ref) {
 /**
  * Generate JS source text to set the object's owner.
  * @private
- * @param {!Dumper} dumper Dumper to which this ObjectInfo belongs.
+ * @param {!Dumper} dumper Dumper to which this ObjectDumper belongs.
  * @param {Do} todo How much to do.  Must be >= Do.DECL; > Do.SET ignored.
  * @param {!Selector} ref Selector refering to this object.
  * @return {string} An eval-able program to initialise the specified binding.
  */
-ObjectInfo.prototype.dumpOwner_ = function(dumper, todo, ref) {
+ObjectDumper.prototype.dumpOwner_ = function(dumper, todo, ref) {
   // TODO(cpcallen): don't recreate a Selector that our caller^3 already has?
   var sel = new Selector(ref);
   sel.push(Selector.OWNER);
@@ -862,13 +867,13 @@ ObjectInfo.prototype.dumpOwner_ = function(dumper, todo, ref) {
  *   necessary.
  * - Any code generated because of recursive dumping.
  * @private
- * @param {!Dumper} dumper Dumper to which this ObjectInfo belongs.
+ * @param {!Dumper} dumper Dumper to which this ObjectDumper belongs.
  * @param {string} key The property to dump.
  * @param {Do} todo How much to do.
  * @param {!Selector} ref Selector refering to this object.
  * @return {string} An eval-able program to initialise the specified binding.
  */
-ObjectInfo.prototype.dumpProperty_ = function(dumper, key, todo, ref) {
+ObjectDumper.prototype.dumpProperty_ = function(dumper, key, todo, ref) {
   // TODO(cpcallen): don't recreate a Selector that our caller^3 already has?
   var sel = new Selector(ref);
   sel.push(key);
@@ -935,12 +940,12 @@ ObjectInfo.prototype.dumpProperty_ = function(dumper, key, todo, ref) {
 /**
  * Generate JS source text to set the object's prototype.
  * @private
- * @param {!Dumper} dumper Dumper to which this ObjectInfo belongs.
+ * @param {!Dumper} dumper Dumper to which this ObjectDumper belongs.
  * @param {Do} todo How much to do.  Must be >= Do.DECL; > Do.SET ignored.
  * @param {!Selector} ref Selector refering to this object.
  * @return {string} An eval-able program to initialise the specified binding.
  */
-ObjectInfo.prototype.dumpPrototype_ = function(dumper, todo, ref) {
+ObjectDumper.prototype.dumpPrototype_ = function(dumper, todo, ref) {
   // TODO(cpcallen): don't recreate a Selector that our caller^3 already has?
   var sel = new Selector(ref);
   sel.push(Selector.PROTOTYPE);
@@ -961,13 +966,13 @@ ObjectInfo.prototype.dumpPrototype_ = function(dumper, todo, ref) {
 /**
  * Recursively dumps all bindings of the object (and objects reachable
  * via it).
- * @param {!Dumper} dumper Dumper to which this ObjectInfo belongs.
+ * @param {!Dumper} dumper Dumper to which this ObjectDumper belongs.
  * @param {!Selector=} ref Selector refering to this object.
  *     Optional; defaults to whatever selector was used to create the
  *     object.
  * @return {string} An eval-able program to initialise the specified binding.
  */
-ObjectInfo.prototype.dumpRecursively = function(dumper, ref) {
+ObjectDumper.prototype.dumpRecursively = function(dumper, ref) {
   if (this.visiting) return '';
   this.visiting = true;
   if (!this.ref || this.proto === undefined) {
@@ -1014,7 +1019,7 @@ ObjectInfo.prototype.dumpRecursively = function(dumper, ref) {
  * @param {!Selector.Part} part The part to get status for.
  * @return {Do} The done status of the binding.
  */
-ObjectInfo.prototype.getDone = function(part) {
+ObjectDumper.prototype.getDone = function(part) {
   if (part === Selector.PROTOTYPE) {
     return this.doneProto;
   } else if (part === Selector.OWNER) {
@@ -1031,11 +1036,11 @@ ObjectInfo.prototype.getDone = function(part) {
  * assignment - i.e., that it exists and is writable, or doesn't exist
  * and doe snot inherit from a non-writable property on the prototype
  * chain.
- * @param {!Dumper} dumper Dumper to which this ObjectInfo belongs.
+ * @param {!Dumper} dumper Dumper to which this ObjectDumper belongs.
  * @param {string} key The property key to check for writability of.
  * @return {boolean} True iff the property can be set by assignment.
  */
-ObjectInfo.prototype.isWritable = function(dumper, key) {
+ObjectDumper.prototype.isWritable = function(dumper, key) {
   // Invariant checks.
   if (this.proto === undefined) {
     throw new Error('Checking writability of property on non-created object');
@@ -1048,7 +1053,7 @@ ObjectInfo.prototype.isWritable = function(dumper, key) {
     if (this.proto === null) {
       return true;
     } else {
-      return dumper.getObjectInfo(this.proto).isWritable(dumper, key);
+      return dumper.getObjectDumper(this.proto).isWritable(dumper, key);
     }
   }
 };
@@ -1057,7 +1062,7 @@ ObjectInfo.prototype.isWritable = function(dumper, key) {
  * Record that the (ressurected) object will have a property, not on the original, that needs to be deleted.
  * @param {string} key The property key to delete.
  */
-ObjectInfo.prototype.scheduleDeletion = function(key) {
+ObjectDumper.prototype.scheduleDeletion = function(key) {
   if (this.toDelete) {
     this.toDelete.push(key);
   } else {
@@ -1072,7 +1077,7 @@ ObjectInfo.prototype.scheduleDeletion = function(key) {
  * @param {!Selector.Part} part The part to set status for.
  * @param {Do} done The new done status of the binding.
  */
-ObjectInfo.prototype.setDone = function(part, done) {
+ObjectDumper.prototype.setDone = function(part, done) {
   var old = this.getDone(part);
   var name = (part === Selector.PROTOTYPE) ? 'prototype' : '.' + part;
 

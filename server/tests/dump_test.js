@@ -41,9 +41,9 @@ const {Dumper} = testOnly;
 const simpleSpec = [{filename: 'all', rest: true}];
 
 /**
- * Unit tests for the ObjectInfo.prototype.isWritable method.
+ * Unit tests for the ObjectDumper.prototype.isWritable method.
  */
-exports.testObjectInfoPrototypeIsWritable = function(t) {
+exports.testObjectDumperPrototypeIsWritable = function(t) {
   const intrp = getInterpreter();
   const pristine = new Interpreter();
   const dumper = new Dumper(intrp, pristine, simpleSpec);
@@ -64,41 +64,53 @@ exports.testObjectInfoPrototypeIsWritable = function(t) {
   child.defineProperty('bar', writable, root);
   child.defineProperty('baz', writable, root);
 
-  const opi = dumper.getObjectInfo(intrp.OBJECT);
-  opi.ref = new Selector('Object.prototype');
-  const oi = dumper.getObjectInfo(parent);
-  oi.ref = new Selector('parent');
-  const ci = dumper.getObjectInfo(child);
-  ci.ref = new Selector('child');
-  opi.proto = null;
-  oi.proto = intrp.OBJECT;
-  ci.proto = intrp.OBJECT;
+  const objectPrototypeDumper = dumper.getObjectDumper(intrp.OBJECT);
+  objectPrototypeDumper.ref = new Selector('Object.prototype');
+  const parentDumper = dumper.getObjectDumper(parent);
+  parentDumper.ref = new Selector('parent');
+  const childDumper = dumper.getObjectDumper(child);
+  childDumper.ref = new Selector('child');
+  objectPrototypeDumper.proto = null;
+  parentDumper.proto = intrp.OBJECT;
+  childDumper.proto = intrp.OBJECT;
 
-  opi.dumpBinding(dumper, 'foo', Do.SET);
-  oi.dumpBinding(dumper, Selector.PROTOTYPE, Do.SET);
-  oi.dumpBinding(dumper, 'bar', Do.SET);
-  ci.dumpBinding(dumper, Selector.PROTOTYPE, Do.DECL);
-  t.expect("ci.isWritable('foo')  // 0", ci.isWritable(dumper, 'foo'), true);
-  t.expect("ci.isWritable('bar')  // 0", ci.isWritable(dumper, 'bar'), true);
-  t.expect("ci.isWritable('baz')  // 0", ci.isWritable(dumper, 'baz'), true);
+  objectPrototypeDumper.dumpBinding(dumper, 'foo', Do.SET);
+  parentDumper.dumpBinding(dumper, Selector.PROTOTYPE, Do.SET);
+  parentDumper.dumpBinding(dumper, 'bar', Do.SET);
+  childDumper.dumpBinding(dumper, Selector.PROTOTYPE, Do.DECL);
+  t.expect("childDumper.isWritable('foo')  // 0",
+      childDumper.isWritable(dumper, 'foo'), true);
+  t.expect("childDumper.isWritable('bar')  // 0",
+      childDumper.isWritable(dumper, 'bar'), true);
+  t.expect("childDumper.isWritable('baz')  // 0",
+      childDumper.isWritable(dumper, 'baz'), true);
 
-  opi.dumpBinding(dumper, 'foo', Do.ATTR);
-  oi.dumpBinding(dumper, 'bar', Do.ATTR);
-  t.expect("ci.isWritable('foo')  // 1", ci.isWritable(dumper, 'foo'), false);
-  t.expect("ci.isWritable('bar')  // 1", ci.isWritable(dumper, 'bar'), true);
-  t.expect("ci.isWritable('baz')  // 1", ci.isWritable(dumper, 'baz'), true);
+  objectPrototypeDumper.dumpBinding(dumper, 'foo', Do.ATTR);
+  parentDumper.dumpBinding(dumper, 'bar', Do.ATTR);
+  t.expect("childDumper.isWritable('foo')  // 1",
+      childDumper.isWritable(dumper, 'foo'), false);
+  t.expect("childDumper.isWritable('bar')  // 1",
+      childDumper.isWritable(dumper, 'bar'), true);
+  t.expect("childDumper.isWritable('baz')  // 1",
+      childDumper.isWritable(dumper, 'baz'), true);
 
-  ci.dumpBinding(dumper, Selector.PROTOTYPE, Do.SET);
-  t.expect("ci.isWritable('foo')  // 2", ci.isWritable(dumper, 'foo'), false);
-  t.expect("ci.isWritable('bar')  // 2", ci.isWritable(dumper, 'bar'), false);
-  t.expect("ci.isWritable('baz')  // 2", ci.isWritable(dumper, 'baz'), true);
+  childDumper.dumpBinding(dumper, Selector.PROTOTYPE, Do.SET);
+  t.expect("childDumper.isWritable('foo')  // 2",
+      childDumper.isWritable(dumper, 'foo'), false);
+  t.expect("childDumper.isWritable('bar')  // 2",
+      childDumper.isWritable(dumper, 'bar'), false);
+  t.expect("childDumper.isWritable('baz')  // 2",
+      childDumper.isWritable(dumper, 'baz'), true);
 
-  ci.dumpBinding(dumper, 'foo', Do.DECL);
-  ci.dumpBinding(dumper, 'bar', Do.DECL);
-  ci.dumpBinding(dumper, 'baz', Do.DECL);
-  t.expect("ci.isWritable('foo')  // 3", ci.isWritable(dumper, 'foo'), true);
-  t.expect("ci.isWritable('bar')  // 3", ci.isWritable(dumper, 'bar'), true);
-  t.expect("ci.isWritable('baz')  // 3", ci.isWritable(dumper, 'baz'), true);
+  childDumper.dumpBinding(dumper, 'foo', Do.DECL);
+  childDumper.dumpBinding(dumper, 'bar', Do.DECL);
+  childDumper.dumpBinding(dumper, 'baz', Do.DECL);
+  t.expect("childDumper.isWritable('foo')  // 3",
+      childDumper.isWritable(dumper, 'foo'), true);
+  t.expect("childDumper.isWritable('bar')  // 3",
+      childDumper.isWritable(dumper, 'bar'), true);
+  t.expect("childDumper.isWritable('baz')  // 3",
+      childDumper.isWritable(dumper, 'baz'), true);
 };
 
 /**
@@ -180,7 +192,7 @@ exports.testDumperPrototypeExprFor = function(t) {
 
   // Give references to needed builtins.
   for (const b of ['Date']) {
-    dumper.getObjectInfo(intrp.builtins.get(b)).ref = new Selector(b);
+    dumper.getObjectDumper(intrp.builtins.get(b)).ref = new Selector(b);
   }
 
   // Create UserFunction to dump.
@@ -218,7 +230,7 @@ exports.testDumperPrototypeExprForSelector = function(t) {
   t.expect(util.format('Dumper.p.exprForSelector(%s)  // 0', selector),
            dumper.exprForSelector(selector),
            "(new 'Object.getPrototypeOf')(foo.bar).baz");
-  dumper.getObjectInfo(intrp.builtins.get('Object.getPrototypeOf')).ref =
+  dumper.getObjectDumper(intrp.builtins.get('Object.getPrototypeOf')).ref =
       new Selector('MyObject.myGetPrototypeOf');
   t.expect(util.format('Dumper.p.exprForSelector(%s)  // 1', selector),
            dumper.exprForSelector(selector),
@@ -302,12 +314,12 @@ exports.testDumperPrototypeDumpBinding = function(t) {
   const dumper = new Dumper(intrp, pristine, simpleSpec);
   // Set a few flags in advance, to limit recursive dumping of
   // builtins in tests.
-  dumper.getObjectInfo(intrp.OBJECT).visiting = true;
-  dumper.getObjectInfo(intrp.ARRAY).visiting = true;
-  dumper.getObjectInfo(intrp.REGEXP).visiting = true;
-  dumper.getObjectInfo(intrp.ERROR).visiting = true;
-  dumper.getObjectInfo(intrp.TYPE_ERROR).visiting = true;
-  dumper.getObjectInfo(intrp.RANGE_ERROR).visiting = true;
+  dumper.getObjectDumper(intrp.OBJECT).visiting = true;
+  dumper.getObjectDumper(intrp.ARRAY).visiting = true;
+  dumper.getObjectDumper(intrp.REGEXP).visiting = true;
+  dumper.getObjectDumper(intrp.ERROR).visiting = true;
+  dumper.getObjectDumper(intrp.TYPE_ERROR).visiting = true;
+  dumper.getObjectDumper(intrp.RANGE_ERROR).visiting = true;
 
   // Check generated output for (and post-dump status of) specific bindings.
   const cases = [
@@ -416,9 +428,9 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     t.expect(util.format('Dumper.p.dumpBinding(<%s>, %o)', s, tc[1]),
              code, tc[2]);
     // Check work recorded.
-    const info  = dumper.getInfoForSelector(s);
+    const parentDumper  = dumper.getDumperForSelectorParent(s);
     t.expect(util.format('Binding status of <%s> === %d', s, tc[1]),
-        info.getDone(s[s.length - 1]), tc[3] || tc[1]);
+        parentDumper.getDone(s[s.length - 1]), tc[3] || tc[1]);
   }
 
   // Check status of (some of the) additional bindings that will be
@@ -493,12 +505,12 @@ exports.testDumperPrototypeDumpBinding = function(t) {
   ];
   for (const tc of implicit) {
     const s = new Selector(tc[0]);
-    const info  = dumper.getInfoForSelector(s);
+    const parentDumper  = dumper.getDumperForSelectorParent(s);
     t.expect(util.format('Binding status of <%s> === %d', s, tc[1]),
-        info.getDone(s[s.length - 1]), tc[1]);
+        parentDumper.getDone(s[s.length - 1]), tc[1]);
     if (tc[2]) {
-      const valueInfo = dumper.getObjectInfo(dumper.valueForSelector(s));
-      t.expect(util.format('Ref for %s', s), String(valueInfo.ref), tc[2]);
+      const objDumper = dumper.getObjectDumper(dumper.valueForSelector(s));
+      t.expect(util.format('Ref for %s', s), String(objDumper.ref), tc[2]);
     }
   }
 };
