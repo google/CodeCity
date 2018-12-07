@@ -556,6 +556,71 @@ exports.testScopeDumperPrototypeDump = function(t) {
   t.expect('ScopeDumper.p.dump(...)', code,
       'var value = 42;\nobj.prop = 69;\n');
 };
+
+/**
+ * Unit test for the ObjectDumper and ScopeDumper.prototype.survey
+ * dump methods.
+ * @param {!T} t The test runner object.
+ */
+exports.testDumperSurvey = function(t) {
+  const intrp = new Interpreter();
+
+  // Create various variables to dump.
+  intrp.createThreadForSrc(`
+      var foo = (function() {
+        var x = 42;
+        bar = function baz() {return x;};
+        function quux() {return -x;};
+        return quux;
+      })();
+      var bar;  // N.B.: hoisted.
+  `);
+  intrp.run();
+
+  const baz = /** @type {!Interpreter.prototype.UserFunction} */(
+      intrp.global.get('bar'));
+  const quux = /** @type {!Interpreter.prototype.UserFunction} */(
+      intrp.global.get('foo'));
+
+  // Create Dumper with pristine Interpreter instance to compare to;
+  // get ScopeDumper for global scope.  Dumper constructor performs
+  // survey.
+  const pristine = new Interpreter();
+  const dumper = new Dumper(intrp, pristine, simpleSpec);
+
+  const globalDumper = dumper.getScopeDumper(intrp.global);
+  const bazDumper = dumper.getObjectDumper(baz);
+  const bazScopeDumper = dumper.getScopeDumper(baz.scope);
+  const quuxDumper = dumper.getObjectDumper(quux);
+  const quuxScopeDumper = dumper.getScopeDumper(quux.scope);
+
+  t.expect('bazScopeDumper.scope.type', bazScopeDumper.scope.type, 'funexp');
+  t.expect('quuxScopeDumper.scope.type',
+      quuxScopeDumper.scope.type, 'function');
+
+  t.expect('globalDumper.innerFunctions.size',
+      globalDumper.innerFunctions.size, 0);
+  t.expect('globalDumper.innerScopes.size', globalDumper.innerScopes.size, 1);
+  t.assert('globalDumper.innerScopes.has(/* quux.scope */)',
+      globalDumper.innerScopes.has(quuxScopeDumper));
+
+  t.expect('quuxScopeDumper.innerFunctions.size',
+      quuxScopeDumper.innerFunctions.size, 1);
+  t.assert('quuxScopeDumper.innerFunctions.has(/* quux */)',
+      quuxScopeDumper.innerFunctions.has(quuxDumper));
+  t.expect('quuxScopeDumper.innerScopes.size',
+      quuxScopeDumper.innerScopes.size, 1);
+  t.assert('quuxScopeDumper.innerScopes.has(/* baz.scope */)',
+      quuxScopeDumper.innerScopes.has(bazScopeDumper));
+
+  t.expect('bazScopeDumper.innerFunctions.size',
+      bazScopeDumper.innerFunctions.size, 1);
+  t.assert('bazScopeDumper.innerFunctions.has(/* baz */)',
+      bazScopeDumper.innerFunctions.has(bazDumper));
+  t.expect('bazScopeDumper.innerScopes.size',
+      bazScopeDumper.innerScopes.size, 0);
+};
+
 /**
  * Unit tests for the Dumper class
  * @param {!T} t The test runner object.

@@ -160,6 +160,9 @@ var Dumper = function(intrp, pristine, spec) {
       }
     }
   }
+
+  // Survey objects accessible via global scope to find their outer scopes.
+  globalDumper.survey(this);
 };
 
 /**
@@ -655,11 +658,19 @@ Dumper.prototype.isShadowed = function(name, scope) {
  */
 var ScopeDumper = function(scope) {
   this.scope = scope;
+  /** @type {boolean} Is object being visited in a recursive survey or dump? */
+  this.visiting = false;
+  /** @type {boolean} Has this scope already been surveyed? */
+  this.surveyed = false;
   /**
    * Map of variable name -> dump status.
    * @private @const {!Object<string, Do>}
    */
   this.doneVar_ = Object.create(null);
+  /** @const {!Set<!ScopeDumper>} Set of inner scopes. */
+  this.innerScopes = new Set();
+  /** @const {!Set<!ObjectDumper>} Set of inner functions. */
+  this.innerFunctions = new Set();
 };
 
 /**
@@ -750,6 +761,35 @@ ScopeDumper.prototype.setDone = function(part, done) {
   this.doneVar_[part] = done;
 };
 
+/**
+ * Visit a Scope (and recursively, everything accessible via its
+ * binding) to prepare for dumping.
+ * @param {!Dumper} dumper Dumper to which this ScopeDumper belongs.
+ */
+ScopeDumper.prototype.survey = function(dumper) {
+  if (this.visiting || this.surveyed) return;
+  this.visiting = true;
+  // Record parent scope.
+  if (this.scope !== dumper.intrp.global) {
+    if (this.scope.outerScope === null) {
+      throw new TypeError('Non-global scope has null outer scope');
+    }
+    var outerScopeDumper = dumper.getScopeDumper(this.scope.outerScope);
+    // Record this as inner scope of this.outerScope.
+    outerScopeDumper.innerScopes.add(this);
+    // Recursively survey enclosing scopes.
+    outerScopeDumper.survey(dumper);
+  }
+  // Survey variable bindings.
+  for (var name in this.scope.vars) {
+    var value = this.scope.get(name);
+    if (!(value instanceof dumper.intrp.Object)) continue;  // Skip primitives.
+    dumper.getObjectDumper(value).survey(dumper, new Selector(name));
+  }
+  this.surveyed = true;
+  this.visiting = false;
+};
+
 ///////////////////////////////////////////////////////////////////////////////
 // ObjectDumper
 
@@ -766,7 +806,7 @@ var ObjectDumper = function(dumper, obj) {
   this.obj = obj;
   /** @type {!Selector|undefined} Reference to this object, once created. */
   this.ref = undefined;
-  /** @type {boolean} Is object being visited in a recursive dump? */
+  /** @type {boolean} Is object being visited in a recursive survey or dump? */
   this.visiting = false;
   /** @type {!Do} Has prototype been set? */
   this.doneProto = Do.DECL;  // Never need to 'declare' the [[Prototype]] slot!
@@ -1140,6 +1180,48 @@ ObjectDumper.prototype.setDone = function(part, done) {
   } else if (typeof part === 'string') {
     this.doneProp_[part] = done;
   }
+};
+
+/**
+ * Visit an Object (and recursively, everything accessible via its
+ * binding) to prepare for dumping.
+ * @param {!Dumper} dumper Dumper to which this ObjectDumper belongs.
+ * @param {!Selector} ref Selector refering to this object.
+ */
+ObjectDumper.prototype.survey = function(dumper, ref) {
+  if (this.visiting) return;
+  this.visiting = true;
+  if (this.obj instanceof dumper.intrp.UserFunction) {
+    // Record this this function as inner to scope, and survey scope.
+    var scopeDumper = dumper.getScopeDumper(this.obj.scope);
+    scopeDumper.innerFunctions.add(this);
+    scopeDumper.survey(dumper);
+  }
+  // Survey prototype.
+  if (this.obj.proto) {
+    ref.push(Selector.PROTOTYPE);
+    dumper.getObjectDumper(this.obj.proto).survey(dumper, ref);
+    ref.pop();
+  }
+  // Survey owner.
+  if (this.obj.owner) {
+    ref.push(Selector.OWNER);
+    var ownerObj = /** @type {!Interpreter.prototype.Object} */(this.obj.owner);
+    dumper.getObjectDumper(ownerObj).survey(dumper, ref);
+    ref.pop();
+  }
+  // Survey properties.
+  var keys = this.obj.ownKeys(dumper.intrp.ROOT);
+  for (var i = 0; i < keys.length; i++) {
+    var key = keys[i];
+    var value = this.obj.get(key, dumper.intrp.ROOT);
+    if (value instanceof dumper.intrp.Object) {
+      ref.push(key);
+      dumper.getObjectDumper(value).survey(dumper, ref);
+      ref.pop();
+    }
+  }
+  this.visiting = false;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
