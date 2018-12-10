@@ -574,13 +574,9 @@ exports.testDumperSurvey = function(t) {
         return quux;
       })();
       var bar;  // N.B.: hoisted.
+      var orphanArgs = (function() {return arguments;})();
   `);
   intrp.run();
-
-  const baz = /** @type {!Interpreter.prototype.UserFunction} */(
-      intrp.global.get('bar'));
-  const quux = /** @type {!Interpreter.prototype.UserFunction} */(
-      intrp.global.get('foo'));
 
   // Create Dumper with pristine Interpreter instance to compare to;
   // get ScopeDumper for global scope.  Dumper constructor performs
@@ -588,6 +584,11 @@ exports.testDumperSurvey = function(t) {
   const pristine = new Interpreter();
   const dumper = new Dumper(intrp, pristine, simpleSpec);
 
+  // Check relationship of functions and scopes recorded by survey.
+  const baz = /** @type {!Interpreter.prototype.UserFunction} */(
+      intrp.global.get('bar'));
+  const quux = /** @type {!Interpreter.prototype.UserFunction} */(
+      intrp.global.get('foo'));
   const globalDumper = dumper.getScopeDumper(intrp.global);
   const bazDumper = dumper.getObjectDumper(baz);
   const bazScopeDumper = dumper.getScopeDumper(baz.scope);
@@ -619,6 +620,17 @@ exports.testDumperSurvey = function(t) {
       bazScopeDumper.innerFunctions.has(bazDumper));
   t.expect('bazScopeDumper.innerScopes.size',
       bazScopeDumper.innerScopes.size, 0);
+
+  // Check relationship of Arguments objects and scopes recorded by survey.
+  const quuxArgs = quuxScopeDumper.scope.get('arguments');
+  const orphanArgs = /** @type{!Interpreter.prototype.Arguments} */(
+      intrp.global.get('arguments'));
+  t.expect('argumentsScopeDumpers.size',
+      dumper.argumentsScopeDumpers.size, 1);
+  t.assert('argumentsScopeDumpers.get(quuxArgs) === quuxScopeDumper',
+      dumper.argumentsScopeDumpers.get(quuxArgs) === quuxScopeDumper);
+  t.assert('argumentsScopeDumpers.get(orphanArgs) === quuxScopeDumper',
+      dumper.argumentsScopeDumpers.get(orphanArgs) === undefined);
 };
 
 /**

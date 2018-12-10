@@ -62,6 +62,13 @@ var Dumper = function(intrp, pristine, spec) {
   /** @type {!Map<!Interpreter.prototype.Object,!ObjectDumper>} */
   this.objDumpers = new Map();
   /**
+   * Map of Arguments objects to the ScopeDumpers for the scopes to
+   * which they belong.
+   * @type {!Map<!Interpreter.prototype.Arguments,!ScopeDumper>}
+   */
+  this.argumentsScopeDumpers = new Map();
+  
+  /**
    * Which scope are we presently outputting code in the context of?
    * @type {!Interpreter.Scope}
    */
@@ -781,6 +788,17 @@ ScopeDumper.prototype.survey = function(dumper) {
     var value = this.scope.get(name);
     if (!(value instanceof dumper.intrp.Object)) continue;  // Skip primitives.
     dumper.getObjectDumper(value).survey(dumper, new Selector(name));
+  }
+  // Record arguments object attached to this scope if it's a function scope.
+  if (this.scope.type === Interpreter.Scope.Type.FUNCTION &&
+      this.scope.hasImmutableBinding('arguments')) {
+    var argsObject = this.scope.get('arguments');
+    if (!(argsObject instanceof dumper.intrp.Arguments)) {
+      throw new TypeError('arguments not an Arguments object');
+    } else if (dumper.argumentsScopeDumpers.has(argsObject)) {
+      throw new Error('Arguments object belongs to more than one scope');
+    }
+    dumper.argumentsScopeDumpers.set(argsObject, this);
   }
   this.surveyed = true;
   this.visiting = false;
