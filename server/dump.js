@@ -58,9 +58,9 @@ var Dumper = function(intrp, pristine, spec) {
   this.pristine = pristine;
   this.config = new Config(spec);
   /** @type {!Map<!Interpreter.Scope,!ScopeDumper>} */
-  this.scopeInfo = new Map;
+  this.scopeDumpers = new Map();
   /** @type {!Map<!Interpreter.prototype.Object,!ObjectDumper>} */
-  this.objDumpers = new Map;
+  this.objDumpers = new Map();
   /**
    * Which scope are we presently outputting code in the context of?
    * @type {!Interpreter.Scope}
@@ -433,7 +433,6 @@ Dumper.prototype.exprForArray = function(arr, arrDumper) {
  */
 Dumper.prototype.exprForDate = function(date, dateDumper) {
   dateDumper.proto = this.intrp.DATE;
-  // BUG(cpcallen): Don't assume Date constructor is already dumped.
   return 'new ' + this.exprForBuiltin('Date') +
       "('" + date.date.toISOString() + "')";
 };
@@ -550,9 +549,9 @@ Dumper.prototype.getDumperForSelectorParent = function(selector) {
  * @return {!ScopeDumper} The ScopeDumper for scope.
  */
 Dumper.prototype.getScopeDumper = function(scope) {
-  if (this.scopeInfo.has(scope)) return this.scopeInfo.get(scope);
+  if (this.scopeDumpers.has(scope)) return this.scopeDumpers.get(scope);
   var scopeDumper = new ScopeDumper(scope);
-  this.scopeInfo.set(scope, scopeDumper);
+  this.scopeDumpers.set(scope, scopeDumper);
   return scopeDumper;
 };
 
@@ -662,10 +661,7 @@ var ScopeDumper = function(scope) {
   this.visiting = false;
   /** @type {boolean} Has this scope already been surveyed? */
   this.surveyed = false;
-  /**
-   * Map of variable name -> dump status.
-   * @private @const {!Object<string, Do>}
-   */
+  /** @private @const {!Object<string, Do>} Done status of each variable. */
   this.doneVar_ = Object.create(null);
   /** @const {!Set<!ScopeDumper>} Set of inner scopes. */
   this.innerScopes = new Set();
@@ -725,8 +721,8 @@ ScopeDumper.prototype.dumpBinding = function(dumper, part, todo, ref) {
   }
   if (todo >= Do.RECURSE && done < Do.RECURSE) {
     if (value instanceof dumper.intrp.Object) {
-      var valueInfo = dumper.getObjectDumper(value);
-      output.push(valueInfo.dump(dumper, sel));
+      var valueDumper = dumper.getObjectDumper(value);
+      output.push(valueDumper.dump(dumper, sel));
     }
   }
   // Record completion.
@@ -821,13 +817,15 @@ var ObjectDumper = function(dumper, obj) {
   this.proto = undefined;
   /** @type {!Do} Has owner been set? */
   this.doneOwner = Do.DECL;  // Never need to 'declare' that object has owner!
-  /** @type {!Object<string, Do>} Map of property name -> dump status. */
+  /** @private @const {!Object<string, Do>} Done status of each property. */
   this.doneProp_ = Object.create(null);
   /**
    * Map of property name -> property descriptor, where property
    * descriptor is a map of attribute names (writable, enumerable,
-   * configurable, more tbd) to boolean values.  (We do not store
-   * values here.)
+   * configurable, more tbd) to boolean values describing the present
+   * attributes of the property at the current point in the dump; this
+   * is updated as code that modifies them is generated.  (We do not
+   * store values here.)
    * @type {!Object<string, !Object<string, boolean>>}
    */
   this.attributes = Object.create(null);
@@ -878,8 +876,8 @@ ObjectDumper.prototype.checkRecurse_ = function(dumper, todo, ref, part, value) 
     if (value instanceof dumper.intrp.Object) {
       var sel = new Selector(ref);
       sel.push(part);
-      var valueInfo = dumper.getObjectDumper(value);
-      output.push(valueInfo.dump(dumper, sel));
+      var valueDumper = dumper.getObjectDumper(value);
+      output.push(valueDumper.dump(dumper, sel));
     }
     // Record completion.
     this.setDone(part, todo);
