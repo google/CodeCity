@@ -191,7 +191,10 @@ exports.testDumperPrototypeExprFor = function(t) {
   const dumper = new Dumper(intrp, pristine, simpleSpec);
 
   // Give references to needed builtins.
-  for (const b of ['Date']) {
+  for (const b of [
+    'Date', 'Error', 'EvalError', 'RangeError', 'ReferenceError', 'TypeError',
+    'SyntaxError', 'URIError', 'PermissionError'
+  ]) {
     dumper.getObjectDumper(intrp.builtins.get(b)).ref = new Selector(b);
   }
 
@@ -208,6 +211,17 @@ exports.testDumperPrototypeExprFor = function(t) {
     [new intrp.Date(new Date('1975-07-27'), intrp.ROOT),
         "new Date('1975-07-27T00:00:00.000Z')"],
     [new intrp.RegExp(/foo/ig, intrp.ROOT), '/foo/gi'],
+    [new intrp.Error(intrp.ROOT, intrp.ERROR), "new Error()"],
+    [new intrp.Error(intrp.ROOT, intrp.ERROR, 'message'),
+        "new Error('message')"],
+    [new intrp.Error(intrp.ROOT, intrp.EVAL_ERROR), "new EvalError()"],
+    [new intrp.Error(intrp.ROOT, intrp.RANGE_ERROR), "new RangeError()"],
+    [new intrp.Error(intrp.ROOT, intrp.REFERENCE_ERROR),
+         "new ReferenceError()"],
+    [new intrp.Error(intrp.ROOT, intrp.SYNTAX_ERROR), "new SyntaxError()"],
+    [new intrp.Error(intrp.ROOT, intrp.TYPE_ERROR), "new TypeError()"],
+    [new intrp.Error(intrp.ROOT, intrp.URI_ERROR), "new URIError()"],
+    [new intrp.Error(intrp.ROOT, intrp.PERM_ERROR), "new PermissionError()"],
   ];
   for (let i = 0; i < cases.length; i++) {
     const tc = cases[i];
