@@ -720,7 +720,6 @@ ScopeDumper.prototype.dumpBinding = function(dumper, part, todo, ref) {
   } else if (typeof part !== 'string') {
     throw new TypeError('Invalid part (not a variable name)');
   }
-  // TODO(cpcallen): don't recreate a Selector that our caller^3 already has?
   var sel = new Selector([part]);
   var done = this.getDone(part);
   var value = this.scope.get(part);
@@ -897,6 +896,7 @@ ObjectDumper.prototype.checkProperty = function(key, value, attr, pd) {
 ObjectDumper.prototype.checkRecurse_ = function(dumper, todo, ref, part, value) {
   if (todo >= Do.RECURSE) {
     if (value instanceof dumper.intrp.Object) {
+      // TODO(cpcallen): don't recreate a Selector that our caller already has.
       var sel = new Selector(ref);
       sel.push(part);
       dumper.getObjectDumper(value).dump(dumper, sel);
@@ -989,7 +989,6 @@ ObjectDumper.prototype.dumpBinding = function(dumper, part, todo, ref) {
  * @param {!Selector} ref Selector refering to this object.
  */
 ObjectDumper.prototype.dumpOwner_ = function(dumper, todo, ref) {
-  // TODO(cpcallen): don't recreate a Selector that our caller^3 already has?
   var sel = new Selector(ref);
   sel.push(Selector.OWNER);
   var value = /** @type {?Interpreter.prototype.Object} */(this.obj.owner);
@@ -1020,7 +1019,6 @@ ObjectDumper.prototype.dumpOwner_ = function(dumper, todo, ref) {
  * @param {!Selector} ref Selector refering to this object.
  */
 ObjectDumper.prototype.dumpProperty_ = function(dumper, key, todo, ref) {
-  // TODO(cpcallen): don't recreate a Selector that our caller^3 already has?
   var sel = new Selector(ref);
   sel.push(key);
   var pd = this.obj.getOwnPropertyDescriptor(key, dumper.intrp.ROOT);
@@ -1089,7 +1087,6 @@ ObjectDumper.prototype.dumpProperty_ = function(dumper, key, todo, ref) {
  * @param {!Selector} ref Selector refering to this object.
  */
 ObjectDumper.prototype.dumpPrototype_ = function(dumper, todo, ref) {
-  // TODO(cpcallen): don't recreate a Selector that our caller^3 already has?
   var sel = new Selector(ref);
   sel.push(Selector.PROTOTYPE);
   var value = this.obj.proto;
