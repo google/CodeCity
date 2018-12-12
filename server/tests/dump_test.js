@@ -561,12 +561,16 @@ exports.testScopeDumperPrototypeDump = function(t) {
   const globalDumper = dumper.getScopeDumper(intrp.global);
 
   // Dump one binding and check result.
-  let code = globalDumper.dumpBinding(dumper, 'obj', Do.SET);
+  dumper.output.length = 0;
+  globalDumper.dumpBinding(dumper, 'obj', Do.SET);
+  let code = dumper.output.join('');
   t.expect("ScopeDumper.p.dumpBinding(..., 'obj', Do.SET, ...)",
       code, "var obj = (new 'Object.create')(null);\n");
 
   // Dump the rest & check result.
-  code = globalDumper.dump(dumper);
+  dumper.output.length = 0;
+  globalDumper.dump(dumper);
+  code = dumper.output.join('');
   t.expect('ScopeDumper.p.dump(...)', code,
       'var value = 42;\nobj.prop = 69;\n');
 };

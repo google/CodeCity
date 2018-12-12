@@ -75,6 +75,8 @@ var Dumper = function(intrp, pristine, spec) {
   this.scope = intrp.global;
   /** @type {!Interpreter.Owner} Perms at present point in output. */
   this.perms = intrp.ROOT;
+  /** @type {!Array<string>} Accumulated output for the current file. */
+  this.output = [];  // TODO(cpcallen): use Buffer or Uint8Array? 
 
   /**
    * Map from pristine objects to their corresponding intrp objects.
@@ -174,7 +176,8 @@ var Dumper = function(intrp, pristine, spec) {
 
 /**
  * Generate JS source text to declare and optionally initialise a
- * particular binding (as specified by a Selector).
+ * particular binding (as specified by a Selector).  The generated
+ * source text is written to the current output file and returned.
  *
  * E.g., if foo = [42, 69, 105], then:
  *
@@ -191,6 +194,7 @@ var Dumper = function(intrp, pristine, spec) {
  * @return {string} An eval-able program to initialise the specified binding.
  */
 Dumper.prototype.dumpBinding = function(selector, todo) {
+  var preLength = this.output.length;
   if (selector.isVar()) {
     var ref = undefined;
     var dumper = this.getScopeDumper(this.scope);
@@ -204,7 +208,8 @@ Dumper.prototype.dumpBinding = function(selector, todo) {
     dumper = this.getObjectDumper(obj);
   }
   var part = selector[selector.length - 1];
-  return dumper.dumpBinding(this, part, todo);
+  dumper.dumpBinding(this, part, todo);
+  return this.output.slice(preLength).join('');
 };
 
 /**
@@ -651,6 +656,15 @@ Dumper.prototype.isShadowed = function(name, scope) {
   return false;
 };
 
+/**
+ * Write strings to current output file.  (May be buffered.)
+ * @param {...string} var_args Strings to output.
+ */
+Dumper.prototype.write = function(var_args) {
+  this.output.push.apply(this.output, arguments);
+}
+
+
 ///////////////////////////////////////////////////////////////////////////////
 // ScopeDumper
 
@@ -680,19 +694,16 @@ var ScopeDumper = function(scope) {
  * Generate JS source text to create and/or initialize a single
  * variable binding.
  * @param {!Dumper} dumper Dumper to which this ScopeDumper belongs.
- * @return {string} An eval-able program to initialise the specified variable.
  */
 ScopeDumper.prototype.dump = function(dumper) {
   if (dumper.scope !== this.scope) {
     throw new Error("Can't dump scope other than current scope");
   }
-  var output = [];
   // Dump variable bindings.
   for (var name in this.scope.vars) {
     if (this.getDone(name) >= Do.RECURSE) continue;  // Skip already-done.
-    output.push(this.dumpBinding(dumper, name, Do.RECURSE));
+    this.dumpBinding(dumper, name, Do.RECURSE);
   }
-  return output.join('');
 };
 
 /**
@@ -702,7 +713,6 @@ ScopeDumper.prototype.dump = function(dumper) {
  * @param {!Selector.Part} part The part to dump.  Must be simple string.
  * @param {Do} todo How much to do.  Must be >= Do.DECL; > Do.SET ignored.
  * @param {!Selector=} ref Ignored.
- * @return {string} An eval-able program to initialise the specified variable.
  */
 ScopeDumper.prototype.dumpBinding = function(dumper, part, todo, ref) {
   if (dumper.scope !== this.scope) {
@@ -714,27 +724,24 @@ ScopeDumper.prototype.dumpBinding = function(dumper, part, todo, ref) {
   var sel = new Selector([part]);
   var done = this.getDone(part);
   var value = this.scope.get(part);
-  var output = [];
 
   if (todo >= Do.DECL && done < todo) {
-    if (done < Do.DECL) output.push('var ');
+    if (done < Do.DECL) dumper.write('var ');
     if (done < Do.SET) {
-      output.push(part);
+      dumper.write(part);
       if (todo >= Do.SET) {
-        output.push(' = ', dumper.exprFor(value, sel, false, part));
+        dumper.write(' = ', dumper.exprFor(value, sel, false, part));
       }
-      output.push(';\n');
+      dumper.write(';\n');
     }
   }
   if (todo >= Do.RECURSE && done < Do.RECURSE) {
     if (value instanceof dumper.intrp.Object) {
-      var valueDumper = dumper.getObjectDumper(value);
-      output.push(valueDumper.dump(dumper, sel));
+      dumper.getObjectDumper(value).dump(dumper, sel);
     }
   }
   // Record completion.
   this.setDone(part, todo);
-  return output.join('');
 };
 
 /**
@@ -886,21 +893,17 @@ ObjectDumper.prototype.checkProperty = function(key, value, attr, pd) {
  *     and which might need to be recursed into.
  * @param {Interpreter.Value} value The value of the specified part.
  *     '' returned if value not an Interpreter.prototype.Object.
- * @return {string} An eval-able program to initialise the specified binding.
  */
 ObjectDumper.prototype.checkRecurse_ = function(dumper, todo, ref, part, value) {
-  var output = [];
   if (todo >= Do.RECURSE) {
     if (value instanceof dumper.intrp.Object) {
       var sel = new Selector(ref);
       sel.push(part);
-      var valueDumper = dumper.getObjectDumper(value);
-      output.push(valueDumper.dump(dumper, sel));
+      dumper.getObjectDumper(value).dump(dumper, sel);
     }
     // Record completion.
     this.setDone(part, todo);
   }
-  return output.join('');
 };
 
 /**
@@ -910,7 +913,6 @@ ObjectDumper.prototype.checkRecurse_ = function(dumper, todo, ref, part, value) 
  * @param {!Selector=} ref Selector refering to this object.
  *     Optional; defaults to whatever selector was used to create the
  *     object.
- * @return {string} An eval-able program to initialise the specified binding.
  */
 ObjectDumper.prototype.dump = function(dumper, ref) {
   if (this.visiting) return '';
@@ -922,39 +924,37 @@ ObjectDumper.prototype.dump = function(dumper, ref) {
   if (!ref) {
     throw new Error("Can't dump an unreferencable object");
   }
-  var output = [];
   // Delete properties that shouldn't exist.
   if (this.toDelete) {
     var sel = new Selector(ref);
     for (var key, i = 0; key = this.toDelete[i]; i++) {
       sel.push(key);
-      output.push('delete ', dumper.exprForSelector(sel), ';\n');
+      dumper.write('delete ', dumper.exprForSelector(sel), ';\n');
       sel.pop();
     }
   }
   // Dump prototype.
   if (this.doneProto < Do.RECURSE) {
-    output.push(this.dumpPrototype_(dumper, Do.RECURSE, ref));
+    this.dumpPrototype_(dumper, Do.RECURSE, ref);
   }
   // Dump owner.
   if (this.doneOwner < Do.RECURSE) {
-    output.push(this.dumpOwner_(dumper, Do.RECURSE, ref));
+    this.dumpOwner_(dumper, Do.RECURSE, ref);
   }
   // Dump properties.
   var keys = this.obj.ownKeys(dumper.intrp.ROOT);
   for (var i = 0; i < keys.length; i++) {
     var key = keys[i];
     if (this.getDone(key) >= Do.RECURSE) continue;  // Skip already-done.
-    output.push(this.dumpProperty_(dumper, key, Do.RECURSE, ref));
+    this.dumpProperty_(dumper, key, Do.RECURSE, ref);
   }
   // TODO(cpcallen): Dump internal elements.
   // Dump extensibility.
   if (!this.obj.isExtensible(dumper.intrp.ROOT)) {
-    output.push(dumper.exprForBuiltin('Object.preventExtensions'), '(',
-                dumper.exprForSelector(ref), ');\n');
+    dumper.write(dumper.exprForBuiltin('Object.preventExtensions'), '(',
+                 dumper.exprForSelector(ref), ');\n');
   }
   this.visiting = false;
-  return output.join('');
 };
 
 /**
@@ -966,7 +966,6 @@ ObjectDumper.prototype.dump = function(dumper, ref) {
  * @param {!Selector=} ref Selector refering to this object.
  *     Optional; defaults to whatever selector was used to create the
  *     object.
- * @return {string} An eval-able program to initialise the specified binding.
  */
 ObjectDumper.prototype.dumpBinding = function(dumper, part, todo, ref) {
   if (!this.ref) throw new Error("Can't dump part of uncreated object");
@@ -988,23 +987,19 @@ ObjectDumper.prototype.dumpBinding = function(dumper, part, todo, ref) {
  * @param {!Dumper} dumper Dumper to which this ObjectDumper belongs.
  * @param {Do} todo How much to do.  Must be >= Do.DECL; > Do.SET ignored.
  * @param {!Selector} ref Selector refering to this object.
- * @return {string} An eval-able program to initialise the specified binding.
  */
 ObjectDumper.prototype.dumpOwner_ = function(dumper, todo, ref) {
   // TODO(cpcallen): don't recreate a Selector that our caller^3 already has?
   var sel = new Selector(ref);
   sel.push(Selector.OWNER);
-  var output = [];
   var value = /** @type {?Interpreter.prototype.Object} */(this.obj.owner);
   if (todo >= Do.SET && this.doneOwner < Do.SET) {
-    output.push(dumper.exprForBuiltin('Object.setOwnerOf'), '(',
-                dumper.exprForSelector(ref), ', ',
-                dumper.exprFor(value, sel), ');\n');
+    dumper.write(dumper.exprForBuiltin('Object.setOwnerOf'), '(',
+                 dumper.exprForSelector(ref), ', ',
+                 dumper.exprFor(value, sel), ');\n');
     this.doneOwner = Do.SET;
   }
-  output.push(
-      this.checkRecurse_(dumper, todo, ref, Selector.OWNER, value));
-  return output.join('');
+  this.checkRecurse_(dumper, todo, ref, Selector.OWNER, value);
 };
 
 /**
@@ -1023,7 +1018,6 @@ ObjectDumper.prototype.dumpOwner_ = function(dumper, todo, ref) {
  * @param {string} key The property to dump.
  * @param {Do} todo How much to do.
  * @param {!Selector} ref Selector refering to this object.
- * @return {string} An eval-able program to initialise the specified binding.
  */
 ObjectDumper.prototype.dumpProperty_ = function(dumper, key, todo, ref) {
   // TODO(cpcallen): don't recreate a Selector that our caller^3 already has?
@@ -1031,7 +1025,6 @@ ObjectDumper.prototype.dumpProperty_ = function(dumper, key, todo, ref) {
   sel.push(key);
   var pd = this.obj.getOwnPropertyDescriptor(key, dumper.intrp.ROOT);
   if (!pd) throw new RangeError("Can't dump nonexistent property " + sel);
-  var output = [];
 
   // Do this binding, if requested.
   var done = this.getDone(key);
@@ -1049,8 +1042,8 @@ ObjectDumper.prototype.dumpProperty_ = function(dumper, key, todo, ref) {
       // Will this assignemnt set the .name of an anonymous function?
       // TODO(ES6): Handle prefix?
       var funcName = dumper.pristine.options.methodNames ? key : undefined;
-      output.push(dumper.exprForSelector(sel), ' = ',
-                  dumper.exprFor(value, sel, false, funcName), ';\n');
+      dumper.write(dumper.exprForSelector(sel), ' = ',
+                   dumper.exprFor(value, sel, false, funcName), ';\n');
       done = this.checkProperty(key, value, attr, pd);
     }
 
@@ -1078,15 +1071,14 @@ ObjectDumper.prototype.dumpProperty_ = function(dumper, key, todo, ref) {
       if (todo >= Do.SET && done < Do.SET) {
         items.push('value: ' + dumper.exprFor(value));
       }
-      output.push(dumper.exprForBuiltin('Object.defineProperty'), '(',
-                  dumper.exprForSelector(ref), ', ', dumper.exprFor(key),
-                  ', {', items.join(', '), '});\n');
+      dumper.write(dumper.exprForBuiltin('Object.defineProperty'), '(',
+                   dumper.exprForSelector(ref), ', ', dumper.exprFor(key),
+                   ', {', items.join(', '), '});\n');
       done = this.checkProperty(key, value, attr, pd);
     }
   }
 
-  output.push(this.checkRecurse_(dumper, todo, ref, key, pd.value));
-  return output.join('');
+  this.checkRecurse_(dumper, todo, ref, key, pd.value);
 };
 
 /**
@@ -1095,24 +1087,20 @@ ObjectDumper.prototype.dumpProperty_ = function(dumper, key, todo, ref) {
  * @param {!Dumper} dumper Dumper to which this ObjectDumper belongs.
  * @param {Do} todo How much to do.  Must be >= Do.DECL; > Do.SET ignored.
  * @param {!Selector} ref Selector refering to this object.
- * @return {string} An eval-able program to initialise the specified binding.
  */
 ObjectDumper.prototype.dumpPrototype_ = function(dumper, todo, ref) {
   // TODO(cpcallen): don't recreate a Selector that our caller^3 already has?
   var sel = new Selector(ref);
   sel.push(Selector.PROTOTYPE);
-  var output = [];
   var value = this.obj.proto;
   if (todo >= Do.SET && this.doneProto < Do.SET) {
-    output.push(dumper.exprForBuiltin('Object.setPrototypeOf'), '(',
-                dumper.exprForSelector(ref), ', ',
-                dumper.exprFor(value, sel), ');\n');
+    dumper.write(dumper.exprForBuiltin('Object.setPrototypeOf'), '(',
+                 dumper.exprForSelector(ref), ', ',
+                 dumper.exprFor(value, sel), ');\n');
     this.proto = value;
     this.doneProto = Do.SET;
   }
-  output.push(
-      this.checkRecurse_(dumper, todo, ref, Selector.PROTOTYPE, value));
-  return output.join('');
+  this.checkRecurse_(dumper, todo, ref, Selector.PROTOTYPE, value);
 };
 
 /**
