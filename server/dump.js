@@ -124,6 +124,7 @@ var Dumper = function(intrp, pristine, spec) {
       globalDumper.setDone(v, Do.SET);
       if (val instanceof intrp.Object) {
         this.getObjectDumper(val).ref = new Selector(v);
+        // Other initialialisation will be taken care of below.
       }
     }
   }
@@ -828,6 +829,8 @@ var ObjectDumper = function(dumper, obj) {
   this.obj = obj;
   /** @type {!Selector|undefined} Reference to this object, once created. */
   this.ref = undefined;
+  /** @type {!ObjectDumper.Done} How much has object been dumped? */
+  this.status = ObjectDumper.Done.NO;
   /** @type {!Do} Has prototype been set? */
   this.doneProto = Do.DECL;  // Never need to 'declare' the [[Prototype]] slot!
   /**
@@ -954,6 +957,7 @@ ObjectDumper.prototype.dump = function(dumper, ref) {
     dumper.write(dumper.exprForBuiltin('Object.preventExtensions'), '(',
                  dumper.exprForSelector(ref), ');\n');
   }
+  this.done = ObjectDumper.Done.DONE_RECURSIVELY;
   dumper.visiting.delete(this);
 };
 
@@ -1225,12 +1229,32 @@ ObjectDumper.prototype.survey = function(dumper, ref) {
   dumper.visiting.delete(this);
 };
 
+/**
+ * Tri-state "done" flag for ObjectDumper.  A bit like Do, but for the
+ * whole object rather than a single binding.
+ * @enum {number}
+ */
+ObjectDumper.Done = {
+  /** Object not fully dumped. */
+  NO: 0,
+
+  /**
+   * Object is done (has all own properties fully defined including
+   * attributes, has correct [[Owner]] and [[Prototype]], is
+   * non-extensible if applicable, etc.).
+   */
+  DONE: 1,
+
+  /** This object and all objects accessible from it are done. */
+  DONE_RECURSIVELY: 2,
+};
+
 ///////////////////////////////////////////////////////////////////////////////
 // Do, etc.
 
 /**
- * Possible things to do (or have done) with a variable / property
- * binding.  Note that all valid 'do' values are truthy.
+ * Possible things to do (or have done) with a variable / property /
+ * etc. binding.  Note that all valid 'do' values are truthy.
  * @enum {number}
  */
 var Do = {
@@ -1296,7 +1320,6 @@ var Do = {
    */
   RECURSE: 6,
 };
-
 
 ///////////////////////////////////////////////////////////////////////////////
 // Data types used to specify a dump configuration.
