@@ -330,13 +330,11 @@ exports.testDumperPrototypeDumpBinding = function(t) {
   const dumper = new Dumper(intrp, pristine, simpleSpec);
   // Set a few flags in advance, to limit recursive dumping of
   // builtins in tests.
-  dumper.getObjectDumper(intrp.OBJECT).visiting = true;
-  dumper.getObjectDumper(intrp.FUNCTION).visiting = true;
-  dumper.getObjectDumper(intrp.ARRAY).visiting = true;
-  dumper.getObjectDumper(intrp.REGEXP).visiting = true;
-  dumper.getObjectDumper(intrp.ERROR).visiting = true;
-  dumper.getObjectDumper(intrp.TYPE_ERROR).visiting = true;
-  dumper.getObjectDumper(intrp.RANGE_ERROR).visiting = true;
+  for (const builtin of [intrp.OBJECT, intrp.FUNCTION, intrp.ARRAY,
+                         intrp.REGEXP, intrp.ERROR, intrp.TYPE_ERROR,
+                         intrp.RANGE_ERROR]) {
+    dumper.visiting.add(dumper.getObjectDumper(builtin));
+  };
 
   // Check generated output for (and post-dump status of) specific bindings.
   const cases = [

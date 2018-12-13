@@ -57,17 +57,21 @@ var Dumper = function(intrp, pristine, spec) {
   this.intrp = intrp;
   this.pristine = pristine;
   this.config = new Config(spec);
-  /** @type {!Map<!Interpreter.Scope,!ScopeDumper>} */
+  /** @const {!Map<!Interpreter.Scope,!ScopeDumper>} */
   this.scopeDumpers = new Map();
-  /** @type {!Map<!Interpreter.prototype.Object,!ObjectDumper>} */
+  /** @const {!Map<!Interpreter.prototype.Object,!ObjectDumper>} */
   this.objDumpers = new Map();
   /**
    * Map of Arguments objects to the ScopeDumpers for the scopes to
    * which they belong.
-   * @type {!Map<!Interpreter.prototype.Arguments,!ScopeDumper>}
+   * @const {!Map<!Interpreter.prototype.Arguments,!ScopeDumper>}
    */
   this.argumentsScopeDumpers = new Map();
-  
+  /**
+   * Set of Scope/Object dumpers currently being recursively surveyed/dumped.
+   * @const {!Set<(!ScopeDumper|!ObjectDumper)>}
+   */
+  this.visiting = new Set();
   /**
    * Which scope are we presently outputting code in the context of?
    * @type {!Interpreter.Scope}
@@ -75,7 +79,7 @@ var Dumper = function(intrp, pristine, spec) {
   this.scope = intrp.global;
   /** @type {!Interpreter.Owner} Perms at present point in output. */
   this.perms = intrp.ROOT;
-  /** @type {!Array<string>} Accumulated output for the current file. */
+  /** @const {!Array<string>} Accumulated output for the current file. */
   this.output = [];  // TODO(cpcallen): use Buffer or Uint8Array? 
 
   /**
@@ -678,8 +682,6 @@ Dumper.prototype.write = function(var_args) {
  */
 var ScopeDumper = function(scope) {
   this.scope = scope;
-  /** @type {boolean} Is object being visited in a recursive survey or dump? */
-  this.visiting = false;
   /** @type {boolean} Has this scope already been surveyed? */
   this.surveyed = false;
   /** @private @const {!Object<string, Do>} Done status of each variable. */
@@ -776,8 +778,8 @@ ScopeDumper.prototype.setDone = function(part, done) {
  * @param {!Dumper} dumper Dumper to which this ScopeDumper belongs.
  */
 ScopeDumper.prototype.survey = function(dumper) {
-  if (this.visiting || this.surveyed) return;
-  this.visiting = true;
+  if (dumper.visiting.has(this) || this.surveyed) return;
+  dumper.visiting.add(this);
   // Record parent scope.
   if (this.scope !== dumper.intrp.global) {
     if (this.scope.outerScope === null) {
@@ -807,7 +809,7 @@ ScopeDumper.prototype.survey = function(dumper) {
     dumper.argumentsScopeDumpers.set(argsObject, this);
   }
   this.surveyed = true;
-  this.visiting = false;
+  dumper.visiting.delete(this);
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -826,8 +828,6 @@ var ObjectDumper = function(dumper, obj) {
   this.obj = obj;
   /** @type {!Selector|undefined} Reference to this object, once created. */
   this.ref = undefined;
-  /** @type {boolean} Is object being visited in a recursive survey or dump? */
-  this.visiting = false;
   /** @type {!Do} Has prototype been set? */
   this.doneProto = Do.DECL;  // Never need to 'declare' the [[Prototype]] slot!
   /**
@@ -915,8 +915,8 @@ ObjectDumper.prototype.checkRecurse_ = function(dumper, todo, ref, part, value) 
  *     object.
  */
 ObjectDumper.prototype.dump = function(dumper, ref) {
-  if (this.visiting) return '';
-  this.visiting = true;
+  if (dumper.visiting.has(this)) return '';
+  dumper.visiting.add(this);
   if (this.proto === undefined) {
     throw new Error("Can't dump an uncreated object");
   }
@@ -954,7 +954,7 @@ ObjectDumper.prototype.dump = function(dumper, ref) {
     dumper.write(dumper.exprForBuiltin('Object.preventExtensions'), '(',
                  dumper.exprForSelector(ref), ');\n');
   }
-  this.visiting = false;
+  dumper.visiting.delete(this);
 };
 
 /**
@@ -1190,8 +1190,8 @@ ObjectDumper.prototype.setDone = function(part, done) {
  * @param {!Selector} ref Selector refering to this object.
  */
 ObjectDumper.prototype.survey = function(dumper, ref) {
-  if (this.visiting) return;
-  this.visiting = true;
+  if (dumper.visiting.has(this)) return;
+  dumper.visiting.add(this);
   if (this.obj instanceof dumper.intrp.UserFunction) {
     // Record this this function as inner to scope, and survey scope.
     var scopeDumper = dumper.getScopeDumper(this.obj.scope);
@@ -1222,7 +1222,7 @@ ObjectDumper.prototype.survey = function(dumper, ref) {
       ref.pop();
     }
   }
-  this.visiting = false;
+  dumper.visiting.delete(this);
 };
 
 ///////////////////////////////////////////////////////////////////////////////
