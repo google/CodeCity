@@ -897,16 +897,16 @@ ObjectDumper.prototype.checkProperty = function(key, value, attr, pd) {
  *     '' returned if value not an Interpreter.prototype.Object.
  */
 ObjectDumper.prototype.checkRecurse_ = function(dumper, todo, ref, part, value) {
-  if (todo >= Do.RECURSE) {
-    if (value instanceof dumper.intrp.Object) {
-      // TODO(cpcallen): don't recreate a Selector that our caller already has.
-      var sel = new Selector(ref);
-      sel.push(part);
-      dumper.getObjectDumper(value).dump(dumper, sel);
-    }
-    // Record completion.
-    this.setDone(part, todo);
+  if (todo < Do.RECURSE) return;  // No recursion requested.
+  if (value instanceof dumper.intrp.Object) {
+    // TODO(cpcallen): don't recreate a Selector that our caller already has.
+    var sel = new Selector(ref);
+    sel.push(part);
+    dumper.getObjectDumper(value).dump(dumper, sel);
   }
+  // Record completion.
+  this.setDone(part, todo);
+  return;
 };
 
 /**
