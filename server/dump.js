@@ -121,7 +121,7 @@ var Dumper = function(intrp, pristine, spec) {
       pval = intrpObjs.get(pval);
     }
     if (Object.is(val, pval)) {
-      globalDumper.setDone(v, Do.SET);
+      globalDumper.setDone(v, Do.DONE);
       if (val instanceof intrp.Object) {
         this.getObjectDumper(val).ref = new Selector(v);
         // Other initialialisation will be taken care of below.
@@ -138,13 +138,13 @@ var Dumper = function(intrp, pristine, spec) {
     pobj = pristine.builtins.get(builtin);
     // Record pre-set prototype.
     objDumper.proto = (pobj.proto === null) ? null : intrpObjs.get(pobj.proto);
-    objDumper.doneProto = (obj.proto === objDumper.proto) ? Do.SET : Do.DECL;
+    objDumper.doneProto = (obj.proto === objDumper.proto) ? Do.DONE : Do.DECL;
     // Record pre-set owner.
     var owner = (pobj.owner === null) ? null :
         intrpObjs.get(/** @type{!Interpreter.prototype.Object} */(pobj.owner));
     objDumper.doneOwner =
         (obj.owner === /** @type{?Interpreter.Owner} */(owner)) ?
-        Do.SET : Do.DECL;
+        Do.DONE : Do.DECL;
     // Record pre-set property values/attributes.
     var keys = pobj.ownKeys(pristine.ROOT);
     for (var j = 0; j < keys.length; j++) {
@@ -273,9 +273,9 @@ Dumper.prototype.exprFor = function(value, selector, callable, funcName) {
     expr = this.exprForObject(value, objDumper);
   }
   // Do we need to set [[Prototype]]?  Not if it's already correct.
-  if (objDumper.proto == value.proto) objDumper.doneProto = Do.SET;
+  if (objDumper.proto == value.proto) objDumper.doneProto = Do.DONE;
   // Do we need to set [[Owner]]?  Not if it's already correct.
-  if (value.owner === this.perms) objDumper.doneOwner = Do.SET;
+  if (value.owner === this.perms) objDumper.doneOwner = Do.DONE;
   return expr;
 };
 
@@ -735,6 +735,7 @@ ScopeDumper.prototype.dumpBinding = function(dumper, part, todo, ref) {
         dumper.write(' = ', dumper.exprFor(value, sel, false, part));
       }
       dumper.write(';\n');
+      if (todo === Do.SET) todo = Do.DONE;  // Promote SET to DONE.
     }
   }
   if (todo >= Do.RECURSE && done < Do.RECURSE) {
@@ -1000,7 +1001,7 @@ ObjectDumper.prototype.dumpOwner_ = function(dumper, todo, ref) {
     dumper.write(dumper.exprForBuiltin('Object.setOwnerOf'), '(',
                  dumper.exprForSelector(ref), ', ',
                  dumper.exprFor(value, sel), ');\n');
-    this.doneOwner = Do.SET;
+    this.doneOwner = Do.DONE;
   }
   this.checkRecurse_(dumper, todo, ref, Selector.OWNER, value);
 };
@@ -1099,7 +1100,7 @@ ObjectDumper.prototype.dumpPrototype_ = function(dumper, todo, ref) {
                  dumper.exprForSelector(ref), ', ',
                  dumper.exprFor(value, sel), ');\n');
     this.proto = value;
-    this.doneProto = Do.SET;
+    this.doneProto = Do.DONE;
   }
   this.checkRecurse_(dumper, todo, ref, Selector.PROTOTYPE, value);
 };
@@ -1300,18 +1301,19 @@ var Do = {
    * the specified binding it will generally not (yet) have its
    * properties or internal set/map data set (but immutable internal
    * data, such as function code, will have been set at creation).
-   *
-   * Possibly only useful as a 'done' value; prefer SET for 'do'
-   * values.
    */
   SET: 4,
 
   /**
    * Ensure theat the specified binding has been set to its final
    * value, and additionally that the final property attributes
-   * (enumerable, writable and/or configurable) are set.
+   * (enumerable, writable and/or configurable) are set.  DONE is
+   * provided as an alias for bindings (like [[Prototype]] and
+   * [[Owner]] that don't have attributes; for those, SET should
+   * automatically be promoted to DONE.
    */
   ATTR: 5,
+  DONE: 5,
 
   /**
    * Ensure the specified path is has been set to its final value (and

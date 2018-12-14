@@ -347,8 +347,8 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     
     ['Object', Do.DECL, 'var Object;\n'],
     ['Object', Do.DECL, ''],
-    ['Object', Do.SET, "Object = new 'Object';\n"],
-    ['Object', Do.SET, ''],
+    ['Object', Do.SET, "Object = new 'Object';\n", Do.DONE],
+    ['Object', Do.DONE, '', Do.DONE],
     ['Object.prototype', Do.SET,
         "Object.prototype = new 'Object.prototype';\n"],
     ['Object.prototype.bar', Do.SET, "Object.prototype.bar = 'bar';\n"],
@@ -357,18 +357,18 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     ['Object.defineProperty', Do.SET,
         "Object.defineProperty = new 'Object.defineProperty';\n"],
 
-    ['CC', Do.SET, 'var CC = {};\n'],
+    ['CC', Do.SET, 'var CC = {};\n', Do.DONE],
     ['CC.root', Do.RECURSE, "CC.root = new 'CC.root';\n"],
 
-    ['obj', Do.SET, 'var obj = {};\n'],
+    ['obj', Do.SET, 'var obj = {};\n', Do.DONE],
     ['obj', Do.RECURSE, 'obj.a = 1;\nobj.b = 2;\nobj.c = 3;\n'],
     ['nullProtoObj', Do.RECURSE,
         "var nullProtoObj = (new 'Object.create')(null);\n"],
 
     // TODO(cpcallen): Really want "var child1 = {foo: 'foo'};\n".
-    ['child1', Do.SET, 'var child1 = {};\n'],
+    ['child1', Do.SET, 'var child1 = {};\n', Do.DONE],
     // TODO(cpcallen): Really want "var child2 = {foo: 'foo'};\n".
-    ['child2', Do.SET, 'var child2 = {};\n'],
+    ['child2', Do.SET, 'var child2 = {};\n', Do.DONE],
     ['parent', Do.RECURSE, "var parent = {};\nparent.foo = 'foo';\n" +
         "Object.defineProperty(parent, 'foo', {writable: false});\n"],
 
@@ -376,7 +376,8 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     ['child1.foo', Do.SET, "child1.foo = 'foo2';\n"],
     ['child1.foo', Do.ATTR,
         "Object.defineProperty(child1, 'foo', {enumerable: false});\n"],
-    ['child2^', Do.SET, "(new 'Object.setPrototypeOf')(child2, parent);\n"],
+    ['child2^', Do.SET, "(new 'Object.setPrototypeOf')(child2, parent);\n",
+        Do.DONE],
     ['child2.foo', Do.DECL, "Object.defineProperty(child2, 'foo', " +
         '{writable: true, enumerable: true, configurable: true});\n'],
     ['child2.foo', Do.SET, "child2.foo = 'foo2';\n"],
@@ -393,12 +394,12 @@ exports.testDumperPrototypeDumpBinding = function(t) {
 
     ['f1', Do.DECL, 'var f1;\n'],
     // TODO(cpcallen): Really want 'function f1(arg) {};\n'.
-    ['f1', Do.SET, 'f1 = function f1(arg) {};\n'],
-    ['f2', Do.SET, 'var f2 = function(arg) {};\n'],
+    ['f1', Do.SET, 'f1 = function f1(arg) {};\n', Do.DONE],
+    ['f2', Do.SET, 'var f2 = function(arg) {};\n', Do.DONE],
     ['f2.f3', Do.DECL, 'f2.f3 = undefined;\n'],
     ['f2.f3', Do.SET, 'f2.f3 = function f4(arg) {};\n', Do.ATTR],
     ['f2.undef', Do.DECL, 'f2.undef = undefined;\n', Do.ATTR],
-    ['f2.f3^', Do.SET, 'Object.setPrototypeOf(f2.f3, null);\n'],
+    ['f2.f3^', Do.SET, 'Object.setPrototypeOf(f2.f3, null);\n', Do.DONE],
     ['f2.f3', Do.RECURSE, "delete f2.f3.name;\nf2.f3.prototype = obj;\n"],
 
     // TODO(cpcallen): Realy want 'var arr = [42, 69, 105, obj];\n'.
@@ -410,34 +411,36 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         'sparse[0] = 0;\nsparse[2] = 2;\nsparse.length = 4;\n'],
 
     ['date1', Do.SET,
-        "var date1 = new (new 'Date')('1975-07-27T00:00:00.000Z');\n"],
-    ['Date', Do.SET, "var Date = new 'Date';\n"],
-    ['date2', Do.SET, "var date2 = new Date('1979-01-04T00:00:00.000Z');\n"],
+        "var date1 = new (new 'Date')('1975-07-27T00:00:00.000Z');\n", Do.DONE],
+    ['Date', Do.SET, "var Date = new 'Date';\n", Do.DONE],
+    ['date2', Do.SET, "var date2 = new Date('1979-01-04T00:00:00.000Z');\n",
+        Do.DONE],
 
-    ['re1', Do.SET, 'var re1 = /foo/gi;\n'],
+    ['re1', Do.SET, 'var re1 = /foo/gi;\n', Do.DONE],
     ['re2', Do.RECURSE, 'var re2 = /bar/g;\n' +
         'Object.setPrototypeOf(re2, re1);\n' +
         're2.lastIndex = 42;\n'],
-    ['re3', Do.SET, 'var re3 = /baz/m;\n'],
-    ['re3^', Do.SET, 'Object.setPrototypeOf(re3, re1);\n'],
+    ['re3', Do.SET, 'var re3 = /baz/m;\n', Do.DONE],
+    ['re3^', Do.SET, 'Object.setPrototypeOf(re3, re1);\n', Do.DONE],
 
-    ['error1', Do.SET, "var error1 = new (new 'Error')('message1');\n"],
+    ['error1', Do.SET, "var error1 = new (new 'Error')('message1');\n",
+        Do.DONE],
     ['error1', Do.RECURSE, "error1.stack = 'stack1';\n"],
-    ['Error', Do.SET, "var Error = new 'Error';\n"],
-    ['TypeError', Do.SET, "var TypeError = new 'TypeError';\n"],
-    ['RangeError', Do.SET, "var RangeError = new 'RangeError';\n"],
-    ['error2', Do.SET, "var error2 = new TypeError('message2');\n"],
+    ['Error', Do.SET, "var Error = new 'Error';\n", Do.DONE],
+    ['TypeError', Do.SET, "var TypeError = new 'TypeError';\n", Do.DONE],
+    ['RangeError', Do.SET, "var RangeError = new 'RangeError';\n", Do.DONE],
+    ['error2', Do.SET, "var error2 = new TypeError('message2');\n", Do.DONE],
     ['error2', Do.RECURSE, "error2.stack = 'stack2';\n"],
-    ['error3', Do.SET, 'var error3 = new Error();\n'],
+    ['error3', Do.SET, 'var error3 = new Error();\n', Do.DONE],
     ['error3.message', Do.ATTR, 'error3.message = 69;\n' +
         "Object.defineProperty(error3, 'message', {writable: false});\n"],
     ['error3', Do.RECURSE, 'delete error3.stack;\n' +
         'Object.setPrototypeOf(error3, error1);\n'],
 
-    ['alice', Do.SET, 'var alice = {};\n'],
+    ['alice', Do.SET, 'var alice = {};\n', Do.DONE],
     ['alice.thing', Do.ATTR, 'alice.thing = {};\n'],
     ['alice.thing{owner}', Do.SET, "(new 'Object.setOwnerOf')" +
-        '(alice.thing, alice);\n'],
+        '(alice.thing, alice);\n', Do.DONE],
     ['Object.setOwnerOf', Do.SET,
         "Object.setOwnerOf = new 'Object.setOwnerOf';\n"],
     ['bob', Do.RECURSE, 'var bob = {};\nbob.thing = {};\n' +
@@ -451,7 +454,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
              code, tc[2]);
     // Check work recorded.
     const parentDumper  = dumper.getDumperForSelectorParent(s);
-    t.expect(util.format('Binding status of <%s> === %d', s, tc[1]),
+    t.expect(util.format('Binding status of <%s> (after dump)', s),
         parentDumper.getDone(s[s.length - 1]), tc[3] || tc[1]);
   }
 
@@ -475,7 +478,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     ['child2^', Do.RECURSE, 'parent'],
     ['child3^', Do.RECURSE, 'parent'],
 
-    ['f1^', Do.SET],
+    ['f1^', Do.DONE],
     ['f1.length', Do.ATTR],
     ['f1.name', Do.ATTR],
     ['f1.prototype', Do.SET, 'f1.prototype'],
@@ -495,8 +498,8 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     ['sparse^', Do.RECURSE, 'arr'],
     ['sparse.length', Do.RECURSE],
 
-    ['date1^', Do.SET],
-    ['date2^', Do.SET],
+    ['date1^', Do.DONE],
+    ['date2^', Do.DONE],
 
     ['re1^', Do.RECURSE],
     ['re1.source', Do.RECURSE],
@@ -510,7 +513,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     ['re2.ignoreCase', Do.RECURSE],
     ['re2.multiline', Do.RECURSE],
     ['re2.lastIndex', Do.RECURSE],
-    ['re3^', Do.SET, 're1'],
+    ['re3^', Do.DONE, 're1'],
     ['re3.source', Do.ATTR],
     ['re3.global', Do.ATTR],
     ['re3.ignoreCase', Do.ATTR],
@@ -520,15 +523,15 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     ['error1.message', Do.RECURSE],
     ['error2.message', Do.RECURSE],
 
-    ['alice{owner}', Do.SET, 'CC.root'],
-    ['alice.thing{owner}', Do.SET, 'alice'],
+    ['alice{owner}', Do.DONE, 'CC.root'],
+    ['alice.thing{owner}', Do.DONE, 'alice'],
     ['bob{owner}', Do.RECURSE, 'CC.root'],
     ['bob.thing{owner}', Do.RECURSE, 'bob'],
   ];
   for (const tc of implicit) {
     const s = new Selector(tc[0]);
     const parentDumper  = dumper.getDumperForSelectorParent(s);
-    t.expect(util.format('Binding status of <%s> === %d', s, tc[1]),
+    t.expect(util.format('Binding status of <%s> (implicit)', s),
         parentDumper.getDone(s[s.length - 1]), tc[1]);
     if (tc[2]) {
       const objDumper = dumper.getObjectDumper(dumper.valueForSelector(s));
@@ -562,14 +565,14 @@ exports.testScopeDumperPrototypeDump = function(t) {
   dumper.output.length = 0;
   globalDumper.dumpBinding(dumper, 'obj', Do.SET);
   let code = dumper.output.join('');
-  t.expect("ScopeDumper.p.dumpBinding(..., 'obj', Do.SET, ...)",
+  t.expect("ScopeDumper.p.dumpBinding(..., 'obj', Do.SET, ...) outputs",
       code, "var obj = (new 'Object.create')(null);\n");
 
   // Dump the rest & check result.
   dumper.output.length = 0;
   globalDumper.dump(dumper);
   code = dumper.output.join('');
-  t.expect('ScopeDumper.p.dump(...)', code,
+  t.expect('ScopeDumper.p.dump(...) outputs', code,
       'var value = 42;\nobj.prop = 69;\n');
 };
 
