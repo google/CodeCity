@@ -344,7 +344,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     ['Infinity', Do.RECURSE, ''],
     ['undefined', Do.RECURSE, ''],
     ['eval', Do.RECURSE, ''],
-    
+
     ['Object', Do.DECL, 'var Object;\n'],
     ['Object', Do.DECL, ''],
     ['Object', Do.SET, "Object = new 'Object';\n", Do.DONE],

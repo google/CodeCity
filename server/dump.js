@@ -80,7 +80,7 @@ var Dumper = function(intrp, pristine, spec) {
   /** @type {!Interpreter.Owner} Perms at present point in output. */
   this.perms = intrp.ROOT;
   /** @const {!Array<string>} Accumulated output for the current file. */
-  this.output = [];  // TODO(cpcallen): use Buffer or Uint8Array? 
+  this.output = [];  // TODO(cpcallen): use Buffer or Uint8Array?
 
   /**
    * Map from pristine objects to their corresponding intrp objects.
@@ -128,7 +128,7 @@ var Dumper = function(intrp, pristine, spec) {
       }
     }
   }
-  
+
   // Create and initialise ObjectDumpers for builtin objects.
   for (i = 0; i < builtins.length; i++) {
     builtin = builtins[i];
@@ -195,7 +195,7 @@ var Dumper = function(intrp, pristine, spec) {
  * myDumper.dumpBinding(new Selector('foo'), Do.RECURSE)
  * // => 'foo[1] = 69;\nfoo[2] = 105;\n'
  * @param {!Selector} selector The selector for the binding to be dumped.
- * @param {Do} todo How much to dump.  Must be >= Do.DECL.
+ * @param {!Do} todo How much to dump.  Must be >= Do.DECL.
  * @return {string} An eval-able program to initialise the specified binding.
  */
 Dumper.prototype.dumpBinding = function(selector, todo) {
@@ -714,7 +714,7 @@ ScopeDumper.prototype.dump = function(dumper) {
  * variable binding.
  * @param {!Dumper} dumper Dumper to which this ScopeDumper belongs.
  * @param {!Selector.Part} part The part to dump.  Must be simple string.
- * @param {Do} todo How much to do.  Must be >= Do.DECL; > Do.SET ignored.
+ * @param {!Do} todo How much to do.  Must be >= Do.DECL; > Do.SET ignored.
  * @param {!Selector=} ref Ignored.
  */
 ScopeDumper.prototype.dumpBinding = function(dumper, part, todo, ref) {
@@ -750,7 +750,7 @@ ScopeDumper.prototype.dumpBinding = function(dumper, part, todo, ref) {
 /**
  * Return the current 'done' status of a variable binding.
  * @param {!Selector.Part} part The part get status for.  Must be simple string.
- * @return {Do} The done status of the binding.
+ * @return {!Do} The done status of the binding.
  */
 ScopeDumper.prototype.getDone = function(part) {
   if (typeof part !== 'string') {
@@ -763,7 +763,7 @@ ScopeDumper.prototype.getDone = function(part) {
  * Update the current 'done' status of a variable binding.  Will throw
  * a RangeError if caller attempts to un-do a previously-done action.
  * @param {!Selector.Part} part The part set status for.  Must be simple string.
- * @param {Do} done The new done status of the binding.
+ * @param {!Do} done The new done status of the binding.
  */
 ScopeDumper.prototype.setDone = function(part, done) {
   if (typeof part !== 'string') {
@@ -887,17 +887,20 @@ ObjectDumper.prototype.checkProperty = function(key, value, attr, pd) {
 };
 
 /**
- * Generate JS source text to set the object's prototype.
+ * Recursively dump value (if requested and possible) by calling the
+ * .dump method of value's ObjectDumper, passing along the same todo
+ * value.
  * @private
  * @param {!Dumper} dumper Dumper to which this ObjectDumper belongs.
- * @param {Do} todo How much to do.  '' returned if todo < Do.RECURSE.
- * @param {!Selector} ref Selector refering to this object.
+ * @param {!Do} todo How much to do.  Nothing done if todo < Do.RECURSE.
+ * @param {!Selector} ref esSelector refering to this object.
  * @param {!Selector.Part} part The binding part that has been dumped
  *     and which might need to be recursed into.
  * @param {Interpreter.Value} value The value of the specified part.
- *     '' returned if value not an Interpreter.prototype.Object.
+ *     Nothing done if value not an Interpreter.prototype.Object.
  */
-ObjectDumper.prototype.checkRecurse_ = function(dumper, todo, ref, part, value) {
+ObjectDumper.prototype.checkRecurse_ = function(
+    dumper, todo, ref, part, value) {
   if (todo < Do.RECURSE) return;  // No recursion requested.
   if (value instanceof dumper.intrp.Object) {
     // TODO(cpcallen): don't recreate a Selector that our caller already has.
@@ -967,7 +970,7 @@ ObjectDumper.prototype.dump = function(dumper, ref) {
  * binding (property or internal slot) of the object.
  * @param {!Dumper} dumper Dumper to which this ObjectDumper belongs.
  * @param {!Selector.Part} part The binding part to dump.
- * @param {Do} todo How much to do.  Must be >= Do.DECL; > Do.SET ignored.
+ * @param {!Do} todo How much to do.  Must be >= Do.DECL; > Do.SET ignored.
  * @param {!Selector=} ref Selector refering to this object.
  *     Optional; defaults to whatever selector was used to create the
  *     object.
@@ -990,7 +993,7 @@ ObjectDumper.prototype.dumpBinding = function(dumper, part, todo, ref) {
  * Generate JS source text to set the object's owner.
  * @private
  * @param {!Dumper} dumper Dumper to which this ObjectDumper belongs.
- * @param {Do} todo How much to do.  Must be >= Do.DECL; > Do.SET ignored.
+ * @param {!Do} todo How much to do.  Must be >= Do.DECL; > Do.SET ignored.
  * @param {!Selector} ref Selector refering to this object.
  */
 ObjectDumper.prototype.dumpOwner_ = function(dumper, todo, ref) {
@@ -1010,7 +1013,7 @@ ObjectDumper.prototype.dumpOwner_ = function(dumper, todo, ref) {
  * Generate JS source text to create and/or initialize a single
  * binding (property or internal slot) of the object.  The output will
  * consist of:
-
+ *
  * - An assignment statement to create the property and/or set its
  *   value, if necessary and possible.
  * - A call to Object.defineProperty, to set the property's attributes
@@ -1020,7 +1023,7 @@ ObjectDumper.prototype.dumpOwner_ = function(dumper, todo, ref) {
  * @private
  * @param {!Dumper} dumper Dumper to which this ObjectDumper belongs.
  * @param {string} key The property to dump.
- * @param {Do} todo How much to do.
+ * @param {!Do} todo How much to do.
  * @param {!Selector} ref Selector refering to this object.
  */
 ObjectDumper.prototype.dumpProperty_ = function(dumper, key, todo, ref) {
@@ -1088,7 +1091,7 @@ ObjectDumper.prototype.dumpProperty_ = function(dumper, key, todo, ref) {
  * Generate JS source text to set the object's prototype.
  * @private
  * @param {!Dumper} dumper Dumper to which this ObjectDumper belongs.
- * @param {Do} todo How much to do.  Must be >= Do.DECL; > Do.SET ignored.
+ * @param {!Do} todo How much to do.  Must be >= Do.DECL; > Do.SET ignored.
  * @param {!Selector} ref Selector refering to this object.
  */
 ObjectDumper.prototype.dumpPrototype_ = function(dumper, todo, ref) {
@@ -1108,7 +1111,7 @@ ObjectDumper.prototype.dumpPrototype_ = function(dumper, todo, ref) {
 /**
  * Return the current 'done' status of an object binding.
  * @param {!Selector.Part} part The part to get status for.
- * @return {Do} The done status of the binding.
+ * @return {!Do} The done status of the binding.
  */
 ObjectDumper.prototype.getDone = function(part) {
   if (part === Selector.PROTOTYPE) {
@@ -1166,7 +1169,7 @@ ObjectDumper.prototype.scheduleDeletion = function(key) {
  * RangeError if caller attempts to un-do or re-do a previously-done
  * action.
  * @param {!Selector.Part} part The part to set status for.
- * @param {Do} done The new done status of the binding.
+ * @param {!Do} done The new done status of the binding.
  */
 ObjectDumper.prototype.setDone = function(part, done) {
   var old = this.getDone(part);
@@ -1360,7 +1363,7 @@ ContentEntry.prototype.path;
 
 /**
  * Do is what to to do with the specified path.
- * @type {Do}
+ * @type {!Do}
  */
 ContentEntry.prototype.do;
 
