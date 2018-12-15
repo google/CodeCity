@@ -86,9 +86,9 @@ var Dumper = function(intrp, pristine, spec) {
    * Map from pristine objects to their corresponding intrp objects.
    * This is mainly for checking to see if builtins have had their
    * prototype or object-valued properties modified.
-   * @type {!Map<!Interpreter.prototype.Object, !Interpreter.prototype.Object>}
+   * @type {!Map<?Interpreter.prototype.Object, ?Interpreter.prototype.Object>}
    */
-  var intrpObjs = new Map();
+  var intrpObjs = new Map([[null, null]]);
   // Initialise intrpObjs.
   var builtins = pristine.builtins.keys();
   for (var i = 0; i < builtins.length; i++) {
@@ -136,11 +136,11 @@ var Dumper = function(intrp, pristine, spec) {
     var objDumper = this.getObjectDumper(obj);
     pobj = pristine.builtins.get(builtin);
     // Record pre-set prototype.
-    objDumper.proto = (pobj.proto === null) ? null : intrpObjs.get(pobj.proto);
+    objDumper.proto = intrpObjs.get(pobj.proto);
     objDumper.doneProto = (obj.proto === objDumper.proto) ? Do.DONE : Do.DECL;
     // Record pre-set owner.
-    var owner = (pobj.owner === null) ? null :
-        intrpObjs.get(/** @type{!Interpreter.prototype.Object} */(pobj.owner));
+    var owner = 
+        intrpObjs.get(/** @type{?Interpreter.prototype.Object} */(pobj.owner));
     objDumper.doneOwner =
         (obj.owner === /** @type{?Interpreter.Owner} */(owner)) ?
         Do.DONE : Do.DECL;
