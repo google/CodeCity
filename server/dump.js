@@ -887,7 +887,7 @@ ObjectDumper.prototype.checkProperty = function(key, value, attr, pd) {
 };
 
 /**
- * Rx jecursively dumps all bindings of the object (and objects reachable
+ * Recursively dumps all bindings of the object (and objects reachable
  * via it).
  * @param {!Dumper} dumper Dumper to which this ObjectDumper belongs.
  * @param {!Selector=} ref Selector refering to this object.
@@ -1006,8 +1006,7 @@ ObjectDumper.prototype.dumpOwner_ = function(dumper, todo, ref) {
  * @return {Interpreter.Value} The value of the specified property.
  */
 ObjectDumper.prototype.dumpProperty_ = function(dumper, key, todo, ref) {
-  var sel = new Selector(ref);
-  sel.push(key);
+  var sel = new Selector(ref.concat(key));
   var pd = this.obj.getOwnPropertyDescriptor(key, dumper.intrp.ROOT);
   if (!pd) throw new RangeError("Can't dump nonexistent property " + sel);
 
