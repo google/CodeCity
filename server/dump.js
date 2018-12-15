@@ -902,6 +902,7 @@ ObjectDumper.prototype.checkProperty = function(key, value, attr, pd) {
 ObjectDumper.prototype.checkRecurse_ = function(
     dumper, todo, ref, part, value) {
   if (todo < Do.RECURSE) return;  // No recursion requested.
+  if (this.getDone(part) >= Do.RECURSE) return;  // Already done.
   if (value instanceof dumper.intrp.Object) {
     // TODO(cpcallen): don't recreate a Selector that our caller already has.
     var sel = new Selector(ref);
@@ -940,20 +941,12 @@ ObjectDumper.prototype.dump = function(dumper, ref) {
       sel.pop();
     }
   }
-  // Dump prototype.
-  if (this.doneProto < Do.RECURSE) {
-    this.dumpBinding(dumper, Selector.PROTOTYPE, Do.RECURSE, ref);
-  }
-  // Dump owner.
-  if (this.doneOwner < Do.RECURSE) {
-    this.dumpBinding(dumper, Selector.OWNER, Do.RECURSE, ref);
-  }
-  // Dump properties.
+  // Dump prototype, owner, and properties.
   var keys = this.obj.ownKeys(dumper.intrp.ROOT);
-  for (var i = 0; i < keys.length; i++) {
-    var key = keys[i];
-    if (this.getDone(key) >= Do.RECURSE) continue;  // Skip already-done.
-    this.dumpProperty_(dumper, key, Do.RECURSE, ref);
+  var parts = [Selector.PROTOTYPE, Selector.OWNER].concat(keys);
+  for (i = 0; i < parts.length; i++) {
+    var part = parts[i];
+    this.dumpBinding(dumper, part, Do.RECURSE, ref);
   }
   // TODO(cpcallen): Dump internal elements.
   // Dump extensibility.
