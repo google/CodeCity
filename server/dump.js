@@ -950,16 +950,18 @@ ObjectDumper.prototype.dumpBinding = function(dumper, part, todo, ref) {
     throw new Error("Can't dump an unreferencable object");
   }
   if (part === Selector.PROTOTYPE) {
-    var value = this.dumpPrototype_(dumper, todo, ref);
+    var r = this.dumpPrototype_(dumper, todo, ref);
   } else if (part === Selector.OWNER) {
-    value = this.dumpOwner_(dumper, todo, ref);
+    r = this.dumpOwner_(dumper, todo, ref);
   } else if (typeof part === 'string') {
-    value = this.dumpProperty_(dumper, part, todo, ref);
+    r = this.dumpProperty_(dumper, part, todo, ref);
   } else {
     throw new Error('Invalid part');
   }
+  var done = r.done;
+  var value = r.value;
   if (todo < Do.RECURSE) return;  // No recursion requested.
-  if (this.getDone(part) >= Do.RECURSE) return;  // Already done.
+  if (done >= Do.RECURSE) return;  // Already done.
   if (value instanceof dumper.intrp.Object) {
     // TODO(cpcallen): don't recreate a Selector that dump* already had.
     var sel = new Selector(ref.concat(part));
@@ -975,7 +977,9 @@ ObjectDumper.prototype.dumpBinding = function(dumper, part, todo, ref) {
  * @param {!Dumper} dumper Dumper to which this ObjectDumper belongs.
  * @param {!Do} todo How much to do.  Must be >= Do.DECL; > Do.SET ignored.
  * @param {!Selector} ref Selector refering to this object.
- * @return {Interpreter.Value} The value of the object's [[Owner]].
+ * @return {{done: !Do, value: Interpreter.Value}} The done status of
+ *     the [[Owner]] binding and the value of the object's [[Owner]]
+ *     slot.
  */
 ObjectDumper.prototype.dumpOwner_ = function(dumper, todo, ref) {
   var sel = new Selector(ref.concat(Selector.OWNER));
@@ -986,7 +990,7 @@ ObjectDumper.prototype.dumpOwner_ = function(dumper, todo, ref) {
                  dumper.exprFor(value, sel), ');\n');
     this.doneOwner = Do.DONE;
   }
-  return value;
+  return {done: this.doneOwner, value};
 };
 
 /**
@@ -1003,7 +1007,8 @@ ObjectDumper.prototype.dumpOwner_ = function(dumper, todo, ref) {
  * @param {string} key The property to dump.
  * @param {!Do} todo How much to do.
  * @param {!Selector} ref Selector refering to this object.
- * @return {Interpreter.Value} The value of the specified property.
+ * @return {{done: !Do, value: Interpreter.Value}} The done status of
+ *     the specified property and its (ultimate/actual) value.
  */
 ObjectDumper.prototype.dumpProperty_ = function(dumper, key, todo, ref) {
   var sel = new Selector(ref.concat(key));
@@ -1061,7 +1066,7 @@ ObjectDumper.prototype.dumpProperty_ = function(dumper, key, todo, ref) {
       done = this.checkProperty(key, value, attr, pd);
     }
   }
-  return pd.value;
+  return {done: done, value: pd.value};
 };
 
 /**
@@ -1070,7 +1075,9 @@ ObjectDumper.prototype.dumpProperty_ = function(dumper, key, todo, ref) {
  * @param {!Dumper} dumper Dumper to which this ObjectDumper belongs.
  * @param {!Do} todo How much to do.  Must be >= Do.DECL; > Do.SET ignored.
  * @param {!Selector} ref Selector refering to this object.
- * @return {Interpreter.Value} The value of the object's [[Prototype]].
+ * @return {{done: !Do, value: Interpreter.Value}} The done status of
+ *     the [[Owner]] binding and the value of the object's [[Owner]]
+ *     slot.
  */
 ObjectDumper.prototype.dumpPrototype_ = function(dumper, todo, ref) {
   var sel = new Selector(ref.concat(Selector.PROTOTYPE));
@@ -1082,7 +1089,7 @@ ObjectDumper.prototype.dumpPrototype_ = function(dumper, todo, ref) {
     this.proto = value;
     this.doneProto = Do.DONE;
   }
-  return value;
+  return {done: this.doneProto, value: value};
 };
 
 /**
