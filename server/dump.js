@@ -936,12 +936,13 @@ ObjectDumper.prototype.dumpBinding = function(dumper, part, todo, ref) {
   if (!ref) {
     throw new Error("Can't dump an unreferencable object");
   }
+  var sel = new Selector(ref.concat(part));
   if (part === Selector.PROTOTYPE) {
-    var r = this.dumpPrototype_(dumper, todo, ref);
+    var r = this.dumpPrototype_(dumper, todo, ref, sel);
   } else if (part === Selector.OWNER) {
-    r = this.dumpOwner_(dumper, todo, ref);
+    r = this.dumpOwner_(dumper, todo, ref, sel);
   } else if (typeof part === 'string') {
-    r = this.dumpProperty_(dumper, part, todo, ref);
+    r = this.dumpProperty_(dumper, part, todo, ref, sel);
   } else {
     throw new Error('Invalid part');
   }
@@ -949,8 +950,6 @@ ObjectDumper.prototype.dumpBinding = function(dumper, part, todo, ref) {
   var value = r.value;
   if (todo >= Do.RECURSE && done < Do.RECURSE &&
       value instanceof dumper.intrp.Object) {
-    // TODO(cpcallen): don't recreate a Selector that dump* already had.
-    var sel = new Selector(ref.concat(part));
     dumper.getObjectDumper(value).dump(dumper, sel);
     this.setDone(part, todo);
   }
@@ -962,12 +961,12 @@ ObjectDumper.prototype.dumpBinding = function(dumper, part, todo, ref) {
  * @param {!Dumper} dumper Dumper to which this ObjectDumper belongs.
  * @param {!Do} todo How much to do.  Must be >= Do.DECL; > Do.SET ignored.
  * @param {!Selector} ref Selector refering to this object.
+ * @param {!Selector} sel Selector refering to this object's [[Owner]] slot.
  * @return {{done: !Do, value: Interpreter.Value}} The done status of
  *     the [[Owner]] binding and the value of the object's [[Owner]]
  *     slot.
  */
-ObjectDumper.prototype.dumpOwner_ = function(dumper, todo, ref) {
-  var sel = new Selector(ref.concat(Selector.OWNER));
+ObjectDumper.prototype.dumpOwner_ = function(dumper, todo, ref, sel) {
   var value = /** @type {?Interpreter.prototype.Object} */(this.obj.owner);
   if (todo >= Do.SET && this.doneOwner < Do.SET) {
     dumper.write(dumper.exprForBuiltin('Object.setOwnerOf'), '(',
@@ -992,11 +991,11 @@ ObjectDumper.prototype.dumpOwner_ = function(dumper, todo, ref) {
  * @param {string} key The property to dump.
  * @param {!Do} todo How much to do.
  * @param {!Selector} ref Selector refering to this object.
+ * @param {!Selector} sel Selector refering to key.
  * @return {{done: !Do, value: Interpreter.Value}} The done status of
  *     the specified property and its (ultimate/actual) value.
  */
-ObjectDumper.prototype.dumpProperty_ = function(dumper, key, todo, ref) {
-  var sel = new Selector(ref.concat(key));
+ObjectDumper.prototype.dumpProperty_ = function(dumper, key, todo, ref, sel) {
   var pd = this.obj.getOwnPropertyDescriptor(key, dumper.intrp.ROOT);
   if (!pd) throw new RangeError("Can't dump nonexistent property " + sel);
 
@@ -1060,12 +1059,12 @@ ObjectDumper.prototype.dumpProperty_ = function(dumper, key, todo, ref) {
  * @param {!Dumper} dumper Dumper to which this ObjectDumper belongs.
  * @param {!Do} todo How much to do.  Must be >= Do.DECL; > Do.SET ignored.
  * @param {!Selector} ref Selector refering to this object.
+ * @param {!Selector} sel Selector refering to this object's [[Prototype]] slot.
  * @return {{done: !Do, value: Interpreter.Value}} The done status of
  *     the [[Owner]] binding and the value of the object's [[Owner]]
  *     slot.
  */
-ObjectDumper.prototype.dumpPrototype_ = function(dumper, todo, ref) {
-  var sel = new Selector(ref.concat(Selector.PROTOTYPE));
+ObjectDumper.prototype.dumpPrototype_ = function(dumper, todo, ref, sel) {
   var value = this.obj.proto;
   if (todo >= Do.SET && this.doneProto < Do.SET) {
     dumper.write(dumper.exprForBuiltin('Object.setPrototypeOf'), '(',
