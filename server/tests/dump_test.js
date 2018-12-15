@@ -353,7 +353,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         "Object.prototype = new 'Object.prototype';\n"],
     ['Object.prototype.bar', Do.SET, "Object.prototype.bar = 'bar';\n"],
     ['Object.prototype.bar', Do.ATTR, "(new 'Object.defineProperty')(" +
-        "Object.prototype, 'bar', {writable: false});\n"],
+        "Object.prototype, 'bar', {writable: false});\n", Do.RECURSE],
     ['Object.defineProperty', Do.SET,
         "Object.defineProperty = new 'Object.defineProperty';\n"],
 
@@ -361,7 +361,8 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     ['CC.root', Do.RECURSE, "CC.root = new 'CC.root';\n"],
 
     ['obj', Do.SET, 'var obj = {};\n', Do.DONE],
-    ['obj', Do.RECURSE, 'obj.a = 1;\nobj.b = 2;\nobj.c = 3;\n'],
+    ['obj.a', Do.SET, 'obj.a = 1;\n', Do.RECURSE],
+    ['obj', Do.RECURSE, 'obj.b = 2;\nobj.c = 3;\n'],
     ['nullProtoObj', Do.RECURSE,
         "var nullProtoObj = (new 'Object.create')(null);\n"],
 
@@ -375,16 +376,18 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     ['child1.foo', Do.DECL, 'child1.foo = undefined;\n'],
     ['child1.foo', Do.SET, "child1.foo = 'foo2';\n"],
     ['child1.foo', Do.ATTR,
-        "Object.defineProperty(child1, 'foo', {enumerable: false});\n"],
+        "Object.defineProperty(child1, 'foo', {enumerable: false});\n",
+        Do.RECURSE],
     ['child2^', Do.SET, "(new 'Object.setPrototypeOf')(child2, parent);\n",
         Do.DONE],
     ['child2.foo', Do.DECL, "Object.defineProperty(child2, 'foo', " +
         '{writable: true, enumerable: true, configurable: true});\n'],
     ['child2.foo', Do.SET, "child2.foo = 'foo2';\n"],
     ['child2.foo', Do.ATTR,
-        "Object.defineProperty(child2, 'foo', {enumerable: false});\n"],
+        "Object.defineProperty(child2, 'foo', {enumerable: false});\n",
+        Do.RECURSE],
     ['child2.bar', Do.SET, "Object.defineProperty(child2, 'bar', " +
-        "{writable: true, enumerable: true, value: 'bar2'});\n", Do.ATTR],
+        "{writable: true, enumerable: true, value: 'bar2'});\n", Do.RECURSE],
     ['child2', Do.RECURSE, '(new \'Object.preventExtensions\')(child2);\n'],
 
     ['child3', Do.RECURSE, "var child3 = (new 'Object.create')(parent);\n"],
@@ -398,8 +401,8 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     ['f2', Do.SET, 'var f2 = function(arg) {};\n', Do.DONE],
     ['f2.f3', Do.DECL, 'f2.f3 = undefined;\n'],
     ['f2.f3', Do.SET, 'f2.f3 = function f4(arg) {};\n', Do.ATTR],
-    ['f2.undef', Do.DECL, 'f2.undef = undefined;\n', Do.ATTR],
-    ['f2.f3^', Do.SET, 'Object.setPrototypeOf(f2.f3, null);\n', Do.DONE],
+    ['f2.undef', Do.DECL, 'f2.undef = undefined;\n', Do.RECURSE],
+    ['f2.f3^', Do.SET, 'Object.setPrototypeOf(f2.f3, null);\n', Do.RECURSE],
     ['f2.f3', Do.RECURSE, "delete f2.f3.name;\nf2.f3.prototype = obj;\n"],
 
     // TODO(cpcallen): Realy want 'var arr = [42, 69, 105, obj];\n'.
@@ -433,7 +436,8 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     ['error2', Do.RECURSE, "error2.stack = 'stack2';\n"],
     ['error3', Do.SET, 'var error3 = new Error();\n', Do.DONE],
     ['error3.message', Do.ATTR, 'error3.message = 69;\n' +
-        "Object.defineProperty(error3, 'message', {writable: false});\n"],
+        "Object.defineProperty(error3, 'message', {writable: false});\n",
+        Do.RECURSE],
     ['error3', Do.RECURSE, 'delete error3.stack;\n' +
         'Object.setPrototypeOf(error3, error1);\n'],
 
@@ -470,22 +474,25 @@ exports.testDumperPrototypeDumpBinding = function(t) {
   // they should be removed.
   const implicit = [
     // [ selector, expected done, expected value (as selector) ]
-    ['Object.length', Do.ATTR],
+    ['Object.length', Do.RECURSE],
     ['Object.name', Do.SET],
 
     ['obj^', Do.RECURSE, 'Object.prototype'],
+    ['obj.b', Do.RECURSE],
+    ['obj.c', Do.RECURSE],
+
     ['child1^', Do.DECL],
     ['child2^', Do.RECURSE, 'parent'],
     ['child3^', Do.RECURSE, 'parent'],
 
     ['f1^', Do.DONE],
-    ['f1.length', Do.ATTR],
-    ['f1.name', Do.ATTR],
+    ['f1.length', Do.RECURSE],
+    ['f1.name', Do.RECURSE],
     ['f1.prototype', Do.SET, 'f1.prototype'],
     ['f1.prototype.constructor', Do.SET, 'f1'],
     ['f2^', Do.DECL],
-    ['f2.length', Do.ATTR],
-    ['f2.name', Do.ATTR],
+    ['f2.length', Do.RECURSE],
+    ['f2.name', Do.RECURSE],
     ['f2.prototype', Do.DECL, 'Object.prototype'],
     ['f2.f3^', Do.RECURSE],
     ['f2.f3.length', Do.RECURSE],
@@ -514,11 +521,11 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     ['re2.multiline', Do.RECURSE],
     ['re2.lastIndex', Do.RECURSE],
     ['re3^', Do.DONE, 're1'],
-    ['re3.source', Do.ATTR],
-    ['re3.global', Do.ATTR],
-    ['re3.ignoreCase', Do.ATTR],
-    ['re3.multiline', Do.ATTR],
-    ['re3.lastIndex', Do.ATTR],
+    ['re3.source', Do.RECURSE],
+    ['re3.global', Do.RECURSE],
+    ['re3.ignoreCase', Do.RECURSE],
+    ['re3.multiline', Do.RECURSE],
+    ['re3.lastIndex', Do.RECURSE],
 
     ['error1.message', Do.RECURSE],
     ['error2.message', Do.RECURSE],

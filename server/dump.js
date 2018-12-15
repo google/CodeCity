@@ -165,7 +165,8 @@ var Dumper = function(intrp, pristine, spec) {
           intrpObjs.get(ppd.value) : ppd.value;
       if (Object.is(pd.value, value)) {
         if (doneAttrs) {
-          objDumper.setDone(key, Do.ATTR);
+          objDumper.setDone(key,
+                            (typeof value === 'object') ? Do.ATTR : Do.RECURSE);
         } else {
           objDumper.setDone(key, Do.SET);
         }
@@ -372,7 +373,7 @@ Dumper.prototype.exprForFunction = function(func, funcDumper, funcName) {
   // The .length property will be set implicitly (and is immutable).
   funcDumper.attributes['length'] =
       {writable: false, enumerable: false, configurable: false};
-  funcDumper.setDone('length', Do.ATTR);
+  funcDumper.setDone('length', Do.RECURSE);
   // The .name property is often set automatically.
   // TODO(ES6): Handle prefix?
   if (funcName === undefined && func.node['id']) {
@@ -434,7 +435,7 @@ Dumper.prototype.exprForArray = function(arr, arrDumper) {
       {writable: true, enumerable: false, configurable: false};
   if (lastIndex < 0 || arr.getOwnPropertyDescriptor(String(lastIndex),  root)) {
     // No need to set .length if it will be set via setting final index.
-    arrDumper.setDone('length', Do.ATTR);
+    arrDumper.setDone('length', Do.RECURSE);
   } else {
     // Length exists; don't worry about it when preserving propery order.
     arrDumper.setDone('length', Do.DECL);
@@ -467,13 +468,13 @@ Dumper.prototype.exprForRegExp = function(re, reDumper) {
   for (var prop, i = 0; prop = props[i]; i++) {
     reDumper.attributes[prop] =
         {writable: false, enumerable: false, configurable: false};
-    reDumper.setDone(prop, Do.ATTR);
+    reDumper.setDone(prop, Do.RECURSE);
   }
   reDumper.attributes['lastIndex'] =
       {writable: true, enumerable: false, configurable: false};
   if (Object.is(re.get('lastIndex', this.intrp.ROOT), 0)) {
     // Can skip setting .lastIndex iff it is 0.
-    reDumper.setDone('lastIndex', Do.ATTR);
+    reDumper.setDone('lastIndex', Do.RECURSE);
   } else {
     reDumper.setDone('lastIndex', Do.DECL);
   }
@@ -878,7 +879,7 @@ ObjectDumper.prototype.checkProperty = function(key, value, attr, pd) {
   } else if (attr.writable === pd.writable &&
       attr.enumerable === pd.enumerable &&
       attr.configurable === pd.configurable) {
-    done = Do.ATTR;
+    done = (typeof value === 'object') ? Do.ATTR : Do.RECURSE;
   } else {
     done = Do.SET;
   }
@@ -960,15 +961,13 @@ ObjectDumper.prototype.dumpBinding = function(dumper, part, todo, ref) {
   }
   var done = r.done;
   var value = r.value;
-  if (todo < Do.RECURSE) return;  // No recursion requested.
-  if (done >= Do.RECURSE) return;  // Already done.
-  if (value instanceof dumper.intrp.Object) {
+  if (todo >= Do.RECURSE && done < Do.RECURSE &&
+      value instanceof dumper.intrp.Object) {
     // TODO(cpcallen): don't recreate a Selector that dump* already had.
     var sel = new Selector(ref.concat(part));
     dumper.getObjectDumper(value).dump(dumper, sel);
+    this.setDone(part, todo);
   }
-  // Record completion.
-  this.setDone(part, todo);
 };
 
 /**
@@ -988,7 +987,7 @@ ObjectDumper.prototype.dumpOwner_ = function(dumper, todo, ref) {
     dumper.write(dumper.exprForBuiltin('Object.setOwnerOf'), '(',
                  dumper.exprForSelector(ref), ', ',
                  dumper.exprFor(value, sel), ');\n');
-    this.doneOwner = Do.DONE;
+    this.doneOwner = (value === null) ? Do.RECURSE: Do.DONE;
   }
   return {done: this.doneOwner, value};
 };
@@ -1087,7 +1086,7 @@ ObjectDumper.prototype.dumpPrototype_ = function(dumper, todo, ref) {
                  dumper.exprForSelector(ref), ', ',
                  dumper.exprFor(value, sel), ');\n');
     this.proto = value;
-    this.doneProto = Do.DONE;
+    this.doneProto = (value === null) ? Do.RECURSE: Do.DONE;
   }
   return {done: this.doneProto, value: value};
 };
