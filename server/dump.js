@@ -942,11 +942,11 @@ ObjectDumper.prototype.dump = function(dumper, ref) {
   }
   // Dump prototype.
   if (this.doneProto < Do.RECURSE) {
-    this.dumpPrototype_(dumper, Do.RECURSE, ref);
+    this.dumpBinding(dumper, Selector.PROTOTYPE, Do.RECURSE, ref);
   }
   // Dump owner.
   if (this.doneOwner < Do.RECURSE) {
-    this.dumpOwner_(dumper, Do.RECURSE, ref);
+    this.dumpBinding(dumper, Selector.OWNER, Do.RECURSE, ref);
   }
   // Dump properties.
   var keys = this.obj.ownKeys(dumper.intrp.ROOT);
@@ -976,8 +976,13 @@ ObjectDumper.prototype.dump = function(dumper, ref) {
  *     object.
  */
 ObjectDumper.prototype.dumpBinding = function(dumper, part, todo, ref) {
-  if (!this.ref) throw new Error("Can't dump part of uncreated object");
+  if (this.proto === undefined) {
+    throw new Error("Can't dump part of uncreated object");
+  }
   if (!ref) ref = this.ref;
+  if (!ref) {
+    throw new Error("Can't dump an unreferencable object");
+  }
   if (part === Selector.PROTOTYPE) {
     return this.dumpPrototype_(dumper, todo, ref);
   } else if (part === Selector.OWNER) {
