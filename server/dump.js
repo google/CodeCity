@@ -90,7 +90,6 @@ var Dumper = function(intrp, pristine, spec) {
    */
   var intrpObjs = new Map();
   // Initialise intrpObjs.
-  var attrNames = ['writable', 'configurable', 'enumerable'];
   var builtins = pristine.builtins.keys();
   for (var i = 0; i < builtins.length; i++) {
     var builtin = builtins[i];
@@ -151,28 +150,15 @@ var Dumper = function(intrp, pristine, spec) {
       var key = keys[j];
       var pd = obj.getOwnPropertyDescriptor(key, intrp.ROOT);
       var ppd = pobj.getOwnPropertyDescriptor(key, pristine.ROOT);
-      var doneAttrs = true;
-      var attrs = {};
-      for (var k = 0; k < attrNames.length; k++) {
-        var attr = attrNames[k];
-        attrs[attr] = ppd[attr];
-        if (pd[attr] !== ppd[attr]) {
-          doneAttrs = false;
-        }
-      }
+      var attrs = {
+        writable: ppd.writable,
+        enumerable: ppd.enumerable,
+        configurable: ppd.configurable
+      };
       objDumper.attributes[key] = attrs;
       var value = ppd.value instanceof intrp.Object ?
           intrpObjs.get(ppd.value) : ppd.value;
-      if (Object.is(pd.value, value)) {
-        if (doneAttrs) {
-          objDumper.setDone(key,
-                            (typeof value === 'object') ? Do.ATTR : Do.RECURSE);
-        } else {
-          objDumper.setDone(key, Do.SET);
-        }
-      } else {
-        objDumper.setDone(key, Do.DECL);
-      }
+      objDumper.checkProperty(key, value, attrs, pd);
     }
   }
 
