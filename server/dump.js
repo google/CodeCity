@@ -887,35 +887,7 @@ ObjectDumper.prototype.checkProperty = function(key, value, attr, pd) {
 };
 
 /**
- * Recursively dump value (if requested and possible) by calling the
- * .dump method of value's ObjectDumper, passing along the same todo
- * value.
- * @private
- * @param {!Dumper} dumper Dumper to which this ObjectDumper belongs.
- * @param {!Do} todo How much to do.  Nothing done if todo < Do.RECURSE.
- * @param {!Selector} ref esSelector refering to this object.
- * @param {!Selector.Part} part The binding part that has been dumped
- *     and which might need to be recursed into.
- * @param {Interpreter.Value} value The value of the specified part.
- *     Nothing done if value not an Interpreter.prototype.Object.
- */
-ObjectDumper.prototype.checkRecurse_ = function(
-    dumper, todo, ref, part, value) {
-  if (todo < Do.RECURSE) return;  // No recursion requested.
-  if (this.getDone(part) >= Do.RECURSE) return;  // Already done.
-  if (value instanceof dumper.intrp.Object) {
-    // TODO(cpcallen): don't recreate a Selector that our caller already has.
-    var sel = new Selector(ref);
-    sel.push(part);
-    dumper.getObjectDumper(value).dump(dumper, sel);
-  }
-  // Record completion.
-  this.setDone(part, todo);
-  return;
-};
-
-/**
- * Recursively dumps all bindings of the object (and objects reachable
+ * Rx jecursively dumps all bindings of the object (and objects reachable
  * via it).
  * @param {!Dumper} dumper Dumper to which this ObjectDumper belongs.
  * @param {!Selector=} ref Selector refering to this object.
@@ -960,7 +932,8 @@ ObjectDumper.prototype.dump = function(dumper, ref) {
 
 /**
  * Generate JS source text to create and/or initialize a single
- * binding (property or internal slot) of the object.
+ * binding (property or internal slot) of the object, including
+ * recursively dumping value object if requested.
  * @param {!Dumper} dumper Dumper to which this ObjectDumper belongs.
  * @param {!Selector.Part} part The binding part to dump.
  * @param {!Do} todo How much to do.  Must be >= Do.DECL; > Do.SET ignored.
@@ -977,26 +950,35 @@ ObjectDumper.prototype.dumpBinding = function(dumper, part, todo, ref) {
     throw new Error("Can't dump an unreferencable object");
   }
   if (part === Selector.PROTOTYPE) {
-    return this.dumpPrototype_(dumper, todo, ref);
+    var value = this.dumpPrototype_(dumper, todo, ref);
   } else if (part === Selector.OWNER) {
-    return this.dumpOwner_(dumper, todo, ref);
+    value = this.dumpOwner_(dumper, todo, ref);
   } else if (typeof part === 'string') {
-    return this.dumpProperty_(dumper, part, todo, ref);
+    value = this.dumpProperty_(dumper, part, todo, ref);
   } else {
     throw new Error('Invalid part');
   }
+  if (todo < Do.RECURSE) return;  // No recursion requested.
+  if (this.getDone(part) >= Do.RECURSE) return;  // Already done.
+  if (value instanceof dumper.intrp.Object) {
+    // TODO(cpcallen): don't recreate a Selector that dump* already had.
+    var sel = new Selector(ref.concat(part));
+    dumper.getObjectDumper(value).dump(dumper, sel);
+  }
+  // Record completion.
+  this.setDone(part, todo);
 };
 
 /**
- * Generate JS source text to set the object's owner.
+ * Generate JS source text to set the object's [[Owner]].
  * @private
  * @param {!Dumper} dumper Dumper to which this ObjectDumper belongs.
  * @param {!Do} todo How much to do.  Must be >= Do.DECL; > Do.SET ignored.
  * @param {!Selector} ref Selector refering to this object.
+ * @return {Interpreter.Value} The value of the object's [[Owner]].
  */
 ObjectDumper.prototype.dumpOwner_ = function(dumper, todo, ref) {
-  var sel = new Selector(ref);
-  sel.push(Selector.OWNER);
+  var sel = new Selector(ref.concat(Selector.OWNER));
   var value = /** @type {?Interpreter.prototype.Object} */(this.obj.owner);
   if (todo >= Do.SET && this.doneOwner < Do.SET) {
     dumper.write(dumper.exprForBuiltin('Object.setOwnerOf'), '(',
@@ -1004,25 +986,24 @@ ObjectDumper.prototype.dumpOwner_ = function(dumper, todo, ref) {
                  dumper.exprFor(value, sel), ');\n');
     this.doneOwner = Do.DONE;
   }
-  this.checkRecurse_(dumper, todo, ref, Selector.OWNER, value);
+  return value;
 };
 
 /**
  * Generate JS source text to create and/or initialize a single
- * binding (property or internal slot) of the object.  The output will
- * consist of:
+ * property of the object.  The output will consist of:
  *
  * - An assignment statement to create the property and/or set its
  *   value, if necessary and possible.
  * - A call to Object.defineProperty, to set the property's attributes
  *   (and value, if the value couldn't be set by assignement), if
  *   necessary.
- * - Any code generated because of recursive dumping.
  * @private
  * @param {!Dumper} dumper Dumper to which this ObjectDumper belongs.
  * @param {string} key The property to dump.
  * @param {!Do} todo How much to do.
  * @param {!Selector} ref Selector refering to this object.
+ * @return {Interpreter.Value} The value of the specified property.
  */
 ObjectDumper.prototype.dumpProperty_ = function(dumper, key, todo, ref) {
   var sel = new Selector(ref);
@@ -1081,20 +1062,19 @@ ObjectDumper.prototype.dumpProperty_ = function(dumper, key, todo, ref) {
       done = this.checkProperty(key, value, attr, pd);
     }
   }
-
-  this.checkRecurse_(dumper, todo, ref, key, pd.value);
+  return pd.value;
 };
 
 /**
- * Generate JS source text to set the object's prototype.
+ * Generate JS source text to set the object's [[Prototype]].
  * @private
  * @param {!Dumper} dumper Dumper to which this ObjectDumper belongs.
  * @param {!Do} todo How much to do.  Must be >= Do.DECL; > Do.SET ignored.
  * @param {!Selector} ref Selector refering to this object.
+ * @return {Interpreter.Value} The value of the object's [[Prototype]].
  */
 ObjectDumper.prototype.dumpPrototype_ = function(dumper, todo, ref) {
-  var sel = new Selector(ref);
-  sel.push(Selector.PROTOTYPE);
+  var sel = new Selector(ref.concat(Selector.PROTOTYPE));
   var value = this.obj.proto;
   if (todo >= Do.SET && this.doneProto < Do.SET) {
     dumper.write(dumper.exprForBuiltin('Object.setPrototypeOf'), '(',
@@ -1103,7 +1083,7 @@ ObjectDumper.prototype.dumpPrototype_ = function(dumper, todo, ref) {
     this.proto = value;
     this.doneProto = Do.DONE;
   }
-  this.checkRecurse_(dumper, todo, ref, Selector.PROTOTYPE, value);
+  return value;
 };
 
 /**
