@@ -880,9 +880,11 @@ ObjectDumper.prototype.checkProperty = function(key, value, attr, pd) {
  * @param {!Selector=} ref Selector refering to this object.
  *     Optional; defaults to whatever selector was used to create the
  *     object.
+ * @return {!ObjectDumper.Done|undefined} Done status for object, or
+ *     undefined if there is a current dump or dumpBinding invocaion.
  */
 ObjectDumper.prototype.dump = function(dumper, ref) {
-  if (dumper.visiting.has(this)) return '';
+  if (dumper.visiting.has(this)) return undefined;
   dumper.visiting.add(this);
   if (this.proto === undefined) {
     throw new Error("Can't dump an uncreated object");
@@ -915,6 +917,7 @@ ObjectDumper.prototype.dump = function(dumper, ref) {
   }
   this.done = ObjectDumper.Done.DONE_RECURSIVELY;
   dumper.visiting.delete(this);
+  return this.done;
 };
 
 /**
@@ -927,6 +930,7 @@ ObjectDumper.prototype.dump = function(dumper, ref) {
  * @param {!Selector=} ref Selector refering to this object.
  *     Optional; defaults to whatever selector was used to create the
  *     object.
+ * @return {!Do} How much has been done on the specified binding.
  */
 ObjectDumper.prototype.dumpBinding = function(dumper, part, todo, ref) {
   if (this.proto === undefined) {
@@ -948,11 +952,13 @@ ObjectDumper.prototype.dumpBinding = function(dumper, part, todo, ref) {
   }
   var done = r.done;
   var value = r.value;
-  if (todo >= Do.RECURSE && done < Do.RECURSE &&
+  if (todo >= Do.RECURSE && done === Do.DONE &&
       value instanceof dumper.intrp.Object) {
     dumper.getObjectDumper(value).dump(dumper, sel);
-    this.setDone(part, todo);
+    done = Do.RECURSE;
+    this.setDone(part, done);
   }
+  return done;
 };
 
 /**
