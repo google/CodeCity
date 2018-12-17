@@ -824,7 +824,7 @@ var ObjectDumper = function(dumper, obj) {
   /** @type {!Selector|undefined} Reference to this object, once created. */
   this.ref = undefined;
   /** @type {!ObjectDumper.Done} How much has object been dumped? */
-  this.status = ObjectDumper.Done.NO;
+  this.done = ObjectDumper.Done.NO;
   /** @type {!Do} Has prototype been set? */
   this.doneProto = Do.DECL;  // Never need to 'declare' the [[Prototype]] slot!
   /**
@@ -890,8 +890,6 @@ ObjectDumper.prototype.checkProperty = function(key, value, attr, pd) {
  *     undefined if there is a current dump or dumpBinding invocaion.
  */
 ObjectDumper.prototype.dump = function(dumper, ref) {
-  if (dumper.visiting.has(this)) return undefined;
-  dumper.visiting.add(this);
   if (this.proto === undefined) {
     throw new Error("Can't dump an uncreated object");
   }
@@ -899,6 +897,14 @@ ObjectDumper.prototype.dump = function(dumper, ref) {
   if (!ref) {
     throw new Error("Can't dump an unreferencable object");
   }
+  if (dumper.visiting.has(this)) {
+    return undefined;
+  }
+  if (this.done === ObjectDumper.Done.DONE_RECURSIVELY) {
+    return this.done;
+  }
+  dumper.visiting.add(this);
+
   // Delete properties that shouldn't exist.
   if (this.toDelete) {
     var sel = new Selector(ref);
@@ -907,23 +913,36 @@ ObjectDumper.prototype.dump = function(dumper, ref) {
       dumper.write('delete ', dumper.exprForSelector(sel), ';\n');
       sel.pop();
     }
+    this.toDelete = null;
   }
   // Dump prototype, owner, and properties.
+  // Optimistically assume success until we find otherwise.
+  var /** !ObjectDumper.Done */ done = ObjectDumper.Done.DONE_RECURSIVELY;
   var keys = this.obj.ownKeys(dumper.intrp.ROOT);
   var parts = [Selector.PROTOTYPE, Selector.OWNER].concat(keys);
   for (i = 0; i < parts.length; i++) {
     var part = parts[i];
-    this.dumpBinding(dumper, part, Do.RECURSE, ref);
+    var b = this.dumpBinding(dumper, part, Do.RECURSE, ref, true);
+    if (b !== Do.RECURSE) {  // Including b === undefined.
+      done = /** @type {!ObjectDumper.Done} */(
+          Math.min(done, ObjectDumper.Done.DONE));
+    } else if (b < Do.DONE) {
+      done = /** @type {!ObjectDumper.Done} */(
+          Math.min(done, ObjectDumper.Done.NO));
+    }
   }
   // TODO(cpcallen): Dump internal elements.
-  // Dump extensibility.
-  if (!this.obj.isExtensible(dumper.intrp.ROOT)) {
-    dumper.write(dumper.exprForBuiltin('Object.preventExtensions'), '(',
-                 dumper.exprForSelector(ref), ');\n');
+  if (done) {
+    // Dump extensibility.
+    if (!this.obj.isExtensible(dumper.intrp.ROOT)) {
+      dumper.write(dumper.exprForBuiltin('Object.preventExtensions'), '(',
+                   dumper.exprForSelector(ref), ');\n');
+    }
   }
-  this.done = ObjectDumper.Done.DONE_RECURSIVELY;
+
+  this.done = done;
   dumper.visiting.delete(this);
-  return this.done;
+  return done;
 };
 
 /**
@@ -936,16 +955,26 @@ ObjectDumper.prototype.dump = function(dumper, ref) {
  * @param {!Selector=} ref Selector refering to this object.
  *     Optional; defaults to whatever selector was used to create the
  *     object.
- * @return {!Do} How much has been done on the specified binding.
+ * @param {boolean=} skipChecks Skip setup checks and visit recording.
+ *     To be used only when called from .dump on the same object.
+ * @return {!Do|undefined} How much has been done on the specified
+ *     binding, or undefined if there is a current dump or dumpBinding
+ *     invocaion.
  */
-ObjectDumper.prototype.dumpBinding = function(dumper, part, todo, ref) {
-  if (this.proto === undefined) {
-    throw new Error("Can't dump part of uncreated object");
+ObjectDumper.prototype.dumpBinding = function(
+    dumper, part, todo, ref, skipChecks) {
+  if (!skipChecks) { 
+    if (this.proto === undefined) {
+      throw new Error("Can't dump part of uncreated object");
+    }
+    if (!ref) ref = this.ref;
+    if (!ref) {
+      throw new Error("Can't dump an unreferencable object");
+    }
+    if (dumper.visiting.has(this)) return undefined;
+    dumper.visiting.add(this);
   }
-  if (!ref) ref = this.ref;
-  if (!ref) {
-    throw new Error("Can't dump an unreferencable object");
-  }
+
   var sel = new Selector(ref.concat(part));
   if (part === Selector.PROTOTYPE) {
     var r = this.dumpPrototype_(dumper, todo, ref, sel);
@@ -960,10 +989,14 @@ ObjectDumper.prototype.dumpBinding = function(dumper, part, todo, ref) {
   var value = r.value;
   if (todo >= Do.RECURSE && done === Do.DONE &&
       value instanceof dumper.intrp.Object) {
-    dumper.getObjectDumper(value).dump(dumper, sel);
-    done = Do.RECURSE;
-    this.setDone(part, done);
+    var d = dumper.getObjectDumper(value).dump(dumper, sel);
+    if (d === ObjectDumper.Done.DONE_RECURSIVELY) {
+      done = Do.RECURSE;
+      this.setDone(part, done);
+    }
   }
+
+  if (!skipChecks) dumper.visiting.delete(this);
   return done;
 };
 
@@ -1451,4 +1484,5 @@ exports.dump = dump;
 // For unit testing only!
 exports.testOnly = {
   Dumper: Dumper,
+  ObjectDumper: ObjectDumper,
 }
