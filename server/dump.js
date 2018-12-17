@@ -137,13 +137,15 @@ var Dumper = function(intrp, pristine, spec) {
     pobj = pristine.builtins.get(builtin);
     // Record pre-set prototype.
     objDumper.proto = intrpObjs.get(pobj.proto);
-    objDumper.doneProto = (obj.proto === objDumper.proto) ? Do.DONE : Do.DECL;
+    if (obj.proto === objDumper.proto) {
+      objDumper.doneProto = (obj.proto === null) ? Do.RECURSE : Do.DONE;
+    }
     // Record pre-set owner.
-    var owner = 
-        intrpObjs.get(/** @type{?Interpreter.prototype.Object} */(pobj.owner));
-    objDumper.doneOwner =
-        (obj.owner === /** @type{?Interpreter.Owner} */(owner)) ?
-        Do.DONE : Do.DECL;
+    var owner = /** @type{?Interpreter.Owner} */(
+        intrpObjs.get(/** @type{?Interpreter.prototype.Object} */(pobj.owner)));
+    if (obj.owner === owner) {
+      objDumper.doneOwner = (obj.owner === null) ? Do.RECURSE : Do.DONE;
+    }
     // Record pre-set property values/attributes.
     var keys = pobj.ownKeys(pristine.ROOT);
     for (var j = 0; j < keys.length; j++) {
@@ -260,9 +262,13 @@ Dumper.prototype.exprFor = function(value, selector, callable, funcName) {
     expr = this.exprForObject(value, objDumper);
   }
   // Do we need to set [[Prototype]]?  Not if it's already correct.
-  if (objDumper.proto == value.proto) objDumper.doneProto = Do.DONE;
+  if (value.proto === objDumper.proto) {
+    objDumper.doneProto = (value.proto === null) ? Do.RECURSE : Do.DONE;
+  }
   // Do we need to set [[Owner]]?  Not if it's already correct.
-  if (value.owner === this.perms) objDumper.doneOwner = Do.DONE;
+  if (value.owner === this.perms) {
+    objDumper.doneOwner = (value.owner === null) ? Do.RECURSE : Do.DONE;
+  }
   return expr;
 };
 

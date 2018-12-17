@@ -318,6 +318,8 @@ exports.testDumperPrototypeDumpBinding = function(t) {
       var bob = {};
       bob.thing = {};
       Object.setOwnerOf(bob.thing, bob);
+      var unowned = {};
+      Object.setOwnerOf(unowned, null);
 
       Object.defineProperty(Object.prototype, 'bar',
           {writable: false, enumerable: true, configurable: true,
@@ -358,13 +360,14 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         "Object.defineProperty = new 'Object.defineProperty';\n"],
 
     ['CC', Do.SET, 'var CC = {};\n', Do.DONE],
-    ['CC.root', Do.RECURSE, "CC.root = new 'CC.root';\n"],
+    ['CC.root', Do.SET, "CC.root = new 'CC.root';\n", Do.DONE],
+    // ['CC.root', Do.RECURSE, "CC.root = new 'CC.root';\n"],
 
     ['obj', Do.SET, 'var obj = {};\n', Do.DONE],
     ['obj.a', Do.SET, 'obj.a = 1;\n', Do.RECURSE],
     ['obj', Do.RECURSE, 'obj.b = 2;\nobj.c = 3;\n'],
-    ['nullProtoObj', Do.RECURSE,
-        "var nullProtoObj = (new 'Object.create')(null);\n"],
+    ['nullProtoObj', Do.SET,
+        "var nullProtoObj = (new 'Object.create')(null);\n", Do.DONE],
 
     // TODO(cpcallen): Really want "var child1 = {foo: 'foo'};\n".
     ['child1', Do.SET, 'var child1 = {};\n', Do.DONE],
@@ -449,6 +452,9 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         "Object.setOwnerOf = new 'Object.setOwnerOf';\n"],
     ['bob', Do.RECURSE, 'var bob = {};\nbob.thing = {};\n' +
         "Object.setOwnerOf(bob.thing, bob);\n"],
+    ['unowned', Do.SET, 'var unowned = {};\n', Do.DONE],
+    ['unowned{owner}', Do.SET, 'Object.setOwnerOf(unowned, null);\n',
+        Do.RECURSE],
   ];
   for (const tc of cases) {
     const s = new Selector(tc[0]);
@@ -477,9 +483,14 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     ['Object.length', Do.RECURSE],
     ['Object.name', Do.SET],
 
+    ['CC.root^', Do.RECURSE],
+    ['CC.root{owner}', Do.RECURSE],
+
     ['obj^', Do.RECURSE, 'Object.prototype'],
     ['obj.b', Do.RECURSE],
     ['obj.c', Do.RECURSE],
+    ['nullProtoObj^', Do.RECURSE],
+    ['nullProtoObj{owner}', Do.DONE],
 
     ['child1^', Do.DECL],
     ['child2^', Do.RECURSE, 'parent'],
