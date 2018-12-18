@@ -138,13 +138,15 @@ var Dumper = function(intrp, pristine, spec) {
     // Record pre-set prototype.
     objDumper.proto = intrpObjs.get(pobj.proto);
     if (obj.proto === objDumper.proto) {
-      objDumper.doneProto = (obj.proto === null) ? Do.RECURSE : Do.DONE;
+      objDumper.setDone(Selector.PROTOTYPE,
+                        (obj.proto === null) ? Do.RECURSE : Do.DONE);
     }
     // Record pre-set owner.
     var owner = /** @type{?Interpreter.Owner} */(
         intrpObjs.get(/** @type{?Interpreter.prototype.Object} */(pobj.owner)));
     if (obj.owner === owner) {
-      objDumper.doneOwner = (obj.owner === null) ? Do.RECURSE : Do.DONE;
+      objDumper.setDone(Selector.OWNER,
+                        (obj.owner === null) ? Do.RECURSE : Do.DONE);
     }
     // Record pre-set property values/attributes.
     var keys = pobj.ownKeys(pristine.ROOT);
@@ -263,11 +265,13 @@ Dumper.prototype.exprFor = function(value, selector, callable, funcName) {
   }
   // Do we need to set [[Prototype]]?  Not if it's already correct.
   if (value.proto === objDumper.proto) {
-    objDumper.doneProto = (value.proto === null) ? Do.RECURSE : Do.DONE;
+    objDumper.setDone(Selector.PROTOTYPE,
+                      (value.proto === null) ? Do.RECURSE : Do.DONE);
   }
   // Do we need to set [[Owner]]?  Not if it's already correct.
   if (value.owner === this.perms) {
-    objDumper.doneOwner = (value.owner === null) ? Do.RECURSE : Do.DONE;
+    objDumper.setDone(Selector.OWNER,
+                      (value.owner === null) ? Do.RECURSE : Do.DONE);
   }
   return expr;
 };
@@ -825,8 +829,8 @@ var ObjectDumper = function(dumper, obj) {
   this.ref = undefined;
   /** @type {!ObjectDumper.Done} How much has object been dumped? */
   this.done = ObjectDumper.Done.NO;
-  /** @type {!Do} Has prototype been set? */
-  this.doneProto = Do.DECL;  // Never need to 'declare' the [[Prototype]] slot!
+  /** @private @type {!Do} Has prototype been set? */
+  this.doneProto_ = Do.DECL;  // Never need to 'declare' the [[Prototype]] slot!
   /**
    * Current value of [[Prototype]] slot of obj at this point in dump.
    * Typically initially Object.prototype (or similar); will be ===
@@ -836,8 +840,8 @@ var ObjectDumper = function(dumper, obj) {
    * @type {?Interpreter.prototype.Object|undefined}
    */
   this.proto = undefined;
-  /** @type {!Do} Has owner been set? */
-  this.doneOwner = Do.DECL;  // Never need to 'declare' that object has owner!
+  /** @private @type {!Do} Has owner been set? */
+  this.doneOwner_ = Do.DECL;  // Never need to 'declare' that object has owner!
   /** @private @const {!Object<string, Do>} Done status of each property. */
   this.doneProp_ = Object.create(null);
   /**
@@ -963,7 +967,7 @@ ObjectDumper.prototype.dump = function(dumper, ref) {
  */
 ObjectDumper.prototype.dumpBinding = function(
     dumper, part, todo, ref, skipChecks) {
-  if (!skipChecks) { 
+  if (!skipChecks) {
     if (this.proto === undefined) {
       throw new Error("Can't dump part of uncreated object");
     }
@@ -1013,13 +1017,13 @@ ObjectDumper.prototype.dumpBinding = function(
  */
 ObjectDumper.prototype.dumpOwner_ = function(dumper, todo, ref, sel) {
   var value = /** @type {?Interpreter.prototype.Object} */(this.obj.owner);
-  if (todo >= Do.SET && this.doneOwner < Do.SET) {
+  if (todo >= Do.SET && this.doneOwner_ < Do.SET) {
     dumper.write(dumper.exprForBuiltin('Object.setOwnerOf'), '(',
                  dumper.exprForSelector(ref), ', ',
                  dumper.exprFor(value, sel), ');\n');
-    this.doneOwner = (value === null) ? Do.RECURSE: Do.DONE;
+    this.doneOwner_ = (value === null) ? Do.RECURSE: Do.DONE;
   }
-  return {done: this.doneOwner, value};
+  return {done: this.doneOwner_, value};
 };
 
 /**
@@ -1111,14 +1115,14 @@ ObjectDumper.prototype.dumpProperty_ = function(dumper, key, todo, ref, sel) {
  */
 ObjectDumper.prototype.dumpPrototype_ = function(dumper, todo, ref, sel) {
   var value = this.obj.proto;
-  if (todo >= Do.SET && this.doneProto < Do.SET) {
+  if (todo >= Do.SET && this.doneProto_ < Do.SET) {
     dumper.write(dumper.exprForBuiltin('Object.setPrototypeOf'), '(',
                  dumper.exprForSelector(ref), ', ',
                  dumper.exprFor(value, sel), ');\n');
     this.proto = value;
-    this.doneProto = (value === null) ? Do.RECURSE: Do.DONE;
+    this.doneProto_ = (value === null) ? Do.RECURSE: Do.DONE;
   }
-  return {done: this.doneProto, value: value};
+  return {done: this.doneProto_, value: value};
 };
 
 /**
@@ -1128,9 +1132,9 @@ ObjectDumper.prototype.dumpPrototype_ = function(dumper, todo, ref, sel) {
  */
 ObjectDumper.prototype.getDone = function(part) {
   if (part === Selector.PROTOTYPE) {
-    return this.doneProto;
+    return this.doneProto_;
   } else if (part === Selector.OWNER) {
-    return this.doneOwner;
+    return this.doneOwner_;
   } else if (typeof part === 'string') {
     return this.doneProp_[part] || Do.UNSTARTED;
   } else {
@@ -1166,7 +1170,8 @@ ObjectDumper.prototype.isWritable = function(dumper, key) {
 };
 
 /**
- * Record that the (ressurected) object will have a property, not on the original, that needs to be deleted.
+ * Record that the (ressurected) object will have a property, not on
+ * the original, that needs to be deleted.
  * @param {string} key The property key to delete.
  */
 ObjectDumper.prototype.scheduleDeletion = function(key) {
@@ -1196,9 +1201,9 @@ ObjectDumper.prototype.setDone = function(part, done) {
   }
   // Do set.
   if (part === Selector.PROTOTYPE) {
-    this.doneProto = done;
+    this.doneProto_ = done;
   } else if (part === Selector.OWNER) {
-    this.doneOwner = done;
+    this.doneOwner_ = done;
   } else if (typeof part === 'string') {
     this.doneProp_[part] = done;
   }
