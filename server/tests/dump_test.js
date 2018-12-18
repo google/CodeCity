@@ -467,9 +467,9 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     t.expect(util.format('Dumper.p.dumpBinding(<%s>, %o)', s, tc[1]),
              code, tc[2]);
     // Check work recorded.
-    const parentDumper  = dumper.getDumperForSelectorParent(s);
+    const {dumper: d, part} = dumper.getComponentsForSelector(s);
     t.expect(util.format('Binding status of <%s> (after dump)', s),
-        parentDumper.getDone(s[s.length - 1]), tc[3] || tc[1]);
+             d.getDone(part), tc[3] || tc[1]);
   }
 
   // Check status of (some of the) additional bindings that will be
@@ -554,9 +554,9 @@ exports.testDumperPrototypeDumpBinding = function(t) {
   ];
   for (const tc of implicit) {
     const s = new Selector(tc[0]);
-    const parentDumper  = dumper.getDumperForSelectorParent(s);
+    const {dumper: d, part} = dumper.getComponentsForSelector(s);
     t.expect(util.format('Binding status of <%s> (implicit)', s),
-        parentDumper.getDone(s[s.length - 1]), tc[1]);
+             d.getDone(part), tc[1]);
     if (tc[2]) {
       const objDumper = dumper.getObjectDumper(dumper.valueForSelector(s));
       t.expect(util.format('Ref for %s', s), String(objDumper.ref), tc[2]);

@@ -538,23 +538,34 @@ Dumper.prototype.exprForBuiltin = function(builtin) {
 };
 
 /**
- * Get ObjectDumper or ScopeDumper of the parent scope/object for the
- * given selector.
+ * Given Selector Selector([p_0, ... p_n]), get the 'parent'
+ * ObjectDumper or ScopeDumper (the one referenced by Selector([p_0,
+ * ... p_n-1])) plus the final part p_n.
+ *
+ * N.B.: the usage of 'components' here is analagous to that term's
+ * usage in interpreter.js but not identical: there is is a [scope,
+ * variable] tuple; here it is a {ScopeDumper/ObjectDumper,
+ * Selector.Part} tuple.
  * @param {!Selector} selector A selector for the binding in question.
- * @return {!ObjectDumper|!ScopeDumper};
+ * @param {!Interpreter.Scope=} scope Scope which selector is relative
+ *     to.  Defaults to current scope.
+ * @return {{dumper: (!ObjectDumper|!ScopeDumper), part: !Selector.Part}}
+ *     The dumper and part corresponding to selector.
  */
-Dumper.prototype.getDumperForSelectorParent = function(selector) {
+Dumper.prototype.getComponentsForSelector = function(selector, scope) {
   if (selector.isVar()) {
-    return this.getScopeDumper(this.scope);
+    var part = selector[0];
+    var dumper = this.getScopeDumper(this.scope);
   } else {
     var ref = new Selector(selector);
-    ref.pop();
+    part = ref.pop();
     var obj = this.valueForSelector(ref);
     if (!(obj instanceof this.intrp.Object)) {
-      throw new TypeError("Can't get dumper for primitive");
+      throw new TypeError("Can't set properties of primitive");
     }
-    return this.getObjectDumper(obj);
+    dumper = this.getObjectDumper(obj);
   }
+  return {dumper: dumper, part: part};
 };
 
 /**
