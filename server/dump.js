@@ -611,11 +611,11 @@ Dumper.prototype.exprForSelector = function(selector) {
  * binding an error is thrown.
  * @param {!Selector} selector A selector, specifiying a binding.
  * @param {!Interpreter.Scope=} scope Scope which selector is relative
- *     to.  Defaults to global scope.
+ *     to.  Defaults to the current scope.
  * @return {Interpreter.Value} The value of that binding.
  */
 Dumper.prototype.valueForSelector = function(selector, scope) {
-  if (!scope) scope = this.intrp.global;
+  if (!scope) scope = this.scope;
   if (selector.length < 1) throw RangeError('Zero-length selector??');
   var varname = selector[0];
   if (typeof varname !== 'string') throw TypeError('Invalid first part??');
@@ -642,13 +642,13 @@ Dumper.prototype.valueForSelector = function(selector, scope) {
 /**
  * Returns true if a given name is shadowed in the current scope.
  * @param {string} name Variable name that might be shadowed.
- * @param {!Interpreter.Scope=} scope Scope in which name is defind
- *     (default: the global scope).
+ * @param {!Interpreter.Scope=} scope Scope in which name is defind.
+ *     Defaults to the global scope.
  * @return {boolean} True iff name is bound in a scope between the
  *     current scope (this.scope) (inclusive) and scope (exclusive).
  */
 Dumper.prototype.isShadowed = function(name, scope) {
-  scope = scope || this.intrp.global;
+  if (!scope) scope = this.intrp.global;
   for (var s = this.scope; s !== scope; s = s.outerScope) {
     if (s === null) {
       throw Error("Looking for name '" + name + "' from non-enclosing scope??");
