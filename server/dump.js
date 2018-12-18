@@ -191,20 +191,8 @@ var Dumper = function(intrp, pristine, spec) {
  */
 Dumper.prototype.dumpBinding = function(selector, todo) {
   var preLength = this.output.length;
-  if (selector.isVar()) {
-    var ref = undefined;
-    var dumper = this.getScopeDumper(this.scope);
-  } else {
-    ref = new Selector(selector);
-    ref.pop();
-    var obj = this.valueForSelector(ref);
-    if (!(obj instanceof this.intrp.Object)) {
-      throw new TypeError("Can't set properties of primitive");
-    }
-    dumper = this.getObjectDumper(obj);
-  }
-  var part = selector[selector.length - 1];
-  dumper.dumpBinding(this, part, todo);
+  var c = this.getComponentsForSelector(selector);
+  c.dumper.dumpBinding(this, c.part, todo);
   return this.output.slice(preLength).join('');
 };
 
