@@ -1007,8 +1007,9 @@ ObjectDumper.prototype.dumpBinding = function(
     dumper.visiting.add(this);
   }
 
-  var done = this.getDone(part);
-  if (done  >= 0) {  // Negative values mean don't dump (yet).
+  try {
+    var done = this.getDone(part);
+    if (done  < 0) return done;  // Negative values mean don't dump (yet).
     var sel = new Selector(ref.concat(part));
     if (part === Selector.PROTOTYPE) {
       var r = this.dumpPrototype_(dumper, todo, ref, sel);
@@ -1029,10 +1030,10 @@ ObjectDumper.prototype.dumpBinding = function(
         this.setDone(part, done);
       }
     }
+    return done;
+  } finally {
+    if (!skipChecks) dumper.visiting.delete(this);
   }
-
-  if (!skipChecks) dumper.visiting.delete(this);
-  return done;
 };
 
 /**
