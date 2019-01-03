@@ -262,6 +262,8 @@ exports.testDumperPrototypeDumpBinding = function(t) {
   // Create various objects to dump.
   intrp.createThreadForSrc(`
       Object.defineProperty(Object, 'name', {writable: true});
+
+      var skip = 'not dumped';
       var obj = {a: 1, b: 2, c:3};
       var nullProtoObj = Object.create(null);
 
@@ -285,10 +287,10 @@ exports.testDumperPrototypeDumpBinding = function(t) {
       f2.f3 = function f4(arg) {};
       f2.undef = undefined;
       Object.setPrototypeOf(f2.f3, null);
-      f2.f3.prototype = obj;
+      f2.f3.prototype = parent;
       delete f2.f3.name;
 
-      var arr = [42, 69, 105, obj];
+      var arr = [42, 69, 105, child2];
       var sparse = [0, , 2];
       Object.setPrototypeOf(sparse, arr);
       sparse.length = 4;
@@ -330,13 +332,18 @@ exports.testDumperPrototypeDumpBinding = function(t) {
   // Create Dumper with pristine Interpreter instance to compare to.
   const pristine = new Interpreter();
   const dumper = new Dumper(intrp, pristine, simpleSpec);
-  // Set a few .done flags in advance, to limit recursive dumping of
-  // builtins in tests.
+  // Set a few object .done flags in advance, to limit recursive
+  // dumping of builtins in tests.
   for (const builtin of [intrp.OBJECT, intrp.FUNCTION, intrp.ARRAY,
                          intrp.REGEXP, intrp.ERROR, intrp.TYPE_ERROR,
                          intrp.RANGE_ERROR]) {
     dumper.getObjectDumper(builtin).done = ObjectDumper.Done.DONE_RECURSIVELY;
   };
+  // Set a few binding .done flags in advance to simulate deferred
+  // dumping.
+  for (const s of ['skip', 'obj.b']) {
+    dumper.markBinding(new Selector(s), Do.SKIP);
+  }
 
   // Check generated output for (and post-dump status of) specific bindings.
   const cases = [
@@ -366,9 +373,10 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     ['CC.root', Do.SET, "CC.root = new 'CC.root';\n", Do.DONE],
     // ['CC.root', Do.RECURSE, "CC.root = new 'CC.root';\n"],
 
+    ['skip', Do.RECURSE, '', Do.SKIP],
     ['obj', Do.SET, 'var obj = {};\n', Do.DONE],
     ['obj.a', Do.SET, 'obj.a = 1;\n', Do.RECURSE],
-    ['obj', Do.RECURSE, 'obj.b = 2;\nobj.c = 3;\n'],
+    ['obj', Do.RECURSE, 'obj.c = 3;\n', Do.DONE],
     ['nullProtoObj', Do.SET,
         "var nullProtoObj = (new 'Object.create')(null);\n", Do.DONE],
 
@@ -409,11 +417,11 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     ['f2.f3', Do.SET, 'f2.f3 = function f4(arg) {};\n', Do.ATTR],
     ['f2.undef', Do.DECL, 'f2.undef = undefined;\n', Do.RECURSE],
     ['f2.f3^', Do.SET, 'Object.setPrototypeOf(f2.f3, null);\n', Do.RECURSE],
-    ['f2.f3', Do.RECURSE, "delete f2.f3.name;\nf2.f3.prototype = obj;\n"],
+    ['f2.f3', Do.RECURSE, "delete f2.f3.name;\nf2.f3.prototype = parent;\n"],
 
     // TODO(cpcallen): Realy want 'var arr = [42, 69, 105, obj];\n'.
     ['arr', Do.RECURSE, 'var arr = [];\narr[0] = 42;\narr[1] = 69;\n' +
-        'arr[2] = 105;\narr[3] = obj;\n'],
+        'arr[2] = 105;\narr[3] = child2;\n'],
     // TODO(cpcallen): really want 'var sparse = [0, , 2];\nsparse.length = 4;'.
     ['sparse', Do.RECURSE, 'var sparse = [];\n' +
         'Object.setPrototypeOf(sparse, arr);\n' +
@@ -454,8 +462,9 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     ['alice.thing', Do.RECURSE, '', Do.DONE],
     ['Object.setOwnerOf', Do.SET,
         "Object.setOwnerOf = new 'Object.setOwnerOf';\n"],
+    // BUG(cpcallen): want result to be Do.RECURSE.
     ['bob', Do.RECURSE, 'var bob = {};\nbob.thing = {};\n' +
-        "Object.setOwnerOf(bob.thing, bob);\n"],
+        "Object.setOwnerOf(bob.thing, bob);\n", Do.DONE],
     ['unowned', Do.SET, 'var unowned = {};\n', Do.DONE],
     ['unowned{owner}', Do.SET, 'Object.setOwnerOf(unowned, null);\n',
         Do.RECURSE],
@@ -491,7 +500,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     ['CC.root{owner}', Do.RECURSE],
 
     ['obj^', Do.RECURSE, 'Object.prototype'],
-    ['obj.b', Do.RECURSE],
+    ['obj.b', Do.SKIP],
     ['obj.c', Do.RECURSE],
     ['nullProtoObj^', Do.RECURSE],
     ['nullProtoObj{owner}', Do.DONE],
@@ -513,7 +522,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     ['f2.f3.length', Do.RECURSE],
     // TODO(cpcallen): enable this once code is correct.
     // ['f2.f3.name', Do.UNSTARTED],  // N.B.: not implicitly set.
-    ['f2.f3.prototype', Do.RECURSE, 'obj'],
+    ['f2.f3.prototype', Do.RECURSE, 'parent'],
 
     ['arr^', Do.RECURSE],
     ['arr.length', Do.RECURSE],

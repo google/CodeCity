@@ -120,7 +120,7 @@ var Dumper = function(intrp, pristine, spec) {
       pval = intrpObjs.get(pval);
     }
     if (Object.is(val, pval)) {
-      globalDumper.setDone(v, Do.DONE);
+      globalDumper.setDone(v, (typeof val === 'object') ? Do.DONE : Do.RECURSE);
       if (val instanceof intrp.Object) {
         this.getObjectDumper(val).ref = new Selector(v);
         // Other initialialisation will be taken care of below.
@@ -168,6 +168,19 @@ var Dumper = function(intrp, pristine, spec) {
 
   // Survey objects accessible via global scope to find their outer scopes.
   globalDumper.survey(this);
+};
+
+/**
+ * Mark a particular binding (as specified by a Selector) with a
+ * certain done value (which, notably in the case of Do.PRUNE and
+ * Do.DEFER has the effect of causing subequent recursive dumps to
+ * ignore that property).
+ * @param {!Selector} selector The selector for the binding to be deferred.
+ * @param {!Do} done Do status to mark binding with.
+ */
+Dumper.prototype.markBinding = function(selector, done) {
+  var c = this.getComponentsForSelector(selector);
+  c.dumper.setDone(c.part, done);
 };
 
 /**
@@ -712,6 +725,7 @@ ScopeDumper.prototype.dump = function(dumper) {
  * @param {!Selector.Part} part The part to dump.  Must be simple string.
  * @param {!Do} todo How much to do.  Must be >= Do.DECL; > Do.SET ignored.
  * @param {!Selector=} ref Ignored.
+ * @return {!Do} How much has been done on the specified binding.
  */
 ScopeDumper.prototype.dumpBinding = function(dumper, part, todo, ref) {
   if (dumper.scope !== this.scope) {
@@ -723,24 +737,33 @@ ScopeDumper.prototype.dumpBinding = function(dumper, part, todo, ref) {
   var done = this.getDone(part);
   var value = this.scope.get(part);
 
-  if (todo >= Do.DECL && done < todo) {
-    if (done < Do.DECL) dumper.write('var ');
-    if (done < Do.SET) {
-      dumper.write(part);
-      if (todo >= Do.SET) {
-        dumper.write(' = ', dumper.exprFor(value, sel, false, part));
+  if (done >= 0) {  // Negative values mean don't dump (yet).
+    if (todo >= Do.DECL && done < todo && done <= Do.SET) {
+      if (done < Do.DECL) {
+        dumper.write('var ');
+        done = Do.DECL;
       }
-      dumper.write(';\n');
-      if (todo === Do.SET) todo = Do.DONE;  // Promote SET to DONE.
+      if (done < Do.SET) {
+        dumper.write(part);
+        if (todo >= Do.SET) {
+          dumper.write(' = ', dumper.exprFor(value, sel, false, part));
+          done = (typeof value === 'object') ? Do.DONE : Do.RECURSE;
+        }
+        dumper.write(';\n');
+      }
+      this.setDone(part, done);
+    }
+    if (todo >= Do.RECURSE && done < Do.RECURSE && 
+        value instanceof dumper.intrp.Object) {
+      var objDone = dumper.getObjectDumper(value).dump(dumper, sel);
+      if (objDone === ObjectDumper.Done.DONE_RECURSIVELY) {
+        done = Do.RECURSE;
+        this.setDone(part, done);
+      }
     }
   }
-  if (todo >= Do.RECURSE && done < Do.RECURSE) {
-    if (value instanceof dumper.intrp.Object) {
-      dumper.getObjectDumper(value).dump(dumper, sel);
-    }
-  }
-  // Record completion.
-  this.setDone(part, todo);
+
+  return done;
 };
 
 /**
@@ -764,8 +787,14 @@ ScopeDumper.prototype.getDone = function(part) {
 ScopeDumper.prototype.setDone = function(part, done) {
   if (typeof part !== 'string') {
     throw new TypeError('Invalid part (not a variable name)');
-  } else if (done < this.getDone(part)) {
-    throw new RangeError('Undoing previous variable binding??');
+  }
+  var old = this.getDone(part);
+
+  // Invariant checks.
+  if (old && done < old) {
+    throw new RangeError("Can't undo previous work on variable " + part);
+  } else if (old && done === old) {
+    throw new RangeError("Redundant work on variable " + part);
   }
   this.doneVar_[part] = done;
 };
@@ -962,7 +991,7 @@ ObjectDumper.prototype.dump = function(dumper, ref) {
  *     To be used only when called from .dump on the same object.
  * @return {!Do|undefined} How much has been done on the specified
  *     binding, or undefined if there is a current dump or dumpBinding
- *     invocaion.
+ *     invocaion for this object.
  */
 ObjectDumper.prototype.dumpBinding = function(
     dumper, part, todo, ref, skipChecks) {
@@ -978,24 +1007,27 @@ ObjectDumper.prototype.dumpBinding = function(
     dumper.visiting.add(this);
   }
 
-  var sel = new Selector(ref.concat(part));
-  if (part === Selector.PROTOTYPE) {
-    var r = this.dumpPrototype_(dumper, todo, ref, sel);
-  } else if (part === Selector.OWNER) {
-    r = this.dumpOwner_(dumper, todo, ref, sel);
-  } else if (typeof part === 'string') {
-    r = this.dumpProperty_(dumper, part, todo, ref, sel);
-  } else {
-    throw new Error('Invalid part');
-  }
-  var done = r.done;
-  var value = r.value;
-  if (todo >= Do.RECURSE && done === Do.DONE &&
-      value instanceof dumper.intrp.Object) {
-    var d = dumper.getObjectDumper(value).dump(dumper, sel);
-    if (d === ObjectDumper.Done.DONE_RECURSIVELY) {
-      done = Do.RECURSE;
-      this.setDone(part, done);
+  var done = this.getDone(part);
+  if (done  >= 0) {  // Negative values mean don't dump (yet).
+    var sel = new Selector(ref.concat(part));
+    if (part === Selector.PROTOTYPE) {
+      var r = this.dumpPrototype_(dumper, todo, ref, sel);
+    } else if (part === Selector.OWNER) {
+      r = this.dumpOwner_(dumper, todo, ref, sel);
+    } else if (typeof part === 'string') {
+      r = this.dumpProperty_(dumper, part, todo, ref, sel);
+    } else {
+      throw new Error('Invalid part');
+    }
+    done = r.done;
+    var value = r.value;
+    if (todo >= Do.RECURSE && done === Do.DONE &&
+        value instanceof dumper.intrp.Object) {
+      var objDone = dumper.getObjectDumper(value).dump(dumper, sel);
+      if (objDone === ObjectDumper.Done.DONE_RECURSIVELY) {
+        done = Do.RECURSE;
+        this.setDone(part, done);
+      }
     }
   }
 
@@ -1193,9 +1225,9 @@ ObjectDumper.prototype.setDone = function(part, done) {
   var name = (part === Selector.PROTOTYPE) ? 'prototype' : '.' + part;
 
   // Invariant checks.
-  if (done < old) {
+  if (old && done < old) {
     throw new RangeError("Can't undo work on " + name);
-  } else if(done === old) {
+  } else if(old && done === old) {
     throw new RangeError('Redundant work on ' + name);
   }
   // Do set.
@@ -1275,32 +1307,34 @@ ObjectDumper.Done = {
 
 /**
  * Possible things to do (or have done) with a variable / property /
- * etc. binding.  Note that all valid 'do' values are truthy.
+ * etc. binding.  N.B.: values meaning "don't do this one (yet)"
+ * are negative, "nothing done" is zero (and therefore falsey), and
+ * "some work has been done" are positive.
  * @enum {number}
  */
 var Do = {
-  /**
-   * Nothing has been done about this binding yet.  Only valid as a
-   * 'done' value, not as a 'do' value.
-   */
-  UNSTARTED: 0,
-
   /**
    * Skip the named binding entirely (unless it or an extension of it
    * is explicitly mentioned in a later config directive); if the data
    * accessible via the named binding is not accessible via any other
    * (non-pruned) path from the global scope it will consequently not
-   * be included in the dump.  Only valid as a 'do' value.
+   * be included in the dump.
    *
    * This option is intended to cause data loss, so be careful!
    */
-  PRUNE: 1,
+  PRUNE: -2,
 
   /**
    * Skip the named binding for now, but include it in a later file
-   * (whichever has rest: true).  Only valid as a 'do' value.
+   * (whichever has rest: true).
    */
-  SKIP: 2,
+  SKIP: -1,
+
+  /**
+   * Nothing has been done about this binding yet.  Only valid as a
+   * 'done' value, not as a 'do' value.
+   */
+  UNSTARTED: 0,
 
   /**
    * Ensure that the specified binding exists, but do not yet set it
@@ -1309,7 +1343,7 @@ var Do = {
    * created but not (yet) set to a value other than undefined (nor
    * made non-configurable).
    */
-  DECL: 3,
+  DECL: 1,
 
   /**
    * Ensure that the specified binding exists and has been set to its
@@ -1322,7 +1356,7 @@ var Do = {
    * properties or internal set/map data set (but immutable internal
    * data, such as function code, will have been set at creation).
    */
-  SET: 4,
+  SET: 2,
 
   /**
    * Ensure theat the specified binding has been set to its final
@@ -1332,15 +1366,15 @@ var Do = {
    * [[Owner]] that don't have attributes; for those, SET should
    * automatically be promoted to DONE.
    */
-  ATTR: 5,
-  DONE: 5,
+  ATTR: 3,
+  DONE: 3,
 
   /**
    * Ensure the specified path is has been set to its final value (and
    * marked immuable, if applicable) and that the same has been done
    * recursively to all bindings reachable via path.
    */
-  RECURSE: 6,
+  RECURSE: 4,
 };
 
 ///////////////////////////////////////////////////////////////////////////////
