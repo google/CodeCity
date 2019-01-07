@@ -160,7 +160,7 @@ Selector.prototype.toString = function(specialHandler) {
       if (specialHandler) {
         specialHandler(part, out);
       } else {
-        out.push('{', part.type, '}');
+        out.push(String(part));
       }
     } else if (identifierRE.test(part)) {
       out.push('.', part);
@@ -189,6 +189,11 @@ Selector.Part;
  */
 var SpecialPart = function(type) {
   this.type = type;
+};
+
+/** @override */
+SpecialPart.prototype.toString = function() {
+  return '{' + this.type + '}';
 };
 
 /**
