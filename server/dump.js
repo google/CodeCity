@@ -918,8 +918,11 @@ ObjectDumper.prototype.checkProperty = function(key, value, attr, pd) {
  * @param {!Selector=} ref Selector refering to this object.
  *     Optional; defaults to whatever selector was used to create the
  *     object.
- * @return {!ObjectDumper.Done|undefined} Done status for object, or
- *     undefined if there is a current dump or dumpBinding invocaion.
+ * @return {!ObjectDumper.Done|?ObjectDumper.Pending} Done status for
+ *     object, or or null if there is an outstanding dump or
+ *     dumpBinding invocaion for this object, or a (bindings,
+ *     dependencies) pair if a recursive call encountered such an
+ *     outstanding invocation.
  */
 ObjectDumper.prototype.dump = function(dumper, ref) {
   if (this.proto === undefined) {
@@ -930,7 +933,7 @@ ObjectDumper.prototype.dump = function(dumper, ref) {
     throw new Error("Can't dump an unreferencable object");
   }
   if (dumper.visiting.has(this)) {
-    return undefined;
+    return null;
   }
   if (this.done === ObjectDumper.Done.DONE_RECURSIVELY) {
     return this.done;
@@ -950,15 +953,26 @@ ObjectDumper.prototype.dump = function(dumper, ref) {
   // Dump prototype, owner, and properties.
   // Optimistically assume success until we find otherwise.
   var /** !ObjectDumper.Done */ done = ObjectDumper.Done.DONE_RECURSIVELY;
+  var /** ?ObjectDumper.Pending */ pending = null;
   var keys = this.obj.ownKeys(dumper.intrp.ROOT);
   var parts = [Selector.PROTOTYPE, Selector.OWNER].concat(keys);
   for (i = 0; i < parts.length; i++) {
     var part = parts[i];
-    var b = this.dumpBinding(dumper, part, Do.RECURSE, ref, true);
-    if (b !== Do.RECURSE) {  // Including b === undefined.
+    var bindingDone = this.dumpBinding(dumper, part, Do.RECURSE, ref, true);
+    if (bindingDone === null) {
+      throw new Error('.dumpBinding returned null to .dump');
+    } else if (bindingDone instanceof ObjectDumper.Pending) {
+      // Circular dependency detected amongs objects being recursively
+      // dumped.  Record details of circularity.
+      if (pending) {
+        pending.merge(bindingDone);
+      } else {
+        pending = bindingDone;
+      }
+    } else  if (bindingDone !== Do.RECURSE) {
       done = /** @type {!ObjectDumper.Done} */(
           Math.min(done, ObjectDumper.Done.DONE));
-    } else if (b < Do.DONE) {
+    } else if (bindingDone < Do.DONE) {
       done = /** @type {!ObjectDumper.Done} */(
           Math.min(done, ObjectDumper.Done.NO));
     }
@@ -970,11 +984,40 @@ ObjectDumper.prototype.dump = function(dumper, ref) {
       dumper.write(dumper.exprForBuiltin('Object.preventExtensions'), '(',
                    dumper.exprForSelector(ref), ');\n');
     }
+    this.done = ObjectDumper.Done.DONE;
+
+    // If all parts of circular dependency are DONE, mark all as
+    // RECURSE / DONE_RECURSIVELY.
+    if (pending) {
+      console.log('>>> CIRCULARITY in %s: %s', ref, pending);
+      var allDone = true;
+      var /** !ObjectDumper */ dep;
+      for (i = 0; dep = pending.dependencies[i]; i++) {
+        if(!dep.done || (dumper.visiting.has(dep) && dep !== this)) {
+          console.log(">>> NOPE: %s", dep.ref);
+          allDone = false;
+        }
+      }
+      if (allDone) {
+        console.log(">>> YES!!!");
+        var /** !Selector */ binding;
+        for (i = 0; binding = pending.bindings[i]; i++) {
+          dumper.markBinding(binding, Do.RECURSE);
+        }
+        for (i = 0; dep = pending.dependencies[i]; i++) {
+          dep.done = ObjectDumper.Done.DONE_RECURSIVELY;
+        }
+        pending = null;
+      } else {
+        done = /** @type {!ObjectDumper.Done} */(
+            Math.min(done, ObjectDumper.Done.DONE));
+      }
+    }
   }
 
   this.done = done;
   dumper.visiting.delete(this);
-  return done;
+  return pending || done;
 };
 
 /**
@@ -989,9 +1032,11 @@ ObjectDumper.prototype.dump = function(dumper, ref) {
  *     object.
  * @param {boolean=} skipChecks Skip setup checks and visit recording.
  *     To be used only when called from .dump on the same object.
- * @return {!Do|undefined} How much has been done on the specified
- *     binding, or undefined if there is a current dump or dumpBinding
- *     invocaion for this object.
+ * @return {!Do|?ObjectDumper.Pending} How much has been done on the
+ *     specified binding, or null if there is an outstanding dump or
+ *     dumpBinding invocaion for this object, or a (bindings,
+ *     dependencies) pair if a recursive call encountered such an
+ *     outstanding invocation.
  */
 ObjectDumper.prototype.dumpBinding = function(
     dumper, part, todo, ref, skipChecks) {
@@ -1003,7 +1048,7 @@ ObjectDumper.prototype.dumpBinding = function(
     if (!ref) {
       throw new Error("Can't dump an unreferencable object");
     }
-    if (dumper.visiting.has(this)) return undefined;
+    if (dumper.visiting.has(this)) return null;
     dumper.visiting.add(this);
   }
 
@@ -1024,8 +1069,14 @@ ObjectDumper.prototype.dumpBinding = function(
     var value = r.value;
     if (todo >= Do.RECURSE && done === Do.DONE &&
         value instanceof dumper.intrp.Object) {
-      var objDone = dumper.getObjectDumper(value).dump(dumper, sel);
-      if (objDone === ObjectDumper.Done.DONE_RECURSIVELY) {
+      var valueDumper = dumper.getObjectDumper(value);
+      var objDone = valueDumper.dump(dumper, sel);
+      if (objDone === null) {  // Circular structure detected.
+        return new ObjectDumper.Pending(sel, valueDumper);
+      } else if (typeof objDone === 'object') {
+ 	objDone.add(sel, valueDumper);
+        return objDone;
+      } else if (objDone === ObjectDumper.Done.DONE_RECURSIVELY) {
         done = Do.RECURSE;
         this.setDone(part, done);
       }
@@ -1302,6 +1353,65 @@ ObjectDumper.Done = {
   /** This object and all objects accessible from it are done. */
   DONE_RECURSIVELY: 2,
 };
+
+/**
+ * A record pending bindings returned by the .dump and .dumpBinding
+ * methods when they encounter a circular dependency while trying to
+ * recursively dump some objects.
+ *
+ * E.g., given objects a and b, if a.b === b, and b.a === a, then
+ * either both a and b can be both be fully recursivley dumped or
+ * neither is.  When attempting to dump a, the dumpProperty(<a.b>)
+ * will try to dump b, which will ensure that b.a is done and return a
+ * Pending object indicating that <b.a> being recursively done is
+ * awaiting completion of a.
+ *
+ * @constructor
+ * @param {!Selector} binding A binding awaiting recursive completion
+ *     of its value object.
+ * @param {!ObjectDumper} valueDumper The ObjecDumper for the object
+ *     which is the value of binding.
+ */
+ObjectDumper.Pending = function (binding, valueDumper) {
+  if (!binding) throw new Error('no binding');
+  if (!valueDumper) throw new Error('no valueDumper');
+  /** !Array<!Selector> */
+  this.bindings = [binding];
+  /** !Array<!ObjectDumper> */
+  this.dependencies = [valueDumper];
+};
+
+/**
+ * Add a new (binding, dependency) pair to this Pending object.
+ * @param {!Selector} binding A binding awaiting recursive completion
+ *     of its value object.
+ * @param {!ObjectDumper} valueDumper The ObjecDumper for the object
+ *     which is the value of binding.
+ */
+ObjectDumper.Pending.prototype.add = function (binding, valueDumper) {
+  if (!binding) throw new Error('no binding');
+  if (!valueDumper) throw new Error('no valueDumper');
+  this.bindings.push(binding);
+  this.dependencies.push(valueDumper);
+};
+
+/** @override */
+ObjectDumper.Pending.prototype.toString = function() {
+  return '{bindings: [' + this.bindings.join(', ') + '], ' +
+      'dependencies: [' + this.dependencies.map(function(od) {
+        return String(od.ref);
+      }).join(', ') + ']}';
+};
+
+/**
+ * Merge another pending list into this one.
+ * @param {!ObjectDumper.Pending} that Another Pending list.
+ */
+ObjectDumper.Pending.prototype.merge = function (that) {
+  this.bindings.push.apply(this.bindings, that.bindings);
+  this.dependencies.push.apply(this.dependencies, that.dependencies);
+};
+
 
 ///////////////////////////////////////////////////////////////////////////////
 // Do, etc.

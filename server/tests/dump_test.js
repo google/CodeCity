@@ -462,9 +462,8 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     ['alice.thing', Do.RECURSE, '', Do.DONE],
     ['Object.setOwnerOf', Do.SET,
         "Object.setOwnerOf = new 'Object.setOwnerOf';\n"],
-    // BUG(cpcallen): want result to be Do.RECURSE.
     ['bob', Do.RECURSE, 'var bob = {};\nbob.thing = {};\n' +
-        "Object.setOwnerOf(bob.thing, bob);\n", Do.DONE],
+        "Object.setOwnerOf(bob.thing, bob);\n"],
     ['unowned', Do.SET, 'var unowned = {};\n', Do.DONE],
     ['unowned{owner}', Do.SET, 'Object.setOwnerOf(unowned, null);\n',
         Do.RECURSE],
@@ -554,12 +553,12 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     ['error1.message', Do.RECURSE],
     ['error2.message', Do.RECURSE],
 
+    ['alice', Do.DONE],
     ['alice{owner}', Do.DONE, 'CC.root'],
     ['alice.thing{owner}', Do.DONE, 'alice'],
+    ['bob', Do.RECURSE],
     ['bob{owner}', Do.RECURSE, 'CC.root'],
-    // TODO(cpcallen): want Do.RECURSE once recursion handles cycles
-    // more reliably.
-    ['bob.thing{owner}', Do.DONE, 'bob'],
+    ['bob.thing{owner}', Do.RECURSE, 'bob'],
   ];
   for (const tc of implicit) {
     const s = new Selector(tc[0]);
