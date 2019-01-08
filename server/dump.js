@@ -985,38 +985,31 @@ ObjectDumper.prototype.dump = function(dumper, ref) {
                    dumper.exprForSelector(ref), ');\n');
     }
     this.done = ObjectDumper.Done.DONE;
+  }
 
-    // If all parts of circular dependency are DONE, mark all as
-    // RECURSE / DONE_RECURSIVELY.
+  dumper.visiting.delete(this);
+  // If all parts of circular dependency are DONE, mark all as
+  // RECURSE / DONE_RECURSIVELY.
+  // TODO(cpcallen): Clean up this code.
+  if (done) {
     if (pending) {
-      console.log('>>> CIRCULARITY in %s: %s', ref, pending);
-      var allDone = true;
-      var /** !ObjectDumper */ dep;
-      for (i = 0; dep = pending.dependencies[i]; i++) {
-        if(!dep.done || (dumper.visiting.has(dep) && dep !== this)) {
-          console.log(">>> NOPE: %s", dep.ref);
-          allDone = false;
-        }
-      }
-      if (allDone) {
-        console.log(">>> YES!!!");
+      if (pending.dependencies.some(
+          function(dep) {return !dep.done || dumper.visiting.has(dep);})) {
+        done = /** @type {!ObjectDumper.Done} */(
+            Math.min(done, ObjectDumper.Done.DONE));
+      } else {
         var /** !Selector */ binding;
         for (i = 0; binding = pending.bindings[i]; i++) {
           dumper.markBinding(binding, Do.RECURSE);
         }
-        for (i = 0; dep = pending.dependencies[i]; i++) {
+        for (var dep, i = 0; dep = pending.dependencies[i]; i++) {
           dep.done = ObjectDumper.Done.DONE_RECURSIVELY;
         }
         pending = null;
-      } else {
-        done = /** @type {!ObjectDumper.Done} */(
-            Math.min(done, ObjectDumper.Done.DONE));
       }
     }
   }
-
   this.done = done;
-  dumper.visiting.delete(this);
   return pending || done;
 };
 
