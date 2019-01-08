@@ -3093,6 +3093,7 @@ Interpreter.FunctionResult.Sleep = new Interpreter.FunctionResult;
  *     noLog: (!Array<string>|undefined),
  *     trimEval: (boolean|undefined),
  *     trimProgram: (boolean|undefined),
+ *     stackLimit: (number|undefined),
  * }}
  */
 Interpreter.Options;
@@ -5959,6 +5960,10 @@ stepFuncs_['Call'] = function (thread, stack, state, node) {
    */
   if (state.step_ === 0) {  // Done evaluating arguments; do function call.
     state.step_ = 1;
+    if (this.options.stackLimit && stack.length > this.options.stackLimit) {
+      throw new this.Error(state.scope.perms, this.RANGE_ERROR,
+          'Maximum call stack size exceeded');
+    }
     var func = state.info_.func;
     var args = state.info_.arguments;
     var r =

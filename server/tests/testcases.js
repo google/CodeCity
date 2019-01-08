@@ -2820,4 +2820,27 @@ module.exports = [
     `,
     expected: 'pass' },
 
+  { name: 'Stack overflow errors', src: `
+    try {
+      (function f() {f();})();
+    } catch (e) {
+      e.name;
+    }
+    `,
+    expected: 'RangeError'
+  },
+
+  { name: 'Minimum stack depth limit', src: `
+    function f() {
+      try {
+        return f() + 1;
+      } catch (e) {
+        return 1;
+      }
+    }
+    var limit = f();
+    limit > 100 ? 'OK' : limit;
+    `,
+    expected: 'OK'
+  },
 ];

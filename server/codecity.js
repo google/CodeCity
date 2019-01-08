@@ -66,6 +66,7 @@ CodeCity.startup = function(configFile) {
     trimEval: true,
     trimProgram: true,
     methodNames: true,
+    stackLimit: 10000,
   });
   CodeCity.initSystemFunctions();
   if (checkpoint) {

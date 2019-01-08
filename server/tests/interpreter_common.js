@@ -47,6 +47,7 @@ exports.getInterpreter = function(options, init) {
     noLog: ['net', 'unhandled'],
     trimEval: true,
     trimProgram: true,
+    stackLimit: 1000,  // Fairly small to speed stack-overflow tests.
   };
   var intrp = new Interpreter(options);
   if (init || init === undefined) {
