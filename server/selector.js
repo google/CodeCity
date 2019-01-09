@@ -177,7 +177,7 @@ Selector.prototype.toString = function(specialHandler) {
 /**
  * A Selector fundamentally an array of Parts, and Parts are either
  * strings (representing variable or property names) or SpecialParts
- * (representing everything else, like ^ for prottype.
+ * (representing everything else, like {proto} or {owner}).
  * @typedef {string|!SpecialPart}
  */
 Selector.Part;
