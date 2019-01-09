@@ -70,8 +70,7 @@ CodeCity.startup = function(configFile) {
   CodeCity.initSystemFunctions();
   if (checkpoint) {
     var filename = path.join(CodeCity.databaseDirectory, checkpoint);
-    var contents = CodeCity.loadFile(filename);
-    contents = CodeCity.parseJson(contents);
+    contents = CodeCity.parseJson(CodeCity.loadFile(filename));
 
     Serializer.deserialize(contents, CodeCity.interpreter);
     console.log('Database loaded: %s', filename);
@@ -83,8 +82,8 @@ CodeCity.startup = function(configFile) {
     var files = fs.readdirSync(CodeCity.databaseDirectory);
     for (var i = 0; i < files.length; i++) {
       if (files[i].match(/^(core|test).*\.js$/)) {
-        var filename = path.join(CodeCity.databaseDirectory, files[i]);
-        var contents = CodeCity.loadFile(filename);
+        filename = path.join(CodeCity.databaseDirectory, files[i]);
+        contents = CodeCity.loadFile(filename);
         console.log('Loading startup file %s', filename);
         CodeCity.interpreter.createThreadForSrc(contents);
         fileCount++;
