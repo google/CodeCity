@@ -49,18 +49,20 @@ tests.errorStack = function() {
     foo();
     console.assert(false, "Invalid MemberExpression didn't throw??");
   } catch (e) {
+    lines = e.stack.split('\n');
     console.assert(lines[0].trim() === 'at foo 4:16',
         'Invalid MemberExpression escaped blame');
   }
 
-  function foo() {
+  function bar() {
     return undefinedVariable;
   }
   try {
-    foo();
+    bar();
     console.assert(false, "Invalid Identifier didn't throw??");
   } catch (e) {
-    console.assert(lines[0].trim() === 'at foo 2:12',
+    lines = e.stack.split('\n');
+    console.assert(lines[0].trim() === 'at bar 2:12',
         'Invalid Identifier escaped blame');
   }
 };
