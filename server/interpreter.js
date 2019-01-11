@@ -73,9 +73,9 @@ var Interpreter = function(options) {
   this.initBuiltins_();
 
   /** @private @const {!Array<!Interpreter.Thread>} */
-  this.threads = [];
+  this.threads_ = [];
   /** @private @type {?Interpreter.Thread} */
-  this.thread = null;
+  this.thread_ = null;
   /** @private (Type is whatever is returned by setTimeout()) */
   this.runner_ = null;
   /** @type {boolean} */
@@ -132,7 +132,7 @@ Interpreter.prototype.now = function() {
 };
 
 /**
- * Create a new thread and add it to .threads, and create a companion
+ * Create a new thread and add it to .threads_, and create a companion
  * user-visible wrapper object and return it.
  * @param {!Interpreter.Owner} owner Owner of new thread.
  * @param {!Interpreter.State} state Initial state
@@ -141,9 +141,9 @@ Interpreter.prototype.now = function() {
  * @return {!Interpreter.prototype.Thread} Userland Thread object.
  */
 Interpreter.prototype.createThread = function(owner, state, runAt) {
-  var id = this.threads.length;
+  var id = this.threads_.length;
   var thread = new Interpreter.Thread(id, state, runAt || this.now());
-  this.threads[this.threads.length] = thread;
+  this.threads_[this.threads_.length] = thread;
   this.go_();
   return new this.Thread(thread, owner);
 };
@@ -195,11 +195,11 @@ Interpreter.prototype.createThreadForFuncCall = function(
 Interpreter.prototype.schedule = function() {
   var now = this.now();
   var runAt = Number.MAX_VALUE;
-  var threads = this.threads;
+  var threads = this.threads_;
   // Assume all remaining threads are ZOMBIEs until proven otherwise.
   this.done = true;
-  this.thread = null;
-  // .threads will be very sparse, so use for-in loop.
+  this.thread_ = null;
+  // .threads_ will be very sparse, so use for-in loop.
   for (var i in threads) {
     i = Number(i);  // Make Closure Compiler happy.
     if (!threads.hasOwnProperty(i)) {
@@ -226,8 +226,8 @@ Interpreter.prototype.schedule = function() {
       case Interpreter.Thread.Status.READY:
         // Is this this most-overdue thread found so far?
         if (threads[i].runAt < runAt) {
-          this.thread = threads[i];
-          runAt = this.thread.runAt;
+          this.thread_ = threads[i];
+          runAt = this.thread_.runAt;
         }
         this.done = false;
         break;
@@ -252,13 +252,14 @@ Interpreter.prototype.step = function() {
   if (this.status !== Interpreter.Status.PAUSED) {
     throw new Error('Can only step paused interpreter');
   }
-  if (!this.thread || this.thread.status !== Interpreter.Thread.Status.READY) {
+  if (!this.thread_ ||
+      this.thread_.status !== Interpreter.Thread.Status.READY) {
     if (this.schedule() > 0) {
       return false;
     }
   }
-  if (!this.thread) throw new Error('Scheduling failed');  // Satisfy compiler.
-  this.step_(this.thread, this.thread.stateStack_);
+  if (!this.thread_) throw new Error('Scheduling failed');  // Satisfy compiler.
+  this.step_(this.thread_, this.thread_.stateStack_);
   return true;
 };
 
@@ -285,7 +286,7 @@ Interpreter.prototype.run = function() {
   }
   var t;
   while ((t = this.schedule()) === 0) {
-    var thread = this.thread;
+    var thread = this.thread_;
     var stack = thread.stateStack_;
     while (thread.status === Interpreter.Thread.Status.READY) {
       this.step_(thread, stack);
@@ -1553,7 +1554,7 @@ Interpreter.prototype.initString_ = function() {
       separator = separator.regexp;
     }
     var jsList = this.split(separator, limit);
-    return intrp.createArrayFromList(jsList, intrp.thread.perms());
+    return intrp.createArrayFromList(jsList, intrp.thread_.perms());
   };
   this.createNativeFunction('String.prototype.split', wrapper, false);
 
@@ -1562,7 +1563,7 @@ Interpreter.prototype.initString_ = function() {
       regexp = regexp.regexp;
     }
     var m = this.match(regexp);
-    return m && intrp.createArrayFromList(m, intrp.thread.perms());
+    return m && intrp.createArrayFromList(m, intrp.thread_.perms());
   };
   this.createNativeFunction('String.prototype.match', wrapper, false);
 
@@ -1588,7 +1589,7 @@ Interpreter.prototype.initString_ = function() {
       return this.repeat(count);
     } catch (e) {
       // 'abc'.repeat(-1) will throw an error.  Catch and rethrow.
-      throw intrp.errorNativeToPseudo(e, intrp.thread.perms());
+      throw intrp.errorNativeToPseudo(e, intrp.thread_.perms());
     }
   };
   this.createNativeFunction('String.prototype.repeat', wrapper, false);
@@ -1733,7 +1734,7 @@ Interpreter.prototype.initNumber_ = function() {
       return this.toExponential(fractionDigits);
     } catch (e) {
       // Throws if fractionDigits isn't within 0-20.
-      throw intrp.errorNativeToPseudo(e, intrp.thread.perms());
+      throw intrp.errorNativeToPseudo(e, intrp.thread_.perms());
     }
   };
   this.createNativeFunction('Number.prototype.toExponential', wrapper, false);
@@ -1743,7 +1744,7 @@ Interpreter.prototype.initNumber_ = function() {
       return this.toFixed(digits);
     } catch (e) {
       // Throws if digits isn't within 0-20.
-      throw intrp.errorNativeToPseudo(e, intrp.thread.perms());
+      throw intrp.errorNativeToPseudo(e, intrp.thread_.perms());
     }
   };
   this.createNativeFunction('Number.prototype.toFixed', wrapper, false);
@@ -1753,7 +1754,7 @@ Interpreter.prototype.initNumber_ = function() {
       return this.toPrecision(precision);
     } catch (e) {
       // Throws if precision isn't within range (depends on implementation).
-      throw intrp.errorNativeToPseudo(e, intrp.thread.perms());
+      throw intrp.errorNativeToPseudo(e, intrp.thread_.perms());
     }
   };
   this.createNativeFunction('Number.prototype.toPrecision', wrapper, false);
@@ -1780,7 +1781,7 @@ Interpreter.prototype.initNumber_ = function() {
         // closure-compiler thinks radix should be a number.
         return Number.prototype.toString.call(x, /** @type {?} */(radix));
       } catch (e) {
-        throw intrp.errorNativeToPseudo(e, intrp.thread.perms());
+        throw intrp.errorNativeToPseudo(e, intrp.thread_.perms());
       }
     }
   });
@@ -1816,7 +1817,7 @@ Interpreter.prototype.initDate_ = function() {
     // Called as new Date().
     var args = [null].concat(Array.from(arguments));
     var date = new (Function.prototype.bind.apply(Date, args));
-    return new intrp.Date(date, intrp.thread.perms());
+    return new intrp.Date(date, intrp.thread_.perms());
   };
   this.createNativeFunction('Date', wrapper, true);
 
@@ -1890,7 +1891,7 @@ Interpreter.prototype.initRegExp_ = function() {
   wrapper = function(pattern, flags) {
     pattern = pattern ? pattern.toString() : '';
     flags = flags ? flags.toString() : '';
-    return new intrp.RegExp(new RegExp(pattern, flags), intrp.thread.perms());
+    return new intrp.RegExp(new RegExp(pattern, flags), intrp.thread_.perms());
   };
   this.createNativeFunction('RegExp', wrapper, true);
 
@@ -1911,7 +1912,7 @@ Interpreter.prototype.initRegExp_ = function() {
   wrapper = function(str) {
     if (!(this instanceof intrp.RegExp) ||
         !(this.regexp instanceof RegExp)) {
-      throw new intrp.Error(intrp.thread.perms(), intrp.TYPE_ERROR,
+      throw new intrp.Error(intrp.thread_.perms(), intrp.TYPE_ERROR,
           'Method RegExp.prototype.exec called on incompatible receiver' +
               this.toString());
     }
@@ -1920,7 +1921,7 @@ Interpreter.prototype.initRegExp_ = function() {
   this.createNativeFunction('RegExp.prototype.test', wrapper, false);
 
   wrapper = function(str) {
-    var perms = intrp.thread.perms();
+    var perms = intrp.thread_.perms();
     if (!(this instanceof intrp.RegExp)) {
       throw new intrp.Error(perms, intrp.TYPE_ERROR,
           'Method RegExp.prototype.exec called on incompatible receiver ' +
@@ -2016,9 +2017,9 @@ Interpreter.prototype.initJSON_ = function() {
     try {
       var nativeObj = JSON.parse(text.toString());
     } catch (e) {
-      throw intrp.errorNativeToPseudo(e, intrp.thread.perms());
+      throw intrp.errorNativeToPseudo(e, intrp.thread_.perms());
     }
-    return intrp.nativeToPseudo(nativeObj, intrp.thread.perms());
+    return intrp.nativeToPseudo(nativeObj, intrp.thread_.perms());
   };
   this.createNativeFunction('JSON.parse', wrapper, false);
 
@@ -2027,7 +2028,7 @@ Interpreter.prototype.initJSON_ = function() {
     try {
       var str = JSON.stringify(nativeObj);
     } catch (e) {
-      throw intrp.errorNativeToPseudo(e, intrp.thread.perms());
+      throw intrp.errorNativeToPseudo(e, intrp.thread_.perms());
     }
     return str;
   };
@@ -2169,8 +2170,8 @@ Interpreter.prototype.initThread_ = function() {
       }
       // TODO(cpcallen:perms): add security check here.
       var id = t.thread.id;
-      if (intrp.threads[id]) {
-        intrp.threads[id].status = Interpreter.Thread.Status.ZOMBIE;
+      if (intrp.threads_[id]) {
+        intrp.threads_[id].status = Interpreter.Thread.Status.ZOMBIE;
       }
     }
   });
@@ -2568,7 +2569,7 @@ Interpreter.prototype.pseudoToNative = function(pseudoObj, cycles) {
   // BUG(cpcallen:perms): Kludge.  Incorrect except when doing .step
   // or run.  Should be an argument instead, forcing caller to decide.
   try {
-    var perms = this.thread.perms();
+    var perms = this.thread_.perms();
   } catch (e) {
     perms = this.ROOT;
   }
@@ -2722,7 +2723,7 @@ Interpreter.prototype.getValueFromScope = function(scope, name) {
       return s.vars[name];
     }
   }
-  throw new this.Error(this.thread.perms(), this.REFERENCE_ERROR,
+  throw new this.Error(this.thread_.perms(), this.REFERENCE_ERROR,
       name + ' is not defined');
 };
 
@@ -2740,13 +2741,13 @@ Interpreter.prototype.setValueToScope = function(scope, name, value) {
       } catch (e) {  // Trying to set immutable binding.
         // TODO(cpcallen:perms): we have a scope here, but scope.perms
         // is probably not the right value for owner of new error.
-        throw new this.Error(this.thread.perms(), this.TYPE_ERROR,
+        throw new this.Error(this.thread_.perms(), this.TYPE_ERROR,
             'Assignment to constant variable ' + name);
       }
       return;
     }
   }
-  throw new this.Error(this.thread.perms(), this.REFERENCE_ERROR,
+  throw new this.Error(this.thread_.perms(), this.REFERENCE_ERROR,
       name + ' is not defined');
 };
 
@@ -2807,7 +2808,7 @@ Interpreter.prototype.populateScope_ = function(node, scope, source) {
  * @return {boolean} True if 'new foo()', false if 'foo()'.
  */
 Interpreter.prototype.calledWithNew = function() {
-  return this.thread.stateStack_[this.thread.stateStack_.length - 1]
+  return this.thread_.stateStack_[this.thread_.stateStack_.length - 1]
       .info_.construct;
 };
 
@@ -3555,7 +3556,7 @@ Interpreter.State.prototype.frame = function() {
  * separate for performance reasons only.
  * @constructor
  * @param {number} id Thread ID.  Should correspond to index of this
- *     thread in .threads array.
+ *     thread in .threads_ array.
  * @param {!Interpreter.State} state Starting state for thread.
  * @param {number} runAt Time at which to start running thread.
  */
