@@ -239,7 +239,8 @@ Interpreter.prototype.schedule = function() {
 };
 
 /**
- * Execute one step of the interpreter.
+ * Execute one step of the interpreter.  Schedules the next runnable
+ * thread if required.
  * @return {boolean} True if a step was executed, false if no more
  *     READY threads.
  */
@@ -256,21 +257,8 @@ Interpreter.prototype.step = function() {
       return false;
     }
   }
-  var thread = this.thread;
-  var stack = thread.stateStack_;
-  var state = stack[stack.length - 1];
-  var node = state.node;
-  try {
-    var nextState = state.stepFunc.call(this, thread, stack, state, node);
-  } catch (e) {
-    this.throw_(thread, e, state.scope.perms);
-  }
-  if (nextState) {
-    stack[stack.length] = nextState;
-  }
-  if (stack.length === 0) {
-    thread.status = Interpreter.Thread.Status.ZOMBIE;
-  }
+  if (!this.thread) throw new Error('Scheduling failed');  // Satisfy compiler.
+  this.step_(this.thread, this.thread.stateStack_);
   return true;
 };
 
@@ -300,26 +288,37 @@ Interpreter.prototype.run = function() {
     var thread = this.thread;
     var stack = thread.stateStack_;
     while (thread.status === Interpreter.Thread.Status.READY) {
-      var state = stack[stack.length - 1];
-      var node = state.node;
-      try {
-        var nextState = state.stepFunc.call(this, thread, stack, state, node);
-      } catch (e) {
-        this.throw_(thread, e, state.scope.perms);
-        nextState = undefined;
-      }
-      if (nextState) {
-        stack[stack.length] = nextState;
-      }
-      if (stack.length === 0) {
-        thread.status = Interpreter.Thread.Status.ZOMBIE;
-      }
+      this.step_(thread, stack);
     }
   }
   if (t === Number.MAX_VALUE) {
     return this.done ? 0 : -1;
   }
   return t;
+};
+
+/**
+ * Actually execute one step of the interpreter.  Presumes thread is
+ * the currently-scheduled thread, is runnable, etc.
+ * @private
+ * @param {!Interpreter.Thread} thread The current thread.
+ * @param {!Array<!Interpreter.State>} stack The current thread's state stack.
+ */
+Interpreter.prototype.step_ = function(thread, stack) {
+  var state = stack[stack.length - 1];
+  var node = state.node;
+  try {
+    var nextState = state.stepFunc.call(this, thread, stack, state, node);
+  } catch (e) {
+    this.throw_(thread, e, state.scope.perms);
+    nextState = undefined;
+  }
+  if (nextState) {
+    stack[stack.length] = nextState;
+  }
+  if (stack.length === 0) {
+    thread.status = Interpreter.Thread.Status.ZOMBIE;
+  }
 };
 
 /**
