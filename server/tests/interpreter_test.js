@@ -107,28 +107,20 @@ function runTest(t, name, src, expected, options) {
  * end the test.  If resolve() is called the test will end normally
  * and the argument supplied will be compared with the expected value;
  * if reject() is called the test will instead be treated as a crash.
- * The caller can additionally supply callbacks to be run before and
- * after starting the user code; the latter may be an async function
- * and will be awaited before awaiting the userland call to
- * resolve/reject.
  * @param {!T} t The test runner object.
  * @param {string} name The name of the test.
  * @param {string} src The code to be evaled.
  * @param {number|string|boolean|null|undefined} expected The expected
  *     completion value.
- * @param {function(!Interpreter)=} initFunc Optional function to be
- *     called after creating and initialzing new interpreter but
- *     before running src.  Can be used to insert extra native
- *     functions into the interpreter.  initFunc is called with the
- *     interpreter instance to be configured as its parameter.
- * @param {function(!Interpreter)=} sideFunc Optional (optionally
- *     async) function to be called after the interpreter has been
- *     .start()ed.
+ * @param {!TestOptions=} options Custom test options.  Note that
+ *     'onRun' is ignored because the interpreter is .start()ed
+ *     instead of .run() being called directly.
  */
-async function runAsyncTest(t, name, src, expected, initFunc, sideFunc) {
-  var intrp = getInterpreter();
-  if (initFunc) {
-    initFunc(intrp);
+async function runAsyncTest(t, name, src, expected, options) {
+  options = options || {};
+  var intrp = getInterpreter(options.options, options.standardInit);
+  if (options.onCreate) {
+    options.onCreate(intrp);
   }
 
   // Create promise to signal completion of test from within
@@ -144,9 +136,6 @@ async function runAsyncTest(t, name, src, expected, initFunc, sideFunc) {
   try {
     intrp.createThreadForSrc(src);
     intrp.start();
-    if (sideFunc) {
-      await sideFunc(intrp);
-    }
     result = await p;
   } catch (e) {
     t.crash(name, util.format('%s\n%s', src, e));
@@ -159,7 +148,7 @@ async function runAsyncTest(t, name, src, expected, initFunc, sideFunc) {
 }
 
 /**
- * Options for runTest.
+ * Options for runTest and runAsyncTest.
  * @record
  */
 var TestOptions = function() {};
@@ -1201,7 +1190,7 @@ exports.testNetworking = async function(t) {
       CC.connectionListen(8888, conn);
       send();
    `;
-  var initFunc = function(intrp) {
+  var createSend = function(intrp) {
     intrp.global.createMutableBinding('send', intrp.createNativeFunction(
         'send', function() {
           // Send some data to server.
@@ -1212,7 +1201,7 @@ exports.testNetworking = async function(t) {
           });
         }));
   };
-  await runAsyncTest(t, name, src, 'foobar', initFunc);
+  await runAsyncTest(t, name, src, 'foobar', {onCreate: createSend});
 
   // Run a test of the connectionListen(), connectionUnlisten(),
   // connectionWrite() and connectionClose functions.
@@ -1228,7 +1217,7 @@ exports.testNetworking = async function(t) {
       resolve(receive());
       CC.connectionUnlisten(8888);
    `;
-  initFunc = function(intrp) {
+  var createReceive = function(intrp) {
     intrp.global.createMutableBinding('receive', new intrp.NativeFunction({
       name: 'receive', length: 0,
       call: function(intrp, thread, state, thisVal, args) {
@@ -1250,7 +1239,7 @@ exports.testNetworking = async function(t) {
       }
     }));
   };
-  await runAsyncTest(t, name, src, 'foobar', initFunc);
+  await runAsyncTest(t, name, src, 'foobar', {onCreate: createReceive});
 
   // Check to make sure that connectionListen() throws if attempting
   // to bind to an invalid port or rebind a port already in use.
