@@ -42,10 +42,10 @@ var interpreter = getInterpreter();
 interpreter.global.createMutableBinding('src');
 
 /**
- * Run a simple test of the interpreter.  Only a single Interpreter
- * instance is created for all tests executed by this function, but
- * eval is used to evaluate src in its own scope.  The supplied src
- * must not modify objects accessible via the global scope!
+ * Run a simple test of the interpreter.  A single, shared Interpreter
+ * instance is used by all tests executed by this function, but eval
+ * is used to evaluate src in its own scope.  The supplied src must
+ * not modify objects accessible via the global scope!
  * @param {!T} t The test runner object.
  * @param {string} name The name of the test.
  * @param {string} src The code to be evaled.
@@ -68,58 +68,28 @@ function runSimpleTest(t, name, src, expected) {
 /**
  * Run a test of the interpreter using an independent Interpreter
  * instance, which may be created with non-default options and/or
- * without the standard startup files.
+ * without the standard startup files, and during which various
+ * callbacks will be executed; see TestOptions for details.
  * @param {!T} t The test runner object.
  * @param {string} name The name of the test.
  * @param {string} src The code to be evaled.
  * @param {number|string|boolean|null|undefined} expected The expected
  *     completion value.
- * @param {!Interpreter.Options=} options Interpreter constructor options.
- * @param {boolean=} init Load the standard startup files (Default: true.)
+ * @param {!TestOptions=} options Custom test options.
  */
-function runCustomTest(t, name, src, expected, options, init) {
-  var intrp = getInterpreter(options, init);
-  try {
-    var thread = intrp.createThreadForSrc(src).thread;
-    intrp.run();
-  } catch (e) {
-    t.crash(name, util.format('%s\n%s', src, e.stack));
-    return;
-  }
-  var r = intrp.pseudoToNative(thread.value);
-  t.expect(name, r, expected, src);
-}
-
-/**
- * Run a more complicated test of the interpreter.  A new interpreter
- * instance is created for each test, and the caller can supply
- * callbacks to be run before beginning and between calls to .run().
- * @param {!T} t The test runner object.
- * @param {string} name The name of the test.
- * @param {string} src The code to be evaled.
- * @param {number|string|boolean|null|undefined} expected The expected
- *     completion value.
- * @param {function(!Interpreter)=} initFunc Optional function to be
- *     called after creating new interpreter instance and running
- *     es5 but before running src.  Can be used to insert extra
- *     native functions into the interpreter.  initFunc is called
- *     with the interpreter instance to be configured as its
- *     parameter.
- * @param {function(!Interpreter)=} waitFunc Optional function to be
- *     called if .run() returns true.  Can be used to fake completion
- *     of asynchronous events for testing purposes.
- */
-function runComplexTest(t, name, src, expected, initFunc, waitFunc) {
-  var intrp = getInterpreter();
-  if (initFunc) {
-    initFunc(intrp);
+function runTest(t, name, src, expected, options) {
+  options = options || {};
+  var intrp = getInterpreter(options.options, options.standardInit);
+  if (options.onCreate) {
+    options.onCreate(intrp);
   }
 
   try {
     var thread = intrp.createThreadForSrc(src).thread;
-    while (intrp.run()) {
-      if (waitFunc) {
-        waitFunc(intrp);
+    var runResult;
+    while ((runResult = intrp.run())) {
+      if (options.onRun) {
+        options.onRun(intrp, runResult);
       }
     }
   } catch (e) {
@@ -188,6 +158,49 @@ async function runAsyncTest(t, name, src, expected, initFunc, sideFunc) {
   t.expect(name, r, expected, src);
 }
 
+/**
+ * Options for runTest.
+ * @record
+ */
+var TestOptions = function() {};
+
+/**
+ * Interpreter constructor options.
+ * @type {!Interpreter.Options|undefined}
+ */
+TestOptions.prototype.options;
+
+/**
+ * Load the standard startup files?  (Default: true.)
+ * @type {boolean|undefined}
+ */
+TestOptions.prototype.standardInit;
+
+/**
+ * Callback to be called after creating new interpreter instance (and
+ * running standard starup files, if not suppressed with standardInit:
+ * false) but before creating a thread for src.  Can be used to insert
+ * extra bindings into the global scope (e.g., to create additional
+ * builtins).
+ *
+ * The first argument is the interpreter instance to be configured.
+ *
+ * @type {function(!Interpreter)|undefined}
+ */
+TestOptions.prototype.onCreate;
+
+/**
+ * Callback to be called if .run() returns true.  Can be used to
+ * simulate passing of time (for sleeping threads) or to fake
+ * completion of asynchronous events (for blocked threads).  
+ *
+ * The first argument is the interpreter instance to be configured.
+ * The second argument is the value returned by .run().
+ *
+ * @type {function(!Interpreter, number)|undefined}
+ */
+TestOptions.prototype.onRun;
+
 ///////////////////////////////////////////////////////////////////////////////
 // Tests: external simple testcases
 ///////////////////////////////////////////////////////////////////////////////
@@ -221,7 +234,7 @@ exports.testStrictBoxedThis = function(t) {
       String.prototype.foo = function() { return typeof this; };
       'a primitive string'.foo();
   `;
-  runCustomTest(t, name, src, 'string');
+  runTest(t, name, src, 'string');  // Not simple: modifies String.prototype
 };
 
 /**
@@ -491,7 +504,10 @@ exports.testFunctionNameSetting = function(t) {
       var gOPD = new 'Object.getOwnPropertyDescriptor';
       gOPD(o.myMethod, 'name');
   `;
-  runCustomTest(t, name, src, undefined, {methodNames: false}, false);
+  runTest(t, name, src, undefined, {
+    options: {methodNames: false},
+    standardInit: false,  // Save time.
+  });
   
   name = 'Assignment to property sets anonymous function name';
   src = `
@@ -499,7 +515,10 @@ exports.testFunctionNameSetting = function(t) {
       o.myMethod = function() {};
       o.myMethod.name;
   `;
-  runCustomTest(t, name, src, 'myMethod', {methodNames: true}, false);
+  runTest(t, name, src, 'myMethod', {
+    options: {methodNames: true},
+    standardInit: false,  // Save time.
+  });
 };
 
 /**
@@ -658,7 +677,7 @@ exports.testAsync = function(t) {
   // instances.  The function, when called, will save its
   // resolve/reject callbacks and first arg in test-local variables.
   var resolve, reject, arg;
-  var initFunc = function(intrp) {
+  var createAsync = function(intrp) {
     intrp.global.createMutableBinding('async', new intrp.NativeFunction({
       name: 'async', length: 0,
       call: function(intrp, thread, state, thisVal, args) {
@@ -673,22 +692,20 @@ exports.testAsync = function(t) {
 
   // Test ordinary return.
   var name = 'testAsyncResolve';
-  var waitFunc = function(intrp) {
-    resolve(arg);
-  };
   var src = `
       'before';
       async();
       'between';
       async('af') + 'ter';
   `;
-  runComplexTest(t, name, src, 'after', initFunc, waitFunc);
+  runTest(t, name, src, 'after', {
+    standardInit: false,  // Save time.
+    onCreate: createAsync,
+    onRun: function(intrp, runResult) {resolve(arg);},
+  });
 
   // Test throwing an exception.
   name ='testAsyncReject';
-  waitFunc = function(intrp) {
-    reject('except');
-  };
   src = `
       try {
         'before';
@@ -698,32 +715,39 @@ exports.testAsync = function(t) {
         e;
       }
   `;
-  runComplexTest(t, name, src, 'except', initFunc, waitFunc);
+  runTest(t, name, src, 'except', {
+    standardInit: false,  // Save time.
+    onCreate: createAsync,
+    onRun: function(intrp, runResult) {reject('except');},
+  });
 
   // Extra check to verify async function can't resolve/reject more
   // than once without an asertion failure.
   name = 'testAsyncSafetyCheck';
   var ok;
-  waitFunc = function(intrp) {
-    resolve(ok);
-    // Call reject; this is expected to blow up.
-    try {
-      reject('foo');
-    } catch (e) {
-      ok = 'ok';
-    }
-  };
   src = `
-     async();
-     async();
+     async();  // Returns ok === undefined then sets ok to 'ok'.
+     async();  // Returns ok === 'ok' then uselessly sets ok a second time.
   `;
-  runComplexTest(t, name, src, 'ok', initFunc, waitFunc);
+  runTest(t, name, src, 'ok', {
+    standardInit: false,  // Save time.
+    onCreate: createAsync,
+    onRun: function(intrp) {
+      resolve(ok);
+      // Call reject; this is expected to blow up.
+      try {
+        reject('foo');
+      } catch (e) {
+        ok = 'ok';
+      }
+    }
+  });
 
   // A test of unwind_, to make sure it unwinds and kills the correct
   // thread when an async function throws.
   name = 'testAsyncRejectUnwind';
   var intrp = getInterpreter();
-  initFunc(intrp);  // Install async function.
+  createAsync(intrp);  // Install async function.
   // Create cannon-fodder thread that will usually be ready to run.
   var bgThread = intrp.createThreadForSrc(`
       // Repeatedly suspend; every 10th time suspend for a long time.
@@ -778,7 +802,7 @@ exports.testThreading = function(t) {
       suspend();
       'after';
   `;
-  runComplexTest(t, 'suspend()', src, 'after');
+  runTest(t, 'suspend()', src, 'after');
 
   // Check that Threads have ids.
   src = `
@@ -788,9 +812,13 @@ exports.testThreading = function(t) {
   `;
   runSimpleTest(t, '(new Thread).id', src, true);
 
-  // Function that simulates time passing, 100ms per invocation.
-  var wait = function(intrp) {
-    intrp.previousTime_ += 100;
+  // Function that simulates time passing as quickly as required.
+  var wait = function(intrp, runResult) {
+    if (runResult > 0) {
+      intrp.previousTime_ += runResult;
+    } else {
+      throw new Error('Unexpected blocked threads');
+    }
   };
 
   src = `
@@ -804,7 +832,7 @@ exports.testThreading = function(t) {
       s += '5';
       s;
   `;
-  runComplexTest(t, 'new Thread', src, '12345', undefined, wait);
+  runTest(t, 'new Thread', src, '12345', {onRun: wait});
 
   src = `
       var current;
@@ -812,7 +840,7 @@ exports.testThreading = function(t) {
       suspend();
       current === thread;
   `;
-  runComplexTest(t, 'Thread.current()', src, true);
+  runTest(t, 'Thread.current()', src, true);
 
   src = `
       var result;
@@ -824,14 +852,14 @@ exports.testThreading = function(t) {
       suspend();
       result;
   `;
-  runComplexTest(t, 'Thread.kill', src, 'OK');
+  runTest(t, 'Thread.kill', src, 'OK');
 
   src = `
       'before';
       suspend(10000);
       'after';
   `;
-  runComplexTest(t, 'suspend(1000)', src, 'after', undefined, wait);
+  runTest(t, 'suspend(1000)', src, 'after', {onRun: wait});
 
   src = `
       var s = '';
@@ -844,7 +872,7 @@ exports.testThreading = function(t) {
       s += '5';
       s;
   `;
-  runComplexTest(t, 'setTimeout', src, '12345', undefined, wait);
+  runTest(t, 'setTimeout', src, '12345', {onRun: wait});
 
   src = `
       // Should have no effect:
@@ -865,7 +893,7 @@ exports.testThreading = function(t) {
       s += '5';
       s;
   `;
-  runComplexTest(t, 'clearTimeout', src, '1235', undefined, wait);
+  runTest(t, 'clearTimeout', src, '1235', {onRun: wait});
 };
 
 /**
@@ -1101,7 +1129,7 @@ exports.testFunctionPrototypeToString = function(t) {
       Object.setPrototypeOf(escape, parent);
       escape.toString().replace(/\\s*/g, '');  // Strip whitespace.
   `;
-  runCustomTest(t, name, src, 'function(){[nativecode]}');
+  runTest(t, name, src, 'function(){[nativecode]}');  // Modifies escape.
 };
 
 /**
@@ -1125,7 +1153,7 @@ exports.testArrayPrototypeJoinParallelism = function(t) {
       // Try to do the join anyway.
       arr.join()
   `;
-  runComplexTest(t, 'Array.prototype.join parallel', src, '1,2,3,4,5');
+  runTest(t, 'Array.prototype.join parallel', src, '1,2,3,4,5');
 };
 
 /**
