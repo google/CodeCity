@@ -38,7 +38,7 @@ const testcases = require('./testcases');
 ///////////////////////////////////////////////////////////////////////////////
 
 // Prepare static interpreter instance for runSimpleTest.
-var interpreter = getInterpreter();
+const interpreter = getInterpreter();
 interpreter.global.createMutableBinding('src');
 
 /**
@@ -53,15 +53,16 @@ interpreter.global.createMutableBinding('src');
  *     completion value.
  */
 function runSimpleTest(t, name, src, expected) {
+  let thread;
   try {
     interpreter.setValueToScope(interpreter.global, 'src', src);
-    var thread = interpreter.createThreadForSrc('eval(src);').thread;
+    thread = interpreter.createThreadForSrc('eval(src);').thread;
     interpreter.run();
   } catch (e) {
     t.crash(name, util.format('%s\n%s', src, e.stack));
     return;
   }
-  var r = interpreter.pseudoToNative(thread.value);
+  const r = interpreter.pseudoToNative(thread.value);
   t.expect(name, r, expected, src);
 }
 
@@ -79,14 +80,15 @@ function runSimpleTest(t, name, src, expected) {
  */
 function runTest(t, name, src, expected, options) {
   options = options || {};
-  var intrp = getInterpreter(options.options, options.standardInit);
+  const intrp = getInterpreter(options.options, options.standardInit);
   if (options.onCreate) {
     options.onCreate(intrp);
   }
 
+  let thread;
   try {
-    var thread = intrp.createThreadForSrc(src).thread;
-    var runResult;
+    thread = intrp.createThreadForSrc(src).thread;
+    let runResult;
     while ((runResult = intrp.run())) {
       if (options.onRun) {
         options.onRun(intrp, runResult);
@@ -96,7 +98,7 @@ function runTest(t, name, src, expected, options) {
     t.crash(name, util.format('%s\n%s', src, e.stack));
     return;
   }
-  var r = intrp.pseudoToNative(thread.value);
+  const r = intrp.pseudoToNative(thread.value);
   t.expect(name, r, expected, src);
 }
 
@@ -118,7 +120,7 @@ function runTest(t, name, src, expected, options) {
  */
 async function runAsyncTest(t, name, src, expected, options) {
   options = options || {};
-  var intrp = getInterpreter(options.options, options.standardInit);
+  const intrp = getInterpreter(options.options, options.standardInit);
   if (options.onCreate) {
     options.onCreate(intrp);
   }
@@ -126,8 +128,8 @@ async function runAsyncTest(t, name, src, expected, options) {
   // Create promise to signal completion of test from within
   // interpreter.  Awaiting p will block until resolve or reject is
   // called.
-  var resolve, reject, result;
-  var p = new Promise(function(res, rej) { resolve = res; reject = rej; });
+  let resolve, reject, result;
+  const p = new Promise(function(res, rej) { resolve = res; reject = rej; });
   intrp.global.createMutableBinding(
       'resolve', intrp.createNativeFunction('resolve', resolve, false));
   intrp.global.createMutableBinding(
@@ -143,7 +145,7 @@ async function runAsyncTest(t, name, src, expected, options) {
   } finally {
     intrp.stop();
   }
-  var r = intrp.pseudoToNative(result);
+  const r = intrp.pseudoToNative(result);
   t.expect(name, r, expected, src);
 }
 
@@ -151,7 +153,7 @@ async function runAsyncTest(t, name, src, expected, options) {
  * Options for runTest and runAsyncTest.
  * @record
  */
-var TestOptions = function() {};
+const TestOptions = function() {};
 
 /**
  * Interpreter constructor options.
@@ -181,7 +183,7 @@ TestOptions.prototype.onCreate;
 /**
  * Callback to be called if .run() returns true.  Can be used to
  * simulate passing of time (for sleeping threads) or to fake
- * completion of asynchronous events (for blocked threads).  
+ * completion of asynchronous events (for blocked threads).
  *
  * The first argument is the interpreter instance to be configured.
  * The second argument is the value returned by .run().
@@ -199,8 +201,7 @@ TestOptions.prototype.onRun;
  * @param {!T} t The test runner object.
  */
 exports.testSimple = function(t) {
-  for (var i = 0; i < testcases.length; i++) {
-    var tc = testcases[i];
+  for (const tc of testcases) {
     if ('expected' in tc) {
       runSimpleTest(t, tc.name, tc.src, tc.expected);
     } else {
@@ -219,7 +220,8 @@ exports.testSimple = function(t) {
  * is running in strict mode; in sloppy mode this will be boxed.)
  */
 exports.testStrictBoxedThis = function(t) {
-  var name = 'strictBoxedThis', src = `
+  let name = 'strictBoxedThis';
+  let src = `
       String.prototype.foo = function() { return typeof this; };
       'a primitive string'.foo();
   `;
@@ -231,7 +233,7 @@ exports.testStrictBoxedThis = function(t) {
  * @param {!T} t The test runner object.
  */
 exports.testSwitchStatementFallthrough = function(t) {
-  var code = `
+  const code = `
       var x = 0;
       switch (i) {
         case 1:
@@ -251,9 +253,9 @@ exports.testSwitchStatementFallthrough = function(t) {
           // fall through
       }
       x;`;
-  var expected = [28, 31, 30, 12, 8];
-  for (var i = 0; i < expected.length; i++) {
-    var src = 'var i = ' + i + ';\n' + code;
+  const expected = [28, 31, 30, 12, 8];
+ for (let i = 0; i < expected.length; i++) {
+    const src = 'var i = ' + i + ';\n' + code;
     runSimpleTest(t, 'switch fallthrough ' + i, src, expected[i]);
   }
 };
@@ -263,7 +265,7 @@ exports.testSwitchStatementFallthrough = function(t) {
  * @param {!T} t The test runner object.
  */
 exports.testSwitchStatementBreaks = function(t) {
-  var code = `
+  const code = `
       foo: {
         switch (i) {
           case 1:
@@ -282,9 +284,9 @@ exports.testSwitchStatementBreaks = function(t) {
             40;
         }
       }`;
-  var expected = [30, 20, 20, 30, 40];
-  for (var i = 0; i < expected.length; i++) {
-    var src = 'var i = ' + i + ';\n' + code;
+  const expected = [30, 20, 20, 30, 40];
+  for (let i = 0; i < expected.length; i++) {
+    const src = 'var i = ' + i + ';\n' + code;
     runSimpleTest(t, 'switch completion ' + i, src, expected[i]);
   }
 };
@@ -295,7 +297,7 @@ exports.testSwitchStatementBreaks = function(t) {
  * @param {!T} t The test runner object.
  */
 exports.testBinaryOp = function(t) {
-  var cases = [
+  const cases = [
     // Addition / concatenation:
     ["1 + 1", 2],
     ["'1' + 1", '11'],
@@ -470,9 +472,8 @@ exports.testBinaryOp = function(t) {
 
     ["1 !== '1'", true],
   ];
-  for (var i = 0; i < cases.length; i++) {
-    var tc = cases[i];
-    var src = tc[0] + ';';
+  for (const tc of cases) {
+    const src = tc[0] + ';';
     runSimpleTest(t, 'BinaryExpression: ' + tc[0], src, tc[1]);
   }
 };
@@ -486,8 +487,8 @@ exports.testFunctionNameSetting = function(t) {
   // Tests of the methodNames option which causes the functions that
   // result from evaluating anonymous function expressions to get a
   // .name when assigned to a property.
-  var name = "Assignment to property doesn't set anonymous function name";
-  var src = `
+  let name = "Assignment to property doesn't set anonymous function name";
+  let src = `
       var o = {};
       o.myMethod = function() {};
       var gOPD = new 'Object.getOwnPropertyDescriptor';
@@ -497,7 +498,7 @@ exports.testFunctionNameSetting = function(t) {
     options: {methodNames: false},
     standardInit: false,  // Save time.
   });
-  
+
   name = 'Assignment to property sets anonymous function name';
   src = `
       var o = {};
@@ -517,7 +518,7 @@ exports.testFunctionNameSetting = function(t) {
  * @param {!T} t The test runner object.
  */
 exports.testArca = function(t) {
-  var cases = [
+  const cases = [
     ['0, NaN', undefined],
     ['NaN, NaN', undefined],
     ['NaN, 0', undefined],
@@ -557,9 +558,8 @@ exports.testArca = function(t) {
     ['2, "11"', true],   // Numeric
     ['"11", "2"', true], // String
   ];
-  for (var i = 0; i < cases.length; i++) {
-    var tc = cases[i];
-    var src = `
+  for (const tc of cases) {
+    const src = `
         (function(a,b){
           return ((a < b) || (a >= b)) ? (a < b) : undefined;
         })(${tc[0]});`;
@@ -575,7 +575,7 @@ exports.testArca = function(t) {
  * @param {!T} t The test runner object.
  */
 exports.testAeca = function(t) {
-  var cases = [
+  const cases = [
     ['false, false', true, true],  // Numeric
     ['false, true', false, false], // Numeric
     ['true, true', true, true],    // Numeric
@@ -647,9 +647,8 @@ exports.testAeca = function(t) {
     ['{}, null', false, false],
     ['{}, undefined', false, false],
   ];
-  for (var i = 0; i < cases.length; i++) {
-    var tc = cases[i];
-    var src = `(function(a,b){ return a == b })(${tc[0]});`;
+  for (const tc of cases) {
+    let src = `(function(a,b){ return a == b })(${tc[0]});`;
     runSimpleTest(t, 'AECA: ' + tc[0], src, tc[1]);
     src = `(function(a,b){ return a === b })(${tc[0]});`;
     runSimpleTest(t, 'ASECA: ' + tc[0], src, tc[2]);
@@ -665,13 +664,13 @@ exports.testAsync = function(t) {
   // Function to install an async NativeFunction on new Interpreter
   // instances.  The function, when called, will save its
   // resolve/reject callbacks and first arg in test-local variables.
-  var resolve, reject, arg;
-  var createAsync = function(intrp) {
+  let resolve, reject, arg;
+  function createAsync(intrp) {
     intrp.global.createMutableBinding('async', new intrp.NativeFunction({
       name: 'async', length: 0,
       call: function(intrp, thread, state, thisVal, args) {
         arg = args[0];
-        var rr = intrp.getResolveReject(thread, state);
+        const rr = intrp.getResolveReject(thread, state);
         resolve = rr.resolve;
         reject = rr.reject;
         return Interpreter.FunctionResult.Block;
@@ -680,8 +679,8 @@ exports.testAsync = function(t) {
   };
 
   // Test ordinary return.
-  var name = 'testAsyncResolve';
-  var src = `
+  let name = 'testAsyncResolve';
+  let src = `
       'before';
       async();
       'between';
@@ -690,7 +689,7 @@ exports.testAsync = function(t) {
   runTest(t, name, src, 'after', {
     standardInit: false,  // Save time.
     onCreate: createAsync,
-    onRun: function(intrp, runResult) {resolve(arg);},
+    onRun: (intrp, runResult) => {resolve(arg);},
   });
 
   // Test throwing an exception.
@@ -707,13 +706,13 @@ exports.testAsync = function(t) {
   runTest(t, name, src, 'except', {
     standardInit: false,  // Save time.
     onCreate: createAsync,
-    onRun: function(intrp, runResult) {reject('except');},
+    onRun: (intrp, runResult) => {reject('except');},
   });
 
   // Extra check to verify async function can't resolve/reject more
   // than once without an asertion failure.
   name = 'testAsyncSafetyCheck';
-  var ok;
+  let ok;
   src = `
      async();  // Returns ok === undefined then sets ok to 'ok'.
      async();  // Returns ok === 'ok' then uselessly sets ok a second time.
@@ -721,7 +720,7 @@ exports.testAsync = function(t) {
   runTest(t, name, src, 'ok', {
     standardInit: false,  // Save time.
     onCreate: createAsync,
-    onRun: function(intrp) {
+    onRun: (intrp) => {
       resolve(ok);
       // Call reject; this is expected to blow up.
       try {
@@ -729,29 +728,29 @@ exports.testAsync = function(t) {
       } catch (e) {
         ok = 'ok';
       }
-    }
+    },
   });
 
   // A test of unwind_, to make sure it unwinds and kills the correct
   // thread when an async function throws.
   name = 'testAsyncRejectUnwind';
-  var intrp = getInterpreter();
+  const intrp = getInterpreter();
   createAsync(intrp);  // Install async function.
   // Create cannon-fodder thread that will usually be ready to run.
-  var bgThread = intrp.createThreadForSrc(`
+  const bgThread = intrp.createThreadForSrc(`
       // Repeatedly suspend; every 10th time suspend for a long time.
       for (var i = 1; true; i++) {
         suspend((i % 10) ? 0 : 1000);
       }
   `).thread;
   // Create thread to call async function.
-  var asyncThread = intrp.createThreadForSrc('async();').thread;
+  const asyncThread = intrp.createThreadForSrc('async();').thread;
   intrp.run();
   // asyncThread has run once and blocked; bgThread has run ten times
   // and is now sleeping for 1s.
 
   // Create Error err to throw.  It should have no stack to start with.
-  var err = new intrp.Error(intrp.ROOT, intrp.ERROR, 'sample error');
+  const err = new intrp.Error(intrp.ROOT, intrp.ERROR, 'sample error');
   t.assert(name + ': Error has no .stack initially',
       !err.has('stack', intrp.ROOT));
 
@@ -773,7 +772,7 @@ exports.testAsync = function(t) {
   // Verify err has aquired a stack.
   t.assert(name + ': Error has .stack after being thrown',
       err.has('stack', intrp.ROOT));
-  var stack = err.get('stack', intrp.ROOT);
+  const stack = err.get('stack', intrp.ROOT);
   t.assert(name + ': Error .stack mentions function that threw',
       stack.match(/in async/));
   t.assert(name + ': Error .stack mentions call site',
@@ -786,7 +785,7 @@ exports.testAsync = function(t) {
  * @param {!T} t The test runner object.
  */
 exports.testThreading = function(t) {
-  var src = `
+  let src = `
       'before';
       suspend();
       'after';
@@ -802,7 +801,7 @@ exports.testThreading = function(t) {
   runSimpleTest(t, '(new Thread).id', src, true);
 
   // Function that simulates time passing as quickly as required.
-  var wait = function(intrp, runResult) {
+  function wait(intrp, runResult) {
     if (runResult > 0) {
       intrp.previousTime_ += runResult;
     } else {
@@ -895,9 +894,9 @@ exports.testStartStop = async function(t) {
   function snooze(ms) {
     return new Promise(function(resolve, reject) { setTimeout(resolve, ms); });
   }
-  var intrp = getInterpreter();
-  var name = 'testStart';
-  var src = `
+  const intrp = getInterpreter();
+  let name = 'testStart';
+  let src = `
       var x = 0;
       while (true) {
         suspend(10);
@@ -921,9 +920,9 @@ exports.testStartStop = async function(t) {
   } finally {
     intrp.stop();
   }
-  var r = intrp.getValueFromScope(intrp.global, 'x');
-  var expected = 2;
-  t.expect(name, r, expected, src + '\n(after 29ms)');
+  let r = intrp.getValueFromScope(intrp.global, 'x');
+  const expected = 2;
+  t.expect(name, r, 2, src + '\n(after 29ms)');
 
   // Check that .pause() actually paused execution.
   name = 'testPause';
@@ -942,7 +941,7 @@ exports.testStartStop = async function(t) {
  * @param {!T} t The test runner object.
  */
 exports.testClasses = function(t) {
-  var classes = {
+  const classes = {
     Object: {
       prototypeProto: 'null',
       literal: '{}'
@@ -1011,28 +1010,28 @@ exports.testClasses = function(t) {
       functionNotConstructor: true  // WeakMap() can't be called without new.
     },
   };
-  for (var c in classes) {
-    var name, src, tc = classes[c];
+  for (const c in classes) {
+    const tc = classes[c];
     // Check constructor is a function:
-    name = c + 'IsFunction';
-    src = 'typeof ' + c + ';';
+    let name = c + 'IsFunction';
+    let src = 'typeof ' + c + ';';
     runSimpleTest(t, name, src, 'function');
     // Check constructor's proto is Function.prototype
     name = c + 'ProtoIsFunctionPrototype';
     src = 'Object.getPrototypeOf(' + c + ') === Function.prototype;';
     runSimpleTest(t, name, src, true);
     // Check prototype is of correct type:
-    var prototypeType = (tc.prototypeType || 'object');
-    name = c + 'PrototypeIs' + prototypeType
+    const prototypeType = (tc.prototypeType || 'object');
+    name = c + 'PrototypeIs' + prototypeType;
     src = 'typeof ' + c + '.prototype;';
     runSimpleTest(t, name, src, prototypeType);
     // Check prototype has correct class:
-    var prototypeClass = (tc.prototypeClass || tc.class || c);
+    const prototypeClass = (tc.prototypeClass || tc.class || c);
     name = c + 'PrototypeClassIs' + prototypeClass;
     src = 'Object.prototype.toString.apply(' + c + '.prototype);';
     runSimpleTest(t, name, src, '[object ' + prototypeClass + ']');
     // Check prototype has correct proto:
-    var prototypeProto = (tc.prototypeProto || 'Object.prototype');
+    const prototypeProto = (tc.prototypeProto || 'Object.prototype');
     name = c + 'PrototypeProtoIs' + prototypeProto;
     src = 'Object.getPrototypeOf(' + c + '.prototype) === ' +
         prototypeProto + ';';
@@ -1042,7 +1041,7 @@ exports.testClasses = function(t) {
     src = c + '.prototype.constructor === ' + c + ';';
     runSimpleTest(t, name, src, true);
 
-    var cls = tc.class || c;
+    const cls = tc.class || c;
     if (!tc.noInstance) {
       // Check instance's type:
       name = c + 'InstanceIs' + prototypeType;
@@ -1082,7 +1081,7 @@ exports.testClasses = function(t) {
     }
     if (tc.literal) {
       // Check literal's type:
-      var literalType = (tc.literalType || prototypeType);
+      const literalType = (tc.literalType || prototypeType);
       name = c + 'LiteralIs' + literalType;
       src = 'typeof (' + tc.literal + ');';
       runSimpleTest(t, name, src, literalType);
@@ -1111,8 +1110,8 @@ exports.testClasses = function(t) {
  * @param {!T} t The test runner object.
  */
 exports.testFunctionPrototypeToString = function(t) {
-  var name = 'Funciton.prototype.toString applied to anonymous NativeFunction';
-  var src = `
+  let name = 'Funciton.prototype.toString applied to anonymous NativeFunction';
+  let src = `
       var parent = function parent() {};
       delete escape.name;
       Object.setPrototypeOf(escape, parent);
@@ -1126,7 +1125,7 @@ exports.testFunctionPrototypeToString = function(t) {
  * @param {!T} t The test runner object.
  */
 exports.testArrayPrototypeJoinParallelism = function(t) {
-  var src = `
+  let src = `
       // Make String() do a suspend(), to tend to cause multiple
       // simultaneous .join() calls become badly interleved with each
       // other.
@@ -1151,7 +1150,7 @@ exports.testArrayPrototypeJoinParallelism = function(t) {
  * @param {!T} t The test runner object.
  */
 exports.testNumberToString = function(t) {
-  var cases = [
+  const cases = [
     ['(42).toString()', '42'],
     ['(42).toString(16)', '2a'],
     //['(-42.4).toString(5)', '-132.2'], Node incorrectly reports '-132.144444'.
@@ -1162,9 +1161,8 @@ exports.testNumberToString = function(t) {
     ['(Infinity).toString()', 'Infinity'],
     ['(-Infinity).toString()', '-Infinity'],
   ];
-  for (var i = 0; i < cases.length; i++) {
-    var tc = cases[i];
-    var src = tc[0] + ';';
+  for (const tc of cases) {
+    const src = tc[0] + ';';
     runSimpleTest(t, 'testNumberToString: ' + tc[0], src, tc[1]);
   }
 };
@@ -1177,8 +1175,8 @@ exports.testNetworking = async function(t) {
   // Run a test of connectionListen() and connectionUnlisten(), and
   // of the server receiving data using the .receive and .end methods
   // on a connection object.
-  var name = 'testServerInbound';
-  var src = `
+  let name = 'testServerInbound';
+  let src = `
       var data = '', conn = {};
       conn.onReceive = function(d) {
         data += d;
@@ -1190,11 +1188,11 @@ exports.testNetworking = async function(t) {
       CC.connectionListen(8888, conn);
       send();
    `;
-  var createSend = function(intrp) {
+  function createSend(intrp) {
     intrp.global.createMutableBinding('send', intrp.createNativeFunction(
         'send', function() {
           // Send some data to server.
-          var client = net.createConnection({ port: 8888 }, function() {
+          const client = net.createConnection({ port: 8888 }, function() {
             client.write('foo');
             client.write('bar');
             client.end();
@@ -1217,14 +1215,14 @@ exports.testNetworking = async function(t) {
       resolve(receive());
       CC.connectionUnlisten(8888);
    `;
-  var createReceive = function(intrp) {
+  function createReceive(intrp) {
     intrp.global.createMutableBinding('receive', new intrp.NativeFunction({
       name: 'receive', length: 0,
       call: function(intrp, thread, state, thisVal, args) {
-        var reply = '';
-        var rr = intrp.getResolveReject(thread, state);
+        let reply = '';
+        const rr = intrp.getResolveReject(thread, state);
         // Receive some data from the server.
-        var client = net.createConnection({ port: 8888 }, function() {
+        const client = net.createConnection({ port: 8888 }, function() {
           client.on('data', function(data) {
             reply += data;
           });
