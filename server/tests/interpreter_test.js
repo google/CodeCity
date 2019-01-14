@@ -37,7 +37,7 @@ const testcases = require('./testcases');
 // Test helper functions.
 ///////////////////////////////////////////////////////////////////////////////
 
-// Prepare static interpreter instance for runTest.
+// Prepare static interpreter instance for runSimpleTest.
 var interpreter = getInterpreter();
 interpreter.global.createMutableBinding('src');
 
@@ -52,7 +52,7 @@ interpreter.global.createMutableBinding('src');
  * @param {number|string|boolean|null|undefined} expected The expected
  *     completion value.
  */
-function runTest(t, name, src, expected) {
+function runSimpleTest(t, name, src, expected) {
   try {
     interpreter.setValueToScope(interpreter.global, 'src', src);
     var thread = interpreter.createThreadForSrc('eval(src);').thread;
@@ -200,7 +200,7 @@ exports.testSimple = function(t) {
   for (var i = 0; i < testcases.length; i++) {
     var tc = testcases[i];
     if ('expected' in tc) {
-      runTest(t, tc.name, tc.src, tc.expected);
+      runSimpleTest(t, tc.name, tc.src, tc.expected);
     } else {
       t.skip(tc.name);
     }
@@ -252,7 +252,7 @@ exports.testSwitchStatementFallthrough = function(t) {
   var expected = [28, 31, 30, 12, 8];
   for (var i = 0; i < expected.length; i++) {
     var src = 'var i = ' + i + ';\n' + code;
-    runTest(t, 'switch fallthrough ' + i, src, expected[i]);
+    runSimpleTest(t, 'switch fallthrough ' + i, src, expected[i]);
   }
 };
 
@@ -283,7 +283,7 @@ exports.testSwitchStatementBreaks = function(t) {
   var expected = [30, 20, 20, 30, 40];
   for (var i = 0; i < expected.length; i++) {
     var src = 'var i = ' + i + ';\n' + code;
-    runTest(t, 'switch completion ' + i, src, expected[i]);
+    runSimpleTest(t, 'switch completion ' + i, src, expected[i]);
   }
 };
 
@@ -471,7 +471,7 @@ exports.testBinaryOp = function(t) {
   for (var i = 0; i < cases.length; i++) {
     var tc = cases[i];
     var src = tc[0] + ';';
-    runTest(t, 'BinaryExpression: ' + tc[0], src, tc[1]);
+    runSimpleTest(t, 'BinaryExpression: ' + tc[0], src, tc[1]);
   }
 };
 
@@ -555,7 +555,7 @@ exports.testArca = function(t) {
         (function(a,b){
           return ((a < b) || (a >= b)) ? (a < b) : undefined;
         })(${tc[0]});`;
-    runTest(t, 'ARCA: ' + tc[0], src, tc[1]);
+    runSimpleTest(t, 'ARCA: ' + tc[0], src, tc[1]);
   }
 };
 
@@ -642,9 +642,9 @@ exports.testAeca = function(t) {
   for (var i = 0; i < cases.length; i++) {
     var tc = cases[i];
     var src = `(function(a,b){ return a == b })(${tc[0]});`;
-    runTest(t, 'AECA: ' + tc[0], src, tc[1]);
+    runSimpleTest(t, 'AECA: ' + tc[0], src, tc[1]);
     src = `(function(a,b){ return a === b })(${tc[0]});`;
-    runTest(t, 'ASECA: ' + tc[0], src, tc[2]);
+    runSimpleTest(t, 'ASECA: ' + tc[0], src, tc[2]);
   }
 };
 
@@ -786,7 +786,7 @@ exports.testThreading = function(t) {
       var t2 = new Thread(function() {});
       typeof t1.id === 'number' && typeof t2.id === 'number' && t1.id !== t2.id;
   `;
-  runTest(t, '(new Thread).id', src, true);
+  runSimpleTest(t, '(new Thread).id', src, true);
 
   // Function that simulates time passing, 100ms per invocation.
   var wait = function(intrp) {
@@ -999,68 +999,68 @@ exports.testClasses = function(t) {
     // Check constructor is a function:
     name = c + 'IsFunction';
     src = 'typeof ' + c + ';';
-    runTest(t, name, src, 'function');
+    runSimpleTest(t, name, src, 'function');
     // Check constructor's proto is Function.prototype
     name = c + 'ProtoIsFunctionPrototype';
     src = 'Object.getPrototypeOf(' + c + ') === Function.prototype;';
-    runTest(t, name, src, true);
+    runSimpleTest(t, name, src, true);
     // Check prototype is of correct type:
     var prototypeType = (tc.prototypeType || 'object');
     name = c + 'PrototypeIs' + prototypeType
     src = 'typeof ' + c + '.prototype;';
-    runTest(t, name, src, prototypeType);
+    runSimpleTest(t, name, src, prototypeType);
     // Check prototype has correct class:
     var prototypeClass = (tc.prototypeClass || tc.class || c);
     name = c + 'PrototypeClassIs' + prototypeClass;
     src = 'Object.prototype.toString.apply(' + c + '.prototype);';
-    runTest(t, name, src, '[object ' + prototypeClass + ']');
+    runSimpleTest(t, name, src, '[object ' + prototypeClass + ']');
     // Check prototype has correct proto:
     var prototypeProto = (tc.prototypeProto || 'Object.prototype');
     name = c + 'PrototypeProtoIs' + prototypeProto;
     src = 'Object.getPrototypeOf(' + c + '.prototype) === ' +
         prototypeProto + ';';
-    runTest(t, name, src, true);
+    runSimpleTest(t, name, src, true);
     // Check prototype's .constructor is constructor:
     name = c + 'PrototypeConstructorIs' + c;
     src = c + '.prototype.constructor === ' + c + ';';
-    runTest(t, name, src, true);
+    runSimpleTest(t, name, src, true);
 
     var cls = tc.class || c;
     if (!tc.noInstance) {
       // Check instance's type:
       name = c + 'InstanceIs' + prototypeType;
       src = 'typeof (new ' + c + ');';
-      runTest(t, name, src, prototypeType);
+      runSimpleTest(t, name, src, prototypeType);
       // Check instance's proto:
       name = c + 'InstancePrototypeIs' + c + 'Prototype';
       src = 'Object.getPrototypeOf(new ' + c + ') === ' + c + '.prototype;';
-      runTest(t, name, src, true);
+      runSimpleTest(t, name, src, true);
       // Check instance's class:
       name = c + 'InstanceClassIs' + cls;
       src = 'Object.prototype.toString.apply(new ' + c + ');';
-      runTest(t, name, src, '[object ' + cls + ']');
+      runSimpleTest(t, name, src, '[object ' + cls + ']');
       // Check instance is instanceof its contructor:
       name = c + 'InstanceIsInstanceof' + c;
       src = '(new ' + c + ') instanceof ' + c + ';';
-      runTest(t, name, src, true);
+      runSimpleTest(t, name, src, true);
       if (!tc.functionNotConstructor) {
         // Recheck instances when constructor called as function:
         // Recheck instance's type:
         name = c + 'ReturnIs' + prototypeType;
         src = 'typeof ' + c + '();';
-        runTest(t, name, src, prototypeType);
+        runSimpleTest(t, name, src, prototypeType);
         // Recheck instance's proto:
         name = c + 'ReturnPrototypeIs' + c + 'Prototype';
         src = 'Object.getPrototypeOf(' + c + '()) === ' + c + '.prototype;';
-        runTest(t, name, src, true);
+        runSimpleTest(t, name, src, true);
         // Recheck instance's class:
         name = c + 'ReturnClassIs' + cls;
         src = 'Object.prototype.toString.apply(' + c + '());';
-        runTest(t, name, src, '[object ' + cls + ']');
+        runSimpleTest(t, name, src, '[object ' + cls + ']');
         // Recheck instance is instanceof its contructor:
         name = c + 'ReturnIsInstanceof' + c;
         src = c + '() instanceof ' + c + ';';
-        runTest(t, name, src, true);
+        runSimpleTest(t, name, src, true);
       }
     }
     if (tc.literal) {
@@ -1068,22 +1068,22 @@ exports.testClasses = function(t) {
       var literalType = (tc.literalType || prototypeType);
       name = c + 'LiteralIs' + literalType;
       src = 'typeof (' + tc.literal + ');';
-      runTest(t, name, src, literalType);
+      runSimpleTest(t, name, src, literalType);
       // Check literal's proto:
       name = c + 'LiteralPrototypeIs' + c + 'Prototype';
       src = 'Object.getPrototypeOf(' + tc.literal + ') === ' + c +
           '.prototype;';
-      runTest(t, name, src, true);
+      runSimpleTest(t, name, src, true);
       // Check literal's class:
       name = c + 'LiteralClassIs' + cls;
       src = 'Object.prototype.toString.apply(' + tc.literal + ');';
-      runTest(t, name, src, '[object ' + cls + ']');
+      runSimpleTest(t, name, src, '[object ' + cls + ']');
       // Primitives can never be instances.
       if (literalType === 'object' || literalType === 'function') {
         // Check literal is instanceof its contructor.
         name = c + 'LiteralIsInstanceof' + c;
         src = '(' + tc.literal + ') instanceof ' + c + ';';
-        runTest(t, name, src, true);
+        runSimpleTest(t, name, src, true);
       }
     }
   }
@@ -1148,7 +1148,7 @@ exports.testNumberToString = function(t) {
   for (var i = 0; i < cases.length; i++) {
     var tc = cases[i];
     var src = tc[0] + ';';
-    runTest(t, 'testNumberToString: ' + tc[0], src, tc[1]);
+    runSimpleTest(t, 'testNumberToString: ' + tc[0], src, tc[1]);
   }
 };
 
