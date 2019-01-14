@@ -76,6 +76,8 @@ var Interpreter = function(options) {
   this.threads_ = [];
   /** @private @type {?Interpreter.Thread} */
   this.thread_ = null;
+  /** @private @type {number|undefined} */
+  this.threadTimeLimit_ = undefined;
   /** @private (Type is whatever is returned by setTimeout()) */
   this.runner_ = null;
   /** @type {boolean} */
@@ -185,7 +187,9 @@ Interpreter.prototype.createThreadForFuncCall = function(
 
 /**
  * Schedule the next runnable thread.  Returns 0 if a READY thread
- * successfuly scheduled; otherwise returns earliest .runAt time
+ * successfuly scheduled (or if the current thread was already
+ * runnable, which can happen when interpreter has just been
+ * deserialised); otherwise returns earliest .runAt time
  * amongst SLEEPING threads (if any), or Number.MAX_VALUE if there are
  * none.  If there are additionally no BLOCKED threads left (i.e.,
  * there are no non-ZOMBIE theads at all) it will also set .done to
@@ -193,6 +197,9 @@ Interpreter.prototype.createThreadForFuncCall = function(
  * @return {number} See description.
  */
 Interpreter.prototype.schedule = function() {
+  if (this.thread && this.thread.status === Interpreter.Thread.Status.READY) {
+    return 0;  // Nothing to do.  Don't reset .threadTimeLimit_!
+  }
   var now = this.now();
   var runAt = Number.MAX_VALUE;
   var threads = this.threads_;
@@ -235,6 +242,8 @@ Interpreter.prototype.schedule = function() {
         throw new Error('Unknown thread state');
     }
   }
+  this.threadTimeLimit_ = (this.thread_ && this.thread_.timeLimit) ?
+      now + this.thread_.timeLimit : undefined;
   return runAt < now ? 0 : runAt;
 };
 
@@ -2864,6 +2873,18 @@ Interpreter.prototype.setValue = function(ref, value, perms) {
 };
 
 /**
+ * Check to see if the current thread has run too long.  Called at the
+ * top of loops and before making function calls.
+ * @param {!Interpreter.Owner} perms Perm to use to create Error object.
+ */
+Interpreter.prototype.checkTimeLimit_ = function(perms) {
+  if (this.threadTimeLimit_ && this.now() > this.threadTimeLimit_) {
+    throw new this.Error(perms, this.RANGE_ERROR, 'Thread ran too long');
+  }
+};
+
+
+/**
  * Carry out the mechanics of throwing an exception.
  *
  * This is intended only to be called from exception handlers in
@@ -3571,6 +3592,9 @@ Interpreter.Thread = function(id, state, runAt) {
   this.stateStack_ = [state];
   /** @type {number} */
   this.runAt = runAt;
+  // TODO(cpcallen): make configurable / inherited.
+  /** @type {number} */
+  this.timeLimit = 0;
   /** @type {?Interpreter.prototype.Thread} */
   this.wrapper = null;
   /** @type {?Interpreter.Value} */
@@ -5942,6 +5966,8 @@ stepFuncs_['CallExpression'] = function (thread, stack, state, node) {
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['Call'] = function (thread, stack, state, node) {
+  // Terminate call if out of time.
+  this.checkTimeLimit_(state.scope.perms);
   /* NOTE: Beware that, because
    *
    *  - an async function might not *actually* be async, and thus
@@ -6073,6 +6099,8 @@ stepFuncs_['DoWhileStatement'] = function (thread, stack, state, node) {
     }
   }
   if (state.step_ === 1) {  // Evaluate condition.
+    // Terminate loop if out of time.
+    this.checkTimeLimit_(state.scope.perms);
     state.step_ = 2;
     return new Interpreter.State(node['test'], state.scope);
   }
@@ -6181,6 +6209,8 @@ stepFuncs_['ForInStatement'] = function (thread, stack, state, node) {
         state.info_ = {iter: iter, key: ''};
         // FALL THROUGH
       case 2:  // Find the property name for this iteration; do node.left.
+        // Terminate loop if out of time.
+        this.checkTimeLimit_(state.scope.perms);
         var key = state.info_.iter.next();
         if (key === undefined) {
           // Done; exit loop.
@@ -6236,6 +6266,8 @@ stepFuncs_['ForStatement'] = function (thread, stack, state, node) {
         }
         // FALL THROUGH
       case 1:  // Eval test expression.
+        // Terminate loop if out of time.
+        this.checkTimeLimit_(state.scope.perms);
         state.step_ = 2;
         if (node['test']) {
           return new Interpreter.State(node['test'], state.scope);
