@@ -90,6 +90,9 @@ function runTest(t, name, src, expected, options) {
   let thread;
   try {
     thread = intrp.createThreadForSrc(src).thread;
+    if (options.onCreateThread) {
+      options.onCreateThread(intrp, thread);
+    }
     let runResult;
     while ((runResult = intrp.run())) {
       if (runResult > 0) {  // Sleeping thread(s).
@@ -143,7 +146,10 @@ async function runAsyncTest(t, name, src, expected, options) {
       'reject', intrp.createNativeFunction('reject', reject, false));
 
   try {
-    intrp.createThreadForSrc(src);
+    const thread = intrp.createThreadForSrc(src).thread;
+    if (options.onCreateThread) {
+      options.onCreateThread(intrp, thread);
+    }
     intrp.start();
     result = await p;
   } catch (e) {
@@ -186,6 +192,17 @@ TestOptions.prototype.standardInit;
  * @type {function(!Interpreter)|undefined}
  */
 TestOptions.prototype.onCreate;
+
+/**
+ * Callback to be called after creating a new Interpreter.Thread, but
+ * before running it.
+ *
+ * The first argument is the interpreter instance.
+ * The second argument is the thread just created.
+ *
+ * @type {function(!Interpreter, !Interpreter.Thread)|undefined}
+ */
+TestOptions.prototype.onCreateThread;
 
 /**
  * Callback to be called if .run() returns a negative value,
@@ -879,6 +896,49 @@ exports.testThreading = function(t) {
       s;
   `;
   runTest(t, 'clearTimeout', src, '1235');
+};
+
+/**
+ * Run tests of the Thread time-limit mechanism.
+ * @param {!T} t The test runner object.
+ */
+exports.testTimeLimit = function(t) {
+  // First check that a sufficiently slow loop will get timed out.
+  // (This also gives us a baseline for how many iterations is
+  // definitely sufficient to cause a timeout in < 10ms.)  If the
+  // number of iterations is adjusted (say, because the
+  // interpreter/hardware got faster, and it stopped hitting the
+  // timeout) make sure to also adjust the number of iterations in the
+  // next test too.
+  let name = 'Thread hits timeLimit';
+  let src = `
+      try {
+        for (var i = 0; i < 2000; i++) {}  // Long but non-infinite loop.
+        "Thread didn't time out";  // Maybe increase iterations?
+      } catch (e) {
+        e.name + ': ' + e.message;  // Can't call String(e): we're out of time!
+      }
+  `;
+  runTest(t, name, src, 'RangeError: Thread ran too long', {
+    onCreateThread: (intrp, thread) => {thread.timeLimit = 2;}
+  });
+
+  // Now check that calling suspend() regularly will save the thread
+  // from timing out.
+  name = 'Thread can use suspend to avoid timeLimit';
+  src = `
+      try {
+        for (var i = 0; i < 2000; i++) {
+          suspend();
+        }
+        "Thread didn't time out";
+      } catch (e) {
+        e.name + ': ' + e.message;  // Can't call String(e): we're out of time!
+      }
+  `;
+  runTest(t, name, src, "Thread didn't time out", {
+    onCreateThread: (intrp, thread) => {thread.timeLimit = 2;}
+  });
 };
 
 /**
