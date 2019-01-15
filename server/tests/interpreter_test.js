@@ -71,6 +71,8 @@ function runSimpleTest(t, name, src, expected) {
  * instance, which may be created with non-default options and/or
  * without the standard startup files, and during which various
  * callbacks will be executed; see TestOptions for details.
+ * (Simulated) time will be automatically fast-forwarded as required
+ * to wake sleeping threads.
  * @param {!T} t The test runner object.
  * @param {string} name The name of the test.
  * @param {string} src The code to be evaled.
@@ -90,8 +92,13 @@ function runTest(t, name, src, expected, options) {
     thread = intrp.createThreadForSrc(src).thread;
     let runResult;
     while ((runResult = intrp.run())) {
-      if (options.onRun) {
-        options.onRun(intrp, runResult);
+      if (runResult > 0) {  // Sleeping thread(s).
+        // Fast forward to wake-up time.  Cast to defeat @private check.
+        /** @type {?} */(intrp).previousTime_ += runResult;  
+      } else {  // Blocked thread(s).
+        if (options.onBlocked) {
+          options.onBlocked(intrp);
+        }
       }
     }
   } catch (e) {
@@ -115,7 +122,7 @@ function runTest(t, name, src, expected, options) {
  * @param {number|string|boolean|null|undefined} expected The expected
  *     completion value.
  * @param {!TestOptions=} options Custom test options.  Note that
- *     'onRun' is ignored because the interpreter is .start()ed
+ *     'onBlocked' is ignored because the interpreter is .start()ed
  *     instead of .run() being called directly.
  */
 async function runAsyncTest(t, name, src, expected, options) {
@@ -181,16 +188,15 @@ TestOptions.prototype.standardInit;
 TestOptions.prototype.onCreate;
 
 /**
- * Callback to be called if .run() returns true.  Can be used to
- * simulate passing of time (for sleeping threads) or to fake
- * completion of asynchronous events (for blocked threads).
+ * Callback to be called if .run() returns a negative value,
+ * indicating there are blocked threads.  Can be used to fake
+ * completion of asynchronous events.
  *
  * The first argument is the interpreter instance to be configured.
- * The second argument is the value returned by .run().
  *
- * @type {function(!Interpreter, number)|undefined}
+ * @type {function(!Interpreter)|undefined}
  */
-TestOptions.prototype.onRun;
+TestOptions.prototype.onBlocked;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Tests: external simple testcases
@@ -689,7 +695,7 @@ exports.testAsync = function(t) {
   runTest(t, name, src, 'after', {
     standardInit: false,  // Save time.
     onCreate: createAsync,
-    onRun: (intrp, runResult) => {resolve(arg);},
+    onBlocked: (intrp) => {resolve(arg);},
   });
 
   // Test throwing an exception.
@@ -706,7 +712,7 @@ exports.testAsync = function(t) {
   runTest(t, name, src, 'except', {
     standardInit: false,  // Save time.
     onCreate: createAsync,
-    onRun: (intrp, runResult) => {reject('except');},
+    onBlocked: (intrp) => {reject('except');},
   });
 
   // Extra check to verify async function can't resolve/reject more
@@ -720,7 +726,7 @@ exports.testAsync = function(t) {
   runTest(t, name, src, 'ok', {
     standardInit: false,  // Save time.
     onCreate: createAsync,
-    onRun: (intrp) => {
+    onBlocked: (intrp) => {
       resolve(ok);
       // Call reject; this is expected to blow up.
       try {
@@ -800,15 +806,6 @@ exports.testThreading = function(t) {
   `;
   runSimpleTest(t, '(new Thread).id', src, true);
 
-  // Function that simulates time passing as quickly as required.
-  function wait(intrp, runResult) {
-    if (runResult > 0) {
-      intrp.previousTime_ += runResult;
-    } else {
-      throw new Error('Unexpected blocked threads');
-    }
-  };
-
   src = `
       var s = '';
       new Thread(function() { s += this; }, 500, 2);
@@ -820,7 +817,7 @@ exports.testThreading = function(t) {
       s += '5';
       s;
   `;
-  runTest(t, 'new Thread', src, '12345', {onRun: wait});
+  runTest(t, 'new Thread', src, '12345');
 
   src = `
       var current;
@@ -847,7 +844,7 @@ exports.testThreading = function(t) {
       suspend(10000);
       'after';
   `;
-  runTest(t, 'suspend(1000)', src, 'after', {onRun: wait});
+  runTest(t, 'suspend(1000)', src, 'after');
 
   src = `
       var s = '';
@@ -860,7 +857,7 @@ exports.testThreading = function(t) {
       s += '5';
       s;
   `;
-  runTest(t, 'setTimeout', src, '12345', {onRun: wait});
+  runTest(t, 'setTimeout', src, '12345');
 
   src = `
       // Should have no effect:
@@ -881,7 +878,7 @@ exports.testThreading = function(t) {
       s += '5';
       s;
   `;
-  runTest(t, 'clearTimeout', src, '1235', {onRun: wait});
+  runTest(t, 'clearTimeout', src, '1235');
 };
 
 /**
