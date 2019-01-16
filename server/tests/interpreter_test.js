@@ -903,24 +903,33 @@ exports.testThreading = function(t) {
  * @param {!T} t The test runner object.
  */
 exports.testTimeLimit = function(t) {
+  // Some constants used by several tests in this section.  It should
+  // be the case that a for loop executing the specified number of
+  // iterations will take longer than the specified time limit, even
+  // if the body of the loop is empty.
+  //
+  // Ideally these should be very small values to ensure the tests
+  // run quickly, but in practice random delays (OS-level time
+  // slicing, GC and JIT delays, etc.) make make tests very flaky if
+  // these values are too small.
+  const iterations = 10000;
+  const timeLimit = 5;  // in ms.
+
   // First check that a sufficiently slow loop will get timed out.
-  // (This also gives us a baseline for how many iterations is
-  // definitely sufficient to cause a timeout in < 10ms.)  If the
-  // number of iterations is adjusted (say, because the
-  // interpreter/hardware got faster, and it stopped hitting the
-  // timeout) make sure to also adjust the number of iterations in the
-  // next test too.
+  // (This also verifies the requirements on the iterations and
+  // timeLimit constants mentioned above.)
   let name = 'Thread hits timeLimit';
   let src = `
       try {
-        for (var i = 0; i < 2000; i++) {}  // Long but non-infinite loop.
+        for (var i = 0; i < ${iterations}; i++) {
+        }
         "Thread didn't time out";  // Maybe increase iterations?
       } catch (e) {
         e.name + ': ' + e.message;  // Can't call String(e): we're out of time!
       }
   `;
   runTest(t, name, src, 'RangeError: Thread ran too long', {
-    onCreateThread: (intrp, thread) => {thread.timeLimit = 2;}
+    onCreateThread: (intrp, thread) => {thread.timeLimit = timeLimit;},
   });
 
   // Now check that calling suspend() regularly will save the thread
@@ -928,7 +937,7 @@ exports.testTimeLimit = function(t) {
   name = 'Thread can use suspend to avoid timeLimit';
   src = `
       try {
-        for (var i = 0; i < 2000; i++) {
+        for (var i = 0; i < ${iterations}; i++) {
           suspend();
         }
         "Thread didn't time out";
@@ -937,8 +946,30 @@ exports.testTimeLimit = function(t) {
       }
   `;
   runTest(t, name, src, "Thread didn't time out", {
-    onCreateThread: (intrp, thread) => {thread.timeLimit = 2;}
+    onCreateThread: (intrp, thread) => {thread.timeLimit = timeLimit;},
   });
+
+  // Test timeLimit is inherited by child Threads.
+  name = 'Threads inherit timeLimit from parent Thread';
+  src = `
+      var r;
+      setTimeout(function() {
+        try {
+          for (var i = 0; i < ${iterations}; i++) {
+          }
+          r = "Thread didn't time out";  // Maybe increase iterations?
+        } catch (e) {
+          r = e.name + ': ' + e.message;  // Can't call String(e).
+        }
+      });
+      suspend(1000000);  // Fortunately simulated time passes really quickly.
+      r;
+  `;
+  runTest(t, name, src, 'RangeError: Thread ran too long', {
+    onCreateThread: (intrp, thread) => {thread.timeLimit = timeLimit;},
+  });
+
+      
 };
 
 /**
