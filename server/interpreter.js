@@ -140,11 +140,13 @@ Interpreter.prototype.now = function() {
  * @param {!Interpreter.State} state Initial state
  * @param {number=} runAt Time at which thread should begin execution
  *     (default: now).
+ * @param {number=} timeLimit Maximum runtime without suspending (in ms).
  * @return {!Interpreter.prototype.Thread} Userland Thread object.
  */
-Interpreter.prototype.createThread = function(owner, state, runAt) {
+Interpreter.prototype.createThread = function(owner, state, runAt, timeLimit) {
   var id = this.threads_.length;
-  var thread = new Interpreter.Thread(id, state, runAt || this.now());
+  var thread =
+      new Interpreter.Thread(id, state, runAt || this.now(), timeLimit);
   this.threads_[this.threads_.length] = thread;
   this.go_();
   return new this.Thread(thread, owner);
@@ -156,16 +158,17 @@ Interpreter.prototype.createThread = function(owner, state, runAt) {
  * global scope and will consequently runs wit whatever permissions
  * the global scope has.
  * @param {string} src JavaScript source code to parse and run.
+ * @param {number=} timeLimit Maximum runtime without suspending (in ms).
  * @return {!Interpreter.prototype.Thread} Userland Thread object.
  */
-Interpreter.prototype.createThreadForSrc = function(src) {
+Interpreter.prototype.createThreadForSrc = function(src, timeLimit) {
   if (this.options.trimProgram) {
     src = src.trim();
   }
   var ast = this.compile_(src);
   this.populateScope_(ast, this.global);
   var state = new Interpreter.State(ast, this.global);
-  return this.createThread(this.ROOT, state);
+  return this.createThread(this.ROOT, state, undefined, timeLimit);
 };
 
 /**
@@ -177,12 +180,13 @@ Interpreter.prototype.createThreadForSrc = function(src) {
  * @param {!Array<?Interpreter.Value>} args Arguments to pass.
  * @param {number=} runAt Time at which thread should begin execution
  *     (default: now).
+ * @param {number=} timeLimit Maximum runtime without suspending (in ms).
  * @return {!Interpreter.prototype.Thread} Userland Thread object.
  */
 Interpreter.prototype.createThreadForFuncCall = function(
-    owner, func, thisVal, args, runAt) {
+    owner, func, thisVal, args, runAt, timeLimit) {
   var state = Interpreter.State.newForCall(func, thisVal, args, owner);
-  return this.createThread(owner, state, runAt);
+  return this.createThread(owner, state, runAt, timeLimit);
 };
 
 /**
@@ -424,7 +428,8 @@ Interpreter.prototype.pause = function() {
           // and .onError will therefore get caller perms === root,
           // which is probably dangerous.
           intrp.createThreadForFuncCall(
-              server.owner, func, server.proto, [userError]);
+              server.owner, func, server.proto, [userError],
+              undefined, server.timeLimit);
         });
       }
       // Reset .uptime() to start counting from *NOW*, and .now() to
@@ -2138,7 +2143,7 @@ Interpreter.prototype.initThread_ = function() {
    *
    * - func is function to run in thread.  (Maybe in future we will
    *   accept src to eval, but not for now.)
-   * - delay is time to wait, in ms, before starting thread.
+   * - delay is time to wait (in ms) before starting thread.
    * - thisArg is the 'this' value to use for the call (as if via .apply).
    * - ...args are additional arguments to pass to func.
    */
@@ -2156,7 +2161,7 @@ Interpreter.prototype.initThread_ = function() {
             func + ' is not a function');
       }
       return intrp.createThreadForFuncCall(
-          perms, func, thisArg, args, intrp.now() + delay);
+          perms, func, thisArg, args, intrp.now() + delay, thread.timeLimit);
     }
   });
 
@@ -2320,7 +2325,7 @@ Interpreter.prototype.initNetwork_ = function() {
         throw new intrp.Error(perms, intrp.TYPE_ERROR,
            'prototype argument to connectionListen must be an object');
       }
-      var server = new intrp.Server(perms, port, proto);
+      var server = new intrp.Server(perms, port, proto, thread.timeLimit);
       intrp.listeners_[port] = server;
       var rr = intrp.getResolveReject(thread, state);
       server.listen(function() {
@@ -3581,8 +3586,9 @@ Interpreter.State.prototype.frame = function() {
  *     thread in .threads_ array.
  * @param {!Interpreter.State} state Starting state for thread.
  * @param {number} runAt Time at which to start running thread.
+ * @param {number=} timeLimit Maximum runtime without suspending (in ms).
  */
-Interpreter.Thread = function(id, state, runAt) {
+Interpreter.Thread = function(id, state, runAt, timeLimit) {
   /** @type {number} */
   this.id = id;
   // Say it's sleeping for now.  May be woken immediately.
@@ -3592,9 +3598,8 @@ Interpreter.Thread = function(id, state, runAt) {
   this.stateStack_ = [state];
   /** @type {number} */
   this.runAt = runAt;
-  // TODO(cpcallen): make configurable / inherited.
   /** @type {number} */
-  this.timeLimit = 0;
+  this.timeLimit = timeLimit || 0;
   /** @type {?Interpreter.prototype.Thread} */
   this.wrapper = null;
   /** @type {?Interpreter.Value} */
@@ -4173,14 +4178,17 @@ Interpreter.prototype.Box.prototype.valueOf = function() {
  * @param {?Interpreter.Owner} owner
  * @param {number} port
  * @param {!Interpreter.prototype.Object} proto
+ * @param {number=} timeLimit
  */
-Interpreter.prototype.Server = function(owner, port, proto) {
+Interpreter.prototype.Server = function(owner, port, proto, timeLimit) {
   /** @type {?Interpreter.Owner} */
   this.owner;
   /** @type {number} */
   this.port;
   /** @type {!Interpreter.prototype.Object} */
   this.proto;
+  /** @type {number} */
+  this.timeLimit;
   /** @private @type {net.Server} */
   this.server_;
   throw new Error('Inner class constructor not callable on prototype');
@@ -5392,8 +5400,9 @@ Interpreter.prototype.installTypes = function() {
    * @param {number} port Port to listen on.
    * @param {!Interpreter.prototype.Object} proto Prototype object for
    *     new connections.
+   * @param {number=} timeLimit Maximum runtime without suspending (in ms).
    */
-  intrp.Server = function(owner, port, proto) {
+  intrp.Server = function(owner, port, proto, timeLimit) {
     // Special excepetion: port === undefined when deserializing, in
     // violation of usual type rules.
     if ((port !== (port >>> 0) || port > 0xffff) && port !== undefined) {
@@ -5405,6 +5414,9 @@ Interpreter.prototype.installTypes = function() {
     this.port = port;
     /** @type {!Interpreter.prototype.Object} */
     this.proto = proto;
+    /** @type {number} */
+    this.timeLimit = timeLimit || 0;
+    /** @type {?net.Server} */
     this.server_ = null;
   };
 
@@ -5445,7 +5457,8 @@ Interpreter.prototype.installTypes = function() {
         // this thread?  Note that this will typically be root, and
         // .onError will therefore get caller perms === root, which is
         // probably dangerous.  Here and several places below.
-        intrp.createThreadForFuncCall(server.owner, func, obj, []);
+        intrp.createThreadForFuncCall(
+            server.owner, func, obj, [], undefined, server.timeLimit);
       }
 
       // Handle incoming data from clients.  N.B. that data is a
@@ -5455,7 +5468,8 @@ Interpreter.prototype.installTypes = function() {
         var func = obj.get('onReceive', this.owner);
         if (func instanceof intrp.Function && server.owner !== null) {
           intrp.createThreadForFuncCall(
-              server.owner, func, obj, [String(data)]);
+              server.owner, func, obj, [String(data)],
+              undefined, server.timeLimit);
         }
       });
 
@@ -5463,7 +5477,8 @@ Interpreter.prototype.installTypes = function() {
         intrp.log('net', 'Connection from %s closed.', socket.remoteAddress);
         var func = obj.get('onEnd', this.owner);
         if (func instanceof intrp.Function && server.owner !== null) {
-          intrp.createThreadForFuncCall(server.owner, func, obj, []);
+          intrp.createThreadForFuncCall(
+              server.owner, func, obj, [], undefined, server.timeLimit);
         }
         // TODO(cpcallen): Don't fully close half-closed connection yet.
         socket.end();
@@ -5474,7 +5489,9 @@ Interpreter.prototype.installTypes = function() {
         var func = obj.get('onError', this.owner);
         if (func instanceof intrp.Function && server.owner !== null) {
           var userError = intrp.errorNativeToPseudo(error, server.owner);
-          intrp.createThreadForFuncCall(server.owner, func, obj, [userError]);
+          intrp.createThreadForFuncCall(
+              server.owner, func, obj, [userError],
+              undefined, server.timeLimit);
         }
       });
 
