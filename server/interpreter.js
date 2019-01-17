@@ -2933,9 +2933,13 @@ Interpreter.prototype.setValue = function(ref, value, perms) {
  * Check to see if the current thread has run too long.  Called at the
  * top of loops and before making function calls.
  * @param {!Interpreter.Owner} perms Perm to use to create Error object.
+ * @param {!Array<Interpreter.State>=} stack Current State stack.  If
+ *   supplied, it will be popped to remove top item (e.g.: Call state)
+ *   from stack trace.
  */
-Interpreter.prototype.checkTimeLimit_ = function(perms) {
+Interpreter.prototype.checkTimeLimit_ = function(perms, stack) {
   if (this.threadTimeLimit_ && this.now() > this.threadTimeLimit_) {
+    if (stack) stack.pop();
     throw new this.Error(perms, this.RANGE_ERROR, 'Thread ran too long');
   }
 };
@@ -6035,8 +6039,10 @@ stepFuncs_['CallExpression'] = function (thread, stack, state, node) {
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['Call'] = function (thread, stack, state, node) {
-  // Terminate call if out of time.
-  this.checkTimeLimit_(state.scope.perms);
+  // Terminate call if out of time.  (And if so, remove Call state
+  // from stack as the first item in the stack trace should be the
+  // position of the call, not "in <function not actually called>".
+  this.checkTimeLimit_(state.scope.perms, stack);
   /* NOTE: Beware that, because
    *
    *  - an async function might not *actually* be async, and thus
