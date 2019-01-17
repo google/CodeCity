@@ -2711,6 +2711,42 @@ module.exports = [
     `,
     expected: 'user' },
 
+  // Time limit tests.  Actual enforcement is tested in
+  // interpreter_tests.js; this is just checking behaviour of get/set
+  // builtins.
+  { name: 'Thread.prototype.getTimeLimit() initially 0', src: `
+    Thread.current().getTimeLimit();
+    `,
+    expected: 0 },
+
+  { name: 'Thread.prototype.setTimeLimit()', src: `
+    Thread.current().setTimeLimit(1000);
+    Thread.current().getTimeLimit();
+    `,
+    expected: 1000 },
+
+  { name: 'Thread.prototype.setTimeLimit(...)', src: `
+    Thread.current().setTimeLimit(1000);
+    Thread.current().getTimeLimit();
+    `,
+    expected: 1000 },
+
+  // Check invalid time limits are rejected.
+  { name: 'Thread.prototype.setTimeLimit(/* invalid value */) throws', src: `
+    Thread.current().setTimeLimit(1000);
+    var invalid = [0, 1001, NaN, "foo", true, {}];
+    var failures = [];
+    for (var i = 0; i < invalid.length; i++) {
+      try {
+        Thread.current().setTimeLimit(invalid[i]);
+        failures.push(invalid[i]);
+      } catch (e) {
+      }
+    }
+    (failures.length === 0) ? 'OK' : String(failures);
+    `,
+    expected: 'OK' },
+
   /////////////////////////////////////////////////////////////////////////////
   // Permissions system:
 
