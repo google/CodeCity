@@ -632,11 +632,9 @@ $.connection.onReceive = function(text) {
   this.buffer += text.replace(/\r/g, '');
   var lf;
   while ((lf = this.buffer.indexOf('\n')) !== -1) {
-    try {
-      this.onReceiveLine(this.buffer.substring(0, lf));
-    } finally {
-      this.buffer = this.buffer.substring(lf + 1);
-    }
+    var line = this.buffer.substring(0, lf);
+    this.buffer = this.buffer.substring(lf + 1);
+    this.onReceiveLine(line);
   }
 };
 
@@ -667,6 +665,8 @@ $.servers.telnet.onReceiveLine = function(text) {
     return;
   }
   // Remainder of function handles login.
+  // TODO(fraser): Make sure that no security issues exist due to
+  // called code suspending or timing out unexpectedly.
   var m = text.match(/identify as ([0-9a-f]+)/);
   if (!m) {
     this.write('{type: "narrate", text: "Unknown command: ' +
