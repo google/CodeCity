@@ -2227,6 +2227,58 @@ Interpreter.prototype.initThread_ = function() {
       return intrp.createArrayFromList(callers, perms);
     }
   });
+
+  // Properties of the Thread prototype object.
+  /**
+   * Decorator to add standard permission and type checks for Thread
+   * prototype methods.
+   * @param {!Interpreter.NativeCallImpl} func Function to decorate.
+   * @return {!Interpreter.NativeCallImpl} The decorated function.)
+   */
+  var withChecks = function(func) {
+    name = (name === undefined ? func.name : name);
+    return function call(intrp, thred, state, thisVal, args) {
+      // TODO(cpcallen:perms): add controls()-type and/or
+      // object-readability check(s) here.
+      if (!(thisVal instanceof intrp.Thread)) {
+        throw new intrp.Error(state.scope.perms, intrp.TYPE_ERROR,
+            'Method Thread.prototype.' + name +
+            ' called on incompatible receiver ' + String(thisVal));
+      }
+      return func.apply(this, arguments);
+    };
+  };
+
+  new this.NativeFunction({
+    id: 'Thread.prototype.getTimeLimit', length: 0,
+    /** @type {!Interpreter.NativeCallImpl} */
+    call: withChecks(function getTimeLimit(
+        intrp, thread, state, thisVal, args) {
+      return thisVal.thread.timeLimit;
+    })
+  });
+
+  new this.NativeFunction({
+    id: 'Thread.prototype.setTimeLimit', length: 1,
+    /** @type {!Interpreter.NativeCallImpl} */
+    call: withChecks(function setTimeLimit(
+        intrp, thread, state, thisVal, args) {
+      var limit = args[0];
+      var perms = state.scope.perms;
+      var old = thisVal.thread.timeLimit || Number.MAX_VALUE;
+      if (typeof limit !== 'number' || Number.isNaN(limit)) {
+        throw new intrp.Error(perms, intrp.TYPE_ERROR,
+        'new limit must be a number (and not NaN)');
+      } else if (limit <= 0) {
+        throw new intrp.Error(perms, intrp.RANGE_ERROR,
+            'new limit must be > 0');
+      } else if (limit > old) {
+        throw new intrp.Error(perms, intrp.RANGE_ERROR,
+            'new limit must be <= previous limit');
+      }
+      thisVal.thread.timeLimit = limit;
+    })
+  });
 };
 
 /**
