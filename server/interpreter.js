@@ -2258,6 +2258,9 @@ Interpreter.prototype.initThread_ = function() {
     })
   });
 
+  // BUG(cpcallen): this only sets the time limit for future slices;
+  // until suspend is called the current Thread will run with its
+  // existing limit.
   new this.NativeFunction({
     id: 'Thread.prototype.setTimeLimit', length: 1,
     /** @type {!Interpreter.NativeCallImpl} */
@@ -2366,6 +2369,7 @@ Interpreter.prototype.initNetwork_ = function() {
     call: function(intrp, thread, state, thisVal, args) {
       var port = args[0];
       var proto = args[1];
+      var timeLimit = Number(args[2]) || thread.timeLimit;
       var perms = state.scope.perms;
       if (port !== (port >>> 0) || port > 0xffff) {
         throw new intrp.Error(perms, intrp.RANGE_ERROR, 'invalid port');
@@ -2377,7 +2381,9 @@ Interpreter.prototype.initNetwork_ = function() {
         throw new intrp.Error(perms, intrp.TYPE_ERROR,
            'prototype argument to connectionListen must be an object');
       }
-      var server = new intrp.Server(perms, port, proto, thread.timeLimit);
+      // TODO(cpcallen): do validity check on timeLimit.  It should
+      // probaly not be larger than current limit (unless root).
+      var server = new intrp.Server(perms, port, proto, timeLimit);
       intrp.listeners_[port] = server;
       var rr = intrp.getResolveReject(thread, state);
       server.listen(function() {

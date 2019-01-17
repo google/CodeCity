@@ -146,6 +146,6 @@
   $.fido = fido;
   $.utils.selector.setSelector(fido, '$.fido');
 
-  $.system.connectionListen(7777, $.servers.telnet);
-  $.system.connectionListen(7780, $.servers.http.connection);
+  $.system.connectionListen(7777, $.servers.telnet, 100);
+  $.system.connectionListen(7780, $.servers.http.connection, 100);
 })();
