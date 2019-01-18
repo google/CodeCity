@@ -118,7 +118,8 @@ function runTest(t, name, src, expected, options) {
  * resolve() and reject() are inserted in the global scope; they will
  * end the test.  If resolve() is called the test will end normally
  * and the argument supplied will be compared with the expected value;
- * if reject() is called the test will instead be treated as a crash.
+ * if reject() is called the test will instead be treated as a
+ * failure.
  * @param {!T} t The test runner object.
  * @param {string} name The name of the test.
  * @param {string} src The code to be evaled.
@@ -153,7 +154,7 @@ async function runAsyncTest(t, name, src, expected, options) {
     intrp.start();
     result = await p;
   } catch (e) {
-    t.crash(name, util.format('%s\n%s', src, e));
+    t.fail(name, util.format('%s\n%s', src, e));
     return;
   } finally {
     intrp.stop();
