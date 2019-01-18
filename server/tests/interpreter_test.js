@@ -779,7 +779,6 @@ exports.testAsync = function(t) {
       !err.has('stack', intrp.ROOT));
 
   // Throw err.
-  intrp.verbose = true;  // REMOVE THIS BEFORE COMMIT
   intrp.thread = bgThread;  // Try to trick reject into killing wrong thread.
   reject(err);  // Throw unhandled Error in asyncThread.
 
