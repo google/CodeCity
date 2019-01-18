@@ -71,8 +71,11 @@ function runSimpleTest(t, name, src, expected) {
  * instance, which may be created with non-default options and/or
  * without the standard startup files, and during which various
  * callbacks will be executed; see TestOptions for details.
- * (Simulated) time will be automatically fast-forwarded as required
- * to wake sleeping threads.
+ * 
+ * By default, (simulated) time will be automatically fast-forwarded
+ * as required to wake sleeping threads, but this can be overridden by
+ * supplying a callback as the onSleeping option.
+ *
  * @param {!T} t The test runner object.
  * @param {string} name The name of the test.
  * @param {string} src The code to be evaled.
@@ -96,8 +99,12 @@ function runTest(t, name, src, expected, options) {
     let runResult;
     while ((runResult = intrp.run())) {
       if (runResult > 0) {  // Sleeping thread(s).
-        // Fast forward to wake-up time.  Cast to defeat @private check.
-        /** @type {?} */(intrp).previousTime_ += runResult;  
+        if (options.onSleeping) {
+          options.onSleeping(intrp, runResult);
+        } else {
+          // Fast forward to wake-up time.  Cast to defeat @private check.
+          /** @type {?} */(intrp).previousTime_ += runResult;
+        }
       } else {  // Blocked thread(s).
         if (options.onBlocked) {
           options.onBlocked(intrp);
@@ -126,8 +133,9 @@ function runTest(t, name, src, expected, options) {
  * @param {number|string|boolean|null|undefined} expected The expected
  *     completion value.
  * @param {!TestOptions=} options Custom test options.  Note that
- *     'onBlocked' is ignored because the interpreter is .start()ed
- *     instead of .run() being called directly.
+ *     'onBlocked' and 'onSleeping' are ignored because the
+ *     interpreter is .start()ed instead of .run() being called
+ *     directly.
  */
 async function runAsyncTest(t, name, src, expected, options) {
   options = options || {};
@@ -204,6 +212,20 @@ TestOptions.prototype.onCreate;
  * @type {function(!Interpreter, !Interpreter.Thread)|undefined}
  */
 TestOptions.prototype.onCreateThread;
+
+/**
+ * Callback to be called if .run() returns a positive value,
+ * indicating there are sleeping threads.  If not supplied, simulated
+ * time will be fast-forwarded to the earliest wake-up time.
+ *
+ * The first argument is the interpreter instance to be configured.
+ *
+ * The second argument is the time until the earliest thead wake-up
+ * time, in ms.
+ *
+ * @type {function(!Interpreter, number)|undefined}
+ */
+TestOptions.prototype.onSleeping;
 
 /**
  * Callback to be called if .run() returns a negative value,
