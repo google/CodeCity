@@ -2236,7 +2236,7 @@ Interpreter.prototype.initThread_ = function() {
    * @return {!Interpreter.NativeCallImpl} The decorated function.)
    */
   var withChecks = function(func) {
-    name = (name === undefined ? func.name : name);
+    name = (name === undefined) ? func.name : name;
     return function call(intrp, thred, state, thisVal, args) {
       // TODO(cpcallen:perms): add controls()-type and/or
       // object-readability check(s) here.
@@ -2271,7 +2271,7 @@ Interpreter.prototype.initThread_ = function() {
       var old = thisVal.thread.timeLimit || Number.MAX_VALUE;
       if (typeof limit !== 'number' || Number.isNaN(limit)) {
         throw new intrp.Error(perms, intrp.TYPE_ERROR,
-        'new limit must be a number (and not NaN)');
+            'new limit must be a number (and not NaN)');
       } else if (limit <= 0) {
         throw new intrp.Error(perms, intrp.RANGE_ERROR,
             'new limit must be > 0');
@@ -2938,6 +2938,7 @@ Interpreter.prototype.setValue = function(ref, value, perms) {
 /**
  * Check to see if the current thread has run too long.  Called at the
  * top of loops and before making function calls.
+ * @private
  * @param {!Interpreter.Owner} perms Perm to use to create Error object.
  * @param {!Array<Interpreter.State>=} stack Current State stack.  If
  *   supplied, it will be popped to remove top item (e.g.: Call state)
