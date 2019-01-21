@@ -95,13 +95,13 @@ module.exports = [
     expected: 45 },
 
   { name: 'getPropertyOnPrimitive', src: `
-    "foo".length;
+    'foo'.length;
     `,
     expected: 3 },
 
   { name: 'setPropertyOnPrimitive', src: `
     try {
-      "foo".bar = 42;
+      'foo'.bar = 42;
     } catch (e) {
       e.name;
     }
@@ -825,7 +825,7 @@ module.exports = [
       e.name;
     }
     `,
-    expected: "TypeError" },
+    expected: 'TypeError' },
 
   { name: 'funcDecl', src: `
     var v;
@@ -1069,7 +1069,7 @@ module.exports = [
     expected: undefined },
 
   { name: 'callEvalOrder', src: `
-    var r = "";
+    var r = '';
     function log(x) {
       r += x;
       return function () {};
@@ -1640,7 +1640,7 @@ module.exports = [
   { name: 'Function.prototype.apply(..., sparse)', src: `
     (function(a, b, c) {
       if (!(1 in arguments)) {
-        throw new Error("Argument 1 missing");
+        throw new Error('Argument 1 missing');
       }
       return a + c;
     }).apply(undefined, [1, , 3]);
@@ -1688,7 +1688,7 @@ module.exports = [
   { name: 'Function.prototype.call', src: `
     (function(a, b, c) {
       if (!(1 in arguments)) {
-        throw new Error("Argument 1 missing");
+        throw new Error('Argument 1 missing');
       }
       return a + c;
     }).call(undefined, 1, 2, 3);
@@ -2734,7 +2734,7 @@ module.exports = [
   // Check invalid time limits are rejected.
   { name: 'Thread.prototype.setTimeLimit(/* invalid value */) throws', src: `
     Thread.current().setTimeLimit(1000);
-    var invalid = [0, 1001, NaN, "foo", true, {}];
+    var invalid = [0, 1001, NaN, 'foo', true, {}];
     var failures = [];
     for (var i = 0; i < invalid.length; i++) {
       try {
@@ -2761,7 +2761,7 @@ module.exports = [
     CC.root.name = 'Root';
     var bob = {};
     bob.name = 'Bob';
-    var r = "";
+    var r = '';
     r += perms().name;
     (function() {
       setPerms(bob);
@@ -2770,7 +2770,7 @@ module.exports = [
     })();
     r += perms().name;
     r;`,
-    expected: "RootBobRoot"
+    expected: 'RootBobRoot'
   },
 
   { name: 'getOwnerOf', src: `
