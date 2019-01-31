@@ -60,17 +60,15 @@ class Registry {
   }
 
   /**
-   * Look up the key for a registered value.  Throws an error if the
+   * Look up the key for a registered value.  Returns undefined if the
    * given value has not been registered.  If the value has been
    * registered with more than one key then one of those keys will be
    * returned but there is no guarantee which.
    * @param {T} value The value to get the key for.
-   * @return {string} The key for value, or undefined if value never registered.
+   * @return {string|undefined} The key for value, or undefined if
+   *     value never registered.
    */
   getKey(value) {
-    if (!this.keys_.has(value)) {
-      throw new Error('Value ' + value + ' not registered');
-    }
     return this.keys_.get(value);
   }
 
