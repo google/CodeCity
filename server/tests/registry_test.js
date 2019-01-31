@@ -43,20 +43,18 @@ exports.testRegistry = function(t) {
   } catch(e) {
     t.pass("reg.get('foo')  // 0");
   }
-  try {
-    reg.getKey(obj);
-    t.fail("reg.getKey(obj)  // 0", "Didn't throw.");
-  } catch(e) {
-    t.pass("reg.getKey(obj)  // 0");
-  }
+  t.expect("reg.getKey(obj)  // 0", reg.getKey(obj), undefined);
+  t.expect("reg.keys().length  // 0", reg.keys().length, 0);
 
   // 1: Register obj as 'foo'.
   reg.set('foo', obj);
   t.expect("reg.has('foo')  // 1", reg.has('foo'), true);
   t.expect("reg.get('foo')  // 1", reg.get('foo'), obj);
   t.expect("reg.getKey(obj)  // 1", reg.getKey(obj), 'foo');
+  t.expect("reg.keys().length  // 1", reg.keys().length, 1);
+  t.expect("reg.keys()[0]  // 1", reg.keys()[0], 'foo');
 
-  // 2: Register another object as 'foo'.
+  // 2: Attempt to register another object as 'foo'.
   try {
     reg.set('foo', {});
     t.fail("reg.set('foo', {})  // 2", "Didn't throw.");
@@ -66,12 +64,7 @@ exports.testRegistry = function(t) {
   t.expect("reg.has('foo')  // 2", reg.has('foo'), true);
   t.expect("reg.get('foo')  // 2", reg.get('foo'), obj);
   t.expect("reg.getKey(obj)  // 2", reg.getKey(obj), 'foo');
-  try {
-    reg.getKey({});
-    t.fail("reg.getKey({})  // 2", "Didn't throw.");
-  } catch(e) {
-    t.pass("reg.getKey({})  // 2");
-  }
+  t.expect("reg.getKey({})  // 2", reg.getKey({}), undefined);
 
   // Test iterators.
   // TODO(cpcallen): test with more than one item to iterate over?
