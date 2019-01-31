@@ -3336,6 +3336,18 @@ Interpreter.Scope.prototype.hasBinding = function(name) {
 };
 
 /**
+ * Returns true iff this scope has an immutable binding for the given
+ * name.
+ *
+ * @param {string} name Name of variable.
+ * @return {boolean} True iff name is immutably bound in this scope.
+ */
+Interpreter.Scope.prototype.hasImmutableBinding = function(name) {
+  var pd = Object.getOwnPropertyDescriptor(this.vars, name);
+  return Boolean(pd && !pd.writable);
+};
+
+/**
  * Creates a mutable binding in this scope and initialises it to
  * undefined or the provided value.
  *
