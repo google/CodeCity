@@ -992,6 +992,8 @@ exports.testStartStop = async function(t) {
       };
   `;
   try {
+    // Garbage collection occuring during test can case flakiness.
+    gc();
     intrp.start();
     // .start() will create a zero-delay timeout to check for sleeping
     // tasks to awaken.  Snooze briefly to allow it to run, after
