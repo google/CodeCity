@@ -580,6 +580,8 @@ Interpreter.prototype.initBuiltins_ = function() {
   // eval is a special case; it must be added to the global scope at
   // startup time (rather than by a "var eval = new 'eval';" statement
   // in es5.js) because assigning to eval is illegal in strict mode.
+  // This also means that it is effectively immutable despite being
+  // created with createMutableBinding.
   this.global.createMutableBinding('eval', eval_);
 
   this.createNativeFunction('isFinite', isFinite, false);
@@ -4661,9 +4663,6 @@ Interpreter.prototype.installTypes = function() {
     this.node = node;
     this.scope = scope;
     if (node['id']) {
-      // BUG(cpcallen): Per ES5 §13 / ES6 §14.1.20, we should actually
-      // create a new scope for the BindingIdentifier here, rather
-      // than inserting it into the scope created at call time.
       this.setName(node['id']['name']);
     }
     var length = node['params'].length;
