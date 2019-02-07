@@ -321,29 +321,95 @@ exports.testRoundtripDetails = function(t) {
     Object.isExtensible(ext) && !Object.isExtensible(nonExt);
   `, true);
 
+  // Test preservation of prototype identity, including protypes used
+  // by various built-in functions.
+  //
+  // exprs is a large object literal which maps built-in constructors
+  // to arrays of values which should all be that constructor's
+  // .prototype object.
+  const exprs = `{
+        Object: [
+          Object.prototype,
+          new 'Object.prototype',
+          Object.getPrototypeOf(new Object),
+          Object.getPrototypeOf({}),
+          Object.getPrototypeOf(Object.getOwnPropertyDescriptor(
+            Object.prototype, 'constructor')),
+        ],
+        Function: [
+          Function.prototype,
+          new 'Function.prototype',
+          Object.getPrototypeOf(new Function),
+          Object.getPrototypeOf(function() {}),
+          Object.getPrototypeOf(Function),
+        ],
+        Array: [
+          Array.prototype,
+          new 'Array.prototype',
+          Object.getPrototypeOf(new Array),
+          Object.getPrototypeOf([]),
+          Object.getPrototypeOf([].slice(0,0)),
+        ],
+        Boolean: [
+          Boolean.prototype,
+          new 'Boolean.prototype',
+          Object.getPrototypeOf(false),
+        ],
+        Number: [
+          Number.prototype,
+          new 'Number.prototype',
+          Object.getPrototypeOf(0),
+        ],
+        String: [
+          String.prototype,
+          new 'String.prototype',
+          Object.getPrototypeOf(''),
+        ],
+        RegExp: [
+          RegExp.prototype,
+          new 'RegExp.prototype',
+          Object.getPrototypeOf(new RegExp),
+          Object.getPrototypeOf(/foo/),
+        ],${['Date', 'Error', 'EvalError', 'RangeError', 'SyntaxError',
+             'TypeError', 'URIError', 'PermissionError'].map((c) => `
+        ${c}: [
+          ${c}.prototype,
+          new '${c}.prototype',
+          Object.getPrototypeOf(new ${c}),
+        ],`).join('')}
+      }`;
   runTest(t, 'testRoundtripBuiltinPrototypes', `
-      var objProto = Object.getPrototypeOf({}),
-          arrProto = Object.getPrototypeOf([]),
-          reProto = Object.getPrototypeOf(/foo/),
-          boolProto = Object.getPrototypeOf(false),
-          numProto = Object.getPrototypeOf(0),
-          strProto =  Object.getPrototypeOf('');
+      var pre = ${exprs};
   `, '', `
-      Object.getPrototypeOf({}) === objProto &&
-      Object.getPrototypeOf({}) === Object.prototype &&
-      Object.getPrototypeOf([]) === arrProto &&
-      Object.getPrototypeOf([]) === Array.prototype &&
-      Object.getPrototypeOf(/foo/) === reProto &&
-      Object.getPrototypeOf(/foo/) === RegExp.prototype &&
-      Object.getPrototypeOf(false) === boolProto &&
-      Object.getPrototypeOf(false) === Boolean.prototype &&
-      Object.getPrototypeOf(0) === numProto &&
-      Object.getPrototypeOf(0) === Number.prototype &&
-      Object.getPrototypeOf('') === strProto &&
-      Object.getPrototypeOf('') === String.prototype;
-  `, true);
+      var post = ${exprs};
+      try {
+        // Check expressions all had same value intially.
+        for (var key in pre) {
+          if (!pre.hasOwnProperty(key)) continue;
+          for (var i = 1; i < pre[key].length; i++) {
+            if (pre[key][0] !== pre[key][i]) {
+              throw 'pre["' + key + '"][0] !== pre["' +
+                  key + '"][' + i + ']';
+            }
+          }
+        }
+        // Check expressions all had same value before and after.
+        for (var key in pre) {
+          if (!pre.hasOwnProperty(key)) continue;
+          for (var i = 0; i < pre[key].length; i++) {
+            if (pre[key][i] !== post[key][i]) {
+              throw 'pre["' + key + '"][' + i + '] !== post["' +
+                  key + '"][' + i + ']';
+            }
+          }
+        }
+        'OK';
+      } catch (e) {
+        e;
+      }
+  `, 'OK');
 
-  runTest(t, 'testRoundtripArrayProto', `
+  runTest(t, 'testRoundtripArrayLengthRemainsMagical', `
     var arr = [0, 1, 2];
   `, '', `
     arr[3] = 3;
