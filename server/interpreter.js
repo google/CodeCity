@@ -1971,7 +1971,7 @@ Interpreter.prototype.initRegExp_ = function() {
 Interpreter.prototype.initError_ = function() {
   var intrp = this;
 
-  var createErrorClass = function(name) {
+  var createErrorClass = function(name, protoKey) {
     var protoproto = name === 'Error' ? intrp.OBJECT : intrp.ERROR;
     var proto = new intrp.Error(intrp.ROOT, protoproto);
     intrp.builtins.set(name + '.prototype', proto);
@@ -1981,7 +1981,10 @@ Interpreter.prototype.initError_ = function() {
       construct: function(intrp, thread, state, args) {
         var message = (args[0] === undefined) ? undefined : String(args[0]);
         var perms = state.scope.perms;
-        var err = new intrp.Error(perms, proto, message);
+        // Use intrp[protoKey] instead of proto because
+        // deserialisation will set up intrp.ERROR et al correctly but
+        // can't modify values of variables in native closures.
+        var err = new intrp.Error(perms, intrp[protoKey], message);
         err.makeStack(thread.callers(perms).slice(1), perms);
         return err;
       },
@@ -1993,14 +1996,14 @@ Interpreter.prototype.initError_ = function() {
     return proto;
   };
 
-  this.ERROR = createErrorClass('Error');  // Must be first!
-  this.EVAL_ERROR = createErrorClass('EvalError');
-  this.RANGE_ERROR = createErrorClass('RangeError');
-  this.REFERENCE_ERROR = createErrorClass('ReferenceError');
-  this.SYNTAX_ERROR = createErrorClass('SyntaxError');
-  this.TYPE_ERROR = createErrorClass('TypeError');
-  this.URI_ERROR = createErrorClass('URIError');
-  this.PERM_ERROR = createErrorClass('PermissionError');
+  intrp.ERROR = createErrorClass('Error', 'ERROR');  // Must be first!
+  intrp.EVAL_ERROR = createErrorClass('EvalError', 'EVAL_ERROR');
+  intrp.RANGE_ERROR = createErrorClass('RangeError', 'RANGE_ERROR');
+  intrp.REFERENCE_ERROR = createErrorClass('ReferenceError', 'REFERENCE_ERROR');
+  intrp.SYNTAX_ERROR = createErrorClass('SyntaxError', 'SYNTAX_ERROR');
+  intrp.TYPE_ERROR = createErrorClass('TypeError', 'TYPE_ERROR');
+  intrp.URI_ERROR = createErrorClass('URIError', 'URI_ERROR');
+  intrp.PERM_ERROR = createErrorClass('PermissionError', 'PERM_ERROR');
 
   this.createNativeFunction('Error.prototype.toString',
                             this.Error.prototype.toString, false);
