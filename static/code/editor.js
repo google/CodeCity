@@ -835,6 +835,8 @@ Code.functionEditor.createDom = function(container) {
     tabSize: 2,
     undoDepth: 1024,
     lineNumbers: true,
+    continueComments: 'Enter',
+    mode: 'text/javascript',
     matchBrackets: true
   };
   this.editor_ = CodeMirror(container, options);
