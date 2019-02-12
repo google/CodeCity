@@ -953,7 +953,90 @@ Code.functionEditor.focus = function(userAction) {
 };
 
 ////////////////////////////////////////////////////////////////////////////////
-//Code.jsspEditor = new Code.GenericEditor('JSSP');
+Code.jsspEditor = new Code.GenericEditor('JSSP');
+
+/**
+ * JavaScript Server Page editor.  Does not exist until tab is selected.
+ * @type {Object}
+ * @private
+ */
+Code.jsspEditor.editor_ = null;
+
+/**
+ * Create the DOM for this editor.
+ * @param {!Element} container DOM should be appended to this containing div.
+ */
+Code.jsspEditor.createDom = function(container) {
+  container.innerHTML = `
+<style>
+#jsspEditor {
+  position: absolute;
+  top: 60px;
+  bottom: 45px;
+  left: 10px;
+  right: 20px
+}
+</style>
+  `;
+  container.id = 'jsspEditor';
+  var options = {
+    tabSize: 2,
+    undoDepth: 1024,
+    lineNumbers: true,
+    continueComments: 'Enter',
+    mode: 'application/x-ejs',
+    matchBrackets: true
+  };
+  this.editor_ = CodeMirror(container, options);
+  this.editor_.setSize('100%', '100%');
+};
+
+/**
+ * Get the contents of the editor.
+ * @return {string} Plain text contents.
+ */
+Code.jsspEditor.getSource = function() {
+  if (!this.created) {
+    return Code.Editor.uncreatedEditorSource;
+  }
+  var source = this.editor_.getValue();
+  return JSON.stringify(source);
+};
+
+/**
+ * Set the contents of the editor.
+ * @param {string} source Plain text contents.
+ */
+Code.jsspEditor.setSource = function(source) {
+  var str;
+  try {
+    str = JSON.parse(source);
+  } catch (e) {}
+  if (typeof str !== 'string') {
+    str = '';
+    this.confidence = 0;
+  } else {
+    if (str.indexOf('<%') !== -1 && str.indexOf('%>') !== -1) {
+      this.confidence = 0.95;
+    } else {
+      this.confidence = 0.8;
+    }
+  }
+  if (this.created) {
+    this.editor_.setValue(str);
+  }
+};
+
+/**
+ * Notification that this editor has just been displayed.
+ * @param {boolean} userAction True if user clicked on a tab.
+ */
+Code.jsspEditor.focus = function(userAction) {
+  this.editor_.refresh();
+  if (userAction) {
+    this.editor_.focus();
+  }
+};
 
 ////////////////////////////////////////////////////////////////////////////////
 Code.svgEditor = new Code.GenericEditor('SVG');
