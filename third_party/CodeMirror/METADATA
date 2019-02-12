@@ -11,7 +11,7 @@ third_party {
     type: GIT
     value: "https://github.com/codemirror/codemirror"
   }
-  version: "e49a19f5cacb447558f162014eb26b8c45b30941"
-  last_upgrade_date { year: 2017 month: 8 day: 24 }
+  version: "5.43.0"
+  last_upgrade_date { year: 2019 month: 2 day: 12 }
   license_type: NOTICE
 }
