@@ -1,0 +1,29 @@
+#valueEditor {
+  position: absolute;
+  top: 60px;
+  bottom: 20px;
+  left: 10px;
+  right: 20px
+}
+
+#functionEditor {
+  position: absolute;
+  top: 60px;
+  bottom: 45px;
+  left: 10px;
+  right: 20px
+}
+
+#jsspEditor {
+  position: absolute;
+  top: 60px;
+  bottom: 45px;
+  left: 10px;
+  right: 20px
+}
+
+.editorBigQuotes {
+  font-family: serif;
+  font-size: 48pt;
+  position: absolute;
+}
