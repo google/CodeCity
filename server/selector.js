@@ -40,20 +40,19 @@ var Selector = function(s) {
   if (Array.isArray(s)) {
     parts = [];
     // Validate & copy parts list.
-    if (typeof s.length < 1) throw new RangeError('Zero-length parts list??');
     if (s.length < 1) throw new RangeError('Zero-length parts list??');
-    if (typeof s[0] !== 'string' || !identifierRE.test(s[0])) {
-      throw new TypeError('Parts array must begin with an identifier');
-    }
-    parts[0] = s[0];
-    for (var i = 1; i < s.length; i++) {
-      if (typeof s[i] !== 'string' && !(s[i] instanceof SpecialPart)) {
-        throw new TypeError('Invalid part in parts array');
-      } else if ((s[i] instanceof SpecialPart) &&
-          s[i] !== Selector.PROTOTYPE && s[i] !== Selector.OWNER) {
+    for (var i = 0; i < s.length; i++) {
+      if (typeof s[i] === 'string' ||
+          s[i] === Selector.PROTOTYPE || s[i] === Selector.OWNER) {
+	parts[i] = s[i];
+      } else if (s[i] instanceof SpecialPart) {
         throw new TypeError('Invalid SpecialPart in parts array');
+      } else {
+        throw new TypeError('Invalid part in parts array');
       }
-      parts[i] = s[i];
+    }
+    if (typeof parts[0] !== 'string' || !identifierRE.test(parts[0])) {
+      throw new TypeError('Parts array must begin with an identifier');
     }
   } else if (typeof s === 'string') {
     // Parse selector text.
