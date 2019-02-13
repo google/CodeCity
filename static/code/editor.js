@@ -718,17 +718,6 @@ Code.valueEditor.editor_ = null;
  * @param {!Element} container DOM should be appended to this containing div.
  */
 Code.valueEditor.createDom = function(container) {
-  container.innerHTML = `
-<style>
-#valueEditor {
-  position: absolute;
-  top: 60px;
-  bottom: 20px;
-  left: 10px;
-  right: 20px
-}
-</style>
-  `;
   container.id = 'valueEditor';
   var options = {
     tabSize: 2,
@@ -786,15 +775,6 @@ Code.functionEditor.editor_ = null;
  */
 Code.functionEditor.createDom = function(container) {
   container.innerHTML = `
-<style>
-#functionEditor {
-  position: absolute;
-  top: 60px;
-  bottom: 45px;
-  left: 10px;
-  right: 20px
-}
-</style>
 <div>
   <input type="checkbox" name="isVerb" id="isVerb"
       onclick="Code.functionEditor.updateDisabled()">
@@ -835,7 +815,7 @@ Code.functionEditor.createDom = function(container) {
     tabSize: 2,
     undoDepth: 1024,
     lineNumbers: true,
-    continueComments: 'Enter',
+    continueComments: {continueLineComment: false},
     mode: 'text/javascript',
     matchBrackets: true
   };
@@ -967,17 +947,6 @@ Code.jsspEditor.editor_ = null;
  * @param {!Element} container DOM should be appended to this containing div.
  */
 Code.jsspEditor.createDom = function(container) {
-  container.innerHTML = `
-<style>
-#jsspEditor {
-  position: absolute;
-  top: 60px;
-  bottom: 45px;
-  left: 10px;
-  right: 20px
-}
-</style>
-  `;
   container.id = 'jsspEditor';
   var options = {
     tabSize: 2,
@@ -1156,13 +1125,6 @@ Code.stringEditor = new Code.GenericEditor('String');
  */
 Code.stringEditor.createDom = function(container) {
   container.innerHTML = `
-<style>
-.editorBigQuotes {
-  font-family: serif;
-  font-size: 48pt;
-  position: absolute;
-}
-</style>
 <div style="position: absolute; top: 60px; bottom: 20px; left: 45px; right: 50px">
   <textarea style="height: 100%; width: 100%; resize: none;"></textarea>
 </div>
