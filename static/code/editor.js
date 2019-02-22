@@ -286,7 +286,7 @@ Code.Editor.tabClick = function(e) {
     editor.created = true;
   }
   container.style.display = 'block';
-  Code.Editor.setSourceToAllEditors(Code.Editor.currentSource, false);
+  Code.Editor.setSourceToAllEditors(Code.Editor.currentSource);
   // If e is an event, then this click is the result of a user's direct action.
   // If not, then it's a fake event as a result of page load.
   var userAction = e instanceof Event;
@@ -344,7 +344,7 @@ Code.Editor.receiveXhr = function() {
     // or b) the previous save was successful.
     if (Code.Editor.currentSource === null || data.saved) {
       Code.Editor.currentSource = data.src;
-      Code.Editor.setSourceToAllEditors(data.src, true);
+      Code.Editor.setSourceToAllEditors(data.src);
     }
   }
   // Remove saving mask.
@@ -440,15 +440,13 @@ Code.Editor.mostConfidentEditor = function() {
 /**
  * Set the values of all the editors.
  * @param {string} src Plain text contents.
- * @param {boolean} isSaved True if this is the saved source.
  */
-Code.Editor.setSourceToAllEditors = function(src, isSaved) {
+Code.Editor.setSourceToAllEditors = function(src) {
   Code.Editor.uncreatedEditorSource = src;
   for (var editor of Code.Editor.editors) {
     editor.setSource(src);
-    if (isSaved) {
-      editor.lastSavedSource = editor.getSource();
-    }
+    // Round-trip version of the source.
+    editor.lastSavedSource = editor.getSource();
   }
 };
 
