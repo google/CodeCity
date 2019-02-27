@@ -91,7 +91,7 @@ function handleRequest(request, response) {
     serveFile(response, 'login.html', {'<<<LOGIN_URL>>>': loginUrl});
     return;
   }
-  var code = new URL(request.url, CFG.redirectUri).searchParams.get('code');
+  var code = new URL(request.url, CFG.origin).searchParams.get('code');
   oauth2Client.getToken(code, function(err, tokens) {
     if (err) {
       console.log(err);
@@ -140,6 +140,8 @@ function readConfigFile(filename) {
     const template = {
       // Internal port for this HTTP server.  Nginx hides this from users.
       httpPort: 7781,
+      // Origin for login and connect pages.
+      origin: 'https://example.codecity.world',
       // Path to the login page.
       loginPath: '/login',
       // Path to the connect page.
@@ -149,8 +151,6 @@ function readConfigFile(filename) {
           '.apps.googleusercontent.com',
       // Google's API client secret.
       clientSecret: 'yyyyyyyyyyyyyyyyyyyyyyyy',
-      // Full public-facing URL for login page.
-      redirectUri: 'https://example.codecity.world/login',
       // Domain of connect page.
       cookieDomain: 'example.codecity.world',
       // Random password for cookie encryption and salt for login IDs.
@@ -181,8 +181,8 @@ function startup() {
   }
 
   // Create an authentication client for our interactions with Google.
-  oauth2Client =
-      new google.auth.OAuth2(CFG.clientId, CFG.clientSecret, CFG.redirectUri);
+  oauth2Client = new google.auth.OAuth2(
+      CFG.clientId, CFG.clientSecret, CFG.origin + CFG.loginPath);
 
   // Precompute Google's login URL.
   loginUrl = oauth2Client.generateAuthUrl({scope: 'email'});
