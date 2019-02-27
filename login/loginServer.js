@@ -30,6 +30,7 @@ var crypto = require('crypto');
 var fs = require('fs');
 var google = require('googleapis');
 var http = require('http');
+var URL = require('url').URL;
 
 // Global variables.
 var CFG = null;
@@ -80,7 +81,7 @@ function handleRequest(request, response) {
     serveFile(response, 'login.html', subs);
 
   } else if (request.url.startsWith(CFG.loginPath + '?code=')) {
-    var code = request.url.substring(request.url.indexOf('=') + 1);
+    var code = new URL(request.url, CFG.redirectUri).searchParams.get('code');
     oauth2Client.getToken(code, function(err, tokens) {
       // Now tokens contains an access_token and an optional refresh_token. Save them.
       if (err) {
