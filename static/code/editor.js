@@ -793,6 +793,7 @@ Code.functionEditor.createDom = function(container) {
     <option>in front of</option>
     <option>in/inside/into</option>
     <option>on top of/on/onto/upon</option>
+    <option>out of/from inside/from</option>
     <option>over</option>
     <option>through</option>
     <option>under/underneath/beneath</option>
