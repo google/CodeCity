@@ -446,7 +446,7 @@ Code.Editor.setSourceToAllEditors = function(src) {
   for (var editor of Code.Editor.editors) {
     editor.setSource(src);
     // Round-trip version of the source.
-    editor.lastSavedSource = editor.getSource();
+    editor.unmodifiedSource = editor.getSource();
   }
 };
 
@@ -650,7 +650,7 @@ Code.GenericEditor = function(name) {
    * Plain text representation of this editor's contents as of load or last save.
    * @type {?string}
    */
-  this.lastSavedSource = null;
+  this.unmodifiedSource = null;
 
   // Register this editor.
   Code.Editor.editors.push(this);
@@ -686,7 +686,7 @@ Code.GenericEditor.prototype.setSource = function(source) {
  * @return {boolean} True if work is saved.
  */
 Code.GenericEditor.prototype.isSaved = function() {
-  return this.getSource() === this.lastSavedSource;
+  return this.getSource() === this.unmodifiedSource;
 };
 
 /**
