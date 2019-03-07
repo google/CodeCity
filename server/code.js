@@ -162,7 +162,7 @@ quote.replacements = {
 };
 
 /**
- * Count non-overlapping occurrences of substring ss in string s.
+ * Count non-overlapping occurrences of searchString in str.
  *
  * There are many possible implementations; using .split works pretty
  * well but this is slightly faster at time of writing.  See
