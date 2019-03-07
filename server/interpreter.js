@@ -204,6 +204,7 @@ Interpreter.prototype.schedule = function() {
   if (this.thread && this.thread.status === Interpreter.Thread.Status.READY) {
     return 0;  // Nothing to do.  Don't reset .threadTimeLimit_!
   }
+  gc();
   var now = this.now();
   var runAt = Number.MAX_VALUE;
   var threads = this.threads_;
@@ -246,8 +247,13 @@ Interpreter.prototype.schedule = function() {
         throw new Error('Unknown thread state');
     }
   }
+  var userNow = process.cpuUsage().user;
   this.threadTimeLimit_ = (this.thread_ && this.thread_.timeLimit) ?
-      now + this.thread_.timeLimit : undefined;
+      userNow + this.thread_.timeLimit * 1000 : undefined;
+  if (this.thread_ && this.thread_.timeLimit) {
+    console.log('>>> Thread %d @ %d / %d: threadTimeLimit = %O.',
+        this.thread_.id, userNow / 1000, this.now(), this.threadTimeLimit_ / 1000);
+  }
   return runAt < now ? 0 : runAt;
 };
 
@@ -2950,7 +2956,10 @@ Interpreter.prototype.setValue = function(ref, value, perms) {
  *   from stack trace.
  */
 Interpreter.prototype.checkTimeLimit_ = function(perms, stack) {
-  if (this.threadTimeLimit_ && this.now() > this.threadTimeLimit_) {
+  var userNow = process.cpuUsage().user;
+  if (this.threadTimeLimit_ && userNow > this.threadTimeLimit_) {
+    console.log('>>> Thread %d @ %d / %d: TERMINATED.',
+        this.thread_.id, userNow / 1000, this.now());
     if (stack) stack.pop();
     throw new this.Error(perms, this.RANGE_ERROR, 'Thread ran too long');
   }

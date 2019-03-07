@@ -1,5 +1,5 @@
 # Run unit tests in Node.
-node --expose-gc tests/run.js
+node --trace_gc --expose-gc tests/run.js
 
 # Delete any existing checkpoint files.
 rm tests/db/*.city

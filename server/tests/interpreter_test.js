@@ -98,6 +98,7 @@ function runTest(t, name, src, expected, options) {
       if (runResult > 0) {  // Sleeping thread(s).
         // Fast forward to wake-up time.  Cast to defeat @private check.
         /** @type {?} */(intrp).previousTime_ += runResult;  
+        console.log('>>> Fast-forwarded %d ms', runResult);
       } else {  // Blocked thread(s).
         if (options.onBlocked) {
           options.onBlocked(intrp);
