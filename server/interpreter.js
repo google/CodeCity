@@ -5922,12 +5922,13 @@ stepFuncs_['BinaryExpression'] = function (thread, stack, state, node) {
  */
 stepFuncs_['BlockStatement'] = function (thread, stack, state, node) {
   var n = state.n_;
-  var /** ?Interpreter.Node */ statement = node['body'][n];
-  if (statement) {
-    state.n_ = n + 1;
-    return new Interpreter.State(statement, state.scope);
+  var /** ?Interpreter.Node */ statement = node['body'][n++];
+  if (n < node['body'].length) {
+    state.n_ = n;
+  } else {
+    stack.pop();
   }
-  stack.pop();
+  return new Interpreter.State(statement, state.scope);
 };
 
 /**
