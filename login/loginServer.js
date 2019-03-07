@@ -26,19 +26,23 @@
 // Start with: node loginServer.js
 'use strict';
 
-var crypto = require('crypto');
-var fs = require('fs');
-var google = require('googleapis');
-var http = require('http');
-var URL = require('url').URL;
+const crypto = require('crypto');
+const fs = require('fs');
+const google = require('googleapis');
+const http = require('http');
+const {promisify} = require('util');
+const {URL} = require('url');
+
+const oauth2Api = google.oauth2('v2');
+const readFile = promisify(fs.readFile);
 
 // Configuration constants.
-var configFileName = 'loginServer.cfg';
+const configFileName = 'loginServer.cfg';
 
 // Global variables.
-var CFG = null;
-var oauth2Client;
-var loginUrl;
+let CFG = null;
+let oauth2Client;
+let loginUrl;
 
 
 /**
@@ -47,23 +51,24 @@ var loginUrl;
  * @param {string} filename Name of template file on disk.
  * @param {!Object} subs Hash of replacement strings.
  */
-function serveFile(response, filename, subs) {
-  fs.readFile(filename, 'utf8', function(err, data) {
-    if (err) {
-      console.log(err);
-      response.statusCode = 500;
-      data = 'Unable to load file: ' + filename + '\n' + err;
-    } else {
-      // Inject substitutions.
-      for (var name in subs) {
-        data = data.replace(name, subs[name]);
-      }
-      response.statusCode = 200;
-      response.setHeader('Content-Type', 'text/html');
+async function serveFile(response, filename, subs) {
+  let data;
+  try {
+    data = await readFile(filename, 'utf8');
+    // Inject substitutions.
+    for (const name in subs) {
+      data = data.replace(name, subs[name]);
     }
+    response.statusCode = 200;
+    response.setHeader('Content-Type', 'text/html');
+  } catch (err) {
+    console.log(err);
+    response.statusCode = 500;
+    data = `Unable to load file: ${filename}\n${err}`;
+  } finally {
     // Serve page to user.
     response.end(data);
-  });
+  }
 }
 
 /**
@@ -71,12 +76,12 @@ function serveFile(response, filename, subs) {
  * @param {!Object} request HTTP server request object
  * @param {!Object} response HTTP server response object.
  */
-function handleRequest(request, response) {
+async function handleRequest(request, response) {
   if (request.connection.remoteAddress != '127.0.0.1') {
     // This check is redundant, the server is only accessible to
     // localhost connections.
     console.log(
-        'Rejecting connection from ' + request.connection.remoteAddress);
+        `Rejecting connection from ${request.connection.remoteAddress}`);
     response.end('Connection rejected.');
     return;
   }
@@ -88,44 +93,64 @@ function handleRequest(request, response) {
   }
   // No query parameters?  Serve login.html.
   if (request.url === CFG.loginPath) {
-    serveFile(response, 'login.html', {'<<<LOGIN_URL>>>': loginUrl});
+    await serveFile(response, 'login.html', {'<<<LOGIN_URL>>>': loginUrl});
     return;
   }
-  var code = new URL(request.url, CFG.origin).searchParams.get('code');
-  oauth2Client.getToken(code, function(err, tokens) {
-    if (err) {
-      console.log(err);
-      response.statusCode = 500;
-      response.end('Google Authentication fail: ' + err);
-      return;
-    }
-    // Now tokens contains an access_token and an optional
-    // refresh_token. Save them.
-    oauth2Client.setCredentials(tokens);
-    var oauth2Api = google.oauth2('v2');
-    oauth2Api.userinfo.v2.me.get({auth: oauth2Client}, function(err, data) {
-      if (err) {
-        console.log(err);
-        response.statusCode = 500;
-        response.end('Google Userinfo fail: ' + err);
-        return;
-      }
-      // Convert the Google ID into one unique for Code City.
-      var id = CFG.password + data.id;
-      id = crypto.createHash('sha512').update(id).digest('hex');
-      // Create anti-tampering hash as checksum.
-      var checksum = CFG.password + id;
-      checksum = crypto.createHash('sha').update(checksum).digest('hex');
-      // For future reference, the user's email address is: data.email
-      response.writeHead(302, {
-        // Temporary redirect
-        'Set-Cookie': 'ID=' + id + '_' + checksum + '; HttpOnly;',
-        'Location': CFG.connectPath
+  // Process authentication code from OAuth server.
+  const code = new URL(request.url, CFG.origin).searchParams.get('code');
+  let tokens;
+  try {
+    // N.B.: due to a bug in Oauth2 API, the Promise returned by
+    // getToken never rejects, even if an error occurs.  See
+    // https://github.com/googleapis/google-api-nodejs-client/issues/1617
+    // for details.  Once that bug is fixed, this contents of this try
+    // block can be replaced by this single line:
+    //
+    // tokens = await oauth2Client.getToken(code);
+    //
+    // Unsightly kludge:
+    tokens = await new Promise((resolve, reject) => {
+      oauth2Client.getToken(code, (err, tokens) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(tokens);
+        }
       });
-      response.end('Login OK.  Redirecting.');
-      console.log('Accepted xxxx' + id.substring(id.length - 4));
     });
+    // End kludge.
+  } catch (err) {
+    console.log(err);
+    response.statusCode = 500;
+    response.end(`Google Authentication fail: ${err}`);
+    return;
+  }
+  // Now tokens contains an access_token and an optional
+  // refresh_token. Save them.
+  oauth2Client.setCredentials(tokens);
+  let data;
+  try {
+    data = await oauth2Api.userinfo.v2.me.get({auth: oauth2Client});
+  } catch (err) {
+    console.log(err);
+    response.statusCode = 500;
+    response.end(`Google Userinfo fail: ${err}`);
+    return;
+  }
+  // Convert the Google ID into one unique for Code City.
+  const id =
+      crypto.createHash('sha512').update(CFG.password + data.id).digest('hex');
+  // Create anti-tampering hash as checksum.
+  const checksum =
+      crypto.createHash('sha').update(CFG.password + id).digest('hex');
+  // For future reference, the user's email address is: data.email.
+  response.writeHead(302, {
+    // Temporary redirect
+    'Set-Cookie': `ID=${id}_${checksum}; HttpOnly;`,
+    'Location': CFG.connectPath
   });
+  response.end('Login OK.  Redirecting.');
+  console.log(`Accepted xxxx${id.substring(id.length - 4)}`);
 }
 
 /**
