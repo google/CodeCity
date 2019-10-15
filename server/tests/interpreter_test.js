@@ -1,9 +1,6 @@
 /**
  * @license
- * Code City: Interpreter JS Tests
- *
- * Copyright 2017 Google Inc.
- * https://github.com/NeilFraser/CodeCity
+ * Copyright 2017 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -97,7 +94,7 @@ function runTest(t, name, src, expected, options) {
     while ((runResult = intrp.run())) {
       if (runResult > 0) {  // Sleeping thread(s).
         // Fast forward to wake-up time.  Cast to defeat @private check.
-        /** @type {?} */(intrp).previousTime_ += runResult;  
+        /** @type {?} */(intrp).previousTime_ += runResult;
       } else {  // Blocked thread(s).
         if (options.onBlocked) {
           options.onBlocked(intrp);
@@ -969,7 +966,7 @@ exports.testTimeLimit = function(t) {
     onCreateThread: (intrp, thread) => {thread.timeLimit = timeLimit;},
   });
 
-      
+
 };
 
 /**
