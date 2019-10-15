@@ -1,7 +1,6 @@
 /**
- * Diff Match and Patch
+ * @license
  * Copyright 2018 The diff-match-patch Authors.
- * https://github.com/google/diff-match-patch
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.

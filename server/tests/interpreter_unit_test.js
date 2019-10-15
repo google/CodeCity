@@ -1,9 +1,6 @@
 /**
  * @license
- * Code City: Interpreter internal unit tests
- *
- * Copyright 2018 Google Inc.
- * https://github.com/NeilFraser/CodeCity
+ * Copyright 2018 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -222,7 +219,7 @@ exports.testSource = function(t) {
   src = src.slice(1, 5);
   name += '.slice(1, 5)';
   t.expect(name + '.toString()', String(src), 'BCDE');
-  
+
   src = src.slice(2, 4);
   name += '.slice(2, 4)';
   t.expect(name + '.toString()', String(src), 'CD');
