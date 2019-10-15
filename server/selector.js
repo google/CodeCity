@@ -1,9 +1,6 @@
 /**
  * @license
- * Code City: Selectors
- *
- * Copyright 2018 Google Inc.
- * https://github.com/NeilFraser/CodeCity
+ * Copyright 2018 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +17,7 @@
 
 /**
  * @fileoverview CSS-style selectors for JS objects.
- * @author cpcallen@google.com (Christohper Allen)
+ * @author cpcallen@google.com (Christopher Allen)
  */
 'use strict';
 
@@ -332,7 +329,7 @@ var tokenize = function(selector) {
     '^': /\^/y,
     str: new RegExp(code.regexps.string, 'y'),
   };
-  
+
   var tokens = [];
   NEXT_TOKEN: for (var index = 0; index < selector.length; ) {
     for (var tokenType in REs) {

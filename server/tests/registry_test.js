@@ -1,9 +1,6 @@
 /**
  * @license
- * Code City: Registry tests
- *
- * Copyright 2018 Google Inc.
- * https://github.com/NeilFraser/CodeCity
+ * Copyright 2018 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,7 +31,7 @@ const {T} = require('./testing');
 exports.testRegistry = function(t) {
   const reg = new Registry;
   const obj = {};
-  
+
   // 0: Initial condition.
   t.expect("reg.has('foo')  // 0", reg.has('foo'), false);
   try {
@@ -82,7 +79,7 @@ exports.testRegistry = function(t) {
   const values = reg.values();
   t.expect("reg.values().length", values.length, 1);
   t.expect("reg.values()[0]", values[0], obj);
-  
+
   const entries = reg.entries();
   t.expect("reg.entries().length", entries.length, 1);
   t.expect("reg.entries()[0][0]", entries[0][0], 'foo');

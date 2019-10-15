@@ -1,7 +1,4 @@
-# MobWrite - Real-time Synchronization and Collaboration Service
-#
-# Copyright 2009 Google Inc.
-# http://code.google.com/p/google-mobwrite/
+# Copyright 2009 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.

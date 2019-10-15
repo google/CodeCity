@@ -1,9 +1,6 @@
 #!/usr/bin/python
 
-# Test harness for mobwrite_core.py
-#
-# Copyright 2006 Google Inc.
-# http://code.google.com/p/google-mobwrite/
+# Copyright 2006 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
