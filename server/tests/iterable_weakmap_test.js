@@ -1,9 +1,6 @@
 /**
  * @license
- * IterableWeakMap Tests
- *
- * Copyright 2018 Google Inc.
- * https://github.com/NeilFraser/CodeCity
+ * Copyright 2018 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +17,7 @@
 
 /**
  * @fileoverview Test for IterableWeakMap.
- * @author cpcallen@google.com (Christohper Allen)
+ * @author cpcallen@google.com (Christopher Allen)
  */
 'use strict';
 
@@ -120,13 +117,13 @@ exports.testIterableWeakMapLayeredGC = function(t) {
       iwm.set(objs[i], objs[i + 1]);
     }
   })();
-    
+
   const limit = 10;  // objs.length * 2
   let count = 0;
   for (; count < limit && iwm.size > 0; count++) {
     gc();
   }
-  
+
   if (count >= limit) {
     t.fail(name, 'Test failed to terminate in a reasonable time.');
   } else if (count > 1) {

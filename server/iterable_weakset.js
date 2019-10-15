@@ -1,9 +1,6 @@
 /**
  * @license
- * IterableWeakMap
- *
- * Copyright 2018 Google Inc.
- * https://github.com/NeilFraser/CodeCity
+ * Copyright 2018 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +17,7 @@
 
 /**
  * @fileoverview A WeakSet that's iterable.
- * @author cpcallen@google.com (Christohper Allen)
+ * @author cpcallen@google.com (Christopher Allen)
  */
 'use strict';
 
@@ -163,7 +160,7 @@ class IterableWeakSet {
   has(value) {
     return this.map_.has(value);
   }
-  
+
   /**
    * @return {number}
    */

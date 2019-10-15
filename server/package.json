@@ -1,7 +1,7 @@
 {
   "name": "codecity-server",
   "version": "0.0.0",
-  "description": "Server for the CodeCity project",
+  "description": "Server for the Code City project",
   "main": "codecity.js",
   "dependencies": {
     "acorn": "^5.7.1",
@@ -15,12 +15,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/NeilFraser/CodeCity.git"
+    "url": "git+https://github.com/google/CodeCity.git"
   },
   "author": "Google",
   "license": "Apache-2.0",
   "bugs": {
-    "url": "https://github.com/NeilFraser/CodeCity/issues"
+    "url": "https://github.com/google/CodeCity/issues"
   },
-  "homepage": "https://github.com/NeilFraser/CodeCity#readme"
+  "homepage": "https://github.com/google/CodeCity#readme"
 }

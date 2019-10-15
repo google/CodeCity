@@ -1,8 +1,6 @@
 /**
  * @license
- * Code City: Demonstration database.
- *
- * Copyright 2018 Google Inc.
+ * Copyright 2018 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -247,7 +245,7 @@ $.tutorial.show = function() {
     case 0:
       lines = [
         '<h1>Translation API Tutorial</h1>',
-        '<p>This tutorial will teach you how to use the Google machine', 
+        '<p>This tutorial will teach you how to use the Google machine',
         'translation API to create a room that will automatically',
         'translate everything said to the language of your choice.</p>',
         '<p>Type <cmd>continue tutorial</cmd> to continue.</p>'
@@ -342,7 +340,7 @@ $.tutorial.show = function() {
         '</pre>',
       ];
       break;
-      
+
     case 8:
       lines = [
         '<h2>Step 8: Test out the new "say" verb</h2>',
@@ -353,7 +351,7 @@ $.tutorial.show = function() {
         '<cmd>say Now I can speak German!</cmd>',
       ];
       break;
-      
+
     case 9:
       lines = [
         '<h2>Step 9: Finish up</h2>',

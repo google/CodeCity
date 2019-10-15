@@ -1,6 +1,6 @@
 [Unit]
 Description=Code City
-Documentation=https://github.com/NeilFraser/CodeCity
+Documentation=https://github.com/google/CodeCity
 After=network.target
 Wants=codecity-login.service codecity-connect.service codecity-mobwrite.service
 
