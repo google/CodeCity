@@ -21,8 +21,8 @@
 
 set -e
 
-# Get top level directory of git repository.  It's the parent
-# directory of the directory containing this script.
+# Get top level directory of the CodeCity git repository.  It's the
+# parent directory of the directory containing this script.
 repo="$(cd "$(dirname "${BASH_SOURCE[0]}")"/.. >/dev/null 2>&1 && pwd)"
 
 # Create var directory if required
@@ -33,6 +33,20 @@ if [[ ! -d "$repo/var" ]] ; then
   fi
 
   mkdir "$repo/var"
+fi
+
+# Find location where the nginx installation keeps its config files.
+# We only want the mime.types file.
+for dir in "$(brew --prefix)/etc" /usr/local/etc /etc; do
+  if [[ -d "$dir" && -f "$dir/nginx/mime.types" ]] ; then
+    mimetypes="$dir/nginx/mime.types"
+    break;
+  fi
+done
+
+if [[ -z "$mimetypes" ]] ; then
+  echo "$0: can't find mime.types file." 1>&2
+  exit 1;
 fi
 
 cat >"$repo/var/nginx-dev.conf" <<EOF
@@ -50,6 +64,7 @@ events {
 
 http {
   access_log off;
+  include $mimetypes;
   default_type application/octet-stream;
 
   # Set temp paths to be in $repo/var:
