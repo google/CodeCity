@@ -108,6 +108,26 @@ Code.Explorer.inputChange = function() {
   }
   Code.Explorer.oldInputValue = input.value;
   var parsed = Code.Explorer.parseInput(input.value);
+  if (Code.Explorer.lastNameToken === null && parsed.lastNameToken) {
+    // Look for cases where a deletion has resulted in a valid parts list.
+    // E.g. $.foo.bar. -> $.foo.bar
+    // Without this check, 'bar' would be considered a lastNameToken fragment.
+    var partsCopy = parsed.parts.slice();
+    partsCopy.push(
+        {type: parsed.lastNameToken.type, value: parsed.lastNameToken.value});
+    var oldParts = JSON.parse(Code.Explorer.partsJSON);
+    oldParts.length = partsCopy.length;
+    if (JSON.stringify(partsCopy) === JSON.stringify(oldParts)) {
+      // Rewrite the parsed input to be complete.
+      parsed = {
+        lastNameToken: null,
+        lastToken: null,
+        parts: partsCopy
+      };
+      // Force the autocomplete menu to hide.
+      Code.Explorer.partsJSON = 'null';
+    }
+  }
   Code.Explorer.lastNameToken = parsed.lastNameToken;
   var partsJSON = JSON.stringify(parsed.parts);
   if (Code.Explorer.partsJSON === partsJSON) {
@@ -124,7 +144,7 @@ Code.Explorer.inputChange = function() {
  * @return {!Object} Object with three fields:
  *     parts: Array of selector parts.
  *     lastNameToken: Last token that was an id, str, or num.
- *     lastToken: Last token.
+ *     lastToken: Last token.  Null if no tokens.
  */
 Code.Explorer.parseInput = function(inputValue) {
   var tokens = Code.Common.tokenizeSelector(inputValue);
@@ -438,7 +458,6 @@ Code.Explorer.setInput = function(parts) {
 Code.Explorer.inputFocus = function() {
   clearInterval(Code.Explorer.inputPollPid);
   Code.Explorer.inputPollPid = setInterval(Code.Explorer.inputChange, 10);
-  Code.Explorer.oldInputValue = null;
   Code.Explorer.inputUpdatable = false;
 };
 
