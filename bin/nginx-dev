@@ -37,7 +37,11 @@ fi
 
 # Find location where the nginx installation keeps its config files.
 # We only want the mime.types file.
-for dir in "$(brew --prefix)/etc" /usr/local/etc /etc; do
+dirs=(/usr/local/etc /etc/opt /etc)
+if type brew >/dev/null 2>&1 ; then  # Homebrew in path?
+  dirs=("$(brew --prefix)/etc" "${dirs[@]}")
+fi
+for dir in "${dirs[@]}"; do
   if [[ -d "$dir" && -f "$dir/nginx/mime.types" ]] ; then
     mimetypes="$dir/nginx/mime.types"
     break;
