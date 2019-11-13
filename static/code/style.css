@@ -17,6 +17,10 @@ textarea {
   width: 100%;
 }
 
+#input.invalid {
+  color: red;
+}
+
 #autocompleteMenu {
   background: #fff;
   border-color: #ccc #666 #666 #ccc;
