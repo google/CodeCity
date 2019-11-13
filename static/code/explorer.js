@@ -372,6 +372,8 @@ Code.Explorer.showAutocompleteMenu = function(options, index) {
                         Code.Explorer.LEFT_OF_INPUT_CHARS);
   var maxLeft = window.innerWidth - menuDiv.offsetWidth;
   menuDiv.style.left = Math.min(left, maxLeft) + 'px';
+  var maxHeight = window.innerHeight - menuDiv.offsetTop - 12;
+  menuDiv.style.maxHeight = maxHeight + 'px';
 };
 
 /**
