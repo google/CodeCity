@@ -25,7 +25,7 @@
 
 var crypto = require('crypto');
 var fs = require('fs');
-var google = require('googleapis');
+var google = require('googleapis').google;
 var http = require('http');
 var URL = require('url').URL;
 
