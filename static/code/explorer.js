@@ -116,13 +116,16 @@ Code.Explorer.inputChange = function() {
     partsCopy.push(
         {type: parsed.lastNameToken.type, value: parsed.lastNameToken.value});
     var oldParts = JSON.parse(Code.Explorer.partsJSON);
-    oldParts.length = partsCopy.length;
+    if (oldParts) {
+      oldParts.length = partsCopy.length;
+    }
     if (JSON.stringify(partsCopy) === JSON.stringify(oldParts)) {
       // Rewrite the parsed input to be complete.
       parsed = {
         lastNameToken: null,
         lastToken: null,
-        parts: partsCopy
+        parts: partsCopy,
+        valid: true
       };
       // Force the autocomplete menu to hide.
       Code.Explorer.partsJSON = 'null';
@@ -136,26 +139,34 @@ Code.Explorer.inputChange = function() {
     Code.Explorer.hideAutocompleteMenu();
     Code.Explorer.setParts(parsed.parts, false);
   }
+  if (parsed.valid) {
+    input.classList.remove('invalid');
+  } else {
+    input.classList.add('invalid');
+  }
 };
 
 /**
  * Parse the input value.
  * @param {string} inputValue Selector string from input field.
- * @return {!Object} Object with three fields:
+ * @return {!Object} Object with four fields:
  *     parts: Array of selector parts.
  *     lastNameToken: Last token that was an id, str, or num.
  *     lastToken: Last token.  Null if no tokens.
+ *     valid: True if all tokens are valid (or could become valid).
  */
 Code.Explorer.parseInput = function(inputValue) {
   var tokens = Code.Common.tokenizeSelector(inputValue);
   var parts = [];
   var token = null;
   var lastNameToken = null;
+  var valid = true;
   for (token of tokens) {
     if (token.type === 'id' || token.type === 'str' || token.type === 'num') {
       lastNameToken = token;
     }
     if (!token.valid) {
+      valid = false;
       break;
     }
     if ('.[]^'.indexOf(token.type) !== -1) {
@@ -168,7 +179,12 @@ Code.Explorer.parseInput = function(inputValue) {
       }
     }
   }
-  return {parts: parts, lastNameToken: lastNameToken, lastToken: token};
+  return {
+    parts: parts,
+    lastNameToken: lastNameToken,
+    lastToken: token,
+    valid: valid
+  };
 };
 
 /**
