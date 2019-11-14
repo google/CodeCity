@@ -100,7 +100,7 @@ function handleRequest(request, response) {
     // refresh_token. Save them.
     oauth2Client.setCredentials(tokens);
     var oauth2Api = google.oauth2('v2');
-    oauth2Api.userinfo.v2.me.get({auth: oauth2Client}, function(err, data) {
+    oauth2Api.userinfo.v2.me.get({auth: oauth2Client}, function(err, res) {
       if (err) {
         console.log(err);
         response.statusCode = 500;
@@ -108,7 +108,7 @@ function handleRequest(request, response) {
         return;
       }
       // Convert the Google ID into one unique for Code City.
-      var id = CFG.password + data.id;
+      var id = CFG.password + res.data.id;
       id = crypto.createHash('sha512').update(id).digest('hex');
       // Create anti-tampering hash as checksum.
       var checksum = CFG.password + id;
