@@ -132,7 +132,7 @@ function handleRequest(request, response) {
       id = crypto.createHash('sha512').update(id).digest('hex');
       // Create anti-tampering hash as checksum.
       var checksum = CFG.password + id;
-      checksum = crypto.createHash('sha').update(checksum).digest('hex');
+      checksum = crypto.createHash('sha3-224').update(checksum).digest('hex');
       // For future reference, the user's email address is: data.email
       response.writeHead(302, {
         // Temporary redirect
