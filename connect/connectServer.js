@@ -137,7 +137,7 @@ function handleRequest(request, response) {
     }
     var loginId = m[1];
     var checksum = CFG.password + loginId;
-    checksum = crypto.createHash('sha').update(checksum).digest('hex');
+    checksum = crypto.createHash('sha3-224').update(checksum).digest('hex');
     if (checksum != m[2]) {
       console.log('Invalid login cookie: ' + cookieList.ID);
       response.writeHead(302, {  // Temporary redirect
@@ -148,7 +148,7 @@ function handleRequest(request, response) {
     }
     var seed = (Date.now() * Math.random()).toString() + cookieList.ID;
     // This ID gets transmitted a *lot* so keep it short.
-    var sessionId = crypto.createHash('sha').update(seed).digest('base64');
+    var sessionId = crypto.createHash('sha3-224').update(seed).digest('base64');
     if (Object.keys(queueList).length > 1000) {
       response.statusCode = 429;
       response.end('Too many queues open at once.');
