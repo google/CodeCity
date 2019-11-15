@@ -94,7 +94,7 @@ async function runTests(files) {
   }
 
   // Print results summary.
-  console.log('\n%s\n', t);
+  console.log('\n%s\n', String(t));
 }
 
 /**
