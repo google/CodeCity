@@ -4,7 +4,8 @@
   "description": "Server for the Code City project",
   "main": "codecity.js",
   "dependencies": {
-    "acorn": "^5.7.1"
+    "acorn": "^5.7.1",
+    "weak-napi": "^1.0.3"
   },
   "devDependencies": {
     "tosource": "^1.0.0"
