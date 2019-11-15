@@ -30,7 +30,7 @@ const {T} = require('./testing');
  * Run some basic tests of IterableWeakMap.
  * @param {!T} t The test runner object.
  */
-exports.testIterableWeakMap = function(t) {
+exports.testIterableWeakMap = async function(t) {
   let name = 'IterableWeakMap';
 
   let assertSame = function(got, want, desc) {
@@ -65,6 +65,9 @@ exports.testIterableWeakMap = function(t) {
   assertSame(iwm.size, 3, 'iwm.size');
 
   gc();
+  // Cycle event loop to allow finalisers to run.
+  await new Promise((res, rej) => setTimeout(res, 0));
+
   assertSame(iwm.has(obj1), true, 'iwm.has(obj) (after GC)');
   assertSame(iwm.get(obj1), 42, 'iwm.get(obj) (after GC)');
   assertSame(iwm.size, 2, 'iwm.size (after GC)');
@@ -97,7 +100,7 @@ exports.testIterableWeakMap = function(t) {
  * warning if it takes several GCs to entierly empty the map.
  * @param {!T} t The test runner object.
  */
-exports.testIterableWeakMapLayeredGC = function(t) {
+exports.testIterableWeakMapLayeredGC = async function(t) {
   /* N.B.: This test seems to be deterministic but very sensitive to
    * seemingly insignificant code changes, which can (for no obvious
    * reason, but probably due to some internal optimisations) result
@@ -122,6 +125,8 @@ exports.testIterableWeakMapLayeredGC = function(t) {
   let count = 0;
   for (; count < limit && iwm.size > 0; count++) {
     gc();
+    // Cycle event loop to allow finalisers to run.
+    await new Promise((res, rej) => setTimeout(res, 0));
   }
 
   if (count >= limit) {

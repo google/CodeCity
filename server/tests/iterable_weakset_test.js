@@ -30,7 +30,7 @@ const {T} = require('./testing');
  * Run some basic tests of IterableWeakSet.
  * @param {!T} t The test runner object.
  */
-exports.testIterableWeakSet = function(t) {
+exports.testIterableWeakSet = async function(t) {
   let name = 'IterableWeakSet';
 
   let assertSame = function(got, want, desc) {
@@ -69,6 +69,9 @@ exports.testIterableWeakSet = function(t) {
   assertSame(iws.size, 3, 'iws.size');
 
   gc();
+  // Cycle event loop to allow finalisers to run.
+  await new Promise((res, rej) => setTimeout(res, 0));
+  
   assertSame(iws.has(obj1), true, 'iws.has(obj) (after GC)');
   assertSame(iws.size, 2, 'iws.size (after GC)');
   const keys = Array.from(iws.keys());
