@@ -442,7 +442,7 @@ CCC.doPing = function() {
 
   // XMLHttpRequest with timeout works in IE8 or better.
   var req = new XMLHttpRequest();
-  req.onreadystatechange = CCC.xhrStateChange;
+  req.onload = CCC.xhrStateChange;
   req.ontimeout = CCC.xhrTimeout;
   req.open('POST', CCC.PING_URL, true);
   req.timeout = CCC.MAX_PING_INTERVAL; // time in milliseconds
@@ -469,25 +469,22 @@ CCC.xhrTimeout = function() {
  * @this {!XMLHttpRequest}
  */
 CCC.xhrStateChange = function() {
-  // Only if request shows "loaded".
-  if (this.readyState === 4) {
-    CCC.xhrObject = null;
-    // Only if "OK".
-    if (this.status === 200) {
-      try {
-        var json = JSON.parse(this.responseText);
-      } catch (e) {
-        console.log('Invalid JSON: ' + this.responseText);
-        return;
-      }
-      CCC.parse(json);
-    } else if (this.status) {
-      console.warn('Connection error code: ' + this.status);
-      CCC.terminate();
+  CCC.xhrObject = null;
+  // Only if "OK".
+  if (this.status === 200) {
+    try {
+      var json = JSON.parse(this.responseText);
+    } catch (e) {
+      console.log('Invalid JSON: ' + this.responseText);
       return;
     }
-    CCC.schedulePing(CCC.pingInterval);
+    CCC.parse(json);
+  } else if (this.status) {
+    console.warn('Connection error code: ' + this.status);
+    CCC.terminate();
+    return;
   }
+  CCC.schedulePing(CCC.pingInterval);
 };
 
 /**
