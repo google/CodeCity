@@ -168,8 +168,7 @@ function handleRequest(request, response) {
     console.log('Hello xxxx' + loginId.substring(loginId.length - 4) +
                 ', starting session ' + sessionId);
 
-  } else if (request.method == 'POST' &&
-             request.url.startsWith(CFG.connectPath + '?ping')) {
+  } else if (request.method == 'POST' && request.url == CFG.pingPath) {
     var requestBody = '';
     request.on('data', function(data) {
       requestBody += data;
@@ -285,6 +284,8 @@ function configureAndStartup() {
         loginPath: '/login',
         // Path to the connect page.
         connectPath: '/connect',
+        // Path to the ping API.
+        pingPath: '/ping',
         // Host of Code City.
         remoteHost: 'localhost',
         // Port of Code City.
