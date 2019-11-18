@@ -304,7 +304,7 @@ Code.Editor.sendXhr = function() {
   xhr.abort();
   xhr.open('POST', '/code/editor');
   xhr.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
-  xhr.onreadystatechange = Code.Editor.receiveXhr;
+  xhr.onload = Code.Editor.receiveXhr;
   var src = Code.Editor.currentSource || '';
   var data =
       'key=' + encodeURIComponent(Code.Editor.key) +
@@ -325,9 +325,6 @@ Code.Editor.codeRequest_ = new XMLHttpRequest();
  */
 Code.Editor.receiveXhr = function() {
   var xhr = Code.Editor.codeRequest_;
-  if (xhr.readyState !== 4) {
-    return;  // Not ready yet.
-  }
   if (xhr.status !== 200) {
     console.warn('Editor XHR returned status ' + xhr.status);
     return;

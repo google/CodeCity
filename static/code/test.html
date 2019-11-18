@@ -39,7 +39,7 @@
       }
 
       function assertTrue(msg, actual) {
-        if (typeof actual == 'undefined') {
+        if (typeof actual === 'undefined') {
           // msg is optional.
           actual = msg;
           return assertEquals(true, actual);
@@ -49,7 +49,7 @@
       }
 
       function assertFalse(msg, actual) {
-        if (typeof actual == 'undefined') {
+        if (typeof actual === 'undefined') {
           // msg is optional.
           actual = msg;
           return assertEquals(false, actual);
@@ -59,18 +59,16 @@
       }
 
       function runTests() {
+        // Find all 'test' functions.
+        var tests = Object.getOwnPropertyNames(window).filter(
+            function(name) {return name.search(/test[A-Z]/) === 0});
         for (var x = 0; x < tests.length; x++) {
           document.write('<h3>' + tests[x] + ':</h3>');
-          eval(tests[x] + '()');
+          window[tests[x]]();
         }
       }
-
-      var tests = [
-        'testCommonSelectorToParts',
-        'testCommonPartsToSelector',
-        'testCommonSelectorToReference'
-      ];
     </script>
+
     <style>
       div.ok {
         color: #090;
@@ -81,8 +79,8 @@
       }
     </style>
   </head>
-  <body>
 
+  <body>
     <h1>Test harness for Code City: Code</h1>
 
     <script>
