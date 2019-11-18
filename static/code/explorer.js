@@ -213,7 +213,7 @@ Code.Explorer.sendAutocomplete = function(partsJSON) {
     Code.Explorer.autocompleteData = [];
     xhr.open('GET', '/code/autocomplete?parts=' +
         encodeURIComponent(partsJSON), true);
-    xhr.onreadystatechange = Code.Explorer.receiveAutocomplete;
+    xhr.onload = Code.Explorer.receiveAutocomplete;
     xhr.send();
     xhr.partsJSON = partsJSON;
   }
@@ -226,9 +226,6 @@ Code.Explorer.autocompleteRequest_ = new XMLHttpRequest();
  */
 Code.Explorer.receiveAutocomplete = function() {
   var xhr = Code.Explorer.autocompleteRequest_;
-  if (xhr.readyState !== 4) {
-    return;  // Not ready yet.
-  }
   if (xhr.status !== 200) {
     console.warn('Autocomplete returned status ' + xhr.status);
     return;
