@@ -81,6 +81,8 @@ Code.popState = function(event) {
   Code.receiveMessage(null);
 };
 
-sessionStorage.setItem(Code.Common.SELECTOR, Code.selector);
-window.addEventListener('message', Code.receiveMessage, false);
-window.addEventListener('popstate', Code.popState, false);
+if (!window.TEST) {
+  sessionStorage.setItem(Code.Common.SELECTOR, Code.selector);
+  window.addEventListener('message', Code.receiveMessage, false);
+  window.addEventListener('popstate', Code.popState, false);
+}

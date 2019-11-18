@@ -602,10 +602,11 @@ Code.Editor.hideButter = function() {
   document.getElementById('editorButter').style.display = 'none';
 };
 
-window.addEventListener('load', Code.Editor.init);
-window.addEventListener('message', Code.Editor.receiveMessage, false);
-window.addEventListener('beforeunload', Code.Editor.beforeUnload);
-
+if (!window.TEST) {
+  window.addEventListener('load', Code.Editor.init);
+  window.addEventListener('message', Code.Editor.receiveMessage, false);
+  window.addEventListener('beforeunload', Code.Editor.beforeUnload);
+}
 
 Code.Editor.editors = [];
 
