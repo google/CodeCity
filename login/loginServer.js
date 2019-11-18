@@ -116,7 +116,8 @@ function handleRequest(request, response) {
       // For future reference, the user's email address is: data.email
       response.writeHead(302, {
         // Temporary redirect
-        'Set-Cookie': 'ID=' + id + '_' + checksum + '; HttpOnly;',
+        'Set-Cookie': 'ID=' + id + '_' + checksum +
+            '; Path=' + CFG.connectPath + '; HttpOnly;',
         'Location': CFG.connectPath
       });
       response.end('Login OK.  Redirecting.');
