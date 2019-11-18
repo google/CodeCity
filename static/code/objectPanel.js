@@ -213,30 +213,32 @@ Code.ObjectPanel.caseInsensitiveComp = function(a, b) {
   return (a < b) ? -1 : ((a > b) ? 1 : 0);
 };
 
-(function() {
-  // Load the data from Code City.
-  var hash = location.hash.substring(1);
-  var script = document.createElement('script');
-  script.src = '/code/objectPanel?parts=' + hash;
-  document.head.appendChild(script);
+if (!window.TEST) {
+  (function() {
+    // Load the data from Code City.
+    var hash = location.hash.substring(1);
+    var script = document.createElement('script');
+    script.src = '/code/objectPanel?parts=' + hash;
+    document.head.appendChild(script);
 
-  // Fill in the object name.
-  Code.ObjectPanel.parts = JSON.parse(decodeURIComponent(hash));
-  var div = document.getElementById('objectTitle');
-  var lastPart = Code.ObjectPanel.parts[Code.ObjectPanel.parts.length - 1];
-  var name;
-  if (!lastPart) {
-    name = 'Globals';
-  } else if (Code.ObjectPanel.parts.length === 1) {
-    // Render as 'foo' or '[42]' or '["???"]' or '^'.
-    name = Code.Common.partsToSelector([lastPart]);
-  } else {
-    // Render as '.foo' or '[42]' or '["???"]' or '^'.
-    var mockParts = [{type: 'id', value: 'X'}, lastPart];
-    name = Code.Common.partsToSelector(mockParts).substring(1);
-  }
-  div.innerHTML = '';
-  div.appendChild(document.createTextNode(name));
-})();
+    // Fill in the object name.
+    Code.ObjectPanel.parts = JSON.parse(decodeURIComponent(hash));
+    var div = document.getElementById('objectTitle');
+    var lastPart = Code.ObjectPanel.parts[Code.ObjectPanel.parts.length - 1];
+    var name;
+    if (!lastPart) {
+      name = 'Globals';
+    } else if (Code.ObjectPanel.parts.length === 1) {
+      // Render as 'foo' or '[42]' or '["???"]' or '^'.
+      name = Code.Common.partsToSelector([lastPart]);
+    } else {
+      // Render as '.foo' or '[42]' or '["???"]' or '^'.
+      var mockParts = [{type: 'id', value: 'X'}, lastPart];
+      name = Code.Common.partsToSelector(mockParts).substring(1);
+    }
+    div.innerHTML = '';
+    div.appendChild(document.createTextNode(name));
+  })();
 
-window.addEventListener('load', Code.ObjectPanel.init);
+  window.addEventListener('load', Code.ObjectPanel.init);
+}
