@@ -1,0 +1,97 @@
+<html>
+  <head>
+    <title>Test harness for Code City: Code</title>
+
+    <script>
+      window.TEST = true;
+    </script>
+    <script src="common.js"></script>
+    <script src="code.js"></script>
+    <script src="explorer.js"></script>
+    <script src="objectPanel.js"></script>
+    <script src="editor.js"></script>
+    <script src="test.js"></script>
+
+    <script>
+      // Counters for unit test results.
+      var test_good = 0;
+      var test_bad = 0;
+
+      // If expected and actual are the identical, print 'Ok', otherwise 'Fail!'
+      function assertEquals(msg, expected, actual) {
+        if (typeof actual === 'undefined') {
+          // msg is optional.
+          actual = expected;
+          expected = msg;
+          msg = 'Expected: \'' + expected + '\' Actual: \'' + actual + '\'';
+        }
+        if (expected === actual) {
+          document.write('<div class="ok">Ok</div>');
+          test_good++;
+          return true;
+        } else {
+          document.write('<div class="fail">Fail!</div>');
+          msg = msg.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+          document.write('<code>' + msg + '</code><BR>');
+          test_bad++;
+          return false;
+        }
+      }
+
+      function assertTrue(msg, actual) {
+        if (typeof actual == 'undefined') {
+          // msg is optional.
+          actual = msg;
+          return assertEquals(true, actual);
+        } else {
+          return assertEquals(msg, true, actual);
+        }
+      }
+
+      function assertFalse(msg, actual) {
+        if (typeof actual == 'undefined') {
+          // msg is optional.
+          actual = msg;
+          return assertEquals(false, actual);
+        } else {
+          return assertEquals(msg, false, actual);
+        }
+      }
+
+      function runTests() {
+        for (var x = 0; x < tests.length; x++) {
+          document.write('<h3>' + tests[x] + ':</h3>');
+          eval(tests[x] + '()');
+        }
+      }
+
+      var tests = [
+        'testCommonSelectorToParts',
+        'testCommonPartsToSelector',
+        'testCommonSelectorToReference'
+      ];
+    </script>
+    <style>
+      div.ok {
+        color: #090;
+      }
+      div.fail {
+        color: #900;
+        font-size: bigger;
+      }
+    </style>
+  </head>
+  <body>
+
+    <h1>Test harness for Code City: Code</h1>
+
+    <script>
+      var startTime = Date.now();
+      runTests();
+      var endTime = Date.now();
+      document.write('<h3>Done.</h3>');
+      document.write('<p>Tests passed: ' + test_good + '<br>Tests failed: ' + test_bad + '</p>');
+      document.write('<p>Total time: ' + (endTime - startTime) + ' ms</p>');
+    </script>
+  </body>
+</html>

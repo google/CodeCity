@@ -729,5 +729,7 @@ Code.Explorer.init = function() {
   Code.Explorer.receiveMessage();
 };
 
-window.addEventListener('load', Code.Explorer.init);
-window.addEventListener('message', Code.Explorer.receiveMessage, false);
+if (!window.TEST) {
+  window.addEventListener('load', Code.Explorer.init);
+  window.addEventListener('message', Code.Explorer.receiveMessage, false);
+}
