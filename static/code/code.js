@@ -86,12 +86,12 @@ Code.popState = function(event) {
  * Set the code editor's title.
  */
 Code.setTitle = function() {
-  var selector = Code.selector;
-  if (selector.length > 36) {
+  var title = Code.selector;
+  if (title.length > 36) {
     // Max title length in Chrome is 36 before truncation.
-    selector = '…' + selector.substr(-35);
+    title = '…' + title.substr(-35);
   }
-  document.title = selector;
+  document.title = title;
 };
 
 if (!window.TEST) {

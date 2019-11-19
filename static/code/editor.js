@@ -908,6 +908,7 @@ Code.functionEditor.setSource = function(source) {
     this.prepElement_.value = props['prep'];
     this.iobjElement_.value = props['iobj'];
     this.isVerbElement_.checked = isVerb;
+    this.updateDisabled();
     this.editor_.setValue(source);
   }
 };
