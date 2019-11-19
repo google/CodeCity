@@ -61,6 +61,7 @@ Code.receiveMessage = function(event) {
   } catch (e) {
     // Maybe editor frame hasn't loaded yet.
   }
+  Code.setTitle();
 };
 
 /**
@@ -81,7 +82,20 @@ Code.popState = function(event) {
   Code.receiveMessage(null);
 };
 
+/**
+ * Set the code editor's title.
+ */
+Code.setTitle = function() {
+  var selector = Code.selector;
+  if (selector.length > 36) {
+    // Max title length in Chrome is 36 before truncation.
+    selector = '…' + selector.substr(-35);
+  }
+  document.title = selector;
+};
+
 if (!window.TEST) {
+  Code.setTitle();
   sessionStorage.setItem(Code.Common.SELECTOR, Code.selector);
   window.addEventListener('message', Code.receiveMessage, false);
   window.addEventListener('popstate', Code.popState, false);
