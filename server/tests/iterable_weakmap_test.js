@@ -105,6 +105,25 @@ exports.testIterableWeakMap = async function(t) {
 };
 
 /**
+ * Test for correct handling of cyclic garbage in IterableWeakMap.
+ * @param {!T} t The test runner object.
+ */
+exports.testIterableWeakMapCyclic = async function(t) {
+  const iwm = new IterableWeakMap;
+  (() => {
+    const objs = [{}, {}, {}];
+    iwm.set(objs[0], objs[0]);  // obj[0] is held circularly.
+    iwm.set(objs[1], objs[2]);  // obj[1] and [2] are held by each other.
+    iwm.set(objs[2], objs[1]);
+  })();
+  t.expect('IterableWeakMapCyclic: iwm.size (before GC)', iwm.size, 3);
+
+  await gcAndFinalise();
+
+  t.expect('IterableWeakMapCyclic: iwm.size (after GC)', iwm.size, 0);
+};
+
+/**
  * Test for layered collection of IterableWeakMap.
  *
  * When a WeakMap contains a chain of object (i.e., wm.get(o1) === o2,
