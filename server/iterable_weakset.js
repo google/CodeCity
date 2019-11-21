@@ -184,7 +184,7 @@ class IterableWeakSet {
   }
 }
 
-IterableWeakSet.prototype[Symbol.iterator] = IterableWeakSet.prototype.entries;
+IterableWeakSet.prototype[Symbol.iterator] = IterableWeakSet.prototype.values;
 IterableWeakSet.prototype.keys = IterableWeakSet.prototype.values;
 
 module.exports = IterableWeakSet;
