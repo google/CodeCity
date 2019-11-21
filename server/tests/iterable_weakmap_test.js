@@ -27,15 +27,31 @@ const IterableWeakMap = require('../iterable_weakmap');
 const {T} = require('./testing');
 
 /**
+ * Request garbage collection and cycle the event loop to give
+ * finalisers a chance to be run.  No guarantees about either,
+ * unfortunately.
+ * @return {void}
+ */
+async function gcAndFinalise() {
+  gc();
+  // Cycle event loop to allow finalisers to run.
+  await new Promise((res, rej) => setTimeout(res, 0));
+}
+  
+/**
  * Run some basic tests of IterableWeakMap.
  * @param {!T} t The test runner object.
  */
 exports.testIterableWeakMap = async function(t) {
-  let name = 'IterableWeakMap';
+  const name = 'IterableWeakMap';
 
-  let assertSame = function(got, want, desc) {
+  const assertSame = function(got, want, desc) {
     t.expect(name + ': ' + desc, got, want);
   };
+
+  assertSame(IterableWeakMap.prototype[Symbol.iterator],
+      IterableWeakMap.prototype.entries,
+      'prototype[Symbol.iterator] and prototype.entries are the same method');
 
   const obj1 = {};
   const obj2 = {};
@@ -64,10 +80,8 @@ exports.testIterableWeakMap = async function(t) {
   assertSame(iwm.has({}), false, 'iwm.has({})');
   assertSame(iwm.size, 3, 'iwm.size');
 
-  gc();
-  // Cycle event loop to allow finalisers to run.
-  await new Promise((res, rej) => setTimeout(res, 0));
-
+  await gcAndFinalise();
+  
   assertSame(iwm.has(obj1), true, 'iwm.has(obj) (after GC)');
   assertSame(iwm.get(obj1), 42, 'iwm.get(obj) (after GC)');
   assertSame(iwm.size, 2, 'iwm.size (after GC)');
@@ -115,7 +129,7 @@ exports.testIterableWeakMapLayeredGC = async function(t) {
 
   // Make a chain of entries.
   (() => {
-    let objs = [{}, {}, {}, {}, {}];
+    const objs = [{}, {}, {}, {}, {}];
     for (let i = 0; i < objs.length; i++) {
       iwm.set(objs[i], objs[i + 1]);
     }
@@ -124,15 +138,14 @@ exports.testIterableWeakMapLayeredGC = async function(t) {
   const limit = 10;  // objs.length * 2
   let count = 0;
   for (; count < limit && iwm.size > 0; count++) {
-    gc();
-    // Cycle event loop to allow finalisers to run.
-    await new Promise((res, rej) => setTimeout(res, 0));
+    await gcAndFinalise();
   }
 
   if (count >= limit) {
     t.fail(name, 'Test failed to terminate in a reasonable time.');
   } else if (count > 1) {
-    t.result('WARN', name, 'IterableWeakMap causes layered GC!');
+    t.result('WARN', name,
+             'IterableWeakMap causes layered GC! (' + count + ' iterations)');
   } else {
     t.pass(name);
   }
