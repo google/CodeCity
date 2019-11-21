@@ -44,39 +44,30 @@ const weak = require('weak');
 weak.get;
 
 /**
- * Function to clean up dead cells from an IterableWeakMap when a key
- * object has been garbaged collected.
+ * Function to clean up dead WeakRefs from an IterableWeakMap when a
+ * key object has been garbaged collected.
  * @this {!IterableWeakMap} IterableWeakMap to remove GCed key from.
- * @param {!Cell} cell Cell containing GCed key.
+ * @param {{ref: !WeakRef}} refWrapper A wrapper containing a WeakRef to remove.
  * @return {void}
  */
-function cleanup(cell) {
-  this.cells_.delete(cell);
+function cleanup(refWrapper) {
+  this.refs_.delete(refWrapper.ref);
 }
 
 /**
- * A weak-key, value tuple in an IterableWeakMap.
+ * A WeakRef<KEY>, value tuple in an IterableWeakMap.
  * @template KEY, VALUE
  */
 class Cell {
   /**
-   * @param {!IterableWeakMap} iwm Map this cell will belong to (for cleanup).
-   * @param {KEY} key The key for this cell.
+   * @param {!WeakRef<KEY>} ref A WeakRef to the key for this cell.
    * @param {VALUE} value The value for this cell.
    */
-  constructor(iwm, key, value) {
+  constructor(ref, value) {
     /** @type {!WeakRef<KEY>} */
-    this.wk = weak(key, cleanup.bind(iwm, this));
+    this.ref = ref;
     /** @type {VALUE} */
     this.value = value;
-  }
-
-  /**
-   * Return the cell's key (as a strong reference).
-   * @return {KEY}
-   */
-  getKey() {
-    return weak.get(this.wk);
   }
 }
 
@@ -100,8 +91,8 @@ class IterableWeakMap extends WeakMap {
    */
   constructor(iterable = undefined) {
     super();
-    /** @private @const @type {!Set<!Cell>} */
-    this.cells_ = new Set();
+    /** @private @const @type {!Set<!WeakRef<KEY>>} */
+    this.refs_ = new Set();
 
     if (iterable === null || iterable === undefined) {
       return;
@@ -127,8 +118,8 @@ class IterableWeakMap extends WeakMap {
    * @override
    */
   clear() {
-    for (const cell of this.cells_) {
-      const key = cell.getKey();
+    for (const ref of this.refs_) {
+      const key = weak.get(ref);
       if (key !== undefined) this.delete(key);
     }
   }
@@ -142,7 +133,7 @@ class IterableWeakMap extends WeakMap {
   delete(key) {
     const cell = super.get(key);
     if (cell) {
-      this.cells_.delete(cell);
+      this.refs_.delete(cell.ref);
     }
     return super.delete(key);
   }
@@ -152,12 +143,12 @@ class IterableWeakMap extends WeakMap {
    * @return {!IteratorIterable<!Array<KEY|VALUE>>}
    */
   *entries() {
-    for (const cell of this.cells_) {
-      const key = cell.getKey();
-      if (key === undefined) {  // key was garbage collected.  Remove cell.
-        this.cells_.delete(cell);
+    for (const ref of this.refs_) {
+      const key = weak.get(ref);
+      if (key === undefined) {  // key was garbage collected.  Remove ref.
+        this.refs_.delete(ref);
       } else {
-        yield [key, cell.value];
+        yield [key, super.get(key).value];
       }
     }
   }
@@ -194,13 +185,8 @@ class IterableWeakMap extends WeakMap {
    * @return {!IteratorIterable<KEY>}
    */
   *keys() {
-    for (const cell of this.cells_) {
-      const key = cell.getKey();
-      if (key === undefined) {  // key was garbage collected.  Remove cell.
-        this.cells_.delete(cell);
-      } else {
-        yield key;
-      }
+    for (const [key, value] of this) {
+      yield key;
     }
   }
 
@@ -217,9 +203,16 @@ class IterableWeakMap extends WeakMap {
     if (super.has(key)) {
       super.get(key).value = value;
     } else {
-      const cell = new Cell(this, key, value);
-      super.set(key, cell);
-      this.cells_.add(cell);
+      // Unfortunatley you can't bind the cleanup function the the
+      // WeakRef before the WeakRef exists, and you can't change the
+      // WeakRef's cleanup function after it's been created, so create
+      // an empty box to pass to cleanup, into which we can put the
+      // WeakRef after it's been created.
+      const refWrapper = {ref: null};
+      const ref = weak(key, cleanup.bind(this, refWrapper));
+      refWrapper.ref = ref;
+      super.set(key, new Cell(ref, value));
+      this.refs_.add(ref);
     }
     return this;
   }
@@ -228,7 +221,7 @@ class IterableWeakMap extends WeakMap {
    * @return {number}
    */
   get size() {
-    return this.cells_.size;
+    return this.refs_.size;
   }
 
   /**
@@ -236,13 +229,8 @@ class IterableWeakMap extends WeakMap {
    * @return {!IteratorIterable<VALUE>}
    */
   *values() {
-    for (const cell of this.cells_) {
-      const key = cell.getKey();
-      if (key === undefined) {  // key was garbage collected.  Remove cell.
-        this.cells_.delete(cell);
-      } else {
-        yield cell.value;
-      }
+    for (const [key, value] of this) {
+      yield value;
     }
   }
 }
