@@ -27,18 +27,33 @@ const IterableWeakSet = require('../iterable_weakset');
 const {T} = require('./testing');
 
 /**
+ * Request garbage collection and cycle the event loop to give
+ * finalisers a chance to be run.  No guarantees about either,
+ * unfortunately.
+ * @return {void}
+ */
+async function gcAndFinalise() {
+  gc();
+  // Cycle event loop to allow finalisers to run.
+  await new Promise((res, rej) => setTimeout(res, 0));
+}
+
+/**
  * Run some basic tests of IterableWeakSet.
  * @param {!T} t The test runner object.
  */
 exports.testIterableWeakSet = async function(t) {
-  let name = 'IterableWeakSet';
+  const name = 'IterableWeakSet';
 
-  let assertSame = function(got, want, desc) {
+  const assertSame = function(got, want, desc) {
     t.expect(name + ': ' + desc, got, want);
   };
 
+  assertSame(IterableWeakSet.prototype[Symbol.iterator],
+      IterableWeakSet.prototype.values,
+      'prototype[Symbol.iterator] and prototype.values are the same method');
   assertSame(IterableWeakSet.prototype.keys, IterableWeakSet.prototype.values,
-      'keys and values are the same method');
+      'prototype.keys and prototype.values are the same method');
 
   const obj1 = {x: 42};
   const obj2 = {x: 69};
@@ -68,10 +83,8 @@ exports.testIterableWeakSet = async function(t) {
   assertSame(iws.has({}), false, 'iws.has({})');
   assertSame(iws.size, 3, 'iws.size');
 
-  gc();
-  // Cycle event loop to allow finalisers to run.
-  await new Promise((res, rej) => setTimeout(res, 0));
-  
+  await gcAndFinalise();
+
   assertSame(iws.has(obj1), true, 'iws.has(obj) (after GC)');
   assertSame(iws.size, 2, 'iws.size (after GC)');
   const keys = Array.from(iws.keys());
@@ -82,10 +95,9 @@ exports.testIterableWeakSet = async function(t) {
   assertSame(iws.delete({}), false, 'iws.delete({})');
   assertSame(iws.delete(obj2), true, 'iws.delete(obj)');
   assertSame(iws.size, 1, 'iws.size (after delete)');
-  const entries = Array.from(iws);
-  assertSame(entries.length, 1, 'Array.from(iws).length (after delete)');
-  assertSame(entries[0][0], obj1, 'Array.from(iws)[0][0]');
-  assertSame(entries[0][1], obj1, 'Array.from(iws)[0][1]');
+  const values = Array.from(iws);
+  assertSame(values.length, 1, 'Array.from(iws).length (after delete)');
+  assertSame(values[0], obj1, 'Array.from(iws)[0]');
 
   iws.clear();
   assertSame(iws.has(obj1), false, 'iws.has(obj) (after clear)');
