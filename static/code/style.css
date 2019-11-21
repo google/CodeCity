@@ -114,6 +114,7 @@ textarea {
 
 #objectResults>a>div {
   padding-left: 8px;
+  min-width: fit-content;
 }
 
 #objectResults>a>div:hover {
