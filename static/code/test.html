@@ -18,11 +18,9 @@
       var test_bad = 0;
 
       // If expected and actual are the identical, print 'Ok', otherwise 'Fail!'
-      function assertEquals(msg, expected, actual) {
-        if (typeof actual === 'undefined') {
+      function assertEquals(expected, actual, msg) {
+        if (msg === undefined) {
           // msg is optional.
-          actual = expected;
-          expected = msg;
           msg = 'Expected: \'' + expected + '\' Actual: \'' + actual + '\'';
         }
         if (expected === actual) {
@@ -39,29 +37,17 @@
       }
 
       function assertTrue(msg, actual) {
-        if (typeof actual === 'undefined') {
-          // msg is optional.
-          actual = msg;
-          return assertEquals(true, actual);
-        } else {
-          return assertEquals(msg, true, actual);
-        }
+        return assertEquals(msg, true, actual);
       }
 
       function assertFalse(msg, actual) {
-        if (typeof actual === 'undefined') {
-          // msg is optional.
-          actual = msg;
-          return assertEquals(false, actual);
-        } else {
-          return assertEquals(msg, false, actual);
-        }
+        return assertEquals(msg, false, actual);
       }
 
       function runTests() {
         // Find all 'test' functions.
         var tests = Object.getOwnPropertyNames(window).filter(
-            function(name) {return name.search(/test[A-Z]/) === 0});
+            function(name) {return /^test[A-Z]/.test(name)});
         for (var x = 0; x < tests.length; x++) {
           document.write('<h3>' + tests[x] + ':</h3>');
           window[tests[x]]();

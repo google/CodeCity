@@ -442,7 +442,7 @@ CCC.doPing = function() {
 
   // XMLHttpRequest with timeout works in IE8 or better.
   var req = new XMLHttpRequest();
-  req.onload = CCC.xhrStateChange;
+  req.onload = CCC.xhrLoaded;
   req.ontimeout = CCC.xhrTimeout;
   req.open('POST', CCC.PING_URL, true);
   req.timeout = CCC.MAX_PING_INTERVAL; // time in milliseconds
@@ -468,7 +468,7 @@ CCC.xhrTimeout = function() {
  * Check network response was ok, then call CCC.parse.
  * @this {!XMLHttpRequest}
  */
-CCC.xhrStateChange = function() {
+CCC.xhrLoaded = function() {
   CCC.xhrObject = null;
   // Only if "OK".
   if (this.status === 200) {

@@ -111,7 +111,8 @@ Code.Explorer.inputChange = function() {
   if (Code.Explorer.lastNameToken === null && parsed.lastNameToken) {
     // Look for cases where a deletion has resulted in a valid parts list.
     // E.g. $.foo.bar. -> $.foo.bar
-    // Without this check, 'bar' would be considered a lastNameToken fragment.
+    // Without this check, 'bar' would be considered a lastNameToken fragment
+    // and the object panels would back-slide one step to $.foo
     var partsCopy = parsed.parts.slice();
     partsCopy.push(
         {type: parsed.lastNameToken.type, value: parsed.lastNameToken.value});
@@ -139,11 +140,7 @@ Code.Explorer.inputChange = function() {
     Code.Explorer.hideAutocompleteMenu();
     Code.Explorer.setParts(parsed.parts, false);
   }
-  if (parsed.valid) {
-    input.classList.remove('invalid');
-  } else {
-    input.classList.add('invalid');
-  }
+  input.classList.toggle('invalid', !parsed.valid);
 };
 
 /**
