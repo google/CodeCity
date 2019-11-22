@@ -21,39 +21,6 @@
  */
 'use strict';
 
-// TODO(cpcallen): Improve (or better: remove) weakref-related type decls.
-
-/**
- * @constructor
- * @template REF
- */
-var WeakRef = function() {};
-
-/**
- * @param {T} obj
- * @param {!Function} callback
- * @return {!WeakRef<T>}
- * @template T
- * @suppress {duplicate}
- */
-const weak = require('weak');
-
-/**
- * Declared to quiet closure-compiler warnings.
- */
-weak.get;
-
-/**
- * Function to clean up dead WeakRefs from an IterableWeakMap when a
- * key object has been garbaged collected.
- * @this {!IterableWeakMap} IterableWeakMap to remove GCed key from.
- * @param {{ref: !WeakRef}} refWrapper A wrapper containing a WeakRef to remove.
- * @return {void}
- */
-function cleanup(refWrapper) {
-  this.refs_.delete(refWrapper.ref);
-}
-
 /**
  * A WeakRef<KEY>, value tuple in an IterableWeakMap.
  * @template KEY, VALUE
@@ -73,12 +40,6 @@ class Cell {
 
 /**
  * A WeakMap implementing the full Map interface, including iterability.
- *
- * BUG(cpcallen): This implementation causes layered collection of
- * chained entries.  That is, if you have N entries in the
- * IterableWeakMap, where key_i === value_i+1, but none of the keys
- * are referenced elsewhere, it will take N garbage collections to
- * completely empty the map.
  * @struct
  * @implements {Iterable<!Array<KEY|VALUE>>}
  * @template KEY, VALUE
@@ -93,6 +54,8 @@ class IterableWeakMap extends WeakMap {
     super();
     /** @private @const @type {!Set<!WeakRef<KEY>>} */
     this.refs_ = new Set();
+    /** @private @const @type {!FinalizationGroup} */
+    this.finalisers_ = new FinalizationGroup(IterableWeakMap.cleanup_);
 
     if (iterable === null || iterable === undefined) {
       return;
@@ -113,15 +76,27 @@ class IterableWeakMap extends WeakMap {
   }
 
   /**
+   * Remove dead cells from .refs_.  Called automatically by the
+   * .finalisers_ FinalizationGroup.
+   * @return {void}
+   */
+  static cleanup_(iterator) {
+    for (const {set, ref} of iterator) {
+      set.delete(ref);
+    }
+  }
+
+  /**
    * Remove all entries from the map.
    * @return {void}
    * @override
    */
   clear() {
     for (const ref of this.refs_) {
-      const key = weak.get(ref);
+      const key = ref.deref();
       if (key !== undefined) this.delete(key);
     }
+    this.refs_.clear();  // Remove anything GCed but not finalised.
   }
 
   /**
@@ -134,6 +109,7 @@ class IterableWeakMap extends WeakMap {
     const cell = super.get(key);
     if (cell) {
       this.refs_.delete(cell.ref);
+      this.finalisers_.unregister(cell.ref);
     }
     return super.delete(key);
   }
@@ -144,7 +120,7 @@ class IterableWeakMap extends WeakMap {
    */
   *entries() {
     for (const ref of this.refs_) {
-      const key = weak.get(ref);
+      const key = ref.deref();
       if (key === undefined) {  // key was garbage collected.  Remove ref.
         this.refs_.delete(ref);
       } else {
@@ -158,13 +134,14 @@ class IterableWeakMap extends WeakMap {
    * it with thisArg as its this value and arguments key, value and
    * this map.
    * @this {MAP}
-   * @param {function(this:THIS, VALUE, KEY, MAP)} callback
+   * @param {function(this:THIS, VALUE, KEY, IterableWeakMap<KEY, VALUE>)}
+   *     callback
    * @param {THIS=} thisArg
    * @return {void}
-   * @template MAP, THIS
+   * @template THIS
    */
   forEach(callback, thisArg = undefined) {
-    for (const [key, value] of this.entries()) {
+    for (const [key, value] of this) {
       callback.call(thisArg, value, key, this);
     }
   }
@@ -177,7 +154,7 @@ class IterableWeakMap extends WeakMap {
    */
   get(key) {
     const cell = super.get(key);
-    return (cell === undefined) ? undefined : cell.value;
+    return cell && cell.value;
   }
 
   /**
@@ -203,16 +180,11 @@ class IterableWeakMap extends WeakMap {
     if (super.has(key)) {
       super.get(key).value = value;
     } else {
-      // Unfortunatley you can't bind the cleanup function the the
-      // WeakRef before the WeakRef exists, and you can't change the
-      // WeakRef's cleanup function after it's been created, so create
-      // an empty box to pass to cleanup, into which we can put the
-      // WeakRef after it's been created.
-      const refWrapper = {ref: null};
-      const ref = weak(key, cleanup.bind(this, refWrapper));
-      refWrapper.ref = ref;
-      super.set(key, new Cell(ref, value));
+      const ref = new WeakRef(key);
+      const cell = new Cell(ref, value);
+      super.set(key, cell);
       this.refs_.add(ref);
+      this.finalisers_.register(key, {set: this.refs_, ref}, ref);
     }
     return this;
   }
