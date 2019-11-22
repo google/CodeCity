@@ -18,6 +18,6 @@ node connectServer.js"
 python mobwrite_server.py"
 
   do script "cd " & dbPath & "../server
-node codecity.js " & dbPath & "demo.cfg"
+node --harmony-weak-refs codecity.js " & dbPath & "demo.cfg"
 
 end tell
