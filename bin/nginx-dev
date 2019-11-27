@@ -110,10 +110,6 @@ http {
       # Proxy to connectServer.js port 7782.
       proxy_pass         http://localhost:7782/connect;
     }
-    location /ping {
-      # Proxy to connectServer.js port 7782.
-      proxy_pass         http://localhost:7782/ping;
-    }
 
     location /mobwrite {
       # Proxy to mobwrite_server.py port 7783.
