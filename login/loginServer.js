@@ -30,12 +30,32 @@ var http = require('http');
 var URL = require('url').URL;
 
 // Configuration constants.
-var configFileName = 'loginServer.cfg';
+const configFileName = 'loginServer.cfg';
 
 // Global variables.
 var CFG = null;
 var oauth2Client;
 var loginUrl;
+
+const DEFAULT_CFG = {
+  // Internal port for this HTTP server.  Nginx hides this from users.
+  httpPort: 7781,
+  // Origin for login and connect pages.
+  origin: 'https://example.codecity.world',
+  // Path to the login page.
+  loginPath: '/login',
+  // Path to the connect page.
+  connectPath: '/connect',
+  // Google's API client ID.
+  clientId: '00000000000-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx' +
+      '.apps.googleusercontent.com',
+  // Google's API client secret.
+  clientSecret: 'yyyyyyyyyyyyyyyyyyyyyyyy',
+  // Domain of connect page.
+  cookieDomain: 'example.codecity.world',
+  // Random password for cookie encryption and salt for login IDs.
+  password: 'zzzzzzzzzzzzzzzz'
+};
 
 
 /**
@@ -134,35 +154,22 @@ function readConfigFile(filename) {
   try {
     data = fs.readFileSync(filename, 'utf8');
   } catch (err) {
-    const template = {
-      // Internal port for this HTTP server.  Nginx hides this from users.
-      httpPort: 7781,
-      // Origin for login and connect pages.
-      origin: 'https://example.codecity.world',
-      // Path to the login page.
-      loginPath: '/login',
-      // Path to the connect page.
-      connectPath: '/connect',
-      // Google's API client ID.
-      clientId: '00000000000-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx' +
-          '.apps.googleusercontent.com',
-      // Google's API client secret.
-      clientSecret: 'yyyyyyyyyyyyyyyyyyyyyyyy',
-      // Domain of connect page.
-      cookieDomain: 'example.codecity.world',
-      // Random password for cookie encryption and salt for login IDs.
-      password: 'zzzzzzzzzzzzzzzz'
-    };
-    fs.writeFileSync(filename, JSON.stringify(template, null, 2), 'utf8');
-    throw new Error(
-        `Configuration file ${filename} not found.  ` +
-        'Creating new file.  Please edit this file.');
+    console.log(`Configuration file ${filename} not found.  ` +
+        'Creating new file.');
+    data = JSON.stringify(DEFAULT_CFG, null, 2);
+    fs.writeFileSync(filename, data, 'utf8');
   }
   CFG = JSON.parse(data);
-  if (CFG.password == 'zzzzzzzzzzzzzzzz') {
-    throw new Error(
+  if (CFG.password === DEFAULT_CFG.password) {
+    throw Error(
         `Configuration file ${filename} not configured.  ` +
         'Please edit this file.');
+  }
+  // All options in the config must be present and non-falsy.
+  for (var key in DEFAULT_CFG) {
+    if (!CFG[key]) {
+      throw Error(`${key} not set in ${filename}`);
+    }
   }
 }
 
@@ -170,12 +177,7 @@ function readConfigFile(filename) {
  * Initialize Google's authentication and start up the HTTP server.
  */
 function startup() {
-  try {
-    readConfigFile(configFileName);
-  } catch (err) {
-    console.log(String(err));
-    return;
-  }
+  readConfigFile(configFileName);
 
   // Create an authentication client for our interactions with Google.
   oauth2Client = new google.auth.OAuth2(
