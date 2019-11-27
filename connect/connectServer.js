@@ -28,10 +28,29 @@ var fs = require('fs');
 var http = require('http');
 var net = require('net');
 
+// Configuration constants.
+const configFileName = 'connectServer.cfg';
 
 // Global variables.
 var CFG = null;
 var queueList = Object.create(null);
+
+const DEFAULT_CFG = {
+  // Internal port for this HTTP server.  Nginx hides this from users.
+  httpPort: 7782,
+  // Path to the login page.
+  loginPath: '/login',
+  // Path to the connect page.
+  connectPath: '/connect',
+  // Host of Code City.
+  remoteHost: 'localhost',
+  // Port of Code City.
+  remotePort: 7777,
+  // Age in seconds of abandoned queues to be closed.
+  connectionTimeout: 300,
+  // Random password for cookie encryption and salt for login IDs.
+  password: 'zzzzzzzzzzzzzzzz'
+};
 
 /**
  * Class for one user's connection to Code City.
@@ -269,44 +288,31 @@ function pong(queue, response, ackCmdNextPing) {
 }
 
 /**
- * Read the JSON configuration file.  If none is present, write a stub.
- * When done, call startup.
+ * Read the JSON configuration file and return it.  If none is
+ * present, write a stub and throw an error.
  */
-function configureAndStartup() {
-  var filename = 'connectServer.cfg';
-  fs.readFile(filename, 'utf8', function(err, data) {
-    if (err) {
-      console.log('Configuration file connectServer.cfg not found.  ' +
-                  'Creating new file.');
-      data = {
-        // Internal port for this HTTP server.  Nginx hides this from users.
-        httpPort: 7782,
-        // Path to the login page.
-        loginPath: '/login',
-        // Path to the connect page.
-        connectPath: '/connect',
-        // Host of Code City.
-        remoteHost: 'localhost',
-        // Port of Code City.
-        remotePort: 7777,
-        // Age in seconds of abandoned queues to be closed.
-        connectionTimeout: 300,
-        // Random password for cookie encryption and salt for login IDs.
-        password: 'zzzzzzzzzzzzzzzz'
-      };
-      data = JSON.stringify(data, null, 2);
-      fs.writeFile(filename, data, 'utf8');
-      return;
+function readConfigFile(filename) {
+  let data;
+  try {
+    data = fs.readFileSync(filename, 'utf8');
+  } catch (err) {
+    console.log(`Configuration file ${filename} not found.  ` +
+        'Creating new file.');
+    data = JSON.stringify(DEFAULT_CFG, null, 2);
+    fs.writeFileSync(filename, data, 'utf8');
+  }
+  CFG = JSON.parse(data);
+  if (CFG.password === DEFAULT_CFG.password) {
+    throw Error(
+        `Configuration file ${filename} not configured.  ` +
+        'Please edit this file.');
+  }
+  // All options in the config must be present and non-falsy.
+  for (var key in DEFAULT_CFG) {
+    if (!CFG[key]) {
+      throw Error(`${key} not set in ${filename}`);
     }
-    data = JSON.parse(data);
-    if (data.password == 'zzzzzzzzzzzzzzzz') {
-      console.log('Configuration file connectServer.cfg not configured.  ' +
-                  'Please edit this file.');
-      return;
-    }
-    CFG = data;
-    startup();
-  });
+  }
 }
 
 /**
@@ -328,6 +334,8 @@ function cleanup() {
  * Start up the HTTP server.
  */
 function startup() {
+  readConfigFile(configFileName);
+
   var server = http.createServer(handleRequest);
   server.listen(CFG.httpPort, 'localhost', function(){
     console.log('Connection server listening on port ' + CFG.httpPort);
@@ -335,4 +343,4 @@ function startup() {
   setInterval(cleanup, 60 * 1000);
 }
 
-configureAndStartup();
+startup();
