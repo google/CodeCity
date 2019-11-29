@@ -6,8 +6,11 @@
   "dependencies": {
     "acorn": "^5.7.1"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "google-closure-compiler": "^20191111.0.0"
+  },
   "scripts": {
+    "compile": "./compile",
     "test": "tests/run"
   },
   "repository": {
