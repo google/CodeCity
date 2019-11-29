@@ -6530,6 +6530,7 @@ stepFuncs_['MemberExpression'] = function (thread, stack, state, node) {
   // method calls from the algorithm in ES6 §2.3.2.1.
   // Step 7: bv = RequireObjectCoercible(baseValue).
   var /** ?Interpreter.Value */ base = state.tmp_;
+  var /** !Interpreter.Owner */ perms = state.scope.perms;
   if (base === null || base === undefined) {
     throw new this.Error(perms, this.TYPE_ERROR,
         "Can't convert " + base + ' to Object');
@@ -6541,7 +6542,6 @@ stepFuncs_['MemberExpression'] = function (thread, stack, state, node) {
   if (state.wantRef_) {
     stack[stack.length - 1].ref = [base, key];
   } else {
-    var perms = state.scope.perms;
     // toObject guaranteed not to throw because of earlier check.
     stack[stack.length - 1].value = this.toObject(base, perms).get(key, perms);
   }
