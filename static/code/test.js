@@ -32,9 +32,43 @@ function testCommonPartsToSelector() {
 }
 
 function testCommonSelectorToReference() {
-  // Detect any common prefix.
   // No substitution.
   assertEquals('$.foo', Code.Common.selectorToReference('$.foo'));
   // Parent substitution.
   assertEquals("$('$^.foo')", Code.Common.selectorToReference('$^.foo'));
+}
+
+function testGetPrefix() {
+  // No string.
+  assertEquals('', Code.Explorer.getPrefix([]));
+  // One string.
+  assertEquals('foo', Code.Explorer.getPrefix(['foo']));
+  // No prefix.
+  assertEquals('', Code.Explorer.getPrefix(['foo', 'bar', 'baz']));
+  // Some prefix.
+  assertEquals('ba', Code.Explorer.getPrefix(['bar', 'baz']));
+  // Whole prefix.
+  assertEquals('foo', Code.Explorer.getPrefix(['foo', 'foot', 'food']));
+  // Case-sensitive.
+  assertEquals('foo', Code.Explorer.getPrefix(['foot', 'fooT']));
+}
+
+
+function testAutocompletePrefix() {
+  // No options.
+  assertEquals('foo,false', String(Code.Explorer.autocompletePrefix([], 'foo')));
+  // One option.
+  assertEquals('FOOT,true', String(Code.Explorer.autocompletePrefix(['FOOT'], 'foo')));
+  // No prefix, one option.
+  assertEquals('foot,true', String(Code.Explorer.autocompletePrefix(['foot'], '')));
+  // No prefix, two options.
+  assertEquals('foo,false', String(Code.Explorer.autocompletePrefix(['food', 'foot'], '')));
+  // Case-sensitive prefix.
+  assertEquals('foo,false', String(Code.Explorer.autocompletePrefix(['foot', 'fool', 'FORK'], 'f')));
+  // Case-sensitive prefix.
+  assertEquals('FORK,true', String(Code.Explorer.autocompletePrefix(['foot', 'fool', 'FORK'], 'F')));
+  // Case-insensitive prefix.
+  assertEquals('foo,false', String(Code.Explorer.autocompletePrefix(['foot', 'fool'], 'F')));
+  // Case-insensitive no match.
+  assertEquals('Fo,false', String(Code.Explorer.autocompletePrefix(['FOOT', 'fool'], 'Fo')));
 }

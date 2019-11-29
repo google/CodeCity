@@ -532,26 +532,30 @@ Code.Explorer.inputKey = function(e) {
   }
   if (e.keyCode === key.tab) {
     if (hasMenu) {
-      var option = scrollDiv.firstChild;
-      var prefix = option.getAttribute('data-option');
-      var optionCount = 0;
-      do {
-        optionCount++;
-        prefix = Code.Explorer.getPrefix(prefix,
-            option.getAttribute('data-option'));
-        option = option.nextSibling;
-      } while (option);
-      if (optionCount === 1) {
+      // Extract all options from the menu.
+      var options = [];
+      for (var i = 0, option; (option = scrollDiv.childNodes[i]); i++) {
+        options[i] = option.getAttribute('data-option');
+      }
+      var prefix = '';
+      if (Code.Explorer.lastNameToken &&
+          Code.Explorer.lastNameToken.type === 'id') {
+        prefix = Code.Explorer.lastNameToken.value;
+      }
+      var tuple = Code.Explorer.autocompletePrefix(options, prefix);
+      if (tuple[1]) {
         // There was only one option.  Choose it.
         var parts = JSON.parse(Code.Explorer.partsJSON);
-        parts.push({type: 'id', value: prefix});
+        parts.push({type: 'id', value: tuple[0]});
         Code.Explorer.setParts(parts, true);
-      } else if (Code.Explorer.lastNameToken) {
-        if (Code.Explorer.lastNameToken.type === 'id') {
-          // Append the common prefix to the input.
-          var input = document.getElementById('input');
+      } else {
+        // Append the common prefix to the existing input.
+        var input = document.getElementById('input');
+        if (Code.Explorer.lastNameToken) {
           input.value = input.value.substring(0,
-              Code.Explorer.lastNameToken.index) + prefix;
+              Code.Explorer.lastNameToken.index) + tuple[0];
+        } else {
+          input.value += tuple[0];
         }
         // TODO: Tab-completion of partial strings and numbers.
       }
@@ -585,19 +589,51 @@ Code.Explorer.inputKey = function(e) {
 };
 
 /**
- * Compute and return the common prefix of two (relatively short) strings.
- * @param {string} str1 One string.
- * @param {string} str2 Another string.
+ * Given a list of options, and an existing prefix, return the common prefix.
+ * E.g. (['food', 'foot'], 'f') -> 'foo'
+ * @param {!Array<string>} options Array of autocompleted strings.
+ * @param {string} prefix Any existing prefix.
+ * @return {!Array<string|boolean>} Tuple with the maximum common prefix, and
+ *   whether this completion is terminal (true), or if there's the option of
+ *   continuing (false).
+ */
+Code.Explorer.autocompletePrefix = function(options, prefix) {
+  // Filter out only those completions that case-sensitively match the prefix.
+  var optionsCase = options.filter(option => option.startsWith(prefix));
+  if (optionsCase.length) {
+    return [Code.Explorer.getPrefix(optionsCase), optionsCase.length === 1];
+  }
+  // Find completions that don't match the prefix's case.
+  var common = Code.Explorer.getPrefix(options);
+  if (common.length > prefix.length) {
+    var optionsCommon = options.filter(option => option.startsWith(common));
+    return [common, optionsCommon.length === 1];
+  }
+  return [prefix, false];
+};
+
+/**
+ * Compute and return the common prefix of n (relatively short) strings.
+ * @param {!Array<string>} strs Array of string.
  * @return {string} Common prefix.
  */
-Code.Explorer.getPrefix = function(str1, str2) {
-  var len = Math.min(str1.length, str2.length);
-  for (var i = 0; i < len; i++) {
-    if (str1[i] !== str2[i]) {
-      break;
-    }
+Code.Explorer.getPrefix = function(strs) {
+  if (strs.length === 0) {
+    return '';
   }
-  return str1.substring(0, i);
+  var i = 0;
+  while (true) {
+    var letter = strs[0][i];
+    for (var j = 0; j < strs.length; j++) {
+      if (strs[j].length <= i) {
+        return strs[j];
+      }
+      if (strs[j][i] !== letter) {
+        return strs[j].substring(0, i);
+      }
+    }
+    i++;
+  }
 };
 
 /**

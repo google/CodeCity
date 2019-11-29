@@ -144,7 +144,7 @@ function handleRequest(request, response) {
         var parts = cookie.split('=');
         cookieList[parts.shift().trim()] = decodeURI(parts.join('='));
     });
-    // Decrypt the ID to ensure there was no tampering.
+    // Validate the ID to ensure there was no tampering.
     var m = cookieList.ID && cookieList.ID.match(/^([0-9a-f]+)_([0-9a-f]+)$/);
     if (!m) {
       console.log('Missing login cookie.  Redirecting.');
