@@ -128,14 +128,12 @@ Code.Explorer.inputChange = function() {
         parts: partsCopy,
         valid: true
       };
-      // Force the autocomplete menu to hide.
-      Code.Explorer.partsJSON = 'null';
     }
   }
   Code.Explorer.lastNameToken = parsed.lastNameToken;
   var partsJSON = JSON.stringify(parsed.parts);
   if (Code.Explorer.partsJSON === partsJSON) {
-    Code.Explorer.updateAutocompleteMenu(parsed.lastToken);
+    Code.Explorer.updateAutocompleteMenu();
   } else {
     Code.Explorer.hideAutocompleteMenu();
     Code.Explorer.setParts(parsed.parts, false);
@@ -244,17 +242,24 @@ Code.Explorer.processAutocomplete = function(data) {
   // If the input value is unchanged, display the autocompletion menu.
   var input = document.getElementById('input');
   if (Code.Explorer.oldInputValue === input.value) {
-    var parsed = Code.Explorer.parseInput(input.value);
-    Code.Explorer.updateAutocompleteMenu(parsed.lastToken);
+    Code.Explorer.updateAutocompleteMenu();
   }
 };
 
 /**
  * Given a partial prefix, filter the autocompletion menu and display
  * all matching options.
- * @param {?Object} token Last token in the parts list.
  */
-Code.Explorer.updateAutocompleteMenu = function(token) {
+Code.Explorer.updateAutocompleteMenu = function() {
+  var parsed = Code.Explorer.parseInput(input.value);
+  var token = parsed.lastToken;
+  // If the lastToken is part of the submitted parts, no menu.
+  parsed.parts.push({'type': token.type, 'value': token.value});
+  if (JSON.stringify(parsed.parts) === Code.Explorer.partsJSON) {
+    Code.Explorer.hideAutocompleteMenu();
+    return;
+  }
+  // Otherwise, show a menu filtered on the partial token.
   var prefix = '';
   var index = token ? token.index : 0;
   if (token) {
