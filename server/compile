@@ -33,8 +33,8 @@ args=(-O=ADVANCED_OPTIMIZATIONS
       --assume_function_wrapper
       --dependency_mode=STRICT
 
-      --externs=externs/node_externs.js
-      --externs=externs/weak_externs.js
+      --externs=externs/node.js
+      --externs=externs/WeakRef.js
 
       --hide_warnings_for=node_modules/acorn
       node_modules/acorn/package.json

@@ -27,8 +27,8 @@
  * @implements {Iterable<!Array<VALUE>>}
  * @template VALUE
  */
-// TODO(cpcallen): Make VALUE a bounded to {!Object} once
-// closure-compiler supports bounded generic types
+// TODO(cpcallen): Make VALUE bounded to {!Object} once
+// closure-compiler supports bounded generic types.
 class IterableWeakSet {
   /**
    * @param {!Iterable<!Array<VALUE>>|!Array<!Array<VALUE>>=} iterable
@@ -36,7 +36,7 @@ class IterableWeakSet {
   constructor(iterable = undefined) {
     /** @private @const @type {!Set<!WeakRef<VALUE>>} */
     this.refs_ = new Set();
-    /** @private @const @type {!WeakMap<VALUE, !WeakRef<VALUE>}} */
+    /** @private @const @type {!WeakMap<VALUE, !WeakRef<VALUE>>}} */
     this.map_ = new WeakMap();
     /** @private @const @type {!FinalizationGroup} */
     this.finalisers_ = new FinalizationGroup(IterableWeakSet.cleanup_);
