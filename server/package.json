@@ -6,9 +6,7 @@
   "dependencies": {
     "acorn": "^5.7.1"
   },
-  "devDependencies": {
-    "tosource": "^1.0.0"
-  },
+  "devDependencies": {},
   "scripts": {
     "test": "tests/run"
   },
