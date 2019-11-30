@@ -548,19 +548,19 @@ Code.Explorer.inputKey = function(e) {
         prefix = Code.Explorer.lastNameToken.value;
       }
       var tuple = Code.Explorer.autocompletePrefix(options, prefix);
-      if (tuple[1]) {
+      if (tuple.terminal) {
         // There was only one option.  Choose it.
         var parts = JSON.parse(Code.Explorer.partsJSON);
-        parts.push({type: 'id', value: tuple[0]});
+        parts.push({type: 'id', value: tuple.prefix});
         Code.Explorer.setParts(parts, true);
       } else {
         // Append the common prefix to the existing input.
         var input = document.getElementById('input');
         if (Code.Explorer.lastNameToken) {
           input.value = input.value.substring(0,
-              Code.Explorer.lastNameToken.index) + tuple[0];
+              Code.Explorer.lastNameToken.index) + tuple.prefix;
         } else {
-          input.value += tuple[0];
+          input.value += tuple.prefix;
         }
         // TODO: Tab-completion of partial strings and numbers.
       }
@@ -595,26 +595,29 @@ Code.Explorer.inputKey = function(e) {
 
 /**
  * Given a list of options, and an existing prefix, return the common prefix.
- * E.g. (['food', 'foot'], 'f') -> 'foo'
+ * E.g. (['food', 'foot'], 'f') -> {prefix: 'foo', terminal: false}
  * @param {!Array<string>} options Array of autocompleted strings.
  * @param {string} prefix Any existing prefix.
- * @return {!Array<string|boolean>} Tuple with the maximum common prefix, and
- *   whether this completion is terminal (true), or if there's the option of
- *   continuing (false).
+ * @return {{prefix: string, terminal: boolean}} Tuple with the maximum common
+ *   prefix, and whether this completion is terminal (true), or if there's the
+ *   option of continuing (false).
  */
 Code.Explorer.autocompletePrefix = function(options, prefix) {
   // Filter out only those completions that case-sensitively match the prefix.
-  var optionsCase = options.filter(option => option.startsWith(prefix));
+  var optionsCase = options.filter(
+      function(option) {return option.startsWith(prefix);});
   if (optionsCase.length) {
-    return [Code.Explorer.getPrefix(optionsCase), optionsCase.length === 1];
+    return {prefix: Code.Explorer.getPrefix(optionsCase),
+        terminal: optionsCase.length === 1};
   }
   // Find completions that don't match the prefix's case.
   var common = Code.Explorer.getPrefix(options);
   if (common.length > prefix.length) {
-    var optionsCommon = options.filter(option => option.startsWith(common));
-    return [common, optionsCommon.length === 1];
+    var optionsCommon = options.filter(
+        function(option) {return option.startsWith(common);});
+    return {prefix: common, terminal: optionsCommon.length === 1};
   }
-  return [prefix, false];
+  return {prefix: prefix, terminal: false};
 };
 
 /**
