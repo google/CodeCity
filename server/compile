@@ -15,7 +15,7 @@
 # limitations under the License.
 
 # Run the Closure Compiler, in --checks-only mode, on the Code City
-# server (and optionally server unit tests as well)
+# server (and optionally server unit tests as well).
 
 
 # Compile tests, which also compile server:
