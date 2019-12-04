@@ -33,7 +33,7 @@ Code.ObjectPanel.parts = null;
  * DOM node containing the list of properties.
  * @type {?Element}
  */
-Code.ObjectPanel.results = null;
+Code.ObjectPanel.tableBody = null;
 
 /**
  * Structured data from Code City.
@@ -45,17 +45,16 @@ Code.ObjectPanel.data = null;
  * Page has loaded, initialize the panel.  Called by Code City with data.
  */
 Code.ObjectPanel.init = function() {
+  Code.ObjectPanel.tableBody = document.getElementById('objectTableBody');
   // Clear the '...'
-  var results = document.getElementById('objectResults');
-  results.innerHTML = '';
-  results.className = '';
+  Code.ObjectPanel.tableBody.innerHTML = '';
   var data = Code.ObjectPanel.data;
   if (!data) {
     // Server error.  Should not happen.
     var title = document.getElementById('objectTitle');
     title.className = 'objectFailTitle';
     var fail = document.getElementById('objectFail');
-    fail.style.display = 'block';
+    fail.style.display = 'table-row';
     return;
   }
   if (data.roots) {
@@ -79,7 +78,12 @@ Code.ObjectPanel.init = function() {
     Code.ObjectPanel.addLink(part, 'object', true);
   }
 
-  // Highlight current item, and monitor for changes.
+  // Position the type symbols, and monitor for layout changes.
+  Code.ObjectPanel.positionTypes();
+  window.addEventListener('scroll', Code.ObjectPanel.positionTypes, false);
+  window.addEventListener('resize', Code.ObjectPanel.positionTypes, false);
+
+  // Highlight current item, and monitor for path changes.
   Code.ObjectPanel.highlight();
   window.addEventListener('message', Code.ObjectPanel.highlight, false);
 };
@@ -98,21 +102,24 @@ Code.ObjectPanel.addLink = function(part, type, section) {
   a.target = '_blank';
   a.setAttribute('data-link', JSON.stringify(part));
   a.addEventListener('click', Code.ObjectPanel.click);
+  var text = document.createTextNode(Code.Common.partsToSelector([part]));
+  a.appendChild(text);
+  var td = document.createElement('td');
+  if (section) {
+    td.className = 'section';
+  }
   var typeSymbol = Code.ObjectPanel.TYPES[type];
   if (typeSymbol) {
-    var span = document.createElement('span');
-    span.className = 'objectType';
-    span.appendChild(document.createTextNode(typeSymbol));
-    span.title = type;
-    a.appendChild(span);
+    var div = document.createElement('div');
+    div.className = 'objectType';
+    div.appendChild(document.createTextNode(typeSymbol));
+    div.title = type;
+    td.appendChild(div);
   }
-  var div = document.createElement('div');
-  div.appendChild(document.createTextNode(Code.Common.partsToSelector([part])));
-  if (section) {
-    div.className = 'section';
-  }
-  a.appendChild(div);
-  document.getElementById('objectResults').appendChild(a);
+  td.appendChild(a);
+  var tr = document.createElement('tr');
+  tr.appendChild(td);
+  Code.ObjectPanel.tableBody.appendChild(tr);
 };
 
 /**
@@ -122,6 +129,17 @@ Code.ObjectPanel.TYPES = {
   'object': '{}',
   'symbol': '☆',
   'function': '𝑓'
+};
+
+/**
+ * When scrollbar is moved or size changes reposition the floating types.
+ */
+Code.ObjectPanel.positionTypes = function() {
+  var left = (document.body.clientWidth + window.scrollX - 18) + 'px';
+  var types = document.getElementsByClassName('objectType');
+  for (var t of types) {
+    t.style.left = left;
+  }
 };
 
 /**
@@ -156,10 +174,11 @@ Code.ObjectPanel.highlight = function() {
   var part = parts ? parts[Code.ObjectPanel.parts.length] : null;
   var jsonPart = JSON.stringify(part);
   var newHighlighted = null;
-  var results = document.getElementById('objectResults');
-  for (var link of results.childNodes) {
+  for (var tr of Code.ObjectPanel.tableBody.childNodes) {
+    var td = tr.firstChild;
+    var link = td.firstChild;
     if (link.getAttribute('data-link') === jsonPart) {
-      newHighlighted = link;
+      newHighlighted = td;
     }
   }
   if (newHighlighted !== Code.ObjectPanel.highlighted) {
@@ -208,9 +227,7 @@ Code.ObjectPanel.filterShadowed = function(data) {
  * @return {number} -1/0/1 comparator value.
  */
 Code.ObjectPanel.caseInsensitiveComp = function(a, b) {
-  a = a.name.toLowerCase();
-  b = b.name.toLowerCase();
-  return (a < b) ? -1 : ((a > b) ? 1 : 0);
+  return a.name.toLowerCase().localeCompare(a.name.toLowerCase());
 };
 
 if (!window.TEST) {
