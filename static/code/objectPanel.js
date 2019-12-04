@@ -135,8 +135,6 @@ Code.ObjectPanel.TYPES = {
  * When scrollbar is moved or size changes reposition the floating types.
  */
 Code.ObjectPanel.positionTypes = function() {
-  var hasScrollbar = window.innerWidth > document.documentElement.clientWidth
-
   var left = (document.body.clientWidth + window.scrollX - 18) + 'px';
   var types = document.getElementsByClassName('objectType');
   for (var t of types) {
