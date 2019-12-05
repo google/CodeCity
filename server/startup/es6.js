@@ -1,8 +1,6 @@
 /**
  * @license
- * Code City: Startup code.
- *
- * Copyright 2017 Google Inc.
+ * Copyright 2017 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -58,8 +56,10 @@ var WeakMap = new 'WeakMap';
   var struct = [
     [Object, 'Object', ['is', 'setPrototypeOf'], []],
     [String, 'String', [], ['endsWith', 'includes', 'repeat', 'startsWith']],
-    [Number, 'Number', ['isFinite', 'isNaN', 'isSafeInteger'], []],
-    [Math, 'Math', ['sign', 'trunc'], []],
+    [Number, 'Number', ['isFinite', 'isInteger', 'isNaN', 'isSafeInteger'], []],
+    [Math, 'Math', ['acosh', 'asinh', 'atanh', 'cbrt', 'clz32', 'cosh', 'expm1',
+                    'fround', 'hypot', 'imul', 'log10', 'log1p', 'log2', 'sign',
+                    'sinh', 'tanh', 'trunc'], []],
     [WeakMap, 'WeakMap', [], ['delete', 'get', 'has', 'set']],
   ];
   for (var i = 0; i < struct.length; i++) {
@@ -92,11 +92,13 @@ var WeakMap = new 'WeakMap';
 
 // Polyfill copied from:
 // developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/find
-Object.defineProperty(Array.prototype, 'find', {value: function(callback/*, thisArg*/) {
+Object.defineProperty(Array.prototype, 'find', {value:
+    function(callback/*, thisArg*/) {
   if (this === null || this === undefined) {
     throw new TypeError('Array.prototype.find called on ' + this);
   } else if (typeof callback !== 'function') {
-    throw new TypeError('callback is type ' + typeof callback + ', not type function');
+    throw new TypeError('callback is type ' + typeof callback +
+                        ', not type function');
   }
   var o = Object(this);
   var len = o.length >>> 0;
@@ -112,11 +114,13 @@ Object.defineProperty(Array.prototype, 'find', {value: function(callback/*, this
 
 // Polyfill copied from:
 // developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/findIndex
-Object.defineProperty(Array.prototype, 'findIndex', {value: function(callback/*, thisArg*/) {
+Object.defineProperty(Array.prototype, 'findIndex', {value:
+    function(callback/*, thisArg*/) {
   if (this === null || this === undefined) {
     throw new TypeError('Array.prototype.findIndex called on ' + this);
   } else if (typeof callback !== 'function') {
-    throw new TypeError('callback is type ' + typeof callback + ', not type function');
+    throw new TypeError('callback is type ' + typeof callback +
+                        ', not type function');
   }
   var o = Object(this);
   var len = o.length >>> 0;
@@ -216,5 +220,11 @@ Object.defineProperty(Number, 'MAX_SAFE_INTEGER',
     {configurable: false,
      enumerable: false,
      writable: false,
-     // Fortunately 2**53 is also safe as long as you dont' increment it!:
+     // Fortunately 2**53 is also safe as long as you don't increment it!:
      value: Math.pow(2, 53) - 1 });
+
+Object.defineProperty(Number, 'MIN_SAFE_INTEGER',
+    {configurable: false,
+     enumerable: false,
+     writable: false,
+     value: -Number.MAX_SAFE_INTEGER});

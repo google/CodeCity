@@ -8,6 +8,7 @@ login/node_modules
 connect/connectServer.cfg
 connect/node_modules
 server/node_modules
+var/
 
 *.city
 *.city.partial

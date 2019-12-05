@@ -1,8 +1,6 @@
 /**
  * @license
- * Code City: JavaScript Interpreter
- *
- * Copyright 2013 Google Inc.
+ * Copyright 2013 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -73,9 +71,11 @@ var Interpreter = function(options) {
   this.initBuiltins_();
 
   /** @private @const {!Array<!Interpreter.Thread>} */
-  this.threads = [];
+  this.threads_ = [];
   /** @private @type {?Interpreter.Thread} */
-  this.thread = null;
+  this.thread_ = null;
+  /** @private @type {number|undefined} */
+  this.threadTimeLimit_ = undefined;
   /** @private (Type is whatever is returned by setTimeout()) */
   this.runner_ = null;
   /** @type {boolean} */
@@ -132,18 +132,20 @@ Interpreter.prototype.now = function() {
 };
 
 /**
- * Create a new thread and add it to .threads, and create a companion
+ * Create a new thread and add it to .threads_, and create a companion
  * user-visible wrapper object and return it.
  * @param {!Interpreter.Owner} owner Owner of new thread.
  * @param {!Interpreter.State} state Initial state
  * @param {number=} runAt Time at which thread should begin execution
  *     (default: now).
+ * @param {number=} timeLimit Maximum runtime without suspending (in ms).
  * @return {!Interpreter.prototype.Thread} Userland Thread object.
  */
-Interpreter.prototype.createThread = function(owner, state, runAt) {
-  var id = this.threads.length;
-  var thread = new Interpreter.Thread(id, state, runAt || this.now());
-  this.threads[this.threads.length] = thread;
+Interpreter.prototype.createThread = function(owner, state, runAt, timeLimit) {
+  var id = this.threads_.length;
+  var thread =
+      new Interpreter.Thread(id, state, runAt || this.now(), timeLimit);
+  this.threads_[this.threads_.length] = thread;
   this.go_();
   return new this.Thread(thread, owner);
 };
@@ -154,16 +156,17 @@ Interpreter.prototype.createThread = function(owner, state, runAt) {
  * global scope and will consequently runs wit whatever permissions
  * the global scope has.
  * @param {string} src JavaScript source code to parse and run.
+ * @param {number=} timeLimit Maximum runtime without suspending (in ms).
  * @return {!Interpreter.prototype.Thread} Userland Thread object.
  */
-Interpreter.prototype.createThreadForSrc = function(src) {
+Interpreter.prototype.createThreadForSrc = function(src, timeLimit) {
   if (this.options.trimProgram) {
     src = src.trim();
   }
   var ast = this.compile_(src);
   this.populateScope_(ast, this.global);
   var state = new Interpreter.State(ast, this.global);
-  return this.createThread(this.ROOT, state);
+  return this.createThread(this.ROOT, state, undefined, timeLimit);
 };
 
 /**
@@ -175,17 +178,20 @@ Interpreter.prototype.createThreadForSrc = function(src) {
  * @param {!Array<?Interpreter.Value>} args Arguments to pass.
  * @param {number=} runAt Time at which thread should begin execution
  *     (default: now).
+ * @param {number=} timeLimit Maximum runtime without suspending (in ms).
  * @return {!Interpreter.prototype.Thread} Userland Thread object.
  */
 Interpreter.prototype.createThreadForFuncCall = function(
-    owner, func, thisVal, args, runAt) {
+    owner, func, thisVal, args, runAt, timeLimit) {
   var state = Interpreter.State.newForCall(func, thisVal, args, owner);
-  return this.createThread(owner, state, runAt);
+  return this.createThread(owner, state, runAt, timeLimit);
 };
 
 /**
  * Schedule the next runnable thread.  Returns 0 if a READY thread
- * successfuly scheduled; otherwise returns earliest .runAt time
+ * successfuly scheduled (or if the current thread was already
+ * runnable, which can happen when interpreter has just been
+ * deserialised); otherwise returns earliest .runAt time
  * amongst SLEEPING threads (if any), or Number.MAX_VALUE if there are
  * none.  If there are additionally no BLOCKED threads left (i.e.,
  * there are no non-ZOMBIE theads at all) it will also set .done to
@@ -193,13 +199,16 @@ Interpreter.prototype.createThreadForFuncCall = function(
  * @return {number} See description.
  */
 Interpreter.prototype.schedule = function() {
+  if (this.thread && this.thread.status === Interpreter.Thread.Status.READY) {
+    return 0;  // Nothing to do.  Don't reset .threadTimeLimit_!
+  }
   var now = this.now();
   var runAt = Number.MAX_VALUE;
-  var threads = this.threads;
+  var threads = this.threads_;
   // Assume all remaining threads are ZOMBIEs until proven otherwise.
   this.done = true;
-  this.thread = null;
-  // .threads will be very sparse, so use for-in loop.
+  this.thread_ = null;
+  // .threads_ will be very sparse, so use for-in loop.
   for (var i in threads) {
     i = Number(i);  // Make Closure Compiler happy.
     if (!threads.hasOwnProperty(i)) {
@@ -226,8 +235,8 @@ Interpreter.prototype.schedule = function() {
       case Interpreter.Thread.Status.READY:
         // Is this this most-overdue thread found so far?
         if (threads[i].runAt < runAt) {
-          this.thread = threads[i];
-          runAt = this.thread.runAt;
+          this.thread_ = threads[i];
+          runAt = this.thread_.runAt;
         }
         this.done = false;
         break;
@@ -235,11 +244,14 @@ Interpreter.prototype.schedule = function() {
         throw new Error('Unknown thread state');
     }
   }
+  this.threadTimeLimit_ = (this.thread_ && this.thread_.timeLimit) ?
+      now + this.thread_.timeLimit : undefined;
   return runAt < now ? 0 : runAt;
 };
 
 /**
- * Execute one step of the interpreter.
+ * Execute one step of the interpreter.  Schedules the next runnable
+ * thread if required.
  * @return {boolean} True if a step was executed, false if no more
  *     READY threads.
  */
@@ -251,26 +263,14 @@ Interpreter.prototype.step = function() {
   if (this.status !== Interpreter.Status.PAUSED) {
     throw new Error('Can only step paused interpreter');
   }
-  if (!this.thread || this.thread.status !== Interpreter.Thread.Status.READY) {
+  if (!this.thread_ ||
+      this.thread_.status !== Interpreter.Thread.Status.READY) {
     if (this.schedule() > 0) {
       return false;
     }
   }
-  var thread = this.thread;
-  var stack = thread.stateStack_;
-  var state = stack[stack.length - 1];
-  var node = state.node;
-  try {
-    var nextState = state.stepFunc.call(this, thread, stack, state, node);
-  } catch (e) {
-    this.throw_(thread, e, state.scope.perms);
-  }
-  if (nextState) {
-    stack[stack.length] = nextState;
-  }
-  if (stack.length === 0) {
-    thread.status = Interpreter.Thread.Status.ZOMBIE;
-  }
+  if (!this.thread_) throw new Error('Scheduling failed');  // Satisfy compiler.
+  this.step_(this.thread_, this.thread_.stateStack_);
   return true;
 };
 
@@ -297,29 +297,40 @@ Interpreter.prototype.run = function() {
   }
   var t;
   while ((t = this.schedule()) === 0) {
-    var thread = this.thread;
+    var thread = this.thread_;
     var stack = thread.stateStack_;
     while (thread.status === Interpreter.Thread.Status.READY) {
-      var state = stack[stack.length - 1];
-      var node = state.node;
-      try {
-        var nextState = state.stepFunc.call(this, thread, stack, state, node);
-      } catch (e) {
-        this.throw_(thread, e, state.scope.perms);
-        nextState = undefined;
-      }
-      if (nextState) {
-        stack[stack.length] = nextState;
-      }
-      if (stack.length === 0) {
-        thread.status = Interpreter.Thread.Status.ZOMBIE;
-      }
+      this.step_(thread, stack);
     }
   }
   if (t === Number.MAX_VALUE) {
     return this.done ? 0 : -1;
   }
   return t;
+};
+
+/**
+ * Actually execute one step of the interpreter.  Presumes thread is
+ * the currently-scheduled thread, is runnable, etc.
+ * @private
+ * @param {!Interpreter.Thread} thread The current thread.
+ * @param {!Array<!Interpreter.State>} stack The current thread's state stack.
+ */
+Interpreter.prototype.step_ = function(thread, stack) {
+  var state = stack[stack.length - 1];
+  var node = state.node;
+  try {
+    var nextState = state.stepFunc.call(this, thread, stack, state, node);
+  } catch (e) {
+    this.throw_(thread, e, state.scope.perms);
+    nextState = undefined;
+  }
+  if (nextState) {
+    stack[stack.length] = nextState;
+  }
+  if (stack.length === 0) {
+    thread.status = Interpreter.Thread.Status.ZOMBIE;
+  }
 };
 
 /**
@@ -415,7 +426,8 @@ Interpreter.prototype.pause = function() {
           // and .onError will therefore get caller perms === root,
           // which is probably dangerous.
           intrp.createThreadForFuncCall(
-              server.owner, func, server.proto, [userError]);
+              server.owner, func, server.proto, [userError],
+              undefined, server.timeLimit);
         });
       }
       // Reset .uptime() to start counting from *NOW*, and .now() to
@@ -566,6 +578,8 @@ Interpreter.prototype.initBuiltins_ = function() {
   // eval is a special case; it must be added to the global scope at
   // startup time (rather than by a "var eval = new 'eval';" statement
   // in es5.js) because assigning to eval is illegal in strict mode.
+  // This also means that it is effectively immutable despite being
+  // created with createMutableBinding.
   this.global.createMutableBinding('eval', eval_);
 
   this.createNativeFunction('isFinite', isFinite, false);
@@ -1554,7 +1568,7 @@ Interpreter.prototype.initString_ = function() {
       separator = separator.regexp;
     }
     var jsList = this.split(separator, limit);
-    return intrp.createArrayFromList(jsList, intrp.thread.perms());
+    return intrp.createArrayFromList(jsList, intrp.thread_.perms());
   };
   this.createNativeFunction('String.prototype.split', wrapper, false);
 
@@ -1563,7 +1577,7 @@ Interpreter.prototype.initString_ = function() {
       regexp = regexp.regexp;
     }
     var m = this.match(regexp);
-    return m && intrp.createArrayFromList(m, intrp.thread.perms());
+    return m && intrp.createArrayFromList(m, intrp.thread_.perms());
   };
   this.createNativeFunction('String.prototype.match', wrapper, false);
 
@@ -1589,7 +1603,7 @@ Interpreter.prototype.initString_ = function() {
       return this.repeat(count);
     } catch (e) {
       // 'abc'.repeat(-1) will throw an error.  Catch and rethrow.
-      throw intrp.errorNativeToPseudo(e, intrp.thread.perms());
+      throw intrp.errorNativeToPseudo(e, intrp.thread_.perms());
     }
   };
   this.createNativeFunction('String.prototype.repeat', wrapper, false);
@@ -1723,6 +1737,7 @@ Interpreter.prototype.initNumber_ = function() {
 
   // Static methods on Number.
   this.createNativeFunction('Number.isFinite', Number.isFinite, false);
+  this.createNativeFunction('Number.isInteger', Number.isInteger, false);
   this.createNativeFunction('Number.isNaN', Number.isNaN, false);
   this.createNativeFunction('Number.isSafeInteger', Number.isSafeInteger,
                             false);
@@ -1733,7 +1748,7 @@ Interpreter.prototype.initNumber_ = function() {
       return this.toExponential(fractionDigits);
     } catch (e) {
       // Throws if fractionDigits isn't within 0-20.
-      throw intrp.errorNativeToPseudo(e, intrp.thread.perms());
+      throw intrp.errorNativeToPseudo(e, intrp.thread_.perms());
     }
   };
   this.createNativeFunction('Number.prototype.toExponential', wrapper, false);
@@ -1743,7 +1758,7 @@ Interpreter.prototype.initNumber_ = function() {
       return this.toFixed(digits);
     } catch (e) {
       // Throws if digits isn't within 0-20.
-      throw intrp.errorNativeToPseudo(e, intrp.thread.perms());
+      throw intrp.errorNativeToPseudo(e, intrp.thread_.perms());
     }
   };
   this.createNativeFunction('Number.prototype.toFixed', wrapper, false);
@@ -1753,7 +1768,7 @@ Interpreter.prototype.initNumber_ = function() {
       return this.toPrecision(precision);
     } catch (e) {
       // Throws if precision isn't within range (depends on implementation).
-      throw intrp.errorNativeToPseudo(e, intrp.thread.perms());
+      throw intrp.errorNativeToPseudo(e, intrp.thread_.perms());
     }
   };
   this.createNativeFunction('Number.prototype.toPrecision', wrapper, false);
@@ -1780,7 +1795,7 @@ Interpreter.prototype.initNumber_ = function() {
         // closure-compiler thinks radix should be a number.
         return Number.prototype.toString.call(x, /** @type {?} */(radix));
       } catch (e) {
-        throw intrp.errorNativeToPseudo(e, intrp.thread.perms());
+        throw intrp.errorNativeToPseudo(e, intrp.thread_.perms());
       }
     }
   });
@@ -1816,7 +1831,7 @@ Interpreter.prototype.initDate_ = function() {
     // Called as new Date().
     var args = [null].concat(Array.from(arguments));
     var date = new (Function.prototype.bind.apply(Date, args));
-    return new intrp.Date(date, intrp.thread.perms());
+    return new intrp.Date(date, intrp.thread_.perms());
   };
   this.createNativeFunction('Date', wrapper, true);
 
@@ -1890,7 +1905,7 @@ Interpreter.prototype.initRegExp_ = function() {
   wrapper = function(pattern, flags) {
     pattern = pattern ? pattern.toString() : '';
     flags = flags ? flags.toString() : '';
-    return new intrp.RegExp(new RegExp(pattern, flags), intrp.thread.perms());
+    return new intrp.RegExp(new RegExp(pattern, flags), intrp.thread_.perms());
   };
   this.createNativeFunction('RegExp', wrapper, true);
 
@@ -1911,7 +1926,7 @@ Interpreter.prototype.initRegExp_ = function() {
   wrapper = function(str) {
     if (!(this instanceof intrp.RegExp) ||
         !(this.regexp instanceof RegExp)) {
-      throw new intrp.Error(intrp.thread.perms(), intrp.TYPE_ERROR,
+      throw new intrp.Error(intrp.thread_.perms(), intrp.TYPE_ERROR,
           'Method RegExp.prototype.exec called on incompatible receiver' +
               this.toString());
     }
@@ -1920,7 +1935,7 @@ Interpreter.prototype.initRegExp_ = function() {
   this.createNativeFunction('RegExp.prototype.test', wrapper, false);
 
   wrapper = function(str) {
-    var perms = intrp.thread.perms();
+    var perms = intrp.thread_.perms();
     if (!(this instanceof intrp.RegExp)) {
       throw new intrp.Error(perms, intrp.TYPE_ERROR,
           'Method RegExp.prototype.exec called on incompatible receiver ' +
@@ -1954,7 +1969,7 @@ Interpreter.prototype.initRegExp_ = function() {
 Interpreter.prototype.initError_ = function() {
   var intrp = this;
 
-  var createErrorClass = function(name) {
+  var createErrorClass = function(name, protoKey) {
     var protoproto = name === 'Error' ? intrp.OBJECT : intrp.ERROR;
     var proto = new intrp.Error(intrp.ROOT, protoproto);
     intrp.builtins.set(name + '.prototype', proto);
@@ -1964,7 +1979,10 @@ Interpreter.prototype.initError_ = function() {
       construct: function(intrp, thread, state, args) {
         var message = (args[0] === undefined) ? undefined : String(args[0]);
         var perms = state.scope.perms;
-        var err = new intrp.Error(perms, proto, message);
+        // Use intrp[protoKey] instead of proto because
+        // deserialisation will set up intrp.ERROR et al correctly but
+        // can't modify values of variables in native closures.
+        var err = new intrp.Error(perms, intrp[protoKey], message);
         err.makeStack(thread.callers(perms).slice(1), perms);
         return err;
       },
@@ -1976,14 +1994,14 @@ Interpreter.prototype.initError_ = function() {
     return proto;
   };
 
-  this.ERROR = createErrorClass('Error');  // Must be first!
-  this.EVAL_ERROR = createErrorClass('EvalError');
-  this.RANGE_ERROR = createErrorClass('RangeError');
-  this.REFERENCE_ERROR = createErrorClass('ReferenceError');
-  this.SYNTAX_ERROR = createErrorClass('SyntaxError');
-  this.TYPE_ERROR = createErrorClass('TypeError');
-  this.URI_ERROR = createErrorClass('URIError');
-  this.PERM_ERROR = createErrorClass('PermissionError');
+  intrp.ERROR = createErrorClass('Error', 'ERROR');  // Must be first!
+  intrp.EVAL_ERROR = createErrorClass('EvalError', 'EVAL_ERROR');
+  intrp.RANGE_ERROR = createErrorClass('RangeError', 'RANGE_ERROR');
+  intrp.REFERENCE_ERROR = createErrorClass('ReferenceError', 'REFERENCE_ERROR');
+  intrp.SYNTAX_ERROR = createErrorClass('SyntaxError', 'SYNTAX_ERROR');
+  intrp.TYPE_ERROR = createErrorClass('TypeError', 'TYPE_ERROR');
+  intrp.URI_ERROR = createErrorClass('URIError', 'URI_ERROR');
+  intrp.PERM_ERROR = createErrorClass('PermissionError', 'PERM_ERROR');
 
   this.createNativeFunction('Error.prototype.toString',
                             this.Error.prototype.toString, false);
@@ -1994,9 +2012,11 @@ Interpreter.prototype.initError_ = function() {
  * @private
  */
 Interpreter.prototype.initMath_ = function() {
-  var numFunctions = ['abs', 'acos', 'asin', 'atan', 'atan2', 'ceil', 'cos',
-                      'exp', 'floor', 'log', 'max', 'min', 'pow', 'random',
-                      'round', 'sign', 'sin', 'sqrt', 'tan', 'trunc'];
+  var numFunctions = ['abs', 'acos', 'acosh', 'asin', 'asinh', 'atan', 'atan2',
+      'atanh', 'cbrt', 'ceil', 'clz32', 'cos', 'cosh', 'exp', 'expm1', 'floor',
+      'fround', 'hypot', 'imul', 'log', 'log10', 'log1p', 'log2', 'max', 'min',
+      'pow', 'random', 'round', 'sign', 'sin', 'sinh', 'sqrt', 'tan', 'tanh',
+      'trunc'];
   for (var i = 0; i < numFunctions.length; i++) {
     this.createNativeFunction('Math.' + numFunctions[i], Math[numFunctions[i]],
                               false);
@@ -2014,9 +2034,9 @@ Interpreter.prototype.initJSON_ = function() {
     try {
       var nativeObj = JSON.parse(text.toString());
     } catch (e) {
-      throw intrp.errorNativeToPseudo(e, intrp.thread.perms());
+      throw intrp.errorNativeToPseudo(e, intrp.thread_.perms());
     }
-    return intrp.nativeToPseudo(nativeObj, intrp.thread.perms());
+    return intrp.nativeToPseudo(nativeObj, intrp.thread_.perms());
   };
   this.createNativeFunction('JSON.parse', wrapper, false);
 
@@ -2025,7 +2045,7 @@ Interpreter.prototype.initJSON_ = function() {
     try {
       var str = JSON.stringify(nativeObj);
     } catch (e) {
-      throw intrp.errorNativeToPseudo(e, intrp.thread.perms());
+      throw intrp.errorNativeToPseudo(e, intrp.thread_.perms());
     }
     return str;
   };
@@ -2126,7 +2146,7 @@ Interpreter.prototype.initThread_ = function() {
    *
    * - func is function to run in thread.  (Maybe in future we will
    *   accept src to eval, but not for now.)
-   * - delay is time to wait, in ms, before starting thread.
+   * - delay is time to wait (in ms) before starting thread.
    * - thisArg is the 'this' value to use for the call (as if via .apply).
    * - ...args are additional arguments to pass to func.
    */
@@ -2144,7 +2164,7 @@ Interpreter.prototype.initThread_ = function() {
             func + ' is not a function');
       }
       return intrp.createThreadForFuncCall(
-          perms, func, thisArg, args, intrp.now() + delay);
+          perms, func, thisArg, args, intrp.now() + delay, thread.timeLimit);
     }
   });
 
@@ -2167,8 +2187,8 @@ Interpreter.prototype.initThread_ = function() {
       }
       // TODO(cpcallen:perms): add security check here.
       var id = t.thread.id;
-      if (intrp.threads[id]) {
-        intrp.threads[id].status = Interpreter.Thread.Status.ZOMBIE;
+      if (intrp.threads_[id]) {
+        intrp.threads_[id].status = Interpreter.Thread.Status.ZOMBIE;
       }
     }
   });
@@ -2209,6 +2229,61 @@ Interpreter.prototype.initThread_ = function() {
       }
       return intrp.createArrayFromList(callers, perms);
     }
+  });
+
+  // Properties of the Thread prototype object.
+  /**
+   * Decorator to add standard permission and type checks for Thread
+   * prototype methods.
+   * @param {!Interpreter.NativeCallImpl} func Function to decorate.
+   * @return {!Interpreter.NativeCallImpl} The decorated function.)
+   */
+  var withChecks = function(func) {
+    name = (name === undefined) ? func.name : name;
+    return function call(intrp, thred, state, thisVal, args) {
+      // TODO(cpcallen:perms): add controls()-type and/or
+      // object-readability check(s) here.
+      if (!(thisVal instanceof intrp.Thread)) {
+        throw new intrp.Error(state.scope.perms, intrp.TYPE_ERROR,
+            'Method Thread.prototype.' + name +
+            ' called on incompatible receiver ' + String(thisVal));
+      }
+      return func.apply(this, arguments);
+    };
+  };
+
+  new this.NativeFunction({
+    id: 'Thread.prototype.getTimeLimit', length: 0,
+    /** @type {!Interpreter.NativeCallImpl} */
+    call: withChecks(function getTimeLimit(
+        intrp, thread, state, thisVal, args) {
+      return thisVal.thread.timeLimit;
+    })
+  });
+
+  // BUG(cpcallen): this only sets the time limit for future slices;
+  // until suspend is called the current Thread will run with its
+  // existing limit.
+  new this.NativeFunction({
+    id: 'Thread.prototype.setTimeLimit', length: 1,
+    /** @type {!Interpreter.NativeCallImpl} */
+    call: withChecks(function setTimeLimit(
+        intrp, thread, state, thisVal, args) {
+      var limit = args[0];
+      var perms = state.scope.perms;
+      var old = thisVal.thread.timeLimit || Number.MAX_VALUE;
+      if (typeof limit !== 'number' || Number.isNaN(limit)) {
+        throw new intrp.Error(perms, intrp.TYPE_ERROR,
+            'new limit must be a number (and not NaN)');
+      } else if (limit <= 0) {
+        throw new intrp.Error(perms, intrp.RANGE_ERROR,
+            'new limit must be > 0');
+      } else if (limit > old) {
+        throw new intrp.Error(perms, intrp.RANGE_ERROR,
+            'new limit must be <= previous limit');
+      }
+      thisVal.thread.timeLimit = limit;
+    })
   });
 };
 
@@ -2297,6 +2372,7 @@ Interpreter.prototype.initNetwork_ = function() {
     call: function(intrp, thread, state, thisVal, args) {
       var port = args[0];
       var proto = args[1];
+      var timeLimit = Number(args[2]) || thread.timeLimit;
       var perms = state.scope.perms;
       if (port !== (port >>> 0) || port > 0xffff) {
         throw new intrp.Error(perms, intrp.RANGE_ERROR, 'invalid port');
@@ -2308,7 +2384,9 @@ Interpreter.prototype.initNetwork_ = function() {
         throw new intrp.Error(perms, intrp.TYPE_ERROR,
            'prototype argument to connectionListen must be an object');
       }
-      var server = new intrp.Server(perms, port, proto);
+      // TODO(cpcallen): do validity check on timeLimit.  It should
+      // probaly not be larger than current limit (unless root).
+      var server = new intrp.Server(perms, port, proto, timeLimit);
       intrp.listeners_[port] = server;
       var rr = intrp.getResolveReject(thread, state);
       server.listen(function() {
@@ -2566,7 +2644,7 @@ Interpreter.prototype.pseudoToNative = function(pseudoObj, cycles) {
   // BUG(cpcallen:perms): Kludge.  Incorrect except when doing .step
   // or run.  Should be an argument instead, forcing caller to decide.
   try {
-    var perms = this.thread.perms();
+    var perms = this.thread_.perms();
   } catch (e) {
     perms = this.ROOT;
   }
@@ -2720,7 +2798,7 @@ Interpreter.prototype.getValueFromScope = function(scope, name) {
       return s.vars[name];
     }
   }
-  throw new this.Error(this.thread.perms(), this.REFERENCE_ERROR,
+  throw new this.Error(this.thread_.perms(), this.REFERENCE_ERROR,
       name + ' is not defined');
 };
 
@@ -2738,13 +2816,13 @@ Interpreter.prototype.setValueToScope = function(scope, name, value) {
       } catch (e) {  // Trying to set immutable binding.
         // TODO(cpcallen:perms): we have a scope here, but scope.perms
         // is probably not the right value for owner of new error.
-        throw new this.Error(this.thread.perms(), this.TYPE_ERROR,
+        throw new this.Error(this.thread_.perms(), this.TYPE_ERROR,
             'Assignment to constant variable ' + name);
       }
       return;
     }
   }
-  throw new this.Error(this.thread.perms(), this.REFERENCE_ERROR,
+  throw new this.Error(this.thread_.perms(), this.REFERENCE_ERROR,
       name + ' is not defined');
 };
 
@@ -2805,7 +2883,7 @@ Interpreter.prototype.populateScope_ = function(node, scope, source) {
  * @return {boolean} True if 'new foo()', false if 'foo()'.
  */
 Interpreter.prototype.calledWithNew = function() {
-  return this.thread.stateStack_[this.thread.stateStack_.length - 1]
+  return this.thread_.stateStack_[this.thread_.stateStack_.length - 1]
       .info_.construct;
 };
 
@@ -2859,6 +2937,23 @@ Interpreter.prototype.setValue = function(ref, value, perms) {
     this.toObject(ref[0], perms).set(name, value, perms);
   }
 };
+
+/**
+ * Check to see if the current thread has run too long.  Called at the
+ * top of loops and before making function calls.
+ * @private
+ * @param {!Interpreter.Owner} perms Perm to use to create Error object.
+ * @param {!Array<Interpreter.State>=} stack Current State stack.  If
+ *   supplied, it will be popped to remove top item (e.g.: Call state)
+ *   from stack trace.
+ */
+Interpreter.prototype.checkTimeLimit_ = function(perms, stack) {
+  if (this.threadTimeLimit_ && this.now() > this.threadTimeLimit_) {
+    if (stack) stack.pop();
+    throw new this.Error(perms, this.RANGE_ERROR, 'Thread ran too long');
+  }
+};
+
 
 /**
  * Carry out the mechanics of throwing an exception.
@@ -3090,6 +3185,7 @@ Interpreter.FunctionResult.Sleep = new Interpreter.FunctionResult;
  *     noLog: (!Array<string>|undefined),
  *     trimEval: (boolean|undefined),
  *     trimProgram: (boolean|undefined),
+ *     stackLimit: (number|undefined),
  * }}
  */
 Interpreter.Options;
@@ -3565,11 +3661,12 @@ Interpreter.State.prototype.frame = function() {
  * separate for performance reasons only.
  * @constructor
  * @param {number} id Thread ID.  Should correspond to index of this
- *     thread in .threads array.
+ *     thread in .threads_ array.
  * @param {!Interpreter.State} state Starting state for thread.
  * @param {number} runAt Time at which to start running thread.
+ * @param {number=} timeLimit Maximum runtime without suspending (in ms).
  */
-Interpreter.Thread = function(id, state, runAt) {
+Interpreter.Thread = function(id, state, runAt, timeLimit) {
   /** @type {number} */
   this.id = id;
   // Say it's sleeping for now.  May be woken immediately.
@@ -3579,6 +3676,8 @@ Interpreter.Thread = function(id, state, runAt) {
   this.stateStack_ = [state];
   /** @type {number} */
   this.runAt = runAt;
+  /** @type {number} */
+  this.timeLimit = timeLimit || 0;
   /** @type {?Interpreter.prototype.Thread} */
   this.wrapper = null;
   /** @type {?Interpreter.Value} */
@@ -4157,14 +4256,17 @@ Interpreter.prototype.Box.prototype.valueOf = function() {
  * @param {?Interpreter.Owner} owner
  * @param {number} port
  * @param {!Interpreter.prototype.Object} proto
+ * @param {number=} timeLimit
  */
-Interpreter.prototype.Server = function(owner, port, proto) {
+Interpreter.prototype.Server = function(owner, port, proto, timeLimit) {
   /** @type {?Interpreter.Owner} */
   this.owner;
   /** @type {number} */
   this.port;
   /** @type {!Interpreter.prototype.Object} */
   this.proto;
+  /** @type {number} */
+  this.timeLimit;
   /** @private @type {net.Server} */
   this.server_;
   throw new Error('Inner class constructor not callable on prototype');
@@ -4574,9 +4676,6 @@ Interpreter.prototype.installTypes = function() {
     this.node = node;
     this.scope = scope;
     if (node['id']) {
-      // BUG(cpcallen): Per ES5 §13 / ES6 §14.1.20, we should actually
-      // create a new scope for the BindingIdentifier here, rather
-      // than inserting it into the scope created at call time.
       this.setName(node['id']['name']);
     }
     var length = node['params'].length;
@@ -5376,8 +5475,9 @@ Interpreter.prototype.installTypes = function() {
    * @param {number} port Port to listen on.
    * @param {!Interpreter.prototype.Object} proto Prototype object for
    *     new connections.
+   * @param {number=} timeLimit Maximum runtime without suspending (in ms).
    */
-  intrp.Server = function(owner, port, proto) {
+  intrp.Server = function(owner, port, proto, timeLimit) {
     // Special excepetion: port === undefined when deserializing, in
     // violation of usual type rules.
     if ((port !== (port >>> 0) || port > 0xffff) && port !== undefined) {
@@ -5389,6 +5489,9 @@ Interpreter.prototype.installTypes = function() {
     this.port = port;
     /** @type {!Interpreter.prototype.Object} */
     this.proto = proto;
+    /** @type {number} */
+    this.timeLimit = timeLimit || 0;
+    /** @type {?net.Server} */
     this.server_ = null;
   };
 
@@ -5429,7 +5532,8 @@ Interpreter.prototype.installTypes = function() {
         // this thread?  Note that this will typically be root, and
         // .onError will therefore get caller perms === root, which is
         // probably dangerous.  Here and several places below.
-        intrp.createThreadForFuncCall(server.owner, func, obj, []);
+        intrp.createThreadForFuncCall(
+            server.owner, func, obj, [], undefined, server.timeLimit);
       }
 
       // Handle incoming data from clients.  N.B. that data is a
@@ -5439,7 +5543,8 @@ Interpreter.prototype.installTypes = function() {
         var func = obj.get('onReceive', this.owner);
         if (func instanceof intrp.Function && server.owner !== null) {
           intrp.createThreadForFuncCall(
-              server.owner, func, obj, [String(data)]);
+              server.owner, func, obj, [String(data)],
+              undefined, server.timeLimit);
         }
       });
 
@@ -5447,7 +5552,8 @@ Interpreter.prototype.installTypes = function() {
         intrp.log('net', 'Connection from %s closed.', socket.remoteAddress);
         var func = obj.get('onEnd', this.owner);
         if (func instanceof intrp.Function && server.owner !== null) {
-          intrp.createThreadForFuncCall(server.owner, func, obj, []);
+          intrp.createThreadForFuncCall(
+              server.owner, func, obj, [], undefined, server.timeLimit);
         }
         // TODO(cpcallen): Don't fully close half-closed connection yet.
         socket.end();
@@ -5458,7 +5564,9 @@ Interpreter.prototype.installTypes = function() {
         var func = obj.get('onError', this.owner);
         if (func instanceof intrp.Function && server.owner !== null) {
           var userError = intrp.errorNativeToPseudo(error, server.owner);
-          intrp.createThreadForFuncCall(server.owner, func, obj, [userError]);
+          intrp.createThreadForFuncCall(
+              server.owner, func, obj, [userError],
+              undefined, server.timeLimit);
         }
       });
 
@@ -5950,6 +6058,10 @@ stepFuncs_['CallExpression'] = function (thread, stack, state, node) {
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['Call'] = function (thread, stack, state, node) {
+  // Terminate call if out of time.  (And if so, remove Call state
+  // from stack as the first item in the stack trace should be the
+  // position of the call, not "in <function not actually called>".
+  this.checkTimeLimit_(state.scope.perms, stack);
   /* NOTE: Beware that, because
    *
    *  - an async function might not *actually* be async, and thus
@@ -5968,6 +6080,10 @@ stepFuncs_['Call'] = function (thread, stack, state, node) {
    */
   if (state.step_ === 0) {  // Done evaluating arguments; do function call.
     state.step_ = 1;
+    if (this.options.stackLimit && stack.length > this.options.stackLimit) {
+      throw new this.Error(state.scope.perms, this.RANGE_ERROR,
+          'Maximum call stack size exceeded');
+    }
     var func = state.info_.func;
     var args = state.info_.arguments;
     var r =
@@ -6077,6 +6193,8 @@ stepFuncs_['DoWhileStatement'] = function (thread, stack, state, node) {
     }
   }
   if (state.step_ === 1) {  // Evaluate condition.
+    // Terminate loop if out of time.
+    this.checkTimeLimit_(state.scope.perms);
     state.step_ = 2;
     return new Interpreter.State(node['test'], state.scope);
   }
@@ -6185,6 +6303,8 @@ stepFuncs_['ForInStatement'] = function (thread, stack, state, node) {
         state.info_ = {iter: iter, key: ''};
         // FALL THROUGH
       case 2:  // Find the property name for this iteration; do node.left.
+        // Terminate loop if out of time.
+        this.checkTimeLimit_(state.scope.perms);
         var key = state.info_.iter.next();
         if (key === undefined) {
           // Done; exit loop.
@@ -6240,6 +6360,8 @@ stepFuncs_['ForStatement'] = function (thread, stack, state, node) {
         }
         // FALL THROUGH
       case 1:  // Eval test expression.
+        // Terminate loop if out of time.
+        this.checkTimeLimit_(state.scope.perms);
         state.step_ = 2;
         if (node['test']) {
           return new Interpreter.State(node['test'], state.scope);
@@ -6408,6 +6530,7 @@ stepFuncs_['MemberExpression'] = function (thread, stack, state, node) {
   // method calls from the algorithm in ES6 §2.3.2.1.
   // Step 7: bv = RequireObjectCoercible(baseValue).
   var /** ?Interpreter.Value */ base = state.tmp_;
+  var /** !Interpreter.Owner */ perms = state.scope.perms;
   if (base === null || base === undefined) {
     throw new this.Error(perms, this.TYPE_ERROR,
         "Can't convert " + base + ' to Object');
@@ -6419,7 +6542,6 @@ stepFuncs_['MemberExpression'] = function (thread, stack, state, node) {
   if (state.wantRef_) {
     stack[stack.length - 1].ref = [base, key];
   } else {
-    var perms = state.scope.perms;
     // toObject guaranteed not to throw because of earlier check.
     stack[stack.length - 1].value = this.toObject(base, perms).get(key, perms);
   }

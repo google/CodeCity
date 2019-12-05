@@ -1,8 +1,6 @@
 /**
  * @license
- * Code City: Server
- *
- * Copyright 2017 Google Inc.
+ * Copyright 2017 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,6 +45,7 @@ exports.getInterpreter = function(options, init) {
     noLog: ['net', 'unhandled'],
     trimEval: true,
     trimProgram: true,
+    stackLimit: 1000,  // Fairly small to speed stack-overflow tests.
   };
   var intrp = new Interpreter(options);
   if (init || init === undefined) {

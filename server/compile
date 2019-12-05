@@ -1,7 +1,96 @@
 #!/bin/bash
 
-# Compile server alone:
-# closure-compiler --flagfile compile.flag --entry_point=codecity.js
+# Copyright 2019 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Run the Closure Compiler, in --checks-only mode, on the Code City
+# server (and optionally server unit tests as well).
+
 
 # Compile tests, which also compile server:
-closure-compiler --flagfile compile.flag --entry_point=tests/run.js tests/**.js
+readonly ENTRY_POINT=tests/run.js
+
+# Aternatively, compile server alone:
+# readonly ENTRY_POINT=codecity.js
+
+# List of arguments to feed to compiler - flags and filenames.
+args=(-O=ADVANCED_OPTIMIZATIONS
+      --checks-only
+
+      --module_resolution=NODE
+      --process_common_js_modules
+      --assume_function_wrapper
+      --dependency_mode=STRICT
+
+      --externs=externs/node.js
+      --externs=externs/WeakRef.js
+
+      --hide_warnings_for=node_modules/acorn
+      node_modules/acorn/package.json
+      node_modules/acorn/**.js
+
+      iterable_weakmap.js
+      iterable_weakset.js
+      registry.js
+      interpreter.js
+      serialize.js
+      code.js
+      selector.js
+      dump.js
+      codecity.js
+
+      tests/*.js
+)
+
+
+# Set current directory to the one containing this script.
+cd "$(dirname "${BASH_SOURCE[0]}")"
+
+# Temporarily symlink extern declarations for node builtins into
+# node_modules/, and add their .js and package.json files to args.
+declare -a builtins
+for path in externs/*; do
+  if [[ -d "${path}" && -f "${path}/package.json" ]]; then
+    builtins+=("$(basename "${path}")")
+  fi
+done
+for builtin in "${builtins[@]}"; do
+  link="node_modules/${builtin}"
+  if [[ -e "${link}" ]]; then
+    if [[ -L "${link}" ]]; then
+	rm "${link}"  # Remove old symlink.
+    else
+      echo "$0: aborting because ${link} already exists and is not a symlink" \
+	  1>&2
+      exit 1
+    fi
+  fi
+  ln -s "../externs/${builtin}" "${link}"
+  args+=("${link}"/{*.js,package.json})
+done
+
+google-closure-compiler "${args[@]}" --entry_point="${ENTRY_POINT}"
+return="$?"
+
+# Remove extern symlinks.
+for builtin in "${builtins[@]}"; do
+  link="node_modules/${builtin}"
+  if [[ ! -L "${link}" ]]; then
+      echo "$0: aborting because ${link} is no longer a symlink" 1>&2
+      exit 1
+  fi
+  rm "${link}"
+done
+
+exit ${return}

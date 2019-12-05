@@ -1,9 +1,6 @@
 /**
  * @license
- * Code City Client
- *
- * Copyright 2017 Google Inc.
- * https://codecity.world/
+ * Copyright 2017 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -445,7 +442,7 @@ CCC.doPing = function() {
 
   // XMLHttpRequest with timeout works in IE8 or better.
   var req = new XMLHttpRequest();
-  req.onreadystatechange = CCC.xhrStateChange;
+  req.onload = CCC.xhrLoaded;
   req.ontimeout = CCC.xhrTimeout;
   req.open('POST', CCC.PING_URL, true);
   req.timeout = CCC.MAX_PING_INTERVAL; // time in milliseconds
@@ -471,26 +468,23 @@ CCC.xhrTimeout = function() {
  * Check network response was ok, then call CCC.parse.
  * @this {!XMLHttpRequest}
  */
-CCC.xhrStateChange = function() {
-  // Only if request shows "loaded".
-  if (this.readyState === 4) {
-    CCC.xhrObject = null;
-    // Only if "OK".
-    if (this.status === 200) {
-      try {
-        var json = JSON.parse(this.responseText);
-      } catch (e) {
-        console.log('Invalid JSON: ' + this.responseText);
-        return;
-      }
-      CCC.parse(json);
-    } else if (this.status) {
-      console.warn('Connection error code: ' + this.status);
-      CCC.terminate();
+CCC.xhrLoaded = function() {
+  CCC.xhrObject = null;
+  // Only if "OK".
+  if (this.status === 200) {
+    try {
+      var json = JSON.parse(this.responseText);
+    } catch (e) {
+      console.log('Invalid JSON: ' + this.responseText);
       return;
     }
-    CCC.schedulePing(CCC.pingInterval);
+    CCC.parse(json);
+  } else if (this.status) {
+    console.warn('Connection error code: ' + this.status);
+    CCC.terminate();
+    return;
   }
+  CCC.schedulePing(CCC.pingInterval);
 };
 
 /**

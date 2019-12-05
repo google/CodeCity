@@ -1,9 +1,6 @@
 /**
  * @license
- * IterableWeakMap Tests
- *
- * Copyright 2018 Google Inc.
- * https://github.com/NeilFraser/CodeCity
+ * Copyright 2018 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +17,7 @@
 
 /**
  * @fileoverview Test for IterableWeakMap.
- * @author cpcallen@google.com (Christohper Allen)
+ * @author cpcallen@google.com (Christopher Allen)
  */
 'use strict';
 
@@ -30,15 +27,36 @@ const IterableWeakMap = require('../iterable_weakmap');
 const {T} = require('./testing');
 
 /**
+ * Request garbage collection and cycle the event loop to give
+ * finalisers a chance to be run.  No guarantees about either,
+ * unfortunately.
+ * @return {!Promise<void>}
+ */
+async function gcAndFinalise() {
+  // Cycle event loop to allow finalisers to run.  Need to cycle it
+  // once before GC to ensure that WeakRefs can be cleared (their
+  // targets can never be cleared in the same turn as the WeakRef was
+  // created), then again after to allow finalisers to run (though,
+  // as of node v12.12.0, the await with which this function is called
+  // is sufficient to achieve the second cycle).
+  await new Promise((res, rej) => setImmediate(res));
+  gc();
+}
+  
+/**
  * Run some basic tests of IterableWeakMap.
  * @param {!T} t The test runner object.
  */
-exports.testIterableWeakMap = function(t) {
-  let name = 'IterableWeakMap';
+exports.testIterableWeakMap = async function(t) {
+  const name = 'IterableWeakMap';
 
-  let assertSame = function(got, want, desc) {
+  const assertSame = function(got, want, desc) {
     t.expect(name + ': ' + desc, got, want);
   };
+
+  assertSame(IterableWeakMap.prototype[Symbol.iterator],
+      IterableWeakMap.prototype.entries,
+      'prototype[Symbol.iterator] and prototype.entries are the same method');
 
   const obj1 = {};
   const obj2 = {};
@@ -67,7 +85,8 @@ exports.testIterableWeakMap = function(t) {
   assertSame(iwm.has({}), false, 'iwm.has({})');
   assertSame(iwm.size, 3, 'iwm.size');
 
-  gc();
+  await gcAndFinalise();
+  
   assertSame(iwm.has(obj1), true, 'iwm.has(obj) (after GC)');
   assertSame(iwm.get(obj1), 42, 'iwm.get(obj) (after GC)');
   assertSame(iwm.size, 2, 'iwm.size (after GC)');
@@ -91,6 +110,25 @@ exports.testIterableWeakMap = function(t) {
 };
 
 /**
+ * Test for correct handling of cyclic garbage in IterableWeakMap.
+ * @param {!T} t The test runner object.
+ */
+exports.testIterableWeakMapCyclic = async function(t) {
+  const iwm = new IterableWeakMap;
+  (() => {
+    const objs = [{}, {}, {}];
+    iwm.set(objs[0], objs[0]);  // obj[0] is held circularly.
+    iwm.set(objs[1], objs[2]);  // obj[1] and [2] are held by each other.
+    iwm.set(objs[2], objs[1]);
+  })();
+  t.expect('IterableWeakMapCyclic: iwm.size (before GC)', iwm.size, 3);
+
+  await gcAndFinalise();
+
+  t.expect('IterableWeakMapCyclic: iwm.size (after GC)', iwm.size, 0);
+};
+
+/**
  * Test for layered collection of IterableWeakMap.
  *
  * When a WeakMap contains a chain of object (i.e., wm.get(o1) === o2,
@@ -100,7 +138,7 @@ exports.testIterableWeakMap = function(t) {
  * warning if it takes several GCs to entierly empty the map.
  * @param {!T} t The test runner object.
  */
-exports.testIterableWeakMapLayeredGC = function(t) {
+exports.testIterableWeakMapLayeredGC = async function(t) {
   /* N.B.: This test seems to be deterministic but very sensitive to
    * seemingly insignificant code changes, which can (for no obvious
    * reason, but probably due to some internal optimisations) result
@@ -115,22 +153,23 @@ exports.testIterableWeakMapLayeredGC = function(t) {
 
   // Make a chain of entries.
   (() => {
-    let objs = [{}, {}, {}, {}, {}];
+    const objs = [{}, {}, {}, {}, {}];
     for (let i = 0; i < objs.length; i++) {
       iwm.set(objs[i], objs[i + 1]);
     }
   })();
-    
+
   const limit = 10;  // objs.length * 2
   let count = 0;
   for (; count < limit && iwm.size > 0; count++) {
-    gc();
+    await gcAndFinalise();
   }
-  
+
   if (count >= limit) {
     t.fail(name, 'Test failed to terminate in a reasonable time.');
   } else if (count > 1) {
-    t.result('WARN', name, 'IterableWeakMap causes layered GC!');
+    t.result('WARN', name,
+             'IterableWeakMap causes layered GC! (' + count + ' iterations)');
   } else {
     t.pass(name);
   }

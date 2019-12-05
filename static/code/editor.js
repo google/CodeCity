@@ -1,8 +1,6 @@
 /**
  * @license
- * Code City: Code Editor.
- *
- * Copyright 2018 Google Inc.
+ * Copyright 2018 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -286,7 +284,7 @@ Code.Editor.tabClick = function(e) {
     editor.created = true;
   }
   container.style.display = 'block';
-  Code.Editor.setSourceToAllEditors(Code.Editor.currentSource, false);
+  Code.Editor.setSourceToAllEditors(Code.Editor.currentSource);
   // If e is an event, then this click is the result of a user's direct action.
   // If not, then it's a fake event as a result of page load.
   var userAction = e instanceof Event;
@@ -306,7 +304,7 @@ Code.Editor.sendXhr = function() {
   xhr.abort();
   xhr.open('POST', '/code/editor');
   xhr.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
-  xhr.onreadystatechange = Code.Editor.receiveXhr;
+  xhr.onload = Code.Editor.receiveXhr;
   var src = Code.Editor.currentSource || '';
   var data =
       'key=' + encodeURIComponent(Code.Editor.key) +
@@ -327,9 +325,6 @@ Code.Editor.codeRequest_ = new XMLHttpRequest();
  */
 Code.Editor.receiveXhr = function() {
   var xhr = Code.Editor.codeRequest_;
-  if (xhr.readyState !== 4) {
-    return;  // Not ready yet.
-  }
   if (xhr.status !== 200) {
     console.warn('Editor XHR returned status ' + xhr.status);
     return;
@@ -344,7 +339,7 @@ Code.Editor.receiveXhr = function() {
     // or b) the previous save was successful.
     if (Code.Editor.currentSource === null || data.saved) {
       Code.Editor.currentSource = data.src;
-      Code.Editor.setSourceToAllEditors(data.src, true);
+      Code.Editor.setSourceToAllEditors(data.src);
     }
   }
   // Remove saving mask.
@@ -440,15 +435,13 @@ Code.Editor.mostConfidentEditor = function() {
 /**
  * Set the values of all the editors.
  * @param {string} src Plain text contents.
- * @param {boolean} isSaved True if this is the saved source.
  */
-Code.Editor.setSourceToAllEditors = function(src, isSaved) {
+Code.Editor.setSourceToAllEditors = function(src) {
   Code.Editor.uncreatedEditorSource = src;
   for (var editor of Code.Editor.editors) {
     editor.setSource(src);
-    if (isSaved) {
-      editor.lastSavedSource = editor.getSource();
-    }
+    // Round-trip version of the source.
+    editor.unmodifiedSource = editor.getSource();
   }
 };
 
@@ -606,10 +599,11 @@ Code.Editor.hideButter = function() {
   document.getElementById('editorButter').style.display = 'none';
 };
 
-window.addEventListener('load', Code.Editor.init);
-window.addEventListener('message', Code.Editor.receiveMessage, false);
-window.addEventListener('beforeunload', Code.Editor.beforeUnload);
-
+if (!window.TEST) {
+  window.addEventListener('load', Code.Editor.init);
+  window.addEventListener('message', Code.Editor.receiveMessage, false);
+  window.addEventListener('beforeunload', Code.Editor.beforeUnload);
+}
 
 Code.Editor.editors = [];
 
@@ -652,7 +646,7 @@ Code.GenericEditor = function(name) {
    * Plain text representation of this editor's contents as of load or last save.
    * @type {?string}
    */
-  this.lastSavedSource = null;
+  this.unmodifiedSource = null;
 
   // Register this editor.
   Code.Editor.editors.push(this);
@@ -688,7 +682,7 @@ Code.GenericEditor.prototype.setSource = function(source) {
  * @return {boolean} True if work is saved.
  */
 Code.GenericEditor.prototype.isSaved = function() {
-  return this.getSource() === this.lastSavedSource;
+  return this.getSource() === this.unmodifiedSource;
 };
 
 /**
@@ -718,17 +712,6 @@ Code.valueEditor.editor_ = null;
  * @param {!Element} container DOM should be appended to this containing div.
  */
 Code.valueEditor.createDom = function(container) {
-  container.innerHTML = `
-<style>
-#valueEditor {
-  position: absolute;
-  top: 60px;
-  bottom: 20px;
-  left: 10px;
-  right: 20px
-}
-</style>
-  `;
   container.id = 'valueEditor';
   var options = {
     tabSize: 2,
@@ -786,15 +769,6 @@ Code.functionEditor.editor_ = null;
  */
 Code.functionEditor.createDom = function(container) {
   container.innerHTML = `
-<style>
-#functionEditor {
-  position: absolute;
-  top: 60px;
-  bottom: 45px;
-  left: 10px;
-  right: 20px
-}
-</style>
 <div>
   <input type="checkbox" name="isVerb" id="isVerb"
       onclick="Code.functionEditor.updateDisabled()">
@@ -813,6 +787,7 @@ Code.functionEditor.createDom = function(container) {
     <option>in front of</option>
     <option>in/inside/into</option>
     <option>on top of/on/onto/upon</option>
+    <option>out of/from inside/from</option>
     <option>over</option>
     <option>through</option>
     <option>under/underneath/beneath</option>
@@ -835,6 +810,8 @@ Code.functionEditor.createDom = function(container) {
     tabSize: 2,
     undoDepth: 1024,
     lineNumbers: true,
+    continueComments: {continueLineComment: false},
+    mode: 'text/javascript',
     matchBrackets: true
   };
   this.editor_ = CodeMirror(container, options);
@@ -931,6 +908,7 @@ Code.functionEditor.setSource = function(source) {
     this.prepElement_.value = props['prep'];
     this.iobjElement_.value = props['iobj'];
     this.isVerbElement_.checked = isVerb;
+    this.updateDisabled();
     this.editor_.setValue(source);
   }
 };
@@ -951,7 +929,79 @@ Code.functionEditor.focus = function(userAction) {
 };
 
 ////////////////////////////////////////////////////////////////////////////////
-//Code.jsspEditor = new Code.GenericEditor('JSSP');
+Code.jsspEditor = new Code.GenericEditor('JSSP');
+
+/**
+ * JavaScript Server Page editor.  Does not exist until tab is selected.
+ * @type {Object}
+ * @private
+ */
+Code.jsspEditor.editor_ = null;
+
+/**
+ * Create the DOM for this editor.
+ * @param {!Element} container DOM should be appended to this containing div.
+ */
+Code.jsspEditor.createDom = function(container) {
+  container.id = 'jsspEditor';
+  var options = {
+    tabSize: 2,
+    undoDepth: 1024,
+    lineNumbers: true,
+    continueComments: 'Enter',
+    mode: 'application/x-ejs',
+    matchBrackets: true
+  };
+  this.editor_ = CodeMirror(container, options);
+  this.editor_.setSize('100%', '100%');
+};
+
+/**
+ * Get the contents of the editor.
+ * @return {string} Plain text contents.
+ */
+Code.jsspEditor.getSource = function() {
+  if (!this.created) {
+    return Code.Editor.uncreatedEditorSource;
+  }
+  var source = this.editor_.getValue();
+  return JSON.stringify(source);
+};
+
+/**
+ * Set the contents of the editor.
+ * @param {string} source Plain text contents.
+ */
+Code.jsspEditor.setSource = function(source) {
+  var str;
+  try {
+    str = JSON.parse(source);
+  } catch (e) {}
+  if (typeof str !== 'string') {
+    str = '';
+    this.confidence = 0;
+  } else {
+    if (str.indexOf('<%') !== -1 && str.indexOf('%>') !== -1) {
+      this.confidence = 0.95;
+    } else {
+      this.confidence = 0.8;
+    }
+  }
+  if (this.created) {
+    this.editor_.setValue(str);
+  }
+};
+
+/**
+ * Notification that this editor has just been displayed.
+ * @param {boolean} userAction True if user clicked on a tab.
+ */
+Code.jsspEditor.focus = function(userAction) {
+  this.editor_.refresh();
+  if (userAction) {
+    this.editor_.focus();
+  }
+};
 
 ////////////////////////////////////////////////////////////////////////////////
 Code.svgEditor = new Code.GenericEditor('SVG');
@@ -1071,13 +1121,6 @@ Code.stringEditor = new Code.GenericEditor('String');
  */
 Code.stringEditor.createDom = function(container) {
   container.innerHTML = `
-<style>
-.editorBigQuotes {
-  font-family: serif;
-  font-size: 48pt;
-  position: absolute;
-}
-</style>
 <div style="position: absolute; top: 60px; bottom: 20px; left: 45px; right: 50px">
   <textarea style="height: 100%; width: 100%; resize: none;"></textarea>
 </div>

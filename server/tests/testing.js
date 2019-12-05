@@ -1,9 +1,6 @@
 /**
  * @license
- * Code City: Server Test Runner
- *
- * Copyright 2018 Google Inc.
- * https://github.com/NeilFraser/CodeCity
+ * Copyright 2018 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -56,7 +53,7 @@ B.prototype.result = function (status, name, message) {
  * @param {number} run Which run is this?  (Run 0 is warm-up run.)
  */
 B.prototype.start = function (name, run) {
-  var r = (run === 0) ? 'WARMUP' : ('RUN ' + run);
+  const r = (run === 0) ? 'WARMUP' : ('RUN ' + run);
   this.startTime = Date.now();
 };
 
@@ -66,8 +63,8 @@ B.prototype.start = function (name, run) {
  * @param {number} run Which run is this?  (Run 0 is warm-up run.)
  */
 B.prototype.end = function (name, run) {
-  var endTime = Date.now();
-  var r = (run === 0) ? 'WARMUP' : ('RUN ' + run);
+  const endTime = Date.now();
+  const r = (run === 0) ? 'WARMUP' : ('RUN ' + run);
   console.log('%s\t%s: %d ms', r, name, endTime - this.startTime);
   this.startTime = Date.now();
 };
@@ -95,8 +92,8 @@ B.prototype.skip = function(name, message) {
  * @return {string}
  */
 B.prototype.toString = function() {
-  var lines = ['Totals:'];
-  for (var status in this.results) {
+  const lines = ['Totals:'];
+  for (const status in this.results) {
     lines.push(util.format('%s\t%d tests', status, this.results[status]));
   }
   return lines.join('\n');

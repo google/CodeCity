@@ -1,8 +1,6 @@
 /**
  * @license
- * Code City: Code.
- *
- * Copyright 2018 Google Inc.
+ * Copyright 2018 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -63,6 +61,7 @@ Code.receiveMessage = function(event) {
   } catch (e) {
     // Maybe editor frame hasn't loaded yet.
   }
+  Code.setTitle();
 };
 
 /**
@@ -83,6 +82,21 @@ Code.popState = function(event) {
   Code.receiveMessage(null);
 };
 
-sessionStorage.setItem(Code.Common.SELECTOR, Code.selector);
-window.addEventListener('message', Code.receiveMessage, false);
-window.addEventListener('popstate', Code.popState, false);
+/**
+ * Set the code editor's title.
+ */
+Code.setTitle = function() {
+  var title = Code.selector;
+  if (title.length > 36) {
+    // Max title length in Chrome is 36 before truncation.
+    title = '…' + title.substr(-35);
+  }
+  document.title = title;
+};
+
+if (!window.TEST) {
+  Code.setTitle();
+  sessionStorage.setItem(Code.Common.SELECTOR, Code.selector);
+  window.addEventListener('message', Code.receiveMessage, false);
+  window.addEventListener('popstate', Code.popState, false);
+}

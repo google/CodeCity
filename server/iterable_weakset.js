@@ -1,9 +1,6 @@
 /**
  * @license
- * IterableWeakMap
- *
- * Copyright 2018 Google Inc.
- * https://github.com/NeilFraser/CodeCity
+ * Copyright 2018 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,31 +17,9 @@
 
 /**
  * @fileoverview A WeakSet that's iterable.
- * @author cpcallen@google.com (Christohper Allen)
+ * @author cpcallen@google.com (Christopher Allen)
  */
 'use strict';
-
-// TODO(cpcallen): Improve (or better: remove) weakref-related type decls.
-
-/**
- * @constructor
- * @template REF
- */
-var WeakRef = function() {};
-
-/**
- * @param {T} obj
- * @param {!Function} callback
- * @return {!WeakRef<T>}
- * @template T
- * @suppress {duplicate}
- */
-const weak = require('weak');
-
-/**
- * Declared to quiet closure-compiler warnings.
- */
-weak.get;
 
 /**
  * A WeakSet implementing the full Set interface, including iterability.
@@ -52,17 +27,19 @@ weak.get;
  * @implements {Iterable<!Array<VALUE>>}
  * @template VALUE
  */
-// TODO(cpcallen): Make VALUE a bounded to {!Object} once
-// closure-compiler supports bounded generic types
+// TODO(cpcallen): Make VALUE bounded to {!Object} once
+// closure-compiler supports bounded generic types.
 class IterableWeakSet {
   /**
    * @param {!Iterable<!Array<VALUE>>|!Array<!Array<VALUE>>=} iterable
    */
   constructor(iterable = undefined) {
-    /** @private @const @type {!WeakMap<VALUE,!WeakRef<VALUE>>} */
-    this.map_ = new WeakMap();
     /** @private @const @type {!Set<!WeakRef<VALUE>>} */
-    this.set_ = new Set();
+    this.refs_ = new Set();
+    /** @private @const @type {!WeakMap<VALUE, !WeakRef<VALUE>>}} */
+    this.map_ = new WeakMap();
+    /** @private @const @type {!FinalizationGroup} */
+    this.finalisers_ = new FinalizationGroup(IterableWeakSet.cleanup_);
 
     if (iterable === null || iterable === undefined) {
       return;
@@ -72,7 +49,7 @@ class IterableWeakSet {
       throw new TypeError("'" + this.add + "' returned for property 'add' " +
           'of object ' + this + ' is not a function');
     }
-    for (const /** ?Array<VALUE>> */ value of iterable) {
+    for (const /** !VALUE */ value of iterable) {
       if (typeof value !== 'object' && typeof value !== 'function' ||
           value === null) {
         throw new TypeError('Iterator value ' + value + ' is not an object');
@@ -91,11 +68,23 @@ class IterableWeakSet {
    */
   add(value) {
     if (!this.map_.has(value)) {
-      const wr = weak(value, () => this.set_.delete(wr));
-      this.map_.set(value, wr);
-      this.set_.add(wr);
+      const ref = new WeakRef(value);
+      this.map_.set(value, ref);
+      this.refs_.add(ref);
+      this.finalisers_.register(value, {set: this.refs_, ref}, ref);
     }
     return this;
+  }
+
+  /**
+   * Remove dead cells from .refs_.  Called automatically by the
+   * .finalisers_ FinalizationGroup.
+   * @return {void}
+   */
+  static cleanup_(iterator) {
+    for (const {set, ref} of iterator) {
+      set.delete(ref);
+    }
   }
 
   /**
@@ -104,10 +93,11 @@ class IterableWeakSet {
    * @override
    */
   clear() {
-    for (const wr of this.set_) {
-      const value = weak.get(wr);
-      if (value !== undefined) this.delete(value);
+    for (const ref of this.refs_) {
+      const key = ref.deref();
+      if (key !== undefined) this.delete(key);
     }
+    this.refs_.clear();  // Remove anything GCed but not finalised.
   }
 
   /**
@@ -117,9 +107,10 @@ class IterableWeakSet {
    * @override
    */
   delete(value) {
-    const wr = this.map_.get(value);
-    if (wr) {
-      this.set_.delete(wr);
+    const ref = this.map_.get(value);
+    if (ref) {
+      this.refs_.delete(ref);
+      this.finalisers_.unregister(ref);
     }
     return this.map_.delete(value);
   }
@@ -129,13 +120,8 @@ class IterableWeakSet {
    * @return {!IteratorIterable<!Array<VALUE>>}
    */
   *entries() {
-    for (const wr of this.set_) {
-      const value = weak.get(wr);
-      if (value === undefined) {  // value was garbage collected.  Remove wr.
-        this.set_.delete(wr);
-      } else {
-        yield [value, value];
-      }
+    for (const value of this) {
+      yield [value, value];
     }
   }
 
@@ -150,7 +136,7 @@ class IterableWeakSet {
    * @template SET, THIS
    */
   forEach(callback, thisArg = undefined) {
-    for (const value of this.values()) {
+    for (const value of this) {
       callback.call(thisArg, value, value, this);
     }
   }
@@ -163,12 +149,12 @@ class IterableWeakSet {
   has(value) {
     return this.map_.has(value);
   }
-  
+
   /**
    * @return {number}
    */
   get size() {
-    return this.set_.size;
+    return this.refs_.size;
   }
 
   /**
@@ -176,10 +162,10 @@ class IterableWeakSet {
    * @return {!IteratorIterable<VALUE>}
    */
   *values() {
-    for (const wr of this.set_) {
-      const value = weak.get(wr);
-      if (value === undefined) {  // value was garbage collected.  Remove wr.
-        this.set_.delete(wr);
+    for (const ref of this.refs_) {
+      const value = ref.deref();
+      if (value === undefined) {  // value was garbage collected.  Remove ref.
+        this.refs_.delete(ref);
       } else {
         yield value;
       }
@@ -187,7 +173,7 @@ class IterableWeakSet {
   }
 }
 
-IterableWeakSet.prototype[Symbol.iterator] = IterableWeakSet.prototype.entries;
+IterableWeakSet.prototype[Symbol.iterator] = IterableWeakSet.prototype.values;
 IterableWeakSet.prototype.keys = IterableWeakSet.prototype.values;
 
 module.exports = IterableWeakSet;

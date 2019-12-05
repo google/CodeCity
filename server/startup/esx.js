@@ -1,8 +1,6 @@
 /**
  * @license
- * Code City: Startup code.
- *
- * Copyright 2017 Google Inc.
+ * Copyright 2017 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -70,7 +68,9 @@ var PermissionError = new 'PermissionError';
 
   var struct = [
     [Object, 'Object', ['getOwnerOf', 'setOwnerOf'], []],
-    [Thread, 'Thread', ['current', 'kill', 'suspend', 'callers'], []],
+    [Thread, 'Thread',
+     ['current', 'kill', 'suspend', 'callers'],
+     ['getTimeLimit', 'setTimeLimit']],
   ];
   for (var i = 0; i < struct.length; i++) {
     var obj = struct[i][0];

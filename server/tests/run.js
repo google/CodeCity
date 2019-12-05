@@ -1,9 +1,6 @@
 /**
  * @license
- * Code City: Server Test Runner
- *
- * Copyright 2017 Google Inc.
- * https://github.com/NeilFraser/CodeCity
+ * Copyright 2017 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -98,7 +95,7 @@ async function runTests(files) {
   }
 
   // Print results summary.
-  console.log('\n%s\n', t);
+  console.log('\n%s\n', String(t));
 }
 
 /**

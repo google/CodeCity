@@ -1,13 +1,13 @@
 # Run unit tests in Node.
-node --expose-gc tests/run.js
+node --harmony-weak-refs --expose-gc tests/run.js
 
 # Delete any existing checkpoint files.
 rm tests/db/*.city
 # Start Code City the first time.
 echo "Starting Code City (1 of 2)"
-node codecity.js tests/db
+node --harmony-weak-refs codecity.js tests/db/test.cfg
 echo "Stopped Code City (1 of 2)"
 # Start Code City the second time.
 echo "Starting Code City (2 of 2)"
-node codecity.js tests/db
+node --harmony-weak-refs codecity.js tests/db/test.cfg
 echo "Stopped Code City (2 of 2)"

@@ -1,8 +1,6 @@
 /**
  * @license
- * Code City: Code Explorer.
- *
- * Copyright 2018 Google Inc.
+ * Copyright 2018 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -110,34 +108,60 @@ Code.Explorer.inputChange = function() {
   }
   Code.Explorer.oldInputValue = input.value;
   var parsed = Code.Explorer.parseInput(input.value);
+  if (Code.Explorer.lastNameToken === null && parsed.lastNameToken) {
+    // Look for cases where a deletion has resulted in a valid parts list.
+    // E.g. $.foo.bar. -> $.foo.bar
+    // Without this check, 'bar' would be considered a lastNameToken fragment
+    // and the object panels would back-slide one step to $.foo
+    var partsCopy = parsed.parts.slice();
+    partsCopy.push(
+        {type: parsed.lastNameToken.type, value: parsed.lastNameToken.value});
+    var oldParts = JSON.parse(Code.Explorer.partsJSON);
+    if (oldParts) {
+      oldParts.length = partsCopy.length;
+    }
+    if (JSON.stringify(partsCopy) === JSON.stringify(oldParts)) {
+      // Rewrite the parsed input to be complete.
+      parsed = {
+        lastNameToken: null,
+        lastToken: null,
+        parts: partsCopy,
+        valid: true
+      };
+    }
+  }
   Code.Explorer.lastNameToken = parsed.lastNameToken;
   var partsJSON = JSON.stringify(parsed.parts);
   if (Code.Explorer.partsJSON === partsJSON) {
-    Code.Explorer.updateAutocompleteMenu(parsed.lastToken);
+    Code.Explorer.updateAutocompleteMenu();
   } else {
     Code.Explorer.hideAutocompleteMenu();
     Code.Explorer.setParts(parsed.parts, false);
   }
+  input.classList.toggle('invalid', !parsed.valid);
 };
 
 /**
  * Parse the input value.
  * @param {string} inputValue Selector string from input field.
- * @return {!Object} Object with three fields:
+ * @return {!Object} Object with four fields:
  *     parts: Array of selector parts.
  *     lastNameToken: Last token that was an id, str, or num.
- *     lastToken: Last token.
+ *     lastToken: Last token.  Null if no tokens.
+ *     valid: True if all tokens are valid (or could become valid).
  */
 Code.Explorer.parseInput = function(inputValue) {
   var tokens = Code.Common.tokenizeSelector(inputValue);
   var parts = [];
   var token = null;
   var lastNameToken = null;
+  var valid = true;
   for (token of tokens) {
     if (token.type === 'id' || token.type === 'str' || token.type === 'num') {
       lastNameToken = token;
     }
     if (!token.valid) {
+      valid = false;
       break;
     }
     if ('.[]^'.indexOf(token.type) !== -1) {
@@ -150,7 +174,12 @@ Code.Explorer.parseInput = function(inputValue) {
       }
     }
   }
-  return {parts: parts, lastNameToken: lastNameToken, lastToken: token};
+  return {
+    parts: parts,
+    lastNameToken: lastNameToken,
+    lastToken: token,
+    valid: valid
+  };
 };
 
 /**
@@ -179,7 +208,7 @@ Code.Explorer.sendAutocomplete = function(partsJSON) {
     Code.Explorer.autocompleteData = [];
     xhr.open('GET', '/code/autocomplete?parts=' +
         encodeURIComponent(partsJSON), true);
-    xhr.onreadystatechange = Code.Explorer.receiveAutocomplete;
+    xhr.onload = Code.Explorer.receiveAutocomplete;
     xhr.send();
     xhr.partsJSON = partsJSON;
   }
@@ -192,9 +221,6 @@ Code.Explorer.autocompleteRequest_ = new XMLHttpRequest();
  */
 Code.Explorer.receiveAutocomplete = function() {
   var xhr = Code.Explorer.autocompleteRequest_;
-  if (xhr.readyState !== 4) {
-    return;  // Not ready yet.
-  }
   if (xhr.status !== 200) {
     console.warn('Autocomplete returned status ' + xhr.status);
     return;
@@ -216,17 +242,24 @@ Code.Explorer.processAutocomplete = function(data) {
   // If the input value is unchanged, display the autocompletion menu.
   var input = document.getElementById('input');
   if (Code.Explorer.oldInputValue === input.value) {
-    var parsed = Code.Explorer.parseInput(input.value);
-    Code.Explorer.updateAutocompleteMenu(parsed.lastToken);
+    Code.Explorer.updateAutocompleteMenu();
   }
 };
 
 /**
  * Given a partial prefix, filter the autocompletion menu and display
  * all matching options.
- * @param {?Object} token Last token in the parts list.
  */
-Code.Explorer.updateAutocompleteMenu = function(token) {
+Code.Explorer.updateAutocompleteMenu = function() {
+  var parsed = Code.Explorer.parseInput(input.value);
+  var token = parsed.lastToken;
+  // If the lastToken is part of the submitted parts, no menu.
+  parsed.parts.push({'type': token.type, 'value': token.value});
+  if (JSON.stringify(parsed.parts) === Code.Explorer.partsJSON) {
+    Code.Explorer.hideAutocompleteMenu();
+    return;
+  }
+  // Otherwise, show a menu filtered on the partial token.
   var prefix = '';
   var index = token ? token.index : 0;
   if (token) {
@@ -338,6 +371,8 @@ Code.Explorer.showAutocompleteMenu = function(options, index) {
                         Code.Explorer.LEFT_OF_INPUT_CHARS);
   var maxLeft = window.innerWidth - menuDiv.offsetWidth;
   menuDiv.style.left = Math.min(left, maxLeft) + 'px';
+  var maxHeight = window.innerHeight - menuDiv.offsetTop - 12;
+  menuDiv.style.maxHeight = maxHeight + 'px';
 };
 
 /**
@@ -440,7 +475,6 @@ Code.Explorer.setInput = function(parts) {
 Code.Explorer.inputFocus = function() {
   clearInterval(Code.Explorer.inputPollPid);
   Code.Explorer.inputPollPid = setInterval(Code.Explorer.inputChange, 10);
-  Code.Explorer.oldInputValue = null;
   Code.Explorer.inputUpdatable = false;
 };
 
@@ -503,26 +537,30 @@ Code.Explorer.inputKey = function(e) {
   }
   if (e.keyCode === key.tab) {
     if (hasMenu) {
-      var option = scrollDiv.firstChild;
-      var prefix = option.getAttribute('data-option');
-      var optionCount = 0;
-      do {
-        optionCount++;
-        prefix = Code.Explorer.getPrefix(prefix,
-            option.getAttribute('data-option'));
-        option = option.nextSibling;
-      } while (option);
-      if (optionCount === 1) {
+      // Extract all options from the menu.
+      var options = [];
+      for (var i = 0, option; (option = scrollDiv.childNodes[i]); i++) {
+        options[i] = option.getAttribute('data-option');
+      }
+      var prefix = '';
+      if (Code.Explorer.lastNameToken &&
+          Code.Explorer.lastNameToken.type === 'id') {
+        prefix = Code.Explorer.lastNameToken.value;
+      }
+      var tuple = Code.Explorer.autocompletePrefix(options, prefix);
+      if (tuple.terminal) {
         // There was only one option.  Choose it.
         var parts = JSON.parse(Code.Explorer.partsJSON);
-        parts.push({type: 'id', value: prefix});
+        parts.push({type: 'id', value: tuple.prefix});
         Code.Explorer.setParts(parts, true);
-      } else if (Code.Explorer.lastNameToken) {
-        if (Code.Explorer.lastNameToken.type === 'id') {
-          // Append the common prefix to the input.
-          var input = document.getElementById('input');
+      } else {
+        // Append the common prefix to the existing input.
+        var input = document.getElementById('input');
+        if (Code.Explorer.lastNameToken) {
           input.value = input.value.substring(0,
-              Code.Explorer.lastNameToken.index) + prefix;
+              Code.Explorer.lastNameToken.index) + tuple.prefix;
+        } else {
+          input.value += tuple.prefix;
         }
         // TODO: Tab-completion of partial strings and numbers.
       }
@@ -556,19 +594,54 @@ Code.Explorer.inputKey = function(e) {
 };
 
 /**
- * Compute and return the common prefix of two (relatively short) strings.
- * @param {string} str1 One string.
- * @param {string} str2 Another string.
+ * Given a list of options, and an existing prefix, return the common prefix.
+ * E.g. (['food', 'foot'], 'f') -> {prefix: 'foo', terminal: false}
+ * @param {!Array<string>} options Array of autocompleted strings.
+ * @param {string} prefix Any existing prefix.
+ * @return {{prefix: string, terminal: boolean}} Tuple with the maximum common
+ *   prefix, and whether this completion is terminal (true), or if there's the
+ *   option of continuing (false).
+ */
+Code.Explorer.autocompletePrefix = function(options, prefix) {
+  // Filter out only those completions that case-sensitively match the prefix.
+  var optionsCase = options.filter(
+      function(option) {return option.startsWith(prefix);});
+  if (optionsCase.length) {
+    return {prefix: Code.Explorer.getPrefix(optionsCase),
+        terminal: optionsCase.length === 1};
+  }
+  // Find completions that don't match the prefix's case.
+  var common = Code.Explorer.getPrefix(options);
+  if (common.length > prefix.length) {
+    var optionsCommon = options.filter(
+        function(option) {return option.startsWith(common);});
+    return {prefix: common, terminal: optionsCommon.length === 1};
+  }
+  return {prefix: prefix, terminal: false};
+};
+
+/**
+ * Compute and return the common prefix of n (relatively short) strings.
+ * @param {!Array<string>} strs Array of string.
  * @return {string} Common prefix.
  */
-Code.Explorer.getPrefix = function(str1, str2) {
-  var len = Math.min(str1.length, str2.length);
-  for (var i = 0; i < len; i++) {
-    if (str1[i] !== str2[i]) {
-      break;
-    }
+Code.Explorer.getPrefix = function(strs) {
+  if (strs.length === 0) {
+    return '';
   }
-  return str1.substring(0, i);
+  var i = 0;
+  while (true) {
+    var letter = strs[0][i];
+    for (var j = 0; j < strs.length; j++) {
+      if (strs[j].length <= i) {
+        return strs[j];
+      }
+      if (strs[j][i] !== letter) {
+        return strs[j].substring(0, i);
+      }
+    }
+    i++;
+  }
 };
 
 /**
@@ -694,5 +767,7 @@ Code.Explorer.init = function() {
   Code.Explorer.receiveMessage();
 };
 
-window.addEventListener('load', Code.Explorer.init);
-window.addEventListener('message', Code.Explorer.receiveMessage, false);
+if (!window.TEST) {
+  window.addEventListener('load', Code.Explorer.init);
+  window.addEventListener('message', Code.Explorer.receiveMessage, false);
+}

@@ -1,9 +1,6 @@
 /**
  * @license
- * IterableWeakMap Tests
- *
- * Copyright 2018 Google Inc.
- * https://github.com/NeilFraser/CodeCity
+ * Copyright 2018 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +17,7 @@
 
 /**
  * @fileoverview Test for IterableWeakSet.
- * @author cpcallen@google.com (Christohper Allen)
+ * @author cpcallen@google.com (Christopher Allen)
  */
 'use strict';
 
@@ -30,18 +27,38 @@ const IterableWeakSet = require('../iterable_weakset');
 const {T} = require('./testing');
 
 /**
+ * Request garbage collection and cycle the event loop to give
+ * finalisers a chance to be run.  No guarantees about either,
+ * unfortunately.
+ * @return {!Promise<void>}
+ */
+async function gcAndFinalise() {
+  // Cycle event loop to allow finalisers to run.  Need to cycle it
+  // once before GC to ensure that WeakRefs can be cleared (their
+  // targets can never be cleared in the same turn as the WeakRef was
+  // created), then again after to allow finalisers to run (though,
+  // as of node v12.12.0, the await with which this function is called
+  // is sufficient to achieve the second cycle).
+  await new Promise((res, rej) => setImmediate(res));
+  gc();
+}
+
+/**
  * Run some basic tests of IterableWeakSet.
  * @param {!T} t The test runner object.
  */
-exports.testIterableWeakSet = function(t) {
-  let name = 'IterableWeakSet';
+exports.testIterableWeakSet = async function(t) {
+  const name = 'IterableWeakSet';
 
-  let assertSame = function(got, want, desc) {
+  const assertSame = function(got, want, desc) {
     t.expect(name + ': ' + desc, got, want);
   };
 
+  assertSame(IterableWeakSet.prototype[Symbol.iterator],
+      IterableWeakSet.prototype.values,
+      'prototype[Symbol.iterator] and prototype.values are the same method');
   assertSame(IterableWeakSet.prototype.keys, IterableWeakSet.prototype.values,
-      'keys and values are the same method');
+      'prototype.keys and prototype.values are the same method');
 
   const obj1 = {x: 42};
   const obj2 = {x: 69};
@@ -71,7 +88,8 @@ exports.testIterableWeakSet = function(t) {
   assertSame(iws.has({}), false, 'iws.has({})');
   assertSame(iws.size, 3, 'iws.size');
 
-  gc();
+  await gcAndFinalise();
+
   assertSame(iws.has(obj1), true, 'iws.has(obj) (after GC)');
   assertSame(iws.size, 2, 'iws.size (after GC)');
   const keys = Array.from(iws.keys());
@@ -82,10 +100,9 @@ exports.testIterableWeakSet = function(t) {
   assertSame(iws.delete({}), false, 'iws.delete({})');
   assertSame(iws.delete(obj2), true, 'iws.delete(obj)');
   assertSame(iws.size, 1, 'iws.size (after delete)');
-  const entries = Array.from(iws);
-  assertSame(entries.length, 1, 'Array.from(iws).length (after delete)');
-  assertSame(entries[0][0], obj1, 'Array.from(iws)[0][0]');
-  assertSame(entries[0][1], obj1, 'Array.from(iws)[0][1]');
+  const values = Array.from(iws);
+  assertSame(values.length, 1, 'Array.from(iws).length (after delete)');
+  assertSame(values[0], obj1, 'Array.from(iws)[0]');
 
   iws.clear();
   assertSame(iws.has(obj1), false, 'iws.has(obj) (after clear)');

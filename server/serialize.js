@@ -1,8 +1,6 @@
 /**
  * @license
- * Code City: serialization and deserialization for JavaScript Intepreter.
- *
- * Copyright 2017 Google Inc.
+ * Copyright 2017 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -220,6 +218,11 @@ Serializer.serialize = function(intrp) {
       // TODO(cpcallen): this is a bit hacky (leaves dangling null
       // properties / array elements on serialized objects) but better
       // fix is hard to do without substantial refactoring.
+      // TODO(cpcallen): For some reason the Closure Compiler thinks
+      // value might be null at this point (it can't be), and
+      // complains about passing it to Object.getPrototypeOf.  Remove
+      // this type-narrowing check once this compiler bug is fixed.
+      if (!value) throw new Error();
       if (Serializer.excludeTypes.has(Object.getPrototypeOf(value))) {
         return null;
       }

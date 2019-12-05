@@ -4,14 +4,20 @@
     <meta charset="utf-8"/>
     <title>Code City: Code Object Panel</title>
     <link rel="stylesheet" href="/static/code/style.css">
-    <link href="https://fonts.googleapis.com/css?family=Roboto+Mono" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto+Mono">
   </head>
   <body id="objectPanel">
-    <header id="objectTitle">&#8203;</header>
-    <section id="objectFail">Server Error<br>Check your console&hellip;</section>
-    <main id="objectResults" class="loading">
-      &#8203; <!-- Zero width space to align the loading ellipsis. -->
-    </main>
+    <table id="objectTable">
+      <thead>
+        <tr><td id="objectTitle">&#8203;</td></tr>
+      </thead>
+      <tbody id="objectTableBody">
+        <tr><td class="loading">&#8203;</td></tr> <!-- Zero width space to align the loading ellipsis. -->
+      </tbody>
+      <tfoot id="objectFail">
+        <tr><td>Server Error<br>Check your console&hellip;</td></tr>
+      </tfoot>
+    </table>
     <script src="common.js"></script>
     <script src="objectPanel.js"></script>
   </body>

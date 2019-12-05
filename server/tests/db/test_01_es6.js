@@ -1,8 +1,6 @@
 /**
  * @license
- * Code City: Testing code.
- *
- * Copyright 2017 Google Inc.
+ * Copyright 2017 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -307,10 +305,21 @@ tests.NumberIsNaN = function() {
   console.assert(!Number.isNaN(' '), 'Number.isNaN " "');
 };
 
+tests.NumberIsInteger = function() {
+  console.assert(Number.isInteger(-17), 'Number.isInteger -17');
+  console.assert(Number.isInteger(Math.pow(2, 64)), 'Number.isInteger 2**64');
+  console.assert(Number.isInteger(-Math.pow(2, 64)), 'Number.isInteger -2**64');
+  console.assert(!Number.isInteger(NaN), 'Number.isInteger NaN');
+  console.assert(!Number.isInteger(Infinity), 'Number.isInteger Infinity');
+  console.assert(!Number.isInteger('3'), 'Number.isInteger "3"');
+  console.assert(!Number.isInteger(3.1), 'Number.isInteger 3.1');
+  console.assert(Number.isInteger(3.0), 'Number.isInteger 3.0');
+};
+
 tests.NumberIsSafeInteger = function() {
   console.assert(Number.isSafeInteger(3), 'Number.isSafeInteger 3');
-  console.assert(!Number.isSafeInteger(Math.pow(2, 53)), 'Number.isSafeInteger 2^53');
-  console.assert(Number.isSafeInteger(Math.pow(2, 53) - 1), 'Number.isSafeInteger 2^53-1');
+  console.assert(!Number.isSafeInteger(Math.pow(2, 53)), 'Number.isSafeInteger 2**53');
+  console.assert(Number.isSafeInteger(Math.pow(2, 53) - 1), 'Number.isSafeInteger 2**53-1');
   console.assert(!Number.isSafeInteger(NaN), 'Number.isSafeInteger NaN');
   console.assert(!Number.isSafeInteger(Infinity), 'Number.isSafeInteger Infinity');
   console.assert(!Number.isSafeInteger('3'), 'Number.isSafeInteger "3"');
@@ -327,6 +336,132 @@ tests.NumberMaxSafeInteger = function() {
       'Number.isSafeInteger(Number.MAX_SAFE_INTEGER + 1);');
 };
 
+tests.NumberMinSafeInteger = function() {
+  console.assert(Number.MIN_SAFE_INTEGER === -(Math.pow(2, 53) - 1),
+      'Number.MIN_SAFE_INTEGER');
+  console.assert(Number.isSafeInteger(Number.MIN_SAFE_INTEGER),
+      'Number.isSafeInteger(Number.MIN_SAFE_INTEGER);');
+  console.assert(!Number.isSafeInteger(Number.MIN_SAFE_INTEGER - 1),
+      'Number.isSafeInteger(Number.MIN_SAFE_INTEGER - 1);');
+};
+
+///////////////////////////////////////////////////////////////////////////////
+// Math
+
+tests.MathAcosh = function() {
+  console.assert(Number.isNaN(Math.acosh(-1)), 'Math.acosh -1');
+  console.assert(Number.isNaN(Math.acosh(0)), 'Math.acosh 0');
+  console.assert(Number.isNaN(Math.acosh(0.5)), 'Math.acosh 0.5');
+  console.assert(Math.acosh(1) === 0, 'Math.acosh 1');
+  console.assert(Math.acosh(2).toPrecision(10) === '1.316957897', 'Math.acosh 2');
+};
+
+tests.MathAsinh = function() {
+  console.assert(Math.asinh(1).toPrecision(10) === '0.8813735870', 'Math.asinh 1');
+  console.assert(Math.asinh(0) === 0, 'Math.asinh 0');
+};
+
+tests.MathAtanh = function() {
+  console.assert(Number.isNaN(Math.atanh(-2)), 'Math.atanh -2');
+  console.assert(Math.atanh(-1) === -Infinity, 'Math.atanh -1');
+  console.assert(Math.atanh(0) === 0, 'Math.atanh 0');
+  console.assert(Math.atanh(0.5).toPrecision(10) === '0.5493061443', 'Math.atanh 0.5');
+  console.assert(Math.atanh(1) === Infinity, 'Math.atanh 1');
+  console.assert(Number.isNaN(Math.atanh(2)), 'Math.atanh 2');
+};
+
+tests.MathCbrt = function() {
+  console.assert(Number.isNaN(Math.cbrt(NaN)), 'Math.cbrt NaN');
+  console.assert(Math.cbrt(-1) === -1, 'Math.cbrt -1');
+  console.assert(Object.is(Math.cbrt(-0), -0), 'Math.cbrt -0');
+  console.assert(Math.cbrt(-Infinity) === -Infinity, 'Math.cbrt -Infinity');
+  console.assert(Object.is(Math.cbrt(0), 0), 'Math.cbrt 0');
+  console.assert(Math.cbrt(1) === 1, 'Math.cbrt 1');
+  console.assert(Math.cbrt(Infinity) === Infinity, 'Math.cbrt Infinity');
+  console.assert(Math.cbrt(null) === 0, 'Math.cbrt null');
+  console.assert(Math.cbrt(2).toPrecision(10) === '1.259921050', 'Math.cbrt 2');
+};
+
+tests.MathClz32 = function() {
+  console.assert(Math.clz32(1) === 31, 'Math.clz32 1');
+  console.assert(Math.clz32(1000) === 22, 'Math.clz32 1000');
+  console.assert(Math.clz32() === 32, 'Math.clz32 ()');
+  console.assert(Math.clz32(NaN) === 32, 'Math.clz32 NaN');
+  console.assert(Math.clz32(Infinity) === 32, 'Math.clz32 Infinity');
+  console.assert(Math.clz32(-Infinity) === 32, 'Math.clz32 -Infinity');
+  console.assert(Math.clz32(0) === 32, 'Math.clz32 0');
+  console.assert(Math.clz32(-0) === 32, 'Math.clz32 -0');
+  console.assert(Math.clz32(null) === 32, 'Math.clz32 null');
+  console.assert(Math.clz32(undefined) === 32, 'Math.clz32 undefined');
+  console.assert(Math.clz32('foo') === 32, 'Math.clz32 "foo"');
+  console.assert(Math.clz32({}) === 32, 'Math.clz32 {}');
+  console.assert(Math.clz32([]) === 32, 'Math.clz32 []');
+  console.assert(Math.clz32(true) === 31, 'Math.clz32 true');
+  console.assert(Math.clz32(3.5) === 30, 'Math.clz32 3.5');
+};
+
+tests.MathCosh = function() {
+  console.assert(Math.cosh(-1).toPrecision(10) === '1.543080635', 'Math.cosh -1');
+  console.assert(Math.cosh(0) === 1, 'Math.cosh 0');
+  console.assert(Math.cosh(1).toPrecision(10) === '1.543080635', 'Math.cosh 1');
+};
+
+tests.MathExpm1 = function() {
+  console.assert(Math.expm1(-1).toPrecision(10) === '-0.6321205588', 'Math.expm1 -1');
+  console.assert(Math.expm1(0) === 0, 'Math.expm1 0');
+  console.assert(Math.expm1(1).toPrecision(10) === '1.718281828', 'Math.expm1 1');
+};
+
+tests.MathFround = function() {
+  console.assert(Math.fround(1.5) === 1.5, 'Math.fround 1.5');
+  console.assert(Math.fround(1.337).toPrecision(10) === '1.337000012', 'Math.fround 1.337');
+  console.assert(Math.fround(Math.pow(2, 150)) === Infinity, 'Math.fround 2**150');
+  console.assert(Number.isNaN(Math.fround('abc')), 'Math.fround "abc"');
+  console.assert(Number.isNaN(Math.fround(NaN)), 'Math.fround NaN');
+};
+
+tests.MathHypot = function() {
+  console.assert(Math.hypot(3, 4) === 5, 'Math.hypot 3, 4');
+  console.assert(Math.hypot(3, 4, 5).toPrecision(10) === '7.071067812', 'Math.hypot 3, 4, 5');
+  console.assert(Math.hypot() === 0, 'Math.hypot ()');
+  console.assert(Number.isNaN(Math.hypot(NaN)), 'Math.hypot NaN');
+  console.assert(Number.isNaN(Math.hypot(3, 4, 'foo')), 'Math.hypot 3, 4, "foo"');
+  console.assert(Math.hypot(3, 4, '5').toPrecision(10) === '7.071067812', 'Math.hypot 3, 4, "5"');
+  console.assert(Math.hypot(-3) === 3, 'Math.hypot -3');
+};
+
+tests.MathImul = function() {
+  console.assert(Math.imul(2, 4) === 8, 'Math.imul 2, 4');
+  console.assert(Math.imul(-1, 8) === -8, 'Math.imul -1, 8');
+  console.assert(Math.imul(-2, -2) === 4, 'Math.imul -2, -2');
+  console.assert(Math.imul(0xffffffff, 5) === -5, 'Math.imul 0xffffffff, 5');
+  console.assert(Math.imul(0xfffffffe, 5) === -10, 'Math.imul 0xfffffffe, 5');
+};
+
+tests.MathLog10 = function() {
+  console.assert(Math.log10(2).toPrecision(10) === '0.3010299957', 'Math.log10 2');
+  console.assert(Math.log10(1) === 0, 'Math.log10 1');
+  console.assert(Math.log10(0) === -Infinity, 'Math.log10 0');
+  console.assert(Number.isNaN(Math.log10(-2)), 'Math.log10 -2');
+  console.assert(Math.log10(100000) === 5, 'Math.log10 100000');
+};
+
+tests.MathLog1p = function() {
+  console.assert(Math.log1p(1).toPrecision(10) === '0.6931471806', 'Math.log1p 1');
+  console.assert(Math.log1p(0) === 0, 'Math.log1p 0');
+  console.assert(Math.log1p(-1) === -Infinity, 'Math.log1p -1');
+  console.assert(Number.isNaN(Math.log1p(-2)), 'Math.log1p -2');
+};
+
+tests.MathLog2 = function() {
+  console.assert(Math.log2(3).toPrecision(10) === '1.584962501', 'Math.log2 3');
+  console.assert(Math.log2(2) === 1, 'Math.log2 2');
+  console.assert(Math.log2(1) === 0, 'Math.log2 1');
+  console.assert(Math.log2(0) === -Infinity, 'Math.log2 0');
+  console.assert(Number.isNaN(Math.log2(-2)), 'Math.log2 -2');
+  console.assert(Math.log2(1024) === 10, 'Math.log2 1024');
+};
+
 tests.MathSign = function() {
   console.assert(Math.sign(3) === 1, 'Math.sign 3');
   console.assert(Math.sign(-3) === -1, 'Math.sign -3');
@@ -336,6 +471,17 @@ tests.MathSign = function() {
   console.assert(Number.isNaN(Math.sign(NaN)), 'Math.sign NaN');
   console.assert(Number.isNaN(Math.sign('foo')), 'Math.sign "foo"');
   console.assert(Number.isNaN(Math.sign()), 'Math.sign undefined');
+};
+
+tests.MathSinh = function() {
+  console.assert(Math.sinh(0) === 0, 'Math.sinh 0');
+  console.assert(Math.sinh(1).toPrecision(10) === '1.175201194', 'Math.sinh 1');
+};
+
+tests.MathTanh = function() {
+  console.assert(Math.tanh(0) === 0, 'Math.tanh 0');
+  console.assert(Math.tanh(Infinity) === 1, 'Math.tanh Infinity');
+  console.assert(Math.tanh(1).toPrecision(10) === '0.7615941560', 'Math.tanh 1');
 };
 
 tests.MathTrunc = function() {

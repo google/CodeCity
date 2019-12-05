@@ -1,8 +1,6 @@
 /**
  * @license
- * Code City: Startup code.
- *
- * Copyright 2017 Google Inc.
+ * Copyright 2017 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -122,19 +120,34 @@ Object.defineProperty(Object, 'defineProperty', {enumerable: false});
      ['apply', 'bind', 'call', 'toString']],
     [Array, 'Array',
      ['isArray'],
-     ['toString', 'pop', 'push', 'shift', 'unshift', 'reverse', 'splice', 'slice', 'concat', 'indexOf', 'lastIndexOf']],
+     ['toString', 'pop', 'push', 'shift', 'unshift', 'reverse', 'splice',
+      'slice', 'concat', 'indexOf', 'lastIndexOf']],
     [String, 'String',
      ['fromCharCode'],
-     ['trim', 'toLowerCase', 'toUpperCase', 'toLocaleLowerCase', 'toLocaleUpperCase', 'charAt', 'charCodeAt', 'substring', 'slice', 'substr', 'indexOf', 'lastIndexOf', 'concat', 'localeCompare', 'split', 'match', 'search', 'replace', 'toString', 'valueOf']],
+     ['trim', 'toLowerCase', 'toUpperCase', 'toLocaleLowerCase',
+      'toLocaleUpperCase', 'charAt', 'charCodeAt', 'substring', 'slice',
+      'substr', 'indexOf', 'lastIndexOf', 'concat', 'localeCompare', 'split',
+      'match', 'search', 'replace', 'toString', 'valueOf']],
     [Boolean, 'Boolean',
      [],
      ['toString', 'valueOf']],
     [Number, 'Number',
      [],
-     ['toExponential', 'toFixed', 'toLocaleString', 'toPrecision', 'toString', 'valueOf']],
+     ['toExponential', 'toFixed', 'toLocaleString', 'toPrecision', 'toString',
+      'valueOf']],
     [Date, 'Date',
      ['now', 'parse', 'UTC'],
-     ['toString', 'getDate', 'getDay', 'getFullYear', 'getHours', 'getMilliseconds', 'getMinutes', 'getMonth', 'getSeconds', 'getTime', 'getTimezoneOffset', 'getUTCDate', 'getUTCDay', 'getUTCFullYear', 'getUTCHours', 'getUTCMilliseconds', 'getUTCMinutes', 'getUTCMonth', 'getUTCSeconds', 'getYear', 'setDate', 'setFullYear', 'setHours', 'setMilliseconds', 'setMinutes', 'setMonth', 'setSeconds', 'setTime', 'setUTCDate', 'setUTCFullYear', 'setUTCHours', 'setUTCMilliseconds', 'setUTCMinutes', 'setUTCMonth', 'setUTCSeconds', 'setYear', 'toDateString', 'toISOString', 'toJSON', 'toGMTString', 'toTimeString', 'toUTCString', 'toLocaleDateString', 'toLocaleString', 'toLocaleTimeString']],
+     ['toString', 'getDate', 'getDay', 'getFullYear', 'getHours',
+      'getMilliseconds', 'getMinutes', 'getMonth', 'getSeconds', 'getTime',
+      'getTimezoneOffset', 'getUTCDate', 'getUTCDay', 'getUTCFullYear',
+      'getUTCHours', 'getUTCMilliseconds', 'getUTCMinutes', 'getUTCMonth',
+      'getUTCSeconds', 'getYear', 'setDate', 'setFullYear', 'setHours',
+      'setMilliseconds', 'setMinutes', 'setMonth', 'setSeconds', 'setTime',
+      'setUTCDate', 'setUTCFullYear', 'setUTCHours', 'setUTCMilliseconds',
+      'setUTCMinutes', 'setUTCMonth', 'setUTCSeconds', 'setYear',
+      'toDateString', 'toISOString', 'toJSON', 'toGMTString', 'toTimeString',
+      'toUTCString', 'toLocaleDateString', 'toLocaleString',
+      'toLocaleTimeString']],
     [RegExp, 'RegExp',
      [],
      ['toString', 'test', 'exec']],
@@ -142,7 +155,8 @@ Object.defineProperty(Object, 'defineProperty', {enumerable: false});
      [],
      ['toString']],
     [Math, 'Math',
-     ['abs', 'acos', 'asin', 'atan', 'atan2', 'ceil', 'cos', 'exp', 'floor', 'log', 'max', 'min', 'pow', 'random', 'round', 'sin', 'sqrt', 'tan'],
+     ['abs', 'acos', 'asin', 'atan', 'atan2', 'ceil', 'cos', 'exp', 'floor',
+      'log', 'max', 'min', 'pow', 'random', 'round', 'sin', 'sqrt', 'tan'],
      []],
     [JSON, 'JSON',
      ['parse', 'stringify'],
@@ -290,7 +304,8 @@ Object.defineProperty(Object, 'create', {value: function(proto, props) {
 
 Object.defineProperty(Object, 'defineProperties', {value: function(obj, props) {
   if (!obj || (typeof obj !== 'object' && typeof obj !== 'function')) {
-    throw new TypeError('Object.defineProperties called on type ' + typeof obj + ', not type object or function');
+    throw new TypeError('Object.defineProperties called on type ' + typeof obj +
+                        ', not type object or function');
   }
   var keys = Object.keys(props);
   for (var i = 0; i < keys.length; i++) {
@@ -305,11 +320,13 @@ Object.defineProperty(Object, 'defineProperties', {value: function(obj, props) {
 
 // Polyfill copied from:
 // developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/every
-Object.defineProperty(Array.prototype, 'every', {value: function(callback/*, thisArg*/) {
+Object.defineProperty(Array.prototype, 'every', {value:
+    function(callback/*, thisArg*/) {
   if (this === null || this === undefined) {
     throw new TypeError('Array.prototype.every called on ' + this);
   } else if (typeof callback !== 'function') {
-    throw new TypeError('callback is type ' + typeof callback + ', not type function');
+    throw new TypeError('callback is type ' + typeof callback +
+        ', not type function');
   }
   var o = Object(this);
   var len = o.length >>> 0;
@@ -322,11 +339,13 @@ Object.defineProperty(Array.prototype, 'every', {value: function(callback/*, thi
 
 // Polyfill copied from:
 // developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/filter
-Object.defineProperty(Array.prototype, 'filter', {value: function(callback/*, thisArg*/) {
+Object.defineProperty(Array.prototype, 'filter', {value:
+    function(callback/*, thisArg*/) {
   if (this === null || this === undefined) {
     throw new TypeError('Array.prototype.filter called on ' + this);
   } else if (typeof callback !== 'function') {
-    throw new TypeError('callback is type ' + typeof callback + ', not type function');
+    throw new TypeError('callback is type ' + typeof callback +
+        ', not type function');
   }
   var o = Object(this);
   var len = o.length >>> 0;
@@ -343,11 +362,13 @@ Object.defineProperty(Array.prototype, 'filter', {value: function(callback/*, th
 
 // Polyfill copied from:
 // developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/forEach
-Object.defineProperty(Array.prototype, 'forEach', {value: function(callback/*, thisArg*/) {
+Object.defineProperty(Array.prototype, 'forEach', {value:
+    function(callback/*, thisArg*/) {
   if (this === null || this === undefined) {
     throw new TypeError('Array.prototype.forEach called on ' + this);
   } else if (typeof callback !== 'function') {
-    throw new TypeError('callback is type ' + typeof callback + ', not type function');
+    throw new TypeError('callback is type ' + typeof callback +
+        ', not type function');
   }
   var o = Object(this);
   var len = o.length >>> 0;
@@ -402,11 +423,13 @@ Object.defineProperty(Array.prototype, 'forEach', {value: function(callback/*, t
 
 // Polyfill copied from:
 // developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/map
-Object.defineProperty(Array.prototype, 'map', {value: function(callback/*, thisArg*/) {
+Object.defineProperty(Array.prototype, 'map', {value:
+    function(callback/*, thisArg*/) {
   if (this === null || this === undefined) {
     throw new TypeError('Array.prototype.map called on ' + this);
   } else if (typeof callback !== 'function') {
-    throw new TypeError('callback is type ' + typeof callback + ', not type function');
+    throw new TypeError('callback is type ' + typeof callback +
+        ', not type function');
   }
   var o = Object(this);
   var len = o.length >>> 0;
@@ -420,11 +443,13 @@ Object.defineProperty(Array.prototype, 'map', {value: function(callback/*, thisA
 
 // Polyfill copied from:
 // developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/Reduce
-Object.defineProperty(Array.prototype, 'reduce', {value: function(callback /*, initialValue*/) {
+Object.defineProperty(Array.prototype, 'reduce', {value:
+    function(callback /*, initialValue*/) {
   if (this === null || this === undefined) {
     throw new TypeError('Array.prototype.reduce called on ' + this);
   } else if (typeof callback !== 'function') {
-    throw new TypeError('callback is type ' + typeof callback + ', not type function');
+    throw new TypeError('callback is type ' + typeof callback +
+        ', not type function');
   }
   var o = Object(this);
   var len = o.length >>> 0;
@@ -447,11 +472,13 @@ Object.defineProperty(Array.prototype, 'reduce', {value: function(callback /*, i
 
 // Polyfill copied from:
 // developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/ReduceRight
-Object.defineProperty(Array.prototype, 'reduceRight', {value: function(callback /*, initialValue*/) {
+Object.defineProperty(Array.prototype, 'reduceRight', {value:
+    function(callback /*, initialValue*/) {
   if (this === null || this === undefined) {
     throw new TypeError('Array.prototype.reduceRight called on ' + this);
   } else if (typeof callback !== 'function') {
-    throw new TypeError('callback is type ' + typeof callback + ', not type function');
+    throw new TypeError('callback is type ' + typeof callback +
+        ', not type function');
   }
   var o = Object(this);
   var len = o.length >>> 0;
@@ -474,11 +501,13 @@ Object.defineProperty(Array.prototype, 'reduceRight', {value: function(callback 
 
 // Polyfill copied from:
 // developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/some
-Object.defineProperty(Array.prototype, 'some', {value: function(callback/*, thisArg*/) {
+Object.defineProperty(Array.prototype, 'some', {value:
+    function(callback/*, thisArg*/) {
   if (this === null || this === undefined) {
     throw new TypeError('Array.prototype.some called on ' + this);
   } else if (typeof callback !== 'function') {
-    throw new TypeError('callback is type ' + typeof callback + ', not type function');
+    throw new TypeError('callback is type ' + typeof callback +
+        ', not type function');
   }
   var o = Object(this);
   var len = o.length >>> 0;
@@ -526,7 +555,8 @@ Object.defineProperty(String.prototype, 'length', {value: 0});
 
 // Polyfill to handle String.prototype.replace's second argument being
 // a function.
-Object.defineProperty(String.prototype, 'replace', {value: function(substr, newSubstr) {
+Object.defineProperty(String.prototype, 'replace', {value:
+    function(substr, newSubstr) {
   if (typeof newSubstr !== 'function') {
     // string.replace(string|regexp, string)
     return (new 'String.prototype.replace').call(this, substr, newSubstr);

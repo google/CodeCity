@@ -1,8 +1,6 @@
 /**
  * @license
- * Code City: Closure Compiler externs for node.js
- *
- * Copyright 2018 Google Inc.
+ * Copyright 2018 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,6 +38,12 @@ fs.accessSync = function(path, mode) {};
 
 /**
  * @param {string} path
+ * @return {boolean}
+ */
+fs.existsSync = function(path) {};
+
+/**
+ * @param {string} path
  * @return {Array<string>}
  */
 fs.readdirSync = function(path) {};
@@ -60,6 +64,12 @@ fs.renameSync = function(oldPath, newPath) {};
 
 /**
  * @param {string} path
+ * @return {fs.Stats}
+ */
+fs.statSync = function(path) {};
+
+/**
+ * @param {string} path
  * @return {void}
  */
 fs.unlinkSync = function(path) {};
@@ -71,5 +81,68 @@ fs.unlinkSync = function(path) {};
  * @return {void}
  */
 fs.writeFileSync = function(filename, data, encoding) {};
+
+/** @constructor */
+fs.Stats = function () {};
+
+/** @return {boolean} */
+fs.Stats.prototype.isFile;
+
+/** @return {boolean} */
+fs.Stats.prototype.isDirectory;
+
+/** @return {boolean} */
+fs.Stats.prototype.isBlockDevice;
+
+/** @return {boolean} */
+fs.Stats.prototype.isCharacterDevice;
+
+/** @return {boolean} */
+fs.Stats.prototype.isSymbolicLink;
+
+/** @return {boolean} */
+fs.Stats.prototype.isFIFO;
+
+/** @return {boolean} */
+fs.Stats.prototype.isSocket;
+
+/** @type {number} */
+fs.Stats.prototype.dev = 0;
+
+/** @type {number} */
+fs.Stats.prototype.ino = 0;
+
+/** @type {number} */
+fs.Stats.prototype.mode = 0;
+
+/** @type {number} */
+fs.Stats.prototype.nlink = 0;
+
+/** @type {number} */
+fs.Stats.prototype.uid = 0;
+
+/** @type {number} */
+fs.Stats.prototype.gid = 0;
+
+/** @type {number} */
+fs.Stats.prototype.rdev = 0;
+
+/** @type {number} */
+fs.Stats.prototype.size = 0;
+
+/** @type {number} */
+fs.Stats.prototype.blkSize = 0;
+
+/** @type {number} */
+fs.Stats.prototype.blocks = 0;
+
+/** @type {Date} */
+fs.Stats.prototype.atime;
+
+/** @type {Date} */
+fs.Stats.prototype.mtime;
+
+/** @type {Date} */
+fs.Stats.prototype.ctime;
 
 module.exports = fs;

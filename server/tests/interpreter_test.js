@@ -1,9 +1,6 @@
 /**
  * @license
- * Code City: Interpreter JS Tests
- *
- * Copyright 2017 Google Inc.
- * https://github.com/NeilFraser/CodeCity
+ * Copyright 2017 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,96 +34,78 @@ const testcases = require('./testcases');
 // Test helper functions.
 ///////////////////////////////////////////////////////////////////////////////
 
-// Prepare static interpreter instance for runTest.
-var interpreter = getInterpreter();
+// Prepare static interpreter instance for runSimpleTest.
+const interpreter = getInterpreter();
 interpreter.global.createMutableBinding('src');
 
 /**
- * Run a simple test of the interpreter.  Only a single Interpreter
- * instance is created for all tests executed by this function, but
- * eval is used to evaluate src in its own scope.  The supplied src
- * must not modify objects accessible via the global scope!
+ * Run a simple test of the interpreter.  A single, shared Interpreter
+ * instance is used by all tests executed by this function, but eval
+ * is used to evaluate src in its own scope.  The supplied src must
+ * not modify objects accessible via the global scope!
  * @param {!T} t The test runner object.
  * @param {string} name The name of the test.
  * @param {string} src The code to be evaled.
  * @param {number|string|boolean|null|undefined} expected The expected
  *     completion value.
  */
-function runTest(t, name, src, expected) {
+function runSimpleTest(t, name, src, expected) {
+  let thread;
   try {
     interpreter.setValueToScope(interpreter.global, 'src', src);
-    var thread = interpreter.createThreadForSrc('eval(src);').thread;
+    thread = interpreter.createThreadForSrc('eval(src);').thread;
     interpreter.run();
   } catch (e) {
     t.crash(name, util.format('%s\n%s', src, e.stack));
     return;
   }
-  var r = interpreter.pseudoToNative(thread.value);
+  const r = interpreter.pseudoToNative(thread.value);
   t.expect(name, r, expected, src);
 }
 
 /**
  * Run a test of the interpreter using an independent Interpreter
  * instance, which may be created with non-default options and/or
- * without the standard startup files.
+ * without the standard startup files, and during which various
+ * callbacks will be executed; see TestOptions for details.
+ * (Simulated) time will be automatically fast-forwarded as required
+ * to wake sleeping threads.
  * @param {!T} t The test runner object.
  * @param {string} name The name of the test.
  * @param {string} src The code to be evaled.
  * @param {number|string|boolean|null|undefined} expected The expected
  *     completion value.
- * @param {!Interpreter.Options=} options Interpreter constructor options.
- * @param {boolean=} init Load the standard startup files (Default: true.)
+ * @param {!TestOptions=} options Custom test options.
  */
-function runCustomTest(t, name, src, expected, options, init) {
-  var intrp = getInterpreter(options, init);
-  try {
-    var thread = intrp.createThreadForSrc(src).thread;
-    intrp.run();
-  } catch (e) {
-    t.crash(name, util.format('%s\n%s', src, e.stack));
-    return;
-  }
-  var r = intrp.pseudoToNative(thread.value);
-  t.expect(name, r, expected, src);
-}
-
-/**
- * Run a more complicated test of the interpreter.  A new interpreter
- * instance is created for each test, and the caller can supply
- * callbacks to be run before beginning and between calls to .run().
- * @param {!T} t The test runner object.
- * @param {string} name The name of the test.
- * @param {string} src The code to be evaled.
- * @param {number|string|boolean|null|undefined} expected The expected
- *     completion value.
- * @param {function(!Interpreter)=} initFunc Optional function to be
- *     called after creating new interpreter instance and running
- *     es5 but before running src.  Can be used to insert extra
- *     native functions into the interpreter.  initFunc is called
- *     with the interpreter instance to be configured as its
- *     parameter.
- * @param {function(!Interpreter)=} waitFunc Optional function to be
- *     called if .run() returns true.  Can be used to fake completion
- *     of asynchronous events for testing purposes.
- */
-function runComplexTest(t, name, src, expected, initFunc, waitFunc) {
-  var intrp = getInterpreter();
-  if (initFunc) {
-    initFunc(intrp);
+function runTest(t, name, src, expected, options) {
+  options = options || {};
+  const intrp = getInterpreter(options.options, options.standardInit);
+  if (options.onCreate) {
+    options.onCreate(intrp);
   }
 
+  let thread;
   try {
-    var thread = intrp.createThreadForSrc(src).thread;
-    while (intrp.run()) {
-      if (waitFunc) {
-        waitFunc(intrp);
+    thread = intrp.createThreadForSrc(src).thread;
+    if (options.onCreateThread) {
+      options.onCreateThread(intrp, thread);
+    }
+    let runResult;
+    while ((runResult = intrp.run())) {
+      if (runResult > 0) {  // Sleeping thread(s).
+        // Fast forward to wake-up time.  Cast to defeat @private check.
+        /** @type {?} */(intrp).previousTime_ += runResult;
+      } else {  // Blocked thread(s).
+        if (options.onBlocked) {
+          options.onBlocked(intrp);
+        }
       }
     }
   } catch (e) {
     t.crash(name, util.format('%s\n%s', src, e.stack));
     return;
   }
-  var r = intrp.pseudoToNative(thread.value);
+  const r = intrp.pseudoToNative(thread.value);
   t.expect(name, r, expected, src);
 }
 
@@ -136,57 +115,103 @@ function runComplexTest(t, name, src, expected, initFunc, waitFunc) {
  * resolve() and reject() are inserted in the global scope; they will
  * end the test.  If resolve() is called the test will end normally
  * and the argument supplied will be compared with the expected value;
- * if reject() is called the test will instead be treated as a crash.
- * The caller can additionally supply callbacks to be run before and
- * after starting the user code; the latter may be an async function
- * and will be awaited before awaiting the userland call to
- * resolve/reject.
+ * if reject() is called the test will instead be treated as a
+ * failure.
  * @param {!T} t The test runner object.
  * @param {string} name The name of the test.
  * @param {string} src The code to be evaled.
  * @param {number|string|boolean|null|undefined} expected The expected
  *     completion value.
- * @param {function(!Interpreter)=} initFunc Optional function to be
- *     called after creating and initialzing new interpreter but
- *     before running src.  Can be used to insert extra native
- *     functions into the interpreter.  initFunc is called with the
- *     interpreter instance to be configured as its parameter.
- * @param {function(!Interpreter)=} sideFunc Optional (optionally
- *     async) function to be called after the interpreter has been
- *     .start()ed.
+ * @param {!TestOptions=} options Custom test options.  Note that
+ *     'onBlocked' is ignored because the interpreter is .start()ed
+ *     instead of .run() being called directly.
  */
-async function runAsyncTest(t, name, src, expected, initFunc, sideFunc) {
-  var intrp = getInterpreter();
-  if (initFunc) {
-    initFunc(intrp);
+async function runAsyncTest(t, name, src, expected, options) {
+  options = options || {};
+  const intrp = getInterpreter(options.options, options.standardInit);
+  if (options.onCreate) {
+    options.onCreate(intrp);
   }
 
   // Create promise to signal completion of test from within
   // interpreter.  Awaiting p will block until resolve or reject is
   // called.
-  var resolve, reject, result;
-  var p = new Promise(function(res, rej) { resolve = res; reject = rej; });
+  let resolve, reject, result;
+  const p = new Promise(function(res, rej) { resolve = res; reject = rej; });
   intrp.global.createMutableBinding(
       'resolve', intrp.createNativeFunction('resolve', resolve, false));
   intrp.global.createMutableBinding(
       'reject', intrp.createNativeFunction('reject', reject, false));
 
   try {
-    intrp.createThreadForSrc(src);
-    intrp.start();
-    if (sideFunc) {
-      await sideFunc(intrp);
+    const thread = intrp.createThreadForSrc(src).thread;
+    if (options.onCreateThread) {
+      options.onCreateThread(intrp, thread);
     }
+    intrp.start();
     result = await p;
   } catch (e) {
-    t.crash(name, util.format('%s\n%s', src, e));
+    t.fail(name, util.format('%s\n%s', src, e));
     return;
   } finally {
     intrp.stop();
   }
-  var r = intrp.pseudoToNative(result);
+  const r = intrp.pseudoToNative(result);
   t.expect(name, r, expected, src);
 }
+
+/**
+ * Options for runTest and runAsyncTest.
+ * @record
+ */
+const TestOptions = function() {};
+
+/**
+ * Interpreter constructor options.
+ * @type {!Interpreter.Options|undefined}
+ */
+TestOptions.prototype.options;
+
+/**
+ * Load the standard startup files?  (Default: true.)
+ * @type {boolean|undefined}
+ */
+TestOptions.prototype.standardInit;
+
+/**
+ * Callback to be called after creating new interpreter instance (and
+ * running standard starup files, if not suppressed with standardInit:
+ * false) but before creating a thread for src.  Can be used to insert
+ * extra bindings into the global scope (e.g., to create additional
+ * builtins).
+ *
+ * The first argument is the interpreter instance to be configured.
+ *
+ * @type {function(!Interpreter)|undefined}
+ */
+TestOptions.prototype.onCreate;
+
+/**
+ * Callback to be called after creating a new Interpreter.Thread, but
+ * before running it.
+ *
+ * The first argument is the interpreter instance.
+ * The second argument is the thread just created.
+ *
+ * @type {function(!Interpreter, !Interpreter.Thread)|undefined}
+ */
+TestOptions.prototype.onCreateThread;
+
+/**
+ * Callback to be called if .run() returns a negative value,
+ * indicating there are blocked threads.  Can be used to fake
+ * completion of asynchronous events.
+ *
+ * The first argument is the interpreter instance to be configured.
+ *
+ * @type {function(!Interpreter)|undefined}
+ */
+TestOptions.prototype.onBlocked;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Tests: external simple testcases
@@ -197,10 +222,9 @@ async function runAsyncTest(t, name, src, expected, initFunc, sideFunc) {
  * @param {!T} t The test runner object.
  */
 exports.testSimple = function(t) {
-  for (var i = 0; i < testcases.length; i++) {
-    var tc = testcases[i];
+  for (const tc of testcases) {
     if ('expected' in tc) {
-      runTest(t, tc.name, tc.src, tc.expected);
+      runSimpleTest(t, tc.name, tc.src, tc.expected);
     } else {
       t.skip(tc.name);
     }
@@ -217,11 +241,12 @@ exports.testSimple = function(t) {
  * is running in strict mode; in sloppy mode this will be boxed.)
  */
 exports.testStrictBoxedThis = function(t) {
-  var name = 'strictBoxedThis', src = `
+  let name = 'strictBoxedThis';
+  let src = `
       String.prototype.foo = function() { return typeof this; };
       'a primitive string'.foo();
   `;
-  runCustomTest(t, name, src, 'string');
+  runTest(t, name, src, 'string');  // Not simple: modifies String.prototype
 };
 
 /**
@@ -229,7 +254,7 @@ exports.testStrictBoxedThis = function(t) {
  * @param {!T} t The test runner object.
  */
 exports.testSwitchStatementFallthrough = function(t) {
-  var code = `
+  const code = `
       var x = 0;
       switch (i) {
         case 1:
@@ -249,10 +274,10 @@ exports.testSwitchStatementFallthrough = function(t) {
           // fall through
       }
       x;`;
-  var expected = [28, 31, 30, 12, 8];
-  for (var i = 0; i < expected.length; i++) {
-    var src = 'var i = ' + i + ';\n' + code;
-    runTest(t, 'switch fallthrough ' + i, src, expected[i]);
+  const expected = [28, 31, 30, 12, 8];
+ for (let i = 0; i < expected.length; i++) {
+    const src = 'var i = ' + i + ';\n' + code;
+    runSimpleTest(t, 'switch fallthrough ' + i, src, expected[i]);
   }
 };
 
@@ -261,7 +286,7 @@ exports.testSwitchStatementFallthrough = function(t) {
  * @param {!T} t The test runner object.
  */
 exports.testSwitchStatementBreaks = function(t) {
-  var code = `
+  const code = `
       foo: {
         switch (i) {
           case 1:
@@ -280,10 +305,10 @@ exports.testSwitchStatementBreaks = function(t) {
             40;
         }
       }`;
-  var expected = [30, 20, 20, 30, 40];
-  for (var i = 0; i < expected.length; i++) {
-    var src = 'var i = ' + i + ';\n' + code;
-    runTest(t, 'switch completion ' + i, src, expected[i]);
+  const expected = [30, 20, 20, 30, 40];
+  for (let i = 0; i < expected.length; i++) {
+    const src = 'var i = ' + i + ';\n' + code;
+    runSimpleTest(t, 'switch completion ' + i, src, expected[i]);
   }
 };
 
@@ -293,7 +318,7 @@ exports.testSwitchStatementBreaks = function(t) {
  * @param {!T} t The test runner object.
  */
 exports.testBinaryOp = function(t) {
-  var cases = [
+  const cases = [
     // Addition / concatenation:
     ["1 + 1", 2],
     ["'1' + 1", '11'],
@@ -468,10 +493,9 @@ exports.testBinaryOp = function(t) {
 
     ["1 !== '1'", true],
   ];
-  for (var i = 0; i < cases.length; i++) {
-    var tc = cases[i];
-    var src = tc[0] + ';';
-    runTest(t, 'BinaryExpression: ' + tc[0], src, tc[1]);
+  for (const tc of cases) {
+    const src = tc[0] + ';';
+    runSimpleTest(t, 'BinaryExpression: ' + tc[0], src, tc[1]);
   }
 };
 
@@ -484,22 +508,28 @@ exports.testFunctionNameSetting = function(t) {
   // Tests of the methodNames option which causes the functions that
   // result from evaluating anonymous function expressions to get a
   // .name when assigned to a property.
-  var name = "Assignment to property doesn't set anonymous function name";
-  var src = `
+  let name = "Assignment to property doesn't set anonymous function name";
+  let src = `
       var o = {};
       o.myMethod = function() {};
       var gOPD = new 'Object.getOwnPropertyDescriptor';
       gOPD(o.myMethod, 'name');
   `;
-  runCustomTest(t, name, src, undefined, {methodNames: false}, false);
-  
+  runTest(t, name, src, undefined, {
+    options: {methodNames: false},
+    standardInit: false,  // Save time.
+  });
+
   name = 'Assignment to property sets anonymous function name';
   src = `
       var o = {};
       o.myMethod = function() {};
       o.myMethod.name;
   `;
-  runCustomTest(t, name, src, 'myMethod', {methodNames: true}, false);
+  runTest(t, name, src, 'myMethod', {
+    options: {methodNames: true},
+    standardInit: false,  // Save time.
+  });
 };
 
 /**
@@ -509,7 +539,7 @@ exports.testFunctionNameSetting = function(t) {
  * @param {!T} t The test runner object.
  */
 exports.testArca = function(t) {
-  var cases = [
+  const cases = [
     ['0, NaN', undefined],
     ['NaN, NaN', undefined],
     ['NaN, 0', undefined],
@@ -549,13 +579,12 @@ exports.testArca = function(t) {
     ['2, "11"', true],   // Numeric
     ['"11", "2"', true], // String
   ];
-  for (var i = 0; i < cases.length; i++) {
-    var tc = cases[i];
-    var src = `
+  for (const tc of cases) {
+    const src = `
         (function(a,b){
           return ((a < b) || (a >= b)) ? (a < b) : undefined;
         })(${tc[0]});`;
-    runTest(t, 'ARCA: ' + tc[0], src, tc[1]);
+    runSimpleTest(t, 'ARCA: ' + tc[0], src, tc[1]);
   }
 };
 
@@ -567,7 +596,7 @@ exports.testArca = function(t) {
  * @param {!T} t The test runner object.
  */
 exports.testAeca = function(t) {
-  var cases = [
+  const cases = [
     ['false, false', true, true],  // Numeric
     ['false, true', false, false], // Numeric
     ['true, true', true, true],    // Numeric
@@ -639,12 +668,11 @@ exports.testAeca = function(t) {
     ['{}, null', false, false],
     ['{}, undefined', false, false],
   ];
-  for (var i = 0; i < cases.length; i++) {
-    var tc = cases[i];
-    var src = `(function(a,b){ return a == b })(${tc[0]});`;
-    runTest(t, 'AECA: ' + tc[0], src, tc[1]);
+  for (const tc of cases) {
+    let src = `(function(a,b){ return a == b })(${tc[0]});`;
+    runSimpleTest(t, 'AECA: ' + tc[0], src, tc[1]);
     src = `(function(a,b){ return a === b })(${tc[0]});`;
-    runTest(t, 'ASECA: ' + tc[0], src, tc[2]);
+    runSimpleTest(t, 'ASECA: ' + tc[0], src, tc[2]);
   }
 };
 
@@ -657,13 +685,13 @@ exports.testAsync = function(t) {
   // Function to install an async NativeFunction on new Interpreter
   // instances.  The function, when called, will save its
   // resolve/reject callbacks and first arg in test-local variables.
-  var resolve, reject, arg;
-  var initFunc = function(intrp) {
+  let resolve, reject, arg;
+  function createAsync(intrp) {
     intrp.global.createMutableBinding('async', new intrp.NativeFunction({
       name: 'async', length: 0,
       call: function(intrp, thread, state, thisVal, args) {
         arg = args[0];
-        var rr = intrp.getResolveReject(thread, state);
+        const rr = intrp.getResolveReject(thread, state);
         resolve = rr.resolve;
         reject = rr.reject;
         return Interpreter.FunctionResult.Block;
@@ -672,23 +700,21 @@ exports.testAsync = function(t) {
   };
 
   // Test ordinary return.
-  var name = 'testAsyncResolve';
-  var waitFunc = function(intrp) {
-    resolve(arg);
-  };
-  var src = `
+  let name = 'testAsyncResolve';
+  let src = `
       'before';
       async();
       'between';
       async('af') + 'ter';
   `;
-  runComplexTest(t, name, src, 'after', initFunc, waitFunc);
+  runTest(t, name, src, 'after', {
+    standardInit: false,  // Save time.
+    onCreate: createAsync,
+    onBlocked: (intrp) => {resolve(arg);},
+  });
 
   // Test throwing an exception.
   name ='testAsyncReject';
-  waitFunc = function(intrp) {
-    reject('except');
-  };
   src = `
       try {
         'before';
@@ -698,52 +724,58 @@ exports.testAsync = function(t) {
         e;
       }
   `;
-  runComplexTest(t, name, src, 'except', initFunc, waitFunc);
+  runTest(t, name, src, 'except', {
+    standardInit: false,  // Save time.
+    onCreate: createAsync,
+    onBlocked: (intrp) => {reject('except');},
+  });
 
   // Extra check to verify async function can't resolve/reject more
   // than once without an asertion failure.
   name = 'testAsyncSafetyCheck';
-  var ok;
-  waitFunc = function(intrp) {
-    resolve(ok);
-    // Call reject; this is expected to blow up.
-    try {
-      reject('foo');
-    } catch (e) {
-      ok = 'ok';
-    }
-  };
+  let ok;
   src = `
-     async();
-     async();
+     async();  // Returns ok === undefined then sets ok to 'ok'.
+     async();  // Returns ok === 'ok' then uselessly sets ok a second time.
   `;
-  runComplexTest(t, name, src, 'ok', initFunc, waitFunc);
+  runTest(t, name, src, 'ok', {
+    standardInit: false,  // Save time.
+    onCreate: createAsync,
+    onBlocked: (intrp) => {
+      resolve(ok);
+      // Call reject; this is expected to blow up.
+      try {
+        reject('foo');
+      } catch (e) {
+        ok = 'ok';
+      }
+    },
+  });
 
   // A test of unwind_, to make sure it unwinds and kills the correct
   // thread when an async function throws.
   name = 'testAsyncRejectUnwind';
-  var intrp = getInterpreter();
-  initFunc(intrp);  // Install async function.
+  const intrp = getInterpreter();
+  createAsync(intrp);  // Install async function.
   // Create cannon-fodder thread that will usually be ready to run.
-  var bgThread = intrp.createThreadForSrc(`
+  const bgThread = intrp.createThreadForSrc(`
       // Repeatedly suspend; every 10th time suspend for a long time.
       for (var i = 1; true; i++) {
         suspend((i % 10) ? 0 : 1000);
       }
   `).thread;
   // Create thread to call async function.
-  var asyncThread = intrp.createThreadForSrc('async();').thread;
+  const asyncThread = intrp.createThreadForSrc('async();').thread;
   intrp.run();
   // asyncThread has run once and blocked; bgThread has run ten times
   // and is now sleeping for 1s.
 
   // Create Error err to throw.  It should have no stack to start with.
-  var err = new intrp.Error(intrp.ROOT, intrp.ERROR, 'sample error');
+  const err = new intrp.Error(intrp.ROOT, intrp.ERROR, 'sample error');
   t.assert(name + ': Error has no .stack initially',
       !err.has('stack', intrp.ROOT));
 
   // Throw err.
-  intrp.verbose = true;  // REMOVE THIS BEFORE COMMIT
   intrp.thread = bgThread;  // Try to trick reject into killing wrong thread.
   reject(err);  // Throw unhandled Error in asyncThread.
 
@@ -760,7 +792,7 @@ exports.testAsync = function(t) {
   // Verify err has aquired a stack.
   t.assert(name + ': Error has .stack after being thrown',
       err.has('stack', intrp.ROOT));
-  var stack = err.get('stack', intrp.ROOT);
+  const stack = err.get('stack', intrp.ROOT);
   t.assert(name + ': Error .stack mentions function that threw',
       stack.match(/in async/));
   t.assert(name + ': Error .stack mentions call site',
@@ -773,12 +805,12 @@ exports.testAsync = function(t) {
  * @param {!T} t The test runner object.
  */
 exports.testThreading = function(t) {
-  var src = `
+  let src = `
       'before';
       suspend();
       'after';
   `;
-  runComplexTest(t, 'suspend()', src, 'after');
+  runTest(t, 'suspend()', src, 'after');
 
   // Check that Threads have ids.
   src = `
@@ -786,12 +818,7 @@ exports.testThreading = function(t) {
       var t2 = new Thread(function() {});
       typeof t1.id === 'number' && typeof t2.id === 'number' && t1.id !== t2.id;
   `;
-  runTest(t, '(new Thread).id', src, true);
-
-  // Function that simulates time passing, 100ms per invocation.
-  var wait = function(intrp) {
-    intrp.previousTime_ += 100;
-  };
+  runSimpleTest(t, '(new Thread).id', src, true);
 
   src = `
       var s = '';
@@ -804,7 +831,7 @@ exports.testThreading = function(t) {
       s += '5';
       s;
   `;
-  runComplexTest(t, 'new Thread', src, '12345', undefined, wait);
+  runTest(t, 'new Thread', src, '12345');
 
   src = `
       var current;
@@ -812,7 +839,7 @@ exports.testThreading = function(t) {
       suspend();
       current === thread;
   `;
-  runComplexTest(t, 'Thread.current()', src, true);
+  runTest(t, 'Thread.current()', src, true);
 
   src = `
       var result;
@@ -824,14 +851,14 @@ exports.testThreading = function(t) {
       suspend();
       result;
   `;
-  runComplexTest(t, 'Thread.kill', src, 'OK');
+  runTest(t, 'Thread.kill', src, 'OK');
 
   src = `
       'before';
       suspend(10000);
       'after';
   `;
-  runComplexTest(t, 'suspend(1000)', src, 'after', undefined, wait);
+  runTest(t, 'suspend(1000)', src, 'after');
 
   src = `
       var s = '';
@@ -844,7 +871,7 @@ exports.testThreading = function(t) {
       s += '5';
       s;
   `;
-  runComplexTest(t, 'setTimeout', src, '12345', undefined, wait);
+  runTest(t, 'setTimeout', src, '12345');
 
   src = `
       // Should have no effect:
@@ -865,7 +892,81 @@ exports.testThreading = function(t) {
       s += '5';
       s;
   `;
-  runComplexTest(t, 'clearTimeout', src, '1235', undefined, wait);
+  runTest(t, 'clearTimeout', src, '1235');
+};
+
+/**
+ * Run tests of the Thread time-limit mechanism.
+ * @param {!T} t The test runner object.
+ */
+exports.testTimeLimit = function(t) {
+  // Some constants used by several tests in this section.  It should
+  // be the case that a for loop executing the specified number of
+  // iterations will take longer than the specified time limit, even
+  // if the body of the loop is empty.
+  //
+  // Ideally these should be very small values to ensure the tests
+  // run quickly, but in practice random delays (OS-level time
+  // slicing, GC and JIT delays, etc.) make make tests very flaky if
+  // these values are too small.
+  const iterations = 10000;
+  const timeLimit = 5;  // in ms.
+
+  // First check that a sufficiently slow loop will get timed out.
+  // (This also verifies the requirements on the iterations and
+  // timeLimit constants mentioned above.)
+  let name = 'Thread hits timeLimit';
+  let src = `
+      try {
+        for (var i = 0; i < ${iterations}; i++) {
+        }
+        "Thread didn't time out";  // Maybe increase iterations?
+      } catch (e) {
+        e.name + ': ' + e.message;  // Can't call String(e): we're out of time!
+      }
+  `;
+  runTest(t, name, src, 'RangeError: Thread ran too long', {
+    onCreateThread: (intrp, thread) => {thread.timeLimit = timeLimit;},
+  });
+
+  // Now check that calling suspend() regularly will save the thread
+  // from timing out.
+  name = 'Thread can use suspend to avoid timeLimit';
+  src = `
+      try {
+        for (var i = 0; i < ${iterations}; i++) {
+          suspend();
+        }
+        "Thread didn't time out";
+      } catch (e) {
+        e.name + ': ' + e.message;  // Can't call String(e): we're out of time!
+      }
+  `;
+  runTest(t, name, src, "Thread didn't time out", {
+    onCreateThread: (intrp, thread) => {thread.timeLimit = timeLimit;},
+  });
+
+  // Test timeLimit is inherited by child Threads.
+  name = 'Threads inherit timeLimit from parent Thread';
+  src = `
+      var r;
+      setTimeout(function() {
+        try {
+          for (var i = 0; i < ${iterations}; i++) {
+          }
+          r = "Thread didn't time out";  // Maybe increase iterations?
+        } catch (e) {
+          r = e.name + ': ' + e.message;  // Can't call String(e).
+        }
+      });
+      suspend(1000000);  // Fortunately simulated time passes really quickly.
+      r;
+  `;
+  runTest(t, name, src, 'RangeError: Thread ran too long', {
+    onCreateThread: (intrp, thread) => {thread.timeLimit = timeLimit;},
+  });
+
+
 };
 
 /**
@@ -878,9 +979,9 @@ exports.testStartStop = async function(t) {
   function snooze(ms) {
     return new Promise(function(resolve, reject) { setTimeout(resolve, ms); });
   }
-  var intrp = getInterpreter();
-  var name = 'testStart';
-  var src = `
+  const intrp = getInterpreter();
+  let name = 'testStart';
+  let src = `
       var x = 0;
       while (true) {
         suspend(10);
@@ -888,6 +989,8 @@ exports.testStartStop = async function(t) {
       };
   `;
   try {
+    // Garbage collection occuring during test can case flakiness.
+    gc();
     intrp.start();
     // .start() will create a zero-delay timeout to check for sleeping
     // tasks to awaken.  Snooze briefly to allow it to run, after
@@ -904,9 +1007,9 @@ exports.testStartStop = async function(t) {
   } finally {
     intrp.stop();
   }
-  var r = intrp.getValueFromScope(intrp.global, 'x');
-  var expected = 2;
-  t.expect(name, r, expected, src + '\n(after 29ms)');
+  let r = intrp.getValueFromScope(intrp.global, 'x');
+  const expected = 2;
+  t.expect(name, r, 2, src + '\n(after 29ms)');
 
   // Check that .pause() actually paused execution.
   name = 'testPause';
@@ -925,7 +1028,7 @@ exports.testStartStop = async function(t) {
  * @param {!T} t The test runner object.
  */
 exports.testClasses = function(t) {
-  var classes = {
+  const classes = {
     Object: {
       prototypeProto: 'null',
       literal: '{}'
@@ -994,96 +1097,96 @@ exports.testClasses = function(t) {
       functionNotConstructor: true  // WeakMap() can't be called without new.
     },
   };
-  for (var c in classes) {
-    var name, src, tc = classes[c];
+  for (const c in classes) {
+    const tc = classes[c];
     // Check constructor is a function:
-    name = c + 'IsFunction';
-    src = 'typeof ' + c + ';';
-    runTest(t, name, src, 'function');
+    let name = c + 'IsFunction';
+    let src = 'typeof ' + c + ';';
+    runSimpleTest(t, name, src, 'function');
     // Check constructor's proto is Function.prototype
     name = c + 'ProtoIsFunctionPrototype';
     src = 'Object.getPrototypeOf(' + c + ') === Function.prototype;';
-    runTest(t, name, src, true);
+    runSimpleTest(t, name, src, true);
     // Check prototype is of correct type:
-    var prototypeType = (tc.prototypeType || 'object');
-    name = c + 'PrototypeIs' + prototypeType
+    const prototypeType = (tc.prototypeType || 'object');
+    name = c + 'PrototypeIs' + prototypeType;
     src = 'typeof ' + c + '.prototype;';
-    runTest(t, name, src, prototypeType);
+    runSimpleTest(t, name, src, prototypeType);
     // Check prototype has correct class:
-    var prototypeClass = (tc.prototypeClass || tc.class || c);
+    const prototypeClass = (tc.prototypeClass || tc.class || c);
     name = c + 'PrototypeClassIs' + prototypeClass;
     src = 'Object.prototype.toString.apply(' + c + '.prototype);';
-    runTest(t, name, src, '[object ' + prototypeClass + ']');
+    runSimpleTest(t, name, src, '[object ' + prototypeClass + ']');
     // Check prototype has correct proto:
-    var prototypeProto = (tc.prototypeProto || 'Object.prototype');
+    const prototypeProto = (tc.prototypeProto || 'Object.prototype');
     name = c + 'PrototypeProtoIs' + prototypeProto;
     src = 'Object.getPrototypeOf(' + c + '.prototype) === ' +
         prototypeProto + ';';
-    runTest(t, name, src, true);
+    runSimpleTest(t, name, src, true);
     // Check prototype's .constructor is constructor:
     name = c + 'PrototypeConstructorIs' + c;
     src = c + '.prototype.constructor === ' + c + ';';
-    runTest(t, name, src, true);
+    runSimpleTest(t, name, src, true);
 
-    var cls = tc.class || c;
+    const cls = tc.class || c;
     if (!tc.noInstance) {
       // Check instance's type:
       name = c + 'InstanceIs' + prototypeType;
       src = 'typeof (new ' + c + ');';
-      runTest(t, name, src, prototypeType);
+      runSimpleTest(t, name, src, prototypeType);
       // Check instance's proto:
       name = c + 'InstancePrototypeIs' + c + 'Prototype';
       src = 'Object.getPrototypeOf(new ' + c + ') === ' + c + '.prototype;';
-      runTest(t, name, src, true);
+      runSimpleTest(t, name, src, true);
       // Check instance's class:
       name = c + 'InstanceClassIs' + cls;
       src = 'Object.prototype.toString.apply(new ' + c + ');';
-      runTest(t, name, src, '[object ' + cls + ']');
+      runSimpleTest(t, name, src, '[object ' + cls + ']');
       // Check instance is instanceof its contructor:
       name = c + 'InstanceIsInstanceof' + c;
       src = '(new ' + c + ') instanceof ' + c + ';';
-      runTest(t, name, src, true);
+      runSimpleTest(t, name, src, true);
       if (!tc.functionNotConstructor) {
         // Recheck instances when constructor called as function:
         // Recheck instance's type:
         name = c + 'ReturnIs' + prototypeType;
         src = 'typeof ' + c + '();';
-        runTest(t, name, src, prototypeType);
+        runSimpleTest(t, name, src, prototypeType);
         // Recheck instance's proto:
         name = c + 'ReturnPrototypeIs' + c + 'Prototype';
         src = 'Object.getPrototypeOf(' + c + '()) === ' + c + '.prototype;';
-        runTest(t, name, src, true);
+        runSimpleTest(t, name, src, true);
         // Recheck instance's class:
         name = c + 'ReturnClassIs' + cls;
         src = 'Object.prototype.toString.apply(' + c + '());';
-        runTest(t, name, src, '[object ' + cls + ']');
+        runSimpleTest(t, name, src, '[object ' + cls + ']');
         // Recheck instance is instanceof its contructor:
         name = c + 'ReturnIsInstanceof' + c;
         src = c + '() instanceof ' + c + ';';
-        runTest(t, name, src, true);
+        runSimpleTest(t, name, src, true);
       }
     }
     if (tc.literal) {
       // Check literal's type:
-      var literalType = (tc.literalType || prototypeType);
+      const literalType = (tc.literalType || prototypeType);
       name = c + 'LiteralIs' + literalType;
       src = 'typeof (' + tc.literal + ');';
-      runTest(t, name, src, literalType);
+      runSimpleTest(t, name, src, literalType);
       // Check literal's proto:
       name = c + 'LiteralPrototypeIs' + c + 'Prototype';
       src = 'Object.getPrototypeOf(' + tc.literal + ') === ' + c +
           '.prototype;';
-      runTest(t, name, src, true);
+      runSimpleTest(t, name, src, true);
       // Check literal's class:
       name = c + 'LiteralClassIs' + cls;
       src = 'Object.prototype.toString.apply(' + tc.literal + ');';
-      runTest(t, name, src, '[object ' + cls + ']');
+      runSimpleTest(t, name, src, '[object ' + cls + ']');
       // Primitives can never be instances.
       if (literalType === 'object' || literalType === 'function') {
         // Check literal is instanceof its contructor.
         name = c + 'LiteralIsInstanceof' + c;
         src = '(' + tc.literal + ') instanceof ' + c + ';';
-        runTest(t, name, src, true);
+        runSimpleTest(t, name, src, true);
       }
     }
   }
@@ -1094,14 +1197,14 @@ exports.testClasses = function(t) {
  * @param {!T} t The test runner object.
  */
 exports.testFunctionPrototypeToString = function(t) {
-  var name = 'Funciton.prototype.toString applied to anonymous NativeFunction';
-  var src = `
+  let name = 'Funciton.prototype.toString applied to anonymous NativeFunction';
+  let src = `
       var parent = function parent() {};
       delete escape.name;
       Object.setPrototypeOf(escape, parent);
       escape.toString().replace(/\\s*/g, '');  // Strip whitespace.
   `;
-  runCustomTest(t, name, src, 'function(){[nativecode]}');
+  runTest(t, name, src, 'function(){[nativecode]}');  // Modifies escape.
 };
 
 /**
@@ -1109,7 +1212,7 @@ exports.testFunctionPrototypeToString = function(t) {
  * @param {!T} t The test runner object.
  */
 exports.testArrayPrototypeJoinParallelism = function(t) {
-  var src = `
+  let src = `
       // Make String() do a suspend(), to tend to cause multiple
       // simultaneous .join() calls become badly interleved with each
       // other.
@@ -1125,7 +1228,7 @@ exports.testArrayPrototypeJoinParallelism = function(t) {
       // Try to do the join anyway.
       arr.join()
   `;
-  runComplexTest(t, 'Array.prototype.join parallel', src, '1,2,3,4,5');
+  runTest(t, 'Array.prototype.join parallel', src, '1,2,3,4,5');
 };
 
 /**
@@ -1134,7 +1237,7 @@ exports.testArrayPrototypeJoinParallelism = function(t) {
  * @param {!T} t The test runner object.
  */
 exports.testNumberToString = function(t) {
-  var cases = [
+  const cases = [
     ['(42).toString()', '42'],
     ['(42).toString(16)', '2a'],
     //['(-42.4).toString(5)', '-132.2'], Node incorrectly reports '-132.144444'.
@@ -1145,10 +1248,9 @@ exports.testNumberToString = function(t) {
     ['(Infinity).toString()', 'Infinity'],
     ['(-Infinity).toString()', '-Infinity'],
   ];
-  for (var i = 0; i < cases.length; i++) {
-    var tc = cases[i];
-    var src = tc[0] + ';';
-    runTest(t, 'testNumberToString: ' + tc[0], src, tc[1]);
+  for (const tc of cases) {
+    const src = tc[0] + ';';
+    runSimpleTest(t, 'testNumberToString: ' + tc[0], src, tc[1]);
   }
 };
 
@@ -1160,8 +1262,8 @@ exports.testNetworking = async function(t) {
   // Run a test of connectionListen() and connectionUnlisten(), and
   // of the server receiving data using the .receive and .end methods
   // on a connection object.
-  var name = 'testServerInbound';
-  var src = `
+  let name = 'testServerInbound';
+  let src = `
       var data = '', conn = {};
       conn.onReceive = function(d) {
         data += d;
@@ -1173,18 +1275,18 @@ exports.testNetworking = async function(t) {
       CC.connectionListen(8888, conn);
       send();
    `;
-  var initFunc = function(intrp) {
+  function createSend(intrp) {
     intrp.global.createMutableBinding('send', intrp.createNativeFunction(
         'send', function() {
           // Send some data to server.
-          var client = net.createConnection({ port: 8888 }, function() {
+          const client = net.createConnection({ port: 8888 }, function() {
             client.write('foo');
             client.write('bar');
             client.end();
           });
         }));
   };
-  await runAsyncTest(t, name, src, 'foobar', initFunc);
+  await runAsyncTest(t, name, src, 'foobar', {onCreate: createSend});
 
   // Run a test of the connectionListen(), connectionUnlisten(),
   // connectionWrite() and connectionClose functions.
@@ -1200,14 +1302,14 @@ exports.testNetworking = async function(t) {
       resolve(receive());
       CC.connectionUnlisten(8888);
    `;
-  initFunc = function(intrp) {
+  function createReceive(intrp) {
     intrp.global.createMutableBinding('receive', new intrp.NativeFunction({
       name: 'receive', length: 0,
       call: function(intrp, thread, state, thisVal, args) {
-        var reply = '';
-        var rr = intrp.getResolveReject(thread, state);
+        let reply = '';
+        const rr = intrp.getResolveReject(thread, state);
         // Receive some data from the server.
-        var client = net.createConnection({ port: 8888 }, function() {
+        const client = net.createConnection({ port: 8888 }, function() {
           client.on('data', function(data) {
             reply += data;
           });
@@ -1222,7 +1324,7 @@ exports.testNetworking = async function(t) {
       }
     }));
   };
-  await runAsyncTest(t, name, src, 'foobar', initFunc);
+  await runAsyncTest(t, name, src, 'foobar', {onCreate: createReceive});
 
   // Check to make sure that connectionListen() throws if attempting
   // to bind to an invalid port or rebind a port already in use.

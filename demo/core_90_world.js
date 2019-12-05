@@ -1,8 +1,6 @@
 /**
  * @license
- * Code City: Demonstration database.
- *
- * Copyright 2017 Google Inc.
+ * Copyright 2017 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -146,6 +144,6 @@
   $.fido = fido;
   $.utils.selector.setSelector(fido, '$.fido');
 
-  $.system.connectionListen(7777, $.servers.telnet);
-  $.system.connectionListen(7780, $.servers.http.connection);
+  $.system.connectionListen(7777, $.servers.telnet, 100);
+  $.system.connectionListen(7780, $.servers.http.connection, 100);
 })();

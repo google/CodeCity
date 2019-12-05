@@ -1,9 +1,6 @@
 /**
  * @license
- * IterableWeakMap
- *
- * Copyright 2018 Google Inc.
- * https://github.com/NeilFraser/CodeCity
+ * Copyright 2018 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,77 +17,29 @@
 
 /**
  * @fileoverview A WeakMap that's iterable.
- * @author cpcallen@google.com (Christohper Allen)
+ * @author cpcallen@google.com (Christopher Allen)
  */
 'use strict';
 
-// TODO(cpcallen): Improve (or better: remove) weakref-related type decls.
-
 /**
- * @constructor
- * @template REF
- */
-var WeakRef = function() {};
-
-/**
- * @param {T} obj
- * @param {!Function} callback
- * @return {!WeakRef<T>}
- * @template T
- * @suppress {duplicate}
- */
-const weak = require('weak');
-
-/**
- * Declared to quiet closure-compiler warnings.
- */
-weak.get;
-
-/**
- * Function to clean up dead cells from an IterableWeakMap when a key
- * object has been garbaged collected.
- * @this {!IterableWeakMap} IterableWeakMap to remove GCed key from.
- * @param {!Cell} cell Cell containing GCed key.
- * @return {void}
- */
-function cleanup(cell) {
-  this.cells_.delete(cell);
-}
-
-/**
- * A weak-key, value tuple in an IterableWeakMap.
+ * A WeakRef<KEY>, value tuple in an IterableWeakMap.
  * @template KEY, VALUE
  */
 class Cell {
   /**
-   * @param {!IterableWeakMap} iwm Map this cell will belong to (for cleanup).
-   * @param {KEY} key The key for this cell.
+   * @param {!WeakRef<KEY>} ref A WeakRef to the key for this cell.
    * @param {VALUE} value The value for this cell.
    */
-  constructor(iwm, key, value) {
+  constructor(ref, value) {
     /** @type {!WeakRef<KEY>} */
-    this.wk = weak(key, cleanup.bind(iwm, this));
+    this.ref = ref;
     /** @type {VALUE} */
     this.value = value;
-  }
-
-  /**
-   * Return the cell's key (as a strong reference).
-   * @return {KEY}
-   */
-  getKey() {
-    return weak.get(this.wk);
   }
 }
 
 /**
  * A WeakMap implementing the full Map interface, including iterability.
- *
- * BUG(cpcallen): This implementation causes layered collection of
- * chained entries.  That is, if you have N entries in the
- * IterableWeakMap, where key_i === value_i+1, but none of the keys
- * are referenced elsewhere, it will take N garbage collections to
- * completely empty the map.
  * @struct
  * @implements {Iterable<!Array<KEY|VALUE>>}
  * @template KEY, VALUE
@@ -103,8 +52,10 @@ class IterableWeakMap extends WeakMap {
    */
   constructor(iterable = undefined) {
     super();
-    /** @private @const @type {!Set<!Cell>} */
-    this.cells_ = new Set();
+    /** @private @const @type {!Set<!WeakRef<KEY>>} */
+    this.refs_ = new Set();
+    /** @private @const @type {!FinalizationGroup} */
+    this.finalisers_ = new FinalizationGroup(IterableWeakMap.cleanup_);
 
     if (iterable === null || iterable === undefined) {
       return;
@@ -125,15 +76,27 @@ class IterableWeakMap extends WeakMap {
   }
 
   /**
+   * Remove dead cells from .refs_.  Called automatically by the
+   * .finalisers_ FinalizationGroup.
+   * @return {void}
+   */
+  static cleanup_(iterator) {
+    for (const {set, ref} of iterator) {
+      set.delete(ref);
+    }
+  }
+
+  /**
    * Remove all entries from the map.
    * @return {void}
    * @override
    */
   clear() {
-    for (const cell of this.cells_) {
-      const key = cell.getKey();
+    for (const ref of this.refs_) {
+      const key = ref.deref();
       if (key !== undefined) this.delete(key);
     }
+    this.refs_.clear();  // Remove anything GCed but not finalised.
   }
 
   /**
@@ -145,7 +108,8 @@ class IterableWeakMap extends WeakMap {
   delete(key) {
     const cell = super.get(key);
     if (cell) {
-      this.cells_.delete(cell);
+      this.refs_.delete(cell.ref);
+      this.finalisers_.unregister(cell.ref);
     }
     return super.delete(key);
   }
@@ -155,12 +119,12 @@ class IterableWeakMap extends WeakMap {
    * @return {!IteratorIterable<!Array<KEY|VALUE>>}
    */
   *entries() {
-    for (const cell of this.cells_) {
-      const key = cell.getKey();
-      if (key === undefined) {  // key was garbage collected.  Remove cell.
-        this.cells_.delete(cell);
+    for (const ref of this.refs_) {
+      const key = ref.deref();
+      if (key === undefined) {  // key was garbage collected.  Remove ref.
+        this.refs_.delete(ref);
       } else {
-        yield [key, cell.value];
+        yield [key, super.get(key).value];
       }
     }
   }
@@ -170,13 +134,14 @@ class IterableWeakMap extends WeakMap {
    * it with thisArg as its this value and arguments key, value and
    * this map.
    * @this {MAP}
-   * @param {function(this:THIS, VALUE, KEY, MAP)} callback
+   * @param {function(this:THIS, VALUE, KEY, IterableWeakMap<KEY, VALUE>)}
+   *     callback
    * @param {THIS=} thisArg
    * @return {void}
    * @template MAP, THIS
    */
   forEach(callback, thisArg = undefined) {
-    for (const [key, value] of this.entries()) {
+    for (const [key, value] of this) {
       callback.call(thisArg, value, key, this);
     }
   }
@@ -189,7 +154,7 @@ class IterableWeakMap extends WeakMap {
    */
   get(key) {
     const cell = super.get(key);
-    return (cell === undefined) ? undefined : cell.value;
+    return cell && cell.value;
   }
 
   /**
@@ -197,13 +162,8 @@ class IterableWeakMap extends WeakMap {
    * @return {!IteratorIterable<KEY>}
    */
   *keys() {
-    for (const cell of this.cells_) {
-      const key = cell.getKey();
-      if (key === undefined) {  // key was garbage collected.  Remove cell.
-        this.cells_.delete(cell);
-      } else {
-        yield key;
-      }
+    for (const [key, value] of this) {
+      yield key;
     }
   }
 
@@ -220,9 +180,11 @@ class IterableWeakMap extends WeakMap {
     if (super.has(key)) {
       super.get(key).value = value;
     } else {
-      const cell = new Cell(this, key, value);
+      const ref = new WeakRef(key);
+      const cell = new Cell(ref, value);
       super.set(key, cell);
-      this.cells_.add(cell);
+      this.refs_.add(ref);
+      this.finalisers_.register(key, {set: this.refs_, ref}, ref);
     }
     return this;
   }
@@ -231,7 +193,7 @@ class IterableWeakMap extends WeakMap {
    * @return {number}
    */
   get size() {
-    return this.cells_.size;
+    return this.refs_.size;
   }
 
   /**
@@ -239,13 +201,8 @@ class IterableWeakMap extends WeakMap {
    * @return {!IteratorIterable<VALUE>}
    */
   *values() {
-    for (const cell of this.cells_) {
-      const key = cell.getKey();
-      if (key === undefined) {  // key was garbage collected.  Remove cell.
-        this.cells_.delete(cell);
-      } else {
-        yield cell.value;
-      }
+    for (const [key, value] of this) {
+      yield value;
     }
   }
 }

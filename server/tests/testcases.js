@@ -1,9 +1,6 @@
 /**
  * @license
- * Code City: Server JavaScript Interpreter Testscases
- *
- * Copyright 2017 Google Inc.
- * https://github.com/NeilFraser/CodeCity
+ * Copyright 2017 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -95,13 +92,13 @@ module.exports = [
     expected: 45 },
 
   { name: 'getPropertyOnPrimitive', src: `
-    "foo".length;
+    'foo'.length;
     `,
     expected: 3 },
 
   { name: 'setPropertyOnPrimitive', src: `
     try {
-      "foo".bar = 42;
+      'foo'.bar = 42;
     } catch (e) {
       e.name;
     }
@@ -825,7 +822,7 @@ module.exports = [
       e.name;
     }
     `,
-    expected: "TypeError" },
+    expected: 'TypeError' },
 
   { name: 'funcDecl', src: `
     var v;
@@ -1069,7 +1066,7 @@ module.exports = [
     expected: undefined },
 
   { name: 'callEvalOrder', src: `
-    var r = "";
+    var r = '';
     function log(x) {
       r += x;
       return function () {};
@@ -1640,7 +1637,7 @@ module.exports = [
   { name: 'Function.prototype.apply(..., sparse)', src: `
     (function(a, b, c) {
       if (!(1 in arguments)) {
-        throw new Error("Argument 1 missing");
+        throw new Error('Argument 1 missing');
       }
       return a + c;
     }).apply(undefined, [1, , 3]);
@@ -1688,7 +1685,7 @@ module.exports = [
   { name: 'Function.prototype.call', src: `
     (function(a, b, c) {
       if (!(1 in arguments)) {
-        throw new Error("Argument 1 missing");
+        throw new Error('Argument 1 missing');
       }
       return a + c;
     }).call(undefined, 1, 2, 3);
@@ -2711,6 +2708,42 @@ module.exports = [
     `,
     expected: 'user' },
 
+  // Time limit tests.  Actual enforcement is tested in
+  // interpreter_tests.js; this is just checking behaviour of get/set
+  // builtins.
+  { name: 'Thread.prototype.getTimeLimit() initially 0', src: `
+    Thread.current().getTimeLimit();
+    `,
+    expected: 0 },
+
+  { name: 'Thread.prototype.setTimeLimit()', src: `
+    Thread.current().setTimeLimit(1000);
+    Thread.current().getTimeLimit();
+    `,
+    expected: 1000 },
+
+  { name: 'Thread.prototype.setTimeLimit(...)', src: `
+    Thread.current().setTimeLimit(1000);
+    Thread.current().getTimeLimit();
+    `,
+    expected: 1000 },
+
+  // Check invalid time limits are rejected.
+  { name: 'Thread.prototype.setTimeLimit(/* invalid value */) throws', src: `
+    Thread.current().setTimeLimit(1000);
+    var invalid = [0, 1001, NaN, 'foo', true, {}];
+    var failures = [];
+    for (var i = 0; i < invalid.length; i++) {
+      try {
+        Thread.current().setTimeLimit(invalid[i]);
+        failures.push(invalid[i]);
+      } catch (e) {
+      }
+    }
+    (failures.length === 0) ? 'OK' : String(failures);
+    `,
+    expected: 'OK' },
+
   /////////////////////////////////////////////////////////////////////////////
   // Permissions system:
 
@@ -2725,7 +2758,7 @@ module.exports = [
     CC.root.name = 'Root';
     var bob = {};
     bob.name = 'Bob';
-    var r = "";
+    var r = '';
     r += perms().name;
     (function() {
       setPerms(bob);
@@ -2734,7 +2767,7 @@ module.exports = [
     })();
     r += perms().name;
     r;`,
-    expected: "RootBobRoot"
+    expected: 'RootBobRoot'
   },
 
   { name: 'getOwnerOf', src: `
@@ -2820,4 +2853,27 @@ module.exports = [
     `,
     expected: 'pass' },
 
+  { name: 'Stack overflow errors', src: `
+    try {
+      (function f() {f();})();
+    } catch (e) {
+      e.name;
+    }
+    `,
+    expected: 'RangeError'
+  },
+
+  { name: 'Minimum stack depth limit', src: `
+    function f() {
+      try {
+        return f() + 1;
+      } catch (e) {
+        return 1;
+      }
+    }
+    var limit = f();
+    limit > 100 ? 'OK' : limit;
+    `,
+    expected: 'OK'
+  },
 ];

@@ -1,9 +1,6 @@
 /**
  * @license
- * Code City: serialisation to eval-able JS
- *
- * Copyright 2018 Google Inc.
- * https://github.com/NeilFraser/CodeCity
+ * Copyright 2018 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +17,7 @@
 
 /**
  * @fileoverview Utilities for manipulating JavaScript code.
- * @author cpcallen@google.com (Christohper Allen)
+ * @author cpcallen@google.com (Christopher Allen)
  */
 'use strict';
 
@@ -35,7 +32,7 @@ var regexps = {};
  */
 regexps.escapes = /\\(?:["'\\\/0bfnrtv]|u[0-9a-fA-F]{4}|x[0-9a-fA-F]{2})/g;
 
-/** 
+/**
  * Matches a single-quoted string literal, like "'this one'" and
  * "'it\\'s'".
  */
@@ -162,7 +159,7 @@ quote.replacements = {
 };
 
 /**
- * Count non-overlapping occurrences of substring ss in string s.
+ * Count non-overlapping occurrences of searchString in str.
  *
  * There are many possible implementations; using .split works pretty
  * well but this is slightly faster at time of writing.  See

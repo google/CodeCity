@@ -1,8 +1,6 @@
 /**
- * MobWrite - Real-time Synchronization and Collaboration Service
- *
- * Copyright 2006 Google Inc.
- * http://code.google.com/p/google-mobwrite/
+ * @license
+ * Copyright 2006 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -642,7 +640,7 @@ mobwrite.syncKill_ = function() {
  */
 mobwrite.syncLoadAjax_ = function(url, post, callback) {
   var req = new XMLHttpRequest();
-  req.onreadystatechange = callback;
+  req.onload = callback;
   req.open('POST', url, true);
   req.setRequestHeader('Content-Type','application/x-www-form-urlencoded');
   req.send(post);
@@ -661,19 +659,16 @@ mobwrite.syncCheckAjax_ = function() {
     // or this might be a callback which we deemed to have timed out.
     return;
   }
-  // Only if req shows "loaded"
-  if (mobwrite.syncAjaxObj_.readyState == 4) {
-    // Only if "OK"
-    if (mobwrite.syncAjaxObj_.status == 200) {
-      var text = mobwrite.syncAjaxObj_.responseText;
-      mobwrite.syncAjaxObj_ = null;
-      mobwrite.syncRun2_(text);
-    } else {
-      if (mobwrite.debug) {
-        console.warn('Connection error code: ' + mobwrite.syncAjaxObj_.status);
-      }
-      mobwrite.syncAjaxObj_ = null;
+  // Only if "OK"
+  if (mobwrite.syncAjaxObj_.status == 200) {
+    var text = mobwrite.syncAjaxObj_.responseText;
+    mobwrite.syncAjaxObj_ = null;
+    mobwrite.syncRun2_(text);
+  } else {
+    if (mobwrite.debug) {
+      console.warn('Connection error code: ' + mobwrite.syncAjaxObj_.status);
     }
+    mobwrite.syncAjaxObj_ = null;
   }
 };
 

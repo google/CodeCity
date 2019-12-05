@@ -1,9 +1,6 @@
 /**
  * @license
- * Code City: Selectors
- *
- * Copyright 2018 Google Inc.
- * https://github.com/NeilFraser/CodeCity
+ * Copyright 2018 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +17,7 @@
 
 /**
  * @fileoverview CSS-style selectors for JS objects.
- * @author cpcallen@google.com (Christohper Allen)
+ * @author cpcallen@google.com (Christopher Allen)
  */
 'use strict';
 
@@ -160,7 +157,7 @@ Selector.prototype.toString = function(specialHandler) {
       if (specialHandler) {
         specialHandler(part, out);
       } else {
-        out.push('{', part.type, '}');
+        out.push(String(part));
       }
     } else if (identifierRE.test(part)) {
       out.push('.', part);
@@ -177,7 +174,7 @@ Selector.prototype.toString = function(specialHandler) {
 /**
  * A Selector fundamentally an array of Parts, and Parts are either
  * strings (representing variable or property names) or SpecialParts
- * (representing everything else, like ^ for prottype.
+ * (representing everything else, like {proto} or {owner}).
  * @typedef {string|!SpecialPart}
  */
 Selector.Part;
@@ -189,6 +186,11 @@ Selector.Part;
  */
 var SpecialPart = function(type) {
   this.type = type;
+};
+
+/** @override */
+SpecialPart.prototype.toString = function() {
+  return '{' + this.type + '}';
 };
 
 /**
@@ -327,7 +329,7 @@ var tokenize = function(selector) {
     '^': /\^/y,
     str: new RegExp(code.regexps.string, 'y'),
   };
-  
+
   var tokens = [];
   NEXT_TOKEN: for (var index = 0; index < selector.length; ) {
     for (var tokenType in REs) {

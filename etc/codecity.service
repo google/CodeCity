@@ -1,6 +1,6 @@
 [Unit]
 Description=Code City
-Documentation=https://github.com/NeilFraser/CodeCity
+Documentation=https://github.com/google/CodeCity
 After=network.target
 Wants=codecity-login.service codecity-connect.service codecity-mobwrite.service
 
@@ -9,7 +9,7 @@ SyslogIdentifier=codecity
 WorkingDirectory=/home/cc/CodeCity/demo
 User=cc
 Group=cc
-ExecStart=@/usr/bin/nodejs codecity /home/cc/CodeCity/server/codecity.js .
+ExecStart=@/usr/bin/nodejs codecity --harmony-weak-refs /home/cc/CodeCity/server/codecity.js ./demo.cfg
 Restart=on-failure
 
 [Install]
