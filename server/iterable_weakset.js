@@ -21,6 +21,8 @@
  */
 'use strict';
 
+const IterableWeakMap = require('./iterable_weakmap');
+
 /**
  * A WeakSet implementing the full Set interface, including iterability.
  * @struct
@@ -35,17 +37,8 @@ class IterableWeakSet {
    * @param {!Iterable<!Array<VALUE>>|!Array<!Array<VALUE>>=} iterable
    */
   constructor(iterable = undefined) {
-    /** @private @const @type {!Set<!WeakRef<VALUE>>} */
-    this.refs_ = new Set();
-    /** @private @const @type {!WeakMap<VALUE, !WeakRef<VALUE>>}} */
-    this.map_ = new WeakMap();
-    /**
-     * @private @const
-     * @type {!FinalizationRegistry<VALUE, !WeakRef<VALUE>, !WeakRef<VALUE>>}
-     */
-    this.finalisers_ = new FinalizationRegistry(ref => {
-      this.refs_.delete(ref);
-    });
+    /** @private @const @type {!IterableWeakMap<VALUE, undefined>}} */
+    this.map_ = new IterableWeakMap();
 
     if (iterable === null || iterable === undefined) {
       return;
@@ -73,12 +66,7 @@ class IterableWeakSet {
    * @template THIS
    */
   add(value) {
-    if (!this.map_.has(value)) {
-      const ref = new WeakRef(value);
-      this.map_.set(value, ref);
-      this.refs_.add(ref);
-      this.finalisers_.register(value, ref, ref);
-    }
+    this.map_.set(value, undefined);
     return this;
   }
 
@@ -88,11 +76,7 @@ class IterableWeakSet {
    * @override
    */
   clear() {
-    for (const ref of this.refs_) {
-      const key = ref.deref();
-      if (key !== undefined) this.delete(key);
-    }
-    this.refs_.clear();  // Remove anything GCed but not finalised.
+    this.map_.clear();
   }
 
   /**
@@ -102,11 +86,6 @@ class IterableWeakSet {
    * @override
    */
   delete(value) {
-    const ref = this.map_.get(value);
-    if (ref) {
-      this.refs_.delete(ref);
-      this.finalisers_.unregister(ref);
-    }
     return this.map_.delete(value);
   }
 
@@ -115,7 +94,7 @@ class IterableWeakSet {
    * @return {!IteratorIterable<!Array<VALUE>>}
    */
   *entries() {
-    for (const value of this) {
+    for (const [value, ignored] of this.map_) {
       yield [value, value];
     }
   }
@@ -149,7 +128,7 @@ class IterableWeakSet {
    * @return {number}
    */
   get size() {
-    return this.refs_.size;
+    return this.map_.size;
   }
 
   /**
@@ -157,13 +136,8 @@ class IterableWeakSet {
    * @return {!IteratorIterable<VALUE>}
    */
   *values() {
-    for (const ref of this.refs_) {
-      const value = ref.deref();
-      if (value === undefined) {  // value was garbage collected.  Remove ref.
-        this.refs_.delete(ref);
-      } else {
-        yield value;
-      }
+    for (const [value, ignored] of this.map_) {
+      yield value;
     }
   }
 }
