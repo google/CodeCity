@@ -26,7 +26,7 @@
 'use strict';
 
 const Interpreter = require('../interpreter');
-const {dump, Do, testOnly} = require('../dump');
+const {Dumper, Do, testOnly} = require('../dumper');
 const fs = require('fs');
 const {getInterpreter} = require('./interpreter_common');
 const path = require('path');
@@ -34,8 +34,8 @@ const Selector = require('../selector');
 const {T} = require('./testing');
 const util = require('util');
 
-// Unpack test-only exports from dump:
-const {Dumper, ObjectDumper} = testOnly;
+// Unpack test-only exports:
+const {ObjectDumper} = testOnly;
 
 /** A very simle Dumper config specification, for testing. */
 const simpleSpec = [{filename: 'all', rest: true}];

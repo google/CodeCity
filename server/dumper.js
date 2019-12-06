@@ -1621,10 +1621,9 @@ var Config = function(spec) {
 // Exports.
 
 exports.Do = Do;
-exports.dump = dump;
+exports.Dumper = Dumper;
 
 // For unit testing only!
 exports.testOnly = {
-  Dumper: Dumper,
   ObjectDumper: ObjectDumper,
 }

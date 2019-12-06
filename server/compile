@@ -47,7 +47,7 @@ args=(-O=ADVANCED_OPTIMIZATIONS
       serialize.js
       code.js
       selector.js
-      dump.js
+      dumper.js
       codecity.js
 
       tests/*.js
