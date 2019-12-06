@@ -191,7 +191,8 @@ exports.testDumperPrototypeExprFor = function(t) {
     'Date', 'Error', 'EvalError', 'RangeError', 'ReferenceError', 'TypeError',
     'SyntaxError', 'URIError', 'PermissionError'
   ]) {
-    dumper.getObjectDumper(intrp.builtins.get(b)).ref = new Selector(b);
+    dumper.getObjectDumper(/** @type {!Interpreter.prototype.Object} */
+        (intrp.builtins.get(b))).ref = new Selector(b);
   }
 
   // Create UserFunction to dump.
@@ -240,8 +241,9 @@ exports.testDumperPrototypeExprForSelector = function(t) {
   t.expect(util.format('Dumper.p.exprForSelector(%s)  // 0', selector),
            dumper.exprForSelector(selector),
            "(new 'Object.getPrototypeOf')(foo.bar).baz");
-  dumper.getObjectDumper(intrp.builtins.get('Object.getPrototypeOf')).ref =
-      new Selector('MyObject.myGetPrototypeOf');
+  dumper.getObjectDumper(/** @type {!Interpreter.prototype.Object} */
+      (intrp.builtins.get('Object.getPrototypeOf'))).ref =
+          new Selector('MyObject.myGetPrototypeOf');
   t.expect(util.format('Dumper.p.exprForSelector(%s)  // 1', selector),
            dumper.exprForSelector(selector),
            'MyObject.myGetPrototypeOf(foo.bar).baz');
@@ -562,8 +564,13 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     t.expect(util.format('Binding status of <%s> (implicit)', s),
              d.getDone(part), tc[1]);
     if (tc[2]) {
-      const objDumper = dumper.getObjectDumper(dumper.valueForSelector(s));
-      t.expect(util.format('Ref for %s', s), String(objDumper.ref), tc[2]);
+      const value = dumper.valueForSelector(s);
+      if (typeof value === 'object' && value) { // value instanceof Interpreter.Object) {
+        const objDumper = dumper.getObjectDumper(value);
+        t.expect(util.format('Ref for %s', s), String(objDumper.ref), tc[2]);
+      } else {
+        t.fail(util.format('Ref for %s', s), 'did not evalutate to an object');
+      }
     }
   }
 };
@@ -669,8 +676,9 @@ exports.testDumperSurvey = function(t) {
       bazScopeDumper.innerScopes.size, 0);
 
   // Check relationship of Arguments objects and scopes recorded by survey.
-  const quuxArgs = quuxScopeDumper.scope.get('arguments');
-  const orphanArgs = /** @type{!Interpreter.prototype.Arguments} */(
+  const quuxArgs = /** @type {!Interpreter.prototype.Arguments} */(
+      quuxScopeDumper.scope.get('arguments'));
+  const orphanArgs = /** @type {!Interpreter.prototype.Arguments} */(
       intrp.global.get('arguments'));
   t.expect('argumentsScopeDumpers.size',
       dumper.argumentsScopeDumpers.size, 1);
