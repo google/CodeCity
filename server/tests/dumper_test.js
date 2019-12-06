@@ -25,10 +25,9 @@
  */
 'use strict';
 
-const Interpreter = require('../interpreter');
 const {Dumper, Do, testOnly} = require('../dumper');
-const fs = require('fs');
 const {getInterpreter} = require('./interpreter_common');
+const Interpreter = require('../interpreter');
 const path = require('path');
 const Selector = require('../selector');
 const {T} = require('./testing');
@@ -37,16 +36,13 @@ const util = require('util');
 // Unpack test-only exports:
 const {ObjectDumper} = testOnly;
 
-/** A very simle Dumper config specification, for testing. */
-const simpleSpec = [{filename: 'all', rest: true}];
-
 /**
  * Unit tests for the ObjectDumper.prototype.isWritable method.
  */
 exports.testObjectDumperPrototypeIsWritable = function(t) {
   const intrp = getInterpreter();
   const pristine = new Interpreter();
-  const dumper = new Dumper(intrp, pristine, simpleSpec);
+  const dumper = new Dumper(intrp, pristine);
 
   const root = intrp.ROOT;
   const writable =
@@ -120,7 +116,7 @@ exports.testObjectDumperPrototypeIsWritable = function(t) {
 exports.testDumperPrototypeIsShadowed = function(t) {
   const intrp = getInterpreter();
   const pristine = new Interpreter();
-  const dumper = new Dumper(intrp, pristine, simpleSpec);
+  const dumper = new Dumper(intrp, pristine);
 
   intrp.global.createMutableBinding('foo', 'foo');
   intrp.global.createMutableBinding('bar', 'bar');
@@ -141,7 +137,7 @@ exports.testDumperPrototypeIsShadowed = function(t) {
 exports.testDumperPrototypeExprForPrimitive = function(t) {
   const intrp = getInterpreter();
   const pristine = new Interpreter();
-  const dumper = new Dumper(intrp, pristine, simpleSpec);
+  const dumper = new Dumper(intrp, pristine);
 
   function doCases(cases) {
     for (const tc of cases) {
@@ -188,7 +184,7 @@ exports.testDumperPrototypeExprForPrimitive = function(t) {
 exports.testDumperPrototypeExprFor = function(t) {
   const intrp = getInterpreter();
   const pristine = new Interpreter();
-  const dumper = new Dumper(intrp, pristine, simpleSpec);
+  const dumper = new Dumper(intrp, pristine);
 
   // Give references to needed builtins.
   for (const b of [
@@ -237,7 +233,7 @@ exports.testDumperPrototypeExprFor = function(t) {
 exports.testDumperPrototypeExprForSelector = function(t) {
   const intrp = getInterpreter();
   const pristine = new Interpreter();
-  const dumper = new Dumper(intrp, pristine, simpleSpec);
+  const dumper = new Dumper(intrp, pristine);
 
   // Test dumping selector before and after dumping Object.getPrototypeOf.
   const selector = new Selector('foo.bar^.baz');
@@ -331,7 +327,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
 
   // Create Dumper with pristine Interpreter instance to compare to.
   const pristine = new Interpreter();
-  const dumper = new Dumper(intrp, pristine, simpleSpec);
+  const dumper = new Dumper(intrp, pristine);
   // Set a few object .done flags in advance, to limit recursive
   // dumping of builtins in tests.
   for (const builtin of [intrp.OBJECT, intrp.FUNCTION, intrp.ARRAY,
@@ -590,7 +586,7 @@ exports.testScopeDumperPrototypeDump = function(t) {
   // Create Dumper with pristine Interpreter instance to compare to;
   // get ScopeDumper for global scope.
   const pristine = new Interpreter();
-  const dumper = new Dumper(intrp, pristine, simpleSpec);
+  const dumper = new Dumper(intrp, pristine);
   const globalDumper = dumper.getScopeDumper(intrp.global);
 
   // Dump one binding and check result.
@@ -633,7 +629,7 @@ exports.testDumperSurvey = function(t) {
   // get ScopeDumper for global scope.  Dumper constructor performs
   // survey.
   const pristine = new Interpreter();
-  const dumper = new Dumper(intrp, pristine, simpleSpec);
+  const dumper = new Dumper(intrp, pristine);
 
   // Check relationship of functions and scopes recorded by survey.
   const baz = /** @type {!Interpreter.prototype.UserFunction} */(
@@ -682,164 +678,4 @@ exports.testDumperSurvey = function(t) {
       dumper.argumentsScopeDumpers.get(quuxArgs) === quuxScopeDumper);
   t.assert('argumentsScopeDumpers.get(orphanArgs) === quuxScopeDumper',
       dumper.argumentsScopeDumpers.get(orphanArgs) === undefined);
-};
-
-/**
- * Unit tests for the Dumper class
- * @param {!T} t The test runner object.
- */
-exports.testDumper = function(t) {
-  const intrp = getInterpreter();
-  const pristine = getInterpreter();
-  const dumper = new Dumper(intrp, pristine, simpleSpec);
-
-  // Hack to install stubs for builtins found in codecity.js.
-  for (const bi of ['CC.log', 'CC.checkpoint', 'CC.shutdown']) {
-    new intrp.NativeFunction({id: bi, length: 0,});
-  }
-
-  // Load demo core.
-  const coreDir = '../demo';
-  for (const file of fs.readdirSync(coreDir) || []) {
-    if (file.match(/^(core|test).*\.js$/)) {
-      const filename = path.join(coreDir, file);
-      intrp.createThreadForSrc(String(fs.readFileSync(filename, 'utf8')));
-      intrp.run();
-    }
-  }
-  intrp.stop();  // Close any listening sockets, so node will exit.
-
-  const spec = [
-    {
-      filename: 'core_00_es5',
-      contents: [
-        'Object',
-        'Function',
-        'Array',
-        'String',
-        'Boolean',
-        'Number',
-        'Date',
-        'RegExp',
-        'Error',
-        'EvalError',
-        'RangeError',
-        'ReferenceError',
-        'SyntaxError',
-        'TypeError',
-        'URIError',
-        'Math',
-        'JSON',
-        'decodeURI',
-        'decodeURIComponent',
-        'encodeURI',
-        'encodeURIComponent',
-        'escape',
-        'isFinite',
-        'isNan',
-        'parseFloat',
-        'parseInt',
-        'unescape',
-      ],
-    }, {
-      filename: 'core_00_es6',
-      contents: [
-        'Object.is',
-        'Object.setPrototypeOf',
-        'Array.prototype.find',
-        'Array.prototype.findIndex',
-        'String.prototype.endsWith',
-        'String.prototype.includes',
-        'String.prototype.repeat',
-        'String.prototype.startsWith',
-        'Number.isFinite',
-        'Number.isNaN',
-        'Number.isSafeInteger',
-        'Number.EPSILON',
-        'Number.MAX_SAFE_INTEGER',
-        'Math.sign',
-        'Math.trunc',
-        'WeakMap',
-      ],
-    }, {
-      filename: 'core_00_esx',
-      contents: [
-        'Object.getOwnerOf',
-        'Object.setOwnerOf',
-        'Thread',
-        'PermissionError',
-        'Array.prototype.join',
-        'suspend',
-        'setTimeout',
-        'clearTimeout',
-      ],
-    }, {
-      filename: 'core_10_base',
-      contents: [
-        {path: 'user', do: Do.DECL},
-        {path: '$', do: Do.SET},
-        '$.system',
-        {path: '$.utils', do: Do.ATTR},
-        '$.physical',
-        '$.thing',
-        '$.room',
-        '$.user',
-        '$.execute',
-        {path: '$.userDatabase', do: Do.ATTR},
-        '$.connection',
-        {path: '$.servers', do: Do.ATTR},
-        '$.servers.telnet',
-      ],
-    }, {
-      filename: 'core_11_$.utils.command',
-      contents: [
-        '$.utils.command',
-        '$.utils.match',
-      ],
-    }, {
-      filename: 'core_12_$.utils.selector',
-      contents: ['$.utils.selector'],
-    }, {
-      filename: 'core_13_$.utils.code',
-      contents: ['$.utils.code'],
-    }, {
-      filename: 'core_20_$.utils.acorn_pre',
-    }, {
-      filename: 'core_21_$.utils.acorn',
-      symlink: '../server/node_modules/acorn/dist/acorn.js',
-    }, {
-      filename: 'core_22_$.utils.acorn_post',
-    }, {
-      filename: 'core_30_$.servers.http',
-      contents: ['$.servers.http'],
-    }, {
-      filename: 'core_31_$.jssp',
-      contents: ['$.jssp'],
-    }, {
-      filename: 'core_32_$.www',
-      contents: [
-        {path: '$.www', do: Do.ATTR},
-        {path: '$.www.ROUTER', do: Do.ATTR},
-        '$.www[404]',
-        '$.www.homepage',
-        '$.www.robots',
-      ],
-    }, {
-      filename: 'core_33_$.www.editor',
-      contents: ['$.www.editor'],
-    }, {
-      filename: 'core_34_$.www.code',
-      contents: ['$.www.code'],
-    }, {
-      filename: 'core_40_$.db.tempId',
-      contents: [
-        {path: '$.db', do: Do.ATTR},
-        '$.db.tempID',
-      ],
-    }, {
-      filename: 'core_90_world',
-      rest: true,
-    },
-  ];
-
 };
