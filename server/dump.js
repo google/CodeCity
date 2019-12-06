@@ -950,7 +950,8 @@ ObjectDumper.prototype.dump = function(dumper, ref) {
     }
     this.toDelete = null;
   }
-  // Dump prototype, owner, and properties.
+  // Dump bindings: prototype, owner, and properties.
+  // TODO(cpcallen): Also dump set/map entries, etc.
   // Optimistically assume success until we find otherwise.
   var /** !ObjectDumper.Done */ done = ObjectDumper.Done.DONE_RECURSIVELY;
   var /** ?ObjectDumper.Pending */ pending = null;
@@ -962,7 +963,7 @@ ObjectDumper.prototype.dump = function(dumper, ref) {
     if (bindingDone === null) {
       throw new Error('.dumpBinding returned null to .dump');
     } else if (bindingDone instanceof ObjectDumper.Pending) {
-      // Circular dependency detected amongs objects being recursively
+      // Circular dependency detected amongst objects being recursively
       // dumped.  Record details of circularity.
       if (pending) {
         pending.merge(bindingDone);
@@ -977,7 +978,6 @@ ObjectDumper.prototype.dump = function(dumper, ref) {
           Math.min(done, ObjectDumper.Done.NO));
     }
   }
-  // TODO(cpcallen): Dump internal elements.
   if (done) {
     // Dump extensibility.
     if (!this.obj.isExtensible(dumper.intrp.ROOT)) {
@@ -1221,7 +1221,7 @@ ObjectDumper.prototype.getDone = function(part) {
 /**
  * Return true iff the specifed property can be created or set by
  * assignment - i.e., that it exists and is writable, or doesn't exist
- * and doe snot inherit from a non-writable property on the prototype
+ * and does not inherit from a non-writable property on the prototype
  * chain.
  * @param {!Dumper} dumper Dumper to which this ObjectDumper belongs.
  * @param {string} key The property key to check for writability of.
@@ -1348,7 +1348,7 @@ ObjectDumper.Done = {
 };
 
 /**
- * A record pending bindings returned by the .dump and .dumpBinding
+ * A record of pending bindings returned by the .dump and .dumpBinding
  * methods when they encounter a circular dependency while trying to
  * recursively dump some objects.
  *
@@ -1362,7 +1362,7 @@ ObjectDumper.Done = {
  * @constructor
  * @param {!Selector} binding A binding awaiting recursive completion
  *     of its value object.
- * @param {!ObjectDumper} valueDumper The ObjecDumper for the object
+ * @param {!ObjectDumper} valueDumper The ObjectDumper for the object
  *     which is the value of binding.
  */
 ObjectDumper.Pending = function (binding, valueDumper) {
@@ -1378,7 +1378,7 @@ ObjectDumper.Pending = function (binding, valueDumper) {
  * Add a new (binding, dependency) pair to this Pending object.
  * @param {!Selector} binding A binding awaiting recursive completion
  *     of its value object.
- * @param {!ObjectDumper} valueDumper The ObjecDumper for the object
+ * @param {!ObjectDumper} valueDumper The ObjectDumper for the object
  *     which is the value of binding.
  */
 ObjectDumper.Pending.prototype.add = function (binding, valueDumper) {
