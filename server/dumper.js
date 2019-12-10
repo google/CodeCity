@@ -913,12 +913,12 @@ ObjectDumper.prototype.checkProperty = function(key, value, attr, pd) {
  *     outstanding invocation.
  */
 ObjectDumper.prototype.dump = function(dumper, ref) {
-  if (this.proto === undefined) {
-    throw new Error("Can't dump an uncreated object");
-  }
   if (!ref) ref = this.ref;
   if (!ref) {
-    throw new Error("Can't dump an unreferencable object");
+    throw new Error("Can't dump unreferencable object");
+  }
+  if (this.proto === undefined) {
+    throw new Error("Can't dump uncreated object " +  ref);
   }
   if (dumper.visiting.has(this)) {
     return null;
