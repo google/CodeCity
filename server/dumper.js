@@ -1054,7 +1054,7 @@ ObjectDumper.prototype.dumpBinding = function(
       var objDone = valueDumper.dump(dumper, sel);
       if (objDone === null) {  // Circular structure detected.
         return new ObjectDumper.Pending(sel, valueDumper);
-      } else if (typeof objDone === 'object') {
+      } else if (objDone instanceof ObjectDumper.Pending) {
         objDone.add(sel, valueDumper);
         return objDone;
       } else if (objDone === ObjectDumper.Done.DONE_RECURSIVELY) {
