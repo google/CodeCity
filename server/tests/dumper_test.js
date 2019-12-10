@@ -255,321 +255,340 @@ exports.testDumperPrototypeExprForSelector = function(t) {
  * @param {!T} t The test runner object.
  */
 exports.testDumperPrototypeDumpBinding = function(t) {
-  const intrp = getInterpreter();
-
-  // Create various objects to dump.
-  intrp.createThreadForSrc(`
-      Object.defineProperty(Object, 'name', {writable: true});
-
-      var skip = 'not dumped';
-      var obj = {a: 1, b: 2, c:3};
-      var nullProtoObj = Object.create(null);
-
-      var parent = {foo: 'foo'};
-      var child1 = Object.create(parent);
-      var child2 = Object.create(parent);
-      var child3 = Object.create(parent);
-      child1.foo = 'foo2';
-      child2.foo = 'foo2';
-      child2.bar = 'bar2';
-      Object.defineProperty(parent, 'foo', {writable: false});
-      Object.defineProperty(child1, 'foo', {enumerable: false});
-      Object.defineProperty(child2, 'foo', {enumerable: false});
-      Object.defineProperty(child2, 'bar', {configurable: false});
-      Object.preventExtensions(child2);
-
-      function f1(arg) {}
-      var f2 = function(arg) {};
-      Object.setPrototypeOf(f2, null);
-      f2.prototype = Object.prototype;
-      f2.f3 = function f4(arg) {};
-      f2.undef = undefined;
-      Object.setPrototypeOf(f2.f3, null);
-      f2.f3.prototype = parent;
-      delete f2.f3.name;
-
-      var arr = [42, 69, 105, child2];
-      var sparse = [0, , 2];
-      Object.setPrototypeOf(sparse, arr);
-      sparse.length = 4;
-
-      var date1 = new Date('1975-07-27');
-      var date2 = new Date('1979-01-04');
-
-      var re1 = /foo/ig;
-      var re2 = /bar/g;
-      Object.setPrototypeOf(re2, re1);
-      re2.lastIndex = 42;
-      var re3 = /baz/m;
-      Object.setPrototypeOf(re3, re1);
-
-      var error1 = new Error('message1');
-      error1.stack = 'stack1';  // Because it's otherwise kind of random.
-      var error2 = new TypeError('message2');
-      error2.stack = 'stack2';
-      var error3 = new RangeError();
-      Object.setPrototypeOf(error3, error1);
-      error3.message = 69;
-      Object.defineProperty(error3, 'message', {writable: false});
-      delete error3.stack;
-
-      var alice = {};
-      alice.thing = (function() {setPerms(alice); return {};})();
-      var bob = {};
-      bob.thing = {};
-      Object.setOwnerOf(bob.thing, bob);
-      var unowned = {};
-      Object.setOwnerOf(unowned, null);
-
-      Object.defineProperty(Object.prototype, 'bar',
-          {writable: false, enumerable: true, configurable: true,
-           value: 'bar'});  // Naughty!
-  `);
-  intrp.run();
-
-  // Create Dumper with pristine Interpreter instance to compare to.
-  const pristine = new Interpreter();
-  const dumper = new Dumper(intrp, pristine);
-  // Set a few object .done flags in advance, to limit recursive
-  // dumping of builtins in tests.
-  for (const builtin of [intrp.OBJECT, intrp.FUNCTION, intrp.ARRAY,
-                         intrp.REGEXP, intrp.ERROR, intrp.TYPE_ERROR,
-                         intrp.RANGE_ERROR]) {
-    dumper.getObjectDumper(builtin).done = ObjectDumper.Done.DONE_RECURSIVELY;
-  };
-  // Set a few binding .done flags in advance to simulate deferred
-  // dumping.
-  for (const s of ['skip', 'obj.b']) {
-    dumper.markBinding(new Selector(s), Do.SKIP);
-  }
-
-  // Check generated output for (and post-dump status of) specific bindings.
+  /**
+   * @type {!Array<{src: string,
+   *                bindingTests: !Array<(string|number)>,
+   *                implicitTests: !Array<(string|number)>}>}
+   */
   const cases = [
-    // [ selector, todo, expected output, expected done (if === todo) ]
-    // Order (somewhat) matters.
-    ['NaN', Do.RECURSE, ''],
-    ['Infinity', Do.RECURSE, ''],
-    ['undefined', Do.RECURSE, ''],
-    ['eval', Do.RECURSE, ''],
+    {
+      src: `
+        Object.defineProperty(Object, 'name', {writable: true});
 
-    ['Object', Do.DECL, 'var Object;\n'],
-    ['Object', Do.DECL, ''],
-    ['Object', Do.SET, "Object = new 'Object';\n", Do.DONE],
-    ['Object', Do.DONE, '', Do.DONE],
-    ['Object.prototype', Do.SET,
-        "Object.prototype = new 'Object.prototype';\n"],
-    // Note that the next few tests depend on having the ObjectDumper
-    // dump individual properties even though we set .done to
-    // DONE_RECURSIVELY at the top to prevent recursive dumping.
-    ['Object.prototype.bar', Do.SET, "Object.prototype.bar = 'bar';\n"],
-    ['Object.prototype.bar', Do.ATTR, "(new 'Object.defineProperty')(" +
-        "Object.prototype, 'bar', {writable: false});\n", Do.RECURSE],
-    ['Object.defineProperty', Do.SET,
-        "Object.defineProperty = new 'Object.defineProperty';\n"],
+        var skip = 'not dumped';
+        var obj = {a: 1, b: 2, c:3};
+        var nullProtoObj = Object.create(null);
 
-    ['CC', Do.SET, 'var CC = {};\n', Do.DONE],
-    ['CC.root', Do.SET, "CC.root = new 'CC.root';\n", Do.DONE],
-    // ['CC.root', Do.RECURSE, "CC.root = new 'CC.root';\n"],
+        var parent = {foo: 'foo'};
+        var child1 = Object.create(parent);
+        var child2 = Object.create(parent);
+        var child3 = Object.create(parent);
+        child1.foo = 'foo2';
+        child2.foo = 'foo2';
+        child2.bar = 'bar2';
+        Object.defineProperty(parent, 'foo', {writable: false});
+        Object.defineProperty(child1, 'foo', {enumerable: false});
+        Object.defineProperty(child2, 'foo', {enumerable: false});
+        Object.defineProperty(child2, 'bar', {configurable: false});
+        Object.preventExtensions(child2);
 
-    ['skip', Do.RECURSE, '', Do.SKIP],
-    ['obj', Do.SET, 'var obj = {};\n', Do.DONE],
-    ['obj.a', Do.SET, 'obj.a = 1;\n', Do.RECURSE],
-    ['obj', Do.RECURSE, 'obj.c = 3;\n', Do.DONE],
-    ['nullProtoObj', Do.SET,
-        "var nullProtoObj = (new 'Object.create')(null);\n", Do.DONE],
+        function f1(arg) {}
+        var f2 = function(arg) {};
+        Object.setPrototypeOf(f2, null);
+        f2.prototype = Object.prototype;
+        f2.f3 = function f4(arg) {};
+        f2.undef = undefined;
+        Object.setPrototypeOf(f2.f3, null);
+        f2.f3.prototype = parent;
+        delete f2.f3.name;
 
-    // TODO(cpcallen): Really want "var child1 = {foo: 'foo'};\n".
-    ['child1', Do.SET, 'var child1 = {};\n', Do.DONE],
-    // TODO(cpcallen): Really want "var child2 = {foo: 'foo'};\n".
-    ['child2', Do.SET, 'var child2 = {};\n', Do.DONE],
-    ['parent', Do.RECURSE, "var parent = {};\nparent.foo = 'foo';\n" +
-        "Object.defineProperty(parent, 'foo', {writable: false});\n"],
+        var arr = [42, 69, 105, child2];
+        var sparse = [0, , 2];
+        Object.setPrototypeOf(sparse, arr);
+        sparse.length = 4;
 
-    ['child1.foo', Do.DECL, 'child1.foo = undefined;\n'],
-    ['child1.foo', Do.SET, "child1.foo = 'foo2';\n"],
-    ['child1.foo', Do.ATTR,
-        "Object.defineProperty(child1, 'foo', {enumerable: false});\n",
-        Do.RECURSE],
-    ['child2^', Do.SET, "(new 'Object.setPrototypeOf')(child2, parent);\n",
-        Do.DONE],
-    ['child2.foo', Do.DECL, "Object.defineProperty(child2, 'foo', " +
-        '{writable: true, enumerable: true, configurable: true});\n'],
-    ['child2.foo', Do.SET, "child2.foo = 'foo2';\n"],
-    ['child2.foo', Do.ATTR,
-        "Object.defineProperty(child2, 'foo', {enumerable: false});\n",
-        Do.RECURSE],
-    ['child2.bar', Do.SET, "Object.defineProperty(child2, 'bar', " +
-        "{writable: true, enumerable: true, value: 'bar2'});\n", Do.RECURSE],
-    ['child2', Do.RECURSE, '(new \'Object.preventExtensions\')(child2);\n'],
+        var date1 = new Date('1975-07-27');
+        var date2 = new Date('1979-01-04');
 
-    ['child3', Do.RECURSE, "var child3 = (new 'Object.create')(parent);\n"],
+        var re1 = /foo/ig;
+        var re2 = /bar/g;
+        Object.setPrototypeOf(re2, re1);
+        re2.lastIndex = 42;
+        var re3 = /baz/m;
+        Object.setPrototypeOf(re3, re1);
 
-    ['Object.setPrototypeOf', Do.SET,
-        "Object.setPrototypeOf = new 'Object.setPrototypeOf';\n"],
+        var error1 = new Error('message1');
+        error1.stack = 'stack1';  // Because it's otherwise kind of random.
+        var error2 = new TypeError('message2');
+        error2.stack = 'stack2';
+        var error3 = new RangeError();
+        Object.setPrototypeOf(error3, error1);
+        error3.message = 69;
+        Object.defineProperty(error3, 'message', {writable: false});
+        delete error3.stack;
 
-    ['f1', Do.DECL, 'var f1;\n'],
-    // TODO(cpcallen): Really want 'function f1(arg) {};\n'.
-    ['f1', Do.SET, 'f1 = function f1(arg) {};\n', Do.DONE],
-    ['f2', Do.SET, 'var f2 = function(arg) {};\n', Do.DONE],
-    ['f2.f3', Do.DECL, 'f2.f3 = undefined;\n'],
-    ['f2.f3', Do.SET, 'f2.f3 = function f4(arg) {};\n', Do.ATTR],
-    ['f2.undef', Do.DECL, 'f2.undef = undefined;\n', Do.RECURSE],
-    ['f2.f3^', Do.SET, 'Object.setPrototypeOf(f2.f3, null);\n', Do.RECURSE],
-    ['f2.f3', Do.RECURSE, "delete f2.f3.name;\nf2.f3.prototype = parent;\n"],
+        var alice = {};
+        alice.thing = (function() {setPerms(alice); return {};})();
+        var bob = {};
+        bob.thing = {};
+        Object.setOwnerOf(bob.thing, bob);
+        var unowned = {};
+        Object.setOwnerOf(unowned, null);
 
-    // TODO(cpcallen): Realy want 'var arr = [42, 69, 105, obj];\n'.
-    ['arr', Do.RECURSE, 'var arr = [];\narr[0] = 42;\narr[1] = 69;\n' +
-        'arr[2] = 105;\narr[3] = child2;\n'],
-    // TODO(cpcallen): really want 'var sparse = [0, , 2];\nsparse.length = 4;'.
-    ['sparse', Do.RECURSE, 'var sparse = [];\n' +
-        'Object.setPrototypeOf(sparse, arr);\n' +
-        'sparse[0] = 0;\nsparse[2] = 2;\nsparse.length = 4;\n'],
+        Object.defineProperty(Object.prototype, 'bar',
+            {writable: false, enumerable: true, configurable: true,
+             value: 'bar'});  // Naughty!
+      `,
+      skip: ['skip', 'obj.b'],
+      bindingTests: [
+        // [ selector, todo, expected output, expected done (if === todo) ]
+        // Order (somewhat) matters.
+        ['NaN', Do.RECURSE, ''],
+        ['Infinity', Do.RECURSE, ''],
+        ['undefined', Do.RECURSE, ''],
+        ['eval', Do.RECURSE, ''],
 
-    ['date1', Do.SET,
-        "var date1 = new (new 'Date')('1975-07-27T00:00:00.000Z');\n", Do.DONE],
-    ['Date', Do.SET, "var Date = new 'Date';\n", Do.DONE],
-    ['date2', Do.SET, "var date2 = new Date('1979-01-04T00:00:00.000Z');\n",
-        Do.DONE],
+        ['Object', Do.DECL, 'var Object;\n'],
+        ['Object', Do.DECL, ''],
+        ['Object', Do.SET, "Object = new 'Object';\n", Do.DONE],
+        ['Object', Do.DONE, '', Do.DONE],
+        ['Object.prototype', Do.SET,
+         "Object.prototype = new 'Object.prototype';\n"],
+        // Note that the next few tests depend on having the ObjectDumper
+        // dump individual properties even though we set .done to
+        // DONE_RECURSIVELY at the top to prevent recursive dumping.
+        ['Object.prototype.bar', Do.SET, "Object.prototype.bar = 'bar';\n"],
+        ['Object.prototype.bar', Do.ATTR, "(new 'Object.defineProperty')(" +
+            "Object.prototype, 'bar', {writable: false});\n", Do.RECURSE],
+        ['Object.defineProperty', Do.SET,
+         "Object.defineProperty = new 'Object.defineProperty';\n"],
 
-    ['re1', Do.SET, 'var re1 = /foo/gi;\n', Do.DONE],
-    ['re2', Do.RECURSE, 'var re2 = /bar/g;\n' +
-        'Object.setPrototypeOf(re2, re1);\n' +
-        're2.lastIndex = 42;\n'],
-    ['re3', Do.SET, 'var re3 = /baz/m;\n', Do.DONE],
-    ['re3^', Do.SET, 'Object.setPrototypeOf(re3, re1);\n', Do.DONE],
+        ['CC', Do.SET, 'var CC = {};\n', Do.DONE],
+        ['CC.root', Do.SET, "CC.root = new 'CC.root';\n", Do.DONE],
+        // ['CC.root', Do.RECURSE, "CC.root = new 'CC.root';\n"],
 
-    ['error1', Do.SET, "var error1 = new (new 'Error')('message1');\n",
-        Do.DONE],
-    ['error1', Do.RECURSE, "error1.stack = 'stack1';\n"],
-    ['Error', Do.SET, "var Error = new 'Error';\n", Do.DONE],
-    ['TypeError', Do.SET, "var TypeError = new 'TypeError';\n", Do.DONE],
-    ['RangeError', Do.SET, "var RangeError = new 'RangeError';\n", Do.DONE],
-    ['error2', Do.SET, "var error2 = new TypeError('message2');\n", Do.DONE],
-    ['error2', Do.RECURSE, "error2.stack = 'stack2';\n"],
-    ['error3', Do.SET, 'var error3 = new Error();\n', Do.DONE],
-    ['error3.message', Do.ATTR, 'error3.message = 69;\n' +
-        "Object.defineProperty(error3, 'message', {writable: false});\n",
-        Do.RECURSE],
-    ['error3', Do.RECURSE, 'delete error3.stack;\n' +
-        'Object.setPrototypeOf(error3, error1);\n'],
+        ['skip', Do.RECURSE, '', Do.SKIP],
+        ['obj', Do.SET, 'var obj = {};\n', Do.DONE],
+        ['obj.a', Do.SET, 'obj.a = 1;\n', Do.RECURSE],
+        ['obj', Do.RECURSE, 'obj.c = 3;\n', Do.DONE],
+        ['nullProtoObj', Do.SET,
+         "var nullProtoObj = (new 'Object.create')(null);\n", Do.DONE],
 
-    ['alice', Do.SET, 'var alice = {};\n', Do.DONE],
-    ['alice.thing', Do.ATTR, 'alice.thing = {};\n'],
-    ['alice.thing{owner}', Do.SET, "(new 'Object.setOwnerOf')" +
-        '(alice.thing, alice);\n', Do.DONE],
-    ['alice.thing', Do.RECURSE, '', Do.DONE],
-    ['Object.setOwnerOf', Do.SET,
-        "Object.setOwnerOf = new 'Object.setOwnerOf';\n"],
-    ['bob', Do.RECURSE, 'var bob = {};\nbob.thing = {};\n' +
-        "Object.setOwnerOf(bob.thing, bob);\n"],
-    ['unowned', Do.SET, 'var unowned = {};\n', Do.DONE],
-    ['unowned{owner}', Do.SET, 'Object.setOwnerOf(unowned, null);\n',
-        Do.RECURSE],
+        // TODO(cpcallen): Really want "var child1 = {foo: 'foo'};\n".
+        ['child1', Do.SET, 'var child1 = {};\n', Do.DONE],
+        // TODO(cpcallen): Really want "var child2 = {foo: 'foo'};\n".
+        ['child2', Do.SET, 'var child2 = {};\n', Do.DONE],
+        ['parent', Do.RECURSE, "var parent = {};\nparent.foo = 'foo';\n" +
+            "Object.defineProperty(parent, 'foo', {writable: false});\n"],
+
+        ['child1.foo', Do.DECL, 'child1.foo = undefined;\n'],
+        ['child1.foo', Do.SET, "child1.foo = 'foo2';\n"],
+        ['child1.foo', Do.ATTR,
+         "Object.defineProperty(child1, 'foo', {enumerable: false});\n",
+         Do.RECURSE],
+        ['child2^', Do.SET, "(new 'Object.setPrototypeOf')(child2, parent);\n",
+         Do.DONE],
+        ['child2.foo', Do.DECL, "Object.defineProperty(child2, 'foo', " +
+            '{writable: true, enumerable: true, configurable: true});\n'],
+        ['child2.foo', Do.SET, "child2.foo = 'foo2';\n"],
+        ['child2.foo', Do.ATTR,
+         "Object.defineProperty(child2, 'foo', {enumerable: false});\n",
+         Do.RECURSE],
+        ['child2.bar', Do.SET, "Object.defineProperty(child2, 'bar', " +
+            "{writable: true, enumerable: true, value: 'bar2'});\n",
+         Do.RECURSE],
+        ['child2', Do.RECURSE, '(new \'Object.preventExtensions\')(child2);\n'],
+        ['child3', Do.RECURSE, "var child3 = (new 'Object.create')(parent);\n"],
+        ['Object.setPrototypeOf', Do.SET,
+         "Object.setPrototypeOf = new 'Object.setPrototypeOf';\n"],
+
+        ['f1', Do.DECL, 'var f1;\n'],
+        // TODO(cpcallen): Really want 'function f1(arg) {};\n'.
+        ['f1', Do.SET, 'f1 = function f1(arg) {};\n', Do.DONE],
+        ['f2', Do.SET, 'var f2 = function(arg) {};\n', Do.DONE],
+        ['f2.f3', Do.DECL, 'f2.f3 = undefined;\n'],
+        ['f2.f3', Do.SET, 'f2.f3 = function f4(arg) {};\n', Do.ATTR],
+        ['f2.undef', Do.DECL, 'f2.undef = undefined;\n', Do.RECURSE],
+        ['f2.f3^', Do.SET, 'Object.setPrototypeOf(f2.f3, null);\n', Do.RECURSE],
+        ['f2.f3', Do.RECURSE,
+         "delete f2.f3.name;\nf2.f3.prototype = parent;\n"],
+
+        // TODO(cpcallen): Realy want 'var arr = [42, 69, 105, obj];\n'.
+        ['arr', Do.RECURSE, 'var arr = [];\narr[0] = 42;\narr[1] = 69;\n' +
+            'arr[2] = 105;\narr[3] = child2;\n'],
+        // TODO(cpcallen): really want output like
+        //     'var sparse = [0, , 2];\nsparse.length = 4;'.
+        ['sparse', Do.RECURSE, 'var sparse = [];\n' +
+            'Object.setPrototypeOf(sparse, arr);\n' +
+            'sparse[0] = 0;\nsparse[2] = 2;\nsparse.length = 4;\n'],
+
+        ['date1', Do.SET,
+         "var date1 = new (new 'Date')('1975-07-27T00:00:00.000Z');\n",
+         Do.DONE],
+        ['Date', Do.SET, "var Date = new 'Date';\n", Do.DONE],
+        ['date2', Do.SET, "var date2 = new Date('1979-01-04T00:00:00.000Z');\n",
+         Do.DONE],
+
+        ['re1', Do.SET, 'var re1 = /foo/gi;\n', Do.DONE],
+        ['re2', Do.RECURSE, 'var re2 = /bar/g;\n' +
+            'Object.setPrototypeOf(re2, re1);\n' +
+            're2.lastIndex = 42;\n'],
+        ['re3', Do.SET, 'var re3 = /baz/m;\n', Do.DONE],
+        ['re3^', Do.SET, 'Object.setPrototypeOf(re3, re1);\n', Do.DONE],
+
+        ['error1', Do.SET, "var error1 = new (new 'Error')('message1');\n",
+         Do.DONE],
+        ['error1', Do.RECURSE, "error1.stack = 'stack1';\n"],
+        ['Error', Do.SET, "var Error = new 'Error';\n", Do.DONE],
+        ['TypeError', Do.SET, "var TypeError = new 'TypeError';\n", Do.DONE],
+        ['RangeError', Do.SET, "var RangeError = new 'RangeError';\n", Do.DONE],
+        ['error2', Do.SET, "var error2 = new TypeError('message2');\n",
+         Do.DONE],
+        ['error2', Do.RECURSE, "error2.stack = 'stack2';\n"],
+        ['error3', Do.SET, 'var error3 = new Error();\n', Do.DONE],
+        ['error3.message', Do.ATTR, 'error3.message = 69;\n' +
+            "Object.defineProperty(error3, 'message', {writable: false});\n",
+         Do.RECURSE],
+        ['error3', Do.RECURSE, 'delete error3.stack;\n' +
+            'Object.setPrototypeOf(error3, error1);\n'],
+
+        ['alice', Do.SET, 'var alice = {};\n', Do.DONE],
+        ['alice.thing', Do.ATTR, 'alice.thing = {};\n'],
+        ['alice.thing{owner}', Do.SET, "(new 'Object.setOwnerOf')" +
+            '(alice.thing, alice);\n', Do.DONE],
+        ['alice.thing', Do.RECURSE, '', Do.DONE],
+        ['Object.setOwnerOf', Do.SET,
+         "Object.setOwnerOf = new 'Object.setOwnerOf';\n"],
+        ['bob', Do.RECURSE, 'var bob = {};\nbob.thing = {};\n' +
+            "Object.setOwnerOf(bob.thing, bob);\n"],
+        ['unowned', Do.SET, 'var unowned = {};\n', Do.DONE],
+        ['unowned{owner}', Do.SET, 'Object.setOwnerOf(unowned, null);\n',
+         Do.RECURSE],
+      ],
+      implicitTests: [
+        // [ selector, expected done, expected value (as selector) ]
+        ['Object.length', Do.RECURSE],
+        ['Object.name', Do.SET],
+
+        ['CC.root^', Do.RECURSE],
+        ['CC.root{owner}', Do.RECURSE],
+
+        ['obj^', Do.RECURSE, 'Object.prototype'],
+        ['obj.b', Do.SKIP],
+        ['obj.c', Do.RECURSE],
+        ['nullProtoObj^', Do.RECURSE],
+        ['nullProtoObj{owner}', Do.DONE],
+
+        ['child1^', Do.DECL],
+        ['child2^', Do.RECURSE, 'parent'],
+        ['child3^', Do.RECURSE, 'parent'],
+
+        ['f1^', Do.DONE],
+        ['f1.length', Do.RECURSE],
+        ['f1.name', Do.RECURSE],
+        ['f1.prototype', Do.SET, 'f1.prototype'],
+        ['f1.prototype.constructor', Do.SET, 'f1'],
+        ['f2^', Do.DECL],
+        ['f2.length', Do.RECURSE],
+        ['f2.name', Do.RECURSE],
+        ['f2.prototype', Do.DECL, 'Object.prototype'],
+        ['f2.f3^', Do.RECURSE],
+        ['f2.f3.length', Do.RECURSE],
+        // TODO(cpcallen): enable this once code is correct.
+        // ['f2.f3.name', Do.UNSTARTED],  // N.B.: not implicitly set.
+        ['f2.f3.prototype', Do.RECURSE, 'parent'],
+
+        ['arr^', Do.RECURSE],
+        ['arr.length', Do.RECURSE],
+        ['sparse^', Do.RECURSE, 'arr'],
+        ['sparse.length', Do.RECURSE],
+
+        ['date1^', Do.DONE],
+        ['date2^', Do.DONE],
+
+        ['re1^', Do.RECURSE],
+        ['re1.source', Do.RECURSE],
+        ['re1.global', Do.RECURSE],
+        ['re1.ignoreCase', Do.RECURSE],
+        ['re1.multiline', Do.RECURSE],
+        ['re1.lastIndex', Do.RECURSE],
+        ['re2^', Do.RECURSE, 're1'],
+        ['re2.source', Do.RECURSE],
+        ['re2.global', Do.RECURSE],
+        ['re2.ignoreCase', Do.RECURSE],
+        ['re2.multiline', Do.RECURSE],
+        ['re2.lastIndex', Do.RECURSE],
+        ['re3^', Do.DONE, 're1'],
+        ['re3.source', Do.RECURSE],
+        ['re3.global', Do.RECURSE],
+        ['re3.ignoreCase', Do.RECURSE],
+        ['re3.multiline', Do.RECURSE],
+        ['re3.lastIndex', Do.RECURSE],
+
+        ['error1.message', Do.RECURSE],
+        ['error2.message', Do.RECURSE],
+
+        ['alice', Do.DONE],
+        ['alice{owner}', Do.DONE, 'CC.root'],
+        ['alice.thing{owner}', Do.DONE, 'alice'],
+        ['bob', Do.RECURSE],
+        ['bob{owner}', Do.RECURSE, 'CC.root'],
+        ['bob.thing{owner}', Do.RECURSE, 'bob'],
+      ],
+    },
   ];
+
   for (const tc of cases) {
-    const s = new Selector(tc[0]);
-    // Dump binding and check output code.
-    const code = dumper.dumpBinding(s, tc[1]);
-    t.expect(util.format('Dumper.p.dumpBinding(<%s>, %o)', s, tc[1]),
-             code, tc[2]);
-    // Check work recorded.
-    const {dumper: d, part} = dumper.getComponentsForSelector(s);
-    t.expect(util.format('Binding status of <%s> (after dump)', s),
-             d.getDone(part), tc[3] || tc[1]);
-  }
+    // Create Interprerter and objects to dump.
+    const intrp = getInterpreter();
+    intrp.createThreadForSrc(tc.src);
+    intrp.run();
 
-  // Check status of (some of the) additional bindings that will be
-  // set implicitly as a side effect of the code generated above, and
-  // that their values have the expected references (where
-  // object-valued and already dumped).
-  //
-  // TODO(cpcallen): The value checks are NOT checking the dumped
-  // value (or even, for .proto, the internal record of the current
-  // value), but instead just the ref of the actual value in the
-  // interpreter being dumped.  That's not really too useful, so maybe
-  // they should be removed.
-  const implicit = [
-    // [ selector, expected done, expected value (as selector) ]
-    ['Object.length', Do.RECURSE],
-    ['Object.name', Do.SET],
+    // Create Dumper with pristine Interpreter instance to compare to.
+    const pristine = new Interpreter();
+    const dumper = new Dumper(intrp, pristine);
 
-    ['CC.root^', Do.RECURSE],
-    ['CC.root{owner}', Do.RECURSE],
+    // Set a few object .done flags in advance, to limit recursive
+    // dumping of builtins in tests.
+    for (const builtin of [intrp.OBJECT, intrp.FUNCTION, intrp.ARRAY,
+                           intrp.REGEXP, intrp.ERROR, intrp.TYPE_ERROR,
+                           intrp.RANGE_ERROR]) {
+      dumper.getObjectDumper(builtin).done = ObjectDumper.Done.DONE_RECURSIVELY;
+    };
+    // Set a few binding .done flags in advance to simulate deferred
+    // dumping.
+    for (const s of tc.skip || []) {
+      dumper.markBinding(new Selector(s), Do.SKIP);
+    }
 
-    ['obj^', Do.RECURSE, 'Object.prototype'],
-    ['obj.b', Do.SKIP],
-    ['obj.c', Do.RECURSE],
-    ['nullProtoObj^', Do.RECURSE],
-    ['nullProtoObj{owner}', Do.DONE],
+    // Check generated output for (and post-dump status of) specific bindings.
+    for (const test of tc.bindingTests || []) {
+      const s = new Selector(test[0]);
+      // Dump binding and check output code.
+      const code = dumper.dumpBinding(s, test[1]);
+      t.expect(util.format('Dumper.p.dumpBinding(<%s>, %o)', s, test[1]),
+               code, test[2]);
+      // Check work recorded.
+      const {dumper: d, part} = dumper.getComponentsForSelector(s);
+      t.expect(util.format('Binding status of <%s> (after dump)', s),
+               d.getDone(part), test[3] || test[1]);
+    }
 
-    ['child1^', Do.DECL],
-    ['child2^', Do.RECURSE, 'parent'],
-    ['child3^', Do.RECURSE, 'parent'],
-
-    ['f1^', Do.DONE],
-    ['f1.length', Do.RECURSE],
-    ['f1.name', Do.RECURSE],
-    ['f1.prototype', Do.SET, 'f1.prototype'],
-    ['f1.prototype.constructor', Do.SET, 'f1'],
-    ['f2^', Do.DECL],
-    ['f2.length', Do.RECURSE],
-    ['f2.name', Do.RECURSE],
-    ['f2.prototype', Do.DECL, 'Object.prototype'],
-    ['f2.f3^', Do.RECURSE],
-    ['f2.f3.length', Do.RECURSE],
-    // TODO(cpcallen): enable this once code is correct.
-    // ['f2.f3.name', Do.UNSTARTED],  // N.B.: not implicitly set.
-    ['f2.f3.prototype', Do.RECURSE, 'parent'],
-
-    ['arr^', Do.RECURSE],
-    ['arr.length', Do.RECURSE],
-    ['sparse^', Do.RECURSE, 'arr'],
-    ['sparse.length', Do.RECURSE],
-
-    ['date1^', Do.DONE],
-    ['date2^', Do.DONE],
-
-    ['re1^', Do.RECURSE],
-    ['re1.source', Do.RECURSE],
-    ['re1.global', Do.RECURSE],
-    ['re1.ignoreCase', Do.RECURSE],
-    ['re1.multiline', Do.RECURSE],
-    ['re1.lastIndex', Do.RECURSE],
-    ['re2^', Do.RECURSE, 're1'],
-    ['re2.source', Do.RECURSE],
-    ['re2.global', Do.RECURSE],
-    ['re2.ignoreCase', Do.RECURSE],
-    ['re2.multiline', Do.RECURSE],
-    ['re2.lastIndex', Do.RECURSE],
-    ['re3^', Do.DONE, 're1'],
-    ['re3.source', Do.RECURSE],
-    ['re3.global', Do.RECURSE],
-    ['re3.ignoreCase', Do.RECURSE],
-    ['re3.multiline', Do.RECURSE],
-    ['re3.lastIndex', Do.RECURSE],
-
-    ['error1.message', Do.RECURSE],
-    ['error2.message', Do.RECURSE],
-
-    ['alice', Do.DONE],
-    ['alice{owner}', Do.DONE, 'CC.root'],
-    ['alice.thing{owner}', Do.DONE, 'alice'],
-    ['bob', Do.RECURSE],
-    ['bob{owner}', Do.RECURSE, 'CC.root'],
-    ['bob.thing{owner}', Do.RECURSE, 'bob'],
-  ];
-  for (const tc of implicit) {
-    const s = new Selector(tc[0]);
-    const {dumper: d, part} = dumper.getComponentsForSelector(s);
-    t.expect(util.format('Binding status of <%s> (implicit)', s),
-             d.getDone(part), tc[1]);
-    if (tc[2]) {
-      const value = dumper.valueForSelector(s);
-      if (typeof value === 'object' && value) { // value instanceof Interpreter.Object) {
-        const objDumper = dumper.getObjectDumper(value);
-        t.expect(util.format('Ref for %s', s), String(objDumper.ref), tc[2]);
-      } else {
-        t.fail(util.format('Ref for %s', s), 'did not evalutate to an object');
+    // Check status of (some of the) additional bindings that will be
+    // set implicitly as a side effect of the code generated above, and
+    // that their values have the expected references (where
+    // object-valued and already dumped).
+    //
+    // TODO(cpcallen): The value checks are NOT checking the dumped
+    // value (or even, for .proto, the internal record of the current
+    // value), but instead just the ref of the actual value in the
+    // interpreter being dumped.  That's not really too useful, so maybe
+    // they should be removed.
+    for (const test of tc.implicitTests || []) {
+      const s = new Selector(test[0]);
+      const {dumper: d, part} = dumper.getComponentsForSelector(s);
+      t.expect(util.format('Binding status of <%s> (implicit)', s),
+               d.getDone(part), test[1]);
+      if (test[2]) {
+        const value = dumper.valueForSelector(s);
+        if (value instanceof intrp.Object) {
+          const objDumper = dumper.getObjectDumper(value);
+          t.expect(util.format('Ref for %s', s),
+                   String(objDumper.ref), test[2]);
+        } else {
+          t.fail(util.format('Ref for %s', s),
+                 'did not evalutate to an object');
+        }
       }
     }
   }
