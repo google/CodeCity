@@ -27,7 +27,7 @@
 
 const {dump, Do} = require('../dump');
 const fs = require('fs');
-const {getInterpreter} = require('./interpreter_common');
+const Interpreter = require('../interpreter');
 const path = require('path');
 const {T} = require('./testing');
 
@@ -36,8 +36,7 @@ const {T} = require('./testing');
  * @param {!T} t The test runner object.
  */
 exports.testDump = function(t) {
-  const intrp = getInterpreter();
-  const pristine = getInterpreter();
+  const intrp = new Interpreter();
 
   // Hack to install stubs for builtins found in codecity.js.
   for (const bi of ['CC.log', 'CC.checkpoint', 'CC.shutdown']) {
@@ -188,5 +187,5 @@ exports.testDump = function(t) {
     },
   ];
 
-  dump(intrp, pristine, spec);
+  dump(intrp, spec);
 };

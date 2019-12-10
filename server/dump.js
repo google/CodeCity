@@ -33,12 +33,10 @@ var {Dumper, Do} = require('./dumper');
 /**
  * Dump an Interpreter using a given dump specification.
  * @param {!Interpreter} intrp The interpreter to dump.
- * @param {!Interpreter} pristine A pristine interpreter, initialised
- *     exactly as the one the ouptut JS will be executed by.
- * @param {!Array<SpecEntry>} spec The dump specificaiton.
+ * @param {!Array<SpecEntry>} spec The dump specification.
  */
-var dump = function(intrp, pristine, spec) {
-  var dumper = new Dumper(intrp, pristine);
+var dump = function(intrp, spec) {
+  var dumper = new Dumper(intrp, new Interpreter());
 };
 
 ///////////////////////////////////////////////////////////////////////////////
