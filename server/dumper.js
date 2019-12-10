@@ -961,7 +961,7 @@ ObjectDumper.prototype.dump = function(dumper, ref) {
     } else  if (bindingDone !== Do.RECURSE) {
       done = /** @type {!ObjectDumper.Done} */(
           Math.min(done, ObjectDumper.Done.DONE));
-    } else if (bindingDone < Do.DONE) {
+    } else if (bindingDone < Do.DONE) {  // BUG(cpcallen): this must be wrong.
       done = /** @type {!ObjectDumper.Done} */(
           Math.min(done, ObjectDumper.Done.NO));
     }
