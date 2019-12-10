@@ -741,7 +741,7 @@ ScopeDumper.prototype.dumpBinding = function(dumper, part, todo, ref) {
       }
       this.setDone(part, done);
     }
-    if (todo >= Do.RECURSE && done < Do.RECURSE && 
+    if (todo >= Do.RECURSE && done < Do.RECURSE &&
         value instanceof dumper.intrp.Object) {
       var objDone = dumper.getObjectDumper(value).dump(dumper, sel);
       if (objDone === ObjectDumper.Done.DONE_RECURSIVELY) {
@@ -958,7 +958,7 @@ ObjectDumper.prototype.dump = function(dumper, ref) {
       } else {
         pending = bindingDone;
       }
-    } else  if (bindingDone !== Do.RECURSE) {
+    } else if (bindingDone !== Do.RECURSE) {
       done = /** @type {!ObjectDumper.Done} */(
           Math.min(done, ObjectDumper.Done.DONE));
     } else if (bindingDone < Do.DONE) {  // BUG(cpcallen): this must be wrong.
@@ -1055,7 +1055,7 @@ ObjectDumper.prototype.dumpBinding = function(
       if (objDone === null) {  // Circular structure detected.
         return new ObjectDumper.Pending(sel, valueDumper);
       } else if (typeof objDone === 'object') {
- 	objDone.add(sel, valueDumper);
+        objDone.add(sel, valueDumper);
         return objDone;
       } else if (objDone === ObjectDumper.Done.DONE_RECURSIVELY) {
         done = Do.RECURSE;
