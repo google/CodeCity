@@ -317,14 +317,6 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         Object.defineProperty(error3, 'message', {writable: false});
         delete error3.stack;
 
-        var alice = {};
-        alice.thing = (function() {setPerms(alice); return {};})();
-        var bob = {};
-        bob.thing = {};
-        Object.setOwnerOf(bob.thing, bob);
-        var unowned = {};
-        Object.setOwnerOf(unowned, null);
-
         Object.defineProperty(Object.prototype, 'bar',
             {writable: false, enumerable: true, configurable: true,
              value: 'bar'});  // Naughty!
@@ -441,19 +433,6 @@ exports.testDumperPrototypeDumpBinding = function(t) {
          Do.RECURSE],
         ['error3', Do.RECURSE, 'delete error3.stack;\n' +
             'Object.setPrototypeOf(error3, error1);\n'],
-
-        ['alice', Do.SET, 'var alice = {};\n', Do.DONE],
-        ['alice.thing', Do.ATTR, 'alice.thing = {};\n'],
-        ['alice.thing{owner}', Do.SET, "(new 'Object.setOwnerOf')" +
-            '(alice.thing, alice);\n', Do.DONE],
-        ['alice.thing', Do.RECURSE, '', Do.DONE],
-        ['Object.setOwnerOf', Do.SET,
-         "Object.setOwnerOf = new 'Object.setOwnerOf';\n"],
-        ['bob', Do.RECURSE, 'var bob = {};\nbob.thing = {};\n' +
-            "Object.setOwnerOf(bob.thing, bob);\n"],
-        ['unowned', Do.SET, 'var unowned = {};\n', Do.DONE],
-        ['unowned{owner}', Do.SET, 'Object.setOwnerOf(unowned, null);\n',
-         Do.RECURSE],
       ],
       implicitTests: [
         // [ selector, expected done, expected value (as selector) ]
@@ -518,6 +497,37 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         ['error1.message', Do.RECURSE],
         ['error2.message', Do.RECURSE],
 
+      ],
+    },
+    { // Test dumping {owner}.
+      src: `
+        var alice = {};
+        alice.thing = (function() {setPerms(alice); return {};})();
+        var bob = {};
+        bob.thing = {};
+        Object.setOwnerOf(bob.thing, bob);
+        var unowned = {};
+        Object.setOwnerOf(unowned, null);
+      `,
+      bindingTests: [
+        ['CC', Do.DONE, 'var CC = {};\n'],
+        ['CC.root', Do.DONE, "CC.root = new 'CC.root';\n"],
+        ['alice', Do.DONE, 'var alice = {};\n'],
+        ['alice.thing', Do.DONE, 'alice.thing = {};\n'],
+        ['alice.thing{owner}', Do.SET, "(new 'Object.setOwnerOf')" +
+            '(alice.thing, alice);\n', Do.DONE],
+        // BUG(cpcallen): why does this not complete to Do.RECURSE?
+        ['alice.thing', Do.RECURSE, '', Do.DONE],
+        ['Object', Do.DONE, "var Object = new 'Object';\n"],
+        ['Object.setOwnerOf', Do.SET,
+         "Object.setOwnerOf = new 'Object.setOwnerOf';\n"],
+        ['bob', Do.RECURSE, 'var bob = {};\nbob.thing = {};\n' +
+            "Object.setOwnerOf(bob.thing, bob);\n"],
+        ['unowned', Do.SET, 'var unowned = {};\n', Do.DONE],
+        ['unowned{owner}', Do.SET, 'Object.setOwnerOf(unowned, null);\n',
+         Do.RECURSE],
+      ],
+      implicitTests: [
         ['alice', Do.DONE],
         ['alice{owner}', Do.DONE, 'CC.root'],
         ['alice.thing{owner}', Do.DONE, 'alice'],
