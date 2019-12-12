@@ -137,7 +137,7 @@ async function runAsyncTest(t, name, src, expected, options) {
   // interpreter.  Awaiting p will block until resolve or reject is
   // called.
   let resolve, reject, result;
-  const p = new Promise(function(res, rej) { resolve = res; reject = rej; });
+  const p = new Promise(function(res, rej) {resolve = res; reject = rej;});
   intrp.global.createMutableBinding(
       'resolve', intrp.createNativeFunction('resolve', resolve, false));
   intrp.global.createMutableBinding(
@@ -243,7 +243,7 @@ exports.testSimple = function(t) {
 exports.testStrictBoxedThis = function(t) {
   let name = 'strictBoxedThis';
   let src = `
-      String.prototype.foo = function() { return typeof this; };
+      String.prototype.foo = function() {return typeof this;};
       'a primitive string'.foo();
   `;
   runTest(t, name, src, 'string');  // Not simple: modifies String.prototype
@@ -669,9 +669,9 @@ exports.testAeca = function(t) {
     ['{}, undefined', false, false],
   ];
   for (const tc of cases) {
-    let src = `(function(a,b){ return a == b })(${tc[0]});`;
+    let src = `(function(a,b) {return a == b})(${tc[0]});`;
     runSimpleTest(t, 'AECA: ' + tc[0], src, tc[1]);
-    src = `(function(a,b){ return a === b })(${tc[0]});`;
+    src = `(function(a,b) {return a === b})(${tc[0]});`;
     runSimpleTest(t, 'ASECA: ' + tc[0], src, tc[2]);
   }
 };
@@ -822,9 +822,9 @@ exports.testThreading = function(t) {
 
   src = `
       var s = '';
-      new Thread(function() { s += this; }, 500, 2);
-      new Thread(function(x) { s += x; }, 1500, undefined, [4]);
-      new Thread(function() { s += '1'; })
+      new Thread(function() {s += this;}, 500, 2);
+      new Thread(function(x) {s += x;}, 1500, undefined, [4]);
+      new Thread(function() {s += '1';})
       suspend(1000);
       s += '3';
       suspend(1000);
@@ -862,8 +862,8 @@ exports.testThreading = function(t) {
 
   src = `
       var s = '';
-      setTimeout(function(x) { s += '2'; }, 500);
-      setTimeout(function(x) { s += '4'; }, 1500);
+      setTimeout(function(x) {s += '2';}, 500);
+      setTimeout(function(x) {s += '4';}, 1500);
       s += '1';
       suspend(1000);
       s += '3';
@@ -977,7 +977,7 @@ exports.testTimeLimit = function(t) {
  */
 exports.testStartStop = async function(t) {
   function snooze(ms) {
-    return new Promise(function(resolve, reject) { setTimeout(resolve, ms); });
+    return new Promise(function(resolve, reject) {setTimeout(resolve, ms);});
   }
   const intrp = getInterpreter();
   let name = 'testStart';
@@ -1224,7 +1224,7 @@ exports.testArrayPrototypeJoinParallelism = function(t) {
       var arr = [1, [2, [3, [4, 5]]]];
       // Set up another Array.prototype.join traversing a subset of
       // the same objects to screw with us.
-      new Thread(function() { arr[1].join(); });
+      new Thread(function() {arr[1].join();});
       // Try to do the join anyway.
       arr.join()
   `;
@@ -1279,7 +1279,7 @@ exports.testNetworking = async function(t) {
     intrp.global.createMutableBinding('send', intrp.createNativeFunction(
         'send', function() {
           // Send some data to server.
-          const client = net.createConnection({ port: 8888 }, function() {
+          const client = net.createConnection({port: 8888}, function() {
             client.write('foo');
             client.write('bar');
             client.end();
@@ -1309,7 +1309,7 @@ exports.testNetworking = async function(t) {
         let reply = '';
         const rr = intrp.getResolveReject(thread, state);
         // Receive some data from the server.
-        const client = net.createConnection({ port: 8888 }, function() {
+        const client = net.createConnection({port: 8888}, function() {
           client.on('data', function(data) {
             reply += data;
           });

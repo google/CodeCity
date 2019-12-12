@@ -1014,7 +1014,7 @@ module.exports = [
     expected: 77.77 },
 
   { name: 'evalIndirectNoSeeEnclosing', src: `
-    (function () {
+    (function() {
       var n = 77.77, gEval = eval;
       try {
         gEval('n');
@@ -1026,7 +1026,7 @@ module.exports = [
     expected: 'ReferenceError' },
 
   { name: 'evalIndirectNoSeeEnclosing2', src: `
-    (function () {
+    (function() {
       var n = 77.77;
       try {
         (function() { return eval; })()('n');
@@ -1069,7 +1069,7 @@ module.exports = [
     var r = '';
     function log(x) {
       r += x;
-      return function () {};
+      return function() {};
     };
     (log('f'))(log('a'), log('b'), log('c'));
     r;
@@ -2308,7 +2308,7 @@ module.exports = [
       [[], 0],
       [[42], 42],
       [[1,2,3], NaN],
-      [function () {}, NaN],
+      [function() {}, NaN],
     ];
     var ok = 0;
     for (var i = 0; i < tests.length; i++) {
@@ -2457,14 +2457,14 @@ module.exports = [
     expected: 'yy' },
 
   { name: 'String.prototype.replace(string, function)', src: `
-    'xxxx'.replace('xx', function () {
+    'xxxx'.replace('xx', function() {
          return '[' + Array.prototype.join.apply(arguments) + ']';
     });
     `,
     expected: '[xx,0,xxxx]xx' },
 
   { name: 'String.prototype.replace(regexp, function)', src: `
-    'xxxx'.replace(/(X)\\1/ig, function () {
+    'xxxx'.replace(/(X)\\1/ig, function() {
          return '[' + Array.prototype.join.apply(arguments) + ']';
     });
     `,
@@ -2559,11 +2559,11 @@ module.exports = [
 
   { name: 'Error .stack correctly reports anonymous function', src: `
     // Use eval to make parsing .stack easier.
-    var e = eval('(function () {return new Error;})()');
+    var e = eval('(function() {return new Error;})()');
     var lines = e.stack.split('\\n');
     lines[0].trim();
     `,
-    expected: 'at anonymous function 1:21' },
+    expected: 'at anonymous function 1:20' },
 
   // Bug #241.
   { name: 'Error .stack correctly blames MemberExpression', src: `
