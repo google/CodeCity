@@ -300,13 +300,6 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         var date1 = new Date('1975-07-27');
         var date2 = new Date('1979-01-04');
 
-        var re1 = /foo/ig;
-        var re2 = /bar/g;
-        Object.setPrototypeOf(re2, re1);
-        re2.lastIndex = 42;
-        var re3 = /baz/m;
-        Object.setPrototypeOf(re3, re1);
-
         Object.defineProperty(Object.prototype, 'bar',
             {writable: false, enumerable: true, configurable: true,
              value: 'bar'});  // Naughty!
@@ -400,13 +393,6 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         ['Date', Do.SET, "var Date = new 'Date';\n", Do.DONE],
         ['date2', Do.SET, "var date2 = new Date('1979-01-04T00:00:00.000Z');\n",
          Do.DONE],
-
-        ['re1', Do.SET, 'var re1 = /foo/gi;\n', Do.DONE],
-        ['re2', Do.RECURSE, 'var re2 = /bar/g;\n' +
-            'Object.setPrototypeOf(re2, re1);\n' +
-            're2.lastIndex = 42;\n'],
-        ['re3', Do.SET, 'var re3 = /baz/m;\n', Do.DONE],
-        ['re3^', Do.SET, 'Object.setPrototypeOf(re3, re1);\n', Do.DONE],
       ],
       implicitTests: [
         // [ selector, expected done, expected value (as selector) ]
@@ -448,7 +434,27 @@ exports.testDumperPrototypeDumpBinding = function(t) {
 
         ['date1^', Do.DONE],
         ['date2^', Do.DONE],
-
+      ],
+    },
+    { // Test dumping RegExp objects.
+      src: `
+        var re1 = /foo/ig;
+        var re2 = /bar/g;
+        Object.setPrototypeOf(re2, re1);
+        re2.lastIndex = 42;
+        var re3 = /baz/m;
+        Object.setPrototypeOf(re3, re1);
+      `,
+      preDone: ['Object.setPrototypeOf'],
+      bindingTests: [
+        ['re1', Do.SET, 'var re1 = /foo/gi;\n', Do.DONE],
+        ['re2', Do.RECURSE, 'var re2 = /bar/g;\n' +
+            'Object.setPrototypeOf(re2, re1);\n' +
+            're2.lastIndex = 42;\n'],
+        ['re3', Do.SET, 'var re3 = /baz/m;\n', Do.DONE],
+        ['re3^', Do.SET, 'Object.setPrototypeOf(re3, re1);\n', Do.DONE],
+      ],
+      implicitTests: [
         ['re1^', Do.RECURSE],
         ['re1.source', Do.RECURSE],
         ['re1.global', Do.RECURSE],
