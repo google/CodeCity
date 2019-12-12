@@ -196,7 +196,7 @@ Serializer.deserialize = function(json, intrp) {
         }
       }
     }
-    if (jsonObj['isExtensible'] === false) { // N.B. normally omitted if true.
+    if (jsonObj['isExtensible'] === false) {  // N.B. normally omitted if true.
       Object.preventExtensions(obj);
     }
   }
@@ -453,13 +453,13 @@ Serializer.objectHunt_ = function(node, seen, excludeTypes, exclude) {
     }
     // Set members.
     if (obj instanceof Set || obj instanceof IterableWeakSet) {
-      obj.forEach(function (value) {
+      obj.forEach(function(value) {
         Serializer.objectHunt_(value, seen, excludeTypes);
       });
     }
     // Map entries.
     if (obj instanceof Map || obj instanceof IterableWeakMap) {
-      obj.forEach(function (value, key) {
+      obj.forEach(function(value, key) {
         Serializer.objectHunt_(key, seen, excludeTypes);
         Serializer.objectHunt_(value, seen, excludeTypes);
       });
@@ -474,7 +474,7 @@ Serializer.objectHunt_ = function(node, seen, excludeTypes, exclude) {
  *     (needed for inner classes).
  * @return {!Object} A key/value map of typesnames to constructors.
  */
-Serializer.getTypesDeserialize_ = function (intrp) {
+Serializer.getTypesDeserialize_ = function(intrp) {
   return {
     'Interpreter': Interpreter,
     'Scope': Interpreter.Scope,
@@ -508,7 +508,7 @@ Serializer.getTypesDeserialize_ = function (intrp) {
  *     deserialized into (needed for inner classes).
  * @return {!Map} A key/value map of protoytype objects to typesnames.
  */
-Serializer.getTypesSerialize_ = function (intrp) {
+Serializer.getTypesSerialize_ = function(intrp) {
   var types = Serializer.getTypesDeserialize_(intrp);
   var map = new Map;
   for (var t in types) {
