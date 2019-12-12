@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # Run unit tests in Node.
 node --harmony-weak-refs --expose-gc tests/run.js
 
