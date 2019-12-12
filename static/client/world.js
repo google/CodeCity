@@ -1413,13 +1413,13 @@ CCC.World.xmlToHtml = function(dom) {
         a.appendChild(document.createTextNode(cmdText));
         return a;
       }
-      if (CCC.World.xmlToHtml.ELEMENT_NAMES.indexOf(dom.tagName) === -1) {
+      if (!CCC.World.xmlToHtml.ELEMENT_NAMES.has(dom.tagName)) {
         console.log('HTML element not in whitelist: <' + dom.tagName + '>');
         return null;
       }
       var element = document.createElement(dom.tagName);
       for (var attr of dom.attributes) {
-        if (CCC.World.xmlToHtml.ATTRIBUTE_NAMES.indexOf(attr.name) === -1) {
+        if (!CCC.World.xmlToHtml.ATTRIBUTE_NAMES.has(attr.name)) {
           console.log('HTML attribute not in whitelist: ' +
               '<' + dom.tagName + ' ' + attr.name + '="' + attr.value + '">');
         } else {
@@ -1430,7 +1430,7 @@ CCC.World.xmlToHtml = function(dom) {
               if (element.style.hasOwnProperty(name) &&
                   isNaN(parseFloat(name)) && // Don't delete indexed props.
                   element.style[name] && element.style[name] !== 'initial' &&
-                  CCC.World.xmlToHtml.STYLE_NAMES.indexOf(name) === -1) {
+                  !CCC.World.xmlToHtml.STYLE_NAMES.has(name)) {
                 console.log('Style attribute not in whitelist: ' +
                     name + ': ' + element.style[name]);
                 element.style[name] = '';
@@ -1459,7 +1459,7 @@ CCC.World.xmlToHtml = function(dom) {
  * Whitelist of all allowed HTML element names.
  * 'svg' element is handled separately.
  */
-CCC.World.xmlToHtml.ELEMENT_NAMES = [
+CCC.World.xmlToHtml.ELEMENT_NAMES = new Set([
   'ABBR',
   'ADDRESS',
   'ARTICLE',
@@ -1527,14 +1527,14 @@ CCC.World.xmlToHtml.ELEMENT_NAMES = [
   'UL',
   'VAR',
   'WBR',
-];
+]);
 
 /**
  * Whitelist of all allowed HTML property names.
  * This architecture assumes that there are no banned properties
  * on one element type which are allowed on another.
  */
-CCC.World.xmlToHtml.ATTRIBUTE_NAMES = [
+CCC.World.xmlToHtml.ATTRIBUTE_NAMES = new Set([
   'cite',
   'colspan',
   'datetime',
@@ -1550,12 +1550,12 @@ CCC.World.xmlToHtml.ATTRIBUTE_NAMES = [
   'title',
   'type',
   'value',
-];
+]);
 
 /**
  * Whitelist of all allowed style property names.
  */
-CCC.World.xmlToHtml.STYLE_NAMES = [
+CCC.World.xmlToHtml.STYLE_NAMES = new Set([
   'border',
   'borderBottom',
   'borderBottomColor',
@@ -1598,7 +1598,7 @@ CCC.World.xmlToHtml.STYLE_NAMES = [
   'textAlign',
   'verticalAlign',
   'width',
-];
+]);
 
 /**
  * Unserialize stringified SVG.  Wrap the SVG elements in an SVG.
@@ -1628,13 +1628,13 @@ CCC.World.xmlToSvg = function(dom) {
   }
   switch (dom.nodeType) {
     case Node.ELEMENT_NODE:
-      if (CCC.World.xmlToSvg.ELEMENT_NAMES.indexOf(dom.tagName) === -1) {
+      if (!CCC.World.xmlToSvg.ELEMENT_NAMES.has(dom.tagName)) {
         console.log('SVG element not in whitelist: <' + dom.tagName + '>');
         return null;
       }
       var svg = document.createElementNS(CCC.Common.NS, dom.tagName);
       for (var attr of dom.attributes) {
-        if (CCC.World.xmlToSvg.ATTRIBUTE_NAMES.indexOf(attr.name) === -1) {
+        if (!CCC.World.xmlToSvg.ATTRIBUTE_NAMES.has(attr.name)) {
           console.log('SVG attribute not in whitelist: ' +
               '<' + dom.tagName + ' ' + attr.name + '="' + attr.value + '">');
         } else {
@@ -1642,7 +1642,7 @@ CCC.World.xmlToSvg = function(dom) {
           if (attr.name === 'class') {
             var classes = attr.value.split(/\s+/g);
             for (var i = classes.length - 1; i >= 0; i--) {
-              if (CCC.World.xmlToSvg.CLASS_NAMES.indexOf(classes[i]) === -1) {
+              if (!CCC.World.xmlToSvg.CLASS_NAMES.has(classes[i])) {
                 console.log('Class name not in whitelist: ' + classes[i]);
                 classes.splice(i, 1);
               }
@@ -1672,7 +1672,7 @@ CCC.World.xmlToSvg = function(dom) {
  * Whitelist of all allowed SVG element names.
  * Try to keep this list in sync with Code.svgEditor.ELEMENT_NAMES.
  */
-CCC.World.xmlToSvg.ELEMENT_NAMES = [
+CCC.World.xmlToSvg.ELEMENT_NAMES = new Set([
   'circle',
   'desc',
   'ellipse',
@@ -1686,14 +1686,14 @@ CCC.World.xmlToSvg.ELEMENT_NAMES = [
   'text',
   'title',
   'tspan',
-];
+]);
 
 /**
  * Whitelist of all allowed SVG property names.
  * This architecture assumes that there are no banned properties
  * on one element type which are allowed on another.
  */
-CCC.World.xmlToSvg.ATTRIBUTE_NAMES = [
+CCC.World.xmlToSvg.ATTRIBUTE_NAMES = new Set([
   'class',
   'cx',
   'cy',
@@ -1717,12 +1717,12 @@ CCC.World.xmlToSvg.ATTRIBUTE_NAMES = [
   'y1',
   'y2',
   'width',
-];
+]);
 
 /**
  * Whitelist of all allowed class names.
  */
-CCC.World.xmlToSvg.CLASS_NAMES = [
+CCC.World.xmlToSvg.CLASS_NAMES = new Set([
   'fillNone',
   'fillWhite',
   'fillBlack',
@@ -1731,7 +1731,7 @@ CCC.World.xmlToSvg.CLASS_NAMES = [
   'strokeWhite',
   'strokeBlack',
   'strokeGrey', 'strokeGray',
-];
+]);
 
 /**
  * Clone a tree of elements, and append it as a new child onto a DOM.

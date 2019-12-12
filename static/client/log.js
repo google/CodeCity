@@ -434,7 +434,7 @@ CCC.Log.renderHtmltext = function(div, node) {
     for (var child of node.childNodes) {
       CCC.Log.renderHtmltext(div, child);
     }
-    if (CCC.Log.renderHtmltext.BLOCK_NAMES.indexOf(node.tagName) !== -1) {
+    if (CCC.Log.renderHtmltext.BLOCK_NAMES.has(node.tagName)) {
       // Add a <br> tag, but not if there's already one.
       var lastTag = div.lastChild;
       while (lastTag && lastTag.nodeType !== Node.ELEMENT_NODE) {
@@ -459,7 +459,7 @@ CCC.Log.renderHtmltext = function(div, node) {
 /**
  * List of elements that are blocks, rather than inline.
  */
-CCC.Log.renderHtmltext.BLOCK_NAMES = [
+CCC.Log.renderHtmltext.BLOCK_NAMES = new Set([
   'ADDRESS',
   'BLOCKQUOTE',
   'BR',
@@ -476,7 +476,7 @@ CCC.Log.renderHtmltext.BLOCK_NAMES = [
   'TABLE',
   'TR',
   'UL',
-];
+]);
 
 /**
  * Gets the message with the given key from the document.
