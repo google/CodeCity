@@ -307,16 +307,6 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         var re3 = /baz/m;
         Object.setPrototypeOf(re3, re1);
 
-        var error1 = new Error('message1');
-        error1.stack = 'stack1';  // Because it's otherwise kind of random.
-        var error2 = new TypeError('message2');
-        error2.stack = 'stack2';
-        var error3 = new RangeError();
-        Object.setPrototypeOf(error3, error1);
-        error3.message = 69;
-        Object.defineProperty(error3, 'message', {writable: false});
-        delete error3.stack;
-
         Object.defineProperty(Object.prototype, 'bar',
             {writable: false, enumerable: true, configurable: true,
              value: 'bar'});  // Naughty!
@@ -417,22 +407,6 @@ exports.testDumperPrototypeDumpBinding = function(t) {
             're2.lastIndex = 42;\n'],
         ['re3', Do.SET, 'var re3 = /baz/m;\n', Do.DONE],
         ['re3^', Do.SET, 'Object.setPrototypeOf(re3, re1);\n', Do.DONE],
-
-        ['error1', Do.SET, "var error1 = new (new 'Error')('message1');\n",
-         Do.DONE],
-        ['error1', Do.RECURSE, "error1.stack = 'stack1';\n"],
-        ['Error', Do.SET, "var Error = new 'Error';\n", Do.DONE],
-        ['TypeError', Do.SET, "var TypeError = new 'TypeError';\n", Do.DONE],
-        ['RangeError', Do.SET, "var RangeError = new 'RangeError';\n", Do.DONE],
-        ['error2', Do.SET, "var error2 = new TypeError('message2');\n",
-         Do.DONE],
-        ['error2', Do.RECURSE, "error2.stack = 'stack2';\n"],
-        ['error3', Do.SET, 'var error3 = new Error();\n', Do.DONE],
-        ['error3.message', Do.ATTR, 'error3.message = 69;\n' +
-            "Object.defineProperty(error3, 'message', {writable: false});\n",
-         Do.RECURSE],
-        ['error3', Do.RECURSE, 'delete error3.stack;\n' +
-            'Object.setPrototypeOf(error3, error1);\n'],
       ],
       implicitTests: [
         // [ selector, expected done, expected value (as selector) ]
@@ -493,13 +467,44 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         ['re3.ignoreCase', Do.RECURSE],
         ['re3.multiline', Do.RECURSE],
         ['re3.lastIndex', Do.RECURSE],
-
-        ['error1.message', Do.RECURSE],
-        ['error2.message', Do.RECURSE],
-
       ],
     },
-    { // Test dumping {owner}.
+    { // Test dumping Error objects.
+      src: `
+        var error1 = new Error('message1');
+        error1.stack = 'stack1';  // Because it's otherwise kind of random.
+        var error2 = new TypeError('message2');
+        error2.stack = 'stack2';
+        var error3 = new RangeError();
+        Object.setPrototypeOf(error3, error1);
+        error3.message = 69;
+        Object.defineProperty(error3, 'message', {writable: false});
+        delete error3.stack;
+      `,
+      preDone: ['Object.defineProperty', 'Object.setPrototypeOf'],
+      bindingTests: [
+        ['error1', Do.SET, "var error1 = new (new 'Error')('message1');\n",
+         Do.DONE],
+        ['error1', Do.RECURSE, "error1.stack = 'stack1';\n"],
+        ['Error', Do.SET, "var Error = new 'Error';\n", Do.DONE],
+        ['TypeError', Do.SET, "var TypeError = new 'TypeError';\n", Do.DONE],
+        ['RangeError', Do.SET, "var RangeError = new 'RangeError';\n", Do.DONE],
+        ['error2', Do.SET, "var error2 = new TypeError('message2');\n",
+         Do.DONE],
+        ['error2', Do.RECURSE, "error2.stack = 'stack2';\n"],
+        ['error3', Do.SET, 'var error3 = new Error();\n', Do.DONE],
+        ['error3.message', Do.ATTR, 'error3.message = 69;\n' +
+            "Object.defineProperty(error3, 'message', {writable: false});\n",
+         Do.RECURSE],
+        ['error3', Do.RECURSE, 'delete error3.stack;\n' +
+            'Object.setPrototypeOf(error3, error1);\n'],
+      ],
+      implicitTests: [
+        ['error1.message', Do.RECURSE],
+        ['error2.message', Do.RECURSE],
+      ],
+    },
+    { // Test dumping {owner} bindings.
       src: `
         var alice = {};
         alice.thing = (function() {setPerms(alice); return {};})();
@@ -555,8 +560,17 @@ exports.testDumperPrototypeDumpBinding = function(t) {
                            intrp.RANGE_ERROR]) {
       dumper.getObjectDumper(builtin).done = ObjectDumper.Done.DONE_RECURSIVELY;
     };
-    // Set a few binding .done flags in advance to simulate deferred
-    // dumping.
+    // Set a few binding .done flags in advance to simulate things
+    // already being dumped or being marked for deferred dumping.
+    for (const d of tc.preDone || []) {
+      const sel = new Selector(d);
+      dumper.markBinding(sel, Do.DONE);
+      // If sel refers to an object, mark it as existing and give it a ref.
+      const v = dumper.valueForSelector(sel);
+      if (v instanceof dumper.intrp.Object) {
+        dumper.getObjectDumper(v).ref = sel;
+      }
+    }
     for (const s of tc.skip || []) {
       dumper.markBinding(new Selector(s), Do.SKIP);
     }
