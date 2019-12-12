@@ -42,7 +42,6 @@ function testGetPrefix() {
   assertEquals('foo', Code.Explorer.getPrefix(['foot', 'fooT']));
 }
 
-
 function testAutocompletePrefix() {
   // No options.
   assertEquals('{"prefix":"foo","terminal":false}', JSON.stringify(Code.Explorer.autocompletePrefix([], 'foo')));

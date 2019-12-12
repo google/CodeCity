@@ -972,7 +972,7 @@ Code.jsspEditor.setSource = function(source) {
     str = '';
     this.confidence = 0;
   } else {
-    if (str.indexOf('<%') !== -1 && str.indexOf('%>') !== -1) {
+    if (str.includes('<%') && str.includes('%>')) {
       this.confidence = 0.95;
     } else {
       this.confidence = 0.8;
@@ -1047,7 +1047,7 @@ Code.svgEditor.setSource = function(source) {
     var nodes = dom.documentElement.querySelectorAll('*');
     var isSvg = nodes.length > 0;
     for (var node of nodes) {
-      if (Code.svgEditor.ELEMENT_NAMES.indexOf(node.tagName) === -1) {
+      if (!Code.svgEditor.ELEMENT_NAMES.has(node.tagName)) {
         isSvg = false;
         break;
       }
@@ -1087,7 +1087,7 @@ Code.svgEditor.focus = function(userAction) {
  * Whitelist of all allowed SVG element names.
  * Try to keep this list in sync with CCC.World.xmlToSvg.ELEMENT_NAMES.
  */
-Code.svgEditor.ELEMENT_NAMES = [
+Code.svgEditor.ELEMENT_NAMES = new Set([
   'circle',
   'desc',
   'ellipse',
@@ -1101,7 +1101,7 @@ Code.svgEditor.ELEMENT_NAMES = [
   'text',
   'title',
   'tspan',
-];
+]);
 
 ////////////////////////////////////////////////////////////////////////////////
 Code.stringEditor = new Code.GenericEditor('String');
