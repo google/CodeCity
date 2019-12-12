@@ -297,9 +297,6 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         Object.setPrototypeOf(sparse, arr);
         sparse.length = 4;
 
-        var date1 = new Date('1975-07-27');
-        var date2 = new Date('1979-01-04');
-
         Object.defineProperty(Object.prototype, 'bar',
             {writable: false, enumerable: true, configurable: true,
              value: 'bar'});  // Naughty!
@@ -387,12 +384,6 @@ exports.testDumperPrototypeDumpBinding = function(t) {
             'Object.setPrototypeOf(sparse, arr);\n' +
             'sparse[0] = 0;\nsparse[2] = 2;\nsparse.length = 4;\n'],
 
-        ['date1', Do.SET,
-         "var date1 = new (new 'Date')('1975-07-27T00:00:00.000Z');\n",
-         Do.DONE],
-        ['Date', Do.SET, "var Date = new 'Date';\n", Do.DONE],
-        ['date2', Do.SET, "var date2 = new Date('1979-01-04T00:00:00.000Z');\n",
-         Do.DONE],
       ],
       implicitTests: [
         // [ selector, expected done, expected value (as selector) ]
@@ -431,7 +422,23 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         ['arr.length', Do.RECURSE],
         ['sparse^', Do.RECURSE, 'arr'],
         ['sparse.length', Do.RECURSE],
-
+      ],
+    },
+    { // Test dumping Date objects.
+      src: `
+        var date1 = new Date('1975-07-27');
+        var date2 = new Date('1979-01-04');
+      `,
+      preDone: ['Object.setPrototypeOf'],
+      bindingTests: [
+        ['date1', Do.SET,
+         "var date1 = new (new 'Date')('1975-07-27T00:00:00.000Z');\n",
+         Do.DONE],
+        ['Date', Do.SET, "var Date = new 'Date';\n", Do.DONE],
+        ['date2', Do.SET, "var date2 = new Date('1979-01-04T00:00:00.000Z');\n",
+         Do.DONE],
+      ],
+      implicitTests: [
         ['date1^', Do.DONE],
         ['date2^', Do.DONE],
       ],
