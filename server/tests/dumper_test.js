@@ -261,6 +261,16 @@ exports.testDumperPrototypeDumpBinding = function(t) {
    *                implicitTests: !Array<(string|number)>}>}
    */
   const cases = [
+    { // Test dumping immutable bindings in the global scope.
+      bindingTests: [
+        // [ selector, todo, expected output, expected done (default: todo) ]
+        // Order matters.
+        ['NaN', Do.RECURSE, ''],
+        ['Infinity', Do.RECURSE, ''],
+        ['undefined', Do.RECURSE, ''],
+        ['eval', Do.RECURSE, ''],
+      ],
+    },
     {
       src: `
         Object.defineProperty(Object, 'name', {writable: true});
@@ -288,13 +298,6 @@ exports.testDumperPrototypeDumpBinding = function(t) {
       `,
       skip: ['skip', 'obj.b'],
       bindingTests: [
-        // [ selector, todo, expected output, expected done (if === todo) ]
-        // Order (somewhat) matters.
-        ['NaN', Do.RECURSE, ''],
-        ['Infinity', Do.RECURSE, ''],
-        ['undefined', Do.RECURSE, ''],
-        ['eval', Do.RECURSE, ''],
-
         ['Object', Do.DECL, 'var Object;\n'],
         ['Object', Do.DECL, ''],
         ['Object', Do.SET, "Object = new 'Object';\n", Do.DONE],
