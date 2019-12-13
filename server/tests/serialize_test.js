@@ -29,6 +29,10 @@ const {getInterpreter} = require('./interpreter_common');
 const Serializer = require('../serialize');
 const {T} = require('./testing');
 
+///////////////////////////////////////////////////////////////////////////////
+// Test helper functions.
+///////////////////////////////////////////////////////////////////////////////
+
 /**
  * Serialize an interpreter to JSON, then create and return a new
  * interpreter by deserializing that JSON.
@@ -38,9 +42,9 @@ const {T} = require('./testing');
  */
 function roundTrip(intrp) {
   intrp.pause();  // Save timer info.
-  var json = JSON.stringify(Serializer.serialize(intrp), null, '  ');
+  const json = JSON.stringify(Serializer.serialize(intrp), null, '  ');
 
-  var intrp2 = new Interpreter;
+  const intrp2 = new Interpreter;
   Serializer.deserialize(JSON.parse(json), intrp2);
   // Deserialized interpreter was stopped, but we want to be able to
   // step/run it, so wake it up to PAUSED.
@@ -64,17 +68,19 @@ function roundTrip(intrp) {
  * @param {string} src3 The code to be evaled after final serialization.
  * @param {number|string|boolean|null|undefined} expected The expected
  *     completion value.
- * @param {number=} steps How many steps to run between serializations
- *     (run src1 to completion if unspecified).
- * @param {boolean=} noBuiltins Skip initialization of global scope
- *     (e.g., evaluation of es5.js, es6.js, es7.js, and cc.js at startup).
- *     Speeds up tests with many roundtrips that do not need builtins.
+ * @param {!TestOptions=} options Custom test options.
  */
-function runTest(t, name, src1, src2, src3, expected, steps, noBuiltins) {
-  var intrp = noBuiltins ? new Interpreter : getInterpreter();
+function runTest(t, name, src1, src2, src3, expected, options) {
+  options = options || {};
+  let intrp = getInterpreter(options.options, options.standardInit);
+  if (options.onCreate) {
+    options.onCreate(intrp);
+  }
+
+  let thread;
   try {
     if (src1) {
-      var thread = intrp.createThreadForSrc(src1).thread;
+      thread = intrp.createThreadForSrc(src1).thread;
       intrp.run();
     }
   } catch (e) {
@@ -86,13 +92,13 @@ function runTest(t, name, src1, src2, src3, expected, steps, noBuiltins) {
     if (src2) {
       thread = intrp.createThreadForSrc(src2).thread;
     }
-    var trips = 0;
-    if (steps === undefined) {
+    let trips = 0;
+    if (options.steps === undefined) {
       intrp.run();
     } else {
-      var s = 0;
+      let s = 0;
       while(intrp.step()) {
-        if ((++s % steps) === 0) {
+        if ((++s % options.steps) === 0) {
           intrp = roundTrip(intrp);
           trips++;
         }
@@ -118,8 +124,8 @@ function runTest(t, name, src1, src2, src3, expected, steps, noBuiltins) {
     return;
   }
 
-  var r = intrp.pseudoToNative(thread.value);
-  var allSrc = util.format(
+  const r = intrp.pseudoToNative(thread.value);
+  const allSrc = util.format(
       '%s\n/* begin roundtrips */\n%s\n/* end roundtrips */\n%s',
       src1, src2, src3);
   t.expect(name, r, expected, allSrc);
@@ -134,14 +140,13 @@ function runTest(t, name, src1, src2, src3, expected, steps, noBuiltins) {
  *
  * Full procedure:
  * - Create and initialize an interpreter instance.
- * - Call initFunc, if supplied, on first interpreter instance.
+ * - Call options.onCreate, if supplied, on first interpreter instance.
  * - Start the interpreter and run src1 (if supplied).
- * - Call and await sideFunc, if supplied.
  * - Await a call to resolve() or reject(); abort the test if the latter occurs.
  * - Stop the interpreter.
  * - Serialize interpreter to JSON.
  * - Create second interpreter instance.  Don't initialize it.
- * - Call initFunc, if supplied, on second interpreter instance.
+ * - Call options.onCreate, if supplied, on second interpreter instance.
  * - Deserialize JSON into second interpreter instance.
  * - Start the second interpreter and allow it to run to completion.
  * - Run src2 (if supplied).
@@ -153,23 +158,21 @@ function runTest(t, name, src1, src2, src3, expected, steps, noBuiltins) {
  * @param {string} src2 The code to be evaled after serialization.
  * @param {number|string|boolean|null|undefined} expected The expected
  *     completion value.
- * @param {function(!Interpreter)=} initFunc Optional function to be
- *     called after creating and initialzing new interpreter but
- *     before running src.  Can be used to insert extra native
- *     functions into the interpreter.  initFunc is called with the
- *     interpreter instance to be configured as its parameter.
+ * @param {!TestOptions=} options Custom test options.
  */
-async function runAsyncTest(t, name, src1, src2, expected, initFunc) {
-  var intrp1 = getInterpreter();
-  if (initFunc) {
-    initFunc(intrp1);
+async function runAsyncTest(t, name, src1, src2, expected, options) {
+  options = options || {};
+  const intrp1 = getInterpreter(options.options, options.standardInit);
+  if (options.onCreate) {
+    options.onCreate(intrp1);
   }
 
+  let thread;
   // Create promise to signal completion of test from within
   // interpreter.  Awaiting p will block until resolve or reject is
   // called.
-  var resolve, reject, result;
-  var p = new Promise(function(res, rej) { resolve = res; reject = rej; });
+  let resolve, reject, result;
+  let p = new Promise(function(res, rej) { resolve = res; reject = rej; });
   intrp1.global.createMutableBinding(
       'resolve', intrp1.createNativeFunction('resolve', resolve, false));
   intrp1.global.createMutableBinding(
@@ -188,8 +191,9 @@ async function runAsyncTest(t, name, src1, src2, expected, initFunc) {
   }
 
   // Serialize.
+  let json;
   try {
-    var json = JSON.stringify(Serializer.serialize(intrp1), null, '  ');
+    json = JSON.stringify(Serializer.serialize(intrp1), null, '  ');
   } catch (e) {
     t.crash(name + 'Serialize', e);
     return;
@@ -198,9 +202,9 @@ async function runAsyncTest(t, name, src1, src2, expected, initFunc) {
   intrp1.stop();
 
   // Restore into new interpreter.
-  var intrp2 = new Interpreter;
-  if (initFunc) {
-    initFunc(intrp2);
+  const intrp2 = getInterpreter(options.options, options.standardInit);
+  if (options.onCreate) {
+    options.onCreate(intrp2);
   }
 
   // New promise.
@@ -222,7 +226,7 @@ async function runAsyncTest(t, name, src1, src2, expected, initFunc) {
     if (src2) {
       intrp2.createThreadForSrc(src2);
     }
-    var r = await p;
+    result = await p;
   } catch (e) {
     t.crash(name + 'Post', e);
     return;
@@ -230,9 +234,54 @@ async function runAsyncTest(t, name, src1, src2, expected, initFunc) {
     intrp2.stop();
   }
 
-  var allSrc = util.format('%s\n/* roundtrip */\n%s', src1, src2);
+  const r = intrp2.pseudoToNative(result);
+  const allSrc = util.format('%s\n/* roundtrip */\n%s', src1, src2);
   t.expect(name, r, expected, allSrc);
 };
+
+/**
+ * Options for runTest and runAsyncTest.
+ * @record
+ */
+const TestOptions = function() {};
+
+/**
+ * Interpreter constructor options.
+ * @type {!Interpreter.Options|undefined}
+ */
+TestOptions.prototype.options;
+
+/**
+ * Load the standard startup files at startup?  (Default: true.)
+ * Setting to false speeds up tests with many roundtrips that do not
+ * need builtins.
+ * @type {boolean|undefined}
+ */
+TestOptions.prototype.standardInit;
+
+/**
+ * Callback to be called after creating new interpreter instance (and
+ * running standard starup files, if not suppressed with standardInit:
+ * false) but before creating a thread for srcN.  Can be used to
+ * insert extra bindings into the global scope (e.g., to create
+ * additional builtins).
+ *
+ * The first argument is the interpreter instance to be configured.
+ *
+ * @type {function(!Interpreter)|undefined}
+ */
+TestOptions.prototype.onCreate;
+
+/**
+ * How many steps to run between serializations (run src1 to
+ * completion if unspecified).
+ * @type {number|undefined}
+ */
+TestOptions.prototype.steps;
+
+///////////////////////////////////////////////////////////////////////////////
+// Tests: serialisation
+///////////////////////////////////////////////////////////////////////////////
 
 /**
  * Run a round trip serialization-deserialization.
@@ -244,12 +293,12 @@ exports.testRoundtripSimple = function(t) {
       for (var i = 0; i < 8; i++) {
         x *= 2;
       }
-  `, 'x;', 256, 100);
+  `, 'x;', 256, {steps: 100});
 };
 
 /**
  * Run a round trip of serializing the Interpreter.SCOPE_REFERENCE
- * sentinel and and an Interpreter.PropertyIterator.
+ * sentinel and an Interpreter.PropertyIterator.
  *
  * BUG(#193): running this test causes *subsequent* benchmarks to run
  *     about 15% slower for no obvious reason.  Investigate.
@@ -262,7 +311,7 @@ exports.testRoundtripScopeRefAndPropIter = function(t) {
       for (var k in o) {
         r += o[k];
       }
-  `, 'r;', 3, 1, true);
+  `, 'r;', 3, {steps: 1, standardInit: false});
 };
 
 /**
@@ -453,7 +502,7 @@ exports.testRoundtripAsync = async function(t) {
   src2 = `
       send();
    `;
-  var initFunc = function(intrp) {
+  const onCreate = function(intrp) {
     intrp.global.createMutableBinding('send', intrp.createNativeFunction(
         'send', function() {
           // Send some data to server.
@@ -464,6 +513,6 @@ exports.testRoundtripAsync = async function(t) {
           });
         }));
   };
-  await runAsyncTest(t, name, src1, src2, 'foobar', initFunc);
+  await runAsyncTest(t, name, src1, src2, 'foobar', {onCreate});
 
 };
