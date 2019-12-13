@@ -282,16 +282,6 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         Object.defineProperty(child2, 'bar', {configurable: false});
         Object.preventExtensions(child2);
 
-        function f1(arg) {}
-        var f2 = function(arg) {};
-        Object.setPrototypeOf(f2, null);
-        f2.prototype = Object.prototype;
-        f2.f3 = function f4(arg) {};
-        f2.undef = undefined;
-        Object.setPrototypeOf(f2.f3, null);
-        f2.f3.prototype = parent;
-        delete f2.f3.name;
-
         Object.defineProperty(Object.prototype, 'bar',
             {writable: false, enumerable: true, configurable: true,
              value: 'bar'});  // Naughty!
@@ -358,17 +348,6 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         ['child3', Do.RECURSE, "var child3 = (new 'Object.create')(parent);\n"],
         ['Object.setPrototypeOf', Do.SET,
          "Object.setPrototypeOf = new 'Object.setPrototypeOf';\n"],
-
-        ['f1', Do.DECL, 'var f1;\n'],
-        // TODO(cpcallen): Really want 'function f1(arg) {};\n'.
-        ['f1', Do.SET, 'f1 = function f1(arg) {};\n', Do.DONE],
-        ['f2', Do.SET, 'var f2 = function(arg) {};\n', Do.DONE],
-        ['f2.f3', Do.DECL, 'f2.f3 = undefined;\n'],
-        ['f2.f3', Do.SET, 'f2.f3 = function f4(arg) {};\n', Do.ATTR],
-        ['f2.undef', Do.DECL, 'f2.undef = undefined;\n', Do.RECURSE],
-        ['f2.f3^', Do.SET, 'Object.setPrototypeOf(f2.f3, null);\n', Do.RECURSE],
-        ['f2.f3', Do.RECURSE,
-         "delete f2.f3.name;\nf2.f3.prototype = parent;\n"],
       ],
       implicitTests: [
         // [ selector, expected done, expected value (as selector) ]
@@ -387,7 +366,35 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         ['child1^', Do.DECL],
         ['child2^', Do.RECURSE, 'parent'],
         ['child3^', Do.RECURSE, 'parent'],
-
+      ],
+    },
+    { // Test dumping Function objects.
+      src: `
+        var obj = {};
+        function f1(arg) {}
+        var f2 = function(arg) {};
+        Object.setPrototypeOf(f2, null);
+        f2.prototype = Object.prototype;
+        f2.f3 = function f4(arg) {};
+        f2.undef = undefined;
+        Object.setPrototypeOf(f2.f3, null);
+        f2.f3.prototype = obj;
+        delete f2.f3.name;
+      `,
+      set: ['Object', 'Object.prototype', 'Object.setPrototypeOf', 'obj'],
+      bindingTests: [
+        ['f1', Do.DECL, 'var f1;\n'],
+        // TODO(cpcallen): Really want 'function f1(arg) {};\n'.
+        ['f1', Do.SET, 'f1 = function f1(arg) {};\n', Do.DONE],
+        ['f2', Do.SET, 'var f2 = function(arg) {};\n', Do.DONE],
+        ['f2.f3', Do.DECL, 'f2.f3 = undefined;\n'],
+        ['f2.f3', Do.SET, 'f2.f3 = function f4(arg) {};\n', Do.ATTR],
+        ['f2.undef', Do.DECL, 'f2.undef = undefined;\n', Do.RECURSE],
+        ['f2.f3^', Do.SET, 'Object.setPrototypeOf(f2.f3, null);\n', Do.RECURSE],
+        ['f2.f3', Do.RECURSE,
+         "delete f2.f3.name;\nf2.f3.prototype = obj;\n"],
+      ],
+      implicitTests: [
         ['f1^', Do.DONE],
         ['f1.length', Do.RECURSE],
         ['f1.name', Do.RECURSE],
@@ -399,9 +406,8 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         ['f2.prototype', Do.DECL, 'Object.prototype'],
         ['f2.f3^', Do.RECURSE],
         ['f2.f3.length', Do.RECURSE],
-        // TODO(cpcallen): enable this once code is correct.
-        // ['f2.f3.name', Do.UNSTARTED],  // N.B.: not implicitly set.
-        ['f2.f3.prototype', Do.RECURSE, 'parent'],
+        ['f2.f3.name', Do.UNSTARTED],  // N.B.: not implicitly set.
+        ['f2.f3.prototype', Do.RECURSE, 'obj'],
       ],
     },
     { // Test dumping Array objects.
