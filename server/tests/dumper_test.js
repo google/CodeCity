@@ -292,11 +292,6 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         f2.f3.prototype = parent;
         delete f2.f3.name;
 
-        var arr = [42, 69, 105, child2];
-        var sparse = [0, , 2];
-        Object.setPrototypeOf(sparse, arr);
-        sparse.length = 4;
-
         Object.defineProperty(Object.prototype, 'bar',
             {writable: false, enumerable: true, configurable: true,
              value: 'bar'});  // Naughty!
@@ -374,16 +369,6 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         ['f2.f3^', Do.SET, 'Object.setPrototypeOf(f2.f3, null);\n', Do.RECURSE],
         ['f2.f3', Do.RECURSE,
          "delete f2.f3.name;\nf2.f3.prototype = parent;\n"],
-
-        // TODO(cpcallen): Realy want 'var arr = [42, 69, 105, obj];\n'.
-        ['arr', Do.RECURSE, 'var arr = [];\narr[0] = 42;\narr[1] = 69;\n' +
-            'arr[2] = 105;\narr[3] = child2;\n'],
-        // TODO(cpcallen): really want output like
-        //     'var sparse = [0, , 2];\nsparse.length = 4;'.
-        ['sparse', Do.RECURSE, 'var sparse = [];\n' +
-            'Object.setPrototypeOf(sparse, arr);\n' +
-            'sparse[0] = 0;\nsparse[2] = 2;\nsparse.length = 4;\n'],
-
       ],
       implicitTests: [
         // [ selector, expected done, expected value (as selector) ]
@@ -417,7 +402,28 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         // TODO(cpcallen): enable this once code is correct.
         // ['f2.f3.name', Do.UNSTARTED],  // N.B.: not implicitly set.
         ['f2.f3.prototype', Do.RECURSE, 'parent'],
-
+      ],
+    },
+    { // Test dumping Array objects.
+      src: `
+        var obj = {};
+        var arr = [42, 69, 105, obj, {}];
+        var sparse = [0, , 2];
+        Object.setPrototypeOf(sparse, arr);
+        sparse.length = 4;
+      `,
+      set: ['Object', 'Object.setPrototypeOf', 'obj'],
+      bindingTests: [
+        // TODO(cpcallen): Realy want 'var arr = [42, 69, 105, obj, {}];\n'.
+        ['arr', Do.RECURSE, 'var arr = [];\narr[0] = 42;\narr[1] = 69;\n' +
+            'arr[2] = 105;\narr[3] = obj;\narr[4] = {};\n'],
+        // TODO(cpcallen): really want output like
+        //     'var sparse = [0, , 2];\nsparse.length = 4;'.
+        ['sparse', Do.RECURSE, 'var sparse = [];\n' +
+            'Object.setPrototypeOf(sparse, arr);\n' +
+            'sparse[0] = 0;\nsparse[2] = 2;\nsparse.length = 4;\n'],
+      ],
+      implicitTests: [
         ['arr^', Do.RECURSE],
         ['arr.length', Do.RECURSE],
         ['sparse^', Do.RECURSE, 'arr'],
