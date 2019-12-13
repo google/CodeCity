@@ -39,7 +39,7 @@ function B() {
  * @param {string} name Name of test.
  * @param {string=} message Additional information to lot about result.
  */
-B.prototype.result = function (status, name, message) {
+B.prototype.result = function(status, name, message) {
   console.log('%s\t%s', status, name);
   if (message) {
     console.log(message);
@@ -52,7 +52,7 @@ B.prototype.result = function (status, name, message) {
  * @param {string} name Name of test.  (Not used.)
  * @param {number} run Which run is this?  (Run 0 is warm-up run.)
  */
-B.prototype.start = function (name, run) {
+B.prototype.start = function(name, run) {
   const r = (run === 0) ? 'WARMUP' : ('RUN ' + run);
   this.startTime = Date.now();
 };
@@ -62,7 +62,7 @@ B.prototype.start = function (name, run) {
  * @param {string} name Name of test.
  * @param {number} run Which run is this?  (Run 0 is warm-up run.)
  */
-B.prototype.end = function (name, run) {
+B.prototype.end = function(name, run) {
   const endTime = Date.now();
   const r = (run === 0) ? 'WARMUP' : ('RUN ' + run);
   console.log('%s\t%s: %d ms', r, name, endTime - this.startTime);
@@ -121,7 +121,7 @@ T.prototype.constructor = T;
  * @param {string} name Name of test.
  * @param {string=} message Additional info to log.
  */
-T.prototype.result = function (status, name, message) {
+T.prototype.result = function(status, name, message) {
   status === 'OK' || console.log('%s:\t%s', status, name);
   if (message) {
     console.log(message);

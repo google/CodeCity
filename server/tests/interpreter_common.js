@@ -41,12 +41,6 @@ exports.startupFiles = {
  * @return {!Interpreter}
  */
 exports.getInterpreter = function(options, init) {
-  options = options || {
-    noLog: ['net', 'unhandled'],
-    trimEval: true,
-    trimProgram: true,
-    stackLimit: 1000,  // Fairly small to speed stack-overflow tests.
-  };
   var intrp = new Interpreter(options);
   if (init || init === undefined) {
     for (const file of Object.values(exports.startupFiles)) {
