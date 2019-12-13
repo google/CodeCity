@@ -224,7 +224,10 @@ TestOptions.prototype.onBlocked;
 exports.testSimple = function(t) {
   for (const tc of testcases) {
     if ('expected' in tc) {
+      const oldOptions = interpreter.options;
+      if (tc.options) interpreter.options = tc.options;
       runSimpleTest(t, tc.name, tc.src, tc.expected);
+      if (tc.options) interpreter.options = oldOptions;
     } else {
       t.skip(tc.name);
     }

@@ -226,11 +226,13 @@ module.exports = [
   { name: 'throwUnhandledError', src: `
     throw new Error('not caught');
     `,
+    options: {noLog: ['unhandled']},
     expected: undefined },
 
   { name: 'throwUnhandledException', src: `
     throw 'not caught';
     `,
+    options: {noLog: ['unhandled']},
     expected: undefined },
 
   { name: 'throwUnhandledErrorWithFinally', src: `
@@ -239,6 +241,7 @@ module.exports = [
     } finally {
     }
     `,
+    options: {noLog: ['unhandled']},
     expected: undefined },
 
   { name: 'throwUnhandledExceptionWithFinally', src: `
@@ -247,6 +250,7 @@ module.exports = [
     } finally {
     }
     `,
+    options: {noLog: ['unhandled']},
     expected: undefined },
 
   { name: 'seqExpr', src: `
@@ -2851,7 +2855,8 @@ module.exports = [
     }
     (ok === tests.length) ? 'pass' : 'fail';
     `,
-    expected: 'pass' },
+    expected: 'pass'
+  },
 
   { name: 'Stack overflow errors', src: `
     try {
@@ -2860,6 +2865,7 @@ module.exports = [
       e.name;
     }
     `,
+    options: {stackLimit: 100},
     expected: 'RangeError'
   },
 
@@ -2874,6 +2880,7 @@ module.exports = [
     var limit = f();
     limit > 100 ? 'OK' : limit;
     `,
+    options: {stackLimit: 1000},
     expected: 'OK'
   },
 ];
