@@ -513,6 +513,9 @@ exports.testRoundtripAsync = async function(t) {
           });
         }));
   };
-  await runAsyncTest(t, name, src1, src2, 'foobar', {onCreate});
+  await runAsyncTest(t, name, src1, src2, 'foobar', {
+    options: {noLog: ['net']},
+    onCreate: onCreate,
+  });
 
 };

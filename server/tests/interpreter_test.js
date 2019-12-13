@@ -755,7 +755,7 @@ exports.testAsync = function(t) {
   // A test of unwind_, to make sure it unwinds and kills the correct
   // thread when an async function throws.
   name = 'testAsyncRejectUnwind';
-  const intrp = getInterpreter();
+  const intrp = getInterpreter({noLog: ['unhandled']});
   createAsync(intrp);  // Install async function.
   // Create cannon-fodder thread that will usually be ready to run.
   const bgThread = intrp.createThreadForSrc(`
@@ -1286,7 +1286,10 @@ exports.testNetworking = async function(t) {
           });
         }));
   };
-  await runAsyncTest(t, name, src, 'foobar', {onCreate: createSend});
+  await runAsyncTest(t, name, src, 'foobar', {
+    options: {noLog: ['net']},
+    onCreate: createSend
+  });
 
   // Run a test of the connectionListen(), connectionUnlisten(),
   // connectionWrite() and connectionClose functions.
@@ -1324,7 +1327,10 @@ exports.testNetworking = async function(t) {
       }
     }));
   };
-  await runAsyncTest(t, name, src, 'foobar', {onCreate: createReceive});
+  await runAsyncTest(t, name, src, 'foobar', {
+    options: {noLog: ['net']},
+    onCreate: createReceive,
+  });
 
   // Check to make sure that connectionListen() throws if attempting
   // to bind to an invalid port or rebind a port already in use.
@@ -1352,7 +1358,7 @@ exports.testNetworking = async function(t) {
       }
       resolve('OK');
    `;
-  await runAsyncTest(t, name, src, 'OK');
+  await runAsyncTest(t, name, src, 'OK', {options: {noLog: ['net']}});
 
   // Check to make sure that connectionUnlisten() throws if attempting
   // to unbind an invalid or not / no longer bound port.
@@ -1373,8 +1379,7 @@ exports.testNetworking = async function(t) {
       }
       resolve('OK');
    `;
-  await runAsyncTest(t, name, src, 'OK');
-
+  await runAsyncTest(t, name, src, 'OK', {options: {noLog: ['net']}});
   // Run test of the xhr() function using HTTP.
   name = 'testXhrHttp';
   const httpTestServer = http.createServer(function (req, res) {
@@ -1388,7 +1393,8 @@ exports.testNetworking = async function(t) {
         reject(e);
       }
   `;
-  await runAsyncTest(t, name, src, 'OK HTTP: /foo');
+  await runAsyncTest(t, name, src, 'OK HTTP: /foo',
+                     {options: {noLog: ['net']}});
   httpTestServer.close();
 
   // Run test of the xhr() function using HTTPS.
@@ -1402,5 +1408,5 @@ exports.testNetworking = async function(t) {
         reject(e);
       }
   `;
-  await runAsyncTest(t, name, src, 'It worked!\n');
+  await runAsyncTest(t, name, src, 'It worked!\n', {options: {noLog: ['net']}});
 };
