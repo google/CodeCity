@@ -6058,10 +6058,6 @@ stepFuncs_['CallExpression'] = function(thread, stack, state, node) {
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['Call'] = function(thread, stack, state, node) {
-  // Terminate call if out of time.  (And if so, remove Call state
-  // from stack as the first item in the stack trace should be the
-  // position of the call, not "in <function not actually called>".
-  this.checkTimeLimit_(state.scope.perms, stack);
   /* NOTE: Beware that, because
    *
    *  - an async function might not *actually* be async, and thus
@@ -6080,6 +6076,10 @@ stepFuncs_['Call'] = function(thread, stack, state, node) {
    */
   if (state.step_ === 0) {  // Done evaluating arguments; do function call.
     state.step_ = 1;
+    // Terminate call if out of time.  (And if so, remove Call state
+    // from stack as the first item in the stack trace should be the
+    // position of the call, not "in <function not actually called>".
+    this.checkTimeLimit_(state.scope.perms, stack);
     if (this.options.stackLimit && stack.length > this.options.stackLimit) {
       throw new this.Error(state.scope.perms, this.RANGE_ERROR,
           'Maximum call stack size exceeded');
