@@ -429,7 +429,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         var date1 = new Date('1975-07-27');
         var date2 = new Date('1979-01-04');
       `,
-      preDone: ['Object.setPrototypeOf'],
+      set: ['Object', 'Object.setPrototypeOf'],
       bindingTests: [
         ['date1', Do.SET,
          "var date1 = new (new 'Date')('1975-07-27T00:00:00.000Z');\n",
@@ -452,7 +452,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         var re3 = /baz/m;
         Object.setPrototypeOf(re3, re1);
       `,
-      preDone: ['Object.setPrototypeOf'],
+      set: ['Object', 'Object.setPrototypeOf'],
       bindingTests: [
         ['re1', Do.SET, 'var re1 = /foo/gi;\n', Do.DONE],
         ['re2', Do.RECURSE, 'var re2 = /bar/g;\n' +
@@ -494,7 +494,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         Object.defineProperty(error3, 'message', {writable: false});
         delete error3.stack;
       `,
-      preDone: ['Object.defineProperty', 'Object.setPrototypeOf'],
+      set: ['Object', 'Object.defineProperty', 'Object.setPrototypeOf'],
       bindingTests: [
         ['error1', Do.SET, "var error1 = new (new 'Error')('message1');\n",
          Do.DONE],
@@ -575,14 +575,8 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     };
     // Set a few binding .done flags in advance to simulate things
     // already being dumped or being marked for deferred dumping.
-    for (const d of tc.preDone || []) {
-      const sel = new Selector(d);
-      dumper.markBinding(sel, Do.DONE);
-      // If sel refers to an object, mark it as existing and give it a ref.
-      const v = dumper.valueForSelector(sel);
-      if (v instanceof dumper.intrp.Object) {
-        dumper.getObjectDumper(v).ref = sel;
-      }
+    for (const s of tc.set || []) {
+      dumper.dumpBinding(new Selector(s), Do.SET);
     }
     for (const s of tc.skip || []) {
       dumper.markBinding(new Selector(s), Do.SKIP);
