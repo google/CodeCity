@@ -616,9 +616,12 @@ Dumper.prototype.exprForSelector = function(selector) {
  */
 Dumper.prototype.valueForSelector = function(selector, scope) {
   if (!scope) scope = this.scope;
-  if (selector.length < 1) throw RangeError('Zero-length selector??');
+  if (selector.length < 1) throw new RangeError('Zero-length selector??');
   var varname = selector[0];
-  if (typeof varname !== 'string') throw TypeError('Invalid first part??');
+  if (typeof varname !== 'string') throw new TypeError('Invalid first part??');
+  if (!scope.hasBinding(varname)) {
+    throw new ReferenceError(varname + ' is not defined');
+  }
   var /** Interpreter.Value */ v = scope.get(varname);
   for (var i = 1; i < selector.length; i++) {
     if (!(v instanceof this.intrp.Object)) {
@@ -720,6 +723,8 @@ ScopeDumper.prototype.dumpBinding = function(dumper, part, todo, ref) {
     throw new Error("Can't create binding other than in current scope");
   } else if (typeof part !== 'string') {
     throw new TypeError('Invalid part (not a variable name)');
+  } else if (!this.scope.hasBinding(part)) {
+    throw new ReferenceError("Can't dump non-existent variable " + part);
   }
   var sel = new Selector([part]);
   var done = this.getDone(part);
@@ -1027,7 +1032,7 @@ ObjectDumper.prototype.dumpBinding = function(
     }
     if (!ref) ref = this.ref;
     if (!ref) {
-      throw new Error("Can't dump an unreferencable object");
+      throw new Error("Can't dump part of an unreferencable object");
     }
     if (dumper.visiting.has(this)) return null;
     dumper.visiting.add(this);
