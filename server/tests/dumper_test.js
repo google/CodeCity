@@ -261,10 +261,39 @@ exports.testDumperPrototypeDumpBinding = function(t) {
    *                implicitTests: !Array<(string|number)>}>}
    */
   const cases = [
-    { // Test dumping immutable bindings in the global scope.
+    { // Test basics: DECL/SET/ATTR/DONE/RECURSE for variables and properties.
+      src: `
+        var skip = 'not dumped';
+        var obj = {a: {x: 1}, b: 2, c: 3, skip: 'not dumped'};
+        Object.defineProperty(obj, 'a', {enumerable: false});
+      `,
+      set: ['Object', 'Object.setPrototypeOf', 'Object.defineProperty'],
+      skip: ['skip', 'obj.skip'],
       bindingTests: [
         // [ selector, todo, expected output, expected done (default: todo) ]
         // Order matters.
+        ['skip', Do.RECURSE, '', Do.SKIP],
+        ['obj', Do.DECL, 'var obj;\n'],
+        ['obj', Do.SET, 'obj = {};\n', Do.DONE],
+
+        ['obj.a', Do.DECL, 'obj.a = undefined;\n'],
+        ['obj.a', Do.SET, 'obj.a = {};\n'],
+        ['obj.a', Do.ATTR,
+         "Object.defineProperty(obj, 'a', {enumerable: false});\n"],
+        ['obj.a', Do.RECURSE, 'obj.a.x = 1;\n'],
+        ['obj.b', Do.SET, 'obj.b = 2;\n', Do.RECURSE],
+
+        ['obj', Do.RECURSE,  'obj.c = 3;\n', Do.DONE],
+      ],
+      implicitTests: [
+        // [ selector, expected done ]
+        ['obj^', Do.RECURSE],
+        ['obj.c', Do.RECURSE],
+        ['obj.skip', Do.SKIP],
+      ],
+    },
+    { // Test (not) dumping immutable bindings in the global scope.
+      bindingTests: [
         ['NaN', Do.RECURSE, ''],
         ['Infinity', Do.RECURSE, ''],
         ['undefined', Do.RECURSE, ''],
@@ -275,8 +304,6 @@ exports.testDumperPrototypeDumpBinding = function(t) {
       src: `
         Object.defineProperty(Object, 'name', {writable: true});
 
-        var skip = 'not dumped';
-        var obj = {a: 1, b: 2, c:3};
         var nullProtoObj = Object.create(null);
 
         var parent = {foo: 'foo'};
@@ -296,7 +323,6 @@ exports.testDumperPrototypeDumpBinding = function(t) {
             {writable: false, enumerable: true, configurable: true,
              value: 'bar'});  // Naughty!
       `,
-      skip: ['skip', 'obj.b'],
       bindingTests: [
         ['Object', Do.DECL, 'var Object;\n'],
         ['Object', Do.DECL, ''],
@@ -317,10 +343,6 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         ['CC.root', Do.SET, "CC.root = new 'CC.root';\n", Do.DONE],
         // ['CC.root', Do.RECURSE, "CC.root = new 'CC.root';\n"],
 
-        ['skip', Do.RECURSE, '', Do.SKIP],
-        ['obj', Do.SET, 'var obj = {};\n', Do.DONE],
-        ['obj.a', Do.SET, 'obj.a = 1;\n', Do.RECURSE],
-        ['obj', Do.RECURSE, 'obj.c = 3;\n', Do.DONE],
         ['nullProtoObj', Do.SET,
          "var nullProtoObj = (new 'Object.create')(null);\n", Do.DONE],
 
@@ -353,16 +375,12 @@ exports.testDumperPrototypeDumpBinding = function(t) {
          "Object.setPrototypeOf = new 'Object.setPrototypeOf';\n"],
       ],
       implicitTests: [
-        // [ selector, expected done, expected value (as selector) ]
         ['Object.length', Do.RECURSE],
         ['Object.name', Do.SET],
 
         ['CC.root^', Do.RECURSE],
         ['CC.root{owner}', Do.RECURSE],
 
-        ['obj^', Do.RECURSE, 'Object.prototype'],
-        ['obj.b', Do.SKIP],
-        ['obj.c', Do.RECURSE],
         ['nullProtoObj^', Do.RECURSE],
         ['nullProtoObj{owner}', Do.DONE],
 
