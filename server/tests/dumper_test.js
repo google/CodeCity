@@ -283,7 +283,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         ['obj.a', Do.RECURSE, 'obj.a.x = 1;\n'],
         ['obj.b', Do.SET, 'obj.b = 2;\n', Do.RECURSE],
 
-        ['obj', Do.RECURSE,  'obj.c = 3;\n', Do.DONE],
+        ['obj', Do.RECURSE, 'obj.c = 3;\n', Do.DONE],
       ],
       implicitTests: [
         // [ selector, expected done ]
@@ -292,6 +292,40 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         ['obj.skip', Do.SKIP],
       ],
     },
+    { // Test recursion in face of incomplet(able) properties.
+      src: `
+        var obj = {a: {id: 'a'}, b: {id: 'b'}, c: {id: 'c'}};
+        obj.a.self = obj.a;
+        obj.b.self = obj.b;
+        obj.c.parent = obj;
+      `,
+      // Mark obj.b.id as SKIP.  Attempting to dump obj recursively
+      // should be leave obj.a as RECUSE, obj.b and obj.c as
+      // DONE, and obj.a.id still SKIP.  obj.c left at DONE.
+      skip: ['obj.b.id'],
+      bindingTests: [
+        ['obj', Do.RECURSE,
+         // TODO(cpcallen): really want "var obj = {a: {id: 'a'}, ...".
+         'var obj = {};\n' + 
+             "obj.a = {};\nobj.a.id = 'a';\nobj.a.self = obj.a;\n" +
+             'obj.b = {};\nobj.b.self = obj.b;\n' +
+             "obj.c = {};\nobj.c.id = 'c';\nobj.c.parent = obj;\n", Do.DONE],
+      ],
+      implicitTests: [
+        ['obj.a', Do.RECURSE],
+        ['obj.a.self', Do.RECURSE],
+        ['obj.a.id', Do.RECURSE],
+        ['obj.b', Do.DONE],
+        ['obj.b.self', Do.DONE],
+        ['obj.b.id', Do.SKIP],
+        ['obj.c', Do.DONE],
+        ['obj.c.id', Do.RECURSE],
+        ['obj.c.parent', Do.DONE],
+      ],
+    },
+
+
+
     { // Test (not) dumping immutable bindings in the global scope.
       bindingTests: [
         ['NaN', Do.RECURSE, ''],
@@ -346,9 +380,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         ['nullProtoObj', Do.SET,
          "var nullProtoObj = (new 'Object.create')(null);\n", Do.DONE],
 
-        // TODO(cpcallen): Really want "var child1 = {foo: 'foo'};\n".
         ['child1', Do.SET, 'var child1 = {};\n', Do.DONE],
-        // TODO(cpcallen): Really want "var child2 = {foo: 'foo'};\n".
         ['child2', Do.SET, 'var child2 = {};\n', Do.DONE],
         ['parent', Do.RECURSE, "var parent = {};\nparent.foo = 'foo';\n" +
             "Object.defineProperty(parent, 'foo', {writable: false});\n"],

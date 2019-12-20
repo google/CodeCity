@@ -963,10 +963,10 @@ ObjectDumper.prototype.dump = function(dumper, ref) {
       } else {
         pending = bindingDone;
       }
-    } else if (bindingDone !== Do.RECURSE) {
+    } else if (bindingDone === Do.DONE) {
       done = /** @type {!ObjectDumper.Done} */(
           Math.min(done, ObjectDumper.Done.DONE));
-    } else if (bindingDone < Do.DONE) {  // BUG(cpcallen): this must be wrong.
+    } else if (bindingDone < Do.DONE) {
       done = /** @type {!ObjectDumper.Done} */(
           Math.min(done, ObjectDumper.Done.NO));
     }
