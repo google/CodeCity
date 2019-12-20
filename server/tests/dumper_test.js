@@ -262,6 +262,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
    */
   const cases = [
     { // Test basics: DECL/SET/ATTR/DONE/RECURSE for variables and properties.
+      title: 'basics',
       src: `
         var skip = 'not dumped';
         var obj = {a: {x: 1}, b: 2, c: 3, skip: 'not dumped'};
@@ -293,6 +294,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
       ],
     },
     { // Test recursion in face of incomplet(able) properties.
+      title: 'recursion 1',
       src: `
         var obj = {a: {id: 'a'}, b: {id: 'b'}, c: {id: 'c'}};
         obj.a.self = obj.a;
@@ -327,6 +329,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
 
 
     { // Test (not) dumping immutable bindings in the global scope.
+      title: 'immutables',
       bindingTests: [
         ['NaN', Do.RECURSE, ''],
         ['Infinity', Do.RECURSE, ''],
@@ -335,6 +338,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
       ],
     },
     {
+      title: 'legacy',
       src: `
         Object.defineProperty(Object, 'name', {writable: true});
 
@@ -422,6 +426,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
       ],
     },
     { // Test dumping Function objects.
+      title: 'Function',
       src: `
         var obj = {};
         function f1(arg) {}
@@ -464,6 +469,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
       ],
     },
     { // Test dumping Array objects.
+      title: 'Array',
       src: `
         var obj = {};
         var arr = [42, 69, 105, obj, {}];
@@ -490,6 +496,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
       ],
     },
     { // Test dumping Date objects.
+      title: 'Date',
       src: `
         var date1 = new Date('1975-07-27');
         var date2 = new Date('1979-01-04');
@@ -509,6 +516,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
       ],
     },
     { // Test dumping RegExp objects.
+      title: 'RegExp',
       src: `
         var re1 = /foo/ig;
         var re2 = /bar/g;
@@ -548,6 +556,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
       ],
     },
     { // Test dumping Error objects.
+      title: 'Error',
       src: `
         var error1 = new Error('message1');
         error1.stack = 'stack1';  // Because it's otherwise kind of random.
@@ -583,6 +592,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
       ],
     },
     { // Test dumping {owner} bindings.
+      title: '{owner}',
       src: `
         var alice = {};
         alice.thing = (function() {setPerms(alice); return {};})();
@@ -622,6 +632,8 @@ exports.testDumperPrototypeDumpBinding = function(t) {
   ];
 
   for (const tc of cases) {
+    const prefix = 'dumpBinding: ' + tc.title + ': ';
+
     // Create Interprerter and objects to dump.
     const intrp = getInterpreter();
     intrp.createThreadForSrc(tc.src);
@@ -652,11 +664,11 @@ exports.testDumperPrototypeDumpBinding = function(t) {
       const s = new Selector(test[0]);
       // Dump binding and check output code.
       const code = dumper.dumpBinding(s, test[1]);
-      t.expect(util.format('Dumper.p.dumpBinding(<%s>, %o)', s, test[1]),
-               code, test[2]);
+      t.expect(util.format('%sDumper.p.dumpBinding(<%s>, %o)', prefix,
+                           s, test[1]), code, test[2]);
       // Check work recorded.
       const {dumper: d, part} = dumper.getComponentsForSelector(s);
-      t.expect(util.format('Binding status of <%s> (after dump)', s),
+      t.expect(util.format('%sBinding status of <%s> (after dump)', prefix, s),
                d.getDone(part), test[3] || test[1]);
     }
 
@@ -673,17 +685,16 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     for (const test of tc.implicitTests || []) {
       const s = new Selector(test[0]);
       const {dumper: d, part} = dumper.getComponentsForSelector(s);
-      t.expect(util.format('Binding status of <%s> (implicit)', s),
+      t.expect(util.format('%sbinding status of <%s> (implicit)', prefix, s),
                d.getDone(part), test[1]);
       if (test[2]) {
         const value = dumper.valueForSelector(s);
         if (value instanceof intrp.Object) {
           const objDumper = dumper.getObjectDumper(value);
-          t.expect(util.format('Ref for %s', s),
+          t.expect(util.format('%sref for %s', prefix, s),
                    String(objDumper.ref), test[2]);
         } else {
-          t.fail(util.format('Ref for %s', s),
-                 'did not evalutate to an object');
+          t.fail(util.format('%s%s did not evaluate to an object', prefix, s));
         }
       }
     }
