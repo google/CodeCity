@@ -219,6 +219,8 @@ exports.testDumperPrototypeExprFor = function(t) {
     [new intrp.Error(intrp.ROOT, intrp.TYPE_ERROR), "new TypeError()"],
     [new intrp.Error(intrp.ROOT, intrp.URI_ERROR), "new URIError()"],
     [new intrp.Error(intrp.ROOT, intrp.PERM_ERROR), "new PermissionError()"],
+    [new intrp.Error(intrp.ROOT, intrp.OBJECT), "new Error()"],
+    [new intrp.Error(intrp.ROOT, null), "new Error()"],
   ];
   for (let i = 0; i < cases.length; i++) {
     const tc = cases[i];
