@@ -952,7 +952,7 @@ ObjectDumper.prototype.dump = function(dumper, ref) {
   var parts = [Selector.PROTOTYPE, Selector.OWNER].concat(keys);
   for (i = 0; i < parts.length; i++) {
     var part = parts[i];
-    var bindingDone = this.dumpBinding(dumper, part, Do.RECURSE, ref, true);
+    var bindingDone = this.dumpBinding(dumper, part, Do.RECURSE, ref);
     if (bindingDone === null) {
       throw new Error('.dumpBinding returned null to .dump');
     } else if (bindingDone instanceof ObjectDumper.Pending) {
@@ -1016,24 +1016,19 @@ ObjectDumper.prototype.dump = function(dumper, ref) {
  * @param {!Selector=} ref Selector refering to this object.
  *     Optional; defaults to whatever selector was used to create the
  *     object.
- * @param {boolean=} skipChecks Skip setup checks and visit recording.
- *     To be used only when called from .dump on the same object.
  * @return {!Do|?ObjectDumper.Pending} How much has been done on the
  *     specified binding, or null if there is an outstanding dump or
  *     dumpBinding invocaion for this object, or a (bindings,
  *     dependencies) pair if a recursive call encountered such an
  *     outstanding invocation.
  */
-ObjectDumper.prototype.dumpBinding = function(
-    dumper, part, todo, ref, skipChecks) {
-  if (!skipChecks) {
-    if (this.proto === undefined) {
-      throw new Error("Can't dump part of uncreated object");
-    }
-    if (!ref) ref = this.ref;
-    if (!ref) {
-      throw new Error("Can't dump part of an unreferencable object");
-    }
+ObjectDumper.prototype.dumpBinding = function(dumper, part, todo, ref) {
+  if (this.proto === undefined) {
+    throw new Error("Can't dump part of uncreated object");
+  }
+  if (!ref) ref = this.ref;
+  if (!ref) {
+    throw new Error("Can't dump part of an unreferencable object");
   }
 
   var done = this.getDone(part);
