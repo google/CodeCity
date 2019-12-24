@@ -327,6 +327,21 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         ['obj.c.parent', Do.DONE],
       ],
     },
+    { // Test recursion that tries to revisit starting object.
+      title: 'recursion 2',
+      src: `
+        var obj = {v: 42};
+        obj.obj = obj;
+      `,
+      bindingTests: [
+        ['obj', Do.DONE, 'var obj = {};\n'],
+        ['obj.obj', Do.RECURSE, 'obj.obj = obj;\nobj.obj.v = 42;\n'],
+        ['obj', Do.RECURSE, ''],
+      ],
+      implicitTests: [
+        ['obj.v', Do.RECURSE],
+      ],
+    },
 
 
 
@@ -604,16 +619,12 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         var unowned = {};
         Object.setOwnerOf(unowned, null);
       `,
+      set: ['Object', 'CC', 'CC.root'],
       bindingTests: [
-        ['CC', Do.DONE, 'var CC = {};\n'],
-        ['CC.root', Do.DONE, "CC.root = new 'CC.root';\n"],
         ['alice', Do.DONE, 'var alice = {};\n'],
         ['alice.thing', Do.DONE, 'alice.thing = {};\n'],
         ['alice.thing{owner}', Do.SET, "(new 'Object.setOwnerOf')" +
             '(alice.thing, alice);\n', Do.DONE],
-        // BUG(cpcallen): why does this not complete to Do.RECURSE?
-        ['alice.thing', Do.RECURSE, '', Do.DONE],
-        ['Object', Do.DONE, "var Object = new 'Object';\n"],
         ['Object.setOwnerOf', Do.SET,
          "Object.setOwnerOf = new 'Object.setOwnerOf';\n"],
         ['bob', Do.RECURSE, 'var bob = {};\nbob.thing = {};\n' +

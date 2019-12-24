@@ -1034,43 +1034,38 @@ ObjectDumper.prototype.dumpBinding = function(
     if (!ref) {
       throw new Error("Can't dump part of an unreferencable object");
     }
-    if (dumper.visiting.has(this)) return null;
-    dumper.visiting.add(this);
   }
 
-  try {
-    var done = this.getDone(part);
-    if (done  < 0) return done;  // Negative values mean don't dump (yet).
-    var sel = new Selector(ref.concat(part));
-    if (part === Selector.PROTOTYPE) {
-      var r = this.dumpPrototype_(dumper, todo, ref, sel);
-    } else if (part === Selector.OWNER) {
-      r = this.dumpOwner_(dumper, todo, ref, sel);
-    } else if (typeof part === 'string') {
-      r = this.dumpProperty_(dumper, part, todo, ref, sel);
-    } else {
-      throw new Error('Invalid part');
-    }
-    done = r.done;
-    var value = r.value;
-    if (todo >= Do.RECURSE && done === Do.DONE &&
-        value instanceof dumper.intrp.Object) {
-      var valueDumper = dumper.getObjectDumper(value);
-      var objDone = valueDumper.dump(dumper, sel);
-      if (objDone === null) {  // Circular structure detected.
-        return new ObjectDumper.Pending(sel, valueDumper);
-      } else if (objDone instanceof ObjectDumper.Pending) {
-        objDone.add(sel, valueDumper);
-        return objDone;
-      } else if (objDone === ObjectDumper.Done.DONE_RECURSIVELY) {
-        done = Do.RECURSE;
-        this.setDone(part, done);
-      }
-    }
-    return done;
-  } finally {
-    if (!skipChecks) dumper.visiting.delete(this);
+  var done = this.getDone(part);
+  if (done  < 0) return done;  // Negative values mean don't dump (yet).
+  var sel = new Selector(ref.concat(part));
+  if (part === Selector.PROTOTYPE) {
+    var r = this.dumpPrototype_(dumper, todo, ref, sel);
+  } else if (part === Selector.OWNER) {
+    r = this.dumpOwner_(dumper, todo, ref, sel);
+  } else if (typeof part === 'string') {
+    r = this.dumpProperty_(dumper, part, todo, ref, sel);
+  } else {
+    throw new Error('Invalid part');
   }
+  done = r.done;
+  var value = r.value;
+  if (todo >= Do.RECURSE && done === Do.DONE &&
+      value instanceof dumper.intrp.Object) {
+    var valueDumper = dumper.getObjectDumper(value);
+    var objDone = valueDumper.dump(dumper, sel);
+    if (objDone === null) {  // Circular structure detected.
+      return new ObjectDumper.Pending(sel, valueDumper);
+    } else if (objDone instanceof ObjectDumper.Pending) {
+      objDone.add(sel, valueDumper);
+      return objDone;
+    } else if (objDone === ObjectDumper.Done.DONE_RECURSIVELY) {
+      done = Do.RECURSE;
+      // Might have already been set via circular references.
+      if (this.getDone(part) < Do.RECURSE) this.setDone(part, done);
+    }
+  }
+  return done;
 };
 
 /**
