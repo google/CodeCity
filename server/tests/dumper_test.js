@@ -335,6 +335,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
       `,
       bindingTests: [
         ['obj', Do.DONE, 'var obj = {};\n'],
+        // TODO(cpcallen): might prefer '...obj.v = 42\n'.
         ['obj.obj', Do.RECURSE, 'obj.obj = obj;\nobj.obj.v = 42;\n'],
         ['obj', Do.RECURSE, ''],
       ],
@@ -342,9 +343,6 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         ['obj.v', Do.RECURSE],
       ],
     },
-
-
-
     { // Test (not) dumping immutable bindings in the global scope.
       title: 'immutables',
       bindingTests: [
@@ -461,6 +459,8 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         ['f1', Do.DECL, 'var f1;\n'],
         // TODO(cpcallen): Really want 'function f1(arg) {};\n'.
         ['f1', Do.SET, 'f1 = function f1(arg) {};\n', Do.DONE],
+        // BUG(cpcallen): this causes a crash.
+        // ['f1', Do.RECURSE, '', Do.RECURSE],
         ['f2', Do.SET, 'var f2 = function(arg) {};\n', Do.DONE],
         ['f2.f3', Do.DECL, 'f2.f3 = undefined;\n'],
         ['f2.f3', Do.SET, 'f2.f3 = function f4(arg) {};\n', Do.ATTR],
@@ -496,10 +496,10 @@ exports.testDumperPrototypeDumpBinding = function(t) {
       `,
       set: ['Object', 'Object.setPrototypeOf', 'obj'],
       bindingTests: [
-        // TODO(cpcallen): Realy want 'var arr = [42, 69, 105, obj, {}];\n'.
+        // TODO(cpcallen): really want 'var arr = [42, 69, 105, obj, {}];\n'.
         ['arr', Do.RECURSE, 'var arr = [];\narr[0] = 42;\narr[1] = 69;\n' +
             'arr[2] = 105;\narr[3] = obj;\narr[4] = {};\n'],
-        // TODO(cpcallen): really want output like
+        // TODO(cpcallen): really want something like
         //     'var sparse = [0, , 2];\nsparse.length = 4;'.
         ['sparse', Do.RECURSE, 'var sparse = [];\n' +
             'Object.setPrototypeOf(sparse, arr);\n' +
@@ -518,7 +518,6 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         var date1 = new Date('1975-07-27');
         var date2 = new Date('1979-01-04');
       `,
-      set: ['Object', 'Object.setPrototypeOf'],
       bindingTests: [
         ['date1', Do.SET,
          "var date1 = new (new 'Date')('1975-07-27T00:00:00.000Z');\n",
@@ -535,6 +534,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     { // Test dumping RegExp objects.
       title: 'RegExp',
       src: `
+        var re0 = new RegExp();
         var re1 = /foo/ig;
         var re2 = /bar/g;
         Object.setPrototypeOf(re2, re1);
@@ -544,6 +544,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
       `,
       set: ['Object', 'Object.setPrototypeOf'],
       bindingTests: [
+        ['re0', Do.SET, 'var re0 = /(?:)/;\n', Do.DONE],
         ['re1', Do.SET, 'var re1 = /foo/gi;\n', Do.DONE],
         ['re2', Do.RECURSE, 'var re2 = /bar/g;\n' +
             'Object.setPrototypeOf(re2, re1);\n' +
