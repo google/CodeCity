@@ -357,8 +357,6 @@ exports.testDumperPrototypeDumpBinding = function(t) {
       src: `
         Object.defineProperty(Object, 'name', {writable: true});
 
-        var nullProtoObj = Object.create(null);
-
         var parent = {foo: 'foo'};
         var child1 = Object.create(parent);
         var child2 = Object.create(parent);
@@ -396,9 +394,6 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         ['CC.root', Do.SET, "CC.root = new 'CC.root';\n", Do.DONE],
         // ['CC.root', Do.RECURSE, "CC.root = new 'CC.root';\n"],
 
-        ['nullProtoObj', Do.SET,
-         "var nullProtoObj = (new 'Object.create')(null);\n", Do.DONE],
-
         ['child1', Do.SET, 'var child1 = {};\n', Do.DONE],
         ['child2', Do.SET, 'var child2 = {};\n', Do.DONE],
         ['parent', Do.RECURSE, "var parent = {};\nparent.foo = 'foo';\n" +
@@ -431,9 +426,6 @@ exports.testDumperPrototypeDumpBinding = function(t) {
 
         ['CC.root^', Do.RECURSE],
         ['CC.root{owner}', Do.RECURSE],
-
-        ['nullProtoObj^', Do.RECURSE],
-        ['nullProtoObj{owner}', Do.DONE],
 
         ['child1^', Do.DECL],
         ['child2^', Do.RECURSE, 'parent'],
@@ -491,7 +483,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         var obj = {};
         var arr = [42, 69, 105, obj, {}];
         var sparse = [0, , 2];
-        Object.setPrototypeOf(sparse, arr);
+        Object.setPrototypeOf(sparse, null);
         sparse.length = 4;
       `,
       set: ['Object', 'Object.setPrototypeOf', 'obj'],
@@ -502,13 +494,13 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         // TODO(cpcallen): really want something like
         //     'var sparse = [0, , 2];\nsparse.length = 4;'.
         ['sparse', Do.RECURSE, 'var sparse = [];\n' +
-            'Object.setPrototypeOf(sparse, arr);\n' +
+            'Object.setPrototypeOf(sparse, null);\n' +
             'sparse[0] = 0;\nsparse[2] = 2;\nsparse.length = 4;\n'],
       ],
       implicitTests: [
         ['arr^', Do.RECURSE],
         ['arr.length', Do.RECURSE],
-        ['sparse^', Do.RECURSE, 'arr'],
+        ['sparse^', Do.RECURSE],
         ['sparse.length', Do.RECURSE],
       ],
     },
@@ -607,6 +599,30 @@ exports.testDumperPrototypeDumpBinding = function(t) {
       implicitTests: [
         ['error1.message', Do.RECURSE],
         ['error2.message', Do.RECURSE],
+      ],
+    },
+    { // Test dumping {proto} bindings: null-protoype objects.
+      title: '{proto} for null-prototype objects',
+      src: `
+        var objs = {obj: new Object(), fun: new Function(), arr: new Array()};
+        for (var p in objs) {
+          Object.setPrototypeOf(objs[p], null);
+        }
+      `,
+      set: ['Object', 'objs'],
+      bindingTests: [
+        ['objs.obj', Do.DONE, "objs.obj = (new 'Object.create')(null);\n"],
+        ['objs.obj{proto}', Do.DONE, '', Do.RECURSE],
+        ['objs.fun', Do.DONE, 'objs.fun = function() {};\n'],
+        ['objs.fun{proto}', Do.SET,
+         "(new 'Object.setPrototypeOf')(objs.fun, null);\n", Do.RECURSE],
+
+        ['Object.setPrototypeOf', Do.SET,
+         "Object.setPrototypeOf = new 'Object.setPrototypeOf';\n"],
+
+        ['objs.arr', Do.DONE, 'objs.arr = [];\n'],
+        ['objs.arr{proto}', Do.SET, 'Object.setPrototypeOf(objs.arr, null);\n',
+         Do.RECURSE],
       ],
     },
     { // Test dumping {owner} bindings.
