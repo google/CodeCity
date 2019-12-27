@@ -416,9 +416,6 @@ exports.testDumperPrototypeDumpBinding = function(t) {
             "{writable: true, enumerable: true, value: 'bar2'});\n",
          Do.RECURSE],
         ['child2', Do.RECURSE, '(new \'Object.preventExtensions\')(child2);\n'],
-        ['child3', Do.RECURSE, "var child3 = (new 'Object.create')(parent);\n"],
-        ['Object.setPrototypeOf', Do.SET,
-         "Object.setPrototypeOf = new 'Object.setPrototypeOf';\n"],
       ],
       implicitTests: [
         ['Object.length', Do.RECURSE],
@@ -426,10 +423,6 @@ exports.testDumperPrototypeDumpBinding = function(t) {
 
         ['CC.root^', Do.RECURSE],
         ['CC.root{owner}', Do.RECURSE],
-
-        ['child1^', Do.DECL],
-        ['child2^', Do.RECURSE, 'parent'],
-        ['child3^', Do.RECURSE, 'parent'],
       ],
     },
     { // Test dumping Function objects.
@@ -601,25 +594,54 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         ['error2.message', Do.RECURSE],
       ],
     },
+    { // Test dumping {proto} bindings.
+      title: '{proto}',
+      src: `
+        var parent = {};
+        var child0 = Object.create(parent);
+        var child1 = Object.create(parent);
+        var child2 = Object.create(parent);
+        var child3 = Object.create(parent);
+     `,
+      set: ['Object'],  // N.B.: Object.create is polyfilled.
+      bindingTests: [
+        ['child0', Do.DONE, 'var child0 = {};\n'],
+        ['child1', Do.DONE, 'var child1 = {};\n'],
+        ['child2', Do.DONE, 'var child2 = {};\n'],
+        ['parent', Do.DONE, 'var parent = {};\n'],
+        ['child3', Do.DONE, "var child3 = (new 'Object.create')(parent);\n"],
+
+        ['child1^', Do.SET, "(new 'Object.setPrototypeOf')(child1, parent);\n",
+         Do.DONE],
+
+        ['Object.setPrototypeOf', Do.SET,
+         "Object.setPrototypeOf = new 'Object.setPrototypeOf';\n"],
+
+        ['child2^', Do.SET, 'Object.setPrototypeOf(child2, parent);\n',
+         Do.DONE],
+      ],
+      implicitTests: [
+        ['child0^', Do.DECL],
+        ['child1^', Do.DONE, 'parent'],
+        ['child2^', Do.DONE, 'parent'],
+        ['child3^', Do.DONE, 'parent'],
+      ]
+    },
     { // Test dumping {proto} bindings: null-protoype objects.
-      title: '{proto} for null-prototype objects',
+      title: 'null {proto}',
       src: `
         var objs = {obj: new Object(), fun: new Function(), arr: new Array()};
         for (var p in objs) {
           Object.setPrototypeOf(objs[p], null);
         }
       `,
-      set: ['Object', 'objs'],
+      set: ['Object', 'Object.setPrototypeOf', 'objs'],
       bindingTests: [
         ['objs.obj', Do.DONE, "objs.obj = (new 'Object.create')(null);\n"],
         ['objs.obj{proto}', Do.DONE, '', Do.RECURSE],
         ['objs.fun', Do.DONE, 'objs.fun = function() {};\n'],
-        ['objs.fun{proto}', Do.SET,
-         "(new 'Object.setPrototypeOf')(objs.fun, null);\n", Do.RECURSE],
-
-        ['Object.setPrototypeOf', Do.SET,
-         "Object.setPrototypeOf = new 'Object.setPrototypeOf';\n"],
-
+        ['objs.fun{proto}', Do.SET, 'Object.setPrototypeOf(objs.fun, null);\n',
+         Do.RECURSE],
         ['objs.arr', Do.DONE, 'objs.arr = [];\n'],
         ['objs.arr{proto}', Do.SET, 'Object.setPrototypeOf(objs.arr, null);\n',
          Do.RECURSE],
