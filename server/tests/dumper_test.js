@@ -343,6 +343,28 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         ['obj.v', Do.RECURSE],
       ],
     },
+    { // Test dumping property attributes.
+      title: 'attributes',
+      src: `
+        var obj = {w: {}, e: {}, c: {}};
+        Object.defineProperty(obj, 'w', {writable: false});
+        Object.defineProperty(obj, 'e', {enumerable: false});
+        Object.defineProperty(obj, 'c', {configurable: false});
+      `,
+      set: ['Object', 'obj'],
+      bindingTests: [
+        ['obj.w', Do.ATTR, "obj.w = {};\n" + 
+            "(new 'Object.defineProperty')(obj, 'w', {writable: false});\n"],
+
+        ['Object.defineProperty', Do.SET,
+         "Object.defineProperty = new 'Object.defineProperty';\n"],
+
+        ['obj.e', Do.ATTR, "obj.e = {};\n" + 
+            "Object.defineProperty(obj, 'e', {enumerable: false});\n"],
+        ['obj.c', Do.ATTR, "obj.c = {};\n" + 
+            "Object.defineProperty(obj, 'c', {configurable: false});\n"],
+      ],
+    },
     { // Test (not) dumping immutable bindings in the global scope.
       title: 'immutables',
       bindingTests: [
@@ -365,9 +387,6 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         child2.foo = 'foo2';
         child2.bar = 'bar2';
         Object.defineProperty(parent, 'foo', {writable: false});
-        Object.defineProperty(child1, 'foo', {enumerable: false});
-        Object.defineProperty(child2, 'foo', {enumerable: false});
-        Object.defineProperty(child2, 'bar', {configurable: false});
         Object.preventExtensions(child2);
 
         Object.defineProperty(Object.prototype, 'bar',
@@ -400,21 +419,15 @@ exports.testDumperPrototypeDumpBinding = function(t) {
             "Object.defineProperty(parent, 'foo', {writable: false});\n"],
 
         ['child1.foo', Do.DECL, 'child1.foo = undefined;\n'],
-        ['child1.foo', Do.SET, "child1.foo = 'foo2';\n"],
-        ['child1.foo', Do.ATTR,
-         "Object.defineProperty(child1, 'foo', {enumerable: false});\n",
-         Do.RECURSE],
+        ['child1.foo', Do.SET, "child1.foo = 'foo2';\n", Do.RECURSE],
         ['child2^', Do.SET, "(new 'Object.setPrototypeOf')(child2, parent);\n",
          Do.DONE],
         ['child2.foo', Do.DECL, "Object.defineProperty(child2, 'foo', " +
             '{writable: true, enumerable: true, configurable: true});\n'],
-        ['child2.foo', Do.SET, "child2.foo = 'foo2';\n"],
-        ['child2.foo', Do.ATTR,
-         "Object.defineProperty(child2, 'foo', {enumerable: false});\n",
-         Do.RECURSE],
+        ['child2.foo', Do.SET, "child2.foo = 'foo2';\n", Do.RECURSE],
         ['child2.bar', Do.SET, "Object.defineProperty(child2, 'bar', " +
-            "{writable: true, enumerable: true, value: 'bar2'});\n",
-         Do.RECURSE],
+            '{writable: true, enumerable: true, configurable: true,' +
+            " value: 'bar2'});\n", Do.RECURSE],
         ['child2', Do.RECURSE, '(new \'Object.preventExtensions\')(child2);\n'],
       ],
       implicitTests: [
