@@ -365,6 +365,53 @@ exports.testDumperPrototypeDumpBinding = function(t) {
             "Object.defineProperty(obj, 'c', {configurable: false});\n"],
       ],
     },
+    { // Test correct dumping inherited-non-writable properties.
+      title: 'non-writable',
+      src: `
+        var parent = {foo: 0};
+        var child = [];
+        for (var i = 0; i <= 4; i++) {
+          child[i] = Object.create(parent);
+          child[i].foo = i;
+        }
+        child[4].foo = undefined;  // Will have DECL do SET implicitly.
+        // Make it impossible to set child[i].foo by assignment.
+        Object.defineProperty(parent, 'foo', {writable: false});
+      `,
+      // Object.create is polyfilled; dumper won't call polyfill.
+      set: ['Object', 'Object.defineProperty', 'parent', 'child',
+            'child[0]', 'child[1]', 'child[2]', 'child[3]', 'child[4]'],
+      bindingTests: [
+        // Inherited non-writable property doesn't exist yet.
+        ['child[0].foo', Do.SET, 'child[0].foo = 0;\n', Do.RECURSE],
+
+        ['parent', Do.RECURSE, 'parent.foo = 0;\n' +
+            "Object.defineProperty(parent, 'foo', {writable: false});\n"],
+
+        ['child[1].foo', Do.DECL, "Object.defineProperty(child[1], 'foo', " +
+            '{writable: true, enumerable: true, configurable: true});\n'],
+        ['child[1].foo', Do.SET, "child[1].foo = 1;\n", Do.RECURSE],
+
+        ['child[2].foo', Do.SET, "Object.defineProperty(child[2], 'foo', " +
+            '{writable: true, enumerable: true, configurable: true,' +
+            ' value: 2});\n', Do.RECURSE],
+
+        ['child[3].foo', Do.ATTR, "Object.defineProperty(child[3], 'foo', " +
+            '{writable: true, enumerable: true, configurable: true,' +
+            ' value: 3});\n', Do.RECURSE],
+
+        ['child[4].foo', Do.DECL, "Object.defineProperty(child[4], 'foo', " +
+            '{writable: true, enumerable: true, configurable: true});\n',
+         Do.RECURSE],
+      ],
+      implicitTests: [
+        ['child[0]^', Do.DONE, 'parent'],
+        ['child[1]^', Do.DONE, 'parent'],
+        ['child[2]^', Do.DONE, 'parent'],
+        ['child[3]^', Do.DONE, 'parent'],
+        ['child[4]^', Do.DONE, 'parent'],
+      ],
+    },
     { // Test (not) dumping immutable bindings in the global scope.
       title: 'immutables',
       bindingTests: [
@@ -379,14 +426,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
       src: `
         Object.defineProperty(Object, 'name', {writable: true});
 
-        var parent = {foo: 'foo'};
-        var child1 = Object.create(parent);
-        var child2 = Object.create(parent);
-        var child3 = Object.create(parent);
-        child1.foo = 'foo2';
-        child2.foo = 'foo2';
-        child2.bar = 'bar2';
-        Object.defineProperty(parent, 'foo', {writable: false});
+        var child2 = {};
         Object.preventExtensions(child2);
 
         Object.defineProperty(Object.prototype, 'bar',
@@ -413,21 +453,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         ['CC.root', Do.SET, "CC.root = new 'CC.root';\n", Do.DONE],
         // ['CC.root', Do.RECURSE, "CC.root = new 'CC.root';\n"],
 
-        ['child1', Do.SET, 'var child1 = {};\n', Do.DONE],
         ['child2', Do.SET, 'var child2 = {};\n', Do.DONE],
-        ['parent', Do.RECURSE, "var parent = {};\nparent.foo = 'foo';\n" +
-            "Object.defineProperty(parent, 'foo', {writable: false});\n"],
-
-        ['child1.foo', Do.DECL, 'child1.foo = undefined;\n'],
-        ['child1.foo', Do.SET, "child1.foo = 'foo2';\n", Do.RECURSE],
-        ['child2^', Do.SET, "(new 'Object.setPrototypeOf')(child2, parent);\n",
-         Do.DONE],
-        ['child2.foo', Do.DECL, "Object.defineProperty(child2, 'foo', " +
-            '{writable: true, enumerable: true, configurable: true});\n'],
-        ['child2.foo', Do.SET, "child2.foo = 'foo2';\n", Do.RECURSE],
-        ['child2.bar', Do.SET, "Object.defineProperty(child2, 'bar', " +
-            '{writable: true, enumerable: true, configurable: true,' +
-            " value: 'bar2'});\n", Do.RECURSE],
         ['child2', Do.RECURSE, '(new \'Object.preventExtensions\')(child2);\n'],
       ],
       implicitTests: [
