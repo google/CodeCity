@@ -344,10 +344,10 @@ Dumper.prototype.exprForObject = function(obj, objDumper) {
  *     recreated.
  * @param {!ObjectDumper} funcDumper ObjectDumper for func.
  * @param {string=} funcName If supplied, and if value is an anonymous
- *     UserFuncion, then the returned expression is presumed to appear
+ *     UserFunction, then the returned expression is presumed to appear
  *     on the right hand side of an assignment statement such that the
  *     resulting Function object has its .name property automatically
- *     set to this value.
+ *     set to this value if a name does not appear in the function body.
  * @return {string} An eval-able representation of func.
  */
 Dumper.prototype.exprForFunction = function(func, funcDumper, funcName) {
@@ -361,7 +361,7 @@ Dumper.prototype.exprForFunction = function(func, funcDumper, funcName) {
   funcDumper.setDone('length', Do.RECURSE);
   // The .name property is often set automatically.
   // TODO(ES6): Handle prefix?
-  if (funcName === undefined && func.node['id']) {
+  if (func.node['id']) {
     funcName = func.node['id']['name'];
   }
   if (funcName) {
@@ -369,38 +369,40 @@ Dumper.prototype.exprForFunction = function(func, funcDumper, funcName) {
         {writable: false, enumerable: false, configurable: true};
     var pd = func.getOwnPropertyDescriptor('name', this.intrp.ROOT);
     if (pd) {
-      funcDumper.checkProperty('name', funcName, attr , pd);
+      funcDumper.checkProperty('name', funcName, attr, pd);
     } else {
       funcDumper.scheduleDeletion('name');
     }
   }
   // The .prototype property will automatically be created, so we
-  // don't need to "declare" it.  Fortunately it's non-configurable,
-  // so we don't need to worry that it might need to be deleted.
-  funcDumper.attributes['prototype'] =
-      {writable: true, enumerable: false, configurable: false};
+  // don't need to "declare" it.  (Fortunately it's non-configurable,
+  // so we don't need to worry that it might need to be deleted.)
   funcDumper.setDone('prototype', Do.DECL);
-  // Better still, we can use the automatically-created .prototype
-  // object if the current value is an ordinary object (regardless of
-  // prototype - that can be set later) and it isn't a built-in or
-  // already instantiated.
-  var prototype = func.get('prototype', this.intrp.ROOT);
+  // Better still, we might be able to use the automatically-created
+  // .prototype object - if the current value is an ordinary Object
+  // and it isn't a built-in or already instantiated.  (N.B.: we don't
+  // care about its {proto}; that can be modified later.)
+  attr = funcDumper.attributes['prototype'] =
+      {writable: true, enumerable: false, configurable: false};
+  pd = func.getOwnPropertyDescriptor('prototype', this.intrp.ROOT);
+  var prototype = pd.value;
   if (!this.intrp.builtins.getKey(prototype) &&
       prototype instanceof this.intrp.Object &&
-      prototype.class === 'Object') {
+      Object.getPrototypeOf(prototype) === this.intrp.Object.prototype) {
     var prototypeFuncDumper = this.getObjectDumper(prototype);
     if(prototypeFuncDumper.ref === undefined) {
       // We can use automatic .prototype object.
+      // Mark .prototype as Do.SET or Do.ATTR as appropriate.
+      funcDumper.checkProperty('prototype', prototype, attr, pd);
       prototypeFuncDumper.ref =
           new Selector(funcDumper.ref.concat('prototype'));
-      funcDumper.setDone('prototype', Do.SET);
-      // It gets a .constructor property, which may or may not need to
-      // be overwritten.
-      prototypeFuncDumper.attributes['constructor'] =
+      // It gets a .constructor property.  Check to see if it will
+      // need to be overwritten.
+      attr = prototypeFuncDumper.attributes['constructor'] =
           {writable: true, enumerable: false, configurable: true};
-      var constructorValue = prototype.get('constructor', this.intrp.ROOT);
-      prototypeFuncDumper.setDone('constructor',
-          constructorValue === func ? Do.SET : Do.DECL);
+      pd = prototype.getOwnPropertyDescriptor('constructor', this.intrp.ROOT);
+      var constructor = pd.value;
+      prototypeFuncDumper.checkProperty('constructor', func, attr, pd);
     }
   }
   return func.toString();
