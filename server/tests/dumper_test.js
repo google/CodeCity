@@ -426,9 +426,6 @@ exports.testDumperPrototypeDumpBinding = function(t) {
       src: `
         Object.defineProperty(Object, 'name', {writable: true});
 
-        var child2 = {};
-        Object.preventExtensions(child2);
-
         Object.defineProperty(Object.prototype, 'bar',
             {writable: false, enumerable: true, configurable: true,
              value: 'bar'});  // Naughty!
@@ -450,11 +447,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
          "Object.defineProperty = new 'Object.defineProperty';\n"],
 
         ['CC', Do.SET, 'var CC = {};\n', Do.DONE],
-        ['CC.root', Do.SET, "CC.root = new 'CC.root';\n", Do.DONE],
-        // ['CC.root', Do.RECURSE, "CC.root = new 'CC.root';\n"],
-
-        ['child2', Do.SET, 'var child2 = {};\n', Do.DONE],
-        ['child2', Do.RECURSE, '(new \'Object.preventExtensions\')(child2);\n'],
+        ['CC.root', Do.RECURSE, "CC.root = new 'CC.root';\n"],
       ],
       implicitTests: [
         ['Object.length', Do.RECURSE],
@@ -718,6 +711,26 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         ['bob', Do.RECURSE],
         ['bob{owner}', Do.RECURSE, 'CC.root'],
         ['bob.thing{owner}', Do.RECURSE, 'bob'],
+      ],
+    },
+    { // Test dumping extensibility.
+      title: 'extensibility',
+      src: `
+        var obj1 = {id: 1};
+        var obj2 = {id: 2};
+        Object.preventExtensions(obj1);
+        Object.preventExtensions(obj2);
+      `,
+      set: ['Object', 'obj1', 'obj2'],
+      bindingTests: [
+        ['obj1.id', Do.SET, 'obj1.id = 1;\n', Do.RECURSE],
+        ['obj1', Do.RECURSE, "(new 'Object.preventExtensions')(obj1);\n"],
+
+        ['Object.preventExtensions', Do.SET, 
+         "Object.preventExtensions = new 'Object.preventExtensions';\n",],
+
+        // Verify property set before extensibility prevented.
+        ['obj2', Do.RECURSE, 'obj2.id = 2;\nObject.preventExtensions(obj2);\n'],
       ],
     },
   ];
