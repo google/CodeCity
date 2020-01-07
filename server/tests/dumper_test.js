@@ -267,7 +267,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
       title: 'basics',
       src: `
         var skip = 'not dumped';
-        var obj = {a: {x: 1}, b: 2, c: 3, skip: 'not dumped'};
+        var obj = {a: {x: 1}, b: 2, c: 3, u: undefined, skip: 'not dumped'};
         Object.defineProperty(obj, 'a', {enumerable: false});
       `,
       set: ['Object', 'Object.setPrototypeOf', 'Object.defineProperty'],
@@ -284,7 +284,10 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         ['obj.a', Do.ATTR,
          "Object.defineProperty(obj, 'a', {enumerable: false});\n"],
         ['obj.a', Do.RECURSE, 'obj.a.x = 1;\n'],
+
         ['obj.b', Do.SET, 'obj.b = 2;\n', Do.RECURSE],
+
+        ['obj.u', Do.DECL, 'obj.u = undefined;\n', Do.RECURSE],
 
         ['obj', Do.RECURSE, 'obj.c = 3;\n', Do.DONE],
       ],
@@ -466,7 +469,6 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         Object.setPrototypeOf(f2, null);
         f2.prototype = Object.prototype;
         f2.f3 = function f4(arg) {};
-        f2.undef = undefined;
         Object.setPrototypeOf(f2.f3, null);
         f2.f3.prototype = obj;
         delete f2.f3.name;
@@ -481,7 +483,6 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         ['f2', Do.SET, 'var f2 = function(arg) {};\n', Do.DONE],
         ['f2.f3', Do.DECL, 'f2.f3 = undefined;\n'],
         ['f2.f3', Do.SET, 'f2.f3 = function f4(arg) {};\n', Do.ATTR],
-        ['f2.undef', Do.DECL, 'f2.undef = undefined;\n', Do.RECURSE],
         ['f2.f3^', Do.SET, 'Object.setPrototypeOf(f2.f3, null);\n', Do.RECURSE],
         ['f2.f3', Do.RECURSE,
          "delete f2.f3.name;\nf2.f3.prototype = obj;\n"],
