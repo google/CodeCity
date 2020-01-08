@@ -424,42 +424,6 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         ['eval', Do.RECURSE, ''],
       ],
     },
-    {
-      title: 'legacy',
-      src: `
-        Object.defineProperty(Object, 'name', {writable: true});
-
-        Object.defineProperty(Object.prototype, 'bar',
-            {writable: false, enumerable: true, configurable: true,
-             value: 'bar'});  // Naughty!
-      `,
-      bindingTests: [
-        ['Object', Do.DECL, 'var Object;\n'],
-        ['Object', Do.DECL, ''],
-        ['Object', Do.SET, "Object = new 'Object';\n", Do.DONE],
-        ['Object', Do.DONE, '', Do.DONE],
-        ['Object.prototype', Do.SET,
-         "Object.prototype = new 'Object.prototype';\n"],
-        // Note that the next few tests depend on having the ObjectDumper
-        // dump individual properties even though we set .done to
-        // DONE_RECURSIVELY at the top to prevent recursive dumping.
-        ['Object.prototype.bar', Do.SET, "Object.prototype.bar = 'bar';\n"],
-        ['Object.prototype.bar', Do.ATTR, "(new 'Object.defineProperty')(" +
-            "Object.prototype, 'bar', {writable: false});\n", Do.RECURSE],
-        ['Object.defineProperty', Do.SET,
-         "Object.defineProperty = new 'Object.defineProperty';\n"],
-
-        ['CC', Do.SET, 'var CC = {};\n', Do.DONE],
-        ['CC.root', Do.RECURSE, "CC.root = new 'CC.root';\n"],
-      ],
-      implicitTests: [
-        ['Object.length', Do.RECURSE],
-        ['Object.name', Do.SET],
-
-        ['CC.root^', Do.RECURSE],
-        ['CC.root{owner}', Do.RECURSE],
-      ],
-    },
     { // Test dumping Function objects.
       title: 'Function',
       src: `
@@ -687,6 +651,15 @@ exports.testDumperPrototypeDumpBinding = function(t) {
       implicitTests: [
         ['error1.message', Do.RECURSE],
         ['error2.message', Do.RECURSE],
+      ],
+    },
+    { // Test dumping builtin objects.
+      title: 'Builtins',
+      src: '',
+      bindingTests: [
+        ['Object', Do.DONE, "var Object = new 'Object';\n"],
+        ['Object.prototype', Do.SET,
+         "Object.prototype = new 'Object.prototype';\n"],
       ],
     },
     { // Test dumping {proto} bindings.
