@@ -394,8 +394,20 @@ Dumper.prototype.exprForFunction = function(func, funcDumper, funcName) {
       // We can use automatic .prototype object.
       // Mark .prototype as Do.SET or Do.ATTR as appropriate.
       funcDumper.checkProperty('prototype', prototype, attr, pd);
+      // Mark prototype object as existing and referenceable.
+      prototypeFuncDumper.proto = this.intrp.OBJECT;
       prototypeFuncDumper.ref =
           new Selector(funcDumper.ref.concat('prototype'));
+      // Do we need to set .prototype's [[Prototype]]?
+      if (prototype.proto === prototypeFuncDumper.proto) {
+        prototypeFuncDumper.setDone(Selector.PROTOTYPE,
+            (prototype.proto === null) ? Do.RECURSE : Do.DONE);
+      }
+      // Do we need to set .prototype's [[Owner]]?
+      if (prototype.owner === this.perms) {
+        prototypeFuncDumper.setDone(Selector.OWNER,
+            (prototype.owner === null) ? Do.RECURSE : Do.DONE);
+      }
       // It gets a .constructor property.  Check to see if it will
       // need to be overwritten.
       attr = prototypeFuncDumper.attributes['constructor'] =

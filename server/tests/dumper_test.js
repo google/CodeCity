@@ -463,29 +463,22 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     { // Test dumping Function objects.
       title: 'Function',
       src: `
-        var obj = {};
         function f1(arg) {}
-        var f2 = function(arg) {};
-        Object.setPrototypeOf(f2, null);
-        f2.prototype = Object.prototype;
-        f2.f3 = function f4(arg) {};
-        Object.setPrototypeOf(f2.f3, null);
-        f2.f3.prototype = obj;
-        delete f2.f3.name;
+        var f2 = function F2(arg) {};
+        var obj = {f3: function() {}};
+        var f4 = new Function('a1', 'a2,a3', 'a4, a5', '');
       `,
-      set: ['Object', 'Object.prototype', 'Object.setPrototypeOf', 'obj'],
+      set: ['obj'],
       bindingTests: [
-        ['f1', Do.DECL, 'var f1;\n'],
-        // TODO(cpcallen): Really want 'function f1(arg) {};\n'.
-        ['f1', Do.SET, 'f1 = function f1(arg) {};\n', Do.DONE],
+        // BUG(cpcallen): Really want 'function f1(arg) {};\n'.
+        ['f1', Do.SET, 'var f1 = function f1(arg) {};\n', Do.DONE],
         // BUG(cpcallen): this causes a crash.
         // ['f1', Do.RECURSE, '', Do.RECURSE],
-        ['f2', Do.SET, 'var f2 = function(arg) {};\n', Do.DONE],
-        ['f2.f3', Do.DECL, 'f2.f3 = undefined;\n'],
-        ['f2.f3', Do.SET, 'f2.f3 = function f4(arg) {};\n', Do.ATTR],
-        ['f2.f3^', Do.SET, 'Object.setPrototypeOf(f2.f3, null);\n', Do.RECURSE],
-        ['f2.f3', Do.RECURSE,
-         "delete f2.f3.name;\nf2.f3.prototype = obj;\n"],
+        ['f2', Do.SET, 'var f2 = function F2(arg) {};\n', Do.DONE],
+        ['obj.f3', Do.SET, 'obj.f3 = function() {};\n', Do.DONE],
+        // BUG(cpcallen): Really want '... = Function(...', due to scoping.
+        ['f4', Do.SET, 'var f4 = function(a1,a2,a3,a4, a5) {};\n', Do.DONE],
+        // TODO(ES5): verify that f4.name gets deleted.
       ],
       implicitTests: [
         ['f1^', Do.DONE],
@@ -493,14 +486,83 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         ['f1.name', Do.RECURSE],
         ['f1.prototype', Do.DONE, 'f1.prototype'],
         ['f1.prototype.constructor', Do.DONE, 'f1'],
-        ['f2^', Do.DECL],
+        ['f2^', Do.DONE],
         ['f2.length', Do.RECURSE],
         ['f2.name', Do.RECURSE],
-        ['f2.prototype', Do.DECL, 'Object.prototype'],
-        ['f2.f3^', Do.RECURSE],
-        ['f2.f3.length', Do.RECURSE],
-        ['f2.f3.name', Do.UNSTARTED],  // N.B.: not implicitly set.
-        ['f2.f3.prototype', Do.RECURSE, 'obj'],
+        ['f2.prototype', Do.DONE, 'f2.prototype'],
+        ['f2.prototype.constructor', Do.DONE, 'f2'],
+        ['obj.f3^', Do.DONE],
+        ['obj.f3.length', Do.RECURSE],
+        ['obj.f3.name', Do.UNSTARTED],  // N.B.: not implicitly set.
+        ['obj.f3.prototype', Do.DONE, 'obj.f3.prototype'],
+        ['obj.f3.prototype.constructor', Do.DONE, 'obj.f3'],
+        ['f4^', Do.DONE],
+        // TODO(ES6): verify that f4.name is implicitly set to 'anonymous'.
+        ['f4.length', Do.RECURSE],
+        ['f4.prototype', Do.DONE, 'f4.prototype'],
+        ['f4.prototype.constructor', Do.DONE, 'f4'],
+      ],
+    },
+    { // Test Function objects with usable and unusable .prototype objects.
+      title: 'Function .prototype',
+      src: `
+        var f1 = function() {};
+        var f2 = function() {};
+        var f3 = function() {};
+        var obj1 = f1.prototype;
+        var obj2 = f2.prototype;
+        f3.prototype = [];
+      `,
+      set: ['Object', 'Object.defineProperty'],
+      bindingTests: [
+        // No problem if f1 dumped before obj1.
+        ['f1', Do.RECURSE, 'var f1 = function() {};\n'],
+        ['obj1', Do.DONE, 'var obj1 = f1.prototype;\n'],
+        // Surmountable difficulty if obj2 dumped before f2.
+        ['obj2', Do.DONE, 'var obj2 = {};\n'],
+        ['f2', Do.DONE, 'var f2 = function() {};\n'],
+        ['f2.prototype', Do.DONE, 'f2.prototype = obj2;\n'],
+        ['f2', Do.RECURSE, 'f2.prototype.constructor = f2;\n' +
+            "Object.defineProperty(f2.prototype, 'constructor', " +
+            '{enumerable: false});\n'],
+        // Non-plain-Object .protype values require special handling too.
+        ['f3', Do.DONE, 'var f3 = function() {};\n'],
+        ['f3', Do.RECURSE, 'f3.prototype = [];\n'],
+      ],
+      implicitTests: [
+        ['obj1', Do.DONE, 'f1.prototype'],  // Var not RECURSEed (only object).
+        ['f1.prototype.constructor', Do.RECURSE, 'f1'],
+        ['f2.prototype', Do.RECURSE, 'obj2'],
+        ['f2.prototype.constructor', Do.RECURSE, 'f2'],
+      ],
+    },
+    { // Test dumping Function objects' .prototype.constructor property.
+      title: 'Function .prototype.constructor',
+      src: `
+        var f = function() {};
+        Object.defineProperty(f.prototype, 'constructor',
+                              {writable: false, value: 42});
+      `,
+      set: ['Object', 'Object.defineProperty', 'f'],
+      bindingTests: [
+        ['f', Do.RECURSE, 'f.prototype.constructor = 42;\n' +
+            "Object.defineProperty(f.prototype, 'constructor', " +
+            '{writable: false});\n'],
+      ],
+    },
+    { // Test dumping Function objects' .name property.
+      title: 'Function .name',
+      src: `
+        var f1 = function() {};
+        var f2 = function() {};
+        Object.defineProperty(f1, 'name', {value: 'Hi!'});
+        delete f2.name;
+      `,
+      set: ['Object', 'Object.defineProperty', 'f1', 'f2'],
+      bindingTests: [
+        ['f1', Do.RECURSE, "Object.defineProperty(f1, 'name', " +
+            "{value: 'Hi!'});\n"],
+        ['f2', Do.RECURSE, 'delete f2.name;\n'],
       ],
     },
     { // Test dumping Array objects.
