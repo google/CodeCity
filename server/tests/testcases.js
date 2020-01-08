@@ -1586,7 +1586,7 @@ module.exports = [
  { name: 'new Function with args .toString()', src: `
     String(new Function('a, b', 'c', 'return a + b * c;'))
     `,
-    expected: 'function(a, b, c) {return a + b * c;}' },
+    expected: 'function(a, b,c) {return a + b * c;}' },
 
   { name: 'Function.prototype has no .prototype', src: `
     Function.prototype.hasOwnProperty('prototype');
