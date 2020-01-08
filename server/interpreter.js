@@ -892,7 +892,7 @@ Interpreter.prototype.initFunction_ = function() {
                 'Invalid function argument: ' + name);
           }
         });
-        argsStr = argList.join(', ');
+        argsStr = argList.join(',');
       }
       // Acorn needs to parse code in the context of a function or
       // else 'return' statements will be syntax errors.
