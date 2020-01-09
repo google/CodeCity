@@ -298,6 +298,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         ['obj.skip', Do.SKIP],
       ],
     },
+
     { // Test recursion in face of incomplet(able) properties.
       title: 'recursion 1',
       src: `
@@ -330,6 +331,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         ['obj.c.parent', Do.DONE],
       ],
     },
+
     { // Test recursion that tries to revisit starting object.
       title: 'recursion 2',
       src: `
@@ -346,6 +348,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         ['obj.v', Do.RECURSE],
       ],
     },
+
     { // Test dumping property attributes.
       title: 'attributes',
       src: `
@@ -368,6 +371,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
             "Object.defineProperty(obj, 'c', {configurable: false});\n"],
       ],
     },
+
     { // Test correct dumping inherited-non-writable properties.
       title: 'non-writable',
       src: `
@@ -415,6 +419,118 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         ['child[4]^', Do.DONE, 'parent'],
       ],
     },
+
+    { // Test dumping {proto} bindings.
+      title: '{proto}',
+      src: `
+        var parent = {};
+        var child0 = Object.create(parent);
+        var child1 = Object.create(parent);
+        var child2 = Object.create(parent);
+        var child3 = Object.create(parent);
+     `,
+      set: ['Object'],  // N.B.: Object.create is polyfilled.
+      bindingTests: [
+        ['child0', Do.DONE, 'var child0 = {};\n'],
+        ['child1', Do.DONE, 'var child1 = {};\n'],
+        ['child2', Do.DONE, 'var child2 = {};\n'],
+        ['parent', Do.DONE, 'var parent = {};\n'],
+        ['child3', Do.DONE, "var child3 = (new 'Object.create')(parent);\n"],
+
+        ['child1^', Do.SET, "(new 'Object.setPrototypeOf')(child1, parent);\n",
+         Do.DONE],
+
+        ['Object.setPrototypeOf', Do.SET,
+         "Object.setPrototypeOf = new 'Object.setPrototypeOf';\n"],
+
+        ['child2^', Do.SET, 'Object.setPrototypeOf(child2, parent);\n',
+         Do.DONE],
+      ],
+      implicitTests: [
+        ['child0^', Do.DECL],
+        ['child1^', Do.DONE, 'parent'],
+        ['child2^', Do.DONE, 'parent'],
+        ['child3^', Do.DONE, 'parent'],
+      ]
+    },
+
+    { // Test dumping {proto} bindings: null-protoype objects.
+      title: 'null {proto}',
+      src: `
+        var objs = {obj: new Object(), fun: new Function(), arr: new Array()};
+        for (var p in objs) {
+          Object.setPrototypeOf(objs[p], null);
+        }
+      `,
+      set: ['Object', 'Object.setPrototypeOf', 'objs'],
+      bindingTests: [
+        ['objs.obj', Do.DONE, "objs.obj = (new 'Object.create')(null);\n"],
+        ['objs.obj{proto}', Do.DONE, '', Do.RECURSE],
+        ['objs.fun', Do.DONE, 'objs.fun = function() {};\n'],
+        ['objs.fun{proto}', Do.SET, 'Object.setPrototypeOf(objs.fun, null);\n',
+         Do.RECURSE],
+        ['objs.arr', Do.DONE, 'objs.arr = [];\n'],
+        ['objs.arr{proto}', Do.SET, 'Object.setPrototypeOf(objs.arr, null);\n',
+         Do.RECURSE],
+      ],
+    },
+
+    { // Test dumping {owner} bindings.
+      title: '{owner}',
+      src: `
+        var alice = {};
+        alice.thing = (function() {setPerms(alice); return {};})();
+        var bob = {};
+        bob.thing = {};
+        Object.setOwnerOf(bob.thing, bob);
+        var unowned = {};
+        Object.setOwnerOf(unowned, null);
+      `,
+      set: ['Object', 'CC', 'CC.root'],
+      bindingTests: [
+        ['alice', Do.DONE, 'var alice = {};\n'],
+        ['alice.thing', Do.DONE, 'alice.thing = {};\n'],
+        ['alice.thing{owner}', Do.SET, "(new 'Object.setOwnerOf')" +
+            '(alice.thing, alice);\n', Do.DONE],
+        ['Object.setOwnerOf', Do.SET,
+         "Object.setOwnerOf = new 'Object.setOwnerOf';\n"],
+        ['bob', Do.RECURSE, 'var bob = {};\nbob.thing = {};\n' +
+            "Object.setOwnerOf(bob.thing, bob);\n"],
+        ['unowned', Do.SET, 'var unowned = {};\n', Do.DONE],
+        ['unowned{owner}', Do.SET, 'Object.setOwnerOf(unowned, null);\n',
+         Do.RECURSE],
+      ],
+      implicitTests: [
+        ['alice', Do.DONE],
+        ['alice{owner}', Do.DONE, 'CC.root'],
+        ['alice.thing{owner}', Do.DONE, 'alice'],
+        ['bob', Do.RECURSE],
+        ['bob{owner}', Do.RECURSE, 'CC.root'],
+        ['bob.thing{owner}', Do.RECURSE, 'bob'],
+      ],
+    },
+
+    { // Test dumping extensibility.
+      title: 'extensibility',
+      src: `
+        var obj1 = {id: 1};
+        var obj2 = {id: 2};
+        Object.preventExtensions(obj1);
+        Object.preventExtensions(obj2);
+      `,
+      set: ['Object', 'obj1', 'obj2'],
+      bindingTests: [
+        ['obj1.id', Do.SET, 'obj1.id = 1;\n', Do.RECURSE],
+        ['obj1', Do.RECURSE, "(new 'Object.preventExtensions')(obj1);\n"],
+
+        ['Object.preventExtensions', Do.SET, 
+         "Object.preventExtensions = new 'Object.preventExtensions';\n",],
+
+        // Verify property set before extensibility prevented.
+        ['obj2', Do.RECURSE, 'obj2.id = 2;\nObject.preventExtensions(obj2);\n'],
+      ],
+    },
+
     { // Test (not) dumping immutable bindings in the global scope.
       title: 'immutables',
       bindingTests: [
@@ -424,6 +540,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         ['eval', Do.RECURSE, ''],
       ],
     },
+
     { // Test dumping Function objects.
       title: 'Function',
       src: `
@@ -467,6 +584,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         ['f4.prototype.constructor', Do.DONE, 'f4'],
       ],
     },
+
     { // Test Function objects with usable and unusable .prototype objects.
       title: 'Function .prototype',
       src: `
@@ -500,6 +618,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         ['f2.prototype.constructor', Do.RECURSE, 'f2'],
       ],
     },
+
     { // Test dumping Function objects' .prototype.constructor property.
       title: 'Function .prototype.constructor',
       src: `
@@ -514,6 +633,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
             '{writable: false});\n'],
       ],
     },
+
     { // Test dumping Function objects' .name property.
       title: 'Function .name',
       src: `
@@ -529,6 +649,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         ['f2', Do.RECURSE, 'delete f2.name;\n'],
       ],
     },
+
     { // Test dumping Array objects.
       title: 'Array',
       src: `
@@ -556,6 +677,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         ['sparse.length', Do.RECURSE],
       ],
     },
+
     { // Test dumping Date objects.
       title: 'Date',
       src: `
@@ -575,6 +697,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         ['date2^', Do.DONE],
       ],
     },
+
     { // Test dumping RegExp objects.
       title: 'RegExp',
       src: `
@@ -617,6 +740,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         ['re3.lastIndex', Do.RECURSE],
       ],
     },
+
     { // Test dumping Error objects.
       title: 'Error',
       src: `
@@ -653,6 +777,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         ['error2.message', Do.RECURSE],
       ],
     },
+
     { // Test dumping builtin objects.
       title: 'Builtins',
       src: '',
@@ -660,113 +785,6 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         ['Object', Do.DONE, "var Object = new 'Object';\n"],
         ['Object.prototype', Do.SET,
          "Object.prototype = new 'Object.prototype';\n"],
-      ],
-    },
-    { // Test dumping {proto} bindings.
-      title: '{proto}',
-      src: `
-        var parent = {};
-        var child0 = Object.create(parent);
-        var child1 = Object.create(parent);
-        var child2 = Object.create(parent);
-        var child3 = Object.create(parent);
-     `,
-      set: ['Object'],  // N.B.: Object.create is polyfilled.
-      bindingTests: [
-        ['child0', Do.DONE, 'var child0 = {};\n'],
-        ['child1', Do.DONE, 'var child1 = {};\n'],
-        ['child2', Do.DONE, 'var child2 = {};\n'],
-        ['parent', Do.DONE, 'var parent = {};\n'],
-        ['child3', Do.DONE, "var child3 = (new 'Object.create')(parent);\n"],
-
-        ['child1^', Do.SET, "(new 'Object.setPrototypeOf')(child1, parent);\n",
-         Do.DONE],
-
-        ['Object.setPrototypeOf', Do.SET,
-         "Object.setPrototypeOf = new 'Object.setPrototypeOf';\n"],
-
-        ['child2^', Do.SET, 'Object.setPrototypeOf(child2, parent);\n',
-         Do.DONE],
-      ],
-      implicitTests: [
-        ['child0^', Do.DECL],
-        ['child1^', Do.DONE, 'parent'],
-        ['child2^', Do.DONE, 'parent'],
-        ['child3^', Do.DONE, 'parent'],
-      ]
-    },
-    { // Test dumping {proto} bindings: null-protoype objects.
-      title: 'null {proto}',
-      src: `
-        var objs = {obj: new Object(), fun: new Function(), arr: new Array()};
-        for (var p in objs) {
-          Object.setPrototypeOf(objs[p], null);
-        }
-      `,
-      set: ['Object', 'Object.setPrototypeOf', 'objs'],
-      bindingTests: [
-        ['objs.obj', Do.DONE, "objs.obj = (new 'Object.create')(null);\n"],
-        ['objs.obj{proto}', Do.DONE, '', Do.RECURSE],
-        ['objs.fun', Do.DONE, 'objs.fun = function() {};\n'],
-        ['objs.fun{proto}', Do.SET, 'Object.setPrototypeOf(objs.fun, null);\n',
-         Do.RECURSE],
-        ['objs.arr', Do.DONE, 'objs.arr = [];\n'],
-        ['objs.arr{proto}', Do.SET, 'Object.setPrototypeOf(objs.arr, null);\n',
-         Do.RECURSE],
-      ],
-    },
-    { // Test dumping {owner} bindings.
-      title: '{owner}',
-      src: `
-        var alice = {};
-        alice.thing = (function() {setPerms(alice); return {};})();
-        var bob = {};
-        bob.thing = {};
-        Object.setOwnerOf(bob.thing, bob);
-        var unowned = {};
-        Object.setOwnerOf(unowned, null);
-      `,
-      set: ['Object', 'CC', 'CC.root'],
-      bindingTests: [
-        ['alice', Do.DONE, 'var alice = {};\n'],
-        ['alice.thing', Do.DONE, 'alice.thing = {};\n'],
-        ['alice.thing{owner}', Do.SET, "(new 'Object.setOwnerOf')" +
-            '(alice.thing, alice);\n', Do.DONE],
-        ['Object.setOwnerOf', Do.SET,
-         "Object.setOwnerOf = new 'Object.setOwnerOf';\n"],
-        ['bob', Do.RECURSE, 'var bob = {};\nbob.thing = {};\n' +
-            "Object.setOwnerOf(bob.thing, bob);\n"],
-        ['unowned', Do.SET, 'var unowned = {};\n', Do.DONE],
-        ['unowned{owner}', Do.SET, 'Object.setOwnerOf(unowned, null);\n',
-         Do.RECURSE],
-      ],
-      implicitTests: [
-        ['alice', Do.DONE],
-        ['alice{owner}', Do.DONE, 'CC.root'],
-        ['alice.thing{owner}', Do.DONE, 'alice'],
-        ['bob', Do.RECURSE],
-        ['bob{owner}', Do.RECURSE, 'CC.root'],
-        ['bob.thing{owner}', Do.RECURSE, 'bob'],
-      ],
-    },
-    { // Test dumping extensibility.
-      title: 'extensibility',
-      src: `
-        var obj1 = {id: 1};
-        var obj2 = {id: 2};
-        Object.preventExtensions(obj1);
-        Object.preventExtensions(obj2);
-      `,
-      set: ['Object', 'obj1', 'obj2'],
-      bindingTests: [
-        ['obj1.id', Do.SET, 'obj1.id = 1;\n', Do.RECURSE],
-        ['obj1', Do.RECURSE, "(new 'Object.preventExtensions')(obj1);\n"],
-
-        ['Object.preventExtensions', Do.SET, 
-         "Object.preventExtensions = new 'Object.preventExtensions';\n",],
-
-        // Verify property set before extensibility prevented.
-        ['obj2', Do.RECURSE, 'obj2.id = 2;\nObject.preventExtensions(obj2);\n'],
       ],
     },
   ];
