@@ -57,6 +57,8 @@ svgEditor.init = function() {
   for (var button of document.querySelectorAll('#toolbox button')) {
     button.addEventListener('click', update, false);
   }
+
+  document.addEventListener('keydown', svgEditor.keypress);
 };
 
 /**
@@ -81,6 +83,80 @@ svgEditor.resize = function() {
   // Recenter the origin to be the middle of the screen.
   svgEditor.canvas.getRootElem().setAttribute('viewBox',
       (-width / 2) + ' 0 ' + width + ' ' + height);
+};
+
+/**
+ * Handle keyboard commands.
+ */
+svgEditor.keypress = function(e) {
+  if (e.key === 'Delete' || e.key === 'Backspace') {
+    svgEditor.canvas.deleteSelectedElements();
+    e.preventDefault();
+  } else if (e.ctrlKey || e.metaKey) {
+    if (e.key === 'z') {
+      if (e.shiftKey) {
+        svgEditor.redo();
+      } else {
+        svgEditor.undo();
+      }
+      e.preventDefault();
+    } else if (e.key === 'x') {
+      svgEditor.cut();
+      e.preventDefault();
+    } else if (e.key === 'c') {
+      svgEditor.copy();
+      e.preventDefault();
+    } else if (e.key === 'v') {
+      svgEditor.paste();
+      e.preventDefault();
+    }
+  }
+};
+
+/**
+ * Redo one action.
+ */
+svgEditor.redo = function() {
+  var undoMgr = svgEditor.canvas.undoMgr;
+  if (undoMgr.getRedoStackSize() > 0) {
+    undoMgr.redo();
+  }
+};
+
+/**
+ * Undo one action.
+ */
+svgEditor.undo = function() {
+  var undoMgr = svgEditor.canvas.undoMgr;
+  if (undoMgr.getUndoStackSize() > 0) {
+    undoMgr.undo();
+  }
+};
+
+/**
+ * Cut selected elements.
+ */
+svgEditor.cut = function() {
+  svgEditor.copy();
+  svgEditor.canvas.deleteSelectedElements();
+};
+
+/**
+ * Copy selected elements.
+ */
+svgEditor.copy = function() {
+  svgEditor.canvas.copySelectedElements();
+};
+
+/**
+ * Paste clipboard to middle of editor.
+ */
+svgEditor.paste = function() {
+  var svgCanvas = svgEditor.canvas;
+  var workarea = document.getElementById('editorContainer');
+  var zoom = svgCanvas.getZoom();
+  var y = (workarea.scrollTop + workarea.offsetHeight / 2) / zoom - svgCanvas.contentH;
+  svgCanvas.pasteElements('point', 0, -y);
 };
 
 /**
