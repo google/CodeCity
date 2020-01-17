@@ -91,6 +91,7 @@ svgEditor.resize = function() {
 svgEditor.keypress = function(e) {
   if (e.key === 'Delete' || e.key === 'Backspace') {
     svgEditor.canvas.deleteSelectedElements();
+    e.preventDefault();
   } else if (e.ctrlKey || e.metaKey) {
     if (e.key === 'z') {
       if (e.shiftKey) {
@@ -101,10 +102,13 @@ svgEditor.keypress = function(e) {
       e.preventDefault();
     } else if (e.key === 'x') {
       svgEditor.cut();
+      e.preventDefault();
     } else if (e.key === 'c') {
       svgEditor.copy();
+      e.preventDefault();
     } else if (e.key === 'v') {
       svgEditor.paste();
+      e.preventDefault();
     }
   }
 };
