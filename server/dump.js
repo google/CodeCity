@@ -36,7 +36,7 @@ var {Dumper, Do} = require('./dumper');
  * @param {!Array<SpecEntry>} spec The dump specification.
  */
 var dump = function(intrp, spec) {
-  var dumper = new Dumper(intrp, new Interpreter());
+  var dumper = new Dumper(new Interpreter(), intrp);
 };
 
 ///////////////////////////////////////////////////////////////////////////////

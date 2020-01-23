@@ -42,7 +42,7 @@ const {ObjectDumper} = testOnly;
 exports.testObjectDumperPrototypeIsWritable = function(t) {
   const intrp = getInterpreter();
   const pristine = new Interpreter();
-  const dumper = new Dumper(intrp, pristine);
+  const dumper = new Dumper(pristine, intrp);
 
   const root = intrp.ROOT;
   const writable =
@@ -116,7 +116,7 @@ exports.testObjectDumperPrototypeIsWritable = function(t) {
 exports.testDumperPrototypeIsShadowed = function(t) {
   const intrp = getInterpreter();
   const pristine = new Interpreter();
-  const dumper = new Dumper(intrp, pristine);
+  const dumper = new Dumper(pristine, intrp);
 
   intrp.global.createMutableBinding('foo', 'foo');
   intrp.global.createMutableBinding('bar', 'bar');
@@ -137,7 +137,7 @@ exports.testDumperPrototypeIsShadowed = function(t) {
 exports.testDumperPrototypeExprForPrimitive = function(t) {
   const intrp = getInterpreter();
   const pristine = new Interpreter();
-  const dumper = new Dumper(intrp, pristine);
+  const dumper = new Dumper(pristine, intrp);
 
   function doCases(cases) {
     for (const tc of cases) {
@@ -184,7 +184,7 @@ exports.testDumperPrototypeExprForPrimitive = function(t) {
 exports.testDumperPrototypeExprFor = function(t) {
   const intrp = getInterpreter();
   const pristine = new Interpreter();
-  const dumper = new Dumper(intrp, pristine);
+  const dumper = new Dumper(pristine, intrp);
 
   // Give references to needed builtins.
   for (const b of [
@@ -236,7 +236,7 @@ exports.testDumperPrototypeExprFor = function(t) {
 exports.testDumperPrototypeExprForSelector = function(t) {
   const intrp = getInterpreter();
   const pristine = new Interpreter();
-  const dumper = new Dumper(intrp, pristine);
+  const dumper = new Dumper(pristine, intrp);
 
   // Test dumping selector before and after dumping Object.getPrototypeOf.
   const selector = new Selector('foo.bar^.baz');
@@ -799,7 +799,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
 
     // Create Dumper with pristine Interpreter instance to compare to.
     const pristine = new Interpreter();
-    const dumper = new Dumper(intrp, pristine);
+    const dumper = new Dumper(pristine, intrp);
 
     // Set a few object .done flags in advance, to limit recursive
     // dumping of builtins in tests.
@@ -877,7 +877,7 @@ exports.testScopeDumperPrototypeDump = function(t) {
   // Create Dumper with pristine Interpreter instance to compare to;
   // get ScopeDumper for global scope.
   const pristine = new Interpreter();
-  const dumper = new Dumper(intrp, pristine);
+  const dumper = new Dumper(pristine, intrp);
   const globalDumper = dumper.getScopeDumper(intrp.global);
 
   // Dump one binding and check result.
@@ -920,7 +920,7 @@ exports.testDumperSurvey = function(t) {
   // get ScopeDumper for global scope.  Dumper constructor performs
   // survey.
   const pristine = new Interpreter();
-  const dumper = new Dumper(intrp, pristine);
+  const dumper = new Dumper(pristine, intrp);
 
   // Check relationship of functions and scopes recorded by survey.
   const baz = /** @type {!Interpreter.prototype.UserFunction} */(

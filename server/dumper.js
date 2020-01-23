@@ -34,17 +34,29 @@ var Selector = require('./selector');
 // Dumper.
 
 /**
- * Dumper encapsulates all machinery to dump an Interpreter to
- * eval-able JS, including maintaining all the dump-state info
- * required to keep track of what has and hasn't yet been dumped.
+ * Dumper compares the state of two Interpreter instances, for the
+ * purpose of generating eval-able JS that would update part or all(*)
+ * of the first to the same state as the second.  This can be used to
+ * dump the state of an Interpreter by comparing it against a pristine
+ * Interpreter instance, or to produce a software patch by comparing a
+ * long-running Interpreter against a previous version of itself or
+ * against the target to which the patch will be applied.
+ *
+ * (*) Limitations: since there is no way to construct arbitrary stack
+ * frames by evaling JS source code, it is not at present possible to
+ * dump the state of threads.  This could be rectified in future by
+ * providing host functions for creating/modifying the stack frames
+ * associated with Thread objects.
+ *
  * @constructor
- * @param {!Interpreter} intrp The interpreter to be dumped.
- * @param {!Interpreter} pristine A pristine interpreter, initialised
- *     exactly as the one the ouptut JS will be executed by.
+ * @param {!Interpreter} intrp1 An interpreter initialised exactly as
+ *     the one the ouptut JS will be executed by.
+ * @param {!Interpreter} intrp2 An interpreter containing state
+ *     modifications (relative to intrp1) to be dumped.
  */
-var Dumper = function(intrp, pristine) {
-  this.intrp = intrp;
-  this.pristine = pristine;
+var Dumper = function(intrp1, intrp2) {
+  this.intrp1 = intrp1;
+  this.intrp2 = intrp2;
   /** @const {!Map<!Interpreter.Scope,!ScopeDumper>} */
   this.scopeDumpers = new Map();
   /** @const {!Map<!Interpreter.prototype.Object,!ObjectDumper>} */
@@ -64,53 +76,52 @@ var Dumper = function(intrp, pristine) {
    * Which scope are we presently outputting code in the context of?
    * @type {!Interpreter.Scope}
    */
-  this.scope = intrp.global;
+  this.scope = intrp2.global;
   /** @type {!Interpreter.Owner} Perms at present point in output. */
-  this.perms = intrp.ROOT;
+  this.perms = intrp2.ROOT;
   /** @const {!Array<string>} Accumulated output for the current file. */
   this.output = [];  // TODO(cpcallen): use Buffer or Uint8Array?
 
   /**
-   * Map from pristine objects to their corresponding intrp objects.
-   * This is mainly for checking to see if builtins have had their
-   * prototype or object-valued properties modified.
+   * Map from objects from intrp2 to corresponding objects in intrp2.
    * @type {!Map<?Interpreter.prototype.Object, ?Interpreter.prototype.Object>}
    */
   var intrpObjs = new Map([[null, null]]);
   // Initialise intrpObjs.
-  var builtins = pristine.builtins.keys();
+  var builtins = intrp1.builtins.keys();
   for (var i = 0; i < builtins.length; i++) {
     var builtin = builtins[i];
-    var obj = intrp.builtins.get(builtin);
-    var pobj = pristine.builtins.get(builtin);
-    if (!(obj instanceof intrp.Object)) {
+    var obj1 = intrp1.builtins.get(builtin);
+    var obj2 = intrp2.builtins.get(builtin);
+    if (!(obj2 instanceof intrp2.Object)) {
       continue;  // Skip primitive-valued builtins.
-    } else if (pobj === undefined) {
-      throw new Error('Builtin not found in pristine Interpreter');
-    } else if (!(pobj instanceof pristine.Object)) {
-      throw new Error('Builtin no longer an object in pristine Interpreter');
+    } else if (obj1 === undefined) {
+      throw new Error('Builtin not found in intrp1 Interpreter');
+    } else if (!(obj1 instanceof intrp1.Object)) {
+      throw new Error("Builtin wasn't an object originally");
     }
     // TODO(cpcallen): add check for inconsistent duplicate
     // registrations - e.g., if parseInt and Number.parseInt were
-    // the same in intrp but different in pristine.
-    intrpObjs.set(pobj, obj);
+    // the same in intrp2 but different in intrp1.
+    intrpObjs.set(obj1, obj2);
   }
 
   // Create and initialise ScopeDumper for global scope.
-  var globalDumper = this.getScopeDumper(intrp.global);
-  for (var v in pristine.global.vars) {
-    var val = intrp.global.get(v);
-    var pval = pristine.global.get(v);
-    if (pval instanceof pristine.Object) {
-      if (!(val instanceof intrp.Object)) {
+  var globalDumper = this.getScopeDumper(intrp2.global);
+  for (var v in intrp1.global.vars) {
+    var val1 = intrp1.global.get(v);
+    var val2 = intrp2.global.get(v);
+    if (val1 instanceof intrp1.Object) {
+      if (!(val2 instanceof intrp2.Object)) {
         throw new TypeError('Primitive / object mistmatch');
       }
-      pval = intrpObjs.get(pval);
+      val1 = intrpObjs.get(val1);
     }
-    if (Object.is(val, pval)) {
-      globalDumper.setDone(v, (typeof val === 'object') ? Do.DONE : Do.RECURSE);
-      if (val instanceof intrp.Object) {
-        this.getObjectDumper(val).ref = new Selector(v);
+    if (Object.is(val1, val2)) {
+      globalDumper.setDone(v,
+                           (typeof val2 === 'object') ? Do.DONE : Do.RECURSE);
+      if (val2 instanceof intrp2.Object) {
+        this.getObjectDumper(val2).ref = new Selector(v);
         // Other initialialisation will be taken care of below.
       }
     }
@@ -119,38 +130,38 @@ var Dumper = function(intrp, pristine) {
   // Create and initialise ObjectDumpers for builtin objects.
   for (i = 0; i < builtins.length; i++) {
     builtin = builtins[i];
-    obj = intrp.builtins.get(builtin);
-    if (!(obj instanceof intrp.Object)) continue;  // Skip primitives.
-    var objDumper = this.getObjectDumper(obj);
-    pobj = pristine.builtins.get(builtin);
+    obj2 = intrp2.builtins.get(builtin);
+    if (!(obj2 instanceof intrp2.Object)) continue;  // Skip primitives.
+    var objDumper = this.getObjectDumper(obj2);
+    obj1 = intrp1.builtins.get(builtin);
     // Record pre-set prototype.
-    objDumper.proto = intrpObjs.get(pobj.proto);
-    if (obj.proto === objDumper.proto) {
+    objDumper.proto = intrpObjs.get(obj1.proto);
+    if (obj2.proto === objDumper.proto) {
       objDumper.setDone(Selector.PROTOTYPE,
-                        (obj.proto === null) ? Do.RECURSE : Do.DONE);
+                        (obj2.proto === null) ? Do.RECURSE : Do.DONE);
     }
     // Record pre-set owner.
     var owner = /** @type{?Interpreter.Owner} */(
-        intrpObjs.get(/** @type{?Interpreter.prototype.Object} */(pobj.owner)));
-    if (obj.owner === owner) {
+        intrpObjs.get(/** @type{?Interpreter.prototype.Object} */(obj1.owner)));
+    if (obj2.owner === owner) {
       objDumper.setDone(Selector.OWNER,
-                        (obj.owner === null) ? Do.RECURSE : Do.DONE);
+                        (obj2.owner === null) ? Do.RECURSE : Do.DONE);
     }
     // Record pre-set property values/attributes.
-    var keys = pobj.ownKeys(pristine.ROOT);
+    var keys = obj1.ownKeys(intrp1.ROOT);
     for (var j = 0; j < keys.length; j++) {
       var key = keys[j];
-      var pd = obj.getOwnPropertyDescriptor(key, intrp.ROOT);
-      var ppd = pobj.getOwnPropertyDescriptor(key, pristine.ROOT);
+      var pd1 = obj1.getOwnPropertyDescriptor(key, intrp1.ROOT);
+      var pd2 = obj2.getOwnPropertyDescriptor(key, intrp2.ROOT);
       var attrs = {
-        writable: ppd.writable,
-        enumerable: ppd.enumerable,
-        configurable: ppd.configurable
+        writable: pd1.writable,
+        enumerable: pd1.enumerable,
+        configurable: pd1.configurable
       };
       objDumper.attributes[key] = attrs;
-      var value = ppd.value instanceof intrp.Object ?
-          intrpObjs.get(ppd.value) : ppd.value;
-      objDumper.checkProperty(key, value, attrs, pd);
+      var value = pd1.value instanceof intrp2.Object ?
+          intrpObjs.get(pd1.value) : pd1.value;
+      objDumper.checkProperty(key, value, attrs, pd2);
     }
   }
 
@@ -204,7 +215,7 @@ Dumper.prototype.dumpBinding = function(selector, todo) {
  * represented by an expression creating the object - but if it has
  * appeared before, then it will instead be represented by an
  * expression referenceing the previously-constructed object.
- * @param {Interpreter.Value} value Arbitrary JS value from this.intrp.
+ * @param {Interpreter.Value} value Arbitrary JS value from this.intrp2.
  * @param {Selector=} selector Location in which value will be stored.
  * @param {boolean=} callable Return the expression suitably
  *     parenthesised to be used as the callee of a CallExpression.
@@ -216,8 +227,8 @@ Dumper.prototype.dumpBinding = function(selector, todo) {
  * @return {string} An eval-able representation of the value.
  */
 Dumper.prototype.exprFor = function(value, selector, callable, funcName) {
-  var intrp = this.intrp;
-  if (!(value instanceof intrp.Object)) {
+  var intrp2 = this.intrp2;
+  if (!(value instanceof intrp2.Object)) {
     return this.exprForPrimitive(value);
   }
 
@@ -227,7 +238,7 @@ Dumper.prototype.exprFor = function(value, selector, callable, funcName) {
   if (selector) objDumper.ref = selector;  // Safe new ref if specified.
 
  // Object not yet referenced.  Is it a builtin?
-  var key = intrp.builtins.getKey(value);
+  var key = intrp2.builtins.getKey(value);
   if (key) {
     var quoted = code.quote(key);
     return callable ? '(new ' + quoted + ')' : 'new ' + quoted;
@@ -235,17 +246,17 @@ Dumper.prototype.exprFor = function(value, selector, callable, funcName) {
   // New object.  Create and save referece for later use.
   if (!selector) throw Error('Refusing to create non-referable object');
   var expr;
-  if (value instanceof intrp.Function) {
+  if (value instanceof intrp2.Function) {
     expr = this.exprForFunction(value, objDumper, funcName);
-  } else if (value instanceof intrp.Array) {
+  } else if (value instanceof intrp2.Array) {
     expr = this.exprForArray(value, objDumper);
-  } else if (value instanceof intrp.Date) {
+  } else if (value instanceof intrp2.Date) {
     expr = this.exprForDate(value, objDumper);
-  } else if (value instanceof intrp.RegExp) {
+  } else if (value instanceof intrp2.RegExp) {
     expr = this.exprForRegExp(value, objDumper);
-  } else if (value instanceof intrp.Error) {
+  } else if (value instanceof intrp2.Error) {
     expr = this.exprForError(value, objDumper);
-  } else if (value instanceof intrp.WeakMap) {
+  } else if (value instanceof intrp2.WeakMap) {
     // TODO(cpcallen)
     throw new Error('WeakMap dumping not implemented');
     // expr = this.exprForWeakMap(value, objDumper);
@@ -321,8 +332,8 @@ Dumper.prototype.exprForObject = function(obj, objDumper) {
     case null:
       objDumper.proto = null;
       return this.exprForBuiltin('Object.create') + '(null)';
-    case this.intrp.OBJECT:
-      objDumper.proto = this.intrp.OBJECT;
+    case this.intrp2.OBJECT:
+      objDumper.proto = this.intrp2.OBJECT;
       return '{}';
     default:
       var protoDumper = this.getObjectDumper(obj.proto);
@@ -332,7 +343,7 @@ Dumper.prototype.exprForObject = function(obj, objDumper) {
             this.exprFor(obj.proto) + ')';
       } else {
         // Can't set [[Prototype]] yet.  Do it later.
-        objDumper.proto = this.intrp.OBJECT;
+        objDumper.proto = this.intrp2.OBJECT;
         return '{}';
       }
   }
@@ -351,10 +362,10 @@ Dumper.prototype.exprForObject = function(obj, objDumper) {
  * @return {string} An eval-able representation of func.
  */
 Dumper.prototype.exprForFunction = function(func, funcDumper, funcName) {
-  if (!(func instanceof this.intrp.UserFunction)) {
+  if (!(func instanceof this.intrp2.UserFunction)) {
     throw Error('Unable to dump non-UserFunction');
   }
-  funcDumper.proto = this.intrp.FUNCTION;  // TODO(ES6): generators, etc.?
+  funcDumper.proto = this.intrp2.FUNCTION;  // TODO(ES6): generators, etc.?
   // The .length property will be set implicitly (and is immutable).
   funcDumper.attributes['length'] =
       {writable: false, enumerable: false, configurable: false};
@@ -367,7 +378,7 @@ Dumper.prototype.exprForFunction = function(func, funcDumper, funcName) {
   if (funcName) {
     var attr = funcDumper.attributes['name'] =
         {writable: false, enumerable: false, configurable: true};
-    var pd = func.getOwnPropertyDescriptor('name', this.intrp.ROOT);
+    var pd = func.getOwnPropertyDescriptor('name', this.intrp2.ROOT);
     if (pd) {
       funcDumper.checkProperty('name', funcName, attr, pd);
     } else {
@@ -384,18 +395,18 @@ Dumper.prototype.exprForFunction = function(func, funcDumper, funcName) {
   // care about its {proto}; that can be modified later.)
   attr = funcDumper.attributes['prototype'] =
       {writable: true, enumerable: false, configurable: false};
-  pd = func.getOwnPropertyDescriptor('prototype', this.intrp.ROOT);
+  pd = func.getOwnPropertyDescriptor('prototype', this.intrp2.ROOT);
   var prototype = pd.value;
-  if (!this.intrp.builtins.getKey(prototype) &&
-      prototype instanceof this.intrp.Object &&
-      Object.getPrototypeOf(prototype) === this.intrp.Object.prototype) {
+  if (!this.intrp2.builtins.getKey(prototype) &&
+      prototype instanceof this.intrp2.Object &&
+      Object.getPrototypeOf(prototype) === this.intrp2.Object.prototype) {
     var prototypeFuncDumper = this.getObjectDumper(prototype);
     if(prototypeFuncDumper.ref === undefined) {
       // We can use automatic .prototype object.
       // Mark .prototype as Do.SET or Do.ATTR as appropriate.
       funcDumper.checkProperty('prototype', prototype, attr, pd);
       // Mark prototype object as existing and referenceable.
-      prototypeFuncDumper.proto = this.intrp.OBJECT;
+      prototypeFuncDumper.proto = this.intrp2.OBJECT;
       prototypeFuncDumper.ref =
           new Selector(funcDumper.ref.concat('prototype'));
       // Do we need to set .prototype's [[Prototype]]?
@@ -412,7 +423,7 @@ Dumper.prototype.exprForFunction = function(func, funcDumper, funcName) {
       // need to be overwritten.
       attr = prototypeFuncDumper.attributes['constructor'] =
           {writable: true, enumerable: false, configurable: true};
-      pd = prototype.getOwnPropertyDescriptor('constructor', this.intrp.ROOT);
+      pd = prototype.getOwnPropertyDescriptor('constructor', this.intrp2.ROOT);
       var constructor = pd.value;
       prototypeFuncDumper.checkProperty('constructor', func, attr, pd);
     }
@@ -427,8 +438,8 @@ Dumper.prototype.exprForFunction = function(func, funcDumper, funcName) {
  * @return {string} An eval-able representation of arr.
  */
 Dumper.prototype.exprForArray = function(arr, arrDumper) {
-  arrDumper.proto = this.intrp.ARRAY;
-  var root = this.intrp.ROOT;
+  arrDumper.proto = this.intrp2.ARRAY;
+  var root = this.intrp2.ROOT;
   var lastIndex = arr.get('length', root) - 1;
   arrDumper.attributes['length'] =
       {writable: true, enumerable: false, configurable: false};
@@ -449,7 +460,7 @@ Dumper.prototype.exprForArray = function(arr, arrDumper) {
  * @return {string} An eval-able representation of date.
  */
 Dumper.prototype.exprForDate = function(date, dateDumper) {
-  dateDumper.proto = this.intrp.DATE;
+  dateDumper.proto = this.intrp2.DATE;
   return 'new ' + this.exprForBuiltin('Date') +
       "('" + date.date.toISOString() + "')";
 };
@@ -461,7 +472,7 @@ Dumper.prototype.exprForDate = function(date, dateDumper) {
  * @return {string} An eval-able representation of re.
  */
 Dumper.prototype.exprForRegExp = function(re, reDumper) {
-  reDumper.proto = this.intrp.REGEXP;
+  reDumper.proto = this.intrp2.REGEXP;
   // Some properties are implicitly pre-set.
   var props = ['source', 'global', 'ignoreCase', 'multiline'];
   for (var prop, i = 0; prop = props[i]; i++) {
@@ -471,7 +482,7 @@ Dumper.prototype.exprForRegExp = function(re, reDumper) {
   }
   reDumper.attributes['lastIndex'] =
       {writable: true, enumerable: false, configurable: false};
-  if (Object.is(re.get('lastIndex', this.intrp.ROOT), 0)) {
+  if (Object.is(re.get('lastIndex', this.intrp2.ROOT), 0)) {
     // Can skip setting .lastIndex iff it is 0.
     reDumper.setDone('lastIndex', Do.RECURSE);
   } else {
@@ -489,26 +500,26 @@ Dumper.prototype.exprForRegExp = function(re, reDumper) {
 Dumper.prototype.exprForError = function(err, errDumper) {
   errDumper.proto = err.proto;
   var constructor;
-  if (err.proto === this.intrp.EVAL_ERROR) {
+  if (err.proto === this.intrp2.EVAL_ERROR) {
     constructor = 'EvalError';
-  } else if (err.proto === this.intrp.RANGE_ERROR) {
+  } else if (err.proto === this.intrp2.RANGE_ERROR) {
     constructor = 'RangeError';
-  } else if (err.proto === this.intrp.REFERENCE_ERROR) {
+  } else if (err.proto === this.intrp2.REFERENCE_ERROR) {
     constructor = 'ReferenceError';
-  } else if (err.proto === this.intrp.SYNTAX_ERROR) {
+  } else if (err.proto === this.intrp2.SYNTAX_ERROR) {
     constructor = 'SyntaxError';
-  } else if (err.proto === this.intrp.TYPE_ERROR) {
+  } else if (err.proto === this.intrp2.TYPE_ERROR) {
     constructor = 'TypeError';
-  } else if (err.proto === this.intrp.URI_ERROR) {
+  } else if (err.proto === this.intrp2.URI_ERROR) {
     constructor = 'URIError';
-  } else if (err.proto === this.intrp.PERM_ERROR) {
+  } else if (err.proto === this.intrp2.PERM_ERROR) {
     constructor = 'PermissionError';
   } else {
     constructor = 'Error';
-    errDumper.proto = this.intrp.ERROR;
+    errDumper.proto = this.intrp2.ERROR;
   }
   // Try to set .message in the constructor call.
-  var message = err.getOwnPropertyDescriptor('message', this.intrp.ROOT);
+  var message = err.getOwnPropertyDescriptor('message', this.intrp2.ROOT);
   var messageExpr = '';
   if (message &&
       (typeof message.value === 'string' || message.value === undefined)) {
@@ -521,7 +532,7 @@ Dumper.prototype.exprForError = function(err, errDumper) {
   // overwrite (or delete) it.
   errDumper.attributes['stack'] =
       {writable: true, enumerable: false, configurable: true};
-  var stack = err.getOwnPropertyDescriptor('stack', this.intrp.ROOT);
+  var stack = err.getOwnPropertyDescriptor('stack', this.intrp2.ROOT);
   if (stack) {
     errDumper.setDone('stack', Do.DECL);
   } else {
@@ -537,7 +548,7 @@ Dumper.prototype.exprForError = function(err, errDumper) {
  * @return {string} An eval-able representation of obj.
  */
 Dumper.prototype.exprForBuiltin = function(builtin) {
-  return this.exprFor(this.intrp.builtins.get(builtin), undefined, true);
+  return this.exprFor(this.intrp2.builtins.get(builtin), undefined, true);
 };
 
 /**
@@ -563,7 +574,7 @@ Dumper.prototype.getComponentsForSelector = function(selector, scope) {
     var ref = new Selector(selector);
     part = ref.pop();
     var obj = this.valueForSelector(ref);
-    if (!(obj instanceof this.intrp.Object)) {
+    if (!(obj instanceof this.intrp2.Object)) {
       throw new TypeError("Can't set properties of primitive");
     }
     dumper = this.getObjectDumper(obj);
@@ -638,13 +649,13 @@ Dumper.prototype.valueForSelector = function(selector, scope) {
   }
   var /** Interpreter.Value */ v = scope.get(varname);
   for (var i = 1; i < selector.length; i++) {
-    if (!(v instanceof this.intrp.Object)) {
+    if (!(v instanceof this.intrp2.Object)) {
       var s = new Selector(selector.slice(0, i));
       throw TypeError("Can't get select part of primitive " + s + ' === ' + v);
     }
     var part = selector[i];
     if (typeof part === 'string') {
-      v = v.get(part, this.intrp.ROOT);
+      v = v.get(part, this.intrp2.ROOT);
     } else if (part === Selector.PROTOTYPE) {
       v = v.proto;
     } else if (part === Selector.OWNER) {
@@ -665,7 +676,7 @@ Dumper.prototype.valueForSelector = function(selector, scope) {
  *     current scope (this.scope) (inclusive) and scope (exclusive).
  */
 Dumper.prototype.isShadowed = function(name, scope) {
-  if (!scope) scope = this.intrp.global;
+  if (!scope) scope = this.intrp2.global;
   for (var s = this.scope; s !== scope; s = s.outerScope) {
     if (s === null) {
       throw Error("Looking for name '" + name + "' from non-enclosing scope??");
@@ -761,7 +772,7 @@ ScopeDumper.prototype.dumpBinding = function(dumper, part, todo, ref) {
       this.setDone(part, done);
     }
     if (todo >= Do.RECURSE && done < Do.RECURSE &&
-        value instanceof dumper.intrp.Object) {
+        value instanceof dumper.intrp2.Object) {
       var objDone = dumper.getObjectDumper(value).dump(dumper, sel);
       if (objDone === ObjectDumper.Done.DONE_RECURSIVELY) {
         done = Do.RECURSE;
@@ -815,7 +826,7 @@ ScopeDumper.prototype.survey = function(dumper) {
   if (dumper.visiting.has(this) || this.surveyed) return;
   dumper.visiting.add(this);
   // Record parent scope.
-  if (this.scope !== dumper.intrp.global) {
+  if (this.scope !== dumper.intrp2.global) {
     if (this.scope.outerScope === null) {
       throw new TypeError('Non-global scope has null outer scope');
     }
@@ -828,14 +839,14 @@ ScopeDumper.prototype.survey = function(dumper) {
   // Survey variable bindings.
   for (var name in this.scope.vars) {
     var value = this.scope.get(name);
-    if (!(value instanceof dumper.intrp.Object)) continue;  // Skip primitives.
+    if (!(value instanceof dumper.intrp2.Object)) continue;  // Skip primitives.
     dumper.getObjectDumper(value).survey(dumper, new Selector(name));
   }
   // Record arguments object attached to this scope if it's a function scope.
   if (this.scope.type === Interpreter.Scope.Type.FUNCTION &&
       this.scope.hasImmutableBinding('arguments')) {
     var argsObject = this.scope.get('arguments');
-    if (!(argsObject instanceof dumper.intrp.Arguments)) {
+    if (!(argsObject instanceof dumper.intrp2.Arguments)) {
       throw new TypeError('arguments not an Arguments object');
     } else if (dumper.argumentsScopeDumpers.has(argsObject)) {
       throw new Error('Arguments object belongs to more than one scope');
@@ -962,7 +973,7 @@ ObjectDumper.prototype.dump = function(dumper, ref) {
   // Optimistically assume success until we find otherwise.
   var /** !ObjectDumper.Done */ done = ObjectDumper.Done.DONE_RECURSIVELY;
   var /** ?ObjectDumper.Pending */ pending = null;
-  var keys = this.obj.ownKeys(dumper.intrp.ROOT);
+  var keys = this.obj.ownKeys(dumper.intrp2.ROOT);
   var parts = [Selector.PROTOTYPE, Selector.OWNER].concat(keys);
   for (i = 0; i < parts.length; i++) {
     var part = parts[i];
@@ -987,7 +998,7 @@ ObjectDumper.prototype.dump = function(dumper, ref) {
   }
   if (done) {
     // Dump extensibility.
-    if (!this.obj.isExtensible(dumper.intrp.ROOT)) {
+    if (!this.obj.isExtensible(dumper.intrp2.ROOT)) {
       dumper.write(dumper.exprForBuiltin('Object.preventExtensions'), '(',
                    dumper.exprForSelector(ref), ');\n');
     }
@@ -1060,7 +1071,7 @@ ObjectDumper.prototype.dumpBinding = function(dumper, part, todo, ref) {
   done = r.done;
   var value = r.value;
   if (todo >= Do.RECURSE && done === Do.DONE &&
-      value instanceof dumper.intrp.Object) {
+      value instanceof dumper.intrp2.Object) {
     var valueDumper = dumper.getObjectDumper(value);
     var objDone = valueDumper.dump(dumper, sel);
     if (objDone === null) {  // Circular structure detected.
@@ -1118,7 +1129,7 @@ ObjectDumper.prototype.dumpOwner_ = function(dumper, todo, ref, sel) {
  *     the specified property and its (ultimate/actual) value.
  */
 ObjectDumper.prototype.dumpProperty_ = function(dumper, key, todo, ref, sel) {
-  var pd = this.obj.getOwnPropertyDescriptor(key, dumper.intrp.ROOT);
+  var pd = this.obj.getOwnPropertyDescriptor(key, dumper.intrp2.ROOT);
   if (!pd) throw new RangeError("Can't dump nonexistent property " + sel);
 
   // Do this binding, if requested.
@@ -1136,7 +1147,7 @@ ObjectDumper.prototype.dumpProperty_ = function(dumper, key, todo, ref, sel) {
       }
       // Will this assignemnt set the .name of an anonymous function?
       // TODO(ES6): Handle prefix?
-      var funcName = dumper.pristine.options.methodNames ? key : undefined;
+      var funcName = dumper.intrp1.options.methodNames ? key : undefined;
       dumper.write(dumper.exprForSelector(sel), ' = ',
                    dumper.exprFor(value, sel, false, funcName), ';\n');
       done = this.checkProperty(key, value, attr, pd);
@@ -1291,7 +1302,7 @@ ObjectDumper.prototype.setDone = function(part, done) {
 ObjectDumper.prototype.survey = function(dumper, ref) {
   if (dumper.visiting.has(this)) return;
   dumper.visiting.add(this);
-  if (this.obj instanceof dumper.intrp.UserFunction) {
+  if (this.obj instanceof dumper.intrp2.UserFunction) {
     // Record this this function as inner to scope, and survey scope.
     var scopeDumper = dumper.getScopeDumper(this.obj.scope);
     scopeDumper.innerFunctions.add(this);
@@ -1311,11 +1322,11 @@ ObjectDumper.prototype.survey = function(dumper, ref) {
     ref.pop();
   }
   // Survey properties.
-  var keys = this.obj.ownKeys(dumper.intrp.ROOT);
+  var keys = this.obj.ownKeys(dumper.intrp2.ROOT);
   for (var i = 0; i < keys.length; i++) {
     var key = keys[i];
-    var value = this.obj.get(key, dumper.intrp.ROOT);
-    if (value instanceof dumper.intrp.Object) {
+    var value = this.obj.get(key, dumper.intrp2.ROOT);
+    if (value instanceof dumper.intrp2.Object) {
       ref.push(key);
       dumper.getObjectDumper(value).survey(dumper, ref);
       ref.pop();
