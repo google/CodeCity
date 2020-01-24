@@ -147,6 +147,9 @@ Code.ObjectPanel.positionTypes = function() {
  * @param {!Event} e Click event.
  */
 Code.ObjectPanel.click = function(e) {
+  if (e.metaKey || e.ctrlKey) {
+    return;
+  }
   var part = JSON.parse(e.currentTarget.getAttribute('data-link'));
   var newParts = Code.ObjectPanel.parts.concat(part);
   var selector = Code.Common.partsToSelector(newParts);
