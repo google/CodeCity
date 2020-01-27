@@ -62,10 +62,10 @@ body.disconnected svg.menuIcon:hover {
   cursor: default;
   font: normal 13px Arial, sans-serif;
   margin: 0;
+  max-height: 100%;
   outline: none;
   padding: 4px 0;
   position: absolute;
-  max-height: 100%;
   z-index: 100;
 }
 
