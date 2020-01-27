@@ -62,6 +62,8 @@ svgEditor.init = function() {
   document.addEventListener('contextmenu', svgEditor.openMenu, false);
   document.addEventListener('mousedown', svgEditor.mousedown, false);
   document.getElementById('menu').addEventListener('click', svgEditor.menuClick);
+  // Don't undo beyond initialization.
+  svgEditor.canvas.undoMgr.resetUndoStack();
 };
 
 /**
