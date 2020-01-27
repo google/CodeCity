@@ -195,28 +195,34 @@ textarea {
   text-overflow: ellipsis;
 }
 
-#editorTabs>span {
-  border-radius: 2px;
-  color: #888;
-  cursor: default;
-  margin-left: 5px;
-  outline: none;
-  padding: 0 5px;
-  user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
+#editorTabs {
+  font-family: "Arial", "Helvetica", sans-serif;
+  font-size: 11px;
 }
 
-#editorTabs.enabled>span {
-  color: #444;
+#editorTabs>.spacer {
+  border-bottom: 1px solid rgba(0,0,0,.1);
+  padding: 2px 5px;
 }
 
-#editorTabs.enabled>span:hover {
-  background-color: #d6e9f8;
+#editorTabs>.jfk-button {
+  border-bottom-color: #f1f1f1;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  height: auto;
+  line-height: normal;
+  margin-right: 0;
+  padding-bottom: 2px;
+  padding-top: 2px;
 }
 
-#editorTabs>span.highlighted {
+#editorTabs.disabled>.jfk-button {
+  color: #ccc;
+}
+
+#editorTabs>.highlighted {
   background-color: #ccc;
+  background-image: none;
 }
 
 #editorContainers>div {
