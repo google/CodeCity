@@ -59,6 +59,9 @@ svgEditor.init = function() {
   }
 
   document.addEventListener('keydown', svgEditor.keypress);
+  document.addEventListener('contextmenu', svgEditor.openMenu, false);
+  document.addEventListener('mousedown', svgEditor.mousedown, false);
+  document.getElementById('menu').addEventListener('click', svgEditor.menuClick);
 };
 
 /**
@@ -86,11 +89,24 @@ svgEditor.resize = function() {
 };
 
 /**
+ * Handle mouse down actions.
+ */
+svgEditor.mousedown = function(e) {
+  // Control-clicking on Mac OS X is treated as a right-click.
+  // WebKit on Mac OS X fails to change button to 2 (but Gecko does).
+  if (e.ctrlKey || e.button == 2) {
+    svgEditor.openMenu(e);
+  } else if (!document.getElementById('menu').contains(e.target)) {
+    svgEditor.closeMenu();
+  }
+};
+
+/**
  * Handle keyboard commands.
  */
 svgEditor.keypress = function(e) {
   if (e.key === 'Delete' || e.key === 'Backspace') {
-    svgEditor.canvas.deleteSelectedElements();
+    svgEditor.delete();
     e.preventDefault();
   } else if (e.ctrlKey || e.metaKey) {
     if (e.key === 'z') {
@@ -134,7 +150,7 @@ svgEditor.undo = function() {
 };
 
 /**
- * Cut selected elements.
+ * Cut selected element(s).
  */
 svgEditor.cut = function() {
   svgEditor.copy();
@@ -142,10 +158,17 @@ svgEditor.cut = function() {
 };
 
 /**
- * Copy selected elements.
+ * Copy selected element(s).
  */
 svgEditor.copy = function() {
   svgEditor.canvas.copySelectedElements();
+};
+
+/**
+ * Delete selected element(s).
+ */
+svgEditor.delete = function() {
+  svgEditor.canvas.deleteSelectedElements();
 };
 
 /**
@@ -255,6 +278,12 @@ svgEditor.updateToolbox = function(force) {
     actions.style.display = selected.length > 0 ? 'block' : 'none';
     singleActions.style.display = selected.length === 1 ? 'block' : 'none';
     svgEditor.updateToolbox.oldSelectedCount_ = selected.length;
+    document.getElementById('menuCut').classList
+        .toggle('menuDisabled', selected.length === 0);
+    document.getElementById('menuCopy').classList
+        .toggle('menuDisabled', selected.length === 0);
+    document.getElementById('menuDelete').classList
+        .toggle('menuDisabled', selected.length === 0);
   }
   if (selected.length === 1) {
     var element = selected[0];
@@ -289,7 +318,7 @@ svgEditor.updateToolbox = function(force) {
 };
 
 svgEditor.updateToolbox.oldMode_ = '';
-svgEditor.updateToolbox.oldSelectedCount_ = 0;
+svgEditor.updateToolbox.oldSelectedCount_ = NaN;
 
 /**
  * Find the fill and stroke for an element.
@@ -339,6 +368,63 @@ svgEditor.changeStroke = function() {
   classes += ' ' + strokeOptions[strokeIndex];
   classes = classes.replace(/\s+/g, ' ').trim();
   element.setAttribute('class', classes);
+};
+
+/**
+ * Open the context menu command menu at the mouse location.
+ * @param {!Event} e Mouse event.
+ */
+svgEditor.openMenu = function(e) {
+  svgEditor.closeMenu();
+  var menu = document.getElementById('menu');
+  var pageHeight = window.innerHeight;
+  var pageWidth = window.innerWidth;
+  var top = e.y;
+  var left = e.x;
+  menu.style.display = 'block';
+  // Don't go off the bottom of the page (hug the bottom).
+  if (top + menu.offsetHeight > pageHeight) {
+    top = Math.max(pageHeight - menu.offsetHeight, 0);
+  }
+  // Don't go off the right of the page (flip menu).
+  if (left + menu.offsetWidth > pageWidth) {
+    left = Math.max(left - menu.offsetWidth, 0);
+  }
+  menu.style.top = top + 'px';
+  menu.style.left = left + 'px';
+  // Don't open the system context menu.
+  e.preventDefault();
+};
+
+/**
+ * If there is a menu open, close it.
+ */
+svgEditor.closeMenu = function() {
+  document.getElementById('menu').style.display = 'none';
+};
+
+/**
+ * Handle mouse clicking on a context menu option.
+ * @param {!Event} e Mouse event.
+ */
+svgEditor.menuClick = function(e) {
+  if (!e.target.classList.contains('menudisabled')) {
+    switch (e.target.id) {
+      case 'menuCut':
+        svgEditor.cut();
+        break;
+      case 'menuCopy':
+        svgEditor.copy();
+        break;
+      case 'menuPaste':
+        svgEditor.paste();
+        break;
+      case 'menuDelete':
+        svgEditor.delete();
+        break;
+    }
+  }
+  svgEditor.closeMenu();
 };
 
 window.addEventListener('load', svgEditor.init);

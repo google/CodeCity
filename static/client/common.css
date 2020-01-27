@@ -83,8 +83,6 @@ body.disconnected .menuitem {
 
 .menuitem:hover {
   background-color: #d6e9f8;
-   /* Use an explicit top and bottom border so that the selection is visible
-    * in high contrast mode. */
   border-color: #d6e9f8;
   border-style: dotted;
   border-width: 1px 0;
