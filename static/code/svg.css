@@ -55,3 +55,47 @@ body {
 #toolbox button:focus {
   outline: 0;
 }
+
+#menu {
+  background: #fff;
+  border-color: #ccc #666 #666 #ccc;
+  border-radius: 4px;
+  border-style: solid;
+  border-width: 1px;
+  cursor: default;
+  display: none;
+  font: normal 13px Arial, sans-serif;
+  margin: 0;
+  max-height: 100%;
+  outline: none;
+  padding: 4px 0;
+  position: absolute;
+  user-select: none;
+  z-index: 100;
+}
+
+.menuitem {
+  color: #444;
+  margin: 0;
+  padding: 4px 1em;
+  white-space: nowrap;
+}
+
+.menuitem:hover:not(.menudisabled) {
+  background-color: #d6e9f8;
+  border-color: #d6e9f8;
+  border-style: dotted;
+  border-width: 1px 0;
+  padding-bottom: 3px;
+  padding-top: 3px;
+}
+
+.menudisabled {
+  color: #ccc;
+}
+
+.menudiv {
+  border-top: 1px solid #ccc;
+  margin-top: 4px;
+  padding-top: 4px;
+}
