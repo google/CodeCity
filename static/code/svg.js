@@ -281,11 +281,11 @@ svgEditor.updateToolbox = function(force) {
     singleActions.style.display = selected.length === 1 ? 'block' : 'none';
     svgEditor.updateToolbox.oldSelectedCount_ = selected.length;
     document.getElementById('menuCut').classList
-        .toggle('menuDisabled', selected.length === 0);
+        .toggle('menuItemDisabled', selected.length === 0);
     document.getElementById('menuCopy').classList
-        .toggle('menuDisabled', selected.length === 0);
+        .toggle('menuItemDisabled', selected.length === 0);
     document.getElementById('menuDelete').classList
-        .toggle('menuDisabled', selected.length === 0);
+        .toggle('menuItemDisabled', selected.length === 0);
   }
   if (selected.length === 1) {
     var element = selected[0];
@@ -410,7 +410,7 @@ svgEditor.closeMenu = function() {
  * @param {!Event} e Mouse event.
  */
 svgEditor.menuClick = function(e) {
-  if (!e.target.classList.contains('menudisabled')) {
+  if (!e.target.classList.contains('menuItemDisabled')) {
     switch (e.target.id) {
       case 'menuCut':
         svgEditor.cut();
