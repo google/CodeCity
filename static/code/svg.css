@@ -81,7 +81,7 @@ body {
   white-space: nowrap;
 }
 
-.menuitem:hover:not(.menudisabled) {
+.menuitem:hover:not(.menuItemDisabled) {
   background-color: #d6e9f8;
   border-color: #d6e9f8;
   border-style: dotted;
@@ -90,7 +90,7 @@ body {
   padding-top: 3px;
 }
 
-.menudisabled {
+.menuItemDisabled {
   color: #ccc;
 }
 
