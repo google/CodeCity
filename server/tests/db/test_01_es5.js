@@ -1875,7 +1875,7 @@ tests.FunctionConstructor = function() {
   console.assert(f(2, 3, 10) === 32, 'new Function with args returns callable');
   console.assert(f.length === 3, 'new Function with args .length');
   actual = String(f);
-  expected = 'function(a, b, c) {return a + b * c;}';
+  expected = 'function(a, b,c) {return a + b * c;}';
   console.assert(actual === expected, 'new Function with args .toString() ' +
       'Actual: "' + actual + '" Expected: "' + expected + '"');
 };
