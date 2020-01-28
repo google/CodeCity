@@ -199,7 +199,7 @@ Interpreter.prototype.createThreadForFuncCall = function(
  * @return {number} See description.
  */
 Interpreter.prototype.schedule = function() {
-  if (this.thread && this.thread.status === Interpreter.Thread.Status.READY) {
+  if (this.thread_ && this.thread_.status === Interpreter.Thread.Status.READY) {
     return 0;  // Nothing to do.  Don't reset .threadTimeLimit_!
   }
   var now = this.now();
@@ -599,7 +599,7 @@ Interpreter.prototype.initBuiltins_ = function() {
           return nativeFunc(str);
         } catch (e) {
           // decodeURI('%xy') will throw an error.  Catch and rethrow.
-          throw intrp.errorNativeToPseudo(e, intrp.thread.perms());
+          throw intrp.errorNativeToPseudo(e, intrp.thread_.perms());
         }
       };
     })(strFunctions[i][0]);

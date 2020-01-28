@@ -2611,6 +2611,18 @@ module.exports = [
         '"null":null,"object":{"obj":{},"arr":[]},"array":[{},[]]}' },
 
   /////////////////////////////////////////////////////////////////////////////
+  // Other built-in functions
+
+  { name: 'decodeURI throws', src: `
+    try {
+      decodeURI('%xy');
+    } catch (e) {
+      e.name;
+    }
+    `,
+    expected: 'URIError' },
+
+  /////////////////////////////////////////////////////////////////////////////
   // WeakMap
 
   { name: 'WeakMap', src: `

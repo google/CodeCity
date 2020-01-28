@@ -2661,6 +2661,20 @@ tests.JsonStringify = function () {
 };
 
 ///////////////////////////////////////////////////////////////////////////////
+// Other built-in functions
+
+tests.decodeUriThrows = function() {
+  try {
+    decodeURI('%xy');
+    console.assert(
+        false, "decodeURI(invalid-URI) didn't throw");
+  } catch (e) {
+    console.assert(e.name === 'URIError',
+        'decodeURI(invalid-URI) wrong error');
+  }
+};
+
+///////////////////////////////////////////////////////////////////////////////
 // Other tests
 
 tests.newHack = function() {
