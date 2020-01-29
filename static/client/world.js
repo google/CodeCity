@@ -1209,7 +1209,7 @@ CCC.World.createHiddenSvg = function(width, height) {
   svg.setAttribute('viewBox', [-svg.scaledWidth_ / 2, 0,
                                svg.scaledWidth_, svg.scaledHeight_].join(' '));
   /*
-  <filter id="whiteShadow25501663536281627">
+  <filter id="whiteShadow25501663536281627" filterUnits="userSpaceOnUse">
     <feFlood result="flood" flood-color="#fff" flood-opacity="1" />
     <feComposite in="flood" result="mask" in2="SourceGraphic" operator="in" />
     <feMorphology in="mask" result="dilated" operator="dilate" radius="4" />
@@ -1224,7 +1224,8 @@ CCC.World.createHiddenSvg = function(width, height) {
   // https://bugs.webkit.org/show_bug.cgi?id=149613
   var id = 'whiteShadow' + String(Math.random()).substring(2);
   svg.whiteShadowId_ = id;
-  var filter = CCC.Common.createSvgElement('filter', {'id': id}, svg);
+  var filter = CCC.Common.createSvgElement('filter',
+      {'id': id, 'filterUnits': 'userSpaceOnUse'}, svg);
   CCC.Common.createSvgElement('feFlood',
       {'result': 'flood', 'flood-color': '#fff', 'flood-opacity': 1}, filter);
   CCC.Common.createSvgElement('feComposite',
