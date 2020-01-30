@@ -2480,6 +2480,7 @@ tests.BooleanPrototypeValueOf = function () {
 // Number and Number.prototype
 
 tests.Number = function() {
+  console.assert(Number() === 0, 'Number()');
   console.assert(isNaN(Number(undefined)), 'Number undefined');
   console.assert(Number(null) === 0, 'Number null');
   console.assert(Number(true) === 1, 'Number true');
@@ -2553,6 +2554,7 @@ tests.NumberPrototypeValueOf = function () {
 // String and String.prototype
 
 tests.String = function() {
+  console.assert(String() === '', 'String()');
   console.assert(String(undefined) === 'undefined', 'String undefined');
   console.assert(String(null) === 'null', 'String null');
   console.assert(String(true) === 'true', 'String true');
