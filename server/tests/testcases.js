@@ -2300,6 +2300,8 @@ module.exports = [
   /////////////////////////////////////////////////////////////////////////////
   // Number and Number.prototype
 
+  { name: 'Number()', src: 'Number();', expected: 0 },
+
   { name: 'Number', src: `
     var tests = [
       [undefined, NaN],
@@ -2371,6 +2373,8 @@ module.exports = [
 
   /////////////////////////////////////////////////////////////////////////////
   // String and String.prototype
+
+  { name: 'String()', src: 'String();', expected: '' },
 
   { name: 'String', src: `
     var tests = [

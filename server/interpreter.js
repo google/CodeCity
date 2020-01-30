@@ -1476,7 +1476,7 @@ Interpreter.prototype.initString_ = function() {
       // ToString(ToPrimitive(x, hint String)) if not.  Note that
       // ToPrimitive (ES6 §7.1.1) is guaranteed to return a primitive
       // or throw.
-      var value = args[0];
+      var value = args.length > 0 ? args[0] : '';
       var perms = state.scope.perms;
       if (!(value instanceof intrp.Object)) {
         return String(value);
@@ -1707,7 +1707,7 @@ Interpreter.prototype.initNumber_ = function() {
     id: 'Number', length: 1,
     /** @type {!Interpreter.NativeCallImpl} */
     call: function(intrp, thread, state, thisVal, args) {
-      return Number(args[0]);
+      return Number(args.length ? args[0] : 0);
     },
     /** @type {!Interpreter.NativeConstructImpl} */
     construct: function(intrp, thread, state, args) {
