@@ -62,10 +62,10 @@ body.disconnected svg.menuIcon:hover {
   cursor: default;
   font: normal 13px Arial, sans-serif;
   margin: 0;
+  max-height: 100%;
   outline: none;
   padding: 4px 0;
   position: absolute;
-  max-height: 100%;
   z-index: 100;
 }
 
@@ -83,8 +83,6 @@ body.disconnected .menuitem {
 
 .menuitem:hover {
   background-color: #d6e9f8;
-   /* Use an explicit top and bottom border so that the selection is visible
-    * in high contrast mode. */
   border-color: #d6e9f8;
   border-style: dotted;
   border-width: 1px 0;

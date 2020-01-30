@@ -1875,7 +1875,7 @@ tests.FunctionConstructor = function() {
   console.assert(f(2, 3, 10) === 32, 'new Function with args returns callable');
   console.assert(f.length === 3, 'new Function with args .length');
   actual = String(f);
-  expected = 'function(a, b, c) {return a + b * c;}';
+  expected = 'function(a, b,c) {return a + b * c;}';
   console.assert(actual === expected, 'new Function with args .toString() ' +
       'Actual: "' + actual + '" Expected: "' + expected + '"');
 };
@@ -2658,6 +2658,20 @@ tests.JsonStringify = function () {
   var str = '{"string":"foo","number":42,"true":true,"false":false,' +
       '"null":null,"object":{"obj":{},"arr":[]},"array":[{},[]]}';
   console.assert(JSON.stringify(obj) === str, 'JSON.stringify');
+};
+
+///////////////////////////////////////////////////////////////////////////////
+// Other built-in functions
+
+tests.decodeUriThrows = function() {
+  try {
+    decodeURI('%xy');
+    console.assert(
+        false, "decodeURI(invalid-URI) didn't throw");
+  } catch (e) {
+    console.assert(e.name === 'URIError',
+        'decodeURI(invalid-URI) wrong error');
+  }
 };
 
 ///////////////////////////////////////////////////////////////////////////////

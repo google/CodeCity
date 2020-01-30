@@ -7,9 +7,10 @@
     "acorn": "^5.7.1"
   },
   "devDependencies": {
-    "tosource": "^1.0.0"
+    "google-closure-compiler": "^20191111.0.0"
   },
   "scripts": {
+    "compile": "./compile",
     "test": "tests/run"
   },
   "repository": {

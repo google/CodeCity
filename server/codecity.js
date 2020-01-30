@@ -318,6 +318,7 @@ CodeCity.log = function(var_args) {
 /**
  * Initialize user-callable system functions.
  * These are not part of any JavaScript standard.
+ * BUG(#280): provide (new) NativeFunction wrappers.
  */
 CodeCity.initSystemFunctions = function() {
   var intrp = CodeCity.interpreter;

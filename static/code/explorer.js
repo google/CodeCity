@@ -128,14 +128,12 @@ Code.Explorer.inputChange = function() {
         parts: partsCopy,
         valid: true
       };
-      // Force the autocomplete menu to hide.
-      Code.Explorer.partsJSON = 'null';
     }
   }
   Code.Explorer.lastNameToken = parsed.lastNameToken;
   var partsJSON = JSON.stringify(parsed.parts);
   if (Code.Explorer.partsJSON === partsJSON) {
-    Code.Explorer.updateAutocompleteMenu(parsed.lastToken);
+    Code.Explorer.updateAutocompleteMenu();
   } else {
     Code.Explorer.hideAutocompleteMenu();
     Code.Explorer.setParts(parsed.parts, false);
@@ -244,17 +242,24 @@ Code.Explorer.processAutocomplete = function(data) {
   // If the input value is unchanged, display the autocompletion menu.
   var input = document.getElementById('input');
   if (Code.Explorer.oldInputValue === input.value) {
-    var parsed = Code.Explorer.parseInput(input.value);
-    Code.Explorer.updateAutocompleteMenu(parsed.lastToken);
+    Code.Explorer.updateAutocompleteMenu();
   }
 };
 
 /**
  * Given a partial prefix, filter the autocompletion menu and display
  * all matching options.
- * @param {?Object} token Last token in the parts list.
  */
-Code.Explorer.updateAutocompleteMenu = function(token) {
+Code.Explorer.updateAutocompleteMenu = function() {
+  var parsed = Code.Explorer.parseInput(input.value);
+  var token = parsed.lastToken;
+  // If the lastToken is part of the submitted parts, no menu.
+  parsed.parts.push({'type': token.type, 'value': token.value});
+  if (JSON.stringify(parsed.parts) === Code.Explorer.partsJSON) {
+    Code.Explorer.hideAutocompleteMenu();
+    return;
+  }
+  // Otherwise, show a menu filtered on the partial token.
   var prefix = '';
   var index = token ? token.index : 0;
   if (token) {
@@ -532,26 +537,30 @@ Code.Explorer.inputKey = function(e) {
   }
   if (e.keyCode === key.tab) {
     if (hasMenu) {
-      var option = scrollDiv.firstChild;
-      var prefix = option.getAttribute('data-option');
-      var optionCount = 0;
-      do {
-        optionCount++;
-        prefix = Code.Explorer.getPrefix(prefix,
-            option.getAttribute('data-option'));
-        option = option.nextSibling;
-      } while (option);
-      if (optionCount === 1) {
+      // Extract all options from the menu.
+      var options = [];
+      for (var i = 0, option; (option = scrollDiv.childNodes[i]); i++) {
+        options[i] = option.getAttribute('data-option');
+      }
+      var prefix = '';
+      if (Code.Explorer.lastNameToken &&
+          Code.Explorer.lastNameToken.type === 'id') {
+        prefix = Code.Explorer.lastNameToken.value;
+      }
+      var tuple = Code.Explorer.autocompletePrefix(options, prefix);
+      if (tuple.terminal) {
         // There was only one option.  Choose it.
         var parts = JSON.parse(Code.Explorer.partsJSON);
-        parts.push({type: 'id', value: prefix});
+        parts.push({type: 'id', value: tuple.prefix});
         Code.Explorer.setParts(parts, true);
-      } else if (Code.Explorer.lastNameToken) {
-        if (Code.Explorer.lastNameToken.type === 'id') {
-          // Append the common prefix to the input.
-          var input = document.getElementById('input');
+      } else {
+        // Append the common prefix to the existing input.
+        var input = document.getElementById('input');
+        if (Code.Explorer.lastNameToken) {
           input.value = input.value.substring(0,
-              Code.Explorer.lastNameToken.index) + prefix;
+              Code.Explorer.lastNameToken.index) + tuple.prefix;
+        } else {
+          input.value += tuple.prefix;
         }
         // TODO: Tab-completion of partial strings and numbers.
       }
@@ -585,19 +594,54 @@ Code.Explorer.inputKey = function(e) {
 };
 
 /**
- * Compute and return the common prefix of two (relatively short) strings.
- * @param {string} str1 One string.
- * @param {string} str2 Another string.
+ * Given a list of options, and an existing prefix, return the common prefix.
+ * E.g. (['food', 'foot'], 'f') -> {prefix: 'foo', terminal: false}
+ * @param {!Array<string>} options Array of autocompleted strings.
+ * @param {string} prefix Any existing prefix.
+ * @return {{prefix: string, terminal: boolean}} Tuple with the maximum common
+ *   prefix, and whether this completion is terminal (true), or if there's the
+ *   option of continuing (false).
+ */
+Code.Explorer.autocompletePrefix = function(options, prefix) {
+  // Filter out only those completions that case-sensitively match the prefix.
+  var optionsCase = options.filter(
+      function(option) {return option.startsWith(prefix);});
+  if (optionsCase.length) {
+    return {prefix: Code.Explorer.getPrefix(optionsCase),
+        terminal: optionsCase.length === 1};
+  }
+  // Find completions that don't match the prefix's case.
+  var common = Code.Explorer.getPrefix(options);
+  if (common.length > prefix.length) {
+    var optionsCommon = options.filter(
+        function(option) {return option.startsWith(common);});
+    return {prefix: common, terminal: optionsCommon.length === 1};
+  }
+  return {prefix: prefix, terminal: false};
+};
+
+/**
+ * Compute and return the common prefix of n (relatively short) strings.
+ * @param {!Array<string>} strs Array of string.
  * @return {string} Common prefix.
  */
-Code.Explorer.getPrefix = function(str1, str2) {
-  var len = Math.min(str1.length, str2.length);
-  for (var i = 0; i < len; i++) {
-    if (str1[i] !== str2[i]) {
-      break;
-    }
+Code.Explorer.getPrefix = function(strs) {
+  if (strs.length === 0) {
+    return '';
   }
-  return str1.substring(0, i);
+  var i = 0;
+  while (true) {
+    var letter = strs[0][i];
+    for (var j = 0; j < strs.length; j++) {
+      if (strs[j].length <= i) {
+        return strs[j];
+      }
+      if (strs[j][i] !== letter) {
+        return strs[j].substring(0, i);
+      }
+    }
+    i++;
+  }
 };
 
 /**

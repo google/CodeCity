@@ -94,11 +94,15 @@ Code.Editor.init = function() {
   var containerRow = document.getElementById('editorContainers');
   for (var i = 0, editor; (editor = Code.Editor.editors[i]); i++) {
     var span = document.createElement('span');
+    span.className = 'jfk-button';
     span.appendChild(document.createTextNode(editor.name));
     span.setAttribute('role', 'button');
     span.setAttribute('tabindex', i);
     span.addEventListener('click', Code.Editor.tabClick);
     tabRow.appendChild(span);
+    var spacer = document.createElement('span');
+    spacer.className = 'spacer';
+    tabRow.appendChild(spacer);
     var div = document.createElement('div');
     containerRow.appendChild(div);
     // Cross-link span/div to editor.
@@ -262,10 +266,8 @@ Code.Editor.tabClick = function(e) {
   }
 
   // Unhighlight all tabs, hide all containers.
-  var tabs = document.querySelectorAll('#editorTabs>.highlighted');
-  for (var tab of tabs) {
-    tab.className = '';
-  }
+  var tab = document.querySelector('#editorTabs>.highlighted');
+  tab && tab.classList.remove('highlighted');
   var containers = document.querySelectorAll('#editorContainers>div');
   for (var container of containers) {
     container.style.display = 'none';
@@ -275,7 +277,7 @@ Code.Editor.tabClick = function(e) {
 
   // Highlight one tab, show one container.
   var tab = e.target;
-  tab.className = 'highlighted';
+  tab.classList.add('highlighted');
   var editor = tab.editor;
   Code.Editor.currentEditor = editor;
   var container = editor.containerElement;
@@ -386,7 +388,7 @@ Code.Editor.currentSource = null;
  */
 Code.Editor.ready = function() {
   // Configure tabs.
-  document.getElementById('editorTabs').className = 'enabled';
+  document.getElementById('editorTabs').classList.remove('disabled');
   Code.Editor.tabClick.disabled = false;
 
   // Switch tabs to show the highest confidence editor.

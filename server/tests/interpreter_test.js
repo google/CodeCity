@@ -137,7 +137,7 @@ async function runAsyncTest(t, name, src, expected, options) {
   // interpreter.  Awaiting p will block until resolve or reject is
   // called.
   let resolve, reject, result;
-  const p = new Promise(function(res, rej) { resolve = res; reject = rej; });
+  const p = new Promise(function(res, rej) {resolve = res; reject = rej;});
   intrp.global.createMutableBinding(
       'resolve', intrp.createNativeFunction('resolve', resolve, false));
   intrp.global.createMutableBinding(
@@ -224,7 +224,10 @@ TestOptions.prototype.onBlocked;
 exports.testSimple = function(t) {
   for (const tc of testcases) {
     if ('expected' in tc) {
+      const oldOptions = interpreter.options;
+      if (tc.options) interpreter.options = tc.options;
       runSimpleTest(t, tc.name, tc.src, tc.expected);
+      if (tc.options) interpreter.options = oldOptions;
     } else {
       t.skip(tc.name);
     }
@@ -243,7 +246,7 @@ exports.testSimple = function(t) {
 exports.testStrictBoxedThis = function(t) {
   let name = 'strictBoxedThis';
   let src = `
-      String.prototype.foo = function() { return typeof this; };
+      String.prototype.foo = function() {return typeof this;};
       'a primitive string'.foo();
   `;
   runTest(t, name, src, 'string');  // Not simple: modifies String.prototype
@@ -669,9 +672,9 @@ exports.testAeca = function(t) {
     ['{}, undefined', false, false],
   ];
   for (const tc of cases) {
-    let src = `(function(a,b){ return a == b })(${tc[0]});`;
+    let src = `(function(a,b) {return a == b})(${tc[0]});`;
     runSimpleTest(t, 'AECA: ' + tc[0], src, tc[1]);
-    src = `(function(a,b){ return a === b })(${tc[0]});`;
+    src = `(function(a,b) {return a === b})(${tc[0]});`;
     runSimpleTest(t, 'ASECA: ' + tc[0], src, tc[2]);
   }
 };
@@ -755,7 +758,7 @@ exports.testAsync = function(t) {
   // A test of unwind_, to make sure it unwinds and kills the correct
   // thread when an async function throws.
   name = 'testAsyncRejectUnwind';
-  const intrp = getInterpreter();
+  const intrp = getInterpreter({noLog: ['unhandled']});
   createAsync(intrp);  // Install async function.
   // Create cannon-fodder thread that will usually be ready to run.
   const bgThread = intrp.createThreadForSrc(`
@@ -776,7 +779,7 @@ exports.testAsync = function(t) {
       !err.has('stack', intrp.ROOT));
 
   // Throw err.
-  intrp.thread = bgThread;  // Try to trick reject into killing wrong thread.
+  intrp.thread_ = bgThread;  // Try to trick reject into killing wrong thread.
   reject(err);  // Throw unhandled Error in asyncThread.
 
   // Verify correct thread was unwound and killed.
@@ -822,9 +825,9 @@ exports.testThreading = function(t) {
 
   src = `
       var s = '';
-      new Thread(function() { s += this; }, 500, 2);
-      new Thread(function(x) { s += x; }, 1500, undefined, [4]);
-      new Thread(function() { s += '1'; })
+      new Thread(function() {s += this;}, 500, 2);
+      new Thread(function(x) {s += x;}, 1500, undefined, [4]);
+      new Thread(function() {s += '1';})
       suspend(1000);
       s += '3';
       suspend(1000);
@@ -862,8 +865,8 @@ exports.testThreading = function(t) {
 
   src = `
       var s = '';
-      setTimeout(function(x) { s += '2'; }, 500);
-      setTimeout(function(x) { s += '4'; }, 1500);
+      setTimeout(function(x) {s += '2';}, 500);
+      setTimeout(function(x) {s += '4';}, 1500);
       s += '1';
       suspend(1000);
       s += '3';
@@ -977,7 +980,7 @@ exports.testTimeLimit = function(t) {
  */
 exports.testStartStop = async function(t) {
   function snooze(ms) {
-    return new Promise(function(resolve, reject) { setTimeout(resolve, ms); });
+    return new Promise(function(resolve, reject) {setTimeout(resolve, ms);});
   }
   const intrp = getInterpreter();
   let name = 'testStart';
@@ -989,6 +992,8 @@ exports.testStartStop = async function(t) {
       };
   `;
   try {
+    // Garbage collection occuring during test can case flakiness.
+    gc();
     intrp.start();
     // .start() will create a zero-delay timeout to check for sleeping
     // tasks to awaken.  Snooze briefly to allow it to run, after
@@ -1222,7 +1227,7 @@ exports.testArrayPrototypeJoinParallelism = function(t) {
       var arr = [1, [2, [3, [4, 5]]]];
       // Set up another Array.prototype.join traversing a subset of
       // the same objects to screw with us.
-      new Thread(function() { arr[1].join(); });
+      new Thread(function() {arr[1].join();});
       // Try to do the join anyway.
       arr.join()
   `;
@@ -1277,14 +1282,17 @@ exports.testNetworking = async function(t) {
     intrp.global.createMutableBinding('send', intrp.createNativeFunction(
         'send', function() {
           // Send some data to server.
-          const client = net.createConnection({ port: 8888 }, function() {
+          const client = net.createConnection({port: 8888}, function() {
             client.write('foo');
             client.write('bar');
             client.end();
           });
         }));
   };
-  await runAsyncTest(t, name, src, 'foobar', {onCreate: createSend});
+  await runAsyncTest(t, name, src, 'foobar', {
+    options: {noLog: ['net']},
+    onCreate: createSend
+  });
 
   // Run a test of the connectionListen(), connectionUnlisten(),
   // connectionWrite() and connectionClose functions.
@@ -1307,7 +1315,7 @@ exports.testNetworking = async function(t) {
         let reply = '';
         const rr = intrp.getResolveReject(thread, state);
         // Receive some data from the server.
-        const client = net.createConnection({ port: 8888 }, function() {
+        const client = net.createConnection({port: 8888}, function() {
           client.on('data', function(data) {
             reply += data;
           });
@@ -1322,17 +1330,19 @@ exports.testNetworking = async function(t) {
       }
     }));
   };
-  await runAsyncTest(t, name, src, 'foobar', {onCreate: createReceive});
+  await runAsyncTest(t, name, src, 'foobar', {
+    options: {noLog: ['net']},
+    onCreate: createReceive,
+  });
 
   // Check to make sure that connectionListen() throws if attempting
   // to bind to an invalid port or rebind a port already in use.
   name = 'testConnectionListenThrows';
   src = `
       // Some invalid ports:
-      // * 22 will be in use (or root-only); should be rejected by OS.
       // * 9999 will be in-use by us, should be rejected by connectionListen.
       // * Others are not integers or are out-of-range.
-      var ports = ['foo', {}, -1, 22, 80.8, 9999, 65536];
+      var ports = ['foo', {}, -1, 80.8, 9999, 65536];
       try {
         CC.connectionListen(9999, {});
         for (var i = 0; i < ports.length; i++) {
@@ -1350,7 +1360,7 @@ exports.testNetworking = async function(t) {
       }
       resolve('OK');
    `;
-  await runAsyncTest(t, name, src, 'OK');
+  await runAsyncTest(t, name, src, 'OK', {options: {noLog: ['net']}});
 
   // Check to make sure that connectionUnlisten() throws if attempting
   // to unbind an invalid or not / no longer bound port.
@@ -1371,8 +1381,7 @@ exports.testNetworking = async function(t) {
       }
       resolve('OK');
    `;
-  await runAsyncTest(t, name, src, 'OK');
-
+  await runAsyncTest(t, name, src, 'OK', {options: {noLog: ['net']}});
   // Run test of the xhr() function using HTTP.
   name = 'testXhrHttp';
   const httpTestServer = http.createServer(function (req, res) {
@@ -1386,7 +1395,8 @@ exports.testNetworking = async function(t) {
         reject(e);
       }
   `;
-  await runAsyncTest(t, name, src, 'OK HTTP: /foo');
+  await runAsyncTest(t, name, src, 'OK HTTP: /foo',
+                     {options: {noLog: ['net']}});
   httpTestServer.close();
 
   // Run test of the xhr() function using HTTPS.
@@ -1400,5 +1410,5 @@ exports.testNetworking = async function(t) {
         reject(e);
       }
   `;
-  await runAsyncTest(t, name, src, 'It worked!\n');
+  await runAsyncTest(t, name, src, 'It worked!\n', {options: {noLog: ['net']}});
 };

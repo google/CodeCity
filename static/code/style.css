@@ -86,6 +86,9 @@ textarea {
 
 #objectFail {
   display: none;
+}
+
+#objectFail>tr>td {
   padding: 8px;
 }
 
@@ -94,38 +97,39 @@ textarea {
   color: #fff;
 }
 
+#objectPanel {
+  margin: 0;
+}
+
 #objectTitle {
   border-bottom: 2px solid #444;
   padding: 8px;
 }
 
-#objectPanel {
-  margin: 0;
+#objectTable {
+  border-collapse: collapse;
+  width: 100%;
 }
 
-#objectResults {
-  margin: 5px 0;
+#objectTableBody>tr>td {
+  padding: 0 2ex 0 8px;
 }
 
-#objectResults>a {
+#objectTableBody>tr>td>a {
   color: #444;
+  display: block;
   text-decoration: none;
 }
 
-#objectResults>a>div {
-  padding-left: 8px;
-  min-width: fit-content;
-}
-
-#objectResults>a>div:hover {
+#objectTableBody>tr>td:hover {
   background-color: #d6e9f8;
 }
 
-#objectResults>a.highlighted>div {
+#objectTableBody>tr>td.highlighted {
   background-color: #ccc;
 }
 
-#objectResults>a>div.section {
+#objectTableBody>tr>td.section {
   border-top: 1px solid #444;
 }
 
@@ -133,8 +137,8 @@ textarea {
   color: #888;
   font-family: monospace;
   font-size: medium;
+  padding-top: 2px;
   position: absolute;
-  right: 0;
   text-align: center;
   width: 3ex;
 }
@@ -181,7 +185,6 @@ textarea {
 #editorButtons {
   float: right;
   margin-right: 3px;
-  margin-top: 8px;
 }
 
 #editorHeader {
@@ -191,28 +194,35 @@ textarea {
   text-overflow: ellipsis;
 }
 
-#editorTabs>span {
-  border-radius: 2px;
-  color: #888;
-  cursor: default;
-  margin-left: 5px;
-  outline: none;
-  padding: 0 5px;
-  user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
+#editorTabs {
+  font-family: "Arial", "Helvetica", sans-serif;
+  font-size: 11px;
+  margin-top: -2px;
 }
 
-#editorTabs.enabled>span {
-  color: #444;
+#editorTabs>.spacer {
+  border-bottom: 1px solid rgba(0,0,0,.1);
+  padding: 4px 5px;
 }
 
-#editorTabs.enabled>span:hover {
-  background-color: #d6e9f8;
+#editorTabs>.jfk-button {
+  border-bottom-color: #f1f1f1;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  height: auto;
+  line-height: normal;
+  margin-right: 0;
+  padding-bottom: 4px;
+  padding-top: 4px;
 }
 
-#editorTabs>span.highlighted {
+#editorTabs.disabled>.jfk-button {
+  color: #ccc;
+}
+
+#editorTabs>.highlighted {
   background-color: #ccc;
+  background-image: none;
 }
 
 #editorContainers>div {

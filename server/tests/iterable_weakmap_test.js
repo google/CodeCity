@@ -30,7 +30,7 @@ const {T} = require('./testing');
  * Request garbage collection and cycle the event loop to give
  * finalisers a chance to be run.  No guarantees about either,
  * unfortunately.
- * @return {void}
+ * @return {!Promise<void>}
  */
 async function gcAndFinalise() {
   // Cycle event loop to allow finalisers to run.  Need to cycle it

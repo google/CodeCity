@@ -226,11 +226,13 @@ module.exports = [
   { name: 'throwUnhandledError', src: `
     throw new Error('not caught');
     `,
+    options: {noLog: ['unhandled']},
     expected: undefined },
 
   { name: 'throwUnhandledException', src: `
     throw 'not caught';
     `,
+    options: {noLog: ['unhandled']},
     expected: undefined },
 
   { name: 'throwUnhandledErrorWithFinally', src: `
@@ -239,6 +241,7 @@ module.exports = [
     } finally {
     }
     `,
+    options: {noLog: ['unhandled']},
     expected: undefined },
 
   { name: 'throwUnhandledExceptionWithFinally', src: `
@@ -247,6 +250,7 @@ module.exports = [
     } finally {
     }
     `,
+    options: {noLog: ['unhandled']},
     expected: undefined },
 
   { name: 'seqExpr', src: `
@@ -1014,7 +1018,7 @@ module.exports = [
     expected: 77.77 },
 
   { name: 'evalIndirectNoSeeEnclosing', src: `
-    (function () {
+    (function() {
       var n = 77.77, gEval = eval;
       try {
         gEval('n');
@@ -1026,7 +1030,7 @@ module.exports = [
     expected: 'ReferenceError' },
 
   { name: 'evalIndirectNoSeeEnclosing2', src: `
-    (function () {
+    (function() {
       var n = 77.77;
       try {
         (function() { return eval; })()('n');
@@ -1069,7 +1073,7 @@ module.exports = [
     var r = '';
     function log(x) {
       r += x;
-      return function () {};
+      return function() {};
     };
     (log('f'))(log('a'), log('b'), log('c'));
     r;
@@ -1582,7 +1586,7 @@ module.exports = [
  { name: 'new Function with args .toString()', src: `
     String(new Function('a, b', 'c', 'return a + b * c;'))
     `,
-    expected: 'function(a, b, c) {return a + b * c;}' },
+    expected: 'function(a, b,c) {return a + b * c;}' },
 
   { name: 'Function.prototype has no .prototype', src: `
     Function.prototype.hasOwnProperty('prototype');
@@ -2308,7 +2312,7 @@ module.exports = [
       [[], 0],
       [[42], 42],
       [[1,2,3], NaN],
-      [function () {}, NaN],
+      [function() {}, NaN],
     ];
     var ok = 0;
     for (var i = 0; i < tests.length; i++) {
@@ -2457,14 +2461,14 @@ module.exports = [
     expected: 'yy' },
 
   { name: 'String.prototype.replace(string, function)', src: `
-    'xxxx'.replace('xx', function () {
+    'xxxx'.replace('xx', function() {
          return '[' + Array.prototype.join.apply(arguments) + ']';
     });
     `,
     expected: '[xx,0,xxxx]xx' },
 
   { name: 'String.prototype.replace(regexp, function)', src: `
-    'xxxx'.replace(/(X)\\1/ig, function () {
+    'xxxx'.replace(/(X)\\1/ig, function() {
          return '[' + Array.prototype.join.apply(arguments) + ']';
     });
     `,
@@ -2559,11 +2563,11 @@ module.exports = [
 
   { name: 'Error .stack correctly reports anonymous function', src: `
     // Use eval to make parsing .stack easier.
-    var e = eval('(function () {return new Error;})()');
+    var e = eval('(function() {return new Error;})()');
     var lines = e.stack.split('\\n');
     lines[0].trim();
     `,
-    expected: 'at anonymous function 1:21' },
+    expected: 'at anonymous function 1:20' },
 
   // Bug #241.
   { name: 'Error .stack correctly blames MemberExpression', src: `
@@ -2605,6 +2609,18 @@ module.exports = [
     `,
     expected: '{"string":"foo","number":42,"true":true,"false":false,' +
         '"null":null,"object":{"obj":{},"arr":[]},"array":[{},[]]}' },
+
+  /////////////////////////////////////////////////////////////////////////////
+  // Other built-in functions
+
+  { name: 'decodeURI throws', src: `
+    try {
+      decodeURI('%xy');
+    } catch (e) {
+      e.name;
+    }
+    `,
+    expected: 'URIError' },
 
   /////////////////////////////////////////////////////////////////////////////
   // WeakMap
@@ -2851,7 +2867,8 @@ module.exports = [
     }
     (ok === tests.length) ? 'pass' : 'fail';
     `,
-    expected: 'pass' },
+    expected: 'pass'
+  },
 
   { name: 'Stack overflow errors', src: `
     try {
@@ -2860,6 +2877,7 @@ module.exports = [
       e.name;
     }
     `,
+    options: {stackLimit: 100},
     expected: 'RangeError'
   },
 
@@ -2874,6 +2892,7 @@ module.exports = [
     var limit = f();
     limit > 100 ? 'OK' : limit;
     `,
+    options: {stackLimit: 1000},
     expected: 'OK'
   },
 ];
