@@ -779,7 +779,7 @@ exports.testAsync = function(t) {
       !err.has('stack', intrp.ROOT));
 
   // Throw err.
-  intrp.thread = bgThread;  // Try to trick reject into killing wrong thread.
+  intrp.thread_ = bgThread;  // Try to trick reject into killing wrong thread.
   reject(err);  // Throw unhandled Error in asyncThread.
 
   // Verify correct thread was unwound and killed.
@@ -1340,10 +1340,9 @@ exports.testNetworking = async function(t) {
   name = 'testConnectionListenThrows';
   src = `
       // Some invalid ports:
-      // * 22 will be in use (or root-only); should be rejected by OS.
       // * 9999 will be in-use by us, should be rejected by connectionListen.
       // * Others are not integers or are out-of-range.
-      var ports = ['foo', {}, -1, 22, 80.8, 9999, 65536];
+      var ports = ['foo', {}, -1, 80.8, 9999, 65536];
       try {
         CC.connectionListen(9999, {});
         for (var i = 0; i < ports.length; i++) {

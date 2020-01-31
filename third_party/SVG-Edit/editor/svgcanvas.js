@@ -5291,8 +5291,8 @@ this.copySelectedElements = function () {
   localStorage.setItem('svgedit_clipboard', JSON.stringify(
     selectedElements.map(function (x) { return getJsonFromSvgElement(x); })
   ));
-
-  $('#cmenu_canvas').enableContextMenuItems('#paste,#paste_in_place');
+  // Code City change: Comment out hook to non-existent context menu.
+  //$('#cmenu_canvas').enableContextMenuItems('#paste,#paste_in_place');
 };
 
 /**
