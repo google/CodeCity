@@ -81,43 +81,29 @@ var Dumper = function(intrp1, intrp2) {
   this.perms = intrp2.ROOT;
   /** @const {!Array<string>} Accumulated output for the current file. */
   this.output = [];  // TODO(cpcallen): use Buffer or Uint8Array?
-
   /**
-   * Map from objects from intrp2 to corresponding objects in intrp2.
+   * Map from objects from intrp1 to corresponding objects in intrp2.
    * @type {!Map<?Interpreter.prototype.Object, ?Interpreter.prototype.Object>}
    */
-  var intrpObjs = new Map([[null, null]]);
-  // Initialise intrpObjs.
-  var builtins = intrp1.builtins.keys();
-  for (var i = 0; i < builtins.length; i++) {
-    var builtin = builtins[i];
-    var obj1 = intrp1.builtins.get(builtin);
-    var obj2 = intrp2.builtins.get(builtin);
-    if (!(obj2 instanceof intrp2.Object)) {
-      continue;  // Skip primitive-valued builtins.
-    } else if (obj1 === undefined) {
-      throw new Error('Builtin not found in intrp1 Interpreter');
-    } else if (!(obj1 instanceof intrp1.Object)) {
-      throw new Error("Builtin wasn't an object originally");
-    }
-    // TODO(cpcallen): add check for inconsistent duplicate
-    // registrations - e.g., if parseInt and Number.parseInt were
-    // the same in intrp2 but different in intrp1.
-    intrpObjs.set(obj1, obj2);
-  }
+  this.objs1to2 = new Map();
 
+  this.diffBuiltins();
+  
   // Create and initialise ScopeDumper for global scope.
   var globalDumper = this.getScopeDumper(intrp2.global);
   for (var v in intrp1.global.vars) {
     var val1 = intrp1.global.get(v);
     var val2 = intrp2.global.get(v);
+    var val1in2;
     if (val1 instanceof intrp1.Object) {
       if (!(val2 instanceof intrp2.Object)) {
         throw new TypeError('Primitive / object mistmatch');
       }
-      val1 = intrpObjs.get(val1);
+      val1in2 = this.objs1to2.get(val1);
+    } else {
+      val1in2 = val1;
     }
-    if (Object.is(val1, val2)) {
+    if (Object.is(val1in2, val2)) {
       globalDumper.setDone(v,
                            (typeof val2 === 'object') ? Do.DONE : Do.RECURSE);
       if (val2 instanceof intrp2.Object) {
@@ -127,46 +113,72 @@ var Dumper = function(intrp1, intrp2) {
     }
   }
 
+  // Survey objects accessible via global scope to find their outer scopes.
+  globalDumper.survey(this);
+};
+
+/**
+ * Diff the values of buit-ins.
+ */
+Dumper.prototype.diffBuiltins = function() {
+  // Initialise intrpObjs.
+  var builtins = this.intrp1.builtins.keys();
+  for (var i = 0; i < builtins.length; i++) {
+    var builtin = builtins[i];
+    var obj1 = this.intrp1.builtins.get(builtin);
+    var obj2 = this.intrp2.builtins.get(builtin);
+    if (!(obj2 instanceof this.intrp2.Object)) {
+      continue;  // Skip primitive-valued builtins.
+    } else if (obj1 === undefined) {
+      throw new Error('Builtin not found in intrp1 Interpreter');
+    } else if (!(obj1 instanceof this.intrp1.Object)) {
+      throw new Error("Builtin wasn't an object originally");
+    }
+    // TODO(cpcallen): add check for inconsistent duplicate
+    // registrations - e.g., if parseInt and Number.parseInt were
+    // the same in intrp2 but different in intrp1.
+    this.objs1to2.set(obj1, obj2);
+  }
+
   // Create and initialise ObjectDumpers for builtin objects.
-  for (i = 0; i < builtins.length; i++) {
+  for (var i = 0; i < builtins.length; i++) {
     builtin = builtins[i];
-    obj2 = intrp2.builtins.get(builtin);
-    if (!(obj2 instanceof intrp2.Object)) continue;  // Skip primitives.
+    obj2 = this.intrp2.builtins.get(builtin);
+    if (!(obj2 instanceof this.intrp2.Object)) continue;  // Skip primitives.
     var objDumper = this.getObjectDumper(obj2);
-    obj1 = intrp1.builtins.get(builtin);
+    obj1 = this.intrp1.builtins.get(builtin);
     // Record pre-set prototype.
-    objDumper.proto = intrpObjs.get(obj1.proto);
+    objDumper.proto =
+        (obj1.proto === null) ? null : this.objs1to2.get(obj1.proto);
     if (obj2.proto === objDumper.proto) {
       objDumper.setDone(Selector.PROTOTYPE,
                         (obj2.proto === null) ? Do.RECURSE : Do.DONE);
     }
     // Record pre-set owner.
     var owner = /** @type{?Interpreter.Owner} */(
-        intrpObjs.get(/** @type{?Interpreter.prototype.Object} */(obj1.owner)));
+        (obj1.owner === null) ? null : this.objs1to2.get(
+            /** @type{?Interpreter.prototype.Object} */(obj1.owner)));
     if (obj2.owner === owner) {
       objDumper.setDone(Selector.OWNER,
                         (obj2.owner === null) ? Do.RECURSE : Do.DONE);
     }
     // Record pre-set property values/attributes.
-    var keys = obj1.ownKeys(intrp1.ROOT);
+    var keys = obj1.ownKeys(this.intrp1.ROOT);
     for (var j = 0; j < keys.length; j++) {
       var key = keys[j];
-      var pd1 = obj1.getOwnPropertyDescriptor(key, intrp1.ROOT);
-      var pd2 = obj2.getOwnPropertyDescriptor(key, intrp2.ROOT);
+      var pd1 = obj1.getOwnPropertyDescriptor(key, this.intrp1.ROOT);
+      var pd2 = obj2.getOwnPropertyDescriptor(key, this.intrp2.ROOT);
       var attrs = {
         writable: pd1.writable,
         enumerable: pd1.enumerable,
         configurable: pd1.configurable
       };
       objDumper.attributes[key] = attrs;
-      var value = pd1.value instanceof intrp2.Object ?
-          intrpObjs.get(pd1.value) : pd1.value;
+      var value = pd1.value instanceof this.intrp2.Object ?
+          this.objs1to2.get(pd1.value) : pd1.value;
       objDumper.checkProperty(key, value, attrs, pd2);
     }
   }
-
-  // Survey objects accessible via global scope to find their outer scopes.
-  globalDumper.survey(this);
 };
 
 /**
