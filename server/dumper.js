@@ -60,7 +60,7 @@ var Dumper = function(intrp1, intrp2) {
   /** @const {!Map<!Interpreter.Scope,!ScopeDumper>} */
   this.scopeDumpers = new Map();
   /** @const {!Map<!Interpreter.prototype.Object,!ObjectDumper>} */
-  this.objDumpers = new Map();
+  this.objDumpers2 = new Map();
   /**
    * Map of Arguments objects to the ScopeDumpers for the scopes to
    * which they belong.
@@ -612,9 +612,9 @@ Dumper.prototype.getScopeDumper = function(scope) {
  * @return {!ObjectDumper} The ObjectDumper for obj.
  */
 Dumper.prototype.getObjectDumper = function(obj) {
-  if (this.objDumpers.has(obj)) return this.objDumpers.get(obj);
+  if (this.objDumpers2.has(obj)) return this.objDumpers2.get(obj);
   var objDumper = new ObjectDumper(this, obj);
-  this.objDumpers.set(obj, objDumper);
+  this.objDumpers2.set(obj, objDumper);
   return objDumper;
 };
 
