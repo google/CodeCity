@@ -179,7 +179,7 @@ Code.ObjectPanel.highlight = function() {
   var newHighlighted = null;
   for (var tr of Code.ObjectPanel.tableBody.childNodes) {
     var td = tr.firstChild;
-    var link = td.firstChild;
+    var link = td.lastChild;  // There might be an objectType div first.
     if (link.getAttribute('data-link') === jsonPart) {
       newHighlighted = td;
     }
