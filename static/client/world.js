@@ -612,7 +612,6 @@ CCC.World.drawScene = function(svg) {
       bBox = g.getBBox();
       var dx = cursorX - bBox.x - (bBox.width / 2);
       g.setAttribute('transform', 'translate(' + dx + ', 0)');
-      g.setAttribute('filter', 'url(#' + svg.whiteShadowId_ + ')');
       // Record location of each user for positioning of speech bubbles.
       var radius = Math.min(bBox.height, bBox.width) / 2;
       var location = {
