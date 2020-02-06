@@ -5284,26 +5284,73 @@ this.cutSelectedElements = function () {
   canvas.deleteSelectedElements();
 };
 
+const CLIPBOARD_ID = 'svgedit_clipboard';
+
 /**
-* Remembers the current selected elements on the clipboard
+* Flash the clipboard data momentarily on localStorage so all tabs can see.
 */
-this.copySelectedElements = function () {
-  localStorage.setItem('svgedit_clipboard', JSON.stringify(
-    selectedElements.map(function (x) { return getJsonFromSvgElement(x); })
-  ));
-  // Code City change: Comment out hook to non-existent context menu.
-  //$('#cmenu_canvas').enableContextMenuItems('#paste,#paste_in_place');
+function flashStorage() {
+  const data = sessionStorage.getItem(CLIPBOARD_ID);
+  localStorage.setItem(CLIPBOARD_ID, data);
+  setTimeout(function() {
+    localStorage.removeItem(CLIPBOARD_ID);
+  }, 1);
 };
 
 /**
-* @param {"in_place"|"point"|undefined} type
-* @param {Number|undefined} x Expected if type is "point"
-* @param {Number|undefined} y Expected if type is "point"
+* Transfers sessionStorage from one tab to another.
+* @param {Event} event Storage event.
+*/
+function storageChange(event) {
+  if (!event.newValue) return;  // This is a call from removeItem.
+  if (event.key === CLIPBOARD_ID + '_startup') {
+    // Another tab asked for our sessionStorage.
+    localStorage.removeItem(CLIPBOARD_ID + '_startup');
+    flashStorage();
+  } else if (event.key === CLIPBOARD_ID) {
+    // Another tab sent data.
+    sessionStorage.setItem(CLIPBOARD_ID, event.newValue);
+  }
+};
+
+// Listen for changes to localStorage.
+window.addEventListener("storage", storageChange, false);
+// Ask other tabs for sessionStorage (this is ONLY to trigger event).
+localStorage.setItem(CLIPBOARD_ID + '_startup', Math.random());
+
+/**
+* Remembers the current selected elements on the clipboard.
+* @function module:svgcanvas.SvgCanvas#copySelectedElements
+* @returns {void}
+*/
+this.copySelectedElements = function () {
+  const data = JSON.stringify(
+      selectedElements.map(function (x) { return getJsonFromSvgElement(x); }));
+  // Use sessionStorage for the clipboard data.
+  sessionStorage.setItem(CLIPBOARD_ID, data);
+  flashStorage();
+
+  let menu = $('#cmenu_canvas');
+  // Context menu might not exist (it is provided by editor.js).
+  if (menu.enableContextMenuItems) {
+    menu.enableContextMenuItems('#paste,#paste_in_place');
+  }
+};
+
+/**
+* @function module:svgcanvas.SvgCanvas#pasteElements
+* @param {"in_place"|"point"|void} type
+* @param {Integer|void} x Expected if type is "point"
+* @param {Integer|void} y Expected if type is "point"
+* @fires module:svgcanvas.SvgCanvas#event:changed
+* @fires module:svgcanvas.SvgCanvas#event:ext_IDsUpdated
+* @returns {void}
 */
 this.pasteElements = function (type, x, y) {
-  let cb = JSON.parse(localStorage.getItem('svgedit_clipboard'));
+  let cb = JSON.parse(sessionStorage.getItem(CLIPBOARD_ID));
+  if (!cb) return;
   let len = cb.length;
-  if (!len) { return; }
+  if (!len) return;
 
   const pasted = [];
   const batchCmd = new BatchCommand('Paste elements');
