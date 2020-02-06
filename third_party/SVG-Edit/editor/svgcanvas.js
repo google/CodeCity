@@ -5295,7 +5295,7 @@ function flashStorage() {
   setTimeout(function() {
     localStorage.removeItem(CLIPBOARD_ID);
   }, 1);
-};
+}
 
 /**
 * Transfers sessionStorage from one tab to another.
@@ -5311,7 +5311,7 @@ function storageChange(event) {
     // Another tab sent data.
     sessionStorage.setItem(CLIPBOARD_ID, event.newValue);
   }
-};
+}
 
 // Listen for changes to localStorage.
 window.addEventListener("storage", storageChange, false);
