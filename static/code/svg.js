@@ -431,4 +431,5 @@ svgEditor.menuClick = function(e) {
 
 window.addEventListener('load', svgEditor.init);
 window.addEventListener('resize', svgEditor.resize);
+window.addEventListener('mousedown', window.focus);
 setInterval(svgEditor.updateToolbox, 250);
