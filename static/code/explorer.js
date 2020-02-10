@@ -465,6 +465,7 @@ Code.Explorer.setInput = function(parts) {
   var value = Code.Common.partsToSelector(parts);
   var input = document.getElementById('input');
   input.value = value;
+  input.classList.remove('invalid');
   input.focus();
   Code.Explorer.oldInputValue = value;  // Don't autocomplete this value.
 };
