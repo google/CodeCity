@@ -5299,7 +5299,7 @@ function flashStorage() {
 
 /**
 * Transfers sessionStorage from one tab to another.
-* @param {Event} event Storage event.
+* @param {!Event} event Storage event.
 */
 function storageChange(event) {
   if (!event.newValue) return;  // This is a call from removeItem.
@@ -5314,7 +5314,7 @@ function storageChange(event) {
 }
 
 // Listen for changes to localStorage.
-window.addEventListener("storage", storageChange, false);
+window.addEventListener('storage', storageChange, false);
 // Ask other tabs for sessionStorage (this is ONLY to trigger event).
 localStorage.setItem(CLIPBOARD_ID + '_startup', Math.random());
 
