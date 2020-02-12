@@ -2040,10 +2040,19 @@ Interpreter.prototype.initJSON_ = function() {
   };
   this.createNativeFunction('JSON.parse', wrapper, false);
 
-  wrapper = function(value) {
+  wrapper = function(value, replacer, space) {
     var nativeObj = intrp.pseudoToNative(value);
+    if (replacer instanceof intrp.Function) {
+      throw new intrp.Error(intrp.thread_.perms(), intrp.TYPE_ERROR,
+          'Function replacer on JSON.stringify not supported');
+    } else if (replacer instanceof intrp.Array) {
+      replacer = intrp.pseudoToNative(replacer);
+    } else {
+      replacer = null;
+    }
+    space = Number(space);
     try {
-      var str = JSON.stringify(nativeObj);
+      var str = JSON.stringify(nativeObj, replacer, space);
     } catch (e) {
       throw intrp.errorNativeToPseudo(e, intrp.thread_.perms());
     }

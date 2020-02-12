@@ -2659,7 +2659,15 @@ tests.JsonStringify = function () {
        object: { obj: {}, arr: [] }, array: [{}, []] };
   var str = '{"string":"foo","number":42,"true":true,"false":false,' +
       '"null":null,"object":{"obj":{},"arr":[]},"array":[{},[]]}';
-  console.assert(JSON.stringify(obj) === str, 'JSON.stringify');
+  console.assert(JSON.stringify(obj) === str, 'JSON.stringify basic');
+
+  str = '{"string":"foo","number":42}';
+  console.assert(JSON.stringify(obj, ['string', 'number']) === str,
+      'JSON.stringify filter');
+
+  str = '{\n  "string": "foo",\n  "number": 42\n}';
+  console.assert(JSON.stringify(obj, ['string', 'number'], 2) === str,
+      'JSON.stringify pretty');
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -2668,11 +2676,9 @@ tests.JsonStringify = function () {
 tests.decodeUriThrows = function() {
   try {
     decodeURI('%xy');
-    console.assert(
-        false, "decodeURI(invalid-URI) didn't throw");
+    console.assert(false, "decodeURI(invalid-URI) didn't throw");
   } catch (e) {
-    console.assert(e.name === 'URIError',
-        'decodeURI(invalid-URI) wrong error');
+    console.assert(e.name === 'URIError', 'decodeURI(invalid-URI) wrong error');
   }
 };
 
