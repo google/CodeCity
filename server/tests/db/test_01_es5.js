@@ -2667,7 +2667,11 @@ tests.JsonStringify = function () {
 
   str = '{\n  "string": "foo",\n  "number": 42\n}';
   console.assert(JSON.stringify(obj, ['string', 'number'], 2) === str,
-      'JSON.stringify pretty');
+      'JSON.stringify pretty number');
+
+  str = '{\n--"string": "foo",\n--"number": 42\n}';
+  console.assert(JSON.stringify(obj, ['string', 'number'], '--') === str,
+      'JSON.stringify pretty string');
 };
 
 ///////////////////////////////////////////////////////////////////////////////
