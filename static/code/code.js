@@ -101,10 +101,11 @@ if (!window.TEST) {
   window.addEventListener('popstate', Code.popState, false);
 }
 
-
+////////////////////////////////////////////
 // Add bridge for SVG editor's clipboard.  This copy allows the clipboard to
 // sync across all /code tabs even if the SVG editor isn't currently loaded.
 // Copied from /code/SVG-Edit/svgcanvas.js
+
 const CLIPBOARD_ID = 'svgedit_clipboard';
 
 /**
@@ -138,3 +139,6 @@ function storageChange(event) {
 window.addEventListener('storage', storageChange, false);
 // Ask other tabs for sessionStorage (this is ONLY to trigger event).
 localStorage.setItem(CLIPBOARD_ID + '_startup', Math.random());
+
+// End of bridge for SVG editor's clipboard.
+////////////////////////////////////////////
