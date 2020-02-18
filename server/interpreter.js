@@ -2040,10 +2040,26 @@ Interpreter.prototype.initJSON_ = function() {
   };
   this.createNativeFunction('JSON.parse', wrapper, false);
 
-  wrapper = function(value) {
+  wrapper = function(value, replacer, space) {
     var nativeObj = intrp.pseudoToNative(value);
+    if (replacer instanceof intrp.Function) {
+      throw new intrp.Error(intrp.thread_.perms(), intrp.TYPE_ERROR,
+          'Function replacer on JSON.stringify not supported');
+    } else if (replacer instanceof intrp.Array) {
+      replacer = intrp.createListFromArrayLike(replacer);
+      replacer = replacer.filter(function(word) {
+        // Spec says we should also support boxed primitives here.
+        return typeof word === 'string' || typeof word === 'number';
+      });
+    } else {
+      replacer = null;
+    }
+    // Spec says we should also support boxed primitives here.
+    if (typeof space !== 'string' && typeof space !== 'number') {
+      space = undefined;
+    }
     try {
-      var str = JSON.stringify(nativeObj);
+      var str = JSON.stringify(nativeObj, replacer, space);
     } catch (e) {
       throw intrp.errorNativeToPseudo(e, intrp.thread_.perms());
     }
@@ -2066,7 +2082,7 @@ Interpreter.prototype.initWeakMap_ = function() {
     id: 'WeakMap', length: 0,  // N.B. length is correct; arg is optional!
     /** @type {!Interpreter.NativeConstructImpl} */
     construct: function(intrp, thread, state, args) {
-      // TODO(cpcallen): Support interator argument to populate map.
+      // TODO(cpcallen): Support iterable argument to populate map.
       return new intrp.WeakMap(state.scope.perms);
     }
   });

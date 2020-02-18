@@ -2606,13 +2606,37 @@ module.exports = [
   /////////////////////////////////////////////////////////////////////////////
   // JSON
 
-  { name: 'JSON.stringify', src: `
+  { name: 'JSON.stringify basic', src: `
     JSON.stringify({
         string: 'foo', number: 42, true: true, false: false, null: null,
         object: { obj: {}, arr: [] }, array: [{}, []] });
     `,
     expected: '{"string":"foo","number":42,"true":true,"false":false,' +
         '"null":null,"object":{"obj":{},"arr":[]},"array":[{},[]]}' },
+
+  { name: 'JSON.stringify filter', src: `
+    JSON.stringify({
+        string: 'foo', number: 42, true: true, false: false, null: null,
+        object: { obj: {}, arr: [] }, array: [{}, []] },
+        ['string', 'number']);
+    `,
+    expected: '{"string":"foo","number":42}' },
+
+  { name: 'JSON.stringify pretty number', src: `
+    JSON.stringify({
+        string: 'foo', number: 42, true: true, false: false, null: null,
+        object: { obj: {}, arr: [] }, array: [{}, []] },
+        ['string', 'number'], 2);
+    `,
+    expected: '{\n  "string": "foo",\n  "number": 42\n}' },
+
+  { name: 'JSON.stringify pretty string', src: `
+    JSON.stringify({
+        string: 'foo', number: 42, true: true, false: false, null: null,
+        object: { obj: {}, arr: [] }, array: [{}, []] },
+        ['string', 'number'], '--');
+    `,
+    expected: '{\n--"string": "foo",\n--"number": 42\n}' },
 
   /////////////////////////////////////////////////////////////////////////////
   // Other built-in functions
