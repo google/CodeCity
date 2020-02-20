@@ -1,6 +1,5 @@
 .DS_Store
 nohup.out
-*.komodoproject
 *~
 
 login/loginServer.cfg
