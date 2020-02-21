@@ -2552,6 +2552,9 @@ Interpreter.toLength = function toLength(value) {
 */
 Interpreter.prototype.createNativeFunction = function(
     name, nativeFunc, legalConstructor) {
+  if (nativeFunc instanceof this.Object) {
+    throw new TypeError('createNativeFunction passed non-native function??');
+  }
   // Make sure impl function has an id for serialization.
   if (!nativeFunc.id) {
     nativeFunc.id = name;
@@ -2578,6 +2581,8 @@ Interpreter.prototype.nativeToPseudo = function(nativeObj, owner) {
       nativeObj === null) {
     // It's a primitive; just return it.
     return /** @type {boolean|number|string|undefined|null} */ (nativeObj);
+  } else if (nativeObj instanceof this.Object) {
+    throw new TypeError('nativeToPseudo called on a pseudo-object??');
   }
 
   var pseudoObj;
@@ -2652,7 +2657,10 @@ Interpreter.prototype.pseudoToNative = function(pseudoObj, cycles) {
       typeof pseudoObj === 'number' ||
       typeof pseudoObj === 'string' ||
       pseudoObj === null || pseudoObj === undefined) {
+    // It's a primitive; just return it.
     return pseudoObj;
+  } else if (!(pseudoObj instanceof this.Object)) {
+    throw new TypeError('pseudoToObject called on wrong type??');
   }
 
   if (pseudoObj instanceof this.RegExp) {  // Regular expression.
@@ -2705,6 +2713,9 @@ Interpreter.prototype.pseudoToNative = function(pseudoObj, cycles) {
  * @return {!Interpreter.prototype.Array} The equivalent interpreter array.
  */
 Interpreter.prototype.createArrayFromList = function(elements, owner) {
+  if (!Array.isArray(elements) || (elements instanceof this.Object)) {
+    throw new TypeError('CreateArrayFromList called on wrong type??');
+  }
   var array = new this.Array(owner);
   for (var n = 0; n < elements.length; n++) {
     array.defineProperty(
@@ -2749,6 +2760,10 @@ Interpreter.prototype.createListFromArrayLike = function(obj, perms) {
  */
 Interpreter.prototype.errorNativeToPseudo = function(err, owner) {
   var proto;
+  if (err instanceof this.Object) {
+    throw new TypeError('errorNativeToPseudo called on wrong type??');
+  }
+
   if (err instanceof EvalError) {
     proto = this.EVAL_ERROR;
   } else if (err instanceof RangeError) {
