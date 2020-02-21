@@ -115,9 +115,13 @@ Code.ObjectPanel.addLink = function(part, type, section) {
  * Symbols to print next to properties.
  */
 Code.ObjectPanel.TYPES = {
+  'array': '[]',
+  'boolean': '⏼',
+  'function': '𝑓',
+  'number': '#',
   'object': '{}',
-  'symbol': '☆',
-  'function': '𝑓'
+  'string': '”',
+  'symbol': '☆'
 };
 
 /**
