@@ -172,62 +172,31 @@ Code.Explorer.parseInput = function(inputValue) {
 };
 
 /**
- * Cache of autocomplete responses from the last minute.
+ * Check to see if there's any autocomplete data, and if so update the menu.
  */
-Code.Explorer.autocompleteCache = Object.create(null);
-
-/**
- * Time to live for cached values in milliseconds.
- */
-Code.Explorer.autocompleteCacheMs = 60 * 1000;
-
-/**
- * Send a request to Code City's autocomplete service.
- * @param {string} partsJSON Stringified array of parts to send to Code City.
- */
-Code.Explorer.sendAutocomplete = function(partsJSON) {
-  var xhr = Code.Explorer.autocompleteRequest_;
-  xhr.abort();
-  var cache = Code.Explorer.autocompleteCache[partsJSON];
-  if (cache && cache.date + Code.Explorer.autocompleteCacheMs > Date.now()) {
-    // Cache hit.
-    Code.Explorer.processAutocomplete(cache.data);
+Code.Explorer.loadAutocomplete = function(partsJSON) {
+  var data = Code.Explorer.getPanelData(Code.Explorer.partsJSON);
+  if (data) {
+    // Flatten the data into a sorted list of options.
+    var set = new Set();
+    if (data.properties) {
+      for (var obj of data.properties) {
+        for (var prop of obj) {
+          set.add(prop.name);
+        }
+      }
+    }
+    if (data.keywords) {
+      for (var word of data.keywords) {
+        set.add('{' + word + '}');
+      }
+    }
+    Code.Explorer.autocompleteData =
+        Array.from(set.keys()).sort(Code.Explorer.caseInsensitiveComp);
   } else {
-    // Cache miss.
     Code.Explorer.autocompleteData = [];
-    xhr.open('GET', '/code/autocomplete?parts=' +
-        encodeURIComponent(partsJSON), true);
-    xhr.onload = Code.Explorer.receiveAutocomplete;
-    xhr.send();
-    xhr.partsJSON = partsJSON;
   }
-};
 
-Code.Explorer.autocompleteRequest_ = new XMLHttpRequest();
-
-/**
- * Got a response from Code City's autocomplete service.
- */
-Code.Explorer.receiveAutocomplete = function() {
-  var xhr = Code.Explorer.autocompleteRequest_;
-  if (xhr.status !== 200) {
-    console.warn('Autocomplete returned status ' + xhr.status);
-    return;
-  }
-  var data = JSON.parse(xhr.responseText);
-  Code.Explorer.filterShadowed(data);
-
-  Code.Explorer.autocompleteCache[xhr.partsJSON] =
-      {date: Date.now(), data: data};
-  Code.Explorer.processAutocomplete(data);
-};
-
-/**
- * Autocomplete data obtained (either by network or cache).  Use it.
- * @param {!Array<!Array<string>>} data Property names from Code City.
- */
-Code.Explorer.processAutocomplete = function(data) {
-  Code.Explorer.autocompleteData = data;
   // If the input value is unchanged, display the autocompletion menu.
   var input = document.getElementById('input');
   if (Code.Explorer.oldInputValue === input.value) {
@@ -266,11 +235,9 @@ Code.Explorer.updateAutocompleteMenu = function() {
   if (!token || token.type === '.' || token.type === 'id' ||
       token.type === '[' || token.type === 'str' || token.type === 'num') {
     // Flatten the options and filter.
-    for (var optionGroup of Code.Explorer.autocompleteData) {
-      for (var option of optionGroup) {
-        if (option.substring(0, prefix.length).toLowerCase() === prefix) {
-            options.push(option);
-        }
+    for (var option of Code.Explorer.autocompleteData) {
+      if (option.substring(0, prefix.length).toLowerCase() === prefix) {
+          options.push(option);
       }
     }
   }
@@ -280,31 +247,6 @@ Code.Explorer.updateAutocompleteMenu = function() {
     Code.Explorer.hideAutocompleteMenu();
   } else {
     Code.Explorer.showAutocompleteMenu(options, index);
-  }
-};
-
-/**
- * Remove any properties that are shadowed by objects higher on the inheritance
- * chain.  Also sort the properties alphabetically.
- * @param {!Array<!Array<string>>} data Property names from Code City.
- */
-Code.Explorer.filterShadowed = function(data) {
-  if (data.length < 2) {
-    return;
-  }
-  var seen = Object.create(null);
-  for (var datum of data) {
-    var cursorInsert = 0;
-    var cursorRead = 0;
-    while (cursorRead < datum.length) {
-      var prop = datum[cursorRead++];
-      if (!seen[prop]) {
-        seen[prop] = true;
-        datum[cursorInsert++] = prop;
-      }
-    }
-    datum.length = cursorInsert;
-    datum.sort(Code.Explorer.caseInsensitiveComp);
   }
 };
 
@@ -439,7 +381,7 @@ Code.Explorer.setParts = function(parts, updateInput) {
   Code.Explorer.partsJSON = JSON.stringify(parts);
   Code.Explorer.inputUpdatable = updateInput;
   Code.Explorer.hideAutocompleteMenu();
-  Code.Explorer.sendAutocomplete(Code.Explorer.partsJSON);
+  Code.Explorer.loadAutocomplete();
   var selector = Code.Common.partsToSelector(parts);
   sessionStorage.setItem(Code.Common.SELECTOR, selector);
   window.parent.postMessage('ping', '*');
@@ -685,6 +627,7 @@ Code.Explorer.loadPanels = function(parts) {
 Code.Explorer.addPanel = function(component) {
   var panelsScroll = document.getElementById('panelsScroll');
   var iframe = document.createElement('iframe');
+  iframe.addEventListener('load', Code.Explorer.loadAutocomplete);
   iframe.id = 'objectPanel' + Code.Explorer.panelCount;
   iframe.src = '/static/code/objectPanel.html#' + encodeURIComponent(component);
   iframe.setAttribute('data-component', component);
@@ -741,6 +684,26 @@ Code.Explorer.scrollPanel = function() {
  * @private
  */
 Code.Explorer.scrollPid_ = 0;
+
+/**
+ * Get the data blob from the specified object panel.
+ * @param {string} partsJSON Stringified array of parts.
+ * @return {!Object|undefined} Data blob, or undefined if data is not
+ *   currently available.
+ */
+Code.Explorer.getPanelData = function(partsJSON) {
+  // Find the object panel that contains the needed data.
+  for (var iframe of document.getElementsByTagName('iframe')) {
+    if (iframe.getAttribute('data-component') === partsJSON) {
+      try {
+        // Risky: Content may not have loaded yet.
+        var data = iframe.contentWindow.Code.ObjectPanel.data;
+      } catch (e) {}
+      break;
+    }
+  }
+  return data;
+};
 
 /**
  * Page has loaded, initialize the explorer.
