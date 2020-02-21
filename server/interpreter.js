@@ -2710,7 +2710,9 @@ Interpreter.prototype.pseudoToNative = function(pseudoObj, cycles) {
     for (i = 0; i < keys.length; i++) {
       var key = keys[i];
       var val = pseudoObj.get(key, perms);
-      nativeObj[key] = this.pseudoToNative(val, cycles);
+      Object.defineProperty(nativeObj, key,
+          {writable: true, enumerable: true, configurable: true,
+           value: this.pseudoToNative(val, cycles)});
     }
   }
   cycles.pseudo.pop();
