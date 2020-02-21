@@ -134,7 +134,7 @@ CCC.Log.connectDiv = function(isConnected, date) {
     var link = document.createElement('a');
     link.className = 'reconnect';
     link.appendChild(CCC.Log.getMsg('reconnectMsg'));
-    div.appendChild(link)
+    div.appendChild(link);
     link.addEventListener('click', parent.location.reload.bind(parent.location));
   }
   return div;
