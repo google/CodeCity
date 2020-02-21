@@ -219,7 +219,7 @@ Code.ObjectPanel.filterShadowed = function(data) {
  * @return {number} -1/0/1 comparator value.
  */
 Code.ObjectPanel.caseInsensitiveComp = function(a, b) {
-  return a.name.toLowerCase().localeCompare(a.name.toLowerCase());
+  return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
 };
 
 if (!window.TEST) {
