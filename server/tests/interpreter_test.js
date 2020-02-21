@@ -1382,6 +1382,7 @@ exports.testNetworking = async function(t) {
       resolve('OK');
    `;
   await runAsyncTest(t, name, src, 'OK', {options: {noLog: ['net']}});
+
   // Run test of the xhr() function using HTTP.
   name = 'testXhrHttp';
   const httpTestServer = http.createServer(function (req, res) {

@@ -484,8 +484,8 @@ exports.testRoundtripAsync = async function(t) {
   `;
   await runAsyncTest(t, name, src1, src2, '123');
 
-  //  Run a test of the server re-listening to sockets after being
-  //  deserialized.
+  // Run a test of the server re-listening to sockets after being
+  // deserialized.
   name = 'testPostRestoreNetworkInbound';
   src1 = `
       var data = '', conn = {};
@@ -502,7 +502,7 @@ exports.testRoundtripAsync = async function(t) {
   src2 = `
       send();
    `;
-  const onCreate = function(intrp) {
+  const installSend = function(intrp) {
     intrp.global.createMutableBinding('send', intrp.createNativeFunction(
         'send', function() {
           // Send some data to server.
@@ -515,7 +515,33 @@ exports.testRoundtripAsync = async function(t) {
   };
   await runAsyncTest(t, name, src1, src2, 'foobar', {
     options: {noLog: ['net']},
-    onCreate: onCreate,
+    onCreate: installSend,
   });
 
+  // Run a test to verify that the connection object's .error method
+  // is called with a suitable Error object if the previously-listened
+  // port is in use when the interpreter is restarted.
+  name = 'testFailedRelistenFiresError';
+  src1 = `
+      var connection = {onError: function(err) {resolve(err.name);}};
+      CC.connectionListen(8888, connection);
+      resolve();  // Start serialisation roundtrip.
+   `;
+  src2 = `
+      suspend();  // Allow pending onError thread to run.
+      resolve('No error thrown');
+  `;
+  let /** number */ count = 0;
+  let /** ?net.Server */ server = null;
+  const blockPort = function(intrp) {
+    if (count++) {  // Do only when creating post-roundtrip Interpreter.
+      server = new net.Server();
+      server.listen(8888);
+    }
+  };
+  await runAsyncTest(t, name, src1, src2, 'Error', {
+    options: {noLog: ['net']},
+    onCreate: blockPort,
+  });
+  server.close();
 };

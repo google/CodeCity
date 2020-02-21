@@ -413,14 +413,14 @@ Interpreter.prototype.pause = function() {
         var server = this.listeners_[Number(port)];
         server.listen(undefined, function(error) {
           // Something went wrong while re-listening.  Maybe port in use.
-          this.log('net', 'Re-listen on port %s failed: %s: %s', server.port,
-                      error.name, error.message);
+          intrp.log('net', 'Re-listen on port %s failed: %s: %s', server.port,
+                    error.name, error.message);
           // Report this to userland by calling .onError on proto
           // (with this === proto) - for lack of a better option.
           if (!server.owner) return;
           var func = server.proto.get('onError', server.owner);
           if (!(func instanceof intrp.Function)) return;
-          var userError = intrp.nativeToPseudo(error, server.owner);
+          var userError = intrp.errorNativeToPseudo(error, server.owner);
           // TODO(cpcallen:perms): Is server.owner the correct owner
           // for this thread?  Note that this will typically be root,
           // and .onError will therefore get caller perms === root,
@@ -5563,8 +5563,8 @@ Interpreter.prototype.installTypes = function() {
       if (func instanceof intrp.Function && server.owner !== null) {
         // TODO(cpcallen:perms): Is server.owner the correct owner for
         // this thread?  Note that this will typically be root, and
-        // .onError will therefore get caller perms === root, which is
-        // probably dangerous.  Here and several places below.
+        // .onConnect will therefore get caller perms === root, which
+        // is probably dangerous.  Here and several places below.
         intrp.createThreadForFuncCall(
             server.owner, func, obj, [], undefined, server.timeLimit);
       }
