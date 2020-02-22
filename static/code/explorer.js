@@ -188,11 +188,11 @@ Code.Explorer.loadAutocomplete = function(partsJSON) {
     }
     if (data.keywords) {
       for (var word of data.keywords) {
-        set.add('{' + word + '}');
+        set.add(word);
       }
     }
     Code.Explorer.autocompleteData =
-        Array.from(set.keys()).sort(Code.Explorer.caseInsensitiveComp);
+        Array.from(set.keys()).sort(Code.Common.caseInsensitiveComp);
   } else {
     Code.Explorer.autocompleteData = [];
   }
@@ -234,7 +234,7 @@ Code.Explorer.updateAutocompleteMenu = function() {
   var options = [];
   if (!token || token.type === '.' || token.type === 'id' ||
       token.type === '[' || token.type === 'str' || token.type === 'num') {
-    // Flatten the options and filter.
+    // Filter the options.
     for (var option of Code.Explorer.autocompleteData) {
       if (option.substring(0, prefix.length).toLowerCase() === prefix) {
           options.push(option);
@@ -248,18 +248,6 @@ Code.Explorer.updateAutocompleteMenu = function() {
   } else {
     Code.Explorer.showAutocompleteMenu(options, index);
   }
-};
-
-/**
- * Comparison function to sort strings A-Z without regard to case.
- * @param {string} a One string.
- * @param {string} b Another string.
- * @return {number} -1/0/1 comparator value.
- */
-Code.Explorer.caseInsensitiveComp = function(a, b) {
-  a = a.toLowerCase();
-  b = b.toLowerCase();
-  return (a < b) ? -1 : ((a > b) ? 1 : 0);
 };
 
 /**

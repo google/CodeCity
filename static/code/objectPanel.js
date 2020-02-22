@@ -212,18 +212,8 @@ Code.ObjectPanel.filterShadowed = function(data) {
       }
     }
     datum.length = cursorInsert;
-    datum.sort(Code.ObjectPanel.caseInsensitiveComp);
+    datum.sort(Code.Common.caseInsensitiveComp);
   }
-};
-
-/**
- * Comparison function to sort named objects A-Z without regard to case.
- * @param {string} a One string.
- * @param {string} b Another string.
- * @return {number} -1/0/1 comparator value.
- */
-Code.ObjectPanel.caseInsensitiveComp = function(a, b) {
-  return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
 };
 
 if (!window.TEST) {
