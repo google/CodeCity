@@ -379,3 +379,14 @@ Code.Common.selectorToReference = function(selector) {
   }
   return selector;
 };
+
+/**
+ * Comparison function to sort named objects A-Z without regard to case.
+ * @param {string} a One string.
+ * @param {string} b Another string.
+ * @return {number} -1/0/1 comparator value.
+ */
+Code.Common.caseInsensitiveComp = function(a, b) {
+  return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
+};
+
