@@ -186,6 +186,11 @@ Code.Explorer.loadAutocomplete = function(partsJSON) {
         }
       }
     }
+    if (data.roots) {
+      for (var root of data.roots) {
+        set.add(root.name);
+      }
+    }
     if (data.keywords) {
       for (var word of data.keywords) {
         set.add(word);
@@ -212,7 +217,9 @@ Code.Explorer.updateAutocompleteMenu = function() {
   var parsed = Code.Explorer.parseInput(input.value);
   var token = parsed.lastToken;
   // If the lastToken is part of the submitted parts, no menu.
-  parsed.parts.push({'type': token.type, 'value': token.value});
+  if (token) {
+    parsed.parts.push({'type': token.type, 'value': token.value});
+  }
   if (JSON.stringify(parsed.parts) === Code.Explorer.partsJSON) {
     Code.Explorer.hideAutocompleteMenu();
     return;
