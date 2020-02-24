@@ -2142,7 +2142,7 @@ module.exports = [
     ['z', undefined, 10, , 'aa', null, 'a', 5, NaN, , 1].sort()
         .map(String).join();
     `,
-    /* TODO(cpcallen): expected: '1,10,5,NaN,a,aa,null,z,undefined,,' */ },
+    expected: '1,10,5,NaN,a,aa,null,z,undefined,,' },
 
   { name: 'Array.prototype.sort(comparefn)', src: `
     [99, 9, 10, 11, 1, 0, 5].sort(function(a, b) {return a - b;}).join();
@@ -2163,7 +2163,7 @@ module.exports = [
           return 0;
         }).map(String).join();
     `,
-    /* TODO(cpcallen): expected: 'z,null,aa,a,NaN,5,10,1,undefined,,' */ },
+    expected: 'z,null,aa,a,NaN,5,10,1,undefined,,' },
 
   { name: 'Array.prototype.splice()', src: `
         var a = ['foo', 'bar', 'baz', , 'quux', 'quuux'];
