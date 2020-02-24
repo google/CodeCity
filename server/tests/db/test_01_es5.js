@@ -2312,28 +2312,28 @@ tests.ArrayPrototypeSort = function() {
       'Array.prototype.sort()');
 
   // TODO(cpcallen):
-  // console.assert(['z', undefined, 10, , 'aa', null, 'a', 5, NaN, , 1].sort()
-  //     .map(String).join() === '1,10,5,NaN,a,aa,null,z,undefined,,',
-  //     'Array.prototype.sort() compaction');
+  console.assert(['z', undefined, 10, , 'aa', null, 'a', 5, NaN, , 1].sort()
+      .map(String).join() === '1,10,5,NaN,a,aa,null,z,undefined,,',
+      'Array.prototype.sort() compaction');
   
   console.assert([99, 9, 10, 11, 1, 0, 5].sort(function(a, b) {return a - b;})
       .join() === '0,1,5,9,10,11,99',
       'Array.prototype.sort(comparefn)');
 
   // TODO(cpcallen):
-  // console.assert(['z', undefined, 10, , 'aa', null, 'a', 5, NaN, , 1].sort(
-  //     function(a, b) {
-  //       // Try to put undefineds first - should not succeed.
-  //       if (a === undefined) return b === undefined ? 0 : -1;
-  //       if (b === undefined) return 1;
-  //       // Reverse order of ususal sort.
-  //       a = String(a);
-  //       b = String(b);
-  //       if (a > b) return -1;
-  //       if (b > a) return 1;
-  //       return 0;
-  //     }).map(String).join() === 'z,null,aa,a,NaN,5,10,1,undefined,,',
-  //     'Array.prototype.sort(comparefn) compaction');
+  console.assert(['z', undefined, 10, , 'aa', null, 'a', 5, NaN, , 1].sort(
+      function(a, b) {
+        // Try to put undefineds first - should not succeed.
+        if (a === undefined) return b === undefined ? 0 : -1;
+        if (b === undefined) return 1;
+        // Reverse order of ususal sort.
+        a = String(a);
+        b = String(b);
+        if (a > b) return -1;
+        if (b > a) return 1;
+        return 0;
+      }).map(String).join() === 'z,null,aa,a,NaN,5,10,1,undefined,,',
+      'Array.prototype.sort(comparefn) compaction');
 };
 
 tests.ArrayPrototypeSplice = function() {

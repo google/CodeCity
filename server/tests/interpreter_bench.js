@@ -83,7 +83,7 @@ exports.benchFibbonacci10k = function(b) {
  * @param {!B} b The test runner object.
  */
 exports.benchSort = function(b) {
-  for (var len of [10, 100, 1000]) {
+  for (var len of [10, 100, 1000, 10000]) {
     var name = 'sort ' + len;
     var setup = `
       var arr = [];
