@@ -2029,8 +2029,8 @@ Interpreter.prototype.initMath_ = function() {
  */
 Interpreter.prototype.initJSON_ = function() {
   var intrp = this;
-
-  var wrapper = function(text) {
+  var wrapper;
+  wrapper = function(text) {
     try {
       var nativeObj = JSON.parse(text.toString());
     } catch (e) {
@@ -2042,11 +2042,12 @@ Interpreter.prototype.initJSON_ = function() {
 
   wrapper = function(value, replacer, space) {
     var nativeObj = intrp.pseudoToNative(value);
+    var perms = intrp.thread_.perms();
     if (replacer instanceof intrp.Function) {
-      throw new intrp.Error(intrp.thread_.perms(), intrp.TYPE_ERROR,
+      throw new intrp.Error(perms, intrp.TYPE_ERROR,
           'Function replacer on JSON.stringify not supported');
     } else if (replacer instanceof intrp.Array) {
-      replacer = intrp.createListFromArrayLike(replacer);
+      replacer = intrp.createListFromArrayLike(replacer, perms);
       replacer = replacer.filter(function(word) {
         // Spec says we should also support boxed primitives here.
         return typeof word === 'string' || typeof word === 'number';
@@ -2061,7 +2062,7 @@ Interpreter.prototype.initJSON_ = function() {
     try {
       var str = JSON.stringify(nativeObj, replacer, space);
     } catch (e) {
-      throw intrp.errorNativeToPseudo(e, intrp.thread_.perms());
+      throw intrp.errorNativeToPseudo(e, perms);
     }
     return str;
   };
