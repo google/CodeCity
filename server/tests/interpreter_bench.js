@@ -77,4 +77,22 @@ exports.benchFibbonacci10k = function(b) {
   `;
   runBench(b, name, setup, timed);
 };
+
+/**
+ * Run some benchmarks of Array.prototype.sort.
+ * @param {!B} b The test runner object.
+ */
+exports.benchSort = function(b) {
+  for (var len of [10, 100, 1000]) {
+    var name = 'sort ' + len;
+    var setup = `
+      var arr = [];
+      for (var i = 0; i < ${len}; i++) {
+        arr.push(Math.floor(Math.random() * ${len}));
+      }`;
+    var timed = `
+      arr.sort(function(a, b) {return a - b;});
+    `;
+    runBench(b, name, setup, timed);
+  }
 };
