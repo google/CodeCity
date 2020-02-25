@@ -2873,43 +2873,68 @@ Interpreter.prototype.populateScope_ = function(node, scope, source) {
     if (!node['source']) throw new Error('Source not found');
     source = node['source'];
   }
+  // Obtain list of bound names for node.  We cache this on the AST
+  // node to save time when repeatedly calling the same function.
+  var boundNames = node['boundNames'];
+  if (!boundNames) {
+    boundNames = node['boundNames'] = this.getBoundNames_(node);
+  }
+  for (var name in boundNames) {
+    var value = boundNames[name] ?
+        new this.UserFunction(boundNames[name], scope, source, scope.perms) :
+        undefined;
+    if (!scope.hasBinding(name)) scope.createMutableBinding(name, value);
+    if (value) this.setValueToScope(scope, name, value);
+  }
+};
+
+/**
+ * Walk an AST sub-tree and find its BoundNames.
+ * @param {!Interpreter.Node} node AST node (program or function).
+ * @param {!Object<string, (!Interpreter.Node|undefined)>=} boundNames
+ *     Used internally for recursive calls.
+ * @return {!Object<string, (!Interpreter.Node|undefined)>} A map of
+ *     bound names.  The keys are var and function declarations
+ *     appearing in the subtree rooted at node; the values are
+ *     undefined for VariableDeclarations or a FunctionDeclaration
+ *     node for FunctionDeclarations.
+ * @private
+ */
+Interpreter.prototype.getBoundNames_ = function(node, boundNames) {
+  if (!boundNames) boundNames = Object.create(null);
   if (node['type'] === 'VariableDeclaration') {
     for (var i = 0; i < node['declarations'].length; i++) {
       var name = node['declarations'][i]['id']['name'];
-      if (!scope.hasBinding(name)) {
-        scope.createMutableBinding(name);
+      if (!Object.prototype.hasOwnProperty.call(boundNames, name)) {
+        boundNames[name] = undefined;
       }
     }
   } else if (node['type'] === 'FunctionDeclaration') {
     name = node['id']['name'];
-    var func = new this.UserFunction(node, scope, source, scope.perms);
-    if (scope.hasBinding(name)) {
-      this.setValueToScope(scope, name, func);
-    } else {
-      scope.createMutableBinding(name, func);
-    }
-    return;  // Do not recurse into function.
+    boundNames[name] = node;
+    return boundNames;  // Do not recurse into function.
   } else if (node['type'] === 'FunctionExpression') {
-    return;  // Do not recurse into function.
+    return boundNames;  // Do not recurse into function.
   } else if (node['type'] === 'ExpressionStatement') {
-    return;  // Expressions can't contain variable/function declarations.
+    return boundNames;  // Expressions can't contain variable/function decls.
   }
-  for (var name in node) {
-    var prop = node[name];
+  for (var key in node) {
+    var prop = node[key];
     if (prop && typeof prop === 'object') {
       if (Array.isArray(prop)) {
         for (var i = 0; i < prop.length; i++) {
           if (prop[i] && prop[i] instanceof Interpreter.Node) {
-            this.populateScope_(prop[i], scope, source);
+            this.getBoundNames_(prop[i], boundNames);
           }
         }
       } else {
         if (prop instanceof Interpreter.Node) {
-          this.populateScope_(prop, scope, source);
+          this.getBoundNames_(prop, boundNames);
         }
       }
     }
   }
+  return boundNames;
 };
 
 /**
