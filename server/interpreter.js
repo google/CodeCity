@@ -5709,11 +5709,7 @@ Descriptor.prototype.withValue = function(value) {
 ///////////////////////////////////////////////////////////////////////////////
 
 /**
- * Obtain the list of BoundNames for an AST sub-tree.  This is done by
- * walking the tree and looking for VariableDeclaration and
- * FunctionDeclaration nodes, with the results being cached on
- * node['boundNames'] for speed when a UserFunction is called
- * repeatedly.
+ * Get the list of BoundNames for an AST sub-tree.
  * @param {!Interpreter.Node} node AST node (program or function).
  * @return {!Object<string, (!Interpreter.Node|undefined)>} A map of
  *     bound names.  The keys are var and function declarations
@@ -5722,55 +5718,24 @@ Descriptor.prototype.withValue = function(value) {
  *     node for FunctionDeclarations.
  */
 var getBoundNames = function(node) {
-  if (node['boundNames']) return node['boundNames'];
-  /** !Object<string, (!Interpreter.Node|undefined)> */
-  var boundNames = node['boundNames'] = Object.create(null);
-  walk(node);
-  return boundNames;
-
-  /**
-   * Actually Walk an AST sub-tree, populating boundNames as we go.
-   * @param {!Interpreter.Node} node AST node (program or function).
-   * @return {void}
-   */
-  function walk(node) {
-    if (node['type'] === 'VariableDeclaration') {
-      for (var i = 0; i < node['declarations'].length; i++) {
-        // VariableDeclarations can't overwrite previous
-        // FunctionDeclarations (but initializer might at run time).
-        var name = node['declarations'][i]['id']['name'];
-        if (!(name in boundNames)) {
-          boundNames[name] = undefined;
-        }
-      }
-    } else if (node['type'] === 'FunctionDeclaration') {
-      // FunctionDeclarations overwrite any previous decl of the same name.
-      name = node['id']['name'];
-      boundNames[name] = node;
-      return;  // Do not recurse into function.
-    } else if (node['type'] === 'FunctionExpression') {
-      return;  // Do not recurse into function.
-    } else if (node['type'] === 'ExpressionStatement') {
-      return;  // Expressions can't contain variable/function decls.
-    }
-    // Visit node's children.
-    for (var key in node) {
-      var prop = node[key];
-      if (prop && typeof prop === 'object') {
-        if (Array.isArray(prop)) {
-          for (var i = 0; i < prop.length; i++) {
-            if (prop[i] && prop[i] instanceof Interpreter.Node) {
-              walk(prop[i]);
-            }
-          }
-        } else {
-          if (prop instanceof Interpreter.Node) {
-            walk(prop);
-          }
-        }
-      }
-    }
+  if (!node['boundNames']) {
+    performStaticAnalysis(node);
   }
+  return node['boundNames'];
+};
+
+/**
+ * Check if an AST contains Identifiers named "arguments" or "eval".
+ * @param {!Interpreter.Node} node AST node (program or function).
+ * @return boolean True iff tree rooted at node contains an Identifier
+ *     named "arguments" or "eval", not including any
+ *     FunctionDeclaration or FunctionExpression subtrees.
+ */
+var hasArgumentsOrEval = function(node) {
+  if (node['hasArgumentsOrEval'] === undefined) {
+    performStaticAnalysis(node);
+  }
+  return node['hasArgumentsOrEval'];
 };
 
 /**
@@ -5798,6 +5763,79 @@ var isIdentifierRef = function(node) {
  */
 var isMemberRef = function(node) {
   return node['type'] === 'MemberExpression';
+};
+
+/**
+ * Walk an AST (or sub-tree), collecting bound names by looking for
+ * VariableDeclaration and FunctionDeclaration nodes, and checking for
+ * Identifiers named "arguments" or "eval".
+ *
+ * The BoundNames will be stored on node['boundNames'] as an
+ * !Object<string, (!Interpreter.Node|undefined)>, where the keys are
+ * the names of VariableDeclaration and FunctionDeclarations, and the
+ * values are undefined for VariableDeclarations or a
+ * FunctionDeclaration node for FunctionDeclarations.
+ *
+ * If any Identifier named "arguments" or "eval" is seen, and
+ * node['hasArgumentsOrEval'] will be set to true; otherwise it will
+ * be set to false.
+ *
+ * @param {!Interpreter.Node} node AST node (program or function).
+ * @return {void}
+ */
+var performStaticAnalysis = function(node) {
+  /** !Object<string, (!Interpreter.Node|undefined)> */
+  var boundNames = node['boundNames'] = Object.create(null);
+  var hasArgumentsOrEval = false;
+  walk(node);
+  node['hasArgumentsOrEval'] = hasArgumentsOrEval;
+
+  /**
+   * Actually Walk an AST sub-tree, populating boundNames as we go.
+   * @param {!Interpreter.Node} node AST node (program or function).
+   * @return {void}
+   */
+  function walk(node) {
+    if (node['type'] === 'VariableDeclaration') {
+      for (var i = 0; i < node['declarations'].length; i++) {
+        // VariableDeclarations can't overwrite previous
+        // FunctionDeclarations (but initializer might at run time).
+        var name = node['declarations'][i]['id']['name'];
+        if (!(name in boundNames)) {
+          boundNames[name] = undefined;
+        }
+      }
+    } else if (node['type'] === 'Identifier') {
+      name = node['name'];
+      if (name === 'arguments' || name === 'eval') {
+        hasArgumentsOrEval = true;
+      }
+    } else if (node['type'] === 'FunctionDeclaration') {
+      // FunctionDeclarations overwrite any previous decl of the same name.
+      name = node['id']['name'];
+      boundNames[name] = node;
+      return;  // Do not recurse into function.
+    } else if (node['type'] === 'FunctionExpression') {
+      return;  // Do not recurse into function.
+    }
+    // Visit node's children.
+    for (var key in node) {
+      var prop = node[key];
+      if (prop && typeof prop === 'object') {
+        if (Array.isArray(prop)) {
+          for (var i = 0; i < prop.length; i++) {
+            if (prop[i] && prop[i] instanceof Interpreter.Node) {
+              walk(prop[i]);
+            }
+          }
+        } else {
+          if (prop instanceof Interpreter.Node) {
+            walk(prop);
+          }
+        }
+      }
+    }
+  }
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -7013,6 +7051,12 @@ for (var name in stepFuncs_) {
 
 module.exports = Interpreter;
 
+module.exports.testOnly = {
+  getBoundNames: getBoundNames,
+  hasArgumentsOrEval: hasArgumentsOrEval,
+};
+  
+    
 ///////////////////////////////////////////////////////////////////////////////
 // AST Node
 ///////////////////////////////////////////////////////////////////////////////
