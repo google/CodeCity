@@ -250,7 +250,8 @@ exports.testHasArgumentsOrEval = function(t) {
     ['Arguments;', false],
     ['arguments;', true],
     ['arguments[0];', true],
-    ['foo(arguments);', true],
+    ['foo[arguments];', true],
+    ['bar(arguments);', true],
     ['{var x; function myArgs() {return arguments;}}', false],
     ['{function f() {} arguments;}', true],
 
