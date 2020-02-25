@@ -4043,9 +4043,9 @@ Interpreter.prototype.UserFunction = function(
  * @private
  */
 Interpreter.prototype.UserFunction.prototype.instantiateDeclarations_ =
-    function(owner, thisVal, args) {
-      throw new Error('Inner class method not callable on prototype');
-    };
+function(owner, thisVal, args) {
+  throw new Error('Inner class method not callable on prototype');
+};
 
 /**
  * @constructor
@@ -5806,6 +5806,7 @@ var performStaticAnalysis = function(node) {
   /**
    * Actually Walk an AST sub-tree, populating boundNames as we go.
    * @param {!Interpreter.Node} node AST node (program or function).
+   * Nested function writes to boundNames and hasArgumentsOrEval.
    * @return {void}
    */
   function walk(node) {
