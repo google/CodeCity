@@ -4810,21 +4810,21 @@ Interpreter.prototype.installTypes = function() {
       var paramValue = args.length > i ? args[i] : undefined;
       scope.createMutableBinding(paramName, paramValue);
     }
-    // Build arguments object.
-    //
-    // BUG(cpcallen): mustn't create arguments object if 'arguments'
-    // is the name of a local variable or named parameter.  Needn't
-    // create arguments object if it is never referenced.
-    var argsObj = new intrp.Arguments(owner);
-    argsObj.defineProperty(
-        'length', Descriptor.wc.withValue(args.length), owner);
-    for (i = 0; i < args.length; i++) {
+    var body = this.node['body'];
+    if (!('arguments' in getBoundNames(body)) &&
+        hasArgumentsOrEval(body)) {
+      // Build arguments object.
+      var argsObj = new intrp.Arguments(owner);
       argsObj.defineProperty(
-          String(i), Descriptor.wec.withValue(args[i]), owner);
+          'length', Descriptor.wc.withValue(args.length), owner);
+      for (i = 0; i < args.length; i++) {
+        argsObj.defineProperty(
+            String(i), Descriptor.wec.withValue(args[i]), owner);
+      }
+      scope.createImmutableBinding('arguments', argsObj);
     }
-    scope.createImmutableBinding('arguments', argsObj);
     // Populate local variables and other inner declarations.
-    intrp.populateScope_(this.node['body'], scope);
+    intrp.populateScope_(body, scope);
     return scope;
   };
 
