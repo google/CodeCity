@@ -523,7 +523,7 @@ Object.defineProperty(Array.prototype, 'some', {value:
 // Polylfill adapted from:
 // https://github.com/v8/v8/blob/8e43b9c01d60ddb5e58ec8de9d34616ea1bb905f/src/js/array.js
 // TODO(cpcallen): as of ES2020, Array.prototype.sort must be stable.
-Array.prototype.sort = function(comparefn) {
+Array.prototype.sort = function sort(comparefn) {
   var obj = this;
   // Let obj = ToObject(this)
   if (typeof(obj) !== 'object' && typeof(obj) !== 'function' || obj === null) {
@@ -583,134 +583,141 @@ Array.prototype.sort = function(comparefn) {
     delete obj[i];
   }
       
-  // Helper functions.
-
-  // For short (length <= 10) arrays, insertion sort is used for efficiency.
-  function insertionSort(a, from, to) {
-    for (var i = from + 1; i < to; i++) {
-      var element = a[i];
-      for (var j = i - 1; j >= from; j--) {
-        var tmp = a[j];
-        var order = comparefn(tmp, element);
-        if (order > 0) {
-          a[j + 1] = tmp;
-        } else {
-          break;
-        }
-      }
-      a[j + 1] = element;
-    }
-  };
-
-  function getThirdIndex(a, from, to) {
-    var t_array = [];
-    // Use both 'from' and 'to' to determine the pivot candidates.
-    var increment = 200 + ((to - from) & 15);
-    var j = 0;
-    from += 1;
-    to -= 1;
-    for (var i = from; i < to; i += increment) {
-      t_array[j] = [i, a[i]];
-      j++;
-    }
-    t_array.sort(function(a, b) {
-      return comparefn(a[1], b[1]);
-    });
-    var third_index = t_array[t_array.length >> 1][0];
-    return third_index;
-  }
-
-  // In-place QuickSort algorithm.
-  function quickSort(a, from, to) {
-    var third_index = 0;
-    while (true) {
-      // Insertion sort is faster for short arrays.
-      if (to - from <= 10) {
-        insertionSort(a, from, to);
-        return;
-      }
-      if (to - from > 1000) {
-        third_index = getThirdIndex(a, from, to);
-      } else {
-        third_index = from + ((to - from) >> 1);
-      }
-      // Find a pivot as the median of first, last and middle element.
-      var v0 = a[from];
-      var v1 = a[to - 1];
-      var v2 = a[third_index];
-      var c01 = comparefn(v0, v1);
-      if (c01 > 0) {
-        // v1 < v0, so swap them.
-        var tmp = v0;
-        v0 = v1;
-        v1 = tmp;
-      } // v0 <= v1.
-      var c02 = comparefn(v0, v2);
-      if (c02 >= 0) {
-        // v2 <= v0 <= v1.
-        var tmp = v0;
-        v0 = v2;
-        v2 = v1;
-        v1 = tmp;
-      } else {
-        // v0 <= v1 && v0 < v2
-        var c12 = comparefn(v1, v2);
-        if (c12 > 0) {
-          // v0 <= v2 < v1
-          var tmp = v1;
-          v1 = v2;
-          v2 = tmp;
-        }
-      }
-      // v0 <= v1 <= v2
-      a[from] = v0;
-      a[to - 1] = v2;
-      var pivot = v1;
-      var low_end = from + 1;   // Upper bound of elements lower than pivot.
-      var high_start = to - 1;  // Lower bound of elements greater than pivot.
-      a[third_index] = a[low_end];
-      a[low_end] = pivot;
-
-      // From low_end to i are elements equal to pivot.
-      // From i to high_start are elements that haven't been compared yet.
-      partition: for (var i = low_end + 1; i < high_start; i++) {
-        var element = a[i];
-        var order = comparefn(element, pivot);
-        if (order < 0) {
-          a[i] = a[low_end];
-          a[low_end] = element;
-          low_end++;
-        } else if (order > 0) {
-          do {
-            high_start--;
-            if (high_start == i) break partition;
-            var top_elem = a[high_start];
-            order = comparefn(top_elem, pivot);
-          } while (order > 0);
-          a[i] = a[high_start];
-          a[high_start] = element;
-          if (order < 0) {
-            element = a[i];
-            a[i] = a[low_end];
-            a[low_end] = element;
-            low_end++;
-          }
-        }
-      }
-      if (to - high_start < low_end - from) {
-        quickSort(a, high_start, to);
-        to = low_end;
-      } else {
-        quickSort(a, from, low_end);
-        from = high_start;
-      }
-    }
-  };
-
-  quickSort(obj, 0, definedCount);
+  Array.prototype.sort.quickSort(obj, 0, definedCount, comparefn);
   return obj;
 };
 Object.defineProperty(Array.prototype, 'sort', {enumerable: false});
+
+// Helper functions.
+
+// For short (length <= 10) arrays, insertion sort is used for efficiency.
+Array.prototype.sort.insertionSort = function insertionSort(
+    a, from, to, comparefn) {
+  for (var i = from + 1; i < to; i++) {
+    var element = a[i];
+    for (var j = i - 1; j >= from; j--) {
+      var tmp = a[j];
+      var order = comparefn(tmp, element);
+      if (order > 0) {
+        a[j + 1] = tmp;
+      } else {
+        break;
+      }
+    }
+    a[j + 1] = element;
+  }
+};
+Object.defineProperty(Array.prototype.sort, 'insertionSort',
+                      {enumerable: false});
+
+Array.prototype.sort.getThirdIndex = function getThirdIndex(
+    a, from, to, comparefn) {
+  var t_array = [];
+  // Use both 'from' and 'to' to determine the pivot candidates.
+  var increment = 200 + ((to - from) & 15);
+  var j = 0;
+  from += 1;
+  to -= 1;
+  for (var i = from; i < to; i += increment) {
+    t_array[j] = [i, a[i]];
+    j++;
+  }
+  t_array.sort(function(a, b) {
+    return comparefn(a[1], b[1]);
+  });
+  var third_index = t_array[t_array.length >> 1][0];
+  return third_index;
+};
+Object.defineProperty(Array.prototype.sort, 'getThirdIndex',
+                      {enumerable: false});
+
+// In-place QuickSort algorithm.
+Array.prototype.sort.quickSort = function quickSort(a, from, to, comparefn) {
+  var third_index = 0;
+  while (true) {
+    // Insertion sort is faster for short arrays.
+    if (to - from <= 10) {
+      Array.prototype.sort.insertionSort(a, from, to, comparefn);
+      return;
+    }
+    if (to - from > 1000) {
+      third_index = Array.prototype.sort.getThirdIndex(a, from, to, comparefn);
+    } else {
+      third_index = from + ((to - from) >> 1);
+    }
+    // Find a pivot as the median of first, last and middle element.
+    var v0 = a[from];
+    var v1 = a[to - 1];
+    var v2 = a[third_index];
+    var c01 = comparefn(v0, v1);
+    if (c01 > 0) {
+      // v1 < v0, so swap them.
+      var tmp = v0;
+      v0 = v1;
+      v1 = tmp;
+    } // v0 <= v1.
+    var c02 = comparefn(v0, v2);
+    if (c02 >= 0) {
+      // v2 <= v0 <= v1.
+      var tmp = v0;
+      v0 = v2;
+      v2 = v1;
+      v1 = tmp;
+    } else {
+      // v0 <= v1 && v0 < v2
+      var c12 = comparefn(v1, v2);
+      if (c12 > 0) {
+        // v0 <= v2 < v1
+        var tmp = v1;
+        v1 = v2;
+        v2 = tmp;
+      }
+    }
+    // v0 <= v1 <= v2
+    a[from] = v0;
+    a[to - 1] = v2;
+    var pivot = v1;
+    var low_end = from + 1;   // Upper bound of elements lower than pivot.
+    var high_start = to - 1;  // Lower bound of elements greater than pivot.
+    a[third_index] = a[low_end];
+    a[low_end] = pivot;
+
+    // From low_end to i are elements equal to pivot.
+    // From i to high_start are elements that haven't been compared yet.
+    partition: for (var i = low_end + 1; i < high_start; i++) {
+      var element = a[i];
+      var order = comparefn(element, pivot);
+      if (order < 0) {
+        a[i] = a[low_end];
+        a[low_end] = element;
+        low_end++;
+      } else if (order > 0) {
+        do {
+          high_start--;
+          if (high_start == i) break partition;
+          var top_elem = a[high_start];
+          order = comparefn(top_elem, pivot);
+        } while (order > 0);
+        a[i] = a[high_start];
+        a[high_start] = element;
+        if (order < 0) {
+          element = a[i];
+          a[i] = a[low_end];
+          a[low_end] = element;
+          low_end++;
+        }
+      }
+    }
+    if (to - high_start < low_end - from) {
+      quickSort(a, high_start, to, comparefn);
+      to = low_end;
+    } else {
+      quickSort(a, from, low_end, comparefn);
+      from = high_start;
+    }
+  }
+};
+Object.defineProperty(Array.prototype.sort, 'quickSort', {enumerable: false});
 
 Object.defineProperty(Array.prototype, 'toLocaleString', {value: function() {
   var out = [];
