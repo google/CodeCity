@@ -4036,6 +4036,18 @@ Interpreter.prototype.UserFunction = function(
 };
 
 /**
+ * @param {!Interpreter.Owner} owner
+ * @param {?Interpreter.Value} thisVal
+ * @param {!Array<?Interpreter.Value>} args
+ * @return {!Interpreter.Scope}
+ * @private
+ */
+Interpreter.prototype.UserFunction.prototype.instantiateDeclarations_ =
+    function(owner, thisVal, args) {
+      throw new Error('Inner class method not callable on prototype');
+    };
+
+/**
  * @constructor
  * @extends {Interpreter.prototype.Function}
  * @param {!Interpreter.prototype.Function} func
@@ -4728,7 +4740,7 @@ Interpreter.prototype.installTypes = function() {
       throw new intrp.Error(state.scope.perms, intrp.PERM_ERROR,
           'Functions with null owner are not executable');
     }
-    var scope = this.instantiateDeclarations(this.owner, thisVal, args);
+    var scope = this.instantiateDeclarations_(this.owner, thisVal, args);
     state.value = undefined;  // Default value if no explicit return.
     thread.stateStack_[thread.stateStack_.length] =
         new Interpreter.State(this.node['body'], scope);
@@ -4779,8 +4791,9 @@ Interpreter.prototype.installTypes = function() {
    * @param {?Interpreter.Value} thisVal The value of 'this' for the call.
    * @param {!Array<?Interpreter.Value>} args The arguments to the call.
    * @return {!Interpreter.Scope} The initialised scope
+   * @private
    */
-  intrp.UserFunction.prototype.instantiateDeclarations = function(
+  intrp.UserFunction.prototype.instantiateDeclarations_ = function(
       owner, thisVal, args) {
     // Aside: we need to pass owner, rather than
     // this.scope.perms, for the new scope perms because (1) we want
@@ -4801,7 +4814,7 @@ Interpreter.prototype.installTypes = function() {
     //
     // BUG(cpcallen): mustn't create arguments object if 'arguments'
     // is the name of a local variable or named parameter.  Needn't
-    // create arguments object if it is never referecned.
+    // create arguments object if it is never referenced.
     var argsObj = new intrp.Arguments(owner);
     argsObj.defineProperty(
         'length', Descriptor.wc.withValue(args.length), owner);
