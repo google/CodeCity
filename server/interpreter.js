@@ -2875,10 +2875,7 @@ Interpreter.prototype.populateScope_ = function(node, scope, source) {
   }
   // Obtain list of bound names for node.  We cache this on the AST
   // node to save time when repeatedly calling the same function.
-  var boundNames = node['boundNames'];
-  if (!boundNames) {
-    boundNames = node['boundNames'] = this.getBoundNames_(node);
-  }
+  var boundNames = getBoundNames(node);
   for (var name in boundNames) {
     var value = boundNames[name] ?
         new this.UserFunction(boundNames[name], scope, source, scope.perms) :
@@ -2886,55 +2883,6 @@ Interpreter.prototype.populateScope_ = function(node, scope, source) {
     if (!scope.hasBinding(name)) scope.createMutableBinding(name, value);
     if (value) this.setValueToScope(scope, name, value);
   }
-};
-
-/**
- * Walk an AST sub-tree and find its BoundNames.
- * @param {!Interpreter.Node} node AST node (program or function).
- * @param {!Object<string, (!Interpreter.Node|undefined)>=} boundNames
- *     Used internally for recursive calls.
- * @return {!Object<string, (!Interpreter.Node|undefined)>} A map of
- *     bound names.  The keys are var and function declarations
- *     appearing in the subtree rooted at node; the values are
- *     undefined for VariableDeclarations or a FunctionDeclaration
- *     node for FunctionDeclarations.
- * @private
- */
-Interpreter.prototype.getBoundNames_ = function(node, boundNames) {
-  if (!boundNames) boundNames = Object.create(null);
-  if (node['type'] === 'VariableDeclaration') {
-    for (var i = 0; i < node['declarations'].length; i++) {
-      var name = node['declarations'][i]['id']['name'];
-      if (!Object.prototype.hasOwnProperty.call(boundNames, name)) {
-        boundNames[name] = undefined;
-      }
-    }
-  } else if (node['type'] === 'FunctionDeclaration') {
-    name = node['id']['name'];
-    boundNames[name] = node;
-    return boundNames;  // Do not recurse into function.
-  } else if (node['type'] === 'FunctionExpression') {
-    return boundNames;  // Do not recurse into function.
-  } else if (node['type'] === 'ExpressionStatement') {
-    return boundNames;  // Expressions can't contain variable/function decls.
-  }
-  for (var key in node) {
-    var prop = node[key];
-    if (prop && typeof prop === 'object') {
-      if (Array.isArray(prop)) {
-        for (var i = 0; i < prop.length; i++) {
-          if (prop[i] && prop[i] instanceof Interpreter.Node) {
-            this.getBoundNames_(prop[i], boundNames);
-          }
-        }
-      } else {
-        if (prop instanceof Interpreter.Node) {
-          this.getBoundNames_(prop, boundNames);
-        }
-      }
-    }
-  }
-  return boundNames;
 };
 
 /**
@@ -5759,6 +5707,71 @@ Descriptor.prototype.withValue = function(value) {
 ///////////////////////////////////////////////////////////////////////////////
 // Static Analysis Functions
 ///////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Obtain the list of BoundNames for an AST sub-tree.  This is done by
+ * walking the tree and looking for VariableDeclaration and
+ * FunctionDeclaration nodes, with the results being cached on
+ * node['boundNames'] for speed when a UserFunction is called
+ * repeatedly.
+ * @param {!Interpreter.Node} node AST node (program or function).
+ * @return {!Object<string, (!Interpreter.Node|undefined)>} A map of
+ *     bound names.  The keys are var and function declarations
+ *     appearing in the subtree rooted at node; the values are
+ *     undefined for VariableDeclarations or a FunctionDeclaration
+ *     node for FunctionDeclarations.
+ */
+var getBoundNames = function(node) {
+  if (node['boundNames']) return node['boundNames'];
+  /** !Object<string, (!Interpreter.Node|undefined)> */
+  var boundNames = node['boundNames'] = Object.create(null);
+  walk(node);
+  return boundNames;
+
+  /**
+   * Actually Walk an AST sub-tree, populating boundNames as we go.
+   * @param {!Interpreter.Node} node AST node (program or function).
+   * @return {void}
+   */
+  function walk(node) {
+    if (node['type'] === 'VariableDeclaration') {
+      for (var i = 0; i < node['declarations'].length; i++) {
+        // VariableDeclarations can't overwrite previous
+        // FunctionDeclarations (but initializer might at run time).
+        var name = node['declarations'][i]['id']['name'];
+        if (!(name in boundNames)) {
+          boundNames[name] = undefined;
+        }
+      }
+    } else if (node['type'] === 'FunctionDeclaration') {
+      // FunctionDeclarations overwrite any previous decl of the same name.
+      name = node['id']['name'];
+      boundNames[name] = node;
+      return;  // Do not recurse into function.
+    } else if (node['type'] === 'FunctionExpression') {
+      return;  // Do not recurse into function.
+    } else if (node['type'] === 'ExpressionStatement') {
+      return;  // Expressions can't contain variable/function decls.
+    }
+    // Visit node's children.
+    for (var key in node) {
+      var prop = node[key];
+      if (prop && typeof prop === 'object') {
+        if (Array.isArray(prop)) {
+          for (var i = 0; i < prop.length; i++) {
+            if (prop[i] && prop[i] instanceof Interpreter.Node) {
+              walk(prop[i]);
+            }
+          }
+        } else {
+          if (prop instanceof Interpreter.Node) {
+            walk(prop);
+          }
+        }
+      }
+    }
+  }
+};
 
 /**
  * The IsAnonymousFunctionDefinition specification method from ES6 §14.1.9
