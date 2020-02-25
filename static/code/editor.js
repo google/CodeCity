@@ -714,6 +714,8 @@ Code.valueEditor.createDom = function(container) {
   };
   this.editor_ = CodeMirror(container, options);
   this.editor_.setSize('100%', '100%');
+  // Use different theme in value editor to distinguish it from other editors.
+  this.editor_.setOption('theme', 'default');
 };
 
 /**
@@ -809,6 +811,7 @@ Code.functionEditor.createDom = function(container) {
   };
   this.editor_ = CodeMirror(container, options);
   this.editor_.setSize('100%', '100%');
+  this.editor_.setOption('theme', 'eclipse');
 
   this.isVerbElement_ = document.getElementById('isVerb');
   this.verbElement_ = document.getElementById('verb');
@@ -947,6 +950,7 @@ Code.jsspEditor.createDom = function(container) {
   };
   this.editor_ = CodeMirror(container, options);
   this.editor_.setSize('100%', '100%');
+  this.editor_.setOption('theme', 'eclipse');
 };
 
 /**
