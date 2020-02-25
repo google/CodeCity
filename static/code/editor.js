@@ -708,6 +708,8 @@ Code.valueEditor.createDom = function(container) {
     tabSize: 2,
     undoDepth: 1024,
     lineNumbers: true,
+    continueComments: {continueLineComment: false},
+    mode: 'text/javascript',
     matchBrackets: true
   };
   this.editor_ = CodeMirror(container, options);
