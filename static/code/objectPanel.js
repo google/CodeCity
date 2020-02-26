@@ -218,7 +218,7 @@ Code.ObjectPanel.filterShadowed = function(data) {
       }
     }
     datum.length = cursorInsert;
-    datum.sort(Code.ObjectPanel.caseInsensitiveComp);
+    datum.sort(Code.ObjectPanel.caseInsensitiveComp_);
   }
 };
 
@@ -227,8 +227,9 @@ Code.ObjectPanel.filterShadowed = function(data) {
  * @param {!Object} a One named object.
  * @param {!Object} b Another named object.
  * @return {number} -1/0/1 comparator value.
+ * @private
  */
-Code.ObjectPanel.caseInsensitiveComp = function(a, b) {
+Code.ObjectPanel.caseInsensitiveComp_ = function(a, b) {
   a = a.name.toLowerCase();
   b = b.name.toLowerCase();
   return (a < b) ? -1 : ((a > b) ? 1 : 0);
@@ -239,11 +240,12 @@ if (!window.TEST) {
     // Load the data from Code City.
     var hash = location.hash.substring(1);
     var script = document.createElement('script');
-    script.src = '/code/objectPanel?parts=' + hash;
+    script.src = '/code/objectPanel?' + hash;
     document.head.appendChild(script);
 
     // Fill in the object name.
-    Code.ObjectPanel.parts = JSON.parse(decodeURIComponent(hash));
+    Code.ObjectPanel.parts =
+        Code.Common.selectorToParts(decodeURIComponent(hash));
     var div = document.getElementById('objectTitle');
     var lastPart = Code.ObjectPanel.parts[Code.ObjectPanel.parts.length - 1];
     var name;

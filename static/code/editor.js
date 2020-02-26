@@ -13,10 +13,10 @@
 Code.Editor = {};
 
 /**
- * JSON-encoded list of complete object selector parts.
- * @type {?string}
+ * List of complete object selector parts.
+ * @type {Array<!Object>}
  */
-Code.Editor.partsJSON = null;
+Code.Editor.parts = null;
 
 /**
  * Currently selected editor.
@@ -42,10 +42,10 @@ Code.Editor.receiveMessage = function() {
   if (!parts || !parts.length) {
     return;  // Invalid parts, ignore.
   }
-  if (JSON.stringify(parts) === Code.Editor.partsJSON) {
+  if (parts === Code.Editor.parts) {
     return;  // No change.
   }
-  if (Code.Editor.partsJSON === null) {
+  if (Code.Editor.parts === null) {
     Code.Editor.load();  // Initial load of content.
   } else {
     Code.Editor.updateCurrentSource();
@@ -113,7 +113,7 @@ Code.Editor.load = function() {
   if (!parts) {
     return;  // Invalid parts, ignore.
   }
-  Code.Editor.partsJSON = JSON.stringify(parts);
+  Code.Editor.parts = parts.slice();  // Shallow copy, since it's popped below.
   // Request data from Code City server.
   Code.Editor.key = undefined;
   Code.Editor.sendXhr();
@@ -296,6 +296,7 @@ Code.Editor.tabClick.disabled = true;
  * Send a request to Code City's code editor service.
  */
 Code.Editor.sendXhr = function() {
+  var selector = Code.Common.partsToSelector(Code.Editor.parts);
   var xhr = Code.Editor.codeRequest_;
   xhr.abort();
   xhr.open('POST', '/code/editor');
@@ -304,7 +305,7 @@ Code.Editor.sendXhr = function() {
   var src = Code.Editor.currentSource || '';
   var data =
       'key=' + encodeURIComponent(Code.Editor.key) +
-      '&parts=' + encodeURIComponent(Code.Editor.partsJSON);
+      '&selector=' + encodeURIComponent(selector);
   if (src) {
     data += '&src=' + encodeURIComponent(src);
   }
