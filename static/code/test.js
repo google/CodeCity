@@ -12,19 +12,19 @@
 
 function testCommonSelectorToParts() {
   // Join a list of parts into a path selector.
-  assertEquals('[{"type":"id","value":"$"},{"type":"^"},{"type":"id","value":"foo"}]', JSON.stringify(Code.Common.selectorToParts('$^.foo')));
+  assertEquals('[{"type":"id","value":"$"},{"type":"keyword","value":"{proto}"},{"type":"id","value":"foo"}]', JSON.stringify(Code.Common.selectorToParts('${proto}.foo')));
 }
 
 function testCommonPartsToSelector() {
   // Join a list of parts into a path selector.
-  assertEquals('$^.foo', Code.Common.partsToSelector([{type: 'id', value: '$'}, {type: '^'}, {type: 'id', value: 'foo'}]));
+  assertEquals('${proto}.foo', Code.Common.partsToSelector([{type: 'id', value: '$'}, {type: 'keyword', value: '{proto}'}, {type: 'id', value: 'foo'}]));
 }
 
 function testCommonSelectorToReference() {
   // No substitution.
   assertEquals('$.foo', Code.Common.selectorToReference('$.foo'));
   // Parent substitution.
-  assertEquals("$('$^.foo')", Code.Common.selectorToReference('$^.foo'));
+  assertEquals("$('${proto}.foo')", Code.Common.selectorToReference('${proto}.foo'));
 }
 
 function testGetPrefix() {
