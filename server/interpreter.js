@@ -5804,7 +5804,7 @@ var performStaticAnalysis = function(node) {
   node['hasArgumentsOrEval'] = hasArgumentsOrEval;
 
   /**
-   * Actually Walk an AST sub-tree, populating boundNames as we go.
+   * Recursively Walk an AST sub-tree, populating boundNames as we go.
    * @param {!Interpreter.Node} node AST node (program or function).
    * Nested function writes to boundNames and hasArgumentsOrEval.
    * @return {void}
