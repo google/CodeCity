@@ -130,15 +130,20 @@ Code.Editor.load = function() {
     var selector = Code.Common.partsToSelector(parts);
     var reference = Code.Common.selectorToReference(selector);
     // Put the last part back on.
-    // Render as '.foo' or '[42]' or '["???"]' or '^'.
+    // Render as '.foo' or '[42]' or '["???"]' or '{xxx}'.
     if (lastPart.type === 'id') {
       var mockParts = [{type: 'id', value: 'X'}, lastPart];
       reference += Code.Common.partsToSelector(mockParts).substring(1) + ' = ';
-    } else if (lastPart.type === '^') {
-      reference = 'Object.setPrototypeOf(' + reference + ', ...) ';
+    } else if (lastPart.type === 'keyword') {
+      if (lastPart.value === '{proto}') {
+        reference = 'Object.setPrototypeOf(' + reference + ', ...) ';
+      } else if (lastPart.value === '{owner}') {
+        reference = 'Object.setOwnerOf(' + reference + ', ...) ';
+      } else {
+        throw new TypeError('Unknown keyword value: ' + lastPart.value);
+      }
     } else {
-      // Unknown part type.
-      throw new TypeError(lastPart);
+      throw new TypeError('Unknown part type: ' + lastPart.type);
     }
   }
   header.appendChild(document.createTextNode(reference));

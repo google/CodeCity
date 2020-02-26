@@ -63,8 +63,14 @@ Code.ObjectPanel.init = function() {
         Code.ObjectPanel.addLink(part, propList[j].type, i && !j);
       }
     }
-    var part = {type: '^'};
-    Code.ObjectPanel.addLink(part, 'object', true);
+  }
+  if (data.keywords) {
+    var first = true;
+    for (var keyword of data.keywords) {
+      var part = {type: 'keyword', value: keyword};
+      Code.ObjectPanel.addLink(part, 'object', first);
+      first = false;
+    }
   }
 
   // Position the type symbols, and monitor for layout changes.
@@ -244,10 +250,10 @@ if (!window.TEST) {
     if (!lastPart) {
       name = 'Globals';
     } else if (Code.ObjectPanel.parts.length === 1) {
-      // Render as 'foo' or '[42]' or '["???"]' or '^'.
+      // Render as 'foo' or '[42]' or '["???"]' or '{xyz}'.
       name = Code.Common.partsToSelector([lastPart]);
     } else {
-      // Render as '.foo' or '[42]' or '["???"]' or '^'.
+      // Render as '.foo' or '[42]' or '["???"]' or '{xyz}'.
       var mockParts = [{type: 'id', value: 'X'}, lastPart];
       name = Code.Common.partsToSelector(mockParts).substring(1);
     }

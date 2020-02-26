@@ -57,12 +57,19 @@ Code.Explorer.inputUpdatable = true;
 
 /**
  * The last set of autocompletion options from Code City.
- * This is an array of arrays of strings.  The first array contains the
- * properties on the object, the second array contains the properties on the
- * object's prototype, and so on.
- * @type {!Array<!Array<string>>}
+ * The 'properties' property is an array of arrays of strings.  The first array
+ * contains the properties on the object, the second array contains the
+ * properties on the object's prototype, and so on.
+ * The 'keywords' property is an array of strings.  E.g. ['proto', 'owner']
+ * @type {Object}
  */
-Code.Explorer.autocompleteData = [];
+Code.Explorer.autocompleteData = null;
+
+/**
+ * The type of the autocomplete menu, 'id' or 'keyword'.
+ * @type {string}
+ */
+Code.Explorer.autocompleteType = '';
 
 /**
  * Got a ping from someone.  Something might have changed and need updating.
@@ -135,7 +142,7 @@ Code.Explorer.inputChange = function() {
  * @param {string} inputValue Selector string from input field.
  * @return {!Object} Object with four fields:
  *     parts: Array of selector parts.
- *     lastNameToken: Last token that was an id, str, or num.
+ *     lastNameToken: Last token that was an id, str, num, or keyword.
  *     lastToken: Last token.  Null if no tokens.
  *     valid: True if all tokens are valid (or could become valid).
  */
@@ -146,21 +153,18 @@ Code.Explorer.parseInput = function(inputValue) {
   var lastNameToken = null;
   var valid = true;
   for (token of tokens) {
-    if (token.type === 'id' || token.type === 'str' || token.type === 'num') {
-      lastNameToken = token;
+    if (lastNameToken) {
+      parts.push({type: 'id', value: lastNameToken.value});
+      lastNameToken = null;
     }
     if (!token.valid) {
       valid = false;
       break;
     }
-    if ('.[]^'.indexOf(token.type) !== -1) {
-      if (lastNameToken) {
-        parts.push({type: 'id', value: lastNameToken.value});
-        lastNameToken = null;
-      }
-      if (token.type === '^') {
-        parts.push({type: '^'});
-      }
+    if (token.type === 'keyword' && token.complete) {
+      parts.push({type: 'keyword', value: token.value});
+    } else if (['id', 'str', 'num', 'keyword'].includes(token.type)) {
+      lastNameToken = token;
     }
   }
   return {
@@ -177,6 +181,7 @@ Code.Explorer.parseInput = function(inputValue) {
 Code.Explorer.loadAutocomplete = function(partsJSON) {
   var data = Code.Explorer.getPanelData(Code.Explorer.partsJSON);
   if (data) {
+    Code.Explorer.autocompleteData = {};
     // Flatten the data into a sorted list of options.
     var set = new Set();
     if (data.properties) {
@@ -191,15 +196,18 @@ Code.Explorer.loadAutocomplete = function(partsJSON) {
         set.add(root.name);
       }
     }
+    Code.Explorer.autocompleteData.properties =
+        Array.from(set.keys()).sort(Code.Explorer.caseInsensitiveComp);
+    set.clear();
     if (data.keywords) {
       for (var word of data.keywords) {
         set.add(word);
       }
     }
-    Code.Explorer.autocompleteData =
-        Array.from(set.keys()).sort(Code.Explorer.caseInsensitiveComp);
+    Code.Explorer.autocompleteData.keywords =
+        Array.from(set.keys()).sort();
   } else {
-    Code.Explorer.autocompleteData = [];
+    Code.Explorer.autocompleteData = null;
   }
 
   // If the input value is unchanged, display the autocompletion menu.
@@ -214,6 +222,7 @@ Code.Explorer.loadAutocomplete = function(partsJSON) {
  * all matching options.
  */
 Code.Explorer.updateAutocompleteMenu = function() {
+  if (!Code.Explorer.autocompleteData) return;
   var parsed = Code.Explorer.parseInput(input.value);
   var token = parsed.lastToken;
   // If the lastToken is part of the submitted parts, no menu.
@@ -225,28 +234,41 @@ Code.Explorer.updateAutocompleteMenu = function() {
     return;
   }
   // Otherwise, show a menu filtered on the partial token.
-  var prefix = '';
-  var index = token ? token.index : 0;
-  if (token) {
-    if (token.type === 'id' || token.type === 'str') {
-      prefix = token.value.toLowerCase();
-    }
-    if ((token.type === 'num') && !isNaN(token.value)) {
-      prefix = String(token.value);
-    }
-    if (token.type === '.' || token.type === '[') {
-      index += token.raw.length;
-    }
-  }
   var options = [];
-  if (!token || token.type === '.' || token.type === 'id' ||
-      token.type === '[' || token.type === 'str' || token.type === 'num') {
-    // Filter the options.
-    for (var option of Code.Explorer.autocompleteData) {
+  var index = token ? token.index : 0;
+  if (token.type === 'keyword') {
+    var prefix = token.value;
+    // Filter the keywords.
+    for (var option of Code.Explorer.autocompleteData.keywords) {
       if (option.substring(0, prefix.length).toLowerCase() === prefix) {
-          options.push(option);
+        options.push(option);
       }
     }
+    Code.Explorer.autocompleteType = 'keyword';
+  } else {
+    // Property.
+    var prefix = '';
+    if (token) {
+      if (token.type === 'id' || token.type === 'str') {
+        prefix = token.value.toLowerCase();
+      }
+      if ((token.type === 'num') && !isNaN(token.value)) {
+        prefix = String(token.value);
+      }
+      if (token.type === '.' || token.type === '[') {
+        index += token.raw.length;
+      }
+    }
+    if (!token || token.type === '.' || token.type === 'id' ||
+        token.type === '[' || token.type === 'str' || token.type === 'num') {
+      // Filter the properties.
+      for (var option of Code.Explorer.autocompleteData.properties) {
+        if (option.substring(0, prefix.length).toLowerCase() === prefix) {
+            options.push(option);
+        }
+      }
+    }
+    Code.Explorer.autocompleteType = 'id';
   }
   if (!options.length ||
       (options.length === 1 && options[0].length === prefix.length)) {
@@ -319,6 +341,7 @@ Code.Explorer.showAutocompleteMenu = function(options, index) {
 Code.Explorer.hideAutocompleteMenu = function() {
   document.getElementById('autocompleteMenu').style.display = 'none';
   Code.Explorer.autocompleteSelect(null);
+  Code.Explorer.autocompleteType = '';
 };
 
 /**
@@ -374,7 +397,8 @@ Code.Explorer.autocompleteSelect = function(div) {
 Code.Explorer.autocompleteClick = function(e) {
   var option = e.target.getAttribute('data-option');
   var parts = JSON.parse(Code.Explorer.partsJSON);
-  parts.push({type: 'id', value: option});
+  console.log(Code.Explorer.autocompleteType);
+  parts.push({type: Code.Explorer.autocompleteType, value: option});
   Code.Explorer.setParts(parts, true);
 };
 
@@ -464,11 +488,13 @@ Code.Explorer.inputKey = function(e) {
     if (selected) {
       // Add the selected autocomplete option to the input.
       var option = selected.getAttribute('data-option');
-      parts.push({type: 'id', value: option});
-    } else if (Code.Explorer.lastNameToken && Code.Explorer.lastNameToken.valid) {
+      parts.push({type: Code.Explorer.autocompleteType, value: option});
+    } else if (Code.Explorer.lastNameToken &&
+        Code.Explorer.lastNameToken.valid) {
       // The currently typed input should be considered complete.
       // E.g. $.foo<enter> is not waiting to become $.foot
-      parts.push({type: 'id', value: Code.Explorer.lastNameToken.value});
+      parts.push({type: Code.Explorer.autocompleteType,
+          value: Code.Explorer.lastNameToken.value});
       Code.Explorer.lastNameToken = null;
     }
     Code.Explorer.setParts(parts, true);
@@ -490,7 +516,7 @@ Code.Explorer.inputKey = function(e) {
       if (tuple.terminal) {
         // There was only one option.  Choose it.
         var parts = JSON.parse(Code.Explorer.partsJSON);
-        parts.push({type: 'id', value: tuple.prefix});
+        parts.push({type: Code.Explorer.autocompleteType, value: tuple.prefix});
         Code.Explorer.setParts(parts, true);
       } else {
         // Append the common prefix to the existing input.
