@@ -60,7 +60,7 @@ Code.Explorer.inputUpdatable = true;
  * The 'properties' property is an array of arrays of strings.  The first array
  * contains the properties on the object, the second array contains the
  * properties on the object's prototype, and so on.
- * The 'keywords' property is an array of strings.  E.g. ['proto', 'owner']
+ * The 'keywords' property is an array of strings.  E.g. ['{proto}', '{owner}']
  * @type {Object}
  */
 Code.Explorer.autocompleteData = null;
@@ -399,7 +399,6 @@ Code.Explorer.autocompleteSelect = function(div) {
 Code.Explorer.autocompleteClick = function(e) {
   var option = e.target.getAttribute('data-option');
   var parts = JSON.parse(Code.Explorer.partsJSON);
-  console.log(Code.Explorer.autocompleteType);
   parts.push({type: Code.Explorer.autocompleteType, value: option});
   Code.Explorer.setParts(parts, true);
 };
