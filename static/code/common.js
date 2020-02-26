@@ -368,7 +368,7 @@ Code.Common.selectorToParts = function(text) {
   var tokens = Code.Common.tokenizeSelector(text);
   var parts = [];
   for (var token of tokens) {
-    if (!token.valid || token.type === '{') {
+    if (!token.valid) {
       return null;
     }
     if (['id', 'str', 'num'].includes(token.type)) {
@@ -384,7 +384,6 @@ Code.Common.selectorToParts = function(text) {
  * Join a list of parts into a path selector.
  * E.g. [{type: 'id', value: '$'}, {type: 'keyword', value: '{proto}'}, {type: 'id', value: 'foo'}] ->
  *   '${proto}.foo'
- * Try to keep this code in sync with $.utils.selector
  * @param {!Array<!Object>} parts Array of parts.
  * @return {string} Selector string.
  */
@@ -420,7 +419,6 @@ Code.Common.partsToSelector = function(parts) {
  * E.g. "$.foo" -> "$.foo"
  * E.g. "${proto}.foo" -> "$('${proto}.foo')"
  * Join a list of parts into a valid code reference.
- * Try to keep this code in sync with $.utils.selector
  * @param {string} selector Selector string.
  * @return {string} Code reference.
  */
