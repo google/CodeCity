@@ -36,7 +36,7 @@ Code.Explorer.oldInputValue = null;
  * JSON-encoded list of complete object selector parts.
  * @type {string}
  */
-Code.Explorer.partsJSON = 'null';
+Code.Explorer.partsJSON = '[]';
 
 /**
  * Final token which may not be complete and isn't included in the parts list.
@@ -178,8 +178,10 @@ Code.Explorer.parseInput = function(inputValue) {
 /**
  * Check to see if there's any autocomplete data, and if so update the menu.
  */
-Code.Explorer.loadAutocomplete = function(partsJSON) {
-  var data = Code.Explorer.getPanelData(Code.Explorer.partsJSON);
+Code.Explorer.loadAutocomplete = function() {
+  var parts = JSON.parse(Code.Explorer.partsJSON);
+  var selector = Code.Common.partsToSelector(parts);
+  var data = Code.Explorer.getPanelData(selector);
   if (data) {
     Code.Explorer.autocompleteData = {};
     // Flatten the data into a sorted list of options.
@@ -633,10 +635,10 @@ Code.Explorer.panelSpacerMargin = 0;
  */
 Code.Explorer.loadPanels = function(parts) {
   for (var i = 0; i <= parts.length; i++) {
-    var component = JSON.stringify(parts.slice(0, i));
+    var selector = Code.Common.partsToSelector(parts.slice(0, i));
     var iframe = document.getElementById('objectPanel' + i);
     if (iframe) {
-      if (iframe.getAttribute('data-component') === component) {
+      if (iframe.getAttribute('data-selector') === selector) {
         // Highlight current item.
         iframe.contentWindow.postMessage('ping', '*');
         continue;
@@ -646,7 +648,7 @@ Code.Explorer.loadPanels = function(parts) {
         }
       }
     }
-    iframe = Code.Explorer.addPanel(component);
+    iframe = Code.Explorer.addPanel(selector);
   }
   while (Code.Explorer.panelCount > i) {
     Code.Explorer.removePanel();
@@ -655,15 +657,15 @@ Code.Explorer.loadPanels = function(parts) {
 
 /**
  * Add an object panel to the right.
- * @param {string} component Stringified parts list.
+ * @param {string} selector Selector string.
  */
-Code.Explorer.addPanel = function(component) {
+Code.Explorer.addPanel = function(selector) {
   var panelsScroll = document.getElementById('panelsScroll');
   var iframe = document.createElement('iframe');
   iframe.addEventListener('load', Code.Explorer.loadAutocomplete);
   iframe.id = 'objectPanel' + Code.Explorer.panelCount;
-  iframe.src = '/static/code/objectPanel.html#' + encodeURIComponent(component);
-  iframe.setAttribute('data-component', component);
+  iframe.src = '/static/code/objectPanel.html#' + encodeURIComponent(selector);
+  iframe.setAttribute('data-selector', selector);
   var spacer = document.getElementById('panelSpacer');
   panelsScroll.insertBefore(iframe, spacer);
   Code.Explorer.panelCount++;
@@ -720,14 +722,14 @@ Code.Explorer.scrollPid_ = 0;
 
 /**
  * Get the data blob from the specified object panel.
- * @param {string} partsJSON Stringified array of parts.
+ * @param {string} selector Selector string.
  * @return {!Object|undefined} Data blob, or undefined if data is not
  *   currently available.
  */
-Code.Explorer.getPanelData = function(partsJSON) {
+Code.Explorer.getPanelData = function(selector) {
   // Find the object panel that contains the needed data.
   for (var iframe of document.getElementsByTagName('iframe')) {
-    if (iframe.getAttribute('data-component') === partsJSON) {
+    if (iframe.getAttribute('data-selector') === selector) {
       try {
         // Risky: Content may not have loaded yet.
         var data = iframe.contentWindow.Code.ObjectPanel.data;
