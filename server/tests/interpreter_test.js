@@ -21,6 +21,7 @@
  */
 'use strict';
 
+const acorn = require('acorn');
 const http = require('http');
 const net = require('net');
 const util = require('util');
@@ -212,6 +213,66 @@ TestOptions.prototype.onCreateThread;
  * @type {function(!Interpreter)|undefined}
  */
 TestOptions.prototype.onBlocked;
+
+///////////////////////////////////////////////////////////////////////////////
+// Tests: static analysis functions
+///////////////////////////////////////////////////////////////////////////////
+
+exports.testGetBoundNames = function(t) {
+  const name = 'getBoundNames';
+  const {getBoundNames} = Interpreter.testOnly;
+
+  const src = `
+      var a, b;
+      for (var c in {}) {}
+      function f(x) {
+        var y, z;
+      };
+      (function g() { var v; })();
+  `;
+  const ast = acorn.parse(src, Interpreter.PARSE_OPTIONS);
+  const boundNames = getBoundNames(ast);
+  const keys = Object.getOwnPropertyNames(boundNames);
+  t.expect(`${name}() keys`, keys.join(),
+           'a,b,c,f', src);
+  for (let i = 0; i < 3; i++) {
+    t.expect(`${name}()[${i}]`, boundNames[keys[i]], undefined, src);
+  }
+  t.expect(`${name}()[3]`, boundNames['f'], ast['body'][2], src);
+};
+
+exports.testHasArgumentsOrEval = function(t) {
+  const name = 'hasArgumentsOrEval';
+  const {hasArgumentsOrEval} = Interpreter.testOnly;
+
+  const cases = [
+    // [src, expected]; will only look at first statement src.
+    ['Arguments;', false],
+    ['arguments;', true],
+    ['arguments[0];', true],
+    ['foo[arguments];', true],
+    ['bar(arguments);', true],
+    ['{var x; function myArgs() {return arguments;}}', false],
+    ['{function f() {} arguments;}', true],
+
+    ['Eval;', false],
+    ['eval;', true],
+    ['eval();', true],
+    ['Function.prototype.call(eval);', true],
+    ['{var x; function myEval(arg) {eval(arg);}}', false],
+    ['{function f() {} eval();}', true],
+  ];
+  for (const [src, expected] of cases) {
+    try {
+      const ast = acorn.parse(src, Interpreter.PARSE_OPTIONS);
+      const firstStatement = ast['body'][0];
+      t.expect(name, hasArgumentsOrEval(firstStatement),
+               expected, src);
+    } catch (e) {
+      t.crash(name, util.format('%s\n%s', src, e.stack));
+    }
+  }
+};
 
 ///////////////////////////////////////////////////////////////////////////////
 // Tests: external simple testcases
@@ -1382,6 +1443,7 @@ exports.testNetworking = async function(t) {
       resolve('OK');
    `;
   await runAsyncTest(t, name, src, 'OK', {options: {noLog: ['net']}});
+
   // Run test of the xhr() function using HTTP.
   name = 'testXhrHttp';
   const httpTestServer = http.createServer(function (req, res) {

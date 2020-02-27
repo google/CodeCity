@@ -1,18 +1,7 @@
 /**
  * @license
  * Copyright 2018 Google LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /**
@@ -47,7 +36,7 @@ Code.Explorer.oldInputValue = null;
  * JSON-encoded list of complete object selector parts.
  * @type {string}
  */
-Code.Explorer.partsJSON = 'null';
+Code.Explorer.partsJSON = '[]';
 
 /**
  * Final token which may not be complete and isn't included in the parts list.
@@ -68,12 +57,19 @@ Code.Explorer.inputUpdatable = true;
 
 /**
  * The last set of autocompletion options from Code City.
- * This is an array of arrays of strings.  The first array contains the
- * properties on the object, the second array contains the properties on the
- * object's prototype, and so on.
- * @type {!Array<!Array<string>>}
+ * The 'properties' property is an array of arrays of strings.  The first array
+ * contains the properties on the object, the second array contains the
+ * properties on the object's prototype, and so on.
+ * The 'keywords' property is an array of strings.  E.g. ['{proto}', '{owner}']
+ * @type {Object}
  */
-Code.Explorer.autocompleteData = [];
+Code.Explorer.autocompleteData = null;
+
+/**
+ * The type of the autocomplete menu, 'id' or 'keyword'.
+ * @type {string}
+ */
+Code.Explorer.autocompleteType = '';
 
 /**
  * Got a ping from someone.  Something might have changed and need updating.
@@ -146,7 +142,7 @@ Code.Explorer.inputChange = function() {
  * @param {string} inputValue Selector string from input field.
  * @return {!Object} Object with four fields:
  *     parts: Array of selector parts.
- *     lastNameToken: Last token that was an id, str, or num.
+ *     lastNameToken: Last token that was an id, str, num, or keyword.
  *     lastToken: Last token.  Null if no tokens.
  *     valid: True if all tokens are valid (or could become valid).
  */
@@ -157,21 +153,18 @@ Code.Explorer.parseInput = function(inputValue) {
   var lastNameToken = null;
   var valid = true;
   for (token of tokens) {
-    if (token.type === 'id' || token.type === 'str' || token.type === 'num') {
-      lastNameToken = token;
+    if (lastNameToken) {
+      parts.push({type: 'id', value: lastNameToken.value});
+      lastNameToken = null;
     }
     if (!token.valid) {
       valid = false;
       break;
     }
-    if ('.[]^'.indexOf(token.type) !== -1) {
-      if (lastNameToken) {
-        parts.push({type: 'id', value: lastNameToken.value});
-        lastNameToken = null;
-      }
-      if (token.type === '^') {
-        parts.push({type: '^'});
-      }
+    if (token.type === 'keyword' && token.complete) {
+      parts.push({type: 'keyword', value: token.value});
+    } else if (['id', 'str', 'num', 'keyword'].includes(token.type)) {
+      lastNameToken = token;
     }
   }
   return {
@@ -183,62 +176,42 @@ Code.Explorer.parseInput = function(inputValue) {
 };
 
 /**
- * Cache of autocomplete responses from the last minute.
+ * Check to see if there's any autocomplete data, and if so update the menu.
  */
-Code.Explorer.autocompleteCache = Object.create(null);
-
-/**
- * Time to live for cached values in milliseconds.
- */
-Code.Explorer.autocompleteCacheMs = 60 * 1000;
-
-/**
- * Send a request to Code City's autocomplete service.
- * @param {string} partsJSON Stringified array of parts to send to Code City.
- */
-Code.Explorer.sendAutocomplete = function(partsJSON) {
-  var xhr = Code.Explorer.autocompleteRequest_;
-  xhr.abort();
-  var cache = Code.Explorer.autocompleteCache[partsJSON];
-  if (cache && cache.date + Code.Explorer.autocompleteCacheMs > Date.now()) {
-    // Cache hit.
-    Code.Explorer.processAutocomplete(cache.data);
+Code.Explorer.loadAutocomplete = function() {
+  var parts = JSON.parse(Code.Explorer.partsJSON);
+  var selector = Code.Common.partsToSelector(parts);
+  var data = Code.Explorer.getPanelData(selector);
+  if (data) {
+    Code.Explorer.autocompleteData = {};
+    // Flatten the data into a sorted list of options.
+    var set = new Set();
+    if (data.properties) {
+      for (var obj of data.properties) {
+        for (var prop of obj) {
+          set.add(prop.name);
+        }
+      }
+    }
+    if (data.roots) {
+      for (var root of data.roots) {
+        set.add(root.name);
+      }
+    }
+    Code.Explorer.autocompleteData.properties =
+        Array.from(set.keys()).sort(Code.Explorer.caseInsensitiveComp);
+    set.clear();
+    if (data.keywords) {
+      for (var word of data.keywords) {
+        set.add(word);
+      }
+    }
+    Code.Explorer.autocompleteData.keywords =
+        Array.from(set.keys()).sort();
   } else {
-    // Cache miss.
-    Code.Explorer.autocompleteData = [];
-    xhr.open('GET', '/code/autocomplete?parts=' +
-        encodeURIComponent(partsJSON), true);
-    xhr.onload = Code.Explorer.receiveAutocomplete;
-    xhr.send();
-    xhr.partsJSON = partsJSON;
+    Code.Explorer.autocompleteData = null;
   }
-};
 
-Code.Explorer.autocompleteRequest_ = new XMLHttpRequest();
-
-/**
- * Got a response from Code City's autocomplete service.
- */
-Code.Explorer.receiveAutocomplete = function() {
-  var xhr = Code.Explorer.autocompleteRequest_;
-  if (xhr.status !== 200) {
-    console.warn('Autocomplete returned status ' + xhr.status);
-    return;
-  }
-  var data = JSON.parse(xhr.responseText);
-  Code.Explorer.filterShadowed(data);
-
-  Code.Explorer.autocompleteCache[xhr.partsJSON] =
-      {date: Date.now(), data: data};
-  Code.Explorer.processAutocomplete(data);
-};
-
-/**
- * Autocomplete data obtained (either by network or cache).  Use it.
- * @param {!Array<!Array<string>>} data Property names from Code City.
- */
-Code.Explorer.processAutocomplete = function(data) {
-  Code.Explorer.autocompleteData = data;
   // If the input value is unchanged, display the autocompletion menu.
   var input = document.getElementById('input');
   if (Code.Explorer.oldInputValue === input.value) {
@@ -251,39 +224,53 @@ Code.Explorer.processAutocomplete = function(data) {
  * all matching options.
  */
 Code.Explorer.updateAutocompleteMenu = function() {
+  if (!Code.Explorer.autocompleteData) return;
   var parsed = Code.Explorer.parseInput(input.value);
   var token = parsed.lastToken;
   // If the lastToken is part of the submitted parts, no menu.
-  parsed.parts.push({'type': token.type, 'value': token.value});
+  if (token) {
+    parsed.parts.push({'type': token.type, 'value': token.value});
+  }
   if (JSON.stringify(parsed.parts) === Code.Explorer.partsJSON) {
     Code.Explorer.hideAutocompleteMenu();
     return;
   }
   // Otherwise, show a menu filtered on the partial token.
-  var prefix = '';
-  var index = token ? token.index : 0;
-  if (token) {
-    if (token.type === 'id' || token.type === 'str') {
-      prefix = token.value.toLowerCase();
-    }
-    if ((token.type === 'num') && !isNaN(token.value)) {
-      prefix = String(token.value);
-    }
-    if (token.type === '.' || token.type === '[') {
-      index += token.raw.length;
-    }
-  }
   var options = [];
-  if (!token || token.type === '.' || token.type === 'id' ||
-      token.type === '[' || token.type === 'str' || token.type === 'num') {
-    // Flatten the options and filter.
-    for (var optionGroup of Code.Explorer.autocompleteData) {
-      for (var option of optionGroup) {
+  var index = token ? token.index : 0;
+  if (token.type === 'keyword') {
+    var prefix = token.value;
+    // Filter the keywords.
+    for (var option of Code.Explorer.autocompleteData.keywords) {
+      if (option.substring(0, prefix.length).toLowerCase() === prefix) {
+        options.push(option);
+      }
+    }
+    Code.Explorer.autocompleteType = 'keyword';
+  } else {
+    // Property.
+    var prefix = '';
+    if (token) {
+      if (token.type === 'id' || token.type === 'str') {
+        prefix = token.value.toLowerCase();
+      }
+      if ((token.type === 'num') && !isNaN(token.value)) {
+        prefix = String(token.value);
+      }
+      if (token.type === '.' || token.type === '[') {
+        index += token.raw.length;
+      }
+    }
+    if (!token || token.type === '.' || token.type === 'id' ||
+        token.type === '[' || token.type === 'str' || token.type === 'num') {
+      // Filter the properties.
+      for (var option of Code.Explorer.autocompleteData.properties) {
         if (option.substring(0, prefix.length).toLowerCase() === prefix) {
             options.push(option);
         }
       }
     }
+    Code.Explorer.autocompleteType = 'id';
   }
   if (!options.length ||
       (options.length === 1 && options[0].length === prefix.length)) {
@@ -291,31 +278,6 @@ Code.Explorer.updateAutocompleteMenu = function() {
     Code.Explorer.hideAutocompleteMenu();
   } else {
     Code.Explorer.showAutocompleteMenu(options, index);
-  }
-};
-
-/**
- * Remove any properties that are shadowed by objects higher on the inheritance
- * chain.  Also sort the properties alphabetically.
- * @param {!Array<!Array<string>>} data Property names from Code City.
- */
-Code.Explorer.filterShadowed = function(data) {
-  if (data.length < 2) {
-    return;
-  }
-  var seen = Object.create(null);
-  for (var datum of data) {
-    var cursorInsert = 0;
-    var cursorRead = 0;
-    while (cursorRead < datum.length) {
-      var prop = datum[cursorRead++];
-      if (!seen[prop]) {
-        seen[prop] = true;
-        datum[cursorInsert++] = prop;
-      }
-    }
-    datum.length = cursorInsert;
-    datum.sort(Code.Explorer.caseInsensitiveComp);
   }
 };
 
@@ -381,6 +343,7 @@ Code.Explorer.showAutocompleteMenu = function(options, index) {
 Code.Explorer.hideAutocompleteMenu = function() {
   document.getElementById('autocompleteMenu').style.display = 'none';
   Code.Explorer.autocompleteSelect(null);
+  Code.Explorer.autocompleteType = '';
 };
 
 /**
@@ -436,7 +399,7 @@ Code.Explorer.autocompleteSelect = function(div) {
 Code.Explorer.autocompleteClick = function(e) {
   var option = e.target.getAttribute('data-option');
   var parts = JSON.parse(Code.Explorer.partsJSON);
-  parts.push({type: 'id', value: option});
+  parts.push({type: Code.Explorer.autocompleteType, value: option});
   Code.Explorer.setParts(parts, true);
 };
 
@@ -450,7 +413,7 @@ Code.Explorer.setParts = function(parts, updateInput) {
   Code.Explorer.partsJSON = JSON.stringify(parts);
   Code.Explorer.inputUpdatable = updateInput;
   Code.Explorer.hideAutocompleteMenu();
-  Code.Explorer.sendAutocomplete(Code.Explorer.partsJSON);
+  Code.Explorer.loadAutocomplete();
   var selector = Code.Common.partsToSelector(parts);
   sessionStorage.setItem(Code.Common.SELECTOR, selector);
   window.parent.postMessage('ping', '*');
@@ -465,6 +428,7 @@ Code.Explorer.setInput = function(parts) {
   var value = Code.Common.partsToSelector(parts);
   var input = document.getElementById('input');
   input.value = value;
+  input.classList.remove('invalid');
   input.focus();
   Code.Explorer.oldInputValue = value;  // Don't autocomplete this value.
 };
@@ -525,11 +489,13 @@ Code.Explorer.inputKey = function(e) {
     if (selected) {
       // Add the selected autocomplete option to the input.
       var option = selected.getAttribute('data-option');
-      parts.push({type: 'id', value: option});
-    } else if (Code.Explorer.lastNameToken && Code.Explorer.lastNameToken.valid) {
+      parts.push({type: Code.Explorer.autocompleteType, value: option});
+    } else if (Code.Explorer.lastNameToken &&
+        Code.Explorer.lastNameToken.valid) {
       // The currently typed input should be considered complete.
       // E.g. $.foo<enter> is not waiting to become $.foot
-      parts.push({type: 'id', value: Code.Explorer.lastNameToken.value});
+      parts.push({type: Code.Explorer.autocompleteType,
+          value: Code.Explorer.lastNameToken.value});
       Code.Explorer.lastNameToken = null;
     }
     Code.Explorer.setParts(parts, true);
@@ -551,7 +517,7 @@ Code.Explorer.inputKey = function(e) {
       if (tuple.terminal) {
         // There was only one option.  Choose it.
         var parts = JSON.parse(Code.Explorer.partsJSON);
-        parts.push({type: 'id', value: tuple.prefix});
+        parts.push({type: Code.Explorer.autocompleteType, value: tuple.prefix});
         Code.Explorer.setParts(parts, true);
       } else {
         // Append the common prefix to the existing input.
@@ -668,10 +634,10 @@ Code.Explorer.panelSpacerMargin = 0;
  */
 Code.Explorer.loadPanels = function(parts) {
   for (var i = 0; i <= parts.length; i++) {
-    var component = JSON.stringify(parts.slice(0, i));
+    var selector = Code.Common.partsToSelector(parts.slice(0, i));
     var iframe = document.getElementById('objectPanel' + i);
     if (iframe) {
-      if (iframe.getAttribute('data-component') === component) {
+      if (iframe.getAttribute('data-selector') === selector) {
         // Highlight current item.
         iframe.contentWindow.postMessage('ping', '*');
         continue;
@@ -681,7 +647,7 @@ Code.Explorer.loadPanels = function(parts) {
         }
       }
     }
-    iframe = Code.Explorer.addPanel(component);
+    iframe = Code.Explorer.addPanel(selector);
   }
   while (Code.Explorer.panelCount > i) {
     Code.Explorer.removePanel();
@@ -690,14 +656,15 @@ Code.Explorer.loadPanels = function(parts) {
 
 /**
  * Add an object panel to the right.
- * @param {string} component Stringified parts list.
+ * @param {string} selector Selector string.
  */
-Code.Explorer.addPanel = function(component) {
+Code.Explorer.addPanel = function(selector) {
   var panelsScroll = document.getElementById('panelsScroll');
   var iframe = document.createElement('iframe');
+  iframe.addEventListener('load', Code.Explorer.loadAutocomplete);
   iframe.id = 'objectPanel' + Code.Explorer.panelCount;
-  iframe.src = '/static/code/objectPanel.html#' + encodeURIComponent(component);
-  iframe.setAttribute('data-component', component);
+  iframe.src = '/static/code/objectPanel.html#' + encodeURIComponent(selector);
+  iframe.setAttribute('data-selector', selector);
   var spacer = document.getElementById('panelSpacer');
   panelsScroll.insertBefore(iframe, spacer);
   Code.Explorer.panelCount++;
@@ -751,6 +718,26 @@ Code.Explorer.scrollPanel = function() {
  * @private
  */
 Code.Explorer.scrollPid_ = 0;
+
+/**
+ * Get the data blob from the specified object panel.
+ * @param {string} selector Selector string.
+ * @return {!Object|undefined} Data blob, or undefined if data is not
+ *   currently available.
+ */
+Code.Explorer.getPanelData = function(selector) {
+  // Find the object panel that contains the needed data.
+  for (var iframe of document.getElementsByTagName('iframe')) {
+    if (iframe.getAttribute('data-selector') === selector) {
+      try {
+        // Risky: Content may not have loaded yet.
+        var data = iframe.contentWindow.Code.ObjectPanel.data;
+      } catch (e) {}
+      break;
+    }
+  }
+  return data;
+};
 
 /**
  * Page has loaded, initialize the explorer.

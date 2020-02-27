@@ -2133,6 +2133,38 @@ module.exports = [
     `,
     expected: 'bar,baz,' },
 
+  { name: 'Array.prototype.sort()', src: `
+    [5, 2, 3, 1, 4].sort().join();  // Sorts ASCIIbetically.
+    `,
+    expected: '1,2,3,4,5' },
+
+  { name: 'Array.prototype.sort() compaction', src: `
+    ['z', undefined, 10, , 'aa', null, 'a', 5, NaN, , 1].sort()
+        .map(String).join();
+    `,
+    expected: '1,10,5,NaN,a,aa,null,z,undefined,,' },
+
+  { name: 'Array.prototype.sort(comparefn)', src: `
+    [99, 9, 10, 11, 1, 0, 5].sort(function(a, b) {return a - b;}).join();
+    `,
+    expected: '0,1,5,9,10,11,99' },
+
+  { name: 'Array.prototype.sort(comparefn) compaction', src: `
+    ['z', undefined, 10, , 'aa', null, 'a', 5, NaN, , 1].sort(
+        function(a, b) {
+          // Try to put undefineds first - should not succeed.
+          if (a === undefined) return b === undefined ? 0 : -1;
+          if (b === undefined) return 1;
+          // Reverse order of ususal sort.
+          a = String(a);
+          b = String(b);
+          if (a > b) return -1;
+          if (b > a) return 1;
+          return 0;
+        }).map(String).join();
+    `,
+    expected: 'z,null,aa,a,NaN,5,10,1,undefined,,' },
+
   { name: 'Array.prototype.splice()', src: `
         var a = ['foo', 'bar', 'baz', , 'quux', 'quuux'];
         var s = a.splice();
@@ -2300,6 +2332,8 @@ module.exports = [
   /////////////////////////////////////////////////////////////////////////////
   // Number and Number.prototype
 
+  { name: 'Number()', src: 'Number();', expected: 0 },
+
   { name: 'Number', src: `
     var tests = [
       [undefined, NaN],
@@ -2371,6 +2405,8 @@ module.exports = [
 
   /////////////////////////////////////////////////////////////////////////////
   // String and String.prototype
+
+  { name: 'String()', src: 'String();', expected: '' },
 
   { name: 'String', src: `
     var tests = [
@@ -2602,13 +2638,37 @@ module.exports = [
   /////////////////////////////////////////////////////////////////////////////
   // JSON
 
-  { name: 'JSON.stringify', src: `
+  { name: 'JSON.stringify basic', src: `
     JSON.stringify({
         string: 'foo', number: 42, true: true, false: false, null: null,
         object: { obj: {}, arr: [] }, array: [{}, []] });
     `,
     expected: '{"string":"foo","number":42,"true":true,"false":false,' +
         '"null":null,"object":{"obj":{},"arr":[]},"array":[{},[]]}' },
+
+  { name: 'JSON.stringify filter', src: `
+    JSON.stringify({
+        string: 'foo', number: 42, true: true, false: false, null: null,
+        object: { obj: {}, arr: [] }, array: [{}, []] },
+        ['string', 'number']);
+    `,
+    expected: '{"string":"foo","number":42}' },
+
+  { name: 'JSON.stringify pretty number', src: `
+    JSON.stringify({
+        string: 'foo', number: 42, true: true, false: false, null: null,
+        object: { obj: {}, arr: [] }, array: [{}, []] },
+        ['string', 'number'], 2);
+    `,
+    expected: '{\n  "string": "foo",\n  "number": 42\n}' },
+
+  { name: 'JSON.stringify pretty string', src: `
+    JSON.stringify({
+        string: 'foo', number: 42, true: true, false: false, null: null,
+        object: { obj: {}, arr: [] }, array: [{}, []] },
+        ['string', 'number'], '--');
+    `,
+    expected: '{\n--"string": "foo",\n--"number": 42\n}' },
 
   /////////////////////////////////////////////////////////////////////////////
   // Other built-in functions

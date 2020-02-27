@@ -2307,6 +2307,35 @@ tests.ArrayPrototypeSlice = function() {
       'Array.prototype.slice.call(huge array-like, -, -)');
 };
 
+tests.ArrayPrototypeSort = function() {
+  console.assert([5, 2, 3, 1, 4].sort().join() === '1,2,3,4,5',
+      'Array.prototype.sort()');
+
+  // TODO(cpcallen):
+  console.assert(['z', undefined, 10, , 'aa', null, 'a', 5, NaN, , 1].sort()
+      .map(String).join() === '1,10,5,NaN,a,aa,null,z,undefined,,',
+      'Array.prototype.sort() compaction');
+  
+  console.assert([99, 9, 10, 11, 1, 0, 5].sort(function(a, b) {return a - b;})
+      .join() === '0,1,5,9,10,11,99',
+      'Array.prototype.sort(comparefn)');
+
+  // TODO(cpcallen):
+  console.assert(['z', undefined, 10, , 'aa', null, 'a', 5, NaN, , 1].sort(
+      function(a, b) {
+        // Try to put undefineds first - should not succeed.
+        if (a === undefined) return b === undefined ? 0 : -1;
+        if (b === undefined) return 1;
+        // Reverse order of ususal sort.
+        a = String(a);
+        b = String(b);
+        if (a > b) return -1;
+        if (b > a) return 1;
+        return 0;
+      }).map(String).join() === 'z,null,aa,a,NaN,5,10,1,undefined,,',
+      'Array.prototype.sort(comparefn) compaction');
+};
+
 tests.ArrayPrototypeSplice = function() {
   var a = ['foo', 'bar', 'baz', , 'quux', 'quuux'];
   var s = a.splice();
@@ -2480,6 +2509,7 @@ tests.BooleanPrototypeValueOf = function () {
 // Number and Number.prototype
 
 tests.Number = function() {
+  console.assert(Number() === 0, 'Number()');
   console.assert(isNaN(Number(undefined)), 'Number undefined');
   console.assert(Number(null) === 0, 'Number null');
   console.assert(Number(true) === 1, 'Number true');
@@ -2553,6 +2583,7 @@ tests.NumberPrototypeValueOf = function () {
 // String and String.prototype
 
 tests.String = function() {
+  console.assert(String() === '', 'String()');
   console.assert(String(undefined) === 'undefined', 'String undefined');
   console.assert(String(null) === 'null', 'String null');
   console.assert(String(true) === 'true', 'String true');
@@ -2657,7 +2688,19 @@ tests.JsonStringify = function () {
        object: { obj: {}, arr: [] }, array: [{}, []] };
   var str = '{"string":"foo","number":42,"true":true,"false":false,' +
       '"null":null,"object":{"obj":{},"arr":[]},"array":[{},[]]}';
-  console.assert(JSON.stringify(obj) === str, 'JSON.stringify');
+  console.assert(JSON.stringify(obj) === str, 'JSON.stringify basic');
+
+  str = '{"string":"foo","number":42}';
+  console.assert(JSON.stringify(obj, ['string', 'number']) === str,
+      'JSON.stringify filter');
+
+  str = '{\n  "string": "foo",\n  "number": 42\n}';
+  console.assert(JSON.stringify(obj, ['string', 'number'], 2) === str,
+      'JSON.stringify pretty number');
+
+  str = '{\n--"string": "foo",\n--"number": 42\n}';
+  console.assert(JSON.stringify(obj, ['string', 'number'], '--') === str,
+      'JSON.stringify pretty string');
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -2666,11 +2709,9 @@ tests.JsonStringify = function () {
 tests.decodeUriThrows = function() {
   try {
     decodeURI('%xy');
-    console.assert(
-        false, "decodeURI(invalid-URI) didn't throw");
+    console.assert(false, "decodeURI(invalid-URI) didn't throw");
   } catch (e) {
-    console.assert(e.name === 'URIError',
-        'decodeURI(invalid-URI) wrong error');
+    console.assert(e.name === 'URIError', 'decodeURI(invalid-URI) wrong error');
   }
 };
 

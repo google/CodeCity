@@ -1,18 +1,7 @@
 /**
  * @license
  * Copyright 2018 Google LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /**
@@ -27,6 +16,10 @@ Code.Common = {};
 // Keys for the sessionStorage.
 Code.Common.SELECTOR = 'code selector';
 
+// Set containing all supported {xyz} names.
+Code.Common.KEYWORD_TYPES =
+    new Set(['{proto}', '{owner}', '{children}', '{owned}', '{keys}', '{values}']);
+
 /**
  * Tokenize a string such as '$.foo["bar"]' into tokens:
  *   {type: "id",  raw: "$",     valid: true, index: 0, value: "$"}
@@ -36,8 +29,13 @@ Code.Common.SELECTOR = 'code selector';
  *   {type: "str", raw: ""bar"", valid: true, index: 6, value: "bar"}
  *   {type: "]",   raw: "]",     valid: true, index: 11}
  * Other tokens include:
- *   {type: "num", raw: "42",    valid: true, index: 2, value: 42}
- *   {type: "^",   raw: "^",     valid: true, index: 5}
+ *   {type: "num",     raw: "42",         valid: true, index: 2, value: 42}
+ *   {type: "keyword", raw: "{proto}",    valid: true, index: 5, value: '{proto}'}
+ *   {type: "keyword", raw: "{owner}",    valid: true, index: 5, value: '{owner}'}
+ *   {type: "keyword", raw: "{children}", valid: true, index: 5, value: '{children}'}
+ *   {type: "keyword", raw: "{owned}",    valid: true, index: 5, value: '{owned}'}
+ *   {type: "keyword", raw: "{keys}",     valid: true, index: 5, value: '{keys}'}
+ *   {type: "keyword", raw: "{values}",   valid: true, index: 5, value: '{values}'}
  * If the string is permanently invalid, the last token is:
  *   {type: "?",   raw: "",      valid: false}
  * A temporary token is used internally during parsing:
@@ -113,26 +111,23 @@ Code.Common.tokenizeSelector = function(text) {
     Code.Common.pushUnparsed_(buffer, index + 1, tokens);
   }
 
-  // Second step is to parse each 'unparsed' token and split out '[',  ']' and
-  // '^' tokens.
+  // Second step is to parse each 'unparsed' token and split out '[', and ']'
+  // tokens.
   for (var i = tokens.length - 1; i >= 0; i--) {
     var token = tokens[i];
     if (token.type === 'unparsed') {
       var index = token.index + token.raw.length;
       // Split string on brackets.
-      var split = token.raw.split(/(\s*[\[\]\^]\s*)/);
+      var split = token.raw.split(/(\s*[\[\]]\s*)/);
       for (var j = split.length - 1; j >= 0; j--) {
         var raw = split[j];
         index -= raw.length;
+        var rawTrim = raw.trim();
         if (raw === '') {
           split.splice(j, 1);  // Delete the empty string.
           continue;
-        } else if (raw.trim() === '[') {
-          split[j] = {type: '[', valid: true};
-        } else if (raw.trim() === ']') {
-          split[j] = {type: ']', valid: true};
-        } else if (raw.trim() === '^') {
-          split[j] = {type: '^', valid: true};
+        } else if (rawTrim === '[' || rawTrim === ']') {
+          split[j] = {type: rawTrim, valid: true};
         } else {
           split[j] = {type: 'unparsed'};
         }
@@ -145,7 +140,50 @@ Code.Common.tokenizeSelector = function(text) {
     }
   }
 
-  // Third step is to parse each 'unparsed' token as a number, if it is
+  // Third step is to parse each 'unparsed' token and split out '{xxx}' tokens.
+  for (var i = tokens.length - 1; i >= 0; i--) {
+    var token = tokens[i];
+    if (token.type === 'unparsed') {
+      var index = token.index + token.raw.length;
+      var split = token.raw.split(/(\s*{\s*\w*\s*(?:}\s*|$))/);
+      for (var j = split.length - 1; j >= 0; j--) {
+        var raw = split[j];
+        index -= raw.length;
+        var rawTrim = raw.trim();
+        if (raw === '') {
+          split.splice(j, 1);  // Delete the empty string.
+          continue;
+        }
+        var m = rawTrim.match(/{\s*(\w*)\s*(}|$)/);
+        if (m) {
+          var keywordToken = {type: 'keyword', value: '{' + m[1] + m[2]};
+          keywordToken.complete =
+              Code.Common.KEYWORD_TYPES.has(keywordToken.value);
+          if (keywordToken.complete) {
+            keywordToken.valid = true;
+          } else {
+            keywordToken.valid = false;
+            for (var validKeyword of Code.Common.KEYWORD_TYPES) {
+              if (validKeyword.startsWith(keywordToken.value)) {
+                keywordToken.valid = true;
+                break;
+              }
+            }
+          }
+          split[j] = keywordToken;
+        } else {
+          split[j] = {type: 'unparsed'};
+        }
+        split[j].raw = raw;
+        split[j].index = index;
+      }
+      // Replace token with split array.
+      split.unshift(i, 1);
+      Array.prototype.splice.apply(tokens, split);
+    }
+  }
+
+  // Fourth step is to parse each 'unparsed' token as a number, if it is
   // preceded by a '[' token.  If the result is NaN (e.g. in the case it is an
   // unquoted identifier) mark the token as invalid.
   for (var i = 1; i < tokens.length; i++) {
@@ -162,7 +200,7 @@ Code.Common.tokenizeSelector = function(text) {
     }
   }
 
-  // Fourth step is to split remaining 'unparsed' tokens into 'id' and '.'
+  // Fifth step is to split remaining 'unparsed' tokens into 'id' and '.'
   // tokens.  The '.' tokens could not be split out before numbers were parsed,
   // since numbers have decimal points.
   var unicodeRegex = /\\u([0-9A-F]{4})/ig;
@@ -194,7 +232,7 @@ Code.Common.tokenizeSelector = function(text) {
         var value = split[j];
         while (true) {
           var test = value.replace(unicodeRegex, '');
-          if (test.indexOf('\\') === -1) {
+          if (!test.includes('\\')) {
             break;
           }
           // Invalid escape found.  Trim off last char and try again.
@@ -217,8 +255,9 @@ Code.Common.tokenizeSelector = function(text) {
   // E.g. '$..foo' can never be legal.
   // E.g. '$["foo' isn't legal now, but could become legal after more typing.
   var state = 0;
-  // 0 - Start or after '.'.  Waiting for 'id'.
-  // 1 - After 'id' or ']' or '^'.  Expecting '.' or '[' or '^' or 'id'.
+  // 0 - Start or after '.'.  Expecting 'id'.
+  // 1 - After 'id' or ']' or 'keyword'.
+  //     Expecting '.' or '[' or 'keyword'.
   // 2 - After '['.  Expecting 'str' or 'num'.
   // 3 - After 'str' or 'num'.  Expecting ']'.
   for (var i = 0; i < tokens.length; i++) {
@@ -232,7 +271,7 @@ Code.Common.tokenizeSelector = function(text) {
     } else if (state === 1) {
       if (token.type === '.') {
         state = 0;
-      } else if (token.type === '^' || token.type === 'id') {
+      } else if (token.type === 'keyword') {
         state = 1;
       } else if (token.type === '[') {
         state = 2;
@@ -251,6 +290,8 @@ Code.Common.tokenizeSelector = function(text) {
       } else {
         break;
       }
+    } else {
+      break;
     }
   }
   // Remove any illegal tokens.
@@ -317,8 +358,8 @@ Code.Common.pushUnparsed_ = function(buffer, index, tokens) {
 
 /**
  * Split a path selector into a list of parts.
- * E.g. '$^.foo' ->
- *   [{type: 'id', value: '$'}, {type: '^'}, {type: 'id', value: 'foo'}]
+ * E.g. '${proto}.foo' ->
+ *   [{type: 'id', value: '$'}, {type: 'keyword', value: '{proto}'}, {type: 'id', value: 'foo'}]
  * @param {string} text Selector string.
  * @return {?Array<!Object>} Array of parts or null if invalid.
  */
@@ -330,10 +371,10 @@ Code.Common.selectorToParts = function(text) {
     if (!token.valid) {
       return null;
     }
-    if (token.type === 'id' || token.type === 'str' || token.type === 'num') {
+    if (['id', 'str', 'num'].includes(token.type)) {
       parts.push({type: 'id', value: token.value});
-    } else if (token.type === '^') {
-      parts.push({type: '^'});
+    } else if (token.type === 'keyword') {
+      parts.push({type: token.type, value: token.value});
     }
   }
   return parts;
@@ -341,9 +382,8 @@ Code.Common.selectorToParts = function(text) {
 
 /**
  * Join a list of parts into a path selector.
- * E.g. [{type: 'id', value: '$'}, {type: '^'}, {type: 'id', value: 'foo'}] ->
- *   '$^.foo'
- * Try to keep this code in sync with $.utils.selector
+ * E.g. [{type: 'id', value: '$'}, {type: 'keyword', value: '{proto}'}, {type: 'id', value: 'foo'}] ->
+ *   '${proto}.foo'
  * @param {!Array<!Object>} parts Array of parts.
  * @return {string} Selector string.
  */
@@ -367,8 +407,8 @@ Code.Common.partsToSelector = function(parts) {
         }
         text += ']';
       }
-    } else if (part.type === '^') {
-      text += '^';
+    } else if (part.type === 'keyword') {
+      text += part.value;
     }
   }
   return text;
@@ -377,15 +417,14 @@ Code.Common.partsToSelector = function(parts) {
 /**
  * Turn a selector string into a valid code reference.
  * E.g. "$.foo" -> "$.foo"
- * E.g. "$^.foo" -> "$('$^.foo')"
+ * E.g. "${proto}.foo" -> "$('${proto}.foo')"
  * Join a list of parts into a valid code reference.
- * Try to keep this code in sync with $.utils.selector
  * @param {string} selector Selector string.
  * @return {string} Code reference.
  */
 Code.Common.selectorToReference = function(selector) {
   var noStrings = selector.replace(/(["'])(?:[^\1\\]|\\.)*?\1/g, '');
-  if (/[\^]/.test(noStrings)) {
+  if (noStrings.includes('{')) {
     return "$('" + selector + "')";
   }
   return selector;

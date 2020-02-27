@@ -1,18 +1,7 @@
 /**
  * @license
  * Copyright 2018 Google LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /**
@@ -24,10 +13,10 @@
 Code.Editor = {};
 
 /**
- * JSON-encoded list of complete object selector parts.
- * @type {?string}
+ * List of complete object selector parts.
+ * @type {Array<!Object>}
  */
-Code.Editor.partsJSON = null;
+Code.Editor.parts = null;
 
 /**
  * Currently selected editor.
@@ -53,10 +42,10 @@ Code.Editor.receiveMessage = function() {
   if (!parts || !parts.length) {
     return;  // Invalid parts, ignore.
   }
-  if (JSON.stringify(parts) === Code.Editor.partsJSON) {
+  if (parts === Code.Editor.parts) {
     return;  // No change.
   }
-  if (Code.Editor.partsJSON === null) {
+  if (Code.Editor.parts === null) {
     Code.Editor.load();  // Initial load of content.
   } else {
     Code.Editor.updateCurrentSource();
@@ -124,7 +113,7 @@ Code.Editor.load = function() {
   if (!parts) {
     return;  // Invalid parts, ignore.
   }
-  Code.Editor.partsJSON = JSON.stringify(parts);
+  Code.Editor.parts = parts.slice();  // Shallow copy, since it's popped below.
   // Request data from Code City server.
   Code.Editor.key = undefined;
   Code.Editor.sendXhr();
@@ -141,15 +130,20 @@ Code.Editor.load = function() {
     var selector = Code.Common.partsToSelector(parts);
     var reference = Code.Common.selectorToReference(selector);
     // Put the last part back on.
-    // Render as '.foo' or '[42]' or '["???"]' or '^'.
+    // Render as '.foo' or '[42]' or '["???"]' or '{xxx}'.
     if (lastPart.type === 'id') {
       var mockParts = [{type: 'id', value: 'X'}, lastPart];
       reference += Code.Common.partsToSelector(mockParts).substring(1) + ' = ';
-    } else if (lastPart.type === '^') {
-      reference = 'Object.setPrototypeOf(' + reference + ', ...) ';
+    } else if (lastPart.type === 'keyword') {
+      if (lastPart.value === '{proto}') {
+        reference = 'Object.setPrototypeOf(' + reference + ', ...) ';
+      } else if (lastPart.value === '{owner}') {
+        reference = 'Object.setOwnerOf(' + reference + ', ...) ';
+      } else {
+        throw new TypeError('Unknown keyword value: ' + lastPart.value);
+      }
     } else {
-      // Unknown part type.
-      throw new TypeError(lastPart);
+      throw new TypeError('Unknown part type: ' + lastPart.type);
     }
   }
   header.appendChild(document.createTextNode(reference));
@@ -302,6 +296,7 @@ Code.Editor.tabClick.disabled = true;
  * Send a request to Code City's code editor service.
  */
 Code.Editor.sendXhr = function() {
+  var selector = Code.Common.partsToSelector(Code.Editor.parts);
   var xhr = Code.Editor.codeRequest_;
   xhr.abort();
   xhr.open('POST', '/code/editor');
@@ -310,7 +305,7 @@ Code.Editor.sendXhr = function() {
   var src = Code.Editor.currentSource || '';
   var data =
       'key=' + encodeURIComponent(Code.Editor.key) +
-      '&parts=' + encodeURIComponent(Code.Editor.partsJSON);
+      '&selector=' + encodeURIComponent(selector);
   if (src) {
     data += '&src=' + encodeURIComponent(src);
   }
@@ -719,10 +714,14 @@ Code.valueEditor.createDom = function(container) {
     tabSize: 2,
     undoDepth: 1024,
     lineNumbers: true,
+    continueComments: {continueLineComment: false},
+    mode: 'text/javascript',
     matchBrackets: true
   };
   this.editor_ = CodeMirror(container, options);
   this.editor_.setSize('100%', '100%');
+  // Use different theme in value editor to distinguish it from other editors.
+  this.editor_.setOption('theme', 'default');
 };
 
 /**
@@ -818,6 +817,7 @@ Code.functionEditor.createDom = function(container) {
   };
   this.editor_ = CodeMirror(container, options);
   this.editor_.setSize('100%', '100%');
+  this.editor_.setOption('theme', 'eclipse');
 
   this.isVerbElement_ = document.getElementById('isVerb');
   this.verbElement_ = document.getElementById('verb');
@@ -956,6 +956,7 @@ Code.jsspEditor.createDom = function(container) {
   };
   this.editor_ = CodeMirror(container, options);
   this.editor_.setSize('100%', '100%');
+  this.editor_.setOption('theme', 'eclipse');
 };
 
 /**
@@ -983,7 +984,7 @@ Code.jsspEditor.setSource = function(source) {
     str = '';
     this.confidence = 0;
   } else {
-    if (str.indexOf('<%') !== -1 && str.indexOf('%>') !== -1) {
+    if (str.includes('<%') && str.includes('%>')) {
       this.confidence = 0.95;
     } else {
       this.confidence = 0.8;
@@ -1058,7 +1059,7 @@ Code.svgEditor.setSource = function(source) {
     var nodes = dom.documentElement.querySelectorAll('*');
     var isSvg = nodes.length > 0;
     for (var node of nodes) {
-      if (Code.svgEditor.ELEMENT_NAMES.indexOf(node.tagName) === -1) {
+      if (!Code.svgEditor.ELEMENT_NAMES.has(node.tagName)) {
         isSvg = false;
         break;
       }
@@ -1098,7 +1099,7 @@ Code.svgEditor.focus = function(userAction) {
  * Whitelist of all allowed SVG element names.
  * Try to keep this list in sync with CCC.World.xmlToSvg.ELEMENT_NAMES.
  */
-Code.svgEditor.ELEMENT_NAMES = [
+Code.svgEditor.ELEMENT_NAMES = new Set([
   'circle',
   'desc',
   'ellipse',
@@ -1112,7 +1113,7 @@ Code.svgEditor.ELEMENT_NAMES = [
   'text',
   'title',
   'tspan',
-];
+]);
 
 ////////////////////////////////////////////////////////////////////////////////
 Code.stringEditor = new Code.GenericEditor('String');

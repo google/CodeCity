@@ -101,7 +101,8 @@ $.www.code.objectPanel.www = function(request, response) {
           // Add typeof information.
           for (var i = 0; i < ownProps.length; i++) {
             var prop = ownProps[i];
-            var type = typeof value[prop];
+            var type =
+                Array.isArray(value[prop]) ? 'array' : typeof value[prop];
             ownProps[i] = {name: prop, type: type};
           }
           data.properties.push(ownProps);

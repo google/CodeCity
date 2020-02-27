@@ -1,18 +1,7 @@
 /**
  * @license
  * Copyright 2018 Google LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /**
@@ -74,8 +63,14 @@ Code.ObjectPanel.init = function() {
         Code.ObjectPanel.addLink(part, propList[j].type, i && !j);
       }
     }
-    var part = {type: '^'};
-    Code.ObjectPanel.addLink(part, 'object', true);
+  }
+  if (data.keywords) {
+    var first = true;
+    for (var keyword of data.keywords) {
+      var part = {type: 'keyword', value: keyword};
+      Code.ObjectPanel.addLink(part, 'object', first);
+      first = false;
+    }
   }
 
   // Position the type symbols, and monitor for layout changes.
@@ -126,9 +121,13 @@ Code.ObjectPanel.addLink = function(part, type, section) {
  * Symbols to print next to properties.
  */
 Code.ObjectPanel.TYPES = {
+  'array': '[]',
+  'boolean': '⏼',
+  'function': '𝑓',
+  'number': '#',
   'object': '{}',
-  'symbol': '☆',
-  'function': '𝑓'
+  'string': '”',
+  'symbol': '☆'
 };
 
 /**
@@ -179,7 +178,7 @@ Code.ObjectPanel.highlight = function() {
   var newHighlighted = null;
   for (var tr of Code.ObjectPanel.tableBody.childNodes) {
     var td = tr.firstChild;
-    var link = td.firstChild;
+    var link = td.lastChild;  // There might be an objectType div first.
     if (link.getAttribute('data-link') === jsonPart) {
       newHighlighted = td;
     }
@@ -219,18 +218,21 @@ Code.ObjectPanel.filterShadowed = function(data) {
       }
     }
     datum.length = cursorInsert;
-    datum.sort(Code.ObjectPanel.caseInsensitiveComp);
+    datum.sort(Code.ObjectPanel.caseInsensitiveComp_);
   }
 };
 
 /**
  * Comparison function to sort named objects A-Z without regard to case.
- * @param {string} a One string.
- * @param {string} b Another string.
+ * @param {!Object} a One named object.
+ * @param {!Object} b Another named object.
  * @return {number} -1/0/1 comparator value.
+ * @private
  */
-Code.ObjectPanel.caseInsensitiveComp = function(a, b) {
-  return a.name.toLowerCase().localeCompare(a.name.toLowerCase());
+Code.ObjectPanel.caseInsensitiveComp_ = function(a, b) {
+  a = a.name.toLowerCase();
+  b = b.name.toLowerCase();
+  return (a < b) ? -1 : ((a > b) ? 1 : 0);
 };
 
 if (!window.TEST) {
@@ -238,21 +240,22 @@ if (!window.TEST) {
     // Load the data from Code City.
     var hash = location.hash.substring(1);
     var script = document.createElement('script');
-    script.src = '/code/objectPanel?parts=' + hash;
+    script.src = '/code/objectPanel?' + hash;
     document.head.appendChild(script);
 
     // Fill in the object name.
-    Code.ObjectPanel.parts = JSON.parse(decodeURIComponent(hash));
+    Code.ObjectPanel.parts =
+        Code.Common.selectorToParts(decodeURIComponent(hash));
     var div = document.getElementById('objectTitle');
     var lastPart = Code.ObjectPanel.parts[Code.ObjectPanel.parts.length - 1];
     var name;
     if (!lastPart) {
       name = 'Globals';
     } else if (Code.ObjectPanel.parts.length === 1) {
-      // Render as 'foo' or '[42]' or '["???"]' or '^'.
+      // Render as 'foo' or '[42]' or '["???"]' or '{xyz}'.
       name = Code.Common.partsToSelector([lastPart]);
     } else {
-      // Render as '.foo' or '[42]' or '["???"]' or '^'.
+      // Render as '.foo' or '[42]' or '["???"]' or '{xyz}'.
       var mockParts = [{type: 'id', value: 'X'}, lastPart];
       name = Code.Common.partsToSelector(mockParts).substring(1);
     }

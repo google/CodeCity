@@ -413,14 +413,14 @@ Interpreter.prototype.pause = function() {
         var server = this.listeners_[Number(port)];
         server.listen(undefined, function(error) {
           // Something went wrong while re-listening.  Maybe port in use.
-          this.log('net', 'Re-listen on port %s failed: %s: %s', server.port,
-                      error.name, error.message);
+          intrp.log('net', 'Re-listen on port %s failed: %s: %s', server.port,
+                    error.name, error.message);
           // Report this to userland by calling .onError on proto
           // (with this === proto) - for lack of a better option.
           if (!server.owner) return;
           var func = server.proto.get('onError', server.owner);
           if (!(func instanceof intrp.Function)) return;
-          var userError = intrp.nativeToPseudo(error, server.owner);
+          var userError = intrp.errorNativeToPseudo(error, server.owner);
           // TODO(cpcallen:perms): Is server.owner the correct owner
           // for this thread?  Note that this will typically be root,
           // and .onError will therefore get caller perms === root,
@@ -1476,7 +1476,7 @@ Interpreter.prototype.initString_ = function() {
       // ToString(ToPrimitive(x, hint String)) if not.  Note that
       // ToPrimitive (ES6 §7.1.1) is guaranteed to return a primitive
       // or throw.
-      var value = args[0];
+      var value = args.length > 0 ? args[0] : '';
       var perms = state.scope.perms;
       if (!(value instanceof intrp.Object)) {
         return String(value);
@@ -1707,7 +1707,7 @@ Interpreter.prototype.initNumber_ = function() {
     id: 'Number', length: 1,
     /** @type {!Interpreter.NativeCallImpl} */
     call: function(intrp, thread, state, thisVal, args) {
-      return Number(args[0]);
+      return Number(args.length ? args[0] : 0);
     },
     /** @type {!Interpreter.NativeConstructImpl} */
     construct: function(intrp, thread, state, args) {
@@ -2029,8 +2029,8 @@ Interpreter.prototype.initMath_ = function() {
  */
 Interpreter.prototype.initJSON_ = function() {
   var intrp = this;
-
-  var wrapper = function(text) {
+  var wrapper;
+  wrapper = function(text) {
     try {
       var nativeObj = JSON.parse(text.toString());
     } catch (e) {
@@ -2040,12 +2040,29 @@ Interpreter.prototype.initJSON_ = function() {
   };
   this.createNativeFunction('JSON.parse', wrapper, false);
 
-  wrapper = function(value) {
+  wrapper = function(value, replacer, space) {
     var nativeObj = intrp.pseudoToNative(value);
+    var perms = intrp.thread_.perms();
+    if (replacer instanceof intrp.Function) {
+      throw new intrp.Error(perms, intrp.TYPE_ERROR,
+          'Function replacer on JSON.stringify not supported');
+    } else if (replacer instanceof intrp.Array) {
+      replacer = intrp.createListFromArrayLike(replacer, perms);
+      replacer = replacer.filter(function(word) {
+        // Spec says we should also support boxed primitives here.
+        return typeof word === 'string' || typeof word === 'number';
+      });
+    } else {
+      replacer = null;
+    }
+    // Spec says we should also support boxed primitives here.
+    if (typeof space !== 'string' && typeof space !== 'number') {
+      space = undefined;
+    }
     try {
-      var str = JSON.stringify(nativeObj);
+      var str = JSON.stringify(nativeObj, replacer, space);
     } catch (e) {
-      throw intrp.errorNativeToPseudo(e, intrp.thread_.perms());
+      throw intrp.errorNativeToPseudo(e, perms);
     }
     return str;
   };
@@ -2066,7 +2083,7 @@ Interpreter.prototype.initWeakMap_ = function() {
     id: 'WeakMap', length: 0,  // N.B. length is correct; arg is optional!
     /** @type {!Interpreter.NativeConstructImpl} */
     construct: function(intrp, thread, state, args) {
-      // TODO(cpcallen): Support interator argument to populate map.
+      // TODO(cpcallen): Support iterable argument to populate map.
       return new intrp.WeakMap(state.scope.perms);
     }
   });
@@ -2552,6 +2569,9 @@ Interpreter.toLength = function toLength(value) {
 */
 Interpreter.prototype.createNativeFunction = function(
     name, nativeFunc, legalConstructor) {
+  if (nativeFunc instanceof this.Object) {
+    throw new TypeError('createNativeFunction passed non-native function??');
+  }
   // Make sure impl function has an id for serialization.
   if (!nativeFunc.id) {
     nativeFunc.id = name;
@@ -2578,6 +2598,8 @@ Interpreter.prototype.nativeToPseudo = function(nativeObj, owner) {
       nativeObj === null) {
     // It's a primitive; just return it.
     return /** @type {boolean|number|string|undefined|null} */ (nativeObj);
+  } else if (nativeObj instanceof this.Object) {
+    throw new TypeError('nativeToPseudo called on a pseudo-object??');
   }
 
   var pseudoObj;
@@ -2652,7 +2674,10 @@ Interpreter.prototype.pseudoToNative = function(pseudoObj, cycles) {
       typeof pseudoObj === 'number' ||
       typeof pseudoObj === 'string' ||
       pseudoObj === null || pseudoObj === undefined) {
+    // It's a primitive; just return it.
     return pseudoObj;
+  } else if (!(pseudoObj instanceof this.Object)) {
+    throw new TypeError('pseudoToObject called on wrong type??');
   }
 
   if (pseudoObj instanceof this.RegExp) {  // Regular expression.
@@ -2686,7 +2711,9 @@ Interpreter.prototype.pseudoToNative = function(pseudoObj, cycles) {
     for (i = 0; i < keys.length; i++) {
       var key = keys[i];
       var val = pseudoObj.get(key, perms);
-      nativeObj[key] = this.pseudoToNative(val, cycles);
+      Object.defineProperty(nativeObj, key,
+          {writable: true, enumerable: true, configurable: true,
+           value: this.pseudoToNative(val, cycles)});
     }
   }
   cycles.pseudo.pop();
@@ -2705,6 +2732,9 @@ Interpreter.prototype.pseudoToNative = function(pseudoObj, cycles) {
  * @return {!Interpreter.prototype.Array} The equivalent interpreter array.
  */
 Interpreter.prototype.createArrayFromList = function(elements, owner) {
+  if (!Array.isArray(elements) || (elements instanceof this.Object)) {
+    throw new TypeError('CreateArrayFromList called on wrong type??');
+  }
   var array = new this.Array(owner);
   for (var n = 0; n < elements.length; n++) {
     array.defineProperty(
@@ -2749,6 +2779,10 @@ Interpreter.prototype.createListFromArrayLike = function(obj, perms) {
  */
 Interpreter.prototype.errorNativeToPseudo = function(err, owner) {
   var proto;
+  if (err instanceof this.Object) {
+    throw new TypeError('errorNativeToPseudo called on wrong type??');
+  }
+
   if (err instanceof EvalError) {
     proto = this.EVAL_ERROR;
   } else if (err instanceof RangeError) {
@@ -2839,42 +2873,15 @@ Interpreter.prototype.populateScope_ = function(node, scope, source) {
     if (!node['source']) throw new Error('Source not found');
     source = node['source'];
   }
-  if (node['type'] === 'VariableDeclaration') {
-    for (var i = 0; i < node['declarations'].length; i++) {
-      var name = node['declarations'][i]['id']['name'];
-      if (!scope.hasBinding(name)) {
-        scope.createMutableBinding(name);
-      }
-    }
-  } else if (node['type'] === 'FunctionDeclaration') {
-    name = node['id']['name'];
-    var func = new this.UserFunction(node, scope, source, scope.perms);
-    if (scope.hasBinding(name)) {
-      this.setValueToScope(scope, name, func);
-    } else {
-      scope.createMutableBinding(name, func);
-    }
-    return;  // Do not recurse into function.
-  } else if (node['type'] === 'FunctionExpression') {
-    return;  // Do not recurse into function.
-  } else if (node['type'] === 'ExpressionStatement') {
-    return;  // Expressions can't contain variable/function declarations.
-  }
-  for (var name in node) {
-    var prop = node[name];
-    if (prop && typeof prop === 'object') {
-      if (Array.isArray(prop)) {
-        for (var i = 0; i < prop.length; i++) {
-          if (prop[i] && prop[i] instanceof Interpreter.Node) {
-            this.populateScope_(prop[i], scope, source);
-          }
-        }
-      } else {
-        if (prop instanceof Interpreter.Node) {
-          this.populateScope_(prop, scope, source);
-        }
-      }
-    }
+  // Obtain list of bound names for node.  We cache this on the AST
+  // node to save time when repeatedly calling the same function.
+  var boundNames = getBoundNames(node);
+  for (var name in boundNames) {
+    var value = boundNames[name] ?
+        new this.UserFunction(boundNames[name], scope, source, scope.perms) :
+        undefined;
+    if (!scope.hasBinding(name)) scope.createMutableBinding(name, value);
+    if (value) this.setValueToScope(scope, name, value);
   }
 };
 
@@ -4029,6 +4036,18 @@ Interpreter.prototype.UserFunction = function(
 };
 
 /**
+ * @param {!Interpreter.Owner} owner
+ * @param {?Interpreter.Value} thisVal
+ * @param {!Array<?Interpreter.Value>} args
+ * @return {!Interpreter.Scope}
+ * @private
+ */
+Interpreter.prototype.UserFunction.prototype.instantiateDeclarations_ =
+function(owner, thisVal, args) {
+  throw new Error('Inner class method not callable on prototype');
+};
+
+/**
  * @constructor
  * @extends {Interpreter.prototype.Function}
  * @param {!Interpreter.prototype.Function} func
@@ -4721,7 +4740,7 @@ Interpreter.prototype.installTypes = function() {
       throw new intrp.Error(state.scope.perms, intrp.PERM_ERROR,
           'Functions with null owner are not executable');
     }
-    var scope = this.instantiateDeclarations(this.owner, thisVal, args);
+    var scope = this.instantiateDeclarations_(this.owner, thisVal, args);
     state.value = undefined;  // Default value if no explicit return.
     thread.stateStack_[thread.stateStack_.length] =
         new Interpreter.State(this.node['body'], scope);
@@ -4772,8 +4791,9 @@ Interpreter.prototype.installTypes = function() {
    * @param {?Interpreter.Value} thisVal The value of 'this' for the call.
    * @param {!Array<?Interpreter.Value>} args The arguments to the call.
    * @return {!Interpreter.Scope} The initialised scope
+   * @private
    */
-  intrp.UserFunction.prototype.instantiateDeclarations = function(
+  intrp.UserFunction.prototype.instantiateDeclarations_ = function(
       owner, thisVal, args) {
     // Aside: we need to pass owner, rather than
     // this.scope.perms, for the new scope perms because (1) we want
@@ -4790,21 +4810,21 @@ Interpreter.prototype.installTypes = function() {
       var paramValue = args.length > i ? args[i] : undefined;
       scope.createMutableBinding(paramName, paramValue);
     }
-    // Build arguments object.
-    //
-    // BUG(cpcallen): mustn't create arguments object if 'arguments'
-    // is the name of a local variable or named parameter.  Needn't
-    // create arguments object if it is never referecned.
-    var argsObj = new intrp.Arguments(owner);
-    argsObj.defineProperty(
-        'length', Descriptor.wc.withValue(args.length), owner);
-    for (i = 0; i < args.length; i++) {
+    var body = this.node['body'];
+    if (!('arguments' in getBoundNames(body)) &&
+        hasArgumentsOrEval(body)) {
+      // Build arguments object.
+      var argsObj = new intrp.Arguments(owner);
       argsObj.defineProperty(
-          String(i), Descriptor.wec.withValue(args[i]), owner);
+          'length', Descriptor.wc.withValue(args.length), owner);
+      for (i = 0; i < args.length; i++) {
+        argsObj.defineProperty(
+            String(i), Descriptor.wec.withValue(args[i]), owner);
+      }
+      scope.createImmutableBinding('arguments', argsObj);
     }
-    scope.createImmutableBinding('arguments', argsObj);
     // Populate local variables and other inner declarations.
-    intrp.populateScope_(this.node['body'], scope);
+    intrp.populateScope_(body, scope);
     return scope;
   };
 
@@ -5530,8 +5550,8 @@ Interpreter.prototype.installTypes = function() {
       if (func instanceof intrp.Function && server.owner !== null) {
         // TODO(cpcallen:perms): Is server.owner the correct owner for
         // this thread?  Note that this will typically be root, and
-        // .onError will therefore get caller perms === root, which is
-        // probably dangerous.  Here and several places below.
+        // .onConnect will therefore get caller perms === root, which
+        // is probably dangerous.  Here and several places below.
         intrp.createThreadForFuncCall(
             server.owner, func, obj, [], undefined, server.timeLimit);
       }
@@ -5702,6 +5722,36 @@ Descriptor.prototype.withValue = function(value) {
 ///////////////////////////////////////////////////////////////////////////////
 
 /**
+ * Get the list of BoundNames for an AST sub-tree.
+ * @param {!Interpreter.Node} node AST node (program or function).
+ * @return {!Object<string, (!Interpreter.Node|undefined)>} A map of
+ *     bound names.  The keys are var and function declarations
+ *     appearing in the subtree rooted at node; the values are
+ *     undefined for VariableDeclarations or a FunctionDeclaration
+ *     node for FunctionDeclarations.
+ */
+var getBoundNames = function(node) {
+  if (!node['boundNames']) {
+    performStaticAnalysis(node);
+  }
+  return node['boundNames'];
+};
+
+/**
+ * Check if an AST contains Identifiers named "arguments" or "eval".
+ * @param {!Interpreter.Node} node AST node (program or function).
+ * @return boolean True iff tree rooted at node contains an Identifier
+ *     named "arguments" or "eval", not including any
+ *     FunctionDeclaration or FunctionExpression subtrees.
+ */
+var hasArgumentsOrEval = function(node) {
+  if (node['hasArgumentsOrEval'] === undefined) {
+    performStaticAnalysis(node);
+  }
+  return node['hasArgumentsOrEval'];
+};
+
+/**
  * The IsAnonymousFunctionDefinition specification method from ES6 §14.1.9
  * @param {!Interpreter.Node} node The node to be tested.
  * @return {boolean} True if node is an anonymous function expression.
@@ -5726,6 +5776,80 @@ var isIdentifierRef = function(node) {
  */
 var isMemberRef = function(node) {
   return node['type'] === 'MemberExpression';
+};
+
+/**
+ * Walk an AST (or sub-tree), collecting bound names by looking for
+ * VariableDeclaration and FunctionDeclaration nodes, and checking for
+ * Identifiers named "arguments" or "eval".
+ *
+ * The BoundNames will be stored on node['boundNames'] as an
+ * !Object<string, (!Interpreter.Node|undefined)>, where the keys are
+ * the names of VariableDeclaration and FunctionDeclarations, and the
+ * values are undefined for VariableDeclarations or a
+ * FunctionDeclaration node for FunctionDeclarations.
+ *
+ * If any Identifier named "arguments" or "eval" is seen, and
+ * node['hasArgumentsOrEval'] will be set to true; otherwise it will
+ * be set to false.
+ *
+ * @param {!Interpreter.Node} node AST node (program or function).
+ * @return {void}
+ */
+var performStaticAnalysis = function(node) {
+  /** !Object<string, (!Interpreter.Node|undefined)> */
+  var boundNames = node['boundNames'] = Object.create(null);
+  var hasArgumentsOrEval = false;
+  walk(node);
+  node['hasArgumentsOrEval'] = hasArgumentsOrEval;
+
+  /**
+   * Recursively Walk an AST sub-tree, populating boundNames as we go.
+   * @param {!Interpreter.Node} node AST node (program or function).
+   * Nested function writes to boundNames and hasArgumentsOrEval.
+   * @return {void}
+   */
+  function walk(node) {
+    if (node['type'] === 'VariableDeclaration') {
+      for (var i = 0; i < node['declarations'].length; i++) {
+        // VariableDeclarations can't overwrite previous
+        // FunctionDeclarations (but initializer might at run time).
+        var name = node['declarations'][i]['id']['name'];
+        if (!(name in boundNames)) {
+          boundNames[name] = undefined;
+        }
+      }
+    } else if (node['type'] === 'Identifier') {
+      name = node['name'];
+      if (name === 'arguments' || name === 'eval') {
+        hasArgumentsOrEval = true;
+      }
+    } else if (node['type'] === 'FunctionDeclaration') {
+      // FunctionDeclarations overwrite any previous decl of the same name.
+      name = node['id']['name'];
+      boundNames[name] = node;
+      return;  // Do not recurse into function.
+    } else if (node['type'] === 'FunctionExpression') {
+      return;  // Do not recurse into function.
+    }
+    // Visit node's children.
+    for (var key in node) {
+      var prop = node[key];
+      if (prop && typeof prop === 'object') {
+        if (Array.isArray(prop)) {
+          for (var i = 0; i < prop.length; i++) {
+            if (prop[i] && prop[i] instanceof Interpreter.Node) {
+              walk(prop[i]);
+            }
+          }
+        } else {
+          if (prop instanceof Interpreter.Node) {
+            walk(prop);
+          }
+        }
+      }
+    }
+  }
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -6941,6 +7065,12 @@ for (var name in stepFuncs_) {
 
 module.exports = Interpreter;
 
+module.exports.testOnly = {
+  getBoundNames: getBoundNames,
+  hasArgumentsOrEval: hasArgumentsOrEval,
+};
+  
+    
 ///////////////////////////////////////////////////////////////////////////////
 // AST Node
 ///////////////////////////////////////////////////////////////////////////////
