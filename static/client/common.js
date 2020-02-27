@@ -337,3 +337,10 @@ CCC.Common.autoHyperlink = function(el) {
 
 CCC.Common.autoHyperlink.urlRegex =
     /((?:https?:\/\/|www\.)[-\w.~:\/?#\[\]@!$&'()*+,;=%]+)/i;
+
+// Set background colour to differentiate server vs local copy.
+if (location.hostname == 'localhost') {
+  window.addEventListener('load', function() {
+    document.body.style.backgroundColor = '#ffe';
+  });
+}
