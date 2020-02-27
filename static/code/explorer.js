@@ -494,8 +494,7 @@ Code.Explorer.inputKey = function(e) {
         Code.Explorer.lastNameToken.valid) {
       // The currently typed input should be considered complete.
       // E.g. $.foo<enter> is not waiting to become $.foot
-      parts.push({type: Code.Explorer.autocompleteType,
-          value: Code.Explorer.lastNameToken.value});
+      parts.push({type: 'id', value: Code.Explorer.lastNameToken.value});
       Code.Explorer.lastNameToken = null;
     }
     Code.Explorer.setParts(parts, true);
