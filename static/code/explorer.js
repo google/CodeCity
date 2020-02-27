@@ -470,13 +470,13 @@ Code.Explorer.autocompleteMouseDown = function() {
  */
 Code.Explorer.inputKey = function(e) {
   var key = {
-    tab: 9,
-    enter: 13,
-    esc: 27,
-    up: 38,
-    down: 40
+    TAB: 9,
+    ENTER: 13,
+    ESC: 27,
+    UP: 38,
+    DOWN: 40
   };
-  if (e.keyCode === key.esc) {
+  if (e.keyCode === key.ESC) {
     Code.Explorer.hideAutocompleteMenu();
   }
   Code.Explorer.autocompleteCursorMonitor();
@@ -484,7 +484,7 @@ Code.Explorer.inputKey = function(e) {
   var selected = scrollDiv.querySelector('.selected');
   var menuDiv = document.getElementById('autocompleteMenu');
   var hasMenu = menuDiv.style.display !== 'none';
-  if (e.keyCode === key.enter) {
+  if (e.keyCode === key.ENTER) {
     var parts = JSON.parse(Code.Explorer.partsJSON);
     if (selected) {
       // Add the selected autocomplete option to the input.
@@ -500,7 +500,7 @@ Code.Explorer.inputKey = function(e) {
     Code.Explorer.setParts(parts, true);
     e.preventDefault();
   }
-  if (e.keyCode === key.tab) {
+  if (e.keyCode === key.TAB) {
     if (hasMenu) {
       // Extract all options from the menu.
       var options = [];
@@ -532,16 +532,16 @@ Code.Explorer.inputKey = function(e) {
     }
     e.preventDefault();
   }
-  if (hasMenu && (e.keyCode === key.up || e.keyCode === key.down)) {
+  if (hasMenu && (e.keyCode === key.UP || e.keyCode === key.DOWN)) {
     Code.Explorer.keyNavigationTime = Date.now();
     var newSelected;
-    if (e.keyCode === key.up) {
+    if (e.keyCode === key.UP) {
       if (!selected) {
         newSelected = scrollDiv.lastChild;
       } else if (selected.previousSibling) {
         newSelected = selected.previousSibling;
       }
-    } else if (e.keyCode === key.down) {
+    } else if (e.keyCode === key.DOWN) {
       if (!selected) {
         newSelected = scrollDiv.firstChild;
       } else if (selected.nextSibling) {
