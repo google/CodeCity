@@ -196,6 +196,7 @@ Code.Common.tokenizeSelector = function(text) {
       if (/^\s*[-+]?(\d*\.?\d*|Infinity)\s*$/.test(token.raw)) {
         token.value = Number(token.raw);
         token.valid = !isNaN(token.value);
+        token.value = String(token.value);
       }
     }
   }
