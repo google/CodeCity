@@ -2950,13 +2950,9 @@ Interpreter.prototype.setValue = function(ref, value, perms) {
  * top of loops and before making function calls.
  * @private
  * @param {!Interpreter.Owner} perms Perm to use to create Error object.
- * @param {!Array<Interpreter.State>=} stack Current State stack.  If
- *   supplied, it will be popped to remove top item (e.g.: Call state)
- *   from stack trace.
  */
-Interpreter.prototype.checkTimeLimit_ = function(perms, stack) {
+Interpreter.prototype.checkTimeLimit_ = function(perms) {
   if (this.threadTimeLimit_ && this.now() > this.threadTimeLimit_) {
-    if (stack) stack.pop();
     throw new this.Error(perms, this.RANGE_ERROR, 'Thread ran too long');
   }
 };
@@ -6200,16 +6196,21 @@ stepFuncs_['Call'] = function(thread, stack, state, node) {
    */
   if (state.step_ === 0) {  // Done evaluating arguments; do function call.
     state.step_ = 1;
-    // Terminate call if out of time.  (And if so, remove Call state
-    // from stack as the first item in the stack trace should be the
-    // position of the call, not "in <function not actually called>".
-    this.checkTimeLimit_(state.scope.perms, stack);
     if (this.options.stackLimit && stack.length > this.options.stackLimit) {
       throw new this.Error(state.scope.perms, this.RANGE_ERROR,
           'Maximum call stack size exceeded');
     }
     var func = state.info_.func;
     var args = state.info_.arguments;
+    // Abort call if out of time, unless it's a call to Thread.suspend().
+    if (func !== this.builtins.get('Thread.suspend')) {
+      try {
+        this.checkTimeLimit_(state.scope.perms);
+      } catch (e) {
+        stack.pop();  // Remove not-called function from stack trace.
+        throw e;
+      }
+    }
     var r =
         state.info_.construct ?
         func.construct(this, thread, state, args) :
