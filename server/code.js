@@ -37,21 +37,21 @@ regexps.escapes = /\\(?:["'\\\/0bfnrtv]|u[0-9a-fA-F]{4}|x[0-9a-fA-F]{2})/g;
  * "'it\\'s'".
  */
 regexps.singleQuotedString =
-    new RegExp("'(?:[^\'\\\\]+|" + regexps.escapes.source + ")*'");
+    new RegExp("'(?:[^'\\\\]|" + regexps.escapes.source + ")*'", 'g');
 
 /**
  * Matches a double-quoted string literal, like '"this one"' and
  * '"it\'s"'.
  */
 regexps.doubleQuotedString =
-    new RegExp('"(?:[^\"\\\\]+|' + regexps.escapes.source + ')*"');
+    new RegExp('"(?:[^"\\\\]|' + regexps.escapes.source + ')*"', 'g');
 
 /**
  * Matches a string literal, like "'this one' and '"that one"' as well
  * as "the 'string literal' substring of this longer string" too.
  */
 regexps.string = new RegExp('(?:' + regexps.singleQuotedString.source + '|' +
-    regexps.doubleQuotedString.source + ')');
+    regexps.doubleQuotedString.source + ')', 'g');
 
 /**
  * Matches exaclty a string literal, like "'this one'" but notably not
