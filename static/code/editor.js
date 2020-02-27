@@ -323,7 +323,8 @@ Code.Editor.codeRequest_ = new XMLHttpRequest();
 Code.Editor.receiveXhr = function() {
   var xhr = Code.Editor.codeRequest_;
   if (xhr.status !== 200) {
-    console.warn('Editor XHR returned status ' + xhr.status);
+    Code.Editor.clearSaveMask();
+    Code.Editor.showButter('Save failed: Status ' + xhr.status, 5000);
     return;
   }
   var data = JSON.parse(xhr.responseText);
@@ -339,11 +340,7 @@ Code.Editor.receiveXhr = function() {
       Code.Editor.setSourceToAllEditors(data.src);
     }
   }
-  // Remove saving mask.
-  clearTimeout(Code.Editor.saveMaskPid);
-  var mask = document.getElementById('editorSavingMask');
-  mask.style.display = 'none';
-  mask.style.opacity = 0;
+  Code.Editor.clearSaveMask();
 
   // While a save is in-flight, the user might have navigated away and be
   // currently blocked by a warning dialog regarding unsaved work.
@@ -364,6 +361,16 @@ Code.Editor.receiveXhr = function() {
   }
 
   Code.Editor.ready && Code.Editor.ready();
+};
+
+/**
+ * Remove saving mask that prevents UI interaction.
+ */
+Code.Editor.clearSaveMask = function() {
+  clearTimeout(Code.Editor.saveMaskPid);
+  var mask = document.getElementById('editorSavingMask');
+  mask.style.display = 'none';
+  mask.style.opacity = 0;
 };
 
 /**
