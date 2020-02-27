@@ -101,6 +101,8 @@ Code.Editor.init = function() {
     editor.containerElement = div;
   }
 
+  document.addEventListener('keydown', Code.Editor.keyDown);
+
   Code.Editor.receiveMessage();
 };
 
@@ -160,6 +162,17 @@ Code.Editor.updateCurrentSource = function() {
   if (!Code.Editor.isSaveDialogVisible) {
     Code.Editor.saturateSave(
         Code.Editor.currentSource !== Code.Editor.originalSource);
+  }
+};
+
+/**
+ * Save the editor if ⌘-s or Ctrl-s is pressed.
+ */
+Code.Editor.keyDown = function(e) {
+  if (e.key === 's' && (e.metaKey || e.ctrlKey)) {
+    Code.Editor.save();
+    e.preventDefault();
+    e.stopPropagation();
   }
 };
 
