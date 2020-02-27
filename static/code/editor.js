@@ -871,6 +871,8 @@ Code.functionEditor.getSource = function() {
     return Code.Editor.uncreatedEditorSource;
   }
   var source = this.editor_.getValue();
+  // Trim trailing whitespace.
+  source = source.replace(/[ \t]+(?=\n)/g, '').replace(/[ \t]+$/, '');
   var verb = '@delete_prop verb';
   var dobj = '@delete_prop dobj';
   var prep = '@delete_prop prep';
