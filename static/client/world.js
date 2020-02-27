@@ -584,7 +584,9 @@ CCC.World.drawScene = function(svg) {
       var g = CCC.Common.createSvgElement('g', {'class': thing.type}, svg);
       var title = CCC.Common.createSvgElement('title', {}, g);
       title.appendChild(document.createTextNode(name));
-      g.setAttribute('filter', 'url(#' + svg.whiteShadowId_ + ')');
+      // TODO: Reenable whiteShadow.
+      // whiteShadow disabled due to clipping bugs.
+      //g.setAttribute('filter', 'url(#' + svg.whiteShadowId_ + ')');
       CCC.World.cloneAndAppend(g, svgDom);
       // Users should face the majority of other users.
       // If user is alone, should face majority of objects.

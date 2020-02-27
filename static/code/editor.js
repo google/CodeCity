@@ -101,6 +101,8 @@ Code.Editor.init = function() {
     editor.containerElement = div;
   }
 
+  document.addEventListener('keydown', Code.Editor.keyDown);
+
   Code.Editor.receiveMessage();
 };
 
@@ -160,6 +162,17 @@ Code.Editor.updateCurrentSource = function() {
   if (!Code.Editor.isSaveDialogVisible) {
     Code.Editor.saturateSave(
         Code.Editor.currentSource !== Code.Editor.originalSource);
+  }
+};
+
+/**
+ * Save the editor if ⌘-s or Ctrl-s is pressed.
+ */
+Code.Editor.keyDown = function(e) {
+  if (e.key === 's' && (e.metaKey || e.ctrlKey)) {
+    Code.Editor.save();
+    e.preventDefault();
+    e.stopPropagation();
   }
 };
 
@@ -323,7 +336,8 @@ Code.Editor.codeRequest_ = new XMLHttpRequest();
 Code.Editor.receiveXhr = function() {
   var xhr = Code.Editor.codeRequest_;
   if (xhr.status !== 200) {
-    console.warn('Editor XHR returned status ' + xhr.status);
+    Code.Editor.clearSaveMask();
+    Code.Editor.showButter('Save failed: Status ' + xhr.status, 5000);
     return;
   }
   var data = JSON.parse(xhr.responseText);
@@ -339,11 +353,7 @@ Code.Editor.receiveXhr = function() {
       Code.Editor.setSourceToAllEditors(data.src);
     }
   }
-  // Remove saving mask.
-  clearTimeout(Code.Editor.saveMaskPid);
-  var mask = document.getElementById('editorSavingMask');
-  mask.style.display = 'none';
-  mask.style.opacity = 0;
+  Code.Editor.clearSaveMask();
 
   // While a save is in-flight, the user might have navigated away and be
   // currently blocked by a warning dialog regarding unsaved work.
@@ -364,6 +374,16 @@ Code.Editor.receiveXhr = function() {
   }
 
   Code.Editor.ready && Code.Editor.ready();
+};
+
+/**
+ * Remove saving mask that prevents UI interaction.
+ */
+Code.Editor.clearSaveMask = function() {
+  clearTimeout(Code.Editor.saveMaskPid);
+  var mask = document.getElementById('editorSavingMask');
+  mask.style.display = 'none';
+  mask.style.opacity = 0;
 };
 
 /**
@@ -851,6 +871,8 @@ Code.functionEditor.getSource = function() {
     return Code.Editor.uncreatedEditorSource;
   }
   var source = this.editor_.getValue();
+  // Trim trailing whitespace.
+  source = source.replace(/[ \t]+(?=\n)/g, '').replace(/[ \t]+$/, '');
   var verb = '@delete_prop verb';
   var dobj = '@delete_prop dobj';
   var prep = '@delete_prop prep';

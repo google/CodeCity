@@ -29,16 +29,19 @@ var code = require('./code');
  * prototype chain.
  * @constructor
  * @extends {Array<!Selector.Part>}
- * @param {string|!Array<!Selector.Part>|!Selector} s A Selector, Parts
+ * @param {string|!Array<!Selector.Part>|!Selector} s A Selector, parts
  *     array or selector string.
  */
 var Selector = function(s) {
   var /** !Array<!Selector.Part> */ parts;
-  if (Array.isArray(s)) {
+  if (typeof s === 'string') {
+    // Parse selector text.
+    parts = parse(s);
+  } else if (Array.isArray(s)) {
     parts = [];
-    // Validate & copy parts list.
-    if (typeof s.length < 1) throw new RangeError('Zero-length parts list??');
-    if (s.length < 1) throw new RangeError('Zero-length parts list??');
+    // Validate & copy parts array.
+    if (typeof s.length < 1) throw new RangeError('Zero-length parts array??');
+    if (s.length < 1) throw new RangeError('Zero-length parts array??');
     if (typeof s[0] !== 'string' || !identifierRE.test(s[0])) {
       throw new TypeError('Parts array must begin with an identifier');
     }
@@ -52,9 +55,6 @@ var Selector = function(s) {
       }
       parts[i] = s[i];
     }
-  } else if (typeof s === 'string') {
-    // Parse selector text.
-    parts = parse(s);
   } else {
     throw new TypeError('Not a selector or parts array');
   }

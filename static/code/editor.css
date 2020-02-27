@@ -1,3 +1,28 @@
+#editorButter {
+  display: none;
+  left: 0;
+  position: absolute;
+  right: 0;
+  top: 0;
+  pointer-events: none;
+  z-index: 10;
+}
+
+#editorButter>div {
+  text-align: center;
+}
+
+#editorButterText {
+  background: #f9edbe;
+  border: 1px solid #f0c36d;
+  border-radius: 0 0 2px 2px;
+  border-top: 0;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  display: inline-block;
+  padding: 0 10px;
+  pointer-events: auto;
+}
+
 #valueEditor {
   position: absolute;
   top: 60px;

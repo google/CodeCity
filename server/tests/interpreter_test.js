@@ -1010,6 +1010,46 @@ exports.testTimeLimit = function(t) {
     onCreateThread: (intrp, thread) => {thread.timeLimit = timeLimit;},
   });
 
+  // Test we can't call anything after timing out.
+  name = "Thread can't call after timeout";
+  src = `
+      try {
+        try {
+          for (var i = 0; i < ${iterations}; i++) {
+          }
+          "Thread didn't time out";  // Maybe increase iterations?
+        } catch (e) {
+          String(e);
+          'Still able to call';
+        }
+      } catch (e) {
+        e.name + ': ' + e.message;  // Can't call String(e): we're out of time!
+      }
+  `;
+  runTest(t, name, src, 'RangeError: Thread ran too long', {
+    onCreateThread: (intrp, thread) => {thread.timeLimit = timeLimit;},
+  });
+
+  // Test we can't call anything after timing out.
+  name = "Thread can call suspend after timeout";
+  src = `
+      try {
+        try {
+          for (var i = 0; i < ${iterations}; i++) {
+          }
+          "Thread didn't time out";  // Maybe increase iterations?
+        } catch (e) {
+          suspend();
+          'Still able to call suspend';
+        }
+      } catch (e) {
+        e.name + ': ' + e.message;  // Can't call String(e): we're out of time!
+      }
+  `;
+  runTest(t, name, src, 'Still able to call suspend', {
+    onCreateThread: (intrp, thread) => {thread.timeLimit = timeLimit;},
+  });
+
   // Test timeLimit is inherited by child Threads.
   name = 'Threads inherit timeLimit from parent Thread';
   src = `
@@ -1029,8 +1069,6 @@ exports.testTimeLimit = function(t) {
   runTest(t, name, src, 'RangeError: Thread ran too long', {
     onCreateThread: (intrp, thread) => {thread.timeLimit = timeLimit;},
   });
-
-
 };
 
 /**
