@@ -121,7 +121,7 @@ var PermissionError = new 'PermissionError';
   // spec bug github.com/tc39/ecma262/issues/289.
   var visitedByThread = new WeakMap;
 
-  Array.prototype.join = function(separator) {
+  Array.prototype.join = function join(separator) {
     // This implements Array.prototype.join from ES6 §22.1.3.12,
     // with the addition of cycle detection as discussed in
     // https://github.com/tc39/ecma262/issues/289.
@@ -179,7 +179,7 @@ Object.defineProperty(Array.prototype, 'join', {enumerable: false});
 //
 var suspend = new 'Thread.suspend';
 
-var setTimeout = function(func, delay) {
+var setTimeout = function setTimeout(func, delay) {
   /* setTimeout(func, delay[, ...args]) -> thread
    *
    * Arguments:
@@ -194,9 +194,13 @@ var setTimeout = function(func, delay) {
   var args = Array.prototype.slice.call(arguments, 2);
   args = [undefined, func, delay, undefined].concat(args);
   return new (Thread.bind.apply(Thread, args));
+  // The parens around Thread.bind.apply(...) are mandatory: we want to
+  // "new" the function returned by bind, not apply (which is not a
+  // constructor).
+  return new (Thread.bind.apply(Thread, args))();
 };
 
-var clearTimeout = function(thread) {
+var clearTimeout = function clearTimeout(thread) {
   /* clearTimeout(thread)
    *
    * Arguments:
