@@ -166,13 +166,25 @@ Code.Editor.updateCurrentSource = function() {
 };
 
 /**
- * Save the editor if ⌘-s or Ctrl-s is pressed.
+ * Keydown handler for the editor frame.
+ * @param {!KeyboardEvent} e Keydown event.
  */
 Code.Editor.keyDown = function(e) {
+  // Save the editor if ⌘-s or Ctrl-s is pressed.
   if (e.key === 's' && (e.metaKey || e.ctrlKey)) {
     Code.Editor.save();
     e.preventDefault();
     e.stopPropagation();
+  }
+
+  // Before starting a search, render the editors' entire document.
+  if ((e.key === 'f' || e.key === 'g') && (e.metaKey || e.ctrlKey)) {
+    if (Code.Editor.currentEditor) {
+      var cm = Code.Editor.currentEditor.getCodeMirror();
+      if (cm) {
+        cm.setOption('viewportMargin', Infinity);
+      }
+    }
   }
 };
 
@@ -703,6 +715,14 @@ Code.GenericEditor.prototype.isSaved = function() {
 };
 
 /**
+ * Return this editor's CodeMirror instance.
+ * @return {Object} Defaults to null.
+ */
+Code.GenericEditor.prototype.getCodeMirror = function() {
+  return null;
+};
+
+/**
  * Notification that this editor has just been displayed.
  * @param {boolean} userAction True if user clicked on a tab.
  */
@@ -718,11 +738,19 @@ Code.valueEditor = new Code.GenericEditor('Value');
 Code.valueEditor.confidence = 0.1;
 
 /**
- * Code Mirror editor.  Does not exist until tab is selected.
+ * CodeMirror editor.  Does not exist until tab is selected.
  * @type {Object}
  * @private
  */
 Code.valueEditor.editor_ = null;
+
+/**
+ * Return this editor's CodeMirror instance.
+ * @return {Object} Defaults to null.
+ */
+Code.valueEditor.getCodeMirror = function() {
+  return this.editor_;
+};
 
 /**
  * Create the DOM for this editor.
@@ -778,11 +806,19 @@ Code.valueEditor.focus = function(userAction) {
 Code.functionEditor = new Code.GenericEditor('Function');
 
 /**
- * Code Mirror editor.  Does not exist until tab is selected.
+ * CodeMirror editor.  Does not exist until tab is selected.
  * @type {Object}
  * @private
  */
 Code.functionEditor.editor_ = null;
+
+/**
+ * Return this editor's CodeMirror instance.
+ * @return {Object} Defaults to null.
+ */
+Code.functionEditor.getCodeMirror = function() {
+  return this.editor_;
+};
 
 /**
  * Create the DOM for this editor.
@@ -961,6 +997,14 @@ Code.jsspEditor = new Code.GenericEditor('JSSP');
  * @private
  */
 Code.jsspEditor.editor_ = null;
+
+/**
+ * Return this editor's CodeMirror instance.
+ * @return {Object} Defaults to null.
+ */
+Code.jsspEditor.getCodeMirror = function() {
+  return this.editor_;
+};
 
 /**
  * Create the DOM for this editor.
