@@ -739,6 +739,17 @@ Code.Explorer.getPanelData = function(selector) {
 };
 
 /**
+ * Keydown handler for the explorer frame.
+ * @param {!KeyboardEvent} e Keydown event.
+ */
+Code.Explorer.keyDown = function(e) {
+  // The editor frame may have strong opinions about key presses.
+  try {
+    parent.frames[1].Code.Editor.keyDown(e);
+  } catch (ex) {}
+};
+
+/**
  * Page has loaded, initialize the explorer.
  */
 Code.Explorer.init = function() {
@@ -747,6 +758,7 @@ Code.Explorer.init = function() {
   input.addEventListener('blur', Code.Explorer.inputBlur);
   input.addEventListener('keydown', Code.Explorer.inputKey);
   input.addEventListener('mousedown', Code.Explorer.inputMouseDown);
+  document.addEventListener('keydown', Code.Explorer.keyDown);
   var scrollDiv = document.getElementById('autocompleteMenuScroll');
   scrollDiv.addEventListener('mousedown', Code.Explorer.autocompleteMouseDown);
   scrollDiv.addEventListener('click', Code.Explorer.autocompleteClick);
