@@ -193,7 +193,7 @@ Object.defineProperty(Array, 'from', {enumerable: false});
 // Array.prototype polyfills
 ///////////////////////////////////////////////////////////////////////////////
 
-Array.prototype.find = function(callback/*, thisArg*/) {
+Array.prototype.find = function find(callback/*, thisArg*/) {
   // Polyfill copied from:
   // developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/find
   if (this === null || this === undefined) {
@@ -215,7 +215,7 @@ Array.prototype.find = function(callback/*, thisArg*/) {
 };
 Object.defineProperty(Array.prototype, 'find', {enumerable: false});
 
-Array.prototype.findIndex = function(callback/*, thisArg*/) {
+Array.prototype.findIndex = function findIndex(callback/*, thisArg*/) {
   // Polyfill copied from:
   // developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/findIndex
   if (this === null || this === undefined) {
@@ -260,7 +260,7 @@ Object.defineProperty(Array.prototype, 'findIndex', {enumerable: false});
   // spec bug github.com/tc39/ecma262/issues/289.
   var visited = [];
 
-  Array.prototype.join = function(separator) {
+  Array.prototype.join = function join(separator) {
     // This implements Array.prototype.join from ES6 §22.1.3.12, with
     // the addition of cycle detection as discussed in
     // https://github.com/tc39/ecma262/issues/289.

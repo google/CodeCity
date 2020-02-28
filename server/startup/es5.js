@@ -295,7 +295,7 @@ Object.defineProperty(RegExp.prototype, 'source', {
 ///////////////////////////////////////////////////////////////////////////////
 
 // Add a polyfill to handle create's second argument.
-Object.create = function(proto, props) {
+Object.create = function create(proto, props) {
   var obj = (new 'Object.create')(proto);
   props && Object.defineProperties(obj, props);
   return obj;
@@ -386,7 +386,7 @@ Object.defineProperty(Object, 'seal', {enumerable: false});
 // Array.prototype polyfills
 ///////////////////////////////////////////////////////////////////////////////
 
-Array.prototype.every = function(callback/*, thisArg*/) {
+Array.prototype.every = function every(callback/*, thisArg*/) {
   // Polyfill copied from:
   // developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/ever
   if (this === null || this === undefined) {
@@ -405,7 +405,7 @@ Array.prototype.every = function(callback/*, thisArg*/) {
 };
 Object.defineProperty(Array.prototype, 'every', {enumerable: false});
 
-Array.prototype.filter = function(callback/*, thisArg*/) {
+Array.prototype.filter = function filter(callback/*, thisArg*/) {
   // Polyfill copied from:
   // developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/filter
   if (this === null || this === undefined) {
@@ -428,7 +428,7 @@ Array.prototype.filter = function(callback/*, thisArg*/) {
 };
 Object.defineProperty(Array.prototype, 'filter', {enumerable: false});
 
-Array.prototype.forEach = function(callback/*, thisArg*/) {
+Array.prototype.forEach = function forEach(callback/*, thisArg*/) {
   // Polyfill copied from:
   // developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/forEach
   if (this === null || this === undefined) {
@@ -451,7 +451,7 @@ Object.defineProperty(Array.prototype, 'forEach', {enumerable: false});
   // spec bug github.com/tc39/ecma262/issues/289.
   var visited = [];
 
-  Array.prototype.join = function(separator) {
+  Array.prototype.join = function join(separator) {
     // This implements Array.prototype.join from ES5 §15.4.4.5, with
     // the addition of cycle detection as discussed in
     // https://github.com/tc39/ecma262/issues/289.
@@ -490,7 +490,7 @@ Object.defineProperty(Array.prototype, 'forEach', {enumerable: false});
 })();
 Object.defineProperty(Array.prototype, 'join', {enumerable: false});
 
-Array.prototype.map = function(callback/*, thisArg*/) {
+Array.prototype.map = function map(callback/*, thisArg*/) {
   // Polyfill copied from:
   // developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/map
   if (this === null || this === undefined) {
@@ -510,7 +510,7 @@ Array.prototype.map = function(callback/*, thisArg*/) {
 };
 Object.defineProperty(Array.prototype, 'map', {enumerable: false});
 
-Array.prototype.reduce = function(callback /*, initialValue*/) {
+Array.prototype.reduce = function reduce(callback /*, initialValue*/) {
   // Polyfill copied from:
   // developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/Reduce
   if (this === null || this === undefined) {
@@ -539,7 +539,7 @@ Array.prototype.reduce = function(callback /*, initialValue*/) {
 };
 Object.defineProperty(Array.prototype, 'reduce', {enumerable: false});
 
-Array.prototype.reduceRight = function(callback /*, initialValue*/) {
+Array.prototype.reduceRight = function reduceRight(callback /*, initialValue*/) {
   // Polyfill copied from:
   // developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/ReduceRight
   if (this === null || this === undefined) {
@@ -568,7 +568,7 @@ Array.prototype.reduceRight = function(callback /*, initialValue*/) {
 };
 Object.defineProperty(Array.prototype, 'reduceRight', {enumerable: false});
 
-Array.prototype.some = function(callback/*, thisArg*/) {
+Array.prototype.some = function some(callback/*, thisArg*/) {
   // Polyfill copied from:
   // developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/some
   if (this === null || this === undefined) {
@@ -788,7 +788,7 @@ Array.prototype.sort.quicksort_ = function quicksort_(a, from, to, comparefn) {
 };
 Object.defineProperty(Array.prototype.sort, 'quicksort_', {enumerable: false});
 
-Array.prototype.toLocaleString = function() {
+Array.prototype.toLocaleString = function toLocaleString() {
   var out = [];
   for (var i = 0; i < this.length; i++) {
     out[i] = (this[i] === null || this[i] === undefined) ?
