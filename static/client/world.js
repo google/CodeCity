@@ -141,7 +141,7 @@ CCC.World.receiveMessage = function(e) {
     CCC.World.renderMessage({type: 'connected',
                              isConnected: false,
                              time: data['text']});
-  } else if (mode === CCC.Common.MessageTypes.MESSAGE) {
+  } else if (mode === CCC.Common.MessageTypes.MEMO) {
     try {
       var msg = JSON.parse(text);
     } catch (e) {

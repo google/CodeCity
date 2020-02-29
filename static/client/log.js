@@ -100,7 +100,7 @@ CCC.Log.receiveMessage = function(e) {
     // Notify the user of the disconnection.
     var div = CCC.Log.connectDiv(false, data['text']);
     CCC.Log.appendRow(div);
-  } else if (mode === CCC.Common.MessageTypes.MESSAGE) {
+  } else if (mode === CCC.Common.MessageTypes.MEMO) {
     var text = data['text'];
     try {
       var json = JSON.parse(text);
