@@ -66,13 +66,13 @@ var Queue = function (id) {
    */
   this.lastPingTime = Date.now();
   /**
-   * The index number of the most recent memo added to the memo queue.
+   * The index number of the most recent memo added to the memo buffer.
    */
   this.memoNum = 0;
   /**
-   * Queue of memos from Code City to the user.
+   * Buffer of memos from Code City to the user.
    */
-  this.memoQueue = [];
+  this.memoBuffer = [];
   /**
    * The index number of the most recent command received from the user.
    */
@@ -91,7 +91,7 @@ var Queue = function (id) {
     console.log('TCP error for session ' + id, error);
   });
   this.client.on('data', function(data) {
-    thisQueue.memoQueue.push(data.toString());
+    thisQueue.memoBuffer.push(data.toString());
     thisQueue.memoNum++;
   });
   this.client.connect(CFG.remotePort, CFG.remoteHost);
@@ -148,7 +148,7 @@ function handleRequest(request, response) {
     var m = cookieList.ID && cookieList.ID.match(/^([0-9a-f]+)_([0-9a-f]+)$/);
     if (!m) {
       console.log('Missing login cookie.  Redirecting.');
-      response.writeHead(302, {  // Temporary redirect
+      response.writeHead(302, {  // Temporary redirect.
          'Location': CFG.loginPath
        });
       response.end('Login required.  Redirecting.');
@@ -159,7 +159,7 @@ function handleRequest(request, response) {
     checksum = crypto.createHash('sha3-224').update(checksum).digest('hex');
     if (checksum !== m[2]) {
       console.log('Invalid login cookie: ' + cookieList.ID);
-      response.writeHead(302, {  // Temporary redirect
+      response.writeHead(302, {  // Temporary redirect.
          'Location': CFG.loginPath
        });
       response.end('Login invalid.  Redirecting.');
@@ -244,8 +244,8 @@ function ping(receivedJson, response) {
     }
     // Client acknowledges receipt of memos.
     // Remove them from the output list.
-    queue.memoQueue.splice(0,
-        queue.memoQueue.length + ackMemoNum - queue.memoNum);
+    queue.memoBuffer.splice(0,
+        queue.memoBuffer.length + ackMemoNum - queue.memoNum);
   }
 
   var delay = 0;
@@ -278,9 +278,9 @@ function pong(queue, response, ackCmdNextPing) {
   if (ackCmdNextPing) {
     sendingJson['ackCmdNum'] = queue.commandNum;
   }
-  if (queue.memoQueue.length) {
+  if (queue.memoBuffer.length) {
     sendingJson['memoNum'] = queue.memoNum;
-    sendingJson['memos'] = queue.memoQueue;
+    sendingJson['memos'] = queue.memoBuffer;
   }
   response.statusCode = 200;
   response.setHeader('Content-Type', 'application/json');
