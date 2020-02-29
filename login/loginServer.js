@@ -87,7 +87,7 @@ function serveFile(response, filename, subs) {
  * @param {!Object} response HTTP server response object.
  */
 function handleRequest(request, response) {
-  if (request.connection.remoteAddress != '127.0.0.1') {
+  if (request.connection.remoteAddress !== '127.0.0.1') {
     // This check is redundant, the server is only accessible to
     // localhost connections.
     console.log(

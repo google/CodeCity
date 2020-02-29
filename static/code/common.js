@@ -432,7 +432,7 @@ Code.Common.selectorToReference = function(selector) {
 };
 
 // Set background colour to differentiate server vs local copy.
-if (location.hostname == 'localhost') {
+if (location.hostname === 'localhost') {
   window.addEventListener('load', function() {
     document.body.style.backgroundColor = '#ffe';
   });
