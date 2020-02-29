@@ -431,6 +431,25 @@ Code.Common.selectorToReference = function(selector) {
   return selector;
 };
 
+/**
+ * Comparison function to sort strings A-Z without regard to case.
+ * @param {string} a One string.
+ * @param {string} b Another string.
+ * @return {number} -1/0/1 comparator value.
+ */
+Code.Common.caseInsensitiveComp = function(a, b) {
+  a = a.toLowerCase();
+  b = b.toLowerCase();
+  var aNum = parseFloat(a);
+  var bNum = parseFloat(b);
+  if (!isNaN(aNum) && !isNaN(bNum) && aNum !== bNum) {
+    // Numeric.
+    return (aNum < bNum) ? -1 : 1;
+  }
+  // ASCIIbetical.
+  return (a < b) ? -1 : ((a > b) ? 1 : 0);
+};
+
 // Set background colour to differentiate server vs local copy.
 if (location.hostname === 'localhost') {
   window.addEventListener('load', function() {

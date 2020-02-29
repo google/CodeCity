@@ -199,7 +199,7 @@ Code.Explorer.loadAutocomplete = function() {
       }
     }
     Code.Explorer.autocompleteData.properties =
-        Array.from(set.keys()).sort(Code.Explorer.caseInsensitiveComp);
+        Array.from(set.keys()).sort(Code.Common.caseInsensitiveComp);
     set.clear();
     if (data.keywords) {
       for (var word of data.keywords) {
@@ -279,18 +279,6 @@ Code.Explorer.updateAutocompleteMenu = function() {
   } else {
     Code.Explorer.showAutocompleteMenu(options, index);
   }
-};
-
-/**
- * Comparison function to sort strings A-Z without regard to case.
- * @param {string} a One string.
- * @param {string} b Another string.
- * @return {number} -1/0/1 comparator value.
- */
-Code.Explorer.caseInsensitiveComp = function(a, b) {
-  a = a.toLowerCase();
-  b = b.toLowerCase();
-  return (a < b) ? -1 : ((a > b) ? 1 : 0);
 };
 
 /**
