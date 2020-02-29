@@ -937,7 +937,7 @@ Code.functionEditor.getSource = function() {
     iobj = '@set_prop iobj = ' + JSON.stringify(this.iobjElement_.value);
   }
   return `
-// @copy_properties true
+${this.metaExtra_.join('\n').trim()}
 // ${verb}
 // ${dobj}
 // ${prep}
@@ -954,6 +954,7 @@ Code.functionEditor.setSource = function(source) {
   var m = source.match(Code.functionEditor.functionRegex_);
   this.confidence = m ? 0.5 : 0;
   if (this.created) {
+    this.metaExtra_ = [];
     var meta;
     if (m) {
       meta = m[1].split(/\n/);
@@ -970,7 +971,7 @@ Code.functionEditor.setSource = function(source) {
     };
     var isVerb = false;
     for (var line of meta) {
-      var m = line.match(Code.functionEditor.setSource.metaRegex_);
+      var m = line.match(Code.functionEditor.setSource.metaSetRegex_);
       if (m) {
         try {
           props[m[1]] = JSON.parse(m[2]);
@@ -978,6 +979,9 @@ Code.functionEditor.setSource = function(source) {
         } catch (e) {
           console.log('Ignoring invalid ' + m[1] + ': ' + m[2]);
         }
+      } else if (!Code.functionEditor.setSource.metaDeleteRegex_.test(line)) {
+        // Not a meta value we recognize.  Preserve it.
+        this.metaExtra_.push(line);
       }
     }
     this.verbElement_.value = props['verb'];
@@ -991,8 +995,13 @@ Code.functionEditor.setSource = function(source) {
 };
 
 // Matches one meta-data comment:  // @set_prop verb = "foobar"
-Code.functionEditor.setSource.metaRegex_ =
+Code.functionEditor.setSource.metaSetRegex_ =
     /^\s*\/\/\s*@set_prop\s+(verb|dobj|prep|iobj)\s*=\s*(.+)$/;
+// Matches one meta-data comment:  // @delete_prop verb
+Code.functionEditor.setSource.metaDeleteRegex_ =
+    /^\s*\/\/\s*@delete_prop\s+(verb|dobj|prep|iobj)$/;
+
+Code.functionEditor.metaExtra_ = [];
 
 /**
  * Notification that this editor has just been displayed.
