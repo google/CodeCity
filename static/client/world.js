@@ -305,7 +305,7 @@ CCC.World.prerenderHistory = function(msg) {
     var rect = document.createElementNS(CCC.Common.NS, 'rect');
     var text = document.createElementNS(CCC.Common.NS, 'text');
     text.appendChild(document.createTextNode(
-        CCC.World.getMsg('relaunchIframeMsg')));
+        CCC.World.getTemplate('relaunchIframeTemplate')));
     g.appendChild(rect);
     g.appendChild(text);
     // Size the rectangle to match the text size.
@@ -471,7 +471,8 @@ CCC.World.connectPanel = function(msg) {
   var df = document.createDocumentFragment();
   var div = document.createElement('div');
   div.className = isConnected ? 'connectDiv' : 'disconnectDiv';
-  var text = CCC.World.getMsg(isConnected ? 'connectedMsg' : 'disconnectedMsg');
+  var text = CCC.World.getTemplate(
+      isConnected ? 'connectedTemplate' : 'disconnectedTemplate');
   div.appendChild(document.createTextNode(text));
   df.appendChild(div);
 
@@ -1053,7 +1054,7 @@ CCC.World.publishHistory = function(historyElement) {
     var closeImg = new Image(21, 21);
     closeImg.className = 'iframeClose';
     closeImg.src = 'close.png';
-    closeImg.title = CCC.World.getMsg('closeIframeMsg');
+    closeImg.title = CCC.World.getTemplate('closeIframeTemplate');
     closeImg.addEventListener('click', function() {
       closeImg.style.display = 'none';
       panelDiv.firstChild.style.visibility = 'visible';  // SVG.
@@ -1121,7 +1122,7 @@ CCC.World.publishPanorama = function() {
     if (icon) {
       icon.addEventListener('click',
           parent.location.reload.bind(parent.location));
-      icon.title = CCC.World.getMsg('reconnectMsg');
+      icon.title = CCC.World.getTemplate('reconnectTemplate');
     }
   }
 };
@@ -1760,14 +1761,14 @@ CCC.World.removeNode = function(node) {
 };
 
 /**
- * Gets the message with the given key from the document.
+ * Gets the template with the given key from the document.
  * @param {string} key The key of the document element.
  * @return {string} The textContent of the specified element.
  */
-CCC.World.getMsg = function(key) {
+CCC.World.getTemplate = function(key) {
   var element = document.getElementById(key);
   if (!element) {
-    throw new Error('Unknown message ' + key);
+    throw new Error('Unknown template ' + key);
   }
   return element.textContent;
 };
