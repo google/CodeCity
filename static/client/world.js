@@ -2072,10 +2072,5 @@ CCC.World.measureText = function(svg, text) {
   return bBox;
 };
 
-/**
- * Cache of text widths for performance boost.
- */
-CCC.World.measureText.cache_ = Object.create(null);
-
 window.addEventListener('message', CCC.World.receiveMessage, false);
 window.addEventListener('load', CCC.World.init, false);
