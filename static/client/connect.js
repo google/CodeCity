@@ -65,14 +65,14 @@ CCC.lastActiveTime = Date.now();
 CCC.unreadLines = 0;
 
 /**
- * The index number of the first command on the commandOutput queue.
+ * The index number of the first command on the commandQueue queue.
  */
-CCC.commandIndex = 0;
+CCC.commandNum = 0;
 
 /**
  * Queue of commands being sent, awaiting acks from server.
  */
-CCC.commandOutput = [];
+CCC.commandQueue = [];
 
 /**
  * Bit to switch off local echo when typing passwords.
@@ -80,9 +80,9 @@ CCC.commandOutput = [];
 CCC.localEcho = true;
 
 /**
- * The index number of the most recent message received from the server.
+ * The index number of the most recent memo received from the server.
  */
-CCC.messageIndex = 0;
+CCC.memoNum = 0;
 
 /**
  * Number of calls to countdown required before launching.
@@ -106,10 +106,10 @@ CCC.pingInterval = CCC.MIN_PING_INTERVAL;
 CCC.nextPingPid = -1;
 
 /**
- * Flag for only acknowledging new messages after a new message has arrived.
+ * Flag for only acknowledging new memos after a new memo has arrived.
  * Saves bandwidth.
  */
-CCC.ackMsgNextPing = true;
+CCC.ackMemoNextPing = true;
 
 /**
  * Buffer to accumulate incoming messages when paused.
@@ -140,7 +140,7 @@ CCC.connectionState = CCC.ConnectionStates.NEVER_CONNECTED;
 CCC.MessageTypes = {
   // Messages that may be paused:
   COMMAND: 'command',  // User-generated command echoed.
-  MESSAGE: 'message',  // Block of text from Code City.
+  MEMO: 'memo',  // Block of text from Code City.
   CONNECT_MSG: 'connect msg',  // User-visible connection message.
   DISCONNECT_MSG: 'disconnect msg',  // User-visible disconnection message.
   // Messages that may be sent while paused:
@@ -377,8 +377,8 @@ CCC.sendCommand = function(commands, echo) {
   }
   for (var command of commands) {
     // Add command to list of commands to send to server.
-    CCC.commandOutput.push(command + '\n');
-    CCC.commandIndex++;
+    CCC.commandQueue.push(command + '\n');
+    CCC.commandNum++;
     // Add command to history.
     if (echo) {
       if (!CCC.commandHistory.length ||
@@ -421,12 +421,12 @@ CCC.doPing = function() {
   var sendingJson = {
     'q': CCC.queueId_
   };
-  if (CCC.ackMsgNextPing) {
-    sendingJson['ackMsg'] = CCC.messageIndex;
+  if (CCC.ackMemoNextPing) {
+    sendingJson['ackMemoNum'] = CCC.memoNum;
   }
-  if (CCC.commandOutput.length) {
-    sendingJson['cmdNum'] = CCC.commandIndex;
-    sendingJson['cmds'] = CCC.commandOutput;
+  if (CCC.commandQueue.length) {
+    sendingJson['cmdNum'] = CCC.commandNum;
+    sendingJson['cmds'] = CCC.commandQueue;
   }
 
   // XMLHttpRequest with timeout works in IE8 or better.
@@ -502,39 +502,39 @@ CCC.parse = function(receivedJson) {
                           CCC.currentDateString());
     CCC.connectionState = CCC.ConnectionStates.CONNECTED;
   }
-  var ackCmd = receivedJson['ackCmd'];
-  var msgNum = receivedJson['msgNum'];
-  var msgs = receivedJson['msgs'];
+  var ackCmdNum = receivedJson['ackCmdNum'];
+  var memoNum = receivedJson['memoNum'];
+  var memos = receivedJson['memos'];
 
-  if (typeof ackCmd === 'number') {
-    if (ackCmd > CCC.commandIndex) {
-      console.error('Server acks ' + ackCmd +
-                    ', but CCC.commandIndex is only ' + CCC.commandIndex);
+  if (typeof ackCmdNum === 'number') {
+    if (ackCmdNum > CCC.commandNum) {
+      console.error('Server acks ' + ackCmdNum +
+                    ', but CCC.commandNum is only ' + CCC.commandNum);
       CCC.terminate();
     }
     // Server acknowledges receipt of commands.
     // Remove them from the output list.
-    CCC.commandOutput.splice(0,
-        CCC.commandOutput.length + ackCmd - CCC.commandIndex);
+    CCC.commandQueue.splice(0,
+        CCC.commandQueue.length + ackCmdNum - CCC.commandNum);
   }
 
-  if (typeof msgNum === 'number') {
+  if (typeof memoNum === 'number') {
     // Server sent messages.  Increase client's index for acknowledgment.
-    var currentIndex = msgNum - msgs.length + 1;
-    for (var msg of msgs) {
-      if (currentIndex > CCC.messageIndex) {
-        CCC.messageIndex = currentIndex;
-        CCC.distributeMessage(CCC.MessageTypes.MESSAGE, msg);
+    var currentIndex = memoNum - memos.length + 1;
+    for (var memo of memos) {
+      if (currentIndex > CCC.memoNum) {
+        CCC.memoNum = currentIndex;
+        CCC.distributeMessage(CCC.MessageTypes.MEMO, memo);
         // Reduce ping interval.
         CCC.pingInterval =
             Math.max(CCC.MIN_PING_INTERVAL, CCC.pingInterval * 0.8);
       }
       currentIndex++;
     }
-    CCC.setUnreadLines(CCC.unreadLines + msgs.length);
-    CCC.ackMsgNextPing = true;
+    CCC.setUnreadLines(CCC.unreadLines + memos.length);
+    CCC.ackMemoNextPing = true;
   } else {
-    CCC.ackMsgNextPing = false;
+    CCC.ackMemoNextPing = false;
   }
 };
 
