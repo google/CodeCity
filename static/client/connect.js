@@ -188,6 +188,12 @@ CCC.init = function() {
   CCC.commandTextarea.addEventListener('click', CCC.userActive, false);
   CCC.commandTextarea.value = '';
 
+  // Restore command history from sessionStorage.
+  var sessionHistory = sessionStorage.getItem('commandHistory');
+  if (sessionHistory) {
+    CCC.commandHistory = JSON.parse(sessionHistory);
+  }
+
   var clearButton = document.getElementById('clearButton');
   clearButton.addEventListener('click', CCC.clear, false);
   var pauseButton = document.getElementById('pauseButton');
@@ -244,6 +250,7 @@ CCC.clear = function() {
   CCC.commandHistory.length = 0;
   CCC.commandTemp = '';
   CCC.commandHistoryPointer = -1;
+  sessionStorage.removeItem('commandHistory');
   if (CCC.pauseBuffer) {
     var datum;
     while ((datum = CCC.pauseBuffer[0]) &&
@@ -396,6 +403,7 @@ CCC.sendCommand = function(commands, echo) {
   }
   CCC.commandTemp = '';
   CCC.commandHistoryPointer = -1;
+  sessionStorage.setItem('commandHistory', JSON.stringify(CCC.commandHistory));
   // User is sending command, reset the ping to be frequent.
   CCC.pingInterval = CCC.MIN_PING_INTERVAL;
   // Interrupt any in-flight ping.
