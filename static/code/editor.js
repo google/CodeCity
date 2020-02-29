@@ -628,6 +628,33 @@ Code.Editor.hideButter = function() {
   document.getElementById('editorButter').style.display = 'none';
 };
 
+/**
+ * Create a CodeMirror editor.
+ * @param {!Element} container HTML element to hold the editor.
+ * @param {!Object} options Editor configuration.
+ * @return {!Object} CodeMirron editor.
+ */
+Code.Editor.newCodeMirror = function(container, options) {
+  var defaultOptions = {
+    extraKeys: {
+      Tab: function(cm) {
+        cm.replaceSelection('  ');
+      }
+    },
+    lineNumbers: true,
+    matchBrackets: true,
+    tabSize: 2,
+    undoDepth: 1024
+  };
+  // Merge options into default options.
+  for (var name in options) {
+    defaultOptions[name] = options[name];
+  }
+  var editor = CodeMirror(container, defaultOptions);
+  editor.setSize('100%', '100%');
+  return editor;
+};
+
 if (!window.TEST) {
   window.addEventListener('load', Code.Editor.init);
   window.addEventListener('message', Code.Editor.receiveMessage, false);
@@ -758,18 +785,13 @@ Code.valueEditor.getCodeMirror = function() {
  */
 Code.valueEditor.createDom = function(container) {
   container.id = 'valueEditor';
+  // Use different theme in value editor to distinguish it from other editors.
   var options = {
-    tabSize: 2,
-    undoDepth: 1024,
-    lineNumbers: true,
     continueComments: {continueLineComment: false},
     mode: 'text/javascript',
-    matchBrackets: true
+    theme: 'default'
   };
-  this.editor_ = CodeMirror(container, options);
-  this.editor_.setSize('100%', '100%');
-  // Use different theme in value editor to distinguish it from other editors.
-  this.editor_.setOption('theme', 'default');
+  this.editor_ = Code.Editor.newCodeMirror(container, options);
 };
 
 /**
@@ -864,16 +886,11 @@ Code.functionEditor.createDom = function(container) {
   `;
   container.id = 'functionEditor';
   var options = {
-    tabSize: 2,
-    undoDepth: 1024,
-    lineNumbers: true,
     continueComments: {continueLineComment: false},
     mode: 'text/javascript',
-    matchBrackets: true
+    theme: 'eclipse'
   };
-  this.editor_ = CodeMirror(container, options);
-  this.editor_.setSize('100%', '100%');
-  this.editor_.setOption('theme', 'eclipse');
+  this.editor_ = Code.Editor.newCodeMirror(container, options);
 
   this.isVerbElement_ = document.getElementById('isVerb');
   this.verbElement_ = document.getElementById('verb');
@@ -1013,16 +1030,11 @@ Code.jsspEditor.getCodeMirror = function() {
 Code.jsspEditor.createDom = function(container) {
   container.id = 'jsspEditor';
   var options = {
-    tabSize: 2,
-    undoDepth: 1024,
-    lineNumbers: true,
     continueComments: 'Enter',
     mode: 'application/x-ejs',
-    matchBrackets: true
+    theme: 'eclipse'
   };
-  this.editor_ = CodeMirror(container, options);
-  this.editor_.setSize('100%', '100%');
-  this.editor_.setOption('theme', 'eclipse');
+  this.editor_ = Code.Editor.newCodeMirror(container, options);
 };
 
 /**
