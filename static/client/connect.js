@@ -65,14 +65,14 @@ CCC.lastActiveTime = Date.now();
 CCC.unreadLines = 0;
 
 /**
- * The index number of the first command on the commandQueue queue.
+ * The index number of the most recent command added to the command buffer.
  */
 CCC.commandNum = 0;
 
 /**
- * Queue of commands being sent, awaiting acks from server.
+ * Buffer of commands being sent, awaiting acks from server.
  */
-CCC.commandQueue = [];
+CCC.commandBuffer = [];
 
 /**
  * Bit to switch off local echo when typing passwords.
@@ -377,7 +377,7 @@ CCC.sendCommand = function(commands, echo) {
   }
   for (var command of commands) {
     // Add command to list of commands to send to server.
-    CCC.commandQueue.push(command + '\n');
+    CCC.commandBuffer.push(command + '\n');
     CCC.commandNum++;
     // Add command to history.
     if (echo) {
@@ -424,9 +424,9 @@ CCC.doPing = function() {
   if (CCC.ackMemoNextPing) {
     sendingJson['ackMemoNum'] = CCC.memoNum;
   }
-  if (CCC.commandQueue.length) {
+  if (CCC.commandBuffer.length) {
     sendingJson['cmdNum'] = CCC.commandNum;
-    sendingJson['cmds'] = CCC.commandQueue;
+    sendingJson['cmds'] = CCC.commandBuffer;
   }
 
   // XMLHttpRequest with timeout works in IE8 or better.
@@ -514,8 +514,8 @@ CCC.parse = function(receivedJson) {
     }
     // Server acknowledges receipt of commands.
     // Remove them from the output list.
-    CCC.commandQueue.splice(0,
-        CCC.commandQueue.length + ackCmdNum - CCC.commandNum);
+    CCC.commandBuffer.splice(0,
+        CCC.commandBuffer.length + ackCmdNum - CCC.commandNum);
   }
 
   if (typeof memoNum === 'number') {
