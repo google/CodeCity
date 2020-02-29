@@ -129,7 +129,7 @@ function serveFile(response, filename, subs) {
  * @param {!Object} response HTTP server response object.
  */
 function handleRequest(request, response) {
-  if (request.connection.remoteAddress != '127.0.0.1') {
+  if (request.connection.remoteAddress !== '127.0.0.1') {
     // This check is redundant, the server is only accessible to
     // localhost connections.
     console.log('Rejecting connection from ' + request.connection.remoteAddress);
@@ -137,7 +137,7 @@ function handleRequest(request, response) {
     return;
   }
 
-  if (request.method == 'GET' && request.url == CFG.connectPath) {
+  if (request.method === 'GET' && request.url === CFG.connectPath) {
     var cookieList = {};
     var rhc = request.headers.cookie;
     rhc && rhc.split(';').forEach(function(cookie) {
@@ -157,7 +157,7 @@ function handleRequest(request, response) {
     var loginId = m[1];
     var checksum = CFG.password + loginId;
     checksum = crypto.createHash('sha3-224').update(checksum).digest('hex');
-    if (checksum != m[2]) {
+    if (checksum !== m[2]) {
       console.log('Invalid login cookie: ' + cookieList.ID);
       response.writeHead(302, {  // Temporary redirect
          'Location': CFG.loginPath
@@ -187,7 +187,7 @@ function handleRequest(request, response) {
     console.log('Hello xxxx' + loginId.substring(loginId.length - 4) +
                 ', starting session ' + sessionId);
 
-  } else if (request.method == 'POST' &&
+  } else if (request.method === 'POST' &&
              request.url.startsWith(CFG.connectPath + '?ping')) {
     var requestBody = '';
     request.on('data', function(data) {
@@ -233,7 +233,7 @@ function ping(receivedJson, response) {
   }
   queue.lastPingTime = Date.now();
 
-  if (typeof ackMemoNum == 'number') {
+  if (typeof ackMemoNum === 'number') {
     if (ackMemoNum > queue.memoNum) {
       var msg = 'Client ' + q + ' ackMemoNum ' + ackMemoNum +
                 ', but queue.memoNum is only ' + queue.memoNum;
@@ -249,7 +249,7 @@ function ping(receivedJson, response) {
   }
 
   var delay = 0;
-  if (typeof cmdNum == 'number') {
+  if (typeof cmdNum === 'number') {
     // Client sent commands.  Increase server's index for acknowledgment.
     var currentIndex = cmdNum - cmds.length + 1;
     for (var i = 0; i < cmds.length; i++) {
