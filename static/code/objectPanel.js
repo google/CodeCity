@@ -203,9 +203,7 @@ Code.ObjectPanel.highlight = function() {
  * @param {Array<!Array<!Object>>} data Property names from Code City.
  */
 Code.ObjectPanel.filterShadowed = function(data) {
-  if (!data || data.length < 2) {
-    return;
-  }
+  if (!data) return;
   var seen = Object.create(null);
   for (var datum of data) {
     var cursorInsert = 0;
@@ -230,9 +228,7 @@ Code.ObjectPanel.filterShadowed = function(data) {
  * @private
  */
 Code.ObjectPanel.caseInsensitiveComp_ = function(a, b) {
-  a = a.name.toLowerCase();
-  b = b.name.toLowerCase();
-  return (a < b) ? -1 : ((a > b) ? 1 : 0);
+  return Code.Common.caseInsensitiveComp(a.name, b.name);
 };
 
 if (!window.TEST) {
