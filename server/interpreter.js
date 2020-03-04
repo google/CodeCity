@@ -2454,8 +2454,11 @@ Interpreter.prototype.initNetwork_ = function() {
       if (!(obj instanceof intrp.Object) || !obj.socket) {
         throw new intrp.Error(state.scope.perms, intrp.TYPE_ERROR,
             'object is not connected');
+      } else if (typeof data !== 'string') {
+        throw new intrp.Error(state.scope.perms, intrp.TYPE_ERROR,
+            'data is not a string');
       }
-      obj.socket.write(String(data));
+      obj.socket.write(data);
     }
   });
 
