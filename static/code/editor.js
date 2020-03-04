@@ -631,11 +631,11 @@ Code.Editor.hideButter = function() {
 /**
  * Create a CodeMirror editor.
  * @param {!Element} container HTML element to hold the editor.
- * @param {!Object} options Editor configuration.
+ * @param {!Object} extraOptions Editor configuration.
  * @return {!Object} CodeMirron editor.
  */
-Code.Editor.newCodeMirror = function(container, options) {
-  var defaultOptions = {
+Code.Editor.newCodeMirror = function(container, extraOptions) {
+  var options = {
     extraKeys: {
       Tab: function(cm) {
         cm.replaceSelection('  ');
@@ -646,11 +646,9 @@ Code.Editor.newCodeMirror = function(container, options) {
     tabSize: 2,
     undoDepth: 1024
   };
-  // Merge options into default options.
-  for (var name in options) {
-    defaultOptions[name] = options[name];
-  }
-  var editor = CodeMirror(container, defaultOptions);
+  // Merge extraOptions into default options.
+  Object.assign(options, extraOptions);
+  var editor = CodeMirror(container, options);
   editor.setSize('100%', '100%');
   return editor;
 };

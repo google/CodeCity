@@ -734,7 +734,9 @@ Code.Explorer.keyDown = function(e) {
   // The editor frame may have strong opinions about key presses.
   try {
     parent.frames[1].Code.Editor.keyDown(e);
-  } catch (ex) {}
+  } catch (ex) {
+    // Frame might not be loaded yet.
+  }
 };
 
 /**
