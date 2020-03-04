@@ -6019,7 +6019,7 @@ stepFuncs_['BinaryExpression'] = function(thread, stack, state, node) {
     case 'instanceof':
       if (!(rightValue instanceof this.Function)) {
         throw new this.Error(state.scope.perms, this.TYPE_ERROR,
-            'Right-hand side of instanceof is not an object');
+            'Right-hand side of instanceof is not a function');
       }
       value = rightValue.hasInstance(leftValue, state.scope.perms);
       break;
