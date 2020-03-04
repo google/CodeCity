@@ -1482,6 +1482,52 @@ exports.testNetworking = async function(t) {
    `;
   await runAsyncTest(t, name, src, 'OK', {options: {noLog: ['net']}});
 
+  // Check to make sure that connectionWrite() throws if attempting to
+  // write anything not a string or to anything not a connected
+  // object.
+  name = 'testConnectionWriteThrows';
+  src = `
+      var conn = {toString: function() {return 'an open connection';}};
+      conn.onConnect = function() {
+        var cases = [
+          {obj: undefined, data: 'fine'},
+          {obj: null, data: 'fine'},
+          {obj: 42, data: 'fine'},
+          {obj: true, data: 'fine'},
+          {obj: 'a string', data: 'fine'},
+          {obj: {/* not connected */}, data: 'fine'},
+          {obj: this, data: undefined},
+          {obj: this, data: null},
+          {obj: this, data: 42},
+          {obj: this, data: true},
+          {obj: this, data: {}},
+        ];
+        for (var tc, i = 0; (tc = cases[i]); i++) {
+          try {
+            CC.connectionWrite(tc.obj, tc.data);
+            resolve('Unexpected success writing ' + tc.data +
+                    ' to ' + String(tc.obj));
+          } catch (e) {
+            if (!(e instanceof TypeError)) {
+              resolve('threw non-TypeError value ' + String(e));
+            }
+          }
+        }
+        CC.connectionClose(this);
+        resolve('OK');
+      };
+      CC.connectionListen(8888, conn);
+      try {
+        receive();
+      } finally {
+        CC.connectionUnlisten(8888);
+      }
+   `;
+  await runAsyncTest(t, name, src, 'OK', {
+    options: {noLog: ['net']},
+    onCreate: createReceive,
+  });
+
   // Run test of the xhr() function using HTTP.
   name = 'testXhrHttp';
   const httpTestServer = http.createServer(function (req, res) {
