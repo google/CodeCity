@@ -33,7 +33,7 @@ CCC.Common.isConnected = false;
 CCC.Common.MessageTypes = {
   // Messages that may be paused:
   COMMAND: 'command',  // User-generated command echoed.
-  MESSAGE: 'message',  // Block of text from Code City.
+  MEMO: 'memo',  // Block of text from Code City.
   CONNECT_MSG: 'connect msg',  // User-visible connection message.
   DISCONNECT_MSG: 'disconnect msg',  // User-visible disconnection message.
   // Messages that may be sent while paused:
@@ -339,7 +339,7 @@ CCC.Common.autoHyperlink.urlRegex =
     /((?:https?:\/\/|www\.)[-\w.~:\/?#\[\]@!$&'()*+,;=%]+)/i;
 
 // Set background colour to differentiate server vs local copy.
-if (location.hostname == 'localhost') {
+if (location.hostname === 'localhost') {
   window.addEventListener('load', function() {
     document.body.style.backgroundColor = '#ffe';
   });

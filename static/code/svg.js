@@ -85,7 +85,7 @@ svgEditor.resize = function() {
 svgEditor.mousedown = function(e) {
   // Control-clicking on Mac OS X is treated as a right-click.
   // WebKit on Mac OS X fails to change button to 2 (but Gecko does).
-  if (e.ctrlKey || e.button == 2) {
+  if (e.ctrlKey || e.button === 2) {
     svgEditor.openMenu(e);
   } else if (!document.getElementById('menu').contains(e.target)) {
     svgEditor.closeMenu();
@@ -279,7 +279,7 @@ svgEditor.updateToolbox = function(force) {
   if (selected.length === 1) {
     var element = selected[0];
     document.getElementById('convertpath-action').style.display =
-        element.tagName == 'path' ? 'none' : 'block';
+        element.tagName === 'path' ? 'none' : 'block';
 
     var fillStroke = svgEditor.getFillStroke(element);
     var fill = fillStroke[0];

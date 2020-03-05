@@ -93,7 +93,7 @@ CCC.World.init = function() {
   CCC.World.scrollDiv = document.getElementById('scrollDiv');
   CCC.World.panoramaDiv = document.getElementById('panoramaDiv');
   CCC.World.scrollBarWidth = CCC.World.getScrollBarWidth();
-  CCC.World.scene = document.createElement('scene');  // Blank scene.
+  CCC.World.scene = {};  // Blank scene.
   delete CCC.World.getScrollBarWidth;  // Free memory.
 
   window.addEventListener('resize', CCC.World.resizeSoon, false);
@@ -141,7 +141,7 @@ CCC.World.receiveMessage = function(e) {
     CCC.World.renderMessage({type: 'connected',
                              isConnected: false,
                              time: data['text']});
-  } else if (mode === CCC.Common.MessageTypes.MESSAGE) {
+  } else if (mode === CCC.Common.MessageTypes.MEMO) {
     try {
       var msg = JSON.parse(text);
     } catch (e) {
@@ -305,7 +305,7 @@ CCC.World.prerenderHistory = function(msg) {
     var rect = document.createElementNS(CCC.Common.NS, 'rect');
     var text = document.createElementNS(CCC.Common.NS, 'text');
     text.appendChild(document.createTextNode(
-        CCC.World.getMsg('relaunchIframeMsg')));
+        CCC.World.getTemplate('relaunchIframeTemplate')));
     g.appendChild(rect);
     g.appendChild(text);
     // Size the rectangle to match the text size.
@@ -471,7 +471,8 @@ CCC.World.connectPanel = function(msg) {
   var df = document.createDocumentFragment();
   var div = document.createElement('div');
   div.className = isConnected ? 'connectDiv' : 'disconnectDiv';
-  var text = CCC.World.getMsg(isConnected ? 'connectedMsg' : 'disconnectedMsg');
+  var text = CCC.World.getTemplate(
+      isConnected ? 'connectedTemplate' : 'disconnectedTemplate');
   div.appendChild(document.createTextNode(text));
   df.appendChild(div);
 
@@ -564,85 +565,87 @@ CCC.World.drawScene = function(svg) {
   CCC.World.drawSceneBackground(svg);
   // Obtain an ordered list of contents.
   var contentsArray = CCC.World.scene.contents;
-  var userTotal = 0;
-  for (var i = 0; i < contentsArray.length; i++) {
-    userTotal += contentsArray[i].type === 'user';
-  }
-  svg.sceneUserLocations = Object.create(null);
-  svg.sceneObjectLocations = Object.create(null);
-  // Draw each item.
-  var icons = [];
-  var userCount = 0;
-  for (var i = 0, thing; (thing = contentsArray[i]); i++) {
-    var cursorX = (i + 1) / (contentsArray.length + 1) * svg.scaledWidth_ -
-        svg.scaledWidth_ / 2;
-    var bBox = null;
-    var isUser = thing.type === 'user';
-    var svgDom = thing.svgDom;
-    if (svgDom && svgDom.firstChild) {
-      var name = thing.what;
-      var g = CCC.Common.createSvgElement('g', {'class': thing.type}, svg);
-      var title = CCC.Common.createSvgElement('title', {}, g);
-      title.appendChild(document.createTextNode(name));
-      // TODO: Reenable whiteShadow.
-      // whiteShadow disabled due to clipping bugs.
-      //g.setAttribute('filter', 'url(#' + svg.whiteShadowId_ + ')');
-      CCC.World.cloneAndAppend(g, svgDom);
-      // Users should face the majority of other users.
-      // If user is alone, should face majority of objects.
-      if (isUser && (userTotal === 1 ?
-          (i > 0 && i >= Math.floor(contentsArray.length / 2)) :
-          (userCount > 0 && userCount >= Math.floor(userTotal / 2)))) {
-        // Wrap mirrored users in an extra group.
-        var g2 = CCC.Common.createSvgElement('g', {}, svg);
-        g.setAttribute('transform', 'scale(-1,1)');
-        g2.appendChild(g);
-        g = g2;
+  if (contentsArray) {
+    var userTotal = 0;
+      for (var i = 0; i < contentsArray.length; i++) {
+        userTotal += contentsArray[i].type === 'user';
       }
-      // Move the sprite into position.
-      bBox = g.getBBox();
-      var dx = cursorX - bBox.x - (bBox.width / 2);
-      g.setAttribute('transform', 'translate(' + dx + ', 0)');
-      // Record location of each user for positioning of speech bubbles.
-      var radius = Math.min(bBox.height, bBox.width) / 2;
-      var location = {
-        headX: cursorX,
-        headY: bBox.y + radius,
-        headR: radius
-      };
+    svg.sceneUserLocations = Object.create(null);
+    svg.sceneObjectLocations = Object.create(null);
+    // Draw each item.
+    var icons = [];
+    var userCount = 0;
+    for (var i = 0, thing; (thing = contentsArray[i]); i++) {
+      var cursorX = (i + 1) / (contentsArray.length + 1) * svg.scaledWidth_ -
+          svg.scaledWidth_ / 2;
+      var bBox = null;
+      var isUser = thing.type === 'user';
+      var svgDom = thing.svgDom;
+      if (svgDom && svgDom.firstChild) {
+        var name = thing.what;
+        var g = CCC.Common.createSvgElement('g', {'class': thing.type}, svg);
+        var title = CCC.Common.createSvgElement('title', {}, g);
+        title.appendChild(document.createTextNode(name));
+        // TODO: Reenable whiteShadow.
+        // whiteShadow disabled due to clipping bugs.
+        //g.setAttribute('filter', 'url(#' + svg.whiteShadowId_ + ')');
+        CCC.World.cloneAndAppend(g, svgDom);
+        // Users should face the majority of other users.
+        // If user is alone, should face majority of objects.
+        if (isUser && (userTotal === 1 ?
+            (i > 0 && i >= Math.floor(contentsArray.length / 2)) :
+            (userCount > 0 && userCount >= Math.floor(userTotal / 2)))) {
+          // Wrap mirrored users in an extra group.
+          var g2 = CCC.Common.createSvgElement('g', {}, svg);
+          g.setAttribute('transform', 'scale(-1,1)');
+          g2.appendChild(g);
+          g = g2;
+        }
+        // Move the sprite into position.
+        bBox = g.getBBox();
+        var dx = cursorX - bBox.x - (bBox.width / 2);
+        g.setAttribute('transform', 'translate(' + dx + ', 0)');
+        // Record location of each user for positioning of speech bubbles.
+        var radius = Math.min(bBox.height, bBox.width) / 2;
+        var location = {
+          headX: cursorX,
+          headY: bBox.y + radius,
+          headR: radius
+        };
+        if (isUser) {
+          svg.sceneUserLocations[name] = location;
+        } else {
+          svg.sceneObjectLocations[name] = location;
+        }
+      }
+      var cmds = thing.cmds;
+      if (cmds) {
+        var iconSize = 6;
+        var x = cursorX - iconSize / 2;
+        var y = isUser ? 40 : 60;
+        if (bBox) {
+          // Align menu icon with top-right corner of user's sprite.
+          x = Math.min(cursorX + bBox.width / 2,
+                       svg.scaledWidth_ / 2 - iconSize);
+          y = Math.max(0, bBox.y);
+        }
+        var icon = CCC.Common.newMenuIcon(cmds);
+        icon.setAttribute('width', iconSize);
+        icon.setAttribute('height', iconSize);
+        icon.setAttribute('viewBox', '0 0 10 10');
+        icon.setAttribute('x', x);
+        icon.setAttribute('y', y);
+        icons.push(icon);
+      }
       if (isUser) {
-        svg.sceneUserLocations[name] = location;
-      } else {
-        svg.sceneObjectLocations[name] = location;
+        userCount++;
       }
     }
-    var cmds = thing.cmds;
-    if (cmds) {
-      var iconSize = 6;
-      var x = cursorX - iconSize / 2;
-      var y = isUser ? 40 : 60;
-      if (bBox) {
-        // Align menu icon with top-right corner of user's sprite.
-        x = Math.min(cursorX + bBox.width / 2,
-                     svg.scaledWidth_ / 2 - iconSize);
-        y = Math.max(0, bBox.y);
-      }
-      var icon = CCC.Common.newMenuIcon(cmds);
-      icon.setAttribute('width', iconSize);
-      icon.setAttribute('height', iconSize);
-      icon.setAttribute('viewBox', '0 0 10 10');
-      icon.setAttribute('x', x);
-      icon.setAttribute('y', y);
-      icons.push(icon);
+    // Menu icons should be added after all the sprites so that they aren't
+    // occluded by user content.
+    for (var icon of icons) {
+      svg.appendChild(icon);
     }
-    if (isUser) {
-      userCount++;
-    }
-  }
-  // Menu icons should be added after all the sprites so that they aren't
-  // occluded by user content.
-  for (var icon of icons) {
-    svg.appendChild(icon);
   }
 };
 
@@ -1053,7 +1056,7 @@ CCC.World.publishHistory = function(historyElement) {
     var closeImg = new Image(21, 21);
     closeImg.className = 'iframeClose';
     closeImg.src = 'close.png';
-    closeImg.title = CCC.World.getMsg('closeIframeMsg');
+    closeImg.title = CCC.World.getTemplate('closeIframeTemplate');
     closeImg.addEventListener('click', function() {
       closeImg.style.display = 'none';
       panelDiv.firstChild.style.visibility = 'visible';  // SVG.
@@ -1121,7 +1124,7 @@ CCC.World.publishPanorama = function() {
     if (icon) {
       icon.addEventListener('click',
           parent.location.reload.bind(parent.location));
-      icon.title = CCC.World.getMsg('reconnectMsg');
+      icon.title = CCC.World.getTemplate('reconnectTemplate');
     }
   }
 };
@@ -1311,7 +1314,7 @@ CCC.World.renderHistory = function() {
   CCC.World.historyRow = null;
   CCC.World.scratchHistory = null;
   CCC.World.scratchPanorama = null;
-  CCC.World.scene = document.createElement('scene');
+  CCC.World.scene = {};
   // Create new history.
   var msgs = CCC.World.historyMessages.concat(CCC.World.panoramaMessages);
   CCC.World.historyMessages.length = 0;
@@ -1760,14 +1763,14 @@ CCC.World.removeNode = function(node) {
 };
 
 /**
- * Gets the message with the given key from the document.
+ * Gets the template with the given key from the document.
  * @param {string} key The key of the document element.
  * @return {string} The textContent of the specified element.
  */
-CCC.World.getMsg = function(key) {
+CCC.World.getTemplate = function(key) {
   var element = document.getElementById(key);
   if (!element) {
-    throw new Error('Unknown message ' + key);
+    throw new Error('Unknown template ' + key);
   }
   return element.textContent;
 };
@@ -2070,11 +2073,6 @@ CCC.World.measureText = function(svg, text) {
   svg.measureTextCache_[text] = bBox;
   return bBox;
 };
-
-/**
- * Cache of text widths for performance boost.
- */
-CCC.World.measureText.cache_ = Object.create(null);
 
 window.addEventListener('message', CCC.World.receiveMessage, false);
 window.addEventListener('load', CCC.World.init, false);

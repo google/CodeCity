@@ -58,6 +58,7 @@ Code.ObjectPanel.init = function() {
     // Print all properties of this object.
     for (var i = 0; i < data.properties.length; i++) {
       var propList = data.properties[i];
+      propList.sort(Code.ObjectPanel.caseInsensitiveComp_);
       for (var j = 0; j < propList.length; j++) {
         var part = {type: 'id', value: propList[j].name};
         Code.ObjectPanel.addLink(part, propList[j].type, i && !j);
@@ -199,13 +200,11 @@ Code.ObjectPanel.highlight = function() {
 
 /**
  * Remove any properties that are shadowed by objects higher on the inheritance
- * chain.  Also sort the properties alphabetically.
+ * chain.
  * @param {Array<!Array<!Object>>} data Property names from Code City.
  */
 Code.ObjectPanel.filterShadowed = function(data) {
-  if (!data || data.length < 2) {
-    return;
-  }
+  if (!data || data.length < 2) return;
   var seen = Object.create(null);
   for (var datum of data) {
     var cursorInsert = 0;
@@ -218,7 +217,6 @@ Code.ObjectPanel.filterShadowed = function(data) {
       }
     }
     datum.length = cursorInsert;
-    datum.sort(Code.ObjectPanel.caseInsensitiveComp_);
   }
 };
 
@@ -230,9 +228,7 @@ Code.ObjectPanel.filterShadowed = function(data) {
  * @private
  */
 Code.ObjectPanel.caseInsensitiveComp_ = function(a, b) {
-  a = a.name.toLowerCase();
-  b = b.name.toLowerCase();
-  return (a < b) ? -1 : ((a > b) ? 1 : 0);
+  return Code.Common.caseInsensitiveComp(a.name, b.name);
 };
 
 if (!window.TEST) {

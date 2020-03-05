@@ -23,6 +23,8 @@
 // Start with: node codecity.js <DB directory>
 'use strict';
 
+const acorn = require('acorn');
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const Interpreter = require('./interpreter');
@@ -67,6 +69,7 @@ CodeCity.startup = function(configFile) {
     stackLimit: 10000,
   });
   CodeCity.initSystemFunctions();
+  CodeCity.initLibraryFunctions();
   if (checkpoint) {
     var filename = path.join(CodeCity.databaseDirectory, checkpoint);
     contents = CodeCity.parseJson(CodeCity.loadFile(filename));
@@ -327,6 +330,83 @@ CodeCity.initSystemFunctions = function() {
   intrp.createNativeFunction('CC.shutdown', function(code) {
     CodeCity.shutdown(Number(code));
   }, false);
+};
+
+/**
+ * Initialize user-callable library functions.
+ * These are not part of any JavaScript standard.
+ */
+CodeCity.initLibraryFunctions = function() {
+  var intrp = CodeCity.interpreter;
+
+  new intrp.NativeFunction({
+    id: 'CC.acorn.parse', length: 1,
+    /** @type {!Interpreter.NativeCallImpl} */
+    call: function(intrp, thread, state, thisVal, args) {
+      var code = args[0];
+      var perms = state.scope.perms;
+      if (typeof code !== 'string') {
+        throw new intrp.Error(perms, intrp.TYPE_ERROR,
+            'argument to parse must be a string');
+      }
+      try {
+        var ast = acorn.parse(code, Interpreter.PARSE_OPTIONS);
+      } catch (e) {
+        throw intrp.errorNativeToPseudo(e, perms);
+      }
+      return intrp.nativeToPseudo(ast, perms);
+    }
+  });
+
+  new intrp.NativeFunction({
+    id: 'CC.acorn.parseExpressionAt', length: 2,
+    /** @type {!Interpreter.NativeCallImpl} */
+    call: function(intrp, thread, state, thisVal, args) {
+      var code = args[0];
+      var offset = args[1];
+      var perms = state.scope.perms;
+      if (typeof code !== 'string') {
+        throw new intrp.Error(perms, intrp.TYPE_ERROR,
+            'first argument to parseExpressionAt must be a string');
+      }
+      if (typeof offset !== 'number') {
+        throw new intrp.Error(perms, intrp.TYPE_ERROR,
+            'second argument to parseExpressionAt must be a number');
+      }
+      try {
+        var ast =
+            acorn.parseExpressionAt(code, offset, Interpreter.PARSE_OPTIONS);
+      } catch (e) {
+        throw intrp.errorNativeToPseudo(e, perms);
+      }
+      return intrp.nativeToPseudo(ast, perms);
+    }
+  });
+
+  new intrp.NativeFunction({
+    id: 'CC.hash', length: 2,
+    /** @type {!Interpreter.NativeCallImpl} */
+    call: function(intrp, thread, state, thisVal, args) {
+      var hash = args[0];
+      var data = args[1];
+      var perms = state.scope.perms;
+      var hashes = crypto.getHashes();
+      if (!hashes.includes(hash)) {
+        throw new intrp.Error(perms, intrp.RANGE_ERROR,
+            'first argument to hash must be one of:\n' +
+            hashes.map(function(h) {return "    '" + h + "'\n";}).join(''));
+      }
+      if (typeof data !== 'string') {
+        throw new intrp.Error(perms, intrp.TYPE_ERROR,
+            'second argument to hash must be a string');
+      }
+      try {
+        return String(crypto.createHash(hash).update(data).digest('hex'));
+      } catch (e) {
+        throw intrp.errorNativeToPseudo(e, perms);
+      }
+    }
+  });
 };
 
 // If this file is executed form a command line, startup Code City.

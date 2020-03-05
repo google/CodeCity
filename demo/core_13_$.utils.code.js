@@ -22,6 +22,8 @@
 
 $.utils.code = {};
 
+$.utils.code.parse = new 'CC.acorn.parse';
+$.utils.code.parseExpressionAt = new 'CC.acorn.parseExpressionAt';
 
 $.utils.code.toSource = function(value, opt_seen) {
   // Given an arbitrary value, produce a source code representation.
@@ -148,7 +150,7 @@ $.utils.code.rewriteForEval = function(src, forceExpression) {
   if (!forceExpression) {
     // Try to parse src as a program.
     try {
-      ast = $.utils.acorn.parse(src);
+      ast = $.utils.code.parse(src);
     } catch (e) {
       // ast remains null.
     }
@@ -172,14 +174,14 @@ $.utils.code.rewriteForEval = function(src, forceExpression) {
   }
   // Try parsing src as an expression.
   // This may throw.
-  ast = $.utils.acorn.parseExpressionAt(src, 0);
+  ast = $.utils.code.parseExpressionAt(src, 0);
   var remainder = src.substring(ast.end).trim();
   if (remainder !== '') {
     // Remainder might legally include trailing comments or semicolons.
     // Remainder might illegally include more statements.
     var remainderAst = null;
     try {
-      remainderAst = $.utils.acorn.parse(remainder);
+      remainderAst = $.utils.code.parse(remainder);
     } catch (e) {
       // remainderAst remains null.
     }

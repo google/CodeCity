@@ -66,17 +66,17 @@ var Queue = function (id) {
    */
   this.lastPingTime = Date.now();
   /**
-   * The index number of the most recent message added to the messages queue.
+   * The index number of the most recent memo added to the memo buffer.
    */
-  this.messageIndex = 0;
+  this.memoNum = 0;
   /**
-   * Queue of messages from Code City to the user.
+   * Buffer of memos from Code City to the user.
    */
-  this.messageOutput = [];
+  this.memoBuffer = [];
   /**
    * The index number of the most recent command received from the user.
    */
-  this.commandIndex = 0;
+  this.commandNum = 0;
   /**
    * Persistent TCP connection to Code City.
    */
@@ -91,8 +91,8 @@ var Queue = function (id) {
     console.log('TCP error for session ' + id, error);
   });
   this.client.on('data', function(data) {
-    thisQueue.messageOutput.push(data.toString());
-    thisQueue.messageIndex++;
+    thisQueue.memoBuffer.push(data.toString());
+    thisQueue.memoNum++;
   });
   this.client.connect(CFG.remotePort, CFG.remoteHost);
 };
@@ -129,7 +129,7 @@ function serveFile(response, filename, subs) {
  * @param {!Object} response HTTP server response object.
  */
 function handleRequest(request, response) {
-  if (request.connection.remoteAddress != '127.0.0.1') {
+  if (request.connection.remoteAddress !== '127.0.0.1') {
     // This check is redundant, the server is only accessible to
     // localhost connections.
     console.log('Rejecting connection from ' + request.connection.remoteAddress);
@@ -137,7 +137,7 @@ function handleRequest(request, response) {
     return;
   }
 
-  if (request.method == 'GET' && request.url == CFG.connectPath) {
+  if (request.method === 'GET' && request.url === CFG.connectPath) {
     var cookieList = {};
     var rhc = request.headers.cookie;
     rhc && rhc.split(';').forEach(function(cookie) {
@@ -148,7 +148,7 @@ function handleRequest(request, response) {
     var m = cookieList.ID && cookieList.ID.match(/^([0-9a-f]+)_([0-9a-f]+)$/);
     if (!m) {
       console.log('Missing login cookie.  Redirecting.');
-      response.writeHead(302, {  // Temporary redirect
+      response.writeHead(302, {  // Temporary redirect.
          'Location': CFG.loginPath
        });
       response.end('Login required.  Redirecting.');
@@ -157,9 +157,9 @@ function handleRequest(request, response) {
     var loginId = m[1];
     var checksum = CFG.password + loginId;
     checksum = crypto.createHash('sha3-224').update(checksum).digest('hex');
-    if (checksum != m[2]) {
+    if (checksum !== m[2]) {
       console.log('Invalid login cookie: ' + cookieList.ID);
-      response.writeHead(302, {  // Temporary redirect
+      response.writeHead(302, {  // Temporary redirect.
          'Location': CFG.loginPath
        });
       response.end('Login invalid.  Redirecting.');
@@ -187,7 +187,7 @@ function handleRequest(request, response) {
     console.log('Hello xxxx' + loginId.substring(loginId.length - 4) +
                 ', starting session ' + sessionId);
 
-  } else if (request.method == 'POST' &&
+  } else if (request.method === 'POST' &&
              request.url.startsWith(CFG.connectPath + '?ping')) {
     var requestBody = '';
     request.on('data', function(data) {
@@ -220,7 +220,7 @@ function handleRequest(request, response) {
 
 function ping(receivedJson, response) {
   var q = receivedJson['q'];
-  var ackMsg = receivedJson['ackMsg'];
+  var ackMemoNum = receivedJson['ackMemoNum'];
   var cmdNum = receivedJson['cmdNum'];
   var cmds = receivedJson['cmds'];
 
@@ -233,28 +233,28 @@ function ping(receivedJson, response) {
   }
   queue.lastPingTime = Date.now();
 
-  if (typeof ackMsg == 'number') {
-    if (ackMsg > queue.messageIndex) {
-      var msg = 'Client ' + q + ' ackMsg ' + ackMsg +
-                ', but queue.messageIndex is only ' + queue.messageIndex;
+  if (typeof ackMemoNum === 'number') {
+    if (ackMemoNum > queue.memoNum) {
+      var msg = 'Client ' + q + ' ackMemoNum ' + ackMemoNum +
+                ', but queue.memoNum is only ' + queue.memoNum;
       console.error(msg);
       response.statusCode = 412;
       response.end(msg);
       return;
     }
-    // Client acknowledges receipt of messages.
+    // Client acknowledges receipt of memos.
     // Remove them from the output list.
-    queue.messageOutput.splice(0,
-        queue.messageOutput.length + ackMsg - queue.messageIndex);
+    queue.memoBuffer.splice(0,
+        queue.memoBuffer.length + ackMemoNum - queue.memoNum);
   }
 
   var delay = 0;
-  if (typeof cmdNum == 'number') {
+  if (typeof cmdNum === 'number') {
     // Client sent commands.  Increase server's index for acknowledgment.
     var currentIndex = cmdNum - cmds.length + 1;
     for (var i = 0; i < cmds.length; i++) {
-      if (currentIndex > queue.commandIndex) {
-        queue.commandIndex = currentIndex;
+      if (currentIndex > queue.commandNum) {
+        queue.commandNum = currentIndex;
         // Send commands to Code City.
         queue.client.write(cmds[i]);
         delay += 200;
@@ -276,11 +276,11 @@ function ping(receivedJson, response) {
 function pong(queue, response, ackCmdNextPing) {
   var sendingJson = {};
   if (ackCmdNextPing) {
-    sendingJson['ackCmd'] = queue.commandIndex;
+    sendingJson['ackCmdNum'] = queue.commandNum;
   }
-  if (queue.messageOutput.length) {
-    sendingJson['msgNum'] = queue.messageIndex;
-    sendingJson['msgs'] = queue.messageOutput;
+  if (queue.memoBuffer.length) {
+    sendingJson['memoNum'] = queue.memoNum;
+    sendingJson['memos'] = queue.memoBuffer;
   }
   response.statusCode = 200;
   response.setHeader('Content-Type', 'application/json');

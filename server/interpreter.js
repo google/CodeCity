@@ -2454,8 +2454,11 @@ Interpreter.prototype.initNetwork_ = function() {
       if (!(obj instanceof intrp.Object) || !obj.socket) {
         throw new intrp.Error(state.scope.perms, intrp.TYPE_ERROR,
             'object is not connected');
+      } else if (typeof data !== 'string') {
+        throw new intrp.Error(state.scope.perms, intrp.TYPE_ERROR,
+            'data is not a string');
       }
-      obj.socket.write(String(data));
+      obj.socket.write(data);
     }
   });
 
@@ -6019,7 +6022,7 @@ stepFuncs_['BinaryExpression'] = function(thread, stack, state, node) {
     case 'instanceof':
       if (!(rightValue instanceof this.Function)) {
         throw new this.Error(state.scope.perms, this.TYPE_ERROR,
-            'Right-hand side of instanceof is not an object');
+            'Right-hand side of instanceof is not a function');
       }
       value = rightValue.hasInstance(leftValue, state.scope.perms);
       break;
