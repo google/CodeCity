@@ -109,6 +109,9 @@ $.utils.replacePhysicalsWithName = function(value) {
   return value;
 };
 
+$.utils.string = {};
+$.utils.string.hash = new 'CC.hash';
+
 // Physical object prototype: $.physical
 $.physical = {};
 $.physical.name = 'Physical object prototype';

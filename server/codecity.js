@@ -24,6 +24,7 @@
 'use strict';
 
 const acorn = require('acorn');
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const Interpreter = require('./interpreter');
@@ -379,6 +380,31 @@ CodeCity.initLibraryFunctions = function() {
         throw intrp.errorNativeToPseudo(e, perms);
       }
       return intrp.nativeToPseudo(ast, perms);
+    }
+  });
+
+  new intrp.NativeFunction({
+    id: 'CC.hash', length: 2,
+    /** @type {!Interpreter.NativeCallImpl} */
+    call: function(intrp, thread, state, thisVal, args) {
+      var hash = args[0];
+      var data = args[1];
+      var perms = state.scope.perms;
+      var hashes = crypto.getHashes();
+      if (!hashes.includes(hash)) {
+        throw new intrp.Error(perms, intrp.RANGE_ERROR,
+            'first argument to hash must be one of:\n' +
+            hashes.map(function(h) {return "    '" + h + "'\n";}).join(''));
+      }
+      if (typeof data !== 'string') {
+        throw new intrp.Error(perms, intrp.TYPE_ERROR,
+            'second argument to hash must be a string');
+      }
+      try {
+        return String(crypto.createHash(hash).update(data).digest('hex'));
+      } catch (e) {
+        throw intrp.errorNativeToPseudo(e, perms);
+      }
     }
   });
 };
