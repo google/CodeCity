@@ -466,6 +466,9 @@ Code.Editor.mostConfidentEditor = function() {
  * @param {string} src Plain text contents.
  */
 Code.Editor.setSourceToAllEditors = function(src) {
+  if (typeof src !== 'string') {
+    throw TypeError(src);
+  }
   Code.Editor.uncreatedEditorSource = src;
   for (var editor of Code.Editor.editors) {
     editor.setSource(src);
