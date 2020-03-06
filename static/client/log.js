@@ -346,7 +346,7 @@ CCC.Log.renderJson = function(json) {
         var fragment = CCC.Log.getTemplate(type + 'SelfTemplate', text);
       } else {
         var who = json.source || CCC.Log.getTemplate('unknownTemplate');
-        var fragment = CCC.Log.getTemplate(type + 'Msg', who, text);
+        var fragment = CCC.Log.getTemplate(type + 'Template', who, text);
       }
       CCC.Common.autoHyperlink(fragment);
       var div = document.createElement('div');
