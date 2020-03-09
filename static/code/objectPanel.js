@@ -128,7 +128,8 @@ Code.ObjectPanel.TYPES = {
   'number': '#',
   'object': '{}',
   'string': '”',
-  'symbol': '☆'
+  'symbol': '☆',
+  'verb': '𝑣𝑓'
 };
 
 /**
