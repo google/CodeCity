@@ -641,7 +641,9 @@ Code.Editor.newCodeMirror = function(container, extraOptions) {
         cm.replaceSelection('  ');
       }
     },
+    gutters: ['CodeMirror-lint-markers'],
     lineNumbers: true,
+    lint: true,
     matchBrackets: true,
     tabSize: 2,
     undoDepth: 1024
@@ -1038,6 +1040,7 @@ Code.jsspEditor.createDom = function(container) {
   container.id = 'jsspEditor';
   var options = {
     continueComments: 'Enter',
+    lint: false,  // CodeMirror doesn't understand <% %>.
     mode: 'application/x-ejs',
     theme: 'eclipse'
   };
