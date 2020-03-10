@@ -707,16 +707,16 @@ CCC.World.createBubble = function(msg, svg) {
 
 /**
  * Find the location of the actor who is initiating a bubble.
- * @param {!Object} msg JSON structure.
+ * @param {!Object} memo JSON structure.
  * @param {!SVGElement} svg SVG Element to place the text and bubble.
  * @return {Object} Provides headX, headY, and headR properties.
  */
-CCC.World.getAnchor = function(msg, svg) {
+CCC.World.getAnchor = function(memo, svg) {
   var anchor = null;
   try {
-    if ((msg.where && msg.where === CCC.World.scene.where) || msg.source) {
-      anchor = svg.sceneUserLocations[msg.source] ||
-               svg.sceneObjectLocations[msg.source];
+    if ((memo.where && memo.where === CCC.World.scene.where) || memo.source) {
+      anchor = svg.sceneUserLocations[memo.source] ||
+               svg.sceneObjectLocations[memo.source];
     }
   } catch (e) {
     // No anchor.  Simpler to try/catch than to check every step.

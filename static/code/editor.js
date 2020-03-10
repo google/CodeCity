@@ -663,7 +663,7 @@ Code.Editor.newCodeMirror = function(container, extraOptions) {
 Code.Editor.JSHintReady = false;
 
 /**
- * Load the JavaScript interpreter.
+ * Load the JSHint library.
  * Defer loading until page is loaded and responsive.
  */
 Code.Editor.importJSHint = function() {
