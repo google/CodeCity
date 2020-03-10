@@ -673,8 +673,12 @@ Code.Editor.importJSHint = function() {
   script.src = '/static/JSHint/jshint.js';
   script.onload = function() {
     Code.Editor.JSHintReady = true;
+    // Activate linting for any editor that's loaded and waiting.
     for (var i = 0, editor; (editor = Code.Editor.editors[i]); i++) {
-      editor.JSHintLoaded();
+      var cm = editor.getCodeMirror();
+      if (cm && editor.useJSHint) {
+        cm.setOption('lint', true);
+      }
     }
   };
   document.head.appendChild(script);
@@ -784,16 +788,6 @@ Code.GenericEditor.prototype.getCodeMirror = function() {
  * @param {boolean} userAction True if user clicked on a tab.
  */
 Code.GenericEditor.prototype.focus = function(userAction) {
-};
-
-/**
- * Notification that JSHint has loaded.
- */
-Code.GenericEditor.prototype.JSHintLoaded = function() {
-  var editor = this.getCodeMirror();
-  if (editor && this.useJSHint) {
-    editor.setOption('lint', true);
-  }
 };
 
 
