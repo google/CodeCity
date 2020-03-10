@@ -2074,5 +2074,7 @@ CCC.World.measureText = function(svg, text) {
   return bBox;
 };
 
-window.addEventListener('message', CCC.World.receiveMessage, false);
-window.addEventListener('load', CCC.World.init, false);
+if (!window.TEST) {
+  window.addEventListener('message', CCC.World.receiveMessage, false);
+  window.addEventListener('load', CCC.World.init, false);
+}

@@ -5,7 +5,7 @@
  */
 
 /**
- * @fileoverview Functions common across frames of Code City's client.
+ * @fileoverview Functions common across log/world frames of Code City's client.
  * @author fraser@google.com (Neil Fraser)
  */
 'use strict';

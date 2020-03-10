@@ -555,5 +555,7 @@ CCC.Log.scrollToBottom = function() {
   CCC.Log.scrollDiv.scrollLeft = 0;
 };
 
-window.addEventListener('message', CCC.Log.receiveMessage, false);
-window.addEventListener('load', CCC.Log.init, false);
+if (!window.TEST) {
+  window.addEventListener('message', CCC.Log.receiveMessage, false);
+  window.addEventListener('load', CCC.Log.init, false);
+}
