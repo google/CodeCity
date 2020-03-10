@@ -104,6 +104,9 @@ Code.Editor.init = function() {
   document.addEventListener('keydown', Code.Editor.keyDown);
 
   Code.Editor.receiveMessage();
+
+  // Defer loading of JSHint to get editors running faster.
+  setTimeout(Code.Editor.importJSHint, 1);
 };
 
 /**
@@ -643,7 +646,6 @@ Code.Editor.newCodeMirror = function(container, extraOptions) {
     },
     gutters: ['CodeMirror-lint-markers'],
     lineNumbers: true,
-    lint: true,
     matchBrackets: true,
     tabSize: 2,
     undoDepth: 1024
@@ -653,6 +655,29 @@ Code.Editor.newCodeMirror = function(container, extraOptions) {
   var editor = CodeMirror(container, options);
   editor.setSize('100%', '100%');
   return editor;
+};
+
+/**
+ * Has the JSHint library loaded yet?
+ */
+Code.Editor.JSHintReady = false;
+
+/**
+ * Load the JavaScript interpreter.
+ * Defer loading until page is loaded and responsive.
+ */
+Code.Editor.importJSHint = function() {
+  //<script type="text/javascript" src="/static/JSHint/jshint.js"></script>
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src = '/static/JSHint/jshint.js';
+  script.onload = function() {
+    Code.Editor.JSHintReady = true;
+    for (var i = 0, editor; (editor = Code.Editor.editors[i]); i++) {
+      editor.JSHintLoaded();
+    }
+  };
+  document.head.appendChild(script);
 };
 
 if (!window.TEST) {
@@ -703,6 +728,11 @@ Code.GenericEditor = function(name) {
    * @type {?string}
    */
   this.unmodifiedSource = null;
+
+  /**
+   * Should this editor use JSHint for syntax checking?
+   */
+  this.useJSHint = false;
 
   // Register this editor.
   Code.Editor.editors.push(this);
@@ -756,6 +786,16 @@ Code.GenericEditor.prototype.getCodeMirror = function() {
 Code.GenericEditor.prototype.focus = function(userAction) {
 };
 
+/**
+ * Notification that JSHint has loaded.
+ */
+Code.GenericEditor.prototype.JSHintLoaded = function() {
+  var editor = this.getCodeMirror();
+  if (editor && this.useJSHint) {
+    editor.setOption('lint', true);
+  }
+};
+
 
 ////////////////////////////////////////////////////////////////////////////////
 Code.valueEditor = new Code.GenericEditor('Value');
@@ -763,6 +803,8 @@ Code.valueEditor = new Code.GenericEditor('Value');
 // The value editor can handle any content, but express a low confidence in
 // order to defer to more specialized editors.
 Code.valueEditor.confidence = 0.1;
+
+Code.valueEditor.useJSHint = true;
 
 /**
  * CodeMirror editor.  Does not exist until tab is selected.
@@ -788,6 +830,7 @@ Code.valueEditor.createDom = function(container) {
   // Use different theme in value editor to distinguish it from other editors.
   var options = {
     continueComments: {continueLineComment: false},
+    lint: Code.Editor.JSHintReady,
     mode: 'text/javascript',
     theme: 'default'
   };
@@ -824,8 +867,11 @@ Code.valueEditor.focus = function(userAction) {
   }
 };
 
+
 ////////////////////////////////////////////////////////////////////////////////
 Code.functionEditor = new Code.GenericEditor('Function');
+
+Code.functionEditor.useJSHint = true;
 
 /**
  * CodeMirror editor.  Does not exist until tab is selected.
@@ -887,6 +933,7 @@ Code.functionEditor.createDom = function(container) {
   container.id = 'functionEditor';
   var options = {
     continueComments: {continueLineComment: false},
+    lint: Code.Editor.JSHintReady,
     mode: 'text/javascript',
     theme: 'eclipse'
   };
