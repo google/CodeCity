@@ -5,7 +5,7 @@
  */
 
 /**
- * @fileoverview Functions common across frames of Code City's client.
+ * @fileoverview Functions common across log/world frames of Code City's client.
  * @author fraser@google.com (Neil Fraser)
  */
 'use strict';
@@ -260,7 +260,7 @@ CCC.Common.parentFocus = function(e) {
  * Helper method for creating SVG elements.
  * @param {string} name Element's tag name.
  * @param {!Object} attrs Dictionary of attribute names and values.
- * @param {Element} opt_parent Optional parent on which to append the element.
+ * @param {!Element=} opt_parent Optional parent on which to append the element.
  * @return {!SVGElement} Newly created SVG element.
  */
 CCC.Common.createSvgElement = function(name, attrs, opt_parent) {

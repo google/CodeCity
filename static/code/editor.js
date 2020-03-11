@@ -104,6 +104,9 @@ Code.Editor.init = function() {
   document.addEventListener('keydown', Code.Editor.keyDown);
 
   Code.Editor.receiveMessage();
+
+  // Defer loading of JSHint to get editors running faster.
+  setTimeout(Code.Editor.importJSHint, 1);
 };
 
 /**
@@ -466,6 +469,9 @@ Code.Editor.mostConfidentEditor = function() {
  * @param {string} src Plain text contents.
  */
 Code.Editor.setSourceToAllEditors = function(src) {
+  if (typeof src !== 'string') {
+    throw TypeError(src);
+  }
   Code.Editor.uncreatedEditorSource = src;
   for (var editor of Code.Editor.editors) {
     editor.setSource(src);
@@ -641,6 +647,7 @@ Code.Editor.newCodeMirror = function(container, extraOptions) {
         cm.replaceSelection('  ');
       }
     },
+    gutters: ['CodeMirror-lint-markers'],
     lineNumbers: true,
     matchBrackets: true,
     tabSize: 2,
@@ -651,6 +658,33 @@ Code.Editor.newCodeMirror = function(container, extraOptions) {
   var editor = CodeMirror(container, options);
   editor.setSize('100%', '100%');
   return editor;
+};
+
+/**
+ * Has the JSHint library loaded yet?
+ */
+Code.Editor.JSHintReady = false;
+
+/**
+ * Load the JSHint library.
+ * Defer loading until page is loaded and responsive.
+ */
+Code.Editor.importJSHint = function() {
+  //<script type="text/javascript" src="/static/JSHint/jshint.js"></script>
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src = '/static/JSHint/jshint.js';
+  script.onload = function() {
+    Code.Editor.JSHintReady = true;
+    // Activate linting for any editor that's loaded and waiting.
+    for (var i = 0, editor; (editor = Code.Editor.editors[i]); i++) {
+      var cm = editor.getCodeMirror();
+      if (cm && editor.useJSHint) {
+        cm.setOption('lint', true);
+      }
+    }
+  };
+  document.head.appendChild(script);
 };
 
 if (!window.TEST) {
@@ -701,6 +735,11 @@ Code.GenericEditor = function(name) {
    * @type {?string}
    */
   this.unmodifiedSource = null;
+
+  /**
+   * Should this editor use JSHint for syntax checking?
+   */
+  this.useJSHint = false;
 
   // Register this editor.
   Code.Editor.editors.push(this);
@@ -762,6 +801,8 @@ Code.valueEditor = new Code.GenericEditor('Value');
 // order to defer to more specialized editors.
 Code.valueEditor.confidence = 0.1;
 
+Code.valueEditor.useJSHint = true;
+
 /**
  * CodeMirror editor.  Does not exist until tab is selected.
  * @type {Object}
@@ -786,6 +827,7 @@ Code.valueEditor.createDom = function(container) {
   // Use different theme in value editor to distinguish it from other editors.
   var options = {
     continueComments: {continueLineComment: false},
+    lint: Code.Editor.JSHintReady,
     mode: 'text/javascript',
     theme: 'default'
   };
@@ -822,8 +864,11 @@ Code.valueEditor.focus = function(userAction) {
   }
 };
 
+
 ////////////////////////////////////////////////////////////////////////////////
 Code.functionEditor = new Code.GenericEditor('Function');
+
+Code.functionEditor.useJSHint = true;
 
 /**
  * CodeMirror editor.  Does not exist until tab is selected.
@@ -885,6 +930,7 @@ Code.functionEditor.createDom = function(container) {
   container.id = 'functionEditor';
   var options = {
     continueComments: {continueLineComment: false},
+    lint: Code.Editor.JSHintReady,
     mode: 'text/javascript',
     theme: 'eclipse'
   };
@@ -1038,6 +1084,7 @@ Code.jsspEditor.createDom = function(container) {
   container.id = 'jsspEditor';
   var options = {
     continueComments: 'Enter',
+    lint: false,  // CodeMirror doesn't understand <% %>.
     mode: 'application/x-ejs',
     theme: 'eclipse'
   };
