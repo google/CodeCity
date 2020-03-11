@@ -169,6 +169,19 @@ CCC.World.preprocessMessage = function(msg) {
       CCC.World.preprocessMessage(msg[prop]);
     }
 
+    // Text too large for a bubble should be in an HTML frame.
+    if ((msg.type === 'say' || msg.type === 'think' || msg.type === 'narrate') &&
+        msg.text.length > 800) {
+      // TODO: Render say/think text in log form:  Bob says, "Blah blah..."
+      var text = msg.text;
+      // Transform this memo into an HTML frame.
+      for (prop in msg) {
+        delete msg[prop];
+      }
+      msg.type = 'html';
+      msg.htmlText = text;
+    }
+
     // Find all stringified SVG props and replace them with actual SVG props.
     if ('svgText' in msg) {
       var svgDom = CCC.World.stringToSvg(msg.svgText);
