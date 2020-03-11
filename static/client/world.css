@@ -68,6 +68,7 @@ body {
 
 .htmlPanel {
   height: 100%;
+  overflow: auto;
 }
 
 .connectDiv {
