@@ -1852,14 +1852,14 @@ CCC.World.wrap = function(svg, text, width, height) {
   var minWidth = width;
   var maxWidth = svg.scaledWidth_ - 10;
   var measuredWidth, measuredHeight;
+  var dy = CCC.World.measureText(svg, 'Wg').height;
   function wrapForWidth(width) {
     measuredWidth = 0;
     measuredHeight = 0;
     var paragraphs = text.split('\n');
-    var dy = CCC.World.measureText(svg, 'Wg').height;
-    for (var paragraph of paragraphs) {
-      paragraph = CCC.World.wrapLine_(svg, paragraph, width);
-      var lines = paragraph.split('\n');
+    for (var i = 0; i < paragraphs.length; i++) {
+      paragraphs[i] = CCC.World.wrapLine_(svg, paragraphs[i], width);
+      var lines = paragraphs[i].split('\n');
       for (var line of lines) {
         var size = CCC.World.measureText(svg, line);
         measuredWidth = Math.max(measuredWidth, size.width);

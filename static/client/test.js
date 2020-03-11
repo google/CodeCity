@@ -54,3 +54,15 @@ function testWorldGetTemplate() {
   }
   assertEquals('Today is a good day to die.', text);
 }
+
+function testWorldWrap() {
+  var svg = CCC.Common.createSvgElement('svg', {'xmlns:xlink': 'http://www.w3.org/1999/xlink'}, document.body);
+  svg.scaledHeight_ = 100;
+  svg.scaledWidth_ = 200;
+  try {
+    var wrapped = CCC.World.wrap(svg, 'Alpha Bravo Charlie Delta Echo', 10, 100000);
+  } finally {
+    document.body.removeChild(svg);
+  }
+  assertEquals('Alpha \nBravo \nCharlie \nDelta \nEcho', wrapped);
+}
