@@ -1849,6 +1849,11 @@ CCC.World.createTextArea = function(svg, text, width, height) {
  * @return {string} Wrapped text.
  */
 CCC.World.wrap = function(svg, text, width, height) {
+  if (text.length > 1024) {
+    // This algorithm doesn't scale to large texts.
+    // Large texts shouldn't be in speech bubbles anyway.
+    return text;
+  }
   var minWidth = width;
   var maxWidth = svg.scaledWidth_ - 10;
   var measuredWidth, measuredHeight;
