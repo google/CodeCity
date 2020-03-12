@@ -932,6 +932,7 @@ Code.functionEditor.createDom = function(container) {
     continueComments: {continueLineComment: false},
     lint: Code.Editor.JSHintReady,
     mode: 'text/javascript',
+    rulers: [{color: '#ddd', column: 80, lineStyle: 'dashed'}],
     theme: 'eclipse'
   };
   this.editor_ = Code.Editor.newCodeMirror(container, options);
