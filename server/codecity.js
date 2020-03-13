@@ -387,7 +387,7 @@ CodeCity.initLibraryFunctions = function() {
     id: 'CC.hash', length: 2,
     /** @type {!Interpreter.NativeCallImpl} */
     call: function(intrp, thread, state, thisVal, args) {
-      var hash = args[0];
+      var hash = String(args[0]);
       var data = args[1];
       var perms = state.scope.perms;
       var hashes = crypto.getHashes();
