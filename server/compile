@@ -34,11 +34,18 @@ args=(-O=ADVANCED_OPTIMIZATIONS
       --dependency_mode=STRICT
 
       --externs=externs/node.js
-      --externs=externs/WeakRef.js
 
       --hide_warnings_for=node_modules/acorn
       node_modules/acorn/package.json
       node_modules/acorn/**.js
+
+      --hide_warnings_for=node_modules/bindings
+      node_modules/bindings/package.json
+      node_modules/bindings/**.js
+
+      --hide_warnings_for=node_modules/weak
+      node_modules/weak/package.json
+      node_modules/weak/**.js
 
       iterable_weakmap.js
       iterable_weakset.js
