@@ -323,7 +323,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
       bindingTests: [
         ['obj', Do.RECURSE,
          // TODO(cpcallen): really want "var obj = {a: {id: 'a'}, ...".
-         'var obj = {};\n' + 
+         'var obj = {};\n' +
              "obj.a = {};\nobj.a.id = 'a';\nobj.a.self = obj.a;\n" +
              'obj.b = {};\nobj.b.self = obj.b;\n' +
              "obj.c = {};\nobj.c.id = 'c';\nobj.c.parent = obj;\n", Do.DONE],
@@ -368,15 +368,15 @@ exports.testDumperPrototypeDumpBinding = function(t) {
       `,
       set: ['Object', 'obj'],
       bindingTests: [
-        ['obj.w', Do.ATTR, "obj.w = {};\n" + 
+        ['obj.w', Do.ATTR, "obj.w = {};\n" +
             "(new 'Object.defineProperty')(obj, 'w', {writable: false});\n"],
 
         ['Object.defineProperty', Do.SET,
          "Object.defineProperty = new 'Object.defineProperty';\n"],
 
-        ['obj.e', Do.ATTR, "obj.e = {};\n" + 
+        ['obj.e', Do.ATTR, "obj.e = {};\n" +
             "Object.defineProperty(obj, 'e', {enumerable: false});\n"],
-        ['obj.c', Do.ATTR, "obj.c = {};\n" + 
+        ['obj.c', Do.ATTR, "obj.c = {};\n" +
             "Object.defineProperty(obj, 'c', {configurable: false});\n"],
       ],
     },
