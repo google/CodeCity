@@ -160,6 +160,7 @@ Interpreter.prototype.createThread = function(owner, state, runAt, timeLimit) {
  * @return {!Interpreter.prototype.Thread} Userland Thread object.
  */
 Interpreter.prototype.createThreadForSrc = function(src, timeLimit) {
+  if (typeof src !== 'string') throw new TypeError('src must be a string');
   if (this.options.trimProgram) {
     src = src.trim();
   }
