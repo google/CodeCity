@@ -793,9 +793,11 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     const prefix = 'dumpBinding: ' + tc.title + ': ';
 
     // Create Interprerter and objects to dump.
-    const intrp = getInterpreter();
-    intrp.createThreadForSrc(tc.src);
-    intrp.run();
+    const intrp = getInterpreter({trimProgram: true});
+    if (tc.src) {
+      intrp.createThreadForSrc(tc.src);
+      intrp.run();
+    }
 
     // Create Dumper with pristine Interpreter instance to compare to.
     const pristine = new Interpreter();
