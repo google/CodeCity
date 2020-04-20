@@ -257,6 +257,15 @@ exports.testDumperPrototypeExprForSelector = function(t) {
  * @param {!T} t The test runner object.
  */
 exports.testDumperPrototypeDumpBinding = function(t) {
+  /**  @type {string} Common minimal init src for all testcases. */
+  const common = "var Object = new 'Object';\n" +
+      ['defineProperty', 'create', 'preventExtensions',
+       'setPrototypeOf', 'setOwnerOf', 'prototype'].map(
+           (member) => `
+               Object.${member} = new 'Object.${member}';
+               Object.defineProperty(Object, '${member}', {enumerable: false});
+           `).join('');
+
   /**
    * @type {!Array<{src: string,
    *                bindingTests: !Array<(string|number)>,
@@ -457,7 +466,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     { // Test dumping {proto} bindings: null-protoype objects.
       title: 'null {proto}',
       src: `
-        var objs = {obj: new Object(), fun: new Function(), arr: new Array()};
+        var objs = {obj: {}, fun: function() {}, arr: []};
         for (var p in objs) {
           Object.setPrototypeOf(objs[p], null);
         }
@@ -478,6 +487,10 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     { // Test dumping {owner} bindings.
       title: '{owner}',
       src: `
+        var CC = {};
+        CC.root = new 'CC.root';
+        var setPerms = new 'setPerms';
+
         var alice = {};
         alice.thing = (function() {setPerms(alice); return {};})();
         var bob = {};
@@ -523,7 +536,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         ['obj1.id', Do.SET, 'obj1.id = 1;\n', Do.RECURSE],
         ['obj1', Do.RECURSE, "(new 'Object.preventExtensions')(obj1);\n"],
 
-        ['Object.preventExtensions', Do.SET, 
+        ['Object.preventExtensions', Do.SET,
          "Object.preventExtensions = new 'Object.preventExtensions';\n",],
 
         // Verify property set before extensibility prevented.
@@ -544,6 +557,8 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     { // Test dumping Function objects.
       title: 'Function',
       src: `
+        var Function = new 'Function';
+
         function f1(arg) {}
         var f2 = function F2(arg) {};
         var obj = {f3: function() {}};
@@ -653,6 +668,8 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     { // Test dumping Array objects.
       title: 'Array',
       src: `
+        var Array = new 'Array';
+
         var obj = {};
         var arr = [42, 69, 105, obj, {}];
         var sparse = [0, , 2];
@@ -681,6 +698,8 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     { // Test dumping Date objects.
       title: 'Date',
       src: `
+        var Date = new 'Date';
+
         var date1 = new Date('1975-07-27');
         var date2 = new Date('1979-01-04');
       `,
@@ -701,6 +720,8 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     { // Test dumping RegExp objects.
       title: 'RegExp',
       src: `
+        var RegExp = new 'RegExp';
+
         var re0 = new RegExp();
         var re1 = /foo/ig;
         var re2 = /bar/g;
@@ -744,6 +765,10 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     { // Test dumping Error objects.
       title: 'Error',
       src: `
+        var Error = new 'Error';
+        var TypeError = new 'TypeError';
+        var RangeError = new 'RangeError';
+
         var error1 = new Error('message1');
         error1.stack = 'stack1';  // Because it's otherwise kind of random.
         var error2 = new TypeError('message2');
@@ -792,12 +817,12 @@ exports.testDumperPrototypeDumpBinding = function(t) {
   for (const tc of cases) {
     const prefix = 'dumpBinding: ' + tc.title + ': ';
 
-    // Create Interprerter and objects to dump.
-    const intrp = getInterpreter({trimProgram: true});
-    if (tc.src) {
-      intrp.createThreadForSrc(tc.src);
-      intrp.run();
-    }
+    // Create Interprerter and objects to dump.  Run minimal common
+    // init then any testcase-specific init source.
+    const intrp = new Interpreter();
+    intrp.createThreadForSrc(common);
+    if (tc.src) intrp.createThreadForSrc(tc.src);
+    intrp.run();
 
     // Create Dumper with pristine Interpreter instance to compare to.
     const pristine = new Interpreter();
