@@ -2896,6 +2896,30 @@ module.exports = [
     expected: 'TypeError'
   },
 
+  { name: 'ES6 causes syntax errors', src: `
+    var tests = [
+      // Class statement.
+      'false && class Foo{};',
+
+      // Arrow functions.
+      'false && [].map((item) => String(item));',
+    ];
+    var failed = [];
+    for (var i = 0; i < tests.length; i++) {
+      try {
+        eval(tests[i]);
+        failed.push("Didn't throw: " + tests[i]);
+      } catch (e) {
+        if (e.name !== 'SyntaxError') {
+          failed.push('Wrong error: ' + tests[i] + ' threw ' + String(e));
+        }
+      }
+    }
+    failed.length ? failed.join('\\n') : 'OK';
+    `,
+    expected: 'OK'
+  },
+
   { name: 'Strict mode syntax errors', src: `
     var tests = [
       // With statement.
@@ -2915,19 +2939,20 @@ module.exports = [
       'var foo; delete foo;',
       'delete foo;',
     ];
-    var ok = 0;
+    var failed = [];
     for (var i = 0; i < tests.length; i++) {
       try {
         eval(tests[i]);
+        failed.push("Didn't throw: " + tests[i]);
       } catch (e) {
-        if (e.name === 'SyntaxError') {
-          ok++;
+        if (e.name !== 'SyntaxError') {
+          failed.push('Wrong error: ' + tests[i] + ' threw ' + String(e));
         }
       }
     }
-    (ok === tests.length) ? 'pass' : 'fail';
+    failed.length ? failed.join('\\n') : 'OK';
     `,
-    expected: 'pass'
+    expected: 'OK'
   },
 
   { name: 'Stack overflow errors', src: `
