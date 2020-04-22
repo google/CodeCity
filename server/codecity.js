@@ -27,6 +27,7 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const Interpreter = require('./interpreter');
+const Parser = require('./parser').Parser;
 const Serializer = require('./serialize');
 
 var CodeCity = {};
@@ -349,7 +350,7 @@ CodeCity.initLibraryFunctions = function() {
             'argument to parse must be a string');
       }
       try {
-        var ast = Interpreter.Parser.parse(code);
+        var ast = Parser.parse(code);
       } catch (e) {
         throw intrp.errorNativeToPseudo(e, perms);
       }
@@ -373,7 +374,7 @@ CodeCity.initLibraryFunctions = function() {
             'second argument to parseExpressionAt must be a number');
       }
       try {
-        var ast = Interpreter.Parser.parseExpressionAt(code, offset);
+        var ast = Parser.parseExpressionAt(code, offset);
       } catch (e) {
         throw intrp.errorNativeToPseudo(e, perms);
       }
