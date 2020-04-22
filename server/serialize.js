@@ -142,7 +142,8 @@ Serializer.deserialize = function(json, intrp) {
         // TODO(cpcallen): this is just a little performance kludge so
         // that the State constructor doesn't need a conditional in it.
         // Find a more general solution to constructors requiring args.
-        obj = new Interpreter.State({}, /** @type {?} */(undefined));
+        obj = new Interpreter.State(/** @type {?} */({}),
+            /** @type {?} */(undefined));
         break;
       default:
         if (constructors[type]) {

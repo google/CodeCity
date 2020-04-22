@@ -2866,9 +2866,10 @@ Interpreter.prototype.populateScope_ = function(node, scope, source) {
   // node to save time when repeatedly calling the same function.
   var boundNames = getBoundNames(node);
   for (var name in boundNames) {
-    var value = boundNames[name] ?
-        new this.UserFunction(boundNames[name], scope, source, scope.perms) :
-        undefined;
+    var boundValue = boundNames[name];
+    var value = boundValue ?
+        new this.UserFunction(boundValue, scope, source, scope.perms)
+        : undefined;
     if (!scope.hasBinding(name)) scope.createMutableBinding(name, value);
     if (value) this.setValueToScope(scope, name, value);
   }
@@ -6756,7 +6757,7 @@ stepFuncs_['ReturnStatement'] = function(thread, stack, state, node) {
  */
 stepFuncs_['SequenceExpression'] = function(thread, stack, state, node) {
   var n = state.n_;
-  var /** ?Node */ expression = node['expressions'][n++];
+  var /** !Node */ expression = node['expressions'][n++];
   if (n >= node['expressions'].length) {
     stack.pop();
   }
