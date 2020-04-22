@@ -43,6 +43,7 @@ args=(-O=ADVANCED_OPTIMIZATIONS
       iterable_weakmap.js
       iterable_weakset.js
       registry.js
+      parser.js
       interpreter.js
       serialize.js
       code.js
