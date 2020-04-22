@@ -24,8 +24,9 @@
 var Interpreter = require('./interpreter');
 var IterableWeakMap = require('./iterable_weakmap');
 var IterableWeakSet = require('./iterable_weakset');
-var Registry = require('./registry');
 var net = require('net');
+var Node = require('./parser').Node;
+var Registry = require('./registry');
 
 var Serializer = {};
 
@@ -499,7 +500,7 @@ Serializer.getTypesDeserialize_ = function(intrp) {
     'PseudoThread': intrp.Thread,
     'Box': intrp.Box,
     'Server': intrp.Server,
-    'Node': Interpreter.Node
+    'Node': Node,
   };
 };
 
