@@ -38,7 +38,7 @@ args=(-O=ADVANCED_OPTIMIZATIONS
 
       --hide_warnings_for=node_modules/acorn
       node_modules/acorn/package.json
-      node_modules/acorn/**.js
+      node_modules/acorn/**.mjs
 
       iterable_weakmap.js
       iterable_weakset.js

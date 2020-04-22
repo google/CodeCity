@@ -4,7 +4,7 @@
   "description": "Server for the Code City project",
   "main": "codecity.js",
   "dependencies": {
-    "acorn": "^5.7.4"
+    "acorn": "^7.1.1"
   },
   "devDependencies": {
     "google-closure-compiler": "^20191111.0.0"
