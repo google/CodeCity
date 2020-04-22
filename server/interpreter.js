@@ -21,11 +21,11 @@
  */
 'use strict';
 
-var acorn = require('acorn');
 var IterableWeakMap = require('./iterable_weakmap');
 var net = require('net');
 var http = require('http');
 var https = require('https');
+var parser = require('./parser');
 var Registry = require('./registry');
 
 /**
@@ -3233,31 +3233,12 @@ Interpreter.NativeCallImpl;
  */
 Interpreter.NativeConstructImpl;
 
-/** @const {!Object} Default options for Interpreter.Parser. */
-Interpreter.PARSE_OPTIONS = {ecmaVersion: 5, strict: true};
+Interpreter.Node = parser.Node;
 
-/**
- * A subclass of acorn.Parser that supports a strict option which, if
- * true, forces strict mode, and which defaults to using options
- * Interpreter.PARSE_OPTIONS.
- *
- * See https://github.com/acornjs/acorn/tree/master/acorn#interface
- * for details on how to use it, valid option values, etc.
- *
- * @constructor
- * @param {!Object|undefined} options Parse options.  Defaults to
- *     Interpreter.PARSE_OPTIONS
- * @param {string} input The text to be parsed.
- * @param {number=} startPos Character offset to start parsing at.
- */
-Interpreter.Parser = function(options, input, startPos) {
-  if (!options) options = Interpreter.PARSE_OPTIONS;
-  acorn.Parser.call(this, options, input, startPos);
-  if (options.strict) this.strict = true;
-};
-Object.setPrototypeOf(Interpreter.Parser, acorn.Parser);
-Object.setPrototypeOf(Interpreter.Parser.prototype, acorn.Parser.prototype);
-      
+Interpreter.PARSE_OPTIONS = parser.PARSE_OPTIONS;
+
+Interpreter.Parser = parser.Parser;
+
 /**
  * An iterator over the properties of an ObjectLike and its
  * prototypes, following the usual for-in loop rules.
@@ -7075,24 +7056,13 @@ for (var name in stepFuncs_) {
   stepFuncs_[name].id = 'Step Function: ' + name;
 }
 
-module.exports = Interpreter;
+///////////////////////////////////////////////////////////////////////////////
+// Exports
+///////////////////////////////////////////////////////////////////////////////
 
-module.exports.testOnly = {
+exports = module.exports = Interpreter;
+
+exports.testOnly = {
   getBoundNames: getBoundNames,
   hasArgumentsOrEval: hasArgumentsOrEval,
 };
-  
-    
-///////////////////////////////////////////////////////////////////////////////
-// AST Node
-///////////////////////////////////////////////////////////////////////////////
-// This is mainly to assist the serializer getting access to the Acorn
-// AST node constructor, but we also use it to create a fake AST nodes
-// for 'eval', and may in future use it for Closure Compiler type
-// checking.
-
-/** @constructor */ Interpreter.Node =
-    acorn.Node.bind(acorn, {options: Interpreter.PARSE_OPTIONS});
-// Only needed to help serializser; not needed for `new Node` since
-// contructing a bound function uses the target function's .prototype.
-Interpreter.Node.prototype = acorn.Node.prototype;
