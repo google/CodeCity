@@ -22,6 +22,63 @@
 
 var acorn = require('acorn');
 
+///////////////////////////////////////////////////////////////////////////////
+// Externs for Acorn.
+///////////////////////////////////////////////////////////////////////////////
+// These are supplied here because closure-compiler doesn't appear to
+// provide any good way to specify externs for a Node module, and the
+// mechanisms used to provide separate externs for Node's built-in
+// modules don't work with NPMs.
+//
+// Trivial 'initialisers' are provided for acorn.Node and acorn.Parser
+// to satisfy the compiler's requirement that constructors be
+// initialised at declaration.
+
+/**
+ * @constructor
+ * @param {!acorn.Parser} parser
+ * @param {?} pos
+ * @param {?} loc
+ */
+acorn.Node = acorn.Node;
+
+/**
+ * @constructor
+ * @param {!Object} options Parse options.
+ * @param {string} input The text to be parsed.
+ * @param {number=} startPos Character offset to start parsing at.
+ */
+acorn.Parser = acorn.Parser;
+
+/**
+ * @return {!Node}
+ */
+acorn.Parser.prototype.startNode;
+
+/**
+ * @param {?} pos
+ * @param {?} loc
+ * @return {!Node}
+ */
+acorn.Parser.prototype.startNodeAt;
+
+/**
+ * @param {string} input
+ * @param {!Object=} options
+ */
+acorn.Parser.parse;
+
+/**
+ * @param {string} input
+ * @param {number} pos
+ * @param {!Object=} options
+ */
+acorn.Parser.parseExpressionAt;
+
+///////////////////////////////////////////////////////////////////////////////
+// Custom Parser subclass for Code City.
+///////////////////////////////////////////////////////////////////////////////
+
 /** @const {!Object} Default options for Parser. */
 var PARSE_OPTIONS = {ecmaVersion: 5, strict: true};
 
@@ -35,6 +92,10 @@ var PARSE_OPTIONS = {ecmaVersion: 5, strict: true};
  * 'eval'.
  *
  * @constructor
+ * @extends {acorn.Node}
+ * @param {!acorn.Parser=} parser
+ * @param {?=} pos
+ * @param {?=} loc
  */
 var Node = function(parser, pos, loc) {
   acorn.Node.call(this, parser || {options: PARSE_OPTIONS}, pos, loc);
@@ -54,6 +115,7 @@ Object.setPrototypeOf(Node.prototype, acorn.Node.prototype);
  * for details on how to use it, valid option values, etc.
  *
  * @constructor
+ * @extends {acorn.Parser}
  * @param {!Object|undefined} options Parse options.  Defaults to
  *     Interpreter.PARSE_OPTIONS
  * @param {string} input The text to be parsed.
@@ -76,6 +138,16 @@ Parser.prototype.startNode = function() {
 Parser.prototype.startNodeAt = function(pos, loc) {
   return new Node(this, pos, loc);
 };
+
+// Redeclare static methods because closure-compiler isn't too smart
+// about static method inheritance in ES5.
+/** @override */ Parser.parse;
+/** @override */ Parser.parseExpressionAt;
+
+
+///////////////////////////////////////////////////////////////////////////////
+// Exports
+///////////////////////////////////////////////////////////////////////////////
 
 exports.Parser = Parser;
 exports.PARSE_OPTIONS = PARSE_OPTIONS;
