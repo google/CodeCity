@@ -23,7 +23,6 @@
 // Start with: node codecity.js <DB directory>
 'use strict';
 
-const acorn = require('acorn');
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
@@ -350,7 +349,7 @@ CodeCity.initLibraryFunctions = function() {
             'argument to parse must be a string');
       }
       try {
-        var ast = acorn.parse(code, Interpreter.PARSE_OPTIONS);
+        var ast = Interpreter.Parser.parse(code);
       } catch (e) {
         throw intrp.errorNativeToPseudo(e, perms);
       }
@@ -374,8 +373,7 @@ CodeCity.initLibraryFunctions = function() {
             'second argument to parseExpressionAt must be a number');
       }
       try {
-        var ast =
-            acorn.parseExpressionAt(code, offset, Interpreter.PARSE_OPTIONS);
+        var ast = Interpreter.Parser.parseExpressionAt(code, offset);
       } catch (e) {
         throw intrp.errorNativeToPseudo(e, perms);
       }

@@ -28,15 +28,6 @@ var http = require('http');
 var https = require('https');
 var Registry = require('./registry');
 
-// Create an Acorn plugin called 'alwaysStrict'.
-acorn.plugins.alwaysStrict = function(parser, configValue) {
-  parser.extend('strictDirective', function(nextMethod) {
-    return function strictDirective(start) {
-      return configValue;
-    };
-  });
-};
-
 /**
  * Create a new interpreter.
  * @constructor
@@ -98,14 +89,6 @@ var Interpreter = function(options) {
   /** @private @type {number} */
   this.cumulativeTime_ = 0;
   this.pause();
-};
-
-/**
- * @const {!Object} Configuration used for all Acorn parsing.
- */
-Interpreter.PARSE_OPTIONS = {
-  ecmaVersion: 5,
-  plugins: {alwaysStrict: true}
 };
 
 /**
@@ -461,14 +444,14 @@ Interpreter.prototype.stop = function() {
  * Convert source code into a ready-to-execute parse tree.
  * @private
  * @param {string} src The source code to be compiled.
- * @param {!Interpreter.Owner=} perms Re-throw Acorn parse errors as
- *     user errors owned by perms.  (Default: re-throw Acorn parse
+ * @param {!Interpreter.Owner=} perms Re-throw parse errors as
+ *     user errors owned by perms.  (Default: re-throw parse
  *     errors as internal (native) errors.)
  * @return {!Interpreter.Node} node Root AST node.
  */
 Interpreter.prototype.compile_ = function(src, perms) {
   try {
-    var ast = acorn.parse(src, Interpreter.PARSE_OPTIONS);
+    var ast = Interpreter.Parser.parse(src);
   } catch (e) {  // Acorn threw a SyntaxError.  Rethrow as a trappable error?
     throw perms ? this.errorNativeToPseudo(e, perms) : e;
   }
@@ -3251,6 +3234,31 @@ Interpreter.NativeCallImpl;
  */
 Interpreter.NativeConstructImpl;
 
+/** @const {!Object} Default options for Interpreter.Parser. */
+Interpreter.PARSE_OPTIONS = {ecmaVersion: 5, strict: true};
+
+/**
+ * A subclass of acorn.Parser that supports a strict option which, if
+ * true, forces strict mode, and which defaults to using options
+ * Interpreter.PARSE_OPTIONS.
+ *
+ * See https://github.com/acornjs/acorn/tree/master/acorn#interface
+ * for details on how to use it, valid option values, etc.
+ *
+ * @constructor
+ * @param {!Object|undefined} options Parse options.  Defaults to
+ *     Interpreter.PARSE_OPTIONS
+ * @param {string} input The text to be parsed.
+ * @param {number=} startPos Character offset to start parsing at.
+ */
+Interpreter.Parser = function(options, input, startPos) {
+  if (!options) options = Interpreter.PARSE_OPTIONS;
+  acorn.Parser.call(this, options, input, startPos);
+  if (options.strict) this.strict = true;
+};
+Object.setPrototypeOf(Interpreter.Parser, acorn.Parser);
+Object.setPrototypeOf(Interpreter.Parser.prototype, acorn.Parser.prototype);
+      
 /**
  * An iterator over the properties of an ObjectLike and its
  * prototypes, following the usual for-in loop rules.
@@ -7084,9 +7092,8 @@ module.exports.testOnly = {
 // for 'eval', and may in future use it for Closure Compiler type
 // checking.
 
-var acornNode = acorn.parse('', Interpreter.PARSE_OPTIONS).constructor;
 /** @constructor */ Interpreter.Node =
-    acornNode.bind(acorn, {options: Interpreter.PARSE_OPTIONS});
+    acorn.Node.bind(acorn, {options: Interpreter.PARSE_OPTIONS});
 // Only needed to help serializser; not needed for `new Node` since
 // contructing a bound function uses the target function's .prototype.
-Interpreter.Node.prototype = acornNode.prototype;
+Interpreter.Node.prototype = acorn.Node.prototype;
