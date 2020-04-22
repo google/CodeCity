@@ -28,6 +28,9 @@ var https = require('https');
 var parser = require('./parser');
 var Registry = require('./registry');
 
+var Node = parser.Node;
+var Parser = parser.Parser;
+
 /**
  * Create a new interpreter.
  * @constructor
@@ -446,11 +449,11 @@ Interpreter.prototype.stop = function() {
  * @param {!Interpreter.Owner=} perms Re-throw parse errors as
  *     user errors owned by perms.  (Default: re-throw parse
  *     errors as internal (native) errors.)
- * @return {!Interpreter.Node} node Root AST node.
+ * @return {!Node} node Root AST node.
  */
 Interpreter.prototype.compile_ = function(src, perms) {
   try {
-    var ast = Interpreter.Parser.parse(src);
+    var ast = Parser.parse(src);
   } catch (e) {  // Acorn threw a SyntaxError.  Rethrow as a trappable error?
     throw perms ? this.errorNativeToPseudo(e, perms) : e;
   }
@@ -461,12 +464,12 @@ Interpreter.prototype.compile_ = function(src, perms) {
       if (prop && typeof prop !== 'object') continue;
       if (Array.isArray(prop)) {
         for (var i = 0; i < prop.length; i++) {
-          if (prop[i] && prop[i] instanceof Interpreter.Node) {
+          if (prop[i] && prop[i] instanceof Node) {
             analyse(prop[i]);
           }
         }
       } else {
-        if (prop instanceof Interpreter.Node) {
+        if (prop instanceof Node) {
           analyse(prop);
         }
       }
@@ -2848,7 +2851,7 @@ Interpreter.prototype.setValueToScope = function(scope, name, value) {
 
 /**
  * Populate a scope with declarations from given node.
- * @param {!Interpreter.Node} node AST node (program or function).
+ * @param {!Node} node AST node (program or function).
  * @param {!Interpreter.Scope} scope Scope dictionary to populate.
  * @param {!Interpreter.Source=} source Original source code.  If not
  *     supplied, will use node['source'] instead.
@@ -3233,12 +3236,6 @@ Interpreter.NativeCallImpl;
  */
 Interpreter.NativeConstructImpl;
 
-Interpreter.Node = parser.Node;
-
-Interpreter.PARSE_OPTIONS = parser.PARSE_OPTIONS;
-
-Interpreter.Parser = parser.Parser;
-
 /**
  * An iterator over the properties of an ObjectLike and its
  * prototypes, following the usual for-in loop rules.
@@ -3530,14 +3527,14 @@ Interpreter.Source.prototype.lineColForPos = function(pos) {
 
 /**
  * Class for a state.
- * @param {!Interpreter.Node} node AST node for the state.
+ * @param {!Node} node AST node for the state.
  * @param {!Interpreter.Scope} scope Scope dictionary for the state.
  * @param {boolean=} wantRef Does parent state want reference (rather
  *     than evaluated value)?  (Default: false.)
  * @constructor
  */
 Interpreter.State = function(node, scope, wantRef) {
-  /** @const {!Interpreter.Node} */
+  /** @const {!Node} */
   this.node = node;
   /** @const {!Interpreter.Scope} */
   this.scope = scope;
@@ -3580,7 +3577,7 @@ Interpreter.State = function(node, scope, wantRef) {
  */
 Interpreter.State.newForCall = function(func, thisVal, args, perms) {
   // Dummy node (used only for type).
-  var node = new Interpreter.Node;
+  var node = new Node;
   node['type'] = 'Call';
   node['stepFunc'] = stepFuncs_['Call'];
   // Dummy outer scope (used ony for perms, which will be caller perms).
@@ -4008,7 +4005,7 @@ Interpreter.prototype.Function.prototype.construct = function(
 /**
  * @constructor
  * @extends {Interpreter.prototype.Function}
- * @param {!Interpreter.Node} node
+ * @param {!Node} node
  * @param {!Interpreter.Scope} scope Enclosing scope.
  * @param {!Interpreter.Source} source
  * @param {?Interpreter.Owner=} owner
@@ -4016,7 +4013,7 @@ Interpreter.prototype.Function.prototype.construct = function(
  */
 Interpreter.prototype.UserFunction = function(
     node, scope, source, owner, proto) {
-  /** @type {!Interpreter.Node} */
+  /** @type {!Node} */
   this.node;
   /** @type {!Interpreter.Scope} */
   this.scope;
@@ -4669,7 +4666,7 @@ Interpreter.prototype.installTypes = function() {
    * Class for a user-defined function.
    * @constructor
    * @extends {Interpreter.prototype.UserFunction}
-   * @param {!Interpreter.Node} node AST node for function body.
+   * @param {!Node} node AST node for function body.
    * @param {!Interpreter.Scope} scope Enclosing scope.
    * @param {!Interpreter.Source} source Source from which AST was parsed.
    * @param {?Interpreter.Owner=} owner Owner object (default: null).
@@ -5711,8 +5708,8 @@ Descriptor.prototype.withValue = function(value) {
 
 /**
  * Get the list of BoundNames for an AST sub-tree.
- * @param {!Interpreter.Node} node AST node (program or function).
- * @return {!Object<string, (!Interpreter.Node|undefined)>} A map of
+ * @param {!Node} node AST node (program or function).
+ * @return {!Object<string, (!Node|undefined)>} A map of
  *     bound names.  The keys are var and function declarations
  *     appearing in the subtree rooted at node; the values are
  *     undefined for VariableDeclarations or a FunctionDeclaration
@@ -5727,7 +5724,7 @@ var getBoundNames = function(node) {
 
 /**
  * Check if an AST contains Identifiers named "arguments" or "eval".
- * @param {!Interpreter.Node} node AST node (program or function).
+ * @param {!Node} node AST node (program or function).
  * @return boolean True iff tree rooted at node contains an Identifier
  *     named "arguments" or "eval", not including any
  *     FunctionDeclaration or FunctionExpression subtrees.
@@ -5741,7 +5738,7 @@ var hasArgumentsOrEval = function(node) {
 
 /**
  * The IsAnonymousFunctionDefinition specification method from ES6 §14.1.9
- * @param {!Interpreter.Node} node The node to be tested.
+ * @param {!Node} node The node to be tested.
  * @return {boolean} True if node is an anonymous function expression.
  */
 var isAnonymousFunctionDefinition = function(node) {
@@ -5750,7 +5747,7 @@ var isAnonymousFunctionDefinition = function(node) {
 
 /**
  * The IsIdentifierRef specification method from ES6 §12.2.1.4 and §12.3.1.4
- * @param {!Interpreter.Node} node The node to be tested.
+ * @param {!Node} node The node to be tested.
  * @return {boolean} True if node is an identifier.
  */
 var isIdentifierRef = function(node) {
@@ -5759,7 +5756,7 @@ var isIdentifierRef = function(node) {
 
 /**
  * Returns true iff node is a MemberExpression.
- * @param {!Interpreter.Node} node The node to be tested.
+ * @param {!Node} node The node to be tested.
  * @return {boolean} True if node is an identifier.
  */
 var isMemberRef = function(node) {
@@ -5772,7 +5769,7 @@ var isMemberRef = function(node) {
  * Identifiers named "arguments" or "eval".
  *
  * The BoundNames will be stored on node['boundNames'] as an
- * !Object<string, (!Interpreter.Node|undefined)>, where the keys are
+ * !Object<string, (!Node|undefined)>, where the keys are
  * the names of VariableDeclaration and FunctionDeclarations, and the
  * values are undefined for VariableDeclarations or a
  * FunctionDeclaration node for FunctionDeclarations.
@@ -5781,11 +5778,11 @@ var isMemberRef = function(node) {
  * node['hasArgumentsOrEval'] will be set to true; otherwise it will
  * be set to false.
  *
- * @param {!Interpreter.Node} node AST node (program or function).
+ * @param {!Node} node AST node (program or function).
  * @return {void}
  */
 var performStaticAnalysis = function(node) {
-  /** !Object<string, (!Interpreter.Node|undefined)> */
+  /** !Object<string, (!Node|undefined)> */
   var boundNames = node['boundNames'] = Object.create(null);
   var hasArgumentsOrEval = false;
   walk(node);
@@ -5793,7 +5790,7 @@ var performStaticAnalysis = function(node) {
 
   /**
    * Recursively Walk an AST sub-tree, populating boundNames as we go.
-   * @param {!Interpreter.Node} node AST node (program or function).
+   * @param {!Node} node AST node (program or function).
    * Nested function writes to boundNames and hasArgumentsOrEval.
    * @return {void}
    */
@@ -5826,12 +5823,12 @@ var performStaticAnalysis = function(node) {
       if (prop && typeof prop === 'object') {
         if (Array.isArray(prop)) {
           for (var i = 0; i < prop.length; i++) {
-            if (prop[i] && prop[i] instanceof Interpreter.Node) {
+            if (prop[i] && prop[i] instanceof Node) {
               walk(prop[i]);
             }
           }
         } else {
-          if (prop instanceof Interpreter.Node) {
+          if (prop instanceof Node) {
             walk(prop);
           }
         }
@@ -5855,7 +5852,7 @@ var performStaticAnalysis = function(node) {
  *                    !Interpreter.Thread,
  *                    !Array<!Interpreter.State>,
  *                    !Interpreter.State,
- *                    !Interpreter.Node)
+ *                    !Node)
  *               : (!Interpreter.State|undefined)}
  */
 Interpreter.StepFunction;
@@ -5872,7 +5869,7 @@ var stepFuncs_ = Object.create(null);
  * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
- * @param {!Interpreter.Node} node
+ * @param {!Node} node
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['ArrayExpression'] = function(thread, stack, state, node) {
@@ -5883,7 +5880,7 @@ stepFuncs_['ArrayExpression'] = function(thread, stack, state, node) {
     state.tmp_.set(String(n), state.value, state.scope.perms);
     n++;
   }
-  var /** !Array<!Interpreter.Node> */ elements = node['elements'];
+  var /** !Array<!Node> */ elements = node['elements'];
   // Skip any elided elements - they're not defined, not undefined.
   while (n < elements.length && ! elements[n]) {
     n++;
@@ -5903,7 +5900,7 @@ stepFuncs_['ArrayExpression'] = function(thread, stack, state, node) {
  * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
- * @param {!Interpreter.Node} node
+ * @param {!Node} node
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['AssignmentExpression'] = function(thread, stack, state, node) {
@@ -5964,7 +5961,7 @@ stepFuncs_['AssignmentExpression'] = function(thread, stack, state, node) {
  * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
- * @param {!Interpreter.Node} node
+ * @param {!Node} node
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['BinaryExpression'] = function(thread, stack, state, node) {
@@ -6027,12 +6024,12 @@ stepFuncs_['BinaryExpression'] = function(thread, stack, state, node) {
  * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
- * @param {!Interpreter.Node} node
+ * @param {!Node} node
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['BlockStatement'] = function(thread, stack, state, node) {
   var n = state.n_;
-  var /** ?Interpreter.Node */ statement = node['body'][n];
+  var /** ?Node */ statement = node['body'][n];
   if (statement) {
     state.n_ = n + 1;
     return new Interpreter.State(statement, state.scope);
@@ -6045,7 +6042,7 @@ stepFuncs_['BlockStatement'] = function(thread, stack, state, node) {
  * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
- * @param {!Interpreter.Node} node
+ * @param {!Node} node
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['BreakStatement'] = function(thread, stack, state, node) {
@@ -6081,7 +6078,7 @@ Interpreter.CallInfo;
  * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
- * @param {!Interpreter.Node} node
+ * @param {!Node} node
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['CallExpression'] = function(thread, stack, state, node) {
@@ -6145,7 +6142,7 @@ stepFuncs_['CallExpression'] = function(thread, stack, state, node) {
   }
   // state.step_ === 3: Done evaluating arguments; do function call.
   // Dummy Node (used only for type and position).
-  var callNode = new Interpreter.Node;
+  var callNode = new Node;
   callNode['type'] = 'Call';
   callNode['stepFunc'] = stepFuncs_['Call'];
   callNode['start'] = node['start'];
@@ -6166,7 +6163,7 @@ stepFuncs_['CallExpression'] = function(thread, stack, state, node) {
  * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
- * @param {!Interpreter.Node} node
+ * @param {!Node} node
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['Call'] = function(thread, stack, state, node) {
@@ -6241,7 +6238,7 @@ stepFuncs_['Call'] = function(thread, stack, state, node) {
  * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
- * @param {!Interpreter.Node} node
+ * @param {!Node} node
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['ConditionalExpression'] = function(thread, stack, state, node) {
@@ -6269,7 +6266,7 @@ stepFuncs_['ConditionalExpression'] = function(thread, stack, state, node) {
  * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
- * @param {!Interpreter.Node} node
+ * @param {!Node} node
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['ContinueStatement'] = function(thread, stack, state, node) {
@@ -6282,7 +6279,7 @@ stepFuncs_['ContinueStatement'] = function(thread, stack, state, node) {
  * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
- * @param {!Interpreter.Node} node
+ * @param {!Node} node
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['DebuggerStatement'] = function(thread, stack, state, node) {
@@ -6297,7 +6294,7 @@ stepFuncs_['DebuggerStatement'] = function(thread, stack, state, node) {
  * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
- * @param {!Interpreter.Node} node
+ * @param {!Node} node
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['DoWhileStatement'] = function(thread, stack, state, node) {
@@ -6330,7 +6327,7 @@ stepFuncs_['DoWhileStatement'] = function(thread, stack, state, node) {
  * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
- * @param {!Interpreter.Node} node
+ * @param {!Node} node
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['EmptyStatement'] = function(thread, stack, state, node) {
@@ -6342,12 +6339,12 @@ stepFuncs_['EmptyStatement'] = function(thread, stack, state, node) {
  * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
- * @param {!Interpreter.Node} node
+ * @param {!Node} node
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['EvalProgram_'] = function(thread, stack, state, node) {
   var n = state.n_;
-  var /** ?Interpreter.Node */ expression = node['body'][n];
+  var /** ?Node */ expression = node['body'][n];
   if (expression) {
     state.n_ = n + 1;
     return new Interpreter.State(expression, state.scope);
@@ -6361,7 +6358,7 @@ stepFuncs_['EvalProgram_'] = function(thread, stack, state, node) {
  * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
- * @param {!Interpreter.Node} node
+ * @param {!Node} node
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['ExpressionStatement'] = function(thread, stack, state, node) {
@@ -6392,7 +6389,7 @@ Interpreter.ForInInfo;
  * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
- * @param {!Interpreter.Node} node
+ * @param {!Node} node
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['ForInStatement'] = function(thread, stack, state, node) {
@@ -6430,7 +6427,7 @@ stepFuncs_['ForInStatement'] = function(thread, stack, state, node) {
         }
         state.info_.key = key;
         // Get (or create) a Reference to node.left:
-        var /** ?Interpreter.Node */ left = node['left'];
+        var /** ?Node */ left = node['left'];
         if (left['type'] !== 'VariableDeclaration') {
           state.step_ = 3;
           // Arbitrary left side, e.g.: for (foo().bar in y).
@@ -6458,7 +6455,7 @@ stepFuncs_['ForInStatement'] = function(thread, stack, state, node) {
  * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
- * @param {!Interpreter.Node} node
+ * @param {!Node} node
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['ForStatement'] = function(thread, stack, state, node) {
@@ -6501,7 +6498,7 @@ stepFuncs_['ForStatement'] = function(thread, stack, state, node) {
  * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
- * @param {!Interpreter.Node} node
+ * @param {!Node} node
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['FunctionDeclaration'] = function(thread, stack, state, node) {
@@ -6514,7 +6511,7 @@ stepFuncs_['FunctionDeclaration'] = function(thread, stack, state, node) {
  * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
- * @param {!Interpreter.Node} node
+ * @param {!Node} node
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['FunctionExpression'] = function(thread, stack, state, node) {
@@ -6541,7 +6538,7 @@ stepFuncs_['FunctionExpression'] = function(thread, stack, state, node) {
  * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
- * @param {!Interpreter.Node} node
+ * @param {!Node} node
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['Identifier'] = function(thread, stack, state, node) {
@@ -6563,7 +6560,7 @@ stepFuncs_['IfStatement'] = stepFuncs_['ConditionalExpression'];
  * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
- * @param {!Interpreter.Node} node
+ * @param {!Node} node
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['LabeledStatement'] = function(thread, stack, state, node) {
@@ -6582,7 +6579,7 @@ stepFuncs_['LabeledStatement'] = function(thread, stack, state, node) {
  * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
- * @param {!Interpreter.Node} node
+ * @param {!Node} node
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['Literal'] = function(thread, stack, state, node) {
@@ -6602,7 +6599,7 @@ stepFuncs_['Literal'] = function(thread, stack, state, node) {
  * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
- * @param {!Interpreter.Node} node
+ * @param {!Node} node
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['LogicalExpression'] = function(thread, stack, state, node) {
@@ -6629,7 +6626,7 @@ stepFuncs_['LogicalExpression'] = function(thread, stack, state, node) {
  * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
- * @param {!Interpreter.Node} node
+ * @param {!Node} node
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['MemberExpression'] = function(thread, stack, state, node) {
@@ -6671,7 +6668,7 @@ stepFuncs_['NewExpression'] = stepFuncs_['CallExpression'];
  * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
- * @param {!Interpreter.Node} node
+ * @param {!Node} node
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['ObjectExpression'] = function(thread, stack, state, node) {
@@ -6680,7 +6677,7 @@ stepFuncs_['ObjectExpression'] = function(thread, stack, state, node) {
     state.tmp_ = new this.Object(state.scope.perms);
   } else {  // Save just-evaluated property value in object.
     // Determine property name.
-    var /** ?Interpreter.Node */ keyNode = node['properties'][n]['key'];
+    var /** ?Node */ keyNode = node['properties'][n]['key'];
     if (keyNode['type'] === 'Identifier') {
       var /** string */ key = keyNode['name'];
     } else if (keyNode['type'] === 'Literal') {
@@ -6702,7 +6699,7 @@ stepFuncs_['ObjectExpression'] = function(thread, stack, state, node) {
     state.tmp_.defineProperty(key, Descriptor.wec.withValue(value), perms);
     state.n_ = ++n;
   }
-  var /** ?Interpreter.Node */ property = node['properties'][n];
+  var /** ?Node */ property = node['properties'][n];
   if (property) {
     if (property['kind'] !== 'init') {
       throw new this.Error(state.scope.perms, this.SYNTAX_ERROR,
@@ -6719,12 +6716,12 @@ stepFuncs_['ObjectExpression'] = function(thread, stack, state, node) {
  * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
- * @param {!Interpreter.Node} node
+ * @param {!Node} node
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['Program'] = function(thread, stack, state, node) {
   var n = state.n_;
-  var /** ?Interpreter.Node */ expression = node['body'][n];
+  var /** ?Node */ expression = node['body'][n];
   if (expression) {
     state.n_ = n + 1;
     return new Interpreter.State(expression, state.scope);
@@ -6737,7 +6734,7 @@ stepFuncs_['Program'] = function(thread, stack, state, node) {
  * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
- * @param {!Interpreter.Node} node
+ * @param {!Node} node
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['ReturnStatement'] = function(thread, stack, state, node) {
@@ -6754,12 +6751,12 @@ stepFuncs_['ReturnStatement'] = function(thread, stack, state, node) {
  * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
- * @param {!Interpreter.Node} node
+ * @param {!Node} node
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['SequenceExpression'] = function(thread, stack, state, node) {
   var n = state.n_;
-  var /** ?Interpreter.Node */ expression = node['expressions'][n++];
+  var /** ?Node */ expression = node['expressions'][n++];
   if (n >= node['expressions'].length) {
     stack.pop();
   }
@@ -6778,7 +6775,7 @@ Interpreter.SwitchInfo;
  * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
- * @param {!Interpreter.Node} node
+ * @param {!Node} node
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['SwitchStatement'] = function(thread, stack, state, node) {
@@ -6798,7 +6795,7 @@ stepFuncs_['SwitchStatement'] = function(thread, stack, state, node) {
       state.step_ = 2;
       // FALL THROUGH
     case 2:  // Find case with non-empty test and evaluate test expression.
-      var /** Array<!Interpreter.Node> */ cases = node['cases'];
+      var /** Array<!Node> */ cases = node['cases'];
       var /** number */ len = cases.length;
       var n = state.n_ + 1;
       if (n < len && !cases[n]['test']) {  // Found default case. Record & skip.
@@ -6824,7 +6821,7 @@ stepFuncs_['SwitchStatement'] = function(thread, stack, state, node) {
       cases = node['cases'];
       len = cases.length;
       for (n = state.n_; n < len; n++) {
-        var /** ?Interpreter.Node */ conseq = cases[n]['consequent'];
+        var /** ?Node */ conseq = cases[n]['consequent'];
         if (conseq && conseq[state.tmp_]) {
           state.n_ = n;
           return new Interpreter.State(conseq[state.tmp_++], state.scope);
@@ -6840,7 +6837,7 @@ stepFuncs_['SwitchStatement'] = function(thread, stack, state, node) {
  * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
- * @param {!Interpreter.Node} node
+ * @param {!Node} node
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['ThisExpression'] = function(thread, stack, state, node) {
@@ -6853,7 +6850,7 @@ stepFuncs_['ThisExpression'] = function(thread, stack, state, node) {
  * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
- * @param {!Interpreter.Node} node
+ * @param {!Node} node
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['ThrowStatement'] = function(thread, stack, state, node) {
@@ -6869,7 +6866,7 @@ stepFuncs_['ThrowStatement'] = function(thread, stack, state, node) {
  * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
- * @param {!Interpreter.Node} node
+ * @param {!Node} node
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['TryStatement'] = function(thread, stack, state, node) {
@@ -6879,7 +6876,7 @@ stepFuncs_['TryStatement'] = function(thread, stack, state, node) {
       return new Interpreter.State(node['block'], state.scope);
     case 1:  // Back from 'try' block.  Run catch?
       state.step_ = 2;
-      var /** ?Interpreter.Node */ handler = node['handler'];
+      var /** ?Node */ handler = node['handler'];
       var cv = /** ?Interpreter.Completion */ (state.info_);
       if (handler && cv && cv.type === Interpreter.CompletionType.THROW) {
         state.info_ = null;  // This error is being handled, don't rethrow.
@@ -6916,7 +6913,7 @@ stepFuncs_['TryStatement'] = function(thread, stack, state, node) {
  * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
- * @param {!Interpreter.Node} node
+ * @param {!Node} node
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['UnaryExpression'] = function(thread, stack, state, node) {
@@ -6972,7 +6969,7 @@ stepFuncs_['UnaryExpression'] = function(thread, stack, state, node) {
  * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
- * @param {!Interpreter.Node} node
+ * @param {!Node} node
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['UpdateExpression'] = function(thread, stack, state, node) {
@@ -7001,7 +6998,7 @@ stepFuncs_['UpdateExpression'] = function(thread, stack, state, node) {
  * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
- * @param {!Interpreter.Node} node
+ * @param {!Node} node
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['VariableDeclaration'] = function(thread, stack, state, node) {
@@ -7041,7 +7038,7 @@ stepFuncs_['VariableDeclaration'] = function(thread, stack, state, node) {
  * @param {!Interpreter.Thread} thread
  * @param {!Array<!Interpreter.State>} stack
  * @param {!Interpreter.State} state
- * @param {!Interpreter.Node} node
+ * @param {!Node} node
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['WithStatement'] = function(thread, stack, state, node) {
