@@ -600,7 +600,10 @@ exports.testDumperPrototypeDumpBinding = function(t) {
       ],
     },
 
-    { // Test Function objects with usable and unusable .prototype objects.
+    { // Test Function objects with usable and unusable .prototype
+      // objects.  Note that we don't need to worry about the
+      // attributes of the .prototype property, because a function
+      // object's .prototype is always non-configurable.
       title: 'Function .prototype',
       src: `
         var f1 = function() {};
@@ -637,15 +640,25 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     { // Test dumping Function objects' .prototype.constructor property.
       title: 'Function .prototype.constructor',
       src: `
-        var f = function() {};
-        Object.defineProperty(f.prototype, 'constructor',
+        var f1 = function() {};
+        var f2 = function() {};
+        var f3 = function() {};
+        Object.defineProperty(f2.prototype, 'constructor',
+                              {enumerable: true});
+        Object.defineProperty(f3.prototype, 'constructor',
                               {writable: false, value: 42});
       `,
-      set: ['Object', 'Object.defineProperty', 'f'],
+      set: ['Object', 'Object.defineProperty', 'f1', 'f2', 'f3'],
       bindingTests: [
-        ['f', Do.RECURSE, 'f.prototype.constructor = 42;\n' +
-            "Object.defineProperty(f.prototype, 'constructor', " +
-            '{writable: false});\n'],
+        ['f3.prototype', Do.DONE, ''],
+        ['f3.prototype.constructor', Do.SET,
+         'f3.prototype.constructor = 42;\n'],
+        ['f3.prototype', Do.RECURSE, 'Object.defineProperty(f3.prototype, ' +
+            "'constructor', {writable: false});\n"],
+      ],
+      implicitTests: [
+        ['f1.prototype.constructor', Do.DONE],
+        ['f2.prototype.constructor', Do.SET],
       ],
     },
 
