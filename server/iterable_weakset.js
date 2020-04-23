@@ -28,7 +28,7 @@
  * @template VALUE
  */
 // TODO(cpcallen): Make VALUE bounded to {!Object} once
-// closure-compiler supports bounded generic types.
+// Closure Compiler supports bounded generic types.
 class IterableWeakSet {
   /**
    * @param {!Iterable<!Array<VALUE>>|!Array<!Array<VALUE>>=} iterable
