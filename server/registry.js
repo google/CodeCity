@@ -21,6 +21,8 @@
  */
 'use strict';
 
+const util = require('util');
+
 /**
  * Class for a registry providing a bijective[1] mapping between
  * string-valued keys and arbitrary values.
@@ -104,7 +106,7 @@ class Registry {
       throw new Error('Key "' + key + '" already in use');
     }
     if (this.keys_.has(value)) {
-      throw new Error('Value ' + value + ' already registered');
+      throw new Error(util.format('Value %O already registered', value));
     }
     this.values_[key] = value;
     this.keys_.set(value, key);
