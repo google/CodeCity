@@ -38,13 +38,8 @@ const {T} = require('./testing');
 exports.testDump = function(t) {
   const intrp = new Interpreter();
 
-  // Hack to install stubs for builtins found in codecity.js.
-  for (const bi of ['CC.log', 'CC.checkpoint', 'CC.shutdown']) {
-    new intrp.NativeFunction({id: bi, length: 0,});
-  }
-
-  // Load demo core.
-  const coreDir = '../demo';
+  // Load tinycore.
+  const coreDir = 'tests/tinycore';
   for (const file of fs.readdirSync(coreDir) || []) {
     if (file.match(/^(core|test).*\.js$/)) {
       const filename = path.join(coreDir, file);

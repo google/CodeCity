@@ -26,9 +26,6 @@ var $ = function() {
 
 // System object: $.system
 $.system = {};
-$.system.log = new 'CC.log';
-$.system.checkpoint = new 'CC.checkpoint';
-$.system.shutdown = new 'CC.shutdown';
 $.system.connectionListen = new 'CC.connectionListen';
 $.system.connectionUnlisten = new 'CC.connectionUnlisten';
 $.system.connectionWrite = new 'CC.connectionWrite';
