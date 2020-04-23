@@ -25,7 +25,7 @@ var acorn = require('acorn');
 ///////////////////////////////////////////////////////////////////////////////
 // Externs for Acorn.
 ///////////////////////////////////////////////////////////////////////////////
-// These are supplied here because closure-compiler doesn't appear to
+// These are supplied here because Closure Compiler doesn't appear to
 // provide any good way to specify externs for a Node module, and the
 // mechanisms used to provide separate externs for Node's built-in
 // modules don't work with NPMs.
@@ -139,7 +139,7 @@ Parser.prototype.startNodeAt = function(pos, loc) {
   return new Node(this, pos, loc);
 };
 
-// Redeclare static methods because closure-compiler isn't too smart
+// Redeclare static methods because Closure Compiler isn't too smart
 // about static method inheritance in ES5.
 /** @override */ Parser.parse;
 /** @override */ Parser.parseExpressionAt;

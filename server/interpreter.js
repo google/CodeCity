@@ -1778,7 +1778,7 @@ Interpreter.prototype.initNumber_ = function() {
       var radix = args[0];
       try {
         // Throws if radix isn't within 2-36.  Cast requried because
-        // closure-compiler thinks radix should be a number.
+        // Closure Compiler thinks radix should be a number.
         return Number.prototype.toString.call(x, /** @type {?} */(radix));
       } catch (e) {
         throw intrp.errorNativeToPseudo(e, intrp.thread_.perms());
@@ -5670,7 +5670,7 @@ var Descriptor = function(writable, enumerable, configurable) {
 /* Type declaration for the properties that
  * intrp.Object.prototype.defineProperty expects to see on a
  * descriptor.  We use "|undefined)", but what we really mean is "|not
- * defined)" because unfortunately closure-compiler's type system has
+ * defined)" because unfortunately Closure Compiler's type system has
  * no way to represent the latter.
  */
 /** @type {(?Interpreter.Value|undefined)} */

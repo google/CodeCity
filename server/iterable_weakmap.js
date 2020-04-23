@@ -45,7 +45,7 @@ class Cell {
  * @template KEY, VALUE
  */
 // TODO(cpcallen): Make KEY a bounded to {!Object} once
-// closure-compiler supports bounded generic types
+// Closure Compiler supports bounded generic types
 class IterableWeakMap extends WeakMap {
   /**
    * @param {!Iterable<!Array<KEY|VALUE>>|!Array<!Array<KEY|VALUE>>=} iterable
