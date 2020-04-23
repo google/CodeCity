@@ -63,6 +63,16 @@ exports.testRegistry = function(t) {
   t.expect("reg.getKey(obj)  // 2", reg.getKey(obj), 'foo');
   t.expect("reg.getKey({})  // 2", reg.getKey({}), undefined);
 
+  // 3: Attempt to register obj as 'bar'.
+  try {
+    reg.set('bar', obj);
+    t.fail("reg.set('bar', obj)  // 3", "Didn't throw.");
+  } catch(e) {
+    t.pass("reg.set('bar', obj)  // 3");
+  }
+  t.expect("reg.has('bar')  // 3", reg.has('bar'), false);
+  t.expect("reg.getKey(obj)  // 3", reg.getKey(obj), 'foo');
+
   // Test iterators.
   // TODO(cpcallen): test with more than one item to iterate over?
   const keys = reg.keys();
