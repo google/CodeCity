@@ -1006,7 +1006,7 @@ ObjectDumper.prototype.dump = function(dumper, ref) {
     } else if (bindingDone === Do.DONE) {
       done = /** @type {!ObjectDumper.Done} */(
           Math.min(done, ObjectDumper.Done.DONE));
-    } else if (bindingDone < Do.DONE) {
+    } else if (bindingDone < Do.DONE && bindingDone !== Do.PRUNE) {
       done = /** @type {!ObjectDumper.Done} */(
           Math.min(done, ObjectDumper.Done.NO));
     }
