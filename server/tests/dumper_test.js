@@ -950,6 +950,7 @@ exports.testDumperSurvey = function(t) {
         bar = function baz() {return x;};
         function quux() {return -x;};
         return quux;
+        arguments;  // Never reached, but forces Arguments instantiation.
       })();
       var bar;  // N.B.: hoisted.
       var orphanArgs = (function() {return arguments;})();
@@ -964,9 +965,9 @@ exports.testDumperSurvey = function(t) {
 
   // Check relationship of functions and scopes recorded by survey.
   const baz = /** @type {!Interpreter.prototype.UserFunction} */(
-      intrp.global.get('bar'));
+      intrp.global.get('bar'));  // Function baz was stored in var bar.
   const quux = /** @type {!Interpreter.prototype.UserFunction} */(
-      intrp.global.get('foo'));
+      intrp.global.get('foo'));  // IIFE returned quux; was stored in var foo.
   const globalDumper = dumper.getScopeDumper(intrp.global);
   const bazDumper = dumper.getObjectDumper(baz);
   const bazScopeDumper = dumper.getScopeDumper(baz.scope);
