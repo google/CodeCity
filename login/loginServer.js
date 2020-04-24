@@ -40,19 +40,17 @@ var loginUrl;
 const DEFAULT_CFG = {
   // Internal port for this HTTP server.  Nginx hides this from users.
   httpPort: 7781,
-  // Origin for login and connect pages.
+  // Absolute URL of server root.
   origin: 'https://example.codecity.world',
-  // Path to the login page.
+  // Relative path to the login page.
   loginPath: '/login',
-  // Path to the connect page.
+  // Relative path to the connect page.
   connectPath: '/connect',
   // Google's API client ID.
   clientId: '00000000000-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx' +
       '.apps.googleusercontent.com',
   // Google's API client secret.
   clientSecret: 'yyyyyyyyyyyyyyyyyyyyyyyy',
-  // Domain of connect page.
-  cookieDomain: 'example.codecity.world',
   // Random password for cookie encryption and salt for login IDs.
   password: 'zzzzzzzzzzzzzzzz'
 };
@@ -89,7 +87,7 @@ function serveFile(response, filename, subs) {
  * @param {!Object} response HTTP server response object.
  */
 function handleRequest(request, response) {
-  if (request.connection.remoteAddress != '127.0.0.1') {
+  if (request.connection.remoteAddress !== '127.0.0.1') {
     // This check is redundant, the server is only accessible to
     // localhost connections.
     console.log(

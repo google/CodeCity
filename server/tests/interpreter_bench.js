@@ -31,20 +31,23 @@ const testcases = require('./testcases');
  * Run a benchmark of the interpreter.
  * @param {!B} b The benchmark runner object.
  * @param {string} name The name of the test.
- * @param {string} src The code to be evaled.
+ * @param {string} setup Source to be evaled to set up benchmark environment.
+ * @param {string} timed Source to be evaled and timed.
  */
-function runBench(b, name, src) {
+function runBench(b, name, setup, timed) {
   for (var i = 0; i < 4; i++) {
     var interpreter = getInterpreter();
 
     var err = undefined;
     try {
-      interpreter.createThreadForSrc(src);
+      interpreter.createThreadForSrc(setup);
+      interpreter.run();
+      interpreter.createThreadForSrc(timed);
       b.start(name, i);
       interpreter.run();
       b.end(name, i);
     } catch (err) {
-      b.crash(name, util.format('%s\n%s', src, err.stack));
+      b.crash(name, util.format('%s\n%s\n%s', setup, timed, err.stack));
     }
   }
 };
@@ -55,7 +58,7 @@ function runBench(b, name, src) {
  */
 exports.benchFibbonacci10k = function(b) {
   var name = 'fibonacci10k';
-  var src = `
+  var setup = `
     var fibonacci = function(n, output) {
       var a = 1, b = 1, sum;
       for (var i = 0; i < n; i++) {
@@ -64,12 +67,32 @@ exports.benchFibbonacci10k = function(b) {
         a = b;
         b = sum;
       }
-    }
+    }`;
+  var timed = `
     for(var i = 0; i < 10000; i++) {
       var result = [];
       fibonacci(78, result);
     }
     result;
   `;
-  runBench(b, name, src);
+  runBench(b, name, setup, timed);
+};
+
+/**
+ * Run some benchmarks of Array.prototype.sort.
+ * @param {!B} b The test runner object.
+ */
+exports.benchSort = function(b) {
+  for (var len of [10, 100, 1000, 10000]) {
+    var name = 'sort ' + len;
+    var setup = `
+      var arr = [];
+      for (var i = 0; i < ${len}; i++) {
+        arr.push(Math.floor(Math.random() * ${len}));
+      }`;
+    var timed = `
+      arr.sort(function(a, b) {return a - b;});
+    `;
+    runBench(b, name, setup, timed);
+  }
 };

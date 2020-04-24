@@ -24,8 +24,9 @@
 var Interpreter = require('./interpreter');
 var IterableWeakMap = require('./iterable_weakmap');
 var IterableWeakSet = require('./iterable_weakset');
-var Registry = require('./registry');
 var net = require('net');
+var Node = require('./parser').Node;
+var Registry = require('./registry');
 
 var Serializer = {};
 
@@ -141,7 +142,8 @@ Serializer.deserialize = function(json, intrp) {
         // TODO(cpcallen): this is just a little performance kludge so
         // that the State constructor doesn't need a conditional in it.
         // Find a more general solution to constructors requiring args.
-        obj = new Interpreter.State({}, /** @type {?} */(undefined));
+        obj = new Interpreter.State(/** @type {?} */({}),
+            /** @type {?} */(undefined));
         break;
       default:
         if (constructors[type]) {
@@ -250,24 +252,26 @@ Serializer.serialize = function(intrp) {
   }
 
   // Properties on Interpreter instances to ignore.
-  var exclude = ['hrStartTime_',
-                 'previousTime_',
-                 'runner_',
-                 'Object',
-                 'Function',
-                 'UserFunction',
-                 'BoundFunction',
-                 'NativeFunction',
-                 'OldNativeFunction',
-                 'Array',
-                 'Date',
-                 'RegExp',
-                 'Error',
-                 'Arguments',
-                 'WeakMap',
-                 'Thread',
-                 'Box',
-                 'Server'];
+  var exclude = [
+    'hrStartTime_',
+    'previousTime_',
+    'runner_',
+    'Object',
+    'Function',
+    'UserFunction',
+    'BoundFunction',
+    'NativeFunction',
+    'OldNativeFunction',
+    'Array',
+    'Date',
+    'RegExp',
+    'Error',
+    'Arguments',
+    'WeakMap',
+    'Thread',
+    'Box',
+    'Server'
+  ];
   // Find all objects.
   var objectList = Serializer.getObjectList_(
       intrp, Serializer.excludeTypes, exclude);
@@ -497,7 +501,7 @@ Serializer.getTypesDeserialize_ = function(intrp) {
     'PseudoThread': intrp.Thread,
     'Box': intrp.Box,
     'Server': intrp.Server,
-    'Node': Interpreter.Node
+    'Node': Node,
   };
 };
 

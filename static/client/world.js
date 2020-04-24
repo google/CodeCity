@@ -1,18 +1,7 @@
 /**
  * @license
  * Copyright 2017 Google LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /**
@@ -104,7 +93,7 @@ CCC.World.init = function() {
   CCC.World.scrollDiv = document.getElementById('scrollDiv');
   CCC.World.panoramaDiv = document.getElementById('panoramaDiv');
   CCC.World.scrollBarWidth = CCC.World.getScrollBarWidth();
-  CCC.World.scene = document.createElement('scene');  // Blank scene.
+  CCC.World.scene = {};  // Blank scene.
   delete CCC.World.getScrollBarWidth;  // Free memory.
 
   window.addEventListener('resize', CCC.World.resizeSoon, false);
@@ -152,7 +141,7 @@ CCC.World.receiveMessage = function(e) {
     CCC.World.renderMessage({type: 'connected',
                              isConnected: false,
                              time: data['text']});
-  } else if (mode === CCC.Common.MessageTypes.MESSAGE) {
+  } else if (mode === CCC.Common.MessageTypes.MEMO) {
     try {
       var msg = JSON.parse(text);
     } catch (e) {
@@ -178,6 +167,19 @@ CCC.World.preprocessMessage = function(msg) {
   if (typeof msg === 'object' && msg !== null) {
     for (var prop in msg) {
       CCC.World.preprocessMessage(msg[prop]);
+    }
+
+    // Text too large for a bubble should be in an HTML frame.
+    if ((msg.type === 'say' || msg.type === 'think' || msg.type === 'narrate') &&
+        msg.text.length > 800) {
+      // TODO: Render say/think text in log form:  Bob says, "Blah blah..."
+      var text = msg.text;
+      // Transform this memo into an HTML frame.
+      for (prop in msg) {
+        delete msg[prop];
+      }
+      msg.type = 'html';
+      msg.htmlText = text;
     }
 
     // Find all stringified SVG props and replace them with actual SVG props.
@@ -217,10 +219,10 @@ CCC.World.preprocessMessage = function(msg) {
 
 /**
  * Render a message to the panorama panel, optionally triggering a history push.
- * @param {!Object} msg JSON structure.
+ * @param {!Object} memo JSON structure.
  */
-CCC.World.renderMessage = function(msg) {
-  if (msg.type === 'link') {
+CCC.World.renderMessage = function(memo) {
+  if (memo.type === 'link') {
     // {type: "link", href: "https://example.com/"}
     // Link is opened by log.  No visualization in world.
     return;
@@ -228,29 +230,29 @@ CCC.World.renderMessage = function(msg) {
   if (isNaN(CCC.World.lastWidth)) {
     // Race condition, message has arrived before world is ready to render.
     // Just add to the panorama queue, it will be rendered later.
-    CCC.World.panoramaMessages.push(msg);
+    CCC.World.panoramaMessages.push(memo);
     return;
   }
 
-  if (msg.type === 'scene' && msg.user) {
+  if (memo.type === 'scene' && memo.user) {
     // This is the user's current location.  Save this environment data.
-    CCC.World.scene = msg;
+    CCC.World.scene = memo;
   }
   // Unrequested scenes should only show if either there is no immediately
   // following message (within half a second), or the following message is
   // something other than say/think/narrate.
-  if (msg.type === 'scene' && !msg.requested) {
-    msg.requested = true;
-    CCC.World.renderMessage.pendingSceneMsg_ = msg;
+  if (memo.type === 'scene' && !memo.requested) {
+    memo.requested = true;
+    CCC.World.renderMessage.pendingSceneMsg_ = memo;
     clearTimeout(CCC.World.renderMessage.pendingScenePid_);
     CCC.World.renderMessage.pendingScenePid_ = setTimeout(function() {
         // No following message arrived.  Render scene change.
-        CCC.World.renderMessage(msg);
+        CCC.World.renderMessage(memo);
       }, 500);
     return;
   }
-  if (msg.type === 'say' || msg.type === 'think' || msg.type === 'narrate' ||
-      msg.type === 'scene') {
+  if (memo.type === 'say' || memo.type === 'think' || memo.type === 'narrate' ||
+      memo.type === 'scene') {
     // Throw away any pending scene change since say/think/narrate will show
     // the updated scene.
     CCC.World.renderMessage.pendingSceneMsg_ = null;
@@ -269,9 +271,9 @@ CCC.World.renderMessage = function(msg) {
 
   var backupScratchHistory =
       CCC.World.scratchHistory && CCC.World.scratchHistory.cloneNode(true);
-  if (CCC.World.prerenderHistory(msg) && CCC.World.prerenderPanorama(msg)) {
+  if (CCC.World.prerenderHistory(memo) && CCC.World.prerenderPanorama(memo)) {
     // Rendering successful in both panorama and pending history panel.
-    CCC.World.panoramaMessages.push(msg);
+    CCC.World.panoramaMessages.push(memo);
     CCC.World.publishPanorama();
   } else {
     // Failure to render.  Publish the previous history, and start fresh.
@@ -286,7 +288,7 @@ CCC.World.renderMessage = function(msg) {
                                CCC.World.panoramaMessages);
     CCC.World.panoramaMessages.length = 0;
     // Try again.
-    CCC.World.renderMessage(msg);
+    CCC.World.renderMessage(memo);
   }
 };
 
@@ -295,11 +297,11 @@ CCC.World.renderMessage.pendingScenePid_ = 0;
 
 /**
  * Experimentally render a new message onto the most recent history frame.
- * @param {!Object} msg JSON structure.
+ * @param {!Object} memo JSON structure.
  * @return {boolean} True if the message fit.  False if overflow.
  */
-CCC.World.prerenderHistory = function(msg) {
-  if (msg.type === 'iframe') {
+CCC.World.prerenderHistory = function(memo) {
+  if (memo.type === 'iframe') {
     if (CCC.World.scratchHistory) {
       return false;  // Every iframe needs to be in its own panel.
     }
@@ -307,16 +309,16 @@ CCC.World.prerenderHistory = function(msg) {
     var svg = CCC.World.createHiddenSvg(CCC.World.panelWidths[0],
                                         CCC.World.panelHeight);
     svg.style.backgroundColor = '#696969';
-    svg.setAttribute('data-iframe-id', msg.iframeId);
+    svg.setAttribute('data-iframe-id', memo.iframeId);
     var g = CCC.Common.createSvgElement('g',
         {'class': 'iframeRelaunch',
          'transform': 'translate(0, 50)',
-         'data-iframe-src': msg.url}, svg);
+         'data-iframe-src': memo.url}, svg);
     // Add relaunch button.
     var rect = document.createElementNS(CCC.Common.NS, 'rect');
     var text = document.createElementNS(CCC.Common.NS, 'text');
     text.appendChild(document.createTextNode(
-        CCC.World.getMsg('relaunchIframeMsg')));
+        CCC.World.getTemplate('relaunchIframeTemplate')));
     g.appendChild(rect);
     g.appendChild(text);
     // Size the rectangle to match the text size.
@@ -332,27 +334,27 @@ CCC.World.prerenderHistory = function(msg) {
     return true;
   }
 
-  if (msg.type === 'html') {
+  if (memo.type === 'html') {
     if (CCC.World.scratchHistory) {
       return false;  // Every htmlframe needs to be in its own panel.
     }
     var div = CCC.World.createHiddenDiv();
-    CCC.World.cloneAndAppend(div, msg.htmlDom);
+    CCC.World.cloneAndAppend(div, memo.htmlDom);
     CCC.World.scratchHistory = div;
     return true;
   }
 
-  if (msg.type === 'connected') {
+  if (memo.type === 'connected') {
     if (CCC.World.scratchHistory) {
       return false;  // Every connect/disconnect needs to be in its own panel.
     }
     var div = CCC.World.createHiddenDiv();
-    div.appendChild(CCC.World.connectPanel(msg));
+    div.appendChild(CCC.World.connectPanel(memo));
     CCC.World.scratchHistory = div;
     return true;
   }
 
-  if (msg.type === 'scene') {
+  if (memo.type === 'scene') {
     //{
     //  type: "scene",
     //  requested: true,
@@ -379,11 +381,11 @@ CCC.World.prerenderHistory = function(msg) {
     if (CCC.World.scratchHistory) {
       return false;
     }
-    msg = CCC.World.sceneDescription(msg);
+    memo = CCC.World.sceneDescription(memo);
   }
 
   // If bubbles can be merged, attempt to do so.
-  var merge = CCC.World.mergeBubbles(CCC.World.scratchHistory, msg);
+  var merge = CCC.World.mergeBubbles(CCC.World.scratchHistory, memo);
   if (merge !== undefined) {
     return merge;
   }
@@ -398,8 +400,8 @@ CCC.World.prerenderHistory = function(msg) {
                                     CCC.World.panelHeight);
     CCC.World.drawScene(svg);
   }
-  if (msg.type === 'say' || msg.type === 'think' || msg.type === 'narrate') {
-    CCC.World.createBubble(msg, svg);
+  if (memo.type === 'say' || memo.type === 'think' || memo.type === 'narrate') {
+    CCC.World.createBubble(memo, svg);
   }
 
   CCC.World.scratchHistory = svg;
@@ -408,11 +410,11 @@ CCC.World.prerenderHistory = function(msg) {
 
 /**
  * Experimentally render a new message onto the panorama frame.
- * @param {!Object} msg JSON structure.
+ * @param {!Object} memo JSON structure.
  * @return {boolean} True if the message fit.  False if overflow.
  */
-CCC.World.prerenderPanorama = function(msg) {
-  if (msg.type === 'iframe') {
+CCC.World.prerenderPanorama = function(memo) {
+  if (memo.type === 'iframe') {
     if (CCC.World.scratchPanorama) {
       return false;  // Every iframe needs to be in its own panel.
     }
@@ -423,32 +425,32 @@ CCC.World.prerenderPanorama = function(msg) {
     return true;
   }
 
-  if (msg.type === 'html') {
+  if (memo.type === 'html') {
     if (CCC.World.scratchPanorama) {
       return false;  // Every htmlframe needs to be in its own panel.
     }
     var div = CCC.World.createHiddenDiv();
-    CCC.World.cloneAndAppend(div, msg.htmlDom);
+    CCC.World.cloneAndAppend(div, memo.htmlDom);
     CCC.World.scratchPanorama = div;
     return true;
   }
 
-  if (msg.type === 'connected') {
+  if (memo.type === 'connected') {
     if (CCC.World.scratchPanorama) {
       return false;  // Every connect/disconnect needs to be in its own panel.
     }
     var div = CCC.World.createHiddenDiv();
-    div.appendChild(CCC.World.connectPanel(msg));
+    div.appendChild(CCC.World.connectPanel(memo));
     CCC.World.scratchPanorama = div;
     return true;
   }
 
-  if (msg.type === 'scene') {
-    msg = CCC.World.sceneDescription(msg);
+  if (memo.type === 'scene') {
+    memo = CCC.World.sceneDescription(memo);
   }
 
   // If bubbles can be merged, attempt to do so.
-  var merge = CCC.World.mergeBubbles(CCC.World.scratchPanorama, msg);
+  var merge = CCC.World.mergeBubbles(CCC.World.scratchPanorama, memo);
   if (merge !== undefined) {
     return merge;
   }
@@ -463,8 +465,8 @@ CCC.World.prerenderPanorama = function(msg) {
                                         CCC.World.panoramaDiv.offsetHeight);
     CCC.World.drawScene(svg);
   }
-  if (msg.type === 'say' || msg.type === 'think' || msg.type === 'narrate') {
-    CCC.World.createBubble(msg, svg);
+  if (memo.type === 'say' || memo.type === 'think' || memo.type === 'narrate') {
+    CCC.World.createBubble(memo, svg);
   }
 
   CCC.World.scratchPanorama = svg;
@@ -473,16 +475,17 @@ CCC.World.prerenderPanorama = function(msg) {
 
 /**
  * Create a panel for a connection/disconnection event.
- * @param {Object} msg Object containing connection/disconnection mode and
+ * @param {!Object} memo Object containing connection/disconnection mode and
  *   date/time of event.
  * @return {!DocumentFragment} Document fragment containing rendered panel.
  */
-CCC.World.connectPanel = function(msg) {
-  var isConnected = msg.isConnected;
+CCC.World.connectPanel = function(memo) {
+  var isConnected = memo.isConnected;
   var df = document.createDocumentFragment();
   var div = document.createElement('div');
   div.className = isConnected ? 'connectDiv' : 'disconnectDiv';
-  var text = CCC.World.getMsg(isConnected ? 'connectedMsg' : 'disconnectedMsg');
+  var text = CCC.World.getTemplate(
+      isConnected ? 'connectedTemplate' : 'disconnectedTemplate');
   div.appendChild(document.createTextNode(text));
   df.appendChild(div);
 
@@ -493,7 +496,7 @@ CCC.World.connectPanel = function(msg) {
 
   div = document.createElement('div');
   div.className = 'systemTime';
-  div.appendChild(document.createTextNode(msg.time));
+  div.appendChild(document.createTextNode(memo.time));
   df.appendChild(div);
 
   return df;
@@ -502,15 +505,15 @@ CCC.World.connectPanel = function(msg) {
 /**
  *
  * @param {!SVGElement} svg SVG element in which to draw the background.
- * @param {!Object} msg JSON structure.
+ * @param {!Object} memo JSON structure.
  * @return {?boolean} True if merged, false if overflow, undefined if no match.
  */
-CCC.World.mergeBubbles = function(svg, msg) {
+CCC.World.mergeBubbles = function(svg, memo) {
   var previousMessage =
       CCC.World.panoramaMessages[CCC.World.panoramaMessages.length - 1];
-  if (!svg || !previousMessage || previousMessage.type !== msg.type ||
-      previousMessage.source !== msg.source ||
-      previousMessage.where !== msg.where) {
+  if (!svg || !previousMessage || previousMessage.type !== memo.type ||
+      previousMessage.source !== memo.source ||
+      previousMessage.where !== memo.where) {
     return undefined;  // Current message not a match with previous message.
   }
   // Remove previous bubble.
@@ -518,34 +521,34 @@ CCC.World.mergeBubbles = function(svg, msg) {
   svg.removeChild(svg.lastBubbleGroup_);
   // Try to add a merged bubble.
   var mergedNode = {};
-  for (var prop in msg) {
-    mergedNode[prop] = msg[prop];
+  for (var prop in memo) {
+    mergedNode[prop] = memo[prop];
   }
-  mergedNode.text = svg.lastPlainText_ + '\n' + msg.text;
+  mergedNode.text = svg.lastPlainText_ + '\n' + memo.text;
   CCC.World.createBubble(mergedNode, svg);
 
   // If the merged bubble is too big, reject the merge.
   var bBox = CCC.World.getBBoxWithTransform(svg.lastBubbleText_);
   var bottom = bBox.y + bBox.height - 2;  // -2 for the border.
-  var anchor = CCC.World.getAnchor(msg, svg);
+  var anchor = CCC.World.getAnchor(memo, svg);
   var limitY = anchor ? 100 - anchor.headY - anchor.headR : 100;
   return bottom < limitY;
 };
 
 /**
  * Forge a text message with the room name and description.
- * @param {!Object} msg JSON structure.
+ * @param {!Object} memo JSON structure.
  * @return {Object} Text message to render, or empty object if no message.
  */
-CCC.World.sceneDescription = function(msg) {
-  var title = msg.where;
+CCC.World.sceneDescription = function(memo) {
+  var title = memo.where;
   if (typeof title !== 'string') {
     return {};
   }
   // Render title with HTML collapsing space rules.
   title = title.replace(/\s+/g, ' ');
   var text = [title];
-  var description = msg.description;
+  var description = memo.description;
   if (description) {
     text.push(description);
   }
@@ -575,93 +578,96 @@ CCC.World.drawScene = function(svg) {
   CCC.World.drawSceneBackground(svg);
   // Obtain an ordered list of contents.
   var contentsArray = CCC.World.scene.contents;
-  var userTotal = 0;
-  for (var i = 0; i < contentsArray.length; i++) {
-    userTotal += contentsArray[i].type === 'user';
-  }
-  svg.sceneUserLocations = Object.create(null);
-  svg.sceneObjectLocations = Object.create(null);
-  // Draw each item.
-  var icons = [];
-  var userCount = 0;
-  for (var i = 0, thing; (thing = contentsArray[i]); i++) {
-    var cursorX = (i + 1) / (contentsArray.length + 1) * svg.scaledWidth_ -
-        svg.scaledWidth_ / 2;
-    var bBox = null;
-    var isUser = thing.type === 'user';
-    var svgDom = thing.svgDom;
-    if (svgDom && svgDom.firstChild) {
-      var name = thing.what;
-      var g = CCC.Common.createSvgElement('g', {'class': thing.type}, svg);
-      var title = CCC.Common.createSvgElement('title', {}, g);
-      title.appendChild(document.createTextNode(name));
-      g.setAttribute('filter', 'url(#' + svg.whiteShadowId_ + ')');
-      CCC.World.cloneAndAppend(g, svgDom);
-      // Users should face the majority of other users.
-      // If user is alone, should face majority of objects.
-      if (isUser && (userTotal === 1 ?
-          (i > 0 && i >= Math.floor(contentsArray.length / 2)) :
-          (userCount > 0 && userCount >= Math.floor(userTotal / 2)))) {
-        // Wrap mirrored users in an extra group.
-        var g2 = CCC.Common.createSvgElement('g', {}, svg);
-        g.setAttribute('transform', 'scale(-1,1)');
-        g2.appendChild(g);
-        g = g2;
+  if (contentsArray) {
+    var userTotal = 0;
+      for (var i = 0; i < contentsArray.length; i++) {
+        userTotal += contentsArray[i].type === 'user';
       }
-      // Move the sprite into position.
-      bBox = g.getBBox();
-      var dx = cursorX - bBox.x - (bBox.width / 2);
-      g.setAttribute('transform', 'translate(' + dx + ', 0)');
-      g.setAttribute('filter', 'url(#' + svg.whiteShadowId_ + ')');
-      // Record location of each user for positioning of speech bubbles.
-      var radius = Math.min(bBox.height, bBox.width) / 2;
-      var location = {
-        headX: cursorX,
-        headY: bBox.y + radius,
-        headR: radius
-      };
+    svg.sceneUserLocations = Object.create(null);
+    svg.sceneObjectLocations = Object.create(null);
+    // Draw each item.
+    var icons = [];
+    var userCount = 0;
+    for (var i = 0, thing; (thing = contentsArray[i]); i++) {
+      var cursorX = (i + 1) / (contentsArray.length + 1) * svg.scaledWidth_ -
+          svg.scaledWidth_ / 2;
+      var bBox = null;
+      var isUser = thing.type === 'user';
+      var svgDom = thing.svgDom;
+      if (svgDom && svgDom.firstChild) {
+        var name = thing.what;
+        var g = CCC.Common.createSvgElement('g', {'class': thing.type}, svg);
+        var title = CCC.Common.createSvgElement('title', {}, g);
+        title.appendChild(document.createTextNode(name));
+        // TODO: Reenable whiteShadow.
+        // whiteShadow disabled due to clipping bugs.
+        //g.setAttribute('filter', 'url(#' + svg.whiteShadowId_ + ')');
+        CCC.World.cloneAndAppend(g, svgDom);
+        // Users should face the majority of other users.
+        // If user is alone, should face majority of objects.
+        if (isUser && (userTotal === 1 ?
+            (i > 0 && i >= Math.floor(contentsArray.length / 2)) :
+            (userCount > 0 && userCount >= Math.floor(userTotal / 2)))) {
+          // Wrap mirrored users in an extra group.
+          var g2 = CCC.Common.createSvgElement('g', {}, svg);
+          g.setAttribute('transform', 'scale(-1,1)');
+          g2.appendChild(g);
+          g = g2;
+        }
+        // Move the sprite into position.
+        bBox = g.getBBox();
+        var dx = cursorX - bBox.x - (bBox.width / 2);
+        g.setAttribute('transform', 'translate(' + dx + ', 0)');
+        // Record location of each user for positioning of speech bubbles.
+        var radius = Math.min(bBox.height, bBox.width) / 2;
+        var location = {
+          headX: cursorX,
+          headY: bBox.y + radius,
+          headR: radius
+        };
+        if (isUser) {
+          svg.sceneUserLocations[name] = location;
+        } else {
+          svg.sceneObjectLocations[name] = location;
+        }
+      }
+      var cmds = thing.cmds;
+      if (cmds) {
+        var iconSize = 6;
+        var x = cursorX - iconSize / 2;
+        var y = isUser ? 40 : 60;
+        if (bBox) {
+          // Align menu icon with top-right corner of user's sprite.
+          x = Math.min(cursorX + bBox.width / 2,
+                       svg.scaledWidth_ / 2 - iconSize);
+          y = Math.max(0, bBox.y);
+        }
+        var icon = CCC.Common.newMenuIcon(cmds);
+        icon.setAttribute('width', iconSize);
+        icon.setAttribute('height', iconSize);
+        icon.setAttribute('viewBox', '0 0 10 10');
+        icon.setAttribute('x', x);
+        icon.setAttribute('y', y);
+        icons.push(icon);
+      }
       if (isUser) {
-        svg.sceneUserLocations[name] = location;
-      } else {
-        svg.sceneObjectLocations[name] = location;
+        userCount++;
       }
     }
-    var cmds = thing.cmds;
-    if (cmds) {
-      var iconSize = 6;
-      var x = cursorX - iconSize / 2;
-      var y = isUser ? 40 : 60;
-      if (bBox) {
-        // Align menu icon with top-right corner of user's sprite.
-        x = Math.min(cursorX + bBox.width / 2,
-                     svg.scaledWidth_ / 2 - iconSize);
-        y = Math.max(0, bBox.y);
-      }
-      var icon = CCC.Common.newMenuIcon(cmds);
-      icon.setAttribute('width', iconSize);
-      icon.setAttribute('height', iconSize);
-      icon.setAttribute('viewBox', '0 0 10 10');
-      icon.setAttribute('x', x);
-      icon.setAttribute('y', y);
-      icons.push(icon);
+    // Menu icons should be added after all the sprites so that they aren't
+    // occluded by user content.
+    for (var icon of icons) {
+      svg.appendChild(icon);
     }
-    if (isUser) {
-      userCount++;
-    }
-  }
-  // Menu icons should be added after all the sprites so that they aren't
-  // occluded by user content.
-  for (var icon of icons) {
-    svg.appendChild(icon);
   }
 };
 
 /**
  * Write text in a bubble.
- * @param {!Object} msg JSON structure.
+ * @param {!Object} memo JSON structure.
  * @param {!SVGElement} svg SVG Element to place the text and bubble.
  */
-CCC.World.createBubble = function(msg, svg) {
+CCC.World.createBubble = function(memo, svg) {
   // {type: "say", text: "Welcome"}
   // {type: "say", source: "Max", where: "Hangout", text: "Hello world."}
   // {type: "say", source: "Cat", where: "Hangout", text: "Meow."}
@@ -672,13 +678,13 @@ CCC.World.createBubble = function(msg, svg) {
   // {type: "narrate", where: "Hangout", text: "Hangout is dark."}
   // {type: "narrate", source: "Max", where: "Hangout", text: "Max smiles."}
   // {type: "narrate", source: "Cat", where: "Hangout", text: "Cat meows."}
-  var source = msg.source;
-  var where = msg.where;
-  var text = msg.text || '';
-  var width = msg.type === 'narrate' ? 150 : 100;
+  var source = memo.source;
+  var where = memo.where;
+  var text = memo.text || '';
+  var width = memo.type === 'narrate' ? 150 : 100;
   width = Math.min(svg.scaledWidth_, width);
   var textGroup = CCC.World.createTextArea(svg, text, width, 30);
-  textGroup.setAttribute('class', msg.type);
+  textGroup.setAttribute('class', memo.type);
   var bubbleGroup = CCC.Common.createSvgElement('g', {'class': 'bubble'}, svg);
   if (source) {
     var title = CCC.Common.createSvgElement('title', {}, bubbleGroup);
@@ -689,7 +695,7 @@ CCC.World.createBubble = function(msg, svg) {
   svg.appendChild(textGroup);
   var textBBox = textGroup.getBBox();
 
-  var anchor = CCC.World.getAnchor(msg, svg);
+  var anchor = CCC.World.getAnchor(memo, svg);
   if (!anchor && where && where === CCC.World.scene.where) {
     // This text box is coming from the room, not a user or object.
     // A bit of a hack: place anchor under box.
@@ -704,7 +710,7 @@ CCC.World.createBubble = function(msg, svg) {
   cursorX = Math.max(cursorX, textBBox.width / 2 - svg.scaledWidth_ / 2 + 1);
   cursorX -= textBBox.x + textBBox.width / 2;
   textGroup.setAttribute('transform', 'translate(' + cursorX + ', 2)');
-  CCC.World.drawBubble(msg.type, bubbleGroup, textGroup, anchor);
+  CCC.World.drawBubble(memo.type, bubbleGroup, textGroup, anchor);
   // Record the appended DOM elements so that they may be removed if more
   // text needs to be appended.
   svg.lastBubbleGroup_ = bubbleGroup;
@@ -714,16 +720,16 @@ CCC.World.createBubble = function(msg, svg) {
 
 /**
  * Find the location of the actor who is initiating a bubble.
- * @param {!Object} msg JSON structure.
+ * @param {!Object} memo JSON structure.
  * @param {!SVGElement} svg SVG Element to place the text and bubble.
  * @return {Object} Provides headX, headY, and headR properties.
  */
-CCC.World.getAnchor = function(msg, svg) {
+CCC.World.getAnchor = function(memo, svg) {
   var anchor = null;
   try {
-    if ((msg.where && msg.where === CCC.World.scene.where) || msg.source) {
-      anchor = svg.sceneUserLocations[msg.source] ||
-               svg.sceneObjectLocations[msg.source];
+    if ((memo.where && memo.where === CCC.World.scene.where) || memo.source) {
+      anchor = svg.sceneUserLocations[memo.source] ||
+               svg.sceneObjectLocations[memo.source];
     }
   } catch (e) {
     // No anchor.  Simpler to try/catch than to check every step.
@@ -1063,7 +1069,7 @@ CCC.World.publishHistory = function(historyElement) {
     var closeImg = new Image(21, 21);
     closeImg.className = 'iframeClose';
     closeImg.src = 'close.png';
-    closeImg.title = CCC.World.getMsg('closeIframeMsg');
+    closeImg.title = CCC.World.getTemplate('closeIframeTemplate');
     closeImg.addEventListener('click', function() {
       closeImg.style.display = 'none';
       panelDiv.firstChild.style.visibility = 'visible';  // SVG.
@@ -1131,7 +1137,7 @@ CCC.World.publishPanorama = function() {
     if (icon) {
       icon.addEventListener('click',
           parent.location.reload.bind(parent.location));
-      icon.title = CCC.World.getMsg('reconnectMsg');
+      icon.title = CCC.World.getTemplate('reconnectTemplate');
     }
   }
 };
@@ -1321,7 +1327,7 @@ CCC.World.renderHistory = function() {
   CCC.World.historyRow = null;
   CCC.World.scratchHistory = null;
   CCC.World.scratchPanorama = null;
-  CCC.World.scene = document.createElement('scene');
+  CCC.World.scene = {};
   // Create new history.
   var msgs = CCC.World.historyMessages.concat(CCC.World.panoramaMessages);
   CCC.World.historyMessages.length = 0;
@@ -1425,13 +1431,13 @@ CCC.World.xmlToHtml = function(dom) {
         a.appendChild(document.createTextNode(cmdText));
         return a;
       }
-      if (CCC.World.xmlToHtml.ELEMENT_NAMES.indexOf(dom.tagName) === -1) {
+      if (!CCC.World.xmlToHtml.ELEMENT_NAMES.has(dom.tagName)) {
         console.log('HTML element not in whitelist: <' + dom.tagName + '>');
         return null;
       }
       var element = document.createElement(dom.tagName);
       for (var attr of dom.attributes) {
-        if (CCC.World.xmlToHtml.ATTRIBUTE_NAMES.indexOf(attr.name) === -1) {
+        if (!CCC.World.xmlToHtml.ATTRIBUTE_NAMES.has(attr.name)) {
           console.log('HTML attribute not in whitelist: ' +
               '<' + dom.tagName + ' ' + attr.name + '="' + attr.value + '">');
         } else {
@@ -1442,7 +1448,7 @@ CCC.World.xmlToHtml = function(dom) {
               if (element.style.hasOwnProperty(name) &&
                   isNaN(parseFloat(name)) && // Don't delete indexed props.
                   element.style[name] && element.style[name] !== 'initial' &&
-                  CCC.World.xmlToHtml.STYLE_NAMES.indexOf(name) === -1) {
+                  !CCC.World.xmlToHtml.STYLE_NAMES.has(name)) {
                 console.log('Style attribute not in whitelist: ' +
                     name + ': ' + element.style[name]);
                 element.style[name] = '';
@@ -1471,7 +1477,7 @@ CCC.World.xmlToHtml = function(dom) {
  * Whitelist of all allowed HTML element names.
  * 'svg' element is handled separately.
  */
-CCC.World.xmlToHtml.ELEMENT_NAMES = [
+CCC.World.xmlToHtml.ELEMENT_NAMES = new Set([
   'ABBR',
   'ADDRESS',
   'ARTICLE',
@@ -1539,14 +1545,14 @@ CCC.World.xmlToHtml.ELEMENT_NAMES = [
   'UL',
   'VAR',
   'WBR',
-];
+]);
 
 /**
  * Whitelist of all allowed HTML property names.
  * This architecture assumes that there are no banned properties
  * on one element type which are allowed on another.
  */
-CCC.World.xmlToHtml.ATTRIBUTE_NAMES = [
+CCC.World.xmlToHtml.ATTRIBUTE_NAMES = new Set([
   'cite',
   'colspan',
   'datetime',
@@ -1562,12 +1568,12 @@ CCC.World.xmlToHtml.ATTRIBUTE_NAMES = [
   'title',
   'type',
   'value',
-];
+]);
 
 /**
  * Whitelist of all allowed style property names.
  */
-CCC.World.xmlToHtml.STYLE_NAMES = [
+CCC.World.xmlToHtml.STYLE_NAMES = new Set([
   'border',
   'borderBottom',
   'borderBottomColor',
@@ -1610,7 +1616,7 @@ CCC.World.xmlToHtml.STYLE_NAMES = [
   'textAlign',
   'verticalAlign',
   'width',
-];
+]);
 
 /**
  * Unserialize stringified SVG.  Wrap the SVG elements in an SVG.
@@ -1640,13 +1646,13 @@ CCC.World.xmlToSvg = function(dom) {
   }
   switch (dom.nodeType) {
     case Node.ELEMENT_NODE:
-      if (CCC.World.xmlToSvg.ELEMENT_NAMES.indexOf(dom.tagName) === -1) {
+      if (!CCC.World.xmlToSvg.ELEMENT_NAMES.has(dom.tagName)) {
         console.log('SVG element not in whitelist: <' + dom.tagName + '>');
         return null;
       }
       var svg = document.createElementNS(CCC.Common.NS, dom.tagName);
       for (var attr of dom.attributes) {
-        if (CCC.World.xmlToSvg.ATTRIBUTE_NAMES.indexOf(attr.name) === -1) {
+        if (!CCC.World.xmlToSvg.ATTRIBUTE_NAMES.has(attr.name)) {
           console.log('SVG attribute not in whitelist: ' +
               '<' + dom.tagName + ' ' + attr.name + '="' + attr.value + '">');
         } else {
@@ -1654,7 +1660,7 @@ CCC.World.xmlToSvg = function(dom) {
           if (attr.name === 'class') {
             var classes = attr.value.split(/\s+/g);
             for (var i = classes.length - 1; i >= 0; i--) {
-              if (CCC.World.xmlToSvg.CLASS_NAMES.indexOf(classes[i]) === -1) {
+              if (!CCC.World.xmlToSvg.CLASS_NAMES.has(classes[i])) {
                 console.log('Class name not in whitelist: ' + classes[i]);
                 classes.splice(i, 1);
               }
@@ -1684,7 +1690,7 @@ CCC.World.xmlToSvg = function(dom) {
  * Whitelist of all allowed SVG element names.
  * Try to keep this list in sync with Code.svgEditor.ELEMENT_NAMES.
  */
-CCC.World.xmlToSvg.ELEMENT_NAMES = [
+CCC.World.xmlToSvg.ELEMENT_NAMES = new Set([
   'circle',
   'desc',
   'ellipse',
@@ -1698,14 +1704,14 @@ CCC.World.xmlToSvg.ELEMENT_NAMES = [
   'text',
   'title',
   'tspan',
-];
+]);
 
 /**
  * Whitelist of all allowed SVG property names.
  * This architecture assumes that there are no banned properties
  * on one element type which are allowed on another.
  */
-CCC.World.xmlToSvg.ATTRIBUTE_NAMES = [
+CCC.World.xmlToSvg.ATTRIBUTE_NAMES = new Set([
   'class',
   'cx',
   'cy',
@@ -1729,12 +1735,12 @@ CCC.World.xmlToSvg.ATTRIBUTE_NAMES = [
   'y1',
   'y2',
   'width',
-];
+]);
 
 /**
  * Whitelist of all allowed class names.
  */
-CCC.World.xmlToSvg.CLASS_NAMES = [
+CCC.World.xmlToSvg.CLASS_NAMES = new Set([
   'fillNone',
   'fillWhite',
   'fillBlack',
@@ -1743,7 +1749,7 @@ CCC.World.xmlToSvg.CLASS_NAMES = [
   'strokeWhite',
   'strokeBlack',
   'strokeGrey', 'strokeGray',
-];
+]);
 
 /**
  * Clone a tree of elements, and append it as a new child onto a DOM.
@@ -1770,14 +1776,14 @@ CCC.World.removeNode = function(node) {
 };
 
 /**
- * Gets the message with the given key from the document.
+ * Gets the template with the given key from the document.
  * @param {string} key The key of the document element.
  * @return {string} The textContent of the specified element.
  */
-CCC.World.getMsg = function(key) {
+CCC.World.getTemplate = function(key) {
   var element = document.getElementById(key);
   if (!element) {
-    throw new Error('Unknown message ' + key);
+    throw new Error('Unknown template ' + key);
   }
   return element.textContent;
 };
@@ -1856,17 +1862,22 @@ CCC.World.createTextArea = function(svg, text, width, height) {
  * @return {string} Wrapped text.
  */
 CCC.World.wrap = function(svg, text, width, height) {
+  if (text.length > 1024) {
+    // This algorithm doesn't scale to large texts.
+    // Large texts shouldn't be in speech bubbles anyway.
+    return text;
+  }
   var minWidth = width;
   var maxWidth = svg.scaledWidth_ - 10;
   var measuredWidth, measuredHeight;
+  var dy = CCC.World.measureText(svg, 'Wg').height;
   function wrapForWidth(width) {
     measuredWidth = 0;
     measuredHeight = 0;
     var paragraphs = text.split('\n');
-    var dy = CCC.World.measureText(svg, 'Wg').height;
-    for (var paragraph of paragraphs) {
-      paragraph = CCC.World.wrapLine_(svg, paragraph, width);
-      var lines = paragraph.split('\n');
+    for (var i = 0; i < paragraphs.length; i++) {
+      paragraphs[i] = CCC.World.wrapLine_(svg, paragraphs[i], width);
+      var lines = paragraphs[i].split('\n');
       for (var line of lines) {
         var size = CCC.World.measureText(svg, line);
         measuredWidth = Math.max(measuredWidth, size.width);
@@ -2081,10 +2092,7 @@ CCC.World.measureText = function(svg, text) {
   return bBox;
 };
 
-/**
- * Cache of text widths for performance boost.
- */
-CCC.World.measureText.cache_ = Object.create(null);
-
-window.addEventListener('message', CCC.World.receiveMessage, false);
-window.addEventListener('load', CCC.World.init, false);
+if (!window.TEST) {
+  window.addEventListener('message', CCC.World.receiveMessage, false);
+  window.addEventListener('load', CCC.World.init, false);
+}

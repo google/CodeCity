@@ -1,18 +1,7 @@
 /**
  * @license
  * Copyright 2019 Google LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /**
@@ -23,19 +12,19 @@
 
 function testCommonSelectorToParts() {
   // Join a list of parts into a path selector.
-  assertEquals('[{"type":"id","value":"$"},{"type":"^"},{"type":"id","value":"foo"}]', JSON.stringify(Code.Common.selectorToParts('$^.foo')));
+  assertEquals('[{"type":"id","value":"$"},{"type":"keyword","value":"{proto}"},{"type":"id","value":"foo"}]', JSON.stringify(Code.Common.selectorToParts('${proto}.foo')));
 }
 
 function testCommonPartsToSelector() {
   // Join a list of parts into a path selector.
-  assertEquals('$^.foo', Code.Common.partsToSelector([{type: 'id', value: '$'}, {type: '^'}, {type: 'id', value: 'foo'}]));
+  assertEquals('${proto}.foo', Code.Common.partsToSelector([{type: 'id', value: '$'}, {type: 'keyword', value: '{proto}'}, {type: 'id', value: 'foo'}]));
 }
 
 function testCommonSelectorToReference() {
   // No substitution.
   assertEquals('$.foo', Code.Common.selectorToReference('$.foo'));
   // Parent substitution.
-  assertEquals("$('$^.foo')", Code.Common.selectorToReference('$^.foo'));
+  assertEquals("$('${proto}.foo')", Code.Common.selectorToReference('${proto}.foo'));
 }
 
 function testGetPrefix() {
@@ -52,7 +41,6 @@ function testGetPrefix() {
   // Case-sensitive.
   assertEquals('foo', Code.Explorer.getPrefix(['foot', 'fooT']));
 }
-
 
 function testAutocompletePrefix() {
   // No options.

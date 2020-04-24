@@ -21,9 +21,20 @@
  */
 'use strict';
 
+const util = require('util');
+
 /**
- * Class for a registry provinding a bidirectional mapping between
+ * Class for a registry providing a bijective[1] mapping between
  * string-valued keys and arbitrary values.
+ *
+ * N.B.: a Map is used for reverse lookups; as Maps use the
+ * sameValueZero algorithm to compare keys[2] it is not possible to
+ * register both 0 and -0, but NaN will work correctly.
+ *
+ * [1] This means no key may have more than one value, and no value
+ *     may have more than one key.
+ * [2] https://developer.mozilla.org/en-US/docs/Web/JavaScript/Equality_comparisons_and_sameness#Same-value-zero_equality
+ *
  * @constructor
  * @template T
  */
@@ -58,9 +69,7 @@ class Registry {
 
   /**
    * Look up the key for a registered value.  Returns undefined if the
-   * given value has not been registered.  If the value has been
-   * registered with more than one key then one of those keys will be
-   * returned but there is no guarantee which.
+   * given value has not been registered.
    * @param {T} value The value to get the key for.
    * @return {string|undefined} The key for value, or undefined if
    *     value never registered.
@@ -94,7 +103,10 @@ class Registry {
    */
   set(key, value) {
     if (key in this.values_) {
-      throw new Error('Key "' + key + '" already registered');
+      throw new Error('Key "' + key + '" already in use');
+    }
+    if (this.keys_.has(value)) {
+      throw new Error(util.format('Value %O already registered', value));
     }
     this.values_[key] = value;
     this.keys_.set(value, key);

@@ -1,22 +1,11 @@
 /**
  * @license
  * Copyright 2017 Google LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /**
- * @fileoverview Functions common across frames of Code City's client.
+ * @fileoverview Functions common across log/world frames of Code City's client.
  * @author fraser@google.com (Neil Fraser)
  */
 'use strict';
@@ -44,7 +33,7 @@ CCC.Common.isConnected = false;
 CCC.Common.MessageTypes = {
   // Messages that may be paused:
   COMMAND: 'command',  // User-generated command echoed.
-  MESSAGE: 'message',  // Block of text from Code City.
+  MEMO: 'memo',  // Block of text from Code City.
   CONNECT_MSG: 'connect msg',  // User-visible connection message.
   DISCONNECT_MSG: 'disconnect msg',  // User-visible disconnection message.
   // Messages that may be sent while paused:
@@ -271,7 +260,7 @@ CCC.Common.parentFocus = function(e) {
  * Helper method for creating SVG elements.
  * @param {string} name Element's tag name.
  * @param {!Object} attrs Dictionary of attribute names and values.
- * @param {Element} opt_parent Optional parent on which to append the element.
+ * @param {!Element=} opt_parent Optional parent on which to append the element.
  * @return {!SVGElement} Newly created SVG element.
  */
 CCC.Common.createSvgElement = function(name, attrs, opt_parent) {
@@ -348,3 +337,10 @@ CCC.Common.autoHyperlink = function(el) {
 
 CCC.Common.autoHyperlink.urlRegex =
     /((?:https?:\/\/|www\.)[-\w.~:\/?#\[\]@!$&'()*+,;=%]+)/i;
+
+// Set background colour to differentiate server vs local copy.
+if (location.hostname === 'localhost') {
+  window.addEventListener('load', function() {
+    document.body.style.backgroundColor = '#ffe';
+  });
+}

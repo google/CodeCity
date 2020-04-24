@@ -1,18 +1,7 @@
 /**
  * @license
  * Copyright 2018 Google LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /**
@@ -96,7 +85,7 @@ svgEditor.resize = function() {
 svgEditor.mousedown = function(e) {
   // Control-clicking on Mac OS X is treated as a right-click.
   // WebKit on Mac OS X fails to change button to 2 (but Gecko does).
-  if (e.ctrlKey || e.button == 2) {
+  if (e.ctrlKey || e.button === 2) {
     svgEditor.openMenu(e);
   } else if (!document.getElementById('menu').contains(e.target)) {
     svgEditor.closeMenu();
@@ -290,7 +279,7 @@ svgEditor.updateToolbox = function(force) {
   if (selected.length === 1) {
     var element = selected[0];
     document.getElementById('convertpath-action').style.display =
-        element.tagName == 'path' ? 'none' : 'block';
+        element.tagName === 'path' ? 'none' : 'block';
 
     var fillStroke = svgEditor.getFillStroke(element);
     var fill = fillStroke[0];
@@ -431,4 +420,5 @@ svgEditor.menuClick = function(e) {
 
 window.addEventListener('load', svgEditor.init);
 window.addEventListener('resize', svgEditor.resize);
+window.addEventListener('mousedown', window.focus);
 setInterval(svgEditor.updateToolbox, 250);

@@ -27,6 +27,7 @@ const util = require('util');
 
 const Interpreter = require('../interpreter');
 const {getInterpreter} = require('./interpreter_common');
+const Parser = require('../parser').Parser;
 const {T} = require('./testing');
 const testcases = require('./testcases');
 
@@ -212,6 +213,66 @@ TestOptions.prototype.onCreateThread;
  * @type {function(!Interpreter)|undefined}
  */
 TestOptions.prototype.onBlocked;
+
+///////////////////////////////////////////////////////////////////////////////
+// Tests: static analysis functions
+///////////////////////////////////////////////////////////////////////////////
+
+exports.testGetBoundNames = function(t) {
+  const name = 'getBoundNames';
+  const {getBoundNames} = Interpreter.testOnly;
+
+  const src = `
+      var a, b;
+      for (var c in {}) {}
+      function f(x) {
+        var y, z;
+      };
+      (function g() { var v; })();
+  `;
+  const ast = Parser.parse(src);
+  const boundNames = getBoundNames(ast);
+  const keys = Object.getOwnPropertyNames(boundNames);
+  t.expect(`${name}() keys`, keys.join(),
+           'a,b,c,f', src);
+  for (let i = 0; i < 3; i++) {
+    t.expect(`${name}()[${i}]`, boundNames[keys[i]], undefined, src);
+  }
+  t.expect(`${name}()[3]`, boundNames['f'], ast['body'][2], src);
+};
+
+exports.testHasArgumentsOrEval = function(t) {
+  const name = 'hasArgumentsOrEval';
+  const {hasArgumentsOrEval} = Interpreter.testOnly;
+
+  const cases = [
+    // [src, expected]; will only look at first statement src.
+    ['Arguments;', false],
+    ['arguments;', true],
+    ['arguments[0];', true],
+    ['foo[arguments];', true],
+    ['bar(arguments);', true],
+    ['{var x; function myArgs() {return arguments;}}', false],
+    ['{function f() {} arguments;}', true],
+
+    ['Eval;', false],
+    ['eval;', true],
+    ['eval();', true],
+    ['Function.prototype.call(eval);', true],
+    ['{var x; function myEval(arg) {eval(arg);}}', false],
+    ['{function f() {} eval();}', true],
+  ];
+  for (const [src, expected] of cases) {
+    try {
+      const ast = Parser.parse(src);
+      const firstStatement = ast['body'][0];
+      t.expect(name, hasArgumentsOrEval(firstStatement),
+               expected, src);
+    } catch (e) {
+      t.crash(name, util.format('%s\n%s', src, e.stack));
+    }
+  }
+};
 
 ///////////////////////////////////////////////////////////////////////////////
 // Tests: external simple testcases
@@ -949,6 +1010,46 @@ exports.testTimeLimit = function(t) {
     onCreateThread: (intrp, thread) => {thread.timeLimit = timeLimit;},
   });
 
+  // Test we can't call anything after timing out.
+  name = "Thread can't call after timeout";
+  src = `
+      try {
+        try {
+          for (var i = 0; i < ${iterations}; i++) {
+          }
+          "Thread didn't time out";  // Maybe increase iterations?
+        } catch (e) {
+          String(e);
+          'Still able to call';
+        }
+      } catch (e) {
+        e.name + ': ' + e.message;  // Can't call String(e): we're out of time!
+      }
+  `;
+  runTest(t, name, src, 'RangeError: Thread ran too long', {
+    onCreateThread: (intrp, thread) => {thread.timeLimit = timeLimit;},
+  });
+
+  // Test we can't call anything after timing out.
+  name = "Thread can call suspend after timeout";
+  src = `
+      try {
+        try {
+          for (var i = 0; i < ${iterations}; i++) {
+          }
+          "Thread didn't time out";  // Maybe increase iterations?
+        } catch (e) {
+          suspend();
+          'Still able to call suspend';
+        }
+      } catch (e) {
+        e.name + ': ' + e.message;  // Can't call String(e): we're out of time!
+      }
+  `;
+  runTest(t, name, src, 'Still able to call suspend', {
+    onCreateThread: (intrp, thread) => {thread.timeLimit = timeLimit;},
+  });
+
   // Test timeLimit is inherited by child Threads.
   name = 'Threads inherit timeLimit from parent Thread';
   src = `
@@ -968,8 +1069,6 @@ exports.testTimeLimit = function(t) {
   runTest(t, name, src, 'RangeError: Thread ran too long', {
     onCreateThread: (intrp, thread) => {thread.timeLimit = timeLimit;},
   });
-
-
 };
 
 /**
@@ -1382,6 +1481,53 @@ exports.testNetworking = async function(t) {
       resolve('OK');
    `;
   await runAsyncTest(t, name, src, 'OK', {options: {noLog: ['net']}});
+
+  // Check to make sure that connectionWrite() throws if attempting to
+  // write anything not a string or to anything not a connected
+  // object.
+  name = 'testConnectionWriteThrows';
+  src = `
+      var conn = {toString: function() {return 'an open connection';}};
+      conn.onConnect = function() {
+        var cases = [
+          {obj: undefined, data: 'fine'},
+          {obj: null, data: 'fine'},
+          {obj: 42, data: 'fine'},
+          {obj: true, data: 'fine'},
+          {obj: 'a string', data: 'fine'},
+          {obj: {/* not connected */}, data: 'fine'},
+          {obj: this, data: undefined},
+          {obj: this, data: null},
+          {obj: this, data: 42},
+          {obj: this, data: true},
+          {obj: this, data: {}},
+        ];
+        for (var tc, i = 0; (tc = cases[i]); i++) {
+          try {
+            CC.connectionWrite(tc.obj, tc.data);
+            resolve('Unexpected success writing ' + tc.data +
+                    ' to ' + String(tc.obj));
+          } catch (e) {
+            if (!(e instanceof TypeError)) {
+              resolve('threw non-TypeError value ' + String(e));
+            }
+          }
+        }
+        CC.connectionClose(this);
+        resolve('OK');
+      };
+      CC.connectionListen(8888, conn);
+      try {
+        receive();
+      } finally {
+        CC.connectionUnlisten(8888);
+      }
+   `;
+  await runAsyncTest(t, name, src, 'OK', {
+    options: {noLog: ['net']},
+    onCreate: createReceive,
+  });
+
   // Run test of the xhr() function using HTTP.
   name = 'testXhrHttp';
   const httpTestServer = http.createServer(function (req, res) {

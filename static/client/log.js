@@ -1,18 +1,7 @@
 /**
  * @license
  * Copyright 2017 Google LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /**
@@ -111,7 +100,7 @@ CCC.Log.receiveMessage = function(e) {
     // Notify the user of the disconnection.
     var div = CCC.Log.connectDiv(false, data['text']);
     CCC.Log.appendRow(div);
-  } else if (mode === CCC.Common.MessageTypes.MESSAGE) {
+  } else if (mode === CCC.Common.MessageTypes.MEMO) {
     var text = data['text'];
     try {
       var json = JSON.parse(text);
@@ -139,13 +128,13 @@ CCC.Log.connectDiv = function(isConnected, date) {
   span.appendChild(document.createTextNode(date));
   div.appendChild(span);
 
-  div.appendChild(CCC.Log.getMsg(isConnected ?
-                           'connectedMsg' : 'disconnectedMsg'));
+  div.appendChild(CCC.Log.getTemplate(isConnected ?
+      'connectedTemplate' : 'disconnectedTemplate'));
   if (!isConnected) {
     var link = document.createElement('a');
     link.className = 'reconnect';
-    link.appendChild(CCC.Log.getMsg('reconnectMsg'));
-    div.appendChild(link)
+    link.appendChild(CCC.Log.getTemplate('reconnectTemplate'));
+    div.appendChild(link);
     link.addEventListener('click', parent.location.reload.bind(parent.location));
   }
   return div;
@@ -316,20 +305,22 @@ CCC.Log.renderJson = function(json) {
       if (objects.length) {
         var objectsDiv = document.createElement('div');
         if (objects.length === 1) {
-          objectsDiv.appendChild(CCC.Log.getMsg('roomObjectMsg', objects[0]));
+          objectsDiv.appendChild(CCC.Log.getTemplate(
+              'roomObjectTemplate', objects[0]));
         } else if (objects.length > 1) {
-          objectsDiv.appendChild(
-              CCC.Log.getMsg('roomObjectsMsg', CCC.Log.naturalList(objects)));
+          objectsDiv.appendChild(CCC.Log.getTemplate(
+              'roomObjectsTemplate', CCC.Log.naturalList(objects)));
         }
         div.appendChild(objectsDiv);
       }
       if (users.length) {
         var usersDiv = document.createElement('div');
         if (users.length === 1) {
-          usersDiv.appendChild(CCC.Log.getMsg('roomUserMsg', users[0]));
+          usersDiv.appendChild(CCC.Log.getTemplate(
+              'roomUserTemplate', users[0]));
         } else if (users.length > 1) {
-          usersDiv.appendChild(
-              CCC.Log.getMsg('roomUsersMsg', CCC.Log.naturalList(users)));
+          usersDiv.appendChild(CCC.Log.getTemplate(
+              'roomUsersTemplate', CCC.Log.naturalList(users)));
         }
         div.appendChild(usersDiv);
       }
@@ -352,10 +343,10 @@ CCC.Log.renderJson = function(json) {
             ((lastLetter === '!') ? 'exclaim' : 'say');
       }
       if (json.source && CCC.Log.userName === json.source) {
-        var fragment = CCC.Log.getMsg(type + 'SelfMsg', text);
+        var fragment = CCC.Log.getTemplate(type + 'SelfTemplate', text);
       } else {
-        var who = json.source || CCC.Log.getMsg('unknownMsg');
-        var fragment = CCC.Log.getMsg(type + 'Msg', who, text);
+        var who = json.source || CCC.Log.getTemplate('unknownTemplate');
+        var fragment = CCC.Log.getTemplate(type + 'Template', who, text);
       }
       CCC.Common.autoHyperlink(fragment);
       var div = document.createElement('div');
@@ -445,7 +436,7 @@ CCC.Log.renderHtmltext = function(div, node) {
     for (var child of node.childNodes) {
       CCC.Log.renderHtmltext(div, child);
     }
-    if (CCC.Log.renderHtmltext.BLOCK_NAMES.indexOf(node.tagName) !== -1) {
+    if (CCC.Log.renderHtmltext.BLOCK_NAMES.has(node.tagName)) {
       // Add a <br> tag, but not if there's already one.
       var lastTag = div.lastChild;
       while (lastTag && lastTag.nodeType !== Node.ELEMENT_NODE) {
@@ -470,7 +461,7 @@ CCC.Log.renderHtmltext = function(div, node) {
 /**
  * List of elements that are blocks, rather than inline.
  */
-CCC.Log.renderHtmltext.BLOCK_NAMES = [
+CCC.Log.renderHtmltext.BLOCK_NAMES = new Set([
   'ADDRESS',
   'BLOCKQUOTE',
   'BR',
@@ -487,18 +478,18 @@ CCC.Log.renderHtmltext.BLOCK_NAMES = [
   'TABLE',
   'TR',
   'UL',
-];
+]);
 
 /**
- * Gets the message with the given key from the document.
+ * Gets the template with the given key from the document.
  * @param {string} key The key of the document element.
  * @param {...string|DocumentFragment} var_args Optional substitutions for %1...
  * @return {!DocumentFragment} A document fragment containing the text.
  */
-CCC.Log.getMsg = function(key, var_args) {
+CCC.Log.getTemplate = function(key, var_args) {
   var element = document.getElementById(key);
   if (!element) {
-    throw new Error('Unknown message ' + key);
+    throw new Error('Unknown template ' + key);
   }
   var text = element.textContent;
   var parts = text.split(/(%\d)/);
@@ -537,7 +528,7 @@ CCC.Log.naturalList = function(list) {
     df.appendChild(list[i]);
   }
   df.appendChild(document.createTextNode(' '));
-  df.appendChild(CCC.Log.getMsg('andMsg'));
+  df.appendChild(CCC.Log.getTemplate('andTemplate'));
   df.appendChild(document.createTextNode(' '));
   df.appendChild(list[list.length - 1]);
   return df;
@@ -564,5 +555,7 @@ CCC.Log.scrollToBottom = function() {
   CCC.Log.scrollDiv.scrollLeft = 0;
 };
 
-window.addEventListener('message', CCC.Log.receiveMessage, false);
-window.addEventListener('load', CCC.Log.init, false);
+if (!window.TEST) {
+  window.addEventListener('message', CCC.Log.receiveMessage, false);
+  window.addEventListener('load', CCC.Log.init, false);
+}

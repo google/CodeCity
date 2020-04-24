@@ -1,18 +1,7 @@
 /**
  * @license
  * Copyright 2018 Google LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /**
@@ -100,3 +89,47 @@ if (!window.TEST) {
   window.addEventListener('message', Code.receiveMessage, false);
   window.addEventListener('popstate', Code.popState, false);
 }
+
+////////////////////////////////////////////
+// Add bridge for SVG editor's clipboard.  This copy allows the clipboard to
+// sync across all /code tabs even if the SVG editor isn't currently loaded.
+// Copied from /code/SVG-Edit/svgcanvas.js
+
+const CLIPBOARD_ID = 'svgedit_clipboard';
+
+/**
+* Flash the clipboard data momentarily on localStorage so all tabs can see.
+* @returns {void}
+*/
+function flashStorage () {
+  const data = sessionStorage.getItem(CLIPBOARD_ID);
+  localStorage.setItem(CLIPBOARD_ID, data);
+  setTimeout(function () {
+    localStorage.removeItem(CLIPBOARD_ID);
+  }, 1);
+}
+
+/**
+* Transfers sessionStorage from one tab to another.
+* @param {!Event} ev Storage event.
+* @returns {void}
+*/
+function storageChange(ev) {
+  if (!ev.newValue) return; // This is a call from removeItem.
+  if (ev.key === CLIPBOARD_ID + '_startup') {
+    // Another tab asked for our sessionStorage.
+    localStorage.removeItem(CLIPBOARD_ID + '_startup');
+    flashStorage();
+  } else if (ev.key === CLIPBOARD_ID) {
+    // Another tab sent data.
+    sessionStorage.setItem(CLIPBOARD_ID, ev.newValue);
+  }
+}
+
+// Listen for changes to localStorage.
+window.addEventListener('storage', storageChange, false);
+// Ask other tabs for sessionStorage (this is ONLY to trigger event).
+localStorage.setItem(CLIPBOARD_ID + '_startup', Math.random());
+
+// End of bridge for SVG editor's clipboard.
+////////////////////////////////////////////

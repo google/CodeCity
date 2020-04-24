@@ -8,14 +8,24 @@
     body {
       text-align: center;
     }
+    noscript {
+      font-size: small;
+      font-family: sans-serif;
+    }
+    #signin {
+      display: none;
+    }
   </style>
 </head>
 <body>
+  <noscript>JavaScript required</noscript>
   <div class="jfk-button jfk-button-submit" role="button" id="signin">
     Sign in
   </div>
   <script>
-    document.getElementById('signin').addEventListener('click', function() {
+    var button =  document.getElementById('signin');
+    button.style.display = 'block';
+    button.addEventListener('click', function() {
       parent.location = "<<<LOGIN_URL>>>";
     });
   </script>

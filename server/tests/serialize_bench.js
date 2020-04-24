@@ -150,7 +150,11 @@ exports.benchRoundtrip = function(b) {
   }
   const fakeBuiltins = function(intrp) {
     // Hack to install stubs for builtins found in codecity.js.
-    for (const bi of ['CC.log', 'CC.checkpoint', 'CC.shutdown']) {
+    const builtins = [
+      'CC.log', 'CC.checkpoint', 'CC.shutdown', 'CC.hash',
+      'CC.acorn.parse', 'CC.acorn.parseExpressionAt',
+    ];
+    for (const bi of builtins) {
       new intrp.NativeFunction({id: bi, length: 0,});
     }
   };

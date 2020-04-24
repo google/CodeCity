@@ -32,7 +32,7 @@ var fs = {};
 
 /**
  * @param {string} path
- * @param {number} mode
+ * @param {number=} mode
  */
 fs.accessSync = function(path, mode) {};
 

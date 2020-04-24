@@ -1,18 +1,7 @@
 /**
  * @license
  * Copyright 2018 Google LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /**
@@ -24,10 +13,10 @@
 Code.Editor = {};
 
 /**
- * JSON-encoded list of complete object selector parts.
- * @type {?string}
+ * List of complete object selector parts.
+ * @type {Array<!Object>}
  */
-Code.Editor.partsJSON = null;
+Code.Editor.parts = null;
 
 /**
  * Currently selected editor.
@@ -53,10 +42,10 @@ Code.Editor.receiveMessage = function() {
   if (!parts || !parts.length) {
     return;  // Invalid parts, ignore.
   }
-  if (JSON.stringify(parts) === Code.Editor.partsJSON) {
+  if (parts === Code.Editor.parts) {
     return;  // No change.
   }
-  if (Code.Editor.partsJSON === null) {
+  if (Code.Editor.parts === null) {
     Code.Editor.load();  // Initial load of content.
   } else {
     Code.Editor.updateCurrentSource();
@@ -112,7 +101,12 @@ Code.Editor.init = function() {
     editor.containerElement = div;
   }
 
+  document.addEventListener('keydown', Code.Editor.keyDown);
+
   Code.Editor.receiveMessage();
+
+  // Defer loading of JSHint to get editors running faster.
+  setTimeout(Code.Editor.importJSHint, 1);
 };
 
 /**
@@ -124,7 +118,7 @@ Code.Editor.load = function() {
   if (!parts) {
     return;  // Invalid parts, ignore.
   }
-  Code.Editor.partsJSON = JSON.stringify(parts);
+  Code.Editor.parts = parts.slice();  // Shallow copy, since it's popped below.
   // Request data from Code City server.
   Code.Editor.key = undefined;
   Code.Editor.sendXhr();
@@ -141,15 +135,20 @@ Code.Editor.load = function() {
     var selector = Code.Common.partsToSelector(parts);
     var reference = Code.Common.selectorToReference(selector);
     // Put the last part back on.
-    // Render as '.foo' or '[42]' or '["???"]' or '^'.
+    // Render as '.foo' or '[42]' or '["???"]' or '{xxx}'.
     if (lastPart.type === 'id') {
       var mockParts = [{type: 'id', value: 'X'}, lastPart];
       reference += Code.Common.partsToSelector(mockParts).substring(1) + ' = ';
-    } else if (lastPart.type === '^') {
-      reference = 'Object.setPrototypeOf(' + reference + ', ...) ';
+    } else if (lastPart.type === 'keyword') {
+      if (lastPart.value === '{proto}') {
+        reference = 'Object.setPrototypeOf(' + reference + ', ...) ';
+      } else if (lastPart.value === '{owner}') {
+        reference = 'Object.setOwnerOf(' + reference + ', ...) ';
+      } else {
+        throw new TypeError('Unknown keyword value: ' + lastPart.value);
+      }
     } else {
-      // Unknown part type.
-      throw new TypeError(lastPart);
+      throw new TypeError('Unknown part type: ' + lastPart.type);
     }
   }
   header.appendChild(document.createTextNode(reference));
@@ -166,6 +165,29 @@ Code.Editor.updateCurrentSource = function() {
   if (!Code.Editor.isSaveDialogVisible) {
     Code.Editor.saturateSave(
         Code.Editor.currentSource !== Code.Editor.originalSource);
+  }
+};
+
+/**
+ * Keydown handler for the editor frame.
+ * @param {!KeyboardEvent} e Keydown event.
+ */
+Code.Editor.keyDown = function(e) {
+  // Save the editor if ⌘-s or Ctrl-s is pressed.
+  if (e.key === 's' && (e.metaKey || e.ctrlKey)) {
+    Code.Editor.save();
+    e.preventDefault();
+    e.stopPropagation();
+  }
+
+  // Before starting a search, render the editors' entire document.
+  if ((e.key === 'f' || e.key === 'g') && (e.metaKey || e.ctrlKey)) {
+    if (Code.Editor.currentEditor) {
+      var cm = Code.Editor.currentEditor.getCodeMirror();
+      if (cm) {
+        cm.setOption('viewportMargin', Infinity);
+      }
+    }
   }
 };
 
@@ -302,6 +324,7 @@ Code.Editor.tabClick.disabled = true;
  * Send a request to Code City's code editor service.
  */
 Code.Editor.sendXhr = function() {
+  var selector = Code.Common.partsToSelector(Code.Editor.parts);
   var xhr = Code.Editor.codeRequest_;
   xhr.abort();
   xhr.open('POST', '/code/editor');
@@ -310,7 +333,7 @@ Code.Editor.sendXhr = function() {
   var src = Code.Editor.currentSource || '';
   var data =
       'key=' + encodeURIComponent(Code.Editor.key) +
-      '&parts=' + encodeURIComponent(Code.Editor.partsJSON);
+      '&selector=' + encodeURIComponent(selector);
   if (src) {
     data += '&src=' + encodeURIComponent(src);
   }
@@ -328,7 +351,8 @@ Code.Editor.codeRequest_ = new XMLHttpRequest();
 Code.Editor.receiveXhr = function() {
   var xhr = Code.Editor.codeRequest_;
   if (xhr.status !== 200) {
-    console.warn('Editor XHR returned status ' + xhr.status);
+    Code.Editor.clearSaveMask();
+    Code.Editor.showButter('Save failed: Status ' + xhr.status, 5000);
     return;
   }
   var data = JSON.parse(xhr.responseText);
@@ -344,11 +368,7 @@ Code.Editor.receiveXhr = function() {
       Code.Editor.setSourceToAllEditors(data.src);
     }
   }
-  // Remove saving mask.
-  clearTimeout(Code.Editor.saveMaskPid);
-  var mask = document.getElementById('editorSavingMask');
-  mask.style.display = 'none';
-  mask.style.opacity = 0;
+  Code.Editor.clearSaveMask();
 
   // While a save is in-flight, the user might have navigated away and be
   // currently blocked by a warning dialog regarding unsaved work.
@@ -369,6 +389,16 @@ Code.Editor.receiveXhr = function() {
   }
 
   Code.Editor.ready && Code.Editor.ready();
+};
+
+/**
+ * Remove saving mask that prevents UI interaction.
+ */
+Code.Editor.clearSaveMask = function() {
+  clearTimeout(Code.Editor.saveMaskPid);
+  var mask = document.getElementById('editorSavingMask');
+  mask.style.display = 'none';
+  mask.style.opacity = 0;
 };
 
 /**
@@ -439,6 +469,9 @@ Code.Editor.mostConfidentEditor = function() {
  * @param {string} src Plain text contents.
  */
 Code.Editor.setSourceToAllEditors = function(src) {
+  if (typeof src !== 'string') {
+    throw TypeError(src);
+  }
   Code.Editor.uncreatedEditorSource = src;
   for (var editor of Code.Editor.editors) {
     editor.setSource(src);
@@ -601,6 +634,59 @@ Code.Editor.hideButter = function() {
   document.getElementById('editorButter').style.display = 'none';
 };
 
+/**
+ * Create a CodeMirror editor.
+ * @param {!Element} container HTML element to hold the editor.
+ * @param {!Object} extraOptions Editor configuration.
+ * @return {!Object} CodeMirron editor.
+ */
+Code.Editor.newCodeMirror = function(container, extraOptions) {
+  var options = {
+    extraKeys: {
+      Tab: function(cm) {
+        cm.replaceSelection('  ');
+      }
+    },
+    gutters: ['CodeMirror-lint-markers'],
+    lineNumbers: true,
+    matchBrackets: true,
+    tabSize: 2,
+    undoDepth: 1024
+  };
+  // Merge extraOptions into default options.
+  Object.assign(options, extraOptions);
+  var editor = CodeMirror(container, options);
+  editor.setSize('100%', '100%');
+  return editor;
+};
+
+/**
+ * Has the JSHint library loaded yet?
+ */
+Code.Editor.JSHintReady = false;
+
+/**
+ * Load the JSHint library.
+ * Defer loading until page is loaded and responsive.
+ */
+Code.Editor.importJSHint = function() {
+  //<script type="text/javascript" src="/static/JSHint/jshint.js"></script>
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src = '/static/JSHint/jshint.js';
+  script.onload = function() {
+    Code.Editor.JSHintReady = true;
+    // Activate linting for any editor that's loaded and waiting.
+    for (var i = 0, editor; (editor = Code.Editor.editors[i]); i++) {
+      var cm = editor.getCodeMirror();
+      if (cm && editor.useJSHint) {
+        cm.setOption('lint', true);
+      }
+    }
+  };
+  document.head.appendChild(script);
+};
+
 if (!window.TEST) {
   window.addEventListener('load', Code.Editor.init);
   window.addEventListener('message', Code.Editor.receiveMessage, false);
@@ -650,6 +736,11 @@ Code.GenericEditor = function(name) {
    */
   this.unmodifiedSource = null;
 
+  /**
+   * Should this editor use JSHint for syntax checking?
+   */
+  this.useJSHint = false;
+
   // Register this editor.
   Code.Editor.editors.push(this);
 };
@@ -688,6 +779,14 @@ Code.GenericEditor.prototype.isSaved = function() {
 };
 
 /**
+ * Return this editor's CodeMirror instance.
+ * @return {Object} Defaults to null.
+ */
+Code.GenericEditor.prototype.getCodeMirror = function() {
+  return null;
+};
+
+/**
  * Notification that this editor has just been displayed.
  * @param {boolean} userAction True if user clicked on a tab.
  */
@@ -702,12 +801,22 @@ Code.valueEditor = new Code.GenericEditor('Value');
 // order to defer to more specialized editors.
 Code.valueEditor.confidence = 0.1;
 
+Code.valueEditor.useJSHint = true;
+
 /**
- * Code Mirror editor.  Does not exist until tab is selected.
+ * CodeMirror editor.  Does not exist until tab is selected.
  * @type {Object}
  * @private
  */
 Code.valueEditor.editor_ = null;
+
+/**
+ * Return this editor's CodeMirror instance.
+ * @return {Object} Defaults to null.
+ */
+Code.valueEditor.getCodeMirror = function() {
+  return this.editor_;
+};
 
 /**
  * Create the DOM for this editor.
@@ -715,14 +824,14 @@ Code.valueEditor.editor_ = null;
  */
 Code.valueEditor.createDom = function(container) {
   container.id = 'valueEditor';
+  // Use different theme in value editor to distinguish it from other editors.
   var options = {
-    tabSize: 2,
-    undoDepth: 1024,
-    lineNumbers: true,
-    matchBrackets: true
+    continueComments: {continueLineComment: false},
+    lint: Code.Editor.JSHintReady,
+    mode: 'text/javascript',
+    theme: 'default'
   };
-  this.editor_ = CodeMirror(container, options);
-  this.editor_.setSize('100%', '100%');
+  this.editor_ = Code.Editor.newCodeMirror(container, options);
 };
 
 /**
@@ -755,15 +864,26 @@ Code.valueEditor.focus = function(userAction) {
   }
 };
 
+
 ////////////////////////////////////////////////////////////////////////////////
 Code.functionEditor = new Code.GenericEditor('Function');
 
+Code.functionEditor.useJSHint = true;
+
 /**
- * Code Mirror editor.  Does not exist until tab is selected.
+ * CodeMirror editor.  Does not exist until tab is selected.
  * @type {Object}
  * @private
  */
 Code.functionEditor.editor_ = null;
+
+/**
+ * Return this editor's CodeMirror instance.
+ * @return {Object} Defaults to null.
+ */
+Code.functionEditor.getCodeMirror = function() {
+  return this.editor_;
+};
 
 /**
  * Create the DOM for this editor.
@@ -809,15 +929,13 @@ Code.functionEditor.createDom = function(container) {
   `;
   container.id = 'functionEditor';
   var options = {
-    tabSize: 2,
-    undoDepth: 1024,
-    lineNumbers: true,
     continueComments: {continueLineComment: false},
+    lint: Code.Editor.JSHintReady,
     mode: 'text/javascript',
-    matchBrackets: true
+    rulers: [{color: '#ddd', column: 80, lineStyle: 'dashed'}],
+    theme: 'eclipse'
   };
-  this.editor_ = CodeMirror(container, options);
-  this.editor_.setSize('100%', '100%');
+  this.editor_ = Code.Editor.newCodeMirror(container, options);
 
   this.isVerbElement_ = document.getElementById('isVerb');
   this.verbElement_ = document.getElementById('verb');
@@ -851,6 +969,8 @@ Code.functionEditor.getSource = function() {
     return Code.Editor.uncreatedEditorSource;
   }
   var source = this.editor_.getValue();
+  // Trim trailing whitespace.
+  source = source.replace(/[ \t]+(?=\n)/g, '').replace(/[ \t]+$/, '');
   var verb = '@delete_prop verb';
   var dobj = '@delete_prop dobj';
   var prep = '@delete_prop prep';
@@ -862,7 +982,7 @@ Code.functionEditor.getSource = function() {
     iobj = '@set_prop iobj = ' + JSON.stringify(this.iobjElement_.value);
   }
   return `
-// @copy_properties true
+${this.metaExtra_.join('\n').trim()}
 // ${verb}
 // ${dobj}
 // ${prep}
@@ -879,6 +999,7 @@ Code.functionEditor.setSource = function(source) {
   var m = source.match(Code.functionEditor.functionRegex_);
   this.confidence = m ? 0.5 : 0;
   if (this.created) {
+    this.metaExtra_ = [];
     var meta;
     if (m) {
       meta = m[1].split(/\n/);
@@ -895,7 +1016,7 @@ Code.functionEditor.setSource = function(source) {
     };
     var isVerb = false;
     for (var line of meta) {
-      var m = line.match(Code.functionEditor.setSource.metaRegex_);
+      var m = line.match(Code.functionEditor.setSource.metaSetRegex_);
       if (m) {
         try {
           props[m[1]] = JSON.parse(m[2]);
@@ -903,6 +1024,9 @@ Code.functionEditor.setSource = function(source) {
         } catch (e) {
           console.log('Ignoring invalid ' + m[1] + ': ' + m[2]);
         }
+      } else if (!Code.functionEditor.setSource.metaDeleteRegex_.test(line)) {
+        // Not a meta value we recognize.  Preserve it.
+        this.metaExtra_.push(line);
       }
     }
     this.verbElement_.value = props['verb'];
@@ -916,8 +1040,13 @@ Code.functionEditor.setSource = function(source) {
 };
 
 // Matches one meta-data comment:  // @set_prop verb = "foobar"
-Code.functionEditor.setSource.metaRegex_ =
+Code.functionEditor.setSource.metaSetRegex_ =
     /^\s*\/\/\s*@set_prop\s+(verb|dobj|prep|iobj)\s*=\s*(.+)$/;
+// Matches one meta-data comment:  // @delete_prop verb
+Code.functionEditor.setSource.metaDeleteRegex_ =
+    /^\s*\/\/\s*@delete_prop\s+(verb|dobj|prep|iobj)$/;
+
+Code.functionEditor.metaExtra_ = [];
 
 /**
  * Notification that this editor has just been displayed.
@@ -941,21 +1070,26 @@ Code.jsspEditor = new Code.GenericEditor('JSSP');
 Code.jsspEditor.editor_ = null;
 
 /**
+ * Return this editor's CodeMirror instance.
+ * @return {Object} Defaults to null.
+ */
+Code.jsspEditor.getCodeMirror = function() {
+  return this.editor_;
+};
+
+/**
  * Create the DOM for this editor.
  * @param {!Element} container DOM should be appended to this containing div.
  */
 Code.jsspEditor.createDom = function(container) {
   container.id = 'jsspEditor';
   var options = {
-    tabSize: 2,
-    undoDepth: 1024,
-    lineNumbers: true,
     continueComments: 'Enter',
+    lint: false,  // CodeMirror doesn't understand <% %>.
     mode: 'application/x-ejs',
-    matchBrackets: true
+    theme: 'eclipse'
   };
-  this.editor_ = CodeMirror(container, options);
-  this.editor_.setSize('100%', '100%');
+  this.editor_ = Code.Editor.newCodeMirror(container, options);
 };
 
 /**
@@ -983,7 +1117,7 @@ Code.jsspEditor.setSource = function(source) {
     str = '';
     this.confidence = 0;
   } else {
-    if (str.indexOf('<%') !== -1 && str.indexOf('%>') !== -1) {
+    if (str.includes('<%') && str.includes('%>')) {
       this.confidence = 0.95;
     } else {
       this.confidence = 0.8;
@@ -1058,7 +1192,7 @@ Code.svgEditor.setSource = function(source) {
     var nodes = dom.documentElement.querySelectorAll('*');
     var isSvg = nodes.length > 0;
     for (var node of nodes) {
-      if (Code.svgEditor.ELEMENT_NAMES.indexOf(node.tagName) === -1) {
+      if (!Code.svgEditor.ELEMENT_NAMES.has(node.tagName)) {
         isSvg = false;
         break;
       }
@@ -1098,7 +1232,7 @@ Code.svgEditor.focus = function(userAction) {
  * Whitelist of all allowed SVG element names.
  * Try to keep this list in sync with CCC.World.xmlToSvg.ELEMENT_NAMES.
  */
-Code.svgEditor.ELEMENT_NAMES = [
+Code.svgEditor.ELEMENT_NAMES = new Set([
   'circle',
   'desc',
   'ellipse',
@@ -1112,7 +1246,7 @@ Code.svgEditor.ELEMENT_NAMES = [
   'text',
   'title',
   'tspan',
-];
+]);
 
 ////////////////////////////////////////////////////////////////////////////////
 Code.stringEditor = new Code.GenericEditor('String');
