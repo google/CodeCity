@@ -268,8 +268,10 @@ exports.testDumperPrototypeDumpBinding = function(t) {
 
   /**
    * @type {!Array<{src: string,
-   *                bindingTests: !Array<(string|number)>,
-   *                implicitTests: !Array<(string|number)>}>}
+   *                skip: (!Array<(string|number)>|undefined),
+   *                set: (!Array<(string|number)>|undefined),
+   *                dump: (!Array<(string|number)>|undefined),
+   *                after: (!Array<(string|number)>|undefined)}>}
    */
   const cases = [
     { // Test basics: DECL/SET/ATTR/DONE/RECURSE for variables and properties.
@@ -281,7 +283,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
       `,
       set: ['Object', 'Object.setPrototypeOf', 'Object.defineProperty'],
       skip: ['skip', 'obj.skip'],
-      bindingTests: [
+      dump: [
         // [ selector, todo, expected output, expected done (default: todo) ]
         // Order matters.
         ['skip', Do.RECURSE, '', Do.SKIP],
@@ -300,7 +302,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
 
         ['obj', Do.RECURSE, 'obj.c = 3;\n', Do.DONE],
       ],
-      implicitTests: [
+      after: [
         // [ selector, expected done ]
         ['obj^', Do.RECURSE],
         ['obj.c', Do.RECURSE],
@@ -320,7 +322,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
       // should be leave obj.a as RECUSE, obj.b and obj.c as
       // DONE, and obj.a.id still SKIP.  obj.c left at DONE.
       skip: ['obj.b.id'],
-      bindingTests: [
+      dump: [
         ['obj', Do.RECURSE,
          // TODO(cpcallen): really want "var obj = {a: {id: 'a'}, ...".
          'var obj = {};\n' +
@@ -328,7 +330,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
              'obj.b = {};\nobj.b.self = obj.b;\n' +
              "obj.c = {};\nobj.c.id = 'c';\nobj.c.parent = obj;\n", Do.DONE],
       ],
-      implicitTests: [
+      after: [
         ['obj.a', Do.RECURSE],
         ['obj.a.self', Do.RECURSE],
         ['obj.a.id', Do.RECURSE],
@@ -347,13 +349,13 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         var obj = {v: 42};
         obj.obj = obj;
       `,
-      bindingTests: [
+      dump: [
         ['obj', Do.DONE, 'var obj = {};\n'],
         // TODO(cpcallen): might prefer '...obj.v = 42\n'.
         ['obj.obj', Do.RECURSE, 'obj.obj = obj;\nobj.obj.v = 42;\n'],
         ['obj', Do.RECURSE, ''],
       ],
-      implicitTests: [
+      after: [
         ['obj.v', Do.RECURSE],
       ],
     },
@@ -367,7 +369,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         Object.defineProperty(obj, 'c', {configurable: false});
       `,
       set: ['Object', 'obj'],
-      bindingTests: [
+      dump: [
         ['obj.w', Do.ATTR, "obj.w = {};\n" +
             "(new 'Object.defineProperty')(obj, 'w', {writable: false});\n"],
 
@@ -397,7 +399,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
       // Object.create is polyfilled; dumper won't call polyfill.
       set: ['Object', 'Object.defineProperty', 'parent', 'child',
             'child[0]', 'child[1]', 'child[2]', 'child[3]', 'child[4]'],
-      bindingTests: [
+      dump: [
         // Inherited non-writable property doesn't exist yet.
         ['child[0].foo', Do.SET, 'child[0].foo = 0;\n', Do.RECURSE],
 
@@ -420,7 +422,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
             '{writable: true, enumerable: true, configurable: true});\n',
          Do.RECURSE],
       ],
-      implicitTests: [
+      after: [
         ['child[0]^', Do.DONE, 'parent'],
         ['child[1]^', Do.DONE, 'parent'],
         ['child[2]^', Do.DONE, 'parent'],
@@ -439,7 +441,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         var child3 = Object.create(parent);
      `,
       set: ['Object'],  // N.B.: Object.create is polyfilled.
-      bindingTests: [
+      dump: [
         ['child0', Do.DONE, 'var child0 = {};\n'],
         ['child1', Do.DONE, 'var child1 = {};\n'],
         ['child2', Do.DONE, 'var child2 = {};\n'],
@@ -455,7 +457,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         ['child2^', Do.SET, 'Object.setPrototypeOf(child2, parent);\n',
          Do.DONE],
       ],
-      implicitTests: [
+      after: [
         ['child0^', Do.DECL],
         ['child1^', Do.DONE, 'parent'],
         ['child2^', Do.DONE, 'parent'],
@@ -472,7 +474,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         }
       `,
       set: ['Object', 'Object.setPrototypeOf', 'objs'],
-      bindingTests: [
+      dump: [
         ['objs.obj', Do.DONE, "objs.obj = (new 'Object.create')(null);\n"],
         ['objs.obj{proto}', Do.DONE, '', Do.RECURSE],
         ['objs.fun', Do.DONE, 'objs.fun = function() {};\n'],
@@ -500,7 +502,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         Object.setOwnerOf(unowned, null);
       `,
       set: ['Object', 'CC', 'CC.root'],
-      bindingTests: [
+      dump: [
         ['alice', Do.DONE, 'var alice = {};\n'],
         ['alice.thing', Do.DONE, 'alice.thing = {};\n'],
         ['alice.thing{owner}', Do.SET, "(new 'Object.setOwnerOf')" +
@@ -513,7 +515,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         ['unowned{owner}', Do.SET, 'Object.setOwnerOf(unowned, null);\n',
          Do.RECURSE],
       ],
-      implicitTests: [
+      after: [
         ['alice', Do.DONE],
         ['alice{owner}', Do.DONE, 'CC.root'],
         ['alice.thing{owner}', Do.DONE, 'alice'],
@@ -532,7 +534,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         Object.preventExtensions(obj2);
       `,
       set: ['Object', 'obj1', 'obj2'],
-      bindingTests: [
+      dump: [
         ['obj1.id', Do.SET, 'obj1.id = 1;\n', Do.RECURSE],
         ['obj1', Do.RECURSE, "(new 'Object.preventExtensions')(obj1);\n"],
 
@@ -546,7 +548,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
 
     { // Test (not) dumping immutable bindings in the global scope.
       title: 'immutables',
-      bindingTests: [
+      dump: [
         ['NaN', Do.RECURSE, ''],
         ['Infinity', Do.RECURSE, ''],
         ['undefined', Do.RECURSE, ''],
@@ -565,7 +567,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         var f4 = new Function('a1', 'a2,a3', 'a4, a5', '');
       `,
       set: ['obj'],
-      bindingTests: [
+      dump: [
         // BUG(cpcallen): Really want 'function f1(arg) {};\n'.
         ['f1', Do.SET, 'var f1 = function f1(arg) {};\n', Do.DONE],
         // BUG(cpcallen): this causes a crash.
@@ -576,7 +578,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         ['f4', Do.SET, 'var f4 = function(a1,a2,a3,a4, a5) {};\n', Do.DONE],
         // TODO(ES5): verify that f4.name gets deleted.
       ],
-      implicitTests: [
+      after: [
         ['f1^', Do.DONE],
         ['f1.length', Do.RECURSE],
         ['f1.name', Do.RECURSE],
@@ -614,7 +616,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         f3.prototype = [];
       `,
       set: ['Object', 'Object.defineProperty'],
-      bindingTests: [
+      dump: [
         // No problem if f1 dumped before obj1.
         ['f1', Do.RECURSE, 'var f1 = function() {};\n'],
         ['obj1', Do.DONE, 'var obj1 = f1.prototype;\n'],
@@ -629,7 +631,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         ['f3', Do.DONE, 'var f3 = function() {};\n'],
         ['f3', Do.RECURSE, 'f3.prototype = [];\n'],
       ],
-      implicitTests: [
+      after: [
         ['obj1', Do.DONE, 'f1.prototype'],  // Var not RECURSEed (only object).
         ['f1.prototype.constructor', Do.RECURSE, 'f1'],
         ['f2.prototype', Do.RECURSE, 'obj2'],
@@ -649,14 +651,14 @@ exports.testDumperPrototypeDumpBinding = function(t) {
                               {writable: false, value: 42});
       `,
       set: ['Object', 'Object.defineProperty', 'f1', 'f2', 'f3'],
-      bindingTests: [
+      dump: [
         ['f3.prototype', Do.DONE, ''],
         ['f3.prototype.constructor', Do.SET,
          'f3.prototype.constructor = 42;\n'],
         ['f3.prototype', Do.RECURSE, 'Object.defineProperty(f3.prototype, ' +
             "'constructor', {writable: false});\n"],
       ],
-      implicitTests: [
+      after: [
         ['f1.prototype.constructor', Do.DONE],
         ['f2.prototype.constructor', Do.SET],
       ],
@@ -671,7 +673,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         delete f2.name;
       `,
       set: ['Object', 'Object.defineProperty', 'f1', 'f2'],
-      bindingTests: [
+      dump: [
         ['f1', Do.RECURSE, "Object.defineProperty(f1, 'name', " +
             "{value: 'Hi!'});\n"],
         ['f2', Do.RECURSE, 'delete f2.name;\n'],
@@ -690,7 +692,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         sparse.length = 4;
       `,
       set: ['Object', 'Object.setPrototypeOf', 'obj'],
-      bindingTests: [
+      dump: [
         // TODO(cpcallen): really want 'var arr = [42, 69, 105, obj, {}];\n'.
         ['arr', Do.RECURSE, 'var arr = [];\narr[0] = 42;\narr[1] = 69;\n' +
             'arr[2] = 105;\narr[3] = obj;\narr[4] = {};\n'],
@@ -700,7 +702,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
             'Object.setPrototypeOf(sparse, null);\n' +
             'sparse[0] = 0;\nsparse[2] = 2;\nsparse.length = 4;\n'],
       ],
-      implicitTests: [
+      after: [
         ['arr^', Do.RECURSE],
         ['arr.length', Do.RECURSE],
         ['sparse^', Do.RECURSE],
@@ -716,7 +718,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         var date1 = new Date('1975-07-27');
         var date2 = new Date('1979-01-04');
       `,
-      bindingTests: [
+      dump: [
         ['date1', Do.SET,
          "var date1 = new (new 'Date')('1975-07-27T00:00:00.000Z');\n",
          Do.DONE],
@@ -724,7 +726,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         ['date2', Do.SET, "var date2 = new Date('1979-01-04T00:00:00.000Z');\n",
          Do.DONE],
       ],
-      implicitTests: [
+      after: [
         ['date1^', Do.DONE],
         ['date2^', Do.DONE],
       ],
@@ -744,7 +746,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         Object.setPrototypeOf(re3, re1);
       `,
       set: ['Object', 'Object.setPrototypeOf'],
-      bindingTests: [
+      dump: [
         ['re0', Do.SET, 'var re0 = /(?:)/;\n', Do.DONE],
         ['re1', Do.SET, 'var re1 = /foo/gi;\n', Do.DONE],
         ['re2', Do.RECURSE, 'var re2 = /bar/g;\n' +
@@ -753,7 +755,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         ['re3', Do.SET, 'var re3 = /baz/m;\n', Do.DONE],
         ['re3^', Do.SET, 'Object.setPrototypeOf(re3, re1);\n', Do.DONE],
       ],
-      implicitTests: [
+      after: [
         ['re1^', Do.RECURSE],
         ['re1.source', Do.RECURSE],
         ['re1.global', Do.RECURSE],
@@ -793,7 +795,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         delete error3.stack;
       `,
       set: ['Object', 'Object.defineProperty', 'Object.setPrototypeOf'],
-      bindingTests: [
+      dump: [
         ['error1', Do.SET, "var error1 = new (new 'Error')('message1');\n",
          Do.DONE],
         ['error1', Do.RECURSE, "error1.stack = 'stack1';\n"],
@@ -810,7 +812,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         ['error3', Do.RECURSE, 'delete error3.stack;\n' +
             'Object.setPrototypeOf(error3, error1);\n'],
       ],
-      implicitTests: [
+      after: [
         ['error1.message', Do.RECURSE],
         ['error2.message', Do.RECURSE],
       ],
@@ -819,7 +821,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     { // Test dumping builtin objects.
       title: 'Builtins',
       src: '',
-      bindingTests: [
+      dump: [
         ['Object', Do.DONE, "var Object = new 'Object';\n"],
         ['Object.prototype', Do.SET,
          "Object.prototype = new 'Object.prototype';\n"],
@@ -846,28 +848,29 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     for (const builtin of [intrp.OBJECT, intrp.FUNCTION, intrp.ARRAY,
                            intrp.REGEXP, intrp.ERROR, intrp.TYPE_ERROR,
                            intrp.RANGE_ERROR]) {
-      dumper.getObjectDumper(builtin).done = ObjectDumper.Done.DONE_RECURSIVELY;
+      dumper.getObjectDumper(builtin).done = ObjectDumper.Done.DONE_RECUSIVELY;
     };
     // Set a few binding .done flags in advance to simulate things
     // already being dumped or being marked for deferred dumping.
-    for (const s of tc.set || []) {
-      dumper.dumpBinding(new Selector(s), Do.SET);
     }
-    for (const s of tc.skip || []) {
-      dumper.markBinding(new Selector(s), Do.SKIP);
+    for (const ss of tc.skip || []) {
+      dumper.markBinding(new Selector(ss), Do.SKIP);
+    }
+    for (const ss of tc.set || []) {
+      dumper.dumpBinding(new Selector(ss), Do.SET);
     }
 
     // Check generated output for (and post-dump status of) specific bindings.
-    for (const test of tc.bindingTests || []) {
-      const s = new Selector(test[0]);
+    for (const [ss, todo, expected, done] of tc.dump || []) {
+      const s = new Selector(ss);
       // Dump binding and check output code.
-      const code = dumper.dumpBinding(s, test[1]);
+      const code = dumper.dumpBinding(s, todo);
       t.expect(util.format('%sDumper.p.dumpBinding(<%s>, %o)', prefix,
-                           s, test[1]), code, test[2]);
+                           s, todo), code, expected);
       // Check work recorded.
       const {dumper: d, part} = dumper.getComponentsForSelector(s);
       t.expect(util.format('%sBinding status of <%s> (after dump)', prefix, s),
-               d.getDone(part), test[3] || test[1]);
+               d.getDone(part), done === undefined ? todo : done);
     }
 
     // Check status of (some of the) additional bindings that will be
@@ -880,17 +883,17 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     // value), but instead just the ref of the actual value in the
     // interpreter being dumped.  That's not really too useful, so maybe
     // they should be removed.
-    for (const test of tc.implicitTests || []) {
-      const s = new Selector(test[0]);
+    for (const [ss, done, valueRef] of tc.after || []) {
+      const s = new Selector(ss);
       const {dumper: d, part} = dumper.getComponentsForSelector(s);
       t.expect(util.format('%sbinding status of <%s> (implicit)', prefix, s),
-               d.getDone(part), test[1]);
-      if (test[2]) {
+               d.getDone(part), done);
+      if (valueRef) {
         const value = dumper.valueForSelector(s);
         if (value instanceof intrp.Object) {
           const objDumper = dumper.getObjectDumper(value);
           t.expect(util.format('%sref for %s', prefix, s),
-                   String(objDumper.ref), test[2]);
+                   String(objDumper.ref), valueRef);
         } else {
           t.fail(util.format('%s%s did not evaluate to an object', prefix, s));
         }
