@@ -37,6 +37,40 @@ var {Dumper, Do} = require('./dumper');
  */
 var dump = function(intrp, spec) {
   var dumper = new Dumper(new Interpreter(), intrp);
+
+  for (var entry, i = 0; entry = spec[i]; i++) {
+    if (!entry.contents) continue;
+    for (var item, j = 0; item = entry.contents[j]; j++) {
+      if (typeof item === 'string') {
+        entry.contents[j] = item = {path: item, do: Do.RECURSE};
+      }
+      var selector = new Selector(item.path);
+      dumper.markBinding(selector, Do.SKIP);
+    }
+  }
+
+  for (var entry, i = 0; entry = spec[i]; i++) {
+    dumper.write('////////////////////////////////////////');
+    dumper.write('///////////////////////////////////////\n\n');
+    dumper.write('// ' + entry.filename + '\n');
+
+    if (entry.contents) {
+      for (var item, j = 0; item = entry.contents[j]; j++) {
+        selector = new Selector(item.path);
+        try {
+          dumper.dumpBinding(selector, item.do);
+          dumper.write('\n');
+        } catch (e) {
+          dumper.write('// ', String(e), '\n');
+          dumper.write(e.stack.split('\n')
+              .map(function (s) {return '//     ' + s + '\n';}));
+        }
+      }
+    } else if (entry.rest) {
+      var globalScopeDumper = dumper.getScopeDumper(intrp.global);
+      globalScopeDumper.dump(dumper);
+    }
+  }
 };
 
 ///////////////////////////////////////////////////////////////////////////////

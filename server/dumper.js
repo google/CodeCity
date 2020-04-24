@@ -184,14 +184,15 @@ Dumper.prototype.diffBuiltins = function() {
 /**
  * Mark a particular binding (as specified by a Selector) with a
  * certain done value (which, notably in the case of Do.PRUNE and
- * Do.DEFER has the effect of causing subequent recursive dumps to
+ * Do.SKIP has the effect of causing subequent recursive dumps to
  * ignore that property).
  * @param {!Selector} selector The selector for the binding to be deferred.
  * @param {!Do} done Do status to mark binding with.
  */
 Dumper.prototype.markBinding = function(selector, done) {
   var c = this.getComponentsForSelector(selector);
-  c.dumper.setDone(c.part, done);
+  var was = c.dumper.getDone(c.part);
+  if (was !== done) c.dumper.setDone(c.part, done);
 };
 
 /**
