@@ -2744,6 +2744,31 @@ tests.newHacknNonLiteral = function() {
   }
 };
 
+tests.es6CausesSyntaxErrors = function() {
+  var tests = [
+    // Class statements & expressions
+    'class Foo{};',
+    'false && class Foo{};',
+     // Arrow functions.
+    'false && [].map((item) => String(item));',
+     // For-of statement.
+    'for (var x of [1, 2, 3]) {};',
+     // Let & const.
+    'let x;',
+    'const x;',
+  ];
+  for (var i = 0; i < tests.length; i++) {
+    var src = tests[i];
+    try {
+      eval(tests[i]);
+      console.assert(false, "es5 didn't throw for: " + src);
+    } catch (e) {
+      console.assert(e.name === 'SyntaxError',
+          'es5 threw wrong error for: ' + src);
+    }
+  }
+};
+
 tests.strictModeSyntaxErrors = function() {
   var tests = [
     // With statement.

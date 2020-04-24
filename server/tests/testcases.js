@@ -2898,11 +2898,19 @@ module.exports = [
 
   { name: 'ES6 causes syntax errors', src: `
     var tests = [
-      // Class statement.
+      // Class statements & expressions
+      'class Foo{};',
       'false && class Foo{};',
 
       // Arrow functions.
       'false && [].map((item) => String(item));',
+
+      // For-of statement.
+      'for (var x of [1, 2, 3]) {};',
+
+      // Let & const.
+      'let x;',
+      'const x;',
     ];
     var failed = [];
     for (var i = 0; i < tests.length; i++) {
