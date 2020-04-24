@@ -216,6 +216,9 @@ Dumper.prototype.markBinding = function(selector, done) {
 Dumper.prototype.dumpBinding = function(selector, todo) {
   var preLength = this.output.length;
   var c = this.getComponentsForSelector(selector);
+  if (c.dumper.getDone(c.part) === Do.SKIP) {
+    c.dumper.setDone(c.part, Do.UNSTARTED);
+  }
   c.dumper.dumpBinding(this, c.part, todo);
   return this.output.slice(preLength).join('');
 };

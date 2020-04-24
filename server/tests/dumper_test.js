@@ -268,6 +268,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
 
   /**
    * @type {!Array<{src: string,
+   *                prune: (!Array<(string|number)>|undefined),
    *                skip: (!Array<(string|number)>|undefined),
    *                set: (!Array<(string|number)>|undefined),
    *                dump: (!Array<(string|number)>|undefined),
@@ -277,16 +278,20 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     { // Test basics: DECL/SET/ATTR/DONE/RECURSE for variables and properties.
       title: 'basics',
       src: `
-        var skip = 'not dumped';
-        var obj = {a: {x: 1}, b: 2, c: 3, u: undefined, skip: 'not dumped'};
+        var prune = 'not dumped';
+        var skip = 'skipped';
+        var obj = {a: {x: 1}, b: 2, c: 3,
+                   u: undefined, skip: 'skipped', prune: 'not dumped'};
         Object.defineProperty(obj, 'a', {enumerable: false});
       `,
-      set: ['Object', 'Object.setPrototypeOf', 'Object.defineProperty'],
+      prune: ['prune', 'obj.prune'],
       skip: ['skip', 'obj.skip'],
+      set: ['Object', 'Object.setPrototypeOf', 'Object.defineProperty'],
       dump: [
         // [ selector, todo, expected output, expected done (default: todo) ]
         // Order matters.
-        ['skip', Do.RECURSE, '', Do.SKIP],
+        ['prune', Do.SET, '', Do.PRUNE],
+        ['skip', Do.SET, "var skip = 'skipped';\n", Do.RECURSE],
         ['obj', Do.DECL, 'var obj;\n'],
         ['obj', Do.SET, 'obj = {};\n', Do.DONE],
 
@@ -295,18 +300,17 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         ['obj.a', Do.ATTR,
          "Object.defineProperty(obj, 'a', {enumerable: false});\n"],
         ['obj.a', Do.RECURSE, 'obj.a.x = 1;\n'],
-
         ['obj.b', Do.SET, 'obj.b = 2;\n', Do.RECURSE],
-
         ['obj.u', Do.DECL, 'obj.u = undefined;\n', Do.RECURSE],
-
         ['obj', Do.RECURSE, 'obj.c = 3;\n', Do.DONE],
+        ['obj.prune', Do.SET, '', Do.PRUNE],
+        ['obj.skip', Do.SET, "obj.skip = 'skipped';\n", Do.RECURSE],
+        ['obj', Do.RECURSE, ''],
       ],
       after: [
         // [ selector, expected done ]
         ['obj^', Do.RECURSE],
         ['obj.c', Do.RECURSE],
-        ['obj.skip', Do.SKIP],
       ],
     },
 
@@ -321,6 +325,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
       // Mark obj.b.id as SKIP.  Attempting to dump obj recursively
       // should be leave obj.a as RECUSE, obj.b and obj.c as
       // DONE, and obj.a.id still SKIP.  obj.c left at DONE.
+      prune: ['obj.c.id'],
       skip: ['obj.b.id'],
       dump: [
         ['obj', Do.RECURSE,
@@ -328,7 +333,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
          'var obj = {};\n' +
              "obj.a = {};\nobj.a.id = 'a';\nobj.a.self = obj.a;\n" +
              'obj.b = {};\nobj.b.self = obj.b;\n' +
-             "obj.c = {};\nobj.c.id = 'c';\nobj.c.parent = obj;\n", Do.DONE],
+             "obj.c = {};\nobj.c.parent = obj;\n", Do.DONE],
       ],
       after: [
         ['obj.a', Do.RECURSE],
@@ -338,7 +343,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         ['obj.b.self', Do.DONE],
         ['obj.b.id', Do.SKIP],
         ['obj.c', Do.DONE],
-        ['obj.c.id', Do.RECURSE],
+        ['obj.c.id', Do.PRUNE],
         ['obj.c.parent', Do.DONE],
       ],
     },
@@ -852,6 +857,8 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     };
     // Set a few binding .done flags in advance to simulate things
     // already being dumped or being marked for deferred dumping.
+    for (const ss of tc.prune || []) {
+      dumper.markBinding(new Selector(ss), Do.PRUNE);
     }
     for (const ss of tc.skip || []) {
       dumper.markBinding(new Selector(ss), Do.SKIP);
