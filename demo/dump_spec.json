@@ -1,0 +1,135 @@
+[
+  {
+    "filename": "core_00_es5",
+    "contents": [
+      "Object",
+      "Function",
+      "Array",
+      "String",
+      "Boolean",
+      "Number",
+      "Date",
+      "RegExp",
+      "Error",
+      "EvalError",
+      "RangeError",
+      "ReferenceError",
+      "SyntaxError",
+      "TypeError",
+      "URIError",
+      "Math",
+      "JSON",
+      "decodeURI",
+      "decodeURIComponent",
+      "encodeURI",
+      "encodeURIComponent",
+      "escape",
+      "isFinite",
+      "isNan",
+      "parseFloat",
+      "parseInt",
+      "unescape"
+    ]
+  }, {
+    "filename": "core_00_es6",
+    "contents": [
+      "Object.is",
+      "Object.setPrototypeOf",
+      "Array.prototype.find",
+      "Array.prototype.findIndex",
+      "String.prototype.endsWith",
+      "String.prototype.includes",
+      "String.prototype.repeat",
+      "String.prototype.startsWith",
+      "Number.isFinite",
+      "Number.isNaN",
+      "Number.isSafeInteger",
+      "Number.EPSILON",
+      "Number.MAX_SAFE_INTEGER",
+      "Math.sign",
+      "Math.trunc",
+      "WeakMap"
+    ]
+  }, {
+    "filename": "core_00_esx",
+    "contents": [
+      "Object.getOwnerOf",
+      "Object.setOwnerOf",
+      "Thread",
+      "PermissionError",
+      "Array.prototype.join",
+      "suspend",
+      "setTimeout",
+      "clearTimeout"
+    ]
+  }, {
+    "filename": "core_10_base",
+    "contents": [
+      {"path": "user", "do": "DECL"},
+      {"path": "$", "do": "SET"},
+      "$.system",
+      {"path": "$.utils", "do": "ATTR"},
+      "$.physical",
+      "$.thing",
+      "$.room",
+      "$.user",
+      "$.execute",
+      {"path": "$.userDatabase", "do": "ATTR"},
+      "$.connection",
+      {"path": "$.servers", "do": "ATTR"},
+      "$.servers.telnet"
+    ]
+  }, {
+    "filename": "core_11_$.utils.command",
+    "contents": [
+      "$.utils.command",
+      "$.utils.match"
+    ]
+  }, {
+    "filename": "core_12_$.utils.selector",
+    "contents": ["$.utils.selector"]
+  }, {
+    "filename": "core_13_$.utils.code",
+    "contents": ["$.utils.code"]
+  }, {
+    "filename": "core_20_$.utils.acorn_pre",
+    "contents": []
+  }, {
+    "filename": "core_21_$.utils.acorn",
+    "symlink": "../server/node_modules/acorn/dist/acorn.js",
+    "contents": []
+  }, {
+    "filename": "core_22_$.utils.acorn_post",
+    "contents": []
+  }, {
+    "filename": "core_30_$.servers.http",
+    "contents": ["$.servers.http"]
+  }, {
+    "filename": "core_31_$.jssp",
+    "contents": ["$.jssp"]
+  }, {
+    "filename": "core_32_$.www",
+    "contents": [
+      {"path": "$.www", "do": "ATTR"},
+      {"path": "$.www.ROUTER", "do": "ATTR"},
+      "$.www[404]",
+      "$.www.homepage",
+      "$.www.robots"
+    ]
+  }, {
+    "filename": "core_33_$.www.editor",
+    "contents": ["$.www.editor"]
+  }, {
+    "filename": "core_34_$.www.code",
+    "contents": ["$.www.code"]
+  }, {
+    "filename": "core_40_$.db.tempId",
+    "contents": [
+      {"path": "$.db", "do": "ATTR"},
+      "$.db.tempID"
+    ]
+  }, {
+    "filename": "core_90_world",
+    "rest": true
+  }
+]

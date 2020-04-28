@@ -902,7 +902,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
           t.expect(util.format('%sref for %s', prefix, s),
                    String(objDumper.ref), valueRef);
         } else {
-          t.fail(util.format('%s%s did not evaluate to an object', prefix, s));
+          t.fail(prefix, util.format('%s did not evaluate to an object', s));
         }
       }
     }

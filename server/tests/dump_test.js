@@ -25,11 +25,71 @@
  */
 'use strict';
 
-const {dump, Do} = require('../dump');
+const {configFromSpec, Do, dump} = require('../dump');
 const fs = require('fs');
 const Interpreter = require('../interpreter');
 const path = require('path');
+const Selector = require('../selector');
 const {T} = require('./testing');
+const util = require('util');
+
+/**
+ * Unit tests for the dump function
+ * @param {!T} t The test runner object.
+ */
+exports.testConfigFromSpec = function(t) {
+  const cases = [{
+    input: [],
+    expected: [],
+  }, {
+    input: [{filename: 'foo', contents: ['a', 'b']}],
+    expected: [
+      {filename: 'foo',
+       contents: [
+         {selector: new Selector('a'), do: Do.RECURSE, reorder: false},
+         {selector: new Selector('b'), do: Do.RECURSE, reorder: false}
+       ],
+       rest: false
+      }
+    ],
+  }];
+  for (const {input, expected} of cases) {
+    const out = configFromSpec(input);
+    t.expect(util.format('configFromSpec(%o)', input),
+             util.format('%o', out),
+             util.format('%o', expected));
+  }
+
+  const invalid = [
+    undefined,  // Not an array.
+    'a string',  // Not an array.
+    {object: 'not array'},  // Not an array.
+    ['array', 'of', 'strings'],  // Array but not  of objects.
+    [{problem: 'no filename'}],  // Is object but has no .filename.
+    [{filename: 'foo'}],  // Missing both .contents and .rest.
+    [{filename: 'foo', contents: [], rest: 'bar'}],  // .rest not bool.
+    [{filename: 'foo', contents: [42]}],  // .contents[0] not an object.
+    [{filename: 'foo', contents: [{}]}],  // ... has no .path.
+    [{filename: 'foo', contents: [{path: 'bar'}]}],  // ... has no .do.
+    [{filename: 'foo', contents: [{path: 'bar', do: 2}]}],  // ... invalid .do.
+    [{filename: 'foo', contents: [{path: 'bar', do: 'baz'}]}],  // Ditto.
+    [{filename: 'foo',  // .reorder not a boolean.
+      contents: [{path: 'bar', do: 'SET', reorder: 'qux'}]}],
+    [{filename: 'foo', rest: 42}],  // .rest not a boolean.
+    [{filename: 'foo', rest: 'false'}],  // .rest not a boolean.
+  ];
+  for (const input of invalid) {
+    const name = util.format('configFromSpec(%o)', input);
+    try {
+      configFromSpec(input);
+      t.fail(input + " didn't throw");
+    } catch (e) {
+      if (!(e instanceof TypeError)) {
+        t.fail(input + ' threw wrong error', e);
+      }
+    }
+  }
+};
 
 /**
  * Unit tests for the dump function
@@ -49,138 +109,8 @@ exports.testDump = function(t) {
   }
   intrp.stop();  // Close any listening sockets, so node will exit.
 
-  const spec = [
-    {
-      filename: 'core_00_es5',
-      contents: [
-        'Object',
-        'Function',
-        'Array',
-        'String',
-        'Boolean',
-        'Number',
-        'Date',
-        'RegExp',
-        'Error',
-        'EvalError',
-        'RangeError',
-        'ReferenceError',
-        'SyntaxError',
-        'TypeError',
-        'URIError',
-        'Math',
-        'JSON',
-        'decodeURI',
-        'decodeURIComponent',
-        'encodeURI',
-        'encodeURIComponent',
-        'escape',
-        'isFinite',
-        'isNan',
-        'parseFloat',
-        'parseInt',
-        'unescape',
-      ],
-    }, {
-      filename: 'core_00_es6',
-      contents: [
-        'Object.is',
-        'Object.setPrototypeOf',
-        'Array.prototype.find',
-        'Array.prototype.findIndex',
-        'String.prototype.endsWith',
-        'String.prototype.includes',
-        'String.prototype.repeat',
-        'String.prototype.startsWith',
-        'Number.isFinite',
-        'Number.isNaN',
-        'Number.isSafeInteger',
-        'Number.EPSILON',
-        'Number.MAX_SAFE_INTEGER',
-        'Math.sign',
-        'Math.trunc',
-        'WeakMap',
-      ],
-    }, {
-      filename: 'core_00_esx',
-      contents: [
-        'Object.getOwnerOf',
-        'Object.setOwnerOf',
-        'Thread',
-        'PermissionError',
-        'Array.prototype.join',
-        'suspend',
-        'setTimeout',
-        'clearTimeout',
-      ],
-    }, {
-      filename: 'core_10_base',
-      contents: [
-        {path: 'user', do: Do.DECL},
-        {path: '$', do: Do.SET},
-        '$.system',
-        {path: '$.utils', do: Do.ATTR},
-        '$.physical',
-        '$.thing',
-        '$.room',
-        '$.user',
-        '$.execute',
-        {path: '$.userDatabase', do: Do.ATTR},
-        '$.connection',
-        {path: '$.servers', do: Do.ATTR},
-        '$.servers.telnet',
-      ],
-    }, {
-      filename: 'core_11_$.utils.command',
-      contents: [
-        '$.utils.command',
-        '$.utils.match',
-      ],
-    }, {
-      filename: 'core_12_$.utils.selector',
-      contents: ['$.utils.selector'],
-    }, {
-      filename: 'core_13_$.utils.code',
-      contents: ['$.utils.code'],
-    }, {
-      filename: 'core_20_$.utils.acorn_pre',
-    }, {
-      filename: 'core_21_$.utils.acorn',
-      symlink: '../server/node_modules/acorn/dist/acorn.js',
-    }, {
-      filename: 'core_22_$.utils.acorn_post',
-    }, {
-      filename: 'core_30_$.servers.http',
-      contents: ['$.servers.http'],
-    }, {
-      filename: 'core_31_$.jssp',
-      contents: ['$.jssp'],
-    }, {
-      filename: 'core_32_$.www',
-      contents: [
-        {path: '$.www', do: Do.ATTR},
-        {path: '$.www.ROUTER', do: Do.ATTR},
-        '$.www[404]',
-        '$.www.homepage',
-        '$.www.robots',
-      ],
-    }, {
-      filename: 'core_33_$.www.editor',
-      contents: ['$.www.editor'],
-    }, {
-      filename: 'core_34_$.www.code',
-      contents: ['$.www.code'],
-    }, {
-      filename: 'core_40_$.db.tempId',
-      contents: [
-        {path: '$.db', do: Do.ATTR},
-        '$.db.tempID',
-      ],
-    }, {
-      filename: 'core_90_world',
-      rest: true,
-    },
-  ];
-
-  dump(intrp, spec);
+  const specText = fs.readFileSync(path.join(coreDir, 'dump_spec.json'));
+  const spec = JSON.parse(String(specText));
+  var config = configFromSpec(spec);
+  dump(intrp, config);
 };
