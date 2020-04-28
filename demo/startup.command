@@ -9,15 +9,15 @@ end tell
 tell app "Terminal"
 
   do script "cd " & dbPath & "../login
-node loginServer.js"
+./loginServer"
 
   do script "cd " & dbPath & "../connect
-node connectServer.js"
+./connectServer"
 
   do script "cd " & dbPath & "../mobwrite
 python mobwrite_server.py"
 
   do script "cd " & dbPath & "../server
-node --harmony-weak-refs codecity.js " & dbPath & "demo.cfg"
+./codecity " & dbPath & "demo.cfg"
 
 end tell
