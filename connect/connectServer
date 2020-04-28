@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 /**
  * @license
  * Copyright 2017 Google LLC
@@ -20,7 +21,6 @@
  * @author fraser@google.com (Neil Fraser)
  */
 
-// Start with: node connectServer.js
 'use strict';
 
 var crypto = require('crypto');

@@ -8,5 +8,5 @@ SyslogIdentifier=cc-connect
 WorkingDirectory=/home/cc/CodeCity/connect
 User=cc
 Group=cc
-ExecStart=@/usr/bin/nodejs cc-connect /home/cc/CodeCity/connect/connectServer.js
+ExecStart=@/home/cc/CodeCity/connect/connectServer cc-connect
 Restart=on-failure
