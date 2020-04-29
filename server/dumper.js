@@ -29,6 +29,7 @@
 var code = require('./code');
 var Interpreter = require('./interpreter');
 var Selector = require('./selector');
+var Writable = require('stream').Writable;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Dumper.
@@ -79,8 +80,8 @@ var Dumper = function(intrp1, intrp2) {
   this.scope = intrp2.global;
   /** @type {!Interpreter.Owner} Perms at present point in output. */
   this.perms = intrp2.ROOT;
-  /** @const {!Array<string>} Accumulated output for the current file. */
-  this.output = [];  // TODO(cpcallen): use Buffer or Uint8Array?
+  /** @private @type {?Writable} stream.Wriable to write dump output to. */
+  this.output_ = null;
   /**
    * Map from objects from intrp1 to corresponding objects in intrp2.
    * @type {!Map<?Interpreter.prototype.Object, ?Interpreter.prototype.Object>}
@@ -198,7 +199,7 @@ Dumper.prototype.markBinding = function(selector, done) {
 /**
  * Generate JS source text to declare and optionally initialise a
  * particular binding (as specified by a Selector).  The generated
- * source text is written to the current output file and returned.
+ * source text is written to the current output buffer.
  *
  * E.g., if foo = [42, 69, 105], then:
  *
@@ -212,16 +213,14 @@ Dumper.prototype.markBinding = function(selector, done) {
  * // => 'foo[1] = 69;\nfoo[2] = 105;\n'
  * @param {!Selector} selector The selector for the binding to be dumped.
  * @param {!Do} todo How much to dump.  Must be >= Do.DECL.
- * @return {string} An eval-able program to initialise the specified binding.
+ * @void
  */
 Dumper.prototype.dumpBinding = function(selector, todo) {
-  var preLength = this.output.length;
   var c = this.getComponentsForSelector(selector);
   if (c.dumper.getDone(c.part) === Do.SKIP) {
     c.dumper.setDone(c.part, Do.UNSTARTED);
   }
   c.dumper.dumpBinding(this, c.part, todo);
-  return this.output.slice(preLength).join('');
 };
 
 /**
@@ -666,6 +665,15 @@ Dumper.prototype.getScopeDumper = function(scope) {
 };
 
 /**
+ * Set the output Buffer or FileHandle that this.write() writes to.
+ * Setting it to null will cause cause write to do nothing.
+ * @param {?Writable} stream stream.Writable for .write to write to.
+ */
+Dumper.prototype.setOutputStream = function(stream) {
+  this.output_ = stream;
+};
+
+/**
  * Get the present value in the interpreter of a particular binding,
  * specified by selector.  If selector does not correspond to a valid
  * binding an error is thrown.
@@ -707,7 +715,9 @@ Dumper.prototype.valueForSelector = function(selector, scope) {
  * @param {...string} var_args Strings to output.
  */
 Dumper.prototype.write = function(var_args) {
-  this.output.push.apply(this.output, arguments);
+  if (this.output_) {
+    this.output_.write(Array.prototype.join.call(arguments, ''));
+  }
 };
 
 ///////////////////////////////////////////////////////////////////////////////

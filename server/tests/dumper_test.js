@@ -30,11 +30,36 @@ const {getInterpreter} = require('./interpreter_common');
 const Interpreter = require('../interpreter');
 const path = require('path');
 const Selector = require('../selector');
+const {Writable} = require('stream');
 const {T} = require('./testing');
 const util = require('util');
 
 // Unpack test-only exports:
 const {ObjectDumper} = testOnly;
+
+/**
+ * A mock Writable, for testing.
+ */
+class MockWritable extends Writable {
+  /** @override */
+  constructor(options = {}) {
+    super(options);
+    /** @const {!Array<string>} */
+    this.output = [];
+  }
+  /**
+   * N.B.: encoding is ignored.
+   * @override
+   */
+  _write(chunk, encoding, callback) {
+    this.output.push(String(chunk));
+    callback();
+  }
+  /** @return {string} */
+  toString() {
+    return this.output.join('');
+  }
+}
 
 /**
  * Unit tests for the ObjectDumper.prototype.isWritable method.
@@ -871,9 +896,11 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     for (const [ss, todo, expected, done] of tc.dump || []) {
       const s = new Selector(ss);
       // Dump binding and check output code.
-      const code = dumper.dumpBinding(s, todo);
+      const result = new MockWritable();
+      dumper.setOutputStream(result);
+      dumper.dumpBinding(s, todo);
       t.expect(util.format('%sDumper.p.dumpBinding(<%s>, %o)', prefix,
-                           s, todo), code, expected);
+                           s, todo), String(result), expected);
       // Check work recorded.
       const {dumper: d, part} = dumper.getComponentsForSelector(s);
       t.expect(util.format('%sBinding status of <%s> (after dump)', prefix, s),
@@ -931,18 +958,17 @@ exports.testScopeDumperPrototypeDump = function(t) {
   const globalDumper = dumper.getScopeDumper(intrp.global);
 
   // Dump one binding and check result.
-  dumper.output.length = 0;
+  let result = new MockWritable();
+  dumper.setOutputStream(result);
   globalDumper.dumpBinding(dumper, 'obj', Do.SET);
-  let code = dumper.output.join('');
   t.expect("ScopeDumper.p.dumpBinding(..., 'obj', Do.SET, ...) outputs",
-      code, "var obj = (new 'Object.create')(null);\n");
+           String(result), "var obj = (new 'Object.create')(null);\n");
 
   // Dump the rest & check result.
-  dumper.output.length = 0;
+  dumper.setOutputStream((result = new MockWritable()));
   globalDumper.dump(dumper);
-  code = dumper.output.join('');
-  t.expect('ScopeDumper.p.dump(...) outputs', code,
-      'var value = 42;\nobj.prop = 69;\n');
+  t.expect('ScopeDumper.p.dump(...) outputs', String(result),
+           'var value = 42;\nobj.prop = 69;\n');
 };
 
 /**
