@@ -26,6 +26,7 @@
 // TODO(cpcallen): Use official externs directly.
 
 var Buffer = require('buffer').Buffer;
+var stream = require('stream');
 
 /** @const */
 var fs = {};
@@ -35,6 +36,38 @@ var fs = {};
  * @param {number=} mode
  */
 fs.accessSync = function(path, mode) {};
+
+/**
+ * @param {string} path
+ * @param {{flags: (string|undefined),
+ *          encoding: (string|undefined),
+ *          fd: (number|undefined),
+ *          mode: (number|undefined),
+ *          bufferSize: (number|undefined)}=} options
+ * @return {fs.ReadStream}
+ */
+fs.createReadStream = function(path, options) {};
+
+/**
+ * @constructor
+ * @extends stream.ReadableStream
+ */
+fs.ReadStream = function () {};
+
+/**
+ * @param {string} path
+ * @param {{flags: (string|undefined),
+ *          encoding: (string|undefined),
+ *          mode: (number|undefined)}=} options
+ * @return {fs.WriteStream}
+ */
+fs.createWriteStream = function(path, options) {};
+
+/**
+ * @constructor
+ * @extends stream.WritableStream
+ */
+fs.WriteStream = function () {};
 
 /**
  * @param {string} path

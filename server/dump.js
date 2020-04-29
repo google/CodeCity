@@ -26,30 +26,43 @@
 'use strict';
 
 var code = require('./code');
-var Interpreter = require('./interpreter');
-var Selector = require('./selector');
 var {Dumper, Do} = require('./dumper');
+var fs = require('fs');
+var Interpreter = require('./interpreter');
+var path = require('path');
+var Selector = require('./selector');
 
 /**
  * Dump an Interpreter using a given dump specification.
  * @param {!Interpreter} intrp The interpreter to dump.
  * @param {!Array<ConfigEntry>} config The dump specification.
+ * @param {string=} directory A directory relative to which
+ *     non-absolute filenames in config should be written.  If none is
+ *     supplied then they will be treated as relative to the current
+ *     directory.
  */
-var dump = function(intrp, config) {
+var dump = function(intrp, config, directory) {
   var dumper = new Dumper(new Interpreter(), intrp);
 
+  // Skip everything that's explicitly mentioned in the config, so
+  // that paths won't get dumped until it's their turn.
   for (var entry, i = 0; entry = config[i]; i++) {
     if (!entry.contents) continue;
     for (var item, j = 0; item = entry.contents[j]; j++) {
       dumper.markBinding(item.selector, Do.SKIP);
     }
   }
-
+  // Dump the specified paths, in order.
   for (var entry, i = 0; entry = config[i]; i++) {
-    dumper.write('////////////////////////////////////////');
-    dumper.write('///////////////////////////////////////\n');
-    dumper.write('// ' + entry.filename + '\n\n');
-
+    var filename = entry.filename;
+    if (directory !== undefined && !path.isAbsolute(filename)) {
+      filename = path.normalize(path.join(directory, filename));
+    }
+    var outputStream = fs.createWriteStream(filename, {mode: 0o600});
+    dumper.setOutputStream(outputStream);
+    dumper.write('////////////////////////////////////////',
+                 '///////////////////////////////////////\n',
+                 '// ', entry.filename, '\n\n');
     if (entry.contents) {
       for (var item, j = 0; item = entry.contents[j]; j++) {
         try {
@@ -65,6 +78,7 @@ var dump = function(intrp, config) {
       var globalScopeDumper = dumper.getScopeDumper(intrp.global);
       globalScopeDumper.dump(dumper);
     }
+    outputStream.end();
   }
 };
 
@@ -229,6 +243,6 @@ var SpecContentEntry;
 ///////////////////////////////////////////////////////////////////////////////
 // Exports.
 
-exports.configFromSpec = configFromSpec;  
+exports.configFromSpec = configFromSpec;
 exports.Do = Do;
 exports.dump = dump;
