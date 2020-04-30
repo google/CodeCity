@@ -29,7 +29,6 @@
 var code = require('./code');
 var Interpreter = require('./interpreter');
 var Selector = require('./selector');
-var Writable = require('stream').Writable;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Dumper.
@@ -80,7 +79,7 @@ var Dumper = function(intrp1, intrp2) {
   this.scope = intrp2.global;
   /** @type {!Interpreter.Owner} Perms at present point in output. */
   this.perms = intrp2.ROOT;
-  /** @private @type {?Writable} stream.Wriable to write dump output to. */
+  /** @private @type {?Writable} something to write dump output to. */
   this.output_ = null;
   /**
    * Map from objects from intrp1 to corresponding objects in intrp2.
@@ -213,7 +212,7 @@ Dumper.prototype.markBinding = function(selector, done) {
  * // => 'foo[1] = 69;\nfoo[2] = 105;\n'
  * @param {!Selector} selector The selector for the binding to be dumped.
  * @param {!Do} todo How much to dump.  Must be >= Do.DECL.
- * @void
+ * @returns {void}
  */
 Dumper.prototype.dumpBinding = function(selector, todo) {
   var c = this.getComponentsForSelector(selector);
@@ -667,7 +666,7 @@ Dumper.prototype.getScopeDumper = function(scope) {
 /**
  * Set the output Buffer or FileHandle that this.write() writes to.
  * Setting it to null will cause cause write to do nothing.
- * @param {?Writable} stream stream.Writable for .write to write to.
+ * @param {?Writable} stream something for .write to write to.
  */
 Dumper.prototype.setOutputStream = function(stream) {
   this.output_ = stream;
@@ -1520,11 +1519,26 @@ var Do = {
   RECURSE: 4,
 };
 
+/**
+ * A writable stream.  Could be a stream.Writable, but we don't check
+ * the return value of .write to see if it's safe to keep writing, so
+ * caller might prefer to supply a synchronous implementation instead!
+ * @interface
+ */
+var Writable = function() {};
+
+/**
+ * Write a string to the writable stream.
+ * @param {string} s
+ */
+Writable.prototype.write = function(s) {};
+
 ///////////////////////////////////////////////////////////////////////////////
 // Exports.
 
 exports.Do = Do;
 exports.Dumper = Dumper;
+exports.Writable = Writable;
 
 // For unit testing only!
 exports.testOnly = {

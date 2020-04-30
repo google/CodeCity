@@ -38,6 +38,12 @@ var fs = {};
 fs.accessSync = function(path, mode) {};
 
 /**
+ * @param {number} fd
+ * @return {void}
+ */
+fs.closeSync = function(fd) {};
+
+/**
  * @param {string} path
  * @param {{flags: (string|undefined),
  *          encoding: (string|undefined),
@@ -74,6 +80,14 @@ fs.WriteStream = function () {};
  * @return {boolean}
  */
 fs.existsSync = function(path) {};
+
+/**
+ * @param {string} path
+ * @param {string} flags
+ * @param {number=} mode
+ * @returns {number}
+ */
+fs.openSync = function(path, flags, mode) {};
 
 /**
  * @param {string} path
@@ -115,6 +129,15 @@ fs.unlinkSync = function(path) {};
  */
 fs.writeFileSync = function(filename, data, encoding) {};
 
+/**
+ * @param {number} fd
+ * @param {string} string
+ * @param {number=} position
+ * @param {string=} encoding
+ * @return {number}
+ */
+fs.writeSync = function(fd, string, position, encoding) {};
+                        
 /** @constructor */
 fs.Stats = function () {};
 

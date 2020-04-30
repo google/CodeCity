@@ -28,7 +28,9 @@
 
 var code = require('./code');
 var CodeCity = require('./codecity');
-var {Dumper, Do} = require('./dumper');
+var Do = require('./dumper').Do;
+var Dumper = require('./dumper').Dumper;
+var Writable = require('./dumper').Writable;
 var fs = require('fs');
 var Interpreter = require('./interpreter');
 var path = require('path');
@@ -63,7 +65,7 @@ var dump = function(intrp, config, directory, verbose) {
     if (directory !== undefined && !path.isAbsolute(filename)) {
       filename = path.normalize(path.join(directory, filename));
     }
-    var outputStream = fs.createWriteStream(filename, {mode: 0o600});
+    var outputStream = new SyncWriter(filename);
     dumper.setOutputStream(outputStream);
     dumper.write('////////////////////////////////////////',
                  '///////////////////////////////////////\n',
@@ -175,6 +177,39 @@ var configFromSpec = function(spec) {
     });
   }
   return config;
+};
+
+/**
+ * A synchronous writable stream, with an API that is a simplified
+ * subset of stream.Writable.
+ * @constructor
+ * @implements Writable
+ * @param {string} filename The file to write to.
+ */
+var SyncWriter = function(filename) {
+  /** @type {number|null} */
+  this.fd = fs.openSync(filename, 'w', 0o600);
+};
+
+/**
+ * Write string to file.
+ * @override
+ * @param {string} s String to write.
+ * @returns {void}
+ */
+SyncWriter.prototype.write = function(s) {
+  if (this.fd === null) throw Error('stream already ended');
+  fs.writeSync(this.fd, s);
+};
+
+/**
+ * Close file.
+ * @returns {void}
+ */
+SyncWriter.prototype.end = function() {
+  if (this.fd === null) throw Error('stream already ended');
+  fs.closeSync(this.fd);
+  this.fd = null;
 };
 
 ///////////////////////////////////////////////////////////////////////////////

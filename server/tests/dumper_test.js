@@ -25,12 +25,11 @@
  */
 'use strict';
 
-const {Dumper, Do, testOnly} = require('../dumper');
+const {Dumper, Do, testOnly, Writable} = require('../dumper');
 const {getInterpreter} = require('./interpreter_common');
 const Interpreter = require('../interpreter');
 const path = require('path');
 const Selector = require('../selector');
-const {Writable} = require('stream');
 const {T} = require('./testing');
 const util = require('util');
 
@@ -39,22 +38,19 @@ const {ObjectDumper} = testOnly;
 
 /**
  * A mock Writable, for testing.
+ * @implements {Writable}
  */
-class MockWritable extends Writable {
-  /** @override */
-  constructor(options = {}) {
-    super(options);
+class MockWritable {
+  constructor() {
     /** @const {!Array<string>} */
     this.output = [];
   }
-  /**
-   * N.B.: encoding is ignored.
-   * @override
-   */
-  _write(chunk, encoding, callback) {
+
+  /** @override */
+  write(chunk) {
     this.output.push(String(chunk));
-    callback();
   }
+
   /** @return {string} */
   toString() {
     return this.output.join('');
