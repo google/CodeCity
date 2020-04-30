@@ -42,10 +42,11 @@ var Selector = require('./selector');
  *     non-absolute filenames in config should be written.  If none is
  *     supplied then they will be treated as relative to the current
  *     directory.
+ * @param {boolean=} verbose Print message describing what is being done.
  */
-var dump = function(intrp, config, directory) {
+var dump = function(intrp, config, directory, verbose) {
   var dumper = new Dumper(new Interpreter(), intrp);
-  console.log('Dumper initialised.');
+  if (verbose) console.log('Dumper initialised.');
 
   // Skip everything that's explicitly mentioned in the config, so
   // that paths won't get dumped until it's their turn.
@@ -58,7 +59,7 @@ var dump = function(intrp, config, directory) {
   // Dump the specified paths, in order.
   for (var entry, i = 0; entry = config[i]; i++) {
     var filename = entry.filename;
-    console.log('Dumping to %s...', filename);
+    if (verbose) console.log('Dumping to %s...', filename);
     if (directory !== undefined && !path.isAbsolute(filename)) {
       filename = path.normalize(path.join(directory, filename));
     }
@@ -70,7 +71,7 @@ var dump = function(intrp, config, directory) {
     if (entry.contents) {
       for (var item, j = 0; item = entry.contents[j]; j++) {
         try {
-          console.log('Dumping: %s', item.selector);
+          if (verbose) console.log('Dumping: %s', item.selector);
           dumper.dumpBinding(item.selector, item.do);
           dumper.write('\n');
         } catch (e) {
@@ -80,7 +81,7 @@ var dump = function(intrp, config, directory) {
         }
       }
     } else if (entry.rest) {
-      console.log('Dumping rest.');
+      if (verbose) console.log('Dumping rest.');
       var globalScopeDumper = dumper.getScopeDumper(intrp.global);
       globalScopeDumper.dump(dumper);
     }
@@ -264,7 +265,7 @@ if (require.main === module) {
   var specText = fs.readFileSync(planFile);
   const spec = JSON.parse(String(specText));
   var config = configFromSpec(spec);
-  dump(intrp, config, dir);
+  dump(intrp, config, dir, /*verbose:*/ true);
 };
 
 ///////////////////////////////////////////////////////////////////////////////
