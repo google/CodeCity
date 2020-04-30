@@ -872,8 +872,11 @@ ScopeDumper.prototype.survey = function(dumper) {
       this.scope.hasImmutableBinding('arguments')) {
     var argsObject = this.scope.get('arguments');
     if (!(argsObject instanceof dumper.intrp2.Arguments)) {
+      // BUG(cpcallen): what about function(arguments) {...}?
       throw new TypeError('arguments not an Arguments object');
     } else if (dumper.argumentsScopeDumpers.has(argsObject)) {
+      // BUG(cpcallen): what about (function(arguments) {...})(
+      //     (function() {return arguments;})()); ?
       throw new Error('Arguments object belongs to more than one scope');
     }
     dumper.argumentsScopeDumpers.set(argsObject, this);
@@ -896,6 +899,8 @@ ScopeDumper.prototype.survey = function(dumper) {
  */
 var ObjectDumper = function(dumper, obj) {
   this.obj = obj;
+  /** @type {boolean} Has this scope already been surveyed? */
+  this.surveyed = false;
   /** @type {!Selector|undefined} Reference to this object, once created. */
   this.ref = undefined;
   /** @type {!ObjectDumper.Done} How much has object been dumped? */
@@ -1326,7 +1331,7 @@ ObjectDumper.prototype.setDone = function(part, done) {
  * @param {!Selector} ref Selector refering to this object.
  */
 ObjectDumper.prototype.survey = function(dumper, ref) {
-  if (dumper.visiting.has(this)) return;
+  if (dumper.visiting.has(this) || this.surveyed) return;
   dumper.visiting.add(this);
   if (this.obj instanceof dumper.intrp2.UserFunction) {
     // Record this this function as inner to scope, and survey scope.
@@ -1359,6 +1364,7 @@ ObjectDumper.prototype.survey = function(dumper, ref) {
     }
   }
   dumper.visiting.delete(this);
+  this.surveyed = true;
 };
 
 /**
