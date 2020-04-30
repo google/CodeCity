@@ -50,7 +50,7 @@ args=(-O=ADVANCED_OPTIMIZATIONS
       selector.js
       dumper.js
       dump.js
-      codecity.js
+      codecity
 
       tests/*.js
 )

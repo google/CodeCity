@@ -1,3 +1,4 @@
+#!/usr/bin/env node --harmony-weak-refs
 /**
  * @license
  * Copyright 2017 Google LLC
@@ -20,7 +21,6 @@
  * @author fraser@google.com (Neil Fraser)
  */
 
-// Start with: node codecity.js <DB directory>
 'use strict';
 
 const crypto = require('crypto');
