@@ -2,6 +2,9 @@
   {
     "filename": "core_00_es5",
     "contents": [
+      {"path": "Object", "do": "SET"},
+      {"path": "Function", "do": "SET"},
+      {"path": "Object.defineProperty", "do": "ATTR"},
       "Object",
       "Function",
       "Array",
@@ -67,6 +70,7 @@
     "contents": [
       {"path": "user", "do": "DECL"},
       {"path": "$", "do": "SET"},
+      "$.root",
       "$.system",
       {"path": "$.utils", "do": "ATTR"},
       "$.physical",
@@ -91,16 +95,6 @@
   }, {
     "filename": "core_13_$.utils.code",
     "contents": ["$.utils.code"]
-  }, {
-    "filename": "core_20_$.utils.acorn_pre",
-    "contents": []
-  }, {
-    "filename": "core_21_$.utils.acorn",
-    "symlink": "../server/node_modules/acorn/dist/acorn.js",
-    "contents": []
-  }, {
-    "filename": "core_22_$.utils.acorn_post",
-    "contents": []
   }, {
     "filename": "core_30_$.servers.http",
     "contents": ["$.servers.http"]
