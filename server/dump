@@ -1,3 +1,4 @@
+#!/usr/bin/env node --harmony-weak-refs
 /**
  * @license
  *
@@ -26,6 +27,7 @@
 'use strict';
 
 var code = require('./code');
+var CodeCity = require('./codecity');
 var {Dumper, Do} = require('./dumper');
 var fs = require('fs');
 var Interpreter = require('./interpreter');
@@ -43,6 +45,7 @@ var Selector = require('./selector');
  */
 var dump = function(intrp, config, directory) {
   var dumper = new Dumper(new Interpreter(), intrp);
+  console.log('Dumper initialised.');
 
   // Skip everything that's explicitly mentioned in the config, so
   // that paths won't get dumped until it's their turn.
@@ -55,6 +58,7 @@ var dump = function(intrp, config, directory) {
   // Dump the specified paths, in order.
   for (var entry, i = 0; entry = config[i]; i++) {
     var filename = entry.filename;
+    console.log('Dumping to %s...', filename);
     if (directory !== undefined && !path.isAbsolute(filename)) {
       filename = path.normalize(path.join(directory, filename));
     }
@@ -66,6 +70,7 @@ var dump = function(intrp, config, directory) {
     if (entry.contents) {
       for (var item, j = 0; item = entry.contents[j]; j++) {
         try {
+          console.log('Dumping: %s', item.selector);
           dumper.dumpBinding(item.selector, item.do);
           dumper.write('\n');
         } catch (e) {
@@ -75,6 +80,7 @@ var dump = function(intrp, config, directory) {
         }
       }
     } else if (entry.rest) {
+      console.log('Dumping rest.');
       var globalScopeDumper = dumper.getScopeDumper(intrp.global);
       globalScopeDumper.dump(dumper);
     }
@@ -239,6 +245,27 @@ var SpecEntry;
  *            reorder: (boolean|undefined)}}
  */
 var SpecContentEntry;
+
+///////////////////////////////////////////////////////////////////////////////
+// Main program.
+
+if (require.main === module) {
+  if (process.argv.length < 4) {
+    console.log(
+        'usage: dump <.city file> <dump_spec.json> <output directory>');
+    process.exit(1);
+  }
+
+  var cityFile = process.argv[2];
+  var planFile = process.argv[3];
+  var dir = process.argv[4];
+
+  var intrp = CodeCity.loadCheckpoint(cityFile);
+  var specText = fs.readFileSync(planFile);
+  const spec = JSON.parse(String(specText));
+  var config = configFromSpec(spec);
+  dump(intrp, config, dir);
+};
 
 ///////////////////////////////////////////////////////////////////////////////
 // Exports.
