@@ -727,17 +727,24 @@ Dumper.prototype.valueForSelector = function(selector, scope) {
 Dumper.prototype.warn = function(warning) {
   if (this.options.verbose) console.log(warning);
   warning = warning.replace(/^(?!$)/gm, '// ');
-  if (warning.slice(-1) !== '\n') warning = warning + '\n';
   this.write(warning);
 };
 
 /**
- * Write strings to current output file.  (May be buffered.)
+ * Write strings to current output file.  (May be buffered.)  The
+ * arguments will be concatenated into a single string, which will be
+ * pefixed with the current indentation and have a trailing newline
+ * added if necessary.  No indentation will be added to the second and
+ * subsequent lines of a multi-line write, however, to preserve
+ * indentation in function bodies / multi-line string literals / etc.
  * @param {...string} var_args Strings to output.
  */
 Dumper.prototype.write = function(var_args) {
   if (this.options.output) {
-    this.options.output.write(Array.prototype.join.call(arguments, ''));
+    // TODO(cpcallen): actually add indentation.
+    var line = Array.prototype.join.call(arguments, '');
+    if (line.slice(-1) !== '\n') line = line + '\n';
+    this.options.output.write(line);
   }
 };
 
@@ -827,23 +834,24 @@ ScopeDumper.prototype.dumpBinding = function(dumper, part, todo, ref) {
   var sel = new Selector([part]);
   var done = this.getDone(part);
   var value = this.scope.get(part);
-
   if (done >= 0) {  // Negative values mean don't dump (yet).
+    var output = [];
     if (todo >= Do.DECL && done < todo && done <= Do.SET) {
       if (done < Do.DECL) {
-        dumper.write('var ');
+        output.push('var ');
         done = Do.DECL;
       }
       if (done < Do.SET) {
-        dumper.write(part);
+        output.push(part);
         if (todo >= Do.SET) {
-          dumper.write(' = ', dumper.exprFor(value, sel, false, part));
+          output.push(' = ', dumper.exprFor(value, sel, false, part));
           done = (typeof value === 'object') ? Do.DONE : Do.RECURSE;
         }
-        dumper.write(';\n');
+        output.push(';');
       }
       this.setDone(part, done);
     }
+    if (output.length) dumper.write.apply(dumper, output);
     if (todo >= Do.RECURSE && done < Do.RECURSE &&
         value instanceof dumper.intrp2.Object) {
       var objDone = dumper.getObjectDumper(value).dump(dumper, sel);
@@ -853,7 +861,6 @@ ScopeDumper.prototype.dumpBinding = function(dumper, part, todo, ref) {
       }
     }
   }
-
   return done;
 };
 
@@ -1041,7 +1048,7 @@ ObjectDumper.prototype.dump = function(dumper, ref) {
     var sel = new Selector(ref);
     for (var key, i = 0; key = this.toDelete[i]; i++) {
       sel.push(key);
-      dumper.write('delete ', dumper.exprForSelector(sel), ';\n');
+      dumper.write('delete ', dumper.exprForSelector(sel), ';');
       sel.pop();
     }
     this.toDelete = null;
@@ -1078,7 +1085,7 @@ ObjectDumper.prototype.dump = function(dumper, ref) {
     // Dump extensibility.
     if (!this.obj.isExtensible(dumper.intrp2.ROOT)) {
       dumper.write(dumper.exprForBuiltin('Object.preventExtensions'), '(',
-                   dumper.exprForSelector(ref), ');\n');
+                   dumper.exprForSelector(ref), ');');
     }
     this.done = ObjectDumper.Done.DONE;
   }
@@ -1182,7 +1189,7 @@ ObjectDumper.prototype.dumpOwner_ = function(dumper, todo, ref, sel) {
   if (todo >= Do.SET && this.doneOwner_ < Do.SET) {
     dumper.write(dumper.exprForBuiltin('Object.setOwnerOf'), '(',
                  dumper.exprForSelector(ref), ', ',
-                 dumper.exprFor(value, sel), ');\n');
+                 dumper.exprFor(value, sel), ');');
     this.doneOwner_ = (value === null) ? Do.RECURSE: Do.DONE;
   }
   return {done: this.doneOwner_, value};
@@ -1227,7 +1234,7 @@ ObjectDumper.prototype.dumpProperty_ = function(dumper, key, todo, ref, sel) {
       // TODO(ES6): Handle prefix?
       var funcName = dumper.intrp1.options.methodNames ? key : undefined;
       dumper.write(dumper.exprForSelector(sel), ' = ',
-                   dumper.exprFor(value, sel, false, funcName), ';\n');
+                   dumper.exprFor(value, sel, false, funcName), ';');
       done = this.checkProperty(key, value, attr, pd);
     }
 
@@ -1257,7 +1264,7 @@ ObjectDumper.prototype.dumpProperty_ = function(dumper, key, todo, ref, sel) {
       }
       dumper.write(dumper.exprForBuiltin('Object.defineProperty'), '(',
                    dumper.exprForSelector(ref), ', ', dumper.exprFor(key),
-                   ', {', items.join(', '), '});\n');
+                   ', {', items.join(', '), '});');
       done = this.checkProperty(key, value, attr, pd);
     }
   }
@@ -1280,7 +1287,7 @@ ObjectDumper.prototype.dumpPrototype_ = function(dumper, todo, ref, sel) {
   if (todo >= Do.SET && this.doneProto_ < Do.SET) {
     dumper.write(dumper.exprForBuiltin('Object.setPrototypeOf'), '(',
                  dumper.exprForSelector(ref), ', ',
-                 dumper.exprFor(value, sel), ');\n');
+                 dumper.exprFor(value, sel), ');');
     this.proto = value;
     this.doneProto_ = (value === null) ? Do.RECURSE: Do.DONE;
   }
