@@ -710,6 +710,20 @@ Dumper.prototype.valueForSelector = function(selector, scope) {
 };
 
 /**
+ * Log a warning about something suspicious that happened while
+ * dumping.  By default this prints to the console and .write()s a
+ * comment to the file being output, but it can be overridden on
+ * individual instances.
+ * @param {string} warning Warning to output or log.
+ */
+Dumper.prototype.warn = function(warning) {
+  console.log(warning);
+  warning = warning.replace(/^/gm, '// ');
+  if (warning.slice(-1) !== '\n') warning = warning + '\n';
+  this.write(warning);
+};
+
+/**
  * Write strings to current output file.  (May be buffered.)
  * @param {...string} var_args Strings to output.
  */

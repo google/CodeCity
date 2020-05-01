@@ -77,9 +77,7 @@ var dump = function(intrp, config, directory, verbose) {
           dumper.dumpBinding(item.selector, item.do);
           dumper.write('\n');
         } catch (e) {
-          dumper.write('// ', String(e), '\n');
-          dumper.write(e.stack.split('\n')
-              .map(function (s) {return '//     ' + s + '\n';}));
+          dumper.warn(e.stack);
         }
       }
     } else if (entry.rest) {
