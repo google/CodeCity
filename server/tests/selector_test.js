@@ -149,3 +149,32 @@ exports.testSelectorPrototypeIsWhatever = function(t) {
   }
 };
 
+/**
+ * Unit tests for Selector.prototype.badness
+ * @param {!T} t The test runner object.
+ */
+exports.testSelectorPrototypeBadness = function(t) {
+  // Test verifies these are in monotonically increasing order of badness.
+  const cases = [
+    'foo',
+    'foobar',
+    'foo.bar',
+    'foo[10]',
+    'foo["&"]',
+    'foo.bar.baz.quux.quuux.quuux',
+    'foo{proto}',
+    'foo.bar.baz.quux.quuux.quuux.quuuux.quuuuux.quuuuuux.quuuuuuux',
+  ];
+  let previous = '(no previous)';
+  let previousBadness = -Infinity;
+  for (const ss of cases) {
+    const s = new Selector(ss);
+    const badness = s.badness();
+    const name = util.format('Selector(%s).badness() < Selector(%s).badness()',
+                             previousBadness, badness);
+    t.assert(name, previousBadness < badness);
+    previous = ss;
+    previousBadness = badness;
+  }
+};
+

@@ -65,6 +65,32 @@ var Selector = function(s) {
 Object.setPrototypeOf(Selector.prototype, Array.prototype);
 
 /**
+ * Return a "badness" score, inversely proportional to how
+ * desirable a particular selector is amongst other selectors
+ * referring to the same object.  In general, longer selectors are
+ * more bad, but selectors containing special parts are especially
+ * bad.
+ * @return {number};
+ */
+Selector.prototype.badness = function() {
+  var penalties = 0;
+  for (var i = 0; i < this.length; i++) {
+    var part = this[i];
+    if (part instanceof SpecialPart) {
+      penalties += 100;
+    } else if (code.regexps.identifierExact.test(part)) {
+      penalties += 10;  // We like identifiers.
+    } else if (String(Number(part)) === part) {
+      penalties += 25;  // Numbers are OK.
+    } else {
+      penalties += 50;  // Quoted strings are undesirable.
+    }
+  }
+  if (this[0] === '$') penalties += 100;  // Prefer builtins.
+  return penalties + String(this).length;
+};
+
+/**
  * Returns true iff the selector represents an object owner
  * binding.
  * @return {boolean} Is selector for owner?
