@@ -737,7 +737,7 @@ Dumper.prototype.valueForSelector = function(selector, scope) {
  */
 Dumper.prototype.warn = function(warning) {
   if (this.options.verbose) console.log(warning);
-  warning = warning.replace(/^/gm, '// ');
+  warning = warning.replace(/^(?!$)/gm, '// ');
   if (warning.slice(-1) !== '\n') warning = warning + '\n';
   this.write(warning);
 };

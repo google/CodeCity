@@ -968,6 +968,22 @@ exports.testScopeDumperPrototypeDump = function(t) {
 };
 
 /**
+ * Unit test for Dumper.prototype.warn
+ * @param {!T} t The test runner object.
+ */
+exports.testDumperPrototypeWarn = function(t) {
+  const intrp = new Interpreter();
+  const dumper = new Dumper(intrp, intrp, {verbose: false});
+  const output = new MockWritable();
+  dumper.setOutputStream(output);
+  dumper.warn('1');
+  dumper.warn('2\n');
+  dumper.warn('3\n4');
+  t.expect('Dumper.prototype.warn(...) output', String(output),
+           '// 1\n// 2\n// 3\n// 4\n');
+};
+
+/**
  * Unit test for the ObjectDumper and ScopeDumper.prototype.survey
  * dump methods.
  * @param {!T} t The test runner object.
