@@ -53,10 +53,16 @@ var Selector = require('./selector');
  *     the one the ouptut JS will be executed by.
  * @param {!Interpreter} intrp2 An interpreter containing state
  *     modifications (relative to intrp1) to be dumped.
+ * @param {!DumperOptions=} options Additional options.
  */
-var Dumper = function(intrp1, intrp2) {
+var Dumper = function(intrp1, intrp2, options) {
   this.intrp1 = intrp1;
   this.intrp2 = intrp2;
+  // Copy DEFAULT_OPTIONS then apply supplied options.
+  this.options = {};
+  this.setOptions(DEFAULT_OPTIONS);
+  if (options) this.setOptions(options);
+
   /** @const {!Map<!Interpreter.Scope,!ScopeDumper>} */
   this.scopeDumpers = new Map();
   /** @const {!Map<!Interpreter.prototype.Object,!ObjectDumper>} */
@@ -212,7 +218,7 @@ Dumper.prototype.markBinding = function(selector, done) {
  * // => 'foo[1] = 69;\nfoo[2] = 105;\n'
  * @param {!Selector} selector The selector for the binding to be dumped.
  * @param {!Do} todo How much to dump.  Must be >= Do.DECL.
- * @returns {void}
+ * @return {void}
  */
 Dumper.prototype.dumpBinding = function(selector, todo) {
   var c = this.getComponentsForSelector(selector);
@@ -664,6 +670,19 @@ Dumper.prototype.getScopeDumper = function(scope) {
 };
 
 /**
+ * Set options for this dumper.  Can be called to change options
+ * between calls to .dumpbBinding.  Will update existing settings with
+ * new values, so only changed options need to be supplied.
+ * @param {!DumperOptions} options The new options to apply.
+ * @return {void}
+ */
+Dumper.prototype.setOptions = function(options) {
+  for (var key in DEFAULT_OPTIONS) {
+    if (key in options) this.options[key] = options[key];
+  }
+};
+
+/**
  * Set the output Buffer or FileHandle that this.write() writes to.
  * Setting it to null will cause cause write to do nothing.
  * @param {?Writable} stream something for .write to write to.
@@ -717,7 +736,7 @@ Dumper.prototype.valueForSelector = function(selector, scope) {
  * @param {string} warning Warning to output or log.
  */
 Dumper.prototype.warn = function(warning) {
-  console.log(warning);
+  if (this.options.verbose) console.log(warning);
   warning = warning.replace(/^/gm, '// ');
   if (warning.slice(-1) !== '\n') warning = warning + '\n';
   this.write(warning);
@@ -731,6 +750,25 @@ Dumper.prototype.write = function(var_args) {
   if (this.output_) {
     this.output_.write(Array.prototype.join.call(arguments, ''));
   }
+};
+
+/**
+ * Options object for Dumper.
+ * @record
+ */
+var DumperOptions = function() {};
+/**
+ * Print status information and warnings to the console?
+ *  @type {boolean|undefined}
+ */
+DumperOptions.prototype.verbose;
+
+/**
+ * Default options for Dumper.
+ * @const @type {!DumperOptions}
+ */
+var DEFAULT_OPTIONS = {
+  verbose: false,
 };
 
 ///////////////////////////////////////////////////////////////////////////////

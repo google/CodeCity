@@ -47,7 +47,7 @@ var Selector = require('./selector');
  * @param {boolean=} verbose Print message describing what is being done.
  */
 var dump = function(intrp, config, directory, verbose) {
-  var dumper = new Dumper(new Interpreter(), intrp);
+  var dumper = new Dumper(new Interpreter(), intrp, {verbose: verbose});
   if (verbose) console.log('Dumper initialised.');
 
   // Skip everything that's explicitly mentioned in the config, so
