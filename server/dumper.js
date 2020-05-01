@@ -90,7 +90,12 @@ var Dumper = function(intrp1, intrp2, options) {
    * @type {!Map<?Interpreter.prototype.Object, ?Interpreter.prototype.Object>}
    */
   this.objs1to2 = new Map();
-
+  /**
+   * Current indentation.
+   * @type {string}
+   */
+  this.indent = '';
+  
   this.diffBuiltins();
 
   // Create and initialise ScopeDumper for global scope.
@@ -726,7 +731,8 @@ Dumper.prototype.valueForSelector = function(selector, scope) {
  */
 Dumper.prototype.warn = function(warning) {
   if (this.options.verbose) console.log(warning);
-  warning = warning.replace(/^(?!$)/gm, '// ');
+  warning = warning.replace(/^(?!$)/gm, this.indent + '// ')
+      .slice(this.indent.length);  // Remove indent from first line.
   this.write(warning);
 };
 
@@ -741,8 +747,7 @@ Dumper.prototype.warn = function(warning) {
  */
 Dumper.prototype.write = function(var_args) {
   if (this.options.output) {
-    // TODO(cpcallen): actually add indentation.
-    var line = Array.prototype.join.call(arguments, '');
+    var line = this.indent + Array.prototype.join.call(arguments, '');
     if (line.slice(-1) !== '\n') line = line + '\n';
     this.options.output.write(line);
   }

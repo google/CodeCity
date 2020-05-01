@@ -978,9 +978,10 @@ exports.testDumperPrototypeWarn = function(t) {
   dumper.setOptions({output: output});
   dumper.warn('1');
   dumper.warn('2\n');
+  dumper.indent = '  ';
   dumper.warn('3\n4');
   t.expect('Dumper.prototype.warn(...) output', String(output),
-           '// 1\n// 2\n// 3\n// 4\n');
+           '// 1\n// 2\n  // 3\n  // 4\n');
 };
 
 /**
