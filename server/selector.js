@@ -42,7 +42,7 @@ var Selector = function(s) {
     // Validate & copy parts array.
     if (typeof s.length < 1) throw new RangeError('Zero-length parts array??');
     if (s.length < 1) throw new RangeError('Zero-length parts array??');
-    if (typeof s[0] !== 'string' || !identifierRE.test(s[0])) {
+    if (typeof s[0] !== 'string' || !code.regexps.identifierExact.test(s[0])) {
       throw new TypeError('Parts array must begin with an identifier');
     }
     parts[0] = s[0];
@@ -159,7 +159,7 @@ Selector.prototype.toString = function(specialHandler) {
       } else {
         out.push(String(part));
       }
-    } else if (identifierRE.test(part)) {
+    } else if (code.regexps.identifierExact.test(part)) {
       out.push('.', part);
     } else if (String(Number(part)) === part) {
       // String represents a number with same string representation.
@@ -362,11 +362,5 @@ var tokenize = function(selector) {
   }
   return tokens;
 };
-
-/**
- * RegExp matching valid JavaScript identifiers.
- * @const @type{!RegExp}
- */
-var identifierRE = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
 
 module.exports = Selector;
