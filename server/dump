@@ -66,7 +66,7 @@ var dump = function(intrp, config, directory, verbose) {
       filename = path.normalize(path.join(directory, filename));
     }
     var outputStream = new SyncWriter(filename);
-    dumper.setOutputStream(outputStream);
+    dumper.setOptions({output: outputStream});
     dumper.write('////////////////////////////////////////',
                  '///////////////////////////////////////\n',
                  '// ', entry.filename, '\n\n');

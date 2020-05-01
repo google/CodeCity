@@ -893,7 +893,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
       const s = new Selector(ss);
       // Dump binding and check output code.
       const result = new MockWritable();
-      dumper.setOutputStream(result);
+      dumper.setOptions({output: result});
       dumper.dumpBinding(s, todo);
       t.expect(util.format('%sDumper.p.dumpBinding(<%s>, %o)', prefix,
                            s, todo), String(result), expected);
@@ -955,13 +955,13 @@ exports.testScopeDumperPrototypeDump = function(t) {
 
   // Dump one binding and check result.
   let result = new MockWritable();
-  dumper.setOutputStream(result);
+  dumper.setOptions({output: result});
   globalDumper.dumpBinding(dumper, 'obj', Do.SET);
   t.expect("ScopeDumper.p.dumpBinding(..., 'obj', Do.SET, ...) outputs",
            String(result), "var obj = (new 'Object.create')(null);\n");
 
   // Dump the rest & check result.
-  dumper.setOutputStream((result = new MockWritable()));
+  dumper.setOptions({output: (result = new MockWritable())});
   globalDumper.dump(dumper);
   t.expect('ScopeDumper.p.dump(...) outputs', String(result),
            'var value = 42;\nobj.prop = 69;\n');
@@ -975,7 +975,7 @@ exports.testDumperPrototypeWarn = function(t) {
   const intrp = new Interpreter();
   const dumper = new Dumper(intrp, intrp, {verbose: false});
   const output = new MockWritable();
-  dumper.setOutputStream(output);
+  dumper.setOptions({output: output});
   dumper.warn('1');
   dumper.warn('2\n');
   dumper.warn('3\n4');

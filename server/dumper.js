@@ -85,8 +85,6 @@ var Dumper = function(intrp1, intrp2, options) {
   this.scope = intrp2.global;
   /** @type {!Interpreter.Owner} Perms at present point in output. */
   this.perms = intrp2.ROOT;
-  /** @private @type {?Writable} something to write dump output to. */
-  this.output_ = null;
   /**
    * Map from objects from intrp1 to corresponding objects in intrp2.
    * @type {!Map<?Interpreter.prototype.Object, ?Interpreter.prototype.Object>}
@@ -683,15 +681,6 @@ Dumper.prototype.setOptions = function(options) {
 };
 
 /**
- * Set the output Buffer or FileHandle that this.write() writes to.
- * Setting it to null will cause cause write to do nothing.
- * @param {?Writable} stream something for .write to write to.
- */
-Dumper.prototype.setOutputStream = function(stream) {
-  this.output_ = stream;
-};
-
-/**
  * Get the present value in the interpreter of a particular binding,
  * specified by selector.  If selector does not correspond to a valid
  * binding an error is thrown.
@@ -747,8 +736,8 @@ Dumper.prototype.warn = function(warning) {
  * @param {...string} var_args Strings to output.
  */
 Dumper.prototype.write = function(var_args) {
-  if (this.output_) {
-    this.output_.write(Array.prototype.join.call(arguments, ''));
+  if (this.options.output) {
+    this.options.output.write(Array.prototype.join.call(arguments, ''));
   }
 };
 
@@ -758,8 +747,15 @@ Dumper.prototype.write = function(var_args) {
  */
 var DumperOptions = function() {};
 /**
+ * The stream that this.write() will write to.  writes to.  Setting it
+ * to null (the default) will cause cause .write() to do nothing,
+ * causing dumped code to be lost.
+ * @type {?Writable|undefined}
+ */
+DumperOptions.prototype.output;
+/**
  * Print status information and warnings to the console?
- *  @type {boolean|undefined}
+ * @type {boolean|undefined}
  */
 DumperOptions.prototype.verbose;
 
@@ -768,6 +764,7 @@ DumperOptions.prototype.verbose;
  * @const @type {!DumperOptions}
  */
 var DEFAULT_OPTIONS = {
+  output: null,
   verbose: false,
 };
 
