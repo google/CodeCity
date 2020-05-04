@@ -24,6 +24,20 @@
 var code = require('./code');
 
 /**
+ * Type for all "special" selector parts (ones which do not represent
+ * named variables / properties).
+ * @constructor
+ */
+var SpecialPart = function(type) {
+  this.type = type;
+};
+
+/** @override */
+SpecialPart.prototype.toString = function() {
+  return '{' + this.type + '}';
+};
+
+/**
  * A Selector is just an array of Parts, which happens to have
  * Selector.prototype (with various useful convenience methods) in its
  * prototype chain.
@@ -198,28 +212,6 @@ Selector.prototype.toString = function(specialHandler) {
 };
 
 /**
- * A Selector fundamentally an array of Parts, and Parts are either
- * strings (representing variable or property names) or SpecialParts
- * (representing everything else, like {proto} or {owner}).
- * @typedef {string|!SpecialPart}
- */
-Selector.Part;
-
-/**
- * Type for all "special" selector parts (ones which do not represent
- * named variables / properties).
- * @constructor
- */
-var SpecialPart = function(type) {
-  this.type = type;
-};
-
-/** @override */
-SpecialPart.prototype.toString = function() {
-  return '{' + this.type + '}';
-};
-
-/**
  * Special singleton Part for refering to an object's prototype.
  */
 Selector.PROTOTYPE = new SpecialPart('proto');
@@ -228,6 +220,14 @@ Selector.PROTOTYPE = new SpecialPart('proto');
  * Special singleton Part for refering to an object's owner.
  */
 Selector.OWNER = new SpecialPart('owner');
+
+/**
+ * A Selector fundamentally an array of Parts, and Parts are either
+ * strings (representing variable or property names) or SpecialParts
+ * (representing everything else, like {proto} or {owner}).
+ * @typedef {string|!SpecialPart}
+ */
+Selector.Part;
 
 /**
  * Parse a selector into an array of Parts.

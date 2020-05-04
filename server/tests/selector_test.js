@@ -170,8 +170,8 @@ exports.testSelectorPrototypeBadness = function(t) {
   for (const ss of cases) {
     const s = new Selector(ss);
     const badness = s.badness();
-    const name = util.format('Selector(%s).badness() < Selector(%s).badness()',
-                             previousBadness, badness);
+    const name = util.format('Selector(%o).badness() < Selector(%o).badness()',
+                             previous, ss);
     t.assert(name, previousBadness < badness);
     previous = ss;
     previousBadness = badness;
