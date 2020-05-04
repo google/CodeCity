@@ -29,6 +29,7 @@
 var code = require('./code');
 var Interpreter = require('./interpreter');
 var Selector = require('./selector');
+var util = require('util');
 
 ///////////////////////////////////////////////////////////////////////////////
 // Dumper.
@@ -409,6 +410,19 @@ Dumper.prototype.exprForFunction = function(func, funcDumper, funcName) {
   if (!(func instanceof this.intrp2.UserFunction)) {
     throw Error('Unable to dump non-UserFunction');
   }
+  // TODO(cpcallen): Should throw, rather than merely warn.
+  for(var scope = func.scope; scope !== this.scope; scope = scope.outerScope) {
+    var vars = Object.getOwnPropertyNames(scope.vars);
+    if (scope.type === Interpreter.Scope.Type.FUNEXP && scope === func.scope ||
+        vars.length === 0) {
+      continue;
+    }
+    this.warn(util.format('CLOSURE: type: %s, vars: %s',
+                          scope.type, vars.join(', ')));
+  }
+
+  // Record stuff that gets done automatically by evaluating a
+  // function expression, like setting its __proto__ and .prototype.
   funcDumper.proto = this.intrp2.FUNCTION;  // TODO(ES6): generators, etc.?
   // The .length property will be set implicitly (and is immutable).
   funcDumper.attributes['length'] =
