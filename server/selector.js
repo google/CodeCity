@@ -79,29 +79,19 @@ var Selector = function(s) {
 Object.setPrototypeOf(Selector.prototype, Array.prototype);
 
 /**
- * Return a "badness" score, inversely proportional to how
- * desirable a particular selector is amongst other selectors
- * referring to the same object.  In general, longer selectors are
- * more bad, but selectors containing special parts are especially
- * bad.
+ * Return a "badness" score, inversely proportional to how desirable a
+ * particular selector is amongst other selectors referring to the
+ * same binding.  In general, longer selectors are more bad, but
+ * selectors containing special parts are especially bad.
+ * TODO(cpcallen): reintroduce penalty for non-builtins?
  * @return {number};
  */
 Selector.prototype.badness = function() {
   var penalties = 0;
   for (var i = 0; i < this.length; i++) {
-    var part = this[i];
-    if (part instanceof SpecialPart) {
-      penalties += 100;
-    } else if (code.regexps.identifierExact.test(part)) {
-      penalties += 10;  // We like identifiers.
-    } else if (String(Number(part)) === part) {
-      penalties += 25;  // Numbers are OK.
-    } else {
-      penalties += 50;  // Quoted strings are undesirable.
-    }
+    penalties += Selector.partBadness(this[i]);
   }
-  if (this[0] === '$') penalties += 100;  // Prefer builtins.
-  return penalties + String(this).length;
+  return penalties;
 };
 
 /**
@@ -209,6 +199,24 @@ Selector.prototype.toString = function(specialHandler) {
     }
   }
   return out.join('');
+};
+
+/**
+ * Return a "badness" score for a single Selector.Part, inversely
+ * proportional to how desirable the part is as part of selector
+ * amongst other selectors referring to the same binding.
+ * @return {number};
+ */
+Selector.partBadness = function(part) {
+  if (part instanceof SpecialPart) {
+    return 100;  // We don't like SpecialParts.
+  } else if (code.regexps.identifierExact.test(part)) {
+    return 10 + part.length;  // We like identifiers.
+  } else if (String(Number(part)) === part) {
+    return 25 + part.length;  // Numbers are OK.
+  } else {
+    return 30 + part.length;  // Quoted strings are less desirable.
+  }
 };
 
 /**

@@ -150,6 +150,37 @@ exports.testSelectorPrototypeIsWhatever = function(t) {
 };
 
 /**
+ * Unit tests for Selector.partBadness
+ * @param {!T} t The test runner object.
+ */
+exports.testSelectorPartBadness = function(t) {
+  // Test verifies these are in monotonically increasing order of badness.
+  const cases = [
+    'bar',
+    'quux',
+    '10',
+    '100',
+    '&',
+    '&*',
+    'ridiculouslyLongIdentifier',
+    '2872498713723',
+    '#^@*%*!@#',
+    Selector.PROTOTYPE,
+  ];
+  let previous = '(no previous)';
+  let previousBadness = -Infinity;
+  for (const part of cases) {
+    const badness = Selector.partBadness(part);
+    const name = util.format(
+        'Selector.partBadness(%o) (===%d) < Selector.partBadness(%o) (===%d)',
+        previous, previousBadness, part, badness);
+    t.assert(name, previousBadness < badness);
+    previous = part;
+    previousBadness = badness;
+  }
+};
+
+/**
  * Unit tests for Selector.prototype.badness
  * @param {!T} t The test runner object.
  */
