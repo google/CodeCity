@@ -718,12 +718,15 @@ Dumper.prototype.survey_ = function() {
   var /** !Array<!ScopeDumper|!ObjectDumper> */ queue = [];
   queue.push(this.getScopeDumper_(this.intrp2.global));
 
+  var visited = new Set();
   for (var i = 0; i < queue.length; i++) {
     var /** !ScopeDumper|!ObjectDumper */ dumper = queue[i];
+    if (visited.has(dumper)) continue;
     var /** !Array<!Components> */ adjacent = dumper.survey(this);
     for (var j = 0; j < adjacent.length; j++) {
       queue.push(adjacent[j].dumper);
     }
+    visited.add(dumper);
   }
 };
 
@@ -808,8 +811,6 @@ Dumper.prototype.write = function(var_args) {
  */
 var ScopeDumper = function(scope) {
   this.scope = scope;
-  /** @type {boolean} Has this scope already been surveyed? */
-  this.surveyed = false;
   /** @private @const {!Object<string, Do>} Done status of each variable. */
   this.doneVar_ = Object.create(null);
   /** @const {!Set<!ScopeDumper>} Set of inner scopes. */
@@ -934,8 +935,6 @@ ScopeDumper.prototype.setDone = function(part, done) {
  * @return {!Array<!Components>} A list of outward edges from this scope.
  */
 ScopeDumper.prototype.survey = function(dumper) {
-  if (dumper.visiting.has(this) || this.surveyed) return [];
-  dumper.visiting.add(this);
   // Record parent scope.
   if (this.scope !== dumper.intrp2.global) {
     if (this.scope.outerScope === null) {
@@ -968,8 +967,6 @@ ScopeDumper.prototype.survey = function(dumper) {
     adjacent.push(new Components(dumper.getObjectDumper_(value), name));
   }
 
-  this.surveyed = true;
-  dumper.visiting.delete(this);
   return adjacent;
 };
 
@@ -987,8 +984,6 @@ ScopeDumper.prototype.survey = function(dumper) {
  */
 var ObjectDumper = function(dumper, obj) {
   this.obj = obj;
-  /** @type {boolean} Has this scope already been surveyed? */
-  this.surveyed = false;
   /** @type {!Selector|undefined} Reference to this object, once created. */
   this.ref = undefined;
   /** @type {!ObjectDumper.Done} How much has object been dumped? */
@@ -1428,8 +1423,6 @@ ObjectDumper.prototype.setDone = function(part, done) {
  * @return {!Array<!Components>} A list of outward edges from this object.
  */
 ObjectDumper.prototype.survey = function(dumper) {
-  if (dumper.visiting.has(this) || this.surveyed) return [];
-  dumper.visiting.add(this);
   var /** !Array<!Components> */ adjacent = [];
 
   if (this.obj instanceof dumper.intrp2.UserFunction) {
@@ -1457,8 +1450,6 @@ ObjectDumper.prototype.survey = function(dumper) {
     adjacent.push(new Components(propDumper, key));
   }
 
-  dumper.visiting.delete(this);
-  this.surveyed = true;
   return adjacent;
 };
 
