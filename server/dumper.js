@@ -124,7 +124,7 @@ var Dumper = function(intrp1, intrp2, options) {
   }
 
   // Survey objects accessible via global scope to find their outer scopes.
-  globalDumper.survey(this);
+  this.survey_();
 };
 
 /**
@@ -710,6 +710,24 @@ Dumper.prototype.setOptions = function(options) {
 };
 
 /**
+ * Survey the global Scope and recursively everything accessible via
+ * its bindings, to prepare for dumping.
+ * @return {void}
+ */
+Dumper.prototype.survey_ = function() {
+  var /** !Array<!ScopeDumper|!ObjectDumper> */ queue = [];
+  queue.push(this.getScopeDumper_(this.intrp2.global));
+
+  for (var i = 0; i < queue.length; i++) {
+    var /** !ScopeDumper|!ObjectDumper */ dumper = queue[i];
+    var /** !Array<!Components> */ adjacent = dumper.survey(this);
+    for (var j = 0; j < adjacent.length; j++) {
+      queue.push(adjacent[j].dumper);
+    }
+  }
+};
+
+/**
  * Get the present value in the interpreter of a particular binding,
  * specified by selector.  If selector does not correspond to a valid
  * binding an error is thrown.
@@ -900,12 +918,23 @@ ScopeDumper.prototype.setDone = function(part, done) {
 };
 
 /**
- * Visit a Scope (and recursively, everything accessible via its
- * binding) to prepare for dumping.
+ * Visit a Scope to prepare for dumping.  In particular:
+ *
+ * - If this.scope.outerScope is set, record this as one of it's inner
+ *   scopes, so that when we go to dump that scope later we know we
+ *   need to dump this one inside it.
+ *
+ * - Find any Arguments object attached to this scope and record the
+ *   relationship in the dumper.argumentsScopeDumpers map.
+ *
+ * - Collect and return an array of Components, where each represents
+ *   a link to an object reachable from a variable in this.scope.
+ *
  * @param {!Dumper} dumper Dumper to which this ScopeDumper belongs.
+ * @return {!Array<!Components>} A list of outward edges from this scope.
  */
 ScopeDumper.prototype.survey = function(dumper) {
-  if (dumper.visiting.has(this) || this.surveyed) return;
+  if (dumper.visiting.has(this) || this.surveyed) return [];
   dumper.visiting.add(this);
   // Record parent scope.
   if (this.scope !== dumper.intrp2.global) {
@@ -915,14 +944,6 @@ ScopeDumper.prototype.survey = function(dumper) {
     var outerScopeDumper = dumper.getScopeDumper_(this.scope.outerScope);
     // Record this as inner scope of this.outerScope.
     outerScopeDumper.innerScopes.add(this);
-    // Recursively survey enclosing scopes.
-    outerScopeDumper.survey(dumper);
-  }
-  // Survey variable bindings.
-  for (var name in this.scope.vars) {
-    var value = this.scope.get(name);
-    if (!(value instanceof dumper.intrp2.Object)) continue;  // Skip primitives.
-    dumper.getObjectDumper_(value).survey(dumper, new Selector(name));
   }
   // Record arguments object attached to this scope if it's a function scope.
   if (this.scope.type === Interpreter.Scope.Type.FUNCTION &&
@@ -938,8 +959,18 @@ ScopeDumper.prototype.survey = function(dumper) {
     }
     dumper.argumentsScopeDumpers.set(argsObject, this);
   }
+
+  // Collect Components for other objects reachable from this one.
+  var /** !Array<!Components> */ adjacent = [];
+  for (var name in this.scope.vars) {
+    var value = this.scope.get(name);
+    if (!(value instanceof dumper.intrp2.Object)) continue;  // Skip primitives.
+    adjacent.push(new Components(dumper.getObjectDumper_(value), name));
+  }
+
   this.surveyed = true;
   dumper.visiting.delete(this);
+  return adjacent;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1382,46 +1413,53 @@ ObjectDumper.prototype.setDone = function(part, done) {
 };
 
 /**
- * Visit an Object (and recursively, everything accessible via its
- * binding) to prepare for dumping.
+ * Visit an Object to prepare for dumping.  In particular:
+ *
+ * - If this.object is a UserFunction, record it on it's .scope's
+ *   ScopeDumper's list of inner functions, so that when we go to dump
+ *   that scope later we know all the functions that need to be
+ *   declared within it.
+ *
+ * - Collect and return an array of Components, where each represents
+ *   a link to an object reachable from a property or slot of this
+ *   this.object (plus one for the scope, if applicable).
+ *
  * @param {!Dumper} dumper Dumper to which this ObjectDumper belongs.
- * @param {!Selector} ref Selector refering to this object.
+ * @return {!Array<!Components>} A list of outward edges from this object.
  */
-ObjectDumper.prototype.survey = function(dumper, ref) {
-  if (dumper.visiting.has(this) || this.surveyed) return;
+ObjectDumper.prototype.survey = function(dumper) {
+  if (dumper.visiting.has(this) || this.surveyed) return [];
   dumper.visiting.add(this);
+  var /** !Array<!Components> */ adjacent = [];
+
   if (this.obj instanceof dumper.intrp2.UserFunction) {
     // Record this this function as inner to scope, and survey scope.
     var scopeDumper = dumper.getScopeDumper_(this.obj.scope);
     scopeDumper.innerFunctions.add(this);
-    scopeDumper.survey(dumper);
+    adjacent.push(new Components(scopeDumper, ''));
   }
-  // Survey prototype.
+
   if (this.obj.proto) {
-    ref.push(Selector.PROTOTYPE);
-    dumper.getObjectDumper_(this.obj.proto).survey(dumper, ref);
-    ref.pop();
+    var protoDumper = dumper.getObjectDumper_(this.obj.proto);
+    adjacent.push(new Components(protoDumper, Selector.PROTOTYPE));
   }
-  // Survey owner.
   if (this.obj.owner) {
-    ref.push(Selector.OWNER);
     var ownerObj = /** @type {!Interpreter.prototype.Object} */(this.obj.owner);
-    dumper.getObjectDumper_(ownerObj).survey(dumper, ref);
-    ref.pop();
+    var ownerDumper = dumper.getObjectDumper_(ownerObj);
+    adjacent.push(new Components(ownerDumper, Selector.OWNER));
   }
-  // Survey properties.
   var keys = this.obj.ownKeys(dumper.intrp2.ROOT);
   for (var i = 0; i < keys.length; i++) {
     var key = keys[i];
     var value = this.obj.get(key, dumper.intrp2.ROOT);
-    if (value instanceof dumper.intrp2.Object) {
-      ref.push(key);
-      dumper.getObjectDumper_(value).survey(dumper, ref);
-      ref.pop();
-    }
+    if (!(value instanceof dumper.intrp2.Object)) continue;  // Skip primitives.
+    var propDumper = dumper.getObjectDumper_(value);
+    adjacent.push(new Components(propDumper, key));
   }
+
   dumper.visiting.delete(this);
   this.surveyed = true;
+  return adjacent;
 };
 
 /**
