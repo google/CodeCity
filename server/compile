@@ -50,6 +50,7 @@ args=(-O=ADVANCED_OPTIMIZATIONS
       selector.js
       dumper.js
       codecity
+      priorityqueue.js
       dump
 
       tests/*.js

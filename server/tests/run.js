@@ -37,6 +37,7 @@ const compileTargets = [
   require('./iterable_weakmap_test'),
   require('./iterable_weakset_test'),
   require('./registry_test'),
+  require('./priorityqueue_test'),
   require('./selector_test'),
   require('./serialize_test'),
 
