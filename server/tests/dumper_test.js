@@ -58,7 +58,7 @@ class MockWritable {
 }
 
 /**
- * Unit tests for the ObjectDumper.prototype.isWritable method.
+ * Tests for the ObjectDumper.prototype.isWritable method.
  * @suppress {accessControls}
  */
 exports.testObjectDumperPrototypeIsWritable = function(t) {
@@ -202,7 +202,7 @@ exports.testDumperPrototypeExprForPrimitive_ = function(t) {
 };
 
 /**
- * Unit tests for the Dumper.prototype.exprFor_ method.
+ * Tests for the Dumper.prototype.exprFor_ method.
  * @param {!T} t The test runner object.
  * @suppress {accessControls}
  */
@@ -252,6 +252,85 @@ exports.testDumperPrototypeExprFor_ = function(t) {
     const r = dumper.exprFor_(tc[0], new Selector(['tc', String(i)]));
     t.expect(util.format('Dumper.p.exprFor_(%s)', tc[1]), r, tc[1]);
   }
+};
+
+/**
+ * Tests for the ObjectDumper and ScopeDumper.prototype.survey
+ * methods.
+ * @param {!T} t The test runner object.
+ * @suppress {accessControls}
+ */
+exports.testDumperSurvey = function(t) {
+  const intrp = new Interpreter();
+
+  // Create various variables to dump.
+  intrp.createThreadForSrc(`
+      var foo = (function() {
+        var x = 42;
+        bar = function baz() {return x;};
+        function quux() {return -x;};
+        return quux;
+        arguments;  // Never reached, but forces Arguments instantiation.
+      })();
+      var bar;  // N.B.: hoisted.
+      var orphanArgs = (function() {return arguments;})();
+  `);
+  intrp.run();
+
+  // Create Dumper with pristine Interpreter instance to compare to;
+  // get ScopeDumper for global scope.  Dumper constructor performs
+  // survey.
+  const pristine = new Interpreter();
+  const dumper = new Dumper(pristine, intrp);
+
+  // Check relationship of functions and scopes recorded by survey.
+  const baz = /** @type {!Interpreter.prototype.UserFunction} */(
+      intrp.global.get('bar'));  // Function baz was stored in var bar.
+  const quux = /** @type {!Interpreter.prototype.UserFunction} */(
+      intrp.global.get('foo'));  // IIFE returned quux; was stored in var foo.
+  const globalDumper = dumper.getScopeDumper_(intrp.global);
+  const bazDumper = dumper.getObjectDumper_(baz);
+  const bazScopeDumper = dumper.getScopeDumper_(baz.scope);
+  const quuxDumper = dumper.getObjectDumper_(quux);
+  const quuxScopeDumper = dumper.getScopeDumper_(quux.scope);
+
+  t.expect('bazScopeDumper.scope.type', bazScopeDumper.scope.type, 'funexp');
+  t.expect('quuxScopeDumper.scope.type',
+      quuxScopeDumper.scope.type, 'function');
+
+  t.expect('globalDumper.innerFunctions.size',
+      globalDumper.innerFunctions.size, 0);
+  t.expect('globalDumper.innerScopes.size', globalDumper.innerScopes.size, 1);
+  t.assert('globalDumper.innerScopes.has(/* quux.scope */)',
+      globalDumper.innerScopes.has(quuxScopeDumper));
+
+  t.expect('quuxScopeDumper.innerFunctions.size',
+      quuxScopeDumper.innerFunctions.size, 1);
+  t.assert('quuxScopeDumper.innerFunctions.has(/* quux */)',
+      quuxScopeDumper.innerFunctions.has(quuxDumper));
+  t.expect('quuxScopeDumper.innerScopes.size',
+      quuxScopeDumper.innerScopes.size, 1);
+  t.assert('quuxScopeDumper.innerScopes.has(/* baz.scope */)',
+      quuxScopeDumper.innerScopes.has(bazScopeDumper));
+
+  t.expect('bazScopeDumper.innerFunctions.size',
+      bazScopeDumper.innerFunctions.size, 1);
+  t.assert('bazScopeDumper.innerFunctions.has(/* baz */)',
+      bazScopeDumper.innerFunctions.has(bazDumper));
+  t.expect('bazScopeDumper.innerScopes.size',
+      bazScopeDumper.innerScopes.size, 0);
+
+  // Check relationship of Arguments objects and scopes recorded by survey.
+  const quuxArgs = /** @type {!Interpreter.prototype.Arguments} */(
+      quuxScopeDumper.scope.get('arguments'));
+  const orphanArgs = /** @type {!Interpreter.prototype.Arguments} */(
+      intrp.global.get('arguments'));
+  t.expect('argumentsScopeDumpers.size',
+      dumper.argumentsScopeDumpers.size, 1);
+  t.assert('argumentsScopeDumpers.get(quuxArgs) === quuxScopeDumper',
+      dumper.argumentsScopeDumpers.get(quuxArgs) === quuxScopeDumper);
+  t.assert('argumentsScopeDumpers.get(orphanArgs) === quuxScopeDumper',
+      dumper.argumentsScopeDumpers.get(orphanArgs) === undefined);
 };
 
 /**
@@ -942,7 +1021,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
 };
 
 /**
- * Unit test for the ScopeDumper.prototype.dump method.
+ * Tests for the ScopeDumper.prototype.dump method.
  * @param {!T} t The test runner object.
  */
 exports.testScopeDumperPrototypeDump = function(t) {
@@ -978,7 +1057,7 @@ exports.testScopeDumperPrototypeDump = function(t) {
 };
 
 /**
- * Unit test for Dumper.prototype.warn
+ * Unit tests for Dumper.prototype.warn
  * @param {!T} t The test runner object.
  */
 exports.testDumperPrototypeWarn = function(t) {
@@ -992,83 +1071,4 @@ exports.testDumperPrototypeWarn = function(t) {
   dumper.warn('3\n4');
   t.expect('Dumper.prototype.warn(...) output', String(output),
            '// 1\n// 2\n  // 3\n  // 4\n');
-};
-
-/**
- * Unit test for the ObjectDumper and ScopeDumper.prototype.survey
- * dump methods.
- * @param {!T} t The test runner object.
- * @suppress {accessControls}
- */
-exports.testDumperSurvey = function(t) {
-  const intrp = new Interpreter();
-
-  // Create various variables to dump.
-  intrp.createThreadForSrc(`
-      var foo = (function() {
-        var x = 42;
-        bar = function baz() {return x;};
-        function quux() {return -x;};
-        return quux;
-        arguments;  // Never reached, but forces Arguments instantiation.
-      })();
-      var bar;  // N.B.: hoisted.
-      var orphanArgs = (function() {return arguments;})();
-  `);
-  intrp.run();
-
-  // Create Dumper with pristine Interpreter instance to compare to;
-  // get ScopeDumper for global scope.  Dumper constructor performs
-  // survey.
-  const pristine = new Interpreter();
-  const dumper = new Dumper(pristine, intrp);
-
-  // Check relationship of functions and scopes recorded by survey.
-  const baz = /** @type {!Interpreter.prototype.UserFunction} */(
-      intrp.global.get('bar'));  // Function baz was stored in var bar.
-  const quux = /** @type {!Interpreter.prototype.UserFunction} */(
-      intrp.global.get('foo'));  // IIFE returned quux; was stored in var foo.
-  const globalDumper = dumper.getScopeDumper_(intrp.global);
-  const bazDumper = dumper.getObjectDumper_(baz);
-  const bazScopeDumper = dumper.getScopeDumper_(baz.scope);
-  const quuxDumper = dumper.getObjectDumper_(quux);
-  const quuxScopeDumper = dumper.getScopeDumper_(quux.scope);
-
-  t.expect('bazScopeDumper.scope.type', bazScopeDumper.scope.type, 'funexp');
-  t.expect('quuxScopeDumper.scope.type',
-      quuxScopeDumper.scope.type, 'function');
-
-  t.expect('globalDumper.innerFunctions.size',
-      globalDumper.innerFunctions.size, 0);
-  t.expect('globalDumper.innerScopes.size', globalDumper.innerScopes.size, 1);
-  t.assert('globalDumper.innerScopes.has(/* quux.scope */)',
-      globalDumper.innerScopes.has(quuxScopeDumper));
-
-  t.expect('quuxScopeDumper.innerFunctions.size',
-      quuxScopeDumper.innerFunctions.size, 1);
-  t.assert('quuxScopeDumper.innerFunctions.has(/* quux */)',
-      quuxScopeDumper.innerFunctions.has(quuxDumper));
-  t.expect('quuxScopeDumper.innerScopes.size',
-      quuxScopeDumper.innerScopes.size, 1);
-  t.assert('quuxScopeDumper.innerScopes.has(/* baz.scope */)',
-      quuxScopeDumper.innerScopes.has(bazScopeDumper));
-
-  t.expect('bazScopeDumper.innerFunctions.size',
-      bazScopeDumper.innerFunctions.size, 1);
-  t.assert('bazScopeDumper.innerFunctions.has(/* baz */)',
-      bazScopeDumper.innerFunctions.has(bazDumper));
-  t.expect('bazScopeDumper.innerScopes.size',
-      bazScopeDumper.innerScopes.size, 0);
-
-  // Check relationship of Arguments objects and scopes recorded by survey.
-  const quuxArgs = /** @type {!Interpreter.prototype.Arguments} */(
-      quuxScopeDumper.scope.get('arguments'));
-  const orphanArgs = /** @type {!Interpreter.prototype.Arguments} */(
-      intrp.global.get('arguments'));
-  t.expect('argumentsScopeDumpers.size',
-      dumper.argumentsScopeDumpers.size, 1);
-  t.assert('argumentsScopeDumpers.get(quuxArgs) === quuxScopeDumper',
-      dumper.argumentsScopeDumpers.get(quuxArgs) === quuxScopeDumper);
-  t.assert('argumentsScopeDumpers.get(orphanArgs) === quuxScopeDumper',
-      dumper.argumentsScopeDumpers.get(orphanArgs) === undefined);
 };
