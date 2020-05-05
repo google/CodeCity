@@ -613,24 +613,18 @@ Dumper.prototype.exprForSelector = function(selector) {
 };
 
 /**
- * Given Selector Selector([p_0, ... p_n]), get the 'parent'
- * ObjectDumper or ScopeDumper (the one referenced by Selector([p_0,
- * ... p_n-1])) plus the final part p_n.
- *
- * N.B.: the usage of 'components' here is analagous to that term's
- * usage in interpreter.js but not identical: there is is a [scope,
- * variable] tuple; here it is a {ScopeDumper/ObjectDumper,
- * Selector.Part} tuple.
+ * Given a Selector and opitonally a Scope, get the corresponding
+ * Components.
  * @param {!Selector} selector A selector for the binding in question.
  * @param {!Interpreter.Scope=} scope Scope which selector is relative
  *     to.  Defaults to current scope.
- * @return {{dumper: (!ObjectDumper|!ScopeDumper), part: !Selector.Part}}
- *     The dumper and part corresponding to selector.
+ * @return {!Components} The dumper and part corresponding to selector.
  */
 Dumper.prototype.getComponentsForSelector = function(selector, scope) {
+  if (!scope) scope = this.scope;
   if (selector.isVar()) {
     var part = selector[0];
-    var dumper = this.getScopeDumper(this.scope);
+    var dumper = this.getScopeDumper(scope);
   } else {
     var ref = new Selector(selector);
     part = ref.pop();
@@ -640,7 +634,7 @@ Dumper.prototype.getComponentsForSelector = function(selector, scope) {
     }
     dumper = this.getObjectDumper(obj);
   }
-  return {dumper: dumper, part: part};
+  return new Components(dumper, part);
 };
 
 /**
@@ -1520,7 +1514,28 @@ ObjectDumper.Pending.prototype.toString = function() {
 };
 
 ///////////////////////////////////////////////////////////////////////////////
-// Do, etc.
+// Helper Classes.
+
+/**
+ * A {<Foo>Dumper, Selector.Part} tuple and various useful methods
+ * which act on such.
+ *
+ * N.B.: the usage of 'components' here is analagous to that term's
+ * usage in interpreter.js but not identical: there is is a [scope,
+ * variable] tuple; here it is a {ScopeDumper/ObjectDumper,
+ * Selector.Part} tuple.
+ *
+ * @constructor
+ * @param {!ScopeDumper|!ObjectDumper} dumper
+ * @param {!Selector.Part} part
+ */
+var Components = function(dumper, part) {
+  /** @const {!ScopeDumper|!ObjectDumper} */ this.dumper = dumper;
+  /** @const {!Selector.Part} */ this.part = part;
+};
+  
+///////////////////////////////////////////////////////////////////////////////
+// Type declarations: Do, etc.
 
 /**
  * Possible things to do (or have done) with a variable / property /
