@@ -59,6 +59,7 @@ class MockWritable {
 
 /**
  * Unit tests for the ObjectDumper.prototype.isWritable method.
+ * @suppress {accessControls}
  */
 exports.testObjectDumperPrototypeIsWritable = function(t) {
   const intrp = getInterpreter();
@@ -81,11 +82,11 @@ exports.testObjectDumperPrototypeIsWritable = function(t) {
   child.defineProperty('bar', writable, root);
   child.defineProperty('baz', writable, root);
 
-  const objectPrototypeDumper = dumper.getObjectDumper(intrp.OBJECT);
+  const objectPrototypeDumper = dumper.getObjectDumper_(intrp.OBJECT);
   objectPrototypeDumper.ref = new Selector('Object.prototype');
-  const parentDumper = dumper.getObjectDumper(parent);
+  const parentDumper = dumper.getObjectDumper_(parent);
   parentDumper.ref = new Selector('parent');
-  const childDumper = dumper.getObjectDumper(child);
+  const childDumper = dumper.getObjectDumper_(child);
   childDumper.ref = new Selector('child');
   objectPrototypeDumper.proto = null;
   parentDumper.proto = intrp.OBJECT;
@@ -131,10 +132,11 @@ exports.testObjectDumperPrototypeIsWritable = function(t) {
 };
 
 /**
- * Unit tests for the Dumper.prototype.isShadowed method.
+ * Unit tests for the Dumper.prototype.isShadowed_ method.
  * @param {!T} t The test runner object.
+ * @suppress {accessControls}
  */
-exports.testDumperPrototypeIsShadowed = function(t) {
+exports.testDumperPrototypeIsShadowed_ = function(t) {
   const intrp = getInterpreter();
   const pristine = new Interpreter();
   const dumper = new Dumper(pristine, intrp);
@@ -147,24 +149,25 @@ exports.testDumperPrototypeIsShadowed = function(t) {
   inner.createMutableBinding('foo', 'foobar!');
   dumper.scope = inner;
 
-  t.expect("isShadowed('foo')", dumper.isShadowed('foo'), true);
-  t.expect("isShadowed('bar')", dumper.isShadowed('bar'), false);
+  t.expect("isShadowed_('foo')", dumper.isShadowed_('foo'), true);
+  t.expect("isShadowed_('bar')", dumper.isShadowed_('bar'), false);
 };
 
 /**
- * Unit tests for the Dumper.prototype.exprForPrimitive method.
+ * Unit tests for the Dumper.prototype.exprForPrimitive_ method.
  * @param {!T} t The test runner object.
+ * @suppress {accessControls}
  */
-exports.testDumperPrototypeExprForPrimitive = function(t) {
+exports.testDumperPrototypeExprForPrimitive_ = function(t) {
   const intrp = getInterpreter();
   const pristine = new Interpreter();
   const dumper = new Dumper(pristine, intrp);
 
   function doCases(cases) {
     for (const tc of cases) {
-      const r = dumper.exprForPrimitive(tc[0]);
-      t.expect(util.format('dumper.exprForPrimitive(%o)', tc[0]), r, tc[1]);
-      t.expect(util.format('eval(dumper.exprForPrimitive(%o))', tc[0]),
+      const r = dumper.exprForPrimitive_(tc[0]);
+      t.expect(util.format('dumper.exprForPrimitive_(%o)', tc[0]), r, tc[1]);
+      t.expect(util.format('eval(dumper.exprForPrimitive_(%o))', tc[0]),
           eval(r), tc[0]);
     }
   }
@@ -199,10 +202,11 @@ exports.testDumperPrototypeExprForPrimitive = function(t) {
 };
 
 /**
- * Unit tests for the Dumper.prototype.exprFor method.
+ * Unit tests for the Dumper.prototype.exprFor_ method.
  * @param {!T} t The test runner object.
+ * @suppress {accessControls}
  */
-exports.testDumperPrototypeExprFor = function(t) {
+exports.testDumperPrototypeExprFor_ = function(t) {
   const intrp = getInterpreter();
   const pristine = new Interpreter();
   const dumper = new Dumper(pristine, intrp);
@@ -212,7 +216,7 @@ exports.testDumperPrototypeExprFor = function(t) {
     'Date', 'Error', 'EvalError', 'RangeError', 'ReferenceError', 'TypeError',
     'SyntaxError', 'URIError', 'PermissionError'
   ]) {
-    dumper.getObjectDumper(/** @type {!Interpreter.prototype.Object} */
+    dumper.getObjectDumper_(/** @type {!Interpreter.prototype.Object} */
         (intrp.builtins.get(b))).ref = new Selector(b);
   }
 
@@ -245,30 +249,31 @@ exports.testDumperPrototypeExprFor = function(t) {
   ];
   for (let i = 0; i < cases.length; i++) {
     const tc = cases[i];
-    const r = dumper.exprFor(tc[0], new Selector(['tc', String(i)]));
-    t.expect(util.format('Dumper.p.exprFor(%s)', tc[1]), r, tc[1]);
+    const r = dumper.exprFor_(tc[0], new Selector(['tc', String(i)]));
+    t.expect(util.format('Dumper.p.exprFor_(%s)', tc[1]), r, tc[1]);
   }
 };
 
 /**
- * Unit tests for the Dumper.prototype.exprForSelector method.
+ * Unit tests for the Dumper.prototype.exprForSelector_ method.
  * @param {!T} t The test runner object.
+ * @suppress {accessControls}
  */
-exports.testDumperPrototypeExprForSelector = function(t) {
+exports.testDumperPrototypeExprForSelector_ = function(t) {
   const intrp = getInterpreter();
   const pristine = new Interpreter();
   const dumper = new Dumper(pristine, intrp);
 
   // Test dumping selector before and after dumping Object.getPrototypeOf.
   const selector = new Selector('foo.bar^.baz');
-  t.expect(util.format('Dumper.p.exprForSelector(%s)  // 0', selector),
-           dumper.exprForSelector(selector),
+  t.expect(util.format('Dumper.p.exprForSelector_(%s)  // 0', selector),
+           dumper.exprForSelector_(selector),
            "(new 'Object.getPrototypeOf')(foo.bar).baz");
-  dumper.getObjectDumper(/** @type {!Interpreter.prototype.Object} */
+  dumper.getObjectDumper_(/** @type {!Interpreter.prototype.Object} */
       (intrp.builtins.get('Object.getPrototypeOf'))).ref =
           new Selector('MyObject.myGetPrototypeOf');
-  t.expect(util.format('Dumper.p.exprForSelector(%s)  // 1', selector),
-           dumper.exprForSelector(selector),
+  t.expect(util.format('Dumper.p.exprForSelector_(%s)  // 1', selector),
+           dumper.exprForSelector_(selector),
            'MyObject.myGetPrototypeOf(foo.bar).baz');
 };
 
@@ -874,7 +879,8 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     for (const builtin of [intrp.OBJECT, intrp.FUNCTION, intrp.ARRAY,
                            intrp.REGEXP, intrp.ERROR, intrp.TYPE_ERROR,
                            intrp.RANGE_ERROR]) {
-      dumper.getObjectDumper(builtin).done = ObjectDumper.Done.DONE_RECUSIVELY;
+      /** @suppress {accessControls} */
+      dumper.getObjectDumper_(builtin).done = ObjectDumper.Done.DONE_RECUSIVELY;
     };
     // Set a few binding .done flags in advance to simulate things
     // already being dumped or being marked for deferred dumping.
@@ -898,7 +904,8 @@ exports.testDumperPrototypeDumpBinding = function(t) {
       t.expect(util.format('%sDumper.p.dumpBinding(<%s>, %o)', prefix,
                            s, todo), String(result), expected);
       // Check work recorded.
-      const {dumper: d, part} = dumper.getComponentsForSelector(s);
+      /** @suppress {accessControls} */
+      const {dumper: d, part} = dumper.getComponentsForSelector_(s);
       t.expect(util.format('%sBinding status of <%s> (after dump)', prefix, s),
                d.getDone(part), done === undefined ? todo : done);
     }
@@ -915,13 +922,15 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     // they should be removed.
     for (const [ss, done, valueRef] of tc.after || []) {
       const s = new Selector(ss);
-      const {dumper: d, part} = dumper.getComponentsForSelector(s);
+      /** @suppress {accessControls} */
+      const {dumper: d, part} = dumper.getComponentsForSelector_(s);
       t.expect(util.format('%sbinding status of <%s> (implicit)', prefix, s),
                d.getDone(part), done);
       if (valueRef) {
         const value = dumper.valueForSelector(s);
         if (value instanceof intrp.Object) {
-          const objDumper = dumper.getObjectDumper(value);
+          /** @suppress {accessControls} */
+          const objDumper = dumper.getObjectDumper_(value);
           t.expect(util.format('%sref for %s', prefix, s),
                    String(objDumper.ref), valueRef);
         } else {
@@ -951,7 +960,8 @@ exports.testScopeDumperPrototypeDump = function(t) {
   // get ScopeDumper for global scope.
   const pristine = new Interpreter();
   const dumper = new Dumper(pristine, intrp);
-  const globalDumper = dumper.getScopeDumper(intrp.global);
+  /** @suppress {accessControls} */
+  const globalDumper = dumper.getScopeDumper_(intrp.global);
 
   // Dump one binding and check result.
   let result = new MockWritable();
@@ -988,6 +998,7 @@ exports.testDumperPrototypeWarn = function(t) {
  * Unit test for the ObjectDumper and ScopeDumper.prototype.survey
  * dump methods.
  * @param {!T} t The test runner object.
+ * @suppress {accessControls}
  */
 exports.testDumperSurvey = function(t) {
   const intrp = new Interpreter();
@@ -1017,11 +1028,11 @@ exports.testDumperSurvey = function(t) {
       intrp.global.get('bar'));  // Function baz was stored in var bar.
   const quux = /** @type {!Interpreter.prototype.UserFunction} */(
       intrp.global.get('foo'));  // IIFE returned quux; was stored in var foo.
-  const globalDumper = dumper.getScopeDumper(intrp.global);
-  const bazDumper = dumper.getObjectDumper(baz);
-  const bazScopeDumper = dumper.getScopeDumper(baz.scope);
-  const quuxDumper = dumper.getObjectDumper(quux);
-  const quuxScopeDumper = dumper.getScopeDumper(quux.scope);
+  const globalDumper = dumper.getScopeDumper_(intrp.global);
+  const bazDumper = dumper.getObjectDumper_(baz);
+  const bazScopeDumper = dumper.getScopeDumper_(baz.scope);
+  const quuxDumper = dumper.getObjectDumper_(quux);
+  const quuxScopeDumper = dumper.getScopeDumper_(quux.scope);
 
   t.expect('bazScopeDumper.scope.type', bazScopeDumper.scope.type, 'funexp');
   t.expect('quuxScopeDumper.scope.type',

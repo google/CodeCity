@@ -82,7 +82,9 @@ var dump = function(intrp, config, directory, verbose) {
       }
     } else if (entry.rest) {
       if (verbose) console.log('Dumping rest.');
-      var globalScopeDumper = dumper.getScopeDumper(intrp.global);
+      // TODO(cpcallen): encapsulate this in Dumper
+      /** @suppress {accessControls} */
+      var globalScopeDumper = dumper.getScopeDumper_(intrp.global);
       globalScopeDumper.dump(dumper);
     }
     outputStream.end();
