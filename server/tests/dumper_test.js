@@ -266,11 +266,14 @@ exports.testDumperSurvey = function(t) {
   // Create various variables to dump.
   intrp.createThreadForSrc(`
       var foo = (function() {
-        var x = 42;
-        bar = function baz() {return x;};
-        function quux() {return -x;};
+        var obj = {};
+        var unreachable = {};
+        bar = function baz() {return unreachable;};
+        function quux() {return obj;};
+        quux.prototype.obj = obj;
+        (new 'Object.setOwnerOf')(bar, obj);
         return quux;
-        arguments;  // Never reached, but forces Arguments instantiation.
+        arguments;  // Not reached, but forces Arguments instantiation.
       })();
       var bar;  // N.B.: hoisted.
       var orphanArgs = (function() {return arguments;})();
@@ -281,23 +284,33 @@ exports.testDumperSurvey = function(t) {
   // get ScopeDumper for global scope.  Dumper constructor performs
   // survey.
   const pristine = new Interpreter();
-  const dumper = new Dumper(pristine, intrp);
+  const dumper = new Dumper(pristine, intrp, {verbose: true});
 
-  // Check relationship of functions and scopes recorded by survey.
+  // Get intrp.Objects created by test program.
   const baz = /** @type {!Interpreter.prototype.UserFunction} */(
       intrp.global.get('bar'));  // Function baz was stored in var bar.
   const quux = /** @type {!Interpreter.prototype.UserFunction} */(
       intrp.global.get('foo'));  // IIFE returned quux; was stored in var foo.
+  const obj = /** @type {!Interpreter.prototype.Object} */(
+      quux.scope.get('obj'));
+  const unreachable = /** @type {!Interpreter.prototype.Object} */(
+      quux.scope.get('unreachable'));
+
+  // Get SubDumpers for objects created by test program.
   const globalDumper = dumper.getScopeDumper_(intrp.global);
   const bazDumper = dumper.getObjectDumper_(baz);
   const bazScopeDumper = dumper.getScopeDumper_(baz.scope);
   const quuxDumper = dumper.getObjectDumper_(quux);
   const quuxScopeDumper = dumper.getScopeDumper_(quux.scope);
+  const objDumper = dumper.getObjectDumper_(obj);
+  const unreachableDumper = dumper.getObjectDumper_(unreachable);
 
+  // Verify types of scopes, via ScopeDumpers.
   t.expect('bazScopeDumper.scope.type', bazScopeDumper.scope.type, 'funexp');
   t.expect('quuxScopeDumper.scope.type',
       quuxScopeDumper.scope.type, 'function');
 
+  // Check relationship of functions and scopes recorded by survey.
   t.expect('globalDumper.innerFunctions.size',
       globalDumper.innerFunctions.size, 0);
   t.expect('globalDumper.innerScopes.size', globalDumper.innerScopes.size, 1);
@@ -331,6 +344,16 @@ exports.testDumperSurvey = function(t) {
       dumper.argumentsScopeDumpers.get(quuxArgs) === quuxScopeDumper);
   t.assert('argumentsScopeDumpers.get(orphanArgs) === quuxScopeDumper',
       dumper.argumentsScopeDumpers.get(orphanArgs) === undefined);
+
+  // Check preferredBadness of various objects.
+  t.expect('bazDumper.preferredBadness', bazDumper.preferredBadness,
+           new Selector('bar').badness());  // Dont forget: bar = baz.
+  t.expect('quuxDumper.preferredBadness', quuxDumper.preferredBadness,
+           new Selector('foo').badness());  // Dont forget: quux = foo.
+  t.expect('objDumper.preferredBadness', objDumper.preferredBadness,
+           new Selector('foo.prototype.obj').badness());
+  t.expect('unreachableDumper.preferredBadness',
+           unreachableDumper.preferredBadness, Infinity);
 };
 
 /**

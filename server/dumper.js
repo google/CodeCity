@@ -28,6 +28,7 @@
 
 var code = require('./code');
 var Interpreter = require('./interpreter');
+var PriorityQueue = require('./priorityqueue').PriorityQueue;
 var Selector = require('./selector');
 var util = require('util');
 
@@ -715,28 +716,31 @@ Dumper.prototype.setOptions = function(options) {
  * @return {void}
  */
 Dumper.prototype.survey_ = function() {
-  var /** !Array<!SubDumper> */ queue = [];
-  queue.push(this.getScopeDumper_(this.intrp2.global));
+  var /** !PriorityQueue<!SubDumper> */ queue = new PriorityQueue;
+  var globalScopeDumper = this.getScopeDumper_(this.intrp2.global);
+  globalScopeDumper.preferredBadness = 0;
+  queue.insert(globalScopeDumper, globalScopeDumper.preferredBadness);
 
   var /** !Set<!SubDumper> */ visited = new Set();
-  for (var i = 0; i < queue.length; i++) {
-    var /** !SubDumper */ dumper = queue[i];
-    if (visited.has(dumper)) continue;
+  while (queue.length) {
+    var /** !SubDumper */ dumper = queue.deleteMin();
+    if (visited.has(dumper)) throw new Error('surveying same dumper twice??');
     var /** !Array<!OutwardEdge> */ adjacent = dumper.survey(this);
     for (var j = 0; j < adjacent.length; j++) {
       var edge = adjacent[j];
       if (edge instanceof ScopeDumper) {
-        if (!visited.has(edge)) queue.push(edge);
-      } else {
-        var /** Selector.Part */ part = adjacent[j].part;
-        var /** Interpreter.Value */ value = adjacent[j].value;
-        if (value instanceof this.intrp2.Object) {
-          var objectDumper = this.getObjectDumper_(value);
-          if (!visited.has(objectDumper)) {
-            queue.push(objectDumper);
-          }
-        }
+        if (visited.has(edge)) continue;
+        queue.set(edge, Infinity);
       }
+      var /** Interpreter.Value */ value = adjacent[j].value;
+      if (!(value instanceof this.intrp2.Object)) continue;
+      var objectDumper = this.getObjectDumper_(value);
+      if (visited.has(objectDumper)) continue;
+      var /** Selector.Part */ part = adjacent[j].part;
+      var newBadness = dumper.preferredBadness + Selector.partBadness(part);
+      if (newBadness >= objectDumper.preferredBadness) continue;
+      objectDumper.preferredBadness = newBadness;
+      queue.set(objectDumper, newBadness);
     }
     visited.add(dumper);
   }
@@ -818,6 +822,8 @@ Dumper.prototype.write = function(var_args) {
  * @abstract @constructor
  */
 var SubDumper = function() {
+  /** @type {number} */
+  this.preferredBadness = Infinity;
 };
 
 /**
@@ -1727,4 +1733,4 @@ exports.Writable = Writable;
 // For unit testing only!
 exports.testOnly = {
   ObjectDumper: ObjectDumper,
-}
+};
