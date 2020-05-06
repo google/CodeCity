@@ -722,9 +722,21 @@ Dumper.prototype.survey_ = function() {
   for (var i = 0; i < queue.length; i++) {
     var /** !SubDumper */ dumper = queue[i];
     if (visited.has(dumper)) continue;
-    var /** !Array<!Components> */ adjacent = dumper.survey(this);
+    var /** !Array<!OutwardEdge> */ adjacent = dumper.survey(this);
     for (var j = 0; j < adjacent.length; j++) {
-      queue.push(adjacent[j].dumper);
+      var edge = adjacent[j];
+      if (edge instanceof ScopeDumper) {
+        if (!visited.has(edge)) queue.push(edge);
+      } else {
+        var /** Selector.Part */ part = adjacent[j].part;
+        var /** Interpreter.Value */ value = adjacent[j].value;
+        if (value instanceof this.intrp2.Object) {
+          var objectDumper = this.getObjectDumper_(value);
+          if (!visited.has(objectDumper)) {
+            queue.push(objectDumper);
+          }
+        }
+      }
     }
     visited.add(dumper);
   }
@@ -807,6 +819,24 @@ Dumper.prototype.write = function(var_args) {
  */
 var SubDumper = function() {
 };
+
+/**
+ * Survey the scope or object associated with this SubDumper in
+ * preparation for dumping.
+ *
+ * Returns a list of OutwardEdges representing outward edges
+ * from this node of the object graph.: the properties (and internal
+ * slots) of this object.  Exceptionally, because Scopes are not
+ * Interpreter Objects (and there is no Selector.Part corresponding to
+ * the enclosing scope slot of a UserFunction object), the
+ * ObjectDumper for a UserFunction will also include a bare
+ * ScopeDumper in its returned array.
+ *
+ * @abstract
+ * @param {!Dumper} dumper Dumper to which this ScopeDumper belongs.
+ * @return {!Array<OutwardEdge>}
+ */
+SubDumper.prototype.survey = function(dumper) {};
 
 ///////////////////////////////////////////////////////////////////////////////
 // ScopeDumper
@@ -941,11 +971,11 @@ ScopeDumper.prototype.setDone = function(part, done) {
  * - Find any Arguments object attached to this scope and record the
  *   relationship in the dumper.argumentsScopeDumpers map.
  *
- * - Collect and return an array of Components, where each represents
- *   a link to an object reachable from a variable in this.scope.
+ * - Collect and return an array of {part, value} tuples, where each
+ *   represents a variable in this scope.
  *
  * @param {!Dumper} dumper Dumper to which this ScopeDumper belongs.
- * @return {!Array<!Components>} A list of outward edges from this scope.
+ * @return {!Array<OutwardEdge>}
  */
 ScopeDumper.prototype.survey = function(dumper) {
   // Record parent scope.
@@ -973,11 +1003,9 @@ ScopeDumper.prototype.survey = function(dumper) {
   }
 
   // Collect Components for other objects reachable from this one.
-  var /** !Array<!Components> */ adjacent = [];
+  var /** !Array<OutwardEdge> */ adjacent = [];
   for (var name in this.scope.vars) {
-    var value = this.scope.get(name);
-    if (!(value instanceof dumper.intrp2.Object)) continue;  // Skip primitives.
-    adjacent.push(new Components(dumper.getObjectDumper_(value), name));
+    adjacent.push({part: name, value: this.scope.get(name)});
   }
 
   return adjacent;
@@ -1431,39 +1459,33 @@ ObjectDumper.prototype.setDone = function(part, done) {
  *   that scope later we know all the functions that need to be
  *   declared within it.
  *
- * - Collect and return an array of Components, where each represents
- *   a link to an object reachable from a property or slot of this
- *   this.object (plus one for the scope, if applicable).
+ * - Collect and return an array of {part, value}, where each
+ *   represents a property or internal slot of this.object.  If
+ *   this.object is a UserFunction, the returned array will also
+ *   contain a bare ScopeDumper object representing the
+ *   function's enclosing scope.
  *
  * @param {!Dumper} dumper Dumper to which this ObjectDumper belongs.
- * @return {!Array<!Components>} A list of outward edges from this object.
+ * @return {!Array<OutwardEdge>}
  */
 ObjectDumper.prototype.survey = function(dumper) {
-  var /** !Array<!Components> */ adjacent = [];
+  var /** !Array<OutwardEdge> */ adjacent = [];
 
   if (this.obj instanceof dumper.intrp2.UserFunction) {
     // Record this this function as inner to scope, and survey scope.
     var scopeDumper = dumper.getScopeDumper_(this.obj.scope);
     scopeDumper.innerFunctions.add(this);
-    adjacent.push(new Components(scopeDumper, ''));
+    adjacent.push(scopeDumper);
   }
 
-  if (this.obj.proto) {
-    var protoDumper = dumper.getObjectDumper_(this.obj.proto);
-    adjacent.push(new Components(protoDumper, Selector.PROTOTYPE));
-  }
-  if (this.obj.owner) {
-    var ownerObj = /** @type {!Interpreter.prototype.Object} */(this.obj.owner);
-    var ownerDumper = dumper.getObjectDumper_(ownerObj);
-    adjacent.push(new Components(ownerDumper, Selector.OWNER));
-  }
+  adjacent.push({part: Selector.PROTOTYPE, value: this.obj.proto});
+  var ownerObj = /** @type {!Interpreter.prototype.Object} */(this.obj.owner);
+  adjacent.push({part: Selector.OWNER, value: ownerObj});
   var keys = this.obj.ownKeys(dumper.intrp2.ROOT);
   for (var i = 0; i < keys.length; i++) {
     var key = keys[i];
     var value = this.obj.get(key, dumper.intrp2.ROOT);
-    if (!(value instanceof dumper.intrp2.Object)) continue;  // Skip primitives.
-    var propDumper = dumper.getObjectDumper_(value);
-    adjacent.push(new Components(propDumper, key));
+    adjacent.push({part: key, value: value});
   }
 
   return adjacent;
@@ -1551,8 +1573,7 @@ ObjectDumper.Pending.prototype.toString = function() {
 // Helper Classes.
 
 /**
- * A {SubDumper, Selector.Part} tuple and various useful methods
- * which act on such.
+ * A {SubDumper, Selector.Part} tuple.
  *
  * N.B.: the usage of 'components' here is analagous to that term's
  * usage in interpreter.js but not identical: there is is a [scope,
@@ -1669,6 +1690,18 @@ var DEFAULT_OPTIONS = {
   output: null,
   verbose: false,
 };
+
+/**
+ * A value representing an outward edge (from an unspecified object)
+ * on the object graph.
+ * 
+ * - Outward edges that are properties or internal slots are
+ *   represented as a {Selector.Part, Interpreter.Value} tuple.  -
+ * - Outward edges that are the enclosing scope of a UserFunction are
+ *   represented by a bare ScopeDumper.
+ * @typedef {{part: Selector.Part, value: Interpreter.Value}|!ScopeDumper}
+ */
+var OutwardEdge;
 
 /**
  * A writable stream.  Could be a stream.Writable, but we don't check
