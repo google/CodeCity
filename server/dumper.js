@@ -76,7 +76,7 @@ var Dumper = function(intrp1, intrp2, options) {
   this.argumentsScopeDumpers = new Map();
   /**
    * Set of Scope/Object dumpers currently being recursively surveyed/dumped.
-   * @const {!Set<(!ScopeDumper|!ObjectDumper)>}
+   * @const {!Set<(!SubDumper)>}
    */
   this.visiting = new Set();
   /**
@@ -715,12 +715,12 @@ Dumper.prototype.setOptions = function(options) {
  * @return {void}
  */
 Dumper.prototype.survey_ = function() {
-  var /** !Array<!ScopeDumper|!ObjectDumper> */ queue = [];
+  var /** !Array<!SubDumper> */ queue = [];
   queue.push(this.getScopeDumper_(this.intrp2.global));
 
-  var visited = new Set();
+  var /** !Set<!SubDumper> */ visited = new Set();
   for (var i = 0; i < queue.length; i++) {
-    var /** !ScopeDumper|!ObjectDumper */ dumper = queue[i];
+    var /** !SubDumper */ dumper = queue[i];
     if (visited.has(dumper)) continue;
     var /** !Array<!Components> */ adjacent = dumper.survey(this);
     for (var j = 0; j < adjacent.length; j++) {
@@ -799,6 +799,16 @@ Dumper.prototype.write = function(var_args) {
 };
 
 ///////////////////////////////////////////////////////////////////////////////
+// SubDumper
+
+/**
+ * Common interface and functionality for ScopeDumper and ObjectDumper.
+ * @abstract @constructor
+ */
+var SubDumper = function() {
+};
+
+///////////////////////////////////////////////////////////////////////////////
 // ScopeDumper
 
 /**
@@ -806,10 +816,11 @@ Dumper.prototype.write = function(var_args) {
  * to eval-able JS, including maintaining all the dump-state info
  * required to keep track of what variable bindings have and haven't
  * yet been dumped.
- * @constructor
+ * @constructor @extends {SubDumper}
  * @param {!Interpreter.Scope} scope The scope to keep state for.
  */
 var ScopeDumper = function(scope) {
+  SubDumper.call(this);
   this.scope = scope;
   /** @private @const {!Object<string, Do>} Done status of each variable. */
   this.doneVar_ = Object.create(null);
@@ -818,6 +829,8 @@ var ScopeDumper = function(scope) {
   /** @const {!Set<!ObjectDumper>} Set of inner functions. */
   this.innerFunctions = new Set();
 };
+Object.setPrototypeOf(ScopeDumper, SubDumper);
+Object.setPrototypeOf(ScopeDumper.prototype, SubDumper.prototype);
 
 /**
  * Generate JS source text to create and/or initialize a single
@@ -978,11 +991,12 @@ ScopeDumper.prototype.survey = function(dumper) {
  * Interpreter.prototype.Object to eval-able JS, including maintaining
  * all the dump-state info required to keep track of what properties
  * (etc.) have and haven't yet been dumped.
- * @constructor
+ * @constructor @extends {SubDumper}
  * @param {!Dumper} dumper Dumper to which this ObjectDumper belongs.
  * @param {!Interpreter.prototype.Object} obj The object to keep state for.
  */
 var ObjectDumper = function(dumper, obj) {
+  SubDumper.call(this);
   this.obj = obj;
   /** @type {!Selector|undefined} Reference to this object, once created. */
   this.ref = undefined;
@@ -1016,6 +1030,8 @@ var ObjectDumper = function(dumper, obj) {
   /** @type {?Array<string>} Properties to delete. */
   this.toDelete = null;
 };
+Object.setPrototypeOf(ObjectDumper, SubDumper);
+Object.setPrototypeOf(ObjectDumper.prototype, SubDumper.prototype);
 
 /**
  * Updates done state of property binding after defining/assigning a
@@ -1535,7 +1551,7 @@ ObjectDumper.Pending.prototype.toString = function() {
 // Helper Classes.
 
 /**
- * A {<Foo>Dumper, Selector.Part} tuple and various useful methods
+ * A {SubDumper, Selector.Part} tuple and various useful methods
  * which act on such.
  *
  * N.B.: the usage of 'components' here is analagous to that term's
@@ -1544,11 +1560,11 @@ ObjectDumper.Pending.prototype.toString = function() {
  * Selector.Part} tuple.
  *
  * @constructor
- * @param {!ScopeDumper|!ObjectDumper} dumper
+ * @param {!SubDumper} dumper
  * @param {!Selector.Part} part
  */
 var Components = function(dumper, part) {
-  /** @const {!ScopeDumper|!ObjectDumper} */ this.dumper = dumper;
+  /** @const {!SubDumper} */ this.dumper = dumper;
   /** @const {!Selector.Part} */ this.part = part;
 };
   
