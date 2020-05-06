@@ -52,7 +52,9 @@ const DEFAULT_CFG = {
   // Google's API client secret.
   clientSecret: 'yyyyyyyyyyyyyyyyyyyyyyyy',
   // Random password for cookie encryption and salt for login IDs.
-  password: 'zzzzzzzzzzzzzzzz'
+  password: 'zzzzzzzzzzzzzzzz',
+  // Regexp on email addresses that must pass to allow access.
+  emailRegexp: '.*'
 };
 
 
@@ -131,14 +133,21 @@ function handleRequest(request, response) {
       // Create anti-tampering hash as checksum.
       var checksum = CFG.password + id;
       checksum = crypto.createHash('sha3-224').update(checksum).digest('hex');
-      // For future reference, the user's email address is: data.email
-      response.writeHead(302, {
-        // Temporary redirect
-        'Set-Cookie': 'ID=' + id + '_' + checksum + '; HttpOnly;',
-        'Location': CFG.connectPath
-      });
-      response.end('Login OK.  Redirecting.');
-      console.log('Accepted xxxx' + id.substring(id.length - 4));
+      var emailRegexp = new RegExp(CFG.emailRegexp || '.*');
+      if (emailRegexp.test(res.data.email)) {
+        response.writeHead(302, {
+          // Temporary redirect
+          'Set-Cookie': 'ID=' + id + '_' + checksum + '; HttpOnly;',
+          'Location': CFG.connectPath
+        });
+        response.end('Login OK.  Redirecting.');
+        console.log('Accepted xxxx' + id.substring(id.length - 4));
+      } else {
+        response.statusCode = 403;
+        response.end('Login denied.  Your email address (' + res.data.email +
+            ') is not authorized.');
+        console.log('Login denied.');
+      }
     });
   });
 }
