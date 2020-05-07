@@ -65,7 +65,7 @@ exports.testConfigFromSpec = function(t) {
     'a string',  // Not an array.
     {object: 'not array'},  // Not an array.
     ['array', 'of', 'strings'],  // Array but not  of objects.
-    [{problem: 'no filename'}],  // Is object but has no .filename.
+    [{}],  // Neither SpecFileItem  nor SpecOptionsItem.
     [{filename: 'foo'}],  // Missing both .contents and .rest.
     [{filename: 'foo', contents: [], rest: 'bar'}],  // .rest not bool.
     [{filename: 'foo', contents: [42]}],  // .contents[0] not an object.
