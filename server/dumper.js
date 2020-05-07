@@ -199,10 +199,11 @@ Dumper.prototype.diffBuiltins_ = function() {
  * certain done value (which, notably in the case of Do.PRUNE and
  * Do.SKIP has the effect of causing subequent recursive dumps to
  * ignore that property).
+ * @private
  * @param {!Selector} selector The selector for the binding to be deferred.
  * @param {!Do} done Do status to mark binding with.
  */
-Dumper.prototype.markBinding = function(selector, done) {
+Dumper.prototype.markBinding_ = function(selector, done) {
   var c = this.getComponentsForSelector_(selector);
   var was = c.dumper.getDone(c.part);
   if (was !== done) c.dumper.setDone(c.part, done);
@@ -698,6 +699,17 @@ Dumper.prototype.getScopeDumper_ = function(scope) {
 };
 
 /**
+ * Mark a particular binding (as specified by a Selector) to pruned,
+ * which will have the effect of trying to ensure it does not exist in
+ * the state reconstructed by the dump output.
+ * // TODO(cpcallen): actually delete pruned properties if necessary.
+ * @param {!Selector} selector The selector for the binding to be pruned.
+ */
+Dumper.prototype.prune = function(selector) {
+  this.markBinding_(selector, Do.PRUNE);
+};
+
+/**
  * Set options for this dumper.  Can be called to change options
  * between calls to .dumpbBinding.  Will update existing settings with
  * new values, so only changed options need to be supplied.
@@ -708,6 +720,16 @@ Dumper.prototype.setOptions = function(options) {
   for (var key in DEFAULT_OPTIONS) {
     if (key in options) this.options[key] = options[key];
   }
+};
+
+/**
+ * Mark a particular binding (as specified by a Selector) to be
+ * skipped, which will have the effect of preventing any further
+ * dumping of it until it is unskipped.
+ * @param {!Selector} selector The selector for the binding to be skipped.
+ */
+Dumper.prototype.skip = function(selector) {
+  this.markBinding_(selector, Do.SKIP);
 };
 
 /**
@@ -744,6 +766,15 @@ Dumper.prototype.survey_ = function() {
     }
     visited.add(dumper);
   }
+};
+
+/**
+ * Mark a particular binding (as specified by a Selector) as no longer
+ * to be skipped.
+ * @param {!Selector} selector The selector for the binding to be skipped.
+ */
+Dumper.prototype.unskip = function(selector) {
+  this.markBinding_(selector, Do.UNSTARTED);
 };
 
 /**
@@ -1181,7 +1212,7 @@ ObjectDumper.prototype.dump = function(dumper, ref) {
       } else {
         var /** !Selector */ binding;
         for (i = 0; binding = pending.bindings[i]; i++) {
-          dumper.markBinding(binding, Do.RECURSE);
+          dumper.markBinding_(binding, Do.RECURSE);
         }
         for (var dep, i = 0; dep = pending.dependencies[i]; i++) {
           dep.done = ObjectDumper.Done.DONE_RECURSIVELY;

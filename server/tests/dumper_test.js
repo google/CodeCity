@@ -987,10 +987,10 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     // Set a few binding .done flags in advance to simulate things
     // already being dumped or being marked for deferred dumping.
     for (const ss of tc.prune || []) {
-      dumper.markBinding(new Selector(ss), Do.PRUNE);
+      dumper.prune(new Selector(ss));
     }
     for (const ss of tc.skip || []) {
-      dumper.markBinding(new Selector(ss), Do.SKIP);
+      dumper.skip(new Selector(ss));
     }
     for (const ss of tc.set || []) {
       dumper.dumpBinding(new Selector(ss), Do.SET);
