@@ -855,6 +855,33 @@ Dumper.prototype.write = function(var_args) {
 var SubDumper = function() {
   /** @type {number} */
   this.preferredBadness = Infinity;
+  /** @type {?Set<Selector.Part>} */
+  this.skip_ = null;
+  /** @type {?Set<Selector.Part>} */
+  this.prune_ = null;
+};
+
+/**
+ * Mark a particular binding (as specified by a Part) to be pruned,
+ * which will have the effect of trying to ensure it does not exist in
+ * the state reconstructed by the dump output.
+ * // TODO(cpcallen): actually delete pruned properties if necessary.
+ * @param {Selector.Part} part The binding to be pruned.
+ */
+SubDumper.prototype.prune = function(part) {
+  if (!this.prune_) this.prune_ = new Set();
+  this.prune_.add(part);
+};
+
+/**
+ * Mark a particular binding (as specified by a Part) to be skipped,
+ * which will have the effect of preventing any further dumping of it
+ * until it is unskipped.
+ * @param {Selector.Part} part The binding to be skipped.
+ */
+SubDumper.prototype.skip = function(part) {
+  if (!this.skip_) this.skip_ = new Set();
+  this.skip_.add(part);
 };
 
 /**
@@ -874,6 +901,17 @@ var SubDumper = function() {
  * @return {!Array<OutwardEdge>}
  */
 SubDumper.prototype.survey = function(dumper) {};
+
+/**
+ * Mark a particular binding (as specified by a Selector) as no longer
+ * to be skipped.
+ * @param {Selector.Part} part The binding to be unskipped.
+ */
+SubDumper.prototype.unskip = function(part) {
+  if (!this.skip_) return;
+  this.skip_.delete(part);
+  if (this.skip_.size === 0) this.skip_ = null;
+};
 
 ///////////////////////////////////////////////////////////////////////////////
 // ScopeDumper
