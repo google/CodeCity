@@ -167,16 +167,10 @@ function readConfigFile(filename) {
     fs.writeFileSync(filename, data, 'utf8');
   }
   CFG = JSON.parse(data);
-  if (CFG.password === DEFAULT_CFG.password) {
+  if (!CFG.password || CFG.password === DEFAULT_CFG.password) {
     throw Error(
         `Configuration file ${filename} not configured.  ` +
         'Please edit this file.');
-  }
-  // All options in the config must be present and non-falsy.
-  for (var key in DEFAULT_CFG) {
-    if (!CFG[key]) {
-      throw Error(`${key} not set in ${filename}`);
-    }
   }
 }
 
