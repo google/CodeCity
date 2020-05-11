@@ -420,7 +420,7 @@ CCC.World.prerenderPanorama = function(memo) {
     }
     var svg = CCC.World.createHiddenSvg(CCC.World.panoramaDiv.offsetWidth,
                                         CCC.World.panoramaDiv.offsetHeight);
-    svg.setAttribute('data-iframe-id', msg.iframeId);
+    svg.setAttribute('data-iframe-id', memo.iframeId);
     CCC.World.scratchPanorama = svg;
     return true;
   }
