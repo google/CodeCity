@@ -180,14 +180,21 @@ svgEditor.paste = function() {
 svgEditor.setString = function(xmlString) {
   // SvgCanvas needs contents wrapped in a throw-away SVG node.
   if (xmlString) {
-    xmlString = '<svg xmlns="http://www.w3.org/2000/svg">' +
+    var svgString = '<svg xmlns="http://www.w3.org/2000/svg">' +
         xmlString + '</svg>';
-    svgEditor.canvas.setSvgString(xmlString);
+    svgEditor.canvas.setSvgString(svgString);
   } else {
     svgEditor.canvas.clear();
   }
   svgEditor.resize();
+
+  // Preserve the original input, alongside it's round-tripped output.
+  svgEditor.setInput = xmlString;
+  svgEditor.setOutput = svgEditor.getString();
 };
+
+svgEditor.setInput = undefined;
+svgEditor.setOutput = undefined;
 
 /**
  * Extract the SVG from the editor.
@@ -213,6 +220,13 @@ svgEditor.getString = function() {
   // Remove the wrapping <g>.
   source = source.replace(/^\s*<g[^>]*>\s*/i, '');
   source = source.replace(/\s*<\/g>\s*$/i, '');
+
+  // If the output is the same as the original input's round-tripped value,
+  // then return the original input.
+  // Otherwise changes may be claimed when none were made by the user.
+  if (source === svgEditor.setOutput) {
+    return svgEditor.setInput;
+  }
   return source;
 };
 
