@@ -1031,10 +1031,9 @@ ScopeDumper.prototype.setDone = function(part, done) {
   var old = this.getDone(part);
 
   // Invariant checks.
-  if (done < old) {
-    throw new RangeError("Can't undo previous work on variable " + part);
-  } else if (done === old) {
-    throw new RangeError("Redundant work on variable " + part);
+  if (done <= old) {
+    var fault = (done === old) ? 'Refusing redundant' : "Can't undo previous";
+    throw new RangeError(fault + ' work on variable ' + part);
   }
   this.doneVar_[part] = done;
 };
@@ -1516,14 +1515,12 @@ ObjectDumper.prototype.scheduleDeletion = function(key) {
  */
 ObjectDumper.prototype.setDone = function(part, done) {
   var old = this.getDone(part);
-  var name = (part === Selector.PROTOTYPE) ? 'prototype' : '.' + part;
 
   // Invariant checks.
-  var description = this.ref ? ' of ' + this.ref : '';
-  if (done < old) {
-    throw new RangeError("Can't undo work on " + name + description);
-  } else if (done === old) {
-    throw new RangeError('Redundant work on ' + name + description);
+  if (done <= old) {
+    var fault = (done === old) ? 'Refusing redundant' : "Can't undo previous";
+    var description = this.ref ? ' of ' + this.ref : '';
+    throw new RangeError(fault + ' work on ' + part + description);
   }
   // Do set.
   if (part === Selector.PROTOTYPE) {
