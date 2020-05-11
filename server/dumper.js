@@ -865,6 +865,21 @@ var SubDumper = function() {
 };
 
 /**
+ * Generate JS source text to create and/or initialize a single
+ * variable binding.
+ * @abstract
+ * @param {!Dumper} dumper Dumper to which this ObjectDumper belongs.
+ * @param {!Selector.Part} part The binding part to dump.
+ * @param {!Do} todo How much to do.  Must be >= Do.DECL; > Do.SET ignored.
+ * @return {!Do|?ObjectDumper.Pending} How much has been done on the
+ *     specified binding, or null if there is an outstanding dump or
+ *     dumpBinding invocaion for this object, or a (bindings,
+ *     dependencies) pair if a recursive call encountered such an
+ *     outstanding invocation.
+ */
+SubDumper.prototype.dumpBinding = function(dumper, part, todo) {};
+
+/**
  * Mark a particular binding (as specified by a Part) to be pruned,
  * which will have the effect of trying to ensure it does not exist in
  * the state reconstructed by the dump output.
@@ -962,10 +977,9 @@ ScopeDumper.prototype.dump = function(dumper) {
  * @param {!Dumper} dumper Dumper to which this ScopeDumper belongs.
  * @param {!Selector.Part} part The part to dump.  Must be simple string.
  * @param {!Do} todo How much to do.  Must be >= Do.DECL; > Do.SET ignored.
- * @param {!Selector=} ref Ignored.
  * @return {!Do} How much has been done on the specified binding.
  */
-ScopeDumper.prototype.dumpBinding = function(dumper, part, todo, ref) {
+ScopeDumper.prototype.dumpBinding = function(dumper, part, todo) {
   if (dumper.scope !== this.scope) {
     throw new Error("Can't create binding other than in current scope");
   } else if (typeof part !== 'string') {
