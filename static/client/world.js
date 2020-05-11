@@ -1090,7 +1090,9 @@ CCC.World.publishHistory = function(historyElement) {
   } else {
     CCC.World.svgZoom(historyElement);
     // The occasional (non-iframe) panel should lack a border.
-    if (Math.random() < 1 / 16) {
+    var connectDiv = historyElement.firstChild &&
+        historyElement.firstChild.className === 'connectDiv';
+    if (!connectDiv && (Math.random() < 1 / 16)) {
       panelDiv.style.borderColor = '#fff';
     }
     // While being built, the SVG was hidden.
