@@ -215,13 +215,13 @@ Dumper.prototype.markBinding_ = function(selector, done) {
  * E.g., if foo = [42, 69, 105], then:
  *
  * myDumper.dumpBinding(new Selector('foo'), Do.DECL)
- * // => 'var foo;\n'
+ * // Writes: 'var foo;\n'
  * myDumper.dumpBinding(new Selector('foo'), Do.SET)
- * // => 'foo = [];\n'
+ * // Writes: 'foo = [];\n'
  * myDumper.dumpBinding(new Selector('foo[0]'), Do.SET)
- * // => 'foo[0] = 42;\n'
+ * // Writes: 'foo[0] = 42;\n'
  * myDumper.dumpBinding(new Selector('foo'), Do.RECURSE)
- * // => 'foo[1] = 69;\nfoo[2] = 105;\n'
+ * // Writs: 'foo[1] = 69;\nfoo[2] = 105;\n'
  * @param {!Selector} selector The selector for the binding to be dumped.
  * @param {!Do} todo How much to dump.  Must be >= Do.DECL.
  * @return {void}
@@ -732,6 +732,11 @@ Dumper.prototype.skip = function(selector) {
 /**
  * Survey the global Scope and recursively everything accessible via
  * its bindings, to prepare for dumping.
+ *
+ * This is done useing Dijkstra's Algorithm to create a least-cost
+ * spanning tree starting from the global scope, with distance
+ * measured by Selector badness.
+ *
  * @return {void}
  */
 Dumper.prototype.survey_ = function() {
@@ -796,7 +801,7 @@ Dumper.prototype.valueForSelector = function(selector, scope) {
   for (var i = 1; i < selector.length; i++) {
     if (!(v instanceof this.intrp2.Object)) {
       var s = new Selector(selector.slice(0, i));
-      throw TypeError("Can't get select part of primitive " + s + ' === ' + v);
+      throw TypeError("Can't select part of primitive " + s + ' === ' + v);
     }
     var part = selector[i];
     if (typeof part === 'string') {
@@ -1473,6 +1478,12 @@ ObjectDumper.prototype.getDone = function(part) {
  * assignment - i.e., that it exists and is writable, or doesn't exist
  * and does not inherit from a non-writable property on the prototype
  * chain.
+ *
+ * N.B. this not checking writability on intrp1 or intrp2, but on the
+ * notional state of the interpreter at this point in the dump (i.e.,
+ * somewhere in between the two), as recorded on the relevant
+ * ObjectDumper .attibutes and .proto properties.
+ *
  * @param {!Dumper} dumper Dumper to which this ObjectDumper belongs.
  * @param {string} key The property key to check for writability of.
  * @return {boolean} True iff the property can be set by assignment.
