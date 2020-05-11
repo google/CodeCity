@@ -968,11 +968,13 @@ ScopeDumper.prototype.dumpBinding = function(dumper, part, todo, ref) {
   } else if (!this.scope.hasBinding(part)) {
     throw new ReferenceError("Can't dump non-existent variable " + part);
   }
-  var done = this.getDone(part);
-  if (this.skip_ && this.skip_.has(part) ||
-      this.prune_ && this.prune_.has(part)) {
-    return done;  // Don't dump this binding yet / at all.
+  if (this.prune_ && this.prune_.has(part)) {
+    // TODO(cpcallen): verify binding does not actually need to be
+    // deleted, since that's impossible.
+    return Do.RECURSE;  // Don't dump this binding at all.
   }
+  var done = this.getDone(part);
+  if (this.skip_ && this.skip_.has(part)) return done;  // Don't dump yet.
   var output = [];
   if (todo >= Do.DECL && done < todo && done <= Do.SET) {
     if (done < Do.DECL) {
@@ -1296,9 +1298,7 @@ ObjectDumper.prototype.dumpBinding = function(dumper, part, todo, ref) {
     return Do.RECURSE;  // Don't dump this binding at all.
   }
   var done = this.getDone(part);
-  if (this.skip_ && this.skip_.has(part)) {
-    return done;  // Don't dump this binding yet.
-  }
+  if (this.skip_ && this.skip_.has(part)) return done;  // Don't dump yet.
   var sel = new Selector(ref.concat(part));
   if (part === Selector.PROTOTYPE) {
     var r = this.dumpPrototype_(dumper, todo, ref, sel);
