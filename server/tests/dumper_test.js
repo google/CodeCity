@@ -1031,7 +1031,9 @@ exports.testDumperPrototypeDumpBinding = function(t) {
       t.expect(util.format('%sbinding status of <%s> (implicit)', prefix, s),
                d.getDone(part), done);
       if (valueRef) {
-        const value = dumper.valueForSelector(s);
+        /** @suppress {accessControls} */
+        const c = dumper.getComponentsForSelector_(s);
+        const value = c.dumper.getValue(dumper, c.part);
         if (value instanceof intrp.Object) {
           /** @suppress {accessControls} */
           const objDumper = dumper.getObjectDumper_(value);

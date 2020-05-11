@@ -632,19 +632,18 @@ Dumper.prototype.exprForSelector_ = function(selector) {
  */
 Dumper.prototype.getComponentsForSelector_ = function(selector, scope) {
   if (!scope) scope = this.scope;
-  if (selector.isVar()) {
-    var part = selector[0];
-    var dumper = this.getScopeDumper_(scope);
-  } else {
-    var ref = new Selector(selector);
-    part = ref.pop();
-    var obj = this.valueForSelector(ref);
-    if (!(obj instanceof this.intrp2.Object)) {
-      throw new TypeError("Can't set properties of primitive");
+  if (selector.length < 1) throw new RangeError('Zero-length selector??');
+  var /** !SubDumper */ dumper = this.getScopeDumper_(scope);
+  var /** Interpreter.Value */ v;
+  for (var i = 0; i < selector.length - 1; i++) {
+    v = dumper.getValue(this, selector[i]);
+    if (!(v instanceof this.intrp2.Object)) {
+      var s = new Selector(selector.slice(0, i));
+      throw TypeError("Can't select part of primitive " + s + ' === ' + v);
     }
-    dumper = this.getObjectDumper_(obj);
+    dumper = this.getObjectDumper_(v);
   }
-  return new Components(dumper, part);
+  return new Components(dumper, selector[selector.length - 1]);
 };
 
 /**
@@ -778,31 +777,6 @@ Dumper.prototype.survey_ = function() {
 Dumper.prototype.unskip = function(selector) {
   var c = this.getComponentsForSelector_(selector);
   c.dumper.unskip(c.part);
-};
-
-/**
- * Get the present value in the interpreter of a particular binding,
- * specified by selector.  If selector does not correspond to a valid
- * binding an error is thrown.
- * @param {!Selector} selector A selector, specifiying a binding.
- * @param {!Interpreter.Scope=} scope Scope which selector is relative
- *     to.  Defaults to the current scope.
- * @return {Interpreter.Value} The value of that binding.
- */
-Dumper.prototype.valueForSelector = function(selector, scope) {
-  if (!scope) scope = this.scope;
-  if (selector.length < 1) throw new RangeError('Zero-length selector??');
-  var /** !SubDumper */ dumper = this.getScopeDumper_(scope);
-  var /** Interpreter.Value */ v;
-  for (var i = 0; ; i++) {
-    v = dumper.getValue(this, selector[i]);
-    if (i === selector.length - 1) return v;
-    if (!(v instanceof this.intrp2.Object)) {
-      var s = new Selector(selector.slice(0, i));
-      throw TypeError("Can't select part of primitive " + s + ' === ' + v);
-    }
-    dumper = this.getObjectDumper_(v);
-  }
 };
 
 /**
