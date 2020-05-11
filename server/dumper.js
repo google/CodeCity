@@ -792,29 +792,17 @@ Dumper.prototype.unskip = function(selector) {
 Dumper.prototype.valueForSelector = function(selector, scope) {
   if (!scope) scope = this.scope;
   if (selector.length < 1) throw new RangeError('Zero-length selector??');
-  var varname = selector[0];
-  if (typeof varname !== 'string') throw new TypeError('Invalid first part??');
-  if (!scope.hasBinding(varname)) {
-    throw new ReferenceError(varname + ' is not defined');
-  }
-  var /** Interpreter.Value */ v = scope.get(varname);
-  for (var i = 1; i < selector.length; i++) {
+  var /** !SubDumper */ dumper = this.getScopeDumper_(scope);
+  var /** Interpreter.Value */ v;
+  for (var i = 0; ; i++) {
+    v = dumper.getValue(this, selector[i]);
+    if (i === selector.length - 1) return v;
     if (!(v instanceof this.intrp2.Object)) {
       var s = new Selector(selector.slice(0, i));
       throw TypeError("Can't select part of primitive " + s + ' === ' + v);
     }
-    var part = selector[i];
-    if (typeof part === 'string') {
-      v = v.get(part, this.intrp2.ROOT);
-    } else if (part === Selector.PROTOTYPE) {
-      v = v.proto;
-    } else if (part === Selector.OWNER) {
-      v = /** @type{?Interpreter.prototype.Object} */(v.owner);
-    } else {
-      throw new Error('Not implemented');
-    }
+    dumper = this.getObjectDumper_(v);
   }
-  return v;
 };
 
 /**
@@ -878,6 +866,16 @@ var SubDumper = function() {
  *     outstanding invocation.
  */
 SubDumper.prototype.dumpBinding = function(dumper, part, todo) {};
+
+/**
+ * Return the value of the given part in intrp2 (i.e., the intended
+ * final value, provided that it isn't going to be pruned.)
+ * @abstract
+ * @param {!Dumper} dumper Dumper to which this SubDumper belongs.
+ * @param {!Selector.Part} part The binding part to get the value of.
+ * @return {Interpreter.Value} The value of that part.
+ */
+SubDumper.prototype.getValue = function(dumper, part) {};
 
 /**
  * Mark a particular binding (as specified by a Part) to be pruned,
@@ -1058,6 +1056,22 @@ ScopeDumper.prototype.setDone = function(part, done) {
     throw new RangeError(fault + ' work on variable ' + part);
   }
   this.doneVar_[part] = done;
+};
+
+/**
+ * Return the value of the given variable in this.scope (i.e., the
+ * value in intrp2, and the intended final value - provided that it
+ * isn't going to be pruned.)
+ * @param {!Dumper} dumper Dumper to which this ScopeDumper belongs.
+ * @param {!Selector.Part} part The binding part to get the value of.
+ * @return {Interpreter.Value} The value of that part.
+ */
+ScopeDumper.prototype.getValue = function(dumper, part) {
+  if (typeof part !== 'string') throw new TypeError('Invalid first part??');
+  if (!this.scope.hasBinding(part)) {
+    throw new ReferenceError(part + ' is not defined');
+  }
+  return this.scope.get(part);
 };
 
 /**
@@ -1484,6 +1498,26 @@ ObjectDumper.prototype.getDone = function(part) {
     return done === undefined ? Do.UNSTARTED : done;
   } else {
     throw new TypeError('Invalid part');
+  }
+};
+
+/**
+ * Return the value of the given part of this.obj (i.e., the value
+ * in intrp2, and the intended final value provided that it isn't
+ * going to be pruned.)
+ * @param {!Dumper} dumper Dumper to which this ObjectDumper belongs.
+ * @param {!Selector.Part} part The binding part to get the value of.
+ * @return {Interpreter.Value} The value of that part.
+ */
+ObjectDumper.prototype.getValue = function(dumper, part) {
+  if (typeof part === 'string') {
+    return this.obj.get(part, dumper.intrp2.ROOT);
+  } else if (part === Selector.PROTOTYPE) {
+    return this.obj.proto;
+  } else if (part === Selector.OWNER) {
+    return /** @type{?Interpreter.prototype.Object} */(this.obj.owner);
+  } else {
+    throw new Error('unknown part type');
   }
 };
 
