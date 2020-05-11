@@ -1015,7 +1015,8 @@ ScopeDumper.prototype.getDone = function(part) {
   if (typeof part !== 'string') {
     throw new TypeError('Invalid part (not a variable name)');
   }
-  return this.doneVar_[part] || Do.UNSTARTED;
+  var done = this.doneVar_[part];
+  return done === undefined ? Do.UNSTARTED : done;
 };
 
 /**
@@ -1460,7 +1461,8 @@ ObjectDumper.prototype.getDone = function(part) {
   } else if (part === Selector.OWNER) {
     return this.doneOwner_;
   } else if (typeof part === 'string') {
-    return this.doneProp_[part] || Do.UNSTARTED;
+    var done = this.doneProp_[part];
+    return done === undefined ? Do.UNSTARTED : done;
   } else {
     throw new TypeError('Invalid part');
   }
@@ -1678,6 +1680,12 @@ var Components = function(dumper, part) {
  * etc. binding.  N.B.: values meaning "don't do this one (yet)"
  * are negative, "nothing done" is zero (and therefore falsey), and
  * "some work has been done" are positive.
+ *
+ * Code should not depend on the numeric values of the enum options,
+ * but it is permissiible to depend on the options being in numeric
+ * order of ascending completion - i.e., Do.x implies Do.y if Do.x >=
+ * Do.y.
+ *
  * @enum {number}
  */
 var Do = {
