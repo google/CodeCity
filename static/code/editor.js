@@ -644,7 +644,14 @@ Code.Editor.newCodeMirror = function(container, extraOptions) {
   var options = {
     extraKeys: {
       Tab: function(cm) {
-        cm.replaceSelection('  ');
+        if (cm.somethingSelected()) {
+          cm.indentSelection('add');
+        } else {
+          cm.replaceSelection('  ');
+        }
+      },
+      'Shift-Tab': function(cm) {
+        cm.indentSelection('subtract');
       }
     },
     gutters: ['CodeMirror-lint-markers'],
