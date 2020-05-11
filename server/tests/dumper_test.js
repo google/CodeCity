@@ -418,7 +418,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
       dump: [
         // [ selector, todo, expected output, expected done (default: todo) ]
         // Order matters.
-        ['prune', Do.SET, '', Do.PRUNE],
+        ['prune', Do.SET, '', Do.UNSTARTED],
         ['skip', Do.SET, "var skip = 'skipped';\n", Do.RECURSE],
         ['obj', Do.DECL, 'var obj;\n'],
         ['obj', Do.SET, 'obj = {};\n', Do.DONE],
@@ -431,7 +431,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         ['obj.b', Do.SET, 'obj.b = 2;\n', Do.RECURSE],
         ['obj.u', Do.DECL, 'obj.u = undefined;\n', Do.RECURSE],
         ['obj', Do.RECURSE, 'obj.c = 3;\n', Do.DONE],
-        ['obj.prune', Do.SET, '', Do.PRUNE],
+        ['obj.prune', Do.SET, '', Do.UNSTARTED],
         ['obj.skip', Do.SET, "obj.skip = 'skipped';\n", Do.RECURSE],
         ['obj', Do.RECURSE, ''],
       ],
@@ -450,9 +450,10 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         obj.b.self = obj.b;
         obj.c.parent = obj;
       `,
-      // Mark obj.b.id as SKIP.  Attempting to dump obj recursively
-      // should be leave obj.a as RECUSE, obj.b and obj.c as
-      // DONE, and obj.a.id still SKIP.  obj.c left at DONE.
+      // Mark obj.b.id to be skipped and obj.c.id to be pruned;
+      // attempting to dump obj recursively should be leave obj.a as
+      // RECUSE, obj.b and obj.c as DONE, and obj.a.id still
+      // UNSTARTED.  obj.c left at DONE.
       prune: ['obj.c.id'],
       skip: ['obj.b.id'],
       dump: [
@@ -469,9 +470,9 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         ['obj.a.id', Do.RECURSE],
         ['obj.b', Do.DONE],
         ['obj.b.self', Do.DONE],
-        ['obj.b.id', Do.SKIP],
+        ['obj.b.id', Do.UNSTARTED],
         ['obj.c', Do.DONE],
-        ['obj.c.id', Do.PRUNE],
+        ['obj.c.id', Do.UNSTARTED],
         ['obj.c.parent', Do.DONE],
       ],
     },
@@ -1002,6 +1003,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
       // Dump binding and check output code.
       const result = new MockWritable();
       dumper.setOptions({output: result});
+      dumper.unskip(s);
       dumper.dumpBinding(s, todo);
       t.expect(util.format('%sDumper.p.dumpBinding(<%s>, %o)', prefix,
                            s, todo), String(result), expected);

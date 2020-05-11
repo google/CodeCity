@@ -196,9 +196,7 @@ Dumper.prototype.diffBuiltins_ = function() {
 
 /**
  * Mark a particular binding (as specified by a Selector) with a
- * certain done value (which, notably in the case of Do.PRUNE and
- * Do.SKIP has the effect of causing subequent recursive dumps to
- * ignore that property).
+ * certain done value.
  * @private
  * @param {!Selector} selector The selector for the binding to be deferred.
  * @param {!Do} done Do status to mark binding with.
@@ -230,9 +228,6 @@ Dumper.prototype.markBinding_ = function(selector, done) {
  */
 Dumper.prototype.dumpBinding = function(selector, todo) {
   var c = this.getComponentsForSelector_(selector);
-  if (c.dumper.getDone(c.part) === Do.SKIP) {
-    c.dumper.setDone(c.part, Do.UNSTARTED);
-  }
   c.dumper.dumpBinding(this, c.part, todo);
 };
 
@@ -706,7 +701,8 @@ Dumper.prototype.getScopeDumper_ = function(scope) {
  * @param {!Selector} selector The selector for the binding to be pruned.
  */
 Dumper.prototype.prune = function(selector) {
-  this.markBinding_(selector, Do.PRUNE);
+  var c = this.getComponentsForSelector_(selector);
+  c.dumper.prune(c.part);
 };
 
 /**
@@ -729,7 +725,8 @@ Dumper.prototype.setOptions = function(options) {
  * @param {!Selector} selector The selector for the binding to be skipped.
  */
 Dumper.prototype.skip = function(selector) {
-  this.markBinding_(selector, Do.SKIP);
+  var c = this.getComponentsForSelector_(selector);
+  c.dumper.skip(c.part);
 };
 
 /**
@@ -774,7 +771,8 @@ Dumper.prototype.survey_ = function() {
  * @param {!Selector} selector The selector for the binding to be skipped.
  */
 Dumper.prototype.unskip = function(selector) {
-  this.markBinding_(selector, Do.UNSTARTED);
+  var c = this.getComponentsForSelector_(selector);
+  c.dumper.unskip(c.part);
 };
 
 /**
@@ -970,29 +968,34 @@ ScopeDumper.prototype.dumpBinding = function(dumper, part, todo, ref) {
   } else if (!this.scope.hasBinding(part)) {
     throw new ReferenceError("Can't dump non-existent variable " + part);
   }
-  var sel = new Selector([part]);
   var done = this.getDone(part);
-  var value = this.scope.get(part);
-  if (done >= 0) {  // Negative values mean don't dump (yet).
-    var output = [];
-    if (todo >= Do.DECL && done < todo && done <= Do.SET) {
-      if (done < Do.DECL) {
-        output.push('var ');
-        done = Do.DECL;
-      }
-      if (done < Do.SET) {
-        output.push(part);
-        if (todo >= Do.SET) {
-          output.push(' = ', dumper.exprFor_(value, sel, false, part));
-          done = (typeof value === 'object') ? Do.DONE : Do.RECURSE;
-        }
-        output.push(';');
-      }
-      this.setDone(part, done);
+  if (this.skip_ && this.skip_.has(part) ||
+      this.prune_ && this.prune_.has(part)) {
+    return done;  // Don't dump this binding yet / at all.
+  }
+  var output = [];
+  if (todo >= Do.DECL && done < todo && done <= Do.SET) {
+    if (done < Do.DECL) {
+      output.push('var ');
+      done = Do.DECL;
     }
-    if (output.length) dumper.write.apply(dumper, output);
-    if (todo >= Do.RECURSE && done < Do.RECURSE &&
-        value instanceof dumper.intrp2.Object) {
+    if (done < Do.SET) {
+      output.push(part);
+      if (todo >= Do.SET) {
+        var sel = new Selector([part]);
+        var value = this.scope.get(part);
+        output.push(' = ', dumper.exprFor_(value, sel, false, part));
+        done = (typeof value === 'object') ? Do.DONE : Do.RECURSE;
+      }
+        output.push(';');
+    }
+    this.setDone(part, done);
+  }
+  if (output.length) dumper.write.apply(dumper, output);
+  if (todo >= Do.RECURSE && done < Do.RECURSE) {
+    var value = this.scope.get(part);
+    if (value instanceof dumper.intrp2.Object) {
+      var sel = new Selector([part]);
       var objDone = dumper.getObjectDumper_(value).dump(dumper, sel);
       if (objDone === ObjectDumper.Done.DONE_RECURSIVELY) {
         done = Do.RECURSE;
@@ -1028,7 +1031,7 @@ ScopeDumper.prototype.setDone = function(part, done) {
   var old = this.getDone(part);
 
   // Invariant checks.
-  if (old && done < old) {
+  if (done < old) {
     throw new RangeError("Can't undo previous work on variable " + part);
   } else if (done === old) {
     throw new RangeError("Redundant work on variable " + part);
@@ -1223,7 +1226,7 @@ ObjectDumper.prototype.dump = function(dumper, ref) {
     } else if (bindingDone === Do.DONE) {
       done = /** @type {!ObjectDumper.Done} */(
           Math.min(done, ObjectDumper.Done.DONE));
-    } else if (bindingDone < Do.DONE && bindingDone !== Do.PRUNE) {
+    } else if (bindingDone < Do.DONE) {
       done = /** @type {!ObjectDumper.Done} */(
           Math.min(done, ObjectDumper.Done.NO));
     }
@@ -1288,8 +1291,14 @@ ObjectDumper.prototype.dumpBinding = function(dumper, part, todo, ref) {
     throw new Error("Can't dump part of an unreferencable object");
   }
 
+  if (this.prune_ && this.prune_.has(part)) {
+    // TODO(cpcallen): delete binding if necessary.
+    return Do.RECURSE;  // Don't dump this binding at all.
+  }
   var done = this.getDone(part);
-  if (done  < 0) return done;  // Negative values mean don't dump (yet).
+  if (this.skip_ && this.skip_.has(part)) {
+    return done;  // Don't dump this binding yet.
+  }
   var sel = new Selector(ref.concat(part));
   if (part === Selector.PROTOTYPE) {
     var r = this.dumpPrototype_(dumper, todo, ref, sel);
@@ -1511,7 +1520,7 @@ ObjectDumper.prototype.setDone = function(part, done) {
 
   // Invariant checks.
   var description = this.ref ? ' of ' + this.ref : '';
-  if (old && done < old) {
+  if (done < old) {
     throw new RangeError("Can't undo work on " + name + description);
   } else if (done === old) {
     throw new RangeError('Redundant work on ' + name + description);
@@ -1676,23 +1685,6 @@ var Components = function(dumper, part) {
  */
 var Do = {
   /**
-   * Skip the named binding entirely (unless it or an extension of it
-   * is explicitly mentioned in a later config directive); if the data
-   * accessible via the named binding is not accessible via any other
-   * (non-pruned) path from the global scope it will consequently not
-   * be included in the dump.
-   *
-   * This option is intended to cause data loss, so be careful!
-   */
-  PRUNE: -2,
-
-  /**
-   * Skip the named binding for now, but include it in a later file
-   * (whichever has rest: true).
-   */
-  SKIP: -1,
-
-  /**
    * Nothing has been done about this binding yet.  Only valid as a
    * 'done' value, not as a 'do' value.
    */
@@ -1724,9 +1716,9 @@ var Do = {
    * Ensure theat the specified binding has been set to its final
    * value, and additionally that the final property attributes
    * (enumerable, writable and/or configurable) are set.  DONE is
-   * provided as an alias for bindings (like [[Prototype]] and
-   * [[Owner]] that don't have attributes; for those, SET should
-   * automatically be promoted to DONE.
+   * provided as an alias for bindings (like variables,
+   * [[Prototype]] and [[Owner]] that don't have attributes; for
+   * those, SET should automatically be promoted to DONE.
    */
   ATTR: 3,
   DONE: 3,
