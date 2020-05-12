@@ -179,6 +179,8 @@ CCC.World.preprocessMessage = function(msg) {
         delete msg[prop];
       }
       msg.type = 'html';
+      text = CCC.Common.escapeSpaces(text.replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>'));
       msg.htmlText = text;
     }
 
