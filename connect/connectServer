@@ -70,6 +70,14 @@ var Queue = function (id) {
    */
   this.memoNum = 0;
   /**
+   * Buffer of incomplete data from Code City.
+   */
+  this.lineBuffer = '';
+  /**
+   * Maximum allowed length (in bytes) of a single memo.
+   */
+  this.maxLineSize = 10 * 1024 * 1024;
+  /**
    * Buffer of memos from Code City to the user.
    */
   this.memoBuffer = [];
@@ -91,8 +99,26 @@ var Queue = function (id) {
     console.log('TCP error for session ' + id, error);
   });
   this.client.on('data', function(data) {
-    thisQueue.memoBuffer.push(data.toString());
-    thisQueue.memoNum++;
+    var text = thisQueue.lineBuffer + data.toString();
+    if (text.length > thisQueue.maxLineSize) {
+      console.log('Session ' +  id + ' drops ' + text.length +
+          ' bytes of data.');
+      text = '{"type":"narrate","text":"[OVERFLOW: ' + text.length +
+          ' bytes lost.  Next line might be garbled.]"}\n';
+    }
+    if (text.endsWith('\n')) {
+      // Text might include more than one memo.  Split on line break.
+      var texts = text.split(/^/m);
+      Array.prototype.push.apply(thisQueue.memoBuffer, texts);
+      thisQueue.memoNum += texts.length;
+      thisQueue.lineBuffer = '';
+    } else {
+      // Data greater than 65536 bytes gets sent to us in chunks.
+      // Save chunks in the line buffer and send the memo only when complete.
+      thisQueue.lineBuffer = text;
+      console.log('Session ' +  id + ' stores ' + text.length +
+          ' bytes in its line buffer.');
+    }
   });
   this.client.connect(CFG.remotePort, CFG.remoteHost);
 };
