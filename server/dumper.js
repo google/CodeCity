@@ -515,6 +515,7 @@ Dumper.prototype.exprForObject_ = function(obj, objDumper) {
       if (protoDumper.ref) {
         objDumper.proto = obj.proto;
         return this.exprForBuiltin_('Object.create') + '(' +
+            // TODO(cpcallen): supply selector here?
             this.exprFor_(obj.proto) + ')';
       } else {
         // Can't set [[Prototype]] yet.  Do it later.
@@ -1453,6 +1454,7 @@ ObjectDumper.prototype.dumpProperty_ = function(dumper, key, todo, ref, sel) {
         items.push('configurable: ' + attr.configurable);
       }
       if (todo >= Do.SET && done < Do.SET) {
+        // TODO(cpcallen): supply selector here?
         items.push('value: ' + dumper.exprFor_(value));
       }
       dumper.write(dumper.exprForBuiltin_('Object.defineProperty'), '(',
