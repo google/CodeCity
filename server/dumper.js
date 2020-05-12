@@ -1278,10 +1278,12 @@ ObjectDumper.prototype.dump = function(dumper, ref) {
 /**
  * Generate JS source text to create and/or initialize a single
  * binding (property or internal slot) of the object, including
- * recursively dumping value object if requested.
+ * recursively dumping value object if requested.  This is a wrapper
+ * that calls .dumpBindingInner to do the actual dumping, and mainly
+ * concerns itself with checks and recursion.
  * @param {!Dumper} dumper Dumper to which this ObjectDumper belongs.
  * @param {!Selector.Part} part The binding part to dump.
- * @param {!Do} todo How much to do.  Must be >= Do.DECL; > Do.SET ignored.
+ * @param {!Do} todo How much to do.  Must be >= Do.DECL.
  * @param {!Selector=} ref Selector refering to this object.
  *     Optional; defaults to whatever selector was used to create the
  *     object.
@@ -1299,27 +1301,20 @@ ObjectDumper.prototype.dumpBinding = function(dumper, part, todo, ref) {
   if (!ref) {
     throw new Error("Can't dump part of an unreferencable object");
   }
-
   if (this.prune_ && this.prune_.has(part)) {
     // TODO(cpcallen): delete binding if necessary.
     return Do.RECURSE;  // Don't dump this binding at all.
   }
   var done = this.getDone(part);
   if (this.skip_ && this.skip_.has(part)) return done;  // Don't dump yet.
-  var sel = new Selector(ref.concat(part));
-  if (part === Selector.PROTOTYPE) {
-    var r = this.dumpPrototype_(dumper, todo, ref, sel);
-  } else if (part === Selector.OWNER) {
-    r = this.dumpOwner_(dumper, todo, ref, sel);
-  } else if (typeof part === 'string') {
-    r = this.dumpProperty_(dumper, part, todo, ref, sel);
-  } else {
-    throw new Error('Invalid part');
-  }
+
+  var r = this.dumpBindingInner(dumper, part, todo, ref);
+
   done = r.done;
   var value = r.value;
   if (todo >= Do.RECURSE && done === Do.DONE &&
       value instanceof dumper.intrp2.Object) {
+    var sel = new Selector(ref.concat(part));
     var valueDumper = dumper.getObjectDumper_(value);
     var objDone = valueDumper.dump(dumper, sel);
     if (objDone === null) {  // Circular structure detected.
@@ -1334,6 +1329,29 @@ ObjectDumper.prototype.dumpBinding = function(dumper, part, todo, ref) {
     }
   }
   return done;
+};
+
+/**
+ * Generate JS source text to create and/or initialize a single
+ * binding (property or internal slot) of the object.
+ * @param {!Dumper} dumper Dumper to which this ObjectDumper belongs.
+ * @param {!Selector.Part} part The binding part to dump.
+ * @param {!Do} todo How much to do.  Must be >= Do.DECL; > Do.ATTR ignored.
+ * @param {!Selector} ref Selector refering to this object.
+ * @return {{done: !Do, value: Interpreter.Value}} The done status of
+ *     the specified property and its (ultimate/actual) value.
+ */
+ObjectDumper.prototype.dumpBindingInner = function(dumper, part, todo, ref) {
+  var sel = new Selector(ref.concat(part));
+  if (part === Selector.PROTOTYPE) {
+    return this.dumpPrototype_(dumper, todo, ref, sel);
+  } else if (part === Selector.OWNER) {
+    return this.dumpOwner_(dumper, todo, ref, sel);
+  } else if (typeof part === 'string') {
+    return this.dumpProperty_(dumper, part, todo, ref, sel);
+  } else {
+    throw new Error('Invalid part');
+  }
 };
 
 /**
