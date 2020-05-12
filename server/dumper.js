@@ -1309,13 +1309,6 @@ ObjectDumper.prototype.dump = function(dumper, ref) {
  *     outstanding invocation.
  */
 ObjectDumper.prototype.dumpBinding = function(dumper, part, todo, ref) {
-  if (this.proto === undefined) {
-    throw new Error("Can't dump part of uncreated object");
-  }
-  if (!ref) ref = this.ref;
-  if (!ref) {
-    throw new Error("Can't dump part of an unreferencable object");
-  }
   if (this.prune_ && this.prune_.has(part)) {
     // TODO(cpcallen): delete binding if necessary.
     return Do.RECURSE;  // Don't dump this binding at all.
@@ -1327,8 +1320,9 @@ ObjectDumper.prototype.dumpBinding = function(dumper, part, todo, ref) {
   var value = this.getValue(dumper, part);
   if (todo >= Do.RECURSE && done === Do.DONE &&
       value instanceof dumper.intrp2.Object) {
-    var sel = new Selector(ref.concat(part));
     var valueDumper = dumper.getObjectDumper_(value);
+    if (!ref) ref = this.ref;
+    var sel = new Selector(ref.concat(part));
     var objDone = valueDumper.dump(dumper, sel);
     if (objDone === null) {  // Circular structure detected.
       return new ObjectDumper.Pending(sel, valueDumper);
@@ -1350,10 +1344,19 @@ ObjectDumper.prototype.dumpBinding = function(dumper, part, todo, ref) {
  * @param {!Dumper} dumper Dumper to which this ObjectDumper belongs.
  * @param {!Selector.Part} part The binding part to dump.
  * @param {!Do} todo How much to do.  Must be >= Do.DECL; > Do.ATTR ignored.
- * @param {!Selector} ref Selector refering to this object.
+ * @param {!Selector=} ref Selector refering to this object.
+ *     Optional; defaults to whatever selector was used to create the
+ *     object.
  * @return {!Do} The done status of the specified binding.
  */
 ObjectDumper.prototype.dumpBindingInner = function(dumper, part, todo, ref) {
+  if (this.proto === undefined) {
+    throw new Error("Can't dump part of uncreated object");
+  }
+  if (!ref) ref = this.ref;
+  if (!ref) {
+    throw new Error("Can't dump part of an unreferencable object");
+  }
   var sel = new Selector(ref.concat(part));
   if (part === Selector.PROTOTYPE) {
     return this.dumpPrototype_(dumper, todo, ref, sel);
