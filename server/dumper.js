@@ -1320,13 +1320,11 @@ ObjectDumper.prototype.dumpBinding = function(dumper, part, todo, ref) {
     // TODO(cpcallen): delete binding if necessary.
     return Do.RECURSE;  // Don't dump this binding at all.
   }
-  var done = this.getDone(part);
-  if (this.skip_ && this.skip_.has(part)) return done;  // Don't dump yet.
+  if (this.skip_ && this.skip_.has(part)) return this.getDone(part);
 
-  var r = this.dumpBindingInner(dumper, part, todo, ref);
+  var done = this.dumpBindingInner(dumper, part, todo, ref);
 
-  done = r.done;
-  var value = r.value;
+  var value = this.getValue(dumper, part);
   if (todo >= Do.RECURSE && done === Do.DONE &&
       value instanceof dumper.intrp2.Object) {
     var sel = new Selector(ref.concat(part));
@@ -1353,8 +1351,7 @@ ObjectDumper.prototype.dumpBinding = function(dumper, part, todo, ref) {
  * @param {!Selector.Part} part The binding part to dump.
  * @param {!Do} todo How much to do.  Must be >= Do.DECL; > Do.ATTR ignored.
  * @param {!Selector} ref Selector refering to this object.
- * @return {{done: !Do, value: Interpreter.Value}} The done status of
- *     the specified property and its (ultimate/actual) value.
+ * @return {!Do} The done status of the specified binding.
  */
 ObjectDumper.prototype.dumpBindingInner = function(dumper, part, todo, ref) {
   var sel = new Selector(ref.concat(part));
@@ -1376,9 +1373,7 @@ ObjectDumper.prototype.dumpBindingInner = function(dumper, part, todo, ref) {
  * @param {!Do} todo How much to do.  Must be >= Do.DECL; > Do.SET ignored.
  * @param {!Selector} ref Selector refering to this object.
  * @param {!Selector} sel Selector refering to this object's [[Owner]] slot.
- * @return {{done: !Do, value: Interpreter.Value}} The done status of
- *     the [[Owner]] binding and the value of the object's [[Owner]]
- *     slot.
+ * @return {!Do} The done status of the object's [[Owner]] slot.
  */
 ObjectDumper.prototype.dumpOwner_ = function(dumper, todo, ref, sel) {
   var value = /** @type {?Interpreter.prototype.Object} */(this.obj.owner);
@@ -1388,7 +1383,7 @@ ObjectDumper.prototype.dumpOwner_ = function(dumper, todo, ref, sel) {
                  dumper.exprFor_(value, sel), ');');
     this.doneOwner_ = (value === null) ? Do.RECURSE: Do.DONE;
   }
-  return {done: this.doneOwner_, value};
+  return this.doneOwner_;
 };
 
 /**
@@ -1406,8 +1401,7 @@ ObjectDumper.prototype.dumpOwner_ = function(dumper, todo, ref, sel) {
  * @param {!Do} todo How much to do.
  * @param {!Selector} ref Selector refering to this object.
  * @param {!Selector} sel Selector refering to key.
- * @return {{done: !Do, value: Interpreter.Value}} The done status of
- *     the specified property and its (ultimate/actual) value.
+ * @return {!Do} The done status of the specified property.
  */
 ObjectDumper.prototype.dumpProperty_ = function(dumper, key, todo, ref, sel) {
   var pd = this.obj.getOwnPropertyDescriptor(key, dumper.intrp2.ROOT);
@@ -1464,7 +1458,7 @@ ObjectDumper.prototype.dumpProperty_ = function(dumper, key, todo, ref, sel) {
       done = this.checkProperty(key, value, attr, pd);
     }
   }
-  return {done: done, value: pd.value};
+  return done;
 };
 
 /**
@@ -1474,9 +1468,7 @@ ObjectDumper.prototype.dumpProperty_ = function(dumper, key, todo, ref, sel) {
  * @param {!Do} todo How much to do.  Must be >= Do.DECL; > Do.SET ignored.
  * @param {!Selector} ref Selector refering to this object.
  * @param {!Selector} sel Selector refering to this object's [[Prototype]] slot.
- * @return {{done: !Do, value: Interpreter.Value}} The done status of
- *     the [[Owner]] binding and the value of the object's [[Owner]]
- *     slot.
+ * @return {!Do} The done status of the object's [[Prototype]] slot.
  */
 ObjectDumper.prototype.dumpPrototype_ = function(dumper, todo, ref, sel) {
   var value = this.obj.proto;
@@ -1487,7 +1479,7 @@ ObjectDumper.prototype.dumpPrototype_ = function(dumper, todo, ref, sel) {
     this.proto = value;
     this.doneProto_ = (value === null) ? Do.RECURSE: Do.DONE;
   }
-  return {done: this.doneProto_, value: value};
+  return this.doneProto_;
 };
 
 /**
