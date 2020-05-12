@@ -945,48 +945,26 @@ ScopeDumper.prototype.dump = function(dumper) {
 
 /**
  * Generate JS source text to create and/or initialize a single
- * variable binding.
+ * variable binding.  This is a wrapper that calls .dumpBindingInner
+ * to do the actual dumping, and mainly concerns itself with checks
+ * and recursion.
  * @param {!Dumper} dumper Dumper to which this ScopeDumper belongs.
  * @param {!Selector.Part} part The part to dump.  Must be simple string.
  * @param {!Do} todo How much to do.  Must be >= Do.DECL; > Do.SET ignored.
  * @return {!Do} How much has been done on the specified binding.
  */
 ScopeDumper.prototype.dumpBinding = function(dumper, part, todo) {
-  if (dumper.scope !== this.scope) {
-    throw new Error("Can't create binding other than in current scope");
-  } else if (typeof part !== 'string') {
-    throw new TypeError('Invalid part (not a variable name)');
-  } else if (!this.scope.hasBinding(part)) {
-    throw new ReferenceError("Can't dump non-existent variable " + part);
-  }
   if (this.prune_ && this.prune_.has(part)) {
     // TODO(cpcallen): verify binding does not actually need to be
     // deleted, since that's impossible.
     return Do.RECURSE;  // Don't dump this binding at all.
   }
-  var done = this.getDone(part);
-  if (this.skip_ && this.skip_.has(part)) return done;  // Don't dump yet.
-  var output = [];
-  if (todo >= Do.DECL && done < todo && done <= Do.SET) {
-    if (done < Do.DECL) {
-      output.push('var ');
-      done = Do.DECL;
-    }
-    if (done < Do.SET) {
-      output.push(part);
-      if (todo >= Do.SET) {
-        var sel = new Selector([part]);
-        var value = this.scope.get(part);
-        output.push(' = ', dumper.exprFor_(value, sel, false, part));
-        done = (typeof value === 'object') ? Do.DONE : Do.RECURSE;
-      }
-        output.push(';');
-    }
-    this.setDone(part, done);
-  }
-  if (output.length) dumper.write.apply(dumper, output);
+  if (this.skip_ && this.skip_.has(part)) return this.getDone(part);
+
+  var done = this.dumpBindingInner(dumper, part, todo);
+
   if (todo >= Do.RECURSE && done < Do.RECURSE) {
-    var value = this.scope.get(part);
+    var value = this.getValue(dumper, part);
     if (value instanceof dumper.intrp2.Object) {
       var sel = new Selector([part]);
       var objDone = dumper.getObjectDumper_(value).dump(dumper, sel);
@@ -996,6 +974,43 @@ ScopeDumper.prototype.dumpBinding = function(dumper, part, todo) {
       }
     }
   }
+  return done;
+};
+
+/**
+ * Generate JS source text to create and/or initialize a single
+ * variable binding.
+ * @param {!Dumper} dumper Dumper to which this ScopeDumper belongs.
+ * @param {!Selector.Part} part The part to dump.  Must be simple string.
+ * @param {!Do} todo How much to do.  Must be >= Do.DECL; > Do.SET ignored.
+ * @return {!Do} How much has been done on the specified binding.
+ */
+ScopeDumper.prototype.dumpBindingInner = function(dumper, part, todo) {
+  if (dumper.scope !== this.scope) {
+    throw new Error("Can't create binding other than in current scope");
+  } else if (typeof part !== 'string') {
+    throw new TypeError('Invalid part (not a variable name)');
+  } else if (!this.scope.hasBinding(part)) {
+    throw new ReferenceError("Can't dump non-existent variable " + part);
+  }  var done = this.getDone(part);
+  var output = [];
+  if (todo < Do.DECL || done >= todo || done > Do.SET) return done;
+  if (done < Do.DECL) {
+    output.push('var ');
+    done = Do.DECL;
+  }
+  if (done < Do.SET) {
+    output.push(part);
+    if (todo >= Do.SET) {
+      var sel = new Selector([part]);
+      var value = this.scope.get(part);
+      output.push(' = ', dumper.exprFor_(value, sel, false, part));
+      done = (typeof value === 'object') ? Do.DONE : Do.RECURSE;
+    }
+    output.push(';');
+  }
+  this.setDone(part, done);
+  dumper.write.apply(dumper, output);
   return done;
 };
 
