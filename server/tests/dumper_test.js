@@ -354,6 +354,17 @@ exports.testDumperSurvey = function(t) {
            new Selector('foo.prototype.obj').badness());
   t.expect('unreachableDumper.preferredBadness',
            unreachableDumper.preferredBadness, Infinity);
+
+  // Check preferredRef of various objects.
+  t.expect('bazDumper.preferredRef (as Selector)',
+           bazDumper.getSelector(/*preferred=*/true).toString(), 'bar');
+  t.expect('quuxDumper.preferredRef (as Selector)',
+           quuxDumper.getSelector(/*preferred=*/true).toString(), 'foo');
+  t.expect('objDumper.preferredRef (as Selector)',
+           objDumper.getSelector(/*preferred=*/true).toString(),
+           'foo.prototype.obj');
+  t.expect('unreachableDumper.preferredRef',
+           unreachableDumper.preferredRef, null);
 };
 
 /**

@@ -756,13 +756,14 @@ Dumper.prototype.survey_ = function() {
         if (visited.has(edge)) continue;
         queue.set(edge, Infinity);
       }
-      var /** Interpreter.Value */ value = adjacent[j].value;
+      var /** Interpreter.Value */ value = edge.value;
       if (!(value instanceof this.intrp2.Object)) continue;
       var objectDumper = this.getObjectDumper_(value);
       if (visited.has(objectDumper)) continue;
-      var /** Selector.Part */ part = adjacent[j].part;
+      var /** Selector.Part */ part = edge.part;
       var newBadness = dumper.preferredBadness + Selector.partBadness(part);
       if (newBadness >= objectDumper.preferredBadness) continue;
+      objectDumper.preferredRef = new Components(dumper, part);
       objectDumper.preferredBadness = newBadness;
       queue.set(objectDumper, newBadness);
     }
@@ -1129,6 +1130,12 @@ ScopeDumper.prototype.survey = function(dumper) {
 var ObjectDumper = function(dumper, obj) {
   SubDumper.call(this);
   this.obj = obj;
+  /**
+   * Preferred reference to this object.  E.g., for Object.prototype
+   * this would be {dumper: <dumper for Object>, part: 'prototype'}.
+   * @type {?Components}
+   */
+  this.preferredRef = null;
   /** @type {!Selector|undefined} Reference to this object, once created. */
   this.ref = undefined;
   /** @type {!ObjectDumper.Done} How much has object been dumped? */
@@ -1506,6 +1513,33 @@ ObjectDumper.prototype.getDone = function(part) {
 };
 
 /**
+ * Return a Selector for this object.  If preferred is true, the
+ * preferred selector will be returned; this is the least-badness
+ * Selecgtor in intrp2 for this.obj, but may not yet be a valid
+ * selector at the current point in the dump.  Otherwise, the selector
+ * returned will be the best known valid selector.  An Error will be
+ * thrown if no valid selector exists.
+ * @param {boolean=} preferred Return preferred selector?
+ * @return {!Selector} A selector for this.obj.
+ */
+ObjectDumper.prototype.getSelector = function(preferred) {
+  var /** !SubDumper */ sd = this;
+  var /** !Array<Selector.Part> */ parts = [];
+  if (!preferred) throw new Error('unimplemented');
+  while (true) {
+    if (sd instanceof ScopeDumper) {
+      if (sd.scope.type === Interpreter.Scope.Type.GLOBAL) break;
+      throw new Error('refusing to create Selector for non-global scope');
+    }
+    var /** ?Components */ next = sd.preferredRef;
+    if (!next) throw new Error('unreferenced object while building Selector');
+    sd = next.dumper;
+    parts.unshift(next.part);
+  }
+  return new Selector(parts);
+};
+
+/**
  * Return the value of the given part of this.obj (i.e., the value
  * in intrp2, and the intended final value provided that it isn't
  * going to be pruned.)
@@ -1734,7 +1768,7 @@ var Components = function(dumper, part) {
   /** @const {!SubDumper} */ this.dumper = dumper;
   /** @const {!Selector.Part} */ this.part = part;
 };
-  
+
 ///////////////////////////////////////////////////////////////////////////////
 // Type declarations: Do, etc.
 
