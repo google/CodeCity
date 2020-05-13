@@ -188,13 +188,13 @@ svgEditor.setString = function(xmlString) {
   }
   svgEditor.resize();
 
-  // Preserve the original input, alongside it's round-tripped output.
-  svgEditor.setInput = xmlString;
-  svgEditor.setOutput = svgEditor.getString();
+  // Preserve the original input, alongside its round-tripped output.
+  svgEditor.inputString = xmlString;
+  svgEditor.outputString = svgEditor.getString();
 };
 
-svgEditor.setInput = undefined;
-svgEditor.setOutput = undefined;
+svgEditor.inputString = undefined;
+svgEditor.outputString = undefined;
 
 /**
  * Extract the SVG from the editor.
@@ -224,8 +224,8 @@ svgEditor.getString = function() {
   // If the output is the same as the original input's round-tripped value,
   // then return the original input.
   // Otherwise changes may be claimed when none were made by the user.
-  if (source === svgEditor.setOutput) {
-    return svgEditor.setInput;
+  if (source === svgEditor.outputString) {
+    return svgEditor.inputString;
   }
   return source;
 };

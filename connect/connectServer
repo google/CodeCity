@@ -71,6 +71,7 @@ var Queue = function (id) {
   this.memoNum = 0;
   /**
    * Buffer of incomplete data from Code City.
+   * If undefined, drop all input until next linefeed.
    */
   this.lineBuffer = '';
   /**
@@ -89,37 +90,68 @@ var Queue = function (id) {
    * Persistent TCP connection to Code City.
    */
   this.client = new net.Socket();
+
   this.client.on('close', function() {
     if (queueList[id]) {
       delete queueList[id];
       console.log('Code City closed session ' + id);
     }
   });
+
   this.client.on('error', function(error) {
     console.log('TCP error for session ' + id, error);
   });
+
   this.client.on('data', function(data) {
-    var text = thisQueue.lineBuffer + data.toString();
-    if (text.length > thisQueue.maxLineSize) {
-      console.log('Session ' +  id + ' drops ' + text.length +
+    function drop(overflow) {
+      console.log('Session ' +  id + ' drops ' + overflow.length +
           ' bytes of data.');
-      text = '{"type":"narrate","text":"[OVERFLOW: ' + text.length +
-          ' bytes lost.  Next line might be garbled.]"}\n';
+      return '{"type":"narrate","text":"[OVERFLOW: ' + overflow.length +
+          ' bytes lost.]"}\n';
     }
-    if (text.endsWith('\n')) {
-      // Text might include more than one memo.  Split on line break.
-      var texts = text.split(/^/m);
-      Array.prototype.push.apply(thisQueue.memoBuffer, texts);
-      thisQueue.memoNum += texts.length;
-      thisQueue.lineBuffer = '';
-    } else {
-      // Data greater than 65536 bytes gets sent to us in chunks.
-      // Save chunks in the line buffer and send the memo only when complete.
-      thisQueue.lineBuffer = text;
-      console.log('Session ' +  id + ' stores ' + text.length +
-          ' bytes in its line buffer.');
+
+    var text = data.toString();
+    if (!text) {
+      return;
+    }
+    if (thisQueue.lineBuffer) {
+      text = thisQueue.lineBuffer + text;
+    }
+    // Split into lines, while preserving the linebreaks.
+    var lines = text.split(/^/m);
+    if (thisQueue.lineBuffer === undefined) {
+      // Throw away continued oversized line.
+      var incompleteLine = lines.shift();
+      lines.unshift(drop(incompleteLine));
+      if (incompleteLine.endsWith('\n')) {
+        // Found the end of the oversized line.  Reset the buffer.
+        thisQueue.lineBuffer = '';
+      }
+    }
+
+    for (var i = 0; i < lines.length; i++) {
+      if (lines[i].endsWith('\n')) {
+        if (lines[i].length > thisQueue.maxLineSize) {
+          // Line is complete, but oversized.  Drop.
+          lines[i] = drop(lines[i]);
+        }
+        thisQueue.memoBuffer.push(lines[i]);
+        thisQueue.memoNum++;
+      } else {
+        // Incomplete line.
+        if (lines[i].length > thisQueue.maxLineSize) {
+          // Discard, and throw away everything till next linebreak.
+          thisQueue.memoBuffer.push(drop(lines[i]));
+          thisQueue.memoNum++;
+          thisQueue.lineBuffer = undefined;
+        } else {
+          // Save this line to the buffer so it may be completed next time.
+          thisQueue.lineBuffer = lines[i];
+        }
+      }
     }
   });
+
   this.client.connect(CFG.remotePort, CFG.remoteHost);
 };
 
