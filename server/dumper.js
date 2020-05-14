@@ -97,7 +97,7 @@ var Dumper = function(intrp1, intrp2, options) {
    * @type {string}
    */
   this.indent = '';
-  
+
   this.diffBuiltins_();
 
   // Create and initialise ScopeDumper for global scope.
@@ -118,7 +118,7 @@ var Dumper = function(intrp1, intrp2, options) {
       globalDumper.setDone(v,
                            (typeof val2 === 'object') ? Do.DONE : Do.RECURSE);
       if (val2 instanceof intrp2.Object) {
-        this.getObjectDumper_(val2).ref = new Selector(v);
+        this.getObjectDumper_(val2).objSelector = new Selector(v);
         // Other initialialisation will be taken care of below.
       }
     }
@@ -258,8 +258,10 @@ Dumper.prototype.exprFor_ = function(value, selector, callable, funcName) {
 
   // Return existing reference to object (if already created).
   var objDumper = this.getObjectDumper_(value);
-  if (objDumper.ref) return this.exprForSelector_(objDumper.ref);
-  if (selector) objDumper.ref = selector;  // Safe new ref if specified.
+  if (objDumper.objSelector) {
+    return this.exprForSelector_(objDumper.objSelector);
+  }
+  if (selector) objDumper.objSelector = selector;
 
  // Object not yet referenced.  Is it a builtin?
   var key = intrp2.builtins.getKey(value);
@@ -464,14 +466,14 @@ Dumper.prototype.exprForFunction_ = function(func, funcDumper, funcName) {
       prototype instanceof this.intrp2.Object &&
       Object.getPrototypeOf(prototype) === this.intrp2.Object.prototype) {
     var prototypeFuncDumper = this.getObjectDumper_(prototype);
-    if(prototypeFuncDumper.ref === undefined) {
+    if(prototypeFuncDumper.objSelector === undefined) {
       // We can use automatic .prototype object.
       // Mark .prototype as Do.SET or Do.ATTR as appropriate.
       funcDumper.checkProperty('prototype', prototype, attr, pd);
       // Mark prototype object as existing and referenceable.
       prototypeFuncDumper.proto = this.intrp2.OBJECT;
-      prototypeFuncDumper.ref =
-          new Selector(funcDumper.ref.concat('prototype'));
+      prototypeFuncDumper.objSelector =
+          new Selector(funcDumper.objSelector.concat('prototype'));
       // Do we need to set .prototype's [[Prototype]]?
       if (prototype.proto === prototypeFuncDumper.proto) {
         prototypeFuncDumper.setDone(Selector.PROTOTYPE,
@@ -512,7 +514,7 @@ Dumper.prototype.exprForObject_ = function(obj, objDumper) {
       return '{}';
     default:
       var protoDumper = this.getObjectDumper_(obj.proto);
-      if (protoDumper.ref) {
+      if (protoDumper.objSelector) {
         objDumper.proto = obj.proto;
         return this.exprForBuiltin_('Object.create') + '(' +
             // TODO(cpcallen): supply selector here?
@@ -1143,7 +1145,7 @@ var ObjectDumper = function(dumper, obj) {
    */
   this.preferredRef = null;
   /** @type {!Selector|undefined} Reference to this object, once created. */
-  this.ref = undefined;
+  this.objSelector = undefined;
   /** @type {!ObjectDumper.Done} How much has object been dumped? */
   this.done = ObjectDumper.Done.NO;
   /** @private @type {!Do} Has prototype been set? */
@@ -1206,7 +1208,7 @@ ObjectDumper.prototype.checkProperty = function(key, value, attr, pd) {
  * Recursively dumps all bindings of the object (and objects reachable
  * via it).
  * @param {!Dumper} dumper Dumper to which this ObjectDumper belongs.
- * @param {!Selector=} ref Selector refering to this object.
+ * @param {!Selector=} objSelector Selector refering to this object.
  *     Optional; defaults to whatever selector was used to create the
  *     object.
  * @return {!ObjectDumper.Done|?ObjectDumper.Pending} Done status for
@@ -1215,13 +1217,13 @@ ObjectDumper.prototype.checkProperty = function(key, value, attr, pd) {
  *     dependencies) pair if a recursive call encountered such an
  *     outstanding invocation.
  */
-ObjectDumper.prototype.dump = function(dumper, ref) {
-  if (!ref) ref = this.ref;
-  if (!ref) {
+ObjectDumper.prototype.dump = function(dumper, objSelector) {
+  if (!objSelector) objSelector = this.objSelector;
+  if (!objSelector) {
     throw new Error("Can't dump unreferencable object");
   }
   if (this.proto === undefined) {
-    throw new Error("Can't dump uncreated object " +  ref);
+    throw new Error("Can't dump uncreated object " +  objSelector);
   }
   if (dumper.visiting.has(this)) {
     return null;
@@ -1233,7 +1235,7 @@ ObjectDumper.prototype.dump = function(dumper, ref) {
 
   // Delete properties that shouldn't exist.
   if (this.toDelete) {
-    var sel = new Selector(ref);
+    var sel = new Selector(objSelector);
     for (var key, i = 0; key = this.toDelete[i]; i++) {
       sel.push(key);
       dumper.write('delete ', dumper.exprForSelector_(sel), ';');
@@ -1250,7 +1252,7 @@ ObjectDumper.prototype.dump = function(dumper, ref) {
   var parts = [Selector.PROTOTYPE, Selector.OWNER].concat(keys);
   for (i = 0; i < parts.length; i++) {
     var part = parts[i];
-    var bindingDone = this.dumpBinding(dumper, part, Do.RECURSE, ref);
+    var bindingDone = this.dumpBinding(dumper, part, Do.RECURSE, objSelector);
     if (bindingDone === null) {
       throw new Error('.dumpBinding returned null to .dump');
     } else if (bindingDone instanceof ObjectDumper.Pending) {
@@ -1273,7 +1275,7 @@ ObjectDumper.prototype.dump = function(dumper, ref) {
     // Dump extensibility.
     if (!this.obj.isExtensible(dumper.intrp2.ROOT)) {
       dumper.write(dumper.exprForBuiltin_('Object.preventExtensions'), '(',
-                   dumper.exprForSelector_(ref), ');');
+                   dumper.exprForSelector_(objSelector), ');');
     }
     this.done = ObjectDumper.Done.DONE;
   }
@@ -1313,7 +1315,7 @@ ObjectDumper.prototype.dump = function(dumper, ref) {
  * @param {!Dumper} dumper Dumper to which this ObjectDumper belongs.
  * @param {!Selector.Part} part The binding part to dump.
  * @param {!Do} todo How much to do.  Must be >= Do.DECL.
- * @param {!Selector=} ref Selector refering to this object.
+ * @param {!Selector=} objSelector Selector refering to this object.
  *     Optional; defaults to whatever selector was used to create the
  *     object.
  * @return {!Do|?ObjectDumper.Pending} How much has been done on the
@@ -1322,26 +1324,26 @@ ObjectDumper.prototype.dump = function(dumper, ref) {
  *     dependencies) pair if a recursive call encountered such an
  *     outstanding invocation.
  */
-ObjectDumper.prototype.dumpBinding = function(dumper, part, todo, ref) {
+ObjectDumper.prototype.dumpBinding = function(dumper, part, todo, objSelector) {
   if (this.prune_ && this.prune_.has(part)) {
     // TODO(cpcallen): delete binding if necessary.
     return Do.RECURSE;  // Don't dump this binding at all.
   }
   if (this.skip_ && this.skip_.has(part)) return this.getDone(part);
 
-  var done = this.dumpBindingInner(dumper, part, todo, ref);
+  var done = this.dumpBindingInner(dumper, part, todo, objSelector);
 
   var value = this.getValue(dumper, part);
   if (todo >= Do.RECURSE && done === Do.DONE &&
       value instanceof dumper.intrp2.Object) {
     var valueDumper = dumper.getObjectDumper_(value);
-    if (!ref) ref = this.ref;
-    var sel = new Selector(ref.concat(part));
-    var objDone = valueDumper.dump(dumper, sel);
+    if (!objSelector) objSelector = this.objSelector;
+    var bindingSelector = new Selector(objSelector.concat(part));
+    var objDone = valueDumper.dump(dumper, bindingSelector);
     if (objDone === null) {  // Circular structure detected.
-      return new ObjectDumper.Pending(sel, valueDumper);
+      return new ObjectDumper.Pending(bindingSelector, valueDumper);
     } else if (objDone instanceof ObjectDumper.Pending) {
-      objDone.add(sel, valueDumper);
+      objDone.add(bindingSelector, valueDumper);
       return objDone;
     } else if (objDone === ObjectDumper.Done.DONE_RECURSIVELY) {
       done = Do.RECURSE;
@@ -1358,26 +1360,27 @@ ObjectDumper.prototype.dumpBinding = function(dumper, part, todo, ref) {
  * @param {!Dumper} dumper Dumper to which this ObjectDumper belongs.
  * @param {!Selector.Part} part The binding part to dump.
  * @param {!Do} todo How much to do.  Must be >= Do.DECL; > Do.ATTR ignored.
- * @param {!Selector=} ref Selector refering to this object.
+ * @param {!Selector=} objSelector Selector refering to this object.
  *     Optional; defaults to whatever selector was used to create the
  *     object.
  * @return {!Do} The done status of the specified binding.
  */
-ObjectDumper.prototype.dumpBindingInner = function(dumper, part, todo, ref) {
+ObjectDumper.prototype.dumpBindingInner = function(dumper, part, todo,
+                                                   objSelector) {
   if (this.proto === undefined) {
     throw new Error("Can't dump part of uncreated object");
   }
-  if (!ref) ref = this.ref;
-  if (!ref) {
+  if (!objSelector) objSelector = this.objSelector;
+  if (!objSelector) {
     throw new Error("Can't dump part of an unreferencable object");
   }
-  var sel = new Selector(ref.concat(part));
+  var bindingSelector = new Selector(objSelector.concat(part));
   if (part === Selector.PROTOTYPE) {
-    return this.dumpPrototype_(dumper, todo, ref, sel);
+    return this.dumpPrototype_(dumper, todo, objSelector, bindingSelector);
   } else if (part === Selector.OWNER) {
-    return this.dumpOwner_(dumper, todo, ref, sel);
+    return this.dumpOwner_(dumper, todo, objSelector, bindingSelector);
   } else if (typeof part === 'string') {
-    return this.dumpProperty_(dumper, part, todo, ref, sel);
+    return this.dumpProperty_(dumper, part, todo, objSelector, bindingSelector);
   } else {
     throw new Error('Invalid part');
   }
@@ -1388,16 +1391,18 @@ ObjectDumper.prototype.dumpBindingInner = function(dumper, part, todo, ref) {
  * @private
  * @param {!Dumper} dumper Dumper to which this ObjectDumper belongs.
  * @param {!Do} todo How much to do.  Must be >= Do.DECL; > Do.SET ignored.
- * @param {!Selector} ref Selector refering to this object.
- * @param {!Selector} sel Selector refering to this object's [[Owner]] slot.
+ * @param {!Selector} objSelector Selector refering to this object.
+ * @param {!Selector} bindingSelector Selector refering to this
+ *     object's [[Owner]] slot.
  * @return {!Do} The done status of the object's [[Owner]] slot.
  */
-ObjectDumper.prototype.dumpOwner_ = function(dumper, todo, ref, sel) {
+ObjectDumper.prototype.dumpOwner_ = function(dumper, todo, objSelector,
+                                             bindingSelector) {
   var value = /** @type {?Interpreter.prototype.Object} */(this.obj.owner);
   if (todo >= Do.SET && this.doneOwner_ < Do.SET) {
     dumper.write(dumper.exprForBuiltin_('Object.setOwnerOf'), '(',
-                 dumper.exprForSelector_(ref), ', ',
-                 dumper.exprFor_(value, sel), ');');
+                 dumper.exprForSelector_(objSelector), ', ',
+                 dumper.exprFor_(value, bindingSelector), ');');
     this.doneOwner_ = (value === null) ? Do.RECURSE: Do.DONE;
   }
   return this.doneOwner_;
@@ -1416,13 +1421,16 @@ ObjectDumper.prototype.dumpOwner_ = function(dumper, todo, ref, sel) {
  * @param {!Dumper} dumper Dumper to which this ObjectDumper belongs.
  * @param {string} key The property to dump.
  * @param {!Do} todo How much to do.
- * @param {!Selector} ref Selector refering to this object.
- * @param {!Selector} sel Selector refering to key.
+ * @param {!Selector} objSelector Selector refering to this object.
+ * @param {!Selector} bindingSelector Selector refering to key.
  * @return {!Do} The done status of the specified property.
  */
-ObjectDumper.prototype.dumpProperty_ = function(dumper, key, todo, ref, sel) {
+ObjectDumper.prototype.dumpProperty_ = function(dumper, key, todo, objSelector,
+                                                bindingSelector) {
   var pd = this.obj.getOwnPropertyDescriptor(key, dumper.intrp2.ROOT);
-  if (!pd) throw new RangeError("Can't dump nonexistent property " + sel);
+  if (!pd) {
+    throw new RangeError("Can't dump nonexistent property " + bindingSelector);
+  }
 
   // Do this binding, if requested.
   var done = this.getDone(key);
@@ -1440,8 +1448,9 @@ ObjectDumper.prototype.dumpProperty_ = function(dumper, key, todo, ref, sel) {
       // Will this assignemnt set the .name of an anonymous function?
       // TODO(ES6): Handle prefix?
       var funcName = dumper.intrp1.options.methodNames ? key : undefined;
-      dumper.write(dumper.exprForSelector_(sel), ' = ',
-                   dumper.exprFor_(value, sel, false, funcName), ';');
+      dumper.write(dumper.exprForSelector_(bindingSelector), ' = ',
+                   dumper.exprFor_(value, bindingSelector, false, funcName),
+                   ';');
       done = this.checkProperty(key, value, attr, pd);
     }
 
@@ -1451,7 +1460,8 @@ ObjectDumper.prototype.dumpProperty_ = function(dumper, key, todo, ref, sel) {
         attr = this.attributes[key] =
             {writable: false, enumerable: false, configurable: false};
       } else if (!attr.configurable) {
-        throw new Error("Can't redefine non-configurable property " + sel);
+        throw new Error("Can't redefine non-configurable property " +
+            bindingSelector);
       }
       var items = [];
       if (attr.writable !== (pd.writable || todo < Do.SET)) {
@@ -1471,8 +1481,8 @@ ObjectDumper.prototype.dumpProperty_ = function(dumper, key, todo, ref, sel) {
         items.push('value: ' + dumper.exprFor_(value));
       }
       dumper.write(dumper.exprForBuiltin_('Object.defineProperty'), '(',
-                   dumper.exprForSelector_(ref), ', ', dumper.exprFor_(key),
-                   ', {', items.join(', '), '});');
+                   dumper.exprForSelector_(objSelector), ', ',
+                   dumper.exprFor_(key), ', {', items.join(', '), '});');
       done = this.checkProperty(key, value, attr, pd);
     }
   }
@@ -1484,16 +1494,18 @@ ObjectDumper.prototype.dumpProperty_ = function(dumper, key, todo, ref, sel) {
  * @private
  * @param {!Dumper} dumper Dumper to which this ObjectDumper belongs.
  * @param {!Do} todo How much to do.  Must be >= Do.DECL; > Do.SET ignored.
- * @param {!Selector} ref Selector refering to this object.
- * @param {!Selector} sel Selector refering to this object's [[Prototype]] slot.
+ * @param {!Selector} objSelector Selector refering to this object.
+ * @param {!Selector} bindingSelector Selector refering to this
+ *     object's [[Prototype]] slot.
  * @return {!Do} The done status of the object's [[Prototype]] slot.
  */
-ObjectDumper.prototype.dumpPrototype_ = function(dumper, todo, ref, sel) {
+ObjectDumper.prototype.dumpPrototype_ = function(dumper, todo, objSelector,
+                                                 bindingSelector) {
   var value = this.obj.proto;
   if (todo >= Do.SET && this.doneProto_ < Do.SET) {
     dumper.write(dumper.exprForBuiltin_('Object.setPrototypeOf'), '(',
-                 dumper.exprForSelector_(ref), ', ',
-                 dumper.exprFor_(value, sel), ');');
+                 dumper.exprForSelector_(objSelector), ', ',
+                 dumper.exprFor_(value, bindingSelector), ');');
     this.proto = value;
     this.doneProto_ = (value === null) ? Do.RECURSE: Do.DONE;
   }
@@ -1624,7 +1636,7 @@ ObjectDumper.prototype.setDone = function(part, done) {
   // Invariant checks.
   if (done <= old) {
     var fault = (done === old) ? 'Refusing redundant' : "Can't undo previous";
-    var description = this.ref ? ' of ' + this.ref : '';
+    var description = this.objSelector ? ' of ' + this.objSelector : '';
     throw new RangeError(fault + ' work on ' + part + description);
   }
   // Do set.
@@ -1751,7 +1763,7 @@ ObjectDumper.Pending.prototype.merge = function (that) {
 ObjectDumper.Pending.prototype.toString = function() {
   return '{bindings: [' + this.bindings.join(', ') + '], ' +
       'dependencies: [' + this.dependencies.map(function(od) {
-        return String(od.ref);
+        return String(od.objSelector);
       }).join(', ') + ']}';
 };
 
@@ -1869,7 +1881,7 @@ var DEFAULT_OPTIONS = {
 /**
  * A value representing an outward edge (from an unspecified object)
  * on the object graph.
- * 
+ *
  * - Outward edges that are properties or internal slots are
  *   represented as a {Selector.Part, Interpreter.Value} tuple.  -
  * - Outward edges that are the enclosing scope of a UserFunction are

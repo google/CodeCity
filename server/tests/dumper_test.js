@@ -83,11 +83,11 @@ exports.testObjectDumperPrototypeIsWritable = function(t) {
   child.defineProperty('baz', writable, root);
 
   const objectPrototypeDumper = dumper.getObjectDumper_(intrp.OBJECT);
-  objectPrototypeDumper.ref = new Selector('Object.prototype');
+  objectPrototypeDumper.objSelector = new Selector('Object.prototype');
   const parentDumper = dumper.getObjectDumper_(parent);
-  parentDumper.ref = new Selector('parent');
+  parentDumper.objSelector = new Selector('parent');
   const childDumper = dumper.getObjectDumper_(child);
-  childDumper.ref = new Selector('child');
+  childDumper.objSelector = new Selector('child');
   objectPrototypeDumper.proto = null;
   parentDumper.proto = intrp.OBJECT;
   childDumper.proto = intrp.OBJECT;
@@ -217,7 +217,7 @@ exports.testDumperPrototypeExprFor_ = function(t) {
     'SyntaxError', 'URIError', 'PermissionError'
   ]) {
     dumper.getObjectDumper_(/** @type {!Interpreter.prototype.Object} */
-        (intrp.builtins.get(b))).ref = new Selector(b);
+        (intrp.builtins.get(b))).objSelector = new Selector(b);
   }
 
   // Create UserFunction to dump.
@@ -379,7 +379,7 @@ exports.testDumperPrototypeExprForSelector_ = function(t) {
            dumper.exprForSelector_(selector),
            "(new 'Object.getPrototypeOf')(foo.bar).baz");
   dumper.getObjectDumper_(/** @type {!Interpreter.prototype.Object} */
-      (intrp.builtins.get('Object.getPrototypeOf'))).ref =
+      (intrp.builtins.get('Object.getPrototypeOf'))).objSelector =
           new Selector('MyObject.myGetPrototypeOf');
   t.expect(util.format('Dumper.p.exprForSelector_(%s)  // 1', selector),
            dumper.exprForSelector_(selector),
@@ -1028,16 +1028,16 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     //
     // TODO(cpcallen): The value checks are NOT checking the dumped
     // value (or even, for .proto, the internal record of the current
-    // value), but instead just the ref of the actual value in the
+    // value), but instead just the selector of the actual value in the
     // interpreter being dumped.  That's not really too useful, so maybe
     // they should be removed.
-    for (const [ss, done, valueRef] of tc.after || []) {
+    for (const [ss, done, valueSelector] of tc.after || []) {
       const s = new Selector(ss);
       /** @suppress {accessControls} */
       const {dumper: d, part} = dumper.getComponentsForSelector_(s);
       t.expect(util.format('%sbinding status of <%s> (implicit)', prefix, s),
                d.getDone(part), done);
-      if (valueRef) {
+      if (valueSelector) {
         /** @suppress {accessControls} */
         const c = dumper.getComponentsForSelector_(s);
         const value = c.dumper.getValue(dumper, c.part);
@@ -1045,7 +1045,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
           /** @suppress {accessControls} */
           const objDumper = dumper.getObjectDumper_(value);
           t.expect(util.format('%sref for %s', prefix, s),
-                   String(objDumper.ref), valueRef);
+                   String(objDumper.objSelector), valueSelector);
         } else {
           t.fail(prefix, util.format('%s did not evaluate to an object', s));
         }
