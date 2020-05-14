@@ -740,34 +740,42 @@ Dumper.prototype.skip = function(selector) {
  * @return {void}
  */
 Dumper.prototype.survey_ = function() {
-  var /** !PriorityQueue<!SubDumper> */ queue = new PriorityQueue;
-  var globalScopeDumper = this.getScopeDumper_(this.intrp2.global);
-  globalScopeDumper.preferredBadness = 0;
-  queue.insert(globalScopeDumper, globalScopeDumper.preferredBadness);
-
   var /** !Set<!SubDumper> */ visited = new Set();
+  var /** !PriorityQueue<!SubDumper> */ queue = new PriorityQueue();
+  var /** !Map<!SubDumper,number> */ badness = new Map();
+
+  // Start building spanning tree from the global scope.
+  var globalScopeDumper = this.getScopeDumper_(this.intrp2.global);
+  var /* @const */ globalBadness = 0;
+  badness.set(globalScopeDumper, globalBadness);
+  queue.insert(globalScopeDumper, globalBadness);
+
   while (queue.length) {
     var /** !SubDumper */ dumper = queue.deleteMin();
     if (visited.has(dumper)) throw new Error('surveying same dumper twice??');
+    visited.add(dumper);
+    badness.delete(dumper);
+
     var /** !Array<!OutwardEdge> */ adjacent = dumper.survey(this);
     for (var j = 0; j < adjacent.length; j++) {
       var edge = adjacent[j];
       if (edge instanceof ScopeDumper) {
         if (visited.has(edge)) continue;
+        badness.set(edge, Infinity);
         queue.set(edge, Infinity);
       }
-      var /** Interpreter.Value */ value = edge.value;
-      if (!(value instanceof this.intrp2.Object)) continue;
-      var objectDumper = this.getObjectDumper_(value);
+      if (!(edge.value instanceof this.intrp2.Object)) continue;
+      var objectDumper = this.getObjectDumper_(edge.value);
       if (visited.has(objectDumper)) continue;
-      var /** Selector.Part */ part = edge.part;
-      var newBadness = dumper.preferredBadness + Selector.partBadness(part);
-      if (newBadness >= objectDumper.preferredBadness) continue;
-      objectDumper.preferredRef = new Components(dumper, part);
-      objectDumper.preferredBadness = newBadness;
+      var newBadness = badness.get(dumper) + Selector.partBadness(edge.part);
+      // If we've not seen objectDumper before, .get will return
+      // undefined and the following test will return false.
+      // (Undefined is effectivly a 'bigger infinity' here!)
+      if (newBadness >= badness.get(objectDumper)) continue;
+      objectDumper.preferredRef = new Components(dumper, edge.part);
+      badness.set(objectDumper, newBadness);
       queue.set(objectDumper, newBadness);
     }
-    visited.add(dumper);
   }
 };
 
@@ -820,8 +828,6 @@ Dumper.prototype.write = function(var_args) {
  * @abstract @constructor
  */
 var SubDumper = function() {
-  /** @type {number} */
-  this.preferredBadness = Infinity;
   /** @type {?Set<Selector.Part>} */
   this.skip_ = null;
   /** @type {?Set<Selector.Part>} */

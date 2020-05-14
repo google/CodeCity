@@ -267,7 +267,7 @@ exports.testDumperSurvey = function(t) {
   intrp.createThreadForSrc(`
       var foo = (function() {
         var obj = {};
-        var unreachable = {};
+        var unreachable = {iAmUnreachable: undefined};
         bar = function baz() {return unreachable;};
         function quux() {return obj;};
         quux.prototype.obj = obj;
@@ -284,7 +284,7 @@ exports.testDumperSurvey = function(t) {
   // get ScopeDumper for global scope.  Dumper constructor performs
   // survey.
   const pristine = new Interpreter();
-  const dumper = new Dumper(pristine, intrp, {verbose: true});
+  const dumper = new Dumper(pristine, intrp);
 
   // Get intrp.Objects created by test program.
   const baz = /** @type {!Interpreter.prototype.UserFunction} */(
@@ -345,16 +345,6 @@ exports.testDumperSurvey = function(t) {
   t.assert('argumentsScopeDumpers.get(orphanArgs) === quuxScopeDumper',
       dumper.argumentsScopeDumpers.get(orphanArgs) === undefined);
 
-  // Check preferredBadness of various objects.
-  t.expect('bazDumper.preferredBadness', bazDumper.preferredBadness,
-           new Selector('bar').badness());  // Dont forget: bar = baz.
-  t.expect('quuxDumper.preferredBadness', quuxDumper.preferredBadness,
-           new Selector('foo').badness());  // Dont forget: quux = foo.
-  t.expect('objDumper.preferredBadness', objDumper.preferredBadness,
-           new Selector('foo.prototype.obj').badness());
-  t.expect('unreachableDumper.preferredBadness',
-           unreachableDumper.preferredBadness, Infinity);
-
   // Check preferredRef of various objects.
   t.expect('bazDumper.preferredRef (as Selector)',
            bazDumper.getSelector(/*preferred=*/true).toString(), 'bar');
@@ -363,8 +353,14 @@ exports.testDumperSurvey = function(t) {
   t.expect('objDumper.preferredRef (as Selector)',
            objDumper.getSelector(/*preferred=*/true).toString(),
            'foo.prototype.obj');
-  t.expect('unreachableDumper.preferredRef',
-           unreachableDumper.preferredRef, null);
+  // Can't create preferred Selector for unreachable (it's
+  // unreachable!), so check .preferredRef manually.
+  t.expect('unreachableDumper.preferredRef.part',
+           unreachableDumper.preferredRef.part, 'unreachable');
+  t.expect('unreachableDumper.preferredRef.dumper',
+           unreachableDumper.preferredRef.dumper, quuxScopeDumper);
+  t.expect('unreachableDumper.preferredRef.part',
+           unreachableDumper.preferredRef.part, 'unreachable');
 };
 
 /**
