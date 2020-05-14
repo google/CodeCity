@@ -62,7 +62,7 @@ class MockWritable {
  * @suppress {accessControls}
  */
 exports.testObjectDumperPrototypeIsWritable = function(t) {
-  const intrp = getInterpreter();
+  const intrp = new Interpreter();
   const pristine = new Interpreter();
   const dumper = new Dumper(pristine, intrp);
 
@@ -773,7 +773,8 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         ['f3', Do.RECURSE, 'f3.prototype = [];\n'],
       ],
       after: [
-        ['obj1', Do.DONE, 'f1.prototype'],  // Var not RECURSEed (only object).
+        ['obj1', Do.DONE, 'obj1'],  // Var not RECURSEed (only object).
+        ['f1.prototype', Do.RECURSE, 'obj1'],
         ['f1.prototype.constructor', Do.RECURSE, 'f1'],
         ['f2.prototype', Do.RECURSE, 'obj2'],
         ['f2.prototype.constructor', Do.RECURSE, 'f2'],
@@ -1028,9 +1029,9 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     //
     // TODO(cpcallen): The value checks are NOT checking the dumped
     // value (or even, for .proto, the internal record of the current
-    // value), but instead just the selector of the actual value in the
-    // interpreter being dumped.  That's not really too useful, so maybe
-    // they should be removed.
+    // value), but instead just the preferred selector for the actual
+    // value in interp2.  That's not really too useful, so maybe they
+    // should be removed.
     for (const [ss, done, valueSelector] of tc.after || []) {
       const s = new Selector(ss);
       /** @suppress {accessControls} */
@@ -1045,7 +1046,8 @@ exports.testDumperPrototypeDumpBinding = function(t) {
           /** @suppress {accessControls} */
           const objDumper = dumper.getObjectDumper_(value);
           t.expect(util.format('%sref for %s', prefix, s),
-                   String(objDumper.objSelector), valueSelector);
+                   objDumper.getSelector(/*preferred=*/true).toString(),
+                   valueSelector);
         } else {
           t.fail(prefix, util.format('%s did not evaluate to an object', s));
         }
