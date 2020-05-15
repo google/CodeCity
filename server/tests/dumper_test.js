@@ -255,25 +255,24 @@ exports.testDumperPrototypeExprFor_ = function(t) {
 };
 
 /**
- * Tests for the ObjectDumper and ScopeDumper.prototype.survey
- * methods.
+ * Tests for the ObjectDumper.prototype.survey and
+ * ScopeDumper.prototype.survey methods and their recording of
+ * information about Scopes, Arguments objects and so on.
  * @param {!T} t The test runner object.
  * @suppress {accessControls}
  */
-exports.testDumperSurvey = function(t) {
+exports.testSubDumperPrototypeSurvey = function(t) {
   const intrp = new Interpreter();
 
-  // Create various variables to dump.
+  // Create various variables to dump, including creating a closure
+  // belonging to two functions.
   intrp.createThreadForSrc(`
       var foo = (function() {
-        var obj = {};
-        var unreachable = {iAmUnreachable: undefined};
-        bar = function baz() {return unreachable;};
-        function quux() {return obj;};
-        quux.prototype.obj = obj;
-        (new 'Object.setOwnerOf')(bar, obj);
+        var x = 42;
+        bar = function baz() {return x;};
+        function quux() {return -x;};
         return quux;
-        arguments;  // Not reached, but forces Arguments instantiation.
+        arguments;  // Never reached, but forces Arguments instantiation.
       })();
       var bar;  // N.B.: hoisted.
       var orphanArgs = (function() {return arguments;})();
@@ -286,31 +285,21 @@ exports.testDumperSurvey = function(t) {
   const pristine = new Interpreter();
   const dumper = new Dumper(pristine, intrp);
 
-  // Get intrp.Objects created by test program.
+  // Check relationship of functions and scopes recorded by survey.
   const baz = /** @type {!Interpreter.prototype.UserFunction} */(
       intrp.global.get('bar'));  // Function baz was stored in var bar.
   const quux = /** @type {!Interpreter.prototype.UserFunction} */(
       intrp.global.get('foo'));  // IIFE returned quux; was stored in var foo.
-  const obj = /** @type {!Interpreter.prototype.Object} */(
-      quux.scope.get('obj'));
-  const unreachable = /** @type {!Interpreter.prototype.Object} */(
-      quux.scope.get('unreachable'));
-
-  // Get SubDumpers for objects created by test program.
   const globalDumper = dumper.getScopeDumper_(intrp.global);
   const bazDumper = dumper.getObjectDumper_(baz);
   const bazScopeDumper = dumper.getScopeDumper_(baz.scope);
   const quuxDumper = dumper.getObjectDumper_(quux);
   const quuxScopeDumper = dumper.getScopeDumper_(quux.scope);
-  const objDumper = dumper.getObjectDumper_(obj);
-  const unreachableDumper = dumper.getObjectDumper_(unreachable);
 
-  // Verify types of scopes, via ScopeDumpers.
   t.expect('bazScopeDumper.scope.type', bazScopeDumper.scope.type, 'funexp');
   t.expect('quuxScopeDumper.scope.type',
       quuxScopeDumper.scope.type, 'function');
 
-  // Check relationship of functions and scopes recorded by survey.
   t.expect('globalDumper.innerFunctions.size',
       globalDumper.innerFunctions.size, 0);
   t.expect('globalDumper.innerScopes.size', globalDumper.innerScopes.size, 1);
@@ -344,23 +333,6 @@ exports.testDumperSurvey = function(t) {
       dumper.argumentsScopeDumpers.get(quuxArgs) === quuxScopeDumper);
   t.assert('argumentsScopeDumpers.get(orphanArgs) === quuxScopeDumper',
       dumper.argumentsScopeDumpers.get(orphanArgs) === undefined);
-
-  // Check preferredRef of various objects.
-  t.expect('bazDumper.preferredRef (as Selector)',
-           bazDumper.getSelector(/*preferred=*/true).toString(), 'bar');
-  t.expect('quuxDumper.preferredRef (as Selector)',
-           quuxDumper.getSelector(/*preferred=*/true).toString(), 'foo');
-  t.expect('objDumper.preferredRef (as Selector)',
-           objDumper.getSelector(/*preferred=*/true).toString(),
-           'foo.prototype.obj');
-  // Can't create preferred Selector for unreachable (it's
-  // unreachable!), so check .preferredRef manually.
-  t.expect('unreachableDumper.preferredRef.part',
-           unreachableDumper.preferredRef.part, 'unreachable');
-  t.expect('unreachableDumper.preferredRef.dumper',
-           unreachableDumper.preferredRef.dumper, quuxScopeDumper);
-  t.expect('unreachableDumper.preferredRef.part',
-           unreachableDumper.preferredRef.part, 'unreachable');
 };
 
 /**
