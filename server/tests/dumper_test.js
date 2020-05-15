@@ -254,6 +254,79 @@ exports.testDumperPrototypeExprFor_ = function(t) {
   }
 };
 
+
+/**
+ * Tests for Dumper.prototype.survey_, and in particular the
+ * imlementation of Dijkstra's Algorigithm it uses to set the
+ * .preferredRef property on ObjectDumper instances.
+ * @param {!T} t The test runner object.
+ * @suppress {accessControls}
+ */
+exports.testDumperPrototypeSurvey = function(t) {
+  const intrp = getInterpreter();
+
+  // Create various variables to dump.
+  intrp.createThreadForSrc(`
+      var func = (function() {
+        var unreachable = {unreachable: true};
+        return function foo() {return unreachable;};
+      })();
+      var arr = [{baz: {}}];
+      var foo = {bar: arr[0]};
+      Object.setPrototypeOf(foo.bar, {});
+  `);
+  intrp.run();
+
+  // Create Dumper with pristine Interpreter instance to compare to;
+  // get ScopeDumper for global scope.  Dumper constructor performs
+  // survey.
+  const pristine = new Interpreter();
+  const dumper = new Dumper(pristine, intrp, {verbose: true});
+
+  // Check preferredRef of various objects.  The preferred selector is
+  // assumed to be the same as the selector used to obtain the object
+  // unless otherwise specified.
+  const tc = [
+    ['func'],
+    ['func{proto}', 'Function.prototype'],
+    ['func{owner}', 'CC.root'],
+    ['func.prototype'],
+    ['func.prototype{proto}', 'Object.prototype'],
+    ['foo'],
+    ['foo{proto}', 'Object.prototype'],
+    ['foo.bar{proto}'],
+    ['foo.bar.baz{proto}', 'Object.prototype'],
+    ['arr[0]', 'foo.bar'],
+  ];
+  for (const [ss, expected] of tc) {
+    const c = dumper.getComponentsForSelector_(new Selector(ss));
+    const obj = c.dumper.getValue(dumper, c.part);
+    if (!(obj instanceof intrp.Object)) {
+      throw new TypeError(ss + ' did not evaluate to an object');
+    }
+    const objDumper = dumper.getObjectDumper_(obj);
+    t.expect('Preferred ref of ' + ss,
+             objDumper.getSelector(/*preferred=*/true).toString(),
+             expected || ss);
+  }
+
+  // Can't create preferred Selector for unreachable (it's
+  // unreachable!), so check .preferredRef manually.
+
+  const func = intrp.global.get('func');
+  if (!(func instanceof intrp.UserFunction) || !func.scope.outerScope) {
+    throw new TypeError('func.scope.outerScope not a Scope');
+  }
+  const funcScopeDumper = dumper.getScopeDumper_(func.scope.outerScope);
+  const unreachable = func.scope.outerScope.get('unreachable');
+  if (!(unreachable instanceof intrp.Object)) throw new TypeError();
+  const unreachableDumper = dumper.getObjectDumper_(unreachable);
+  t.expect('unreachableDumper.preferredRef.dumper',
+           unreachableDumper.preferredRef.dumper, funcScopeDumper);
+  t.expect('unreachableDumper.preferredRef.part',
+           unreachableDumper.preferredRef.part, 'unreachable');
+};
+
 /**
  * Tests for the ObjectDumper.prototype.survey and
  * ScopeDumper.prototype.survey methods and their recording of

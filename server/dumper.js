@@ -744,6 +744,7 @@ Dumper.prototype.skip = function(selector) {
 Dumper.prototype.survey_ = function() {
   var /** !Set<!SubDumper> */ visited = new Set();
   var /** !PriorityQueue<!SubDumper> */ queue = new PriorityQueue();
+  // TODO(cpcallen): Remove badness; this info is already stored in queue.
   var /** !Map<!SubDumper,number> */ badness = new Map();
 
   // Start building spanning tree from the global scope.
@@ -756,6 +757,7 @@ Dumper.prototype.survey_ = function() {
     var /** !SubDumper */ dumper = queue.deleteMin();
     if (visited.has(dumper)) throw new Error('surveying same dumper twice??');
     visited.add(dumper);
+    var baseBadness = badness.get(dumper);
     badness.delete(dumper);
 
     var /** !Array<!OutwardEdge> */ adjacent = dumper.survey(this);
@@ -769,7 +771,7 @@ Dumper.prototype.survey_ = function() {
       if (!(edge.value instanceof this.intrp2.Object)) continue;
       var objectDumper = this.getObjectDumper_(edge.value);
       if (visited.has(objectDumper)) continue;
-      var newBadness = badness.get(dumper) + Selector.partBadness(edge.part);
+      var newBadness = baseBadness + Selector.partBadness(edge.part);
       // If we've not seen objectDumper before, .get will return
       // undefined and the following test will return false.
       // (Undefined is effectivly a 'bigger infinity' here!)
@@ -1090,6 +1092,8 @@ ScopeDumper.prototype.getValue = function(dumper, part) {
  * @return {!Array<OutwardEdge>}
  */
 ScopeDumper.prototype.survey = function(dumper) {
+  var /** !Array<OutwardEdge> */ adjacent = [];
+
   // Record parent scope.
   if (this.scope !== dumper.intrp2.global) {
     if (this.scope.outerScope === null) {
@@ -1098,6 +1102,8 @@ ScopeDumper.prototype.survey = function(dumper) {
     var outerScopeDumper = dumper.getScopeDumper_(this.scope.outerScope);
     // Record this as inner scope of this.outerScope.
     outerScopeDumper.innerScopes.add(this);
+    // Don't forget to survey the outerScope, too:
+    adjacent.push(outerScopeDumper);
   }
   // Record arguments object attached to this scope if it's a function scope.
   if (this.scope.type === Interpreter.Scope.Type.FUNCTION &&
@@ -1115,7 +1121,6 @@ ScopeDumper.prototype.survey = function(dumper) {
   }
 
   // Collect Components for other objects reachable from this one.
-  var /** !Array<OutwardEdge> */ adjacent = [];
   for (var name in this.scope.vars) {
     adjacent.push({part: name, value: this.scope.get(name)});
   }
