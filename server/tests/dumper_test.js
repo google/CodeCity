@@ -62,31 +62,33 @@ class MockWritable {
  * @suppress {accessControls}
  */
 exports.testObjectDumperPrototypeIsWritable = function(t) {
-  const intrp = new Interpreter();
+  const intrp = getInterpreter();
+  // Create some objects and properties:
+  // - .foo writable on child but not Object.prototype.
+  // - .bar writable on child but not parent.
+  // - .baz writable on child and parent.
+  intrp.createThreadForSrc(`
+    Object.prototype.foo = undefined;  // Cheeky!
+    Object.defineProperty(Object.prototype, 'foo', {writable: false});
+
+    var parent = {bar: undefined, baz: undefined};
+    Object.defineProperty(parent, 'bar', {writable: false});
+
+    var child = {foo: undefined, bar: undefined, baz: undefined};
+    Object.setPrototypeOf(child, parent);
+  `);
+  intrp.run();
+
   const pristine = new Interpreter();
   const dumper = new Dumper(pristine, intrp);
 
-  const root = intrp.ROOT;
-  const writable =
-      {writable: true, enumerable: true, configurable: true, value: true};
-  const nonwritable =
-      {writable: false, enumerable: true, configurable: true, value: false};
-
-  // Create some objects and properties.
-  intrp.OBJECT.defineProperty('foo', nonwritable, root);
-  const parent = new intrp.Object(root);
-  parent.defineProperty('bar', nonwritable, root);
-  parent.defineProperty('baz', writable, root);
-  const child = new intrp.Object(root, parent);
-  child.defineProperty('foo', writable, root);
-  child.defineProperty('bar', writable, root);
-  child.defineProperty('baz', writable, root);
-
   const objectPrototypeDumper = dumper.getObjectDumper_(intrp.OBJECT);
   objectPrototypeDumper.objSelector = new Selector('Object.prototype');
-  const parentDumper = dumper.getObjectDumper_(parent);
+  const parentDumper = dumper.getComponentsForSelector_(
+      new Selector('parent.bar')).dumper;
   parentDumper.objSelector = new Selector('parent');
-  const childDumper = dumper.getObjectDumper_(child);
+  const childDumper = dumper.getComponentsForSelector_(
+      new Selector('child.bar')).dumper;
   childDumper.objSelector = new Selector('child');
   objectPrototypeDumper.proto = null;
   parentDumper.proto = intrp.OBJECT;
