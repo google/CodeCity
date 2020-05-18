@@ -226,8 +226,6 @@ exports.testDumperPrototypeExprFor_ = function(t) {
     'SyntaxError', 'URIError', 'PermissionError'
   ]) {
     dumper.getObjectDumper_(/** @type {!Interpreter.prototype.Object} */
-        (intrp.builtins.get(b))).objSelector = new Selector(b);
-    dumper.getObjectDumper_(/** @type {!Interpreter.prototype.Object} */
         (intrp.builtins.get(b))).ref = new Components(dumper.global, b);
   }
 
@@ -259,7 +257,7 @@ exports.testDumperPrototypeExprFor_ = function(t) {
     [new intrp.Error(intrp.ROOT, null), "new Error()"],
   ];
   // A fake reference: exprFor_ won't create an unreferenceable object.
-  const ref = new Components(dumper.getScopeDumper_(dumper.scope), 'myVar');
+  const ref = new Components(dumper.global, 'dummyVariable');
   for (const [value, expected] of cases) {
     const r = dumper.exprFor_(value, ref);
     t.expect(util.format('Dumper.p.exprFor_(%s)', value), r, expected);
@@ -437,9 +435,6 @@ exports.testDumperPrototypeExprForSelector_ = function(t) {
            "(new 'Object.getPrototypeOf')(foo.bar).baz");
   // Give Object.getPrototypeOf a referrence indicating it is
   // available via the global variable myGetPrototypeOf.
-  dumper.getObjectDumper_(/** @type {!Interpreter.prototype.Object} */
-      (intrp.builtins.get('Object.getPrototypeOf'))).objSelector =
-          new Selector('myGetPrototypeOf');
   dumper.getObjectDumper_(/** @type {!Interpreter.prototype.Object} */
       (intrp.builtins.get('Object.getPrototypeOf'))).ref =
           new Components(dumper.global, 'myGetPrototypeOf');

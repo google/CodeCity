@@ -118,7 +118,6 @@ var Dumper = function(intrp1, intrp2, options) {
     if (Object.is(val1in2, val2)) {
       this.global.setDone(v, (typeof val2 === 'object') ? Do.DONE : Do.RECURSE);
       if (val2 instanceof intrp2.Object) {
-        this.getObjectDumper_(val2).objSelector = new Selector(v);
         this.getObjectDumper_(val2).ref = new Components(this.global, v);
         // Other initialialisation will be taken care of below.
       }
@@ -265,7 +264,6 @@ Dumper.prototype.exprFor_ = function(value, ref, callable, funcName) {
   // TODO(cpcallen): only update .ref if new one better.
   if (ref) {
     objDumper.ref = ref;  // Safe new ref if specified.
-    objDumper.objSelector = objDumper.getSelector();
   }
 
  // Object not yet referenced.  Is it a builtin?
@@ -471,14 +469,12 @@ Dumper.prototype.exprForFunction_ = function(func, funcDumper, funcName) {
       prototype instanceof this.intrp2.Object &&
       Object.getPrototypeOf(prototype) === this.intrp2.Object.prototype) {
     var prototypeFuncDumper = this.getObjectDumper_(prototype);
-    if(prototypeFuncDumper.objSelector === undefined) {
+    if(prototypeFuncDumper.proto === undefined) {
       // We can use automatic .prototype object.
       // Mark .prototype as Do.SET or Do.ATTR as appropriate.
       funcDumper.checkProperty('prototype', prototype, attr, pd);
       // Mark prototype object as existing and referenceable.
       prototypeFuncDumper.proto = this.intrp2.OBJECT;
-      prototypeFuncDumper.objSelector =
-          new Selector(funcDumper.objSelector.concat('prototype'));
       prototypeFuncDumper.ref = new Components(funcDumper, 'prototype');
       // Do we need to set .prototype's [[Prototype]]?
       if (prototype.proto === prototypeFuncDumper.proto) {
@@ -519,8 +515,7 @@ Dumper.prototype.exprForObject_ = function(obj, objDumper) {
       objDumper.proto = this.intrp2.OBJECT;
       return '{}';
     default:
-      var protoDumper = this.getObjectDumper_(obj.proto);
-      if (protoDumper.objSelector) {
+      if (this.getObjectDumper_(obj.proto).proto !== undefined) {
         objDumper.proto = obj.proto;
         return this.exprForBuiltin_('Object.create') + '(' +
             // TODO(cpcallen): supply selector here?
@@ -1162,8 +1157,6 @@ var ObjectDumper = function(dumper, obj) {
    * @type {?Components} Reference to this object, once created.
    */
   this.ref = null;
-  /** @type {!Selector|undefined} Reference to this object, once created. */
-  this.objSelector = undefined;
   /** @type {!ObjectDumper.Done} How much has object been dumped? */
   this.done = ObjectDumper.Done.NO;
   /** @private @type {!Do} Has prototype been set? */
@@ -1660,7 +1653,7 @@ ObjectDumper.prototype.setDone = function(part, done) {
   // Invariant checks.
   if (done <= old) {
     var fault = (done === old) ? 'Refusing redundant' : "Can't undo previous";
-    var description = this.objSelector ? ' of ' + this.objSelector : '';
+    var description = ' of ' + this.getSelector(/*preferred=*/true);
     throw new RangeError(fault + ' work on ' + part + description);
   }
   // Do set.
@@ -1787,7 +1780,7 @@ ObjectDumper.Pending.prototype.merge = function (that) {
 ObjectDumper.Pending.prototype.toString = function() {
   return '{bindings: [' + this.bindings.join(', ') + '], ' +
       'dependencies: [' + this.dependencies.map(function(od) {
-        return String(od.objSelector);
+        return String(od.getSelector());
       }).join(', ') + ']}';
 };
 
