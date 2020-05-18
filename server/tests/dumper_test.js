@@ -34,7 +34,7 @@ const {T} = require('./testing');
 const util = require('util');
 
 // Unpack test-only exports:
-const {ObjectDumper} = testOnly;
+const {Components, ObjectDumper} = testOnly;
 
 /**
  * A mock Writable, for testing.
@@ -82,18 +82,25 @@ exports.testObjectDumperPrototypeIsWritable = function(t) {
   const pristine = new Interpreter();
   const dumper = new Dumper(pristine, intrp);
 
+  dumper.dumpBinding(new Selector('Object'), Do.SET);
+  dumper.dumpBinding(new Selector('Object.prototype'), Do.SET);
+  
   const objectPrototypeDumper = dumper.getObjectDumper_(intrp.OBJECT);
-  objectPrototypeDumper.objSelector = new Selector('Object.prototype');
   const parentDumper = dumper.getComponentsForSelector_(
       new Selector('parent.bar')).dumper;
-  parentDumper.objSelector = new Selector('parent');
   const childDumper = dumper.getComponentsForSelector_(
       new Selector('child.bar')).dumper;
-  childDumper.objSelector = new Selector('child');
-  objectPrototypeDumper.proto = null;
-  parentDumper.proto = intrp.OBJECT;
-  childDumper.proto = intrp.OBJECT;
 
+  // Fake dumping of parent and child as if created by object
+  // literals.  (.dumpBinding would use Object.create, pre-setting
+  // their prototypes - we don't want that for this test.)
+  parentDumper.proto = intrp.OBJECT;
+  parentDumper.ref = new Components(dumper.global, 'parent');
+  childDumper.proto = intrp.OBJECT;
+  childDumper.ref = new Components(dumper.global, 'child');
+
+  // Now dump various bindings in a certain order, and check
+  // writability of child.foo, .bar and .baz in each situation.
   objectPrototypeDumper.dumpBinding(dumper, 'foo', Do.SET);
   parentDumper.dumpBinding(dumper, Selector.PROTOTYPE, Do.SET);
   parentDumper.dumpBinding(dumper, 'bar', Do.SET);
@@ -220,6 +227,8 @@ exports.testDumperPrototypeExprFor_ = function(t) {
   ]) {
     dumper.getObjectDumper_(/** @type {!Interpreter.prototype.Object} */
         (intrp.builtins.get(b))).objSelector = new Selector(b);
+    dumper.getObjectDumper_(/** @type {!Interpreter.prototype.Object} */
+        (intrp.builtins.get(b))).ref = new Components(dumper.global, b);
   }
 
   // Create UserFunction to dump.
@@ -249,10 +258,11 @@ exports.testDumperPrototypeExprFor_ = function(t) {
     [new intrp.Error(intrp.ROOT, intrp.OBJECT), "new Error()"],
     [new intrp.Error(intrp.ROOT, null), "new Error()"],
   ];
-  for (let i = 0; i < cases.length; i++) {
-    const tc = cases[i];
-    const r = dumper.exprFor_(tc[0], new Selector(['tc', String(i)]));
-    t.expect(util.format('Dumper.p.exprFor_(%s)', tc[1]), r, tc[1]);
+  // A fake reference: exprFor_ won't create an unreferenceable object.
+  const ref = new Components(dumper.getScopeDumper_(dumper.scope), 'myVar');
+  for (const [value, expected] of cases) {
+    const r = dumper.exprFor_(value, ref);
+    t.expect(util.format('Dumper.p.exprFor_(%s)', value), r, expected);
   }
 };
 
@@ -307,7 +317,7 @@ exports.testDumperPrototypeSurvey = function(t) {
       throw new TypeError(ss + ' did not evaluate to an object');
     }
     const objDumper = dumper.getObjectDumper_(obj);
-    t.expect('Preferred ref of ' + ss,
+    t.expect('Dumper.p.survey_: .preferredRef of ' + ss,
              objDumper.getSelector(/*preferred=*/true).toString(),
              expected || ss);
   }
@@ -323,9 +333,9 @@ exports.testDumperPrototypeSurvey = function(t) {
   const unreachable = func.scope.outerScope.get('unreachable');
   if (!(unreachable instanceof intrp.Object)) throw new TypeError();
   const unreachableDumper = dumper.getObjectDumper_(unreachable);
-  t.expect('unreachableDumper.preferredRef.dumper',
+  t.expect('Dumper.p.survey_: unreachableDumper.preferredRef.dumper',
            unreachableDumper.preferredRef.dumper, funcScopeDumper);
-  t.expect('unreachableDumper.preferredRef.part',
+  t.expect('Dumper.p.survey_: unreachableDumper.preferredRef.part',
            unreachableDumper.preferredRef.part, 'unreachable');
 };
 
@@ -425,12 +435,17 @@ exports.testDumperPrototypeExprForSelector_ = function(t) {
   t.expect(util.format('Dumper.p.exprForSelector_(%s)  // 0', selector),
            dumper.exprForSelector_(selector),
            "(new 'Object.getPrototypeOf')(foo.bar).baz");
+  // Give Object.getPrototypeOf a referrence indicating it is
+  // available via the global variable myGetPrototypeOf.
   dumper.getObjectDumper_(/** @type {!Interpreter.prototype.Object} */
       (intrp.builtins.get('Object.getPrototypeOf'))).objSelector =
-          new Selector('MyObject.myGetPrototypeOf');
+          new Selector('myGetPrototypeOf');
+  dumper.getObjectDumper_(/** @type {!Interpreter.prototype.Object} */
+      (intrp.builtins.get('Object.getPrototypeOf'))).ref =
+          new Components(dumper.global, 'myGetPrototypeOf');
   t.expect(util.format('Dumper.p.exprForSelector_(%s)  // 1', selector),
            dumper.exprForSelector_(selector),
-           'MyObject.myGetPrototypeOf(foo.bar).baz');
+           'myGetPrototypeOf(foo.bar).baz');
 };
 
 /**
