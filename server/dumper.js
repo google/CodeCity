@@ -856,25 +856,6 @@ var SubDumper = function() {
 
 /**
  * Generate JS source text to create and/or initialize a single
- * binding (variable in a scope, or property / internal slot of an
- * object).  This is a wrapper that calls .dumpBindingInner to do
- * the actual dumping, and mainly concerns itself with checks.
- * @param {!Dumper} dumper Dumper to which this ObjectDumper belongs.
- * @param {!Selector.Part} part The binding part to dump.
- * @param {!Do} todo How much to do.  Must be >= Do.DECL; > Do.SET ignored.
- * @return {!Do} How much has been done on the specified binding.
- */
-SubDumper.prototype.dumpBinding = function(dumper, part, todo) {
-  if (this.prune_ && this.prune_.has(part)) {
-    return Do.RECURSE;  // Don't dump this binding at all.
-  }
-  if (this.skip_ && this.skip_.has(part)) return this.getDone(part);
-
-  return this.dumpBindingInner(dumper, part, todo);
-};
-
-/**
- * Generate JS source text to create and/or initialize a single
  * binding (varialbe in a scope, or property / internal slot of an
  * object).
  * @abstract
@@ -883,7 +864,7 @@ SubDumper.prototype.dumpBinding = function(dumper, part, todo) {
  * @param {!Do} todo How much to do.  Must be >= Do.DECL; > Do.SET ignored.
  * @return {!Do} How much has been done on the specified binding.
  */
-SubDumper.prototype.dumpBindingInner = function(dumper, part, todo) {};
+SubDumper.prototype.dumpBinding = function(dumper, part, todo) {};
 
 /**
  * Return the value of the given part in intrp2 (i.e., the intended
@@ -995,14 +976,19 @@ ScopeDumper.prototype.dump = function(dumper) {
  * @param {!Do} todo How much to do.  Must be >= Do.DECL; > Do.SET ignored.
  * @return {!Do} How much has been done on the specified binding.
  */
-ScopeDumper.prototype.dumpBindingInner = function(dumper, part, todo) {
+ScopeDumper.prototype.dumpBinding = function(dumper, part, todo) {
   if (dumper.scope !== this.scope) {
     throw new Error("Can't create binding other than in current scope");
   } else if (typeof part !== 'string') {
     throw new TypeError('Invalid part (not a variable name)');
   } else if (!this.scope.hasBinding(part)) {
     throw new ReferenceError("Can't dump non-existent variable " + part);
-  }  var done = this.getDone(part);
+  } else if (this.prune_ && this.prune_.has(part)) {
+    return Do.RECURSE;  // Don't dump this binding at all.
+  } else if (this.skip_ && this.skip_.has(part)) {
+    return this.getDone(part);  // Do nothing but don't lie about it.
+  }
+  var done = this.getDone(part);
   var output = [];
   if (todo < Do.DECL || done >= todo || done > Do.SET) return done;
   if (done < Do.DECL) {
@@ -1341,13 +1327,18 @@ ObjectDumper.prototype.dump = function(dumper, objSelector) {
  *     object.
  * @return {!Do} The done status of the specified binding.
  */
-ObjectDumper.prototype.dumpBindingInner = function(
-    dumper, part, todo, objSelector) {
+ObjectDumper.prototype.dumpBinding = function(dumper, part, todo, objSelector) {
   if (!objSelector) objSelector = this.getSelector();
-  if (!objSelector) throw new Error("can't dump unreferencable object");
-  if (this.proto === undefined) {
+  if (!objSelector) {
+    throw new Error("can't dump unreferencable object");
+  } else if (this.proto === undefined) {
     throw new Error("can't dump uncreated object " +  this.getSelector(true));
+  } else if (this.prune_ && this.prune_.has(part)) {
+    return Do.RECURSE;  // Don't dump requested binding at all.
+  } else if (this.skip_ && this.skip_.has(part)) {
+    return this.getDone(part);  // Do nothing but don't lie about it.
   }
+
 
   var bindingSelector = new Selector(objSelector.concat(part));
   var partRef = new Components(this, part);
