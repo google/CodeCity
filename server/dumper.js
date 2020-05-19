@@ -222,13 +222,28 @@ Dumper.prototype.markBinding_ = function(selector, done) {
  * // Writes: 'foo[0] = 42;\n'
  * myDumper.dumpBinding(new Selector('foo'), Do.RECURSE)
  * // Writs: 'foo[1] = 69;\nfoo[2] = 105;\n'
+ * 
+ * This is mainly a wrapper around Object/ScopeDumper.p.dumpBinding
+ * and ObjectDumper.p.dump.
+ *
  * @param {!Selector} selector The selector for the binding to be dumped.
  * @param {!Do} todo How much to dump.  Must be >= Do.DECL.
  * @return {void}
  */
 Dumper.prototype.dumpBinding = function(selector, todo) {
   var c = this.getComponentsForSelector_(selector);
-  c.dumper.dumpBinding(this, c.part, todo);
+  var done = c.dumper.dumpBinding(this, c.part, todo);
+  if (todo >= Do.RECURSE && done < Do.RECURSE) {
+    var value = c.dumper.getValue(this, c.part);
+    if (value instanceof this.intrp2.Object) {
+      var objDone = this.getObjectDumper_(value).dump(this);
+      if (objDone === ObjectDumper.Done.DONE_RECURSIVELY) {
+        if (c.dumper.getDone(c.part) < Do.RECURSE) {
+          c.dumper.setDone(c.part, Do.RECURSE);
+        }
+      }
+    }
+  }
 };
 
 /**
@@ -842,10 +857,8 @@ var SubDumper = function() {
 /**
  * Generate JS source text to create and/or initialize a single
  * binding (variable in a scope, or property / internal slot of an
- * object), including recursively dumping the value object if
- * requested.  This is a wrapper that calls .dumpBindingInner to do
- * the actual dumping, and mainly concerns itself with checks and
- * recursion.
+ * object).  This is a wrapper that calls .dumpBindingInner to do
+ * the actual dumping, and mainly concerns itself with checks.
  * @param {!Dumper} dumper Dumper to which this ObjectDumper belongs.
  * @param {!Selector.Part} part The binding part to dump.
  * @param {!Do} todo How much to do.  Must be >= Do.DECL; > Do.SET ignored.
@@ -857,18 +870,7 @@ SubDumper.prototype.dumpBinding = function(dumper, part, todo) {
   }
   if (this.skip_ && this.skip_.has(part)) return this.getDone(part);
 
-  var done = this.dumpBindingInner(dumper, part, todo);
-
-  if (todo >= Do.RECURSE && done < Do.RECURSE) {
-    var value = this.getValue(dumper, part);
-    if (value instanceof dumper.intrp2.Object) {
-      var objDone = dumper.getObjectDumper_(value).dump(dumper);
-      if (objDone === ObjectDumper.Done.DONE_RECURSIVELY) {
-        if (this.getDone(part) < Do.RECURSE) this.setDone(part, Do.RECURSE);
-      }
-    }
-  }
-  return done;
+  return this.dumpBindingInner(dumper, part, todo);
 };
 
 /**
