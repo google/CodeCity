@@ -195,19 +195,6 @@ Dumper.prototype.diffBuiltins_ = function() {
 };
 
 /**
- * Mark a particular binding (as specified by a Selector) with a
- * certain done value.
- * @private
- * @param {!Selector} selector The selector for the binding to be deferred.
- * @param {!Do} done Do status to mark binding with.
- */
-Dumper.prototype.markBinding_ = function(selector, done) {
-  var c = this.getComponentsForSelector_(selector);
-  var was = c.dumper.getDone(c.part);
-  if (was !== done) c.dumper.setDone(c.part, done);
-};
-
-/**
  * Generate JS source text to declare and optionally initialise a
  * particular binding (as specified by a Selector).  The generated
  * source text is written to the current output buffer.
@@ -641,7 +628,7 @@ Dumper.prototype.exprForSelector_ = function(selector) {
 };
 
 /**
- * Given a Selector and opitonally a Scope, get the corresponding
+ * Given a Selector and optionally a Scope, get the corresponding
  * Components.
  * @private
  * @param {!Selector} selector A selector for the binding in question.
@@ -663,26 +650,6 @@ Dumper.prototype.getComponentsForSelector_ = function(selector, scope) {
     dumper = this.getObjectDumper_(v);
   }
   return new Components(dumper, selector[selector.length - 1]);
-};
-
-/**
- * Returns true if a given name is shadowed in the current scope.
- * @private
- * @param {string} name Variable name that might be shadowed.
- * @param {!Interpreter.Scope=} scope Scope in which name is defind.
- *     Defaults to the global scope.
- * @return {boolean} True iff name is bound in a scope between the
- *     current scope (this.scope) (inclusive) and scope (exclusive).
- */
-Dumper.prototype.isShadowed_ = function(name, scope) {
-  if (!scope) scope = this.intrp2.global;
-  for (var s = this.scope; s !== scope; s = s.outerScope) {
-    if (s === null) {
-      throw Error("Looking for name '" + name + "' from non-enclosing scope??");
-    }
-    if (s.hasBinding(name)) return true;
-  }
-  return false;
 };
 
 /**
@@ -709,6 +676,39 @@ Dumper.prototype.getScopeDumper_ = function(scope) {
   var scopeDumper = new ScopeDumper(scope);
   this.scopeDumpers.set(scope, scopeDumper);
   return scopeDumper;
+};
+
+/**
+ * Returns true if a given name is shadowed in the current scope.
+ * @private
+ * @param {string} name Variable name that might be shadowed.
+ * @param {!Interpreter.Scope=} scope Scope in which name is defind.
+ *     Defaults to the global scope.
+ * @return {boolean} True iff name is bound in a scope between the
+ *     current scope (this.scope) (inclusive) and scope (exclusive).
+ */
+Dumper.prototype.isShadowed_ = function(name, scope) {
+  if (!scope) scope = this.intrp2.global;
+  for (var s = this.scope; s !== scope; s = s.outerScope) {
+    if (s === null) {
+      throw Error("Looking for name '" + name + "' from non-enclosing scope??");
+    }
+    if (s.hasBinding(name)) return true;
+  }
+  return false;
+};
+
+/**
+ * Mark a particular binding (as specified by a Selector) with a
+ * certain done value.
+ * @private
+ * @param {!Selector} selector The selector for the binding to be deferred.
+ * @param {!Do} done Do status to mark binding with.
+ */
+Dumper.prototype.markBinding_ = function(selector, done) {
+  var c = this.getComponentsForSelector_(selector);
+  var was = c.dumper.getDone(c.part);
+  if (was !== done) c.dumper.setDone(c.part, done);
 };
 
 /**
