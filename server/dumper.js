@@ -222,7 +222,7 @@ Dumper.prototype.markBinding_ = function(selector, done) {
  * // Writes: 'foo[0] = 42;\n'
  * myDumper.dumpBinding(new Selector('foo'), Do.RECURSE)
  * // Writs: 'foo[1] = 69;\nfoo[2] = 105;\n'
- * 
+ *
  * This is mainly a wrapper around Object/ScopeDumper.p.dumpBinding
  * and ObjectDumper.p.dump.
  *
@@ -236,7 +236,7 @@ Dumper.prototype.dumpBinding = function(selector, todo) {
   if (todo >= Do.RECURSE && done < Do.RECURSE) {
     var value = c.dumper.getValue(this, c.part);
     if (value instanceof this.intrp2.Object) {
-      var objDone = this.getObjectDumper_(value).dump(this);
+      var objDone = this.getObjectDumper_(value).dump(this, selector);
       if (objDone === ObjectDumper.Done.DONE_RECURSIVELY) {
         if (c.dumper.getDone(c.part) < Do.RECURSE) {
           c.dumper.setDone(c.part, Do.RECURSE);
@@ -1248,7 +1248,9 @@ ObjectDumper.prototype.dump = function(dumper, objSelector) {
       continue;
     }
     // Attempt to dump the binding itself.
-    var bindingDone = this.dumpBinding(dumper, part, Do.DONE);
+    var bindingSelector = new Selector(objSelector.concat(part));
+    var bindingDone =
+        this.dumpBinding(dumper, part, Do.DONE, objSelector, bindingSelector);
     if (bindingDone === Do.RECURSE) {  // Nothing more to do for part.
       continue;
     } else if (bindingDone < Do.DONE) {  // Object can't be done.
@@ -1261,7 +1263,6 @@ ObjectDumper.prototype.dump = function(dumper, objSelector) {
     var value = this.getValue(dumper, part);
     if (!(value instanceof dumper.intrp2.Object)) continue;
     var valueDumper = dumper.getObjectDumper_(value);
-    var bindingSelector = new Selector(objSelector.concat(part));
     var objDone = valueDumper.dump(dumper, bindingSelector);
     if (objDone === null || objDone instanceof ObjectDumper.Pending) {
       // Circular structure detected.
@@ -1323,11 +1324,13 @@ ObjectDumper.prototype.dump = function(dumper, objSelector) {
  * @param {!Selector.Part} part The binding part to dump.
  * @param {!Do} todo How much to do.  Must be >= Do.DECL; > Do.ATTR ignored.
  * @param {!Selector=} objSelector Selector refering to this object.
- *     Optional; defaults to whatever selector was used to create the
- *     object.
+ *     Optional; will be created using getSelector if not supplied.
+ * @param {!Selector=} bindingSelector Selector refering to part.
+ *     Optional; will be created by appending part to objSelector.
  * @return {!Do} The done status of the specified binding.
  */
-ObjectDumper.prototype.dumpBinding = function(dumper, part, todo, objSelector) {
+ObjectDumper.prototype.dumpBinding = function(
+    dumper, part, todo, objSelector, bindingSelector) {
   if (!objSelector) objSelector = this.getSelector();
   if (!objSelector) {
     throw new Error("can't dump unreferencable object");
@@ -1339,8 +1342,9 @@ ObjectDumper.prototype.dumpBinding = function(dumper, part, todo, objSelector) {
     return this.getDone(part);  // Do nothing but don't lie about it.
   }
 
-
-  var bindingSelector = new Selector(objSelector.concat(part));
+  if (!bindingSelector) {
+    bindingSelector = new Selector(objSelector.concat(part));
+  }
   var partRef = new Components(this, part);
   if (part === Selector.PROTOTYPE) {
     return this.dumpPrototype_(dumper, todo, partRef,
