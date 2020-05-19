@@ -1046,9 +1046,10 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     // dumping of builtins in tests.
     for (const builtin of [intrp.OBJECT, intrp.FUNCTION, intrp.ARRAY,
                            intrp.REGEXP, intrp.ERROR, intrp.TYPE_ERROR,
-                           intrp.RANGE_ERROR]) {
+                           intrp.RANGE_ERROR, intrp.ROOT]) {
       /** @suppress {accessControls} */
-      dumper.getObjectDumper_(builtin).done = ObjectDumper.Done.DONE_RECUSIVELY;
+      dumper.getObjectDumper_(builtin).done =
+          ObjectDumper.Done.DONE_RECURSIVELY;
     };
     // Set a few binding .done flags in advance to simulate things
     // already being dumped or being marked for deferred dumping.
@@ -1134,6 +1135,19 @@ exports.testScopeDumperPrototypeDump = function(t) {
   const dumper = new Dumper(pristine, intrp);
   /** @suppress {accessControls} */
   const globalDumper = dumper.getScopeDumper_(intrp.global);
+
+  // Set a few object .done flags in advance, to limit recursive
+  // dumping of builtins in tests.
+  // TODO(cpcallen): this is a temporary hack while refactoring
+  // recursion out of SubDumper.p.dumpBinding; remove once that
+  // refactor is done.
+  for (const builtin of [intrp.OBJECT, intrp.FUNCTION, intrp.ARRAY,
+                         intrp.REGEXP, intrp.ERROR, intrp.TYPE_ERROR,
+                         intrp.RANGE_ERROR, intrp.ROOT]) {
+    /** @suppress {accessControls} */
+    dumper.getObjectDumper_(builtin).done =
+        ObjectDumper.Done.DONE_RECURSIVELY;
+  };
 
   // Dump one binding and check result.
   let result = new MockWritable();

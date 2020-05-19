@@ -841,19 +841,47 @@ var SubDumper = function() {
 
 /**
  * Generate JS source text to create and/or initialize a single
- * variable binding.  This is a wrapper around .dumpBindingInner that
- * mainly does checks and handles recursion.
- * @abstract
+ * binding (variable in a scope, or property / internal slot of an
+ * object), including recursively dumping the value object if
+ * requested.  This is a wrapper that calls .dumpBindingInner to do
+ * the actual dumping, and mainly concerns itself with checks and
+ * recursion.
  * @param {!Dumper} dumper Dumper to which this ObjectDumper belongs.
  * @param {!Selector.Part} part The binding part to dump.
  * @param {!Do} todo How much to do.  Must be >= Do.DECL; > Do.SET ignored.
- * @return {!Do|?ObjectDumper.Pending} How much has been done on the
- *     specified binding, or null if there is an outstanding dump or
- *     dumpBinding invocaion for this object, or a (bindings,
- *     dependencies) pair if a recursive call encountered such an
- *     outstanding invocation.
+ * @return {!Do} How much has been done on the specified binding.
  */
-SubDumper.prototype.dumpBinding = function(dumper, part, todo) {};
+SubDumper.prototype.dumpBinding = function(dumper, part, todo) {
+  if (this.prune_ && this.prune_.has(part)) {
+    return Do.RECURSE;  // Don't dump this binding at all.
+  }
+  if (this.skip_ && this.skip_.has(part)) return this.getDone(part);
+
+  var done = this.dumpBindingInner(dumper, part, todo);
+
+  if (todo >= Do.RECURSE && done < Do.RECURSE) {
+    var value = this.getValue(dumper, part);
+    if (value instanceof dumper.intrp2.Object) {
+      var objDone = dumper.getObjectDumper_(value).dump(dumper);
+      if (objDone === ObjectDumper.Done.DONE_RECURSIVELY) {
+        if (this.getDone(part) < Do.RECURSE) this.setDone(part, Do.RECURSE);
+      }
+    }
+  }
+  return done;
+};
+
+/**
+ * Generate JS source text to create and/or initialize a single
+ * binding (varialbe in a scope, or property / internal slot of an
+ * object).
+ * @abstract
+ * @param {!Dumper} dumper Dumper to which this ScopeDumper belongs.
+ * @param {!Selector.Part} part The part to dump.  Must be simple string.
+ * @param {!Do} todo How much to do.  Must be >= Do.DECL; > Do.SET ignored.
+ * @return {!Do} How much has been done on the specified binding.
+ */
+SubDumper.prototype.dumpBindingInner = function(dumper, part, todo) {};
 
 /**
  * Return the value of the given part in intrp2 (i.e., the intended
@@ -955,41 +983,6 @@ ScopeDumper.prototype.dump = function(dumper) {
     if (this.getDone(name) >= Do.RECURSE) continue;  // Skip already-done.
     this.dumpBinding(dumper, name, Do.RECURSE);
   }
-};
-
-/**
- * Generate JS source text to create and/or initialize a single
- * variable binding.  This is a wrapper that calls .dumpBindingInner
- * to do the actual dumping, and mainly concerns itself with checks
- * and recursion.
- * @param {!Dumper} dumper Dumper to which this ScopeDumper belongs.
- * @param {!Selector.Part} part The part to dump.  Must be simple string.
- * @param {!Do} todo How much to do.  Must be >= Do.DECL; > Do.SET ignored.
- * @return {!Do} How much has been done on the specified binding.
- */
-ScopeDumper.prototype.dumpBinding = function(dumper, part, todo) {
-  if (typeof part !== 'string') throw new TypeError('scope has only variables');
-  if (this.prune_ && this.prune_.has(part)) {
-    // TODO(cpcallen): verify binding does not actually need to be
-    // deleted, since that's impossible.
-    return Do.RECURSE;  // Don't dump this binding at all.
-  }
-  if (this.skip_ && this.skip_.has(part)) return this.getDone(part);
-
-  var done = this.dumpBindingInner(dumper, part, todo);
-
-  if (todo >= Do.RECURSE && done < Do.RECURSE) {
-    var value = this.getValue(dumper, part);
-    if (value instanceof dumper.intrp2.Object) {
-      var varSelector = new Selector(part);
-      var objDone = dumper.getObjectDumper_(value).dump(dumper, varSelector);
-      if (objDone === ObjectDumper.Done.DONE_RECURSIVELY) {
-        done = Do.RECURSE;
-        this.setDone(part, done);
-      }
-    }
-  }
-  return done;
 };
 
 /**
@@ -1234,12 +1227,8 @@ ObjectDumper.prototype.dump = function(dumper, objSelector) {
   if (this.proto === undefined) {
     throw new Error("can't dump uncreated object " +  this.getSelector(true));
   }
-  if (dumper.visiting.has(this)) {
-    return null;
-  }
-  if (this.done === ObjectDumper.Done.DONE_RECURSIVELY) {
-    return this.done;
-  }
+  if (dumper.visiting.has(this)) return null;
+  if (this.done === ObjectDumper.Done.DONE_RECURSIVELY) return this.done;
   dumper.visiting.add(this);
 
   // Delete properties that shouldn't exist.
@@ -1261,32 +1250,56 @@ ObjectDumper.prototype.dump = function(dumper, objSelector) {
   var parts = [Selector.PROTOTYPE, Selector.OWNER].concat(keys);
   for (i = 0; i < parts.length; i++) {
     var part = parts[i];
-    var bindingDone = this.dumpBinding(dumper, part, Do.RECURSE, objSelector);
-    if (bindingDone === null) {
-      throw new Error('.dumpBinding returned null to .dump');
-    } else if (bindingDone instanceof ObjectDumper.Pending) {
-      // Circular dependency detected amongst objects being recursively
-      // dumped.  Record details of circularity.
-      if (pending) {
-        pending.merge(bindingDone);
-      } else {
-        pending = bindingDone;
-      }
-    } else if (bindingDone === Do.DONE) {
+    if (this.prune_ && this.prune_.has(part)) {
+      // TODO(cpcallen): delete binding if necessary.
+      continue;
+    } else if (this.skip_ && this.skip_.has(part)) {
+      // Can't finish an object with skipped parts.
       done = /** @type {!ObjectDumper.Done} */(
-          Math.min(done, ObjectDumper.Done.DONE));
-    } else if (bindingDone < Do.DONE) {
+          Math.min(done, ObjectDumper.Done.NO));
+      continue;
+    }
+    // Attempt to dump the binding itself.
+    var bindingDone = this.dumpBinding(dumper, part, Do.DONE);
+    if (bindingDone === Do.RECURSE) {  // Nothing more to do for part.
+      continue;
+    } else if (bindingDone < Do.DONE) {  // Object can't be done.
       done = /** @type {!ObjectDumper.Done} */(
           Math.min(done, ObjectDumper.Done.NO));
     }
+    if (bindingDone < Do.SET) continue;  // Can't recurse if no object yet!
+
+    // Attempt to recursively dump the value object, if there is one.
+    var value = this.getValue(dumper, part);
+    if (!(value instanceof dumper.intrp2.Object)) continue;
+    var valueDumper = dumper.getObjectDumper_(value);
+    var bindingSelector = new Selector(objSelector.concat(part));
+    var objDone = valueDumper.dump(dumper, bindingSelector);
+    if (objDone === null || objDone instanceof ObjectDumper.Pending) {
+      // Circular structure detected.
+      if (!pending) {
+        pending = new ObjectDumper.Pending(bindingSelector, valueDumper);
+      } else {
+        pending.add(bindingSelector, valueDumper);
+      }
+      if (objDone instanceof ObjectDumper.Pending) {
+        // Circular dependency detected amongst objects being recursively
+        // dumped.  Record details of circularity.  Add this binding.
+        pending.merge(objDone);
+      }
+    } else if (objDone === ObjectDumper.Done.DONE_RECURSIVELY) {
+      // Successful recursive dump.  Upgrade binding accordingly.
+      this.setDone(part, Do.RECURSE);
+    }
   }
+
   if (done) {
     // Dump extensibility.
     if (!this.obj.isExtensible(dumper.intrp2.ROOT)) {
       dumper.write(dumper.exprForBuiltin_('Object.preventExtensions'), '(',
                    dumper.exprForSelector_(objSelector), ');');
     }
-    this.done = ObjectDumper.Done.DONE;
+    this.done = ObjectDumper.Done.DONE;  // Needed to allow cycles to complete.
   }
 
   dumper.visiting.delete(this);
@@ -1313,54 +1326,6 @@ ObjectDumper.prototype.dump = function(dumper, objSelector) {
   }
   this.done = done;
   return pending || done;
-};
-
-/**
- * Generate JS source text to create and/or initialize a single
- * binding (property or internal slot) of the object, including
- * recursively dumping value object if requested.  This is a wrapper
- * that calls .dumpBindingInner to do the actual dumping, and mainly
- * concerns itself with checks and recursion.
- * @param {!Dumper} dumper Dumper to which this ObjectDumper belongs.
- * @param {!Selector.Part} part The binding part to dump.
- * @param {!Do} todo How much to do.  Must be >= Do.DECL.
- * @param {!Selector=} objSelector Selector refering to this object.
- *     Optional; defaults to whatever selector was used to create the
- *     object.
- * @return {!Do|?ObjectDumper.Pending} How much has been done on the
- *     specified binding, or null if there is an outstanding dump or
- *     dumpBinding invocaion for this object, or a (bindings,
- *     dependencies) pair if a recursive call encountered such an
- *     outstanding invocation.
- */
-ObjectDumper.prototype.dumpBinding = function(dumper, part, todo, objSelector) {
-  if (this.prune_ && this.prune_.has(part)) {
-    // TODO(cpcallen): delete binding if necessary.
-    return Do.RECURSE;  // Don't dump this binding at all.
-  }
-  if (this.skip_ && this.skip_.has(part)) return this.getDone(part);
-
-  var done = this.dumpBindingInner(dumper, part, todo, objSelector);
-
-  var value = this.getValue(dumper, part);
-  if (todo >= Do.RECURSE && done === Do.DONE &&
-      value instanceof dumper.intrp2.Object) {
-    var valueDumper = dumper.getObjectDumper_(value);
-    if (!objSelector) objSelector = this.getSelector();
-    var bindingSelector = new Selector(objSelector.concat(part));
-    var objDone = valueDumper.dump(dumper, bindingSelector);
-    if (objDone === null) {  // Circular structure detected.
-      return new ObjectDumper.Pending(bindingSelector, valueDumper);
-    } else if (objDone instanceof ObjectDumper.Pending) {
-      objDone.add(bindingSelector, valueDumper);
-      return objDone;
-    } else if (objDone === ObjectDumper.Done.DONE_RECURSIVELY) {
-      done = Do.RECURSE;
-      // Might have already been set via circular references.
-      if (this.getDone(part) < Do.RECURSE) this.setDone(part, done);
-    }
-  }
-  return done;
 };
 
 /**
@@ -1776,7 +1741,7 @@ ObjectDumper.Pending.prototype.merge = function (that) {
 ObjectDumper.Pending.prototype.toString = function() {
   return '{bindings: [' + this.bindings.join(', ') + '], ' +
       'dependencies: [' + this.dependencies.map(function(od) {
-        return String(od.getSelector());
+        return String(od.getSelector(/*preferred=*/true));
       }).join(', ') + ']}';
 };
 
