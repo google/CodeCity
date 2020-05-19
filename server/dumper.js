@@ -1566,10 +1566,6 @@ ObjectDumper.prototype.getSelector = function(preferred) {
     if (!next) throw new Error('unreferenced object while building Selector');
     sd = next.dumper;
     parts.unshift(next.part);
-    if (parts.length > 10) {
-      console.log('>>>', parts);
-      throw new RangeError('infinite loop');
-    }
   }
   return new Selector(parts);
 };

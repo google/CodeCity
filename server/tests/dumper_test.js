@@ -291,7 +291,7 @@ exports.testDumperPrototypeSurvey = function(t) {
   // get ScopeDumper for global scope.  Dumper constructor performs
   // survey.
   const pristine = new Interpreter();
-  const dumper = new Dumper(pristine, intrp, {verbose: true});
+  const dumper = new Dumper(pristine, intrp);
 
   // Check preferredRef of various objects.  The preferred selector is
   // assumed to be the same as the selector used to obtain the object
@@ -1155,7 +1155,7 @@ exports.testScopeDumperPrototypeDump = function(t) {
  */
 exports.testDumperPrototypeWarn = function(t) {
   const intrp = new Interpreter();
-  const dumper = new Dumper(intrp, intrp, {verbose: false});
+  const dumper = new Dumper(intrp, intrp);
   const output = new MockWritable();
   dumper.setOptions({output: output});
   dumper.warn('1');
