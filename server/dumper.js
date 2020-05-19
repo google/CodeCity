@@ -964,7 +964,17 @@ ScopeDumper.prototype.dump = function(dumper) {
   // Dump variable bindings.
   for (var name in this.scope.vars) {
     if (this.getDone(name) >= Do.RECURSE) continue;  // Skip already-done.
-    this.dumpBinding(dumper, name, Do.RECURSE);
+    // Dump binding itself.
+    var done = this.dumpBinding(dumper, name, Do.RECURSE);
+    // Attempt to recursively dump the value object, if there is one.
+    if (done >= Do.RECURSE) continue;
+    var value = this.getValue(dumper, name);
+    if (!(value instanceof dumper.intrp2.Object)) continue;
+    var valueDumper = dumper.getObjectDumper_(value);
+    var objDone = valueDumper.dump(dumper, new Selector(name));
+    if (objDone === ObjectDumper.Done.DONE_RECURSIVELY) {
+      this.setDone(name, Do.RECURSE);
+    }
   }
 };
 
