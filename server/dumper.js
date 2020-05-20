@@ -1590,6 +1590,26 @@ ObjectDumper.prototype.getValue = function(dumper, part) {
 };
 
 /**
+ * The .preferredRef properties of ObjectDumper instnaces form a tree
+ * were, e.g., the ObjectDumper for Object is the parent node for the
+ * ObjectDumpers for Object.create and Object.prototype.
+ *
+ * This function returns true iff this ObjectDumper's is part of the
+ * subtree rooted at root - i.e., its .preferredRef transitively
+ * includes root.
+ * @param {!ObjectDumper} root Another ObjectDumper.
+ * @return {boolean} True iff this is in the subtree rooted at root.
+ */
+ObjectDumper.prototype.inTreeOf = function(root) {
+  var /** ?SubDumper */ d = this;
+  while (true) {
+    if (d === root) return true;
+    if (!(d instanceof ObjectDumper)) return false;
+    d = d.preferredRef.dumper;
+  }
+};
+
+/**
  * Return true iff the specifed property can be created or set by
  * assignment - i.e., that it exists and is writable, or doesn't exist
  * and does not inherit from a non-writable property on the prototype
