@@ -537,7 +537,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     },
 
     { // Test recursion in face of incomplet(able) properties.
-      title: 'recursion 1',
+      title: 'recursion-incompletable',
       src: `
         var obj = {a: {id: 'a'}, b: {id: 'b'}, c: {id: 'c'}};
         obj.a.self = obj.a;
@@ -572,7 +572,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     },
 
     { // Test recursion that tries to revisit starting object.
-      title: 'recursion 2',
+      title: 'recursion-revist',
       src: `
         var obj = {v: 42};
         obj.obj = obj;
@@ -585,6 +585,33 @@ exports.testDumperPrototypeDumpBinding = function(t) {
       ],
       after: [
         ['obj.v', Do.RECURSE],
+      ],
+    },
+
+    { // Test recursion, limited by subtree.
+      title: 'recursion-subtree',
+      src: `
+        var outsider = {iam: 'outsider'};
+        var obj = {
+          foo: [outsider, {iam: 'insider'}],
+          bar: {iam: 'bar'},
+        };
+        obj.foo[2] = obj.bar;
+      `,
+      set: ['obj'],
+      dump: [
+        ['obj.foo', Do.RECURSE,
+         'obj.foo = [];\n' +
+             'obj.foo[0] = {};\n' +
+             "obj.foo[1] = {};\nobj.foo[1].iam = 'insider';\n" +
+             'obj.foo[2] = {};\n',
+         Do.DONE, /*treeOnly=*/true],
+        ['obj', Do.RECURSE,
+         "obj.foo[2].iam = 'bar';\nobj.bar = obj.foo[2];\n",
+         Do.DONE, /*treeOnly=*/true],
+        ['obj', Do.RECURSE,
+         "obj.foo[0].iam = 'outsider';\n",
+         Do.RECURSE, /*treeOnly=*/false],
       ],
     },
 
@@ -1094,15 +1121,16 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     }
 
     // Check generated output for (and post-dump status of) specific bindings.
-    for (const [ss, todo, expected, done] of tc.dump || []) {
+    for (const [ss, todo, expected, done, subTreeOnly] of tc.dump || []) {
       const s = new Selector(ss);
       // Dump binding and check output code.
       const result = new MockWritable();
       dumper.setOptions({output: result});
       dumper.unskip(s);
-      dumper.dumpBinding(s, todo);
-      t.expect(util.format('%sDumper.p.dumpBinding(<%s>, %o)', prefix,
-                           s, todo), String(result), expected);
+      dumper.dumpBinding(s, todo, subTreeOnly);
+      t.expect(util.format('%sDumper.p.dumpBinding(<%s>, %o, %o)', prefix,
+                           s, todo, Boolean(subTreeOnly)),
+               String(result), expected);
       // Check work recorded.
       /** @suppress {accessControls} */
       const {dumper: d, part} = dumper.getComponentsForSelector_(s);
