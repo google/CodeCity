@@ -1712,7 +1712,7 @@ ObjectDumper.Done = {
  * @param {!ObjectDumper} valueDumper The ObjectDumper for the object
  *     which is the value of binding.
  */
-ObjectDumper.Pending = function (binding, valueDumper) {
+ObjectDumper.Pending = function(binding, valueDumper) {
   if (!binding) throw new Error('no binding');
   if (!valueDumper) throw new Error('no valueDumper');
   /** !Array<!Selector> */
@@ -1728,7 +1728,7 @@ ObjectDumper.Pending = function (binding, valueDumper) {
  * @param {!ObjectDumper} valueDumper The ObjectDumper for the object
  *     which is the value of binding.
  */
-ObjectDumper.Pending.prototype.add = function (binding, valueDumper) {
+ObjectDumper.Pending.prototype.add = function(binding, valueDumper) {
   if (!binding) throw new Error('no binding');
   if (!valueDumper) throw new Error('no valueDumper');
   this.bindings.push(binding);
@@ -1739,7 +1739,7 @@ ObjectDumper.Pending.prototype.add = function (binding, valueDumper) {
  * Merge another pending list into this one.
  * @param {!ObjectDumper.Pending} that Another Pending list.
  */
-ObjectDumper.Pending.prototype.merge = function (that) {
+ObjectDumper.Pending.prototype.merge = function(that) {
   this.bindings.push.apply(this.bindings, that.bindings);
   this.dependencies.push.apply(this.dependencies, that.dependencies);
 };
