@@ -86,10 +86,8 @@ exports.testObjectDumperPrototypeIsWritable = function(t) {
   dumper.dumpBinding(new Selector('Object.prototype'), Do.SET);
   
   const objectPrototypeDumper = dumper.getObjectDumper_(intrp.OBJECT);
-  const parentDumper = dumper.getComponentsForSelector_(
-      new Selector('parent.bar')).dumper;
-  const childDumper = dumper.getComponentsForSelector_(
-      new Selector('child.bar')).dumper;
+  const parentDumper = dumper.getDumperFor('parent');
+  const childDumper = dumper.getDumperFor('child');
 
   // Fake dumping of parent and child as if created by object
   // literals.  (.dumpBinding would use Object.create, pre-setting
@@ -309,12 +307,7 @@ exports.testDumperPrototypeSurvey = function(t) {
     ['arr[0]', 'foo.bar'],
   ];
   for (const [ss, expected] of tc) {
-    const c = dumper.getComponentsForSelector_(new Selector(ss));
-    const obj = c.dumper.getValue(dumper, c.part);
-    if (!(obj instanceof intrp.Object)) {
-      throw new TypeError(ss + ' did not evaluate to an object');
-    }
-    const objDumper = dumper.getObjectDumper_(obj);
+    const objDumper = dumper.getDumperFor(ss);
     t.expect('Dumper.p.survey_: .preferredRef of ' + ss,
              objDumper.getSelector(/*preferred=*/true).toString(),
              expected || ss);
@@ -1097,18 +1090,10 @@ exports.testDumperPrototypeDumpBinding = function(t) {
       t.expect(util.format('%sbinding status of <%s> (implicit)', prefix, s),
                d.getDone(part), done);
       if (valueSelector) {
-        /** @suppress {accessControls} */
-        const c = dumper.getComponentsForSelector_(s);
-        const value = c.dumper.getValue(dumper, c.part);
-        if (value instanceof intrp.Object) {
-          /** @suppress {accessControls} */
-          const objDumper = dumper.getObjectDumper_(value);
-          t.expect(util.format('%sref for %s', prefix, s),
-                   objDumper.getSelector(/*preferred=*/true).toString(),
-                   valueSelector);
-        } else {
-          t.fail(prefix, util.format('%s did not evaluate to an object', s));
-        }
+        const objDumper = dumper.getDumperFor(ss);
+        t.expect(util.format('%sref for %s', prefix, s),
+                 objDumper.getSelector(/*preferred=*/true).toString(),
+                 valueSelector);
       }
     }
   }

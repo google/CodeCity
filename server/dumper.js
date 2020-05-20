@@ -644,12 +644,39 @@ Dumper.prototype.getComponentsForSelector_ = function(selector, scope) {
   for (var i = 0; i < selector.length - 1; i++) {
     v = dumper.getValue(this, selector[i]);
     if (!(v instanceof this.intrp2.Object)) {
-      var s = new Selector(selector.slice(0, i));
+      var s = new Selector(selector.slice(0, i+1));
       throw TypeError("Can't select part of primitive " + s + ' === ' + v);
     }
     dumper = this.getObjectDumper_(v);
   }
   return new Components(dumper, selector[selector.length - 1]);
+};
+
+/**
+ * Given a Selector or selector string and optionally a Scope, get the
+ * SubDumper for the value object identified.  This is intended to be
+ * used only for testing.
+ * @param {!Selector|string} selector A Selector or selector string
+ *     referring to an object.
+ * @param {!Interpreter.Scope=} scope Scope which ss is relative to.
+ *     Defaults to current scope.
+ * @return {!ObjectDumper} The ObjectDumper for the referred-to object.
+ */
+Dumper.prototype.getDumperFor = function(selector, scope) {
+  if (typeof selector === 'string') selector = new Selector(selector);
+  if (!scope) scope = this.scope;
+  var /** !SubDumper */ dumper = this.getScopeDumper_(scope);
+  var /** Interpreter.Value */ v;
+  for (var i = 0; i < selector.length; i++) {
+    v = dumper.getValue(this, selector[i]);
+    if (!(v instanceof this.intrp2.Object)) {
+      var s = new Selector(selector.slice(0, i+1));
+      throw TypeError("Can't select part of primitive " + s + ' === ' + v);
+    }
+    dumper = this.getObjectDumper_(v);
+  }
+  if (!(dumper instanceof ObjectDumper)) throw new TypeError('corrupt state');
+  return dumper;
 };
 
 /**
