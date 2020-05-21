@@ -1,1 +1,0 @@
-../core/core_10_$.utils.command.js
