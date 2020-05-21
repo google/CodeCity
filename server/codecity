@@ -83,7 +83,7 @@ CodeCity.startup = function(configFile) {
     var fileCount = 0;
     var files = fs.readdirSync(CodeCity.databaseDirectory);
     for (var i = 0; i < files.length; i++) {
-      if (files[i].match(/^(core|test).*\.js$/)) {
+      if (files[i].match(/^(core|db|test).*\.js$/)) {
         filename = path.join(CodeCity.databaseDirectory, files[i]);
         contents = CodeCity.loadFile(filename);
         console.log('Loading startup file %s', filename);
