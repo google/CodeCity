@@ -491,6 +491,9 @@ CCC.xhrLoaded = function() {
     }
     CCC.xhrErrorCounter = 0;
     CCC.parse(json);
+  } else if (this.status === 410) {
+    console.warn('Session closed.');
+    CCC.terminate();
   } else if (this.status) {
     console.warn('Connection error code: ' + this.status);
     CCC.xhrError();
