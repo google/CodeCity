@@ -285,7 +285,7 @@ function ping(receivedJson, response) {
   var queue = queueList[q];
   if (!queue) {
     console.log('Unknown session ' + q);
-    response.statusCode = 404;
+    response.statusCode = 410;
     response.end('Your session has timed out');
     return;
   }
