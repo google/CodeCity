@@ -492,8 +492,8 @@ CCC.World.connectPanel = function(memo) {
   df.appendChild(div);
 
   var img = document.createElement('img');
-  img.className = isConnected ? 'connectIcon' : 'reloadIcon';
-  img.src = isConnected ? 'connectIcon.svg' : 'reloadIcon.svg';
+  img.className = 'connectionIcon';
+  img.src = 'connectionIcons.svg' + (isConnected ? '#connect' : '#reload');
   df.appendChild(img);
 
   div = document.createElement('div');

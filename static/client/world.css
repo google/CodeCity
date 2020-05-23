@@ -84,7 +84,7 @@ body {
   text-align: center;
 }
 
-.reloadIcon, .connectIcon {
+.connectionIcon {
   display: block;
   height: 48px;
   margin-left: auto;
@@ -94,7 +94,7 @@ body {
   width: 48px;
 }
 
-#panoramaDiv .reloadIcon:hover {
+.connectionIcon[src$="#reload"]:hover {
   cursor: pointer;
   opacity: 1;
 }
