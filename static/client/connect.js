@@ -117,6 +117,11 @@ CCC.ackMemoNextPing = true;
 CCC.pauseBuffer = null;
 
 /**
+ * Number of consecutive ping errors that have occurred.
+ */
+CCC.xhrErrorCounter = 0;
+
+/**
  * Sequence of possible connection states.
  * @enum {number}
  */
@@ -440,10 +445,11 @@ CCC.doPing = function() {
   // XMLHttpRequest with timeout works in IE8 or better.
   var req = new XMLHttpRequest();
   req.onload = CCC.xhrLoaded;
-  req.ontimeout = CCC.xhrTimeout;
+  req.ontimeout = CCC.xhrError;
+  req.onerror = CCC.xhrError;
   req.open('POST', CCC.PING_URL, true);
-  req.timeout = CCC.MAX_PING_INTERVAL; // time in milliseconds
-  req.setRequestHeader('Content-Type','application/x-www-form-urlencoded');
+  req.timeout = CCC.MAX_PING_INTERVAL;  // Time in milliseconds.
+  req.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
   req.send(JSON.stringify(sendingJson));
   CCC.xhrObject = req;
   // Let the ping interval creep up.
@@ -451,13 +457,20 @@ CCC.doPing = function() {
 };
 
 /**
- * Timeout function for XHR request.
+ * Error handler for XHR request.
  * @this {!XMLHttpRequest}
  */
-CCC.xhrTimeout = function() {
-  console.warn('Connection timeout.');
+CCC.xhrError = function() {
+  CCC.xhrErrorCounter++;
+  console.warn('Connection error: ' + CCC.xhrErrorCounter);
   CCC.xhrObject = null;
-  CCC.schedulePing(CCC.pingInterval);
+  if (CCC.xhrErrorCounter >= 8) {
+    // Too many errors.  Drop the connection.
+    CCC.terminate();
+    return;
+  } else {
+    CCC.schedulePing(CCC.pingInterval);
+  }
 };
 
 /**
@@ -472,13 +485,15 @@ CCC.xhrLoaded = function() {
     try {
       var json = JSON.parse(this.responseText);
     } catch (e) {
-      console.log('Invalid JSON: ' + this.responseText);
+      console.warn('Invalid JSON: ' + this.responseText);
+      CCC.xhrError();
       return;
     }
+    CCC.xhrErrorCounter = 0;
     CCC.parse(json);
   } else if (this.status) {
     console.warn('Connection error code: ' + this.status);
-    CCC.terminate();
+    CCC.xhrError();
     return;
   }
   CCC.schedulePing(CCC.pingInterval);
