@@ -134,6 +134,9 @@ function handleRequest(request, response) {
       var checksum = CFG.password + id;
       checksum = crypto.createHash('sha3-224').update(checksum).digest('hex');
       var emailRegexp = new RegExp(CFG.emailRegexp || '.*');
+      // FYI: If present, res.data.hd contains the GSfE domain.
+      // E.g. 'students.gissv.org', or 'sjsu.edu'.
+      // We aren't using it now, but this might be used to filter users.
       if (emailRegexp.test(res.data.email)) {
         response.writeHead(302, {
           // Temporary redirect
