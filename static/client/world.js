@@ -179,6 +179,8 @@ CCC.World.preprocessMessage = function(msg) {
         delete msg[prop];
       }
       msg.type = 'html';
+      text = CCC.Common.escapeSpaces(text.replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>'));
       msg.htmlText = text;
     }
 
@@ -420,7 +422,7 @@ CCC.World.prerenderPanorama = function(memo) {
     }
     var svg = CCC.World.createHiddenSvg(CCC.World.panoramaDiv.offsetWidth,
                                         CCC.World.panoramaDiv.offsetHeight);
-    svg.setAttribute('data-iframe-id', msg.iframeId);
+    svg.setAttribute('data-iframe-id', memo.iframeId);
     CCC.World.scratchPanorama = svg;
     return true;
   }
@@ -1090,7 +1092,9 @@ CCC.World.publishHistory = function(historyElement) {
   } else {
     CCC.World.svgZoom(historyElement);
     // The occasional (non-iframe) panel should lack a border.
-    if (Math.random() < 1 / 16) {
+    var connectDiv = historyElement.firstChild &&
+        historyElement.firstChild.className === 'connectDiv';
+    if (!connectDiv && (Math.random() < 1 / 16)) {
       panelDiv.style.borderColor = '#fff';
     }
     // While being built, the SVG was hidden.

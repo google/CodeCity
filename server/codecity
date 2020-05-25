@@ -129,7 +129,7 @@ CodeCity.loadStartup = function(dir) {
   var fileCount = 0;
   var files = fs.readdirSync(dir);
   for (var i = 0; i < files.length; i++) {
-    if (files[i].match(/^(core|test).*\.js$/)) {
+    if (files[i].match(/^(core|db|test).*\.js$/)) {
       var filename = path.join(dir, files[i]);
       var contents = CodeCity.loadFile(filename);
       console.log('Loading startup file %s', filename);

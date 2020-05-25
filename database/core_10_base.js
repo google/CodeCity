@@ -1,0 +1,1 @@
+../core/core_10_base.js

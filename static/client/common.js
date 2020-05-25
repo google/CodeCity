@@ -306,13 +306,15 @@ CCC.Common.autoHyperlink = function(el) {
     for (var j = 0; j < parts.length; j++) {
       var part = parts[j];
       var m = part.match(CCC.Common.autoHyperlink.urlRegex);
-      if (m && m[0] === part) {
+      // Look up the previous character (if it exists), to weed out: $.www.bar
+      var prevChar = j ? parts[j - 1].substr(-1) : '';
+      if (prevChar !== '.' && m && m[0] === part) {
         // This part is a URL.
-        var lastChar = part.substr(-1);
-        if (part.length && '.,!)]?\''.includes(lastChar)) {
+        var n = part.match(/[.,!)\]?']+$/);
+        if (n) {
           // Move any trailing punctuation out of URL.
-          part = part.substring(0, part.length - 1);
-          parts[j + 1] = lastChar + (parts[j + 1] || '');
+          part = part.substring(0, part.length - n[0].length);
+          parts[j + 1] = n[0] + (parts[j + 1] || '');
         }
         var href = part;
         if (!/^https?:\/\//.test(href)) {
@@ -336,7 +338,7 @@ CCC.Common.autoHyperlink = function(el) {
 };
 
 CCC.Common.autoHyperlink.urlRegex =
-    /((?:https?:\/\/|www\.)[-\w.~:\/?#\[\]@!$&'()*+,;=%]+)/i;
+    /(\b(?:https?:\/\/|www\.)[-\w.~:\/?#\[\]@!$&'()*+,;=%]+)/i;
 
 // Set background colour to differentiate server vs local copy.
 if (location.hostname === 'localhost') {
