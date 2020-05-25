@@ -38,7 +38,10 @@ var Selector = require('./selector');
 
 /**
  * Dump an Interpreter using a given dump specification.
- * @param {!Interpreter} intrp The interpreter to dump.
+ * @param {!Interpreter} intrp1 An interpreter initialised exactly as
+ *     the one the ouptut JS will be executed by.
+ * @param {!Interpreter} intrp2 An interpreter containing state
+ *     modifications (relative to intrp1) to be dumped.
  * @param {!Array<ConfigItem>} config The dump specification.
  * @param {string=} directory A directory relative to which
  *     non-absolute filenames in config should be written.  If none is
@@ -46,8 +49,8 @@ var Selector = require('./selector');
  *     directory.
  * @param {boolean=} verbose Print message describing what is being done.
  */
-var dump = function(intrp, config, directory, verbose) {
-  var dumper = new Dumper(new Interpreter(), intrp, {verbose: verbose});
+var dump = function(intrp1, intrp2, config, directory, verbose) {
+  var dumper = new Dumper(intrp1, intrp2, {verbose: verbose});
   if (verbose) console.log('Dumper initialised.');
 
   // Skip everything that's explicitly mentioned in the config, so
@@ -75,18 +78,17 @@ var dump = function(intrp, config, directory, verbose) {
         try {
           if (verbose) console.log('Dumping: %s', entry.selector);
           dumper.unskip(entry.selector);
-          dumper.dumpBinding(entry.selector, entry.do);
+          dumper.dumpBinding(entry.selector, entry.do, true);
           dumper.write('\n');
         } catch (e) {
           dumper.warn(e.stack);
         }
       }
-    } else if (item.rest) {
+    }
+    if (item.rest) {
       if (verbose) console.log('Dumping rest.');
       // TODO(cpcallen): encapsulate this in Dumper
-      /** @suppress {accessControls} */
-      var globalScopeDumper = dumper.getScopeDumper_(intrp.global);
-      globalScopeDumper.dump(dumper);
+      dumper.global.dump(dumper);
     }
     outputStream.end();
   }
@@ -340,7 +342,7 @@ if (require.main === module) {
   var specText = fs.readFileSync(planFile);
   const spec = JSON.parse(String(specText));
   var config = configFromSpec(spec);
-  dump(intrp, config, dir, /*verbose:*/ true);
+  dump(CodeCity.makeInterpreter(), intrp, config, dir, /*verbose:*/ true);
 };
 
 ///////////////////////////////////////////////////////////////////////////////

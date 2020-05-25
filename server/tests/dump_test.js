@@ -112,5 +112,5 @@ exports.testDump = function(t) {
   const specText = fs.readFileSync(path.join(coreDir, 'dump_spec.json'));
   const spec = JSON.parse(String(specText));
   var config = configFromSpec(spec);
-  dump(intrp, config, '/tmp');
+  dump(new Interpreter(), intrp, config, '/tmp');
 };
