@@ -354,7 +354,7 @@ var tokenize = function(selector) {
   var REs = {
     whitespace: /\s+/y,
     '.': /\./y,
-    id: /[A-Za-z_$][A-Za-z0-9_$]*/y,  // See also identifierRE below.
+    id: new RegExp(code.regexps.identifier, 'y'),
     number: /\d+/y,
     '[': /\[/y,
     ']': /\]/y,
