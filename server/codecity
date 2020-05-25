@@ -52,8 +52,12 @@ CodeCity.startup = function(configFile) {
   CodeCity.config = CodeCity.parseJson(contents);
 
   // Find the most recent database file.
-  CodeCity.databaseDirectory = path.join(path.dirname(configFile),
-      CodeCity.config.databaseDirectory || './');
+  var dir = CodeCity.config.databaseDirectory || './';
+  if (dir[0] === '/') {
+    CodeCity.databaseDirectory = dir;
+  } else {
+    CodeCity.databaseDirectory = path.join(path.dirname(configFile), dir);
+  }
   if (!fs.existsSync(CodeCity.databaseDirectory)) {
     console.error('Database directory not found: ' +
         CodeCity.databaseDirectory);
