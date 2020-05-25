@@ -72,7 +72,7 @@ regexps.stringExact = new RegExp('^' + regexps.string.source + '$');
  * identifier - but the full regexp is absurdly complicated.
  * @const
  */
-regexps.identifier = /[A-Za-z_$][A-Za-z0-9_$]*/;
+regexps.identifier = /[A-Za-z_$][A-Za-z0-9_$]*/g;
 
 /**
  * RegExp matching exactly a valid JavaScript identifier.  See note
