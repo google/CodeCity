@@ -1,6 +1,6 @@
 [
   {
-    "filename": "core_00_es5",
+    "filename": "core_00_es5.js",
     "contents": [
       {"path": "Object", "do": "SET"},
       {"path": "Function", "do": "SET"},
@@ -28,13 +28,13 @@
       "encodeURIComponent",
       "escape",
       "isFinite",
-      "isNan",
+      "isNaN",
       "parseFloat",
       "parseInt",
       "unescape"
     ]
   }, {
-    "filename": "core_00_es6",
+    "filename": "core_00_es6.js",
     "contents": [
       "Object.is",
       "Object.setPrototypeOf",
@@ -54,7 +54,7 @@
       "WeakMap"
     ]
   }, {
-    "filename": "core_00_esx",
+    "filename": "core_00_esx.js",
     "contents": [
       "Object.getOwnerOf",
       "Object.setOwnerOf",
@@ -66,11 +66,10 @@
       "clearTimeout"
     ]
   }, {
-    "filename": "core_10_base",
+    "filename": "core_10_base.js",
     "contents": [
       {"path": "user", "do": "DECL"},
       {"path": "$", "do": "SET"},
-      "$.root",
       "$.system",
       {"path": "$.utils", "do": "ATTR"},
       "$.physical",
@@ -84,25 +83,28 @@
       "$.servers.telnet"
     ]
   }, {
-    "filename": "core_11_$.utils.command",
+    "filename": "core_11_$.utils.command.js",
     "contents": [
       "$.utils.command",
       "$.utils.match"
     ]
   }, {
-    "filename": "core_12_$.utils.selector",
-    "contents": ["$.utils.selector"]
+    "filename": "core_12_$.utils.selector.js",
+    "contents": [
+      "$.utils.selector",
+      {"path": "$.utils.selector.objectMap_", "do": "ATTR"}
+    ]
   }, {
-    "filename": "core_13_$.utils.code",
+    "filename": "core_13_$.utils.code.js",
     "contents": ["$.utils.code"]
   }, {
-    "filename": "core_30_$.servers.http",
+    "filename": "core_30_$.servers.http.js",
     "contents": ["$.servers.http"]
   }, {
-    "filename": "core_31_$.jssp",
+    "filename": "core_31_$.jssp.js",
     "contents": ["$.jssp"]
   }, {
-    "filename": "core_32_$.www",
+    "filename": "core_32_$.www.js",
     "contents": [
       {"path": "$.www", "do": "ATTR"},
       {"path": "$.www.ROUTER", "do": "ATTR"},
@@ -111,19 +113,35 @@
       "$.www.robots"
     ]
   }, {
-    "filename": "core_33_$.www.editor",
+    "filename": "core_33_$.www.editor.js",
     "contents": ["$.www.editor"]
   }, {
-    "filename": "core_34_$.www.code",
+    "filename": "core_34_$.www.code.js",
     "contents": ["$.www.code"]
   }, {
-    "filename": "core_40_$.db.tempId",
+    "filename": "core_40_$.db.tempId.js",
     "contents": [
       {"path": "$.db", "do": "ATTR"},
-      "$.db.tempID"
+      "$.db.tempId"
     ]
   }, {
-    "filename": "core_90_world",
+    "filename": "db_00_world.js",
+    "rest": true
+  }, {
+    "filename": "db_01_deutsche_zimmer.js",
+    "contents": [
+      "$.dz",
+      "$.tutorial"
+    ]
+  }, {
+    "filename": "db_01_plant.js",
+    "contents": [
+      "$.seed",
+      "$.pot",
+      "$.thrower"
+    ]
+  }, {
+    "filename": "db_99_leftovers.js",
     "rest": true
   }
 ]
