@@ -215,8 +215,9 @@ Dumper.prototype.diffBuiltins_ = function() {
  *
  * @param {!Selector} selector The selector for the binding to be dumped.
  * @param {!Do} todo How much to dump.  Must be >= Do.DECL.
- * @param {boolean=} treeOnly If true, limit recursive dumping to
- *     objects whose preferred selectors have selector as a prefix.
+ * @param {boolean=} treeOnly If true, limit recursive dumping to the
+ *     subtree of the spaning tree (as defined by the preferred
+ *     selectors) rooted at selector.
  * @return {void}
  */
 Dumper.prototype.dumpBinding = function(selector, todo, treeOnly) {
@@ -225,9 +226,7 @@ Dumper.prototype.dumpBinding = function(selector, todo, treeOnly) {
   if (todo >= Do.RECURSE && done < Do.RECURSE) {
     var value = c.dumper.getValue(this, c.part);
     if (value instanceof this.intrp2.Object) {
-      var valueDumper = this.getObjectDumper_(value);
-      var subtree = treeOnly ? valueDumper : undefined;
-      var objDone = valueDumper.dump(this, selector, subtree);
+      var objDone = this.getObjectDumper_(value).dump(this, selector, treeOnly);
       if (objDone === ObjectDumper.Done.DONE_RECURSIVELY) {
         if (c.dumper.getDone(c.part) < Do.RECURSE) {
           c.dumper.setDone(c.part, Do.RECURSE);
@@ -1244,16 +1243,16 @@ ObjectDumper.prototype.checkProperty = function(key, value, attr, pd) {
  * @param {!Selector=} objSelector Selector refering to this object.
  *     Optional; defaults to whatever selector was used to create the
  *     object.
- * @param {!ObjectDumper=} subtree If supplied, limit recursive
- *     dumping to objects whose .preferredRef transitively includes
- *     subtree.
+ * @param {boolean=} treeOnly If true, limit recursive dumping to the
+ *     subtree of the spaning tree (as defined by the preferred
+ *     selectors) rooted at selector.
  * @return {!ObjectDumper.Done|?ObjectDumper.Pending} Done status for
  *     object, or or null if there is an outstanding dump or
  *     dumpBinding invocaion for this object, or a (bindings,
  *     dependencies) pair if a recursive call encountered such an
  *     outstanding invocation.
  */
-ObjectDumper.prototype.dump = function(dumper, objSelector, subtree) {
+ObjectDumper.prototype.dump = function(dumper, objSelector, treeOnly) {
   if (!objSelector) objSelector = this.getSelector();
   if (!objSelector) throw new Error("can't dump unreferencable object");
   if (this.proto === undefined) {
@@ -1307,13 +1306,14 @@ ObjectDumper.prototype.dump = function(dumper, objSelector, subtree) {
     var value = this.getValue(dumper, part);
     if (!(value instanceof dumper.intrp2.Object)) continue;
     var valueDumper = dumper.getObjectDumper_(value);
-    if (subtree && !valueDumper.inTreeOf(subtree)) {
-      // Refuse to recurse into objects outside of subtree.  Treat as SKIP.
+    if (treeOnly && valueDumper.preferredRef.dumper !== this) {
+      // Refuse to recurse into objects outside of the spanning tree.
+      // Treat as SKIP.
       done = /** @type {!ObjectDumper.Done} */(
           Math.min(done, ObjectDumper.Done.NO));
       continue;
     }
-    var objDone = valueDumper.dump(dumper, bindingSelector, subtree);
+    var objDone = valueDumper.dump(dumper, bindingSelector, treeOnly);
     if (objDone === null || objDone instanceof ObjectDumper.Pending) {
       // Circular structure detected.
       if (!pending) {

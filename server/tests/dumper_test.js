@@ -607,7 +607,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
              'obj.foo[2] = {};\n',
          Do.DONE, /*treeOnly=*/true],
         ['obj', Do.RECURSE,
-         "obj.foo[2].iam = 'bar';\nobj.bar = obj.foo[2];\n",
+         "obj.bar = obj.foo[2];\nobj.bar.iam = 'bar';\n",
          Do.DONE, /*treeOnly=*/true],
         ['obj', Do.RECURSE,
          "obj.foo[0].iam = 'outsider';\n",

@@ -126,7 +126,10 @@
     ]
   }, {
     "filename": "db_00_world.js",
-    "rest": true
+    "contents": [
+      "user",
+      "$"
+    ]
   }, {
     "filename": "db_01_deutsche_zimmer.js",
     "contents": [
