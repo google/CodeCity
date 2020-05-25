@@ -1137,7 +1137,7 @@ CCC.World.publishPanorama = function() {
       menu.addEventListener('click', CCC.Common.openMenu, false);
     }
     // Add an event handler to a reload icon.
-    var icon = content.querySelector('.reloadIcon');
+    var icon = content.querySelector('.connectionIcon[src$="#reload"]');
     if (icon) {
       icon.addEventListener('click',
           parent.location.reload.bind(parent.location));
@@ -1147,7 +1147,7 @@ CCC.World.publishPanorama = function() {
 };
 
 /**
- * Find all SVG images with viewbox="0 0 0 0" attribute and resize them to fit.
+ * Find all SVG images with viewBox="0 0 0 0" attribute and resize them to fit.
  * @param {!Element} container DOM node for panel.
  */
 CCC.World.svgZoom = function(container) {
