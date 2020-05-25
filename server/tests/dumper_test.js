@@ -139,43 +139,6 @@ exports.testObjectDumperPrototypeIsWritable = function(t) {
 };
 
 /**
- * Tests for the ObjectDumper.prototype.isTreeOf method.
- */
-exports.testObjectDumperPrototypeInTreeOf = function(t) {
-  const intrp = getInterpreter();
-  intrp.createThreadForSrc(`
-    var parent = {};  // Outside tree of foo.
-    var foo = {bar: [{}, {}, {}]};
-    foo.baz = Object.create(parent);  // Proto not in subtree of foo.
-    foo.quux = Object.create({});  // Proto included in subtree of foo.
-  `);
-  intrp.run();
-
-  const pristine = new Interpreter();
-  const dumper = new Dumper(pristine, intrp);
-
-  const /** !Object<string, !Array<string>> */ ancestors = {
-    'foo': ['foo'],
-    'foo.bar': ['foo', 'foo.bar'],
-    'foo.baz': ['foo', 'foo.baz'],
-    'foo.quux': ['foo', 'foo.quux'],
-    'foo.bar{proto}': ['foo.bar{proto}'],
-    'foo.baz{proto}': ['foo.baz{proto}'],
-    'foo.quux{proto}': ['foo', 'foo.quux', 'foo.quux{proto}'],
-    'foo.bar[0]': ['foo', 'foo.bar', 'foo.bar[0]'],
-  };
-  for (const ss1 in ancestors) {
-    for (const ss2 in ancestors) {
-      const od1 = dumper.getDumperFor(ss1);
-      const od2 = dumper.getDumperFor(ss2);
-      t.expect(util.format('DumperFor<%s>.inTreeOf(DumperFor<%s>)', ss1, ss2),
-               od1.inTreeOf(od2), ancestors[ss1].includes(ss2));
-    }
-  }
-};
-  
-
-/**
  * Unit tests for the Dumper.prototype.isShadowed_ method.
  * @param {!T} t The test runner object.
  * @suppress {accessControls}
