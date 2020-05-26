@@ -1198,3 +1198,31 @@ exports.testScopeDumperPrototypeDump = function(t) {
   t.expect('ScopeDumper.p.dump(...) outputs', String(result),
            'var value = 42;\nobj.prop = 69;\n');
 };
+
+/**
+ * Unit tests for Dumper.prototype.dump
+ * @param {!T} t The test runner object.
+ */
+exports.testDumperPrototypeDump = function(t) {
+  const intrp = new Interpreter({noLog: ['net']});
+
+  // Create a variable and a listening socket to dump.
+  intrp.createThreadForSrc(`
+      var listener = {onRecieve: function onRecieve(data) {}};
+      (new 'CC.connectionListen')(8888, listener);
+  `);
+  intrp.run();
+
+  // Create Dumper with pristine Interpreter instance to compare to;
+  const pristine = new Interpreter();
+  const dumper = new Dumper(pristine, intrp);
+  const output = new MockWritable();
+  dumper.setOptions({output: output});
+  dumper.dump();
+  t.expect('Dumper.p.dump(...) outputs', String(output),
+           'var listener = {};\n' +
+               'listener.onRecieve = function onRecieve(data) {};\n');
+
+  intrp.createThreadForSrc('(new "CC.connectionUnlisten")(8888);');
+  intrp.run();
+};

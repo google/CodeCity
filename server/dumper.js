@@ -193,6 +193,16 @@ Dumper.prototype.diffBuiltins_ = function() {
 };
 
 /**
+ * Dump everything that has not already been dumped so far.  The
+ * generated source text is written to the current output buffer.
+ * @return {void}
+ */
+Dumper.prototype.dump = function() {
+  // Dump all remaining bindings.
+  this.global.dump(this);
+};
+
+/**
  * Generate JS source text to declare and optionally initialise a
  * particular binding (as specified by a Selector).  The generated
  * source text is written to the current output buffer.

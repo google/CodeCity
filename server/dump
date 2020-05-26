@@ -85,8 +85,7 @@ var dump = function(intrp1, intrp2, config, directory, verbose) {
     }
     if (item.rest) {
       if (verbose) console.log('Dumping rest.');
-      // TODO(cpcallen): encapsulate this in Dumper
-      dumper.global.dump(dumper);
+      dumper.dump();
     }
     outputStream.end();
   }
