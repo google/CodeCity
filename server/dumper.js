@@ -195,11 +195,20 @@ Dumper.prototype.diffBuiltins_ = function() {
 /**
  * Dump everything that has not already been dumped so far.  The
  * generated source text is written to the current output buffer.
+ * Notably, this will also dump any listening sockets.
  * @return {void}
  */
 Dumper.prototype.dump = function() {
   // Dump all remaining bindings.
   this.global.dump(this);
+
+  // Dump listening sockets.
+  for (var key in this.intrp2.listeners_) {
+    var port = Number(key);
+    var listener = this.intrp2.listeners_[port];
+    this.write(this.exprForBuiltin_('CC.connectionListen') + '(' +
+        port + ', ' + this.exprFor_(listener.proto) + ');');
+  }
 };
 
 /**

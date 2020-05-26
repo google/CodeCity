@@ -1221,7 +1221,8 @@ exports.testDumperPrototypeDump = function(t) {
   dumper.dump();
   t.expect('Dumper.p.dump(...) outputs', String(output),
            'var listener = {};\n' +
-               'listener.onRecieve = function onRecieve(data) {};\n');
+               'listener.onRecieve = function onRecieve(data) {};\n' +
+               "(new 'CC.connectionListen')(8888, listener);\n");
 
   intrp.createThreadForSrc('(new "CC.connectionUnlisten")(8888);');
   intrp.run();
