@@ -1134,6 +1134,23 @@ exports.testDumperPrototypeDumpBinding = function(t) {
 };
 
 /**
+ * Unit tests for Dumper.prototype.warn
+ * @param {!T} t The test runner object.
+ */
+exports.testDumperPrototypeWarn = function(t) {
+  const intrp = new Interpreter();
+  const dumper = new Dumper(intrp, intrp);
+  const output = new MockWritable();
+  dumper.setOptions({output: output});
+  dumper.warn('1');
+  dumper.warn('2\n');
+  dumper.indent = '  ';
+  dumper.warn('3\n4');
+  t.expect('Dumper.prototype.warn(...) output', String(output),
+           '// 1\n// 2\n  // 3\n  // 4\n');
+};
+
+/**
  * Tests for the ScopeDumper.prototype.dump method.
  * @param {!T} t The test runner object.
  */
@@ -1180,21 +1197,4 @@ exports.testScopeDumperPrototypeDump = function(t) {
   globalDumper.dump(dumper);
   t.expect('ScopeDumper.p.dump(...) outputs', String(result),
            'var value = 42;\nobj.prop = 69;\n');
-};
-
-/**
- * Unit tests for Dumper.prototype.warn
- * @param {!T} t The test runner object.
- */
-exports.testDumperPrototypeWarn = function(t) {
-  const intrp = new Interpreter();
-  const dumper = new Dumper(intrp, intrp);
-  const output = new MockWritable();
-  dumper.setOptions({output: output});
-  dumper.warn('1');
-  dumper.warn('2\n');
-  dumper.indent = '  ';
-  dumper.warn('3\n4');
-  t.expect('Dumper.prototype.warn(...) output', String(output),
-           '// 1\n// 2\n  // 3\n  // 4\n');
 };
