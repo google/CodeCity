@@ -75,7 +75,8 @@ var Interpreter = function(options) {
   /** @type {boolean} */
   this.done = true;  // True if any non-ZOMBIE threads exist.
 
-  /** @private @const {!Object<number, !Interpreter.prototype.Server>} */
+  // TODO(cpcallen): rename this to .listeners
+  /** @const {!Object<number, !Interpreter.prototype.Server>} */
   this.listeners_ = Object.create(null);
 
   // TODO(cpcallen): This is an ugly hack to allow the serialiser to
