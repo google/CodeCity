@@ -91,7 +91,7 @@ CodeCity.startup = function(configFile) {
 /**
  * Create an Interpreter instance with desired options and initialise
  * it with custom builtins.
- * @returns {!Interpreter}
+ * @return {!Interpreter}
  */
 CodeCity.makeInterpreter = function() {
   var intrp = new Interpreter({
@@ -109,7 +109,7 @@ CodeCity.makeInterpreter = function() {
  * Create an Interpreter instance and deserialise a .city checkpoint
  * into it.
  * @param {string} filename The filename of the .city file to read.
- * @returns {!Interpreter}
+ * @return {!Interpreter}
  */
 CodeCity.loadCheckpoint = function(filename) {
   var intrp = CodeCity.makeInterpreter();
@@ -122,7 +122,7 @@ CodeCity.loadCheckpoint = function(filename) {
 /**
  * Create an Interpreter instance and load startup .js files into it.
  * @param {string} dir The directory containing startup files to be read.
- * @returns {!Interpreter}
+ * @return {!Interpreter}
  */
 CodeCity.loadStartup = function(dir) {
   var intrp = CodeCity.makeInterpreter();

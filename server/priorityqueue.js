@@ -34,7 +34,7 @@
  * Returns the parent index of a given index in a heap.
  * @private
  * @param {number} i Index to get parent of.
- * @returns {number} Index of parent, or -1 if i is 0.
+ * @return {number} Index of parent, or -1 if i is 0.
  */
 function parent(i) {
   if (i <= 0) return -1;
@@ -45,7 +45,7 @@ function parent(i) {
  * Returns the child indices of a given index in a heap.
  * @private
  * @param {number} i Index to get children of.
- * @returns !Array<number> Two-element array of indicies of the chilren.
+ * @return !Array<number> Two-element array of indicies of the chilren.
  */
 function children(i) {
   return [(i * 2) + 1, (i * 2) + 2];

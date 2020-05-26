@@ -1,9 +1,7 @@
 #!/usr/bin/env node --harmony-weak-refs
 /**
  * @license
- *
- * Copyright 2018 Google Inc.
- * https://github.com/NeilFraser/CodeCity
+ * Copyright 2018 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +20,7 @@
  * @fileoverview Infrastructure to save the state of an Interpreter as
  *     eval-able JS.  Mainly a wrapper around Dumper, handling
  *     the application of a dupmp configuration.
- * @author cpcallen@google.com (Christohper Allen)
+ * @author cpcallen@google.com (Christopher Allen)
  */
 'use strict';
 
@@ -42,7 +40,7 @@ var Selector = require('./selector');
  *     the one the ouptut JS will be executed by.
  * @param {!Interpreter} intrp2 An interpreter containing state
  *     modifications (relative to intrp1) to be dumped.
- * @param {!Array<ConfigItem>} config The dump specification.
+ * @param {!Array<!ConfigItem>} config The dump specification.
  * @param {string=} directory A directory relative to which
  *     non-absolute filenames in config should be written.  If none is
  *     supplied then they will be treated as relative to the current
@@ -62,7 +60,7 @@ var dump = function(intrp1, intrp2, config, directory, verbose) {
     }
   }
   // Dump the specified paths, in order.
-  for (var entry, i = 0; item = config[i]; i++) {
+  for (var item, i = 0; item = config[i]; i++) {
     var filename = item.filename;
     if (verbose) console.log('Dumping to %s...', filename);
     if (directory !== undefined && !path.isAbsolute(filename)) {
@@ -119,7 +117,7 @@ var dump = function(intrp1, intrp2, config, directory, verbose) {
  * @return {!Array<!ConfigItem>}
  */
 var configFromSpec = function(spec) {
-  var /** !Array<ConfigItem> */ config = [];
+  var /** !Array<!ConfigItem> */ config = [];
 
   /** @type {function(string, number=)} */
   function reject(message, j) {
@@ -242,7 +240,7 @@ SyncWriter.prototype.end = function() {
 
 /**
  * A processed-and-ready-to-use configuration entry.
- * @typedef {OptionsItem|FileItem}
+ * @typedef {!OptionsItem|!FileItem}
  */
 var ConfigItem;
 
@@ -292,7 +290,7 @@ var ContentEntry = function() {};
 //////////////////////////////////////////////////////////////////////
 // For dump_spec.json use; loose, JSON-compatible types:
 
-/** @typedef {SpecOptionsItem|SpecFileItem} */
+/** @typedef {!SpecOptionsItem|!SpecFileItem} */
 var SpecConfigItem;
 
 /**

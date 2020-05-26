@@ -85,7 +85,7 @@ fs.existsSync = function(path) {};
  * @param {string} path
  * @param {string} flags
  * @param {number=} mode
- * @returns {number}
+ * @return {number}
  */
 fs.openSync = function(path, flags, mode) {};
 

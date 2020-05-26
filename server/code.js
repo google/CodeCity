@@ -68,7 +68,7 @@ regexps.stringExact = new RegExp('^' + regexps.string.source + '$');
 
 /**
  * RegExp matching a valid JavaScript identifier.  Note that this is
- * fairly conservative, because ANY unicode letter can appare in an
+ * fairly conservative, because ANY Unicode letter can appear in an
  * identifier - but the full regexp is absurdly complicated.
  * @const
  */

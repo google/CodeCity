@@ -1,9 +1,6 @@
 /**
  * @license
- * Code City: serialisation to eval-able JS (tests)
- *
- * Copyright 2018 Google Inc.
- * https://github.com/NeilFraser/CodeCity
+ * Copyright 2018 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -761,6 +758,15 @@ exports.testDumperPrototypeDumpBinding = function(t) {
 
         // Verify property set before extensibility prevented.
         ['obj2', Do.RECURSE, 'obj2.id = 2;\nObject.preventExtensions(obj2);\n'],
+      ],
+    },
+
+    { // Test dumping null variables.
+      // (See https://github.com/google/CodeCity/pull/371/files#r429566592)
+      title: 'null variable',
+      src: 'var n = null;',
+      dump: [
+        ['n', Do.SET, 'var n = null;\n', Do.RECURSE],
       ],
     },
 

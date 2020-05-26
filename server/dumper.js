@@ -1,8 +1,6 @@
 /**
  * @license
- *
- * Copyright 2018 Google Inc.
- * https://github.com/NeilFraser/CodeCity
+ * Copyright 2018 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +20,7 @@
  *     state of (parts or all of) two Interpreter objects, outputing
  *     eval-able JS code to convert the one into the other.  eval-able
  *     JS.
- * @author cpcallen@google.com (Christohper Allen)
+ * @author cpcallen@google.com (Christopher Allen)
  */
 'use strict';
 
@@ -243,6 +241,11 @@ Dumper.prototype.dumpBinding = function(selector, todo, treeOnly) {
  * represented by an expression creating the object - but if it has
  * appeared before, then it will instead be represented by an
  * expression referenceing the previously-constructed object.
+ *
+ * This method is mostly a wrapper around the other .exprFor<Foo>_
+ * methods (but notably not .exprForBuiltin_, which is a wrapper
+ * around this method); see them for examples of expected output.
+ *
  * @private
  * @param {Interpreter.Value} value Arbitrary JS value from this.intrp2.
  * @param {!Components=} ref Location in which value will be stored.
@@ -311,7 +314,11 @@ Dumper.prototype.exprFor_ = function(value, ref, callable, funcName) {
 };
 
 /**
- * Get a source text representation of a given Array object.
+ * Get a source text representation of a given Array object.  For the
+ * moment the return value is always '[]', but the specified arrDumper
+ * is modified to reflect what further work will need to be done to
+ * finsh dumping the array object.
+ * TODO(cpcallen): Return a more interesting array literal when possible.
  * @private
  * @param {!Interpreter.prototype.Array} arr Array object to be recreated.
  * @param {!ObjectDumper} arrDumper ObjectDumper for arr.
@@ -335,7 +342,12 @@ Dumper.prototype.exprForArray_ = function(arr, arrDumper) {
 
 /**
  * Get a source text representation of a given builtin, for the
- * purposes of calling it.
+ * purposes of calling it.  Usually the return value will be a string
+ * like 'Object.defineProperty', but if the builtin in question hasn't
+ * yet been assigned to an object it will instead return a string like
+ * "(new 'Object.defineProperty')" to invoke the new hack to obtain
+ * it.  This is a trivial wrapper around exprFor_ for a common use
+ * case.
  * @private
  * @param {string} builtin The name of the builtin.
  * @return {string} An eval-able representation of obj.
@@ -345,7 +357,10 @@ Dumper.prototype.exprForBuiltin_ = function(builtin) {
 };
 
 /**
- * Get a source text representation of a given Date object.
+ * Get a source text representation of a given Date object.  The
+ * return value will usually be a string of the form "new
+ * Date('1975-07-27T23:59:59.000Z')" (but the new hack will be invoked
+ * if the Data constructor has not yet been initialised).
  * @private
  * @param {!Interpreter.prototype.Date} date Date object to be recreated.
  * @param {!ObjectDumper} dateDumper ObjectDumper for date.
@@ -358,7 +373,13 @@ Dumper.prototype.exprForDate_ = function(date, dateDumper) {
 };
 
 /**
- * Get a source text representation of a given Error object.
+ * Get a source text representation of a given Error object.  The
+ * return value will usually be a string of the form "new
+ * RangeError()" or "new TypeError('message')" (but the new hack will
+ * be invoked if the Data constructor has not yet been initialised).
+ * Only the built-in Error constructors will be used; for custom error
+ * stub-types errDumper will be left in a state that will ensure that
+ * {proto} is subsequently set appropriately.
  * @private
  * @param {!Interpreter.prototype.Error} err Error object to be recreated.
  * @param {!ObjectDumper} errDumper ObjectDumper for err.
@@ -409,7 +430,15 @@ Dumper.prototype.exprForError_ = function(err, errDumper) {
 };
 
 /**
- * Get a source text representation of a given Function object.
+ * Get a source text representation of a given Function object.  The
+ * returned string is just this.obj.toString(), which will be a string
+ * of the form "function name(arg0, arg1, ...) { body; }", formatted
+ * with whitespace and line breaks as it was in the original source.
+ * Most of this method is therefore devoted to ensuring that
+ * funcDumper is modified to reflect what further work will need to be
+ * done to finsh dumping the function object.
+ * TODO(cpcallen): Dump FunctionDeclarations as such, rather than
+ * converting them into FunctionExpressions.
  * @private
  * @param {!Interpreter.prototype.Function} func Function object to be
  *     recreated.
@@ -426,7 +455,7 @@ Dumper.prototype.exprForFunction_ = function(func, funcDumper, funcName) {
     throw Error('Unable to dump non-UserFunction');
   }
   // TODO(cpcallen): Should throw, rather than merely warn.
-  for(var scope = func.scope; scope !== this.scope; scope = scope.outerScope) {
+  for (var scope = func.scope; scope !== this.scope; scope = scope.outerScope) {
     var vars = Object.getOwnPropertyNames(scope.vars);
     if (scope.type === Interpreter.Scope.Type.FUNEXP && scope === func.scope ||
         vars.length === 0) {
@@ -474,7 +503,7 @@ Dumper.prototype.exprForFunction_ = function(func, funcDumper, funcName) {
       prototype instanceof this.intrp2.Object &&
       Object.getPrototypeOf(prototype) === this.intrp2.Object.prototype) {
     var prototypeFuncDumper = this.getObjectDumper_(prototype);
-    if(prototypeFuncDumper.proto === undefined) {
+    if (prototypeFuncDumper.proto === undefined) {
       // We can use automatic .prototype object.
       // Mark .prototype as Do.SET or Do.ATTR as appropriate.
       funcDumper.checkProperty('prototype', prototype, attr, pd);
@@ -496,7 +525,6 @@ Dumper.prototype.exprForFunction_ = function(func, funcDumper, funcName) {
       attr = prototypeFuncDumper.attributes['constructor'] =
           {writable: true, enumerable: false, configurable: true};
       pd = prototype.getOwnPropertyDescriptor('constructor', this.intrp2.ROOT);
-      var constructor = pd.value;
       prototypeFuncDumper.checkProperty('constructor', func, attr, pd);
     }
   }
@@ -504,8 +532,11 @@ Dumper.prototype.exprForFunction_ = function(func, funcDumper, funcName) {
 };
 
 /**
- * Get a source text representation of a given Object.  May or may not
- * include all properties, etc.
+ * Get a source text representation of a given Object.  For now the
+ * return value will always be either the string '{}' or one of the
+ * form 'Object.create(prototype)' (and/or invoking the new hack if
+ * required).
+ * TODO(cpcallen): return a more interesting object literal when possible.
  * @private
  * @param {!Interpreter.prototype.Object} obj Object to be recreated.
  * @param {!ObjectDumper} objDumper ObjectDumper for obj.
@@ -536,7 +567,15 @@ Dumper.prototype.exprForObject_ = function(obj, objDumper) {
 /**
  * Get a source text representation of a given primitive value (not
  * including symbols).  Correctly handles having Infinity, NaN and/or
- * undefiend shadowed by binding in the current scope.
+ * undefiend shadowed by binding in the current scope.  In general
+ * this is just the obvious literal, but note:
+ *
+ * - Strings will be single- or double-quoted depending on which is
+ *   more concise.
+ * - If Infinity, NaN or undefined is shadowed an alternative
+ *   expression evaluating to the desired value will be returned
+ *   instead.  (N.B.: true, false and null are literals so cannot be
+ *   shadowed.)
  * @private
  * @param {undefined|null|boolean|number|string} value Primitive JS value.
  * @return {string} An eval-able representation of the value.
@@ -579,7 +618,9 @@ Dumper.prototype.exprForPrimitive_ = function(value) {
 };
 
 /**
- * Get a source text representation of a given RegExp object.
+ * Get a source text representation of a given RegExp object.  The
+ * returned value will be a string containing a regexp literal, like
+ * '/foobar/gi'.
  * @private
  * @param {!Interpreter.prototype.RegExp} re RegExp to be recreated.
  * @param {!ObjectDumper} reDumper ObjectDumper for re.
@@ -610,7 +651,8 @@ Dumper.prototype.exprForRegExp_ = function(re, reDumper) {
  * given Selector s and Dumper d, d.exprForSelector_(s) will be the
  * same as s.toExpr() except when the output needs to call a builtin
  * function like Object.getPrototypeOf that is not available via its
- * usual name.
+ * usual name - e.g. 'Object.getPrototypeOf(foo.bar)' rather than
+ * 'foo.bar{proto}'.
  * @private
  * @param {Selector=} selector Selector to obtain value of.
  * @return {string} An eval-able representation of the value.
@@ -635,8 +677,8 @@ Dumper.prototype.exprForSelector_ = function(selector) {
  * Components.
  * @private
  * @param {!Selector} selector A selector for the binding in question.
- * @param {!Interpreter.Scope=} scope Scope which selector is relative
- *     to.  Defaults to current scope.
+ * @param {!Interpreter.Scope=} scope Scope which selector is relative to.
+ *     Defaults to current scope.
  * @return {!Components} The dumper and part corresponding to selector.
  */
 Dumper.prototype.getComponentsForSelector_ = function(selector, scope) {
@@ -647,7 +689,7 @@ Dumper.prototype.getComponentsForSelector_ = function(selector, scope) {
   for (var i = 0; i < selector.length - 1; i++) {
     v = dumper.getValue(this, selector[i]);
     if (!(v instanceof this.intrp2.Object)) {
-      var s = new Selector(selector.slice(0, i+1));
+      var s = new Selector(selector.slice(0, i + 1));
       throw TypeError("Can't select part of primitive " + s + ' === ' + v);
     }
     dumper = this.getObjectDumper_(v);
@@ -673,7 +715,7 @@ Dumper.prototype.getDumperFor = function(selector, scope) {
   for (var i = 0; i < selector.length; i++) {
     v = dumper.getValue(this, selector[i]);
     if (!(v instanceof this.intrp2.Object)) {
-      var s = new Selector(selector.slice(0, i+1));
+      var s = new Selector(selector.slice(0, i + 1));
       throw TypeError("Can't select part of primitive " + s + ' === ' + v);
     }
     dumper = this.getObjectDumper_(v);
@@ -712,7 +754,7 @@ Dumper.prototype.getScopeDumper_ = function(scope) {
  * Returns true if a given name is shadowed in the current scope.
  * @private
  * @param {string} name Variable name that might be shadowed.
- * @param {!Interpreter.Scope=} scope Scope in which name is defind.
+ * @param {!Interpreter.Scope=} scope Scope in which name is defined.
  *     Defaults to the global scope.
  * @return {boolean} True iff name is bound in a scope between the
  *     current scope (this.scope) (inclusive) and scope (exclusive).
@@ -745,7 +787,7 @@ Dumper.prototype.markBinding_ = function(selector, done) {
  * Mark a particular binding (as specified by a Selector) to pruned,
  * which will have the effect of trying to ensure it does not exist in
  * the state reconstructed by the dump output.
- * // TODO(cpcallen): actually delete pruned properties if necessary.
+ * TODO(cpcallen): actually delete pruned properties if necessary.
  * @param {!Selector} selector The selector for the binding to be pruned.
  */
 Dumper.prototype.prune = function(selector) {
@@ -785,6 +827,7 @@ Dumper.prototype.skip = function(selector) {
  * spanning tree starting from the global scope, with distance
  * measured by Selector badness.
  *
+ * @private
  * @return {void}
  */
 Dumper.prototype.survey_ = function() {
@@ -865,7 +908,7 @@ Dumper.prototype.warn = function(warning) {
 Dumper.prototype.write = function(var_args) {
   if (this.options.output) {
     var line = this.indent + Array.prototype.join.call(arguments, '');
-    if (line.slice(-1) !== '\n') line = line + '\n';
+    if (!line.endsWith('\n')) line += '\n';
     this.options.output.write(line);
   }
 };
@@ -910,7 +953,7 @@ SubDumper.prototype.getValue = function(dumper, part) {};
  * Mark a particular binding (as specified by a Part) to be pruned,
  * which will have the effect of trying to ensure it does not exist in
  * the state reconstructed by the dump output.
- * // TODO(cpcallen): actually delete pruned properties if necessary.
+ * TODO(cpcallen): actually delete pruned properties if necessary.
  * @param {Selector.Part} part The binding to be pruned.
  */
 SubDumper.prototype.prune = function(part) {
@@ -1041,7 +1084,7 @@ ScopeDumper.prototype.dumpBinding = function(dumper, part, todo) {
       var ref = new Components(this, part);
       var value = this.scope.get(part);
       output.push(' = ', dumper.exprFor_(value, ref, false, part));
-      done = (typeof value === 'object') ? Do.DONE : Do.RECURSE;
+      done = (value instanceof dumper.intrp2.Object) ? Do.DONE : Do.RECURSE;
     }
     output.push(';');
   }
@@ -1223,8 +1266,9 @@ Object.setPrototypeOf(ObjectDumper.prototype, SubDumper.prototype);
  * @return {!Do} New done state.
  */
 ObjectDumper.prototype.checkProperty = function(key, value, attr, pd) {
+  var done;
   if (!Object.is(value, pd.value)) {
-    var done = Do.DECL;
+    done = Do.DECL;
   } else if (attr.writable === pd.writable &&
       attr.enumerable === pd.enumerable &&
       attr.configurable === pd.configurable) {
@@ -1661,8 +1705,8 @@ ObjectDumper.prototype.setDone = function(part, done) {
   // Invariant checks.
   if (done <= old) {
     var fault = (done === old) ? 'Refusing redundant' : "Can't undo previous";
-    var description = ' of ' + this.getSelector(/*preferred=*/true);
-    throw new RangeError(fault + ' work on ' + part + description);
+    var description = this.getSelector(/*preferred=*/true);
+    throw new RangeError(fault + ' work on ' + part + ' of ' + description);
   }
   // Do set.
   if (part === Selector.PROTOTYPE) {
@@ -1914,6 +1958,8 @@ var DEFAULT_OPTIONS = {
  * @typedef {{part: Selector.Part, value: Interpreter.Value}|!ScopeDumper}
  */
 var OutwardEdge;
+
+var /** OutwardEdge */ outTest = null;
 
 /**
  * A writable stream.  Could be a stream.Writable, but we don't check
