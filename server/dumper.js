@@ -1959,8 +1959,6 @@ var DEFAULT_OPTIONS = {
  */
 var OutwardEdge;
 
-var /** OutwardEdge */ outTest = null;
-
 /**
  * A writable stream.  Could be a stream.Writable, but we don't check
  * the return value of .write to see if it's safe to keep writing, so
