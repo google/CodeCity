@@ -90,7 +90,7 @@ class PriorityQueue {
    * @return {void}
    */
   insert(value, priority) {
-    return this.set.call(this, value, priority);
+    this.set.call(this, value, priority);
   }
 
   /** @return {number} */
@@ -134,7 +134,7 @@ class PriorityQueue {
     while (i > 0) {
       const p = parent(i);
       if (this.heap_[p].priority <= entry.priority) break;
-      this.heap_[i] =  this.heap_[p];
+      this.heap_[i] = this.heap_[p];
       this.indices_.set(this.heap_[p].value, i);
       i = p;
     }

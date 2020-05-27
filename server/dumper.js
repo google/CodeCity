@@ -18,8 +18,7 @@
 /**
  * @fileoverview The Dumper class (and related helpers) to diff the
  *     state of (parts or all of) two Interpreter objects, outputing
- *     eval-able JS code to convert the one into the other.  eval-able
- *     JS.
+ *     eval-able JS code to convert the one into the other.
  * @author cpcallen@google.com (Christopher Allen)
  */
 'use strict';
@@ -349,7 +348,7 @@ Dumper.prototype.exprForArray_ = function(arr, arrDumper) {
   var lastIndex = arr.get('length', root) - 1;
   arrDumper.attributes['length'] =
       {writable: true, enumerable: false, configurable: false};
-  if (lastIndex < 0 || arr.getOwnPropertyDescriptor(String(lastIndex),  root)) {
+  if (lastIndex < 0 || arr.getOwnPropertyDescriptor(String(lastIndex), root)) {
     // No need to set .length if it will be set via setting final index.
     arrDumper.setDone('length', Do.RECURSE);
   } else {
@@ -1319,7 +1318,7 @@ ObjectDumper.prototype.dump = function(dumper, objSelector, treeOnly) {
   if (!objSelector) objSelector = this.getSelector();
   if (!objSelector) throw new Error("can't dump unreferencable object");
   if (this.proto === undefined) {
-    throw new Error("can't dump uncreated object " +  this.getSelector(true));
+    throw new Error("can't dump uncreated object " + this.getSelector(true));
   }
   if (dumper.visiting.has(this)) return null;
   if (this.done === ObjectDumper.Done.DONE_RECURSIVELY) return this.done;
@@ -1448,7 +1447,7 @@ ObjectDumper.prototype.dumpBinding = function(
   if (!objSelector) {
     throw new Error("can't dump unreferencable object");
   } else if (this.proto === undefined) {
-    throw new Error("can't dump uncreated object " +  this.getSelector(true));
+    throw new Error("can't dump uncreated object " + this.getSelector(true));
   } else if (this.prune_ && this.prune_.has(part)) {
     return Do.RECURSE;  // Don't dump requested binding at all.
   } else if (this.skip_ && this.skip_.has(part)) {
@@ -1554,7 +1553,7 @@ ObjectDumper.prototype.dumpProperty_ = function(
       var items = [];
       if (attr.writable !== (pd.writable || todo < Do.SET)) {
         attr.writable = pd.writable || todo < Do.SET;
-        items.push('writable: ' +  attr.writable);
+        items.push('writable: ' + attr.writable);
       }
       if (attr.enumerable !== (pd.enumerable || todo < Do.SET)) {
         attr.enumerable = pd.enumerable || todo < Do.SET;
@@ -1945,9 +1944,9 @@ var Do = {
  */
 var DumperOptions = function() {};
 /**
- * The stream that this.write() will write to.  writes to.  Setting it
- * to null (the default) will cause cause .write() to do nothing,
- * causing dumped code to be lost.
+ * The stream that this.write() will write to.  Setting it to null
+ * (the default) will cause cause .write() to do nothing, causing
+ * dumped code to be lost.
  * @type {?Writable|undefined}
  */
 DumperOptions.prototype.output;
@@ -1971,7 +1970,7 @@ var DEFAULT_OPTIONS = {
  * on the object graph.
  *
  * - Outward edges that are properties or internal slots are
- *   represented as a {Selector.Part, Interpreter.Value} tuple.  -
+ *   represented as a {Selector.Part, Interpreter.Value} tuple.
  * - Outward edges that are the enclosing scope of a UserFunction are
  *   represented by a bare ScopeDumper.
  * @typedef {{part: Selector.Part, value: Interpreter.Value}|!ScopeDumper}
