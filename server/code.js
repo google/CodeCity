@@ -23,18 +23,21 @@
 
 /**
  * A collection of useful regular expressions.
+ * @const
  */
 var regexps = {};
 
 /**
  * Matches (globally) escape sequences found in string and regexp
  * literals, like '\n' or '\x20' or '\u1234'.
+ * @const
  */
 regexps.escapes = /\\(?:["'\\\/0bfnrtv]|u[0-9a-fA-F]{4}|x[0-9a-fA-F]{2})/g;
 
 /**
  * Matches a single-quoted string literal, like "'this one'" and
  * "'it\\'s'".
+ * @const
  */
 regexps.singleQuotedString =
     new RegExp("'(?:[^'\\\\]|" + regexps.escapes.source + ")*'", 'g');
@@ -42,6 +45,7 @@ regexps.singleQuotedString =
 /**
  * Matches a double-quoted string literal, like '"this one"' and
  * '"it\'s"'.
+ * @const
  */
 regexps.doubleQuotedString =
     new RegExp('"(?:[^"\\\\]|' + regexps.escapes.source + ')*"', 'g');
@@ -49,6 +53,7 @@ regexps.doubleQuotedString =
 /**
  * Matches a string literal, like "'this one' and '"that one"' as well
  * as "the 'string literal' substring of this longer string" too.
+ * @const
  */
 regexps.string = new RegExp('(?:' + regexps.singleQuotedString.source + '|' +
     regexps.doubleQuotedString.source + ')', 'g');
@@ -57,8 +62,24 @@ regexps.string = new RegExp('(?:' + regexps.singleQuotedString.source + '|' +
  * Matches exaclty a string literal, like "'this one'" but notably not
  * " 'this one' " (because it contains other characters not part of
  * the literal).
+ * @const
  */
 regexps.stringExact = new RegExp('^' + regexps.string.source + '$');
+
+/**
+ * RegExp matching a valid JavaScript identifier.  Note that this is
+ * fairly conservative, because ANY Unicode letter can appear in an
+ * identifier - but the full regexp is absurdly complicated.
+ * @const
+ */
+regexps.identifier = /[A-Za-z_$][A-Za-z0-9_$]*/g;
+
+/**
+ * RegExp matching exactly a valid JavaScript identifier.  See note
+ * for .identifier, above.
+ * @const
+ */
+regexps.identifierExact = new RegExp('^' + regexps.identifier.source + '$');
 
 /**
  * Convert a string representation of a string literal to a string.

@@ -28,4 +28,4 @@
 /** @constructor */
 var Buffer = function() {};
 
-module.exports = Buffer;
+exports.Buffer = Buffer;

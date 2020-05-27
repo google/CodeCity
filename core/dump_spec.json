@@ -1,0 +1,150 @@
+[
+  {
+    "filename": "core_00_es5.js",
+    "contents": [
+      {"path": "Object", "do": "SET"},
+      {"path": "Function", "do": "SET"},
+      {"path": "Object.defineProperty", "do": "ATTR"},
+      "Object",
+      "Function",
+      "Array",
+      "String",
+      "Boolean",
+      "Number",
+      "Date",
+      "RegExp",
+      "Error",
+      "EvalError",
+      "RangeError",
+      "ReferenceError",
+      "SyntaxError",
+      "TypeError",
+      "URIError",
+      "Math",
+      "JSON",
+      "decodeURI",
+      "decodeURIComponent",
+      "encodeURI",
+      "encodeURIComponent",
+      "escape",
+      "isFinite",
+      "isNaN",
+      "parseFloat",
+      "parseInt",
+      "unescape"
+    ]
+  }, {
+    "filename": "core_00_es6.js",
+    "contents": [
+      "Object.is",
+      "Object.setPrototypeOf",
+      "Array.prototype.find",
+      "Array.prototype.findIndex",
+      "String.prototype.endsWith",
+      "String.prototype.includes",
+      "String.prototype.repeat",
+      "String.prototype.startsWith",
+      "Number.isFinite",
+      "Number.isNaN",
+      "Number.isSafeInteger",
+      "Number.EPSILON",
+      "Number.MAX_SAFE_INTEGER",
+      "Math.sign",
+      "Math.trunc",
+      "WeakMap"
+    ]
+  }, {
+    "filename": "core_00_esx.js",
+    "contents": [
+      "Object.getOwnerOf",
+      "Object.setOwnerOf",
+      "Thread",
+      "PermissionError",
+      "Array.prototype.join",
+      "suspend",
+      "setTimeout",
+      "clearTimeout"
+    ]
+  }, {
+    "filename": "core_10_base.js",
+    "contents": [
+      {"path": "user", "do": "DECL"},
+      {"path": "$", "do": "SET"},
+      "$.system",
+      {"path": "$.utils", "do": "ATTR"},
+      "$.physical",
+      "$.thing",
+      "$.room",
+      "$.user",
+      "$.execute",
+      {"path": "$.userDatabase", "do": "ATTR"},
+      "$.connection",
+      {"path": "$.servers", "do": "ATTR"},
+      "$.servers.telnet"
+    ]
+  }, {
+    "filename": "core_11_$.utils.command.js",
+    "contents": [
+      "$.utils.command",
+      "$.utils.match"
+    ]
+  }, {
+    "filename": "core_12_$.utils.selector.js",
+    "contents": [
+      "$.utils.selector",
+      {"path": "$.utils.selector.objectMap_", "do": "ATTR"}
+    ]
+  }, {
+    "filename": "core_13_$.utils.code.js",
+    "contents": ["$.utils.code"]
+  }, {
+    "filename": "core_30_$.servers.http.js",
+    "contents": ["$.servers.http"]
+  }, {
+    "filename": "core_31_$.jssp.js",
+    "contents": ["$.jssp"]
+  }, {
+    "filename": "core_32_$.www.js",
+    "contents": [
+      {"path": "$.www", "do": "ATTR"},
+      {"path": "$.www.ROUTER", "do": "ATTR"},
+      "$.www[404]",
+      "$.www.homepage",
+      "$.www.robots"
+    ]
+  }, {
+    "filename": "core_33_$.www.editor.js",
+    "contents": ["$.www.editor"]
+  }, {
+    "filename": "core_34_$.www.code.js",
+    "contents": ["$.www.code"]
+  }, {
+    "filename": "core_40_$.db.tempId.js",
+    "contents": [
+      {"path": "$.db", "do": "ATTR"},
+      "$.db.tempId"
+    ]
+  }, {
+    "filename": "db_00_world.js",
+    "contents": [
+      "user",
+      "$"
+    ]
+  }, {
+    "filename": "db_01_deutsche_zimmer.js",
+    "contents": [
+      "$.dz",
+      "$.tutorial"
+    ]
+  }, {
+    "filename": "db_01_plant.js",
+    "contents": [
+      "$.seed",
+      "$.pot",
+      "$.thrower"
+    ]
+  }, {
+    "filename": "db_99_leftovers.js",
+    "rest": true
+  }
+]
