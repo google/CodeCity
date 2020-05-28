@@ -73,14 +73,10 @@ var dump = function(intrp1, intrp2, config, directory, verbose) {
                  '// ', item.filename, '\n\n');
     if (item.contents) {
       for (var entry, j = 0; entry = item.contents[j]; j++) {
-        try {
-          if (verbose) console.log('Dumping: %s', entry.selector);
-          dumper.unskip(entry.selector);
-          dumper.dumpBinding(entry.selector, entry.do, true);
-          dumper.write('\n');
-        } catch (e) {
-          dumper.warn(e.stack);
-        }
+        if (verbose) console.log('Dumping: %s', entry.selector);
+        dumper.unskip(entry.selector);
+        dumper.dumpBinding(entry.selector, entry.do, true);
+        dumper.write('\n');
       }
     }
     if (item.rest) {
