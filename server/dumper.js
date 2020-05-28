@@ -73,11 +73,6 @@ var Dumper = function(intrp1, intrp2, options) {
    */
   this.argumentsScopeDumpers = new Map();
   /**
-   * Set of Scope/Object dumpers currently being recursively surveyed/dumped.
-   * @const {!Set<(!SubDumper)>}
-   */
-  this.visiting = new Set();
-  /**
    * Which scope are we presently outputting code in the context of?
    * @type {!Interpreter.Scope}
    */
@@ -1322,21 +1317,26 @@ ObjectDumper.prototype.checkProperty = function(key, value, attr, pd) {
  * @param {boolean=} treeOnly If true, limit recursive dumping to the
  *     subtree of the spaning tree (as defined by the preferred
  *     selectors) rooted at selector.
+ * @param {!Set<(!SubDumper)>=} visiting Set of Scope/Object dumpers
+ *     currently being recursively surveyed/dumped.  Used only when
+ *     recursing.
  * @return {!ObjectDumper.Done|?ObjectDumper.Pending} Done status for
  *     object, or or null if there is an outstanding dump or
  *     dumpBinding invocaion for this object, or a (bindings,
  *     dependencies) pair if a recursive call encountered such an
  *     outstanding invocation.
  */
-ObjectDumper.prototype.dump = function(dumper, objSelector, treeOnly) {
+ObjectDumper.prototype.dump = function(
+    dumper, objSelector, treeOnly, visiting) {
+  if (!visiting) visiting = new Set();
   if (!objSelector) objSelector = this.getSelector();
   if (!objSelector) throw new Error("can't dump unreferencable object");
   if (this.proto === undefined) {
     throw new Error("can't dump uncreated object " + this.getSelector(true));
   }
-  if (dumper.visiting.has(this)) return null;
+  if (visiting.has(this)) return null;
   if (this.done === ObjectDumper.Done.DONE_RECURSIVELY) return this.done;
-  dumper.visiting.add(this);
+  visiting.add(this);
 
   // Delete properties that shouldn't exist.
   if (this.toDelete) {
@@ -1389,7 +1389,7 @@ ObjectDumper.prototype.dump = function(dumper, objSelector, treeOnly) {
           Math.min(done, ObjectDumper.Done.NO));
       continue;
     }
-    var objDone = valueDumper.dump(dumper, bindingSelector, treeOnly);
+    var objDone = valueDumper.dump(dumper, bindingSelector, treeOnly, visiting);
     if (objDone === null || objDone instanceof ObjectDumper.Pending) {
       // Circular structure detected.
       if (!pending) {
@@ -1417,14 +1417,14 @@ ObjectDumper.prototype.dump = function(dumper, objSelector, treeOnly) {
     this.done = ObjectDumper.Done.DONE;  // Needed to allow cycles to complete.
   }
 
-  dumper.visiting.delete(this);
+  visiting.delete(this);
   // If all parts of circular dependency are DONE, mark all as
   // RECURSE / DONE_RECURSIVELY.
   // TODO(cpcallen): Clean up this code.
   if (done) {
     if (pending) {
       if (pending.dependencies.some(
-          function(dep) {return !dep.done || dumper.visiting.has(dep);})) {
+          function(dep) {return !dep.done || visiting.has(dep);})) {
         done = /** @type {!ObjectDumper.Done} */(
             Math.min(done, ObjectDumper.Done.DONE));
       } else {
