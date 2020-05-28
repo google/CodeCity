@@ -1856,8 +1856,8 @@ ObjectDumper.Pending.prototype.add = function(binding, valueDumper) {
  * @param {!ObjectDumper.Pending} that Another Pending list.
  */
 ObjectDumper.Pending.prototype.merge = function(that) {
-  this.bindings.push.apply(this.bindings, that.bindings);
-  this.dependencies.push.apply(this.dependencies, that.dependencies);
+  this.bindings = this.bindings.concat(that.bindings);
+  this.dependencies = this.dependencies.concat(that.dependencies);
 };
 
 /** @override */
