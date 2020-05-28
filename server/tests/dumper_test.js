@@ -741,24 +741,31 @@ exports.testDumperPrototypeDumpBinding = function(t) {
       ],
     },
 
-    { // Test dumping extensibility.
+    { // Test dumping extensibility (with related recursion tests).
       title: 'extensibility',
       src: `
+        var other = {id: 'other'};
         var obj1 = {id: 1};
         var obj2 = {id: 2};
+        var obj3 = {id: 3, other: other};
         Object.preventExtensions(obj1);
         Object.preventExtensions(obj2);
+        Object.preventExtensions(obj3);
       `,
-      set: ['Object', 'obj1', 'obj2'],
+      set: ['Object', 'obj1', 'obj2', 'obj3'],
       dump: [
         ['obj1.id', Do.SET, 'obj1.id = 1;\n', Do.RECURSE],
         ['obj1', Do.RECURSE, "(new 'Object.preventExtensions')(obj1);\n"],
 
         ['Object.preventExtensions', Do.SET,
          "Object.preventExtensions = new 'Object.preventExtensions';\n",],
-
         // Verify property set before extensibility prevented.
         ['obj2', Do.RECURSE, 'obj2.id = 2;\nObject.preventExtensions(obj2);\n'],
+        // Verify treeOnly doesn't prevent .preventExtensions being called.
+        ['obj3', Do.RECURSE, 'obj3.id = 3;\nobj3.other = {};\n' + 
+            'Object.preventExtensions(obj3);\n', Do.DONE, /*treeOnly=*/true],
+        // Verify we don't call .preventExtensions more than once.
+        ['obj3', Do.RECURSE, "obj3.other.id = 'other';\n", Do.RECURSE],
       ],
     },
 
