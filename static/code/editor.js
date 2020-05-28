@@ -370,6 +370,26 @@ Code.Editor.receiveXhr = function() {
   }
   Code.Editor.clearSaveMask();
 
+  if (data.saved === false && !data.login) {
+    // Save was requested, but failed due to lack of a login.
+    // Open login window.
+    var loginWindow = open('/login?loginThenClose', 'login', 'height=600,width=500');
+    if (loginWindow) {
+      var pid = setInterval(function() {
+        if (loginWindow.closeMe) {
+          loginWindow.close();
+          Code.Editor.save();
+        }
+        if (loginWindow.closed) {
+          clearInterval(pid);
+        }
+      }, 1000);
+    } else {
+      alert('Your browser has blocked the opening of the page you requested.\n' +
+            'Please allow pop-ups on this domain. ✓️');
+    }
+  }
+
   // While a save is in-flight, the user might have navigated away and be
   // currently blocked by a warning dialog regarding unsaved work.
   if (Code.Editor.isSaveDialogVisible) {

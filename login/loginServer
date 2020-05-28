@@ -103,12 +103,25 @@ function handleRequest(request, response) {
     response.end(`Unknown Login URL: ${request.url}`);
     return;
   }
-  // No query parameters?  Serve login.html.
-  if (request.url === CFG.loginPath) {
+  var url = new URL(request.url, CFG.origin);
+  if (url.searchParams.has('windowclose')) {
+    // Serve up close.html to close the window.
+    serveFile(response, 'close.html', {});
+    return;
+  }
+  var code = url.searchParams.get('code');
+  if (!code) {
+    // No auth code?  Serve login.html.
+    // Compute Google's login URL.
+    var options = {scope: 'email'};
+    if (url.searchParams.has('loginThenClose')) {
+      options.state = 'autoclose';
+    }
+    var loginUrl = oauth2Client.generateAuthUrl(options);
     serveFile(response, 'login.html', {'<<<LOGIN_URL>>>': loginUrl});
     return;
   }
-  var code = new URL(request.url, CFG.origin).searchParams.get('code');
+  // Handle the result of a login.
   oauth2Client.getToken(code, function(err, tokens) {
     if (err) {
       console.log(err);
@@ -138,10 +151,13 @@ function handleRequest(request, response) {
       // E.g. 'students.gissv.org', or 'sjsu.edu'.
       // We aren't using it now, but this might be used to filter users.
       if (emailRegexp.test(res.data.email)) {
+       var state = url.searchParams.get('state');
+        var redirectUrl = (state === 'autoclose') ?
+            (CFG.loginPath + '?windowclose') : CFG.connectPath;
         response.writeHead(302, {
           // Temporary redirect
           'Set-Cookie': 'ID=' + id + '_' + checksum + '; HttpOnly;',
-          'Location': CFG.connectPath
+          'Location': redirectUrl
         });
         response.end('Login OK.  Redirecting.');
         console.log('Accepted xxxx' + id.substring(id.length - 4));
@@ -186,9 +202,6 @@ function startup() {
   // Create an authentication client for our interactions with Google.
   oauth2Client = new google.auth.OAuth2(
       CFG.clientId, CFG.clientSecret, CFG.origin + CFG.loginPath);
-
-  // Precompute Google's login URL.
-  loginUrl = oauth2Client.generateAuthUrl({scope: 'email'});
 
   // Start an HTTP server.
   var server = http.createServer(handleRequest);
