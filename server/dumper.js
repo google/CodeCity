@@ -1389,9 +1389,8 @@ ObjectDumper.prototype.dump = function(
     var valueDumper = dumper.getObjectDumper_(value);
     if (treeOnly && valueDumper.preferredRef.dumper !== this) {
       // Refuse to recurse into objects outside of the spanning tree.
-      // Treat as SKIP.
       done = /** @type {!ObjectDumper.Done} */(
-          Math.min(done, ObjectDumper.Done.NO));
+          Math.min(done, ObjectDumper.Done.DONE));
       continue;
     }
     var objDone =
@@ -1414,13 +1413,13 @@ ObjectDumper.prototype.dump = function(
     }
   }
 
-  if (done) {
+  if (this.done < ObjectDumper.Done.DONE && done >= ObjectDumper.Done.DONE) {
     // Dump extensibility.
     if (!this.obj.isExtensible(dumper.intrp2.ROOT)) {
       dumper.write(dumper.exprForBuiltin_('Object.preventExtensions'), '(',
                    dumper.exprForSelector_(objSelector), ');');
     }
-    this.done = ObjectDumper.Done.DONE;  // Needed to allow cycles to complete.
+    this.done = ObjectDumper.Done.DONE;  // Set now to allow cycles to complete.
   }
 
   visiting.pop();
