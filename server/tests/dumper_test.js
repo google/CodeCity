@@ -218,7 +218,7 @@ exports.testDumperPrototypeExprFor_ = function(t) {
   // Give references to needed builtins.
   for (const b of [
     'Date', 'Error', 'EvalError', 'RangeError', 'ReferenceError', 'TypeError',
-    'SyntaxError', 'URIError', 'PermissionError'
+    'SyntaxError', 'URIError', 'PermissionError', 'WeakMap',
   ]) {
     dumper.getObjectDumper_(/** @type {!Interpreter.prototype.Object} */
         (intrp.builtins.get(b))).ref = new Components(dumper.global, b);
@@ -250,6 +250,7 @@ exports.testDumperPrototypeExprFor_ = function(t) {
     [new intrp.Error(intrp.ROOT, intrp.PERM_ERROR), "new PermissionError()"],
     [new intrp.Error(intrp.ROOT, intrp.OBJECT), "new Error()"],
     [new intrp.Error(intrp.ROOT, null), "new Error()"],
+    [new intrp.WeakMap(), 'new WeakMap()'],
   ];
   // A fake reference: exprFor_ won't create an unreferenceable object.
   const ref = new Components(dumper.global, 'dummyVariable');
@@ -1040,6 +1041,29 @@ exports.testDumperPrototypeDumpBinding = function(t) {
       after: [
         ['error1.message', Do.RECURSE],
         ['error2.message', Do.RECURSE],
+      ],
+    },
+
+    { // Test dumping WeakMap objects.
+      title: 'WeakMap',
+      src: `
+        var WeakMap = new 'WeakMap';
+        var Object = new 'Object';
+        Object.setPrototypeOf = new 'Object.setPrototypeOf';
+
+        var wm1 = new WeakMap();
+        var wm2 = new WeakMap();
+        Object.setPrototypeOf(wm2, null);
+      `,
+      set: ['Object', 'Object.setPrototypeOf'],
+      dump: [
+        ['wm1', Do.SET, "var wm1 = new (new 'WeakMap')();\n", Do.DONE],
+        ['WeakMap', Do.SET, "var WeakMap = new 'WeakMap';\n", Do.DONE],
+        ['wm2', Do.SET, 'var wm2 = new WeakMap();\n', Do.DONE],
+      ],
+      after: [
+        ['wm1^', Do.DONE],
+        ['wm2^', Do.DECL],
       ],
     },
 
