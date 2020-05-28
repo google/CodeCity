@@ -312,9 +312,7 @@ Dumper.prototype.exprFor_ = function(value, ref, callable, funcName) {
   } else if (value instanceof intrp2.Error) {
     expr = this.exprForError_(value, objDumper);
   } else if (value instanceof intrp2.WeakMap) {
-    // TODO(cpcallen)
-    throw new Error('WeakMap dumping not implemented');
-    // expr = this.exprForWeakMap_(value, objDumper);
+    expr = this.exprForWeakMap_(value, objDumper);
   } else {
     expr = this.exprForObject_(value, objDumper);
   }
@@ -688,6 +686,22 @@ Dumper.prototype.exprForSelector_ = function(selector) {
       throw new TypeError('Invalid part in parts array');
     }
   });
+};
+
+/**
+ * Get a source text representation of a given WeakMap object.  The
+ * return value will usually be the string "new WeakMap()" (but the
+ * new hack will be invoked if the WeakMap constructor has not yet
+ * been initialised).
+ * @private
+ * @param {!Interpreter.prototype.WeakMap} weakMap WeakMap object to
+ *     be recreated.
+ * @param {!ObjectDumper} weakMapDumper ObjectDumper for weakmap.
+ * @return {string} An eval-able representation of weakmap.
+ */
+Dumper.prototype.exprForWeakMap_ = function(weakMap, weakMapDumper) {
+  weakMapDumper.proto = this.intrp2.WEAKMAP;
+  return 'new ' + this.exprForBuiltin_('WeakMap') + '()';
 };
 
 /**
