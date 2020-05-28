@@ -648,7 +648,7 @@ Dumper.prototype.exprForRegExp_ = function(re, reDumper) {
   reDumper.proto = this.intrp2.REGEXP;
   // Some properties are implicitly pre-set.
   var props = ['source', 'global', 'ignoreCase', 'multiline'];
-  for (var prop, i = 0; prop = props[i]; i++) {
+  for (var prop, i = 0; (prop = props[i]); i++) {
     reDumper.attributes[prop] =
         {writable: false, enumerable: false, configurable: false};
     reDumper.setDone(prop, Do.RECURSE);
@@ -1327,7 +1327,7 @@ ObjectDumper.prototype.dump = function(dumper, objSelector, treeOnly) {
   // Delete properties that shouldn't exist.
   if (this.toDelete) {
     var sel = new Selector(objSelector);
-    for (var key, i = 0; key = this.toDelete[i]; i++) {
+    for (var key, i = 0; (key = this.toDelete[i]); i++) {
       sel.push(key);
       dumper.write('delete ', dumper.exprForSelector_(sel), ';');
       sel.pop();
@@ -1415,10 +1415,10 @@ ObjectDumper.prototype.dump = function(dumper, objSelector, treeOnly) {
             Math.min(done, ObjectDumper.Done.DONE));
       } else {
         var /** !Selector */ binding;
-        for (i = 0; binding = pending.bindings[i]; i++) {
+        for (i = 0; (binding = pending.bindings[i]); i++) {
           dumper.markBinding_(binding, Do.RECURSE);
         }
-        for (var dep, i = 0; dep = pending.dependencies[i]; i++) {
+        for (var dep, i = 0; (dep = pending.dependencies[i]); i++) {
           dep.done = ObjectDumper.Done.DONE_RECURSIVELY;
         }
         pending = null;
