@@ -1318,7 +1318,10 @@ ObjectDumper.prototype.checkProperty = function(key, value, attr, pd) {
  *     subtree of the spaning tree (as defined by the preferred
  *     selectors) rooted at selector.
  * @param {!Set<(!SubDumper)>=} visiting Set of Scope/Object dumpers
- *     currently being recursively surveyed/dumped.  Used only when
+ *     currently being recursively dumped.  Used only when
+ *     recursing.
+ * @param {!Set<(!SubDumper)>=} visited Set of Scope/Object dumpers
+ *     currently that have already been visited.  Used only when
  *     recursing.
  * @return {!ObjectDumper.Done|?ObjectDumper.Pending} Done status for
  *     object, or or null if there is an outstanding dump or
@@ -1327,16 +1330,18 @@ ObjectDumper.prototype.checkProperty = function(key, value, attr, pd) {
  *     outstanding invocation.
  */
 ObjectDumper.prototype.dump = function(
-    dumper, objSelector, treeOnly, visiting) {
+    dumper, objSelector, treeOnly, visiting, visited) {
   if (!visiting) visiting = new Set();
+  if (!visited) visited = new Set();
   if (!objSelector) objSelector = this.getSelector();
   if (!objSelector) throw new Error("can't dump unreferencable object");
   if (this.proto === undefined) {
     throw new Error("can't dump uncreated object " + this.getSelector(true));
   }
-  if (visiting.has(this)) return null;
+  if (visited.has(this)) return null;
   if (this.done === ObjectDumper.Done.DONE_RECURSIVELY) return this.done;
   visiting.add(this);
+  visited.add(this);
 
   // Delete properties that shouldn't exist.
   if (this.toDelete) {
@@ -1389,7 +1394,8 @@ ObjectDumper.prototype.dump = function(
           Math.min(done, ObjectDumper.Done.NO));
       continue;
     }
-    var objDone = valueDumper.dump(dumper, bindingSelector, treeOnly, visiting);
+    var objDone =
+        valueDumper.dump(dumper, bindingSelector, treeOnly, visiting, visited);
     if (objDone === null || objDone instanceof ObjectDumper.Pending) {
       // Circular structure detected.
       if (!pending) {
