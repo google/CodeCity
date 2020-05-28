@@ -1317,7 +1317,7 @@ ObjectDumper.prototype.checkProperty = function(key, value, attr, pd) {
  * @param {boolean=} treeOnly If true, limit recursive dumping to the
  *     subtree of the spaning tree (as defined by the preferred
  *     selectors) rooted at selector.
- * @param {!Set<(!SubDumper)>=} visiting Set of Scope/Object dumpers
+ * @param {!Array<(!SubDumper)>=} visiting List of Scope/Object dumpers
  *     currently being recursively dumped.  Used only when
  *     recursing.
  * @param {!Set<(!SubDumper)>=} visited Set of Scope/Object dumpers
@@ -1331,7 +1331,7 @@ ObjectDumper.prototype.checkProperty = function(key, value, attr, pd) {
  */
 ObjectDumper.prototype.dump = function(
     dumper, objSelector, treeOnly, visiting, visited) {
-  if (!visiting) visiting = new Set();
+  if (!visiting) visiting = [];
   if (!visited) visited = new Set();
   if (!objSelector) objSelector = this.getSelector();
   if (!objSelector) throw new Error("can't dump unreferencable object");
@@ -1340,7 +1340,7 @@ ObjectDumper.prototype.dump = function(
   }
   if (visited.has(this)) return null;
   if (this.done === ObjectDumper.Done.DONE_RECURSIVELY) return this.done;
-  visiting.add(this);
+  visiting.push(this);
   visited.add(this);
 
   // Delete properties that shouldn't exist.
@@ -1423,14 +1423,14 @@ ObjectDumper.prototype.dump = function(
     this.done = ObjectDumper.Done.DONE;  // Needed to allow cycles to complete.
   }
 
-  visiting.delete(this);
+  visiting.pop();
   // If all parts of circular dependency are DONE, mark all as
   // RECURSE / DONE_RECURSIVELY.
   // TODO(cpcallen): Clean up this code.
   if (done) {
     if (pending) {
       if (pending.dependencies.some(
-          function(dep) {return !dep.done || visiting.has(dep);})) {
+          function(dep) {return !dep.done || visiting.includes(dep);})) {
         done = /** @type {!ObjectDumper.Done} */(
             Math.min(done, ObjectDumper.Done.DONE));
       } else {
