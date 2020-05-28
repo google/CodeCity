@@ -1567,8 +1567,9 @@ ObjectDumper.prototype.dumpProperty_ = function(
         attr = this.attributes[key] =
             {writable: false, enumerable: false, configurable: false};
       } else if (!attr.configurable) {
-        throw new Error("Can't redefine non-configurable property " +
-            bindingSelector);
+        dumper.warn(
+            "Can't redefine non-configurable property " + bindingSelector);
+        return done;
       }
       var items = [];
       if (attr.writable !== (pd.writable || todo < Do.SET)) {
