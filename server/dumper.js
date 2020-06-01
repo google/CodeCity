@@ -1509,7 +1509,7 @@ ObjectDumper.prototype.dumpOwner_ = function(
   var value = /** @type {?Interpreter.prototype.Object} */(this.obj.owner);
   if (todo >= Do.SET && this.doneOwner_ < Do.SET) {
     dumper.write(dumper.exprForBuiltin_('Object.setOwnerOf'), '(',
-                 dumper.exprForSelector_(this.getSelector()), ', ',
+                 dumper.exprForSelector_(objSelector), ', ',
                  dumper.exprFor_(value, partRef), ');');
     this.doneOwner_ = (value === null) ? Do.RECURSE: Do.DONE;
   }
