@@ -1387,7 +1387,9 @@ ObjectDumper.prototype.dump = function(
     var value = this.getValue(dumper, part);
     if (!(value instanceof dumper.intrp2.Object)) continue;
     var valueDumper = dumper.getObjectDumper_(value);
-    if (treeOnly && valueDumper.preferredRef.dumper !== this) {
+    if (treeOnly &&
+        (this !== valueDumper.preferredRef.dumper ||
+         part !== valueDumper.preferredRef.part)) {
       // Refuse to recurse into objects outside of the spanning tree.
       done = /** @type {!ObjectDumper.Done} */(
           Math.min(done, ObjectDumper.Done.DONE));
