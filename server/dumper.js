@@ -110,7 +110,7 @@ var Dumper = function(intrp1, intrp2, options) {
     if (Object.is(val1in2, val2)) {
       this.global.setDone(v, (typeof val2 === 'object') ? Do.DONE : Do.RECURSE);
       if (val2 instanceof intrp2.Object) {
-        this.getObjectDumper_(val2).ref = new Components(this.global, v);
+        this.getObjectDumper_(val2).updateRef(new Components(this.global, v));
         // Other initialialisation will be taken care of below.
       }
     }
@@ -279,13 +279,10 @@ Dumper.prototype.exprFor_ = function(value, ref, callable, funcName) {
 
   // Return existing reference to object (if already created).
   var objDumper = this.getObjectDumper_(value);
-  if (objDumper.ref) {
-    return this.exprForSelector_(objDumper.getSelector());
-  }
-  // TODO(cpcallen): only update .ref if new one better.
-  if (ref) {
-    objDumper.ref = ref;  // Safe new ref if specified.
-  }
+  var prev;
+  if (objDumper.ref) prev = this.exprForSelector_(objDumper.getSelector());
+  if (ref) objDumper.updateRef(ref);  // Safe new ref if specified.
+  if (prev) return prev;
 
  // Object not yet referenced.  Is it a builtin?
   var key = intrp2.builtins.getKey(value);
@@ -520,7 +517,7 @@ Dumper.prototype.exprForFunction_ = function(func, funcDumper, funcName) {
       funcDumper.checkProperty('prototype', prototype, attr, pd);
       // Mark prototype object as existing and referenceable.
       prototypeFuncDumper.proto = this.intrp2.OBJECT;
-      prototypeFuncDumper.ref = new Components(funcDumper, 'prototype');
+      prototypeFuncDumper.updateRef(new Components(funcDumper, 'prototype'));
       // Do we need to set .prototype's [[Prototype]]?
       if (prototype.proto === prototypeFuncDumper.proto) {
         prototypeFuncDumper.setDone(Selector.PROTOTYPE,
@@ -1395,6 +1392,7 @@ ObjectDumper.prototype.dump = function(
           Math.min(done, ObjectDumper.Done.DONE));
       continue;
     }
+    valueDumper.updateRef(new Components(this, part));
     var objDone =
         valueDumper.dump(dumper, bindingSelector, treeOnly, visiting, visited);
     if (objDone === null || objDone instanceof ObjectDumper.Pending) {
@@ -1796,6 +1794,45 @@ ObjectDumper.prototype.survey = function(dumper) {
   }
 
   return adjacent;
+};
+
+/**
+ * Record a new reference to the object, if it is better (by Selector
+ * badness) than the existing one.
+ * @param {!Components} ref The new reference.
+ * @return {void}
+ */
+ObjectDumper.prototype.updateRef = function(ref) {
+  if (ref.dumper === this) return;  // Ignore self-references.
+  if (!this.ref) {
+    this.ref = ref;  // Any ref is better than no ref.
+  } else if (this.preferredRef) {  // Can compare to preferredRef.
+    if (ref.dumper === this.preferredRef.dumper) {
+      if (this.ref.dumper !== this.preferredRef.dumper ||
+          Selector.partBadness(ref.part) <
+          Selector.partBadness(this.ref.part)) {
+        this.ref = ref;
+      }
+    } else if (this.ref.dumper === this.preferredRef.dumper) {
+      return;
+    } 
+  }
+  // Have exisiting ref.  Either have no preferredRef, or neither
+  // this.ref nor ref are from preferred object/scope.  Try to compare
+  // selector badness.
+  var oldBadness;
+  var newBadness;
+  try {
+    oldBadness = this.getSelector();
+  } catch (e) {
+    oldBadness = Infinity;
+  }
+  try {
+    newBadness = ref.dumper.getSelector() + Selector.partBadness(ref.part);
+  } catch (e) {
+    newBadness = Infinity;
+  }
+  if (newBadness < oldBadness) this.ref = ref;
 };
 
 /**
