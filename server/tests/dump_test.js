@@ -42,13 +42,32 @@ exports.testConfigFromSpec = function(t) {
     input: [{filename: 'foo', contents: ['a', 'b']}],
     expected: [
       {filename: 'foo',
+       prune: [],
+       pruneRest: [],
        contents: [
          {selector: new Selector('a'), do: Do.RECURSE, reorder: false},
          {selector: new Selector('b'), do: Do.RECURSE, reorder: false}
        ],
        rest: false
-      }
-    ],
+      }],
+  }, {
+    input: [{filename: 'foo', prune: ['a', 'b'], rest: true}],
+    expected: [
+      {filename: 'foo',
+       prune: [new Selector('a'), new Selector('b')],
+       pruneRest: [],
+       contents: [],
+       rest: true
+      }],
+  }, {
+    input: [{filename: 'foo', pruneRest: ['c', 'd'], rest: true}],
+    expected: [
+      {filename: 'foo',
+       prune: [],
+       pruneRest: [new Selector('c'), new Selector('d')],
+       contents: [],
+       rest: true
+      }],
   }];
   for (const {input, expected} of cases) {
     const out = configFromSpec(input);
@@ -62,10 +81,11 @@ exports.testConfigFromSpec = function(t) {
     'a string',  // Not an array.
     {object: 'not array'},  // Not an array.
     ['array', 'of', 'strings'],  // Array but not  of objects.
-    [{}],  // Neither SpecFileItem  nor SpecOptionsItem.
+    // [{}],  // Neither SpecFileItem  nor SpecOptionsItem.
     [{filename: 'foo'}],  // Missing both .contents and .rest.
     [{filename: 'foo', contents: [], rest: 'bar'}],  // .rest not bool.
-    [{filename: 'foo', contents: [42]}],  // .contents[0] not an object.
+    [{filename: 'foo', contents: [42]}],  // .contents[0] not object or string.
+    [{filename: 'foo', contents: ['foo[']}],  // .contents[0] invalid selector.
     [{filename: 'foo', contents: [{}]}],  // ... has no .path.
     [{filename: 'foo', contents: [{path: 'bar'}]}],  // ... has no .do.
     [{filename: 'foo', contents: [{path: 'bar', do: 2}]}],  // ... invalid .do.
@@ -74,15 +94,19 @@ exports.testConfigFromSpec = function(t) {
       contents: [{path: 'bar', do: 'SET', reorder: 'qux'}]}],
     [{filename: 'foo', rest: 42}],  // .rest not a boolean.
     [{filename: 'foo', rest: 'false'}],  // .rest not a boolean.
+    [{filename: 'foo', prune: 'x', rest: true}], // .prune not an array.
+    [{filename: 'foo', prune: ['foo['], rest: true}], // .prune[0] invalid.
+    [{filename: 'foo', pruneRest: 'x', rest: true}], // .prune not an array.
+    [{filename: 'foo', pruneRest: ['foo['], rest: true}], // .prune[0] invalid.
   ];
   for (const input of invalid) {
     const name = util.format('configFromSpec(%o)', input);
     try {
       configFromSpec(input);
-      t.fail(input + " didn't throw");
+      t.fail(util.format("%O didn't throw", input));
     } catch (e) {
-      if (!(e instanceof TypeError)) {
-        t.fail(input + ' threw wrong error', e);
+      if (!(e instanceof TypeError || e instanceof SyntaxError)) {
+        t.fail(util.format('%O threw wrong error', input), e);
       }
     }
   }

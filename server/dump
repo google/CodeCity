@@ -61,6 +61,10 @@ var dump = function(intrp1, intrp2, config, directory, verbose) {
   }
   // Dump the specified paths, in order.
   for (var item, i = 0; item = config[i]; i++) {
+    if (!('filename' in item)) {  // An OptionsItem.
+      continue;
+    }
+    // A FileItem.
     var filename = item.filename;
     if (verbose) console.log('Dumping to %s...', filename);
     if (directory !== undefined && !path.isAbsolute(filename)) {
@@ -71,8 +75,14 @@ var dump = function(intrp1, intrp2, config, directory, verbose) {
     dumper.write('////////////////////////////////////////',
                  '///////////////////////////////////////\n',
                  '// ', item.filename, '\n\n');
+    for (var selector, j = 0; (selector = item.prune[j]); j++) {
+      dumper.prune(selector);
+    }
+    for (var selector, j = 0; (selector = item.pruneRest[j]); j++) {
+      dumper.pruneRest(selector);
+    }
     if (item.contents) {
-      for (var entry, j = 0; entry = item.contents[j]; j++) {
+      for (var entry, j = 0; (entry = item.contents[j]); j++) {
         if (verbose) console.log('Dumping: %s', entry.selector);
         dumper.unskip(entry.selector);
         dumper.dumpBinding(entry.selector, entry.do, true);
@@ -132,6 +142,8 @@ var configFromSpec = function(spec) {
       reject('not a SpecConfigItem object');
     }
     if ('filename' in item) {  // It's a SpecFileItem.
+      var /** !Array<!Selector> */ prune = [];
+      var /** !Array<!Selector> */ pruneRest = [];
       var /** !Array<!ContentEntry> */ contents = [];
 
       if (typeof item.filename !== 'string') {
@@ -141,8 +153,26 @@ var configFromSpec = function(spec) {
         reject('.contents is not an array');
       } else if (typeof item.rest !== 'boolean' && item.rest !== undefined) {
         reject('.rest is not a boolean');
-      } else if (item.contents) {
-        for (var j = 0; j < item.contents.length; j++) {
+      }
+
+      if ('prune' in item) {
+        if (!Array.isArray(item.prune)) {
+          reject('.prune is not an array');
+        }
+        for (var j = 0; j < item.prune.length; j++) {
+          prune.push(new Selector(item.prune[j]));
+        }
+      }
+      if ('pruneRest' in item) {
+        if (!Array.isArray(item.pruneRest)) {
+          reject('.pruneRest is not an array');
+        }
+        for (j = 0; j < item.pruneRest.length; j++) {
+          pruneRest.push(new Selector(item.pruneRest[j]));
+        }
+      }
+      if ('contents' in item) {
+        for (j = 0; j < item.contents.length; j++) {
           var entry = item.contents[j];
 
           if (typeof entry === 'string') {
@@ -169,28 +199,18 @@ var configFromSpec = function(spec) {
         throw new TypeError(
             'spec[' + i + '] must specify one of .contents or .rest');
       }
+
       config.push({
         filename: item.filename,
+        prune: prune,
+        pruneRest: pruneRest,
         contents: contents,  // Possibly empty.
         rest: Boolean(item.rest),
       });
     } else { // It's a SpecOptionsItem.
-      var /** !Array<!Selector> */ prune = [];
-      var foundOne = false;
-
-      if ('prune' in item) {
-        foundOne = true;
-        if (!Array.isArray(item.prune)) {
-          reject('.prune is not an  array');
-        }
-        for (var j = 0; j < item.prune.length; j++) {
-          prune.push(new Selector(item.prune[j]));
-        }
-      }
-      if (!foundOne) {
-        reject('OptionsItem must contain one of: .prune');
-      }
-    } 
+      // No options implemented yet.  Ignore.
+      // config.push({});
+    }
   }
   return config;
 };
@@ -242,7 +262,7 @@ var ConfigItem;
 /**
  * A processed-and-ready-to-use configuration entry setting general
  * options.
- * @typedef {{prune: !Array<!Selector>}}
+ * @typedef {{options: undefined}}
  */
 var OptionsItem;
 
@@ -250,6 +270,8 @@ var OptionsItem;
  * A processed-and-ready-to-use configuration entry for a single
  * output file.
  * @typedef {{filename: string,
+ *            prune: !Array<!Selector>,
+ *            pruneRest: !Array<!Selector>,
  *            contents: !Array<!ContentEntry>,
  *            rest: boolean}}
  */
@@ -291,7 +313,7 @@ var SpecConfigItem;
 /**
  * An OptionsItem, but with Selectors represented by selector strings.
  *
- * @typedef {{prune: !Array<string>}}
+ * @typedef {{options: undefined}}
  */
 var SpecOptionsItem;
 
@@ -303,6 +325,8 @@ var SpecOptionsItem;
  * recursively.
  *
  * @typedef {{filename: string,
+ *            prune: (!Array<string>|undefined),
+ *            pruneRest: (!Array<string>|undefined),
  *            contents: (!Array<string|!SpecContentEntry>|undefined),
  *            rest: (boolean|undefined)}}
  */
