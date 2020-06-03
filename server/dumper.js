@@ -820,6 +820,19 @@ Dumper.prototype.prune = function(selector) {
 };
 
 /**
+ * Mark a particular binding (as specified by a Selector) to pruned,
+ * which will have the effect of trying to ensure it does not exist in
+ * the state reconstructed by the dump output.
+ * TODO(cpcallen): actually delete pruned properties if necessary.
+ * @param {!Selector} selector The selector for the binding to be pruned.
+ */
+Dumper.prototype.pruneRest = function(selector) {
+  selector = new Selector(selector.concat(['']));  // TOOD(cpcallen): ugly!
+  var c = this.getComponentsForSelector_(selector);
+  c.dumper.pruneRest = true;
+};
+
+/**
  * Set options for this dumper.  Can be called to change options
  * between calls to .dumpbBinding.  Will update existing settings with
  * new values, so only changed options need to be supplied.
@@ -1053,6 +1066,7 @@ Object.setPrototypeOf(ScopeDumper.prototype, SubDumper.prototype);
  * Generate JS source text to create and/or initialize a single
  * variable binding.
  * @param {!Dumper} dumper Dumper to which this ScopeDumper belongs.
+ * @return {void}
  */
 ScopeDumper.prototype.dump = function(dumper) {
   if (dumper.scope !== this.scope) {
@@ -1233,6 +1247,7 @@ ScopeDumper.prototype.survey = function(dumper) {
  */
 var ObjectDumper = function(dumper, obj) {
   SubDumper.call(this);
+  /** @type {!Interpreter.prototype.Object} */
   this.obj = obj;
   /**
    * Preferred reference to this object.  E.g., for Object.prototype
@@ -1245,6 +1260,13 @@ var ObjectDumper = function(dumper, obj) {
    * @type {?Components} Reference to this object, once created.
    */
   this.ref = null;
+  /**
+   * If true, then .dump() will not do any additional work dumping
+   * bindings, beyond what has already been done by calls to
+   * .dumpBinding(), nor will it recursively dump any value object.
+   * @type {boolean}
+   */
+  this.pruneRest = false;
   /** @type {!ObjectDumper.Done} How much has object been dumped? */
   this.done = ObjectDumper.Done.NO;
   /** @private @type {!Do} Has prototype been set? */
@@ -1356,7 +1378,8 @@ ObjectDumper.prototype.dump = function(
   var /** !ObjectDumper.Done */ done = ObjectDumper.Done.DONE_RECURSIVELY;
   var /** ?ObjectDumper.Pending */ pending = null;
   var keys = this.obj.ownKeys(dumper.intrp2.ROOT);
-  var parts = [Selector.PROTOTYPE, Selector.OWNER].concat(keys);
+  var parts =
+      this.pruneRest ? [] : [Selector.PROTOTYPE, Selector.OWNER].concat(keys);
   for (i = 0; i < parts.length; i++) {
     var part = parts[i];
     if (this.prune_ && this.prune_.has(part)) {

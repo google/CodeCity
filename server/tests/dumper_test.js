@@ -452,6 +452,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
   /**
    * @type {!Array<{src: string,
    *                prune: (!Array<(string|number)>|undefined),
+   *                pruneRest: (!Array<(string|number)>|undefined),
    *                skip: (!Array<(string|number)>|undefined),
    *                set: (!Array<(string|number)>|undefined),
    *                dump: (!Array<(string|number)>|undefined),
@@ -497,7 +498,29 @@ exports.testDumperPrototypeDumpBinding = function(t) {
       ],
     },
 
-    { // Test recursion in face of incomplet(able) properties.
+    { // Test simple recursion with pruning.
+      title: 'recursion-simple',
+      src: `
+        var obj = {a: {id: 'a'}, b: {id: 'b'}, c: {id: 'c'}};
+      `,
+      // Mark obj.b.id to be pruned, and pruneRest of obj.c.
+      prune: ['obj.b.id'],
+      pruneRest: ['obj.c'],
+      dump: [
+        ['obj', Do.RECURSE, "var obj = {};\nobj.a = {};\nobj.a.id = 'a';\n" +
+            'obj.b = {};\nobj.c = {};\n'],
+      ],
+      after: [
+        ['obj.a', Do.RECURSE],
+        ['obj.a.id', Do.RECURSE],
+        ['obj.b', Do.RECURSE],
+        ['obj.b.id', Do.UNSTARTED],
+        ['obj.c', Do.RECURSE],
+        ['obj.c.id', Do.UNSTARTED],
+      ],
+    },
+
+    { // Test recursion in face of cyclic data and incomplet(able) properties.
       title: 'recursion-incompletable',
       src: `
         var obj = {a: {id: 'a'}, b: {id: 'b'}, c: {id: 'c'}};
@@ -1112,6 +1135,9 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     // already being dumped or being marked for deferred dumping.
     for (const ss of tc.prune || []) {
       dumper.prune(new Selector(ss));
+    }
+    for (const ss of tc.pruneRest || []) {
+      dumper.pruneRest(new Selector(ss));
     }
     for (const ss of tc.skip || []) {
       dumper.skip(new Selector(ss));
