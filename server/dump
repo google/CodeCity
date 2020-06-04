@@ -28,6 +28,7 @@ var code = require('./code');
 var CodeCity = require('./codecity');
 var Do = require('./dumper').Do;
 var Dumper = require('./dumper').Dumper;
+var DumperOptions = require('./dumper').DumperOptions;
 var Writable = require('./dumper').Writable;
 var fs = require('fs');
 var Interpreter = require('./interpreter');
@@ -61,7 +62,8 @@ var dump = function(intrp1, intrp2, config, directory, verbose) {
   }
   // Dump the specified paths, in order.
   for (var item, i = 0; item = config[i]; i++) {
-    if (!('filename' in item)) {  // An OptionsItem.
+    if ('options' in item) {  // An OptionsItem.
+      dumper.setOptions(item.options);
       continue;
     }
     // A FileItem.
@@ -91,9 +93,7 @@ var dump = function(intrp1, intrp2, config, directory, verbose) {
     }
     if (item.rest) {
       if (verbose) console.log('Dumping rest.');
-      dumper.setOptions({treeOnly: false});
       dumper.dump();
-      dumper.setOptions({treeOnly: true});
     }
     outputStream.end();
   }
@@ -198,8 +198,7 @@ var configFromSpec = function(spec) {
           });
         }
       } else if (!item.rest) {
-        throw new TypeError(
-            'spec[' + i + '] must specify one of .contents or .rest');
+        reject('must specify one of .contents or .rest');
       }
 
       config.push({
@@ -209,9 +208,14 @@ var configFromSpec = function(spec) {
         contents: contents,  // Possibly empty.
         rest: Boolean(item.rest),
       });
-    } else { // It's a SpecOptionsItem.
-      // No options implemented yet.  Ignore.
-      // config.push({});
+    } else if ('options' in item) { // It's a SpecOptionsItem.
+      if (typeof item.options !== 'object') {
+        reject('.options is not a DumperOptions object');
+        // TODO(cpcallen): additional type checks?
+      }
+      config.push({options: item.options});
+    } else {
+      reject('is neither a SpecFileItem nor a SpecOptionsItem');
     }
   }
   return config;
@@ -264,7 +268,7 @@ var ConfigItem;
 /**
  * A processed-and-ready-to-use configuration entry setting general
  * options.
- * @typedef {{options: undefined}}
+ * @typedef {{options: !DumperOptions}}
  */
 var OptionsItem;
 
@@ -315,7 +319,7 @@ var SpecConfigItem;
 /**
  * An OptionsItem, but with Selectors represented by selector strings.
  *
- * @typedef {{options: undefined}}
+ * @typedef {{options: !DumperOptions}}
  */
 var SpecOptionsItem;
 

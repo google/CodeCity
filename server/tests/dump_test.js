@@ -68,6 +68,9 @@ exports.testConfigFromSpec = function(t) {
        contents: [],
        rest: true
       }],
+  }, {
+    input: [{options: {}}, {options: {treeOnly: false}}],
+    expected: [{options: {}}, {options: {treeOnly: false}}],
   }];
   for (const {input, expected} of cases) {
     const out = configFromSpec(input);
@@ -81,7 +84,7 @@ exports.testConfigFromSpec = function(t) {
     'a string',  // Not an array.
     {object: 'not array'},  // Not an array.
     ['array', 'of', 'strings'],  // Array but not  of objects.
-    // [{}],  // Neither SpecFileItem  nor SpecOptionsItem.
+    [{}],  // Neither SpecFileItem  nor SpecOptionsItem.
     [{filename: 'foo'}],  // Missing both .contents and .rest.
     [{filename: 'foo', contents: [], rest: 'bar'}],  // .rest not bool.
     [{filename: 'foo', contents: [42]}],  // .contents[0] not object or string.
@@ -98,6 +101,7 @@ exports.testConfigFromSpec = function(t) {
     [{filename: 'foo', prune: ['foo['], rest: true}], // .prune[0] invalid.
     [{filename: 'foo', pruneRest: 'x', rest: true}], // .prune not an array.
     [{filename: 'foo', pruneRest: ['foo['], rest: true}], // .prune[0] invalid.
+    [{options: 'not an object'}],  // .options is not an object.
   ];
   for (const input of invalid) {
     const name = util.format('configFromSpec(%o)', input);

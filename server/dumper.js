@@ -2095,6 +2095,7 @@ Writable.prototype.write = function(s) {};
 
 exports.Do = Do;
 exports.Dumper = Dumper;
+exports.DumperOptions = DumperOptions;
 exports.Writable = Writable;
 
 // For unit testing only!
