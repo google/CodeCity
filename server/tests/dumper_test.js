@@ -498,6 +498,21 @@ exports.testDumperPrototypeDumpBinding = function(t) {
       ],
     },
 
+    { // Test the skipBinding option.
+      title: 'skipBinding',
+      src: `
+        var obj = {a: 'a', b: 'b'};
+        Object.setPrototypeOf(obj, {});
+      `,
+      set: ['Object', 'Object.setPrototypeOf'],
+      dump: [
+        ['obj', Do.RECURSE, "var obj = {};\nobj.a = 'a';\n", Do.DONE,
+         {skipBindings: ['b', Selector.PROTOTYPE]}],
+        ['obj', Do.RECURSE, 'Object.setPrototypeOf(obj, {});\n' +
+            "obj.b = 'b';\n", Do.RECURSE, {skipBindings: []}],
+      ],
+    },
+
     { // Test simple recursion with pruning.
       title: 'recursion-simple',
       src: `
