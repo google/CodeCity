@@ -85,13 +85,15 @@ var dump = function(intrp1, intrp2, config, directory, verbose) {
       for (var entry, j = 0; (entry = item.contents[j]); j++) {
         if (verbose) console.log('Dumping: %s', entry.selector);
         dumper.unskip(entry.selector);
-        dumper.dumpBinding(entry.selector, entry.do, true);
+        dumper.dumpBinding(entry.selector, entry.do);
         dumper.write('\n');
       }
     }
     if (item.rest) {
       if (verbose) console.log('Dumping rest.');
+      dumper.setOptions({treeOnly: false});
       dumper.dump();
+      dumper.setOptions({treeOnly: true});
     }
     outputStream.end();
   }

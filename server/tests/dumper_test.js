@@ -573,7 +573,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     },
 
     { // Test recursion, limited by subtree.
-      title: 'recursion-subtree',
+      title: 'recursion-treeOnly',
       src: `
         var outsider = {iam: 'outsider'};
         var obj = {
@@ -589,13 +589,13 @@ exports.testDumperPrototypeDumpBinding = function(t) {
              'obj.foo[0] = {};\n' +
              "obj.foo[1] = {};\nobj.foo[1].iam = 'insider';\n" +
              'obj.foo[2] = {};\n',
-         Do.DONE, /*treeOnly=*/true],
+         Do.DONE, {treeOnly: true}],
         ['obj', Do.RECURSE,
          "obj.bar = obj.foo[2];\nobj.bar.iam = 'bar';\n",
-         Do.DONE, /*treeOnly=*/true],
+         Do.DONE, {treeOnly: true}],
         ['obj', Do.RECURSE,
          "obj.foo[0].iam = 'outsider';\n",
-         Do.RECURSE, /*treeOnly=*/false],
+         Do.RECURSE, {treeOnly: false}],
       ],
     },
 
@@ -786,9 +786,10 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         ['obj2', Do.RECURSE, 'obj2.id = 2;\nObject.preventExtensions(obj2);\n'],
         // Verify treeOnly doesn't prevent .preventExtensions being called.
         ['obj3', Do.RECURSE, 'obj3.id = 3;\nobj3.other = {};\n' + 
-            'Object.preventExtensions(obj3);\n', Do.DONE, /*treeOnly=*/true],
+            'Object.preventExtensions(obj3);\n', Do.DONE, {treeOnly: true}],
         // Verify we don't call .preventExtensions more than once.
-        ['obj3', Do.RECURSE, "obj3.other.id = 'other';\n", Do.RECURSE],
+        ['obj3', Do.RECURSE, "obj3.other.id = 'other';\n", Do.RECURSE,
+         {treeOnly: false}],
       ],
     },
 
@@ -1119,8 +1120,10 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     intrp.run();
 
     // Create Dumper with pristine Interpreter instance to compare to.
+    // Supply treeOnly: false because most tests were written before
+    // this option was created (and made to default to true).
     const pristine = new Interpreter();
-    const dumper = new Dumper(pristine, intrp);
+    const dumper = new Dumper(pristine, intrp, {treeOnly: false});
 
     // Set a few object .done flags in advance, to limit recursive
     // dumping of builtins in tests.
@@ -1147,15 +1150,16 @@ exports.testDumperPrototypeDumpBinding = function(t) {
     }
 
     // Check generated output for (and post-dump status of) specific bindings.
-    for (const [ss, todo, expected, done, subTreeOnly] of tc.dump || []) {
+    for (const [ss, todo, expected, done, options] of tc.dump || []) {
       const s = new Selector(ss);
       // Dump binding and check output code.
       const result = new MockWritable();
+      if (options) dumper.setOptions(options);
       dumper.setOptions({output: result});
       dumper.unskip(s);
-      dumper.dumpBinding(s, todo, subTreeOnly);
-      t.expect(util.format('%sDumper.p.dumpBinding(<%s>, %o, %o)', prefix,
-                           s, todo, Boolean(subTreeOnly)),
+      dumper.dumpBinding(s, todo);
+      t.expect(util.format('%sDumper.p.dumpBinding(<%s>, %o)', prefix,
+                           s, todo),
                String(result), expected);
       // Check work recorded.
       /** @suppress {accessControls} */

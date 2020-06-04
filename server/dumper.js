@@ -226,18 +226,15 @@ Dumper.prototype.dump = function() {
  *
  * @param {!Selector} selector The selector for the binding to be dumped.
  * @param {!Do} todo How much to dump.  Must be >= Do.DECL.
- * @param {boolean=} treeOnly If true, limit recursive dumping to the
- *     subtree of the spaning tree (as defined by the preferred
- *     selectors) rooted at selector.
  * @return {void}
  */
-Dumper.prototype.dumpBinding = function(selector, todo, treeOnly) {
+Dumper.prototype.dumpBinding = function(selector, todo) {
   var c = this.getComponentsForSelector_(selector);
   var done = c.dumper.dumpBinding(this, c.part, todo);
   if (todo >= Do.RECURSE && done < Do.RECURSE) {
     var value = c.dumper.getValue(this, c.part);
     if (value instanceof this.intrp2.Object) {
-      var objDone = this.getObjectDumper_(value).dump(this, selector, treeOnly);
+      var objDone = this.getObjectDumper_(value).dump(this, selector);
       if (objDone === ObjectDumper.Done.DONE_RECURSIVELY) {
         if (c.dumper.getDone(c.part) < Do.RECURSE) {
           c.dumper.setDone(c.part, Do.RECURSE);
@@ -1333,9 +1330,6 @@ ObjectDumper.prototype.checkProperty = function(key, value, attr, pd) {
  * @param {!Selector=} objSelector Selector refering to this object.
  *     Optional; defaults to whatever selector was used to create the
  *     object.
- * @param {boolean=} treeOnly If true, limit recursive dumping to the
- *     subtree of the spaning tree (as defined by the preferred
- *     selectors) rooted at selector.
  * @param {!Array<(!SubDumper)>=} visiting List of Scope/Object dumpers
  *     currently being recursively dumped.  Used only when
  *     recursing.
@@ -1349,7 +1343,7 @@ ObjectDumper.prototype.checkProperty = function(key, value, attr, pd) {
  *     outstanding invocation.
  */
 ObjectDumper.prototype.dump = function(
-    dumper, objSelector, treeOnly, visiting, visited) {
+    dumper, objSelector, visiting, visited) {
   if (!visiting) visiting = [];
   if (!visited) visited = new Set();
   if (!objSelector) objSelector = this.getSelector();
@@ -1407,7 +1401,7 @@ ObjectDumper.prototype.dump = function(
     var value = this.getValue(dumper, part);
     if (!(value instanceof dumper.intrp2.Object)) continue;
     var valueDumper = dumper.getObjectDumper_(value);
-    if (treeOnly &&
+    if (dumper.options.treeOnly &&
         (this !== valueDumper.preferredRef.dumper ||
          part !== valueDumper.preferredRef.part)) {
       // Refuse to recurse into objects outside of the spanning tree.
@@ -1417,7 +1411,7 @@ ObjectDumper.prototype.dump = function(
     }
     valueDumper.updateRef(new Components(this, part));
     var objDone =
-        valueDumper.dump(dumper, bindingSelector, treeOnly, visiting, visited);
+        valueDumper.dump(dumper, bindingSelector, visiting, visited);
     if (objDone === null || objDone instanceof ObjectDumper.Pending) {
       // Circular structure detected.
       if (!pending) {
@@ -2033,6 +2027,28 @@ var DumperOptions = function() {};
  */
 DumperOptions.prototype.output;
 /**
+ * If true, limit recursive dumping to the spaning tree defined by the
+ * preferred selectors.
+ *
+ * E.g.: Noting that Object{proto}, Fucntion{proto} and
+ * Function.prototype are the same object.  If treeOnly is true (the
+ * default), then:
+ *
+ * * Dumping Object recursively would set Object{proto} but not visit
+ *   Function.prototype at all, while
+ * * Dumping Function recursively would set Function{proto} but
+ *   recurse into Function.prototype.
+ *
+ * On the other hand, if treeOnly is false, then dumping Object
+ * recursively would recurse into Object{proto} (i.e.,
+ * Function.prototype by a different name), and dumping Function might
+ * choose ot recurse via Function{proto} rather than
+ * Function.prototype.
+ *
+ * @type {boolean|undefined}
+ */
+DumperOptions.prototype.treeOnly;
+/**
  * Print status information and warnings to the console?
  * @type {boolean|undefined}
  */
@@ -2044,6 +2060,7 @@ DumperOptions.prototype.verbose;
  */
 var DEFAULT_OPTIONS = {
   output: null,
+  treeOnly: true,
   verbose: false,
 };
 
