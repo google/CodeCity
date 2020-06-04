@@ -58,6 +58,7 @@ var Dumper = function(intrp1, intrp2, options) {
   this.intrp1 = intrp1;
   this.intrp2 = intrp2;
   // Copy DEFAULT_OPTIONS then apply supplied options.
+  /** @type {!DumperOptions} */
   this.options = {};
   this.setOptions(DEFAULT_OPTIONS);
   if (options) this.setOptions(options);
@@ -1379,7 +1380,8 @@ ObjectDumper.prototype.dump = function(
     if (this.prune_ && this.prune_.has(part)) {
       // TODO(cpcallen): delete binding if necessary.
       continue;
-    } else if (this.skip_ && this.skip_.has(part)) {
+    } else if (this.skip_ && this.skip_.has(part) ||
+        dumper.options.skipBindings.includes(part)) {
       // Can't finish an object with skipped parts.
       done = /** @type {!ObjectDumper.Done} */(
           Math.min(done, ObjectDumper.Done.NO));
@@ -2027,6 +2029,11 @@ var DumperOptions = function() {};
  */
 DumperOptions.prototype.output;
 /**
+ * Skip the named bindings.
+ * @type {!Array<Selector.Part>|undefined}
+ */
+DumperOptions.prototype.skipBindings;
+/**
  * If true, limit recursive dumping to the spaning tree defined by the
  * preferred selectors.
  *
@@ -2060,6 +2067,7 @@ DumperOptions.prototype.verbose;
  */
 var DEFAULT_OPTIONS = {
   output: null,
+  skipBindings: [],
   treeOnly: true,
   verbose: false,
 };
