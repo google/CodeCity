@@ -47,6 +47,8 @@
       "$.servers.eval"
     ]
   }, {
+    "options": {"treeOnly": false}
+  }, {
     "filename": "core_99_rest.js",
     "rest": true
   }
