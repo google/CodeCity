@@ -42,12 +42,12 @@ SpecialPart.prototype.toString = function() {
  * Selector.prototype (with various useful convenience methods) in its
  * prototype chain.
  * @constructor
- * @extends {Array<!Selector.Part>}
- * @param {string|!Array<!Selector.Part>|!Selector} s A Selector, parts
+ * @extends {Array<Selector.Part>}
+ * @param {string|!Array<Selector.Part>|!Selector} s A Selector, parts
  *     array or selector string.
  */
 var Selector = function(s) {
-  var /** !Array<!Selector.Part> */ parts;
+  var /** !Array<Selector.Part> */ parts;
   if (typeof s === 'string') {
     // Parse selector text.
     parts = parse(s);

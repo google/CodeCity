@@ -967,7 +967,7 @@ var SubDumper = function() {
  * object).
  * @abstract
  * @param {!Dumper} dumper Dumper to which this ScopeDumper belongs.
- * @param {!Selector.Part} part The part to dump.  Must be simple string.
+ * @param {Selector.Part} part The part to dump.  Must be simple string.
  * @param {!Do} todo How much to do.  Must be >= Do.DECL; > Do.SET ignored.
  * @return {!Do} How much has been done on the specified binding.
  */
@@ -978,7 +978,7 @@ SubDumper.prototype.dumpBinding = function(dumper, part, todo) {};
  * final value, provided that it isn't going to be pruned.)
  * @abstract
  * @param {!Dumper} dumper Dumper to which this SubDumper belongs.
- * @param {!Selector.Part} part The binding part to get the value of.
+ * @param {Selector.Part} part The binding part to get the value of.
  * @return {Interpreter.Value} The value of that part.
  */
 SubDumper.prototype.getValue = function(dumper, part) {};
@@ -1090,7 +1090,7 @@ ScopeDumper.prototype.dump = function(dumper) {
  * Generate JS source text to create and/or initialize a single
  * variable binding.
  * @param {!Dumper} dumper Dumper to which this ScopeDumper belongs.
- * @param {!Selector.Part} part The part to dump.  Must be simple string.
+ * @param {Selector.Part} part The part to dump.  Must be simple string.
  * @param {!Do} todo How much to do.  Must be >= Do.DECL; > Do.SET ignored.
  * @return {!Do} How much has been done on the specified binding.
  */
@@ -1130,7 +1130,7 @@ ScopeDumper.prototype.dumpBinding = function(dumper, part, todo) {
 
 /**
  * Return the current 'done' status of a variable binding.
- * @param {!Selector.Part} part The part get status for.  Must be simple string.
+ * @param {Selector.Part} part The part get status for.  Must be simple string.
  * @return {!Do} The done status of the binding.
  */
 ScopeDumper.prototype.getDone = function(part) {
@@ -1144,7 +1144,7 @@ ScopeDumper.prototype.getDone = function(part) {
 /**
  * Update the current 'done' status of a variable binding.  Will throw
  * a RangeError if caller attempts to un-do a previously-done action.
- * @param {!Selector.Part} part The part set status for.  Must be simple string.
+ * @param {Selector.Part} part The part set status for.  Must be simple string.
  * @param {!Do} done The new done status of the binding.
  */
 ScopeDumper.prototype.setDone = function(part, done) {
@@ -1166,7 +1166,7 @@ ScopeDumper.prototype.setDone = function(part, done) {
  * value in intrp2, and the intended final value - provided that it
  * isn't going to be pruned.)
  * @param {!Dumper} dumper Dumper to which this ScopeDumper belongs.
- * @param {!Selector.Part} part The binding part to get the value of.
+ * @param {Selector.Part} part The binding part to get the value of.
  * @return {Interpreter.Value} The value of that part.
  */
 ScopeDumper.prototype.getValue = function(dumper, part) {
@@ -1469,7 +1469,7 @@ ObjectDumper.prototype.dump = function(
  * Generate JS source text to create and/or initialize a single
  * binding (property or internal slot) of the object.
  * @param {!Dumper} dumper Dumper to which this ObjectDumper belongs.
- * @param {!Selector.Part} part The binding part to dump.
+ * @param {Selector.Part} part The binding part to dump.
  * @param {!Do} todo How much to do.  Must be >= Do.DECL; > Do.ATTR ignored.
  * @param {!Selector=} objSelector Selector refering to this object.
  *     Optional; will be created using getSelector if not supplied.
@@ -1639,7 +1639,7 @@ ObjectDumper.prototype.dumpPrototype_ = function(
 
 /**
  * Return the current 'done' status of an object binding.
- * @param {!Selector.Part} part The part to get status for.
+ * @param {Selector.Part} part The part to get status for.
  * @return {!Do} The done status of the binding.
  */
 ObjectDumper.prototype.getDone = function(part) {
@@ -1686,7 +1686,7 @@ ObjectDumper.prototype.getSelector = function(preferred) {
  * in intrp2, and the intended final value provided that it isn't
  * going to be pruned.)
  * @param {!Dumper} dumper Dumper to which this ObjectDumper belongs.
- * @param {!Selector.Part} part The binding part to get the value of.
+ * @param {Selector.Part} part The binding part to get the value of.
  * @return {Interpreter.Value} The value of that part.
  */
 ObjectDumper.prototype.getValue = function(dumper, part) {
@@ -1751,7 +1751,7 @@ ObjectDumper.prototype.scheduleDeletion = function(key) {
  * Update the current 'done' status of a property.  Will throw a
  * RangeError if caller attempts to un-do or re-do a previously-done
  * action.
- * @param {!Selector.Part} part The part to set status for.
+ * @param {Selector.Part} part The part to set status for.
  * @param {!Do} done The new done status of the binding.
  */
 ObjectDumper.prototype.setDone = function(part, done) {
@@ -1943,11 +1943,11 @@ ObjectDumper.Pending.prototype.toString = function() {
  *
  * @constructor
  * @param {!SubDumper} dumper
- * @param {!Selector.Part} part
+ * @param {Selector.Part} part
  */
 var Components = function(dumper, part) {
   /** @const {!SubDumper} */ this.dumper = dumper;
-  /** @const {!Selector.Part} */ this.part = part;
+  /** @const {Selector.Part} */ this.part = part;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
