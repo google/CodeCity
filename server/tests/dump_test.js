@@ -39,9 +39,15 @@ exports.testConfigFromSpec = function(t) {
     input: [],
     expected: [],
   }, {
-    input: [{filename: 'foo', contents: ['a', 'b']}],
+    input: [
+      {filename: 'foo',
+       header: ['// F1 BIOS', '// Copyright YEAR Foonly inc.', 'LINES'],
+       headerSubs: {YEAR: '1978', LINES: ['// 1', '// 2']},
+       contents: ['a', 'b']}],
     expected: [
       {filename: 'foo',
+       header: '// F1 BIOS\n// Copyright YEAR Foonly inc.\nLINES',
+       headerSubs: {YEAR: '1978', LINES: '// 1\n// 2'},
        prune: [],
        pruneRest: [],
        contents: [
@@ -53,20 +59,18 @@ exports.testConfigFromSpec = function(t) {
   }, {
     input: [{filename: 'foo', prune: ['a', 'b'], rest: true}],
     expected: [
-      {filename: 'foo',
+      {filename: 'foo', header: undefined, headerSubs: {},
        prune: [new Selector('a'), new Selector('b')],
        pruneRest: [],
-       contents: [],
-       rest: true
+       contents: [], rest: true
       }],
   }, {
     input: [{filename: 'foo', pruneRest: ['c', 'd'], rest: true}],
     expected: [
-      {filename: 'foo',
+      {filename: 'foo', header: undefined, headerSubs: {},
        prune: [],
        pruneRest: [new Selector('c'), new Selector('d')],
-       contents: [],
-       rest: true
+       contents: [], rest: true
       }],
   }, {
     input: [{options: {}}, {options: {treeOnly: false}}],
