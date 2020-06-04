@@ -60,6 +60,7 @@ var dump = function(intrp1, intrp2, config, directory, verbose) {
       dumper.skip(entry.selector);
     }
   }
+  var /** string */ header = '';
   // Dump the specified paths, in order.
   for (var item, i = 0; item = config[i]; i++) {
     if ('options' in item) {  // An OptionsItem.
@@ -74,15 +75,21 @@ var dump = function(intrp1, intrp2, config, directory, verbose) {
     }
     var outputStream = new SyncWriter(filename);
     dumper.setOptions({output: outputStream});
-    dumper.write('////////////////////////////////////////',
-                 '///////////////////////////////////////\n',
-                 '// ', item.filename, '\n\n');
+
     for (var selector, j = 0; (selector = item.prune[j]); j++) {
       dumper.prune(selector);
     }
     for (var selector, j = 0; (selector = item.pruneRest[j]); j++) {
       dumper.pruneRest(selector);
     }
+
+    if (item.header !== undefined) header = item.header;
+    var fileHeader = header;
+    for (var key in item.headerSubs) {
+      fileHeader = fileHeader.replace(key, item.headerSubs[key]);
+    }
+    if (fileHeader) dumper.write(fileHeader);
+
     if (item.contents) {
       for (var entry, j = 0; (entry = item.contents[j]); j++) {
         if (verbose) console.log('Dumping: %s', entry.selector);
@@ -144,6 +151,8 @@ var configFromSpec = function(spec) {
       reject('not a SpecConfigItem object');
     }
     if ('filename' in item) {  // It's a SpecFileItem.
+      var /** (string|undefined) */ header;
+      var /** !Object<string, string> */ headerSubs = {};
       var /** !Array<!Selector> */ prune = [];
       var /** !Array<!Selector> */ pruneRest = [];
       var /** !Array<!ContentEntry> */ contents = [];
@@ -156,7 +165,27 @@ var configFromSpec = function(spec) {
       } else if (typeof item.rest !== 'boolean' && item.rest !== undefined) {
         reject('.rest is not a boolean');
       }
-
+      if (item.header instanceof Array) {
+        header = item.header.join('\n');
+      } else if (typeof item.header === 'string' || item.header === undefined) {
+        header = item.header;
+      } else {
+        reject('.header is not string or array of strings');
+      }
+      if (item.headerSubs instanceof Object) {
+        for (var key in item.headerSubs) {
+          var value = item.headerSubs[key];
+          if (value instanceof Array) {
+            headerSubs[key] = value.join('\n');
+          } else if (typeof value === 'string' || value === undefined) {
+            headerSubs[key] = value;
+          } else {
+            reject('.headerSubs.' + key + ' is not a string');
+          }
+        }
+      } else if (item.headerSubs !== undefined) {
+        reject('.headerSubs is not an object');
+      }
       if ('prune' in item) {
         if (!Array.isArray(item.prune)) {
           reject('.prune is not an array');
@@ -203,6 +232,8 @@ var configFromSpec = function(spec) {
 
       config.push({
         filename: item.filename,
+        header: header,
+        headerSubs: headerSubs,
         prune: prune,
         pruneRest: pruneRest,
         contents: contents,  // Possibly empty.
@@ -268,7 +299,8 @@ var ConfigItem;
 /**
  * A processed-and-ready-to-use configuration entry setting general
  * options.
- * @typedef {{options: !DumperOptions}}
+ * @typedef {{copyright: (string|!Array<string>|undefined),
+ *            options: !DumperOptions}}
  */
 var OptionsItem;
 
@@ -276,6 +308,8 @@ var OptionsItem;
  * A processed-and-ready-to-use configuration entry for a single
  * output file.
  * @typedef {{filename: string,
+ *            header: (string|undefined),
+ *            headerSubs: !Object<string, string>,
  *            prune: !Array<!Selector>,
  *            pruneRest: !Array<!Selector>,
  *            contents: !Array<!ContentEntry>,
@@ -325,12 +359,18 @@ var SpecOptionsItem;
 
 /**
  * A FileItem represented as plain old JavaScript object (i.e., as
- * ouptut by JSON.parse).  Do values are reprsesented by the
- * coresponding strings (e.g., "RECURSE" instead of Do.RECURSE), while
- * content items can be just a selector string, which will be dumped
- * recursively.
+ * ouptut by JSON.parse):
+ *
+ * - Do values are reprsesented by the coresponding strings (e.g.,
+ *   "RECURSE" instead of Do.RECURSE).
+ * - For convenience, header: and the values of headerSubs: may be an
+ *   arrays of strings, which will be joined with newlines.
+ * - Contents entries can be just a selector string, which will be
+ *   treated as Do.RECURSE.
  *
  * @typedef {{filename: string,
+ *            header: (string|!Array<string>|undefined),
+ *            headerSubs: (!Object<string, (!Array<string>|string)>|undefined),
  *            prune: (!Array<string>|undefined),
  *            pruneRest: (!Array<string>|undefined),
  *            contents: (!Array<string|!SpecContentEntry>|undefined),
