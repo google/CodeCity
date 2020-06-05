@@ -1,10 +1,41 @@
 [
   {
+    "options": {"skipBindings": ["lastModifiedTime", "lastModifiedUser"]}
+  }, {
+    "header": [
+      "/**",
+      " * @license",
+      " * Copyright <YEAR> Google LLC",
+      " *",
+      " * Licensed under the Apache License, Version 2.0 (the \"License\");",
+      " * you may not use this file except in compliance with the License.",
+      " * You may obtain a copy of the License at",
+      " *",
+      " *   http://www.apache.org/licenses/LICENSE-2.0",
+      " *",
+      " * Unless required by applicable law or agreed to in writing, software",
+      " * distributed under the License is distributed on an \"AS IS\" BASIS,",
+      " * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.",
+      " * See the License for the specific language governing permissions and",
+      " * limitations under the License.",
+      " */",
+      "",
+      "/**",
+      " * @fileoverview <OVERVIEW>",
+      " * @author <AUTHOR>",
+      " */",
+      ""
+    ],
     "filename": "core_00_es5.js",
+    "headerSubs": {
+      "<YEAR>": "2017",
+      "<OVERVIEW>": [
+        "Load builtins and add polyfills to bring the server's partial",
+        " * JavaScript implementation up to ECMAScript 5.1 (or close to it)."
+      ],
+      "<AUTHOR>": "fraser@google.com (Neil Fraser)"
+    },
     "contents": [
-      {"path": "Object", "do": "SET"},
-      {"path": "Function", "do": "SET"},
-      {"path": "Object.defineProperty", "do": "ATTR"},
       "Object",
       "Function",
       "Array",
@@ -35,6 +66,14 @@
     ]
   }, {
     "filename": "core_00_es6.js",
+    "headerSubs": {
+      "<YEAR>": "2017",
+      "<OVERVIEW>": [
+        "Load builtins and add polyfills to bring the server's partial",
+        " * JavaScript implementation to include some features of ECMAScript 6."
+      ],
+      "<AUTHOR>": "fraser@google.com (Neil Fraser)"
+    },
     "contents": [
       "Object.is",
       "Object.setPrototypeOf",
@@ -54,7 +93,28 @@
       "WeakMap"
     ]
   }, {
+    "filename": "core_00_es7.js",
+    "headerSubs": {
+      "<YEAR>": "2017",
+      "<OVERVIEW>": [
+        "Load builtins and add polyfills to bring the server's partial",
+        " * JavaScript implementation to include some features of ECMAScript 7."
+      ],
+      "<AUTHOR>": "fraser@google.com (Neil Fraser)"
+    },
+    "contents": [
+      "Array.prototype.includes"
+    ]
+  }, {
     "filename": "core_00_esx.js",
+    "headerSubs": {
+      "<YEAR>": "2017",
+      "<OVERVIEW>": [
+        "Load builtins and add polyfills for Code City-specific extensions to",
+        " * JavaScript."
+      ],
+      "<AUTHOR>": "cpcallen@google.com (Christopher Allen)"
+    },
     "contents": [
       "Object.getOwnerOf",
       "Object.setOwnerOf",
@@ -65,86 +125,189 @@
       "setTimeout",
       "clearTimeout"
     ]
-  }, {
+  },
+
+  {
     "filename": "core_10_base.js",
+    "headerSubs": {
+      "<YEAR>": "2017",
+      "<OVERVIEW>": "Database core for Code City.",
+      "<AUTHOR>": "fraser@google.com (Neil Fraser)"
+    },
     "contents": [
-      {"path": "user", "do": "DECL"},
+      "user",
       {"path": "$", "do": "SET"},
       "$.system",
-      {"path": "$.utils", "do": "ATTR"},
+      "$.utils",
       "$.physical",
       "$.thing",
       "$.room",
       "$.user",
       "$.execute",
-      {"path": "$.userDatabase", "do": "ATTR"},
+      "$.userDatabase",
       "$.connection",
-      {"path": "$.servers", "do": "ATTR"},
-      "$.servers.telnet"
+      "$.servers"
     ]
   }, {
-    "filename": "core_11_$.utils.command.js",
-    "contents": [
-      "$.utils.command",
-      "$.utils.match"
-    ]
-  }, {
-    "filename": "core_12_$.utils.selector.js",
-    "contents": [
-      "$.utils.selector",
-      {"path": "$.utils.selector.objectMap_", "do": "ATTR"}
-    ]
-  }, {
-    "filename": "core_13_$.utils.code.js",
+    "filename": "core_12_$.utils.code.js",
+    "headerSubs": {
+      "<YEAR>": "2018",
+      "<OVERVIEW>": "Code utilities for Code City.",
+      "<AUTHOR>": "fraser@google.com (Neil Fraser)"
+    },
     "contents": ["$.utils.code"]
   }, {
-    "filename": "core_30_$.servers.http.js",
-    "contents": ["$.servers.http"]
+    "filename": "core_13_$.Selector.js",
+    "headerSubs": {
+      "<YEAR>": "2018",
+      "<OVERVIEW>": "Selector utilities for Code City.",
+      "<AUTHOR>": "fraser@google.com (Neil Fraser)"
+    },
+    "contents": [
+      "$.utils.selector"
+    ]
+  },
+
+  {
+    "filename": "core_20_$.utils.html.js",
+    "headerSubs": {
+      "<YEAR>": "2018",
+      "<OVERVIEW>": "HTML utilities for Code City.",
+      "<AUTHOR>": "fraser@google.com (Neil Fraser)"
+    },
+    "contents": ["$.utils.html"]
   }, {
-    "filename": "core_31_$.jssp.js",
+    "filename": "core_21_$.Jssp.js",
+    "headerSubs": {
+      "<YEAR>": "2017",
+      "<OVERVIEW>": "JavaScript Server Pages for Code City.",
+      "<AUTHOR>": "fraser@google.com (Neil Fraser)"
+    },
     "contents": ["$.jssp"]
   }, {
-    "filename": "core_32_$.www.js",
+    "filename": "core_23_$.servers.http.js",
+    "headerSubs": {
+      "<YEAR>": "2017",
+      "<OVERVIEW>": "Webserver for Code City.",
+      "<AUTHOR>": "fraser@google.com (Neil Fraser)"
+    },
+    "contents": ["$.servers.http"]
+  }, {
+    "filename": "core_24_$.www.js",
+    "headerSubs": {
+      "<YEAR>": "2017",
+      "<OVERVIEW>": "Top-level URL handlers for Code City.",
+      "<AUTHOR>": "fraser@google.com (Neil Fraser)"
+    },
     "contents": [
-      {"path": "$.www", "do": "ATTR"},
-      {"path": "$.www.ROUTER", "do": "ATTR"},
-      "$.www[404]",
-      "$.www.homepage",
-      "$.www.robots"
+      "$.www"
     ]
   }, {
-    "filename": "core_33_$.www.editor.js",
-    "contents": ["$.www.editor"]
-  }, {
-    "filename": "core_34_$.www.code.js",
-    "contents": ["$.www.code"]
-  }, {
-    "filename": "core_40_$.db.tempId.js",
+    "filename": "core_25_$.db.tempId.js",
+    "headerSubs": {
+      "<YEAR>": "2018",
+      "<OVERVIEW>": "Temporary ID database for Code City.",
+      "<AUTHOR>": "fraser@google.com (Neil Fraser)"
+    },
     "contents": [
       {"path": "$.db", "do": "ATTR"},
-      "$.db.tempId"
+      "$.db.tempId",
+      {"path": "$.db.tempId.tempIds_", "do": "ATTR"},
+      {"path": "$.db.tempId.cleanThread_", "do": "ATTR"}
     ]
   }, {
-    "filename": "db_00_world.js",
+    "filename": "core_26_$.www.editor.js",
+    "headerSubs": {
+      "<YEAR>": "2017",
+      "<OVERVIEW>": "Code editor for Code City.",
+      "<AUTHOR>": "cpcallen@google.com (Christopher Allen)"
+    },
     "contents": [
-      "user",
-      "$"
+      "$.www.editor"
     ]
   }, {
-    "filename": "db_01_deutsche_zimmer.js",
+    "filename": "core_27_$.www.code.js",
+    "headerSubs": {
+      "<YEAR>": "2018",
+      "<OVERVIEW>": "Web-based code explorer/editor for Code City.",
+      "<AUTHOR>": "fraser@google.com (Neil Fraser)"
+    },
     "contents": [
-      "$.dz",
+      "$.www.code"
+    ]
+  },
+
+  {
+    "filename": "core_30_$.utils.command.js",
+    "headerSubs": {
+      "<YEAR>": "2017",
+      "<OVERVIEW>": "Command parser for Code City",
+      "<AUTHOR>": "fraser@google.com (Neil Fraser)"
+    },
+    "contents": ["$.utils.command"]
+  },
+
+  {
+    "headerSubs": {
+      "<YEAR>": "2017",
+      "<OVERVIEW>": "Initial starting room for Code City.",
+      "<AUTHOR>": "fraser@google.com (Neil Fraser)"
+    },
+    "filename": "core_40_$.startRoom.js",
+    "contents": [
+      {"path": "$.startRoom", "do": "DONE"},
+      "$.startRoom{proto}",
+      "$.startRoom{owner}",
+      {"path": "$.startRoom.contents_", "do": "DONE"},
+      "$.startRoom.name",
+      "$.startRoom.description",
+      "$.startRoom.roll",
+      "$.clock"
+    ]
+  }, {
+    "headerSubs": {
+      "<YEAR>": "2018",
+      "<OVERVIEW>": "Translation room and tutorial  demo for Code City.",
+      "<AUTHOR>": "cpcallen@google.com (Christopher Allen)"
+    },
+    "filename": "core_41_deutsche_zimmer.js",
+    "contents": [
       "$.tutorial"
     ]
   }, {
-    "filename": "db_01_plant.js",
+    "filename": "core_42_plant.js",
+    "headerSubs": {
+      "<YEAR>": "2018",
+      "<OVERVIEW>": "Plant demo for Code City.",
+      "<AUTHOR>": "fraser@google.com (Neil Fraser)"
+    },
     "contents": [
       "$.seed",
       "$.pot",
-      "$.thrower"
+      {"path": "$.pot.stage", "do": "DECL"},
+      {"path": "$.pot.seed", "do": "DECL"},
+      "$.thrower",
+      {"path": "$.thrower.location", "do": "DECL"}
+    ]
+  },
+
+  {
+    "options": {"skipBindings": []}
+  }, {
+    "filename": "db_01_world.js",
+    "headerSubs": {
+      "<YEAR>": "2017",
+      "<OVERVIEW>": "Main database for google.codecity.world.",
+      "<AUTHOR>": "fraser@google.com (Neil Fraser)"
+    },
+    "contents": [
+      "$"
     ]
   }, {
+    "options": {"treeOnly": false}
+  }, {
     "filename": "db_99_leftovers.js",
+    "header": "",
     "rest": true
   }
 ]

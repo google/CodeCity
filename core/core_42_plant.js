@@ -159,12 +159,7 @@
     return commands;
   };
 
-  // It's Bob's flamethrower.
-  thrower.moveTo($.bob);
+  thrower.moveTo($.startRoom);
   $.thrower = thrower;
   $.utils.selector.setSelector(thrower, '$.thrower');
-
-  // Move Alice and the clock to the end of the room.
-  $.alice.moveTo($.startRoom, $.pot);
-  $.clock.moveTo($.startRoom, $.alice);
 })();

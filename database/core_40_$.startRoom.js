@@ -1,0 +1,1 @@
+../core/core_40_$.startRoom.js
