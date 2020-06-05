@@ -54,15 +54,15 @@ var dump = function(intrp1, intrp2, config, directory, verbose) {
 
   // Skip everything that's explicitly mentioned in the config, so
   // that paths won't get dumped until it's their turn.
-  for (var item, i = 0; item = config[i]; i++) {
+  for (var item, i = 0; (item = config[i]); i++) {
     if (!item.contents) continue;
-    for (var entry, j = 0; entry = item.contents[j]; j++) {
+    for (var entry, j = 0; (entry = item.contents[j]); j++) {
       dumper.skip(entry.selector);
     }
   }
   var /** string */ header = '';
   // Dump the specified paths, in order.
-  for (var item, i = 0; item = config[i]; i++) {
+  for (var item, i = 0; (item = config[i]); i++) {
     if ('options' in item) {  // An OptionsItem.
       dumper.setOptions(item.options);
       continue;
@@ -239,7 +239,7 @@ var configFromSpec = function(spec) {
         contents: contents,  // Possibly empty.
         rest: Boolean(item.rest),
       });
-    } else if ('options' in item) { // It's a SpecOptionsItem.
+    } else if ('options' in item) {  // It's a SpecOptionsItem.
       if (typeof item.options !== 'object') {
         reject('.options is not a DumperOptions object');
         // TODO(cpcallen): additional type checks?
