@@ -22,82 +22,6 @@
 
 // Set up a room, two users, and a dog.
 (function () {
-  var hangout = Object.create($.room);
-  hangout.name = 'Hangout';
-  hangout.description = 'A place to hang out, chat, and program.';
-  hangout.roll = function(cmd) {
-    var json = {
-      type: 'iframe',
-      url: 'https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1'
-    };
-    this.tellAll(json);
-  };
-  hangout.roll.verb = 'roll';
-  hangout.roll.dobj = 'none';
-  hangout.roll.prep = 'none';
-  hangout.roll.iobj = 'none';
-  $.startRoom = hangout;
-  $.utils.selector.setSelector(hangout, '$.startRoom');
-
-  var clock = Object.create($.thing);
-  clock.name = 'clock';
-  clock.getDescription = function() {
-    return 'It is currently ' + Date();
-  };
-  clock.getSvgText = function() {
-    var svg = '<circle cx="0" cy="30" r="10" class="fillWhite" />';
-    var r = 10;
-    for (var i = 0; i < 12; i++) {
-      var a = Math.PI * 2 / 12 * i;
-      var length = (i % 3 === 0) ? 2 : 1;
-      var x1 = Math.sin(a) * r;
-      var y1 = Math.cos(a) * r + 30;
-      var x2 = Math.sin(a) * (r - length);
-      var y2 = Math.cos(a) * (r - length) + 30;
-      svg += '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" />';
-    }
-    var now = new Date;
-    var minutes = now.getMinutes() + (now.getSeconds() / 60);
-    var hours = now.getHours() + (minutes / 60);
-    var x1 = 0;
-    var y1 = 30;
-    a = minutes / 60 * Math.PI * 2 + Math.PI;
-    var x2 = Math.sin(a) * -8;
-    var y2 = Math.cos(a) * 8 + 30;
-    svg += '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" />';
-    a = hours / 12 * Math.PI * 2 + Math.PI;
-    var x2 = Math.sin(a) * -6;
-    var y2 = Math.cos(a) * 6 + 30;
-    svg += '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" />';
-    return svg;
-  };
-  clock.moveTo(hangout);
-  clock.chime = function(silent) {
-    var msPerMinute = 60 * 1000;
-    var msPerHour = 60 * msPerMinute;
-    var now = new Date;
-    var hours = (now.getHours() % 12) || 12;
-    var nextHour = msPerHour - (now.getTime() % msPerHour);
-    if (nextHour < msPerMinute && !silent) {
-      // Next hour is less than a minute away, we got called a wee bit too soon.
-      // Schedule for the next hour.
-      nextHour += msPerHour;
-      // Round current hour up to the next hour.
-      hours++;
-    }
-    setTimeout(clock.chime.bind(clock), nextHour);
-    if (!silent) {
-      var text = [];
-      while (hours--) {
-        text.push('Bong.');
-      }
-      this.location.narrateAll(text.join(' '), this);
-    }
-  };
-  clock.chime(true);
-  $.clock = clock;
-  $.utils.selector.setSelector(hangout, '$.clock');
-
   var bob = Object.create($.user);
   bob.name = 'Bob';
   $.userDatabase['1387bfc24b159b3bd6ea187c66551d6b08f52dafb7fe5c3a5a93478f54ac6202b8f78efe5817015c250173b23a70f7f6ef3205e9f5d28730e0ff2033cc6fcf84'] = bob;
@@ -106,7 +30,7 @@
   bob.svgText += '<path d="m 0.74,99.4 c 3.18,-7.65 4.14,-15.4 6.27,-23.6 1.11,6.88 2.32,14.5 3.72,23.7" />';
   bob.svgText += '<path d="m 7.01,76.8 c -0.44,-7.45 -0.78,-14.6 -0.11,-18.7" />';
   bob.svgText += '<path d="m 6.59,58.5 c -3.47,-1.83 -6.15,-6.17 -6.06,-10.1 0.07,-3.06 2.25,-6.52 5.10,-7.65 2.94,-1.17 6.90,0.01 9.24,2.12 2.20,1.98 3.12,5.45 2.87,8.39 -0.22,2.57 -1.53,5.42 -3.72,6.80 -2.10,1.33 -5.24,1.59 -7.44,0.42 z" class="fillWhite" />';
-  bob.moveTo(hangout);
+  bob.moveTo($.startRoom);
   $.bob = bob;
   $.utils.selector.setSelector(bob, '$.bob');
 
@@ -120,7 +44,7 @@
   alice.svgText += '<path d="m 12.3,58.5 c 2.4,0.8 5.6,0.4 7.6,-1.2 2.5,-2 3.7,-5.8 3.3,-9 -0.3,-2.6 -2.2,-5.3 -4.6,-6.5 -3,-1.5 -7.4,-1.8 -10.1,0.2 -2.58,1.9 -3.75,6 -3.08,9.1 0.71,3.3 3.7,6.3 6.88,7.4 z" class="fillWhite" />';
   alice.svgText += '<path d="m 6.48,53.4 c -0.1,-2.2 1.1,-5.7 4.42,-3.6 6,3.8 12.3,-3.5 11.3,-4.3 l 0,0" />';
   alice.svgText += '<path d="m 6.06,52.6 c -1.34,3.2 -1.54,7.1 -1.18,10.3 -0.15,-2.5 -4.525,-7.7 -4.243,-11.4 0.403,-5.3 2.783,-5.9 4.573,-3.6 0,2.3 0.28,3.8 0.85,4.7 z" class="fillWhite" />';
-  alice.moveTo(hangout);
+  alice.moveTo($.startRoom);
   $.alice = alice;
   $.utils.selector.setSelector(alice, '$.alice');
 
@@ -144,6 +68,10 @@
   $.fido = fido;
   $.utils.selector.setSelector(fido, '$.fido');
 
-  $.system.connectionListen(7777, $.servers.telnet, 100);
-  $.system.connectionListen(7780, $.servers.http.connection, 100);
+  // It's Bob's flamethrower.
+  $.thrower.moveTo(bob);
+  
+  // Move Alice and the clock to the end of the room.
+  $.alice.moveTo($.startRoom, $.pot);
+  $.clock.moveTo($.startRoom, $.alice);
 })();
