@@ -21,13 +21,9 @@
  * @author fraser@google.com (Neil Fraser)
  */
 
-
 ///////////////////////////////////////////////////////////////////////////////
 // Array.prototype polyfills
 ///////////////////////////////////////////////////////////////////////////////
 
-Object.defineProperty(Array.prototype, 'includes',
-    {configurable: true,
-     enumerable: false,
-     writable: true,
-     value: new 'Array.prototype.includes'});
+Array.prototype.includes = new 'Array.prototype.includes';
+Object.defineProperty(Array.prototype, 'includes', {enumerable: false});

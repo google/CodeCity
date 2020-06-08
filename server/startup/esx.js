@@ -121,59 +121,57 @@ var PermissionError = new 'PermissionError';
   // spec bug github.com/tc39/ecma262/issues/289.
   var visitedByThread = new WeakMap;
 
-  Object.defineProperty(Array.prototype, 'join', {
-    configurable: true, writable: true,
-    value: function(separator) {
-      // This implements Array.prototype.join from ES6 §22.1.3.12,
-      // with the addition of cycle detection as discussed in
-      // https://github.com/tc39/ecma262/issues/289.
-      //
-      // The only difference from the ES6 version is that the cycle
-      // detection mechanism is thread-aware, so multiple parallel
-      // invocations of .join will not interfere with each other.
-      //
-      // Variable names reflect those in the spec.
-      //
-      // N.B. This function is defined in a closure!
-      var isObj = (typeof this === 'object' || typeof this === 'function') &&
-          this !== null;
-      if (isObj) {
-        if (visitedByThread.has(Thread.current())) {
-          var visited = visitedByThread.get(Thread.current());
-        } else {
-          visited = [];
-          visitedByThread.set(Thread.current(), visited);
-        }
-        if (visited.includes(this)) {
-          return '';
-        }
-        visited.push(this);
+  Array.prototype.join = function(separator) {
+    // This implements Array.prototype.join from ES6 §22.1.3.12,
+    // with the addition of cycle detection as discussed in
+    // https://github.com/tc39/ecma262/issues/289.
+    //
+    // The only difference from the ES6 version is that the cycle
+    // detection mechanism is thread-aware, so multiple parallel
+    // invocations of .join will not interfere with each other.
+    //
+    // Variable names reflect those in the spec.
+    //
+    // N.B. This function is defined in a closure!
+    var isObj = (typeof this === 'object' || typeof this === 'function') &&
+        this !== null;
+    if (isObj) {
+      if (visitedByThread.has(Thread.current())) {
+        var visited = visitedByThread.get(Thread.current());
+      } else {
+        visited = [];
+        visitedByThread.set(Thread.current(), visited);
       }
-      try {
-        // TODO(cpcallen): setPerms(callerPerms());
-        var len = toLength(this.length);
-        var sep = (separator === undefined) ? ',' : String(separator);
-        if (!len) {
-          return '';
+      if (visited.includes(this)) {
+        return '';
+      }
+      visited.push(this);
+    }
+    try {
+      // TODO(cpcallen): setPerms(callerPerms());
+      var len = toLength(this.length);
+      var sep = (separator === undefined) ? ',' : String(separator);
+      if (!len) {
+        return '';
+      }
+      var r = '';
+      for (var k = 0; k < len; k++) {
+        if (k > 0) r += sep;
+        var element = this[k];
+        if (element !== undefined && element !== null) {
+          r += String(element);
         }
-        var r = '';
-        for (var k = 0; k < len; k++) {
-          if (k > 0) r += sep;
-          var element = this[k];
-          if (element !== undefined && element !== null) {
-            r += String(element);
-          }
-        }
-        return r;
-      } finally {
-        if (isObj) visited.pop();
-        if (!visited.length) {
-          visitedByThread.delete(Thread.current());
-        }
+      }
+      return r;
+    } finally {
+      if (isObj) visited.pop();
+      if (!visited.length) {
+        visitedByThread.delete(Thread.current());
       }
     }
-  });
+  };
 })();
+Object.defineProperty(Array.prototype, 'join', {enumerable: false});
 
 ///////////////////////////////////////////////////////////////////////////////
 // Threads API; parts are roughly conformant with HTML Living
