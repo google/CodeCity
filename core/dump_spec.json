@@ -24,9 +24,13 @@
       " * @fileoverview <OVERVIEW>",
       " * @author <AUTHOR>",
       " */",
-      ""
+      "",
+      "//////////////////////////////////////////////////////////////////////",
+      "// AUTO-GENERATED CODE FROM DUMP.  EDIT WITH CAUTION!",
+      "//////////////////////////////////////////////////////////////////////",
+      "\n"
     ],
-    "filename": "core_00_es5.js",
+    "filename": "../var/dump/core_00_es5.js",
     "headerSubs": {
       "<YEAR>": "2017",
       "<OVERVIEW>": [
@@ -65,7 +69,7 @@
       "unescape"
     ]
   }, {
-    "filename": "core_00_es6.js",
+    "filename": "../var/dump/core_00_es6.js",
     "headerSubs": {
       "<YEAR>": "2017",
       "<OVERVIEW>": [
@@ -77,6 +81,7 @@
     "contents": [
       "Object.is",
       "Object.setPrototypeOf",
+      "Array.from",
       "Array.prototype.find",
       "Array.prototype.findIndex",
       "String.prototype.endsWith",
@@ -93,7 +98,7 @@
       "WeakMap"
     ]
   }, {
-    "filename": "core_00_es7.js",
+    "filename": "../var/dump/core_00_es7.js",
     "headerSubs": {
       "<YEAR>": "2017",
       "<OVERVIEW>": [
@@ -106,7 +111,7 @@
       "Array.prototype.includes"
     ]
   }, {
-    "filename": "core_00_esx.js",
+    "filename": "../var/dump/core_00_esx.js",
     "headerSubs": {
       "<YEAR>": "2017",
       "<OVERVIEW>": [
@@ -134,19 +139,30 @@
       "<OVERVIEW>": "Database core for Code City.",
       "<AUTHOR>": "fraser@google.com (Neil Fraser)"
     },
+    "prune": ["$.system.onStartup.thread_"],
     "contents": [
-      "user",
+      "perms",
+      "setPerms",
       {"path": "$", "do": "SET"},
+      "$.root",
       "$.system",
+      "user",
+      {"path": "$.utils", "do": "ATTR"},
+      {"path": "$.utils.validate", "do": "ATTR"},
+      {"path": "$.servers", "do": "ATTR"}
+    ]
+  }, {
+    "filename": "core_11_$.utils.js",
+    "headerSubs": {
+      "<YEAR>": "2020",
+      "<OVERVIEW>": "Basic utilities for Code City.",
+      "<AUTHOR>": "cpcallen@google.com (Christopher Allen)"
+    },
+    "contents": [
       "$.utils",
-      "$.physical",
-      "$.thing",
-      "$.room",
-      "$.user",
-      "$.execute",
-      "$.userDatabase",
-      "$.connection",
-      "$.servers"
+      "$.utils.array",
+      "$.utils.object",
+      "$.utils.string"
     ]
   }, {
     "filename": "core_12_$.utils.code.js",
@@ -160,11 +176,15 @@
     "filename": "core_13_$.Selector.js",
     "headerSubs": {
       "<YEAR>": "2018",
-      "<OVERVIEW>": "Selector utilities for Code City.",
-      "<AUTHOR>": "fraser@google.com (Neil Fraser)"
+      "<OVERVIEW>": "Selector implementation for Code City core.",
+      "<AUTHOR>": "cpcallen@google.com (Christopher Allen)"
     },
+    "pruneRest": ["$.Selector.cache_", "$.Selector.sortByBadness.cache_"],
     "contents": [
-      "$.utils.selector"
+      "$.Selector",
+      "$.utils.Binding",
+      {"path": "$.Selector.cache_", "do": "ATTR"},
+      {"path": "$.Selector.sortByBadness.cache_", "do": "ATTR"}
     ]
   },
 
@@ -183,7 +203,15 @@
       "<OVERVIEW>": "JavaScript Server Pages for Code City.",
       "<AUTHOR>": "fraser@google.com (Neil Fraser)"
     },
-    "contents": ["$.jssp"]
+    "contents": ["$.Jssp"]
+  }, {
+    "filename": "core_22_$.connection.js",
+    "headerSubs": {
+      "<YEAR>": "2017",
+      "<OVERVIEW>": "Connection object for Code City.",
+      "<AUTHOR>": "fraser@google.com (Neil Fraser)"
+    },
+    "contents": ["$.connection"]
   }, {
     "filename": "core_23_$.servers.http.js",
     "headerSubs": {
@@ -200,7 +228,10 @@
       "<AUTHOR>": "fraser@google.com (Neil Fraser)"
     },
     "contents": [
-      "$.www"
+      {"path": "$.www", "do": "ATTR"},
+      "$.www[404]",
+      "$.www['/']",
+      "$.www['/robots.txt']"
     ]
   }, {
     "filename": "core_25_$.db.tempId.js",
@@ -223,7 +254,8 @@
       "<AUTHOR>": "cpcallen@google.com (Christopher Allen)"
     },
     "contents": [
-      "$.www.editor"
+      "$.www.editor",
+      "$.www['/editor']"
     ]
   }, {
     "filename": "core_27_$.www.code.js",
@@ -233,7 +265,10 @@
       "<AUTHOR>": "fraser@google.com (Neil Fraser)"
     },
     "contents": [
-      "$.www.code"
+      "$.www.code",
+      "$.www['/code']",
+      "$.www['/code/editor']",
+      "$.www['/code/objectPanel']"
     ]
   },
 
@@ -245,6 +280,61 @@
       "<AUTHOR>": "fraser@google.com (Neil Fraser)"
     },
     "contents": ["$.utils.command"]
+  }, {
+    "filename": "core_31_$.utils_world.js",
+    "headerSubs": {
+      "<YEAR>": "2017",
+      "<OVERVIEW>": "World-related utils for Code City.",
+      "<AUTHOR>": "fraser@google.com (Neil Fraser)"
+    },
+    "contents": [
+      "$.utils.commandMenu",
+      "$.utils.replacePhysicalsWithName"
+    ]
+  }, {
+    "filename": "core_32_physical.js",
+    "headerSubs": {
+      "<YEAR>": "2017",
+      "<OVERVIEW>": "Physical object prototype for Code City.",
+      "<AUTHOR>": "fraser@google.com (Neil Fraser)"
+    },
+    "contents": [
+      "$.physical",
+      {"path": "$.physicals", "do": "ATTR"},
+      {"path": "$.physicals['Physical object prototype']", "do": "ATTR"},
+      "$.utils.validate.physicals",
+      "$.garbage"
+    ]
+  }, {
+    "filename": "core_33_world.js",
+    "headerSubs": {
+      "<YEAR>": "2017",
+      "<OVERVIEW>": "Generic physical object types for Code City.",
+      "<AUTHOR>": "fraser@google.com (Neil Fraser)"
+    },
+    "contents": [
+      "$.user",
+      "$.room",
+      "$.thing",
+      "$.container",
+      {"path": "$.physicals['User prototype']", "do": "ATTR"},
+      {"path": "$.physicals['Room prototype']", "do": "ATTR"},
+      {"path": "$.physicals['Thing prototype']", "do": "ATTR"},
+      {"path": "$.physicals['Container prototype']", "do": "ATTR"}
+    ]
+  }, {
+    "filename": "core_34_$.servers.telnet.js",
+    "headerSubs": {
+      "<YEAR>": "2017",
+      "<OVERVIEW>": "Telnet server for Code City.",
+      "<AUTHOR>": "fraser@google.com (Neil Fraser)"
+    },
+    "pruneRest": ["$.servers.telnet.connected"],
+    "contents": [
+      {"path": "$.userDatabase", "do": "ATTR"},
+      "$.servers.telnet",
+      {"path": "$.servers.telnet.connected", "do": "ATTR"}
+    ]
   },
 
   {
@@ -254,11 +344,15 @@
       "<AUTHOR>": "fraser@google.com (Neil Fraser)"
     },
     "filename": "core_40_$.startRoom.js",
+    "prune": ["$.clock.thread_"],
     "contents": [
       {"path": "$.startRoom", "do": "DONE"},
       "$.startRoom{proto}",
       "$.startRoom{owner}",
+      "$.startRoom.location",
       {"path": "$.startRoom.contents_", "do": "DONE"},
+      {"path": "$.startRoom.contents_.forObj", "do": "DONE"},
+      {"path": "$.startRoom.contents_.forKey", "do": "DONE"},
       "$.startRoom.name",
       "$.startRoom.description",
       "$.startRoom.roll",
@@ -272,7 +366,15 @@
     },
     "filename": "core_41_deutsche_zimmer.js",
     "contents": [
-      "$.tutorial"
+      "$.physicals['Das deutsche Zimmer']",
+      "$.tutorial",
+      {"path": "$.tutorial.location", "do": "DECL"},
+      {"path": "$.tutorial.user", "do": "DECL"},
+      {"path": "$.tutorial.thread", "do": "DECL"},
+      {"path": "$.tutorial.step", "do": "DECL"},
+      {"path": "$.tutorial.room", "do": "DECL"},
+      {"path": "$.tutorial.origFunc", "do": "DECL"},
+      {"path": "$.physicals.tutorial", "do": "DONE"}
     ]
   }, {
     "filename": "core_42_plant.js",
@@ -283,18 +385,141 @@
     },
     "contents": [
       "$.seed",
+      {"path": "$.seed.location", "do": "DECL"},
+      {"path": "$.physicals['Generic Seed']", "do": "DONE"},
       "$.pot",
+      {"path": "$.pot.location", "do": "DECL"},
       {"path": "$.pot.stage", "do": "DECL"},
       {"path": "$.pot.seed", "do": "DECL"},
+      {"path": "$.physicals['flower pot']", "do": "DONE"},
       "$.thrower",
-      {"path": "$.thrower.location", "do": "DECL"}
+      {"path": "$.thrower.location", "do": "DECL"},
+      {"path": "$.thrower.savedSvg", "do": "DECL"},
+      {"path": "$.physicals['a flame thrower']", "do": "DONE"}
+    ]
+  }, {
+    "filename": "core_43_genetics_lab.js",
+    "headerSubs": {
+      "<YEAR>": "2020",
+      "<OVERVIEW>": "Genetics lab demo for Code City.",
+      "<AUTHOR>": "fraser@google.com (Neil Fraser)"
+    },
+    "contents": [
+      "$.cage",
+      {"path": "$.cage.location", "do": "DONE"},
+      {"path": "$.physicals.cage", "do": "DONE"},
+      "$.physicals['Genetics Lab']",
+      "$.physicals['Genetic Mouse Prototype']",
+      "$.www['/geneticsEditor']"
+    ]
+  }, {
+    "filename": "core_44_$.assistant.js",
+    "headerSubs": {
+      "<YEAR>": "2020",
+      "<OVERVIEW>": "Voice-activated assistant demo for Code City.",
+      "<AUTHOR>": "cpcallen@google.com (Christopher Allen)"
+    },
+    "contents": [
+      "$.assistant",
+      {"path": "$.assistant.location", "do": "DECL"},
+      {"path": "$.pot.location", "do": "DECL"},
+      {"path": "$.physicals.assistant", "do": "DONE"}
     ]
   },
 
   {
     "options": {"skipBindings": []}
   }, {
-    "filename": "db_01_world.js",
+    "filename": "../database/db_00_core_lastModified.js",
+    "headerSubs": {
+      "<YEAR>": "2020",
+      "<OVERVIEW>": "Edit history info for Code City core.",
+      "<AUTHOR>": "cpcallen@google.com (Christopher Allen)"
+    },
+    "contents": [
+      "Object",
+      "Function",
+      "Array",
+      "String",
+      "Boolean",
+      "Number",
+      "Date",
+      "RegExp",
+      "Error",
+      "EvalError",
+      "RangeError",
+      "ReferenceError",
+      "SyntaxError",
+      "TypeError",
+      "URIError",
+      "Math",
+      "JSON",
+      "WeakMap",
+      "decodeURI",
+      "decodeURIComponent",
+      "encodeURI",
+      "encodeURIComponent",
+      "escape",
+      "isFinite",
+      "isNaN",
+      "parseFloat",
+      "parseInt",
+      "unescape",
+      "Thread",
+      "PermissionError",
+      "Array.prototype.join",
+      "suspend",
+      "setTimeout",
+      "clearTimeout",
+      "perms",
+      "setPerms",
+      "user",
+      "$.Jssp",
+      "$.Selector",
+      "$.cage",
+      "$.clock",
+      "$.connection",
+      "$.container",
+      "$.db.tempId",
+      "$.garbage",
+      "$.physical",
+      "$.physicals.cage",
+      "$.physicals['Das deutsche Zimmer']",
+      "$.physicals['Genetics Lab']",
+      "$.physicals['Genetic Mouse Prototype']",
+      "$.physicals.Hangout",
+      "$.room",
+      "$.root",
+      "$.servers.http",
+      "$.servers.telnet",
+      "$.startRoom.roll",
+      "$.system",
+      "$.thing",
+      "$.tutorial",
+      "$.user",
+      "$.utils.Binding",
+      "$.utils.array",
+      "$.utils.code",
+      "$.utils.command",
+      "$.utils.commandMenu",
+      "$.utils.html",
+      "$.utils.object",
+      "$.utils.replacePhysicalsWithName",
+      "$.utils.string",
+      "$.utils.validate.physicals",
+      "$.www.code",
+      "$.www.editor",
+      "$.www[404]",
+      "$.www['/']",
+      "$.www['/code']",
+      "$.www['/code/editor']",
+      "$.www['/code/objectPanel']",
+      "$.www['/editor']",
+      "$.www['/geneticsEditor']",
+      "$.www['/robots.txt']"
+    ]
+  }, {
+    "filename": "../database/db_01_world.js",
     "headerSubs": {
       "<YEAR>": "2017",
       "<OVERVIEW>": "Main database for google.codecity.world.",
@@ -306,7 +531,7 @@
   }, {
     "options": {"treeOnly": false}
   }, {
-    "filename": "db_99_leftovers.js",
+    "filename": "../database/db_99_leftovers.js",
     "header": "",
     "rest": true
   }
