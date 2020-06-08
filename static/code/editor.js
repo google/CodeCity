@@ -373,7 +373,7 @@ Code.Editor.receiveXhr = function() {
   if (data.saved === false && !data.login) {
     // Save was requested, but failed due to lack of a login.
     // Open login window.
-    var loginWindow = open('/login?loginThenClose', 'login', 'height=600,width=500');
+    var loginWindow = open('login.html', 'login', 'height=600,width=500');
     if (loginWindow) {
       var pid = setInterval(function() {
         if (loginWindow.closeMe) {
