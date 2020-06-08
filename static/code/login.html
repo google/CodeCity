@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <title>Code City Login</title>
+  <style>
+    body {
+      font-family: "Roboto Mono", monospace;
+      text-align: center;
+    }
+    h1 {
+      font-size: 40pt;
+      font-weight: 100;
+    }
+    h1>img {
+      vertical-align: text-bottom;
+    }
+    #tagline {
+      font-style: italic;
+      margin: 2em;
+    }
+    iframe {
+      height: 50px;
+      width: 100px;
+      border: none;
+      display: block;
+      margin: 0 auto;
+    }
+  </style>
+  <link href="https://fonts.googleapis.com/css?family=Roboto+Mono" rel="stylesheet">
+  <link href="/static/favicon.ico" rel="shortcut icon">
+</head>
+<body>
+  <h1>
+    <img src="/static/logo.svg" alt="" width="95px" height="100px">
+    Code City
+  </h1>
+  <p id="tagline">Login required to edit code.</p>
+  <iframe src="/login?loginThenClose"></iframe>
+</body>
+</html>
