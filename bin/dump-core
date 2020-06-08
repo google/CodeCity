@@ -1,0 +1,44 @@
+#!/bin/bash
+
+# Copyright 2020 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Create configuration file for and then start nginx, for use as a
+# local development server.  nginx is configured to run in the
+# foreground, and to store all runtime data in <repository root>/var,
+# rather than in /var/ or /usr/local/var/ as it might normally.
+
+set -e
+
+# Get top level directory of the CodeCity git repository.  It's the
+# parent directory of the directory containing this script.
+repo="$(cd "$(dirname "${BASH_SOURCE[0]}")"/.. >/dev/null 2>&1 && pwd)"
+
+cd "${repo}"
+mkdir -p var/dump
+
+# Make way for dump.  Ignore errors.
+rm var/dump/*.js || true
+rm core/core_[1-9]*.js || true
+rm database/core_*.js || true
+rm database/db_*.js || true
+
+# Get last .city file.
+city=$( (cd database && ls -1 *.city |tail  -1) )
+
+# Run dump.
+server/dump "database/${city}" core/dump_spec.json core
+
+# Link core file into database.
+(cd database && ln -s ../core/core*.js .)
