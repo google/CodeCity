@@ -38,7 +38,7 @@ var Parser = parser.Parser;
  * runtime state is represented on disk.
  * @type {number}
  */
-var SERIALIZATION_VERSION = 0;
+var SERIALIZATION_VERSION = 1;
 
 /**
  * Create a new interpreter.
@@ -3507,29 +3507,14 @@ Interpreter.Scope.Type = {
  * position within the original source text.
  * @constructor
  * @param {string} src Some source text
- * @param {number=} start_ For internal use only.
- * @param {number=} end_ For internal use only.
+ * @param {number=} offset_ For internal use only.
  */
-Interpreter.Source = function(src, start_, end_) {
+Interpreter.Source = function(src, offset_) {
   if (src === undefined) return;  // Deserializing.
   /** @private @type {string} */
   this.src_ = src;
-  if (start_ === undefined) {
-    /** @private @type {number} */
-    this.start_ = 0;
-  } else if (start_ < 0 || start_ > src.length) {
-    throw new RangeError('Source start out of range');
-  } else {
-    this.start_ = start_;
-  }
-  if (end_ === undefined) {
-    /** @private @type {number} */
-    this.end_ = src.length;
-  } else if (end_ < 0 || end_ > src.length) {
-    throw new RangeError('Source end out of range');
-  } else {
-    this.end_ = end_;
-  }
+  /** @private @type {number} */
+  this.offset_ = offset_ || 0;
   Object.freeze(this);
 };
 
@@ -3538,7 +3523,7 @@ Interpreter.Source = function(src, start_, end_) {
  * @return {string}
  */
 Interpreter.Source.prototype.toString = function() {
-  return this.src_.slice(this.start_, this.end_);
+  return this.src_;
 };
 
 /**
@@ -3551,13 +3536,18 @@ Interpreter.Source.prototype.toString = function() {
  * @return {!Interpreter.Source} The sliced source.
  */
 Interpreter.Source.prototype.slice = function(start, end) {
-  if (start < this.start_ || start > this.end_) {
+  if (start < this.offset_ || start > this.offset_ + this.src_.length) {
     throw new RangeError('Source slice start out of range');
   }
-  if (end < this.start_ || end > this.end_) {
+  if (end < this.offset_ || end > this.offset_ + this.src_.length) {
     throw new RangeError('Source slice end out of range');
   }
-  return new Interpreter.Source(this.src_, start, end);
+  if (start > end) {
+    throw new RangeError('Source slice start past end');
+  }
+  return new Interpreter.Source(
+      this.src_.slice(start - this.offset_, end - this.offset_),
+      start - this.offset_);
 };
 
 /**
@@ -3569,10 +3559,10 @@ Interpreter.Source.prototype.slice = function(start, end) {
  *     position pos, relative to the start of this particular slice.
  */
 Interpreter.Source.prototype.lineColForPos = function(pos) {
-  if (pos < this.start_ || pos > this.end_) {
+  if (pos < this.offset_ || pos > this.offset_ + this.src_.length) {
     throw new RangeError('Source position out of range');
   }
-  var lines = this.src_.slice(this.start_, pos).split('\n');
+  var lines = this.src_.slice(0, pos - this.offset_).split('\n');
   return {line: lines.length, col: lines[lines.length - 1].length + 1};
 };
 
