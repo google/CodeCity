@@ -32,12 +32,32 @@ var Node = parser.Node;
 var Parser = parser.Parser;
 
 /**
+ * Version number for the serialisation format.  MUST be incremented
+ * when any change is made to the implementation of Interpreter and
+ * related classe (in this file and others) which would change how the
+ * runtime state is represented on disk.
+ * @type {number}
+ */
+var SERIALIZATION_VERSION = 0;
+
+/**
  * Create a new interpreter.
  * @constructor
  * @param {!Interpreter.Options=} options
  */
 var Interpreter = function(options) {
+  /** @type {!Interpreter.Options} */
   this.options = options || {};
+  /**
+   * Serialisation version for this Interpreter instance.  Will be set
+   * to SERIALIZATION_VERSION, but not here, because there exist .city
+   * files that have no .serlizationVersion in them, and loading one
+   * won't overwrite what we set here.  Instead, set it in
+   * .preSerialize, and check in in .postDeserialize.
+   * @type {number|undefined}
+   */
+  this.serializationVersion = undefined;
+  // Install .Object, .Function, etc.
   this.installTypes();
   /**
    * Registry of builtins - e.g. Object, Function.prototype, Array.pop, etc.
@@ -441,6 +461,34 @@ Interpreter.prototype.stop = function() {
   for (var port in this.listeners_) {
     this.listeners_[Number(port)].unlisten();
   }
+  this.status = Interpreter.Status.STOPPED;
+};
+
+/**
+ * Prepare an interpreter to be seralized.
+ */
+Interpreter.prototype.preSerialize = function() {
+  // As noted in constructor: set .seralizationVersion only just
+  // before serialising, so as to avoid mistaking old, un-versioned
+  // .city files for the current version.
+  this.serializationVersion = SERIALIZATION_VERSION;
+};
+
+/**
+ * Prepare an interpreter to run after being deseralized.
+ */
+Interpreter.prototype.postDeserialize = function() {
+  // Check to make sure deseralised interpreter is compatible with the
+  // current implementation.
+  if (this.serializationVersion !== SERIALIZATION_VERSION) {
+    throw new Error('version error: seralized interpreter was version ' +
+        this.serializationVersion + '; current version is ' +
+        SERIALIZATION_VERSION);
+  }
+  // Checkpointed interpreter was probably paused, but because we're
+  // restoring from a checkpoint the resurrected interpreter is
+  // actually stopped (i.e., with no listening sockets, and with
+  // questionable timer state information).
   this.status = Interpreter.Status.STOPPED;
 };
 
