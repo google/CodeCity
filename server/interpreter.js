@@ -93,7 +93,7 @@ var Interpreter = function(options) {
   /** @private (Type is whatever is returned by setTimeout()) */
   this.runner_ = null;
   /** @type {boolean} */
-  this.done = true;  // True if any non-ZOMBIE threads exist.
+  this.done = true;  // True if no non-ZOMBIE threads exist.
 
   // TODO(cpcallen): rename this to .listeners
   /** @const {!Object<number, !Interpreter.prototype.Server>} */
@@ -812,7 +812,7 @@ Interpreter.prototype.initObject_ = function() {
       if (obj instanceof intrp.Object) {
         // obj.setPrototypeOf handles security and circularity checks.
         if (!obj.setPrototypeOf(proto, perms)) {
-	  throw new intrp.Error(perms, intrp.TYPE_ERROR,
+          throw new intrp.Error(perms, intrp.TYPE_ERROR,
               'setPrototypeOf failed');
         }
       }
