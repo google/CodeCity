@@ -214,6 +214,8 @@ exports.testScope = function(t) {
 exports.testSource = function(t) {
   var src = new Interpreter.Source('ABCDEF');
   var name = "Source('ABCDEF')";
+
+  src = src.slice(0, 6);
   t.expect(name + '.toString()', String(src), 'ABCDEF');
 
   src = src.slice(1, 5);
