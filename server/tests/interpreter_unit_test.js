@@ -214,6 +214,8 @@ exports.testScope = function(t) {
 exports.testSource = function(t) {
   var src = new Interpreter.Source('ABCDEF');
   var name = "Source('ABCDEF')";
+
+  src = src.slice(0, 6);
   t.expect(name + '.toString()', String(src), 'ABCDEF');
 
   src = src.slice(1, 5);
@@ -227,9 +229,15 @@ exports.testSource = function(t) {
   var s = '1\n.2\n..3\n.4\n5\n';
   var pos3 = s.indexOf('3');
   src = new Interpreter.Source(s);
-  name = "Source('" + s + "')";
+  name = util.format('Source(%o)', s);
   var lc = src.lineColForPos(pos3);
   t.expect(name + '.lineColForPos(' + pos3 + ').line', lc.line, 3);
+  t.expect(name + '.lineColForPos(' + pos3 + ').col', lc.col, 3);
+
+  src = src.slice(2, 12);
+  name += '.slice(2, 12)';
+  lc = src.lineColForPos(pos3);
+  t.expect(name + '.lineColForPos(' + pos3 + ').line', lc.line, 2);
   t.expect(name + '.lineColForPos(' + pos3 + ').col', lc.col, 3);
 
   src = src.slice(2, 12);
@@ -240,15 +248,15 @@ exports.testSource = function(t) {
   t.expect(name + '.lineColForPos(' + pos3 + ').line', lc.line, 2);
   t.expect(name + '.lineColForPos(' + pos3 + ').col', lc.col, 3);
 
-  src = new Interpreter.Source('startBound').slice(0, 0);
-  name = "Source('startBound').slice(0, 0)";
+  src = new Interpreter.Source('startBound').slice(0, 5).slice(0, 0);
+  name = "Source('startBound').slice(0, 5).slice(0, 0)";
   lc = src.lineColForPos(0);
   t.expect(name + '.lineColForPos(0).line', lc.line, 1);
   t.expect(name + '.lineColForPos(0).col', lc.line, 1);
   t.expect(name + '.toString()', String(src), '');
 
-  src = new Interpreter.Source('endBound').slice(8, 8);
-  name = "Source('endBound').slice(8, 8)";
+  src = new Interpreter.Source('endBound').slice(3, 8).slice(8, 8);
+  name = "Source('endBound').slice(3, 8).slice(8, 8)";
   lc = src.lineColForPos(8);
   t.expect(name + '.lineColForPos(8).line', lc.line, 1);
   t.expect(name + '.lineColForPos(8).col', lc.line, 1);

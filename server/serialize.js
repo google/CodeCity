@@ -202,11 +202,8 @@ Serializer.deserialize = function(json, intrp) {
       Object.preventExtensions(obj);
     }
   }
-  // Finally: fixup interpreter state.  Checkpointed interpreter was
-  // probably paused, but because we're restoring from a checkpoint
-  // the resurrected interpreter is actually stopped (i.e., with no
-  // listening sockets, and with questionable timer state information).
-  intrp.status = Interpreter.Status.STOPPED;
+  // Finally: fixup interpreter state, post-deserialization.
+  intrp.postDeserialize();
 };
 
 /**
@@ -215,6 +212,9 @@ Serializer.deserialize = function(json, intrp) {
  * @return {!Object} JSON-compatible object.
  */
 Serializer.serialize = function(intrp) {
+  // First: prepare interpreter for serialization.
+  intrp.preSerialize();
+  
   function encodeValue(value) {
     if (value && (typeof value === 'object' || typeof value === 'function')) {
       // TODO(cpcallen): this is a bit hacky (leaves dangling null

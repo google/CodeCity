@@ -10,8 +10,9 @@ The following naming convention has been established to keep things
 organised:
 
 core_0?_*.js - ES5.1 (and later) polyfills / JS base language stuff.
-core_1?_*.js - Base structure ($, $.utils, etc.).
-core_3?_*.js - Servers, JSSPs, editors, etc.
-core_4?_*.js - Physical world
+core_1?_*.js - Base structure & utilities ($, $.utils, etc.)
+core_2?_*.js - Web servers, editors, etc.
+core_3?_*.js - Physical world infrastructure, telnet server, etc.
+core_4?_*.js - Start room, demos, etc.
 
 test_??_*.js - Any tests to be run against the database.

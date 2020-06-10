@@ -16,58 +16,51 @@
  */
 
 /**
- * @fileoverview Deutsche Zimmer demo for Code City.
- * @author cpcallen@google.com (Christopher Allen)
+ * @fileoverview Translation room and tutorial  demo for Code City.
  */
 
-///////////////////////////////////////////////////////////////////////////////
-// Deutsche Zimmer (fixed example, in case of tutorial demo trouble):
-//
-$.dz = Object.create($.room);
+//////////////////////////////////////////////////////////////////////
+// AUTO-GENERATED CODE FROM DUMP.  EDIT WITH CAUTION!
+//////////////////////////////////////////////////////////////////////
 
-$.dz.name = 'Das deutsche Zimmer';
-
-$.dz.translate = function(text) {
+$.physicals['Das deutsche Zimmer'] = (new 'Object.create')($.room);
+$.physicals['Das deutsche Zimmer'].name = 'Das deutsche Zimmer';
+$.physicals['Das deutsche Zimmer'].translate = function(text) {
   // Try to translate text into German.  If successful, return
   // translation.  If not, narrate an indication of failure and return
   // the original text untranslated.
   try {
-    var json = $.system.xhr('https://translate-service.scratch.mit.edu' +
-        '/translate?language=de&text=' + encodeURIComponent(text));
-    return JSON.parse(json).result;
+    return $.utils.string.translate(text, 'de');
   } catch (e) {
-    this.narrateAll('There is a crackling noise.');
+    this.narrate('There is a crackling noise.');
     return text;
   }
 };
-
-$.dz.say = function(cmd) {
+delete $.physicals['Das deutsche Zimmer'].translate.name;
+Object.setOwnerOf($.physicals['Das deutsche Zimmer'].translate, Object.getOwnerOf($.Jssp.OutputBuffer));
+$.physicals['Das deutsche Zimmer'].say = function(cmd) {
   // Format:  "Hello.    -or-    say Hello.
   var text = (cmd.cmdstr[0] === '"') ? cmd.cmdstr.substring(1) : cmd.argstr;
   cmd.cmdstr = [];
   cmd.argstr = this.translate(text);
   return $.room.say.call(this, cmd);
 };
-$.dz.say.verb = 'say|".*';
-$.dz.say.dobj = 'any';
-$.dz.say.prep = 'any';
-$.dz.say.iobj = 'any';
+$.physicals['Das deutsche Zimmer'].say.verb = 'say|".*';
+$.physicals['Das deutsche Zimmer'].say.dobj = 'any';
+$.physicals['Das deutsche Zimmer'].say.prep = 'any';
+$.physicals['Das deutsche Zimmer'].say.iobj = 'any';
+$.physicals['Das deutsche Zimmer'].contents_ = [];
+$.physicals['Das deutsche Zimmer'].contents_.forObj = $.physicals['Das deutsche Zimmer'];
+Object.defineProperty($.physicals['Das deutsche Zimmer'].contents_, 'forObj', {writable: false, enumerable: false, configurable: false});
+$.physicals['Das deutsche Zimmer'].contents_.forKey = 'contents_';
+Object.defineProperty($.physicals['Das deutsche Zimmer'].contents_, 'forKey', {writable: false, enumerable: false, configurable: false});
+$.physicals['Das deutsche Zimmer'].location = null;
 
-///////////////////////////////////////////////////////////////////////////////
-// Translation Room tutorial
-
-$.tutorial = Object.create($.thing);
+$.tutorial = (new 'Object.create')($.thing);
 $.tutorial.name = 'tutorial';
-$.tutorial.description = 'A tutorial on how to use the Google Translate API ' +
-    'from within Code City.  To begin, pick it up and then look at it again.';
-$.tutorial.svgText = [
-  '<path class=\"fillWhite\" d="M-15,99 L0,79 H15 L0,99 Z"/>',
-  '<line x1="2" x2="11" y1="81" y2="81"/>',
-  '<line x1="0" x2="9" y1="83" y2="83"/>',
-  '<line x1="-2" x2="4" y1="85" y2="85"/>',
-].join('\n');
-
-$.tutorial.look = function(cmd) {
+$.tutorial.description = 'A tutorial on how to use the Google Translate API from within Code City.  To begin, pick it up and then look at it again.';
+$.tutorial.svgText = '<path class="fillWhite" d="M-15,99 L0,79 H15 L0,99 Z"/>\n<line x1="2" x2="11" y1="81" y2="81"/>\n<line x1="0" x2="9" y1="83" y2="83"/>\n<line x1="-2" x2="4" y1="85" y2="85"/>';
+$.tutorial.look = function look(cmd) {
   if (this.location !== cmd.user) {
     // Show description, encouraging user to pick up tutorial.
     $.thing.look.call(this, cmd);
@@ -75,42 +68,34 @@ $.tutorial.look = function(cmd) {
   }
   this.show(cmd.user);  // Show current step.
 };
+Object.setOwnerOf($.tutorial.look, Object.getOwnerOf($.Jssp.OutputBuffer));
 $.tutorial.look.verb = 'l(ook)?';
 $.tutorial.look.dobj = 'this';
 $.tutorial.look.prep = 'none';
 $.tutorial.look.iobj = 'none';
-
-$.tutorial.user = undefined;
-$.tutorial.thread = null;
-$.tutorial.step = 0;
-$.tutorial.room = undefined;
-$.tutorial.origFunc = undefined;
-
-$.tutorial.reset = function(cmd) {
+$.tutorial.reset = function reset(cmd) {
   this.checkLocation();
   this.step = 0;
   this.room = undefined;
   this.origFunc = undefined;
   this.show();
 };
+Object.setOwnerOf($.tutorial.reset, Object.getOwnerOf($.Jssp.OutputBuffer));
 $.tutorial.reset.verb = 'reset';
 $.tutorial.reset.dobj = 'this';
 $.tutorial.reset.prep = 'none';
 $.tutorial.reset.iobj = 'none';
-$.tutorial.moveTo($.startRoom);
-
-$.tutorial.continue = function(cmd) {
+$.tutorial.continue = function continueVerb(cmd) {
   this.step++;
   this.run();
   this.show();
 };
+Object.setOwnerOf($.tutorial.continue, Object.getOwnerOf($.Jssp.OutputBuffer));
 $.tutorial.continue.verb = 'continue';
 $.tutorial.continue.dobj = 'this';
 $.tutorial.continue.prep = 'none';
 $.tutorial.continue.iobj = 'none';
-$.tutorial.moveTo($.startRoom);
-
-$.tutorial.getCommands = function(who) {
+$.tutorial.getCommands = function getCOmmands(who) {
   var commands = $.thing.getCommands.call(this, who);
   if (this.location === who) {
     commands.push('continue ' + this.name);
@@ -118,18 +103,18 @@ $.tutorial.getCommands = function(who) {
   }
   return commands;
 };
-
-$.tutorial.moveTo = function(dest) {
+Object.setOwnerOf($.tutorial.getCommands, Object.getOwnerOf($.Jssp.OutputBuffer));
+$.tutorial.moveTo = function moveTo(dest) {
   // Set this.user th the $.user holding us, or to undefined if not held.
   var r = $.thing.moveTo.call(this, dest);
   this.checkLocation();
   return r;
 };
-
-$.tutorial.checkLocation = function() {
+Object.setOwnerOf($.tutorial.moveTo, Object.getOwnerOf($.Jssp.OutputBuffer));
+$.tutorial.checkLocation = function checkLocation() {
   if ($.user.isPrototypeOf(this.location)) {
     this.user = this.location;
-    this.thread = new Thread(this.check.bind(this));
+    this.thread = new Thread(this.check, 0, this);
   } else {
     this.user = undefined;
     if (this.t) {
@@ -138,18 +123,23 @@ $.tutorial.checkLocation = function() {
     }
   }
 };
-
-$.tutorial.check = function() {
+Object.setOwnerOf($.tutorial.checkLocation, Object.getOwnerOf($.Jssp.OutputBuffer));
+$.tutorial.check = function check() {
   while (true) {
     var step = this.step;
     switch (step) {
       case 1:
         // See if user has done step 1: are they carrying a room?
         if (this.room) throw new Error('How is .room set already??');
-        this.room = this.user.getContents().find(function(item) {
-          var props = Object.getOwnPropertyNames(item);
-          return $.room.isPrototypeOf(item) && props.length === 2;
-        });
+        for (var key in $.physicals) {
+          var item = $.physicals[key];
+          if ($.room.isPrototypeOf(item) &&
+              Object.getOwnerOf(item) === this.user &&
+              item.name.match(/Deutsche Zimmer/i)) {
+            this.room = item;
+            break;
+          }
+        }
         if (this.room) this.step++;
         break;
 
@@ -219,8 +209,8 @@ $.tutorial.check = function() {
     suspend(1000);
   }
 };
-
-$.tutorial.run = function() {
+Object.setOwnerOf($.tutorial.check, Object.getOwnerOf($.Jssp.OutputBuffer));
+$.tutorial.run = function run() {
   switch (this.step) {
     case 3:
       if (this.room.location !== null) this.room.moveTo(null);
@@ -229,16 +219,16 @@ $.tutorial.run = function() {
 
     case 5:
       // Open room in the code editor.
-      var link = '/code?' + encodeURIComponent('$.tutorial.room.translate');
-      this.user.writeJson({type: "link", href: link});
+      var link = '/code?' + encodeURIComponent($.Selector.for(this.room).toString() + '.translate');
+      this.user.readMemo({type: "link", href: link});
       break;
 
     default:
       // Nothing to do.
   }
 };
-
-$.tutorial.show = function() {
+Object.setOwnerOf($.tutorial.run, Object.getOwnerOf($.Jssp.OutputBuffer));
+$.tutorial.show = function show() {
   var lines;
   var step = this.step;
   switch(step) {
@@ -297,15 +287,14 @@ $.tutorial.show = function() {
         'following code (and save it):</p>',
         '<pre>',
         'function translate(text) {',
-        '  // Try to translate text into German.  If successful, return',
-        '  // translation. If not, narrate an indication of failure and return',
-        '  // the original text untranslated.',
+        '  // Try to translate text into German.  If successful, return the translation.',
+        '  // If not, narrate an indication of failure and return the original text.',
         '  try {',
         "    var json = $.system.xhr('https://translate-service.scratch.mit.edu' +",
         "        '/translate?language=de&text=' + encodeURIComponent(text));",
         '    return JSON.parse(json).result;',
         '  } catch (e) {',
-        "    this.narrateAll('There is a crackling noise.');",
+        "    this.narrate('There is a crackling noise.');",
         '    return text;',
         '  }',
         '};',
@@ -330,7 +319,7 @@ $.tutorial.show = function() {
         '<p>Use the top part of the inspector to navigate to the "say"',
         'function, and replace it with the following:</p>',
         '<pre>',
-        'function(cmd) {',
+        'function say(cmd) {',
         '  // Format:  "Hello.    -or-    say Hello.',
         '  var text = (cmd.cmdstr[0] === \'"\') ? cmd.cmdstr.substring(1) : cmd.argstr;',
         '  cmd.cmdstr = [];',
@@ -360,16 +349,16 @@ $.tutorial.show = function() {
         '(Hint: look in $.tutorial.room.translate, and remever that "de" is',
         'the two-letter code for the German language.)</p>',
         "<p>When you're done, type <cmd>continue tutorial</cmd> and you'll",
-        "be taken back to where you came from.  JavaScript's garbage",
-        "collector will automatically delete this room when it's no longer in",
-        'use.</p>',
+        'be taken back to where you came from.  You can delete this room ',
+        'when you no longer want it by typing <cmd>destroy ' +
+        $.Selector.for(this.room).toString() + '</cmd>.',
       ];
       break;
 
     case 10:
       this.user.moveTo($.startRoom);
       this.room = undefined;
-      // FALL THROUGH
+      // FALLTTHROUGH
     default:
       lines = [
         '<h2>Tutorial Ended</h2>',
@@ -378,5 +367,26 @@ $.tutorial.show = function() {
         '<p>You can always <cmd>reset tutorial</cmd> to do it all again.</p>',
       ];
   }
-  this.user.writeJson({type: 'html', htmlText: lines.join('\n')});
+  this.user.readMemo({type: 'html', htmlText: lines.join('\n')});
 };
+Object.setOwnerOf($.tutorial.show, Object.getOwnerOf($.Jssp.OutputBuffer));
+$.tutorial.contents_ = [];
+$.tutorial.contents_.forObj = $.tutorial;
+Object.defineProperty($.tutorial.contents_, 'forObj', {writable: false, enumerable: false, configurable: false});
+$.tutorial.contents_.forKey = 'contents_';
+Object.defineProperty($.tutorial.contents_, 'forKey', {writable: false, enumerable: false, configurable: false});
+
+$.tutorial.location = undefined;
+
+$.tutorial.user = undefined;
+
+$.tutorial.thread = undefined;
+
+$.tutorial.step = undefined;
+
+$.tutorial.room = undefined;
+
+$.tutorial.origFunc = undefined;
+
+$.physicals.tutorial = $.tutorial;
+

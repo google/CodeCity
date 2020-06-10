@@ -2824,7 +2824,6 @@ module.exports = [
   // Permissions system:
 
   { name: 'perms returns root', src: `
-
     perms() === CC.root;
     `,
     expected: true

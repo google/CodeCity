@@ -1,0 +1,495 @@
+/**
+ * @license
+ * Copyright 2018 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/**
+ * @fileoverview Code utilities for Code City.
+ */
+
+//////////////////////////////////////////////////////////////////////
+// AUTO-GENERATED CODE FROM DUMP.  EDIT WITH CAUTION!
+//////////////////////////////////////////////////////////////////////
+
+$.utils.code = {};
+$.utils.code.toSource = function toSource(value, opt_seen) {
+  // Given an arbitrary value, produce a source code representation.
+  // Primitive values are straightforward: "42", "'abc'", "false", etc.
+  // Functions, RegExps, Dates, Arrays, and errors are returned as their
+  // definitions.
+  // Other objects and symbols are returned as selector expression.
+  // Throws if a code representation can't be made.
+  var type = typeof value;
+  if (value === undefined || value === null ||
+      type === 'number' || type === 'boolean') {
+    if (Object.is(value, -0)) {
+      return '-0';
+    }
+    return String(value);
+  } else if (type === 'string') {
+    return JSON.stringify(value);
+  } else if (type === 'function') {
+    return Function.prototype.toString.call(value);
+  } else if (type === 'object') {
+    // TODO: Replace opt_seen with Set, once available.
+    if (opt_seen) {
+      if (opt_seen.includes(value)) {
+        throw new RangeError('[Recursive data structure]');
+      }
+      opt_seen.push(value);
+    } else {
+      opt_seen = [value];
+    }
+    var proto = Object.getPrototypeOf(value);
+    if (proto === RegExp.prototype) {
+      return String(value);
+    } else if (proto === Date.prototype) {
+      return 'new Date(\'' + value.toJSON() + '\')';
+    } else if (proto === Array.prototype && Array.isArray(value) &&
+               value.length <= 100) {
+      var props = Object.getOwnPropertyNames(value);
+      var data = [];
+      for (var i = 0; i < value.length; i++) {
+        if (props.includes(String(i))) {
+          try {
+            data[i] = $.utils.code.toSource(value[i], opt_seen);
+          } catch (e) {
+            // Recursive data structure.  Bail.
+            data = null;
+            break;
+          }
+        } else {
+          data[i] = '';
+        }
+      }
+      if (data) {
+        return '[' + data.join(', ') + ']';
+      }
+    } else if (value instanceof Error) {
+      var constructor;
+      if (proto === Error.prototype) {
+        constructor = 'Error';
+      } else if (proto === EvalError.prototype) {
+        constructor = 'EvalError';
+      } else if (proto === RangeError.prototype) {
+        constructor = 'RangeError';
+      } else if (proto === ReferenceError.prototype) {
+        constructor = 'ReferenceError';
+      } else if (proto === SyntaxError.prototype) {
+        constructor = 'SyntaxError';
+      } else if (proto === TypeError.prototype) {
+        constructor = 'TypeError';
+      } else if (proto === URIError.prototype) {
+        constructor = 'URIError';
+      } else if (proto === PermissionError.prototype) {
+        constructor = 'PermissionError';
+      }
+      var msg;
+      if (value.message === undefined) {
+        msg = '';
+      } else {
+        try {
+          msg = $.utils.code.toSource(value.message, opt_seen);
+        } catch (e) {
+          // Leave msg undefined.
+        }
+      }
+      if (constructor && msg !== undefined) {
+        return constructor + '(' + msg + ')';
+      }
+    }
+  }
+  if (type === 'object' || type === 'symbol') {
+    var selector = $.Selector.for(value);
+    if (selector) {
+      var string = selector.toString();
+      var expr = selector.toExpr();
+      if (string === expr) return expr;
+      return '// ' + string + '\n' + expr;
+    }
+    throw new ReferenceError('[' + type + ' with no known selector]');
+  }
+  // Can't happen.
+  throw new TypeError('[' + type + ']');
+};
+Object.setOwnerOf($.utils.code.toSource, Object.getOwnerOf($.system.onStartup.prototype));
+$.utils.code.toSource.processingError = false;
+$.utils.code.toSourceSafe = function toSourceSafe(value) {
+  // Same as $.utils.code.toSource, but don't throw any selector errors.
+  try {
+    return $.utils.code.toSource(value);
+  } catch (e) {
+    if (e instanceof ReferenceError) {
+      return e.message;
+    }
+    throw e;
+  }
+};
+$.utils.code.rewriteForEval = function(src, forceExpression) {
+  // Eval treats {} as an empty block (return value undefined).
+  // Eval treats {'a': 1} as a syntax error.
+  // Eval treats {a: 1} as block with a labeled statement (return value 1).
+  // Detect these cases and enclose in parenthesis.
+  // But don't mess with: {var x = 1; x + x;}
+  // This is consistent with the console on Chrome and Node.
+  // If 'forceExpression' is true, then throw a SyntaxError if the src is
+  // more than one expression (e.g. '1; 2;').
+  var ast = null;
+  if (!forceExpression) {
+    // Try to parse src as a program.
+    try {
+      ast = $.utils.code.parse(src);
+    } catch (e) {
+      // ast remains null.
+    }
+  }
+  if (ast) {
+    if (ast.type === 'Program' && ast.body.length === 1 &&
+        ast.body[0].type === 'BlockStatement') {
+      if (ast.body[0].body.length === 0) {
+        // This is an empty object: {}
+        return '({})';
+      }
+      if (ast.body[0].body.length === 1 &&
+          ast.body[0].body[0].type === 'LabeledStatement' &&
+          ast.body[0].body[0].body.type === 'ExpressionStatement') {
+        // This is an unquoted object literal: {a: 1}
+        // There might be a comment, so add a linebreak.
+        return '(' + src + '\n)';
+      }
+    }
+    return src;
+  }
+  // Try parsing src as an expression.
+  // This may throw.
+  ast = $.utils.code.parseExpressionAt(src, 0);
+  var remainder = src.substring(ast.end).trim();
+  if (remainder !== '') {
+    // Remainder might legally include trailing comments or semicolons.
+    // Remainder might illegally include more statements.
+    var remainderAst = null;
+    try {
+      remainderAst = $.utils.code.parse(remainder);
+    } catch (e) {
+      // remainderAst remains null.
+    }
+    if (!remainderAst) {
+      throw new SyntaxError('Syntax error beyond expression');
+    }
+    if (remainderAst.type !== 'Program') {
+      throw new SyntaxError('Unexpected code beyond expression');  // Module?
+    }
+    // Trim off any unnecessary trailing semicolons.
+    while (remainderAst.body[0] &&
+           remainderAst.body[0].type === 'EmptyStatement') {
+      remainderAst.body.shift();
+    }
+    if (remainderAst.body.length !== 0) {
+      throw new SyntaxError('Only one expression expected');
+    }
+  }
+  src = src.substring(0, ast.end);
+  if (ast.type === 'ObjectExpression' || ast.type === 'FunctionExpression') {
+    // {a: 1}  and function () {} both need to be wrapped in parens to avoid
+    // being syntax errors.
+    src = '(' + src + ')';
+  }
+  return src;
+};
+delete $.utils.code.rewriteForEval.name;
+Object.setOwnerOf($.utils.code.rewriteForEval, Object.getOwnerOf($.utils.imageMatch.recog.prototype));
+$.utils.code.rewriteForEval.unittest = function() {
+  var cases = {
+    // Input: [Expression, Statement(s)]
+    '1 + 2': ['1 + 2', '1 + 2'],
+    '2 + 3  // Comment': ['2 + 3', '2 + 3  // Comment'],
+    '3 + 4;': ['3 + 4', '3 + 4;'],
+    '4 + 5; 6 + 7': [SyntaxError, '4 + 5; 6 + 7'],
+    '{}': ['({})', '({})'],
+    '{}  // Comment': ['({})', '({})'],
+    '{};': ['({})', '{};'],
+    '{}; {}': [SyntaxError, '{}; {}'],
+    '{"a": 1}': ['({"a": 1})', '({"a": 1})'],
+    '{"a": 2}  // Comment': ['({"a": 2})', '({"a": 2})'],
+    '{"a": 3};': ['({"a": 3})', '({"a": 3})'],
+    '{"a": 4}; {"a": 4}': [SyntaxError, SyntaxError],
+    '{b: 1}': ['({b: 1})', '({b: 1}\n)'],
+    '{b: 2}  // Comment': ['({b: 2})', '({b: 2}  // Comment\n)'],
+    '{b: 3};': ['({b: 3})', '{b: 3};'],
+    '{b: 4}; {b: 4}': [SyntaxError, '{b: 4}; {b: 4}'],
+    'function () {}': ['(function () {})', '(function () {})'],
+    'function () {}  // Comment': ['(function () {})', '(function () {})'],
+    'function () {};': ['(function () {})', '(function () {})'],
+    'function () {}; function () {}': [SyntaxError, SyntaxError],
+    '{} + []': ['{} + []', '{} + []']
+  };
+  var actual;
+  for (var key in cases) {
+    if (!cases.hasOwnProperty(key)) continue;
+    // Test eval as an expression.
+    try {
+      actual = $.utils.code.rewriteForEval(key, true);
+    } catch (e) {
+      actual = SyntaxError;
+    }
+    if (actual !== cases[key][0]) {
+      throw new Error('Eval Expression\n' +
+                      'Expected: ' + cases[key][0] + ' Actual: ' + actual);
+    }
+    // Test eval as a statement.
+    try {
+      actual = $.utils.code.rewriteForEval(key, false);
+    } catch (e) {
+      actual = SyntaxError;
+    }
+    if (actual !== cases[key][1]) {
+      throw new Error('Eval Statement\n' +
+                      'Expected: ' + cases[key][1] + ' Actual: ' + actual);
+    }
+  }
+};
+$.utils.code.eval = function(src, evalFunc) {
+  // Eval src and attempt to print the resulting value readably.
+  //
+  // Evaluation is done by calling evalFunc (passing src) if supplied,
+  // or by calling the eval built-in function (under a different name,
+  // so it operates in the global scope).  Unhandled exceptions are
+  // caught and converted to a string.
+  //
+  // Caller may wish to transform input with
+  // $.utils.code.rewriteForEval before passing it to this function.
+  evalFunc = evalFunc || eval;
+  var out;
+  try {
+    out = evalFunc(src);
+  } catch (e) {
+    // Exception thrown.  Use built-in ToString via + to avoid calling
+    // String, least it call a .toString method that itself throws.
+    // TODO(cpcallen): find an alternative way of doing this safely
+    // once the interpreter calls String for all string conversions.
+    if (e instanceof Error) {
+      out = 'Unhandled error: ' + e.name;
+      if (e.message) out += ': ' + e.message;
+      if (e.stack) out += '\n' + e.stack;
+      return out;
+    } else {
+      return 'Unhandled exception: ' + e;
+    }
+  }
+  // Suspend if needed.
+  try {(function(){})();} catch (e) {suspend();}
+  // Attempt to print a source-legal representation.
+  return $.utils.code.toSource(out);
+};
+delete $.utils.code.eval.name;
+Object.setOwnerOf($.utils.code.eval, Object.getOwnerOf($.system.onStartup.prototype));
+$.utils.code.regexps = {};
+$.utils.code.regexps.README = "$.utils.code.regexps contains some RegExps useful for parsing or otherwise analysing code.  They are:\n\n.escapes: Matches (globally) escape sequences found in string and regexp literals, like '\\n' or '\\x20' or '\\u1234'.\n\n.singleQuotedString: Matches a single-quoted string literal, like \"'this one'\" and \"'it\\\\'s'\".\n\n.doubleQuotedString: Matches a double-quoted string literal, like '\"this one\"' and '\"it\\'s\"'.\n\n.string: Matches a string literal, like \"'this one' and '\"that one\"' as well.\n\n.identifier: Matches an identifier.\n\nThe '..Exact' versions of these RegExps are anchored with '^' and '$' so they only match exactly specified thing - for example, .stringExact matches string literals \"'this one'\" but notably not \" 'this one' \" (because it contains other characters not part of the literal).\n";
+$.utils.code.regexps.escapes = /\\(?:["'\\\/0bfnrtv]|u[0-9a-fA-F]{4}|x[0-9a-fA-F]{2})/g;
+$.utils.code.regexps.singleQuotedString = /'(?:[^'\\]|\\(?:["'\\\/0bfnrtv]|u[0-9a-fA-F]{4}|x[0-9a-fA-F]{2}))*'/g;
+$.utils.code.regexps.doubleQuotedString = /"(?:[^"\\]|\\(?:["'\\\/0bfnrtv]|u[0-9a-fA-F]{4}|x[0-9a-fA-F]{2}))*"/g;
+$.utils.code.regexps.string = /(?:'(?:[^'\\]|\\(?:["'\\\/0bfnrtv]|u[0-9a-fA-F]{4}|x[0-9a-fA-F]{2}))*'|"(?:[^"\\]|\\(?:["'\\\/0bfnrtv]|u[0-9a-fA-F]{4}|x[0-9a-fA-F]{2}))*")/g;
+$.utils.code.regexps.stringExact = /^(?:'(?:[^'\\]|\\(?:["'\\\/0bfnrtv]|u[0-9a-fA-F]{4}|x[0-9a-fA-F]{2}))*'|"(?:[^"\\]|\\(?:["'\\\/0bfnrtv]|u[0-9a-fA-F]{4}|x[0-9a-fA-F]{2}))*")$/;
+$.utils.code.regexps.identifier = /[A-Za-z_$][A-Za-z0-9_$]*/;
+$.utils.code.regexps.identifierExact = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
+$.utils.code.regexps.keyword = /abstract|boolean|break|byte|case|catch|char|class|const|continue|debugger|default|delete|do|double|else|enum|export|extends|false|final|finally|float|for|function|goto|if|implements|import|in|instanceof|int|interface|long|native|new|null|package|private|protected|public|return|short|static|super|switch|synchronized|this|throw|throws|transient|true|try|typeof|var|volatile|void|while|with/;
+$.utils.code.regexps.keywordExact = /^(?:abstract|boolean|break|byte|case|catch|char|class|const|continue|debugger|default|delete|do|double|else|enum|export|extends|false|final|finally|float|for|function|goto|if|implements|import|in|instanceof|int|interface|long|native|new|null|package|private|protected|public|return|short|static|super|switch|synchronized|this|throw|throws|transient|true|try|typeof|var|volatile|void|while|with)$/;
+$.utils.code.parseString = function(s) {
+  // Convert a string representation of a string literal to a string.
+	// Basically does eval(s), but safely and only if s is a string
+  // literal.
+  if (!this.regexps.stringExact.test(s)) {
+    throw new TypeError(quote(s) + ' is not a string literal');
+  };
+  return s.slice(1, -1).replace(this.regexps.escapes, function(esc) {
+    switch (esc[1]) {
+      case "'":
+      case '"':
+      case '/':
+      case '\\':
+        return esc[1];
+      case '0':
+        return '\0';
+      case 'b':
+        return '\b';
+      case 'f':
+        return '\f';
+      case 'n':
+        return '\n';
+      case 'r':
+        return '\r';
+      case 't':
+        return '\t';
+      case 'v':
+        return '\v';
+      case 'u':
+      case 'x':
+        return String.fromCharCode(parseInt(esc.slice(2), 16));
+      default:
+        // RegExp in call to replace has accepted something we
+        // don't know how to decode.
+        throw new Error('unknown escape sequence "' + esc + '"??');
+    }
+  });
+};
+delete $.utils.code.parseString.name;
+$.utils.code.quote = function quote(str) {
+  // Convert a string into a string literal.  We use single or double
+  // quotes depending on which occurs less frequently in the string to
+  // be escaped (prefering single quotes if it's a tie).  Strictly
+  // speaking we only need to escape backslash, \r, \n, \u2028 (line
+  // separator), \u2029 (paragraph separator) and whichever quote
+  // character we're using, but for output readability we escape all the
+  // control characters.
+  //
+  // TODO(cpcallen): Consider using optimised algorithm from Node.js's
+  //     util.format (see strEscape function in
+  //     https://github.com/nodejs/node/blob/master/lib/util.js).
+  // @param {string} str The string to convert.
+  // @return {string} The value s as a eval-able string literal.
+  if (this.count(str, "'") > this.count(str, '"')) {  // More 's.  Use "s.
+    return '"' + str.replace(this.quote.doubleRE, this.quote.replace) + '"';
+  } else {  // Equal or more "s.  Use 's.
+    return "'" + str.replace(this.quote.singleRE, this.quote.replace) + "'";
+  }
+};
+$.utils.code.quote.prototype.constructor = function(str) {
+  // Convert a string into a string literal.  We use single or double
+  // quotes depending on which occurs less frequently in the string to
+  // be escaped (prefering single quotes if it's a tie).  Strictly
+  // speaking we only need to escape backslash, \r, \n, \u2028 (line
+  // separator), \u2029 (paragraph separator) and whichever quote
+  // character we're using, but for output readability we escape all the
+  // control characters.
+  //
+  // TODO(cpcallen): Consider using optimised algorithm from Node.js's
+  //     util.format (see strEscape function in
+  //     https://github.com/nodejs/node/blob/master/lib/util.js).
+  // @param {string} str The string to convert.
+  // @return {string} The value s as a eval-able string literal.
+  if (count(str, "'") > count(str, '"')) {  // More 's.  Use "s.
+    return '"' + str.replace(this.quote.doubleRE, this.quote.replace) + '"';
+  } else {  // Equal or more "s.  Use 's.
+    return "'" + str.replace(this.quote.singleRE, this.quote.replace) + "'";
+  }
+};
+delete $.utils.code.quote.prototype.constructor.name;
+$.utils.code.quote.prototype.constructor.prototype = $.utils.code.quote.prototype;
+$.utils.code.quote.prototype.constructor.singleRE = /[\x00-\x1f\\\u2028\u2029']/g;
+$.utils.code.quote.prototype.constructor.doubleRE = /[\x00-\x1f\\\u2028\u2029"]/g;
+$.utils.code.quote.prototype.constructor.replace = function(c) {
+  // Replace special characters with their quoted replacements.
+  // Intended to be used as the second argument to
+  // String.prototype.replace.
+  return $.utils.code.quote.replacements[c];
+};
+$.utils.code.quote.singleRE = $.utils.code.quote.prototype.constructor.singleRE;
+$.utils.code.quote.doubleRE = $.utils.code.quote.prototype.constructor.doubleRE;
+$.utils.code.quote.replace = function replace(c) {
+  // Replace special characters with their quoted replacements.
+  // Intended to be used as the second argument to
+  // String.prototype.replace.
+  return $.utils.code.quote.replacements[c];
+};
+$.utils.code.quote.replace.prototype = $.utils.code.quote.prototype.constructor.replace.prototype;
+delete $.utils.code.quote.replace.prototype.constructor.name;
+$.utils.code.quote.replacements = {};
+$.utils.code.quote.replacements['\0'] = '\\0';
+$.utils.code.quote.replacements['\x01'] = '\\x01';
+$.utils.code.quote.replacements['\x02'] = '\\x02';
+$.utils.code.quote.replacements['\x03'] = '\\x03';
+$.utils.code.quote.replacements['\x04'] = '\\x04';
+$.utils.code.quote.replacements['\x05'] = '\\x05';
+$.utils.code.quote.replacements['\x06'] = '\\x06';
+$.utils.code.quote.replacements['\x07'] = '\\x07';
+$.utils.code.quote.replacements['\b'] = '\\b';
+$.utils.code.quote.replacements['\t'] = '\\t';
+$.utils.code.quote.replacements['\n'] = '\\n';
+$.utils.code.quote.replacements['\v'] = '\\v';
+$.utils.code.quote.replacements['\f'] = '\\f';
+$.utils.code.quote.replacements['\r'] = '\\r';
+$.utils.code.quote.replacements['\x0e'] = '\\x0e';
+$.utils.code.quote.replacements['\x0f'] = '\\x0f';
+$.utils.code.quote.replacements['"'] = '\\"';
+$.utils.code.quote.replacements["'"] = "\\'";
+$.utils.code.quote.replacements['\\'] = '\\\\';
+$.utils.code.quote.replacements['\u2028'] = '\\u2028';
+$.utils.code.quote.replacements['\u2029'] = '\\u2029';
+$.utils.code.count = function count(str, searchString) {
+  // Count non-overlapping occurrences of searchString in str.
+  return str.split(searchString).length;
+};
+$.utils.code.count.prototype.constructor = function(str, searchString) {
+  // Count non-overlapping occurrences of searchString in str.
+  return str.split(searchString).length;
+};
+delete $.utils.code.count.prototype.constructor.name;
+$.utils.code.count.prototype.constructor.prototype = $.utils.code.count.prototype;
+$.utils.code.isIdentifier = function isIdentifier(id) {
+  return typeof id === 'string' &&
+      $.utils.code.regexps.identifierExact.test(id) &&
+      !$.utils.code.regexps.keywordExact.test(id);
+};
+$.utils.code.isIdentifier.prototype.constructor = function isIdentifier(id) {
+  return $.utils.code.regexps.identifierExact.matches(id) &&
+      !$.utils.code.regexps.keywordExact.matches(id);
+};
+$.utils.code.isIdentifier.prototype.constructor.prototype = $.utils.code.isIdentifier.prototype;
+$.utils.code.getGlobal = function getGlobal() {
+  // Return a pseudo global object.
+  var global = Object.create(null);
+  global.$ = $;
+  global.Array = Array;
+  global.Boolean = Boolean;
+  global.clearTimeout = clearTimeout;
+  global.Date = Date;
+  global.decodeURI = decodeURI;
+  global.decodeURIComponent = decodeURIComponent;
+  global.encodeURI = encodeURI;
+  global.encodeURIComponent = encodeURIComponent;
+  global.Error = Error;
+  global.escape = escape;
+  global.eval = eval;
+  global.EvalError = EvalError;
+  global.Function = Function;
+  global.isFinite = isFinite;
+  global.isNaN = isNaN;
+  global.JSON = JSON;
+  global.Math = Math;
+  global.Number = Number;
+  global.Object = Object;
+  global.parseFloat = parseFloat;
+  global.parseInt = parseInt;
+  global.perms = perms;
+  global.RangeError = RangeError;
+  global.ReferenceError = ReferenceError;
+  global.RegExp = RegExp;
+  global.setPerms = setPerms;
+  global.setTimeout = setTimeout;
+  global.String = String;
+  global.suspend = suspend;
+  global.SyntaxError = SyntaxError;
+  global.Thread = Thread;
+  global.TypeError = TypeError;
+  global.unescape = unescape;
+  global.URIError = URIError;
+  global.user = user;
+  global.WeakMap = WeakMap;
+  return global;
+};
+Object.setOwnerOf($.utils.code.getGlobal, Object.getOwnerOf($.system.onStartup.prototype));
+$.utils.code.parse = new 'CC.acorn.parse';
+$.utils.code.parseExpressionAt = new 'CC.acorn.parseExpressionAt';
+

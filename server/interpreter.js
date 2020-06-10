@@ -32,12 +32,32 @@ var Node = parser.Node;
 var Parser = parser.Parser;
 
 /**
+ * Version number for the serialisation format.  MUST be incremented
+ * when any change is made to the implementation of Interpreter and
+ * related classes (in this file and others) which would change how
+ * the runtime state is represented on disk.
+ * @type {number}
+ */
+var SERIALIZATION_VERSION = 1;
+
+/**
  * Create a new interpreter.
  * @constructor
  * @param {!Interpreter.Options=} options
  */
 var Interpreter = function(options) {
+  /** @type {!Interpreter.Options} */
   this.options = options || {};
+  /**
+   * Serialisation version for this Interpreter instance.  Will be set
+   * to SERIALIZATION_VERSION, but not here, because there exist .city
+   * files that have no .serlizationVersion in them, and loading one
+   * won't overwrite what we set here.  Instead, set it in
+   * .preSerialize, and check in in .postDeserialize.
+   * @type {number|undefined}
+   */
+  this.serializationVersion = undefined;
+  // Install .Object, .Function, etc.
   this.installTypes();
   /**
    * Registry of builtins - e.g. Object, Function.prototype, Array.pop, etc.
@@ -73,7 +93,7 @@ var Interpreter = function(options) {
   /** @private (Type is whatever is returned by setTimeout()) */
   this.runner_ = null;
   /** @type {boolean} */
-  this.done = true;  // True if any non-ZOMBIE threads exist.
+  this.done = true;  // True if no non-ZOMBIE threads exist.
 
   // TODO(cpcallen): rename this to .listeners
   /** @const {!Object<number, !Interpreter.prototype.Server>} */
@@ -445,6 +465,34 @@ Interpreter.prototype.stop = function() {
 };
 
 /**
+ * Prepare an interpreter to be seralized.
+ */
+Interpreter.prototype.preSerialize = function() {
+  // As noted in constructor: set .seralizationVersion only just
+  // before serialising, so as to avoid mistaking old, un-versioned
+  // .city files for the current version.
+  this.serializationVersion = SERIALIZATION_VERSION;
+};
+
+/**
+ * Prepare an interpreter to run after being deseralized.
+ */
+Interpreter.prototype.postDeserialize = function() {
+  // Check to make sure deseralised interpreter is compatible with the
+  // current implementation.
+  if (this.serializationVersion !== SERIALIZATION_VERSION) {
+    throw new Error('version error: seralized interpreter was version ' +
+        this.serializationVersion + '; current version is ' +
+        SERIALIZATION_VERSION);
+  }
+  // Checkpointed interpreter was probably paused, but because we're
+  // restoring from a checkpoint the resurrected interpreter is
+  // actually stopped (i.e., with no listening sockets, and with
+  // questionable timer state information).
+  this.status = Interpreter.Status.STOPPED;
+};
+
+/**
  * Convert source code into a ready-to-execute parse tree.
  * @private
  * @param {string} src The source code to be compiled.
@@ -764,7 +812,7 @@ Interpreter.prototype.initObject_ = function() {
       if (obj instanceof intrp.Object) {
         // obj.setPrototypeOf handles security and circularity checks.
         if (!obj.setPrototypeOf(proto, perms)) {
-	  throw new intrp.Error(perms, intrp.TYPE_ERROR,
+          throw new intrp.Error(perms, intrp.TYPE_ERROR,
               'setPrototypeOf failed');
         }
       }
@@ -3459,29 +3507,14 @@ Interpreter.Scope.Type = {
  * position within the original source text.
  * @constructor
  * @param {string} src Some source text
- * @param {number=} start_ For internal use only.
- * @param {number=} end_ For internal use only.
+ * @param {number=} offset_ For internal use only.
  */
-Interpreter.Source = function(src, start_, end_) {
+Interpreter.Source = function(src, offset_) {
   if (src === undefined) return;  // Deserializing.
   /** @private @type {string} */
   this.src_ = src;
-  if (start_ === undefined) {
-    /** @private @type {number} */
-    this.start_ = 0;
-  } else if (start_ < 0 || start_ > src.length) {
-    throw new RangeError('Source start out of range');
-  } else {
-    this.start_ = start_;
-  }
-  if (end_ === undefined) {
-    /** @private @type {number} */
-    this.end_ = src.length;
-  } else if (end_ < 0 || end_ > src.length) {
-    throw new RangeError('Source end out of range');
-  } else {
-    this.end_ = end_;
-  }
+  /** @private @type {number} */
+  this.offset_ = offset_ || 0;
   Object.freeze(this);
 };
 
@@ -3490,7 +3523,7 @@ Interpreter.Source = function(src, start_, end_) {
  * @return {string}
  */
 Interpreter.Source.prototype.toString = function() {
-  return this.src_.slice(this.start_, this.end_);
+  return this.src_;
 };
 
 /**
@@ -3503,13 +3536,18 @@ Interpreter.Source.prototype.toString = function() {
  * @return {!Interpreter.Source} The sliced source.
  */
 Interpreter.Source.prototype.slice = function(start, end) {
-  if (start < this.start_ || start > this.end_) {
+  if (start < this.offset_ || start > this.offset_ + this.src_.length) {
     throw new RangeError('Source slice start out of range');
   }
-  if (end < this.start_ || end > this.end_) {
+  if (end < this.offset_ || end > this.offset_ + this.src_.length) {
     throw new RangeError('Source slice end out of range');
   }
-  return new Interpreter.Source(this.src_, start, end);
+  if (start > end) {
+    throw new RangeError('Source slice start past end');
+  }
+  return new Interpreter.Source(
+      this.src_.slice(start - this.offset_, end - this.offset_),
+      start);
 };
 
 /**
@@ -3521,10 +3559,10 @@ Interpreter.Source.prototype.slice = function(start, end) {
  *     position pos, relative to the start of this particular slice.
  */
 Interpreter.Source.prototype.lineColForPos = function(pos) {
-  if (pos < this.start_ || pos > this.end_) {
+  if (pos < this.offset_ || pos > this.offset_ + this.src_.length) {
     throw new RangeError('Source position out of range');
   }
-  var lines = this.src_.slice(this.start_, pos).split('\n');
+  var lines = this.src_.slice(0, pos - this.offset_).split('\n');
   return {line: lines.length, col: lines[lines.length - 1].length + 1};
 };
 

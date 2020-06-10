@@ -1,0 +1,1 @@
+../core/core_41_deutsche_zimmer.js
