@@ -20,15 +20,18 @@
  * @author fraser@google.com (Neil Fraser)
  */
 
-$.utils.html = {}
+//////////////////////////////////////////////////////////////////////
+// AUTO-GENERATED CODE FROM DUMP.  EDIT WITH CAUTION!
+//////////////////////////////////////////////////////////////////////
 
-$.utils.html.escape = function(text) {
+$.utils.html = {};
+$.utils.html.escape = function escape(text) {
   // Escape text so that it is safe to print as HTML.
   return String(text).replace(/&/g, '&amp;').replace(/"/g, '&quot;')
       .replace(/</g, '&lt;').replace(/>/g, '&gt;');
 };
-
-$.utils.html.preserveWhitespace = function(text) {
+Object.setOwnerOf($.utils.html.escape, Object.getOwnerOf($.Selector.db.get));
+$.utils.html.preserveWhitespace = function preserveWhitespace(text) {
   // Escape text so that it is safe and preserves whitespace formatting as HTML.
   // Runs of three spaces ('   ') need to be escaped twice ('_  ', '__ ').
   return $.utils.html.escape(text)
@@ -37,3 +40,5 @@ $.utils.html.preserveWhitespace = function(text) {
       .replace(/^ /gm, '\u00A0')
       .replace(/\n/g, '<br>');
 };
+Object.setOwnerOf($.utils.html.preserveWhitespace, Object.getOwnerOf($.Selector.db.get));
+

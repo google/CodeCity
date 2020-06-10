@@ -20,19 +20,155 @@
  * @author fraser@google.com (Neil Fraser)
  */
 
-// HTTP object:
-$.servers.http = {};
+//////////////////////////////////////////////////////////////////////
+// AUTO-GENERATED CODE FROM DUMP.  EDIT WITH CAUTION!
+//////////////////////////////////////////////////////////////////////
 
-// Web request object:
-$.servers.http.IncomingMessage = function() {
+$.servers.http = {};
+$.servers.http.STATUS_CODES = (new 'Object.create')(null);
+$.servers.http.STATUS_CODES[100] = 'Continue';
+$.servers.http.STATUS_CODES[101] = 'Switching Protocols';
+$.servers.http.STATUS_CODES[102] = 'Processing';
+$.servers.http.STATUS_CODES[200] = 'OK';
+$.servers.http.STATUS_CODES[201] = 'Created';
+$.servers.http.STATUS_CODES[202] = 'Accepted';
+$.servers.http.STATUS_CODES[203] = 'Non-Authoritative Information';
+$.servers.http.STATUS_CODES[204] = 'No Content';
+$.servers.http.STATUS_CODES[205] = 'Reset Content';
+$.servers.http.STATUS_CODES[206] = 'Partial Content';
+$.servers.http.STATUS_CODES[207] = 'Multi-Status';
+$.servers.http.STATUS_CODES[208] = 'Already Reported';
+$.servers.http.STATUS_CODES[226] = 'IM Used';
+$.servers.http.STATUS_CODES[300] = 'Multiple Choices';
+$.servers.http.STATUS_CODES[301] = 'Moved Permanently';
+$.servers.http.STATUS_CODES[302] = 'Found';
+$.servers.http.STATUS_CODES[303] = 'See Other';
+$.servers.http.STATUS_CODES[304] = 'Not Modified';
+$.servers.http.STATUS_CODES[305] = 'Use Proxy';
+$.servers.http.STATUS_CODES[306] = 'Switch Proxy';
+$.servers.http.STATUS_CODES[307] = 'Temporary Redirect';
+$.servers.http.STATUS_CODES[308] = 'Permanent Redirect';
+$.servers.http.STATUS_CODES[400] = 'Bad Request';
+$.servers.http.STATUS_CODES[401] = 'Unauthorized';
+$.servers.http.STATUS_CODES[402] = 'Payment Required';
+$.servers.http.STATUS_CODES[403] = 'Forbidden';
+$.servers.http.STATUS_CODES[404] = 'Not Found';
+$.servers.http.STATUS_CODES[405] = 'Method Not Allowed';
+$.servers.http.STATUS_CODES[406] = 'Not Acceptable';
+$.servers.http.STATUS_CODES[407] = 'Proxy Authentication Required';
+$.servers.http.STATUS_CODES[408] = 'Request Timeout';
+$.servers.http.STATUS_CODES[409] = 'Conflict';
+$.servers.http.STATUS_CODES[410] = 'Gone';
+$.servers.http.STATUS_CODES[411] = 'Length Required';
+$.servers.http.STATUS_CODES[412] = 'Precondition Failed';
+$.servers.http.STATUS_CODES[413] = 'Payload Too Large';
+$.servers.http.STATUS_CODES[414] = 'URI Too Long';
+$.servers.http.STATUS_CODES[415] = 'Unsupported Media Type';
+$.servers.http.STATUS_CODES[416] = 'Range Not Satisfiable';
+$.servers.http.STATUS_CODES[417] = 'Expectation Failed';
+$.servers.http.STATUS_CODES[418] = "I'm a teapot";
+$.servers.http.STATUS_CODES[421] = 'Misdirected Request';
+$.servers.http.STATUS_CODES[422] = 'Unprocessable Entity';
+$.servers.http.STATUS_CODES[423] = 'Locked';
+$.servers.http.STATUS_CODES[424] = 'Failed Dependency';
+$.servers.http.STATUS_CODES[426] = 'Upgrade Required';
+$.servers.http.STATUS_CODES[428] = 'Precondition Required';
+$.servers.http.STATUS_CODES[429] = 'Too Many Requests';
+$.servers.http.STATUS_CODES[431] = 'Request Header Fields Too Large';
+$.servers.http.STATUS_CODES[451] = 'Unavailable For Legal Reasons';
+$.servers.http.STATUS_CODES[500] = 'Internal Server Error';
+$.servers.http.STATUS_CODES[501] = 'Not Implemented';
+$.servers.http.STATUS_CODES[502] = 'Bad Gateway';
+$.servers.http.STATUS_CODES[503] = 'Service Unavailable';
+$.servers.http.STATUS_CODES[504] = 'Gateway Timeout';
+$.servers.http.STATUS_CODES[505] = 'HTTP Version Not Supported';
+$.servers.http.STATUS_CODES[506] = 'Variant Also Negotiates';
+$.servers.http.STATUS_CODES[507] = 'Insufficient Storage';
+$.servers.http.STATUS_CODES[508] = 'Loop Detected';
+$.servers.http.STATUS_CODES[510] = 'Not Extended';
+$.servers.http.STATUS_CODES[511] = 'Network Authentication Required';
+$.servers.http.connection = (new 'Object.create')($.connection);
+$.servers.http.connection.onConnect = function onConnect() {
+  $.connection.onConnect.apply(this, arguments);
+  this.timeout = setTimeout(this.close.bind(this), 60 * 1000);
+  this.request = new $.servers.http.Request();
+  this.response = new $.servers.http.Response(this);
+};
+Object.setOwnerOf($.servers.http.connection.onConnect, Object.getOwnerOf($.Jssp.OutputBuffer));
+$.servers.http.connection.onReceive = function onReceive(data) {
+  this.buffer += data;
+  var lf;
+  // Start in line-delimited mode, parsing HTTP headers.
+  while ((lf = this.buffer.indexOf('\n')) !== -1) {
+    try {
+      this.onReceiveChunk(this.buffer.substring(0, lf + 1));
+    } finally {
+      this.buffer = this.buffer.substring(lf + 1);
+    }
+  }
+  if (this.request.state_ === 'body') {
+    // Waiting for POST data, not line-delimited.
+    this.onReceiveChunk(this.buffer);
+    this.buffer = '';
+  }
+};
+Object.setOwnerOf($.servers.http.connection.onReceive, Object.getOwnerOf($.utils.code.rewriteForEval));
+$.servers.http.connection.onReceiveChunk = function onReceiveChunk(chunk) {
+  if (!this.request.parse(chunk)) {
+    return;  // Wait for more lines to arrive.
+  }
+  var pathname = this.request.pathname;
+  var obj = ($.www.hasOwnProperty(pathname) && $.www[this.request.pathname]) || $.www['404'];
+  try {
+    obj.www(this.request, this.response);
+  } catch (e) {
+    suspend();
+    // TODO: report error to client, somehow.
+    $.system.log(String(e) + '\n' + e.stack);
+  } finally {
+    this.close();
+  }
+};
+Object.setOwnerOf($.servers.http.connection.onReceiveChunk, Object.getOwnerOf($.Jssp.OutputBuffer));
+$.servers.http.connection.onEnd = function onEnd() {
+  clearTimeout(this.timeout);
+  $.connection.onEnd.apply(this, arguments);
+};
+Object.setOwnerOf($.servers.http.connection.onEnd, Object.getOwnerOf($.servers.http.connection.onReceive));
+$.servers.http.connection.close = function close() {
+  $.system.connectionClose(this);
+};
+Object.setOwnerOf($.servers.http.connection.close, Object.getOwnerOf($.servers.http.connection.onEnd));
+$.servers.http.connection.close.prototype = $.connection.close.prototype;
+$.servers.http.connection.onError = function onError(error) {
+  // TODO(cpcallen): add check for error that occurs when relistening
+  // fails at server startup from checkpoint.
+  if (error.message === 'write after end' ||
+      error.message === 'This socket has been ended by the other party') {
+    this.connected = false;
+  }
+};
+Object.setOwnerOf($.servers.http.connection.onError, Object.getOwnerOf($.servers.http.connection.close));
+$.servers.http.connection.onError.prototype = $.connection.onError.prototype;
+$.servers.http.connection.onReceiveLine = function onReceiveLine(text) {
+  // Override this on child classes.
+};
+Object.setOwnerOf($.servers.http.connection.onReceiveLine, Object.getOwnerOf($.servers.http.connection.close));
+$.servers.http.connection.onReceiveLine.prototype = $.connection.onReceiveLine.prototype;
+$.servers.http.connection.write = function write(text) {
+  $.system.connectionWrite(this, text);
+};
+Object.setOwnerOf($.servers.http.connection.write, Object.getOwnerOf($.servers.http.connection.close));
+$.servers.http.connection.write.prototype = $.connection.write.prototype;
+$.servers.http.Request = function Request() {
   this.headers = Object.create(null);
   this.headers.cookie = Object.create(null);
   this.parameters = Object.create(null);
   // One of 'invalid', 'request', 'headers', 'body', 'done'.
   this.state_ = 'request';
 };
-
-$.servers.http.IncomingMessage.prototype.parse = function(line) {
+Object.setOwnerOf($.servers.http.Request, Object.getOwnerOf($.Jssp.OutputBuffer));
+$.servers.http.Request.prototype.parse = function parse(line) {
   // Returns true if parsing is complete, false if more lines are needed.
   if (this.state_ === 'request') {
     // Match "GET /images/logo.png HTTP/1.1"
@@ -80,14 +216,14 @@ $.servers.http.IncomingMessage.prototype.parse = function(line) {
           var cookieName = cookies[i].substring(0, eqIndex);
           var cookieValue = cookies[i].substring(eqIndex + 1);
           if (cookieName === 'ID') {
-            // Special-case the 'id' cookie for user login.
-            // Do not expose this id string to anyone.
-            var m = cookieValue.match(/^([0-9a-f]+)_[0-9a-f]+$/);
+            // Special-case the 'ID' cookie for user login.
+            // Do not expose this ID string to anyone.
+            var c = cookieValue.match(/^([0-9a-f]+)_[0-9a-f]+$/);
             // m[1] is the user's account ID.
             // The second part is the salted security hash.
             // Ignore the hash unless we are creating a new account.
-            if (m) {
-              this.user = $.userDatabase[m[1]];
+            if (c) {
+              this.user = $.userDatabase[c[1]];
             }
           } else {
             // Regular cookie.
@@ -120,21 +256,8 @@ $.servers.http.IncomingMessage.prototype.parse = function(line) {
   // Invalid state?  Extra lines?  Ignore.
   return true;
 };
-$.servers.http.IncomingMessage.discardDuplicates = [
-  'authorization',
-  'content-length',
-  'content-type',
-  'from',
-  'host',
-  'if-modified-since',
-  'if-unmodified-since',
-  'max-forwards',
-  'proxy-authorization',
-  'referer',
-  'user-agent'
-];
-
-$.servers.http.IncomingMessage.prototype.parseUrl_ = function(url) {
+Object.setOwnerOf($.servers.http.Request.prototype.parse, Object.getOwnerOf($.servers.http.connection.close));
+$.servers.http.Request.prototype.parseUrl_ = function(url) {
   // pathname: /bar/baz?data  ->  /bar/baz
   // query: /bar/baz?data  ->  data
   var qIndex = url.indexOf('?');
@@ -145,8 +268,7 @@ $.servers.http.IncomingMessage.prototype.parseUrl_ = function(url) {
     this.query = url.substring(qIndex + 1);
   }
 };
-
-$.servers.http.IncomingMessage.prototype.parseParameters_ = function(data) {
+$.servers.http.Request.prototype.parseParameters_ = function(data) {
   if (!data) {
     return;
   }
@@ -173,10 +295,19 @@ $.servers.http.IncomingMessage.prototype.parseParameters_ = function(data) {
     this.parameters[name] = value;
   }
 };
-
-
-// Web response object:
-$.servers.http.ServerResponse = function(connection) {
+$.servers.http.Request.discardDuplicates = [];
+$.servers.http.Request.discardDuplicates[0] = 'authorization';
+$.servers.http.Request.discardDuplicates[1] = 'content-length';
+$.servers.http.Request.discardDuplicates[2] = 'content-type';
+$.servers.http.Request.discardDuplicates[3] = 'from';
+$.servers.http.Request.discardDuplicates[4] = 'host';
+$.servers.http.Request.discardDuplicates[5] = 'if-modified-since';
+$.servers.http.Request.discardDuplicates[6] = 'if-unmodified-since';
+$.servers.http.Request.discardDuplicates[7] = 'max-forwards';
+$.servers.http.Request.discardDuplicates[8] = 'proxy-authorization';
+$.servers.http.Request.discardDuplicates[9] = 'referer';
+$.servers.http.Request.discardDuplicates[10] = 'user-agent';
+$.servers.http.Response = function Response(connection) {
   this.headersSent = false;
   this.statusCode = 200;
   this.headers_ = Object.create(null);
@@ -184,8 +315,8 @@ $.servers.http.ServerResponse = function(connection) {
   this.setHeader('content-type', 'text/html; charset=utf-8');
   this.connection_ = connection;
 };
-
-$.servers.http.ServerResponse.prototype.setHeader = function(name, value) {
+Object.setOwnerOf($.servers.http.Response, Object.getOwnerOf($.Jssp.OutputBuffer));
+$.servers.http.Response.prototype.setHeader = function(name, value) {
   if (this.headersSent) {
     throw new Error('Header already sent.');
   }
@@ -196,9 +327,8 @@ $.servers.http.ServerResponse.prototype.setHeader = function(name, value) {
   } else {
     var existing = this.headers_[name];
     if (name in this.headers_) {
-      if ($.servers.http.ServerResponse.discardDuplicates.includes(name)) {
-        // Discard this duplicate.
-        value = existing;
+      if ($.servers.http.Response.discardDuplicates.includes(name)) {
+        // Discard older duplicate.
       } else {
         // Append this header onto previously defined header.
         value = existing + ', ' + value;
@@ -207,18 +337,9 @@ $.servers.http.ServerResponse.prototype.setHeader = function(name, value) {
     this.headers_[name] = value;
   }
 };
-$.servers.http.ServerResponse.discardDuplicates = [
-  'age',
-  'content-length',
-  'content-type',
-  'etag',
-  'expires',
-  'last-modified',
-  'location',
-  'retry-after'
-];
-
-$.servers.http.ServerResponse.prototype.writeHead = function() {
+delete $.servers.http.Response.prototype.setHeader.name;
+Object.setOwnerOf($.servers.http.Response.prototype.setHeader, Object.getOwnerOf($.Jssp.OutputBuffer));
+$.servers.http.Response.prototype.writeHead = function() {
   if (this.headersSent) {
     throw new Error('Header already sent.');
   }
@@ -237,21 +358,40 @@ $.servers.http.ServerResponse.prototype.writeHead = function() {
   }
   this.connection_.write('\r\n');
 };
-
-$.servers.http.ServerResponse.prototype.capitalize = function(txt) {
+delete $.servers.http.Response.prototype.writeHead.name;
+$.servers.http.Response.prototype.writeHead.prototype.constructor = function() {
+  if (this.headersSent) {
+    throw new Error('Header already sent.');
+  }
+  this.headersSent = true;
+  var statusMessage = $.servers.http.STATUS_CODES[this.statusCode] || 'Unknown';
+  this.connection_.write('HTTP/1.0 ' + this.statusCode + ' ' + statusMessage +
+                         '\r\n');
+  for (var name in this.headers_) {
+    // Print all header names as Title-Case.
+    var title = name.replace(/\w+/g, this.capitalize);
+    this.connection_.write(title + ': ' + this.headers_[name] + '\r\n');
+  }
+  for (var i = 0; i < this.cookies.length; i++) {
+    // Print all cookies.
+    this.connection_.write('Set-Cookie: ' + this.cookies[i] + '\r\n');
+  }
+  this.connection_.write('\r\n');
+};
+$.servers.http.Response.prototype.writeHead.prototype.constructor.prototype = $.servers.http.Response.prototype.writeHead.prototype;
+Object.defineProperty($.servers.http.Response.prototype.writeHead.prototype.constructor, 'name', {value: 'writeHead'});
+$.servers.http.Response.prototype.capitalize = function(txt) {
   // 'foo' -> 'Foo'
   // Assumes incoming text is already lowercase.
   return txt[0].toUpperCase() + txt.substring(1);
 };
-
-$.servers.http.ServerResponse.prototype.setStatus = function(code) {
+$.servers.http.Response.prototype.setStatus = function(code) {
   if (this.headersSent) {
     throw new Error('Header already sent.');
   }
   this.statusCode = code;
 };
-
-$.servers.http.ServerResponse.prototype.write = function(text) {
+$.servers.http.Response.prototype.write = function(text) {
   if (text !== '') {
     if (!this.headersSent) {
       this.writeHead();
@@ -259,124 +399,13 @@ $.servers.http.ServerResponse.prototype.write = function(text) {
     this.connection_.write(text);
   }
 };
+$.servers.http.Response.discardDuplicates = [];
+$.servers.http.Response.discardDuplicates[0] = 'age';
+$.servers.http.Response.discardDuplicates[1] = 'content-length';
+$.servers.http.Response.discardDuplicates[2] = 'content-type';
+$.servers.http.Response.discardDuplicates[3] = 'etag';
+$.servers.http.Response.discardDuplicates[4] = 'expires';
+$.servers.http.Response.discardDuplicates[5] = 'last-modified';
+$.servers.http.Response.discardDuplicates[6] = 'location';
+$.servers.http.Response.discardDuplicates[7] = 'retry-after';
 
-
-$.servers.http.STATUS_CODES = Object.create(null);
-$.servers.http.STATUS_CODES[100] = 'Continue';
-$.servers.http.STATUS_CODES[101] = 'Switching Protocols';
-$.servers.http.STATUS_CODES[102] = 'Processing';
-$.servers.http.STATUS_CODES[200] = 'OK';
-$.servers.http.STATUS_CODES[201] = 'Created';
-$.servers.http.STATUS_CODES[202] = 'Accepted';
-$.servers.http.STATUS_CODES[203] = 'Non-Authoritative Information';
-$.servers.http.STATUS_CODES[204] = 'No Content';
-$.servers.http.STATUS_CODES[205] = 'Reset Content';
-$.servers.http.STATUS_CODES[206] = 'Partial Content';
-$.servers.http.STATUS_CODES[207] = 'Multi-Status';
-$.servers.http.STATUS_CODES[208] = 'Already Reported';
-$.servers.http.STATUS_CODES[226] = 'IM Used';
-$.servers.http.STATUS_CODES[300] = 'Multiple Choices';
-$.servers.http.STATUS_CODES[301] = 'Moved Permanently';
-$.servers.http.STATUS_CODES[302] = 'Found';
-$.servers.http.STATUS_CODES[303] = 'See Other';
-$.servers.http.STATUS_CODES[304] = 'Not Modified';
-$.servers.http.STATUS_CODES[305] = 'Use Proxy';
-$.servers.http.STATUS_CODES[306] = 'Switch Proxy';
-$.servers.http.STATUS_CODES[307] = 'Temporary Redirect';
-$.servers.http.STATUS_CODES[308] = 'Permanent Redirect';
-$.servers.http.STATUS_CODES[400] = 'Bad Request';
-$.servers.http.STATUS_CODES[401] = 'Unauthorized';
-$.servers.http.STATUS_CODES[402] = 'Payment Required';
-$.servers.http.STATUS_CODES[403] = 'Forbidden';
-$.servers.http.STATUS_CODES[404] = 'Not Found';
-$.servers.http.STATUS_CODES[405] = 'Method Not Allowed';
-$.servers.http.STATUS_CODES[406] = 'Not Acceptable';
-$.servers.http.STATUS_CODES[407] = 'Proxy Authentication Required';
-$.servers.http.STATUS_CODES[408] = 'Request Timeout';
-$.servers.http.STATUS_CODES[409] = 'Conflict';
-$.servers.http.STATUS_CODES[410] = 'Gone';
-$.servers.http.STATUS_CODES[411] = 'Length Required';
-$.servers.http.STATUS_CODES[412] = 'Precondition Failed';
-$.servers.http.STATUS_CODES[413] = 'Payload Too Large';
-$.servers.http.STATUS_CODES[414] = 'URI Too Long';
-$.servers.http.STATUS_CODES[415] = 'Unsupported Media Type';
-$.servers.http.STATUS_CODES[416] = 'Range Not Satisfiable';
-$.servers.http.STATUS_CODES[417] = 'Expectation Failed';
-$.servers.http.STATUS_CODES[418] = 'I\'m a teapot';
-$.servers.http.STATUS_CODES[421] = 'Misdirected Request';
-$.servers.http.STATUS_CODES[422] = 'Unprocessable Entity';
-$.servers.http.STATUS_CODES[423] = 'Locked';
-$.servers.http.STATUS_CODES[424] = 'Failed Dependency';
-$.servers.http.STATUS_CODES[426] = 'Upgrade Required';
-$.servers.http.STATUS_CODES[428] = 'Precondition Required';
-$.servers.http.STATUS_CODES[429] = 'Too Many Requests';
-$.servers.http.STATUS_CODES[431] = 'Request Header Fields Too Large';
-$.servers.http.STATUS_CODES[451] = 'Unavailable For Legal Reasons';
-$.servers.http.STATUS_CODES[500] = 'Internal Server Error';
-$.servers.http.STATUS_CODES[501] = 'Not Implemented';
-$.servers.http.STATUS_CODES[502] = 'Bad Gateway';
-$.servers.http.STATUS_CODES[503] = 'Service Unavailable';
-$.servers.http.STATUS_CODES[504] = 'Gateway Timeout';
-$.servers.http.STATUS_CODES[505] = 'HTTP Version Not Supported';
-$.servers.http.STATUS_CODES[506] = 'Variant Also Negotiates';
-$.servers.http.STATUS_CODES[507] = 'Insufficient Storage';
-$.servers.http.STATUS_CODES[508] = 'Loop Detected';
-$.servers.http.STATUS_CODES[510] = 'Not Extended';
-$.servers.http.STATUS_CODES[511] = 'Network Authentication Required';
-
-$.servers.http.route = function(url, table) {
-  // Given a URL and a router table, find the first property that matches.
-  // Each property is a (regexp, handler) tuple.
-  // Returns undefined if no match.
-  for (var name in table) {
-    var rule = table[name];
-    if (rule.regexp.test(url)) {
-      return rule.handler;
-    }
-  }
-  return undefined;
-};
-
-// Web server:
-$.servers.http.connection = Object.create($.connection);
-
-$.servers.http.connection.onConnect = function() {
-  $.connection.onConnect.apply(this);
-  this.timeout = setTimeout(this.close.bind(this), 60 * 1000);
-  this.request = new $.servers.http.IncomingMessage();
-  this.response = new $.servers.http.ServerResponse(this);
-};
-
-$.servers.http.connection.onReceive = function(data) {
-  this.buffer += data;
-  var lf;
-  // Start in line-delimited mode, parsing HTTP headers.
-  while ((lf = this.buffer.indexOf('\n')) !== -1) {
-    try {
-      this.onReceiveChunk(this.buffer.substring(0, lf + 1));
-    } finally {
-      this.buffer = this.buffer.substring(lf + 1);
-    }
-  }
-  if (this.request.state_ === 'body') {
-    // Waiting for POST data, not line-delimited.
-    this.onReceiveChunk(this.buffer);
-    this.buffer = '';
-  }
-};
-
-$.servers.http.connection.onReceiveChunk = function(chunk) {
-  if (!this.request.parse(chunk)) {
-    return;  // Wait for more lines to arrive.
-  }
-  var obj = $.servers.http.route(this.request.url, $.www.ROUTER) || $.www['404'];
-  try {
-    obj.www(this.request, this.response);
-  } finally {
-    this.close();
-  }
-};
-
-$.servers.http.connection.onEnd = function() {
-  clearTimeout(this.timeout);
-};
