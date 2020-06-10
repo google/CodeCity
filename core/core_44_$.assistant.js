@@ -17,7 +17,6 @@
 
 /**
  * @fileoverview Voice-activated assistant demo for Code City.
- * @author cpcallen@google.com (Christopher Allen)
  */
 
 //////////////////////////////////////////////////////////////////////

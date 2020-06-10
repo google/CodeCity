@@ -22,7 +22,6 @@
       "",
       "/**",
       " * @fileoverview <OVERVIEW>",
-      " * @author <AUTHOR>",
       " */",
       "",
       "//////////////////////////////////////////////////////////////////////",
@@ -36,8 +35,7 @@
       "<OVERVIEW>": [
         "Load builtins and add polyfills to bring the server's partial",
         " * JavaScript implementation up to ECMAScript 5.1 (or close to it)."
-      ],
-      "<AUTHOR>": "fraser@google.com (Neil Fraser)"
+      ]
     },
     "contents": [
       "Object",
@@ -75,8 +73,7 @@
       "<OVERVIEW>": [
         "Load builtins and add polyfills to bring the server's partial",
         " * JavaScript implementation to include some features of ECMAScript 6."
-      ],
-      "<AUTHOR>": "fraser@google.com (Neil Fraser)"
+      ]
     },
     "contents": [
       "Object.is",
@@ -104,8 +101,7 @@
       "<OVERVIEW>": [
         "Load builtins and add polyfills to bring the server's partial",
         " * JavaScript implementation to include some features of ECMAScript 7."
-      ],
-      "<AUTHOR>": "fraser@google.com (Neil Fraser)"
+      ]
     },
     "contents": [
       "Array.prototype.includes"
@@ -117,8 +113,7 @@
       "<OVERVIEW>": [
         "Load builtins and add polyfills for Code City-specific extensions to",
         " * JavaScript."
-      ],
-      "<AUTHOR>": "cpcallen@google.com (Christopher Allen)"
+      ]
     },
     "contents": [
       "Object.getOwnerOf",
@@ -136,8 +131,7 @@
     "filename": "core_10_base.js",
     "headerSubs": {
       "<YEAR>": "2017",
-      "<OVERVIEW>": "Database core for Code City.",
-      "<AUTHOR>": "fraser@google.com (Neil Fraser)"
+      "<OVERVIEW>": "Database core for Code City."
     },
     "prune": ["$.system.onStartup.thread_"],
     "contents": [
@@ -155,8 +149,7 @@
     "filename": "core_11_$.utils.js",
     "headerSubs": {
       "<YEAR>": "2020",
-      "<OVERVIEW>": "Basic utilities for Code City.",
-      "<AUTHOR>": "cpcallen@google.com (Christopher Allen)"
+      "<OVERVIEW>": "Basic utilities for Code City."
     },
     "contents": [
       "$.utils",
@@ -168,16 +161,14 @@
     "filename": "core_12_$.utils.code.js",
     "headerSubs": {
       "<YEAR>": "2018",
-      "<OVERVIEW>": "Code utilities for Code City.",
-      "<AUTHOR>": "fraser@google.com (Neil Fraser)"
+      "<OVERVIEW>": "Code utilities for Code City."
     },
     "contents": ["$.utils.code"]
   }, {
     "filename": "core_13_$.Selector.js",
     "headerSubs": {
       "<YEAR>": "2018",
-      "<OVERVIEW>": "Selector implementation for Code City core.",
-      "<AUTHOR>": "cpcallen@google.com (Christopher Allen)"
+      "<OVERVIEW>": "Selector implementation for Code City core."
     },
     "pruneRest": ["$.Selector.cache_", "$.Selector.sortByBadness.cache_"],
     "contents": [
@@ -192,40 +183,35 @@
     "filename": "core_20_$.utils.html.js",
     "headerSubs": {
       "<YEAR>": "2018",
-      "<OVERVIEW>": "HTML utilities for Code City.",
-      "<AUTHOR>": "fraser@google.com (Neil Fraser)"
+      "<OVERVIEW>": "HTML utilities for Code City."
     },
     "contents": ["$.utils.html"]
   }, {
     "filename": "core_21_$.Jssp.js",
     "headerSubs": {
       "<YEAR>": "2017",
-      "<OVERVIEW>": "JavaScript Server Pages for Code City.",
-      "<AUTHOR>": "fraser@google.com (Neil Fraser)"
+      "<OVERVIEW>": "JavaScript Server Pages for Code City."
     },
     "contents": ["$.Jssp"]
   }, {
     "filename": "core_22_$.connection.js",
     "headerSubs": {
       "<YEAR>": "2017",
-      "<OVERVIEW>": "Connection object for Code City.",
-      "<AUTHOR>": "fraser@google.com (Neil Fraser)"
+      "<OVERVIEW>": "Connection object for Code City."
     },
     "contents": ["$.connection"]
   }, {
     "filename": "core_23_$.servers.http.js",
     "headerSubs": {
       "<YEAR>": "2017",
-      "<OVERVIEW>": "Webserver for Code City.",
-      "<AUTHOR>": "fraser@google.com (Neil Fraser)"
+      "<OVERVIEW>": "Webserver for Code City."
     },
     "contents": ["$.servers.http"]
   }, {
     "filename": "core_24_$.www.js",
     "headerSubs": {
       "<YEAR>": "2017",
-      "<OVERVIEW>": "Top-level URL handlers for Code City.",
-      "<AUTHOR>": "fraser@google.com (Neil Fraser)"
+      "<OVERVIEW>": "Top-level URL handlers for Code City."
     },
     "contents": [
       {"path": "$.www", "do": "ATTR"},
@@ -237,8 +223,7 @@
     "filename": "core_25_$.db.tempId.js",
     "headerSubs": {
       "<YEAR>": "2018",
-      "<OVERVIEW>": "Temporary ID database for Code City.",
-      "<AUTHOR>": "fraser@google.com (Neil Fraser)"
+      "<OVERVIEW>": "Temporary ID database for Code City."
     },
     "contents": [
       {"path": "$.db", "do": "ATTR"},
@@ -250,8 +235,7 @@
     "filename": "core_26_$.www.editor.js",
     "headerSubs": {
       "<YEAR>": "2017",
-      "<OVERVIEW>": "Code editor for Code City.",
-      "<AUTHOR>": "cpcallen@google.com (Christopher Allen)"
+      "<OVERVIEW>": "Code editor for Code City."
     },
     "contents": [
       "$.www.editor",
@@ -261,8 +245,7 @@
     "filename": "core_27_$.www.code.js",
     "headerSubs": {
       "<YEAR>": "2018",
-      "<OVERVIEW>": "Web-based code explorer/editor for Code City.",
-      "<AUTHOR>": "fraser@google.com (Neil Fraser)"
+      "<OVERVIEW>": "Web-based code explorer/editor for Code City."
     },
     "contents": [
       "$.www.code",
@@ -276,16 +259,14 @@
     "filename": "core_30_$.utils.command.js",
     "headerSubs": {
       "<YEAR>": "2017",
-      "<OVERVIEW>": "Command parser for Code City",
-      "<AUTHOR>": "fraser@google.com (Neil Fraser)"
+      "<OVERVIEW>": "Command parser for Code City"
     },
     "contents": ["$.utils.command"]
   }, {
     "filename": "core_31_$.utils_world.js",
     "headerSubs": {
       "<YEAR>": "2017",
-      "<OVERVIEW>": "World-related utils for Code City.",
-      "<AUTHOR>": "fraser@google.com (Neil Fraser)"
+      "<OVERVIEW>": "World-related utils for Code City."
     },
     "contents": [
       "$.utils.commandMenu",
@@ -295,8 +276,7 @@
     "filename": "core_32_physical.js",
     "headerSubs": {
       "<YEAR>": "2017",
-      "<OVERVIEW>": "Physical object prototype for Code City.",
-      "<AUTHOR>": "fraser@google.com (Neil Fraser)"
+      "<OVERVIEW>": "Physical object prototype for Code City."
     },
     "contents": [
       "$.physical",
@@ -309,8 +289,7 @@
     "filename": "core_33_world.js",
     "headerSubs": {
       "<YEAR>": "2017",
-      "<OVERVIEW>": "Generic physical object types for Code City.",
-      "<AUTHOR>": "fraser@google.com (Neil Fraser)"
+      "<OVERVIEW>": "Generic physical object types for Code City."
     },
     "contents": [
       "$.user",
@@ -326,8 +305,7 @@
     "filename": "core_34_$.servers.telnet.js",
     "headerSubs": {
       "<YEAR>": "2017",
-      "<OVERVIEW>": "Telnet server for Code City.",
-      "<AUTHOR>": "fraser@google.com (Neil Fraser)"
+      "<OVERVIEW>": "Telnet server for Code City."
     },
     "pruneRest": ["$.servers.telnet.connected"],
     "contents": [
@@ -340,8 +318,7 @@
   {
     "headerSubs": {
       "<YEAR>": "2017",
-      "<OVERVIEW>": "Initial starting room for Code City.",
-      "<AUTHOR>": "fraser@google.com (Neil Fraser)"
+      "<OVERVIEW>": "Initial starting room for Code City."
     },
     "filename": "core_40_$.startRoom.js",
     "prune": ["$.clock.thread_"],
@@ -361,8 +338,7 @@
   }, {
     "headerSubs": {
       "<YEAR>": "2018",
-      "<OVERVIEW>": "Translation room and tutorial  demo for Code City.",
-      "<AUTHOR>": "cpcallen@google.com (Christopher Allen)"
+      "<OVERVIEW>": "Translation room and tutorial  demo for Code City."
     },
     "filename": "core_41_deutsche_zimmer.js",
     "contents": [
@@ -380,8 +356,7 @@
     "filename": "core_42_plant.js",
     "headerSubs": {
       "<YEAR>": "2018",
-      "<OVERVIEW>": "Plant demo for Code City.",
-      "<AUTHOR>": "fraser@google.com (Neil Fraser)"
+      "<OVERVIEW>": "Plant demo for Code City."
     },
     "contents": [
       "$.seed",
@@ -401,8 +376,7 @@
     "filename": "core_43_genetics_lab.js",
     "headerSubs": {
       "<YEAR>": "2020",
-      "<OVERVIEW>": "Genetics lab demo for Code City.",
-      "<AUTHOR>": "fraser@google.com (Neil Fraser)"
+      "<OVERVIEW>": "Genetics lab demo for Code City."
     },
     "contents": [
       "$.cage",
@@ -416,8 +390,7 @@
     "filename": "core_44_$.assistant.js",
     "headerSubs": {
       "<YEAR>": "2020",
-      "<OVERVIEW>": "Voice-activated assistant demo for Code City.",
-      "<AUTHOR>": "cpcallen@google.com (Christopher Allen)"
+      "<OVERVIEW>": "Voice-activated assistant demo for Code City."
     },
     "contents": [
       "$.assistant",
@@ -433,8 +406,7 @@
     "filename": "../database/db_00_core_lastModified.js",
     "headerSubs": {
       "<YEAR>": "2020",
-      "<OVERVIEW>": "Edit history info for Code City core.",
-      "<AUTHOR>": "cpcallen@google.com (Christopher Allen)"
+      "<OVERVIEW>": "Edit history info for Code City core."
     },
     "contents": [
       "Object",
@@ -522,8 +494,7 @@
     "filename": "../database/db_01_world.js",
     "headerSubs": {
       "<YEAR>": "2017",
-      "<OVERVIEW>": "Main database for google.codecity.world.",
-      "<AUTHOR>": "fraser@google.com (Neil Fraser)"
+      "<OVERVIEW>": "Main database for google.codecity.world."
     },
     "contents": [
       "$"

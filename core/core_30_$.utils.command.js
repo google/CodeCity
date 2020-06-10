@@ -17,7 +17,6 @@
 
 /**
  * @fileoverview Command parser for Code City
- * @author fraser@google.com (Neil Fraser)
  */
 
 //////////////////////////////////////////////////////////////////////

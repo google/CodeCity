@@ -17,7 +17,6 @@
 
 /**
  * @fileoverview Basic utilities for Code City.
- * @author cpcallen@google.com (Christopher Allen)
  */
 
 //////////////////////////////////////////////////////////////////////

@@ -17,7 +17,6 @@
 
 /**
  * @fileoverview Connection object for Code City.
- * @author fraser@google.com (Neil Fraser)
  */
 
 //////////////////////////////////////////////////////////////////////

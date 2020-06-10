@@ -17,7 +17,6 @@
 
 /**
  * @fileoverview Selector implementation for Code City core.
- * @author cpcallen@google.com (Christopher Allen)
  */
 
 //////////////////////////////////////////////////////////////////////

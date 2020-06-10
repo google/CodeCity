@@ -17,7 +17,6 @@
 
 /**
  * @fileoverview Generic physical object types for Code City.
- * @author fraser@google.com (Neil Fraser)
  */
 
 //////////////////////////////////////////////////////////////////////

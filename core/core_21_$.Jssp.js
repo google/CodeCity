@@ -17,7 +17,6 @@
 
 /**
  * @fileoverview JavaScript Server Pages for Code City.
- * @author fraser@google.com (Neil Fraser)
  */
 
 //////////////////////////////////////////////////////////////////////

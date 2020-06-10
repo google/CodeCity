@@ -17,7 +17,6 @@
 
 /**
  * @fileoverview Physical object prototype for Code City.
- * @author fraser@google.com (Neil Fraser)
  */
 
 //////////////////////////////////////////////////////////////////////

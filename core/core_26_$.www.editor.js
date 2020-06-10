@@ -17,7 +17,6 @@
 
 /**
  * @fileoverview Code editor for Code City.
- * @author cpcallen@google.com (Christopher Allen)
  */
 
 //////////////////////////////////////////////////////////////////////
