@@ -3547,7 +3547,7 @@ Interpreter.Source.prototype.slice = function(start, end) {
   }
   return new Interpreter.Source(
       this.src_.slice(start - this.offset_, end - this.offset_),
-      start - this.offset_);
+      start);
 };
 
 /**
