@@ -1,0 +1,417 @@
+#!/usr/bin/env node --harmony-weak-refs
+/**
+ * @license
+ * Copyright 2018 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/**
+ * @fileoverview Infrastructure to save the state of an Interpreter as
+ *     eval-able JS.  Mainly a wrapper around Dumper, handling
+ *     the application of a dupmp configuration.
+ * @author cpcallen@google.com (Christopher Allen)
+ */
+'use strict';
+
+var code = require('./code');
+var CodeCity = require('./codecity');
+var Do = require('./dumper').Do;
+var Dumper = require('./dumper').Dumper;
+var DumperOptions = require('./dumper').DumperOptions;
+var Writable = require('./dumper').Writable;
+var fs = require('fs');
+var Interpreter = require('./interpreter');
+var path = require('path');
+var Selector = require('./selector');
+
+/**
+ * Dump an Interpreter using a given dump specification.
+ * @param {!Interpreter} intrp1 An interpreter initialised exactly as
+ *     the one the ouptut JS will be executed by.
+ * @param {!Interpreter} intrp2 An interpreter containing state
+ *     modifications (relative to intrp1) to be dumped.
+ * @param {!Array<!ConfigItem>} config The dump specification.
+ * @param {string=} directory A directory relative to which
+ *     non-absolute filenames in config should be written.  If none is
+ *     supplied then they will be treated as relative to the current
+ *     directory.
+ * @param {boolean=} verbose Print message describing what is being done.
+ */
+var dump = function(intrp1, intrp2, config, directory, verbose) {
+  var dumper = new Dumper(intrp1, intrp2, {verbose: verbose});
+  if (verbose) console.log('Dumper initialised.');
+
+  // Skip everything that's explicitly mentioned in the config, so
+  // that paths won't get dumped until it's their turn.
+  for (var item, i = 0; (item = config[i]); i++) {
+    if (!item.contents) continue;
+    for (var entry, j = 0; (entry = item.contents[j]); j++) {
+      dumper.skip(entry.selector);
+    }
+  }
+  var /** string */ header = '';
+  // Dump the specified paths, in order.
+  for (var item, i = 0; (item = config[i]); i++) {
+    if ('options' in item) {  // An OptionsItem.
+      dumper.setOptions(item.options);
+      continue;
+    }
+    // A FileItem.
+    var filename = item.filename;
+    if (verbose) console.log('Dumping to %s...', filename);
+    if (directory !== undefined && !path.isAbsolute(filename)) {
+      filename = path.normalize(path.join(directory, filename));
+    }
+    var outputStream = new SyncWriter(filename);
+    dumper.setOptions({output: outputStream});
+
+    for (var selector, j = 0; (selector = item.prune[j]); j++) {
+      dumper.prune(selector);
+    }
+    for (var selector, j = 0; (selector = item.pruneRest[j]); j++) {
+      dumper.pruneRest(selector);
+    }
+
+    if (item.header !== undefined) header = item.header;
+    var fileHeader = header;
+    for (var key in item.headerSubs) {
+      fileHeader = fileHeader.replace(key, item.headerSubs[key]);
+    }
+    if (fileHeader) dumper.write(fileHeader);
+
+    if (item.contents) {
+      for (var entry, j = 0; (entry = item.contents[j]); j++) {
+        if (verbose) console.log('Dumping: %s', entry.selector);
+        dumper.unskip(entry.selector);
+        dumper.dumpBinding(entry.selector, entry.do);
+        dumper.write('\n');
+      }
+    }
+    if (item.rest) {
+      if (verbose) console.log('Dumping rest.');
+      dumper.dump();
+    }
+    outputStream.end();
+  }
+};
+
+/**
+ * Convert a dump plan from an !Array<!SpecConfigItem> to
+ * !Array<!ConfigItem>, with validataion and a few conversions:
+ *
+ * - Whereas as in the input, paths will will be represented by
+ *   selector strings, in the corresponding output the properties will
+ *   be Selectors.  The SpecConfigEntry path: will become .selector in
+ *   the corresponding COnfigEntry.
+ *
+ * - Whereas the input will specify do: values as strings
+ *   (e.g. "RECURSE"), the output will have Do enum values
+ *   (e.g. Do.RECURSE) instead.
+ *
+ * - A plain selector string ss, appearing in the contents: array of a
+ *   SpecFileItem, will be replaced by the ContentEntry
+ *   {selector: new Selector(ss), do: Do.RECURSE, reorder: false}.
+ *
+ * - All optional boolean-valued properties will be normalised to
+ *   exist, defaulting to false.
+ *
+ * @param {*} spec The dump plan to be validated.  If this is not an
+ *     !Array<!SpecEntry>, TypeError will be thrown.
+ * @return {!Array<!ConfigItem>}
+ */
+var configFromSpec = function(spec) {
+  var /** !Array<!ConfigItem> */ config = [];
+
+  /** @type {function(string, number=)} */
+  function reject(message, j) {
+    var prefix = 'spec[' + i + ']';
+    if (j !== undefined) prefix = prefix + '.contents[' + j + ']';
+    if (message[0] !== '.') prefix = prefix + ' ';
+    throw new TypeError(prefix + message);
+  }
+
+  if (!Array.isArray(spec)) {
+    throw new TypeError('spec must be an array of SpecConfigItems');
+  }
+  for (var i = 0; i < spec.length; i++) {
+    var item = spec[i];
+
+    if (typeof item !== 'object' || item === null) {
+      reject('not a SpecConfigItem object');
+    }
+    if ('filename' in item) {  // It's a SpecFileItem.
+      var /** (string|undefined) */ header;
+      var /** !Object<string, string> */ headerSubs = {};
+      var /** !Array<!Selector> */ prune = [];
+      var /** !Array<!Selector> */ pruneRest = [];
+      var /** !Array<!ContentEntry> */ contents = [];
+
+      if (typeof item.filename !== 'string') {
+        // TODO(cpcallen): add better filename validity check?
+        reject('.filename is not a string');
+      } else if (!Array.isArray(item.contents) && item.contents !== undefined) {
+        reject('.contents is not an array');
+      } else if (typeof item.rest !== 'boolean' && item.rest !== undefined) {
+        reject('.rest is not a boolean');
+      }
+      if (item.header instanceof Array) {
+        header = item.header.join('\n');
+      } else if (typeof item.header === 'string' || item.header === undefined) {
+        header = item.header;
+      } else {
+        reject('.header is not string or array of strings');
+      }
+      if (item.headerSubs instanceof Object) {
+        for (var key in item.headerSubs) {
+          var value = item.headerSubs[key];
+          if (value instanceof Array) {
+            headerSubs[key] = value.join('\n');
+          } else if (typeof value === 'string' || value === undefined) {
+            headerSubs[key] = value;
+          } else {
+            reject('.headerSubs.' + key + ' is not a string');
+          }
+        }
+      } else if (item.headerSubs !== undefined) {
+        reject('.headerSubs is not an object');
+      }
+      if ('prune' in item) {
+        if (!Array.isArray(item.prune)) {
+          reject('.prune is not an array');
+        }
+        for (var j = 0; j < item.prune.length; j++) {
+          prune.push(new Selector(item.prune[j]));
+        }
+      }
+      if ('pruneRest' in item) {
+        if (!Array.isArray(item.pruneRest)) {
+          reject('.pruneRest is not an array');
+        }
+        for (j = 0; j < item.pruneRest.length; j++) {
+          pruneRest.push(new Selector(item.pruneRest[j]));
+        }
+      }
+      if ('contents' in item) {
+        for (j = 0; j < item.contents.length; j++) {
+          var entry = item.contents[j];
+
+          if (typeof entry === 'string') {
+            var selector = new Selector(entry);
+            contents.push({selector: selector, do: Do.RECURSE, reorder: false});
+            continue;
+          } else if (typeof entry !== 'object' || entry === null) {
+            reject('not a SpecContentEntry object', j);
+          } else if (typeof entry.path !== 'string') {
+            reject('.path not a vaid selector string', j);
+          } else if (!Do.hasOwnProperty(entry.do)) {
+            reject('.do: ' + entry.do + ' is not a valid Do value', j);
+          } else if (typeof entry.reorder !== 'boolean' &&
+                     entry.reorder !== undefined) {
+            reject('.reorder must be boolean or omitted', j);
+          }
+          contents.push({
+            selector: new Selector(entry.path),
+            do: Do[entry.do],
+            reorder: Boolean(entry.reorder),
+          });
+        }
+      } else if (!item.rest) {
+        reject('must specify one of .contents or .rest');
+      }
+
+      config.push({
+        filename: item.filename,
+        header: header,
+        headerSubs: headerSubs,
+        prune: prune,
+        pruneRest: pruneRest,
+        contents: contents,  // Possibly empty.
+        rest: Boolean(item.rest),
+      });
+    } else if ('options' in item) {  // It's a SpecOptionsItem.
+      if (typeof item.options !== 'object') {
+        reject('.options is not a DumperOptions object');
+        // TODO(cpcallen): additional type checks?
+      }
+      config.push({options: item.options});
+    } else {
+      reject('is neither a SpecFileItem nor a SpecOptionsItem');
+    }
+  }
+  return config;
+};
+
+/**
+ * A synchronous writable stream, with an API that is a simplified
+ * subset of stream.Writable.
+ * @constructor
+ * @implements Writable
+ * @param {string} filename The file to write to.
+ */
+var SyncWriter = function(filename) {
+  /** @type {number|null} */
+  this.fd = fs.openSync(filename, 'w', 0o600);
+};
+
+/**
+ * Write string to file.
+ * @override
+ * @param {string} s String to write.
+ * @returns {void}
+ */
+SyncWriter.prototype.write = function(s) {
+  if (this.fd === null) throw Error('stream already ended');
+  fs.writeSync(this.fd, s);
+};
+
+/**
+ * Close file.
+ * @returns {void}
+ */
+SyncWriter.prototype.end = function() {
+  if (this.fd === null) throw Error('stream already ended');
+  fs.closeSync(this.fd);
+  this.fd = null;
+};
+
+///////////////////////////////////////////////////////////////////////////////
+// Data types used to specify a dump configuration.
+///////////////////////////////////////////////////////////////////////////////
+// For internal use; strict types:
+
+/**
+ * A processed-and-ready-to-use configuration entry.
+ * @typedef {!OptionsItem|!FileItem}
+ */
+var ConfigItem;
+
+/**
+ * A processed-and-ready-to-use configuration entry setting general
+ * options.
+ * @typedef {{copyright: (string|!Array<string>|undefined),
+ *            options: !DumperOptions}}
+ */
+var OptionsItem;
+
+/**
+ * A processed-and-ready-to-use configuration entry for a single
+ * output file.
+ * @typedef {{filename: string,
+ *            header: (string|undefined),
+ *            headerSubs: !Object<string, string>,
+ *            prune: !Array<!Selector>,
+ *            pruneRest: !Array<!Selector>,
+ *            contents: !Array<!ContentEntry>,
+ *            rest: boolean}}
+ */
+var FileItem;
+
+/**
+ * The type of the values of .contents entries of a ConfigEntry.
+ *
+ * - selector: is a Selector identifying the variable or property
+ *   binding this entry applies to.
+ *
+ * - do: is a Do value speciifying how much of selector to dump.
+ *
+ * - reorder: is a boolean specifying whether it is acceptable to
+ *   allow property or set/map entry entries to be created (by the
+ *   output JS) in a different order than they apear in the
+ *   interpreter instance being serialised.  If false, output may
+ *   contain placeholder entries like:
+ *
+ *       var obj = {};
+ *       obj.foo = undefined;  // placeholder
+ *       obj.bar = function() { ... };
+ *
+ *   to allow obj.foo to be defined later while still preserving
+ *   property order.
+ * 
+ * @typedef {{selector: !Selector,
+ *            do: Do,
+ *            reorder: boolean}}
+ */
+var ContentEntry = function() {};
+
+//////////////////////////////////////////////////////////////////////
+// For dump_spec.json use; loose, JSON-compatible types:
+
+/** @typedef {!SpecOptionsItem|!SpecFileItem} */
+var SpecConfigItem;
+
+/**
+ * An OptionsItem, but with Selectors represented by selector strings.
+ *
+ * @typedef {{options: !DumperOptions}}
+ */
+var SpecOptionsItem;
+
+/**
+ * A FileItem represented as plain old JavaScript object (i.e., as
+ * ouptut by JSON.parse):
+ *
+ * - Do values are reprsesented by the coresponding strings (e.g.,
+ *   "RECURSE" instead of Do.RECURSE).
+ * - For convenience, header: and the values of headerSubs: may be an
+ *   arrays of strings, which will be joined with newlines.
+ * - Contents entries can be just a selector string, which will be
+ *   treated as Do.RECURSE.
+ *
+ * @typedef {{filename: string,
+ *            header: (string|!Array<string>|undefined),
+ *            headerSubs: (!Object<string, (!Array<string>|string)>|undefined),
+ *            prune: (!Array<string>|undefined),
+ *            pruneRest: (!Array<string>|undefined),
+ *            contents: (!Array<string|!SpecContentEntry>|undefined),
+ *            rest: (boolean|undefined)}}
+ */
+var SpecFileItem;
+
+/**
+ * Like a ContentEntry, but with a string instead of a Do value.
+ * @typedef {{path: string,
+ *            do: string,
+ *            reorder: (boolean|undefined)}}
+ */
+var SpecContentEntry;
+
+///////////////////////////////////////////////////////////////////////////////
+// Main program.
+///////////////////////////////////////////////////////////////////////////////
+
+if (require.main === module) {
+  if (process.argv.length < 4) {
+    console.log(
+        'usage: dump <.city file> <dump_spec.json> <output directory>');
+    process.exit(1);
+  }
+
+  var cityFile = process.argv[2];
+  var planFile = process.argv[3];
+  var dir = process.argv[4];
+
+  var intrp = CodeCity.loadCheckpoint(cityFile);
+  var specText = fs.readFileSync(planFile);
+  const spec = JSON.parse(String(specText));
+  var config = configFromSpec(spec);
+  dump(CodeCity.makeInterpreter(), intrp, config, dir, /*verbose:*/ true);
+};
+
+///////////////////////////////////////////////////////////////////////////////
+// Exports.
+///////////////////////////////////////////////////////////////////////////////
+
+exports.configFromSpec = configFromSpec;
+exports.Do = Do;
+exports.dump = dump;

@@ -88,6 +88,10 @@ exports.testParseString = function(t) {
     `'\\x1G'`,
     `'\\u1g00'`,
     `'\\u1G00'`,
+    // Pathological cases that previously caused exponential
+    // backtracking.
+    `'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`,
+    `"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`,
   ];
   for (const tc of badCases) {
     try {

@@ -1,0 +1,8 @@
+On startup, if no .city database file exists, the server will read and
+execute all .js files in this directory in asciibetical order.  The
+following naming convention has been established to keep things
+organised:
+
+core*.js - The Code City core.
+db*.js   - A dumped databse, if available, less core.
+test*.js - Any tests to be run against the databse.

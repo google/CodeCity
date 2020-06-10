@@ -179,6 +179,8 @@ CCC.World.preprocessMessage = function(msg) {
         delete msg[prop];
       }
       msg.type = 'html';
+      text = CCC.Common.escapeSpaces(text.replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>'));
       msg.htmlText = text;
     }
 
@@ -420,7 +422,7 @@ CCC.World.prerenderPanorama = function(memo) {
     }
     var svg = CCC.World.createHiddenSvg(CCC.World.panoramaDiv.offsetWidth,
                                         CCC.World.panoramaDiv.offsetHeight);
-    svg.setAttribute('data-iframe-id', msg.iframeId);
+    svg.setAttribute('data-iframe-id', memo.iframeId);
     CCC.World.scratchPanorama = svg;
     return true;
   }
@@ -490,8 +492,8 @@ CCC.World.connectPanel = function(memo) {
   df.appendChild(div);
 
   var img = document.createElement('img');
-  img.className = isConnected ? 'connectIcon' : 'reloadIcon';
-  img.src = isConnected ? 'connectIcon.svg' : 'reloadIcon.svg';
+  img.className = 'connectionIcon';
+  img.src = 'connectionIcons.svg' + (isConnected ? '#connect' : '#reload');
   df.appendChild(img);
 
   div = document.createElement('div');
@@ -1090,7 +1092,9 @@ CCC.World.publishHistory = function(historyElement) {
   } else {
     CCC.World.svgZoom(historyElement);
     // The occasional (non-iframe) panel should lack a border.
-    if (Math.random() < 1 / 16) {
+    var connectDiv = historyElement.firstChild &&
+        historyElement.firstChild.className === 'connectDiv';
+    if (!connectDiv && (Math.random() < 1 / 16)) {
       panelDiv.style.borderColor = '#fff';
     }
     // While being built, the SVG was hidden.
@@ -1133,7 +1137,7 @@ CCC.World.publishPanorama = function() {
       menu.addEventListener('click', CCC.Common.openMenu, false);
     }
     // Add an event handler to a reload icon.
-    var icon = content.querySelector('.reloadIcon');
+    var icon = content.querySelector('.connectionIcon[src$="#reload"]');
     if (icon) {
       icon.addEventListener('click',
           parent.location.reload.bind(parent.location));
@@ -1143,7 +1147,7 @@ CCC.World.publishPanorama = function() {
 };
 
 /**
- * Find all SVG images with viewbox="0 0 0 0" attribute and resize them to fit.
+ * Find all SVG images with viewBox="0 0 0 0" attribute and resize them to fit.
  * @param {!Element} container DOM node for panel.
  */
 CCC.World.svgZoom = function(container) {

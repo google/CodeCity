@@ -21,13 +21,13 @@
  */
 'use strict';
 
-const acorn = require('acorn');
 const http = require('http');
 const net = require('net');
 const util = require('util');
 
 const Interpreter = require('../interpreter');
 const {getInterpreter} = require('./interpreter_common');
+const Parser = require('../parser').Parser;
 const {T} = require('./testing');
 const testcases = require('./testcases');
 
@@ -230,7 +230,7 @@ exports.testGetBoundNames = function(t) {
       };
       (function g() { var v; })();
   `;
-  const ast = acorn.parse(src, Interpreter.PARSE_OPTIONS);
+  const ast = Parser.parse(src);
   const boundNames = getBoundNames(ast);
   const keys = Object.getOwnPropertyNames(boundNames);
   t.expect(`${name}() keys`, keys.join(),
@@ -264,7 +264,7 @@ exports.testHasArgumentsOrEval = function(t) {
   ];
   for (const [src, expected] of cases) {
     try {
-      const ast = acorn.parse(src, Interpreter.PARSE_OPTIONS);
+      const ast = Parser.parse(src);
       const firstStatement = ast['body'][0];
       t.expect(name, hasArgumentsOrEval(firstStatement),
                expected, src);

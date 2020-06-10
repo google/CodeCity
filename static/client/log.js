@@ -375,7 +375,11 @@ CCC.Log.renderJson = function(json) {
       div.appendChild(a);
       // Note: this opens the link in a new tab regardless of whether the user
       // is in world or log view.
-      window.open(json.href);
+      var success = window.open(json.href);
+      if (!success) {
+        alert('Your browser has blocked the opening of the page you requested.\n' +
+              'Please allow pop-ups on this domain. ✓️');
+      }
       return div;
   }
   // Unknown XML.

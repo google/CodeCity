@@ -24,16 +24,30 @@
 var code = require('./code');
 
 /**
+ * Type for all "special" selector parts (ones which do not represent
+ * named variables / properties).
+ * @constructor
+ */
+var SpecialPart = function(type) {
+  this.type = type;
+};
+
+/** @override */
+SpecialPart.prototype.toString = function() {
+  return '{' + this.type + '}';
+};
+
+/**
  * A Selector is just an array of Parts, which happens to have
  * Selector.prototype (with various useful convenience methods) in its
  * prototype chain.
  * @constructor
- * @extends {Array<!Selector.Part>}
- * @param {string|!Array<!Selector.Part>|!Selector} s A Selector, parts
+ * @extends {Array<Selector.Part>}
+ * @param {string|!Array<Selector.Part>|!Selector} s A Selector, parts
  *     array or selector string.
  */
 var Selector = function(s) {
-  var /** !Array<!Selector.Part> */ parts;
+  var /** !Array<Selector.Part> */ parts;
   if (typeof s === 'string') {
     // Parse selector text.
     parts = parse(s);
@@ -42,7 +56,7 @@ var Selector = function(s) {
     // Validate & copy parts array.
     if (typeof s.length < 1) throw new RangeError('Zero-length parts array??');
     if (s.length < 1) throw new RangeError('Zero-length parts array??');
-    if (typeof s[0] !== 'string' || !identifierRE.test(s[0])) {
+    if (typeof s[0] !== 'string' || !code.regexps.identifierExact.test(s[0])) {
       throw new TypeError('Parts array must begin with an identifier');
     }
     parts[0] = s[0];
@@ -63,6 +77,22 @@ var Selector = function(s) {
 };
 
 Object.setPrototypeOf(Selector.prototype, Array.prototype);
+
+/**
+ * Return a "badness" score, inversely proportional to how desirable a
+ * particular selector is amongst other selectors referring to the
+ * same binding.  In general, longer selectors are more bad, but
+ * selectors containing special parts are especially bad.
+ * TODO(cpcallen): reintroduce penalty for non-builtins?
+ * @return {number};
+ */
+Selector.prototype.badness = function() {
+  var penalties = 0;
+  for (var i = 0; i < this.length; i++) {
+    penalties += Selector.partBadness(this[i]);
+  }
+  return penalties;
+};
 
 /**
  * Returns true iff the selector represents an object owner
@@ -159,7 +189,7 @@ Selector.prototype.toString = function(specialHandler) {
       } else {
         out.push(String(part));
       }
-    } else if (identifierRE.test(part)) {
+    } else if (code.regexps.identifierExact.test(part)) {
       out.push('.', part);
     } else if (String(Number(part)) === part) {
       // String represents a number with same string representation.
@@ -172,25 +202,21 @@ Selector.prototype.toString = function(specialHandler) {
 };
 
 /**
- * A Selector fundamentally an array of Parts, and Parts are either
- * strings (representing variable or property names) or SpecialParts
- * (representing everything else, like {proto} or {owner}).
- * @typedef {string|!SpecialPart}
+ * Return a "badness" score for a single Selector.Part, inversely
+ * proportional to how desirable the part is as part of selector
+ * amongst other selectors referring to the same binding.
+ * @return {number};
  */
-Selector.Part;
-
-/**
- * Type for all "special" selector parts (ones which do not represent
- * named variables / properties).
- * @constructor
- */
-var SpecialPart = function(type) {
-  this.type = type;
-};
-
-/** @override */
-SpecialPart.prototype.toString = function() {
-  return '{' + this.type + '}';
+Selector.partBadness = function(part) {
+  if (part instanceof SpecialPart) {
+    return 100;  // We don't like SpecialParts.
+  } else if (code.regexps.identifierExact.test(part)) {
+    return 10 + part.length;  // We like identifiers.
+  } else if (String(Number(part)) === part) {
+    return 25 + part.length;  // Numbers are OK.
+  } else {
+    return 30 + part.length;  // Quoted strings are less desirable.
+  }
 };
 
 /**
@@ -202,6 +228,14 @@ Selector.PROTOTYPE = new SpecialPart('proto');
  * Special singleton Part for refering to an object's owner.
  */
 Selector.OWNER = new SpecialPart('owner');
+
+/**
+ * A Selector fundamentally an array of Parts, and Parts are either
+ * strings (representing variable or property names) or SpecialParts
+ * (representing everything else, like {proto} or {owner}).
+ * @typedef {string|!SpecialPart}
+ */
+Selector.Part;
 
 /**
  * Parse a selector into an array of Parts.
@@ -320,7 +354,7 @@ var tokenize = function(selector) {
   var REs = {
     whitespace: /\s+/y,
     '.': /\./y,
-    id: /[A-Za-z_$][A-Za-z0-9_$]*/y,  // See also identifierRE below.
+    id: new RegExp(code.regexps.identifier, 'y'),
     number: /\d+/y,
     '[': /\[/y,
     ']': /\]/y,
@@ -362,11 +396,5 @@ var tokenize = function(selector) {
   }
   return tokens;
 };
-
-/**
- * RegExp matching valid JavaScript identifiers.
- * @const @type{!RegExp}
- */
-var identifierRE = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
 
 module.exports = Selector;

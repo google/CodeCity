@@ -41,9 +41,22 @@ path.dirname = function(path) {};
 path.extname = function(path) {};
 
 /**
+ * @param {string} p
+ * @return {boolean}
+ */
+path.isAbsolute = function(p) {};
+
+/**
  * @param {...string} var_args
  * @return {string}
  */
 path.join = function(var_args) {};
+
+/**
+ * @param {string} p
+ * @return {string}
+ */
+path.normalize = function(p) {};
+
 
 module.exports = path;

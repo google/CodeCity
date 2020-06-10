@@ -1,0 +1,55 @@
+[
+  {
+    "filename": "core_00_es_minimal.js",
+    "contents": [
+      {"path": "Object", "do": "SET"},
+      {"path": "Function", "do": "SET"},
+      {"path": "Object.defineProperty", "do": "ATTR"},
+      "Object",
+      "Function",
+      "Array",
+      "String",
+      "Boolean",
+      "Number",
+      "Date",
+      "RegExp",
+      "Error",
+      "EvalError",
+      "RangeError",
+      "ReferenceError",
+      "SyntaxError",
+      "TypeError",
+      "URIError",
+      "Math",
+      "JSON",
+      "isFinite",
+      "isNaN",
+      "parseFloat",
+      "parseInt"
+    ]
+  }, {
+    "filename": "core_10_base.js",
+    "contents": [
+      {"path": "$", "do": "SET"},
+      "$.system",
+      "$.utils",
+      "$.connection",
+      "$.servers"
+    ]
+  }, {
+    "filename": "core_13_$.utils.code.js",
+    "contents": [
+      "$.utils.code"
+    ]
+  }, {
+    "filename": "core_35_$.servers.eval.js",
+    "contents": [
+      "$.servers.eval"
+    ]
+  }, {
+    "options": {"treeOnly": false}
+  }, {
+    "filename": "core_99_rest.js",
+    "rest": true
+  }
+]

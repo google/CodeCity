@@ -1,0 +1,37 @@
+<!doctype html>
+
+<html lang="en">
+<head>
+  <title>Code City Login</title>
+  <style>
+    body {
+      font-family: "Roboto Mono", monospace;
+      text-align: center;
+    }
+    .container {
+      display: table;
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      width: 100%;
+    }
+    .centered {
+      display: table-cell;
+      vertical-align: middle;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="centered">
+      <p>Login successful.</p>
+      <p>Close this window.</p>
+    </div>
+  </div>
+  <script>
+    // Flag that allows any opener window to know that this window may be closed.
+    window.closeMe = true;
+  </script>
+</body>
+</html>

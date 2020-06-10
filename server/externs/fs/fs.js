@@ -25,22 +25,69 @@
 
 // TODO(cpcallen): Use official externs directly.
 
-var Buffer = require('buffer');
+var Buffer = require('buffer').Buffer;
+var stream = require('stream');
 
 /** @const */
 var fs = {};
 
 /**
  * @param {string} path
- * @param {number} mode
+ * @param {number=} mode
  */
 fs.accessSync = function(path, mode) {};
+
+/**
+ * @param {number} fd
+ * @return {void}
+ */
+fs.closeSync = function(fd) {};
+
+/**
+ * @param {string} path
+ * @param {{flags: (string|undefined),
+ *          encoding: (string|undefined),
+ *          fd: (number|undefined),
+ *          mode: (number|undefined),
+ *          bufferSize: (number|undefined)}=} options
+ * @return {fs.ReadStream}
+ */
+fs.createReadStream = function(path, options) {};
+
+/**
+ * @constructor
+ * @extends stream.ReadableStream
+ */
+fs.ReadStream = function () {};
+
+/**
+ * @param {string} path
+ * @param {{flags: (string|undefined),
+ *          encoding: (string|undefined),
+ *          mode: (number|undefined)}=} options
+ * @return {fs.WriteStream}
+ */
+fs.createWriteStream = function(path, options) {};
+
+/**
+ * @constructor
+ * @extends stream.WritableStream
+ */
+fs.WriteStream = function () {};
 
 /**
  * @param {string} path
  * @return {boolean}
  */
 fs.existsSync = function(path) {};
+
+/**
+ * @param {string} path
+ * @param {string} flags
+ * @param {number=} mode
+ * @return {number}
+ */
+fs.openSync = function(path, flags, mode) {};
 
 /**
  * @param {string} path
@@ -82,6 +129,15 @@ fs.unlinkSync = function(path) {};
  */
 fs.writeFileSync = function(filename, data, encoding) {};
 
+/**
+ * @param {number} fd
+ * @param {string} string
+ * @param {number=} position
+ * @param {string=} encoding
+ * @return {number}
+ */
+fs.writeSync = function(fd, string, position, encoding) {};
+                        
 /** @constructor */
 fs.Stats = function () {};
 

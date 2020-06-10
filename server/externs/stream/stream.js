@@ -26,7 +26,7 @@
 // TODO(cpcallen): Use official externs directly.
 
 var events = require('events');
-var Buffer = require('buffer');
+var Buffer = require('buffer').Buffer;
 
 /** @const */
 var stream = {};

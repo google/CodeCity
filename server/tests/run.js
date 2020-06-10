@@ -29,12 +29,15 @@
 const compileTargets = [
   require('../codecity'),
   require('./code_test'),
+  require('./dump_test'),
+  require('./dumper_test'),
   require('./interpreter_test'),
   require('./interpreter_unit_test'),
   require('./interpreter_test'),
   require('./iterable_weakmap_test'),
   require('./iterable_weakset_test'),
   require('./registry_test'),
+  require('./priorityqueue_test'),
   require('./selector_test'),
   require('./serialize_test'),
 

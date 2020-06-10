@@ -25,7 +25,7 @@
 
 // TODO(cpcallen): Use official externs directly.
 
-var Buffer = require('buffer');
+var Buffer = require('buffer').Buffer;
 var http = require('http');
 var tls = require('tls');
 

@@ -21,7 +21,7 @@
  * @author cpcallen@google.com (Christopher Allen)
  */
 
-var Buffer = require('buffer');
+var Buffer = require('buffer').Buffer;
 var events = require('events');
 
 var net = {};

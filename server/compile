@@ -31,23 +31,27 @@ args=(-O=ADVANCED_OPTIMIZATIONS
       --module_resolution=NODE
       --process_common_js_modules
       --assume_function_wrapper
-      --dependency_mode=STRICT
+      --dependency_mode=PRUNE
 
       --externs=externs/node.js
       --externs=externs/WeakRef.js
 
       --hide_warnings_for=node_modules/acorn
       node_modules/acorn/package.json
-      node_modules/acorn/**.js
+      node_modules/acorn/**.mjs
 
       iterable_weakmap.js
       iterable_weakset.js
       registry.js
+      parser.js
       interpreter.js
       serialize.js
       code.js
       selector.js
-      codecity.js
+      dumper.js
+      codecity
+      priorityqueue.js
+      dump
 
       tests/*.js
 )

@@ -1,3 +1,4 @@
+#!/usr/bin/env node --harmony-weak-refs
 /**
  * @license
  * Copyright 2017 Google LLC
@@ -20,14 +21,13 @@
  * @author fraser@google.com (Neil Fraser)
  */
 
-// Start with: node codecity.js <DB directory>
 'use strict';
 
-const acorn = require('acorn');
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const Interpreter = require('./interpreter');
+const Parser = require('./parser').Parser;
 const Serializer = require('./serialize');
 
 var CodeCity = {};
@@ -41,7 +41,7 @@ CodeCity.config = null;
  * If not present, look for the configuration file as a command line parameter.
  */
 CodeCity.startup = function(configFile) {
-  // process.argv is a list containing: ['node', 'codecity.js', 'db/google.cfg']
+  // process.argv is a list containing: ['node', 'codecity', 'db/google.cfg']
   configFile = configFile || process.argv[2];
   if (!configFile) {
     console.error('Configuration file not found.\n' +
@@ -52,8 +52,12 @@ CodeCity.startup = function(configFile) {
   CodeCity.config = CodeCity.parseJson(contents);
 
   // Find the most recent database file.
-  CodeCity.databaseDirectory = path.join(path.dirname(configFile),
-      CodeCity.config.databaseDirectory || './');
+  var dir = CodeCity.config.databaseDirectory || './';
+  if (dir[0] === '/') {
+    CodeCity.databaseDirectory = dir;
+  } else {
+    CodeCity.databaseDirectory = path.join(path.dirname(configFile), dir);
+  }
   if (!fs.existsSync(CodeCity.databaseDirectory)) {
     console.error('Database directory not found: ' +
         CodeCity.databaseDirectory);
@@ -62,41 +66,14 @@ CodeCity.startup = function(configFile) {
   // Find the most recent database file.
   var checkpoint = CodeCity.allCheckpoints()[0];
   // Load the interpreter.
-  CodeCity.interpreter = new Interpreter({
-    trimEval: true,
-    trimProgram: true,
-    methodNames: true,
-    stackLimit: 10000,
-  });
-  CodeCity.initSystemFunctions();
-  CodeCity.initLibraryFunctions();
   if (checkpoint) {
     var filename = path.join(CodeCity.databaseDirectory, checkpoint);
-    contents = CodeCity.parseJson(CodeCity.loadFile(filename));
-
-    Serializer.deserialize(contents, CodeCity.interpreter);
-    console.log('Database loaded: %s', filename);
+    CodeCity.interpreter = CodeCity.loadCheckpoint(filename);
   } else {
     // Database not found, load one or more startup files instead.
     console.log('Unable to find database file in %s, looking for startup ' +
         'file(s) instead.', CodeCity.databaseDirectory);
-    var fileCount = 0;
-    var files = fs.readdirSync(CodeCity.databaseDirectory);
-    for (var i = 0; i < files.length; i++) {
-      if (files[i].match(/^(core|test).*\.js$/)) {
-        filename = path.join(CodeCity.databaseDirectory, files[i]);
-        contents = CodeCity.loadFile(filename);
-        console.log('Loading startup file %s', filename);
-        CodeCity.interpreter.createThreadForSrc(contents);
-        fileCount++;
-      }
-    }
-    if (fileCount === 0) {
-      console.error('Unable to find startup file(s) in %s',
-                    CodeCity.databaseDirectory);
-      process.exit(1);
-    }
-    console.log('Loaded %d startup file(s).', fileCount);
+    CodeCity.interpreter = CodeCity.loadStartup(CodeCity.databaseDirectory);
   }
 
   // Checkpoint at regular intervals.
@@ -109,6 +86,63 @@ CodeCity.startup = function(configFile) {
 
   console.log('Load complete.  Starting Code City.');
   CodeCity.interpreter.start();
+};
+
+/**
+ * Create an Interpreter instance with desired options and initialise
+ * it with custom builtins.
+ * @return {!Interpreter}
+ */
+CodeCity.makeInterpreter = function() {
+  var intrp = new Interpreter({
+    trimEval: true,
+    trimProgram: true,
+    methodNames: true,
+    stackLimit: 10000,
+  });
+  CodeCity.initSystemFunctions(intrp);
+  CodeCity.initLibraryFunctions(intrp);
+  return intrp;
+};
+
+/**
+ * Create an Interpreter instance and deserialise a .city checkpoint
+ * into it.
+ * @param {string} filename The filename of the .city file to read.
+ * @return {!Interpreter}
+ */
+CodeCity.loadCheckpoint = function(filename) {
+  var intrp = CodeCity.makeInterpreter();
+  var flatpack = CodeCity.parseJson(CodeCity.loadFile(filename));
+  Serializer.deserialize(flatpack, intrp);
+  console.log('Checkpoint %s loaded.', filename);
+  return intrp;
+};
+
+/**
+ * Create an Interpreter instance and load startup .js files into it.
+ * @param {string} dir The directory containing startup files to be read.
+ * @return {!Interpreter}
+ */
+CodeCity.loadStartup = function(dir) {
+  var intrp = CodeCity.makeInterpreter();
+  var fileCount = 0;
+  var files = fs.readdirSync(dir);
+  for (var i = 0; i < files.length; i++) {
+    if (files[i].match(/^(core|db|test).*\.js$/)) {
+      var filename = path.join(dir, files[i]);
+      var contents = CodeCity.loadFile(filename);
+      console.log('Loading startup file %s', filename);
+      intrp.createThreadForSrc(contents);
+      fileCount++;
+    }
+  }
+  if (fileCount === 0) {
+    console.error('Unable to find startup file(s) in %s', dir);
+    process.exit(1);
+  }
+  console.log('Loaded %d startup file(s) from %s', fileCount, dir);
+  return intrp;
 };
 
 /**
@@ -322,9 +356,9 @@ CodeCity.log = function(var_args) {
  * Initialize user-callable system functions.
  * These are not part of any JavaScript standard.
  * BUG(#280): provide (new) NativeFunction wrappers.
+ * @param {!Interpreter} intrp The Interpreter instance to initialize.
  */
-CodeCity.initSystemFunctions = function() {
-  var intrp = CodeCity.interpreter;
+CodeCity.initSystemFunctions = function(intrp) {
   intrp.createNativeFunction('CC.log', CodeCity.log, false);
   intrp.createNativeFunction('CC.checkpoint', CodeCity.checkpoint, false);
   intrp.createNativeFunction('CC.shutdown', function(code) {
@@ -335,10 +369,9 @@ CodeCity.initSystemFunctions = function() {
 /**
  * Initialize user-callable library functions.
  * These are not part of any JavaScript standard.
+ * @param {!Interpreter} intrp The Interpreter instance to initialize.
  */
-CodeCity.initLibraryFunctions = function() {
-  var intrp = CodeCity.interpreter;
-
+CodeCity.initLibraryFunctions = function(intrp) {
   new intrp.NativeFunction({
     id: 'CC.acorn.parse', length: 1,
     /** @type {!Interpreter.NativeCallImpl} */
@@ -350,7 +383,7 @@ CodeCity.initLibraryFunctions = function() {
             'argument to parse must be a string');
       }
       try {
-        var ast = acorn.parse(code, Interpreter.PARSE_OPTIONS);
+        var ast = Parser.parse(code);
       } catch (e) {
         throw intrp.errorNativeToPseudo(e, perms);
       }
@@ -374,8 +407,7 @@ CodeCity.initLibraryFunctions = function() {
             'second argument to parseExpressionAt must be a number');
       }
       try {
-        var ast =
-            acorn.parseExpressionAt(code, offset, Interpreter.PARSE_OPTIONS);
+        var ast = Parser.parseExpressionAt(code, offset);
       } catch (e) {
         throw intrp.errorNativeToPseudo(e, perms);
       }
@@ -387,7 +419,7 @@ CodeCity.initLibraryFunctions = function() {
     id: 'CC.hash', length: 2,
     /** @type {!Interpreter.NativeCallImpl} */
     call: function(intrp, thread, state, thisVal, args) {
-      var hash = args[0];
+      var hash = String(args[0]);
       var data = args[1];
       var perms = state.scope.perms;
       var hashes = crypto.getHashes();
@@ -409,6 +441,10 @@ CodeCity.initLibraryFunctions = function() {
   });
 };
 
+
+///////////////////////////////////////////////////////////////////////////////
+// Main program.
+
 // If this file is executed form a command line, startup Code City.
 // Otherwise, if it is required as a library, do nothing.
 if (require.main === module) {
@@ -421,5 +457,8 @@ if (require.main === module) {
   // SIGHUP forces checkpoint.
   process.on('SIGHUP', CodeCity.checkpoint.bind(null, false));
 }
+
+///////////////////////////////////////////////////////////////////////////////
+// Exports
 
 module.exports = CodeCity;
