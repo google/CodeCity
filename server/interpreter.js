@@ -34,8 +34,8 @@ var Parser = parser.Parser;
 /**
  * Version number for the serialisation format.  MUST be incremented
  * when any change is made to the implementation of Interpreter and
- * related classe (in this file and others) which would change how the
- * runtime state is represented on disk.
+ * related classes (in this file and others) which would change how
+ * the runtime state is represented on disk.
  * @type {number}
  */
 var SERIALIZATION_VERSION = 1;

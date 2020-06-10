@@ -212,7 +212,7 @@ Serializer.deserialize = function(json, intrp) {
  * @return {!Object} JSON-compatible object.
  */
 Serializer.serialize = function(intrp) {
-  // First: preapare interpreter for serialization.
+  // First: prepare interpreter for serialization.
   intrp.preSerialize();
   
   function encodeValue(value) {
