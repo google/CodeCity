@@ -17,7 +17,6 @@
 
 /**
  * @fileoverview Database core for Code City.
- * @author fraser@google.com (Neil Fraser)
  */
 
 //////////////////////////////////////////////////////////////////////

@@ -17,7 +17,6 @@
 
 /**
  * @fileoverview Translation room and tutorial  demo for Code City.
- * @author cpcallen@google.com (Christopher Allen)
  */
 
 //////////////////////////////////////////////////////////////////////

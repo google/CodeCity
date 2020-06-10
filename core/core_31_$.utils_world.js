@@ -17,7 +17,6 @@
 
 /**
  * @fileoverview World-related utils for Code City.
- * @author fraser@google.com (Neil Fraser)
  */
 
 //////////////////////////////////////////////////////////////////////
