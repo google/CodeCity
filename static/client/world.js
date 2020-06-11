@@ -1435,13 +1435,15 @@ CCC.World.xmlToHtml = function(dom) {
         a.appendChild(document.createTextNode(cmdText));
         return a;
       }
-      if (!CCC.World.xmlToHtml.ELEMENT_NAMES.has(dom.tagName)) {
+      if (CCC.World.xmlToHtml.ELEMENT_NAMES &&
+          !CCC.World.xmlToHtml.ELEMENT_NAMES.has(dom.tagName)) {
         console.log('HTML element not in whitelist: <' + dom.tagName + '>');
         return null;
       }
       var element = document.createElement(dom.tagName);
       for (var attr of dom.attributes) {
-        if (!CCC.World.xmlToHtml.ATTRIBUTE_NAMES.has(attr.name)) {
+        if (CCC.World.xmlToHtml.ATTRIBUTE_NAMES &&
+            !CCC.World.xmlToHtml.ATTRIBUTE_NAMES.has(attr.name)) {
           console.log('HTML attribute not in whitelist: ' +
               '<' + dom.tagName + ' ' + attr.name + '="' + attr.value + '">');
         } else {
@@ -1452,6 +1454,7 @@ CCC.World.xmlToHtml = function(dom) {
               if (element.style.hasOwnProperty(name) &&
                   isNaN(parseFloat(name)) && // Don't delete indexed props.
                   element.style[name] && element.style[name] !== 'initial' &&
+                  CCC.World.xmlToHtml.STYLE_NAMES &&
                   !CCC.World.xmlToHtml.STYLE_NAMES.has(name)) {
                 console.log('Style attribute not in whitelist: ' +
                     name + ': ' + element.style[name]);
@@ -1480,6 +1483,7 @@ CCC.World.xmlToHtml = function(dom) {
 /**
  * Whitelist of all allowed HTML element names.
  * 'svg' element is handled separately.
+ * Set to null to disable filtering.
  */
 CCC.World.xmlToHtml.ELEMENT_NAMES = new Set([
   'ABBR',
@@ -1555,6 +1559,7 @@ CCC.World.xmlToHtml.ELEMENT_NAMES = new Set([
  * Whitelist of all allowed HTML property names.
  * This architecture assumes that there are no banned properties
  * on one element type which are allowed on another.
+ * Set to null to disable filtering.
  */
 CCC.World.xmlToHtml.ATTRIBUTE_NAMES = new Set([
   'cite',
@@ -1576,6 +1581,7 @@ CCC.World.xmlToHtml.ATTRIBUTE_NAMES = new Set([
 
 /**
  * Whitelist of all allowed style property names.
+ * Set to null to disable filtering.
  */
 CCC.World.xmlToHtml.STYLE_NAMES = new Set([
   'border',
@@ -1650,13 +1656,15 @@ CCC.World.xmlToSvg = function(dom) {
   }
   switch (dom.nodeType) {
     case Node.ELEMENT_NODE:
-      if (!CCC.World.xmlToSvg.ELEMENT_NAMES.has(dom.tagName)) {
+      if (CCC.World.xmlToSvg.ELEMENT_NAMES &&
+          !CCC.World.xmlToSvg.ELEMENT_NAMES.has(dom.tagName)) {
         console.log('SVG element not in whitelist: <' + dom.tagName + '>');
         return null;
       }
       var svg = document.createElementNS(CCC.Common.NS, dom.tagName);
       for (var attr of dom.attributes) {
-        if (!CCC.World.xmlToSvg.ATTRIBUTE_NAMES.has(attr.name)) {
+        if (CCC.World.xmlToSvg.ATTRIBUTE_NAMES &&
+            !CCC.World.xmlToSvg.ATTRIBUTE_NAMES.has(attr.name)) {
           console.log('SVG attribute not in whitelist: ' +
               '<' + dom.tagName + ' ' + attr.name + '="' + attr.value + '">');
         } else {
@@ -1664,7 +1672,8 @@ CCC.World.xmlToSvg = function(dom) {
           if (attr.name === 'class') {
             var classes = attr.value.split(/\s+/g);
             for (var i = classes.length - 1; i >= 0; i--) {
-              if (!CCC.World.xmlToSvg.CLASS_NAMES.has(classes[i])) {
+              if (CCC.World.xmlToSvg.CLASS_NAMES &&
+                  !CCC.World.xmlToSvg.CLASS_NAMES.has(classes[i])) {
                 console.log('Class name not in whitelist: ' + classes[i]);
                 classes.splice(i, 1);
               }
@@ -1693,6 +1702,7 @@ CCC.World.xmlToSvg = function(dom) {
 /**
  * Whitelist of all allowed SVG element names.
  * Try to keep this list in sync with Code.svgEditor.ELEMENT_NAMES.
+ * Set to null to disable filtering.
  */
 CCC.World.xmlToSvg.ELEMENT_NAMES = new Set([
   'circle',
@@ -1714,6 +1724,7 @@ CCC.World.xmlToSvg.ELEMENT_NAMES = new Set([
  * Whitelist of all allowed SVG property names.
  * This architecture assumes that there are no banned properties
  * on one element type which are allowed on another.
+ * Set to null to disable filtering.
  */
 CCC.World.xmlToSvg.ATTRIBUTE_NAMES = new Set([
   'class',
@@ -1743,6 +1754,7 @@ CCC.World.xmlToSvg.ATTRIBUTE_NAMES = new Set([
 
 /**
  * Whitelist of all allowed class names.
+ * Set to null to disable filtering.
  */
 CCC.World.xmlToSvg.CLASS_NAMES = new Set([
   'fillNone',
@@ -2099,4 +2111,9 @@ CCC.World.measureText = function(svg, text) {
 if (!window.TEST) {
   window.addEventListener('message', CCC.World.receiveMessage, false);
   window.addEventListener('load', CCC.World.init, false);
+
+  // Temporary disabling of SVG filters.  June 2020
+  CCC.World.xmlToSvg.ELEMENT_NAMES = null;
+  CCC.World.xmlToSvg.ATTRIBUTE_NAMES = null;
+  CCC.World.xmlToSvg.CLASS_NAMES = null;
 }
