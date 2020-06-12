@@ -63,11 +63,7 @@ Object.setOwnerOf($.servers.telnet.connection.onReceiveLine, Object.getOwnerOf($
 $.servers.telnet.connection.onEnd = function onEnd() {
   var user = this.user;
   // Mark connection as closed.
-  $.connection.onEnd.apply(this, arguments);
-  // Remove this and any other closed / debound connections from array of open connections.
-  $.servers.telnet.connected = $.servers.telnet.connected.filter(function(c) {
-    return c.connected && (!c.user || c.user.connection === c);
-  });
+  $.connection.onEnd.call(this);
   if (user) {
     // Unbind connection from user.
     this.user = null;
@@ -75,23 +71,26 @@ $.servers.telnet.connection.onEnd = function onEnd() {
       user.connection = null;
       $.system.log('Unbinding connection from ' + user.name);
     }
-    setPerms(user);
-    new Thread(user.onDisconnect, 0, user);
+    (function () {
+      setPerms(user);
+      new Thread(user.onDisconnect, 0, user);
+    })();
   }
+  // Remove this and any other closed / debound connections from array of open connections.
+  $.servers.telnet.validate();
 };
 Object.setOwnerOf($.servers.telnet.connection.onEnd, Object.getOwnerOf($.Jssp.OutputBuffer));
-$.servers.telnet.connection.onConnect = function() {
-  // super call.
+$.servers.telnet.connection.onConnect = function onConnect() {
+  // super call.  Records .connectTime (as number of ms since epoch).
   $.connection.onConnect.apply(this, arguments);
-  // Record connection time.
-  this.startTime = new Date();
   // Add this connection to list of active telnet connections.
   $.servers.telnet.connected.push(this);
-
+  setTimeout((function() {
+    if (!this.user) this.close();
+  }).bind(this), $.servers.telnet.LOGIN_TIMEOUT_MS);
 };
-delete $.servers.telnet.connection.onConnect.name;
 Object.setOwnerOf($.servers.telnet.connection.onConnect, Object.getOwnerOf($.Jssp.OutputBuffer));
-$.servers.telnet.connection.onConnect.prototype = $.connection.onConnect.prototype;
+Object.setOwnerOf($.servers.telnet.connection.onConnect.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
 $.servers.telnet.createUser = function createUser() {
   var guest = Object.create($.user);
   guest.setName('Guest', /*tryAlternative:*/ true);
@@ -108,6 +107,31 @@ $.servers.telnet.createUser = function createUser() {
   return guest;
 };
 Object.setOwnerOf($.servers.telnet.createUser, Object.getOwnerOf($.Jssp.OutputBuffer));
+$.servers.telnet.validate = function validate() {
+  // Examine supposedly-open connections and close and/or remove
+  // closed / timed-out / debound ones from the .connected arary.
+  var limit = Date.now() - this.LOGIN_TIMEOUT_MS;
+  this.connected = this.connected.filter(function(c) {
+    // Close any connections that haven't logged in promptly.
+    if (!c.user && c.connectTime < limit) {
+      try {
+        // Call .close().  Note that that this won't result in the
+        // object's .connected property being set to false
+        // immediately, but only after an async callback to
+        // connection.onEnd() - which will result in another call
+        // to $.servers.telnet.validate().
+        c.close();
+      } catch (e) {
+        // Connection was already closed.  Mark it as such.
+        c.connected = false;
+      }
+    }
+    return c.connected && (!c.user || c.user.connection === c);
+  });
+};
+Object.setOwnerOf($.servers.telnet.validate, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.servers.telnet.validate.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
+$.servers.telnet.LOGIN_TIMEOUT_MS = 20000;
 
 $.servers.telnet.connected = [];
 

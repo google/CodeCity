@@ -23,12 +23,6 @@
 // AUTO-GENERATED CODE FROM DUMP.  EDIT WITH CAUTION!
 //////////////////////////////////////////////////////////////////////
 
-$.utils.isObject = function isObject(v) {
-  /* Returns true iff v is an object (of any class, including Array
-   * and Function). */
-  return (typeof v === 'object' && v !== null) || typeof v === 'function';
-};
-Object.setOwnerOf($.utils.isObject, Object.getOwnerOf($.system.onStartup.prototype));
 $.utils.validate.ownArray = function(object, key) {
  	// Ensure that object[key] is an array not shared with any other
   // object or property, not inherited from a prototype, etc.
@@ -64,6 +58,12 @@ $.utils.validate.ownArray.prototype.constructor = function(object, key) {
 };
 delete $.utils.validate.ownArray.prototype.constructor.name;
 $.utils.validate.ownArray.prototype.constructor.prototype = $.utils.validate.ownArray.prototype;
+$.utils.isObject = function isObject(v) {
+  /* Returns true iff v is an object (of any class, including Array
+   * and Function). */
+  return (typeof v === 'object' && v !== null) || typeof v === 'function';
+};
+Object.setOwnerOf($.utils.isObject, Object.getOwnerOf($.system.onStartup.prototype));
 $.utils.imageMatch = {};
 $.utils.imageMatch.send = function send(ink) {
   var json = $.system.xhr('https://neil.fraser.name/scripts/imageMatch.py' +
