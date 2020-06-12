@@ -30,15 +30,15 @@ mkdir -p var/dump
 
 # Make way for dump.  Ignore errors.
 rm var/dump/*.js || true
-rm core/core_[1-9]*.js || true
+rm core/core_[1-8]*.js || true
 rm database/core_*.js || true
 rm database/db_*.js || true
 
 # Get last .city file.
-city=$( (cd database && ls -1 *.city |tail  -1) )
+city=$( (cd database && ls -1 *.city |sort |tail  -1) )
 
 # Run dump.
 server/dump "database/${city}" core/dump_spec.json core
 
-# Link core file into database.
-(cd database && ln -s ../core/core*.js .)
+# Link core file into database, except core_99_startup.js
+(cd database && ln -s ../core/core_[0-8]*.js .)
