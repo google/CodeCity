@@ -25,11 +25,13 @@
 
 $.connection = {};
 $.connection.onConnect = function onConnect() {
+  this.connectTime = Date.now();
   this.user = null;
   this.buffer = '';
   this.connected = true;
 };
 Object.setOwnerOf($.connection.onConnect, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.connection.onConnect.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
 $.connection.onReceive = function onReceive(text) {
   this.buffer += text.replace(/\r/g, '');
   var lf;
@@ -46,6 +48,7 @@ $.connection.onReceiveLine = function onReceiveLine(text) {
 Object.setOwnerOf($.connection.onReceiveLine, Object.getOwnerOf($.Jssp.OutputBuffer));
 $.connection.onEnd = function onEnd() {
   this.connected = false;
+  this.disconnectTime = Date.now();
 };
 Object.setOwnerOf($.connection.onEnd, Object.getOwnerOf($.Jssp.OutputBuffer));
 $.connection.write = function write(text) {

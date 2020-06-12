@@ -171,7 +171,6 @@ $.utils.command.execute = function execute(cmdstr, user) {
       var func = host[prop];
       if (typeof func !== 'function') continue;  // Not a function.
       var verbSpec = func.verb;
-      var prepSpec = func.prep;
       var dobjSpec = func.dobj;
       var prepSpec = func.prep;
       var iobjSpec = func.iobj;  // I can't wait for ES6.

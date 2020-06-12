@@ -435,10 +435,11 @@ $.user.go = function go(cmd) {
   var dest = null;
   if ($.room.isPrototypeOf(cmd.iobj)) {
     dest = cmd.iobj;
-  } else if (!cmd.iobj) {
+  } else if (!cmd.iobjstr) {
     throw 'Usage: go to <name of room>';
   } else {
     var re = new RegExp(cmd.iobjstr, 'i');
+    // TODO: find best match, not just first match?
     for (var name in $.physicals) {
       if (name.match(re) && $.room.isPrototypeOf($.physicals[name])) {
         dest = $.physicals[name];
@@ -446,8 +447,11 @@ $.user.go = function go(cmd) {
       }
     }
   }
-  if (!dest) return;
-  this.teleportTo(dest);
+  if (dest) {
+    this.teleportTo(dest);
+  } else {
+    throw 'There is no room named ' + cmd.iobjstr + '.';
+  }
 };
 Object.setOwnerOf($.user.go, Object.getOwnerOf($.Jssp.OutputBuffer));
 Object.setOwnerOf($.user.go.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
@@ -917,6 +921,8 @@ $.container.open = function open(cmd) {
   cmd.user.narrate('You open ' + String(cmd.dobj) + '.');
   this.look(cmd);
 };
+Object.setOwnerOf($.container.open, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.container.open.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
 $.container.open.verb = 'open';
 $.container.open.dobj = 'this';
 $.container.open.prep = 'none';
@@ -950,6 +956,8 @@ $.container.setOpen = function setOpen(newState) {
   this.isOpen = Boolean(newState);
   return true;
 };
+Object.setOwnerOf($.container.setOpen, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.container.setOpen.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
 $.container.getCommands = function getCommands(who) {
   var commands = $.thing.getCommands.call(this, who);
   if (this.isOpen) {

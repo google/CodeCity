@@ -61,7 +61,7 @@ $.assistant.say = function say(speech) {
   };
   this.location.sendMemo(memo);
 };
-$.assistant.lastActivated = 1584246539955;
+$.assistant.lastActivated = 1591829514766;
 $.assistant.onCommand = function onCommand(command) {
   /* Attempt to find a handler for command, by calling methods on this
    * named cmd_* until one of them returns true.

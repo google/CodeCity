@@ -54,7 +54,6 @@ $.pot.stages[5] = '<path class="fillWhite" d="m-33.77239,82.99355l1.77938,16.273
 $.pot.getSvgText = function getSvgText() {
     return this.stages[this.stage];
   };
-// CLOSURE: type: function, vars: arguments, seed, startSeed, pot, thrower
 $.pot.getSvgText.prototype.constructor = function() {
     return this.stages[this.stage];
   };
@@ -69,7 +68,6 @@ $.pot.plant = function plant(cmd) {
     this.stage = 0;
     this.seed = cmd.dobj;
   };
-// CLOSURE: type: function, vars: arguments, seed, startSeed, pot, thrower
 $.pot.plant.prototype.constructor = function(cmd) {
     user.narrate('You plant ' + cmd.dobj.name + ' in ' + this.name + '.');
     if (user.location) {
@@ -113,7 +111,6 @@ $.pot.getCommands = function getCommands(who) {
     commands.push('water ' + this.name);
     return commands;
   };
-// CLOSURE: type: function, vars: arguments, seed, startSeed, pot, thrower
 $.pot.getCommands.prototype.constructor = function(who) {
     var commands = $.thing.getCommands.call(this, who);
     commands.push('water ' + this.name);
@@ -153,7 +150,6 @@ $.thrower.wear = function(cmd) {
     }
   };
 delete $.thrower.wear.name;
-// CLOSURE: type: function, vars: arguments, seed, startSeed, pot, thrower
 $.thrower.wear.prototype.constructor = function(cmd) {
     this.moveTo(user);
     this.savedSvg = user.svgText;
@@ -184,7 +180,6 @@ $.thrower.unwear = function(cmd) {
     }
   };
 delete $.thrower.unwear.name;
-// CLOSURE: type: function, vars: arguments, seed, startSeed, pot, thrower
 $.thrower.unwear.prototype.constructor = function(cmd) {
     user.svgText = this.savedSvg;
     this.savedSvg = undefined;
@@ -227,7 +222,6 @@ $.thrower.fire.verb = 'fire';
 $.thrower.fire.dobj = 'this';
 $.thrower.fire.prep = 'at/to';
 $.thrower.fire.iobj = 'any';
-// CLOSURE: type: function, vars: arguments, seed, startSeed, pot, thrower
 $.thrower.getCommands = function(who) {
     var commands = $.thing.getCommands.call(this, who);
     if (this.savedSvg) {
