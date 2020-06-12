@@ -25,8 +25,13 @@
  */
 
 $.system.onStartup();
+
 $.tutorial.moveTo($.startRoom);
+$.tutorial.reset();
+
 $.pot.moveTo($.startRoom);
+$.pot.stage = 0;
 $.seed.moveTo($.startRoom);
 $.thrower.moveTo($.startRoom);
+
 $.assistant.moveTo($.startRoom);

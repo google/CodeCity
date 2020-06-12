@@ -78,7 +78,7 @@ $.tutorial.reset = function reset(cmd) {
   this.step = 0;
   this.room = undefined;
   this.origFunc = undefined;
-  this.show();
+  if (this.user) this.show();
 };
 Object.setOwnerOf($.tutorial.reset, Object.getOwnerOf($.Jssp.OutputBuffer));
 $.tutorial.reset.verb = 'reset';

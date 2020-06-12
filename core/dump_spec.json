@@ -310,6 +310,7 @@
     "pruneRest": ["$.servers.telnet.connected"],
     "contents": [
       {"path": "$.userDatabase", "do": "ATTR"},
+      "$.userDatabase.validate",
       "$.servers.telnet",
       {"path": "$.servers.telnet.connected", "do": "ATTR"}
     ]
@@ -364,8 +365,9 @@
       {"path": "$.physicals['Generic Seed']", "do": "DONE"},
       "$.pot",
       {"path": "$.pot.location", "do": "DECL"},
-      {"path": "$.pot.stage", "do": "DECL"},
       {"path": "$.pot.seed", "do": "DECL"},
+      {"path": "$.pot.stage", "do": "DECL"},
+      "$.pot.stages",
       {"path": "$.physicals['flower pot']", "do": "DONE"},
       "$.thrower",
       {"path": "$.thrower.location", "do": "DECL"},
@@ -395,7 +397,7 @@
     "contents": [
       "$.assistant",
       {"path": "$.assistant.location", "do": "DECL"},
-      {"path": "$.pot.location", "do": "DECL"},
+      {"path": "$.assistant.lastActivated", "do": "DECL"},
       {"path": "$.physicals.assistant", "do": "DONE"}
     ]
   },

@@ -25,6 +25,17 @@
 
 $.userDatabase = (new 'Object.create')(null);
 
+$.userDatabase.validate = function validate() {
+  for (var key in this) {
+    if (!($.user.isPrototypeOf(this[key]))) {
+      delete this[key];
+    }
+  }
+};
+Object.defineProperty($.userDatabase, 'validate', {enumerable: false});
+Object.setOwnerOf($.userDatabase.validate, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.userDatabase.validate.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
+
 $.servers.telnet = {};
 $.servers.telnet.connection = (new 'Object.create')($.connection);
 $.servers.telnet.connection.onReceiveLine = function onReceiveLine(text) {
