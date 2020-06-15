@@ -35,10 +35,10 @@ const testcases = require('./testcases');
  * @param {string} timed Source to be evaled and timed.
  */
 function runBench(b, name, setup, timed) {
-  for (var i = 0; i < 4; i++) {
-    var interpreter = getInterpreter();
+  for (let i = 0; i < 4; i++) {
+    const interpreter = getInterpreter();
 
-    var err = undefined;
+    const err = undefined;
     try {
       interpreter.createThreadForSrc(setup);
       interpreter.run();
@@ -57,8 +57,8 @@ function runBench(b, name, setup, timed) {
  * @param {!B} b The test runner object.
  */
 exports.benchFibbonacci10k = function(b) {
-  var name = 'fibonacci10k';
-  var setup = `
+  const name = 'fibonacci10k';
+  const setup = `
     var fibonacci = function(n, output) {
       var a = 1, b = 1, sum;
       for (var i = 0; i < n; i++) {
@@ -68,7 +68,7 @@ exports.benchFibbonacci10k = function(b) {
         b = sum;
       }
     }`;
-  var timed = `
+  const timed = `
     for(var i = 0; i < 10000; i++) {
       var result = [];
       fibonacci(78, result);
@@ -83,14 +83,14 @@ exports.benchFibbonacci10k = function(b) {
  * @param {!B} b The test runner object.
  */
 exports.benchSort = function(b) {
-  for (var len of [10, 100, 1000, 10000]) {
-    var name = 'sort ' + len;
-    var setup = `
+  for (const len of [10, 100, 1000, 10000]) {
+    const name = 'sort ' + len;
+    const setup = `
       var arr = [];
       for (var i = 0; i < ${len}; i++) {
         arr.push(Math.floor(Math.random() * ${len}));
       }`;
-    var timed = `
+    const timed = `
       arr.sort(function(a, b) {return a - b;});
     `;
     runBench(b, name, setup, timed);
