@@ -125,7 +125,7 @@ exports.testConfigFromSpec = function(t) {
  * @param {!T} t The test runner object.
  */
 exports.testDump = function(t) {
-  const intrp = new Interpreter();
+  const intrp = new Interpreter({noLog: ['net']});
 
   // Load tinycore.
   const coreDir = 'tests/tinycore';
