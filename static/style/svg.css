@@ -16,6 +16,11 @@ text {
 a {
   cursor: pointer;
   text-decoration: underline;
+  fill: #00e;
+}
+
+a:hover {
+  fill: #d00;
 }
 
 .strokeNone {
