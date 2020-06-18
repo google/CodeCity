@@ -2,23 +2,24 @@ body {
   color: #444;
 }
 
+a {
+  color: #00e;
+}
+
+a:hover {
+  color: #d00;
+}
+
 a.command {
   cursor: pointer;
   text-decoration: underline dotted;
 }
 
-body.disconnected a.command {
-  cursor: not-allowed;
-  text-decoration-color: #ccc;
-}
-
-a.command:hover {
-  color: #d00;
-}
-
+body.disconnected a.command,
 body.disconnected a.command:hover {
+  cursor: not-allowed;
   color: #444;
-  text-decoration-color: #aaa;
+  text-decoration-color: #444;
 }
 
 #scrollDiv {

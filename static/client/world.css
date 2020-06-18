@@ -127,6 +127,7 @@ g.say {
 }
 
 a.disabled {
+  color: #444;
   cursor: no-drop;
-  text-decoration: underline dotted #ccc;
+  text-decoration: underline dotted #444;
 }
