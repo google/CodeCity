@@ -664,6 +664,8 @@ CCC.keydown = function(e) {
     CCC.commandHistoryPointer = -1;
     CCC.commandTemp = '';
   }
+  // Delete the placeholder text as soon as the user types anything.
+  CCC.commandTextarea.placeholder = '';
 };
 
 /**
