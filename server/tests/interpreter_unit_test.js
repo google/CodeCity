@@ -31,8 +31,8 @@ const {T} = require('./testing');
  * @param {!T} t The test runner object.
  */
 exports.testToIntegerEtc = function(t) {
-  var intrp = new Interpreter;
-  var cases = [
+  const intrp = new Interpreter;
+  const cases = [
     // [value, ToInteger(value), ToLength(value), ToUint32(value)]
     [false, 0, 0, 0],
     [true, 1, 1, 1],
@@ -71,14 +71,12 @@ exports.testToIntegerEtc = function(t) {
     [new intrp.Array, 0, 0, 0],
     [new intrp.Object, 0, 0, 0],
   ];
-  var funcs = [Interpreter.toInteger,
-               Interpreter.toLength,
-               Interpreter.toUint32];
-  for (var i = 0; i < cases.length; i++) {
-    var tc = cases[i];
-    for (var j = 0; j < funcs.length; j++) {
-      var name =  util.format('%s(%o)', funcs[j].name, tc[0]);
-      t.expect(name, funcs[j](tc[0]), tc[j + 1]);
+  const funcs =
+      [Interpreter.toInteger, Interpreter.toLength, Interpreter.toUint32];
+  for (const [input, ...expected] of cases) {
+    for (let i = 0; i < funcs.length; i++) {
+      const name =  util.format('%s(%o)', funcs[i].name, input);
+      t.expect(name, funcs[i](input), expected[i]);
     }
   }
 };
@@ -88,25 +86,25 @@ exports.testToIntegerEtc = function(t) {
  * @param {!T} t The test runner object.
  */
 exports.testNativeToPseudo = function(t) {
-  var intrp = new Interpreter;
+  const intrp = new Interpreter;
 
   // Test handling of Arrays (including extra non-index properties).
-  var props = {0: 0, 1: 1, 2: 2, length: 3, extra: 4};
-  var arr = [];
-  for (var k in props) {
+  const props = {0: 0, 1: 1, 2: 2, length: 3, extra: 4};
+  const arr = [];
+  for (const k in props) {
     if (!props.hasOwnProperty(k)) continue;
     arr[/** @type{?} */(k)] = props[k];
   }
-  var pArr = intrp.nativeToPseudo(arr, intrp.ROOT);
-  for (var k in props) {
+  const pArr = intrp.nativeToPseudo(arr, intrp.ROOT);
+  for (const k in props) {
     if (!props.hasOwnProperty(k)) continue;
-    var name = 'testNativeToPseudo(array)["' + k + '"]';
-    var r = pArr.get(k, intrp.ROOT);
+    const name = 'testNativeToPseudo(array)["' + k + '"]';
+    const r = pArr.get(k, intrp.ROOT);
     t.expect(name, r, props[k]);
   }
 
   // Test handling of Errors.
-  var cases = [
+  const cases = [
     [Error, intrp.ERROR],
     [EvalError, intrp.EVAL_ERROR],
     [RangeError, intrp.RANGE_ERROR],
@@ -115,12 +113,11 @@ exports.testNativeToPseudo = function(t) {
     [TypeError, intrp.TYPE_ERROR],
     [URIError, intrp.URI_ERROR],
   ];
-  for (var i = 0, tc; tc = cases[i], i < cases.length; i++) {
-    var Err = tc[0], proto = tc[1];
-    var name = 'testNativeToPseudo(' + Err.prototype.name + ')';
-    var errName, errMessage = 'test ' + Err.prototype.name;
-    var error = Err(errMessage);
-    var pError = intrp.nativeToPseudo(error, intrp.ROOT);
+  for (const [Err, proto] of cases) {
+    const name = 'testNativeToPseudo(' + Err.prototype.name + ')';
+    const errMessage = 'test ' + Err.prototype.name;
+    const error = Err(errMessage);
+    const pError = intrp.nativeToPseudo(error, intrp.ROOT);
 
     t.expect(name + ' instanceof intrp.Error',
         pError instanceof intrp.Error, true);
@@ -135,10 +132,10 @@ exports.testNativeToPseudo = function(t) {
  * @param {!T} t The test runner object.
  */
 exports.testScope = function(t) {
-  var intrp = new Interpreter;
-  var outer = new Interpreter.Scope(
+  const intrp = new Interpreter;
+  const outer = new Interpreter.Scope(
       Interpreter.Scope.Type.DUMMY, intrp.ROOT, null, 'this');
-  var inner = new Interpreter.Scope(
+  const inner = new Interpreter.Scope(
       Interpreter.Scope.Type.DUMMY, intrp.ROOT, outer);
 
   // 0: Initial condition.
@@ -212,8 +209,8 @@ exports.testScope = function(t) {
  * @param {!T} t The test runner object.
  */
 exports.testSource = function(t) {
-  var src = new Interpreter.Source('ABCDEF');
-  var name = "Source('ABCDEF')";
+  let src = new Interpreter.Source('ABCDEF');
+  let name = "Source('ABCDEF')";
 
   src = src.slice(0, 6);
   t.expect(name + '.toString()', String(src), 'ABCDEF');
@@ -226,11 +223,11 @@ exports.testSource = function(t) {
   name += '.slice(2, 4)';
   t.expect(name + '.toString()', String(src), 'CD');
 
-  var s = '1\n.2\n..3\n.4\n5\n';
-  var pos3 = s.indexOf('3');
+  const s = '1\n.2\n..3\n.4\n5\n';
+  const pos3 = s.indexOf('3');
   src = new Interpreter.Source(s);
   name = util.format('Source(%o)', s);
-  var lc = src.lineColForPos(pos3);
+  let lc = src.lineColForPos(pos3);
   t.expect(name + '.lineColForPos(' + pos3 + ').line', lc.line, 3);
   t.expect(name + '.lineColForPos(' + pos3 + ').col', lc.col, 3);
 

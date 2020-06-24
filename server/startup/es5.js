@@ -302,7 +302,7 @@ Object.create = function(proto, props) {
 };
 Object.defineProperty(Object, 'create', {enumerable: false});
 
-Object.defineProperties = function definePr(obj, props) {
+Object.defineProperties = function defineProperties(obj, props) {
   if (!obj || (typeof obj !== 'object' && typeof obj !== 'function')) {
     throw new TypeError('Object.defineProperties called on type ' + typeof obj +
                         ', not type object or function');
@@ -314,6 +314,41 @@ Object.defineProperties = function definePr(obj, props) {
   return obj;
 };
 Object.defineProperty(Object, 'defineProperties', {enumerable: false});
+
+Object.isFrozen = function isFrozen(obj) {
+  // TODO: replace this with builtin version.
+  // Per ES5.1, §15.2.3.12
+  if (obj === null || !(typeof obj === 'object' || typeof obj === 'function')) {
+    throw new TypeError('Primitive is already immutable');
+  }
+  var keys = Object.getOwnPropertyNames(obj);
+  for (var i = 0; i < keys.length; i++) {
+    var key = keys[i];
+    var pd = Object.getOwnPropertyDescriptor(obj, key);
+    // Assume no accessor properties.
+    if (pd.configurable || pd.writable) return false;
+  }
+  if (Object.isExtensible) return false;
+  return true;
+};
+Object.defineProperty(Object, 'isFrozen', {enumerable: false});
+
+Object.isSealed = function isSealed(obj) {
+  // TODO: replace this with builtin version.
+  // Per ES5.1, §15.2.3.12
+  if (obj === null || !(typeof obj === 'object' || typeof obj === 'function')) {
+    throw new TypeError('Primitive is already immutable');
+  }
+  var keys = Object.getOwnPropertyNames(obj);
+  for (var i = 0; i < keys.length; i++) {
+    var key = keys[i];
+    var pd = Object.getOwnPropertyDescriptor(obj, key);
+    if (pd.configurable) return false;
+  }
+  if (Object.isExtensible) return false;
+  return true;
+};
+Object.defineProperty(Object, 'isSealed', {enumerable: false});
 
 Object.freeze = function freeze(obj) {
   // TODO: replace this with builtin version.
@@ -330,6 +365,22 @@ Object.freeze = function freeze(obj) {
   Object.preventExtensions(obj);
 };
 Object.defineProperty(Object, 'freeze', {enumerable: false});
+
+Object.seal = function seal(obj) {
+  // TODO: replace this with builtin version.
+  // Per ES5.1, §15.2.3.8
+  if (obj === null || !(typeof obj === 'object' || typeof obj === 'function')) {
+    throw new TypeError('Primitive is already immutable');
+  }
+  var keys = Object.getOwnPropertyNames(obj);
+  for (var i = 0; i < keys.length; i++) {
+    var key = keys[i];
+    // Assume no accessor properties.
+    Object.defineProperty(obj, key, {configurable: false});
+  }
+  Object.preventExtensions(obj);
+};
+Object.defineProperty(Object, 'seal', {enumerable: false});
 
 ///////////////////////////////////////////////////////////////////////////////
 // Array.prototype polyfills

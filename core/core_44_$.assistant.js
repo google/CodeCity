@@ -61,7 +61,6 @@ $.assistant.say = function say(speech) {
   };
   this.location.sendMemo(memo);
 };
-$.assistant.lastActivated = 1584246539955;
 $.assistant.onCommand = function onCommand(command) {
   /* Attempt to find a handler for command, by calling methods on this
    * named cmd_* until one of them returns true.
@@ -128,6 +127,7 @@ $.assistant.description = "A squat grey cylinder that looks like it's listening.
 
 $.assistant.location = undefined;
 
+$.assistant.lastActivated = undefined;
 
 $.physicals.assistant = $.assistant;
 

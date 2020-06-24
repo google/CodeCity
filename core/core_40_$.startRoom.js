@@ -59,7 +59,6 @@ $.clock.getDescription = function() {
   return 'It is currently ' + Date();
 };
 delete $.clock.getDescription.name;
-// CLOSURE: type: function, vars: arguments, hangout, clock, bob, alice, fido
 $.clock.getDescription.prototype.constructor = function() {
     return 'It is currently ' + Date();
   };
@@ -93,7 +92,6 @@ $.clock.getSvgText = function() {
   return svg;
 };
 delete $.clock.getSvgText.name;
-// CLOSURE: type: function, vars: arguments, hangout, clock, bob, alice, fido
 $.clock.getSvgText.prototype.constructor = function() {
     var svg = '<circle cx="0" cy="30" r="10" class="fillWhite" />';
     var r = 10;
@@ -145,8 +143,7 @@ $.clock.validate = function validate() {
   this.onTimer();
 };
 Object.setOwnerOf($.clock.validate, Object.getOwnerOf($.Jssp.OutputBuffer));
-$.clock.validate.prototype = $.physical.validate.prototype;
-$.clock.validate.prototype.constructor = $.clock.validate;
+Object.setOwnerOf($.clock.validate.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
 $.clock.onTimer = function onTimer() {
   /* Function that creates a thread to call itself at the next hour
    * (and calls this.chime() if it is the right time to do so.)

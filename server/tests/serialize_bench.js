@@ -140,7 +140,7 @@ function runInterpreterBench(b, name, src) {
  */
 exports.benchRoundtrip = function(b) {
   let name = 'Roundtrip demo';
-  const demoDir = path.join(__dirname, '../../demo');
+  const demoDir = path.join(__dirname, '../../core');
   const filenames = fs.readdirSync(demoDir);
   filenames.sort();
   let src = '';
