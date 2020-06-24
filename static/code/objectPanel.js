@@ -187,10 +187,10 @@ Code.ObjectPanel.highlight = function() {
   }
   if (newHighlighted !== Code.ObjectPanel.highlighted) {
     if (Code.ObjectPanel.highlighted) {
-      Code.ObjectPanel.highlighted.className = '';
+      Code.ObjectPanel.highlighted.classList.remove('highlighted');
     }
     if (newHighlighted) {
-      newHighlighted.className = 'highlighted';
+      newHighlighted.classList.add('highlighted');
       if (newHighlighted.scrollIntoView) {
         newHighlighted.scrollIntoView({block: 'nearest', inline: 'nearest'});
       }
