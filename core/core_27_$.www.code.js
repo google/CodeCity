@@ -108,7 +108,7 @@ $.www.code.objectPanel.getType = function(value) {
   return typeof value;
 };
 delete $.www.code.objectPanel.getType.name;
-Object.setOwnerOf($.www.code.objectPanel.getType, Object.getOwnerOf($.servers.http.Request.prototype.parse));
+Object.setOwnerOf($.www.code.objectPanel.getType, Object.getOwnerOf($.Jssp.prototype.compile));
 $.www.code.editor = {};
 $.www.code.editor.www = function code_editor_www(request, response) {
   // HTTP handler for /code/editor
@@ -178,7 +178,7 @@ $.www.code.editor.www = function code_editor_www(request, response) {
     response.write(JSON.stringify(data));
   }
 };
-Object.setOwnerOf($.www.code.editor.www, Object.getOwnerOf($.servers.http.Request.prototype.parse));
+Object.setOwnerOf($.www.code.editor.www, Object.getOwnerOf($.Jssp.prototype.compile));
 $.www.code.editor.handleMetaData = function handleMetaData(src, oldValue, newValue) {
 	// Parse metadata directives from src and apply to newValue.
   //
@@ -262,7 +262,7 @@ $.www.code.editor.save = function $_www_code_editor_save(src, binding, data, use
   var saveValue;
   try {
     suspend();
-    var expr = $.utils.code.rewriteForEval(src, /* forceExpression= */ true);
+    var expr = $.utils.code.rewriteForEval(src, /*forceExpression:*/true);
     // Evaluate src in global scope (eval by any other name, literally).
     var evalGlobal = eval;
     saveValue = evalGlobal(expr);
@@ -271,7 +271,7 @@ $.www.code.editor.save = function $_www_code_editor_save(src, binding, data, use
     data.butter = String(e);
     return;
   }
-  var oldValue = binding.get();
+  var oldValue = binding.get(/*inherited:*/false);  // Get actual current value.
   try {
     $.www.code.editor.handleMetaData(src, oldValue, saveValue);
   } catch (e) {
@@ -303,22 +303,36 @@ $.www.code.editor.save = function $_www_code_editor_save(src, binding, data, use
     data.butter = 'Saved';
   }
 };
-Object.setOwnerOf($.www.code.editor.save, {});
-$.www.code.editor.generateMetaData = function generateMetaData(value) {
-  // Assemble any meta-data for the editor.
+Object.setOwnerOf($.www.code.editor.save, Object.getOwnerOf($.Jssp.OutputBuffer));
+$.www.code.editor.generateMetaData = function generateMetaData(value, inherited) {
+  /* Assemble any meta-data for the editor.
+   *
+   * Arguments:
+   * value: any - the value which will be provided as the initial value to begin
+   *     editing from.  This might be a value inherited from a prototype, if the
+   *     binding being edited does not yet exist.
+   * inherited: boolean - should be set to true iff value is inherited from a
+   *     prototype, such that saving will create a new property binding
+   *     overriding the interhited value, rather than replacing an existing
+   *     value.
+   *
+   * Returns: string - metadata informing $.www.code.editor.save what to do
+   *     after creating the new value from the edited description.  At present,
+   *     metadata is only generated if it is a function.
+   */
   var meta = '';
   if ($.utils.isObject(value)) {
     // TODO: add @copy_properties here, but not if the source code is a selector?
   }
   if (typeof value === 'function') {
-    meta += '// @copy_properties true\n';
+    meta += '// @copy_properties ' + !inherited + '\n';
     if (value.lastModifiedTime) {
       meta += '// @last_modified_time ' + value.lastModifiedTime + '\n';
     }
     if (value.lastModifiedUser) {
       meta += '// @last_modified_user ' + String(value.lastModifiedUser) + '\n';
     }
-    var src = $.utils.code.toSource(value);
+    var src = $.utils.code.toSource(inherited ? undefined : value);
     meta += '// @hash ' + $.utils.string.hash('md5', src) + '\n';
     var props = ['verb', 'dobj', 'prep', 'iobj'];
     for (var i = 0, prop; (prop = props[i]); i++) {
@@ -334,25 +348,27 @@ $.www.code.editor.generateMetaData = function generateMetaData(value) {
 };
 Object.setOwnerOf($.www.code.editor.generateMetaData, Object.getOwnerOf($.Jssp.OutputBuffer));
 $.www.code.editor.load = function load(binding) {
-  // The complement of save: render the current value of binding as a
-  // string, prefixed with metadata, postfixed with type information.
-  //
-  // This should return a string which, when passed eval, will be (in
-  // order of preference):
-  //
-  // - Identical to (as determined by Object.is) the current value,
-  // - A shallow-copy of the current value, or
-  // - Unparsable, such that eval will throw SyntaxError.
-  //
-  // The intention should be that it should be safe to save witout
-  // having made any changes and be reasonably confident nothing will
-  // break.
-  //
-  // Args:
-  // - binding: a $.utils.Binding for the binding being edited.
-  var value = binding.get();
+  /* The complement of save: render the current value of binding as a
+   * string, prefixed with metadata, postfixed with type information.
+   *
+   * This should return a string which, when passed eval, will be (in
+   * order of preference):
+   *
+   * - Identical to (as determined by Object.is) the current value,
+   * - A shallow-copy of the current value, or
+   * - Unparsable, such that eval will throw SyntaxError.
+   *
+   * The intention should be that it should be safe to save witout
+   * having made any changes and be reasonably confident nothing will
+   * break.
+   *
+   * Args:
+   * - binding: a $.utils.Binding for the binding being edited.
+   */
+  var value = binding.get(/*inherited:*/true);
   try {
-    var src = this.generateMetaData(value) + $.utils.code.toSource(value);
+    var src = this.generateMetaData(value, !binding.exists()) +
+              $.utils.code.toSource(value);
     if (!$.utils.isObject(value)) return src;
     var proto = Object.getPrototypeOf(value);
     if (typeof value === 'function' && proto === Function.prototype) return src;

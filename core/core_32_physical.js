@@ -33,8 +33,10 @@ $.physical.getSvgText = function() {
   return this.svgText;
 };
 $.physical.getSvgText.prototype.constructor = function getSvgText() {
-  return this.isOpen ? this.svgTextOpen : this.svgTextClosed;
+  return this.state ? this.svgText : this.svgTextNight;
 };
+Object.setOwnerOf($.physical.getSvgText.prototype.constructor, Object.getOwnerOf($.Jssp.prototype.compile));
+$.physical.getSvgText.prototype.constructor.prototype = $.physical.getSvgText.prototype;
 $.physical.getDescription = function() {
   return this.description;
 };
@@ -42,6 +44,8 @@ $.physical.getContents = function getContents() {
   $.physical.validate.call(this);
   return this.contents_.slice();
 };
+Object.setOwnerOf($.physical.getContents, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.physical.getContents.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
 $.physical.addContents = function addContents(newThing, opt_neighbour) {
   // Add newThing to this's contents.  It will be added after
   // opt_neighbour, or to the end of list if opt_neighbour not given.
@@ -76,14 +80,15 @@ $.physical.addContents = function addContents(newThing, opt_neighbour) {
   // Common case of appending a thing.
   contents.push(newThing);
 };
-$.physical.removeContents = function(thing) {
-  var contents = this.getContents();
+$.physical.removeContents = function removeContents(thing) {
+  var contents = this.contents_;
   var index = contents.indexOf(thing);
   if (index !== -1) {
     contents.splice(index, 1);
   }
   this.contents_ = contents;
 };
+Object.setOwnerOf($.physical.removeContents, Object.getOwnerOf($.Jssp.prototype.compile));
 $.physical.moveTo = function moveTo(dest, opt_neighbour) {
   // Move his object to the specified destination location.
   // Attempt to position this object next to a specified neighbour, if given.
@@ -97,16 +102,16 @@ $.physical.moveTo = function moveTo(dest, opt_neighbour) {
   // $.physical.addContents(), but we bail here if it is likely to fail later.
   for (var loc = dest; loc; loc = loc.location) {
 		if (loc === this) {
-      throw new RangeError('cannot move object inside itself');
+      throw new RangeError('cannot move an object inside itself');
     }
   }
-  // Call this.moveable(dest), and refuse move unless it returns true without suspending.
-	var movable = false;
-  new Thread(function checkMovable() {
- 		movable = Boolean(this.movable(dest));
+  // Call this.willMoveTo(dest), and refuse move unless it returns true without suspending.
+	var willMove = false;
+  new Thread(function checkWillMoveTo() {
+ 		willMove = Boolean(this.willMoveTo(dest));
   }, 0, this);
   suspend(0);
-  if (!movable) {
+  if (!willMove) {
     throw new PermissionError(String(this) + " isn't movable to " + String(dest));
   }
   // Call dest.accept(this), and refuse move unless it returns true without suspending.
@@ -130,7 +135,7 @@ $.physical.moveTo = function moveTo(dest, opt_neighbour) {
     try {
       dest.addContents(this, opt_neighbour);
     } finally {
-      if (!dest.getContents().includes(this)) {
+      if (!dest.contents_.includes(this)) {
         this.location = null;  // Uh oh.
         dest = null;
       }
@@ -143,16 +148,6 @@ $.physical.moveTo = function moveTo(dest, opt_neighbour) {
   suspend(0);
 };
 Object.setOwnerOf($.physical.moveTo, Object.getOwnerOf($.Jssp.OutputBuffer));
-$.physical.moveTo.updateScene_ = function(room, mover) {
-  if (!$.room.isPrototypeOf(room)) return;
-  var contents = room.getContents();
-  for (var i = 0; i < contents.length; i++) {
-    var who = contents[i];
-    if ($.user.isPrototypeOf(who)) {
-      room.sendScene(who, who === mover);
-    }
-  }
-};
 $.physical.look = function look(cmd) {
   var html = this.lookJssp.toString(this, {user: cmd.user});
   cmd.user.readMemo({type: "html", htmlText: html});
@@ -201,29 +196,13 @@ response.write("\n    </td>\n  </tr>\n</table>");
 delete $.physical.lookJssp.compiled_.name;
 Object.setOwnerOf($.physical.lookJssp.compiled_, Object.getOwnerOf($.Jssp.OutputBuffer));
 Object.setOwnerOf($.physical.lookJssp.compiled_.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
-$.physical.inspect = function inspect(cmd) {
-  // Open this object in the code editor.
-  var selector = $.Selector.for(this);
-  if (!selector) {
-    cmd.user.narrate('Unfortuantely the code editor does not know how to locate ' + String(this) + ' yet.');
-    return;
-  }
-  var link = '/code?' + encodeURIComponent(String(selector));
-  cmd.user.readMemo({type: "link", href: link});
-};
-Object.setOwnerOf($.physical.inspect, Object.getOwnerOf($.Jssp.OutputBuffer));
-$.physical.inspect.verb = 'inspect';
-$.physical.inspect.dobj = 'this';
-$.physical.inspect.prep = 'none';
-$.physical.inspect.iobj = 'none';
-$.physical.getCommands = function(who) {
+$.physical.getCommands = function getCommands(who) {
   return [
-    'look ' + this.name,
-    'examine ' + this.name,
-    'inspect ' + this.name
+    'look ' + String(this),
+    // 'examine ' + String(this),
+    'edit ' + String(this)
   ];
 };
-delete $.physical.getCommands.name;
 Object.setOwnerOf($.physical.getCommands, Object.getOwnerOf($.Jssp.OutputBuffer));
 $.physical.validate = function validate() {
   /* Validate this $.physical object to enforce that certain
@@ -290,49 +269,32 @@ $.physical.toString.prototype.constructor = function toString() {
       '/' + String(proposeMateOwner) +
       '/' + String(acceptMateOwner) + ')';
 };
-$.physical.movable = function(dest) {
-  // Returns true iff this is willing to move to dest.
-  return false;
-};
-delete $.physical.movable.name;
-$.physical.accept = function(what, src) {
-  // Returns true iff this is willing to accept what arriving from src.
-  //
-  // This function should only be called by $.physical.moveTo()
-  // immediately before actually performing a move.  It is OK if this
-  // function (or its overrides) has some kind of observable
-  // side-effect (making noise, causing some other action, etc.).
-  //
-  // Other code wanting to test if a move might succeed should call
-  // .willAccept(what, src) instead.
-  //
-  // Throwing an error or suspending is equivalent to returning false.
+$.physical.accept = function accept(what, src) {
+  /* Returns true iff this is willing to accept what arriving from src.
+   *
+   * This function should only be called by $.physical.moveTo()
+   * immediately before actually performing a move.  It is OK if this
+   * function (or its overrides) has some kind of observable
+   * side-effect (making noise, causing some other action, etc.).
+   *
+   * Other code wanting to test if a move is likely to succeed should
+   * call .willAccept(what, src) instead.
+   *
+   * Throwing an error or suspending is equivalent to returning false.
+   */
   return this.willAccept(what, src);
 };
-delete $.physical.accept.name;
-$.physical.accept.prototype.constructor = function(what, src) {
-  // Returns true iff this is willing to accept what arriving from src.
-  //
-  // This function should only be called by $.physical.moveTo()
-  // immediately before actually performing a move.  It is OK if this
-  // function (or its overrides) has some kind of observable
-  // side-effect (making noise, causing some other action, etc.).
-  //
-  // Other code wanting to test if a move might succeed should call
-  // .acceptable(what, src) instead.
-  return this.acceptable(what, src);
-};
-delete $.physical.accept.prototype.constructor.name;
-$.physical.accept.prototype.constructor.prototype = $.physical.accept.prototype;
-$.physical.willAccept = function(what, src) {
-  // Returns true iff this is willing to accept what arriving from src.
-  //
-  // This function (or its overrides) MUST NOT have any kind of
-  // observable side-effect (making noise, causing some other action,
-  // etc.).
+Object.setOwnerOf($.physical.accept, Object.getOwnerOf($.Jssp.OutputBuffer));
+$.physical.willAccept = function willAccept(what, src) {
+  /* Returns true iff this is willing to accept what arriving from src.
+   *
+   * This function (or its overrides) MUST NOT have any kind of
+   * observable side-effect (making noise, causing some other action,
+   * etc.)
+   */
   return false;
 };
-delete $.physical.willAccept.name;
+Object.setOwnerOf($.physical.willAccept, Object.getOwnerOf($.Jssp.OutputBuffer));
 $.physical.onExit = function(what, dest) {
   // Called by $.physical.moveTo just before what leaves for dest.
 };
@@ -342,12 +304,9 @@ $.physical.onEnter = function(what, src) {
 };
 delete $.physical.onEnter.name;
 $.physical.lookAt = function lookAt(cmd) {
-  this.look.call(this, cmd);
+  this.look(cmd);
 };
-$.physical.lookAt.prototype.constructor = function lookAt(cmd) {
-  this.look.call(this, cmd);
-};
-$.physical.lookAt.prototype.constructor.prototype = $.physical.lookAt.prototype;
+Object.setOwnerOf($.physical.lookAt, Object.getOwnerOf($.Jssp.OutputBuffer));
 $.physical.lookAt.verb = 'l(ook)?';
 $.physical.lookAt.dobj = 'none';
 $.physical.lookAt.prep = 'at/to';
@@ -394,7 +353,7 @@ $.physical.readMemo = function readMemo(memo) {
   if (this.onMemo) {
     new Thread(function readMemoDispatcher() {
       try {
-        this.onMemo(memo)
+        this.onMemo(memo);
       } catch (e) {
         suspend();
         if ($.room.isPrototypeOf(this.location)) {
@@ -406,6 +365,7 @@ $.physical.readMemo = function readMemo(memo) {
     }, 0, this);
   }
 };
+Object.setOwnerOf($.physical.readMemo, Object.getOwnerOf($.Jssp.prototype.compile));
 $.physical.setName = function setName(name, tryAlternative) {
   /* Set the .name of this physical object.  If the desired name is
    * already in use and tryAlternative is true a similar name (like
@@ -575,8 +535,8 @@ $.physical.examine.jssp = function jssp(request, response) {
 Object.setPrototypeOf($.physical.examine.jssp, $.Jssp.prototype);
 Object.setOwnerOf($.physical.examine.jssp, Object.getOwnerOf($.Jssp.OutputBuffer));
 Object.setOwnerOf($.physical.examine.jssp.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
-$.physical.examine.jssp.source = "<h1>\n  <svg width=\"32px\" height=\"32px\" viewBox=\"0 0 0 0\">\n    <%= this.getSvgText() %>\n  </svg>\n  <%= $.utils.html.escape(this.name) + $.utils.commandMenu(this.getCommands(request.user)) %>\n</h1>\nYou can:\n<ul>\n<%\n  for (var key in this) {\n    var method = this[key];\n    if (typeof method  !== 'function' || !method.verb) continue;\n    var command = method.verb.replace('|', '/');\n    if (method.dobj === 'this') {\n      command += ' ' + this.name;\n    } else if (method.dobj === 'any') {\n      command += ' &lt;any&gt;';\n    }\n    if (method.prep  !== 'none') {\n      command += ' ' + (method.prep === 'any' ? '&lt;any&gt;' : method.prep);\n      if (method.iobj === 'this') {\n        command += ' ' + this.name;\n      } else if (method.iobj === 'any') {\n        command += ' &lt;any&gt;';\n      }\n    }\n    response.write('<li>' + command + '</li>');\n  }\n%>\n</ul>";
-$.physical.examine.jssp.hash_ = '6bb122e06f567f0b2cf2a8b18860e504v1.0.0';
+$.physical.examine.jssp.source = "<h1>\n  <svg width=\"32px\" height=\"32px\" viewBox=\"0 0 0 0\">\n    <%= this.getSvgText() %>\n  </svg>\n  <%= $.utils.html.escape(this.name) + $.utils.commandMenu(this.getCommands(request.user)) %>\n</h1>\nYou can:\n<ul>\n<%\n  for (var key in this) {\n    var method = this[key];\n    if (typeof method  !== 'function' || !method.verb) continue;\n    var command = method.verb.replace(/\\|/g, '/');\n    if (method.dobj === 'this') {\n      command += ' ' + this.name;\n    } else if (method.dobj === 'any') {\n      command += ' &lt;any&gt;';\n    }\n    if (method.prep  !== 'none') {\n      command += ' ' + (method.prep === 'any' ? '&lt;any&gt;' : method.prep);\n      if (method.iobj === 'this') {\n        command += ' ' + this.name;\n      } else if (method.iobj === 'any') {\n        command += ' &lt;any&gt;';\n      }\n    }\n    response.write('<li>' + command + '</li>');\n  }\n%>\n</ul>";
+$.physical.examine.jssp.hash_ = '07270d0ef03f70e5a6bffc698176cc01v1.0.0';
 $.physical.examine.jssp.compiled_ = function(request, response) {
 // DO NOT EDIT THIS CODE: AUTOMATICALLY GENERATED BY JSSP.
 response.write("<h1>\n  <svg width=\"32px\" height=\"32px\" viewBox=\"0 0 0 0\">\n    ");
@@ -588,7 +548,7 @@ response.write("\n</h1>\nYou can:\n<ul>\n");
   for (var key in this) {
     var method = this[key];
     if (typeof method  !== 'function' || !method.verb) continue;
-    var command = method.verb.replace('|', '/');
+    var command = method.verb.replace(/\|/g, '/');
     if (method.dobj === 'this') {
       command += ' ' + this.name;
     } else if (method.dobj === 'any') {
@@ -607,9 +567,35 @@ response.write("\n</h1>\nYou can:\n<ul>\n");
 
 response.write("\n</ul>");
 };
-Object.setOwnerOf($.physical.examine.jssp.compiled_, Object.getOwnerOf($.Jssp.OutputBuffer));
-Object.setOwnerOf($.physical.examine.jssp.compiled_.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.physical.examine.jssp.compiled_, Object.getOwnerOf($.Jssp.prototype.compile));
+Object.setOwnerOf($.physical.examine.jssp.compiled_.prototype, Object.getOwnerOf($.Jssp.prototype.compile));
 Object.defineProperty($.physical.examine.jssp.compiled_, 'name', {value: '$.physical.examine.jssp.compiled_'});
+$.physical.willMoveTo = function willMoveTo(dest) {
+  /* Returns true iff this is willing to move to dest.
+   *
+   * This function (or its overrides) MUST NOT have any kind of
+   * observable side-effect (making noise, causing some other action,
+   * etc.)
+   */
+  return false;
+};
+Object.setOwnerOf($.physical.willMoveTo, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.physical.willMoveTo.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
+$.physical.edit = function inspect(cmd) {
+  // Open this object in the code editor.
+  var selector = $.Selector.for(this);
+  if (!selector) {
+    cmd.user.narrate('Unfortuantely the code editor does not know how to locate ' + String(this) + ' yet.');
+    return;
+  }
+  var link = '/code?' + encodeURIComponent(String(selector));
+  cmd.user.readMemo({type: "link", href: link});
+};
+Object.setOwnerOf($.physical.edit, Object.getOwnerOf($.Jssp.OutputBuffer));
+$.physical.edit.verb = 'edit';
+$.physical.edit.dobj = 'this';
+$.physical.edit.prep = 'none';
+$.physical.edit.iobj = 'none';
 
 $.physicals = (new 'Object.create')(null);
 

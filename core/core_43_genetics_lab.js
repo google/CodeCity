@@ -30,7 +30,7 @@ $.cage.contents_.forObj = $.cage;
 Object.defineProperty($.cage.contents_, 'forObj', {writable: false, enumerable: false, configurable: false});
 $.cage.contents_.forKey = 'contents_';
 Object.defineProperty($.cage.contents_, 'forKey', {writable: false, enumerable: false, configurable: false});
-$.cage.isOpen = true;
+$.cage.isOpen = false;
 $.cage.variation = 1;
 $.cage.tempo = 30;
 $.cage.maxPopulation = 50;
@@ -56,23 +56,27 @@ $.cage.fight = function fight(aggressor, defender) {
     this.kill(victim);
   }
 };
-Object.setOwnerOf($.cage.fight, Object.getOwnerOf($.container.getDescription));
+Object.setOwnerOf($.cage.fight, Object.getOwnerOf($.Jssp.prototype.compile));
 $.cage.kill = function kill(victim) {
   if (!this.isMouse(victim)) {
     this.location.narrate('ERROR: Cannot kill ' + String(victim) + " since it doesn't appear to be a mouse in here.");
     return;
   }
   var owner = Object.getOwnerOf(victim);
-  if (owner === this) {
-    // This mouse is a child.
+  if (this === $.physicals.cage.mousePrototype) {
+    // Can't happen.  But would be catastrophic, so check anyway.
     victim.moveTo(null);
+    throw Error('Tried to kill the prototype mouse.');
+  } else if (owner === this) {
+    // This mouse is a child.
+    victim.destroy();
   } else {
     // This mouse belongs to a user.
     victim.moveTo(owner);
     this.location.narrate($.utils.string.capitalize(String(victim)) + ' is ejected from ' + String(this));
   }
 };
-Object.setOwnerOf($.cage.kill, Object.getOwnerOf($.cage.fight));
+Object.setOwnerOf($.cage.kill, Object.getOwnerOf($.Jssp.prototype.compile));
 $.cage.breed = function breed(mother, father) {
   mother.fertility--;
   father.fertility--;
@@ -109,7 +113,7 @@ $.cage.breed = function breed(mother, father) {
   this.location.narrate($.utils.string.capitalize(String(kid)) + ' has been born to ' + String(mother) + ' & ' + String(father) + '.');
   this.tasks.push(setTimeout(this.life.bind(this, kid), 0));
 };
-Object.setOwnerOf($.cage.breed, Object.getOwnerOf($.cage.fight));
+Object.setOwnerOf($.cage.breed, Object.getOwnerOf($.Jssp.prototype.compile));
 $.cage.tasks = [];
 $.cage.setOpen = function setOpen(newState) {
   var success = Object.getPrototypeOf($.cage).setOpen.call(this, newState);
@@ -225,7 +229,7 @@ $.cage.life = function life(mouse) {
     }
   }
 };
-Object.setOwnerOf($.cage.life, Object.getOwnerOf($.cage.breed));
+Object.setOwnerOf($.cage.life, Object.getOwnerOf($.Jssp.prototype.compile));
 $.cage.willAccept = function willAccept(what, src) {
   // Returns true iff this is willing to accept what arriving from src.
   //
@@ -234,12 +238,12 @@ $.cage.willAccept = function willAccept(what, src) {
   // etc.).
   return this.isOpen || (this.mousePrototype.isPrototypeOf(what) && !src);
 };
-Object.setOwnerOf($.cage.willAccept, Object.getOwnerOf($.cage.breed));
+Object.setOwnerOf($.cage.willAccept, Object.getOwnerOf($.Jssp.prototype.compile));
 $.cage.willAccept.prototype = $.container.willAccept.prototype;
-$.cage.willAccept.prototype.constructor = $.cage.willAccept;
+$.cage.willAccept.prototype.constructor = $.container.willAccept;
 $.cage.mousePrototype = (new 'Object.create')($.thing);
 $.cage.mousePrototype.name = 'Genetic Mouse Prototype';
-$.cage.mousePrototype.location = Object.getOwnerOf($.cage.breed);
+$.cage.mousePrototype.location = null;
 $.cage.mousePrototype.contents_ = [];
 $.cage.mousePrototype.contents_.forObj = $.cage.mousePrototype;
 Object.defineProperty($.cage.mousePrototype.contents_, 'forObj', {writable: false, enumerable: false, configurable: false});
@@ -255,13 +259,14 @@ $.cage.mousePrototype.proposeMate = function proposeMate() {
   var mice = this.location.getContents();
   return mice[Math.floor(Math.random() * mice.length)];
 };
+Object.setOwnerOf($.cage.mousePrototype.proposeMate, Object.getOwnerOf($.Jssp.prototype.compile));
 $.cage.mousePrototype.acceptMate = function acceptMate(whom) {
   // The mouse 'whom' wishes to mate with you!
   // Return true to mate with it, or false to tell it to go away.
   // Reprogram this function to make it smarter!
   return Math.random() > 0.5;
 };
-Object.setOwnerOf($.cage.mousePrototype.acceptMate, Object.getOwnerOf($.cage.breed));
+Object.setOwnerOf($.cage.mousePrototype.acceptMate, Object.getOwnerOf($.Jssp.prototype.compile));
 $.cage.mousePrototype.pickFight = function pickFight() {
   // Return who you'd like to fight with!
   // Returning null will pass on this fight and all future ones.
@@ -270,7 +275,7 @@ $.cage.mousePrototype.pickFight = function pickFight() {
   var mice = this.location.getContents();
   return mice[Math.floor(Math.random() * mice.length)];
 };
-Object.setOwnerOf($.cage.mousePrototype.pickFight, Object.getOwnerOf($.cage.breed));
+Object.setOwnerOf($.cage.mousePrototype.pickFight, Object.getOwnerOf($.Jssp.prototype.compile));
 $.cage.mousePrototype.getDescription = function getDescription() {
   var sex = 'multi-sexual';
   if (this.sex === 'm') sex = 'male';
@@ -282,9 +287,9 @@ $.cage.mousePrototype.getDescription = function getDescription() {
   desc.push('It belongs to generation ' + this.generation + '.');
   return desc.join('\n');
 };
-$.cage.mousePrototype.getDescription.prototype = $.user.getDescription.prototype;
+$.cage.mousePrototype.getDescription.prototype = $.room.getDescription.prototype;
 $.cage.mousePrototype.toString = $.physical.toString.prototype.constructor;
-Object.setOwnerOf($.cage.mousePrototype.toString, Object.getOwnerOf($.cage.breed));
+Object.setOwnerOf($.cage.mousePrototype.toString, Object.getOwnerOf($.Jssp.prototype.compile));
 $.cage.mousePrototype.toString.prototype = $.physical.toString.prototype;
 $.cage.mousePrototype.init = function init(mother, father, variation) {
   // Blend together the numeric attributes from the parents.
@@ -317,7 +322,7 @@ $.cage.mousePrototype.init = function init(mother, father, variation) {
   this.acceptMate = (f2 ? mother : father).acceptMate;
   this.pickFight = (f3 ? mother : father).pickFight;
 };
-Object.setOwnerOf($.cage.mousePrototype.init, Object.getOwnerOf($.cage.breed));
+Object.setOwnerOf($.cage.mousePrototype.init, Object.getOwnerOf($.Jssp.prototype.compile));
 $.cage.mousePrototype.svgText = '<circle class="fillWhite" cx="5.72917" cy="75.78125" fill-opacity="null" r="3.03695" stroke-dasharray="null" stroke-linecap="null" stroke-linejoin="null" stroke-opacity="null" stroke-width="null"/>\n<circle class="fillWhite" cx="16.14583" cy="76.04167" fill-opacity="null" r="3.03695" stroke-dasharray="null" stroke-linecap="null" stroke-linejoin="null" stroke-opacity="null" stroke-width="null"/>\n<path class="fillWhite" d="m12.03308,93.12514c0.10717,-0.16041 0.20994,-0.33687 0.3607,-0.46521c0.13567,-0.11549 0.26228,-0.2318 0.35766,-0.41378c0.09514,-0.18152 0.18337,-0.37185 0.27094,-0.54384c0.09047,-0.17769 0.23341,-0.33627 0.32625,-0.51556c0.09456,-0.18262 0.16626,-0.3955 0.25294,-0.57592c0.08473,-0.17635 0.15151,-0.35631 0.21424,-0.55787c0.0606,-0.19472 0.11528,-0.39692 0.236,-0.55692c0.11711,-0.15522 0.1751,-0.3524 0.24424,-0.54836c0.0733,-0.20776 0.17971,-0.36417 0.30408,-0.54333c0.11333,-0.16327 0.23029,-0.33189 0.31148,-0.51088c0.08883,-0.19584 0.08604,-0.43681 0.17292,-0.60107c0.09343,-0.17665 0.17524,-0.38236 0.25117,-0.60702c0.05663,-0.16755 0.14565,-0.40706 0.24423,-0.56254c0.11292,-0.17809 0.21575,-0.35482 0.29636,-0.55741c0.07633,-0.19184 0.12109,-0.38516 0.17569,-0.61406c0.04666,-0.19564 0.07422,-0.39394 0.14751,-0.60325c0.07343,-0.20968 0.15269,-0.42249 0.1859,-0.63342c0.03708,-0.23553 0.0675,-0.40802 0.09892,-0.64514c0.03015,-0.22757 0.06075,-0.43228 0.10575,-0.64423c0.04384,-0.20646 0.11445,-0.41401 0.1663,-0.63329c0.04621,-0.19545 0.02886,-0.4034 0.01633,-0.62028c-0.01387,-0.24007 0.02528,-0.45202 0.06057,-0.66655c0.03699,-0.22484 0.07443,-0.44395 0.05068,-0.66456c-0.02303,-0.21391 -0.05871,-0.42537 -0.10194,-0.62671c-0.04718,-0.21968 -0.08464,-0.43581 -0.15489,-0.62975c-0.07444,-0.20548 -0.14604,-0.39207 -0.23557,-0.57846c-0.08918,-0.18566 -0.19834,-0.32861 -0.29469,-0.50329c-0.09897,-0.17945 -0.17809,-0.31666 -0.20312,-0.41964c-0.04113,-0.1692 -0.28667,-0.14852 -0.44171,-0.233c-0.1559,-0.08495 -0.30662,-0.20848 -0.44924,-0.26572c-0.16227,-0.06513 -0.33202,-0.15875 -0.50227,-0.16386c-0.17611,-0.00528 -0.33485,0.00854 -0.5018,-0.02748c-0.17309,-0.03735 -0.34972,-0.00494 -0.52126,-0.00233c-0.1752,0.00267 -0.33668,-0.04599 -0.51453,-0.06461c-0.16328,-0.0171 -0.33364,0 -0.51639,0c-0.16946,0 -0.33838,0 -0.49933,0c-0.2001,0 -0.37072,0.01565 -0.52376,0c-0.18217,-0.01862 -0.34876,-0.10261 -0.50742,-0.12788c-0.17392,-0.0277 -0.35294,0.01033 -0.51354,-0.00204c-0.17468,-0.01345 -0.35419,-0.0047 -0.52247,0.00069c-0.17037,0.00545 -0.33059,-0.03414 -0.51396,-0.0348c-0.17038,-0.00062 -0.33266,0.0348 -0.51511,0.0348c-0.17961,0 -0.34591,0 -0.5116,0c-0.1717,0 -0.35472,-0.05006 -0.52282,0.02861c-0.15635,0.07318 -0.30353,0.16488 -0.48929,0.16523c-0.16718,0.00031 -0.33557,-0.00327 -0.49828,-0.0056c-0.16088,-0.0023 -0.33418,0.00613 -0.51423,0.04867c-0.16796,0.03968 -0.28058,0.18636 -0.43422,0.26698c-0.16081,0.08438 -0.33311,0.14746 -0.50376,0.21417c-0.16856,0.06589 -0.34886,0.06024 -0.50639,0.14344c-0.15083,0.07966 -0.29251,0.26612 -0.34361,0.46952c-0.05001,0.19908 -0.06113,0.41128 -0.10312,0.57281c-0.06418,0.24692 -0.04219,0.48684 -0.04318,0.70093c-0.00091,0.19685 -0.02179,0.44057 -0.00433,0.64629c0.01749,0.20598 0.04606,0.4338 0.055,0.66725c0.00789,0.2059 0.00868,0.44533 0.05574,0.65214c0.04451,0.19562 0.10108,0.4036 0.12911,0.62044c0.02837,0.21952 0.11424,0.40775 0.18964,0.61066c0.06952,0.18708 0.15266,0.38581 0.21557,0.572c0.06656,0.19699 0.21037,0.33757 0.31022,0.51815c0.09604,0.1737 0.19471,0.37664 0.27117,0.57747c0.07028,0.18458 0.15927,0.35897 0.27799,0.51699c0.13449,0.17902 0.22487,0.35185 0.30652,0.5394c0.08267,0.1899 0.17582,0.35748 0.27797,0.57073c0.09073,0.1894 0.19736,0.33509 0.30578,0.54181c0.09507,0.18126 0.13773,0.36801 0.26948,0.55438c0.1012,0.14315 0.1916,0.31362 0.30295,0.47201c0.10736,0.15272 0.26718,0.28502 0.35353,0.48125c0.07875,0.17895 0.08404,0.40871 0.18561,0.61244c0.08625,0.173 0.19465,0.3578 0.29178,0.53422c0.09824,0.17845 0.2189,0.34272 0.26908,0.5225c0.05477,0.19623 0.17323,0.36946 0.26577,0.54706c0.09091,0.17449 0.20319,0.34711 0.28538,0.53386c0.0811,0.18428 0.17419,0.37775 0.26136,0.57929c0.08158,0.18863 0.20843,0.34264 0.32867,0.51285c0.10846,0.15354 0.24673,0.27505 0.3601,0.44161c0.10788,0.1585 0.19981,0.31101 0.31581,0.43291c0.1382,0.14522 0.27754,0.25864 0.40544,0.42133c0.1197,0.15226 0.25321,0.29275 0.39242,0.39693c0.15915,0.11909 0.32793,0.1887 0.44168,0.24786c0.14677,0.07633 0.31817,0.06461 0.44623,-0.01292l0.00432,-0.09804l0.11123,0.11027" fill-opacity="null" stroke-dasharray="null" stroke-linecap="null" stroke-linejoin="null" stroke-opacity="null" stroke-width="null"/>\n<circle class="fillBlack" cx="13.80208" cy="80.85938" fill-opacity="null" r="0.67853" stroke-dasharray="null" stroke-linecap="null" stroke-linejoin="null" stroke-opacity="null" stroke-width="null"/>\n<circle class="fillBlack" cx="8.72396" cy="80.72909" fill-opacity="null" r="0.54832" stroke-dasharray="null" stroke-linecap="null" stroke-linejoin="null" stroke-opacity="null" stroke-width="null"/>\n<line fill-opacity="null" stroke-dasharray="null" stroke-linecap="null" stroke-linejoin="null" stroke-opacity="null" x1="13.02083" x2="26.30208" y1="89.0625" y2="86.71875"/>\n<line fill-opacity="null" stroke-dasharray="null" stroke-linecap="null" stroke-linejoin="null" stroke-opacity="null" x1="9.63542" x2="-4.16667" y1="88.54167" y2="91.66667"/>\n<line fill-opacity="null" stroke-dasharray="null" stroke-linecap="null" stroke-linejoin="null" stroke-opacity="null" x1="12.5" x2="26.04167" y1="89.0625" y2="89.0625"/>\n<line fill-opacity="null" stroke-dasharray="null" stroke-linecap="null" stroke-linejoin="null" stroke-opacity="null" x1="9.11458" x2="-3.64583" y1="88.02083" y2="88.80208"/>\n<line fill-opacity="null" stroke-dasharray="null" stroke-linecap="null" stroke-linejoin="null" stroke-opacity="null" x1="13.02083" x2="24.21875" y1="89.0625" y2="91.14583"/>\n<line fill-opacity="null" stroke-dasharray="null" stroke-linecap="null" stroke-linejoin="null" stroke-opacity="null" x1="9.375" x2="-0.52083" y1="89.0625" y2="92.70833"/>';
 $.cage.mousePrototype.startAggressiveness = 2;
 $.cage.mousePrototype.aggressiveness = 2;
@@ -330,18 +335,22 @@ $.cage.mousePrototype.edit = function edit(cmd) {
   cmd.user.readMemo({type: "link", href: link});
 };
 Object.setOwnerOf($.cage.mousePrototype.edit, Object.getOwnerOf($.Jssp.OutputBuffer));
-Object.setOwnerOf($.cage.mousePrototype.edit.prototype, Object.getOwnerOf($.cage.breed));
+Object.setOwnerOf($.cage.mousePrototype.edit.prototype, Object.getOwnerOf($.Jssp.prototype.compile));
 $.cage.mousePrototype.edit.verb = 'edit';
 $.cage.mousePrototype.edit.dobj = 'this';
 $.cage.mousePrototype.edit.prep = 'none';
 $.cage.mousePrototype.edit.iobj = 'none';
-$.cage.mousePrototype.getCommands = $.thing.getCommands.prototype.constructor;
-Object.setOwnerOf($.cage.mousePrototype.getCommands, Object.getOwnerOf($.cage.breed));
+$.cage.mousePrototype.getCommands = function getCommands(who) {
+  var commands = $.thing.getCommands.call(this, who);
+  commands.push('edit ' + this.name);
+  return commands;
+};
+Object.setOwnerOf($.cage.mousePrototype.getCommands, Object.getOwnerOf($.Jssp.prototype.compile));
 $.cage.mousePrototype.getCommands.prototype = $.thing.getCommands.prototype;
 $.cage.isMouse = function isMouse(animal) {
   return this.mousePrototype.isPrototypeOf(animal) && (animal.location === this);
 };
-Object.setOwnerOf($.cage.isMouse, Object.getOwnerOf($.cage.breed));
+Object.setOwnerOf($.cage.isMouse, Object.getOwnerOf($.Jssp.prototype.compile));
 $.cage.startMouse = function startMouse(mouse) {
   // Reset all attributes to defaults.
   var reset = ['fertility', 'startFertility', 'generation', 'startAggressiveness', 'sex', 'size'];
@@ -378,6 +387,8 @@ $.cage.open.verb = 'open';
 $.cage.open.dobj = 'this';
 $.cage.open.prep = 'none';
 $.cage.open.iobj = 'none';
+$.cage.svgTextClosed = '<path class="fillWhite" d="m20,80 l10,-10 l20,0 l0,20 l-10,10"/>\n<line x1="40" x2="50" y1="80" y2="70"/>\n<rect class="fillWhite" height="20" width="20" x="20" y="80"/>\n';
+$.cage.svgTextOpen = '<path class="fillWhite" d="m20,80 l10,-10 l20,0 l0,20 l-10,10"/>\n<line x1="30" x2="30" y1="90" y2="70"/>\n<rect class="fillWhite" height="20" width="20" x="20" y="80"/>\n<line x1="40" x2="50" y1="80" y2="70"/>\n<path class="fillWhite" d="m20,80 l10,-10 l-16,-16 l-10,10 l16,16z"/>\n';
 
 $.cage.location = (new 'Object.create')($.room);
 
@@ -392,6 +403,7 @@ $.physicals['Genetics Lab'].contents_.forObj = $.cage.location;
 Object.defineProperty($.physicals['Genetics Lab'].contents_, 'forObj', {writable: false, enumerable: false, configurable: false});
 $.physicals['Genetics Lab'].contents_.forKey = 'contents_';
 Object.defineProperty($.physicals['Genetics Lab'].contents_, 'forKey', {writable: false, enumerable: false, configurable: false});
+$.physicals['Genetics Lab'].description = 'To create a new mouse, type: create $.cage.mousePrototype as <name>';
 
 $.physicals['Genetic Mouse Prototype'] = $.cage.mousePrototype;
 

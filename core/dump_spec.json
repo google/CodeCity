@@ -232,6 +232,16 @@
       {"path": "$.db.tempId.cleanThread_", "do": "ATTR"}
     ]
   }, {
+    "filename": "core_25_$.userDatabase.js",
+    "headerSubs": {
+      "<YEAR>": "2017",
+      "<OVERVIEW>": "User database for Code City."
+    },
+    "contents": [
+      "$.userDatabase",
+      {"path": "$.userDatabase.byMd5", "do": "ATTR"}
+    ]
+  }, {
     "filename": "core_26_$.www.editor.js",
     "headerSubs": {
       "<YEAR>": "2017",
@@ -309,8 +319,6 @@
     },
     "pruneRest": ["$.servers.telnet.connected"],
     "contents": [
-      {"path": "$.userDatabase", "do": "ATTR"},
-      "$.userDatabase.validate",
       "$.servers.telnet",
       {"path": "$.servers.telnet.connected", "do": "ATTR"}
     ]
@@ -399,6 +407,20 @@
       {"path": "$.assistant.location", "do": "DECL"},
       {"path": "$.assistant.lastActivated", "do": "DECL"},
       {"path": "$.physicals.assistant", "do": "DONE"}
+    ]
+  }, {
+    "filename": "core_45_Challenge_Room.js",
+    "headerSubs": {
+      "<YEAR>": "2020",
+      "<OVERVIEW>": "Chalenge room demo for Code City."
+    },
+    "contents": [
+      "$.physicals['Challenge room']",
+      "$.physicals['light switch']",
+      "$.physicals.chest",
+      "$.physicals.safe",
+      "$.physicals.food",
+      "$.physicals.girl"
     ]
   },
 
