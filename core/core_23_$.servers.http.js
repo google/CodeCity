@@ -111,7 +111,7 @@ $.servers.http.connection.onReceive = function onReceive(data) {
     this.buffer = '';
   }
 };
-Object.setOwnerOf($.servers.http.connection.onReceive, Object.getOwnerOf($.utils.code.rewriteForEval));
+Object.setOwnerOf($.servers.http.connection.onReceive, Object.getOwnerOf($.Jssp.prototype.compile));
 $.servers.http.connection.onReceiveChunk = function onReceiveChunk(chunk) {
   if (!this.request.parse(chunk)) {
     return;  // Wait for more lines to arrive.
@@ -133,11 +133,11 @@ $.servers.http.connection.onEnd = function onEnd() {
   clearTimeout(this.timeout);
   $.connection.onEnd.apply(this, arguments);
 };
-Object.setOwnerOf($.servers.http.connection.onEnd, Object.getOwnerOf($.servers.http.connection.onReceive));
+Object.setOwnerOf($.servers.http.connection.onEnd, Object.getOwnerOf($.Jssp.prototype.compile));
 $.servers.http.connection.close = function close() {
   $.system.connectionClose(this);
 };
-Object.setOwnerOf($.servers.http.connection.close, Object.getOwnerOf($.servers.http.connection.onEnd));
+Object.setOwnerOf($.servers.http.connection.close, Object.getOwnerOf($.Jssp.prototype.compile));
 $.servers.http.connection.close.prototype = $.connection.close.prototype;
 $.servers.http.connection.onError = function onError(error) {
   // TODO(cpcallen): add check for error that occurs when relistening
@@ -147,17 +147,17 @@ $.servers.http.connection.onError = function onError(error) {
     this.connected = false;
   }
 };
-Object.setOwnerOf($.servers.http.connection.onError, Object.getOwnerOf($.servers.http.connection.close));
+Object.setOwnerOf($.servers.http.connection.onError, Object.getOwnerOf($.Jssp.prototype.compile));
 $.servers.http.connection.onError.prototype = $.connection.onError.prototype;
 $.servers.http.connection.onReceiveLine = function onReceiveLine(text) {
   // Override this on child classes.
 };
-Object.setOwnerOf($.servers.http.connection.onReceiveLine, Object.getOwnerOf($.servers.http.connection.close));
+Object.setOwnerOf($.servers.http.connection.onReceiveLine, Object.getOwnerOf($.Jssp.prototype.compile));
 $.servers.http.connection.onReceiveLine.prototype = $.connection.onReceiveLine.prototype;
 $.servers.http.connection.write = function write(text) {
   $.system.connectionWrite(this, text);
 };
-Object.setOwnerOf($.servers.http.connection.write, Object.getOwnerOf($.servers.http.connection.close));
+Object.setOwnerOf($.servers.http.connection.write, Object.getOwnerOf($.Jssp.prototype.compile));
 $.servers.http.connection.write.prototype = $.connection.write.prototype;
 $.servers.http.Request = function Request() {
   this.headers = Object.create(null);
@@ -222,7 +222,7 @@ $.servers.http.Request.prototype.parse = function parse(line) {
             // The second part is the salted security hash.
             // Ignore the hash unless we are creating a new account.
             if (c) {
-              this.user = $.userDatabase[c[1]];
+              this.user = $.userDatabase.get(c[1]);
             }
           } else {
             // Regular cookie.
@@ -255,7 +255,7 @@ $.servers.http.Request.prototype.parse = function parse(line) {
   // Invalid state?  Extra lines?  Ignore.
   return true;
 };
-Object.setOwnerOf($.servers.http.Request.prototype.parse, Object.getOwnerOf($.servers.http.connection.close));
+Object.setOwnerOf($.servers.http.Request.prototype.parse, Object.getOwnerOf($.Jssp.prototype.compile));
 $.servers.http.Request.prototype.parseUrl_ = function(url) {
   // pathname: /bar/baz?data  ->  /bar/baz
   // query: /bar/baz?data  ->  data

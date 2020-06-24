@@ -101,28 +101,6 @@ $.user.eval.doEval_ = function doEval_(me, here, $$$src) {
 };
 $.user.eval.doEval_.prototype = $.user.eval.prototype.constructor.doEval_.prototype;
 $.user.eval.doEval_.prototype.constructor = $.user.eval.doEval_;
-$.user.edit = function edit(cmd) {
-  var obj = cmd.iobj;
-  var objName = cmd.iobjstr;
-  var prop = cmd.dobjstr;
-
-  if (!$.utils.isObject(obj) || !prop) {
-    cmd.user.narrate('Usage: edit <property> on <object>');
-    return;
-  }
-  var url = $.www.editor.edit(obj, objName, prop);
-  var memo = {
-    type: 'iframe',
-    url: url,
-    alt: 'Edit ' + prop + ' on ' + objName
-  };
-  cmd.user.readMemo(memo);
-};
-Object.setOwnerOf($.user.edit, Object.getOwnerOf($.Jssp.OutputBuffer));
-$.user.edit.verb = 'edit';
-$.user.edit.dobj = 'any';
-$.user.edit.prep = 'on top of/on/onto/upon';
-$.user.edit.iobj = 'any';
 $.user.narrate = function narrate(text, obj) {
   var memo = {type: 'narrate', text: String(text)};
   if (obj && obj.location) {
@@ -193,14 +171,6 @@ $.user.quit.verb = 'quit';
 $.user.quit.dobj = 'none';
 $.user.quit.prep = 'none';
 $.user.quit.iobj = 'none';
-$.user.movable = function(dest) {
-  // CallReturns true iff this is willing to move to dest.
-  // Users should in general always be in a room.
-  return $.room.isPrototypeOf(dest);
-};
-delete $.user.movable.name;
-$.user.movable.prototype = $.physical.movable.prototype;
-$.user.movable.prototype.constructor = $.user.movable;
 $.user.willAccept = function(what, src) {
   // Returns true iff this is willing to accept what arriving from src.
   //
@@ -228,21 +198,8 @@ $.user.moveTo = function moveTo(dest, opt_neighbour) {
   }
 	return r;
 };
+Object.setOwnerOf($.user.moveTo, Object.getOwnerOf($.Jssp.OutputBuffer));
 $.user.moveTo.prototype = $.physical.moveTo.prototype;
-$.user.moveTo.updateScene_ = $.physical.moveTo.updateScene_;
-$.user.moveTo.updateScene_.prototype.constructor = function(room) {
-  if ($.room.isPrototypeOf(room)) {
-    var contents = room.getContents();
-    for (var i = 0; i < contents.length; i++) {
-      var who = contents[i];
-      if ($.user.isPrototypeOf(who)) {
-        room.sendScene(who, false);
-      }
-    }
-  }
-};
-$.user.moveTo.updateScene_.prototype.constructor.prototype = $.user.moveTo.updateScene_.prototype;
-Object.defineProperty($.user.moveTo.updateScene_.prototype.constructor, 'name', {value: 'updateScene_'});
 $.user.getNullSvgText = function getNullSvgText() {
   // Return an SVG text for the null void (i.e., what
   // a user sees if they're .location is null).
@@ -278,20 +235,13 @@ $.user.getCommands = function(who) {
   return commands;
 };
 $.user.getCommands.prototype = $.physical.getCommands.prototype;
-$.user.getDescription = function() {
+$.user.getDescription = function getDescription() {
   var desc = $.physical.getDescription.apply(this, arguments);
 	return desc + (desc ? '  ' : '') +
       this.name + (this.connection && this.connection.connected ? ' is awake.' : ' is sleeping.');
 };
-$.user.getDescription.prototype = $.physical.getDescription.prototype;
-$.user.getDescription.prototype.constructor = function() {
-  var desc = $.thing.getDescription.call(this);
-  if (desc) {
-    desc += '\n';
-  }
-  desc += 'It is ' + (this.isOpen ? 'open' : 'closed') +'.';
-  return desc;
-};
+Object.setOwnerOf($.user.getDescription, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.user.getDescription.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
 $.user.who = function(cmd) {
   $.console.look({user: cmd.user});
 };
@@ -309,7 +259,7 @@ $.user.onInput = function onInput(command) {
   // Process one line of input from the user.
   // TODO(cpcallen): add security checks!
   try {
-    $.utils.command.execute(command, this);
+    $.utils.command.execute(command.trim(), this);
   } catch (e) {
     suspend();
     this.narrate(String(e));
@@ -459,12 +409,15 @@ $.user.go.verb = 'go';
 $.user.go.dobj = 'none';
 $.user.go.prep = 'at/to';
 $.user.go.iobj = 'any';
-$.user.onConnect = function onConnect() {
+$.user.onConnect = function onConnect(reconnect) {
   /* Called from $.servers.telnet.connection.onReceiveLine once a new
-   * connection is logged in to this user.
+   * connection is logged in to this user.  Argument will be true if
+   * user was already connected (and this is just a reconnection).
    */
   if ($.room.isPrototypeOf(this.location)) {
-    this.location.narrate(String(this) + ' wakes up.', this);
+    this.location.narrate(
+      String(this) + (reconnect ? ' startles awake.' : ' wakes up.'),
+      this);
     this.onInput('look');
   } else {
     this.teleportTo(this.home || $.startRoom);
@@ -512,6 +465,49 @@ $.user.destroy = function destroy() {
 Object.setOwnerOf($.user.destroy, Object.getOwnerOf($.Jssp.OutputBuffer));
 $.user.destroy.prototype = $.physical.destroy.prototype;
 Object.setOwnerOf($.user.destroy.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
+$.user.inventory = function inventory(cmd) {
+  this.look(cmd);
+};
+Object.setOwnerOf($.user.inventory, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.user.inventory.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
+$.user.inventory.verb = 'inv(?:entory)?';
+$.user.inventory.dobj = 'none';
+$.user.inventory.prep = 'none';
+$.user.inventory.iobj = 'none';
+$.user.willMoveTo = function willMoveTo(dest) {
+  /* Returns true iff this is willing to move to dest.
+   *
+   * This function (or its overrides) MUST NOT have any kind of
+   * observable side-effect (making noise, causing some other action,
+   * etc.)
+   */
+  // Users should in general always be in a room.
+  return $.room.isPrototypeOf(dest);
+};
+Object.setOwnerOf($.user.willMoveTo, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.user.willMoveTo.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
+$.user.editInline = function editInline(cmd) {
+  var obj = cmd.iobj;
+  var objName = cmd.iobjstr;
+  var prop = cmd.dobjstr;
+
+  if (!$.utils.isObject(obj) || !prop) {
+    cmd.user.narrate('Usage: edit <property> on <object>');
+    return;
+  }
+  var url = $.www.editor.edit(obj, objName, prop);
+  var memo = {
+    type: 'iframe',
+    url: url,
+    alt: 'Edit ' + prop + ' on ' + objName
+  };
+  cmd.user.readMemo(memo);
+};
+Object.setOwnerOf($.user.editInline, Object.getOwnerOf($.Jssp.OutputBuffer));
+$.user.editInline.verb = 'edit';
+$.user.editInline.dobj = 'any';
+$.user.editInline.prep = 'on top of/on/onto/upon';
+$.user.editInline.iobj = 'any';
 
 $.room = (new 'Object.create')($.physical);
 $.room.name = 'Room prototype';
@@ -522,7 +518,7 @@ $.room.sendScene = function(who, requested) {
     requested: requested,
     user: who,
     where: this,
-    description: undefined,
+    description: this.getDescription(),
     svgText: this.getSvgText(),
     contents: []
   };
@@ -539,6 +535,7 @@ $.room.sendScene = function(who, requested) {
   who.readMemo(memo);
 };
 delete $.room.sendScene.name;
+Object.setOwnerOf($.room.sendScene, Object.getOwnerOf($.Jssp.prototype.compile));
 $.room.look = function look(cmd) {
   this.sendScene(cmd.user, true);
 };
@@ -587,7 +584,7 @@ $.room.think = function think(cmd) {
   memo.alt = altOthers;
   this.sendMemo(memo, cmd.user);
 };
-Object.setOwnerOf($.room.think, Object.getOwnerOf($.servers.http.Request.prototype.parse));
+Object.setOwnerOf($.room.think, Object.getOwnerOf($.Jssp.prototype.compile));
 $.room.think.verb = 'think|.oO';
 $.room.think.dobj = 'any';
 $.room.think.prep = 'any';
@@ -638,52 +635,20 @@ $.room.willAccept.prototype = $.physical.willAccept.prototype;
 $.room.onEnter = function onEnter(what, src) {
   // TODO: caller check: should only be called by $.physical.moveTo.
   $.physical.validate.call(this);
-	var contents = this.getContents();
-  for (var i = 0; i < contents.length; i++) {
-    var who = contents[i];
-    if ($.user.isPrototypeOf(who)) {
-      this.sendScene(who, who === what);
-    }
+  this.updateScene(false);
+
+  if ($.user.isPrototypeOf(what)) {
+    this.sendScene(what, true);
   }
 };
-$.room.onEnter.prototype.constructor = function(what, src) {
-  // TODO: caller check: should only be called by $.physical.moveTo.
-  $.physical.validate.call(this);
-	var contents = this.getContents();
-  for (var i = 0; i < contents.length; i++) {
-    var who = contents[i];
-    if ($.user.isPrototypeOf(who)) {
-      this.sendScene(who, who === what);
-    }
-  }
-};
-delete $.room.onEnter.prototype.constructor.name;
-$.room.onEnter.prototype.constructor.prototype = $.room.onEnter.prototype;
+Object.setOwnerOf($.room.onEnter, Object.getOwnerOf($.Jssp.prototype.compile));
 $.room.onExit = function onExit(what, dest) {
   // TODO: caller check: should only be called by $.physical.moveTo.
   suspend(0);  // Wait for what to actually leave.
   $.physical.validate.call(this);
-	var contents = this.getContents();
-  for (var i = 0; i < contents.length; i++) {
-    var who = contents[i];
-    if ($.user.isPrototypeOf(who) && who !== what) {
-      this.sendScene(who);
-    }
-  }
+  this.updateScene(false);
 };
-$.room.onExit.prototype.constructor = function(what, src) {
-  // TODO: caller check: should only be called by $.physical.moveTo.
-  $.physical.validate.call(this);
-	var contents = this.getContents();
-  for (var i = 0; i < contents.length; i++) {
-    var who = contents[i];
-    if ($.user.isPrototypeOf(who) && who !== what) {
-      this.sendScene(who);
-    }
-  }
-};
-delete $.room.onExit.prototype.constructor.name;
-$.room.onExit.prototype.constructor.prototype = $.room.onExit.prototype;
+Object.setOwnerOf($.room.onExit, Object.getOwnerOf($.Jssp.prototype.compile));
 $.room.lookHere = function lookHere(cmd) {
   return this.look(cmd);
 };
@@ -721,7 +686,7 @@ $.room.sendMemo = function sendMemo(memo, except) {
     thing.readMemo(memo);
   }
 };
-Object.setOwnerOf($.room.sendMemo, Object.getOwnerOf($.room.think));
+Object.setOwnerOf($.room.sendMemo, Object.getOwnerOf($.Jssp.prototype.compile));
 $.room.emote = function emote(cmd) {
   // Format:  :blinks..    -or-    ::'s ears twitch.
   var m, action;
@@ -743,6 +708,22 @@ $.room.emote.verb = '::?[^:]+';
 $.room.emote.dobj = 'any';
 $.room.emote.prep = 'any';
 $.room.emote.iobj = 'any';
+$.room.updateScene = function updateScene(force) {
+  var contents = this.getContents();
+  for (var i = 0, who; (who = contents[i]); i++) {
+    if ($.user.isPrototypeOf(who)) {
+      this.sendScene(who, force);
+    }
+  }
+};
+Object.setOwnerOf($.room.updateScene, Object.getOwnerOf($.Jssp.prototype.compile));
+Object.setOwnerOf($.room.updateScene.prototype, Object.getOwnerOf($.Jssp.prototype.compile));
+$.room.getDescription = function getDescription() {
+  return this.description;
+};
+Object.setOwnerOf($.room.getDescription, Object.getOwnerOf($.Jssp.prototype.compile));
+$.room.getDescription.prototype = $.physical.getDescription.prototype;
+$.room.getDescription.prototype.constructor = $.room.getDescription;
 
 $.thing = (new 'Object.create')($.physical);
 $.thing.name = 'Thing prototype';
@@ -752,85 +733,61 @@ $.thing.get = function get(cmd) {
     cmd.user.narrate("You can't reach " + this.name + ".");
     return;
   }
-  this.moveTo(cmd.user);
+  try {
+    this.moveTo(cmd.user);
+  } catch (e) {
+    throw (e instanceof Error) ? e.message : e;
+  }
   cmd.user.narrate('You pick up ' + this.name + '.');
   if (cmd.user.location) {
     cmd.user.location.narrate(cmd.user.name + ' picks up ' + this.name + '.', cmd.user);
   }
 };
-$.thing.get.prototype.constructor = function(cmd) {
-  this.moveTo(user);
-  user.narrate('You pick up ' + this.name + '.');
-  if (user.location) {
-    user.location.narrate(user.name + ' picks up ' + this.name + '.');
-  }
-};
-$.thing.get.prototype.constructor.prototype = $.thing.get.prototype;
-Object.defineProperty($.thing.get.prototype.constructor, 'name', {value: 'get'});
-$.thing.get.prototype.constructor.verb = 'get|take';
-$.thing.get.prototype.constructor.dobj = 'this';
-$.thing.get.prototype.constructor.prep = 'none';
-$.thing.get.prototype.constructor.iobj = 'none';
+Object.setOwnerOf($.thing.get, Object.getOwnerOf($.Jssp.OutputBuffer));
 $.thing.get.verb = 'get|take';
 $.thing.get.dobj = 'this';
 $.thing.get.prep = 'none';
 $.thing.get.iobj = 'none';
 $.thing.drop = function drop(cmd) {
   if (this.location !== cmd.user) {
-    cmd.user.narrate("You can't drop something you're not holding.")
+    cmd.user.narrate("You can't drop something you're not holding.");
     return;
   }
-  this.moveTo(cmd.user.location);
+  try {
+    this.moveTo(cmd.user.location);
+  } catch (e) {
+    throw (e instanceof Error) ? e.message : e;
+  }
   cmd.user.narrate('You drop ' + this.name + '.');
   if (cmd.user.location) {
     cmd.user.location.narrate(cmd.user.name + ' drops ' + this.name + '.', cmd.user);
   }
 };
-$.thing.drop.prototype.constructor = function(cmd) {
-  this.moveTo(user.location);
-  user.narrate('You drop ' + this.name + '.');
-  if (user.location) {
-    user.location.narrate(user.name + ' drops ' + this.name + '.');
-  }
-};
-$.thing.drop.prototype.constructor.prototype = $.thing.drop.prototype;
-Object.defineProperty($.thing.drop.prototype.constructor, 'name', {value: 'drop'});
-$.thing.drop.prototype.constructor.verb = 'drop|throw';
-$.thing.drop.prototype.constructor.dobj = 'this';
-$.thing.drop.prototype.constructor.prep = 'none';
-$.thing.drop.prototype.constructor.iobj = 'none';
+Object.setOwnerOf($.thing.drop, Object.getOwnerOf($.Jssp.OutputBuffer));
 $.thing.drop.verb = 'drop|throw';
 $.thing.drop.dobj = 'this';
 $.thing.drop.prep = 'none';
 $.thing.drop.iobj = 'none';
 $.thing.give = function give(cmd) {
   if (this.location !== cmd.user && this.location !== cmd.user.location) {
-    cmd.user.narrate("You can't reach " + this.name + ".");
+    cmd.user.narrate("You can't reach " + String(this) + ".");
     return;
-  }  
-  this.moveTo(cmd.iobj);
-  cmd.user.narrate('You give ' + this.name + ' to ' + cmd.iobj.name + '.');
-  cmd.iobj.narrate(cmd.user.name + ' gives ' + this.name + ' to you.');
+  }
+  try {
+    this.moveTo(cmd.iobj);
+  } catch (e) {
+    throw (e instanceof Error) ? e.message : e;
+  }
+  cmd.user.narrate('You give ' + String(this) + ' to ' + String(cmd.iobj) + '.');
+  cmd.iobj.narrate(String(cmd.user) + ' gives ' + String(this) + ' to you.');
   if (cmd.user.location) {
     cmd.user.location.narrate(
-        cmd.user.name + ' gives ' + this.name + ' to ' + cmd.iobj.name + '.',
+        String(cmd.user) + ' gives ' + String(this) + ' to ' + String(cmd.iobj) + '.',
         [cmd.user, cmd.iobj]);
   }
 };
-$.thing.give.prototype.constructor = function(cmd) {
-  this.moveTo(cmd.iobj);
-  user.narrate('You give ' + this.name + ' to ' + cmd.iobj.name + '.');
-  if (user.location) {
-    user.location.narrate(user.name + ' gives ' + this.name + ' to ' +
-        cmd.iobj.name + '.');
-  }
-};
-$.thing.give.prototype.constructor.prototype = $.thing.give.prototype;
-Object.defineProperty($.thing.give.prototype.constructor, 'name', {value: 'give'});
-$.thing.give.prototype.constructor.verb = 'give';
-$.thing.give.prototype.constructor.dobj = 'this';
-$.thing.give.prototype.constructor.prep = 'at/to';
-$.thing.give.prototype.constructor.iobj = 'any';
+Object.setOwnerOf($.thing.give, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.thing.give.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
 $.thing.give.verb = 'give';
 $.thing.give.dobj = 'this';
 $.thing.give.prep = 'at/to';
@@ -838,32 +795,35 @@ $.thing.give.iobj = 'any';
 $.thing.getCommands = function getCommands(who) {
   var commands = $.physical.getCommands.call(this, who);
   if (this.location === who) {
-    commands.push('drop ' + this.name);
+    commands.push('drop ' + String(this));
   } else if (this.location === who.location) {
-    commands.push('get ' + this.name);
+    commands.push('get ' + String(this));
   }
   return commands;
 };
-$.thing.getCommands.prototype.constructor = function getCommands(who) {
-  var commands = $.thing.getCommands.call(this, who);
-  commands.push('edit ' + this.name);
-  return commands;
-};
-$.thing.movable = function movable(dest) {
-  // Returns true iff this is willing to move to dest.
-  return true;
-};
-$.thing.movable.prototype = $.user.movable.prototype;
+Object.setOwnerOf($.thing.getCommands, Object.getOwnerOf($.Jssp.prototype.compile));
+$.thing.movable = true;
 $.thing.location = null;
 $.thing.contents_ = [];
 $.thing.contents_.forObj = $.thing;
 Object.defineProperty($.thing.contents_, 'forObj', {writable: false, enumerable: false, configurable: false});
 $.thing.contents_.forKey = 'contents_';
 Object.defineProperty($.thing.contents_, 'forKey', {writable: false, enumerable: false, configurable: false});
+$.thing.willMoveTo = function willMoveTo(dest) {
+  /* Returns true iff this is willing to move to dest.
+   *
+   * This function (or its overrides) MUST NOT have any kind of
+   * observable side-effect (making noise, causing some other action,
+   * etc.)
+   */
+  return Boolean(this.movable);
+};
+Object.setOwnerOf($.thing.willMoveTo, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.thing.willMoveTo.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
 
 $.container = (new 'Object.create')($.thing);
 $.container.getFrom = function getFrom(cmd) {
-  var thing = cmd.dobj
+  var thing = cmd.dobj;
   if ($.utils.command.matchFailed(thing)) {
     thing = $.utils.command.match(cmd.dobjstr, this);
   }
@@ -881,7 +841,7 @@ $.container.getFrom = function getFrom(cmd) {
     return;
   }
   try {
-    thing.moveTo(cmd.user);
+    thing.moveTo(this.toFloor ? this.location : cmd.user);
   } catch (e) {
     cmd.user.narrate(e.message);
     return;
@@ -891,7 +851,7 @@ $.container.getFrom = function getFrom(cmd) {
     cmd.user.location.narrate(String(cmd.user) + ' takes ' + String(thing) + ' from ' + String(this) + '.', cmd.user);
   }
 };
-Object.setOwnerOf($.container.getFrom, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.container.getFrom, Object.getOwnerOf($.Jssp.prototype.compile));
 $.container.getFrom.verb = 'get|take';
 $.container.getFrom.dobj = 'any';
 $.container.getFrom.prep = 'out of/from inside/from';
@@ -899,7 +859,9 @@ $.container.getFrom.iobj = 'this';
 $.container.name = 'Container prototype';
 $.container.svgTextOpen = '<path class="fillWhite" d="m10,90l5,-5l10,0l0,10l-5,5"/>\n<line x1="15" x2="15" y1="95" y2="85"/>\n<rect class="fillWhite" height="10" width="10" x="10" y="90"/>\n<line x1="20" x2="25" y1="90" y2="85"/>\n<path class="fillWhite" d="m10,90l5,-5l-8,-8l-5,5l8,8z"/>';
 $.container.svgTextClosed = '<path class="fillWhite" d="m10,90l5,-5l10,0l0,10l-5,5"/>\n<line x1="20" x2="25" y1="90" y2="85"/>\n<rect class="fillWhite" height="10" width="10" x="10" y="90"/>';
-$.container.getSvgText = $.physical.getSvgText.prototype.constructor;
+$.container.getSvgText = function getSvgText() {
+  return this.isOpen ? this.svgTextOpen : this.svgTextClosed;
+};
 $.container.getSvgText.prototype = $.physical.getSvgText.prototype;
 $.container.isOpen = true;
 $.container.open = function open(cmd) {
@@ -954,6 +916,9 @@ $.container.close.prep = 'none';
 $.container.close.iobj = 'none';
 $.container.setOpen = function setOpen(newState) {
   this.isOpen = Boolean(newState);
+  if ($.room.isPrototypeOf(this.location)) {
+    this.location.updateScene(false);
+  }
   return true;
 };
 Object.setOwnerOf($.container.setOpen, Object.getOwnerOf($.Jssp.OutputBuffer));
@@ -961,12 +926,13 @@ Object.setOwnerOf($.container.setOpen.prototype, Object.getOwnerOf($.Jssp.Output
 $.container.getCommands = function getCommands(who) {
   var commands = $.thing.getCommands.call(this, who);
   if (this.isOpen) {
-    commands.push('close ' + this.name);
+    commands.push('close ' + String(this));
   } else {
-    commands.push('open ' + this.name);
+    commands.push('open ' + String(this));
   }
   return commands;
 };
+Object.setOwnerOf($.container.getCommands, Object.getOwnerOf($.Jssp.prototype.compile));
 $.container.getCommands.prototype = $.thing.getCommands.prototype;
 $.container.putIn = function putIn(cmd) {
   if ($.utils.command.matchFailed(cmd.dobj, cmd.dobjstr, cmd.user)) return;
@@ -1000,20 +966,104 @@ $.container.putIn.dobj = 'any';
 $.container.putIn.prep = 'in/inside/into';
 $.container.putIn.iobj = 'this';
 $.container.willAccept = function willAccept(what, src) {
-  // Returns true iff this is willing to accept what arriving from src.
-  //
-  // This function (or its overrides) MUST NOT have any kind of
-  // observable side-effect (making noise, causing some other action,
-  // etc.).
+  /* Returns true iff this is willing to accept what arriving from src.
+   *
+   * This function (or its overrides) MUST NOT have any kind of
+   * observable side-effect (making noise, causing some other action,
+   * etc.)
+   */
   return this.isOpen;
 };
+Object.setOwnerOf($.container.willAccept, Object.getOwnerOf($.Jssp.OutputBuffer));
 $.container.willAccept.prototype = $.physical.willAccept.prototype;
-$.container.getDescription = $.user.getDescription.prototype.constructor;
-delete $.container.getDescription.name;
-Object.setOwnerOf($.container.getDescription, Object.getOwnerOf($.room.sendMemo));
-$.container.getDescription.prototype = $.user.getDescription.prototype;
 $.container.location = null;
 $.container.contents_ = null;
+$.container.contentsVisibleWhenOpen = true;
+$.container.contentsVisibleWhenClosed = false;
+// CLOSURE: type: function, vars: source, jssp
+// CLOSURE: type: funexp, vars: Jssp
+$.container.lookJssp = function jssp(request, response) {
+  // DO NOT EDIT THIS CODE.  AUTOMATICALLY GENERATED BY JSSP.
+  // To edit contents of generated page, edit this.source.
+  return jssp.render(this, request, response);  // See $.Jssp for explanation.
+};
+Object.setPrototypeOf($.container.lookJssp, $.Jssp.prototype);
+Object.setOwnerOf($.container.lookJssp, Object.getOwnerOf($.Jssp.prototype.compile));
+Object.setOwnerOf($.container.lookJssp.prototype, Object.getOwnerOf($.Jssp.prototype.compile));
+$.container.lookJssp.source = "<table style=\"height: 100%; width: 100%;\">\n  <tr>\n    <td style=\"padding: 1ex; width: 30%;\">\n      <svg width=\"100%\" height=\"100%\" viewBox=\"0 0 0 0\">\n        <%= this.getSvgText() %>\n      </svg>\n    </td>\n    <td>\n    <h1><%= $.utils.html.escape(this.name) + $.utils.commandMenu(this.getCommands(request.user)) %></h1>\n    <p><%= $.utils.html.preserveWhitespace(this.getDescription()) %></p>\n    <p>It is <%= this.isOpen ? 'open' : 'closed' %>.</p>\n<%\nif (this.isOpen ? this.contentsVisibleWhenOpen : this.contentsVisibleWhenClosed) {\n  var contents = this.getContents();\n  if (contents.length) {\n    var contentsHtml = [];\n    for (var i = 0; i < contents.length; i++) {\n      var commands = [\n        'look ' + contents[i].name + ' in ' + this.name,\n        'get ' + contents[i].name + ' from ' + this.name\n      ];\n      contentsHtml[i] = $.utils.html.escape(contents[i].name) +\n          $.utils.commandMenu(commands);\n    }\n    response.write('<p>Contents: ' + contentsHtml.join(', ') + '</p>');\n  }\n}\nif (this.location) {\n  response.write('<p>Location: ' + $.utils.html.escape(this.location.name) +\n      $.utils.commandMenu(this.location.getCommands(request.user)) + '</p>');\n}\n%>\n    </td>\n  </tr>\n</table>";
+$.container.lookJssp.hash_ = 'fa0a4420dc0559e0e432e5c4030fd2c2v1.0.0';
+$.container.lookJssp.compiled_ = function(request, response) {
+// DO NOT EDIT THIS CODE: AUTOMATICALLY GENERATED BY JSSP.
+response.write("<table style=\"height: 100%; width: 100%;\">\n  <tr>\n    <td style=\"padding: 1ex; width: 30%;\">\n      <svg width=\"100%\" height=\"100%\" viewBox=\"0 0 0 0\">\n        ");
+response.write(this.getSvgText());
+response.write("\n      </svg>\n    </td>\n    <td>\n    <h1>");
+response.write($.utils.html.escape(this.name) + $.utils.commandMenu(this.getCommands(request.user)));
+response.write("</h1>\n    <p>");
+response.write($.utils.html.preserveWhitespace(this.getDescription()));
+response.write("</p>\n    <p>It is ");
+response.write(this.isOpen ? 'open' : 'closed');
+response.write(".</p>\n");
+
+if (this.isOpen ? this.contentsVisibleWhenOpen : this.contentsVisibleWhenClosed) {
+  var contents = this.getContents();
+  if (contents.length) {
+    var contentsHtml = [];
+    for (var i = 0; i < contents.length; i++) {
+      var commands = [
+        'look ' + contents[i].name + ' in ' + this.name,
+        'get ' + contents[i].name + ' from ' + this.name
+      ];
+      contentsHtml[i] = $.utils.html.escape(contents[i].name) +
+          $.utils.commandMenu(commands);
+    }
+    response.write('<p>Contents: ' + contentsHtml.join(', ') + '</p>');
+  }
+}
+if (this.location) {
+  response.write('<p>Location: ' + $.utils.html.escape(this.location.name) +
+      $.utils.commandMenu(this.location.getCommands(request.user)) + '</p>');
+}
+
+response.write("\n    </td>\n  </tr>\n</table>");
+};
+Object.setOwnerOf($.container.lookJssp.compiled_, Object.getOwnerOf($.Jssp.prototype.compile));
+Object.setOwnerOf($.container.lookJssp.compiled_.prototype, Object.getOwnerOf($.Jssp.prototype.compile));
+Object.defineProperty($.container.lookJssp.compiled_, 'name', {value: '$.container.lookJssp.compiled_'});
+$.container.lookIn = function lookIn(cmd) {
+  var thing = cmd.dobj
+  if ($.utils.command.matchFailed(thing)) {
+    thing = $.utils.command.match(cmd.dobjstr, this);
+  }
+  if ($.utils.command.matchFailed(thing, cmd.dobjstr, cmd.user)) return;
+  if (this.location !== cmd.user.location && this.location !== cmd.user) {
+    cmd.user.narrate($.utils.string.capitalize(String(this)) + ' is not here.');
+    return;
+  }
+  if (thing.location !== this) {
+    cmd.user.narrate($.utils.string.capitalize(String(thing)) + ' is not in ' + String(this) + '.');
+    return;
+  }
+  if (this.isOpen) {
+    if (!this.contentsVisibleWhenOpen) {
+      cmd.user.narrate('You can\'t see inside ' + String(this) + '.');
+      return;
+    }
+  } else {
+    if (!this.contentsVisibleWhenClosed) {
+      cmd.user.narrate($.utils.string.capitalize(String(this)) + ' is closed.');
+      return;
+    }
+  }
+  var html = thing.lookJssp.toString(thing, {user: cmd.user});
+  cmd.user.readMemo({type: "html", htmlText: html});
+};
+Object.setOwnerOf($.container.lookIn, Object.getOwnerOf($.Jssp.prototype.compile));
+Object.setOwnerOf($.container.lookIn.prototype, Object.getOwnerOf($.Jssp.prototype.compile));
+$.container.lookIn.verb = 'l(ook)?';
+$.container.lookIn.dobj = 'any';
+$.container.lookIn.prep = 'in/inside/into';
+$.container.lookIn.iobj = 'this';
+$.container.toFloor = false;
 
 $.physicals['User prototype'] = $.user;
 

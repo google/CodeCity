@@ -65,31 +65,14 @@ $.utils.isObject = function isObject(v) {
 };
 Object.setOwnerOf($.utils.isObject, Object.getOwnerOf($.system.onStartup.prototype));
 $.utils.imageMatch = {};
-$.utils.imageMatch.send = function send(ink) {
+$.utils.imageMatch.recog = function send(svgText) {
+  svgText = '<svg transform="scale(4)">' + svgText + '</svg>';
   var json = $.system.xhr('https://neil.fraser.name/scripts/imageMatch.py' +
-                          '?ink=' + encodeURIComponent(JSON.stringify(ink)));
+                          '?svg=' + encodeURIComponent(svgText));
   return JSON.parse(json);
 };
-Object.setOwnerOf($.utils.imageMatch.send, {});
-Object.setOwnerOf($.utils.imageMatch.send.prototype, Object.getOwnerOf($.utils.imageMatch.send));
-$.utils.imageMatch.recog = function recog(ink) {
-  //var ink = this.svgToInk(svg);
-  var json = this.send(ink);
-  try {
-    var name = json[1][0][1][0];
-  } catch (e) {
-    // No match.
-  }
-  return name;
-};
-Object.setOwnerOf($.utils.imageMatch.recog, Object.getOwnerOf($.utils.imageMatch.send.prototype));
+Object.setOwnerOf($.utils.imageMatch.recog, {});
 Object.setOwnerOf($.utils.imageMatch.recog.prototype, Object.getOwnerOf($.utils.imageMatch.recog));
-$.utils.imageMatch.svgToInk = function svgToInk(svg) {
-  ink = [];
-  return ink;
-};
-Object.setOwnerOf($.utils.imageMatch.svgToInk, Object.getOwnerOf($.utils.imageMatch.recog.prototype));
-Object.setOwnerOf($.utils.imageMatch.svgToInk.prototype, Object.getOwnerOf($.utils.imageMatch.recog.prototype));
 
 $.utils.array = {};
 $.utils.array.filterUntilFound = function filterUntilFound(array, filter1 /*, filter2, filter3... */) {
