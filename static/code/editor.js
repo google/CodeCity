@@ -926,6 +926,7 @@ Code.functionEditor.createDom = function(container) {
   <select id="dobj">
     <option>none</option>
     <option>this</option>
+    <option>something</option>
     <option>any</option>
   </select>
   <select id="prep">
@@ -950,6 +951,7 @@ Code.functionEditor.createDom = function(container) {
   <select id="iobj">
     <option>none</option>
     <option>this</option>
+    <option>something</option>
     <option>any</option>
   </select>
 </div>
