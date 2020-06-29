@@ -16,7 +16,7 @@
  */
 
 /**
- * @fileoverview Chalenge room demo for Code City.
+ * @fileoverview Challenge room demo for Code City.
  */
 
 //////////////////////////////////////////////////////////////////////
