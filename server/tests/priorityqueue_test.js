@@ -86,16 +86,16 @@ function checkInvariants(t, pq, note) {
                    i, pq.heap_[i].priority, p, pq.heap_[p].priority) +
                        util.format('\n%o\n', pq.heap_));
     }
-    // Check index is correct for .heap_[i].value
-    t.expect(util.format('PriorityQueue: .indices_.get(.heap_[%d].value)%s',
+    // Check index is correct for .heap_[i].item
+    t.expect(util.format('PriorityQueue: .indices_.get(.heap_[%d].item)%s',
                          i, note),
-             pq.indices_.get(pq.heap_[i].value), i);
+             pq.indices_.get(pq.heap_[i].item), i);
   }
-  for (const [value, index] of pq.indices_) {
-    // Check value is correct for .indices_.get(v).
-    t.expect(util.format('PriorityQueue: .heap_[.indices_.get(%o)].value%s',
-                         value, note),
-             pq.heap_[index].value, value);
+  for (const [item, index] of pq.indices_) {
+    // Check item is correct for .indices_.get(v).
+    t.expect(util.format('PriorityQueue: .heap_[.indices_.get(%o)].item%s',
+                         item, note),
+             pq.heap_[index].item, item);
   }
   t.expect('PriorityQueue: .heap_.length (vs. .indices_.size)' + note,
            pq.heap_.length, pq.indices_.size);
@@ -109,7 +109,7 @@ exports.testPriorityQueue = function(t) {
   const name = 'PriorityQueue';
   const pq = new PriorityQueue();
 
-  // Insert some values in a particular order, using value as priority.
+  // Insert some items in a particular order, using item as priority.
   for (const v of [2, 4, 6, 8, 10, 12, 14, 15, 13, 11, 9, 7, 5, 3, 1]) {
     pq.set(v, v);
     checkInvariants(t, pq, util.format('after .insert(%d, %d)', v, v));

@@ -58,7 +58,7 @@ function children(i) {
  */
 class PriorityQueue {
   constructor() {
-   /** @private @const {!Array<{value: T, priority: number}>} */
+   /** @private @const {!Array<{item: T, priority: number}>} */
     this.heap_ = [];
     /** @private @const {!Map<T,number>} */
     this.indices_ = new Map();
@@ -72,8 +72,8 @@ class PriorityQueue {
     if (this.heap_.length === 0) {
       throw RangeError('queue is empty');
     }
-    const value = this.heap_[0].value;
-    this.indices_.delete(value);
+    const item = this.heap_[0].item;
+    this.indices_.delete(item);
     if (this.heap_.length > 1) {
       this.heap_[0] = this.heap_.pop();
       // percolateDown_ will update indices_.
@@ -81,17 +81,17 @@ class PriorityQueue {
     } else {
       this.heap_.pop();
     }
-    return value;
+    return item;
   }
 
   /**
    * Insert an item in the queue.
-   * @param {T} value The item to be inserted.
-   * @param {number} priority The priority value to insert it with.
+   * @param {T} item The item to be inserted.
+   * @param {number} priority The priority item to insert it with.
    * @return {void}
    */
-  insert(value, priority) {
-    this.set.call(this, value, priority);
+  insert(item, priority) {
+    this.set.call(this, item, priority);
   }
 
   /** @return {number} */
@@ -117,11 +117,11 @@ class PriorityQueue {
       }
       if (entry.priority <= this.heap_[c].priority) break;
       this.heap_[i] = this.heap_[c];
-      this.indices_.set(this.heap_[c].value, i);
+      this.indices_.set(this.heap_[c].item, i);
       i = c;
     }
     this.heap_[i] = entry;
-    this.indices_.set(entry.value, i);
+    this.indices_.set(entry.item, i);
   }
 
   /**
@@ -136,43 +136,43 @@ class PriorityQueue {
       const p = parent(i);
       if (this.heap_[p].priority <= entry.priority) break;
       this.heap_[i] = this.heap_[p];
-      this.indices_.set(this.heap_[p].value, i);
+      this.indices_.set(this.heap_[p].item, i);
       i = p;
     }
     this.heap_[i] = entry;
-    this.indices_.set(entry.value, i);
+    this.indices_.set(entry.item, i);
   }
 
   /**
-   * Reduce the priority of a given value.
-   * @param {T} value The item to be modified.
+   * Reduce the priority of a given item.
+   * @param {T} item The item to be modified.
    * @param {number} priority The new priority value.  Must not be
    *     greater than the existing value.
    * @return {void}
    */
-  reducePriority(value, priority) {
-    return this.set.call(this, value, priority);
+  reducePriority(item, priority) {
+    return this.set.call(this, item, priority);
   }
 
   /**
    * Insert an item into the queue or update its priority.  If the
-   * value is already in the queue then priority must not be greater
+   * item is already in the queue then priority must not be greater
    * than the previous priority or RangeError will be thrown.
-   * @param {T} value The item to be inserted/updated.
-   * @param {number} priority The (new) priority for value.
+   * @param {T} item The item to be inserted/updated.
+   * @param {number} priority The (new) priority for item.
    * @return {void}
    */
-  set(value, priority) {
-    let i = this.indices_.get(value);
+  set(item, priority) {
+    let i = this.indices_.get(item);
     if (i === undefined) {
       i = this.heap_.length;
-      this.heap_.push({value, priority});
+      this.heap_.push({item, priority});
     } else if (this.heap_[i].priority < priority) {
       throw new RangeError('attempting to increase priority');
     } else {
       this.heap_[i].priority = priority;
     }
-    // percolateUp will set/update this.indices_ entry for value.
+    // percolateUp will set/update this.indices_ entry for item.
     this.percolateUp_(i);
   }
 }
