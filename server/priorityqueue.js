@@ -106,21 +106,22 @@ class PriorityQueue {
    * @param {number} i Index of node to percolate up.
    */
   percolateDown_(i) {
-    const entry = this.heap_[i];
+    const heap = this.heap_;
+    const entry = heap[i];
     while (true) {
       const [l, r] = children(i);
-      if (l >= this.heap_.length) break;  // No children.
+      if (l >= heap.length) break;  // No children.
       let c = l;
-      if (r < this.heap_.length &&  // Two children.  Pick smallest.
-          this.heap_[r].priority < this.heap_[l].priority) {
+      if (r < heap.length &&  // Two children.  Pick smallest.
+          heap[r].priority < heap[l].priority) {
         c = r;
       }
-      if (entry.priority <= this.heap_[c].priority) break;
-      this.heap_[i] = this.heap_[c];
-      this.indices_.set(this.heap_[c].item, i);
+      if (entry.priority <= heap[c].priority) break;
+      heap[i] = heap[c];
+      this.indices_.set(heap[c].item, i);
       i = c;
     }
-    this.heap_[i] = entry;
+    heap[i] = entry;
     this.indices_.set(entry.item, i);
   }
 
@@ -131,15 +132,16 @@ class PriorityQueue {
    * @param {number} i Index of node to percolate up.
    */
   percolateUp_(i) {
-    const entry = this.heap_[i];
+    const heap = this.heap_;
+    const entry = heap[i];
     while (i > 0) {
       const p = parent(i);
-      if (this.heap_[p].priority <= entry.priority) break;
-      this.heap_[i] = this.heap_[p];
-      this.indices_.set(this.heap_[p].item, i);
+      if (heap[p].priority <= entry.priority) break;
+      heap[i] = heap[p];
+      this.indices_.set(heap[p].item, i);
       i = p;
     }
-    this.heap_[i] = entry;
+    heap[i] = entry;
     this.indices_.set(entry.item, i);
   }
 
