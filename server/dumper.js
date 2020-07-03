@@ -905,7 +905,7 @@ Dumper.prototype.skip = function(selector) {
  */
 Dumper.prototype.survey_ = function() {
   var /** !Set<!SubDumper> */ visited = new Set();
-  var /** !PriorityQueue<!SubDumper> */ queue = new PriorityQueue();
+  var /** !PriorityQueue<!SubDumper, number> */ queue = new PriorityQueue();
   // TODO(cpcallen): Remove badness; this info is already stored in queue.
   var /** !Map<!SubDumper,number> */ badness = new Map();
 

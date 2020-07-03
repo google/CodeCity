@@ -80,7 +80,7 @@ function checkInvariants(t, pq, note) {
     const p = parent(i);
     if (p >= 0) {
       t.assert('PriorityQueue heap ordering invariant' + note,
-               pq.heap_[i].priority >= pq.heap_[p].priority,
+               pq.compareFn_(pq.heap_[i].priority, pq.heap_[p].priority) >= 0,
                util.format(
                    '.heap_[%d].priority === %d, .heap_[%d].priority === %d',
                    i, pq.heap_[i].priority, p, pq.heap_[p].priority) +
@@ -117,27 +117,66 @@ exports.testPriorityQueue = function(t) {
 
   // Remove three items.
   for (let i = 1; i <= 3; i++) {
-    t.expect(name + ' .deleteMin() // ' + i, pq.deleteMin(), i);
-    t.expect(name + ' .length // ' + i, pq.length, 15 - i);
+    t.expect(name + ' .deleteMin()  // ' + i, pq.deleteMin(), i);
+    t.expect(name + ' .length  // ' + i, pq.length, 15 - i);
     checkInvariants(t, pq, 'after .deleteMin #' + i);
   }
 
   // Reduce priority of 6 to 4.5.
-  pq.set(6, 4.5);
+  pq.reducePriority(6, 4.5);
   checkInvariants(t, pq, 'after .reducePriority(6, 4.5)');
 
   // Remove next three items; verify order per changed priorities.
-  t.expect(name + ' .deleteMin() // 4', pq.deleteMin(), 4);
+  t.expect(name + ' .deleteMin()  // 4', pq.deleteMin(), 4);
   checkInvariants(t, pq, 'after .deleteMin #4');
-  t.expect(name + ' .deleteMin() // 5', pq.deleteMin(), 6);
+  t.expect(name + ' .deleteMin()  // 5', pq.deleteMin(), 6);
   checkInvariants(t, pq, 'after .deleteMin #5');
-  t.expect(name + ' .deleteMin() // 6', pq.deleteMin(), 5);
+  t.expect(name + ' .deleteMin()  // 6', pq.deleteMin(), 5);
   checkInvariants(t, pq, 'after .deleteMin #6');
 
   // Remove remaining items.
   for (let i = 7; i <= 15; i++) {
-    t.expect(name + ' .deleteMin() // ' + i, pq.deleteMin(), i);
-    t.expect(name + ' .length // ' + i, pq.length, 15 - i);
+    t.expect(name + ' .deleteMin()  // ' + i, pq.deleteMin(), i);
+    t.expect(name + ' .length  // ' + i, pq.length, 15 - i);
+    checkInvariants(t, pq, 'after .deleteMin #' + i);
+  }
+};
+
+/**
+ * Test PriorityQueue with a custom compareFn.
+ * @param {!T} t The test runner object.
+ */
+exports.testPriorityQueueCustomCompareFn = function(t) {
+  const name = 'PriorityQueue(/*compareFn*/)';
+  // Custom comparison reverses usual sort order.
+  const pq = new PriorityQueue((a,b) => b - a);
+
+  // Insert 1-7 in order.
+  for (let i = 1; i <= 7; i++) {
+    pq.set(i, i);
+    checkInvariants(t, pq, util.format('after .insert(%d, %d)', i, i));
+  }
+
+  // Remove three items (7, 6, 5).
+  for (let i = 1; i <= 3; i++) {
+    t.expect(name + ' .deleteMin()  // ' + i, pq.deleteMin(), 8 - i);
+    t.expect(name + ' .length  // ' + i, pq.length, 7 - i);
+    checkInvariants(t, pq, 'after .deleteMin #' + i);
+  }
+
+  // "Reduce" priority of 1 to Infinity.
+  pq.set(1, Infinity);
+  checkInvariants(t, pq, 'after .set(1, Infinity)');
+
+  // Remove next item; verify order per changed priorities.
+  t.expect(name + ' .deleteMin()  // 4', pq.deleteMin(), 1);
+  t.expect(name + ' .length  // 4', pq.length, 3);
+  checkInvariants(t, pq, 'after .deleteMin #4');
+
+  // Remove remaining items (4, 3, 2).
+  for (let i = 5; i <= 7; i++) {
+    t.expect(name + ' .deleteMin()  // ' + i, pq.deleteMin(), 9 - i);
+    t.expect(name + ' .length  // ' + i, pq.length, 7 - i);
     checkInvariants(t, pq, 'after .deleteMin #' + i);
   }
 };

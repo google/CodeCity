@@ -52,20 +52,66 @@ function children(i) {
 }
 
 /**
- * A priority queue.
+ * A priority queue.  The priority queue stores items of arbitrary
+ * type T, each with a corresponding priority of arbitrary type P.
+ *
+ * The priority values must have the property that they can be divided
+ * into a set of equivalence classes which are totally ordered,
+ * according to a comparison function compareFn.  The default
+ * compareFn compares priority values using <, ===, and >; a custom
+ * comparision function, using the same protocol as
+ * Array.prototype.sort, may be supplied to the constructor.
+ *
  * @stuct
- * @template T
+ * @template T, P
  */
 class PriorityQueue {
-  constructor() {
-   /** @private @const {!Array<{item: T, priority: number}>} */
+  /**
+   * @param {function(P,P):number=} compareFn A function that defines
+   *     the sort order of priorities.  Requirements are same as for
+   *     the compareFn argument to Array.prototype.sort.  Priorities
+   *     will otherwise be compared using <, > and ===.
+   */
+  constructor(compareFn) {
+   /** @private @const {!Array<{item: T, priority: P}>} */
     this.heap_ = [];
-    /** @private @const {!Map<T,number>} */
+    /** @private @const {!Map<T, number>} */
     this.indices_ = new Map();
+
+    if (compareFn) {
+      // Override built-in .compareFn_ with method that calls supplied
+      // compareFn and checks validity of its return value.
+      this.compareFn_ = function(a, b) {
+        const c = compareFn(a, b);
+        if (typeof c !== 'number' || Number.isNaN(c)) {
+          throw new TypeError('compareFn must return non-NaN number');
+        }
+        return c;
+      };
+    }
   }
 
   /**
-   * Remove the minimum
+   * Compare two priorities using <, > and ===.
+   *
+   * N.B.: This is a consistent comparision function over strings and
+   * over numbers (excluding NaN), but is NOT a consistent comparision
+   * function over arbitrary JS values.
+   * @private
+   * @param {P} a
+   * @param {P} b
+   * @return {number} negative if a<b, positive if a>b, 0 if a===b.
+   */
+  compareFn_(a, b) {
+    if (a === b) return 0;
+    if (a > b) return 1;
+    if (a < b) return -1;
+    throw new TypeError('incomparable priority values');
+  }
+
+  /**
+   * Remove the item with the minmum priority from the queue and
+   * return it.
    * @return {T} The minimum-priority item just removed.
    */
   deleteMin() {
@@ -87,14 +133,14 @@ class PriorityQueue {
   /**
    * Insert an item in the queue.
    * @param {T} item The item to be inserted.
-   * @param {number} priority The priority item to insert it with.
+   * @param {P} priority The priority value to insert it with.
    * @return {void}
    */
   insert(item, priority) {
     this.set.call(this, item, priority);
   }
 
-  /** @return {number} */
+  /** @return {number} The number of items in the queue. */
   get length() {
     return this.heap_.length;
   }
@@ -113,10 +159,10 @@ class PriorityQueue {
       if (l >= heap.length) break;  // No children.
       let c = l;
       if (r < heap.length &&  // Two children.  Pick smallest.
-          heap[r].priority < heap[l].priority) {
+          this.compareFn_(heap[r].priority, heap[l].priority) < 0) {
         c = r;
       }
-      if (entry.priority <= heap[c].priority) break;
+      if (this.compareFn_(entry.priority, heap[c].priority) <= 0) break;
       heap[i] = heap[c];
       this.indices_.set(heap[c].item, i);
       i = c;
@@ -136,7 +182,7 @@ class PriorityQueue {
     const entry = heap[i];
     while (i > 0) {
       const p = parent(i);
-      if (heap[p].priority <= entry.priority) break;
+      if (this.compareFn_(heap[p].priority, entry.priority) <= 0) break;
       heap[i] = heap[p];
       this.indices_.set(heap[p].item, i);
       i = p;
@@ -148,8 +194,8 @@ class PriorityQueue {
   /**
    * Reduce the priority of a given item.
    * @param {T} item The item to be modified.
-   * @param {number} priority The new priority value.  Must not be
-   *     greater than the existing value.
+   * @param {P} priority The new priority value.  Must not be greater
+   *     than the existing value.
    * @return {void}
    */
   reducePriority(item, priority) {
@@ -161,7 +207,7 @@ class PriorityQueue {
    * item is already in the queue then priority must not be greater
    * than the previous priority or RangeError will be thrown.
    * @param {T} item The item to be inserted/updated.
-   * @param {number} priority The (new) priority for item.
+   * @param {P} priority The (new) priority for item.
    * @return {void}
    */
   set(item, priority) {
@@ -169,7 +215,7 @@ class PriorityQueue {
     if (i === undefined) {
       i = this.heap_.length;
       this.heap_.push({item, priority});
-    } else if (this.heap_[i].priority < priority) {
+    } else if (this.compareFn_(priority, this.heap_[i].priority) > 0) {
       throw new RangeError('attempting to increase priority');
     } else {
       this.heap_[i].priority = priority;
