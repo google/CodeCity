@@ -92,6 +92,15 @@ class PriorityQueue {
   }
 
   /**
+   * Remove all entries from the PriorityQueue.
+   * @return {void}
+   */
+  clear() {
+    this.heap_.length = 0;
+    this.indices_.clear();
+  }
+
+  /**
    * Compare two priorities using <, > and ===.
    *
    * N.B.: This is a consistent comparision function over strings and

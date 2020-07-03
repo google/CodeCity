@@ -135,11 +135,9 @@ exports.testPriorityQueue = function(t) {
   checkInvariants(t, pq, 'after .deleteMin #6');
 
   // Remove remaining items.
-  for (let i = 7; i <= 15; i++) {
-    t.expect(name + ' .deleteMin()  // ' + i, pq.deleteMin(), i);
-    t.expect(name + ' .length  // ' + i, pq.length, 15 - i);
-    checkInvariants(t, pq, 'after .deleteMin #' + i);
-  }
+  pq.clear();
+  t.expect(name + ' .length  // after .clear', pq.length, 0);
+  checkInvariants(t, pq, 'after .clear');
 };
 
 /**
