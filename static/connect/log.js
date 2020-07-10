@@ -47,15 +47,15 @@ CCC.Log.init = function() {
  * Load the Prettify CSS and JavaScript.
  */
 CCC.Log.importPrettify = function() {
-  //<link rel="stylesheet" type="text/css" href="common/prettify.css">
-  //<script type="text/javascript" src="common/prettify.js"></script>
+  //<link rel="stylesheet" type="text/css" href="connect/prettify.css">
+  //<script type="text/javascript" src="connect/prettify.js"></script>
   var link = document.createElement('link');
   link.rel = 'stylesheet';
   link.type = 'text/css';
-  link.href = 'prettify.css';
+  link.href = STATIC_URL + 'connect/prettify.css';
   document.head.appendChild(link);
   var script = document.createElement('script');
-  script.src = 'prettify.js';
+  script.src = STATIC_URL + 'connect/prettify.js';
   document.head.appendChild(script);
 };
 

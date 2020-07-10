@@ -38,10 +38,10 @@ var queueList = Object.create(null);
 const DEFAULT_CFG = {
   // Internal port for this HTTP server.  Nginx hides this from users.
   httpPort: 7782,
-  // Path to the login page.
-  loginPath: '/login',
-  // Path to the connect page.
-  connectPath: '/connect',
+  // URL of login page (absolute or relative).
+  loginUrl: 'https://login.example.codecity.world/',
+  // URL of static folder (absolute or relative).
+  staticUrl: 'https://static.example.codecity.world/',
   // Host of Code City.
   remoteHost: 'localhost',
   // Port of Code City.
@@ -160,8 +160,9 @@ var Queue = function (id) {
  * @param {!Object} response HTTP server response object.
  * @param {string} filename Name of template file on disk.
  * @param {!Object} subs Hash of replacement strings.
+ * @param {boolean} denyFrame If true, don't allow page to be framed.
  */
-function serveFile(response, filename, subs) {
+function serveFile(response, filename, subs, denyFrame) {
   fs.readFile(filename, 'utf8', function(err, data) {
     if (err) {
       response.statusCode = 500;
@@ -170,13 +171,15 @@ function serveFile(response, filename, subs) {
     }
     // Inject substitutions.
     for (var name in subs) {
-      data = data.replace(name, subs[name]);
+      data = data.replace(new RegExp(name, 'g'), subs[name]);
     }
     // Serve page to user.
     response.statusCode = 200;
     response.setHeader('Content-Type', 'text/html');
-    // Prevent a user from iframing this page and scraping the session ID.
-    response.setHeader('X-Frame-Options', 'DENY');
+    if (denyFrame) {
+      // Prevent a user from iframing this page and scraping the session ID.
+      response.setHeader('X-Frame-Options', 'DENY');
+    }
     response.end(data);
   });
 }
@@ -195,7 +198,18 @@ function handleRequest(request, response) {
     return;
   }
 
-  if (request.method === 'GET' && request.url === CFG.connectPath) {
+  var path = request.url.split('?')[0];  // Strip off any parameters.
+  if (request.method === 'GET' && path.endsWith('/log')) {
+    serveFile(response, 'log.html', {'<<<STATIC_URL>>>': CFG.staticUrl}, false);
+    return;
+  }
+
+  if (request.method === 'GET' && path.endsWith('/world')) {
+    serveFile(response, 'world.html', {'<<<STATIC_URL>>>': CFG.staticUrl}, false);
+    return;
+  }
+
+  if (request.method === 'GET' && path.endsWith('/')) {
     var cookieList = {};
     var rhc = request.headers.cookie;
     rhc && rhc.split(';').forEach(function(cookie) {
@@ -207,7 +221,7 @@ function handleRequest(request, response) {
     if (!m) {
       console.log('Missing login cookie.  Redirecting.');
       response.writeHead(302, {  // Temporary redirect.
-         'Location': CFG.loginPath
+         'Location': CFG.loginUrl
        });
       response.end('Login required.  Redirecting.');
       return;
@@ -218,7 +232,7 @@ function handleRequest(request, response) {
     if (checksum !== m[2]) {
       console.log('Invalid login cookie: ' + cookieList.ID);
       response.writeHead(302, {  // Temporary redirect.
-         'Location': CFG.loginPath
+         'Location': CFG.loginUrl
        });
       response.end('Login invalid.  Redirecting.');
       return;
@@ -239,14 +253,16 @@ function handleRequest(request, response) {
     queue.client.write('identify as ' + loginId + '\n');
 
     var subs = {
-      '<<<SESSION_ID>>>': sessionId
+      '<<<SESSION_ID>>>': sessionId,
+      '<<<STATIC_URL>>>': CFG.staticUrl
     };
-    serveFile(response, 'connect.html', subs);
+    serveFile(response, 'connect.html', subs, true);
     console.log('Hello xxxx' + loginId.substring(loginId.length - 4) +
                 ', starting session ' + sessionId);
+    return;
+  }
 
-  } else if (request.method === 'POST' &&
-             request.url.startsWith(CFG.connectPath + '?ping')) {
+  if (request.method === 'POST' && path.endsWith('/ping')) {
     var requestBody = '';
     request.on('data', function(data) {
       requestBody += data;
@@ -270,10 +286,11 @@ function handleRequest(request, response) {
       }
       ping(receivedJson, response);
     });
-  } else {
-    response.statusCode = 404;
-    response.end('Unknown Connect URL: ' + request.url);
+    return;
   }
+
+  response.statusCode = 404;
+  response.end('Unknown connectServer URL: ' + request.url);
 }
 
 function ping(receivedJson, response) {

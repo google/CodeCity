@@ -40,17 +40,19 @@ var loginUrl;
 const DEFAULT_CFG = {
   // Internal port for this HTTP server.  Nginx hides this from users.
   httpPort: 7781,
-  // Absolute URL of server root.
-  origin: 'https://example.codecity.world',
-  // Relative path to the login page.
-  loginPath: '/login',
-  // Relative path to the connect page.
-  connectPath: '/connect',
+  // Absolute URL of login page.
+  loginUrl: 'https://login.example.codecity.world/',
+  // URL of connect page (absolute or relative).
+  connectUrl: 'https://connect.example.codecity.world/',
+  // URL of static folder (absolute or relative).
+  staticUrl: 'https://static.example.codecity.world/',
   // Google's API client ID.
   clientId: '00000000000-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx' +
       '.apps.googleusercontent.com',
   // Google's API client secret.
   clientSecret: 'yyyyyyyyyyyyyyyyyyyyyyyy',
+  // Root domain.
+  cookieDomain: 'example.codecity.world',
   // Random password for cookie encryption and salt for login IDs.
   password: 'zzzzzzzzzzzzzzzz',
   // Regexp on email addresses that must pass to allow access.
@@ -73,7 +75,7 @@ function serveFile(response, filename, subs) {
     } else {
       // Inject substitutions.
       for (var name in subs) {
-        data = data.replace(name, subs[name]);
+        data = data.replace(new RegExp(name, 'g'), subs[name]);
       }
       response.statusCode = 200;
       response.setHeader('Content-Type', 'text/html');
@@ -97,18 +99,14 @@ function handleRequest(request, response) {
     response.end('Connection rejected.');
     return;
   }
-  // Only serve the page specified by loginPath.
-  if (!request.url.startsWith(CFG.loginPath)) {
-    response.statusCode = 404;
-    response.end(`Unknown Login URL: ${request.url}`);
-    return;
-  }
-  var url = new URL(request.url, CFG.origin);
-  if (url.searchParams.has('windowclose')) {
+
+  var url = new URL(request.url, CFG.loginUrl);
+  if (request.method === 'GET' && url.searchParams.has('close')) {
     // Serve up close.html to close the window.
     serveFile(response, 'close.html', {});
     return;
   }
+
   var code = url.searchParams.get('code');
   if (!code) {
     // No auth code?  Serve login.html.
@@ -117,8 +115,11 @@ function handleRequest(request, response) {
     if (url.searchParams.has('loginThenClose')) {
       options.state = 'autoclose';
     }
-    var loginUrl = oauth2Client.generateAuthUrl(options);
-    serveFile(response, 'login.html', {'<<<LOGIN_URL>>>': loginUrl});
+    var subs = {
+      '<<<LOGIN_URL>>>': oauth2Client.generateAuthUrl(options),
+      '<<<STATIC_URL>>>': CFG.staticUrl
+    };
+    serveFile(response, 'login.html', subs);
     return;
   }
   // Handle the result of a login.
@@ -152,11 +153,11 @@ function handleRequest(request, response) {
       // We aren't using it now, but this might be used to filter users.
       if (emailRegexp.test(res.data.email)) {
        var state = url.searchParams.get('state');
-        var redirectUrl = (state === 'autoclose') ?
-            (CFG.loginPath + '?windowclose') : CFG.connectPath;
+        var domain = CFG.cookieDomain ? 'Domain=' + CFG.cookieDomain : '';
+        var redirectUrl = (state === 'autoclose') ? '?close' : CFG.connectUrl;
         response.writeHead(302, {
           // Temporary redirect
-          'Set-Cookie': 'ID=' + id + '_' + checksum + '; HttpOnly;',
+          'Set-Cookie': 'ID=' + id + '_' + checksum + '; HttpOnly;' + domain,
           'Location': redirectUrl
         });
         response.end('Login OK.  Redirecting.');
@@ -201,7 +202,7 @@ function startup() {
 
   // Create an authentication client for our interactions with Google.
   oauth2Client = new google.auth.OAuth2(
-      CFG.clientId, CFG.clientSecret, CFG.origin + CFG.loginPath);
+      CFG.clientId, CFG.clientSecret, CFG.loginUrl);
 
   // Start an HTTP server.
   var server = http.createServer(handleRequest);

@@ -34,7 +34,7 @@ CCC.MAX_HISTORY_SIZE = 1000;
  * Location to send pings to.
  * @constant
  */
-CCC.PING_URL = '/connect?ping';
+CCC.PING_URL = 'ping';
 
 // Properties below this point are not configurable.
 
