@@ -152,7 +152,7 @@ function handleRequest(request, response) {
       // E.g. 'students.gissv.org', or 'sjsu.edu'.
       // We aren't using it now, but this might be used to filter users.
       if (emailRegexp.test(res.data.email)) {
-       var state = url.searchParams.get('state');
+        var state = url.searchParams.get('state');
         var domain = CFG.cookieDomain ? 'Domain=' + CFG.cookieDomain : '';
         var redirectUrl = (state === 'autoclose') ? '?close' : CFG.connectUrl;
         response.writeHead(302, {

@@ -160,9 +160,8 @@ var Queue = function (id) {
  * @param {!Object} response HTTP server response object.
  * @param {string} filename Name of template file on disk.
  * @param {!Object} subs Hash of replacement strings.
- * @param {boolean} denyFrame If true, don't allow page to be framed.
  */
-function serveFile(response, filename, subs, denyFrame) {
+function serveFile(response, filename, subs) {
   fs.readFile(filename, 'utf8', function(err, data) {
     if (err) {
       response.statusCode = 500;
@@ -176,10 +175,6 @@ function serveFile(response, filename, subs, denyFrame) {
     // Serve page to user.
     response.statusCode = 200;
     response.setHeader('Content-Type', 'text/html');
-    if (denyFrame) {
-      // Prevent a user from iframing this page and scraping the session ID.
-      response.setHeader('X-Frame-Options', 'DENY');
-    }
     response.end(data);
   });
 }
@@ -200,12 +195,12 @@ function handleRequest(request, response) {
 
   var path = request.url.split('?')[0];  // Strip off any parameters.
   if (request.method === 'GET' && path.endsWith('/log')) {
-    serveFile(response, 'log.html', {'<<<STATIC_URL>>>': CFG.staticUrl}, false);
+    serveFile(response, 'log.html', {'<<<STATIC_URL>>>': CFG.staticUrl});
     return;
   }
 
   if (request.method === 'GET' && path.endsWith('/world')) {
-    serveFile(response, 'world.html', {'<<<STATIC_URL>>>': CFG.staticUrl}, false);
+    serveFile(response, 'world.html', {'<<<STATIC_URL>>>': CFG.staticUrl});
     return;
   }
 
@@ -256,7 +251,7 @@ function handleRequest(request, response) {
       '<<<SESSION_ID>>>': sessionId,
       '<<<STATIC_URL>>>': CFG.staticUrl
     };
-    serveFile(response, 'connect.html', subs, true);
+    serveFile(response, 'connect.html', subs);
     console.log('Hello xxxx' + loginId.substring(loginId.length - 4) +
                 ', starting session ' + sessionId);
     return;
