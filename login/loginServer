@@ -183,7 +183,7 @@ function readConfigFile(filename) {
   } catch (err) {
     console.log(`Configuration file ${filename} not found.  ` +
         'Creating new file.');
-    data = JSON.stringify(DEFAULT_CFG, null, 2);
+    data = JSON.stringify(DEFAULT_CFG, null, 2) + '\n';
     fs.writeFileSync(filename, data, 'utf8');
   }
   CFG = JSON.parse(data);
@@ -192,6 +192,9 @@ function readConfigFile(filename) {
         `Configuration file ${filename} not configured.  ` +
         'Please edit this file.');
   }
+  if (!CFG.loginUrl.endsWith('/')) CFG.loginUrl += '/';
+  if (!CFG.connectUrl.endsWith('/')) CFG.connectUrl += '/';
+  if (!CFG.staticUrl.endsWith('/')) CFG.staticUrl += '/';
 }
 
 /**
