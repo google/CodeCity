@@ -327,7 +327,7 @@ Code.Editor.sendXhr = function() {
   var selector = Code.Common.partsToSelector(Code.Editor.parts);
   var xhr = Code.Editor.codeRequest_;
   xhr.abort();
-  xhr.open('POST', '/code/editor');
+  xhr.open('POST', 'editorXhr');
   xhr.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
   xhr.onload = Code.Editor.receiveXhr;
   var src = Code.Editor.currentSource || '';
@@ -373,7 +373,7 @@ Code.Editor.receiveXhr = function() {
   if (data.saved === false && !data.login) {
     // Save was requested, but failed due to lack of a login.
     // Open login window.
-    var loginWindow = open('login.html', 'login', 'height=600,width=500');
+    var loginWindow = open('login', 'login', 'height=600,width=500');
     if (loginWindow) {
       var pid = setInterval(function() {
         if (loginWindow.closeMe) {
@@ -1183,7 +1183,7 @@ Code.svgEditor.parser = new DOMParser();
 Code.svgEditor.createDom = function(container) {
   container.innerHTML = `
 <div style="position: absolute; top: 60px; bottom: 0; left: 0; right: 0; overflow: hidden;">
-  <iframe src="/static/code/svg.html" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0"></iframe>
+  <iframe src="svg" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0"></iframe>
 </div>
   `;
   this.frameWindow_ = container.querySelector('iframe').contentWindow;
@@ -1351,7 +1351,7 @@ Code.diffEditor = new Code.GenericEditor('Diff');
 Code.diffEditor.createDom = function(container) {
   container.innerHTML = `
 <div style="position: absolute; top: 60px; bottom: 0; left: 0; right: 0; overflow: hidden;">
-  <iframe src="/static/code/diff.html" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0"></iframe>
+  <iframe src="diff" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0"></iframe>
 </div>
   `;
   this.frameWindow_ = container.querySelector('iframe').contentWindow;

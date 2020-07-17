@@ -234,15 +234,9 @@ Code.ObjectPanel.caseInsensitiveComp_ = function(a, b) {
 
 if (!window.TEST) {
   (function() {
-    // Load the data from Code City.
-    var hash = location.hash.substring(1);
-    var script = document.createElement('script');
-    script.src = '/code/objectPanel?' + hash;
-    document.head.appendChild(script);
-
     // Fill in the object name.
-    Code.ObjectPanel.parts =
-        Code.Common.selectorToParts(decodeURIComponent(hash));
+    var query = decodeURIComponent(location.search.substring(1));
+    Code.ObjectPanel.parts = Code.Common.selectorToParts(query);
     var div = document.getElementById('objectTitle');
     var lastPart = Code.ObjectPanel.parts[Code.ObjectPanel.parts.length - 1];
     var name;
