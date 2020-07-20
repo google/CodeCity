@@ -5,8 +5,8 @@ After=network.target
 
 [Service]
 SyslogIdentifier=cc-connect
-WorkingDirectory=/home/cc/CodeCity/connect
-User=cc
-Group=cc
-ExecStart=@/home/cc/CodeCity/connect/connectServer cc-connect
+WorkingDirectory=/home/codecity/CodeCity/connect
+User=codecity
+Group=codecity
+ExecStart=@/home/codecity/CodeCity/connect/connectServer cc-connect
 Restart=on-failure

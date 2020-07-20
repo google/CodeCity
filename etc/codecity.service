@@ -6,10 +6,10 @@ Wants=codecity-login.service codecity-connect.service codecity-mobwrite.service
 
 [Service]
 SyslogIdentifier=codecity
-WorkingDirectory=/home/cc/CodeCity/database
-User=cc
-Group=cc
-ExecStart=@/home/cc/CodeCity/server/codecity codecity codecity.cfg
+WorkingDirectory=/home/codecity/CodeCity/database
+User=codecity
+Group=codecity
+ExecStart=@/home/codecity/CodeCity/server/codecity codecity codecity.cfg
 Restart=on-failure
 
 [Install]

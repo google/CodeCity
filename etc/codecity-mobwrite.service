@@ -5,8 +5,8 @@ After=network.target
 
 [Service]
 SyslogIdentifier=cc-mobwrite
-WorkingDirectory=/home/cc/CodeCity/mobwrite
-User=cc
-Group=cc
-ExecStart=@/usr/bin/python cc-mobwrite /home/cc/CodeCity/mobwrite/mobwrite_server.py
+WorkingDirectory=/home/codecity/CodeCity/mobwrite
+User=codecity
+Group=codecity
+ExecStart=@/usr/bin/python cc-mobwrite /home/codecity/CodeCity/mobwrite/mobwrite_server.py
 Restart=on-failure
