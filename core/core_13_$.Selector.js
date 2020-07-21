@@ -602,8 +602,9 @@ $.utils.Binding.prototype.set = function set(value) {
     // somehow being subverted to access a different value than
     // expected due to one of the intervening objects being
     // compromised (by a getter, say).
+    var tmpId;
     do {
-      var tmpId = 'tmp' + Math.floor(Math.random() * 0xFFFFFFFF);
+      tmpId = 'tmp' + Math.floor(Math.random() * 0xFFFFFFFF);
     } while (tmpId in $);
     var evalGlobal = eval;
     try {
@@ -622,10 +623,15 @@ $.utils.Binding.prototype.set = function set(value) {
   }
 };
 Object.setOwnerOf($.utils.Binding.prototype.set, Object.getOwnerOf($.Selector.db.get));
-$.utils.Binding.prototype.get = function get() {
-  // Return the current value of the binding, or undefined if the
-  // binding does not exist.
-  var part = this.part
+$.utils.Binding.prototype.get = function get(inherited) {
+  /* Return the current value of the binding, or undefined if the
+   * binding does not exist.
+   *
+   * If inherited is true and the binding is a property binding that
+   * does not exist on the object, any inherited value will be returned
+   * instead.
+   */
+  var part = this.part;
   if (this.object === null) {
     if (!$.utils.code.isIdentifier(part)) {
         throw new TypeError('Invalid part');
@@ -637,7 +643,11 @@ $.utils.Binding.prototype.get = function get() {
   } else if(part === $.Selector.OWNER) {
     return Object.getOwnerOf(this.object);
   }
-  return this.object[part];
+  if (inherited || Object.prototype.hasOwnProperty.call(this.object, part)) {
+    return this.object[part];
+  } else {
+    return undefined;
+  }
 };
 Object.setOwnerOf($.utils.Binding.prototype.get, Object.getOwnerOf($.Selector.db.get));
 $.utils.Binding.prototype.isOwner = function isOwner() {
@@ -662,6 +672,29 @@ $.utils.Binding.prototype.isVar = function isVar() {
   // Returns true iff the binding is a top-level variable binding.
   return this.object === null;
 };
+$.utils.Binding.prototype.exists = function exists() {
+  /* Returns true iff the binding exists.
+   */
+  var part = this.part;
+  if (this.object === null) {
+    if (!$.utils.code.isIdentifier(part)) {
+        throw new TypeError('Invalid part');
+    }
+    var evalGlobal = eval;
+    try {
+      globalEval(varName);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  } else if(part === $.Selector.PROTOTYPE ||
+            part === $.Selector.OWNER) {
+    return true;
+  }
+  return Object.prototype.hasOwnProperty.call(this.object, part);
+};
+Object.setOwnerOf($.utils.Binding.prototype.exists, Object.getOwnerOf($.Selector.db.get));
+Object.setOwnerOf($.utils.Binding.prototype.exists.prototype, Object.getOwnerOf($.Selector.db.get));
 $.utils.Binding.from = function from(selector) {
   /* Create and return a Binding for the given selector - that is,
    * such that Binding.from(s).get() === s.toValue().

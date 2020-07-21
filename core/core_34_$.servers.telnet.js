@@ -23,18 +23,40 @@
 // AUTO-GENERATED CODE FROM DUMP.  EDIT WITH CAUTION!
 //////////////////////////////////////////////////////////////////////
 
-$.userDatabase = (new 'Object.create')(null);
-
+$.userDatabase = {};
+Object.setOwnerOf($.userDatabase, Object.getOwnerOf($.Jssp.OutputBuffer));
+$.userDatabase.get = function get(id) {
+  // Returns the user, or undefined.
+  var hash = $.utils.string.hash('md5', this.salt_ + id);
+  var table = this.byMd5;
+  var value = table[hash];
+  if (!($.user.isPrototypeOf(value))) {
+    delete table[hash];
+    return undefined;
+  }
+  return value;
+};
+Object.setOwnerOf($.userDatabase.get, Object.getOwnerOf($.Jssp.prototype.compile));
+Object.setOwnerOf($.userDatabase.get.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
+$.userDatabase.set = function set(id, user) {
+  var hash = $.utils.string.hash('md5', this.salt_ + id);
+  this.byMd5[hash] = user;
+};
+Object.setOwnerOf($.userDatabase.set, Object.getOwnerOf($.Jssp.prototype.compile));
+Object.setOwnerOf($.userDatabase.set.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
 $.userDatabase.validate = function validate() {
-  for (var key in this) {
-    if (!($.user.isPrototypeOf(this[key]))) {
-      delete this[key];
+  var table = this.byMd5
+  for (var key in table) {
+    if (!($.user.isPrototypeOf(table[key]))) {
+      delete table[key];
     }
   }
 };
-Object.defineProperty($.userDatabase, 'validate', {enumerable: false});
 Object.setOwnerOf($.userDatabase.validate, Object.getOwnerOf($.Jssp.OutputBuffer));
 Object.setOwnerOf($.userDatabase.validate.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
+$.userDatabase.salt_ = 'v2OU0LHchCl84mhu';
+
+$.userDatabase.byMd5 = (new 'Object.create')(null);
 
 $.servers.telnet = {};
 $.servers.telnet.connection = (new 'Object.create')($.connection);
@@ -54,8 +76,15 @@ $.servers.telnet.connection.onReceiveLine = function onReceiveLine(text) {
     this.write('{type: "narrate", text: "Unknown command: ' +
                $.utils.html.preserveWhitespace(text) + '"}');
   }
-  var user = this.user = $.userDatabase[m[1]] || ($.userDatabase[m[1]] = $.servers.telnet.createUser());
+  var user = $.userDatabase.get(m[1]);
+  if (!user) {
+    user = $.servers.telnet.createUser();
+    $.userDatabase.set(m[1], user);
+  }
+  this.user = user;
+  var rebind = false;
   if (user.connection) {
+    rebind = true;
     try {
       user.connection.close();
     } catch (e) {
@@ -68,7 +97,7 @@ $.servers.telnet.connection.onReceiveLine = function onReceiveLine(text) {
   user.connection = this;
   Object.setOwnerOf(Thread.current(), user);
   setPerms(this.user);
-  new Thread(user.onConnect, 0, user);
+  new Thread(user.onConnect, 0, user, rebind);
 };
 Object.setOwnerOf($.servers.telnet.connection.onReceiveLine, Object.getOwnerOf($.Jssp.OutputBuffer));
 $.servers.telnet.connection.onEnd = function onEnd() {
@@ -81,11 +110,11 @@ $.servers.telnet.connection.onEnd = function onEnd() {
     if (user.connection === this) {
       user.connection = null;
       $.system.log('Unbinding connection from ' + user.name);
+      (function () {
+        setPerms(user);
+        new Thread(user.onDisconnect, 0, user);
+      })();
     }
-    (function () {
-      setPerms(user);
-      new Thread(user.onDisconnect, 0, user);
-    })();
   }
   // Remove this and any other closed / debound connections from array of open connections.
   $.servers.telnet.validate();

@@ -53,69 +53,62 @@ $.pot.getSvgText.prototype.constructor = function() {
 $.pot.getSvgText.prototype.constructor.prototype = $.pot.getSvgText.prototype;
 Object.defineProperty($.pot.getSvgText.prototype.constructor, 'name', {value: 'getSvgText'});
 $.pot.plant = function plant(cmd) {
-    cmd.user.narrate('You plant ' + cmd.dobj.name + ' in ' + this.name + '.');
+    cmd.user.narrate('You plant ' + String(cmd.dobj) + ' in ' + String(this) + '.');
     if (cmd.user.location) {
-      cmd.user.location.narrate(user.name + ' plants ' + cmd.dobj.name + ' in ' + this.name + '.', cmd.user);
+      cmd.user.location.narrate(String(cmd.user) + ' plants ' + String(cmd.dobj) + ' in ' + String(this) + '.', cmd.user);
     }
     cmd.dobj.moveTo(null);
     this.stage = 0;
     this.seed = cmd.dobj;
   };
-$.pot.plant.prototype.constructor = function(cmd) {
-    user.narrate('You plant ' + cmd.dobj.name + ' in ' + this.name + '.');
-    if (user.location) {
-      user.location.narrate(user.name + ' plants ' + cmd.dobj.name + ' in ' + this.name + '.');
-    }
-    cmd.dobj.moveTo(null);
-    this.stage = 0;
-    this.seed = cmd.dobj;
-  };
-$.pot.plant.prototype.constructor.prototype = $.pot.plant.prototype;
-Object.defineProperty($.pot.plant.prototype.constructor, 'name', {value: 'plant'});
-$.pot.plant.prototype.constructor.verb = 'plant|put';
-$.pot.plant.prototype.constructor.dobj = 'any';
-$.pot.plant.prototype.constructor.prep = 'in/inside/into';
-$.pot.plant.prototype.constructor.iobj = 'this';
+Object.setOwnerOf($.pot.plant, Object.getOwnerOf($.Jssp.OutputBuffer));
 $.pot.plant.verb = 'plant|put';
 $.pot.plant.dobj = 'any';
 $.pot.plant.prep = 'in/inside/into';
 $.pot.plant.iobj = 'this';
 $.pot.water = function water(cmd) {
-    cmd.user.narrate('You water ' + this.name + '.');
-    if (cmd.user.location) {
-      cmd.user.location.narrate(cmd.user.name + ' waters ' + this.name + '.', cmd.user);
+  cmd.user.narrate('You water ' + String(this) + '.');
+  if (cmd.user.location) {
+    cmd.user.location.narrate(String(cmd.user) + ' waters ' + String(this) + '.', cmd.user);
+  }
+  if (this.seed && this.stage < 4) {
+    if (this.stage === 2) {
+      var newSeed = Object.create(this.seed);
+      newSeed.moveTo(this.location, this);
+      cmd.user.location.narrate('A new seed appears.');
     }
-    if (this.seed && this.stage < 5) {
-      if (this.stage === 2) {
-        var newSeed = Object.create(this.seed);
-        newSeed.moveTo(this.location, this);
-        cmd.user.location.narrate('A new seed appears.');
-      }
-      this.stage++;
-      $.physical.moveTo.updateScene_(this.location);
-    }
-  };
+    this.stage++;
+    this.location.updateScene(true);
+  }
+};
+Object.setOwnerOf($.pot.water, Object.getOwnerOf($.Jssp.prototype.compile));
 $.pot.water.verb = 'water';
 $.pot.water.dobj = 'this';
 $.pot.water.prep = 'none';
 $.pot.water.iobj = 'none';
 $.pot.getCommands = function getCommands(who) {
-    var commands = $.thing.getCommands.call(this, who);
-    commands.push('water ' + this.name);
-    return commands;
-  };
-$.pot.getCommands.prototype.constructor = function(who) {
-    var commands = $.thing.getCommands.call(this, who);
-    commands.push('water ' + this.name);
-    return commands;
-  };
-$.pot.getCommands.prototype.constructor.prototype = $.pot.getCommands.prototype;
-Object.defineProperty($.pot.getCommands.prototype.constructor, 'name', {value: 'getCommands'});
+  var commands = $.thing.getCommands.call(this, who);
+  commands.push('water ' + this.name);
+  return commands;
+};
+Object.setOwnerOf($.pot.getCommands, Object.getOwnerOf($.Jssp.prototype.compile));
 $.pot.contents_ = [];
 $.pot.contents_.forObj = $.pot;
 Object.defineProperty($.pot.contents_, 'forObj', {writable: false, enumerable: false, configurable: false});
 $.pot.contents_.forKey = 'contents_';
 Object.defineProperty($.pot.contents_, 'forKey', {writable: false, enumerable: false, configurable: false});
+$.pot.reset = function reset(cmd) {
+  $.physicals["a seed"].moveTo(this.location);
+  this.stage = 0;
+  this.seed = null;
+  cmd.user.narrate('You reset ' + String(this) + '.');
+};
+Object.setOwnerOf($.pot.reset, Object.getOwnerOf($.Jssp.prototype.compile));
+Object.setOwnerOf($.pot.reset.prototype, Object.getOwnerOf($.Jssp.prototype.compile));
+$.pot.reset.verb = 'reset';
+$.pot.reset.dobj = 'this';
+$.pot.reset.prep = 'none';
+$.pot.reset.iobj = 'none';
 
 $.pot.location = undefined;
 
@@ -136,107 +129,116 @@ $.physicals['flower pot'] = $.pot;
 $.thrower = (new 'Object.create')($.thing);
 $.thrower.name = 'a flame thrower';
 $.thrower.aliases = [];
+Object.setOwnerOf($.thrower.aliases, Object.getOwnerOf($.Jssp.OutputBuffer));
 $.thrower.aliases[0] = 'flame thrower';
 $.thrower.aliases[1] = 'flamethrower';
+$.thrower.aliases[2] = 'a flamethrower';
+$.thrower.aliases[3] = 'thrower';
 $.thrower.description = 'A backpack filled with napalm.  A pilot light is burning quietly.';
 $.thrower.svgText = '<g transform=\'scale(-1.5, 1.5) translate(17, -10)\'><rect class="strokeBlack fillGrey" height="13.06639" width="4.10959" x="-19.44152" y="48.68282"/>\n<path d="m-19.75764,50.15806c-2.23042,-3.16122 -8.40716,0.81052 0.148,10.25242"/>\n<path class="strokeBlack fillGrey" d="m-17.33404,58.58799l-8.74377,0.19224l-7.6768,-4.20565l-0.7354,1.68199l8.09674,4.41641l9.04311,-0.42061" fill-opacity="null" stroke-dasharray="null" stroke-linecap="null" stroke-linejoin="null" stroke-opacity="null" stroke-width="null"/></g>';
-$.thrower.wear = function(cmd) {
-    this.moveTo(cmd.user);
-    this.savedSvg = cmd.user.svgText;
-    cmd.user.svgText += this.svgText;
-    cmd.user.narrate('You strap on ' + this.name + '.');
-    if (cmd.user.location) {
-      cmd.user.location.narrate(cmd.user.name + ' straps on ' + this.name + '.', cmd.user);
-      $.physical.moveTo.updateScene_(cmd.user.location);
-    }
-  };
-delete $.thrower.wear.name;
-$.thrower.wear.prototype.constructor = function(cmd) {
-    this.moveTo(user);
-    this.savedSvg = user.svgText;
-    user.svgText += this.svgText;
-    user.narrate('You strap on ' + this.name + '.');
-    if (user.location) {
-      user.location.narrate(user.name + ' straps on ' + this.name + '.');
-      $.physical.moveTo.updateScene_(user.location);
-    }
-  };
-$.thrower.wear.prototype.constructor.prototype = $.thrower.wear.prototype;
-Object.defineProperty($.thrower.wear.prototype.constructor, 'name', {value: 'wear'});
-$.thrower.wear.prototype.constructor.verb = 'put|strap';
-$.thrower.wear.prototype.constructor.dobj = 'this';
-$.thrower.wear.prototype.constructor.prep = 'on top of/on/onto/upon';
-$.thrower.wear.prototype.constructor.iobj = 'none';
-$.thrower.wear.verb = 'put|strap';
-$.thrower.wear.dobj = 'this';
-$.thrower.wear.prep = 'on top of/on/onto/upon';
-$.thrower.wear.iobj = 'none';
-$.thrower.unwear = function(cmd) {
-    cmd.user.svgText = this.savedSvg;
-    this.savedSvg = undefined;
-    cmd.user.narrate('You unstrap ' + this.name + '.');
-    if (cmd.user.location) {
-      cmd.user.location.narrate(cmd.user.name + ' unstraps ' + this.name + '.', cmd.user);
-      $.physical.moveTo.updateScene_(cmd.user.location);
-    }
-  };
-delete $.thrower.unwear.name;
-$.thrower.unwear.prototype.constructor = function(cmd) {
-    user.svgText = this.savedSvg;
-    this.savedSvg = undefined;
-    user.narrate('You unstrap ' + this.name + '.');
-    if (user.location) {
-      user.location.narrate(user.name + ' unstraps ' + this.name + '.');
-      $.physical.moveTo.updateScene_(user.location);
-    }
-  };
-$.thrower.unwear.prototype.constructor.prototype = $.thrower.unwear.prototype;
-Object.defineProperty($.thrower.unwear.prototype.constructor, 'name', {value: 'unwear'});
-$.thrower.unwear.prototype.constructor.verb = 'remove|unstrap';
-$.thrower.unwear.prototype.constructor.dobj = 'this';
-$.thrower.unwear.prototype.constructor.prep = 'none';
-$.thrower.unwear.prototype.constructor.iobj = 'none';
-$.thrower.unwear.verb = 'remove|unstrap';
-$.thrower.unwear.dobj = 'this';
-$.thrower.unwear.prep = 'none';
-$.thrower.unwear.iobj = 'none';
+$.thrower.wear = function wear(user) {
+  if (this.savedSvg) {
+    user.narrate(String(this) + ' is already being worn.');
+    return;
+  }
+  this.moveTo(user);
+  this.savedSvg = user.svgText;
+  user.svgText += this.svgText;
+  if (user.location) {
+    user.location.updateScene(true);
+    user.location.narrate(String(user) + ' straps on ' + String(this) + '.', user);
+  }
+  user.narrate('You strap on ' + String(this) + '.');
+};
+Object.setOwnerOf($.thrower.wear, Object.getOwnerOf($.Jssp.prototype.compile));
+$.thrower.unwear = function unwear(user) {
+  if (!this.savedSvg) {
+    user.narrate('You aren\'t wearing ' + String(this) + '.');
+    return;
+  }
+  user.svgText = this.savedSvg;
+  this.savedSvg = undefined;
+  if (user.location) {
+    user.location.updateScene(true);
+    user.location.narrate(String(user) + ' takes off ' + String(this) + '.', user);
+  }
+  user.narrate('You takes off ' + String(this) + '.');
+};
+Object.setOwnerOf($.thrower.unwear, Object.getOwnerOf($.Jssp.prototype.compile));
 $.thrower.fire = function fire(cmd) {
-    var memo = {
-      type: 'iframe',
-      url: '/static/flamethrower.html',
-      alt: 'FIRE!!!'
-    };
-    cmd.user.location.sendMemo(memo);
-    if (cmd.iobj.seed) {
-      cmd.iobj.seed = null;
-    }
-    if (typeof cmd.iobj.stage === 'number') {
-      if (cmd.iobj.stage > 0) {
-        cmd.iobj.stage = cmd.iobj.stages.length - 1;
-      }
-    }
-    suspend(5000);
-    $.physical.moveTo.updateScene_(cmd.iobj.location);
+  var memo = {
+    type: 'iframe',
+    url: '/static/flamethrower.html',
+    alt: 'FIRE!!!'
   };
-Object.setOwnerOf($.thrower.fire, Object.getOwnerOf($.container.getDescription));
+  cmd.user.location.sendMemo(memo);
+  if (cmd.iobj.seed) {
+    cmd.iobj.seed = null;
+  }
+  if (typeof cmd.iobj.stage === 'number') {
+    if (cmd.iobj.stage > 0) {
+      cmd.iobj.stage = cmd.iobj.stages.length - 1;
+    }
+  }
+  suspend(5000);
+  cmd.user.location.updateScene(true);
+};
+Object.setOwnerOf($.thrower.fire, Object.getOwnerOf($.Jssp.prototype.compile));
 $.thrower.fire.verb = 'fire';
 $.thrower.fire.dobj = 'this';
 $.thrower.fire.prep = 'at/to';
 $.thrower.fire.iobj = 'any';
-$.thrower.getCommands = function(who) {
-    var commands = $.thing.getCommands.call(this, who);
-    if (this.savedSvg) {
-      commands.push('remove ' + this.name);
-    } else {
-      commands.push('strap ' + this.name + ' on');
-    }
-    return commands;
-  };
+$.thrower.getCommands = function getCommands(who) {
+  var commands = $.thing.getCommands.call(this, who);
+  if (this.savedSvg) {
+    commands.push('take off ' + this.name);
+  } else {
+    commands.push('put on ' + this.name);
+  }
+  return commands;
+};
+Object.setOwnerOf($.thrower.getCommands, Object.getOwnerOf($.Jssp.prototype.compile));
 $.thrower.contents_ = [];
 $.thrower.contents_.forObj = $.thrower;
 Object.defineProperty($.thrower.contents_, 'forObj', {writable: false, enumerable: false, configurable: false});
 $.thrower.contents_.forKey = 'contents_';
 Object.defineProperty($.thrower.contents_, 'forKey', {writable: false, enumerable: false, configurable: false});
+$.thrower.unwear1 = function unwear1(cmd) {
+  this.unwear(cmd.user);
+};
+Object.setOwnerOf($.thrower.unwear1, Object.getOwnerOf($.Jssp.prototype.compile));
+Object.setOwnerOf($.thrower.unwear1.prototype, Object.getOwnerOf($.Jssp.prototype.compile));
+$.thrower.unwear1.verb = 'take';
+$.thrower.unwear1.dobj = 'this';
+$.thrower.unwear1.prep = 'off/off of';
+$.thrower.unwear1.iobj = 'none';
+$.thrower.unwear2 = function unwear2(cmd) {
+  this.unwear(cmd.user);
+};
+Object.setOwnerOf($.thrower.unwear2, Object.getOwnerOf($.Jssp.prototype.compile));
+Object.setOwnerOf($.thrower.unwear2.prototype, Object.getOwnerOf($.Jssp.prototype.compile));
+$.thrower.unwear2.verb = 'take';
+$.thrower.unwear2.dobj = 'none';
+$.thrower.unwear2.prep = 'off/off of';
+$.thrower.unwear2.iobj = 'this';
+$.thrower.wear1 = function wear1(cmd) {
+  this.wear(cmd.user);
+};
+Object.setOwnerOf($.thrower.wear1, Object.getOwnerOf($.Jssp.prototype.compile));
+Object.setOwnerOf($.thrower.wear1.prototype, Object.getOwnerOf($.Jssp.prototype.compile));
+$.thrower.wear1.verb = 'put';
+$.thrower.wear1.dobj = 'this';
+$.thrower.wear1.prep = 'on top of/on/onto/upon';
+$.thrower.wear1.iobj = 'none';
+$.thrower.wear2 = function wear2(cmd) {
+  this.wear(cmd.user);
+};
+Object.setOwnerOf($.thrower.wear2, Object.getOwnerOf($.Jssp.prototype.compile));
+Object.setOwnerOf($.thrower.wear2.prototype, Object.getOwnerOf($.Jssp.prototype.compile));
+$.thrower.wear2.verb = 'put';
+$.thrower.wear2.dobj = 'none';
+$.thrower.wear2.prep = 'on top of/on/onto/upon';
+$.thrower.wear2.iobj = 'this';
 
 $.thrower.location = undefined;
 
