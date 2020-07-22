@@ -199,7 +199,7 @@ $.user.moveTo = function moveTo(dest, opt_neighbour) {
 	return r;
 };
 Object.setOwnerOf($.user.moveTo, Object.getOwnerOf($.Jssp.OutputBuffer));
-$.user.moveTo.prototype = $.physical.moveTo.prototype;
+Object.setOwnerOf($.user.moveTo.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
 $.user.getNullSvgText = function getNullSvgText() {
   // Return an SVG text for the null void (i.e., what
   // a user sees if they're .location is null).
@@ -801,7 +801,8 @@ $.thing.getCommands = function getCommands(who) {
   }
   return commands;
 };
-Object.setOwnerOf($.thing.getCommands, Object.getOwnerOf($.Jssp.prototype.compile));
+Object.setOwnerOf($.thing.getCommands, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.thing.getCommands.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
 $.thing.movable = true;
 $.thing.location = null;
 $.thing.contents_ = [];
@@ -862,7 +863,8 @@ $.container.svgTextClosed = '<path class="fillWhite" d="m10,90l5,-5l10,0l0,10l-5
 $.container.getSvgText = function getSvgText() {
   return this.isOpen ? this.svgTextOpen : this.svgTextClosed;
 };
-$.container.getSvgText.prototype = $.physical.getSvgText.prototype;
+Object.setOwnerOf($.container.getSvgText, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.container.getSvgText.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
 $.container.isOpen = true;
 $.container.open = function open(cmd) {
   if (this.isOpen) {
@@ -932,8 +934,8 @@ $.container.getCommands = function getCommands(who) {
   }
   return commands;
 };
-Object.setOwnerOf($.container.getCommands, Object.getOwnerOf($.Jssp.prototype.compile));
-$.container.getCommands.prototype = $.thing.getCommands.prototype;
+Object.setOwnerOf($.container.getCommands, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.container.getCommands.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
 $.container.putIn = function putIn(cmd) {
   if ($.utils.command.matchFailed(cmd.dobj, cmd.dobjstr, cmd.user)) return;
   var thing = cmd.dobj;
@@ -972,7 +974,7 @@ $.container.willAccept = function willAccept(what, src) {
    * observable side-effect (making noise, causing some other action,
    * etc.)
    */
-  return this.isOpen;
+  return this.isOpen && $.thing.isPrototypeOf(what);
 };
 Object.setOwnerOf($.container.willAccept, Object.getOwnerOf($.Jssp.OutputBuffer));
 $.container.willAccept.prototype = $.physical.willAccept.prototype;

@@ -214,10 +214,13 @@
       "<OVERVIEW>": "Top-level URL handlers for Code City."
     },
     "contents": [
-      {"path": "$.www", "do": "ATTR"},
-      "$.www[404]",
-      "$.www['/']",
-      "$.www['/robots.txt']"
+      {"path": "$.http", "do": "ATTR"},
+      {"path": "$.http['www.']", "do": "ATTR"},
+      "$.http['www.'][404]",
+      "$.http['www.']['/']",
+      "$.http['www.']['/mirror']",
+      "$.http['www.']['/robots.txt']",
+      {"path": "$.www", "do": "ATTR"}
     ]
   }, {
     "filename": "core_25_$.db.tempId.js",
@@ -245,11 +248,11 @@
     "filename": "core_26_$.www.editor.js",
     "headerSubs": {
       "<YEAR>": "2017",
-      "<OVERVIEW>": "Code editor for Code City."
+      "<OVERVIEW>": "Inline code editor for Code City."
     },
     "contents": [
-      "$.www.editor",
-      "$.www['/editor']"
+      "$.http['www.'].editor",
+      "$.http['www.']['/editor']"
     ]
   }, {
     "filename": "core_27_$.www.code.js",
@@ -259,9 +262,19 @@
     },
     "contents": [
       "$.www.code",
+      "$.http['code.']",
       "$.www['/code']",
       "$.www['/code/editor']",
       "$.www['/code/objectPanel']"
+    ]
+  }, {
+    "filename": "core_28_$.servers.eval.js",
+    "headerSubs": {
+      "<YEAR>": "2020",
+      "<OVERVIEW>": "Eval server for Code City."
+    },
+    "contents": [
+      "$.servers.eval"
     ]
   },
 
@@ -319,6 +332,8 @@
     },
     "pruneRest": ["$.servers.telnet.connected"],
     "contents": [
+      "$.userDatabase",
+      {"path": "$.userDatabase.byMd5", "do": "ATTR"},
       "$.servers.telnet",
       {"path": "$.servers.telnet.connected", "do": "ATTR"}
     ]
@@ -389,10 +404,13 @@
       "<OVERVIEW>": "Genetics lab demo for Code City."
     },
     "contents": [
-      "$.cage",
-      {"path": "$.cage.location", "do": "DONE"},
-      {"path": "$.physicals.cage", "do": "DONE"},
       "$.physicals['Genetics Lab']",
+      {"path": "$.physicals['Genetics Lab'].contents_", "do": "DONE"},
+      {"path": "$.physicals['Genetics Lab'].contents_.forObj", "do": "DONE"},
+      {"path": "$.physicals['Genetics Lab'].contents_.forKey", "do": "DONE"},
+      "$.cage",
+      {"path": "$.cage.location", "do": "DECL"},
+      {"path": "$.physicals.cage", "do": "DONE"},
       "$.physicals['Genetic Mouse Prototype']",
       "$.www['/geneticsEditor']"
     ]

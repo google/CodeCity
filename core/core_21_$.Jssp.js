@@ -124,7 +124,7 @@ $.Jssp.prototype.compile = function compile() {
   if (state !== STATES.LITERAL) {
     throw new SyntaxError('Unclosed JSSP tag.');
   }
-  var code = '\n' + code.join('\n') + '\n';
+  code = '\n' + code.join('\n') + '\n';
   try {
     var newFunc = new Function('request, response', code);
   } catch (e) {

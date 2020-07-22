@@ -73,6 +73,18 @@ $.utils.imageMatch.recog = function send(svgText) {
 };
 Object.setOwnerOf($.utils.imageMatch.recog, {});
 Object.setOwnerOf($.utils.imageMatch.recog.prototype, Object.getOwnerOf($.utils.imageMatch.recog));
+$.utils.regexp = {};
+Object.setOwnerOf($.utils.regexp, Object.getOwnerOf($.utils.imageMatch.recog.prototype));
+$.utils.regexp.escape = function escape(str) {
+  // Escape a string so that it may be used as a literal in a regular expression.
+  // Example: $.utils.regexp.escape('[...]') -> "\\[\\.\\.\\.\\]"
+  // Usecase: new RegExp($.utils.regexp.escape('[...]')).test('Alpha [...] Beta')
+  //
+  // Source: https://stackoverflow.com/questions/3561493/is-there-a-regexp-escape-function-in-javascript
+  return str.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+};
+Object.setOwnerOf($.utils.regexp.escape, Object.getOwnerOf($.utils.imageMatch.recog.prototype));
+Object.setOwnerOf($.utils.regexp.escape.prototype, Object.getOwnerOf($.utils.imageMatch.recog.prototype));
 
 $.utils.array = {};
 $.utils.array.filterUntilFound = function filterUntilFound(array, filter1 /*, filter2, filter3... */) {

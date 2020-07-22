@@ -29,14 +29,12 @@ $.physical.description = '';
 $.physical.svgText = '';
 $.physical.location = null;
 $.physical.contents_ = null;
-$.physical.getSvgText = function() {
+$.physical.getSvgText = function getSvgText() {
   return this.svgText;
 };
-$.physical.getSvgText.prototype.constructor = function getSvgText() {
-  return this.state ? this.svgText : this.svgTextNight;
-};
-Object.setOwnerOf($.physical.getSvgText.prototype.constructor, Object.getOwnerOf($.Jssp.prototype.compile));
-$.physical.getSvgText.prototype.constructor.prototype = $.physical.getSvgText.prototype;
+Object.setOwnerOf($.physical.getSvgText, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.physical.getSvgText.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
+
 $.physical.getDescription = function() {
   return this.description;
 };
@@ -588,10 +586,12 @@ $.physical.edit = function inspect(cmd) {
     cmd.user.narrate('Unfortuantely the code editor does not know how to locate ' + String(this) + ' yet.');
     return;
   }
-  var link = '/code?' + encodeURIComponent(String(selector));
+  // No need to encode $.
+  var query = encodeURIComponent(String(selector)).replace(/%24/g, '$');
+  var link = $.servers.http.makeUrl('code', '') + '?' + query;
   cmd.user.readMemo({type: "link", href: link});
 };
-Object.setOwnerOf($.physical.edit, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.physical.edit, Object.getOwnerOf($.Jssp.prototype.compile));
 $.physical.edit.verb = 'edit';
 $.physical.edit.dobj = 'this';
 $.physical.edit.prep = 'none';

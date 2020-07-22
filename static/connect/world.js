@@ -493,7 +493,8 @@ CCC.World.connectPanel = function(memo) {
 
   var img = document.createElement('img');
   img.className = 'connectionIcon';
-  img.src = 'connectionIcons.svg' + (isConnected ? '#connect' : '#reload');
+  img.src = STATIC_URL + 'connect/connectionIcons.svg' +
+      (isConnected ? '#connect' : '#reload');
   df.appendChild(img);
 
   div = document.createElement('div');
@@ -1070,7 +1071,7 @@ CCC.World.publishHistory = function(historyElement) {
     // Add <img height=21 width=21 src="close.png" title="Close iframe">
     var closeImg = new Image(21, 21);
     closeImg.className = 'iframeClose';
-    closeImg.src = 'close.png';
+    closeImg.src = STATIC_URL + 'connect/close.png';
     closeImg.title = CCC.World.getTemplate('closeIframeTemplate');
     closeImg.addEventListener('click', function() {
       closeImg.style.display = 'none';
