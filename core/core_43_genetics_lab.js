@@ -43,7 +43,7 @@ $.cage.contents_.forObj = $.cage;
 Object.defineProperty($.cage.contents_, 'forObj', {writable: false, enumerable: false, configurable: false});
 $.cage.contents_.forKey = 'contents_';
 Object.defineProperty($.cage.contents_, 'forKey', {writable: false, enumerable: false, configurable: false});
-$.cage.isOpen = true;
+$.cage.isOpen = false;
 $.cage.variation = 1;
 $.cage.tempo = 30;
 $.cage.maxPopulation = 50;
@@ -348,8 +348,7 @@ $.cage.mousePrototype.edit = function edit(cmd) {
   var link = $.servers.http.makeUrl('www', 'geneticsEditor?' + query);
   cmd.user.readMemo({type: "link", href: link});
 };
-Object.setOwnerOf($.cage.mousePrototype.edit, Object.getOwnerOf($.Jssp.prototype.compile));
-Object.setOwnerOf($.cage.mousePrototype.edit.prototype, Object.getOwnerOf($.Jssp.prototype.compile));
+Object.setOwnerOf($.cage.mousePrototype.edit, Object.getOwnerOf($.Jssp.prototype.compile));Object.setOwnerOf($.cage.mousePrototype.edit.prototype, Object.getOwnerOf($.Jssp.prototype.compile));
 $.cage.mousePrototype.edit.verb = 'edit';
 $.cage.mousePrototype.edit.dobj = 'this';
 $.cage.mousePrototype.edit.prep = 'none';
@@ -360,6 +359,7 @@ $.cage.mousePrototype.getCommands = function getCommands(who) {
   return commands;
 };
 Object.setOwnerOf($.cage.mousePrototype.getCommands, Object.getOwnerOf($.Jssp.prototype.compile));
+$.cage.mousePrototype.getCommands.prototype = $.thing.getCommands.prototype;
 $.cage.isMouse = function isMouse(animal) {
   return this.mousePrototype.isPrototypeOf(animal) && (animal.location === this);
 };

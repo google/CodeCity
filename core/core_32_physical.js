@@ -34,6 +34,7 @@ $.physical.getSvgText = function getSvgText() {
 };
 Object.setOwnerOf($.physical.getSvgText, Object.getOwnerOf($.Jssp.OutputBuffer));
 Object.setOwnerOf($.physical.getSvgText.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
+
 $.physical.getDescription = function() {
   return this.description;
 };
