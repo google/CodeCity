@@ -697,10 +697,14 @@ Code.Editor.JSHintReady = false;
  * Defer loading until page is loaded and responsive.
  */
 Code.Editor.importJSHint = function() {
-  //<script type="text/javascript" src="/static/JSHint/jshint.js"></script>
+  // <script type="text/javascript" src="/static/JSHint/jshint.js"></script>
   var script = document.createElement('script');
   script.type = 'text/javascript';
-  script.src = '/static/JSHint/jshint.js';
+  var mySource = document.getElementById('editor_js').src;
+  // Might be with or without subdomains:
+  // https://static.google.codecity.world/code/editor.js
+  // http://localhost:8080/static/code/editor.js
+  script.src = mySource.replace('code/editor.js', 'JSHint/jshint.js');
   script.onload = function() {
     Code.Editor.JSHintReady = true;
     // Activate linting for any editor that's loaded and waiting.

@@ -94,7 +94,8 @@ Code.ObjectPanel.addLink = function(part, type, section) {
   var newParts = Code.ObjectPanel.parts.concat(part);
   var selector = Code.Common.partsToSelector(newParts);
   var a = document.createElement('a');
-  a.href = '/code?' + encodeURIComponent(selector);
+  var query = encodeURIComponent(selector).replace(/%24/g, '$');
+  a.href = './?' + query;
   a.target = '_blank';
   a.setAttribute('data-link', JSON.stringify(part));
   a.addEventListener('click', Code.ObjectPanel.click);
