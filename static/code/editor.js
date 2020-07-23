@@ -375,15 +375,12 @@ Code.Editor.receiveXhr = function() {
     // Open login window.
     var loginWindow = open('login', 'login', 'height=600,width=500');
     if (loginWindow) {
-      var pid = setInterval(function() {
-        if (loginWindow.closeMe) {
+      window.addEventListener('message', function(event) {
+        if (event.data === 'closeMe') {
           loginWindow.close();
           Code.Editor.save();
         }
-        if (loginWindow.closed) {
-          clearInterval(pid);
-        }
-      }, 1000);
+      }, false);
     } else {
       alert('Your browser has blocked the opening of the page you requested.\n' +
             'Please allow pop-ups on this domain. ✓️');
