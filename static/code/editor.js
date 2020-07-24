@@ -31,6 +31,16 @@ Code.Editor.currentEditor = null;
 Code.Editor.uncreatedEditorSource = '';
 
 /**
+ * URL of this script.
+ * Might be with or without subdomains:
+ * https://static.google.codecity.world/code/editor.js
+ * http://localhost:8080/static/code/editor.js
+ * @type {string}
+ */
+Code.Editor.mySource = document.getElementById('editor_js').src;
+
+
+/**
  * Got a ping from someone.  Something might have changed and need updating.
  */
 Code.Editor.receiveMessage = function() {
@@ -247,9 +257,9 @@ Code.Editor.beforeUnload.disabled = false;
 Code.Editor.loadMobWrite = function(callback) {
   if (!Code.Editor.waitMobWrite_.isLoaded) {
     var files = ['dmp.js', 'mobwrite_core.js', 'mobwrite_cc.js'];
-    for (var i = 0; i < files.length; i++) {
+    for (var file of files) {
       var script = document.createElement('script');
-      script.src = 'mobwrite/' + files[i];
+      script.src = Code.Editor.mySource.replace('editor.js', 'mobwrite/' + file);
       document.head.appendChild(script);
     }
   }
@@ -270,6 +280,17 @@ Code.Editor.waitMobWrite_ = function(callback) {
   } else {
     if (!Code.Editor.waitMobWrite_.isLoaded) {
       Code.MobwriteShare.init();
+      // Point MobWrite at the daemon on Code City.
+      var url = Code.Editor.mySource.replace('/code/editor.js', '');
+      if (url.endsWith('/static')) {
+        // http://localhost:8080/static
+        mobwrite.syncGateway = url.replace(/\/static$/, '/mobwrite');
+      } else if (/:\/\/static\./.test(url)) {
+        // https://static.google.codecity.world
+        mobwrite.syncGateway = url.replace('://static.', '://mobwrite.');
+      } else {
+        throw Error('Source does not match known pattern: ' + url);
+      }
       Code.Editor.waitMobWrite_.isLoaded = true;
     }
     callback();
@@ -697,11 +718,7 @@ Code.Editor.importJSHint = function() {
   // <script type="text/javascript" src="/static/JSHint/jshint.js"></script>
   var script = document.createElement('script');
   script.type = 'text/javascript';
-  var mySource = document.getElementById('editor_js').src;
-  // Might be with or without subdomains:
-  // https://static.google.codecity.world/code/editor.js
-  // http://localhost:8080/static/code/editor.js
-  script.src = mySource.replace('code/editor.js', 'JSHint/jshint.js');
+  script.src = Code.Editor.mySource.replace('code/editor.js', 'JSHint/jshint.js');
   script.onload = function() {
     Code.Editor.JSHintReady = true;
     // Activate linting for any editor that's loaded and waiting.
