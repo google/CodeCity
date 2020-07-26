@@ -218,7 +218,7 @@ class DaemonMobWrite(BaseHTTPRequestHandler, mobwrite_core.MobWrite):
     div = data.find("q=")
     if div == -1:
       self.send_response(400)
-      self.send_header('Content-type','text/plain')
+      self.send_header('Content-type', 'text/plain')
       self.end_headers()
       self.wfile.write("'q=' parameter not found in data:\n")
       self.wfile.write(data)
@@ -227,7 +227,8 @@ class DaemonMobWrite(BaseHTTPRequestHandler, mobwrite_core.MobWrite):
     data = data[div + 2:]
     data = urllib.unquote(data)
     self.send_response(200)
-    self.send_header('Content-type','text/plain')
+    self.send_header('Content-type', 'text/plain')
+    self.send_header('Access-Control-Allow-Origin', '*')
     self.end_headers()
 
     self.wfile.write(self.handleRequest(data))
