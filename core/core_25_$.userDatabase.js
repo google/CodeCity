@@ -27,7 +27,7 @@ $.userDatabase = {};
 Object.setOwnerOf($.userDatabase, Object.getOwnerOf($.Jssp.OutputBuffer));
 $.userDatabase.get = function get(id) {
   // Returns the user, or undefined.
-  var hash = $.utils.string.hash('md5', this.salt + id);
+  var hash = $.utils.string.hash('md5', this.salt_ + id);
   var table = this.byMd5;
   var value = table[hash];
   if (!($.user.isPrototypeOf(value))) {
@@ -36,13 +36,13 @@ $.userDatabase.get = function get(id) {
   }
   return value;
 };
-Object.setOwnerOf($.userDatabase.get, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.userDatabase.get, Object.getOwnerOf($.Jssp.prototype.compile));
 Object.setOwnerOf($.userDatabase.get.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
 $.userDatabase.set = function set(id, user) {
-  var hash = $.utils.string.hash('md5', this.salt + id);
+  var hash = $.utils.string.hash('md5', this.salt_ + id);
   this.byMd5[hash] = user;
 };
-Object.setOwnerOf($.userDatabase.set, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.userDatabase.set, Object.getOwnerOf($.Jssp.prototype.compile));
 Object.setOwnerOf($.userDatabase.set.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
 $.userDatabase.validate = function validate() {
   var table = this.byMd5
@@ -54,7 +54,7 @@ $.userDatabase.validate = function validate() {
 };
 Object.setOwnerOf($.userDatabase.validate, Object.getOwnerOf($.Jssp.OutputBuffer));
 Object.setOwnerOf($.userDatabase.validate.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
-$.userDatabase.salt = 'v2OU0LHchCl84mhu';
+$.userDatabase.salt_ = 'v2OU0LHchCl84mhu';
 
 $.userDatabase.byMd5 = (new 'Object.create')(null);
 
