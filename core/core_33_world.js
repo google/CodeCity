@@ -486,7 +486,7 @@ $.user.willMoveTo = function willMoveTo(dest) {
 };
 Object.setOwnerOf($.user.willMoveTo, Object.getOwnerOf($.Jssp.OutputBuffer));
 Object.setOwnerOf($.user.willMoveTo.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
-$.user.editInline = function editInline(cmd) {
+$.user.inlineEdit = function inlineEdit(cmd) {
   var obj = cmd.iobj;
   var objName = cmd.iobjstr;
   var prop = cmd.dobjstr;
@@ -495,7 +495,7 @@ $.user.editInline = function editInline(cmd) {
     cmd.user.narrate('Usage: edit <property> on <object>');
     return;
   }
-  var url = $.www.editor.edit(obj, objName, prop);
+  var url = $.http['code.']['/inlineEdit'].edit(obj, objName, prop);
   var memo = {
     type: 'iframe',
     url: url,
@@ -503,11 +503,11 @@ $.user.editInline = function editInline(cmd) {
   };
   cmd.user.readMemo(memo);
 };
-Object.setOwnerOf($.user.editInline, Object.getOwnerOf($.Jssp.OutputBuffer));
-$.user.editInline.verb = 'edit';
-$.user.editInline.dobj = 'any';
-$.user.editInline.prep = 'on top of/on/onto/upon';
-$.user.editInline.iobj = 'any';
+Object.setOwnerOf($.user.inlineEdit, Object.getOwnerOf($.Jssp.prototype.compile));
+$.user.inlineEdit.verb = 'edit';
+$.user.inlineEdit.dobj = 'any';
+$.user.inlineEdit.prep = 'on top of/on/onto/upon';
+$.user.inlineEdit.iobj = 'any';
 
 $.room = (new 'Object.create')($.physical);
 $.room.name = 'Room prototype';
@@ -795,13 +795,13 @@ $.thing.give.iobj = 'any';
 $.thing.getCommands = function getCommands(who) {
   var commands = $.physical.getCommands.call(this, who);
   if (this.location === who) {
-    commands.push('drop ' + String(this));
+    commands.push('drop ' + this.name);
   } else if (this.location === who.location) {
-    commands.push('get ' + String(this));
+    commands.push('get ' + this.name);
   }
   return commands;
 };
-Object.setOwnerOf($.thing.getCommands, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.thing.getCommands, Object.getOwnerOf($.Jssp.prototype.compile));
 Object.setOwnerOf($.thing.getCommands.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
 $.thing.movable = true;
 $.thing.location = null;

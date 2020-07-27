@@ -84,7 +84,9 @@ $.physicals['Challenge room'].getSvgText = function() {
 };
 delete $.physicals['Challenge room'].getSvgText.name;
 Object.setOwnerOf($.physicals['Challenge room'].getSvgText, Object.getOwnerOf($.Jssp.prototype.compile));
-$.physicals['Challenge room'].getSvgText.prototype = $.physical.getSvgText.prototype;
+$.physicals['Challenge room'].getSvgText.prototype.constructor = function getSvgText() {
+  return this.state ? this.svgText : this.svgTextNight;
+};
 $.physicals['Challenge room'].getContents = function getContents() {
   $.physical.validate.call(this);
   if (this.switch.state) {
@@ -128,7 +130,7 @@ $.physicals['light switch'].flip = function flip(newState, user) {
     this.state = newState;
     this.home.updateScene(true);
     user.narrate('You turn ' + onOff + ' the switch.');
-    this.home.narrate(user.name + ' turns ' + onOff + ' the switch.', user);
+    this.home.narrate(String(user) + ' turns ' + onOff + ' the switch.', user);
   }
 };
 Object.setOwnerOf($.physicals['light switch'].flip, Object.getOwnerOf($.Jssp.prototype.compile));
@@ -136,18 +138,17 @@ Object.setOwnerOf($.physicals['light switch'].flip.prototype, Object.getOwnerOf(
 $.physicals['light switch'].flipOn1 = function flipOn1(cmd) {
   this.flip(true, cmd.user);
 };
-Object.setOwnerOf($.physicals['light switch'].flipOn1, Object.getOwnerOf($.Jssp.prototype.compile));
-Object.setOwnerOf($.physicals['light switch'].flipOn1.prototype, Object.getOwnerOf($.Jssp.prototype.compile));
-$.physicals['light switch'].flipOn1.prototype.constructor = function flipOn2(cmd) {
-  this.flip(true, cmd.user);
-};
+Object.setOwnerOf($.physicals['light switch'].flipOn1, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.physicals['light switch'].flipOn1.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
 $.physicals['light switch'].flipOn1.verb = 'flip|turn|switch';
 $.physicals['light switch'].flipOn1.dobj = 'this';
 $.physicals['light switch'].flipOn1.prep = 'on top of/on/onto/upon';
 $.physicals['light switch'].flipOn1.iobj = 'none';
-$.physicals['light switch'].flipOn2 = $.physicals['light switch'].flipOn1.prototype.constructor;
-Object.setOwnerOf($.physicals['light switch'].flipOn2, Object.getOwnerOf($.Jssp.prototype.compile));
-$.physicals['light switch'].flipOn2.prototype = $.physicals['light switch'].flipOn1.prototype;
+$.physicals['light switch'].flipOn2 = function flipOn2(cmd) {
+  this.flip(true, cmd.user);
+};
+Object.setOwnerOf($.physicals['light switch'].flipOn2, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.physicals['light switch'].flipOn2.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
 $.physicals['light switch'].flipOn2.verb = 'flip|turn|switch';
 $.physicals['light switch'].flipOn2.dobj = 'none';
 $.physicals['light switch'].flipOn2.prep = 'on top of/on/onto/upon';
@@ -155,7 +156,8 @@ $.physicals['light switch'].flipOn2.iobj = 'this';
 $.physicals['light switch'].flipOff2 = function flipOff2(cmd) {
   this.flip(false, cmd.user);
 };
-Object.setOwnerOf($.physicals['light switch'].flipOff2, Object.getOwnerOf($.Jssp.prototype.compile));
+Object.setOwnerOf($.physicals['light switch'].flipOff2, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.physicals['light switch'].flipOff2.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
 $.physicals['light switch'].flipOff2.verb = 'flip|turn|switch';
 $.physicals['light switch'].flipOff2.dobj = 'none';
 $.physicals['light switch'].flipOff2.prep = 'off/off of';
@@ -163,28 +165,28 @@ $.physicals['light switch'].flipOff2.iobj = 'this';
 $.physicals['light switch'].flipOff1 = function flipOff1(cmd) {
   this.flip(false, cmd.user);
 };
-Object.setOwnerOf($.physicals['light switch'].flipOff1, Object.getOwnerOf($.Jssp.prototype.compile));
-$.physicals['light switch'].flipOff1.prototype = $.physicals['light switch'].flipOff2.prototype;
-Object.setOwnerOf($.physicals['light switch'].flipOff1.prototype, Object.getOwnerOf($.Jssp.prototype.compile));
-$.physicals['light switch'].flipOff1.prototype.constructor = $.physicals['light switch'].flipOff1;
+Object.setOwnerOf($.physicals['light switch'].flipOff1, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.physicals['light switch'].flipOff1.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
 $.physicals['light switch'].flipOff1.verb = 'flip|turn|switch';
 $.physicals['light switch'].flipOff1.dobj = 'this';
 $.physicals['light switch'].flipOff1.prep = 'off/off of';
 $.physicals['light switch'].flipOff1.iobj = 'none';
 $.physicals['light switch'].home = $.physicals['Challenge room'];
 $.physicals['light switch'].svgTextNight = '<g transform="scale(0.7) translate(0, 20)">\n  <rect class="fillGrey" height="25" width="15" x="0" y="30"/>\n  <rect class="strokeWhite" height="12" width="7" x="4" y="36.5"/>\n  <rect class="strokeBlack fillBlack" height="5" width="5" x="5" y="42.5"/>\n</g>';
-$.physicals['light switch'].getSvgText = $.physical.getSvgText.prototype.constructor;
+$.physicals['light switch'].getSvgText = $.physicals['Challenge room'].getSvgText.prototype.constructor;
+Object.setOwnerOf($.physicals['light switch'].getSvgText, Object.getOwnerOf($.Jssp.prototype.compile));
+$.physicals['light switch'].getSvgText.prototype = $.physicals['Challenge room'].getSvgText.prototype;
 $.physicals['light switch'].getCommands = function getCommands(who) {
   var commands = $.thing.getCommands.call(this, who);
   if (this.state) {
-    commands.push('turn off ' + this.name);
+    commands.push('turn off ' + String(this));
   } else {
-    commands.push('turn on ' + this.name);
+    commands.push('turn on ' + String(this));
   }
   return commands;
 };
 Object.setOwnerOf($.physicals['light switch'].getCommands, Object.getOwnerOf($.Jssp.prototype.compile));
-$.physicals['light switch'].getCommands.prototype = $.thing.getCommands.prototype;
+$.physicals['light switch'].getCommands.prototype = $.cage.mousePrototype.getCommands.prototype;
 $.physicals['light switch'].aliases = [];
 Object.setOwnerOf($.physicals['light switch'].aliases, Object.getOwnerOf($.Jssp.OutputBuffer));
 $.physicals['light switch'].aliases[0] = 'lightswitch';
@@ -319,7 +321,7 @@ $.physicals.safe.getCommands = function getCommands(who) {
   return commands;
 };
 Object.setOwnerOf($.physicals.safe.getCommands, Object.getOwnerOf($.Jssp.prototype.compile));
-$.physicals.safe.getCommands.prototype = $.thing.getCommands.prototype;
+$.physicals.safe.getCommands.prototype = $.cage.mousePrototype.getCommands.prototype;
 $.physicals.safe.crack = function crack(cmd) {
   cmd.user.narrate('The "crack" function has not been programmed.  ' +
      'To do so, visit: https://google.codecity.world/blocklySafe');
@@ -359,7 +361,7 @@ $.physicals.food.give = function give(cmd) {
   cmd.user.narrate('You offer ' + String(this) + ' to ' + String(cmd.iobj) + '.');
   if (cmd.user.location) {
     cmd.user.location.narrate(
-        cmd.user.name + ' offers ' + String(this) + ' to ' + String(cmd.iobj) + '.',
+        String(cmd.user) + ' offers ' + String(this) + ' to ' + String(cmd.iobj) + '.',
         [cmd.user, cmd.iobj]);
   }
   var matches = $.utils.imageMatch.recog(this.getSvgText());
@@ -397,7 +399,7 @@ $.physicals.food.give = function give(cmd) {
     this.girl.location.sendMemo(memo);
   }
 };
-Object.setOwnerOf($.physicals.food.give, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.physicals.food.give, Object.getOwnerOf($.Jssp.prototype.compile));
 Object.setOwnerOf($.physicals.food.give.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
 $.physicals.food.give.verb = 'give';
 $.physicals.food.give.dobj = 'this';
@@ -427,7 +429,7 @@ $.physicals.food.getCommands = function getCommands(who) {
   return commands;
 };
 Object.setOwnerOf($.physicals.food.getCommands, Object.getOwnerOf($.Jssp.prototype.compile));
-$.physicals.food.getCommands.prototype = $.thing.getCommands.prototype;
+$.physicals.food.getCommands.prototype = $.cage.mousePrototype.getCommands.prototype;
 $.physicals.food.svgTextReset = '<path d="M-7,80L-5,97C-5,100.5,5,100.5,5,97L7,80" class="fillWhite"/>\n<ellipse class="fillWhite" cx="0" cy="80" rx="7" ry="3"/>\n';
 
 $.physicals.girl = $.physicals.chest.location.contents_[2];

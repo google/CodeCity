@@ -23,41 +23,6 @@
 // AUTO-GENERATED CODE FROM DUMP.  EDIT WITH CAUTION!
 //////////////////////////////////////////////////////////////////////
 
-$.userDatabase = {};
-Object.setOwnerOf($.userDatabase, Object.getOwnerOf($.Jssp.OutputBuffer));
-$.userDatabase.get = function get(id) {
-  // Returns the user, or undefined.
-  var hash = $.utils.string.hash('md5', this.salt_ + id);
-  var table = this.byMd5;
-  var value = table[hash];
-  if (!($.user.isPrototypeOf(value))) {
-    delete table[hash];
-    return undefined;
-  }
-  return value;
-};
-Object.setOwnerOf($.userDatabase.get, Object.getOwnerOf($.Jssp.prototype.compile));
-Object.setOwnerOf($.userDatabase.get.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
-$.userDatabase.set = function set(id, user) {
-  var hash = $.utils.string.hash('md5', this.salt_ + id);
-  this.byMd5[hash] = user;
-};
-Object.setOwnerOf($.userDatabase.set, Object.getOwnerOf($.Jssp.prototype.compile));
-Object.setOwnerOf($.userDatabase.set.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
-$.userDatabase.validate = function validate() {
-  var table = this.byMd5
-  for (var key in table) {
-    if (!($.user.isPrototypeOf(table[key]))) {
-      delete table[key];
-    }
-  }
-};
-Object.setOwnerOf($.userDatabase.validate, Object.getOwnerOf($.Jssp.OutputBuffer));
-Object.setOwnerOf($.userDatabase.validate.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
-$.userDatabase.salt_ = 'v2OU0LHchCl84mhu';
-
-$.userDatabase.byMd5 = (new 'Object.create')(null);
-
 $.servers.telnet = {};
 $.servers.telnet.connection = (new 'Object.create')($.connection);
 $.servers.telnet.connection.onReceiveLine = function onReceiveLine(text) {

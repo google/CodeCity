@@ -34,7 +34,6 @@ $.physical.getSvgText = function getSvgText() {
 };
 Object.setOwnerOf($.physical.getSvgText, Object.getOwnerOf($.Jssp.OutputBuffer));
 Object.setOwnerOf($.physical.getSvgText.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
-
 $.physical.getDescription = function() {
   return this.description;
 };
@@ -196,12 +195,12 @@ Object.setOwnerOf($.physical.lookJssp.compiled_, Object.getOwnerOf($.Jssp.Output
 Object.setOwnerOf($.physical.lookJssp.compiled_.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
 $.physical.getCommands = function getCommands(who) {
   return [
-    'look ' + String(this),
-    // 'examine ' + String(this),
-    'edit ' + String(this)
+    'look ' + this.name,
+    // 'examine ' + this.name,
+    'edit ' + this.name
   ];
 };
-Object.setOwnerOf($.physical.getCommands, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.physical.getCommands, Object.getOwnerOf($.Jssp.prototype.compile));
 $.physical.validate = function validate() {
   /* Validate this $.physical object to enforce that certain
    * invariants are true.  Those invariants are:

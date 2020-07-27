@@ -220,6 +220,7 @@
       "$.http['www.']['/']",
       "$.http['www.']['/mirror']",
       "$.http['www.']['/robots.txt']",
+      "$.http['login.']",
       {"path": "$.www", "do": "ATTR"}
     ]
   }, {
@@ -251,8 +252,9 @@
       "<OVERVIEW>": "Inline code editor for Code City."
     },
     "contents": [
-      "$.http['www.'].editor",
-      "$.http['www.']['/editor']"
+      "$.www.editor",
+      {"path": "$.http['code.']", "do": "SET"},
+      "$.http['code.']['/inlineEdit']"
     ]
   }, {
     "filename": "core_27_$.www.code.js",
@@ -262,10 +264,7 @@
     },
     "contents": [
       "$.www.code",
-      "$.http['code.']",
-      "$.www['/code']",
-      "$.www['/code/editor']",
-      "$.www['/code/objectPanel']"
+      "$.http['code.']"
     ]
   }, {
     "filename": "core_28_$.servers.eval.js",
@@ -332,8 +331,6 @@
     },
     "pruneRest": ["$.servers.telnet.connected"],
     "contents": [
-      "$.userDatabase",
-      {"path": "$.userDatabase.byMd5", "do": "ATTR"},
       "$.servers.telnet",
       {"path": "$.servers.telnet.connected", "do": "ATTR"}
     ]
@@ -412,7 +409,7 @@
       {"path": "$.cage.location", "do": "DECL"},
       {"path": "$.physicals.cage", "do": "DONE"},
       "$.physicals['Genetic Mouse Prototype']",
-      "$.www['/geneticsEditor']"
+      "$.http['genetics.']"
     ]
   }, {
     "filename": "core_44_$.assistant.js",
@@ -496,6 +493,12 @@
       "$.container",
       "$.db.tempId",
       "$.garbage",
+      "$.http['code.']",
+      "$.http['genetics.']",
+      "$.http['www.'][404]",
+      "$.http['www.']['/']",
+      "$.http['www.']['/mirror']",
+      "$.http['www.']['/robots.txt']",
       "$.physical",
       "$.physicals.cage",
       "$.physicals['Das deutsche Zimmer']",
@@ -525,11 +528,6 @@
       "$.www.editor",
       "$.www[404]",
       "$.www['/']",
-      "$.www['/code']",
-      "$.www['/code/editor']",
-      "$.www['/code/objectPanel']",
-      "$.www['/editor']",
-      "$.www['/geneticsEditor']",
       "$.www['/robots.txt']"
     ]
   }, {
