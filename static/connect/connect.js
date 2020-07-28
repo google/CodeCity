@@ -243,7 +243,7 @@ CCC.tab = function(mode) {
     logButton.classList.add('jfk-checked');
   }
   // Set a session cookie to preserve this setting.
-  document.cookie = 'TAB=' + mode + '; path=/connect';
+  document.cookie = 'TAB=' + mode;
   CCC.commandTextarea.focus();
 };
 
