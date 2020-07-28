@@ -156,8 +156,9 @@ function handleRequest(request, response) {
         var domain = CFG.cookieDomain ? 'Domain=' + CFG.cookieDomain : '';
         var redirectUrl = (state === 'autoclose') ? '?close' : CFG.connectUrl;
         response.writeHead(302, {
-          // Temporary redirect
-          'Set-Cookie': 'ID=' + id + '_' + checksum + '; HttpOnly;' + domain,
+          // Temporary redirect.
+          'Set-Cookie': 'ID=' + id + '_' + checksum + '; HttpOnly;' + domain +
+              '; Path=/',
           'Location': redirectUrl
         });
         response.end('Login OK.  Redirecting.');
