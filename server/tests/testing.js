@@ -188,5 +188,34 @@ T.prototype.expect = function(name, got, want, message) {
   }
 };
 
+/**
+ * Check if got and want produce the same string when passed to
+ * utils.inspect(); record test pass if so or test failure otherwise.
+ * Useful for quick tests of functions that return small data
+ * structures, while being pickier than using JSON.stringify to do the
+ * comparison.
+ * @param {string} name The name of the test.
+ * @param {*} got The actual result of the test.
+ * @param {*} want The expected result of the test.
+ * @param {string=} message Additional info to log on failure only.
+ * @param {!Object=} options Options to pass to util.inspect.
+ *     Defaults to {showHidden: true, showProxy: true}.
+ */
+T.prototype.inspect = function(name, got, want, message, options) {
+  if (!options) {
+    options = {showHidden: true, showProxy: true};
+  }
+  const gotString = util.inspect(got, options);
+  const wantString = util.inspect(want, options);
+  if (gotString === wantString) {
+    this.pass(name);
+  } else {
+    message = message ? message + '\n' : '';
+    message = util.format('%sgot:\n%s\nwant:\n%s', message,
+                          gotString, wantString);
+    this.fail(name, message);
+  }
+};
+
 exports.B = B;
 exports.T = T;
