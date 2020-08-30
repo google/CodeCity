@@ -24,10 +24,13 @@ import RGBColor from './rgbcolor.js';
 //     scaleHeight: int => scales vertically to height
 //     renderCallback: function => will call the function after the first render is completed
 //     forceRedraw: function => will call the function on every frame, if it returns true, will redraw
+
 export default function canvg (target, s, opts) {
   // no parameters
+
   if (target == null && s == null && opts == null) {
     const svgTags = document.querySelectorAll('svg');
+
     for (let i = 0; i < svgTags.length; i++) {
       const svgTag = svgTags[i];
       const c = document.createElement('canvas');
@@ -50,6 +53,7 @@ export default function canvg (target, s, opts) {
   if (target.svg != null) target.svg.stop();
   const svg = build(opts || {});
   // on i.e. 8 for flash canvas, we can't assign the property so check for it
+  
   if (!(target.childNodes.length === 1 && target.childNodes[0].nodeName === 'OBJECT')) {
     target.svg = svg;
   }
@@ -103,6 +107,7 @@ function build (opts) {
       };
     }();
   };
+
   svg.init();
 
   // images loaded
@@ -267,6 +272,7 @@ function build (opts) {
     // get the length as pixels
     toPixels (viewPort, processPercent) {
       if (!this.hasValue()) return 0;
+      //first important var defined (s)
       const s = this.value + '';
       if (s.match(/em$/)) return this.numValue() * this.getEM(viewPort);
       if (s.match(/ex$/)) return this.numValue() * this.getEM(viewPort) / 2.0;
@@ -277,6 +283,7 @@ function build (opts) {
       if (s.match(/mm$/)) return this.numValue() * this.getDPI(viewPort) / 25.4;
       if (s.match(/in$/)) return this.numValue() * this.getDPI(viewPort);
       if (s.match(/%$/)) return this.numValue() * svg.ViewPort.ComputeSize(viewPort);
+      //second inportant variable defined (s & n)
       const n = this.numValue();
       if (processPercent && n < 1.0) return n * svg.ViewPort.ComputeSize(viewPort);
       return n;
@@ -286,6 +293,7 @@ function build (opts) {
     // get the time as milliseconds
     toMilliseconds () {
       if (!this.hasValue()) return 0;
+      //define variable which is used often
       const s = this.value + '';
       if (s.match(/s$/)) return this.numValue() * 1000;
       if (s.match(/ms$/)) return this.numValue();
@@ -316,6 +324,7 @@ function build (opts) {
     this.Weights = 'normal|bold|bolder|lighter|100|200|300|400|500|600|700|800|900|inherit';
 
     this.CreateFont = function (fontStyle, fontVariant, fontWeight, fontSize, fontFamily, inherit) {
+      //const f = fonts. to consider renaming variables. 
       const f = inherit != null ? this.Parse(inherit) : this.CreateFont('', '', '', '', '', svg.ctx.font);
       return {
         fontFamily: fontFamily || f.fontFamily,
@@ -611,7 +620,8 @@ function build (opts) {
 
   // aspect ratio
   svg.AspectRatio = function (ctx, aspectRatio, width, desiredWidth, height, desiredHeight, minX, minY, refX, refY) {
-    // aspect ratio - https://www.w3.org/TR/SVG/coords.html#PreserveAspectRatioAttribute
+    // aspect ratio -https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/preserveAspectRatio
+
     aspectRatio = svg.compressSpaces(aspectRatio);
     aspectRatio = aspectRatio.replace(/^defer\s/, ''); // ignore defer
     const align = aspectRatio.split(' ')[0] || 'xMidYMid';
@@ -622,11 +632,13 @@ function build (opts) {
     const scaleY = height / desiredHeight;
     const scaleMin = Math.min(scaleX, scaleY);
     const scaleMax = Math.max(scaleX, scaleY);
+
     if (meetOrSlice === 'meet') { desiredWidth *= scaleMin; desiredHeight *= scaleMin; }
     if (meetOrSlice === 'slice') { desiredWidth *= scaleMax; desiredHeight *= scaleMax; }
 
     refX = new svg.Property('refX', refX);
     refY = new svg.Property('refY', refY);
+    
     if (refX.hasValue() && refY.hasValue()) {
       ctx.translate(-scaleMin * refX.toPixels('x'), -scaleMin * refY.toPixels('y'));
     } else {
