@@ -133,7 +133,7 @@ you can skip all but the last step.
         https://en.wikipedia.org/wiki/Wildcard_DNS_record), so that
         each user can serve their content on an isolated subdomain
         (like
-        <code><em>username</em>.codecity.<em>example.org</em></code>).
+        <code><em>username</em>.example.codecity.world</code>).
         To facilitate obtaining the necessary [wildcard certificate](
         https://en.wikipedia.org/wiki/Wildcard_certificate), we
         recommend you use a [DNS provider who easily integrates with
@@ -150,7 +150,7 @@ regularly checkpoints its database to the instance’s persistent disk,
 setting up regular snapshotting of that disk will give you a separate
 backup of the whole system in case of disaster.
 
-Snapshots are [not free], [are cheap].  A few dollars a month buys a
+Snapshots are [not free], but [are cheap].  A few dollars a month buys a
 lot of peace of mind!
 
 [not free]: https://cloud.google.com/compute/disks-image-pricing#persistentdisk
@@ -261,7 +261,7 @@ https://en.wikipedia.org/wiki/Public_key_certificate#TLS/SSL_server_certificate
 *   An ordinary certificate covers one or more specific domain names,
     like `www.example.org`.
 *   A wildcard certificate includes one or more wildcard domains, like
-    `*.example.org`.  If you’re using a wildcard DNS entry, a
+    `*.example.org`.
 
 You will need to get a TLS certificate covering the [set of DNS entries
 you [created earlier](#set-up-an-ip-address-and-domain-name).  If (as
@@ -380,13 +380,13 @@ modify DNS TXT records.
     sudo -iu codecity
     ```
 0.  Clone the [Code City
-    repo](https://github.com/NeilFraser/CodeCity).  (If you are a
+    repo](https://github.com/google/CodeCity).  (If you are a
     project collaborator, see below for [instructions on how to use
     SSH instad of HTTPS](#git-code-city-by-ssh-instead-of-https).)
     ```
     git clone https://github.com/google/CodeCity.git
     ```
-0.  Install install required NPMs:
+0.  Install required NPMs:
     ```
     (cd CodeCity/server && npm ci --only=prod)
     (cd CodeCity/login && npm ci --only=prod)
@@ -450,9 +450,9 @@ nginx.
 0.  Make sure you can access your desired logo using your web browser.
     If you are using a wildcard DNS configuration, it should be
     accessible via a URL like
-    <code>static.<em>exmaple</em>.codecity.world/logo-auth.png</code>;
+    <code>static.<em>example</em>.codecity.world/logo-auth.png</code>;
     for a single-domain configuration it will instead be
-    <code><em>exmaple</em>.codecity.world/static/logo-auth.png</code>.
+    <code><em>example</em>.codecity.world/static/logo-auth.png</code>.
     Make a note of this URL.
 0.  Go to [APIs & Services > OAuth consent screen](
     https://console.cloud.google.com/apis/credentials/consent).  Enter
@@ -625,7 +625,7 @@ to be able to use our personal credentials as the user `codecity`.
 The solution is adapted [from Server Fault](
 https://serverfault.com/questions/107187).
 
-#### Preparation (Do Once)
+#### Preparation (do once)
 
 1.  Add your SSH public key (ideally, one from a hardware token or the
     like) to [your GitHub account](https://github.com/settings/keys).
