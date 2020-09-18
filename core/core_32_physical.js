@@ -29,20 +29,12 @@ $.physical.description = '';
 $.physical.svgText = '';
 $.physical.location = null;
 $.physical.contents_ = null;
-$.physical.getSvgText = function getSvgText() {
-  return this.svgText;
-};
-Object.setOwnerOf($.physical.getSvgText, Object.getOwnerOf($.Jssp.OutputBuffer));
-Object.setOwnerOf($.physical.getSvgText.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
-$.physical.getDescription = function() {
-  return this.description;
-};
 $.physical.getContents = function getContents() {
   $.physical.validate.call(this);
   return this.contents_.slice();
 };
-Object.setOwnerOf($.physical.getContents, Object.getOwnerOf($.Jssp.OutputBuffer));
-Object.setOwnerOf($.physical.getContents.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.physical.getContents, $.physicals.Maximilian);
+Object.setOwnerOf($.physical.getContents.prototype, $.physicals.Maximilian);
 $.physical.addContents = function addContents(newThing, opt_neighbour) {
   // Add newThing to this's contents.  It will be added after
   // opt_neighbour, or to the end of list if opt_neighbour not given.
@@ -85,10 +77,11 @@ $.physical.removeContents = function removeContents(thing) {
   }
   this.contents_ = contents;
 };
-Object.setOwnerOf($.physical.removeContents, Object.getOwnerOf($.Jssp.prototype.compile));
+Object.setOwnerOf($.physical.removeContents, $.physicals.Neil);
 $.physical.moveTo = function moveTo(dest, opt_neighbour) {
-  // Move his object to the specified destination location.
-  // Attempt to position this object next to a specified neighbour, if given.
+  /* Move his object to the specified destination location.
+   * Attempt to position this object next to a specified neighbour, if given.
+   */
   $.physical.validate.call(this);
   if (!$.physical.isPrototypeOf(dest) && dest !== null) {
     throw new Error('destination must be a $.physical or null');
@@ -144,12 +137,12 @@ $.physical.moveTo = function moveTo(dest, opt_neighbour) {
   }, 0, this);
   suspend(0);
 };
-Object.setOwnerOf($.physical.moveTo, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.physical.moveTo, $.physicals.Maximilian);
 $.physical.look = function look(cmd) {
   var html = this.lookJssp.toString(this, {user: cmd.user});
   cmd.user.readMemo({type: "html", htmlText: html});
 };
-Object.setOwnerOf($.physical.look, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.physical.look, $.physicals.Maximilian);
 $.physical.look.verb = 'l(ook)?';
 $.physical.look.dobj = 'this';
 $.physical.look.prep = 'none';
@@ -160,18 +153,18 @@ $.physical.lookJssp = function jssp(request, response) {
   return jssp.render(this, request, response);  // See $.Jssp for explanation.
 };
 Object.setPrototypeOf($.physical.lookJssp, $.Jssp.prototype);
-Object.setOwnerOf($.physical.lookJssp, Object.getOwnerOf($.Jssp.OutputBuffer));
-Object.setOwnerOf($.physical.lookJssp.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
-$.physical.lookJssp.source = '<table style="height: 100%; width: 100%;">\n  <tr>\n    <td style="padding: 1ex; width: 30%;">\n      <svg width="100%" height="100%" viewBox="0 0 0 0">\n        <%= this.getSvgText() %>\n      </svg>\n    </td>\n    <td>\n    <h1><%= $.utils.html.escape(this.name) + $.utils.commandMenu(this.getCommands(request.user)) %></h1>\n    <p><%= $.utils.html.preserveWhitespace(this.getDescription()) %></p>\n<%\nvar contents = this.getContents();\nif (contents.length) {\n  var contentsHtml = [];\n  for (var i = 0; i < contents.length; i++) {\n    contentsHtml[i] = $.utils.html.escape(contents[i].name) +\n        $.utils.commandMenu(contents[i].getCommands(request.user));\n  }\n  response.write(\'<p>Contents: \' + contentsHtml.join(\', \') + \'</p>\');\n}\nif (this.location) {\n  response.write(\'<p>Location: \' + $.utils.html.escape(this.location.name) +\n      $.utils.commandMenu(this.location.getCommands(request.user)) + \'</p>\');\n}\n%>\n    </td>\n  </tr>\n</table>';
-$.physical.lookJssp.hash_ = '75be546dc1c383713d40c9cbbf952381v1.0.0';
+Object.setOwnerOf($.physical.lookJssp, $.physicals.Maximilian);
+Object.setOwnerOf($.physical.lookJssp.prototype, $.physicals.Maximilian);
+$.physical.lookJssp.source = "<table style=\"height: 100%; width: 100%;\">\n  <tr>\n    <td style=\"padding: 1ex; width: 30%;\">\n      <svg width=\"100%\" height=\"100%\" viewBox=\"0 0 0 0\">\n        <%= $.utils.object.getValue(this, 'svgText') %>\n      </svg>\n    </td>\n    <td>\n    <h1><%= $.utils.html.escape(String(this)) + $.utils.commandMenu(this.getCommands(request.user)) %></h1>\n    <p><%= $.utils.html.preserveWhitespace($.utils.object.getValue(this, 'description')) %></p>\n<%\nvar contents = this.getContents();\nif (contents.length) {\n  var contentsHtml = [];\n  for (var i = 0; i < contents.length; i++) {\n    contentsHtml[i] = $.utils.html.escape(contents[i].name) +\n        $.utils.commandMenu(contents[i].getCommands(request.user));\n  }\n  response.write('<p>Contents: ' + contentsHtml.join(', ') + '</p>');\n}\nif (this.location) {\n  response.write('<p>Location: ' + $.utils.html.escape(this.location.name) +\n      $.utils.commandMenu(this.location.getCommands(request.user)) + '</p>');\n}\n%>\n    </td>\n  </tr>\n</table>";
+$.physical.lookJssp.hash_ = '5a2e8750ef065f83329ad3c416362abbv1.0.0';
 $.physical.lookJssp.compiled_ = function(request, response) {
 // DO NOT EDIT THIS CODE: AUTOMATICALLY GENERATED BY JSSP.
 response.write("<table style=\"height: 100%; width: 100%;\">\n  <tr>\n    <td style=\"padding: 1ex; width: 30%;\">\n      <svg width=\"100%\" height=\"100%\" viewBox=\"0 0 0 0\">\n        ");
-response.write(this.getSvgText());
+response.write($.utils.object.getValue(this, 'svgText'));
 response.write("\n      </svg>\n    </td>\n    <td>\n    <h1>");
-response.write($.utils.html.escape(this.name) + $.utils.commandMenu(this.getCommands(request.user)));
+response.write($.utils.html.escape(String(this)) + $.utils.commandMenu(this.getCommands(request.user)));
 response.write("</h1>\n    <p>");
-response.write($.utils.html.preserveWhitespace(this.getDescription()));
+response.write($.utils.html.preserveWhitespace($.utils.object.getValue(this, 'description')));
 response.write("</p>\n");
 
 var contents = this.getContents();
@@ -190,9 +183,9 @@ if (this.location) {
 
 response.write("\n    </td>\n  </tr>\n</table>");
 };
-delete $.physical.lookJssp.compiled_.name;
-Object.setOwnerOf($.physical.lookJssp.compiled_, Object.getOwnerOf($.Jssp.OutputBuffer));
-Object.setOwnerOf($.physical.lookJssp.compiled_.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.physical.lookJssp.compiled_, $.physicals.Neil);
+Object.setOwnerOf($.physical.lookJssp.compiled_.prototype, $.physicals.Neil);
+Object.defineProperty($.physical.lookJssp.compiled_, 'name', {value: '$.pot.lookJssp.compiled_'});
 $.physical.getCommands = function getCommands(who) {
   return [
     'look ' + this.name,
@@ -200,7 +193,7 @@ $.physical.getCommands = function getCommands(who) {
     'edit ' + this.name
   ];
 };
-Object.setOwnerOf($.physical.getCommands, Object.getOwnerOf($.Jssp.prototype.compile));
+Object.setOwnerOf($.physical.getCommands, $.physicals.Neil);
 $.physical.validate = function validate() {
   /* Validate this $.physical object to enforce that certain
    * invariants are true.  Those invariants are:
@@ -242,14 +235,14 @@ $.physical.validate = function validate() {
   }
   // TODO: check for circular containment?
 };
-Object.setOwnerOf($.physical.validate, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.physical.validate, $.physicals.Maximilian);
 $.physical.validate.prototype.constructor = function validate() {
   // Super call.
   $.physical.validate.call(this);
   // Clean up list of connected objects.
   $.servers.telnet.validate();
 };
-Object.setOwnerOf($.physical.validate.prototype.constructor, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.physical.validate.prototype.constructor, $.physicals.Maximilian);
 $.physical.validate.prototype.constructor.prototype = $.physical.validate.prototype;
 $.physical.toString = function toString() {
   return this.name;
@@ -281,7 +274,7 @@ $.physical.accept = function accept(what, src) {
    */
   return this.willAccept(what, src);
 };
-Object.setOwnerOf($.physical.accept, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.physical.accept, $.physicals.Maximilian);
 $.physical.willAccept = function willAccept(what, src) {
   /* Returns true iff this is willing to accept what arriving from src.
    *
@@ -291,7 +284,7 @@ $.physical.willAccept = function willAccept(what, src) {
    */
   return false;
 };
-Object.setOwnerOf($.physical.willAccept, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.physical.willAccept, $.physicals.Maximilian);
 $.physical.onExit = function(what, dest) {
   // Called by $.physical.moveTo just before what leaves for dest.
 };
@@ -303,7 +296,7 @@ delete $.physical.onEnter.name;
 $.physical.lookAt = function lookAt(cmd) {
   this.look(cmd);
 };
-Object.setOwnerOf($.physical.lookAt, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.physical.lookAt, $.physicals.Maximilian);
 $.physical.lookAt.verb = 'l(ook)?';
 $.physical.lookAt.dobj = 'none';
 $.physical.lookAt.prep = 'at/to';
@@ -320,33 +313,34 @@ $.physical.kick.dobj = 'this';
 $.physical.kick.prep = 'none';
 $.physical.kick.iobj = 'none';
 $.physical.readMemo = function readMemo(memo) {
-  // Deliver a memo to this object.
-  //
-  // A memo is an object that encodes a message about something that
-  // can be seen or has just happened nearby.  Most usually they are
-  // sent to the user's client (after being converted to JSON), but in
-  // principle any $.physical object can receve a memo and potentially
-  // react to it.
-  //
-  // Some example memos:
-  //
-  // A scene (simlified):
-  // {type: 'scene', user: <the user>, where: <a room>,
-  //  svgText: '<background image for room>',
-  //  contents: [
-  //    {type: 'user', what: <the user>, svgText: '<image of user>' },
-  //    {type: 'thing', what: <a thing>, svgText: '<image of thing>'}
-  //  ]}
-  //
-  // A narration:
-  // {type: 'narrate', text: "A door appears!"}
-  //
-  // Someone says something:
-  // {type: 'say', source: <a user>, where: <a room>, text: 'Hi.'}
-  //
-  // If you want to make an object react to memos (e.g., by responding
-  // to things said to it), it is better to create an .onMemo method
-  // rather than overriding .readMemo.
+  /* Deliver a memo to this object.
+   *
+   * A memo is an object that encodes a message about something that
+   * can be seen or has just happened nearby.  Most usually they are
+   * sent to the user's client (after being converted to JSON), but in
+   * principle any $.physical object can receve a memo and potentially
+   * react to it.
+   *
+   * Some example memos:
+   *
+   * A scene (simlified):
+   * {type: 'scene', user: <the user>, where: <a room>,
+   *  svgText: '<background image for room>',
+   *  contents: [
+   *    {type: 'user', what: <the user>, svgText: '<image of user>' },
+   *    {type: 'thing', what: <a thing>, svgText: '<image of thing>'}
+   *  ]}
+   *
+   * A narration:
+   * {type: 'narrate', text: "A door appears!"}
+   *
+   * Someone says something:
+   * {type: 'say', source: <a user>, where: <a room>, text: 'Hi.'}
+   *
+   * If you want to make an object react to memos (e.g., by responding
+   * to things said to it), it is better to create an .onMemo method
+   * rather than overriding .readMemo.
+   */
   if (this.onMemo) {
     new Thread(function readMemoDispatcher() {
       try {
@@ -362,7 +356,7 @@ $.physical.readMemo = function readMemo(memo) {
     }, 0, this);
   }
 };
-Object.setOwnerOf($.physical.readMemo, Object.getOwnerOf($.Jssp.prototype.compile));
+Object.setOwnerOf($.physical.readMemo, $.physicals.Maximilian);
 $.physical.setName = function setName(name, tryAlternative) {
   /* Set the .name of this physical object.  If the desired name is
    * already in use and tryAlternative is true a similar name (like
@@ -412,8 +406,8 @@ $.physical.setName = function setName(name, tryAlternative) {
   new $.Selector(['$', 'physicals', name]).toValue(/*save:*/true);
   return name;
 };
-Object.setOwnerOf($.physical.setName, Object.getOwnerOf($.Jssp.OutputBuffer));
-Object.setOwnerOf($.physical.setName.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.physical.setName, $.physicals.Maximilian);
+Object.setOwnerOf($.physical.setName.prototype, $.physicals.Maximilian);
 $.physical.destroy = function destroy() {
   // TODO: add security check here!!
 
@@ -455,7 +449,7 @@ $.physical.destroy = function destroy() {
   // function.
   this.proto = origProto;  // Record original prototype.
 };
-Object.setOwnerOf($.physical.destroy, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.physical.destroy, $.physicals.Maximilian);
 $.physical.rename = function rename(cmd) {
   try {
     var oldName = String(this);
@@ -465,8 +459,8 @@ $.physical.rename = function rename(cmd) {
     throw e.message;
   }
 };
-Object.setOwnerOf($.physical.rename, Object.getOwnerOf($.Jssp.OutputBuffer));
-Object.setOwnerOf($.physical.rename.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.physical.rename, $.physicals.Maximilian);
+Object.setOwnerOf($.physical.rename.prototype, $.physicals.Maximilian);
 $.physical.rename.verb = 'rename';
 $.physical.rename.dobj = 'this';
 $.physical.rename.prep = 'at/to';
@@ -483,8 +477,8 @@ $.physical.destroyVerb = function destroyVerb(cmd) {
   this.destroy();
   cmd.user.narrate(name + ' destroyed.');
 };
-Object.setOwnerOf($.physical.destroyVerb, Object.getOwnerOf($.Jssp.OutputBuffer));
-Object.setOwnerOf($.physical.destroyVerb.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.physical.destroyVerb, $.physicals.Maximilian);
+Object.setOwnerOf($.physical.destroyVerb.prototype, $.physicals.Maximilian);
 $.physical.destroyVerb.verb = 'destroy';
 $.physical.destroyVerb.dobj = 'this';
 $.physical.destroyVerb.prep = 'none';
@@ -502,14 +496,14 @@ $.physical.teleportTo = function teleport(dest, opt_neighbour) {
     this.location.narrate(String(this) + ' appears out of thin air.', this);
   }
 };
-Object.setOwnerOf($.physical.teleportTo, Object.getOwnerOf($.Jssp.OutputBuffer));
-Object.setOwnerOf($.physical.teleportTo.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.physical.teleportTo, $.physicals.Maximilian);
+Object.setOwnerOf($.physical.teleportTo.prototype, $.physicals.Maximilian);
 $.physical.describe = function describe(cmd) {
   this.description = cmd.iobjstr;
   cmd.user.narrate($.utils.string.capitalize(String(this)) + '\'s description set to "' + this.description + '".');
 };
-Object.setOwnerOf($.physical.describe, Object.getOwnerOf($.Jssp.OutputBuffer));
-Object.setOwnerOf($.physical.describe.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.physical.describe, $.physicals.Maximilian);
+Object.setOwnerOf($.physical.describe.prototype, $.physicals.Maximilian);
 $.physical.describe.verb = 'describe';
 $.physical.describe.dobj = 'this';
 $.physical.describe.prep = 'as';
@@ -518,8 +512,8 @@ $.physical.examine = function examine(cmd) {
   var html = examine.jssp.toString(this, {user: cmd.user});
   cmd.user.readMemo({type: "html", htmlText: html});
 };
-Object.setOwnerOf($.physical.examine, Object.getOwnerOf($.Jssp.OutputBuffer));
-Object.setOwnerOf($.physical.examine.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.physical.examine, $.physicals.Maximilian);
+Object.setOwnerOf($.physical.examine.prototype, $.physicals.Maximilian);
 $.physical.examine.verb = 'ex(amine)?';
 $.physical.examine.dobj = 'this';
 $.physical.examine.prep = 'none';
@@ -530,16 +524,16 @@ $.physical.examine.jssp = function jssp(request, response) {
   return jssp.render(this, request, response);  // See $.Jssp for explanation.
 };
 Object.setPrototypeOf($.physical.examine.jssp, $.Jssp.prototype);
-Object.setOwnerOf($.physical.examine.jssp, Object.getOwnerOf($.Jssp.OutputBuffer));
-Object.setOwnerOf($.physical.examine.jssp.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
-$.physical.examine.jssp.source = "<h1>\n  <svg width=\"32px\" height=\"32px\" viewBox=\"0 0 0 0\">\n    <%= this.getSvgText() %>\n  </svg>\n  <%= $.utils.html.escape(this.name) + $.utils.commandMenu(this.getCommands(request.user)) %>\n</h1>\nYou can:\n<ul>\n<%\n  for (var key in this) {\n    var method = this[key];\n    if (typeof method  !== 'function' || !method.verb) continue;\n    var command = method.verb.replace(/\\|/g, '/');\n    if (method.dobj === 'this') {\n      command += ' ' + this.name;\n    } else if (method.dobj === 'any') {\n      command += ' &lt;any&gt;';\n    }\n    if (method.prep  !== 'none') {\n      command += ' ' + (method.prep === 'any' ? '&lt;any&gt;' : method.prep);\n      if (method.iobj === 'this') {\n        command += ' ' + this.name;\n      } else if (method.iobj === 'any') {\n        command += ' &lt;any&gt;';\n      }\n    }\n    response.write('<li>' + command + '</li>');\n  }\n%>\n</ul>";
-$.physical.examine.jssp.hash_ = '07270d0ef03f70e5a6bffc698176cc01v1.0.0';
+Object.setOwnerOf($.physical.examine.jssp, $.physicals.Maximilian);
+Object.setOwnerOf($.physical.examine.jssp.prototype, $.physicals.Maximilian);
+$.physical.examine.jssp.source = "<h1>\n  <svg width=\"32px\" height=\"32px\" viewBox=\"0 0 0 0\">\n    <%= $.utils.object.getValue(this, 'svgText') %>\n  </svg>\n  <%= $.utils.html.escape(String(this)) + $.utils.commandMenu(this.getCommands(request.user)) %>\n</h1>\nYou can:\n<ul>\n<%\n  for (var key in this) {\n    var method = this[key];\n    if (typeof method  !== 'function' || !method.verb) continue;\n    var command = method.verb.replace(/\\|/g, '/');\n    if (method.dobj === 'this') {\n      command += ' ' + this.name;\n    } else if (method.dobj === 'any') {\n      command += ' &lt;any&gt;';\n    }\n    if (method.prep  !== 'none') {\n      command += ' ' + (method.prep === 'any' ? '&lt;any&gt;' : method.prep);\n      if (method.iobj === 'this') {\n        command += ' ' + this.name;\n      } else if (method.iobj === 'any') {\n        command += ' &lt;any&gt;';\n      }\n    }\n    response.write('<li>' + command + '</li>');\n  }\n%>\n</ul>";
+$.physical.examine.jssp.hash_ = '442c22134e1b937d5d3b607edfc0dd11v1.0.0';
 $.physical.examine.jssp.compiled_ = function(request, response) {
 // DO NOT EDIT THIS CODE: AUTOMATICALLY GENERATED BY JSSP.
 response.write("<h1>\n  <svg width=\"32px\" height=\"32px\" viewBox=\"0 0 0 0\">\n    ");
-response.write(this.getSvgText());
+response.write($.utils.object.getValue(this, 'svgText'));
 response.write("\n  </svg>\n  ");
-response.write($.utils.html.escape(this.name) + $.utils.commandMenu(this.getCommands(request.user)));
+response.write($.utils.html.escape(String(this)) + $.utils.commandMenu(this.getCommands(request.user)));
 response.write("\n</h1>\nYou can:\n<ul>\n");
 
   for (var key in this) {
@@ -564,8 +558,8 @@ response.write("\n</h1>\nYou can:\n<ul>\n");
 
 response.write("\n</ul>");
 };
-Object.setOwnerOf($.physical.examine.jssp.compiled_, Object.getOwnerOf($.Jssp.prototype.compile));
-Object.setOwnerOf($.physical.examine.jssp.compiled_.prototype, Object.getOwnerOf($.Jssp.prototype.compile));
+Object.setOwnerOf($.physical.examine.jssp.compiled_, $.physicals.Neil);
+Object.setOwnerOf($.physical.examine.jssp.compiled_.prototype, $.physicals.Neil);
 Object.defineProperty($.physical.examine.jssp.compiled_, 'name', {value: '$.physical.examine.jssp.compiled_'});
 $.physical.willMoveTo = function willMoveTo(dest) {
   /* Returns true iff this is willing to move to dest.
@@ -576,8 +570,8 @@ $.physical.willMoveTo = function willMoveTo(dest) {
    */
   return false;
 };
-Object.setOwnerOf($.physical.willMoveTo, Object.getOwnerOf($.Jssp.OutputBuffer));
-Object.setOwnerOf($.physical.willMoveTo.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.physical.willMoveTo, $.physicals.Maximilian);
+Object.setOwnerOf($.physical.willMoveTo.prototype, $.physicals.Maximilian);
 $.physical.edit = function inspect(cmd) {
   // Open this object in the code editor.
   var selector = $.Selector.for(this);
@@ -590,13 +584,12 @@ $.physical.edit = function inspect(cmd) {
   var link = $.servers.http.makeUrl('code', '') + '?' + query;
   cmd.user.readMemo({type: "link", href: link});
 };
-Object.setOwnerOf($.physical.edit, Object.getOwnerOf($.Jssp.prototype.compile));
+Object.setOwnerOf($.physical.edit, $.physicals.Neil);
 $.physical.edit.verb = 'edit';
 $.physical.edit.dobj = 'this';
 $.physical.edit.prep = 'none';
 $.physical.edit.iobj = 'none';
 
-$.physicals = (new 'Object.create')(null);
 
 $.physicals['Physical object prototype'] = $.physical;
 
@@ -625,15 +618,15 @@ $.utils.validate.physicals = function physicals(doSpider) {
     });
   }
 };
-Object.setOwnerOf($.utils.validate.physicals, Object.getOwnerOf($.Jssp.OutputBuffer));
-Object.setOwnerOf($.utils.validate.physicals.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.utils.validate.physicals, $.physicals.Maximilian);
+Object.setOwnerOf($.utils.validate.physicals.prototype, $.physicals.Maximilian);
 
 $.garbage = {};
 $.garbage.toString = function toString() {
   return 'garbage';
 };
-Object.setOwnerOf($.garbage.toString, Object.getOwnerOf($.Jssp.OutputBuffer));
-Object.setOwnerOf($.garbage.toString.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.garbage.toString, $.physicals.Maximilian);
+Object.setOwnerOf($.garbage.toString.prototype, $.physicals.Maximilian);
 $.garbage.README = "We can't forcibly delete objects, so when we want to destroy an object (such as in $.physical.destroy), we do our best to delete obvious references to it (e.g. by deleting its entry in $.physicals and moving it to null), delete all properties on it, set its owner to null and set its prototype to this $.garbage, so that if other references to it are discovered later we know they should be deleted too.";
 $.garbage.validate = function validate() {
   /* Fix the prototype of an object which now inherits from a
@@ -668,6 +661,6 @@ $.garbage.validate = function validate() {
     proto = grandProto;
   }
 };
-Object.setOwnerOf($.garbage.validate, Object.getOwnerOf($.Jssp.OutputBuffer));
-Object.setOwnerOf($.garbage.validate.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.garbage.validate, $.physicals.Maximilian);
+Object.setOwnerOf($.garbage.validate.prototype, $.physicals.Maximilian);
 

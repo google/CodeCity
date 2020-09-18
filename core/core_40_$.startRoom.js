@@ -55,72 +55,6 @@ $.startRoom.roll.iobj = 'none';
 
 $.clock = (new 'Object.create')($.thing);
 $.clock.name = 'clock';
-$.clock.getDescription = function() {
-  return 'It is currently ' + Date();
-};
-delete $.clock.getDescription.name;
-$.clock.getDescription.prototype.constructor = function() {
-    return 'It is currently ' + Date();
-  };
-$.clock.getDescription.prototype.constructor.prototype = $.clock.getDescription.prototype;
-Object.defineProperty($.clock.getDescription.prototype.constructor, 'name', {value: 'getDescription'});
-$.clock.getSvgText = function() {
-  var svg = '<circle cx="0" cy="30" r="10" class="fillWhite" />';
-  var r = 10;
-  for (var i = 0; i < 12; i++) {
-    var a = Math.PI * 2 / 12 * i;
-    var length = (i % 3 === 0) ? 2 : 1;
-    var x1 = Math.sin(a) * r;
-    var y1 = Math.cos(a) * r + 30;
-    var x2 = Math.sin(a) * (r - length);
-    var y2 = Math.cos(a) * (r - length) + 30;
-    svg += '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" />';
-  }
-  var now = new Date;
-  var minutes = now.getMinutes() + (now.getSeconds() / 60);
-  var hours = now.getHours() + (minutes / 60);
-  var x1 = 0;
-  var y1 = 30;
-  a = minutes / 60 * Math.PI * 2 + Math.PI;
-  var x2 = Math.sin(a) * -8;
-  var y2 = Math.cos(a) * 8 + 30;
-  svg += '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" />';
-  a = hours / 12 * Math.PI * 2 + Math.PI;
-  var x2 = Math.sin(a) * -6;
-  var y2 = Math.cos(a) * 6 + 30;
-  svg += '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" />';
-  return svg;
-};
-delete $.clock.getSvgText.name;
-$.clock.getSvgText.prototype.constructor = function() {
-    var svg = '<circle cx="0" cy="30" r="10" class="fillWhite" />';
-    var r = 10;
-    for (var i = 0; i < 12; i++) {
-      var a = Math.PI * 2 / 12 * i;
-      var length = (i % 3 === 0) ? 2 : 1;
-      var x1 = Math.sin(a) * r;
-      var y1 = Math.cos(a) * r + 30;
-      var x2 = Math.sin(a) * (r - length);
-      var y2 = Math.cos(a) * (r - length) + 30;
-      svg += '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" />';
-    }
-    var now = new Date;
-    var minutes = now.getMinutes() + (now.getSeconds() / 60);
-    var hours = now.getHours() + (minutes / 60);
-    var x1 = 0;
-    var y1 = 30;
-    a = minutes / 60 * Math.PI * 2 + Math.PI;
-    var x2 = Math.sin(a) * -8;
-    var y2 = Math.cos(a) * 8 + 30;
-    svg += '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" />';
-    a = hours / 12 * Math.PI * 2 + Math.PI;
-    var x2 = Math.sin(a) * -6;
-    var y2 = Math.cos(a) * 6 + 30;
-    svg += '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" />';
-    return svg;
-  };
-$.clock.getSvgText.prototype.constructor.prototype = $.clock.getSvgText.prototype;
-Object.defineProperty($.clock.getSvgText.prototype.constructor, 'name', {value: 'getSvgText'});
 $.clock.location = $.startRoom;
 $.clock.chime = function chime(silent) {
   // Chiming only.  Timer management all handled by .onTimeout.
@@ -131,7 +65,7 @@ $.clock.chime = function chime(silent) {
   }
   this.location.narrate(text.join(' '), undefined, this);
 };
-Object.setOwnerOf($.clock.chime, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.clock.chime, $.physicals.Maximilian);
 $.clock.contents_ = [];
 $.clock.contents_.forObj = $.clock;
 Object.defineProperty($.clock.contents_, 'forObj', {writable: false, enumerable: false, configurable: false});
@@ -142,8 +76,8 @@ $.clock.validate = function validate() {
   // Reset timer that runs the chime.
   this.onTimer();
 };
-Object.setOwnerOf($.clock.validate, Object.getOwnerOf($.Jssp.OutputBuffer));
-Object.setOwnerOf($.clock.validate.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.clock.validate, $.physicals.Maximilian);
+Object.setOwnerOf($.clock.validate.prototype, $.physicals.Maximilian);
 $.clock.onTimer = function onTimer() {
   /* Function that creates a thread to call itself at the next hour
    * (and calls this.chime() if it is the right time to do so.)
@@ -165,7 +99,40 @@ $.clock.onTimer = function onTimer() {
 
   if (doChime) this.chime();
 };
-Object.setOwnerOf($.clock.onTimer, Object.getOwnerOf($.Jssp.OutputBuffer));
-Object.setOwnerOf($.clock.onTimer.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.clock.onTimer, $.physicals.Maximilian);
+Object.setOwnerOf($.clock.onTimer.prototype, $.physicals.Maximilian);
 $.clock.movable = false;
+$.clock.description = function description() {
+  return 'It is currently ' + Date();
+};
+Object.setOwnerOf($.clock.description, $.physicals.Neil);
+Object.setOwnerOf($.clock.description.prototype, $.physicals.Neil);
+$.clock.svgText = function svgText() {
+  var svg = '<circle cx="0" cy="30" r="10" class="fillWhite" />';
+  var r = 10;
+  for (var i = 0; i < 12; i++) {
+    var a = Math.PI * 2 / 12 * i;
+    var length = (i % 3 === 0) ? 2 : 1;
+    var x1 = Math.sin(a) * r;
+    var y1 = Math.cos(a) * r + 30;
+    var x2 = Math.sin(a) * (r - length);
+    var y2 = Math.cos(a) * (r - length) + 30;
+    svg += '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" />';
+  }
+  var now = new Date();
+  var minutes = now.getMinutes() + (now.getSeconds() / 60);
+  var hours = now.getHours() + (minutes / 60);
+  var x1 = 0;
+  var y1 = 30;
+  a = minutes / 60 * Math.PI * 2 + Math.PI;
+  var x2 = Math.sin(a) * -8;
+  var y2 = Math.cos(a) * 8 + 30;
+  svg += '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" />';
+  a = hours / 12 * Math.PI * 2 + Math.PI;
+  var x2 = Math.sin(a) * -6;
+  var y2 = Math.cos(a) * 6 + 30;
+  svg += '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" />';
+  return svg;
+};
+Object.setOwnerOf($.clock.svgText, $.physicals.Neil);
 

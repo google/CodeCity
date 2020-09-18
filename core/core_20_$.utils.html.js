@@ -29,7 +29,7 @@ $.utils.html.escape = function escape(text) {
   return String(text).replace(/&/g, '&amp;').replace(/"/g, '&quot;')
       .replace(/</g, '&lt;').replace(/>/g, '&gt;');
 };
-Object.setOwnerOf($.utils.html.escape, Object.getOwnerOf($.Selector.db.get));
+Object.setOwnerOf($.utils.html.escape, $.physicals.Maximilian);
 $.utils.html.preserveWhitespace = function preserveWhitespace(text) {
   // Escape text so that it is safe and preserves whitespace formatting as HTML.
   // Runs of three spaces ('   ') need to be escaped twice ('_  ', '__ ').
@@ -39,5 +39,5 @@ $.utils.html.preserveWhitespace = function preserveWhitespace(text) {
       .replace(/^ /gm, '\u00A0')
       .replace(/\n/g, '<br>');
 };
-Object.setOwnerOf($.utils.html.preserveWhitespace, Object.getOwnerOf($.Selector.db.get));
+Object.setOwnerOf($.utils.html.preserveWhitespace, $.physicals.Maximilian);
 

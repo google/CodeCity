@@ -151,7 +151,7 @@ $.utils.command.parse = function parse(cmdstr, user) {
     iobj: iobj
   };
 };
-Object.setOwnerOf($.utils.command.parse, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.utils.command.parse, $.physicals.Maximilian);
 $.utils.command.execute = function execute(cmdstr, user) {
   /* Parse and execute a user's command.  Returns true if a
    * verb-function was invoked; narrates an error message and
@@ -193,7 +193,7 @@ $.utils.command.execute = function execute(cmdstr, user) {
   cmd.user.narrate('I don\'t understand that.');
   return false;
 };
-Object.setOwnerOf($.utils.command.execute, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.utils.command.execute, $.physicals.Maximilian);
 $.utils.command.verbRegExp = /^\s*(\S+)(?:\s(.*))?/;
 $.utils.command.match = function match(str, context) {
   /* Attempt to find an object matching str amongst context,
@@ -228,7 +228,7 @@ $.utils.command.match = function match(str, context) {
       return $.AMBIGUOUS_MATCH;
   }
 };
-Object.setOwnerOf($.utils.command.match, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.utils.command.match, $.physicals.Maximilian);
 $.utils.command.matchFailed = function matchFailed(obj, objstr, user) {
   /* Return true iff obj is NOT a valid match, and optionally narrate
    * a suitable error message if not.
@@ -262,8 +262,8 @@ $.utils.command.matchFailed = function matchFailed(obj, objstr, user) {
     throw new TypeError('unexpected value checking match result');
   }
 };
-Object.setOwnerOf($.utils.command.matchFailed, Object.getOwnerOf($.Jssp.OutputBuffer));
-Object.setOwnerOf($.utils.command.matchFailed.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.utils.command.matchFailed, $.physicals.Maximilian);
+Object.setOwnerOf($.utils.command.matchFailed.prototype, $.physicals.Maximilian);
 $.utils.command.matchObjects = function matchObjects(str, objects) {
   /* Match a string against a list of objects.  Will return an array
    * of zero or more objects such that (in order of preference):
@@ -301,8 +301,8 @@ $.utils.command.matchObjects = function matchObjects(str, objects) {
   if (partialMatches.length) return partialMatches;
   return [];
 };
-Object.setOwnerOf($.utils.command.matchObjects, Object.getOwnerOf($.Jssp.OutputBuffer));
-Object.setOwnerOf($.utils.command.matchObjects.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.utils.command.matchObjects, $.physicals.Maximilian);
+Object.setOwnerOf($.utils.command.matchObjects.prototype, $.physicals.Maximilian);
 $.utils.command.matchObjects.strength = function strength(str, obj) {
   /* Score str as a match for obj.
    * Returns: number
@@ -331,5 +331,5 @@ $.utils.command.matchObjects.strength = function strength(str, obj) {
   }
   return partial ? 1 : 0;
 };
-Object.setOwnerOf($.utils.command.matchObjects.strength, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.utils.command.matchObjects.strength, $.physicals.Maximilian);
 

@@ -63,7 +63,7 @@ $.utils.isObject = function isObject(v) {
    * and Function). */
   return (typeof v === 'object' && v !== null) || typeof v === 'function';
 };
-Object.setOwnerOf($.utils.isObject, Object.getOwnerOf($.system.onStartup.prototype));
+Object.setOwnerOf($.utils.isObject, $.physicals.Maximilian);
 $.utils.imageMatch = {};
 $.utils.imageMatch.recog = function send(svgText) {
   svgText = '<svg transform="scale(4)">' + svgText + '</svg>';
@@ -71,10 +71,10 @@ $.utils.imageMatch.recog = function send(svgText) {
                           '?svg=' + encodeURIComponent(svgText));
   return JSON.parse(json);
 };
-Object.setOwnerOf($.utils.imageMatch.recog, {});
-Object.setOwnerOf($.utils.imageMatch.recog.prototype, Object.getOwnerOf($.utils.imageMatch.recog));
+Object.setOwnerOf($.utils.imageMatch.recog, $.physicals.Neil);
+Object.setOwnerOf($.utils.imageMatch.recog.prototype, $.physicals.Neil);
 $.utils.regexp = {};
-Object.setOwnerOf($.utils.regexp, Object.getOwnerOf($.utils.imageMatch.recog.prototype));
+Object.setOwnerOf($.utils.regexp, $.physicals.Neil);
 $.utils.regexp.escape = function escape(str) {
   // Escape a string so that it may be used as a literal in a regular expression.
   // Example: $.utils.regexp.escape('[...]') -> "\\[\\.\\.\\.\\]"
@@ -83,8 +83,8 @@ $.utils.regexp.escape = function escape(str) {
   // Source: https://stackoverflow.com/questions/3561493/is-there-a-regexp-escape-function-in-javascript
   return str.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
 };
-Object.setOwnerOf($.utils.regexp.escape, Object.getOwnerOf($.utils.imageMatch.recog.prototype));
-Object.setOwnerOf($.utils.regexp.escape.prototype, Object.getOwnerOf($.utils.imageMatch.recog.prototype));
+Object.setOwnerOf($.utils.regexp.escape, $.physicals.Neil);
+Object.setOwnerOf($.utils.regexp.escape.prototype, $.physicals.Neil);
 
 $.utils.array = {};
 $.utils.array.filterUntilFound = function filterUntilFound(array, filter1 /*, filter2, filter3... */) {
@@ -105,7 +105,7 @@ $.utils.array.filterUntilFound.prototype.constructor = function filterUntilFound
 $.utils.array.filterUntilFound.prototype.constructor.prototype = $.utils.array.filterUntilFound.prototype;
 
 $.utils.object = {};
-Object.setOwnerOf($.utils.object, Object.getOwnerOf($.system.onStartup.prototype));
+Object.setOwnerOf($.utils.object, $.physicals.Maximilian);
 $.utils.object.spider = function spider(start, callback) {
   /* Spider the objects accessible transitively via the properties of
    * object.
@@ -153,8 +153,8 @@ $.utils.object.spider = function spider(start, callback) {
     }
   }
 };
-Object.setOwnerOf($.utils.object.spider, Object.getOwnerOf($.system.onStartup.prototype));
-Object.setOwnerOf($.utils.object.spider.prototype, Object.getOwnerOf($.system.onStartup.prototype));
+Object.setOwnerOf($.utils.object.spider, $.physicals.Maximilian);
+Object.setOwnerOf($.utils.object.spider.prototype, $.physicals.Maximilian);
 $.utils.object.transplantProperties = function transplantProperties(oldObject, newObject) {
   // Copy all properties defined on one object to another.
   if (!$.utils.isObject(newObject) || !$.utils.isObject(oldObject)) {
@@ -191,12 +191,30 @@ $.utils.object.transplantProperties = function transplantProperties(oldObject, n
     }
   }
 };
+$.utils.object.getValue = function getValue(object, prop) {
+  /* Get the value from an object's property.
+   * If the value is a function, call it and return the result.
+   * Used (for example) to get a description.  Simple objects would have a
+   * string in their description property.  Compiles objects would have a
+   * function in their description property that returns a string.
+   */
+  var value = object[prop];
+  if (typeof value === 'function') {
+    value = value.call(object);
+  }
+  return value;
+};
+Object.setOwnerOf($.utils.object.getValue, $.physicals.Maximilian);
+Object.setOwnerOf($.utils.object.getValue.prototype, $.physicals.Neil);
 
 $.utils.string = {};
 $.utils.string.capitalize = function capitalize(str) {
+  /* 'foo' -> 'Foo'
+   * Assumes incoming text is already lowercase.
+   */
   return str.charAt(0).toUpperCase() + str.substring(1);
 };
-Object.setOwnerOf($.utils.string.capitalize, Object.getOwnerOf($.system.onStartup.prototype));
+Object.setOwnerOf($.utils.string.capitalize, $.physicals.Neil);
 $.utils.string.randomCharacter = function randomCharacter(chars) {
   return chars.charAt(Math.random() * chars.length);
 };
@@ -220,6 +238,27 @@ $.utils.string.translate = function translate(text, language) {
   var json = $.system.xhr(url);
   return JSON.parse(json).result;
 };
-Object.setOwnerOf($.utils.string.translate, Object.getOwnerOf($.system.onStartup.prototype));
-Object.setOwnerOf($.utils.string.translate.prototype, Object.getOwnerOf($.system.onStartup.prototype));
+Object.setOwnerOf($.utils.string.translate, $.physicals.Maximilian);
+Object.setOwnerOf($.utils.string.translate.prototype, $.physicals.Maximilian);
+$.utils.string.generateRandom = function generateRandom(length, soup) {
+  /* Return a string of the specified length consisting of characters from the
+   * given soup, or $.utils.string.generateRandom.DEFAULT_SOUP if none
+   * specified.
+   *
+   * E.g.: generateRandom(4, 'abc') might return 'cbca'.
+   *
+   * Arguments:
+   * - length: number - length of string to generate.
+   * - soup: string - alphabet to select characters randomly from.
+   */
+  soup = soup || $.utils.string.generateRandom.DEFAULT_SOUP;
+  var out = [];
+  for (var i = 0; i < length; i++) {
+    out[i] = this.randomCharacter(soup);
+  }
+  return out.join('');
+};
+Object.setOwnerOf($.utils.string.generateRandom, $.physicals.Maximilian);
+Object.setOwnerOf($.utils.string.generateRandom.prototype, $.physicals.Neil);
+$.utils.string.generateRandom.DEFAULT_SOUP = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 
