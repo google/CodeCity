@@ -44,14 +44,6 @@ $.pot.name = 'flower pot';
 $.pot.aliases = [];
 $.pot.aliases[0] = 'pot';
 $.pot.description = 'A clay flower pot.  Try planting a seed in a pot, then watering it.';
-$.pot.getSvgText = function getSvgText() {
-    return this.stages[this.stage];
-  };
-$.pot.getSvgText.prototype.constructor = function() {
-    return this.stages[this.stage];
-  };
-$.pot.getSvgText.prototype.constructor.prototype = $.pot.getSvgText.prototype;
-Object.defineProperty($.pot.getSvgText.prototype.constructor, 'name', {value: 'getSvgText'});
 $.pot.plant = function plant(cmd) {
     cmd.user.narrate('You plant ' + String(cmd.dobj) + ' in ' + String(this) + '.');
     if (cmd.user.location) {
@@ -61,7 +53,7 @@ $.pot.plant = function plant(cmd) {
     this.stage = 0;
     this.seed = cmd.dobj;
   };
-Object.setOwnerOf($.pot.plant, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.pot.plant, $.physicals.Maximilian);
 $.pot.plant.verb = 'plant|put';
 $.pot.plant.dobj = 'any';
 $.pot.plant.prep = 'in/inside/into';
@@ -81,7 +73,7 @@ $.pot.water = function water(cmd) {
     this.location.updateScene(true);
   }
 };
-Object.setOwnerOf($.pot.water, Object.getOwnerOf($.Jssp.prototype.compile));
+Object.setOwnerOf($.pot.water, $.physicals.Neil);
 $.pot.water.verb = 'water';
 $.pot.water.dobj = 'this';
 $.pot.water.prep = 'none';
@@ -91,7 +83,7 @@ $.pot.getCommands = function getCommands(who) {
   commands.push('water ' + this.name);
   return commands;
 };
-Object.setOwnerOf($.pot.getCommands, Object.getOwnerOf($.Jssp.prototype.compile));
+Object.setOwnerOf($.pot.getCommands, $.physicals.Neil);
 $.pot.contents_ = [];
 $.pot.contents_.forObj = $.pot;
 Object.defineProperty($.pot.contents_, 'forObj', {writable: false, enumerable: false, configurable: false});
@@ -103,12 +95,16 @@ $.pot.reset = function reset(cmd) {
   this.seed = null;
   cmd.user.narrate('You reset ' + String(this) + '.');
 };
-Object.setOwnerOf($.pot.reset, Object.getOwnerOf($.Jssp.prototype.compile));
-Object.setOwnerOf($.pot.reset.prototype, Object.getOwnerOf($.Jssp.prototype.compile));
+Object.setOwnerOf($.pot.reset, $.physicals.Neil);
+Object.setOwnerOf($.pot.reset.prototype, $.physicals.Neil);
 $.pot.reset.verb = 'reset';
 $.pot.reset.dobj = 'this';
 $.pot.reset.prep = 'none';
 $.pot.reset.iobj = 'none';
+$.pot.svgText = function svgText() {
+  return this.stages[this.stage];
+};
+Object.setOwnerOf($.pot.svgText, $.physicals.Neil);
 
 $.pot.location = undefined;
 
@@ -129,7 +125,7 @@ $.physicals['flower pot'] = $.pot;
 $.thrower = (new 'Object.create')($.thing);
 $.thrower.name = 'a flame thrower';
 $.thrower.aliases = [];
-Object.setOwnerOf($.thrower.aliases, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.thrower.aliases, $.physicals.Maximilian);
 $.thrower.aliases[0] = 'flame thrower';
 $.thrower.aliases[1] = 'flamethrower';
 $.thrower.aliases[2] = 'a flamethrower';
@@ -150,7 +146,7 @@ $.thrower.wear = function wear(user) {
   }
   user.narrate('You strap on ' + String(this) + '.');
 };
-Object.setOwnerOf($.thrower.wear, Object.getOwnerOf($.Jssp.prototype.compile));
+Object.setOwnerOf($.thrower.wear, $.physicals.Neil);
 $.thrower.unwear = function unwear(user) {
   if (!this.savedSvg) {
     user.narrate('You aren\'t wearing ' + String(this) + '.');
@@ -164,7 +160,7 @@ $.thrower.unwear = function unwear(user) {
   }
   user.narrate('You takes off ' + String(this) + '.');
 };
-Object.setOwnerOf($.thrower.unwear, Object.getOwnerOf($.Jssp.prototype.compile));
+Object.setOwnerOf($.thrower.unwear, $.physicals.Neil);
 $.thrower.fire = function fire(cmd) {
   var memo = {
     type: 'iframe',
@@ -183,7 +179,7 @@ $.thrower.fire = function fire(cmd) {
   suspend(5000);
   cmd.user.location.updateScene(true);
 };
-Object.setOwnerOf($.thrower.fire, Object.getOwnerOf($.Jssp.prototype.compile));
+Object.setOwnerOf($.thrower.fire, $.physicals.Neil);
 $.thrower.fire.verb = 'fire';
 $.thrower.fire.dobj = 'this';
 $.thrower.fire.prep = 'at/to';
@@ -197,7 +193,7 @@ $.thrower.getCommands = function getCommands(who) {
   }
   return commands;
 };
-Object.setOwnerOf($.thrower.getCommands, Object.getOwnerOf($.Jssp.prototype.compile));
+Object.setOwnerOf($.thrower.getCommands, $.physicals.Neil);
 $.thrower.contents_ = [];
 $.thrower.contents_.forObj = $.thrower;
 Object.defineProperty($.thrower.contents_, 'forObj', {writable: false, enumerable: false, configurable: false});
@@ -206,8 +202,8 @@ Object.defineProperty($.thrower.contents_, 'forKey', {writable: false, enumerabl
 $.thrower.unwear1 = function unwear1(cmd) {
   this.unwear(cmd.user);
 };
-Object.setOwnerOf($.thrower.unwear1, Object.getOwnerOf($.Jssp.prototype.compile));
-Object.setOwnerOf($.thrower.unwear1.prototype, Object.getOwnerOf($.Jssp.prototype.compile));
+Object.setOwnerOf($.thrower.unwear1, $.physicals.Neil);
+Object.setOwnerOf($.thrower.unwear1.prototype, $.physicals.Neil);
 $.thrower.unwear1.verb = 'take';
 $.thrower.unwear1.dobj = 'this';
 $.thrower.unwear1.prep = 'off/off of';
@@ -215,8 +211,8 @@ $.thrower.unwear1.iobj = 'none';
 $.thrower.unwear2 = function unwear2(cmd) {
   this.unwear(cmd.user);
 };
-Object.setOwnerOf($.thrower.unwear2, Object.getOwnerOf($.Jssp.prototype.compile));
-Object.setOwnerOf($.thrower.unwear2.prototype, Object.getOwnerOf($.Jssp.prototype.compile));
+Object.setOwnerOf($.thrower.unwear2, $.physicals.Neil);
+Object.setOwnerOf($.thrower.unwear2.prototype, $.physicals.Neil);
 $.thrower.unwear2.verb = 'take';
 $.thrower.unwear2.dobj = 'none';
 $.thrower.unwear2.prep = 'off/off of';
@@ -224,8 +220,8 @@ $.thrower.unwear2.iobj = 'this';
 $.thrower.wear1 = function wear1(cmd) {
   this.wear(cmd.user);
 };
-Object.setOwnerOf($.thrower.wear1, Object.getOwnerOf($.Jssp.prototype.compile));
-Object.setOwnerOf($.thrower.wear1.prototype, Object.getOwnerOf($.Jssp.prototype.compile));
+Object.setOwnerOf($.thrower.wear1, $.physicals.Neil);
+Object.setOwnerOf($.thrower.wear1.prototype, $.physicals.Neil);
 $.thrower.wear1.verb = 'put';
 $.thrower.wear1.dobj = 'this';
 $.thrower.wear1.prep = 'on top of/on/onto/upon';
@@ -233,8 +229,8 @@ $.thrower.wear1.iobj = 'none';
 $.thrower.wear2 = function wear2(cmd) {
   this.wear(cmd.user);
 };
-Object.setOwnerOf($.thrower.wear2, Object.getOwnerOf($.Jssp.prototype.compile));
-Object.setOwnerOf($.thrower.wear2.prototype, Object.getOwnerOf($.Jssp.prototype.compile));
+Object.setOwnerOf($.thrower.wear2, $.physicals.Neil);
+Object.setOwnerOf($.thrower.wear2.prototype, $.physicals.Neil);
 $.thrower.wear2.verb = 'put';
 $.thrower.wear2.dobj = 'none';
 $.thrower.wear2.prep = 'on top of/on/onto/upon';

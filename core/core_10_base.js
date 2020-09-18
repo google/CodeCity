@@ -37,6 +37,12 @@ $.root.toString = function toString() {
   return 'root';
 };
 
+$.physicals = (new 'Object.create')(null);
+
+$.physicals.Maximilian = {};
+
+$.physicals.Neil = {};
+
 $.system = {};
 $.system.log = new 'CC.log';
 $.system.checkpoint = new 'CC.checkpoint';
@@ -68,8 +74,8 @@ $.system.onStartup = function onStartup() {
   $.Selector.db.populate();
   $.system.log('Startup: Selector reverse-lookup DB rebuilt.');
 };
-Object.setOwnerOf($.system.onStartup, {});
-Object.setOwnerOf($.system.onStartup.prototype, Object.getOwnerOf($.system.onStartup));
+Object.setOwnerOf($.system.onStartup, $.physicals.Maximilian);
+Object.setOwnerOf($.system.onStartup.prototype, $.physicals.Maximilian);
 
 var user = function user() {
   // The global user() is intended to be used to find the current

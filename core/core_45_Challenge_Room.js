@@ -24,7 +24,7 @@
 //////////////////////////////////////////////////////////////////////
 
 $.physicals['Challenge room'] = (new 'Object.create')($.room);
-Object.setOwnerOf($.physicals['Challenge room'], Object.getOwnerOf($.Jssp.prototype.compile));
+Object.setOwnerOf($.physicals['Challenge room'], $.physicals.Neil);
 $.physicals['Challenge room'].name = 'Challenge room';
 $.physicals['Challenge room'].location = null;
 $.physicals['Challenge room'].contents_ = [];
@@ -67,8 +67,8 @@ $.physicals['Challenge room'].reset = function reset(cmd) {
     cmd.user.narrate('You reset ' + String(this) + '.');
   }
 };
-Object.setOwnerOf($.physicals['Challenge room'].reset, Object.getOwnerOf($.Jssp.prototype.compile));
-Object.setOwnerOf($.physicals['Challenge room'].reset.prototype, Object.getOwnerOf($.Jssp.prototype.compile));
+Object.setOwnerOf($.physicals['Challenge room'].reset, $.physicals.Neil);
+Object.setOwnerOf($.physicals['Challenge room'].reset.prototype, $.physicals.Neil);
 $.physicals['Challenge room'].reset.verb = 'reset';
 $.physicals['Challenge room'].reset.dobj = 'none';
 $.physicals['Challenge room'].reset.prep = 'none';
@@ -79,14 +79,6 @@ $.physicals['Challenge room'].girl = $.physicals['Challenge room'].contents_[2];
 $.physicals['Challenge room'].food = (new 'Object.create')($.thing);
 $.physicals['Challenge room'].switch = $.physicals['Challenge room'].contents_[0];
 $.physicals['Challenge room'].svgTextNight = '<rect class="fillBlack strokeNone" height="100" width="2000" x="-1000" y="0"/>\n<line class="strokeWhite" x1="-1000" x2="1000" y1="90" y2="90"/>';
-$.physicals['Challenge room'].getSvgText = function() {
-  return this.switch.state ? this.svgText : this.svgTextNight;
-};
-delete $.physicals['Challenge room'].getSvgText.name;
-Object.setOwnerOf($.physicals['Challenge room'].getSvgText, Object.getOwnerOf($.Jssp.prototype.compile));
-$.physicals['Challenge room'].getSvgText.prototype.constructor = function getSvgText() {
-  return this.state ? this.svgText : this.svgTextNight;
-};
 $.physicals['Challenge room'].getContents = function getContents() {
   $.physical.validate.call(this);
   if (this.switch.state) {
@@ -101,18 +93,19 @@ $.physicals['Challenge room'].getContents = function getContents() {
     return contents;
   }
 };
-Object.setOwnerOf($.physicals['Challenge room'].getContents, Object.getOwnerOf($.Jssp.prototype.compile));
-$.physicals['Challenge room'].getDescription = function() {
-  return this.switch.state ? this.description : this.descriptionNight;
+Object.setOwnerOf($.physicals['Challenge room'].getContents, $.physicals.Neil);
+$.physicals['Challenge room'].description = function description() {
+  return this.switch.state ? 'Can you solve the challenge?' : 'It\'s dark in here.';
 };
-delete $.physicals['Challenge room'].getDescription.name;
-Object.setOwnerOf($.physicals['Challenge room'].getDescription, Object.getOwnerOf($.Jssp.prototype.compile));
-$.physicals['Challenge room'].getDescription.prototype = $.room.getDescription.prototype;
-$.physicals['Challenge room'].descriptionNight = "It's dark in here.";
-$.physicals['Challenge room'].description = 'Can you solve the challenge?';
+Object.setOwnerOf($.physicals['Challenge room'].description, $.physicals.Neil);
+$.physicals['Challenge room'].svgTextDay = '<line x1="-1000" y1="90" x2="1000" y2="90" />';
+$.physicals['Challenge room'].svgText = function svgText() {
+  return this.switch.state ? this.svgTextDay : this.svgTextNight;
+};
+Object.setOwnerOf($.physicals['Challenge room'].svgText, $.physicals.Neil);
 
-$.physicals['light switch'] = $.physicals['Challenge room'].contents_[0];
-Object.setOwnerOf($.physicals['light switch'], Object.getOwnerOf($.Jssp.prototype.compile));
+$.physicals['light switch'] = $.physicals['Challenge room'].switch;
+Object.setOwnerOf($.physicals['light switch'], $.physicals.Neil);
 $.physicals['light switch'].name = 'light switch';
 $.physicals['light switch'].location = $.physicals['Challenge room'];
 $.physicals['light switch'].contents_ = [];
@@ -120,7 +113,11 @@ $.physicals['light switch'].contents_.forObj = $.physicals['light switch'];
 Object.defineProperty($.physicals['light switch'].contents_, 'forObj', {writable: false, enumerable: false, configurable: false});
 $.physicals['light switch'].contents_.forKey = 'contents_';
 Object.defineProperty($.physicals['light switch'].contents_, 'forKey', {writable: false, enumerable: false, configurable: false});
-$.physicals['light switch'].svgText = '<g transform="scale(0.7) translate(0, 20)">\n<rect class="fillWhite" height="25" width="15" x="0" y="30"/>\n<rect class="strokeGrey" height="12" width="7" x="4" y="36.5"/>\n<rect class="strokeBlack fillBlack" height="5" width="5" x="5" y="37.5"/>\n</g>';
+$.physicals['light switch'].svgText = function svgText() {
+  return this.state ? this.svgTextDay : this.svgTextNight;
+};
+Object.setOwnerOf($.physicals['light switch'].svgText, $.physicals.Neil);
+$.physicals['light switch'].svgText.prototype = $.physicals['Challenge room'].svgText.prototype;
 $.physicals['light switch'].state = false;
 $.physicals['light switch'].flip = function flip(newState, user) {
   var onOff = newState ? 'on' : 'off';
@@ -133,13 +130,13 @@ $.physicals['light switch'].flip = function flip(newState, user) {
     this.home.narrate(String(user) + ' turns ' + onOff + ' the switch.', user);
   }
 };
-Object.setOwnerOf($.physicals['light switch'].flip, Object.getOwnerOf($.Jssp.prototype.compile));
-Object.setOwnerOf($.physicals['light switch'].flip.prototype, Object.getOwnerOf($.Jssp.prototype.compile));
+Object.setOwnerOf($.physicals['light switch'].flip, $.physicals.Neil);
+Object.setOwnerOf($.physicals['light switch'].flip.prototype, $.physicals.Neil);
 $.physicals['light switch'].flipOn1 = function flipOn1(cmd) {
   this.flip(true, cmd.user);
 };
-Object.setOwnerOf($.physicals['light switch'].flipOn1, Object.getOwnerOf($.Jssp.OutputBuffer));
-Object.setOwnerOf($.physicals['light switch'].flipOn1.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.physicals['light switch'].flipOn1, $.physicals.Maximilian);
+Object.setOwnerOf($.physicals['light switch'].flipOn1.prototype, $.physicals.Maximilian);
 $.physicals['light switch'].flipOn1.verb = 'flip|turn|switch';
 $.physicals['light switch'].flipOn1.dobj = 'this';
 $.physicals['light switch'].flipOn1.prep = 'on top of/on/onto/upon';
@@ -147,8 +144,8 @@ $.physicals['light switch'].flipOn1.iobj = 'none';
 $.physicals['light switch'].flipOn2 = function flipOn2(cmd) {
   this.flip(true, cmd.user);
 };
-Object.setOwnerOf($.physicals['light switch'].flipOn2, Object.getOwnerOf($.Jssp.OutputBuffer));
-Object.setOwnerOf($.physicals['light switch'].flipOn2.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.physicals['light switch'].flipOn2, $.physicals.Maximilian);
+Object.setOwnerOf($.physicals['light switch'].flipOn2.prototype, $.physicals.Maximilian);
 $.physicals['light switch'].flipOn2.verb = 'flip|turn|switch';
 $.physicals['light switch'].flipOn2.dobj = 'none';
 $.physicals['light switch'].flipOn2.prep = 'on top of/on/onto/upon';
@@ -156,8 +153,8 @@ $.physicals['light switch'].flipOn2.iobj = 'this';
 $.physicals['light switch'].flipOff2 = function flipOff2(cmd) {
   this.flip(false, cmd.user);
 };
-Object.setOwnerOf($.physicals['light switch'].flipOff2, Object.getOwnerOf($.Jssp.OutputBuffer));
-Object.setOwnerOf($.physicals['light switch'].flipOff2.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.physicals['light switch'].flipOff2, $.physicals.Maximilian);
+Object.setOwnerOf($.physicals['light switch'].flipOff2.prototype, $.physicals.Maximilian);
 $.physicals['light switch'].flipOff2.verb = 'flip|turn|switch';
 $.physicals['light switch'].flipOff2.dobj = 'none';
 $.physicals['light switch'].flipOff2.prep = 'off/off of';
@@ -165,17 +162,14 @@ $.physicals['light switch'].flipOff2.iobj = 'this';
 $.physicals['light switch'].flipOff1 = function flipOff1(cmd) {
   this.flip(false, cmd.user);
 };
-Object.setOwnerOf($.physicals['light switch'].flipOff1, Object.getOwnerOf($.Jssp.OutputBuffer));
-Object.setOwnerOf($.physicals['light switch'].flipOff1.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.physicals['light switch'].flipOff1, $.physicals.Maximilian);
+Object.setOwnerOf($.physicals['light switch'].flipOff1.prototype, $.physicals.Maximilian);
 $.physicals['light switch'].flipOff1.verb = 'flip|turn|switch';
 $.physicals['light switch'].flipOff1.dobj = 'this';
 $.physicals['light switch'].flipOff1.prep = 'off/off of';
 $.physicals['light switch'].flipOff1.iobj = 'none';
 $.physicals['light switch'].home = $.physicals['Challenge room'];
 $.physicals['light switch'].svgTextNight = '<g transform="scale(0.7) translate(0, 20)">\n  <rect class="fillGrey" height="25" width="15" x="0" y="30"/>\n  <rect class="strokeWhite" height="12" width="7" x="4" y="36.5"/>\n  <rect class="strokeBlack fillBlack" height="5" width="5" x="5" y="42.5"/>\n</g>';
-$.physicals['light switch'].getSvgText = $.physicals['Challenge room'].getSvgText.prototype.constructor;
-Object.setOwnerOf($.physicals['light switch'].getSvgText, Object.getOwnerOf($.Jssp.prototype.compile));
-$.physicals['light switch'].getSvgText.prototype = $.physicals['Challenge room'].getSvgText.prototype;
 $.physicals['light switch'].getCommands = function getCommands(who) {
   var commands = $.thing.getCommands.call(this, who);
   if (this.state) {
@@ -185,16 +179,17 @@ $.physicals['light switch'].getCommands = function getCommands(who) {
   }
   return commands;
 };
-Object.setOwnerOf($.physicals['light switch'].getCommands, Object.getOwnerOf($.Jssp.prototype.compile));
+Object.setOwnerOf($.physicals['light switch'].getCommands, $.physicals.Neil);
 $.physicals['light switch'].getCommands.prototype = $.cage.mousePrototype.getCommands.prototype;
 $.physicals['light switch'].aliases = [];
-Object.setOwnerOf($.physicals['light switch'].aliases, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.physicals['light switch'].aliases, $.physicals.Maximilian);
 $.physicals['light switch'].aliases[0] = 'lightswitch';
 $.physicals['light switch'].aliases[1] = 'switch';
 $.physicals['light switch'].movable = false;
+$.physicals['light switch'].svgTextDay = '<g transform="scale(0.7) translate(0, 20)">\n<rect class="fillWhite" height="25" width="15" x="0" y="30"/>\n<rect class="strokeGrey" height="12" width="7" x="4" y="36.5"/>\n<rect class="strokeBlack fillBlack" height="5" width="5" x="5" y="37.5"/>\n</g>';
 
-$.physicals.chest = $.physicals['Challenge room'].contents_[1];
-Object.setOwnerOf($.physicals.chest, Object.getOwnerOf($.Jssp.prototype.compile));
+$.physicals.chest = $.physicals['Challenge room'].chest;
+Object.setOwnerOf($.physicals.chest, $.physicals.Neil);
 $.physicals.chest.name = 'chest';
 $.physicals.chest.location = $.physicals['Challenge room'];
 $.physicals.chest.contents_ = [];
@@ -208,8 +203,8 @@ $.physicals.chest.svgTextOpen = '<rect class="fillGrey" height="26.08352" width=
 $.physicals.chest.isOpen = false;
 $.physicals.chest.description = 'A steamer chest with a very heavy lid.';
 $.physicals.chest.TIME = 5000;
-$.physicals.chest.lastTime_ = 0;
-$.physicals.chest.lastUser_ = null;
+$.physicals.chest.lastTime_ = 1597444509970;
+$.physicals.chest.lastUser_ = $.physicals.Neil;
 $.physicals.chest.open = function open(cmd) {
   if (this.isOpen) {
     cmd.user.narrate($.utils.string.capitalize(String(cmd.dobj)) + ' is already open.');
@@ -240,8 +235,8 @@ $.physicals.chest.open = function open(cmd) {
   this.lastUser_ = null;
   this.lastTime_ = 0;
 };
-Object.setOwnerOf($.physicals.chest.open, Object.getOwnerOf($.Jssp.prototype.compile));
-Object.setOwnerOf($.physicals.chest.open.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.physicals.chest.open, $.physicals.Neil);
+Object.setOwnerOf($.physicals.chest.open.prototype, $.physicals.Maximilian);
 $.physicals.chest.open.verb = 'open';
 $.physicals.chest.open.dobj = 'this';
 $.physicals.chest.open.prep = 'none';
@@ -255,11 +250,11 @@ $.physicals.chest.setOpen = function setOpen(newState) {
   }
   return true;
 };
-Object.setOwnerOf($.physicals.chest.setOpen, Object.getOwnerOf($.Jssp.prototype.compile));
-Object.setOwnerOf($.physicals.chest.setOpen.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.physicals.chest.setOpen, $.physicals.Neil);
+Object.setOwnerOf($.physicals.chest.setOpen.prototype, $.physicals.Maximilian);
 
-$.physicals.safe = $.physicals.chest.contents_[0];
-Object.setOwnerOf($.physicals.safe, Object.getOwnerOf($.Jssp.prototype.compile));
+$.physicals.safe = $.physicals.chest.location.safe;
+Object.setOwnerOf($.physicals.safe, $.physicals.Neil);
 $.physicals.safe.name = 'safe';
 $.physicals.safe.location = $.physicals.chest;
 $.physicals.safe.contents_ = [];
@@ -273,8 +268,8 @@ $.physicals.safe.description = 'The safe is secured with a three digit combinati
 $.physicals.safe.open = function open(cmd) {
   cmd.user.narrate('You need a three-digit combination to open the safe:  open ' + String(cmd.dobj) + ' with xxx');
 };
-Object.setOwnerOf($.physicals.safe.open, Object.getOwnerOf($.Jssp.OutputBuffer));
-Object.setOwnerOf($.physicals.safe.open.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.physicals.safe.open, $.physicals.Maximilian);
+Object.setOwnerOf($.physicals.safe.open.prototype, $.physicals.Maximilian);
 $.physicals.safe.open.verb = 'open';
 $.physicals.safe.open.dobj = 'this';
 $.physicals.safe.open.prep = 'none';
@@ -298,8 +293,8 @@ $.physicals.safe.openWith = function openWith(cmd) {
   cmd.user.narrate('You open ' + String(cmd.dobj) + '.');
   this.look(cmd);
 };
-Object.setOwnerOf($.physicals.safe.openWith, Object.getOwnerOf($.Jssp.OutputBuffer));
-Object.setOwnerOf($.physicals.safe.openWith.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.physicals.safe.openWith, $.physicals.Maximilian);
+Object.setOwnerOf($.physicals.safe.openWith.prototype, $.physicals.Maximilian);
 $.physicals.safe.openWith.verb = 'open';
 $.physicals.safe.openWith.dobj = 'this';
 $.physicals.safe.openWith.prep = 'with/using';
@@ -310,8 +305,8 @@ $.physicals.safe.setOpen = function setOpen(newState, combo) {
   }
   return $.container.setOpen.call(this, newState);
 };
-Object.setOwnerOf($.physicals.safe.setOpen, Object.getOwnerOf($.Jssp.prototype.compile));
-Object.setOwnerOf($.physicals.safe.setOpen.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.physicals.safe.setOpen, $.physicals.Neil);
+Object.setOwnerOf($.physicals.safe.setOpen.prototype, $.physicals.Maximilian);
 $.physicals.safe.combo = 'e94550c93cd70fe748e6982b3439ad3b';
 $.physicals.safe.svgTextClosed = '<path class="fillWhite" d="m0,80l10,-10l20,0l0,20l-10,10"/>\n<line x1="20" x2="30" y1="80" y2="70"/>\n<rect class="fillWhite" height="20" width="20" x="0" y="80"/>\n<circle class="fillWhite" cx="10" cy="90" fill-opacity="null" r="4"/>\n<circle class="fillWhite" cx="10" cy="90" fill-opacity="null" r="2"/>';
 $.physicals.safe.svgTextOpen = '<rect class="fillGrey" height="20" width="20" x="0" y="65"/>\n<path class="fillGrey" d="m0,85l-10,10l0,-20l10,-10l0,20z"/>\n<path class="fillWhite" d="m0,65l-10,10l20,0l10,-10l-20,0z"/>\n<path class="fillGrey" d="m0,85l-10,10l20,0l10,-10l-20,0z"/>\n<path class="fillWhite" d="m20,85l-10,10l0,-20l10,-10l0,20z"/>\n<path class="fillWhite" d="m-10,95l-12.5,4.5l0,-20l12.5,-4.5l0,20z"/>';
@@ -320,7 +315,7 @@ $.physicals.safe.getCommands = function getCommands(who) {
   commands.push('crack ' + String(this));
   return commands;
 };
-Object.setOwnerOf($.physicals.safe.getCommands, Object.getOwnerOf($.Jssp.prototype.compile));
+Object.setOwnerOf($.physicals.safe.getCommands, $.physicals.Neil);
 $.physicals.safe.getCommands.prototype = $.cage.mousePrototype.getCommands.prototype;
 $.physicals.safe.crack = function crack(cmd) {
   cmd.user.narrate('The "crack" function has not been programmed.  ' +
@@ -330,8 +325,26 @@ $.physicals.safe.crack = function crack(cmd) {
   // Have fun!
 
 };
-Object.setOwnerOf($.physicals.safe.crack, Object.getOwnerOf($.Jssp.prototype.compile));
-Object.setOwnerOf($.physicals.safe.crack.prototype, Object.getOwnerOf($.Jssp.prototype.compile));
+Object.setOwnerOf($.physicals.safe.crack, $.physicals.Neil);
+Object.setOwnerOf($.physicals.safe.crack.prototype, $.physicals.Neil);
+$.physicals.safe.crack.prototype.constructor = function crack(cmd) {
+  var i;
+  
+  
+  for (i = 0; i <= 999; i++) {
+    this.setOpen(true, i);
+  }
+
+  this.location.narrate(String(cmd.user) + ' attempts to crack the ' + String(cmd.dobj) + '.', cmd.user);
+  cmd.user.narrate('You attempt to crack the ' + String(cmd.dobj) + '.');
+  this.location.narrate(this.isOpen ? 'It works!  The safe swings open.' : 'It failed!  The safe remains shut.');  
+};
+Object.setOwnerOf($.physicals.safe.crack.prototype.constructor, $.physicals.Neil);
+$.physicals.safe.crack.prototype.constructor.prototype = $.physicals.safe.crack.prototype;
+$.physicals.safe.crack.prototype.constructor.verb = 'crack';
+$.physicals.safe.crack.prototype.constructor.dobj = 'this';
+$.physicals.safe.crack.prototype.constructor.prep = 'none';
+$.physicals.safe.crack.prototype.constructor.iobj = 'none';
 $.physicals.safe.crack.verb = 'crack';
 $.physicals.safe.crack.dobj = 'this';
 $.physicals.safe.crack.prep = 'none';
@@ -340,7 +353,7 @@ $.physicals.safe.crackReset = $.physicals.safe.crack;
 $.physicals.safe.toFloor = true;
 
 $.physicals.food = $.physicals.chest.location.food;
-Object.setOwnerOf($.physicals.food, Object.getOwnerOf($.Jssp.prototype.compile));
+Object.setOwnerOf($.physicals.food, $.physicals.Neil);
 $.physicals.food.name = 'food';
 $.physicals.food.location = $.physicals.safe;
 $.physicals.food.contents_ = [];
@@ -364,7 +377,7 @@ $.physicals.food.give = function give(cmd) {
         String(cmd.user) + ' offers ' + String(this) + ' to ' + String(cmd.iobj) + '.',
         [cmd.user, cmd.iobj]);
   }
-  var matches = $.utils.imageMatch.recog(this.getSvgText());
+  var matches = $.utils.imageMatch.recog($.utils.object.getValue(this, 'svgText'));
   var ok = this.girl.foodList.includes(matches[0]);
   if (!ok) {
     this.girl.attempts++;
@@ -399,13 +412,13 @@ $.physicals.food.give = function give(cmd) {
     this.girl.location.sendMemo(memo);
   }
 };
-Object.setOwnerOf($.physicals.food.give, Object.getOwnerOf($.Jssp.prototype.compile));
-Object.setOwnerOf($.physicals.food.give.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.physicals.food.give, $.physicals.Neil);
+Object.setOwnerOf($.physicals.food.give.prototype, $.physicals.Maximilian);
 $.physicals.food.give.verb = 'give';
 $.physicals.food.give.dobj = 'this';
 $.physicals.food.give.prep = 'at/to';
 $.physicals.food.give.iobj = 'any';
-$.physicals.food.girl = $.physicals.chest.location.contents_[2];
+$.physicals.food.girl = $.physicals.chest.location.girl;
 $.physicals.food.redraw = function inspect(cmd) {
   // Open this object in the SVG editor.
   var selector = $.Selector.for(this);
@@ -416,8 +429,8 @@ $.physicals.food.redraw = function inspect(cmd) {
   var link = '/code?' + encodeURIComponent(String(selector) + '.svgText');
   cmd.user.readMemo({type: "link", href: link});
 };
-Object.setOwnerOf($.physicals.food.redraw, Object.getOwnerOf($.Jssp.prototype.compile));
-Object.setOwnerOf($.physicals.food.redraw.prototype, Object.getOwnerOf($.Jssp.prototype.compile));
+Object.setOwnerOf($.physicals.food.redraw, $.physicals.Neil);
+Object.setOwnerOf($.physicals.food.redraw.prototype, $.physicals.Neil);
 $.physicals.food.redraw.verb = 'redraw';
 $.physicals.food.redraw.dobj = 'this';
 $.physicals.food.redraw.prep = 'none';
@@ -428,12 +441,12 @@ $.physicals.food.getCommands = function getCommands(who) {
   commands.push('give ' + this.name + ' to girl');
   return commands;
 };
-Object.setOwnerOf($.physicals.food.getCommands, Object.getOwnerOf($.Jssp.prototype.compile));
-$.physicals.food.getCommands.prototype = $.cage.mousePrototype.getCommands.prototype;
+Object.setOwnerOf($.physicals.food.getCommands, $.physicals.Neil);
+$.physicals.food.getCommands.prototype = $.physicals.safe.getCommands.prototype;
 $.physicals.food.svgTextReset = '<path d="M-7,80L-5,97C-5,100.5,5,100.5,5,97L7,80" class="fillWhite"/>\n<ellipse class="fillWhite" cx="0" cy="80" rx="7" ry="3"/>\n';
 
-$.physicals.girl = $.physicals.chest.location.contents_[2];
-Object.setOwnerOf($.physicals.girl, Object.getOwnerOf($.Jssp.prototype.compile));
+$.physicals.girl = $.physicals.food.girl;
+Object.setOwnerOf($.physicals.girl, $.physicals.Neil);
 $.physicals.girl.name = 'girl';
 $.physicals.girl.location = $.physicals.chest.location;
 $.physicals.girl.contents_ = [];
@@ -449,7 +462,7 @@ $.physicals.girl.get = function get(cmd) {
     cmd.user.location.narrate(String(cmd.user) + ' tries to pick up ' + String(this) + '.', cmd.user);
   }
 };
-Object.setOwnerOf($.physicals.girl.get, Object.getOwnerOf($.Jssp.prototype.compile));
+Object.setOwnerOf($.physicals.girl.get, $.physicals.Neil);
 $.physicals.girl.get.prototype = $.thing.get.prototype;
 $.physicals.girl.get.verb = 'get|take';
 $.physicals.girl.get.dobj = 'this';
@@ -719,7 +732,7 @@ $.physicals.girl.willAccept = function(what, src) {
   return what === this.food;
 };
 delete $.physicals.girl.willAccept.name;
-Object.setOwnerOf($.physicals.girl.willAccept, Object.getOwnerOf($.Jssp.prototype.compile));
+Object.setOwnerOf($.physicals.girl.willAccept, $.physicals.Neil);
 $.physicals.girl.willAccept.prototype = $.cage.willAccept.prototype;
 $.physicals.girl.movable = false;
 $.physicals.girl.attempts = 0;

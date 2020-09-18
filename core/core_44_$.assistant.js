@@ -50,7 +50,7 @@ $.assistant.onMemo = function onMemo(memo) {
   // Process command.
   this.onCommand(m[1] || '');
 };
-Object.setOwnerOf($.assistant.onMemo, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.assistant.onMemo, $.physicals.Maximilian);
 $.assistant.say = function say(speech) {
   if (!this.location) return;
   var memo = {
@@ -86,7 +86,7 @@ $.assistant.onCommand = function onCommand(command) {
   }
   if (!done) this.say('Sorry, I don\'t understand "' + command + '".');
 };
-Object.setOwnerOf($.assistant.onCommand, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.assistant.onCommand, $.physicals.Maximilian);
 $.assistant.cmd_time = function cmd_time(command, raw) {
   // First check to see if the command looked like a request for the time.
   if (!command.match(/what time is it|what('s| is) the time/i)) return false;
@@ -94,8 +94,8 @@ $.assistant.cmd_time = function cmd_time(command, raw) {
   this.say('The current time is ' + new Date().toTimeString());
   return true;
 };
-Object.setOwnerOf($.assistant.cmd_time, Object.getOwnerOf($.Jssp.OutputBuffer));
-Object.setOwnerOf($.assistant.cmd_time.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.assistant.cmd_time, $.physicals.Maximilian);
+Object.setOwnerOf($.assistant.cmd_time.prototype, $.physicals.Maximilian);
 $.assistant.cmd_translate = function cmd_translate(command, raw) {
   // First check to see if the command looked like a request to translate some text.
   var m = raw.match(/(?:what\s+is|how\s+do\s+you\s+say)\s+(?:"([^"]+)"|(.*))\s+in\s+(\w+)/i);
@@ -116,8 +116,8 @@ $.assistant.cmd_translate = function cmd_translate(command, raw) {
   }
   return true;
 };
-Object.setOwnerOf($.assistant.cmd_translate, Object.getOwnerOf($.Jssp.OutputBuffer));
-Object.setOwnerOf($.assistant.cmd_translate.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.assistant.cmd_translate, $.physicals.Maximilian);
+Object.setOwnerOf($.assistant.cmd_translate.prototype, $.physicals.Maximilian);
 $.assistant.cmd_translate.languages = (new 'Object.create')(null);
 $.assistant.cmd_translate.languages.german = 'de';
 $.assistant.cmd_translate.languages.italian = 'it';
