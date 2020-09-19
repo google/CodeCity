@@ -17,7 +17,7 @@
   },
   "homepage": "https://github.com/google/CodeCity#readme",
   "dependencies": {
-    "googleapis": "^45.0.0"
+    "googleapis": "^59.0.0"
   },
   "devDependencies": {}
 }
