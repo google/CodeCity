@@ -419,19 +419,31 @@ exports.testDumperPrototypeExprForSelector_ = function(t) {
   const pristine = new Interpreter();
   const dumper = new Dumper(pristine, intrp);
 
-  // Test dumping selector before and after dumping Object.getPrototypeOf.
-  const selector = new Selector('foo.bar^.baz');
-  t.expect(util.format('Dumper.p.exprForSelector_(%s)  // 0', selector),
-           dumper.exprForSelector_(selector),
+  // Test dumping a selector before and after dumping Object.getPrototypeOf.
+  const s1 = new Selector('foo.bar{proto}.baz');
+  t.expect(util.format('Dumper.p.exprForSelector_(%s)  // 0', s1),
+           dumper.exprForSelector_(s1),
            "(new 'Object.getPrototypeOf')(foo.bar).baz");
   // Give Object.getPrototypeOf a referrence indicating it is
   // available via the global variable myGetPrototypeOf.
   dumper.getObjectDumper_(/** @type {!Interpreter.prototype.Object} */
       (intrp.builtins.get('Object.getPrototypeOf'))).ref =
           new Components(dumper.global, 'myGetPrototypeOf');
-  t.expect(util.format('Dumper.p.exprForSelector_(%s)  // 1', selector),
-           dumper.exprForSelector_(selector),
+  t.expect(util.format('Dumper.p.exprForSelector_(%s)  // 1', s1),
+           dumper.exprForSelector_(s1),
            'myGetPrototypeOf(foo.bar).baz');
+
+  // Test dumping selector before and after dumping Object.getPrototypeOf.
+  const s2 = new Selector('quux{owner}');
+  t.expect(util.format('Dumper.p.exprForSelector_(%s)  // 0', s2),
+           dumper.exprForSelector_(s2), "(new 'Object.getOwnerOf')(quux)");
+  // Give Object.getOwnerOf a referrence indicating it is
+  // available via the global variable myGetOwnerOf.
+  dumper.getObjectDumper_(/** @type {!Interpreter.prototype.Object} */
+      (intrp.builtins.get('Object.getOwnerOf'))).ref =
+          new Components(dumper.global, 'myGetOwnerOf');
+  t.expect(util.format('Dumper.p.exprForSelector_(%s)  // 1', s2),
+           dumper.exprForSelector_(s2), 'myGetOwnerOf(quux)');
 };
 
 /**
