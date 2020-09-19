@@ -658,8 +658,10 @@ Dumper.prototype.exprForRegExp_ = function(re, reDumper) {
  * given Selector s and Dumper d, d.exprForSelector_(s) will be the
  * same as s.toExpr() except when the output needs to call a builtin
  * function like Object.getPrototypeOf that is not available via its
- * usual name - e.g. 'Object.getPrototypeOf(foo.bar)' rather than
- * 'foo.bar{proto}'.
+ * usual name - e.g. if Object.getPrototypeOf has not yet been dumped
+ * then the eelector foo.bar{proto} might be represented as "(new
+ * 'Object.getPrototypeOf')(foo.bar)" instead of
+ * "Object.getPrototypeOf(foo.bar)".
  * @private
  * @param {Selector=} selector Selector to obtain value of.
  * @return {string} An eval-able representation of the value.
