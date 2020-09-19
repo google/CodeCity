@@ -141,7 +141,7 @@ exports.testObjectDumperPrototypeIsWritable = function(t) {
  * @suppress {accessControls}
  */
 exports.testDumperPrototypeIsShadowed_ = function(t) {
-  const intrp = getInterpreter();
+  const intrp = new Interpreter();
   const pristine = new Interpreter();
   const dumper = new Dumper(pristine, intrp);
 
@@ -163,7 +163,7 @@ exports.testDumperPrototypeIsShadowed_ = function(t) {
  * @suppress {accessControls}
  */
 exports.testDumperPrototypeExprForPrimitive_ = function(t) {
-  const intrp = getInterpreter();
+  const intrp = new Interpreter();
   const pristine = new Interpreter();
   const dumper = new Dumper(pristine, intrp);
 
@@ -211,7 +211,7 @@ exports.testDumperPrototypeExprForPrimitive_ = function(t) {
  * @suppress {accessControls}
  */
 exports.testDumperPrototypeExprFor_ = function(t) {
-  const intrp = getInterpreter();
+  const intrp = new Interpreter();
   const pristine = new Interpreter();
   const dumper = new Dumper(pristine, intrp);
 
@@ -415,7 +415,7 @@ exports.testSubDumperPrototypeSurvey = function(t) {
  * @suppress {accessControls}
  */
 exports.testDumperPrototypeExprForSelector_ = function(t) {
-  const intrp = getInterpreter();
+  const intrp = new Interpreter();
   const pristine = new Interpreter();
   const dumper = new Dumper(pristine, intrp);
 
