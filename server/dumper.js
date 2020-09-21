@@ -756,7 +756,7 @@ Dumper.prototype.getDumperFor = function(selector, scope) {
  */
 Dumper.prototype.getObjectDumper_ = function(obj) {
   if (this.objDumpers2.has(obj)) return this.objDumpers2.get(obj);
-  var objDumper = new ObjectDumper(this, obj);
+  var objDumper = new ObjectDumper(obj);
   this.objDumpers2.set(obj, objDumper);
   return objDumper;
 };
@@ -1242,10 +1242,9 @@ ScopeDumper.prototype.survey = function(dumper) {
  * all the dump-state info required to keep track of what properties
  * (etc.) have and haven't yet been dumped.
  * @constructor @extends {SubDumper}
- * @param {!Dumper} dumper Dumper to which this ObjectDumper belongs.
  * @param {!Interpreter.prototype.Object} obj The object to keep state for.
  */
-var ObjectDumper = function(dumper, obj) {
+var ObjectDumper = function(obj) {
   SubDumper.call(this);
   /** @type {!Interpreter.prototype.Object} */
   this.obj = obj;
