@@ -1953,6 +1953,27 @@ var Components = function(dumper, part) {
   /** @const {Selector.Part} */ this.part = part;
 };
 
+/**
+ * Custom util.inspect implementation, to make debug/test output more
+ * readable.
+ * @param {number} depth
+ * @param {util.inspect.Options} opts
+ * @return {string}
+ */
+Components.prototype[util.inspect.custom] = function(depth, opts) {
+  var /** string */ dumper;
+  if (this.dumper instanceof ScopeDumper) {
+    dumper = util.format('<%s scope>', this.dumper.scope.type);
+  } else if (this.dumper instanceof ObjectDumper) {
+    try {
+      dumper = this.dumper.getSelector(/*preferred=*/true).toString();
+    } catch (e) {
+      dumper = '<unknown>';
+    }
+  }
+  return util.format('Components<%s, %s>', dumper, this.part);
+};
+
 ///////////////////////////////////////////////////////////////////////////////
 // Type declarations: Do, etc.
 
