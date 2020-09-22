@@ -112,7 +112,8 @@ var Dumper = function(intrp1, intrp2, options) {
     if (Object.is(val1in2, val2)) {
       this.global.setDone(v, (typeof val2 === 'object') ? Do.DONE : Do.RECURSE);
       if (val2 instanceof intrp2.Object) {
-        this.getObjectDumper_(val2).updateRef(new Components(this.global, v));
+        this.getObjectDumper_(val2)
+            .updateRef(this, new Components(this.global, v));
         // Other initialialisation will be taken care of below.
       }
     }
@@ -284,7 +285,7 @@ Dumper.prototype.exprFor_ = function(value, ref, callable, funcName) {
   if (objDumper.proto !== undefined && objDumper.ref) {
     selector = objDumper.getSelector();
   }
-  if (ref) objDumper.updateRef(ref);  // Safe new ref if specified.
+  if (ref) objDumper.updateRef(this, ref);  // Safe new ref if specified.
   if (selector) return this.exprForSelector_(selector);
 
   // Object not yet referenced.  Is it a builtin?
@@ -547,7 +548,8 @@ Dumper.prototype.exprForFunction_ = function(func, funcDumper, funcName) {
       funcDumper.checkProperty('prototype', prototype, attr, pd);
       // Mark prototype object as existing and referenceable.
       prototypeFuncDumper.proto = this.intrp2.OBJECT;
-      prototypeFuncDumper.updateRef(new Components(funcDumper, 'prototype'));
+      prototypeFuncDumper
+          .updateRef(this, new Components(funcDumper, 'prototype'));
       // Do we need to set .prototype's [[Prototype]]?
       if (prototype.proto === prototypeFuncDumper.proto) {
         prototypeFuncDumper.setDone(Selector.PROTOTYPE,
@@ -593,7 +595,7 @@ Dumper.prototype.exprForObject_ = function(obj, objDumper) {
         // Record prototype connection.
         objDumper.proto = obj.proto;
         this.getObjectDumper_(obj.proto)
-            .updateRef(new Components(objDumper, Selector.PROTOTYPE));
+            .updateRef(this, new Components(objDumper, Selector.PROTOTYPE));
         return this.exprForCall_('Object.create', [obj.proto]);
       } else {
         // Can't set [[Prototype]] yet.  Do it later.
@@ -1467,7 +1469,7 @@ ObjectDumper.prototype.dump = function(
           Math.min(done, ObjectDumper.Done.DONE));
       continue;
     }
-    valueDumper.updateRef(new Components(this, part));
+    valueDumper.updateRef(dumper, new Components(this, part));
     var objDone =
         valueDumper.dump(dumper, bindingSelector, visiting, visited);
     if (objDone === null || objDone instanceof ObjectDumper.Pending) {
@@ -1585,7 +1587,7 @@ ObjectDumper.prototype.dumpOwner_ = function(
     // Record owner connection.
     if (value !== null) {
       dumper.getObjectDumper_(value)
-          .updateRef(new Components(this, Selector.OWNER));
+          .updateRef(dumper, new Components(this, Selector.OWNER));
     }
     dumper.write(
         dumper.exprForCall_('Object.setOwnerOf', [objSelector, value]),
@@ -1696,7 +1698,7 @@ ObjectDumper.prototype.dumpPrototype_ = function(
     this.proto = value;
     if (value !== null) {
       dumper.getObjectDumper_(value)
-          .updateRef(new Components(this, Selector.PROTOTYPE));
+          .updateRef(dumper, new Components(this, Selector.PROTOTYPE));
     }
     dumper.write(
         dumper.exprForCall_('Object.setPrototypeOf', [objSelector, value]),
@@ -1886,10 +1888,11 @@ ObjectDumper.prototype.survey = function(dumper) {
 /**
  * Record a new reference to the object, if it is better (by Selector
  * badness) than the existing one.
+ * @param {!Dumper} dumper The Dumper to which this ObjectDumber belongs.
  * @param {!Components} ref The new reference.
  * @return {void}
  */
-ObjectDumper.prototype.updateRef = function(ref) {
+ObjectDumper.prototype.updateRef = function(dumper, ref) {
   if (ref.dumper === this) return;  // Ignore self-references.
   if (!this.ref) {
     this.ref = ref;  // Any ref is better than no ref.
