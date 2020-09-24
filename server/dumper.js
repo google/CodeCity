@@ -1842,12 +1842,13 @@ ObjectDumper.prototype.updateRef = function(ref) {
   var oldBadness;
   var newBadness;
   try {
-    oldBadness = this.getSelector();
+    oldBadness = this.getSelector().badness();
   } catch (e) {
     oldBadness = Infinity;
   }
   try {
-    newBadness = ref.dumper.getSelector() + Selector.partBadness(ref.part);
+    newBadness =
+        ref.dumper.getSelector().badness() + Selector.partBadness(ref.part);
   } catch (e) {
     newBadness = Infinity;
   }
