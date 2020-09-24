@@ -104,14 +104,15 @@ you can skip all but the last step.
     address.  The details of this are outside of the scope of this
     document, but we have the following observations and
     recommendations:
-    *   Setting up
-        [DNS](https://en.wikipedia.org/wiki/Domain_Name_System)
+    *   Setting up DNS<sup>[[?]](
+        https://en.wikipedia.org/wiki/Domain_Name_System)</sup>
         involves two different entities: the registrar, which assigns
-        you a [domain name](https://en.wikipedia.org/wiki/Domain_name)
-        (like `example.org`), and a DNS provider, which runs the [name
-        servers](https://en.wikipedia.org/wiki/Name_server) that
-        resolve individual DNS entries (like `www.example.com`) to
-        specific numeric IP addresses like the one created in the
+        you a domain
+        name<sup>[[?]](https://en.wikipedia.org/wiki/Domain_name)</sup>
+        (like `example.org`), and a DNS provider, which runs the name
+        servers<sup>[[?]](https://en.wikipedia.org/wiki/Name_server)</sup>
+        that resolve individual DNS entries (like `www.example.com`)
+        to specific numeric IP addresses like the one created in the
         previous step.  In some cases both these services will be
         provided by the same company, but many organisations will
         typically run their own DNS servers, or outsource it to a
@@ -129,16 +130,17 @@ you can skip all but the last step.
     *   Because of the [same origin policy], if you’d like to allow
         individual (not fully trusted) users of your instance to be
         able to create their own web pages / servers, we *strongly*
-        recommend that you use a [wildcard DNS record](
-        https://en.wikipedia.org/wiki/Wildcard_DNS_record), so that
-        each user can serve their content on an isolated subdomain
-        (like
-        <code><em>username</em>.example.codecity.world</code>).
-        To facilitate obtaining the necessary [wildcard certificate](
-        https://en.wikipedia.org/wiki/Wildcard_certificate), we
+        recommend that you use a wildcard DNS record<sup>[[?]](
+        https://en.wikipedia.org/wiki/Wildcard_DNS_record)</sup>, so
+        that each user can serve their content on an isolated
+        subdomain (like
+        <code><em>username</em>.example.codecity.world</code>).  To
+        facilitate obtaining the necessary wildcard
+        certificate<sup>[[?]](
+        https://en.wikipedia.org/wiki/Wildcard_certificate)</sup>, we
         recommend you use a [DNS provider who easily integrates with
         Let’s Encrypt DNS validation][dns-providers], such as [Google
-        Cloud DNS](https://cloud.google.com/dns/) if possible.
+        Cloud DNS](https://cloud.google.com/dns/), if possible.
  
 [same origin policy]: https://developer.mozilla.org/en-US/docs/Web/Security/Same-origin_policy
 [dns-providers]: https://community.letsencrypt.org/t/dns-providers-who-easily-integrate-with-lets-encrypt-dns-validation/86438
@@ -253,10 +255,10 @@ set-up.
 ### Get TLS Certificates
 
 In order to allow incoming HTTPS connections, you will need an
-[TLS](https://en.wikipedia.org/wiki/Transport_Layer_Security) [server
-certificate](
+TLS<sup>[[?]](https://en.wikipedia.org/wiki/Transport_Layer_Security)</sup>
+server certificate<sup>[[?]](
 https://en.wikipedia.org/wiki/Public_key_certificate#TLS/SSL_server_certificate
-).  There are two types:
+)</sup>.  There are two types:
 
 *   An ordinary certificate covers one or more specific domain names,
     like `www.example.org`.
@@ -277,8 +279,8 @@ way is to use [Certbot](https://certbot.eff.org/) to get one from
 To use Certbot to get a wildcard certificate, you will need to use the
 [`dns-01` challenge](
 https://letsencrypt.org/docs/challenge-types/#dns-01-challenge), which
-requires being able to create [DNS TXT records](
-https://en.wikipedia.org/wiki/TXT_record) for your domain name.
+requires being able to create DNS TXT records<sup>[[?]](
+https://en.wikipedia.org/wiki/TXT_record)</sup> for your domain name.
 Here’s an example of how to do this if using Google Cloud DNS; see
 [full instructions on the certbot website](
 https://certbot.eff.org/lets-encrypt/debianbuster-nginx) if you use
@@ -480,11 +482,10 @@ nginx.
     *   Name: a suitable full name for your instance, (e.g. “Code City
         for Springfield Highschool”).
     *   Authorized JavaScript origins: may be left blank.
-    *   Authorised redirect URIs: for wildcard DNS configurations this
-        will be of the form
-        <code>https://login.<em>example</em>.codecity.world/</code>;
+    *   Authorized redirect URIs: for wildcard DNS configurations this
+        will be of the form `https://login.example.codecity.world/`;
         for single-domain configurations it will instead be
-        <code><em>example</em>.codecity.world/login</code>.
+        `https://example.codecity.world/login`.
 0.  Click Save.
 0.  Now click on the newly-created client ID.  Make a note of the
     Client ID (it will be a long string like
@@ -530,9 +531,9 @@ https://support.google.com/cloud/answer/6158849) for more information.
     *   Set `password` to a secret, random string.  If you don’t have
         a convenient way to generate one locally, you can copy a
         [random string from random.org].
-    *   Optionally, set `emailRegexp` to a [regexp] matching email
-        addresses which should be permitted to log in to your
-        isntance—e.g., `^.*@myorganisation.org$`.
+    *   Optionally, set `emailRegexp` to a [JavaScript regexp]
+        matching email addresses which should be permitted to log in
+        to your instance—e.g., `^.*@myorganisation.org$`.
 0.  Create and edit a config file for connectServer:
     *   Run connectServer once to create an empty config file:
         ```
@@ -559,7 +560,7 @@ https://support.google.com/cloud/answer/6158849) for more information.
     exit
     ```
 
-[regexp]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions
+[JavaScript regexp]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions
 [random string from random.org]: https://www.random.org/strings/?num=1&len=20&digits=on&upperalpha=on&loweralpha=on&unique=on&format=html&rnd=new
 
 ### Configure Systemd and Start Code City Servers
@@ -594,15 +595,16 @@ network activity, here’s how to do that:
     ```
     Note the port number (in this case 9229).
 0.  SSH in to the GCE instance again, enabling port forwarding:
-    *   <code>$ <strong>ssh -L 9229:localhost:9229
-        cpcallen@google.codecity.world</strong></code>
+    ```
+    ssh -L 9229:localhost:9229 google.codecity.world
+    ```
     *   The initial 9229 can be replaced with a local port number of
         your choice.
-    *   The <code>:localhost:</code> directive ensures that only
-        processes running on your local machine can make use of the
-        port forward.
+    *   The `:localhost:` directive ensures that only processes
+        running on your local machine can make use of the port
+        forward.
 0.  Open the inspector in Chrome by going to
-    <code>chrome://inspect</code>
+    [`chrome://inspect`](chrome://inspect).
 
 (Based on [node.js debugging documentation](
 https://nodejs.org/en/docs/guides/debugging-getting-started/) and [a
