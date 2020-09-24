@@ -138,7 +138,7 @@ class IterableWeakMap extends WeakMap {
    *     callback
    * @param {THIS=} thisArg
    * @return {void}
-   * @template THIS
+   * @template MAP, THIS
    */
   forEach(callback, thisArg = undefined) {
     for (const [key, value] of this) {
