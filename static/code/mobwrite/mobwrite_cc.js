@@ -71,8 +71,6 @@ Code.MobwriteShare.init = function() {
 
   // Register this shareHandler with MobWrite.
   mobwrite.shareHandlers.push(Code.MobwriteShare.shareHandler);
-  // Point MobWrite at the daemon on Code City.
-  mobwrite.syncGateway = '/mobwrite';
   // Default max is 10 seconds.  Decrease to 5.
   mobwrite.maxSyncInterval = 5000;
 };

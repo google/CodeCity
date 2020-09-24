@@ -631,6 +631,7 @@ mobwrite.syncLoadAjax_ = function(url, post, callback) {
   var req = new XMLHttpRequest();
   req.onload = callback;
   req.open('POST', url, true);
+  req.withCredentials = true;
   req.setRequestHeader('Content-Type','application/x-www-form-urlencoded');
   req.send(post);
   return req;
@@ -649,10 +650,16 @@ mobwrite.syncCheckAjax_ = function() {
     return;
   }
   // Only if "OK"
-  if (mobwrite.syncAjaxObj_.status == 200) {
+  if (mobwrite.syncAjaxObj_.status === 200) {
     var text = mobwrite.syncAjaxObj_.responseText;
     mobwrite.syncAjaxObj_ = null;
     mobwrite.syncRun2_(text);
+  } else if (mobwrite.syncAjaxObj_.status === 410) {
+    // Required cookie not found.  Stop sharing.
+    console.warn('410: Required cookie not found');
+    for (var file in mobwrite.shared) {
+      delete mobwrite.shared[file];
+    }
   } else {
     if (mobwrite.debug) {
       console.warn('Connection error code: ' + mobwrite.syncAjaxObj_.status);

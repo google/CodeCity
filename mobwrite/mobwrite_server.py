@@ -25,6 +25,7 @@ __author__ = "fraser@google.com (Neil Fraser)"
 import datetime
 import glob
 import os
+import re
 import sys
 import time
 import thread
@@ -211,30 +212,41 @@ class DaemonMobWrite(BaseHTTPRequestHandler, mobwrite_core.MobWrite):
           (self.client_address[0], connection_origin))
     mobwrite_core.LOG.info("Connection accepted from " + self.client_address[0])
 
+    required_cookie = mobwrite_core.CFG.get("REQUIRED_COOKIE", "")
+    if required_cookie and (('Cookie' not in self.headers) or
+        (not re.search(r'(^|;)\s*%s=\w' % required_cookie, self.headers['Cookie']))):
+      self.send_headers(410)
+      self.wfile.write("Required cookie not found.\n")
+      return
+
     # Read the POST data.
     content_length = int(self.headers['Content-Length'])
     data = self.rfile.read(content_length)
 
     div = data.find("q=")
     if div == -1:
-      self.send_response(400)
-      self.send_header('Content-type','text/plain')
-      self.end_headers()
+      self.send_headers(400)
       self.wfile.write("'q=' parameter not found in data:\n")
       self.wfile.write(data)
       return
 
     data = data[div + 2:]
     data = urllib.unquote(data)
-    self.send_response(200)
-    self.send_header('Content-type','text/plain')
-    self.end_headers()
-
+    self.send_headers(200)
     self.wfile.write(self.handleRequest(data))
     self.wfile.write("\n")  # Terminating blank line.
 
     # Goodbye
     mobwrite_core.LOG.debug("Disconnecting.")
+
+
+  def send_headers(self, code):
+    origin = self.headers['Origin']
+    self.send_response(code)
+    self.send_header('Content-type', 'text/plain')
+    self.send_header('Access-Control-Allow-Origin', origin)
+    self.send_header('Access-Control-Allow-Credentials', 'true')
+    self.end_headers()
 
 
   def handleRequest(self, text):

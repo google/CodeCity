@@ -31,6 +31,16 @@ Code.Editor.currentEditor = null;
 Code.Editor.uncreatedEditorSource = '';
 
 /**
+ * URL of this script.
+ * Might be with or without subdomains:
+ * https://static.google.codecity.world/code/editor.js
+ * http://localhost:8080/static/code/editor.js
+ * @type {string}
+ */
+Code.Editor.mySource = document.getElementById('editor_js').src;
+
+
+/**
  * Got a ping from someone.  Something might have changed and need updating.
  */
 Code.Editor.receiveMessage = function() {
@@ -247,9 +257,9 @@ Code.Editor.beforeUnload.disabled = false;
 Code.Editor.loadMobWrite = function(callback) {
   if (!Code.Editor.waitMobWrite_.isLoaded) {
     var files = ['dmp.js', 'mobwrite_core.js', 'mobwrite_cc.js'];
-    for (var i = 0; i < files.length; i++) {
+    for (var file of files) {
       var script = document.createElement('script');
-      script.src = 'mobwrite/' + files[i];
+      script.src = Code.Editor.mySource.replace('editor.js', 'mobwrite/' + file);
       document.head.appendChild(script);
     }
   }
@@ -270,6 +280,17 @@ Code.Editor.waitMobWrite_ = function(callback) {
   } else {
     if (!Code.Editor.waitMobWrite_.isLoaded) {
       Code.MobwriteShare.init();
+      // Point MobWrite at the daemon on Code City.
+      var url = Code.Editor.mySource.replace('/code/editor.js', '');
+      if (url.endsWith('/static')) {
+        // http://localhost:8080/static
+        mobwrite.syncGateway = url.replace(/\/static$/, '/mobwrite');
+      } else if (/:\/\/static\./.test(url)) {
+        // https://static.google.codecity.world
+        mobwrite.syncGateway = url.replace('://static.', '://mobwrite.');
+      } else {
+        throw Error('Source does not match known pattern: ' + url);
+      }
       Code.Editor.waitMobWrite_.isLoaded = true;
     }
     callback();
@@ -327,7 +348,7 @@ Code.Editor.sendXhr = function() {
   var selector = Code.Common.partsToSelector(Code.Editor.parts);
   var xhr = Code.Editor.codeRequest_;
   xhr.abort();
-  xhr.open('POST', '/code/editor');
+  xhr.open('POST', 'editorXhr');
   xhr.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
   xhr.onload = Code.Editor.receiveXhr;
   var src = Code.Editor.currentSource || '';
@@ -373,17 +394,14 @@ Code.Editor.receiveXhr = function() {
   if (data.saved === false && !data.login) {
     // Save was requested, but failed due to lack of a login.
     // Open login window.
-    var loginWindow = open('login.html', 'login', 'height=600,width=500');
+    var loginWindow = open('login', 'login', 'height=600,width=500');
     if (loginWindow) {
-      var pid = setInterval(function() {
-        if (loginWindow.closeMe) {
+      window.addEventListener('message', function(event) {
+        if (event.data === 'closeMe') {
           loginWindow.close();
           Code.Editor.save();
         }
-        if (loginWindow.closed) {
-          clearInterval(pid);
-        }
-      }, 1000);
+      }, false);
     } else {
       alert('Your browser has blocked the opening of the page you requested.\n' +
             'Please allow pop-ups on this domain. ✓️');
@@ -697,10 +715,10 @@ Code.Editor.JSHintReady = false;
  * Defer loading until page is loaded and responsive.
  */
 Code.Editor.importJSHint = function() {
-  //<script type="text/javascript" src="/static/JSHint/jshint.js"></script>
+  // <script type="text/javascript" src="/static/JSHint/jshint.js"></script>
   var script = document.createElement('script');
   script.type = 'text/javascript';
-  script.src = '/static/JSHint/jshint.js';
+  script.src = Code.Editor.mySource.replace('code/editor.js', 'JSHint/jshint.js');
   script.onload = function() {
     Code.Editor.JSHintReady = true;
     // Activate linting for any editor that's loaded and waiting.
@@ -926,6 +944,7 @@ Code.functionEditor.createDom = function(container) {
   <select id="dobj">
     <option>none</option>
     <option>this</option>
+    <option>something</option>
     <option>any</option>
   </select>
   <select id="prep">
@@ -950,6 +969,7 @@ Code.functionEditor.createDom = function(container) {
   <select id="iobj">
     <option>none</option>
     <option>this</option>
+    <option>something</option>
     <option>any</option>
   </select>
 </div>
@@ -1181,7 +1201,7 @@ Code.svgEditor.parser = new DOMParser();
 Code.svgEditor.createDom = function(container) {
   container.innerHTML = `
 <div style="position: absolute; top: 60px; bottom: 0; left: 0; right: 0; overflow: hidden;">
-  <iframe src="/static/code/svg.html" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0"></iframe>
+  <iframe src="svg" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0"></iframe>
 </div>
   `;
   this.frameWindow_ = container.querySelector('iframe').contentWindow;
@@ -1349,7 +1369,7 @@ Code.diffEditor = new Code.GenericEditor('Diff');
 Code.diffEditor.createDom = function(container) {
   container.innerHTML = `
 <div style="position: absolute; top: 60px; bottom: 0; left: 0; right: 0; overflow: hidden;">
-  <iframe src="/static/code/diff.html" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0"></iframe>
+  <iframe src="diff" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0"></iframe>
 </div>
   `;
   this.frameWindow_ = container.querySelector('iframe').contentWindow;

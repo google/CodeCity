@@ -167,4 +167,5 @@ $.clock.onTimer = function onTimer() {
 };
 Object.setOwnerOf($.clock.onTimer, Object.getOwnerOf($.Jssp.OutputBuffer));
 Object.setOwnerOf($.clock.onTimer.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
+$.clock.movable = false;
 

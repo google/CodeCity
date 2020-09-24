@@ -34,7 +34,7 @@ CCC.MAX_HISTORY_SIZE = 1000;
  * Location to send pings to.
  * @constant
  */
-CCC.PING_URL = '/connect?ping';
+CCC.PING_URL = 'ping';
 
 // Properties below this point are not configurable.
 
@@ -243,7 +243,7 @@ CCC.tab = function(mode) {
     logButton.classList.add('jfk-checked');
   }
   // Set a session cookie to preserve this setting.
-  document.cookie = 'TAB=' + mode + '; path=/connect';
+  document.cookie = 'TAB=' + mode;
   CCC.commandTextarea.focus();
 };
 

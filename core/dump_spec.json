@@ -214,10 +214,14 @@
       "<OVERVIEW>": "Top-level URL handlers for Code City."
     },
     "contents": [
-      {"path": "$.www", "do": "ATTR"},
-      "$.www[404]",
-      "$.www['/']",
-      "$.www['/robots.txt']"
+      {"path": "$.http", "do": "ATTR"},
+      {"path": "$.http['www.']", "do": "ATTR"},
+      "$.http['www.'][404]",
+      "$.http['www.']['/']",
+      "$.http['www.']['/mirror']",
+      "$.http['www.']['/robots.txt']",
+      "$.http['login.']",
+      {"path": "$.www", "do": "ATTR"}
     ]
   }, {
     "filename": "core_25_$.db.tempId.js",
@@ -232,14 +236,25 @@
       {"path": "$.db.tempId.cleanThread_", "do": "ATTR"}
     ]
   }, {
+    "filename": "core_25_$.userDatabase.js",
+    "headerSubs": {
+      "<YEAR>": "2017",
+      "<OVERVIEW>": "User database for Code City."
+    },
+    "contents": [
+      "$.userDatabase",
+      {"path": "$.userDatabase.byMd5", "do": "ATTR"}
+    ]
+  }, {
     "filename": "core_26_$.www.editor.js",
     "headerSubs": {
       "<YEAR>": "2017",
-      "<OVERVIEW>": "Code editor for Code City."
+      "<OVERVIEW>": "Inline code editor for Code City."
     },
     "contents": [
       "$.www.editor",
-      "$.www['/editor']"
+      {"path": "$.http['code.']", "do": "SET"},
+      "$.http['code.']['/inlineEdit']"
     ]
   }, {
     "filename": "core_27_$.www.code.js",
@@ -249,9 +264,16 @@
     },
     "contents": [
       "$.www.code",
-      "$.www['/code']",
-      "$.www['/code/editor']",
-      "$.www['/code/objectPanel']"
+      "$.http['code.']"
+    ]
+  }, {
+    "filename": "core_28_$.servers.eval.js",
+    "headerSubs": {
+      "<YEAR>": "2020",
+      "<OVERVIEW>": "Eval server for Code City."
+    },
+    "contents": [
+      "$.servers.eval"
     ]
   },
 
@@ -309,8 +331,6 @@
     },
     "pruneRest": ["$.servers.telnet.connected"],
     "contents": [
-      {"path": "$.userDatabase", "do": "ATTR"},
-      "$.userDatabase.validate",
       "$.servers.telnet",
       {"path": "$.servers.telnet.connected", "do": "ATTR"}
     ]
@@ -381,12 +401,15 @@
       "<OVERVIEW>": "Genetics lab demo for Code City."
     },
     "contents": [
-      "$.cage",
-      {"path": "$.cage.location", "do": "DONE"},
-      {"path": "$.physicals.cage", "do": "DONE"},
       "$.physicals['Genetics Lab']",
+      {"path": "$.physicals['Genetics Lab'].contents_", "do": "DONE"},
+      {"path": "$.physicals['Genetics Lab'].contents_.forObj", "do": "DONE"},
+      {"path": "$.physicals['Genetics Lab'].contents_.forKey", "do": "DONE"},
+      "$.cage",
+      {"path": "$.cage.location", "do": "DECL"},
+      {"path": "$.physicals.cage", "do": "DONE"},
       "$.physicals['Genetic Mouse Prototype']",
-      "$.www['/geneticsEditor']"
+      "$.http['genetics.']"
     ]
   }, {
     "filename": "core_44_$.assistant.js",
@@ -399,6 +422,20 @@
       {"path": "$.assistant.location", "do": "DECL"},
       {"path": "$.assistant.lastActivated", "do": "DECL"},
       {"path": "$.physicals.assistant", "do": "DONE"}
+    ]
+  }, {
+    "filename": "core_45_Challenge_Room.js",
+    "headerSubs": {
+      "<YEAR>": "2020",
+      "<OVERVIEW>": "Challenge room demo for Code City."
+    },
+    "contents": [
+      "$.physicals['Challenge room']",
+      "$.physicals['light switch']",
+      "$.physicals.chest",
+      "$.physicals.safe",
+      "$.physicals.food",
+      "$.physicals.girl"
     ]
   },
 
@@ -456,6 +493,12 @@
       "$.container",
       "$.db.tempId",
       "$.garbage",
+      "$.http['code.']",
+      "$.http['genetics.']",
+      "$.http['www.'][404]",
+      "$.http['www.']['/']",
+      "$.http['www.']['/mirror']",
+      "$.http['www.']['/robots.txt']",
       "$.physical",
       "$.physicals.cage",
       "$.physicals['Das deutsche Zimmer']",
@@ -485,11 +528,6 @@
       "$.www.editor",
       "$.www[404]",
       "$.www['/']",
-      "$.www['/code']",
-      "$.www['/code/editor']",
-      "$.www['/code/objectPanel']",
-      "$.www['/editor']",
-      "$.www['/geneticsEditor']",
       "$.www['/robots.txt']"
     ]
   }, {

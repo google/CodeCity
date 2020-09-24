@@ -14,25 +14,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Create configuration file for and then start nginx, for use as a
+# Create configuration files for and then start nginx, for use as a
 # local development server.  nginx is configured to run in the
 # foreground, and to store all runtime data in <repository root>/var,
 # rather than in /var/ or /usr/local/var/ as it might normally.
+#
+# This is done by generating var/nginx-dev.conf, which will include
+# var/cc-localhost.conf, which is copied (with edits) from
+# etc/cc-localhost.conf, then starting nginx specifying
+# var/nginx-dev.conf as the config file to use.
 
 set -e
 
 # Get top level directory of the CodeCity git repository.  It's the
 # parent directory of the directory containing this script.
-repo="$(cd "$(dirname "${BASH_SOURCE[0]}")"/.. >/dev/null 2>&1 && pwd)"
+readonly repo="$(cd "$(dirname "${BASH_SOURCE[0]}")"/.. >/dev/null 2>&1 && pwd)"
 
 # Create var directory if required
-if [[ ! -d "$repo/var" ]] ; then
-  if [[ -x "$repo/var" ]] ; then
-    echo "$repo/var already exists and is not a directory" 1>&2
+if [[ ! -d "${repo}/var" ]] ; then
+  if [[ -x "${repo}/var" ]] ; then
+    echo "${repo}/var already exists and is not a directory" 1>&2
     exit 1
   fi
 
-  mkdir "$repo/var"
+  mkdir "${repo}/var"
 fi
 
 # Find location where the nginx installation keeps its config files.
@@ -42,13 +47,13 @@ if type brew >/dev/null 2>&1 ; then  # Homebrew in path?
   dirs=("$(brew --prefix)/etc" "${dirs[@]}")
 fi
 for dir in "${dirs[@]}"; do
-  if [[ -d "$dir" && -f "$dir/nginx/mime.types" ]] ; then
-    mimetypes="$dir/nginx/mime.types"
+  if [[ -d "${dir}" && -f "${dir}/nginx/mime.types" ]] ; then
+    readonly mimetypes="${dir}/nginx/mime.types"
     break;
   fi
 done
 
-if [[ -z "$mimetypes" ]] ; then
+if [[ -z "${mimetypes}" ]] ; then
   echo "$0: can't find mime.types file." 1>&2
   exit 1;
 fi
@@ -68,7 +73,7 @@ events {
 
 http {
   access_log off;
-  include $mimetypes;
+  include ${mimetypes};
   default_type application/octet-stream;
 
   # Set temp paths to be in $repo/var:
@@ -78,47 +83,11 @@ http {
   scgi_temp_path $repo/var/scgi_temp;
   uwsgi_temp_path $repo/var/uwsgi_temp;
 
-  server {
-    listen 8080;
-
-    proxy_redirect     off;
-    proxy_max_temp_file_size   0;
-    proxy_connect_timeout      10s;
-    proxy_send_timeout         10s;
-    proxy_read_timeout         10s;
-
-    location / {
-      # Proxy to Code City port 7780.
-      proxy_pass         http://localhost:7780/;
-      error_page 502 503 504 =503 /static/503.html;
-    }
-
-    location /static/ {
-      # Static files.
-      autoindex on;
-      index index.html;
-      # Edit to be full path to CodeCity directory (/static is implicit):
-      root $repo;
-    }
-
-    location /login {
-      # Proxy to loginServer.js port 7781.
-      proxy_pass         http://localhost:7781/login;
-    }
-
-    location /connect {
-      # Proxy to connectServer.js port 7782.
-      proxy_pass         http://localhost:7782/connect;
-    }
-
-    location /mobwrite {
-      # Proxy to mobwrite_server.py port 7783.
-      proxy_pass         http://localhost:7783/mobwrite;
-    }
-
-  }
-
+  include ${repo}/var/cc-localhost.conf;
 }
 EOF
 
+readonly repo_escaped=${repo//\//\\/}
+sed -e "s/REPOSITORY/${repo_escaped}/g" ${repo}/etc/cc-localhost.conf \
+    > ${repo}/var/cc-localhost.conf
 nginx -c "$repo/var/nginx-dev.conf"

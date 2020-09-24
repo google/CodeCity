@@ -23,19 +23,6 @@
 // AUTO-GENERATED CODE FROM DUMP.  EDIT WITH CAUTION!
 //////////////////////////////////////////////////////////////////////
 
-$.userDatabase = (new 'Object.create')(null);
-
-$.userDatabase.validate = function validate() {
-  for (var key in this) {
-    if (!($.user.isPrototypeOf(this[key]))) {
-      delete this[key];
-    }
-  }
-};
-Object.defineProperty($.userDatabase, 'validate', {enumerable: false});
-Object.setOwnerOf($.userDatabase.validate, Object.getOwnerOf($.Jssp.OutputBuffer));
-Object.setOwnerOf($.userDatabase.validate.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
-
 $.servers.telnet = {};
 $.servers.telnet.connection = (new 'Object.create')($.connection);
 $.servers.telnet.connection.onReceiveLine = function onReceiveLine(text) {
@@ -54,8 +41,15 @@ $.servers.telnet.connection.onReceiveLine = function onReceiveLine(text) {
     this.write('{type: "narrate", text: "Unknown command: ' +
                $.utils.html.preserveWhitespace(text) + '"}');
   }
-  var user = this.user = $.userDatabase[m[1]] || ($.userDatabase[m[1]] = $.servers.telnet.createUser());
+  var user = $.userDatabase.get(m[1]);
+  if (!user) {
+    user = $.servers.telnet.createUser();
+    $.userDatabase.set(m[1], user);
+  }
+  this.user = user;
+  var rebind = false;
   if (user.connection) {
+    rebind = true;
     try {
       user.connection.close();
     } catch (e) {
@@ -68,7 +62,7 @@ $.servers.telnet.connection.onReceiveLine = function onReceiveLine(text) {
   user.connection = this;
   Object.setOwnerOf(Thread.current(), user);
   setPerms(this.user);
-  new Thread(user.onConnect, 0, user);
+  new Thread(user.onConnect, 0, user, rebind);
 };
 Object.setOwnerOf($.servers.telnet.connection.onReceiveLine, Object.getOwnerOf($.Jssp.OutputBuffer));
 $.servers.telnet.connection.onEnd = function onEnd() {
@@ -81,11 +75,11 @@ $.servers.telnet.connection.onEnd = function onEnd() {
     if (user.connection === this) {
       user.connection = null;
       $.system.log('Unbinding connection from ' + user.name);
+      (function () {
+        setPerms(user);
+        new Thread(user.onDisconnect, 0, user);
+      })();
     }
-    (function () {
-      setPerms(user);
-      new Thread(user.onDisconnect, 0, user);
-    })();
   }
   // Remove this and any other closed / debound connections from array of open connections.
   $.servers.telnet.validate();

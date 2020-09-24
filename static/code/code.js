@@ -36,8 +36,9 @@ Code.receiveMessage = function(event) {
   Code.selector = selector;
   if (event) {
     // Change the URL if this is NOT the result of a forwards/back navigation.
-    history.pushState(selector, selector,
-                      '/code?' + encodeURIComponent(selector));
+    var query = encodeURIComponent(selector);
+    query = query.replace(/%24/g, '$');  // No need to encode $.
+    history.pushState(selector, selector, '?' + query);
   }
   // Propagate the ping down the tree of frames.
   try {

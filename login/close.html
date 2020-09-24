@@ -30,8 +30,8 @@
     </div>
   </div>
   <script>
-    // Flag that allows any opener window to know that this window may be closed.
-    window.closeMe = true;
+    // Send message that allows any opener window to know that this window may be closed.
+    opener.postMessage('closeMe', '*');
   </script>
 </body>
 </html>

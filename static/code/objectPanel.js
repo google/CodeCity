@@ -94,7 +94,8 @@ Code.ObjectPanel.addLink = function(part, type, section) {
   var newParts = Code.ObjectPanel.parts.concat(part);
   var selector = Code.Common.partsToSelector(newParts);
   var a = document.createElement('a');
-  a.href = '/code?' + encodeURIComponent(selector);
+  var query = encodeURIComponent(selector).replace(/%24/g, '$');
+  a.href = './?' + query;
   a.target = '_blank';
   a.setAttribute('data-link', JSON.stringify(part));
   a.addEventListener('click', Code.ObjectPanel.click);
@@ -187,10 +188,10 @@ Code.ObjectPanel.highlight = function() {
   }
   if (newHighlighted !== Code.ObjectPanel.highlighted) {
     if (Code.ObjectPanel.highlighted) {
-      Code.ObjectPanel.highlighted.className = '';
+      Code.ObjectPanel.highlighted.classList.remove('highlighted');
     }
     if (newHighlighted) {
-      newHighlighted.className = 'highlighted';
+      newHighlighted.classList.add('highlighted');
       if (newHighlighted.scrollIntoView) {
         newHighlighted.scrollIntoView({block: 'nearest', inline: 'nearest'});
       }
@@ -234,15 +235,9 @@ Code.ObjectPanel.caseInsensitiveComp_ = function(a, b) {
 
 if (!window.TEST) {
   (function() {
-    // Load the data from Code City.
-    var hash = location.hash.substring(1);
-    var script = document.createElement('script');
-    script.src = '/code/objectPanel?' + hash;
-    document.head.appendChild(script);
-
     // Fill in the object name.
-    Code.ObjectPanel.parts =
-        Code.Common.selectorToParts(decodeURIComponent(hash));
+    var query = decodeURIComponent(location.search.substring(1));
+    Code.ObjectPanel.parts = Code.Common.selectorToParts(query);
     var div = document.getElementById('objectTitle');
     var lastPart = Code.ObjectPanel.parts[Code.ObjectPanel.parts.length - 1];
     var name;
