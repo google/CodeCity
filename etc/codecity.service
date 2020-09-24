@@ -9,7 +9,7 @@ SyslogIdentifier=codecity
 WorkingDirectory=/home/cc/CodeCity/database
 User=cc
 Group=cc
-ExecStart=@/usr/bin/nodejs codecity --harmony-weak-refs /home/cc/CodeCity/server/codecity codecity.cfg
+ExecStart=@/home/cc/CodeCity/server/codecity codecity codecity.cfg
 Restart=on-failure
 
 [Install]
