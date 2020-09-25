@@ -85,6 +85,15 @@ protect.  See [Appendix A: Creating a Service Account](
         *   Recommended: **un**tick “Delete boot disk when instance
             deleted” so that if you _do_ delete your instance you can
             recreate it easily and without losing user data.
+    *   Networking:
+        *   Under Network interfaces, click the pencil icon next to
+            the default interface.
+        *   External IP: ignore this section for now.
+        *   Public DNS PTR Record: optionally click “Enable” and enter
+            the [domain name](#set-up-an-ip-address-and-domain-name)
+            you intend to use for your instance,
+            e.g. <code><em>example</em>.codecity.world</code>.
+        *   Click “Done” to end editing the network interface.
 0.  Double-check the monthly cost estimate to ensure it is reasonable.
 0.  Click “create” and you will be taken back to the VM instances
     dashboard.  After a few minutes, you should see your new instance
@@ -99,60 +108,85 @@ protect.  See [Appendix A: Creating a Service Account](
 [always-free]: https://cloud.google.com/free/docs/gcp-free-tier#always-free-usage-limits
 [service-account]: https://cloud.google.com/iam/docs/creating-managing-service-accounts
 
-### Set up an IP address and domain name
+#### Reserve a Static IP Address
 
-This step is necessary to allow users to connect with your
-newly-created instance.  If you are not using Google Cloud Platform
-you can skip all but the last step.
+For users to be able to access your instance from the Internet, it
+will need a static IP address<sup>[[?]](
+https://en.wikipedia.org/wiki/IP_address) (like 192.0.2.1) so that
+traffic can be routed to it.
 
 1.  Go to the [Networking / External IP addresses
     console](https://console.cloud.google.com/networking/addresses).
-0.  On the line for the instance you’ve just created, under “Type”,
-    choose “Static”.
-    *   In the resulting “Reserve a new static IP address dialog, type
-        in a name (can be any value, but recommend you use the same
-        name as for your instance).
-0.  Now point the domain name for your instance at this new static
-    address.  The details of this are outside of the scope of this
-    document, but we have the following observations and
-    recommendations:
-    *   Setting up DNS<sup>[[?]](
-        https://en.wikipedia.org/wiki/Domain_Name_System)</sup>
-        involves two different entities: the registrar, which assigns
-        you a domain
-        name<sup>[[?]](https://en.wikipedia.org/wiki/Domain_name)</sup>
-        (like `example.org`), and a DNS provider, which runs the name
-        servers<sup>[[?]](https://en.wikipedia.org/wiki/Name_server)</sup>
-        that resolve individual DNS entries (like `www.example.com`)
-        to specific numeric IP addresses like the one created in the
-        previous step.  In some cases both these services will be
-        provided by the same company, but many organisations will
-        typically run their own DNS servers, or outsource it to a
-        [managed DNS provider](
-        https://en.wikipedia.org/wiki/List_of_managed_DNS_providers).
-    *   If you are using your own domain name (e.g.,
-        <code>codecity.<em>example.org</em></code>) this will be done
-        through your DNS provider’s configuration console or via your
-        internal organisational DNS service configuration.
-    *   Alternatively we may in some cases be able to offer you the
-        use of a Code City subdomain (e.g.,
-        <code><em>example</em>.codecity.world</code>), in which case
-        we will take care of this step for you.  Contact us for
-        details.
-    *   Because of the [same origin policy], if you’d like to allow
-        individual (not fully trusted) users of your instance to be
-        able to create their own web pages / servers, we *strongly*
-        recommend that you use a wildcard DNS record<sup>[[?]](
-        https://en.wikipedia.org/wiki/Wildcard_DNS_record)</sup>, so
-        that each user can serve their content on an isolated
-        subdomain (like
-        <code><em>username</em>.example.codecity.world</code>).  To
-        facilitate obtaining the necessary wildcard
-        certificate<sup>[[?]](
-        https://en.wikipedia.org/wiki/Wildcard_certificate)</sup>, we
-        recommend you use a [DNS provider who easily integrates with
-        Let’s Encrypt DNS validation][dns-providers], such as [Google
-        Cloud DNS](https://cloud.google.com/dns/), if possible.
+0.  Click “+ Reserve Static Address”.  Enter details as follows:
+    *   Name: can be any value, but we recommend you use the same name
+        as for your instance.  This is just used to identify the
+        address reservation.
+    *   Description: enter any text you like—e.g.: “Static IP
+        address for <em>example</em>.codecity.world.”
+    *   Network Service Tier: choose either.  See [description of
+        options](https://cloud.google.com/network-tiers/) and [pricing
+        information](https://cloud.google.com/network-tiers/pricing).
+    *   IP vesion: IPv4.
+    *   Type: Regional.
+        *   Region: choose the same region as your instance was
+            created in.
+        *   Attached to: choose your instance from the drop-down.
+0.  Click “Reserve”.
+0.  Make a note of the external address (like 192.0.2.1) which you
+    have just reserved for your instance.
+
+### Give Your Instance a Domain Name
+
+The Domain Name System<sup>[[?]](
+https://en.wikipedia.org/wiki/Domain_Name_System)</sup> is a
+distributed global database that maps domain names (like
+`example.org`) to IP addresses (like 192.0.2.1).
+
+In order for users to be able to access your instance without having
+to know the numeric static IP address you reserved in the previous
+section, you must create a human-readable domain mame<sup>[[?]](
+https://en.wikipedia.org/wiki/Domain_name)</sup> for it.
+
+The details of this process are outside of the scope of this document,
+but we have the following observations and recommendations:
+
+*   Setting up DNS involves two distinct entities: a domain name
+    registrar<sup>[[?]](
+    https://en.wikipedia.org/wiki/Domain_name_registrar)</sup>, from
+    whom you can purchase a domain name (like `example.org`), and a
+    DNS provider, who runs the name servers<sup>[[?]](
+    https://en.wikipedia.org/wiki/Name_server)</sup> that resolve
+    individual DNS entries (like `www.example.com`) to specific
+    numeric IP addresses like the one created in the previous section.
+    
+    In many cases both these services will be provided by the same
+    company, but many organisations will typically run their own DNS
+    servers, or outsource it to a [managed DNS provider](
+    https://en.wikipedia.org/wiki/List_of_managed_DNS_providers).
+
+*   If you are using your own domain name (e.g.,
+    <code>codecity.<em>example.org</em></code>) this will be done
+    through your DNS provider’s configuration console or via your
+    internal organisational DNS service configuration.
+
+*   Alternatively we may in some cases be able to offer you the
+    use of a Code City subdomain (e.g.,
+    <code><em>example</em>.codecity.world</code>), in which case
+    we will take care of this step for you.  Contact us for
+    details.
+
+*   Because of the [same origin policy], if you’d like to allow
+    individual (not fully trusted) users of your instance to be able
+    to create their own web pages / servers, we *strongly* recommend
+    that you use a wildcard DNS record<sup>[[?]](
+    https://en.wikipedia.org/wiki/Wildcard_DNS_record)</sup>, so that
+    each user can serve their content on an isolated subdomain (like
+    <code><em>username</em>.example.codecity.world</code>).  To
+    facilitate obtaining the necessary wildcard certificate<sup>[[?]](
+    https://en.wikipedia.org/wiki/Wildcard_certificate)</sup>, we
+    recommend you use a [DNS provider who easily integrates with Let’s
+    Encrypt DNS validation][dns-providers], such as [Google Cloud
+    DNS](https://cloud.google.com/dns/), if possible.
  
 [same origin policy]: https://developer.mozilla.org/en-US/docs/Web/Security/Same-origin_policy
 [dns-providers]: https://community.letsencrypt.org/t/dns-providers-who-easily-integrate-with-lets-encrypt-dns-validation/86438
