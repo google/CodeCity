@@ -199,7 +199,7 @@ Now apply the schedule to your instance’s persistent disk:
 ## Set Up Machine and Install Code City
 
 These instructions assume you are using a GCE instance running Debian
-GNU/Linux 9 (stretch), but feel free to adapt to your particular
+GNU/Linux 10 "buster", but feel free to adapt to your particular
 set-up.
 
 1.  Log into your instance.  (See instructions in first section if
@@ -579,6 +579,8 @@ https://support.google.com/cloud/answer/6158849) for more information.
     ```
 0.  Verify you can connect to your new Code City instance by pointing
     your web browser its domain name—e.g., `https://example.codecity.world`.
+
+Congratulations, you're done!
 
 ## Remote Debugging
 
