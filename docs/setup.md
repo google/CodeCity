@@ -7,16 +7,31 @@ account in good standing.
 
 ## Google Compute Engine Setup
 
-We recommend running your Code City server on a Google Compute Engine
-(GCE) instance—it’s reliable, minimal hassle, and, thanks to [Google
-Cloud Platform’s “Always Free” tier](https://cloud.google.com/free),
-can be completely free!
+We recommend running your Code City server on a [Google Compute
+Engine](https://cloud.google.com/compute)</sup> (GCE) virtual
+machine<sup>[[?]](
+https://en.wikipedia.org/wiki/Virtual_machine)</sup> (VM)—it’s
+reliable, minimal hassle, and, thanks to [Google Cloud Platform’s
+“Always Free” tier](https://cloud.google.com/free), can be (very
+nearly) free!
 
 ### Create a GCE instance
 
-This will create a virtual machine on which your Code City instance
-will run.  You can skip this step if you intend to run your instance
-on your own machine or another cloud provider’s hardware. 
+This will create a dedicated GCE instance (VM) on which to run Code
+City.  You can skip this step if you intend to run your instance on
+your own machine or another cloud provider’s hardware.
+
+Before you begin: the GCE instance (VM) you create will run using the
+permissions of a service account<sup>[[?]](
+https://cloud.google.com/iam/docs/service-accounts)</sup>.  There is a
+“Compute Engine default service account” which will work fine but has
+quite broad permissions.  You may wish to create a service account
+with more limited permissions, to reduce the amount of damage an
+attacker can do if they compromise your Code City instance and gain
+control of the VM on which it runs.  This is especially so if your GCP
+project contains other resources (user data, etc.) which you wish to
+protect.  See [Appendix A: Creating a Service Account](
+#appendix-a-creating-a-service-account) for instructions.
 
 1.  Go to the [Google Compute Engine
     console](https://console.cloud.google.com/compute/instances).
@@ -49,13 +64,10 @@ on your own machine or another cloud provider’s hardware.
             (total, not per-instance) of persistent disk free of
             charge.
     *   Identity and API access:
-        *   Service account: the default, “Compute Engine default
-            service account”, is fine—but if you already use Google
-            Cloud Platform you may wish to [create a service
-            account][service-account] and role(s) with more restricted
-            permissions, to ensure that in the event that your Code
-            City instance is compromised it cannot be used to
-            compromise other GCP resources.
+        *   Service account: use the default “Compute Engine default
+            service account” or select the one you created by
+            following the instructions in [appendix A](
+            #appendix-a-creating-a-service-account).
         *   Access scopes: Allow default access.
     *   Firewall: Allow both HTTP and HTTPS traffic.
     *   Management:
@@ -582,7 +594,100 @@ https://support.google.com/cloud/answer/6158849) for more information.
 
 Congratulations, you're done!
 
-## Remote Debugging
+## Appendix A: Creating a Service Account
+
+To protect any other Google Cloud Platform services you run against
+the consequences of your Code City instance being compromised, you can
+have the GCE VM it runs on use only the limited permissions of a
+custom service account, rather than the extensive permissions held by
+the Compute Engine default service account.  To do this there are three
+steps:
+
+1.  Creating one or more roles for the service account.
+0.  Creating a service account
+0.  Applying the service account to the GCE instance.
+
+### Create Role(s)
+
+You should create one role for running CodeCity instances on GCE, and
+optionally create a second role if you intend to have your GCE
+instance [obtain wildcard TLS certificates using certbot via the ACME
+HTTP-01 challenge](#getting-a-wildcard-certificate).
+
+1.  Go to the [Roles tab of IAM & Admin](
+    https://console.cloud.google.com/iam-admin/roles).
+0.  Create a role for running a Code City instance by clicking “+
+    Create Role” then enter details as follows:
+    *   Title: “CodeCity Instance”.
+    *   Description: “Base role for all CodeCity instances.  Created
+        on: …”.
+    *   ID: `instance`.
+    *   Add the following permissions by clicking “+ Add Permissions”
+        button, typing the name of the permission into the “Filter
+        table” field (*not* the “Filter permissions by role” field),
+        selecting required permission, and clicking Add:
+        *   `compute.globalOperations.get`
+        *   `compute.zoneOperations.get`
+        *   `logging.logEntries.create`
+    *   Click “Create”.
+0.  Optionally create a second role for obtaining wildcard certs by
+    again clicking “+ Create Role” and entering:
+    *   Title: “CodeCity Cert-via-DNS”
+    *   Description: “Add-on permission to allow an instance to update
+        its own wildcard letsencrypt SSL cert via an ACME dns-01
+        challenge.  Created on: …”.
+    *   ID: `dnscert`.
+    *   Add the following permisions:
+        *   `dns.changes.create`
+        *   `dns.changes.get`
+        *   `dns.managedZones.list`
+        *   `dns.resourceRecordSets.create`
+        *   `dns.resourceRecordSets.delete`
+        *   `dns.resourceRecordSets.list`
+        *   `dns.resourceRecordSets.update`
+    *   Click “Create”.
+
+### Create a Service Account
+
+Now you can create a service account for your instance.
+
+1.  Go to the [Service Accounts tab of IAM & Admin](
+    https://console.cloud.google.com/iam-admin/serviceaccounts).
+0.  Click “+ Create Servce Account” and enter details as follows:
+    *   Service account name: choose and appropriate name such as
+        “CodeCity instance” or “instance-<em>myInstanceName</em>”.
+    *   Service account ID: modify suggested ID if desired.
+    *   Service account description: “Service account for the
+        <em>exmaple..codecity.world</em> instance” or similar.
+0.  Click “Create”.
+    *   Where it says “Select a role”, select “CodeCity Instance”.
+    *   If you intend to use certbot to obtain a wildcare DNS cert,
+        click “+ Add Another Role” and select “CodeCity Cert-via-DNS”.
+0.  Click “Continue”.
+0.  Click “Done.
+
+### Use the Service Account to run your GCE Instance
+
+If you have not yet done so, simply [follow the instructions to create
+a GCE instance for Code City](#create-a-gce-instance) and, when you
+get to the “Identity and API access” section of the creation wizard,
+select the service account you created previously.
+
+Otherwise, if you have already created your GCE instance, configure it
+to use the newly-create service account as follows:
+
+1.  Go to the [VM instances tab](
+    https://console.cloud.google.com/compute/instances).
+0.  Select the VM instance you created previously.
+0.  Click the stop button at the top of the page to stop it, if it is
+    running.
+0.  Click the name of your instance to view its “VM instnace details”
+    page.
+0.  Click “Edit”.
+0.  Scroll down to “Service account” and select the service account
+    you created previously.
+
+## Appendix B: Remote Debugging
 
 If you need to debug the server because it has stopped responding to
 network activity, here’s how to do that:
@@ -614,7 +719,7 @@ related blog post](
 https://hackernoon.com/debugging-node-without-restarting-processes-bd5d5c98f200).)
 
 
-## Additional Instructions for Code City Collaborators
+## Appendix C: Additional Instructions for Code City Collaborators
 
 ### GIT Code City by SSH instead of HTTPS
 
