@@ -692,7 +692,7 @@ Now you can create a service account for your instance.
         “CodeCity instance” or “instance-<em>myInstanceName</em>”.
     *   Service account ID: modify suggested ID if desired.
     *   Service account description: “Service account for the
-        <em>exmaple..codecity.world</em> instance” or similar.
+        <em>example</em>.codecity.world instance” or similar.
 0.  Click “Create”.
     *   Where it says “Select a role”, select “CodeCity Instance”.
     *   If you intend to use certbot to obtain a wildcare DNS cert,
