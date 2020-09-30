@@ -8,5 +8,5 @@ SyslogIdentifier=cc-mobwrite
 WorkingDirectory=/home/codecity/CodeCity/mobwrite
 User=codecity
 Group=codecity
-ExecStart=@/usr/bin/python cc-mobwrite /home/codecity/CodeCity/mobwrite/mobwrite_server.py
+ExecStart=@/usr/bin/python2 cc-mobwrite /home/codecity/CodeCity/mobwrite/mobwrite_server.py
 Restart=on-failure
