@@ -15,7 +15,7 @@ tell app "Terminal"
 ./connectServer"
 
   do script "cd " & basePath & "/mobwrite
-python mobwrite_server.py"
+python2 mobwrite_server.py"
 
   do script "cd " & basePath & "/server
 ./codecity " & basePath & "/database/codecity.cfg"
