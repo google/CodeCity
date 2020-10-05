@@ -58,9 +58,9 @@ $.system.onStartup = function onStartup() {
    * listening sockets, etc.)
    */
   // Listen on various sockets.
-  try {$.system.connectionListen(7777, $.servers.telnet.connection);} catch(e) {}
+  // try {$.system.connectionListen(7777, $.servers.telnet.connection);} catch(e) {}
   try {$.system.connectionListen(7780, $.servers.http.connection);} catch(e) {}
-  try {$.system.connectionListen(9999, $.servers.eval.connection);} catch(e) {}
+  // try {$.system.connectionListen(9999, $.servers.eval.connection);} catch(e) {}
   $.system.log('Startup: listeners started.');
 
   // Restart timers and clear auto-expring caches.

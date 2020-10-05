@@ -31,18 +31,3 @@ $.servers.http.host = 'localhost:8080';
 
 // Set up.
 $.system.onStartup();
-
-// Tidy up.
-$.tutorial.moveTo($.startRoom);
-$.tutorial.reset();
-
-$.pot.moveTo($.startRoom);
-$.pot.stage = 0;
-$.seed.moveTo($.startRoom);
-$.thrower.moveTo($.startRoom);
-
-$.cage.moveTo($.physicals['Genetics Lab']);
-
-$.assistant.moveTo($.startRoom);
-
-
