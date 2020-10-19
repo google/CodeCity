@@ -593,6 +593,7 @@ $.servers.http.makeUrl = function makeUrl(subdomain, rest) {
    * -> "/secret/cat?foo=bar"
    */
   subdomain = subdomain || 'www';
+  if (rest === undefined) rest = '';
   var url;
   if (this.subdomains) {
     url = '//';
@@ -606,6 +607,6 @@ $.servers.http.makeUrl = function makeUrl(subdomain, rest) {
   }
   return url + rest;
 };
-Object.setOwnerOf($.servers.http.makeUrl, $.physicals.Neil);
+Object.setOwnerOf($.servers.http.makeUrl, $.physicals.Maximilian);
 Object.setOwnerOf($.servers.http.makeUrl.prototype, $.physicals.Neil);
 
