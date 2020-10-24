@@ -26,8 +26,8 @@
 
 // Configuration.
 $.servers.http.subdomains = false;
-$.servers.http.protocol = 'http:';
-$.servers.http.host = 'localhost:8080';
+$.servers.http.protocol = 'https:';
+$.servers.http.host = 'admin.blockly.games';
 
 // Set up.
 $.system.onStartup();
