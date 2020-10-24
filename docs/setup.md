@@ -532,7 +532,7 @@ nginx.
     *   Authorized redirect URIs: for wildcard DNS configurations this
         will be of the form `https://login.example.codecity.world/`;
         for single-domain configurations it will instead be
-        `https://example.codecity.world/login`.
+        `https://example.codecity.world/login/`.
 0.  Click Save.
 0.  Now click on the newly-created client ID.  Make a note of the
     Client ID (it will be a long string like
