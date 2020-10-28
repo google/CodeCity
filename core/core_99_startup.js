@@ -33,6 +33,10 @@ $.servers.http.host = 'localhost:8080';
 $.system.onStartup();
 
 // Tidy up.
+$.clock.movable = true;
+$.clock.moveTo($.startRoom);
+$.clock.movable = false;
+
 $.tutorial.moveTo($.startRoom);
 $.tutorial.reset();
 
