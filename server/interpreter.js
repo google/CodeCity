@@ -1437,23 +1437,18 @@ Interpreter.prototype.initArray_ = function() {
     id: 'Array.prototype.toString', length: 0,
     /** @type {!Interpreter.NativeCallImpl} */
     call: function(intrp, thread, state, thisVal, args) {
-      if (!state.info_.funcState) {  // First visit: call .join().
-        state.info_.funcState = true;
-        var perms = state.scope.perms;
-        var obj = intrp.toObject(thisVal, perms);
-        var join = obj.get('join', perms);
-        if (join instanceof intrp.Function) {
-          var func = join;
-        } else {
-          func = /** @type {!Interpreter.prototype.Function} */ (
-              intrp.builtins.get('Object.prototype.toString'));
-        }
-        var newState = Interpreter.State.newForCall(func, thisVal, [], perms);
-        thread.stateStack_.push(newState);
-        return Interpreter.FunctionResult.CallAgain;
-      } else {  // Second visit: return value returned by .join().
-        return state.value;
+      var perms = state.scope.perms;
+      var obj = intrp.toObject(thisVal, perms);
+      var join = obj.get('join', perms);
+      if (join instanceof intrp.Function) {
+        var func = join;
+      } else {
+        func = /** @type {!Interpreter.prototype.Function} */ (
+            intrp.builtins.get('Object.prototype.toString'));
       }
+      var newState = Interpreter.State.newForCall(func, thisVal, [], perms);
+      thread.stateStack_.push(newState);
+      return Interpreter.FunctionResult.AwaitValue;
     }
   });
 
