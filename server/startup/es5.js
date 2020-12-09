@@ -652,13 +652,13 @@ Array.prototype.sort = function sort(comparefn) {
     delete obj[i];
   }
       
-  Array.prototype.sort.quickSort(obj, 0, definedCount, comparefn);
+  Array.prototype.sort.quicksort_(obj, 0, definedCount, comparefn);
   return obj;
 };
 Object.defineProperty(Array.prototype, 'sort', {enumerable: false});
 
 // Helper functions.
-Array.prototype.sort.insertionSort = function insertionSort(
+Array.prototype.sort.insertionSort_ = function insertionSort_(
     a, from, to, comparefn) {
   // For short (length <= 10) arrays, insertion sort is used for efficiency.
   for (var i = from + 1; i < to; i++) {
@@ -675,10 +675,10 @@ Array.prototype.sort.insertionSort = function insertionSort(
     a[j + 1] = element;
   }
 };
-Object.defineProperty(Array.prototype.sort, 'insertionSort',
+Object.defineProperty(Array.prototype.sort, 'insertionSort_',
                       {enumerable: false});
 
-Array.prototype.sort.getThirdIndex = function getThirdIndex(
+Array.prototype.sort.getThirdIndex_ = function getThirdIndex_(
     a, from, to, comparefn) {
   var t_array = [];
   // Use both 'from' and 'to' to determine the pivot candidates.
@@ -696,21 +696,21 @@ Array.prototype.sort.getThirdIndex = function getThirdIndex(
   var third_index = t_array[t_array.length >> 1][0];
   return third_index;
 };
-Object.defineProperty(Array.prototype.sort, 'getThirdIndex',
+Object.defineProperty(Array.prototype.sort, 'getThirdIndex_',
                       {enumerable: false});
 
-Array.prototype.sort.quickSort = function quickSort(a, from, to, comparefn) {
+Array.prototype.sort.quicksort_ = function quicksort_(a, from, to, comparefn) {
   /* In-place QuickSort algorithm.
    */
   var third_index = 0;
   while (true) {
     // Insertion sort is faster for short arrays.
     if (to - from <= 10) {
-      Array.prototype.sort.insertionSort(a, from, to, comparefn);
+      Array.prototype.sort.insertionSort_(a, from, to, comparefn);
       return;
     }
     if (to - from > 1000) {
-      third_index = Array.prototype.sort.getThirdIndex(a, from, to, comparefn);
+      third_index = Array.prototype.sort.getThirdIndex_(a, from, to, comparefn);
     } else {
       third_index = from + ((to - from) >> 1);
     }
@@ -778,15 +778,15 @@ Array.prototype.sort.quickSort = function quickSort(a, from, to, comparefn) {
       }
     }
     if (to - high_start < low_end - from) {
-      quickSort(a, high_start, to, comparefn);
+      quicksort_(a, high_start, to, comparefn);
       to = low_end;
     } else {
-      quickSort(a, from, low_end, comparefn);
+      quicksort_(a, from, low_end, comparefn);
       from = high_start;
     }
   }
 };
-Object.defineProperty(Array.prototype.sort, 'quickSort', {enumerable: false});
+Object.defineProperty(Array.prototype.sort, 'quicksort_', {enumerable: false});
 
 Array.prototype.toLocaleString = function() {
   var out = [];
