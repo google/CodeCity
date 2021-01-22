@@ -24,7 +24,7 @@
 'use strict';
 
 const crypto = require('crypto');
-const fs = require('fs');
+const fs = require('fs').promises;
 const google = require('googleapis').google;
 const http = require('http');
 const URL = require('url').URL;
@@ -87,7 +87,7 @@ function sendError(request, response, statusCode, message) {
 async function serveFile(request, response, filename, subs) {
   let /** string */ data;
   try {
-    data = String(await fs.promises.readFile(filename, 'utf8'));
+    data = String(await fs.readFile(filename, 'utf8'));
   } catch (err) {
     sendError(request, response,
               500, `Unable to load file ${filename}: ${err}`);
@@ -189,15 +189,15 @@ async function handleRequest(request, response) {
  * Read the JSON configuration file and return it.  If none is
  * present, write a stub and throw an error.
  */
-function readConfigFile(filename) {
+async function readConfigFile(filename) {
   let data;
   try {
-    data = fs.readFileSync(filename, 'utf8');
+    data = await fs.readFile(filename, 'utf8');
   } catch (err) {
     console.log(`Configuration file ${filename} not found.  ` +
         'Creating new file.');
     data = JSON.stringify(DEFAULT_CFG, null, 2) + '\n';
-    fs.writeFileSync(filename, data, 'utf8');
+    await fs.writeFile(filename, data, 'utf8');
   }
   CFG = JSON.parse(data);
   if (!CFG.password || CFG.password === DEFAULT_CFG.password) {
@@ -213,8 +213,8 @@ function readConfigFile(filename) {
 /**
  * Initialize Google's authentication and start up the HTTP server.
  */
-function startup() {
-  readConfigFile(configFileName);
+async function startup() {
+  await readConfigFile(configFileName);
 
   // Create an authentication client for our interactions with Google.
   oauth2Client = new google.auth.OAuth2(
