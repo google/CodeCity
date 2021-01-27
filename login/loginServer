@@ -131,7 +131,7 @@ async function handleRequest(request, response) {
       options.state = 'autoclose';
     }
     const subs = {
-      '<<<LOGIN_URL>>>': oauth2Client.generateAuthUrl(options),
+      '<<<OAUTH_URL>>>': oauth2Client.generateAuthUrl(options),
       '<<<STATIC_URL>>>': CFG.staticUrl
     };
     serveFile(request, response, 'login.html', subs);
