@@ -117,12 +117,17 @@ async function handleRequest(request, response) {
 
   const url = new URL(request.url, CFG.loginUrl);
   const code = url.searchParams.get('code');
+  // No auth code?  Serve login.html.
   if (!code) {
-    // No auth code?  Serve login.html.
-    // Compute Google's login URL.
+    // Compute Google's login URL, including deciding where to
+    // redirect to afterwards.
     const options = {scope: 'email'};
-    if (url.searchParams.has('loginThenClose')) {
-      options.state = 'autoclose';
+    if (url.searchParams.has('after')) {
+      options.state = url.searchParams.get('after');
+    } else if (url.searchParams.has('loginThenClose')) {
+      options.state = CFG.staticUrl + 'login-close.html';
+    } else {
+      options.state = CFG.connectUrl;
     }
     const subs = {
       '<<<OAUTH_URL>>>': oauth2Client.generateAuthUrl(options),
@@ -168,13 +173,16 @@ async function handleRequest(request, response) {
   }
 
   // Login successful.  Issue ID cookie.
-  const state = url.searchParams.get('state');
-  const domain = CFG.cookieDomain ? ' Domain=' + CFG.cookieDomain : '';
-  const redirectUrl = (state === 'autoclose') ?
-      CFG.staticUrl + 'login-close.html' :
-      CFG.connectUrl;
+  if (!url.searchParams.has('state')) {
+    sendError(request, response, 500,
+              'Login successful but loginServer forgot where to redirect to.');
+    return;
+  }
+  const domain = CFG.cookieDomain ? `Domain=${CFG.cookieDomain}; ` : '';
+  const redirectUrl = url.searchParams.get('state');
+      
   response.writeHead(302, {   // Temporary redirect.
-    'Set-Cookie': `ID=${id}_${checksum}; HttpOnly; ${domain}; Path=/`,
+    'Set-Cookie': `ID=${id}_${checksum}; HttpOnly; ${domain}Path=/`,
     'Location': redirectUrl,
   });
   response.end('Login OK.  Redirecting.');
