@@ -126,6 +126,7 @@ Code.ObjectPanel.TYPES = {
   'array': '[]',
   'boolean': '⏼',
   'function': '𝑓',
+  'null': '␀',
   'number': '#',
   'object': '{}',
   'string': '”',
