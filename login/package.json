@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/google/CodeCity#readme",
   "dependencies": {
+    "forwarded-parse": "^2.1.1",
     "googleapis": "^59.0.0"
   },
   "devDependencies": {}
