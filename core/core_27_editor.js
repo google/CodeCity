@@ -192,6 +192,9 @@ Object.defineProperty($.http['code.']['/objectPanel'].www.compiled_, 'name', {va
 $.http['code.']['/objectPanel'].getType = function getType(value) {
   // Return a type string for a value.
   // E.g. 'string', 'object', 'array', 'boolean'.
+  if (value === null) {
+    return 'null';
+  }
   if (Array.isArray(value)) {
     return 'array';
   }
