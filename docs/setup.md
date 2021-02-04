@@ -237,7 +237,7 @@ Now apply the schedule to your instance’s persistent disk:
     https://console.cloud.google.com/compute/disks).
 0.  Click on the name of the persistent disk for your instance.  (By
     default it will have the same name you gave to your instance.)
-0.  In the ⋮ menu, choose edit.
+0.  Click on “Edit” at the top of the screen.
 0.  Under Snapshot schedule, select the schedule you created in steps
     1–3.
 0.  Click Save.
@@ -294,7 +294,8 @@ set-up.
     ```
 0.  Verify the correct version of node is installed:
     ```
-    $ node –-version v12.18.2
+    $ node –-version
+    v12.18.4
     ```
     (Actual version may be later than 12.18.)
 
@@ -531,7 +532,7 @@ nginx.
     *   Authorized redirect URIs: for wildcard DNS configurations this
         will be of the form `https://login.example.codecity.world/`;
         for single-domain configurations it will instead be
-        `https://example.codecity.world/login`.
+        `https://example.codecity.world/login/`.
 0.  Click Save.
 0.  Now click on the newly-created client ID.  Make a note of the
     Client ID (it will be a long string like
