@@ -93,7 +93,7 @@ $.servers.http.connection.onConnect = function onConnect() {
   this.request = new $.servers.http.Request();
   this.response = new $.servers.http.Response(this);
 };
-Object.setOwnerOf($.servers.http.connection.onConnect, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.servers.http.connection.onConnect, $.physicals.Maximilian);
 $.servers.http.connection.onReceive = function onReceive(data) {
   this.buffer += data;
   var lf;
@@ -111,38 +111,23 @@ $.servers.http.connection.onReceive = function onReceive(data) {
     this.buffer = '';
   }
 };
-Object.setOwnerOf($.servers.http.connection.onReceive, Object.getOwnerOf($.Jssp.prototype.compile));
+Object.setOwnerOf($.servers.http.connection.onReceive, $.physicals.Neil);
 $.servers.http.connection.onReceiveChunk = function onReceiveChunk(chunk) {
-  if (!this.request.parse(chunk)) {
-    return;  // Wait for more lines to arrive.
+  if (this.request.parse(chunk)) {
+    this.handle_();
   }
-  var obj = $.http['www.']['404'];
-  var subdomain = (this.request.subdomain || 'www') + '.';
-  var domainObj = ($.http.hasOwnProperty(subdomain) && $.http[subdomain]);
-  if (domainObj) {
-    var pathname = this.request.pathname;
-    obj = (domainObj.hasOwnProperty(pathname) && domainObj[pathname]) || obj;
-  }
-  try {
-    obj.www(this.request, this.response);
-  } catch (e) {
-    suspend();
-    // TODO: report error to client, somehow.
-    $.system.log(String(e) + '\n' + e.stack);
-  } finally {
-    this.close();
-  }
+  // Otherwise wait for more lines to arrive.
 };
-Object.setOwnerOf($.servers.http.connection.onReceiveChunk, Object.getOwnerOf($.Jssp.prototype.compile));
+Object.setOwnerOf($.servers.http.connection.onReceiveChunk, $.physicals.Maximilian);
 $.servers.http.connection.onEnd = function onEnd() {
   clearTimeout(this.timeout);
   $.connection.onEnd.apply(this, arguments);
 };
-Object.setOwnerOf($.servers.http.connection.onEnd, Object.getOwnerOf($.Jssp.prototype.compile));
+Object.setOwnerOf($.servers.http.connection.onEnd, $.physicals.Neil);
 $.servers.http.connection.close = function close() {
   $.system.connectionClose(this);
 };
-Object.setOwnerOf($.servers.http.connection.close, Object.getOwnerOf($.Jssp.prototype.compile));
+Object.setOwnerOf($.servers.http.connection.close, $.physicals.Neil);
 $.servers.http.connection.close.prototype = $.connection.close.prototype;
 $.servers.http.connection.onError = function onError(error) {
   // TODO(cpcallen): add check for error that occurs when relistening
@@ -152,18 +137,54 @@ $.servers.http.connection.onError = function onError(error) {
     this.connected = false;
   }
 };
-Object.setOwnerOf($.servers.http.connection.onError, Object.getOwnerOf($.Jssp.prototype.compile));
+Object.setOwnerOf($.servers.http.connection.onError, $.physicals.Neil);
 $.servers.http.connection.onError.prototype = $.connection.onError.prototype;
 $.servers.http.connection.onReceiveLine = function onReceiveLine(text) {
   // Override this on child classes.
 };
-Object.setOwnerOf($.servers.http.connection.onReceiveLine, Object.getOwnerOf($.Jssp.prototype.compile));
+Object.setOwnerOf($.servers.http.connection.onReceiveLine, $.physicals.Neil);
 $.servers.http.connection.onReceiveLine.prototype = $.connection.onReceiveLine.prototype;
 $.servers.http.connection.write = function write(text) {
   $.system.connectionWrite(this, text);
 };
-Object.setOwnerOf($.servers.http.connection.write, Object.getOwnerOf($.Jssp.prototype.compile));
+Object.setOwnerOf($.servers.http.connection.write, $.physicals.Neil);
 $.servers.http.connection.write.prototype = $.connection.write.prototype;
+$.servers.http.connection.handle_ = function handle_() {
+  /* Route this connection to a hander, invoke the handler, and deal with the
+   * aftermath.
+   */
+  try {
+    var subdomain = (this.request.subdomain || 'www') + '.';
+    var pathname = this.request.pathname;
+    var domainObj = ($.http.hasOwnProperty(subdomain) && $.http[subdomain]);
+    if (!domainObj) {
+      this.response.sendError(404, 'Invalid subdomain "' +
+                              $.utils.html.escape(this.request.subdomain) +
+                              '".');
+      return;
+    }
+    var obj = (domainObj.hasOwnProperty(pathname) && domainObj[pathname]);
+    if (!obj) {
+      this.response.sendError(404);
+      return;
+    }
+    obj.www(this.request, this.response);
+  } catch (e) {
+    suspend();
+    $.system.log(String(e) + '\n' + e.stack);
+    if (this.response.headersSent) {
+      // Too late to return a proper error page.  Oh well.
+      this.response.write('<pre>' +
+                          $.utils.html.escape(String(e) + '\n' + e.stack) +
+                          '</pre>');
+    } else {
+      this.response.sendError(500, e);
+    }
+  } finally {
+    this.close();
+  }
+};
+Object.setOwnerOf($.servers.http.connection.handle_, $.physicals.Maximilian);
 $.servers.http.Request = function Request() {
   this.headers = Object.create(null);
   this.headers.cookie = Object.create(null);
@@ -171,7 +192,7 @@ $.servers.http.Request = function Request() {
   // One of 'invalid', 'request', 'headers', 'body', 'done'.
   this.state_ = 'request';
 };
-Object.setOwnerOf($.servers.http.Request, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.servers.http.Request, $.physicals.Maximilian);
 $.servers.http.Request.prototype.parse = function parse(line) {
   // Returns true if parsing is complete, false if more lines are needed.
   if (this.state_ === 'request') {
@@ -262,7 +283,7 @@ $.servers.http.Request.prototype.parse = function parse(line) {
   // Invalid state?  Extra lines?  Ignore.
   return true;
 };
-Object.setOwnerOf($.servers.http.Request.prototype.parse, Object.getOwnerOf($.Jssp.prototype.compile));
+Object.setOwnerOf($.servers.http.Request.prototype.parse, $.physicals.Neil);
 $.servers.http.Request.prototype.parseUrl_ = function parseUrl_(url) {
   // pathname: /bar/baz?data  ->  /bar/baz
   // query: /bar/baz?data  ->  data
@@ -274,7 +295,7 @@ $.servers.http.Request.prototype.parseUrl_ = function parseUrl_(url) {
     this.query = url.substring(qIndex + 1);
   }
 };
-Object.setOwnerOf($.servers.http.Request.prototype.parseUrl_, Object.getOwnerOf($.Jssp.prototype.compile));
+Object.setOwnerOf($.servers.http.Request.prototype.parseUrl_, $.physicals.Neil);
 $.servers.http.Request.prototype.parseParameters_ = function parseParameters_(data) {
   if (!data) {
     return;
@@ -303,7 +324,7 @@ $.servers.http.Request.prototype.parseParameters_ = function parseParameters_(da
     this.parameters[name] = value;
   }
 };
-Object.setOwnerOf($.servers.http.Request.prototype.parseParameters_, Object.getOwnerOf($.Jssp.prototype.compile));
+Object.setOwnerOf($.servers.http.Request.prototype.parseParameters_, $.physicals.Neil);
 $.servers.http.Request.prototype.parseSubdomain_ = function parseSubdomain_() {
   var subdomain = 'www';
   if ($.servers.http.subdomains) {
@@ -332,9 +353,11 @@ $.servers.http.Request.prototype.parseSubdomain_ = function parseSubdomain_() {
   }
   this.subdomain = subdomain;
 };
-Object.setOwnerOf($.servers.http.Request.prototype.parseSubdomain_, Object.getOwnerOf($.Jssp.prototype.compile));
+Object.setOwnerOf($.servers.http.Request.prototype.parseSubdomain_, $.physicals.Neil);
+Object.setOwnerOf($.servers.http.Request.prototype.parseSubdomain_.prototype, $.physicals.Neil);
 $.servers.http.Request.prototype.parseSubdomain_.hostStringCache_ = 'google.codecity.world';
 $.servers.http.Request.prototype.parseSubdomain_.hostRegExpCache_ = /^([-A-Za-z0-9]+)\.google\.codecity\.world$/;
+Object.setOwnerOf($.servers.http.Request.prototype.parseSubdomain_.hostRegExpCache_, $.physicals.Neil);
 $.servers.http.Request.prototype.fromSameOrigin = function fromSameOrigin() {
   /* Determines if the previous page and the requested page are from the same
    * origin.  Normally this means that they are from the same subdomain.
@@ -364,8 +387,8 @@ $.servers.http.Request.prototype.fromSameOrigin = function fromSameOrigin() {
   var subdomain = m ? m[1] : 'www';
   return subdomain === this.subdomain;
 };
-Object.setOwnerOf($.servers.http.Request.prototype.fromSameOrigin, Object.getOwnerOf($.Jssp.prototype.compile));
-Object.setOwnerOf($.servers.http.Request.prototype.fromSameOrigin.prototype, Object.getOwnerOf($.Jssp.prototype.compile));
+Object.setOwnerOf($.servers.http.Request.prototype.fromSameOrigin, $.physicals.Neil);
+Object.setOwnerOf($.servers.http.Request.prototype.fromSameOrigin.prototype, $.physicals.Neil);
 $.servers.http.Request.discardDuplicates = [];
 $.servers.http.Request.discardDuplicates[0] = 'authorization';
 $.servers.http.Request.discardDuplicates[1] = 'content-length';
@@ -381,36 +404,42 @@ $.servers.http.Request.discardDuplicates[10] = 'user-agent';
 $.servers.http.Response = function Response(connection) {
   this.headersSent = false;
   this.statusCode = 200;
-  this.headers_ = Object.create(null);
+  this.headers_ = Object.create(Response.defaultHeaders);
   this.cookies = [];
   this.setHeader('content-type', 'text/html; charset=utf-8');
   this.connection_ = connection;
 };
-Object.setOwnerOf($.servers.http.Response, Object.getOwnerOf($.Jssp.OutputBuffer));
-$.servers.http.Response.prototype.setHeader = function(name, value) {
+Object.setOwnerOf($.servers.http.Response, $.physicals.Maximilian);
+$.servers.http.Response.prototype.setHeader = function setHeader(name, value) {
   if (this.headersSent) {
-    throw new Error('Header already sent.');
+    throw new Error('header already sent');
+  }
+  value = String(value).trim();
+  if (value.includes('\n') || value.includes('\r')) {
+    throw new RangeError('invalid header value');
   }
   // Normalize all header names as lowercase.
-  name = name.toLowerCase(name);
+  name = String(name).toLowerCase(name);
   if (name === 'set-cookie') {
+    if (/^\s*ID\s*=/.test(value)) {
+      throw new PermissionError('not allowed to set ID cookie');
+    }
     this.cookies.push(value);
   } else {
-    var existing = this.headers_[name];
-    if (name in this.headers_) {
+    var existing = Object.getOwnPropertyDescriptor(this.headers_, name);
+    if (existing) {  // Header already set for this Response specifically.
       if ($.servers.http.Response.discardDuplicates.includes(name)) {
-        // Discard older duplicate.
+        // Overwrite existing value.
       } else {
         // Append this header onto previously defined header.
-        value = existing + ', ' + value;
+        value = existing.value + ', ' + value;
       }
     }
     this.headers_[name] = value;
   }
 };
-delete $.servers.http.Response.prototype.setHeader.name;
-Object.setOwnerOf($.servers.http.Response.prototype.setHeader, Object.getOwnerOf($.Jssp.OutputBuffer));
-$.servers.http.Response.prototype.writeHead = function() {
+Object.setOwnerOf($.servers.http.Response.prototype.setHeader, $.physicals.Maximilian);
+$.servers.http.Response.prototype.writeHead = function writeHead() {
   if (this.headersSent) {
     throw new Error('Header already sent.');
   }
@@ -420,7 +449,7 @@ $.servers.http.Response.prototype.writeHead = function() {
                          '\r\n');
   for (var name in this.headers_) {
     // Print all header names as Title-Case.
-    var title = name.replace(/\w+/g, this.capitalize);
+    var title = name.replace(/\w+/g, $.utils.string.capitalize);
     this.connection_.write(title + ': ' + this.headers_[name] + '\r\n');
   }
   for (var i = 0; i < this.cookies.length; i++) {
@@ -429,39 +458,22 @@ $.servers.http.Response.prototype.writeHead = function() {
   }
   this.connection_.write('\r\n');
 };
-delete $.servers.http.Response.prototype.writeHead.name;
-$.servers.http.Response.prototype.writeHead.prototype.constructor = function() {
+Object.setOwnerOf($.servers.http.Response.prototype.writeHead, $.physicals.Maximilian);
+$.servers.http.Response.prototype.setStatus = function setStatus(statusCode) {
+  /* Set the status code for this Response.
+   * Must be called before .writeHead().
+   *
+   * - statusCode: number - the HTTP status code to return.
+   */
+  if (!(statusCode in $.servers.http.STATUS_CODES)) {
+    throw new RangeError('invalid HTTP status code ' + statusCode);
+  }
   if (this.headersSent) {
-    throw new Error('Header already sent.');
+    throw new Error('header already sent.');
   }
-  this.headersSent = true;
-  var statusMessage = $.servers.http.STATUS_CODES[this.statusCode] || 'Unknown';
-  this.connection_.write('HTTP/1.0 ' + this.statusCode + ' ' + statusMessage +
-                         '\r\n');
-  for (var name in this.headers_) {
-    // Print all header names as Title-Case.
-    var title = name.replace(/\w+/g, this.capitalize);
-    this.connection_.write(title + ': ' + this.headers_[name] + '\r\n');
-  }
-  for (var i = 0; i < this.cookies.length; i++) {
-    // Print all cookies.
-    this.connection_.write('Set-Cookie: ' + this.cookies[i] + '\r\n');
-  }
-  this.connection_.write('\r\n');
+  this.statusCode = statusCode;
 };
-$.servers.http.Response.prototype.writeHead.prototype.constructor.prototype = $.servers.http.Response.prototype.writeHead.prototype;
-Object.defineProperty($.servers.http.Response.prototype.writeHead.prototype.constructor, 'name', {value: 'writeHead'});
-$.servers.http.Response.prototype.capitalize = function(txt) {
-  // 'foo' -> 'Foo'
-  // Assumes incoming text is already lowercase.
-  return txt[0].toUpperCase() + txt.substring(1);
-};
-$.servers.http.Response.prototype.setStatus = function(code) {
-  if (this.headersSent) {
-    throw new Error('Header already sent.');
-  }
-  this.statusCode = code;
-};
+Object.setOwnerOf($.servers.http.Response.prototype.setStatus, $.physicals.Maximilian);
 $.servers.http.Response.prototype.write = function write(text) {
   text = String(text);
   if (text !== '') {
@@ -471,7 +483,94 @@ $.servers.http.Response.prototype.write = function write(text) {
     this.connection_.write(text);
   }
 };
-Object.setOwnerOf($.servers.http.Response.prototype.write, Object.getOwnerOf($.Jssp.prototype.compile));
+Object.setOwnerOf($.servers.http.Response.prototype.write, $.physicals.Neil);
+$.servers.http.Response.prototype.clearIdCookie = function clearIdCookie() {
+  // TODO: Security check goes here.  Should be only callable by logout.
+  if (this.headersSent) {
+    throw new Error('Header already sent');
+  }
+  var domain = $.servers.http.subdomains ? ' Domain=' + $.servers.http.host : '';
+  var value = 'ID=; HttpOnly;' + domain + '; Path=/; Max-Age=0;';
+  this.cookies.push(value);
+};
+Object.setOwnerOf($.servers.http.Response.prototype.clearIdCookie, $.physicals.Neil);
+Object.setOwnerOf($.servers.http.Response.prototype.clearIdCookie.prototype, $.physicals.Neil);
+$.servers.http.Response.prototype.sendRedirect = function sendRedirect(url, statusCode) {
+  /* Write a redirect as the response.
+   *
+   * Must be called before writeHeader has been called.
+   *
+   * Arguments:
+   * - url: string - the destination URL for the redirect.
+   * - statusCode?: number - optional HTTP status code (default: 303).
+   */
+  if (!statusCode) statusCode = 303;
+  this.setStatus(statusCode);
+  this.setHeader('Location', url);
+  this.writeHead();
+};
+Object.setOwnerOf($.servers.http.Response.prototype.sendRedirect, $.physicals.Maximilian);
+Object.setOwnerOf($.servers.http.Response.prototype.sendRedirect.prototype, $.physicals.Maximilian);
+$.servers.http.Response.prototype.sendError = function sendError(statusCode, message) {
+  /* Send an error status and page as the response.
+   *
+   * Must be called before writeHeader has been called.  Writes a complete HTML
+   * document to the connection, but doesn't close the connection.
+   *
+   * Arguments:
+   * - statusCode: number - an HTTP status code.
+   * - message?: string | Error - optional status message or Error instance.
+   */
+  this.setStatus(statusCode);
+  if (message instanceof Error) {
+    this.errorMessage_ = $.utils.html.escape(String(message)) +
+      '<pre>' + $.utils.html.escape(message.stack) + '</pre>';
+  } else if (message !== undefined) {
+    this.errorMessage_ = $.utils.html.escape(message);
+  } else {
+    this.errorMessage_ = '';
+  }
+  sendError.jssp(this.connection_.request, this);
+};
+Object.setOwnerOf($.servers.http.Response.prototype.sendError, $.physicals.Maximilian);
+Object.setOwnerOf($.servers.http.Response.prototype.sendError.prototype, $.physicals.Maximilian);
+// CLOSURE: type: function, vars: source, jssp
+// CLOSURE: type: funexp, vars: Jssp
+$.servers.http.Response.prototype.sendError.jssp = function jssp(request, response) {
+  // DO NOT EDIT THIS CODE.  AUTOMATICALLY GENERATED BY JSSP.
+  // To edit contents of generated page, edit this.source.
+  return jssp.render(this, request, response);  // See $.Jssp for explanation.
+};
+Object.setPrototypeOf($.servers.http.Response.prototype.sendError.jssp, $.Jssp.prototype);
+Object.setOwnerOf($.servers.http.Response.prototype.sendError.jssp, $.physicals.Neil);
+Object.setOwnerOf($.servers.http.Response.prototype.sendError.jssp.prototype, $.physicals.Neil);
+$.servers.http.Response.prototype.sendError.jssp.source = '<html>\n<head>\n  <title><%=response.statusCode%> - Code City</title>\n  <style>\n    body {\n      font-family: "Roboto Mono", monospace;\n      text-align: center;\n    }\n    h1 {\n      font-size: 40pt;\n      font-weight: 100;\n    }\n    h1>img {\n      vertical-align: text-bottom;\n    }\n    pre {\n      margin: 2em;\n    }\n  </style>\n  <link href="https://fonts.googleapis.com/css?family=Roboto+Mono" rel="stylesheet">\n  <link href="<%=$.servers.http.makeUrl(\'static\', \'favicon.ico\')%>" rel="shortcut icon">\n</head>\n<body>\n  <h1>\n    <img src="<%=$.servers.http.makeUrl(\'static\', \'logo-error.svg\')%>" alt="">\n    <%=response.statusCode%> <%=$.servers.http.STATUS_CODES[response.statusCode]%>\n  </h1>\n  <pre>Host: <%=$.utils.html.escape(request.headers.host) %>\n<%= request.method %> <%= $.utils.html.escape(request.url) %></pre>\n  <%=response.errorMessage_%>\n</body>\n</html>';
+$.servers.http.Response.prototype.sendError.jssp.hash_ = 'a638cf349f7eab7e22087cf4d8f5872fv1.0.0';
+$.servers.http.Response.prototype.sendError.jssp.compiled_ = function(request, response) {
+// DO NOT EDIT THIS CODE: AUTOMATICALLY GENERATED BY JSSP.
+response.write("<html>\n<head>\n  <title>");
+response.write(response.statusCode);
+response.write(" - Code City</title>\n  <style>\n    body {\n      font-family: \"Roboto Mono\", monospace;\n      text-align: center;\n    }\n    h1 {\n      font-size: 40pt;\n      font-weight: 100;\n    }\n    h1>img {\n      vertical-align: text-bottom;\n    }\n    pre {\n      margin: 2em;\n    }\n  </style>\n  <link href=\"https://fonts.googleapis.com/css?family=Roboto+Mono\" rel=\"stylesheet\">\n  <link href=\"");
+response.write($.servers.http.makeUrl('static', 'favicon.ico'));
+response.write("\" rel=\"shortcut icon\">\n</head>\n<body>\n  <h1>\n    <img src=\"");
+response.write($.servers.http.makeUrl('static', 'logo-error.svg'));
+response.write("\" alt=\"\">\n    ");
+response.write(response.statusCode);
+response.write(" ");
+response.write($.servers.http.STATUS_CODES[response.statusCode]);
+response.write("\n  </h1>\n  <pre>Host: ");
+response.write($.utils.html.escape(request.headers.host));
+response.write("\n");
+response.write(request.method);
+response.write(" ");
+response.write($.utils.html.escape(request.url));
+response.write("</pre>\n  ");
+response.write(response.errorMessage_);
+response.write("\n</body>\n</html>");
+};
+Object.setOwnerOf($.servers.http.Response.prototype.sendError.jssp.compiled_, $.physicals.Neil);
+Object.setOwnerOf($.servers.http.Response.prototype.sendError.jssp.compiled_.prototype, $.physicals.Neil);
+Object.defineProperty($.servers.http.Response.prototype.sendError.jssp.compiled_, 'name', {value: '$.servers.http.Response.prototype.writeErrorPage.jssp.compiled_'});
 $.servers.http.Response.discardDuplicates = [];
 $.servers.http.Response.discardDuplicates[0] = 'age';
 $.servers.http.Response.discardDuplicates[1] = 'content-length';
@@ -481,6 +580,9 @@ $.servers.http.Response.discardDuplicates[4] = 'expires';
 $.servers.http.Response.discardDuplicates[5] = 'last-modified';
 $.servers.http.Response.discardDuplicates[6] = 'location';
 $.servers.http.Response.discardDuplicates[7] = 'retry-after';
+$.servers.http.Response.defaultHeaders = (new 'Object.create')(null);
+$.servers.http.Response.defaultHeaders['cache-control'] = 'no-store';
+$.servers.http.Response.defaultHeaders.server = 'CodeCity/0.0 ($.servers.http)';
 $.servers.http.protocol = 'https:';
 $.servers.http.host = 'google.codecity.world';
 $.servers.http.subdomains = true;
@@ -491,6 +593,7 @@ $.servers.http.makeUrl = function makeUrl(subdomain, rest) {
    * -> "/secret/cat?foo=bar"
    */
   subdomain = subdomain || 'www';
+  if (rest === undefined) rest = '';
   var url;
   if (this.subdomains) {
     url = '//';
@@ -504,6 +607,6 @@ $.servers.http.makeUrl = function makeUrl(subdomain, rest) {
   }
   return url + rest;
 };
-Object.setOwnerOf($.servers.http.makeUrl, Object.getOwnerOf($.Jssp.prototype.compile));
-Object.setOwnerOf($.servers.http.makeUrl.prototype, Object.getOwnerOf($.Jssp.prototype.compile));
+Object.setOwnerOf($.servers.http.makeUrl, $.physicals.Maximilian);
+Object.setOwnerOf($.servers.http.makeUrl.prototype, $.physicals.Neil);
 

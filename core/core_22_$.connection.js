@@ -30,8 +30,8 @@ $.connection.onConnect = function onConnect() {
   this.buffer = '';
   this.connected = true;
 };
-Object.setOwnerOf($.connection.onConnect, Object.getOwnerOf($.Jssp.OutputBuffer));
-Object.setOwnerOf($.connection.onConnect.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.connection.onConnect, $.physicals.Maximilian);
+Object.setOwnerOf($.connection.onConnect.prototype, $.physicals.Maximilian);
 $.connection.onReceive = function onReceive(text) {
   this.buffer += text.replace(/\r/g, '');
   var lf;
@@ -41,24 +41,24 @@ $.connection.onReceive = function onReceive(text) {
     this.onReceiveLine(line);
   }
 };
-Object.setOwnerOf($.connection.onReceive, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.connection.onReceive, $.physicals.Maximilian);
 $.connection.onReceiveLine = function onReceiveLine(text) {
   // Override this on child classes.
 };
-Object.setOwnerOf($.connection.onReceiveLine, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.connection.onReceiveLine, $.physicals.Maximilian);
 $.connection.onEnd = function onEnd() {
   this.connected = false;
   this.disconnectTime = Date.now();
 };
-Object.setOwnerOf($.connection.onEnd, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.connection.onEnd, $.physicals.Maximilian);
 $.connection.write = function write(text) {
   $.system.connectionWrite(this, text);
 };
-Object.setOwnerOf($.connection.write, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.connection.write, $.physicals.Maximilian);
 $.connection.close = function close() {
   $.system.connectionClose(this);
 };
-Object.setOwnerOf($.connection.close, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.connection.close, $.physicals.Maximilian);
 $.connection.onError = function onError(error) {
   // TODO(cpcallen): add check for error that occurs when relistening
   // fails at server startup from checkpoint.
@@ -67,5 +67,5 @@ $.connection.onError = function onError(error) {
     this.connected = false;
   }
 };
-Object.setOwnerOf($.connection.onError, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.connection.onError, $.physicals.Maximilian);
 

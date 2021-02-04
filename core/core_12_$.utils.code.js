@@ -124,7 +124,7 @@ $.utils.code.toSource = function toSource(value, opt_seen) {
   // Can't happen.
   throw new TypeError('[' + type + ']');
 };
-Object.setOwnerOf($.utils.code.toSource, Object.getOwnerOf($.system.onStartup.prototype));
+Object.setOwnerOf($.utils.code.toSource, $.physicals.Maximilian);
 $.utils.code.toSource.processingError = false;
 $.utils.code.toSourceSafe = function toSourceSafe(value) {
   // Same as $.utils.code.toSource, but don't throw any selector errors.
@@ -209,7 +209,7 @@ $.utils.code.rewriteForEval = function(src, forceExpression) {
   return src;
 };
 delete $.utils.code.rewriteForEval.name;
-Object.setOwnerOf($.utils.code.rewriteForEval, Object.getOwnerOf($.utils.imageMatch.recog.prototype));
+Object.setOwnerOf($.utils.code.rewriteForEval, $.physicals.Neil);
 $.utils.code.rewriteForEval.unittest = function() {
   var cases = {
     // Input: [Expression, Statement(s)]
@@ -294,7 +294,7 @@ $.utils.code.eval = function(src, evalFunc) {
   return $.utils.code.toSource(out);
 };
 delete $.utils.code.eval.name;
-Object.setOwnerOf($.utils.code.eval, Object.getOwnerOf($.system.onStartup.prototype));
+Object.setOwnerOf($.utils.code.eval, $.physicals.Maximilian);
 $.utils.code.regexps = {};
 $.utils.code.regexps.README = "$.utils.code.regexps contains some RegExps useful for parsing or otherwise analysing code.  They are:\n\n.escapes: Matches (globally) escape sequences found in string and regexp literals, like '\\n' or '\\x20' or '\\u1234'.\n\n.singleQuotedString: Matches a single-quoted string literal, like \"'this one'\" and \"'it\\\\'s'\".\n\n.doubleQuotedString: Matches a double-quoted string literal, like '\"this one\"' and '\"it\\'s\"'.\n\n.string: Matches a string literal, like \"'this one' and '\"that one\"' as well.\n\n.identifier: Matches an identifier.\n\nThe '..Exact' versions of these RegExps are anchored with '^' and '$' so they only match exactly specified thing - for example, .stringExact matches string literals \"'this one'\" but notably not \" 'this one' \" (because it contains other characters not part of the literal).\n";
 $.utils.code.regexps.escapes = /\\(?:["'\\\/0bfnrtv]|u[0-9a-fA-F]{4}|x[0-9a-fA-F]{2})/g;
@@ -489,7 +489,7 @@ $.utils.code.getGlobal = function getGlobal() {
   global.WeakMap = WeakMap;
   return global;
 };
-Object.setOwnerOf($.utils.code.getGlobal, Object.getOwnerOf($.system.onStartup.prototype));
+Object.setOwnerOf($.utils.code.getGlobal, $.physicals.Maximilian);
 $.utils.code.parse = new 'CC.acorn.parse';
 $.utils.code.parseExpressionAt = new 'CC.acorn.parseExpressionAt';
 

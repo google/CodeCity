@@ -23,24 +23,25 @@
 
 'use strict';
 
-var crypto = require('crypto');
-var fs = require('fs');
-var google = require('googleapis').google;
-var http = require('http');
-var URL = require('url').URL;
+const crypto = require('crypto');
+const forwardedParse = require('forwarded-parse');
+const fs = require('fs').promises;
+const {google} = require('googleapis');
+const http = require('http');
+const {URL, format: urlFormat} = require('url');
+
+const oauth2Api = google.oauth2('v2');
 
 // Configuration constants.
 const configFileName = 'loginServer.cfg';
 
-// Global variables.
-var CFG = null;
-var oauth2Client;
+// Global variables 
+let CFG = null;
+const /** !Object<string, !google.auth.OAuth2> */ clients = {};
 
 const DEFAULT_CFG = {
   // Internal port for this HTTP server.  Nginx hides this from users.
   httpPort: 7781,
-  // Absolute URL of login page.
-  loginUrl: 'https://login.example.codecity.world/',
   // URL of connect page (absolute or relative).
   connectUrl: 'https://connect.example.codecity.world/',
   // URL of static folder (absolute or relative).
@@ -59,29 +60,46 @@ const DEFAULT_CFG = {
 };
 
 
+/** 
+ * Serve an error to the given ServerResult.  Also log information
+ * about the failed IncomingMessage to the console.
+ * @param {!http.IncomingMessage} request The request which triggered the error.
+ * @param {!http.ServerResponse} response The ServerResult to send error to.
+ * @param {number} statusCode the HTTP response code to be served.
+ * @param {string} message An additional message to include in the result.
+ * @return {void}
+ */
+function sendError(request, response, statusCode, message) {
+  console.log('%s %s (Host: %s): %d %s', request.method,
+              request.url.replace(/=[^&]*(?=&|$)/g, '=...'),
+              request.headers.host, statusCode, message);
+  response.writeHead(statusCode).end(message);
+}
+
 /**
  * Load a file from disk, add substitutions, and serve to the web.
- * @param {!Object} response HTTP server response object.
+ * @param {!IncomingMessage} request The request being answered.
+ * @param {!http.ServerResponse} response The ServerResult to send the file to.
  * @param {string} filename Name of template file on disk.
- * @param {!Object} subs Hash of replacement strings.
+ * @param {!Object} subs Object-map of replacement strings.
  */
-function serveFile(response, filename, subs) {
-  fs.readFile(filename, 'utf8', function(err, data) {
-    if (err) {
-      console.log(err);
-      response.statusCode = 500;
-      data = 'Unable to load file: ' + filename + '\n' + err;
-    } else {
-      // Inject substitutions.
-      for (var name in subs) {
-        data = data.replace(new RegExp(name, 'g'), subs[name]);
-      }
-      response.statusCode = 200;
-      response.setHeader('Content-Type', 'text/html');
-    }
-    // Serve page to user.
-    response.end(data);
-  });
+async function serveFile(request, response, filename, subs) {
+  let /** string */ data;
+  try {
+    data = String(await fs.readFile(filename, 'utf8'));
+  } catch (err) {
+    sendError(request, response,
+              500, `Unable to load file ${filename}: ${err}`);
+    return;
+  }
+  // Inject substitutions.
+  for (const name in subs) {
+    data = data.replace(new RegExp(name, 'g'), subs[name]);
+  }
+  // Serve page to user.
+  response.statusCode = 200;
+  response.setHeader('Content-Type', 'text/html');
+  response.end(data);
 }
 
 /**
@@ -89,102 +107,128 @@ function serveFile(response, filename, subs) {
  * @param {!Object} request HTTP server request object
  * @param {!Object} response HTTP server response object.
  */
-function handleRequest(request, response) {
+async function handleRequest(request, response) {
   if (request.connection.remoteAddress !== '127.0.0.1') {
-    // This check is redundant, the server is only accessible to
-    // localhost connections.
-    console.log(
-        'Rejecting connection from ' + request.connection.remoteAddress);
-    response.end('Connection rejected.');
+    sendError(request, response, 403,
+              `Connection from ${request.connection.remoteAddress} denied.`);
     return;
   }
 
-  var url = new URL(request.url, CFG.loginUrl);
-  if (request.method === 'GET' && url.searchParams.has('close')) {
-    // Serve up close.html to close the window.
-    serveFile(response, 'close.html', {});
-    return;
-  }
-
-  var code = url.searchParams.get('code');
-  if (!code) {
-    // No auth code?  Serve login.html.
-    // Compute Google's login URL.
-    var options = {scope: 'email'};
-    if (url.searchParams.has('loginThenClose')) {
-      options.state = 'autoclose';
-    }
-    var subs = {
-      '<<<LOGIN_URL>>>': oauth2Client.generateAuthUrl(options),
-      '<<<STATIC_URL>>>': CFG.staticUrl
-    };
-    serveFile(response, 'login.html', subs);
-    return;
-  }
-  // Handle the result of a login.
-  oauth2Client.getToken(code, function(err, tokens) {
-    if (err) {
-      console.log(err);
-      response.statusCode = 500;
-      response.end('Google Authentication fail: ' + err);
+  // Determine what URL the client contacted us on.
+  let proto = 'http';  // What proto we are actually listening to.
+  let host = request.headers.host;  // Host header we actually received.
+  // See if the first reverse proxy knows better.
+  const forwarded = request.headers.forwarded;
+  if (forwarded) {
+    try {
+      const forwards = forwardedParse(forwarded);
+      if (forwards[0]) {
+        if (forwards[0].proto) proto = forwards[0].proto;
+        if (forwards[0].host) host = forwards[0].host;
+      }
+    } catch (e) {
+      sendError(request, response, 400,
+                `Forwarded header: ${e.name}: ${e.message} of "${forwarded}"`);
       return;
     }
-    // Now tokens contains an access_token and an optional
-    // refresh_token. Save them.
-    oauth2Client.setCredentials(tokens);
-    var oauth2Api = google.oauth2('v2');
-    oauth2Api.userinfo.v2.me.get({auth: oauth2Client}, function(err, res) {
-      if (err) {
-        console.log(err);
-        response.statusCode = 500;
-        response.end('Google Userinfo fail: ' + err);
-        return;
-      }
-      // Convert the Google ID into one unique for Code City.
-      var id = CFG.password + res.data.id;
-      id = crypto.createHash('sha512').update(id).digest('hex');
-      // Create anti-tampering hash as checksum.
-      var checksum = CFG.password + id;
-      checksum = crypto.createHash('sha3-224').update(checksum).digest('hex');
-      var emailRegexp = new RegExp(CFG.emailRegexp || '.*');
-      // FYI: If present, res.data.hd contains the GSfE domain.
-      // E.g. 'students.gissv.org', or 'sjsu.edu'.
-      // We aren't using it now, but this might be used to filter users.
-      if (emailRegexp.test(res.data.email)) {
-        var state = url.searchParams.get('state');
-        var domain = CFG.cookieDomain ? ' Domain=' + CFG.cookieDomain : '';
-        var redirectUrl = (state === 'autoclose') ? '?close' : CFG.connectUrl;
-        response.writeHead(302, {
-          // Temporary redirect.
-          'Set-Cookie': 'ID=' + id + '_' + checksum + '; HttpOnly;' + domain +
-              '; Path=/',
-          'Location': redirectUrl
-        });
-        response.end('Login OK.  Redirecting.');
-        console.log('Accepted xxxx' + id.substring(id.length - 4));
-      } else {
-        response.statusCode = 403;
-        response.end('Login denied.  Your email address (' + res.data.email +
-            ') is not authorized.');
-        console.log('Login denied.');
-      }
-    });
+  }
+  const url = new URL(request.url, `${proto}://${host}`);
+  const loginUrl = urlFormat(url, {fragment: false, search: false});
+
+  // Get an authentication client for our interactions with Google.
+  if (!clients[loginUrl]) {
+    // Create client for login URL not seen before.
+    clients[loginUrl] = new google.auth.OAuth2(
+        CFG.clientId, CFG.clientSecret, loginUrl);
+  }
+  const oauth2Client = clients[loginUrl];
+
+  // No auth code?  Serve login.html.
+  const code = url.searchParams.get('code');
+  if (!code) {
+    // Compute Google's login URL, including deciding where to
+    // redirect to afterwards.
+    const options = {scope: 'email'};
+    if (url.searchParams.has('after')) {
+      options.state = url.searchParams.get('after');
+    } else if (url.searchParams.has('loginThenClose')) {
+      options.state = CFG.staticUrl + 'login-close.html';
+    } else {
+      options.state = CFG.connectUrl;
+    }
+    const subs = {
+      '<<<OAUTH_URL>>>': oauth2Client.generateAuthUrl(options),
+      '<<<STATIC_URL>>>': CFG.staticUrl
+    };
+    serveFile(request, response, 'login.html', subs);
+    return;
+  }
+
+  // Handle the result of a login.
+  let tokens;
+  try {
+    ({tokens} = await oauth2Client.getToken(code));
+  } catch (err) {
+    sendError(request, response, 500, `Google OAuth2 fail: ${err}`);
+    return;
+  }
+  // Now tokens contains an access_token and an optional
+  // refresh_token. Save them.
+  oauth2Client.setCredentials(tokens);
+  let data;
+  try {
+    ({data} = await oauth2Api.userinfo.v2.me.get({auth: oauth2Client}));
+  } catch (err) {
+    sendError(request, response, 500, `Google Userinfo fail: ${err}`);
+    return;
+  }
+  // Convert the Google ID into one unique for Code City.
+  const id = crypto.createHash('sha512')
+      .update(CFG.password + data.id).digest('hex');
+  // Create anti-tampering hash as checksum.
+  const checksum = crypto.createHash('sha3-224')
+      .update(CFG.password + id).digest('hex');
+  const emailRegexp = new RegExp(CFG.emailRegexp || '.*');
+  // FYI: If present, data.hd contains the GSfE domain.
+  // E.g. 'students.gissv.org', or 'sjsu.edu'.
+  // We aren't using it now, but this might be used to filter users.
+
+  // Check email address is allowed.
+  if (!emailRegexp.test(data.email)) {
+    sendError(request, response, 403, `Login denied for ${data.email}`);
+    return;
+  }
+
+  // Login successful.  Issue ID cookie.
+  if (!url.searchParams.has('state')) {
+    sendError(request, response, 500,
+              'Login successful but loginServer forgot where to redirect to.');
+    return;
+  }
+  const domain = CFG.cookieDomain ? `Domain=${CFG.cookieDomain}; ` : '';
+  const redirectUrl = url.searchParams.get('state');
+      
+  response.writeHead(302, {   // Temporary redirect.
+    'Set-Cookie': `ID=${id}_${checksum}; HttpOnly; ${domain}Path=/`,
+    'Location': redirectUrl,
   });
+  response.end('Login OK.  Redirecting.');
+  console.log('Accepted xxxx' + id.substring(id.length - 4));
 }
 
 /**
  * Read the JSON configuration file and return it.  If none is
  * present, write a stub and throw an error.
  */
-function readConfigFile(filename) {
+async function readConfigFile(filename) {
   let data;
   try {
-    data = fs.readFileSync(filename, 'utf8');
+    data = await fs.readFile(filename, 'utf8');
   } catch (err) {
     console.log(`Configuration file ${filename} not found.  ` +
         'Creating new file.');
     data = JSON.stringify(DEFAULT_CFG, null, 2) + '\n';
-    fs.writeFileSync(filename, data, 'utf8');
+    await fs.writeFile(filename, data, 'utf8');
   }
   CFG = JSON.parse(data);
   if (!CFG.password || CFG.password === DEFAULT_CFG.password) {
@@ -192,25 +236,20 @@ function readConfigFile(filename) {
         `Configuration file ${filename} not configured.  ` +
         'Please edit this file.');
   }
-  if (!CFG.loginUrl.endsWith('/')) CFG.loginUrl += '/';
   if (!CFG.connectUrl.endsWith('/')) CFG.connectUrl += '/';
   if (!CFG.staticUrl.endsWith('/')) CFG.staticUrl += '/';
 }
 
 /**
- * Initialize Google's authentication and start up the HTTP server.
+ * Read configuration and start up the HTTP server.
  */
-function startup() {
-  readConfigFile(configFileName);
-
-  // Create an authentication client for our interactions with Google.
-  oauth2Client = new google.auth.OAuth2(
-      CFG.clientId, CFG.clientSecret, CFG.loginUrl);
+async function startup() {
+  await readConfigFile(configFileName);
 
   // Start an HTTP server.
-  var server = http.createServer(handleRequest);
+  const server = http.createServer(handleRequest);
   server.listen(CFG.httpPort, 'localhost', () => {
-    console.log('Login server listening on port ' + CFG.httpPort);
+    console.log(`Login server listening on port ${CFG.httpPort}`);
   });
 }
 

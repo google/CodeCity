@@ -7,16 +7,31 @@ account in good standing.
 
 ## Google Compute Engine Setup
 
-We recommend running your Code City server on a Google Compute Engine
-(GCE) instance—it’s reliable, minimal hassle, and, thanks to [Google
-Cloud Platform’s “Always Free” tier](https://cloud.google.com/free),
-can be completely free!
+We recommend running your Code City server on a [Google Compute
+Engine](https://cloud.google.com/compute)</sup> (GCE) virtual
+machine<sup>[[?]](
+https://en.wikipedia.org/wiki/Virtual_machine)</sup> (VM)—it’s
+reliable, minimal hassle, and, thanks to [Google Cloud Platform’s
+“Always Free” tier](https://cloud.google.com/free), can be (very
+nearly) free!
 
 ### Create a GCE instance
 
-This will create a virtual machine on which your Code City instance
-will run.  You can skip this step if you intend to run your instance
-on your own machine or another cloud provider’s hardware. 
+This will create a dedicated GCE instance (VM) on which to run Code
+City.  You can skip this step if you intend to run your instance on
+your own machine or another cloud provider’s hardware.
+
+Before you begin: the GCE instance (VM) you create will run using the
+permissions of a service account<sup>[[?]](
+https://cloud.google.com/iam/docs/service-accounts)</sup>.  There is a
+“Compute Engine default service account” which will work fine but has
+quite broad permissions.  You may wish to create a service account
+with more limited permissions, to reduce the amount of damage an
+attacker can do if they compromise your Code City instance and gain
+control of the VM on which it runs.  This is especially so if your GCP
+project contains other resources (user data, etc.) which you wish to
+protect.  See [Appendix A: Creating a Service Account](
+#appendix-a-creating-a-service-account) for instructions.
 
 1.  Go to the [Google Compute Engine
     console](https://console.cloud.google.com/compute/instances).
@@ -49,13 +64,10 @@ on your own machine or another cloud provider’s hardware.
             (total, not per-instance) of persistent disk free of
             charge.
     *   Identity and API access:
-        *   Service account: the default, “Compute Engine default
-            service account”, is fine—but if you already use Google
-            Cloud Platform you may wish to [create a service
-            account][service-account] and role(s) with more restricted
-            permissions, to ensure that in the event that your Code
-            City instance is compromised it cannot be used to
-            compromise other GCP resources.
+        *   Service account: use the default “Compute Engine default
+            service account” or select the one you created by
+            following the instructions in [appendix A](
+            #appendix-a-creating-a-service-account).
         *   Access scopes: Allow default access.
     *   Firewall: Allow both HTTP and HTTPS traffic.
     *   Management:
@@ -73,6 +85,15 @@ on your own machine or another cloud provider’s hardware.
         *   Recommended: **un**tick “Delete boot disk when instance
             deleted” so that if you _do_ delete your instance you can
             recreate it easily and without losing user data.
+    *   Networking:
+        *   Under Network interfaces, click the pencil icon next to
+            the default interface.
+        *   External IP: ignore this section for now.
+        *   Public DNS PTR Record: optionally click “Enable” and enter
+            the [domain name](#set-up-an-ip-address-and-domain-name)
+            you intend to use for your instance,
+            e.g. <code><em>example</em>.codecity.world</code>.
+        *   Click “Done” to end editing the network interface.
 0.  Double-check the monthly cost estimate to ensure it is reasonable.
 0.  Click “create” and you will be taken back to the VM instances
     dashboard.  After a few minutes, you should see your new instance
@@ -87,58 +108,85 @@ on your own machine or another cloud provider’s hardware.
 [always-free]: https://cloud.google.com/free/docs/gcp-free-tier#always-free-usage-limits
 [service-account]: https://cloud.google.com/iam/docs/creating-managing-service-accounts
 
-### Set up an IP address and domain name
+#### Reserve a Static IP Address
 
-This step is necessary to allow users to connect with your
-newly-created instance.  If you are not using Google Cloud Platform
-you can skip all but the last step.
+For users to be able to access your instance from the Internet, it
+will need a static IP address<sup>[[?]](
+https://en.wikipedia.org/wiki/IP_address) (like 192.0.2.1) so that
+traffic can be routed to it.
 
 1.  Go to the [Networking / External IP addresses
     console](https://console.cloud.google.com/networking/addresses).
-0.  On the line for the instance you’ve just created, under “Type”,
-    choose “Static”.
-    *   In the resulting “Reserve a new static IP address dialog, type
-        in a name (can be any value, but recommend you use the same
-        name as for your instance).
-0.  Now point the domain name for your instance at this new static
-    address.  The details of this are outside of the scope of this
-    document, but we have the following observations and
-    recommendations:
-    *   Setting up
-        [DNS](https://en.wikipedia.org/wiki/Domain_Name_System)
-        involves two different entities: the registrar, which assigns
-        you a [domain name](https://en.wikipedia.org/wiki/Domain_name)
-        (like `example.org`), and a DNS provider, which runs the [name
-        servers](https://en.wikipedia.org/wiki/Name_server) that
-        resolve individual DNS entries (like `www.example.com`) to
-        specific numeric IP addresses like the one created in the
-        previous step.  In some cases both these services will be
-        provided by the same company, but many organisations will
-        typically run their own DNS servers, or outsource it to a
-        [managed DNS provider](
-        https://en.wikipedia.org/wiki/List_of_managed_DNS_providers).
-    *   If you are using your own domain name (e.g.,
-        <code>codecity.<em>example.org</em></code>) this will be done
-        through your DNS provider’s configuration console or via your
-        internal organisational DNS service configuration.
-    *   Alternatively we may in some cases be able to offer you the
-        use of a Code City subdomain (e.g.,
-        <code><em>example</em>.codecity.world</code>), in which case
-        we will take care of this step for you.  Contact us for
-        details.
-    *   Because of the [same origin policy], if you’d like to allow
-        individual (not fully trusted) users of your instance to be
-        able to create their own web pages / servers, we *strongly*
-        recommend that you use a [wildcard DNS record](
-        https://en.wikipedia.org/wiki/Wildcard_DNS_record), so that
-        each user can serve their content on an isolated subdomain
-        (like
-        <code><em>username</em>.example.codecity.world</code>).
-        To facilitate obtaining the necessary [wildcard certificate](
-        https://en.wikipedia.org/wiki/Wildcard_certificate), we
-        recommend you use a [DNS provider who easily integrates with
-        Let’s Encrypt DNS validation][dns-providers], such as [Google
-        Cloud DNS](https://cloud.google.com/dns/) if possible.
+0.  Click “+ Reserve Static Address”.  Enter details as follows:
+    *   Name: can be any value, but we recommend you use the same name
+        as for your instance.  This is just used to identify the
+        address reservation.
+    *   Description: enter any text you like—e.g.: “Static IP
+        address for <em>example</em>.codecity.world.”
+    *   Network Service Tier: choose either.  See [description of
+        options](https://cloud.google.com/network-tiers/) and [pricing
+        information](https://cloud.google.com/network-tiers/pricing).
+    *   IP vesion: IPv4.
+    *   Type: Regional.
+        *   Region: choose the same region as your instance was
+            created in.
+        *   Attached to: choose your instance from the drop-down.
+0.  Click “Reserve”.
+0.  Make a note of the external address (like 192.0.2.1) which you
+    have just reserved for your instance.
+
+### Give Your Instance a Domain Name
+
+The Domain Name System<sup>[[?]](
+https://en.wikipedia.org/wiki/Domain_Name_System)</sup> is a
+distributed global database that maps domain names (like
+`example.org`) to IP addresses (like 192.0.2.1).
+
+In order for users to be able to access your instance without having
+to know the numeric static IP address you reserved in the previous
+section, you must create a human-readable domain mame<sup>[[?]](
+https://en.wikipedia.org/wiki/Domain_name)</sup> for it.
+
+The details of this process are outside of the scope of this document,
+but we have the following observations and recommendations:
+
+*   Setting up DNS involves two distinct entities: a domain name
+    registrar<sup>[[?]](
+    https://en.wikipedia.org/wiki/Domain_name_registrar)</sup>, from
+    whom you can purchase a domain name (like `example.org`), and a
+    DNS provider, who runs the name servers<sup>[[?]](
+    https://en.wikipedia.org/wiki/Name_server)</sup> that resolve
+    individual DNS entries (like `www.example.com`) to specific
+    numeric IP addresses like the one created in the previous section.
+    
+    In many cases both these services will be provided by the same
+    company, but many organisations will typically run their own DNS
+    servers, or outsource it to a [managed DNS provider](
+    https://en.wikipedia.org/wiki/List_of_managed_DNS_providers).
+
+*   If you are using your own domain name (e.g.,
+    <code>codecity.<em>example.org</em></code>) this will be done
+    through your DNS provider’s configuration console or via your
+    internal organisational DNS service configuration.
+
+*   Alternatively we may in some cases be able to offer you the
+    use of a Code City subdomain (e.g.,
+    <code><em>example</em>.codecity.world</code>), in which case
+    we will take care of this step for you.  Contact us for
+    details.
+
+*   Because of the [same origin policy], if you’d like to allow
+    individual (not fully trusted) users of your instance to be able
+    to create their own web pages / servers, we *strongly* recommend
+    that you use a wildcard DNS record<sup>[[?]](
+    https://en.wikipedia.org/wiki/Wildcard_DNS_record)</sup>, so that
+    each user can serve their content on an isolated subdomain (like
+    <code><em>username</em>.example.codecity.world</code>).  To
+    facilitate obtaining the necessary wildcard certificate<sup>[[?]](
+    https://en.wikipedia.org/wiki/Wildcard_certificate)</sup>, we
+    recommend you use a [DNS provider who easily integrates with Let’s
+    Encrypt DNS validation][dns-providers], such as [Google Cloud
+    DNS](https://cloud.google.com/dns/), if possible.
  
 [same origin policy]: https://developer.mozilla.org/en-US/docs/Web/Security/Same-origin_policy
 [dns-providers]: https://community.letsencrypt.org/t/dns-providers-who-easily-integrate-with-lets-encrypt-dns-validation/86438
@@ -189,7 +237,7 @@ Now apply the schedule to your instance’s persistent disk:
     https://console.cloud.google.com/compute/disks).
 0.  Click on the name of the persistent disk for your instance.  (By
     default it will have the same name you gave to your instance.)
-0.  Click the pencil icon to edit the disk.
+0.  Click on “Edit” at the top of the screen.
 0.  Under Snapshot schedule, select the schedule you created in steps
     1–3.
 0.  Click Save.
@@ -197,7 +245,7 @@ Now apply the schedule to your instance’s persistent disk:
 ## Set Up Machine and Install Code City
 
 These instructions assume you are using a GCE instance running Debian
-GNU/Linux 9 (stretch), but feel free to adapt to your particular
+GNU/Linux 10 "buster", but feel free to adapt to your particular
 set-up.
 
 1.  Log into your instance.  (See instructions in first section if
@@ -246,17 +294,18 @@ set-up.
     ```
 0.  Verify the correct version of node is installed:
     ```
-    $ node –-version v12.18.2
+    $ node –-version
+    v12.18.4
     ```
     (Actual version may be later than 12.18.)
 
 ### Get TLS Certificates
 
 In order to allow incoming HTTPS connections, you will need an
-[TLS](https://en.wikipedia.org/wiki/Transport_Layer_Security) [server
-certificate](
+TLS<sup>[[?]](https://en.wikipedia.org/wiki/Transport_Layer_Security)</sup>
+server certificate<sup>[[?]](
 https://en.wikipedia.org/wiki/Public_key_certificate#TLS/SSL_server_certificate
-).  There are two types:
+)</sup>.  There are two types:
 
 *   An ordinary certificate covers one or more specific domain names,
     like `www.example.org`.
@@ -277,8 +326,8 @@ way is to use [Certbot](https://certbot.eff.org/) to get one from
 To use Certbot to get a wildcard certificate, you will need to use the
 [`dns-01` challenge](
 https://letsencrypt.org/docs/challenge-types/#dns-01-challenge), which
-requires being able to create [DNS TXT records](
-https://en.wikipedia.org/wiki/TXT_record) for your domain name.
+requires being able to create DNS TXT records<sup>[[?]](
+https://en.wikipedia.org/wiki/TXT_record)</sup> for your domain name.
 Here’s an example of how to do this if using Google Cloud DNS; see
 [full instructions on the certbot website](
 https://certbot.eff.org/lets-encrypt/debianbuster-nginx) if you use
@@ -480,11 +529,10 @@ nginx.
     *   Name: a suitable full name for your instance, (e.g. “Code City
         for Springfield Highschool”).
     *   Authorized JavaScript origins: may be left blank.
-    *   Authorised redirect URIs: for wildcard DNS configurations this
-        will be of the form
-        <code>https://login.<em>example</em>.codecity.world/</code>;
+    *   Authorized redirect URIs: for wildcard DNS configurations this
+        will be of the form `https://login.example.codecity.world/`;
         for single-domain configurations it will instead be
-        <code><em>example</em>.codecity.world/login</code>.
+        `https://example.codecity.world/login/`.
 0.  Click Save.
 0.  Now click on the newly-created client ID.  Make a note of the
     Client ID (it will be a long string like
@@ -530,9 +578,9 @@ https://support.google.com/cloud/answer/6158849) for more information.
     *   Set `password` to a secret, random string.  If you don’t have
         a convenient way to generate one locally, you can copy a
         [random string from random.org].
-    *   Optionally, set `emailRegexp` to a [regexp] matching email
-        addresses which should be permitted to log in to your
-        isntance—e.g., `^.*@myorganisation.org$`.
+    *   Optionally, set `emailRegexp` to a [JavaScript regexp]
+        matching email addresses which should be permitted to log in
+        to your instance—e.g., `^.*@myorganisation.org$`.
 0.  Create and edit a config file for connectServer:
     *   Run connectServer once to create an empty config file:
         ```
@@ -559,7 +607,7 @@ https://support.google.com/cloud/answer/6158849) for more information.
     exit
     ```
 
-[regexp]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions
+[JavaScript regexp]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions
 [random string from random.org]: https://www.random.org/strings/?num=1&len=20&digits=on&upperalpha=on&loweralpha=on&unique=on&format=html&rnd=new
 
 ### Configure Systemd and Start Code City Servers
@@ -579,7 +627,102 @@ https://support.google.com/cloud/answer/6158849) for more information.
 0.  Verify you can connect to your new Code City instance by pointing
     your web browser its domain name—e.g., `https://example.codecity.world`.
 
-## Remote Debugging
+Congratulations, you're done!
+
+## Appendix A: Creating a Service Account
+
+To protect any other Google Cloud Platform services you run against
+the consequences of your Code City instance being compromised, you can
+have the GCE VM it runs on use only the limited permissions of a
+custom service account, rather than the extensive permissions held by
+the Compute Engine default service account.  To do this there are three
+steps:
+
+1.  Creating one or more roles for the service account.
+0.  Creating a service account
+0.  Applying the service account to the GCE instance.
+
+### Create Role(s)
+
+You should create one role for running CodeCity instances on GCE, and
+optionally create a second role if you intend to have your GCE
+instance [obtain wildcard TLS certificates using certbot via the ACME
+HTTP-01 challenge](#getting-a-wildcard-certificate).
+
+1.  Go to the [Roles tab of IAM & Admin](
+    https://console.cloud.google.com/iam-admin/roles).
+0.  Create a role for running a Code City instance by clicking “+
+    Create Role” then enter details as follows:
+    *   Title: “CodeCity Instance”.
+    *   Description: “Base role for all CodeCity instances.  Created
+        on: …”.
+    *   ID: `instance`.
+    *   Add the following permissions by clicking “+ Add Permissions”
+        button, typing the name of the permission into the “Filter
+        table” field (*not* the “Filter permissions by role” field),
+        selecting required permission, and clicking Add:
+        *   `compute.globalOperations.get`
+        *   `compute.zoneOperations.get`
+        *   `logging.logEntries.create`
+    *   Click “Create”.
+0.  Optionally create a second role for obtaining wildcard certs by
+    again clicking “+ Create Role” and entering:
+    *   Title: “CodeCity Cert-via-DNS”
+    *   Description: “Add-on permission to allow an instance to update
+        its own wildcard letsencrypt SSL cert via an ACME dns-01
+        challenge.  Created on: …”.
+    *   ID: `dnscert`.
+    *   Add the following permisions:
+        *   `dns.changes.create`
+        *   `dns.changes.get`
+        *   `dns.managedZones.list`
+        *   `dns.resourceRecordSets.create`
+        *   `dns.resourceRecordSets.delete`
+        *   `dns.resourceRecordSets.list`
+        *   `dns.resourceRecordSets.update`
+    *   Click “Create”.
+
+### Create a Service Account
+
+Now you can create a service account for your instance.
+
+1.  Go to the [Service Accounts tab of IAM & Admin](
+    https://console.cloud.google.com/iam-admin/serviceaccounts).
+0.  Click “+ Create Servce Account” and enter details as follows:
+    *   Service account name: choose and appropriate name such as
+        “CodeCity instance” or “instance-<em>myInstanceName</em>”.
+    *   Service account ID: modify suggested ID if desired.
+    *   Service account description: “Service account for the
+        <em>example</em>.codecity.world instance” or similar.
+0.  Click “Create”.
+    *   Where it says “Select a role”, select “CodeCity Instance”.
+    *   If you intend to use certbot to obtain a wildcare DNS cert,
+        click “+ Add Another Role” and select “CodeCity Cert-via-DNS”.
+0.  Click “Continue”.
+0.  Click “Done.
+
+### Use the Service Account to run your GCE Instance
+
+If you have not yet done so, simply [follow the instructions to create
+a GCE instance for Code City](#create-a-gce-instance) and, when you
+get to the “Identity and API access” section of the creation wizard,
+select the service account you created previously.
+
+Otherwise, if you have already created your GCE instance, configure it
+to use the newly-create service account as follows:
+
+1.  Go to the [VM instances tab](
+    https://console.cloud.google.com/compute/instances).
+0.  Select the VM instance you created previously.
+0.  Click the stop button at the top of the page to stop it, if it is
+    running.
+0.  Click the name of your instance to view its “VM instnace details”
+    page.
+0.  Click “Edit”.
+0.  Scroll down to “Service account” and select the service account
+    you created previously.
+
+## Appendix B: Remote Debugging
 
 If you need to debug the server because it has stopped responding to
 network activity, here’s how to do that:
@@ -594,15 +737,16 @@ network activity, here’s how to do that:
     ```
     Note the port number (in this case 9229).
 0.  SSH in to the GCE instance again, enabling port forwarding:
-    *   <code>$ <strong>ssh -L 9229:localhost:9229
-        cpcallen@google.codecity.world</strong></code>
+    ```
+    ssh -L 9229:localhost:9229 google.codecity.world
+    ```
     *   The initial 9229 can be replaced with a local port number of
         your choice.
-    *   The <code>:localhost:</code> directive ensures that only
-        processes running on your local machine can make use of the
-        port forward.
+    *   The `:localhost:` directive ensures that only processes
+        running on your local machine can make use of the port
+        forward.
 0.  Open the inspector in Chrome by going to
-    <code>chrome://inspect</code>
+    [`chrome://inspect`](chrome://inspect).
 
 (Based on [node.js debugging documentation](
 https://nodejs.org/en/docs/guides/debugging-getting-started/) and [a
@@ -610,7 +754,7 @@ related blog post](
 https://hackernoon.com/debugging-node-without-restarting-processes-bd5d5c98f200).)
 
 
-## Additional Instructions for Code City Collaborators
+## Appendix C: Additional Instructions for Code City Collaborators
 
 ### GIT Code City by SSH instead of HTTPS
 

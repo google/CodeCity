@@ -139,6 +139,9 @@
       "setPerms",
       {"path": "$", "do": "SET"},
       "$.root",
+      {"path": "$.physicals", "do": "DONE"},
+      {"path": "$.physicals.Maximilian", "do": "SET"},
+      {"path": "$.physicals.Neil", "do": "SET"},
       "$.system",
       "user",
       {"path": "$.utils", "do": "ATTR"},
@@ -208,19 +211,20 @@
     },
     "contents": ["$.servers.http"]
   }, {
-    "filename": "core_24_$.www.js",
+    "filename": "core_24_$.http.js",
     "headerSubs": {
       "<YEAR>": "2017",
       "<OVERVIEW>": "Top-level URL handlers for Code City."
     },
     "contents": [
-      {"path": "$.http", "do": "ATTR"},
-      {"path": "$.http['www.']", "do": "ATTR"},
-      "$.http['www.'][404]",
+      {"path": "$.http", "do": "DONE"},
+      {"path": "$.http['www.']", "do": "DONE"},
       "$.http['www.']['/']",
       "$.http['www.']['/mirror']",
       "$.http['www.']['/robots.txt']",
+      "$.http['connect.']",
       "$.http['login.']",
+      "$.http['static.']",
       {"path": "$.www", "do": "ATTR"}
     ]
   }, {
@@ -246,24 +250,22 @@
       {"path": "$.userDatabase.byMd5", "do": "ATTR"}
     ]
   }, {
-    "filename": "core_26_$.www.editor.js",
+    "filename": "core_26_inline_editor.js",
     "headerSubs": {
       "<YEAR>": "2017",
       "<OVERVIEW>": "Inline code editor for Code City."
     },
     "contents": [
-      "$.www.editor",
       {"path": "$.http['code.']", "do": "SET"},
       "$.http['code.']['/inlineEdit']"
     ]
   }, {
-    "filename": "core_27_$.www.code.js",
+    "filename": "core_27_editor.js",
     "headerSubs": {
       "<YEAR>": "2018",
       "<OVERVIEW>": "Web-based code explorer/editor for Code City."
     },
     "contents": [
-      "$.www.code",
       "$.http['code.']"
     ]
   }, {
@@ -495,7 +497,6 @@
       "$.garbage",
       "$.http['code.']",
       "$.http['genetics.']",
-      "$.http['www.'][404]",
       "$.http['www.']['/']",
       "$.http['www.']['/mirror']",
       "$.http['www.']['/robots.txt']",
@@ -523,12 +524,7 @@
       "$.utils.object",
       "$.utils.replacePhysicalsWithName",
       "$.utils.string",
-      "$.utils.validate.physicals",
-      "$.www.code",
-      "$.www.editor",
-      "$.www[404]",
-      "$.www['/']",
-      "$.www['/robots.txt']"
+      "$.utils.validate.physicals"
     ]
   }, {
     "filename": "../database/db_01_world.js",

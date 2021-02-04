@@ -37,7 +37,7 @@ $.physicals['Das deutsche Zimmer'].translate = function(text) {
   }
 };
 delete $.physicals['Das deutsche Zimmer'].translate.name;
-Object.setOwnerOf($.physicals['Das deutsche Zimmer'].translate, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.physicals['Das deutsche Zimmer'].translate, $.physicals.Maximilian);
 $.physicals['Das deutsche Zimmer'].say = function(cmd) {
   // Format:  "Hello.    -or-    say Hello.
   var text = (cmd.cmdstr[0] === '"') ? cmd.cmdstr.substring(1) : cmd.argstr;
@@ -68,7 +68,7 @@ $.tutorial.look = function look(cmd) {
   }
   this.show(cmd.user);  // Show current step.
 };
-Object.setOwnerOf($.tutorial.look, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.tutorial.look, $.physicals.Maximilian);
 $.tutorial.look.verb = 'l(ook)?';
 $.tutorial.look.dobj = 'this';
 $.tutorial.look.prep = 'none';
@@ -80,7 +80,7 @@ $.tutorial.reset = function reset(cmd) {
   this.origFunc = undefined;
   if (this.user) this.show();
 };
-Object.setOwnerOf($.tutorial.reset, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.tutorial.reset, $.physicals.Maximilian);
 $.tutorial.reset.verb = 'reset';
 $.tutorial.reset.dobj = 'this';
 $.tutorial.reset.prep = 'none';
@@ -90,7 +90,7 @@ $.tutorial.continue = function continueVerb(cmd) {
   this.run();
   this.show();
 };
-Object.setOwnerOf($.tutorial.continue, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.tutorial.continue, $.physicals.Maximilian);
 $.tutorial.continue.verb = 'continue';
 $.tutorial.continue.dobj = 'this';
 $.tutorial.continue.prep = 'none';
@@ -103,14 +103,14 @@ $.tutorial.getCommands = function getCOmmands(who) {
   }
   return commands;
 };
-Object.setOwnerOf($.tutorial.getCommands, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.tutorial.getCommands, $.physicals.Maximilian);
 $.tutorial.moveTo = function moveTo(dest) {
   // Set this.user th the $.user holding us, or to undefined if not held.
   var r = $.thing.moveTo.call(this, dest);
   this.checkLocation();
   return r;
 };
-Object.setOwnerOf($.tutorial.moveTo, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.tutorial.moveTo, $.physicals.Maximilian);
 $.tutorial.checkLocation = function checkLocation() {
   if ($.user.isPrototypeOf(this.location)) {
     this.user = this.location;
@@ -123,7 +123,7 @@ $.tutorial.checkLocation = function checkLocation() {
     }
   }
 };
-Object.setOwnerOf($.tutorial.checkLocation, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.tutorial.checkLocation, $.physicals.Maximilian);
 $.tutorial.check = function check() {
   while (true) {
     var step = this.step;
@@ -209,7 +209,7 @@ $.tutorial.check = function check() {
     suspend(1000);
   }
 };
-Object.setOwnerOf($.tutorial.check, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.tutorial.check, $.physicals.Maximilian);
 $.tutorial.run = function run() {
   switch (this.step) {
     case 3:
@@ -227,7 +227,7 @@ $.tutorial.run = function run() {
       // Nothing to do.
   }
 };
-Object.setOwnerOf($.tutorial.run, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.tutorial.run, $.physicals.Maximilian);
 $.tutorial.show = function show() {
   var lines;
   var step = this.step;
@@ -369,7 +369,7 @@ $.tutorial.show = function show() {
   }
   this.user.readMemo({type: 'html', htmlText: lines.join('\n')});
 };
-Object.setOwnerOf($.tutorial.show, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.tutorial.show, $.physicals.Maximilian);
 $.tutorial.contents_ = [];
 $.tutorial.contents_.forObj = $.tutorial;
 Object.defineProperty($.tutorial.contents_, 'forObj', {writable: false, enumerable: false, configurable: false});

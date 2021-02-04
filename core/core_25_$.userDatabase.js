@@ -24,7 +24,7 @@
 //////////////////////////////////////////////////////////////////////
 
 $.userDatabase = {};
-Object.setOwnerOf($.userDatabase, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.userDatabase, $.physicals.Maximilian);
 $.userDatabase.get = function get(id) {
   // Returns the user, or undefined.
   var hash = $.utils.string.hash('md5', this.salt_ + id);
@@ -36,14 +36,14 @@ $.userDatabase.get = function get(id) {
   }
   return value;
 };
-Object.setOwnerOf($.userDatabase.get, Object.getOwnerOf($.Jssp.prototype.compile));
-Object.setOwnerOf($.userDatabase.get.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.userDatabase.get, $.physicals.Neil);
+Object.setOwnerOf($.userDatabase.get.prototype, $.physicals.Maximilian);
 $.userDatabase.set = function set(id, user) {
   var hash = $.utils.string.hash('md5', this.salt_ + id);
   this.byMd5[hash] = user;
 };
-Object.setOwnerOf($.userDatabase.set, Object.getOwnerOf($.Jssp.prototype.compile));
-Object.setOwnerOf($.userDatabase.set.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.userDatabase.set, $.physicals.Neil);
+Object.setOwnerOf($.userDatabase.set.prototype, $.physicals.Maximilian);
 $.userDatabase.validate = function validate() {
   var table = this.byMd5
   for (var key in table) {
@@ -52,8 +52,8 @@ $.userDatabase.validate = function validate() {
     }
   }
 };
-Object.setOwnerOf($.userDatabase.validate, Object.getOwnerOf($.Jssp.OutputBuffer));
-Object.setOwnerOf($.userDatabase.validate.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.userDatabase.validate, $.physicals.Maximilian);
+Object.setOwnerOf($.userDatabase.validate.prototype, $.physicals.Maximilian);
 $.userDatabase.salt_ = 'v2OU0LHchCl84mhu';
 
 $.userDatabase.byMd5 = (new 'Object.create')(null);

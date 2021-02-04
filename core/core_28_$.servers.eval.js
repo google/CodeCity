@@ -42,8 +42,8 @@ $.servers.eval.connection.onConnect = function onConnect() {
   $.servers.eval.connected = this;
   this.write('eval> ');
 };
-Object.setOwnerOf($.servers.eval.connection.onConnect, Object.getOwnerOf($.Jssp.OutputBuffer));
-Object.setOwnerOf($.servers.eval.connection.onConnect.prototype, Object.getOwnerOf($.Jssp.OutputBuffer));
+Object.setOwnerOf($.servers.eval.connection.onConnect, $.physicals.Maximilian);
+Object.setOwnerOf($.servers.eval.connection.onConnect.prototype, $.physicals.Maximilian);
 $.servers.eval.connection.close = function() {
   this.write('This session has been terminated.\n');
   return $.connection.close.apply(this, arguments);
