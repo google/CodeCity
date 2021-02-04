@@ -124,31 +124,6 @@ $.servers.http.connection.onEnd = function onEnd() {
   $.connection.onEnd.apply(this, arguments);
 };
 Object.setOwnerOf($.servers.http.connection.onEnd, $.physicals.Neil);
-$.servers.http.connection.close = function close() {
-  $.system.connectionClose(this);
-};
-Object.setOwnerOf($.servers.http.connection.close, $.physicals.Neil);
-$.servers.http.connection.close.prototype = $.connection.close.prototype;
-$.servers.http.connection.onError = function onError(error) {
-  // TODO(cpcallen): add check for error that occurs when relistening
-  // fails at server startup from checkpoint.
-  if (error.message === 'write after end' ||
-      error.message === 'This socket has been ended by the other party') {
-    this.connected = false;
-  }
-};
-Object.setOwnerOf($.servers.http.connection.onError, $.physicals.Neil);
-$.servers.http.connection.onError.prototype = $.connection.onError.prototype;
-$.servers.http.connection.onReceiveLine = function onReceiveLine(text) {
-  // Override this on child classes.
-};
-Object.setOwnerOf($.servers.http.connection.onReceiveLine, $.physicals.Neil);
-$.servers.http.connection.onReceiveLine.prototype = $.connection.onReceiveLine.prototype;
-$.servers.http.connection.write = function write(text) {
-  $.system.connectionWrite(this, text);
-};
-Object.setOwnerOf($.servers.http.connection.write, $.physicals.Neil);
-$.servers.http.connection.write.prototype = $.connection.write.prototype;
 $.servers.http.connection.handle_ = function handle_() {
   /* Route this connection to a hander, invoke the handler, and deal with the
    * aftermath.
