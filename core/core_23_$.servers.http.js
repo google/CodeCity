@@ -306,13 +306,12 @@ $.servers.http.Request.prototype.parseSubdomain_ = function parseSubdomain_() {
     if (this.headers.host) {
       // Extract the wildcard subdomain.
       // E.g. https://foo.example.codecity.world/bar -> foo
-      var thisFunc = $.servers.http.Request.prototype.parseSubdomain_;
-      if (thisFunc.hostStringCache_ !== $.servers.http.host) {
-        thisFunc.hostStringCache_ = $.servers.http.host;
-        thisFunc.hostRegExpCache_ = new RegExp('^([-A-Za-z0-9]+)\\.' +
-            $.utils.regexp.escape(thisFunc.hostStringCache_) + '$');
+      if (parseSubdomain_.hostStringCache_ !== $.servers.http.host) {
+        parseSubdomain_.hostStringCache_ = $.servers.http.host;
+        parseSubdomain_.hostRegExpCache_ = new RegExp('^([-A-Za-z0-9]+)\\.' +
+            $.utils.regexp.escape(parseSubdomain_.hostStringCache_) + '$');
       }
-      var m = this.headers.host.match(thisFunc.hostRegExpCache_);
+      var m = this.headers.host.match(parseSubdomain_.hostRegExpCache_);
       if (m) {
         subdomain = m[1];
       }
@@ -328,7 +327,7 @@ $.servers.http.Request.prototype.parseSubdomain_ = function parseSubdomain_() {
   }
   this.subdomain = subdomain;
 };
-Object.setOwnerOf($.servers.http.Request.prototype.parseSubdomain_, $.physicals.Neil);
+Object.setOwnerOf($.servers.http.Request.prototype.parseSubdomain_, $.physicals.Maximilian);
 Object.setOwnerOf($.servers.http.Request.prototype.parseSubdomain_.prototype, $.physicals.Neil);
 $.servers.http.Request.prototype.parseSubdomain_.hostStringCache_ = 'google.codecity.world';
 $.servers.http.Request.prototype.parseSubdomain_.hostRegExpCache_ = /^([-A-Za-z0-9]+)\.google\.codecity\.world$/;
