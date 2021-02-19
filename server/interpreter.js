@@ -2712,10 +2712,10 @@ Interpreter.prototype.pseudoToNative = function(pseudoObj, cycles) {
     return pseudoObj;
   } else if (!(pseudoObj instanceof this.Object)) {
     throw new TypeError('pseudoToObject called on wrong type??');
-  }
-
-  if (pseudoObj instanceof this.RegExp) {  // Regular expression.
+  } else if (pseudoObj instanceof this.RegExp) {  // Regular expression.
     return pseudoObj.regexp;
+  } else if (pseudoObj instanceof this.Function) {  // Function.
+    return undefined;
   }
 
   if (!cycles) {
@@ -2726,29 +2726,18 @@ Interpreter.prototype.pseudoToNative = function(pseudoObj, cycles) {
     return cycles.native[i];
   }
   cycles.pseudo[cycles.pseudo.length] = pseudoObj;
-  var nativeObj;
-  if (pseudoObj instanceof this.Array) {  // Array.
-    nativeObj = [];
-    cycles.native[cycles.native.length] = nativeObj;
-    var length = pseudoObj.get('length', perms);
-    for (i = 0; i < length; i++) {
-      // TODO(cpcallen): do we really want to include inherited properties?
-      if (pseudoObj.has(String(i), perms)) {
-        nativeObj[i] =
-            this.pseudoToNative(pseudoObj.get(String(i), perms), cycles);
-      }
-    }
-  } else {  // Object.
-    nativeObj = {};
-    cycles.native[cycles.native.length] = nativeObj;
-    var keys = pseudoObj.ownKeys(perms);
-    for (i = 0; i < keys.length; i++) {
-      var key = keys[i];
-      var val = pseudoObj.get(key, perms);
-      Object.defineProperty(nativeObj, key,
-          {writable: true, enumerable: true, configurable: true,
-           value: this.pseudoToNative(val, cycles)});
-    }
+  var nativeObj = pseudoObj instanceof this.Array ? [] : {};
+  cycles.native[cycles.native.length] = nativeObj;
+  var keys = pseudoObj.ownKeys(perms);
+  for (i = 0; i < keys.length; i++) {
+    var key = keys[i];
+    var pd = pseudoObj.getOwnPropertyDescriptor(key, perms);
+    Object.defineProperty(nativeObj, key, {
+      writable: pd.writable,
+      enumerable: pd.enumerable,
+      configurable: pd.configurable,
+      value: this.pseudoToNative(pd.value, cycles)
+    });
   }
   cycles.pseudo.pop();
   cycles.native.pop();

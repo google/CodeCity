@@ -2690,6 +2690,15 @@ tests.JsonStringify = function () {
       '"null":null,"object":{"obj":{},"arr":[]},"array":[{},[]]}';
   console.assert(JSON.stringify(obj) === str, 'JSON.stringify basic');
 
+  console.assert(JSON.stringify(function(){}) === undefined,
+      'JSON.stringify(function(){})');
+
+  console.assert(JSON.stringify([function(){}]) === '[null]',
+      'JSON.stringify([function(){}])');
+
+  console.assert(JSON.stringify({f: function(){}}) === '{}',
+      'JSON.stringify({f: function(){}})');
+
   str = '{"string":"foo","number":42}';
   console.assert(JSON.stringify(obj, ['string', 'number']) === str,
       'JSON.stringify filter');
@@ -2701,6 +2710,21 @@ tests.JsonStringify = function () {
   str = '{\n--"string": "foo",\n--"number": 42\n}';
   console.assert(JSON.stringify(obj, ['string', 'number'], '--') === str,
       'JSON.stringify pretty string');
+
+  obj = {e: 'enumerable', ne: 'nonenumerable'};
+  Object.defineProperty(obj, 'ne', {enumerable: false});
+  console.assert(JSON.stringify(obj) === '{"e":"enumerable"}',
+      'JSON.stringify nonenumerable');
+
+
+  obj = {};
+  obj.circular = obj;
+  try {
+    JSON.stringify(obj);
+    console.assert(false, "JSON.stringify didn't throw");
+  } catch (e) {
+    console.assert(e.name === 'TypeError', 'JSON.stringify wrong error');
+  }
 };
 
 ///////////////////////////////////////////////////////////////////////////////
