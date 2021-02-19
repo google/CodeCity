@@ -2646,6 +2646,21 @@ module.exports = [
     expected: '{"string":"foo","number":42,"true":true,"false":false,' +
         '"null":null,"object":{"obj":{},"arr":[]},"array":[{},[]]}' },
 
+  { name: 'JSON.stringify(function(){})', src: `
+    JSON.stringify(function(){});
+    `,
+    expected: undefined },
+
+  { name: 'JSON.stringify([function(){}])', src: `
+    JSON.stringify([function(){}]);
+    `,
+    expected: "[null]" },
+
+  { name: 'JSON.stringify({f: function(){}})', src: `
+    JSON.stringify({f: function(){}});
+    `,
+    expected: "{}" },
+
   { name: 'JSON.stringify filter', src: `
     JSON.stringify({
         string: 'foo', number: 42, true: true, false: false, null: null,
@@ -2669,6 +2684,29 @@ module.exports = [
         ['string', 'number'], '--');
     `,
     expected: '{\n--"string": "foo",\n--"number": 42\n}' },
+
+  { name: 'JSON.stringify nonenumerable', src: `
+    var obj = {e: 'enumerable', ne: 'nonenumerable'};
+    Object.defineProperty(obj, 'ne', {enumerable: false});
+    JSON.stringify(obj);
+    `,
+    expected: '{"e":"enumerable"}' },
+
+  { name: 'JSON.stringify inherited', src: `
+    JSON.stringify(Object.create({foo: 'bar'}));
+    `,
+    expected: '{}' },
+
+  { name: 'JSON.stringify circular', src: `
+    var obj = {};
+    obj.circular = obj;
+    try {
+      JSON.stringify(obj);
+    } catch (e) {
+      e.name;
+    }
+    `,
+    expected: 'TypeError' },
 
   /////////////////////////////////////////////////////////////////////////////
   // Other built-in functions
