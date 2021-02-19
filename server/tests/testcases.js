@@ -2692,6 +2692,11 @@ module.exports = [
     `,
     expected: '{"e":"enumerable"}' },
 
+  { name: 'JSON.stringify inherited', src: `
+    JSON.stringify(Object.create({foo: 'bar'}));
+    `,
+    expected: '{}' },
+
   { name: 'JSON.stringify circular', src: `
     var obj = {};
     obj.circular = obj;

@@ -2716,6 +2716,8 @@ tests.JsonStringify = function () {
   console.assert(JSON.stringify(obj) === '{"e":"enumerable"}',
       'JSON.stringify nonenumerable');
 
+  console.assert(JSON.stringify(Object.create({foo: 'bar'})) === '{}',
+      'JSON.stringify inherited');
 
   obj = {};
   obj.circular = obj;
