@@ -231,7 +231,9 @@
       "$.hosts.dummy",
       "$.hosts.root.subdomains.connect",
       "$.hosts.root.subdomains.login",
+      "$.hosts.root.subdomains.mobwrite",
       "$.hosts.root.subdomains.static",
+      "$.hosts.root.subdomains.system",
       {"path": "$.hosts.test", "do": "DONE"},
       {"path": "$.hosts.test.subdomains", "do": "DONE"},
       "$.hosts.test.hostname",
@@ -241,7 +243,9 @@
       "$.hosts.test['/mirror']",
       "$.hosts.test.subdomains.connect",
       "$.hosts.test.subdomains.login",
-      "$.hosts.test.subdomains.static"
+      "$.hosts.test.subdomains.mobwrite",
+      "$.hosts.test.subdomains.static",
+      "$.hosts.test.subdomains.system"
     ]
   }, {
     "filename": "core_24_$.http.js",
@@ -258,7 +262,9 @@
       "$.http['www.']['/robots.txt']",
       "$.http['connect.']",
       "$.http['login.']",
+      "$.http['mobwrite.']",
       "$.http['static.']",
+      "$.http['system.']",
       {"path": "$.www", "do": "ATTR"}
     ]
   }, {
@@ -543,17 +549,26 @@
       "$.hosts.dummy",
       "$.hosts.root.subdomains.connect",
       "$.hosts.root.subdomains.login",
+      "$.hosts.root.subdomains.mobwrite",
       "$.hosts.root.subdomains.static",
+      "$.hosts.root.subdomains.system",
       "$.hosts.test['/']",
       "$.hosts.test['/error']",
       "$.hosts.test['/mirror']",
       "$.hosts.test.subdomains.connect",
       "$.hosts.test.subdomains.login",
+      "$.hosts.test.subdomains.mobwrite",
       "$.hosts.test.subdomains.static",
+      "$.hosts.test.subdomains.system",
       "$.hosts.code",
       "$.hosts.genetics",
       "$.http['code.']",
+      "$.http['connect.']",
+      "$.http['login.']",
       "$.http['genetics.']",
+      "$.http['mobwrite.']",
+      "$.http['static.']",
+      "$.http['system.']",
       "$.http['www.']['/']",
       "$.http['www.']['/mirror']",
       "$.http['www.']['/robots.txt']",
