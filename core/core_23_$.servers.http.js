@@ -342,6 +342,12 @@ $.servers.http.Request.prototype.fromSameOrigin = function fromSameOrigin() {
    * Returns true or false, or (in the case of missing headers) undefined.
    * Callers should choose whether to fail-safe or fail-deadly when the
    * user's proxy strips the referer header, resulting in undefined.
+   *
+   * BUG: if referer was for subdomain routed via a root Host with
+   * .pathToSubdomain enabled, but .origin is for the root domain,
+   * fromSameOrigin will return true.  This is not intended and possibly
+   * insecure - but probably mostly harmless: if .pathToSubdomain is
+   * enabled subdomains are not really secure against each other anyway.
    */
   var referer = this.headers.referer; // https://foo.example.codecity.world/bar
   var host = this.headers.host;  // foo.example.codecity.world
@@ -349,9 +355,10 @@ $.servers.http.Request.prototype.fromSameOrigin = function fromSameOrigin() {
     // Missing headers.  Not enough information to know.
     return undefined;
   }
+
   var origin;
   if (this.origin) {  // User router-provided origin if possible.
-    origin = this.orign;
+    origin = this.origin;
   } else {  // Fall back to guessing based on host + subdomain.
     origin = host;
     if (!$.servers.http.subdomains) {
@@ -364,11 +371,11 @@ $.servers.http.Request.prototype.fromSameOrigin = function fromSameOrigin() {
 Object.setOwnerOf($.servers.http.Request.prototype.fromSameOrigin, $.physicals.Maximilian);
 $.servers.http.Request.prototype.hostUrl = function hostUrl(varArgs) {
   /* Return the base URL for the host that handled this Request, or
-   * a subdomain.  This is derived from (and often identical to)
-   * .headers.host, but with some extra magic:
+   * a subdomain (omitting scheme).  This is derived from .headers.host,
+   * but with some extra magic:
    *
    * - Absent any argument, it will be the URL which routes to the root
-   *   Host object serving this Request - e.g., https://example.codecity.world/
+   *   Host object serving this Request - e.g., //example.codecity.world/
    *   The "root" host is ordinarily just first of $.http.hosts[] to accept
    *   the request (as opposed to one of $.http.hosts[].subdomains[name]s).
    * - If an argument is supplied, the returned URL will instead be for
@@ -376,14 +383,14 @@ $.servers.http.Request.prototype.hostUrl = function hostUrl(varArgs) {
    * - Multiple arguments can be supplied if there are nested subdomains.
    *
    * E.g.:
-   * request.hostUrl()             => https://example.codecity.world/
-   * request.hostUrl('code')       => https://code.example.codecity.world/
-   * request.hostUrl('foo', 'bar') => https://foo.bar.example.codecity.world/
+   * request.hostUrl()             => '//example.codecity.world/'
+   * request.hostUrl('code')       => '//code.example.codecity.world/'
+   * request.hostUrl('foo', 'bar') => '//foo.bar.example.codecity.world/'
    *
    * If .pathToSubdomain is enabled on one or more Host object(s):
-   * request.hostUrl('code')       => https://example.codecity.world/code/
-   * request.hostUrl('foo', 'bar') => https://example.codecity.world/foo/bar/
-   *                              or: https://bar.example.codecity.world/foo/
+   * request.hostUrl('code')       => '//example.codecity.world/code/'
+   * request.hostUrl('foo', 'bar') => '//example.codecity.world/foo/bar/'
+   *                              or: '//bar.example.codecity.world/foo/'
    *
    * Barring bugs, the returned URL should always end with a '/'.
    *
@@ -396,18 +403,23 @@ $.servers.http.Request.prototype.hostUrl = function hostUrl(varArgs) {
    *       subdomain exists.
    * Returns: string - the URL for the desired domain/subdomain.
    */
+  // Fallback to $hosts.root.url() in case no routing information is available.
   if (!this.route) {
-
     var rootHost = $.hosts.root;
     return rootHost.url.apply(rootHost, arguments);
   }
-
+  // Walk the tree of Hosts rooted at the root Host via which this
+  // Request was served.  If this request was routed the same way, use
+  // the recorded usePath boolean.
+  var host = this.route[0].host;
   var hostname = this.route[0].authority;
   for (var subdomain, i = 0; (subdomain = arguments[i]); i++) {
-    var host = this.route[i].host;
-    hostname = host.urlForSubdomain(hostname, subdomain);
+    var routeI = this.route[i];
+    var usePath = (routeI && routeI.host === host) ? routeI.pathToSubdomain : undefined;
+    hostname = host.urlForSubdomain(hostname, subdomain, usePath);
+    host = host.subdomains[subdomain];
   }
-  return this.scheme + '://' + hostname + '/';
+  return '//' + hostname + '/';
 };
 Object.setOwnerOf($.servers.http.Request.prototype.hostUrl, $.physicals.Maximilian);
 Object.setOwnerOf($.servers.http.Request.prototype.hostUrl.prototype, $.physicals.Maximilian);
@@ -619,59 +631,44 @@ $.servers.http.Host.prototype.handle = function handle(request, response, info) 
    * Arguments:
    * - request: $.servers.http.Request - the incoming request to handle.
    * - response: $.servers.http.Response - the response to write to.
-   * - info: Object - some information used by recursive calls to this function.
+   * - info: Object | undefined - some information used by recursive calls to
+   *   this function.
    * Returns: boolean - true iff request was for this host.
    */
   // Temproray guard
   if (!this.matchHostname_(request.headers.host)) return false;
 
-  if (!info) {  // this is a root Host.  Extract info from request.
-    info = {
-      scheme: this.scheme,  // TODO: extract from Forwarded header.
-      authority: request.headers.host,  // May include port.
-      path: request.path,
-      route: [],
-    };
-    info.origin = info.scheme + '://' + info.authority + '/';
-  } else {  // this is a subdomain Host.
-    // Nothing to do.
+  // If detailed request routing info is available, use it.
+  if (info) return this.handleInfo_(request, response, info);
+
+  // Extact detailed routing info from request.
+  info = {
+    // scheme: this.scheme,  // TODO: extract from Forwarded header.
+    authority: request.headers.host,  // For routing.  May include port.
+    origin: request.headers.host,  // For Request.prototype.fromSameOrigin.
+    path: request.path,
+    route: [],
+  };
+
+  // The authorityExact RegExp gives submatches [ipAddress, dnsAddress,
+  // port].  Only one of the addresses capture groups will match.
+  var m = $.utils.url.regexps.authorityExact.exec(request.headers.host);
+  var hostname = m[1] || m[2];  // IP or DNS addess.
+  var ipOnly = !!(m[2]);  // True iff hostname is an IP address.
+  var port = m[3];  // Port, if present (without ':').
+
+  if (ipOnly) {  // No subdomains possible (other than via pathToSubdomain).
+    return this.handleInfo_(request, response, info);
   }
 
-/*
-  var hostRegExp = this.hostRegExp;
-  if (!hostRegExp) {
-    if (!this.hostname) {
-      // TODO: do something clever here.
-      var err = new Error('Must specify .hostname or .hostRegExp');
-      $.system.log(String(err) + String(err.stack));
-      $.system.log('>>> .hostname === ' + String(this.hostname));
-      $.system.log('>>> .hostRegExp === ' + String(this.hostRegExp));
-      return false;
-    }
-    hostRegExp = new RegExp($.utils.regexp.escape(this.hostname) + '$');
-  }
+  var hostRegExp = (
+    this.hostRegExp ? this.hostRegExp :
+    this.hostname ? new RegExp($.utils.regexp.escape(this.hostname) + '$') :
+    undefined);
+
   $.system.log(String(hostRegExp));
-*/
 
-  if (!this.matchHostname_(info.authority)) return false;
-  info.route.push({authority: info.authority, host: this});
-
-/*
-    // The authorityExact RegExp gives submatches [ipAddress, dnsAddress,
-    // port].  Only one of the addresses capture groups will match, and
-    var m = $.utils.url.regexps.authorityExact.exec(request.headers.host);
-
-      hostname: m[1] || m[2],  // IP or DNS addess.
-      port: m[3],
-
-    if (m[2]) {  // Got DNS rather than IP address.
-      var labels = m[2].split('.');
-    }
-*/
-
-  // Request is for this host.  Try to route to handler to serve page.
-  this.route_(request, response, info);
-  return true;
+  return this.handleInfo_(request, response, info);
 };
 Object.setOwnerOf($.servers.http.Host.prototype.handle, $.physicals.Maximilian);
 Object.setOwnerOf($.servers.http.Host.prototype.handle.prototype, $.physicals.Maximilian);
@@ -769,7 +766,7 @@ Object.setOwnerOf($.servers.http.Host.prototype.addSubdomain, $.physicals.Maximi
 Object.setOwnerOf($.servers.http.Host.prototype.addSubdomain.prototype, $.physicals.Maximilian);
 $.servers.http.Host.prototype.scheme = 'https';
 $.servers.http.Host.prototype.url = function url(varArgs) {
-  /* Return the base URL for this host.
+  /* Return the base URL for this host (omitting shcheme).
    *
    * Generally prefer $.servers.http.Request.prototype.hostUrl (q.v.)
    * instead of method - but in some cases it is necessary to generate
@@ -784,14 +781,14 @@ $.servers.http.Host.prototype.url = function url(varArgs) {
    * - Multiple arguments can be supplied if there are nested subdomains.
    *
    * E.g.:
-   * rootHost.url()             => https://example.codecity.world/
-   * rootHost.url('code')       => https://code.example.codecity.world/
-   * rootHost.url('foo', 'bar') => https://foo.bar.example.codecity.world/
+   * rootHost.url()             => '//example.codecity.world/'
+   * rootHost.url('code')       => '//code.example.codecity.world/'
+   * rootHost.url('foo', 'bar') => '//foo.bar.example.codecity.world/'
    *
    * If .pathToSubdomain is enabled on one or more Host object(s):
-   * rootHost.url('code')       => https://example.codecity.world/code/
-   * rootHost.url('foo', 'bar') => https://example.codecity.world/foo/bar/
-   *                           or: https://bar.example.codecity.world/foo/
+   * rootHost.url('code')       => '//example.codecity.world/code/'
+   * rootHost.url('foo', 'bar') => '//example.codecity.world/foo/bar/'
+   *                           or: '//bar.example.codecity.world/foo/'
    *
    * Barring bugs, the returned URL should always end with a '/'.
    * Arguments:
@@ -802,15 +799,13 @@ $.servers.http.Host.prototype.url = function url(varArgs) {
    */
   if (typeof this.hostname !== 'string') {
     throw new Error('canonical hostname not set');
-  } else if (typeof this.scheme !== 'string') {
-    throw new TypeError(".scheme should usually be 'http' or 'https'");
   }
   var hostname = this.hostname;
   var host = this;
   for (var subdomain, i = 0; (subdomain = arguments[i]); i++) {
     hostname = host.urlForSubdomain(hostname, subdomain);
   }
-  return this.scheme + '://' + hostname + '/';
+  return '//' + hostname + '/';
 };
 Object.setOwnerOf($.servers.http.Host.prototype.url, $.physicals.Maximilian);
 Object.setOwnerOf($.servers.http.Host.prototype.url.prototype, $.physicals.Maximilian);
@@ -858,6 +853,24 @@ $.servers.http.Host.prototype.urlForSubdomain = function urlForSubdomain(hostnam
 };
 Object.setOwnerOf($.servers.http.Host.prototype.urlForSubdomain, $.physicals.Maximilian);
 Object.setOwnerOf($.servers.http.Host.prototype.urlForSubdomain.prototype, $.physicals.Maximilian);
+$.servers.http.Host.prototype.handleInfo_ = function handleInfo_(request, response, info) {
+  /* Helper for handle method.  Arguments the same but info is
+   * mandatory.
+   *
+   * Arguments:
+   * - request: $.servers.http.Request - the incoming request to handle.
+   * - response: $.servers.http.Response - the response to write to.
+   * - info: Object - some information used by recursive calls to this function.
+   * Returns: boolean - true iff request was for this host.
+   */
+  if (!this.matchHostname_(info.authority)) return false;  // Not for us.
+
+  info.route.push({authority: info.authority, host: this});
+  this.route_(request, response, info);
+  return true;
+};
+Object.setOwnerOf($.servers.http.Host.prototype.handleInfo_, $.physicals.Maximilian);
+Object.setOwnerOf($.servers.http.Host.prototype.handleInfo_.prototype, $.physicals.Maximilian);
 $.servers.http.onRequest = function onRequest(connection) {
   /* Called from $.servers.http.connection.onReceiveChunk when the
    * connection.request has been fully parsed and is ready to be handled.
