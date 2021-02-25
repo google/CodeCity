@@ -501,7 +501,7 @@ $.user.inlineEdit = function inlineEdit(cmd) {
     cmd.user.narrate('Usage: edit <property> on <object>');
     return;
   }
-  var url = $.http['code.']['/inlineEdit'].edit(obj, objName, prop);
+  var url = $.hosts.code['/inlineEdit'].edit(obj, objName, prop);
   var memo = {
     type: 'iframe',
     url: url,
@@ -509,7 +509,7 @@ $.user.inlineEdit = function inlineEdit(cmd) {
   };
   cmd.user.readMemo(memo);
 };
-Object.setOwnerOf($.user.inlineEdit, $.physicals.Neil);
+Object.setOwnerOf($.user.inlineEdit, $.physicals.Maximilian);
 $.user.inlineEdit.verb = 'edit';
 $.user.inlineEdit.dobj = 'any';
 $.user.inlineEdit.prep = 'on top of/on/onto/upon';

@@ -581,10 +581,10 @@ $.physical.edit = function inspect(cmd) {
   }
   // No need to encode $.
   var query = encodeURIComponent(String(selector)).replace(/%24/g, '$');
-  var link = $.servers.http.makeUrl('code', '') + '?' + query;
+  var link = $.hosts.root.url('code') + '?' + query;
   cmd.user.readMemo({type: "link", href: link});
 };
-Object.setOwnerOf($.physical.edit, $.physicals.Neil);
+Object.setOwnerOf($.physical.edit, $.physicals.Maximilian);
 $.physical.edit.verb = 'edit';
 $.physical.edit.dobj = 'this';
 $.physical.edit.prep = 'none';
