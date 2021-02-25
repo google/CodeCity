@@ -405,54 +405,6 @@ $.Selector.parse.tokenize = function tokenize(selector) {
   }
   return tokens;
 };
-$.Selector.parse.tokenize.prototype.constructor = function tokenize(selector) {
-	// Tokenizes a selector string.  Throws a SyntaxError if any text is
- 	// found which does not form a valid token.
-  var REs = {
-    whitespace: /^\s+/,
-    '.': /^\./,
-    id: new RegExp('^' + $.utils.code.regexp.identifier.source),
-    number: /^\d+/,
-    '[': /^\[/,
-    ']': /^\]/,
-    '{': /^\{/,
-    '}': /^\}/,
-    '^': /^\^/,
-    str: new RegExp('^' + $.utils.code.regexps.string.source),
-  };
-  
-  var tokens = [];
-  NEXT_TOKEN: for (var index = 0; index < selector.length; ) {
-    for (var tokenType in REs) {
-      if (!REs.hasOwnProperty(tokenType)) continue;
-      var re = REs[tokenType];
-      var m = re.exec(selector.slice(index));
-      if (!m) continue;  // No match.  Try next regexp.
-      tokens.push({
-        type: tokenType,
-        raw: m[0],
-        valid: true,
-        index: index,
-      });
-      index += re.lastIndex;
-      continue NEXT_TOKEN;
-    }
-    // No token matched.
-    throw new SyntaxError('invalid selector ' + selector);
-  }
-
-  // Postprocess token list to get values.
-  for(var i = 0; i < tokens.length; i++) {
-    var token = tokens[i];
-    if (token.type === 'number') {
-      token.value = Number(token.raw);
-    } else if (token.type === 'str') {
-      token.value = $.utils.code.parseString(token.raw);
-    }
-  }
-  return tokens;
-};
-$.Selector.parse.tokenize.prototype.constructor.prototype = $.Selector.parse.tokenize.prototype;
 $.Selector.for = function Selector_for(object) {
   /* Return a Selector for object, or undefined if none known.
    */
@@ -641,7 +593,7 @@ $.utils.Binding.prototype.get = function get(inherited) {
   var part = this.part;
   if (this.object === null) {
     if (!$.utils.code.isIdentifier(part)) {
-        throw new TypeError('Invalid part');
+      throw new TypeError('Invalid part');
     }
     var evalGlobal = eval;
     return evalGlobal(part);
@@ -656,7 +608,7 @@ $.utils.Binding.prototype.get = function get(inherited) {
     return undefined;
   }
 };
-Object.setOwnerOf($.utils.Binding.prototype.get, $.physicals.Maximilian);
+Object.setOwnerOf($.utils.Binding.prototype.get, $.physicals.Neil);
 $.utils.Binding.prototype.isOwner = function isOwner() {
   /* Returns true iff the binding is an bject owner binding.
    */
