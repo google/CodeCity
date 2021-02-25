@@ -314,6 +314,16 @@ $.utils.object.getValue = function getValue(object, prop) {
 };
 Object.setOwnerOf($.utils.object.getValue, $.physicals.Maximilian);
 Object.setOwnerOf($.utils.object.getValue.prototype, $.physicals.Neil);
+$.utils.object.getPropertyLocation = function $_utils_object_getPropertyLocation(obj, propName) {
+  // Returns the object that defines the given propName.
+  // Might be object, or one of its prototypes, or null.
+  while (obj && !Object.prototype.hasOwnProperty.call(obj, propName)) {
+    obj = Object.getPrototypeOf(obj);
+  }
+  return obj;
+};
+Object.setOwnerOf($.utils.object.getPropertyLocation, $.physicals.Neil);
+Object.setOwnerOf($.utils.object.getPropertyLocation.prototype, $.physicals.Neil);
 
 $.utils.string = {};
 $.utils.string.capitalize = function capitalize(str) {
