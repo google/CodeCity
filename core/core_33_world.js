@@ -277,9 +277,22 @@ $.user.grep.prep = 'for/about';
 $.user.grep.iobj = 'any';
 $.user.grep.search = function search(user, prefix, searchString, selector, seen) {
   var value = selector.toValue();
-  if (!$.utils.isObject(value)) {
+  if (!$.utils.isObject(value)) {  // value is a primitive.
     if (String(value).includes(searchString))	{
-      user.narrate(selector.toString() + ' === ' + $.utils.code.toSource(value));
+      var formatted = $.utils.code.toSource(value);
+      if (typeof value === 'string' && formatted.length > 60) {
+        // Print only extracts of long string values.
+        formatted = formatted.slice(1, -1);  // Remove quotation marks.
+        var re = new RegExp('.{0,20}' +
+                            $.utils.regexp.escape(searchString) +
+                            '.{0,20}', 'g');
+        var m;
+        while ((m = re.exec(formatted))) {
+          user.narrate(selector.toString() + ' includes' + ' ...' + m[0] + '...');
+        }
+      } else {
+        user.narrate(selector.toString() + ' === ' + formatted);
+      }
     }
     return;
   }
