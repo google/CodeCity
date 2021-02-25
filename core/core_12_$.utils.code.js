@@ -57,14 +57,47 @@ $.utils.code.toSource = function toSource(value, opt_seen) {
       return String(value);
     } else if (proto === Date.prototype) {
       return 'new Date(\'' + value.toJSON() + '\')';
+    } else if (proto === Object.prototype) {
+      var props = Object.getOwnPropertyNames(value);
+      var data = [];
+      for (var i = 0; i < props.length; i++) {
+        var propName = props[i];
+        var propValue = value[propName];
+        try {
+          var propSource = (typeof propValue === 'function') ?
+              ('function ' + propValue.name + '() { ... }') :
+              $.utils.code.toSource(propValue, opt_seen);
+          data[i] = JSON.stringify(propName) + ': ' + propSource;
+        } catch (e) {
+          // Recursive data structure.  Bail.
+          data = null;
+          break;
+        }
+      }
+      if (data) {
+        var selectorString = '';
+/*
+        var selector = $.Selector.for(value);
+        if (selector) {
+          selectorString = ' // ' + selector.toString();
+        }
+*/
+        if (!data.length) {
+          return '{}' + selectorString;
+        }
+        return '{' + selectorString + '\n' + $.utils.string.prefixLines(data.join(',\n'), '  ') + '\n}';
+      }
     } else if (proto === Array.prototype && Array.isArray(value) &&
                value.length <= 100) {
       var props = Object.getOwnPropertyNames(value);
       var data = [];
       for (var i = 0; i < value.length; i++) {
         if (props.includes(String(i))) {
+          var propValue = value[i]
           try {
-            data[i] = $.utils.code.toSource(value[i], opt_seen);
+            data[i] = (typeof propValue === 'function') ?
+                ('function ' + propValue.name + '() { ... }') :
+                $.utils.code.toSource(propValue, opt_seen);
           } catch (e) {
             // Recursive data structure.  Bail.
             data = null;
@@ -75,7 +108,10 @@ $.utils.code.toSource = function toSource(value, opt_seen) {
         }
       }
       if (data) {
-        return '[' + data.join(', ') + ']';
+        if (!data.length) {
+          return '[]';
+        }
+        return '[\n' + $.utils.string.prefixLines(data.join(',\n'), '  ') + '\n]';
       }
     } else if (value instanceof Error) {
       var constructor;
@@ -124,7 +160,7 @@ $.utils.code.toSource = function toSource(value, opt_seen) {
   // Can't happen.
   throw new TypeError('[' + type + ']');
 };
-Object.setOwnerOf($.utils.code.toSource, $.physicals.Maximilian);
+Object.setOwnerOf($.utils.code.toSource, $.physicals.Neil);
 $.utils.code.toSource.processingError = false;
 $.utils.code.toSourceSafe = function toSourceSafe(value) {
   // Same as $.utils.code.toSource, but don't throw any selector errors.
