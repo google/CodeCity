@@ -107,7 +107,12 @@ $.http['connect.'] = null;
 
 $.http['login.'] = null;
 
+$.http['mobwrite.'] = null;
+
 $.http['static.'] = null;
+
+$.http['system.'] = {};
+$.http['system.']['/logout'] = $.hosts.root.subdomains.system['/logout'];
 
 $.www = $.http['www.'];
 
