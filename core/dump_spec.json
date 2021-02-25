@@ -210,7 +210,39 @@
       "<YEAR>": "2017",
       "<OVERVIEW>": "Webserver for Code City."
     },
-    "contents": ["$.servers.http"]
+    "contents": [
+      "$.servers.http",
+      {"path": "$.servers.http.hosts", "do": "DONE"}
+    ]
+  }, {
+    "filename": "core_24_$.hosts.js",
+    "headerSubs": {
+      "<YEAR>": "2017",
+      "<OVERVIEW>": "Host objects for Code City."
+    },
+    "contents": [
+      {"path": "$.hosts", "do": "DONE"},
+      {"path": "$.hosts.root", "do": "DONE"},
+      {"path": "$.hosts.root.subdomains", "do": "DONE"},
+      "$.hosts.root.hostname",
+      "$.hosts.root['/']",
+      "$.hosts.root['/mirror']",
+      "$.hosts.root['/robots.txt']",
+      "$.hosts.dummy",
+      "$.hosts.root.subdomains.connect",
+      "$.hosts.root.subdomains.login",
+      "$.hosts.root.subdomains.static",
+      {"path": "$.hosts.test", "do": "DONE"},
+      {"path": "$.hosts.test.subdomains", "do": "DONE"},
+      "$.hosts.test.hostname",
+      "$.hosts.test.pathToSubdomain",
+      "$.hosts.test['/']",
+      "$.hosts.test['/error']",
+      "$.hosts.test['/mirror']",
+      "$.hosts.test.subdomains.connect",
+      "$.hosts.test.subdomains.login",
+      "$.hosts.test.subdomains.static"
+    ]
   }, {
     "filename": "core_24_$.http.js",
     "headerSubs": {
@@ -221,6 +253,7 @@
       {"path": "$.http", "do": "DONE"},
       {"path": "$.http['www.']", "do": "DONE"},
       "$.http['www.']['/']",
+      "$.http['www.']['/error']",
       "$.http['www.']['/mirror']",
       "$.http['www.']['/robots.txt']",
       "$.http['connect.']",
@@ -257,6 +290,10 @@
       "<OVERVIEW>": "Inline code editor for Code City."
     },
     "contents": [
+      {"path": "$.hosts.code", "do": "SET"},
+      "$.hosts.code['/inlineEdit']",
+      {"path": "$.hosts.root.subdomains.code", "do": "SET"},
+      {"path": "$.hosts.test.subdomains.code", "do": "SET"},
       {"path": "$.http['code.']", "do": "SET"},
       "$.http['code.']['/inlineEdit']"
     ]
@@ -267,6 +304,7 @@
       "<OVERVIEW>": "Web-based code explorer/editor for Code City."
     },
     "contents": [
+      "$.hosts.code",
       "$.http['code.']"
     ]
   }, {
@@ -412,6 +450,9 @@
       {"path": "$.cage.location", "do": "DECL"},
       {"path": "$.physicals.cage", "do": "DONE"},
       "$.physicals['Genetic Mouse Prototype']",
+      "$.hosts.genetics",
+      "$.hosts.root.subdomains.genetics",
+      "$.hosts.test.subdomains.genetics",
       "$.http['genetics.']"
     ]
   }, {
@@ -496,6 +537,21 @@
       "$.container",
       "$.db.tempId",
       "$.garbage",
+      "$.hosts.root['/']",
+      "$.hosts.root['/mirror']",
+      "$.hosts.root['/robots.txt']",
+      "$.hosts.dummy",
+      "$.hosts.root.subdomains.connect",
+      "$.hosts.root.subdomains.login",
+      "$.hosts.root.subdomains.static",
+      "$.hosts.test['/']",
+      "$.hosts.test['/error']",
+      "$.hosts.test['/mirror']",
+      "$.hosts.test.subdomains.connect",
+      "$.hosts.test.subdomains.login",
+      "$.hosts.test.subdomains.static",
+      "$.hosts.code",
+      "$.hosts.genetics",
       "$.http['code.']",
       "$.http['genetics.']",
       "$.http['www.']['/']",

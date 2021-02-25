@@ -29,6 +29,10 @@ $.servers.http.subdomains = false;
 $.servers.http.protocol = 'http:';
 $.servers.http.host = 'localhost:8080';
 
+$.hosts.root.pathToSubdomain = true;  // Should be !$.servers.http.subdomains.
+$.hosts.root.scheme = 'http';  // No trailing colon.
+$.hosts.root.hostname = 'localhost:8080';
+
 // Set up.
 $.system.onStartup();
 
