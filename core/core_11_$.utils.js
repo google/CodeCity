@@ -379,4 +379,11 @@ $.utils.string.generateRandom = function generateRandom(length, soup) {
 Object.setOwnerOf($.utils.string.generateRandom, $.physicals.Maximilian);
 Object.setOwnerOf($.utils.string.generateRandom.prototype, $.physicals.Neil);
 $.utils.string.generateRandom.DEFAULT_SOUP = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+$.utils.string.prefixLines = function prefixLines(text, prefix) {
+  // Prepend a common prefix onto each line of code.
+  // Intended for indenting code or adding '//' comment markers.
+  return prefix + text.replace(/(?!\n$)\n/g, '\n' + prefix);
+};
+Object.setOwnerOf($.utils.string.prefixLines, $.physicals.Neil);
+Object.setOwnerOf($.utils.string.prefixLines.prototype, $.physicals.Neil);
 
