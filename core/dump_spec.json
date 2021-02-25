@@ -191,12 +191,12 @@
     },
     "contents": ["$.utils.html"]
   }, {
-    "filename": "core_21_$.Jssp.js",
+    "filename": "core_21_$.jssp.js",
     "headerSubs": {
       "<YEAR>": "2017",
       "<OVERVIEW>": "JavaScript Server Pages for Code City."
     },
-    "contents": ["$.Jssp"]
+    "contents": ["$.jssp"]
   }, {
     "filename": "core_22_$.connection.js",
     "headerSubs": {
@@ -535,7 +535,7 @@
       "perms",
       "setPerms",
       "user",
-      "$.Jssp",
+      "$.jssp",
       "$.Selector",
       "$.cage",
       "$.clock",
