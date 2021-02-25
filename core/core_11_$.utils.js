@@ -23,7 +23,7 @@
 // AUTO-GENERATED CODE FROM DUMP.  EDIT WITH CAUTION!
 //////////////////////////////////////////////////////////////////////
 
-$.utils.validate.ownArray = function(object, key) {
+$.utils.validate.ownArray = function ownArray(object, key) {
  	// Ensure that object[key] is an array not shared with any other
   // object or property, not inherited from a prototype, etc.
   // If it is, relaced it with a new, unshared array with the same
@@ -39,25 +39,7 @@ $.utils.validate.ownArray = function(object, key) {
                                           forKey: {value: key}});
   }
 };
-delete $.utils.validate.ownArray.name;
-$.utils.validate.ownArray.prototype.constructor = function(object, key) {
- 	// Ensure that object[key] is an array not shared with any other
-  // object, not inherited from a prototype, etc.  If it is, it
-  // will be relaced by a new, unshared array with the same
-  // contents.
-  if (!object.hasOwnProperty(key) || !Array.isArray(object[key]) ||
-      object[key].forObj !== object || object[key].forKey !== key) {
-    try {
-      object[key] = Array.from(object[key]);
-    } catch (e) {
-      object[key] = [];
-    }
-		Object.defineProperties(object[key], {forObj: {value: object},
-                                          forKey: {value: key}});
-  }
-};
-delete $.utils.validate.ownArray.prototype.constructor.name;
-$.utils.validate.ownArray.prototype.constructor.prototype = $.utils.validate.ownArray.prototype;
+Object.setOwnerOf($.utils.validate.ownArray, $.physicals.Neil);
 $.utils.isObject = function isObject(v) {
   /* Returns true iff v is an object (of any class, including Array
    * and Function). */
@@ -65,7 +47,7 @@ $.utils.isObject = function isObject(v) {
 };
 Object.setOwnerOf($.utils.isObject, $.physicals.Maximilian);
 $.utils.imageMatch = {};
-$.utils.imageMatch.recog = function send(svgText) {
+$.utils.imageMatch.recog = function recog(svgText) {
   svgText = '<svg transform="scale(4)">' + svgText + '</svg>';
   var json = $.system.xhr('https://neil.fraser.name/scripts/imageMatch.py' +
                           '?svg=' + encodeURIComponent(svgText));

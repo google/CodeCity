@@ -572,7 +572,7 @@ $.physical.willMoveTo = function willMoveTo(dest) {
 };
 Object.setOwnerOf($.physical.willMoveTo, $.physicals.Maximilian);
 Object.setOwnerOf($.physical.willMoveTo.prototype, $.physicals.Maximilian);
-$.physical.edit = function inspect(cmd) {
+$.physical.edit = function edit(cmd) {
   // Open this object in the code editor.
   var selector = $.Selector.for(this);
   if (!selector) {
