@@ -351,14 +351,14 @@ $.servers.http.Request.prototype.fromSameOrigin = function fromSameOrigin() {
    */
   var referer = this.headers.referer; // https://foo.example.codecity.world/bar
   var host = this.headers.host;  // foo.example.codecity.world
-  if (!referer || (!host && !this.origin)) {
+  if (!referer || (!host || !this.subdomain) && !this.info) {
     // Missing headers.  Not enough information to know.
     return undefined;
   }
 
   var origin;
-  if (this.origin) {  // User router-provided origin if possible.
-    origin = this.origin;
+  if (this.info) {  // User router-provided origin if possible.
+    origin = this.info.origin;
   } else {  // Fall back to guessing based on host + subdomain.
     origin = host;
     if (!$.servers.http.subdomains) {
@@ -403,23 +403,25 @@ $.servers.http.Request.prototype.hostUrl = function hostUrl(varArgs) {
    *       subdomain exists.
    * Returns: string - the URL for the desired domain/subdomain.
    */
-  // Fallback to $hosts.root.url() in case no routing information is available.
-  if (!this.route) {
+  // No routing information is available?  Fallback to $hosts.root.url().
+  if (!this.info) {
     var rootHost = $.hosts.root;
     return rootHost.url.apply(rootHost, arguments);
   }
   // Walk the tree of Hosts rooted at the root Host via which this
-  // Request was served.  If this request was routed the same way, use
-  // the recorded usePath boolean.
-  var host = this.route[0].host;
-  var hostname = this.route[0].authority;
+  // Request was served.
+  var host = this.info.rootHost;
+  var authority = this.info.rootAuthority;
+  // Did nginx request pathToSubdomain, because it knows that it is not
+  // configured for real wildcard subdomains?  (N.B.: header uses the
+  // RFC 8941 convention of "?1" for true, "?0" for false.)
+  var pathToSubdomainHeader =
+      (this.headers['codecity-pathtosubdomain'] === '?1');
   for (var subdomain, i = 0; (subdomain = arguments[i]); i++) {
-    var routeI = this.route[i];
-    var usePath = (routeI && routeI.host === host) ? routeI.pathToSubdomain : undefined;
-    hostname = host.urlForSubdomain(hostname, subdomain, usePath);
+    authority = host.urlForSubdomain(authority, subdomain, pathToSubdomainHeader);
     host = host.subdomains[subdomain];
   }
-  return '//' + hostname + '/';
+  return '//' + authority + '/';
 };
 Object.setOwnerOf($.servers.http.Request.prototype.hostUrl, $.physicals.Maximilian);
 Object.setOwnerOf($.servers.http.Request.prototype.hostUrl.prototype, $.physicals.Maximilian);
@@ -602,17 +604,46 @@ $.servers.http.Host = function Host() {
    *
    * - hostname: string | undefined - the canonical hostname for
    *   this Host object.  Should include the port number, if non-default.
+   *
+   *   If .hostRegExp (see below) is undefined, .hostname will be used to
+   *   decide which Requests to handle:
+   *
+   *   - This host object will serve requests whose Host: header exactly
+   *     matches .hostname itself.
+   *   - It will pass requests whose Host: header ends with .hostname to
+   *     the corresponding subdomain, if it exists.
+   *
+   *   E.g., if .hostname = 'bar.baz', this host will serve requests for
+   *   bar.baz and will pass requests for foo.bar.baz to .subdomains.foo
+   *   but will reject requests for bar.baz:8080.
+   *
+   *   If both .hostname and .hostRegExp are undefined, all requests will
+   *   be served by this host or automagically passed along to a suitable
+   *   subdomain.
+   *
    * - hostRegExp: RegExp | undefined - a RegExp matching Host: header
    *   values this host should respond to.  If undefined (the default),
-   *   this host will only respond to requests for .hostname.  Note that
-   *   if you want to support subdomains, this regexp regexp should be
-   *   constructed so that it matches starting at the beginning of the
-   *   root hostname (and not be anchored with ^) - e.g.,
-   *   /example.codecity.\w+(?::\d+)$/.
+   *   this .hostname (see above) will be used instead.
+   *
+   *   Note that when the Host is deciding whether to serve a Request
+   *   itself, this regexp will be treated as if it begins with /^/,
+   *   while when the Host is trying to determine if it should be passed
+   *   off to a subdomain it will treat it as if it begins with /(?<=\.)/
+   *   (despite ES5.1 not supporting such look-behind assertions).
+   *
+   *   This means that .hostRegExp = /bar.baz$/ will cause this Host object
+   *   to serve 'bar.baz' and try to pass 'foo.bar.baz' to .subdomains.foo,
+   *   but will always reject 'foobar.baz'.  Anchoring with /^/ will
+   *   prevent subdomain matching, so don't do that if you don't mean to!
+   *
+   *   It's recommended that .hostRegExp be anchored with /$/, but note
+   *   that if you want to serve pages on a non-standard ports you must
+   *   match the port as well - e.g.:  /example\.codecity\.\w+(?::\d+)$/
+   *   will match example.codecity.<any TLD> with or without a port number.
+   *
    * - pathToSubdomain: boolean - enable mapping the first element
    *   (directory) of request paths to a subdomain.  (Default: false.)
-   * - scheme: string - The canonical scheme for this Host object.
-   *   (Default: 'https'.)
+   *
    * - subdomains: Object<string, Host> | null - a null-prototype
    *   object mapping subdomain names to their respective Host objects,
    *   or just null if there are no subdomains.  Use .addSubdomain to
@@ -635,62 +666,99 @@ $.servers.http.Host.prototype.handle = function handle(request, response, info) 
    *   this function.
    * Returns: boolean - true iff request was for this host.
    */
-  // Temproray guard
-  if (!this.matchHostname_(request.headers.host)) return false;
+  // Temproray guard to prevent me from breaking the code editor.
+  // if (/^code/.test(request.headers.host)) return false;
 
-  // If detailed request routing info is available, use it.
-  if (info) return this.handleInfo_(request, response, info);
+  if (!info) {
+    // Extact detailed routing info from request.
+    var hostHeader = request.headers.host;
+    info = {
+      origin: hostHeader,  // For Request.prototype.fromSameOrigin.
+      path: request.path,
+      rootHost: this,
+    };
 
-  // Extact detailed routing info from request.
-  info = {
-    // scheme: this.scheme,  // TODO: extract from Forwarded header.
-    authority: request.headers.host,  // For routing.  May include port.
-    origin: request.headers.host,  // For Request.prototype.fromSameOrigin.
-    path: request.path,
-    route: [],
-  };
-
-  // The authorityExact RegExp gives submatches [ipAddress, dnsAddress,
-  // port].  Only one of the addresses capture groups will match.
-  var m = $.utils.url.regexps.authorityExact.exec(request.headers.host);
-  var hostname = m[1] || m[2];  // IP or DNS addess.
-  var ipOnly = !!(m[2]);  // True iff hostname is an IP address.
-  var port = m[3];  // Port, if present (without ':').
-
-  if (ipOnly) {  // No subdomains possible (other than via pathToSubdomain).
-    return this.handleInfo_(request, response, info);
+    // The authorityExact RegExp gives submatches [ipAddress, dnsAddress,
+    // port].  Only one of the addresses capture groups will match.
+    var m = $.utils.url.regexps.authorityExact.exec(hostHeader);
+    if (!m) {  // Invalid Host header.
+      response.sendError(400, 'Invalid Host header.');
+      return true;  // We don't want it, but no one else should either.
+    } else if (m[1]) {  // It's an IP address.  No (real) subdomains possible.
+      info.rootAuthority = info.authority = hostHeader;
+    } else if (this.hostRegExp || this.hostname) {
+      var hostRegExp = this.hostRegExp ? this.hostRegExp :
+        new RegExp($.utils.regexp.escape(this.hostname) + '$')
+      // We have a .hostname or .hostRegExp, and can work out if there is a
+      // subdomain prefixed to request.headers.host from that.
+      m = hostRegExp.exec(hostHeader);
+      // Apply a check equivalent to a /(?<=^|\.)/ look-behind assertion.
+      if (m.index > 0) {
+        if (hostHeader[m.index - 1] !== '.') return false;  // Lookbehind failed.
+        // Record subdomain(s) that need to be matched.
+        info.subdomains = hostHeader.slice(0, m.index - 1).split('.');
+      }
+      info.rootAuthority = info.authority = hostHeader.slice(m.index);
+    } else {
+      // Try to guess where the subdomain(s) end and the root hostname begins.
+      // To deal correclty with cases like x.x.y.z and x.y.x.y.z, be
+      // pessimistic and assume they're all subdomains to start with.
+      var potentialSubdomains  = hostHeader.split('.');
+      info.rootAuthority = info.authority = potentialSubdomains.pop();  // TLD can't be subdomain!
+      for (var i = potentialSubdomains.length; i >= 0; i--) {
+        info.subdomains = potentialSubdomains.slice(0, i);
+        var r = this.handle(request, response, info);
+        if (r) return r;
+        info.rootAuthority = info.authority = potentialSubdomains[i - 1] + '.' + info.authority;
+      }
+      return false;
+    }
   }
 
-  var hostRegExp = (
-    this.hostRegExp ? this.hostRegExp :
-    this.hostname ? new RegExp($.utils.regexp.escape(this.hostname) + '$') :
-    undefined);
+  // Is this request for us or a subdomain of us?
+  if (!this.matchHostname_(info.authority)) return false;
 
-  $.system.log(String(hostRegExp));
+  // This request is for us or a subdomain.
+  // Do we need to try to find a subdomain for this request?
+  if (info.subdomains && info.subdomains.length) {
+    var subdomain = info.subdomains.pop();
+    if (!(subdomain in this.subdomains)) return false;
+    info.authority = subdomain + '.' + info.authority;
+    return this.subdomains[subdomain].handle(request, response, info);
+  }
 
-  return this.handleInfo_(request, response, info);
+  // No, it's for us.
+  this.route_(request, response, info);
+  return true;
 };
 Object.setOwnerOf($.servers.http.Host.prototype.handle, $.physicals.Maximilian);
 Object.setOwnerOf($.servers.http.Host.prototype.handle.prototype, $.physicals.Maximilian);
 $.servers.http.Host.prototype.route_ = function route_(request, response, info) {
   /* Attempt to route an http(s) request for this host to the correct
-   * handler.  If a handler is found, call it; if not, generate an
-   * appropriate error.
+   * handler.  If a handler is found, call it.
+   *
+   * If no handler is found, but this host has .pathToSubdomain set,
+   * or .pathToSubdomain is undefined but request contains a
+   * CodeCity-pathToSubdomain header with value '?1' (true, in RFC 8941
+   * Structured Field Value notation) then attempt to map the first
+   * element (directory name) of info.path to one of .subdomains and,
+   * if successful, call the corresponding subdomain host's .handle
+   * method.
+   *
+   * Otherwise generate a 404 error.
    *
    * Arguments:
    * - request: $.servers.http.Request - the incoming request to handle.
    * - response: $.servers.http.Response - the response to write to.
    * - info: Object - some additional information generated by
-   *       Host.prototype.route.
+   *       Host.prototype.handle (see that method for details).
    */
   var path = info.path;
   if (typeof path !== 'string' || path[0] !== '/') {
     response.sendError(400, 'Invalid path "' + path + '"');
   } else if (path in this) {
     // Record routing info on Request object.
-    request.scheme = info.scheme;
-    request.route = info.route;
-    request.origin = info.origin;
+    request.info = info;
     // Serve page.
     var obj = this[path];
     if (!$.utils.isObject(obj)) {
@@ -702,16 +770,18 @@ $.servers.http.Host.prototype.route_ = function route_(request, response, info) 
     } else {
       response.sendError(500, "Handler .www is neither a function nor a JSSP.");
     }
-  } else if (this.subdomains && this.pathToSubdomain) {
+  } else if (this.subdomains &&
+             (this.pathToSubdomain ||
+              (this.pathToSubdomain === undefined &&
+               this.headers['codecity-pathtosubdomain'] === '?1'))) {
     // Try to route to a subdomain based on top-level directory.
     // E.g. https://example.codecity.world/foo/bar -> foo
     var m = path.match(/^\/([-A-Za-z0-9]+)(\/.*)?$/);
     var subdomain = '';  // Empty string gives good 404 message if .match fails.
     if (m && (subdomain = m[1]) in this.subdomains) {
-      // Route to th subdomain.
+      // Route to the subdomain.  Modify info.path and info.origin as appropriate
       info.path = m[2] || '/';
       info.origin += '/' + subdomain;
-      info.route[info.route.length - 1].pathToSubdomain = true;
       if (!this.subdomains[subdomain].handle(request, response, info)) {
         response.sendError(500, 'Host for pseudo-subdomain /' + subdomain + '/ rejected request.');
         return;
@@ -726,18 +796,20 @@ $.servers.http.Host.prototype.route_ = function route_(request, response, info) 
 Object.setOwnerOf($.servers.http.Host.prototype.route_, $.physicals.Maximilian);
 Object.setOwnerOf($.servers.http.Host.prototype.route_.prototype, $.physicals.Maximilian);
 $.servers.http.Host.prototype.matchHostname_ = function matchHostname_(hostname) {
-  /* Returns: boolean - true if hostname matches this.hostname.
+  /* Returns: boolean - true if hostname exactly matches this.hostRegExp or,
+   *     if that is undefined, this.hostname.
    */
   if (this.hostRegExp) {
     if (!(this.hostRegExp instanceof RegExp)) {
       throw new TypeError('invalid .hostRegExp');
     }
-    return this.hostRegExp.test(hostname);
+    var m = this.hostRegExp.exec(hostname);
+    return (m && m.index === 0);  // Match only accepted if at start.
   } else if (this.hostname) {
     if (typeof this.hostname !== 'string') {
       throw new TypeError('invalid .hostname');
     }
-    return this.hostname === hostname;
+    return this.hostname === hostname;  // Only exact matches.
   } else {
     return true;
   }
@@ -764,15 +836,14 @@ $.servers.http.Host.prototype.addSubdomain = function addSubdomain(name, host) {
 };
 Object.setOwnerOf($.servers.http.Host.prototype.addSubdomain, $.physicals.Maximilian);
 Object.setOwnerOf($.servers.http.Host.prototype.addSubdomain.prototype, $.physicals.Maximilian);
-$.servers.http.Host.prototype.scheme = 'https';
 $.servers.http.Host.prototype.url = function url(varArgs) {
-  /* Return the base URL for this host (omitting shcheme).
+  /* Return the base URL for this host (omitting scheme).
    *
    * Generally prefer $.servers.http.Request.prototype.hostUrl (q.v.)
    * instead of method - but in some cases it is necessary to generate
    * a URL for the webserver without an existing inbound Request to use
    * as reference, so this method allows one to be generated in the
-   * obvious way from this.scheme and this.hostname.  As with .hostUrl:
+   * obvious way from this.hostname.  As with .hostUrl:
    *
    * - Absent any argument, the returned URL will routes to this
    *   Host object.
@@ -810,67 +881,52 @@ $.servers.http.Host.prototype.url = function url(varArgs) {
 Object.setOwnerOf($.servers.http.Host.prototype.url, $.physicals.Maximilian);
 Object.setOwnerOf($.servers.http.Host.prototype.url.prototype, $.physicals.Maximilian);
 $.servers.http.Host.prototype.pathToSubdomain = false;
-$.servers.http.Host.prototype.urlForSubdomain = function urlForSubdomain(hostname, subdomain, usePath) {
+$.servers.http.Host.prototype.urlForSubdomain = function urlForSubdomain(hostname, subdomain, pathToSubdomainHeader) {
   /* A helper function for the .url method.
    *
    * Given a hostname for this host, add the specified subdomain
    * if it exists, or throw RangeError if not.
    *
-   * If this.pathToSubdomain is true and usePath === true or is
-   * undefined, the subdomain will be added as a directory name
-   * suffix rather than a hostname pefix.
+   * If this.pathToSubdomain is true, or this.pathToSubdomain is undefined
+   * and pathToSubdomainHeader is true, then the subdomain will be added as
+   * a directory name suffix rather than a hostname pefix.
    *
    * E.g.:
    * rootHost.pathToSubdomain = false;
    * rootHost.urlForSubdomain('example.codecity.world', 'code')
    *    => 'code.example.codecity.world'
    *
-   * rootHost.pathToSubdomain = true;
-   * rootHost.urlForSubdomain('example', 'code')
+   * rootHost.pathToSubdomain = undefined;
+   * rootHost.urlForSubdomain('example', 'code', true)
    *    => 'example.codecity.world/code'
    * rootHost.urlForSubdomain('example', 'code', false)
    *    => 'code.example.codecity.world'
+   * rootHost.pathToSubdomain = true;
+   * rootHost.urlForSubdomain('example', 'code', false)
+   *    => 'example.codecity.world/code'
    *
    * Arguments:
    * - hostname: string - the base hostname for this Host.
    * - subdomain: string - the desired subdomain.
-   * - usePath: boolean | undefined - add subdomain as suffix if
-   *   this.pathToSubdomain is true (default: true).
+   * - pathToSubdomainHeader: boolean | undefined - value of the
+   *   CodeCity-pathToSubdomain header for the current request (if there
+   *   is one).
    *
    * TODO: Give this function a better name, because what it returns
    * is not actually a valid URL.
    */
-  if (!(subdomain in this.subdomains)) {
+  if (!(this.subdomains && subdomain in this.subdomains)) {
     throw new RangeError('nonexistent subdomain "' + subdomain + '"');
   }
-  if (this.pathToSubdomain && usePath !== false) {
+  if (this.pathToSubdomain ||
+      this.pathToSubdomain === undefined && pathToSubdomainHeader) {
     return hostname + '/' + subdomain;
-  } else if (!this.pathToSubdomain && usePath) {
-    throw new Error('unexpected usePath request on non-.pathToSubdomain host');
   } else {
     return subdomain + '.' + hostname;
   }
 };
 Object.setOwnerOf($.servers.http.Host.prototype.urlForSubdomain, $.physicals.Maximilian);
 Object.setOwnerOf($.servers.http.Host.prototype.urlForSubdomain.prototype, $.physicals.Maximilian);
-$.servers.http.Host.prototype.handleInfo_ = function handleInfo_(request, response, info) {
-  /* Helper for handle method.  Arguments the same but info is
-   * mandatory.
-   *
-   * Arguments:
-   * - request: $.servers.http.Request - the incoming request to handle.
-   * - response: $.servers.http.Response - the response to write to.
-   * - info: Object - some information used by recursive calls to this function.
-   * Returns: boolean - true iff request was for this host.
-   */
-  if (!this.matchHostname_(info.authority)) return false;  // Not for us.
-
-  info.route.push({authority: info.authority, host: this});
-  this.route_(request, response, info);
-  return true;
-};
-Object.setOwnerOf($.servers.http.Host.prototype.handleInfo_, $.physicals.Maximilian);
-Object.setOwnerOf($.servers.http.Host.prototype.handleInfo_.prototype, $.physicals.Maximilian);
 $.servers.http.onRequest = function onRequest(connection) {
   /* Called from $.servers.http.connection.onReceiveChunk when the
    * connection.request has been fully parsed and is ready to be handled.
