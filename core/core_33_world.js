@@ -307,13 +307,21 @@ $.user.grep.search = function search(user, prefix, searchString, selector, seen)
 	if (seen.has(value)) return;
   seen.set(value, true);
   // Is it a function containing the search string?
-  if (typeof value === 'function' && Function.prototype.toString.call(value).includes(searchString)) {
-    user.narrate(selector.toString() + ' mentions ' + searchString);
+  if (typeof value === 'function') {
+    var text = Function.prototype.toString.call(value);
+    if (text.includes(searchString)) {
+      user.narrate(selector.toString() + ' mentions ' + searchString + ':');
+      var lines = text.split('\n');
+      for (var i = 0; i < lines.length; i++) {
+        if (lines[i].includes(searchString)) {
+          user.narrate('    line ' + (i + 1) + ': ' + lines[i]);
+        }
+      }
+    }
   }
 	// Check key names
   var keys = Object.getOwnPropertyNames(value);
   for (var i = 0; i < keys.length; i++) {
-
     var key = keys[i];
     var subSelector = new $.Selector(selector.concat(key));
     if (key.includes(searchString)) {
