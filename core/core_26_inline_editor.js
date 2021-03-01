@@ -82,8 +82,6 @@ $.hosts.code['/inlineEdit'].www = '<%\nvar staticUrl = request.hostUrl(\'static\
 
 $.hosts.root.subdomains.code = $.hosts.code;
 
-$.hosts.test.subdomains.code = $.hosts.code;
-
 $.http['code.'] = {};
 
 $.http['code.']['/inlineEdit'] = $.hosts.code['/inlineEdit'];

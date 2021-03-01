@@ -29,7 +29,9 @@ $.http['www.'] = {};
 
 $.http['www.']['/'] = $.hosts.root['/'];
 
-$.http['www.']['/error'] = $.hosts.test['/error'];
+$.http['www.']['/error'] = {};
+Object.setOwnerOf($.http['www.']['/error'], $.physicals.Maximilian);
+$.http['www.']['/error'].www = "<% throw new Error('this is a test Error'); %>";
 
 $.http['www.']['/mirror'] = {};
 Object.setOwnerOf($.http['www.']['/mirror'], $.physicals.Maximilian);

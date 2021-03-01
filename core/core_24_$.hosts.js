@@ -29,7 +29,7 @@ $.hosts.root = (new 'Object.create')($.servers.http.Host.prototype);
 
 $.hosts.root.subdomains = (new 'Object.create')(null);
 
-$.hosts.root.hostname = 'google.codecity.world';
+$.hosts.root.hostname = undefined;
 
 $.hosts.root['/'] = {};
 $.hosts.root['/'].www = '<!doctype html>\n<% var staticUrl = request.hostUrl(\'static\'); %>\n<html lang="en">\n<head>\n  <title>Code City</title>\n  <style>\n    body {\n      font-family: "Roboto Mono", monospace;\n      text-align: center;\n    }\n    h1 {\n      font-size: 40pt;\n      font-weight: 100;\n    }\n    h1>img {\n      vertical-align: text-bottom;\n    }\n    #tagline {\n      font-style: italic;\n      margin: 2em;\n    }\n    iframe {\n      height: 50px;\n      width: 100px;\n      border: none;\n      display: block;\n      margin: 0 auto;\n    }\n  </style>\n  <link href="https://fonts.googleapis.com/css?family=Roboto+Mono" rel="stylesheet">\n  <link href="<%=staticUrl%>favicon.ico" rel="shortcut icon">\n</head>\n<body>\n  <h1>\n    <img src="<%=staticUrl%>logo.svg" alt="" width="95" height="100">\n    Code City\n  </h1>\n  <p id="tagline">A community of inquisitive programmers.</p>\n  <iframe src="<%=request.hostUrl(\'login\')%>?after=<%=request.hostUrl(\'connect\')%>"></iframe>\n</body>\n</html>';
@@ -82,29 +82,5 @@ $.hosts.root.subdomains.system['/logout'] = {};
 Object.setOwnerOf($.hosts.root.subdomains.system['/logout'], $.physicals.Neil);
 $.hosts.root.subdomains.system['/logout'].www = '<%\nvar staticUrl = request.hostUrl(\'static\');\nvar doLogout = !request.user ||\n    (request.query === \'execute\' && request.fromSameOrigin());\nif (doLogout) {\n  response.clearIdCookie()\n}\n%>\n<!doctype html>\n<html lang="en">\n<head>\n  <title>Code City Logout</title>\n  <style>\n    body {\n      font-family: "Roboto Mono", monospace;\n      text-align: center;\n    }\n    h1 {\n      font-size: 40pt;\n      font-weight: 100;\n    }\n    h1>img {\n      vertical-align: text-bottom;\n    }\n    #tagline {\n      font-style: italic;\n      margin: 2em;\n    }\n    iframe {\n      height: 50px;\n      width: 100px;\n      border: none;\n      display: block;\n      margin: 0 auto;\n    }\n  </style>\n  <link href="https://fonts.googleapis.com/css?family=Roboto+Mono" rel="stylesheet">\n  <link href="<%=staticUrl%>favicon.ico" rel="shortcut icon">\n  <link href="<%=staticUrl%>style/jfk.css" rel="stylesheet">\n\n  </head>\n<body>\n  <h1>\n    <img src="<%=staticUrl%>logo.svg" alt="" width="95" height="100">\n    Code City\n  </h1>\n  <p id="tagline"><%= $.servers.http.host %></p>\n<% if (doLogout) { %>\n  <p>You have been signed out.</p>\n  <iframe src="<%=request.hostUrl(\'login\')%>"></iframe>\n<% } else { %>\n  <div class="jfk-button jfk-button-action" role="button" id="signout">\n    Sign out\n  </div>\n  <script>\n    var button =  document.getElementById(\'signout\');\n    button.addEventListener(\'click\', function() {\n      parent.location = "?execute";\n    });\n  </script>\n<% } %>\n</body>\n</html>';
 
-$.hosts.test = (new 'Object.create')($.servers.http.Host.prototype);
-
-$.hosts.test.subdomains = (new 'Object.create')(null);
-
-$.hosts.test.hostname = 'test.google.codecity.world';
-
-$.hosts.test.pathToSubdomain = true;
-
-$.hosts.test['/'] = $.hosts.root['/'];
-
-$.hosts.test['/error'] = {};
-Object.setOwnerOf($.hosts.test['/error'], $.physicals.Maximilian);
-$.hosts.test['/error'].www = "<% throw new Error('this is a test Error'); %>";
-
-$.hosts.test['/mirror'] = $.hosts.root['/mirror'];
-
-$.hosts.test.subdomains.connect = $.hosts.dummy;
-
-$.hosts.test.subdomains.login = $.hosts.dummy;
-
-$.hosts.test.subdomains.mobwrite = $.hosts.dummy;
-
-$.hosts.test.subdomains.static = $.hosts.dummy;
-
-$.hosts.test.subdomains.system = $.hosts.root.subdomains.system;
+$.servers.http.hosts[0] = $.hosts.root;
 
