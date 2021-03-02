@@ -124,36 +124,6 @@ $.servers.http.connection.onEnd = function onEnd() {
   $.connection.onEnd.apply(this, arguments);
 };
 Object.setOwnerOf($.servers.http.connection.onEnd, $.physicals.Neil);
-$.servers.http.connection.route_ = function route_() {
-  /* Route this.request by finding a suitable handler object for it.
-   * This is done by using the request's host and path (with optional special
-   * handling of wildcard subdomains) to look up a handler object in $.http,
-   * then return that object.  If no handler object can be found, or the
-   * handler object does not have a .www method, a suitable error is served
-   * by calling this.result.sendErrror.
-   *
-   * Returns: an object with a .www method to handle this.request, or null
-   * if no suitable hander is found.
-   */
-  this.request.parseSubdomain_();
-  var subdomain = (this.request.subdomain || 'www') + '.';
-  var path = this.request.path;
-  var domainObj = ($.http.hasOwnProperty(subdomain) && $.http[subdomain]);
-  if (!domainObj) {
-    this.response.sendError(400, 'Invalid subdomain "' +
-                            $.utils.html.escape(this.request.subdomain) +
-                            '".');
-    return null;
-  }
-  var obj = (domainObj.hasOwnProperty(path) && domainObj[path]);
-  if (!obj) {
-    this.response.sendError(404);
-    return null;
-  }
-  return obj;
-};
-Object.setOwnerOf($.servers.http.connection.route_, $.physicals.Maximilian);
-Object.setOwnerOf($.servers.http.connection.route_.prototype, $.physicals.Maximilian);
 $.servers.http.Request = function Request() {
   this.headers = Object.create(null);
   this.headers.cookie = Object.create(null);
@@ -302,44 +272,16 @@ $.servers.http.Request.prototype.parseParameters_ = function parseParameters_(da
   }
 };
 Object.setOwnerOf($.servers.http.Request.prototype.parseParameters_, $.physicals.Neil);
-$.servers.http.Request.prototype.parseSubdomain_ = function parseSubdomain_() {
-  var subdomain = 'www';
-  if ($.servers.http.subdomains) {
-    if (this.headers.host) {
-      // Extract the wildcard subdomain.
-      // E.g. https://foo.example.codecity.world/bar -> foo
-      if (parseSubdomain_.hostStringCache_ !== $.servers.http.host) {
-        parseSubdomain_.hostStringCache_ = $.servers.http.host;
-        parseSubdomain_.hostRegExpCache_ = new RegExp('^([-A-Za-z0-9]+)\\.' +
-            $.utils.regexp.escape(parseSubdomain_.hostStringCache_) + '$');
-      }
-      var m = this.headers.host.match(parseSubdomain_.hostRegExpCache_);
-      if (m) {
-        subdomain = m[1];
-      }
-    }
-  } else {
-    // Extract the first directory.
-    // E.g. https://example.codecity.world/foo/bar -> foo
-    var m = this.path.match(/^\/([-A-Za-z0-9]+)(\/.*)?$/);
-    if (m) {
-      subdomain = m[1];
-      this.path = m[2] || '/';
-    }
-  }
-  this.subdomain = subdomain;
-};
-Object.setOwnerOf($.servers.http.Request.prototype.parseSubdomain_, $.physicals.Maximilian);
-Object.setOwnerOf($.servers.http.Request.prototype.parseSubdomain_.prototype, $.physicals.Neil);
-$.servers.http.Request.prototype.parseSubdomain_.hostStringCache_ = 'google.codecity.world';
-$.servers.http.Request.prototype.parseSubdomain_.hostRegExpCache_ = /^([-A-Za-z0-9]+)\.google\.codecity\.world$/;
-Object.setOwnerOf($.servers.http.Request.prototype.parseSubdomain_.hostRegExpCache_, $.physicals.Neil);
 $.servers.http.Request.prototype.fromSameOrigin = function fromSameOrigin() {
   /* Determines if the previous page and the requested page are from the same
    * origin.  Normally this means that they are from the same subdomain.
-   * However, if $.servers.http.subdomains is set to false, then the first
-   * directory name is used for comparison.
-   * Returns true or false, or (in the case of missing headers) undefined.
+   * However, if pathToSubdomain is enabled then the first directory name
+   * is used for comparison.
+   *
+   * Return: boolean | undefined - true if from the same origin, false if
+   * from different origins, and undefined if missing headers prevent a
+   * firm conclusion one way or the other.
+   *
    * Callers should choose whether to fail-safe or fail-deadly when the
    * user's proxy strips the referer header, resulting in undefined.
    *
@@ -349,24 +291,14 @@ $.servers.http.Request.prototype.fromSameOrigin = function fromSameOrigin() {
    * insecure - but probably mostly harmless: if .pathToSubdomain is
    * enabled subdomains are not really secure against each other anyway.
    */
-  var referer = this.headers.referer; // https://foo.example.codecity.world/bar
-  var host = this.headers.host;  // foo.example.codecity.world
-  if (!referer || (!host || !this.subdomain) && !this.info) {
+  var referer = this.headers.referer;  // https://foo.example.codecity.world/bar
+  if (!referer || !this.info) {
     // Missing headers.  Not enough information to know.
     return undefined;
   }
-
-  var origin;
-  if (this.info) {  // User router-provided origin if possible.
-    origin = this.info.origin;
-  } else {  // Fall back to guessing based on host + subdomain.
-    origin = host;
-    if (!$.servers.http.subdomains) {
-      origin += "/" + this.subdomain;
-    }
-  }
-  var regex = new RegExp('^https?://' + $.utils.regexp.escape(origin) + '/');
-  return regex.test(referer);
+  var origin = this.info.origin;  // foo.example.codecity.world
+  var regexp = new RegExp('^https?://' + $.utils.regexp.escape(origin) + '/');
+  return regexp.test(referer);
 };
 Object.setOwnerOf($.servers.http.Request.prototype.fromSameOrigin, $.physicals.Maximilian);
 $.servers.http.Request.prototype.hostUrl = function hostUrl(varArgs) {
@@ -376,8 +308,8 @@ $.servers.http.Request.prototype.hostUrl = function hostUrl(varArgs) {
    *
    * - Absent any argument, it will be the URL which routes to the root
    *   Host object serving this Request - e.g., //example.codecity.world/
-   *   The "root" host is ordinarily just first of $.http.hosts[] to accept
-   *   the request (as opposed to one of $.http.hosts[].subdomains[name]s).
+   *   The "root" host is ordinarily just first of $.servers.http.hosts[]
+   *   to accept the request (as opposed to one of its .subdomains).
    * - If an argument is supplied, the returned URL will instead be for
    *   the named subdomain.
    * - Multiple arguments can be supplied if there are nested subdomains.
@@ -525,11 +457,16 @@ $.servers.http.Response.prototype.clearIdCookie = function clearIdCookie() {
   if (this.headersSent) {
     throw new Error('Header already sent');
   }
-  var domain = $.servers.http.subdomains ? ' Domain=' + $.servers.http.host : '';
+  var request = this.connection_.request;
+  var domain = '';
+  if (request.info) {
+    var rootHost = request.info.rootAuthority || request.info.host.hostname;
+    domain = rootHost ? ' Domain=' + rootHost : '';
+  }
   var value = 'ID=; HttpOnly;' + domain + '; Path=/; Max-Age=0;';
   this.cookies.push(value);
 };
-Object.setOwnerOf($.servers.http.Response.prototype.clearIdCookie, $.physicals.Neil);
+Object.setOwnerOf($.servers.http.Response.prototype.clearIdCookie, $.physicals.Maximilian);
 Object.setOwnerOf($.servers.http.Response.prototype.clearIdCookie.prototype, $.physicals.Neil);
 $.servers.http.Response.prototype.sendRedirect = function sendRedirect(url, statusCode) {
   /* Write a redirect as the response.
@@ -942,30 +879,20 @@ $.servers.http.onRequest = function onRequest(connection) {
    * connection.request has been fully parsed and is ready to be handled.
    *
    * Arguments:
-   * - conenction: inherits from $.servers.http.connection instance - the
+   * - conenction: Object with prototype $.servers.http.connection - the
    *       connection to be handle.
    */
-  // Call connection.route_() to find a handler object for connection.request,
-  // then invoke that handler and deal with the aftermath.
   var request = connection.request;
   var response = connection.response;
   try {
-    // Try new routing.
+    // Call .handle(request, response) on each Host object in
+    // $.servers.http.hosts in order until one returns true to indicate
+    // that it handled the request.
     for (var host, i = 0; (host = this.hosts[i]); i++) {
       if (host.handle(request, response)) return;
     }
-
-    // Fall back to old routing.
-    var obj = connection.route_();
-    if (obj) {
-      if (typeof obj.www === 'string') {
-        $.jssp.eval(obj, 'www', request, response);
-      } else if (typeof obj.www === 'function') {
-        obj.www(request, response);
-      } else {
-        response.seendError(500);
-      }
-    }
+    // No host responded to request.
+    response.sendError(400, 'Unknown Host');
   } catch (e) {
     suspend();
     $.system.log(String(e) + '\n' + e.stack);
