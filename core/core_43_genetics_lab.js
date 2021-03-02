@@ -475,8 +475,3 @@ Object.setOwnerOf($.hosts.genetics['/editorXhr'].www.prototype, $.physicals.Neil
 
 $.hosts.root.subdomains.genetics = $.hosts.genetics;
 
-$.http['genetics.'] = {};
-Object.setOwnerOf($.http['genetics.'], $.physicals.Neil);
-$.http['genetics.']['/editor'] = $.hosts.genetics['/editor'];
-$.http['genetics.']['/editorXhr'] = $.hosts.genetics['/editorXhr'];
-
