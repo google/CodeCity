@@ -287,15 +287,7 @@ $.utils.object.transplantProperties = function transplantProperties(oldObject, n
     try {
       Object.defineProperty(newObject, k, pd);
     } catch (e) {
-      try {
-        // If defineProperty fails, try simple assignment.
-        // TODO(cpcallen): remove this when server allows
-        // (non-effective) redefinition of nonconfigurable
-        // properties?
-        newObject[k] = pd.value;
-      } catch (e) {
-        // Ignore failed attempt to copy properties.
-      }
+      // Ignore failed attempt to copy properties.
     }
   }
 };
