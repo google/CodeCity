@@ -224,7 +224,6 @@
       {"path": "$.hosts", "do": "DONE"},
       {"path": "$.hosts.root", "do": "DONE"},
       {"path": "$.hosts.root.subdomains", "do": "DONE"},
-      "$.hosts.root.hostname",
       "$.hosts.root['/']",
       "$.hosts.root['/mirror']",
       "$.hosts.root['/robots.txt']",

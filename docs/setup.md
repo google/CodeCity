@@ -602,7 +602,17 @@ https://support.google.com/cloud/answer/6158849) for more information.
     *   Set `$.servers.http.host` to your instance’s domain name—e.g.,
         <code>$.servers.http.host =
         '<em>example</em>.codecity.world';</code>
-0.  Exit from the `codecity` account.
+    *   Set `$.hosts.root.hostname` to your instance’s domain
+        name—e.g., <code>$.hosts.root.hostname =
+        '<em>example</em>.codecity.world';</code>
+    *   Set `$.hosts.root.pathToSubdomain = false;` if you are using a
+        wildcard DNS entry for your instance; otherwise set it to
+        `true`.
+    *   If you have more than one DNS entry for your instance, set
+        `$.hosts.root.hostRegExp` according to the instructions
+        provided.
+0.  Save the file, exit your editor and exit from the `codecity`
+    account.
     ```
     exit
     ```
