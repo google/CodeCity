@@ -40,6 +40,54 @@ $.utils.validate.ownArray = function ownArray(object, key) {
   }
 };
 Object.setOwnerOf($.utils.validate.ownArray, $.physicals.Neil);
+$.utils.validate.functionPrototypes = function functionPrototypes() {
+  /* Find (and fix) functions that have f.prototype.constructor !== f.
+   */
+  var u = user();
+  u.narrate('Looking for functions with mismatched .prototype.constructor...');
+  $.utils.object.spider($, function findProtosHelper(object, path) {
+    // Skip $.archive entirely.
+    if (object === $.archive) return true;
+    if (typeof object !== 'function') return false;
+
+    var selector = $.Selector.for(object) || new $.Selector(['$'].concat(path));
+    if (!object.prototype) {
+      if (!String(object).includes('[native code]')) {
+        u.narrate(String(selector) + ' has no .prototype');
+      }
+    } else if (!object.prototype.constructor) {
+      u.narrate(String(selector) + ' has no .prototype.constructor');
+    } else if (object.prototype.constructor !== object) {
+      u.narrate(String(selector) + ' has mismatched .prototype.constructor');
+      var protoProps = Object.getOwnPropertyNames(object.prototype);
+      var pcSelector = $.Selector.for(object.prototype.constructor);
+      // Does it look like a plain old boring auto-created .prototype object?
+      var pd = Object.getOwnPropertyDescriptor(object.prototype, 'constructor');
+      if (Object.getPrototypeOf(object.prototype) === Object.prototype &&
+          protoProps.length === 1 && protoProps[0] === 'constructor' &&
+          pd.writable === true && pd.enumerable === false && pd.configurable === true ) {
+        if (String(pcSelector) === String(selector) + '.prototype.constructor') {
+          u.narrate('----Fixable?: yes!');
+          object.prototype.constructor = object;
+        } else {
+          u.narrate('----Fixable?: yes🤞 (is ' + String(pcSelector) + ')');
+          // Make new .prototype object, since current one is likely shared.
+          var newProto = {constructor: object};
+          Object.setOwnerOf(newProto, Object.getOwnerOf(object));
+          Object.defineProperty(newProto, 'constructor', {enumerable: false});
+          object.prototype = newProto;
+        }
+      } else {
+        u.narrate('----Fixable?: NO: has properties other than .constructor' +
+                     (pcSelector ? ' (is ' + String(pcSelector) + ')' : ''));
+      }
+    }
+    return false;
+  });
+  u.narrate('Done.');
+};
+Object.setOwnerOf($.utils.validate.functionPrototypes, $.physicals.Maximilian);
+Object.setOwnerOf($.utils.validate.functionPrototypes.prototype, $.physicals.Maximilian);
 $.utils.isObject = function isObject(v) {
   /* Returns true iff v is an object (of any class, including Array
    * and Function). */
@@ -227,7 +275,7 @@ $.utils.object.spider = function spider(start, callback) {
    *     properties of the current object are not traversed.
    */
   var thread = Thread.current();
-  thread.setTimeLimit(Math.min(thread.getTimeLimit(), 100));
+  thread.setTimeLimit(Math.min(thread.getTimeLimit() || Infinity, 100));
   var seen = new WeakMap();
   var path = [];
   doSpider(start);
