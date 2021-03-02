@@ -37,58 +37,6 @@ $.user.eval = function(cmd) {
   suspend();
   cmd.user.narrate('⇒ ' + out);
 };
-$.user.eval.prototype.constructor = function(cmd) {
-  // Format:  ;1+1    -or-    eval 1+1
-  var src = (cmd.cmdstr[0] === ';') ? cmd.cmdstr.substring(1) : cmd.argstr;
-  src = $.utils.code.rewriteForEval(src, /* forceExpression= */ false);
-  var out;
-  try {
-    // Can't
-    out = this.eval.doEval_(src, this, this.location);
-    try {
-      // Attempt to print a source-legal representation.
-      out = $.utils.code.toSource(out);
-    } catch (e) {
-      try {
-        // Maybe it's something JSON can deal with (like an array).
-        out = JSON.stringify(out);
-      } catch (e) {
-        try {
-          // Maybe it's a recursive data structure.
-          out = String(out);
-        } catch (e) {
-          // Maybe it's Object.create(null).
-          out = '[Unprintable value]';
-        }
-      }
-    }
-  } catch (e) {
-    if (e instanceof Error) {
-      out = String(e.name);
-      if (e.message) {
-        out += ': ' + String(e.message);
-      }
-      if (e.stack) {
-        out += '\n' + e.stack;
-      }
-    } else {
-      out = 'Unhandled exception: ' + String(e);
-    }
-  }
-  user.narrate('⇒ ' + out);
-};
-$.user.eval.prototype.constructor.prototype = $.user.eval.prototype;
-Object.defineProperty($.user.eval.prototype.constructor, 'name', {value: 'eval'});
-$.user.eval.prototype.constructor.verb = 'eval|;.*';
-$.user.eval.prototype.constructor.dobj = 'any';
-$.user.eval.prototype.constructor.prep = 'any';
-$.user.eval.prototype.constructor.iobj = 'any';
-$.user.eval.prototype.constructor.doEval_ = function($$$src, me, here) {
-  // Execute eval in a scope with no variables.
-  // The '$$$src' parameter is awkwardly-named so as not to collide with user
-  // evaled code.  The 'me' and 'here' parameters are exposed to the user.
-  return eval($$$src);
-};
 $.user.eval.verb = 'eval|;.*';
 $.user.eval.dobj = 'any';
 $.user.eval.prep = 'any';
@@ -99,8 +47,6 @@ $.user.eval.doEval_ = function doEval_(me, here, $$$src) {
   // evaled code.  The 'me' and 'here' parameters are exposed to the user.
   return eval($$$src);
 };
-$.user.eval.doEval_.prototype = $.user.eval.prototype.constructor.doEval_.prototype;
-$.user.eval.doEval_.prototype.constructor = $.user.eval.doEval_;
 $.user.narrate = function narrate(text, obj) {
   var memo = {type: 'narrate', text: String(text)};
   if (obj && obj.location) {
@@ -180,7 +126,8 @@ $.user.willAccept = function(what, src) {
   return $.thing.isPrototypeOf(what);
 };
 delete $.user.willAccept.name;
-$.user.willAccept.prototype = $.physical.willAccept.prototype;
+Object.setOwnerOf($.user.willAccept, $.physicals.Maximilian);
+Object.setOwnerOf($.user.willAccept.prototype, $.physicals.Maximilian);
 $.user.moveTo = function moveTo(dest, opt_neighbour) {
   var r = $.physical.moveTo.call(this, dest, opt_neighbour);
   if (this.location === null) {
@@ -224,9 +171,6 @@ $.user.getNullSvgText = function getNullSvgText() {
   return out.join('');
 };
 Object.defineProperty($.user.getNullSvgText, 'name', {value: 'nullVoidSvgText'});
-$.user.getNullSvgText.prototype.constructor = function nullVoidSvgText() {
-};
-$.user.getNullSvgText.prototype.constructor.prototype = $.user.getNullSvgText.prototype;
 $.user.getCommands = function(who) {
   var commands = $.physical.getCommands.apply(this, arguments);
   if (who.location !== this.location) {
@@ -234,16 +178,11 @@ $.user.getCommands = function(who) {
   }
   return commands;
 };
-$.user.getCommands.prototype = $.physical.getCommands.prototype;
+Object.setOwnerOf($.user.getCommands.prototype, $.physicals.Maximilian);
 $.user.who = function(cmd) {
   $.console.look({user: cmd.user});
 };
 delete $.user.who.name;
-$.user.who.prototype.constructor = function(cmd) {
-  $.console.look({user: cmd.user});
-};
-delete $.user.who.prototype.constructor.name;
-$.user.who.prototype.constructor.prototype = $.user.who.prototype;
 $.user.who.verb = 'w(ho)?';
 $.user.who.dobj = 'none';
 $.user.who.prep = 'none';
@@ -477,7 +416,6 @@ $.user.destroy = function destroy() {
   $.userDatabase.validate();
 };
 Object.setOwnerOf($.user.destroy, $.physicals.Maximilian);
-$.user.destroy.prototype = $.physical.destroy.prototype;
 Object.setOwnerOf($.user.destroy.prototype, $.physicals.Maximilian);
 $.user.inventory = function inventory(cmd) {
   this.look(cmd);
@@ -639,17 +577,6 @@ $.room.narrate = function narrate(text, except, obj) {
     }
   }
 };
-$.room.narrate.prototype.constructor = function(text, obj) {
-  var contents = this.getContents();
-  for (var i = 0; i < contents.length; i++) {
-    var thing = contents[i];
-    if (thing !== user && thing.narrate) {
-      thing.narrate(text, obj);
-    }
-  }
-};
-$.room.narrate.prototype.constructor.prototype = $.room.narrate.prototype;
-Object.defineProperty($.room.narrate.prototype.constructor, 'name', {value: 'narrate'});
 $.room.willAccept = function(what, src) {
   // Returns true iff this is willing to accept what arriving from src.
   //
@@ -659,7 +586,6 @@ $.room.willAccept = function(what, src) {
   return $.thing.isPrototypeOf(what) || $.user.isPrototypeOf(what);
 };
 delete $.room.willAccept.name;
-$.room.willAccept.prototype = $.user.willAccept.prototype;
 $.room.onEnter = function onEnter(what, src) {
   // TODO: caller check: should only be called by $.physical.moveTo.
   $.physical.validate.call(this);
@@ -680,15 +606,6 @@ Object.setOwnerOf($.room.onExit, $.physicals.Neil);
 $.room.lookHere = function lookHere(cmd) {
   return this.look(cmd);
 };
-$.room.lookHere.prototype.constructor = function(cmd) {
-  return this.look(cmd);
-};
-$.room.lookHere.prototype.constructor.prototype = $.room.lookHere.prototype;
-Object.defineProperty($.room.lookHere.prototype.constructor, 'name', {value: 'lookhere'});
-$.room.lookHere.prototype.constructor.verb = 'l(ook)?';
-$.room.lookHere.prototype.constructor.dobj = 'none';
-$.room.lookHere.prototype.constructor.prep = 'none';
-$.room.lookHere.prototype.constructor.iobj = 'none';
 $.room.lookHere.verb = 'l(ook)?';
 $.room.lookHere.dobj = 'none';
 $.room.lookHere.prep = 'none';
@@ -994,7 +911,7 @@ $.container.willAccept = function willAccept(what, src) {
   return this.isOpen && $.thing.isPrototypeOf(what);
 };
 Object.setOwnerOf($.container.willAccept, $.physicals.Maximilian);
-$.container.willAccept.prototype = $.user.willAccept.prototype;
+Object.setOwnerOf($.container.willAccept.prototype, $.physicals.Maximilian);
 $.container.location = null;
 $.container.contents_ = [];
 $.container.contents_.forObj = $.container;

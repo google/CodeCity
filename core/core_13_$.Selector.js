@@ -250,12 +250,6 @@ $.Selector.SpecialPart = function SpecialPart(type) {
   this.type = type;
   Object.freeze(this);
 };
-$.Selector.SpecialPart.prototype.constructor = function SpecialPart(type) {
-  // A SpecialPart is a class for all "special" selector parts (ones
-  // which do not represent named variables / properties).
-  this.type = type;
-};
-$.Selector.SpecialPart.prototype.constructor.prototype = $.Selector.SpecialPart.prototype;
 $.Selector.SpecialPart.prototype.toString = function() {
   return '{' + this.type + '}';
 };
