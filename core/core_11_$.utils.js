@@ -255,10 +255,6 @@ $.utils.array.filterUntilFound = function filterUntilFound(array, filter1 /*, fi
   }
   return [];
 };
-$.utils.array.filterUntilFound.prototype.constructor = function filterUntilFound(array, filter1 /*, filter2, filter3... */) {
-  // 
-};
-$.utils.array.filterUntilFound.prototype.constructor.prototype = $.utils.array.filterUntilFound.prototype;
 
 $.utils.object = {};
 Object.setOwnerOf($.utils.object, $.physicals.Maximilian);
@@ -339,6 +335,7 @@ $.utils.object.transplantProperties = function transplantProperties(oldObject, n
     }
   }
 };
+Object.setOwnerOf($.utils.object.transplantProperties, $.physicals.Maximilian);
 $.utils.object.getValue = function getValue(object, prop) {
   /* Get the value from an object's property.
    * If the value is a function, call it and return the result.

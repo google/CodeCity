@@ -401,46 +401,14 @@ $.utils.code.quote = function quote(str) {
     return "'" + str.replace(this.quote.singleRE, this.quote.replace) + "'";
   }
 };
-$.utils.code.quote.prototype.constructor = function(str) {
-  // Convert a string into a string literal.  We use single or double
-  // quotes depending on which occurs less frequently in the string to
-  // be escaped (prefering single quotes if it's a tie).  Strictly
-  // speaking we only need to escape backslash, \r, \n, \u2028 (line
-  // separator), \u2029 (paragraph separator) and whichever quote
-  // character we're using, but for output readability we escape all the
-  // control characters.
-  //
-  // TODO(cpcallen): Consider using optimised algorithm from Node.js's
-  //     util.format (see strEscape function in
-  //     https://github.com/nodejs/node/blob/master/lib/util.js).
-  // @param {string} str The string to convert.
-  // @return {string} The value s as a eval-able string literal.
-  if (count(str, "'") > count(str, '"')) {  // More 's.  Use "s.
-    return '"' + str.replace(this.quote.doubleRE, this.quote.replace) + '"';
-  } else {  // Equal or more "s.  Use 's.
-    return "'" + str.replace(this.quote.singleRE, this.quote.replace) + "'";
-  }
-};
-delete $.utils.code.quote.prototype.constructor.name;
-$.utils.code.quote.prototype.constructor.prototype = $.utils.code.quote.prototype;
-$.utils.code.quote.prototype.constructor.singleRE = /[\x00-\x1f\\\u2028\u2029']/g;
-$.utils.code.quote.prototype.constructor.doubleRE = /[\x00-\x1f\\\u2028\u2029"]/g;
-$.utils.code.quote.prototype.constructor.replace = function(c) {
-  // Replace special characters with their quoted replacements.
-  // Intended to be used as the second argument to
-  // String.prototype.replace.
-  return $.utils.code.quote.replacements[c];
-};
-$.utils.code.quote.singleRE = $.utils.code.quote.prototype.constructor.singleRE;
-$.utils.code.quote.doubleRE = $.utils.code.quote.prototype.constructor.doubleRE;
+$.utils.code.quote.singleRE = /[\x00-\x1f\\\u2028\u2029']/g;
+$.utils.code.quote.doubleRE = /[\x00-\x1f\\\u2028\u2029"]/g;
 $.utils.code.quote.replace = function replace(c) {
   // Replace special characters with their quoted replacements.
   // Intended to be used as the second argument to
   // String.prototype.replace.
   return $.utils.code.quote.replacements[c];
 };
-$.utils.code.quote.replace.prototype = $.utils.code.quote.prototype.constructor.replace.prototype;
-delete $.utils.code.quote.replace.prototype.constructor.name;
 $.utils.code.quote.replacements = {};
 $.utils.code.quote.replacements['\0'] = '\\0';
 $.utils.code.quote.replacements['\x01'] = '\\x01';
@@ -467,22 +435,11 @@ $.utils.code.count = function count(str, searchString) {
   // Count non-overlapping occurrences of searchString in str.
   return str.split(searchString).length;
 };
-$.utils.code.count.prototype.constructor = function(str, searchString) {
-  // Count non-overlapping occurrences of searchString in str.
-  return str.split(searchString).length;
-};
-delete $.utils.code.count.prototype.constructor.name;
-$.utils.code.count.prototype.constructor.prototype = $.utils.code.count.prototype;
 $.utils.code.isIdentifier = function isIdentifier(id) {
   return typeof id === 'string' &&
       $.utils.code.regexps.identifierExact.test(id) &&
       !$.utils.code.regexps.keywordExact.test(id);
 };
-$.utils.code.isIdentifier.prototype.constructor = function isIdentifier(id) {
-  return $.utils.code.regexps.identifierExact.matches(id) &&
-      !$.utils.code.regexps.keywordExact.matches(id);
-};
-$.utils.code.isIdentifier.prototype.constructor.prototype = $.utils.code.isIdentifier.prototype;
 $.utils.code.getGlobal = function getGlobal() {
   // Return a pseudo global object.
   var global = Object.create(null);

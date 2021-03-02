@@ -33,7 +33,7 @@ $.servers.eval.connection.onReceiveLine = function(text) {
   this.write('⇒ ' + $.utils.code.eval(text) + '\n');
   this.write('eval> ');
 };
-$.servers.eval.connection.onReceiveLine.prototype = $.connection.onReceiveLine.prototype;
+Object.setOwnerOf($.servers.eval.connection.onReceiveLine.prototype, $.physicals.Maximilian);
 $.servers.eval.connection.onConnect = function onConnect() {
   $.connection.onConnect.apply(this, arguments);
   if ($.servers.eval.connected) {
@@ -48,12 +48,12 @@ $.servers.eval.connection.close = function() {
   this.write('This session has been terminated.\n');
   return $.connection.close.apply(this, arguments);
 };
-$.servers.eval.connection.close.prototype = $.connection.close.prototype;
+Object.setOwnerOf($.servers.eval.connection.close.prototype, $.physicals.Maximilian);
 $.servers.eval.connection.onEnd = function() {
   $.servers.eval.connected = null;
   return $.connection.onEnd.apply(this, arguments);
 };
 delete $.servers.eval.connection.onEnd.name;
-$.servers.eval.connection.onEnd.prototype = $.connection.onEnd.prototype;
+Object.setOwnerOf($.servers.eval.connection.onEnd.prototype, $.physicals.Maximilian);
 $.servers.eval.connected = null;
 

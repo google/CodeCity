@@ -252,8 +252,7 @@ $.cage.willAccept = function willAccept(what, src) {
   return this.isOpen || (this.mousePrototype.isPrototypeOf(what) && !src);
 };
 Object.setOwnerOf($.cage.willAccept, $.physicals.Neil);
-$.cage.willAccept.prototype = $.user.willAccept.prototype;
-$.cage.willAccept.prototype.constructor = $.container.willAccept;
+Object.setOwnerOf($.cage.willAccept.prototype, $.physicals.Maximilian);
 $.cage.mousePrototype = (new 'Object.create')($.thing);
 $.cage.mousePrototype.name = 'Genetic Mouse Prototype';
 $.cage.mousePrototype.location = null;
@@ -289,9 +288,19 @@ $.cage.mousePrototype.pickFight = function pickFight() {
   return mice[Math.floor(Math.random() * mice.length)];
 };
 Object.setOwnerOf($.cage.mousePrototype.pickFight, $.physicals.Neil);
-$.cage.mousePrototype.toString = $.physical.toString.prototype.constructor;
+$.cage.mousePrototype.toString = function toString() {
+  var prototype = Object.getPrototypeOf(this);
+  var pickFightOwner = (this.pickFight === prototype.pickFight) ?
+      null : Object.getOwnerOf(this.pickFight);
+  var proposeMateOwner = (this.proposeMate === prototype.proposeMate) ?
+      null : Object.getOwnerOf(this.proposeMate);
+  var acceptMateOwner = (this.acceptMate === prototype.acceptMate) ?
+      null : Object.getOwnerOf(this.acceptMate);
+  return this.name + ' (' + String(pickFightOwner) +
+      '/' + String(proposeMateOwner) +
+      '/' + String(acceptMateOwner) + ')';
+};
 Object.setOwnerOf($.cage.mousePrototype.toString, $.physicals.Neil);
-$.cage.mousePrototype.toString.prototype = $.physical.toString.prototype;
 $.cage.mousePrototype.init = function init(mother, father, variation) {
   // Blend together the numeric attributes from the parents.
   var thisMouse = this;

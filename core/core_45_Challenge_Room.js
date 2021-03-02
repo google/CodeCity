@@ -117,7 +117,7 @@ $.physicals['light switch'].svgText = function svgText() {
   return this.state ? this.svgTextDay : this.svgTextNight;
 };
 Object.setOwnerOf($.physicals['light switch'].svgText, $.physicals.Neil);
-$.physicals['light switch'].svgText.prototype = $.physicals['Challenge room'].svgText.prototype;
+Object.setOwnerOf($.physicals['light switch'].svgText.prototype, $.physicals.Maximilian);
 $.physicals['light switch'].state = false;
 $.physicals['light switch'].flip = function flip(newState, user) {
   var onOff = newState ? 'on' : 'off';
@@ -180,7 +180,7 @@ $.physicals['light switch'].getCommands = function getCommands(who) {
   return commands;
 };
 Object.setOwnerOf($.physicals['light switch'].getCommands, $.physicals.Neil);
-$.physicals['light switch'].getCommands.prototype = $.cage.mousePrototype.getCommands.prototype;
+Object.setOwnerOf($.physicals['light switch'].getCommands.prototype, $.physicals.Maximilian);
 $.physicals['light switch'].aliases = [];
 Object.setOwnerOf($.physicals['light switch'].aliases, $.physicals.Maximilian);
 $.physicals['light switch'].aliases[0] = 'lightswitch';
@@ -316,7 +316,7 @@ $.physicals.safe.getCommands = function getCommands(who) {
   return commands;
 };
 Object.setOwnerOf($.physicals.safe.getCommands, $.physicals.Neil);
-$.physicals.safe.getCommands.prototype = $.cage.mousePrototype.getCommands.prototype;
+Object.setOwnerOf($.physicals.safe.getCommands.prototype, $.physicals.Maximilian);
 $.physicals.safe.crack = function crack(cmd) {
   cmd.user.narrate('The "crack" function has not been programmed.  ' +
      'To do so, visit: https://google.codecity.world/blocklySafe');
@@ -327,24 +327,6 @@ $.physicals.safe.crack = function crack(cmd) {
 };
 Object.setOwnerOf($.physicals.safe.crack, $.physicals.Neil);
 Object.setOwnerOf($.physicals.safe.crack.prototype, $.physicals.Neil);
-$.physicals.safe.crack.prototype.constructor = function crack(cmd) {
-  var i;
-  
-  
-  for (i = 0; i <= 999; i++) {
-    this.setOpen(true, i);
-  }
-
-  this.location.narrate(String(cmd.user) + ' attempts to crack the ' + String(cmd.dobj) + '.', cmd.user);
-  cmd.user.narrate('You attempt to crack the ' + String(cmd.dobj) + '.');
-  this.location.narrate(this.isOpen ? 'It works!  The safe swings open.' : 'It failed!  The safe remains shut.');  
-};
-Object.setOwnerOf($.physicals.safe.crack.prototype.constructor, $.physicals.Neil);
-$.physicals.safe.crack.prototype.constructor.prototype = $.physicals.safe.crack.prototype;
-$.physicals.safe.crack.prototype.constructor.verb = 'crack';
-$.physicals.safe.crack.prototype.constructor.dobj = 'this';
-$.physicals.safe.crack.prototype.constructor.prep = 'none';
-$.physicals.safe.crack.prototype.constructor.iobj = 'none';
 $.physicals.safe.crack.verb = 'crack';
 $.physicals.safe.crack.dobj = 'this';
 $.physicals.safe.crack.prep = 'none';
@@ -442,7 +424,7 @@ $.physicals.food.getCommands = function getCommands(who) {
   return commands;
 };
 Object.setOwnerOf($.physicals.food.getCommands, $.physicals.Neil);
-$.physicals.food.getCommands.prototype = $.physicals.safe.getCommands.prototype;
+Object.setOwnerOf($.physicals.food.getCommands.prototype, $.physicals.Maximilian);
 $.physicals.food.svgTextReset = '<path d="M-7,80L-5,97C-5,100.5,5,100.5,5,97L7,80" class="fillWhite"/>\n<ellipse class="fillWhite" cx="0" cy="80" rx="7" ry="3"/>\n';
 
 $.physicals.girl = $.physicals.food.girl;
@@ -463,7 +445,7 @@ $.physicals.girl.get = function get(cmd) {
   }
 };
 Object.setOwnerOf($.physicals.girl.get, $.physicals.Neil);
-$.physicals.girl.get.prototype = $.thing.get.prototype;
+Object.setOwnerOf($.physicals.girl.get.prototype, $.physicals.Maximilian);
 $.physicals.girl.get.verb = 'get|take';
 $.physicals.girl.get.dobj = 'this';
 $.physicals.girl.get.prep = 'none';
@@ -732,8 +714,8 @@ $.physicals.girl.willAccept = function(what, src) {
   return what === this.food;
 };
 delete $.physicals.girl.willAccept.name;
-Object.setOwnerOf($.physicals.girl.willAccept, $.physicals.Neil);
-$.physicals.girl.willAccept.prototype = $.cage.willAccept.prototype;
+Object.setOwnerOf($.physicals.girl.willAccept, $.physicals.Maximilian);
+Object.setOwnerOf($.physicals.girl.willAccept.prototype, $.physicals.Maximilian);
 $.physicals.girl.movable = false;
 $.physicals.girl.attempts = 0;
 

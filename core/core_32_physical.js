@@ -198,29 +198,10 @@ $.physical.validate = function validate() {
   // TODO: check for circular containment?
 };
 Object.setOwnerOf($.physical.validate, $.physicals.Maximilian);
-$.physical.validate.prototype.constructor = function validate() {
-  // Super call.
-  $.physical.validate.call(this);
-  // Clean up list of connected objects.
-  $.servers.telnet.validate();
-};
-Object.setOwnerOf($.physical.validate.prototype.constructor, $.physicals.Maximilian);
-$.physical.validate.prototype.constructor.prototype = $.physical.validate.prototype;
 $.physical.toString = function toString() {
   return this.name;
 };
-$.physical.toString.prototype.constructor = function toString() {
-  var prototype = Object.getPrototypeOf(this);
-  var pickFightOwner = (this.pickFight === prototype.pickFight) ?
-      null : Object.getOwnerOf(this.pickFight);
-  var proposeMateOwner = (this.proposeMate === prototype.proposeMate) ?
-      null : Object.getOwnerOf(this.proposeMate);
-  var acceptMateOwner = (this.acceptMate === prototype.acceptMate) ?
-      null : Object.getOwnerOf(this.acceptMate);
-  return this.name + ' (' + String(pickFightOwner) +
-      '/' + String(proposeMateOwner) +
-      '/' + String(acceptMateOwner) + ')';
-};
+Object.setOwnerOf($.physical.toString.prototype, $.physicals.Maximilian);
 $.physical.accept = function accept(what, src) {
   /* Returns true iff this is willing to accept what arriving from src.
    *
@@ -247,6 +228,7 @@ $.physical.willAccept = function willAccept(what, src) {
   return false;
 };
 Object.setOwnerOf($.physical.willAccept, $.physicals.Maximilian);
+Object.setOwnerOf($.physical.willAccept.prototype, $.physicals.Maximilian);
 $.physical.onExit = function(what, dest) {
   // Called by $.physical.moveTo just before what leaves for dest.
 };
@@ -412,6 +394,7 @@ $.physical.destroy = function destroy() {
   this.proto = origProto;  // Record original prototype.
 };
 Object.setOwnerOf($.physical.destroy, $.physicals.Maximilian);
+Object.setOwnerOf($.physical.destroy.prototype, $.physicals.Maximilian);
 $.physical.rename = function rename(cmd) {
   try {
     var oldName = String(this);
