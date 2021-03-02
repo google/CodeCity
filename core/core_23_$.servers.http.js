@@ -570,7 +570,7 @@ $.servers.http.Response.prototype.sendError = function sendError(statusCode, mes
 };
 Object.setOwnerOf($.servers.http.Response.prototype.sendError, $.physicals.Neil);
 Object.setOwnerOf($.servers.http.Response.prototype.sendError.prototype, $.physicals.Maximilian);
-$.servers.http.Response.prototype.sendErrorJssp = '<html>\n<head>\n  <title><%=response.statusCode%> - Code City</title>\n  <style>\n    body {\n      font-family: "Roboto Mono", monospace;\n      text-align: center;\n    }\n    h1 {\n      font-size: 40pt;\n      font-weight: 100;\n    }\n    h1>img {\n      vertical-align: text-bottom;\n    }\n    pre {\n      margin: 2em;\n    }\n  </style>\n  <link href="https://fonts.googleapis.com/css?family=Roboto+Mono" rel="stylesheet">\n  <link href="<%=request.hostUrl(\'static\')%>favicon.ico" rel="shortcut icon">\n</head>\n<body>\n  <h1>\n    <img src="<%=request.hostUrl(\'static\')%>logo-error.svg" alt="">\n    <%=response.statusCode%> <%=$.servers.http.STATUS_CODES[response.statusCode]%>\n  </h1>\n  <pre>Host: <%=$.utils.html.escape(request.headers.host) %>\n<%= request.method %> <%= $.utils.html.escape(request.url) %></pre>\n  <%=response.errorMessage_%>\n</body>\n</html>';
+$.servers.http.Response.prototype.sendErrorJssp = '<% try {var staticUrl = request.hostUrl(\'static\');} catch(e) {staticUrl = \'\';} %>\n<html>\n<head>\n  <title><%=response.statusCode%> - Code City</title>\n  <style>\n    body {\n      font-family: "Roboto Mono", monospace;\n      text-align: center;\n    }\n    h1 {\n      font-size: 40pt;\n      font-weight: 100;\n    }\n    h1>img {\n      vertical-align: text-bottom;\n    }\n    pre {\n      margin: 2em;\n    }\n  </style>\n  <link href="https://fonts.googleapis.com/css?family=Roboto+Mono" rel="stylesheet">\n  <link href="<%=staticUrl%>favicon.ico" rel="shortcut icon">\n</head>\n<body>\n  <h1>\n    <img src="<%=staticUrl%>logo-error.svg" alt="">\n    <%=response.statusCode%> <%=$.servers.http.STATUS_CODES[response.statusCode]%>\n  </h1>\n  <pre>Host: <%=$.utils.html.escape(request.headers.host) %>\n<%= request.method %> <%= $.utils.html.escape(request.url) %></pre>\n  <%=response.errorMessage_%>\n</body>\n</html>';
 $.servers.http.Response.discardDuplicates = [];
 $.servers.http.Response.discardDuplicates[0] = 'age';
 $.servers.http.Response.discardDuplicates[1] = 'content-length';
@@ -641,8 +641,18 @@ $.servers.http.Host = function Host() {
    *   match the port as well - e.g.:  /example\.codecity\.\w+(?::\d+)$/
    *   will match example.codecity.<any TLD> with or without a port number.
    *
-   * - pathToSubdomain: boolean - enable mapping the first element
-   *   (directory) of request paths to a subdomain.  (Default: false.)
+   * - pathToSubdomain: boolean | undefined - enable (or disable) mapping
+   *   the first element (directory) of request paths to a subdomain.
+   *
+   *   If set to  undefined, the CodeCity-pathToSubdomain header will be
+   *   used to determine decide whether to do this mapping on a
+   *   per-request basis (but normally this header will be configured
+   *   staticaly in the nginx reverse-proxy configuration).
+   *
+   *   The CodeCity-pathToSubdomain header will be interpreted according
+   *   to the RFC 8941 Structure Field Values convention, with '?1'
+   *   meaning true and '?0' meaning false.  Any other value will be
+   *   treated as false.
    *
    * - subdomains: Object<string, Host> | null - a null-prototype
    *   object mapping subdomain names to their respective Host objects,
@@ -773,7 +783,7 @@ $.servers.http.Host.prototype.route_ = function route_(request, response, info) 
   } else if (this.subdomains &&
              (this.pathToSubdomain ||
               (this.pathToSubdomain === undefined &&
-               this.headers['codecity-pathtosubdomain'] === '?1'))) {
+               request.headers['codecity-pathtosubdomain'] === '?1'))) {
     // Try to route to a subdomain based on top-level directory.
     // E.g. https://example.codecity.world/foo/bar -> foo
     var m = path.match(/^\/([-A-Za-z0-9]+)(\/.*)?$/);
@@ -880,7 +890,7 @@ $.servers.http.Host.prototype.url = function url(varArgs) {
 };
 Object.setOwnerOf($.servers.http.Host.prototype.url, $.physicals.Maximilian);
 Object.setOwnerOf($.servers.http.Host.prototype.url.prototype, $.physicals.Maximilian);
-$.servers.http.Host.prototype.pathToSubdomain = false;
+$.servers.http.Host.prototype.pathToSubdomain = undefined;
 $.servers.http.Host.prototype.urlForSubdomain = function urlForSubdomain(hostname, subdomain, pathToSubdomainHeader) {
   /* A helper function for the .url method.
    *
