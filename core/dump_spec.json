@@ -236,26 +236,6 @@
       {"path": "$.servers.http.hosts[0]", "do": "DONE"}
     ]
   }, {
-    "filename": "core_24_$.http.js",
-    "headerSubs": {
-      "<YEAR>": "2017",
-      "<OVERVIEW>": "Top-level URL handlers for Code City."
-    },
-    "contents": [
-      {"path": "$.http", "do": "DONE"},
-      {"path": "$.http['www.']", "do": "DONE"},
-      "$.http['www.']['/']",
-      "$.http['www.']['/error']",
-      "$.http['www.']['/mirror']",
-      "$.http['www.']['/robots.txt']",
-      "$.http['connect.']",
-      "$.http['login.']",
-      "$.http['mobwrite.']",
-      "$.http['static.']",
-      "$.http['system.']",
-      {"path": "$.www", "do": "ATTR"}
-    ]
-  }, {
     "filename": "core_25_$.db.tempId.js",
     "headerSubs": {
       "<YEAR>": "2018",
@@ -286,9 +266,7 @@
     "contents": [
       {"path": "$.hosts.code", "do": "SET"},
       "$.hosts.code['/inlineEdit']",
-      {"path": "$.hosts.root.subdomains.code", "do": "SET"},
-      {"path": "$.http['code.']", "do": "SET"},
-      "$.http['code.']['/inlineEdit']"
+      {"path": "$.hosts.root.subdomains.code", "do": "SET"}
     ]
   }, {
     "filename": "core_27_editor.js",
@@ -297,8 +275,7 @@
       "<OVERVIEW>": "Web-based code explorer/editor for Code City."
     },
     "contents": [
-      "$.hosts.code",
-      "$.http['code.']"
+      "$.hosts.code"
     ]
   }, {
     "filename": "core_28_$.servers.eval.js",
@@ -444,8 +421,7 @@
       {"path": "$.physicals.cage", "do": "DONE"},
       "$.physicals['Genetic Mouse Prototype']",
       "$.hosts.genetics",
-      "$.hosts.root.subdomains.genetics",
-      "$.http['genetics.']"
+      "$.hosts.root.subdomains.genetics"
     ]
   }, {
     "filename": "core_44_$.assistant.js",
@@ -540,16 +516,6 @@
       "$.hosts.root.subdomains.system",
       "$.hosts.code",
       "$.hosts.genetics",
-      "$.http['code.']",
-      "$.http['connect.']",
-      "$.http['login.']",
-      "$.http['genetics.']",
-      "$.http['mobwrite.']",
-      "$.http['static.']",
-      "$.http['system.']",
-      "$.http['www.']['/']",
-      "$.http['www.']['/mirror']",
-      "$.http['www.']['/robots.txt']",
       "$.pot",
       "$.pot.stages",
       "$.physical",
