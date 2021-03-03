@@ -180,6 +180,17 @@ CCC.init = function() {
   CCC.displayCell = document.getElementById('displayCell');
   CCC.commandTextarea = document.getElementById('commandTextarea');
 
+  // When the user closes the tab/window, tell connect server to logout.
+  window.addEventListener('unload', function() {
+    CCC.abortPing();
+    clearTimeout(CCC.nextPingPid);
+    var sendingJson = {
+      'q': CCC.queueId_,
+      'logout': true
+    };
+    navigator.sendBeacon(CCC.PING_URL, JSON.stringify(sendingJson));
+  }, false);
+
   // When focus returns to this frame from an iframe, go to the command area.
   // This happens whenever a command link is clicked in an iframe.
   window.addEventListener('focus', function() {
@@ -411,12 +422,18 @@ CCC.sendCommand = function(commands, echo) {
   sessionStorage.setItem('commandHistory', JSON.stringify(CCC.commandHistory));
   // User is sending command, reset the ping to be frequent.
   CCC.pingInterval = CCC.MIN_PING_INTERVAL;
-  // Interrupt any in-flight ping.
+  CCC.abortPing();
+  CCC.doPing();
+};
+
+/**
+ * Interrupt any in-flight ping.
+ */
+CCC.abortPing = function() {
   if (CCC.xhrObject) {
     CCC.xhrObject.abort();
     CCC.xhrObject = null;
   }
-  CCC.doPing();
 };
 
 /**
