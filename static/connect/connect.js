@@ -186,7 +186,7 @@ CCC.init = function() {
     clearTimeout(CCC.nextPingPid);
     var sendingJson = {
       'q': CCC.queueId_,
-      'logout': 1
+      'logout': true
     };
     navigator.sendBeacon(CCC.PING_URL, JSON.stringify(sendingJson));
   }, false);
