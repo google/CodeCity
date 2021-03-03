@@ -639,6 +639,7 @@ $.servers.http.Host.prototype.handle = function handle(request, response, info) 
       // We have a .hostname or .hostRegExp, and can work out if there is a
       // subdomain prefixed to request.headers.host from that.
       m = hostRegExp.exec(hostHeader);
+      if (!m) return false;  // Did not match.  Not for us.
       // Apply a check equivalent to a /(?<=^|\.)/ look-behind assertion.
       if (m.index > 0) {
         if (hostHeader[m.index - 1] !== '.') return false;  // Lookbehind failed.
