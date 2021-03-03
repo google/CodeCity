@@ -82,5 +82,5 @@ $.db.tempId.timeoutMs = 3600000;
 
 $.db.tempId.tempIds_ = (new 'Object.create')(null);
 
-$.db.tempId.cleanThread_ = null;
+$.db.tempId.cleanThread_ = undefined;
 
