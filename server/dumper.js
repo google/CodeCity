@@ -202,9 +202,10 @@ Dumper.prototype.dump = function() {
   for (var key in this.intrp2.listeners_) {
     var port = Number(key);
     var listener = this.intrp2.listeners_[port];
-    this.write(this.exprForBuiltin_('CC.connectionListen') + '(' +
-        port + ', ' + this.exprFor_(listener.proto) + ', ' +
-        this.exprFor_(listener.timeLimit) + ');');
+    this.write(this.exprForBuiltin_('CC.connectionListen'), '(',
+               String(port), ',',
+               this.exprFor_(listener.proto), ', ',
+               this.exprFor_(listener.timeLimit), ');');
   }
 };
 
