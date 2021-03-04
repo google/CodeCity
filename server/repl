@@ -55,7 +55,12 @@ rl.on('line', function(line) {
       return;
     }
     intrp.run();
-    console.log(intrp.pseudoToNative(thread.value));
+    const value = thread.value;
+    if (value instanceof intrp.Function) {
+      console.log(value.toString());
+    } else {
+      console.log('%o', intrp.pseudoToNative(thread.value));
+    }
   } finally {
     rl.prompt();
   }
