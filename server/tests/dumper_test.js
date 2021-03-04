@@ -433,7 +433,7 @@ exports.testDumperPrototypeExprForSelector_ = function(t) {
            dumper.exprForSelector_(s1),
            'myGetPrototypeOf(foo.bar).baz');
 
-  // Test dumping selector before and after dumping Object.getPrototypeOf.
+  // Test dumping a selector before and after dumping Object.getOwnerOf.
   const s2 = new Selector('quux{owner}');
   t.expect(util.format('Dumper.p.exprForSelector_(%s)  // 0', s2),
            dumper.exprForSelector_(s2), "(new 'Object.getOwnerOf')(quux)");

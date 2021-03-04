@@ -659,7 +659,7 @@ Dumper.prototype.exprForRegExp_ = function(re, reDumper) {
  * same as s.toExpr() except when the output needs to call a builtin
  * function like Object.getPrototypeOf that is not available via its
  * usual name - e.g. if Object.getPrototypeOf has not yet been dumped
- * then the eelector foo.bar{proto} might be represented as "(new
+ * then the selector foo.bar{proto} might be represented as "(new
  * 'Object.getPrototypeOf')(foo.bar)" instead of
  * "Object.getPrototypeOf(foo.bar)".
  * @private
