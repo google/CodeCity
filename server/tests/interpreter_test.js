@@ -1357,10 +1357,11 @@ exports.testNumberToString = function(t) {
 };
 
 /**
- * Run tests of the networking subsystem.
+ * Run tests of the server side of the networking subsystem
+ * (connectionListen et al.)
  * @param {!T} t The test runner object.
  */
-exports.testNetworking = async function(t) {
+exports.testServing = async function(t) {
   // Run a test of connectionListen() and connectionUnlisten(), and
   // of the server receiving data using the .receive and .end methods
   // on a connection object.
@@ -1438,13 +1439,16 @@ exports.testNetworking = async function(t) {
   // Check to make sure that connectionListen() throws if attempting
   // to bind to an invalid port or rebind a port already in use.
   name = 'testConnectionListenThrows';
+  const server = new net.Server();
+  server.listen(8887);
   src = `
       // Some invalid ports:
-      // * 9999 will be in-use by us, should be rejected by connectionListen.
+      // * 8887 is in use by the above net.Server.
+      // * 8888 will be in-use by via previous connectionListen.
       // * Others are not integers or are out-of-range.
-      var ports = ['foo', {}, -1, 80.8, 9999, 65536];
+      var ports = ['foo', {}, -1, 80.8, 8887, 8888, 65536];
       try {
-        CC.connectionListen(9999, {});
+        CC.connectionListen(8888, {});
         for (var i = 0; i < ports.length; i++) {
           try {
             CC.connectionListen(ports[i], {});
@@ -1456,19 +1460,20 @@ exports.testNetworking = async function(t) {
           }
         }
       } finally {
-        CC.connectionUnlisten(9999);
+        CC.connectionUnlisten(8888);
       }
       resolve('OK');
    `;
   await runAsyncTest(t, name, src, 'OK', {options: {noLog: ['net']}});
+  server.close();
 
   // Check to make sure that connectionUnlisten() throws if attempting
   // to unbind an invalid or not / no longer bound port.
   name = 'testConnectionUnlistenThrows';
   src = `
-      var ports = ['foo', {}, -1, 22, 80.8, 4567, 65536];
-      CC.connectionListen(9999, {});
-      CC.connectionUnlisten(9999, {});
+      var ports = ['foo', {}, -1, 22, 80.8, 4567, 8888, 65536];
+      CC.connectionListen(8888, {});
+      CC.connectionUnlisten(8888, {});
       for (var i = 0; i < ports.length; i++) {
         try {
           CC.connectionUnlisten(ports[i], {});
@@ -1529,13 +1534,20 @@ exports.testNetworking = async function(t) {
     onCreate: createReceive,
   });
 
+};
+
+/**
+ * Run tests of the client side of the networking subsystem (xhr).
+ * @param {!T} t The test runner object.
+ */
+exports.testClient = async function(t) {
   // Run test of the xhr() function using HTTP.
-  name = 'testXhrHttp';
+  let name = 'testXhrHttp';
   const httpTestServer = http.createServer(function (req, res) {
     res.writeHead(200, {'Content-Type': 'text/plain'});
     res.end('OK HTTP: ' + req.url);
   }).listen(9980);
-  src = `
+  let src = `
       try {
         resolve(CC.xhr('http://localhost:9980/foo'));
       } catch (e) {
