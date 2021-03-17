@@ -24,11 +24,6 @@
  * restart listeners intead.
  */
 
-// Configuration.
-$.servers.http.subdomains = false;
-$.servers.http.protocol = 'http:';
-$.servers.http.host = 'localhost:8080';
-
 /* Optional (but recommended) configuration.  The web server is
  * capable of guessing its own hostname, but will be more efficient
  * and secure if its configuration is specified explicitly.
