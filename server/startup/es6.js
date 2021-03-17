@@ -87,6 +87,31 @@ var WeakMap = new 'WeakMap';
 })();
 
 ///////////////////////////////////////////////////////////////////////////////
+// Object constructor polyfills
+///////////////////////////////////////////////////////////////////////////////
+
+Object.assign = function assign(target, varArgs) {
+  // Polyfill adapted from https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/assign#polyfill
+  // The length property of the assign method is 2.
+  if (target === null || target === undefined) {
+    throw new TypeError('Cannot convert undefined or null to object');
+  }
+  for (var index = 1; index < arguments.length; index++) {
+    var nextSource = arguments[index];
+    if (nextSource !== null && nextSource !== undefined) {
+      for (var nextKey in nextSource) {
+        // Avoid bugs when hasOwnProperty is shadowed
+        if (Object.prototype.hasOwnProperty.call(nextSource, nextKey)) {
+          to[nextKey] = nextSource[nextKey];
+        }
+      }
+    }
+  }
+  return to;
+};
+
+
+///////////////////////////////////////////////////////////////////////////////
 // Array constructor polyfills
 ///////////////////////////////////////////////////////////////////////////////
 

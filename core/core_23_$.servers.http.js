@@ -114,7 +114,7 @@ $.servers.http.connection.onReceive = function onReceive(data) {
 Object.setOwnerOf($.servers.http.connection.onReceive, $.physicals.Neil);
 $.servers.http.connection.onReceiveChunk = function onReceiveChunk(chunk) {
   if (this.request.parse(chunk)) {
-    this.handle_();
+    $.servers.http.onRequest(this);
   }
   // Otherwise wait for more lines to arrive.
 };
@@ -124,67 +124,6 @@ $.servers.http.connection.onEnd = function onEnd() {
   $.connection.onEnd.apply(this, arguments);
 };
 Object.setOwnerOf($.servers.http.connection.onEnd, $.physicals.Neil);
-$.servers.http.connection.close = function close() {
-  $.system.connectionClose(this);
-};
-Object.setOwnerOf($.servers.http.connection.close, $.physicals.Neil);
-$.servers.http.connection.close.prototype = $.connection.close.prototype;
-$.servers.http.connection.onError = function onError(error) {
-  // TODO(cpcallen): add check for error that occurs when relistening
-  // fails at server startup from checkpoint.
-  if (error.message === 'write after end' ||
-      error.message === 'This socket has been ended by the other party') {
-    this.connected = false;
-  }
-};
-Object.setOwnerOf($.servers.http.connection.onError, $.physicals.Neil);
-$.servers.http.connection.onError.prototype = $.connection.onError.prototype;
-$.servers.http.connection.onReceiveLine = function onReceiveLine(text) {
-  // Override this on child classes.
-};
-Object.setOwnerOf($.servers.http.connection.onReceiveLine, $.physicals.Neil);
-$.servers.http.connection.onReceiveLine.prototype = $.connection.onReceiveLine.prototype;
-$.servers.http.connection.write = function write(text) {
-  $.system.connectionWrite(this, text);
-};
-Object.setOwnerOf($.servers.http.connection.write, $.physicals.Neil);
-$.servers.http.connection.write.prototype = $.connection.write.prototype;
-$.servers.http.connection.handle_ = function handle_() {
-  /* Route this connection to a hander, invoke the handler, and deal with the
-   * aftermath.
-   */
-  try {
-    var subdomain = (this.request.subdomain || 'www') + '.';
-    var pathname = this.request.pathname;
-    var domainObj = ($.http.hasOwnProperty(subdomain) && $.http[subdomain]);
-    if (!domainObj) {
-      this.response.sendError(404, 'Invalid subdomain "' +
-                              $.utils.html.escape(this.request.subdomain) +
-                              '".');
-      return;
-    }
-    var obj = (domainObj.hasOwnProperty(pathname) && domainObj[pathname]);
-    if (!obj) {
-      this.response.sendError(404);
-      return;
-    }
-    obj.www(this.request, this.response);
-  } catch (e) {
-    suspend();
-    $.system.log(String(e) + '\n' + e.stack);
-    if (this.response.headersSent) {
-      // Too late to return a proper error page.  Oh well.
-      this.response.write('<pre>' +
-                          $.utils.html.escape(String(e) + '\n' + e.stack) +
-                          '</pre>');
-    } else {
-      this.response.sendError(500, e);
-    }
-  } finally {
-    this.close();
-  }
-};
-Object.setOwnerOf($.servers.http.connection.handle_, $.physicals.Maximilian);
 $.servers.http.Request = function Request() {
   this.headers = Object.create(null);
   this.headers.cookie = Object.create(null);
@@ -212,8 +151,7 @@ $.servers.http.Request.prototype.parse = function parse(line) {
   }
   if (this.state_ === 'headers') {
     line = line.trim();
-    if (!line) {
-      this.parseSubdomain_();
+    if (!line) {  // Done parsing headers.
       if (this.method === 'POST') {
         this.state_ = 'body';
         this.data = '';
@@ -283,19 +221,28 @@ $.servers.http.Request.prototype.parse = function parse(line) {
   // Invalid state?  Extra lines?  Ignore.
   return true;
 };
-Object.setOwnerOf($.servers.http.Request.prototype.parse, $.physicals.Neil);
+Object.setOwnerOf($.servers.http.Request.prototype.parse, $.physicals.Maximilian);
 $.servers.http.Request.prototype.parseUrl_ = function parseUrl_(url) {
-  // pathname: /bar/baz?data  ->  /bar/baz
-  // query: /bar/baz?data  ->  data
+  /* Parse a URL and set this.path and this.query as appropriate:
+   *
+   * E.g. given url = '/bar/baz?data', set:
+   * - this.path = '/bar/baz'
+   * - this.query = 'data'
+   *
+   * Arguments:
+   * - url: string - the URL to parse.
+   *
+   * TODO(cpcallen): add check for leading "/"?
+   */
   var qIndex = url.indexOf('?');
   if (qIndex === -1) {
-    this.pathname = url;
+    this.path = url;
   } else {
-    this.pathname = url.substring(0, qIndex);
+    this.path = url.substring(0, qIndex);
     this.query = url.substring(qIndex + 1);
   }
 };
-Object.setOwnerOf($.servers.http.Request.prototype.parseUrl_, $.physicals.Neil);
+Object.setOwnerOf($.servers.http.Request.prototype.parseUrl_, $.physicals.Maximilian);
 $.servers.http.Request.prototype.parseParameters_ = function parseParameters_(data) {
   if (!data) {
     return;
@@ -325,70 +272,91 @@ $.servers.http.Request.prototype.parseParameters_ = function parseParameters_(da
   }
 };
 Object.setOwnerOf($.servers.http.Request.prototype.parseParameters_, $.physicals.Neil);
-$.servers.http.Request.prototype.parseSubdomain_ = function parseSubdomain_() {
-  var subdomain = 'www';
-  if ($.servers.http.subdomains) {
-    if (this.headers.host) {
-      // Extract the wildcard subdomain.
-      // E.g. https://foo.example.codecity.world/bar -> foo
-      var thisFunc = $.servers.http.Request.prototype.parseSubdomain_;
-      if (thisFunc.hostStringCache_ !== $.servers.http.host) {
-        thisFunc.hostStringCache_ = $.servers.http.host;
-        thisFunc.hostRegExpCache_ = new RegExp('^([-A-Za-z0-9]+)\\.' +
-            $.utils.regexp.escape(thisFunc.hostStringCache_) + '$');
-      }
-      var m = this.headers.host.match(thisFunc.hostRegExpCache_);
-      if (m) {
-        subdomain = m[1];
-      }
-    }
-  } else {
-    // Extract the first directory.
-    // E.g. https://example.codecity.world/foo/bar -> foo
-    var m = this.pathname.match(/^\/([-A-Za-z0-9]+)(\/.*)?$/);
-    if (m) {
-      subdomain = m[1];
-      this.pathname = m[2] || '/';
-    }
-  }
-  this.subdomain = subdomain;
-};
-Object.setOwnerOf($.servers.http.Request.prototype.parseSubdomain_, $.physicals.Neil);
-Object.setOwnerOf($.servers.http.Request.prototype.parseSubdomain_.prototype, $.physicals.Neil);
-$.servers.http.Request.prototype.parseSubdomain_.hostStringCache_ = 'google.codecity.world';
-$.servers.http.Request.prototype.parseSubdomain_.hostRegExpCache_ = /^([-A-Za-z0-9]+)\.google\.codecity\.world$/;
-Object.setOwnerOf($.servers.http.Request.prototype.parseSubdomain_.hostRegExpCache_, $.physicals.Neil);
 $.servers.http.Request.prototype.fromSameOrigin = function fromSameOrigin() {
   /* Determines if the previous page and the requested page are from the same
    * origin.  Normally this means that they are from the same subdomain.
-   * However, if $.servers.http.subdomains is set to false, then the first
-   * directory name is used for comparison.
-   * Returns true or false, or (in the case of missing headers) undefined.
+   * However, if pathToSubdomain is enabled then the first directory name
+   * is used for comparison.
+   *
+   * Return: boolean | undefined - true if from the same origin, false if
+   * from different origins, and undefined if missing headers prevent a
+   * firm conclusion one way or the other.
+   *
    * Callers should choose whether to fail-safe or fail-deadly when the
    * user's proxy strips the referer header, resulting in undefined.
+   *
+   * BUG: if referer was for subdomain routed via a root Host with
+   * .pathToSubdomain enabled, but .origin is for the root domain,
+   * fromSameOrigin will return true.  This is not intended and possibly
+   * insecure - but probably mostly harmless: if .pathToSubdomain is
+   * enabled subdomains are not really secure against each other anyway.
    */
-  var referer = this.headers.referer; // https://foo.example.codecity.world/bar
-  var host = this.headers.host;  // foo.example.codecity.world
-  if (!referer || !host) {
+  var referer = this.headers.referer;  // https://foo.example.codecity.world/bar
+  if (!referer || !this.info) {
     // Missing headers.  Not enough information to know.
     return undefined;
   }
-  var regex = new RegExp('^https?://' + $.utils.regexp.escape(host) + '/');
-  if (!regex.test(referer)) {
-    // Referer is from a different host.
-    return false;
-  }
-  if ($.servers.http.subdomains) {
-    // In subdomain mode, only the host must match.
-    return true;
-  }
-  // In non-subdomain mode, the first directory must match too.
-  var m = referer.match(/^https?:\/\/[^\/]+\/([-A-Za-z0-9]+)(\/|$)/);
-  var subdomain = m ? m[1] : 'www';
-  return subdomain === this.subdomain;
+  var origin = this.info.origin;  // foo.example.codecity.world
+  var regexp = new RegExp('^https?://' + $.utils.regexp.escape(origin) + '/');
+  return regexp.test(referer);
 };
-Object.setOwnerOf($.servers.http.Request.prototype.fromSameOrigin, $.physicals.Neil);
-Object.setOwnerOf($.servers.http.Request.prototype.fromSameOrigin.prototype, $.physicals.Neil);
+Object.setOwnerOf($.servers.http.Request.prototype.fromSameOrigin, $.physicals.Maximilian);
+$.servers.http.Request.prototype.hostUrl = function hostUrl(varArgs) {
+  /* Return the base URL for the host that handled this Request, or
+   * a subdomain (omitting scheme).  This is derived from .headers.host,
+   * but with some extra magic:
+   *
+   * - Absent any argument, it will be the URL which routes to the root
+   *   Host object serving this Request - e.g., //example.codecity.world/
+   *   The "root" host is ordinarily just first of $.servers.http.hosts[]
+   *   to accept the request (as opposed to one of its .subdomains).
+   * - If an argument is supplied, the returned URL will instead be for
+   *   the named subdomain.
+   * - Multiple arguments can be supplied if there are nested subdomains.
+   *
+   * E.g.:
+   * request.hostUrl()             => '//example.codecity.world/'
+   * request.hostUrl('code')       => '//code.example.codecity.world/'
+   * request.hostUrl('foo', 'bar') => '//foo.bar.example.codecity.world/'
+   *
+   * If .pathToSubdomain is enabled on one or more Host object(s):
+   * request.hostUrl('code')       => '//example.codecity.world/code/'
+   * request.hostUrl('foo', 'bar') => '//example.codecity.world/foo/bar/'
+   *                              or: '//bar.example.codecity.world/foo/'
+   *
+   * Barring bugs, the returned URL should always end with a '/'.
+   *
+   * See also $.servers.http.Host.prototype.url for cases where you need
+   * to generate a host URL without an incoming Request to use as reference.
+   *
+   * Arguments:
+   * - subdomain: string - a string denoting a subdomain of interest.
+   *       Multiple arguments are allowed.  RangeError is thrown if no such
+   *       subdomain exists.
+   * Returns: string - the URL for the desired domain/subdomain.
+   */
+  // No routing information is available?  Fallback to $hosts.root.url().
+  if (!this.info) {
+    var rootHost = $.hosts.root;
+    return rootHost.url.apply(rootHost, arguments);
+  }
+  // Walk the tree of Hosts rooted at the root Host via which this
+  // Request was served.
+  var host = this.info.rootHost;
+  var authority = this.info.rootAuthority;
+  // Did nginx request pathToSubdomain, because it knows that it is not
+  // configured for real wildcard subdomains?  (N.B.: header uses the
+  // RFC 8941 convention of "?1" for true, "?0" for false.)
+  var pathToSubdomainHeader =
+      (this.headers['codecity-pathtosubdomain'] === '?1');
+  for (var subdomain, i = 0; (subdomain = arguments[i]); i++) {
+    authority = host.urlForSubdomain(authority, subdomain, pathToSubdomainHeader);
+    host = host.subdomains[subdomain];
+  }
+  return '//' + authority + '/';
+};
+Object.setOwnerOf($.servers.http.Request.prototype.hostUrl, $.physicals.Maximilian);
+Object.setOwnerOf($.servers.http.Request.prototype.hostUrl.prototype, $.physicals.Maximilian);
 $.servers.http.Request.discardDuplicates = [];
 $.servers.http.Request.discardDuplicates[0] = 'authorization';
 $.servers.http.Request.discardDuplicates[1] = 'content-length';
@@ -489,11 +457,16 @@ $.servers.http.Response.prototype.clearIdCookie = function clearIdCookie() {
   if (this.headersSent) {
     throw new Error('Header already sent');
   }
-  var domain = $.servers.http.subdomains ? ' Domain=' + $.servers.http.host : '';
+  var request = this.connection_.request;
+  var domain = '';
+  if (request.info) {
+    var rootHost = request.info.rootAuthority || request.info.host.hostname;
+    domain = rootHost ? ' Domain=' + rootHost : '';
+  }
   var value = 'ID=; HttpOnly;' + domain + '; Path=/; Max-Age=0;';
   this.cookies.push(value);
 };
-Object.setOwnerOf($.servers.http.Response.prototype.clearIdCookie, $.physicals.Neil);
+Object.setOwnerOf($.servers.http.Response.prototype.clearIdCookie, $.physicals.Maximilian);
 Object.setOwnerOf($.servers.http.Response.prototype.clearIdCookie.prototype, $.physicals.Neil);
 $.servers.http.Response.prototype.sendRedirect = function sendRedirect(url, statusCode) {
   /* Write a redirect as the response.
@@ -530,47 +503,11 @@ $.servers.http.Response.prototype.sendError = function sendError(statusCode, mes
   } else {
     this.errorMessage_ = '';
   }
-  sendError.jssp(this.connection_.request, this);
+  $.jssp.eval(this, 'sendErrorJssp', this.connection_.request, this);
 };
-Object.setOwnerOf($.servers.http.Response.prototype.sendError, $.physicals.Maximilian);
+Object.setOwnerOf($.servers.http.Response.prototype.sendError, $.physicals.Neil);
 Object.setOwnerOf($.servers.http.Response.prototype.sendError.prototype, $.physicals.Maximilian);
-// CLOSURE: type: function, vars: source, jssp
-// CLOSURE: type: funexp, vars: Jssp
-$.servers.http.Response.prototype.sendError.jssp = function jssp(request, response) {
-  // DO NOT EDIT THIS CODE.  AUTOMATICALLY GENERATED BY JSSP.
-  // To edit contents of generated page, edit this.source.
-  return jssp.render(this, request, response);  // See $.Jssp for explanation.
-};
-Object.setPrototypeOf($.servers.http.Response.prototype.sendError.jssp, $.Jssp.prototype);
-Object.setOwnerOf($.servers.http.Response.prototype.sendError.jssp, $.physicals.Neil);
-Object.setOwnerOf($.servers.http.Response.prototype.sendError.jssp.prototype, $.physicals.Neil);
-$.servers.http.Response.prototype.sendError.jssp.source = '<html>\n<head>\n  <title><%=response.statusCode%> - Code City</title>\n  <style>\n    body {\n      font-family: "Roboto Mono", monospace;\n      text-align: center;\n    }\n    h1 {\n      font-size: 40pt;\n      font-weight: 100;\n    }\n    h1>img {\n      vertical-align: text-bottom;\n    }\n    pre {\n      margin: 2em;\n    }\n  </style>\n  <link href="https://fonts.googleapis.com/css?family=Roboto+Mono" rel="stylesheet">\n  <link href="<%=$.servers.http.makeUrl(\'static\', \'favicon.ico\')%>" rel="shortcut icon">\n</head>\n<body>\n  <h1>\n    <img src="<%=$.servers.http.makeUrl(\'static\', \'logo-error.svg\')%>" alt="">\n    <%=response.statusCode%> <%=$.servers.http.STATUS_CODES[response.statusCode]%>\n  </h1>\n  <pre>Host: <%=$.utils.html.escape(request.headers.host) %>\n<%= request.method %> <%= $.utils.html.escape(request.url) %></pre>\n  <%=response.errorMessage_%>\n</body>\n</html>';
-$.servers.http.Response.prototype.sendError.jssp.hash_ = 'a638cf349f7eab7e22087cf4d8f5872fv1.0.0';
-$.servers.http.Response.prototype.sendError.jssp.compiled_ = function(request, response) {
-// DO NOT EDIT THIS CODE: AUTOMATICALLY GENERATED BY JSSP.
-response.write("<html>\n<head>\n  <title>");
-response.write(response.statusCode);
-response.write(" - Code City</title>\n  <style>\n    body {\n      font-family: \"Roboto Mono\", monospace;\n      text-align: center;\n    }\n    h1 {\n      font-size: 40pt;\n      font-weight: 100;\n    }\n    h1>img {\n      vertical-align: text-bottom;\n    }\n    pre {\n      margin: 2em;\n    }\n  </style>\n  <link href=\"https://fonts.googleapis.com/css?family=Roboto+Mono\" rel=\"stylesheet\">\n  <link href=\"");
-response.write($.servers.http.makeUrl('static', 'favicon.ico'));
-response.write("\" rel=\"shortcut icon\">\n</head>\n<body>\n  <h1>\n    <img src=\"");
-response.write($.servers.http.makeUrl('static', 'logo-error.svg'));
-response.write("\" alt=\"\">\n    ");
-response.write(response.statusCode);
-response.write(" ");
-response.write($.servers.http.STATUS_CODES[response.statusCode]);
-response.write("\n  </h1>\n  <pre>Host: ");
-response.write($.utils.html.escape(request.headers.host));
-response.write("\n");
-response.write(request.method);
-response.write(" ");
-response.write($.utils.html.escape(request.url));
-response.write("</pre>\n  ");
-response.write(response.errorMessage_);
-response.write("\n</body>\n</html>");
-};
-Object.setOwnerOf($.servers.http.Response.prototype.sendError.jssp.compiled_, $.physicals.Neil);
-Object.setOwnerOf($.servers.http.Response.prototype.sendError.jssp.compiled_.prototype, $.physicals.Neil);
-Object.defineProperty($.servers.http.Response.prototype.sendError.jssp.compiled_, 'name', {value: '$.servers.http.Response.prototype.writeErrorPage.jssp.compiled_'});
+$.servers.http.Response.prototype.sendErrorJssp = '<% try {var staticUrl = request.hostUrl(\'static\');} catch(e) {staticUrl = \'\';} %>\n<html>\n<head>\n  <title><%=response.statusCode%> - Code City</title>\n  <style>\n    body {\n      font-family: "Roboto Mono", monospace;\n      text-align: center;\n    }\n    h1 {\n      font-size: 40pt;\n      font-weight: 100;\n    }\n    h1>img {\n      vertical-align: text-bottom;\n    }\n    pre {\n      margin: 2em;\n    }\n  </style>\n  <link href="https://fonts.googleapis.com/css?family=Roboto+Mono" rel="stylesheet">\n  <link href="<%=staticUrl%>favicon.ico" rel="shortcut icon">\n</head>\n<body>\n  <h1>\n    <img src="<%=staticUrl%>logo-error.svg" alt="">\n    <%=response.statusCode%> <%=$.servers.http.STATUS_CODES[response.statusCode]%>\n  </h1>\n  <pre>Host: <%=$.utils.html.escape(request.headers.host) %>\n<%= request.method %> <%= $.utils.html.escape(request.url) %></pre>\n  <%=response.errorMessage_%>\n</body>\n</html>';
 $.servers.http.Response.discardDuplicates = [];
 $.servers.http.Response.discardDuplicates[0] = 'age';
 $.servers.http.Response.discardDuplicates[1] = 'content-length';
@@ -583,30 +520,393 @@ $.servers.http.Response.discardDuplicates[7] = 'retry-after';
 $.servers.http.Response.defaultHeaders = (new 'Object.create')(null);
 $.servers.http.Response.defaultHeaders['cache-control'] = 'no-store';
 $.servers.http.Response.defaultHeaders.server = 'CodeCity/0.0 ($.servers.http)';
-$.servers.http.protocol = 'https:';
-$.servers.http.host = 'google.codecity.world';
-$.servers.http.subdomains = true;
-$.servers.http.makeUrl = function makeUrl(subdomain, rest) {
-  /* Make a URL for Code City.  Defaults to the 'www' subdomain.
-   * E.g. $.servers.http.makeUrl('secret', 'cat?foo=bar')
-   * -> "//secret.google.codecity.world/cat?foo=bar
-   * -> "/secret/cat?foo=bar"
+$.servers.http.Host = function Host() {
+  /* A Host object represents a domain or subdomain served by the
+   * web server.  It is expected that most Host instances will be
+   * the values of properties of $.hosts.
+   *
+   * Methods on Host.prototype (see individual methodd documentation
+   * for details):
+   *
+   * - .addSubdomain() - add a new subdomain to .subdomains.
+   * - .handle() - try to have this host handle an incoming request.
+   * - .url() - return the URL for this host.
+   * - .urlForSubdomain() - a helper method for .url().
+   *
+   * Instance properties of Host objects (by default these all
+   * inherit their default values from Host.prototype):
+   *
+   * - hostname: string | undefined - the canonical hostname for
+   *   this Host object.  Should include the port number, if non-default.
+   *
+   *   If .hostRegExp (see below) is undefined, .hostname will be used to
+   *   decide which Requests to handle:
+   *
+   *   - This host object will serve requests whose Host: header exactly
+   *     matches .hostname itself.
+   *   - It will pass requests whose Host: header ends with .hostname to
+   *     the corresponding subdomain, if it exists.
+   *
+   *   E.g., if .hostname = 'bar.baz', this host will serve requests for
+   *   bar.baz and will pass requests for foo.bar.baz to .subdomains.foo
+   *   but will reject requests for bar.baz:8080.
+   *
+   *   If both .hostname and .hostRegExp are undefined, all requests will
+   *   be served by this host or automagically passed along to a suitable
+   *   subdomain.
+   *
+   * - hostRegExp: RegExp | undefined - a RegExp matching Host: header
+   *   values this host should respond to.  If undefined (the default),
+   *   this .hostname (see above) will be used instead.
+   *
+   *   Note that when the Host is deciding whether to serve a Request
+   *   itself, this regexp will be treated as if it begins with /^/,
+   *   while when the Host is trying to determine if it should be passed
+   *   off to a subdomain it will treat it as if it begins with /(?<=\.)/
+   *   (despite ES5.1 not supporting such look-behind assertions).
+   *
+   *   This means that .hostRegExp = /bar.baz$/ will cause this Host object
+   *   to serve 'bar.baz' and try to pass 'foo.bar.baz' to .subdomains.foo,
+   *   but will always reject 'foobar.baz'.  Anchoring with /^/ will
+   *   prevent subdomain matching, so don't do that if you don't mean to!
+   *
+   *   It's recommended that .hostRegExp be anchored with /$/, but note
+   *   that if you want to serve pages on a non-standard ports you must
+   *   match the port as well - e.g.:  /example\.codecity\.\w+(?::\d+)$/
+   *   will match example.codecity.<any TLD> with or without a port number.
+   *
+   * - pathToSubdomain: boolean | undefined - enable (or disable) mapping
+   *   the first element (directory) of request paths to a subdomain.
+   *
+   *   If set to  undefined, the CodeCity-pathToSubdomain header will be
+   *   used to determine decide whether to do this mapping on a
+   *   per-request basis (but normally this header will be configured
+   *   staticaly in the nginx reverse-proxy configuration).
+   *
+   *   The CodeCity-pathToSubdomain header will be interpreted according
+   *   to the RFC 8941 Structure Field Values convention, with '?1'
+   *   meaning true and '?0' meaning false.  Any other value will be
+   *   treated as false.
+   *
+   * - subdomains: Object<string, Host> | null - a null-prototype
+   *   object mapping subdomain names to their respective Host objects,
+   *   or just null if there are no subdomains.  Use .addSubdomain to
+   *   add entries to this mapping.  (Default: null.)
    */
-  subdomain = subdomain || 'www';
-  if (rest === undefined) rest = '';
-  var url;
-  if (this.subdomains) {
-    url = '//';
-    if (subdomain === 'www') {
-      url += this.host + '/';
+};
+Object.setOwnerOf($.servers.http.Host, $.physicals.Maximilian);
+Object.setOwnerOf($.servers.http.Host.prototype, $.physicals.Maximilian);
+$.servers.http.Host.prototype.handle = function handle(request, response, info) {
+  /* Attempt to handle an http(s) request.  First tries to see if the
+   * request can be served by the Host object of a direct subdomain
+   * of this Host, then tries to handle itself, then, if
+   * this.pseudoSubdomains is enabled, attempts to route the request
+   * to a subdomain Host based on the first component of the path.
+   *
+   * Arguments:
+   * - request: $.servers.http.Request - the incoming request to handle.
+   * - response: $.servers.http.Response - the response to write to.
+   * - info: Object | undefined - some information used by recursive calls to
+   *   this function.
+   * Returns: boolean - true iff request was for this host.
+   */
+  // Temproray guard to prevent me from breaking the code editor.
+  // if (/^code/.test(request.headers.host)) return false;
+
+  if (!info) {
+    // Extact detailed routing info from request.
+    var hostHeader = request.headers.host;
+    info = {
+      origin: hostHeader,  // For Request.prototype.fromSameOrigin.
+      path: request.path,
+      rootHost: this,
+    };
+
+    // The authorityExact RegExp gives submatches [ipAddress, dnsAddress,
+    // port].  Only one of the addresses capture groups will match.
+    var m = $.utils.url.regexps.authorityExact.exec(hostHeader);
+    if (!m) {  // Invalid Host header.
+      response.sendError(400, 'Invalid Host header.');
+      return true;  // We don't want it, but no one else should either.
+    } else if (m[1]) {  // It's an IP address.  No (real) subdomains possible.
+      info.rootAuthority = info.authority = hostHeader;
+    } else if (this.hostRegExp || this.hostname) {
+      var hostRegExp = this.hostRegExp ? this.hostRegExp :
+        new RegExp($.utils.regexp.escape(this.hostname) + '$')
+      // We have a .hostname or .hostRegExp, and can work out if there is a
+      // subdomain prefixed to request.headers.host from that.
+      m = hostRegExp.exec(hostHeader);
+      if (!m) return false;  // Did not match.  Not for us.
+      // Apply a check equivalent to a /(?<=^|\.)/ look-behind assertion.
+      if (m.index > 0) {
+        if (hostHeader[m.index - 1] !== '.') return false;  // Lookbehind failed.
+        // Record subdomain(s) that need to be matched.
+        info.subdomains = hostHeader.slice(0, m.index - 1).split('.');
+      }
+      info.rootAuthority = info.authority = hostHeader.slice(m.index);
     } else {
-      url += subdomain + '.' + this.host + '/';
+      // Try to guess where the subdomain(s) end and the root hostname begins.
+      // To deal correclty with cases like x.x.y.z and x.y.x.y.z, be
+      // pessimistic and assume they're all subdomains to start with.
+      var potentialSubdomains  = hostHeader.split('.');
+      info.rootAuthority = info.authority = potentialSubdomains.pop();  // TLD can't be subdomain!
+      for (var i = potentialSubdomains.length; i >= 0; i--) {
+        info.subdomains = potentialSubdomains.slice(0, i);
+        var r = this.handle(request, response, info);
+        if (r) return r;
+        info.rootAuthority = info.authority = potentialSubdomains[i - 1] + '.' + info.authority;
+      }
+      return false;
+    }
+  }
+
+  // Is this request for us or a subdomain of us?
+  if (!this.matchHostname_(info.authority)) return false;
+
+  // This request is for us or a subdomain.
+  // Do we need to try to find a subdomain for this request?
+  if (info.subdomains && info.subdomains.length) {
+    var subdomain = info.subdomains.pop();
+    if (!(subdomain in this.subdomains)) return false;
+    info.authority = subdomain + '.' + info.authority;
+    return this.subdomains[subdomain].handle(request, response, info);
+  }
+
+  // No, it's for us.
+  this.route_(request, response, info);
+  return true;
+};
+Object.setOwnerOf($.servers.http.Host.prototype.handle, $.physicals.Maximilian);
+Object.setOwnerOf($.servers.http.Host.prototype.handle.prototype, $.physicals.Maximilian);
+$.servers.http.Host.prototype.route_ = function route_(request, response, info) {
+  /* Attempt to route an http(s) request for this host to the correct
+   * handler.  If a handler is found, call it.
+   *
+   * If no handler is found, but this host has .pathToSubdomain set,
+   * or .pathToSubdomain is undefined but request contains a
+   * CodeCity-pathToSubdomain header with value '?1' (true, in RFC 8941
+   * Structured Field Value notation) then attempt to map the first
+   * element (directory name) of info.path to one of .subdomains and,
+   * if successful, call the corresponding subdomain host's .handle
+   * method.
+   *
+   * Otherwise generate a 404 error.
+   *
+   * Arguments:
+   * - request: $.servers.http.Request - the incoming request to handle.
+   * - response: $.servers.http.Response - the response to write to.
+   * - info: Object - some additional information generated by
+   *       Host.prototype.handle (see that method for details).
+   */
+  var path = info.path;
+  if (typeof path !== 'string' || path[0] !== '/') {
+    response.sendError(400, 'Invalid path "' + path + '"');
+  } else if (path in this) {
+    // Record routing info on Request object.
+    request.info = info;
+    // Serve page.
+    var obj = this[path];
+    if (!$.utils.isObject(obj)) {
+      response.sendError(500, "Handler is not an object.");
+    } else if (typeof obj.www === 'string') {
+      $.jssp.eval(obj, 'www', request, response);
+    } else if (typeof obj.www === 'function') {
+      obj.www(request, response);
+    } else {
+      response.sendError(500, "Handler .www is neither a function nor a JSSP.");
+    }
+  } else if (this.subdomains &&
+             (this.pathToSubdomain ||
+              (this.pathToSubdomain === undefined &&
+               request.headers['codecity-pathtosubdomain'] === '?1'))) {
+    // Try to route to a subdomain based on top-level directory.
+    // E.g. https://example.codecity.world/foo/bar -> foo
+    var m = path.match(/^\/([-A-Za-z0-9]+)(\/.*)?$/);
+    var subdomain = '';  // Empty string gives good 404 message if .match fails.
+    if (m && (subdomain = m[1]) in this.subdomains) {
+      // Route to the subdomain.  Modify info.path and info.origin as appropriate
+      info.path = m[2] || '/';
+      info.origin += '/' + subdomain;
+      if (!this.subdomains[subdomain].handle(request, response, info)) {
+        response.sendError(500, 'Host for pseudo-subdomain /' + subdomain + '/ rejected request.');
+        return;
+      }
+    } else {
+      response.sendError(404, 'Not Found (and /' + subdomain + '/ does not map to a subdomain).');
     }
   } else {
-    url = '/' + subdomain + '/';
+    response.sendError(404);
   }
-  return url + rest;
 };
-Object.setOwnerOf($.servers.http.makeUrl, $.physicals.Maximilian);
-Object.setOwnerOf($.servers.http.makeUrl.prototype, $.physicals.Neil);
+Object.setOwnerOf($.servers.http.Host.prototype.route_, $.physicals.Maximilian);
+Object.setOwnerOf($.servers.http.Host.prototype.route_.prototype, $.physicals.Maximilian);
+$.servers.http.Host.prototype.matchHostname_ = function matchHostname_(hostname) {
+  /* Returns: boolean - true if hostname exactly matches this.hostRegExp or,
+   *     if that is undefined, this.hostname.
+   */
+  if (this.hostRegExp) {
+    if (!(this.hostRegExp instanceof RegExp)) {
+      throw new TypeError('invalid .hostRegExp');
+    }
+    var m = this.hostRegExp.exec(hostname);
+    return (m && m.index === 0);  // Match only accepted if at start.
+  } else if (this.hostname) {
+    if (typeof this.hostname !== 'string') {
+      throw new TypeError('invalid .hostname');
+    }
+    return this.hostname === hostname;  // Only exact matches.
+  } else {
+    return true;
+  }
+};
+Object.setOwnerOf($.servers.http.Host.prototype.matchHostname_, $.physicals.Maximilian);
+Object.setOwnerOf($.servers.http.Host.prototype.matchHostname_.prototype, $.physicals.Maximilian);
+$.servers.http.Host.prototype.hostname = undefined;
+$.servers.http.Host.prototype.subdomains = null;
+$.servers.http.Host.prototype.addSubdomain = function addSubdomain(name, host) {
+  /* Add the given Host as a subdomain of this Host.
+   *
+   * Arguments:
+   * - name: string - the subdomain name.
+   * - host: $.servers.http.Host - the Host to serve the subdomain.
+   */
+  name = String(name);
+  if (!(host instanceof $.servers.http.Host)) {
+    throw new TypeError('host must be a Host');
+  }
+  if (!this.hasOwnProperty('subdomains')) {
+    this.subdomains = Object.create(null);
+  }
+  this.subdomains[name] = host;
+};
+Object.setOwnerOf($.servers.http.Host.prototype.addSubdomain, $.physicals.Maximilian);
+Object.setOwnerOf($.servers.http.Host.prototype.addSubdomain.prototype, $.physicals.Maximilian);
+$.servers.http.Host.prototype.url = function url(varArgs) {
+  /* Return the base URL for this host (omitting scheme).
+   *
+   * Generally prefer $.servers.http.Request.prototype.hostUrl (q.v.)
+   * instead of method - but in some cases it is necessary to generate
+   * a URL for the webserver without an existing inbound Request to use
+   * as reference, so this method allows one to be generated in the
+   * obvious way from this.hostname.  As with .hostUrl:
+   *
+   * - Absent any argument, the returned URL will routes to this
+   *   Host object.
+   * - If an argument is supplied, the returned URL will instead be for
+   *   the named subdomain.
+   * - Multiple arguments can be supplied if there are nested subdomains.
+   *
+   * E.g.:
+   * rootHost.url()             => '//example.codecity.world/'
+   * rootHost.url('code')       => '//code.example.codecity.world/'
+   * rootHost.url('foo', 'bar') => '//foo.bar.example.codecity.world/'
+   *
+   * If .pathToSubdomain is enabled on one or more Host object(s):
+   * rootHost.url('code')       => '//example.codecity.world/code/'
+   * rootHost.url('foo', 'bar') => '//example.codecity.world/foo/bar/'
+   *                           or: '//bar.example.codecity.world/foo/'
+   *
+   * Barring bugs, the returned URL should always end with a '/'.
+   * Arguments:
+   * - subdomain: string - a string denoting a subdomain of interest.
+   *       Multiple arguments are allowed.  RangeError is thrown if no such
+   *       subdomain exists.
+   * Returns: string - the URL for the desired domain/subdomain.
+   */
+  if (typeof this.hostname !== 'string') {
+    throw new Error('canonical hostname not set');
+  }
+  var hostname = this.hostname;
+  var host = this;
+  for (var subdomain, i = 0; (subdomain = arguments[i]); i++) {
+    hostname = host.urlForSubdomain(hostname, subdomain);
+  }
+  return '//' + hostname + '/';
+};
+Object.setOwnerOf($.servers.http.Host.prototype.url, $.physicals.Maximilian);
+Object.setOwnerOf($.servers.http.Host.prototype.url.prototype, $.physicals.Maximilian);
+$.servers.http.Host.prototype.pathToSubdomain = undefined;
+$.servers.http.Host.prototype.urlForSubdomain = function urlForSubdomain(hostname, subdomain, pathToSubdomainHeader) {
+  /* A helper function for the .url method.
+   *
+   * Given a hostname for this host, add the specified subdomain
+   * if it exists, or throw RangeError if not.
+   *
+   * If this.pathToSubdomain is true, or this.pathToSubdomain is undefined
+   * and pathToSubdomainHeader is true, then the subdomain will be added as
+   * a directory name suffix rather than a hostname pefix.
+   *
+   * E.g.:
+   * rootHost.pathToSubdomain = false;
+   * rootHost.urlForSubdomain('example.codecity.world', 'code')
+   *    => 'code.example.codecity.world'
+   *
+   * rootHost.pathToSubdomain = undefined;
+   * rootHost.urlForSubdomain('example', 'code', true)
+   *    => 'example.codecity.world/code'
+   * rootHost.urlForSubdomain('example', 'code', false)
+   *    => 'code.example.codecity.world'
+   * rootHost.pathToSubdomain = true;
+   * rootHost.urlForSubdomain('example', 'code', false)
+   *    => 'example.codecity.world/code'
+   *
+   * Arguments:
+   * - hostname: string - the base hostname for this Host.
+   * - subdomain: string - the desired subdomain.
+   * - pathToSubdomainHeader: boolean | undefined - value of the
+   *   CodeCity-pathToSubdomain header for the current request (if there
+   *   is one).
+   *
+   * TODO: Give this function a better name, because what it returns
+   * is not actually a valid URL.
+   */
+  if (!(this.subdomains && subdomain in this.subdomains)) {
+    throw new RangeError('nonexistent subdomain "' + subdomain + '"');
+  }
+  if (this.pathToSubdomain ||
+      this.pathToSubdomain === undefined && pathToSubdomainHeader) {
+    return hostname + '/' + subdomain;
+  } else {
+    return subdomain + '.' + hostname;
+  }
+};
+Object.setOwnerOf($.servers.http.Host.prototype.urlForSubdomain, $.physicals.Maximilian);
+Object.setOwnerOf($.servers.http.Host.prototype.urlForSubdomain.prototype, $.physicals.Maximilian);
+$.servers.http.onRequest = function onRequest(connection) {
+  /* Called from $.servers.http.connection.onReceiveChunk when the
+   * connection.request has been fully parsed and is ready to be handled.
+   *
+   * Arguments:
+   * - conenction: Object with prototype $.servers.http.connection - the
+   *       connection to be handle.
+   */
+  var request = connection.request;
+  var response = connection.response;
+  try {
+    // Call .handle(request, response) on each Host object in
+    // $.servers.http.hosts in order until one returns true to indicate
+    // that it handled the request.
+    for (var host, i = 0; (host = this.hosts[i]); i++) {
+      if (host.handle(request, response)) return;
+    }
+    // No host responded to request.
+    response.sendError(400, 'Unknown Host');
+  } catch (e) {
+    suspend();
+    $.system.log(String(e) + '\n' + e.stack);
+    if (response.headersSent) {
+      // Too late to return a proper error page.  Oh well.
+      response.write('<pre>' + $.utils.html.escape(String(e) + '\n' + e.stack) +
+                     '</pre>');
+    } else {
+      response.sendError(500, e);
+    }
+  } finally {
+    connection.close();
+  }
+};
+Object.setOwnerOf($.servers.http.onRequest, $.physicals.Maximilian);
+Object.setOwnerOf($.servers.http.onRequest.prototype, $.physicals.Maximilian);
+
+$.servers.http.hosts = [];
 

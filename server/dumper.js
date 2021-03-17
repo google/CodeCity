@@ -202,7 +202,8 @@ Dumper.prototype.dump = function() {
     var port = Number(key);
     var listener = this.intrp2.listeners_[port];
     this.write(this.exprForBuiltin_('CC.connectionListen') + '(' +
-        port + ', ' + this.exprFor_(listener.proto) + ');');
+        port + ', ' + this.exprFor_(listener.proto) + ', ' +
+        this.exprFor_(listener.timeLimit) + ');');
   }
 };
 
@@ -657,8 +658,10 @@ Dumper.prototype.exprForRegExp_ = function(re, reDumper) {
  * given Selector s and Dumper d, d.exprForSelector_(s) will be the
  * same as s.toExpr() except when the output needs to call a builtin
  * function like Object.getPrototypeOf that is not available via its
- * usual name - e.g. 'Object.getPrototypeOf(foo.bar)' rather than
- * 'foo.bar{proto}'.
+ * usual name - e.g. if Object.getPrototypeOf has not yet been dumped
+ * then the selector foo.bar{proto} might be represented as "(new
+ * 'Object.getPrototypeOf')(foo.bar)" instead of
+ * "Object.getPrototypeOf(foo.bar)".
  * @private
  * @param {Selector=} selector Selector to obtain value of.
  * @return {string} An eval-able representation of the value.
@@ -754,7 +757,7 @@ Dumper.prototype.getDumperFor = function(selector, scope) {
  */
 Dumper.prototype.getObjectDumper_ = function(obj) {
   if (this.objDumpers2.has(obj)) return this.objDumpers2.get(obj);
-  var objDumper = new ObjectDumper(this, obj);
+  var objDumper = new ObjectDumper(obj);
   this.objDumpers2.set(obj, objDumper);
   return objDumper;
 };
@@ -1240,10 +1243,9 @@ ScopeDumper.prototype.survey = function(dumper) {
  * all the dump-state info required to keep track of what properties
  * (etc.) have and haven't yet been dumped.
  * @constructor @extends {SubDumper}
- * @param {!Dumper} dumper Dumper to which this ObjectDumper belongs.
  * @param {!Interpreter.prototype.Object} obj The object to keep state for.
  */
-var ObjectDumper = function(dumper, obj) {
+var ObjectDumper = function(obj) {
   SubDumper.call(this);
   /** @type {!Interpreter.prototype.Object} */
   this.obj = obj;
@@ -1951,6 +1953,27 @@ ObjectDumper.Pending.prototype.toString = function() {
 var Components = function(dumper, part) {
   /** @const {!SubDumper} */ this.dumper = dumper;
   /** @const {Selector.Part} */ this.part = part;
+};
+
+/**
+ * Custom util.inspect implementation, to make debug/test output more
+ * readable.
+ * @param {number} depth
+ * @param {util.inspect.Options} opts
+ * @return {string}
+ */
+Components.prototype[util.inspect.custom] = function(depth, opts) {
+  var /** string */ dumper;
+  if (this.dumper instanceof ScopeDumper) {
+    dumper = util.format('<%s scope>', this.dumper.scope.type);
+  } else if (this.dumper instanceof ObjectDumper) {
+    try {
+      dumper = this.dumper.getSelector(/*preferred=*/true).toString();
+    } catch (e) {
+      dumper = '<unknown>';
+    }
+  }
+  return util.format('Components<%s, %s>', dumper, this.part);
 };
 
 ///////////////////////////////////////////////////////////////////////////////

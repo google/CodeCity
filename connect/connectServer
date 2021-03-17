@@ -62,6 +62,10 @@ var Queue = function (id) {
   // Save 'this' for closures below.
   var thisQueue = this;
   /**
+   * ID of this queue in queueList.
+   */
+  this.id = id;
+  /**
    * Time that this queue was pinged by a user.  Abandoned queues are deleted.
    */
   this.lastPingTime = Date.now();
@@ -91,12 +95,7 @@ var Queue = function (id) {
    */
   this.client = new net.Socket();
 
-  this.client.on('close', function() {
-    if (queueList[id]) {
-      delete queueList[id];
-      console.log('Code City closed session ' + id);
-    }
-  });
+  this.client.on('close', this.destroy.bind(this, 'Code City closed session'));
 
   this.client.on('error', function(error) {
     console.log('TCP error for session ' + id, error);
@@ -153,6 +152,18 @@ var Queue = function (id) {
   });
 
   this.client.connect(CFG.remotePort, CFG.remoteHost);
+};
+
+/**
+ * Close this queue and deregister it.
+ * @param {string} msg Console message to print (with ID appended).
+ */
+Queue.prototype.destroy = function(msg) {
+  if (queueList[this.id]) {
+    delete queueList[this.id];
+  }
+  this.client.end();
+  console.log(msg + ' ' + this.id);
 };
 
 /**
@@ -278,7 +289,7 @@ function handleRequest(request, response) {
       try {
         var receivedJson = JSON.parse(requestBody);
         if (!receivedJson['q']) {
-          throw 'no queue';
+          throw Error('No queue');
         }
       } catch (e) {
         console.error('Illegal JSON');
@@ -300,6 +311,7 @@ function ping(receivedJson, response) {
   var ackMemoNum = receivedJson['ackMemoNum'];
   var cmdNum = receivedJson['cmdNum'];
   var cmds = receivedJson['cmds'];
+  var logout = receivedJson['logout'];
 
   var queue = queueList[q];
   if (!queue) {
@@ -343,11 +355,16 @@ function ping(receivedJson, response) {
     var ackCmdNextPing = false;
   }
 
-  // Wait a fifth of a second for each command,
-  // but don't wait for more than a second.
-  var delay = Math.min(delay, 1000);
-  var replyFunc = pong.bind(null, queue, response, ackCmdNextPing);
-  setTimeout(replyFunc, delay);
+  if (logout) {
+    pong(queue, response, ackCmdNextPing);
+    queue.destroy('Client disconnected');
+  } else {
+    // Wait a fifth of a second for each command,
+    // but don't wait for more than a second.
+    var delay = Math.min(delay, 1000);
+    var replyFunc = pong.bind(null, queue, response, ackCmdNextPing);
+    setTimeout(replyFunc, delay);
+  }
 }
 
 function pong(queue, response, ackCmdNextPing) {
@@ -396,9 +413,7 @@ function cleanup() {
   for (var id in queueList) {
     var queue = queueList[id];
     if (queue.lastPingTime < bestBefore) {
-      queue.client.end();
-      delete queueList[id];
-      console.log('Timeout of session ' + id);
+      queue.destroy('Timeout of session');
     }
   }
 }

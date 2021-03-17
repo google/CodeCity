@@ -593,16 +593,17 @@ https://support.google.com/cloud/answer/6158849) for more information.
 0.  Modify the configuration for the in-core HTTP server:
     *   Open the file `~/CodeCity/core/core_99_startup.js` in the text
         editor of your choice.  Find the `// Configuration.` section.
-    *   Set `$.servers.http.subdomains = true;` if you are using a
-        wildcard DNS entry for your instance; otherwise leave as
-        `false`.
-    *   Set `$.servers.http.protocol = 'https:';`.  (The default
-        value, `'http:'`, is only applicable when running CodeCity
-        locally for development purposes.)
-    *   Set `$.servers.http.host` to your instance’s domain name—e.g.,
-        <code>$.servers.http.host =
+    *   Set `$.hosts.root.hostname` to your instance’s domain
+        name—e.g., <code>$.hosts.root.hostname =
         '<em>example</em>.codecity.world';</code>
-0.  Exit from the `codecity` account.
+    *   Set `$.hosts.root.pathToSubdomain = false;` if you are using a
+        wildcard DNS entry for your instance; otherwise set it to
+        `true`.
+    *   If you have more than one DNS entry for your instance, set
+        `$.hosts.root.hostRegExp` according to the instructions
+        provided.
+0.  Save the file, exit your editor and exit from the `codecity`
+    account.
     ```
     exit
     ```

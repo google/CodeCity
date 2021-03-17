@@ -77,6 +77,7 @@
     },
     "contents": [
       "Object.is",
+      "Object.assign",
       "Object.setPrototypeOf",
       "Array.from",
       "Array.prototype.find",
@@ -137,16 +138,16 @@
     "contents": [
       "perms",
       "setPerms",
-      {"path": "$", "do": "SET"},
+      {"path": "$", "do": "DONE"},
       "$.root",
       {"path": "$.physicals", "do": "DONE"},
-      {"path": "$.physicals.Maximilian", "do": "SET"},
-      {"path": "$.physicals.Neil", "do": "SET"},
+      {"path": "$.physicals.Maximilian", "do": "DONE"},
+      {"path": "$.physicals.Neil", "do": "DONE"},
       "$.system",
       "user",
-      {"path": "$.utils", "do": "ATTR"},
-      {"path": "$.utils.validate", "do": "ATTR"},
-      {"path": "$.servers", "do": "ATTR"}
+      {"path": "$.utils", "do": "DONE"},
+      {"path": "$.utils.validate", "do": "DONE"},
+      {"path": "$.servers", "do": "DONE"}
     ]
   }, {
     "filename": "core_11_$.utils.js",
@@ -177,8 +178,8 @@
     "contents": [
       "$.Selector",
       "$.utils.Binding",
-      {"path": "$.Selector.cache_", "do": "ATTR"},
-      {"path": "$.Selector.sortByBadness.cache_", "do": "ATTR"}
+      {"path": "$.Selector.cache_", "do": "DONE"},
+      {"path": "$.Selector.sortByBadness.cache_", "do": "DONE"}
     ]
   },
 
@@ -190,12 +191,12 @@
     },
     "contents": ["$.utils.html"]
   }, {
-    "filename": "core_21_$.Jssp.js",
+    "filename": "core_21_$.jssp.js",
     "headerSubs": {
       "<YEAR>": "2017",
       "<OVERVIEW>": "JavaScript Server Pages for Code City."
     },
-    "contents": ["$.Jssp"]
+    "contents": ["$.jssp"]
   }, {
     "filename": "core_22_$.connection.js",
     "headerSubs": {
@@ -209,23 +210,30 @@
       "<YEAR>": "2017",
       "<OVERVIEW>": "Webserver for Code City."
     },
-    "contents": ["$.servers.http"]
+    "contents": [
+      "$.servers.http",
+      {"path": "$.servers.http.hosts", "do": "DONE"}
+    ]
   }, {
-    "filename": "core_24_$.http.js",
+    "filename": "core_24_$.hosts.js",
     "headerSubs": {
       "<YEAR>": "2017",
-      "<OVERVIEW>": "Top-level URL handlers for Code City."
+      "<OVERVIEW>": "Host objects for Code City."
     },
     "contents": [
-      {"path": "$.http", "do": "DONE"},
-      {"path": "$.http['www.']", "do": "DONE"},
-      "$.http['www.']['/']",
-      "$.http['www.']['/mirror']",
-      "$.http['www.']['/robots.txt']",
-      "$.http['connect.']",
-      "$.http['login.']",
-      "$.http['static.']",
-      {"path": "$.www", "do": "ATTR"}
+      {"path": "$.hosts", "do": "DONE"},
+      {"path": "$.hosts.root", "do": "DONE"},
+      {"path": "$.hosts.root.subdomains", "do": "DONE"},
+      "$.hosts.root['/']",
+      "$.hosts.root['/mirror']",
+      "$.hosts.root['/robots.txt']",
+      "$.hosts.dummy",
+      "$.hosts.root.subdomains.connect",
+      "$.hosts.root.subdomains.login",
+      "$.hosts.root.subdomains.mobwrite",
+      "$.hosts.root.subdomains.static",
+      "$.hosts.root.subdomains.system",
+      {"path": "$.servers.http.hosts[0]", "do": "DONE"}
     ]
   }, {
     "filename": "core_25_$.db.tempId.js",
@@ -234,10 +242,10 @@
       "<OVERVIEW>": "Temporary ID database for Code City."
     },
     "contents": [
-      {"path": "$.db", "do": "ATTR"},
+      {"path": "$.db", "do": "DONE"},
       "$.db.tempId",
-      {"path": "$.db.tempId.tempIds_", "do": "ATTR"},
-      {"path": "$.db.tempId.cleanThread_", "do": "ATTR"}
+      {"path": "$.db.tempId.tempIds_", "do": "DONE"},
+      {"path": "$.db.tempId.cleanThread_", "do": "DECL"}
     ]
   }, {
     "filename": "core_25_$.userDatabase.js",
@@ -247,7 +255,7 @@
     },
     "contents": [
       "$.userDatabase",
-      {"path": "$.userDatabase.byMd5", "do": "ATTR"}
+      {"path": "$.userDatabase.byMd5", "do": "DONE"}
     ]
   }, {
     "filename": "core_26_inline_editor.js",
@@ -256,8 +264,9 @@
       "<OVERVIEW>": "Inline code editor for Code City."
     },
     "contents": [
-      {"path": "$.http['code.']", "do": "SET"},
-      "$.http['code.']['/inlineEdit']"
+      {"path": "$.hosts.code", "do": "DONE"},
+      "$.hosts.code['/inlineEdit']",
+      {"path": "$.hosts.root.subdomains.code", "do": "DONE"}
     ]
   }, {
     "filename": "core_27_editor.js",
@@ -266,7 +275,7 @@
       "<OVERVIEW>": "Web-based code explorer/editor for Code City."
     },
     "contents": [
-      "$.http['code.']"
+      "$.hosts.code"
     ]
   }, {
     "filename": "core_28_$.servers.eval.js",
@@ -304,8 +313,8 @@
     },
     "contents": [
       "$.physical",
-      {"path": "$.physicals", "do": "ATTR"},
-      {"path": "$.physicals['Physical object prototype']", "do": "ATTR"},
+      {"path": "$.physicals", "do": "DONE"},
+      {"path": "$.physicals['Physical object prototype']", "do": "DONE"},
       "$.utils.validate.physicals",
       "$.garbage"
     ]
@@ -320,10 +329,10 @@
       "$.room",
       "$.thing",
       "$.container",
-      {"path": "$.physicals['User prototype']", "do": "ATTR"},
-      {"path": "$.physicals['Room prototype']", "do": "ATTR"},
-      {"path": "$.physicals['Thing prototype']", "do": "ATTR"},
-      {"path": "$.physicals['Container prototype']", "do": "ATTR"}
+      {"path": "$.physicals['User prototype']", "do": "DONE"},
+      {"path": "$.physicals['Room prototype']", "do": "DONE"},
+      {"path": "$.physicals['Thing prototype']", "do": "DONE"},
+      {"path": "$.physicals['Container prototype']", "do": "DONE"}
     ]
   }, {
     "filename": "core_34_$.servers.telnet.js",
@@ -334,7 +343,7 @@
     "pruneRest": ["$.servers.telnet.connected"],
     "contents": [
       "$.servers.telnet",
-      {"path": "$.servers.telnet.connected", "do": "ATTR"}
+      {"path": "$.servers.telnet.connected", "do": "DONE"}
     ]
   },
 
@@ -356,7 +365,8 @@
       "$.startRoom.name",
       "$.startRoom.description",
       "$.startRoom.roll",
-      "$.clock"
+      "$.clock",
+      {"path": "$.clock.thread_", "do": "DONE"}
     ]
   }, {
     "headerSubs": {
@@ -411,7 +421,8 @@
       {"path": "$.cage.location", "do": "DECL"},
       {"path": "$.physicals.cage", "do": "DONE"},
       "$.physicals['Genetic Mouse Prototype']",
-      "$.http['genetics.']"
+      "$.hosts.genetics",
+      "$.hosts.root.subdomains.genetics"
     ]
   }, {
     "filename": "core_44_$.assistant.js",
@@ -467,7 +478,6 @@
       "URIError",
       "Math",
       "JSON",
-      "WeakMap",
       "decodeURI",
       "decodeURIComponent",
       "encodeURI",
@@ -478,53 +488,125 @@
       "parseFloat",
       "parseInt",
       "unescape",
+
+      "Object.is",
+      "Object.assign",
+      "Object.setPrototypeOf",
+      "Array.from",
+      "Array.prototype.find",
+      "Array.prototype.findIndex",
+      "String.prototype.endsWith",
+      "String.prototype.includes",
+      "String.prototype.repeat",
+      "String.prototype.startsWith",
+      "Number.isFinite",
+      "Number.isNaN",
+      "Number.isSafeInteger",
+      "Number.EPSILON",
+      "Number.MAX_SAFE_INTEGER",
+      "Math.sign",
+      "Math.trunc",
+      "WeakMap",
+
+      "Array.prototype.includes",
+
+      "Object.getOwnerOf",
+      "Object.setOwnerOf",
       "Thread",
       "PermissionError",
       "Array.prototype.join",
       "suspend",
       "setTimeout",
       "clearTimeout",
+
       "perms",
       "setPerms",
-      "user",
-      "$.Jssp",
-      "$.Selector",
-      "$.cage",
-      "$.clock",
-      "$.connection",
-      "$.container",
-      "$.db.tempId",
-      "$.garbage",
-      "$.http['code.']",
-      "$.http['genetics.']",
-      "$.http['www.']['/']",
-      "$.http['www.']['/mirror']",
-      "$.http['www.']['/robots.txt']",
-      "$.physical",
-      "$.physicals.cage",
-      "$.physicals['Das deutsche Zimmer']",
-      "$.physicals['Genetics Lab']",
-      "$.physicals['Genetic Mouse Prototype']",
-      "$.physicals.Hangout",
-      "$.room",
       "$.root",
-      "$.servers.http",
-      "$.servers.telnet",
-      "$.startRoom.roll",
       "$.system",
-      "$.thing",
-      "$.tutorial",
-      "$.user",
-      "$.utils.Binding",
+      "user",
+
+      "$.utils",
       "$.utils.array",
-      "$.utils.code",
-      "$.utils.command",
-      "$.utils.commandMenu",
-      "$.utils.html",
       "$.utils.object",
-      "$.utils.replacePhysicalsWithName",
       "$.utils.string",
-      "$.utils.validate.physicals"
+
+      "$.utils.code",
+      "$.Selector",
+      "$.utils.Binding",
+
+      "$.utils.html",
+
+      "$.jssp",
+
+      "$.connection",
+
+      "$.servers.http",
+
+      "$.hosts.root['/']",
+      "$.hosts.root['/mirror']",
+      "$.hosts.root['/robots.txt']",
+      "$.hosts.dummy",
+      "$.hosts.root.subdomains.connect",
+      "$.hosts.root.subdomains.login",
+      "$.hosts.root.subdomains.mobwrite",
+      "$.hosts.root.subdomains.static",
+      "$.hosts.root.subdomains.system",
+
+      "$.db.tempId",
+
+      "$.userDatabase",
+
+      "$.hosts.code['/inlineEdit']",
+      "$.hosts.code",
+
+      "$.servers.eval",
+
+      "$.utils.command",
+
+      "$.utils.commandMenu",
+      "$.utils.replacePhysicalsWithName",
+
+      "$.physical",
+      "$.utils.validate.physicals",
+      "$.garbage",
+
+      "$.user",
+      "$.room",
+      "$.thing",
+      "$.container",
+
+      "$.servers.telnet",
+
+      "$.startRoom{proto}",
+      "$.startRoom{owner}",
+      "$.startRoom.location",
+      "$.startRoom.name",
+      "$.startRoom.description",
+      "$.startRoom.roll",
+      "$.clock",
+
+      "$.physicals['Das deutsche Zimmer']",
+      "$.tutorial",
+
+      "$.seed",
+      "$.pot",
+      "$.pot.stages",
+      "$.thrower",
+
+      "$.physicals['Genetics Lab']",
+      "$.cage",
+      "$.physicals['Genetic Mouse Prototype']",
+      "$.hosts.genetics",
+      "$.hosts.root.subdomains.genetics",
+
+      "$.assistant",
+
+      "$.physicals['Challenge room']",
+      "$.physicals['light switch']",
+      "$.physicals.chest",
+      "$.physicals.safe",
+      "$.physicals.food",
+      "$.physicals.girl"
     ]
   }, {
     "filename": "../database/db_01_world.js",
@@ -533,6 +615,7 @@
       "<OVERVIEW>": "Main database for google.codecity.world."
     },
     "contents": [
+      "$.db.tempId.tempIds_",
       "$"
     ]
   }, {

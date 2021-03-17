@@ -23,7 +23,7 @@
 // AUTO-GENERATED CODE FROM DUMP.  EDIT WITH CAUTION!
 //////////////////////////////////////////////////////////////////////
 
-$.utils.validate.ownArray = function(object, key) {
+$.utils.validate.ownArray = function ownArray(object, key) {
  	// Ensure that object[key] is an array not shared with any other
   // object or property, not inherited from a prototype, etc.
   // If it is, relaced it with a new, unshared array with the same
@@ -39,25 +39,55 @@ $.utils.validate.ownArray = function(object, key) {
                                           forKey: {value: key}});
   }
 };
-delete $.utils.validate.ownArray.name;
-$.utils.validate.ownArray.prototype.constructor = function(object, key) {
- 	// Ensure that object[key] is an array not shared with any other
-  // object, not inherited from a prototype, etc.  If it is, it
-  // will be relaced by a new, unshared array with the same
-  // contents.
-  if (!object.hasOwnProperty(key) || !Array.isArray(object[key]) ||
-      object[key].forObj !== object || object[key].forKey !== key) {
-    try {
-      object[key] = Array.from(object[key]);
-    } catch (e) {
-      object[key] = [];
+Object.setOwnerOf($.utils.validate.ownArray, $.physicals.Neil);
+$.utils.validate.functionPrototypes = function functionPrototypes() {
+  /* Find (and fix) functions that have f.prototype.constructor !== f.
+   */
+  var u = user();
+  u.narrate('Looking for functions with mismatched .prototype.constructor...');
+  $.utils.object.spider($, function findProtosHelper(object, path) {
+    // Skip $.archive entirely.
+    if (object === $.archive) return true;
+    if (typeof object !== 'function') return false;
+
+    var selector = $.Selector.for(object) || new $.Selector(['$'].concat(path));
+    if (!object.prototype) {
+      if (!String(object).includes('[native code]')) {
+        u.narrate(String(selector) + ' has no .prototype');
+      }
+    } else if (!object.prototype.constructor) {
+      u.narrate(String(selector) + ' has no .prototype.constructor');
+    } else if (object.prototype.constructor !== object) {
+      u.narrate(String(selector) + ' has mismatched .prototype.constructor');
+      var protoProps = Object.getOwnPropertyNames(object.prototype);
+      var pcSelector = $.Selector.for(object.prototype.constructor);
+      // Does it look like a plain old boring auto-created .prototype object?
+      var pd = Object.getOwnPropertyDescriptor(object.prototype, 'constructor');
+      if (Object.getPrototypeOf(object.prototype) === Object.prototype &&
+          protoProps.length === 1 && protoProps[0] === 'constructor' &&
+          pd.writable === true && pd.enumerable === false && pd.configurable === true ) {
+        if (String(pcSelector) === String(selector) + '.prototype.constructor') {
+          u.narrate('----Fixable?: yes!');
+          object.prototype.constructor = object;
+        } else {
+          u.narrate('----Fixable?: yes🤞 (is ' + String(pcSelector) + ')');
+          // Make new .prototype object, since current one is likely shared.
+          var newProto = {constructor: object};
+          Object.setOwnerOf(newProto, Object.getOwnerOf(object));
+          Object.defineProperty(newProto, 'constructor', {enumerable: false});
+          object.prototype = newProto;
+        }
+      } else {
+        u.narrate('----Fixable?: NO: has properties other than .constructor' +
+                     (pcSelector ? ' (is ' + String(pcSelector) + ')' : ''));
+      }
     }
-		Object.defineProperties(object[key], {forObj: {value: object},
-                                          forKey: {value: key}});
-  }
+    return false;
+  });
+  u.narrate('Done.');
 };
-delete $.utils.validate.ownArray.prototype.constructor.name;
-$.utils.validate.ownArray.prototype.constructor.prototype = $.utils.validate.ownArray.prototype;
+Object.setOwnerOf($.utils.validate.functionPrototypes, $.physicals.Maximilian);
+Object.setOwnerOf($.utils.validate.functionPrototypes.prototype, $.physicals.Maximilian);
 $.utils.isObject = function isObject(v) {
   /* Returns true iff v is an object (of any class, including Array
    * and Function). */
@@ -65,7 +95,7 @@ $.utils.isObject = function isObject(v) {
 };
 Object.setOwnerOf($.utils.isObject, $.physicals.Maximilian);
 $.utils.imageMatch = {};
-$.utils.imageMatch.recog = function send(svgText) {
+$.utils.imageMatch.recog = function recog(svgText) {
   svgText = '<svg transform="scale(4)">' + svgText + '</svg>';
   var json = $.system.xhr('https://neil.fraser.name/scripts/imageMatch.py' +
                           '?svg=' + encodeURIComponent(svgText));
@@ -85,6 +115,132 @@ $.utils.regexp.escape = function escape(str) {
 };
 Object.setOwnerOf($.utils.regexp.escape, $.physicals.Neil);
 Object.setOwnerOf($.utils.regexp.escape.prototype, $.physicals.Neil);
+$.utils.url = {};
+Object.setOwnerOf($.utils.url, $.physicals.Maximilian);
+$.utils.url.regexps = {};
+Object.setOwnerOf($.utils.url.regexps, $.physicals.Maximilian);
+$.utils.url.regexps.README = '$.utils.url.regexps contains some RegExps useful for parsing or otherwise analysing URLs.\n\nSee .generate() for how they are constructed and what they will match.';
+$.utils.url.regexps.ipv4Address = /(?:25[0-5]|2[0-4][0-9]|[01]?[0-9]{1,2})(?:\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9]{1,2})){3}/g;
+Object.setOwnerOf($.utils.url.regexps.ipv4Address, $.physicals.Maximilian);
+$.utils.url.regexps.generate = function generate() {
+  /* Generate some RegExps that match various parts of URLs.  The
+   * intention is that these regular expressions conform to the
+   * grammar given in RFC 3986, "Uniform Resource Identifier (URI):
+   * Generic Syntax" (https://tools.ietf.org/html/rfc3986).
+   *
+   * TODO: add tests for generated RegExps.
+   */
+
+  ////////////////////////////////////////////////////////////////////
+  // IPv4 Addresses.
+  // Based on https://stackoverflow.com/a/14453696/4969945
+
+  // Matches an octet, optionally with leading zeros.
+  var octet = '(?:25[0-5]|2[0-4][0-9]|[01]?[0-9]{1,2})';
+  // Matches an octet without no leading zeros.
+  var octetStrict = '(?:25[0-5]|(?:2[0-4]|1[0-9]|[1-9])?[0-9])';
+
+
+  // Globally matches IPv4 addresses, optionally with leading zeros.
+  this.ipv4Address = new RegExp(octet + '(?:\\.' + octet + '){3}', 'g');
+  // Globally matches IPv4 addresses with no leading zeros.
+  this.ipv4AddressStrict =
+      new RegExp(octetStrict + '(?:\\.' + octetStrict + '){3}', 'g');
+
+  ////////////////////////////////////////////////////////////////////
+  // IPv6 Addresses.
+  // Based on https://stackoverflow.com/a/17871737/4969945 but modified
+  // to reduce ambiguity match more greedily when unanchored.
+
+  // Matches a 32-bit hex value as it can appear in an IPv6 address.
+  var word = '[0-9a-fA-F]{1,4}';
+
+  // Matches an IPv4 address as it can appear in an IPv6 address.
+  var ipv4 = this.ipv4AddressStrict.source;
+
+  // Globally matches a valid IPv6 address.
+  this.ipv6Address = new RegExp(
+      '(?:' +
+          '[fF][eE]80:(?::' + word + '){0,4}%[0-9a-zA-Z]+|' +  // fe80::7:8%eth0 fe80::7:8%1 (link-local IPv6 addresses with zone index)
+          '(?:' + word + ':){1,4}:' + ipv4 + '|' +             // 2001:db8:3:4::192.0.2.33  64:ff9b::192.0.2.33 (IPv4-Embedded IPv6 Address)
+          '(?:' + word + ':){7}' + word + '|' +                // 1:2:3:4:5:6:7:8
+          '(?:' + word + ':){6}(?::' + word + '){1,1}|' +      // 1:2:3:4:5:6::8 ... 1:2:3:4:5:6::8
+          '(?:' + word + ':){5}(?::' + word + '){1,2}|' +      // 1:2:3:4:5::8   ... 1:2:3:4:5::7:8
+          '(?:' + word + ':){4}(?::' + word + '){1,3}|' +      // 1:2:3:4::8     ... 1:2:3:4::6:7:8
+          '(?:' + word + ':){3}(?::' + word + '){1,4}|' +      // 1:2:3::8       ... 1:2:3::5:6:7:8
+          '(?:' + word + ':){2}(?::' + word + '){1,5}|' +      // 1:2::8         ... 1:2::4:5:6:7:8
+          '(?:' + word + ':){1}(?::' + word + '){1,6}|' +      // 1::8           ... 1::3:4:5:6:7:8
+          '(?:' + word + ':){1,7}:|' +                         // 1::            ... 1:2:3:4:5:6:7::
+          '::(?:[fF]{4}(?::0{1,4})?:)?' + ipv4 + '|' +         // ::255.255.255.255  ::ffff:255.255.255.255  ::ffff:0:255.255.255.255 (IPv4-mapped IPv6 addresses and IPv4-translated addresses)
+          ':(?::' + word + '){1,7}|' +                         // ::8            ... ::2:3:4:5:6:7:8
+          '::' +                                               // ::
+      ')', 'g');
+
+  ////////////////////////////////////////////////////////////////////
+  // DNS Domain Names.
+
+  // Matches a label (per RFC 952, updated by RFC 1123 to allow a
+  // it to begin with a digit), limited to 63 charcters (per RFC 1035).
+  var label = '[a-zA-Z0-9][a-zA-Z0-9-]{0,62}';
+
+  // Globally matches a legal (but not necessary valid!) DNS name.
+  // See also https://stackoverflow.com/q/106179/4969945 .
+  // BUG: does not limit length of name to ca. 253 characters (see
+  //     https://devblogs.microsoft.com/oldnewthing/20120412-00/?p=7873
+  //     for gory details).
+  this.dnsAddress = new RegExp(label + '(?:\\.' + label + ')*', 'g');
+
+  ////////////////////////////////////////////////////////////////////
+  // Authority section
+
+  // Globally matches a valid IP address (v4 or v6).
+  this.ipAddress = new RegExp(
+    this.ipv4Address.source + '|\\[' + this.ipv6Address.source + '\\]', 'g');
+
+  // Globally matches a valid URL authority section (e.g. domain name
+  // and port); this is (not coincidentally) also the same as a valid
+  // HTTP Host: header value.
+  //
+  // The RegExp includes capture groups for an IP address [1] *or* a
+  // DNS address [2], and (optionally) a port number [3].
+  this.authority = new RegExp(
+    '(?:(' + this.ipAddress.source + ')|' +
+       '(' + this.dnsAddress.source + '))' +
+    '(?::([0-9]+))?', 'g');  // Optional port number.
+
+  ////////////////////////////////////////////////////////////////////
+  // Exact forms of the above.  These do not get the global flag.
+  var keys = ['ipv4Address', 'ipv4AddressStrict', 'ipv6Address',
+              'dnsAddress', 'ipAddress', 'authority'];
+  for (var key, i = 0; (key = keys[i]); i++) {
+    this[key + 'Exact'] = new RegExp('^' + this[key].source + '$');
+  }
+
+};
+Object.setOwnerOf($.utils.url.regexps.generate, $.physicals.Maximilian);
+Object.setOwnerOf($.utils.url.regexps.generate.prototype, $.physicals.Maximilian);
+$.utils.url.regexps.ipv4AddressStrict = /(?:25[0-5]|(?:2[0-4]|1[0-9]|[1-9])?[0-9])(?:\.(?:25[0-5]|(?:2[0-4]|1[0-9]|[1-9])?[0-9])){3}/g;
+Object.setOwnerOf($.utils.url.regexps.ipv4AddressStrict, $.physicals.Maximilian);
+$.utils.url.regexps.ipv6Address = /(?:[fF][eE]80:(?::[0-9a-fA-F]{1,4}){0,4}%[0-9a-zA-Z]+|(?:[0-9a-fA-F]{1,4}:){1,4}:(?:25[0-5]|(?:2[0-4]|1[0-9]|[1-9])?[0-9])(?:\.(?:25[0-5]|(?:2[0-4]|1[0-9]|[1-9])?[0-9])){3}|(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|(?:[0-9a-fA-F]{1,4}:){6}(?::[0-9a-fA-F]{1,4}){1,1}|(?:[0-9a-fA-F]{1,4}:){5}(?::[0-9a-fA-F]{1,4}){1,2}|(?:[0-9a-fA-F]{1,4}:){4}(?::[0-9a-fA-F]{1,4}){1,3}|(?:[0-9a-fA-F]{1,4}:){3}(?::[0-9a-fA-F]{1,4}){1,4}|(?:[0-9a-fA-F]{1,4}:){2}(?::[0-9a-fA-F]{1,4}){1,5}|(?:[0-9a-fA-F]{1,4}:){1}(?::[0-9a-fA-F]{1,4}){1,6}|(?:[0-9a-fA-F]{1,4}:){1,7}:|::(?:[fF]{4}(?::0{1,4})?:)?(?:25[0-5]|(?:2[0-4]|1[0-9]|[1-9])?[0-9])(?:\.(?:25[0-5]|(?:2[0-4]|1[0-9]|[1-9])?[0-9])){3}|:(?::[0-9a-fA-F]{1,4}){1,7}|::)/g;
+Object.setOwnerOf($.utils.url.regexps.ipv6Address, $.physicals.Maximilian);
+$.utils.url.regexps.ipv4AddressExact = /^(?:25[0-5]|2[0-4][0-9]|[01]?[0-9]{1,2})(?:\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9]{1,2})){3}$/;
+Object.setOwnerOf($.utils.url.regexps.ipv4AddressExact, $.physicals.Maximilian);
+$.utils.url.regexps.ipv4AddressStrictExact = /^(?:25[0-5]|(?:2[0-4]|1[0-9]|[1-9])?[0-9])(?:\.(?:25[0-5]|(?:2[0-4]|1[0-9]|[1-9])?[0-9])){3}$/;
+Object.setOwnerOf($.utils.url.regexps.ipv4AddressStrictExact, $.physicals.Maximilian);
+$.utils.url.regexps.ipv6AddressExact = /^(?:[fF][eE]80:(?::[0-9a-fA-F]{1,4}){0,4}%[0-9a-zA-Z]+|(?:[0-9a-fA-F]{1,4}:){1,4}:(?:25[0-5]|(?:2[0-4]|1[0-9]|[1-9])?[0-9])(?:\.(?:25[0-5]|(?:2[0-4]|1[0-9]|[1-9])?[0-9])){3}|(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|(?:[0-9a-fA-F]{1,4}:){6}(?::[0-9a-fA-F]{1,4}){1,1}|(?:[0-9a-fA-F]{1,4}:){5}(?::[0-9a-fA-F]{1,4}){1,2}|(?:[0-9a-fA-F]{1,4}:){4}(?::[0-9a-fA-F]{1,4}){1,3}|(?:[0-9a-fA-F]{1,4}:){3}(?::[0-9a-fA-F]{1,4}){1,4}|(?:[0-9a-fA-F]{1,4}:){2}(?::[0-9a-fA-F]{1,4}){1,5}|(?:[0-9a-fA-F]{1,4}:){1}(?::[0-9a-fA-F]{1,4}){1,6}|(?:[0-9a-fA-F]{1,4}:){1,7}:|::(?:[fF]{4}(?::0{1,4})?:)?(?:25[0-5]|(?:2[0-4]|1[0-9]|[1-9])?[0-9])(?:\.(?:25[0-5]|(?:2[0-4]|1[0-9]|[1-9])?[0-9])){3}|:(?::[0-9a-fA-F]{1,4}){1,7}|::)$/;
+Object.setOwnerOf($.utils.url.regexps.ipv6AddressExact, $.physicals.Maximilian);
+$.utils.url.regexps.dnsAddress = /[a-zA-Z0-9][a-zA-Z0-9-]{0,62}(?:\.[a-zA-Z0-9][a-zA-Z0-9-]{0,62})*/g;
+Object.setOwnerOf($.utils.url.regexps.dnsAddress, $.physicals.Maximilian);
+$.utils.url.regexps.dnsAddressExact = /^[a-zA-Z0-9][a-zA-Z0-9-]{0,62}(?:\.[a-zA-Z0-9][a-zA-Z0-9-]{0,62})*$/;
+Object.setOwnerOf($.utils.url.regexps.dnsAddressExact, $.physicals.Maximilian);
+$.utils.url.regexps.authority = /(?:((?:25[0-5]|2[0-4][0-9]|[01]?[0-9]{1,2})(?:\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9]{1,2})){3}|\[(?:[fF][eE]80:(?::[0-9a-fA-F]{1,4}){0,4}%[0-9a-zA-Z]+|(?:[0-9a-fA-F]{1,4}:){1,4}:(?:25[0-5]|(?:2[0-4]|1[0-9]|[1-9])?[0-9])(?:\.(?:25[0-5]|(?:2[0-4]|1[0-9]|[1-9])?[0-9])){3}|(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|(?:[0-9a-fA-F]{1,4}:){6}(?::[0-9a-fA-F]{1,4}){1,1}|(?:[0-9a-fA-F]{1,4}:){5}(?::[0-9a-fA-F]{1,4}){1,2}|(?:[0-9a-fA-F]{1,4}:){4}(?::[0-9a-fA-F]{1,4}){1,3}|(?:[0-9a-fA-F]{1,4}:){3}(?::[0-9a-fA-F]{1,4}){1,4}|(?:[0-9a-fA-F]{1,4}:){2}(?::[0-9a-fA-F]{1,4}){1,5}|(?:[0-9a-fA-F]{1,4}:){1}(?::[0-9a-fA-F]{1,4}){1,6}|(?:[0-9a-fA-F]{1,4}:){1,7}:|::(?:[fF]{4}(?::0{1,4})?:)?(?:25[0-5]|(?:2[0-4]|1[0-9]|[1-9])?[0-9])(?:\.(?:25[0-5]|(?:2[0-4]|1[0-9]|[1-9])?[0-9])){3}|:(?::[0-9a-fA-F]{1,4}){1,7}|::)\])|([a-zA-Z0-9][a-zA-Z0-9-]{0,62}(?:\.[a-zA-Z0-9][a-zA-Z0-9-]{0,62})*))(?::([0-9]+))?/g;
+Object.setOwnerOf($.utils.url.regexps.authority, $.physicals.Maximilian);
+$.utils.url.regexps.authorityExact = /^(?:((?:25[0-5]|2[0-4][0-9]|[01]?[0-9]{1,2})(?:\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9]{1,2})){3}|\[(?:[fF][eE]80:(?::[0-9a-fA-F]{1,4}){0,4}%[0-9a-zA-Z]+|(?:[0-9a-fA-F]{1,4}:){1,4}:(?:25[0-5]|(?:2[0-4]|1[0-9]|[1-9])?[0-9])(?:\.(?:25[0-5]|(?:2[0-4]|1[0-9]|[1-9])?[0-9])){3}|(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|(?:[0-9a-fA-F]{1,4}:){6}(?::[0-9a-fA-F]{1,4}){1,1}|(?:[0-9a-fA-F]{1,4}:){5}(?::[0-9a-fA-F]{1,4}){1,2}|(?:[0-9a-fA-F]{1,4}:){4}(?::[0-9a-fA-F]{1,4}){1,3}|(?:[0-9a-fA-F]{1,4}:){3}(?::[0-9a-fA-F]{1,4}){1,4}|(?:[0-9a-fA-F]{1,4}:){2}(?::[0-9a-fA-F]{1,4}){1,5}|(?:[0-9a-fA-F]{1,4}:){1}(?::[0-9a-fA-F]{1,4}){1,6}|(?:[0-9a-fA-F]{1,4}:){1,7}:|::(?:[fF]{4}(?::0{1,4})?:)?(?:25[0-5]|(?:2[0-4]|1[0-9]|[1-9])?[0-9])(?:\.(?:25[0-5]|(?:2[0-4]|1[0-9]|[1-9])?[0-9])){3}|:(?::[0-9a-fA-F]{1,4}){1,7}|::)\])|([a-zA-Z0-9][a-zA-Z0-9-]{0,62}(?:\.[a-zA-Z0-9][a-zA-Z0-9-]{0,62})*))(?::([0-9]+))?$/;
+Object.setOwnerOf($.utils.url.regexps.authorityExact, $.physicals.Maximilian);
+$.utils.url.regexps.ipAddress = /(?:25[0-5]|2[0-4][0-9]|[01]?[0-9]{1,2})(?:\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9]{1,2})){3}|\[(?:[fF][eE]80:(?::[0-9a-fA-F]{1,4}){0,4}%[0-9a-zA-Z]+|(?:[0-9a-fA-F]{1,4}:){1,4}:(?:25[0-5]|(?:2[0-4]|1[0-9]|[1-9])?[0-9])(?:\.(?:25[0-5]|(?:2[0-4]|1[0-9]|[1-9])?[0-9])){3}|(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|(?:[0-9a-fA-F]{1,4}:){6}(?::[0-9a-fA-F]{1,4}){1,1}|(?:[0-9a-fA-F]{1,4}:){5}(?::[0-9a-fA-F]{1,4}){1,2}|(?:[0-9a-fA-F]{1,4}:){4}(?::[0-9a-fA-F]{1,4}){1,3}|(?:[0-9a-fA-F]{1,4}:){3}(?::[0-9a-fA-F]{1,4}){1,4}|(?:[0-9a-fA-F]{1,4}:){2}(?::[0-9a-fA-F]{1,4}){1,5}|(?:[0-9a-fA-F]{1,4}:){1}(?::[0-9a-fA-F]{1,4}){1,6}|(?:[0-9a-fA-F]{1,4}:){1,7}:|::(?:[fF]{4}(?::0{1,4})?:)?(?:25[0-5]|(?:2[0-4]|1[0-9]|[1-9])?[0-9])(?:\.(?:25[0-5]|(?:2[0-4]|1[0-9]|[1-9])?[0-9])){3}|:(?::[0-9a-fA-F]{1,4}){1,7}|::)\]/g;
+Object.setOwnerOf($.utils.url.regexps.ipAddress, $.physicals.Maximilian);
+$.utils.url.regexps.ipAddressExact = /^(?:25[0-5]|2[0-4][0-9]|[01]?[0-9]{1,2})(?:\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9]{1,2})){3}|\[(?:[fF][eE]80:(?::[0-9a-fA-F]{1,4}){0,4}%[0-9a-zA-Z]+|(?:[0-9a-fA-F]{1,4}:){1,4}:(?:25[0-5]|(?:2[0-4]|1[0-9]|[1-9])?[0-9])(?:\.(?:25[0-5]|(?:2[0-4]|1[0-9]|[1-9])?[0-9])){3}|(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|(?:[0-9a-fA-F]{1,4}:){6}(?::[0-9a-fA-F]{1,4}){1,1}|(?:[0-9a-fA-F]{1,4}:){5}(?::[0-9a-fA-F]{1,4}){1,2}|(?:[0-9a-fA-F]{1,4}:){4}(?::[0-9a-fA-F]{1,4}){1,3}|(?:[0-9a-fA-F]{1,4}:){3}(?::[0-9a-fA-F]{1,4}){1,4}|(?:[0-9a-fA-F]{1,4}:){2}(?::[0-9a-fA-F]{1,4}){1,5}|(?:[0-9a-fA-F]{1,4}:){1}(?::[0-9a-fA-F]{1,4}){1,6}|(?:[0-9a-fA-F]{1,4}:){1,7}:|::(?:[fF]{4}(?::0{1,4})?:)?(?:25[0-5]|(?:2[0-4]|1[0-9]|[1-9])?[0-9])(?:\.(?:25[0-5]|(?:2[0-4]|1[0-9]|[1-9])?[0-9])){3}|:(?::[0-9a-fA-F]{1,4}){1,7}|::)\]$/;
+Object.setOwnerOf($.utils.url.regexps.ipAddressExact, $.physicals.Maximilian);
 
 $.utils.array = {};
 $.utils.array.filterUntilFound = function filterUntilFound(array, filter1 /*, filter2, filter3... */) {
@@ -99,10 +255,6 @@ $.utils.array.filterUntilFound = function filterUntilFound(array, filter1 /*, fi
   }
   return [];
 };
-$.utils.array.filterUntilFound.prototype.constructor = function filterUntilFound(array, filter1 /*, filter2, filter3... */) {
-  // 
-};
-$.utils.array.filterUntilFound.prototype.constructor.prototype = $.utils.array.filterUntilFound.prototype;
 
 $.utils.object = {};
 Object.setOwnerOf($.utils.object, $.physicals.Maximilian);
@@ -119,7 +271,7 @@ $.utils.object.spider = function spider(start, callback) {
    *     properties of the current object are not traversed.
    */
   var thread = Thread.current();
-  thread.setTimeLimit(Math.min(thread.getTimeLimit(), 100));
+  thread.setTimeLimit(Math.min(thread.getTimeLimit() || Infinity, 100));
   var seen = new WeakMap();
   var path = [];
   doSpider(start);
@@ -179,18 +331,11 @@ $.utils.object.transplantProperties = function transplantProperties(oldObject, n
     try {
       Object.defineProperty(newObject, k, pd);
     } catch (e) {
-      try {
-        // If defineProperty fails, try simple assignment.
-        // TODO(cpcallen): remove this when server allows
-        // (non-effective) redefinition of nonconfigurable
-        // properties?
-        newObject[k] = pd.value;
-      } catch (e) {
-        // Ignore failed attempt to copy properties.
-      }
+      // Ignore failed attempt to copy properties.
     }
   }
 };
+Object.setOwnerOf($.utils.object.transplantProperties, $.physicals.Maximilian);
 $.utils.object.getValue = function getValue(object, prop) {
   /* Get the value from an object's property.
    * If the value is a function, call it and return the result.
@@ -206,6 +351,16 @@ $.utils.object.getValue = function getValue(object, prop) {
 };
 Object.setOwnerOf($.utils.object.getValue, $.physicals.Maximilian);
 Object.setOwnerOf($.utils.object.getValue.prototype, $.physicals.Neil);
+$.utils.object.getPropertyLocation = function $_utils_object_getPropertyLocation(obj, propName) {
+  // Returns the object that defines the given propName.
+  // Might be object, or one of its prototypes, or null.
+  while (obj && !Object.prototype.hasOwnProperty.call(obj, propName)) {
+    obj = Object.getPrototypeOf(obj);
+  }
+  return obj;
+};
+Object.setOwnerOf($.utils.object.getPropertyLocation, $.physicals.Neil);
+Object.setOwnerOf($.utils.object.getPropertyLocation.prototype, $.physicals.Neil);
 
 $.utils.string = {};
 $.utils.string.capitalize = function capitalize(str) {
@@ -261,4 +416,11 @@ $.utils.string.generateRandom = function generateRandom(length, soup) {
 Object.setOwnerOf($.utils.string.generateRandom, $.physicals.Maximilian);
 Object.setOwnerOf($.utils.string.generateRandom.prototype, $.physicals.Neil);
 $.utils.string.generateRandom.DEFAULT_SOUP = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+$.utils.string.prefixLines = function prefixLines(text, prefix) {
+  // Prepend a common prefix onto each line of code.
+  // Intended for indenting code or adding '//' comment markers.
+  return prefix + text.replace(/(?!\n$)\n/g, '\n' + prefix);
+};
+Object.setOwnerOf($.utils.string.prefixLines, $.physicals.Neil);
+Object.setOwnerOf($.utils.string.prefixLines.prototype, $.physicals.Neil);
 

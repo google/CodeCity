@@ -29,6 +29,32 @@
 var util = {};
 
 /**
+ * @param {*} object
+ * @param {?util.inspect.Options=} options
+ * @return {string}
+ */
+util.inspect = function(object, options) {};
+
+/**
+ * @const {symbol}
+ */
+util.inspect.custom;
+
+/**
+ * @typedef {{showHidden: (boolean|undefined),
+ *            depth: (number|null|undefined),
+ *            colors: (boolean|undefined),
+ *            customInspect: (boolean|undefined),
+ *            showProxy: (boolean|undefined),
+ *            maxArrayLength: (number|undefined),
+ *            maxStringLength: (number|undefined),
+ *            breakLength: (number|undefined),
+ *            compact: (boolean|number|undefined),
+ *            sorted: (boolean|!Function|undefined)}}
+ */
+util.inspect.Options;
+
+/**
  * @param {string} format
  * @param {...*} var_args
  * @return {string}

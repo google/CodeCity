@@ -24,15 +24,47 @@
  * restart listeners intead.
  */
 
-// Configuration.
-$.servers.http.subdomains = false;
-$.servers.http.protocol = 'http:';
-$.servers.http.host = 'localhost:8080';
+/* Optional (but recommended) configuration.  The web server is
+ * capable of guessing its own hostname, but will be more efficient
+ * and secure if its configuration is specified explicitly.
+ */
+
+/* Set .hostname to the canonical hostname (including the port number,
+ * if non-default).
+ */
+// $.hosts.root.hostname = 'example.codecity.world';
+// $.hosts.root.hostname = 'localhost:8080';
+
+/* If your host has more than one name, set .hostRegExp to a regular
+ * expression that matches all valid name+port combinations for this
+ * host.  It is recommended that it end with /$/, but do NOT start it
+ * with /^/ unless you want to break wildcard subdomains.  Make sure
+ * it matches .hostname!
+ */
+// Accept either of two different hostnames.
+// $.hosts.root.hostRegExp = /example.codecity.world$|codecity.example.com$/;
+// Match any TLD and optional port.
+// $.hosts.root.hostRegExp = /example.codecity.\w+(?::\d+)?$/;
+
+/* Set .pathToSubdomain to true if you don't have a wildcard DNS entry
+ * and wildcard TLS certificate for your hostname (false if you do);
+ * this will enable accessing pages usually served on subdomains (such
+ * as the code editor) via the root hostname instead.
+ *
+ * Normally the nginx reverse proxy sends a CodeCity-pathToSubdomain
+ * header which will automatically enable or disable this feature, but
+ * you can override it here.
+ */
+// $.hosts.root.pathToSubdomain = false;
 
 // Set up.
 $.system.onStartup();
 
 // Tidy up.
+$.clock.movable = true;
+$.clock.moveTo($.startRoom);
+$.clock.movable = false;
+
 $.tutorial.moveTo($.startRoom);
 $.tutorial.reset();
 
