@@ -76,11 +76,22 @@ protect.  See [Appendix A: Creating a Service Account](
     *   Security:
         *   Recommended: tick “Turn on Secure Boot”.
         *   SSH Keys: you can add your ssh public key(s) here if you
-            wish; they will automatically be added to the
-            corresponding `~userid/.ssh/authorized_keys` file.  Even
-            if you don’t do this now you will in any case be able to
-            SSH to the machine from [GCE instances page](
-            https://console.cloud.google.com/compute/instances).
+            wish; doing so will cause them to be automatically added
+            to the corresponding `~userid/.ssh/authorized_keys` file,
+            but note:
+            *   Keys added here apply only to this GCE instance.  If
+                you expect your project to have multiple instances you
+                may prefer to add your SSH keys on [the Compute Engine
+                metadata page](
+                https://pantheon.corp.google.com/compute/metadata/sshKeys)
+                instead: keys added there will have access to all the
+                project's GCE instances by default (i.e., unless you
+                tick "Block project-wide SSH keys" on a particular
+                instance).
+            *   Even if you don’t add any ssh keys now you will in any
+                case be able to SSH to the machine from [GCE instances
+                page](
+                https://console.cloud.google.com/compute/instances).
     *   Disks:
         *   Recommended: **un**tick “Delete boot disk when instance
             deleted” so that if you _do_ delete your instance you can
@@ -94,7 +105,8 @@ protect.  See [Appendix A: Creating a Service Account](
             you intend to use for your instance,
             e.g. <code><em>example</em>.codecity.world</code>.
         *   Click “Done” to end editing the network interface.
-0.  Double-check the monthly cost estimate to ensure it is reasonable.
+0.  Double-check the monthly cost estimate (at the top of the page) to
+    ensure it is reasonable.
 0.  Click “create” and you will be taken back to the VM instances
     dashboard.  After a few minutes, you should see your new instance
     is ready, and has internal and external IP addresses.
@@ -181,12 +193,19 @@ but we have the following observations and recommendations:
     that you use a wildcard DNS record<sup>[[?]](
     https://en.wikipedia.org/wiki/Wildcard_DNS_record)</sup>, so that
     each user can serve their content on an isolated subdomain (like
-    <code><em>username</em>.example.codecity.world</code>).  To
-    facilitate obtaining the necessary wildcard certificate<sup>[[?]](
-    https://en.wikipedia.org/wiki/Wildcard_certificate)</sup>, we
-    recommend you use a [DNS provider who easily integrates with Let’s
-    Encrypt DNS validation][dns-providers], such as [Google Cloud
-    DNS](https://cloud.google.com/dns/), if possible.
+    <code><em>username</em>.example.codecity.world</code>).
+    *  You will need to create (or arrange to have created) two
+       separate DNS "A" records for your domain name:
+       *   The main entry, e.g. `example.codecity.world`, type `A`,
+           resolving to your instance's IP address, and
+       *   The wildcard entry, e.g. `*.example.codecity.world`, also
+           type `A`, resolving to the same IP address.
+    *  To facilitate obtaining the necessary wildcard
+       certificate<sup>[[?]](
+       https://en.wikipedia.org/wiki/Wildcard_certificate)</sup>, we
+       recommend you use a [DNS provider who easily integrates with
+       Let’s Encrypt DNS validation][dns-providers], such as [Google
+       Cloud DNS](https://cloud.google.com/dns/), if possible.
  
 [same origin policy]: https://developer.mozilla.org/en-US/docs/Web/Security/Same-origin_policy
 [dns-providers]: https://community.letsencrypt.org/t/dns-providers-who-easily-integrate-with-lets-encrypt-dns-validation/86438
@@ -350,8 +369,10 @@ another provider.
         tab of the IAM & Admin section of the GCP console.
     0.  Find the service account under which your GCE instance runs;
         unless you elected otherwise above, this will be the one named
-        “Compute Engine default service account”.
-    0.  From the Actions menu (︙), select “Create Key”.
+        “Compute Engine default service account”.  Click on the email
+        address for the key to open the details pane.
+    0.  Click on the keys tab.
+    0.  From the Add Key pop-up menu, select “Create new key”.
         *   Choose Key Type: JSON.
         *   Click “Create”.
     0.  Your browser will download a file with a name of the form
@@ -362,7 +383,7 @@ another provider.
         <em>projectID–XXXXXXXXXXXX</em>.json
         <em>example</em>.codecity.world:service-account.json</code>,
         or by pasting it into a terminal window, as follows:
-        *   Open the `.json` file you downloaded in step 2.iii. in a
+        *   Open the `.json` file you downloaded in step 2.iv. in a
             text editor, select the whole contents and copy it to the
             clipboard.
         *   **On your instance**, enter the command `cat - >
@@ -556,18 +577,14 @@ https://support.google.com/cloud/answer/6158849) for more information.
         ```
         Open `~/CodeCity/login/loginServer.cfg` in the text editor of
         your choice.
-    *   Change the `loginUrl` to the URL for the login server.  If
-        using a wildcard DNS entry for your instance, it will be the
-        `login.` subdomain of your instance’s name; otherwise it will
-        be the `/login` path on your instance.  For example:
-        *   With wildcard DNS: `https://login.example.codecity.world/`
-        *   Without wildcard DNS:`https://example.codecity.world/login/`
-    *   Change the `connectUrl` to the URL for the connect server.
-        This works similarly to the previous entry, e.g.:
+    *   Set `connectUrl` to the URL for the connect server.  If using
+        a wildcard DNS entry for your instance, it will be the
+        `connect.` subdomain of your instance’s name; otherwise it
+        will be the `/connect` path on your instance.  For example:
         *   With wildcard DNS: `https://connect.example.codecity.world/`
         *   Without wildcard DNS:`https://example.codecity.world/connect/`
-    *   Change the `staticUrl` to the URL nginx will serve static
-        content on, e.g.:
+    *   Set `staticUrl` to the URL nginx will serve static content on.
+        This works similarly to the previous entry, e.g.:
         *   With wildcard DNS: `https://static.example.codecity.world/`
         *   Without wildcard DNS:`https://example.codecity.world/static/`
     *   Set `clientID` and `clientSecret` to the values obtained
@@ -580,7 +597,7 @@ https://support.google.com/cloud/answer/6158849) for more information.
         [random string from random.org].
     *   Optionally, set `emailRegexp` to a [JavaScript regexp]
         matching email addresses which should be permitted to log in
-        to your instance—e.g., `^.*@myorganisation.org$`.
+        to your instance—e.g., `^.*@myorganisation\\.org$`.
 0.  Create and edit a config file for connectServer:
     *   Run connectServer once to create an empty config file:
         ```
@@ -588,11 +605,15 @@ https://support.google.com/cloud/answer/6158849) for more information.
         ```
         Open `~/CodeCity/connect/connectServer.cfg` in the text editor
         of your choice.
-    *   Set `loginUrl`, `staticUrl` and `password` to the _same_
+    *   Set `loginUrl` to the URL for the login server, e.g.:
+        *   With wildcard DNS: `https://login.example.codecity.world/`
+        *   Without wildcard DNS:`https://example.codecity.world/login/`
+    *   Set `staticUrl` and `password` to the _same_
         values used in `loginServer.cfg`.
 0.  Modify the configuration for the in-core HTTP server:
     *   Open the file `~/CodeCity/core/core_99_startup.js` in the text
-        editor of your choice.  Find the `// Configuration.` section.
+        editor of your choice.  Find the optional configuration
+        section near the top of the file.
     *   Set `$.hosts.root.hostname` to your instance’s domain
         name—e.g., <code>$.hosts.root.hostname =
         '<em>example</em>.codecity.world';</code>
@@ -795,9 +816,11 @@ City](#install--configure-code-city).
 
 4.  Ensure that your SSH public key can be used to log in to the
     instance.  This can be done in two ways:
-    *   Preferred: add it to the instance at creation or by editing
-        the instance on [the GCE instances page](
-        https://console.cloud.google.com/compute/instances)
+    *   Preferred: add it to [the Compute Engine metadata page](
+        https://pantheon.corp.google.com/compute/metadata/sshKeys).
+    *   Alternatively: add it to the instance at creation or by
+        editing the instance on [the GCE instances page](
+        https://console.cloud.google.com/compute/instances).
     *   Alternatively: log into the instance initially using the
         browser-based SSH available via the GCE console.  Use the text
         editor of your choice to append your SSH public key to
