@@ -88,7 +88,7 @@ protect.  See [Appendix A: Creating a Service Account](
                 project's GCE instances by default (i.e., unless you
                 tick "Block project-wide SSH keys" on a particular
                 instance).
-            *   Even if you don’t add any ssh keys now you will in any
+            *   Even if you don’t add any SSH keys now you will in any
                 case be able to SSH to the machine from [GCE instances
                 page](
                 https://console.cloud.google.com/compute/instances).
