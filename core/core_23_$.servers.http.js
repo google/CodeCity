@@ -520,9 +520,6 @@ $.servers.http.Response.discardDuplicates[7] = 'retry-after';
 $.servers.http.Response.defaultHeaders = (new 'Object.create')(null);
 $.servers.http.Response.defaultHeaders['cache-control'] = 'no-store';
 $.servers.http.Response.defaultHeaders.server = 'CodeCity/0.0 ($.servers.http)';
-$.servers.http.protocol = 'https:';
-$.servers.http.host = 'google.codecity.world';
-$.servers.http.subdomains = true;
 $.servers.http.Host = function Host() {
   /* A Host object represents a domain or subdomain served by the
    * web server.  It is expected that most Host instances will be
