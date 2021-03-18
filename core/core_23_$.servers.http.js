@@ -182,13 +182,7 @@ $.servers.http.Request.prototype.parse = function parse(line) {
           if (cookieName === 'ID') {
             // Special-case the 'ID' cookie for user login.
             // Do not expose this ID string to anyone.
-            var c = cookieValue.match(/^([0-9a-f]+)_[0-9a-f]+$/);
-            // m[1] is the user's account ID.
-            // The second part is the salted security hash.
-            // Ignore the hash unless we are creating a new account.
-            if (c) {
-              this.user = $.userDatabase.get(c[1]);
-            }
+            this.user = $.userDatabase.get(cookieValue);
           } else {
             // Regular cookie.
             existing[cookieName] = cookieValue;
@@ -221,7 +215,7 @@ $.servers.http.Request.prototype.parse = function parse(line) {
   // Invalid state?  Extra lines?  Ignore.
   return true;
 };
-Object.setOwnerOf($.servers.http.Request.prototype.parse, $.physicals.Maximilian);
+Object.setOwnerOf($.servers.http.Request.prototype.parse, $.physicals.Neil);
 $.servers.http.Request.prototype.parseUrl_ = function parseUrl_(url) {
   /* Parse a URL and set this.path and this.query as appropriate:
    *
