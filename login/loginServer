@@ -35,7 +35,7 @@ const oauth2Api = google.oauth2('v2');
 // Configuration constants.
 const configFileName = 'loginServer.cfg';
 
-// Global variables 
+// Global variables
 let CFG = null;
 const /** !Object<string, !google.auth.OAuth2> */ clients = {};
 
@@ -53,14 +53,14 @@ const DEFAULT_CFG = {
   clientSecret: 'yyyyyyyyyyyyyyyyyyyyyyyy',
   // Root domain.
   cookieDomain: 'example.codecity.world',
-  // Random password for cookie encryption and salt for login IDs.
-  password: 'zzzzzzzzzzzzzzzz',
+  // Random salt for login IDs.
+  salt: 'zzzzzzzzzzzzzzzz',
   // Regexp on email addresses that must pass to allow access.
   emailRegexp: '.*'
 };
 
 
-/** 
+/**
  * Serve an error to the given ServerResult.  Also log information
  * about the failed IncomingMessage to the console.
  * @param {!http.IncomingMessage} request The request which triggered the error.
@@ -184,10 +184,7 @@ async function handleRequest(request, response) {
   }
   // Convert the Google ID into one unique for Code City.
   const id = crypto.createHash('sha512')
-      .update(CFG.password + data.id).digest('hex');
-  // Create anti-tampering hash as checksum.
-  const checksum = crypto.createHash('sha3-224')
-      .update(CFG.password + id).digest('hex');
+      .update(CFG.salt + data.id).digest('hex');
   const emailRegexp = new RegExp(CFG.emailRegexp || '.*');
   // FYI: If present, data.hd contains the GSfE domain.
   // E.g. 'students.gissv.org', or 'sjsu.edu'.
@@ -207,9 +204,9 @@ async function handleRequest(request, response) {
   }
   const domain = CFG.cookieDomain ? `Domain=${CFG.cookieDomain}; ` : '';
   const redirectUrl = url.searchParams.get('state');
-      
-  response.writeHead(302, {   // Temporary redirect.
-    'Set-Cookie': `ID=${id}_${checksum}; HttpOnly; ${domain}Path=/`,
+
+  response.writeHead(302, {  // Temporary redirect.
+    'Set-Cookie': `ID=${id}; HttpOnly; ${domain}Path=/`,
     'Location': redirectUrl,
   });
   response.end('Login OK.  Redirecting.');
@@ -231,7 +228,7 @@ async function readConfigFile(filename) {
     await fs.writeFile(filename, data, 'utf8');
   }
   CFG = JSON.parse(data);
-  if (!CFG.password || CFG.password === DEFAULT_CFG.password) {
+  if (!CFG.salt || CFG.salt === DEFAULT_CFG.salt) {
     throw Error(
         `Configuration file ${filename} not configured.  ` +
         'Please edit this file.');

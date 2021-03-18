@@ -47,9 +47,7 @@ const DEFAULT_CFG = {
   // Port of Code City.
   remotePort: 7777,
   // Age in seconds of abandoned queues to be closed.
-  connectionTimeout: 300,
-  // Random password for cookie encryption and salt for login IDs.
-  password: 'zzzzzzzzzzzzzzzz'
+  connectionTimeout: 300
 };
 
 /**
@@ -223,24 +221,13 @@ function handleRequest(request, response) {
         cookieList[parts.shift().trim()] = decodeURI(parts.join('='));
     });
     // Validate the ID to ensure there was no tampering.
-    var m = cookieList.ID && cookieList.ID.match(/^([0-9a-f]+)_([0-9a-f]+)$/);
+    var m = cookieList.ID && cookieList.ID.match(/^[0-9a-f]+$/);
     if (!m) {
       console.log('Missing login cookie.  Redirecting.');
       response.writeHead(302, {  // Temporary redirect.
          'Location': CFG.loginUrl
        });
       response.end('Login required.  Redirecting.');
-      return;
-    }
-    var loginId = m[1];
-    var checksum = CFG.password + loginId;
-    checksum = crypto.createHash('sha3-224').update(checksum).digest('hex');
-    if (checksum !== m[2]) {
-      console.log('Invalid login cookie: ' + cookieList.ID);
-      response.writeHead(302, {  // Temporary redirect.
-         'Location': CFG.loginUrl
-       });
-      response.end('Login invalid.  Redirecting.');
       return;
     }
     var seed = (Date.now() * Math.random()).toString() + cookieList.ID;
@@ -256,14 +243,14 @@ function handleRequest(request, response) {
     queueList[sessionId] = queue;
 
     // Start a connection.
-    queue.client.write('identify as ' + loginId + '\n');
+    queue.client.write('identify as ' + cookieList.ID + '\n');
 
     var subs = {
       '<<<SESSION_ID>>>': sessionId,
       '<<<STATIC_URL>>>': CFG.staticUrl
     };
     serveFile(response, 'connect.html', subs);
-    console.log('Hello xxxx' + loginId.substring(loginId.length - 4) +
+    console.log('Hello xxxx' + cookieList.ID.substring(cookieList.ID.length - 4) +
                 ', starting session ' + sessionId);
     return;
   }
@@ -396,7 +383,7 @@ function readConfigFile(filename) {
     fs.writeFileSync(filename, data, 'utf8');
   }
   CFG = JSON.parse(data);
-  if (!CFG.password || CFG.password === DEFAULT_CFG.password) {
+  if (!CFG.loginUrl || CFG.loginUrl === DEFAULT_CFG.loginUrl) {
     throw Error(
         `Configuration file ${filename} not configured.  ` +
         'Please edit this file.');
