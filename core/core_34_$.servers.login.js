@@ -27,7 +27,6 @@ $.servers.login = {};
 Object.setOwnerOf($.servers.login, $.physicals.Neil);
 $.servers.login.connection = (new 'Object.create')($.connection);
 $.servers.login.connection.onReceiveLine = function onReceiveLine(line) {
-  $.system.log('login service backend got: ' + $.utils.code.toSource(line));
   line = line.trim();
   try {
     var loginData = JSON.parse(line);

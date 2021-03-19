@@ -135,7 +135,6 @@ async function pingBackend(query) {
   return new Promise((resolve, reject) => {
     const socket = net.createConnection({port: CFG.backendPort});
     socket.on('connect', () => {
-      console.log('Backend: sent %o', query);
       socket.end(query);
     });
     socket.on('error', (error) => {
@@ -143,11 +142,9 @@ async function pingBackend(query) {
       reject(error);
     });
     socket.on('data', (data) => {
-      console.log('Backend: received %o', String(data));
       result += String(data);
     });
     socket.on('end', () => {
-      console.log('Backend: closed');
       resolve(result);
     });
   });
