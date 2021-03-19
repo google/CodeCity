@@ -49,6 +49,7 @@ Object.setOwnerOf($.connection.onReceiveLine, $.physicals.Maximilian);
 $.connection.onEnd = function onEnd() {
   this.connected = false;
   this.disconnectTime = Date.now();
+  this.close();
 };
 Object.setOwnerOf($.connection.onEnd, $.physicals.Maximilian);
 $.connection.write = function write(text) {
