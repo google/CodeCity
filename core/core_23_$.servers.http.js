@@ -896,6 +896,7 @@ $.servers.http.onRequest = function onRequest(connection) {
       response.sendError(500, e);
     }
   } finally {
+    suspend();
     connection.close();
   }
 };
