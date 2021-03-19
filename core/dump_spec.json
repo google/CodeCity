@@ -335,6 +335,15 @@
       {"path": "$.physicals['Container prototype']", "do": "DONE"}
     ]
   }, {
+    "filename": "core_34_$.servers.login.js",
+    "headerSubs": {
+      "<YEAR>": "2021",
+      "<OVERVIEW>": "Login service backend server for Code City."
+    },
+    "contents": [
+      "$.servers.login"
+    ]
+  }, {
     "filename": "core_34_$.servers.telnet.js",
     "headerSubs": {
       "<YEAR>": "2017",
@@ -574,6 +583,8 @@
       "$.room",
       "$.thing",
       "$.container",
+
+      "$.servers.login",
 
       "$.servers.telnet",
 
