@@ -54,8 +54,6 @@ const DEFAULT_CFG = {
   clientSecret: 'yyyyyyyyyyyyyyyyyyyyyyyy',
   // Root domain.
   cookieDomain: 'example.codecity.world',
-  // Random salt for login IDs.
-  salt: 'zzzzzzzzzzzzzzzz',
   // Regexp on email addresses that must pass to allow access.
   emailRegexp: '.*',
   // Port number for the login service backend.
@@ -66,6 +64,8 @@ const DEFAULT_CFG = {
    *
    * Available fieldnames, and the types and meanings of their values:
    * - id: string - the user's OAuth (GAIA) ID as a numeric string.
+   *   If salt is set (below), the .id will be salted and hashed with
+   *   sha512 before being sent to the login backend service.
    * - email: string - the user's email address.
    * - verified_email: boolean - has the user's email address been verified?
    * - name: string - the user's full name.
@@ -74,7 +74,12 @@ const DEFAULT_CFG = {
    * - picture: string - URL pointing to the user's profile picture.
    * - hd: string - the hosted domain, for GSuite accounts.
    */
-  backendFields: ['id']
+  backendFields: ['id'],
+  /* Random salt for OAuth IDs.  If set to '' the .id field received
+   * from the Oauth server will be hashed but not salted. If set to 
+   * undefined (or not set) the .id wil be sent plaintext.
+   */
+  salt: 'zzzzzzzzzzzzzzzz'
 };
 
 /**
@@ -305,7 +310,7 @@ async function readConfigFile(filename) {
     await fs.writeFile(filename, data, 'utf8');
   }
   CFG = JSON.parse(data);
-  if (!CFG.salt || CFG.salt === DEFAULT_CFG.salt) {
+  if (CFG.salt === DEFAULT_CFG.salt) {
     throw Error(
         `Configuration file ${filename} not configured.  ` +
         'Please edit this file.');
