@@ -28,6 +28,7 @@ const forwardedParse = require('forwarded-parse');
 const fs = require('fs').promises;
 const {google} = require('googleapis');
 const http = require('http');
+const net = require('net');
 const {URL, format: urlFormat} = require('url');
 
 const oauth2Api = google.oauth2('v2');
@@ -53,12 +54,33 @@ const DEFAULT_CFG = {
   clientSecret: 'yyyyyyyyyyyyyyyyyyyyyyyy',
   // Root domain.
   cookieDomain: 'example.codecity.world',
-  // Random salt for login IDs.
-  salt: 'zzzzzzzzzzzzzzzz',
   // Regexp on email addresses that must pass to allow access.
-  emailRegexp: '.*'
+  emailRegexp: '.*',
+  // Port number for the login service backend.
+  backendPort: 7776,
+  /* List of fields, from data object returned by
+   * oauth2Api.userinfo.v2.me.get, to pass along in the request the
+   * login service backend.
+   *
+   * Available fieldnames, and the types and meanings of their values:
+   * - id: string - the user's OAuth (GAIA) ID as a numeric string.
+   *   If salt is set (below), the .id will be salted and hashed with
+   *   sha512 before being sent to the login backend service.
+   * - email: string - the user's email address.
+   * - verified_email: boolean - has the user's email address been verified?
+   * - name: string - the user's full name.
+   * - given_name: string - the user's given name.
+   * - family_name: string - the user's family name.
+   * - picture: string - URL pointing to the user's profile picture.
+   * - hd: string - the hosted domain, for GSuite accounts.
+   */
+  backendFields: ['id'],
+  /* Random salt for OAuth IDs.  If set to '' the .id field received
+   * from the Oauth server will be hashed but not salted. If set to 
+   * undefined (or not set) the .id wil be sent plaintext.
+   */
+  salt: 'zzzzzzzzzzzzzzzz'
 };
-
 
 /**
  * Serve an error to the given ServerResult.  Also log information
@@ -71,7 +93,7 @@ const DEFAULT_CFG = {
  */
 function sendError(request, response, statusCode, message) {
   console.log('%s %s (Host: %s): %d %s', request.method,
-              request.url.replace(/=[^&]*(?=&|$)/g, '=...'),
+              request.url.replace(/=[^&]*(?=&|$)/g, '=…'),
               request.headers.host, statusCode, message);
   response.writeHead(statusCode).end(message);
 }
@@ -100,6 +122,32 @@ async function serveFile(request, response, filename, subs) {
   response.statusCode = 200;
   response.setHeader('Content-Type', 'text/html');
   response.end(data);
+}
+
+/**
+ * Send a string to the login service backend and return any data
+ * received in response.
+ * @param {string} query Data string to send to backend.
+ * @return {!Promise<string>} a promise yeilding the data received.
+ */
+async function pingBackend(query) {
+  let result = '';
+  return new Promise((resolve, reject) => {
+    const socket = net.createConnection({port: CFG.backendPort});
+    socket.on('connect', () => {
+      socket.end(query);
+    });
+    socket.on('error', (error) => {
+      socket.destroy();
+      reject(error);
+    });
+    socket.on('data', (data) => {
+      result += String(data);
+    });
+    socket.on('end', () => {
+      resolve(result);
+    });
+  });
 }
 
 /**
@@ -164,7 +212,7 @@ async function handleRequest(request, response) {
     return;
   }
 
-  // Handle the result of a login.
+  // Handle the result of an OAuth login.
   let tokens;
   try {
     ({tokens} = await oauth2Client.getToken(code));
@@ -182,17 +230,48 @@ async function handleRequest(request, response) {
     sendError(request, response, 500, `Google Userinfo fail: ${err}`);
     return;
   }
-  // Convert the Google ID into one unique for Code City.
-  const id = crypto.createHash('sha512')
-      .update(CFG.salt + data.id).digest('hex');
-  const emailRegexp = new RegExp(CFG.emailRegexp || '.*');
-  // FYI: If present, data.hd contains the GSfE domain.
-  // E.g. 'students.gissv.org', or 'sjsu.edu'.
-  // We aren't using it now, but this might be used to filter users.
 
   // Check email address is allowed.
+  const emailRegexp = new RegExp(CFG.emailRegexp || '.*');
   if (!emailRegexp.test(data.email)) {
     sendError(request, response, 403, `Login denied for ${data.email}`);
+    return;
+  }
+  // FYI: If present, data.hd contains the GSfE domai,
+  // e.g. 'students.gissv.org', or 'sjsu.edu'.  We aren't using it
+  // now, but this might be used to filter users.
+
+  // Convert the OAuth (GAIA) ID into one unique for Code City.  Use
+  // CFG.salt to salt the sha512hash.  If .salt === '', then .id will
+  // still be hashed but not salted.
+  // TODO(cpcallen): it would be more secure to append salt to id.
+  if (('id' in data) && CFG.salt !== undefined) {
+    data.id = crypto.createHash('sha512')
+        .update(CFG.salt + data.id).digest('hex');
+  }
+
+  // Contact login service backend if configured.
+  let cookie;
+  if (CFG.backendPort) {
+    // Construct object to be passed to login service backend.
+    const loginData = {};
+    for (const name of CFG.backendFields || ['id']) {
+      if (name in data) loginData[name] = data[name];
+    }
+
+    // Ping the login service backend.
+    try {
+      cookie = await pingBackend(JSON.stringify(loginData) + '\n');
+    } catch (err) {
+      sendError(request, response, 500, `Login service backend fail: ${err}`);
+      return;
+    }
+  } else {
+    // Just use the (probably salted and hashed) id value like we used to.
+    cookie = data.id;
+  }
+  if (!cookie) {
+    sendError('Login service backend did not return a valid cookie');
     return;
   }
 
@@ -206,11 +285,11 @@ async function handleRequest(request, response) {
   const redirectUrl = url.searchParams.get('state');
 
   response.writeHead(302, {  // Temporary redirect.
-    'Set-Cookie': `ID=${id}; HttpOnly; ${domain}Path=/`,
+    'Set-Cookie': `ID=${cookie}; HttpOnly; ${domain}Path=/`,
     'Location': redirectUrl,
   });
   response.end('Login OK.  Redirecting.');
-  console.log('Accepted xxxx' + id.substring(id.length - 4));
+  console.log('Accepted xxxx' + cookie.substring(cookie.length - 4));
 }
 
 /**
@@ -228,7 +307,7 @@ async function readConfigFile(filename) {
     await fs.writeFile(filename, data, 'utf8');
   }
   CFG = JSON.parse(data);
-  if (!CFG.salt || CFG.salt === DEFAULT_CFG.salt) {
+  if (CFG.salt === DEFAULT_CFG.salt) {
     throw Error(
         `Configuration file ${filename} not configured.  ` +
         'Please edit this file.');

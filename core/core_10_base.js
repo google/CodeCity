@@ -58,6 +58,7 @@ $.system.onStartup = function onStartup() {
    * listening sockets, etc.)
    */
   // Listen on various sockets.
+  try {$.system.connectionListen(7776, $.servers.login.connection, 100);} catch(e) {}
   try {$.system.connectionListen(7777, $.servers.telnet.connection, 100);} catch(e) {}
   try {$.system.connectionListen(7780, $.servers.http.connection, 100);} catch(e) {}
   try {$.system.connectionListen(9999, $.servers.eval.connection);} catch(e) {}
@@ -74,7 +75,7 @@ $.system.onStartup = function onStartup() {
   $.Selector.db.populate();
   $.system.log('Startup: Selector reverse-lookup DB rebuilt.');
 };
-Object.setOwnerOf($.system.onStartup, $.physicals.Maximilian);
+Object.setOwnerOf($.system.onStartup, $.physicals.Neil);
 Object.setOwnerOf($.system.onStartup.prototype, $.physicals.Maximilian);
 
 var user = function user() {

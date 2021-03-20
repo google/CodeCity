@@ -39,10 +39,13 @@ $.userDatabase.get = function get(id) {
 Object.setOwnerOf($.userDatabase.get, $.physicals.Neil);
 Object.setOwnerOf($.userDatabase.get.prototype, $.physicals.Maximilian);
 $.userDatabase.set = function set(id, user) {
+  if (!$.user.isPrototypeOf(user)) {
+    throw new TypeError('userDatabase only accepts $.user values');
+  }
   var hash = $.utils.string.hash('md5', this.salt_ + id);
   this.byMd5[hash] = user;
 };
-Object.setOwnerOf($.userDatabase.set, $.physicals.Neil);
+Object.setOwnerOf($.userDatabase.set, $.physicals.Maximilian);
 Object.setOwnerOf($.userDatabase.set.prototype, $.physicals.Maximilian);
 $.userDatabase.validate = function validate() {
   var table = this.byMd5

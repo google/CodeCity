@@ -5540,7 +5540,7 @@ Interpreter.prototype.installTypes = function() {
     }
     var server = this;  // Because this will be undefined in handlers below.
     // Create net.Server, start it listening, and attached it to this.
-    var netServer = new net.Server(/* {allowHalfOpen: true} */);
+    var netServer = new net.Server({allowHalfOpen: true});
     netServer.on('connection', function(socket) {
       // TODO(cpcallen): Add localhost test here, like this - only
       // also allow IPV6 connections:
@@ -5566,6 +5566,16 @@ Interpreter.prototype.installTypes = function() {
             server.owner, func, obj, [], undefined, server.timeLimit);
       }
 
+      // Handle socket closing completely.
+      socket.on('close', function() {
+        intrp.log('net', 'Connection from %s closed.', socket.remoteAddress);
+        var func = obj.get('onClose', this.owner);
+        if (func instanceof intrp.Function && server.owner !== null) {
+          intrp.createThreadForFuncCall(
+              server.owner, func, obj, [], undefined, server.timeLimit);
+        }
+      });
+
       // Handle incoming data from clients.  N.B. that data is a
       // node buffer object, so we must convert it to a string
       // before passing it to user code.
@@ -5578,17 +5588,17 @@ Interpreter.prototype.installTypes = function() {
         }
       });
 
+      // Handle far end closing connection.
       socket.on('end', function() {
-        intrp.log('net', 'Connection from %s closed.', socket.remoteAddress);
+        intrp.log('net', 'Connection from %s ended.', socket.remoteAddress);
         var func = obj.get('onEnd', this.owner);
         if (func instanceof intrp.Function && server.owner !== null) {
           intrp.createThreadForFuncCall(
               server.owner, func, obj, [], undefined, server.timeLimit);
         }
-        // TODO(cpcallen): Don't fully close half-closed connection yet.
-        socket.end();
       });
 
+      // Handle errors.
       socket.on('error', function(error) {
         intrp.log('net', 'Socket error:', error);
         var func = obj.get('onError', this.owner);
