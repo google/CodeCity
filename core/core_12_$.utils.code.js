@@ -332,16 +332,69 @@ $.utils.code.eval = function(src, evalFunc) {
 delete $.utils.code.eval.name;
 Object.setOwnerOf($.utils.code.eval, $.physicals.Maximilian);
 $.utils.code.regexps = {};
-$.utils.code.regexps.README = "$.utils.code.regexps contains some RegExps useful for parsing or otherwise analysing code.  They are:\n\n.escapes: Matches (globally) escape sequences found in string and regexp literals, like '\\n' or '\\x20' or '\\u1234'.\n\n.singleQuotedString: Matches a single-quoted string literal, like \"'this one'\" and \"'it\\\\'s'\".\n\n.doubleQuotedString: Matches a double-quoted string literal, like '\"this one\"' and '\"it\\'s\"'.\n\n.string: Matches a string literal, like \"'this one' and '\"that one\"' as well.\n\n.identifier: Matches an identifier.\n\nThe '..Exact' versions of these RegExps are anchored with '^' and '$' so they only match exactly specified thing - for example, .stringExact matches string literals \"'this one'\" but notably not \" 'this one' \" (because it contains other characters not part of the literal).\n";
+$.utils.code.regexps.README = '$.utils.code.regexps contains some RegExps useful for parsing or otherwise analysing code.\n\nSee ._generate() for how they are constructed and what they will match.\n';
+$.utils.code.regexps._generate = function _generate() {
+  /* Generate some RegExps that match various bits of JavaScript syntax.
+   * The intention is that these regular expressions conform to the
+   * lexical grammar given ES5.1 Appendix A.1
+   * (https://262.ecma-international.org/5.1/#sec-A.1), in some cases
+   * updated to include changes in the current version of the spec
+   * (https://tc39.es/ecma262/#sec-lexical-grammar).
+   *
+   * TODO: add tests for generated RegExps.
+   */
+
+  // Globally matches escape sequences found in string and regexp
+  // literals, like '\n' or '\x20' or '\u1234'.  (This is basically
+  // the spec EscapeSequence but including the backslash prefix.)
+  this.escapes = /\\(?:["'\\\/0bfnrtv]|u[0-9a-fA-F]{4}|x[0-9a-fA-F]{2})/g;
+
+  // Globally matches a single-quoted string literal, like "'this one'"
+  // and "'it\\'s'".
+  this.singleQuotedString =
+      new RegExp("'(?:[^'\\\\]|" + this.escapes.source + ")*'", 'g');
+
+  // Globally matches a double-quoted string literal, like '"this one"'
+  // and '"it\'s"'.
+  this.doubleQuotedString =
+      new RegExp('"(?:[^"\\\\]|' + this.escapes.source + ')*"', 'g');
+
+  // Globally matches a StringLiteral, like "'this one' and '"that one"'
+  // as well as "the 'string literal' substring of this longer string" too.
+  this.string = new RegExp('(?:' + this.singleQuotedString.source + '|' +
+      this.doubleQuotedString.source + ')', 'g');
+
+  // Globally matches a valid JavaScript IdentifierName.  Note that
+  // this is conservative, because ANY Unicode letter can appear
+  // in an identifier - but the full regexp is absurdly complicated.
+  this.identifierName = /[A-Za-z_$][A-Za-z0-9_$]*/g;
+
+  // Matches a valid ES2020 ReservedWord.
+  var reserved = /await|break|case|catch|class|const|continue|debugger|default|delete|do|else|enum|export|extends|false|finally|for|function|if|import|in|instanceof|new|null|return|super|switch|this|throw|true|try|typeof|var|void|while|with|yield/;
+  // Matches ES5.1 FutureReservedWords not included in reserved.
+  var reservedES5 = /implements|interface|let|package|protected|public|static/;
+  // Globally matches a valid JavaScript ReservedWord.
+  this.reservedWord =
+      new RegExp('(?:' + reserved.source + '|' + reservedES5.source + ')', 'g');
+
+  ////////////////////////////////////////////////////////////////////
+  // Exact forms of the above.  These do not get the global flag.
+  var keys = ['identifierName', 'reservedWord', 'string'];
+  for (var key, i = 0; (key = keys[i]); i++) {
+    this[key + 'Exact'] = new RegExp('^' + this[key].source + '$');
+  }
+
+};
+Object.setOwnerOf($.utils.code.regexps._generate.prototype, $.physicals.Maximilian);
 $.utils.code.regexps.escapes = /\\(?:["'\\\/0bfnrtv]|u[0-9a-fA-F]{4}|x[0-9a-fA-F]{2})/g;
 $.utils.code.regexps.singleQuotedString = /'(?:[^'\\]|\\(?:["'\\\/0bfnrtv]|u[0-9a-fA-F]{4}|x[0-9a-fA-F]{2}))*'/g;
 $.utils.code.regexps.doubleQuotedString = /"(?:[^"\\]|\\(?:["'\\\/0bfnrtv]|u[0-9a-fA-F]{4}|x[0-9a-fA-F]{2}))*"/g;
 $.utils.code.regexps.string = /(?:'(?:[^'\\]|\\(?:["'\\\/0bfnrtv]|u[0-9a-fA-F]{4}|x[0-9a-fA-F]{2}))*'|"(?:[^"\\]|\\(?:["'\\\/0bfnrtv]|u[0-9a-fA-F]{4}|x[0-9a-fA-F]{2}))*")/g;
+$.utils.code.regexps.identifierName = /[A-Za-z_$][A-Za-z0-9_$]*/g;
+$.utils.code.regexps.reservedWord = /(?:await|break|case|catch|class|const|continue|debugger|default|delete|do|else|enum|export|extends|false|finally|for|function|if|import|in|instanceof|new|null|return|super|switch|this|throw|true|try|typeof|var|void|while|with|yield|implements|interface|let|package|protected|public|static)/g;
+$.utils.code.regexps.identifierNameExact = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
+$.utils.code.regexps.reservedWordExact = /^(?:await|break|case|catch|class|const|continue|debugger|default|delete|do|else|enum|export|extends|false|finally|for|function|if|import|in|instanceof|new|null|return|super|switch|this|throw|true|try|typeof|var|void|while|with|yield|implements|interface|let|package|protected|public|static)$/;
 $.utils.code.regexps.stringExact = /^(?:'(?:[^'\\]|\\(?:["'\\\/0bfnrtv]|u[0-9a-fA-F]{4}|x[0-9a-fA-F]{2}))*'|"(?:[^"\\]|\\(?:["'\\\/0bfnrtv]|u[0-9a-fA-F]{4}|x[0-9a-fA-F]{2}))*")$/;
-$.utils.code.regexps.identifier = /[A-Za-z_$][A-Za-z0-9_$]*/;
-$.utils.code.regexps.identifierExact = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
-$.utils.code.regexps.keyword = /abstract|boolean|break|byte|case|catch|char|class|const|continue|debugger|default|delete|do|double|else|enum|export|extends|false|final|finally|float|for|function|goto|if|implements|import|in|instanceof|int|interface|long|native|new|null|package|private|protected|public|return|short|static|super|switch|synchronized|this|throw|throws|transient|true|try|typeof|var|volatile|void|while|with/;
-$.utils.code.regexps.keywordExact = /^(?:abstract|boolean|break|byte|case|catch|char|class|const|continue|debugger|default|delete|do|double|else|enum|export|extends|false|final|finally|float|for|function|goto|if|implements|import|in|instanceof|int|interface|long|native|new|null|package|private|protected|public|return|short|static|super|switch|synchronized|this|throw|throws|transient|true|try|typeof|var|volatile|void|while|with)$/;
 $.utils.code.parseString = function(s) {
   // Convert a string representation of a string literal to a string.
 	// Basically does eval(s), but safely and only if s is a string
@@ -436,10 +489,17 @@ $.utils.code.count = function count(str, searchString) {
   return str.split(searchString).length;
 };
 $.utils.code.isIdentifier = function isIdentifier(id) {
-  return typeof id === 'string' &&
-      $.utils.code.regexps.identifierExact.test(id) &&
-      !$.utils.code.regexps.keywordExact.test(id);
+  /* Arguments:
+   * - id: any - any JavaScript value.
+   *
+   * Returns: boolean - true iff id is a string representing valid
+   *     Identifier, which is any bare word that can be used
+   *     as a variable name (i.e., excluding reserved words).
+   */
+  return $.utils.code.isIdentifierName(id) &&
+      !$.utils.code.regexps.reservedWordExact.test(id);
 };
+Object.setOwnerOf($.utils.code.isIdentifier, $.physicals.Maximilian);
 $.utils.code.getGlobal = function getGlobal() {
   // Return a pseudo global object.
   var global = Object.create(null);
@@ -485,4 +545,17 @@ $.utils.code.getGlobal = function getGlobal() {
 Object.setOwnerOf($.utils.code.getGlobal, $.physicals.Maximilian);
 $.utils.code.parse = new 'CC.acorn.parse';
 $.utils.code.parseExpressionAt = new 'CC.acorn.parseExpressionAt';
+$.utils.code.isIdentifierName = function isIdentifierName(id) {
+  /* Arguments:
+   * - id: any - any JavaScript value.
+   *
+   * Returns: boolean - true iff id is a string representing valid
+   *     IdentifierName, which is anything bare word that can appear
+   *     after the '.' in a MemberExpresion.
+   */
+  return typeof id === 'string' &&
+      $.utils.code.regexps.identifierNameExact.test(id);
+};
+Object.setOwnerOf($.utils.code.isIdentifierName, $.physicals.Maximilian);
+Object.setOwnerOf($.utils.code.isIdentifierName.prototype, $.physicals.Maximilian);
 
