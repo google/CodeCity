@@ -1,0 +1,31 @@
+body {
+  background-color: white;
+  font-family: sans-serif;
+  max-width: 50em;
+  margin: 1em;
+}
+
+h1, h2, h3 {
+  font-weight: normal;
+}
+
+.productImage {
+  float: left;
+  height: 60px;
+  margin 1em;
+  width: 60px;
+}
+
+.basketImage {
+  height: 30px;
+  width: 30px;
+}
+
+.footer {
+  font-size: small;
+  margin-top: 2em;
+}
+
+.balls {
+  float: right;
+}

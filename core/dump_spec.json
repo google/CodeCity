@@ -461,6 +461,16 @@
       "$.physicals.food",
       "$.physicals.girl"
     ]
+  }, {
+    "filename": "core_46_$.secuityCourse.js",
+    "headerSubs": {
+      "<YEAR>": "2021",
+      "<OVERVIEW>": "Security course demo for Code City."
+    },
+    "contents": [
+      "$.securityCourse",
+      "$.hosts.root['/securitycourse']"
+    ]
   },
 
   {
@@ -620,7 +630,10 @@
       "$.physicals.chest",
       "$.physicals.safe",
       "$.physicals.food",
-      "$.physicals.girl"
+      "$.physicals.girl",
+
+      "$.securityCourse",
+      "$.hosts.root['/securitycourse']"
     ]
   }, {
     "filename": "../database/db_01_world.js",
