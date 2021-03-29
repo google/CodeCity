@@ -61,8 +61,8 @@ $.connection.close = function close() {
 };
 Object.setOwnerOf($.connection.close, $.physicals.Maximilian);
 $.connection.onError = function onError(error) {
-  // TODO(cpcallen): add check for error that occurs when relistening
-  // fails at server startup from checkpoint.
+  // TODO: add check for error that occurs when relistening
+  // fails when restarting server from checkpoint.
   if (error.message === 'write after end' ||
       error.message === 'This socket has been ended by the other party') {
     this.connected = false;

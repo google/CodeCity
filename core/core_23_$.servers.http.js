@@ -582,14 +582,14 @@ $.servers.http.Response.prototype.sendRedirect = function sendRedirect(url, stat
    *
    * Arguments:
    * - url: string - the destination URL for the redirect.
-   * - statusCode?: number - optional HTTP status code (default: 303).
+   * - statusCode?: number - optional HTTP status code (default: 303 See Other).
    */
   if (!statusCode) statusCode = 303;
   this.setStatus(statusCode);
   this.setHeader('Location', url);
   this.writeHead();
 };
-Object.setOwnerOf($.servers.http.Response.prototype.sendRedirect, $.physicals.Maximilian);
+Object.setOwnerOf($.servers.http.Response.prototype.sendRedirect, $.physicals.Neil);
 Object.setOwnerOf($.servers.http.Response.prototype.sendRedirect.prototype, $.physicals.Maximilian);
 $.servers.http.Response.prototype.sendError = function sendError(statusCode, message) {
   /* Send an error status and page as the response.
@@ -735,9 +735,6 @@ $.servers.http.Host.prototype.handle = function handle(request, response, info) 
    *   this function.
    * Returns: boolean - true iff request was for this host.
    */
-  // Temproray guard to prevent me from breaking the code editor.
-  // if (/^code/.test(request.headers.host)) return false;
-
   if (!info) {
     // Extact detailed routing info from request.
     var hostHeader = request.headers.host;
