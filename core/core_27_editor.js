@@ -395,4 +395,27 @@ $.hosts.code['/login'] = {};
 Object.setOwnerOf($.hosts.code['/login'], $.physicals.Neil);
 $.hosts.code['/login'].www = '<!doctype html>\n<% var staticUrl = request.hostUrl(\'static\'); %>\n<html lang="en">\n<head>\n  <title>Code City Login</title>\n  <style>\n    body {\n      font-family: "Roboto Mono", monospace;\n      text-align: center;\n    }\n    h1 {\n      font-size: 40pt;\n      font-weight: 100;\n    }\n    h1>img {\n      vertical-align: text-bottom;\n    }\n    #tagline {\n      font-style: italic;\n      margin: 2em;\n    }\n    iframe {\n      height: 50px;\n      width: 100px;\n      border: none;\n      display: block;\n      margin: 0 auto;\n    }\n  </style>\n  <link href="https://fonts.googleapis.com/css?family=Roboto+Mono" rel="stylesheet">\n  <link href="<%=staticUrl%>favicon.ico" rel="shortcut icon">\n</head>\n<body>\n  <h1>\n    <img src="<%=staticUrl%>logo.svg" alt="" width="95" height="100">\n    Code City\n  </h1>\n  <p id="tagline">Login required to edit code.</p>\n  <iframe src="<%=request.hostUrl(\'login\')%>?after=<%=staticUrl%>login-close.html"></iframe>\n</body>\n</html>';
 $.hosts.code['/mirror'] = $.hosts.root['/mirror'];
+$.hosts.code['/eval'] = {};
+Object.setOwnerOf($.hosts.code['/eval'], $.physicals.Neil);
+$.hosts.code['/eval'].www = "<!doctype html>\n<% var staticUrl = request.hostUrl('static'); %>\n<html>\n  <head>\n    <title>Code City Eval</title>\n    <style>\nbody {\n  font-family: \"Roboto Mono\", monospace;\n  margin: 0;\n}\n#resultsPre {\n  bottom: 4em;\n  box-sizing: border-box;\n  left: 0;\n  overflow-y: scroll;\n  padding-left: 1em;\n  position: absolute;\n  top: 2em;\n  width: 100%;\n}\n      \n#evalTextarea {\n  color: #000;\n  bottom: 0;\n  box-sizing: border-box;\n  background-color: #f8f8f8;\n  font-size: 12pt;\n  height: 42pt;\n  margin-top: 2px;\n  position: absolute;\n  resize: none;\n  width: 100%;\n}\n    </style>\n    <link href=\"https://fonts.googleapis.com/css?family=Roboto+Mono\" rel=\"stylesheet\">\n    <link href=\"<%=staticUrl%>favicon.ico\" rel=\"shortcut icon\">\n    <script>\nfunction init() {\n  document.getElementById('evalTextarea').addEventListener('keydown', keydown, false);\n}\nwindow.addEventListener('load', init);\n      \nfunction keydown(e) {\n  if (e.key !== 'Enter') {\n    return;\n  }\n  var ta = document.getElementById('evalTextarea');\n  var value = ta.value.trim();\n  ta.value = '';\n  ta.placeholder = '';\n  e.preventDefault();\n  if (value === '') {\n    return;\n  }\n  addLine('> ' + value);\n  send(value);\n}\n\nfunction send(text) {\n  var xhr = new XMLHttpRequest();   // new HttpRequest instance \n  var theUrl = \"/json-handler\";\n  xhr.open('POST', 'evalXhr');\n  xhr.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');\n  xhr.onload = receive;\n  xhr.send(text);\n}\n\nfunction receive() {\n  if (this.status !== 200) {\n    addLine('HTTP Error: ' + this.status);\n  } else {\n    addLine(this.responseText);\n  }\n}\n\nfunction addLine(text) {\n  var pre = document.getElementById('resultsPre');\n  pre.textContent += '\\n' + text;\n  pre.scrollTop = Number.MAX_SAFE_INTEGER;\n}\n    </script>\n  \n  </head>\n  <body>\n    <h4>Immediate Eval</h4>\n    <pre id=\"resultsPre\"></pre>\n    <textarea id=\"evalTextarea\" placeholder=\"1 + 2\" style=\"font-family: 'Roboto Mono', monospace;\"></textarea>\n  </body>\n</html>";
+$.hosts.code['/evalXhr'] = {};
+Object.setOwnerOf($.hosts.code['/evalXhr'], $.physicals.Neil);
+$.hosts.code['/evalXhr'].www = function code_evalXhr_www(request, response) {
+  setPerms(request.user);
+  var output = '';
+  if (!request.fromSameOrigin()) {
+    // Security check to ensure this is being loaded by the eval editor.
+    output = 'Cross-origin referer: ' + String(request.headers.referer);
+  } else {
+    try {
+      var globalEval = eval;
+      output = $.utils.code.toSource(globalEval(request.data), {depthLimit: 2});
+    } catch (e) {
+      output = String(e);
+    }
+  }
+  response.write(output);
+};
+Object.setOwnerOf($.hosts.code['/evalXhr'].www, $.physicals.Maximilian);
+Object.setOwnerOf($.hosts.code['/evalXhr'].www.prototype, $.physicals.Neil);
 
