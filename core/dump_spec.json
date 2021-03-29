@@ -233,6 +233,7 @@
       "$.hosts.root.subdomains.mobwrite",
       "$.hosts.root.subdomains.static",
       "$.hosts.root.subdomains.system",
+      "$.hosts.root.access",
       {"path": "$.servers.http.hosts[0]", "do": "DONE"}
     ]
   }, {

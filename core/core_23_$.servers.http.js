@@ -530,6 +530,24 @@ $.servers.http.Host = function Host() {
    * Instance properties of Host objects (by default these all
    * inherit their default values from Host.prototype):
    *
+   * - access: string - Access control switch.  It has the following
+   *   possible values:
+   *
+   *   - 'public': The host will by default serve pages to any client
+   *     unless the handler object has .wwwAccess === 'private', in
+   *     which case it will only be served to logged-in users.
+   *     Unauthenticated clients will get 403 forbidden and be
+   *     directed to login.
+   *
+   *   - 'private': The host will by default only serve pages to
+   *     logged-in users unless the hander object has .wwwAccess ===
+   *     'public'.
+   *
+   *   - 'hidden': The host will only serve pages to logged-in users;
+   *     any unauthenticated client will be declined (by .handle
+   *     returning false) which will normally result in them recieving
+   *     a 400 Unknown Host error.
+   *
    * - hostname: string | undefined - the canonical hostname for
    *   this Host object.  Should include the port number, if non-default.
    *
@@ -666,7 +684,11 @@ $.servers.http.Host.prototype.handle = function handle(request, response, info) 
     return this.subdomains[subdomain].handle(request, response, info);
   }
 
-  // No, it's for us.
+  // No, it's for us.  Should we hide from unauthenticated clients?
+  if (this.access === 'hidden' && !($.user.isPrototypeOf(request.user))) {
+    return false;
+  }
+  // No.  Serve reqeust.
   this.route_(request, response, info);
   return true;
 };
@@ -696,13 +718,22 @@ $.servers.http.Host.prototype.route_ = function route_(request, response, info) 
   if (typeof path !== 'string' || path[0] !== '/') {
     response.sendError(400, 'Invalid path "' + path + '"');
   } else if (path in this) {
-    // Record routing info on Request object.
-    request.info = info;
-    // Serve page.
+    // Get handler object.
     var obj = this[path];
     if (!$.utils.isObject(obj)) {
       response.sendError(500, "Handler is not an object.");
-    } else if (typeof obj.www === 'string') {
+      return;
+    }
+    // Check access control.
+    if (!($.user.isPrototypeOf(request.user)) &&  // Not logged in.
+        (this.access !== 'public' && obj.wwwAccess !== 'public' ||
+         obj.wwwAccess === 'private')) {
+      response.sendError(403);
+      return;
+    }
+    // Record routing info on Request object and serve page.
+    request.info = info;
+    if (typeof obj.www === 'string') {
       $.jssp.eval(obj, 'www', request, response);
     } else if (typeof obj.www === 'function') {
       obj.www(request, response);
@@ -866,6 +897,7 @@ $.servers.http.Host.prototype.urlForSubdomain = function urlForSubdomain(hostnam
 };
 Object.setOwnerOf($.servers.http.Host.prototype.urlForSubdomain, $.physicals.Maximilian);
 Object.setOwnerOf($.servers.http.Host.prototype.urlForSubdomain.prototype, $.physicals.Maximilian);
+$.servers.http.Host.prototype.access = 'hidden';
 $.servers.http.onRequest = function onRequest(connection) {
   /* Called from $.servers.http.connection.onReceiveChunk when the
    * connection.request has been fully parsed and is ready to be handled.
