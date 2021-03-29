@@ -17,7 +17,7 @@
 
 /**
  * @fileoverview Polyfills to bring the server's partial JavaScript
- * implementation up to JavaScript 5.1 (or close to it).
+ * implementation up to ECMAScript 5.1 (or close to it).
  * @author fraser@google.com (Neil Fraser)
  */
 

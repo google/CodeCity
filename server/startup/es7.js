@@ -17,12 +17,12 @@
 
 /**
  * @fileoverview Polyfills to bring the server's partial JavaScript
- * implementation to include some features of JavaScript 7.
+ * implementation to include some features of ECMAScript 2016 (ES7).
  * @author fraser@google.com (Neil Fraser)
  */
 
 ///////////////////////////////////////////////////////////////////////////////
-// Array.prototype polyfills
+// Array.prototype methods
 ///////////////////////////////////////////////////////////////////////////////
 
 Array.prototype.includes = new 'Array.prototype.includes';
