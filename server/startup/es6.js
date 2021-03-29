@@ -17,7 +17,7 @@
 
 /**
  * @fileoverview Polyfills to bring the server's partial JavaScript
- * implementation to include some features of JavaScript 6.
+ * implementation to include some features of ECMAScript 2015 (ES6).
  * @author fraser@google.com (Neil Fraser)
  */
 
