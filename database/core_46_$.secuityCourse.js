@@ -1,0 +1,1 @@
+../core/core_46_$.secuityCourse.js
