@@ -166,9 +166,9 @@ $.physical.validate = function validate() {
    */
   // Recover this if it has inadvertently become $.garbage.
   //
-  // TODO(cpcallen): ideally validatate is non-overridable, and
-  // everywhere that presently invokes $.physical.validate.call(x) can
-  // just do x.validate() instead, and this line can go away.
+  // TODO: ideally validatate is non-overridable, and everywhere that
+  // presently invokes $.physical.validate.call(x) can just do
+  // x.validate() instead, and this line can go away.
   if ($.garbage.isPrototypeOf(this)) this.validate();
   if (!$.physical.isPrototypeOf(this)) {
     throw TypeError('$.physical.validate called on incompatible receiver');
