@@ -40,8 +40,8 @@ $.Selector = function Selector(s) {
     parts = [];
     // Validate & copy parts list.
     if (s.length < 1) throw new RangeError('Zero-length parts list??');
-    if (typeof s[0] !== 'string' || !$.utils.code.regexps.identifierExact.test(s[0])) {
-      throw new TypeError('Parts array must begin with an identifier');
+    if (!$.utils.code.isIdentifier(s[0])) {
+      throw new TypeError('parts array must begin with an identifier');
     }
     parts[0] = s[0];
     for (var i = 1; i < s.length; i++) {
@@ -156,7 +156,7 @@ $.Selector.prototype.toString = function toString(specialHandler) {
       } else {
         out.push(String(part));
       }
-    } else if ($.utils.code.regexps.identifierExact.test(part)) {
+    } else if ($.utils.code.isIdentifierName(part)) {
       out.push('.', part);
     } else if (String(Number(part)) === part) {
       // String represents a number with same string representation.
@@ -185,7 +185,7 @@ $.Selector.prototype.toValue = function toValue(save, global) {
   if (this.length === 0) throw RangeError('Invalid Selector');
   var varname = this[0];
   if (!$.utils.code.isIdentifier(varname)) {
-    throw TypeError('Invalid first part');
+    throw TypeError('invalid variable identifier');
   }
   var v;
   if (global) {
@@ -232,7 +232,7 @@ $.Selector.prototype.badness = function badness() {
     var part = this[i];
     if (part instanceof this.constructor.SpecialPart) {
       penalties += 100;
-    } else if ($.utils.code.regexps.identifierExact.test(part)) {
+    } else if ($.utils.code.isIdentifierName(part)) {
       penalties += 10;  // We like identifiers.
     } else if (String(Number(part)) === part) {
       penalties += 25;  // Numbers are OK.
@@ -357,7 +357,7 @@ $.Selector.parse.tokenize = function tokenize(selector) {
   var REs = {
     whitespace: /^\s+/g,
     '.': /^\./g,
-    id: new RegExp('^' + $.utils.code.regexps.identifier.source, 'g'),
+    id: new RegExp('^' + $.utils.code.regexps.identifierName.source, 'g'),
     number: /^\d+/g,
     '[': /^\[/g,
     ']': /^\]/g,
@@ -366,7 +366,7 @@ $.Selector.parse.tokenize = function tokenize(selector) {
     '^': /^\^/g,
     str: new RegExp('^' + $.utils.code.regexps.string.source, 'g'),
   };
-  
+
   var tokens = [];
   NEXT_TOKEN: for (var index = 0; index < selector.length; ) {
     for (var tokenType in REs) {
@@ -527,7 +527,7 @@ $.utils.Binding = function Binding(object, part) {
    * a variable in the global scope.
    */
   if (object === null) {
-    if (typeof part !== 'string' || !$.utils.code.regexps.identifierExact.test(part)) {
+    if (!$.utils.code.isIdentifier(part)) {
       throw TypeError('Invalid variable name');
     }
   } else if (!$.utils.isObject(object)) {
@@ -587,7 +587,7 @@ $.utils.Binding.prototype.get = function get(inherited) {
   var part = this.part;
   if (this.object === null) {
     if (!$.utils.code.isIdentifier(part)) {
-      throw new TypeError('Invalid part');
+      throw new TypeError('invalid variable identifier');
     }
     var evalGlobal = eval;
     return evalGlobal(part);
@@ -602,7 +602,7 @@ $.utils.Binding.prototype.get = function get(inherited) {
     return undefined;
   }
 };
-Object.setOwnerOf($.utils.Binding.prototype.get, $.physicals.Neil);
+Object.setOwnerOf($.utils.Binding.prototype.get, $.physicals.Maximilian);
 $.utils.Binding.prototype.isOwner = function isOwner() {
   /* Returns true iff the binding is an bject owner binding.
    */
@@ -633,7 +633,7 @@ $.utils.Binding.prototype.exists = function exists() {
   var part = this.part;
   if (this.object === null) {
     if (!$.utils.code.isIdentifier(part)) {
-        throw new TypeError('Invalid part');
+        throw new TypeError('invalid variable identifier');
     }
     var evalGlobal = eval;
     try {
