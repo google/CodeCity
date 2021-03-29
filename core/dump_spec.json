@@ -211,6 +211,7 @@
       "<OVERVIEW>": "Webserver for Code City."
     },
     "contents": [
+      "$.utils.url",
       "$.servers.http",
       {"path": "$.servers.http.hosts", "do": "DONE"}
     ]
@@ -550,6 +551,7 @@
 
       "$.connection",
 
+      "$.utils.url",
       "$.servers.http",
 
       "$.hosts.root['/']",
