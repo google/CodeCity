@@ -49,6 +49,6 @@ tests.getOwnerOf = function() {
 tests.setOwnerOf = function() {
   var bob = {};
   var obj = {};
-  Object.setOwnerOf(obj, bob);
-  console.assert(Object.getOwnerOf(obj) === bob, 'setOwenerOf');
+  console.assert(Object.setOwnerOf(obj, bob) === obj, 'setOwneerOf return');
+  console.assert(Object.getOwnerOf(obj) === bob, 'setOwenerOf effect');
 };

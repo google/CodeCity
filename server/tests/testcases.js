@@ -2897,8 +2897,7 @@ module.exports = [
   { name: 'setOwnerOf', src: `
     var bob = {};
     var obj = {};
-    Object.setOwnerOf(obj, bob);
-    Object.getOwnerOf(obj) === bob;
+    Object.setOwnerOf(obj, bob) === obj && Object.getOwnerOf(obj) === bob;
     `,
     expected: true
   },
