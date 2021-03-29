@@ -1011,6 +1011,32 @@ $.servers.http.Host.prototype.urlForSubdomain = function urlForSubdomain(hostnam
 Object.setOwnerOf($.servers.http.Host.prototype.urlForSubdomain, $.physicals.Maximilian);
 Object.setOwnerOf($.servers.http.Host.prototype.urlForSubdomain.prototype, $.physicals.Maximilian);
 $.servers.http.Host.prototype.access = 'hidden';
+$.servers.http.Host.prototype.deleteSubdomain = function deleteSubdomain(subdomain) {
+  /* Delete a subdomain, or all subdomains served by a particular
+   * Host object.
+   *
+   * Arguments:
+   * - subdomain: string | $.servers.http.Host - the name of the subdomain
+   *   to be deleted, or the Host object serving it.
+   */
+  if (!this.subdomains) return;
+  if (typeof subdomain === 'string') {
+    delete this.subdomains[subdomain];
+  } else if (subdomain instanceof $.servers.http.Host) {
+    for (var key in this.subdomains) {
+      if (this.subdomains[key] === subdomain) {
+        delete this.subdomains[key];
+      }
+    }
+  } else {
+    throw new TypeError('argument must be subdomain name or Host object');
+  }
+  if (Object.getOwnPropertyNames(this.subdomains).length === 0) {
+    delete this.subdomains;
+  }
+};
+Object.setOwnerOf($.servers.http.Host.prototype.deleteSubdomain, $.physicals.Maximilian);
+Object.setOwnerOf($.servers.http.Host.prototype.deleteSubdomain.prototype, $.physicals.Maximilian);
 $.servers.http.onRequest = function onRequest(connection) {
   /* Called from $.servers.http.connection.onReceiveChunk when the
    * connection.request has been fully parsed and is ready to be handled.
