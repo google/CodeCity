@@ -23,6 +23,119 @@
 // AUTO-GENERATED CODE FROM DUMP.  EDIT WITH CAUTION!
 //////////////////////////////////////////////////////////////////////
 
+$.utils.url = {};
+Object.setOwnerOf($.utils.url, $.physicals.Maximilian);
+$.utils.url.regexps = {};
+$.utils.url.regexps.README = '$.utils.url.regexps contains some RegExps useful for parsing or otherwise analysing URLs.\n\nSee ._generate() for how they are constructed and what they will match.';
+$.utils.url.regexps._generate = function _generate() {
+  /* Generate some RegExps that match various parts of URLs.  The
+   * intention is that these regular expressions conform to the
+   * grammar given in RFC 3986, "Uniform Resource Identifier (URI):
+   * Generic Syntax" (https://tools.ietf.org/html/rfc3986).
+   *
+   * TODO: add tests for generated RegExps.
+   */
+
+  ////////////////////////////////////////////////////////////////////
+  // IPv4 Addresses.
+  // Based on https://stackoverflow.com/a/14453696/4969945
+
+  // Matches an octet, optionally with leading zeros.
+  var octet = '(?:25[0-5]|2[0-4][0-9]|[01]?[0-9]{1,2})';
+  // Matches an octet without no leading zeros.
+  var octetStrict = '(?:25[0-5]|(?:2[0-4]|1[0-9]|[1-9])?[0-9])';
+
+
+  // Globally matches IPv4 addresses, optionally with leading zeros.
+  this.ipv4Address = new RegExp(octet + '(?:\\.' + octet + '){3}', 'g');
+  // Globally matches IPv4 addresses with no leading zeros.
+  this.ipv4AddressStrict =
+      new RegExp(octetStrict + '(?:\\.' + octetStrict + '){3}', 'g');
+
+  ////////////////////////////////////////////////////////////////////
+  // IPv6 Addresses.
+  // Based on https://stackoverflow.com/a/17871737/4969945 but modified
+  // to reduce ambiguity match more greedily when unanchored.
+
+  // Matches a 32-bit hex value as it can appear in an IPv6 address.
+  var word = '[0-9a-fA-F]{1,4}';
+
+  // Matches an IPv4 address as it can appear in an IPv6 address.
+  var ipv4 = this.ipv4AddressStrict.source;
+
+  // Globally matches a valid IPv6 address.
+  this.ipv6Address = new RegExp(
+      '(?:' +
+          '[fF][eE]80:(?::' + word + '){0,4}%[0-9a-zA-Z]+|' +  // fe80::7:8%eth0 fe80::7:8%1 (link-local IPv6 addresses with zone index)
+          '(?:' + word + ':){1,4}:' + ipv4 + '|' +             // 2001:db8:3:4::192.0.2.33  64:ff9b::192.0.2.33 (IPv4-Embedded IPv6 Address)
+          '(?:' + word + ':){7}' + word + '|' +                // 1:2:3:4:5:6:7:8
+          '(?:' + word + ':){6}(?::' + word + '){1,1}|' +      // 1:2:3:4:5:6::8 ... 1:2:3:4:5:6::8
+          '(?:' + word + ':){5}(?::' + word + '){1,2}|' +      // 1:2:3:4:5::8   ... 1:2:3:4:5::7:8
+          '(?:' + word + ':){4}(?::' + word + '){1,3}|' +      // 1:2:3:4::8     ... 1:2:3:4::6:7:8
+          '(?:' + word + ':){3}(?::' + word + '){1,4}|' +      // 1:2:3::8       ... 1:2:3::5:6:7:8
+          '(?:' + word + ':){2}(?::' + word + '){1,5}|' +      // 1:2::8         ... 1:2::4:5:6:7:8
+          '(?:' + word + ':){1}(?::' + word + '){1,6}|' +      // 1::8           ... 1::3:4:5:6:7:8
+          '(?:' + word + ':){1,7}:|' +                         // 1::            ... 1:2:3:4:5:6:7::
+          '::(?:[fF]{4}(?::0{1,4})?:)?' + ipv4 + '|' +         // ::255.255.255.255  ::ffff:255.255.255.255  ::ffff:0:255.255.255.255 (IPv4-mapped IPv6 addresses and IPv4-translated addresses)
+          ':(?::' + word + '){1,7}|' +                         // ::8            ... ::2:3:4:5:6:7:8
+          '::' +                                               // ::
+      ')', 'g');
+
+  ////////////////////////////////////////////////////////////////////
+  // DNS Domain Names.
+
+  // Matches a label (per RFC 952, updated by RFC 1123 to allow a
+  // it to begin with a digit), limited to 63 charcters (per RFC 1035).
+  var label = '[a-zA-Z0-9][a-zA-Z0-9-]{0,62}';
+
+  // Globally matches a legal (but not necessary valid!) DNS name.
+  // See also https://stackoverflow.com/q/106179/4969945 .
+  // BUG: does not limit length of name to ca. 253 characters (see
+  //     https://devblogs.microsoft.com/oldnewthing/20120412-00/?p=7873
+  //     for gory details).
+  this.dnsAddress = new RegExp(label + '(?:\\.' + label + ')*', 'g');
+
+  ////////////////////////////////////////////////////////////////////
+  // Authority section
+
+  // Globally matches a valid IP address (v4 or v6).
+  this.ipAddress = new RegExp(
+    this.ipv4Address.source + '|\\[' + this.ipv6Address.source + '\\]', 'g');
+
+  // Globally matches a valid URL authority section (e.g. domain name
+  // and port); this is (not coincidentally) also the same as a valid
+  // HTTP Host: header value.
+  //
+  // The RegExp includes capture groups for an IP address [1] *or* a
+  // DNS address [2], and (optionally) a port number [3].
+  this.authority = new RegExp(
+    '(?:(' + this.ipAddress.source + ')|' +
+       '(' + this.dnsAddress.source + '))' +
+    '(?::([0-9]+))?', 'g');  // Optional port number.
+
+  ////////////////////////////////////////////////////////////////////
+  // Exact forms of the above.  These do not get the global flag.
+  var keys = ['ipv4Address', 'ipv4AddressStrict', 'ipv6Address',
+              'dnsAddress', 'ipAddress', 'authority'];
+  for (var key, i = 0; (key = keys[i]); i++) {
+    this[key + 'Exact'] = new RegExp('^' + this[key].source + '$');
+  }
+
+};
+Object.setOwnerOf($.utils.url.regexps._generate.prototype, $.physicals.Maximilian);
+$.utils.url.regexps.ipv4Address = /(?:25[0-5]|2[0-4][0-9]|[01]?[0-9]{1,2})(?:\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9]{1,2})){3}/g;
+$.utils.url.regexps.ipv4AddressStrict = /(?:25[0-5]|(?:2[0-4]|1[0-9]|[1-9])?[0-9])(?:\.(?:25[0-5]|(?:2[0-4]|1[0-9]|[1-9])?[0-9])){3}/g;
+$.utils.url.regexps.ipv6Address = /(?:[fF][eE]80:(?::[0-9a-fA-F]{1,4}){0,4}%[0-9a-zA-Z]+|(?:[0-9a-fA-F]{1,4}:){1,4}:(?:25[0-5]|(?:2[0-4]|1[0-9]|[1-9])?[0-9])(?:\.(?:25[0-5]|(?:2[0-4]|1[0-9]|[1-9])?[0-9])){3}|(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|(?:[0-9a-fA-F]{1,4}:){6}(?::[0-9a-fA-F]{1,4}){1,1}|(?:[0-9a-fA-F]{1,4}:){5}(?::[0-9a-fA-F]{1,4}){1,2}|(?:[0-9a-fA-F]{1,4}:){4}(?::[0-9a-fA-F]{1,4}){1,3}|(?:[0-9a-fA-F]{1,4}:){3}(?::[0-9a-fA-F]{1,4}){1,4}|(?:[0-9a-fA-F]{1,4}:){2}(?::[0-9a-fA-F]{1,4}){1,5}|(?:[0-9a-fA-F]{1,4}:){1}(?::[0-9a-fA-F]{1,4}){1,6}|(?:[0-9a-fA-F]{1,4}:){1,7}:|::(?:[fF]{4}(?::0{1,4})?:)?(?:25[0-5]|(?:2[0-4]|1[0-9]|[1-9])?[0-9])(?:\.(?:25[0-5]|(?:2[0-4]|1[0-9]|[1-9])?[0-9])){3}|:(?::[0-9a-fA-F]{1,4}){1,7}|::)/g;
+$.utils.url.regexps.dnsAddress = /[a-zA-Z0-9][a-zA-Z0-9-]{0,62}(?:\.[a-zA-Z0-9][a-zA-Z0-9-]{0,62})*/g;
+$.utils.url.regexps.ipAddress = /(?:25[0-5]|2[0-4][0-9]|[01]?[0-9]{1,2})(?:\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9]{1,2})){3}|\[(?:[fF][eE]80:(?::[0-9a-fA-F]{1,4}){0,4}%[0-9a-zA-Z]+|(?:[0-9a-fA-F]{1,4}:){1,4}:(?:25[0-5]|(?:2[0-4]|1[0-9]|[1-9])?[0-9])(?:\.(?:25[0-5]|(?:2[0-4]|1[0-9]|[1-9])?[0-9])){3}|(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|(?:[0-9a-fA-F]{1,4}:){6}(?::[0-9a-fA-F]{1,4}){1,1}|(?:[0-9a-fA-F]{1,4}:){5}(?::[0-9a-fA-F]{1,4}){1,2}|(?:[0-9a-fA-F]{1,4}:){4}(?::[0-9a-fA-F]{1,4}){1,3}|(?:[0-9a-fA-F]{1,4}:){3}(?::[0-9a-fA-F]{1,4}){1,4}|(?:[0-9a-fA-F]{1,4}:){2}(?::[0-9a-fA-F]{1,4}){1,5}|(?:[0-9a-fA-F]{1,4}:){1}(?::[0-9a-fA-F]{1,4}){1,6}|(?:[0-9a-fA-F]{1,4}:){1,7}:|::(?:[fF]{4}(?::0{1,4})?:)?(?:25[0-5]|(?:2[0-4]|1[0-9]|[1-9])?[0-9])(?:\.(?:25[0-5]|(?:2[0-4]|1[0-9]|[1-9])?[0-9])){3}|:(?::[0-9a-fA-F]{1,4}){1,7}|::)\]/g;
+$.utils.url.regexps.authority = /(?:((?:25[0-5]|2[0-4][0-9]|[01]?[0-9]{1,2})(?:\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9]{1,2})){3}|\[(?:[fF][eE]80:(?::[0-9a-fA-F]{1,4}){0,4}%[0-9a-zA-Z]+|(?:[0-9a-fA-F]{1,4}:){1,4}:(?:25[0-5]|(?:2[0-4]|1[0-9]|[1-9])?[0-9])(?:\.(?:25[0-5]|(?:2[0-4]|1[0-9]|[1-9])?[0-9])){3}|(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|(?:[0-9a-fA-F]{1,4}:){6}(?::[0-9a-fA-F]{1,4}){1,1}|(?:[0-9a-fA-F]{1,4}:){5}(?::[0-9a-fA-F]{1,4}){1,2}|(?:[0-9a-fA-F]{1,4}:){4}(?::[0-9a-fA-F]{1,4}){1,3}|(?:[0-9a-fA-F]{1,4}:){3}(?::[0-9a-fA-F]{1,4}){1,4}|(?:[0-9a-fA-F]{1,4}:){2}(?::[0-9a-fA-F]{1,4}){1,5}|(?:[0-9a-fA-F]{1,4}:){1}(?::[0-9a-fA-F]{1,4}){1,6}|(?:[0-9a-fA-F]{1,4}:){1,7}:|::(?:[fF]{4}(?::0{1,4})?:)?(?:25[0-5]|(?:2[0-4]|1[0-9]|[1-9])?[0-9])(?:\.(?:25[0-5]|(?:2[0-4]|1[0-9]|[1-9])?[0-9])){3}|:(?::[0-9a-fA-F]{1,4}){1,7}|::)\])|([a-zA-Z0-9][a-zA-Z0-9-]{0,62}(?:\.[a-zA-Z0-9][a-zA-Z0-9-]{0,62})*))(?::([0-9]+))?/g;
+$.utils.url.regexps.ipv4AddressExact = /^(?:25[0-5]|2[0-4][0-9]|[01]?[0-9]{1,2})(?:\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9]{1,2})){3}$/;
+$.utils.url.regexps.ipv4AddressStrictExact = /^(?:25[0-5]|(?:2[0-4]|1[0-9]|[1-9])?[0-9])(?:\.(?:25[0-5]|(?:2[0-4]|1[0-9]|[1-9])?[0-9])){3}$/;
+$.utils.url.regexps.ipv6AddressExact = /^(?:[fF][eE]80:(?::[0-9a-fA-F]{1,4}){0,4}%[0-9a-zA-Z]+|(?:[0-9a-fA-F]{1,4}:){1,4}:(?:25[0-5]|(?:2[0-4]|1[0-9]|[1-9])?[0-9])(?:\.(?:25[0-5]|(?:2[0-4]|1[0-9]|[1-9])?[0-9])){3}|(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|(?:[0-9a-fA-F]{1,4}:){6}(?::[0-9a-fA-F]{1,4}){1,1}|(?:[0-9a-fA-F]{1,4}:){5}(?::[0-9a-fA-F]{1,4}){1,2}|(?:[0-9a-fA-F]{1,4}:){4}(?::[0-9a-fA-F]{1,4}){1,3}|(?:[0-9a-fA-F]{1,4}:){3}(?::[0-9a-fA-F]{1,4}){1,4}|(?:[0-9a-fA-F]{1,4}:){2}(?::[0-9a-fA-F]{1,4}){1,5}|(?:[0-9a-fA-F]{1,4}:){1}(?::[0-9a-fA-F]{1,4}){1,6}|(?:[0-9a-fA-F]{1,4}:){1,7}:|::(?:[fF]{4}(?::0{1,4})?:)?(?:25[0-5]|(?:2[0-4]|1[0-9]|[1-9])?[0-9])(?:\.(?:25[0-5]|(?:2[0-4]|1[0-9]|[1-9])?[0-9])){3}|:(?::[0-9a-fA-F]{1,4}){1,7}|::)$/;
+$.utils.url.regexps.dnsAddressExact = /^[a-zA-Z0-9][a-zA-Z0-9-]{0,62}(?:\.[a-zA-Z0-9][a-zA-Z0-9-]{0,62})*$/;
+$.utils.url.regexps.ipAddressExact = /^(?:25[0-5]|2[0-4][0-9]|[01]?[0-9]{1,2})(?:\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9]{1,2})){3}|\[(?:[fF][eE]80:(?::[0-9a-fA-F]{1,4}){0,4}%[0-9a-zA-Z]+|(?:[0-9a-fA-F]{1,4}:){1,4}:(?:25[0-5]|(?:2[0-4]|1[0-9]|[1-9])?[0-9])(?:\.(?:25[0-5]|(?:2[0-4]|1[0-9]|[1-9])?[0-9])){3}|(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|(?:[0-9a-fA-F]{1,4}:){6}(?::[0-9a-fA-F]{1,4}){1,1}|(?:[0-9a-fA-F]{1,4}:){5}(?::[0-9a-fA-F]{1,4}){1,2}|(?:[0-9a-fA-F]{1,4}:){4}(?::[0-9a-fA-F]{1,4}){1,3}|(?:[0-9a-fA-F]{1,4}:){3}(?::[0-9a-fA-F]{1,4}){1,4}|(?:[0-9a-fA-F]{1,4}:){2}(?::[0-9a-fA-F]{1,4}){1,5}|(?:[0-9a-fA-F]{1,4}:){1}(?::[0-9a-fA-F]{1,4}){1,6}|(?:[0-9a-fA-F]{1,4}:){1,7}:|::(?:[fF]{4}(?::0{1,4})?:)?(?:25[0-5]|(?:2[0-4]|1[0-9]|[1-9])?[0-9])(?:\.(?:25[0-5]|(?:2[0-4]|1[0-9]|[1-9])?[0-9])){3}|:(?::[0-9a-fA-F]{1,4}){1,7}|::)\]$/;
+$.utils.url.regexps.authorityExact = /^(?:((?:25[0-5]|2[0-4][0-9]|[01]?[0-9]{1,2})(?:\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9]{1,2})){3}|\[(?:[fF][eE]80:(?::[0-9a-fA-F]{1,4}){0,4}%[0-9a-zA-Z]+|(?:[0-9a-fA-F]{1,4}:){1,4}:(?:25[0-5]|(?:2[0-4]|1[0-9]|[1-9])?[0-9])(?:\.(?:25[0-5]|(?:2[0-4]|1[0-9]|[1-9])?[0-9])){3}|(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|(?:[0-9a-fA-F]{1,4}:){6}(?::[0-9a-fA-F]{1,4}){1,1}|(?:[0-9a-fA-F]{1,4}:){5}(?::[0-9a-fA-F]{1,4}){1,2}|(?:[0-9a-fA-F]{1,4}:){4}(?::[0-9a-fA-F]{1,4}){1,3}|(?:[0-9a-fA-F]{1,4}:){3}(?::[0-9a-fA-F]{1,4}){1,4}|(?:[0-9a-fA-F]{1,4}:){2}(?::[0-9a-fA-F]{1,4}){1,5}|(?:[0-9a-fA-F]{1,4}:){1}(?::[0-9a-fA-F]{1,4}){1,6}|(?:[0-9a-fA-F]{1,4}:){1,7}:|::(?:[fF]{4}(?::0{1,4})?:)?(?:25[0-5]|(?:2[0-4]|1[0-9]|[1-9])?[0-9])(?:\.(?:25[0-5]|(?:2[0-4]|1[0-9]|[1-9])?[0-9])){3}|:(?::[0-9a-fA-F]{1,4}){1,7}|::)\])|([a-zA-Z0-9][a-zA-Z0-9-]{0,62}(?:\.[a-zA-Z0-9][a-zA-Z0-9-]{0,62})*))(?::([0-9]+))?$/;
+
 $.servers.http = {};
 $.servers.http.STATUS_CODES = (new 'Object.create')(null);
 $.servers.http.STATUS_CODES[100] = 'Continue';
