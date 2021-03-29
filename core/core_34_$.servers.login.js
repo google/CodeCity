@@ -104,7 +104,7 @@ $.servers.login.createUser = function createUser(id, name) {
   if ($.userDatabase.get(id)) throw new TypeError('user already exists');
 
   // Create new $.user.
-  user = Object.create($.user);
+  var user = Object.create($.user);
   user.setName(name || 'Guest', /*tryAlternative:*/ true);
   $.userDatabase.set(id, user);
   /*
