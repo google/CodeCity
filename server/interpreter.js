@@ -2403,6 +2403,7 @@ Interpreter.prototype.initPerms_ = function() {
       // TODO(cpcallen:perms): throw if current perms does not
       // control obj and (new) owner.
       obj.owner = /** @type {?Interpreter.Owner} */(owner);
+      return obj;
     }
   });
 };
