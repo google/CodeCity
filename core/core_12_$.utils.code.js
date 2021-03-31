@@ -352,12 +352,14 @@ $.utils.code.regexps._generate = function _generate() {
   // Globally matches a single-quoted string literal, like "'this one'"
   // and "'it\\'s'".
   this.singleQuotedString =
-      new RegExp("'(?:[^'\\\\]|" + this.escapes.source + ")*'", 'g');
+      new RegExp("'(?:[^'\\\\\\r\\n\\u2028\\u2029]|" +
+                 this.escapes.source + ")*'", 'g');
 
   // Globally matches a double-quoted string literal, like '"this one"'
   // and '"it\'s"'.
   this.doubleQuotedString =
-      new RegExp('"(?:[^"\\\\]|' + this.escapes.source + ')*"', 'g');
+      new RegExp('"(?:[^"\\\\\\r\\n\\u2028\\u2029]|' +
+                 this.escapes.source + ')*"', 'g');
 
   // Globally matches a StringLiteral, like "'this one' and '"that one"'
   // as well as "the 'string literal' substring of this longer string" too.
@@ -387,21 +389,22 @@ $.utils.code.regexps._generate = function _generate() {
 };
 Object.setOwnerOf($.utils.code.regexps._generate.prototype, $.physicals.Maximilian);
 $.utils.code.regexps.escapes = /\\(?:["'\\\/0bfnrtv]|u[0-9a-fA-F]{4}|x[0-9a-fA-F]{2})/g;
-$.utils.code.regexps.singleQuotedString = /'(?:[^'\\]|\\(?:["'\\\/0bfnrtv]|u[0-9a-fA-F]{4}|x[0-9a-fA-F]{2}))*'/g;
-$.utils.code.regexps.doubleQuotedString = /"(?:[^"\\]|\\(?:["'\\\/0bfnrtv]|u[0-9a-fA-F]{4}|x[0-9a-fA-F]{2}))*"/g;
-$.utils.code.regexps.string = /(?:'(?:[^'\\]|\\(?:["'\\\/0bfnrtv]|u[0-9a-fA-F]{4}|x[0-9a-fA-F]{2}))*'|"(?:[^"\\]|\\(?:["'\\\/0bfnrtv]|u[0-9a-fA-F]{4}|x[0-9a-fA-F]{2}))*")/g;
+$.utils.code.regexps.singleQuotedString = /'(?:[^'\\\r\n\u2028\u2029]|\\(?:["'\\\/0bfnrtv]|u[0-9a-fA-F]{4}|x[0-9a-fA-F]{2}))*'/g;
+$.utils.code.regexps.doubleQuotedString = /"(?:[^"\\\r\n\u2028\u2029]|\\(?:["'\\\/0bfnrtv]|u[0-9a-fA-F]{4}|x[0-9a-fA-F]{2}))*"/g;
+$.utils.code.regexps.string = /(?:'(?:[^'\\\r\n\u2028\u2029]|\\(?:["'\\\/0bfnrtv]|u[0-9a-fA-F]{4}|x[0-9a-fA-F]{2}))*'|"(?:[^"\\\r\n\u2028\u2029]|\\(?:["'\\\/0bfnrtv]|u[0-9a-fA-F]{4}|x[0-9a-fA-F]{2}))*")/g;
 $.utils.code.regexps.identifierName = /[A-Za-z_$][A-Za-z0-9_$]*/g;
 $.utils.code.regexps.reservedWord = /(?:await|break|case|catch|class|const|continue|debugger|default|delete|do|else|enum|export|extends|false|finally|for|function|if|import|in|instanceof|new|null|return|super|switch|this|throw|true|try|typeof|var|void|while|with|yield|implements|interface|let|package|protected|public|static)/g;
 $.utils.code.regexps.identifierNameExact = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
 $.utils.code.regexps.reservedWordExact = /^(?:await|break|case|catch|class|const|continue|debugger|default|delete|do|else|enum|export|extends|false|finally|for|function|if|import|in|instanceof|new|null|return|super|switch|this|throw|true|try|typeof|var|void|while|with|yield|implements|interface|let|package|protected|public|static)$/;
-$.utils.code.regexps.stringExact = /^(?:'(?:[^'\\]|\\(?:["'\\\/0bfnrtv]|u[0-9a-fA-F]{4}|x[0-9a-fA-F]{2}))*'|"(?:[^"\\]|\\(?:["'\\\/0bfnrtv]|u[0-9a-fA-F]{4}|x[0-9a-fA-F]{2}))*")$/;
-$.utils.code.parseString = function(s) {
-  // Convert a string representation of a string literal to a string.
-	// Basically does eval(s), but safely and only if s is a string
-  // literal.
+$.utils.code.regexps.stringExact = /^(?:'(?:[^'\\\r\n\u2028\u2029]|\\(?:["'\\\/0bfnrtv]|u[0-9a-fA-F]{4}|x[0-9a-fA-F]{2}))*'|"(?:[^"\\\r\n\u2028\u2029]|\\(?:["'\\\/0bfnrtv]|u[0-9a-fA-F]{4}|x[0-9a-fA-F]{2}))*")$/;
+$.utils.code.parseString = function parseString(s) {
+  /* Convert a string representation of a string literal to a string.
+	 * Basically does eval(s), but safely and only if s is a string
+   * literal.
+   */
   if (!this.regexps.stringExact.test(s)) {
-    throw new TypeError(quote(s) + ' is not a string literal');
-  };
+    throw new TypeError(this.quote(s) + ' is not a string literal');
+  }
   return s.slice(1, -1).replace(this.regexps.escapes, function(esc) {
     switch (esc[1]) {
       case "'":
@@ -433,7 +436,7 @@ $.utils.code.parseString = function(s) {
     }
   });
 };
-delete $.utils.code.parseString.name;
+Object.setOwnerOf($.utils.code.parseString, $.physicals.Maximilian);
 $.utils.code.quote = function quote(str) {
   // Convert a string into a string literal.  We use single or double
   // quotes depending on which occurs less frequently in the string to
