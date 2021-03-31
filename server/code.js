@@ -40,7 +40,8 @@ regexps.escapes = /\\(?:["'\\\/0bfnrtv]|u[0-9a-fA-F]{4}|x[0-9a-fA-F]{2})/g;
  * @const
  */
 regexps.singleQuotedString =
-    new RegExp("'(?:[^'\\\\]|" + regexps.escapes.source + ")*'", 'g');
+    new RegExp("'(?:[^'\\\\\\r\\n\\u2028\\u2029]|" +
+               regexps.escapes.source + ")*'", 'g');
 
 /**
  * Matches a double-quoted string literal, like '"this one"' and
@@ -48,7 +49,8 @@ regexps.singleQuotedString =
  * @const
  */
 regexps.doubleQuotedString =
-    new RegExp('"(?:[^"\\\\]|' + regexps.escapes.source + ')*"', 'g');
+    new RegExp('"(?:[^"\\\\\\r\\n\\u2028\\u2029]|' +
+               regexps.escapes.source + ')*"', 'g');
 
 /**
  * Matches a string literal, like "'this one' and '"that one"' as well
