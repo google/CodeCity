@@ -1330,18 +1330,72 @@ Code.stringEditor.getSource = function() {
 Code.stringEditor.setSource = function(source) {
   var str;
   try {
-    str = JSON.parse(source);
-  } catch (e) {}
-  if (typeof str !== 'string') {
+    str = Code.stringEditor.parseString(source.trim());
+    this.confidence = 0.9;
+  } catch (e) {
     str = '';
     this.confidence = 0;
-  } else {
-    this.confidence = 0.9;
   }
   if (this.created) {
     this.textarea_.value = str;
   }
 };
+
+/**
+ * Convert a string representation of a string literal to a string.
+ * Basically does eval(s), but safely and only if s is a string
+ * literal.
+ * Copied from $.utils.code.parseString
+ * @param {string} s Candidate string literal.
+ * @retun {string} String value.
+ */
+Code.stringEditor.parseString = function(s) {
+  if (!Code.stringEditor.stringExact_.test(s)) {
+    throw new TypeError('Not a string literal');
+  }
+  return s.slice(1, -1).replace(Code.stringEditor.stringEscapes_, function(esc) {
+    switch (esc[1]) {
+      case "'":
+      case '"':
+      case '/':
+      case '\\':
+        return esc[1];
+      case '0':
+        return '\0';
+      case 'b':
+        return '\b';
+      case 'f':
+        return '\f';
+      case 'n':
+        return '\n';
+      case 'r':
+        return '\r';
+      case 't':
+        return '\t';
+      case 'v':
+        return '\v';
+      case 'u':
+      case 'x':
+        return String.fromCharCode(parseInt(esc.slice(2), 16));
+      default:
+        // RegExp in call to replace has accepted something we
+        // don't know how to decode.
+        throw new Error('unknown escape sequence "' + esc + '"??');
+    }
+  });
+};
+
+/**
+ * Tests if a valid string literal.
+ * Copied from $.utils.code.regexps.stringExact
+ */
+Code.stringEditor.stringExact_ = /^(?:'(?:[^'\\\r\n\u2028\u2029]|\\(?:["'\\\/0bfnrtv]|u[0-9a-fA-F]{4}|x[0-9a-fA-F]{2}))*'|"(?:[^"\\\r\n\u2028\u2029]|\\(?:["'\\\/0bfnrtv]|u[0-9a-fA-F]{4}|x[0-9a-fA-F]{2}))*")$/;
+
+/**
+ * Finds escape sequences in string literals.
+ * Copied from $.utils.code.regexps.escapes
+ */
+Code.stringEditor.stringEscapes_ = /\\(?:["'\\\/0bfnrtv]|u[0-9a-fA-F]{4}|x[0-9a-fA-F]{2})/g;
 
 /**
  * Notification that this editor has just been displayed.
