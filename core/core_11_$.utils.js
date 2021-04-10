@@ -181,29 +181,46 @@ $.utils.object.spider = function spider(start, callback) {
 };
 Object.setOwnerOf($.utils.object.spider, $.physicals.Maximilian);
 Object.setOwnerOf($.utils.object.spider.prototype, $.physicals.Maximilian);
-$.utils.object.transplantProperties = function transplantProperties(oldObject, newObject) {
-  // Copy all properties defined on one object to another.
-  if (!$.utils.isObject(newObject) || !$.utils.isObject(oldObject)) {
-    throw new TypeError("Can't transplant properties on non-objects.");
+$.utils.object.transplantProperties = function transplantProperties(source, destination) {
+  /* Copy own properties (whether enumerable or not) from source to
+   * destination, but do not overwrite existing own properties(*) on
+   * destination.  Called from $.hosts.code['/editorXhr'].handleMetadata
+   * to preserve properties when replacing function objects.
+   *
+   * (*) The exception to the no-overwrite rule is that if destination
+   * is a function and source.prototype is an object then
+   * destination.function will be overwritten by source.prototype;
+   * moreover, if a property source.prototype.constructor exists and is
+   * writable it will be redefined to set its value to destination.
+   * This ensures that destination.prototype.constructor === destination.
+   *
+   * Arguments:
+   * - source: object - the object to copy properties from.
+   * - destination: object - the object to copy properties to.
+   */
+  if (!$.utils.isObject(source) || !$.utils.isObject(destination)) {
+    throw new TypeError('source and destination must be objects');
   }
-  if (oldObject === newObject) return;  // Nothing to do!
-  var keys = Object.getOwnPropertyNames(oldObject);
+  if (destination === source) return;  // Nothing to do!
+  var keys = Object.getOwnPropertyNames(source);
   for (var i = 0; i < keys.length; i++) {
-    var k = keys[i];
-    var pd = Object.getOwnPropertyDescriptor(oldObject, k);
-    if (typeof newObject === 'function') {
-      if (k === 'length' || k === 'name') continue;  // Skip these.
-      if (k === 'prototype' && $.utils.isObject(pd.value)) {
-        // Fix foo.constructor.prototype to be foo, if .constructor writable.
-        var cpd = Object.getOwnPropertyDescriptor(pd.value, 'constructor');
-        if (cpd.writable) {
-          cpd.value = newObject;
-          Object.defineProperty(pd.value, 'constructor', cpd);
-        }
+    var key = keys[i];
+    var pd = Object.getOwnPropertyDescriptor(source, key);
+    if (typeof destination === 'function' &&
+        key === 'prototype' && $.utils.isObject(pd.value)) {
+      // Fix destination.constructor.prototype to be destination, if
+      // .constructor writable.
+      var cpd = Object.getOwnPropertyDescriptor(pd.value, 'constructor');
+      if (cpd.writable) {
+        cpd.value = destination;
+        Object.defineProperty(pd.value, 'constructor', cpd);
       }
+    } else {
+      // Do not overwrite any other existing properties on destination.
+      if (Object.prototype.hasOwnProperty.call(destination, key)) continue;
     }
     try {
-      Object.defineProperty(newObject, k, pd);
+      Object.defineProperty(destination, key, pd);
     } catch (e) {
       // Ignore failed attempt to copy properties.
     }
