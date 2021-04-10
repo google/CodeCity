@@ -296,7 +296,7 @@ $.utils.code.rewriteForEval.unittest = function() {
     }
   }
 };
-$.utils.code.eval = function(src, evalFunc) {
+$.utils.code.eval = function $_utils_code_eval(src, evalFunc) {
   // Eval src and attempt to print the resulting value readably.
   //
   // Evaluation is done by calling evalFunc (passing src) if supplied,
@@ -327,9 +327,13 @@ $.utils.code.eval = function(src, evalFunc) {
   // Suspend if needed.
   try {(function(){})();} catch (e) {suspend();}
   // Attempt to print a source-legal representation.
-  return $.utils.code.toSource(out);
+  return $.utils.code.expressionFor(out, {
+    depth: 2,
+    abbreviateMethods: true,
+    proto: 'note',
+    owner: 'ignore'
+  });
 };
-delete $.utils.code.eval.name;
 Object.setOwnerOf($.utils.code.eval, $.physicals.Maximilian);
 $.utils.code.regexps = {};
 $.utils.code.regexps.README = '$.utils.code.regexps contains some RegExps useful for parsing or otherwise analysing code.\n\nSee ._generate() for how they are constructed and what they will match.\n';

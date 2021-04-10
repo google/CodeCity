@@ -27,16 +27,17 @@ $.user = (new 'Object.create')($.physical);
 $.user.name = 'User prototype';
 $.user.connection = null;
 $.user.svgText = '<circle cx="50" cy="50" r="10" class="fillWhite"/><line x1="50" y1="60" x2="50" y2="80" /><line x1="40" y1="70" x2="60" y2="70" /><line x1="50" y1="80" x2="40" y2="100" /><line x1="50" y1="80" x2="60" y2="100" />';
-$.user.eval = function(cmd) {
+$.user.eval = function $_user_eval(cmd) {
   // Format:  ;1+1    -or-    eval 1+1
   var src = (cmd.cmdstr[0] === ';') ? cmd.cmdstr.substring(1) : cmd.argstr;
   src = $.utils.code.rewriteForEval(src, /* forceExpression= */ false);
   // Do eval with this === this and vars me === this and here === this.location.
-  var evalFunc = this.eval.doEval_.bind(this, this, this.location);
+  var evalFunc = $_user_eval.doEval_.bind(this, this, this.location);
   var out = $.utils.code.eval(src, evalFunc);
   suspend();
   cmd.user.narrate('⇒ ' + out);
 };
+Object.setOwnerOf($.user.eval, $.physicals.Maximilian);
 $.user.eval.verb = 'eval|;.*';
 $.user.eval.dobj = 'any';
 $.user.eval.prep = 'any';
