@@ -434,9 +434,10 @@ $.hosts.code['/evalXhr'].www = function code_evalXhr_www(request, response) {
     output = 'Cross-origin referer: ' + String(request.headers.referer);
   } else {
     try {
-      var globalEval = eval;
-      output = $.utils.code.toSource(globalEval(request.data), {depthLimit: 2});
+      var src = $.utils.code.rewriteForEval(request.data);
+      output = $.utils.code.eval(src);
     } catch (e) {
+      suspend();
       output = String(e);
     }
   }
