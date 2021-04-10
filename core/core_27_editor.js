@@ -134,9 +134,6 @@ $.hosts.code['/editorXhr'].www = function code_editorXhr_www(request, response) 
       return;
     }
 
-    // Populate the (original) value object in the reverse-lookup db.
-    selector.toValue(/*save:*/true);
-
     // Get Binding being edited.
     var object;
     var part = selector[selector.length - 1];
@@ -149,9 +146,8 @@ $.hosts.code['/editorXhr'].www = function code_editorXhr_www(request, response) 
     } else {
       // Get parent object via selector.
       var parent = new $.Selector(selector.slice(0, -1));
-      // Populate parent object in the reverse-lookup db.
-      parent.toValue(/*save:*/true);
       try {
+        // Get parent object and populate the reverse-lookup db.
         object = parent.toValue(/*save:*/true);
       } catch (e) {
         data.butter = e.message;
@@ -172,9 +168,13 @@ $.hosts.code['/editorXhr'].www = function code_editorXhr_www(request, response) 
       this.save(request.parameters.src, binding, data, request.user);
     }
 
+    // Populate the new value object in the reverse-lookup db.
+    selector.toValue(/*save:*/true);
+
     // Load revised source.
     this.load(binding, data);
   } finally {
+    suspend();
     response.write(JSON.stringify(data));
   }
 };
