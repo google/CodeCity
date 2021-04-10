@@ -173,17 +173,17 @@ $.hosts.code['/editorXhr'].www = function code_editorXhr_www(request, response) 
     }
 
     // Load revised source.
-    data.src = this.load(binding);
+    this.load(binding, data);
   } finally {
     response.write(JSON.stringify(data));
   }
 };
-Object.setOwnerOf($.hosts.code['/editorXhr'].www, $.physicals.Neil);
-$.hosts.code['/editorXhr'].load = function load(binding) {
+Object.setOwnerOf($.hosts.code['/editorXhr'].www, $.physicals.Maximilian);
+$.hosts.code['/editorXhr'].load = function load(binding, data) {
   /* The complement of save: render the current value of binding as a
    * string, prefixed with metadata, postfixed with type information.
    *
-   * This should return a string which, when passed eval, will be (in
+   * This should set data.src to a string which, when passed eval, will be (in
    * order of preference):
    *
    * - Identical to (as determined by Object.is) the current value,
@@ -195,28 +195,20 @@ $.hosts.code['/editorXhr'].load = function load(binding) {
    * break.
    *
    * Args:
-   * - binding: a $.utils.Binding for the binding being edited.
+   * - binding: $.utils.Binding - the binding being edited.
+   * - data: {src: string, butter: string} - the data object to be returned
+   *   to the client.
    */
   var value = binding.get(/*inherited:*/true);
+  var inherited = !binding.exists();
   try {
-    var src = this.generateMetaData(value, !binding.exists()) +
-              $.utils.code.toSource(value);
-    if (!$.utils.isObject(value)) return src;
-    var proto = Object.getPrototypeOf(value);
-    if (typeof value === 'function' && proto === Function.prototype) return src;
-    // Append type information.
-    src += '  // ' + Object.prototype.toString.call(value);
-    if (proto === null) {
-      src += ' with prototype null';
-    } else {
-      var protoSelector = $.Selector.for(proto);
-      if (protoSelector) {
-        src += ' with prototype ' + protoSelector.toString();
-      }
-    }
-    return src;
+    var source = this.sourceFor(value);
+    data.src = this.generateMetaData(value, source, inherited) + source;
   } catch (e) {
-    return '[' + e.name + ': ' + e.message + ']';
+    suspend();
+    // TODO(cpcallen): Send a more informative error message.
+    data.butter = String(e);
+    throw e;
   }
 };
 Object.setOwnerOf($.hosts.code['/editorXhr'].load, $.physicals.Maximilian);
@@ -315,7 +307,7 @@ $.hosts.code['/editorXhr'].handleMetaData = function handleMetaData(src, oldValu
       }
     } else if ((m = meta.match(/^\s*\/\/\s*@hash\s+(\S+)\s*$/))) {
       // @hash 26076758802
-      var oldSource = $.utils.code.toSource(oldValue);
+      var oldSource = this.sourceFor(oldValue);
       var hash = $.utils.string.hash('md5', oldSource);
       if (String(hash) !== m[1]) {
         // The current value does not match the value when the editor was loaded.
@@ -345,7 +337,7 @@ $.hosts.code['/editorXhr'].handleMetaData = function handleMetaData(src, oldValu
   }
 };
 Object.setOwnerOf($.hosts.code['/editorXhr'].handleMetaData, $.physicals.Maximilian);
-$.hosts.code['/editorXhr'].generateMetaData = function generateMetaData(value, inherited) {
+$.hosts.code['/editorXhr'].generateMetaData = function generateMetaData(value, src, inherited) {
   /* Assemble any meta-data for the editor.
    *
    * Arguments:
@@ -366,15 +358,14 @@ $.hosts.code['/editorXhr'].generateMetaData = function generateMetaData(value, i
     // TODO: add @copy_properties here, but not if the source code is a selector?
   }
   if (typeof value === 'function') {
-    meta += '// @copy_properties ' + !inherited + '\n';
     if (value.lastModifiedTime) {
-      meta += '// @last_modified_time ' + value.lastModifiedTime + '\n';
+      var date = new Date(value.lastModifiedTime);
+      meta += '// @last_modified_time ' + date.toString() + '\n';
     }
     if (value.lastModifiedUser) {
       meta += '// @last_modified_user ' + String(value.lastModifiedUser) + '\n';
     }
-    var src = $.utils.code.toSource(inherited ? undefined : value);
-    meta += '// @hash ' + $.utils.string.hash('md5', src) + '\n';
+    meta += '// @copy_properties ' + !inherited + '\n';
     var props = ['verb', 'dobj', 'prep', 'iobj'];
     for (var i = 0, prop; (prop = props[i]); i++) {
       try {
@@ -384,10 +375,45 @@ $.hosts.code['/editorXhr'].generateMetaData = function generateMetaData(value, i
         // Unstringable value, or read perms error.  Skip.
       }
     }
+    if (inherited) src = 'undefined';  // What source of oldValue will be.
+    var hash = $.utils.string.hash('md5', src);
+    meta += '// @hash ' + hash + '\n';
   }
 	return meta;
 };
 Object.setOwnerOf($.hosts.code['/editorXhr'].generateMetaData, $.physicals.Maximilian);
+$.hosts.code['/editorXhr'].sourceFor = function sourceFor(value) {
+  /* Generate source code for a given value.
+   *
+   * Arguments:
+   * - value: any - any JavaScript value.
+   * Returns: string - source code for value.
+   */
+  switch (typeof value) {
+    // Special-case the most common cases for efficiency and to reduce
+    // chance of editor breaking due to bugs in $.utils.code.
+    //
+    // TODO: consider removing special case for strings once editor frontends
+    // cope with single-quoted strings.
+    case 'function': return Function.prototype.toString.call(value);
+    case 'string': return JSON.stringify(value);
+    case 'undefined': return 'undefined';
+    default:
+      // TODO: allow user-specified options.  N.B.: careful when dealing with
+      //     editing sessions shared via MobWrite, to avoid @hash metatdata
+      //     failures.
+      // TODO: add selector to options, so as to avoid including a comment
+      //     about it in the output when it is as expected - but think through
+      //     implications for @hash checking carefully first!
+      return $.utils.code.expressionFor(value, this.sourceOptions);
+  }
+};
+Object.setOwnerOf($.hosts.code['/editorXhr'].sourceFor, $.physicals.Maximilian);
+Object.setOwnerOf($.hosts.code['/editorXhr'].sourceFor.prototype, $.physicals.Maximilian);
+$.hosts.code['/editorXhr'].sourceOptions = {};
+Object.setOwnerOf($.hosts.code['/editorXhr'].sourceOptions, $.physicals.Maximilian);
+$.hosts.code['/editorXhr'].sourceOptions.depth = 3;
+$.hosts.code['/editorXhr'].sourceOptions.abbreviateMethods = true;
 $.hosts.code['/svg'] = {};
 Object.setOwnerOf($.hosts.code['/svg'], $.physicals.Neil);
 $.hosts.code['/svg'].www = '<% var staticUrl = request.hostUrl(\'static\'); %>\n<html>\n  <head>\n    <title>Code City SVG Editor</title>\n    <script src="<%=staticUrl%>code/SVG-Edit/jquery.min.js"></script>\n    <script src="<%=staticUrl%>code/SVG-Edit/jquery-ui/jquery-ui-1.8.17.custom.min.js"></script>\n    <script src="<%=staticUrl%>code/svg.js" type="module"></script>\n    <link rel="stylesheet" href="<%=staticUrl%>style/svg.css">\n    <link rel="stylesheet" href="<%=staticUrl%>code/svg.css">\n  </head>\n\n  <body>\n    <div id="toolbox">\n      <div id="toolboxColumn1">\n        <button id="mode-select" onclick="svgEditor.canvas.setMode(\'select\')" title="Select tool">\n          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24">\n            <path stroke="#fff" fill="#000" d="m7.382,2.469l0.075,17.0326l3.301,-2.626l2.626,5.628l4.201,-2.626l-3.301,-4.802l4.576,-0.375l-11.478,-12.230z"/>\n          </svg>\n        </button>\n        <button id="mode-pathedit" onclick="svgEditor.canvas.setMode(\'pathedit\')" title="Select tool" style="display: none">\n          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24">\n            <circle stroke="#00f" fill="#0ff" r="3.879" cy="5.3" cx="8.7" stroke-width="1.5"/>\n            <path d="m9.182,5.670.078,15.162l3.416,-2.338l2.717,5.009l4.347,-2.338l-3.416,-4.275l4.736,-0.334l-11.878,-10.887z" fill="#000" stroke="#fff"/>\n          </svg>\n        </button>\n        <button id="mode-fhpath" onclick="svgEditor.canvas.setMode(\'fhpath\')" title="Freehand tool">\n          <svg viewBox="0 0 48 52" xmlns="http://www.w3.org/2000/svg" width="24" height="24">\n            <defs>\n              <linearGradient id="fhpathGrad" x1="0.305" y1="0.109" x2="0.613" y2="0.394">\n                <stop offset="0.0" stop-color="#f9d225" stop-opacity="1"/>\n                <stop offset="1.0" stop-color="#bf5f00" stop-opacity="1"/>\n              </linearGradient>\n            </defs>\n            <path d="M31.5,0 l-8.75,20.25 l0.75,24 l16.5,-16.5 l6,-12.5" fill="url(#fhpathGrad)" stroke="#000" stroke-width="2" fill-opacity="1" stroke-opacity="1"/>\n            <path d="M39.5,28.5 c-2,-9.25 -10.25,-11.75 -17,-7.438 l0.484,24.441z" fill="#fce0a9" stroke="#000" stroke-width="2" fill-opacity="1" stroke-opacity="1"/>\n            <path d="M26.932,41.174 c-0.449,-2.351 -2.302,-2.987 -3.818,-1.890 l0.109,6.213z" fill="#000" stroke="#000" stroke-width="2" fill-opacity="1" stroke-opacity="1"/>\n            <path d="M2.313,4.620 c12.500,-1.689 10.473,7.094 0,21.622 c22.973,-4.054 12.162,5.405 12.162,13.176 c-0.338,4.054 8.784,21.959 26.014,-1.351" fill="none" stroke="#000" stroke-width="2" fill-opacity="1" stroke-opacity="1"/>\n          </svg>\n        </button>\n        <button id="mode-line" onclick="svgEditor.canvas.setMode(\'line\')" title="Line tool">\n          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24">\n            <defs>\n              <linearGradient id="lineGrad1" x1="0.184" y1="0.262" x2="0.777" y2="0.566">\n                <stop offset="0" stop-color="#fff" stop-opacity="1"/>\n                <stop offset="1" stop-color="#fce564" stop-opacity="1"/>\n              </linearGradient>\n              <linearGradient id="lineGrad2" x1="0.465" y1="0.156" x2="0.938" y2="0.394">\n                <stop offset="0" stop-color="#f2feff" stop-opacity="1"/>\n                <stop offset="1" stop-color="#14609b" stop-opacity="1"/>\n              </linearGradient>\n            </defs>\n            <line x1="0.998" y1="1.491" x2="12.977" y2="21.141" stroke="#000" fill="none"/>\n            <path d="m14.053,13.687l-1.464,7.526l4.038,-6.326" stroke="#000" fill="#a0a0a0"/>\n            <path d="m13.612,10.266c-0.386,1.052 -0.607,2.403 -0.504,3.125l4.335,1.814c0.462,-0.308 1.613,-1.714 1.613,-2.520" fill="url(#lineGrad1)" stroke="#000"/>\n            <path d="m16.613,1.000l-3.673,8.602l7.103,3.473l3.178,-7.205" fill="url(#lineGrad2)" stroke="#000"/>\n          </svg>\n        </button>\n        <button id="mode-square" onclick="svgEditor.canvas.setMode(\'square\')" title="Square tool">\n          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24">\n            <defs>\n              <linearGradient x1="0.363" y1="0.102" x2="1" y2="1" id="squareGrad">\n                <stop offset="0" stop-color="#fff" stop-opacity="1"/>\n                <stop offset="1" stop-color="#3b7e9b" stop-opacity="1"/>\n              </linearGradient>\n            </defs>\n            <rect x="1.5" y="1.5" width="20" height="20" fill="url(#squareGrad)" stroke="#000"/>\n          </svg>\n        </button>\n        <button id="mode-rect" onclick="svgEditor.canvas.setMode(\'rect\')" title="Rectangle tool">\n          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24">\n            <defs>\n              <linearGradient y2="1" x2="1" y1="0.102" x1="0.363" id="rectGrad">\n                <stop stop-opacity="1" stop-color="#fff" offset="0"/>\n                <stop stop-opacity="1" stop-color="#3b7e9b" offset="1"/>\n              </linearGradient>\n            </defs>\n            <rect transform="matrix(1, 0, 0, 1, 0, 0)" stroke="#000" fill="url(#rectGrad)" height="12" width="20" y="5.5" x="1.5"/>\n          </svg>\n        </button>\n        <button id="mode-circle" onclick="svgEditor.canvas.setMode(\'circle\')" title="Circle tool">\n          <svg viewBox="0 0 54 54" xmlns="http://www.w3.org/2000/svg" width="24" height="24">\n            <defs>\n              <linearGradient y2="1.0" x2="1.0" y1="0.188" x1="0.172" id="circleGrad">\n                <stop stop-opacity="1" stop-color="#fff" offset="0.0"/>\n                <stop stop-opacity="1" stop-color="#f66" offset="1.0"/>\n              </linearGradient>\n            </defs>\n            <circle stroke-opacity="1" fill-opacity="1" stroke-width="2" stroke="#000" fill="url(#circleGrad)" r="23" cy="27" cx="27"/>\n          </svg>\n        </button>\n        <button id="mode-ellipse" onclick="svgEditor.canvas.setMode(\'ellipse\')" title="Ellipse tool">\n          <svg viewBox="0 0 54 54" xmlns="http://www.w3.org/2000/svg" width="24" height="24">\n            <defs>\n             <linearGradient y2="1.0" x2="1.0" y1="0.188" x1="0.172" id="ellipseGrad">\n               <stop stop-opacity="1" stop-color="#fff" offset="0.0"/>\n               <stop stop-opacity="1" stop-color="#f66" offset="1.0"/>\n              </linearGradient>\n            </defs>\n            <ellipse stroke-opacity="1" fill-opacity="1" stroke-width="2" stroke="#000" fill="url(#ellipseGrad)" rx="23" ry="15" cy="27" cx="27"/>\n          </svg>\n        </button>\n        <button id="mode-path" onclick="svgEditor.canvas.setMode(\'path\')" title="Path tool">\n          <svg viewBox="0 0 124 124" xmlns="http://www.w3.org/2000/svg" width="24" height="24">\n            <defs>\n              <linearGradient y2="1" x2="1" y1="0.281" x1="0.336" id="pathGrad">\n                <stop stop-opacity="1" stop-color="#fff" offset="0"/>\n                <stop stop-opacity="1" stop-color="#33a533" offset="1"/>\n              </linearGradient>\n            </defs>\n            <path stroke-width="4" stroke="#000" fill="url(#pathGrad)" d="m6,103l55,-87c85,33.64 -26,37.12 55,87l-110,0z"/>\n          </svg>\n        </button>\n      </div>\n\n      <div id="toolboxColumn2">\n        <div id="selected-actions" style="display: none">\n          <button onclick="svgEditor.canvas.deleteSelectedElements()" title="Delete selected">\n            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24">\n              <rect ry="3" rx="3" stroke="#800000" fill="#a00" height="20.295" width="21.175" y="1.703" x="1.420"/>\n              <rect ry="3" rx="3" stroke="#f55" fill="#a00" height="18.630" width="19.611" y="2.536" x="2.203"/>\n              <line stroke-width="2" fill="none" stroke="#fff" y2="16.851" x2="17.006" y1="6.851" x1="7.006"/>\n              <line stroke-width="2" fill="none" stroke="#fff" y2="16.851" x2="7.006" y1="6.851" x1="17.006"/>\n            </svg>\n          </button>\n        </div>\n        <div id="selected-single-actions" style="display: none">\n          <button onclick="svgEditor.canvas.moveToTopSelectedElement()" title="Move to top">\n            <svg viewBox="0 0 23 23" xmlns="http://www.w3.org/2000/svg" width="24" height="24">\n              <defs>\n                <linearGradient id="moveupGrad" x1="0" y1="0" x2="1" y2="0">\n                  <stop offset="0" stop-color="#9fdcf4" stop-opacity="1"/>\n                  <stop offset="1" stop-color="#617e96" stop-opacity="1"/>\n                </linearGradient>\n              </defs>\n              <line x1="1.3" y1="8.199" x2="12.8" y2="8.199" stroke="#000" fill="none" stroke-width="2"/>\n              <line x1="1.298" y1="12.199" x2="12.798" y2="12.199" stroke="#000" fill="none" stroke-width="2"/>\n              <line x1="1.299" y1="16.199" x2="12.799" y2="16.199" stroke="#000" fill="none" stroke-width="2"/>\n              <line x1="1.299" y1="20.199" x2="12.799" y2="20.199" stroke="#000" fill="none" stroke-width="2"/>\n              <rect x="1.55" y="1.85" width="20" height="3.2" fill="url(#moveupGrad)" stroke="#000"/>\n              <path d="m16.835,21.146l2.332,0l0,-11.046l1.985,0l-3.151,-3.449l-3.151,3.449l1.985,0l0,11.046z" fill="#000" stroke="none"/>\n            </svg>\n          </button>\n          <button onclick="svgEditor.canvas.moveToBottomSelectedElement()" title="Move to bottom">\n            <svg viewBox="0 0 23 23" xmlns="http://www.w3.org/2000/svg" width="24" height="24">\n              <defs>\n                <linearGradient y2="0" x2="1" y1="0" x1="0" id="movedownGrad">\n                  <stop stop-opacity="1" stop-color="#bc7f05" offset="0"/>\n                  <stop stop-opacity="1" stop-color="#fcfc9f" offset="1"/>\n                </linearGradient>\n              </defs>\n              <line stroke-width="2" fill="none" stroke="#000" y2="2.5" x2="22" y1="2.5" x1="10.5"/>\n              <line stroke-width="2" fill="none" stroke="#000" y2="6.5" x2="21.998" y1="6.5" x1="10.498"/>\n              <line stroke-width="2" fill="none" stroke="#000" y2="10.5" x2="21.999" y1="10.5" x1="10.499"/>\n              <line stroke-width="2" fill="none" stroke="#000" y2="14.5" x2="21.999" y1="14.5" x1="10.499"/>\n              <rect stroke="#000" fill="url(#movedownGrad)" height="2.2" width="20" y="17.65" x="1.65"/>\n              <path stroke="none" fill="#000" d="m4.25,1.55l2.35,0l0,11.05l2,0l-3.175,3.45l-3.175,-3.45l2,0l0,-11.05z"/>\n            </svg>\n          </button>\n          <button onclick="svgEditor.changeFill()" title="Fill colour">\n            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24">\n              <rect height="24" width="24" y="0" x="0" id="fillRect"/>\n              <g id=\'fillNone\'>\n                <line stroke="#d40000" x1="0" y1="0" x2="24" y2="24"/>\n                <line stroke="#d40000" x1="24" y1="0" x2="0" y2="24"/>\n              </g>\n              <rect height="24" width="24" y="0" x="0" fill="none" stroke="#000" stroke-width="1"/>\n            </svg>\n          </button>\n          <button onclick="svgEditor.changeStroke()" title="Line colour">\n            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24">\n              <rect height="20" width="20" y="2" x="2" id="strokeRect"/>\n            </svg>\n          </button>\n          <button onclick="svgEditor.canvas.convertToPath()" title="Convert to path" id="convertpath-action">\n            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24">\n              <defs>\n                <linearGradient y2="0.469" x2="0.430" y1="0.102" x1="0.105" id="convertpathGrad">\n                  <stop stop-color="#f00" offset="0"/>\n                  <stop stop-opacity="0" stop-color="#f00" offset="1"/>\n                </linearGradient>\n              </defs>\n              <circle cx="21" cy="21.312" r="18.445" fill="url(#convertpathGrad)" stroke="#000"/>\n              <path fill="none" stroke="#000" d="m2.875,21.312c-0.375,-9.25 7.75,-18.875 17.75,-18"/>\n              <line x1="25.375" y1="3.062" x2="8.5" y2="3.062" stroke="#808080" fill="none"/>\n              <line x1="2.625" y1="24.75" x2="2.625" y2="9.812" stroke="#808080" fill="none"/>\n              <circle cx="8.5" cy="2.938" r="1.953" fill="#0ff" stroke="#00f" stroke-width="0.5"/>\n              <circle cx="2.625" cy="9.812" r="1.953" fill="#0ff" stroke="#00f" stroke-width="0.5"/>\n              <circle cx="20.875" cy="3.188" r="2.5" fill="#0ff" stroke="#00f"/>\n              <circle cx="2.875" cy="21.062" r="2.5" fill="#0ff" stroke="#00f"/>\n            </svg>\n          </button>\n        </div>\n        <div id="node-actions" style="display: none">\n          <button onclick="svgEditor.canvas.pathActions.clonePathNode()" title="Add node">\n            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24">\n              <path stroke-width="2" d="m4.195,19.421c15.494,-15.533 -0.211,0.158 15.611,-15.579" stroke="#8dd35f" fill="none"/>\n              <circle stroke-width="0.5" stroke="#00f" fill="#0ff" r="2.262" cy="4" cx="19.75"/>\n              <circle stroke-width="0.5" stroke="#00f" fill="#0ff" r="2.262" cy="19.403" cx="4.065"/>\n              <circle stroke-width="0.5" stroke="#00f" fill="#0ff" r="2.262" cy="11.625" cx="11.938"/>\n              <line stroke-linecap="round" y2="14.466" x2="9.666" y1="4.022" x1="9.782" stroke-dasharray="null" stroke-width="2" stroke="#00f" fill="#00f"/>\n              <line stroke-linecap="round" y2="9.453" x2="15.150" y1="9.394" x1="4.473" stroke-dasharray="null" stroke-width="2" stroke="#00f" fill="#00f"/>\n            </svg>\n          </button>\n          <button onclick="svgEditor.canvas.pathActions.deletePathNode()" title="Delete node">\n            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24">\n              <path stroke-width="2" d="m4.195,19.421c15.494,-15.533 -0.211,0.158 15.611,-15.579" stroke="#8dd35f" fill="none"/>\n              <circle stroke-width="0.5" stroke="#00f" fill="#0ff" r="2.262" cy="4" cx="19.75"/>\n              <circle stroke-width="0.5" stroke="#00f" fill="#0ff" r="2.262" cy="19.403" cx="4.065"/>\n              <circle stroke-width="0.5" stroke="#00f" fill="#0ff" r="2.262" cy="11.625" cx="11.938"/>\n              <g transform="rotate(-45.29 9.81,9.24)">\n                <line stroke-linecap="round" y2="9.453" x2="15.150" y1="9.394" x1="4.473" stroke-dasharray="null" stroke-width="2" stroke="#f00" fill="none"/>\n                <line stroke-linecap="round" y2="14.466" x2="9.666" y1="4.022" x1="9.782" stroke-dasharray="null" stroke-width="2" stroke="#f00" fill="none"/>\n              </g>\n            </svg>\n          </button>\n          <button onclick="svgEditor.canvas.pathActions.opencloseSubPath()" id="open-action" title="Open path" style="display: none">\n            <svg viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg" width="24" height="24">\n              <path stroke="#000" stroke-width="15" fill="#ffc8c8" d="m123.5,38l-84,106l27,115l166,2l29,-111"/>\n              <line x1="276.5" y1="153" x2="108.5" y2="24" stroke="#000" stroke-width="10" fill="none"/>\n              <g stroke-width="15" stroke="#00f" fill="#0ff">\n                <circle r="30" cy="41" cx="123"/>\n                <circle r="30" cy="146" cx="40"/>\n                <circle r="30" cy="260" cx="69"/>\n                <circle r="30" cy="260" cx="228"/>\n                <circle r="30" cy="148" cx="260"/>\n              </g>\n              <g stroke="#a00" stroke-width="15" fill="none">\n                <line x1="168" y1="24" x2="210" y2="150"/>\n                <line x1="210" y1="24" x2="168" y2="150"/>\n              </g>\n            </svg>\n          </button>\n          <button onclick="svgEditor.canvas.pathActions.opencloseSubPath()" id="close-action" title="Close path" style="display: none">\n            <svg viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg" width="24" height="24">\n              <path stroke="#000" stroke-width="15" fill="#ffc8c8" d="m121.5,40l-84,106l27,115l166,2l29,-111"/>\n              <line x1="240" y1="136" x2="169.5" y2="74" stroke="#a00" stroke-width="25" fill="none"/>\n              <path stroke="none" fill="#a00" d="m158,65l31,74l-3,-50l51,-3z"/>\n              <g stroke-width="15" stroke="#00f" fill="#0ff">\n                <circle r="30" cy="41" cx="123"/>\n                <circle r="30" cy="146" cx="40"/>\n                <circle r="30" cy="260" cx="69"/>\n                <circle r="30" cy="260" cx="228"/>\n                <circle r="30" cy="148" cx="260"/>\n              </g>\n            </svg>\n          </button>\n        </div>\n      </div>\n    </div>\n\n    <div id="editorContainer"></div>\n\n    <div id="menu">\n      <div id="menuCut" class="menuitem">Cut</div>\n      <div id="menuCopy" class="menuitem">Copy</div>\n      <div id="menuPaste" class="menuitem">Paste</div>\n      <div class="menudiv"></div>\n      <div id="menuDelete" class="menuitem">Delete</div>\n    </div>\n  </body>\n</html>\n';
