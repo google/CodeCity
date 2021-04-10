@@ -561,4 +561,255 @@ $.utils.code.isIdentifierName = function isIdentifierName(id) {
 };
 Object.setOwnerOf($.utils.code.isIdentifierName, $.physicals.Maximilian);
 Object.setOwnerOf($.utils.code.isIdentifierName.prototype, $.physicals.Maximilian);
+$.utils.code.expressionFor = function expressionFor(value, options) {
+  /* Given an arbitrary value, return a string containing a JavaScript
+   * expression for it.
+   *
+   * The intention is that expressionFor(value) should return a string
+   * such that eval(expressionFor(value)) will be (in order of preference):
+   *
+   * - Identical to value (as determined by Object.is), or
+   * - An equivalent copy of value to a specified depth, or
+   * - Be unparsable or contain comments explaining in what way the
+   *   result of eval will differ from original value.
+   *
+   * Arguments:
+   * - value: any - any JavaScript value.
+   * - options?: Object - optional options object.  See implementation.
+   *
+   * Returns: string - an expression for value.
+   *
+   * TODO: there should be flags controlling what to do when it is not
+   * possible to construct an expression that will eval to an exact copy
+   * of value.  The options should include returning valid code containing
+   * comments, returning unparsable code, or throwing an an error.
+   */
+  var opts = {
+    depth: 10,  // How deeply shall we traverse the object tree?
+    arrayLimit: 100,  // Max number of array elements to include.
+    propertyLimit: 100,  // Max number of properties to include.
+    abbreviateFunctions: false,  // Elide all function bodies?
+    abbreviateMethods: false,  // Elide method function bodies?
+    proto: 'set',  // 'set', 'note' or (any other value) ignore prototype.
+    owner: 'note',  // 'set', 'note' or (any other value) ignore owner.
+    lineLength: 80,  // Line length limit, for formatting purposes.
+    indent: 2,  // Indent for nested expressions.
+    seen_: [],  // TODO: use Set instead of Array.
+  };
+  // Like Object.assign(opts, options) but copies inherited properties too.
+  for (var k in options) opts[k] = options[k];
+
+  // Helper to handle failures where expressionFor cannot or does not yet
+  // return an experssion that will eval to an identical copy of value.
+  // Typical usage: return fail('reason for failure');
+  function fail(message) {
+    // TODO: have flag to make it:
+    // throw new ReferenceError(message);
+    return $.utils.code.blockComment(message);
+  }
+
+  // Helper for properties in array and object literals.
+  function expressionForProperty(key) {
+    var descriptor = Object.getOwnPropertyDescriptor(value, key);
+    var propertyValue = descriptor.value;
+    if (selector) {
+      opts.selector = new $.Selector(selector.concat(key));
+    }
+    opts.abbreviateFunctions = opts.abbreviateMethods;
+    return expressionFor(propertyValue, opts);
+  }
+
+  var type = typeof value;
+  if (value === undefined || value === null ||
+      type === 'number' || type === 'boolean') {
+    if (Object.is(value, -0)) return '-0';
+    return String(value);
+  } else if (type === 'string') {
+    return $.utils.code.quote(value);
+  } else if (type !== 'function' && type !== 'object') {
+    throw new TypeError("unknown type '" + type + "'");
+  }
+
+  // value is an object of some kind (including function).  Work out a selector.
+  var selector = $.Selector.for(value);
+  if (opts.selector) {
+    var suggestedSelectorValue = opts.selector.toValue(/*save:*/true);
+    if (!selector && suggestedSelectorValue === value) {
+      selector = opts.selector;
+    }
+  }
+
+  // Deal with already-seen objects (and nesting limit depth limit).
+  if (opts.seen_.includes(value)) {
+    return fail('cyclic or shared substructure' +
+                (selector ? ': ' + selector.toString() : 'with no known selector'));
+  } else if (opts.depth < 1) {
+    if (!selector) return fail(type + ' with no known selector');
+    return selector.toExpr();
+  }
+  // Prepare for recursive calls.
+  opts.seen_.push(value);
+  opts.depth--;
+  opts.lineLength -= opts.indent;
+
+  // Get the object's [[Class]] - Object, Array, Date, RegExp, Error, etc.
+  // Since 'class' isn't a legal variable name, re-use 'type'.
+  type = Object.prototype.toString.call(value).slice(8, -1);
+  var proto = Object.getPrototypeOf(value);  // Actual prototype of value.
+  var expectedProto;  // Expected prototype of object of same [[Class]] as value.
+  var prefix = '', expr = '', suffix = '';  // Concatenate to get final expression.
+  var entries;  // Array of initialisers for object or array literal.
+  var notes = []; // Array of notes to postpend as comment.
+
+  // Make a note about the object's selector unless it is the expected
+  // one.  Decide this before recursive calls mess with opts.selector.
+  var selectorNote = selector ? selector.toString() : '';
+  if (opts.selector && selectorNote === opts.selector.toString()) {
+    selectorNote = '';
+  }
+
+  if (type === 'Array') {
+    if (!Array.isArray(value)) throw TypeError('non-array array??');
+    expectedProto = Array.prototype;
+    prefix = '[';
+    suffix = ']';
+    entries = [];
+    for (var i = 0; i < value.length; i++) {
+      suspend();
+      if (i >= opts.arrayLimit) {
+        entries[i] = $.utils.code.blockComment('and ' + (value.length - opts.arrayLimit) + ' more');
+        break;
+      } else if (!Object.hasOwnProperty.call(value, i)) {
+        entries[i] = '';
+        continue;
+      }
+      entries[i] = expressionForProperty(String(i));
+    }
+  } else if (type === 'Date') {
+    expr = 'new Date(\'' + value.toJSON() + '\')';
+    expectedProto = Date.prototype;
+  } else if (type === 'Error') {
+    expectedProto = proto;
+    switch (proto) {
+      case EvalError.prototype: prefix = 'EvalError'; break;
+      case RangeError.prototype:  prefix = 'RangeError'; break;
+      case ReferenceError.prototype: prefix = 'ReferenceError'; break;
+      case SyntaxError.prototype: expr = 'SyntaxError'; break;
+      case TypeError.prototype: expr = 'TypeError'; break;
+      case URIError.prototype: expr = 'URIError'; break;
+      case PermissionError.prototype: expr = 'PermissionError'; break;
+      default:
+        expr = 'Error';
+        expectedProto = Error.prototype;
+    }
+    if (typeof value.message === 'string') {
+      expr += '(' + $.utils.code.quote(value.message) + ')';
+    } else {
+      expr += '()';
+    }
+  } else if (type === 'Function') {
+    expectedProto = Function.prototype;
+    expr = Function.prototype.toString.call(value);
+    if (opts.abbreviateFunctions) {
+      expr = fail(expr.replace(/\{[^]*$/, '{ ... }'));
+    }
+  } else if (type === 'Object') {
+    expectedProto = Object.prototype;
+    prefix = '{';
+    suffix = '}';
+    entries = [];
+    var keys = Object.getOwnPropertyNames(value);
+    for (var i = 0; i < keys.length; i++) {
+      suspend();
+      if (i >= opts.propertyLimit) {
+        entries[i] = '/* and ' + (keys.length - opts.propertyLimit) + ' more */';
+        break;
+      }
+      var key = keys[i];
+      // BUG(#469): property keys that are NumericLiterals (like 3.2e4
+      // or 0xf00) can also appear unquoted!
+      entries[i] =
+        ($.utils.code.isIdentifierName(key) ? key : $.utils.code.quote(key)) +
+        ': ' + expressionForProperty(key);
+    }
+  } else if (type === 'RegExp') {
+    expr = RegExp.prototype.toString.call(value);
+    expectedProto = RegExp.prototype;
+  } else if (type === 'Thread') {
+    if (selector) return selector.toExpr();
+    expr = 'new Thread(' + fail('unable to reconstruct thread state') + ')';
+    expectedProto = Thread.prototype;
+  } else if (type === 'WeakMap') {
+    expectedProto = WeakMap.prototype;
+    expr = 'new WeakMap()';
+  } else {
+    throw new TypeError('unknown internal type ' + type);
+  }
+
+  // TODO: Prepend/append call to Object.defineProperties for remaining
+  // properties & property attributes.
+
+  // Pre/append prototype information if it is not as expected.
+  if (proto !== expectedProto) {
+    var protoString = expressionFor(proto, {depth: 0});
+    if (opts.proto === 'set') {
+      prefix = 'Object.setPrototypeOf(' + prefix;
+      suffix += ', ' + protoString + ')';
+    } else if (opts.proto === 'note') {
+      notes.push('[[Proto]]: ' + protoString);
+    }
+  }
+
+  // Prepend/append owner information.
+  var ownerString = expressionFor(Object.getOwnerOf(value), {depth: 0});
+  if (opts.owner === 'set') {
+    // BUG: Object.setOwnerOf(obj, owner) does not return obj (yet).
+    throw new Error("can't set owner in an expression yet");
+    // prefix = 'Object.setOwnerOf(' + prefix;
+    // suffix += ', ' + ownerString + ')';
+  } else if (opts.owner === 'note') {
+    notes.push('[[Owner]]: ' + ownerString);
+  }
+
+  // Prepend/append notes.
+  if (selectorNote)  {
+    prefix = $.utils.code.blockComment(selectorNote) + ' ' + prefix;
+  }
+  if (notes.length) {
+    suffix += ' ' + $.utils.code.blockComment(notes.join(', '));
+  }
+
+  // Join entries choosing a suitable layout depending on available space.
+  if (entries && entries.length) {
+    // Try single-line output.
+    // BUG: this omits required trailing comma when there are undefined
+    // trailing aray elements (e.g., [1, 2, 3,,].
+    expr = entries.join(', ');
+    var result = prefix + expr + suffix;
+    if (result.length <= opts.lineLength && !result.includes('\n')) {
+      return result;
+    }
+
+    // Generate multi-line output.
+    var padding = ' '.repeat(opts.indent);
+    expr = '\n' + $.utils.string.prefixLines(entries.join(',\n'), padding) + ',\n';
+  }
+
+  return prefix + expr + suffix;
+};
+Object.setOwnerOf($.utils.code.expressionFor, $.physicals.Maximilian);
+Object.setOwnerOf($.utils.code.expressionFor.prototype, $.physicals.Maximilian);
+$.utils.code.blockComment = function blockComment(text) {
+  /* Format text as a block comment.  Any occurences of the closing
+   * block comment delimiter in text will have a space inerted in them.
+   * If text is undefined, an empty string will be returned instead.
+   *
+   * Arguments:
+   * - text: string | undefined - the contents of the comment.
+   * Returns: string - the block comment.
+   */
+  return text ? '/* ' + text.replace(/\*\//g, '* /') + ' */' : '';
+};
+Object.setOwnerOf($.utils.code.blockComment, $.physicals.Maximilian);
+Object.setOwnerOf($.utils.code.blockComment.prototype, $.physicals.Maximilian);
 
