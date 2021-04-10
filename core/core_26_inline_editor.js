@@ -50,7 +50,11 @@ $.hosts.code['/inlineEdit'].load = function load(obj, key) {
    */
   var pd = Object.getOwnPropertyDescriptor(obj, key);
   var value = pd ? pd.value : undefined;
-  return $.utils.code.toSourceSafe(value);
+  if (typeof value === 'function') {
+    return Function.prototype.toString.apply(value);
+  } else {
+    return $.utils.code.expressionFor(value, {depth: 1});
+  }
 };
 Object.setOwnerOf($.hosts.code['/inlineEdit'].load, $.physicals.Maximilian);
 $.hosts.code['/inlineEdit'].save = function save(obj, key, src) {

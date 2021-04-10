@@ -219,7 +219,7 @@ $.user.grep.search = function search(user, prefix, searchString, selector, seen)
   var value = selector.toValue();
   if (!$.utils.isObject(value)) {  // value is a primitive.
     if (String(value).includes(searchString))	{
-      var formatted = $.utils.code.toSource(value);
+      var formatted = $.utils.code.expressionFor(value);
       if (typeof value === 'string' && formatted.length > 60) {
         // Print only extracts of long string values.
         formatted = formatted.slice(1, -1);  // Remove quotation marks.
