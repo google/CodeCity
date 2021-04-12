@@ -469,7 +469,8 @@
     },
     "contents": [
       "$.securityCourse",
-      "$.hosts.root['/securitycourse']"
+      {"path": "$.securityCourse.storeHosts", "do": "DONE"},
+      {"path": "$.hosts.root['/securitycourse']", "do": "DONE"}
     ]
   },
 
