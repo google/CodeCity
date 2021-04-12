@@ -565,11 +565,12 @@ $.servers.http.Response.prototype.clearIdCookie = function clearIdCookie() {
     throw new Error('Header already sent');
   }
   var request = this.connection_.request;
-  var domain = '';
-  if (request.info) {
-    var rootHost = request.info.rootAuthority || request.info.host.hostname;
-    domain = rootHost ? ' Domain=' + rootHost : '';
-  }
+  // Guess cookie domain.
+  var rootHost =
+      (request.info && request.info.rootAuthority) ||  // Request rootAuthority.
+      request.headers.host ||  // Actual Host: header value for the request.
+      $.hosts.root.hostname;  // Configuerd hostname
+  var domain = rootHost ? ' Domain=' + rootHost.replace(/:\d+$/, '') : '';  // Remove port number.
   var value = 'ID=; HttpOnly;' + domain + '; Path=/; Max-Age=0;';
   this.cookies.push(value);
 };
