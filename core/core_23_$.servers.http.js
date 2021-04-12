@@ -859,8 +859,13 @@ $.servers.http.Host.prototype.route_ = function route_(request, response, info) 
     var m = path.match(/^\/([-A-Za-z0-9]+)(\/.*)?$/);
     var subdomain = '';  // Empty string gives good 404 message if .match fails.
     if (m && (subdomain = m[1]) in this.subdomains) {
+      // Subdomain matched.  Do we need to redirect to add a trailing '/'?
+      if (!m[2]) {
+        response.sendRedirect(subdomain + '/', 308);
+        return;
+      }
       // Route to the subdomain.  Modify info.path and info.origin as appropriate
-      info.path = m[2] || '/';
+      info.path = m[2];
       info.origin += '/' + subdomain;
       if (!this.subdomains[subdomain].handle(request, response, info)) {
         response.sendError(500, 'Host for pseudo-subdomain /' + subdomain + '/ rejected request.');
