@@ -236,7 +236,6 @@
       "$.hosts.root.subdomains.mobwrite",
       "$.hosts.root.subdomains.static",
       "$.hosts.root.subdomains.system",
-      "$.hosts.root.access",
       {"path": "$.servers.http.hosts[0]", "do": "DONE"}
     ]
   }, {
@@ -646,6 +645,9 @@
       "<OVERVIEW>": "Main database for google.codecity.world."
     },
     "contents": [
+      "$.servers.http.Host.prototype.access",
+      "$.hosts.root.access",
+      "$.hosts.system.access",
       "$.db.tempId.tempIds_",
       "$"
     ]
