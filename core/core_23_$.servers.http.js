@@ -1013,7 +1013,6 @@ $.servers.http.Host.prototype.urlForSubdomain = function urlForSubdomain(hostnam
 };
 Object.setOwnerOf($.servers.http.Host.prototype.urlForSubdomain, $.physicals.Maximilian);
 Object.setOwnerOf($.servers.http.Host.prototype.urlForSubdomain.prototype, $.physicals.Maximilian);
-$.servers.http.Host.prototype.access = 'hidden';
 $.servers.http.Host.prototype.deleteSubdomain = function deleteSubdomain(subdomain) {
   /* Delete a subdomain, or all subdomains served by a particular
    * Host object.
