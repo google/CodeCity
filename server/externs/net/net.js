@@ -27,16 +27,28 @@ var events = require('events');
 var net = {};
 
 /**
+ * @typedef {{allowHalfOpen: ?boolean}}
+ */
+var createOptions;
+
+/**
+ * @param {(createOptions|function(...))=} options
+ * @param {function(...)=} connectionListener
+ * @return {net.Server}
+ */
+net.createServer = function(options, connectionListener) {};
+
+/**
  * @typedef {{port: (number|undefined),
  *            host: (string|undefined),
  *            localAddress: (string|undefined),
  *            path: (string|undefined),
  *            allowHalfOpen: (boolean|undefined)}}
  */
-net.ConnectOptions;
+var connectOptions;
 
 /**
- * @param {net.ConnectOptions|number|string} arg1
+ * @param {connectOptions|number|string} arg1
  * @param {(function(...)|string)=} arg2
  * @param {function(...)=} arg3
  * @return {!net.Socket}
@@ -48,8 +60,9 @@ net.createConnection = function(arg1, arg2, arg3) {};
 
 /**
  * @constructor
+ * @param {createOptions=} options
  */
-net.Server = function() {};
+net.Server = function(options) {};
 
 /**
  * @return {{port: number, family: string, address: string}}
