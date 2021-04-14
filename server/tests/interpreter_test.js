@@ -1371,6 +1371,7 @@ exports.testNetworking = async function(t) {
         data += d;
       };
       conn.onEnd = function() {
+        CC.connectionClose(this);
         CC.connectionUnlisten(8888);
         resolve(data);
       };
