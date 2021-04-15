@@ -254,7 +254,7 @@ $.utils.code.regexps.reservedWordExact = /^(?:await|break|case|catch|class|const
 $.utils.code.regexps.stringExact = /^(?:'(?:[^'\\\r\n\u2028\u2029]|\\(?:["'\\\/0bfnrtv]|u[0-9a-fA-F]{4}|x[0-9a-fA-F]{2}))*'|"(?:[^"\\\r\n\u2028\u2029]|\\(?:["'\\\/0bfnrtv]|u[0-9a-fA-F]{4}|x[0-9a-fA-F]{2}))*")$/;
 $.utils.code.parseString = function parseString(s) {
   /* Convert a string representation of a string literal to a string.
-	 * Basically does eval(s), but safely and only if s is a string
+   * Basically does eval(s), but safely and only if s is a string
    * literal.
    */
   if (!this.regexps.stringExact.test(s)) {

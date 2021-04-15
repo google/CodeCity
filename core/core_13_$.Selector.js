@@ -46,17 +46,17 @@ $.Selector = function Selector(s) {
     parts[0] = s[0];
     for (var i = 1; i < s.length; i++) {
       if (typeof s[i] === 'string' || s[i] === Selector.PROTOTYPE || s[i] === Selector.OWNER) {
-	      parts[i] = s[i];
+        parts[i] = s[i];
       } else if (s[i] instanceof Selector.SpecialPart) {
         throw new TypeError('Invalid SpecialPart in parts array');
-	    } else if (typeof s[i] === 'object' && s[i].type) {
+      } else if (typeof s[i] === 'object' && s[i].type) {
         // Handle normalisation of parts lists that have been roundtripped via JSON.
         switch(s[i].type) {
           case 'proto':
-	          parts[i] = Selector.PROTOTYPE;
+            parts[i] = Selector.PROTOTYPE;
             break;
           case 'owner':
-	          parts[i] = Selector.OWNER;
+            parts[i] = Selector.OWNER;
             break;
           default:
           throw new TypeError('Unknown SpecialPart type ' + s[i].type);
@@ -101,8 +101,8 @@ $.Selector.prototype.isVar = function isVar() {
 };
 Object.setOwnerOf($.Selector.prototype.isVar, $.physicals.Maximilian);
 $.Selector.prototype.toExpr = function toExpr() {
-	/* Return the selector as an evaluable expression yeilding the selected value.
-	 */
+  /* Return the selector as an evaluable expression yeilding the selected value.
+   */
   return this.toString(function(part, out) {
     if (part === $.Selector.PROTOTYPE) {
       out.unshift('Object.getPrototypeOf(');
@@ -228,7 +228,7 @@ $.Selector.prototype.badness = function badness() {
    * bad.
    */
   var penalties = 0;
-	for (var i = 0; i < this.length; i++) {
+  for (var i = 0; i < this.length; i++) {
     var part = this[i];
     if (part instanceof this.constructor.SpecialPart) {
       penalties += 100;
@@ -354,7 +354,7 @@ $.Selector.parse = function parse(selector) {
 Object.setOwnerOf($.Selector.parse, $.physicals.Maximilian);
 $.Selector.parse.tokenize = function tokenize(selector) {
   // Tokenizes a selector string.  Throws a SyntaxError if any text is
- 	// found which does not form a valid token.
+  // found which does not form a valid token.
   var REs = {
     whitespace: /^\s+/g,
     '.': /^\./g,
@@ -400,6 +400,7 @@ $.Selector.parse.tokenize = function tokenize(selector) {
   }
   return tokens;
 };
+Object.setOwnerOf($.Selector.parse.tokenize, $.physicals.Maximilian);
 $.Selector.for = function Selector_for(object) {
   /* Return a Selector for object, or undefined if none known.
    */
@@ -422,14 +423,14 @@ $.Selector.db.set = function set(object, selector) {
   known.push(selectorString);
   // Sort by badness, trim to length and save.
   $.Selector.sortByBadness(known);
-	this.map_.set(object, known.slice(0, this.diversityLimit));
+  this.map_.set(object, known.slice(0, this.diversityLimit));
 };
 Object.setOwnerOf($.Selector.db.set, $.physicals.Maximilian);
 $.Selector.db.README = 'Selector.db is database mapping objects to Selectors.\n\nThis info is stored in Selector.db.map_, which is a WeakMap mapping objects to entries.\n\nEach entry is an object whose keys are selector strings and values are the corresponding Selectors (i.e., parts lists).';
 $.Selector.db.diversityLimit = 5;
 $.Selector.db.get = function get(object) {
   if (!$.utils.isObject(object)) return undefined;
-	var known = this.map_.get(object);
+  var known = this.map_.get(object);
   while (known && known.length) {
     var selector = new $.Selector(known[0]);
     var value = null;
@@ -573,7 +574,7 @@ $.utils.Binding.prototype.set = function set(value) {
     Object.setOwnerOf(this.object, value);
   } else {
     // BUG: doesn't handle non-writable properties.
-		this.object[this.part] = value;
+    this.object[this.part] = value;
   }
 };
 Object.setOwnerOf($.utils.Binding.prototype.set, $.physicals.Maximilian);
@@ -655,7 +656,7 @@ $.utils.Binding.from = function from(selector) {
   /* Create and return a Binding for the given selector - that is,
    * such that Binding.from(s).get() === s.toValue().
    */
-	var part = selector[selector.length - 1];
+  var part = selector[selector.length - 1];
   if (selector.isVar()) {
     // Global variable; no parent object.
     return new this(null, part);
@@ -666,7 +667,7 @@ $.utils.Binding.from = function from(selector) {
   if (!$.utils.isObject(object)) {
     throw new TypeError(String(parent) + ' is not an object');
   }
-	return new this(object, part);
+  return new this(object, part);
 };
 Object.setOwnerOf($.utils.Binding.from, $.physicals.Maximilian);
 
