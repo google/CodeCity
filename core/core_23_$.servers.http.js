@@ -837,7 +837,7 @@ $.servers.http.Host.prototype.route_ = function route_(request, response, info) 
     }
     // Check access control.
     if (!($.user.isPrototypeOf(request.user)) &&  // Not logged in.
-        (this.access !== 'public' && obj.wwwAccess !== 'public' ||
+        ((this.access !== 'public' && obj.wwwAccess !== 'public') ||
          obj.wwwAccess === 'private')) {
       response.sendError(403);
       return;
