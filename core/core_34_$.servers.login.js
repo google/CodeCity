@@ -43,34 +43,6 @@ $.servers.login.connection.onReceiveLine = function onReceiveLine(line) {
 };
 Object.setOwnerOf($.servers.login.connection.onReceiveLine, $.physicals.Maximilian);
 Object.setOwnerOf($.servers.login.connection.onReceiveLine.prototype, $.physicals.Neil);
-$.servers.login.getUser = function getUser(id) {
-  /* Get the $.user for the given id, or create one if none exists.
-   *
-   * Arguments:
-   * - id: string - the ID cookie for the given user.
-   * Returns: a $.user
-   */
-  var user = $.userDatabase.get(id);
-  if (user) return user;
-
-  // Create new $.user.
-  user = Object.create($.user);
-  user.setName('Guest', /*tryAlternative:*/ true);
-  $.userDatabase.set(id, user);
-  /*
-  (function() {
-    setPerms(user);
-		var home = Object.create($.room);
-	  home.setName(user.name + "'s room", true);
-	  home.description = 'A quiet place for ' + user.name + ' to work.';
-	  user.home = home;
-	  user.moveTo(home);
-  })();
-  */
-  return user;
-};
-Object.setOwnerOf($.servers.login.getUser, $.physicals.Maximilian);
-Object.setOwnerOf($.servers.login.getUser.prototype, $.physicals.Maximilian);
 $.servers.login.getCookie = function getCookie(loginData) {
   /* Get the ID cookie for the given loginData.
    *
@@ -94,11 +66,11 @@ $.servers.login.getCookie = function getCookie(loginData) {
 Object.setOwnerOf($.servers.login.getCookie, $.physicals.Maximilian);
 Object.setOwnerOf($.servers.login.getCookie.prototype, $.physicals.Maximilian);
 $.servers.login.createUser = function createUser(id, name) {
-  /* Get the $.user for the given id, or create one if none exists.
+  /* Create a $.user object for the given id.
    *
    * Arguments:
    * - id: string - the ID cookie for the given user.
-   * - name: string - the name for the new user.
+   * - name?: string - the name for the new user.  Default: 'Guest'.
    * Returns: Object - the new $.user object
    */
   if ($.userDatabase.get(id)) throw new TypeError('user already exists');
