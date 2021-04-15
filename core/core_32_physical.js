@@ -229,14 +229,16 @@ $.physical.willAccept = function willAccept(what, src) {
 };
 Object.setOwnerOf($.physical.willAccept, $.physicals.Maximilian);
 Object.setOwnerOf($.physical.willAccept.prototype, $.physicals.Maximilian);
-$.physical.onExit = function(what, dest) {
-  // Called by $.physical.moveTo just before what leaves for dest.
+$.physical.onExit = function onExit(what, dest) {
+  /* Called by $.physical.moveTo just before what leaves for dest.
+   */
 };
-delete $.physical.onExit.name;
-$.physical.onEnter = function(what, src) {
-  // Called by $.physical.moveTo just after what arrives from src.
+Object.setOwnerOf($.physical.onExit, $.physicals.Maximilian);
+$.physical.onEnter = function onEnter(what, src) {
+  /* Called by $.physical.moveTo just after what arrives from src.
+   */
 };
-delete $.physical.onEnter.name;
+Object.setOwnerOf($.physical.onEnter, $.physicals.Maximilian);
 $.physical.lookAt = function lookAt(cmd) {
   this.look(cmd);
 };
@@ -515,7 +517,7 @@ $.utils.validate.physicals = function physicals(doSpider) {
   }
 
   if (doSpider) {
-    $.utils.object.spider($, function(obj) {
+    $.utils.object.spider($, function spiderPhysicals(obj) {
       if (!$.physical.isPrototypeOf(obj)) return false;  // Skip, but don't prune.
       obj.setName(obj.name, /*tryAlternative:*/ true);
     });

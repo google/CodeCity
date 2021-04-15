@@ -56,7 +56,7 @@ $.user.narrate = function narrate(text, obj) {
   }
   this.readMemo(memo);
 };
-$.user.create = function(cmd) {
+$.user.create = function create(cmd) {
   if ($.physical !== cmd.dobj && !$.physical.isPrototypeOf(cmd.dobj)) {
     cmd.user.narrate('Unknown prototype object.\n' + $.user.create.usage);
     return;
@@ -78,7 +78,6 @@ $.user.create = function(cmd) {
     }
   }
 };
-delete $.user.create.name;
 Object.setOwnerOf($.user.create, $.physicals.Maximilian);
 $.user.create.usage = 'Usage: create <prototype> as <name>';
 $.user.create.verb = 'create';
@@ -109,24 +108,25 @@ $.user.join.verb = 'join';
 $.user.join.dobj = 'any';
 $.user.join.prep = 'none';
 $.user.join.iobj = 'none';
-$.user.quit = function(cmd) {
+$.user.quit = function quit(cmd) {
   if (this.connection) {
     this.connection.close();
   }
 };
+Object.setOwnerOf($.user.quit, $.physicals.Maximilian);
 $.user.quit.verb = 'quit';
 $.user.quit.dobj = 'none';
 $.user.quit.prep = 'none';
 $.user.quit.iobj = 'none';
-$.user.willAccept = function(what, src) {
-  // Returns true iff this is willing to accept what arriving from src.
-  //
-  // This function (or its overrides) MUST NOT have any kind of
-  // observable side-effect (making noise, causing some other action,
-  // etc.).
+$.user.willAccept = function willAccept(what, src) {
+  /* Returns true iff this is willing to accept what arriving from src.
+   *
+   * This function (or its overrides) MUST NOT have any kind of
+   * observable side-effect (making noise, causing some other action,
+   * etc.).
+   */
   return $.thing.isPrototypeOf(what);
 };
-delete $.user.willAccept.name;
 Object.setOwnerOf($.user.willAccept, $.physicals.Maximilian);
 Object.setOwnerOf($.user.willAccept.prototype, $.physicals.Maximilian);
 $.user.moveTo = function moveTo(dest, opt_neighbour) {
@@ -149,9 +149,9 @@ $.user.moveTo = function moveTo(dest, opt_neighbour) {
 Object.setOwnerOf($.user.moveTo, $.physicals.Maximilian);
 Object.setOwnerOf($.user.moveTo.prototype, $.physicals.Maximilian);
 $.user.getNullSvgText = function getNullSvgText() {
-  // Return an SVG text for the null void (i.e., what
-  // a user sees if they're .location is null).
-
+  /* Return an SVG text for the null void (i.e., what
+   * a user sees if they're .location is null).
+   */
   // Draw a double spiral on a black background.
   // TODO(cpcallen): make spiral curved, rather than angular.
   var out = [];
@@ -171,19 +171,20 @@ $.user.getNullSvgText = function getNullSvgText() {
   }
   return out.join('');
 };
-Object.defineProperty($.user.getNullSvgText, 'name', {value: 'nullVoidSvgText'});
-$.user.getCommands = function(who) {
+Object.setOwnerOf($.user.getNullSvgText, $.physicals.Maximilian);
+$.user.getCommands = function getCommands(who) {
   var commands = $.physical.getCommands.apply(this, arguments);
   if (who.location !== this.location) {
     commands.push('join ' + this.name);
   }
   return commands;
 };
+Object.setOwnerOf($.user.getCommands, $.physicals.Maximilian);
 Object.setOwnerOf($.user.getCommands.prototype, $.physicals.Maximilian);
-$.user.who = function(cmd) {
+$.user.who = function who(cmd) {
   $.console.look({user: cmd.user});
 };
-delete $.user.who.name;
+Object.setOwnerOf($.user.who, $.physicals.Maximilian);
 $.user.who.verb = 'w(ho)?';
 $.user.who.dobj = 'none';
 $.user.who.prep = 'none';
@@ -578,15 +579,16 @@ $.room.narrate = function narrate(text, except, obj) {
     }
   }
 };
-$.room.willAccept = function(what, src) {
-  // Returns true iff this is willing to accept what arriving from src.
-  //
-  // This function (or its overrides) MUST NOT have any kind of
-  // observable side-effect (making noise, causing some other action,
-  // etc.).
+$.room.willAccept = function willAccept(what, src) {
+  /* Returns true iff this is willing to accept what arriving from src.
+   *
+   * This function (or its overrides) MUST NOT have any kind of
+   * observable side-effect (making noise, causing some other action,
+   * etc.).
+   */
   return $.thing.isPrototypeOf(what) || $.user.isPrototypeOf(what);
 };
-delete $.room.willAccept.name;
+Object.setOwnerOf($.room.willAccept, $.physicals.Maximilian);
 $.room.onEnter = function onEnter(what, src) {
   // TODO: caller check: should only be called by $.physical.moveTo.
   $.physical.validate.call(this);
@@ -921,7 +923,7 @@ $.container.contents_.forKey = 'contents_';
 Object.defineProperty($.container.contents_, 'forKey', {writable: false, enumerable: false, configurable: false});
 $.container.contentsVisibleWhenOpen = true;
 $.container.contentsVisibleWhenClosed = false;
-$.container.lookJssp = "<table style=\"height: 100%; width: 100%;\">\n  <tr>\n    <td style=\"padding: 1ex; width: 30%;\">\n      <svg width=\"100%\" height=\"100%\" viewBox=\"0 0 0 0\">\n        <%= $.utils.object.getValue(this, 'svgText') %>\n      </svg>\n    </td>\n    <td>\n    <h1><%= $.utils.html.escape(String(this)) + $.utils.commandMenu(this.getCommands(request.user)) %></h1>\n    <p><%= $.utils.html.preserveWhitespace($.utils.object.getValue(this, 'description')) %></p>\n    <p>It is <%= this.isOpen ? 'open' : 'closed' %>.</p>\n<%\nif (this.isOpen ? this.contentsVisibleWhenOpen : this.contentsVisibleWhenClosed) {\n  var contents = this.getContents();\n  if (contents.length) {\n    var contentsHtml = [];\n    for (var i = 0; i < contents.length; i++) {\n      var commands = [\n        'look ' + contents[i].name + ' in ' + this.name,\n        'get ' + contents[i].name + ' from ' + this.name\n      ];\n      contentsHtml[i] = $.utils.html.escape(contents[i].name) +\n          $.utils.commandMenu(commands);\n    }\n    response.write('<p>Contents: ' + contentsHtml.join(', ') + '</p>');\n  }\n}\nif (this.location) {\n  response.write('<p>Location: ' + $.utils.html.escape(this.location.name) +\n      $.utils.commandMenu(this.location.getCommands(request.user)) + '</p>');\n}\n%>\n    </td>\n  </tr>\n</table>";
+$.container.lookJssp = "<table style=\"height: 100%; width: 100%;\">\n  <tr>\n    <td style=\"padding: 1ex; width: 30%;\">\n      <svg width=\"100%\" height=\"100%\" viewBox=\"0 0 0 0\">\n        <%= $.utils.object.getValue(this, 'svgText') %>\n      </svg>\n    </td>\n    <td>\n    <h1><%: String(this) %><%= $.utils.commandMenu(this.getCommands(request.user)) %></h1>\n    <p><%= $.utils.html.preserveWhitespace($.utils.object.getValue(this, 'description')) %></p>\n    <p>It is <%= this.isOpen ? 'open' : 'closed' %>.</p>\n<%\nif (this.isOpen ? this.contentsVisibleWhenOpen : this.contentsVisibleWhenClosed) {\n  var contents = this.getContents();\n  if (contents.length) {\n    var contentsHtml = [];\n    for (var i = 0; i < contents.length; i++) {\n      var commands = [\n        'look ' + contents[i].name + ' in ' + this.name,\n        'get ' + contents[i].name + ' from ' + this.name\n      ];\n      contentsHtml[i] = $.utils.html.escape(contents[i].name) +\n          $.utils.commandMenu(commands);\n    }\n    response.write('<p>Contents: ' + contentsHtml.join(', ') + '</p>');\n  }\n}\nif (this.location) {\n  response.write('<p>Location: ' + $.utils.html.escape(this.location.name) +\n      $.utils.commandMenu(this.location.getCommands(request.user)) + '</p>');\n}\n%>\n    </td>\n  </tr>\n</table>";
 $.container.lookIn = function lookIn(cmd) {
   var thing = cmd.dobj
   if ($.utils.command.matchFailed(thing)) {

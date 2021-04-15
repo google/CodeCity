@@ -23,7 +23,7 @@
 // AUTO-GENERATED CODE FROM DUMP.  EDIT WITH CAUTION!
 //////////////////////////////////////////////////////////////////////
 
-$.utils.commandMenu = function(commands) {
+$.utils.commandMenu = function commandMenu(commands) {
   var cmdXml = '';
   if (commands.length) {
     cmdXml += '<cmds>';
@@ -34,14 +34,16 @@ $.utils.commandMenu = function(commands) {
   }
   return cmdXml;
 };
+Object.setOwnerOf($.utils.commandMenu, $.physicals.Maximilian);
 
-$.utils.replacePhysicalsWithName = function(value) {
-  // Deeply clone JSON object.
-  // Replace all instances of $.physical with the object's name.
+$.utils.replacePhysicalsWithName = function replacePhysicalsWithName(value) {
+  /* Deeply clone JSON object.
+   * Replace all instances of $.physical with the object's name.
+   */
   if (Array.isArray(value)) {
     var newArray = [];
     for (var i = 0; i < value.length; i++) {
-      newArray[i] = $.utils.replacePhysicalsWithName(value[i]);
+      newArray[i] = replacePhysicalsWithName(value[i]);
     }
     return newArray;
   }
@@ -51,10 +53,11 @@ $.utils.replacePhysicalsWithName = function(value) {
   if (typeof value === 'object' && value !== null) {
     var newObject = {};
     for (var prop in value) {
-      newObject[prop] = $.utils.replacePhysicalsWithName(value[prop]);
+      newObject[prop] = replacePhysicalsWithName(value[prop]);
     }
     return newObject;
   }
   return value;
 };
+Object.setOwnerOf($.utils.replacePhysicalsWithName, $.physicals.Maximilian);
 

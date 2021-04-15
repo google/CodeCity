@@ -24,15 +24,16 @@
 //////////////////////////////////////////////////////////////////////
 
 $.utils.code = {};
-$.utils.code.rewriteForEval = function(src, forceExpression) {
-  // Eval treats {} as an empty block (return value undefined).
-  // Eval treats {'a': 1} as a syntax error.
-  // Eval treats {a: 1} as block with a labeled statement (return value 1).
-  // Detect these cases and enclose in parenthesis.
-  // But don't mess with: {var x = 1; x + x;}
-  // This is consistent with the console on Chrome and Node.
-  // If 'forceExpression' is true, then throw a SyntaxError if the src is
-  // more than one expression (e.g. '1; 2;').
+$.utils.code.rewriteForEval = function rewriteForEval(src, forceExpression) {
+  /* Eval treats {} as an empty block (return value undefined).
+   * Eval treats {'a': 1} as a syntax error.
+   * Eval treats {a: 1} as block with a labeled statement (return value 1).
+   * Detect these cases and enclose in parenthesis.
+   * But don't mess with: {var x = 1; x + x;}
+   * This is consistent with the console on Chrome and Node.
+   * If 'forceExpression' is true, then throw a SyntaxError if the src is
+   * more than one expression (e.g. '1; 2;').
+   */
   var ast = null;
   if (!forceExpression) {
     // Try to parse src as a program.
@@ -95,8 +96,7 @@ $.utils.code.rewriteForEval = function(src, forceExpression) {
   }
   return src;
 };
-delete $.utils.code.rewriteForEval.name;
-Object.setOwnerOf($.utils.code.rewriteForEval, $.physicals.Neil);
+Object.setOwnerOf($.utils.code.rewriteForEval, $.physicals.Maximilian);
 $.utils.code.rewriteForEval.unittest = function() {
   var cases = {
     // Input: [Expression, Statement(s)]
