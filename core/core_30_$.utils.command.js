@@ -116,7 +116,7 @@ $.utils.command.parse = function parse(cmdstr, user) {
   // TODO(cpcallen): support quoting.
   var argstrTrimmed = argstr.trim();
   var args = argstrTrimmed ? argstrTrimmed.split(/\s+/) : [];
-	// Recombine args and split into dobjstr / prepstr / iobjstr
+  // Recombine args and split into dobjstr / prepstr / iobjstr
   var argsNormalised = args.join(' ');
   var dobjstr = '';
   var prepstr = '';

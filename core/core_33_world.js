@@ -133,18 +133,18 @@ $.user.moveTo = function moveTo(dest, opt_neighbour) {
   var r = $.physical.moveTo.call(this, dest, opt_neighbour);
   if (this.location === null) {
     // Show null scene.
-	  var memo = {
-  	  type: 'scene',
-    	requested: true,
-	    user: this,
-  	  where: 'The null void',
-    	description: "You have somehow ended up nowhere at all.\n(Type 'home' to go home.)",
-	    svgText: this.getNullSvgText(),
-  	  contents: []
-	  };
-	  this.readMemo(memo);
+    var memo = {
+      type: 'scene',
+      requested: true,
+      user: this,
+      where: 'The null void',
+      description: "You have somehow ended up nowhere at all.\n(Type 'home' to go home.)",
+      svgText: this.getNullSvgText(),
+      contents: []
+    };
+    this.readMemo(memo);
   }
-	return r;
+  return r;
 };
 Object.setOwnerOf($.user.moveTo, $.physicals.Maximilian);
 Object.setOwnerOf($.user.moveTo.prototype, $.physicals.Maximilian);
@@ -159,15 +159,15 @@ $.user.getNullSvgText = function getNullSvgText() {
   for (var i = 0; i < 2; i++) {
     var vx = 0;
     var vy = Math.pow(-1, i);
-  	out.push('<path class="strokeWhite" d="M ', 100 * vx, ',', 50 - 50 * vy, ' ');
+    out.push('<path class="strokeWhite" d="M ', 100 * vx, ',', 50 - 50 * vy, ' ');
     for (var j = 0; j < 20; j++) {
       var d = Math.pow(0.5, j/2);
       out.push(' ', 100 * d * vx, ',', 50 - 50 * d * vy, ' ');
       var tmp = vx;
       vx = -vy;
       vy = tmp;
-  	}
-	  out.push('"/>\n');
+    }
+    out.push('"/>\n');
   }
   return out.join('');
 };
@@ -219,7 +219,7 @@ $.user.grep.iobj = 'any';
 $.user.grep.search = function search(user, prefix, searchString, selector, seen) {
   var value = selector.toValue();
   if (!$.utils.isObject(value)) {  // value is a primitive.
-    if (String(value).includes(searchString))	{
+    if (String(value).includes(searchString)) {
       var formatted = $.utils.code.expressionFor(value);
       if (typeof value === 'string' && formatted.length > 60) {
         // Print only extracts of long string values.
@@ -245,7 +245,7 @@ $.user.grep.search = function search(user, prefix, searchString, selector, seen)
     selector = canonical;
   }
   // Have we seen it before?
-	if (seen.has(value)) return;
+  if (seen.has(value)) return;
   seen.set(value, true);
   // Is it a function containing the search string?
   if (typeof value === 'function') {
@@ -260,7 +260,7 @@ $.user.grep.search = function search(user, prefix, searchString, selector, seen)
       }
     }
   }
-	// Check key names
+  // Check key names
   var keys = Object.getOwnPropertyNames(value);
   for (var i = 0; i < keys.length; i++) {
     var key = keys[i];
@@ -315,7 +315,7 @@ $.user.destroyVerb.prep = 'none';
 $.user.destroyVerb.iobj = 'none';
 $.user.homeVerb = function homeVerb(cmd) {
   var home = cmd.user.home || $.startRoom;
-	if (cmd.user.location === home) {
+  if (cmd.user.location === home) {
     cmd.user.narrate('You are already at home.');
     return;
   }
@@ -559,9 +559,9 @@ $.room.think.prep = 'any';
 $.room.think.iobj = 'any';
 $.room.narrate = function narrate(text, except, obj) {
   /* Send narration text to the contents of the room.
-   * 
+   *
    * text is the contents of the narration.
-	 *
+   *
    * except is an individual $.physical object, or an array of such,
    *        which should not receive the narration.
    *
@@ -579,6 +579,7 @@ $.room.narrate = function narrate(text, except, obj) {
     }
   }
 };
+Object.setOwnerOf($.room.narrate, $.physicals.Maximilian);
 $.room.willAccept = function willAccept(what, src) {
   /* Returns true iff this is willing to accept what arriving from src.
    *
@@ -622,7 +623,7 @@ Object.defineProperty($.room.contents_, 'forKey', {writable: false, enumerable: 
 $.room.sendMemo = function sendMemo(memo, except) {
   /* Send a memo to most or all objects in this room.
    * - memo: the memo to be sent.
-	 * - except: an individual $.physical object, or an array of such,
+   * - except: an individual $.physical object, or an array of such,
    *           which should not receive the memo.
    */
   var contents = this.getContents();
@@ -634,7 +635,7 @@ $.room.sendMemo = function sendMemo(memo, except) {
     thing.readMemo(memo);
   }
 };
-Object.setOwnerOf($.room.sendMemo, $.physicals.Neil);
+Object.setOwnerOf($.room.sendMemo, $.physicals.Maximilian);
 $.room.emote = function emote(cmd) {
   // Format:  :blinks..    -or-    ::'s ears twitch.
   var m, action;

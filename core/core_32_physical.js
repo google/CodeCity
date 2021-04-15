@@ -47,7 +47,7 @@ $.physical.addContents = function addContents(newThing, opt_neighbour) {
     throw new RangeError('object to be added to contents must have .location set first');
   }
   for (var loc = this; loc; loc = loc.location) {
-		if (loc === newThing) {
+    if (loc === newThing) {
       throw new RangeError('object cannot contain itself');
     }
   }
@@ -69,6 +69,7 @@ $.physical.addContents = function addContents(newThing, opt_neighbour) {
   // Common case of appending a thing.
   contents.push(newThing);
 };
+Object.setOwnerOf($.physical.addContents, $.physicals.Maximilian);
 $.physical.removeContents = function removeContents(thing) {
   var contents = this.contents_;
   var index = contents.indexOf(thing);
@@ -91,23 +92,23 @@ $.physical.moveTo = function moveTo(dest, opt_neighbour) {
   // Preliminary check for recursive move.  This is formally enforced by
   // $.physical.addContents(), but we bail here if it is likely to fail later.
   for (var loc = dest; loc; loc = loc.location) {
-		if (loc === this) {
+    if (loc === this) {
       throw new RangeError('cannot move an object inside itself');
     }
   }
   // Call this.willMoveTo(dest), and refuse move unless it returns true without suspending.
-	var willMove = false;
+  var willMove = false;
   new Thread(function checkWillMoveTo() {
- 		willMove = Boolean(this.willMoveTo(dest));
+    willMove = Boolean(this.willMoveTo(dest));
   }, 0, this);
   suspend(0);
   if (!willMove) {
     throw new PermissionError(String(this) + " isn't movable to " + String(dest));
   }
   // Call dest.accept(this), and refuse move unless it returns true without suspending.
-	var accept = false;
+  var accept = false;
   new Thread(function checkAccept() {
- 		accept = (dest === null || Boolean(dest.accept(this)));
+    accept = (dest === null || Boolean(dest.accept(this)));
   }, 0, this);
   suspend(0);
   if (!accept) {

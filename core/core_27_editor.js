@@ -153,7 +153,7 @@ $.hosts.code['/editorXhr'].www = function code_editorXhr_www(request, response) 
         data.butter = e.message;
         return;
       }
-			if (!$.utils.isObject(object)) {
+      if (!$.utils.isObject(object)) {
         data.butter = String(parent) + ' is not an object';
         return;
       }
@@ -268,7 +268,7 @@ $.hosts.code['/editorXhr'].save = function $_www_code_editor_save(src, binding, 
 };
 Object.setOwnerOf($.hosts.code['/editorXhr'].save, $.physicals.Neil);
 $.hosts.code['/editorXhr'].handleMetaData = function handleMetaData(src, oldValue, newValue) {
-	// Parse metadata directives from src and apply to newValue.
+  // Parse metadata directives from src and apply to newValue.
   //
   // The $.hosts.code['/editor'].www sends values to be edited to the
   // editor front-end encoded as JavaScript expressions, optionally preceded
@@ -379,7 +379,7 @@ $.hosts.code['/editorXhr'].generateMetaData = function generateMetaData(value, s
     var hash = $.utils.string.hash('md5', src);
     meta += '// @hash ' + hash + '\n';
   }
-	return meta;
+  return meta;
 };
 Object.setOwnerOf($.hosts.code['/editorXhr'].generateMetaData, $.physicals.Maximilian);
 $.hosts.code['/editorXhr'].sourceFor = function sourceFor(value) {

@@ -110,11 +110,11 @@ $.servers.login.createUser = function createUser(id, name) {
   /*
   (function() {
     setPerms(user);
-		var home = Object.create($.room);
-	  home.setName(user.name + "'s room", true);
-	  home.description = 'A quiet place for ' + user.name + ' to work.';
-	  user.home = home;
-	  user.moveTo(home);
+    var home = Object.create($.room);
+    home.setName(user.name + "'s room", true);
+    home.description = 'A quiet place for ' + user.name + ' to work.';
+    user.home = home;
+    user.moveTo(home);
   })();
   */
   return user;

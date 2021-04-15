@@ -24,7 +24,7 @@
 //////////////////////////////////////////////////////////////////////
 
 $.utils.validate.ownArray = function ownArray(object, key) {
- 	// Ensure that object[key] is an array not shared with any other
+  // Ensure that object[key] is an array not shared with any other
   // object or property, not inherited from a prototype, etc.
   // If it is, relaced it with a new, unshared array with the same
   // contents (if possible).
@@ -35,11 +35,11 @@ $.utils.validate.ownArray = function ownArray(object, key) {
     } catch (e) {
       object[key] = [];
     }
-		Object.defineProperties(object[key], {forObj: {value: object},
+    Object.defineProperties(object[key], {forObj: {value: object},
                                           forKey: {value: key}});
   }
 };
-Object.setOwnerOf($.utils.validate.ownArray, $.physicals.Neil);
+Object.setOwnerOf($.utils.validate.ownArray, $.physicals.Maximilian);
 $.utils.validate.functionPrototypes = function functionPrototypes() {
   /* Find (and fix) functions that have f.prototype.constructor !== f.
    */
@@ -122,13 +122,14 @@ $.utils.array.filterUntilFound = function filterUntilFound(array, filter1 /*, fi
   // in turn until one returns a non-empty result.  Return that
   // result, or an empty array if there are no more filters.
   filters = Array.from(arguments).slice(1);
-	while (filters.length > 0) {
+  while (filters.length > 0) {
     var filter = filters.shift();
     var result = array.filter(filter);
     if (result.length > 0) return result;
   }
   return [];
 };
+Object.setOwnerOf($.utils.array.filterUntilFound, $.physicals.Maximilian);
 
 $.utils.object = {};
 Object.setOwnerOf($.utils.object, $.physicals.Maximilian);
@@ -154,7 +155,7 @@ $.utils.object.spider = function spider(start, callback) {
     if (!$.utils.isObject(object)) return;
 
     // Have we seen it before?
-  	if (seen.has(object)) return;
+    if (seen.has(object)) return;
     seen.set(object, true);
 
     if (callback(object, path)) return;
