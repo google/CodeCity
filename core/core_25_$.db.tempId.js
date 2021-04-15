@@ -26,8 +26,9 @@
 $.db = {};
 
 $.db.tempId = {};
-$.db.tempId.getObjById = function(id) {
-  // Find object temporarily stored with the given ID.
+$.db.tempId.getObjById = function getObjById(id) {
+  /* Find object temporarily stored with the given ID.
+   */
   var record = this.tempIds_[id];
   if (record) {
      record.time = Date.now();
@@ -35,11 +36,11 @@ $.db.tempId.getObjById = function(id) {
   }
   return undefined;
 };
-delete $.db.tempId.getObjById.name;
-Object.setOwnerOf($.db.tempId.getObjById, $.physicals.Neil);
-$.db.tempId.storeObj = function(obj) {
-  // Find temporary ID for obj in this.tempIds_,
-  // adding it if it's not already there.
+Object.setOwnerOf($.db.tempId.getObjById, $.physicals.Maximilian);
+$.db.tempId.storeObj = function storeObj(obj) {
+  /* Find temporary ID for obj in this.tempIds_,
+   * adding it if it's not already there.
+   */
   var records = this.tempIds_;
   for (var id in records) {
     if (Object.is(records[id].obj, obj)) {
@@ -55,8 +56,7 @@ $.db.tempId.storeObj = function(obj) {
   this.cleanSoon();
   return id;
 };
-delete $.db.tempId.storeObj.name;
-Object.setOwnerOf($.db.tempId.storeObj, $.physicals.Neil);
+Object.setOwnerOf($.db.tempId.storeObj, $.physicals.Maximilian);
 $.db.tempId.cleanSoon = function cleanSoon() {
   // Schedule a cleanup to happen in a minute.
   // Allows multiple calls to be batched together.

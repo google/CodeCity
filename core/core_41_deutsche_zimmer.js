@@ -25,10 +25,11 @@
 
 $.physicals['Das deutsche Zimmer'] = (new 'Object.create')($.room);
 $.physicals['Das deutsche Zimmer'].name = 'Das deutsche Zimmer';
-$.physicals['Das deutsche Zimmer'].translate = function(text) {
-  // Try to translate text into German.  If successful, return
-  // translation.  If not, narrate an indication of failure and return
-  // the original text untranslated.
+$.physicals['Das deutsche Zimmer'].translate = function translate(text) {
+  /* Try to translate text into German.  If successful, return
+   * translation.  If not, narrate an indication of failure and return
+   * the original text untranslated.
+   */
   try {
     return $.utils.string.translate(text, 'de');
   } catch (e) {
@@ -36,15 +37,15 @@ $.physicals['Das deutsche Zimmer'].translate = function(text) {
     return text;
   }
 };
-delete $.physicals['Das deutsche Zimmer'].translate.name;
 Object.setOwnerOf($.physicals['Das deutsche Zimmer'].translate, $.physicals.Maximilian);
-$.physicals['Das deutsche Zimmer'].say = function(cmd) {
+$.physicals['Das deutsche Zimmer'].say = function say(cmd) {
   // Format:  "Hello.    -or-    say Hello.
   var text = (cmd.cmdstr[0] === '"') ? cmd.cmdstr.substring(1) : cmd.argstr;
   cmd.cmdstr = [];
   cmd.argstr = this.translate(text);
   return $.room.say.call(this, cmd);
 };
+Object.setOwnerOf($.physicals['Das deutsche Zimmer'].say, $.physicals.Maximilian);
 $.physicals['Das deutsche Zimmer'].say.verb = 'say|".*';
 $.physicals['Das deutsche Zimmer'].say.dobj = 'any';
 $.physicals['Das deutsche Zimmer'].say.prep = 'any';
@@ -154,7 +155,7 @@ $.tutorial.check = function check() {
         if (pd && typeof pd.value === 'function') {
           this.origFunc = pd.value;
           var tutorial = this;
-          this.room.translate = function() {
+          this.room.translate = function translateHook() {
             // This is just a hook to help automate the tutorial.
             if (tutorial.step === 6) tutorial.step++;
             // Restore and call original version of the function.

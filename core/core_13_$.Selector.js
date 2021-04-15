@@ -250,9 +250,10 @@ $.Selector.SpecialPart = function SpecialPart(type) {
   this.type = type;
   Object.freeze(this);
 };
-$.Selector.SpecialPart.prototype.toString = function() {
+$.Selector.SpecialPart.prototype.toString = function toString() {
   return '{' + this.type + '}';
 };
+Object.setOwnerOf($.Selector.SpecialPart.prototype.toString, $.physicals.Maximilian);
 $.Selector.PROTOTYPE = (new 'Object.create')($.Selector.SpecialPart.prototype);
 $.Selector.PROTOTYPE.type = 'proto';
 Object.defineProperty($.Selector.PROTOTYPE, 'type', {writable: false, configurable: false});

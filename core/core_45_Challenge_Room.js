@@ -705,15 +705,15 @@ $.physicals.girl.foodList[249] = 'pear';
 $.physicals.girl.foodList[250] = 'steak';
 $.physicals.girl.foodList[251] = 'peanut';
 $.physicals.girl.foodList[252] = 'hot dog';
-$.physicals.girl.willAccept = function(what, src) {
-  // Returns true iff this is willing to accept what arriving from src.
-  //
-  // This function (or its overrides) MUST NOT have any kind of
-  // observable side-effect (making noise, causing some other action,
-  // etc.).
+$.physicals.girl.willAccept = function willAccept(what, src) {
+  /* Returns true iff this is willing to accept what arriving from src.
+   *
+   * This function (or its overrides) MUST NOT have any kind of
+   * observable side-effect (making noise, causing some other action,
+   * etc.).
+   */
   return what === this.food;
 };
-delete $.physicals.girl.willAccept.name;
 Object.setOwnerOf($.physicals.girl.willAccept, $.physicals.Maximilian);
 Object.setOwnerOf($.physicals.girl.willAccept.prototype, $.physicals.Maximilian);
 $.physicals.girl.movable = false;
