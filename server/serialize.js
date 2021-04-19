@@ -65,11 +65,19 @@ var Config;
  */
 Serializer.getConfig_ = function(intrp) {
   var /** !Array<!TypeInfo> */ types = [
+    // Generic JavaScript types, not including those requring special
+    // construction (like Functions, Dates, RegExps, etc.)
+    {tag: 'Object', constructor: Object},
+    {tag: 'Array', constructor: Array},
+    {tag: 'Map', constructor: Map},
+    {tag: 'Set', constructor: Set},
+    
     // Custom types, not Interpreter-specific.
     {tag: 'IterableWeakMap', constructor: IterableWeakMap,
      prune: ['refs_', 'finalisers_']},
     {tag: 'IterableWeakSet', constructor: IterableWeakSet,
      prune: ['refs_', 'map_', 'finalisers_']},
+    {tag: 'Registry', constructor: Registry},
     
     // Interpreter-specific types.
     {tag: 'Interpreter', constructor: Interpreter, prune: [
@@ -194,18 +202,15 @@ Serializer.deserialize = function(json, intrp) {
     var jsonObj = json[i];
     var obj;
     var tag = jsonObj['type'];
+    // Default case handles most types; sepcial cases handle only
+    // those that can't be correctly created by an unparameterized
+    // construction "new Constructor()".
     switch (tag) {
-      case 'Object':
-        obj = {};
-        break;
       case 'Function':
         obj = functionHash[jsonObj['id']];
         if (!obj) {
           throw new RangeError('Function ID not found: ' + jsonObj['id']);
         }
-        break;
-      case 'Array':
-        obj = [];
         break;
       case 'Date':
         obj = new Date(jsonObj['data']);
@@ -215,21 +220,6 @@ Serializer.deserialize = function(json, intrp) {
         break;
       case 'RegExp':
         obj = RegExp(jsonObj['source'], jsonObj['flags']);
-        break;
-      case 'Map':
-        obj = new Map;
-        break;
-      case 'Set':
-        obj = new Set;
-        break;
-      case 'IterableWeakMap':
-        obj = new IterableWeakMap;
-        break;
-      case 'IterableWeakSet':
-        obj = new IterableWeakSet;
-        break;
-      case 'Registry':
-        obj = new Registry;
         break;
       case 'State':
         // TODO(cpcallen): this is just a little performance kludge so
@@ -356,10 +346,9 @@ Serializer.serialize = function(intrp) {
     }
     var proto = Object.getPrototypeOf(obj);
     var typeInfo = config.byProto.get(proto);
+    // Default case handles most types; sepcial cases handle only
+    // those that have extra intenal slots.
     switch (proto) {
-      case Object.prototype:
-        jsonObj['type'] = 'Object';
-        break;
       case Function.prototype:
         jsonObj['type'] = 'Function';
         jsonObj['id'] = obj.id;
@@ -367,9 +356,6 @@ Serializer.serialize = function(intrp) {
           throw new Error('Native function has no ID: ' + obj);
         }
         continue;  // No need to index properties.
-      case Array.prototype:
-        jsonObj['type'] = 'Array';
-        break;
       case Date.prototype:
         jsonObj['type'] = 'Date';
         jsonObj['data'] = obj.toJSON();
