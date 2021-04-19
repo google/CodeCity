@@ -30,6 +30,45 @@ var Registry = require('./registry');
 
 var Serializer = {};
 
+/** !Set<!Object> Prototypes of types to be excluded from serialization. */
+Serializer.excludeTypes = new Set([net.Socket.prototype, net.Server.prototype]);
+
+/**
+ * Per-prototype sets of properties to be excluded from serialization.
+ * @type {!Map<!Object,!Array<string>>}
+ */
+Serializer.pruneProperties = new Map([
+  [Interpreter.prototype, [
+    'hrStartTime_',
+    'previousTime_',
+    'runner_',
+    'Object',
+    'Function',
+    'UserFunction',
+    'BoundFunction',
+    'NativeFunction',
+    'OldNativeFunction',
+    'Array',
+    'Date',
+    'RegExp',
+    'Error',
+    'Arguments',
+    'WeakMap',
+    'Thread',
+    'Box',
+    'Server',
+  ]],
+  [IterableWeakMap.prototype, [
+    'refs_',
+    'finalisers_',
+  ]],
+  [IterableWeakSet.prototype, [
+    'refs_',
+    'map_',
+    'finalisers_',
+  ]],
+]);
+
 /**
  * Deserialize the provided JSON-compatible object into an interpreter.
  * @param {!Object} JSON-compatible object.
@@ -217,9 +256,6 @@ Serializer.serialize = function(intrp) {
   
   function encodeValue(value) {
     if (value && (typeof value === 'object' || typeof value === 'function')) {
-      // TODO(cpcallen): this is a bit hacky (leaves dangling null
-      // properties / array elements on serialized objects) but better
-      // fix is hard to do without substantial refactoring.
       // TODO(cpcallen): For some reason the Closure Compiler thinks
       // value might be null at this point (it can't be), and
       // complains about passing it to Object.getPrototypeOf.  Remove
@@ -251,30 +287,8 @@ Serializer.serialize = function(intrp) {
     return value;
   }
 
-  // Properties on Interpreter instances to ignore.
-  var exclude = [
-    'hrStartTime_',
-    'previousTime_',
-    'runner_',
-    'Object',
-    'Function',
-    'UserFunction',
-    'BoundFunction',
-    'NativeFunction',
-    'OldNativeFunction',
-    'Array',
-    'Date',
-    'RegExp',
-    'Error',
-    'Arguments',
-    'WeakMap',
-    'Thread',
-    'Box',
-    'Server'
-  ];
   // Find all objects.
-  var objectList = Serializer.getObjectList_(
-      intrp, Serializer.excludeTypes, exclude);
+  var objectList = Serializer.getObjectList_(intrp);
   // Build reverse-lookup cache.
   var /** !Map<Object,number> */ objectRefs = new Map();
   for (var i = 0; i < objectList.length; i++) {
@@ -337,7 +351,7 @@ Serializer.serialize = function(intrp) {
         jsonObj['type'] = 'IterableWeakMap';
         if (obj.size) {
           jsonObj['entries'] =
-              Array.from(/** @type {?} */(obj),function(entry) {
+              Array.from(/** @type {?} */(obj), function(entry) {
                 var key = encodeValue(entry[0]);
                 var value = encodeValue(entry[1]);
                 return [key, value];
@@ -366,12 +380,15 @@ Serializer.serialize = function(intrp) {
     var nonConfigurable = [];
     var nonEnumerable = [];
     var nonWritable = [];
+    var prune = (proto && Serializer.pruneProperties.get(proto)) || [];
     var keys = Object.getOwnPropertyNames(obj);
     for (var j = 0; j < keys.length; j++) {
       var key = keys[j];
-      if (obj === intrp && exclude.includes(key)) {
-        continue;
-      }
+      if (prune.includes(key)) continue;
+      // Skip [[Socket]] slot on connected objects.
+      // TODO(cpcallen): this is pretty kludgy.  Try to find a better way.
+      if (obj instanceof intrp.Object && key === 'socket') continue;
+
       props[key] = encodeValue(obj[key]);
       var descriptor = Object.getOwnPropertyDescriptor(obj, key);
       if (!descriptor.configurable) {
@@ -384,7 +401,7 @@ Serializer.serialize = function(intrp) {
         nonWritable.push(key);
       }
     }
-    if (keys.length) {
+    if (Object.getOwnPropertyNames(keys).length) {
       jsonObj['props'] = props;
     }
     if (nonConfigurable.length) {
@@ -410,13 +427,11 @@ Serializer.serialize = function(intrp) {
  *     this would allow more readable references by using paths
  *     instead of numerical indices.
  * @param {*} node JavaScript value to search.
- * @param {!Set<?Object>} excludeTypes Set of prototypes not to spider.
- * @param {!Array<string>=} exclude List of properties not to spider.
  * @return {!Array<!Object>} objectList Array of all objects found via node.
  */
-Serializer.getObjectList_ = function(node, excludeTypes, exclude) {
+Serializer.getObjectList_ = function(node) {
   var seen = new Set();
-  Serializer.objectHunt_(node, seen, excludeTypes, exclude);
+  Serializer.objectHunt_(node, seen);
   return Array.from(seen.keys());
 }
 
@@ -425,47 +440,39 @@ Serializer.getObjectList_ = function(node, excludeTypes, exclude) {
  *
  * @param {*} node JavaScript value to search.
  * @param {!Set<?Object>} seen Set of objects found so far.
- * @param {!Set<?Object>} excludeTypes Set of prototypes not to spider.
- * @param {!Array<string>=} exclude List of properties not to spider.
  */
-Serializer.objectHunt_ = function(node, seen, excludeTypes, exclude) {
+Serializer.objectHunt_ = function(node, seen) {
   if (!node || (typeof node !== 'object' && typeof node !== 'function')) {
     // node is primitive.  Nothing to do.
     return;
   }
   var obj = /** @type {!Object} */(node);
-  if (excludeTypes.has(Object.getPrototypeOf(/** @type {!Object} */(obj))) ||
+  var proto = Object.getPrototypeOf(/** @type {!Object} */(obj));
+  if (Serializer.excludeTypes.has(proto) ||
       seen.has(/** @type {!Object} */(obj))) {
     return;
   }
   seen.add(obj);
   if (typeof obj === 'object') {  // Recurse.
     // Properties.
-    if (!(obj instanceof Date) &&
-        !(obj instanceof IterableWeakMap) &&
-        !(obj instanceof IterableWeakSet) &&
-        !(obj instanceof RegExp) &&
-        !(obj instanceof Set)) {
-      var keys = Object.getOwnPropertyNames(obj);
-      for (var i = 0; i < keys.length; i++) {
-        var key = keys[i];
-        if (!exclude || !exclude.includes(key)) {
-          // Don't pass exclude; it's only for top-level property keys.
-          Serializer.objectHunt_(obj[key], seen, excludeTypes);
-        }
-      }
+    var prune = (proto && Serializer.pruneProperties.get(proto)) || [];
+    var keys = Object.getOwnPropertyNames(obj);
+    for (var i = 0; i < keys.length; i++) {
+      var key = keys[i];
+      if (prune.includes(key)) continue;
+      Serializer.objectHunt_(obj[key], seen);
     }
     // Set members.
     if (obj instanceof Set || obj instanceof IterableWeakSet) {
       obj.forEach(function(value) {
-        Serializer.objectHunt_(value, seen, excludeTypes);
+        Serializer.objectHunt_(value, seen);
       });
     }
     // Map entries.
     if (obj instanceof Map || obj instanceof IterableWeakMap) {
       obj.forEach(function(value, key) {
-        Serializer.objectHunt_(key, seen, excludeTypes);
-        Serializer.objectHunt_(value, seen, excludeTypes);
+        Serializer.objectHunt_(key, seen);
+        Serializer.objectHunt_(value, seen);
       });
     }
   }
@@ -522,7 +529,5 @@ Serializer.getTypesSerialize_ = function(intrp) {
   }
   return map;
 };
-
-Serializer.excludeTypes = new Set([net.Socket.prototype, net.Server.prototype]);
 
 module.exports = Serializer;
