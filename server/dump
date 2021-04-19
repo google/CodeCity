@@ -177,7 +177,7 @@ var configFromSpec = function(spec) {
           var value = item.headerSubs[key];
           if (value instanceof Array) {
             headerSubs[key] = value.join('\n');
-          } else if (typeof value === 'string' || value === undefined) {
+          } else if (typeof value === 'string') {
             headerSubs[key] = value;
           } else {
             reject('.headerSubs.' + key + ' is not a string');
