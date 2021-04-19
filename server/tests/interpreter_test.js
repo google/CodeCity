@@ -1534,6 +1534,65 @@ exports.testServing = async function(t) {
     onCreate: createReceive,
   });
 
+  // Run a test to make sure listening sockets survive the interpreter
+  // being paused and restarted.
+  name = 'testServerPauseStart';
+  src = `
+      var data = '', conn = {};
+      conn.onReceive = function(d) {
+        data += d;
+      };
+      conn.onEnd = function() {
+        CC.connectionClose(this);
+        CC.connectionUnlisten(8888);
+        resolve(data);
+      };
+      CC.connectionListen(8888, conn);
+      pause();
+      send();
+   `;
+  function createPauseAndSend(intrp) {
+    intrp.global.createMutableBinding('pause', intrp.createNativeFunction(
+        'pause', function() {
+          intrp.pause();
+          intrp.start();
+        }));
+    createSend(intrp);
+  };
+  await runAsyncTest(t, name, src, 'foobar', {
+    options: {noLog: ['net']},
+    onCreate: createPauseAndSend
+  });
+
+  // Run a test to make sure listening sockets are re-listened after
+  // the interpreter is stopped and restarted.
+  name = 'testServerStopStart';
+  src = `
+      var data = '', conn = {};
+      conn.onReceive = function(d) {
+        data += d;
+      };
+      conn.onEnd = function() {
+        CC.connectionClose(this);
+        CC.connectionUnlisten(8888);
+        resolve(data);
+      };
+      CC.connectionListen(8888, conn);
+      stop();
+      send();
+   `;
+  function createStopAndSend(intrp) {
+    intrp.global.createMutableBinding('stop', intrp.createNativeFunction(
+        'stop', function() {
+          intrp.stop();
+          intrp.start();
+        }));
+    createSend(intrp);
+  };
+  await runAsyncTest(t, name, src, 'foobar', {
+    options: {noLog: ['net']},
+    onCreate: createStopAndSend
+  });
 };
 
 /**

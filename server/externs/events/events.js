@@ -24,15 +24,25 @@
 /** @const */
 var events = {};
 
+/** @type {symbol} */
+events.errorMonitor;
+
 /** @constructor */
 events.EventEmitter = function() {};
 
 /**
- * @param {string} event
+ * @param {string|symbol} event
  * @param {function(...)} listener
  * @return {events.EventEmitter}
  */
 events.EventEmitter.prototype.on = function(event, listener) {};
+
+/**
+ * @param {string|symbol} event
+ * @param {function(...)} listener
+ * @return {events.EventEmitter}
+ */
+events.EventEmitter.prototype.removeListener = function(event, listener) {};
 
 /**
  * @param {string} event
