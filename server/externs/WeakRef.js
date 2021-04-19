@@ -24,20 +24,6 @@
 
 /**
  * @constructor
- * @param {T} target
- * @template T
- */
-// TODO(cpcallen): Make T bounded to {!Object} once closure-compiler
-// supports bounded generic types.
-var WeakRef = function(target) {};
-
-/**
- * @return {T}
- */
-WeakRef.prototype.deref = function() {};
-
-/**
- * @constructor
  * @param {function(!Iterator<HOLDINGS>)} cleanupCallback
  * @template TARGET, HOLDINGS, TOKEN
  */
