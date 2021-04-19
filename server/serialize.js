@@ -240,12 +240,15 @@ Serializer.deserialize = function(json, intrp) {
   // Second pass: Populate properties for every object.
   for (var i = 0; i < json.length; i++) {
     var jsonObj = json[i];
+    var tag = jsonObj['type'];
+    var typeInfo = config.byTag[tag];
     var obj = objectList[i];
     // Set prototype, if specified.
     if (jsonObj['proto']) {
       Object.setPrototypeOf(obj, decodeValue(jsonObj['proto']));
     }
     // Repopulate properties.
+    var prune = (typeInfo && typeInfo.prune) || [];
     var props = jsonObj['props'];
     if (props) {
       var nonConfigurable = jsonObj['nonConfigurable'] || [];
@@ -254,6 +257,7 @@ Serializer.deserialize = function(json, intrp) {
       var keys = Object.getOwnPropertyNames(props);
       for (var j = 0; j < keys.length; j++) {
         var key = keys[j];
+        if (prune.includes(key)) continue;
         Object.defineProperty(obj, key,
             {configurable: !nonConfigurable.includes(key),
              enumerable: !nonEnumerable.includes(key),
