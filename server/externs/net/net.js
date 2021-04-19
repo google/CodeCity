@@ -61,6 +61,7 @@ net.createConnection = function(arg1, arg2, arg3) {};
 /**
  * @constructor
  * @param {createOptions=} options
+ * @extends {events.EventEmitter}
  */
 net.Server = function(options) {};
 
@@ -84,13 +85,6 @@ net.Server.prototype.close = function(callback) {};
  * @return {void}
  */
 net.Server.prototype.listen = function(port, host, backlog, callback) {};
-
-/**
- * @param {string} event
- * @param {function(...)} listener
- * @return {net.Server}
- */
-net.Server.prototype.on = function(event, listener) {};
 
 ///////////////////////////////////////////////////////////////////////////////
 // net.Socket
