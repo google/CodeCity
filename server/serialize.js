@@ -168,14 +168,14 @@ Serializer.deserialize = function(json, intrp) {
       var nonConfigurable = jsonObj['nonConfigurable'] || [];
       var nonEnumerable = jsonObj['nonEnumerable'] || [];
       var nonWritable = jsonObj['nonWritable'] || [];
-      var names = Object.getOwnPropertyNames(props);
-      for (var j = 0; j < names.length; j++) {
-        var name = names[j];
-        Object.defineProperty(obj, name,
-            {configurable: !nonConfigurable.includes(name),
-             enumerable: !nonEnumerable.includes(name),
-             writable: !nonWritable.includes(name),
-             value: decodeValue(props[name])});
+      var keys = Object.getOwnPropertyNames(props);
+      for (var j = 0; j < keys.length; j++) {
+        var key = keys[j];
+        Object.defineProperty(obj, key,
+            {configurable: !nonConfigurable.includes(key),
+             enumerable: !nonEnumerable.includes(key),
+             writable: !nonWritable.includes(key),
+             value: decodeValue(props[key])});
       }
     }
     // Repopulate sets.
@@ -366,25 +366,25 @@ Serializer.serialize = function(intrp) {
     var nonConfigurable = [];
     var nonEnumerable = [];
     var nonWritable = [];
-    var names = Object.getOwnPropertyNames(obj);
-    for (var j = 0; j < names.length; j++) {
-      var name = names[j];
-      if (obj === intrp && exclude.includes(name)) {
+    var keys = Object.getOwnPropertyNames(obj);
+    for (var j = 0; j < keys.length; j++) {
+      var key = keys[j];
+      if (obj === intrp && exclude.includes(key)) {
         continue;
       }
-      props[name] = encodeValue(obj[name]);
-      var descriptor = Object.getOwnPropertyDescriptor(obj, name);
+      props[key] = encodeValue(obj[key]);
+      var descriptor = Object.getOwnPropertyDescriptor(obj, key);
       if (!descriptor.configurable) {
-        nonConfigurable.push(name);
+        nonConfigurable.push(key);
       }
       if (!descriptor.enumerable) {
-        nonEnumerable.push(name);
+        nonEnumerable.push(key);
       }
       if (!descriptor.writable) {
-        nonWritable.push(name);
+        nonWritable.push(key);
       }
     }
-    if (names.length) {
+    if (keys.length) {
       jsonObj['props'] = props;
     }
     if (nonConfigurable.length) {
@@ -446,12 +446,12 @@ Serializer.objectHunt_ = function(node, seen, excludeTypes, exclude) {
         !(obj instanceof IterableWeakSet) &&
         !(obj instanceof RegExp) &&
         !(obj instanceof Set)) {
-      var names = Object.getOwnPropertyNames(obj);
-      for (var i = 0; i < names.length; i++) {
-        var name = names[i];
-        if (!exclude || !exclude.includes(name)) {
+      var keys = Object.getOwnPropertyNames(obj);
+      for (var i = 0; i < keys.length; i++) {
+        var key = keys[i];
+        if (!exclude || !exclude.includes(key)) {
           // Don't pass exclude; it's only for top-level property keys.
-          Serializer.objectHunt_(obj[name], seen, excludeTypes);
+          Serializer.objectHunt_(obj[key], seen, excludeTypes);
         }
       }
     }
