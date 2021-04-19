@@ -30,44 +30,98 @@ var Registry = require('./registry');
 
 var Serializer = {};
 
-/** !Set<!Object> Prototypes of types to be excluded from serialization. */
-Serializer.excludeTypes = new Set([net.Socket.prototype, net.Server.prototype]);
+/** 
+ * A record of a single serializalbe type, including a type tag, a
+ * constructor function to call when deserializing an instance, and an
+ * optional list of properties to exclude when serializing.
+ *
+ * @typedef {{
+ *   tag: string,
+ *   constructor: !Function,
+ *   prune: (!Array<string>|undefined),
+ * }}
+ */
+var TypeInfo;
 
 /**
- * Per-prototype sets of properties to be excluded from serialization.
- * @type {!Map<!Object,!Array<string>>}
+ * A configuration object containing an array of TypeInfo objects and
+ * indexes by tag an prototype object.
+ *
+ * @typedef {{
+ *   types: !Array<!TypeInfo>,
+ *   byTag: !Object<!TypeInfo>,
+ *   byProto: !Map<?Object,!TypeInfo>,
+ * }}
  */
-Serializer.pruneProperties = new Map([
-  [Interpreter.prototype, [
-    'hrStartTime_',
-    'previousTime_',
-    'runner_',
-    'Object',
-    'Function',
-    'UserFunction',
-    'BoundFunction',
-    'NativeFunction',
-    'OldNativeFunction',
-    'Array',
-    'Date',
-    'RegExp',
-    'Error',
-    'Arguments',
-    'WeakMap',
-    'Thread',
-    'Box',
-    'Server',
-  ]],
-  [IterableWeakMap.prototype, [
-    'refs_',
-    'finalisers_',
-  ]],
-  [IterableWeakSet.prototype, [
-    'refs_',
-    'map_',
-    'finalisers_',
-  ]],
-]);
+var Config;
+
+/**
+ * Create a configuration object for serializing or desieralizing na
+ * particular Interpreter instance.
+ *
+ * @param {!Interpreter} intrp The interpreter instance being serialized
+ *     (needed for inner classes).
+ * @return {!Config} The configuration object.
+ */
+Serializer.getConfig_ = function(intrp) {
+  var /** !Array<!TypeInfo> */ types = [
+    // Custom types, not Interpreter-specific.
+    {tag: 'IterableWeakMap', constructor: IterableWeakMap,
+     prune: ['refs_', 'finalisers_']},
+    {tag: 'IterableWeakSet', constructor: IterableWeakSet,
+     prune: ['refs_', 'map_', 'finalisers_']},
+    
+    // Interpreter-specific types.
+    {tag: 'Interpreter', constructor: Interpreter, prune: [
+      'hrStartTime_',
+      'previousTime_',
+      'runner_',
+      'Object',
+      'Function',
+      'UserFunction',
+      'BoundFunction',
+      'NativeFunction',
+      'OldNativeFunction',
+      'Array',
+      'Date',
+      'RegExp',
+      'Error',
+      'Arguments',
+      'WeakMap',
+      'Thread',
+      'Box',
+      'Server',
+    ]},
+    {tag: 'Scope', constructor: Interpreter.Scope},
+    {tag: 'State', constructor: Interpreter.State},
+    {tag: 'Thread', constructor: Interpreter.Thread},
+    {tag: 'PropertyIterator', constructor: Interpreter.PropertyIterator},
+    {tag: 'Source', constructor: Interpreter.Source},
+    {tag: 'PseudoObject', constructor: intrp.Object, prune: ['socket']},
+    {tag: 'PseudoFunction', constructor: intrp.Function},
+    {tag: 'PseudoUserFunction', constructor: intrp.UserFunction},
+    {tag: 'PseudoBoundFunction', constructor: intrp.BoundFunction},
+    {tag: 'PseudoNativeFunction', constructor: intrp.NativeFunction},
+    {tag: 'PseudoOldNativeFunction', constructor: intrp.OldNativeFunction},
+    {tag: 'PseudoArray', constructor: intrp.Array},
+    {tag: 'PseudoDate', constructor: intrp.Date},
+    {tag: 'PseudoRegExp', constructor: intrp.RegExp},
+    {tag: 'PseudoError', constructor: intrp.Error},
+    {tag: 'PseudoArguments', constructor: intrp.Arguments},
+    {tag: 'PseudoWeakMap', constructor: intrp.WeakMap},
+    {tag: 'PseudoThread', constructor: intrp.Thread},
+    {tag: 'Box', constructor: intrp.Box},
+    {tag: 'Server', constructor: intrp.Server, prune: ['server_']},
+    {tag: 'Node', constructor: Node},
+  ];
+  var /** !Object<string,!TypeInfo> */ byTag = Object.create(null);
+  var /** !Map<!Object,!TypeInfo> */ byProto = new Map();
+  for (var type, i = 0; type = types[i]; i++) {
+    byTag[type.tag] = type;
+    byProto.set(type.constructor.prototype, type);
+  }
+  return {types: types, byTag: byTag, byProto: byProto};
+};
 
 /**
  * Deserialize the provided JSON-compatible object into an interpreter.
@@ -100,6 +154,9 @@ Serializer.deserialize = function(json, intrp) {
     return value;
   }
 
+  // Get configuration.
+  var config = Serializer.getConfig_(intrp);
+  
   if (!Array.isArray(json)) {
     throw new TypeError('Top-level JSON is not a list.');
   }
@@ -130,17 +187,14 @@ Serializer.deserialize = function(json, intrp) {
     functionHash[stepFunc.id] = stepFunc;
   }
 
-  // Get constructors
-  var constructors = Serializer.getTypesDeserialize_(intrp);
-
   // First pass: Create object stubs for every object.  We don't need
   // to (re)create object #0, because that's the interpreter proper.
   var objectList = [intrp];
   for (var i = 1; i < json.length; i++) {
     var jsonObj = json[i];
     var obj;
-    var type = jsonObj['type'];
-    switch (type) {
+    var tag = jsonObj['type'];
+    switch (tag) {
       case 'Object':
         obj = {};
         break;
@@ -185,10 +239,10 @@ Serializer.deserialize = function(json, intrp) {
             /** @type {?} */(undefined));
         break;
       default:
-        if (constructors[type]) {
-          obj = new constructors[type];
+        if (config.byTag[tag]) {
+          obj = new config.byTag[tag].constructor();
         } else {
-          throw new TypeError('Unknown type: ' + jsonObj['type']);
+          throw new TypeError('Unknown type tag "' + tag + '"');
         }
     }
     objectList[i] = obj;
@@ -256,17 +310,10 @@ Serializer.serialize = function(intrp) {
   
   function encodeValue(value) {
     if (value && (typeof value === 'object' || typeof value === 'function')) {
-      // TODO(cpcallen): For some reason the Closure Compiler thinks
-      // value might be null at this point (it can't be), and
-      // complains about passing it to Object.getPrototypeOf.  Remove
-      // this type-narrowing check once this compiler bug is fixed.
-      if (!value) throw new Error();
-      if (Serializer.excludeTypes.has(Object.getPrototypeOf(value))) {
-        return null;
-      }
       var ref = objectRefs.get(value);
       if (ref === undefined) {
-        throw new RangeError('Object not found in table.');
+        console.log('>>>', value);
+        throw new RangeError('object not found in table');
       }
       return {'#': ref};
     }
@@ -287,15 +334,16 @@ Serializer.serialize = function(intrp) {
     return value;
   }
 
+  // Get configuration.
+  var config = Serializer.getConfig_(intrp);
+
   // Find all objects.
-  var objectList = Serializer.getObjectList_(intrp);
+  var objectList = Serializer.getObjectList_(intrp, config);
   // Build reverse-lookup cache.
   var /** !Map<Object,number> */ objectRefs = new Map();
   for (var i = 0; i < objectList.length; i++) {
     objectRefs.set(objectList[i], i);
   }
-  // Get types.
-  var types = Serializer.getTypesSerialize_(intrp);
   // Serialize every object.
   var json = [];
   for (var i = 0; i < objectList.length; i++) {
@@ -307,6 +355,7 @@ Serializer.serialize = function(intrp) {
       jsonObj['#'] = i;
     }
     var proto = Object.getPrototypeOf(obj);
+    var typeInfo = config.byProto.get(proto);
     switch (proto) {
       case Object.prototype:
         jsonObj['type'] = 'Object';
@@ -368,9 +417,8 @@ Serializer.serialize = function(intrp) {
         jsonObj['type'] = 'Registry';
         break;
       default:
-        var type = types.get(proto);
-        if (type) {
-          jsonObj['type'] = type;
+        if (typeInfo) {
+          jsonObj['type'] = typeInfo.tag;
         } else {
           jsonObj['type'] = Array.isArray(obj) ? 'Array' : 'Object';
           jsonObj['proto'] = encodeValue(proto);
@@ -380,7 +428,7 @@ Serializer.serialize = function(intrp) {
     var nonConfigurable = [];
     var nonEnumerable = [];
     var nonWritable = [];
-    var prune = (proto && Serializer.pruneProperties.get(proto)) || [];
+    var prune = (typeInfo && typeInfo.prune) || [];
     var keys = Object.getOwnPropertyNames(obj);
     for (var j = 0; j < keys.length; j++) {
       var key = keys[j];
@@ -427,107 +475,55 @@ Serializer.serialize = function(intrp) {
  *     this would allow more readable references by using paths
  *     instead of numerical indices.
  * @param {*} node JavaScript value to search.
+ * @param {!Config} config Configuation object.
  * @return {!Array<!Object>} objectList Array of all objects found via node.
  */
-Serializer.getObjectList_ = function(node) {
+Serializer.getObjectList_ = function(node, config) {
   var seen = new Set();
-  Serializer.objectHunt_(node, seen);
+  Serializer.objectHunt_(node, config, seen);
   return Array.from(seen.keys());
-}
+};
 
 /**
  * Recursively search node find all non-primitives.
  *
  * @param {*} node JavaScript value to search.
+ * @param {!Config} config Configuation object.
  * @param {!Set<?Object>} seen Set of objects found so far.
  */
-Serializer.objectHunt_ = function(node, seen) {
+Serializer.objectHunt_ = function(node, config, seen) {
   if (!node || (typeof node !== 'object' && typeof node !== 'function')) {
     // node is primitive.  Nothing to do.
     return;
   }
   var obj = /** @type {!Object} */(node);
-  var proto = Object.getPrototypeOf(/** @type {!Object} */(obj));
-  if (Serializer.excludeTypes.has(proto) ||
-      seen.has(/** @type {!Object} */(obj))) {
-    return;
-  }
+  if (seen.has(obj)) return;
+  var proto = Object.getPrototypeOf(obj);
   seen.add(obj);
   if (typeof obj === 'object') {  // Recurse.
+    var typeInfo = config.byProto.get(proto);
+    var prune = (typeInfo && typeInfo.prune) || [];
     // Properties.
-    var prune = (proto && Serializer.pruneProperties.get(proto)) || [];
     var keys = Object.getOwnPropertyNames(obj);
     for (var i = 0; i < keys.length; i++) {
       var key = keys[i];
       if (prune.includes(key)) continue;
-      Serializer.objectHunt_(obj[key], seen);
+      Serializer.objectHunt_(obj[key], config, seen);
     }
     // Set members.
     if (obj instanceof Set || obj instanceof IterableWeakSet) {
       obj.forEach(function(value) {
-        Serializer.objectHunt_(value, seen);
+        Serializer.objectHunt_(value, config, seen);
       });
     }
     // Map entries.
     if (obj instanceof Map || obj instanceof IterableWeakMap) {
       obj.forEach(function(value, key) {
-        Serializer.objectHunt_(key, seen);
-        Serializer.objectHunt_(value, seen);
+        Serializer.objectHunt_(key, config, seen);
+        Serializer.objectHunt_(value, config, seen);
       });
     }
   }
-};
-
-/**
- * Make a map of typename to contructor for each type that might be
- * found while serializing an Interpreter instance.
- * @param {!Interpreter} intrp The interpreter instance being serialized
- *     (needed for inner classes).
- * @return {!Object} A key/value map of typesnames to constructors.
- */
-Serializer.getTypesDeserialize_ = function(intrp) {
-  return {
-    'Interpreter': Interpreter,
-    'Scope': Interpreter.Scope,
-    'State': Interpreter.State,
-    'Thread': Interpreter.Thread,
-    'PropertyIterator': Interpreter.PropertyIterator,
-    'Source': Interpreter.Source,
-    'PseudoObject': intrp.Object,
-    'PseudoFunction': intrp.Function,
-    'PseudoUserFunction': intrp.UserFunction,
-    'PseudoBoundFunction': intrp.BoundFunction,
-    'PseudoNativeFunction': intrp.NativeFunction,
-    'PseudoOldNativeFunction': intrp.OldNativeFunction,
-    'PseudoArray': intrp.Array,
-    'PseudoDate': intrp.Date,
-    'PseudoRegExp': intrp.RegExp,
-    'PseudoError': intrp.Error,
-    'PseudoArguments': intrp.Arguments,
-    'PseudoWeakMap': intrp.WeakMap,
-    'PseudoThread': intrp.Thread,
-    'Box': intrp.Box,
-    'Server': intrp.Server,
-    'Node': Node,
-  };
-};
-
-/**
- * Make a map of prototype to typename for each of the types that
- * might be found while deserializing an Interpreter instance.
- * @param {!Interpreter} intrp An interpreter instance being
- *     deserialized into (needed for inner classes).
- * @return {!Map} A key/value map of protoytype objects to typesnames.
- */
-Serializer.getTypesSerialize_ = function(intrp) {
-  var types = Serializer.getTypesDeserialize_(intrp);
-  var map = new Map;
-  for (var t in types) {
-    if (types.hasOwnProperty(t)) {
-      map.set(types[t].prototype, t);
-    }
-  }
-  return map;
 };
 
 module.exports = Serializer;
