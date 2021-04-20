@@ -198,14 +198,14 @@ Dumper.prototype.dump = function() {
   // Dump all remaining bindings.
   this.global.dump(this);
 
-  // Dump listening sockets.
+  // Dump listening Servers.
   for (var key in this.intrp2.listeners_) {
     var port = Number(key);
-    var listener = this.intrp2.listeners_[port];
+    var server = this.intrp2.listeners_[port];
     this.write(this.exprForBuiltin_('CC.connectionListen'), '(',
-               String(port), ',',
-               this.exprFor_(listener.proto), ', ',
-               this.exprFor_(listener.timeLimit), ');');
+               this.exprFor_(port), ', ', this.exprFor_(server.proto),
+               (server.timeLimit ? ', ' + this.exprFor_(server.timeLimit) : ''),
+               ');');
   }
 };
 
