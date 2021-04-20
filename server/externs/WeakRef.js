@@ -16,38 +16,35 @@
  */
 
 /**
- * @fileoverview Closure Compiler externs for the new tc39 WeakRef and
- *     FinalizationGroup API https://github.com/tc39/proposal-weakrefs
+ * @fileoverview Closure Compiler externs for the new ES2020  WeakRef and
+ *     FinalizationRegistry API https://tc39.es/ecma262/#sec-managing-memory
  * @author cpcallen@google.com (Christopher Allen)
  * @externs
  */
 
+// Closure Compiler (as of google-closue-compiler@20210406.0.0) now
+// knows about WeakRef, but it doesn't yet know about FinalizationRegistry.
+
 /**
  * @constructor
- * @param {function(!Iterator<HOLDINGS>)} cleanupCallback
+ * @param {function(HOLDINGS)} cleanupCallback
  * @template TARGET, HOLDINGS, TOKEN
  */
 // TODO(cpcallen): Make TARGET and TOKEN bounded to {!Object} once
 // closure-compiler supports bounded generic types.
-var FinalizationGroup = function(cleanupCallback) {};
+var FinalizationRegistry = function(cleanupCallback) {};
 
 /**
  * @param {TARGET} target
  * @param {HOLDINGS} holdings
- * @param {?TOKEN} unregisterToken
+ * @param {TOKEN=} unregisterToken
  * @return {void}
  */
-FinalizationGroup.prototype.register =
+FinalizationRegistry.prototype.register =
     function(target, holdings, unregisterToken) {};
 
 /**
- * @param {?TOKEN} unregisterToken
+ * @param {TOKEN} unregisterToken
  * @return {void}
  */
-FinalizationGroup.prototype.unregister = function(unregisterToken) {};
-
-/**
- * @param {function(!Iterator<HOLDINGS>)} cleanupCallback
- * @return {void}
- */
-FinalizationGroup.prototype.cleanupSome = function(cleanupCallback) {};
+FinalizationRegistry.prototype.unregister = function(unregisterToken) {};

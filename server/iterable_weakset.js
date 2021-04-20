@@ -38,8 +38,8 @@ class IterableWeakSet {
     this.refs_ = new Set();
     /** @private @const @type {!WeakMap<VALUE, !WeakRef<VALUE>>}} */
     this.map_ = new WeakMap();
-    /** @private @const @type {!FinalizationGroup} */
-    this.finalisers_ = new FinalizationGroup(IterableWeakSet.cleanup_);
+    /** @private @const @type {!FinalizationRegistry} */
+    this.finalisers_ = new FinalizationRegistry(IterableWeakSet.cleanup_);
 
     if (iterable === null || iterable === undefined) {
       return;
@@ -78,13 +78,13 @@ class IterableWeakSet {
 
   /**
    * Remove dead cells from .refs_.  Called automatically by the
-   * .finalisers_ FinalizationGroup.
+   * .finalisers_ FinalizationRegistry.
+   * @template KEY
+   * @param {{set: !Set<!WeakRef<KEY>>, ref: !WeakRef<KEY>}} holding
    * @return {void}
    */
-  static cleanup_(iterator) {
-    for (const {set, ref} of iterator) {
-      set.delete(ref);
-    }
+  static cleanup_(holding) {
+    holding.set.delete(holding.ref);
   }
 
   /**

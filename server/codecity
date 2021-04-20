@@ -1,4 +1,4 @@
-#!/usr/bin/env -S node --harmony-weak-refs
+#!/usr/bin/env node
 /**
  * @license
  * Copyright 2017 Google LLC
