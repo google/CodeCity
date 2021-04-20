@@ -257,8 +257,9 @@ Dumper.prototype.dumpBinding = function(selector, todo) {
  * expression referenceing the previously-constructed object.
  *
  * This method is mostly a wrapper around the other .exprFor<Foo>_
- * methods (but notably not .exprForBuiltin_, which is a wrapper
- * around this method); see them for examples of expected output.
+ * methods (but notably not .exprForBuiltin_ and .exprForCall_, which
+ * are wrappers around this method); see them for examples of expected
+ * output.
  *
  * @private
  * @param {Interpreter.Value} value Arbitrary JS value from this.intrp2.
@@ -363,6 +364,28 @@ Dumper.prototype.exprForArray_ = function(arr, arrDumper) {
  */
 Dumper.prototype.exprForBuiltin_ = function(builtin) {
   return this.exprFor_(this.intrp2.builtins.get(builtin), undefined, true);
+};
+
+/**
+ * Get a source text representation of a call to a given builtin
+ * function.  The array of arguments can contain either
+ * Interpreter.Values or Selectors, which will be passed to .exprFor_
+ * and .exprForSelector_, respectively.
+ * @private
+ * @param {string} builtin The name of the builtin function to call.
+ * @param {!Array<!Selector|Interpreter.Value>=} args Arguments to the  call.
+ * @return {string} An eval-able representation of a builtin function call.
+ */
+Dumper.prototype.exprForCall_ = function(builtin, args) {
+  var dumper = this;
+  return this.exprForBuiltin_(builtin) + '(' +
+      Array.from(args || []).map(function (argument) {
+        if (argument instanceof Selector) {
+          return dumper.exprForSelector_(argument);
+        } else {
+          return dumper.exprFor_(argument);
+        }
+      }).join(', ') + ')';
 };
 
 /**
