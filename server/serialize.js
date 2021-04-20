@@ -56,7 +56,7 @@ var TypeInfo;
 var Config;
 
 /**
- * Create a configuration object for serializing or desieralizing na
+ * Create a configuration object for serializing or desieralizing a
  * particular Interpreter instance.
  *
  * @param {!Interpreter} intrp The interpreter instance being serialized
