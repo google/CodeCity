@@ -22,7 +22,7 @@
 'use strict';
 
 /**
- * A WeakRef<KEY>, value tuple in an IterableWeakMap.
+ * A (WeakRef<KEY>, value) tuple in an IterableWeakMap.
  * @template KEY, VALUE
  */
 class Cell {
@@ -54,8 +54,8 @@ class IterableWeakMap extends WeakMap {
     super();
     /** @private @const @type {!Set<!WeakRef<KEY>>} */
     this.refs_ = new Set();
-    /** @private @const @type {!FinalizationGroup} */
-    this.finalisers_ = new FinalizationGroup(IterableWeakMap.cleanup_);
+    /** @private @const @type {!FinalizationRegistry} */
+    this.finalisers_ = new FinalizationRegistry(IterableWeakMap.cleanup_);
 
     if (iterable === null || iterable === undefined) {
       return;
@@ -77,13 +77,13 @@ class IterableWeakMap extends WeakMap {
 
   /**
    * Remove dead cells from .refs_.  Called automatically by the
-   * .finalisers_ FinalizationGroup.
+   * .finalisers_ FinalizationRegistry.
+   * @template KEY
+   * @param {{set: !Set<!WeakRef<KEY>>, ref: !WeakRef<KEY>}} holding
    * @return {void}
    */
-  static cleanup_(iterator) {
-    for (const {set, ref} of iterator) {
-      set.delete(ref);
-    }
+  static cleanup_(holding) {
+    holding.set.delete(holding.ref);
   }
 
   /**
