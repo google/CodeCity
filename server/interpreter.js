@@ -370,8 +370,9 @@ Interpreter.prototype.step_ = function(thread, stack) {
 };
 
 /**
- * If interpreter status is RUNNING, use setTimeout to repeatedly call
- * .run() until there are no more sleeping threads.
+ * If interpreter status is RUNNING, use setTimeout to arrange for
+ * .run() to be called repeatedly until there are no more sleeping
+ * threads.
  * @private
  */
 Interpreter.prototype.go_ = function() {

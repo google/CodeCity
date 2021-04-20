@@ -1288,20 +1288,34 @@ exports.testScopeDumperPrototypeDump = function(t) {
 };
 
 /**
- * Unit tests for Dumper.prototype.dump
+ * Unit tests for Dumper.prototype.dump.  These need to be async
+ * because connectionListen is (under the covers).
  * @param {!T} t The test runner object.
  */
-exports.testDumperPrototypeDump = function(t) {
+exports.testDumperPrototypeDump = async function(t) {
   const intrp = new Interpreter({noLog: ['net']});
 
-  // Create a variable and a listening socket to dump.
+  // Create a NativeFuction called "continue" that can be used to
+  // resolve awaited Promises.  (Don't add it to the global scope, as
+  // doing so causes dump errors because it's not present in a
+  // pristine Interpreter instance.)
+  // TODO(cpcallen): consider abstracting test machinery into a
+  // runAsyncDumpTest function?
+  let resolve;
+  intrp.createNativeFunction('continue', () => {resolve();}, false);
+
+  // Create a variable and two listening sockets to dump.
   intrp.createThreadForSrc(`
       var listener = {onRecieve: function onRecieve(data) {}};
-      (new 'CC.connectionListen')(8888, listener);
+      (new 'CC.connectionListen')(8888, listener, 100);
+      (new 'CC.connectionListen')(8889, listener);
+      (new 'continue')();
   `);
-  intrp.run();
+  intrp.start();
+  await new Promise((res, rej) => {resolve = res;});  // Wait for continue().
+  intrp.pause();
 
-  // Create Dumper with pristine Interpreter instance to compare to;
+  // Create Dumper with pristine Interpreter instance to compare to.
   const pristine = new Interpreter();
   const dumper = new Dumper(pristine, intrp);
   const output = new MockWritable();
@@ -1310,8 +1324,16 @@ exports.testDumperPrototypeDump = function(t) {
   t.expect('Dumper.p.dump(...) outputs', String(output),
            'var listener = {};\n' +
                'listener.onRecieve = function onRecieve(data) {};\n' +
-               "(new 'CC.connectionListen')(8888, listener);\n");
+               "(new 'CC.connectionListen')(8888, listener, 100);\n" +
+               "(new 'CC.connectionListen')(8889, listener);\n");
 
-  intrp.createThreadForSrc('(new "CC.connectionUnlisten")(8888);');
-  intrp.run();
+  // Clean up.
+  intrp.createThreadForSrc(`
+      (new "CC.connectionUnlisten")(8888);
+      (new "CC.connectionUnlisten")(8889);
+      (new 'continue')();
+  `);
+  intrp.start();
+  await new Promise((res, rej) => {resolve = res;});  // Wait for continue().
+  intrp.stop();
 };
