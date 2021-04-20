@@ -54,8 +54,13 @@ class IterableWeakMap extends WeakMap {
     super();
     /** @private @const @type {!Set<!WeakRef<KEY>>} */
     this.refs_ = new Set();
-    /** @private @const @type {!FinalizationRegistry} */
-    this.finalisers_ = new FinalizationRegistry(IterableWeakMap.cleanup_);
+    /**
+     * @private @const
+     * @type {!FinalizationRegistry<VALUE, !WeakRef<VALUE>, !WeakRef<VALUE>>}
+     */
+    this.finalisers_ = new FinalizationRegistry(ref => {
+      this.refs_.delete(ref);
+    });
 
     if (iterable === null || iterable === undefined) {
       return;
@@ -73,17 +78,6 @@ class IterableWeakMap extends WeakMap {
       }
       adder.call(this, entry[0], entry[1]);
     }
-  }
-
-  /**
-   * Remove dead cells from .refs_.  Called automatically by the
-   * .finalisers_ FinalizationRegistry.
-   * @template KEY
-   * @param {{set: !Set<!WeakRef<KEY>>, ref: !WeakRef<KEY>}} holding
-   * @return {void}
-   */
-  static cleanup_(holding) {
-    holding.set.delete(holding.ref);
   }
 
   /**
@@ -184,7 +178,7 @@ class IterableWeakMap extends WeakMap {
       const cell = new Cell(ref, value);
       super.set(key, cell);
       this.refs_.add(ref);
-      this.finalisers_.register(key, {set: this.refs_, ref}, ref);
+      this.finalisers_.register(key, ref, ref);
     }
     return this;
   }
