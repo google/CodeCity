@@ -25,7 +25,7 @@
 
 // TODO(cpcallen): Use official externs directly.
 
-/** @constructor */
+/** @constructor @struct */
 var Buffer = function() {};
 
 exports.Buffer = Buffer;

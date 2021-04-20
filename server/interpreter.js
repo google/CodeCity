@@ -44,6 +44,7 @@ var SERIALIZATION_VERSION = 1;
 /**
  * Create a new interpreter.
  * @constructor
+ * @struct
  * @param {!Interpreter.Options=} options
  */
 var Interpreter = function(options) {
@@ -82,6 +83,29 @@ var Interpreter = function(options) {
    */
   this.global = new Interpreter.Scope(Interpreter.Scope.Type.GLOBAL,
       /** @type {?} */ (undefined), null, undefined);
+
+  // Declare properties that wil be initialised by initBuiltins_.
+  /** @type {!Interpreter.prototype.Object} */ this.OBJECT;
+  /** @type {!Interpreter.Owner} */ this.ROOT;
+  /** @type {!Interpreter.prototype.Function} */ this.FUNCTION;
+  /** @type {!Interpreter.prototype.Array} */ this.ARRAY;
+  /** @type {!Interpreter.prototype.Object} */ this.STRING;
+  /** @type {!Interpreter.prototype.Object} */ this.BOOLEAN;
+  /** @type {!Interpreter.prototype.Object} */ this.NUMBER;
+  /** @type {!Interpreter.prototype.Object} */ this.DATE;
+  /** @type {!Interpreter.prototype.Object} */ this.REGEXP;
+  /** @type {!Interpreter.prototype.Error} */ this.ERROR;
+  /** @type {!Interpreter.prototype.Error} */ this.EVAL_ERROR;
+  /** @type {!Interpreter.prototype.Error} */ this.RANGE_ERROR;
+  /** @type {!Interpreter.prototype.Error} */ this.REFERENCE_ERROR;
+  /** @type {!Interpreter.prototype.Error} */ this.SYNTAX_ERROR;
+  /** @type {!Interpreter.prototype.Error} */ this.TYPE_ERROR;
+  /** @type {!Interpreter.prototype.Error} */ this.URI_ERROR;
+  /** @type {!Interpreter.prototype.Error} */ this.PERM_ERROR;
+  /** @type {!Interpreter.prototype.Object} */ this.WEAKMAP;
+  /** @type {!Interpreter.prototype.Object} */ this.THREAD;
+  /** @type {!Interpreter.Owner} */ this.ANYBODY;
+
   // Create builtins and (minimally) initialize global scope:
   this.initBuiltins_();
 
@@ -113,6 +137,9 @@ var Interpreter = function(options) {
   this.previousTime_ = 0;
   /** @private @type {number} */
   this.cumulativeTime_ = 0;
+  /** @private @type {!Array<number>} */
+  this.hrStartTime_;  // Initialised by pause.
+
   this.pause();
 };
 
@@ -2015,6 +2042,7 @@ Interpreter.prototype.initError_ = function() {
         // Use intrp[protoKey] instead of proto because
         // deserialisation will set up intrp.ERROR et al correctly but
         // can't modify values of variables in native closures.
+        /** @suppress {checkTypes} */
         var err = new intrp.Error(perms, intrp[protoKey], message);
         err.makeStack(thread.callers(perms).slice(1), perms);
         return err;
@@ -2122,10 +2150,24 @@ Interpreter.prototype.initWeakMap_ = function() {
   });
 
   // Properties of the WeakMap prototype object.
+
   /**
-   * Decorator to add standard permission and type checks for HashMap
+   * A narrowing of Interpreter.NativeCallImpl for decorated WeakMap
+   * .call implementations.
+   * @typedef {function(this: Interpreter.prototype.NativeFunction,
+   *                    !Interpreter,
+   *                    !Interpreter.Thread,
+   *                    !Interpreter.State,
+   *                    !Interpreter.prototype.WeakMap,
+   *                    !Array<?Interpreter.Value>)
+   *               : (?Interpreter.Value|!Interpreter.FunctionResult)}
+   */
+  var WeakMapCallImpl;
+  
+  /**
+   * Decorator to add standard permission and type checks for WeakMap
    * prototype methods.
-   * @param {!Interpreter.NativeCallImpl} func Function to decorate.
+   * @param {!WeakMapCallImpl} func Function to decorate.
    * @param {string=} name Name of decorated function (default:
    *     func.name).  (N.B. needed because 'delete' is a reserve word.
    * @return {!Interpreter.NativeCallImpl} The decorated function.)
@@ -2149,7 +2191,6 @@ Interpreter.prototype.initWeakMap_ = function() {
 
   new this.NativeFunction({
     id: 'WeakMap.prototype.delete', length: 1,
-    /** @type {!Interpreter.NativeCallImpl} */
     call: withChecks(function(intrp, thread, state, thisVal, args) {
       return thisVal.weakMap.delete(args[0]);
     }, 'delete')
@@ -2157,7 +2198,6 @@ Interpreter.prototype.initWeakMap_ = function() {
 
   new this.NativeFunction({
     id: 'WeakMap.prototype.get', length: 1,
-    /** @type {!Interpreter.NativeCallImpl} */
     call: withChecks(function get(intrp, thread, state, thisVal, args) {
       return thisVal.weakMap.get(args[0]);
     })
@@ -2165,7 +2205,6 @@ Interpreter.prototype.initWeakMap_ = function() {
 
   new this.NativeFunction({
     id: 'WeakMap.prototype.has', length: 1,
-    /** @type {!Interpreter.NativeCallImpl} */
     call: withChecks(function has(intrp, thread, state, thisVal, args) {
       return thisVal.weakMap.has(args[0]);
     })
@@ -2173,7 +2212,6 @@ Interpreter.prototype.initWeakMap_ = function() {
 
   new this.NativeFunction({
     id: 'WeakMap.prototype.set', length: 2,
-    /** @type {!Interpreter.NativeCallImpl} */
     call: withChecks(function set(intrp, thread, state, thisVal, args) {
       thisVal.weakMap.set(args[0], args[1]);
       return thisVal;
@@ -2282,10 +2320,24 @@ Interpreter.prototype.initThread_ = function() {
   });
 
   // Properties of the Thread prototype object.
+
+  /**
+   * A narrowing of Interpreter.NativeCallImpl for decorated Thread
+   * .call implementations.
+   * @typedef {function(this: Interpreter.prototype.NativeFunction,
+   *                    !Interpreter,
+   *                    !Interpreter.Thread,
+   *                    !Interpreter.State,
+   *                    !Interpreter.prototype.Thread,
+   *                    !Array<?Interpreter.Value>)
+   *               : (?Interpreter.Value|!Interpreter.FunctionResult)}
+   */
+  var ThreadCallImpl;
+
   /**
    * Decorator to add standard permission and type checks for Thread
    * prototype methods.
-   * @param {!Interpreter.NativeCallImpl} func Function to decorate.
+   * @param {!ThreadCallImpl} func Function to decorate.
    * @return {!Interpreter.NativeCallImpl} The decorated function.)
    */
   var withChecks = function(func) {
@@ -2304,7 +2356,6 @@ Interpreter.prototype.initThread_ = function() {
 
   new this.NativeFunction({
     id: 'Thread.prototype.getTimeLimit', length: 0,
-    /** @type {!Interpreter.NativeCallImpl} */
     call: withChecks(function getTimeLimit(
         intrp, thread, state, thisVal, args) {
       return thisVal.thread.timeLimit;
@@ -2316,7 +2367,6 @@ Interpreter.prototype.initThread_ = function() {
   // existing limit.
   new this.NativeFunction({
     id: 'Thread.prototype.setTimeLimit', length: 1,
-    /** @type {!Interpreter.NativeCallImpl} */
     call: withChecks(function setTimeLimit(
         intrp, thread, state, thisVal, args) {
       var limit = args[0];
@@ -3179,6 +3229,7 @@ Interpreter.CompletionType = {
  * immediately available (e.g., in the case of a user function that
  * needs to be evaluated, or an async function that blocks).
  * @constructor
+ * @struct
  */
 Interpreter.FunctionResult = function() {};
 /**
@@ -3274,6 +3325,7 @@ Interpreter.NativeConstructImpl;
  * An iterator over the properties of an ObjectLike and its
  * prototypes, following the usual for-in loop rules.
  * @constructor
+ * @struct
  * @param {!Interpreter.ObjectLike} obj Object or Box whose properties
  *     are to be iterated over.
  * @param {!Interpreter.Owner} perms Who is doing the iteration?
@@ -3327,6 +3379,8 @@ Interpreter.PropertyIterator.prototype.next = function() {
 /**
  * Class for a scope.  Implements Lexical Environments and the
  * Environment Record specification type from E5.1 §10.2 / ES6 §8.1.
+ * @constructor
+ * @struct
  * @param {!Interpreter.Scope.Type} type What variety of scope is it?
  * @param {!Interpreter.Owner} perms The permissions with which code
  *     in the current scope is executing.
@@ -3335,7 +3389,6 @@ Interpreter.PropertyIterator.prototype.next = function() {
  * @param {?Interpreter.Value=} thisVal Value of 'this' in scope.
  *     (Default: copy value from outerScope.  N.B.: passing undefined
  *     is NOT treated the same as passing no value!)
- * @constructor
  */
 Interpreter.Scope = function(type, perms, outerScope, thisVal) {
   /** @type {!Interpreter.Scope.Type} */
@@ -3489,6 +3542,7 @@ Interpreter.Scope.Type = {
  * original source text.  Such sliced objects "remember" their
  * position within the original source text.
  * @constructor
+ * @struct
  * @param {string} src Some source text
  * @param {number=} offset_ For internal use only.
  */
@@ -3551,11 +3605,12 @@ Interpreter.Source.prototype.lineColForPos = function(pos) {
 
 /**
  * Class for a state.
+ * @constructor
+ * @struct
  * @param {!Node} node AST node for the state.
  * @param {!Interpreter.Scope} scope Scope dictionary for the state.
  * @param {boolean=} wantRef Does parent state want reference (rather
  *     than evaluated value)?  (Default: false.)
- * @constructor
  */
 Interpreter.State = function(node, scope, wantRef) {
   /** @const {!Node} */
@@ -3676,6 +3731,7 @@ Interpreter.State.prototype.frame = function() {
  * serves as a user-visible wrapper for this class.  The two are
  * separate for performance reasons only.
  * @constructor
+ * @struct
  * @param {number} id Thread ID.  Should correspond to index of this
  *     thread in .threads_ array.
  * @param {!Interpreter.State} state Starting state for thread.
@@ -3864,6 +3920,7 @@ Interpreter.ObjectLike.prototype.valueOf = function() {};
 
 /**
  * @constructor
+ * @struct
  * @implements {Interpreter.ObjectLike}
  * @param {?Interpreter.Owner=} owner
  * @param {?Interpreter.prototype.Object=} proto
@@ -3875,6 +3932,12 @@ Interpreter.prototype.Object = function(owner, proto) {
   this.proto;
   /** @const {!Object<?Interpreter.Value>} */
   this.properties;
+  // TODO(cpcallen): this is kind of ugly, because connected Objects
+  // have their shape mutated by the on('connect') handler in Server.
+  // Consider rewriting it so that there is a WeakMap on Interpreter
+  // instances mapping objects to their corresponding Socket.
+  /** @type {!net.Socket|undefined} */
+  this.socket;
   throw new Error('Inner class constructor not callable on prototype');
 };
 
@@ -3976,6 +4039,7 @@ Interpreter.prototype.Object.prototype.valueOf = function() {
 
 /**
  * @constructor
+ * @struct
  * @extends {Interpreter.prototype.Object}
  * @param {?Interpreter.Owner=} owner
  * @param {?Interpreter.prototype.Object=} proto
@@ -4028,6 +4092,7 @@ Interpreter.prototype.Function.prototype.construct = function(
 
 /**
  * @constructor
+ * @struct
  * @extends {Interpreter.prototype.Function}
  * @param {!Node} node
  * @param {!Interpreter.Scope} scope Enclosing scope.
@@ -4058,6 +4123,7 @@ function(owner, thisVal, args) {
 
 /**
  * @constructor
+ * @struct
  * @extends {Interpreter.prototype.Function}
  * @param {!Interpreter.prototype.Function} func
  * @param {?Interpreter.Value} thisVal
@@ -4076,6 +4142,7 @@ Interpreter.prototype.BoundFunction = function(func, thisVal, args, owner) {
 
 /**
  * @constructor
+ * @struct
  * @extends {Interpreter.prototype.Function}
  * @param {!NativeFunctionOptions=} options
  */
@@ -4085,10 +4152,11 @@ Interpreter.prototype.NativeFunction = function(options) {
 
 /**
  * @constructor
+ * @struct
  * @extends {Interpreter.prototype.NativeFunction}
  * @param {!Function} impl
  * @param {boolean} legalConstructor
- * @param {?Interpreter.Owner=} owner
+ * @param {!Interpreter.Owner=} owner
  * @param {?Interpreter.prototype.Object=} proto
  */
 Interpreter.prototype.OldNativeFunction =
@@ -4102,6 +4170,7 @@ Interpreter.prototype.OldNativeFunction =
 
 /**
  * @constructor
+ * @struct
  * @extends {Interpreter.prototype.Object}
  * @param {?Interpreter.Owner=} owner
  * @param {?Interpreter.prototype.Object=} proto
@@ -4112,6 +4181,7 @@ Interpreter.prototype.Array = function(owner, proto) {
 
 /**
  * @constructor
+ * @struct
  * @extends {Interpreter.prototype.Object}
  * @param {!Date} date
  * @param {?Interpreter.Owner=} owner
@@ -4125,6 +4195,7 @@ Interpreter.prototype.Date = function(date, owner, proto) {
 
 /**
  * @constructor
+ * @struct
  * @extends {Interpreter.prototype.Object}
  * @param {!RegExp=} re
  * @param {?Interpreter.Owner=} owner
@@ -4138,6 +4209,7 @@ Interpreter.prototype.RegExp = function(re, owner, proto) {
 
 /**
  * @constructor
+ * @struct
  * @extends {Interpreter.prototype.Object}
  * @param {?Interpreter.Owner=} owner
  * @param {?Interpreter.prototype.Object=} proto
@@ -4158,6 +4230,7 @@ Interpreter.prototype.Error.prototype.makeStack = function(callers, perms) {
 
 /**
  * @constructor
+ * @struct
  * @extends {Interpreter.prototype.Object}
  * @param {?Interpreter.Owner=} owner
  * @param {?Interpreter.prototype.Object=} proto
@@ -4168,6 +4241,7 @@ Interpreter.prototype.Arguments = function(owner, proto) {
 
 /**
  * @constructor
+ * @struct
  * @extends {Interpreter.prototype.Object}
  * @param {?Interpreter.Owner=} owner
  * @param {?Interpreter.prototype.Object=} proto
@@ -4180,6 +4254,7 @@ Interpreter.prototype.WeakMap = function(owner, proto) {
 
 /**
  * @constructor
+ * @struct
  * @extends {Interpreter.prototype.Object}
  * @param {!Interpreter.Thread} thread
  * @param {!Interpreter.Owner} owner
@@ -4195,6 +4270,7 @@ Interpreter.prototype.Thread = function(thread, owner, proto) {
 // Other types, not representing JS objects.
 /**
  * @constructor
+ * @struct
  * @implements {Interpreter.ObjectLike}
  * @param {(boolean|number|string)} prim
  */
@@ -4281,6 +4357,7 @@ Interpreter.prototype.Box.prototype.valueOf = function() {
 
 /**
  * @constructor
+ * @struct
  * @param {!Interpreter.Owner} owner
  * @param {number} port
  * @param {!Interpreter.prototype.Object} proto
@@ -4327,6 +4404,7 @@ Interpreter.prototype.installTypes = function() {
   /**
    * Class for an object.
    * @constructor
+   * @struct
    * @extends {Interpreter.prototype.Object}
    * @param {?Interpreter.Owner=} owner Owner object or null.
    * @param {?Interpreter.prototype.Object=} proto Prototype object or null.
@@ -4567,6 +4645,7 @@ Interpreter.prototype.installTypes = function() {
   /**
    * Class for a function.
    * @constructor
+   * @struct
    * @extends {Interpreter.prototype.Function}
    * @param {?Interpreter.Owner=} owner Owner object (default: null).
    * @param {?Interpreter.prototype.Object=} proto Prototype object or null.
@@ -4689,6 +4768,7 @@ Interpreter.prototype.installTypes = function() {
   /**
    * Class for a user-defined function.
    * @constructor
+   * @struct
    * @extends {Interpreter.prototype.UserFunction}
    * @param {!Node} node AST node for function body.
    * @param {!Interpreter.Scope} scope Enclosing scope.
@@ -4840,6 +4920,7 @@ Interpreter.prototype.installTypes = function() {
   /**
    * Class for bound functions.  See ES5 §15.3.4.5 / ES6 §9.4.1.
    * @constructor
+   * @struct
    * @extends {Interpreter.prototype.BoundFunction}
    * @param {!Interpreter.prototype.Function} func Function to be bound.
    * @param {?Interpreter.Value} thisVal The this value passed into function.
@@ -4943,6 +5024,7 @@ Interpreter.prototype.installTypes = function() {
    * intrp.FUNCTION - i.e., Function.prototype).
    *
    * @constructor
+   * @struct
    * @extends {Interpreter.prototype.NativeFunction}
    * @param {!NativeFunctionOptions=} options Options object for
    *     constructing native function.
@@ -4990,11 +5072,12 @@ Interpreter.prototype.installTypes = function() {
   /**
    * Class for an old native function.
    * @constructor
+   * @struct
    * @extends {Interpreter.prototype.OldNativeFunction}
    * @param {!Function} impl Old-style native function implementation
    * @param {boolean} legalConstructor True if the function can be used as a
    *     constructor (e.g. Array), false if not (e.g. escape).
-   * @param {?Interpreter.Owner=} owner Owner object or null (default: root).
+   * @param {!Interpreter.Owner=} owner Owner object or null (default: root).
    * @param {?Interpreter.prototype.Object=} proto Prototype object or null.
    */
   intrp.OldNativeFunction = function(impl, legalConstructor, owner, proto) {
@@ -5039,6 +5122,7 @@ Interpreter.prototype.installTypes = function() {
   /**
    * Class for an array
    * @constructor
+   * @struct
    * @extends {Interpreter.prototype.Array}
    * @param {?Interpreter.Owner=} owner Owner object or null.
    * @param {?Interpreter.prototype.Object=} proto Prototype object or null.
@@ -5090,6 +5174,7 @@ Interpreter.prototype.installTypes = function() {
   /**
    * Class for a date.
    * @constructor
+   * @struct
    * @extends {Interpreter.prototype.Date}
    * @param {!Date} date Date value for this Date object.
    * @param {?Interpreter.Owner=} owner Owner object or null.
@@ -5127,6 +5212,7 @@ Interpreter.prototype.installTypes = function() {
   /**
    * Class for a regexp
    * @constructor
+   * @struct
    * @extends {Interpreter.prototype.RegExp}
    * @param {!RegExp=} re The RegExp value for this RegExp object.
    * @param {?Interpreter.Owner=} owner Owner object or null.
@@ -5169,6 +5255,7 @@ Interpreter.prototype.installTypes = function() {
   /**
    * Class for an error object
    * @constructor
+   * @struct
    * @extends {Interpreter.prototype.Error}
    * @param {?Interpreter.Owner=} owner Owner object or null.
    * @param {?Interpreter.prototype.Object=} proto Prototype object or null.
@@ -5275,6 +5362,7 @@ Interpreter.prototype.installTypes = function() {
    * What's left is basically an ordinary object with a special
    * [[Class]].
    * @constructor
+   * @struct
    * @extends {Interpreter.prototype.Arguments}
    * @param {?Interpreter.Owner=} owner Owner object or null.
    * @param {?Interpreter.prototype.Object=} proto Prototype object or null.
@@ -5290,6 +5378,7 @@ Interpreter.prototype.installTypes = function() {
   /**
    * The WeakMap class from ES6.
    * @constructor
+   * @struct
    * @extends {Interpreter.prototype.WeakMap}
    * @param {?Interpreter.Owner=} owner Owner object or null.
    * @param {?Interpreter.prototype.Object=} proto Prototype object or null.
@@ -5311,6 +5400,7 @@ Interpreter.prototype.installTypes = function() {
    * Note that there should be at most one of these wrappers for each
    * Interpreter.Thread, and this constructor enforces this.
    * @constructor
+   * @struct
    * @extends {Interpreter.prototype.Thread}
    * @param {!Interpreter.Thread} thread Thread represented by this object.
    * @param {!Interpreter.Owner} owner Owner of this thread.
@@ -5343,6 +5433,7 @@ Interpreter.prototype.installTypes = function() {
    * ES5.1 or ES6 to do ToObject().
    *
    * @constructor
+   * @struct
    * @extends {Interpreter.prototype.Box}
    * @param {(boolean|number|string)} prim Primitive to box
    */
@@ -5499,6 +5590,7 @@ Interpreter.prototype.installTypes = function() {
    * userland pseduoObject, but it is intended to be easily adaptable
    * for that if desired.
    * @constructor
+   * @struct
    * @extends {Interpreter.prototype.Server}
    * @param {!Interpreter.Owner} owner Owner object or null.
    * @param {number} port Port to listen on.
@@ -5679,7 +5771,7 @@ Interpreter.prototype.installTypes = function() {
  *            id: (string|undefined),
  *            call: (Interpreter.NativeCallImpl|undefined),
  *            construct: (Interpreter.NativeConstructImpl|undefined),
- *            owner: (?Interpreter.Owner|undefined),
+ *            owner: (!Interpreter.Owner|undefined),
  *            proto: (?Interpreter.prototype.Object|undefined)}}
  */
 var NativeFunctionOptions;
@@ -5709,6 +5801,7 @@ Interpreter.Descriptor.prototype.configurable;
  * commonly-used examples and a function to easily create new
  * descriptors from a prototype.
  * @constructor
+ * @struct
  * @implements {Interpreter.Descriptor}
  * @param {boolean=} writable Is the property writable?
  * @param {boolean=} enumerable Is the property enumerable?
@@ -6792,8 +6885,8 @@ stepFuncs_['Program'] = function(thread, stack, state, node) {
  * @return {!Interpreter.State|undefined}
  */
 stepFuncs_['ReturnStatement'] = function(thread, stack, state, node) {
-  if (node['argument'] && !state.done_) {
-    state.done_ = true;
+  if (node['argument'] && state.step_ === 0) {
+    state.step_ = 1;
     return new Interpreter.State(node['argument'], state.scope);
   }
   this.unwind_(

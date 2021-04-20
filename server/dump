@@ -256,6 +256,7 @@ var configFromSpec = function(spec) {
  * A synchronous writable stream, with an API that is a simplified
  * subset of stream.Writable.
  * @constructor
+ * @struct
  * @implements Writable
  * @param {string} filename The file to write to.
  */

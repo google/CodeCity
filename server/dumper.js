@@ -48,6 +48,7 @@ var util = require('util');
  * associated with Thread objects.
  *
  * @constructor
+ * @struct
  * @param {!Interpreter} intrp1 An interpreter initialised exactly as
  *     the one the ouptut JS will be executed by.
  * @param {!Interpreter} intrp2 An interpreter containing state
@@ -957,6 +958,7 @@ Dumper.prototype.write = function(var_args) {
 /**
  * Common interface and functionality for ScopeDumper and ObjectDumper.
  * @abstract @constructor
+ * @struct
  */
 var SubDumper = function() {
   /** @type {?Set<Selector.Part>} */
@@ -978,6 +980,14 @@ var SubDumper = function() {
 SubDumper.prototype.dumpBinding = function(dumper, part, todo) {};
 
 /**
+ * Return the current 'done' status of a binding.
+ * @abstract
+ * @param {Selector.Part} part The part to get status for.
+ * @return {!Do} The done status of the binding.
+ */
+SubDumper.prototype.getDone = function(part) {};
+
+/**
  * Return the value of the given part in intrp2 (i.e., the intended
  * final value, provided that it isn't going to be pruned.)
  * @abstract
@@ -986,6 +996,15 @@ SubDumper.prototype.dumpBinding = function(dumper, part, todo) {};
  * @return {Interpreter.Value} The value of that part.
  */
 SubDumper.prototype.getValue = function(dumper, part) {};
+
+/**
+ * Update the current 'done' status of a binding.  Will throw a
+ * RangeError if caller attempts to un-do or re-do a previously-done
+ * action.
+ * @param {Selector.Part} part The part to set status for.
+ * @param {!Do} done The new done status of the binding.
+ */
+SubDumper.prototype.setDone = function(part, done) {};
 
 /**
  * Mark a particular binding (as specified by a Part) to be pruned,
@@ -1048,6 +1067,7 @@ SubDumper.prototype.unskip = function(part) {
  * required to keep track of what variable bindings have and haven't
  * yet been dumped.
  * @constructor @extends {SubDumper}
+ * @struct
  * @param {!Interpreter.Scope} scope The scope to keep state for.
  */
 var ScopeDumper = function(scope) {
@@ -1243,6 +1263,7 @@ ScopeDumper.prototype.survey = function(dumper) {
  * all the dump-state info required to keep track of what properties
  * (etc.) have and haven't yet been dumped.
  * @constructor @extends {SubDumper}
+ * @struct
  * @param {!Interpreter.prototype.Object} obj The object to keep state for.
  */
 var ObjectDumper = function(obj) {
@@ -1672,15 +1693,16 @@ ObjectDumper.prototype.getDone = function(part) {
 ObjectDumper.prototype.getSelector = function(preferred) {
   var /** !SubDumper */ sd = this;
   var /** !Array<Selector.Part> */ parts = [];
-  while (true) {
-    if (sd instanceof ScopeDumper) {
-      if (sd.scope.type === Interpreter.Scope.Type.GLOBAL) break;
-      throw new Error('refusing to create Selector for non-global scope');
-    }
+  while (sd instanceof ObjectDumper) {
     var /** ?Components */ next = preferred ? sd.preferredRef : sd.ref;
     if (!next) throw new Error('unreferenced object while building Selector');
     sd = next.dumper;
     parts.unshift(next.part);
+  }
+  if (!(sd instanceof ScopeDumper)) {
+    throw new TypeError('unknown SubDumper subclass');
+  } else  if (sd.scope.type !== Interpreter.Scope.Type.GLOBAL) {
+    throw new Error('refusing to create Selector for non-global scope');
   }
   return new Selector(parts);
 };
@@ -1849,8 +1871,10 @@ ObjectDumper.prototype.updateRef = function(ref) {
     oldBadness = Infinity;
   }
   try {
-    newBadness =
-        ref.dumper.getSelector().badness() + Selector.partBadness(ref.part);
+    newBadness = Selector.partBadness(ref.part);
+    if (ref.dumper instanceof ObjectDumper) {
+      newBadness += ref.dumper.getSelector().badness();
+    }
   } catch (e) {
     newBadness = Infinity;
   }
@@ -1890,6 +1914,7 @@ ObjectDumper.Done = {
  * awaiting completion of a.
  *
  * @constructor
+ * @struct
  * @param {!Selector} binding A binding awaiting recursive completion
  *     of its value object.
  * @param {!ObjectDumper} valueDumper The ObjectDumper for the object
@@ -1947,6 +1972,7 @@ ObjectDumper.Pending.prototype.toString = function() {
  * Selector.Part} tuple.
  *
  * @constructor
+ * @struct
  * @param {!SubDumper} dumper
  * @param {Selector.Part} part
  */

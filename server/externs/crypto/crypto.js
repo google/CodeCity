@@ -38,10 +38,11 @@ var crypto = {};
 crypto.createHash = function(algorithm) {};
 
 /**
+ * @constructor
+ * @struct
+ * @extends stream.Transform
  * @param {string} algorithm
  * @param {Object=} options
- * @constructor
- * @extends stream.Transform
  */
 crypto.Hash = function(algorithm, options) {};
 

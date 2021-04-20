@@ -45,9 +45,10 @@ http.requestListener;
 http.createServer;
 
 /**
- * @param {http.requestListener=} listener
  * @constructor
+ * @struct
  * @extends events.EventEmitter
+ * @param {http.requestListener=} listener
  */
 http.Server = function(listener) {};
 
@@ -65,6 +66,7 @@ http.Server.prototype.close;
 
 /**
  * @constructor
+ * @struct
  * @extends stream.Readable
  */
 http.IncomingMessage = function() {};
@@ -128,6 +130,7 @@ http.IncomingMessage.prototype.setTimeout;
 
 /**
  * @constructor
+ * @struct
  * @extends events.EventEmitter
  * @private
  */
@@ -191,6 +194,7 @@ http.ServerResponse.prototype.end;
 
 /**
  * @constructor
+ * @struct
  * @extends events.EventEmitter
  * @private
  */
@@ -233,6 +237,7 @@ http.get = function(urlOrOptions, optionsOrCallback, callback) {};
 
 /**
  * @constructor
+ * @struct
  * @extends events.EventEmitter
  */
 http.Agent = function() {};
