@@ -34,6 +34,7 @@ var https = {};
 
 /**
  * @constructor
+ * @struct
  * @extends tls.Server
  */
 https.Server = function() {};
@@ -80,6 +81,7 @@ https.get = function(urlOrOptions, optionsOrCallback, callback) {};
 
 /**
  * @constructor
+ * @struct
  * @extends http.Agent
  */
 https.Agent = function() {};

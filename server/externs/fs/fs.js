@@ -56,6 +56,7 @@ fs.createReadStream = function(path, options) {};
 
 /**
  * @constructor
+ * @struct
  * @extends stream.ReadableStream
  */
 fs.ReadStream = function () {};
@@ -71,6 +72,7 @@ fs.createWriteStream = function(path, options) {};
 
 /**
  * @constructor
+ * @struct
  * @extends stream.WritableStream
  */
 fs.WriteStream = function () {};
@@ -138,7 +140,7 @@ fs.writeFileSync = function(filename, data, encoding) {};
  */
 fs.writeSync = function(fd, string, position, encoding) {};
                         
-/** @constructor */
+/** @constructor @struct */
 fs.Stats = function () {};
 
 /** @return {boolean} */

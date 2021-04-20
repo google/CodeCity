@@ -53,6 +53,7 @@ function children(i) {
 
 /**
  * A priority queue.
+ * @stuct
  * @template T
  */
 class PriorityQueue {

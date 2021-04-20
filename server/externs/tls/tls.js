@@ -37,6 +37,8 @@ var tls = {};
 
 /**
  * @constructor
+ * @struct
+ * @extends stream.Stream
  */
 tls.CreateOptions = function () {};
 
@@ -93,12 +95,14 @@ tls.connect = function(port, host, options, callback) {};
 
 /**
  * @constructor
+ * @struct
  * @extends events.EventEmitter
  */
 tls.SecurePair = function() {};
 
 /**
  * @constructor
+ * @struct
  * @extends net.Server
  */
 tls.Server = function() {};
@@ -112,6 +116,7 @@ tls.Server.prototype.addContext = function(hostname, credentials) {};
 
 /**
  * @constructor
+ * @struct
  * @extends stream.Duplex
  */
 tls.CleartextStream = function() {};

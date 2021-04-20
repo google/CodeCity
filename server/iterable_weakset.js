@@ -23,6 +23,7 @@
 
 /**
  * A WeakSet implementing the full Set interface, including iterability.
+ * @struct
  * @extends {WeakSet}
  * @implements {Iterable<!Array<VALUE>>}
  * @template VALUE

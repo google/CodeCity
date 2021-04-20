@@ -33,8 +33,9 @@ var stream = {};
 
 /**
  * @constructor
- * @param {Object=} options
+ * @struct
  * @extends events.EventEmitter
+ * @param {Object=} options
  */
 stream.Stream = function(options) {};
 
@@ -47,8 +48,9 @@ stream.Stream.prototype.pipe;
 
 /**
  * @constructor
- * @param {Object=} options
+ * @struct
  * @extends stream.Stream
+ * @param {Object=} options
  */
 stream.Readable = function(options) {};
 
@@ -114,6 +116,7 @@ stream.Readable.prototype.wrap;
 
 /**
  * @constructor
+ * @struct
  * @extends stream.Readable
  */
 stream.ReadableStream = function() {};
@@ -136,8 +139,9 @@ stream.ReadableStream.prototype.destroy;
 
 /**
  * @constructor
- * @param {Object=} options
+ * @struct
  * @extends stream.Stream
+ * @param {Object=} options
  */
 stream.Writable = function(options) {};
 
@@ -174,6 +178,7 @@ stream.Writable.prototype.end;
 
 /**
  * @constructor
+ * @struct
  * @extends stream.Writable
  */
 stream.WritableStream = function() {};
@@ -215,9 +220,8 @@ stream.WritableStream.prototype.destroySoon;
 
 /**
  * @constructor
- * @param {Object=} options
+ * @struct
  * @extends stream.Readable
- * Xextends stream.Writable
  */
 stream.Duplex = function(options) {};
 
@@ -228,9 +232,10 @@ stream.Duplex.prototype.allowHalfOpen;
 
 
 /**
- * @param {Object=} options
  * @constructor
+ * @struct
  * @extends stream.Duplex
+ * @param {Object=} options
  */
 stream.Transform = function(options) {};
 
@@ -251,9 +256,10 @@ stream.Transform._transform;
 stream.Transform._flush;
 
 /**
- * @param {Object=} options
  * @constructor
+ * @struct
  * @extends stream.Transform
+ * @param {Object=} options
  */
 stream.PassThrough = function(options) {};
 

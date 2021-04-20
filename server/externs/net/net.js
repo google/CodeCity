@@ -60,6 +60,7 @@ net.createConnection = function(arg1, arg2, arg3) {};
 
 /**
  * @constructor
+ * @struct
  * @param {createOptions=} options
  * @extends {events.EventEmitter}
  */
@@ -91,6 +92,7 @@ net.Server.prototype.listen = function(port, host, backlog, callback) {};
 
 /**
  * @constructor
+ * @struct
  * @param {{fd: ?*, type: ?string, allowHalfOpen: ?boolean}=} options
  * @extends events.EventEmitter
  */
@@ -103,5 +105,13 @@ net.Socket = function(options) {};
  * @return {void}
  */
 net.Socket.prototype.write = function(data, encoding, callback) {};
+
+/**
+ * @param {(string|Buffer)=} data
+ * @param {(string|function(...))=} encoding
+ * @param {function(...)=} callback
+ * @return {void}
+ */
+net.Socket.prototype.end = function(data, encoding, callback) {};
 
 module.exports = net;

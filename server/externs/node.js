@@ -94,14 +94,14 @@ process.kill = function (pid, signal) {};
  *     (===require('events')), but redefined here since
  *     closure-compiler won't let us require() that definition in an
  *     externs file.
- * @param {string} event
+ * @param {string|symbol} event
  * @param {function(...)} listener
  */
 process.on = function(event, listener) {};
 
 /**
  * Also inherited from EventEmitter.
- * @param {string} event
+ * @param {string|symbol} event
  * @param {function(...)} listener
  */
 process.once = function(event, listener) {};

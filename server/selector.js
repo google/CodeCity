@@ -27,6 +27,7 @@ var code = require('./code');
  * Type for all "special" selector parts (ones which do not represent
  * named variables / properties).
  * @constructor
+ * @struct
  */
 var SpecialPart = function(type) {
   this.type = type;

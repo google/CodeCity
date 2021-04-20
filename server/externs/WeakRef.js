@@ -27,8 +27,10 @@
 
 /**
  * @constructor
+ * @struct
  * @param {function(HOLDINGS)} cleanupCallback
  * @template TARGET, HOLDINGS, TOKEN
+ * @nosideeffects
  */
 // TODO(cpcallen): Make TARGET and TOKEN bounded to {!Object} once
 // closure-compiler supports bounded generic types.
