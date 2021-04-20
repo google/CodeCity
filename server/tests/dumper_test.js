@@ -447,6 +447,47 @@ exports.testDumperPrototypeExprForSelector_ = function(t) {
 };
 
 /**
+ * Unit tests for the Dumper.prototype.exprForCall_ method.
+ * @param {!T} t The test runner object.
+ * @suppress {accessControls}
+ */
+exports.testDumperPrototypeExprForCall_ = function(t) {
+  const intrp = new Interpreter();
+  const pristine = new Interpreter();
+  const dumper = new Dumper(pristine, intrp);
+
+  // Test dumping builtin calls with no arguments.  Note that eval is
+  // inserted in the global Scope at Interpreter construction time,
+  // while escape is not.
+  t.expect("Dumper.p.exprForCall_('eval')",
+           dumper.exprForCall_('eval'),
+           'eval()');  // eval is inserted in global scope at creation.
+
+  t.expect("Dumper.p.exprForCall_('escape')",
+           dumper.exprForCall_('escape'),
+           "(new 'escape')()");
+
+  // Test dumping builtin calls with primitive arguments.
+  t.expect("Dumper.p.exprForCall_('eval', [true])",
+           dumper.exprForCall_('eval', [true]),
+           "eval(true)");
+
+  t.expect("Dumper.p.exprForCall_('eval', ['foo', 42])",
+           dumper.exprForCall_('eval', ['foo', 42]),
+           "eval('foo', 42)");
+
+  // Test dumping builtin calls with object arguments.
+  t.expect("Dumper.p.exprForCall_('eval', [eval])",
+           dumper.exprForCall_('eval', [intrp.builtins.get('eval')]),
+           "eval(eval)");
+
+  // Test dumping builtin calls with Selector arguments.
+  t.expect("Dumper.p.exprForCall_('eval', [new Selector('foo.bar.baz')])",
+           dumper.exprForCall_('eval', [new Selector('foo.bar.baz')]),
+           "eval(foo.bar.baz)");
+};
+
+/**
  * Tests for the Dumper.prototype.dumpBinding method, and by
  * implication most of ScopeDumper and ObjectDumper.
  * @param {!T} t The test runner object.
