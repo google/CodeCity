@@ -36,11 +36,10 @@ async function gcAndFinalise() {
   // Cycle event loop to allow finalisers to run.  Need to cycle it
   // once before GC to ensure that WeakRefs can be cleared (their
   // targets can never be cleared in the same turn as the WeakRef was
-  // created), then again after to allow finalisers to run (though,
-  // as of node v12.12.0, the await with which this function is called
-  // is sufficient to achieve the second cycle).
+  // created), then again after to allow finalisers to run.
   await new Promise((res, rej) => setImmediate(res));
   gc();
+  await new Promise((res, rej) => setImmediate(res));
 }
   
 /**
