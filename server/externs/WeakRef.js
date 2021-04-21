@@ -16,7 +16,7 @@
  */
 
 /**
- * @fileoverview Closure Compiler externs for the new ES2020  WeakRef and
+ * @fileoverview Closure Compiler externs for the new ES2020 WeakRef and
  *     FinalizationRegistry API https://tc39.es/ecma262/#sec-managing-memory
  * @author cpcallen@google.com (Christopher Allen)
  * @externs
