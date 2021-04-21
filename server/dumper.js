@@ -287,7 +287,7 @@ Dumper.prototype.exprFor_ = function(value, ref, callable, funcName) {
   if (ref) objDumper.updateRef(ref);  // Safe new ref if specified.
   if (selector) return this.exprForSelector_(selector);
 
- // Object not yet referenced.  Is it a builtin?
+  // Object not yet referenced.  Is it a builtin?
   var key = intrp2.builtins.getKey(value);
   if (key) {
     var quoted = code.quote(key);
@@ -296,8 +296,11 @@ Dumper.prototype.exprFor_ = function(value, ref, callable, funcName) {
 
   // Seems to be a new object.  Check it really doesn't exist already
   // and that it will be referenceable.
-  if (objDumper.proto !== undefined) throw new Error('object already exists');
-  if (!objDumper.ref) throw Error('refusing to create non-referable object');
+  if (objDumper.proto !== undefined) {
+    throw new Error('object already exists but is not referenced');
+  } else if (!objDumper.ref) {
+    throw new Error('refusing to create non-referable object');
+  }
 
   var expr;
   if (value instanceof intrp2.Function) {
