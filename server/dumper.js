@@ -853,15 +853,15 @@ Dumper.prototype.prune = function(selector) {
 };
 
 /**
- * Mark a particular binding (as specified by a Selector) to pruned,
- * which will have the effect of trying to ensure it does not exist in
- * the state reconstructed by the dump output.
+ * Set the .prune flag on the ObjectDumper for the object identified
+ * by the given Selector to true.
  * TODO(cpcallen): actually delete pruned properties if necessary.
  * @param {!Selector} selector The selector for the binding to be pruned.
  */
 Dumper.prototype.pruneRest = function(selector) {
-  selector = new Selector(selector.concat(['']));  // TOOD(cpcallen): ugly!
+  selector = new Selector(selector.concat(['']));  // N.B. ugly hack!
   var c = this.getComponentsForSelector_(selector);
+  if (!(c.dumper instanceof ObjectDumper)) throw new TypeError();
   c.dumper.pruneRest = true;
 };
 
@@ -1313,9 +1313,11 @@ var ObjectDumper = function(obj) {
    */
   this.ref = null;
   /**
-   * If true, then .dump() will not do any additional work dumping
-   * bindings, beyond what has already been done by calls to
-   * .dumpBinding(), nor will it recursively dump any value object.
+   * If true, then .dump() will not dump any ordinary (property /
+   * member / entry) bindings.  This means that only bindings dumped
+   * by calls to .dumpBinding() will be dumped.  (Prototype and owner
+   * bindings will still be dumped unless they are individually
+   * .prune()ed.)
    * @type {boolean}
    */
   this.pruneRest = false;
@@ -1427,8 +1429,8 @@ ObjectDumper.prototype.dump = function(
   var /** !ObjectDumper.Done */ done = ObjectDumper.Done.DONE_RECURSIVELY;
   var /** ?ObjectDumper.Pending */ pending = null;
   var keys = this.obj.ownKeys(dumper.intrp2.ROOT);
-  var parts =
-      this.pruneRest ? [] : [Selector.PROTOTYPE, Selector.OWNER].concat(keys);
+  var parts = [Selector.PROTOTYPE, Selector.OWNER];
+  if (!this.pruneRest) parts = parts.concat(keys);
   for (i = 0; i < parts.length; i++) {
     var part = parts[i];
     if (this.prune_ && this.prune_.has(part)) {
