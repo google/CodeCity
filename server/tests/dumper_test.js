@@ -211,7 +211,13 @@ exports.testDumperPrototypeExprForPrimitive_ = function(t) {
  * @suppress {accessControls}
  */
 exports.testDumperPrototypeExprFor_ = function(t) {
+  // Create an Interperter with a UserFunction to dump.
   const intrp = new Interpreter();
+  intrp.createThreadForSrc('function foo(bar) {}');
+  intrp.run();
+  const func = /** @type {!Interpreter.prototype.UserFunction} */ (
+      intrp.global.get('foo'));
+
   const pristine = new Interpreter();
   const dumper = new Dumper(pristine, intrp);
 
@@ -223,11 +229,8 @@ exports.testDumperPrototypeExprFor_ = function(t) {
     dumper.getObjectDumper_(/** @type {!Interpreter.prototype.Object} */
         (intrp.builtins.get(b))).ref = new Components(dumper.global, b);
   }
-
-  // Create UserFunction to dump.
-  intrp.createThreadForSrc('function foo(bar) {}');
-  intrp.run();
-  const func = intrp.global.get('foo');
+  // Give foo a reference too, even though it has not been created yet.
+  dumper.getObjectDumper_(func).ref = new Components(dumper.global, 'foo');
 
   const cases = [
     [intrp.OBJECT, "new 'Object.prototype'"],
