@@ -573,13 +573,20 @@ exports.testDumperPrototypeDumpBinding = function(t) {
       title: 'recursion-simple',
       src: `
         var obj = {a: {id: 'a'}, b: {id: 'b'}, c: {id: 'c'}};
+        Object.setPrototypeOf(obj.c, {id: 'd'});
       `,
       // Mark obj.b.id to be pruned, and pruneRest of obj.c.
       prune: ['obj.b.id'],
       pruneRest: ['obj.c'],
       dump: [
-        ['obj', Do.RECURSE, "var obj = {};\nobj.a = {};\nobj.a.id = 'a';\n" +
-            'obj.b = {};\nobj.c = {};\n'],
+        ['obj', Do.RECURSE,
+         'var obj = {};\n' +
+             "obj.a = {};\n" +
+             "obj.a.id = 'a';\n" +
+             'obj.b = {};\n' +
+             'obj.c = {};\n' +
+             "(new 'Object.setPrototypeOf')(obj.c, {});\n" +
+             "(new 'Object.getPrototypeOf')(obj.c).id = 'd';\n"],
       ],
       after: [
         ['obj.a', Do.RECURSE],
