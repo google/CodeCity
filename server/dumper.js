@@ -202,10 +202,9 @@ Dumper.prototype.dump = function() {
   for (var key in this.intrp2.listeners_) {
     var port = Number(key);
     var server = this.intrp2.listeners_[port];
-    this.write(this.exprForBuiltin_('CC.connectionListen'), '(',
-               this.exprFor_(port), ', ', this.exprFor_(server.proto),
-               (server.timeLimit ? ', ' + this.exprFor_(server.timeLimit) : ''),
-               ');');
+    var args = [port, server.proto];
+    if (server.timeLimit) args.push(server.timeLimit);
+    this.write(this.exprForCall_('CC.connectionListen', args), ';');
   }
 };
 
@@ -406,8 +405,7 @@ Dumper.prototype.exprForCall_ = function(builtin, args) {
  */
 Dumper.prototype.exprForDate_ = function(date, dateDumper) {
   dateDumper.proto = this.intrp2.DATE;
-  return 'new ' + this.exprForBuiltin_('Date') +
-      "('" + date.date.toISOString() + "')";
+  return 'new ' + this.exprForCall_('Date', [date.date.toISOString()]);
 };
 
 /**
@@ -446,10 +444,9 @@ Dumper.prototype.exprForError_ = function(err, errDumper) {
   }
   // Try to set .message in the constructor call.
   var message = err.getOwnPropertyDescriptor('message', this.intrp2.ROOT);
-  var messageExpr = '';
-  if (message &&
-      (typeof message.value === 'string' || message.value === undefined)) {
-    messageExpr = this.exprFor_(message.value);
+  var args = [];
+  if (message && typeof message.value === 'string') {
+    args.push(message.value);
     var attr = errDumper.attributes['message'] =
         {writable: true, enumerable: false, configurable: true};
     errDumper.checkProperty('message', message.value, attr , message);
@@ -464,7 +461,7 @@ Dumper.prototype.exprForError_ = function(err, errDumper) {
   } else {
     errDumper.scheduleDeletion('stack');
   }
-  return 'new ' + this.exprForBuiltin_(constructor) + '(' + messageExpr + ')';
+  return 'new ' + this.exprForCall_(constructor, args);
 };
 
 /**
@@ -584,16 +581,17 @@ Dumper.prototype.exprForObject_ = function(obj, objDumper) {
   switch (obj.proto) {
     case null:
       objDumper.proto = null;
-      return this.exprForBuiltin_('Object.create') + '(null)';
+      return this.exprForCall_('Object.create', [null]);
     case this.intrp2.OBJECT:
       objDumper.proto = this.intrp2.OBJECT;
       return '{}';
     default:
       if (this.getObjectDumper_(obj.proto).proto !== undefined) {
+        // Record prototype connection.
         objDumper.proto = obj.proto;
-        return this.exprForBuiltin_('Object.create') + '(' +
-            // TODO(cpcallen): supply selector here?
-            this.exprFor_(obj.proto) + ')';
+        this.getObjectDumper_(obj.proto)
+            .updateRef(new Components(objDumper, Selector.PROTOTYPE));
+        return this.exprForCall_('Object.create', [obj.proto]);
       } else {
         // Can't set [[Prototype]] yet.  Do it later.
         objDumper.proto = this.intrp2.OBJECT;
@@ -725,7 +723,7 @@ Dumper.prototype.exprForSelector_ = function(selector) {
  */
 Dumper.prototype.exprForWeakMap_ = function(weakMap, weakMapDumper) {
   weakMapDumper.proto = this.intrp2.WEAKMAP;
-  return 'new ' + this.exprForBuiltin_('WeakMap') + '()';
+  return 'new ' + this.exprForCall_('WeakMap');
 };
 
 /**
@@ -1488,8 +1486,9 @@ ObjectDumper.prototype.dump = function(
   if (this.done < ObjectDumper.Done.DONE && done >= ObjectDumper.Done.DONE) {
     // Dump extensibility.
     if (!this.obj.isExtensible(dumper.intrp2.ROOT)) {
-      dumper.write(dumper.exprForBuiltin_('Object.preventExtensions'), '(',
-                   dumper.exprForSelector_(objSelector), ');');
+      dumper.write(
+          dumper.exprForCall_('Object.preventExtensions', [objSelector]),
+          ';');
     }
     this.done = ObjectDumper.Done.DONE;  // Set now to allow cycles to complete.
   }
@@ -1578,9 +1577,14 @@ ObjectDumper.prototype.dumpOwner_ = function(
     dumper, todo, partRef, objSelector,bindingSelector) {
   var value = /** @type {?Interpreter.prototype.Object} */(this.obj.owner);
   if (todo >= Do.SET && this.doneOwner_ < Do.SET) {
-    dumper.write(dumper.exprForBuiltin_('Object.setOwnerOf'), '(',
-                 dumper.exprForSelector_(objSelector), ', ',
-                 dumper.exprFor_(value, partRef), ');');
+    // Record owner connection.
+    if (value !== null) {
+      dumper.getObjectDumper_(value)
+          .updateRef(new Components(this, Selector.OWNER));
+    }
+    dumper.write(
+        dumper.exprForCall_('Object.setOwnerOf', [objSelector, value]),
+        ';');
     this.doneOwner_ = (value === null) ? Do.RECURSE: Do.DONE;
   }
   return this.doneOwner_;
@@ -1683,10 +1687,15 @@ ObjectDumper.prototype.dumpPrototype_ = function(
     dumper, todo, partRef, objSelector, bindingSelector) {
   var value = this.obj.proto;
   if (todo >= Do.SET && this.doneProto_ < Do.SET) {
-    dumper.write(dumper.exprForBuiltin_('Object.setPrototypeOf'), '(',
-                 dumper.exprForSelector_(objSelector), ', ',
-                 dumper.exprFor_(value, partRef), ');');
+    // Record prototype connection.
     this.proto = value;
+    if (value !== null) {
+      dumper.getObjectDumper_(value)
+          .updateRef(new Components(this, Selector.PROTOTYPE));
+    }
+    dumper.write(
+        dumper.exprForCall_('Object.setPrototypeOf', [objSelector, value]),
+        ';');
     this.doneProto_ = (value === null) ? Do.RECURSE: Do.DONE;
   }
   return this.doneProto_;
