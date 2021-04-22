@@ -811,6 +811,7 @@ Dumper.prototype.getScopeDumper_ = function(scope) {
 
 /**
  * Returns true if a given name is shadowed in the current scope.
+ * TODO(cpcallen): Use .reachable on the global Scope's ScopeDumper.
  * @private
  * @param {string} name Variable name that might be shadowed.
  * @param {!Interpreter.Scope=} scope Scope in which name is defined.
@@ -1052,6 +1053,18 @@ SubDumper.prototype.prune = function(part) {
 };
 
 /**
+ * Return true the specified part is presently reachable - i.e., could
+ * be set or read by an expression in the currently-dumped scope.
+ * @abstract
+ * @param {!Dumper} dumper Dumper to which this SubDumper belongs.
+ * @param {Selector.Part=} part The binding whose reachability is of
+ *     interest.  Ignored, since all object bindings are always
+ *     reachable if the object is.
+ * @return {boolean}
+ */
+SubDumper.prototype.reachable = function(dumper, part) {};
+
+/**
  * Mark a particular binding (as specified by a Part) to be skipped,
  * which will have the effect of preventing any further dumping of it
  * until it is unskipped.
@@ -1232,6 +1245,27 @@ ScopeDumper.prototype.getValue = function(dumper, part) {
     throw new ReferenceError(part + ' is not defined');
   }
   return this.scope.get(part);
+};
+
+/**
+ * Return true iff the given binding (which must be a variable name)
+ * is currently reachable.  Specifically, this will return true if:
+ *
+ * 1. this.scope is the current value dumper.scope, since we can
+ *    always access existing bindings and create new ones in the
+ *    current scope.
+ * 2. this.scope is an outer scope of dumper.scope and par 
+ *    is not shadowed in dumper.scope or any intervening one.
+ *
+ * BUG(cpcallen): Only #1 is implemented at the moment.
+ *
+ * @param {!Dumper} dumper Dumper to which this ScopeDumper belongs.
+ * @param {Selector.Part=} part Variable name whose reachability is of
+ *     interest.
+ * @return {boolean}
+ */
+ScopeDumper.prototype.reachable = function(dumper, part) {
+  return this.scope === dumper.scope;
 };
 
 /**
@@ -1807,6 +1841,18 @@ ObjectDumper.prototype.isWritable = function(dumper, key) {
 };
 
 /**
+ * Return true iff this.object is currently reachable.
+ * @param {!Dumper} dumper Dumper to which this ObjectDumper belongs.
+ * @param {Selector.Part=} part The binding whose reachability is of
+ *     interest.  Ignored, since all object bindings are always
+ *     reachable if the object is.
+ * @return {boolean}
+ */
+ObjectDumper.prototype.reachable = function(dumper, part) {
+  return Boolean(this.ref) && this.ref.dumper.reachable(dumper, this.ref.part);
+};
+
+/**
  * Record that the (ressurected) object will have a property, not on
  * the original, that needs to be deleted.
  * @param {string} key The property key to delete.
@@ -1904,32 +1950,13 @@ ObjectDumper.prototype.survey = function(dumper) {
  * @return {void}
  */
 ObjectDumper.prototype.updateRef = function(dumper, ref) {
-  /**
-   * Return true iff ref is reachable, i.e. has a chain of .refs going
-   * back to the global scope.
-   * TODO(cpcallen): support inner scopes.
-   * @param {?Components} ref
-   * @return {boolean}
-   */
-  function reachable(ref) {
-    if (!ref) return false;
-    if (ref.dumper instanceof ScopeDumper) {
-      return (ref.dumper.scope === dumper.intrp2.global);
-    } else if (ref.dumper instanceof ObjectDumper) {
-      if (!ref.dumper.ref) return false;
-      return reachable(ref.dumper.ref);
-    } else {
-      throw new TypeError('unknown SubDumper subtype');
-    }
-  }
-
   if (ref.dumper === this) return;  // Ignore references from self entirely.
   if (!this.ref) {  // Prefer any reference over no reference.
     this.ref = ref;
     return;
   }
-  if (reachable(this.ref)) {
-    if (reachable(ref)) {  // Both existing and new refs reachable.
+  if (this.ref.isReachable(dumper)) {
+    if (ref.isReachable(dumper)) {  // Both existing and new refs reachable.
       if (this.preferredRef) {  // Prefer .preferredRef over others.
         if (this.preferredRef.equals(this.ref)) {
           return;
@@ -1947,7 +1974,7 @@ ObjectDumper.prototype.updateRef = function(dumper, ref) {
       if (newBadness < oldBadness) this.ref = ref;
     }
   } else {
-    if (reachable(ref)) {  // Existing ref unreachable but new ref is!
+    if (ref.isReachable(dumper)) {  // Existing ref unreachable but new ref is!
       this.ref = ref;
     } else {  // Neither existing nor new refs reachable.
       var oldBadness =
@@ -2072,6 +2099,15 @@ var Components = function(dumper, part) {
  */
 Components.prototype.equals = function(that) {
   return this.dumper === that.dumper && this.part === that.part;
+};
+
+/**
+ * Return true iff this reference is currently reachable.
+ * @param {!Dumper} dumper Dumper to which this Components belongs.
+ * @return {boolean}
+ */
+Components.prototype.isReachable = function(dumper) {
+  return this.dumper.reachable(dumper, this.part);
 };
 
 /**
