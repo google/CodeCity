@@ -30,8 +30,8 @@ const Selector = require('../selector');
 const {T} = require('./testing');
 const util = require('util');
 
-// Unpack test-only exports:
-const {Components, ObjectDumper} = testOnly;
+// Unpack test-only exports.
+const {Components, ObjectDumper, ScopeDumper} = testOnly;
 
 /**
  * A mock Writable, for testing.
@@ -81,7 +81,7 @@ exports.testObjectDumperPrototypeIsWritable = function(t) {
 
   dumper.dumpBinding(new Selector('Object'), Do.SET);
   dumper.dumpBinding(new Selector('Object.prototype'), Do.SET);
-  
+
   const objectPrototypeDumper = dumper.getObjectDumper_(intrp.OBJECT);
   const parentDumper = dumper.getDumperFor('parent');
   const childDumper = dumper.getDumperFor('child');
@@ -133,6 +133,101 @@ exports.testObjectDumperPrototypeIsWritable = function(t) {
       childDumper.isWritable(dumper, 'bar'), true);
   t.expect("childDumper.isWritable('baz')  // 3",
       childDumper.isWritable(dumper, 'baz'), true);
+};
+
+/**
+ * Tests for the ObjectDumper.prototype.updateRef method.
+ * @suppress {accessControls}
+ */
+exports.testObjectDumperUpdateRef = function(t) {
+  const intrp = new Interpreter();
+
+  // ScopeDumper for global scope and ObjectDumpers for some arbitrary objects.
+  const globalDumper = new ScopeDumper(intrp.global);
+  const fooDumper = new ObjectDumper(new intrp.Object());
+  const barDumper = new ObjectDumper(new intrp.Object());
+  const reachableDumper = new ObjectDumper(new intrp.Object());
+  const unreachableDumper = new ObjectDumper(new intrp.Object());
+
+  // Stub Dumper.
+  const /** !Dumper */ dumper = /** @type {?} */({
+    intrp2: intrp,
+  });
+
+  // Scenario 0: Reject self references.
+  fooDumper.updateRef(dumper, new Components(fooDumper, ''));
+  t.expect('fooDumper.updateRef(<foo, "">); fooDumper.ref',
+           fooDumper.ref, null);
+
+  // Scenario 1: Typical cases during dumping.  We've dumped foo and
+  // are dumping foo.bar, which might also have (not preferred)
+  // references from reachable and unreachable objects or the global
+  // scope.
+  fooDumper.preferredRef = new Components(globalDumper, 'foo');
+  fooDumper.ref = fooDumper.preferredRef;  // Reachable.
+  barDumper.preferredRef = new Components(fooDumper, 'bar');  // foo.bar
+  barDumper.ref = null;  // Not yet reachable.
+
+  reachableDumper.preferredRef = new Components(globalDumper, 'reachable');
+  reachableDumper.ref = reachableDumper.preferredRef;  // Reachable.
+  unreachableDumper.preferredRef = new Components(globalDumper, 'unreachable');
+  unreachableDumper.ref = null;  // Not yet reachable.
+  
+  // Test all N*N combinations of possible (existing, proposed) refs
+  // for bar.  Cases are in order increrasing preferability: earlier
+  // ones should be replace by later but not vice-versa.
+  const cases = [
+    null,  // No known reference yet.
+
+    // Refs from an unreachable object are better than nothing.
+    new Components(unreachableDumper, Selector.PROTOTYPE),
+    new Components(unreachableDumper, '#hash'),
+    new Components(unreachableDumper, '42'),
+    new Components(unreachableDumper, 'aaaaaaaaaa'),
+    new Components(unreachableDumper, 'bar'),
+
+    // Refs from reachable objects are better - but other than
+    // foo.bar, these two objects are equally good so order just comes
+    // down to selector badness.
+    new Components(reachableDumper, Selector.PROTOTYPE),
+    new Components(fooDumper, Selector.PROTOTYPE),
+    new Components(reachableDumper, '#hash'),
+    new Components(fooDumper, '#hash'),
+    new Components(reachableDumper, '42'),
+    new Components(fooDumper, '42'),
+    new Components(reachableDumper, 'aaaaaaaaaa'),
+    new Components(fooDumper, 'aaaaaaaaaa'),
+    new Components(reachableDumper, 'bar'),
+    new Components(reachableDumper, 'b'),
+    new Components(fooDumper, 'b'),
+
+    // Refs from a scope are generally better.
+    new Components(globalDumper, 'aaaaaaaaaa'),
+    new Components(globalDumper, 'bar'),
+    new Components(globalDumper, 'b'),
+
+    // The preferred reference is best of all.
+    new Components(fooDumper, 'bar'),
+  ];
+  for (var i = 0; i < cases.length; i++) {
+    for (var j = 1; j < cases.length; j++) {  // Don't call updateRef with null.
+      if (!reachableDumper.ref) throw new Error();
+      const before = cases[i];
+      const suggested = cases[j];
+      const expected = cases[Math.max(i, j)];
+      const name = util.format('updateRef %o to %o?', before, suggested);
+      const message =
+          util.format(['barDumper.ref = %s;',
+                       'barDumper.updateRef(%s);',
+                       'barDumper.ref;'].map(s => '    ' + s).join('\n'),
+                      before, suggested);
+      barDumper.ref = before;
+      barDumper.updateRef(dumper, suggested);
+      t.expect(name, barDumper.ref, expected, message);
+    }
+  }
+
+  // TODO(cpcallen): Scenario 2: unreachable refs (e.g. due to scoping).
 };
 
 /**
@@ -863,7 +958,7 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         // Verify property set before extensibility prevented.
         ['obj2', Do.RECURSE, 'obj2.id = 2;\nObject.preventExtensions(obj2);\n'],
         // Verify treeOnly doesn't prevent .preventExtensions being called.
-        ['obj3', Do.RECURSE, 'obj3.id = 3;\nobj3.other = {};\n' + 
+        ['obj3', Do.RECURSE, 'obj3.id = 3;\nobj3.other = {};\n' +
             'Object.preventExtensions(obj3);\n', Do.DONE, {treeOnly: true}],
         // Verify we don't call .preventExtensions more than once.
         ['obj3', Do.RECURSE, "obj3.other.id = 'other';\n", Do.RECURSE,
