@@ -1931,11 +1931,9 @@ ObjectDumper.prototype.updateRef = function(dumper, ref) {
   if (reachable(this.ref)) {
     if (reachable(ref)) {  // Both existing and new refs reachable.
       if (this.preferredRef) {  // Prefer .preferredRef over others.
-        if (this.ref.dumper === this.preferredRef.dumper &&
-            this.ref.part === this.preferredRef.part) {
+        if (this.preferredRef.equals(this.ref)) {
           return;
-        } else if(ref.dumper === this.preferredRef.dumper &&
-            ref.part === this.preferredRef.part) {
+        } else if(this.preferredRef.equals(ref)) {
           this.ref = ref;
           return;
         }
@@ -2065,6 +2063,15 @@ ObjectDumper.Pending.prototype.toString = function() {
 var Components = function(dumper, part) {
   /** @const {!SubDumper} */ this.dumper = dumper;
   /** @const {Selector.Part} */ this.part = part;
+};
+
+/**
+ * Return true iff this and that represent the same binding.
+ * @param {!Components} that Another Components to compare this with.
+ * @return {boolean}
+ */
+Components.prototype.equals = function(that) {
+  return this.dumper === that.dumper && this.part === that.part;
 };
 
 /**
