@@ -152,6 +152,7 @@ exports.testObjectDumperUpdateRef = function(t) {
   // Stub Dumper.
   const /** !Dumper */ dumper = /** @type {?} */({
     intrp2: intrp,
+    scope: intrp.global,
   });
 
   // Scenario 0: Reject self references.
