@@ -1886,46 +1886,85 @@ ObjectDumper.prototype.survey = function(dumper) {
 };
 
 /**
- * Record a new reference to the object, if it is better (by Selector
- * badness) than the existing one.
+ * Record a new reference to the object, if it is 'better' than the
+ * existing one.  'Better' means, in order of priority:
+ *
+ * - Ignore references from self entirely.
+ * - Prefer any reference over no reference.
+ * - Prefer references from reachable objects over ones from
+ *   unreachable objects.
+ * - If both existing (this.ref) and proposed (ref) .dumpers are reachable:
+ *   - Prefer .preferredRef over others, otherwise
+ *   - Prefer reference with lowest overall badness.
+ * - If neither .dumper is reachable, prefer reference with lowest overall
+ *   badness when using .dumpers's .preferredRef instead.
+ *
  * @param {!Dumper} dumper The Dumper to which this ObjectDumber belongs.
  * @param {!Components} ref The new reference.
  * @return {void}
  */
 ObjectDumper.prototype.updateRef = function(dumper, ref) {
-  if (ref.dumper === this) return;  // Ignore self-references.
-  if (!this.ref) {
-    this.ref = ref;  // Any ref is better than no ref.
-  } else if (this.preferredRef) {  // Can compare to preferredRef.
-    if (ref.dumper === this.preferredRef.dumper) {
-      if (this.ref.dumper !== this.preferredRef.dumper ||
-          Selector.partBadness(ref.part) <
-          Selector.partBadness(this.ref.part)) {
-        this.ref = ref;
-      }
-    } else if (this.ref.dumper === this.preferredRef.dumper) {
-      return;
-    } 
-  }
-  // Have exisiting ref.  Either have no preferredRef, or neither
-  // this.ref nor ref are from preferred object/scope.  Try to compare
-  // selector badness.
-  var oldBadness;
-  var newBadness;
-  try {
-    oldBadness = this.getSelector().badness();
-  } catch (e) {
-    oldBadness = Infinity;
-  }
-  try {
-    newBadness = Selector.partBadness(ref.part);
-    if (ref.dumper instanceof ObjectDumper) {
-      newBadness += ref.dumper.getSelector().badness();
+  /**
+   * Return true iff ref is reachable, i.e. has a chain of .refs going
+   * back to the global scope.
+   * TODO(cpcallen): support inner scopes.
+   * @param {?Components} ref
+   * @return {boolean}
+   */
+  function reachable(ref) {
+    if (!ref) return false;
+    if (ref.dumper instanceof ScopeDumper) {
+      return (ref.dumper.scope === dumper.intrp2.global);
+    } else if (ref.dumper instanceof ObjectDumper) {
+      if (!ref.dumper.ref) return false;
+      return reachable(ref.dumper.ref);
+    } else {
+      throw new TypeError('unknown SubDumper subtype');
     }
-  } catch (e) {
-    newBadness = Infinity;
   }
-  if (newBadness < oldBadness) this.ref = ref;
+
+  if (ref.dumper === this) return;  // Ignore references from self entirely.
+  if (!this.ref) {  // Prefer any reference over no reference.
+    this.ref = ref;
+    return;
+  }
+  if (reachable(this.ref)) {
+    if (reachable(ref)) {  // Both existing and new refs reachable.
+      if (this.preferredRef) {  // Prefer .preferredRef over others.
+        if (this.ref.dumper === this.preferredRef.dumper &&
+            this.ref.part === this.preferredRef.part) {
+          return;
+        } else if(ref.dumper === this.preferredRef.dumper &&
+            ref.part === this.preferredRef.part) {
+          this.ref = ref;
+          return;
+        }
+      }
+      // Otherwise, prefer ref with lowest overall badness.
+      var oldBadness = this.getSelector().badness();
+      var newBadness = Selector.partBadness(ref.part);
+      if (ref.dumper instanceof ObjectDumper) {
+        newBadness += ref.dumper.getSelector().badness();
+      }
+      if (newBadness < oldBadness) this.ref = ref;
+    }
+  } else {
+    if (reachable(ref)) {  // Existing ref unreachable but new ref is!
+      this.ref = ref;
+    } else {  // Neither existing nor new refs reachable.
+      var oldBadness =
+          Selector.partBadness(this.ref.part) + 
+          (this.ref.dumper instanceof ObjectDumper ?
+           this.ref.dumper.getSelector(/*preferred=*/true).badness() :
+           0);
+      var newBadness =
+          Selector.partBadness(ref.part) + 
+          (ref.dumper instanceof ObjectDumper ?
+           ref.dumper.getSelector(/*preferred=*/true).badness() :
+           0);
+      if (newBadness < oldBadness) this.ref = ref;
+    }
+  }
 };
 
 /**
@@ -2046,7 +2085,7 @@ Components.prototype[util.inspect.custom] = function(depth, opts) {
       dumper = '<unknown>';
     }
   }
-  return util.format('Components<%s, %s>', dumper, this.part);
+  return util.format('[%s.%s]', dumper, this.part);
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -2207,4 +2246,5 @@ exports.Writable = Writable;
 exports.testOnly = {
   Components: Components,
   ObjectDumper: ObjectDumper,
+  ScopeDumper: ScopeDumper,
 };
