@@ -69,9 +69,10 @@ regexps.string = new RegExp('(?:' + regexps.singleQuotedString.source + '|' +
 regexps.stringExact = new RegExp('^' + regexps.string.source + '$');
 
 /**
- * RegExp matching a valid JavaScript identifier.  Note that this is
- * fairly conservative, because ANY Unicode letter can appear in an
- * identifier - but the full regexp is absurdly complicated.
+ * RegExp matching a valid JavaScript identifier (strictly an
+ * IdentifierName, which does not exclude ReservedWord).  Note that
+ * this is fairly conservative, because ANY Unicode letter can appear
+ * in an identifier - but the full regexp is absurdly complicated.
  * @const
  */
 regexps.identifier = /[A-Za-z_$][A-Za-z0-9_$]*/g;
