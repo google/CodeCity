@@ -60,7 +60,7 @@ module.exports = [
         'else';
       }
     `,
-    expected: 'then'
+    expected: 'then',
   },
   {
     name: 'if(false)',
@@ -71,22 +71,22 @@ module.exports = [
         'else';
       }
     `,
-    expected: 'else'
+    expected: 'else',
   },
   {
     name: 'simpleAssignment',
     src: `var x = 0; x = 44; x;`,
-    expected: 44
+    expected: 44,
   },
   {
     name: 'propertyAssignment',
     src: `var o = {}; o.foo = 45; o.foo;`,
-    expected: 45
+    expected: 45,
   },
   {
     name: 'getPropertyOnPrimitive',
     src: `'foo'.length;`,
-    expected: 3
+    expected: 3,
   },
   {
     name: 'setPropertyOnPrimitive',
@@ -97,7 +97,7 @@ module.exports = [
         e.name;
       }
     `,
-    expected: 'TypeError'
+    expected: 'TypeError',
   },
   {
     src: `var x = 45; x++; x++;`,
@@ -114,12 +114,12 @@ module.exports = [
   {
     name: 'Effect of += on left argument',
     src: `var x = 40, y = 8; x += y; x;`,
-    expected: 48
+    expected: 48,
   },
   {
     name: 'Effect of += on right argument',
     src: `var x = 40, y = 8; x += y; y;`,
-    expected: 8
+    expected: 8,
   },
   {
     src: `var v, f = function() {v = 49;}; f(); v;
@@ -133,42 +133,42 @@ module.exports = [
       myAssignedFunc = function() {};
       myAssignedFunc.name;
     `,
-    expected: 'myAssignedFunc'
+    expected: 'myAssignedFunc',
   },
   {
     name: 'objectExprSetsAnonFuncName',
     src: `({myPropFunc: function() {}}).myPropFunc.name;`,
-    expected: 'myPropFunc'
+    expected: 'myPropFunc',
   },
   {
     name: 'varDeclSetsAnonFuncName',
     src: `var myVarDeclFunc = function() {}; myVarDeclFunc.name;`,
-    expected: 'myVarDeclFunc'
+    expected: 'myVarDeclFunc',
   },
   {
     name: 'funExpWithParameter',
     src: `var v; var f = function(x) {v = x;}; f(50); v;`,
-    expected: 50
+    expected: 50,
   },
   {
     name: 'funExpParameterNotShadowedByVar',
     src: `var f = function(x) {var x; return x;}; f(50.1);`,
-    expected: 50.1
+    expected: 50.1,
   },
   {
     name: 'funExpParameterNotShadowedByVar',
     src: `var f = function(x) {var x = 50.2; return x;}; f(50.2);`,
-    expected: 50.2
+    expected: 50.2,
   },
   {
     name: 'functionWithReturn',
     src: `(function(x) {return x;})(51);`,
-    expected: 51
+    expected: 51,
   },
   {
     name: 'functionWithoutReturn',
     src: `(function() {})();`,
-    expected: undefined
+    expected: undefined,
   },
   {
     name: 'multipleReturn',
@@ -182,7 +182,7 @@ module.exports = [
       }
       f();
     `,
-    expected: false
+    expected: false,
   },
   {
     name: 'throwCatch',
@@ -196,7 +196,7 @@ module.exports = [
         e * 2;
       }
     `,
-    expected: 52
+    expected: 52,
   },
   {
     name: 'throwCatchFalsey',
@@ -207,20 +207,20 @@ module.exports = [
         'caught ' + String(e);
       }
     `,
-    expected: 'caught null'
+    expected: 'caught null',
   },
   // N.B.: This and next tests have no equivalent in the test DB.
   {
     name: 'throwUnhandledError',
     src: `throw new Error('not caught');`,
     options: {noLog: ['unhandled']},
-    expected: undefined
+    expected: undefined,
   },
   {
     name: 'throwUnhandledException',
     src: `throw 'not caught';`,
     options: {noLog: ['unhandled']},
-    expected: undefined
+    expected: undefined,
   },
   {
     src: `try {throw new Error('not caught');} finally {}`,
@@ -243,12 +243,12 @@ module.exports = [
       x = (y = 60, z = 5, 0.5);
       x + y + z;
     `,
-    expected: 65.5
+    expected: 65.5,
   },
   {
     name: 'labeledStatement',
     src: `foo: 54;`,
-    expected: 54
+    expected: 54,
   },
   {
     name: 'whileLoop',
@@ -257,7 +257,7 @@ module.exports = [
       while (a < 55) a++;
       a;
     `,
-    expected: 55
+    expected: 55,
   },
   {
     name: 'while(false)',
@@ -266,7 +266,7 @@ module.exports = [
       while (false) a++;
       a;
     `,
-    expected: 56
+    expected: 56,
   },
   {
     name: 'do ... while(false)',
@@ -275,7 +275,7 @@ module.exports = [
       do a++; while (false);
       a;
     `,
-    expected: 57
+    expected: 57,
   },
   {
     name: 'do ... break ... while',
@@ -288,7 +288,7 @@ module.exports = [
       } while (false);
       a;
     `,
-    expected: 58
+    expected: 58,
   },
   {
     src: `foo: break foo;`,
@@ -308,7 +308,7 @@ module.exports = [
       }
       a;
     `,
-    expected: 59
+    expected: 59,
   },
   {
     name: 'do ... while with try ... continue ... finally ...',
@@ -323,7 +323,7 @@ module.exports = [
       } while (false);
       a;
     `,
-    expected: 60
+    expected: 60,
   },
   {
     name: 'while with try ... break ... finally continue',
@@ -338,7 +338,7 @@ module.exports = [
       }
       a;
     `,
-    expected: 61
+    expected: 61,
   },
   {
     name: 'while with try ... return ... finally continue',
@@ -355,7 +355,7 @@ module.exports = [
         return i;
       })();
     `,
-    expected: 62
+    expected: 62,
   },
   {
     src: `63 || 'foo';`,
@@ -368,7 +368,7 @@ module.exports = [
   {
     name: '|| short-circuit',
     src: `var r = 0; true || (r++); r;`,
-    expected: 0
+    expected: 0,
   },
   {
     src: `({}) && 65;`,
@@ -381,7 +381,7 @@ module.exports = [
   {
     name: '&&  sort-circuit',
     src: `var r = 0; false && (r++); r;`,
-    expected: 0
+    expected: 0,
   },
   {
     name: 'for',
@@ -392,7 +392,7 @@ module.exports = [
       }
       t;
     `,
-    expected: 66
+    expected: 66,
   },
   {
     name: 'forIn',
@@ -401,7 +401,7 @@ module.exports = [
       for (var i in a) {x += a[i];}
       x;
     `,
-    expected: 67
+    expected: 67,
   },
   {
     name: 'forInMemberExp',
@@ -410,7 +410,7 @@ module.exports = [
       for (o.foo in a) {x *= a[o.foo];}
       x;
     `,
-    expected: 68
+    expected: 68,
   },
   {
     name: 'forInMembFunc',
@@ -421,7 +421,7 @@ module.exports = [
       for (f().foo in a) {x += a[o.foo];}
       x;
     `,
-    expected: 69
+    expected: 69,
   },
   {
     name: 'forInNullUndefined',
@@ -432,7 +432,7 @@ module.exports = [
       for (f().foo in undefined) {x++;}
       x;
     `,
-    expected: 0
+    expected: 0,
   },
   {
     name: 'switchDefaultFirst',
@@ -445,7 +445,7 @@ module.exports = [
           'fail';
       };
     `,
-    expected: 'OK'
+    expected: 'OK',
   },
   {
     name: 'switchDefaultOnly',
@@ -455,7 +455,7 @@ module.exports = [
           'OK';
       };
     `,
-    expected: 'OK'
+    expected: 'OK',
   },
   {
     name: 'switchEmptyToEnd',
@@ -468,7 +468,7 @@ module.exports = [
         case 'bar':
       };
     `,
-    expected: 'ok'
+    expected: 'ok',
   },
   {
     name: 'thisInMethod',
@@ -479,7 +479,7 @@ module.exports = [
       };
       o.f();
     `,
-    expected: 70
+    expected: 70,
   },
   {
     name: 'thisInFormerMethod',
@@ -488,12 +488,12 @@ module.exports = [
       var g = o.f;
       g();
     `,
-    expected: undefined
+    expected: undefined,
   },
   {
     name: 'thisGlobal',
     src: `this;`,
-    expected: undefined
+    expected: undefined,
   },
   {
     src: `[].length;`,
@@ -509,7 +509,7 @@ module.exports = [
       var a = [,undefined,null,0,false];
       !(0 in a) && (1 in a) && (2 in a) && (3 in a) && (4 in a);
     `,
-    expected: true
+    expected: true,
   },
   {
     name: 'arrayLengthPropertyDescriptor',
@@ -518,7 +518,7 @@ module.exports = [
       var pd = Object.getOwnPropertyDescriptor(a, 'length');
       (pd.value === 3) && pd.writable && !pd.enumerable && !pd.configurable;
     `,
-    expected: true
+    expected: true,
   },
   {
     name: 'arrayLength',
@@ -602,7 +602,7 @@ module.exports = [
         String(e);
       }
     `,
-    expected: 'OK'
+    expected: 'OK',
   },
   {
     name: 'arrayLengthWithNonWritableProps',
@@ -613,7 +613,7 @@ module.exports = [
       a.length = 0;
       a[0] === undefined && a.length === 0;
     `,
-    expected: true
+    expected: true,
   },
   {
     name: 'arrayLengthWithNonConfigurableProps',
@@ -627,12 +627,12 @@ module.exports = [
         e.name;
       }
     `,
-    expected: 'TypeError'
+    expected: 'TypeError',
   },
   {
     name: 'compValEmptyBlock',
     src: `{};`,
-    expected: undefined
+    expected: undefined,
   },
   {
     src: `undefined;`,
@@ -641,7 +641,7 @@ module.exports = [
   {
     name: 'unaryVoid',
     src: `var x = 70; (undefined === void x++) && x;`,
-    expected: 71
+    expected: 71,
   },
   {
     src: `+'72';`,
@@ -680,7 +680,7 @@ module.exports = [
       }
       (ok === tests.length) ? 'pass' : 'fail';
     `,
-    expected: 'pass'
+    expected: 'pass',
   },
   {
     name: 'unaryTypeofUndeclared',
@@ -691,12 +691,12 @@ module.exports = [
         'whoops!'
       }
     `,
-    expected: 'undefined'
+    expected: 'undefined',
   },
   {
     name: 'binaryIn',
     src: `var o = {foo: 'bar'}; 'foo' in o && !('bar' in o);`,
-    expected: true
+    expected: true,
   },
   {
     name: 'binaryInParent',
@@ -705,7 +705,7 @@ module.exports = [
       var o = Object.create(p);
       'foo' in o && !('bar' in o);
     `,
-    expected: true
+    expected: true,
   },
   {
     src: `'length' in [];`,
@@ -720,7 +720,7 @@ module.exports = [
         e.name;
       }
     `,
-    expected: 'TypeError'
+    expected: 'TypeError',
   },
   {
     name: 'instanceofBasics',
@@ -729,7 +729,7 @@ module.exports = [
       var f = new F;
       f instanceof F && f instanceof Object && !(f.prototype instanceof F);
     `,
-    expected: true
+    expected: true,
   },
   {
     name: 'instanceofNonObjectLHS',
@@ -738,7 +738,7 @@ module.exports = [
       F.prototype = null;
       42 instanceof F;
     `,
-    expected: false
+    expected: false,
   },
   {
     name: 'instanceofNonFunctionRHS',
@@ -749,7 +749,7 @@ module.exports = [
         e.name;
       }
     `,
-    expected: 'TypeError'
+    expected: 'TypeError',
   },
   {
     name: 'instanceofNonObjectPrototype',
@@ -762,7 +762,7 @@ module.exports = [
         e.name;
       }
     `,
-    expected: 'TypeError'
+    expected: 'TypeError',
   },
   {
     name: 'undefined.foo',
@@ -773,7 +773,7 @@ module.exports = [
         e.name;
       }
     `,
-    expected: 'TypeError'
+    expected: 'TypeError',
   },
   {
     name: 'undefined.foo = ...',
@@ -785,7 +785,7 @@ module.exports = [
         e.name + ',' + c;
       }
     `,
-    expected: 'TypeError,0'
+    expected: 'TypeError,0',
   },
   {
     name: 'null.foo',
@@ -796,7 +796,7 @@ module.exports = [
         e.name;
       }
     `,
-    expected: 'TypeError'
+    expected: 'TypeError',
   },
   {
     name: 'null.foo = ...',
@@ -808,7 +808,7 @@ module.exports = [
         e.name + ',' + c;
       }
     `,
-    expected: 'TypeError,0'
+    expected: 'TypeError,0',
   },
   {
     name: 'delete',
@@ -817,12 +817,12 @@ module.exports = [
       (delete o.quux) + ('foo' in o) + (delete o.foo) +
           !('foo' in o) + (delete o.foo);
     `,
-    expected: 5
+    expected: 5,
   },
   {
     name: 'deleteNonexistentFromPrimitive',
     src: `(delete false.nonexistent) && (delete (42).toString);`,
-    expected: true
+    expected: true,
   },
   // This "actually" tries to delete the non-configurable own .length
   // property from the auto-boxed String instance created by step 4a
@@ -839,7 +839,7 @@ module.exports = [
         e.name;
       }
     `,
-    expected: 'TypeError'
+    expected: 'TypeError',
   },
   {
     name: 'funcDecl',
@@ -851,7 +851,7 @@ module.exports = [
       f();
       v;
     `,
-    expected: 75
+    expected: 75,
   },
   {
     name: 'namedFunctionExpression',
@@ -864,17 +864,17 @@ module.exports = [
       };
       f(152)
     `,
-    expected: 76
+    expected: 76,
   },
   {
     name: 'namedFunExpNameBinding',
     src: `var f = function foo() {return foo;}; f() === f;`,
-    expected: true
+    expected: true,
   },
   {
     name: 'namedFunExpNameBindingNoLeak',
     src: `var f = function foo() {}; typeof foo;`,
-    expected: 'undefined'
+    expected: 'undefined',
   },
   {
     name: 'namedFunExpNameBindingImmutable',
@@ -888,7 +888,7 @@ module.exports = [
       };
       f();
     `,
-    expected: 'TypeError'
+    expected: 'TypeError',
   },
   {
     name: 'namedFunExpNameBindingShadowedByParam',
@@ -899,7 +899,7 @@ module.exports = [
       };
       f(76);
     `,
-    expected: 76.1
+    expected: 76.1,
   },
   {
     name: 'namedFunExpNameBindingShadowedByVar',
@@ -911,7 +911,7 @@ module.exports = [
       };
       f();
     `,
-    expected: 76.2
+    expected: 76.2,
   },
   {
     name: 'closureIndependence',
@@ -923,7 +923,7 @@ module.exports = [
       var plus4 = makeAdder(4);
       plus3(plus4(70));
     `,
-    expected: 77
+    expected: 77,
   },
   {
     name: 'internalObjectToString',
@@ -934,7 +934,7 @@ module.exports = [
         key;
       }
     `,
-    expected: '[object Object]'
+    expected: '[object Object]',
   },
   {
     name: 'internalFunctionToString',
@@ -946,7 +946,7 @@ module.exports = [
       }
       /^function.*\(.*\).*{[^]*}$/.test(s);
     `,
-    expected: true
+    expected: true,
   },
   {
     name: 'internalNativeFuncToString',
@@ -958,7 +958,7 @@ module.exports = [
       }
       /^function.*\(.*\).*{[^]*}$/.test(s);
     `,
-    expected: true
+    expected: true,
   },
   {
     name: 'internalArrayToString',
@@ -969,7 +969,7 @@ module.exports = [
         key;
       }
     `,
-    expected: '1,2,3'
+    expected: '1,2,3',
   },
   {
     name: 'internalDateToString',
@@ -980,7 +980,7 @@ module.exports = [
         key;
       }
     `,
-    expected: (new Date(0)).toString()
+    expected: (new Date(0)).toString(),
   },
   {
     name: 'internalRegExpToString',
@@ -991,7 +991,7 @@ module.exports = [
         key;
       }
     `,
-    expected: '/foo/g'
+    expected: '/foo/g',
   },
   {
     name: 'internalErrorToString',
@@ -1002,7 +1002,7 @@ module.exports = [
         key;
       }
     `,
-    expected: 'Error: oops'
+    expected: 'Error: oops',
   },
   {
     name: 'internalArgumentsToString',
@@ -1015,7 +1015,7 @@ module.exports = [
         key;
       }
     `,
-    expected: '[object Arguments]'
+    expected: '[object Arguments]',
   },
   {
     src: `debugger;`,
@@ -1029,7 +1029,7 @@ module.exports = [
       var t = new T(7, 0.7);
       t.sum;
     `,
-    expected: 77.7
+    expected: 77.7,
   },
   {
     name: 'newExpressionReturnObj',
@@ -1038,7 +1038,7 @@ module.exports = [
       T.prototype = {p: 'the prototype'};
       (new T).p;
     `,
-    expected: undefined
+    expected: undefined,
   },
   {
     name: 'newExpressionReturnPrimitive',
@@ -1047,7 +1047,7 @@ module.exports = [
       T.prototype = {p: 'the prototype'};
       (new T).p;
     `,
-    expected: 'the prototype'
+    expected: 'the prototype',
   },
   {
     src: `/foo/.test('foobar');`,
@@ -1056,7 +1056,7 @@ module.exports = [
   {
     name: 'evalSeeEnclosing',
     src: `var n = 77.77; eval('n');`,
-    expected: 77.77
+    expected: 77.77,
   },
   {
     name: 'evalIndirectNoSeeEnclosing',
@@ -1070,7 +1070,7 @@ module.exports = [
         }
       })();
     `,
-    expected: 'ReferenceError'
+    expected: 'ReferenceError',
   },
   {
     name: 'evalIndirectNoSeeEnclosing2',
@@ -1084,22 +1084,22 @@ module.exports = [
         }
       })();
     `,
-    expected: 'ReferenceError'
+    expected: 'ReferenceError',
   },
   {
     name: 'evalIndirectSeeGlobal',
     src: `var gEval = eval; gEval('typeof Array');`,
-    expected: 'function'
+    expected: 'function',
   },
   {
     name: 'evalModifyEnclosing',
     src: `var n = 77.77; eval('n = 77.88'); n;`,
-    expected: 77.88
+    expected: 77.88,
   },
   {
     name: 'evalNoLeakingDecls',
     src: `eval('var n = 88.88'); typeof n;`,
-    expected: 'undefined'
+    expected: 'undefined',
   },
   // A bug in eval would cause it to return the value of the
   // previously-evaluated ExpressionStatement if the eval program did
@@ -1107,7 +1107,7 @@ module.exports = [
   {
     name: 'evalEmptyBlock',
     src: `'fail'; eval('{}');`,
-    expected: undefined
+    expected: undefined,
   },
   {
     name: 'callEvalOrder',
@@ -1120,7 +1120,7 @@ module.exports = [
       (log('f'))(log('a'), log('b'), log('c'));
       r;
     `,
-    expected: 'fabc'
+    expected: 'fabc',
   },
   {
     name: 'callEvalArgsBeforeCallability',
@@ -1133,7 +1133,7 @@ module.exports = [
         e.name;
       }
     `,
-    expected: 'args'
+    expected: 'args',
   },
   {
     name: 'callNonCallable',
@@ -1159,7 +1159,7 @@ module.exports = [
       }
       (ok === tests.length) ? 'pass' : 'fail';
     `,
-    expected: 'pass'
+    expected: 'pass',
   },
   /////////////////////////////////////////////////////////////////////////////
   // Object and Object.prototype
@@ -1172,7 +1172,7 @@ module.exports = [
         e.name;
       }
     `,
-    expected: 'TypeError'
+    expected: 'TypeError',
   },
   {
     name: 'Object.defineProperty non-object',
@@ -1183,7 +1183,7 @@ module.exports = [
         e.name;
       }
     `,
-    expected: 'TypeError'
+    expected: 'TypeError',
   },
   {
     name: 'Object.defineProperty bad descriptor',
@@ -1195,7 +1195,7 @@ module.exports = [
         e.name;
       }
     `,
-    expected: 'TypeError'
+    expected: 'TypeError',
   },
   // This also tests iteration over (non-)enumerable properties.
   {
@@ -1227,7 +1227,7 @@ module.exports = [
       r += Object.getOwnPropertyNames(o).length;
       r;
     `,
-    expected: 78
+    expected: 78,
   },
   {
     name: 'Object.getPrototypeOf(null) and undefined',
@@ -1242,7 +1242,7 @@ module.exports = [
       }
       r;
     `,
-    expected: 'TypeErrorTypeError'
+    expected: 'TypeErrorTypeError',
   },
   // This tests for ES6 behaviour:
   {
@@ -1252,7 +1252,7 @@ module.exports = [
       Object.getPrototypeOf(1337) === Number.prototype &&
       Object.getPrototypeOf('hi') === String.prototype;
     `,
-    expected: true
+    expected: true,
   },
   {
     name: 'Object.setPrototypeOf(null, ...) and undefined',
@@ -1267,7 +1267,7 @@ module.exports = [
       }
       r;
     `,
-    expected: 'TypeErrorTypeError'
+    expected: 'TypeErrorTypeError',
   },
   {
     name: 'Object.setPrototypeOf primitives',
@@ -1276,7 +1276,7 @@ module.exports = [
       Object.setPrototypeOf(1337, null) === 1337 &&
       Object.setPrototypeOf('hi', null) === 'hi';
     `,
-    expected: true
+    expected: true,
   },
   {
     name: 'Object.setPrototypeOf',
@@ -1287,7 +1287,7 @@ module.exports = [
       Object.setPrototypeOf(q, p) === q &&
           Object.getPrototypeOf(q) === p && q.parent;
     `,
-    expected: 'p'
+    expected: 'p',
   },
   {
     name: 'Object.setPrototypeOf(..., null)',
@@ -1296,7 +1296,7 @@ module.exports = [
       var q = Object.create(o);
       Object.setPrototypeOf(q, null) === q && Object.getPrototypeOf(q);
     `,
-    expected: null
+    expected: null,
   },
   {
     name: 'Object.setPrototypeOf circular',
@@ -1309,7 +1309,7 @@ module.exports = [
         e.name;
       }
     `,
-    expected: 'TypeError'
+    expected: 'TypeError',
   },
   {
     name: 'Object.create()',
@@ -1320,7 +1320,7 @@ module.exports = [
         e.name;
       }
     `,
-    expected: 'TypeError'
+    expected: 'TypeError',
   },
   {
     name: 'Object.create non-object prototype',
@@ -1331,12 +1331,12 @@ module.exports = [
         e.name;
       }
     `,
-    expected: 'TypeError'
+    expected: 'TypeError',
   },
   {
     name: 'Object.create(null) prototype',
     src: `Object.getPrototypeOf(Object.create(null));`,
-    expected: null
+    expected: null,
   },
   {
     name: 'Object.create',
@@ -1345,7 +1345,7 @@ module.exports = [
       delete o.foo
       o.foo;
     `,
-    expected: 79
+    expected: 79,
   },
   {
     name: 'Object.getOwnPropertyDescriptor()',
@@ -1356,7 +1356,7 @@ module.exports = [
         e.name;
       }
     `,
-    expected: 'TypeError'
+    expected: 'TypeError',
   },
   {
     name: 'Object.getOwnPropertyDescriptor non-object',
@@ -1367,12 +1367,12 @@ module.exports = [
         e.name;
       }
     `,
-    expected: 'TypeError'
+    expected: 'TypeError',
   },
   {
     name: 'Object.getOwnPropertyDescriptor bad key',
     src: `Object.getOwnPropertyDescriptor({}, 'foo');`,
-    expected: undefined
+    expected: undefined,
   },
   {
     name: 'Object.getOwnPropertyDescriptor',
@@ -1383,7 +1383,7 @@ module.exports = [
       desc.value === o.foo &&
           !desc.writable && !desc.enumerable && !desc.configurable;
     `,
-    expected: true
+    expected: true,
   },
   {
     name: 'Object.getOwnPropertyNames()',
@@ -1394,7 +1394,7 @@ module.exports = [
         e.name;
       }
     `,
-    expected: 'TypeError'
+    expected: 'TypeError',
   },
   {
     name: 'Object.getOwnPropertyNames string',
@@ -1408,7 +1408,7 @@ module.exports = [
         }
       }
     `,
-    expected: 16
+    expected: 16,
   },
   {
     src: `Object.getOwnPropertyNames(42).length`,
@@ -1427,7 +1427,7 @@ module.exports = [
         e.name;
       }
     `,
-    expected: 'TypeError'
+    expected: 'TypeError',
   },
   {
     name: 'Object.getOwnPropertyNames(undefined)',
@@ -1438,7 +1438,7 @@ module.exports = [
         e.name;
       }
     `,
-    expected: 'TypeError'
+    expected: 'TypeError',
   },
   {
     name: 'Object.getOwnPropertyNames',
@@ -1453,7 +1453,7 @@ module.exports = [
       }
       r;
     `,
-    expected: 80
+    expected: 80,
   },
   {
     name: 'Object.defineProperties()',
@@ -1464,7 +1464,7 @@ module.exports = [
         e.name;
       }
     `,
-    expected: 'TypeError'
+    expected: 'TypeError',
   },
   {
     name: 'Object.defineProperties non-object',
@@ -1475,7 +1475,7 @@ module.exports = [
         e.name;
       }
     `,
-    expected: 'TypeError'
+    expected: 'TypeError',
   },
   {
     name: 'Object.defineProperties non-object props',
@@ -1486,7 +1486,7 @@ module.exports = [
         e.name;
       }
     `,
-    expected: 'TypeError'
+    expected: 'TypeError',
   },
   {
     name: 'Object.defineProperties bad descriptor',
@@ -1498,7 +1498,7 @@ module.exports = [
         e.name;
       }
     `,
-    expected: 'TypeError'
+    expected: 'TypeError',
   },
   {
     name: 'Object.defineProperties',
@@ -1516,7 +1516,7 @@ module.exports = [
       }
       r + Object.getOwnPropertyNames(o).length;
     `,
-    expected: 81
+    expected: 81,
   },
   {
     name: 'Object.create(..., properties)',
@@ -1534,12 +1534,12 @@ module.exports = [
       }
       r + Object.getOwnPropertyNames(o).length;
     `,
-    expected: 82
+    expected: 82,
   },
   {
     name: 'Object.prototype.toString',
     src: `({}).toString();`,
-    expected: '[object Object]'
+    expected: '[object Object]',
   },
   {
     name: 'Object.protoype.hasOwnProperty',
@@ -1554,7 +1554,7 @@ module.exports = [
       }
       r;
     `,
-    expected: 83
+    expected: 83,
   },
   {
     name: 'Object.protoype.isPrototypeOf primitives',
@@ -1568,7 +1568,7 @@ module.exports = [
       Object.prototype.isPrototypeOf.call(null, null) ||
       Object.prototype.isPrototypeOf.call(undefined, undefined);
     `,
-    expected: false
+    expected: false,
   },
   {
     name: 'Object.protoype.isPrototypeOf.call(null, ...)',
@@ -1579,7 +1579,7 @@ module.exports = [
         e.name;
       }
     `,
-    expected: 'TypeError'
+    expected: 'TypeError',
   },
   {
     name: 'Object.protoype.isPrototypeOf.call(undefined, ...)',
@@ -1591,12 +1591,12 @@ module.exports = [
         e.name;
       }
     `,
-    expected: 'TypeError'
+    expected: 'TypeError',
   },
   {
     name: 'Object.protoype.isPrototypeOf self',
     src: `var o = {}; o.isPrototypeOf(o);`,
-    expected: false
+    expected: false,
   },
   {
     src: `Object.prototype.isPrototypeOf(Object.create(null))`,
@@ -1612,7 +1612,7 @@ module.exports = [
       g.isPrototypeOf(o) && p.isPrototypeOf(o) &&
       !o.isPrototypeOf(p) && !o.isPrototypeOf(g);
     `,
-    expected: true
+    expected: true,
   },
   {
     name: 'Object.protoype.propertyIsEnumerable(null)',
@@ -1623,7 +1623,7 @@ module.exports = [
         e.name;
       }
     `,
-    expected: 'TypeError'
+    expected: 'TypeError',
   },
   {
     name: 'ObjectProtoypePropertyIsEnumerableUndefined',
@@ -1634,7 +1634,7 @@ module.exports = [
         e.name;
       }
     `,
-    expected: 'TypeError'
+    expected: 'TypeError',
   },
   {
     name: 'Object.protoype.propertyIsEnumerable primitives',
@@ -1642,7 +1642,7 @@ module.exports = [
       var OppIE = Object.prototype.propertyIsEnumerable;
       OppIE.call('foo', '0') && !OppIE.call('foo', 'length');
     `,
-    expected: true
+    expected: true,
   },
   {
     name: 'Object.protoype.propertyIsEnumerable',
@@ -1652,14 +1652,14 @@ module.exports = [
       o.propertyIsEnumerable('foo') && !o.propertyIsEnumerable('bar') &&
           !o.propertyIsEnumerable('baz');
     `,
-    expected: true
+    expected: true,
   },
   /////////////////////////////////////////////////////////////////////////////
   // Function and Function.prototype
   {
     name: 'new Function() returns callable',
     src: `(new Function)();`,
-    expected: undefined
+    expected: undefined,
   },
   {
     src: `(new Function).length;`,
@@ -1672,7 +1672,7 @@ module.exports = [
   {
     name: 'new Function simple returns callable',
     src: `(new Function('return 42;'))();`,
-    expected: 42
+    expected: 42,
   },
   {
     src: `(new Function('return 42;')).length;`,
@@ -1685,22 +1685,22 @@ module.exports = [
   {
     name: 'new Function with args returns callable',
     src: `(new Function('a, b', 'c', 'return a + b * c;'))(2, 3, 10);`,
-    expected: 32
+    expected: 32,
   },
   {
     name: 'new Function with args .length',
     src: `(new Function('a, b', 'c', 'return a + b * c;')).length;`,
-    expected: 3
+    expected: 3,
   },
   {
     name: 'new Function with args .toString()',
     src: `String(new Function('a, b', 'c', 'return a + b * c;'))`,
-    expected: 'function(a, b,c) {return a + b * c;}'
+    expected: 'function(a, b,c) {return a + b * c;}',
   },
   {
     name: 'Function.prototype has no .prototype',
     src: `Function.prototype.hasOwnProperty('prototype');`,
-    expected: false
+    expected: false,
   },
   {
     name: 'Function.prototype.toString applied to non-fucntion throws',
@@ -1711,7 +1711,7 @@ module.exports = [
         e.name;
       }
     `,
-    expected: 'TypeError'
+    expected: 'TypeError',
   },
   {
     name: 'Function.prototype.apply non-function throws',
@@ -1724,7 +1724,7 @@ module.exports = [
         e.name;
       }
     `,
-    expected: 'TypeError'
+    expected: 'TypeError',
   },
   {
     name: 'Function.prototype.apply this',
@@ -1733,7 +1733,7 @@ module.exports = [
       function f() {return this;}
       f.apply(o, []) === o;
     `,
-    expected: true
+    expected: true,
   },
   {
     name: 'Function.prototype.apply(..., undefined) or null',
@@ -1744,7 +1744,7 @@ module.exports = [
       f.apply(undefined, null);
       n;
     `,
-    expected: 0
+    expected: 0,
   },
   {
     name: 'Function.prototype.apply(..., non-object)',
@@ -1755,7 +1755,7 @@ module.exports = [
         e.name;
       }
     `,
-    expected: 'TypeError'
+    expected: 'TypeError',
   },
   {
     name: 'Function.prototype.apply(..., sparse)',
@@ -1767,7 +1767,7 @@ module.exports = [
         return a + c;
       }).apply(undefined, [1, , 3]);
     `,
-    expected: 4
+    expected: 4,
   },
   {
     name: 'Function.prototype.apply(..., array-like)',
@@ -1776,7 +1776,7 @@ module.exports = [
         return a + b + c;
       }).apply(undefined, {0: 1, 1: 2, 2: 3, length: 3});
     `,
-    expected: 6
+    expected: 6,
   },
   {
     name: 'Function.prototype.apply(..., non-array-like)',
@@ -1785,7 +1785,7 @@ module.exports = [
         return a + b + c;
       }).apply(undefined, {0: 1, 1: 2, 2: 4});
     `,
-    expected: NaN  // Because undefined + undefined === NaN.
+    expected: NaN  // Because undefined + undefined === NaN.,
   },
   {
     name: 'Function.prototype.call non-function throws',
@@ -1798,7 +1798,7 @@ module.exports = [
         e.name;
       }
     `,
-    expected: 'TypeError'
+    expected: 'TypeError',
   },
   {
     name: 'Function.prototype.call this',
@@ -1807,12 +1807,12 @@ module.exports = [
       function f() {return this;}
       f.call(o) === o;
     `,
-    expected: true
+    expected: true,
   },
   {
     name: 'Function.prototype.call no args',
     src: `(function() {return arguments.length;}).call();`,
-    expected: 0
+    expected: 0,
   },
   {
     name: 'Function.prototype.call',
@@ -1824,7 +1824,7 @@ module.exports = [
         return a + c;
       }).call(undefined, 1, 2, 3);
     `,
-    expected: 4
+    expected: 4,
   },
   {
     name: 'Function.prototype.bind non-function throws',
@@ -1837,7 +1837,7 @@ module.exports = [
         e.name;
       }
     `,
-    expected: 'TypeError'
+    expected: 'TypeError',
   },
   {
     name: 'Function.prototype.bind this',
@@ -1846,12 +1846,12 @@ module.exports = [
       function f() {return this;}
       f.bind(o)() === o;
     `,
-    expected: true
+    expected: true,
   },
   {
     name: 'Function.prototype.bind no args',
     src: `(function() {return arguments.length;}).bind()();`,
-    expected: 0
+    expected: 0,
   },
   {
     name: 'Function.prototype.bind',
@@ -1861,7 +1861,7 @@ module.exports = [
         return a + b + c + d;
       }).bind(undefined, 1).bind(undefined, 2)(3);
     `,
-    expected: 10
+    expected: 10,
   },
   {
     name: 'Function.prototype.bind call BF',
@@ -1872,7 +1872,7 @@ module.exports = [
       f();
       constructed;
     `,
-    expected: false
+    expected: false,
   },
   {
     name: 'Function.prototype.bind construct BF',
@@ -1883,7 +1883,7 @@ module.exports = [
       new f;
       constructed;
     `,
-    expected: true
+    expected: true,
   },
   {
     name: 'Function.prototype.call.bind construct BF',
@@ -1897,7 +1897,7 @@ module.exports = [
         !invoked && e.name;
       }
     `,
-    expected: 'TypeError'
+    expected: 'TypeError',
   },
   // N.B.: tests of semantics of class constructors are unavoidably ES6.
   {
@@ -1910,20 +1910,20 @@ module.exports = [
         e.name;
       }
     `,
-    expected: 'TypeError'
+    expected: 'TypeError',
   },
   // N.B.: tests of semantics of class constructors are unavoidably ES6.
   {
     name: 'Function.prototype.bind class constructor',
     src: `String(new (WeakMap.bind()));`,
-    expected: '[object WeakMap]'
+    expected: '[object WeakMap]',
   },
   /////////////////////////////////////////////////////////////////////////////
   // Array and Array.prototype
   {
     name: 'new Array()',
     src: `var a = new Array(); Array.isArray(a) && a.length;`,
-    expected: 0
+    expected: 0,
   },
   {
     name: 'newArray(/* number */)',
@@ -1931,7 +1931,7 @@ module.exports = [
       var a = new Array(42);
       Array.isArray(a) && !(0 in a) && !(41 in a) && a.length;
     `,
-    expected: 42
+    expected: 42,
   },
   {
     name: 'new Array(/* non-number */)',
@@ -1939,7 +1939,7 @@ module.exports = [
       var a = new Array('foo');
       Array.isArray(a) && a.length === 1 && a[0];
     `,
-    expected: 'foo'
+    expected: 'foo',
   },
   {
     name: 'new Array(/* multiple args */)',
@@ -1947,7 +1947,7 @@ module.exports = [
       var a = new Array(1, 2, 3);
       Array.isArray(a) && a.length === 3 && String(a);
     `,
-    expected: '1,2,3'
+    expected: '1,2,3',
   },
   {
     src: `Array.isArray(Array.prototype);`,
@@ -1972,7 +1972,7 @@ module.exports = [
       var c = a.concat();
       a.length === 6 && c.length === 6 && c !== a && String(c);
     `,
-    expected: 'foo,bar,baz,,quux,quuux'
+    expected: 'foo,bar,baz,,quux,quuux',
   },
   {
     name: 'Array.prototype.concat(...)',
@@ -1981,7 +1981,7 @@ module.exports = [
       var c = [].concat(['foo', 'bar'], 'baz', undefined, o);
       c.length === 5 && '3' in c && c[3] === undefined && String(c);
     `,
-    expected: 'foo,bar,baz,,[object Object]'
+    expected: 'foo,bar,baz,,[object Object]',
   },
   {
     name: 'Array.prototype.concat.call(object, ...)',
@@ -1990,7 +1990,7 @@ module.exports = [
       var c = Array.prototype.concat.call(o, 'baz', [, 'quux', 'quuux']);
       c.length === 5 && String(c);
     `,
-    expected: '[object Object],baz,,quux,quuux'
+    expected: '[object Object],baz,,quux,quuux',
   },
   {
     src: `[1, 2, 3, 2, 1].includes(2);`,
@@ -2003,12 +2003,12 @@ module.exports = [
   {
     name: 'Array.prototype.includes fromIndex',
     src: `[1, 2, 3, 2, 1].includes(2, 2);`,
-    expected: true
+    expected: true,
   },
   {
     name: 'Array.prototype.includes negative fromIndex',
     src: `[1, 2, 3, 2, 1].includes(1, -3);`,
-    expected: true
+    expected: true,
   },
   {
     src: `['x', NaN, 'y'].includes(NaN);`,
@@ -2020,32 +2020,32 @@ module.exports = [
       var o = {0: 1, 1: 2, 2: 3, 3: 2, 4: 1, length: 5};
       Array.prototype.includes.call(o, 2);
     `,
-    expected: true
+    expected: true,
   },
   {
     name: 'Array.prototype.indexOf',
     src: `[1, 2, 3, 2, 1].indexOf(2);`,
-    expected: 1
+    expected: 1,
   },
   {
     name: 'Array.prototype.indexOf not found',
     src: `[1, 2, 3, 2, 1].indexOf(4);`,
-    expected: -1
+    expected: -1,
   },
   {
     name: 'Array.prototype.indexOf fromIndex',
     src: `[1, 2, 3, 2, 1].indexOf(2, 2);`,
-    expected: 3
+    expected: 3,
   },
   {
     name: 'Array.prototype.indexOf negative fromIndex',
     src: `[1, 2, 3, 2, 1].indexOf(1, -3);`,
-    expected: 4
+    expected: 4,
   },
   {
     name: 'Array.prototype.indexOf NaN',
     src: `['x', NaN, 'y'].indexOf(NaN);`,
-    expected: -1
+    expected: -1,
   },
   {
     name: 'Array.prototype.indexOf.call(array-like, ...)',
@@ -2053,12 +2053,12 @@ module.exports = [
       var o = {0: 1, 1: 2, 2: 3, 3: 2, 4: 1, length: 5};
       Array.prototype.indexOf.call(o, 2);
     `,
-    expected: 1
+    expected: 1,
   },
   {
     name: 'Array.prototype.join',
     src: `[1, 2, 3].join('-');`,
-    expected: '1-2-3'
+    expected: '1-2-3',
   },
   {
     name: 'Array.prototype.join cycle detection',
@@ -2068,27 +2068,27 @@ module.exports = [
       a.join('-');
       "Didn't crash!";
     `,
-    expected: 'Didn\'t crash!'
+    expected: 'Didn\'t crash!',
   },
   {
     name: 'Array.prototype.lastIndexOf',
     src: `[1, 2, 3, 2, 1].lastIndexOf(2);`,
-    expected: 3
+    expected: 3,
   },
   {
     name: 'Array.prototype.lastIndexOf not found',
     src: `[1, 2, 3, 2, 1].lastIndexOf(4);`,
-    expected: -1
+    expected: -1,
   },
   {
     name: 'Array.prototype.lastIndexOf(..., +)',
     src: `[1, 2, 3, 2, 1].lastIndexOf(2, 2);`,
-    expected: 1
+    expected: 1,
   },
   {
     name: 'Array.prototype.lastIndexOf(..., -)',
     src: `[1, 2, 3, 2, 1].lastIndexOf(1, -3);`,
-    expected: 0
+    expected: 0,
   },
   {
     name: 'Array.prototype.lastIndexOf.call(array-like, ...)',
@@ -2096,7 +2096,7 @@ module.exports = [
       var o = {0: 1, 1: 2, 2: 3, 3: 2, 4: 1, length: 5};
       Array.prototype.lastIndexOf.call(o, 2);
     `,
-    expected: 3
+    expected: 3,
   },
   {
     name: 'Array.prototype.pop',
@@ -2105,7 +2105,7 @@ module.exports = [
       var r = a.pop();
       a.length === 2 && r;
     `,
-    expected: 'baz'
+    expected: 'baz',
   },
   {
     name: 'Array.prototype.pop empty array',
@@ -2114,7 +2114,7 @@ module.exports = [
       var r = a.pop();
       a.length === 0 && r;
     `,
-    expected: undefined
+    expected: undefined,
   },
   {
     name: 'Array.prototype.pop.apply(array-like)',
@@ -2123,7 +2123,7 @@ module.exports = [
       var r = Array.prototype.pop.apply(o);
       o.length === 2 && r;
     `,
-    expected: 'baz'
+    expected: 'baz',
   },
   {
     name: 'Array.prototype.pop.apply(empty array-like)',
@@ -2132,7 +2132,7 @@ module.exports = [
       var r = Array.prototype.pop.apply(o);
       o.length === 0 && r;
     `,
-    expected: undefined
+    expected: undefined,
   },
   {
     name: 'Array.prototype.pop.apply(huge array-like)',
@@ -2143,7 +2143,7 @@ module.exports = [
       var r = Array.prototype.pop.apply(o);
       o.length === 5000000000000001 && o[5000000000000000] === 'foo' && r;
     `,
-    expected: 'quux'
+    expected: 'quux',
   },
   {
     name: 'Array.prototype.push',
@@ -2152,7 +2152,7 @@ module.exports = [
       a.push('foo') === 1 && a.push('bar') === 2 &&
           a.length === 2 && a[0] === 'foo' && a[1] === 'bar';
     `,
-    expected: true
+    expected: true,
   },
   {
     name: 'Array.prototype.push.call(array-like, ...)',
@@ -2162,7 +2162,7 @@ module.exports = [
           Array.prototype.push.call(o, 'bar') === 2 &&
           o.length === 2 && o[0] === 'foo' && o[1] === 'bar';
     `,
-    expected: true
+    expected: true,
   },
   {
     name: 'Array.prototype.push.call(huge array-like, ...)',
@@ -2174,7 +2174,7 @@ module.exports = [
           o[5000000000000000] === 'foo' && o[5000000000000001] === 'bar' &&
           o.length === 5000000000000002
     `,
-    expected: true
+    expected: true,
   },
   {
     name: 'Array.prototype.reverse odd-length',
@@ -2182,7 +2182,7 @@ module.exports = [
       var a = [1, 2, 3];
       a.reverse() === a && a.length === 3 && String(a);
     `,
-    expected: '3,2,1'
+    expected: '3,2,1',
   },
   {
     name: 'Array.prototype.reverse even-length',
@@ -2190,7 +2190,7 @@ module.exports = [
       var a = [1, 2, , 4];
       a.reverse() === a && a.length === 4 && String(a);
     `,
-    expected: '4,,2,1'
+    expected: '4,,2,1',
   },
   {
     name: 'Array.prototype.reverse empty',
@@ -2198,7 +2198,7 @@ module.exports = [
       var a = [];
       a.reverse() === a && a.length;
     `,
-    expected: 0
+    expected: 0,
   },
   {
     name: 'Array.prototype.reverse.call(odd-length array-like)',
@@ -2207,7 +2207,7 @@ module.exports = [
       Array.prototype.reverse.call(o) === o && o.length === 3 &&
           Array.prototype.slice.apply(o).toString();
     `,
-    expected: '3,2,1'
+    expected: '3,2,1',
   },
   {
     name: 'Array.prototype.reverse.call(even-length array-like)',
@@ -2216,7 +2216,7 @@ module.exports = [
       Array.prototype.reverse.call(o) === o && o.length === 4 &&
           Array.prototype.slice.apply(o).toString();
     `,
-    expected: '4,,2,1'
+    expected: '4,,2,1',
   },
   {
     name: 'Array.prototype.reverse.call(empty array-like)',
@@ -2224,7 +2224,7 @@ module.exports = [
       var o = {length: 0};
       Array.prototype.reverse.call(o) === o && o.length;
     `,
-    expected: 0
+    expected: 0,
   },
   {
     name: 'Array.prototype.shift',
@@ -2233,7 +2233,7 @@ module.exports = [
       var r = a.shift();
       a.length === 2 && a[0] === 'bar' && a[1] === 'baz' && r;
     `,
-    expected: 'foo'
+    expected: 'foo',
   },
   {
     name: 'Array.prototype.shift empty array',
@@ -2242,7 +2242,7 @@ module.exports = [
       var r = a.shift();
       a.length === 0 && r;
     `,
-    expected: undefined
+    expected: undefined,
   },
   {
     name: 'Array.prototype.shift.apply(array-like)',
@@ -2251,7 +2251,7 @@ module.exports = [
       var r = Array.prototype.shift.apply(o);
       o.length === 2 && o[0] === 'bar' && o[1] === 'baz' && r;
     `,
-    expected: 'foo'
+    expected: 'foo',
   },
   {
     name: 'Array.prototype.shift.apply(empty array-like)',
@@ -2260,7 +2260,7 @@ module.exports = [
       var r = Array.prototype.shift.apply(o);
       o.length === 0 && r;
     `,
-    expected: undefined
+    expected: undefined,
   },
   {
     name: 'Array.prototype.shift.apply(huge array-like)',
@@ -2281,7 +2281,7 @@ module.exports = [
       var s = a.slice();
       a.length === 6 && s.length === 6 && String(s);
     `,
-    expected: 'foo,bar,baz,,quux,quuux'
+    expected: 'foo,bar,baz,,quux,quuux',
   },
   {
     name: 'Array.prototype.slice(-)',
@@ -2290,7 +2290,7 @@ module.exports = [
       var s = a.slice(-2);
       a.length === 6 && s.length === 2 && String(s);
     `,
-    expected: 'quux,quuux'
+    expected: 'quux,quuux',
   },
   {
     name: 'Array.prototype.slice(+, +)',
@@ -2299,7 +2299,7 @@ module.exports = [
       var s = a.slice(1, 4);
       a.length === 6 && s.length === 3 && !('2' in s) && String(s);
     `,
-    expected: 'bar,baz,'
+    expected: 'bar,baz,',
   },
   {
     name: 'Array.prototype.slice(+, -)',
@@ -2308,7 +2308,7 @@ module.exports = [
       var s = a.slice(1, -2);
       a.length === 6 && s.length === 3 && !('2' in s) && String(s);
     `,
-    expected: 'bar,baz,'
+    expected: 'bar,baz,',
   },
   {
     name: 'Array.prototype.slice.call(array-like, -, +)',
@@ -2320,7 +2320,7 @@ module.exports = [
       !Array.isArray(o) && o.length === 6 &&
           Array.isArray(s) && s.length === 3 && !('2' in s) && String(s);
     `,
-    expected: 'bar,baz,'
+    expected: 'bar,baz,',
   },
   {
     name: 'Array.prototype.slice.call(huge array-like, -, -)',
@@ -2334,12 +2334,12 @@ module.exports = [
       !Array.isArray(o) && o.length === 5000000000000006 &&
           Array.isArray(s) && s.length === 3 && !('2' in s) && String(s);
     `,
-    expected: 'bar,baz,'
+    expected: 'bar,baz,',
   },
   {
     name: 'Array.prototype.sort()',
     src: `[5, 2, 3, 1, 4].sort().join();  // Sorts ASCIIbetically.`,
-    expected: '1,2,3,4,5'
+    expected: '1,2,3,4,5',
   },
   {
     name: 'Array.prototype.sort() compaction',
@@ -2347,7 +2347,7 @@ module.exports = [
       ['z', undefined, 10, , 'aa', null, 'a', 5, NaN, , 1].sort()
           .map(String).join();
     `,
-    expected: '1,10,5,NaN,a,aa,null,z,undefined,,'
+    expected: '1,10,5,NaN,a,aa,null,z,undefined,,',
   },
   {
     name: 'Array.prototype.sort(/* comparefn */)',
@@ -2355,7 +2355,7 @@ module.exports = [
       [99, 9, 10, 11, 1, 0, 5]
           .sort(function(a, b) {return a - b;}).join();
     `,
-    expected: '0,1,5,9,10,11,99'
+    expected: '0,1,5,9,10,11,99',
   },
   {
     name: 'Array.prototype.sort(/* comparefn */) compaction',
@@ -2373,7 +2373,7 @@ module.exports = [
             return 0;
           }).map(String).join();
     `,
-    expected: 'z,null,aa,a,NaN,5,10,1,undefined,,'
+    expected: 'z,null,aa,a,NaN,5,10,1,undefined,,',
   },
   {
     name: 'Array.prototype.splice()',
@@ -2382,7 +2382,7 @@ module.exports = [
       var s = a.splice();
       a.length === 6 && s.length === 0 && String(a) + ':' + String(s);
     `,
-    expected: 'foo,bar,baz,,quux,quuux:'
+    expected: 'foo,bar,baz,,quux,quuux:',
   },
   {
     name: 'Array.prototype.splice(-)',
@@ -2391,7 +2391,7 @@ module.exports = [
       var s = a.splice(-2);
       a.length === 4 && s.length === 2 && String(a) + ':' + String(s);
     `,
-    expected: 'foo,bar,baz,:quux,quuux'
+    expected: 'foo,bar,baz,:quux,quuux',
   },
   {
     name: 'Array.prototype.splice(+, +, ...)',
@@ -2400,7 +2400,7 @@ module.exports = [
       var s = a.splice(1, 3, 'bletch');
       a.length === 4 && s.length === 3 && String(a) + ':' + String(s);
     `,
-    expected: 'foo,bletch,quux,quuux:bar,baz,'
+    expected: 'foo,bletch,quux,quuux:bar,baz,',
   },
   {
     name: 'Array.prototype.splice.call(array-like, 0, large, ...)',
@@ -2413,7 +2413,7 @@ module.exports = [
       o[0] === 'bletch' &&
       Array.isArray(s) && s.length === 6 && !('3' in s) && String(s);
     `,
-    expected: 'foo,bar,baz,,quux,quuux'
+    expected: 'foo,bar,baz,,quux,quuux',
   },
   {
     name: 'Array.prototype.splice.call(huge array-like, -, -, many...)',
@@ -2429,7 +2429,7 @@ module.exports = [
           o[5000000000000006] === 'quux' && o[5000000000000007] === 'quuux' &&
           Array.isArray(s) && s.length === 0;
     `,
-    expected: true
+    expected: true,
   },
   {
     name: 'Array.prototype.toString cycle detection',
@@ -2439,17 +2439,17 @@ module.exports = [
       a.toString();
       "Didn't crash!";
     `,
-    expected: 'Didn\'t crash!'
+    expected: 'Didn\'t crash!',
   },
   {
     name: 'Array.prototype.toString.call(obj-w/join)',
     src: `Array.prototype.toString.apply({join: function() {return 'OK';}});`,
-    expected: 'OK'
+    expected: 'OK',
   },
   {
     name: 'Array.prototype.toString.call(array-like)',
     src: `Array.prototype.toString.apply({0: 'foo', 1: 'bar', length: 2});`,
-    expected: '[object Object]'
+    expected: '[object Object]',
   },
   {
     name: 'Array.prototype.unshift',
@@ -2458,7 +2458,7 @@ module.exports = [
       a.unshift('foo') === 1 && a.unshift('bar') === 2 &&
           a.length === 2 && a[0] === 'bar' && a[1] === 'foo';
     `,
-    expected: true
+    expected: true,
   },
   {
     name: 'Array.prototype.unshift.call(array-like, ...)',
@@ -2468,7 +2468,7 @@ module.exports = [
           Array.prototype.unshift.call(o, 'bar') === 2 &&
           o.length === 2 && o[0] === 'bar' && o[1] === 'foo';
     `,
-    expected: true
+    expected: true,
   },
   {
     name: 'Array.prototype.unshift.call(huge array-like, ...)',
@@ -2510,7 +2510,7 @@ module.exports = [
       }
       (ok === tests.length) ? 'pass' : 'fail';
     `,
-    expected: 'pass'
+    expected: 'pass',
   },
   {
     src: `Boolean.prototype.toString();`,
@@ -2533,7 +2533,7 @@ module.exports = [
         e.name;
       }
     `,
-    expected: 'TypeError'
+    expected: 'TypeError',
   },
   {
     src: `Boolean.prototype.valueOf();`,
@@ -2556,7 +2556,7 @@ module.exports = [
         e.name;
       }
     `,
-    expected: 'TypeError'
+    expected: 'TypeError',
   },
   /////////////////////////////////////////////////////////////////////////////
   // Number and Number.prototype
@@ -2585,7 +2585,7 @@ module.exports = [
       }
       (ok === tests.length) ? 'pass' : 'fail';
     `,
-    expected: 'pass'
+    expected: 'pass',
   },
   {
     name: 'Number.MAX_SAFE_INTEGER',
@@ -2594,7 +2594,7 @@ module.exports = [
           Number.isSafeInteger(Number.MAX_SAFE_INTEGER) &&
           !Number.isSafeInteger(Number.MAX_SAFE_INTEGER + 1);
     `,
-    expected: true
+    expected: true,
   },
   {
     src: `Number.prototype.toString();`,
@@ -2613,7 +2613,7 @@ module.exports = [
         e.name;
       }
     `,
-    expected: 'TypeError'
+    expected: 'TypeError',
   },
   {
     src: `Number.prototype.valueOf();`,
@@ -2632,7 +2632,7 @@ module.exports = [
         e.name;
       }
     `,
-    expected: 'TypeError'
+    expected: 'TypeError',
   },
   /////////////////////////////////////////////////////////////////////////////
   // String and String.prototype
@@ -2661,7 +2661,7 @@ module.exports = [
       }
       (ok === tests.length) ? 'pass' : 'fail';
     `,
-    expected: 'pass'
+    expected: 'pass',
   },
   {
     name: 'String calls valueOf',
@@ -2670,7 +2670,7 @@ module.exports = [
       o.valueOf = function() {return 'OK';};
       String(o);
     `,
-    expected: 'OK'
+    expected: 'OK',
   },
   {
     name: 'String calling valueOf returns string',
@@ -2679,7 +2679,7 @@ module.exports = [
       o.valueOf = function() {return 42;};
       String(o);
     `,
-    expected: '42'
+    expected: '42',
   },
   {
     name: 'String calling valueOf throws',
@@ -2692,7 +2692,7 @@ module.exports = [
         e.name;
       }
     `,
-    expected: 'TypeError'
+    expected: 'TypeError',
   },
   {
     name: 'String calls toString',
@@ -2702,7 +2702,7 @@ module.exports = [
       o.toString = function() {return 'OK';};
       String(o);
     `,
-    expected: 'OK'
+    expected: 'OK',
   },
   {
     name: 'String calling toString returns string',
@@ -2711,7 +2711,7 @@ module.exports = [
       o.valueOf = function() {return 42;};
       String(o);
     `,
-    expected: '42'
+    expected: '42',
   },
   {
     name: 'String calling toString throws',
@@ -2725,7 +2725,7 @@ module.exports = [
         e.name;
       }
     `,
-    expected: 'TypeError'
+    expected: 'TypeError',
   },
   {
     src: `String.prototype.length;`,
@@ -2734,12 +2734,12 @@ module.exports = [
   {
     name: 'String.prototype.replace(string, string)',
     src: `'xxxx'.replace('xx', 'y');`,
-    expected: 'yxx'
+    expected: 'yxx',
   },
   {
     name: 'String.prototype.replace(regexp, string)',
     src: `'xxxx'.replace(/(X)\\1/ig, 'y');`,
-    expected: 'yy'
+    expected: 'yy',
   },
   {
     name: 'String.prototype.replace(string, function)',
@@ -2748,7 +2748,7 @@ module.exports = [
            return '[' + Array.prototype.join.apply(arguments) + ']';
       });
     `,
-    expected: '[xx,0,xxxx]xx'
+    expected: '[xx,0,xxxx]xx',
   },
   {
     name: 'String.prototype.replace(regexp, function)',
@@ -2757,27 +2757,27 @@ module.exports = [
            return '[' + Array.prototype.join.apply(arguments) + ']';
       });
     `,
-    expected: '[xx,x,0,xxxx][xx,x,2,xxxx]'
+    expected: '[xx,x,0,xxxx][xx,x,2,xxxx]',
   },
   {
     name: 'String.prototype.search(string) not found',
     src: `'hello'.search('H')`,
-    expected: -1
+    expected: -1,
   },
   {
     name: 'String.prototype.search(string) found',
     src: `'hello'.search('ll')`,
-    expected: 2
+    expected: 2,
   },
   {
     name: 'String.prototype.search(regexp) not found',
     src: `'hello'.search(/H/)`,
-    expected: -1
+    expected: -1,
   },
   {
     name: 'String.prototype.search(regexp) found',
     src: `'hello'.search(/(.)\\1/)`,
-    expected: 2
+    expected: 2,
   },
   {
     src: `String.prototype.toString();`,
@@ -2786,7 +2786,7 @@ module.exports = [
   {
     name: 'String.prototype.toString.call primitive',
     src: `String.prototype.toString.call('a string');`,
-    expected: 'a string'
+    expected: 'a string',
   },
   {
     name: 'String.prototype.toString.call non-String object',
@@ -2797,7 +2797,7 @@ module.exports = [
         e.name;
       }
     `,
-    expected: 'TypeError'
+    expected: 'TypeError',
   },
   {
     src: `String.prototype.valueOf();`,
@@ -2806,7 +2806,7 @@ module.exports = [
   {
     name: 'String.prototype.valueOf.call primitive',
     src: `String.prototype.valueOf.call('a string');`,
-    expected: 'a string'
+    expected: 'a string',
   },
   {
     name: 'String.prototype.valueOf.call non-String object',
@@ -2817,7 +2817,7 @@ module.exports = [
         e.name;
       }
     `,
-    expected: 'TypeError'
+    expected: 'TypeError',
   },
   /////////////////////////////////////////////////////////////////////////////
   // RegExp
@@ -2830,7 +2830,7 @@ module.exports = [
         e.name;
       }
     `,
-    expected: 'TypeError'
+    expected: 'TypeError',
   },
   /////////////////////////////////////////////////////////////////////////////
   // Error and Error.prototype (and all the other native error types too)
@@ -2842,7 +2842,7 @@ module.exports = [
       var lines = e.stack.split('\\n');
       lines[0].trim();
     `,
-    expected: 'at "new Error;" 1:1'
+    expected: 'at "new Error;" 1:1',
   },
   {
     name: 'thrown Error has .stack',
@@ -2854,7 +2854,7 @@ module.exports = [
       }
       lines[0].trim();
     `,
-    expected: 'at buggy 1:19'
+    expected: 'at buggy 1:19',
   },
   {
     name: 'Error .stack correctly reports anonymous function',
@@ -2864,7 +2864,7 @@ module.exports = [
       var lines = e.stack.split('\\n');
       lines[0].trim();
     `,
-    expected: 'at anonymous function 1:20'
+    expected: 'at anonymous function 1:20',
   },
   // Bug #241.
   {
@@ -2883,7 +2883,7 @@ module.exports = [
       }
       lines[0].trim();
     `,
-    expected: 'at foo 4:20'
+    expected: 'at foo 4:20',
   },
   {
     name: 'Error .stack correctly blames Identifier',
@@ -2898,7 +2898,7 @@ module.exports = [
       }
       lines[0].trim();
     `,
-    expected: 'at foo 2:16'
+    expected: 'at foo 2:16',
   },
   /////////////////////////////////////////////////////////////////////////////
   // JSON
@@ -2910,7 +2910,7 @@ module.exports = [
           object: {obj: {}, arr: []}, array: [{}, []] });
     `,
     expected: '{"string":"foo","number":42,"true":true,"false":false,' +
-        '"null":null,"object":{"obj":{},"arr":[]},"array":[{},[]]}'
+        '"null":null,"object":{"obj":{},"arr":[]},"array":[{},[]]}',
   },
   {
     src: `JSON.stringify(function(){});`,
@@ -2932,7 +2932,7 @@ module.exports = [
           object: {obj: {}, arr: []}, array: [{}, []] },
           ['string', 'number']);
     `,
-    expected: '{"string":"foo","number":42}'
+    expected: '{"string":"foo","number":42}',
   },
   {
     name: 'JSON.stringify pretty number',
@@ -2942,7 +2942,7 @@ module.exports = [
           object: {obj: {}, arr: []}, array: [{}, []] },
           ['string', 'number'], 2);
     `,
-    expected: '{\n  "string": "foo",\n  "number": 42\n}'
+    expected: '{\n  "string": "foo",\n  "number": 42\n}',
   },
   {
     name: 'JSON.stringify pretty string',
@@ -2952,7 +2952,7 @@ module.exports = [
           object: {obj: {}, arr: []}, array: [{}, []] },
           ['string', 'number'], '--');
     `,
-    expected: '{\n--"string": "foo",\n--"number": 42\n}'
+    expected: '{\n--"string": "foo",\n--"number": 42\n}',
   },
   {
     name: 'JSON.stringify nonenumerable',
@@ -2961,12 +2961,12 @@ module.exports = [
       Object.defineProperty(obj, 'ne', {enumerable: false});
       JSON.stringify(obj);
     `,
-    expected: '{"e":"enumerable"}'
+    expected: '{"e":"enumerable"}',
   },
   {
     name: 'JSON.stringify inherited',
     src: `JSON.stringify(Object.create({foo: 'bar'}));`,
-    expected: '{}'
+    expected: '{}',
   },
   {
     name: 'JSON.stringify circular',
@@ -2979,7 +2979,7 @@ module.exports = [
         e.name;
       }
     `,
-    expected: 'TypeError'
+    expected: 'TypeError',
   },
   /////////////////////////////////////////////////////////////////////////////
   // Other built-in functions
@@ -2992,7 +2992,7 @@ module.exports = [
         e.name;
       }
     `,
-    expected: 'URIError'
+    expected: 'URIError',
   },
   /////////////////////////////////////////////////////////////////////////////
   // WeakMap
@@ -3013,7 +3013,7 @@ module.exports = [
       !w.has(o) || fails++;
       fails;
     `,
-    expected: 0
+    expected: 0,
   },
   {
     name: 'WeakMap.prototype methods reject non-WeakMap this',
@@ -3042,7 +3042,7 @@ module.exports = [
       }
       fails;
     `,
-    expected: 0
+    expected: 0,
   },
   {
     name: 'WeakMap',
@@ -3061,7 +3061,7 @@ module.exports = [
       !w.has(o) || fails++;
       fails;
     `,
-    expected: 0
+    expected: 0,
   },
   /////////////////////////////////////////////////////////////////////////////
   // Thread and Thread.prototype:
@@ -3086,7 +3086,7 @@ module.exports = [
   {
     name: 'Thread.callers()[0].line & .col',
     src: 'var frame = Thread.callers()[0]; frame.line + "," + frame.col;',
-    expected: '1,13'
+    expected: '1,13',
   },
   {
     name: 'Thread.callers()[/* last */].program',
@@ -3094,7 +3094,7 @@ module.exports = [
       var callers = Thread.callers();
       typeof callers[callers.length - 1].program;
     `,
-    expected: 'string'
+    expected: 'string',
   },
   {
     name: 'Thread.callers()[0].callerPerms',
@@ -3107,7 +3107,7 @@ module.exports = [
       setPerms(user);
       f();
     `,
-    expected: 'user'
+    expected: 'user',
   },
   // Time limit tests.  Actual enforcement is tested in
   // interpreter_tests.js; this is just checking behaviour of get/set
@@ -3115,7 +3115,7 @@ module.exports = [
   {
     name: 'Thread.prototype.getTimeLimit() initially 0',
     src: `Thread.current().getTimeLimit();`,
-    expected: 0
+    expected: 0,
   },
   {
     name: 'Thread.prototype.setTimeLimit()',
@@ -3123,7 +3123,7 @@ module.exports = [
       Thread.current().setTimeLimit(1000);
       Thread.current().getTimeLimit();
     `,
-    expected: 1000
+    expected: 1000,
   },
   {
     name: 'Thread.prototype.setTimeLimit(...)',
@@ -3131,7 +3131,7 @@ module.exports = [
       Thread.current().setTimeLimit(1000);
       Thread.current().getTimeLimit();
     `,
-    expected: 1000
+    expected: 1000,
   },
   // Check invalid time limits are rejected.
   {
@@ -3149,14 +3149,14 @@ module.exports = [
       }
       (failures.length === 0) ? 'OK' : String(failures);
     `,
-    expected: 'OK'
+    expected: 'OK',
   },
   /////////////////////////////////////////////////////////////////////////////
   // Permissions system:
   {
     name: 'perms returns root',
     src: `perms() === CC.root;`,
-    expected: true
+    expected: true,
   },
   {
     name: 'setPerms',
@@ -3174,7 +3174,7 @@ module.exports = [
       r += perms().name;
       r;
     `,
-    expected: 'RootBobRoot'
+    expected: 'RootBobRoot',
   },
   {
     name: 'getOwnerOf',
@@ -3187,7 +3187,7 @@ module.exports = [
       Object.getOwnerOf(roots) === CC.root &&
       Object.getOwnerOf(bobs) === bob
     `,
-    expected: true
+    expected: true,
   },
   {
     name: 'setOwnerOf',
@@ -3196,14 +3196,14 @@ module.exports = [
       var obj = {};
       Object.setOwnerOf(obj, bob) === obj && Object.getOwnerOf(obj) === bob;
     `,
-    expected: true
+    expected: true,
   },
   /////////////////////////////////////////////////////////////////////////////
   // Other tests:
   {
     name: 'new hack',
     src: `(new 'Array.prototype.push') === Array.prototype.push`,
-    expected: true
+    expected: true,
   },
   {
     name: 'new hack with unkown builtin',
@@ -3214,7 +3214,7 @@ module.exports = [
         e.name;
       }
     `,
-    expected: 'ReferenceError'
+    expected: 'ReferenceError',
   },
   {
     name: 'new hack with other than string literal',
@@ -3226,7 +3226,7 @@ module.exports = [
         e.name;
       }
     `,
-    expected: 'TypeError'
+    expected: 'TypeError',
   },
   {
     name: 'ES6 causes syntax errors',
@@ -3256,7 +3256,7 @@ module.exports = [
       }
       failed.length ? failed.join('\\n') : 'OK';
     `,
-    expected: 'OK'
+    expected: 'OK',
   },
   {
     name: 'Strict mode syntax errors',
@@ -3288,7 +3288,7 @@ module.exports = [
       }
       failed.length ? failed.join('\\n') : 'OK';
     `,
-    expected: 'OK'
+    expected: 'OK',
   },
   {
     name: 'Stack overflow errors',
@@ -3300,7 +3300,7 @@ module.exports = [
       }
     `,
     options: {stackLimit: 100},
-    expected: 'RangeError'
+    expected: 'RangeError',
   },
   {
     name: 'Minimum stack depth limit',
@@ -3316,6 +3316,6 @@ module.exports = [
       limit > 100 ? 'OK' : limit;
     `,
     options: {stackLimit: 1000},
-    expected: 'OK'
+    expected: 'OK',
   },
 ];
