@@ -3172,23 +3172,25 @@ module.exports = [
         // Perms revert at end of scope.
       })();
       r += perms().name;
-      r;`,
-      expected: 'RootBobRoot'
+      r;
+    `,
+    expected: 'RootBobRoot'
   },
   {
-      name: 'getOwnerOf',
-      src: `
+    name: 'getOwnerOf',
+    src: `
       var bob = {};
       var roots = {};
       setPerms(bob);
       var bobs = new Object;
       Object.getOwnerOf(Object) === CC.root &&
       Object.getOwnerOf(roots) === CC.root &&
-      Object.getOwnerOf(bobs) === bob`,
-      expected: true
+      Object.getOwnerOf(bobs) === bob
+    `,
+    expected: true
   },
   {
-      name: 'setOwnerOf',
+    name: 'setOwnerOf',
       src: `
       var bob = {};
       var obj = {};
