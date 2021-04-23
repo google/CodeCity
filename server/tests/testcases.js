@@ -23,34 +23,13 @@
 
 // Testcases for testSimple in interpreter_test.js.
 module.exports = [
-  {
-    src: `1 + 1;`,
-    expected: 2
-  },
-  {
-    src: `2 + 2;`,
-    expected: 4
-  },
-  {
-    src: `6 * 7;`,
-    expected: 42
-  },
-  {
-    src: `(3 + 12 / 4) * (10 - 3);`,
-    expected: 42
-  },
-  {
-    src: `var x = 43; x;`,
-    expected: 43
-  },
-  {
-    src: `true ? 'then' : 'else';`,
-    expected: 'then'
-  },
-  {
-    src: `false ? 'then' : 'else';`,
-    expected: 'else'
-  },
+  {src: `1 + 1;`, expected: 2},
+  {src: `2 + 2;`, expected: 4},
+  {src: `6 * 7;`, expected: 42},
+  {src: `(3 + 12 / 4) * (10 - 3);`, expected: 42},
+  {src: `var x = 43; x;`, expected: 43},
+  {src: `true ? 'then' : 'else';`, expected: 'then'},
+  {src: `false ? 'then' : 'else';`, expected: 'else'},
   {
     name: 'if(true)',
     src: `
@@ -99,18 +78,9 @@ module.exports = [
     `,
     expected: 'TypeError',
   },
-  {
-    src: `var x = 45; x++; x++;`,
-    expected: 46
-  },
-  {
-    src: `var x = 45; ++x; ++x;`,
-    expected: 47
-  },
-  {
-    src: `'foo' + 'bar';`,
-    expected: 'foobar'
-  },
+  {src: `var x = 45; x++; x++;`, expected: 46},
+  {src: `var x = 45; ++x; ++x;`, expected: 47},
+  {src: `'foo' + 'bar';`, expected: 'foobar'},
   {
     name: 'Effect of += on left argument',
     src: `var x = 40, y = 8; x += y; x;`,
@@ -232,10 +202,7 @@ module.exports = [
     options: {noLog: ['unhandled']},
     expected: undefined
   },
-  {
-    src: `51, 52, 53;`,
-    expected: 53
-  },
+  {src: `51, 52, 53;`, expected: 53},
   {
     name: 'sequenceExpression',
     src: `
@@ -357,27 +324,15 @@ module.exports = [
     `,
     expected: 62,
   },
-  {
-    src: `63 || 'foo';`,
-    expected: 63
-  },
-  {
-    src: `false || 64;`,
-    expected: 64
-  },
+  {src: `63 || 'foo';`, expected: 63},
+  {src: `false || 64;`, expected: 64},
   {
     name: '|| short-circuit',
     src: `var r = 0; true || (r++); r;`,
     expected: 0,
   },
-  {
-    src: `({}) && 65;`,
-    expected: 65
-  },
-  {
-    src: `0 && 65;`,
-    expected: 0
-  },
+  {src: `({}) && 65;`, expected: 65},
+  {src: `0 && 65;`, expected: 0},
   {
     name: '&&  sort-circuit',
     src: `var r = 0; false && (r++); r;`,
@@ -495,14 +450,8 @@ module.exports = [
     src: `this;`,
     expected: undefined,
   },
-  {
-    src: `[].length;`,
-    expected: 0
-  },
-  {
-    src: `[1,,3,,].length;`,
-    expected: 4
-  },
+  {src: `[].length;`, expected: 0},
+  {src: `[1,,3,,].length;`, expected: 4},
   {
     name: 'arrayElidedNotDefinedNotUndefined',
     src: `
@@ -634,31 +583,16 @@ module.exports = [
     src: `{};`,
     expected: undefined,
   },
-  {
-    src: `undefined;`,
-    expected: undefined
-  },
+  {src: `undefined;`, expected: undefined},
   {
     name: 'unaryVoid',
     src: `var x = 70; (undefined === void x++) && x;`,
     expected: 71,
   },
-  {
-    src: `+'72';`,
-    expected: 72
-  },
-  {
-    src: `-73;`,
-    expected: -73
-  },
-  {
-    src: `~0xffffffb5;`,
-    expected: 74
-  },
-  {
-    src: `!false && (!true === false);`,
-    expected: true
-  },
+  {src: `+'72';`, expected: 72},
+  {src: `-73;`, expected: -73},
+  {src: `~0xffffffb5;`, expected: 74},
+  {src: `!false && (!true === false);`, expected: true},
   {
     name: 'unaryTypeof',
     src: `
@@ -707,10 +641,7 @@ module.exports = [
     `,
     expected: true,
   },
-  {
-    src: `'length' in [];`,
-    expected: true
-  },
+  {src: `'length' in [];`, expected: true},
   {
     name: 'binaryInStringLength',
     src: `
@@ -1017,10 +948,7 @@ module.exports = [
     `,
     expected: '[object Arguments]',
   },
-  {
-    src: `debugger;`,
-    expected: undefined
-  },
+  {src: `debugger;`, expected: undefined},
   {
     name: 'newExpression',
     src: `
@@ -1049,10 +977,7 @@ module.exports = [
     `,
     expected: 'the prototype',
   },
-  {
-    src: `/foo/.test('foobar');`,
-    expected: true
-  },
+  {src: `/foo/.test('foobar');`, expected: true},
   {
     name: 'evalSeeEnclosing',
     src: `var n = 77.77; eval('n');`,
@@ -1410,14 +1335,8 @@ module.exports = [
     `,
     expected: 16,
   },
-  {
-    src: `Object.getOwnPropertyNames(42).length`,
-    expected: 0
-  },
-  {
-    src: `Object.getOwnPropertyNames(true).length`,
-    expected: 0
-  },
+  {src: `Object.getOwnPropertyNames(42).length`, expected: 0},
+  {src: `Object.getOwnPropertyNames(true).length`, expected: 0},
   {
     name: 'Object.getOwnPropertyNames(null)',
     src: `
@@ -1598,10 +1517,7 @@ module.exports = [
     src: `var o = {}; o.isPrototypeOf(o);`,
     expected: false,
   },
-  {
-    src: `Object.prototype.isPrototypeOf(Object.create(null))`,
-    expected: false
-  },
+  {src: `Object.prototype.isPrototypeOf(Object.create(null))`, expected: false},
   {
     name: 'Object.protoype.isPrototypeOf related',
     src: `
@@ -1661,23 +1577,14 @@ module.exports = [
     src: `(new Function)();`,
     expected: undefined,
   },
-  {
-    src: `(new Function).length;`,
-    expected: 0
-  },
-  {
-    src: `(new Function).toString()`,
-    expected: 'function() {}'
-  },
+  {src: `(new Function).length;`, expected: 0},
+  {src: `(new Function).toString()`, expected: 'function() {}'},
   {
     name: 'new Function simple returns callable',
     src: `(new Function('return 42;'))();`,
     expected: 42,
   },
-  {
-    src: `(new Function('return 42;')).length;`,
-    expected: 0
-  },
+  {src: `(new Function('return 42;')).length;`, expected: 0},
   {
     src: `(new Function('return 42;')).toString()`,
     expected: 'function() {return 42;}'
@@ -1949,22 +1856,10 @@ module.exports = [
     `,
     expected: '1,2,3',
   },
-  {
-    src: `Array.isArray(Array.prototype);`,
-    expected: true
-  },
-  {
-    src: `Array.isArray(new Array);`,
-    expected: true
-  },
-  {
-    src: `Array.isArray([]);`,
-    expected: true
-  },
-  {
-    src: `Array.isArray({0: 'foo', 1: 'bar', length: 2});`,
-    expected: false
-  },
+  {src: `Array.isArray(Array.prototype);`, expected: true},
+  {src: `Array.isArray(new Array);`, expected: true},
+  {src: `Array.isArray([]);`, expected: true},
+  {src: `Array.isArray({0: 'foo', 1: 'bar', length: 2});`, expected: false},
   {
     name: 'Array.prototype.concat()',
     src: `
@@ -1992,14 +1887,8 @@ module.exports = [
     `,
     expected: '[object Object],baz,,quux,quuux',
   },
-  {
-    src: `[1, 2, 3, 2, 1].includes(2);`,
-    expected: true
-  },
-  {
-    src: `[1, 2, 3, 2, 1].includes(4);`,
-    expected: false
-  },
+  {src: `[1, 2, 3, 2, 1].includes(2);`, expected: true},
+  {src: `[1, 2, 3, 2, 1].includes(4);`, expected: false},
   {
     name: 'Array.prototype.includes fromIndex',
     src: `[1, 2, 3, 2, 1].includes(2, 2);`,
@@ -2010,10 +1899,7 @@ module.exports = [
     src: `[1, 2, 3, 2, 1].includes(1, -3);`,
     expected: true,
   },
-  {
-    src: `['x', NaN, 'y'].includes(NaN);`,
-    expected: true
-  },
+  {src: `['x', NaN, 'y'].includes(NaN);`, expected: true},
   {
     name: 'Array.prototype.includes.call(array-like, ...)',
     src: `
@@ -2512,18 +2398,9 @@ module.exports = [
     `,
     expected: 'pass',
   },
-  {
-    src: `Boolean.prototype.toString();`,
-    expected: 'false'
-  },
-  {
-    src: `Boolean.prototype.toString.call(true);`,
-    expected: 'true'
-  },
-  {
-    src: `Boolean.prototype.toString.call(false);`,
-    expected: 'false'
-  },
+  {src: `Boolean.prototype.toString();`, expected: 'false'},
+  {src: `Boolean.prototype.toString.call(true);`, expected: 'true'},
+  {src: `Boolean.prototype.toString.call(false);`, expected: 'false'},
   {
     name: 'Boolean.prototype.toString.call non-Boolean object',
     src: `
@@ -2535,18 +2412,9 @@ module.exports = [
     `,
     expected: 'TypeError',
   },
-  {
-    src: `Boolean.prototype.valueOf();`,
-    expected: false
-  },
-  {
-    src: `Boolean.prototype.valueOf.call(true);`,
-    expected: true
-  },
-  {
-    src: `Boolean.prototype.valueOf.call(false);`,
-    expected: false
-  },
+  {src: `Boolean.prototype.valueOf();`, expected: false},
+  {src: `Boolean.prototype.valueOf.call(true);`, expected: true},
+  {src: `Boolean.prototype.valueOf.call(false);`, expected: false},
   {
     name: 'Boolean.prototype.valueOf.call non-Boolean object',
     src: `
@@ -2596,14 +2464,8 @@ module.exports = [
     `,
     expected: true,
   },
-  {
-    src: `Number.prototype.toString();`,
-    expected: '0'
-  },
-  {
-    src: `Number.prototype.toString.call(84);`,
-    expected: '84'
-  },
+  {src: `Number.prototype.toString();`, expected: '0'},
+  {src: `Number.prototype.toString.call(84);`, expected: '84'},
   {
     name: 'Number.prototype.toString.call non-Number object',
     src: `
@@ -2615,14 +2477,8 @@ module.exports = [
     `,
     expected: 'TypeError',
   },
-  {
-    src: `Number.prototype.valueOf();`,
-    expected: 0
-  },
-  {
-    src: `Number.prototype.valueOf.call(85);`,
-    expected: 85
-  },
+  {src: `Number.prototype.valueOf();`, expected: 0},
+  {src: `Number.prototype.valueOf.call(85);`, expected: 85},
   {
     name: 'Number.prototype.valueOf.call non-Number object',
     src: `
@@ -2727,10 +2583,7 @@ module.exports = [
     `,
     expected: 'TypeError',
   },
-  {
-    src: `String.prototype.length;`,
-    expected: 0
-  },
+  {src: `String.prototype.length;`, expected: 0},
   {
     name: 'String.prototype.replace(string, string)',
     src: `'xxxx'.replace('xx', 'y');`,
@@ -2779,10 +2632,7 @@ module.exports = [
     src: `'hello'.search(/(.)\\1/)`,
     expected: 2,
   },
-  {
-    src: `String.prototype.toString();`,
-    expected: ''
-  },
+  {src: `String.prototype.toString();`, expected: ''},
   {
     name: 'String.prototype.toString.call primitive',
     src: `String.prototype.toString.call('a string');`,
@@ -2799,10 +2649,7 @@ module.exports = [
     `,
     expected: 'TypeError',
   },
-  {
-    src: `String.prototype.valueOf();`,
-    expected: ''
-  },
+  {src: `String.prototype.valueOf();`, expected: ''},
   {
     name: 'String.prototype.valueOf.call primitive',
     src: `String.prototype.valueOf.call('a string');`,
@@ -2912,18 +2759,9 @@ module.exports = [
     expected: '{"string":"foo","number":42,"true":true,"false":false,' +
         '"null":null,"object":{"obj":{},"arr":[]},"array":[{},[]]}',
   },
-  {
-    src: `JSON.stringify(function(){});`,
-    expected: undefined
-  },
-  {
-    src: `JSON.stringify([function(){}]);`,
-    expected: '[null]'
-  },
-  {
-    src: `JSON.stringify({f: function(){}});`,
-    expected: '{}'
-  },
+  {src: `JSON.stringify(function(){});`, expected: undefined},
+  {src: `JSON.stringify([function(){}]);`, expected: '[null]'},
+  {src: `JSON.stringify({f: function(){}});`, expected: '{}'},
   {
     name: 'JSON.stringify filter',
     src: `
@@ -3191,7 +3029,7 @@ module.exports = [
   },
   {
     name: 'setOwnerOf',
-      src: `
+    src: `
       var bob = {};
       var obj = {};
       Object.setOwnerOf(obj, bob) === obj && Object.getOwnerOf(obj) === bob;
