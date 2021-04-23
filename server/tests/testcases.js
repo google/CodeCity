@@ -92,9 +92,9 @@ module.exports = [
     expected: 8,
   },
   {
-    src: `var v, f = function() {v = 49;}; f(); v;
-    `,
-    expected: 49
+    name: 'FunctionExpression',
+    src: `var v, f = function() {v = 49;}; f(); v;`,
+    expected: 49,
   },
   {
     name: 'assignmentSetsAnonFuncName',
@@ -195,12 +195,12 @@ module.exports = [
   {
     src: `try {throw new Error('not caught');} finally {}`,
     options: {noLog: ['unhandled']},
-    expected: undefined
+    expected: undefined,
   },
   {
     src: `try {throw 'not caught';} finally {}`,
     options: {noLog: ['unhandled']},
-    expected: undefined
+    expected: undefined,
   },
   {src: `51, 52, 53;`, expected: 53},
   {
@@ -259,7 +259,7 @@ module.exports = [
   },
   {
     src: `foo: break foo;`,
-    expected: undefined /* (but legal!) */
+    expected: undefined,  // (but legal!)
   },
   {
     name: 'try ... break ... finally',
@@ -1072,6 +1072,7 @@ module.exports = [
     `,
     expected: 'pass',
   },
+
   /////////////////////////////////////////////////////////////////////////////
   // Object and Object.prototype
   {
@@ -1556,6 +1557,7 @@ module.exports = [
     `,
     expected: true,
   },
+
   /////////////////////////////////////////////////////////////////////////////
   // Function and Function.prototype
   {
@@ -1811,6 +1813,7 @@ module.exports = [
     src: `String(new (WeakMap.bind()));`,
     expected: '[object WeakMap]',
   },
+
   /////////////////////////////////////////////////////////////////////////////
   // Array and Array.prototype
   {
@@ -2355,6 +2358,7 @@ module.exports = [
     // SKIP until more efficient unshift implementation available.
     /* expected: true */
   },
+
   /////////////////////////////////////////////////////////////////////////////
   // Boolean and Boolean.prototype
   {src: `Boolean(undefined);`, expected: false},
@@ -2398,6 +2402,7 @@ module.exports = [
     `,
     expected: 'TypeError',
   },
+
   /////////////////////////////////////////////////////////////////////////////
   // Number and Number.prototype
   {src: `Number();`, expected: 0},
@@ -2448,6 +2453,7 @@ module.exports = [
     `,
     expected: 'TypeError',
   },
+
   /////////////////////////////////////////////////////////////////////////////
   // String and String.prototype
   {src: `String();`, expected: ''},
@@ -2610,6 +2616,7 @@ module.exports = [
     `,
     expected: 'TypeError',
   },
+
   /////////////////////////////////////////////////////////////////////////////
   // RegExp
   {
@@ -2623,6 +2630,7 @@ module.exports = [
     `,
     expected: 'TypeError',
   },
+
   /////////////////////////////////////////////////////////////////////////////
   // Error and Error.prototype (and all the other native error types too)
   {
@@ -2691,6 +2699,7 @@ module.exports = [
     `,
     expected: 'at foo 2:16',
   },
+
   /////////////////////////////////////////////////////////////////////////////
   // JSON
   {
@@ -2763,6 +2772,7 @@ module.exports = [
     `,
     expected: 'TypeError',
   },
+
   /////////////////////////////////////////////////////////////////////////////
   // Other built-in functions
   {
@@ -2776,6 +2786,7 @@ module.exports = [
     `,
     expected: 'URIError',
   },
+
   /////////////////////////////////////////////////////////////////////////////
   // WeakMap
   {
@@ -2845,6 +2856,7 @@ module.exports = [
     `,
     expected: 0,
   },
+
   /////////////////////////////////////////////////////////////////////////////
   // Thread and Thread.prototype:
   // TODO(cpallen): change .eval to .program when test harness no
@@ -2858,16 +2870,16 @@ module.exports = [
       Object.getOwnerOf(callers) === owner &&
           Object.getOwnerOf(callers[0]) === owner;
     `,
-    expected: true
+    expected: true,
   },
   {
     name: 'Thread.callers()[0].eval',
-    src: 'Thread.callers()[0].eval',
-    expected: 'Thread.callers()[0].eval'
+    src: `Thread.callers()[0].eval`,
+    expected: 'Thread.callers()[0].eval',
   },
   {
     name: 'Thread.callers()[0].line & .col',
-    src: 'var frame = Thread.callers()[0]; frame.line + "," + frame.col;',
+    src: `var frame = Thread.callers()[0]; frame.line + "," + frame.col;`,
     expected: '1,13',
   },
   {
@@ -2933,6 +2945,7 @@ module.exports = [
     `,
     expected: 'OK',
   },
+
   /////////////////////////////////////////////////////////////////////////////
   // Permissions system:
   {
@@ -2980,6 +2993,7 @@ module.exports = [
     `,
     expected: true,
   },
+
   /////////////////////////////////////////////////////////////////////////////
   // Other tests:
   {
