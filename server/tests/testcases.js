@@ -122,7 +122,7 @@ module.exports = [
     expected: 8
   },
   {
-    src: `var v, f = function() { v = 49; }; f(); v;
+    src: `var v, f = function() {v = 49;}; f(); v;
     `,
     expected: 49
   },
@@ -147,22 +147,22 @@ module.exports = [
   },
   {
     name: 'funExpWithParameter',
-    src: `var v; var f = function(x) { v = x; }; f(50); v;`,
+    src: `var v; var f = function(x) {v = x;}; f(50); v;`,
     expected: 50
   },
   {
     name: 'funExpParameterNotShadowedByVar',
-    src: `var f = function(x) { var x; return x; }; f(50.1);`,
+    src: `var f = function(x) {var x; return x;}; f(50.1);`,
     expected: 50.1
   },
   {
     name: 'funExpParameterNotShadowedByVar',
-    src: `var f = function(x) { var x = 50.2; return x; }; f(50.2);`,
+    src: `var f = function(x) {var x = 50.2; return x;}; f(50.2);`,
     expected: 50.2
   },
   {
     name: 'functionWithReturn',
-    src: `(function(x) { return x; })(51);`,
+    src: `(function(x) {return x;})(51);`,
     expected: 51
   },
   {
@@ -398,7 +398,7 @@ module.exports = [
     name: 'forIn',
     src: `
     var x = 0, a = {a: 60, b:3, c:4};
-    for (var i in a) { x += a[i]; }
+    for (var i in a) {x += a[i];}
     x;
     `,
     expected: 67
@@ -407,7 +407,7 @@ module.exports = [
     name: 'forInMemberExp',
     src: `
     var x = 1, o = {foo: 'bar'}, a = {a:2, b:2, c:17};
-    for (o.foo in a) { x *= a[o.foo]; }
+    for (o.foo in a) {x *= a[o.foo];}
     x;
     `,
     expected: 68
@@ -416,9 +416,9 @@ module.exports = [
     name: 'forInMembFunc',
     src: `
     var x = 0, o = {};
-    var f = function() { x += 20; return o; };
+    var f = function() {x += 20; return o;};
     var a = {a:2, b:3, c:4};
-    for (f().foo in a) { x += a[o.foo]; }
+    for (f().foo in a) {x += a[o.foo];}
     x;
     `,
     expected: 69
@@ -427,9 +427,9 @@ module.exports = [
     name: 'forInNullUndefined',
     src: `
     var x = 0, o = {};
-    var f = function() { x++; return o; };
-    for (f().foo in null) { x++; }
-    for (f().foo in undefined) { x++; }
+    var f = function() {x++; return o;};
+    for (f().foo in null) {x++;}
+    for (f().foo in undefined) {x++;}
     x;
     `,
     expected: 0
@@ -474,7 +474,7 @@ module.exports = [
     name: 'thisInMethod',
     src: `
     var o = {
-      f: function() { return this.foo; },
+      f: function() {return this.foo;},
       foo: 70
     };
     o.f();
@@ -484,7 +484,7 @@ module.exports = [
   {
     name: 'thisInFormerMethod',
     src: `
-    var o = { f: function() { return this; }};
+    var o = {f: function() {return this;}};
     var g = o.f;
     g();
     `,
@@ -917,7 +917,7 @@ module.exports = [
     name: 'closureIndependence',
     src: `
     function makeAdder(x) {
-      return function(y) { return x + y; };
+      return function(y) {return x + y;};
     }
     var plus3 = makeAdder(3);
     var plus4 = makeAdder(4);
@@ -1024,8 +1024,8 @@ module.exports = [
   {
     name: 'newExpression',
     src: `
-    function T(x, y) { this.sum += x + y; };
-    T.prototype = { sum: 70 }
+    function T(x, y) {this.sum += x + y;};
+    T.prototype = {sum: 70}
     var t = new T(7, 0.7);
     t.sum;
     `,
@@ -1034,8 +1034,8 @@ module.exports = [
   {
     name: 'newExpressionReturnObj',
     src: `
-    function T() { return {}; };
-    T.prototype = { p: 'the prototype' };
+    function T() {return {};};
+    T.prototype = {p: 'the prototype'};
     (new T).p;
     `,
     expected: undefined
@@ -1043,8 +1043,8 @@ module.exports = [
   {
     name: 'newExpressionReturnPrimitive',
     src: `
-    function T() { return 0; };
-    T.prototype = { p: 'the prototype' };
+    function T() {return 0;};
+    T.prototype = {p: 'the prototype'};
     (new T).p;
     `,
     expected: 'the prototype'
@@ -1078,7 +1078,7 @@ module.exports = [
     (function() {
       var n = 77.77;
       try {
-        (function() { return eval; })()('n');
+        (function() {return eval;})()('n');
       } catch (e) {
         return e.name;
       }
@@ -1127,7 +1127,7 @@ module.exports = [
     src: `
     try {
       var invalid = undefined;
-      function t() { throw {name: 'args'}; };
+      function t() {throw {name: 'args'};};
       invalid(t());
     } catch(e) {
       e.name;
@@ -1201,7 +1201,7 @@ module.exports = [
   {
     name: 'Object.defineProperty',
     src: `
-    var o = { foo: 50 }, r = 0;
+    var o = {foo: 50}, r = 0;
     Object.defineProperty(o, 'bar', {
       writable: true,
       enumerable: true,
@@ -1378,7 +1378,7 @@ module.exports = [
     name: 'Object.getOwnPropertyDescriptor',
     src: `
     var o = {}, r = 0;
-    Object.defineProperty(o, 'foo', { value: 'bar' });
+    Object.defineProperty(o, 'foo', {value: 'bar'});
     var desc = Object.getOwnPropertyDescriptor(o, 'foo');
     desc.value === o.foo &&
         !desc.writable && !desc.enumerable && !desc.configurable;
@@ -1445,7 +1445,7 @@ module.exports = [
     src: `
     var o = Object.create({baz: 999});
     o.foo = 42;
-    Object.defineProperty(o, 'bar', { value: 38 });
+    Object.defineProperty(o, 'bar', {value: 38});
     var keys = Object.getOwnPropertyNames(o);
     var r = 0;
     for (var i = 0; i < keys.length; i++) {
@@ -1493,7 +1493,7 @@ module.exports = [
     src: `
     var o = {};
     try {
-      Object.defineProperties(o, { foo: 'not an object' });
+      Object.defineProperties(o, {foo: 'not an object'});
     } catch (e) {
       e.name;
     }
@@ -1503,14 +1503,14 @@ module.exports = [
   {
     name: 'Object.defineProperties',
     src: `
-    var o = { foo: 70 }, r = 0;
+    var o = {foo: 70}, r = 0;
     Object.defineProperties(o, {
         bar: {
             writable: true,
             enumerable: true,
             configurable: true,
             value: 8 },
-        baz: { value: 999 }});
+        baz: {value: 999}});
     for (var k in o) {
       r += o[k];
     }
@@ -1521,13 +1521,13 @@ module.exports = [
   {
     name: 'Object.create(..., properties)',
     src: `
-    var o = Object.create({ foo: 70 }, {
+    var o = Object.create({foo: 70}, {
         bar: {
             writable: true,
             enumerable: true,
             configurable: true,
             value: 10 },
-        baz: { value: 999 }});
+        baz: {value: 999}});
     var r = 0;
     for (var k in o) {
       r += o[k];
@@ -1729,7 +1729,7 @@ module.exports = [
     name: 'Function.prototype.apply this',
     src: `
     var o = {};
-    function f() { return this; }
+    function f() {return this;}
     f.apply(o, []) === o;
     `,
     expected: true
@@ -1738,7 +1738,7 @@ module.exports = [
     name: 'Function.prototype.apply(..., undefined) or null',
     src: `
     var n = 0;
-    function f() { n += arguments.length; }
+    function f() {n += arguments.length;}
     f.apply(undefined, undefined);
     f.apply(undefined, null);
     n;
@@ -1803,7 +1803,7 @@ module.exports = [
     name: 'Function.prototype.call this',
     src: `
     var o = {};
-    function f() { return this; }
+    function f() {return this;}
     f.call(o) === o;
     `,
     expected: true
@@ -1842,14 +1842,14 @@ module.exports = [
     name: 'Function.prototype.bind this',
     src: `
     var o = {};
-    function f() { return this; }
+    function f() {return this;}
     f.bind(o)() === o;
     `,
     expected: true
   },
   {
     name: 'Function.prototype.bind no args',
-    src: `(function() { return arguments.length; }).bind()();`,
+    src: `(function() {return arguments.length;}).bind()();`,
     expected: 0
   },
   {
@@ -2903,7 +2903,7 @@ module.exports = [
     src: `
     JSON.stringify({
         string: 'foo', number: 42, true: true, false: false, null: null,
-        object: { obj: {}, arr: [] }, array: [{}, []] });
+        object: {obj: {}, arr: []}, array: [{}, []] });
     `,
     expected: '{"string":"foo","number":42,"true":true,"false":false,' +
         '"null":null,"object":{"obj":{},"arr":[]},"array":[{},[]]}'
@@ -2925,7 +2925,7 @@ module.exports = [
     src: `
     JSON.stringify({
         string: 'foo', number: 42, true: true, false: false, null: null,
-        object: { obj: {}, arr: [] }, array: [{}, []] },
+        object: {obj: {}, arr: []}, array: [{}, []] },
         ['string', 'number']);
     `,
     expected: '{"string":"foo","number":42}'
@@ -2935,7 +2935,7 @@ module.exports = [
     src: `
     JSON.stringify({
         string: 'foo', number: 42, true: true, false: false, null: null,
-        object: { obj: {}, arr: [] }, array: [{}, []] },
+        object: {obj: {}, arr: []}, array: [{}, []] },
         ['string', 'number'], 2);
     `,
     expected: '{\n  "string": "foo",\n  "number": 42\n}'
@@ -2945,7 +2945,7 @@ module.exports = [
     src: `
     JSON.stringify({
         string: 'foo', number: 42, true: true, false: false, null: null,
-        object: { obj: {}, arr: [] }, array: [{}, []] },
+        object: {obj: {}, arr: []}, array: [{}, []] },
         ['string', 'number'], '--');
     `,
     expected: '{\n--"string": "foo",\n--"number": 42\n}'
@@ -3256,10 +3256,10 @@ module.exports = [
     src: `
     var tests = [
       // With statement.
-      'var o = { foo: 42 }; var f = function() { with (o) { foo; }};',
+      'var o = {foo: 42}; var f = function() {with (o) {foo;}};',
       // Binding eval in global scope, or arguments in a function.
       'var eval = "rebinding eval?!?";',
-      '(function() { arguments = undefined; });',
+      '(function() {arguments = undefined;});',
       // Duplicate argument names.
       '(function(a, a) {});',
       // Octal numeric literals.
