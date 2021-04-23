@@ -21,8 +21,8 @@
  */
 'use strict';
 
+// Testcases for testSimple in interpreter_test.js.
 module.exports = [
-  // Testcases for TestInterpreterSimple (have expected value):
   {
     src: `1 + 1;`,
     expected: 2
@@ -1784,8 +1784,8 @@ module.exports = [
       return a + b + c;
     }).apply(undefined, {0: 1, 1: 2, 2: 4});
     `,
-    expected: NaN
-  },  // Because undefined + undefined === NaN.
+    expected: NaN  // Because undefined + undefined === NaN.
+  },
   {
     name: 'Function.prototype.call non-function throws',
     src: `
@@ -1898,7 +1898,7 @@ module.exports = [
     `,
     expected: 'TypeError'
   },
-  // N.B.: tests of class constructor semantics unavoidably ES6.
+  // N.B.: tests of semantics of class constructors are unavoidably ES6.
   {
     name: 'Function.prototype.bind class constructor w/o new',
     src: `
@@ -1911,7 +1911,7 @@ module.exports = [
     `,
     expected: 'TypeError'
   },
-  // N.B.: tests of class constructor semantics unavoidably ES6.
+  // N.B.: tests of semantics of class constructors are unavoidably ES6.
   {
     name: 'Function.prototype.bind class constructor',
     src: `String(new (WeakMap.bind()));`,
@@ -3030,10 +3030,11 @@ module.exports = [
       var method = methods[i];
       for (var j = 0; j < values.length; j++) {
         var value = values[j];
-        expectError(method, value, [{}]);
-        expectError(method, w, [value]);
+        expectError(method, value, [{}]);  // Can't call method on non-WeakMap.
+        expectError(method, w, [value]);  // Can't store non-object in WeakMap.
       }
-      expectError(method, WeakMap.prototpye, [{}]);  // Ordinary object.
+      // WeakMap.prototype is an ordinary object, not a WeakMap.
+      expectError(method, WeakMap.prototpye, [{}]);
     }
     fails;
     `,
