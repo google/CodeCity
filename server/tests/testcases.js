@@ -24,42 +24,35 @@
 module.exports = [
   // Testcases for TestInterpreterSimple (have expected value):
   {
-    name: 'onePlusOne',
     src: `1 + 1;`,
     expected: 2
   },
   {
-    name: 'twoPlusTwo',
     src: `2 + 2;`,
     expected: 4
   },
   {
-    name: 'sixTimesSeven',
     src: `6 * 7;`,
     expected: 42
   },
   {
-    name: 'simpleFourFunction',
     src: `(3 + 12 / 4) * (10 - 3);`,
     expected: 42
   },
   {
-    name: 'variableDecl',
     src: `var x = 43; x;`,
     expected: 43
   },
   {
-    name: 'condTrue',
     src: `true ? 'then' : 'else';`,
     expected: 'then'
   },
   {
-    name: 'condFalse',
     src: `false ? 'then' : 'else';`,
     expected: 'else'
   },
   {
-    name: 'ifTrue',
+    name: 'if(true)',
     src: `
     if (true) {
       'then';
@@ -70,7 +63,7 @@ module.exports = [
     expected: 'then'
   },
   {
-    name: 'ifFalse',
+    name: 'if(false)',
     src: `
     if (false) {
       'then';
@@ -107,37 +100,29 @@ module.exports = [
     expected: 'TypeError'
   },
   {
-    name: 'postincrement',
     src: `var x = 45; x++; x++;`,
     expected: 46
   },
   {
-    name: 'preincrement',
     src: `var x = 45; ++x; ++x;`,
     expected: 47
   },
   {
-    name: 'concat',
     src: `'foo' + 'bar';`,
     expected: 'foobar'
   },
   {
-    name: 'plusequalsLeft',
+    name: 'Effect of += on left argument',
     src: `var x = 40, y = 8; x += y; x;`,
     expected: 48
   },
   {
-    name: 'plusequalsRight',
+    name: 'Effect of += on right argument',
     src: `var x = 40, y = 8; x += y; y;`,
     expected: 8
   },
   {
-    name: 'simpleFunctionExpression',
-    src: `
-    var v;
-    var f = function() { v = 49; };
-    f();
-    v;
+    src: `var v, f = function() { v = 49; }; f(); v;
     `,
     expected: 49
   },
@@ -238,31 +223,27 @@ module.exports = [
     expected: undefined
   },
   {
-    name: 'throwUnhandledErrorWithFinally',
-    src: `
-    try {
-      throw new Error('not caught');
-    } finally {
-    }
-    `,
+    src: `try {throw new Error('not caught');} finally {}`,
     options: {noLog: ['unhandled']},
     expected: undefined
   },
   {
-    name: 'throwUnhandledExceptionWithFinally',
-    src: `
-    try {
-      throw 'not caught';
-    } finally {
-    }
-    `,
+    src: `try {throw 'not caught';} finally {}`,
     options: {noLog: ['unhandled']},
     expected: undefined
   },
   {
-    name: 'seqExpr',
     src: `51, 52, 53;`,
     expected: 53
+  },
+  {
+    name: 'sequenceExpression',
+    src: `
+    var x, y, z;
+    x = (y = 60, z = 5, 0.5);
+    x + y + z;
+    `,
+    expected: 65.5
   },
   {
     name: 'labeledStatement',
@@ -273,37 +254,31 @@ module.exports = [
     name: 'whileLoop',
     src: `
     var a = 0;
-    while (a < 55) {
-      a++;
-    }
+    while (a < 55) a++;
     a;
     `,
     expected: 55
   },
   {
-    name: 'whileFalse',
+    name: 'while(false)',
     src: `
     var a = 56;
-    while (false) {
-      a++;
-    }
+    while (false) a++;
     a;
     `,
     expected: 56
   },
   {
-    name: 'doWhileFalse',
+    name: 'do ... while(false)',
     src: `
     var a = 56;
-    do {
-      a++;
-    } while (false);
+    do a++; while (false);
     a;
     `,
     expected: 57
   },
   {
-    name: 'breakDoWhile',
+    name: 'do ... break ... while',
     src: `
     var a = 57;
     do {
@@ -316,12 +291,11 @@ module.exports = [
     expected: 58
   },
   {
-    name: 'selfBreak',
     src: `foo: break foo;`,
     expected: undefined /* (but legal!) */
   },
   {
-    name: 'breakWithFinally',
+    name: 'try ... break ... finally',
     src: `
     var a = 6;
     foo: {
@@ -337,7 +311,7 @@ module.exports = [
     expected: 59
   },
   {
-    name: 'continueWithFinally',
+    name: 'do ... while with try ... continue ... finally ...',
     src: `
     var a = 59;
     do {
@@ -352,7 +326,7 @@ module.exports = [
     expected: 60
   },
   {
-    name: 'breakWithFinallyContinue',
+    name: 'while with try ... break ... finally continue',
     src: `
     var a = 0;
     while (a++ < 60) {
@@ -367,7 +341,7 @@ module.exports = [
     expected: 61
   },
   {
-    name: 'returnWithFinallyContinue',
+    name: 'while with try ... return ... finally continue',
     src: `
     (function() {
       var i = 0;
@@ -384,46 +358,33 @@ module.exports = [
     expected: 62
   },
   {
-    name: 'orTrue',
     src: `63 || 'foo';`,
     expected: 63
   },
   {
-    name: 'orFalse',
     src: `false || 64;`,
     expected: 64
   },
   {
-    name: 'orShortcircuit',
+    name: '|| short-circuit',
     src: `var r = 0; true || (r++); r;`,
     expected: 0
   },
   {
-    name: 'andTrue',
     src: `({}) && 65;`,
     expected: 65
   },
   {
-    name: 'andFalse',
     src: `0 && 65;`,
     expected: 0
   },
   {
-    name: 'andShortcircuit',
+    name: '&&  sort-circuit',
     src: `var r = 0; false && (r++); r;`,
     expected: 0
   },
   {
-    name: 'sequenceExpresion',
-    src: `
-    var x, y, z;
-    x = (y = 60, z = 5, 0.5);
-    x + y + z;
-    `,
-    expected: 65.5
-  },
-  {
-    name: 'forTriangular',
+    name: 'for',
     src: `
     var t = 0;
     for (var i = 0; i < 12; i++) {
@@ -535,12 +496,10 @@ module.exports = [
     expected: undefined
   },
   {
-    name: 'emptyArrayLength',
     src: `[].length;`,
     expected: 0
   },
   {
-    name: 'arrayElidedLength',
     src: `[1,,3,,].length;`,
     expected: 4
   },
@@ -676,7 +635,6 @@ module.exports = [
     expected: undefined
   },
   {
-    name: 'undefined',
     src: `undefined;`,
     expected: undefined
   },
@@ -686,22 +644,18 @@ module.exports = [
     expected: 71
   },
   {
-    name: 'unaryPlus',
     src: `+'72';`,
     expected: 72
   },
   {
-    name: 'unaryMinus',
     src: `-73;`,
     expected: -73
   },
   {
-    name: 'unaryComplement',
     src: `~0xffffffb5;`,
     expected: 74
   },
   {
-    name: 'unaryNot',
     src: `!false && (!true === false);`,
     expected: true
   },
@@ -754,7 +708,6 @@ module.exports = [
     expected: true
   },
   {
-    name: 'binaryInArrayLength',
     src: `'length' in [];`,
     expected: true
   },
@@ -858,7 +811,7 @@ module.exports = [
     expected: 'TypeError,0'
   },
   {
-    name: 'deleteProp',
+    name: 'delete',
     src: `
     var o = {foo: 'bar'};
     (delete o.quux) + ('foo' in o) + (delete o.foo) +
@@ -1065,10 +1018,7 @@ module.exports = [
     expected: '[object Arguments]'
   },
   {
-    name: 'debugger',
-    src: `
-    debugger;
-    `,
+    src: `debugger;`,
     expected: undefined
   },
   {
@@ -1100,7 +1050,6 @@ module.exports = [
     expected: 'the prototype'
   },
   {
-    name: 'regexpSimple',
     src: `/foo/.test('foobar');`,
     expected: true
   },
@@ -1462,12 +1411,10 @@ module.exports = [
     expected: 16
   },
   {
-    name: 'Object.getOwnPropertyNames number',
     src: `Object.getOwnPropertyNames(42).length`,
     expected: 0
   },
   {
-    name: 'Object.getOwnPropertyNames boolean',
     src: `Object.getOwnPropertyNames(true).length`,
     expected: 0
   },
@@ -1651,7 +1598,6 @@ module.exports = [
     expected: false
   },
   {
-    name: 'Object.protoype.isPrototypeOf unrelated',
     src: `Object.prototype.isPrototypeOf(Object.create(null))`,
     expected: false
   },
@@ -1715,12 +1661,10 @@ module.exports = [
     expected: undefined
   },
   {
-    name: 'new Function() .length',
     src: `(new Function).length;`,
     expected: 0
   },
   {
-    name: 'new Function() .toString()',
     src: `(new Function).toString()`,
     expected: 'function() {}'
   },
@@ -1730,12 +1674,10 @@ module.exports = [
     expected: 42
   },
   {
-    name: 'new Function simple .length',
     src: `(new Function('return 42;')).length;`,
     expected: 0
   },
   {
-    name: 'new Function simple .toString()',
     src: `(new Function('return 42;')).toString()`,
     expected: 'function() {return 42;}'
   },
@@ -1971,22 +1913,19 @@ module.exports = [
   },
   // N.B.: tests of class constructor semantics unavoidably ES6.
   {
-    name: 'Function.protote.bind class constructor',
+    name: 'Function.prototype.bind class constructor',
     src: `String(new (WeakMap.bind()));`,
     expected: '[object WeakMap]'
   },
   /////////////////////////////////////////////////////////////////////////////
   // Array and Array.prototype
   {
-    name: 'new Array()NoArgs',
-    src: `
-    var a = new Array;
-    Array.isArray(a) && a.length;
-    `,
+    name: 'new Array()',
+    src: `var a = new Array(); Array.isArray(a) && a.length;`,
     expected: 0
   },
   {
-    name: 'newArray(number)',
+    name: 'newArray(/* number */)',
     src: `
     var a = new Array(42);
     Array.isArray(a) && !(0 in a) && !(41 in a) && a.length;
@@ -1994,7 +1933,7 @@ module.exports = [
     expected: 42
   },
   {
-    name: 'new Array(non-number)',
+    name: 'new Array(/* non-number */)',
     src: `
     var a = new Array('foo');
     Array.isArray(a) && a.length === 1 && a[0];
@@ -2002,7 +1941,7 @@ module.exports = [
     expected: 'foo'
   },
   {
-    name: 'new Array multiple args',
+    name: 'new Array(/* multiple args */)',
     src: `
     var a = new Array(1, 2, 3);
     Array.isArray(a) && a.length === 3 && String(a);
@@ -2010,22 +1949,18 @@ module.exports = [
     expected: '1,2,3'
   },
   {
-    name: 'Array.isArray Array.prototype',
     src: `Array.isArray(Array.prototype);`,
     expected: true
   },
   {
-    name: 'Array.isArray Array instance',
     src: `Array.isArray(new Array);`,
     expected: true
   },
   {
-    name: 'Array.isArray array literal',
     src: `Array.isArray([]);`,
     expected: true
   },
   {
-    name: 'Array.isArray(array-like)',
     src: `Array.isArray({0: 'foo', 1: 'bar', length: 2});`,
     expected: false
   },
@@ -2057,12 +1992,10 @@ module.exports = [
     expected: '[object Object],baz,,quux,quuux'
   },
   {
-    name: 'Array.prototype.includes',
     src: `[1, 2, 3, 2, 1].includes(2);`,
     expected: true
   },
   {
-    name: 'Array.prototype.includes not found',
     src: `[1, 2, 3, 2, 1].includes(4);`,
     expected: false
   },
@@ -2077,7 +2010,6 @@ module.exports = [
     expected: true
   },
   {
-    name: 'Array.prototype.includes NaN',
     src: `['x', NaN, 'y'].includes(NaN);`,
     expected: true
   },
@@ -2100,12 +2032,12 @@ module.exports = [
     expected: -1
   },
   {
-    name: 'Array.prototype.indexOf(..., +)',
+    name: 'Array.prototype.indexOf fromIndex',
     src: `[1, 2, 3, 2, 1].indexOf(2, 2);`,
     expected: 3
   },
   {
-    name: 'Array.prototype.indexOf(..., -)',
+    name: 'Array.prototype.indexOf negative fromIndex',
     src: `[1, 2, 3, 2, 1].indexOf(1, -3);`,
     expected: 4
   },
@@ -2577,17 +2509,14 @@ module.exports = [
     expected: 'pass'
   },
   {
-    name: 'Boolean.prototype.toString()',
     src: `Boolean.prototype.toString();`,
     expected: 'false'
   },
   {
-    name: 'Boolean.prototype.toString.call(true)',
     src: `Boolean.prototype.toString.call(true);`,
     expected: 'true'
   },
   {
-    name: 'Boolean.prototype.toString.call(false)',
     src: `Boolean.prototype.toString.call(false);`,
     expected: 'false'
   },
@@ -2603,17 +2532,14 @@ module.exports = [
     expected: 'TypeError'
   },
   {
-    name: 'Boolean.prototype.valueOf()',
     src: `Boolean.prototype.valueOf();`,
     expected: false
   },
   {
-    name: 'Boolean.prototype.valueOf.call primitive true',
     src: `Boolean.prototype.valueOf.call(true);`,
     expected: true
   },
   {
-    name: 'Boolean.prototype.valueOf.call primitive false',
     src: `Boolean.prototype.valueOf.call(false);`,
     expected: false
   },
@@ -2667,12 +2593,10 @@ module.exports = [
     expected: true
   },
   {
-    name: 'Number.prototype.toString()',
     src: `Number.prototype.toString();`,
     expected: '0'
   },
   {
-    name: 'Number.prototype.toString.call primitive',
     src: `Number.prototype.toString.call(84);`,
     expected: '84'
   },
@@ -2688,12 +2612,10 @@ module.exports = [
     expected: 'TypeError'
   },
   {
-    name: 'Number.prototype.valueOf()',
     src: `Number.prototype.valueOf();`,
     expected: 0
   },
   {
-    name: 'Number.prototype.valueOf.call primitive',
     src: `Number.prototype.valueOf.call(85);`,
     expected: 85
   },
@@ -2802,7 +2724,6 @@ module.exports = [
     expected: 'TypeError'
   },
   {
-    name: 'String.prototype.length',
     src: `String.prototype.length;`,
     expected: 0
   },
@@ -2855,7 +2776,6 @@ module.exports = [
     expected: 2
   },
   {
-    name: 'String.prototype.toString()',
     src: `String.prototype.toString();`,
     expected: ''
   },
@@ -2876,7 +2796,6 @@ module.exports = [
     expected: 'TypeError'
   },
   {
-    name: 'String.prototype.valueOf()',
     src: `String.prototype.valueOf();`,
     expected: ''
   },
@@ -2990,17 +2909,14 @@ module.exports = [
         '"null":null,"object":{"obj":{},"arr":[]},"array":[{},[]]}'
   },
   {
-    name: 'JSON.stringify(function(){})',
     src: `JSON.stringify(function(){});`,
     expected: undefined
   },
   {
-    name: 'JSON.stringify([function(){}])',
     src: `JSON.stringify([function(){}]);`,
     expected: '[null]'
   },
   {
-    name: 'JSON.stringify({f: function(){}})',
     src: `JSON.stringify({f: function(){}});`,
     expected: '{}'
   },
@@ -3168,7 +3084,7 @@ module.exports = [
     expected: '1,13'
   },
   {
-    name: 'Thread.callers()[/*last*/].program',
+    name: 'Thread.callers()[/* last */].program',
     src: `
     var callers = Thread.callers();
     typeof callers[callers.length - 1].program;

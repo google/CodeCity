@@ -266,7 +266,7 @@ exports.testHasArgumentsOrEval = function(t) {
     try {
       const ast = Parser.parse(src);
       const firstStatement = ast['body'][0];
-      t.expect(name, hasArgumentsOrEval(firstStatement),
+      t.expect(`${name} ${src}`, hasArgumentsOrEval(firstStatement),
                expected, src);
     } catch (e) {
       t.crash(name, util.format('%s\n%s', src, e.stack));
@@ -287,7 +287,7 @@ exports.testSimple = function(t) {
     if ('expected' in tc) {
       const oldOptions = interpreter.options;
       if (tc.options) interpreter.options = tc.options;
-      runSimpleTest(t, tc.name, tc.src, tc.expected);
+      runSimpleTest(t, tc.name || tc.src, tc.src, tc.expected);
       if (tc.options) interpreter.options = oldOptions;
     } else {
       t.skip(tc.name);
