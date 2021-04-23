@@ -593,29 +593,15 @@ module.exports = [
   {src: `-73;`, expected: -73},
   {src: `~0xffffffb5;`, expected: 74},
   {src: `!false && (!true === false);`, expected: true},
-  {
-    name: 'unaryTypeof',
-    src: `
-      var tests = [
-        [undefined, 'undefined'],
-        [null, 'object'],
-        [false, 'boolean'],
-        [0, 'number'],
-        ['', 'string'],
-        [{}, 'object'],
-        [[], 'object'],
-        [function() {}, 'function'],
-      ];
-      var ok = 0;
-      for (var i = 0; i < tests.length; i++) {
-        if (typeof tests[i][0] === tests[i][1]) {
-          ok++;
-        }
-      }
-      (ok === tests.length) ? 'pass' : 'fail';
-    `,
-    expected: 'pass',
-  },
+
+  {src: `typeof undefined;`, expected: 'undefined'},
+  {src: `typeof null;`, expected: 'object'},
+  {src: `typeof false;`, expected: 'boolean'},
+  {src: `typeof 0;`, expected: 'number'},
+  {src: `typeof '';`, expected: 'string'},
+  {src: `typeof {};`, expected: 'object'},
+  {src: `typeof [];`, expected: 'object'},
+  {src: `typeof function() {};`, expected: 'function'},
   {
     name: 'unaryTypeofUndeclared',
     src: `
@@ -2371,33 +2357,19 @@ module.exports = [
   },
   /////////////////////////////////////////////////////////////////////////////
   // Boolean and Boolean.prototype
-  {
-    name: 'Boolean',
-    src: `
-      var tests = [
-        [undefined, false],
-        [null, false],
-        [false, false],
-        [true, true],
-        [NaN, false],
-        [0, false],
-        [1, true],
-        ['', false],
-        ['foo', true],
-        [{}, true],
-        [[], true],
-        [function() {}, true],
-      ];
-      var ok = 0;
-      for (var i = 0; i < tests.length; i++) {
-        if (Boolean(tests[i][0]) === tests[i][1]) {
-          ok++;
-        }
-      }
-      (ok === tests.length) ? 'pass' : 'fail';
-    `,
-    expected: 'pass',
-  },
+  {src: `Boolean(undefined);`, expected: false},
+  {src: `Boolean(null);`, expected: false},
+  {src: `Boolean(false);`, expected: false},
+  {src: `Boolean(true);`, expected: true},
+  {src: `Boolean(NaN);`, expected: false},
+  {src: `Boolean(0);`, expected: false},
+  {src: `Boolean(1);`, expected: true},
+  {src: `Boolean('');`, expected: false},
+  {src: `Boolean('foo');`, expected: true},
+  {src: `Boolean({});`, expected: true},
+  {src: `Boolean([]);`, expected: true},
+  {src: `Boolean(function() {});`, expected: true},
+
   {src: `Boolean.prototype.toString();`, expected: 'false'},
   {src: `Boolean.prototype.toString.call(true);`, expected: 'true'},
   {src: `Boolean.prototype.toString.call(false);`, expected: 'false'},
@@ -2428,33 +2400,19 @@ module.exports = [
   },
   /////////////////////////////////////////////////////////////////////////////
   // Number and Number.prototype
-  {name: 'Number()', src: 'Number();', expected: 0},
-  {
-    name: 'Number',
-    src: `
-      var tests = [
-        [undefined, NaN],
-        [null, 0],
-        [true, 1],
-        [false, 0],
-        ['42', 42],
-        ['', 0],
-        [{}, NaN],
-        [[], 0],
-        [[42], 42],
-        [[1,2,3], NaN],
-        [function() {}, NaN],
-      ];
-      var ok = 0;
-      for (var i = 0; i < tests.length; i++) {
-        if (Object.is(Number(tests[i][0]), tests[i][1])) {
-          ok++;
-        }
-      }
-      (ok === tests.length) ? 'pass' : 'fail';
-    `,
-    expected: 'pass',
-  },
+  {src: `Number();`, expected: 0},
+  {src: `Number(undefined);`, expected: NaN},
+  {src: `Number(null);`, expected: 0},
+  {src: `Number(true);`, expected: 1},
+  {src: `Number(false);`, expected: 0},
+  {src: `Number('42');`, expected: 42},
+  {src: `Number('');`, expected: 0},
+  {src: `Number({});`, expected: NaN},
+  {src: `Number([]);`, expected: 0},
+  {src: `Number([42]);`, expected: 42},
+  {src: `Number([1,2,3]);`, expected: NaN},
+  {src: `Number(function() {});`, expected: NaN},
+
   {
     name: 'Number.MAX_SAFE_INTEGER',
     src: `
@@ -2492,33 +2450,19 @@ module.exports = [
   },
   /////////////////////////////////////////////////////////////////////////////
   // String and String.prototype
-  {name: 'String()', src: 'String();', expected: ''},
-  {
-    name: 'String',
-    src: `
-      var tests = [
-        [undefined, 'undefined'],
-        [null, 'null'],
-        [true, 'true'],
-        [false, 'false'],
-        [0, '0'],
-        [-0, '0'],
-        [Infinity, 'Infinity'],
-        [-Infinity, '-Infinity'],
-        [NaN, 'NaN'],
-        [{}, '[object Object]'],
-        [[1, 2, 3,,5], '1,2,3,,5'],
-      ];
-      var ok = 0;
-      for (var i = 0; i < tests.length; i++) {
-        if (String(tests[i][0]) === tests[i][1]) {
-          ok++;
-        }
-      }
-      (ok === tests.length) ? 'pass' : 'fail';
-    `,
-    expected: 'pass',
-  },
+  {src: `String();`, expected: ''},
+  {src: `String(undefined);`, expected: 'undefined'},
+  {src: `String(null);`, expected: 'null'},
+  {src: `String(true);`, expected: 'true'},
+  {src: `String(false);`, expected: 'false'},
+  {src: `String(0);`, expected: '0'},
+  {src: `String(-0);`, expected: '0'},
+  {src: `String(Infinity);`, expected: 'Infinity'},
+  {src: `String(-Infinity);`, expected: '-Infinity'},
+  {src: `String(NaN);`, expected: 'NaN'},
+  {src: `String({});`, expected: '[object Object]'},
+  {src: `String([1, 2, 3,,5]);`, expected: '1,2,3,,5'},
+
   {
     name: 'String calls valueOf',
     src: `
