@@ -97,7 +97,7 @@ module.exports = [
     expected: 49,
   },
   {
-    name: 'assignmentSetsAnonFuncName',
+    name: 'variable assignment sets anonymous function name',
     src: `
       var myAssignedFunc;
       myAssignedFunc = function() {};
@@ -106,12 +106,32 @@ module.exports = [
     expected: 'myAssignedFunc',
   },
   {
-    name: 'objectExprSetsAnonFuncName',
+    name: 'property assignment does not set anonymous FunctionExpression name',
+    src: `
+      var obj = {};
+      obj.myMethod = function() {};
+      obj.myMethod.name;
+    `,
+    expected: '',
+  },
+  {
+    // This one is a CodeCity extension.
+    name: 'property assignment optionally sets anonymous function name',
+    src: `
+      var obj = {};
+      obj.myMethod = function() {};
+      obj.myMethod.name;
+    `,
+    options: {methodNames: true},
+    expected: 'myMethod',
+  },
+  {
+    name: 'object expression sets anonymous FunctionExpression name',
     src: `({myPropFunc: function() {}}).myPropFunc.name;`,
     expected: 'myPropFunc',
   },
   {
-    name: 'varDeclSetsAnonFuncName',
+    name: 'variable declaration sets anonymous FunctionExpression name',
     src: `var myVarDeclFunc = function() {}; myVarDeclFunc.name;`,
     expected: 'myVarDeclFunc',
   },
