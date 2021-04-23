@@ -23,173 +23,227 @@
 
 module.exports = [
   // Testcases for TestInterpreterSimple (have expected value):
-  { name: 'onePlusOne', src: `
+  {
+    name: 'onePlusOne',
+    src: `
     1 + 1;
     `,
-    expected: 2 },
-
-  { name: 'twoPlusTwo', src: `
+    expected: 2
+  },
+  {
+    name: 'twoPlusTwo',
+    src: `
     2 + 2;
     `,
-    expected: 4 },
-
-  { name: 'sixTimesSeven', src: `
+    expected: 4
+  },
+  {
+    name: 'sixTimesSeven',
+    src: `
     6 * 7;
     `,
-    expected: 42 },
-
-  { name: 'simpleFourFunction', src: `
+    expected: 42
+  },
+  {
+    name: 'simpleFourFunction',
+    src: `
     (3 + 12 / 4) * (10 - 3);
     `,
-    expected: 42 },
-
-  { name: 'variableDecl', src: `
+    expected: 42
+  },
+  {
+    name: 'variableDecl',
+    src: `
     var x = 43;
     x;
     `,
-    expected: 43 },
-
-  { name: 'condTrue', src: `
+    expected: 43
+  },
+  {
+    name: 'condTrue',
+    src: `
     true ? 'then' : 'else';
     `,
-    expected: 'then' },
-
-  { name: 'condFalse', src: `
+    expected: 'then'
+  },
+  {
+    name: 'condFalse',
+    src: `
     false ? 'then' : 'else';
     `,
-    expected: 'else' },
-
-  { name: 'ifTrue', src: `
+    expected: 'else'
+  },
+  {
+    name: 'ifTrue',
+    src: `
     if (true) {
       'then';
     } else {
       'else';
     }
     `,
-    expected: 'then' },
-
-  { name: 'ifFalse', src: `
+    expected: 'then'
+  },
+  {
+    name: 'ifFalse',
+    src: `
     if (false) {
       'then';
     } else {
       'else';
     }
     `,
-    expected: 'else' },
-
-  { name: 'simpleAssignment', src: `
+    expected: 'else'
+  },
+  {
+    name: 'simpleAssignment',
+    src: `
     var x = 0;
     x = 44;
     x;
     `,
-    expected: 44 },
-
-  { name: 'propertyAssignment', src: `
+    expected: 44
+  },
+  {
+    name: 'propertyAssignment',
+    src: `
     var o = {};
     o.foo = 45;
     o.foo;
     `,
-    expected: 45 },
-
-  { name: 'getPropertyOnPrimitive', src: `
+    expected: 45
+  },
+  {
+    name: 'getPropertyOnPrimitive',
+    src: `
     'foo'.length;
     `,
-    expected: 3 },
-
-  { name: 'setPropertyOnPrimitive', src: `
+    expected: 3
+  },
+  {
+    name: 'setPropertyOnPrimitive',
+    src: `
     try {
       'foo'.bar = 42;
     } catch (e) {
       e.name;
     }
     `,
-    expected: 'TypeError' },
-
-  { name: 'postincrement', src: `
+    expected: 'TypeError'
+  },
+  {
+    name: 'postincrement',
+    src: `
     var x = 45;
     x++;
     x++;
     `,
-    expected: 46 },
-
-  { name: 'preincrement', src: `
+    expected: 46
+  },
+  {
+    name: 'preincrement',
+    src: `
     var x = 45;
     ++x;
     ++x;
     `,
-    expected: 47 },
-
-  { name: 'concat', src: `
+    expected: 47
+  },
+  {
+    name: 'concat',
+    src: `
     'foo' + 'bar';
     `,
-    expected: 'foobar' },
-
-  { name: 'plusequalsLeft', src: `
+    expected: 'foobar'
+  },
+  {
+    name: 'plusequalsLeft',
+    src: `
     var x = 40, y = 8;
     x += y;
     x;
     `,
-  expected: 48 },
-
-  { name: 'plusequalsRight', src: `
+    expected: 48
+  },
+  {
+    name: 'plusequalsRight',
+    src: `
     var x = 40, y = 8;
     x += y;
     y;
     `,
-    expected: 8 },
-
-  { name: 'simpleFunctionExpression', src: `
+    expected: 8
+  },
+  {
+    name: 'simpleFunctionExpression',
+    src: `
     var v;
     var f = function() { v = 49; };
     f();
     v;
     `,
-    expected: 49 },
-
-  { name: 'assignmentSetsAnonFuncName', src: `
+    expected: 49
+  },
+  {
+    name: 'assignmentSetsAnonFuncName',
+    src: `
     var myAssignedFunc;
     myAssignedFunc = function() {};
     myAssignedFunc.name;
     `,
-    expected: 'myAssignedFunc' },
-
-  { name: 'objectExprSetsAnonFuncName', src: `
+    expected: 'myAssignedFunc'
+  },
+  {
+    name: 'objectExprSetsAnonFuncName',
+    src: `
     var o = {myPropFunc: function() {}};
     o.myPropFunc.name;
     `,
-    expected: 'myPropFunc' },
-
-  { name: 'varDeclSetsAnonFuncName', src: `
+    expected: 'myPropFunc'
+  },
+  {
+    name: 'varDeclSetsAnonFuncName',
+    src: `
     var myVarDeclFunc = function() {};
     myVarDeclFunc.name;
     `,
-    expected: 'myVarDeclFunc' },
-
-  { name: 'funExpWithParameter', src: `
+    expected: 'myVarDeclFunc'
+  },
+  {
+    name: 'funExpWithParameter',
+    src: `
     var v;
     var f = function(x) { v = x; };
     f(50);
     v;
     `,
-    expected: 50 },
-
-  { name: 'funExpParameterNotShadowedByVar', src: `
+    expected: 50
+  },
+  {
+    name: 'funExpParameterNotShadowedByVar',
+    src: `
     var f = function(x) { var x; return x; };
     f(50.1);
     `,
-    expected: 50.1 },
-
-  { name: 'functionWithReturn', src: `
+    expected: 50.1
+  },
+  {
+    name: 'functionWithReturn',
+    src: `
     (function(x) { return x; })(51);
     `,
-    expected: 51 },
-
-  { name: 'functionWithoutReturn', src: `
+    expected: 51
+  },
+  {
+    name: 'functionWithoutReturn',
+    src: `
     (function() {})();
     `,
-    expected: undefined },
-
-  { name: 'multipleReturn', src: `
+    expected: undefined
+  },
+  {
+    name: 'multipleReturn',
+    src: `
     var f = function() {
       try {
         return true;
@@ -199,9 +253,11 @@ module.exports = [
     }
     f();
     `,
-    expected: false },
-
-  { name: 'throwCatch', src: `
+    expected: false
+  },
+  {
+    name: 'throwCatch',
+    src: `
     var f = function() {
       throw 26;
     }
@@ -211,86 +267,108 @@ module.exports = [
       e * 2;
     }
     `,
-    expected: 52 },
-
-  { name: 'throwCatchFalsey', src: `
+    expected: 52
+  },
+  {
+    name: 'throwCatchFalsey',
+    src: `
     try {
       throw null;
     } catch (e) {
       'caught ' + String(e);
     }
     `,
-    expected: 'caught null' },
-
+    expected: 'caught null'
+  },
   // N.B.: This and next tests have no equivalent in the test DB.
-  { name: 'throwUnhandledError', src: `
+  {
+    name: 'throwUnhandledError',
+    src: `
     throw new Error('not caught');
     `,
     options: {noLog: ['unhandled']},
-    expected: undefined },
-
-  { name: 'throwUnhandledException', src: `
+    expected: undefined
+  },
+  {
+    name: 'throwUnhandledException',
+    src: `
     throw 'not caught';
     `,
     options: {noLog: ['unhandled']},
-    expected: undefined },
-
-  { name: 'throwUnhandledErrorWithFinally', src: `
+    expected: undefined
+  },
+  {
+    name: 'throwUnhandledErrorWithFinally',
+    src: `
     try {
       throw new Error('not caught');
     } finally {
     }
     `,
     options: {noLog: ['unhandled']},
-    expected: undefined },
-
-  { name: 'throwUnhandledExceptionWithFinally', src: `
+    expected: undefined
+  },
+  {
+    name: 'throwUnhandledExceptionWithFinally',
+    src: `
     try {
       throw 'not caught';
     } finally {
     }
     `,
     options: {noLog: ['unhandled']},
-    expected: undefined },
-
-  { name: 'seqExpr', src: `
+    expected: undefined
+  },
+  {
+    name: 'seqExpr',
+    src: `
     51, 52, 53;
     `,
-    expected: 53 },
-
-  { name: 'labeledStatement', src: `
+    expected: 53
+  },
+  {
+    name: 'labeledStatement',
+    src: `
     foo: 54;
     `,
-    expected: 54 },
-
-  { name: 'whileLoop', src: `
+    expected: 54
+  },
+  {
+    name: 'whileLoop',
+    src: `
     var a = 0;
     while (a < 55) {
       a++;
     }
     a;
     `,
-    expected: 55 },
-
-  { name: 'whileFalse', src: `
+    expected: 55
+  },
+  {
+    name: 'whileFalse',
+    src: `
     var a = 56;
     while (false) {
       a++;
     }
     a;
     `,
-    expected: 56 },
-
-  { name: 'doWhileFalse', src: `
+    expected: 56
+  },
+  {
+    name: 'doWhileFalse',
+    src: `
     var a = 56;
     do {
       a++;
     } while (false);
     a;
     `,
-    expected: 57 },
-
-  { name: 'breakDoWhile', src: `
+    expected: 57
+  },
+  {
+    name: 'breakDoWhile',
+    src: `
     var a = 57;
     do {
       a++;
@@ -299,14 +377,18 @@ module.exports = [
     } while (false);
     a;
     `,
-    expected: 58 },
-
-  { name: 'selfBreak', src: `
+    expected: 58
+  },
+  {
+    name: 'selfBreak',
+    src: `
     foo: break foo;
     `,
-    expected: undefined /* (but legal!) */ },
-
-  { name: 'breakWithFinally', src: `
+    expected: undefined /* (but legal!) */
+  },
+  {
+    name: 'breakWithFinally',
+    src: `
     var a = 6;
     foo: {
       try {
@@ -320,8 +402,9 @@ module.exports = [
     `,
     expected: 59
   },
-
-  { name: 'continueWithFinally', src: `
+  {
+    name: 'continueWithFinally',
+    src: `
     var a = 59;
     do {
       try {
@@ -334,8 +417,9 @@ module.exports = [
     `,
     expected: 60
   },
-
-  { name: 'breakWithFinallyContinue', src: `
+  {
+    name: 'breakWithFinallyContinue',
+    src: `
     var a = 0;
     while (a++ < 60) {
       try {
@@ -348,8 +432,9 @@ module.exports = [
     `,
     expected: 61
   },
-
-  { name: 'returnWithFinallyContinue', src: `
+  {
+    name: 'returnWithFinallyContinue',
+    src: `
     (function() {
       var i = 0;
       while (i++ < 61) {
@@ -364,90 +449,115 @@ module.exports = [
     `,
     expected: 62
   },
-
-  { name: 'orTrue', src: `
+  {
+    name: 'orTrue',
+    src: `
     63 || 'foo';
     `,
-    expected: 63 },
-
-  { name: 'orFalse', src: `
+    expected: 63
+  },
+  {
+    name: 'orFalse',
+    src: `
     false || 64;
     `,
-    expected: 64 },
-
-  { name: 'orShortcircuit', src: `
+    expected: 64
+  },
+  {
+    name: 'orShortcircuit',
+    src: `
     var r = 0;
     true || (r++);
     r;
     `,
-    expected: 0 },
-
-  { name: 'andTrue', src: `
+    expected: 0
+  },
+  {
+    name: 'andTrue',
+    src: `
     ({}) && 65;
     `,
-    expected: 65 },
-
-  { name: 'andFalse', src: `
+    expected: 65
+  },
+  {
+    name: 'andFalse',
+    src: `
     0 && 65;
     `,
-    expected: 0 },
-
-  { name: 'andShortcircuit', src: `
+    expected: 0
+  },
+  {
+    name: 'andShortcircuit',
+    src: `
     var r = 0;
     false && (r++);
     r;
     `,
-    expected: 0 },
-
-  { name: 'sequenceExpresion', src: `
+    expected: 0
+  },
+  {
+    name: 'sequenceExpresion',
+    src: `
     var x, y, z;
     x = (y = 60, z = 5, 0.5);
     x + y + z;
     `,
-    expected: 65.5 },
-
-  { name: 'forTriangular', src: `
+    expected: 65.5
+  },
+  {
+    name: 'forTriangular',
+    src: `
     var t = 0;
     for (var i = 0; i < 12; i++) {
       t += i;
     }
     t;
     `,
-    expected: 66 },
-
-  { name: 'forIn', src: `
+    expected: 66
+  },
+  {
+    name: 'forIn',
+    src: `
     var x = 0, a = {a: 60, b:3, c:4};
     for (var i in a) { x += a[i]; }
     x;
     `,
-    expected: 67 },
-
-  { name: 'forInMemberExp', src: `
+    expected: 67
+  },
+  {
+    name: 'forInMemberExp',
+    src: `
     var x = 1, o = {foo: 'bar'}, a = {a:2, b:2, c:17};
     for (o.foo in a) { x *= a[o.foo]; }
     x;
     `,
-    expected: 68 },
-
-  { name: 'forInMembFunc', src: `
+    expected: 68
+  },
+  {
+    name: 'forInMembFunc',
+    src: `
     var x = 0, o = {};
     var f = function() { x += 20; return o; };
     var a = {a:2, b:3, c:4};
     for (f().foo in a) { x += a[o.foo]; }
     x;
     `,
-    expected: 69 },
-
-  { name: 'forInNullUndefined', src: `
+    expected: 69
+  },
+  {
+    name: 'forInNullUndefined',
+    src: `
     var x = 0, o = {};
     var f = function() { x++; return o; };
     for (f().foo in null) { x++; }
     for (f().foo in undefined) { x++; }
     x;
     `,
-    expected: 0 },
-
-  { name: 'switchDefaultFirst', src: `
+    expected: 0
+  },
+  {
+    name: 'switchDefaultFirst',
+    src: `
     switch ('not found') {
       default:
         'OK';
@@ -456,17 +566,21 @@ module.exports = [
         'fail';
     };
     `,
-    expected: 'OK' },
-
-  { name: 'switchDefaultOnly', src: `
+    expected: 'OK'
+  },
+  {
+    name: 'switchDefaultOnly',
+    src: `
     switch ('not found') {
       default:
         'OK';
     };
     `,
-    expected: 'OK' },
-
-  { name: 'switchEmptyToEnd', src: `
+    expected: 'OK'
+  },
+  {
+    name: 'switchEmptyToEnd',
+    src: `
     'ok';
     switch ('foo') {
       default:
@@ -475,53 +589,69 @@ module.exports = [
       case 'bar':
     };
     `,
-    expected: 'ok' },
-
-  { name: 'thisInMethod', src: `
+    expected: 'ok'
+  },
+  {
+    name: 'thisInMethod',
+    src: `
     var o = {
       f: function() { return this.foo; },
       foo: 70
     };
     o.f();
     `,
-    expected: 70 },
-
-  { name: 'thisInFormerMethod', src: `
+    expected: 70
+  },
+  {
+    name: 'thisInFormerMethod',
+    src: `
     var o = { f: function() { return this; }};
     var g = o.f;
     g();
     `,
-    expected: undefined },
-
-  { name: 'thisGlobal', src: `
+    expected: undefined
+  },
+  {
+    name: 'thisGlobal',
+    src: `
     this;
     `,
-    expected: undefined },
-
-  { name: 'emptyArrayLength', src: `
+    expected: undefined
+  },
+  {
+    name: 'emptyArrayLength',
+    src: `
     [].length;
     `,
-    expected: 0 },
-
-  { name: 'arrayElidedLength', src: `
+    expected: 0
+  },
+  {
+    name: 'arrayElidedLength',
+    src: `
     [1,,3,,].length;
     `,
-    expected: 4 },
-
-  { name: 'arrayElidedNotDefinedNotUndefined', src: `
+    expected: 4
+  },
+  {
+    name: 'arrayElidedNotDefinedNotUndefined',
+    src: `
     var a = [,undefined,null,0,false];
     !(0 in a) && (1 in a) && (2 in a) && (3 in a) && (4 in a);
     `,
-    expected: true },
-
-  { name: 'arrayLengthPropertyDescriptor', src: `
+    expected: true
+  },
+  {
+    name: 'arrayLengthPropertyDescriptor',
+    src: `
     var a = [1, 2, 3];
     var pd = Object.getOwnPropertyDescriptor(a, 'length');
     (pd.value === 3) && pd.writable && !pd.enumerable && !pd.configurable;
     `,
-    expected: true },
-
-  { name: 'arrayLength', src: `
+    expected: true
+  },
+  {
+    name: 'arrayLength',
+    src: `
     try {
       var a;
       function checkLen(exp, desc) {
@@ -530,21 +660,17 @@ module.exports = [
           throw new Error(desc ? msg + ' ' + desc : msg);
         }
       }
-
       // Empty array has length == 0
       a = [];
       checkLen(0, 'on empty array');
-
       // Adding non-numeric properties does not increase length:
       a['zero'] = 0;
       checkLen(0, 'after setting non-index property on []');
-
       // Adding numeric properties >= length does increase length:
       for (var i = 0; i < 5; i++) {
         a[i] = i;
         checkLen(i + 1, 'after setting a[' + i + ']');
       }
-
       // .length works propery even for large, sparse arrays, and even
       // if values are undefined:
       for (i = 3; i <= 31; i++) {
@@ -552,11 +678,9 @@ module.exports = [
         a[idx] = undefined;
         checkLen(idx + 1, 'after setting a[' + idx + ']');
       }
-
       // Adding numeric properties < length does not increase length:
       a[idx - 1] = 'not the largest';
       checkLen(idx + 1, 'after setting non-largest element');
-
       // Verify behaviour around largest possible index:
       a[0xfffffffd] = null;
       checkLen(0xfffffffe);
@@ -566,7 +690,6 @@ module.exports = [
       checkLen(0xffffffff);  // Unchanged.
       a[0x100000000] = null; // Not an index.
       checkLen(0xffffffff);  // Unchanged.
-
       function checkIdx(idx, exp, desc) {
         var r = a.hasOwnProperty(idx);
         if (r !== exp) {
@@ -574,14 +697,12 @@ module.exports = [
           throw new Error(desc ? msg + ' ' + desc : msg);
         }
       }
-
       // Setting length to existing value should have no effect:
       a.length = 0xffffffff;
       checkIdx(0xfffffffd, true);
       checkIdx(0xfffffffe, true);
       checkIdx(0xffffffff, true);
       checkIdx(0x100000000, true);
-
       // Setting length one less than maximum should remove largest
       // index, but leave properties with keys too large to be indexes:
       a.length = 0xfffffffe;
@@ -589,7 +710,6 @@ module.exports = [
       checkIdx(0xfffffffe, false);
       checkIdx(0xffffffff, true);
       checkIdx(0x100000000, true);
-
       // Setting length to zero should remove all index properties:
       a.length = 0;
       for (var key in a) {
@@ -601,7 +721,6 @@ module.exports = [
               'Setting a.length = 0 failed to remove property ' + key);
         }
       }
-
       // Make sure we didn't wipe everything!
       if (Object.getOwnPropertyNames(a).length !== 4) {
         throw new Error(
@@ -612,18 +731,22 @@ module.exports = [
       String(e);
     }
     `,
-    expected: 'OK' },
-
-  { name: 'arrayLengthWithNonWritableProps', src: `
+    expected: 'OK'
+  },
+  {
+    name: 'arrayLengthWithNonWritableProps',
+    src: `
     var a = [];
     Object.defineProperty(a, 0,
         {value: 'hi', writable: false, configurable: true});
     a.length = 0;
     a[0] === undefined && a.length === 0;
     `,
-    expected: true },
-
-  { name: 'arrayLengthWithNonConfigurableProps', src: `
+    expected: true
+  },
+  {
+    name: 'arrayLengthWithNonConfigurableProps',
+    src: `
     var a = [];
     Object.defineProperty(a, 0,
         {value: 'hi', writable: false, configurable: false});
@@ -633,45 +756,61 @@ module.exports = [
       e.name;
     }
     `,
-    expected: 'TypeError' },
-
-  { name: 'compValEmptyBlock', src: `
+    expected: 'TypeError'
+  },
+  {
+    name: 'compValEmptyBlock',
+    src: `
     {};
     `,
-    expected: undefined },
-
-  { name: 'undefined', src: `
+    expected: undefined
+  },
+  {
+    name: 'undefined',
+    src: `
     undefined;
     `,
-    expected: undefined },
-
-  { name: 'unaryVoid', src: `
+    expected: undefined
+  },
+  {
+    name: 'unaryVoid',
+    src: `
     var x = 70;
     (undefined === void x++) && x;
     `,
-    expected: 71 },
-
-  { name: 'unaryPlus', src: `
+    expected: 71
+  },
+  {
+    name: 'unaryPlus',
+    src: `
     +'72';
     `,
-    expected: 72 },
-
-  { name: 'unaryMinus', src: `
+    expected: 72
+  },
+  {
+    name: 'unaryMinus',
+    src: `
     -73;
     `,
-    expected: -73 },
-
-  { name: 'unaryComplement', src: `
+    expected: -73
+  },
+  {
+    name: 'unaryComplement',
+    src: `
     ~0xffffffb5;
     `,
-    expected: 74 },
-
-  { name: 'unaryNot', src: `
+    expected: 74
+  },
+  {
+    name: 'unaryNot',
+    src: `
     !false && (!true === false);
     `,
-    expected: true },
-
-  { name: 'unaryTypeof', src: `
+    expected: true
+  },
+  {
+    name: 'unaryTypeof',
+    src: `
     var tests = [
       [undefined, 'undefined'],
       [null, 'object'],
@@ -690,68 +829,86 @@ module.exports = [
     }
     (ok === tests.length) ? 'pass' : 'fail';
     `,
-    expected: 'pass' },
-
-  { name: 'unaryTypeofUndeclared', src: `
+    expected: 'pass'
+  },
+  {
+    name: 'unaryTypeofUndeclared',
+    src: `
     try {
       typeof undeclaredVar;
     } catch (e) {
       'whoops!'
     }
     `,
-    expected: 'undefined' },
-
-  { name: 'binaryIn', src: `
+    expected: 'undefined'
+  },
+  {
+    name: 'binaryIn',
+    src: `
     var o = {foo: 'bar'};
     'foo' in o && !('bar' in o);
     `,
-    expected: true },
-
-  { name: 'binaryInParent', src: `
+    expected: true
+  },
+  {
+    name: 'binaryInParent',
+    src: `
     var p = {foo: 'bar'};
     var o = Object.create(p);
     'foo' in o && !('bar' in o);
     `,
-    expected: true },
-
-  { name: 'binaryInArrayLength', src: `
+    expected: true
+  },
+  {
+    name: 'binaryInArrayLength',
+    src: `
     'length' in [];
     `,
-    expected: true },
-
-  { name: 'binaryInStringLength', src: `
+    expected: true
+  },
+  {
+    name: 'binaryInStringLength',
+    src: `
     try {
       'length' in '';
     } catch (e) {
       e.name;
     }
     `,
-    expected: 'TypeError' },
-
-  { name: 'instanceofBasics', src: `
+    expected: 'TypeError'
+  },
+  {
+    name: 'instanceofBasics',
+    src: `
     function F(){}
     var f = new F;
     f instanceof F && f instanceof Object && !(f.prototype instanceof F);
     `,
-    expected: true },
-
-  { name: 'instanceofNonObjectLHS', src: `
+    expected: true
+  },
+  {
+    name: 'instanceofNonObjectLHS',
+    src: `
     function F() {}
     F.prototype = null;
     42 instanceof F;
     `,
-    expected: false },
-
-  { name: 'instanceofNonFunctionRHS', src: `
+    expected: false
+  },
+  {
+    name: 'instanceofNonFunctionRHS',
+    src: `
     try {
       ({}) instanceof 0;
     } catch (e) {
       e.name;
     }
     `,
-    expected: 'TypeError' },
-
-  { name: 'instanceofNonObjectPrototype', src: `
+    expected: 'TypeError'
+  },
+  {
+    name: 'instanceofNonObjectPrototype',
+    src: `
     function F() {};
     F.prototype = 'hello';
     try {
@@ -760,18 +917,22 @@ module.exports = [
       e.name;
     }
     `,
-    expected: 'TypeError' },
-
-  { name: 'undefined.foo', src: `
+    expected: 'TypeError'
+  },
+  {
+    name: 'undefined.foo',
+    src: `
     try {
       undefined.foo;
     } catch (e) {
       e.name;
     }
     `,
-    expected: 'TypeError' },
-
-  { name: 'undefined.foo = ...', src: `
+    expected: 'TypeError'
+  },
+  {
+    name: 'undefined.foo = ...',
+    src: `
     try {
       var c = 0;
       undefined.foo = c++;
@@ -779,18 +940,22 @@ module.exports = [
       e.name + ',' + c;
     }
     `,
-    expected: 'TypeError,0' },
-
-  { name: 'null.foo', src: `
+    expected: 'TypeError,0'
+  },
+  {
+    name: 'null.foo',
+    src: `
     try {
       null.foo;
     } catch (e) {
       e.name;
     }
     `,
-    expected: 'TypeError' },
-
-  { name: 'null.foo = ...', src: `
+    expected: 'TypeError'
+  },
+  {
+    name: 'null.foo = ...',
+    src: `
     try {
       var c = 0;
       null.foo = c++;
@@ -798,37 +963,45 @@ module.exports = [
       e.name + ',' + c;
     }
     `,
-    expected: 'TypeError,0' },
-
-  { name: 'deleteProp', src: `
+    expected: 'TypeError,0'
+  },
+  {
+    name: 'deleteProp',
+    src: `
     var o = {foo: 'bar'};
     (delete o.quux) + ('foo' in o) + (delete o.foo) +
         !('foo' in o) + (delete o.foo);
     `,
-    expected: 5 },
-
-  { name: 'deleteNonexistentFromPrimitive', src: `
+    expected: 5
+  },
+  {
+    name: 'deleteNonexistentFromPrimitive',
+    src: `
     (delete false.nonexistent) &&
     (delete (42).toString);
     `,
-    expected: true },
-
+    expected: true
+  },
   // This "actually" tries to delete the non-configurable own .length
   // property from the auto-boxed String instance created by step 4a
   // of algorithm in §11.4.1 of the ES 5.1 spec.  We have to use a
   // string here, because only String instances have own properties
   // (and yes: they are all non-configurable, so delete *always*
   // fails).
-  { name: 'deleteOwnFromPrimitive', src: `
+  {
+    name: 'deleteOwnFromPrimitive',
+    src: `
     try {
       delete 'hello'.length;
     } catch (e) {
       e.name;
     }
     `,
-    expected: 'TypeError' },
-
-  { name: 'funcDecl', src: `
+    expected: 'TypeError'
+  },
+  {
+    name: 'funcDecl',
+    src: `
     var v;
     function f() {
       v = 75;
@@ -836,9 +1009,11 @@ module.exports = [
     f();
     v;
     `,
-    expected: 75 },
-
-  { name: 'namedFunctionExpression', src: `
+    expected: 75
+  },
+  {
+    name: 'namedFunctionExpression',
+    src: `
     var f = function half(x) {
       if (x < 100) {
         return x;
@@ -847,21 +1022,27 @@ module.exports = [
     };
     f(152)
     `,
-    expected: 76 },
-
-  { name: 'namedFunExpNameBinding', src: `
+    expected: 76
+  },
+  {
+    name: 'namedFunExpNameBinding',
+    src: `
     var f = function foo() {return foo;};
     f() === f;
     `,
-    expected: true },
-
-  { name: 'namedFunExpNameBindingNoLeak', src: `
+    expected: true
+  },
+  {
+    name: 'namedFunExpNameBindingNoLeak',
+    src: `
     var f = function foo() {};
     typeof foo;
     `,
-    expected: 'undefined' },
-
-  { name: 'namedFunExpNameBindingImmutable', src: `
+    expected: 'undefined'
+  },
+  {
+    name: 'namedFunExpNameBindingImmutable',
+    src: `
     var f = function foo() {
       try {
         foo = null;
@@ -871,18 +1052,22 @@ module.exports = [
     };
     f();
     `,
-    expected: 'TypeError' },
-
-  { name: 'namedFunExpNameBindingShadowedByParam', src: `
+    expected: 'TypeError'
+  },
+  {
+    name: 'namedFunExpNameBindingShadowedByParam',
+    src: `
     var f = function foo(foo) {
       foo += 0.1;  // Verify mutability.
       return foo;
     };
     f(76);
     `,
-    expected: 76.1 },
-
-  { name: 'namedFunExpNameBindingShadowedByVar', src: `
+    expected: 76.1
+  },
+  {
+    name: 'namedFunExpNameBindingShadowedByVar',
+    src: `
     var f = function foo() {
       var foo;
       foo = 76.2;  // Verify mutability.
@@ -890,9 +1075,11 @@ module.exports = [
     };
     f();
     `,
-    expected: 76.2 },
-
-  { name: 'closureIndependence', src: `
+    expected: 76.2
+  },
+  {
+    name: 'closureIndependence',
+    src: `
     function makeAdder(x) {
       return function(y) { return x + y; };
     }
@@ -900,18 +1087,22 @@ module.exports = [
     var plus4 = makeAdder(4);
     plus3(plus4(70));
     `,
-    expected: 77 },
-
-  { name: 'internalObjectToString', src: `
+    expected: 77
+  },
+  {
+    name: 'internalObjectToString',
+    src: `
     var o = {};
     o[{}] = null;
     for(var key in o) {
       key;
     }
     `,
-    expected: '[object Object]' },
-
-  { name: 'internalFunctionToString', src: `
+    expected: '[object Object]'
+  },
+  {
+    name: 'internalFunctionToString',
+    src: `
     var o = {}, s, f = function(){};
     o[f] = null;
     for(var key in o) {
@@ -919,9 +1110,11 @@ module.exports = [
     }
     /^function.*\(.*\).*{[^]*}$/.test(s);
     `,
-    expected: true },
-
-  { name: 'internalNativeFuncToString', src: `
+    expected: true
+  },
+  {
+    name: 'internalNativeFuncToString',
+    src: `
     var o = {}, s, f = Object.create;
     o[f] = null;
     for(var key in o) {
@@ -929,45 +1122,55 @@ module.exports = [
     }
     /^function.*\(.*\).*{[^]*}$/.test(s);
     `,
-    expected: true },
-
-  { name: 'internalArrayToString', src: `
+    expected: true
+  },
+  {
+    name: 'internalArrayToString',
+    src: `
     var o = {};
     o[[1, 2, 3]] = null;
     for(var key in o) {
       key;
     }
     `,
-    expected: '1,2,3' },
-
-  { name: 'internalDateToString', src: `
+    expected: '1,2,3'
+  },
+  {
+    name: 'internalDateToString',
+    src: `
     var o = {};
     o[new Date(0)] = null;
     for(var key in o) {
       key;
     }
     `,
-    expected: (new Date(0)).toString() },
-
-  { name: 'internalRegExpToString', src: `
+    expected: (new Date(0)).toString()
+  },
+  {
+    name: 'internalRegExpToString',
+    src: `
     var o = {};
     o[/foo/g] = null;
     for(var key in o) {
       key;
     }
     `,
-    expected: '/foo/g' },
-
-  { name: 'internalErrorToString', src: `
+    expected: '/foo/g'
+  },
+  {
+    name: 'internalErrorToString',
+    src: `
     var o = {};
     o[Error('oops')] = null;
     for(var key in o) {
       key;
     }
     `,
-    expected: 'Error: oops' },
-
-  { name: 'internalArgumentsToString', src: `
+    expected: 'Error: oops'
+  },
+  {
+    name: 'internalArgumentsToString',
+    src: `
     var o = {};
     (function() {
       o[arguments] = null;
@@ -978,46 +1181,59 @@ module.exports = [
     `,
     expected: '[object Arguments]'
   },
-
-  { name: 'debugger', src: `
+  {
+    name: 'debugger',
+    src: `
     debugger;
     `,
-    expected: undefined },
-
-  { name: 'newExpression', src: `
+    expected: undefined
+  },
+  {
+    name: 'newExpression',
+    src: `
     function T(x, y) { this.sum += x + y; };
     T.prototype = { sum: 70 }
     var t = new T(7, 0.7);
     t.sum;
     `,
-    expected: 77.7 },
-
-  { name: 'newExpressionReturnObj', src: `
+    expected: 77.7
+  },
+  {
+    name: 'newExpressionReturnObj',
+    src: `
     function T() { return {}; };
     T.prototype = { p: 'the prototype' };
     (new T).p;
     `,
-    expected: undefined },
-
-  { name: 'newExpressionReturnPrimitive', src: `
+    expected: undefined
+  },
+  {
+    name: 'newExpressionReturnPrimitive',
+    src: `
     function T() { return 0; };
     T.prototype = { p: 'the prototype' };
     (new T).p;
     `,
-    expected: 'the prototype' },
-
-  { name: 'regexpSimple', src: `
+    expected: 'the prototype'
+  },
+  {
+    name: 'regexpSimple',
+    src: `
     /foo/.test('foobar');
     `,
-    expected: true },
-
-  { name: 'evalSeeEnclosing', src: `
+    expected: true
+  },
+  {
+    name: 'evalSeeEnclosing',
+    src: `
     var n = 77.77;
     eval('n');
     `,
-    expected: 77.77 },
-
-  { name: 'evalIndirectNoSeeEnclosing', src: `
+    expected: 77.77
+  },
+  {
+    name: 'evalIndirectNoSeeEnclosing',
+    src: `
     (function() {
       var n = 77.77, gEval = eval;
       try {
@@ -1027,9 +1243,11 @@ module.exports = [
       }
     })();
     `,
-    expected: 'ReferenceError' },
-
-  { name: 'evalIndirectNoSeeEnclosing2', src: `
+    expected: 'ReferenceError'
+  },
+  {
+    name: 'evalIndirectNoSeeEnclosing2',
+    src: `
     (function() {
       var n = 77.77;
       try {
@@ -1039,37 +1257,47 @@ module.exports = [
       }
     })();
     `,
-    expected: 'ReferenceError' },
-
-  { name: 'evalIndirectSeeGlobal', src: `
+    expected: 'ReferenceError'
+  },
+  {
+    name: 'evalIndirectSeeGlobal',
+    src: `
     var gEval = eval;
     gEval('typeof Array');
     `,
-    expected: 'function' },
-
-  { name: 'evalModifyEnclosing', src: `
+    expected: 'function'
+  },
+  {
+    name: 'evalModifyEnclosing',
+    src: `
     var n = 77.77;
     eval('n = 77.88');
     n;
     `,
-    expected: 77.88 },
-
-  { name: 'evalNoLeakingDecls', src: `
+    expected: 77.88
+  },
+  {
+    name: 'evalNoLeakingDecls',
+    src: `
     eval('var n = 88.88');
     typeof n;
     `,
-    expected: 'undefined' },
-
+    expected: 'undefined'
+  },
   // A bug in eval would cause it to return the value of the
   // previously-evaluated ExpressionStatement if the eval program did
   // not contain any ExpressionStatements.
-  { name: 'evalEmptyBlock', src: `
+  {
+    name: 'evalEmptyBlock',
+    src: `
     'fail';
     eval('{}');
     `,
-    expected: undefined },
-
-  { name: 'callEvalOrder', src: `
+    expected: undefined
+  },
+  {
+    name: 'callEvalOrder',
+    src: `
     var r = '';
     function log(x) {
       r += x;
@@ -1078,9 +1306,11 @@ module.exports = [
     (log('f'))(log('a'), log('b'), log('c'));
     r;
     `,
-    expected: 'fabc' },
-
-  { name: 'callEvalArgsBeforeCallability', src: `
+    expected: 'fabc'
+  },
+  {
+    name: 'callEvalArgsBeforeCallability',
+    src: `
     try {
       var invalid = undefined;
       function t() { throw {name: 'args'}; };
@@ -1089,9 +1319,11 @@ module.exports = [
       e.name;
     }
     `,
-    expected: 'args' },
-
-  { name: 'callNonCallable', src: `
+    expected: 'args'
+  },
+  {
+    name: 'callNonCallable',
+    src: `
     var tests = [
       undefined,
       null,
@@ -1113,30 +1345,35 @@ module.exports = [
     }
     (ok === tests.length) ? 'pass' : 'fail';
     `,
-    expected: 'pass' },
-
+    expected: 'pass'
+  },
   /////////////////////////////////////////////////////////////////////////////
   // Object and Object.prototype
-
-  { name: 'Object.defineProperty()', src: `
+  {
+    name: 'Object.defineProperty()',
+    src: `
     try {
       Object.defineProperty();
     } catch (e) {
       e.name;
     }
     `,
-    expected: 'TypeError' },
-
-  { name: 'Object.defineProperty non-object', src: `
+    expected: 'TypeError'
+  },
+  {
+    name: 'Object.defineProperty non-object',
+    src: `
     try {
       Object.defineProperty('not an object', 'foo', {});
     } catch (e) {
       e.name;
     }
     `,
-    expected: 'TypeError' },
-
-  { name: 'Object.defineProperty bad descriptor', src: `
+    expected: 'TypeError'
+  },
+  {
+    name: 'Object.defineProperty bad descriptor',
+    src: `
     var o = {};
     try {
       Object.defineProperty(o, 'foo', 'not an object');
@@ -1144,10 +1381,12 @@ module.exports = [
       e.name;
     }
     `,
-    expected: 'TypeError' },
-
+    expected: 'TypeError'
+  },
   // This also tests iteration over (non-)enumerable properties.
-  { name: 'Object.defineProperty', src: `
+  {
+    name: 'Object.defineProperty',
+    src: `
     var o = { foo: 50 }, r = 0;
     Object.defineProperty(o, 'bar', {
       writable: true,
@@ -1174,9 +1413,11 @@ module.exports = [
     r += Object.getOwnPropertyNames(o).length;
     r;
     `,
-    expected: 78 },
-
-  { name: 'Object.getPrototypeOf(null) and undefined', src: `
+    expected: 78
+  },
+  {
+    name: 'Object.getPrototypeOf(null) and undefined',
+    src: `
     var r = '', prims = [null, undefined];
     for (var i = 0; i < prims.length; i++) {
       try {
@@ -1187,17 +1428,21 @@ module.exports = [
     }
     r;
     `,
-    expected: 'TypeErrorTypeError' },
-
+    expected: 'TypeErrorTypeError'
+  },
   // This tests for ES6 behaviour:
-  { name: 'Object.getPrototypeOf primitives', src: `
+  {
+    name: 'Object.getPrototypeOf primitives',
+    src: `
     Object.getPrototypeOf(true) === Boolean.prototype &&
     Object.getPrototypeOf(1337) === Number.prototype &&
     Object.getPrototypeOf('hi') === String.prototype;
     `,
-    expected: true },
-
-  { name: 'Object.setPrototypeOf(null, ...) and undefined', src: `
+    expected: true
+  },
+  {
+    name: 'Object.setPrototypeOf(null, ...) and undefined',
+    src: `
     var r = '', prims = [null, undefined];
     for (var i = 0; i < prims.length; i++) {
       try {
@@ -1208,32 +1453,40 @@ module.exports = [
     }
     r;
     `,
-    expected: 'TypeErrorTypeError' },
-
-  { name: 'Object.setPrototypeOf primitives', src: `
+    expected: 'TypeErrorTypeError'
+  },
+  {
+    name: 'Object.setPrototypeOf primitives',
+    src: `
     Object.setPrototypeOf(true, null) === true &&
     Object.setPrototypeOf(1337, null) === 1337 &&
     Object.setPrototypeOf('hi', null) === 'hi';
     `,
-    expected: true },
-
-  { name: 'Object.setPrototypeOf', src: `
+    expected: true
+  },
+  {
+    name: 'Object.setPrototypeOf',
+    src: `
     var o = {parent: 'o'};
     var p = {parent: 'p'};
     var q = Object.create(o);
     Object.setPrototypeOf(q, p) === q &&
         Object.getPrototypeOf(q) === p && q.parent;
     `,
-    expected: 'p' },
-
-  { name: 'Object.setPrototypeOf(..., null)', src: `
+    expected: 'p'
+  },
+  {
+    name: 'Object.setPrototypeOf(..., null)',
+    src: `
     var o = {parent: 'o'};
     var q = Object.create(o);
     Object.setPrototypeOf(q, null) === q && Object.getPrototypeOf(q);
     `,
-    expected: null },
-
-  { name: 'Object.setPrototypeOf circular', src: `
+    expected: null
+  },
+  {
+    name: 'Object.setPrototypeOf circular',
+    src: `
     var o = {};
     var p = Object.create(o);
     try {
@@ -1242,82 +1495,102 @@ module.exports = [
       e.name;
     }
     `,
-    expected: 'TypeError' },
-
-  { name: 'Object.create()', src: `
+    expected: 'TypeError'
+  },
+  {
+    name: 'Object.create()',
+    src: `
     try {
       Object.create();
     } catch (e) {
       e.name;
     }
     `,
-    expected: 'TypeError' },
-
-  { name: 'Object.create non-object prototype', src: `
+    expected: 'TypeError'
+  },
+  {
+    name: 'Object.create non-object prototype',
+    src: `
     try {
       Object.create(42);
     } catch (e) {
       e.name;
     }
     `,
-    expected: 'TypeError' },
-
-  { name: 'Object.create(null) prototype', src: `
+    expected: 'TypeError'
+  },
+  {
+    name: 'Object.create(null) prototype',
+    src: `
     var o = Object.create(null);
     Object.getPrototypeOf(o);
     `,
-    expected: null },
-
-  { name: 'Object.create', src: `
+    expected: null
+  },
+  {
+    name: 'Object.create',
+    src: `
     var o = Object.create({foo: 79});
     delete o.foo
     o.foo;
     `,
-    expected: 79 },
-
-  { name: 'Object.getOwnPropertyDescriptor()', src: `
+    expected: 79
+  },
+  {
+    name: 'Object.getOwnPropertyDescriptor()',
+    src: `
     try {
       Object.getOwnPropertyDescriptor();
     } catch (e) {
       e.name;
     }
     `,
-    expected: 'TypeError' },
-
-  { name: 'Object.getOwnPropertyDescriptor non-object', src: `
+    expected: 'TypeError'
+  },
+  {
+    name: 'Object.getOwnPropertyDescriptor non-object',
+    src: `
     try {
       Object.getOwnPropertyDescriptor('not an object', 'foo');
     } catch (e) {
       e.name;
     }
     `,
-    expected: 'TypeError' },
-
-  { name: 'Object.getOwnPropertyDescriptor bad keyy', src: `
+    expected: 'TypeError'
+  },
+  {
+    name: 'Object.getOwnPropertyDescriptor bad keyy',
+    src: `
     var o = {};
     Object.getOwnPropertyDescriptor(o, 'foo');
     `,
-    expected: undefined },
-
-  { name: 'Object.getOwnPropertyDescriptor', src: `
+    expected: undefined
+  },
+  {
+    name: 'Object.getOwnPropertyDescriptor',
+    src: `
     var o = {}, r = 0;
     Object.defineProperty(o, 'foo', { value: 'bar' });
     var desc = Object.getOwnPropertyDescriptor(o, 'foo');
     desc.value === o.foo &&
         !desc.writable && !desc.enumerable && !desc.configurable;
     `,
-    expected: true },
-
-  { name: 'Object.getOwnPropertyNames()', src: `
+    expected: true
+  },
+  {
+    name: 'Object.getOwnPropertyNames()',
+    src: `
     try {
       Object.getOwnPropertyNames();
     } catch (e) {
       e.name;
     }
     `,
-    expected: 'TypeError' },
-
-  { name: 'Object.getOwnPropertyNames string', src: `
+    expected: 'TypeError'
+  },
+  {
+    name: 'Object.getOwnPropertyNames string',
+    src: `
     var i, r = 0, names = Object.getOwnPropertyNames('foo');
     for (i = 0; i < names.length; i++) {
       if (names[i] === 'length') {
@@ -1327,37 +1600,47 @@ module.exports = [
       }
     }
     `,
-    expected: 16 },
-
-  { name: 'Object.getOwnPropertyNames number', src: `
+    expected: 16
+  },
+  {
+    name: 'Object.getOwnPropertyNames number',
+    src: `
     Object.getOwnPropertyNames(42).length
     `,
-    expected: 0 },
-
-  { name: 'Object.getOwnPropertyNames boolean', src: `
+    expected: 0
+  },
+  {
+    name: 'Object.getOwnPropertyNames boolean',
+    src: `
     Object.getOwnPropertyNames(true).length
     `,
-    expected: 0 },
-
-  { name: 'Object.getOwnPropertyNames(null)', src: `
+    expected: 0
+  },
+  {
+    name: 'Object.getOwnPropertyNames(null)',
+    src: `
     try {
       Object.getOwnPropertyNames(null).length;
     } catch (e) {
       e.name;
     }
     `,
-    expected: 'TypeError' },
-
-  { name: 'Object.getOwnPropertyNames(undefined)', src: `
+    expected: 'TypeError'
+  },
+  {
+    name: 'Object.getOwnPropertyNames(undefined)',
+    src: `
     try {
       Object.getOwnPropertyNames(undefined).length;
     } catch (e) {
       e.name;
     }
     `,
-    expected: 'TypeError' },
-
-  { name: 'Object.getOwnPropertyNames', src: `
+    expected: 'TypeError'
+  },
+  {
+    name: 'Object.getOwnPropertyNames',
+    src: `
     var o = Object.create({baz: 999});
     o.foo = 42;
     Object.defineProperty(o, 'bar', { value: 38 });
@@ -1368,36 +1651,44 @@ module.exports = [
     }
     r;
     `,
-    expected: 80 },
-
-  { name: 'Object.defineProperties()', src: `
+    expected: 80
+  },
+  {
+    name: 'Object.defineProperties()',
+    src: `
     try {
       Object.defineProperties();
     } catch (e) {
       e.name;
     }
     `,
-    expected: 'TypeError' },
-
-  { name: 'Object.defineProperties non-object', src: `
+    expected: 'TypeError'
+  },
+  {
+    name: 'Object.defineProperties non-object',
+    src: `
     try {
       Object.defineProperties('not an object', {});
     } catch (e) {
       e.name;
     }
     `,
-    expected: 'TypeError' },
-
-  { name: 'Object.defineProperties non-object props', src: `
+    expected: 'TypeError'
+  },
+  {
+    name: 'Object.defineProperties non-object props',
+    src: `
     try {
       Object.defineProperties({}, undefined);
     } catch (e) {
       e.name;
     }
     `,
-    expected: 'TypeError' },
-
-  { name: 'Object.defineProperties bad descriptor', src: `
+    expected: 'TypeError'
+  },
+  {
+    name: 'Object.defineProperties bad descriptor',
+    src: `
     var o = {};
     try {
       Object.defineProperties(o, { foo: 'not an object' });
@@ -1405,9 +1696,11 @@ module.exports = [
       e.name;
     }
     `,
-    expected: 'TypeError' },
-
-  { name: 'Object.defineProperties', src: `
+    expected: 'TypeError'
+  },
+  {
+    name: 'Object.defineProperties',
+    src: `
     var o = { foo: 70 }, r = 0;
     Object.defineProperties(o, {
         bar: {
@@ -1421,9 +1714,11 @@ module.exports = [
     }
     r + Object.getOwnPropertyNames(o).length;
     `,
-    expected: 81 },
-
-  { name: 'Object.create(..., properties)', src: `
+    expected: 81
+  },
+  {
+    name: 'Object.create(..., properties)',
+    src: `
     var o = Object.create({ foo: 70 }, {
         bar: {
             writable: true,
@@ -1437,14 +1732,18 @@ module.exports = [
     }
     r + Object.getOwnPropertyNames(o).length;
     `,
-    expected: 82 },
-
-  { name: 'Object.prototype.toString', src: `
+    expected: 82
+  },
+  {
+    name: 'Object.prototype.toString',
+    src: `
     ({}).toString();
     `,
-    expected: '[object Object]' },
-
-  { name: 'Object.protoype.hasOwnProperty', src: `
+    expected: '[object Object]'
+  },
+  {
+    name: 'Object.protoype.hasOwnProperty',
+    src: `
     var o = Object.create({baz: 999});
     o.foo = 42;
     Object.defineProperty(o, 'bar', {value: 41, enumerable: true});
@@ -1455,9 +1754,11 @@ module.exports = [
     }
     r;
     `,
-    expected: 83 },
-
-  { name: 'Object.protoype.isPrototypeOf primitives', src: `
+    expected: 83
+  },
+  {
+    name: 'Object.protoype.isPrototypeOf primitives',
+    src: `
     Boolean.prototype.isPrototypeOf(false) ||
     Number.prototype.isPrototypeOf(0) ||
     String.prototype.isPrototypeOf('') ||
@@ -1467,38 +1768,48 @@ module.exports = [
     Object.prototype.isPrototypeOf.call(null, null) ||
     Object.prototype.isPrototypeOf.call(undefined, undefined);
     `,
-    expected: false },
-
-  { name: 'Object.protoype.isPrototypeOf.call(null, ...)', src: `
+    expected: false
+  },
+  {
+    name: 'Object.protoype.isPrototypeOf.call(null, ...)',
+    src: `
     try {
       Object.prototype.isPrototypeOf.call(null, Object.create(null));
     } catch (e) {
       e.name;
     }
     `,
-    expected: 'TypeError' },
-
-  { name: 'Object.protoype.isPrototypeOf.call(undefined, ...)', src: `
+    expected: 'TypeError'
+  },
+  {
+    name: 'Object.protoype.isPrototypeOf.call(undefined, ...)',
+    src: `
     try {
       Object.prototype.isPrototypeOf.call(undefined, Object.create(undefined));
     } catch (e) {
       e.name;
     }
     `,
-    expected: 'TypeError' },
-
-  { name: 'Object.protoype.isPrototypeOf self', src: `
+    expected: 'TypeError'
+  },
+  {
+    name: 'Object.protoype.isPrototypeOf self',
+    src: `
     var o = {};
     o.isPrototypeOf(o);
     `,
-    expected: false },
-
-  { name: 'Object.protoype.isPrototypeOf unrelated', src: `
+    expected: false
+  },
+  {
+    name: 'Object.protoype.isPrototypeOf unrelated',
+    src: `
     Object.prototype.isPrototypeOf(Object.create(null))
     `,
-    expected: false },
-
-  { name: 'Object.protoype.isPrototypeOf related', src: `
+    expected: false
+  },
+  {
+    name: 'Object.protoype.isPrototypeOf related',
+    src: `
     var g = {};
     var p = Object.create(g);
     var o = Object.create(p);
@@ -1506,103 +1817,134 @@ module.exports = [
     g.isPrototypeOf(o) && p.isPrototypeOf(o) &&
     !o.isPrototypeOf(p) && !o.isPrototypeOf(g);
     `,
-    expected: true },
-
-  { name: 'Object.protoype.propertyIsEnumerable(null)', src: `
+    expected: true
+  },
+  {
+    name: 'Object.protoype.propertyIsEnumerable(null)',
+    src: `
     try {
       Object.prototype.propertyIsEnumerable.call(null, '');
     } catch(e) {
       e.name;
     }
     `,
-    expected: 'TypeError' },
-
-  { name: 'ObjectProtoypePropertyIsEnumerableUndefined', src: `
+    expected: 'TypeError'
+  },
+  {
+    name: 'ObjectProtoypePropertyIsEnumerableUndefined',
+    src: `
     try {
       Object.prototype.propertyIsEnumerable.call(undefined, '');
     } catch(e) {
       e.name;
     }
     `,
-    expected: 'TypeError' },
-
-  { name: 'Object.protoype.propertyIsEnumerable primitives', src: `
+    expected: 'TypeError'
+  },
+  {
+    name: 'Object.protoype.propertyIsEnumerable primitives',
+    src: `
     var OppIE = Object.prototype.propertyIsEnumerable;
     OppIE.call('foo', '0') && !OppIE.call('foo', 'length');
     `,
-    expected: true },
-
-  { name: 'Object.protoype.propertyIsEnumerable', src: `
+    expected: true
+  },
+  {
+    name: 'Object.protoype.propertyIsEnumerable',
+    src: `
     var o = {foo: 'foo'};
     Object.defineProperty(o, 'bar', {value: 'bar', enumerable: false});
     o.propertyIsEnumerable('foo') && !o.propertyIsEnumerable('bar') &&
         !o.propertyIsEnumerable('baz');
     `,
-    expected: true },
-
+    expected: true
+  },
   /////////////////////////////////////////////////////////////////////////////
   // Function and Function.prototype
-
-  { name: 'new Function() returns callable', src: `
+  {
+    name: 'new Function() returns callable',
+    src: `
     (new Function)();
     `,
-    expected: undefined },
-
-  { name: 'new Function() .length', src: `
+    expected: undefined
+  },
+  {
+    name: 'new Function() .length',
+    src: `
     (new Function).length;
     `,
-    expected: 0 },
-
-  { name: 'new Function() .toString()', src: `
+    expected: 0
+  },
+  {
+    name: 'new Function() .toString()',
+    src: `
     String(new Function)
     `,
-    expected: 'function() {}' },
-
-  { name: 'new Function simple returns callable', src: `
+    expected: 'function() {}'
+  },
+  {
+    name: 'new Function simple returns callable',
+    src: `
     (new Function('return 42;'))();
     `,
-    expected: 42 },
-
-  { name: 'new Function simple .length', src: `
+    expected: 42
+  },
+  {
+    name: 'new Function simple .length',
+    src: `
     (new Function('return 42;')).length;
     `,
-    expected: 0 },
-
-  { name: 'new Function simple .toString()', src: `
+    expected: 0
+  },
+  {
+    name: 'new Function simple .toString()',
+    src: `
     String(new Function('return 42;'))
     `,
-    expected: 'function() {return 42;}' },
-
-  { name: 'new Function with args returns callable', src: `
+    expected: 'function() {return 42;}'
+  },
+  {
+    name: 'new Function with args returns callable',
+    src: `
     (new Function('a, b', 'c', 'return a + b * c;'))(2, 3, 10);
     `,
-    expected: 32 },
-
-  { name: 'new Function with args .length', src: `
+    expected: 32
+  },
+  {
+    name: 'new Function with args .length',
+    src: `
     (new Function('a, b', 'c', 'return a + b * c;')).length;
     `,
-    expected: 3 },
-
- { name: 'new Function with args .toString()', src: `
+    expected: 3
+  },
+  {
+    name: 'new Function with args .toString()',
+    src: `
     String(new Function('a, b', 'c', 'return a + b * c;'))
     `,
-    expected: 'function(a, b,c) {return a + b * c;}' },
-
-  { name: 'Function.prototype has no .prototype', src: `
+    expected: 'function(a, b,c) {return a + b * c;}'
+  },
+  {
+    name: 'Function.prototype has no .prototype',
+    src: `
     Function.prototype.hasOwnProperty('prototype');
     `,
-    expected: false },
-
-  { name: 'Function.prototype.toString applied to non-fucntion throws', src: `
+    expected: false
+  },
+  {
+    name: 'Function.prototype.toString applied to non-fucntion throws',
+    src: `
     try {
       Function.prototype.toString.apply({});
     } catch (e) {
       e.name;
     }
     `,
-    expected: 'TypeError' },
-
-  { name: 'Function.prototype.apply non-function throws', src: `
+    expected: 'TypeError'
+  },
+  {
+    name: 'Function.prototype.apply non-function throws',
+    src: `
     var o = {};
     o.apply = Function.prototype.apply;
     try {
@@ -1611,34 +1953,42 @@ module.exports = [
       e.name;
     }
     `,
-    expected: 'TypeError' },
-
-  { name: 'Function.prototype.apply this', src: `
+    expected: 'TypeError'
+  },
+  {
+    name: 'Function.prototype.apply this',
+    src: `
     var o = {};
     function f() { return this; }
     f.apply(o, []) === o;
     `,
-    expected: true },
-
-  { name: 'Function.prototype.apply(..., undefined) or null', src: `
+    expected: true
+  },
+  {
+    name: 'Function.prototype.apply(..., undefined) or null',
+    src: `
     var n = 0;
     function f() { n += arguments.length; }
     f.apply(undefined, undefined);
     f.apply(undefined, null);
     n;
     `,
-    expected: 0 },
-
-  { name: 'Function.prototype.apply(..., non-object)', src: `
+    expected: 0
+  },
+  {
+    name: 'Function.prototype.apply(..., non-object)',
+    src: `
     try {
       (function() {}).apply(undefined, 'not an object');
     } catch (e) {
       e.name;
     }
     `,
-    expected: 'TypeError' },
-
-  { name: 'Function.prototype.apply(..., sparse)', src: `
+    expected: 'TypeError'
+  },
+  {
+    name: 'Function.prototype.apply(..., sparse)',
+    src: `
     (function(a, b, c) {
       if (!(1 in arguments)) {
         throw new Error('Argument 1 missing');
@@ -1646,23 +1996,29 @@ module.exports = [
       return a + c;
     }).apply(undefined, [1, , 3]);
     `,
-    expected: 4 },
-
-  { name: 'Function.prototype.apply(..., array-like)', src: `
+    expected: 4
+  },
+  {
+    name: 'Function.prototype.apply(..., array-like)',
+    src: `
     (function(a, b, c) {
       return a + b + c;
     }).apply(undefined, {0: 1, 1: 2, 2: 3, length: 3});
     `,
-    expected: 6 },
-
-  { name: 'Function.prototype.apply(..., non-array-like)', src: `
+    expected: 6
+  },
+  {
+    name: 'Function.prototype.apply(..., non-array-like)',
+    src: `
     (function(a, b, c) {
       return a + b + c;
     }).apply(undefined, {0: 1, 1: 2, 2: 4});
     `,
-    expected: NaN },  // Because undefined + undefined === NaN.
-
-  { name: 'Function.prototype.call non-function throws', src: `
+    expected: NaN
+  },  // Because undefined + undefined === NaN.
+  {
+    name: 'Function.prototype.call non-function throws',
+    src: `
     var o = {};
     o.call = Function.prototype.call;
     try {
@@ -1671,22 +2027,28 @@ module.exports = [
       e.name;
     }
     `,
-    expected: 'TypeError' },
-
-  { name: 'Function.prototype.call this', src: `
+    expected: 'TypeError'
+  },
+  {
+    name: 'Function.prototype.call this',
+    src: `
     var o = {};
     function f() { return this; }
     f.call(o) === o;
     `,
-    expected: true },
-
-  { name: 'Function.prototype.call no args', src: `
+    expected: true
+  },
+  {
+    name: 'Function.prototype.call no args',
+    src: `
     function f() { return arguments.length; }
     f.call(undefined);
     `,
-    expected: 0 },
-
-  { name: 'Function.prototype.call', src: `
+    expected: 0
+  },
+  {
+    name: 'Function.prototype.call',
+    src: `
     (function(a, b, c) {
       if (!(1 in arguments)) {
         throw new Error('Argument 1 missing');
@@ -1694,9 +2056,11 @@ module.exports = [
       return a + c;
     }).call(undefined, 1, 2, 3);
     `,
-    expected: 4 },
-
-  { name: 'Function.prototype.bind non-function throws', src: `
+    expected: 4
+  },
+  {
+    name: 'Function.prototype.bind non-function throws',
+    src: `
     var o = {};
     o.bind = Function.prototype.bind;
     try {
@@ -1705,48 +2069,60 @@ module.exports = [
       e.name;
     }
     `,
-    expected: 'TypeError' },
-
-  { name: 'Function.prototype.bind this', src: `
+    expected: 'TypeError'
+  },
+  {
+    name: 'Function.prototype.bind this',
+    src: `
     var o = {};
     function f() { return this; }
     f.bind(o)() === o;
     `,
-    expected: true },
-
-  { name: 'Function.prototype.bind no args', src: `
+    expected: true
+  },
+  {
+    name: 'Function.prototype.bind no args',
+    src: `
     function f() { return arguments.length; }
     f.bind(undefined)();
     `,
-    expected: 0 },
-
-  { name: 'Function.prototype.bind', src: `
+    expected: 0
+  },
+  {
+    name: 'Function.prototype.bind',
+    src: `
     var d = 4;
     (function(a, b, c) {
       return a + b + c + d;
     }).bind(undefined, 1).bind(undefined, 2)(3);
     `,
-    expected: 10 },
-
-  { name: 'Function.prototype.bind call BF', src: `
+    expected: 10
+  },
+  {
+    name: 'Function.prototype.bind call BF',
+    src: `
     var constructed;
     function Foo() {constructed = (this instanceof Foo)}
     var f = Foo.bind();
     f();
     constructed;
     `,
-    expected: false },
-
-  { name: 'Function.prototype.bind construct BF', src: `
+    expected: false
+  },
+  {
+    name: 'Function.prototype.bind construct BF',
+    src: `
     var constructed;
     function Foo() {constructed = (this instanceof Foo)}
     var f = Foo.bind();
     new f;
     constructed;
     `,
-    expected: true },
-
-  { name: 'Function.prototype.call.bind construct BF', src: `
+    expected: true
+  },
+  {
+    name: 'Function.prototype.call.bind construct BF',
+    src: `
     var invoked;
     function Foo() {invoked = true};
     var f = Foo.call.bind(Foo);
@@ -1756,10 +2132,12 @@ module.exports = [
       !invoked && e.name;
     }
     `,
-    expected: 'TypeError' },
-
+    expected: 'TypeError'
+  },
   // N.B.: tests of class constructor semantics unavoidably ES6.
-  { name: 'Function.prototype.bind class constructor w/o new', src: `
+  {
+    name: 'Function.prototype.bind class constructor w/o new',
+    src: `
     var f = WeakMap.bind();  // Should be O.K.
     try {
       f();
@@ -1767,237 +2145,313 @@ module.exports = [
       e.name;
     }
     `,
-    expected: 'TypeError' },
-
+    expected: 'TypeError'
+  },
   // N.B.: tests of class constructor semantics unavoidably ES6.
-  { name: 'Function.protote.bind class constructor', src: `
+  {
+    name: 'Function.protote.bind class constructor',
+    src: `
     String(new (WeakMap.bind()));
     `,
-    expected: '[object WeakMap]' },
-
+    expected: '[object WeakMap]'
+  },
   /////////////////////////////////////////////////////////////////////////////
   // Array and Array.prototype
-
-  { name: 'new Array()NoArgs', src: `
+  {
+    name: 'new Array()NoArgs',
+    src: `
     var a = new Array;
     Array.isArray(a) && a.length;
     `,
-    expected: 0 },
-
-  { name: 'newArray(number)', src: `
+    expected: 0
+  },
+  {
+    name: 'newArray(number)',
+    src: `
     var a = new Array(42);
     Array.isArray(a) && !(0 in a) && !(41 in a) && a.length;
     `,
-    expected: 42 },
-
-  { name: 'new Array(non-number)', src: `
+    expected: 42
+  },
+  {
+    name: 'new Array(non-number)',
+    src: `
     var a = new Array('foo');
     Array.isArray(a) && a.length === 1 && a[0];
     `,
-    expected: 'foo' },
-
-  { name: 'new Array multiple args', src: `
+    expected: 'foo'
+  },
+  {
+    name: 'new Array multiple args',
+    src: `
     var a = new Array(1, 2, 3);
     Array.isArray(a) && a.length === 3 && String(a);
     `,
-    expected: '1,2,3' },
-
-  { name: 'Array.isArray Array.prototype', src: `
+    expected: '1,2,3'
+  },
+  {
+    name: 'Array.isArray Array.prototype',
+    src: `
     Array.isArray(Array.prototype);
     `,
-    expected: true },
-
-  { name: 'Array.isArray Array instance', src: `
+    expected: true
+  },
+  {
+    name: 'Array.isArray Array instance',
+    src: `
     Array.isArray(new Array);
     `,
-    expected: true },
-
-  { name: 'Array.isArray array literal', src: `
+    expected: true
+  },
+  {
+    name: 'Array.isArray array literal',
+    src: `
     Array.isArray([]);
     `,
-    expected: true },
-
-  { name: 'Array.isArray(array-like)', src: `
+    expected: true
+  },
+  {
+    name: 'Array.isArray(array-like)',
+    src: `
     Array.isArray({0: 'foo', 1: 'bar', length: 2});
     `,
-    expected: false },
-
-  { name: 'Array.prototype.concat()', src: `
+    expected: false
+  },
+  {
+    name: 'Array.prototype.concat()',
+    src: `
         var a = ['foo', 'bar', 'baz', , 'quux', 'quuux'];
         var c = a.concat();
         a.length === 6 && c.length === 6 && c !== a && String(c);
     `,
-    expected: 'foo,bar,baz,,quux,quuux' },
-
-  { name: 'Array.prototype.concat(...)', src: `
+    expected: 'foo,bar,baz,,quux,quuux'
+  },
+  {
+    name: 'Array.prototype.concat(...)',
+    src: `
         var o = {0: 'quux', 1: 'quuux', length: 2};
         var c = [].concat(['foo', 'bar'], 'baz', undefined, o);
         c.length === 5 && '3' in c && c[3] === undefined && String(c);
     `,
-    expected: 'foo,bar,baz,,[object Object]' },
-
-  { name: 'Array.prototype.concat.call(object, ...)', src: `
+    expected: 'foo,bar,baz,,[object Object]'
+  },
+  {
+    name: 'Array.prototype.concat.call(object, ...)',
+    src: `
         var o = {0: 'foo', 1: 'bar', length: 2};
         var c = Array.prototype.concat.call(o, 'baz', [, 'quux', 'quuux']);
         c.length === 5 && String(c);
     `,
-    expected: '[object Object],baz,,quux,quuux' },
-
-  { name: 'Array.prototype.includes', src: `
+    expected: '[object Object],baz,,quux,quuux'
+  },
+  {
+    name: 'Array.prototype.includes',
+    src: `
     [1, 2, 3, 2, 1].includes(2);
     `,
-    expected: true },
-
-  { name: 'Array.prototype.includes not found', src: `
+    expected: true
+  },
+  {
+    name: 'Array.prototype.includes not found',
+    src: `
     [1, 2, 3, 2, 1].includes(4);
     `,
-    expected: false },
-
-  { name: 'Array.prototype.includes(..., +)', src: `
+    expected: false
+  },
+  {
+    name: 'Array.prototype.includes(..., +)',
+    src: `
     [1, 2, 3, 2, 1].includes(2, 2);
     `,
-    expected: true },
-
-  { name: 'Array.prototype.includes(..., -)', src: `
+    expected: true
+  },
+  {
+    name: 'Array.prototype.includes(..., -)',
+    src: `
     [1, 2, 3, 2, 1].includes(1, -3);
     `,
-    expected: true },
-
-  { name: 'Array.prototype.includes NaN', src: `
+    expected: true
+  },
+  {
+    name: 'Array.prototype.includes NaN',
+    src: `
     ['x', NaN, 'y'].includes(NaN);
     `,
-    expected: true },
-
-  { name: 'Array.prototype.includes.call(array-like, ...)', src: `
+    expected: true
+  },
+  {
+    name: 'Array.prototype.includes.call(array-like, ...)',
+    src: `
     var o = {0: 1, 1: 2, 2: 3, 3: 2, 4: 1, length: 5};
     Array.prototype.includes.call(o, 2);
     `,
-    expected: true },
-
-  { name: 'Array.prototype.indexOf', src: `
+    expected: true
+  },
+  {
+    name: 'Array.prototype.indexOf',
+    src: `
     [1, 2, 3, 2, 1].indexOf(2);
     `,
-    expected: 1 },
-
-  { name: 'Array.prototype.indexOf not found', src: `
+    expected: 1
+  },
+  {
+    name: 'Array.prototype.indexOf not found',
+    src: `
     [1, 2, 3, 2, 1].indexOf(4);
     `,
-    expected: -1 },
-
-  { name: 'Array.prototype.indexOf(..., +)', src: `
+    expected: -1
+  },
+  {
+    name: 'Array.prototype.indexOf(..., +)',
+    src: `
     [1, 2, 3, 2, 1].indexOf(2, 2);
     `,
-    expected: 3 },
-
-  { name: 'Array.prototype.indexOf(..., -)', src: `
+    expected: 3
+  },
+  {
+    name: 'Array.prototype.indexOf(..., -)',
+    src: `
     [1, 2, 3, 2, 1].indexOf(1, -3);
     `,
-    expected: 4 },
-
-  { name: 'Array.prototype.indexOf NaN', src: `
+    expected: 4
+  },
+  {
+    name: 'Array.prototype.indexOf NaN',
+    src: `
     ['x', NaN, 'y'].indexOf(NaN);
     `,
-    expected: -1 },
-
-  { name: 'Array.prototype.indexOf.call(array-like, ...)', src: `
+    expected: -1
+  },
+  {
+    name: 'Array.prototype.indexOf.call(array-like, ...)',
+    src: `
     var o = {0: 1, 1: 2, 2: 3, 3: 2, 4: 1, length: 5};
     Array.prototype.indexOf.call(o, 2);
     `,
-    expected: 1 },
-
-  { name: 'Array.prototype.join', src: `
+    expected: 1
+  },
+  {
+    name: 'Array.prototype.join',
+    src: `
     [1, 2, 3].join('-');
     `,
-    expected: '1-2-3' },
-
-  { name: 'Array.prototype.join cycle detection', src: `
+    expected: '1-2-3'
+  },
+  {
+    name: 'Array.prototype.join cycle detection',
+    src: `
     var a = [1, , 3];
     a[1] = a;
     a.join('-');
     "Didn't crash!";
     `,
-    expected: "Didn't crash!" },
-
-  { name: 'Array.prototype.lastIndexOf', src: `
+    expected: 'Didn\'t crash!'
+  },
+  {
+    name: 'Array.prototype.lastIndexOf',
+    src: `
     [1, 2, 3, 2, 1].lastIndexOf(2);
     `,
-    expected: 3 },
-
-  { name: 'Array.prototype.lastIndexOf not found', src: `
+    expected: 3
+  },
+  {
+    name: 'Array.prototype.lastIndexOf not found',
+    src: `
     [1, 2, 3, 2, 1].lastIndexOf(4);
     `,
-    expected: -1 },
-
-  { name: 'Array.prototype.lastIndexOf(..., +)', src: `
+    expected: -1
+  },
+  {
+    name: 'Array.prototype.lastIndexOf(..., +)',
+    src: `
     [1, 2, 3, 2, 1].lastIndexOf(2, 2);
     `,
-    expected: 1 },
-
-  { name: 'Array.prototype.lastIndexOf(..., -)', src: `
+    expected: 1
+  },
+  {
+    name: 'Array.prototype.lastIndexOf(..., -)',
+    src: `
     [1, 2, 3, 2, 1].lastIndexOf(1, -3);
     `,
-    expected: 0 },
-
-  { name: 'Array.prototype.lastIndexOf.call(array-like, ...)', src: `
+    expected: 0
+  },
+  {
+    name: 'Array.prototype.lastIndexOf.call(array-like, ...)',
+    src: `
     var o = {0: 1, 1: 2, 2: 3, 3: 2, 4: 1, length: 5};
     Array.prototype.lastIndexOf.call(o, 2);
     `,
-    expected: 3 },
-
-  { name: 'Array.prototype.pop', src: `
+    expected: 3
+  },
+  {
+    name: 'Array.prototype.pop',
+    src: `
         var a = ['foo', 'bar', 'baz'];
         var r = a.pop();
         a.length === 2 && r;
     `,
-    expected: 'baz' },
-
-  { name: 'Array.prototype.pop empty array', src: `
+    expected: 'baz'
+  },
+  {
+    name: 'Array.prototype.pop empty array',
+    src: `
         var a = [];
         var r = a.pop();
         a.length === 0 && r;
     `,
-    expected: undefined },
-
-  { name: 'Array.prototype.pop.apply(array-like)', src: `
+    expected: undefined
+  },
+  {
+    name: 'Array.prototype.pop.apply(array-like)',
+    src: `
         var o = {0: 'foo', 1: 'bar', 2: 'baz', length: 3};
         var r = Array.prototype.pop.apply(o);
         o.length === 2 && r;
     `,
-    expected: 'baz' },
-
-  { name: 'Array.prototype.pop.apply(empty array-like)', src: `
+    expected: 'baz'
+  },
+  {
+    name: 'Array.prototype.pop.apply(empty array-like)',
+    src: `
         var o = {length: 0};
         var r = Array.prototype.pop.apply(o);
         o.length === 0 && r;
     `,
-    expected: undefined },
-
-  { name: 'Array.prototype.pop.apply(huge array-like)', src: `
+    expected: undefined
+  },
+  {
+    name: 'Array.prototype.pop.apply(huge array-like)',
+    src: `
         var o = {5000000000000000: 'foo',
                  5000000000000001: 'quux',
                  length: 5000000000000002};
         var r = Array.prototype.pop.apply(o);
         o.length === 5000000000000001 && o[5000000000000000] === 'foo' && r;
     `,
-    expected: 'quux' },
-
-  { name: 'Array.prototype.push', src: `
+    expected: 'quux'
+  },
+  {
+    name: 'Array.prototype.push',
+    src: `
         var a = [];
         a.push('foo') === 1 && a.push('bar') === 2 &&
             a.length === 2 && a[0] === 'foo' && a[1] === 'bar';
     `,
-    expected: true },
-
-  { name: 'Array.prototype.push.call(array-like, ...)', src: `
+    expected: true
+  },
+  {
+    name: 'Array.prototype.push.call(array-like, ...)',
+    src: `
         var o = {length: 0};
         Array.prototype.push.call(o, 'foo') === 1 &&
             Array.prototype.push.call(o, 'bar') === 2 &&
             o.length === 2 && o[0] === 'foo' && o[1] === 'bar';
-
     `,
-    expected: true },
-
-  { name: 'Array.prototype.push.call(huge array-like, ...)', src: `
+    expected: true
+  },
+  {
+    name: 'Array.prototype.push.call(huge array-like, ...)',
+    src: `
         var o = {length: 5000000000000000};
         var o = {length: 5000000000000000};
         Array.prototype.push.call(o, 'foo') === 5000000000000001 &&
@@ -2005,75 +2459,97 @@ module.exports = [
             o[5000000000000000] === 'foo' && o[5000000000000001] === 'bar' &&
             o.length === 5000000000000002
     `,
-    expected: true },
-
-  { name: 'Array.prototype.reverse odd-length', src: `
+    expected: true
+  },
+  {
+    name: 'Array.prototype.reverse odd-length',
+    src: `
         var a = [1, 2, 3];
         a.reverse() === a && a.length === 3 && String(a);
     `,
-    expected: '3,2,1' },
-
-  { name: 'Array.prototype.reverse even-length', src: `
+    expected: '3,2,1'
+  },
+  {
+    name: 'Array.prototype.reverse even-length',
+    src: `
         var a = [1, 2, , 4];
         a.reverse() === a && a.length === 4 && String(a);
     `,
-    expected: '4,,2,1' },
-
-  { name: 'Array.prototype.reverse empty', src: `
+    expected: '4,,2,1'
+  },
+  {
+    name: 'Array.prototype.reverse empty',
+    src: `
         var a = [];
         a.reverse() === a && a.length;
     `,
-    expected: 0 },
-
-  { name: 'Array.prototype.reverse.call(odd-length array-like)', src: `
+    expected: 0
+  },
+  {
+    name: 'Array.prototype.reverse.call(odd-length array-like)',
+    src: `
         var o = {0: 1, 1: 2, 2: 3, length: 3};
         Array.prototype.reverse.call(o) === o && o.length === 3 &&
             Array.prototype.slice.apply(o).toString();
     `,
-    expected: '3,2,1' },
-
-  { name: 'Array.prototype.reverse.call(even-length array-like)', src: `
+    expected: '3,2,1'
+  },
+  {
+    name: 'Array.prototype.reverse.call(even-length array-like)',
+    src: `
         var o = {0: 1, 1: 2, 3: 4, length: 4};
         Array.prototype.reverse.call(o) === o && o.length === 4 &&
             Array.prototype.slice.apply(o).toString();
     `,
-    expected: '4,,2,1' },
-
-  { name: 'Array.prototype.reverse.call(empty array-like)', src: `
+    expected: '4,,2,1'
+  },
+  {
+    name: 'Array.prototype.reverse.call(empty array-like)',
+    src: `
         var o = {length: 0};
         Array.prototype.reverse.call(o) === o && o.length;
     `,
-    expected: 0 },
-
-  { name: 'Array.prototype.shift', src: `
+    expected: 0
+  },
+  {
+    name: 'Array.prototype.shift',
+    src: `
         var a = ['foo', 'bar', 'baz'];
         var r = a.shift();
         a.length === 2 && a[0] === 'bar' && a[1] === 'baz' && r;
     `,
-    expected: 'foo' },
-
-  { name: 'Array.prototype.shift empty array', src: `
+    expected: 'foo'
+  },
+  {
+    name: 'Array.prototype.shift empty array',
+    src: `
         var a = [];
         var r = a.shift();
         a.length === 0 && r;
     `,
-    expected: undefined },
-
-  { name: 'Array.prototype.shift.apply(array-like)', src: `
+    expected: undefined
+  },
+  {
+    name: 'Array.prototype.shift.apply(array-like)',
+    src: `
         var o = {0: 'foo', 1: 'bar', 2: 'baz', length: 3};
         var r = Array.prototype.shift.apply(o);
         o.length === 2 && o[0] === 'bar' && o[1] === 'baz' && r;
     `,
-    expected: 'foo' },
-
-  { name: 'Array.prototype.shift.apply(empty array-like)', src: `
+    expected: 'foo'
+  },
+  {
+    name: 'Array.prototype.shift.apply(empty array-like)',
+    src: `
         var o = {length: 0};
         var r = Array.prototype.shift.apply(o);
         o.length === 0 && r;
     `,
-    expected: undefined },
-
-  { name: 'Array.prototype.shift.apply(huge array-like)', src: `
+    expected: undefined
+  },
+  {
+    name: 'Array.prototype.shift.apply(huge array-like)',
+    src: `
         var o = {5000000000000000: 'foo',
                  5000000000000001: 'quux',
                  length: 5000000000000002};
@@ -2081,37 +2557,47 @@ module.exports = [
         o.length === 5000000000000001 && o[5000000000000000] === 'quux' && r;
     `,
     // SKIP until more efficient shift implementation available.
-    /* expected: 'foo' */ },
-
-  { name: 'Array.prototype.slice()', src: `
+    /* expected: 'foo' */
+  },
+  {
+    name: 'Array.prototype.slice()',
+    src: `
         var a = ['foo', 'bar', 'baz', , 'quux', 'quuux'];
         var s = a.slice();
         a.length === 6 && s.length === 6 && String(s);
     `,
-    expected: 'foo,bar,baz,,quux,quuux' },
-
-  { name: 'Array.prototype.slice(-)', src: `
+    expected: 'foo,bar,baz,,quux,quuux'
+  },
+  {
+    name: 'Array.prototype.slice(-)',
+    src: `
         var a = ['foo', 'bar', 'baz', , 'quux', 'quuux'];
         var s = a.slice(-2);
         a.length === 6 && s.length === 2 && String(s);
     `,
-    expected: 'quux,quuux' },
-
-  { name: 'Array.prototype.slice(+, +)', src: `
+    expected: 'quux,quuux'
+  },
+  {
+    name: 'Array.prototype.slice(+, +)',
+    src: `
         var a = ['foo', 'bar', 'baz', , 'quux', 'quuux'];
         var s = a.slice(1, 4);
         a.length === 6 && s.length === 3 && !('2' in s) && String(s);
     `,
-    expected: 'bar,baz,' },
-
-  { name: 'Array.prototype.slice(+, -)', src: `
+    expected: 'bar,baz,'
+  },
+  {
+    name: 'Array.prototype.slice(+, -)',
+    src: `
         var a = ['foo', 'bar', 'baz', , 'quux', 'quuux'];
         var s = a.slice(1, -2);
         a.length === 6 && s.length === 3 && !('2' in s) && String(s);
     `,
-    expected: 'bar,baz,' },
-
-  { name: 'Array.prototype.slice.call(array-like, -, +)', src: `
+    expected: 'bar,baz,'
+  },
+  {
+    name: 'Array.prototype.slice.call(array-like, -, +)',
+    src: `
         var o = {
           0: 'foo', 1: 'bar', 2: 'baz', 4: 'quux', 5: 'quuux', length: 6
         };
@@ -2119,9 +2605,11 @@ module.exports = [
         !Array.isArray(o) && o.length === 6 &&
             Array.isArray(s) && s.length === 3 && !('2' in s) && String(s);
     `,
-    expected: 'bar,baz,' },
-
-  { name: 'Array.prototype.slice.call(huge array-like, -, -)', src: `
+    expected: 'bar,baz,'
+  },
+  {
+    name: 'Array.prototype.slice.call(huge array-like, -, -)',
+    src: `
         var o = {
           5000000000000000: 'foo', 5000000000000001: 'bar',
           5000000000000002: 'baz', 5000000000000004: 'quux',
@@ -2131,25 +2619,33 @@ module.exports = [
         !Array.isArray(o) && o.length === 5000000000000006 &&
             Array.isArray(s) && s.length === 3 && !('2' in s) && String(s);
     `,
-    expected: 'bar,baz,' },
-
-  { name: 'Array.prototype.sort()', src: `
+    expected: 'bar,baz,'
+  },
+  {
+    name: 'Array.prototype.sort()',
+    src: `
     [5, 2, 3, 1, 4].sort().join();  // Sorts ASCIIbetically.
     `,
-    expected: '1,2,3,4,5' },
-
-  { name: 'Array.prototype.sort() compaction', src: `
+    expected: '1,2,3,4,5'
+  },
+  {
+    name: 'Array.prototype.sort() compaction',
+    src: `
     ['z', undefined, 10, , 'aa', null, 'a', 5, NaN, , 1].sort()
         .map(String).join();
     `,
-    expected: '1,10,5,NaN,a,aa,null,z,undefined,,' },
-
-  { name: 'Array.prototype.sort(comparefn)', src: `
+    expected: '1,10,5,NaN,a,aa,null,z,undefined,,'
+  },
+  {
+    name: 'Array.prototype.sort(comparefn)',
+    src: `
     [99, 9, 10, 11, 1, 0, 5].sort(function(a, b) {return a - b;}).join();
     `,
-    expected: '0,1,5,9,10,11,99' },
-
-  { name: 'Array.prototype.sort(comparefn) compaction', src: `
+    expected: '0,1,5,9,10,11,99'
+  },
+  {
+    name: 'Array.prototype.sort(comparefn) compaction',
+    src: `
     ['z', undefined, 10, , 'aa', null, 'a', 5, NaN, , 1].sort(
         function(a, b) {
           // Try to put undefineds first - should not succeed.
@@ -2163,30 +2659,38 @@ module.exports = [
           return 0;
         }).map(String).join();
     `,
-    expected: 'z,null,aa,a,NaN,5,10,1,undefined,,' },
-
-  { name: 'Array.prototype.splice()', src: `
+    expected: 'z,null,aa,a,NaN,5,10,1,undefined,,'
+  },
+  {
+    name: 'Array.prototype.splice()',
+    src: `
         var a = ['foo', 'bar', 'baz', , 'quux', 'quuux'];
         var s = a.splice();
         a.length === 6 && s.length === 0 && String(a) + ':' + String(s);
     `,
-    expected: 'foo,bar,baz,,quux,quuux:' },
-
-  { name: 'Array.prototype.splice(-)', src: `
+    expected: 'foo,bar,baz,,quux,quuux:'
+  },
+  {
+    name: 'Array.prototype.splice(-)',
+    src: `
         var a = ['foo', 'bar', 'baz', , 'quux', 'quuux'];
         var s = a.splice(-2);
         a.length === 4 && s.length === 2 && String(a) + ':' + String(s);
     `,
-    expected: 'foo,bar,baz,:quux,quuux' },
-
-  { name: 'Array.prototype.splice(+, +, ...)', src: `
+    expected: 'foo,bar,baz,:quux,quuux'
+  },
+  {
+    name: 'Array.prototype.splice(+, +, ...)',
+    src: `
         var a = ['foo', 'bar', 'baz', , 'quux', 'quuux'];
         var s = a.splice(1, 3, 'bletch');
         a.length === 4 && s.length === 3 && String(a) + ':' + String(s);
     `,
-    expected: 'foo,bletch,quux,quuux:bar,baz,' },
-
-  { name: 'Array.prototype.splice.call(array-like, 0, large, ...)', src: `
+    expected: 'foo,bletch,quux,quuux:bar,baz,'
+  },
+  {
+    name: 'Array.prototype.splice.call(array-like, 0, large, ...)',
+    src: `
         var o = {
           0: 'foo', 1: 'bar', 2: 'baz', 4: 'quux', 5: 'quuux', length: 6
         };
@@ -2195,9 +2699,11 @@ module.exports = [
         o[0] === 'bletch' &&
         Array.isArray(s) && s.length === 6 && !('3' in s) && String(s);
     `,
-    expected: 'foo,bar,baz,,quux,quuux' },
-
-  { name: 'Array.prototype.splice.call(huge array-like, -, -, many...)', src: `
+    expected: 'foo,bar,baz,,quux,quuux'
+  },
+  {
+    name: 'Array.prototype.splice.call(huge array-like, -, -, many...)',
+    src: `
         var o = {
           5000000000000000: 'foo', 5000000000000001: 'bar',
           5000000000000002: 'baz', 5000000000000004: 'quux',
@@ -2209,45 +2715,56 @@ module.exports = [
             o[5000000000000006] === 'quux' && o[5000000000000007] === 'quuux' &&
             Array.isArray(s) && s.length === 0;
     `,
-    expected: true },
-
-  { name: 'Array.prototype.toString cycle detection', src: `
+    expected: true
+  },
+  {
+    name: 'Array.prototype.toString cycle detection',
+    src: `
     var a = [1, , 3];
     a[1] = a;
     a.toString();
     "Didn't crash!";
     `,
-    expected: "Didn't crash!" },
-
-  { name: 'Array.prototype.toString.call(obj-w/join)', src: `
+    expected: 'Didn\'t crash!'
+  },
+  {
+    name: 'Array.prototype.toString.call(obj-w/join)',
+    src: `
     var o = {join: function() {return 'OK';}};
     Array.prototype.toString.apply(o);
     `,
-    expected: 'OK' },
-
-  { name: 'Array.prototype.toString.call(array-like)', src: `
+    expected: 'OK'
+  },
+  {
+    name: 'Array.prototype.toString.call(array-like)',
+    src: `
     var o = {0: 'foo', 1: 'bar', length: 2};
     Array.prototype.toString.apply(o);
     `,
-    expected: '[object Object]' },
-
-  { name: 'Array.prototype.unshift', src: `
+    expected: '[object Object]'
+  },
+  {
+    name: 'Array.prototype.unshift',
+    src: `
         var a = [];
         a.unshift('foo') === 1 && a.unshift('bar') === 2 &&
             a.length === 2 && a[0] === 'bar' && a[1] === 'foo';
     `,
-    expected: true },
-
-  { name: 'Array.prototype.unshift.call(array-like, ...)', src: `
+    expected: true
+  },
+  {
+    name: 'Array.prototype.unshift.call(array-like, ...)',
+    src: `
         var o = {length: 0};
         Array.prototype.unshift.call(o, 'foo') === 1 &&
             Array.prototype.unshift.call(o, 'bar') === 2 &&
             o.length === 2 && o[0] === 'bar' && o[1] === 'foo';
-
     `,
-    expected: true },
-
-  { name: 'Array.prototype.unshift.call(huge array-like, ...)', src: `
+    expected: true
+  },
+  {
+    name: 'Array.prototype.unshift.call(huge array-like, ...)',
+    src: `
         var o = {length: 5000000000000000};
         var o = {length: 5000000000000000};
         Array.prototype.unshift.call(o, 'foo') === 5000000000000001 &&
@@ -2256,11 +2773,13 @@ module.exports = [
             o.length === 5000000000000002
     `,
     // SKIP until more efficient unshift implementation available.
-    /* expected: true */ },
-
+    /* expected: true */
+  },
   /////////////////////////////////////////////////////////////////////////////
   // Boolean and Boolean.prototype
-  { name: 'Boolean', src: `
+  {
+    name: 'Boolean',
+    src: `
     var tests = [
       [undefined, false],
       [null, false],
@@ -2283,58 +2802,72 @@ module.exports = [
     }
     (ok === tests.length) ? 'pass' : 'fail';
     `,
-    expected: 'pass' },
-
-  { name: 'Boolean.prototype.toString()', src: `
+    expected: 'pass'
+  },
+  {
+    name: 'Boolean.prototype.toString()',
+    src: `
     Boolean.prototype.toString();
     `,
-    expected: 'false' },
-
-  { name: 'Boolean.prototype.toString.call(true)', src: `
+    expected: 'false'
+  },
+  {
+    name: 'Boolean.prototype.toString.call(true)',
+    src: `
     Boolean.prototype.toString.call(true);
     `,
-    expected: 'true' },
-
-  { name: 'Boolean.prototype.toString.call(false)', src: `
+    expected: 'true'
+  },
+  {
+    name: 'Boolean.prototype.toString.call(false)',
+    src: `
     Boolean.prototype.toString.call(false);
     `,
-    expected: 'false' },
-
-  { name: 'Boolean.prototype.toString.call non-Boolean object', src: `
+    expected: 'false'
+  },
+  {
+    name: 'Boolean.prototype.toString.call non-Boolean object',
+    src: `
     try {
       Boolean.prototype.toString.call({});
     } catch (e) {
       e.name;
     }
     `,
-    expected: 'TypeError' },
-
-  { name: 'Boolean.prototype.valueOf()', src: `
+    expected: 'TypeError'
+  },
+  {
+    name: 'Boolean.prototype.valueOf()',
+    src: `
     Boolean.prototype.valueOf();
     `,
-    expected: false },
-
-  { name: 'Boolean.prototype.valueOf.call primitive', src: `
+    expected: false
+  },
+  {
+    name: 'Boolean.prototype.valueOf.call primitive',
+    src: `
     Boolean.prototype.valueOf.call(true) &&
         !Boolean.prototype.valueOf.call(false);
     `,
-    expected: true },
-
-  { name: 'Boolean.prototype.valueOf.call non-Boolean object', src: `
+    expected: true
+  },
+  {
+    name: 'Boolean.prototype.valueOf.call non-Boolean object',
+    src: `
     try {
       Boolean.prototype.valueOf.call({});
     } catch (e) {
       e.name;
     }
     `,
-    expected: 'TypeError' },
-
+    expected: 'TypeError'
+  },
   /////////////////////////////////////////////////////////////////////////////
   // Number and Number.prototype
-
-  { name: 'Number()', src: 'Number();', expected: 0 },
-
-  { name: 'Number', src: `
+  {name: 'Number()', src: 'Number();', expected: 0},
+  {
+    name: 'Number',
+    src: `
     var tests = [
       [undefined, NaN],
       [null, 0],
@@ -2356,59 +2889,73 @@ module.exports = [
     }
     (ok === tests.length) ? 'pass' : 'fail';
     `,
-    expected: 'pass' },
-
-  { name: 'Number.MAX_SAFE_INTEGER', src: `
+    expected: 'pass'
+  },
+  {
+    name: 'Number.MAX_SAFE_INTEGER',
+    src: `
     Number.MAX_SAFE_INTEGER + 1 === Math.pow(2, 53) &&
         Number.isSafeInteger(Number.MAX_SAFE_INTEGER) &&
         !Number.isSafeInteger(Number.MAX_SAFE_INTEGER + 1);
     `,
-    expected: true },
-
-  { name: 'Number.prototype.toString()', src: `
+    expected: true
+  },
+  {
+    name: 'Number.prototype.toString()',
+    src: `
     Number.prototype.toString();
     `,
-    expected: '0' },
-
-  { name: 'Number.prototype.toString.call primitive', src: `
+    expected: '0'
+  },
+  {
+    name: 'Number.prototype.toString.call primitive',
+    src: `
     Number.prototype.toString.call(84);
     `,
-    expected: '84' },
-
-  { name: 'Number.prototype.toString.call non-Number object', src: `
+    expected: '84'
+  },
+  {
+    name: 'Number.prototype.toString.call non-Number object',
+    src: `
     try {
       Number.prototype.toString.call({});
     } catch (e) {
       e.name;
     }
     `,
-    expected: 'TypeError' },
-
-  { name: 'Number.prototype.valueOf()', src: `
+    expected: 'TypeError'
+  },
+  {
+    name: 'Number.prototype.valueOf()',
+    src: `
     Number.prototype.valueOf();
     `,
-    expected: 0 },
-
-  { name: 'Number.prototype.valueOf.call primitive', src: `
+    expected: 0
+  },
+  {
+    name: 'Number.prototype.valueOf.call primitive',
+    src: `
     Number.prototype.valueOf.call(85);
     `,
-    expected: 85 },
-
-  { name: 'Number.prototype.valueOf.call non-Number object', src: `
+    expected: 85
+  },
+  {
+    name: 'Number.prototype.valueOf.call non-Number object',
+    src: `
     try {
       Number.prototype.valueOf.call({});
     } catch (e) {
       e.name;
     }
     `,
-    expected: 'TypeError' },
-
+    expected: 'TypeError'
+  },
   /////////////////////////////////////////////////////////////////////////////
   // String and String.prototype
-
-  { name: 'String()', src: 'String();', expected: '' },
-
-  { name: 'String', src: `
+  {name: 'String()', src: 'String();', expected: ''},
+  {
+    name: 'String',
+    src: `
     var tests = [
       [undefined, 'undefined'],
       [null, 'null'],
@@ -2430,23 +2977,29 @@ module.exports = [
     }
     (ok === tests.length) ? 'pass' : 'fail';
     `,
-    expected: 'pass' },
-
-  { name: 'String calls valueOf', src: `
+    expected: 'pass'
+  },
+  {
+    name: 'String calls valueOf',
+    src: `
         var o = Object.create(null);
         o.valueOf = function() {return 'OK';};
         String(o);
     `,
-    expected: 'OK' },
-
-  { name: 'String calling valueOf returns string', src: `
+    expected: 'OK'
+  },
+  {
+    name: 'String calling valueOf returns string',
+    src: `
         var o = Object.create(null);
         o.valueOf = function() {return 42;};
         String(o);
     `,
-    expected: '42' },
-
-  { name: 'String calling valueOf throws', src: `
+    expected: '42'
+  },
+  {
+    name: 'String calling valueOf throws',
+    src: `
         var o = Object.create(null);
         o.valueOf = function() {return {};};
         try {
@@ -2455,24 +3008,30 @@ module.exports = [
           e.name;
         }
     `,
-    expected: 'TypeError' },
-
-  { name: 'String calls toString', src: `
+    expected: 'TypeError'
+  },
+  {
+    name: 'String calls toString',
+    src: `
         var o = Object.create(null);
         o.valueOf = function() {return 'Whoops: called valueOf';};
         o.toString = function() {return 'OK';};
         String(o);
     `,
-    expected: 'OK' },
-
-  { name: 'String calling toString returns string', src: `
+    expected: 'OK'
+  },
+  {
+    name: 'String calling toString returns string',
+    src: `
         var o = Object.create(null);
         o.valueOf = function() {return 42;};
         String(o);
     `,
-    expected: '42' },
-
-  { name: 'String calling toString throws', src: `
+    expected: '42'
+  },
+  {
+    name: 'String calling toString throws',
+    src: `
         var o = Object.create(null);
         o.valueOf = function() {return {};};
         o.toString = function() {return {};};
@@ -2482,112 +3041,139 @@ module.exports = [
           e.name;
         }
     `,
-    expected: 'TypeError' },
-
-  { name: 'String.prototype.length',
+    expected: 'TypeError'
+  },
+  {
+    name: 'String.prototype.length',
     src: `String.prototype.length;`,
-    expected: 0 },
-
-  { name: 'String.prototype.replace(string, string)',
+    expected: 0
+  },
+  {
+    name: 'String.prototype.replace(string, string)',
     src: `'xxxx'.replace('xx', 'y');`,
-    expected: 'yxx' },
-
-  { name: 'String.prototype.replace(regexp, string)',
+    expected: 'yxx'
+  },
+  {
+    name: 'String.prototype.replace(regexp, string)',
     src: `'xxxx'.replace(/(X)\\1/ig, 'y');`,
-    expected: 'yy' },
-
-  { name: 'String.prototype.replace(string, function)', src: `
+    expected: 'yy'
+  },
+  {
+    name: 'String.prototype.replace(string, function)',
+    src: `
     'xxxx'.replace('xx', function() {
          return '[' + Array.prototype.join.apply(arguments) + ']';
     });
     `,
-    expected: '[xx,0,xxxx]xx' },
-
-  { name: 'String.prototype.replace(regexp, function)', src: `
+    expected: '[xx,0,xxxx]xx'
+  },
+  {
+    name: 'String.prototype.replace(regexp, function)',
+    src: `
     'xxxx'.replace(/(X)\\1/ig, function() {
          return '[' + Array.prototype.join.apply(arguments) + ']';
     });
     `,
-    expected: '[xx,x,0,xxxx][xx,x,2,xxxx]' },
-
-  { name: 'String.prototype.search(string) not found',
+    expected: '[xx,x,0,xxxx][xx,x,2,xxxx]'
+  },
+  {
+    name: 'String.prototype.search(string) not found',
     src: `'hello'.search('H')`,
-    expected: -1 },
-
-  { name: 'String.prototype.search(string) found',
+    expected: -1
+  },
+  {
+    name: 'String.prototype.search(string) found',
     src: `'hello'.search('ll')`,
-    expected: 2 },
-
-  { name: 'String.prototype.search(regexp) not found',
+    expected: 2
+  },
+  {
+    name: 'String.prototype.search(regexp) not found',
     src: `'hello'.search(/H/)`,
-    expected: -1 },
-
-  { name: 'String.prototype.search(regexp) found',
+    expected: -1
+  },
+  {
+    name: 'String.prototype.search(regexp) found',
     src: `'hello'.search(/(.)\\1/)`,
-    expected: 2 },
-
-  { name: 'String.prototype.toString()', src: `
+    expected: 2
+  },
+  {
+    name: 'String.prototype.toString()',
+    src: `
     String.prototype.toString();
     `,
-    expected: '' },
-
-  { name: 'String.prototype.toString.call primitive', src: `
+    expected: ''
+  },
+  {
+    name: 'String.prototype.toString.call primitive',
+    src: `
     String.prototype.toString.call('a string');
     `,
-    expected: 'a string' },
-
-  { name: 'String.prototype.toString.call non-String object', src: `
+    expected: 'a string'
+  },
+  {
+    name: 'String.prototype.toString.call non-String object',
+    src: `
     try {
       String.prototype.toString.call({});
     } catch (e) {
       e.name;
     }
     `,
-    expected: 'TypeError' },
-
-  { name: 'String.prototype.valueOf()', src: `
+    expected: 'TypeError'
+  },
+  {
+    name: 'String.prototype.valueOf()',
+    src: `
     String.prototype.valueOf();
     `,
-    expected: '' },
-
-  { name: 'String.prototype.valueOf.call primitive', src: `
+    expected: ''
+  },
+  {
+    name: 'String.prototype.valueOf.call primitive',
+    src: `
     String.prototype.valueOf.call('a string');
     `,
-    expected: 'a string' },
-
-  { name: 'String.prototype.valueOf.call non-String object', src: `
+    expected: 'a string'
+  },
+  {
+    name: 'String.prototype.valueOf.call non-String object',
+    src: `
     try {
       String.prototype.valueOf.call({});
     } catch (e) {
       e.name;
     }
     `,
-    expected: 'TypeError' },
-
+    expected: 'TypeError'
+  },
   /////////////////////////////////////////////////////////////////////////////
   // RegExp
-
-  { name: 'RegExp.prototype.test.apply(non-regexp) throws', src: `
+  {
+    name: 'RegExp.prototype.test.apply(non-regexp) throws',
+    src: `
     try {
       /foo/.test.apply({}, ['foo']);
     } catch (e) {
       e.name;
     }
     `,
-    expected: 'TypeError' },
-
+    expected: 'TypeError'
+  },
   /////////////////////////////////////////////////////////////////////////////
   // Error and Error.prototype (and all the other native error types too)
-
-  { name: 'new Error has .stack', src: `
+  {
+    name: 'new Error has .stack',
+    src: `
     // Use eval to make parsing .stack easier.
     var e = eval('new Error;');
     var lines = e.stack.split('\\n');
     lines[0].trim();
     `,
-    expected: 'at "new Error;" 1:1' },
-
-  { name: 'thrown Error has .stack', src: `
+    expected: 'at "new Error;" 1:1'
+  },
+  {
+    name: 'thrown Error has .stack',
+    src: `
     try {
       (function buggy() {1 instanceof 2;})();
     } catch (e) {
@@ -2595,18 +3181,22 @@ module.exports = [
     }
     lines[0].trim();
     `,
-    expected: 'at buggy 1:19' },
-
-  { name: 'Error .stack correctly reports anonymous function', src: `
+    expected: 'at buggy 1:19'
+  },
+  {
+    name: 'Error .stack correctly reports anonymous function',
+    src: `
     // Use eval to make parsing .stack easier.
     var e = eval('(function() {return new Error;})()');
     var lines = e.stack.split('\\n');
     lines[0].trim();
     `,
-    expected: 'at anonymous function 1:20' },
-
+    expected: 'at anonymous function 1:20'
+  },
   // Bug #241.
-  { name: 'Error .stack correctly blames MemberExpression', src: `
+  {
+    name: 'Error .stack correctly blames MemberExpression',
+    src: `
     function foo() {
       switch (1) {
         case 1:
@@ -2620,9 +3210,11 @@ module.exports = [
     }
     lines[0].trim();
     `,
-    expected: 'at foo 4:18' },
-
-  { name: 'Error .stack correctly blames Identifier', src: `
+    expected: 'at foo 4:18'
+  },
+  {
+    name: 'Error .stack correctly blames Identifier',
+    src: `
     function foo() {
       return undefinedVariable;
     }
@@ -2633,71 +3225,90 @@ module.exports = [
     }
     lines[0].trim();
     `,
-    expected: 'at foo 2:14' },
-
+    expected: 'at foo 2:14'
+  },
   /////////////////////////////////////////////////////////////////////////////
   // JSON
-
-  { name: 'JSON.stringify basic', src: `
+  {
+    name: 'JSON.stringify basic',
+    src: `
     JSON.stringify({
         string: 'foo', number: 42, true: true, false: false, null: null,
         object: { obj: {}, arr: [] }, array: [{}, []] });
     `,
     expected: '{"string":"foo","number":42,"true":true,"false":false,' +
-        '"null":null,"object":{"obj":{},"arr":[]},"array":[{},[]]}' },
-
-  { name: 'JSON.stringify(function(){})', src: `
+        '"null":null,"object":{"obj":{},"arr":[]},"array":[{},[]]}'
+  },
+  {
+    name: 'JSON.stringify(function(){})',
+    src: `
     JSON.stringify(function(){});
     `,
-    expected: undefined },
-
-  { name: 'JSON.stringify([function(){}])', src: `
+    expected: undefined
+  },
+  {
+    name: 'JSON.stringify([function(){}])',
+    src: `
     JSON.stringify([function(){}]);
     `,
-    expected: "[null]" },
-
-  { name: 'JSON.stringify({f: function(){}})', src: `
+    expected: '[null]'
+  },
+  {
+    name: 'JSON.stringify({f: function(){}})',
+    src: `
     JSON.stringify({f: function(){}});
     `,
-    expected: "{}" },
-
-  { name: 'JSON.stringify filter', src: `
+    expected: '{}'
+  },
+  {
+    name: 'JSON.stringify filter',
+    src: `
     JSON.stringify({
         string: 'foo', number: 42, true: true, false: false, null: null,
         object: { obj: {}, arr: [] }, array: [{}, []] },
         ['string', 'number']);
     `,
-    expected: '{"string":"foo","number":42}' },
-
-  { name: 'JSON.stringify pretty number', src: `
+    expected: '{"string":"foo","number":42}'
+  },
+  {
+    name: 'JSON.stringify pretty number',
+    src: `
     JSON.stringify({
         string: 'foo', number: 42, true: true, false: false, null: null,
         object: { obj: {}, arr: [] }, array: [{}, []] },
         ['string', 'number'], 2);
     `,
-    expected: '{\n  "string": "foo",\n  "number": 42\n}' },
-
-  { name: 'JSON.stringify pretty string', src: `
+    expected: '{\n  "string": "foo",\n  "number": 42\n}'
+  },
+  {
+    name: 'JSON.stringify pretty string',
+    src: `
     JSON.stringify({
         string: 'foo', number: 42, true: true, false: false, null: null,
         object: { obj: {}, arr: [] }, array: [{}, []] },
         ['string', 'number'], '--');
     `,
-    expected: '{\n--"string": "foo",\n--"number": 42\n}' },
-
-  { name: 'JSON.stringify nonenumerable', src: `
+    expected: '{\n--"string": "foo",\n--"number": 42\n}'
+  },
+  {
+    name: 'JSON.stringify nonenumerable',
+    src: `
     var obj = {e: 'enumerable', ne: 'nonenumerable'};
     Object.defineProperty(obj, 'ne', {enumerable: false});
     JSON.stringify(obj);
     `,
-    expected: '{"e":"enumerable"}' },
-
-  { name: 'JSON.stringify inherited', src: `
+    expected: '{"e":"enumerable"}'
+  },
+  {
+    name: 'JSON.stringify inherited',
+    src: `
     JSON.stringify(Object.create({foo: 'bar'}));
     `,
-    expected: '{}' },
-
-  { name: 'JSON.stringify circular', src: `
+    expected: '{}'
+  },
+  {
+    name: 'JSON.stringify circular',
+    src: `
     var obj = {};
     obj.circular = obj;
     try {
@@ -2706,24 +3317,26 @@ module.exports = [
       e.name;
     }
     `,
-    expected: 'TypeError' },
-
+    expected: 'TypeError'
+  },
   /////////////////////////////////////////////////////////////////////////////
   // Other built-in functions
-
-  { name: 'decodeURI throws', src: `
+  {
+    name: 'decodeURI throws',
+    src: `
     try {
       decodeURI('%xy');
     } catch (e) {
       e.name;
     }
     `,
-    expected: 'URIError' },
-
+    expected: 'URIError'
+  },
   /////////////////////////////////////////////////////////////////////////////
   // WeakMap
-
-  { name: 'WeakMap', src: `
+  {
+    name: 'WeakMap',
+    src: `
     var w = new WeakMap;
     var p = {};
     var o = Object.create(p);
@@ -2738,9 +3351,11 @@ module.exports = [
     !w.has(o) || fails++;
     fails;
     `,
-    expected: 0 },
-
-  { name: 'WeakMap.prototype methods reject non-WeakMap this', src: `
+    expected: 0
+  },
+  {
+    name: 'WeakMap.prototype methods reject non-WeakMap this',
+    src: `
     var w = new WeakMap;
     var fails = 0;
     function expectError(method, thisVal, args) {
@@ -2764,9 +3379,11 @@ module.exports = [
     }
     fails;
     `,
-    expected: 0 },
-
-  { name: 'WeakMap', src: `
+    expected: 0
+  },
+  {
+    name: 'WeakMap',
+    src: `
     var w = new WeakMap;
     var p = {};
     var o = Object.create(p);
@@ -2781,37 +3398,44 @@ module.exports = [
     !w.has(o) || fails++;
     fails;
     `,
-    expected: 0 },
-
+    expected: 0
+  },
   /////////////////////////////////////////////////////////////////////////////
   // Thread and Thread.prototype:
-
   // TODO(cpallen): change .eval to .program when test harness no
   //     longer relies on eval.
-  { name: 'Thread.callers() ownership', src: `
+  {
+    name: 'Thread.callers() ownership',
+    src: `
     var owner = {};
     setPerms(owner);
     var callers = Thread.callers();
     Object.getOwnerOf(callers) === owner &&
         Object.getOwnerOf(callers[0]) === owner;
     `,
-    expected: true },
-
-  { name: 'Thread.callers()[0].eval',
+    expected: true
+  },
+  {
+    name: 'Thread.callers()[0].eval',
     src: 'Thread.callers()[0].eval',
-    expected: 'Thread.callers()[0].eval' },
-
-  { name: 'Thread.callers()[0].line & .col',
+    expected: 'Thread.callers()[0].eval'
+  },
+  {
+    name: 'Thread.callers()[0].line & .col',
     src: 'var frame = Thread.callers()[0]; frame.line + "," + frame.col;',
-    expected: '1,13' },
-
-  { name: 'Thread.callers()[/*last*/].program', src: `
+    expected: '1,13'
+  },
+  {
+    name: 'Thread.callers()[/*last*/].program',
+    src: `
     var callers = Thread.callers();
     Boolean(callers[callers.length - 1].program);
     `,
-    expected: true },
-
-  { name: 'Thread.callers()[0].callerPerms', src: `
+    expected: true
+  },
+  {
+    name: 'Thread.callers()[0].callerPerms',
+    src: `
     CC.root.name = 'root';
     var user = {name: 'user'};
     function f() {
@@ -2820,30 +3444,38 @@ module.exports = [
     setPerms(user);
     f();
     `,
-    expected: 'user' },
-
+    expected: 'user'
+  },
   // Time limit tests.  Actual enforcement is tested in
   // interpreter_tests.js; this is just checking behaviour of get/set
   // builtins.
-  { name: 'Thread.prototype.getTimeLimit() initially 0', src: `
+  {
+    name: 'Thread.prototype.getTimeLimit() initially 0',
+    src: `
     Thread.current().getTimeLimit();
     `,
-    expected: 0 },
-
-  { name: 'Thread.prototype.setTimeLimit()', src: `
+    expected: 0
+  },
+  {
+    name: 'Thread.prototype.setTimeLimit()',
+    src: `
     Thread.current().setTimeLimit(1000);
     Thread.current().getTimeLimit();
     `,
-    expected: 1000 },
-
-  { name: 'Thread.prototype.setTimeLimit(...)', src: `
+    expected: 1000
+  },
+  {
+    name: 'Thread.prototype.setTimeLimit(...)',
+    src: `
     Thread.current().setTimeLimit(1000);
     Thread.current().getTimeLimit();
     `,
-    expected: 1000 },
-
+    expected: 1000
+  },
   // Check invalid time limits are rejected.
-  { name: 'Thread.prototype.setTimeLimit(/* invalid value */) throws', src: `
+  {
+    name: 'Thread.prototype.setTimeLimit(/* invalid value */) throws',
+    src: `
     Thread.current().setTimeLimit(1000);
     var invalid = [0, 1001, NaN, 'foo', true, {}];
     var failures = [];
@@ -2856,18 +3488,20 @@ module.exports = [
     }
     (failures.length === 0) ? 'OK' : String(failures);
     `,
-    expected: 'OK' },
-
+    expected: 'OK'
+  },
   /////////////////////////////////////////////////////////////////////////////
   // Permissions system:
-
-  { name: 'perms returns root', src: `
+  {
+    name: 'perms returns root',
+    src: `
     perms() === CC.root;
     `,
     expected: true
   },
-
-  { name: 'setPerms', src: `
+  {
+    name: 'setPerms',
+    src: `
     CC.root.name = 'Root';
     var bob = {};
     bob.name = 'Bob';
@@ -2882,8 +3516,9 @@ module.exports = [
     r;`,
     expected: 'RootBobRoot'
   },
-
-  { name: 'getOwnerOf', src: `
+  {
+    name: 'getOwnerOf',
+    src: `
     var bob = {};
     var roots = {};
     setPerms(bob);
@@ -2893,25 +3528,27 @@ module.exports = [
     Object.getOwnerOf(bobs) === bob`,
     expected: true
   },
-
-  { name: 'setOwnerOf', src: `
+  {
+    name: 'setOwnerOf',
+    src: `
     var bob = {};
     var obj = {};
     Object.setOwnerOf(obj, bob) === obj && Object.getOwnerOf(obj) === bob;
     `,
     expected: true
   },
-
   /////////////////////////////////////////////////////////////////////////////
   // Other tests:
-
-  { name: 'new hack', src: `
+  {
+    name: 'new hack',
+    src: `
     (new 'Array.prototype.push') === Array.prototype.push
     `,
     expected: true
   },
-
-  { name: 'new hack with unkown builtin', src: `
+  {
+    name: 'new hack with unkown builtin',
+    src: `
     try {
       new 'nonexistent-builtin-name';
     } catch (e) {
@@ -2920,8 +3557,9 @@ module.exports = [
     `,
     expected: 'ReferenceError'
   },
-
-  { name: 'new hack with other than string literal', src: `
+  {
+    name: 'new hack with other than string literal',
+    src: `
     try {
       var builtin = 'Object.prototype';
       new builtin;
@@ -2931,19 +3569,17 @@ module.exports = [
     `,
     expected: 'TypeError'
   },
-
-  { name: 'ES6 causes syntax errors', src: `
+  {
+    name: 'ES6 causes syntax errors',
+    src: `
     var tests = [
       // Class statements & expressions
       'class Foo{};',
       'false && class Foo{};',
-
       // Arrow functions.
       'false && [].map((item) => String(item));',
-
       // For-of statement.
       'for (var x of [1, 2, 3]) {};',
-
       // Let & const.
       'let x;',
       'const x;',
@@ -2963,22 +3599,19 @@ module.exports = [
     `,
     expected: 'OK'
   },
-
-  { name: 'Strict mode syntax errors', src: `
+  {
+    name: 'Strict mode syntax errors',
+    src: `
     var tests = [
       // With statement.
       'var o = { foo: 42 }; var f = function() { with (o) { foo; }};',
-
       // Binding eval in global scope, or arguments in a function.
       'var eval = "rebinding eval?!?";',
       '(function() { arguments = undefined; });',
-
       // Duplicate argument names.
       '(function(a, a) {});',
-
       // Octal numeric literals.
       '0777;',
-
       // Delete of unqualified or undeclared identifier.
       'var foo; delete foo;',
       'delete foo;',
@@ -2998,8 +3631,9 @@ module.exports = [
     `,
     expected: 'OK'
   },
-
-  { name: 'Stack overflow errors', src: `
+  {
+    name: 'Stack overflow errors',
+    src: `
     try {
       (function f() {f();})();
     } catch (e) {
@@ -3009,8 +3643,9 @@ module.exports = [
     options: {stackLimit: 100},
     expected: 'RangeError'
   },
-
-  { name: 'Minimum stack depth limit', src: `
+  {
+    name: 'Minimum stack depth limit',
+    src: `
     function f() {
       try {
         return f() + 1;
