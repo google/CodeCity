@@ -28,8 +28,8 @@
 /**
  * @constructor
  * @struct
- * @param {function(HOLDINGS)} cleanupCallback
- * @template TARGET, HOLDINGS, TOKEN
+ * @param {function(HELDVALUE)} cleanupCallback
+ * @template TARGET, HELDVALUE, TOKEN
  * @nosideeffects
  */
 // TODO(cpcallen): Make TARGET and TOKEN bounded to {!Object} once
@@ -38,12 +38,12 @@ var FinalizationRegistry = function(cleanupCallback) {};
 
 /**
  * @param {TARGET} target
- * @param {HOLDINGS} holdings
+ * @param {HELDVALUE} heldValue
  * @param {TOKEN=} unregisterToken
  * @return {void}
  */
 FinalizationRegistry.prototype.register =
-    function(target, holdings, unregisterToken) {};
+    function(target, heldValue, unregisterToken) {};
 
 /**
  * @param {TOKEN} unregisterToken
