@@ -1962,13 +1962,45 @@ Interpreter.prototype.initRegExp_ = function() {
   // (In ES5 it had [[Class]] RegExp.)
   this.REGEXP = new this.Object(this.ROOT);
   this.builtins.set('RegExp.prototype', this.REGEXP);
+
   // RegExp constructor.
-  wrapper = function(pattern, flags) {
-    pattern = pattern ? pattern.toString() : '';
-    flags = flags ? flags.toString() : '';
-    return new intrp.RegExp(new RegExp(pattern, flags), intrp.thread_.perms());
-  };
-  this.createNativeFunction('RegExp', wrapper, true);
+  new this.NativeFunction({
+    id: 'RegExp', length: 1,
+    /** @type {!Interpreter.NativeCallImpl} */
+    call: function(intrp, thread, state, thisVal, args) {
+      var pattern = args[0];
+      var flags = args[1];
+      if (pattern instanceof intrp.RegExp && flags === undefined) {
+        // Per ES6 §21.2.3.1 step 4.b, (now
+        // https://tc39.es/ecma262/#sec-regexp-constructor step 2.b),
+        // check pattern.constructor to see if it's RegExp.
+        var patternConstructor = pattern.get('constructor', state.scope.perms);
+        if (patternConstructor === this) return pattern;
+      }
+      return this.construct.call(this, intrp, thread, state, args);
+    },
+    /** @type {!Interpreter.NativeConstructImpl} */
+    construct: function(intrp, thread, state, args) {
+      var pattern = args[0];
+      var flags = args[1];
+      var perms = state.scope.perms;
+      if (pattern instanceof intrp.RegExp) {
+        pattern = pattern.regexp.source;
+        // ES5.1 required that TypeError be thown here if flags !==
+        // undefined, but ES6 and later do not.
+      }
+      // TODO(ES6): ES6 §21.2.3.1 step 6 (now
+      // https://tc39.es/ecma262/#sec-regexp-constructor step 5).
+      pattern = (pattern === undefined ? '' : String(pattern));
+      flags = (flags === undefined ? '' : String(flags));
+      // TODO(ES6): also accept [uy]; ES8: [s], soon: [p].
+      if (!/^(?:([gim])(?!.*\1))*$/.test(flags)) {  // Reject repeated flags.
+        throw new intrp.Error(perms, intrp.SYNTAX_ERROR,
+            "Invalid flags supplied to RegExp constructor '" + flags + "'");
+      }
+      return new intrp.RegExp(new RegExp(pattern, flags), perms);
+    }
+  });
 
   new this.NativeFunction({
     id: 'RegExp.prototype.toString', length: 0,
@@ -1989,7 +2021,7 @@ Interpreter.prototype.initRegExp_ = function() {
         !(this.regexp instanceof RegExp)) {
       throw new intrp.Error(intrp.thread_.perms(), intrp.TYPE_ERROR,
           'Method RegExp.prototype.exec called on incompatible receiver' +
-              this.toString());
+              this);
     }
     return this.regexp.test(str);
   };
@@ -2002,7 +2034,7 @@ Interpreter.prototype.initRegExp_ = function() {
           'Method RegExp.prototype.exec called on incompatible receiver ' +
           this);
     }
-    str = str.toString();
+    str = String(str);
     // Get lastIndex from wrapped regex, since this is settable.
     this.regexp.lastIndex = this.get('lastIndex', perms);
     var match = this.regexp.exec(str);

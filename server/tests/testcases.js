@@ -2639,11 +2639,132 @@ module.exports = [
 
   /////////////////////////////////////////////////////////////////////////////
   // RegExp
+  {src: `new RegExp(undefined).source`, expected: '(?:)'},
+  {src: `new RegExp(null).source`, expected: 'null'},
+  {src: `new RegExp(true).source`, expected: 'true'},
+  {src: `new RegExp(false).source`, expected: 'false'},
+  {src: `new RegExp('').source`, expected: '(?:)'},
+  {src: `new RegExp('foo').source`, expected: 'foo'},
+  {src: `new RegExp('0').source`, expected: '0'},
+  {src: `new RegExp({}).source`, expected: '[object Object]'},
+  {src: `new RegExp([]).source`, expected: '(?:)'},
+
+  {src: `RegExp(undefined).source`, expected: '(?:)'},
+  {src: `RegExp(null).source`, expected: 'null'},
+  {src: `RegExp(true).source`, expected: 'true'},
+  {src: `RegExp(false).source`, expected: 'false'},
+  {src: `RegExp('').source`, expected: '(?:)'},
+  {src: `RegExp('foo').source`, expected: 'foo'},
+  {src: `RegExp('0').source`, expected: '0'},
+  {src: `RegExp({}).source`, expected: '[object Object]'},
+  {src: `RegExp([]).source`, expected: '(?:)'},
+
+  // TODO(ES6):
+  // {src: `new RegExp('foo', '').flags`, expected: ''},
+  // {src: `new RegExp('foo', 'g').flags`, expected: 'g'},
+  // {src: `new RegExp('foo', 'i').flags`, expected: 'i'},
+  // {src: `new RegExp('foo', 'gi').flags`, expected: 'gi'},
+  // {src: `new RegExp('foo', 'm').flags`, expected: 'm'},
+  // {src: `new RegExp('foo', 'gm').flags`, expected: 'gm'},
+  // {src: `new RegExp('foo', 'im').flags`, expected: 'im'},
+  // {src: `new RegExp('foo', 'gim').flags`, expected: 'gim'},
+
+  {src: `new RegExp('foo', '').global`, expected: false},
+  {src: `new RegExp('foo', 'g').global`, expected: true},
+  {src: `new RegExp('foo', '').ignoreCase`, expected: false},
+  {src: `new RegExp('foo', 'i').ignoreCase`, expected: true},
+  {src: `new RegExp('foo', '').multiline`, expected: false},
+  {src: `new RegExp('foo', 'm').multiline`, expected: true},
+
   {
-    name: 'RegExp.prototype.test.apply(non-regexp) throws',
+    name: "new RegExp('', 'x') throws",
     src: `
       try {
-        /foo/.test.apply({}, ['foo']);
+        new RegExp('', 'x');
+      } catch (e) {
+        e.name;
+      }
+    `,
+    expected: 'SyntaxError',
+  },
+  {
+    name: "new RegExp('', 'gg') throws",
+    src: `
+      try {
+        new RegExp('', 'gg');
+      } catch (e) {
+        e.name;
+      }
+    `,
+    expected: 'SyntaxError',
+  },
+
+  // Check behaviour of RegExp when called with and without new, when
+  // pattern is itself a RegExp, and flags are or are not supplied.
+  {src: `var re = /foo/; new RegExp(re) === re;`, expected: false},
+  {src: `var re = /foo/; RegExp(re) === re;`, expected: true},
+  {src: `var re = /foo/; RegExp(re, 'm') === re;`, expected: false},
+  {src: `var re = /foo/m; RegExp(re, 'm') === re;`, expected: false},
+  {src: `var re = /foo/m; RegExp(re) === re;`, expected: true},
+  {
+    name: 'RegExp called as function checks .constructor',
+    src: `
+      function SubClass() {};
+      Object.setPrototypeOf(SubClass, RegExp);
+      Object.setPrototypeOf(SubClass.prototype, RegExp.prototype);
+      var re = /foo/;
+      re.constructor = SubClass;
+      RegExp(re) === re;
+    `,
+    expected: false,
+  },
+  // TODO(ES6):
+  // {src: `var re = /foo/m; RegExp(re, 'i').flags;`, expected: 'i'},
+  {src: `var re = /foo/m; RegExp(re, 'i').multiline;`, expected: false},
+  {src: `var re = /foo/m; RegExp(re, 'i').ignoreCase;`, expected: true},
+
+
+  // Check behaviour of RegExp.prototype methods.
+  {
+    name: 'RegExp.prototype.exec.call(undefined) throws',
+    src: `
+      try {
+        RegExp.prototype.exec.call(undefined, 'foo');
+      } catch (e) {
+        e.name;
+      }
+    `,
+    expected: 'TypeError',
+  },
+  {
+    name: 'RegExp.prototype.exec.call(non-regexp) throws',
+    src: `
+      try {
+        RegExp.prototype.exec.call({}, 'foo');
+      } catch (e) {
+        e.name;
+      }
+    `,
+    expected: 'TypeError',
+  },
+  {src: `/undefined/.exec(undefined).length;`, expected: 1},
+  {src: `/null/.exec(null).length;`, expected: 1},
+  {
+    name: 'RegExp.prototype.test.call(undefined) throws',
+    src: `
+      try {
+        RegExp.prototype.test.call(undefined);
+      } catch (e) {
+        e.name;
+      }
+    `,
+    expected: 'TypeError'
+  },
+  {
+    name: 'RegExp.prototype.test.call(/* non-regexp */) throws',
+    src: `
+      try {
+        RegExp.Prototype.test.call({}, 'foo');
       } catch (e) {
         e.name;
       }
