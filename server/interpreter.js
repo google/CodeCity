@@ -2094,7 +2094,7 @@ Interpreter.prototype.initJSON_ = function() {
   var wrapper;
   wrapper = function(text) {
     try {
-      var nativeObj = JSON.parse(text.toString());
+      var nativeObj = JSON.parse(String(text));
     } catch (e) {
       throw intrp.errorNativeToPseudo(e, intrp.thread_.perms());
     }

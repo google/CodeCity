@@ -2723,7 +2723,63 @@ module.exports = [
   /////////////////////////////////////////////////////////////////////////////
   // JSON
   {
-    name: 'JSON.stringify basic',
+    name: 'JSON.parse(undefined) throws',
+    src: `
+      try {
+        JSON.parse(undefined);
+      } catch (e) {
+        e.name;
+      }
+    `,
+    expected: 'SyntaxError',
+  },
+  {src: `JSON.parse(null);`, expected: null},
+  {src: `JSON.parse(true);`, expected: true},
+  {src: `JSON.parse(false);`, expected: false},
+  {src: `JSON.parse(42);`, expected: 42},
+  {
+    name: "JSON.parse('') throws",
+    src: `
+      try {
+        JSON.parse('');
+      } catch (e) {
+        e.name;
+      }
+    `,
+    expected: 'SyntaxError',
+  },
+  {
+    name: 'JSON.parse([]) throws',
+    src: `
+      try {
+        JSON.parse([]);  // Equivalent to JSON.parse('');
+      } catch (e) {
+        e.name;
+      }
+    `,
+    expected: 'SyntaxError',
+  },
+  {
+    name: 'JSON.parse({}) throws',
+    src: `
+      try {
+        JSON.parse({});  // Equivalent to JSON.parse('[object Object]');
+      } catch (e) {
+        e.name;
+      }
+    `,
+    expected: 'SyntaxError',
+  },
+
+  {src: `JSON.stringify(undefined);`, expected: undefined},
+  {src: `JSON.stringify(null);`, expected: 'null'},
+  {src: `JSON.stringify(true);`, expected: 'true'},
+  {src: `JSON.stringify(false);`, expected: 'false'},
+  {src: `JSON.stringify(42);`, expected: '42'},
+  {src: `JSON.stringify('string');`, expected: '"string"'},
+  {src: `JSON.stringify([1,2,,4]);`, expected: '[1,2,null,4]'},
+  {
+    name: 'JSON.stringify({...})',
     src: `
       JSON.stringify({
           string: 'foo', number: 42, true: true, false: false, null: null,
@@ -2736,7 +2792,7 @@ module.exports = [
   {src: `JSON.stringify([function(){}]);`, expected: '[null]'},
   {src: `JSON.stringify({f: function(){}});`, expected: '{}'},
   {
-    name: 'JSON.stringify filter',
+    name: 'JSON.stringify({...}, [/* filter array */])',
     src: `
       JSON.stringify({
           string: 'foo', number: 42, true: true, false: false, null: null,
@@ -2746,7 +2802,7 @@ module.exports = [
     expected: '{"string":"foo","number":42}',
   },
   {
-    name: 'JSON.stringify pretty number',
+    name: 'JSON.stringify({...}, [...], /* space number */)',
     src: `
       JSON.stringify({
           string: 'foo', number: 42, true: true, false: false, null: null,
@@ -2756,7 +2812,7 @@ module.exports = [
     expected: '{\n  "string": "foo",\n  "number": 42\n}',
   },
   {
-    name: 'JSON.stringify pretty string',
+    name: 'JSON.stringify({...}, [...], /* space  string */)',
     src: `
       JSON.stringify({
           string: 'foo', number: 42, true: true, false: false, null: null,
@@ -2766,7 +2822,7 @@ module.exports = [
     expected: '{\n--"string": "foo",\n--"number": 42\n}',
   },
   {
-    name: 'JSON.stringify nonenumerable',
+    name: 'JSON.stringify ignores nonenumerable properties',
     src: `
       var obj = {e: 'enumerable', ne: 'nonenumerable'};
       Object.defineProperty(obj, 'ne', {enumerable: false});
@@ -2775,12 +2831,12 @@ module.exports = [
     expected: '{"e":"enumerable"}',
   },
   {
-    name: 'JSON.stringify inherited',
+    name: 'JSON.stringify ignores inherited properties',
     src: `JSON.stringify(Object.create({foo: 'bar'}));`,
     expected: '{}',
   },
   {
-    name: 'JSON.stringify circular',
+    name: 'JSON.stringify throws when value is cyclic',
     src: `
       var obj = {};
       obj.circular = obj;
