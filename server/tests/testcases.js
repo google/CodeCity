@@ -1643,6 +1643,22 @@ module.exports = [
     expected: 'TypeError',
   },
   {
+    name: 'Function.prototype.toSting on NativeFunction',
+    src: `escape.toString();`,
+    expected: 'function escape() { [native code] }',
+  },
+  {
+    name: 'Function.prototype.toSting on modified NativeFunction',
+    destructive: true,  // Modifies escape.
+    src: `
+      // Delete escape's original .name make it inherit a new one.
+      delete escape.name;
+      Object.setPrototypeOf(escape, function parent() {});
+      escape.toString();
+    `,
+    expected: 'function () { [native code] }',
+  },
+  {
     name: 'Function.prototype.apply.call(/* non-function */) throws',
     src: `
       try {
