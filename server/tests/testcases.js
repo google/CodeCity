@@ -1596,34 +1596,34 @@ module.exports = [
   // Function and Function.prototype
   {
     name: 'new Function() returns callable',
-    src: `(new Function)();`,
+    src: `new Function()();`,
     expected: undefined,
   },
-  {src: `(new Function).length;`, expected: 0},
-  {src: `(new Function).toString()`, expected: 'function() {}'},
+  {src: `(new Function()).length;`, expected: 0},
+  {src: `new Function().toString()`, expected: 'function() {}'},
   {
-    name: 'new Function simple returns callable',
-    src: `(new Function('return 42;'))();`,
+    name: 'new Function(/* body */) returns callable',
+    src: `new Function('return 42;')();`,
     expected: 42,
   },
-  {src: `(new Function('return 42;')).length;`, expected: 0},
+  {src: `new Function(/* body */).length;`, expected: 0},
   {
-    src: `(new Function('return 42;')).toString()`,
+    src: `new Function('return 42;').toString()`,
     expected: 'function() {return 42;}'
   },
   {
-    name: 'new Function with args returns callable',
-    src: `(new Function('a, b', 'c', 'return a + b * c;'))(2, 3, 10);`,
+    name: 'new Function(/* args... */, /* body */) returns callable',
+    src: `new Function('a, b', 'c', 'return a + b * c;')(2, 3, 10);`,
     expected: 32,
   },
   {
-    name: 'new Function with args .length',
-    src: `(new Function('a, b', 'c', 'return a + b * c;')).length;`,
+    name: "(new Function('a, b', 'c', /* body */)).length",
+    src: `new Function('a, b', 'c', 'return a + b * c;').length;`,
     expected: 3,
   },
   {
-    name: 'new Function with args .toString()',
-    src: `String(new Function('a, b', 'c', 'return a + b * c;'))`,
+    name: 'new Function(/* args... */, /* body */).toString()',
+    src: `new Function('a, b', 'c', 'return a + b * c;').toString()`,
     expected: 'function(a, b,c) {return a + b * c;}',
   },
   {
@@ -1632,10 +1632,10 @@ module.exports = [
     expected: false,
   },
   {
-    name: 'Function.prototype.toString applied to non-fucntion throws',
+    name: 'Function.prototype.toString.call(/* non-function */) throws',
     src: `
       try {
-        Function.prototype.toString.apply({});
+        Function.prototype.toString.call({});
       } catch (e) {
         e.name;
       }
@@ -1643,12 +1643,10 @@ module.exports = [
     expected: 'TypeError',
   },
   {
-    name: 'Function.prototype.apply non-function throws',
+    name: 'Function.prototype.apply.call(/* non-function */) throws',
     src: `
-      var o = {};
-      o.apply = Function.prototype.apply;
       try {
-        o.apply();
+        Function.prototype.apply.call({});
       } catch (e) {
         e.name;
       }
@@ -1676,7 +1674,7 @@ module.exports = [
     expected: 0,
   },
   {
-    name: 'Function.prototype.apply(..., non-object)',
+    name: 'Function.prototype.apply(..., /* non-object */) throws',
     src: `
       try {
         (function() {}).apply(undefined, 'not an object');
@@ -1687,11 +1685,11 @@ module.exports = [
     expected: 'TypeError',
   },
   {
-    name: 'Function.prototype.apply(..., sparse)',
+    name: 'Function.prototype.apply(..., /* sparse array */)',
     src: `
       (function(a, b, c) {
         if (!(1 in arguments)) {
-          throw new Error('Argument 1 missing');
+          throw new Error('arguments[1] missing');
         }
         return a + c;
       }).apply(undefined, [1, , 3]);
@@ -1699,7 +1697,7 @@ module.exports = [
     expected: 4,
   },
   {
-    name: 'Function.prototype.apply(..., array-like)',
+    name: 'Function.prototype.apply(..., /* array-like */)',
     src: `
       (function(a, b, c) {
         return a + b + c;
@@ -1708,7 +1706,7 @@ module.exports = [
     expected: 6,
   },
   {
-    name: 'Function.prototype.apply(..., non-array-like)',
+    name: 'Function.prototype.apply(..., /* non-array-like */)',
     src: `
       (function(a, b, c) {
         return a + b + c;
@@ -1717,12 +1715,10 @@ module.exports = [
     expected: NaN  // Because undefined + undefined === NaN.,
   },
   {
-    name: 'Function.prototype.call non-function throws',
+    name: 'Function.prototype.call.call(/* non-function */) throws',
     src: `
-      var o = {};
-      o.call = Function.prototype.call;
       try {
-        o.call();
+        Function.prototype.call.call({});
       } catch (e) {
         e.name;
       }
@@ -1739,12 +1735,12 @@ module.exports = [
     expected: true,
   },
   {
-    name: 'Function.prototype.call no args',
+    name: 'Function.prototype.call() gives arguments.length === 0',
     src: `(function() {return arguments.length;}).call();`,
     expected: 0,
   },
   {
-    name: 'Function.prototype.call',
+    name: 'Function.prototype.call(..., /* sparse array */)',
     src: `
       (function(a, b, c) {
         if (!(1 in arguments)) {
@@ -1756,12 +1752,10 @@ module.exports = [
     expected: 4,
   },
   {
-    name: 'Function.prototype.bind non-function throws',
+    name: 'Function.prototype.bind.call(/* non-function */) throws',
     src: `
-      var o = {};
-      o.bind = Function.prototype.bind;
       try {
-        o.bind();
+        Function.prototype.bind.call({});
       } catch (e) {
         e.name;
       }
