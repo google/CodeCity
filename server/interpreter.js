@@ -938,32 +938,20 @@ Interpreter.prototype.initObject_ = function() {
 Interpreter.prototype.initFunction_ = function() {
   var intrp = this;
   var wrapper;
-  var identifierRegexp = /^[A-Za-z_$][\w$]*$/;
   // Function constructor.
   new this.NativeFunction({
     id: 'Function', length: 1,
     /** @type {!Interpreter.NativeConstructImpl} */
     construct: function(intrp, thread, state, args) {
-      var argList = args.slice();
-      if (args.length) {
-        var code = String(argList.pop());
-      } else {
-        var code = '';
-      }
-      var argsStr = argList.join(',').trim();
-      if (argsStr) {
-        argsStr.split(/\s*,\s*/).map(function(name) {
-          if (!identifierRegexp.test(name)) {
-            throw new intrp.Error(state.scope.perms, intrp.SYNTAX_ERROR,
-                'Invalid function argument: ' + name);
-          }
-        });
-        argsStr = argList.join(',');
-      }
-      // Acorn needs to parse code in the context of a function or
+      args = args.slice();  // Copy, so we can .pop safely.
+      var body = args.length ? String(args.pop()) : '';
+      // Concatenate formal parameter names.  Let Acorn verify they
+      // are valid Identifiers.
+      var argsStr = args.map(function(arg) {return String(arg);}).join(',');
+      // Acorn needs to parse body in the context of a function or
       // else 'return' statements will be syntax errors.
-      code = '(function(' + argsStr + ') {' + code + '})';
-      var ast = intrp.compile_(code, state.scope.perms);
+      var source = '(function(' + argsStr + ') {' + body + '})';
+      var ast = intrp.compile_(source, state.scope.perms);
       if (ast['body'].length !== 1) {
         // Function('a', 'return a + 6;}; {alert(1);');
         // TODO: there must be a cleaner way to detect this!
@@ -973,7 +961,7 @@ Interpreter.prototype.initFunction_ = function() {
       // Interestingly, the scope for constructed functions is the global
       // scope, even if they were constructed in some other scope.
       return new intrp.UserFunction(ast['body'][0]['expression'],
-          intrp.global, new Interpreter.Source(code), state.scope.perms);
+          intrp.global, new Interpreter.Source(source), state.scope.perms);
     },
     /** @type {!Interpreter.NativeCallImpl} */
     call: function(intrp, thread, state, thisVal, args) {
