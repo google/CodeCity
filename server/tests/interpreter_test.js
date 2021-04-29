@@ -319,27 +319,27 @@ exports.testStrictBoxedThis = function(t) {
  */
 exports.testSwitchStatementFallthrough = function(t) {
   const code = `
-      var x = 0;
+      var x = '';
       switch (i) {
         case 1:
-          x += 1;
+          x += '1';
           // fall through
         case 2:
-          x += 2;
+          x += '2';
           // fall through
         default:
-          x += 16;
+          x += 'D';
           // fall through
         case 3:
-          x += 4;
+          x += '3';
           // fall through
         case 4:
-          x += 8;
+          x += '4';
           // fall through
       }
       x;`;
-  const expected = [28, 31, 30, 12, 8];
- for (let i = 0; i < expected.length; i++) {
+  const expected = ['D34', '12D34', '2D34', '34', '4'];
+  for (let i = 0; i < expected.length; i++) {
     const src = 'var i = ' + i + ';\n' + code;
     runSimpleTest(t, 'switch fallthrough ' + i, src, expected[i]);
   }
