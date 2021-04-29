@@ -1627,6 +1627,33 @@ module.exports = [
     expected: 'function(a, b,c) {return a + b * c;}',
   },
   {
+    name: 'Function constructor accepts non-ASCII parameter names',
+    src: `new Function('fußball', '').toString()`,
+    expected: 'function(fußball) {}',
+  },
+  {
+    name: 'Function constructor rejects non-unicode-letter parameter names',
+    src: `
+      try {
+        new Function('a…z', '');
+      } catch (e) {
+        e.name;
+      }
+    `,
+    expected: 'SyntaxError',
+  },
+  {
+    name: 'Function constructor rejects repeated parameter names',
+    src: `
+      try {
+        new Function('a', 'a', '');
+      } catch (e) {
+        e.name;
+      }
+    `,
+    expected: 'SyntaxError',
+  },
+  {
     name: 'Function.prototype has no .prototype',
     src: `Function.prototype.hasOwnProperty('prototype');`,
     expected: false,
