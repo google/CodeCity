@@ -446,29 +446,43 @@ module.exports = [
     expected: 'ok',
   },
   {
-    name: 'thisInMethod',
+    name: 'value of this in function call',
     src: `
-      var o = {
-        f: function() {return this.foo;},
-        foo: 70
-      };
-      o.f();
-    `,
-    expected: 70,
-  },
-  {
-    name: 'thisInFormerMethod',
-    src: `
-      var o = {f: function() {return this;}};
-      var g = o.f;
-      g();
+      var f = function() {return this;};
+      f();
     `,
     expected: undefined,
   },
   {
-    name: 'thisGlobal',
-    src: `this;`,
+    name: 'value of this in method call',
+    src: `
+      var obj = {method: function() {return this;}};
+      obj.method() === obj;
+    `,
+    expected: true,
+  },
+  {
+    name: 'value of this in method called as function',
+    src: `
+      var obj = {method: function() {return this;}};
+      var f = obj.method;
+      f();
+    `,
     expected: undefined,
+  },
+  {
+    name: 'value of this outside function body',
+    src: `this === undefined;`,
+    expected: true,
+  },
+  {
+    name: 'value of this not boxed (in strict mode)',
+    destructive: true,  // Modifies String.prototype!
+    src: `
+      String.prototype.method = function() {return typeof this;};
+      'a primitive string'.method();
+    `,
+    expected: 'string',  // Would be an [object String] in non-strict mode.
   },
   {src: `[].length;`, expected: 0},
   {src: `[1,,3,,].length;`, expected: 4},

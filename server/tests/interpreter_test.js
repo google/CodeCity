@@ -275,22 +275,27 @@ exports.testHasArgumentsOrEval = function(t) {
 };
 
 ///////////////////////////////////////////////////////////////////////////////
-// Tests: external simple testcases
+// Tests: run tests from testcases.js.
 ///////////////////////////////////////////////////////////////////////////////
 
 /**
  * Run the simple tests in testcases.js
  * @param {!T} t The test runner object.
  */
-exports.testSimple = function(t) {
+exports.testTestcases = function(t) {
   for (const tc of testcases) {
-    if ('expected' in tc) {
+    if (!('expected' in tc)) {
+      t.skip(tc.name);
+      continue;
+    }
+    if (tc.destructive) {
+      const testOptions = tc.options ? {options: tc.options} : {};
+      runTest(t, tc.name || tc.src, tc.src, tc.expected, testOptions);
+    } else {
       const oldOptions = interpreter.options;
       if (tc.options) interpreter.options = tc.options;
       runSimpleTest(t, tc.name || tc.src, tc.src, tc.expected);
       if (tc.options) interpreter.options = oldOptions;
-    } else {
-      t.skip(tc.name);
     }
   }
 };
@@ -298,20 +303,6 @@ exports.testSimple = function(t) {
 ///////////////////////////////////////////////////////////////////////////////
 // Tests: interpreter internals
 ///////////////////////////////////////////////////////////////////////////////
-
-/**
- * Run a (destructive) test to ensure that 'this' is a primitive in
- * methods invoked on primitives.  (This also tests that interpreter
- * is running in strict mode; in sloppy mode this will be boxed.)
- */
-exports.testStrictBoxedThis = function(t) {
-  let name = 'strictBoxedThis';
-  let src = `
-      String.prototype.foo = function() {return typeof this;};
-      'a primitive string'.foo();
-  `;
-  runTest(t, name, src, 'string');  // Not simple: modifies String.prototype
-};
 
 /**
  * Run some tests of switch statement with fallthrough.
