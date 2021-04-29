@@ -1643,17 +1643,6 @@ module.exports = [
     expected: 'SyntaxError',
   },
   {
-    name: 'Function constructor rejects repeated parameter names',
-    src: `
-      try {
-        new Function('a', 'a', '');
-      } catch (e) {
-        e.name;
-      }
-    `,
-    expected: 'SyntaxError',
-  },
-  {
     name: 'Function.prototype has no .prototype',
     src: `Function.prototype.hasOwnProperty('prototype');`,
     expected: false,
@@ -3313,6 +3302,7 @@ module.exports = [
         '(function() {arguments = undefined;});',
         // Duplicate argument names.
         '(function(a, a) {});',
+        "new Function('a', 'a', '');",
         // Octal numeric literals.
         '0777;',
         // Delete of unqualified or undeclared identifier.
