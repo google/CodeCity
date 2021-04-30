@@ -610,8 +610,6 @@ Interpreter.prototype.initBuiltins_ = function() {
   this.initPerms_();
 
   // Initialize ES standard global functions.
-  var intrp = this;
-
   var eval_ = new this.NativeFunction({
     id: 'eval', length: 1,
     /** @type {!Interpreter.NativeCallImpl} */
@@ -658,6 +656,7 @@ Interpreter.prototype.initBuiltins_ = function() {
     [decodeURI, 'decodeURI'], [decodeURIComponent, 'decodeURIComponent'],
     [encodeURI, 'encodeURI'], [encodeURIComponent, 'encodeURIComponent']
   ];
+  var intrp = this;
   for (var i = 0; i < strFunctions.length; i++) {
     var wrapper = (function(nativeFunc) {
       return function(str) {
@@ -706,8 +705,6 @@ Interpreter.prototype.initObject_ = function() {
       return this.construct.call(this, intrp, thread, state, args);
     }
   });
-
-  var intrp = this;
 
   // Static methods on Object.
   this.createNativeFunction('Object.is', Object.is, false);
@@ -1583,7 +1580,7 @@ Interpreter.prototype.initString_ = function() {
   var thisStringValue = function(intrp, value, name, perms) {
     if (typeof value === 'string') {  // String primitive.
       return value;
-    } else if (value === intrp.STRING) {  // The only Boolen object.
+    } else if (value === intrp.STRING) {  // The only String object.
       return '';
     }
     throw new intrp.Error(perms, intrp.TYPE_ERROR,
@@ -1881,7 +1878,7 @@ Interpreter.prototype.initDate_ = function() {
     }
     // Called as new Date().
     var args = [null].concat(Array.from(arguments));
-    var date = new (Function.prototype.bind.apply(Date, args));
+    var date = new (Function.prototype.bind.apply(Date, args))();
     return new intrp.Date(date, intrp.thread_.perms());
   };
   this.createNativeFunction('Date', wrapper, true);
@@ -2488,8 +2485,6 @@ Interpreter.prototype.initPerms_ = function() {
  * @private
  */
 Interpreter.prototype.initNetwork_ = function() {
-  var intrp = this;
-
   new this.NativeFunction({
     id: 'CC.connectionListen', length: 2,
     /** @type {!Interpreter.NativeCallImpl} */
