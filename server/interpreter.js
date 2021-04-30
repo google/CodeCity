@@ -4671,22 +4671,13 @@ Interpreter.prototype.installTypes = function() {
   intrp.Function.prototype.class = 'Function';
 
   /**
-   * Convert this function into a string.  Since
-   * http://tc39.github.io/Function-prototype-toString-revision/
-   * proposes that (more or less) anything that's not a user-defined
-   * function will return "{ [native code] }", do that here.
+   * Convert this function into a string.
    * @override
+   * @this {!Interpreter.prototype.Function}
    */
   intrp.Function.prototype.toString = function() {
-    // TODO(cpcallen): include formal parameter names.
-    // TODO(cpcallen:perms): readability check?  Would need to add
-    // perms param, in which case method should probably be renamed
-    // and we need to audit all use of String() throughout the
-    // interpreter (including implicit use inside v8-native
-    // functions).
-    var pd = this.getOwnPropertyDescriptor('name', intrp.ANYBODY);
-    var name = pd && typeof pd.value === 'string' ? pd.value : '';
-    return 'function ' + name + '() { [native code] }';
+    // Just do the simplest possible (spec-compliant) thing here.
+    return 'function () { [native code] }';
   };
 
   /**
@@ -5045,12 +5036,16 @@ Interpreter.prototype.installTypes = function() {
     var owner = (options.owner !== undefined ? options.owner : intrp.ROOT);
     // Invoke super constructor.
     intrp.Function.call(/** @type {?} */ (this), owner, options.proto);
-    // Set .name if name or id supplied.
+    // Set .name if name or id supplied, and save original name internally.
+    // N.B.: Function.prototype gets .name === ''.
+    /** The initial value of the .name property.  @type {string|undefined} */
+    this.name = undefined;
     if (options.name !== undefined) {
-      this.setName(options.name);
+      this.name = options.name;
     } else if (options.id) {
-      this.setName(options.id.replace(/^.*\./, ''));
+      this.name = options.id.replace(/^.*\./, '');
     }
+    if (this.name !== undefined) this.setName(this.name);
     // Set .length if length supplied.
     if (options.length !== undefined) {
       this.defineProperty('length', Descriptor.none.withValue(options.length),
@@ -5079,6 +5074,22 @@ Interpreter.prototype.installTypes = function() {
 
   intrp.NativeFunction.prototype = Object.create(intrp.Function.prototype);
   intrp.NativeFunction.prototype.constructor = intrp.NativeFunction;
+
+  /**
+   * Convert this function into a string.  This implements
+   * https://tc39.es/Function-prototype-toString-revision/#proposal-sec-function.prototype.tostring
+   * (now adopted) as it applies to "Well-known Intrinsic Object[s]"
+   * as well as any other NativeFunction constructed with specified
+   * name or id.
+   * @override
+   */
+  intrp.NativeFunction.prototype.toString = function() {
+    if (this.name === undefined) {
+      return intrp.Function.prototype.toString.call(this);
+    }
+    // TODO(cpcallen): include formal parameter names?
+    return 'function ' + this.name + '() { [native code] }';
+  };
 
   /**
    * Class for an old native function.

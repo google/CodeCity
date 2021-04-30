@@ -1648,6 +1648,10 @@ module.exports = [
     expected: false,
   },
   {
+    src: `Function.prototype.toString()`,
+    expected: 'function () { [native code] }'
+  },
+  {
     name: 'Function.prototype.toString.call(/* non-function */) throws',
     src: `
       try {
@@ -1672,7 +1676,7 @@ module.exports = [
       Object.setPrototypeOf(escape, function parent() {});
       escape.toString();
     `,
-    expected: 'function () { [native code] }',
+    expected: 'function escape() { [native code] }',
   },
   {
     name: 'Function.prototype.apply.call(/* non-function */) throws',
