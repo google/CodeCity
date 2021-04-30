@@ -2665,25 +2665,20 @@ Interpreter.toLength = function toLength(value) {
 
 /**
  * Create a new native function.  Function will be owned by root.
- * @param {string} name Name of new function.
- * @param {!Function} nativeFunc JavaScript function.
+ * @param {string} id ID to register new function in builtins registry.
+ * @param {!Function} nativeFunc Any JavaScript function.
  * @param {boolean} legalConstructor True if the function can be used as a
  *     constructor (e.g. Array), false if not (e.g. escape).
  * @return {!Interpreter.prototype.Function} New function.
 */
 Interpreter.prototype.createNativeFunction = function(
-    name, nativeFunc, legalConstructor) {
+    id, nativeFunc, legalConstructor) {
   if (nativeFunc instanceof this.Object) {
     throw new TypeError('createNativeFunction passed non-native function??');
   }
   // Make sure impl function has an id for serialization.
-  if (!nativeFunc.id) {
-    nativeFunc.id = name;
-  }
-  var func = new this.OldNativeFunction(nativeFunc, legalConstructor);
-  func.setName(name.replace(/^.*\./, ''));
-  this.builtins.set(name, func);
-  return func;
+  if (!nativeFunc.id) nativeFunc.id = id;
+  return new this.OldNativeFunction(nativeFunc, legalConstructor, {id: id});
 };
 
 /**
@@ -4177,15 +4172,10 @@ Interpreter.prototype.NativeFunction = function(options) {
  * @extends {Interpreter.prototype.NativeFunction}
  * @param {!Function} impl
  * @param {boolean} legalConstructor
- * @param {!Interpreter.Owner=} owner
- * @param {?Interpreter.prototype.Object=} proto
+ * @param {!NativeFunctionOptions=} options
  */
 Interpreter.prototype.OldNativeFunction =
-    function(impl, legalConstructor, owner, proto) {
-  /** @type {!Function} */
-  this.impl;
-  /** @type {boolean} */
-  this.illegalConstructor;
+    function(impl, legalConstructor, options) {
   throw new Error('Inner class constructor not callable on prototype');
 };
 
@@ -5098,16 +5088,15 @@ Interpreter.prototype.installTypes = function() {
    * @param {!Function} impl Old-style native function implementation
    * @param {boolean} legalConstructor True if the function can be used as a
    *     constructor (e.g. Array), false if not (e.g. escape).
-   * @param {!Interpreter.Owner=} owner Owner object or null (default: root).
-   * @param {?Interpreter.prototype.Object=} proto Prototype object or null.
+   * @param {!NativeFunctionOptions=} options Options object for
+   *     constructing the underlying NativeFunction.
    */
-  intrp.OldNativeFunction = function(impl, legalConstructor, owner, proto) {
-    if (!impl) {  // Deserializing
-      return;
-    }
-    intrp.NativeFunction.call(/** @type {?} */ (this),
-        {owner: owner, proto: proto, length: impl.length});
+  intrp.OldNativeFunction = function(impl, legalConstructor, options) {
+    if (!impl) return;  // Deserializing
+    intrp.NativeFunction.call(/** @type {?} */ (this), options);
+    /** @type {!Function} */
     this.impl = impl;
+    /** @type {boolean} */
     this.illegalConstructor = !legalConstructor;
   };
 
