@@ -1005,7 +1005,8 @@ exports.testDumperPrototypeDumpBinding = function(t) {
         ['f2', Do.SET, 'var f2 = function F2(arg) {};\n', Do.DONE],
         ['obj.f3', Do.SET, 'obj.f3 = function() {};\n', Do.DONE],
         // BUG(cpcallen): Really want '... = Function(...', due to scoping.
-        ['f4', Do.SET, 'var f4 = function(a1,a2,a3,a4, a5) {};\n', Do.DONE],
+        ['f4', Do.SET,
+         'var f4 = function anonymous(a1,a2,a3,a4, a5\n) {\n\n};\n', Do.DONE],
         // TODO(ES5): verify that f4.name gets deleted.
       ],
       after: [

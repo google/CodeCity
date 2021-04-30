@@ -1600,16 +1600,21 @@ module.exports = [
     expected: undefined,
   },
   {src: `(new Function()).length;`, expected: 0},
-  {src: `new Function().toString()`, expected: 'function() {}'},
+  {src: `new Function().toString()`, expected: 'function anonymous(\n) {\n\n}'},
   {
     name: 'new Function(/* body */) returns callable',
     src: `new Function('return 42;')();`,
     expected: 42,
   },
+  {
+    name: 'Function constructor accepts trailing line comments in body',
+    src: `typeof new Function('//');`,
+    expected: 'function',
+  },
   {src: `new Function(/* body */).length;`, expected: 0},
   {
     src: `new Function('return 42;').toString()`,
-    expected: 'function() {return 42;}'
+    expected: 'function anonymous(\n) {\nreturn 42;\n}'
   },
   {
     name: 'new Function(/* args... */, /* body */) returns callable',
@@ -1624,12 +1629,12 @@ module.exports = [
   {
     name: 'new Function(/* args... */, /* body */).toString()',
     src: `new Function('a, b', 'c', 'return a + b * c;').toString()`,
-    expected: 'function(a, b,c) {return a + b * c;}',
+    expected: 'function anonymous(a, b,c\n) {\nreturn a + b * c;\n}',
   },
   {
     name: 'Function constructor accepts non-ASCII parameter names',
     src: `new Function('fußball', '').toString()`,
-    expected: 'function(fußball) {}',
+    expected: 'function anonymous(fußball\n) {\n\n}',
   },
   {
     name: 'Function constructor rejects non-unicode-letter parameter names',
@@ -1642,6 +1647,24 @@ module.exports = [
     `,
     expected: 'SyntaxError',
   },
+  {
+    name: 'Function constructor accepts block comments in parameter list',
+    src: `new Function('a, /*test*/b', 'c', 'return a + b * c;')(2, 4, 10)`,
+    expected: 42,
+  },
+  {
+    name: 'Function constructor accepts line comments in parameter list',
+    src: `new Function('a, b', 'c //test', 'return a + b * c;')(2, 4, 10)`,
+    expected: 42,
+  },
+  {
+    name: 'Function constructor parameter line comments hide later parameters',
+    src: `
+      new Function('dummy //', 'escape', 'return typeof escape')(0, 0);
+    `,
+    expected: 'function',
+  },
+
   {
     name: 'Function.prototype has no .prototype',
     src: `Function.prototype.hasOwnProperty('prototype');`,

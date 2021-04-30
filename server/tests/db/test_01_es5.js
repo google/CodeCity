@@ -1859,7 +1859,7 @@ tests.FunctionConstructor = function() {
   console.assert(f() === undefined, 'new Function() returns callable');
   console.assert(f.length === 0, 'new Function() .length');
   var actual = String(f);
-  var expected = 'function() {}';
+  var expected = 'function anonymous(\n) {\n\n}';
   console.assert(actual === expected, 'new Function() .toString() ' +
       'Actual: "' + actual + '" Expected: "' + expected + '"');
 
@@ -1867,7 +1867,7 @@ tests.FunctionConstructor = function() {
   console.assert(f() === 42, 'new Function simple returns callable');
   console.assert(f.length === 0, 'new Function simple .length');
   actual = String(f);
-  expected = 'function() {return 42;}';
+  expected = 'function anonymous(\n) {\nreturn 42;\n}';
   console.assert(actual === expected, 'new Function simple .toString() ' +
       'Actual: "' + actual + '" Expected: "' + expected + '"');
 
@@ -1875,7 +1875,7 @@ tests.FunctionConstructor = function() {
   console.assert(f(2, 3, 10) === 32, 'new Function with args returns callable');
   console.assert(f.length === 3, 'new Function with args .length');
   actual = String(f);
-  expected = 'function(a, b,c) {return a + b * c;}';
+  expected = 'function anonymous(a, b,c\n) {\nreturn a + b * c;\n}';
   console.assert(actual === expected, 'new Function with args .toString() ' +
       'Actual: "' + actual + '" Expected: "' + expected + '"');
 };

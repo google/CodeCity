@@ -949,8 +949,10 @@ Interpreter.prototype.initFunction_ = function() {
       // are valid Identifiers.
       var argsStr = args.map(function(arg) {return String(arg);}).join(',');
       // Acorn needs to parse body in the context of a function or
-      // else 'return' statements will be syntax errors.
-      var source = '(function(' + argsStr + ') {' + body + '})';
+      // else 'return' statements will be syntax errors.  The name
+      // "anonymous" and extra line breaks were standardised in ES2019
+      // via https://tc39.es/Function-prototype-toString-revision/
+      var source = '(function anonymous(' + argsStr + '\n) {\n' + body + '\n})';
       var ast = intrp.compile_(source, state.scope.perms);
       if (ast['body'].length !== 1) {
         // Function('a', 'return a + 6;}; {alert(1);');
