@@ -1659,9 +1659,7 @@ module.exports = [
   },
   {
     name: 'Function constructor parameter line comments hide later parameters',
-    src: `
-      new Function('dummy //', 'escape', 'return typeof escape')(0, 0);
-    `,
+    src: `new Function('dummy //', 'escape', 'return typeof escape')(0, 0);`,
     expected: 'function',
   },
 
