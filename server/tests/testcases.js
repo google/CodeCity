@@ -1477,6 +1477,26 @@ module.exports = [
     expected: 82,
   },
   {
+    name: 'Object.assign',
+    src: `
+      var p = {x: 'inherited enumerable', y: 'inherited nonenumerable'};
+      var o = Object.create(p);
+      o.a = 'own enumerable';
+      o.b = 'own nonenumerable';
+      o.c = 'own enumerable';
+      Object.defineProperty(p, 'y', {enumerable: false});
+      Object.defineProperty(o, 'b', {enumerable: false});
+
+      var t = {a: 'to be overwritten', b: 'not overwritten', d: 'preserved'};
+
+      Object.assign(t, o, {e: 'extra'});
+      [Object.getOwnPropertyNames(t).length,
+       t.a, t.b, t.c, t.d, t.e].toString();
+    `,
+    expected:
+      '5,own enumerable,not overwritten,own enumerable,preserved,extra',
+  },
+  {
     name: 'Object.getOwnPropertyNames',
     src: `
       var p = {x: 'inherited enumerable', y: 'inherited nonenumerable'};
