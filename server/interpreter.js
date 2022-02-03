@@ -693,7 +693,7 @@ Interpreter.prototype.initObject_ = function() {
           typeof value === 'string') {
         // No boxed primitives in Code City.
         throw new intrp.Error(state.scope.perms, intrp.TYPE_ERROR,
-            'Boxed primitives not supported.');
+            'boxed primitives not supported');
       } else if (value === undefined || value === null) {
         return new intrp.Object(state.scope.perms);
       } else {
@@ -717,8 +717,7 @@ Interpreter.prototype.initObject_ = function() {
       // N.B.: we use ES6 definition; ES5.1 would throw TypeError if
       // passed a non-object.
       var obj = intrp.toObject(args[0], perms);
-      var keys = obj.ownKeys(state.scope.perms);
-      return intrp.createArrayFromList(keys, state.scope.perms);
+      return intrp.createArrayFromList(obj.ownKeys(perms), perms);
     }
   });
 
@@ -728,7 +727,14 @@ Interpreter.prototype.initObject_ = function() {
     call: function(intrp, thread, state, thisVal, args) {
       var perms = state.scope.perms;
       var obj = intrp.toObject(args[0], perms);
-      return intrp.createArrayFromList(obj.ownKeys(perms), perms);
+      var keys = obj.ownKeys(perms);
+      var enumerableKeys = [];
+      for (var i = 0; i < keys.length; i++) {
+        var key = keys[i];
+        var pd = obj.getOwnPropertyDescriptor(key, perms);
+        if (pd.enumerable) enumerableKeys.push(key);
+      }
+      return intrp.createArrayFromList(enumerableKeys, perms);
     }
   });
 
