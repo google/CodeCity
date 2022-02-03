@@ -1477,6 +1477,34 @@ module.exports = [
     expected: 82,
   },
   {
+    name: 'Object.getOwnPropertyNames',
+    src: `
+      var p = {x: 'inherited enumerable', y: 'inherited nonenumerable'};
+      var o = Object.create(p);
+      o.a = 'own enumerable';
+      o.b = 'own nonenumerable';
+      o.c = 'own enumerable';
+      Object.defineProperty(p, 'y', {enumerable: false});
+      Object.defineProperty(o, 'b', {enumerable: false});
+      Object.getOwnPropertyNames(o).toString();
+    `,
+    expected: 'a,b,c',
+  },
+  {
+    name: 'Object.keys',
+    src: `
+      var p = {x: 'inherited enumerable', y: 'inherited nonenumerable'};
+      var o = Object.create(p);
+      o.a = 'own enumerable';
+      o.b = 'own nonenumerable';
+      o.c = 'own enumerable';
+      Object.defineProperty(p, 'y', {enumerable: false});
+      Object.defineProperty(o, 'b', {enumerable: false});
+      Object.keys(o).toString();
+    `,
+    expected: 'a,c',
+  },
+  {
     name: 'Object.prototype.toString',
     src: `({}).toString();`,
     expected: '[object Object]',
