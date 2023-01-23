@@ -5964,6 +5964,8 @@ var performStaticAnalysis = function(node) {
    * @param {!Node} node AST node (program or function).
    * Nested function writes to boundNames and hasArgumentsOrEval.
    * @return {void}
+   * TODO(cpcallen): Limit recursion to only AST nodes that can
+   *     contain declarations (e.g. no ExpressionStatements?)
    */
   function walk(node) {
     if (node['type'] === 'VariableDeclaration') {

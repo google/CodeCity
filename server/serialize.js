@@ -306,7 +306,6 @@ Serializer.serialize = function(intrp) {
     if (value && (typeof value === 'object' || typeof value === 'function')) {
       var ref = objectRefs.get(value);
       if (ref === undefined) {
-        console.log('>>>', value);
         throw new RangeError('object not found in table');
       }
       return {'#': ref};
