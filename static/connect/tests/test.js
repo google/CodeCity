@@ -18,6 +18,31 @@ function testCommonEscapeSpaces() {
   assertEquals('\u00A0a\u00A0 \u00A0 \u00A0 \u00A0 b', CCC.Common.escapeSpaces(' a\tb'));
 }
 
+function testCommonParentFocus() {
+  var textarea = document.createElement('textarea');
+  textarea.id = 'commandTextarea';
+  document.body.appendChild(textarea);
+  try {
+    var event = {key: 'x', preventDefault: function() {}};
+    CCC.Common.parentFocus(event);
+    assertEquals('x', textarea.value);
+    assertEquals(1, textarea.selectionStart);
+
+    textarea.value = 'look north';
+    textarea.setSelectionRange(5, 5);
+    CCC.Common.parentFocus(event);
+    assertEquals('look xnorth', textarea.value);
+    assertEquals(6, textarea.selectionStart);
+
+    textarea.setSelectionRange(5, 10);
+    CCC.Common.parentFocus(event);
+    assertEquals('look x', textarea.value);
+    assertEquals(6, textarea.selectionStart);
+  } finally {
+    document.body.removeChild(textarea);
+  }
+}
+
 // log.js
 
 function testLogGetTemplate() {
