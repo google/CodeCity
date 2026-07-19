@@ -74,7 +74,7 @@ $.hosts.code['/objectPanel'].buildData = function buildData(query) {
           for (var i = 0; i < ownProps.length; i++) {
             var prop = ownProps[i];
             var type = this.getType(value[prop]);
-            ownProps[i] = {name: prop, type: type};
+            ownProps[i] = { name: prop, type: type };
           }
           data.properties.push(ownProps);
           value = Object.getPrototypeOf(value);
@@ -94,7 +94,7 @@ $.hosts.code['/objectPanel'].buildData = function buildData(query) {
     // Add typeof information.
     var global = $.utils.code.getGlobal();
     for (var name in global) {
-      data.roots.push({name: name, type: this.getType(global[name])});
+      data.roots.push({ name: name, type: this.getType(global[name]) });
     }
   }
   return data;
@@ -119,7 +119,7 @@ $.hosts.code['/editorXhr'].www = function code_editorXhr_www(request, response) 
    *   only present if save was requested
    * - login: boolean indicating if the user is logged in
    */
-  var data = {login: !!request.user};
+  var data = { login: !!request.user };
   try {  // ends with ... finally {response.write(JSON.stringify(data));}
     if (!request.fromSameOrigin()) {
       // Security check to ensure this is being loaded by the code editor.
@@ -141,7 +141,7 @@ $.hosts.code['/editorXhr'].www = function code_editorXhr_www(request, response) 
       // Global variable; no parent object.
       object = null;
     } else if (request.parameters.key &&
-               (object = $.db.tempId.getObjById(request.parameters.key))) {
+      (object = $.db.tempId.getObjById(request.parameters.key))) {
       // Successfully retrieved parent object from tempID DB.
     } else {
       // Get parent object via selector.
@@ -370,7 +370,7 @@ $.hosts.code['/editorXhr'].generateMetaData = function generateMetaData(value, s
     for (var i = 0, prop; (prop = props[i]); i++) {
       try {
         meta += '// ' + (value[prop] ? '@set_prop ' + prop + ' = ' +
-            JSON.stringify(value[prop]) : '@delete_prop ' + prop) + '\n';
+          JSON.stringify(value[prop]) : '@delete_prop ' + prop) + '\n';
       } catch (e) {
         // Unstringable value, or read perms error.  Skip.
       }
