@@ -243,10 +243,13 @@ CCC.Common.parentFocus = function(e) {
     var ct = parent.document.getElementById('commandTextarea');
     ct.focus();
     // Chrome won't type the character in the textarea after a focus change.
-    // For the easy case where the field is empty, just add the character.
-    // TODO: Handle cases where the field is not empty.
-    if (e && e.key.length === 1 && !ct.value.length) {
-      ct.value = e.key;
+    // Insert the character at the cursor, replacing any selected text.
+    if (e && e.key.length === 1) {
+      var start = ct.selectionStart;
+      var end = ct.selectionEnd;
+      ct.value = ct.value.substring(0, start) + e.key +
+          ct.value.substring(end);
+      ct.selectionStart = ct.selectionEnd = start + e.key.length;
       // Firefox will type the character a second time, prevent this.
       e.preventDefault();
     }
